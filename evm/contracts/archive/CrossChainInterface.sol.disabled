@@ -1,0 +1,178 @@
+//SPDX-License-Identifier: MIT
+
+pragma solidity ^0.8.9;
+
+import "./polymerase/IbcDispatcher.sol";
+import "./polymerase/IbcReceiver.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+
+interface ISwapPoolFactory {
+    function pooltemplate() external view returns (address);
+
+    function IsCreatedByFactory(address arg0) external view returns (bool);
+}
+
+interface IPolymerase {
+    function call_multichain(
+        uint256 _chain,
+        bytes32 _target,
+        bytes memory _data
+    ) external returns (bool);
+}
+
+interface ISwapPool {
+    function swapFromUnits(
+        uint256 _toAsset,
+        address _who,
+        uint256 _U
+    ) external returns (uint256);
+
+    function setupMaster() external view returns (address);
+}
+
+/// @title CrossChainInterface
+/// @author Alexander @ Polymer Labs
+/// @notice Interface for PolySwap to talk to simple Polymerase
+contract CrossChainInterface is Ownable {
+    address public immutable PolymeraseDispatcher;
+    address public _poolFactory;
+    mapping(address => bool) public validArriver;
+
+    // Usage: assert self.checkConnection[_chainID][_from][_target]
+    mapping(uint256 => mapping(bytes32 => mapping(bytes32 => bool)))
+        public checkConnection;
+
+    mapping(uint256 => bytes32) public _friendlyChainInterfaces;
+
+    constructor(address _factory, address _polymeraseDispatcher) {
+        _poolFactory = _factory;
+        PolymeraseDispatcher = _polymeraseDispatcher;
+        _friendlyChainInterfaces[block.chainid] = bytes32(
+            abi.encode(address(this))
+        ); // ! CHECK
+        validArriver[_polymeraseDispatcher] = true;
+    }
+
+    function chain_id() external view returns (uint256) {
+        return block.chainid;
+    }
+
+    function setfriendlyChainInterfaces(uint256 _chainID, bytes32 _address)
+        external
+        onlyOwner
+    {
+        _friendlyChainInterfaces[_chainID] = _address;
+    }
+
+    function crossChainSwap(
+        uint256 _chain,
+        bytes32 _pool,
+        uint256 _asset,
+        bytes32 _who,
+        uint256 _U
+    ) external returns (bool) {
+        /* 
+            Context indicator
+                0x00: ordinary,
+                0x01: Amplified
+                0x02: LargeSwap
+                0x03: CreteConnection
+
+            0 _context : Bytes[1]
+            1-32 _pool (target) : bytes32
+            33-64 _who : bytes32
+            65 _compressedAsset : uint8 (Assumption less than 512 tokens per pool)
+            66-97 _U : uint256 (Unit of liqudiity, fixed point with 64 bits for precision.)
+        */
+        // require(ISwapPoolFactory(_poolFactory).IsCreatedByFactory(msg.sender));
+        // require(
+        //     checkConnection[_chain][bytes32(abi.encodePacked(msg.sender))][
+        //         _pool
+        //     ],
+        //     "No connection"
+        // );
+        uint8 compressedAsset = uint8(_asset);
+
+        // abi.encodePacked encodes the arguments as a concat. This should be the same as:
+        // _data: Bytes[130] = concat(0x00,  convert(msg.sender, bytes32), _pool, _who, compressedAsset, C) in vyper
+        bytes memory data = abi.encodePacked(
+            bytes1(0x00),
+            abi.encode(msg.sender),
+            _pool,
+            _who,
+            compressedAsset,
+            _U
+        );
+        // abi.encode allways encodes to 32 bytes.
+        // abi.encodePacked encodes in the smallest possible bytes.
+        // 32 bytes are reserved for addresses (for potential future proofing).
+        // Ethereum addresses only use 20 bytes, so abi.encodePacked returns 20 bytes where abi.encode returns 32 bytes.
+
+        IPolymerase(PolymeraseDispatcher).call_multichain(
+            _chain,
+            _friendlyChainInterfaces[_chain],
+            data
+        );
+
+        return true;
+    }
+
+    function CreateConnection(
+        uint256 _chain,
+        bytes32 _pool,
+        bool _state
+    ) external returns (bool) {
+        require(ISwapPoolFactory(_poolFactory).IsCreatedByFactory(msg.sender));
+        bytes32 msgSenderB32 = bytes32(abi.encodePacked(msg.sender));
+
+        checkConnection[_chain][msgSenderB32][_pool] = _state;
+        checkConnection[_chain][_pool][msgSenderB32] = _state;
+
+        return true;
+    }
+
+    function receives(bytes calldata _header, bytes calldata _data)
+        external
+        returns (uint256)
+    {
+        /* 
+            Context indicator
+                0x00: ordinary,
+                # (reserved) 0x02: LargeSwap
+                0x03: CreateConnection
+         */
+        require(validArriver[msg.sender], "Polymerase Only");
+        uint256 _chain = uint256(uint64(bytes8(_header[0:8])));
+        /* 
+        0 _context : Bytes[1] == (0x00 or 0x01)
+        1-32 _fromPool : bytes32
+        33-64 _pool : bytes32 */
+        bytes1 _context = _data[0];
+        bytes32 _fromPool = bytes32(_data[1:33]);
+        address _pool = abi.decode(_data[33:65], (address));
+
+        if (_context == 0x00) {
+            /* 
+                0 _context : Bytes[1] == (0x00 or 0x01)
+                1-32 _fromPool : bytes32
+                33-64 _pool : bytes32
+                65-96 _who : bytes32
+                97 _compressedAsset : uint8
+                98-129 _U : uint265
+             */
+            // require(
+            //     checkConnection[_chain][bytes32(_data[33:65])][_fromPool],
+            //     "No connection"
+            // );
+
+            address _who = abi.decode(_data[65:97], (address));
+            uint8 _compressedAsset = uint8(_data[97]); // can store upto 2^8-1 = 255
+            uint256 _U = uint256(bytes32(_data[98:130]));
+
+            return ISwapPool(_pool).swapFromUnits(_compressedAsset, _who, _U);
+        } else if (_context == 0x03) {
+            //Reserved
+        }
+        return 0;
+    }
+}

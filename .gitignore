@@ -1,0 +1,30 @@
+# VIM swap files
+*.swp
+
+# SOLC bin
+bin
+bin/*
+
+
+#vscode files
+.vscode
+
+# MacOS files
+.DS_Store
+
+# Py compiled bytecode
+*.pyc
+__pycache__
+
+node_modules
+
+.env
+.venv
+
+build
+!build/deployments
+reports
+.pytest_cache
+*.cpython*
+
+snapshots/0x*

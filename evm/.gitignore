@@ -1,0 +1,11 @@
+.env
+venv/
+node_modules/
+
+build/*
+!build/deployments
+reports/
+.pytest_cache
+*.cpython*
+
+snapshots/0x*

@@ -1,0 +1,23 @@
+[tool.poetry]
+name = "Polymer Smart-Contracts"
+version = "0"
+description = "A collection of the smart contracts for usage by the Polymer community."
+authors = ["Polymer"]
+
+[tool.poetry.dependencies]
+pip = "^21.2.4"
+python = ">=3.9, <3.10"
+eth-brownie = "^1.19.0"
+vyper = "=0.3.3"
+dotmap = "^1.3.23"
+sync = "^1.0.0"
+numpy = "^1.21.4"
+pandas = "^1.3.4"
+tqdm = "^4.62.3"
+
+[tool.poetry.dev-dependencies]
+flake8 = "^4.0.1"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"

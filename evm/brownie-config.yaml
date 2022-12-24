@@ -1,0 +1,29 @@
+# use Ganache's forked mainnet mode as the default network
+networks:
+  mainnet-fork:
+    cmd_settings:
+      fork: "https://eth-mainnet.alchemyapi.io/v2/$ALCHEMY_API_TOKEN"
+  
+
+autofetch_sources: true
+
+# require OpenZeppelin Contracts
+dependencies:
+  - "OpenZeppelin/openzeppelin-contracts@4.5.0"
+# path remapping to support OpenZeppelin imports with NPM-style path
+
+compiler:
+  solc:
+    optimizer:
+        enabled: true
+        runs: 1000
+    remappings:
+      - "@openzeppelin=OpenZeppelin/openzeppelin-contracts@4.5.0"
+
+hypothesis:
+  max_examples: 5
+
+
+reports:
+  exclude_paths:
+    - contracts/test/token.sol

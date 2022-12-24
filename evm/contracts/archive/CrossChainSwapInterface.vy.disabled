@@ -1,0 +1,164 @@
+# @version =0.3.3
+
+
+interface IISwapPoolFactory:
+    def pooltemplate() -> address: view
+    def IsCreatedByFactory(arg0: address) -> bool: view
+
+interface IPolymerase:
+    def call_multichain(_chain : uint256, _target : bytes32, _data : Bytes[130]) -> bool: payable
+
+interface ISwapPool:
+    def swapFromUnits(_toAsset : uint256, _who : address,  _U : uint256) -> uint256: nonpayable
+    def setupMaster() -> address: view
+
+
+POLYMERASEADDRESS: address #constant(address) = ZERO_ADDRESS
+
+poolFactory: public(address)
+configurator: public(address)
+validArrivers: public(HashMap[address, bool])
+# Usage: assert self.checkConnection[_from][_target]
+checkConnection: public(HashMap[uint256, HashMap[bytes32, HashMap[bytes32, bool]]])
+
+friendlyChainInterfaces: public(HashMap[uint256, bytes32])
+
+
+@external
+def __init__(_factory : address, _polymeraseAddress : address):
+    self.poolFactory = _factory
+    self.POLYMERASEADDRESS = _polymeraseAddress
+    self.friendlyChainInterfaces[chain.id] = convert(self, bytes32)
+    self.validArrivers[_polymeraseAddress] = True
+
+
+@view
+@external
+def chain_id() -> uint256:
+    return chain.id
+
+
+@external
+def newConfigurator(_newConfigurator : address):
+    assert msg.sender == self.configurator
+    self.configurator = _newConfigurator 
+
+
+@external
+def editValidArrivers(_arriver : address, _status : bool):
+    assert msg.sender == self.configurator
+    
+    self.validArrivers[_arriver] = _status
+
+
+@external
+def setfriendlyChainInterfaces(_chainID : uint256, _address : bytes32):
+    assert msg.sender == self.configurator
+    
+    self.friendlyChainInterfaces[_chainID] = _address
+
+
+@external
+def crossChainSwap(_chain : uint256, _pool : bytes32, _asset : uint256, _who : bytes32, _U : uint256) -> bool:
+    """
+        Context indicator
+            0x00: ordinary,
+            0x01: Amplified
+            0x02: LargeSwap
+            0x03: CreteConnection
+
+        0 _context : Bytes[1]
+        1-32 _fromPool : bytes32
+        33-64 _pool : bytes32
+        65-96 _who : bytes32
+        97 _compressedAsset : uint8
+        98-129 _U : uint265
+    """
+    assert IISwapPoolFactory(self.poolFactory).IsCreatedByFactory(msg.sender)
+    assert self.checkConnection[_chain][convert(msg.sender, bytes32)][_pool], "No connection"
+    compressedAsset: Bytes[1] = slice(convert(_asset, bytes32),32-1,1)
+    C: bytes32 = convert(_U, bytes32)
+
+    _data: Bytes[130] = concat(b"\x00",  convert(msg.sender, bytes32), _pool, _who, compressedAsset, C)
+
+    assert IPolymerase(self.POLYMERASEADDRESS).call_multichain(
+        _chain,
+        self.friendlyChainInterfaces[_chain],
+        _data
+    )
+
+    return True
+
+
+@external
+def CreateConnection(_chain : uint256, _pool : bytes32, _state : bool) -> bool:
+    assert IISwapPoolFactory(self.poolFactory).IsCreatedByFactory(msg.sender)
+
+    # _data : Bytes[130] = concat(0x03, slice(convert(_state, bytes32), 1, 1), _pool)
+
+    # assert IPolymerase(self.POLYMERASEADDRESS).call_multichain(
+    #     _chain,
+    #     self.friendlyChainInterfaces[_chain],
+    #     _data
+    # )
+    self.checkConnection[_chain][convert(msg.sender, bytes32)][_pool] = _state
+    self.checkConnection[_chain][_pool][convert(msg.sender, bytes32)] = _state
+
+    return True
+
+
+@external
+def receives(_header: Bytes[40], _data : Bytes[130]) -> uint256:
+    """
+        Context indicator
+            0x00: ordinary,
+            0x01: Amplified
+            # (reserved) 0x02: LargeSwap
+            0x03: CreateConnection
+    """
+    assert self.validArrivers[msg.sender], "IPolymerase Only"
+    
+
+    _chain : uint256 = convert(slice(_header, 0, 8), uint256)
+
+    # 0 _context : Bytes[1] == (0x00 or 0x01)
+    # 1-32 _fromPool : bytes32
+    # 33-64 _pool : bytes32
+    _context: Bytes[1] = slice(_data, 0, 1)
+    _fromPool : bytes32 = extract32(_data, 1)
+    _poolInBytes: bytes32 = extract32(_data, 33)
+    _pool: address = convert(_poolInBytes, address)
+
+
+    if _context == b"\x00":
+        # 0 _context : Bytes[1] == (0x00 or 0x01)
+        # 1-32 _fromPool : bytes32
+        # 33-64 _pool : bytes32
+        # 65-96 _who : bytes32
+        # 97 _compressedAsset : uint8
+        # 98-129 _U : uint265
+        assert self.checkConnection[_chain][_poolInBytes][_fromPool], "No connection" 
+        
+
+        _who: address = extract32(_data, 65, output_type=address)
+        _compressedAsset: Bytes[1] = slice(_data, 97, 1)  # can store upto 2^8-1 = 255
+        _U: uint256 = extract32(_data, 98, output_type=uint256)
+
+        return ISwapPool(_pool).swapFromUnits(convert(_compressedAsset, uint256), _who, _U)
+    elif _context == b"\x01":
+        # 0 _context : Bytes[1]
+        # 1-32 _fromPool : bytes32
+        # 33-64 _pool : bytes32
+        # 65-96 _who : bytes32
+        # 97 _compressedAsset : uint8
+        # 98-129 _U : uint265
+        assert self.checkConnection[_chain][_poolInBytes][_fromPool], "No connection" 
+
+
+        _who: address = extract32(_data, 65, output_type=address)
+        _compressedAsset: Bytes[1] = slice(_data, 97, 1)  # can store upto 2^8-1 = 255
+        _U: uint256 = extract32(_data, 98, output_type=uint256) # convert(slice(_data, 66, 32), uint256)
+
+        return ISwapPool(_pool).swapFromUnits(convert(_compressedAsset, uint256), _who, _U)
+    return 0
+

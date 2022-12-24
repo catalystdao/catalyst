@@ -1,0 +1,23 @@
+[features]
+seeds = false
+[programs.localnet]
+fixed_point_math = "FixedPointMathsPoLymer1111111111111111111111"
+swap_pool = "Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS"
+swap_pool_amplified = "Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnA"
+ibc_interface = "Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLCC"
+polymerase_emulator = "Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcPLYMERASEEMU"
+polymerase_emulator_tester = "Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsPET"
+polymerase_receiver = "6NUbfXpGgo9dUKiEv8NQsGJoHxteMBVoAXLtnRHbJH7J"
+polymerase_sender = "4Zo7npJHcpHhnj9dUXAY2ZzpuZT75AFn1z3uD6WqgBKu"
+polymerase_register = "BYbaE3pipg9w4kAo7NVrN9TrNm4nnnHpKEVNvh4mvgvi"
+
+[registry]
+url = "https://anchor.projectserum.com"
+
+[provider]
+cluster = "localnet"
+wallet = "test-wallet.json"
+
+[scripts]
+test = "pytest -s"
+test_mocha = "yarn run ts-mocha -p ./tsconfig.json -t 1000000"
