@@ -1,0 +1,14 @@
+{
+    "name": "@catalabs/sdk-core",
+    "version": "0.1.0",
+    "description": "",
+    "main": "dist/index.js",
+    "scripts": {
+        "compile": "tsc -b",
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "author": "",
+    "license": "ISC",
+    "dependencies": {
+    }
+}

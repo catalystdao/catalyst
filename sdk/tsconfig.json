@@ -1,0 +1,15 @@
+{
+  "extends": "./tsconfig-base.json",
+  "references": [
+    {
+      "path": "./packages/sdk-core"
+    },
+    {
+      "path": "./packages/sdk-gov"
+    }
+  ],
+  "include": [
+    "./tests/**/*.ts",
+    "./tests/**/*.json"
+  ]
+}
