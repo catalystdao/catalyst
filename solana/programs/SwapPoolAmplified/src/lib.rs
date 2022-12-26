@@ -7,8 +7,8 @@ use ibc_interface;
 use ibc_interface::cpi::accounts as interface_accounts;
 use ibc_interface::program::IbcInterface;
 
-use shared_lib::u256::U256;
-use shared_lib::fixed_point_math_x64::{mul_x64, pow_x64, inv_pow2_x64};
+use fixed_point_math_lib::u256::U256;
+use fixed_point_math_lib::fixed_point_math_x64::{mul_x64, pow_x64, inv_pow2_x64};
 use token_utils::create_pda_token_account;
 
 use std::ops::Shl;

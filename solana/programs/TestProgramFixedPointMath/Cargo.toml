@@ -18,4 +18,4 @@ default = []
 [dependencies]
 anchor-lang = "0.25.0"
 uint = "0.8"
-shared_lib = { path = "../../../rust-common/fixed_point_math_lib" }
+fixed-point-math-lib = { path = "../../../rust-common/fixed_point_math_lib" }

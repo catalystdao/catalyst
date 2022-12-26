@@ -19,6 +19,6 @@ default = []
 anchor-lang = "0.25.0"
 anchor-spl = "0.25.0"
 spl-token = { version = "3.3.0", features = ["no-entrypoint"] }
-shared_lib = { path = "../../../rust-common/fixed_point_math_lib" }
+fixed-point-math-lib = { path = "../../../rust-common/fixed_point_math_lib" }
 IBCInterface = { path = "../IBCInterface", features = ["cpi", "no-entrypoint"] }
 token-utils = { path = "../../token-utils" }

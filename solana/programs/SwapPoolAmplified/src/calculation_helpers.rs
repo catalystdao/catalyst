@@ -1,8 +1,8 @@
 use std::ops::{Shr, Shl};
 
 use anchor_lang::prelude::*;
-use shared_lib::u256::U256;
-use shared_lib::fixed_point_math_x64::{div_x64, pow_x64, inv_pow_x64};
+use fixed_point_math_lib::u256::U256;
+use fixed_point_math_lib::fixed_point_math_x64::{div_x64, pow_x64, inv_pow_x64};
 
 const ONE_X64: U256 = U256([0, 1, 0, 0]);
 const ONE_X128: U256 = U256([0, 0, 1, 0]);

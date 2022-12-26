@@ -1,6 +1,6 @@
 use std::ops::{Shr, Shl};
 
-use anchor_lang::prelude::*;
+use cosmwasm_std::{StdResult, Uint128};
 use fixed_point_math_lib::u256::U256;
 use fixed_point_math_lib::fixed_point_math_x64::{log2_x64, div_x64, inv_pow_x64, inv_pow2_x64, pow2_x64, LN2_X64, mul_x64};
 
@@ -10,7 +10,7 @@ const ONE_X64: U256 = U256([0, 1, 0, 0]);
 
 // Deposits and Withdrawals *****************************************************************************************************
 
-pub fn calc_asset_amount_for_pool_tokens(pool_token_balance: u64, asset_balance: u64, asset_eq_balance: u64) -> Result<u64> {
+pub fn calc_asset_amount_for_pool_tokens(pool_token_balance: Uint128, asset_balance: Uint128, asset_eq_balance: Uint128) -> StdResult<Uint128> {
     if asset_eq_balance == asset_balance {
         return Ok(pool_token_balance)
     }
@@ -27,7 +27,7 @@ pub fn out_swap_x64(
     source_asset_balance: U256,     // At
     source_asset_weight: U256,      // WA
     approx: bool
-) -> Result<U256> {
+) -> StdResult<U256> {
     // Computes the integral
     // int_{At}^{At+x} WA/w dw
 
@@ -54,7 +54,7 @@ pub fn in_swap(
     target_asset_balance: U256,     // Bt
     target_asset_weight: U256,      // WB
     approx: bool
-) -> Result<U256> {
+) -> StdResult<U256> {
     // Solves the following integral for 'y'
     // int_{Bt-y}^{Bt} WB/w dW
 
@@ -84,7 +84,7 @@ pub fn full_swap(
     target_asset_balance: U256,
     target_asset_weight: U256,
     approx: bool
-) -> Result<U256> {
+) -> StdResult<U256> {
 
     // Bt * (1 - (At + input) / At) ^ (-WA/WB))       NOTE: (At + input) / At >= 1 as input > 0
 
@@ -116,21 +116,13 @@ pub fn full_swap(
 }
 
 
-#[error_code]
-pub enum IntegralCalculationErrorCode {
-    #[msg("Arithmetic Error. Possible overflow/underflow.")]
-    ArithmeticError,
-}
-
-
-
 // Liquidity swaps **************************************************************************************************************
 
 pub fn calc_out_liquidity_swap_x64(
     input_liquidity: U256,          // x
     source_asset_eq_balance: U256,  // A0
     source_asset_weight: U256       // WA
-) -> Result<U256> {
+) -> StdResult<U256> {
     // Computes the integral
     // int_{At}^{At+x} WA/w dw
 
@@ -147,7 +139,7 @@ pub fn calc_in_liquidity_swap(
     liquidity_units_x64: U256,       // U
     target_asset_eq_balance: U256,   // B0
     target_assets_aggr_weight: U256  // W_SUM
-) -> Result<U256> {
+) -> StdResult<U256> {
     // Solves the following integral for 'y'
     // int_{Bt-y}^{Bt} W_SUM/w dW
 

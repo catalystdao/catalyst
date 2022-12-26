@@ -7,7 +7,7 @@ use ibc_interface;
 use ibc_interface::cpi::accounts as interface_accounts;
 use ibc_interface::program::IbcInterface;
 
-use shared_lib::u256::U256;
+use fixed_point_math_lib::u256::U256;
 use token_utils::create_pda_token_account;
 
 pub mod calculation_helpers;

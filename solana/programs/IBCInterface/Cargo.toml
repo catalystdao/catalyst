@@ -19,7 +19,7 @@ default = []
 anchor-lang = "0.25.0"
 spl-token = { version = "3.3.0", features = ["no-entrypoint"] }
 byteorder = "1"
-shared_lib = { path = "../../../rust-common/fixed_point_math_lib" }
+fixed-point-math-lib = { path = "../../../rust-common/fixed_point_math_lib" }
 polymerase-receiver = { path = "../polymerase-receiver", features = ["cpi", "no-entrypoint"] }
 polymerase-register = { path = "../polymerase-register", features = ["cpi", "no-entrypoint"] }
 polymerase-sender = { path = "../polymerase-sender", features = ["cpi", "no-entrypoint"] }

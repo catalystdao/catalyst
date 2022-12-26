@@ -1,11 +1,11 @@
 [package]
-name = "shared_lib"
+name = "fixed-point-math-lib"
 version = "0.1.0"
 authors = ["Catalyst"]
 edition = "2021"
 
 [dependencies]
-uint = "=0.9.1"
+uint = "=0.9.5"
 
 [dev-dependencies]
 cached = "=0.40"
