@@ -35,6 +35,14 @@ pub struct SwapPoolState {
 // TODO do we want to define the functions here? (as impl of the SwapPoolState)
 impl SwapPoolState {
 
+    pub fn get_asset_index(&self, asset: &String) -> Result<usize, ContractError> {
+        self.assets
+            .iter()
+            .enumerate()
+            .find_map(|(index, a): (usize, &Addr)| if *a == *asset { Some(index) } else { None })
+            .ok_or(ContractError::InvalidAssets {})
+    }
+
     pub fn update_units_inflow(
         &mut self,
         units_inflow_x64: U256,

@@ -116,6 +116,13 @@ pub fn execute(
         ExecuteMsg::FinishSetup {} => execute_finish_setup(deps, env, info),
         ExecuteMsg::Deposit { pool_tokens_amount } => execute_deposit(deps, env, info, pool_tokens_amount),
         ExecuteMsg::Withdraw { pool_tokens_amount } => execute_withdraw(deps, env, info, pool_tokens_amount),
+        ExecuteMsg::Localswap {
+            from_asset,
+            to_asset,
+            amount,
+            min_out,
+            approx
+        } => execute_local_swap(deps, env, info, from_asset, to_asset, amount, min_out, approx),
 
         // CW20 execute msgs - Use cw20-base for the implementation
         ExecuteMsg::Transfer { recipient, amount } => Ok(execute_transfer(deps, env, info, recipient, amount)?),
@@ -448,6 +455,91 @@ pub fn execute_withdraw(
             .add_messages(transfer_msgs)
             .add_attribute("withdrawn_amounts", format!("{:?}", withdrawal_amounts))
             .add_attribute("burnt_pool_tokens", pool_tokens_amount)
+    )
+
+}
+
+
+pub fn execute_local_swap(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    from_asset: String,
+    to_asset: String,
+    amount: Uint128,
+    min_out: Uint128,
+    approx: bool
+) -> Result<Response, ContractError> {
+
+    let state = STATE.load(deps.storage)?;
+
+    // No need to verify whether from_asset or to_asset are valid addresses, as they must match one of the
+    // addresses saved to the 'assets' vec of the swap pool state (otherwise get_asset_index will fail).
+    let from_asset_index = state.get_asset_index(&from_asset)?;
+    let to_asset_index = state.get_asset_index(&to_asset)?;
+
+    // Query the asset balances
+    let balance_msg = Cw20QueryMsg::Balance { address: env.contract.address.to_string() };
+    let from_asset_balance: Uint128 = deps.querier.query_wasm_smart(&from_asset, &balance_msg)?;
+    let to_asset_balance: Uint128 = deps.querier.query_wasm_smart(&to_asset, &balance_msg)?;
+    
+    // Calculate swap output
+    let out = Uint128::from(calculation_helpers::full_swap(
+        U256::from(amount.u128()),
+        U256::from(from_asset_balance.u128()),
+        U256::from(state.assets_weights[from_asset_index]),
+        U256::from(
+            to_asset_balance
+                .checked_sub(state.escrowed_assets[to_asset_index])
+                .map_err(|_| ContractError::ArithmeticError {})?
+                .u128()
+            ),
+        U256::from(state.assets_weights[to_asset_index]),
+        approx
+    )?.as_u128());      // U256 to u64 will panic if overflow
+
+    if out < min_out { return Err(ContractError::SwapMinYieldNotFulfilled {}) }
+
+    
+    // Build message to transfer input assets to the pool
+    let swapper_addr_str = info.sender.to_string();
+    let self_addr_str    = env.contract.address.to_string();
+
+    let transfer_from_asset_msg = CosmosMsg::Wasm(
+        cosmwasm_std::WasmMsg::Execute {
+            contract_addr: from_asset.clone(),
+            msg: to_binary(&Cw20ExecuteMsg::TransferFrom {
+                owner: swapper_addr_str.clone(),
+                recipient: self_addr_str.clone(),
+                amount
+            })?,
+            funds: vec![]
+        }
+    );
+
+    // Build message to transfer output assets to the swapper
+    let transfer_to_asset_msg = CosmosMsg::Wasm(
+        cosmwasm_std::WasmMsg::Execute {
+            contract_addr: from_asset.clone(),
+            msg: to_binary(&Cw20ExecuteMsg::TransferFrom {
+                owner: self_addr_str,
+                recipient: swapper_addr_str.clone(),
+                amount: out
+            })?,
+            funds: vec![]
+        }
+    );
+
+    
+    Ok(
+        Response::new()
+            .add_message(transfer_from_asset_msg)
+            .add_message(transfer_to_asset_msg)
+            .add_attribute("from_asset", from_asset)
+            .add_attribute("to_asset", to_asset)
+            .add_attribute("amount", amount)
+            .add_attribute("yield", out)
+            .add_attribute("fees", "0")     //TODO
     )
 
 }

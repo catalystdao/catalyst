@@ -115,12 +115,13 @@ pub enum ExecuteMsg {
 
     Withdraw { pool_tokens_amount: Uint128 },
 
-    // Localswap {
-    //     from_asset: String,
-    //     to_asset: String,
-    //     amount: Uint128,
-    //     min_out: Uint128
-    // },
+    Localswap {
+        from_asset: String,
+        to_asset: String,
+        amount: Uint128,
+        min_out: Uint128,
+        approx: bool
+    },
 
     // SwapToUnits {
     //     chain: u32,
