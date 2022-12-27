@@ -117,8 +117,8 @@ pub fn execute(
         ExecuteMsg::Deposit { pool_tokens_amount } => execute_deposit(deps, env, info, pool_tokens_amount),
         ExecuteMsg::Withdraw { pool_tokens_amount } => execute_withdraw(deps, env, info, pool_tokens_amount),
         ExecuteMsg::Localswap {
-            from_asset,
-            to_asset,
+            from_asset, //TODO use asset index? - No need to find the index of the asset + consistent with swap_to_units and swap_from_units
+            to_asset,   //TODO use asset index? - No need to find the index of the asset + consistent with swap_to_units and swap_from_units
             amount,
             min_out,
             approx
