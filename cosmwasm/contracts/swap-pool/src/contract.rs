@@ -12,11 +12,12 @@ use cw20_base::contract::{
     execute_burn, execute_mint, execute_send, execute_transfer, query_balance, query_token_info,
 };
 use cw20_base::state::{MinterData, TokenInfo, TOKEN_INFO};
+use sha3::{Digest, Keccak256};
 
 use crate::calculation_helpers;
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
-use crate::state::{SwapPoolState, STATE};
+use crate::state::{SwapPoolState, STATE, ESCROWS, Escrow};
 
 
 // version info for migration info
@@ -123,6 +124,32 @@ pub fn execute(
             min_out,
             approx
         } => execute_local_swap(deps, env, info, from_asset, to_asset, amount, min_out, approx),
+        ExecuteMsg::SwapToUnits {
+            chain,
+            target_pool,
+            target_user,
+            from_asset,
+            to_asset_index,
+            amount,
+            min_out,
+            approx,
+            fallback_address,
+            calldata
+        } => execute_swap_to_units(
+            deps,
+            env,
+            info,
+            chain,
+            target_pool,
+            target_user,
+            from_asset,
+            to_asset_index,
+            amount,
+            min_out,
+            approx,
+            fallback_address,
+            calldata
+        ),
 
         // CW20 execute msgs - Use cw20-base for the implementation
         ExecuteMsg::Transfer { recipient, amount } => Ok(execute_transfer(deps, env, info, recipient, amount)?),
@@ -545,10 +572,127 @@ pub fn execute_local_swap(
 }
 
 
+pub fn execute_swap_to_units(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    chain: u32,
+    target_pool: String,
+    target_user: String,
+    from_asset: String,
+    to_asset_index: u8,
+    amount: Uint128,
+    min_out: [u64; 4],
+    approx: u8,
+    fallback_address: String,
+    calldata: Vec<u8>
+) -> Result<Response, ContractError> {
+
+    let mut state = STATE.load(deps.storage)?;
+
+    // No need to verify whether from_asset is a valid address, as it must match one of the
+    // addresses saved to the 'assets' vec of the swap pool state (otherwise get_asset_index will fail).
+    let from_asset_index = state.get_asset_index(&from_asset)?;
+
+    // Query the from_asset balance
+    let balance_msg = Cw20QueryMsg::Balance { address: env.contract.address.to_string() };
+    let from_asset_balance: Uint128 = deps.querier.query_wasm_smart(&from_asset, &balance_msg)?;
+
+    let units_x64 = calculation_helpers::out_swap_x64(
+        U256::from(amount.u128()),  //TODO subtract pool fee
+        U256::from(from_asset_balance.u128()),
+        U256::from(state.assets_weights[from_asset_index]),
+        (approx & 1) > 0
+    )?;
+
+    // The hash for the escrow is built only with the data that matters for the escrow (+ the implementation is specific for each implementation)
+    //   - source asset         (32 bytes?)
+    //   - source asset amount  (16 bytes)
+    //   - units                (32 bytes)
+    // To randomize the hash, the following are also included
+    //   - target user          (32 bytes)
+    //   - block number         (8 bytes)
+    //   Note that the fallback user is not included on the hash as it is not sent on the IBC packet
+    //   and hence cannot be recovered for the timeout/ack execution (it is saved to variable)
+
+    let mut hash_data: Vec<u8> = Vec::with_capacity(32 * 3 + 16 + 8);    // Initialize vec with the specified capacity (avoid reallocations)
+    hash_data.extend_from_slice(from_asset.as_bytes());  // TODO make sure it's 32 bytes
+    hash_data.extend_from_slice(&amount.to_be_bytes());
+
+    let mut units_x64_bytes = [0u8; 32];
+    units_x64.to_big_endian(units_x64_bytes.as_mut_slice());
+    hash_data.extend_from_slice(&units_x64_bytes);                       //TODO better way to do this?
+
+    hash_data.extend_from_slice(target_user.as_bytes());
+    hash_data.extend_from_slice(&env.block.height.to_be_bytes());
+
+    let escrow_hash = calc_keccak256(hash_data);
+
+    // Verify and save the fallback_address to the escrow
+    if ESCROWS.has(deps.storage, escrow_hash.as_str()) {
+        return Err(ContractError::NonEmptyEscrow {});
+    }
+
+    let fallback_address = deps.api.addr_validate(fallback_address.as_str())?;
+    ESCROWS.save(deps.storage, &escrow_hash.as_str(), &Escrow{ fallback_address })?;
+
+    // Escrow the assets
+    state.escrowed_assets[from_asset_index] =
+        state.escrowed_assets[from_asset_index].checked_add(amount).map_err(|_| ContractError::ArithmeticError {})?;    //TODO subtract pool fee
+
+
+    // Save swap pool state
+    STATE.save(deps.storage, &state)?;
+
+
+    // Build message to transfer assets from the user to the pool
+    let transfer_assets_msg = CosmosMsg::Wasm(
+        cosmwasm_std::WasmMsg::Execute {
+            contract_addr: from_asset.clone(),
+            msg: to_binary(&Cw20ExecuteMsg::TransferFrom {
+                owner: info.sender.to_string(),
+                recipient: env.contract.address.to_string(),
+                amount
+            })?,
+            funds: vec![]
+        }
+    );
+
+    // TODO Build message to transfer governance fee to governance contract
+    // let transfer_gov_fee_msg = 
+
+    // TODO Build message to invoke the IBC interface    
+    // let invoke_ibc_interface_msg = 
+
+    Ok(
+        Response::new()
+            .add_message(transfer_assets_msg)
+            // .add_message(transfer_gov_fee_msg)
+            // .add_message(invoke_ibc_interface_msg)
+            .add_attribute("target_pool", target_pool)
+            .add_attribute("target_user", target_user)
+            .add_attribute("from_asset", from_asset)
+            .add_attribute("to_asset_index", to_asset_index.to_string())
+            .add_attribute("amount", amount.to_string())
+            .add_attribute("units", format!("{:?}", units_x64.0))   //TODO currently returning an array (made into a string) => return a number
+            .add_attribute("min_out", format!("{:?}", min_out))     //TODO currently returning an array (made into a string) => return a number
+            .add_attribute("escrow_hash", escrow_hash)
+    )
+
+}
+
+
+
 //TODO move this fn somewhere else?
 fn get_pool_token_supply(deps: Deps) -> StdResult<Uint128> {
     let info = TOKEN_INFO.load(deps.storage)?;
     Ok(info.total_supply)
+}
+
+fn calc_keccak256(message: Vec<u8>) -> String {
+    let mut hasher = Keccak256::new();
+    hasher.update(message);
+    format!("{:?}", hasher.finalize().to_vec())
 }
 
 

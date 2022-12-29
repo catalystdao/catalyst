@@ -2,7 +2,7 @@
 use cosmwasm_schema::cw_serde;
 
 use cosmwasm_std::{Addr, Uint128};
-use cw_storage_plus::Item;
+use cw_storage_plus::{Item, Map};
 use fixed_point_math_lib::u256::U256;
 use swap_pool_common::state::DECAYRATE;
 
@@ -11,6 +11,8 @@ use crate::ContractError;
 // TODO move to swap-pool-common?
 // TODO change name + storage_key to avoid possible collisions when importing? (e.g. swap-pool-state) 
 pub const STATE: Item<SwapPoolState> = Item::new("state");
+
+pub const ESCROWS: Map<&str, Escrow> = Map::new("swap-pool-escrows");
 
 #[cw_serde]
 pub struct SwapPoolState {
@@ -146,4 +148,10 @@ impl SwapPoolState {
         Ok(())
     }
 
+}
+
+
+#[cw_serde]
+pub struct Escrow {
+    pub fallback_address: Addr
 }

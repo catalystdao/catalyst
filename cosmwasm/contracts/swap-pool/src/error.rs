@@ -45,6 +45,9 @@ pub enum ContractError {
     #[error("Liquidity swap amount exceeds pool limit.")]
     LiquiditySwapLimitExceeded {},
     
+    #[error("Resulting escrow hash already in use.")]
+    NonEmptyEscrow {},
+    
 
 
     // CW20 Errors

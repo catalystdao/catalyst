@@ -32,6 +32,7 @@ cw20-base = { version = "0.15.1", features = ["library"] }
 schemars = "0.8.10"
 serde = { version = "1.0.145", default-features = false, features = ["derive"] }
 thiserror = { version = "1.0.31" }
+sha3 = "0.10.6"
 swap-pool-common = { path = "../swap-pool-common" }
 fixed-point-math-lib = { path = "../../../rust-common/fixed_point_math_lib" }
 
