@@ -1,17 +1,14 @@
-# Polymer monorepo
+# Catalyst smart contracts monorepo
+This monorepo contains all Catalyst implementations
 
-Polymer DAO is focused on building trustless cross chain infrastructure for DeFi protocols.
+Catalyst is an implementation of the Asynchronous Swaps. A design which enables synchronously and asynchronously priced assets using shared liquidity for a large set of assets, supporting both volatile assets and stable assets. The design allows market markers to compete with exiting (volatile and stable coin) on-chain AMMs and (volatile and stable coin) cross-chain AMMs using the same amount of liquidity as a single competitor.
 
-See subfolders for module specific README and code.
-  - /chain : Smart contracts
-  - /archive : Contains depreciated code
-  - /catalyst : Contains the implementation of a cross chain amm
-  - /nfts : Contains the implementation of a cross chain NFT market
 
-# Polymer chain
-
-Contains all on chain Polymer contracts.
-Whenever mentioned [pnpm](https://pnpm.io) can be replaced by npm .
+Each implementation is contained within its own folder.
+  - /evm : Solidity implementation targeting the Ethereum Virtual Machine.
+  - /rust-common : Contains depreciated code
+  - /simulator : Simulation of the Catalyst logic.
+  - /solana : Rust implementation targeting the Solana Virtual Machine.
 
 ## Dev dependencies
 
@@ -21,7 +18,7 @@ Whenever mentioned [pnpm](https://pnpm.io) can be replaced by npm .
 
 - eth-brownie
 
-  - via [poetry](https://python-poetry.org)  (`brew install poetry`): `poetry install` in `/chain`
+  - via [poetry](https://python-poetry.org)  (`brew install poetry`): `poetry install` in `/`
   - via pip: `pip3 install eth-brownie` (check that your $PATH is properly configured).
 
 - Python dependencies in *./pyproject.toml*. Automatically installed with `poetry install`
@@ -35,7 +32,7 @@ Whenever mentioned [pnpm](https://pnpm.io) can be replaced by npm .
 
 # Introduction to Brownie & EVM Smart Contracts
 
-Brownie wraps smart contract development in a neat package. For this repository, any smart contract written in Solidity `^0.8.9` or Vyper `0.2.16` will automatically be compiled and deploy-ready. To deploy, fund an account loaded into Brownie:
+Brownie wraps smart contract development in a neat package. For this repository, any smart contract written in Solidity or Vyper will automatically be compiled and deploy-ready. To deploy, fund an account loaded into Brownie:
 
 - `brownie accounts --help`
 
@@ -87,37 +84,6 @@ To compile vyper contracts directly, the correct Vyper version should be install
   - via pip: `pip install vyper==<version>`
   - via docker: [vyper.readthedocs.io](https://vyper.readthedocs.io/en/latest/installing-vyper.html#docker)
 
-## Polymer
-
-2 Versions, one written in Vyper 0.2.16 and one written in Solidity 0.8.9
-
-### Polymer.vy
-
-Mintable and Burnable standard ERC20 token.
-
-If approval is set to MAX_UINT256, it saves gas by not updating the approval amount.
-
-### PolymerToken.sol
-
-Exports PolymerToken.
-
-Mintable, Burnable (through OpenZeppelin ERC20Burnable) and supports ERC2612 (through OpenZeppelin draft-ERC20Permit)
-
-## Laboratory
-
-2 Smart contracts, `Reagent.vy` and `Laboratory.vy`. Reagent will hold tokens awaiting distribution.
-
-`Laboratory.vy` provides incentives for users to stake tokens. Every block a fixed amount of Polymer will be withdrawn from `Reagent.vy`. The Polymer will be distributed across all tokens according to their weight. The Polymer not be withdrawn before `_updateExperiment` is called. (for example via `deposit`).
-
-Via `recover` the owner can recover ERC20 not activated. Recovered ERC20s are sent to the contract owner.
-Polymer cannot be recovered from the contract. Unrecoverable tokens can be considered burned if no other recover function is available. 
-
-The contract allows the owner to adjust the minted Polymer per block via `setYield`. 
-
-In `/chain` run:
-
-> brownie test tests/polymer -n auto
-
 # Connecting to devnet
 The VPS does not expose **geth**, so to connect one has to execute the commands on the VPS's localhost.
 
@@ -136,83 +102,3 @@ Then add the 2 networks to brownie:
 > brownie networks add Ethereum polymerase-geth  host=http://127.0.0.1:10000 chainid=1337
 
 > brownie networks add 'Binance Smart Chain' polymerase-bsc-geth  host=http://127.0.0.10001 chainid=1234
-
-The following accounts are used by the devnet:
-
-
-## ETH
-Dispatcher contract address: 0x615FC00cB4160fC02c0297d83E8d6928c53e03a1
-
-PolymerLabs = `accounts.from_mnemonic("sample trigger van weather case attack sleep program fantasy awkward govern scrub")`
-
-ProtocolUser = `accounts.from_mnemonic("pond hurdle must coast current mixture seat victory sheriff record install cheese")`
-
-### Setup devnet (OUTDATED)
-
-First run:
-`brownie console --network polymerase-geth`
-
-```py
-import brownie
-dispatch = "0x615FC00cB4160fC02c0297d83E8d6928c53e03a1"
-assert web3.eth.get_code(dispatch) != web3.eth.get_code(ZERO_ADDRESS), "Dispatch is incorrect"
-acct = accounts.from_mnemonic("sample trigger van weather case attack sleep program fantasy awkward govern scrub")
-assert acct.balance() > 0, "Account is not funded"
-from scripts.easyCatalyst import *
-ps = Catalyst(acct, poolname="psETHEREUM", poolsymbol="psETH", ibcinterface=dispatch)
-ps.crosschaininterface.registerPort({'from': acct})
-ch0 = brownie.convert.datatypes.HexString("0x6368616e6e656c2d310000000000000000000000000000000000000000000000", type_str="bytes32")
-ps.crosschaininterface.setChannelForChain(1234, ch0, {'from':
-acct})
-```
-
-The address of the swap pool on BSC is needed.
-
-```py
-swappool = <...>
-swappool_bytes = brownie.convert.to_bytes(swappool.replace("0x", ""))
-ps.swappool.createConnectionWithChain(1234, swappool_bytes, True, {"from": acct})
-```
-
-The swap
-
-```py
-ps.tokens[0].approve(ps.swappool, 2**256-1, {'from': acct})
-target = accounts.from_mnemonic("wrap diagram afraid install miss speed hidden clip zoo lizard tattoo install")
-target_bytes = brownie.convert.to_bytes(target.address.replace("0x", ""))
-ps.swappool.swapToUnits(1234, swappool_bytes, ps.tokens[0], 0, target_bytes
-, 1 * 10**18, {'from': acct})
-```
-
-
-## BSC
-Dispatcher contract address: 0xa2D36936Aa8Ca2d0312f4B4965B6688f030EcB9C
-
-PolymerLabs = `accounts.from_mnemonic("wrap diagram afraid install miss speed hidden clip zoo lizard tattoo install")`
-
-ProtocolUser = `accounts.from_mnemonic("claw assist lava gravity meadow anger salt luxury crumble flash merge suit")`
-
-### Setup devnet
-
-First run:
-`brownie console --network polymerase-bsc-geth`
-
-```py
-import brownie
-dispatch = "0xa2D36936Aa8Ca2d0312f4B4965B6688f030EcB9C"
-assert web3.eth.get_code(dispatch) != web3.eth.get_code(ZERO_ADDRESS), "Dispatch is incorrect"
-acct = accounts.from_mnemonic("wrap diagram afraid install miss speed hidden clip zoo lizard tattoo install")
-assert acct.balance() > 0, "Account is not funded"
-from scripts.easyCatalyst import *
-ps = Catalyst(acct, poolname="psBINANCE", poolsymbol="psBSC", ibcinterface=dispatch)
-ps.crosschaininterface.registerPort({'from': acct})
-ch0 = brownie.convert.datatypes.HexString("0x6368616e6e656c2d300000000000000000000000000000000000000000000000", type_str="bytes32")
-ps.crosschaininterface.setChannelForChain(1337, ch0, {'from':
-acct})
-```
-The address of the swap pool on ETH is needed.
-```py
-swappool = <...>
-swappool_bytes = brownie.convert.to_bytes(swappool.replace("0x", ""))
-ps.swappool.createConnectionWithChain(1337, swappool_bytes, True, {"from": acct})
-```
