@@ -10,6 +10,8 @@ Each implementation is contained within its own folder.
   - /simulator : Simulation of the Catalyst logic.
   - /solana : Rust implementation targeting the Solana Virtual Machine.
 
+The EVM implementation is used as a reference implementation.
+
 ## Dev dependencies
 
 - ganache-cli
