@@ -6,5 +6,6 @@ pub const CATALYST_IBC_INTERFACE_STATE: Item<CatalystIBCInterfaceState> = Item::
 
 #[cw_serde]
 pub struct CatalystIBCInterfaceState {
-    pub ibc_endpoint: Addr
+    pub admin: Addr,
+    pub default_timeout: u64
 }

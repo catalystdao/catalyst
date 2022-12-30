@@ -23,14 +23,16 @@ pub fn instantiate(
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
     let catalyst_ibc_interface_state = CatalystIBCInterfaceState {
-        ibc_endpoint: deps.api.addr_validate(&msg.ibc_endpoint)?   // Validate ibc_endpoint
+        admin: deps.api.addr_validate(&msg.gov_contract)?,   // Validate ibc_endpoint
+        default_timeout: msg.default_timeout
     };
 
     CATALYST_IBC_INTERFACE_STATE.save(deps.storage, &catalyst_ibc_interface_state)?;
 
     Ok(
         Response::new()
-            .add_attribute("ibc_endpoint", catalyst_ibc_interface_state.ibc_endpoint)
+            .add_attribute("gov_contract", msg.gov_contract)
+            .add_attribute("default_timeout", msg.default_timeout.to_string())
     )
 }
 
@@ -117,17 +119,19 @@ mod tests {
     use super::*;
     use cosmwasm_std::{testing::{mock_dependencies, mock_env, mock_info}, Attribute};
 
-    pub const IBC_ENDPOINT_TEST_ADDR: &str = "inst_addr";
+    pub const SOME_ADDR: &str = "some_addr";
+    pub const GOV_ADDR: &str = "gov_addr";
 
     #[test]
     fn test_instantiate() {
 
         let mut deps = mock_dependencies();
         let env = mock_env();
-        let info = mock_info(IBC_ENDPOINT_TEST_ADDR, &vec![]);
+        let info = mock_info(SOME_ADDR, &vec![]);
       
         let msg = InstantiateMsg {
-            ibc_endpoint: IBC_ENDPOINT_TEST_ADDR.to_string()
+            gov_contract: GOV_ADDR.to_string(),
+            default_timeout: 3600       // 1 hour
         };
       
         // Instantiate contract
@@ -136,7 +140,12 @@ mod tests {
         // Verify response attributes
         assert_eq!(
             response.attributes[0],
-            Attribute { key: "ibc_endpoint".to_string(), value: IBC_ENDPOINT_TEST_ADDR.to_string() }
+            Attribute { key: "gov_contract".to_string(), value: GOV_ADDR.to_string() }
+        );
+
+        assert_eq!(
+            response.attributes[1],
+            Attribute { key: "default_timeout".to_string(), value: 3600.to_string() }
         );
 
         // TODO Verify state

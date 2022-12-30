@@ -2,7 +2,8 @@ use cosmwasm_schema::{cw_serde, QueryResponses};
 
 #[cw_serde]
 pub struct InstantiateMsg {
-    pub ibc_endpoint: String
+    pub gov_contract: String,
+    pub default_timeout: u64
 }
 
 #[cw_serde]
