@@ -1,6 +1,6 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, IbcChannelOpenMsg, IbcChannelConnectMsg, IbcBasicResponse, IbcChannelCloseMsg, IbcPacketReceiveMsg, IbcReceiveResponse, IbcPacketAckMsg, IbcPacketTimeoutMsg};
+use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
 use cw2::set_contract_version;
 
 use crate::error::ContractError;
@@ -52,67 +52,6 @@ pub fn query(_deps: Deps, _env: Env, _msg: QueryMsg) -> StdResult<Binary> {
     unimplemented!()
 }
 
-
-// IBC entrypoints
-
-#[cfg_attr(not(feature = "library"), entry_point)]
-pub fn ibc_channel_open(
-    _deps: DepsMut,
-    _env: Env,
-    _msg: IbcChannelOpenMsg
-) -> StdResult<()> {
-    unimplemented!();
-}
-
-
-#[cfg_attr(not(feature = "library"), entry_point)]
-pub fn ibc_channel_connect(
-    _deps: DepsMut,
-    _env: Env,
-    _msg: IbcChannelConnectMsg,
-) -> StdResult<IbcBasicResponse> {
-    unimplemented!();
-}
-
-
-#[cfg_attr(not(feature = "library"), entry_point)]
-pub fn ibc_channel_close(
-    _deps: DepsMut,
-    _env: Env,
-    _msg: IbcChannelCloseMsg,
-) -> StdResult<IbcBasicResponse> {
-    unimplemented!();
-}
-
-
-#[cfg_attr(not(feature = "library"), entry_point)]
-pub fn ibc_packet_receive(
-    _deps: DepsMut,
-    _env: Env,
-    _msg: IbcPacketReceiveMsg,
-) -> StdResult<IbcReceiveResponse> {
-    unimplemented!();
-}
-
-
-#[cfg_attr(not(feature = "library"), entry_point)]
-pub fn ibc_packet_ack(
-    _deps: DepsMut,
-    _env: Env,
-    _msg: IbcPacketAckMsg,
-) -> StdResult<IbcBasicResponse> {
-    unimplemented!();
-}
-
-
-#[cfg_attr(not(feature = "library"), entry_point)]
-pub fn ibc_packet_timeout(
-    _deps: DepsMut,
-    _env: Env,
-    _msg: IbcPacketTimeoutMsg,
-) -> StdResult<IbcBasicResponse> {
-    unimplemented!();
-}
 
 #[cfg(test)]
 mod tests {
