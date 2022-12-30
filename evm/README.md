@@ -9,10 +9,11 @@ The EVM implementation of Catalyst is used as a reference implementation for oth
 - `SwapPoolAmplified.sol` : Extends `SwapPoolCommon.sol` with the price curve $P(w) = \frac{1 - \theta}{w^\theta}$.
 - `SwapPoolFactory.sol` : Simplifies deployment of swap pools through Open Zeppelin's Clones. Minimal proxies which uses delegate calls to the deployed contracts. This significantly reduces pool deployment cost. 
 
-
 ## FixedPointMath.sol
 
-Implements: 
+The mathematical library used to handle fixed point numbers. Fixed point numbers are  implemented transparently in `uint256` or `int128` by multiplying integers by $2^{64}$, such that $(4)_{64} = 4 · 2^{64} = 73,786,976,294,838,206,464$. Similarly, decimal numbers can be represented: $(0.375)_{64} = 0.375 · 2^{64} = 6,917,529,027,641,081,856$. The mathematical library contains functions which handle multiplication and division that could overflow in `uint256`.
+
+The library enables computation of: 
 
 - `log2X64`: Computes $\log_2$ for X64 input and output.
 
@@ -21,10 +22,10 @@ Implements:
 - `invp2X64`: Computes $2^{-x}$ for X64 input and output.
 
 - `fpowX64`: Computes $x^y$ for X64 inputs and outputs. Uses the identity $2^{y · \log_2x}$
-- 
+
 - `invfpowX64`: Computes $x^{-y}$ for X64 inputs and outputs. Uses the identity $2^{-y · \log_2x}$
 
-Power function only works for $base ≥ 1$. If $base <> 1$ use the identity: $base^p = \left(\frac{1}{base}\right)^{-p}$.
+$log_2$ only works for $x ≥ 1$. If $x < 1$, use the identity: $log_2(x) = - log_2(x^{-1}).$ Since $x^y$ is implemented through $log_2$, the similar identity can be used: $x^p = \left(\frac{1}{x}\right)^{-p}$.
 
 ## CatalystIBCInterface.sol
 
