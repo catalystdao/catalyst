@@ -29,7 +29,7 @@ $log_2$ only works for $x ≥ 1$. If $x < 1$, use the identity: $log_2(x) = - lo
 
 ## CatalystIBCInterface.sol
 
-An intermediate contract between swap pools and the message router. This contract is specifically designed to sit between Catalyst swap pools and and IBC compliant message router.
+An intermediate contract between swap pools and the message router. This contract is specifically designed to sit between Catalyst swap pools and an IBC compliant message router.
 
 Wraps the cross-chain calls into a byte array. The byte array depends on the message purpose. The message purpose can be found in the first byte of the transaction:
 
@@ -74,7 +74,6 @@ The calldata target should be encoded within the first 32 bytes of _customData.
 ```
 
 
-
 # Example of the data structure:
 ```py
 import brownie
@@ -93,17 +92,71 @@ _U = int(1e18*251251*2**64)
 
 ## SwapPoolCommon.sol
 
-Deployed delegate proxies for `SwapPool.vy`
+A contract abstract, implementing logic which doesn't depend on the swap curve. Among these are:
+
+- Security limit logic
+- Pool administration
+- Connection management
+- Escrow logic
+
+Swap Pools can inherit `SwapPoolCommon.sol` to automatically be compliant with IBC callbacks and the security limit. 
+
+By inheriting `SwapPoolCommon.sol`, Swap Pools are deployed inactive:
+```solidity
+constructor() ERC20("", "") {
+    _CHECK = true; // <----
+}
+```
+which breaks pool setup:
+```solidity
+function setupBase(
+    string calldata name_,
+    string calldata symbol_,
+    address chaininterface,
+    address setupMaster
+) internal {
+    // The pool is only designed to be used by a proxy and not as a standalone.
+    // as a result self.check is set to TRUE on init, to stop anyone from using
+    // the pool without a proxy.
+    require(!_CHECK); // <----
+    ...
+}
+```
+This makes it necessary to deploy a minimal proxy which uses the pool logic via delegateCall.
+
 
 ## SwapPool.sol
 
-Provides `SwapPool.vy` with a Polymerase interface.
+Extends `SwapPoolCommon.sol` with the price curve $P(w) = \frac{W}{w \ln(2)}$. This approximates the constant product AMM, also called $x \cdot y = k$. The swap curve is known from Uniswap v2 and Balancer.
 
-The data is the same between swap implementation (amplified/non-amplified). Data structure can be found as docstrings.
+The important AMM related equations are:
+
+Marginal price: $\lim_{x \to 0} y_\beta/x_\alpha = \frac{\beta_t}{\alpha_t}  \frac{W_\alpha}{W_\beta}$
+
+SwapToAndFromUnits: $y_\beta = \beta_t \cdot \left(1-\left(\frac{\alpha_t+x}{\alpha_t}\right)^{-\frac{W_\alpha}{W_\beta}}\right)$
+
+SwapToUnits: $U= W_\alpha \cdot \log_2\left(\frac{\alpha_t+x_\alpha}{\alpha_t}\right)$
+
+SwapFromUnits: $y_\beta = \beta_t \cdot \left(1-2^{-\frac{U}{W_\beta}}\right)$
+
+Invariant: $K = \prod_{i \in \{\alpha, \beta, \dots\}} i_t^{W_i}$
 
 ## SwapPoolAmplified.sol
 
+Extends `SwapPoolCommon.sol` with the price curve $P(w) = \frac{1}{w^\theta} \cdot (1-\theta)$. This flattens the swap curve such that the marginal price is closer to 1:1. The flattening depends on $\theta$, where $\theta = 0$ always delivers 1:1 swaps. This is similar to Stable Swap except that the swap is computed asynchronously instead of synchronously.
+
+The important AMM related equations are:
+
+Marginal price: $\lim_{x \to 0} y_\beta/x_\alpha = \frac{\left(\alpha_t W_\alpha\right)^\theta}{\left(\beta_t W_\beta\right)^\theta} \frac{W_\beta}{W_\alpha}$
+
+SwapToAndFromUnits: $y_\beta=\beta_t \left(1-\left(\frac{(\beta \cdot W_\beta)^{1-\theta}_t - \left(\left(\alpha_t \cdot W_\alpha +x_\alpha \cdot W_\alpha \right)^{1-\theta} - \left(\alpha_t\cdot W_\alpha\right)^{1-\theta}\right) }{\left(\beta_t \cdot W_{\beta}\right)^{1-\theta}}\right)^{\frac{1}{1-\theta}}\right)$
+
+SwapToUnits: $U=\left((\alpha_t  \cdot W_\alpha + x_\alpha  \cdot W_\alpha)^{1-\theta} - \left(\alpha_t  \cdot W_\alpha \right)^{1-\theta} \right)$
+
+SwapFromUnits: $y_\beta = \beta_t \cdot \left(1 -\left(\frac{\left(\beta_t \cdot W_\beta\right)^{1-\theta} - U }{\left(\beta_t \cdot W_\beta\right)^{1-\theta}}\right)^{\frac{1}{1-\theta}}\right)$
+
+Invariant: $K = \sum_{i \in \{\alpha, \beta, \dots\}} i^{1-\theta} W_i^{1-\theta}$
 
 ## SwapPoolFactory.sol
 
-
+Both `SwapPool.sol` and `SwapPoolFactory.sol` are deployed disabled as a result of inheriting `SwapPoolCommon.sol`. To ease pool creation, `SwapPoolFactory.sol` wraps the deployment of minimal proxies and the associated setup of the Swap Pool in a single call.

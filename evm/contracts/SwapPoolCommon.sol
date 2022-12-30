@@ -133,12 +133,12 @@ abstract contract CatalystSwapPoolCommon is
         address chaininterface,
         address setupMaster
     ) internal {
-        _mint(setupMaster, ONE);
-        _onlyLocal = chaininterface == address(0);
         // The pool is only designed to be used by a proxy and not as a standalone.
         // as a result self.check is set to TRUE on init, to stop anyone from using
         // the pool without a proxy.
         require(!_CHECK); // dev: Pool Already setup.
+        _mint(setupMaster, ONE);
+        _onlyLocal = chaininterface == address(0);
         _CHECK = true;
 
         _chaininterface = chaininterface;
