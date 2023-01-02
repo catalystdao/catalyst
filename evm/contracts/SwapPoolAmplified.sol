@@ -555,7 +555,8 @@ contract CatalystSwapPoolAmplified is
         // If the price in the group is 1:1.
         { // We don't need weightedAssetBalanceSum again.
             uint256 weightedAssetBalanceSum = 0;
-            for (uint256 it = 0; it < NUMASSETS; it++) {
+            uint256 it;
+            for (it = 0; it < NUMASSETS; it++) {
                 address token = _tokenIndexing[it];
                 if (token == address(0)) break;
                 tokenIndexed[it] = token;
@@ -570,7 +571,7 @@ contract CatalystSwapPoolAmplified is
                 ampWeightAssetBalances[it] = wab;  // Store since it is an expensive calculation.
                 weightedAssetBalanceSum += wab;
             }
-            walpha_0_ampped = weightedAssetBalanceSum - _unitTracker;
+            walpha_0_ampped = (weightedAssetBalanceSum - _unitTracker)/it;
         }
 
 
@@ -621,7 +622,8 @@ contract CatalystSwapPoolAmplified is
         // If the price in the group is 1:1.
         { // We don't need weightedAssetBalanceSum again.
             uint256 weightedAssetBalanceSum = 0;
-            for (uint256 it = 0; it < NUMASSETS; it++) {
+            uint256 it;
+            for (it = 0; it < NUMASSETS; it++) {
                 address token = _tokenIndexing[it];
                 if (token == address(0)) break;
                 tokenIndexed[it] = token;
@@ -636,7 +638,7 @@ contract CatalystSwapPoolAmplified is
                 ampWeightAssetBalances[it] = wab;  // Store since it is an expensive calculation.
                 weightedAssetBalanceSum += wab;
             }
-            walpha_0_ampped = weightedAssetBalanceSum - _unitTracker;
+            walpha_0_ampped = (weightedAssetBalanceSum - _unitTracker)/it;
         }
 
 
@@ -1046,7 +1048,8 @@ contract CatalystSwapPoolAmplified is
         // If the price in the group is 1:1.
         { // We don't need weightedAssetBalanceSum again.
             uint256 weightedAssetBalanceSum = 0;
-            for (uint256 it = 0; it < NUMASSETS; it++) {
+            uint256 it;
+            for (it = 0; it < NUMASSETS; it++) {
                 address token = _tokenIndexing[it];
                 if (token == address(0)) break;
                 tokenIndexed[it] = token;
@@ -1061,7 +1064,7 @@ contract CatalystSwapPoolAmplified is
                 ampWeightAssetBalances[it] = wab;  // Store since it is an expensive calculation.
                 weightedAssetBalanceSum += wab;
             }
-            walpha_0_ampped = weightedAssetBalanceSum - _unitTracker;
+            walpha_0_ampped = (weightedAssetBalanceSum - _unitTracker)/it;
         }
 
 
