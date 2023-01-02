@@ -11,7 +11,7 @@ The EVM implementation of Catalyst is used as a reference implementation for oth
 
 ## FixedPointMath.sol
 
-The mathematical library used to handle fixed point numbers. Fixed point numbers are  implemented transparently in `uint256` or `int128` by multiplying integers by $2^{64}$, such that $(4)_{64} = 4 · 2^{64} = 73,786,976,294,838,206,464$. Similarly, decimal numbers can be represented: $(0.375)_{64} = 0.375 · 2^{64} = 6,917,529,027,641,081,856$. The mathematical library contains functions which handle multiplication and division that could overflow in `uint256`.
+The mathematical library used to handle fixed point numbers. Fixed point numbers are  implemented transparently in `uint256` or `int128` by multiplying integers by $2^{64}$, such that $(4)_{64} = 4 \cdot 2^{64} = 73,786,976,294,838,206,464$. Similarly, decimal numbers can be represented: $(0.375)_{64} = 0.375 \cdot 2^{64} = 6,917,529,027,641,081,856$. The mathematical library contains functions which handle multiplication and division that could overflow in `uint256`.
 
 The library enables computation of: 
 
@@ -21,9 +21,9 @@ The library enables computation of:
 
 - `invp2X64`: Computes $2^{-x}$ for X64 input and output.
 
-- `fpowX64`: Computes $x^y$ for X64 inputs and outputs. Uses the identity $2^{y · \log_2x}$
+- `fpowX64`: Computes $x^y$ for X64 inputs and outputs. Uses the identity $2^{y \cdot \log_2x}$
 
-- `invfpowX64`: Computes $x^{-y}$ for X64 inputs and outputs. Uses the identity $2^{-y · \log_2x}$
+- `invfpowX64`: Computes $x^{-y}$ for X64 inputs and outputs. Uses the identity $2^{-y \cdot \log_2x}$
 
 $log_2$ only works for $x ≥ 1$. If $x < 1$, use the identity: $log_2(x) = - log_2(x^{-1}).$ Since $x^y$ is implemented through $log_2$, the similar identity can be used: $x^p = \left(\frac{1}{x}\right)^{-p}$.
 
@@ -129,34 +129,89 @@ This makes it necessary to deploy a minimal proxy which uses the pool logic via 
 
 Extends `SwapPoolCommon.sol` with the price curve $P(w) = \frac{W}{w \ln(2)}$. This approximates the constant product AMM, also called $x \cdot y = k$. The swap curve is known from Uniswap v2 and Balancer.
 
-The important AMM related equations are:
-
-Marginal price: $\lim_{x \to 0} y_\beta/x_\alpha = \frac{\beta_t}{\alpha_t}  \frac{W_\alpha}{W_\beta}$
-
-SwapToAndFromUnits: $y_\beta = \beta_t \cdot \left(1-\left(\frac{\alpha_t+x}{\alpha_t}\right)^{-\frac{W_\alpha}{W_\beta}}\right)$
-
-SwapToUnits: $U= W_\alpha \cdot \log_2\left(\frac{\alpha_t+x_\alpha}{\alpha_t}\right)$
-
-SwapFromUnits: $y_\beta = \beta_t \cdot \left(1-2^{-\frac{U}{W_\beta}}\right)$
-
-Invariant: $K = \prod_{i \in \{\alpha, \beta, \dots\}} i_t^{W_i}$
-
 ## SwapPoolAmplified.sol
 
 Extends `SwapPoolCommon.sol` with the price curve $P(w) = \frac{1}{w^\theta} \cdot (1-\theta)$. This flattens the swap curve such that the marginal price is closer to 1:1. The flattening depends on $\theta$, where $\theta = 0$ always delivers 1:1 swaps. This is similar to Stable Swap except that the swap is computed asynchronously instead of synchronously.
 
-The important AMM related equations are:
-
-Marginal price: $\lim_{x \to 0} y_\beta/x_\alpha = \frac{\left(\alpha_t W_\alpha\right)^\theta}{\left(\beta_t W_\beta\right)^\theta} \frac{W_\beta}{W_\alpha}$
-
-SwapToAndFromUnits: $y_\beta=\beta_t \left(1-\left(\frac{(\beta \cdot W_\beta)^{1-\theta}_t - \left(\left(\alpha_t \cdot W_\alpha +x_\alpha \cdot W_\alpha \right)^{1-\theta} - \left(\alpha_t\cdot W_\alpha\right)^{1-\theta}\right) }{\left(\beta_t \cdot W_{\beta}\right)^{1-\theta}}\right)^{\frac{1}{1-\theta}}\right)$
-
-SwapToUnits: $U=\left((\alpha_t  \cdot W_\alpha + x_\alpha  \cdot W_\alpha)^{1-\theta} - \left(\alpha_t  \cdot W_\alpha \right)^{1-\theta} \right)$
-
-SwapFromUnits: $y_\beta = \beta_t \cdot \left(1 -\left(\frac{\left(\beta_t \cdot W_\beta\right)^{1-\theta} - U }{\left(\beta_t \cdot W_\beta\right)^{1-\theta}}\right)^{\frac{1}{1-\theta}}\right)$
-
-Invariant: $K = \sum_{i \in \{\alpha, \beta, \dots\}} i^{1-\theta} W_i^{1-\theta}$
-
 ## SwapPoolFactory.sol
 
 Both `SwapPool.sol` and `SwapPoolFactory.sol` are deployed disabled as a result of inheriting `SwapPoolCommon.sol`. To ease pool creation, `SwapPoolFactory.sol` wraps the deployment of minimal proxies and the associated setup of the Swap Pool in a single call.
+
+# EVM Development
+
+This repository uses Brownie for smart contract development, testing and deployment. Brownie can handle multiple versions of Solidity and Vyper and will automatically combine contracts to be deploy-ready. Brownie depends on `ganache`.
+
+## Dev dependencies
+
+- ganache-cli
+  
+  - `pnpm install -g ganache`
+
+- eth-brownie
+  
+  - via [poetry](https://python-poetry.org)  (`brew install poetry`): `poetry install` in `/`
+  - via pip: `pip3 install eth-brownie` (check that `$PATH` is properly configured).
+
+- Python dependencies in *./pyproject.toml*. Automatically installed with `poetry install`
+  
+  - Note: You can set the poetry python version via `poetry env use python3.9` for example.
+
+- Blockchain API
+  
+  - Default: [alchemy](https://www.alchemy.com), export key to `$ALCHEMY_API_TOKEN`
+  
+  - Alt: [Infura](https://infura.io), edit *./.brownie/network-config.yaml* with Infura RPC.
+
+# Introduction to Brownie 
+
+Brownie wraps smart contract development in a neat package. To deploy, fund an account loaded into Brownie:
+
+- `brownie accounts --help`
+  
+  - `brownie accounts new <NAME OF ACCOUNT>`
+    
+    - Example: `brownie accounts new deployment` or `brownie accounts new 0` and provide a privatekey.
+  
+  - `brownie generate new <NAME OF ACCOUNT>`
+
+- Fund the account generated by brownie. [Kovan faucet](https://github.com/kovan-testnet/faucet), [Rinkeby faucet](https://faucet.rinkeby.io).
+
+Open the brownie dev console:
+
+`brownie console --network <mainnet/kovan/development>`
+
+and load the account:
+
+```
+acct = accounts.load('<NAME OF ACCOUNT>')
+SC = SmartContractName.deploy(*init_vars, {'from': acct})
+SC
+```
+
+The smart contract has now been deployed. Deployment scripts can be found in `./scripts/deploy/*`
+
+## Contracts
+
+Contracts are stored in *./contracts*. Contracts compiled by brownie, `brownie compile` are stored in *./build*. Brownie will automatically download compatible solidity and vyper versions for internal usage.
+
+### Solidity
+
+To compile solidity contracts directly (not through Brownie), one has to install:
+
+- Solidity
+  
+  - via brew: `brew tap ethereum/ethereum` then `brew install solidity`
+  - via npm: `pnpm install -g solc` (installs solcjs)
+  - [soliditylang.org](https://docs.soliditylang.org/en/latest/installing-solidity.html)
+
+- `pnpm install`
+
+- `solc <path-to-contract> --base-path node_modules`
+
+### Vyper
+
+To compile vyper contracts directly, the correct Vyper version should be installed independently of this project. eth-brownie depends on the newest version of Vyper, which the contracts might not be compatible with.
+
+- Vyper
+  - via pip: `pip install vyper==<version>`
+  - via docker: [vyper.readthedocs.io](https://vyper.readthedocs.io/en/latest/installing-vyper.html#docker)

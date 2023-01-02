@@ -13,7 +13,8 @@ Each implementation is contained within its own folder.
 
 The EVM implementation is used as a reference implementation.
 
-The following section is best viewed on a MarkDown reader which render $\LaTeX$, like VS code.
+The following section is best viewed on a MarkDown reader which supports inline and block $\LaTeX$ equations, like Github or VS code.
+
 # On Asset Pricing:
 
 Let $P(w)$ be a non-increasing function representing the marginal price for a token as a function of the current pool balance, $w$. The value of $\Delta w$ can then be naively calculated by multiplying the starting price by the purchase amount.
@@ -90,24 +91,29 @@ Using the Catalyst Equation with the price curves, core mathematical equations c
 
 ### On Mathematics
 
-**TODO, rewrite**
-Approximation to reduce gas cost & swap accuracy for small swaps.
+Because the swap equations contains $log_2$ and fractional powers, there will be numerical errors. At the same time, the numerical methods used to compute $log_2$ are expensive. As a result, it can make sense to approximate the swap curve rather than using the exact mathematical formulas.
+
+The idea is to offer all assets at a constant price, which is the price at the end of the action. When assets are sold to the pool, the price is constant at $P_\alpha(\alpha_t + x)$. Since $P$ is non-increasing: $P_\alpha(\alpha_t) > P_\alpha(\alpha_t + x)$ and the user gets the lowest price for their assets. Likewise, when assets are purchased: $P_\beta(\beta_t) < P_\beta(\beta_t - y)$. This gives rise to the equations:
+
+SwapToUnits: $U=\frac{W_\alpha}{(\alpha_t+x_\alpha)\cdot\ln(2)}\cdot x_\alpha$
+
+SwapFromUnits: $y_\beta=\frac{\beta_t}{\frac{W_\beta}{U\cdot\ln(2)}+1}$
+
+Notice these equations are only valid for volatile tokens: $P(w) = \frac{W_\alpha}{w \cdot \ln(2)}$. This is because deriving SwapFromUnits requires solving $U = P(\beta_t - y_\beta) \cdot y_\beta$ for $y_\beta$. For the amplified price curve, this is difficult and neither cheaper nor more accurate than the alternative. 
+
+An alternative approximation is using a linear line to approximate the price. For selling, the tangent is used and for buying a line connecting starting and end price is used. However, these methods are more gas intensive with only minor improvement to the approximation.
+
+
 
 ## On deposits and withdrawals.
 
-**TODO, rewrite**
+When depositing and withdrawing, the net debt distribution within a pool system, *a group*, must be maintained. Let $\alpha_0, \beta_0, ...$ be a reference to net system assets. Then the outstanding units is $U[\alpha_0] = \int_{\alpha_{0}}^{\alpha_{t}}P_{\alpha} \! \left(w\right)d w$. Keeping the outstanding units constant:
 
-When depositing and withdrawing, the net debt distribution within the pool system, group, must be maintained. Let $\alpha_0, \beta_0, ...$ be a reference to net system assets. Then the outstanding units is $\int_{\alpha_{0}}^{\alpha_{t}}P_{\alpha} \! \left(w\right)d w$ . Keep the outstanding units invariant:
+$$U[\alpha_0] = \int_{\alpha_{0}}^{\alpha_{t}}P \! \left(w\right)d w = \int_{\alpha_{0} +pt_\alpha}^{\alpha_{t} +tk_\alpha}P \! \left( w\right)d w$$
 
-$$
- \begin{equation}
- U[\alpha_0] = \int_{\alpha_{0}}^{\alpha_{t}}P \! \left(w\right)d w = \int_{\alpha_{0} +pt_\alpha}^{\alpha_{t} +tk_\alpha}P \! \left( w\right)d w \end{equation}
-$$
+Where $P(w)$ is the pricing function, $\alpha_t$ is the current asset balance, $tk_\alpha$ is the asset input amount, $\alpha_0$ is net asset reference, and $pt$ is the net asset reference output amount.
 
-Where $P(w)$ is the pricing function, $\alpha_t$ is the current asset balance, $tk_\alpha$ is the asset input amount, $\alpha_0$ is net asset reference, and $pt$ is the net asset reference output amount. Solving the integrals yields the relations:
-**TODO, rewrite**
-
-In a pool with a price function such that $\int_0^\tau P(w) \ dw < \infty$  for any $\tau > 0$, debt maintenance is slightly different. Intuitively, this is because when tokens are swapped, the value leaves one and enters another. However, when the curve is tight enough that there is a limited amount of liquidity on one side, the pool can Is *emptied* . If one-sided is empty, the other side shouldn’t own 100%. Examine the debt maintenance equation:
+In a pool with a price function such that $\int_0^\tau P(w) \ dw < \infty$  for any $\tau > 0$, debt maintenance is slightly different. Intuitively, this is because when tokens are swapped, the value leaves one and enters another. However, when the curve is tight enough that there is a limited amount of liquidity on one side, the pool can Is *emptied*. If one-sided is empty, the other side shouldn’t own 100%. Examine the debt maintenance equation:
 
 $$
  U[\alpha_0] = \int_{w\alpha_{0}}^{w\alpha_{t}}P^\theta \! \left(w\right)d w = \int_{w\alpha_{0} +wpt_\alpha}^{w\alpha_{t} +wtk_\alpha}P^\theta \! \left( w\right)d w$$
@@ -122,83 +128,10 @@ $$0< U[\alpha_0'] = \int_{0}^{w\alpha_{t} +wtk_\alpha}P^\theta \! \left( w\right
 
 However, since $0<\int_0^\tau P^\theta(w) \ dw < \infty$ for any $\tau > 0$ we can find $\tau > 0$ such that $U[\alpha_0'] = \int_0^\tau P^\theta(w) \ dw$. The result is that $0 < \tau = w\alpha_t+wtk_\alpha, \ tk_\alpha \neq - \alpha_t$ and tokens are left in the pool.
 
+# Development
 
-## Dev dependencies
 
-- ganache-cli
-  
-  - `pnpm install -g ganache`
-
-- eth-brownie
-  
-  - via [poetry](https://python-poetry.org)  (`brew install poetry`): `poetry install` in `/`
-  - via pip: `pip3 install eth-brownie` (check that your $PATH is properly configured).
-
-- Python dependencies in *./pyproject.toml*. Automatically installed with `poetry install`
-  
-  - Note: You can set the poetry python version via `poetry env use python3.9` for example.
-
-- Blockchain API
-  
-  - Default: [alchemy](https://www.alchemy.com), export key to `$ALCHEMY_API_TOKEN`
-  
-  - Alt: [Infura](https://infura.io), edit *./.brownie/network-config.yaml* with Infura RPC.
-
-# Introduction to Brownie & EVM Smart Contracts
-
-Brownie wraps smart contract development in a neat package. For this repository, any smart contract written in Solidity or Vyper will automatically be compiled and deploy-ready. To deploy, fund an account loaded into Brownie:
-
-- `brownie accounts --help`
-  
-  - `brownie accounts new <NAME OF ACCOUNT>`
-    
-    - Example: `brownie accounts new deployment` or `brownie accounts new 0` and provide a privatekey.
-  
-  - `brownie generate new <NAME OF ACCOUNT>`
-
-- Fund the account generated by brownie. [Kovan faucet](https://github.com/kovan-testnet/faucet), [Rinkeby faucet](https://faucet.rinkeby.io).
-
-Open the brownie dev console:
-
-`brownie console --network <mainnet/kovan/development>`
-
-and load the account:
-
-```
-acct = accounts.load('<NAME OF ACCOUNT>')
-SC = SmartContractName.deploy(*init_vars, {'from': acct})
-SC
-```
-
-The smart contract has now been deployed. Deployment scripts can be found in `./scripts/deploy/*`
-
-# Contracts
-
-Contracts are stored in *./contracts*. Contracts compiled by brownie, `brownie compile` are stored in *./build*. Brownie will automatically download compatible solidity and vyper versions for internal usage.
-
-### Solidity
-
-To compile solidity contracts directly (not through Brownie), one has to install:
-
-- Solidity
-  
-  - via brew: `brew tap ethereum/ethereum` then `brew install solidity`
-  - via npm: `pnpm install -g solc` (installs solcjs)
-  - [soliditylang.org](https://docs.soliditylang.org/en/latest/installing-solidity.html)
-
-- `pnpm install`
-
-- `solc <path-to-contract> --base-path node_modules`
-
-### Vyper
-
-To compile vyper contracts directly, the correct Vyper version should be installed independently of this project. eth-brownie depends on the newest version of Vyper, which the contracts might not be compatible with.
-
-- Vyper
-  - via pip: `pip install vyper==<version>`
-  - via docker: [vyper.readthedocs.io](https://vyper.readthedocs.io/en/latest/installing-vyper.html#docker)
-
-# Connecting to devnet
+## Devnet
 
 The VPS does not expose **geth**, so to connect one has to execute the commands on the VPS's localhost.
 
