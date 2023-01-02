@@ -15,7 +15,7 @@ The EVM implementation is used as a reference implementation.
 
 The following section is best viewed on a MarkDown reader which supports inline and block $\LaTeX$ equations, like Github or VS code.
 
-# On Asset Pricing:
+# On Asset Pricing
 
 Let $P(w)$ be a non-increasing function representing the marginal price for a token as a function of the current pool balance, $w$. The value of $\Delta w$ can then be naively calculated by multiplying the starting price by the purchase amount.
 

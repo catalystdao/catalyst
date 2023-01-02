@@ -44,51 +44,130 @@ Context Flag
 	  7: Unused
 ```
 
-0x00: Asset Swap
+Generally, the message format is:
+```jsx
+0 _context : Bytes[1]  # Used by CII to unpack data.
+1-32 _fromPool : bytes32  # The sending pool. Since CCI sits between the pools and the message router, the CCI cannot infer the pool from the message router.
+33-64 _pool : bytes32  # The receiving pool. The payload target which the other CCI should deliver the data to.
+...
+```
+
+Catalyst v1 implements 2 type of swaps, Asset swaps and Liquidity Swaps.
+
+### 0x00: Asset Swap
+
+If `(_context & 0x01) == 0`, then the message is an asset swap. It could be called a cross-chain asset swap but there is nothing to stop a user from Asset Swapping between 2 pools on the same chain. As a result, it would be more fitting to call it cross-pool swap.
+
+The Asset Swap implements the general message format:
 
 ```jsx
-0 _context : Bytes[1]  # Used by CCI to detect how to unpack data
-1-32 _fromPool : bytes32  # The origin pool
-33-64 _pool : bytes32  # The target pool. Called by CCI on the other end.
-65-96 _who : bytes32  # The recipient of the assets on the other end.
+0 _context : Bytes[1]
+1-32 _fromPool : bytes32
+33-64 _pool : bytes32
+65-96 _who : bytes32  # The recipient of the assets on the target chain.
 97-128 _U : uint256  # Number of units
 129 _assetIndex : uint8  # Asset index on target pool
-130-161 _minOut : uint256  # Minimum number of output assets.
+130-161 _minOut : uint256  # Minimum number of output assets. If the pool returns less, the transaction should revert.
 162-193 _escrowAmount : uint256  # The number of tokens initially used.
 194-225 _escrowToken : bytes32  # The token initially used.
-226-227 _customDataLength : uint16  # If custom data is passed.
+226-227 _customDataLength : uint16  # If custom data is passed, then length.
 228-259+_customDataLength-32 _customData : bytes...  # The bytes passed to the custom Target.
 The calldata target should be encoded within the first 32 bytes of _customData.
 ```
+The message is hashed on the sending chain. This allows the escrow storage to be moved into the cross-chain message, only true escrow information can be submitted to the escrow logic.
 
-0x01: Liquidity Swap
+### 0x01: Liquidity Swap
+If `(_context & 0x01) == 1`, then the message is an liquidity swap. The purpose of liquidity swaps is to reduce the cost of acquiring an even distribution of liquidity. While the asset cost (through slippage) would be the same as getting an even distribution manually, the gas cost and number of interactions required could be substantially less.
+
+This is done by converting the 4 actions:
+1. Withdraw tokens
+2. Convert tokens to units and transfer to target pool
+3. Convert units to an even mix of tokens
+4. Deposit the tokens into the pool.
+
+into a single transaction.
+
+
+The Liquidity Swap implements the general message format:
 
 ```jsx
-0 _context : Bytes[1]  # Used by CCI to detect how to unpack data
-1-32 _fromPool : bytes32  # Where the call came from
-33-64 _pool : bytes32  # The target pool. Called by CCI on the other end.
-65-96 _who : bytes32  # The recipient of the assets on the other end.
-97-128 _LU : uint256  # Number of liquidity units
-129-160 _minOut : uint256
-161-192 _escrowAmount : uint256  # The number of tokens initially used.
+0 _context : Bytes[1] 
+1-32 _fromPool : bytes32
+33-64 _pool : bytes32
+65-96 _who : bytes32  # The recipient of the pool tokens on the target chain.
+97-128 _LU : uint256  # Number of units
+129-160 _minOut : uint256  # Minimum number of pool tokens minted to `_who`. If the pool returns less, the transaction should revert.
+161-192 _escrowAmount : uint256  # The number of pools tokens initially used.
 ```
 
+### Encoding or decoding a Catalyst message
 
-# Example of the data structure:
+Using brownie, the below code example shows how to encode and decode a Catalyst message.
+
 ```py
-import brownie
-_chain = 1
-_pool = brownie.convert.to_bytes("0x602C71e4DAC47a042Ee7f46E0aee17F94A3bA0B6".replace("0x00", ""))
-_asset = 1
-_who = brownie.convert.to_bytes("0x66aB6D9362d4F35596279692F0251Db635165871".replace("0x00", ""))
-_U = int(1e18*251251*2**64)
+from brownie import convert, ZERO_ADDRESS
+
+def payloadConstructor(
+    _fromPool,
+    _toPool,
+    _who,
+    _U,
+    _assetIndex=0,
+    _minOut=0,
+    _escrowAmount=0,
+    _escrowToken=ZERO_ADDRESS,
+    _context=convert.to_bytes(0, type_str="bytes1"),
+):
+    return (
+        _context
+        + convert.to_bytes(_fromPool, type_str="bytes32")
+        + convert.to_bytes(_toPool, type_str="bytes32")
+        + _who
+        + convert.to_bytes(_U, type_str="bytes32")
+        + convert.to_bytes(_assetIndex, type_str="bytes1")
+        + convert.to_bytes(_minOut, type_str="bytes32")
+        + convert.to_bytes(_escrowAmount, type_str="bytes32")
+        + convert.to_bytes(_escrowToken, type_str="bytes32")
+        + convert.to_bytes(0, type_str="bytes2")
+    )
+
+
+def evmBytes32ToAddress(bytes32):
+    return convert.to_address(bytes32[12:])
+
+
+def decodePayload(data, decode_address=evmBytes32ToAddress):
+    context = data[0]
+    if context & 1:
+        return {
+            "_context": data[0],
+            "_fromPool": decode_address(data[1:33]),
+            "_toPool": decode_address(data[33:65]),
+            "_who": decode_address(data[65:97]),
+            "_LU": convert.to_uint(data[97:129]),
+            "_minOut": convert.to_uint(data[129:161]),
+            "_escrowAmount": convert.to_uint(data[161:193])
+        }
+    customDataLength = convert.to_uint(data[226:228], type_str="uint16")
+    return {
+        "_context": data[0],
+        "_fromPool": decode_address(data[1:33]),
+        "_toPool": decode_address(data[33:65]),
+        "_who": decode_address(data[65:97]),
+        "_U": convert.to_uint(data[97:129]),
+        "_assetIndex": convert.to_uint(data[129], type_str="uint8"),
+        "_minOut": convert.to_uint(data[130:162]),
+        "_escrowAmount": convert.to_uint(data[162:194]),
+        "_escrowToken": decode_address(data[194:226]),
+        "customDataLength": customDataLength,
+        "_customDataTarget": decode_address(data[228:260]) if customDataLength > 0 else None,
+        "_customData": data[260:260+customDataLength - 32] if customDataLength > 0 else None
+    }
+
+data = payloadConstructor("0x66aB6D9362d4F35596279692F0251Db635165871", "0x33A4622B82D4c04a53e170c638B944ce27cffce3", convert.to_bytes("0x0063046686E46Dc6F15918b61AE2B121458534a5"), 12786308645202655232)
 ```
 
-
-`data = 0x0000000000000000000000000066ab6d9362d4f35596279692f0251db635165871000000000000000000000000602c71e4dac47a042ee7f46e0aee17f94a3ba0b600000000000000000000000066ab6d9362d4f35596279692f0251db635165871010000000000000000000000000000353458108326660000000000000000000000`
-
-`data = 0x0000000000000000000000000066ab6d9362d4f35596279692f0251db635165871000000000000000000000000602c71e4dac47a042ee7f46e0aee17f94a3ba0b600000000000000000000000066ab6d9362d4f35596279692f0251db635165871010000000000000000000000000000353458108326660000000000000000000000`
-
+`data = 0000000000000000000000000066ab6d9362d4f35596279692f0251db63516587100000000000000000000000033a4622b82d4c04a53e170c638b944ce27cffce30000000000000000000000000063046686e46dc6f15918b61ae2b121458534a5000000000000000000000000000000000000000000000000b17217f7d1cf7800000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000`
 
 ## SwapPoolCommon.sol
 

@@ -7,7 +7,7 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./SwapPoolFactory.sol";
 import "./FixedPointMath.sol";
 import "./CatalystIBCInterface.sol";
-import "./IOnCatalyst.sol";
+import "./interfaces/IOnCatalyst.sol";
 import "./ICatalystV1Pool.sol";
 import "./interfaces/ICatalystV1PoolErrors.sol";
 

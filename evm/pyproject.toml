@@ -1,11 +1,10 @@
 [tool.poetry]
-name = "Polymer Smart-Contracts"
+name = "CatalystEVM"
 version = "0"
-description = "A collection of the smart contracts for usage by the Polymer community."
-authors = ["Polymer"]
+description = "Catalyst EVM implementation"
+authors = ["Catalyst"]
 
 [tool.poetry.dependencies]
-pip = "^21.2.4"
 python = ">=3.9, <3.10"
 eth-brownie = "^1.19.0"
 vyper = "=0.3.3"
