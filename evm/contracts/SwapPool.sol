@@ -496,7 +496,7 @@ contract CatalystSwapPool is
      * of tokens to the burner. This doesn't change the pool price.
      * @param poolTokens The number of pool tokens to burn.
      */
-    function withdrawAll(uint256 poolTokens) external {
+    function withdrawAll(uint256 poolTokens, uint256[] calldata minOut) external {
         // cache totalSupply. This saves up to ~200 gas.
         uint256 initial_totalSupply = totalSupply() + _escrowedPoolTokens;
 
@@ -516,7 +516,7 @@ contract CatalystSwapPool is
             // Number of tokens which can be released given balance0Amount pool tokens.
             uint256 tokenAmount = (At * poolTokens) / initial_totalSupply;
 
-
+            require(tokenAmount >= minOut[it], SWAP_RETURN_INSUFFICIENT);
             // Transferring of the released tokens.
             amounts[it] = tokenAmount;
             IERC20(token).safeTransfer(msg.sender, tokenAmount);
@@ -793,27 +793,15 @@ contract CatalystSwapPool is
         // Since we have already cached totalSupply, we might as well burn the tokens
         // now. If the user doesn't have enough tokens, they save a bit of gas.
         _burn(msg.sender, poolTokens);
-
-        uint256 U = 0;
+        uint256 WSUM = 0; // Is not X64.
         for (uint256 it = 0; it < NUMASSETS; it++) {
             address token = _tokenIndexing[it];
             if (token == address(0)) break;
 
-            // 1. Withdraw tokens.
-            // Withdrawals should returns less, so the escrowed tokens are subtracted.
-            uint256 At = IERC20(token).balanceOf(address(this)) -  _escrowedTokens[token];
-
-            uint256 tokenAmount = (At * poolTokens) / initial_totalSupply;
-
-            // 2. Convert tokens to units
-            uint256 W = _weight[token];
-
-            if ((approx & 1) > 0) {
-                U += approx_compute_integral(tokenAmount, At, W);
-            } else {
-                U += compute_integral(tokenAmount, At, W);
-            }
+            WSUM += _weight[token]; // Is not X64.
         }
+
+        uint256 U = log2X64(bigdiv64(initial_totalSupply, initial_totalSupply - poolTokens)) * WSUM;
 
         bytes32 messageHash;
         {

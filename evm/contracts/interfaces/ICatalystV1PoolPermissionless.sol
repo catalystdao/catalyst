@@ -28,7 +28,7 @@ interface ICatalystV1PoolPermissionless {
      * of tokens to the burner. This doesn't change the pool price.
      * @param baseAmount The number of pool tokens to burn.
      */
-    function withdrawAll(uint256 baseAmount) external;
+    function withdrawAll(uint256 baseAmount, uint256[] calldata minOut) external;
 
     /**
      * @notice A swap between 2 assets which both are inside the pool. Is atomic.
