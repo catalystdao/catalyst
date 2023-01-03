@@ -500,6 +500,7 @@ contract CatalystSwapPoolAmplified is
 
                 uint256 wab = fpowX64((weightAssetBalance) << 64, oneMinusAmp);  
                 weightedAssetBalanceSum += wab;
+                if (tokenAmounts[it] == 0) continue;
                 U += fpowX64(weightAssetBalance + weight * tokenAmounts[it], oneMinusAmp) - wab;
                 IERC20(token).safeTransferFrom(msg.sender, address(this), tokenAmounts[it]);
             }
@@ -523,7 +524,7 @@ contract CatalystSwapPoolAmplified is
      * @param poolTokens The number of pool tokens to mint.
      * @param minOut The minimum number of tokens minted.
      */
-    function withdrawAll(uint256 poolTokens, uint256[] calldata minOut) public {
+    function withdrawAll(uint256 poolTokens, uint256[] calldata minOut) external {
         // Burn the desired number of pool tokens to the user. If they don't have it, it saves gas.
         _burn(msg.sender, poolTokens);
         
@@ -648,6 +649,7 @@ contract CatalystSwapPoolAmplified is
             if (U == 0) break;
             
             uint256 U_i = (U * withdrawRatioX64[it]) >> 64;
+            if (U_i == 0) continue;
             U -= U_i;
 
             // We could use dry_swap_from_unit but then we would have to compue a ton of fpows. Instead, lets just reuse our existing computations.
