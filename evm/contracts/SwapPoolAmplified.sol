@@ -547,7 +547,6 @@ contract CatalystSwapPoolAmplified is
         address[] memory tokenIndexed = new address[](NUMASSETS);
         uint256[] memory weightAssetBalances = new uint256[](NUMASSETS);
         uint256[] memory ampWeightAssetBalances = new uint256[](NUMASSETS);
-        uint256[] memory assetWeights = new uint256[](NUMASSETS);
 
         uint256 walpha_0_ampped;
         // First, lets derive walpha_0. This lets us evaluate the number of tokens the pool should have
@@ -560,7 +559,6 @@ contract CatalystSwapPoolAmplified is
                 if (token == address(0)) break;
                 tokenIndexed[it] = token;
                 uint256 weight = _weight[token];
-                assetWeights[it] = weight;
 
                 // Not minus escrowedAmount, since we want the deposit to return less.
                 uint256 weightAssetBalance = weight * ERC20(token).balanceOf(address(this));
@@ -576,10 +574,13 @@ contract CatalystSwapPoolAmplified is
 
         // For later event logging, the amounts transferred to the pool are stored.
         uint256[] memory amounts = new uint256[](NUMASSETS);
-        uint256 walpha_0 = fpowX64(walpha_0_ampped, ONEONE/(oneMinusAmp)); // todo: Optimise?
-        uint256 wpt_a = (poolTokens * walpha_0)/totalSupply();
         {
-            uint256 innerdiff = fpowX64(walpha_0 + wpt_a, oneMinusAmp) - walpha_0_ampped;   
+            uint256 innerdiff;
+            {
+                uint256 walpha_0 = fpowX64(walpha_0_ampped, ONEONE/(oneMinusAmp)); // todo: Optimise?
+                uint256 wpt_a = (walpha_0 * poolTokens)/totalSupply();
+                innerdiff = fpowX64(walpha_0 + wpt_a, oneMinusAmp) - walpha_0_ampped;   
+            } 
             for (uint256 it = 0; it < NUMASSETS; it++) {
                 address token = tokenIndexed[it];
                 if (token == address(0)) break;
@@ -613,7 +614,6 @@ contract CatalystSwapPoolAmplified is
         address[] memory tokenIndexed = new address[](NUMASSETS);
         uint256[] memory weightAssetBalances = new uint256[](NUMASSETS);
         uint256[] memory ampWeightAssetBalances = new uint256[](NUMASSETS);
-        uint256[] memory assetWeights = new uint256[](NUMASSETS);
 
         uint256 walpha_0_ampped;
         // First, lets derive walpha_0. This lets us evaluate the number of tokens the pool should have
@@ -626,7 +626,6 @@ contract CatalystSwapPoolAmplified is
                 if (token == address(0)) break;
                 tokenIndexed[it] = token;
                 uint256 weight = _weight[token];
-                assetWeights[it] = weight;
 
                 // minus escrowedAmount, since we want the withdrawal to return less.
                 uint256 weightAssetBalance = weight * (ERC20(token).balanceOf(address(this)) - _escrowedTokens[token]);
@@ -642,12 +641,15 @@ contract CatalystSwapPoolAmplified is
 
         // For later event logging, the amounts transferred to the pool are stored.
         uint256[] memory amounts = new uint256[](NUMASSETS);
-        uint256 walpha_0 = fpowX64(walpha_0_ampped, ONEONE/(oneMinusAmp));
         // solve: poolTokens = (wpt_a * (totalSupply() + poolTokens))/walpha_0; for wpt_a.
         // Plus _escrowedPoolTokens since we want the withdrawal to return less.
-        uint256 wpt_a = (walpha_0 * poolTokens)/(totalSupply() + _escrowedPoolTokens + poolTokens);  // Remember to add the number of pool tokens burned to totalSupply
         {
-            uint256 innerdiff = fpowX64(walpha_0 + wpt_a, oneMinusAmp) - walpha_0_ampped;   
+            uint256 innerdiff;
+            {
+                uint256 walpha_0 = fpowX64(walpha_0_ampped, ONEONE/(oneMinusAmp));
+                uint256 wpt_a = (walpha_0 * poolTokens)/(totalSupply() + _escrowedPoolTokens + poolTokens);  // Remember to add the number of pool tokens burned to totalSupply
+                innerdiff = fpowX64(walpha_0 + wpt_a, oneMinusAmp) - walpha_0_ampped;   
+            }
             for (uint256 it = 0; it < NUMASSETS; it++) {
                 address token = tokenIndexed[it];
                 if (token == address(0)) break;
@@ -1013,7 +1015,6 @@ contract CatalystSwapPoolAmplified is
      * Brownie: brownie.convert.to_bytes(_poolAddress, type_str="bytes32")
      * @param targetUser The recipient of the transaction on _chain. Encoded in bytes32. For EVM chains it can be found similarly to _targetPool.
      * @param poolTokens The number of pool tokens to liquidity Swap
-     * @param approx Unused
      */
     function outLiquidity(
         uint256 chain,
@@ -1021,9 +1022,8 @@ contract CatalystSwapPoolAmplified is
         bytes32 targetUser,
         uint256 poolTokens,
         uint256 minOut,
-        uint8 approx,
         address fallbackUser
-    ) external returns (uint256) {
+    ) internal returns (uint256) {
         require(fallbackUser != address(0));
         _W();
         _A();
@@ -1100,6 +1100,30 @@ contract CatalystSwapPoolAmplified is
         );
 
         return U;
+    }
+
+
+    /**
+     * @notice Initiate a cross-chain liquidity swap by lowering liquidity and transfer the liquidity units to another pool.
+     * @param chain The target chain. Will be converted by the interface to channelId.
+     * @param targetPool The target pool on the target chain encoded in bytes32. For EVM chains this can be computed as:
+     * Vyper: convert(_poolAddress, bytes32)
+     * Solidity: abi.encode(_poolAddress)
+     * Brownie: brownie.convert.to_bytes(_poolAddress, type_str="bytes32")
+     * @param targetUser The recipient of the transaction on _chain. Encoded in bytes32. For EVM chains it can be found similarly to _targetPool.
+     * @param poolTokens The number of pool tokens to liquidity Swap
+     * @param approx unused
+     */
+    function outLiquidity(
+        uint256 chain,
+        bytes32 targetPool,
+        bytes32 targetUser,
+        uint256 poolTokens,
+        uint256 minOut,
+        uint8 approx,
+        address fallbackUser
+    ) external returns (uint256) {
+        outLiquidity(chain, targetPool, targetUser, poolTokens, minOut, fallbackUser);
     }
 
     // @nonreentrant('lock')
