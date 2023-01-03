@@ -89,7 +89,7 @@ contract CatalystSwapPoolAmplified is
         _governanceFee = governanceFee;
         {
             uint256 max_unit_inflow = 0;
-            for (uint256 it = 0; it < init_assets.length; it++) {
+            for (uint256 it = 0; it < init_assets.length; ++it) {
                 address tokenAddress = init_assets[it];
                 _tokenIndexing[it] = tokenAddress;
                 _weight[tokenAddress] = weights[it];
@@ -127,7 +127,7 @@ contract CatalystSwapPoolAmplified is
         uint256 new_max_unit_inflow = 0;
         // We don't want to spend gas on each update, updating the security limit. As a result, we decrease security
         // for lower gas cost.
-        for (uint256 it = 0; it < NUMASSETS; it++) {
+        for (uint256 it = 0; it < NUMASSETS; ++it) {
             address token = _tokenIndexing[it];
             if (token == address(0)) break;
             _targetWeight[token] = newWeights[it]; // Set new weights
@@ -154,68 +154,6 @@ contract CatalystSwapPoolAmplified is
         }
     }
 
-    /**
-     * @notice If the governance requests a weight change, this function will adjust the pool weights.
-     */
-    function _W() internal {
-        uint256 adjTarget = _adjustmentTarget;
-
-        if ((adjTarget != 0) && (adjTarget % 2 == 0)) {
-            uint256 currTime = block.timestamp;
-            uint256 lastModification = _lastModificationTime;
-            if (currTime == lastModification) return; // If no time has passed since last update, then we don't need to update anything.
-
-            // If the current time is past the adjustment, then we need to finalise the weights.
-            if (currTime >= adjTarget) {
-                for (uint256 it = 0; it < NUMASSETS; it++) {
-                    address token = _tokenIndexing[it];
-                    if (token == address(0)) break;
-                    uint256 targetWeight = _targetWeight[token];
-                    // Only save weights if they are differnet.
-                    if (_weight[token] != targetWeight) {
-                        _weight[token] = targetWeight;
-                    }
-                }
-                // Set weightAdjustmentTime to 0. This ensures the if statement is never entered.
-                _adjustmentTarget = 0;
-                _lastModificationTime = currTime;
-
-                // Check if security limit needs to be updated.
-                uint256 target_max_unit_inflow = _target_max_unit_inflow;
-                if (target_max_unit_inflow != 0) {
-                    _max_unit_inflow = target_max_unit_inflow;
-                    _target_max_unit_inflow = 0;
-                }
-                return;
-            }
-            for (uint256 it = 0; it < NUMASSETS; it++) {
-                address token = _tokenIndexing[it];
-                if (token == address(0)) break;
-                uint256 targetWeight = _targetWeight[token];
-                uint256 currentWeight = _weight[token];
-                if (currentWeight == targetWeight) {
-                    continue;
-                }
-                uint256 newWeight;
-                if (targetWeight > currentWeight) {
-                    newWeight =
-                        currentWeight +
-                        ((targetWeight - currentWeight) *
-                            (currTime - lastModification)) /
-                        (adjTarget - lastModification);
-                } else {
-                    newWeight =
-                        currentWeight -
-                        ((currentWeight - targetWeight) *
-                            (currTime - lastModification)) /
-                        (adjTarget - lastModification);
-                }
-                _weight[token] = newWeight;
-            }
-            _lastModificationTime = currTime;
-        }
-    }
-
     function modifyAmplification(
         uint256 targetTime,
         uint256 targetAmplification
@@ -230,7 +168,7 @@ contract CatalystSwapPoolAmplified is
 
         uint256 amp = targetAmplification;
         uint256 new_max_unit_inflow = 0;
-        for (uint256 it = 0; it < NUMASSETS; it++) {
+        for (uint256 it = 0; it < NUMASSETS; ++it) {
             address token = _tokenIndexing[it];
             if (token == address(0)) break;
             uint256 balanceOfSelf = IERC20(token).balanceOf(address(this));
@@ -535,67 +473,47 @@ contract CatalystSwapPoolAmplified is
         return complete_integral(input, A, B, W_A, W_B, _amp);
     }
 
-
     /**
      * @notice Deposits a symmetrical number of tokens such that in 1:1 wpt_a are deposited. This doesn't change the pool price.
      * @dev Requires approvals for all tokens within the pool.
-     * @param poolTokens The number of pool tokens to mint.
+     * @param tokenAmounts An array of the tokens amounts to be deposited.
+     * @param minOut The minimum number of pool tokens to be minted.
      */
-    function depositAll(uint256 poolTokens) external {
+    function depositMixed(uint256[] calldata tokenAmounts, uint256 minOut) external {
         // Cache weights and balances.
         uint256 oneMinusAmp = ONE - _amp;
-        address[] memory tokenIndexed = new address[](NUMASSETS);
-        uint256[] memory weightAssetBalances = new uint256[](NUMASSETS);
-        uint256[] memory ampWeightAssetBalances = new uint256[](NUMASSETS);
 
         uint256 walpha_0_ampped;
+        uint256 U = 0;
+        uint256 it;
         // First, lets derive walpha_0. This lets us evaluate the number of tokens the pool should have
         // If the price in the group is 1:1.
         { // We don't need weightedAssetBalanceSum again.
             uint256 weightedAssetBalanceSum = 0;
-            uint256 it;
-            for (it = 0; it < NUMASSETS; it++) {
+            for (it = 0; it < NUMASSETS; ++it) {
                 address token = _tokenIndexing[it];
                 if (token == address(0)) break;
-                tokenIndexed[it] = token;
                 uint256 weight = _weight[token];
 
                 // Not minus escrowedAmount, since we want the deposit to return less.
                 uint256 weightAssetBalance = weight * ERC20(token).balanceOf(address(this));
-                weightAssetBalances[it] = weightAssetBalance;  // Store since we need it later
 
                 uint256 wab = fpowX64((weightAssetBalance) << 64, oneMinusAmp);  
-                ampWeightAssetBalances[it] = wab;  // Store since it is an expensive calculation.
                 weightedAssetBalanceSum += wab;
+                U += fpowX64(weightAssetBalance + weight * tokenAmounts[it], oneMinusAmp) - wab;
+                IERC20(token).safeTransferFrom(msg.sender, address(this), tokenAmounts[it]);
             }
             walpha_0_ampped = uint256((int256(weightedAssetBalanceSum) - int256(_unitTracker)))/it;
         }
+        uint256 walpha_0 = fpowX64(walpha_0_ampped, ONEONE/(oneMinusAmp)); // todo: Optimise?
+        uint256 wpt_a = fpowX64((walpha_0_ampped + U/it), ONEONE/oneMinusAmp) - walpha_0;
 
-
-        // For later event logging, the amounts transferred to the pool are stored.
-        uint256[] memory amounts = new uint256[](NUMASSETS);
-        {
-            uint256 innerdiff;
-            {
-                uint256 walpha_0 = fpowX64(walpha_0_ampped, ONEONE/(oneMinusAmp)); // todo: Optimise?
-                uint256 wpt_a = (walpha_0 * poolTokens)/totalSupply();
-                innerdiff = fpowX64(walpha_0 + wpt_a, oneMinusAmp) - walpha_0_ampped;   
-            } 
-            for (uint256 it = 0; it < NUMASSETS; it++) {
-                address token = tokenIndexed[it];
-                if (token == address(0)) break;
-
-                uint256 tokenAmount = fpowX64(ampWeightAssetBalances[it] + innerdiff, ONEONE/(oneMinusAmp)) - weightAssetBalances[it] << 64;
-
-                // Transfer the appropriate number of tokens from the user to the pool. (And store for event logging)
-                amounts[it] = tokenAmount;
-                IERC20(token).safeTransferFrom(msg.sender, address(this), tokenAmount); // dev: User doesn't have enough tokens or low approval
-            }
-        }
+        uint256 poolTokens = (wpt_a * totalSupply())/walpha_0;
+        require(minOut <= poolTokens, SWAP_RETURN_INSUFFICIENT);
         // Mint the desired number of pool tokens to the user.
         _mint(msg.sender, poolTokens);
 
-        emit Deposit(msg.sender, poolTokens, amounts);
+        emit Deposit(msg.sender, poolTokens, tokenAmounts);
     }
 
     // @nonreentrant('lock')
@@ -621,7 +539,7 @@ contract CatalystSwapPoolAmplified is
         { // We don't need weightedAssetBalanceSum again.
             uint256 weightedAssetBalanceSum = 0;
             uint256 it;
-            for (it = 0; it < NUMASSETS; it++) {
+            for (it = 0; it < NUMASSETS; ++it) {
                 address token = _tokenIndexing[it];
                 if (token == address(0)) break;
                 tokenIndexed[it] = token;
@@ -650,7 +568,7 @@ contract CatalystSwapPoolAmplified is
                 uint256 wpt_a = (walpha_0 * poolTokens)/(totalSupply() + _escrowedPoolTokens + poolTokens);  // Remember to add the number of pool tokens burned to totalSupply
                 innerdiff = fpowX64(walpha_0 + wpt_a, oneMinusAmp) - walpha_0_ampped;   
             }
-            for (uint256 it = 0; it < NUMASSETS; it++) {
+            for (uint256 it = 0; it < NUMASSETS; ++it) {
                 address token = tokenIndexed[it];
                 if (token == address(0)) break;
 
@@ -673,7 +591,72 @@ contract CatalystSwapPoolAmplified is
             }
         }
 
-        emit Deposit(msg.sender, poolTokens, amounts);
+        emit Withdraw(msg.sender, poolTokens, amounts);
+    }
+
+    // @nonreentrant('lock')
+    /**
+     * @notice Deposits a symmetrical number of tokens such that in 1:1 wpt_a are deposited. This doesn't change the pool price.
+     * @dev Requires approvals for all tokens within the pool.
+     * @param poolTokens The number of pool tokens to withdraw
+     * @param withdrawRatioX64 The percentage of units used to withdraw. In the following special scheme: U_a = U · withdrawRatio[0], U_b = (U - U_a) · withdrawRatio[1], U_c = (U - U_a - U_b) · withdrawRatio[2], .... Is X64
+     * @param minOuts The minimum number of tokens minted.
+     */
+    function withdrawMixed(uint256 poolTokens, uint256[] calldata withdrawRatioX64, uint256[] calldata minOuts) public {
+        // Burn the desired number of pool tokens to the user. If they don't have it, it saves gas.
+        _burn(msg.sender, poolTokens);
+        
+        // Cache weights and balances.
+        uint256 oneMinusAmp = ONE - _amp;
+        address[] memory tokenIndexed = new address[](NUMASSETS);
+        uint256[] memory assetBalances = new uint256[](NUMASSETS);
+        uint256[] memory ampWeightAssetBalances = new uint256[](NUMASSETS);
+
+        uint256 U;
+        // First, lets derive walpha_0. This lets us evaluate the number of tokens the pool should have
+        // If the price in the group is 1:1.
+        { // We don't need weightedAssetBalanceSum again.
+            uint256 it;
+            uint256 walpha_0_ampped;
+            uint256 walpha_0;
+            {
+                uint256 weightedAssetBalanceSum = 0;
+                for (it = 0; it < NUMASSETS; ++it) {
+                    address token = _tokenIndexing[it];
+                    if (token == address(0)) break;
+                    tokenIndexed[it] = token;
+                    uint256 weight = _weight[token];
+
+                    // minus escrowedAmount, since we want the withdrawal to return less.
+                    uint256 ab = (ERC20(token).balanceOf(address(this)) - _escrowedTokens[token]);
+                    assetBalances[it] = ab;
+                    uint256 weightAssetBalance = weight * ab;
+
+                    uint256 wab = fpowX64((weightAssetBalance) << 64, oneMinusAmp);  
+                    ampWeightAssetBalances[it] = wab;  // Store since it is an expensive calculation.
+                    weightedAssetBalanceSum += wab;
+                }
+                walpha_0_ampped = uint256((int256(weightedAssetBalanceSum) - int256(_unitTracker)))/it;
+                walpha_0 = fpowX64(walpha_0_ampped, ONEONE/(oneMinusAmp));
+            }
+
+            U = it * (fpowX64(walpha_0 + poolTokens/(totalSupply() + _escrowedPoolTokens + poolTokens), oneMinusAmp) - walpha_0_ampped); // Remember to add the number of pool tokens burned to totalSupply
+        }
+
+        uint256[] memory amounts = new uint256[](NUMASSETS);
+        for (uint256 it = 0; it < NUMASSETS; ++it) {
+            if (U == 0) break;
+            
+            uint256 U_i = (U * withdrawRatioX64[it]) >> 64;
+            U -= U_i;
+
+            // We could use dry_swap_from_unit but then we would have to compue a ton of fpows. Instead, lets just reuse our existing computations.
+            uint256 tokenAmount = (assetBalances[it] * (ONE - fpowX64(bigdiv64(ampWeightAssetBalances[it] - U_i, ampWeightAssetBalances[it]), ONEONE/oneMinusAmp))) >> 64;
+            require(minOuts[it] <= tokenAmount, SWAP_RETURN_INSUFFICIENT);
+            IERC20(tokenIndexed[it]).transfer(msg.sender, tokenAmount);
+        }
+
+        emit Withdraw(msg.sender, poolTokens, amounts);
     }
 
 
@@ -691,7 +674,6 @@ contract CatalystSwapPoolAmplified is
         uint256 amount,
         uint256 minOut
     ) public returns (uint256) {
-        _W();
         _A();
         uint256 fee = mulX64(amount, _poolFeeX64);
 
@@ -747,7 +729,6 @@ contract CatalystSwapPoolAmplified is
         bytes memory calldata_
     ) internal returns (uint256) {
         require(fallbackUser != address(0));
-        _W();
         _A();
         // uint256 fee = mulX64(amount, _poolFeeX64);
 
@@ -930,7 +911,6 @@ contract CatalystSwapPoolAmplified is
         bool approx,
         bytes32 messageHash
     ) public returns (uint256) {
-        _W();
         _A();
         // The chaininterface is the only valid caller of this function, as there cannot
         // be a check of U. (It is purely a number)
@@ -1025,7 +1005,6 @@ contract CatalystSwapPoolAmplified is
         address fallbackUser
     ) internal returns (uint256) {
         require(fallbackUser != address(0));
-        _W();
         _A();
         // Cache totalSupply. This saves up to ~200 gas.
         uint256 initial_totalSupply = totalSupply() + _escrowedPoolTokens;
@@ -1041,7 +1020,7 @@ contract CatalystSwapPoolAmplified is
         // If the price in the group is 1:1.
         { // We don't need weightedAssetBalanceSum again.
             uint256 weightedAssetBalanceSum = 0;
-            for (it = 0; it < NUMASSETS; it++) {
+            for (it = 0; it < NUMASSETS; ++it) {
                 address token = _tokenIndexing[it];
                 if (token == address(0)) break;
                 uint256 weight = _weight[token];
@@ -1143,7 +1122,6 @@ contract CatalystSwapPoolAmplified is
         bool approx,
         bytes32 messageHash
     ) external returns (uint256) {
-        _W();
         _A();
         // The chaininterface is the only valid caller of this function, as there cannot
         // be a check of _U. (It is purely a number)
@@ -1156,7 +1134,7 @@ contract CatalystSwapPoolAmplified is
         // If the price in the group is 1:1.
         { // We don't need weightedAssetBalanceSum again.
             uint256 weightedAssetBalanceSum = 0;
-            for (it = 0; it < NUMASSETS; it++) {
+            for (it = 0; it < NUMASSETS; ++it) {
                 address token = _tokenIndexing[it];
                 if (token == address(0)) break;
                 uint256 weight = _weight[token];

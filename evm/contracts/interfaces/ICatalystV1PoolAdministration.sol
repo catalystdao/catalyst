@@ -25,22 +25,6 @@ interface ICatalystV1PoolAdministration {
     function createConnection(bytes32 channelId, bytes32 poolReceiving, bool state) external;
 
     /**
-     * @notice Creates a connection to the pool _poolReceiving using the lookup table of the interface.
-     * @dev if _poolReceiving is an EVM pool, it can be computes as:
-     *     Vyper: convert(_poolAddress, bytes32)
-     *     Solidity: abi.encode(_poolAddress)
-     *     Brownie: brownie.convert.to_bytes(_poolAddress, type_str="bytes32")
-     * ! Using tx.origin is not secure.
-     * However, it makes it easy to bundle call from an external contract
-     * and no assets are at risk because the pool should not be used without
-     * setupMaster == ZERO_ADDRESS
-     * @param chainId _chainId of the target pool. The interface will convert the chainId to the correct channelId.
-     * @param poolReceiving The bytes32 representation of the target pool
-     * @param state Boolean indicating if the connection should be open or closed.
-     */
-    function createConnectionWithChain(uint256 chainId, bytes32 poolReceiving, bool state) external;
-
-    /**
      * @notice Gives up short term ownership of the pool. This makes the pool unstoppable.
      * @dev ! Using tx.origin is not secure.
      * However, it makes it easy to bundle call from an external contract

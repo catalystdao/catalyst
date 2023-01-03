@@ -15,13 +15,13 @@ interface ICatalystV1PoolPermissionless {
         address setupMaster
     ) external;
 
-    /**
-     * @notice Deposits a symmetrical number of tokens such that baseAmount of pool tokens are minted.
-     * This doesn't change the pool price.
-     * @dev Requires approvals for all tokens within the pool.
-     * @param baseAmount The number of pool tokens to mint.
-     */
-    function depositAll(uint256 baseAmount) external;
+    // /**
+    //  * @notice Deposits a symmetrical number of tokens such that baseAmount of pool tokens are minted.
+    //  * This doesn't change the pool price.
+    //  * @dev Requires approvals for all tokens within the pool.
+    //  * @param baseAmount The number of pool tokens to mint.
+    //  */
+    // function depositMixed(uint256 baseAmount) external;
 
     /**
      * @notice Burns baseAmount and releases the symmetrical share

@@ -114,7 +114,7 @@ abstract contract CatalystSwapPoolCommon is
     }
 
     function decimals() public pure override returns (uint8) {
-        return 18;
+        return 64;
     }
 
     function factoryOwner() public view override returns (address) {
@@ -137,7 +137,6 @@ abstract contract CatalystSwapPoolCommon is
         // as a result self.check is set to TRUE on init, to stop anyone from using
         // the pool without a proxy.
         require(!_CHECK); // dev: Pool Already setup.
-        _mint(setupMaster, ONE);
         _onlyLocal = chaininterface == address(0);
         _CHECK = true;
 
@@ -151,6 +150,7 @@ abstract contract CatalystSwapPoolCommon is
         // END ERC20 //
 
         // Mint 1 pool token to the short-term pool owner.
+        _mint(setupMaster, ONE);
     }
 
     /** @notice  Returns the current cross-chain unit capacity. */
@@ -257,39 +257,6 @@ abstract contract CatalystSwapPoolCommon is
 
         CatalystIBCInterface(_chaininterface).CreateConnection(
             channelId,
-            poolReceiving,
-            state
-        );
-    }
-
-    /**
-     * @notice Creates a connection to the pool _poolReceiving using the lookup table of the interface.
-     * @dev if _poolReceiving is an EVM pool, it can be computes as:
-     *     Vyper: convert(_poolAddress, bytes32)
-     *     Solidity: abi.encode(_poolAddress)
-     *     Brownie: brownie.convert.to_bytes(_poolAddress, type_str="bytes32")
-     * ! Using tx.origin is not secure.
-     * However, it makes it easy to bundle call from an external contract
-     * and no assets are at risk because the pool should not be used without
-     * setupMaster == ZERO_ADDRESS
-     * @param chainId _chainId of the target pool. The interface will convert the chainId to the correct channelId.
-     * @param poolReceiving The bytes32 representation of the target pool
-     * @param state Boolean indicating if the connection should be open or closed.
-     */
-    function createConnectionWithChain(
-        uint256 chainId,
-        bytes32 poolReceiving,
-        bool state
-    ) external override {
-        // ! tx.origin ! Read @dev.
-        require(
-            (tx.origin == _setupMaster) ||
-                (msg.sender == _setupMaster) ||
-                (msg.sender == factoryOwner())
-        ); // dev: No auth
-
-        CatalystIBCInterface(_chaininterface).CreateConnectionWithChain(
-            chainId,
             poolReceiving,
             state
         );

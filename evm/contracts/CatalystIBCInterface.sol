@@ -95,23 +95,6 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
         return true;
     }
 
-    function CreateConnectionWithChain(
-        uint256 chainId,
-        bytes32 pool,
-        bool state
-    ) external {
-        require(
-            ISwapPoolFactory(_poolFactory).IsCreatedByFactory(
-                address(this),
-                msg.sender
-            )
-        ); // dev: Only factory pools.
-        bytes32 msgSenderB32 = bytes32(abi.encode(msg.sender));
-        bytes32 channelId = _channelForChain[chainId];
-
-        checkConnection[channelId][msgSenderB32][pool] = state;
-        checkConnection[channelId][pool][msgSenderB32] = state;
-    }
 
     function crossChainSwap(
         uint32 chainId,
