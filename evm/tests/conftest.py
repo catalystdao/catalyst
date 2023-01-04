@@ -3,7 +3,7 @@
 # implementation, as to easily cross validate if changes to one contract is compatible with other contracts.
 
 import pytest
-from brownie import Token, PolymeraseEmulator, IBCEmulator
+from brownie import Token, IBCEmulator
 
 
 # A contract with goverance like permissions.
