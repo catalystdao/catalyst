@@ -25,7 +25,7 @@ contract testFixedPointMath is CatalystFixedPointMath {
         return invp2X64(x);
     }
 
-    function iinvp2TaylorX64(uint256 x) external returns (uint256) {
+    function iinvp2TaylorX64(uint256 x) external pure returns (uint256) {
         return invp2TaylorX64(x);
     }
 
@@ -33,7 +33,7 @@ contract testFixedPointMath is CatalystFixedPointMath {
         return fpowX64(x, p);
     }
 
-    function iinvp2X64(uint256 x, uint256 p) external pure returns (uint256) {
+    function iinvfpowX64(uint256 x, uint256 p) external pure returns (uint256) {
         return invfpowX64(x, p);
     }
 
