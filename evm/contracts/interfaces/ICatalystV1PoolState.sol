@@ -1,7 +1,14 @@
 //SPDX-License-Identifier: Unlicsened
-pragma solidity ^0.8.17;
+pragma solidity >=0.8.17 <0.9.0;
 
-import "./ICatalystV1PoolStructs.sol";
+struct TokenEscrow {
+    uint256 amount;
+    address token;
+}
+
+struct LiquidityEscrow {
+    uint256 poolTokens;
+}
 
 /// @title Pool state
 /// @notice Contains all pool storage which depends on the pool state.

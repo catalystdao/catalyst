@@ -1,5 +1,5 @@
 //SPDX-License-Identifier: Unlicsened
-pragma solidity ^0.8.17;
+pragma solidity >=0.8.17 <0.9.0;
 
 /// @title Administrative actions defined by Catalyst v1 Pools
 /// @notice Contains all functions which can only be called by privileged users.
@@ -22,7 +22,11 @@ interface ICatalystV1PoolAdministration {
      * @param poolReceiving The bytes32 representation of the target pool
      * @param state Boolean indicating if the connection should be open or closed.
      */
-    function createConnection(bytes32 channelId, bytes32 poolReceiving, bool state) external;
+    function createConnection(
+        bytes32 channelId,
+        bytes32 poolReceiving,
+        bool state
+    ) external;
 
     /**
      * @notice Gives up short term ownership of the pool. This makes the pool unstoppable.

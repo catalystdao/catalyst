@@ -1,6 +1,6 @@
 //SPDX-License-Identifier: Unlicsened
 
-pragma solidity ^0.8.17;
+pragma solidity >=0.8.17 <0.9.0;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -35,10 +35,7 @@ import "./ICatalystV1Pool.sol";
  * Finally, call finishSetup to give up the deployer's control
  * over the pool.
  */
-contract CatalystSwapPool is
-    CatalystFixedPointMath,
-    CatalystSwapPoolCommon
-{
+contract CatalystSwapPool is CatalystFixedPointMath, CatalystSwapPoolCommon {
     using SafeERC20 for IERC20;
 
     //--- ERRORS ---//
@@ -346,7 +343,6 @@ contract CatalystSwapPool is
         return (B * W_A * input) / (W_B * A + (W_A + W_B) * input);
     }
 
-
     /**
      * @notice Solves the non-unique swap integral.
      * @dev All input amounts should be the raw numbers and not X64.
@@ -357,10 +353,11 @@ contract CatalystSwapPool is
      * @param W The pool weight of the _out token.
      * @return Output denominated in percentage of pool.
      */
-    function arbitrary_solve_integralX64(
-        uint256 U,
-        uint256 W
-    ) internal pure returns (uint256) {
+    function arbitrary_solve_integralX64(uint256 U, uint256 W)
+        internal
+        pure
+        returns (uint256)
+    {
         uint256 invp = invp2X64(U / W);
         return bigdiv64(ONE - invp, invp);
     }
@@ -373,14 +370,14 @@ contract CatalystSwapPool is
      * @param W The pool weight of the _out token.
      * @return Output denominated in percentage of pool.
      */
-    function arbitrary_approx_solve_integralX64(
-        uint256 U,
-        uint256 W
-    ) public pure returns (uint256) {
+    function arbitrary_approx_solve_integralX64(uint256 U, uint256 W)
+        public
+        pure
+        returns (uint256)
+    {
         uint256 UnitTimesLN2to64 = U * LN2;
-        return UnitTimesLN2to64/W;
-    } 
-
+        return UnitTimesLN2to64 / W;
+    }
 
     /**
      * @notice Computes the return of a SwapToUnits, without executing one.
@@ -465,7 +462,6 @@ contract CatalystSwapPool is
         return complete_integral(input, A, B, W_A, W_B);
     }
 
-
     // todo: @nonreentrant('lock')
     /**
      * @notice Deposits a user configurable amount of tokens.
@@ -474,7 +470,9 @@ contract CatalystSwapPool is
      * @param tokenAmounts An array of the tokens amounts to be deposited.
      * @param minOut The minimum number of pool tokens to be minted.
      */
-    function depositMixed(uint256[] calldata tokenAmounts, uint256 minOut) external {
+    function depositMixed(uint256[] calldata tokenAmounts, uint256 minOut)
+        external
+    {
         // Cache totalSupply. This saves up to ~200 gas.
         uint256 initial_totalSupply = totalSupply(); // Not! + _escrowedPoolTokens, since a smaller number results in fewer pool tokens.
 
@@ -502,14 +500,15 @@ contract CatalystSwapPool is
         }
 
         uint256 poolTokens;
-        poolTokens = (initial_totalSupply * arbitrary_solve_integralX64(U, WSUM)) >> 64;
+        poolTokens =
+            (initial_totalSupply * arbitrary_solve_integralX64(U, WSUM)) >>
+            64;
         // Emit the event
         emit Deposit(msg.sender, poolTokens, tokenAmounts);
         require(minOut <= poolTokens, SWAP_RETURN_INSUFFICIENT);
 
         // Mint the desired number of pool tokens to the user.
         _mint(msg.sender, poolTokens);
-
     }
 
     // @nonreentrant('lock')
@@ -518,7 +517,9 @@ contract CatalystSwapPool is
      * of tokens to the burner. This doesn't change the pool price.
      * @param poolTokens The number of pool tokens to burn.
      */
-    function withdrawAll(uint256 poolTokens, uint256[] calldata minOut) external {
+    function withdrawAll(uint256 poolTokens, uint256[] calldata minOut)
+        external
+    {
         // cache totalSupply. This saves up to ~200 gas.
         uint256 initial_totalSupply = totalSupply() + _escrowedPoolTokens;
 
@@ -533,7 +534,8 @@ contract CatalystSwapPool is
             if (token == address(0)) break;
 
             // Withdrawals should returns less, so the escrowed tokens are subtracted.
-            uint256 At = IERC20(token).balanceOf(address(this)) -  _escrowedTokens[token];
+            uint256 At = IERC20(token).balanceOf(address(this)) -
+                _escrowedTokens[token];
 
             // Number of tokens which can be released given poolTokens.
             uint256 tokenAmount = (At * poolTokens) / initial_totalSupply;
@@ -556,14 +558,17 @@ contract CatalystSwapPool is
      * @param withdrawRatioX64 The percentage of units used to withdraw. In the following special scheme: U_a = U · withdrawRatio[0], U_b = (U - U_a) · withdrawRatio[1], U_c = (U - U_a - U_b) · withdrawRatio[2], .... Is X64
      * @param minOuts The minimum number of tokens minted.
      */
-    function withdrawMixed(uint256 poolTokens, uint256[] calldata withdrawRatioX64, uint256[] calldata minOuts) external {
+    function withdrawMixed(
+        uint256 poolTokens,
+        uint256[] calldata withdrawRatioX64,
+        uint256[] calldata minOuts
+    ) external {
         // cache totalSupply. This saves a bit of gas.
         uint256 initial_totalSupply = totalSupply() + _escrowedPoolTokens;
 
         // Since we have already cached totalSupply, we might as well burn the tokens
         // now. If the user doesn't have enough tokens, they save a bit of gas.
         _burn(msg.sender, poolTokens);
-
 
         address[] memory tokenIndexed = new address[](NUMASSETS);
         uint256[] memory weights = new uint256[](NUMASSETS);
@@ -578,28 +583,31 @@ contract CatalystSwapPool is
             WSUM += weight;
         }
 
-        uint256 U = log2X64(bigdiv64(initial_totalSupply, initial_totalSupply - poolTokens)) * WSUM;
+        uint256 U = log2X64(
+            bigdiv64(initial_totalSupply, initial_totalSupply - poolTokens)
+        ) * WSUM;
 
         // For later event logging, the amounts transferred to the pool are stored.
         uint256[] memory amounts = new uint256[](NUMASSETS);
         for (uint256 it = 0; it < NUMASSETS; it++) {
-             if (U == 0) break;
-            
+            if (U == 0) break;
+
             uint256 U_i = (U * withdrawRatioX64[it]) >> 64;
             if (U_i == 0) continue;
             U -= U_i;
             address token = tokenIndexed[it];
 
             // Withdrawals should returns less, so the escrowed tokens are subtracted.
-            uint256 At = IERC20(token).balanceOf(address(this)) -  _escrowedTokens[token];
+            uint256 At = IERC20(token).balanceOf(address(this)) -
+                _escrowedTokens[token];
 
-            
             uint256 tokenAmount;
-            if (U < 130971882923337824) { // TODO needed?
+            if (U < 130971882923337824) {
+                // TODO needed?
                 tokenAmount = approx_solve_integral(U_i, At, weights[it]);
-            } else { 
+            } else {
                 tokenAmount = solve_integral(U_i, At, weights[it]);
-            } 
+            }
 
             require(minOuts[it] <= tokenAmount, SWAP_RETURN_INSUFFICIENT);
             // Transferring of the released tokens.
@@ -706,18 +714,17 @@ contract CatalystSwapPool is
             });
 
             // Send the purchased units to _targetPool on _chain.
-            messageHash = CatalystIBCInterface(_chaininterface)
-                .crossChainSwap(
-                    chain,
-                    targetPool,
-                    targetUser,
-                    toAssetIndex,
-                    U,
-                    minOut,
-                    (approx & 2) > 0,
-                    escrowInformation,
-                    calldata_
-                );
+            messageHash = CatalystIBCInterface(_chaininterface).crossChainSwap(
+                chain,
+                targetPool,
+                targetUser,
+                toAssetIndex,
+                U,
+                minOut,
+                (approx & 2) > 0,
+                escrowInformation,
+                calldata_
+            );
         }
         // Collect the tokens from the user.
         IERC20(fromAsset).safeTransferFrom(msg.sender, address(this), amount);
@@ -755,7 +762,7 @@ contract CatalystSwapPool is
 
         return U;
     }
-    
+
     function swapToUnits(
         uint32 chain,
         bytes32 targetPool,
@@ -768,7 +775,19 @@ contract CatalystSwapPool is
         address fallbackUser
     ) external returns (uint256) {
         bytes memory calldata_ = new bytes(0);
-        return swapToUnits(chain, targetPool, targetUser, fromAsset, toAssetIndex, amount, minOut, approx, fallbackUser, calldata_);
+        return
+            swapToUnits(
+                chain,
+                targetPool,
+                targetUser,
+                fromAsset,
+                toAssetIndex,
+                amount,
+                minOut,
+                approx,
+                fallbackUser,
+                calldata_
+            );
     }
 
     /**
@@ -847,8 +866,6 @@ contract CatalystSwapPool is
     // 4. Deposit the even mix of tokens.
     // In 1 user invocation.
 
-
-
     //@nonreentrant('lock')
     /**
      * @notice Initiate a cross-chain liquidity swap by lowering liquidity
@@ -886,7 +903,9 @@ contract CatalystSwapPool is
             WSUM += _weight[token]; // Is not X64.
         }
 
-        uint256 U = log2X64(bigdiv64(initial_totalSupply, initial_totalSupply - poolTokens)) * WSUM;
+        uint256 U = log2X64(
+            bigdiv64(initial_totalSupply, initial_totalSupply - poolTokens)
+        ) * WSUM;
 
         bytes32 messageHash;
         {
@@ -895,16 +914,15 @@ contract CatalystSwapPool is
             });
 
             // 2 continued: transfer to target pool.
-            messageHash = CatalystIBCInterface(_chaininterface)
-                .liquiditySwap(
-                    chain,
-                    targetPool,
-                    targetUser,
-                    U,
-                    minOut,
-                    (approx & 2) > 0,
-                    escrowInformation
-                );
+            messageHash = CatalystIBCInterface(_chaininterface).liquiditySwap(
+                chain,
+                targetPool,
+                targetUser,
+                U,
+                minOut,
+                (approx & 2) > 0,
+                escrowInformation
+            );
         }
 
         // Escrow the pool tokens
@@ -926,7 +944,6 @@ contract CatalystSwapPool is
 
         return U;
     }
-
 
     // @nonreentrant('lock')
     /**
@@ -954,7 +971,7 @@ contract CatalystSwapPool is
 
         // We need to use the incoming units to purchace exactly the pool distribution.
         // The pool contains _numberOfTokensInPool pool tokens, the incoming units needs
-        // to be distributed according to the pool weights. 
+        // to be distributed according to the pool weights.
         address token0;
         uint256 WSUM = 0; // Is not X64.
         for (uint256 it = 0; it < NUMASSETS; it++) {
@@ -971,15 +988,14 @@ contract CatalystSwapPool is
         // We could use dry_swap_to_unit(from, amount, approx), but it repeats a bunch of logic.
         // Instead, lets implement it here.
         uint256 poolTokens;
-        uint256 ts = totalSupply(); 
+        uint256 ts = totalSupply();
         {
             // 3. Convert units to an even mix of tokens.
             if (approx) {
-                poolTokens = (U * LN2 * ts)/(WSUM << 64) >> 64; 
+                poolTokens = ((U * LN2 * ts) / (WSUM << 64)) >> 64;
             } else {
                 poolTokens = (arbitrary_solve_integralX64(U, WSUM) * ts) >> 64;
             }
-
         }
 
         // 4. Deposit the even mix of tokens.

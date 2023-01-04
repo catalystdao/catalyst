@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 
-pragma solidity ^0.8.17;
+pragma solidity >=0.8.17 <0.9.0;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -30,13 +30,20 @@ contract CatalystSwapPoolFactory is Ownable {
     uint256 public _defaultGovernanceFee;
     uint256 constant ONE = 2**64;
 
-    constructor(address volatilePoolTemplate, address amplifiedPoolTemplate, uint256 initialDefaultGovernanceFee) {
+    constructor(
+        address volatilePoolTemplate,
+        address amplifiedPoolTemplate,
+        uint256 initialDefaultGovernanceFee
+    ) {
         _poolTemplate[0] = volatilePoolTemplate;
         _poolTemplate[1] = amplifiedPoolTemplate;
         _defaultGovernanceFee = initialDefaultGovernanceFee;
     }
 
-    function setNewDefaultGovernanceFee(uint256 newDefaultGovernanceFee) external onlyOwner {
+    function setNewDefaultGovernanceFee(uint256 newDefaultGovernanceFee)
+        external
+        onlyOwner
+    {
         require(newDefaultGovernanceFee <= 2**63); // GovernanceFee is maximum 50%.
         _defaultGovernanceFee = newDefaultGovernanceFee;
     }
@@ -73,7 +80,13 @@ contract CatalystSwapPoolFactory is Ownable {
             msg.sender
         );
 
-        emit PoolDeployed(msg.sender, swapPool, chaininterface, amp, init_assets);
+        emit PoolDeployed(
+            msg.sender,
+            swapPool,
+            chaininterface,
+            amp,
+            init_assets
+        );
         IsCreatedByFactory[chaininterface][swapPool] = true;
 
         return swapPool;

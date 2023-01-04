@@ -1,12 +1,12 @@
 //SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.9;
+pragma solidity >=0.8.17 <0.9.0;
 
 import "./polymerase/IbcDispatcher.sol";
 import "./polymerase/IbcReceiver.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./ICatalystV1Pool.sol";
-import "./interfaces/ICatalystV1PoolStructs.sol";
+import "./interfaces/ICatalystV1PoolState.sol"; // structs
 
 interface ISwapPoolFactory {
     function IsCreatedByFactory(address arg0, address arg1)
@@ -95,7 +95,6 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
         return true;
     }
 
-
     function crossChainSwap(
         uint32 chainId,
         bytes32 targetPool,
@@ -167,9 +166,9 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
             uint8(targetAssetIndex),
             minOut,
             preparedEscrowAndCalldata,
-            uint32(block.number % 2**32)    // TODO: Considering the "randomness" of U, does this even make sense?
-                                            // TODO: The only way to find a collision is by deliberately making 2 very similar transactions.
-                                            // TODO: Which is a waste of gas.
+            uint32(block.number % 2**32) // TODO: Considering the "randomness" of U, does this even make sense?
+            // TODO: The only way to find a collision is by deliberately making 2 very similar transactions.
+            // TODO: Which is a waste of gas.
         );
         // abi.encode allways encodes to 32 bytes.
         // abi.encodePacked encodes in the smallest possible bytes.
@@ -240,9 +239,9 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
             minOut,
             escrowInformation.poolTokens,
             uint8(0),
-            uint32(block.number % 2**32)    // TODO: Considering the "randomness" of U, does this even make sense?
-                                            // TODO: The only way to find a collision is by deliberately making 2 very similar transactions.
-                                            // TODO: Which is a waste of gas.
+            uint32(block.number % 2**32) // TODO: Considering the "randomness" of U, does this even make sense?
+            // TODO: The only way to find a collision is by deliberately making 2 very similar transactions.
+            // TODO: Which is a waste of gas.
         );
         // abi.encode always encodes to 32 bytes.
         // abi.encodePacked encodes in the smallest possible bytes.
@@ -282,7 +281,6 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
         uint256 U = uint256(bytes32(data[97:129]));
 
         if ((_context & 0x01) == 0) {
-
             /* 
                 97-128 _U : uint265
             */
@@ -322,7 +320,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
         bytes1 _context = data[0]; // Only reverts if the data is truely empty. Well formed data is not.
         address fromPool = abi.decode(data[1:33], (address)); // ^^ Data is well formed.
         uint256 U = uint256(bytes32(data[97:129]));
-        
+
         if ((_context & 0x01) == 0) {
             // Always true if token swaps.
 

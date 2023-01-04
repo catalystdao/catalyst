@@ -1,6 +1,6 @@
 //SPDX-License-Identifier: Unlicsened
 
-pragma solidity ^0.8.17;
+pragma solidity >=0.8.17 <0.9.0;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -168,7 +168,7 @@ abstract contract CatalystSwapPoolCommon is
         if (UF <= delta_flow) return MUF;
 
         // No underflow since _unit_flow > delta_flow
-        if (MUF <= UF) return 0;  // Amplified pools can have MUF <= UF since MUF is modified when swapping
+        if (MUF <= UF) return 0; // Amplified pools can have MUF <= UF since MUF is modified when swapping
         return MUF - (UF - delta_flow);
     }
 
@@ -290,16 +290,18 @@ abstract contract CatalystSwapPoolCommon is
     //-- Escrow Functions --//
 
     /** @notice Release the escrowed tokens into the pool.  */
-    function releaseEscrowACK(bytes32 messageHash, uint256 U, uint256 escrowAmount, address escrowToken)
-        external
-        override
-    {
+    function releaseEscrowACK(
+        bytes32 messageHash,
+        uint256 U,
+        uint256 escrowAmount,
+        address escrowToken
+    ) external override {
         require(msg.sender == _chaininterface);
 
-        address fallbackUser = _escrowedFor[messageHash];  // (2) Passing in an empty messageHash gives 0,0,0
+        address fallbackUser = _escrowedFor[messageHash]; // (2) Passing in an empty messageHash gives 0,0,0
         require(fallbackUser != address(0));
-        delete _escrowedFor[messageHash];  // (2) This will pass, since empty can be deleted. (Nothing happens)
-        _escrowedTokens[escrowToken] -= escrowAmount;  // (2) This passes, since _escrowedTokens[0] = 0 => 0 - 0 = 0
+        delete _escrowedFor[messageHash]; // (2) This will pass, since empty can be deleted. (Nothing happens)
+        _escrowedTokens[escrowToken] -= escrowAmount; // (2) This passes, since _escrowedTokens[0] = 0 => 0 - 0 = 0
 
         emit EscrowAck(messageHash, false); // (2) This passes,
 
@@ -309,9 +311,9 @@ abstract contract CatalystSwapPoolCommon is
         // the inswapped amount of trust in the pool. If this wasn't implemented, there would be
         // a maximum daily cross chain volume, which is bad for liquidity providers.
         {
-           // Calling timeout and then ack should not be possible. 
-           // (1) Protects Timeout from being called after ack, since the information is zeroed.
-           // (2) Checking for existing escrow is not done implicitly, so it has to be done explicitly.
+            // Calling timeout and then ack should not be possible.
+            // (1) Protects Timeout from being called after ack, since the information is zeroed.
+            // (2) Checking for existing escrow is not done implicitly, so it has to be done explicitly.
             uint256 UF = _unit_flow;
             // If UF < U and we do UF - U < 0 underflow => bad.
             if (UF > U) {
@@ -324,10 +326,12 @@ abstract contract CatalystSwapPoolCommon is
     }
 
     /** @notice Returned the escrowed tokens to the user */
-    function releaseEscrowTIMEOUT(bytes32 messageHash, uint256 U, uint256 escrowAmount, address escrowToken)
-        external
-        override
-    {
+    function releaseEscrowTIMEOUT(
+        bytes32 messageHash,
+        uint256 U,
+        uint256 escrowAmount,
+        address escrowToken
+    ) external override {
         require(msg.sender == _chaininterface); // Never reverts when truely recovering funds.
 
         address fallbackUser = _escrowedFor[messageHash]; // If funds exist, then information exists.
@@ -335,19 +339,17 @@ abstract contract CatalystSwapPoolCommon is
         delete _escrowedFor[messageHash]; // To remove the possibility of reentry.
         _escrowedTokens[escrowToken] -= escrowAmount; // Underflow? Only if someone is able to modify the _escrowedTokens value to be lower. (Reentry?: No)
 
-        IERC20(escrowToken).safeTransfer(  // (1) If escrowInformation.token == address(0), this fails.
-            fallbackUser,
-            escrowAmount
-        ); // 1. Would fail if there is no balance. We remove the balance of the escrow from what is claimable by users. 2. (Solana: If the user is valid.)
+        IERC20(escrowToken).safeTransfer(fallbackUser, escrowAmount); // (1) If escrowInformation.token == address(0), this fails. // 1. Would fail if there is no balance. We remove the balance of the escrow from what is claimable by users. 2. (Solana: If the user is valid.)
 
         emit EscrowTimeout(messageHash, false); // Cannot fail.
     }
 
     /** @notice Release the escrowed tokens into the pool.  */
-    function releaseLiquidityEscrowACK(bytes32 messageHash, uint256 U, uint256 escrowAmount)
-        external
-        override
-    {
+    function releaseLiquidityEscrowACK(
+        bytes32 messageHash,
+        uint256 U,
+        uint256 escrowAmount
+    ) external override {
         require(msg.sender == _chaininterface);
 
         address fallbackUser = _escrowedLiquidityFor[messageHash];
@@ -363,9 +365,9 @@ abstract contract CatalystSwapPoolCommon is
         // the inswapped amount of trust in the pool. If this wasn't implemented, there would be
         // a maximum daily cross chain volume, which is bad for liquidity providers.
         {
-           // Calling timeout and then ack should not be possible. 
-           // (1) Protects Timeout from being called after ack, since the information is zeroed.
-           // (2) Checking for existing escrow is not done implicitly, so it has to be done explicitly.
+            // Calling timeout and then ack should not be possible.
+            // (1) Protects Timeout from being called after ack, since the information is zeroed.
+            // (2) Checking for existing escrow is not done implicitly, so it has to be done explicitly.
             uint256 UF = _unit_flow;
             // If UF < U and we do UF - U < 0 underflow => bad.
             if (UF > U) {
@@ -378,21 +380,19 @@ abstract contract CatalystSwapPoolCommon is
     }
 
     /** @notice Returned the escrowed tokens to the user. For liquidity escrows */
-    function releaseLiquidityEscrowTIMEOUT(bytes32 messageHash, uint256 U, uint256 escrowAmount)
-        external
-        override
-    {
+    function releaseLiquidityEscrowTIMEOUT(
+        bytes32 messageHash,
+        uint256 U,
+        uint256 escrowAmount
+    ) external override {
         require(msg.sender == _chaininterface); // Never reverts when truely recovering funds.
 
         address fallbackUser = _escrowedLiquidityFor[messageHash]; // If funds exist, then information exists.
-        require(fallbackUser != address(0));  // Only fails if the escrow doesn't exist. (desired)
+        require(fallbackUser != address(0)); // Only fails if the escrow doesn't exist. (desired)
         delete _escrowedLiquidityFor[messageHash]; // To remove the possibility of reentry.
         _escrowedPoolTokens -= escrowAmount; // Underflow? Only if someone is able to modify the _escrowedPoolTokens value to be lower. (Reentry?: No)
 
-        _mint(
-            fallbackUser,
-            escrowAmount
-        ); // 1. Does not fail. 2. (Solana: If the user is valid.)
+        _mint(fallbackUser, escrowAmount); // 1. Does not fail. 2. (Solana: If the user is valid.)
 
         emit EscrowTimeout(messageHash, true); // Cannot fail
     }

@@ -13,6 +13,7 @@ sync = "^1.0.0"
 numpy = "^1.21.4"
 pandas = "^1.3.4"
 tqdm = "^4.62.3"
+slither-analyzer = "^0.9.1"
 
 [tool.poetry.dev-dependencies]
 flake8 = "^4.0.1"

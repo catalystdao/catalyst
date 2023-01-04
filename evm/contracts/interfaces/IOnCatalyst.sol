@@ -1,7 +1,6 @@
 //SPDX-License-Identifier: Unlicsened
 
-pragma solidity ^0.8.17;
-
+pragma solidity >=0.8.17 <0.9.0;
 
 interface ICatalystReceiver {
     /**
@@ -10,5 +9,6 @@ interface ICatalystReceiver {
      * @dev Requires approvals for all tokens within the pool.
      * @param data The number of pool tokens to mint.
      */
-    function onCatalystCall(uint256 purchasedTokens, bytes calldata data) external;
+    function onCatalystCall(uint256 purchasedTokens, bytes calldata data)
+        external;
 }

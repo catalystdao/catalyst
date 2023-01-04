@@ -1,34 +1,34 @@
 //SPDX-License-Identifier: Unlicsened
 
-pragma solidity ^0.8.17;
+pragma solidity >=0.8.17 <0.9.0;
 
 /// @title Catalyst Fixed Point Mathematics Library
-/// @author 
+/// @author
 ///     Alexander @ Catalyst
 ///     Copyright reserved by Catalyst
-/// @notice 
+/// @notice
 ///     Fixed point mathematics used by Polymer.
 ///     If a fixed point number is stored inside uint256, the variable
 ///     should be clearly marked. For example, if 64 bits are reserved
 ///     for the decimal, the variable should have X64 appened.
-///     
+///
 ///     Contains the following mathematical descriptions in Solidity:
 ///         mulX64
 ///         a : X64, b : X64
 ///         a · b => y : X64, as long as y does not overflow X64.
-///     
+///
 ///         bigdiv64
 ///         a : uint256, b : uint256
 ///         (a << 64)/b => y, as long as y does not overflow uint256.
-///     
+///
 ///         log2X64
 ///         x : uint256
 ///         log2(x) => y : X64, as long as y >= 0
-///     
+///
 ///         p2X64
 ///         x : X64, x < 192
 ///         2**x => y : X64
-///     
+///
 ///         fpowX64
 ///         x : X64, p : X64
 ///         x**p => y : X64, depends on p2 and log2
@@ -379,29 +379,29 @@ contract CatalystFixedPointMath {
         require(major_x < 41); // dev: Major larger then fixed points. Reserve a few (64-41=23) bits for accuracy
 
         uint256 intermediate = ONE;
-        if (major_x == 0) { 
+        if (major_x == 0) {
             // Taylor works really well for x < 1.
             // While I should be able to use the identity:
-            // 2^(-x) = 2^(-(x_up + x_down)) = 2^(-x_up - x_down) = 2^(-x_up) * 2^(-x_down) 
+            // 2^(-x) = 2^(-(x_up + x_down)) = 2^(-x_up - x_down) = 2^(-x_up) * 2^(-x_down)
             // it is not as good as the alternative implementation.
             uint256 xp = x;
             unchecked {
                 intermediate -= (12786308645202655659 * xp) >> 64;
-                xp = (xp*x) >> 64; // Max value is 41**2 * 2**128 < 2**256-1
+                xp = (xp * x) >> 64; // Max value is 41**2 * 2**128 < 2**256-1
                 intermediate += (4431396893595737425 * xp) >> 64;
-                xp = (xp*x) >> 64; // Max value is 41**3 * 2**128 < 2**256-1
+                xp = (xp * x) >> 64; // Max value is 41**3 * 2**128 < 2**256-1
                 intermediate -= (1023870087579328453 * xp) >> 64;
-                xp = (xp*x) >> 64; // Max value is 41**4 * 2**128 < 2**256-1
+                xp = (xp * x) >> 64; // Max value is 41**4 * 2**128 < 2**256-1
                 intermediate += (177423166116318950 * xp) >> 64;
-                xp = (xp*x) >> 64; // Max value is 41**5 * 2**128 < 2**256-1
+                xp = (xp * x) >> 64; // Max value is 41**5 * 2**128 < 2**256-1
                 intermediate -= (24596073471909060 * xp) >> 64;
-                xp = (xp*x) >> 64; // Max value is 41**6 * 2**128 < 2**256-1
+                xp = (xp * x) >> 64; // Max value is 41**6 * 2**128 < 2**256-1
                 intermediate += (2841449829983172 * xp) >> 64;
-                xp = (xp*x) >> 64; // Max value is 41**7 * 2**128 < 2**256-1
+                xp = (xp * x) >> 64; // Max value is 41**7 * 2**128 < 2**256-1
                 intermediate -= (281363276907910 * xp) >> 64;
-                xp = (xp*x) >> 64; // Max value is 41**8 * 2**128 < 2**256-1
+                xp = (xp * x) >> 64; // Max value is 41**8 * 2**128 < 2**256-1
                 intermediate += (24378270262729 * xp) >> 64;
-                xp = (xp*x) >> 64; // Max value is 41**9 * 2**128 < 2**256-1
+                xp = (xp * x) >> 64; // Max value is 41**9 * 2**128 < 2**256-1
                 // intermediate -= (1877525477726 * xp) >> 64;
                 // xp = (xp*x) >> 64; // Max value is 41**10 * 2**128 < 2**256-1
                 // intermediate += (130140149132 * xp) >> 64;
@@ -420,7 +420,6 @@ contract CatalystFixedPointMath {
         }
         // 2^(-2^(-i)) * 2^64, i = 1..
         // uint72[19] memory TWOTWOMINUSI = [13043817825332782212, 15511800964685064948, 16915738899553466670, 17664662643191237676, 18051468387014017850, 18248035989933441396, 18347121020861646923, 18396865112328554661, 18421787711448657617, 18434261669329232139, 18440501815349552981, 18443622680442407997, 18445183311048607332, 18445963675871538003, 18446353870663572145, 18446548971154807802, 18446646522174239825, 18446695297877410579, 18446719685777359790 ] //, 18446731879739425374, 18446737976723480912, 18446741025216264368, 18446742549462845018, 18446743311586182573, 18446743692647863158, 18446743883178706403, 18446743978444128763, 18446744026076840128, 18446744049893195856, 18446744061801373732, 18446744067755462673, 18446744070732507144]
-
 
         unchecked {
             if ((x & (1 << (64 - 1))) > 0)
@@ -468,7 +467,7 @@ contract CatalystFixedPointMath {
     }
 
     /// @notice Using taylor
-    /// @dev The accuracy is the smallest iteration. 
+    /// @dev The accuracy is the smallest iteration.
     ///      (Uses the lagrange error => max i at 1. Thus the max error is last fixed number)
     /// @param x uint256, X64
     /// @return uint256, X64 as 2**(-x/2**64)*2**64
@@ -479,26 +478,26 @@ contract CatalystFixedPointMath {
 
         uint256 intermediate = ONE;
 
-        uint256 xp = (x << (256-64)) >> (256-64);
+        uint256 xp = (x << (256 - 64)) >> (256 - 64);
         unchecked {
             intermediate -= (12786308645202655659 * xp) >> 64;
-            xp = (xp*x) >> 64; // Max value is 41**2 * 2**128 < 2**256-1
+            xp = (xp * x) >> 64; // Max value is 41**2 * 2**128 < 2**256-1
             intermediate += (4431396893595737425 * xp) >> 64;
-            xp = (xp*x) >> 64; // Max value is 41**3 * 2**128 < 2**256-1
+            xp = (xp * x) >> 64; // Max value is 41**3 * 2**128 < 2**256-1
             intermediate -= (1023870087579328453 * xp) >> 64;
-            xp = (xp*x) >> 64; // Max value is 41**4 * 2**128 < 2**256-1
+            xp = (xp * x) >> 64; // Max value is 41**4 * 2**128 < 2**256-1
             intermediate += (177423166116318950 * xp) >> 64;
-            xp = (xp*x) >> 64; // Max value is 41**5 * 2**128 < 2**256-1
+            xp = (xp * x) >> 64; // Max value is 41**5 * 2**128 < 2**256-1
             intermediate -= (24596073471909060 * xp) >> 64;
-            xp = (xp*x) >> 64; // Max value is 41**6 * 2**128 < 2**256-1
+            xp = (xp * x) >> 64; // Max value is 41**6 * 2**128 < 2**256-1
             intermediate += (2841449829983172 * xp) >> 64;
-            xp = (xp*x) >> 64; // Max value is 41**7 * 2**128 < 2**256-1
+            xp = (xp * x) >> 64; // Max value is 41**7 * 2**128 < 2**256-1
             intermediate -= (281363276907910 * xp) >> 64;
-            xp = (xp*x) >> 64; // Max value is 41**8 * 2**128 < 2**256-1
+            xp = (xp * x) >> 64; // Max value is 41**8 * 2**128 < 2**256-1
             intermediate += (24378270262729 * xp) >> 64;
-            xp = (xp*x) >> 64; // Max value is 41**9 * 2**128 < 2**256-1
+            xp = (xp * x) >> 64; // Max value is 41**9 * 2**128 < 2**256-1
             intermediate -= (1877525477726 * xp) >> 64;
-            xp = (xp*x) >> 64; // Max value is 41**10 * 2**128 < 2**256-1
+            xp = (xp * x) >> 64; // Max value is 41**10 * 2**128 < 2**256-1
             intermediate += (130140149132 * xp) >> 64;
             // xp = (xp*x) >> 64; // Max value is 41**11 * 2**128 < 2**256-1
             // intermediate -= (8200570677 * xp) >> 64;
