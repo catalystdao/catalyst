@@ -500,6 +500,7 @@ contract CatalystSwapPoolAmplified is
 
                 uint256 wab = fpowX64((weightAssetBalance) << 64, oneMinusAmp);  
                 weightedAssetBalanceSum += wab;
+                
                 if (tokenAmounts[it] == 0) continue;
                 U += fpowX64(weightAssetBalance + weight * tokenAmounts[it], oneMinusAmp) - wab;
                 IERC20(token).safeTransferFrom(msg.sender, address(this), tokenAmounts[it]);
@@ -604,6 +605,11 @@ contract CatalystSwapPoolAmplified is
      * @param minOuts The minimum number of tokens minted.
      */
     function withdrawMixed(uint256 poolTokens, uint256[] calldata withdrawRatioX64, uint256[] calldata minOuts) public {
+        // Here the implementation should cache: "totalSupply() + _escrowedPoolTokens".
+        // However, there is not enough stack to do so. So when accessing totalSupply()
+        // remember to add poolTokens to it. (As they are burned in the next line)
+        // This implementation only access totalSupply once, so caching is not needed.
+
         // Burn the desired number of pool tokens to the user. If they don't have it, it saves gas.
         _burn(msg.sender, poolTokens);
         
