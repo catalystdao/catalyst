@@ -623,12 +623,12 @@ contract CatalystSwapPoolAmplified is
                     );
                     // Transfer the appropriate number of tokens from the user to the pool. (And store for event logging)
                     amounts[it] = tokenAmount;
-                    IERC20(token).transfer(msg.sender, tokenAmount); // dev: User doesn't have enough tokens or low approval
+                    IERC20(token).safeTransfer(msg.sender, tokenAmount); // dev: User doesn't have enough tokens or low approval
                     continue;
                 }
                 // Transfer the appropriate number of tokens from the user to the pool. (And store for event logging)
                 amounts[it] = tokenAmount;
-                IERC20(token).transfer(msg.sender, tokenAmount);
+                IERC20(token).safeTransfer(msg.sender, tokenAmount);
             }
         }
 
@@ -728,7 +728,7 @@ contract CatalystSwapPoolAmplified is
                         ONEONE / oneMinusAmp
                     ))) >> 64;
             require(minOuts[it] <= tokenAmount, SWAP_RETURN_INSUFFICIENT);
-            IERC20(tokenIndexed[it]).transfer(msg.sender, tokenAmount);
+            IERC20(tokenIndexed[it]).safeTransfer(msg.sender, tokenAmount);
         }
 
         emit Withdraw(msg.sender, poolTokens, amounts);
@@ -799,6 +799,22 @@ contract CatalystSwapPoolAmplified is
             amount - mulX64(amount, _poolFeeX64)
         );
 
+        // Track units for fee distribution.
+        _unitTracker += int128(uint128(U));
+
+        // Compute the change in max_unit_inflow.
+        {
+            uint256 fromBalance = ERC20(fromAsset).balanceOf(address(this));
+            _max_unit_inflow += mulX64(
+                _ampUnitCONSTANT,
+                getModifyUnitCapacity(
+                    fromBalance - (amount - mulX64(amount, _poolFeeX64)),
+                    fromBalance,
+                    fromAsset
+                )
+            );
+        }
+
         bytes32 messageHash;
 
         {
@@ -825,25 +841,11 @@ contract CatalystSwapPoolAmplified is
         IERC20(fromAsset).safeTransferFrom(msg.sender, address(this), amount);
 
         // Escrow the tokens
+        // ! Reentrancy. It is not possible to abuse the reentry, since the storage change is checked for validity first.
         require(_escrowedFor[messageHash] == address(0)); // User cannot supply fallbackUser = address(0)
         _escrowedTokens[fromAsset] += amount - mulX64(amount, _poolFeeX64);
         _escrowedFor[messageHash] = fallbackUser;
 
-        // Track units for fee distribution.
-        _unitTracker += int128(uint128(U));
-
-        // Compute the change in max_unit_inflow.
-        {
-            uint256 fromBalance = ERC20(fromAsset).balanceOf(address(this));
-            _max_unit_inflow += mulX64(
-                _ampUnitCONSTANT,
-                getModifyUnitCapacity(
-                    fromBalance - (amount - mulX64(amount, _poolFeeX64)),
-                    fromBalance,
-                    fromAsset
-                )
-            );
-        }
 
         {
             // Governance Fee
@@ -990,15 +992,13 @@ contract CatalystSwapPoolAmplified is
 
         require(minOut <= purchasedTokens, SWAP_RETURN_INSUFFICIENT);
 
-        // Send the return value to the user.
-        IERC20(toAsset).safeTransfer(who, purchasedTokens);
 
         // Track units for fee distribution.
         _unitTracker -= int128(uint128(U));
 
         // Compute the change in max_unit_inflow.
         uint256 toBalance = IERC20(toAsset).balanceOf(address(this)) -
-            _escrowedTokens[toAsset];
+            _escrowedTokens[toAsset] - purchasedTokens;
         _max_unit_inflow -= mulX64(
             _ampUnitCONSTANT,
             getModifyUnitCapacity(
@@ -1007,6 +1007,9 @@ contract CatalystSwapPoolAmplified is
                 toAsset
             )
         );
+
+        // Send the return value to the user.
+        IERC20(toAsset).safeTransfer(who, purchasedTokens);
 
         emit SwapFromUnits(who, toAsset, U, purchasedTokens, messageHash);
 
@@ -1136,6 +1139,7 @@ contract CatalystSwapPoolAmplified is
             );
         }
 
+        // ! Reentrancy. It is not possible to abuse the reentry, since the storage change is checked for validity first.
         // Escrow the pool tokens
         require(_escrowedLiquidityFor[messageHash] == address(0));
         _escrowedLiquidityFor[messageHash] = fallbackUser;

@@ -729,6 +729,7 @@ contract CatalystSwapPool is CatalystFixedPointMath, CatalystSwapPoolCommon {
         // Collect the tokens from the user.
         IERC20(fromAsset).safeTransferFrom(msg.sender, address(this), amount);
 
+        // ! Reentrancy. It is not possible to abuse the reentry, since the storage change is checked for validity first.
         // Escrow the tokens
         require(_escrowedFor[messageHash] == address(0)); // User cannot supply fallbackUser = address(0)
         _escrowedTokens[fromAsset] += amount - mulX64(amount, _poolFeeX64);
@@ -866,7 +867,6 @@ contract CatalystSwapPool is CatalystFixedPointMath, CatalystSwapPoolCommon {
     // 4. Deposit the even mix of tokens.
     // In 1 user invocation.
 
-    //@nonreentrant('lock')
     /**
      * @notice Initiate a cross-chain liquidity swap by lowering liquidity
      * and transfer the liquidity units to another pool.
@@ -925,6 +925,7 @@ contract CatalystSwapPool is CatalystFixedPointMath, CatalystSwapPoolCommon {
             );
         }
 
+        // ! Reentrancy. It is not possible to abuse the reentry, since the storage change is checked for validity first.
         // Escrow the pool tokens
         require(_escrowedLiquidityFor[messageHash] == address(0));
         _escrowedLiquidityFor[messageHash] = fallbackUser;
