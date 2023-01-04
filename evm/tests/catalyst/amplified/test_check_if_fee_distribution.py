@@ -75,7 +75,7 @@ def test_withdraw(gov, accounts, default_amp_swappool_self, token1, token2):
     assert 10**5 > token1.balanceOf(balance_modifier)
     assert 10**5 > token2.balanceOf(balance_modifier)
 
-    swappool.withdrawAll(baseAmount, {"from": balance_modifier})
+    swappool.withdrawAll(baseAmount, [0, 0, 0], {"from": balance_modifier})
 
     assert depositValue + 10**5 < token1.balanceOf(balance_modifier)
     assert depositValue + 10**5 < token2.balanceOf(balance_modifier)

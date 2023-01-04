@@ -361,7 +361,8 @@ contract CatalystSwapPool is
         uint256 U,
         uint256 W
     ) internal pure returns (uint256) {
-        return (ONE - invp2X64(U / W));
+        uint256 invp = invp2X64(U / W);
+        return bigdiv64(ONE - invp, invp);
     }
 
     /**
@@ -377,7 +378,7 @@ contract CatalystSwapPool is
         uint256 W
     ) public pure returns (uint256) {
         uint256 UnitTimesLN2to64 = U * LN2;
-        return (UnitTimesLN2to64) / ((W << 64) + UnitTimesLN2to64 >> 64);
+        return UnitTimesLN2to64/W;
     } 
 
 
@@ -500,21 +501,15 @@ contract CatalystSwapPool is
             ); // dev: User doesn't have enough tokens;
         }
 
-        uint256 poolTokens = initial_totalSupply;
-        // If the purchase amount is below 0.0071%, our 2^-p implementation is not wrong enough.
-        // 130971882923337824 = int(0.0071 * 2**64)
-        if (U < 130971882923337824) { // TODO: Needed?
-            poolTokens *= arbitrary_approx_solve_integralX64(U, WSUM);
-        } else {
-            poolTokens *= arbitrary_solve_integralX64(U, WSUM);
-        } 
+        uint256 poolTokens;
+        poolTokens = (initial_totalSupply * arbitrary_solve_integralX64(U, WSUM)) >> 64;
+        // Emit the event
+        emit Deposit(msg.sender, poolTokens, tokenAmounts);
         require(minOut <= poolTokens, SWAP_RETURN_INSUFFICIENT);
 
         // Mint the desired number of pool tokens to the user.
         _mint(msg.sender, poolTokens);
 
-        // Emit the event
-        emit Deposit(msg.sender, poolTokens, tokenAmounts);
     }
 
     // @nonreentrant('lock')
@@ -975,20 +970,19 @@ contract CatalystSwapPool is
         // address token0;
         // We could use dry_swap_to_unit(from, amount, approx), but it repeats a bunch of logic.
         // Instead, lets implement it here.
-        uint256 poolPercentage;
+        uint256 poolTokens;
+        uint256 ts = totalSupply(); 
         {
             // 3. Convert units to an even mix of tokens.
             if (approx) {
-                poolPercentage = arbitrary_approx_solve_integralX64(U, WSUM); 
+                poolTokens = (U * LN2 * ts)/(WSUM << 64) >> 64; 
             } else {
-                poolPercentage = arbitrary_solve_integralX64(U, WSUM);
+                poolTokens = (arbitrary_solve_integralX64(U, WSUM) * ts) >> 64;
             }
 
         }
 
         // 4. Deposit the even mix of tokens.
-        uint256 ts = totalSupply(); 
-        uint256 poolTokens = (poolPercentage*ts) >> 64;
         require(minOut <= poolTokens, SWAP_RETURN_INSUFFICIENT);
 
         // Mint pool tokens for who

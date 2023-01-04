@@ -205,7 +205,7 @@ def run_withdraw(
         amount = init_sp_withdrawer_pool_tokens
 
     # Withdraw everything
-    tx = sp.withdrawAll(amount, {"from": withdrawer})
+    tx = sp.withdrawAll(amount, [0, 0, 0], {"from": withdrawer})
 
     # Check transaction event
     assert len(tx.events['Withdraw']) == 1
@@ -275,7 +275,7 @@ def run_amp_withdraw(
         amount = init_sp_withdrawer_pool_tokens
 
     # Withdraw everything
-    tx = sp.withdrawAll(amount, {"from": withdrawer})
+    tx = sp.withdrawAll(amount, [0, 0, 0], {"from": withdrawer})
 
     # Check transaction event
     assert len(tx.events['Withdraw']) == 1

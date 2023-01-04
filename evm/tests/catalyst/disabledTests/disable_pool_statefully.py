@@ -166,7 +166,7 @@ class StateMachine:
         baseAmount = int(swappool.balanceOf(self.accounts[0]) * percentage)
         print(f"Withdrawing: {baseAmount}")
 
-        swappool.withdrawAll(baseAmount, {"from": self.accounts[0]})
+        swappool.withdrawAll(baseAmount, [0, 0, 0], {"from": self.accounts[0]})
 
     @rule(
         st_value=st_value,

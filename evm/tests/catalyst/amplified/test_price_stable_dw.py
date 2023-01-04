@@ -127,7 +127,7 @@ def test_price_invariant(gov, accounts, swappool1, token1, token2):
 
     baseAmount = swappool1.balanceOf(balance_modifier)
     assert baseAmount > 0
-    txW = swappool1.withdrawAll(baseAmount, {"from": balance_modifier})
+    txW = swappool1.withdrawAll(baseAmount, [0, 0, 0], {"from": balance_modifier})
 
     priceAfterWithdrawal = (
         (token1.balanceOf(swappool1) / token2.balanceOf(swappool1)) ** amp
