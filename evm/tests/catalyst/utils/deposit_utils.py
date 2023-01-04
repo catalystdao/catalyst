@@ -325,7 +325,7 @@ def get_swappool_group_invariant(swappool_tokens_tuples):
     for swappool, tokens in swappool_tokens_tuples:
         for token in tokens:
             token_weight = swappool._weight(token)
-            invariant *= token.balanceOf(swappool)**token_weight / swappool._balance0(token)**token_weight
+            invariant *= token.balanceOf(swappool)**token_weight
     
     return invariant
 
