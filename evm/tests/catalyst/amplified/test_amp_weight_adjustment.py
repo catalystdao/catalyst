@@ -1,7 +1,7 @@
 import brownie
 import numpy as np
 import pytest
-from brownie import ZERO_ADDRESS, Token, SwapPool, chain
+from brownie import chain
 from brownie.test import given, strategy
 from hypothesis import settings
 from math import ceil, floor

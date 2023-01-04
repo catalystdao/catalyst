@@ -1,10 +1,8 @@
 import brownie
 import numpy as np
 import pytest
-from brownie import ZERO_ADDRESS, Token, SwapPool, chain
 from brownie.test import given, strategy
 from hypothesis import settings
-import json
 from a_common_functions import get_swap_return, check_swap_return
 
 
