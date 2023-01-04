@@ -110,7 +110,6 @@ def test_deposit_and_withdraw(
     # Check that all tokens were moved correctly.
     for token, balance in zip(tokens, deposit_balances):
         assert token.balanceOf(sp) == 2 * balance
-        assert sp._balance0(token) == 2 * balance    # This is true, as the balance0 of the asset is initialized to be the same as the initial balance deposited when creating the pool (and hence it gets doubled)
 
 
     # 2. Withdraw all the previously deposited assets
@@ -128,8 +127,6 @@ def test_deposit_and_withdraw(
     # Check that all tokens were moved correctly.
     for token, balance in zip(tokens, deposit_balances):
         assert token.balanceOf(sp) == balance
-        assert sp._balance0(token) == balance    # This is true, as the balance0 of the asset is initialized to be the same as the initial balance deposited when creating the pool (and hence it gets doubled)
-
 
 
 def test_swap_and_deposit_and_withdraw(
@@ -195,8 +192,6 @@ def test_swap_and_deposit_and_withdraw(
         else:
             assert token.balanceOf(sp) == 2 * balance
 
-        assert sp._balance0(token) == 2 * balance    # This is true, as the balance0 of the asset is initialized to be the same as the initial balance deposited when creating the pool (and hence it gets doubled)
-
 
     # 3. Withdraw all the previously deposited assets
     withdraw_amount = deposit_amount
@@ -218,9 +213,6 @@ def test_swap_and_deposit_and_withdraw(
             assert token.balanceOf(sp) == balance + swap_amount
         else:
             assert token.balanceOf(sp) == balance
-
-        assert sp._balance0(token) == balance    # This is true, as the balance0 of the asset is initialized to be the same as the initial balance deposited when creating the pool (and hence it gets doubled)
-
 
 
 def test_deposit_zero_amount(

@@ -120,8 +120,7 @@ def test_price_invariant(gov, accounts, swappool1, token1, token2):
         / swappool1._weight(token1)
     )
     topInvariantBeforeWithdrawal = token1.balanceOf(swappool1)**(1-amp) + token2.balanceOf(swappool1)**(1-amp)
-    bottomInvariantBeforeWithdrawal = swappool1._balance0(token1)**(1-amp) + swappool1._balance0(token2)**(1-amp)
-    invariantBeforeWithdrawal = topInvariantBeforeWithdrawal / bottomInvariantBeforeWithdrawal
+    invariantBeforeWithdrawal = topInvariantBeforeWithdrawal
 
     chain.revert()
 
@@ -135,8 +134,7 @@ def test_price_invariant(gov, accounts, swappool1, token1, token2):
         / swappool1._weight(token1)
     )
     topInvariantAfterWithdrawal = token1.balanceOf(swappool1)**(1-amp) + token2.balanceOf(swappool1)**(1-amp)
-    bottomInvariantAfterWithdrawal = swappool1._balance0(token1)**(1-amp) + swappool1._balance0(token2)**(1-amp)
-    invariantAfterWithdrawal = topInvariantAfterWithdrawal / bottomInvariantAfterWithdrawal
+    invariantAfterWithdrawal = topInvariantAfterWithdrawal
 
     assert priceAfterWithdrawal == priceBeforeWithdrawal
     assert 1 + 1e-08 >= invariantAfterWithdrawal/invariantBeforeWithdrawal >= 1 - 1e-08

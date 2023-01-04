@@ -34,7 +34,6 @@ def run_deposit(
     init_sp_token_balances         = [token.balanceOf(sp) for token in sp_tokens]
     init_sp_pool_token_supply      = sp.totalSupply()
     init_sp_depositor_pool_tokens  = sp.balanceOf(depositor)
-    init_sp_balance0               = [sp._balance0(token) for token in sp_tokens]
     init_sp_invariant              = get_swappool_group_invariant([[sp, sp_tokens]])
     init_sp_spot_prices            = get_swappool_spot_prices(sp, sp_tokens)
 
@@ -70,10 +69,6 @@ def run_deposit(
     # Check pool tokens
     assert sp.totalSupply() == init_sp_pool_token_supply + amount
     assert sp.balanceOf(depositor) == init_sp_depositor_pool_tokens + amount
-
-    # Check balance0s
-    for i, token in enumerate(sp_tokens):
-        assert_relative_error(sp._balance0(token), init_sp_balance0[i] * (1 + deposit_proportion), -large_error_bound, small_error_bound)
     
     # Check deposited amounts
     for i, token in enumerate(sp_tokens):
@@ -116,7 +111,6 @@ def run_amp_deposit(
     init_sp_token_balances         = [token.balanceOf(sp) for token in sp_tokens]
     init_sp_pool_token_supply      = sp.totalSupply()
     init_sp_depositor_pool_tokens  = sp.balanceOf(depositor)
-    init_sp_balance0               = [sp._balance0(token) for token in sp_tokens]
     init_sp_invariant              = get_amp_swappool_group_invariant([[sp, sp_tokens]])
     init_sp_spot_prices            = get_swappool_spot_prices(sp, sp_tokens)
 
@@ -152,10 +146,6 @@ def run_amp_deposit(
     # Check pool tokens
     assert sp.totalSupply() == init_sp_pool_token_supply + amount
     assert sp.balanceOf(depositor) == init_sp_depositor_pool_tokens + amount
-
-    # Check balance0s
-    for i, token in enumerate(sp_tokens):
-        assert_relative_error(sp._balance0(token), init_sp_balance0[i] * (1 + deposit_proportion), -large_error_bound, small_error_bound)
     
     # Check deposited amounts
     for i, token in enumerate(sp_tokens):
@@ -195,7 +185,6 @@ def run_withdraw(
     init_sp_token_balances         = [token.balanceOf(sp) for token in sp_tokens]
     init_sp_pool_token_supply      = sp.totalSupply()
     init_sp_withdrawer_pool_tokens = sp.balanceOf(withdrawer)
-    init_sp_balance0               = [sp._balance0(token) for token in sp_tokens]
     init_sp_invariant              = get_swappool_group_invariant([[sp, sp_tokens]])
     init_sp_spot_prices            = get_swappool_spot_prices(sp, sp_tokens)
 
@@ -222,8 +211,6 @@ def run_withdraw(
 
     # Check balance0s
     withdraw_proportion = amount / init_sp_pool_token_supply
-    for i, token in enumerate(sp_tokens):
-        assert_relative_error(sp._balance0(token), init_sp_balance0[i] * (1 - withdraw_proportion), -large_error_bound, small_error_bound)
     
     # Check withdrawn amounts
     for i, token in enumerate(sp_tokens):
@@ -265,7 +252,6 @@ def run_amp_withdraw(
     init_sp_token_balances         = [token.balanceOf(sp) for token in sp_tokens]
     init_sp_pool_token_supply      = sp.totalSupply()
     init_sp_withdrawer_pool_tokens = sp.balanceOf(withdrawer)
-    init_sp_balance0               = [sp._balance0(token) for token in sp_tokens]
     init_sp_invariant              = get_amp_swappool_group_invariant([[sp, sp_tokens]])
     init_sp_spot_prices            = get_swappool_spot_prices(sp, sp_tokens)
 
@@ -290,10 +276,7 @@ def run_amp_withdraw(
     assert sp.totalSupply()         == init_sp_pool_token_supply - amount
     assert sp.balanceOf(withdrawer) == init_sp_withdrawer_pool_tokens - amount
 
-    # Check balance0s
     withdraw_proportion = amount / init_sp_pool_token_supply
-    for i, token in enumerate(sp_tokens):
-        assert_relative_error(sp._balance0(token), init_sp_balance0[i] * (1 - withdraw_proportion), -large_error_bound, small_error_bound)
     
     # Check withdrawn amounts
     for i, token in enumerate(sp_tokens):
@@ -347,7 +330,6 @@ def get_amp_swappool_group_invariant(swappool_tokens_tuples):
         for token in tokens:
             token_weight = swappool._weight(token)
             top_invariant    += token.balanceOf(swappool)**one_minus_amp * token_weight
-            bottom_invariant += swappool._balance0(token)**one_minus_amp * token_weight
 
     
-    return top_invariant/bottom_invariant
+    return top_invariant

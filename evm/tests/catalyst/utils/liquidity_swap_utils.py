@@ -60,7 +60,6 @@ def run_liquidity_swap(
 
 
     # Get state before swapping
-    init_sp1_balance0                 = [sp1._balance0(token) for token in sp1_tokens]
     init_sp1_pool_token_supply        = sp1.totalSupply()
     init_sp1_escrowed_pool_tokens     = sp1._escrowedPoolTokens()
     init_sp1_from_swapper_pool_tokens = sp1.balanceOf(from_swapper)
@@ -107,14 +106,6 @@ def run_liquidity_swap(
     assert sp1._escrowedPoolTokens() == init_sp1_escrowed_pool_tokens + swap_amount
     escrow_info = sp1._escrowedLiquidityFor(message_hash)
     assert escrow_info == fallback_user
-
-    # Check balance0s
-    expected_sp1_new_balance0 = []
-    for i, token in enumerate(sp1_tokens):
-        expected_new_balance0 = init_sp1_balance0[i] * ( 1 - swap_amount/init_sp1_pool_token_supply )
-        assert_relative_error(sp1._balance0(token), expected_new_balance0, -small_error_bound, large_error_bound)
-
-        expected_sp1_new_balance0.append(expected_new_balance0)
     
     # TODO Check group invariant?
 

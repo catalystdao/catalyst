@@ -3,7 +3,7 @@ from typing import Any, List
 
 # Defaults
 
-DEFAULT_POOL_DECIMALS     = 18
+DEFAULT_POOL_DECIMALS     = 64
 INITIAL_POOL_TOKEN_SUPPLY = 2**64
 MAX_POOL_ASSETS           = 3
 
