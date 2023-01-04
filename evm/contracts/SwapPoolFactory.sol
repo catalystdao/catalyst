@@ -53,7 +53,7 @@ contract CatalystSwapPoolFactory is Ownable {
     ) external returns (address) {
         address swapPool = Clones.clone(_poolTemplate[poolTemplateIndex]);
 
-        // The pool expects the balance0s to exist in the pool when setup is called.
+        // The pool expects the balances to exist in the pool when setup is called.
         for (uint256 it = 0; it < init_assets.length; it++) {
             IERC20(init_assets[it]).safeTransferFrom(
                 msg.sender,

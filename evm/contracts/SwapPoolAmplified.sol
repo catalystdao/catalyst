@@ -695,20 +695,8 @@ contract CatalystSwapPoolAmplified is
         IERC20(toAsset).safeTransfer(msg.sender, out);
         IERC20(fromAsset).safeTransferFrom(msg.sender, address(this), amount);
 
-        // uint256 unitConstant = _ampUnitCONSTANT;
-        // # Since the token limit depend on the current balance and all NUMASSETS
-        // # assets have been updated, we should recalculate the limit.
-        // # While we could compute each update separate, it would require 4 powers
-        // # and recomputing it requires max NUMASSETS (3).
-        // newUnitLimit: uint256 = 0
-        // oneMinusAmp : uint256 = ONE - self.amp
-        // for asset_num in range(NUMASSETS):
-        //     asset : address = self.tokenIndexing[asset_num]
-        //     if asset == ZERO_ADDRESS:
-        //         break
-        //     newUnitLimit += self.weight[asset] * self._fpowX64(shift(self.balance0[asset], 64), oneMinusAmp)
+        // TODO: Security limit update?
 
-        // self.max_liquidity_unit_inflow = self.pMULX64(self.ampLiquidityUnitCONSTANT, newUnitLimit)
 
         emit LocalSwap(msg.sender, fromAsset, toAsset, amount, out, fee);
 

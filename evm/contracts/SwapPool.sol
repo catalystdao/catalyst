@@ -541,7 +541,7 @@ contract CatalystSwapPool is
             // Withdrawals should returns less, so the escrowed tokens are subtracted.
             uint256 At = IERC20(token).balanceOf(address(this)) -  _escrowedTokens[token];
 
-            // Number of tokens which can be released given balance0Amount pool tokens.
+            // Number of tokens which can be released given poolTokens.
             uint256 tokenAmount = (At * poolTokens) / initial_totalSupply;
 
             require(tokenAmount >= minOut[it], SWAP_RETURN_INSUFFICIENT);
