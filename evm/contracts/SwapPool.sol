@@ -468,8 +468,9 @@ contract CatalystSwapPool is
 
     // todo: @nonreentrant('lock')
     /**
-     * @notice Deposits a symmetrical number of tokens such that in 1:1 wpt_a are deposited. This doesn't change the pool price.
+     * @notice Deposits a user configurable amount of tokens.
      * @dev Requires approvals for all tokens within the pool.
+     * It is advised that the deposit matches the pool's %token distribution.
      * @param tokenAmounts An array of the tokens amounts to be deposited.
      * @param minOut The minimum number of pool tokens to be minted.
      */
@@ -554,9 +555,9 @@ contract CatalystSwapPool is
     }
 
     /**
-     * @notice Burns poolTokens and releases the symmetrical share
-     * of tokens to the burner. This doesn't change the pool price.
+     * @notice Burns poolTokens and release a token distribution which can be set by the user.
      * @dev Requires approvals for all tokens within the pool.
+     *      It is advised that the deposit matches the pool's %token distribution.
      * @param poolTokens The number of pool tokens to withdraw
      * @param withdrawRatioX64 The percentage of units used to withdraw. In the following special scheme: U_a = U · withdrawRatio[0], U_b = (U - U_a) · withdrawRatio[1], U_c = (U - U_a - U_b) · withdrawRatio[2], .... Is X64
      * @param minOuts The minimum number of tokens minted.
