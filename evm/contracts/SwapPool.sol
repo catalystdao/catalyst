@@ -347,6 +347,41 @@ contract CatalystSwapPool is
         return (B * W_A * input) / (W_B * A + (W_A + W_B) * input);
     }
 
+
+    /**
+     * @notice Solves the non-unique swap integral.
+     * @dev All input amounts should be the raw numbers and not X64.
+     * Since units are always denominated in X64, the function
+     * should be treated as mathematically *native*.
+     * The function is only to be used for liquidity swaps.
+     * @param U Input units. Is technically X64 but can be treated as not.
+     * @param W The pool weight of the _out token.
+     * @return Output denominated in percentage of pool.
+     */
+    function arbitrary_solve_integralX64(
+        uint256 U,
+        uint256 W
+    ) internal pure returns (uint256) {
+        return (ONE - invp2X64(U / W));
+    }
+
+    /**
+     * @notice Solves the non-unique swap integral by approximation.
+     * @dev read @arbitrary_solve_integral.
+     * The function is only to be used for liquidity swaps.
+     * @param U Input units. Is technically X64 but can be treated as not.
+     * @param W The pool weight of the _out token.
+     * @return Output denominated in percentage of pool.
+     */
+    function arbitrary_approx_solve_integralX64(
+        uint256 U,
+        uint256 W
+    ) public pure returns (uint256) {
+        uint256 UnitTimesLN2to64 = U * LN2;
+        return (UnitTimesLN2to64) / ((W << 64) + UnitTimesLN2to64 >> 64);
+    } 
+
+
     /**
      * @notice Computes the return of a SwapToUnits, without executing one.
      * @dev Before letting a user swap, it can be beneficial to viewing the
@@ -430,64 +465,56 @@ contract CatalystSwapPool is
         return complete_integral(input, A, B, W_A, W_B);
     }
 
-    // /// @notice
-    // ///     Returns the number of tokens needed to mint a certain number of pool tokens.
-    // ///
-    // ///     Solves \int_{A_{0}}^{A_{t}}P \ \left(w\right)d w = \int_{A_{0} +pt}^{A_{t} +tk}P \ \left( w\right)d w
-    // ///     for tk.
-    // /// @param asset The token address used as underlying for deposit.
-    // /// @param poolTokens The number of asset specific pool tokens to mint.
-    // /// @return Number of tokens required to mint poolTokens.
-    // function liquidity_equation_tk(address asset, uint256 poolTokens)
-    //     internal
-    //     view
-    //     returns (uint256)
-    // {
-    //     uint256 At = IERC20(asset).balanceOf(address(this));
-    //     uint256 A0 = _balance0[asset];
-    //     if (At == A0) return poolTokens;
-
-    //     return (At * poolTokens) / A0;
-    // }
 
     // todo: @nonreentrant('lock')
     /**
-     * @notice Deposits a symmetrical number of tokens such that poolTokens are minted.
-     * This doesn't change the pool price.
+     * @notice Deposits a symmetrical number of tokens such that in 1:1 wpt_a are deposited. This doesn't change the pool price.
      * @dev Requires approvals for all tokens within the pool.
-     * @param poolTokens The number of pool tokens to mint.
+     * @param tokenAmounts An array of the tokens amounts to be deposited.
+     * @param minOut The minimum number of pool tokens to be minted.
      */
-    function depositAll(uint256 poolTokens) external {
+    function depositMixed(uint256[] calldata tokenAmounts, uint256 minOut) external {
         // Cache totalSupply. This saves up to ~200 gas.
         uint256 initial_totalSupply = totalSupply(); // Not! + _escrowedPoolTokens, since a smaller number results in fewer pool tokens.
 
+        uint256 WSUM = 0;
+        uint256 U = 0;
         // For later event logging, the amounts transferred to the pool are stored.
-        uint256[] memory amounts = new uint256[](NUMASSETS);
         for (uint256 it = 0; it < NUMASSETS; it++) {
             address token = _tokenIndexing[it];
             if (token == address(0)) break;
+            uint256 weight = _weight[token];
+            WSUM += weight;
 
             // Deposits should returns less, so the escrowed tokens are not subtracted.
             uint256 At = IERC20(token).balanceOf(address(this));
 
-            // Number of tokens which can be released given balance0Amount pool tokens.
-            uint256 tokenAmount = (At * poolTokens) / initial_totalSupply;
+            U += compute_integral(tokenAmounts[it], At, weight); // Our log function is really accurate.
 
             // Transfer the appropriate number of pool tokens from the user
-            // to the pool. (And store for event logging)
-            amounts[it] = tokenAmount;
+            // to the pool.
             IERC20(token).safeTransferFrom(
                 msg.sender,
                 address(this),
-                tokenAmount
+                tokenAmounts[it]
             ); // dev: User doesn't have enough tokens;
         }
+
+        uint256 poolTokens = initial_totalSupply;
+        // If the purchase amount is below 0.0071%, our 2^-p implementation is not wrong enough.
+        // 130971882923337824 = int(0.0071 * 2**64)
+        if (U < 130971882923337824) { // TODO: Needed?
+            poolTokens *= arbitrary_approx_solve_integralX64(U, WSUM);
+        } else {
+            poolTokens *= arbitrary_solve_integralX64(U, WSUM);
+        } 
+        require(minOut <= poolTokens, SWAP_RETURN_INSUFFICIENT);
 
         // Mint the desired number of pool tokens to the user.
         _mint(msg.sender, poolTokens);
 
         // Emit the event
-        emit Deposit(msg.sender, poolTokens, amounts);
+        emit Deposit(msg.sender, poolTokens, tokenAmounts);
     }
 
     // @nonreentrant('lock')
@@ -517,6 +544,69 @@ contract CatalystSwapPool is
             uint256 tokenAmount = (At * poolTokens) / initial_totalSupply;
 
             require(tokenAmount >= minOut[it], SWAP_RETURN_INSUFFICIENT);
+            // Transferring of the released tokens.
+            amounts[it] = tokenAmount;
+            IERC20(token).safeTransfer(msg.sender, tokenAmount);
+        }
+
+        // Emit the event
+        emit Withdraw(msg.sender, poolTokens, amounts);
+    }
+
+    /**
+     * @notice Burns poolTokens and releases the symmetrical share
+     * of tokens to the burner. This doesn't change the pool price.
+     * @dev Requires approvals for all tokens within the pool.
+     * @param poolTokens The number of pool tokens to withdraw
+     * @param withdrawRatioX64 The percentage of units used to withdraw. In the following special scheme: U_a = U · withdrawRatio[0], U_b = (U - U_a) · withdrawRatio[1], U_c = (U - U_a - U_b) · withdrawRatio[2], .... Is X64
+     * @param minOuts The minimum number of tokens minted.
+     */
+    function withdrawMixed(uint256 poolTokens, uint256[] calldata withdrawRatioX64, uint256[] calldata minOuts) external {
+        // cache totalSupply. This saves a bit of gas.
+        uint256 initial_totalSupply = totalSupply() + _escrowedPoolTokens;
+
+        // Since we have already cached totalSupply, we might as well burn the tokens
+        // now. If the user doesn't have enough tokens, they save a bit of gas.
+        _burn(msg.sender, poolTokens);
+
+
+        address[] memory tokenIndexed = new address[](NUMASSETS);
+        uint256[] memory weights = new uint256[](NUMASSETS);
+
+        uint256 WSUM = 0;
+        // For later event logging, the amounts transferred to the pool are stored.
+        for (uint256 it = 0; it < NUMASSETS; it++) {
+            address token = _tokenIndexing[it];
+            if (token == address(0)) break;
+            tokenIndexed[it] = token;
+            uint256 weight = _weight[token];
+            WSUM += weight;
+        }
+
+        uint256 U = log2X64(bigdiv64(initial_totalSupply, initial_totalSupply - poolTokens)) * WSUM;
+
+        // For later event logging, the amounts transferred to the pool are stored.
+        uint256[] memory amounts = new uint256[](NUMASSETS);
+        for (uint256 it = 0; it < NUMASSETS; it++) {
+             if (U == 0) break;
+            
+            uint256 U_i = (U * withdrawRatioX64[it]) >> 64;
+            if (U_i == 0) continue;
+            U -= U_i;
+            address token = tokenIndexed[it];
+
+            // Withdrawals should returns less, so the escrowed tokens are subtracted.
+            uint256 At = IERC20(token).balanceOf(address(this)) -  _escrowedTokens[token];
+
+            
+            uint256 tokenAmount;
+            if (U < 130971882923337824) { // TODO needed?
+                tokenAmount = approx_solve_integral(U_i, At, weights[it]);
+            } else { 
+                tokenAmount = solve_integral(U_i, At, weights[it]);
+            } 
+
+            require(minOuts[it] <= tokenAmount, SWAP_RETURN_INSUFFICIENT);
             // Transferring of the released tokens.
             amounts[it] = tokenAmount;
             IERC20(token).safeTransfer(msg.sender, tokenAmount);
@@ -842,39 +932,6 @@ contract CatalystSwapPool is
         return U;
     }
 
-
-    /**
-     * @notice Solves the non-unique swap integral.
-     * @dev All input amounts should be the raw numbers and not X64.
-     * Since units are always denominated in X64, the function
-     * should be treated as mathematically *native*.
-     * The function is only to be used for liquidity swaps.
-     * @param U Input units. Is technically X64 but can be treated as not.
-     * @param W The pool weight of the _out token.
-     * @return Output denominated in percentage of pool.
-     */
-    function arbitrary_solve_integralX64(
-        uint256 U,
-        uint256 W
-    ) internal pure returns (uint256) {
-        return (ONE - invp2X64(U / W));
-    }
-
-    /**
-     * @notice Solves the non-unique swap integral by approximation.
-     * @dev read @arbitrary_solve_integral.
-     * The function is only to be used for liquidity swaps.
-     * @param U Input units. Is technically X64 but can be treated as not.
-     * @param W The pool weight of the _out token.
-     * @return Output denominated in percentage of pool.
-     */
-    function arbitrary_approx_solve_integralX64(
-        uint256 U,
-        uint256 W
-    ) public pure returns (uint256) {
-        uint256 UnitTimesLN2to64 = U * LN2;
-        return (UnitTimesLN2to64) / ((W << 64) + UnitTimesLN2to64 >> 64);
-    } 
 
     // @nonreentrant('lock')
     /**
