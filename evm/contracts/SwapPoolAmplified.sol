@@ -225,20 +225,17 @@ contract CatalystSwapPoolAmplified is
         uint256 oneMinusAmp = ONE - _amp;
         // Notice, a > b => a^(1-k) > b^(1-k) =>
         // a <= b => a^(1-k) <= b^(1-k)
+        uint256 weight = _weight[asset];
         if (oldBalance < newBalance)
             // Since a^(1-k) > b^(1-k), the return is positive
-            return
-                _weight[asset] *
-                (fpowX64(newBalance << 64, oneMinusAmp) -
-                    fpowX64(oldBalance << 64, oneMinusAmp));
+            return fpowX64(weight * newBalance << 64, oneMinusAmp) -
+                    fpowX64(weight * oldBalance << 64, oneMinusAmp);
 
         // Since a^(1-k) > b^(1-k), the return is negative
         // Since the function returns uint256, return
         // b^(1-k) - a^(1-k) instead. (since that is positive)
-        return
-            _weight[asset] *
-            (fpowX64(oldBalance << 64, oneMinusAmp) -
-                fpowX64(newBalance << 64, oneMinusAmp));
+        return fpowX64(weight * oldBalance << 64, oneMinusAmp) -
+                fpowX64(weight * newBalance << 64, oneMinusAmp);
     }
 
     //--- Swap integrals ---//
@@ -270,9 +267,8 @@ contract CatalystSwapPoolAmplified is
     ) internal pure returns (uint256) {
         uint256 oneMinusAmp = ONE - amp; // Minor gas saving :)
         return
-            W *
-            (fpowX64((A + input) << 64, oneMinusAmp) -
-                fpowX64(A << 64, oneMinusAmp));
+            (fpowX64((W*(A + input)) << 64, oneMinusAmp) -
+                fpowX64((W*A) << 64, oneMinusAmp));
     }
 
     /**
@@ -302,7 +298,7 @@ contract CatalystSwapPoolAmplified is
         uint256 oneMinusAmp = ONE - amp; // Minor gas saving :)
         // W_B · B^(1-k) is repeated twice and requires 1 power.
         // As a result, we compute it and cache.
-        uint256 W_BTimesBtoOneMinusAmp = W * fpowX64(B << 64, oneMinusAmp);
+        uint256 W_BTimesBtoOneMinusAmp = fpowX64((W * B) << 64, oneMinusAmp);
         return
             (B *
                 (ONE -
@@ -348,7 +344,7 @@ contract CatalystSwapPoolAmplified is
         uint256 amp
     ) internal pure returns (uint256) {
         uint256 oneMinusAmp = ONE - amp; // Minor gas saving :)
-        uint256 W_BTimesBtoOneMinusAmp = W_B * fpowX64(B << 64, oneMinusAmp);
+        uint256 W_BTimesBtoOneMinusAmp = fpowX64(W_B * B << 64, oneMinusAmp);
         return
             (B *
                 (ONE -
@@ -356,9 +352,8 @@ contract CatalystSwapPoolAmplified is
                         bigdiv64(
                             W_BTimesBtoOneMinusAmp,
                             W_BTimesBtoOneMinusAmp -
-                                W_A *
-                                (fpowX64((A + input) << 64, oneMinusAmp) -
-                                    fpowX64(A << 64, oneMinusAmp))
+                                (fpowX64((W_A * A + input) << 64, oneMinusAmp) -
+                                    fpowX64(W_A * A << 64, oneMinusAmp))
                         ),
                         bigdiv64(ONE, oneMinusAmp)
                     ))) >> 64;
@@ -378,7 +373,7 @@ contract CatalystSwapPoolAmplified is
     {
         uint256 W = _weight[from];
         uint256 A = IERC20(from).balanceOf(address(this));
-        require(A + amount < 2**(256 - 64) - 1, BALANCE_SECURITY_LIMIT); // dev: Potential exploitable
+        require(W*(A + amount) < 2**(256 - 64) - 1, BALANCE_SECURITY_LIMIT); // dev: Potential exploitable
         // if the attacker can abuse
         // some kind of flash-mint.
 
@@ -399,7 +394,7 @@ contract CatalystSwapPoolAmplified is
     {
         uint256 W = _weight[to];
         uint256 B = IERC20(to).balanceOf(address(this)) - _escrowedTokens[to];
-        require(B < 2**(256 - 64) - 1, BALANCE_SECURITY_LIMIT); // dev: Potential exploitable
+        require(W*B < 2**(256 - 64) - 1, BALANCE_SECURITY_LIMIT); // dev: Potential exploitable
         // if the attacker can abuse
         // some kind of flash-mint.
 
@@ -421,11 +416,11 @@ contract CatalystSwapPoolAmplified is
         uint256 B = IERC20(to).balanceOf(address(this)) - _escrowedTokens[to];
         uint256 W_A = _weight[from];
         uint256 W_B = _weight[to];
-        require(B < 2**(256 - 64) - 1, BALANCE_SECURITY_LIMIT); // dev: Potential exploitable
+        require((W_B * B) < 2**(256 - 64) - 1, BALANCE_SECURITY_LIMIT); // dev: Potential exploitable
         // if the attacker can abuse
         // some kind of flash-mint.
 
-        require(A + input < 2**(256 - 64) - 1, BALANCE_SECURITY_LIMIT); // dev: Potential exploitable
+        require(W_A * (A + input) < 2**(256 - 64) - 1, BALANCE_SECURITY_LIMIT); // dev: Potential exploitable
         // if the attacker can abuse
         // some kind of flash-mint.
 
