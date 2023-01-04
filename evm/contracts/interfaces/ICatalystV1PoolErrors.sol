@@ -1,5 +1,5 @@
 //SPDX-License-Identifier: Unlicsened
-pragma solidity >=0.8.17 <0.9.0;
+pragma solidity ^0.8.16;
 
 /// @title Errors defined by Catalyst v1 Pools
 /// @notice Contains all errors raised by the pool

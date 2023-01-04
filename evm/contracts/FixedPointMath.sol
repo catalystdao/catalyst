@@ -1,6 +1,6 @@
 //SPDX-License-Identifier: Unlicsened
 
-pragma solidity >=0.8.17 <0.9.0;
+pragma solidity ^0.8.16;
 
 /// @title Catalyst Fixed Point Mathematics Library
 /// @author
@@ -149,7 +149,9 @@ contract CatalystFixedPointMath {
             log2_intermediate -= pXX;
 
             // Secure the decimal point
-            x_i = x / (1 << log2_intermediate);
+            x_i = x / (1 << log2_intermediate); // We want the number rounded down.
+            // slither: performs a multiplication on the result of a division
+            // Alexander: Yes. That is on purpose.
             log2_intermediate = log2_intermediate << pXX;
             // for (uint256 i = 0; i < 24; i++) {
             //     // 24 is Supposedly: 1/2**24 => .0.0000059605% deviation, but I am getting more like 1/2**20 deviation => .0000953674% deviation

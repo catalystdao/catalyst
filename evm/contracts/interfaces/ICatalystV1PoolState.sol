@@ -1,5 +1,5 @@
 //SPDX-License-Identifier: Unlicsened
-pragma solidity >=0.8.17 <0.9.0;
+pragma solidity ^0.8.16;
 
 struct TokenEscrow {
     uint256 amount;

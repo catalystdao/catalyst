@@ -1,15 +1,15 @@
 //SPDX-License-Identifier: Unlicsened
 
-pragma solidity >=0.8.17 <0.9.0;
+pragma solidity ^0.8.16;
 
 import "../FixedPointMath.sol";
 
 contract testFixedPointMath is CatalystFixedPointMath {
     function imul(uint256 a, uint256 b) external pure returns (uint256) {
         return mulX64(a, b);
-    } 
+    }
 
-    function ibigdiv(uint256 a, uint256 b) external pure returns(uint256) {
+    function ibigdiv(uint256 a, uint256 b) external pure returns (uint256) {
         return bigdiv64(a, b);
     }
 

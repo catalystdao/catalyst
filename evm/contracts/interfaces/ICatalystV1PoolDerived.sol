@@ -1,5 +1,5 @@
 //SPDX-License-Identifier: Unlicsened
-pragma solidity >=0.8.17 <0.9.0;
+pragma solidity ^0.8.16;
 
 /// @title Derived Pool state
 /// @notice Contains all pool state which is derived from pool storage
