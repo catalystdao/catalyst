@@ -15,6 +15,6 @@ def main():
     swappool_bytes_BSC = brownie.convert.to_bytes(swappool_BSC.replace("0x", ""))
 
     # create connection to the pool on ETH
-    brownie.SwapPool.at(swappool_ETH).createConnectionWithChain(
+    brownie.SwapPool.at(swappool_ETH).createConnection(
         1234, swappool_bytes_BSC, True, {"from": acct}
     )

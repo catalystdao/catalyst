@@ -152,7 +152,7 @@ def test_finish_setup(swapfactory, crosschaininterface, chainId, tokens, deploye
     )
 
     # Create connection with itself (set onlyLocal to false)
-    swap_pool_info_2.swappool.createConnectionWithChain(
+    swap_pool_info_2.swappool.createConnection(
         chainId,
         brownie.convert.to_bytes(swap_pool_info_2.swappool.address.replace("0x", "")),
         True,
@@ -284,7 +284,7 @@ def test_create_connection(
 
     # Invalid caller
     with brownie.reverts(dev_revert_msg="dev: No auth"):
-        swap_pool_info_1.swappool.createConnectionWithChain(
+        swap_pool_info_1.swappool.createConnection(
             chainId,
             brownie.convert.to_bytes(swap_pool_info_2.swappool.address.replace("0x", "")),
             True,
@@ -301,7 +301,7 @@ def test_create_connection(
 
 
     # Setup master
-    swap_pool_info_1.swappool.createConnectionWithChain(
+    swap_pool_info_1.swappool.createConnection(
         chainId,
         brownie.convert.to_bytes(swap_pool_info_2.swappool.address.replace("0x", "")),
         True,
@@ -319,7 +319,7 @@ def test_create_connection(
 
 
     # Factory owner
-    swap_pool_info_1.swappool.createConnectionWithChain(
+    swap_pool_info_1.swappool.createConnection(
         chainId,
         brownie.convert.to_bytes(swap_pool_info_2.swappool.address.replace("0x", "")),
         False,
@@ -342,7 +342,7 @@ def test_create_connection(
 
     # Setup master not valid anymore
     with brownie.reverts(dev_revert_msg="dev: No auth"):
-        swap_pool_info_1.swappool.createConnectionWithChain(
+        swap_pool_info_1.swappool.createConnection(
             chainId,
             brownie.convert.to_bytes(swap_pool_info_2.swappool.address.replace("0x", "")),
             True,
@@ -359,7 +359,7 @@ def test_create_connection(
     
 
     # Factory owner still valid
-    swap_pool_info_1.swappool.createConnectionWithChain(
+    swap_pool_info_1.swappool.createConnection(
         chainId,
         brownie.convert.to_bytes(swap_pool_info_2.swappool.address.replace("0x", "")),
         True,

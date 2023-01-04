@@ -56,7 +56,7 @@ def run_deposit(
         token.approve(sp, deposit_balance + 1, {"from": depositor}) # Extra 1 to allow for rounding errors
 
     # Deposit tokens
-    tx = sp.depositAll(amount, {"from": depositor})
+    tx = sp.depositMixed(expected_deposit_balances, amount, {"from": depositor})
 
     # Check transaction event
     assert len(tx.events['Deposit']) == 1
@@ -138,7 +138,7 @@ def run_amp_deposit(
         token.approve(sp, deposit_balance + 1, {"from": depositor}) # Extra 1 to allow for rounding errors
 
     # Deposit tokens
-    tx = sp.depositAll(amount, {"from": depositor})
+    tx = sp.depositMixed(expected_deposit_balances, amount, {"from": depositor})
 
     # Check transaction event
     assert len(tx.events['Deposit']) == 1

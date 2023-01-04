@@ -73,7 +73,7 @@ def default_amp_swappool_self(deploy_swappool, token1, token2, token3, accounts,
 
         TARGET_CHAIN_ID = chainId
 
-        sp.createConnectionWithChain(
+        sp.createConnection(
             TARGET_CHAIN_ID,
             convert.to_bytes(sp.address.replace("0x", "")),
             True,

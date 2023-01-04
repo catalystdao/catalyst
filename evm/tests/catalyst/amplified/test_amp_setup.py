@@ -161,7 +161,7 @@ def test_finish_setup(swapfactory, crosschaininterface, chainId, tokens, deploye
     )
 
     # Create connection with itself (set onlyLocal to false)
-    swap_pool_info_2.swappool.createConnectionWithChain(
+    swap_pool_info_2.swappool.createConnection(
         chainId,
         brownie.convert.to_bytes(swap_pool_info_2.swappool.address.replace("0x", "")),
         True,

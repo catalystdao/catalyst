@@ -44,7 +44,7 @@ def test_deposit_into_pool(gov, accounts, default_amp_swappool_self, token1, tok
     baseAmount = (
         int((depositValue * swappool.totalSupply()) / token1.balanceOf(swappool)) - 1000
     )
-    swappool.depositAll(baseAmount, {"from": balance_modifier})
+    swappool.depositMixed([depositValue], baseAmount-1, {"from": balance_modifier})
 
     assert 10**5 > token1.balanceOf(balance_modifier)
     assert swappool.balanceOf(balance_modifier) == baseAmount

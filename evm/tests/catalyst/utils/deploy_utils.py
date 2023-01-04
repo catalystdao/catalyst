@@ -63,8 +63,6 @@ def run_deploy_swappool_unsafe(
         assert token.balanceOf(swap_pool) == deploy_balance
         assert token.balanceOf(deployer)  == init_deployer_balance - deploy_balance
 
-        # Balance0 check
-        assert swap_pool._balance0(token) == deploy_balance
 
     # Pool tokens check
     assert swap_pool.totalSupply()       == INITIAL_POOL_TOKEN_SUPPLY

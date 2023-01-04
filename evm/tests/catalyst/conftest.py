@@ -164,7 +164,7 @@ def default_swappool_self(deploy_swappool, token1, token2, token3, accounts, cha
         deployer=deployer,
     )
 
-    sp.createConnectionWithChain(
+    sp.createConnection(
         TARGET_CHAIN_ID,
         convert.to_bytes(sp.address.replace("0x", "")),
         True,

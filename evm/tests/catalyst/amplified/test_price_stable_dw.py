@@ -39,14 +39,14 @@ def swappool2(deploy_swappool, accounts, token3):
 
 
 def test_create_connections(swappool1, swappool2, accounts, chainId):
-    swappool1.createConnectionWithChain(
+    swappool1.createConnection(
         chainId,
         convert.to_bytes(swappool2.address.replace("0x", "")),
         True,
         {"from": accounts[0]},
     )
 
-    swappool2.createConnectionWithChain(
+    swappool2.createConnection(
         chainId,
         convert.to_bytes(swappool1.address.replace("0x", "")),
         True,
@@ -71,7 +71,7 @@ def test_deposit_into_pool(gov, accounts, swappool1, token1, token2):
         int((depositValue * swappool1.totalSupply()) / token1.balanceOf(swappool1))
         - 1000
     )
-    swappool1.depositAll(baseAmount, {"from": balance_modifier})
+    swappool1.depositMixed(depositValue, baseAmount-1, {"from": balance_modifier})
 
     assert 10**5 > token1.balanceOf(balance_modifier)
     assert swappool1.balanceOf(balance_modifier) == baseAmount
