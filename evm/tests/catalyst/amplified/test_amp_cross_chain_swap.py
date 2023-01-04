@@ -671,20 +671,21 @@ def test_swap_from_asset_not_in_pool(
 
     # TODO: The transaction does not fail if the user sends some from_tokens to the pool before invoking the swap.
     # Add a require statement to make the error more explicit?
-    tx = sp1.swapToUnits(
-        chainId,
-        brownie.convert.to_bytes(sp2.address.replace("0x", "")),
-        brownie.convert.to_bytes(swapper2.address.replace("0x", "")),
-        from_token,
-        0,
-        swap_amount,
-        0,
-        0,
-        swapper1,
-        {"from": swapper1}
-    )
+    with brownie.reverts():
+        tx = sp1.swapToUnits(
+            chainId,
+            brownie.convert.to_bytes(sp2.address.replace("0x", "")),
+            brownie.convert.to_bytes(swapper2.address.replace("0x", "")),
+            from_token,
+            0,
+            swap_amount,
+            0,
+            0,
+            swapper1,
+            {"from": swapper1}
+        )
 
-    assert tx.events['SwapToUnits'][0]['output'] == 0
+    # assert tx.events['SwapToUnits'][0]['output'] == 0
 
 
 

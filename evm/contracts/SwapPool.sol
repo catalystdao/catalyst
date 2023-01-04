@@ -397,8 +397,12 @@ contract CatalystSwapPool is CatalystFixedPointMath, CatalystSwapPoolCommon {
         uint256 A = IERC20(from).balanceOf(address(this));
         uint256 W = _weight[from];
 
+        // If a token is not part of the pool, W is 0. This returns 0 by
+        // multiplication with 0.
         if (approx) return approx_compute_integral(amount, A, W);
 
+        // If a token is not part of the pool, W is 0. This returns 0 by
+        // multiplication with 0.
         return compute_integral(amount, A, W);
     }
 
@@ -457,8 +461,12 @@ contract CatalystSwapPool is CatalystFixedPointMath, CatalystSwapPoolCommon {
             // Saves ~7500 gas.
             return (B * input) / (A + input);
 
+        // If from token doesn't exist, W_A is 0
+        // and this returns 0 by multiplications with 0.
         if (approx) return approx_integral(input, A, B, W_A, W_B);
 
+        // If the token doesn't exist, W_A is 0.
+        // Then invfpowX64 returns 1 which is subtracted from 1 => returns 0.
         return complete_integral(input, A, B, W_A, W_B);
     }
 

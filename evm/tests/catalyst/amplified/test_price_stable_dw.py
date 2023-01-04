@@ -71,7 +71,7 @@ def test_deposit_into_pool(gov, accounts, swappool1, token1, token2):
         int((depositValue * swappool1.totalSupply()) / token1.balanceOf(swappool1))
         - 1000
     )
-    swappool1.depositMixed(depositValue, baseAmount-1, {"from": balance_modifier})
+    swappool1.depositMixed([depositValue], baseAmount-1, {"from": balance_modifier})
 
     assert 10**5 > token1.balanceOf(balance_modifier)
     assert swappool1.balanceOf(balance_modifier) == baseAmount

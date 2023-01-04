@@ -113,46 +113,6 @@ contract CatalystSwapPoolAmplified is
         setupBase(name_, symbol_, chaininterface, setupMaster);
     }
 
-    function modifyWeights(uint256 targetTime, uint256[] calldata newWeights)
-        external
-        onlyFactoryOwner
-    {
-        require(targetTime >= block.timestamp + 60 * 60 * 24 * 2); // dev: targetTime must be more than 2 days in the future.
-        require(_targetAmplification == _amp); // dev: Weight and amplification changes are disallowed simultaneously.
-        _adjustmentTarget = targetTime + (targetTime % 2); // Weight changes have even target time
-        _lastModificationTime = block.timestamp;
-
-        uint256 amp = _amp;
-        uint256 new_max_unit_inflow = 0;
-        // We don't want to spend gas on each update, updating the security limit. As a result, we decrease security
-        // for lower gas cost.
-        for (uint256 it = 0; it < NUMASSETS; ++it) {
-            address token = _tokenIndexing[it];
-            if (token == address(0)) break;
-            _targetWeight[token] = newWeights[it]; // Set new weights
-
-            uint256 balanceOfSelf = IERC20(token).balanceOf(address(this));
-            new_max_unit_inflow +=
-                newWeights[it] *
-                fpowX64(balanceOfSelf << 64, ONE - amp); // Compute new security limit.
-        }
-        new_max_unit_inflow = mulX64(_ampUnitCONSTANT, new_max_unit_inflow);
-        if (new_max_unit_inflow >= _max_unit_inflow) {
-            // The governance can technically remove the security limit by setting targetTime = max(uint256)
-            // while newWeights = (max(uint256)/NUMWEIGHTS) >> 64. Since the router and the governance are
-            // to be independent, this is not a security issue.
-            // Alt: Call with higher weights and then immediately call with lower weights.
-            _max_unit_inflow = new_max_unit_inflow;
-            _target_max_unit_inflow = 0;
-        } else {
-            // Decreases of the security limit can also be a way to remove the security limit. However, if the
-            // weights are kept low (=1) (for cheaper tx costs), then this is non-issue since it cannot be
-            // decerased further.
-            // _max_unit_inflow = current_unit_inflow
-            _target_max_unit_inflow = new_max_unit_inflow;
-        }
-    }
-
     function modifyAmplification(
         uint256 targetTime,
         uint256 targetAmplification
