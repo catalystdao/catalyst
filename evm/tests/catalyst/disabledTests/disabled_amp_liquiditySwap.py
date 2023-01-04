@@ -96,7 +96,7 @@ def test_add_depositor(swappool1_info, gov, depositor):
     initial_total_supply = swappool1.totalSupply()
 
     # Deposit
-    swappool1.depositAll(initial_total_supply, {"from": depositor})
+    swappool1.depositMixed(deposit_balances, initial_total_supply, {"from": depositor})
 
     # Check that the deposit was correct.  # Since the user deposits the same amount as was within the pool, the pool token supply should have doubled
     assert swappool1.balanceOf(depositor) == initial_total_supply
