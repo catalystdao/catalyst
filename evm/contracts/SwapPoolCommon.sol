@@ -102,15 +102,15 @@ abstract contract CatalystSwapPoolCommon is
     }
 
     // Overriding the name and symbol storage variables
-    string private _name;
-    string private _symbol;
+    string private __name;
+    string private __symbol;
 
     function name() public view override returns (string memory) {
-        return _name;
+        return __name;
     }
 
     function symbol() public view override returns (string memory) {
-        return _symbol;
+        return __symbol;
     }
 
     function decimals() public pure override returns (uint8) {
@@ -145,8 +145,8 @@ abstract contract CatalystSwapPoolCommon is
         _factory = msg.sender;
 
         // Names the ERC20 pool token //
-        _name = name_;
-        _symbol = symbol_;
+        __name = name_;
+        __symbol = symbol_;
         // END ERC20 //
 
         // Mint 1 pool token to the short-term pool owner.
