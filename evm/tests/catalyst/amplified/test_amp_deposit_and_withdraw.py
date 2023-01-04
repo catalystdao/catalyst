@@ -25,7 +25,7 @@ def depositor(accounts):
 
 # Define and init swap pools
 amplification = 2**62
-depositValues = [10 * 10**18, 1000 * 10**18, 1000 * 10**6, 1000 * 10**18]   # Values correspond to the different tokens from the 'tokens' fixture
+depositValues = [1000 * 10**18, 1000 * 10**18, 1000 * 10**6, 1000 * 10**18]   # Values correspond to the different tokens from the 'tokens' fixture
 
 @pytest.fixture(scope="module")
 def swappool1_info(deploy_swappool, tokens, deployer):

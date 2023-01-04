@@ -462,7 +462,7 @@ contract CatalystSwapPoolAmplified is
                 if (tokenAmounts[it] == 0) continue;
                 U +=
                     fpowX64(
-                        weightAssetBalance + weight * tokenAmounts[it],
+                        weightAssetBalance + (weight * tokenAmounts[it]) << 64,
                         oneMinusAmp
                     ) -
                     wab;
@@ -552,11 +552,8 @@ contract CatalystSwapPoolAmplified is
                     walpha_0_ampped,
                     ONEONE / (oneMinusAmp)
                 );
-                uint256 wpt_a = (walpha_0 * poolTokens) /
-                    (totalSupply() + _escrowedPoolTokens + poolTokens); // Remember to add the number of pool tokens burned to totalSupply
-                innerdiff =
-                    fpowX64(walpha_0 + wpt_a, oneMinusAmp) -
-                    walpha_0_ampped;
+                uint256 wpt_a = (walpha_0 * poolTokens) / (totalSupply() + _escrowedPoolTokens + poolTokens); // Remember to add the number of pool tokens burned to totalSupply
+                innerdiff = fpowX64(walpha_0 + wpt_a, oneMinusAmp) - walpha_0_ampped;
             }
             for (uint256 it = 0; it < NUMASSETS; ++it) {
                 address token = tokenIndexed[it];
