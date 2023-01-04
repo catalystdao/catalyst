@@ -287,6 +287,16 @@ To compile solidity contracts directly (not through Brownie), one has to install
 
 - `solc <path-to-contract> --base-path node_modules`
 
+### Slither
+
+*[Slither](https://github.com/crytic/slither) is a Solidity static analysis framework written in Python 3. It runs a suite of vulnerability detectors, prints visual information about contract details, and provides an API to easily write custom analyses. Slither enables developers to find vulnerabilities, enhance their code comprehension, and quickly prototype custom analyses.*
+
+Catalyst has been analyzed using Slither and no major bugs was found. To rerun the analytics, run:
+
+`slither contracts/<>.sol --solc-remaps @openzeppelin=node_modules/@openzeppelin --solc-args "--optimize --optimize-runs 1000" --exclude naming-convention`
+
+For each contract. `slither .` does not work.
+
 ### Vyper
 
 To compile vyper contracts directly, the correct Vyper version should be installed independently of this project. eth-brownie depends on the newest version of Vyper, which the contracts might not be compatible with.
