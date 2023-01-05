@@ -137,7 +137,7 @@ def compute_expected_swap():
         amp = 2**64
         try:
             amp = fromSwappool._amp()
-        except:
+        except AttributeError:
             pass
         
         w1 = fromSwappool._weight(fromToken)

@@ -5,6 +5,29 @@ from brownie.test import given, strategy
 
 # This function compares the output difference between withdrawAll and withdrawMixed
 @given(percentage=strategy("uint256", min_value=100, max_value=10000))
+def test_withdrawall(swappool, get_pool_tokens, berg, molly, percentage):
+    percentage /= 10000
+    
+    # Check if the test is valid
+    tokens = get_pool_tokens(swappool)
+    poolBalances = [token.balanceOf(swappool) for token in tokens]
+    
+    # Lets continue
+    poolTokens = int(swappool.balanceOf(molly) * percentage)
+    swappool.transfer(berg, poolTokens, {'from': molly})
+    ts = swappool.totalSupply()
+    
+    tx_all = swappool.withdrawAll(poolTokens, [0 for _ in tokens], {'from': berg})
+    
+    withdrawAllAmount = tx_all.return_value
+    
+    for allAmount, poolBalance in zip(withdrawAllAmount, poolBalances):
+        assert allAmount <= poolBalance*poolTokens // swappool.totalSupply()
+        assert int(poolBalance * percentage * 9 / 10) <= allAmount
+    
+
+# This function compares the output difference between withdrawAll and withdrawMixed
+@given(percentage=strategy("uint256", min_value=100, max_value=10000))
 def test_compare_withdrawall_and_withdrawmixed(swappool, get_pool_tokens, berg, molly, percentage):
     percentage /= 10000
     
