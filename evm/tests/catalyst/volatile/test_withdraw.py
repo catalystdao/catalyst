@@ -5,7 +5,7 @@ from brownie.test import given, strategy
 
 # This function compares the output difference between withdrawAll and withdrawMixed
 @given(percentage=strategy("uint256", min_value=100, max_value=10000))
-def test_withdrawlike_all(swappool, get_pool_tokens, berg, molly, percentage):
+def test_compare_withdrawall_and_withdrawmixed(swappool, get_pool_tokens, berg, molly, percentage):
     percentage /= 10000
     
     # Check if the test is valid
