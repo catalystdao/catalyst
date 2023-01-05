@@ -1,6 +1,7 @@
 import pytest
 
 from brownie import convert, ZERO_ADDRESS
+from brownie import Token
 from math import log2, ceil
 
 
@@ -169,8 +170,10 @@ def get_pool_tokens():
         while len(tokens) < 3:
             token = swappool._tokenIndexing(len(tokens))
             if token != ZERO_ADDRESS:
-                tokens.append(token)
+                tokens.append(Token.at(token))
             else:
                 break
+        
+        return tokens
     
     yield _get_pool_tokens
