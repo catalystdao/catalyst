@@ -470,7 +470,6 @@ contract CatalystSwapPool is CatalystFixedPointMath, CatalystSwapPoolCommon {
         return complete_integral(input, A, B, W_A, W_B);
     }
 
-    // todo: @nonreentrant('lock')
     /**
      * @notice Deposits a user configurable amount of tokens.
      * @dev Requires approvals for all tokens within the pool.
@@ -484,11 +483,14 @@ contract CatalystSwapPool is CatalystFixedPointMath, CatalystSwapPoolCommon {
         // Cache totalSupply. This saves up to ~200 gas.
         uint256 initial_totalSupply = totalSupply(); // Not! + _escrowedPoolTokens, since a smaller number results in fewer pool tokens.
 
+        address[] memory tokenIndexed = new address[](NUMASSETS);
+
         uint256 WSUM = 0;
         uint256 U = 0;
         // For later event logging, the amounts transferred to the pool are stored.
         for (uint256 it = 0; it < NUMASSETS; it++) {
             address token = _tokenIndexing[it];
+            tokenIndexed[it] = token;
             if (token == address(0)) break;
             uint256 weight = _weight[token];
             WSUM += weight;
@@ -500,6 +502,21 @@ contract CatalystSwapPool is CatalystFixedPointMath, CatalystSwapPoolCommon {
 
             // Transfer the appropriate number of pool tokens from the user
             // to the pool.
+        }
+
+        uint256 poolTokens;
+        poolTokens = (initial_totalSupply * arbitrary_solve_integralX64(U, WSUM)) >> 64;
+        // Emit the event
+        emit Deposit(msg.sender, poolTokens, tokenAmounts);
+        require(minOut <= poolTokens, SWAP_RETURN_INSUFFICIENT);
+
+        // Mint the desired number of pool tokens to the user.
+        _mint(msg.sender, poolTokens);
+
+        // ! Reentry protection
+        for (uint256 it = 0; it < NUMASSETS; it++) {
+            address token = tokenIndexed[it];
+            if (token == address(0)) break;
             IERC20(token).safeTransferFrom(
                 msg.sender,
                 address(this),
@@ -507,19 +524,9 @@ contract CatalystSwapPool is CatalystFixedPointMath, CatalystSwapPoolCommon {
             ); // dev: User doesn't have enough tokens;
         }
 
-        uint256 poolTokens;
-        poolTokens =
-            (initial_totalSupply * arbitrary_solve_integralX64(U, WSUM)) >>
-            64;
-        // Emit the event
-        emit Deposit(msg.sender, poolTokens, tokenAmounts);
-        require(minOut <= poolTokens, SWAP_RETURN_INSUFFICIENT);
-
-        // Mint the desired number of pool tokens to the user.
-        _mint(msg.sender, poolTokens);
     }
 
-    // @nonreentrant('lock')
+    // TODO @nonreentrant('lock')
     /**
      * @notice Burns poolTokens and releases the symmetrical share
      * of tokens to the burner. This doesn't change the pool price.
@@ -620,6 +627,9 @@ contract CatalystSwapPool is CatalystFixedPointMath, CatalystSwapPoolCommon {
             require(minOuts[it] <= tokenAmount, SWAP_RETURN_INSUFFICIENT);
             // Transferring of the released tokens.
             amounts[it] = tokenAmount;
+
+            // ! Reentry protection. Since U are already bought (and pool tokens have been burned)
+            // ! if a reentry tried to stop here, solve_integral would return less. (This is like a liquidity swap.)
             IERC20(token).safeTransfer(msg.sender, tokenAmount);
         }
 
