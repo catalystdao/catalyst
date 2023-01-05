@@ -478,7 +478,7 @@ contract CatalystSwapPool is CatalystFixedPointMath, CatalystSwapPoolCommon {
      * @param minOut The minimum number of pool tokens to be minted.
      */
     function depositMixed(uint256[] calldata tokenAmounts, uint256 minOut)
-        external
+        external returns(uint256)
     {
         // Cache totalSupply. This saves up to ~200 gas.
         uint256 initial_totalSupply = totalSupply(); // Not! + _escrowedPoolTokens, since a smaller number results in fewer pool tokens.
@@ -523,7 +523,7 @@ contract CatalystSwapPool is CatalystFixedPointMath, CatalystSwapPoolCommon {
                 tokenAmounts[it]
             ); // dev: User doesn't have enough tokens;
         }
-
+        return poolTokens;
     }
 
     // TODO @nonreentrant('lock')
@@ -533,7 +533,7 @@ contract CatalystSwapPool is CatalystFixedPointMath, CatalystSwapPoolCommon {
      * @param poolTokens The number of pool tokens to burn.
      */
     function withdrawAll(uint256 poolTokens, uint256[] calldata minOut)
-        external
+        external returns(uint256[] memory)
     {
         // cache totalSupply. This saves up to ~200 gas.
         uint256 initial_totalSupply = totalSupply() + _escrowedPoolTokens;
@@ -563,6 +563,8 @@ contract CatalystSwapPool is CatalystFixedPointMath, CatalystSwapPoolCommon {
 
         // Emit the event
         emit Withdraw(msg.sender, poolTokens, amounts);
+
+        return amounts;
     }
 
     /**
@@ -577,7 +579,7 @@ contract CatalystSwapPool is CatalystFixedPointMath, CatalystSwapPoolCommon {
         uint256 poolTokens,
         uint256[] calldata withdrawRatioX64,
         uint256[] calldata minOuts
-    ) external {
+    ) external returns(uint256[] memory) {
         // cache totalSupply. This saves a bit of gas.
         uint256 initial_totalSupply = totalSupply() + _escrowedPoolTokens;
 
@@ -635,6 +637,8 @@ contract CatalystSwapPool is CatalystFixedPointMath, CatalystSwapPoolCommon {
 
         // Emit the event
         emit Withdraw(msg.sender, poolTokens, amounts);
+
+        return amounts;
     }
 
     // @nonreentrant('lock')

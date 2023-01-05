@@ -433,7 +433,7 @@ contract CatalystSwapPoolAmplified is
      * @param minOut The minimum number of pool tokens to be minted.
      */
     function depositMixed(uint256[] calldata tokenAmounts, uint256 minOut)
-        external
+        external returns(uint256)
     {
         // Cache weights and balances.
         uint256 oneMinusAmp = ONE - _amp;
@@ -489,6 +489,8 @@ contract CatalystSwapPoolAmplified is
         _mint(msg.sender, poolTokens);
 
         emit Deposit(msg.sender, poolTokens, tokenAmounts);
+
+        return poolTokens;
     }
 
     // @nonreentrant('lock')
@@ -499,7 +501,7 @@ contract CatalystSwapPoolAmplified is
      * @param minOut The minimum number of tokens minted.
      */
     function withdrawAll(uint256 poolTokens, uint256[] calldata minOut)
-        external
+        external returns(uint256[] memory)
     {
         // Burn the desired number of pool tokens to the user. If they don't have it, it saves gas.
         _burn(msg.sender, poolTokens);
@@ -584,6 +586,8 @@ contract CatalystSwapPoolAmplified is
         }
 
         emit Withdraw(msg.sender, poolTokens, amounts);
+
+        return amounts;
     }
 
     // @nonreentrant('lock')
@@ -598,7 +602,7 @@ contract CatalystSwapPoolAmplified is
         uint256 poolTokens,
         uint256[] calldata withdrawRatioX64,
         uint256[] calldata minOuts
-    ) public {
+    ) external returns(uint256[] memory) {
         // Here the implementation should cache: "totalSupply() + _escrowedPoolTokens".
         // However, there is not enough stack to do so. So when accessing totalSupply()
         // remember to add poolTokens to it. (As they are burned in the next line)
@@ -609,7 +613,6 @@ contract CatalystSwapPoolAmplified is
 
         // Cache weights and balances.
         uint256 oneMinusAmp = ONE - _amp;
-        address[] memory tokenIndexed = new address[](NUMASSETS);
         uint256[] memory assetBalances = new uint256[](NUMASSETS);
         uint256[] memory ampWeightAssetBalances = new uint256[](NUMASSETS);
 
@@ -626,7 +629,6 @@ contract CatalystSwapPoolAmplified is
                 for (it = 0; it < NUMASSETS; ++it) {
                     address token = _tokenIndexing[it];
                     if (token == address(0)) break;
-                    tokenIndexed[it] = token;
                     uint256 weight = _weight[token];
 
                     // minus escrowedAmount, since we want the withdrawal to return less.
@@ -650,12 +652,9 @@ contract CatalystSwapPoolAmplified is
                 walpha_0 = fpowX64(walpha_0_ampped, ONEONE / (oneMinusAmp));
             }
 
-            U =
-                it *
-                (fpowX64(
-                    walpha_0 +
-                        poolTokens /
-                        (totalSupply() + _escrowedPoolTokens + poolTokens),
+            U = it * (
+                fpowX64(
+                    walpha_0 + poolTokens / (totalSupply() + _escrowedPoolTokens + poolTokens),
                     oneMinusAmp
                 ) - walpha_0_ampped); // Remember to add the number of pool tokens burned to totalSupply
         }
@@ -679,10 +678,12 @@ contract CatalystSwapPoolAmplified is
                         ONEONE / oneMinusAmp
                     ))) >> 64;
             require(minOuts[it] <= tokenAmount, SWAP_RETURN_INSUFFICIENT);
-            IERC20(tokenIndexed[it]).safeTransfer(msg.sender, tokenAmount);
+            IERC20(_tokenIndexing[it]).safeTransfer(msg.sender, tokenAmount);
         }
 
         emit Withdraw(msg.sender, poolTokens, amounts);
+
+        return amounts;
     }
 
     // @nonreentrant('lock')

@@ -25,7 +25,7 @@ interface ICatalystV1PoolPermissionless {
      * @param minOut The minimum number of pool tokens to be minted.
      */
     function depositMixed(uint256[] calldata tokenAmounts, uint256 minOut)
-        external;
+        external returns(uint256);
 
     /**
      * @notice Burns baseAmount and releases the symmetrical share
@@ -33,7 +33,7 @@ interface ICatalystV1PoolPermissionless {
      * @param baseAmount The number of pool tokens to burn.
      */
     function withdrawAll(uint256 baseAmount, uint256[] calldata minOut)
-        external;
+        external returns(uint256[] memory);
 
     /**
      * @notice Burns poolTokens and release a token distribution which can be set by the user.
@@ -49,7 +49,7 @@ interface ICatalystV1PoolPermissionless {
         uint256 poolTokens,
         uint256[] calldata withdrawRatioX64,
         uint256[] calldata minOuts
-    ) external;
+    ) external returns(uint256[] memory);
 
     /**
      * @notice A swap between 2 assets which both are inside the pool. Is atomic.
