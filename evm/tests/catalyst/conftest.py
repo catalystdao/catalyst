@@ -13,10 +13,16 @@ CHANNEL_ID = 0
 pytest_plugins = [
     "fixtures.accounts",
     "fixtures.core_contracts",
-    "fixtures.tokens"
+    "fixtures.tokens",
     "fixtures.functions"
 ]
 
+
+# Test isolation
+
+@pytest.fixture(autouse=True)
+def isolation(module_isolation):
+    pass
 
 # Pool data given to create pools for tests.
 
