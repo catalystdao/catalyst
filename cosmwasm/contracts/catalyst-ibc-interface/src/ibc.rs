@@ -2,16 +2,19 @@
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
     DepsMut, Env, StdResult, IbcChannelOpenMsg, IbcChannelConnectMsg, IbcBasicResponse, IbcChannelCloseMsg, 
-    IbcPacketReceiveMsg, IbcReceiveResponse, IbcPacketAckMsg, IbcPacketTimeoutMsg
+    IbcPacketReceiveMsg, IbcReceiveResponse, IbcPacketAckMsg, IbcPacketTimeoutMsg, IbcChannel
 };
+
+use crate::ContractError;
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn ibc_channel_open(
     _deps: DepsMut,
     _env: Env,
-    _msg: IbcChannelOpenMsg
+    msg: IbcChannelOpenMsg
 ) -> StdResult<()> {
-    unimplemented!();
+    enforce_order_and_version(msg.channel(), msg.counterparty_version())?;
+    Ok(())
 }
 
 
@@ -22,6 +25,15 @@ pub fn ibc_channel_connect(
     _msg: IbcChannelConnectMsg,
 ) -> StdResult<IbcBasicResponse> {
     unimplemented!();
+}
+
+
+fn enforce_order_and_version(
+    channel: &IbcChannel,
+    counterparty_version: Option<&str>,
+) -> Result<(), ContractError> {
+    //TODO set constraints
+    Ok(())
 }
 
 

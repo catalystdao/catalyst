@@ -1,6 +1,6 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
+use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, Uint128, Addr};
 use cw2::set_contract_version;
 
 use crate::error::ContractError;
@@ -39,12 +39,66 @@ pub fn instantiate(
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(
-    _deps: DepsMut,
-    _env: Env,
-    _info: MessageInfo,
-    _msg: ExecuteMsg,
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
-    unimplemented!()
+    match msg {
+        ExecuteMsg::CrossChainSwap {
+            chain_id,
+            target_pool,
+            target_user,
+            target_asset_index,
+            units_x64,
+            min_out,
+            approx,
+            source_amount,
+            source_asset,
+            calldata
+        } => execute_cross_chain_swap(
+            deps,
+            env,
+            info,
+            chain_id,
+            target_pool,
+            target_user,
+            target_asset_index,
+            units_x64,
+            min_out,
+            approx,
+            source_amount,
+            source_asset,
+            calldata
+        )
+    }
+}
+
+fn execute_register_pool(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    pool: String
+) -> Result<Response, ContractError> {
+    unimplemented!();
+}
+
+fn execute_cross_chain_swap(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    chain_id: String,
+    target_pool: [u8; 32],
+    target_user: [u8; 32],
+    target_asset_index: u8,
+    units_x64: [u8; 32],
+    min_out: [u8; 32],
+    approx: bool,
+    source_amount: Uint128,
+    source_asset: Addr,
+    calldata: Vec<u8>
+) -> Result<Response, ContractError> {
+    unimplemented!();
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
