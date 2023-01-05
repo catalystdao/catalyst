@@ -345,15 +345,14 @@ contract CatalystSwapPoolAmplified is
     ) internal pure returns (uint256) {
         uint256 oneMinusAmp = ONE - amp; // Minor gas saving :)
         uint256 W_BTimesBtoOneMinusAmp = fpowX64(W_B * B << 64, oneMinusAmp);
+        uint256 U = fpowX64((W_A * (A + input)) << 64, oneMinusAmp) - fpowX64(W_A * A << 64, oneMinusAmp);
         return
             (B *
                 (ONE -
                     invfpowX64(
                         bigdiv64(
                             W_BTimesBtoOneMinusAmp,
-                            W_BTimesBtoOneMinusAmp -
-                                (fpowX64((W_A * A + input) << 64, oneMinusAmp) -
-                                    fpowX64(W_A * A << 64, oneMinusAmp))
+                            W_BTimesBtoOneMinusAmp - U
                         ),
                         bigdiv64(ONE, oneMinusAmp)
                     ))) >> 64;

@@ -5,33 +5,39 @@ from brownie import (
     CatalystSwapPool,
     CatalystSwapPoolAmplified,
     CatalystIBCInterface,
+    IBCEmulator,
     ZERO_ADDRESS,
     convert
 )
 
 
 @pytest.fixture(scope="module")
-def swappool_template(gov):
-    yield gov.deploy(CatalystSwapPool)
+def ibcemulator(deployer):
+    yield deployer.deploy(IBCEmulator)
 
 
 @pytest.fixture(scope="module")
-def amplifiedswappool_template(gov):
-    yield gov.deploy(CatalystSwapPoolAmplified)
+def swappool_template(deployer):
+    yield deployer.deploy(CatalystSwapPool)
+
+
+@pytest.fixture(scope="module")
+def amplifiedswappool_template(deployer):
+    yield deployer.deploy(CatalystSwapPoolAmplified)
     
 
 @pytest.fixture(scope="module")
-def swapfactory(gov, swappool_template, amplifiedswappool_template):
-    yield gov.deploy(
+def swapfactory(deployer, swappool_template, amplifiedswappool_template):
+    yield deployer.deploy(
         CatalystSwapPoolFactory, swappool_template, amplifiedswappool_template, 0
     )
 
 
 @pytest.fixture(scope="module")
-def crosschaininterface(gov, swapfactory, ibcemulator):
-    cci = gov.deploy(CatalystIBCInterface, swapfactory, ibcemulator)
-    cci.registerPort({"from": gov})  # register port 1
-    cci.registerPort({"from": gov})  # register port 2
+def crosschaininterface(deployer, swapfactory, ibcemulator):
+    cci = deployer.deploy(CatalystIBCInterface, swapfactory, ibcemulator)
+    cci.registerPort({"from": deployer})  # register port 1
+    cci.registerPort({"from": deployer})  # register port 2
 
     yield cci
 
@@ -99,7 +105,7 @@ def swappool(deploy_swappool, pool_data):
     
     if pool_data.get("selfConnection"):
         sp.createConnection(
-            b"",
+            convert.to_bytes(1, type_str="bytes32"),
             convert.to_bytes(sp.address.replace("0x", "")),
             True,
             {"from": deployer},
@@ -121,24 +127,24 @@ def swappool(deploy_swappool, pool_data):
 # Amplified pool
 @pytest.fixture(scope="module")
 def amp_swappool(deploy_swappool, amp_pool_data):
-    assert pool_data.get("amp") < 2**64
-    deployer = pool_data.get("deployer")
-    tokens = pool_data.get("tokens")
-    depositAmounts = pool_data.get("depositAmounts")
+    assert amp_pool_data.get("amp") < 2**64
+    deployer = amp_pool_data.get("deployer")
+    tokens = amp_pool_data.get("tokens")
+    depositAmounts = amp_pool_data.get("depositAmounts")
     
 
     sp = deploy_swappool(
         tokens,
         depositAmounts,
-        pool_data.get("weights"),
-        pool_data.get("amp"),
-        pool_data.get("poolName"),
-        pool_data.get("poolSymbol"),
+        amp_pool_data.get("weights"),
+        amp_pool_data.get("amp"),
+        amp_pool_data.get("poolName"),
+        amp_pool_data.get("poolSymbol"),
         deployer=deployer,
     )
-    if pool_data.get("selfConnection"):
+    if amp_pool_data.get("selfConnection"):
         sp.createConnection(
-            b"",
+            convert.to_bytes(1, type_str="bytes32"),
             convert.to_bytes(sp.address.replace("0x", "")),
             True,
             {"from": deployer},
@@ -155,3 +161,5 @@ def amp_swappool(deploy_swappool, amp_pool_data):
         assert token.balanceOf(sp) == depositValue
 
     yield sp
+
+

@@ -4,8 +4,8 @@ from brownie import Token
 
 # An easy way to deploy a simple token.
 @pytest.fixture(scope="module")
-def create_token(gov):
-    def create_token(name="TokenName", symbol="TKN", decimal=18, deployer=gov):
+def create_token(deployer):
+    def create_token(name="TokenName", symbol="TKN", decimal=18, deployer=deployer):
         return Token.deploy(name, symbol, decimal, 10000*10**decimal, {"from": deployer})
 
     yield create_token

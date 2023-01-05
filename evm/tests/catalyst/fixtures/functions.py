@@ -1,6 +1,7 @@
 import pytest
 
 from brownie import convert, ZERO_ADDRESS
+from math import log2
 
 
 def evmBytes32ToAddress(bytes32):
@@ -94,7 +95,7 @@ def LiquidityPayloadConstructor():
             + convert.to_bytes(0, type_str="bytes2")
     )
     
-    yield LiquidityPayloadConstructor
+    yield _liquidityPayloadConstructor
 
 
 @pytest.fixture(scope="session")
@@ -111,6 +112,7 @@ def relative_error():
     yield _relative_error
 
 
+@pytest.fixture(scope="session")
 def assert_relative_error(relative_error):
     def _assert_relative_error(a, b, low_error_bound, high_error_bound=None, error_id=None):
         if high_error_bound is None:
@@ -122,3 +124,39 @@ def assert_relative_error(relative_error):
         assert low_error_bound <= error <= high_error_bound, f"Error {error} is outside allowed range [{low_error_bound}, {high_error_bound}] {error_id_string}"
 
     yield _assert_relative_error
+    
+
+@pytest.fixture(scope="session")
+def compute_expected_swap():
+    # The below functions are implemented exactly instead of through the mathematical implementation.
+    def _compute_expected_swap(swap_amount, fromToken, toToken, fromSwappool, toSwappool=None):
+        if toSwappool is None:
+            toSwappool = fromSwappool
+        
+        amp = 2**64
+        try:
+            amp = fromSwappool._amp()
+        except:
+            pass
+        
+        w1 = fromSwappool._weight(fromToken)
+        w2 = toSwappool._weight(toToken)
+        a = fromToken.balanceOf(fromSwappool)
+        b = toToken.balanceOf(toSwappool)
+        if amp != 2**64:
+            a *= w1
+            b *= w2
+            swap_amount *= w1
+            amp /= 2**64
+            
+            bamp = b**(1-amp)
+            
+            U = (a + swap_amount)**(1-amp) - (a)**(1-amp)
+            return b/w2 * (1 - ((bamp - U)/(bamp))**(1/(1-amp)))
+        
+        if w1 == w2:
+            return (b*swap_amount)/(a+swap_amount)
+        U = w1 * log2((a + swap_amount)/a)
+        return b * (1 - 2**(-U/w2))
+        
+    yield _compute_expected_swap
