@@ -17,6 +17,9 @@ pytest_plugins = [
 ]
 
 
+
+# Pool data given to create pools for tests.
+
 @pytest.fixture(scope="module")
 def pool_data(token1, token2, token3):
     return dict(
@@ -27,7 +30,7 @@ def pool_data(token1, token2, token3):
         poolName="POOLNAME",
         poolSymbol="PS",
         deployer=accounts[1],
-        selfConnection=False
+        selfConnection=True  # TODO: Figure out how to parametrize setting this to 0. (should skip tests which requires local cross-chain swaps)
     )
 
 @pytest.fixture(scope="module")
@@ -40,6 +43,6 @@ def amp_pool_data(token1, token2, token3):
         poolName="POOLNAME",
         poolSymbol="PS",
         deployer=accounts[1],
-        selfConnection=False
+        selfConnection=True  # TODO: Figure out how to parametrize setting this to 0. (should skip tests which requires local cross-chain swaps)
     )
     
