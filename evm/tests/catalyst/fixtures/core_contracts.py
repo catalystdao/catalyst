@@ -120,7 +120,7 @@ def swappool(deploy_swappool, pool_data):
 
 # Amplified pool
 @pytest.fixture(scope="module")
-def amp_swappool(deploy_swappool, pool_data):
+def amp_swappool(deploy_swappool, amp_pool_data):
     assert pool_data.get("amp") < 2**64
     deployer = pool_data.get("deployer")
     tokens = pool_data.get("tokens")

@@ -30,4 +30,16 @@ def pool_data(token1, token2, token3):
         selfConnection=False
     )
 
+@pytest.fixture(scope="module")
+def amp_pool_data(token1, token2, token3):
+    return dict(
+        amp=2*62,
+        tokens = [token1, token2, token3],
+        depositAmounts=[10 * 10**18, 1000 * 10**18, 1000 * 10**6],
+        weights=[int(int(1000 * 10**18)/int(10 * 10**6)), 1, int(int(1000 * 10**18)/int(1000 * 10**6))],
+        poolName="POOLNAME",
+        poolSymbol="PS",
+        deployer=accounts[1],
+        selfConnection=False
+    )
     
