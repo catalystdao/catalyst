@@ -597,6 +597,7 @@ contract CatalystSwapPool is CatalystFixedPointMath, CatalystSwapPoolCommon {
             if (token == address(0)) break;
             tokenIndexed[it] = token;
             uint256 weight = _weight[token];
+            weights[it] = weight;
             WSUM += weight;
         }
 
