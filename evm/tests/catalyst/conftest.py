@@ -14,6 +14,7 @@ pytest_plugins = [
     "fixtures.accounts",
     "fixtures.core_contracts",
     "fixtures.tokens"
+    "fixtures.functions"
 ]
 
 
