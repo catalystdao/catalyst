@@ -125,6 +125,48 @@ def swappool(channelId, deploy_swappool, pool_data):
     yield sp
 
 
+@pytest.fixture(scope="module")
+def swappool1(deploy_swappool, pool_data_cross):
+    pool_data = pool_data_cross[0]
+    assert pool_data.get("amp") == 2**64
+    deployer = pool_data.get("deployer")
+    tokens = pool_data.get("tokens")
+    depositAmounts = pool_data.get("depositAmounts")
+
+    sp = deploy_swappool(
+        tokens,
+        depositAmounts,
+        pool_data.get("weights"),
+        2**64,
+        pool_data.get("poolName"),
+        pool_data.get("poolSymbol"),
+        deployer=deployer,
+    )
+
+    yield sp
+    
+    
+@pytest.fixture(scope="module")
+def swappool2(deploy_swappool, pool_data_cross):
+    pool_data = pool_data_cross[1]
+    assert pool_data.get("amp") == 2**64
+    deployer = pool_data.get("deployer")
+    tokens = pool_data.get("tokens")
+    depositAmounts = pool_data.get("depositAmounts")
+
+    sp = deploy_swappool(
+        tokens,
+        depositAmounts,
+        pool_data.get("weights"),
+        2**64,
+        pool_data.get("poolName"),
+        pool_data.get("poolSymbol"),
+        deployer=deployer,
+    )
+    
+    yield sp
+    
+    
 # Amplified pool
 @pytest.fixture(scope="module")
 def amp_swappool(channelId, deploy_swappool, amp_pool_data):
@@ -164,3 +206,47 @@ def amp_swappool(channelId, deploy_swappool, amp_pool_data):
     yield sp
 
 
+# Amplified pool
+@pytest.fixture(scope="module")
+def swappool1_amp(channelId, deploy_swappool, amp_pool_data_cross):
+    amp_pool_data = amp_pool_data_cross[0]
+    assert amp_pool_data.get("amp") < 2**64
+    deployer = amp_pool_data.get("deployer")
+    tokens = amp_pool_data.get("tokens")
+    depositAmounts = amp_pool_data.get("depositAmounts")
+    
+
+    sp = deploy_swappool(
+        tokens,
+        depositAmounts,
+        amp_pool_data.get("weights"),
+        amp_pool_data.get("amp"),
+        amp_pool_data.get("poolName"),
+        amp_pool_data.get("poolSymbol"),
+        deployer=deployer,
+    )
+
+    yield sp
+
+
+# Amplified pool
+@pytest.fixture(scope="module")
+def swappool2_amp(channelId, deploy_swappool, amp_pool_data_cross):
+    amp_pool_data = amp_pool_data_cross[1]
+    assert amp_pool_data.get("amp") < 2**64
+    deployer = amp_pool_data.get("deployer")
+    tokens = amp_pool_data.get("tokens")
+    depositAmounts = amp_pool_data.get("depositAmounts")
+    
+
+    sp = deploy_swappool(
+        tokens,
+        depositAmounts,
+        amp_pool_data.get("weights"),
+        amp_pool_data.get("amp"),
+        amp_pool_data.get("poolName"),
+        amp_pool_data.get("poolSymbol"),
+        deployer=deployer,
+    )
+
+    yield sp

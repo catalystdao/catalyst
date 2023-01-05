@@ -12,9 +12,10 @@ CHANNEL_ID = 0
 
 pytest_plugins = [
     "fixtures.accounts",
+    "fixtures.common_actions",
     "fixtures.core_contracts",
     "fixtures.tokens",
-    "fixtures.functions"
+    "fixtures.functions",
 ]
 
 
@@ -39,10 +40,33 @@ def pool_data(token1, token2, token3):
         selfConnection=True  # TODO: Figure out how to parametrize setting this to 0. (should skip tests which requires local cross-chain swaps)
     )
 
+
+@pytest.fixture(scope="module")
+def pool_data_cross(token1, token2, token3):
+    return [dict(
+        amp=2**64,
+        tokens = [token1, token2],
+        depositAmounts=[10 * 10**18, 1000 * 10**18],
+        weights=[1,1,1],
+        poolName="POOLNAME",
+        poolSymbol="PS",
+        deployer=accounts[1]
+    ), dict(
+        amp=2**64,
+        tokens = [token3],
+        depositAmounts=[1000 * 10**6],
+        weights=[1,1,1],
+        poolName="POOLNAME2",
+        poolSymbol="PS2",
+        deployer=accounts[1]
+    )]
+
+
 @pytest.fixture(scope="module")
 def amp_pool_data(token1, token2, token3):
+    amp = 2**62
     return dict(
-        amp=2**62,
+        amp=amp,
         tokens = [token1, token2, token3],
         depositAmounts=[10 * 10**18, 1000 * 10**18, 1000 * 10**6],
         weights=[int(int(1000 * 10**18)/int(10 * 10**18)), 1, int(int(1000 * 10**18)/int(1000 * 10**6))],
@@ -51,4 +75,25 @@ def amp_pool_data(token1, token2, token3):
         deployer=accounts[1],
         selfConnection=True  # TODO: Figure out how to parametrize setting this to 0. (should skip tests which requires local cross-chain swaps)
     )
-    
+
+
+@pytest.fixture(scope="module")
+def amp_pool_data_cross(token1, token2, token3):
+    amp = 2**62
+    return [dict(
+        amp=amp,
+        tokens = [token1, token2],
+        depositAmounts=[10 * 10**18, 1000 * 10**18],
+        weights=[int(int(1000 * 10**18)/int(10 * 10**18)), 1],
+        poolName="POOLNAME",
+        poolSymbol="PS",
+        deployer=accounts[1]
+    ), dict(
+        amp=amp,
+        tokens = [token3],
+        depositAmounts=[1000 * 10**6],
+        weights=[int(int(1000 * 10**18)/int(1000 * 10**6))],
+        poolName="POOLNAME2",
+        poolSymbol="PS2",
+        deployer=accounts[1]
+    )]
