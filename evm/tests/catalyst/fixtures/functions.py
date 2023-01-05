@@ -127,6 +127,7 @@ def assert_relative_error(relative_error):
     yield _assert_relative_error
     
 
+@pytest.mark.no_call_coverage
 @pytest.fixture(scope="session")
 def compute_expected_swap():
     # The below functions are implemented exactly instead of through the mathematical implementation.
@@ -162,7 +163,8 @@ def compute_expected_swap():
         
     yield _compute_expected_swap
     
-
+    
+@pytest.mark.no_call_coverage
 @pytest.fixture(scope="session")
 def get_pool_tokens():
     def _get_pool_tokens(swappool):

@@ -32,8 +32,3 @@ def token3(create_token):
 @pytest.fixture(scope="module")
 def token4(create_token):
     yield create_token("four", "TTTT", decimal=18)
-
-
-@pytest.fixture(scope="module")
-def tokens(token1, token2, token3, token4):
-    yield [token1, token2, token3, token4]

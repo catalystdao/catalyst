@@ -81,13 +81,14 @@ def deploy_swappool(accounts, swapfactory, crosschaininterface):
     yield deploy_swappool
 
 
-default_depositValues = [10 * 10**18, 1000 * 10**18, 1000 * 10**6]
-matching_amplified_weights = [default_depositValues[1]/default_depositValues[0], 1, default_depositValues[2]/default_depositValues[0]]
+@pytest.fixture(scope="session")
+def channelId():
+    yield convert.to_bytes(1, type_str="bytes32")
 
 
 # Non amplified pools
 @pytest.fixture(scope="module")
-def swappool(deploy_swappool, pool_data):
+def swappool(channelId, deploy_swappool, pool_data):
     assert pool_data.get("amp") == 2**64
     deployer = pool_data.get("deployer")
     tokens = pool_data.get("tokens")
@@ -105,7 +106,7 @@ def swappool(deploy_swappool, pool_data):
     
     if pool_data.get("selfConnection"):
         sp.createConnection(
-            convert.to_bytes(1, type_str="bytes32"),
+            channelId,
             convert.to_bytes(sp.address.replace("0x", "")),
             True,
             {"from": deployer},
@@ -126,7 +127,7 @@ def swappool(deploy_swappool, pool_data):
 
 # Amplified pool
 @pytest.fixture(scope="module")
-def amp_swappool(deploy_swappool, amp_pool_data):
+def amp_swappool(channelId, deploy_swappool, amp_pool_data):
     assert amp_pool_data.get("amp") < 2**64
     deployer = amp_pool_data.get("deployer")
     tokens = amp_pool_data.get("tokens")
@@ -144,7 +145,7 @@ def amp_swappool(deploy_swappool, amp_pool_data):
     )
     if amp_pool_data.get("selfConnection"):
         sp.createConnection(
-            convert.to_bytes(1, type_str="bytes32"),
+            channelId,
             convert.to_bytes(sp.address.replace("0x", "")),
             True,
             {"from": deployer},
