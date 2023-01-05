@@ -1,7 +1,7 @@
 import pytest
 
 from brownie import convert, ZERO_ADDRESS
-from math import log2
+from math import log2, ceil
 
 
 def evmBytes32ToAddress(bytes32):
@@ -152,11 +152,25 @@ def compute_expected_swap():
             bamp = b**(1-amp)
             
             U = (a + swap_amount)**(1-amp) - (a)**(1-amp)
-            return b/w2 * (1 - ((bamp - U)/(bamp))**(1/(1-amp)))
+            return ceil(b/w2 * (1 - ((bamp - U)/(bamp))**(1/(1-amp))))
         
         if w1 == w2:
-            return (b*swap_amount)/(a+swap_amount)
+            return ceil((b*swap_amount)/(a+swap_amount))
         U = w1 * log2((a + swap_amount)/a)
-        return b * (1 - 2**(-U/w2))
+        return ceil(b * (1 - 2**(-U/w2)))
         
     yield _compute_expected_swap
+    
+
+@pytest.fixture(scope="session")
+def get_pool_tokens():
+    def _get_pool_tokens(swappool):
+        tokens = []
+        while len(tokens) < 3:
+            token = swappool._tokenIndexing(len(tokens))
+            if token != ZERO_ADDRESS:
+                tokens.append(token)
+            else:
+                break
+    
+    yield _get_pool_tokens
