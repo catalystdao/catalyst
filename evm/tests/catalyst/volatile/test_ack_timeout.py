@@ -97,6 +97,7 @@ def test_ibc_ack(channelId, swappool, ibcemulator, get_pool_tokens, berg, deploy
 
 
 def test_only_one_response(channelId, swappool, ibcemulator, get_pool_tokens, berg, deployer):
+    swap_amount = 10 * 10**18
     tokens = get_pool_tokens(swappool)
     
     tokens[0].transfer(berg, swap_amount, {'from': deployer})
