@@ -2,7 +2,6 @@
 
 pragma solidity ^0.8.16;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
 import "./IbcReceiver.sol";
 import "./IbcDispatcher.sol";
 
@@ -11,7 +10,7 @@ struct PacketMetadata {
     address sender;
 }
 
-contract IBCEmulator is IbcDispatcher, Ownable {
+contract IBCEmulator is IbcDispatcher {
     address[2] public _ports;
 
     event IncomingMetadata(PacketMetadata metadata);
