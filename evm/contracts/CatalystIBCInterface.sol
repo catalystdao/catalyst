@@ -51,13 +51,11 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
 
     constructor(
         address factory,
-        address polymeraseDispatcher,
-        bytes32 localChannelId
+        address polymeraseDispatcher
     ) {
         _poolFactory = factory;
         PolymeraseDispatcher = polymeraseDispatcher;
         validArriver[polymeraseDispatcher] = true;
-        _channelForChain[block.chainid] = localChannelId;
         _calldataRouter = address(0);
     }
 
@@ -67,13 +65,6 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
 
     function chain_id() external view returns (uint256) {
         return block.chainid;
-    }
-
-    function setChannelForChain(uint256 chainID, bytes32 channel)
-        external
-        onlyOwner
-    {
-        _channelForChain[chainID] = channel;
     }
 
     function CreateConnection(
@@ -96,7 +87,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
     }
 
     function crossChainSwap(
-        uint32 chainId,
+        bytes32 channelId,
         bytes32 targetPool,
         bytes32 targetUser,
         uint8 targetAssetIndex,
@@ -136,14 +127,6 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
                 msg.sender
             )
         ); // dev: Only factory pools.
-
-        bytes32 channelId = _channelForChain[chainId]; // ! Default value is 0
-        // require(
-        //     checkConnection[channelId][bytes32(abi.encodePacked(msg.sender))][
-        //         _pool
-        //     ],
-        //     NO_CONNECTION
-        // );
 
         bytes memory preparedCalldata = abi.encodePacked(
             uint16(calldata_.length),
@@ -185,7 +168,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
     }
 
     function liquiditySwap(
-        uint256 chainId,
+        bytes32 channelId,
         bytes32 targetPool,
         bytes32 targetUser,
         uint256 U,
@@ -220,7 +203,6 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
             )
         ); // dev: Only factory pools.
 
-        bytes32 channelId = _channelForChain[chainId]; // ! Default value is 0
         // require(
         //     checkConnection[channelId][bytes32(abi.encodePacked(msg.sender))][
         //         _pool

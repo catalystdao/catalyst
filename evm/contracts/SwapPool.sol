@@ -701,7 +701,7 @@ contract CatalystSwapPool is CatalystFixedPointMath, CatalystSwapPoolCommon {
      * accurately predict the gas cost and swap return.
      */
     function swapToUnits(
-        uint32 chain,
+        bytes32 chain,
         bytes32 targetPool,
         bytes32 targetUser,
         address fromAsset,
@@ -783,7 +783,7 @@ contract CatalystSwapPool is CatalystFixedPointMath, CatalystSwapPoolCommon {
     }
 
     function swapToUnits(
-        uint32 chain,
+        bytes32 chain,
         bytes32 targetPool,
         bytes32 targetUser,
         address fromAsset,
@@ -897,7 +897,7 @@ contract CatalystSwapPool is CatalystFixedPointMath, CatalystSwapPoolCommon {
      * @param poolTokens The number of pool tokens to liquidity Swap
      */
     function outLiquidity(
-        uint256 chain,
+        bytes32 chain,
         bytes32 targetPool,
         bytes32 targetUser,
         uint256 poolTokens,

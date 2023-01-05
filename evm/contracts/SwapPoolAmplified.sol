@@ -731,7 +731,7 @@ contract CatalystSwapPoolAmplified is
     }
 
     function swapToUnits(
-        uint32 chain,
+        bytes32 chain,
         bytes32 targetPool,
         bytes32 targetUser,
         address fromAsset,
@@ -844,7 +844,7 @@ contract CatalystSwapPoolAmplified is
      * @param fallbackUser If the transaction fails send the escrowed funds to this address
      */
     function swapToUnits(
-        uint32 chain,
+        bytes32 chain,
         bytes32 targetPool,
         bytes32 targetUser,
         address fromAsset,
@@ -885,7 +885,7 @@ contract CatalystSwapPoolAmplified is
      * @param fallbackUser If the transaction fails send the escrowed funds to this address
      */
     function swapToUnits(
-        uint32 chain,
+        bytes32 chain,
         bytes32 targetPool,
         bytes32 targetUser,
         address fromAsset,
@@ -1015,7 +1015,7 @@ contract CatalystSwapPoolAmplified is
      * @param poolTokens The number of pool tokens to liquidity Swap
      */
     function outLiquidity(
-        uint256 chain,
+        bytes32 chain,
         bytes32 targetPool,
         bytes32 targetUser,
         uint256 poolTokens,
@@ -1123,7 +1123,7 @@ contract CatalystSwapPoolAmplified is
      * @param approx unused
      */
     function outLiquidity(
-        uint256 chain,
+        bytes32 chain,
         bytes32 targetPool,
         bytes32 targetUser,
         uint256 poolTokens,

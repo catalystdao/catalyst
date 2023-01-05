@@ -84,7 +84,7 @@ interface ICatalystV1PoolPermissionless {
      * accurately predict the gas cost and swap return.
      */
     function swapToUnits(
-        uint32 chain,
+        bytes32 chain,
         bytes32 targetPool,
         bytes32 targetUser,
         address fromAsset,
@@ -97,7 +97,7 @@ interface ICatalystV1PoolPermissionless {
 
     /// @notice Includes calldata_
     function swapToUnits(
-        uint32 chain,
+        bytes32 chain,
         bytes32 targetPool,
         bytes32 targetUser,
         address fromAsset,
@@ -151,7 +151,7 @@ interface ICatalystV1PoolPermissionless {
      * @param baseAmount The number of pool tokens to liquidity Swap
      */
     function outLiquidity(
-        uint256 chain,
+        bytes32 chain,
         bytes32 targetPool,
         bytes32 who,
         uint256 baseAmount,
