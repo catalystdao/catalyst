@@ -18,7 +18,6 @@ pytest_plugins = [
 ]
 
 
-
 # Pool data given to create pools for tests.
 
 @pytest.fixture(scope="module")
