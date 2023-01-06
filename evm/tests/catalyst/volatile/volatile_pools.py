@@ -1,5 +1,5 @@
 volatile_params = {
-    "3 tokens": {
+    "default": {
         "amp": 2**64,
         "tokens": [0,1,2],
         "depositAmounts": [10 * 10**18, 1000 * 10**18, 1000 * 10**6],
@@ -9,7 +9,7 @@ volatile_params = {
         "deployer": 1,
         "selfConnection": True
     },
-    "2 tokens": {
+    "2tokens": {
         "amp": 2**64,
         "tokens": [0, 1],
         "depositAmounts": [10 * 10**18, 100 * 10**18],

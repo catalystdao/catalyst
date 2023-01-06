@@ -26,10 +26,18 @@ def isolation(fn_isolation):
     pass
 
 
+def pytest_addoption(parser):
+    parser.addoption("--poolname", help="Only runs tests for poolname")
+
 
 def pytest_generate_tests(metafunc):
     if "pool_data" in  metafunc.fixturenames:
-        metafunc.parametrize("pool_data", list(volatile_params.keys()), indirect=True, scope="session")
+        poolname = metafunc.config.getoption('poolname')
+        if poolname is not None:
+            metafunc.parametrize("pool_data", [poolname], indirect=True, scope="session")
+        else:
+            metafunc.parametrize("pool_data", list(volatile_params.keys()), indirect=True, scope="session")
+            
 
 
 # Pool data given to create pools for tests.
