@@ -652,11 +652,7 @@ contract CatalystSwapPoolAmplified is
                 walpha_0 = fpowX64(walpha_0_ampped, ONEONE / (oneMinusAmp));
             }
 
-            U = it * (
-                fpowX64(
-                    walpha_0 + poolTokens / (totalSupply() + _escrowedPoolTokens + poolTokens),
-                    oneMinusAmp
-                ) - walpha_0_ampped); // Remember to add the number of pool tokens burned to totalSupply
+            U = it * fpowX64((walpha_0 * poolTokens)/(totalSupply() + _escrowedPoolTokens + poolTokens), oneMinusAmp);
         }
 
         uint256[] memory amounts = new uint256[](NUMASSETS);
@@ -1065,8 +1061,7 @@ contract CatalystSwapPoolAmplified is
         {
             uint256 walpha_0 = fpowX64(walpha_0_ampped, ONEONE / (oneMinusAmp));
             // Plus _escrowedPoolTokens since we want the withdrawal to return less.
-            uint256 innerdiff = fpowX64((walpha_0 * poolTokens)/(totalSupply() + _escrowedPoolTokens + poolTokens), oneMinusAmp);
-            U = innerdiff * it;
+            U = it * fpowX64((walpha_0 * poolTokens)/(totalSupply() + _escrowedPoolTokens + poolTokens), oneMinusAmp);
         }
 
         bytes32 messageHash;
