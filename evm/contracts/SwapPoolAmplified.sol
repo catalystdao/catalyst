@@ -1064,12 +1064,8 @@ contract CatalystSwapPoolAmplified is
         uint256 U = 0;
         {
             uint256 walpha_0 = fpowX64(walpha_0_ampped, ONEONE / (oneMinusAmp));
-            // solve: poolTokens = (wpt_a * (totalSupply() + poolTokens))/walpha_0; for wpt_a.
             // Plus _escrowedPoolTokens since we want the withdrawal to return less.
-            uint256 wpt_a = (walpha_0 * poolTokens) /
-                (totalSupply() + _escrowedPoolTokens + poolTokens); // Remember to add the number of pool tokens burned to totalSupply
-            uint256 innerdiff = fpowX64(walpha_0 + wpt_a, oneMinusAmp) -
-                walpha_0_ampped;
+            uint256 innerdiff = fpowX64((walpha_0 * poolTokens)/(totalSupply() + _escrowedPoolTokens + poolTokens), oneMinusAmp);
             U = innerdiff * it;
         }
 
