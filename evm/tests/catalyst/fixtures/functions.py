@@ -131,7 +131,7 @@ def assert_relative_error(relative_error):
 @pytest.fixture(scope="session")
 def compute_expected_swap():
     # The below functions are implemented exactly instead of through the mathematical implementation.
-    def _compute_expected_swap(swap_amount, fromToken, toToken, fromSwappool, toSwappool=None):
+    def _compute_expected_swap(swap_amount, fromToken, toToken, fromSwappool, toSwappool=None, withU=False):
         if toSwappool is None:
             toSwappool = fromSwappool
         
@@ -154,14 +154,108 @@ def compute_expected_swap():
             bamp = b**(1-amp)
             
             U = (a + swap_amount)**(1-amp) - (a)**(1-amp)
+            if withU:
+                return (U, ceil(b/w2 * (1 - ((bamp - U)/(bamp))**(1/(1-amp)))))
             return ceil(b/w2 * (1 - ((bamp - U)/(bamp))**(1/(1-amp))))
         
         if w1 == w2:
             return ceil((b*swap_amount)/(a+swap_amount))
         U = w1 * log2((a + swap_amount)/a)
+        if withU:
+            return (U, ceil(b * (1 - 2**(-U/w2))))
         return ceil(b * (1 - 2**(-U/w2)))
         
     yield _compute_expected_swap
+
+
+@pytest.fixture(scope="session")
+def prod():
+    def _prod(arr):
+        product = 1
+        for a in arr:
+            product *= a
+        return product
+
+    yield _prod
+
+
+@pytest.mark.no_call_coverage
+@pytest.fixture(scope="session")
+def invariant(get_pool_tokens, prod):
+    def _invariant(swappool):
+        tokens = get_pool_tokens(swappool)
+        amp = 2**64
+        try:
+            amp = swappool._amp()
+        except AttributeError:
+            pass
+    
+        weights = [swappool._weights(token) for token in tokens]
+        balances = [token.balanceOf(swappool) for token in tokens]
+        if amp != 2**64:
+            oneMinusAmp = (2**64 - amp)/2**64
+            return sum([(weight * balance)**oneMinusAmp for weight, balance in zip(weights, balances)])
+        
+        return prod([balance**weight for weight, balance in zip(weights, balances)])
+
+    yield _invariant
+
+
+@pytest.mark.no_call_coverage
+@pytest.fixture(scope="session")
+def balance_0(invariant):
+    def _balance_0(swappool):
+        amp = swappool._amp()
+        assert amp != 2**64
+        
+        walpha_theta = invariant(swappool) - swappool._unitTracker
+        
+        return walpha_theta**(2**64/(2**64-amp))
+    
+    yield _balance_0
+
+
+@pytest.mark.no_call_coverage
+@pytest.fixture(scope="session")
+def compute_expected_liquidity_swap(get_pool_tokens):
+    # The below functions are implemented exactly instead of through the mathematical implementation.
+    def _compute_expected_liquidity_swap(swap_amount, fromSwappool, toSwappool, withU=False):
+        fromTokens = get_pool_tokens(fromSwappool)
+        toTokens = get_pool_tokens(toSwappool)
+        
+        amp = 2**64
+        try:
+            amp = fromSwappool._amp()
+        except AttributeError:
+            pass
+        
+        fromPT = fromSwappool.totalSupply()
+        toPT = toSwappool.totalSupply()
+        pt = swap_amount
+        
+        if amp != 2**64:
+            oneMinusAmp = (2**64 - amp)/2**64
+            a0 = balance_0(fromSwappool)
+            b0 = balance_0(toSwappool)
+            
+            
+            U = ((a0 + (a0 * pt)/fromPT)**(oneMinusAmp) - (a0)**(oneMinusAmp)) * len(fromTokens)
+            wpt = (b0**(oneMinusAmp) + U/len(toTokens))**(2**64/(2**64-amp)) - b0
+            
+            if withU:
+                return (U, wpt*toPT/b0)
+            return wpt*toPT/b0
+        
+        fromWSUM = sum([fromSwappool._weight(token) for token in fromTokens])
+        toWSUM = sum([toSwappool._weight(token) for token in toTokens])
+        U = log2(fromPT/(fromPT-pt)) * fromWSUM
+        
+        share = 1 - 2**(-U/toWSUM)
+        if withU:
+            return (U, toPT * (share/(1-share)))
+        return toPT * (share/(1-share))
+        
+    yield _compute_expected_liquidity_swap
     
     
 @pytest.mark.no_call_coverage
