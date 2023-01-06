@@ -3,13 +3,6 @@ import pytest
 from brownie import ZERO_ADDRESS, chain, convert, reverts
 from brownie.test import given, strategy
 
-# POOLNAME = "PS One Two Three"
-# POOLSYMBOL = "ps(ott) "
-POOLNAME = "PS OneTwoThree"
-POOLSYMBOL = "ps(OTT) "
-
-depositValues = [10 * 10**18, 1000 * 10**18, 1000 * 10**6]
-
 pytestmark = pytest.mark.usefixtures("connect_pools", "finish_setup")
 
 
