@@ -459,12 +459,10 @@ contract CatalystSwapPoolAmplified is
                 weightedAssetBalanceSum += wab;
 
                 if (tokenAmounts[it] == 0) continue;
-                U +=
-                    fpowX64(
+                U += fpowX64(
                         weightAssetBalance + (weight * tokenAmounts[it]) << 64,
                         oneMinusAmp
-                    ) -
-                    wab;
+                    ) - wab;
                 IERC20(token).safeTransferFrom(
                     msg.sender,
                     address(this),
@@ -535,11 +533,7 @@ contract CatalystSwapPoolAmplified is
                 ampWeightAssetBalances[it] = wab; // Store since it is an expensive calculation.
                 weightedAssetBalanceSum += wab;
             }
-            walpha_0_ampped =
-                uint256(
-                    (int256(weightedAssetBalanceSum) - int256(_unitTracker))
-                ) /
-                it;
+            walpha_0_ampped = uint256((int256(weightedAssetBalanceSum) - int256(_unitTracker))) / it;
         }
 
         // For later event logging, the amounts transferred to the pool are stored.
@@ -555,17 +549,18 @@ contract CatalystSwapPoolAmplified is
                 );
                 uint256 wpt_a = (walpha_0 * poolTokens) / (totalSupply() + _escrowedPoolTokens + poolTokens); // Remember to add the number of pool tokens burned to totalSupply
                 innerdiff = fpowX64(walpha_0 + wpt_a, oneMinusAmp) - walpha_0_ampped;
+                // TODO: innerdiff = fpowX64((walpha_0 * poolTokens)/(totalSupply() + _escrowedPoolTokens + poolTokens), oneMinusAmp);
             }
             for (uint256 it = 0; it < NUMASSETS; ++it) {
                 address token = tokenIndexed[it];
                 if (token == address(0)) break;
 
-                uint256 tokenAmount = (fpowX64(
-                    ampWeightAssetBalances[it] + innerdiff,
-                    ONEONE / (oneMinusAmp)
-                ) - weightAssetBalances[it]) << 64;
+                uint256 tokenAmount = (
+                    fpowX64((ampWeightAssetBalances[it] + innerdiff), ONEONE / (oneMinusAmp))
+                    - (weightAssetBalances[it] << 64)
+                ) >> 64;
                 uint256 weight = _weight[token];
-                if (tokenAmount > weightAssetBalances[it] / weight) {
+                if (tokenAmount > weightAssetBalances[it]) {
                     //! If the pool doesn't have enough assets for a withdrawal, then
                     //! withdraw all of the pools assets. This should be protected against by setting minOut != 0.
                     //! This is possible because the pool expects assets to come back. (it is owed assets)
@@ -579,6 +574,8 @@ contract CatalystSwapPoolAmplified is
                     IERC20(token).safeTransfer(msg.sender, tokenAmount); // dev: User doesn't have enough tokens or low approval
                     continue;
                 }
+                tokenAmount /= weight;
+                require(tokenAmount >= minOut[it], SWAP_RETURN_INSUFFICIENT);
                 // Transfer the appropriate number of tokens from the user to the pool. (And store for event logging)
                 amounts[it] = tokenAmount;
                 IERC20(token).safeTransfer(msg.sender, tokenAmount);

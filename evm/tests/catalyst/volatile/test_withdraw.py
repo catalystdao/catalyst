@@ -22,7 +22,7 @@ def test_withdrawall(swappool, get_pool_tokens, berg, molly, percentage):
     withdrawAllAmount = tx_all.return_value
     
     for allAmount, poolBalance in zip(withdrawAllAmount, poolBalances):
-        assert allAmount <= poolBalance*poolTokens // swappool.totalSupply()
+        assert allAmount <= poolBalance*poolTokens // ts
         assert int(poolBalance * percentage * 9 / 10) <= allAmount
     
 
