@@ -6,11 +6,6 @@ from brownie.test import given, strategy
 from math import log2
 
 
-@pytest.fixture(autouse=True)
-def isolation(fn_isolation):
-    pass
-
-
 invpow_diviation = 100 / 100  # TODO: Improve
 
 

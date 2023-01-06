@@ -13,11 +13,6 @@ from decimal import Decimal
 invpow2_diviation = 1 / 2**15
 
 
-@pytest.fixture(autouse=True)
-def isolation(fn_isolation):
-    pass
-
-
 @given(value=strategy("uint256", max_value=50 * 2**64, min_value=2 ** (64 - 7)))
 def test_inv2power(gov, mathX64, value):
     if value >= 41 * 2**64:

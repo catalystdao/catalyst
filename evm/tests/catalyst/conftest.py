@@ -22,33 +22,31 @@ pytest_plugins = [
 
 # Test isolation
 @pytest.fixture(autouse=True)
-def isolation(module_isolation):
+def isolation(fn_isolation):
     pass
 
 
-def para_tokens(provided, token_list):
-    out_list = []
-    for val in provided:
-        out_list.append(token_list[val])
-    return out_list
+
+def pytest_generate_tests(metafunc):
+    if "pool_data" in  metafunc.fixturenames:
+        metafunc.parametrize("pool_data", list(volatile_params.keys()), indirect=True, scope="session")
 
 
 # Pool data given to create pools for tests.
-@pytest.fixture(scope="module", params=volatile_params[:1], ids=["3 token", "2 token"][:1])
-def pool_data(request, token1, token2, token3, token4):
-    token_list = [token1, token2, token3, token4]
+@pytest.fixture(scope="session")
+def pool_data(request):
+    base_data = volatile_params[request.param]
     return {
-        **request.param, 
-        "tokens": para_tokens(request.param["tokens"], token_list), 
-        "deployer": accounts[request.param.get("deployer")]
+        **base_data, 
+        "deployer": accounts[base_data.get("deployer")]
     }
 
 
-@pytest.fixture(scope="module")
-def pool_data_cross(token1, token2, token3):
+@pytest.fixture(scope="session")
+def pool_data_cross():
     return [dict(
         amp=2**64,
-        tokens = [token1, token2],
+        tokens = [0, 1],
         depositAmounts=[10 * 10**18, 1000 * 10**18],
         weights=[1,1,1],
         poolName="POOLNAME",
@@ -56,7 +54,7 @@ def pool_data_cross(token1, token2, token3):
         deployer=accounts[1]
     ), dict(
         amp=2**64,
-        tokens = [token3],
+        tokens = [2],
         depositAmounts=[1000 * 10**6],
         weights=[1,1,1],
         poolName="POOLNAME2",
@@ -65,12 +63,12 @@ def pool_data_cross(token1, token2, token3):
     )]
 
 
-@pytest.fixture(scope="module")
-def amp_pool_data(token1, token2, token3):
+@pytest.fixture(scope="session")
+def amp_pool_data():
     amp = 2**62
     return dict(
         amp=amp,
-        tokens = [token1, token2, token3],
+        tokens = [0, 1, 2],
         depositAmounts=[10 * 10**18, 1000 * 10**18, 1000 * 10**6],
         weights=[int(int(1000 * 10**18)/int(10 * 10**18)), 1, int(int(1000 * 10**18)/int(1000 * 10**6))],
         poolName="POOLNAME",
@@ -80,12 +78,12 @@ def amp_pool_data(token1, token2, token3):
     )
 
 
-@pytest.fixture(scope="module")
-def amp_pool_data_cross(token1, token2, token3):
+@pytest.fixture(scope="session")
+def amp_pool_data_cross():
     amp = 2**62
     return [dict(
         amp=amp,
-        tokens = [token1, token2],
+        tokens = [0, 1],
         depositAmounts=[10 * 10**18, 1000 * 10**18],
         weights=[int(int(1000 * 10**18)/int(10 * 10**18)), 1],
         poolName="POOLNAME",
@@ -93,7 +91,7 @@ def amp_pool_data_cross(token1, token2, token3):
         deployer=accounts[1]
     ), dict(
         amp=amp,
-        tokens = [token3],
+        tokens = [2],
         depositAmounts=[1000 * 10**6],
         weights=[int(int(1000 * 10**18)/int(1000 * 10**6))],
         poolName="POOLNAME2",

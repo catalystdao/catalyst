@@ -10,11 +10,6 @@ il2_diviation = 1 / 2**20
 pow2_diviation = 1 / 2**18
 
 
-@pytest.fixture(autouse=True)
-def isolation(fn_isolation):
-    pass
-
-
 @given(value=strategy("uint256", min_value=2**64, max_value=2**192 - 1))
 def test_self_pow(mathX64, value):
 

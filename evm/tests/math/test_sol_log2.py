@@ -8,11 +8,6 @@ import numpy as np
 il2_diviation = 1 / 2**20
 
 
-@pytest.fixture(autouse=True)
-def isolation(fn_isolation):
-    pass
-
-
 @given(value=strategy("uint256", max_value=2**256 - 1, min_value=2**64))
 def test_l2(gov, mathX64, value):
     X64 = 2**64

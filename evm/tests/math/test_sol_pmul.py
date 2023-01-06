@@ -5,11 +5,6 @@ import brownie
 from brownie.test import given, strategy
 
 
-@pytest.fixture(autouse=True)
-def isolation(fn_isolation):
-    pass
-
-
 @given(value=strategy("uint256[2]"))
 def test_pMul(mathX64, value):
     # The largest number we can handle because of the decimals is

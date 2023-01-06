@@ -3,11 +3,6 @@ from brownie import reverts, chain
 from brownie.test import given, strategy
 
 
-@pytest.fixture(autouse=True)
-def isolation(fn_isolation):
-    pass
-
-
 @given(swap_amount=strategy("uint256", max_value=10*10**18))
 def test_local_swap(swappool_amp, token1, token2, berg, deployer, compute_expected_swap, swap_amount):
     token1.transfer(berg, swap_amount, {'from': deployer})
