@@ -42,8 +42,8 @@ pool_information = {
     "amp2tokens": {
         "amp": 2**62,
         "tokens": [0, 1],
-        "depositAmounts": [1 * 10**18, 1000 * 10**18],
-        "weights": [int(int(1000 * 10**18)/int(1 * 10**18)), 1],
+        "depositAmounts": [10 * 10**18, 1000 * 10**18],
+        "weights": [int(int(1000 * 10**18)/int(10 * 10**18)), 1],
         "poolName": "AMP2",
         "poolSymbol": "AP2",
         "deployer": 1,
