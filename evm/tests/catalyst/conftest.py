@@ -59,7 +59,6 @@ def pytest_generate_tests(metafunc):
     if "pool_data_cross" in  metafunc.fixturenames:
         multiSwapPools = []
         ids = []
-        print(list(combinations(volatile_pools.items(), 2)))
         for pool1, pool2 in combinations(volatile_pools.items(), 2):
             key1, value1, key2, value2 = pool1 + pool2
             allTokens = value1.get("tokens") + value2.get("tokens")
