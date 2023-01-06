@@ -11,6 +11,7 @@ from pool_data import pool_information
 from itertools import combinations
 
 CHANNEL_ID = 0
+NUM_ASSETS = 3
 
 pytest_plugins = [
     "fixtures.accounts",

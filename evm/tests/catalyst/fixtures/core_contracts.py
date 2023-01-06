@@ -52,6 +52,8 @@ def deploy_swappool(accounts, swapfactory, crosschaininterface):
         name,
         symbol,
         deployer,
+        only_local = False,
+        template_index = None
     ):
         it = 0
         for token in tokens:
@@ -61,15 +63,18 @@ def deploy_swappool(accounts, swapfactory, crosschaininterface):
             token.approve(swapfactory, token_balances[it], {"from": deployer})
             it += 1
 
+        if template_index is None:
+            template_index = 1 if amp != 2**64 else 0
+
         tx_R = swapfactory.deploy_swappool(
-            1 if amp != 2**64 else 0,  # Template index. 0 is volatile, 1 is amplified.
+            template_index,
             tokens,
             token_balances,
             weights,
             amp,
             name,
             symbol,
-            crosschaininterface,
+            ZERO_ADDRESS if only_local else crosschaininterface,
             {"from": deployer},
         )
 
