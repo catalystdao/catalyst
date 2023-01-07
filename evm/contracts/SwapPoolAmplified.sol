@@ -587,6 +587,8 @@ contract CatalystSwapPoolAmplified is
         return amounts;
     }
 
+    event debug(uint256 debugger);
+
     // @nonreentrant('lock')
     /**
      * @notice Deposits a symmetrical number of tokens such that in 1:1 wpt_a are deposited. This doesn't change the pool price.
@@ -648,8 +650,11 @@ contract CatalystSwapPoolAmplified is
                     it;
                 walpha_0 = fpowX64(walpha_0_ampped, ONEONE / (oneMinusAmp));
             }
+            uint256 wpt_a = (walpha_0 * poolTokens) / (totalSupply() + _escrowedPoolTokens + poolTokens); // Remember to add the number of pool tokens burned to totalSupply
+            uint256 innerdiff = fpowX64(walpha_0 + wpt_a, oneMinusAmp) - walpha_0_ampped;
+            U = it * innerdiff;
 
-            U = it * fpowX64((walpha_0 * poolTokens)/(totalSupply() + _escrowedPoolTokens + poolTokens), oneMinusAmp);
+            // todo: U = it * fpowX64((walpha_0 * poolTokens)/(totalSupply() + _escrowedPoolTokens + poolTokens), oneMinusAmp);
         }
 
         uint256[] memory amounts = new uint256[](NUMASSETS);
@@ -661,17 +666,19 @@ contract CatalystSwapPoolAmplified is
             U -= U_i;
 
             // We could use dry_swap_from_unit but then we would have to compue a ton of fpows. Instead, lets just reuse our existing computations.
-            uint256 tokenAmount = (assetBalances[it] *
-                (ONE -
-                    fpowX64(
-                        bigdiv64(
-                            ampWeightAssetBalances[it] - U_i,
-                            ampWeightAssetBalances[it]
-                        ),
-                        ONEONE / oneMinusAmp
-                    ))) >> 64;
+            // uint256 tokenAmount = (assetBalances[it] *
+            //     (ONE - invfpowX64(
+            //             bigdiv64(
+            //                 ampWeightAssetBalances[it],
+            //                 ampWeightAssetBalances[it] - U_i
+            //             ),
+            //             ONEONE / oneMinusAmp
+            //         ))) >> 64;
+            uint256 tokenAmount = dry_swap_from_unit(_tokenIndexing[it], U_i);
             require(minOuts[it] <= tokenAmount, SWAP_RETURN_INSUFFICIENT);
             IERC20(_tokenIndexing[it]).safeTransfer(msg.sender, tokenAmount);
+
+            amounts[it] = tokenAmount;
         }
 
         emit Withdraw(msg.sender, poolTokens, amounts);
