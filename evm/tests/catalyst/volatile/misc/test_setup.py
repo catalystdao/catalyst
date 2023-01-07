@@ -2,8 +2,8 @@ import brownie
 
 from tests.catalyst.conftest import NUM_ASSETS  #TODO move to fixture
 
-# # TODO do we want deployment of a pool with no tokens to fail? (currently it does not fail)
-# def test_setup_no_tokens(deployer, deploy_swappool):
+# TODO do we want deployment of a pool with no tokens to fail? (currently it does not fail)
+# def test_setup_no_tokens(deploy_swappool, deployer):
 #     sp = deploy_swappool(
 #         [],
 #         [],
@@ -15,34 +15,34 @@ from tests.catalyst.conftest import NUM_ASSETS  #TODO move to fixture
 #     )
 
 
-# def test_setup_too_many_tokens(deployer, deploy_swappool, token_list):
-#     asset_count = NUM_ASSETS + 1
+def test_setup_too_many_tokens(deploy_swappool, token_list, deployer):
+    asset_count = NUM_ASSETS + 1
 
-#     with brownie.reverts():     #TODO add dev revert message
-#         sp = deploy_swappool(
-#             token_list[:asset_count],
-#             [10**8]*asset_count,
-#             [1]*asset_count,
-#             2**64,
-#             "",
-#             "",
-#             deployer=deployer,
-#         )
+    with brownie.reverts():     #TODO add dev revert message
+        sp = deploy_swappool(
+            token_list[:asset_count],
+            [10**8]*asset_count,
+            [1]*asset_count,
+            2**64,
+            "",
+            "",
+            deployer=deployer,
+        )
 
 
-# def test_setup_token_0_balance(deployer, deploy_swappool, token_list):
-#     asset_count = NUM_ASSETS
+def test_setup_token_0_balance(deploy_swappool, token_list, deployer):
+    asset_count = NUM_ASSETS
 
-#     with brownie.reverts():     #TODO add dev revert message
-#         sp = deploy_swappool(
-#             token_list[:asset_count],
-#             [10**8]*(asset_count - 1) + [0],    # Set the initial balance for the last token to 0
-#             [1]*asset_count,
-#             2**64,
-#             "",
-#             "",
-#             deployer=deployer,
-#         )
+    with brownie.reverts():     #TODO add dev revert message
+        sp = deploy_swappool(
+            token_list[:asset_count],
+            [10**8]*(asset_count - 1) + [0],    # Set the initial balance for the last token to 0
+            [1]*asset_count,
+            2**64,
+            "",
+            "",
+            deployer=deployer,
+        )
 
 
 def test_setup_call_twice(deploy_swappool, crosschaininterface, pool_data, token_list):
