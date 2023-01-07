@@ -542,14 +542,11 @@ contract CatalystSwapPoolAmplified is
         // Plus _escrowedPoolTokens since we want the withdrawal to return less.
         {
             uint256 innerdiff;
-            {
-                uint256 walpha_0 = fpowX64(
-                    walpha_0_ampped,
-                    ONEONE / (oneMinusAmp)
-                );
-                uint256 wpt_a = (walpha_0 * poolTokens) / (totalSupply() + _escrowedPoolTokens + poolTokens); // Remember to add the number of pool tokens burned to totalSupply
-                innerdiff = fpowX64(walpha_0 + wpt_a, oneMinusAmp) - walpha_0_ampped;
-                // TODO: innerdiff = fpowX64((walpha_0 * poolTokens)/(totalSupply() + _escrowedPoolTokens + poolTokens), oneMinusAmp);
+            { 
+                // Remember to add the number of pool tokens burned to totalSupply
+                uint256 ts = (totalSupply() + _escrowedPoolTokens + poolTokens);
+                uint256 pt_fraction = ((ts + poolTokens) << 64) / ts;
+                innerdiff = mulX64(walpha_0_ampped, fpowX64(pt_fraction, oneMinusAmp) - ONE);
             }
             for (uint256 it = 0; it < NUMASSETS; ++it) {
                 address token = tokenIndexed[it];
@@ -622,7 +619,6 @@ contract CatalystSwapPoolAmplified is
             // We don't need weightedAssetBalanceSum again.
             uint256 it;
             uint256 walpha_0_ampped;
-            uint256 walpha_0;
             {
                 uint256 weightedAssetBalanceSum = 0;
                 for (it = 0; it < NUMASSETS; ++it) {
@@ -648,13 +644,12 @@ contract CatalystSwapPoolAmplified is
                         (int256(weightedAssetBalanceSum) - int256(_unitTracker))
                     ) /
                     it;
-                walpha_0 = fpowX64(walpha_0_ampped, ONEONE / (oneMinusAmp));
+                // walpha_0 = fpowX64(walpha_0_ampped, ONEONE / (oneMinusAmp));
             }
-            uint256 wpt_a = (walpha_0 * poolTokens) / (totalSupply() + _escrowedPoolTokens + poolTokens); // Remember to add the number of pool tokens burned to totalSupply
-            uint256 innerdiff = fpowX64(walpha_0 + wpt_a, oneMinusAmp) - walpha_0_ampped;
-            U = it * innerdiff;
-
-            // todo: U = it * fpowX64((walpha_0 * poolTokens)/(totalSupply() + _escrowedPoolTokens + poolTokens), oneMinusAmp);
+            // Remember to add the number of pool tokens burned to totalSupply
+            uint256 ts = (totalSupply() + _escrowedPoolTokens + poolTokens);
+            uint256 pt_fraction = ((ts + poolTokens) << 64) / ts;
+            U = it * mulX64(walpha_0_ampped, fpowX64(pt_fraction, oneMinusAmp) - ONE);
         }
 
         uint256[] memory amounts = new uint256[](NUMASSETS);
