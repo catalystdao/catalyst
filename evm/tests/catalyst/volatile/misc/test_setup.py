@@ -1,7 +1,5 @@
 import brownie
 
-from tests.catalyst.conftest import NUM_ASSETS  #TODO move to fixture
-
 # TODO do we want deployment of a pool with no tokens to fail? (currently it does not fail)
 # def test_setup_no_tokens(deploy_swappool, deployer):
 #     sp = deploy_swappool(
@@ -15,8 +13,8 @@ from tests.catalyst.conftest import NUM_ASSETS  #TODO move to fixture
 #     )
 
 
-def test_setup_too_many_tokens(deploy_swappool, token_list, deployer):
-    asset_count = NUM_ASSETS + 1
+def test_setup_too_many_tokens(deploy_swappool, token_list, deployer, swappool_max_assets):
+    asset_count = swappool_max_assets + 1
 
     with brownie.reverts():     #TODO add dev revert message
         sp = deploy_swappool(
@@ -30,8 +28,8 @@ def test_setup_too_many_tokens(deploy_swappool, token_list, deployer):
         )
 
 
-def test_setup_token_0_balance(deploy_swappool, token_list, deployer):
-    asset_count = NUM_ASSETS
+def test_setup_token_0_balance(deploy_swappool, token_list, deployer, swappool_max_assets):
+    asset_count = swappool_max_assets
 
     with brownie.reverts():     #TODO add dev revert message
         sp = deploy_swappool(

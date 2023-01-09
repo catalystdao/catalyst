@@ -10,6 +10,10 @@ from brownie import (
     convert
 )
 
+#TODO set as pytest option?
+@pytest.fixture(scope="session")
+def swappool_max_assets():
+    return 3
 
 @pytest.fixture(scope="module")
 def ibcemulator(deployer):
