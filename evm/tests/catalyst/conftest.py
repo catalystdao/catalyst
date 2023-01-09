@@ -98,6 +98,10 @@ def pytest_generate_tests(metafunc):
 @pytest.fixture(scope="session")
 def pool_data(request):
     base_data = pool_information[request.param]
+
+    assert len(base_data.get("tokens")) == len(base_data.get("depositAmounts"))
+    assert len(base_data.get("tokens")) == len(base_data.get("weights"))
+
     return {
         **base_data, 
         "deployer": accounts[base_data.get("deployer")]
