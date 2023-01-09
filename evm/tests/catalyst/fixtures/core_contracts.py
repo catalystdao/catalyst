@@ -142,41 +142,49 @@ def swappool(channelId, deploy_swappool, pool_data, token_list):
 
 
 @pytest.fixture(scope="module")
-def swappool1(deploy_swappool, pool_data_cross, token_list):
+def swappool1_config(pool_data_cross):
     pool_data = pool_data_cross[0]
     assert pool_data.get("amp") == 2**64
-    deployer = pool_data.get("deployer")
-    tokens = para_tokens(pool_data.get("tokens"), token_list)
-    depositAmounts = pool_data.get("depositAmounts")
+    yield pool_data
+
+@pytest.fixture(scope="module")
+def swappool1(deploy_swappool, swappool1_config, token_list):
+    deployer = swappool1_config.get("deployer")
+    tokens = para_tokens(swappool1_config.get("tokens"), token_list)
+    depositAmounts = swappool1_config.get("depositAmounts")
 
     sp = deploy_swappool(
         tokens,
         depositAmounts,
-        pool_data.get("weights"),
+        swappool1_config.get("weights"),
         2**64,
-        pool_data.get("poolName"),
-        pool_data.get("poolSymbol"),
+        swappool1_config.get("poolName"),
+        swappool1_config.get("poolSymbol"),
         deployer=deployer,
     )
 
     yield sp
     
-    
+
 @pytest.fixture(scope="module")
-def swappool2(deploy_swappool, pool_data_cross, token_list):
+def swappool2_config(pool_data_cross):
     pool_data = pool_data_cross[1]
     assert pool_data.get("amp") == 2**64
-    deployer = pool_data.get("deployer")
-    tokens = para_tokens(pool_data.get("tokens"), token_list)
-    depositAmounts = pool_data.get("depositAmounts")
+    yield pool_data
+
+@pytest.fixture(scope="module")
+def swappool2(deploy_swappool, swappool2_config, token_list):
+    deployer = swappool2_config.get("deployer")
+    tokens = para_tokens(swappool2_config.get("tokens"), token_list)
+    depositAmounts = swappool2_config.get("depositAmounts")
 
     sp = deploy_swappool(
         tokens,
         depositAmounts,
-        pool_data.get("weights"),
+        swappool2_config.get("weights"),
         2**64,
-        pool_data.get("poolName"),
-        pool_data.get("poolSymbol"),
+        swappool2_config.get("poolName"),
+        swappool2_config.get("poolSymbol"),
         deployer=deployer,
     )
     
@@ -224,21 +232,25 @@ def swappool_amp(channelId, deploy_swappool, amp_pool_data, token_list):
 
 # Amplified pool
 @pytest.fixture(scope="module")
-def swappool1_amp(deploy_swappool, amp_pool_data_cross, token_list):
+def swappool1_amp_config(amp_pool_data_cross):
     amp_pool_data = amp_pool_data_cross[0]
     assert amp_pool_data.get("amp") < 2**64
-    deployer = amp_pool_data.get("deployer")
-    tokens = para_tokens(amp_pool_data.get("tokens"), token_list)
-    depositAmounts = amp_pool_data.get("depositAmounts")
+    yield amp_pool_data
+
+@pytest.fixture(scope="module")
+def swappool1_amp(deploy_swappool, swappool1_amp_config, token_list):
+    deployer = swappool1_amp_config.get("deployer")
+    tokens = para_tokens(swappool1_amp_config.get("tokens"), token_list)
+    depositAmounts = swappool1_amp_config.get("depositAmounts")
     
 
     sp = deploy_swappool(
         tokens,
         depositAmounts,
-        amp_pool_data.get("weights"),
-        amp_pool_data.get("amp"),
-        amp_pool_data.get("poolName"),
-        amp_pool_data.get("poolSymbol"),
+        swappool1_amp_config.get("weights"),
+        swappool1_amp_config.get("amp"),
+        swappool1_amp_config.get("poolName"),
+        swappool1_amp_config.get("poolSymbol"),
         deployer=deployer,
     )
 
@@ -247,21 +259,25 @@ def swappool1_amp(deploy_swappool, amp_pool_data_cross, token_list):
 
 # Amplified pool
 @pytest.fixture(scope="module")
-def swappool2_amp(deploy_swappool, amp_pool_data_cross, token_list):
+def swappool2_amp_config(amp_pool_data_cross):
     amp_pool_data = amp_pool_data_cross[1]
     assert amp_pool_data.get("amp") < 2**64
-    deployer = amp_pool_data.get("deployer")
-    tokens = para_tokens(amp_pool_data.get("tokens"), token_list)
-    depositAmounts = amp_pool_data.get("depositAmounts")
+    yield amp_pool_data
+
+@pytest.fixture(scope="module")
+def swappool2_amp(deploy_swappool, swappool2_amp_config, token_list):
+    deployer = swappool2_amp_config.get("deployer")
+    tokens = para_tokens(swappool2_amp_config.get("tokens"), token_list)
+    depositAmounts = swappool2_amp_config.get("depositAmounts")
     
 
     sp = deploy_swappool(
         tokens,
         depositAmounts,
-        amp_pool_data.get("weights"),
-        amp_pool_data.get("amp"),
-        amp_pool_data.get("poolName"),
-        amp_pool_data.get("poolSymbol"),
+        swappool2_amp_config.get("weights"),
+        swappool2_amp_config.get("amp"),
+        swappool2_amp_config.get("poolName"),
+        swappool2_amp_config.get("poolSymbol"),
         deployer=deployer,
     )
 
