@@ -278,3 +278,31 @@ def get_pool_tokens():
         return tokens
     
     yield _get_pool_tokens
+
+
+@pytest.mark.no_call_coverage
+@pytest.fixture(scope="session")
+def compute_expected_units_capacity():
+    def _compute_expected_units_capacity(
+        ref_capacity,
+        ref_capacity_timestamp,
+        change_timestamp,
+        change_capacity_delta,
+        current_timestamp,
+        max_capacity,
+        decayrate=24*60*60
+    ):
+        # Since the units capacity is time dependant, two events must be taken into account:
+        #   - The capacity change since the ref_capacity value was taken until the capacity was modified by a transaction (the change_timestamp and change_capacity_delta)
+        #   - The capacity change since the transaction until now
+
+        # Compute the capacity at the time of the change
+        ref_capacity_at_change = min(max_capacity, ref_capacity + int(max_capacity*(change_timestamp - ref_capacity_timestamp)/decayrate))
+
+        # Compute the capacity after the change
+        change_capacity = max(0, min(max_capacity, ref_capacity_at_change + change_capacity_delta))
+
+        # Compute the capacity at the current time
+        return min(max_capacity, change_capacity + int(max_capacity*(current_timestamp - change_timestamp)/decayrate))
+
+    yield _compute_expected_units_capacity
