@@ -115,16 +115,21 @@ def relative_error():
 
 @pytest.fixture(scope="session")
 def assert_relative_error(relative_error):
-    def _assert_relative_error(a, b, low_error_bound, high_error_bound=None, error_id=None):
-        if high_error_bound is None:
-            high_error_bound = low_error_bound
+    def _assert_relative_error(a, b, neg_error_bound, pos_error_bound, error_id=None):
         
         error = relative_error(a, b)
-        
         error_id_string = f"(ERR: {error_id})" if error_id is not None else ""
-        assert low_error_bound <= error <= high_error_bound, f"Error {error} is outside allowed range [{low_error_bound}, {high_error_bound}] {error_id_string}"
+        assert neg_error_bound <= error <= pos_error_bound, f"Error {error} is outside allowed range [{neg_error_bound}, {pos_error_bound}] {error_id_string}"
 
     yield _assert_relative_error
+
+
+@pytest.fixture(scope="session")
+def assert_abs_relative_error(assert_relative_error):
+    def _assert_abs_relative_error(a, b, error_bound, error_id=None):
+        assert_relative_error(a, b, -error_bound, error_bound, error_id)
+
+    yield _assert_abs_relative_error
     
 
 @pytest.mark.no_call_coverage
