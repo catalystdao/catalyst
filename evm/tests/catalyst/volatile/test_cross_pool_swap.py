@@ -129,13 +129,13 @@ def test_swap_to_units_event(channelId, swappool1, swappool2, token1, berg, elwo
     tx = swappool1.swapToUnits(
         channelId,
         convert.to_bytes(swappool2.address.replace("0x", "")),
-        convert.to_bytes(elwood.address.replace("0x", "")),
+        convert.to_bytes(elwood.address.replace("0x", "")),     # NOTE: not using the same account as the caller of the tx to make sure the 'targetUser' is correctly reported
         token1,
         1,                                                      # NOTE: use non-zero target asset index to make sure the field is set on the event (and not just left blank)
         swap_amount,
         min_out,
         approx,
-        elwood,                                                 # NOTE: not using the same account as the caller of the tx to make sure the 'targetUser' is correctly reported
+        elwood,
         {"from": berg},
     )
 
