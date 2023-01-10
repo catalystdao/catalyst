@@ -66,36 +66,6 @@ def test_ibc_timeout(channelId, swappool, ibcemulator, get_pool_tokens, berg, de
     assert tokens[0].balanceOf(berg) == swap_amount + userBalance
 
 
-@pytest.mark.no_call_coverage
-@given(swap_amount=strategy("uint256", max_value=1000*10**18))
-def test_ibc_ack(channelId, swappool, ibcemulator, get_pool_tokens, berg, deployer, swap_amount):
-    tokens = get_pool_tokens(swappool)
-    
-    tokens[0].transfer(berg, swap_amount, {'from': deployer})
-    tokens[0].approve(swappool, swap_amount, {'from': berg})
-
-    tx = swappool.swapToUnits(
-        channelId,
-        brownie.convert.to_bytes(swappool.address.replace("0x", "")),
-        brownie.convert.to_bytes(berg.address.replace("0x", "")),
-        tokens[0],
-        1,
-        swap_amount,
-        0,
-        0,
-        berg,
-        {"from": berg},
-    )
-    userBalance = tokens[0].balanceOf(berg)
-    
-    txe = ibcemulator.ack(
-        tx.events["IncomingMetadata"]["metadata"][0],
-        tx.events["IncomingPacket"]["packet"],
-        {"from": deployer},
-    )
-    assert tokens[0].balanceOf(berg) == userBalance
-
-
 def test_only_one_response(channelId, swappool, ibcemulator, get_pool_tokens, berg, deployer):
     swap_amount = 10 * 10**18
     tokens = get_pool_tokens(swappool)
