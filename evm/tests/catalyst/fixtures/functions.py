@@ -3,6 +3,7 @@ import pytest
 from brownie import convert, ZERO_ADDRESS
 from brownie import Token
 from math import log2, ceil
+import numpy as np
 
 
 def evmBytes32ToAddress(bytes32):
@@ -160,17 +161,71 @@ def compute_expected_swap():
             
             U = (a + swap_amount)**(1-amp) - (a)**(1-amp)
             if withU:
-                return (U, ceil(b/w2 * (1 - ((bamp - U)/(bamp))**(1/(1-amp)))))
+                return (U*2**64, ceil(b/w2 * (1 - ((bamp - U)/(bamp))**(1/(1-amp)))))
             return ceil(b/w2 * (1 - ((bamp - U)/(bamp))**(1/(1-amp))))
         
         if w1 == w2:
             return ceil((b*swap_amount)/(a+swap_amount))
         U = w1 * log2((a + swap_amount)/a)
         if withU:
-            return (U, ceil(b * (1 - 2**(-U/w2))))
+            return (U*2**64, ceil(b * (1 - 2**(-U/w2))))
         return ceil(b * (1 - 2**(-U/w2)))
         
     yield _compute_expected_swap
+
+
+@pytest.mark.no_call_coverage
+@pytest.fixture(scope="session")
+def compute_expected_swap_given_U():
+    # The below functions are implemented exactly instead of through the mathematical implementation.
+    def _compute_expected_swap_given_U(U, toToken, toSwappool):
+        amp = 2**64
+        try:
+            amp = toSwappool._amp()
+        except AttributeError:
+            pass
+        
+        w = toSwappool._weight(toToken)
+        b = toToken.balanceOf(toSwappool)
+        U /= 2**64
+        if amp != 2**64:
+            b *= w
+            amp /= 2**64
+            
+            bamp = b**(1-amp)
+            
+            return ceil(b/w * (1 - ((bamp - U)/(bamp))**(1/(1-amp))))
+        
+        
+        return ceil(b * (1 - 2**(-U/w)))
+        
+    yield _compute_expected_swap_given_U
+
+
+@pytest.mark.no_call_coverage
+@pytest.fixture(scope="session")
+def compute_withdraw_to_U(get_pool_tokens, balance_0):
+    # The below functions are implemented exactly instead of through the mathematical implementation.
+    def _compute_withdraw_to_U(withdraw_amount, swappool):
+        amp = 2**64
+        try:
+            amp = swappool._amp()
+        except AttributeError:
+            pass
+        
+        totalSupply = swappool.totalSupply()
+        tokens = get_pool_tokens(swappool)
+        if amp != 2**64:
+            walpha = balance_0(swappool)
+            
+            N = len(tokens)
+            OneMinusAmp = (2**64-amp)/2**64
+            return ceil((N * walpha**OneMinusAmp * ((1+ withdraw_amount/totalSupply)**OneMinusAmp - 1)) * 2**64)
+        
+        wsum = sum([swappool._weight(token) for token in tokens])
+        return ceil(log2(totalSupply/(totalSupply-withdraw_amount))*wsum * 2**64)
+        
+    yield _compute_withdraw_to_U
 
 
 @pytest.fixture(scope="session")
@@ -195,27 +250,28 @@ def invariant(get_pool_tokens, prod):
         except AttributeError:
             pass
     
-        weights = [swappool._weights(token) for token in tokens]
-        balances = [token.balanceOf(swappool) for token in tokens]
+        weights = np.array([swappool._weight(token) for token in tokens])
+        balances = np.array([token.balanceOf(swappool) for token in tokens])
         if amp != 2**64:
             oneMinusAmp = (2**64 - amp)/2**64
-            return sum([(weight * balance)**oneMinusAmp for weight, balance in zip(weights, balances)])
+            return ((weights * balances)**oneMinusAmp).sum()
         
-        return prod([balance**weight for weight, balance in zip(weights, balances)])
+        return (balances**weights).prod()
 
     yield _invariant
 
 
 @pytest.mark.no_call_coverage
 @pytest.fixture(scope="session")
-def balance_0(invariant):
+def balance_0(get_pool_tokens, invariant):
     def _balance_0(swappool):
+        tokens = get_pool_tokens(swappool)
         amp = swappool._amp()
         assert amp != 2**64
         
-        walpha_theta = invariant(swappool) - swappool._unitTracker
+        walpha_theta = (invariant(swappool) - swappool._unitTracker()/2**64)/len(tokens)
         
-        return walpha_theta**(2**64/(2**64-amp))
+        return int(np.power(walpha_theta, (2**64/(2**64-amp))))
     
     yield _balance_0
 
