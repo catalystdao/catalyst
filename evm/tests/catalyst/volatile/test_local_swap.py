@@ -77,4 +77,51 @@ def test_local_swap_minout(swappool, token1, token2, berg, deployer, swap_amount
             token1, token2, swap_amount, min_out, False, {'from': berg}
         )
         assert min_out <= tx.return_value
+
+
+def test_local_swap_event(swappool, token1, token2, berg, deployer):
+    """
+        Test the LocalSwap event gets fired.
+    """
+
+    swap_amount = 10**8
+
+    token1.transfer(berg, swap_amount, {'from': deployer})      # Fund berg's account with tokens to swap
+    token1.approve(swappool, swap_amount, {'from': berg})
     
+    tx = swappool.localswap(token1, token2, swap_amount, 0, {'from': berg})
+
+    observed_return = tx.return_value
+
+    swap_event = tx.events['LocalSwap']
+
+    assert swap_event['who']       == berg
+    assert swap_event['fromAsset'] == token1
+    assert swap_event['toAsset']   == token2
+    assert swap_event['input']     == swap_amount
+    assert swap_event['output']    == observed_return
+    assert swap_event['fees']      >= 0                     # Check that there is a fees field
+
+
+def test_local_swap_event_approx(swappool, token1, token2, berg, deployer):
+    """
+        Test the LocalSwap event gets fired (approx swap).
+    """
+
+    swap_amount = 10**8
+
+    token1.transfer(berg, swap_amount, {'from': deployer})      # Fund berg's account with tokens to swap
+    token1.approve(swappool, swap_amount, {'from': berg})
+    
+    tx = swappool.localswap(token1, token2, swap_amount, 0, True, {'from': berg})
+
+    observed_return = tx.return_value
+
+    swap_event = tx.events['LocalSwap']
+
+    assert swap_event['who']       == berg
+    assert swap_event['fromAsset'] == token1
+    assert swap_event['toAsset']   == token2
+    assert swap_event['input']     == swap_amount
+    assert swap_event['output']    == observed_return
+    assert swap_event['fees']      >= 0                     # Check that there is a fees field
