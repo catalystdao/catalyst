@@ -2,6 +2,8 @@ import pytest
 from brownie import reverts
 from brownie.test import given, strategy
 
+#TODO add fees test (create fixture that sets up non-zero fees to the pool)
+
 
 @given(swap_amount=strategy("uint256", max_value=2000*10**18))
 def test_local_swap(swappool, token1, token2, berg, deployer, compute_expected_swap, swap_amount):
