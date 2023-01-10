@@ -97,6 +97,26 @@ def test_setup_invalid_amplification(deploy_swappool, amp_pool_data, token_list)
         )
 
 
+def test_setup_pool_token_mint(deploy_swappool, amp_pool_data, token_list):
+
+    deployer = amp_pool_data.get("deployer")
+    tokens = [token_list[idx] for idx in amp_pool_data.get("tokens")]
+    depositAmounts = amp_pool_data.get("depositAmounts")
+
+    # Deploy the swap pool via the factory (internally calls setup on the swappool)
+    sp = deploy_swappool(
+        tokens,
+        depositAmounts,
+        amp_pool_data.get("weights"),
+        2**64,
+        amp_pool_data.get("poolName"),
+        amp_pool_data.get("poolSymbol"),
+        deployer=deployer
+    )
+
+    assert sp.balanceOf(deployer) == 2**64
+
+
 
 # Finish setup tests
 
