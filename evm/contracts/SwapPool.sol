@@ -4,7 +4,7 @@ pragma solidity ^0.8.16;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "./FixedPointMath.sol";
+import "./FixedPointMathLib.sol";
 import "./CatalystIBCInterface.sol";
 import "./SwapPoolCommon.sol";
 import "./ICatalystV1Pool.sol";
@@ -35,7 +35,7 @@ import "./ICatalystV1Pool.sol";
  * Finally, call finishSetup to give up the deployer's control
  * over the pool.
  */
-contract CatalystSwapPool is CatalystFixedPointMath, CatalystSwapPoolCommon {
+contract CatalystSwapPool is CatalystSwapPoolCommon {
     using SafeERC20 for IERC20;
 
     //--- ERRORS ---//
@@ -64,7 +64,7 @@ contract CatalystSwapPool is CatalystFixedPointMath, CatalystSwapPoolCommon {
         address chaininterface,
         address setupMaster
     ) public {
-        require(amp == ONE);
+        require(amp == FixedPointMathLib.WAD);
         require(init_assets.length <= NUMASSETS);
         _governanceFee = governanceFee;
         {
@@ -106,7 +106,7 @@ contract CatalystSwapPool is CatalystFixedPointMath, CatalystSwapPoolCommon {
             _targetWeight[token] = newWeights[it];
             sumWeights += newWeights[it];
         }
-        uint256 new_max_unit_inflow = sumWeights << 64;
+        uint256 new_max_unit_inflow = sumWeights * FixedPointMathLib.WAD;
         // We don't want to spend gas on each update, updating the security limit. As a result, we decrease security
         // for lower gas cost.
         if (new_max_unit_inflow >= _max_unit_inflow) {
@@ -209,7 +209,7 @@ contract CatalystSwapPool is CatalystFixedPointMath, CatalystSwapPoolCommon {
         // Shifting A + in and A before dividing returns:
         // ((A + in) * 2**64) / ((A) * 2**64) * 2**64 = (A + _in) / A * 2**64
         // Thus the shifting cancels and is not needed.
-        return W * log2X64(bigdiv64(A + input, A));
+        return W * uint256(FixedPointMathLib.lnWad(int256(FixedPointMathLib.mulWadDown(A + input, A))));
     }
 
     /**
@@ -233,7 +233,7 @@ contract CatalystSwapPool is CatalystFixedPointMath, CatalystSwapPoolCommon {
         uint256 A,
         uint256 W
     ) internal pure returns (uint256) {
-        return bigdiv64((W * input) << 64, ((A + input) * LN2));
+        return FixedPointMathLib.divWadDown(W * input, A + input);
     }
 
     /**
@@ -254,7 +254,7 @@ contract CatalystSwapPool is CatalystFixedPointMath, CatalystSwapPoolCommon {
         uint256 B,
         uint256 W
     ) internal pure returns (uint256) {
-        return (B * (ONE - invp2X64(U / W))) >> 64;
+        return (B * (FixedPointMathLib.WAD - uint256(FixedPointMathLib.expWad(-int256(U / W))))) / FixedPointMathLib.WAD;
     }
 
     /**
@@ -279,8 +279,7 @@ contract CatalystSwapPool is CatalystFixedPointMath, CatalystSwapPoolCommon {
         uint256 B,
         uint256 W
     ) public pure returns (uint256) {
-        uint256 UnitTimesLN2 = mulX64(U, LN2);
-        return (B * UnitTimesLN2) / ((W << 64) + UnitTimesLN2);
+        return (B * U) / (W * FixedPointMathLib.WAD  + U);
     }
 
     /**
@@ -310,9 +309,8 @@ contract CatalystSwapPool is CatalystFixedPointMath, CatalystSwapPoolCommon {
         // (A+input)/A >= 1 as in >= 0. As a result, invfpow should be used.
         // Notice, bigdiv64 is used twice on value not x64. This is because a x64
         // shifted valued is required for invfpow in both arguments.
-        uint256 U = ONE -
-            invfpowX64(bigdiv64(A + input, A), bigdiv64(W_A, W_B));
-        return (B * U) >> 64;
+        uint256 U = FixedPointMathLib.WAD - uint256(FixedPointMathLib.powWad(int256(FixedPointMathLib.divWadDown(A + input, A)), int256(FixedPointMathLib.divWadDown(W_A, W_B))));
+        return (B * U) / FixedPointMathLib.WAD;
     }
 
     /**
@@ -358,8 +356,8 @@ contract CatalystSwapPool is CatalystFixedPointMath, CatalystSwapPoolCommon {
         pure
         returns (uint256)
     {
-        uint256 invp = invp2X64(U / W);
-        return bigdiv64(ONE - invp, invp);
+        uint256 invp = uint256(FixedPointMathLib.expWad(-int256(U / W)));
+        return FixedPointMathLib.divWadDown(FixedPointMathLib.WAD - invp, invp);
     }
 
     /**
@@ -375,8 +373,7 @@ contract CatalystSwapPool is CatalystFixedPointMath, CatalystSwapPoolCommon {
         pure
         returns (uint256)
     {
-        uint256 UnitTimesLN2to64 = U * LN2;
-        return UnitTimesLN2to64 / W;
+        return U / W;
     }
 
     /**
@@ -601,31 +598,24 @@ contract CatalystSwapPool is CatalystFixedPointMath, CatalystSwapPoolCommon {
             WSUM += weight;
         }
 
-        uint256 U = log2X64(
-            bigdiv64(initial_totalSupply, initial_totalSupply - poolTokens)
-        ) * WSUM;
+        uint256 U = uint256(FixedPointMathLib.lnWad(
+            int256(FixedPointMathLib.divWadDown(initial_totalSupply, initial_totalSupply - poolTokens)
+        ))) * WSUM;
 
         // For later event logging, the amounts transferred to the pool are stored.
         uint256[] memory amounts = new uint256[](NUMASSETS);
         for (uint256 it = 0; it < NUMASSETS; it++) {
             if (U == 0) break;
 
-            uint256 U_i = (U * withdrawRatioX64[it]) >> 64;
+            uint256 U_i = (U * withdrawRatioX64[it]) / FixedPointMathLib.WAD;
             if (U_i == 0) continue;
             U -= U_i;
             address token = tokenIndexed[it];
 
             // Withdrawals should returns less, so the escrowed tokens are subtracted.
-            uint256 At = IERC20(token).balanceOf(address(this)) -
-                _escrowedTokens[token];
+            uint256 At = IERC20(token).balanceOf(address(this)) - _escrowedTokens[token];
 
-            uint256 tokenAmount;
-            if (U < 130971882923337824) {
-                // TODO needed?
-                tokenAmount = approx_solve_integral(U_i, At, weights[it]);
-            } else {
-                tokenAmount = solve_integral(U_i, At, weights[it]);
-            }
+            uint256 tokenAmount = solve_integral(U_i, At, weights[it]);
 
             require(minOuts[it] <= tokenAmount, SWAP_RETURN_INSUFFICIENT);
             // Transferring of the released tokens.
@@ -659,7 +649,7 @@ contract CatalystSwapPool is CatalystFixedPointMath, CatalystSwapPoolCommon {
         bool approx
     ) public returns (uint256) {
         _W();
-        uint256 fee = mulX64(amount, _poolFeeX64);
+        uint256 fee = FixedPointMathLib.mulWadDown(amount, _poolFeeX64);
 
         // Calculate the swap return value.
         uint256 out = dry_swap_both(fromAsset, toAsset, amount - fee, approx);
@@ -724,7 +714,7 @@ contract CatalystSwapPool is CatalystFixedPointMath, CatalystSwapPoolCommon {
         // Calculate the group specific units bought.
         uint256 U = dry_swap_to_unit(
             fromAsset,
-            amount - mulX64(amount, _poolFeeX64),
+            amount - FixedPointMathLib.mulWadDown(amount, _poolFeeX64),
             (approx & 1) > 0
         );
 
@@ -732,7 +722,7 @@ contract CatalystSwapPool is CatalystFixedPointMath, CatalystSwapPoolCommon {
 
         {
             TokenEscrow memory escrowInformation = TokenEscrow({
-                amount: amount - mulX64(amount, _poolFeeX64),
+                amount: amount - FixedPointMathLib.mulWadDown(amount, _poolFeeX64),
                 token: fromAsset
             });
 
@@ -755,15 +745,15 @@ contract CatalystSwapPool is CatalystFixedPointMath, CatalystSwapPoolCommon {
         // ! Reentrancy. It is not possible to abuse the reentry, since the storage change is checked for validity first.
         // Escrow the tokens
         require(_escrowedFor[messageHash] == address(0)); // User cannot supply fallbackUser = address(0)
-        _escrowedTokens[fromAsset] += amount - mulX64(amount, _poolFeeX64);
+        _escrowedTokens[fromAsset] += amount - FixedPointMathLib.mulWadDown(amount, _poolFeeX64);
         _escrowedFor[messageHash] = fallbackUser;
 
         {
             // Governance Fee
             uint256 governanceFee = _governanceFee;
             if (governanceFee != 0) {
-                uint256 governancePart = mulX64(
-                    mulX64(amount, _poolFeeX64),
+                uint256 governancePart = FixedPointMathLib.mulWadDown(
+                    FixedPointMathLib.mulWadDown(amount, _poolFeeX64),
                     governanceFee
                 );
                 IERC20(fromAsset).safeTransfer(factoryOwner(), governancePart);
@@ -926,9 +916,9 @@ contract CatalystSwapPool is CatalystFixedPointMath, CatalystSwapPoolCommon {
             WSUM += _weight[token]; // Is not X64.
         }
 
-        uint256 U = log2X64(
-            bigdiv64(initial_totalSupply, initial_totalSupply - poolTokens)
-        ) * WSUM;
+        uint256 U = uint256(FixedPointMathLib.lnWad(int256(
+            FixedPointMathLib.divWadDown(initial_totalSupply, initial_totalSupply - poolTokens)
+        ))) * WSUM;
 
         bytes32 messageHash;
         {
@@ -1016,9 +1006,9 @@ contract CatalystSwapPool is CatalystFixedPointMath, CatalystSwapPoolCommon {
         {
             // 3. Convert units to an even mix of tokens.
             if (approx) {
-                poolTokens = ((U * LN2 * ts) / (WSUM << 64)) >> 64;
+                poolTokens = ((U * ts) / (WSUM * FixedPointMathLib.WAD));
             } else {
-                poolTokens = (arbitrary_solve_integralX64(U, WSUM) * ts) >> 64;
+                poolTokens = (arbitrary_solve_integralX64(U, WSUM) * ts)/FixedPointMathLib.WAD;
             }
         }
 

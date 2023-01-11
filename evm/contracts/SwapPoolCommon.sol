@@ -5,7 +5,6 @@ pragma solidity ^0.8.16;
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./SwapPoolFactory.sol";
-import "./FixedPointMath.sol";
 import "./CatalystIBCInterface.sol";
 import "./interfaces/IOnCatalyst.sol";
 import "./ICatalystV1Pool.sol";
@@ -16,7 +15,6 @@ import "./interfaces/ICatalystV1PoolErrors.sol";
  * @author Catalyst Labs
  */
 abstract contract CatalystSwapPoolCommon is
-    CatalystFixedPointMath,
     ERC20,
     ICatalystV1PoolErrors,
     ICatalystV1Pool
@@ -150,7 +148,7 @@ abstract contract CatalystSwapPoolCommon is
         // END ERC20 //
 
         // Mint 1 pool token to the short-term pool owner.
-        _mint(setupMaster, ONE);
+        _mint(setupMaster, 10**18);
     }
 
     /** @notice  Returns the current cross-chain unit capacity. */

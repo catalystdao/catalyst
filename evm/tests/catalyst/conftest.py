@@ -36,7 +36,7 @@ def pytest_generate_tests(metafunc):
     volatile_pools = {}
     amplified_pools = {}
     for key, value in pool_information.items():
-        if value.get("amp") == 2**64:
+        if value.get("amp") == 10**18:
             volatile_pools[key] = value
         else:
             amplified_pools[key] = value
@@ -46,7 +46,7 @@ def pytest_generate_tests(metafunc):
         poolname = metafunc.config.getoption('poolname')
         if poolname is not None:
             assert 1 < len(volatile_pools[poolname].get("tokens"))
-            assert 2**64 == len(volatile_pools[poolname].get("amp"))
+            assert 10**18 == len(volatile_pools[poolname].get("amp"))
             metafunc.parametrize("pool_data", [poolname], indirect=True, scope="session")
         else:
             localSwapPools = []
