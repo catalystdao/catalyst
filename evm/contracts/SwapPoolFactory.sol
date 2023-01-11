@@ -23,6 +23,14 @@ contract CatalystSwapPoolFactory is Ownable {
         address[] assets // List of the 3 assets
     );
 
+    /**
+     * @notice Emitted on default governance fee adjustment
+     * @param feeX64 The new default governance fee
+     */
+    event SetDefaultGovernanceFee(
+        uint256 feeX64
+    );
+
     // 0: Volatile v1
     // 1: Amplified v1
     mapping(uint256 => address) public _poolTemplate;
@@ -46,6 +54,8 @@ contract CatalystSwapPoolFactory is Ownable {
     {
         require(newDefaultGovernanceFee <= 2**63); // GovernanceFee is maximum 50%.
         _defaultGovernanceFee = newDefaultGovernanceFee;
+
+        emit SetDefaultGovernanceFee(newDefaultGovernanceFee);
     }
 
     function deploy_swappool(

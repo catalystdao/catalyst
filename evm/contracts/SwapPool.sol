@@ -123,6 +123,8 @@ contract CatalystSwapPool is CatalystFixedPointMath, CatalystSwapPoolCommon {
             // _max_unit_inflow = current_unit_inflow
             _target_max_unit_inflow = new_max_unit_inflow;
         }
+
+        emit ModifyWeights(targetTime, newWeights);
     }
 
     /**

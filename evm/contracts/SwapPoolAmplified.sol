@@ -146,6 +146,8 @@ contract CatalystSwapPoolAmplified is
             // _max_unit_inflow = current_unit_inflow
             _target_max_unit_inflow = new_max_unit_inflow;
         }
+
+        emit ModifyAmplification(targetTime, targetAmplification);
     }
 
     /**
