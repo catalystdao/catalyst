@@ -237,6 +237,8 @@ abstract contract CatalystSwapPoolCommon is
     function setPoolFee(uint256 newPoolFee) external override {
         require(msg.sender == _feeAdministrator); // dev: Only feeAdministrator can set new fee
         _poolFee = newPoolFee;
+
+        emit SetPoolFee(newPoolFee);
     }
 
     // TODO add to contract interface
@@ -244,6 +246,8 @@ abstract contract CatalystSwapPoolCommon is
         require(msg.sender == _feeAdministrator); // dev: Only feeAdministrator can set new fee
         require(newPoolGovernanceFee <= 75**17); // dev: GovernanceFee is maximum 75%.
         _governanceFee = newPoolGovernanceFee;
+
+        emit SetGovernanceFee(newPoolGovernanceFee);
     }
 
     // TODO Event for connection

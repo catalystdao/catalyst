@@ -176,6 +176,8 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
             // decerased further.
             _target_max_unit_inflow = new_max_unit_inflow;
         }
+
+        emit ModifyWeights(targetTime, newWeights);
     }
 
     /**

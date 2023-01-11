@@ -110,4 +110,40 @@ interface ICatalystV1PoolEvents {
 
     /** @notice Called upon failed swap. */
     event EscrowTimeout(bytes32 messageHash, bool liquiditySwap);
+
+    /**
+     * @notice Emitted on pool fee adjustment
+     * @param fee The new pool fee
+     */
+    event SetPoolFee(
+        uint256 fee
+    );
+
+    /**
+     * @notice Emitted on governance fee adjustment
+     * @param fee The new governance fee
+     */
+    event SetGovernanceFee(
+        uint256 fee
+    );
+
+    /**
+     * @notice Emitted on weights modification
+     * @param targetTime Time at which the weights adjustment must complete.
+     * @param targetWeights The desired new weights.
+     */
+    event ModifyWeights(
+        uint256 targetTime,
+        uint256[] targetWeights
+    );
+
+    /**
+     * @notice Emitted on amplification modification
+     * @param targetTime Time at which the amplification adjustment must complete.
+     * @param targetAmplification The desired new amplification.
+     */
+    event ModifyAmplification(
+        uint256 targetTime,
+        uint256 targetAmplification
+    );
 }
