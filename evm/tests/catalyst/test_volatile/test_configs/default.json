@@ -1,0 +1,51 @@
+{
+    "tokens": [
+        {
+            "name": "Token1",
+            "symbol": "TKN1",
+            "decimals": 18,
+            "supply": 10000
+        },
+        {
+            "name": "Token2",
+            "symbol": "TKN2",
+            "decimals": 18,
+            "supply": 10000
+        },
+        {
+            "name": "Token3",
+            "symbol": "TKN3",
+            "decimals": 6,
+            "supply": 10000
+        },
+        {
+            "name": "Token4",
+            "symbol": "TKN4",
+            "decimals": 18,
+            "supply": 10000
+        }
+    ],
+    "pools": [
+        {
+            "tokens": [0, 1, 2],
+            "depositAmounts": ["10 * 10**18", "1000 * 10**18", "1000 * 10**6"],
+            "weights": [1, 1, 1],
+            "poolName": "POOLNAME",
+            "poolSymbol": "PS"
+        },
+        {
+            "tokens": [0, 1],
+            "depositAmounts": ["10 * 10**18", "100 * 10**18"],
+            "weights": [1,1],
+            "poolName": "AnotherPoolName",
+            "poolSymbol": "APN"
+        }, 
+        {
+            "tokens": [2],
+            "depositAmounts": ["1000 * 10**6"],
+            "weights": [1],
+            "poolName": "POOLNAME2",
+            "poolSymbol": "PS2"
+        }
+    ]
+}
