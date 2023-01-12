@@ -1,6 +1,6 @@
 import brownie
 import pytest
-from brownie import ZERO_ADDRESS, chain, convert, reverts
+from brownie import ZERO_ADDRESS, chain, convert, reverts, web3
 from brownie.test import given, strategy
 
 pytestmark = pytest.mark.usefixtures("connect_pools", "finish_setup")
@@ -88,16 +88,17 @@ def test_swap_to_units_event(channelId, swappool1, swappool2, token1, berg, elwo
     tx = swappool1.swapToUnits(
         channelId,
         convert.to_bytes(swappool2.address.replace("0x", "")),
-        convert.to_bytes(elwood.address.replace("0x", "")),
+        convert.to_bytes(elwood.address.replace("0x", "")),     # NOTE: not using the same account as the caller of the tx to make sure the 'targetUser' is correctly reported
         token1,
         1,                                                      # NOTE: use non-zero target asset index to make sure the field is set on the event (and not just left blank)
         swap_amount,
         min_out,
-        elwood,                                                 # NOTE: not using the same account as the caller of the tx to make sure the 'targetUser' is correctly reported
+        elwood,
         {"from": berg},
     )
 
     observed_units = tx.return_value
+    expected_message_hash = web3.keccak(tx.events["IncomingPacket"]["packet"][3]).hex()   # Keccak of the payload contained on the ibc packet
 
     swap_to_units_event = tx.events['SwapToUnits']
 
@@ -108,8 +109,7 @@ def test_swap_to_units_event(channelId, swappool1, swappool2, token1, berg, elwo
     assert swap_to_units_event['input']        == swap_amount
     assert swap_to_units_event['output']       == observed_units
     assert swap_to_units_event['minOut']       == min_out
-
-    assert swap_to_units_event['messageHash'] is not None
+    assert swap_to_units_event['messageHash']  == expected_message_hash
 
 
 def test_swap_from_units_event(channelId, swappool1, swappool2, token1, token3, berg, elwood, deployer, ibcemulator):
@@ -134,14 +134,14 @@ def test_swap_from_units_event(channelId, swappool1, swappool2, token1, token3, 
     )
 
     observed_units = tx.return_value
+    expected_message_hash = web3.keccak(tx.events["IncomingPacket"]["packet"][3]).hex()   # Keccak of the payload contained on the ibc packet
 
     txe = ibcemulator.execute(tx.events["IncomingMetadata"]["metadata"][0], tx.events["IncomingPacket"]["packet"], {"from": berg})
 
     swap_from_units_event = txe.events['SwapFromUnits']
 
-    assert swap_from_units_event['who']     == elwood
-    assert swap_from_units_event['toAsset'] == token3
-    assert swap_from_units_event['input']   == observed_units
-    assert swap_from_units_event['output']  == token3.balanceOf(elwood)
-
-    assert swap_from_units_event['messageHash'] is not None
+    assert swap_from_units_event['who']         == elwood
+    assert swap_from_units_event['toAsset']     == token3
+    assert swap_from_units_event['input']       == observed_units
+    assert swap_from_units_event['output']      == token3.balanceOf(elwood)
+    assert swap_from_units_event['messageHash'] == expected_message_hash
