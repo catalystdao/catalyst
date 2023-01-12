@@ -89,7 +89,7 @@ def test_setup_invalid_amplification(deploy_swappool, pool_data, token_list):
             tokens,
             depositAmounts,
             pool_data.get("weights"),
-            10**18,
+            10**17,
             pool_data.get("poolName"),
             pool_data.get("poolSymbol"),
             deployer=deployer,
