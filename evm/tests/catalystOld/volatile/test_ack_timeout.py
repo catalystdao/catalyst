@@ -22,7 +22,6 @@ def test_ibc_ack(channelId, swappool, ibcemulator, get_pool_tokens, berg, deploy
         1,
         swap_amount,
         0,
-        0,
         berg,
         {"from": berg},
     )
@@ -52,7 +51,6 @@ def test_ibc_timeout(channelId, swappool, ibcemulator, get_pool_tokens, berg, de
         1,
         swap_amount,
         0,
-        0,
         berg,
         {"from": berg},
     )
@@ -80,7 +78,6 @@ def test_only_one_response(channelId, swappool, ibcemulator, get_pool_tokens, be
         tokens[0],
         1,
         swap_amount,
-        0,
         0,
         berg,
         {"from": berg},
@@ -141,10 +138,10 @@ def test_ibc_timeout_and_ack(channelId, swappool, ibcemulator, get_pool_tokens, 
 
     U = int(693147180559945344 / 2)  # Example value used to test if the swap is corrected.
 
-    both1_12 = swappool.dry_swap_both(token1, token2, 10**18, False)
-    both1_21 = swappool.dry_swap_both(token2, token1, 10**18, False)
-    to1 = swappool.dry_swap_to_unit(token1, 10**18, True)
-    from1 = swappool.dry_swap_from_unit(token1, U, False)
+    both1_12 = swappool.dry_swap_both(token1, token2, 10**18)
+    both1_21 = swappool.dry_swap_both(token2, token1, 10**18)
+    to1 = swappool.dry_swap_to_unit(token1, 10**18)
+    from1 = swappool.dry_swap_from_unit(token1, U)
 
     tx1 = swappool.swapToUnits(
         channelId,
@@ -154,15 +151,14 @@ def test_ibc_timeout_and_ack(channelId, swappool, ibcemulator, get_pool_tokens, 
         1,
         swap_amount,
         0,
-        1,  # Equal to True, False.
         berg,
         {"from": berg},
     )
 
-    both2_12 = swappool.dry_swap_both(token1, token2, 10**18, False)
-    both2_21 = swappool.dry_swap_both(token2, token1, 10**18, False)
-    to2 = swappool.dry_swap_to_unit(token1, 10**18, True)
-    from2 = swappool.dry_swap_from_unit(token1, U, False)
+    both2_12 = swappool.dry_swap_both(token1, token2, 10**18)
+    both2_21 = swappool.dry_swap_both(token2, token1, 10**18)
+    to2 = swappool.dry_swap_to_unit(token1, 10**18)
+    from2 = swappool.dry_swap_from_unit(token1, U)
 
     assert both1_12 > both2_12
     assert both1_21 == both2_21
@@ -175,10 +171,10 @@ def test_ibc_timeout_and_ack(channelId, swappool, ibcemulator, get_pool_tokens, 
         {"from": berg},
     )
 
-    both3_12 = swappool.dry_swap_both(token1, token2, 10**18, False)
-    both3_21 = swappool.dry_swap_both(token2, token1, 10**18, False)
-    to3 = swappool.dry_swap_to_unit(token1, 10**18, True)
-    from3 = swappool.dry_swap_from_unit(token1, U, False)
+    both3_12 = swappool.dry_swap_both(token1, token2, 10**18)
+    both3_21 = swappool.dry_swap_both(token2, token1, 10**18)
+    to3 = swappool.dry_swap_to_unit(token1, 10**18)
+    from3 = swappool.dry_swap_from_unit(token1, U)
 
     assert both1_12 == both3_12
     assert both1_21 == both3_21
@@ -193,10 +189,10 @@ def test_ibc_timeout_and_ack(channelId, swappool, ibcemulator, get_pool_tokens, 
         {"from": berg},
     )
 
-    both3_12 = swappool.dry_swap_both(token1, token2, 10**18, False)
-    both3_21 = swappool.dry_swap_both(token2, token1, 10**18, False)
-    to3 = swappool.dry_swap_to_unit(token1, 10**18, True)
-    from3 = swappool.dry_swap_from_unit(token1, U, False)
+    both3_12 = swappool.dry_swap_both(token1, token2, 10**18)
+    both3_21 = swappool.dry_swap_both(token2, token1, 10**18)
+    to3 = swappool.dry_swap_to_unit(token1, 10**18)
+    from3 = swappool.dry_swap_from_unit(token1, U)
 
     assert both1_12 > both3_12
     assert both1_21 < both3_21

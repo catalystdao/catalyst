@@ -35,7 +35,6 @@ def test_liquidity_swap(channelId, swappool1, swappool2, berg, deployer, compute
         convert.to_bytes(berg.address.replace("0x", "")),
         pool1_tokens_swapped,
         int(estimatedPool2Tokens*9/10),
-        0,  # False, False
         berg,
         {"from": berg}
     )

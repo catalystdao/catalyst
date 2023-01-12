@@ -77,9 +77,7 @@ interface ICatalystV1PoolPermissionless {
      * @param toAssetIndex The index of the asset the user wants to buy in the target pool.
      * @param amount The number of _fromAsset to sell to the pool.
      * @param minOut The minimum number of returned tokens to the targetUser on the target chain.
-     * @param approx Should SwapFromUnits be computed using approximation?
      * @param fallbackUser If the transaction fails send the escrowed funds to this address
-     * @dev Use the appropriate dry swaps to decide if approximation makes sense.
      * These are the same functions as used by the swap functions, so they will
      * accurately predict the gas cost and swap return.
      */
@@ -91,7 +89,6 @@ interface ICatalystV1PoolPermissionless {
         uint8 toAssetIndex,
         uint256 amount,
         uint256 minOut,
-        uint8 approx,
         address fallbackUser
     ) external returns (uint256);
 
@@ -104,7 +101,6 @@ interface ICatalystV1PoolPermissionless {
         uint8 toAssetIndex,
         uint256 amount,
         uint256 minOut,
-        uint8 approx,
         address fallbackUser,
         bytes calldata calldata_
     ) external returns (uint256);
@@ -117,14 +113,12 @@ interface ICatalystV1PoolPermissionless {
      * @param who The recipient of toAsset
      * @param U Number of units to convert into toAsset.
      * @param minOut Minimum number of tokens bought. Reverts if less.
-     * @param approx If the swap approximation should be used over the "true" swap. Ignored for amplified pools.
      */
     function swapFromUnits(
         uint256 toAssetIndex,
         address who,
         uint256 U,
         uint256 minOut,
-        bool approx,
         bytes32 messageHash
     ) external returns (uint256);
 
@@ -133,7 +127,6 @@ interface ICatalystV1PoolPermissionless {
         address who,
         uint256 U,
         uint256 minOut,
-        bool approx,
         bytes32 messageHash,
         address dataTarget,
         bytes calldata data
@@ -156,7 +149,6 @@ interface ICatalystV1PoolPermissionless {
         bytes32 who,
         uint256 baseAmount,
         uint256 minOut,
-        uint8 approx,
         address fallbackUser
     ) external returns (uint256);
 
@@ -172,7 +164,6 @@ interface ICatalystV1PoolPermissionless {
         address who,
         uint256 U,
         uint256 minOut,
-        bool approx,
         bytes32 messageHash
     ) external returns (uint256);
 }

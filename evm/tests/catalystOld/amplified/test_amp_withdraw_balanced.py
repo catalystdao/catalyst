@@ -37,7 +37,7 @@ def test_compare_withdrawall_and_withdrawmixed(swappool_amp, get_pool_tokens, be
     withdrawAllAmount = tx_all.return_value
     chain.undo()
     
-    tx_mixed = swappool_amp.withdrawMixed(poolTokens, [int(2**64/(len(tokens) - i)) for i in range(len(tokens))], [0 for _ in tokens], {'from': berg})
+    tx_mixed = swappool_amp.withdrawMixed(poolTokens, [int(10**18/(len(tokens) - i)) for i in range(len(tokens))], [0 for _ in tokens], {'from': berg})
     
     withdrawMixedAmount = tx_mixed.return_value
     

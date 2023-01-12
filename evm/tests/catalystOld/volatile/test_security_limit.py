@@ -55,7 +55,6 @@ def test_security_limit_swap_loop(
         0,
         swap_amount,
         0,
-        0,  # Equal to False, False
         berg,
         {"from": berg},
     )
@@ -124,7 +123,6 @@ def test_security_limit_swap_loop(
         0,
         purchased_tokens,
         0,
-        0,  # Equal to False, False
         berg,
         {"from": berg},
     )
@@ -209,7 +207,6 @@ def test_security_limit_swap_timeout(
         0,
         swap_amount,
         0,
-        0,  # Equal to False, False
         berg,
         {"from": berg},
     )
@@ -246,7 +243,6 @@ def test_security_limit_swap_timeout(
         0,
         purchased_tokens,
         0,
-        0,  # Equal to False, False
         berg,
         {"from": berg},
     )

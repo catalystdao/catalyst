@@ -5,7 +5,6 @@ pragma solidity ^0.8.16;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/proxy/Clones.sol";
-import "./FixedPointMath.sol";
 import "./CatalystIBCInterface.sol";
 
 /**
@@ -36,7 +35,6 @@ contract CatalystSwapPoolFactory is Ownable {
     mapping(uint256 => address) public _poolTemplate;
     mapping(address => mapping(address => bool)) public IsCreatedByFactory;
     uint256 public _defaultGovernanceFee;
-    uint256 constant ONE = 2**64;
 
     constructor(
         address volatilePoolTemplate,
@@ -52,7 +50,7 @@ contract CatalystSwapPoolFactory is Ownable {
         external
         onlyOwner
     {
-        require(newDefaultGovernanceFee <= 2**63); // GovernanceFee is maximum 50%.
+        require(newDefaultGovernanceFee <= 10**18 / 2); // GovernanceFee is maximum 50%.
         _defaultGovernanceFee = newDefaultGovernanceFee;
 
         emit SetDefaultGovernanceFee(newDefaultGovernanceFee);
