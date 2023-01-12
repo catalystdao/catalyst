@@ -84,7 +84,7 @@ contract CatalystSwapPool is CatalystSwapPoolCommon {
 
                 // The maximum unit flow is \sum Weights. The value is shifted 64
                 // since units are always X64.
-                max_unit_inflow += weights[it] << 64;
+                max_unit_inflow += weights[it] * FixedPointMathLib.WAD;
             }
             _max_unit_inflow = max_unit_inflow;
         }
@@ -397,7 +397,7 @@ contract CatalystSwapPool is CatalystSwapPoolCommon {
         }
 
         uint256 poolTokens;
-        poolTokens = (initial_totalSupply * arbitrary_solve_integralX64(U, WSUM)) >> 64;
+        poolTokens = (initial_totalSupply * arbitrary_solve_integralX64(U, WSUM)) / FixedPointMathLib.WAD;
         // Emit the event
         emit Deposit(msg.sender, poolTokens, tokenAmounts);
         require(minOut <= poolTokens, SWAP_RETURN_INSUFFICIENT);

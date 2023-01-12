@@ -620,8 +620,8 @@ contract CatalystSwapPoolAmplified is
                 walpha_0_ampped = uint256(int256(weightedAssetBalanceSum) - int256(_unitTracker)) / it;
             }
             // Remember to add the number of pool tokens burned to totalSupply
-            uint256 ts = (totalSupply() + _escrowedPoolTokens + poolTokens);
-            uint256 pt_fraction = ((ts + poolTokens) << 64) / ts;
+            uint256 ts = totalSupply() + _escrowedPoolTokens + poolTokens;
+            uint256 pt_fraction = FixedPointMathLib.divWadDown(ts + poolTokens, ts);
             U = it * FixedPointMathLib.mulWadDown(
                 walpha_0_ampped, 
                 uint256(FixedPointMathLib.powWad(int256(pt_fraction), oneMinusAmp)) - FixedPointMathLib.WAD
@@ -632,11 +632,21 @@ contract CatalystSwapPoolAmplified is
         for (uint256 it = 0; it < NUMASSETS; ++it) {
             if (U == 0) break;
 
-            uint256 U_i = (U * withdrawRatioX64[it]) >> 64;
+            uint256 U_i = (U * withdrawRatioX64[it]) / FixedPointMathLib.WAD;
             if (U_i == 0) continue;
             U -= U_i;
 
-            uint256 tokenAmount = dry_swap_from_unit(_tokenIndexing[it], U_i);
+            // uint256 tokenAmount = dry_swap_from_unit(_tokenIndexing[it], U_i);
+            uint256 tokenAmount;
+            {
+                // W_B · B^(1-k) is repeated twice and requires 1 power.
+                // As a result, we compute it and cache.
+                uint256 W_BxBtoOMA = ampWeightAssetBalances[it];
+                tokenAmount = assetBalances[it] * (FixedPointMathLib.WAD - uint256(FixedPointMathLib.powWad(
+                    int256(FixedPointMathLib.divWadUp(W_BxBtoOMA - U, W_BxBtoOMA)),
+                    int256(FixedPointMathLib.WAD * FixedPointMathLib.WAD / uint256(oneMinusAmp)))
+                )) / FixedPointMathLib.WAD;
+            }
             require(minOuts[it] <= tokenAmount, SWAP_RETURN_INSUFFICIENT);
             IERC20(_tokenIndexing[it]).safeTransfer(msg.sender, tokenAmount);
 
