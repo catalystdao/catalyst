@@ -86,12 +86,14 @@ def pytest_generate_tests(metafunc):
     if rel_test_path[0] == "test_volatile":
         volatile_config = _test_config["volatile"]
 
+        metafunc.parametrize("swap_pool_type", ["volatile"], scope="session")
         metafunc.parametrize("raw_config", [volatile_config], indirect=True, scope="session")
         metafunc.parametrize("raw_pool_config", volatile_config["pools"], indirect=True, scope="session")
 
     elif rel_test_path[0] == "test_amplified":
         amplified_config = _test_config["amplified"]
 
+        metafunc.parametrize("swap_pool_type", ["amplified"], scope="session")
         metafunc.parametrize("raw_config", [amplified_config], indirect=True, scope="session")
         metafunc.parametrize("raw_pool_config", amplified_config["pools"], indirect=True, scope="session")
     
