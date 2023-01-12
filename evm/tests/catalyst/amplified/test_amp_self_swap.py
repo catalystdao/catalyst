@@ -23,7 +23,6 @@ def test_cross_pool_swap(channelId, swappool_amp, token1, berg, deployer, ibcemu
         0,
         swap_amount,
         0,
-        0,  # Equal to False, False
         berg,
         {"from": berg},
     )
