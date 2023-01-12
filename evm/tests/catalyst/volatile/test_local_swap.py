@@ -23,27 +23,6 @@ def test_local_swap(swappool, token1, token2, berg, deployer, compute_expected_s
     assert tx.return_value == token2.balanceOf(berg)
     
     
-
-@given(swap_amount=strategy("uint256", max_value=2000*10**18))
-def test_local_swap_approx(swappool, token1, token2, berg, deployer, compute_expected_swap, swap_amount):
-    token1.transfer(berg, swap_amount, {'from': deployer})
-    token1.approve(swappool, swap_amount, {'from': berg})
-    
-    y = compute_expected_swap(swap_amount, token1, token2, swappool)
-    
-    if swap_amount/(token1.balanceOf(swappool)-swap_amount) < 1e-02:
-        tx = swappool.localswap(
-            token1, token2, swap_amount, 0, True, {'from': berg}
-        )
-        assert tx.return_value <= int(y*1.000001), "Swap returns more than theoretical"
-    else:
-        tx = swappool.localswap(
-            token1, token2, swap_amount, (y * 9 /10), True, {'from': berg}
-        )
-        assert tx.return_value <= int(y*1.000001), "Swap returns more than theoretical"
-        assert (y * 9 /10) <= tx.return_value, "Swap returns less than 9/10 theoretical"
-    
-    
 @given(swap_amount=strategy("uint256", min_value=1*10**18, max_value=2000*10**18))
 def test_local_swap_minout_always_fails(swappool, token1, token2, berg, deployer, compute_expected_swap, swap_amount):
     token1.transfer(berg, swap_amount, {'from': deployer})
@@ -62,7 +41,7 @@ def test_local_swap_minout(swappool, token1, token2, berg, deployer, swap_amount
     token1.transfer(berg, swap_amount, {'from': deployer})
     token1.approve(swappool, swap_amount, {'from': berg})
     
-    simulated_swap_return = swappool.dry_swap_both(token1, token2, swap_amount, False)
+    simulated_swap_return = swappool.dry_swap_both(token1, token2, swap_amount)
     
     if simulated_swap_return < min_out:
         with reverts("Insufficient Return"):
@@ -97,28 +76,3 @@ def test_local_swap_event(swappool, token1, token2, berg, deployer):
     assert swap_event['toAsset']   == token2
     assert swap_event['input']     == swap_amount
     assert swap_event['output']    == observed_return
-    assert swap_event['fees']      >= 0                     # Check that there is a fees field
-
-
-def test_local_swap_event_approx(swappool, token1, token2, berg, deployer):
-    """
-        Test the LocalSwap event gets fired (approx swap).
-    """
-
-    swap_amount = 10**8
-
-    token1.transfer(berg, swap_amount, {'from': deployer})      # Fund berg's account with tokens to swap
-    token1.approve(swappool, swap_amount, {'from': berg})
-    
-    tx = swappool.localswap(token1, token2, swap_amount, 0, True, {'from': berg})
-
-    observed_return = tx.return_value
-
-    swap_event = tx.events['LocalSwap']
-
-    assert swap_event['who']       == berg
-    assert swap_event['fromAsset'] == token1
-    assert swap_event['toAsset']   == token2
-    assert swap_event['input']     == swap_amount
-    assert swap_event['output']    == observed_return
-    assert swap_event['fees']      >= 0                     # Check that there is a fees field

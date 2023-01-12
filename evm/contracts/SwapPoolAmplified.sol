@@ -116,7 +116,7 @@ contract CatalystSwapPoolAmplified is
         if (_adjustmentTarget != 0) {
             require(_targetAmplification != _amp); // dev: Weight and amplification changes are disallowed simultaneously.
         }
-        _adjustmentTarget = targetTime + (targetTime % 2) + 1; //  Weight changes have uneven target time
+        _adjustmentTarget = targetTime;
         _lastModificationTime = block.timestamp;
         _targetAmplification = targetAmplification;
 
@@ -407,11 +407,12 @@ contract CatalystSwapPoolAmplified is
         int256 oneMinusAmp = int256(FixedPointMathLib.WAD - _amp);
 
         uint256 walpha_0_ampped;
-        uint256 U = 0;
+        uint256 U;
         uint256 it;
         // First, lets derive walpha_0. This lets us evaluate the number of tokens the pool should have
         // If the price in the group is 1:1.
         {
+            int256 intU = 0;
             // We don't need weightedAssetBalanceSum again.
             uint256 weightedAssetBalanceSum = 0;
             for (it = 0; it < NUMASSETS; ++it) {
@@ -420,15 +421,21 @@ contract CatalystSwapPoolAmplified is
                 uint256 weight = _weight[token];
 
                 // Not minus escrowedAmount, since we want the deposit to return less.
-                uint256 weightAssetBalance = weight *
-                    ERC20(token).balanceOf(address(this));
+                uint256 weightAssetBalance = weight * ERC20(token).balanceOf(address(this)) * FixedPointMathLib.WAD;
+                
+                
+                {
+                    uint256 wab = uint256(FixedPointMathLib.powWad(int256(weightAssetBalance), oneMinusAmp));
+                    weightedAssetBalanceSum += wab;
 
-                uint256 wab = uint256(FixedPointMathLib.powWad(int256(weightAssetBalance * FixedPointMathLib.WAD), oneMinusAmp));
-                weightedAssetBalanceSum += wab;
+                    if (tokenAmounts[it] == 0) continue;
+                    
+                    intU -= int256(wab);
+                }
 
-                if (tokenAmounts[it] == 0) continue;
 
-                U += uint256(FixedPointMathLib.powWad(int256(weightAssetBalance + (weight * tokenAmounts[it]) * FixedPointMathLib.WAD), oneMinusAmp)) - wab;
+                intU += FixedPointMathLib.powWad(int256(weightAssetBalance + weight * tokenAmounts[it] * FixedPointMathLib.WAD), oneMinusAmp);
+                
 
                 IERC20(token).safeTransferFrom(
                     msg.sender,
@@ -436,6 +443,8 @@ contract CatalystSwapPoolAmplified is
                     tokenAmounts[it]
                 );
             }
+            U = uint256(intU);
+
             walpha_0_ampped = uint256(int256(weightedAssetBalanceSum) - int256(_unitTracker)) / it;
         }
         uint256 walpha_0 = uint256(FixedPointMathLib.powWad(
@@ -650,7 +659,7 @@ contract CatalystSwapPoolAmplified is
         address toAsset,
         uint256 amount,
         uint256 minOut
-    ) public returns (uint256) {
+    ) external returns (uint256) {
         _A();
         uint256 fee = FixedPointMathLib.mulWadDown(amount, _poolFeeX64);
 
@@ -666,19 +675,9 @@ contract CatalystSwapPoolAmplified is
 
         // TODO: Security limit update?
 
-        emit LocalSwap(msg.sender, fromAsset, toAsset, amount, out, fee);
+        emit LocalSwap(msg.sender, fromAsset, toAsset, amount, out);
 
         return out;
-    }
-
-    function localswap(
-        address fromAsset,
-        address toAsset,
-        uint256 amount,
-        uint256 minOut,
-        bool approx
-    ) external returns (uint256) {
-        return localswap(fromAsset, toAsset, amount, minOut);
     }
 
     function swapToUnits(
@@ -691,7 +690,7 @@ contract CatalystSwapPoolAmplified is
         uint256 minOut,
         address fallbackUser,
         bytes memory calldata_
-    ) internal returns (uint256) {
+    ) public returns (uint256) {
         require(fallbackUser != address(0));
         _A();
         // uint256 fee = FixedPointMathLib.mulWadDown(amount, _poolFeeX64);
@@ -734,7 +733,6 @@ contract CatalystSwapPoolAmplified is
                 toAssetIndex,
                 U,
                 minOut,
-                false,
                 escrowInformation,
                 calldata_
             );
@@ -779,46 +777,6 @@ contract CatalystSwapPoolAmplified is
         return U;
     }
 
-    /**
-     * @notice Initiate a cross-chain swap by purchasing units and transfer them to another pool.
-     * @param chain The target chain. Will be converted by the interface to channelId.
-     * @param targetPool The target pool on the target chain encoded in bytes32. For EVM chains this can be computed as:
-     * Vyper: convert(_poolAddress, bytes32)
-     * Solidity: abi.encode(_poolAddress)
-     * Brownie: brownie.convert.to_bytes(_poolAddress, type_str="bytes32")
-     * @param targetUser The recipient of the transaction on _chain. Encoded in bytes32. For EVM chains it can be derived similarly to targetPool.
-     * @param fromAsset The asset the user wants to sell.
-     * @param toAssetIndex The index of the asset the user wants to buy in the target pool.
-     * @param amount The number of _fromAsset to sell to the pool.
-     * @param minOut The minimum number of returned tokens to the targetUser on the target chain.
-     * @param approx Unused
-     * @param fallbackUser If the transaction fails send the escrowed funds to this address
-     */
-    function swapToUnits(
-        bytes32 chain,
-        bytes32 targetPool,
-        bytes32 targetUser,
-        address fromAsset,
-        uint8 toAssetIndex,
-        uint256 amount,
-        uint256 minOut,
-        uint8 approx,
-        address fallbackUser,
-        bytes memory calldata_
-    ) external returns (uint256) {
-        return
-            swapToUnits(
-                chain,
-                targetPool,
-                targetUser,
-                fromAsset,
-                toAssetIndex,
-                amount,
-                minOut,
-                fallbackUser,
-                calldata_
-            );
-    }
 
     /**
      * @notice Initiate a cross-chain swap by purchasing units and transfer them to another pool.
@@ -832,7 +790,6 @@ contract CatalystSwapPoolAmplified is
      * @param toAssetIndex The index of the asset the user wants to buy in the target pool.
      * @param amount The number of _fromAsset to sell to the pool.
      * @param minOut The minimum number of returned tokens to the targetUser on the target chain.
-     * @param approx Unused
      * @param fallbackUser If the transaction fails send the escrowed funds to this address
      */
     function swapToUnits(
@@ -843,7 +800,6 @@ contract CatalystSwapPoolAmplified is
         uint8 toAssetIndex,
         uint256 amount,
         uint256 minOut,
-        uint8 approx,
         address fallbackUser
     ) external returns (uint256) {
         bytes memory calldata_ = new bytes(0);
@@ -870,14 +826,12 @@ contract CatalystSwapPoolAmplified is
      * @param who The recipient of toAsset
      * @param U Number of units to convert into toAsset.
      * @param minOut Minimum number of tokens bought. Reverts if less.
-     * @param approx Ignored
      */
     function swapFromUnits(
         uint256 toAssetIndex,
         address who,
         uint256 U,
         uint256 minOut,
-        bool approx,
         bytes32 messageHash
     ) public returns (uint256) {
         _A();
@@ -924,7 +878,6 @@ contract CatalystSwapPoolAmplified is
         address who,
         uint256 U,
         uint256 minOut,
-        bool approx,
         bytes32 messageHash,
         address dataTarget,
         bytes calldata data
@@ -934,7 +887,6 @@ contract CatalystSwapPoolAmplified is
             who,
             U,
             minOut,
-            approx,
             messageHash
         );
 
@@ -972,11 +924,9 @@ contract CatalystSwapPoolAmplified is
         uint256 poolTokens,
         uint256 minOut,
         address fallbackUser
-    ) internal returns (uint256) {
+    ) external returns (uint256) {
         require(fallbackUser != address(0));
         _A();
-        // Cache totalSupply. This saves up to ~200 gas.
-        uint256 initial_totalSupply = totalSupply() + _escrowedPoolTokens;
 
         // Since we have already cached totalSupply, we might as well burn the tokens
         // now. If the user doesn't have enough tokens, they save a bit of gas.
@@ -1033,7 +983,6 @@ contract CatalystSwapPoolAmplified is
                 targetUser,
                 U,
                 minOut,
-                false,
                 escrowInformation
             );
         }
@@ -1051,42 +1000,12 @@ contract CatalystSwapPoolAmplified is
             targetUser,
             poolTokens,
             U,
-            0,
             messageHash
         );
 
         return U;
     }
 
-    /**
-     * @notice Initiate a cross-chain liquidity swap by lowering liquidity and transfer the liquidity units to another pool.
-     * @param chain The target chain. Will be converted by the interface to channelId.
-     * @param targetPool The target pool on the target chain encoded in bytes32. For EVM chains this can be computed as:
-     * Vyper: convert(_poolAddress, bytes32)
-     * Solidity: abi.encode(_poolAddress)
-     * Brownie: brownie.convert.to_bytes(_poolAddress, type_str="bytes32")
-     * @param targetUser The recipient of the transaction on _chain. Encoded in bytes32. For EVM chains it can be found similarly to _targetPool.
-     * @param poolTokens The number of pool tokens to liquidity Swap
-     * @param approx unused
-     */
-    function outLiquidity(
-        bytes32 chain,
-        bytes32 targetPool,
-        bytes32 targetUser,
-        uint256 poolTokens,
-        uint256 minOut,
-        uint8 approx,
-        address fallbackUser
-    ) external returns (uint256) {
-        outLiquidity(
-            chain,
-            targetPool,
-            targetUser,
-            poolTokens,
-            minOut,
-            fallbackUser
-        );
-    }
 
     // @nonreentrant('lock')
     /**
@@ -1096,13 +1015,11 @@ contract CatalystSwapPoolAmplified is
      * to check the validity of units.
      * @param who The recipient of pool tokens
      * @param U Number of units to convert into pool tokens.
-     * @param approx Ignored
      */
     function inLiquidity(
         address who,
         uint256 U,
         uint256 minOut,
-        bool approx,
         bytes32 messageHash
     ) external returns (uint256) {
         _A();

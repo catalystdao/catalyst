@@ -22,7 +22,6 @@ def test_amp_cross_pool_swap(channelId, swappool1_amp, swappool2_amp, token1, to
         0,
         swap_amount,
         0,
-        0,  # Equal to False, False
         berg,
         {"from": berg},
     )
@@ -68,7 +67,6 @@ def test_swap_to_units_event(channelId, swappool1_amp, swappool2_amp, token1, be
         1,                                                      # NOTE: use non-zero target asset index to make sure the field is set on the event (and not just left blank)
         swap_amount,
         min_out,
-        0,
         elwood,                                                 # NOTE: not using the same account as the caller of the tx to make sure the 'targetUser' is correctly reported
         {"from": berg},
     )
@@ -106,7 +104,6 @@ def test_swap_from_units_event(channelId, swappool1_amp, swappool2_amp, token1, 
         token1,
         0,
         swap_amount,
-        0,
         0,
         elwood,
         {"from": berg},

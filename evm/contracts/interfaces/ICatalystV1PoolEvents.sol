@@ -12,15 +12,13 @@ interface ICatalystV1PoolEvents {
      * @param toAsset The asset which was purchased with _fromAsset
      * @param input The number of _fromAsset sold
      * @param output The number of tokens provided to _who
-     * @param fees  The pool fee. Taken from the input. Numerical losses/fees are for obvious reasons not included.
      */
     event LocalSwap(
         address indexed who,
         address indexed fromAsset,
         address toAsset,
         uint256 input,
-        uint256 output,
-        uint256 fees
+        uint256 output
     );
 
     /**
@@ -67,14 +65,12 @@ interface ICatalystV1PoolEvents {
      * @param targetUser The recipient of the liquidity. The person who bought the trade is not present.
      * @param input The number of _fromAsset sold
      * @param output The calculated number of liquidity units bought.
-     * @param fees The pool fee. Taken from the input. Numerical losses/fees are for obvious reasons not included.
      */
     event SwapToLiquidityUnits(
         bytes32 indexed targetPool,
         bytes32 indexed targetUser,
         uint256 input,
         uint256 output,
-        uint256 fees,
         bytes32 messageHash
     );
 

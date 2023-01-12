@@ -22,7 +22,6 @@ def test_ibc_ack(channelId, swappool_amp, ibcemulator, get_pool_tokens, berg, de
         1,
         swap_amount,
         0,
-        0,
         berg,
         {"from": berg},
     )
@@ -51,7 +50,6 @@ def test_ibc_timeout(channelId, swappool_amp, ibcemulator, get_pool_tokens, berg
         tokens[0],
         1,
         swap_amount,
-        0,
         0,
         berg,
         {"from": berg},
@@ -82,7 +80,6 @@ def test_ibc_ack(channelId, swappool_amp, ibcemulator, get_pool_tokens, berg, de
         1,
         swap_amount,
         0,
-        0,
         berg,
         {"from": berg},
     )
@@ -110,7 +107,6 @@ def test_only_one_response(channelId, swappool_amp, ibcemulator, get_pool_tokens
         tokens[0],
         1,
         swap_amount,
-        0,
         0,
         berg,
         {"from": berg},
@@ -184,7 +180,6 @@ def test_ibc_timeout_and_ack(channelId, swappool_amp, ibcemulator, get_pool_toke
         1,
         swap_amount,
         0,
-        1,  # Equal to True, False.
         berg,
         {"from": berg},
     )

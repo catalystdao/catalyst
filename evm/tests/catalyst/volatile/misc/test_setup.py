@@ -6,7 +6,7 @@ import brownie
 #         [],
 #         [],
 #         [],
-#         2**64,
+#         10**18,
 #         "",
 #         "",
 #         deployer=deployer,
@@ -21,7 +21,7 @@ def test_setup_too_many_tokens(deploy_swappool, token_list, deployer, swappool_m
             token_list[:asset_count],
             [10**8]*asset_count,
             [1]*asset_count,
-            2**64,
+            10**18,
             "",
             "",
             deployer=deployer,
@@ -36,7 +36,7 @@ def test_setup_token_0_balance(deploy_swappool, token_list, deployer, swappool_m
             token_list[:asset_count],
             [10**8]*(asset_count - 1) + [0],    # Set the initial balance for the last token to 0
             [1]*asset_count,
-            2**64,
+            10**18,
             "",
             "",
             deployer=deployer,
@@ -45,7 +45,7 @@ def test_setup_token_0_balance(deploy_swappool, token_list, deployer, swappool_m
 
 def test_setup_call_twice(deploy_swappool, crosschaininterface, pool_data, token_list):
 
-    assert pool_data.get("amp") == 2**64
+    assert pool_data.get("amp") == 10**18
     deployer = pool_data.get("deployer")
     tokens = [token_list[idx] for idx in pool_data.get("tokens")]
     depositAmounts = pool_data.get("depositAmounts")
@@ -55,7 +55,7 @@ def test_setup_call_twice(deploy_swappool, crosschaininterface, pool_data, token
         tokens,
         depositAmounts,
         pool_data.get("weights"),
-        2**64,
+        10**18,
         pool_data.get("poolName"),
         pool_data.get("poolSymbol"),
         deployer=deployer,
@@ -66,7 +66,7 @@ def test_setup_call_twice(deploy_swappool, crosschaininterface, pool_data, token
         sp.setup(
             tokens,
             [1 for _ in tokens],
-            2**64,
+            10**18,
             0,
             "",
             "",
@@ -78,7 +78,7 @@ def test_setup_call_twice(deploy_swappool, crosschaininterface, pool_data, token
 
 def test_setup_invalid_amplification(deploy_swappool, pool_data, token_list):
     
-    assert pool_data.get("amp") == 2**64
+    assert pool_data.get("amp") == 10**18
     deployer = pool_data.get("deployer")
     tokens = [token_list[idx] for idx in pool_data.get("tokens")]
     depositAmounts = pool_data.get("depositAmounts")
@@ -89,7 +89,7 @@ def test_setup_invalid_amplification(deploy_swappool, pool_data, token_list):
             tokens,
             depositAmounts,
             pool_data.get("weights"),
-            2**64,
+            10**18,
             pool_data.get("poolName"),
             pool_data.get("poolSymbol"),
             deployer=deployer,
@@ -108,13 +108,13 @@ def test_setup_pool_token_mint(deploy_swappool, pool_data, token_list):
         tokens,
         depositAmounts,
         pool_data.get("weights"),
-        2**64,
+        10**18,
         pool_data.get("poolName"),
         pool_data.get("poolSymbol"),
         deployer=deployer
     )
 
-    assert sp.balanceOf(deployer) == 2**64
+    assert sp.balanceOf(deployer) == 10**18
 
 
 
@@ -122,7 +122,7 @@ def test_setup_pool_token_mint(deploy_swappool, pool_data, token_list):
 
 def test_finish_setup_unauthorized(deploy_swappool, pool_data, token_list, molly):
 
-    assert pool_data.get("amp") == 2**64
+    assert pool_data.get("amp") == 10**18
     deployer = pool_data.get("deployer")
     tokens = [token_list[idx] for idx in pool_data.get("tokens")]
     depositAmounts = pool_data.get("depositAmounts")
@@ -132,7 +132,7 @@ def test_finish_setup_unauthorized(deploy_swappool, pool_data, token_list, molly
         tokens,
         depositAmounts,
         pool_data.get("weights"),
-        2**64,
+        10**18,
         pool_data.get("poolName"),
         pool_data.get("poolSymbol"),
         deployer=deployer,
@@ -144,7 +144,7 @@ def test_finish_setup_unauthorized(deploy_swappool, pool_data, token_list, molly
 
 def test_finish_setup_call_twice(deploy_swappool, pool_data, token_list):
 
-    assert pool_data.get("amp") == 2**64
+    assert pool_data.get("amp") == 10**18
     deployer = pool_data.get("deployer")
     tokens = [token_list[idx] for idx in pool_data.get("tokens")]
     depositAmounts = pool_data.get("depositAmounts")
@@ -154,7 +154,7 @@ def test_finish_setup_call_twice(deploy_swappool, pool_data, token_list):
         tokens,
         depositAmounts,
         pool_data.get("weights"),
-        2**64,
+        10**18,
         pool_data.get("poolName"),
         pool_data.get("poolSymbol"),
         deployer=deployer,
@@ -169,7 +169,7 @@ def test_finish_setup_call_twice(deploy_swappool, pool_data, token_list):
 
 def test_finish_setup_only_local(deploy_swappool, pool_data, token_list, molly):
 
-    assert pool_data.get("amp") == 2**64
+    assert pool_data.get("amp") == 10**18
     deployer = pool_data.get("deployer")
     tokens = [token_list[idx] for idx in pool_data.get("tokens")]
     depositAmounts = pool_data.get("depositAmounts")
@@ -179,7 +179,7 @@ def test_finish_setup_only_local(deploy_swappool, pool_data, token_list, molly):
         tokens,
         depositAmounts,
         pool_data.get("weights"),
-        2**64,
+        10**18,
         pool_data.get("poolName"),
         pool_data.get("poolSymbol"),
         deployer=deployer,

@@ -209,32 +209,9 @@ contract CatalystSwapPool is CatalystSwapPoolCommon {
         // Shifting A + in and A before dividing returns:
         // ((A + in) * 2**64) / ((A) * 2**64) * 2**64 = (A + _in) / A * 2**64
         // Thus the shifting cancels and is not needed.
-        return W * uint256(FixedPointMathLib.lnWad(int256(FixedPointMathLib.mulWadDown(A + input, A))));
+        return W * uint256(FixedPointMathLib.lnWad(int256(FixedPointMathLib.divWadDown(A + input, A))));
     }
 
-    /**
-     * @notice Computes the integral \int_{A}^{A+in} W/(w · ln(2)) dw by lower approximation.
-     * After swapping, we know the price to be W/((_A + in) · ln(2)). The amount provided
-     * to the seller is then (W · in)/((_A + in) · ln(2)).
-     *
-     * The value is returned as units, which is always in X64.
-     * @dev This function should sometimes be used over _compute_integral
-     * if in/_A <= 0.1% since it is cheaper and mathematically simpler.
-     * All input amounts should be the raw numbers and not X64.
-     * Since units are always denominated in X64, the function
-     * should be treated as mathematically *native*.
-     * @param input The input amount.
-     * @param A The current pool balance of the in token.
-     * @param W The pool weight of the in token.
-     * @return Group specific units in X64 (units are **always** X64).
-     */
-    function approx_compute_integral(
-        uint256 input,
-        uint256 A,
-        uint256 W
-    ) internal pure returns (uint256) {
-        return FixedPointMathLib.divWadDown(W * input, A + input);
-    }
 
     /**
      * @notice Solves the equation U = \int_{A-_out}^{A} W/(w · ln(2)) dw for _out
@@ -257,30 +234,6 @@ contract CatalystSwapPool is CatalystSwapPoolCommon {
         return (B * (FixedPointMathLib.WAD - uint256(FixedPointMathLib.expWad(-int256(U / W))))) / FixedPointMathLib.WAD;
     }
 
-    /**
-     * @notice Solves the equation U = \int_{B-_out}^{B} W/(w · ln(2)) dw for _out
-     * by upper approximation. After swapping, we know the price to be W/((B - out) · ln(2)).
-     * The amount provided to the seller is then (W · _out)/((A - _out) · ln(2)).
-     *     => _out = (B · U · LN2)/(W + U · LN2)
-     * @dev This function should sometimes be used over _solve_integral.
-     * Since the error is relative to _out and _B, it is difficult
-     * to provide relative bounds when the approximation is better
-     * than the true equation.
-     * All input amounts should be the raw numbers and not X64.
-     * Since units are always denominated in X64, the function
-     * should be treated as mathematically *native*.
-     * @param U Input units. Is technically X64 but can be treated as not.
-     * @param B The current pool balance of the _out token.
-     * @param W The pool weight of the _out token.
-     * @return Output denominated in output token.
-     */
-    function approx_solve_integral(
-        uint256 U,
-        uint256 B,
-        uint256 W
-    ) public pure returns (uint256) {
-        return (B * U) / (W * FixedPointMathLib.WAD  + U);
-    }
 
     /**
      * @notice Solves the equation
@@ -314,34 +267,6 @@ contract CatalystSwapPool is CatalystSwapPoolCommon {
     }
 
     /**
-     * @notice Solves the equation
-     *     \int_{A}^{A + _in} W_A/(w · ln(2)) dw = \int_{B-out}^{B} W_B/(w · ln(2)) dw for out
-     * by approximation. For the mathematical explanation, see approx_solve_integral
-     * and approx_compute_integral.
-     *     => out = (B · W_A · in)/(W_B · A + (W_A + W_B) · in)
-     *
-     * Alternatively, the integral can be computed through:
-     *     approx_solve_integral(approx_compute_integral(input, A, W_A), B, W_B).
-     * However, this approximation never uses X64 numbers which makes it slightly cheaper.
-     * @dev This function never use any X64 mathematics.
-     * @param input The input amount.
-     * @param A The current pool balance of the _in token.
-     * @param B The current pool balance of the _out token.
-     * @param W_A The pool weight of the _in token.
-     * @param W_B The pool weight of the _out token.
-     * @return Output denominated in output token.
-     */
-    function approx_integral(
-        uint256 input,
-        uint256 A,
-        uint256 B,
-        uint256 W_A,
-        uint256 W_B
-    ) internal pure returns (uint256) {
-        return (B * W_A * input) / (W_B * A + (W_A + W_B) * input);
-    }
-
-    /**
      * @notice Solves the non-unique swap integral.
      * @dev All input amounts should be the raw numbers and not X64.
      * Since units are always denominated in X64, the function
@@ -361,42 +286,20 @@ contract CatalystSwapPool is CatalystSwapPoolCommon {
     }
 
     /**
-     * @notice Solves the non-unique swap integral by approximation.
-     * @dev read @arbitrary_solve_integral.
-     * The function is only to be used for liquidity swaps.
-     * @param U Input units. Is technically X64 but can be treated as not.
-     * @param W The pool weight of the _out token.
-     * @return Output denominated in percentage of pool.
-     */
-    function arbitrary_approx_solve_integralX64(uint256 U, uint256 W)
-        public
-        pure
-        returns (uint256)
-    {
-        return U / W;
-    }
-
-    /**
      * @notice Computes the return of a SwapToUnits, without executing one.
      * @dev Before letting a user swap, it can be beneficial to viewing the
      * return approximated and not approximated. Then choose the one with
      * the lowest cost (max return & min gas cost).
      * @param from The address of the token to sell.
      * @param amount The amount of from token to sell.
-     * @param approx True if SwapToUnits should be approximated (read: approx_compute_integral)
      * @return uint256 specific units in X64 (units are **always** X64).
      */
     function dry_swap_to_unit(
         address from,
-        uint256 amount,
-        bool approx
+        uint256 amount
     ) public view returns (uint256) {
         uint256 A = IERC20(from).balanceOf(address(this));
         uint256 W = _weight[from];
-
-        // If a token is not part of the pool, W is 0. This returns 0 by
-        // multiplication with 0.
-        if (approx) return approx_compute_integral(amount, A, W);
 
         // If a token is not part of the pool, W is 0. This returns 0 by
         // multiplication with 0.
@@ -410,18 +313,14 @@ contract CatalystSwapPool is CatalystSwapPoolCommon {
      * the lowest cost (max return & min gas cost).
      * @param to The address of the token to buy.
      * @param U The number of units used to buy to.
-     * @param approx True if SwapToUnits should be approximated (read: _approx_solve_integral)
      * @return Output denominated in output token.
      */
     function dry_swap_from_unit(
         address to,
-        uint256 U,
-        bool approx
+        uint256 U
     ) public view returns (uint256) {
         uint256 B = IERC20(to).balanceOf(address(this)) - _escrowedTokens[to];
         uint256 W = _weight[to];
-
-        if (approx) return approx_solve_integral(U, B, W);
 
         return solve_integral(U, B, W);
     }
@@ -438,14 +337,12 @@ contract CatalystSwapPool is CatalystSwapPoolCommon {
      * @param from The address of the token to sell.
      * @param to The address of the token to buy.
      * @param input The amount of _from token to sell for to token.
-     * @param approx True if SwapToUnits should be approximated (read: approx_compute_integral) Is ignored if the tokens weights are equal.
      * @return Output denominated in to token.
      */
     function dry_swap_both(
         address from,
         address to,
-        uint256 input,
-        bool approx
+        uint256 input
     ) public view returns (uint256) {
         uint256 A = IERC20(from).balanceOf(address(this));
         uint256 B = IERC20(to).balanceOf(address(this)) - _escrowedTokens[to];
@@ -457,10 +354,6 @@ contract CatalystSwapPool is CatalystSwapPoolCommon {
         if (W_A == W_B)
             // Saves ~7500 gas.
             return (B * input) / (A + input);
-
-        // If from token doesn't exist, W_A is 0
-        // and this returns 0 by multiplications with 0.
-        if (approx) return approx_integral(input, A, B, W_A, W_B);
 
         // If the token doesn't exist, W_A is 0.
         // Then invfpowX64 returns 1 which is subtracted from 1 => returns 0.
@@ -639,20 +532,18 @@ contract CatalystSwapPool is CatalystSwapPoolCommon {
      * @param toAsset The asset the user wants to buy
      * @param amount The amount of fromAsset the user wants to sell
      * @param minOut The minimum output of _toAsset the user wants.
-     * @param approx If true, uses (worse) but simpler swapping which can improve swap return and gas costs. If assets weights are equal, this is ignored.
      */
     function localswap(
         address fromAsset,
         address toAsset,
         uint256 amount,
-        uint256 minOut,
-        bool approx
+        uint256 minOut
     ) public returns (uint256) {
         _W();
         uint256 fee = FixedPointMathLib.mulWadDown(amount, _poolFeeX64);
 
         // Calculate the swap return value.
-        uint256 out = dry_swap_both(fromAsset, toAsset, amount - fee, approx);
+        uint256 out = dry_swap_both(fromAsset, toAsset, amount - fee);
 
         // Check if the calculated returned value is more than the minimum output.
         require(out >= minOut, SWAP_RETURN_INSUFFICIENT);
@@ -661,19 +552,11 @@ contract CatalystSwapPool is CatalystSwapPoolCommon {
         IERC20(toAsset).safeTransfer(msg.sender, out);
         IERC20(fromAsset).safeTransferFrom(msg.sender, address(this), amount);
 
-        emit LocalSwap(msg.sender, fromAsset, toAsset, amount, out, fee);
+        emit LocalSwap(msg.sender, fromAsset, toAsset, amount, out);
 
         return out;
     }
 
-    function localswap(
-        address fromAsset,
-        address toAsset,
-        uint256 amount,
-        uint256 minOut
-    ) public returns (uint256) {
-        return localswap(fromAsset, toAsset, amount, minOut, false);
-    }
 
     // @nonreentrant('lock')
     /**
@@ -688,7 +571,6 @@ contract CatalystSwapPool is CatalystSwapPoolCommon {
      * @param toAssetIndex The index of the asset the user wants to buy in the target pool.
      * @param amount The number of _fromAsset to sell to the pool.
      * @param minOut The minimum number of returned tokens to the targetUser on the target chain.
-     * @param approx Should SwapFromUnits be computed using approximation?
      * @param fallbackUser If the transaction fails send the escrowed funds to this address
      * @param calldata_ Data field if a call should be made on the target chain. Should be encoded abi.encode(address, data)
      * @dev Use the appropriate dry swaps to decide if approximation makes sense.
@@ -703,7 +585,6 @@ contract CatalystSwapPool is CatalystSwapPoolCommon {
         uint8 toAssetIndex,
         uint256 amount,
         uint256 minOut,
-        uint8 approx,
         address fallbackUser,
         bytes memory calldata_
     ) public returns (uint256) {
@@ -714,8 +595,7 @@ contract CatalystSwapPool is CatalystSwapPoolCommon {
         // Calculate the group specific units bought.
         uint256 U = dry_swap_to_unit(
             fromAsset,
-            amount - FixedPointMathLib.mulWadDown(amount, _poolFeeX64),
-            (approx & 1) > 0
+            amount - FixedPointMathLib.mulWadDown(amount, _poolFeeX64)
         );
 
         bytes32 messageHash;
@@ -734,7 +614,6 @@ contract CatalystSwapPool is CatalystSwapPoolCommon {
                 toAssetIndex,
                 U,
                 minOut,
-                (approx & 2) > 0,
                 escrowInformation,
                 calldata_
             );
@@ -785,7 +664,6 @@ contract CatalystSwapPool is CatalystSwapPoolCommon {
         uint8 toAssetIndex,
         uint256 amount,
         uint256 minOut,
-        uint8 approx,
         address fallbackUser
     ) external returns (uint256) {
         bytes memory calldata_ = new bytes(0);
@@ -798,7 +676,6 @@ contract CatalystSwapPool is CatalystSwapPoolCommon {
                 toAssetIndex,
                 amount,
                 minOut,
-                approx,
                 fallbackUser,
                 calldata_
             );
@@ -812,14 +689,12 @@ contract CatalystSwapPool is CatalystSwapPoolCommon {
      * @param who The recipient of toAsset
      * @param U Number of units to convert into toAsset.
      * @param minOut Minimum number of tokens bought. Reverts if less.
-     * @param approx If the swap approximation should be used over the "true" swap.
      */
     function swapFromUnits(
         uint256 toAssetIndex,
         address who,
         uint256 U,
         uint256 minOut,
-        bool approx,
         bytes32 messageHash
     ) public returns (uint256) {
         _W();
@@ -833,7 +708,7 @@ contract CatalystSwapPool is CatalystSwapPoolCommon {
         checkAndSetUnitCapacity(U);
 
         // Calculate the swap return value.
-        uint256 purchasedTokens = dry_swap_from_unit(toAsset, U, approx);
+        uint256 purchasedTokens = dry_swap_from_unit(toAsset, U);
 
         require(minOut <= purchasedTokens, SWAP_RETURN_INSUFFICIENT);
 
@@ -850,7 +725,6 @@ contract CatalystSwapPool is CatalystSwapPoolCommon {
         address who,
         uint256 U,
         uint256 minOut,
-        bool approx,
         bytes32 messageHash,
         address dataTarget,
         bytes calldata data
@@ -860,7 +734,6 @@ contract CatalystSwapPool is CatalystSwapPoolCommon {
             who,
             U,
             minOut,
-            approx,
             messageHash
         );
 
@@ -897,7 +770,6 @@ contract CatalystSwapPool is CatalystSwapPoolCommon {
         bytes32 targetUser,
         uint256 poolTokens,
         uint256 minOut,
-        uint8 approx,
         address fallbackUser
     ) external returns (uint256) {
         require(fallbackUser != address(0));
@@ -933,7 +805,6 @@ contract CatalystSwapPool is CatalystSwapPoolCommon {
                 targetUser,
                 U,
                 minOut,
-                (approx & 2) > 0,
                 escrowInformation
             );
         }
@@ -952,7 +823,6 @@ contract CatalystSwapPool is CatalystSwapPoolCommon {
             targetUser,
             poolTokens,
             U,
-            0,
             messageHash
         );
 
@@ -972,7 +842,6 @@ contract CatalystSwapPool is CatalystSwapPoolCommon {
         address who,
         uint256 U,
         uint256 minOut,
-        bool approx,
         bytes32 messageHash
     ) external returns (uint256) {
         _W();
@@ -999,18 +868,7 @@ contract CatalystSwapPool is CatalystSwapPoolCommon {
         // Since we know the relationship between the current pool assets (it being the current balances)
         // we only need to derive one. For simplifity, the first asset is always used.
         // address token0;
-        // We could use dry_swap_to_unit(from, amount, approx), but it repeats a bunch of logic.
-        // Instead, lets implement it here.
-        uint256 poolTokens;
-        uint256 ts = totalSupply();
-        {
-            // 3. Convert units to an even mix of tokens.
-            if (approx) {
-                poolTokens = ((U * ts) / (WSUM * FixedPointMathLib.WAD));
-            } else {
-                poolTokens = (arbitrary_solve_integralX64(U, WSUM) * ts)/FixedPointMathLib.WAD;
-            }
-        }
+        uint256 poolTokens = (arbitrary_solve_integralX64(U, WSUM) * totalSupply())/FixedPointMathLib.WAD;
 
         // 4. Deposit the even mix of tokens.
         require(minOut <= poolTokens, SWAP_RETURN_INSUFFICIENT);

@@ -93,7 +93,6 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
         uint8 targetAssetIndex,
         uint256 U,
         uint256 minOut,
-        bool approx,
         TokenEscrow memory escrowInformation,
         bytes memory calldata_
     ) external returns (bytes32) {
@@ -141,7 +140,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
 
         // abi.encodePacked encodes the arguments as a concat.
         bytes memory data = abi.encodePacked(
-            uint8(approx ? 2 : 0), // Needs flag 1 for approximation.
+            uint8(0),
             abi.encode(msg.sender),
             targetPool,
             targetUser,
@@ -173,7 +172,6 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
         bytes32 targetUser,
         uint256 U,
         uint256 minOut,
-        bool approx,
         LiquidityEscrow memory escrowInformation
     ) external returns (bytes32) {
         /*
@@ -213,7 +211,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
         // abi.encodePacked encodes the arguments as a concat. This should be the same as:
         // _data: Bytes[130] = concat(0x00,  convert(msg.sender, bytes32), _pool, _who, assetIndex, C) in vyper
         bytes memory data = abi.encodePacked(
-            uint8(approx ? 3 : 1),
+            uint8(1),
             abi.encode(msg.sender),
             targetPool,
             targetUser,
@@ -378,7 +376,6 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
                     abi.decode(data[65:97], (address)), // who
                     uint256(bytes32(data[97:129])), // U
                     uint256(bytes32(data[130:162])), // minOut
-                    (_context & 0x02) > 0, // approx
                     keccak256(data), // messageHash
                     callDataTarget,
                     calldata_
@@ -390,7 +387,6 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
                 abi.decode(data[65:97], (address)), // who
                 uint256(bytes32(data[97:129])), // U
                 uint256(bytes32(data[130:162])), // minOut
-                (_context & 0x02) > 0, // approx
                 keccak256(data) // messageHash
             );
         } else {
@@ -402,7 +398,6 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
                 who,
                 U,
                 minOut,
-                (_context & 0x02) > 0,
                 keccak256(data)
             );
         }

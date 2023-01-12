@@ -30,7 +30,7 @@ pool_information = {
         "selfConnection": False
     },
     "ampdefault": {
-        "amp": 2**62,
+        "amp": 25 * 10**16,
         "tokens": [0, 1, 2],
         "depositAmounts": [10 * 10**18, 1000 * 10**18, 1000 * 10**6],
         "weights": [int(int(1000 * 10**18)/int(10 * 10**18)), 1, int(int(1000 * 10**18)/int(1000 * 10**6))],
@@ -40,7 +40,7 @@ pool_information = {
         "selfConnection": True
     },
     "amp2tokens": {
-        "amp": 2**62,
+        "amp": 25 * 10**16,
         "tokens": [0, 1],
         "depositAmounts": [10 * 10**18, 1000 * 10**18],
         "weights": [int(int(1000 * 10**18)/int(10 * 10**18)), 1],
@@ -50,7 +50,7 @@ pool_information = {
         "selfConnection": True
     },
     "amp1tokens": {
-        "amp": 2**62,
+        "amp": 25 * 10**16,
         "tokens": [2],
         "depositAmounts": [1000 * 10**6],
         "weights": [int(int(1000 * 10**18)/int(1000 * 10**6))],

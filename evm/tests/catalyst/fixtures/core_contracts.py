@@ -194,7 +194,7 @@ def swappool2(deploy_swappool, swappool2_config, token_list):
 # Amplified pool
 @pytest.fixture(scope="module")
 def swappool_amp(channelId, deploy_swappool, amp_pool_data, token_list):
-    assert amp_pool_data.get("amp") < 2**64
+    assert amp_pool_data.get("amp") < 10**18
     deployer = amp_pool_data.get("deployer")
     tokens = para_tokens(amp_pool_data.get("tokens"), token_list)
     depositAmounts = amp_pool_data.get("depositAmounts")
@@ -220,8 +220,8 @@ def swappool_amp(channelId, deploy_swappool, amp_pool_data, token_list):
 
     # Validate swappool is correctly created
     assert sp.ready()
-    assert sp.balanceOf(deployer) == 2**64
-    assert sp.totalSupply() == 2**64
+    assert sp.balanceOf(deployer) == 10**18
+    assert sp.totalSupply() == 10**18
     for i in range(len(tokens)):
         token = tokens[i]
         depositValue = depositAmounts[i]
@@ -234,7 +234,7 @@ def swappool_amp(channelId, deploy_swappool, amp_pool_data, token_list):
 @pytest.fixture(scope="module")
 def swappool1_amp_config(amp_pool_data_cross):
     amp_pool_data = amp_pool_data_cross[0]
-    assert amp_pool_data.get("amp") < 2**64
+    assert amp_pool_data.get("amp") < 10**18
     yield amp_pool_data
 
 @pytest.fixture(scope="module")
@@ -261,7 +261,7 @@ def swappool1_amp(deploy_swappool, swappool1_amp_config, token_list):
 @pytest.fixture(scope="module")
 def swappool2_amp_config(amp_pool_data_cross):
     amp_pool_data = amp_pool_data_cross[1]
-    assert amp_pool_data.get("amp") < 2**64
+    assert amp_pool_data.get("amp") < 10**18
     yield amp_pool_data
 
 @pytest.fixture(scope="module")

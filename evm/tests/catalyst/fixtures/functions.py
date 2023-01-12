@@ -2,8 +2,9 @@ import pytest
 
 from brownie import convert, ZERO_ADDRESS
 from brownie import Token
-from math import log2, ceil
+from math import log, exp
 import numpy as np
+from decimal import Decimal
 
 
 def evmBytes32ToAddress(bytes32):
@@ -141,35 +142,35 @@ def compute_expected_swap():
         if toSwappool is None:
             toSwappool = fromSwappool
         
-        amp = 2**64
+        amp = 10**18
         try:
-            amp = fromSwappool._amp()
+            amp = Decimal(fromSwappool._amp())
         except AttributeError:
             pass
         
-        w1 = fromSwappool._weight(fromToken)
-        w2 = toSwappool._weight(toToken)
-        a = fromToken.balanceOf(fromSwappool)
-        b = toToken.balanceOf(toSwappool)
-        if amp != 2**64:
+        w1 = Decimal(fromSwappool._weight(fromToken))
+        w2 = Decimal(toSwappool._weight(toToken))
+        a = Decimal(fromToken.balanceOf(fromSwappool))
+        b = Decimal(toToken.balanceOf(toSwappool))
+        if amp != 10**18:
             a *= w1
             b *= w2
             swap_amount *= w1
-            amp /= 2**64
+            amp /= Decimal(10**18)
             
             bamp = b**(1-amp)
             
             U = (a + swap_amount)**(1-amp) - (a)**(1-amp)
             if withU:
-                return (U*2**64, ceil(b/w2 * (1 - ((bamp - U)/(bamp))**(1/(1-amp)))))
-            return ceil(b/w2 * (1 - ((bamp - U)/(bamp))**(1/(1-amp))))
+                return (int(U*10**18), int((b/w2 * (1 - ((bamp - U)/(bamp))**(1/(1-amp)))).ceil()))
+            return int(b/w2 * (1 - ((bamp - U)/(bamp))**(1/(1-amp))))
         
         if w1 == w2:
-            return ceil((b*swap_amount)/(a+swap_amount))
-        U = w1 * log2((a + swap_amount)/a)
+            return int((b*swap_amount)/(a+swap_amount))
+        U = w1 * log((a + swap_amount)/a)
         if withU:
-            return (U*2**64, ceil(b * (1 - 2**(-U/w2))))
-        return ceil(b * (1 - 2**(-U/w2)))
+            return (U*10**18, int(b * (1 - exp(-U/w2))))
+        return int(b * (1 - exp(-U/w2)))
         
     yield _compute_expected_swap
 
@@ -179,25 +180,25 @@ def compute_expected_swap():
 def compute_expected_swap_given_U():
     # The below functions are implemented exactly instead of through the mathematical implementation.
     def _compute_expected_swap_given_U(U, toToken, toSwappool):
-        amp = 2**64
+        amp = 10**18
         try:
-            amp = toSwappool._amp()
+            amp = Decimal(toSwappool._amp())
         except AttributeError:
             pass
         
-        w = toSwappool._weight(toToken)
-        b = toToken.balanceOf(toSwappool)
-        U /= 2**64
-        if amp != 2**64:
+        w = Decimal(toSwappool._weight(toToken))
+        b = Decimal(toToken.balanceOf(toSwappool))
+        U = Decimal(U)
+        U /= Decimal(10**18)
+        if amp != 10**18:
             b *= w
-            amp /= 2**64
+            amp /= Decimal(10**18)
             
             bamp = b**(1-amp)
             
-            return ceil(b/w * (1 - ((bamp - U)/(bamp))**(1/(1-amp))))
+            return int(b/w * (1 - ((bamp - U)/(bamp))**(1/(1-amp))))
         
-        
-        return ceil(b * (1 - 2**(-U/w)))
+        return int(b * (1 - exp(-U/w)))
         
     yield _compute_expected_swap_given_U
 
@@ -207,56 +208,46 @@ def compute_expected_swap_given_U():
 def compute_withdraw_to_U(get_pool_tokens, balance_0):
     # The below functions are implemented exactly instead of through the mathematical implementation.
     def _compute_withdraw_to_U(withdraw_amount, swappool):
-        amp = 2**64
+        amp = 10**18
         try:
-            amp = swappool._amp()
+            amp = Decimal(swappool._amp())
         except AttributeError:
             pass
         
-        totalSupply = swappool.totalSupply()
+        totalSupply = Decimal(swappool.totalSupply())
         tokens = get_pool_tokens(swappool)
-        if amp != 2**64:
+        if amp != 10**18:
             walpha = balance_0(swappool)
             
-            N = len(tokens)
-            OneMinusAmp = (2**64-amp)/2**64
-            return ceil((N * walpha**OneMinusAmp * ((1+ withdraw_amount/totalSupply)**OneMinusAmp - 1)) * 2**64)
+            N = Decimal(len(tokens))
+            oneMinusAmp = (Decimal(10**18)-amp)/Decimal(10**18)
+            return int((N * walpha**oneMinusAmp * ((1+ withdraw_amount/totalSupply)**oneMinusAmp - 1)) * Decimal(10**18))
         
         wsum = sum([swappool._weight(token) for token in tokens])
-        return ceil(log2(totalSupply/(totalSupply-withdraw_amount))*wsum * 2**64)
+        return int(log(totalSupply/(totalSupply-withdraw_amount))*wsum * Decimal(10**18))
         
     yield _compute_withdraw_to_U
 
 
-@pytest.fixture(scope="session")
-def prod():
-    def _prod(arr):
-        product = 1
-        for a in arr:
-            product *= a
-        return product
-
-    yield _prod
-
 
 @pytest.mark.no_call_coverage
 @pytest.fixture(scope="session")
-def invariant(get_pool_tokens, prod):
+def invariant(get_pool_tokens):
     def _invariant(swappool):
         tokens = get_pool_tokens(swappool)
-        amp = 2**64
+        amp = 10**18
         try:
-            amp = swappool._amp()
+            amp = Decimal(swappool._amp())
         except AttributeError:
             pass
     
-        weights = np.array([swappool._weight(token) for token in tokens])
-        balances = np.array([token.balanceOf(swappool) for token in tokens])
-        if amp != 2**64:
-            oneMinusAmp = (2**64 - amp)/2**64
-            return ((weights * balances)**oneMinusAmp).sum()
+        weights = np.array([Decimal(swappool._weight(token)) for token in tokens])
+        balances = np.array([Decimal(token.balanceOf(swappool)) for token in tokens])
+        if amp != 10**18:
+            oneMinusAmp = (Decimal(10**18)-amp)/Decimal(10**18)
+            return Decimal(((weights * balances)**oneMinusAmp).sum())
         
-        return (balances**weights).prod()
+        return Decimal((balances**weights).prod())
 
     yield _invariant
 
@@ -266,12 +257,12 @@ def invariant(get_pool_tokens, prod):
 def balance_0(get_pool_tokens, invariant):
     def _balance_0(swappool):
         tokens = get_pool_tokens(swappool)
-        amp = swappool._amp()
-        assert amp != 2**64
+        amp = Decimal(swappool._amp())
+        assert amp != 10**18, NotImplementedError
         
-        walpha_theta = (invariant(swappool) - swappool._unitTracker()/2**64)/len(tokens)
+        walpha_theta = (invariant(swappool) - Decimal(swappool._unitTracker())/Decimal(10**18))/Decimal(len(tokens))
         
-        return int(np.power(walpha_theta, (2**64/(2**64-amp))))
+        return Decimal(np.power(walpha_theta, (Decimal(10**18)/(Decimal(10**18)-amp))))
     
     yield _balance_0
 
@@ -284,37 +275,37 @@ def compute_expected_liquidity_swap(get_pool_tokens):
         fromTokens = get_pool_tokens(fromSwappool)
         toTokens = get_pool_tokens(toSwappool)
         
-        amp = 2**64
+        amp = 10**18
         try:
-            amp = fromSwappool._amp()
+            amp = Decimal(fromSwappool._amp())
         except AttributeError:
             pass
         
-        fromPT = fromSwappool.totalSupply()
-        toPT = toSwappool.totalSupply()
-        pt = swap_amount
+        fromPT = Decimal(fromSwappool.totalSupply())
+        toPT = Decimal(toSwappool.totalSupply())
+        pt = Decimal(swap_amount)
         
-        if amp != 2**64:
-            oneMinusAmp = (2**64 - amp)/2**64
+        if amp != 10**18:
+            oneMinusAmp = (Decimal(10**18)-amp)/Decimal(10**18)
             a0 = balance_0(fromSwappool)
             b0 = balance_0(toSwappool)
             
             
             U = ((a0 + (a0 * pt)/fromPT)**(oneMinusAmp) - (a0)**(oneMinusAmp)) * len(fromTokens)
-            wpt = (b0**(oneMinusAmp) + U/len(toTokens))**(2**64/(2**64-amp)) - b0
+            wpt = (b0**(oneMinusAmp) + U/len(toTokens))**(Decimal(10**18)/(Decimal(10**18)-amp)) - b0
             
             if withU:
-                return (U, wpt*toPT/b0)
-            return wpt*toPT/b0
+                return (int(U*10**18), int(wpt*toPT/b0))
+            return int(wpt*toPT/b0)
         
-        fromWSUM = sum([fromSwappool._weight(token) for token in fromTokens])
-        toWSUM = sum([toSwappool._weight(token) for token in toTokens])
-        U = log2(fromPT/(fromPT-pt)) * fromWSUM
+        fromWSUM = Decimal(sum([fromSwappool._weight(token) for token in fromTokens]))
+        toWSUM = Decimal(sum([toSwappool._weight(token) for token in toTokens]))
+        U = Decimal(log(fromPT/(fromPT-pt))) * fromWSUM
         
-        share = 1 - 2**(-U/toWSUM)
+        share = Decimal(1) - Decimal(2)**(-U/toWSUM)
         if withU:
-            return (U, toPT * (share/(1-share)))
-        return toPT * (share/(1-share))
+            return (int(U*10**18), int(toPT * (share/(1-share))))
+        return int(toPT * (share/(1-share)))
         
     yield _compute_expected_liquidity_swap
     
