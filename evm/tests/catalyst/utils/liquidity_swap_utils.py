@@ -93,7 +93,6 @@ def run_liquidity_swap(
     assert swap_to_liquidity_units_event['targetPool']   == sp2.address
     assert swap_to_liquidity_units_event['targetUser']   == to_swapper
     assert swap_to_liquidity_units_event['input']        == swap_amount
-    #swap_to_liquidity_units_event['fees']            # TODO?
 
     output_liquidity_units = swap_to_liquidity_units_event['output']
     message_hash           = swap_to_liquidity_units_event['messageHash']

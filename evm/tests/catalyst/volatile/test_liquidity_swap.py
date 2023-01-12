@@ -58,9 +58,7 @@ def test_liquidity_swap(channelId, swappool1, swappool2, berg, deployer, compute
         assert (estimatedPool2Tokens * 9 /10) <= purchased_tokens, "Swap returns less than 9/10 theoretical"
     
 
-
-@pytest.mark.parametrize("approx", [0, 1, 2, 3], ids=["no-approx", "swap-to-approx", "swap-from-approx", "all-approx"])
-def test_swap_to_liquidity_units_event(channelId, swappool1, swappool1_config, swappool2, berg, elwood, approx):
+def test_swap_to_liquidity_units_event(channelId, swappool1, swappool1_config, swappool2, berg, elwood):
     """
         Test the SwapToLiquidityUnits event gets fired.
     """
@@ -73,7 +71,6 @@ def test_swap_to_liquidity_units_event(channelId, swappool1, swappool1_config, s
         convert.to_bytes(berg.address.replace("0x", "")),       # NOTE: not using the same account as the caller of the tx to make sure the 'targetUser' is correctly reported
         swap_amount,
         0,
-        approx,
         elwood,
         {"from": swappool1_config.get("deployer")}              # Using the deployer as the sender as it will already have some pool tokens
     )
@@ -87,13 +84,10 @@ def test_swap_to_liquidity_units_event(channelId, swappool1, swappool1_config, s
     assert swap_to_units_event['targetUser']  == berg
     assert swap_to_units_event['input']       == swap_amount
     assert swap_to_units_event['output']      == observed_liquidity_units
-    assert swap_to_units_event['fees']        >= 0                         # Check there is a fees field
     assert swap_to_units_event['messageHash'] == expected_message_hash
 
 
-
-@pytest.mark.parametrize("approx", [0, 1, 2, 3], ids=["no-approx", "swap-to-approx", "swap-from-approx", "all-approx"])
-def test_swap_from_liquidity_units_event(channelId, swappool1, swappool1_config, swappool2, berg, elwood, ibcemulator, approx):
+def test_swap_from_liquidity_units_event(channelId, swappool1, swappool1_config, swappool2, berg, elwood, ibcemulator):
     """
         Test the SwapFromLiquidityUnits event gets fired.
     """
@@ -106,7 +100,6 @@ def test_swap_from_liquidity_units_event(channelId, swappool1, swappool1_config,
         convert.to_bytes(berg.address.replace("0x", "")),
         swap_amount,
         0,
-        approx,
         elwood,
         {"from": swappool1_config.get("deployer")}              # Using the deployer as the sender as it will already have some pool tokens
     )

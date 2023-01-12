@@ -94,7 +94,6 @@ def run_local_swap(
     assert swap_event['fromAsset'] == from_token
     assert swap_event['toAsset']   == to_token
     assert swap_event['input']     == swap_amount
-    # assert swap_event['fees']  # TODO?
 
     # Check output
     observed_output = swap_event['output']
@@ -182,7 +181,6 @@ def run_amp_local_swap(
     assert swap_event['fromAsset'] == from_token
     assert swap_event['toAsset']   == to_token
     assert swap_event['input']     == swap_amount
-    # assert swap_event['fees']  # TODO?
 
     # Check output
     observed_output = swap_event['output']

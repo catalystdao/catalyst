@@ -46,11 +46,11 @@ def test_local_swap_minout(swappool, token1, token2, berg, deployer, swap_amount
     if simulated_swap_return < min_out:
         with reverts("Insufficient Return"):
             tx = swappool.localswap(
-                token1, token2, swap_amount, min_out, False, {'from': berg}
+                token1, token2, swap_amount, min_out, {'from': berg}
             )
     else:
         tx = swappool.localswap(
-            token1, token2, swap_amount, min_out, False, {'from': berg}
+            token1, token2, swap_amount, min_out, {'from': berg}
         )
         assert min_out <= tx.return_value
 
