@@ -79,12 +79,32 @@ def pytest_configure(config):
 
 def pytest_generate_tests(metafunc):
 
-    pass
+    project_path  = get_loaded_projects()[0]._path
+    test_path     = Path(metafunc.definition.fspath)
+    rel_test_path = test_path.relative_to(project_path).parts[2:]   # Ignore the first two 'parts' of the test path, as the tests are under './tests/catalyst'
 
-@pytest.fixture(scope="session")
-def pools_data(request):
-    pass
+    if rel_test_path[0] == "test_volatile":
+        volatile_config = _test_config["volatile"]
 
+        metafunc.parametrize("raw_config", [volatile_config], indirect=True, scope="session")
+        metafunc.parametrize("raw_pool_config", volatile_config["pools"], indirect=True, scope="session")
+
+    elif rel_test_path[0] == "test_amplified":
+        amplified_config = _test_config["amplified"]
+
+        metafunc.parametrize("raw_config", [amplified_config], indirect=True, scope="session")
+        metafunc.parametrize("raw_pool_config", amplified_config["pools"], indirect=True, scope="session")
+    
+
+
+# Main parametrized fixture to expose the entire test_config as selected by the user
 @pytest.fixture(scope="session")
-def pool_data(request):
-    pass
+def raw_config(request):
+    yield request.param
+
+
+# Main parametrized fixture to expose each pool from test_config as selected by the user
+@pytest.fixture(scope="session")
+def raw_pool_config(request):
+    yield request.param
+
