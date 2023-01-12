@@ -129,6 +129,7 @@ def test_swap_from_units_event(channelId, swappool1, swappool2, token1, token3, 
         token1,
         0,
         swap_amount,
+        0,
         elwood,
         {"from": berg},
     )
