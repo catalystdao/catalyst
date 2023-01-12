@@ -1,4 +1,8 @@
+import json
+from pathlib import Path
 import pytest
+
+from brownie.project.main import get_loaded_projects
 
 
 pytest_plugins = [
@@ -7,6 +11,11 @@ pytest_plugins = [
     "fixtures.pools",
     "fixtures.tokens"
 ]
+
+_test_config = {
+    "volatile"  : None,
+    "amplified" : None
+}
 
 
 # Enable test isolation
@@ -24,6 +33,7 @@ def pytest_addoption(parser):
 
 
 def pytest_configure(config):
+
     # Verify the parser options
     if config.getoption("--vol-only") and config.getoption("--amp-only"):
         raise Exception("Can't specify both --vol-only and --amp-only at the same time.")
@@ -31,20 +41,45 @@ def pytest_configure(config):
     if config.getoption("--vol-only") and config.getoption("--amplification") is not None:
         raise Exception("--amplification cannot be specified when running volatile-only tests (--vol-only)")
 
+    # Note that if "--vol-only" nor "--amp-only" are specified, all tests will run
+    run_vol_tests = not config.getoption("--amp-only")
+    run_amp_tests = not config.getoption("--vol-only")
+
+    # Load config files
+    config_name  = config.getoption("--config")
+    project_path = get_loaded_projects()[0]._path
+    
+    if run_vol_tests:
+
+        vol_config_path = project_path.joinpath(
+            "tests", "catalyst", "test_volatile", "test_configs", config_name + ".json"
+        )
+
+        if not vol_config_path.is_file():
+            raise Exception(f"Cannot file config file \'{config_name}.json\' for volatile tests.")
+    
+        with vol_config_path.open() as f:
+            _test_config["volatile"] = json.load(f)
+    
+    
+    if run_amp_tests:
+
+        amp_config_path = project_path.joinpath(
+            "tests", "catalyst", "test_amplified", "test_configs", config_name + ".json"
+        )
+
+        if not amp_config_path.is_file():
+            raise Exception(f"Cannot file config file \'{config_name}.json\' for amplified tests.")
+    
+        with amp_config_path.open() as f:
+            _test_config["amplified"] = json.load(f)
+
+
 
 
 def pytest_generate_tests(metafunc):
 
-    # Note that if "--vol-only" nor "--amp-only" are specified, all tests will run
-    run_vol_tests = not metafunc.config.getoption("--amp-only")
-    run_amp_tests = not metafunc.config.getoption("--vol-only")
-
-    if run_vol_tests:
-        pass
-
-    if run_amp_tests:
-        pass
-            
+    pass
 
 @pytest.fixture(scope="session")
 def pools_data(request):
