@@ -129,7 +129,8 @@ def pytest_generate_tests(metafunc):
         swap_pool_type = "amplified"
 
 
-    metafunc.parametrize("swap_pool_type", [swap_pool_type], scope="session")
+    if "swap_pool_type" in metafunc.fixturenames:
+        metafunc.parametrize("swap_pool_type", [swap_pool_type], scope="session")
 
     if "raw_config" in metafunc.fixturenames:
         metafunc.parametrize("raw_config", [config], indirect=True, scope="session")
