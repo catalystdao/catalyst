@@ -115,13 +115,18 @@ def group_pools(group_config, group_tokens, deploy_pool, deployer):
 # (i.e. they ARE parametrized for every single pool defined on the test config file)
 
 @pytest.fixture(scope="module")
-def pool_config(request, amplification, max_pool_assets):
+def pool_config(raw_pool_config, amplification, max_pool_assets):
 
-    config = request.param
-    _verify_pool_config(config, max_pool_assets)
+    _verify_pool_config(raw_pool_config, max_pool_assets)
 
-    # Inject the amplification value into the config object
-    yield {**config, amplification: amplification}
+    yield {
+        "tokens"        : raw_pool_config["tokens"],
+        "initBalances" : [eval(balance) for balance in raw_pool_config["initBalances"]],      # Evaluate balance expressions (e.g. '10**18')
+        "weights"       : raw_pool_config["weights"],
+        "name"          : raw_pool_config["name"],
+        "symbol"        : raw_pool_config["symbol"],
+        "amplification" : amplification
+    }
 
 
 @pytest.fixture(scope="module")
