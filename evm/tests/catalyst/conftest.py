@@ -34,16 +34,13 @@ def pytest_addoption(parser):
 
 def pytest_configure(config):
 
-    # Verify the parser options
-    if config.getoption("--volatile") and config.getoption("--amplified"):
-        raise Exception("Can't specify both --volatile and --amplified at the same time.")
-    
-    if config.getoption("--volatile") and config.getoption("--amplification") is not None:
-        raise Exception("--amplification cannot be specified when running volatile-only tests (--volatile)")
-
     # Note that if "--volatile" nor "--amplified" are specified, all tests will run
-    run_vol_tests = not config.getoption("--amplified")
-    run_amp_tests = not config.getoption("--volatile")
+    run_all_tests = not config.getoption("--volatile") and not config.getoption("--amplified")
+    run_vol_tests = run_all_tests or config.getoption("--volatile")
+    run_amp_tests = run_all_tests or config.getoption("--amplified")
+    
+    if not run_amp_tests and config.getoption("--amplification") is not None:
+        raise Exception("--amplification cannot be specified when amplified tests are not set to run.")
 
     # Load config files
     config_name  = config.getoption("--config")
