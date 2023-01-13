@@ -13,19 +13,21 @@ import "./ICatalystV1Pool.sol";
  * @title Catalyst: The Multi-Chain Swap pool
  * @author Catalyst Labs
  * @notice Catalyst multi-chain swap pool using the asset specific
- * pricing curve: W/(w · ln(2)) where W is an asset specific
- * weight and w is the pool balance.
+ * pricing curve: W/w where W is an asset specific weight and w
+ * is the pool balance.
  *
  * The following contract supports between 1 and 3 assets for
  * atomic swaps. To increase the number of tokens supported,
  * change NUMASSETS to the desired maximum token amount.
+ * This constant is set in "SwapPoolCommon.sol"
  *
- * Implements the ERC20 specification, such that the contract
- * will be its own pool token.
- * @dev This contract is deployed /broken/: It cannot be used as a
+ * The swappool implements the ERC20 specification, such that the
+ * contract will be its own pool token.
+ * @dev This contract is deployed inactive: It cannot be used as a
  * swap pool as is. To use it, a proxy contract duplicating the
  * logic of this contract needs to be deployed. In vyper, this
- * can be done through (vy 0.3.4) create_minimal_proxy_to.
+ * can be done through (vy >=0.3.4) create_minimal_proxy_to.
+ * In Solidity, this can be done through OZ cllones: Clones.clone(...)
  * After deployment of the proxy, call setup(...). This will
  * initialize the pool and prepare it for cross-chain transactions.
  *
@@ -33,26 +35,50 @@ import "./ICatalystV1Pool.sol";
  * createConnection to connect the pool with pools on other chains.
  *
  * Finally, call finishSetup to give up the deployer's control
- * over the pool.
+ * over the pool. 
+ * !If finishSetup is not called, the pool can be drained!
  */
 contract CatalystSwapPool is CatalystSwapPoolCommon {
     using SafeERC20 for IERC20;
 
     //--- ERRORS ---//
+    // Errors are defined in interfaces/ICatalystV1PoolErrors.sol
+
 
     //--- Config ---//
-    // The following section contains the configurable variables.
+    // Minimum time parameter adjustments can be made with.
+    uint256 constant MIN_ADJUSTMENT_TIME = 60 * 60 * 24 * 7;
+
+    // For other config options, see SwapPoolCommon.sol
+
 
     //-- Variables --//
+    // There are no variables specific to the volatile pool. See SwapPoolCommon.sol
 
     /**
-     * @notice Setup a pool.
-     * @dev The @param amp is only used as a sanity check and needs to be set to 2**64.
-     * If less than NUMASSETS are used to setup the pool, let the remaining init_assets be ZERO_ADDRESS
-     * The unused weights can be whatever. (however, 0 is recommended.)
-     * The initial token amounts should have been sent to the pool before setup.
-     * If any token has token amount 0, the pool will never be able to have more than
-     * 0 tokens for that token.
+     * @notice Configures an empty pool.
+     * @dev The @param amp is only used as a sanity check and needs to be set to 10**18 (WAD).
+     * If less than NUMASSETS are used to setup the pool
+     * let the remaining <init_assets> be ZERO_ADDRESS / address(0)
+     *
+     * Unused weights can be whatever. (0 is recommended.)
+     *
+     * The initial token amounts should have been sent to the pool before setup is called.
+     * Since someone can call setup can claim the initial tokens, this needs to be
+     * done atomically!
+     *
+     * If 0 of a token in init_assets is provided, the setup reverts.
+     * @param init_assets A list of the token addresses associated with the pool
+     * @param weights The weights associated with the tokens. 
+     *                If set to values with low resolotion (<= 10*5), this should be viewed as opt out of governance
+     *                weight adjustment. This is not enforced.
+     * @param amp Amplification factor. Set to 10**18 for this pool
+     * @param governanceFee The Catalyst governance fee portion. Is WAD.
+     * @param name_ pool token name.
+     * @param symbol_ pool token symbol.
+     * @param chaininterface The message wrapper used by the pool. If set to ZERO_ADDRESS / address(0)
+                             This should be viewed as opt out of cross-chain swapping.
+     * @param setupMaster The address responsible for setting up the pool.
      */
     function setup(
         address[] calldata init_assets,
@@ -64,16 +90,22 @@ contract CatalystSwapPool is CatalystSwapPoolCommon {
         address chaininterface,
         address setupMaster
     ) public {
+        // Check that the amplification is correct.
         require(amp == FixedPointMathLib.WAD);
+        // Check for a misunderstanding regarding how many assets this pool supports.
         require(init_assets.length <= NUMASSETS);
+
+        // Store the governance fee.
         _governanceFee = governanceFee;
-        {
+        
+        // Compute the security limit.
+        {  //  Stack limitations.
             uint256 max_unit_inflow = 0;
             for (uint256 it = 0; it < init_assets.length; it++) {
                 address tokenAddress = init_assets[it];
                 _tokenIndexing[it] = tokenAddress;
                 _weight[tokenAddress] = weights[it];
-                // The contract expect the tokens to have been sent to it before setup is
+                // The contract expect tokens to have been sent to it before setup is
                 // called. Make sure the pool has more than 0 tokens.
                 {
                     uint256 balanceOfSelf = IERC20(tokenAddress).balanceOf(
@@ -82,23 +114,36 @@ contract CatalystSwapPool is CatalystSwapPoolCommon {
                     require(balanceOfSelf > 0); // dev: 0 tokens provided in setup.
                 }
 
-                // The maximum unit flow is \sum Weights. The value is shifted 64
-                // since units are always X64.
+                // The maximum unit flow is \sum Weights * ln(2). The value is multiplied by 
+                // WAD since units are always WAD denominated.
                 max_unit_inflow += weights[it] * FixedPointMathLib.WAD;
             }
-            _max_unit_inflow = max_unit_inflow;
+            _max_unit_inflow = max_unit_inflow * FixedPointMathLib.LN2;
         }
 
+        // Do common pool setup logic.
         setupBase(name_, symbol_, chaininterface, setupMaster);
     }
 
+
+    /**
+     * @notice Allows Governance to modify the pool weights to optimise liquidity.
+     * @dev targetTime needs to be more than MIN_ADJUSTMENT_TIME in the future.
+     * !Can be abused by governance to disable the security limit!
+     * @param targetTime Once reached, _weight[...] = newWeights[...]
+     * @param newWeights The new weights to apply
+     */
     function modifyWeights(uint256 targetTime, uint256[] calldata newWeights)
         external
         onlyFactoryOwner
     {
-        require(targetTime >= block.timestamp + 60 * 60 * 24 * 2); // dev: targetTime must be more than 2 days in the future.
+        require(targetTime >= block.timestamp + MIN_ADJUSTMENT_TIME); // dev: targetTime must be more than MIN_ADJUSTMENT_TIME in the future.
+        
+        // Store adjustment information
         _adjustmentTarget = targetTime;
         _lastModificationTime = block.timestamp;
+
+        // Compute sum weight for security limit.
         uint256 sumWeights = 0;
         for (uint256 it = 0; it < NUMASSETS; it++) {
             address token = _tokenIndexing[it];
@@ -107,79 +152,92 @@ contract CatalystSwapPool is CatalystSwapPoolCommon {
             sumWeights += newWeights[it];
         }
         uint256 new_max_unit_inflow = sumWeights * FixedPointMathLib.WAD;
-        // We don't want to spend gas on each update, updating the security limit. As a result, we decrease security
-        // for lower gas cost.
+        // We don't want to spend gas to update the security limit on each swap. 
+        // As a result, we "disable" it by immediately increasing it.
         if (new_max_unit_inflow >= _max_unit_inflow) {
-            // The governance can technically remove the security limit by setting targetTime = max(uint256)
-            // while newWeights = (max(uint256)/NUMWEIGHTS) >> 64. Since the router and the governance are
-            // to be independent, this is not a security issue.
-            // Alt: Call with higher weights and then immediately call with lower weights.
+            // immediately set higher security limit to ensure the limit isn't reached.
+
+            // ! The governance can disable the security limit by setting targetTime = max(uint256)
+            // ! with newWeights = (max(uint256)/sumWeights) / FixedPointMathLib.WAD. 
+            // ! Since the router and the governance are assumbed to be independent, this is not a security issue.
+            // ! Alt: Call with higher weights and then immediately call with lower weights.
             _max_unit_inflow = new_max_unit_inflow;
             _target_max_unit_inflow = 0;
         } else {
+            // Don't update the security limit now but delay it until the weights are set.
+
             // Decreases of the security limit can also be a way to remove the security limit. However, if the
             // weights are kept low (=1) (for cheaper tx costs), then this is non-issue since it cannot be
             // decerased further.
-            // _max_unit_inflow = current_unit_inflow
             _target_max_unit_inflow = new_max_unit_inflow;
         }
     }
 
     /**
      * @notice If the governance requests a weight change, this function will adjust the pool weights.
+     * @dev Called first thing on every function depending on weights.
      */
     function _W() internal {
+        // We might use adjustment target more than once. Since we don't change it, lets store it.
         uint256 adjTarget = _adjustmentTarget;
 
         if (adjTarget != 0) {
-            uint256 currTime = block.timestamp;
+            // We need to use lastModification again. Store it.
             uint256 lastModification = _lastModificationTime;
-            if (currTime == lastModification) return; // If no time has passed since last update, then we don't need to update anything.
 
-            // If the current time is past the adjustment, then we need to finalise the weights.
-            if (currTime >= adjTarget) {
+            // If no time has passed since last update, then we don't need to update anything.
+            if (block.timestamp == lastModification) return; 
+
+            // If the current time is past the adjustment the weights needs to be finalized.
+            if (block.timestamp >= adjTarget) {
                 for (uint256 it = 0; it < NUMASSETS; it++) {
                     address token = _tokenIndexing[it];
                     if (token == address(0)) break;
+
                     uint256 targetWeight = _targetWeight[token];
                     // Only save weights if they are differnet.
                     if (_weight[token] != targetWeight) {
                         _weight[token] = targetWeight;
                     }
                 }
-                // Set weightAdjustmentTime to 0. This ensures the if statement is never entered.
+                // Set weightAdjustmentTime to 0. This ensures the first if statement is never entered.
                 _adjustmentTarget = 0;
                 _lastModificationTime = block.timestamp;
+
                 uint256 target_max_unit_inflow = _target_max_unit_inflow;
+                // If the security limit was decreased, decrease it now.
                 if (target_max_unit_inflow != 0) {
                     _max_unit_inflow = target_max_unit_inflow;
                     _target_max_unit_inflow = 0;
                 }
                 return;
             }
+            // Calculate partial weight change
             for (uint256 it = 0; it < NUMASSETS; it++) {
                 address token = _tokenIndexing[it];
                 if (token == address(0)) break;
+
                 uint256 targetWeight = _targetWeight[token];
                 uint256 currentWeight = _weight[token];
+
+                // If the weight has already been reached, skip the mathematics.
                 if (currentWeight == targetWeight) {
                     continue;
                 }
-                uint256 newWeight;
+
                 if (targetWeight > currentWeight) {
-                    newWeight =
-                        currentWeight +
-                        ((targetWeight - currentWeight) *
-                            (block.timestamp - lastModification)) /
-                        (adjTarget - lastModification);
+                    // if the weights are increased then targetWeight - currentWeight > 0.
+                    // Add the change to the current weight.
+                    _weight[token] = currentWeight + (
+                        (targetWeight - currentWeight) * (block.timestamp - lastModification)
+                    ) / (adjTarget - lastModification);
                 } else {
-                    newWeight =
-                        currentWeight -
-                        ((currentWeight - targetWeight) *
-                            (block.timestamp - lastModification)) /
-                        (adjTarget - lastModification);
+                    // if the weights are decreased then targetWeight - currentWeight < 0.
+                    // Subtract the change from the current weights.
+                    _weight[token] = currentWeight - (
+                        (currentWeight - targetWeight) * (block.timestamp - lastModification)
+                    ) / (adjTarget - lastModification);
                 }
-                _weight[token] = newWeight;
             }
             _lastModificationTime = block.timestamp;
         }
@@ -188,43 +246,37 @@ contract CatalystSwapPool is CatalystSwapPoolCommon {
     //--- Swap integrals ---//
 
     /**
-     * @notice Computes the integral \int_{A}^{A+in} W/(w · ln(2)) dw
-     *     = W ln(A_2/A_1)
-     * The value is returned as units, which is always in X64.
-     * @dev All input amounts should be the raw numbers and not X64.
-     * Since units are always denominated in X64, the function
+     * @notice Computes the integral \int_{A}^{A+x} W/w dw = W ln((A+x)/A)
+     * The value is returned as units, which is always WAD.
+     * @dev All input amounts should be the raw numbers and not WAD.
+     * Since units are always multiplifed by WAD, the function
      * should be treated as mathematically *native*.
      * @param input The input amount.
-     * @param A The current pool balance.
-     * @param W The pool weight of the token.
-     * @return Group specific units in X64 (units are **always** X64).
+     * @param A The current pool balance of the x token.
+     * @param W The weight of the x token.
+     * @return uint256 Group specific units (units are **always** WAD).
      */
     function compute_integral(
         uint256 input,
         uint256 A,
         uint256 W
     ) internal pure returns (uint256) {
-        // Notice, A + in and A are not X64 but bigdiv64 is used anyway.
-        // That is because _log2X64 requires an X64 number.
-        // Shifting A + in and A before dividing returns:
-        // ((A + in) * 2**64) / ((A) * 2**64) * 2**64 = (A + _in) / A * 2**64
-        // Thus the shifting cancels and is not needed.
+        // Notice, A + in and A are WAD but divWadDown is used anyway.
+        // That is because lnWad requires a scaled number.
         return W * uint256(FixedPointMathLib.lnWad(int256(FixedPointMathLib.divWadDown(A + input, A))));
     }
 
 
     /**
-     * @notice Solves the equation U = \int_{A-_out}^{A} W/(w · ln(2)) dw for _out
-     *     = B_1 · (1 - 2^(-U/W_0))
-     *
-     * The value is returned as output token.
-     * @dev All input amounts should be the raw numbers and not X64.
-     * Since units are always denominated in X64, the function
+     * @notice Solves the equation U = \int_{B-y}^{B} W/w dw for y = B · (1 - exp(-U/W))
+     * The value is returned as output token. (not WAD)
+     * @dev All input amounts should be the raw numbers and not WAD.
+     * Since units are always multiplifed by WAD, the function
      * should be treated as mathematically *native*.
-     * @param U Input units. Is technically X64 but can be treated as not.
-     * @param B The current pool balance of the _out token.
-     * @param W The pool weight of the _out token.
-     * @return Output denominated in output token.
+     * @param U Incoming group specific units.
+     * @param B The current pool balance of the y token.
+     * @param W The weight of the y token.
+     * @return uint25 Output denominated in output token. (not WAD)
      */
     function solve_integral(
         uint256 U,
@@ -237,8 +289,7 @@ contract CatalystSwapPool is CatalystSwapPoolCommon {
 
     /**
      * @notice Solves the equation
-     *     \int_{A}^{A + _in} W_A/(w · ln(2)) dw = \int_{B-out}^{B} W_B/(w · ln(2)) dw for out
-     * => out = B · (1 - ((A+in)/A)^(-W_A/W_B))
+     *     \int_{A}^{A+x} W_a/w dw = \int_{B-y}^{B} W_b/w dw for y =  B · (1 - ((A+x)/A)^(-W_a/W_b))
      *
      * Alternatively, the integral can be computed through:
      *      solve_integral(_compute_integral(input, A, W_A), B, W_B).
@@ -246,11 +297,11 @@ contract CatalystSwapPool is CatalystSwapPoolCommon {
      *      (Apart from that, the mathematical operations are the same.)
      * @dev All input amounts should be the raw numbers and not X64.
      * @param input The input amount.
-     * @param A The current pool balance of the _in token.
-     * @param B The current pool balance of the _out token.
-     * @param W_A The pool weight of the _in token.
-     * @param W_B The pool weight of the _out token.
-     * @return Output denominated in output token.
+     * @param A The current pool balance of the x token.
+     * @param B The current pool balance of the y token.
+     * @param W_A The weight of the x token.
+     * @param W_B TThe weight of the y token.
+     * @return uint256 Output denominated in output token.
      */
     function complete_integral(
         uint256 input,
@@ -268,21 +319,21 @@ contract CatalystSwapPool is CatalystSwapPoolCommon {
 
     /**
      * @notice Solves the non-unique swap integral.
-     * @dev All input amounts should be the raw numbers and not X64.
-     * Since units are always denominated in X64, the function
-     * should be treated as mathematically *native*.
-     * The function is only to be used for liquidity swaps.
-     * @param U Input units. Is technically X64 but can be treated as not.
-     * @param W The pool weight of the _out token.
-     * @return Output denominated in percentage of pool.
+     * @dev The function is only to be used for liquidity swaps.
+     * Read solve_integral for more documentation.
+     * @param U Input units.
+     * @param W The generalised weights.
+     * @return uint256 Output denominated in percentage of pool.
      */
-    function arbitrary_solve_integralX64(uint256 U, uint256 W)
-        internal
-        pure
-        returns (uint256)
-    {
-        uint256 invp = uint256(FixedPointMathLib.expWad(-int256(U / W)));
-        return FixedPointMathLib.divWadDown(FixedPointMathLib.WAD - invp, invp);
+    function arbitrary_solve_integral(
+        uint256 U,
+        uint256 W
+    ) internal pure returns (uint256) {
+        // Compute the non pool ownership share. (1 - pool ownership share)
+        uint256 npos = uint256(FixedPointMathLib.expWad(-int256(U / W)));
+        // Convert the pool non ownership share to % of current pool.
+        // That is: y = share/(1-share) => (1-npos)/(1-(1-npos)) = (1-npos/npos)
+        return FixedPointMathLib.divWadDown(FixedPointMathLib.WAD - npos, npos);
     }
 
     /**
@@ -367,9 +418,10 @@ contract CatalystSwapPool is CatalystSwapPoolCommon {
      * @param tokenAmounts An array of the tokens amounts to be deposited.
      * @param minOut The minimum number of pool tokens to be minted.
      */
-    function depositMixed(uint256[] calldata tokenAmounts, uint256 minOut)
-        external returns(uint256)
-    {
+    function depositMixed(
+        uint256[] calldata tokenAmounts,
+        uint256 minOut
+    ) external returns(uint256) {
         // Cache totalSupply. This saves up to ~200 gas.
         uint256 initial_totalSupply = totalSupply(); // Not! + _escrowedPoolTokens, since a smaller number results in fewer pool tokens.
 
