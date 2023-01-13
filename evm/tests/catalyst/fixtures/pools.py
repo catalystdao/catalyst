@@ -81,17 +81,19 @@ def group_config(raw_config, amplification, max_pool_assets):
     yield [
         {
             "tokens"        : config["tokens"],
-            "initBalances"  : [eval(balance) for balance in config["initBalances"]],      # Evaluate balance expressions (e.g. '10**18')
+            "init_balances" : [eval(balance) for balance in config["initBalances"]],      # Evaluate balance expressions (e.g. '10**18')
             "weights"       : config["weights"],
-            "poolName"      : config["poolName"],
-            "poolSymbol"    : config["poolSymbol"],
+            "name"          : config["name"],
+            "symbol"        : config["symbol"],
             "amplification" : amplification
         } for config in raw_pools_config
     ]
 
+
 @pytest.fixture(scope="module")
 def group_tokens(group_config, tokens):
     yield [[tokens[i] for i in pool["tokens"]] for pool in group_config]
+
 
 @pytest.fixture(scope="module")
 def group_pools(group_config, group_tokens, deploy_pool, deployer):
@@ -99,11 +101,11 @@ def group_pools(group_config, group_tokens, deploy_pool, deployer):
     yield [
         deploy_pool(
             tokens         = tokens,
-            token_balances = pool["initBalances"],
+            token_balances = pool["init_balances"],
             weights        = pool["weights"],
             amp            = pool["amplification"] if pool["amplification"] is not None else 10**18,
-            name           = pool["poolName"],
-            symbol         = pool["poolSymbol"],
+            name           = pool["name"],
+            symbol         = pool["nymbol"],
             deployer       = deployer,
         ) for pool, tokens in zip(group_config, group_tokens)
     ]
@@ -121,7 +123,7 @@ def pool_config(raw_pool_config, amplification, max_pool_assets):
 
     yield {
         "tokens"        : raw_pool_config["tokens"],
-        "initBalances" : [eval(balance) for balance in raw_pool_config["initBalances"]],      # Evaluate balance expressions (e.g. '10**18')
+        "init_balances" : [eval(balance) for balance in raw_pool_config["initBalances"]],      # Evaluate balance expressions (e.g. '10**18')
         "weights"       : raw_pool_config["weights"],
         "name"          : raw_pool_config["name"],
         "symbol"        : raw_pool_config["symbol"],
@@ -139,11 +141,11 @@ def pool(pool_config, pool_tokens, deploy_pool, deployer):
 
     yield deploy_pool(
             tokens         = pool_tokens,
-            token_balances = pool_config["initBalances"],
+            token_balances = pool_config["init_balances"],
             weights        = pool_config["weights"],
             amp            = pool_config["amplification"] if pool_config["amplification"] is not None else 10**18,
-            name           = pool_config["poolName"],
-            symbol         = pool_config["poolSymbol"],
+            name           = pool_config["name"],
+            symbol         = pool_config["symbol"],
             deployer       = deployer,
         )
 
@@ -153,5 +155,5 @@ def _verify_pool_config(config, max_pool_assets):
     assert "tokens" in config and len(config["tokens"]) > 0 and len(config["tokens"]) <= max_pool_assets
     assert "initBalances" in config and len(config["initBalances"]) == len(config["tokens"])
     assert "weights" in config and len(config["weights"]) == len(config["tokens"])
-    assert "poolName" in config and isinstance(config["poolName"], str)
-    assert "poolSymbol" in config and isinstance(config["poolSymbol"], str)
+    assert "name" in config and isinstance(config["name"], str)
+    assert "symbol" in config and isinstance(config["symbol"], str)

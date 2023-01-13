@@ -30,22 +30,22 @@
             "tokens": [0, 1, 2],
             "initBalances": ["10 * 10**18", "1000 * 10**18", "1000 * 10**6"],
             "weights": [1, 1, 1],
-            "poolName": "POOLNAME",
-            "poolSymbol": "PS"
+            "name": "POOLNAME",
+            "symbol": "PS"
         },
         {
             "tokens": [0, 1],
             "initBalances": ["10 * 10**18", "100 * 10**18"],
             "weights": [1,1],
-            "poolName": "AnotherPoolName",
-            "poolSymbol": "APN"
+            "name": "AnotherPoolName",
+            "symbol": "APN"
         }, 
         {
             "tokens": [2],
             "initBalances": ["1000 * 10**6"],
             "weights": [1],
-            "poolName": "POOLNAME2",
-            "poolSymbol": "PS2"
+            "name": "POOLNAME2",
+            "symbol": "PS2"
         }
     ]
 }
