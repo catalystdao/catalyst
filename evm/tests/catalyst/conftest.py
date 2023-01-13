@@ -26,8 +26,8 @@ def isolation(fn_isolation):
 
 def pytest_addoption(parser):
     parser.addoption("--config", default="default", help="Load the a specific test config definition.")
-    parser.addoption("--vol-only", action="store_true", help="Run only tests of the volatile pool.")
-    parser.addoption("--amp-only", action="store_true", help="Run only tests of the amplified pool.")
+    parser.addoption("--volatile", action="store_true", help="Run only tests of the volatile pool.")
+    parser.addoption("--amplified", action="store_true", help="Run only tests of the amplified pool.")
     parser.addoption("--amplification", default=None, help="Override the config amplification constant.")
 
 
@@ -35,15 +35,15 @@ def pytest_addoption(parser):
 def pytest_configure(config):
 
     # Verify the parser options
-    if config.getoption("--vol-only") and config.getoption("--amp-only"):
-        raise Exception("Can't specify both --vol-only and --amp-only at the same time.")
+    if config.getoption("--volatile") and config.getoption("--amplified"):
+        raise Exception("Can't specify both --volatile and --amplified at the same time.")
     
-    if config.getoption("--vol-only") and config.getoption("--amplification") is not None:
-        raise Exception("--amplification cannot be specified when running volatile-only tests (--vol-only)")
+    if config.getoption("--volatile") and config.getoption("--amplification") is not None:
+        raise Exception("--amplification cannot be specified when running volatile-only tests (--volatile)")
 
-    # Note that if "--vol-only" nor "--amp-only" are specified, all tests will run
-    run_vol_tests = not config.getoption("--amp-only")
-    run_amp_tests = not config.getoption("--vol-only")
+    # Note that if "--volatile" nor "--amplified" are specified, all tests will run
+    run_vol_tests = not config.getoption("--amplified")
+    run_amp_tests = not config.getoption("--volatile")
 
     # Load config files
     config_name  = config.getoption("--config")
