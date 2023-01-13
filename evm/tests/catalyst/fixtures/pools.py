@@ -1,6 +1,7 @@
 import pytest
 from brownie import ZERO_ADDRESS
 
+MAX_POOL_ASSETS = 3
 
 @pytest.fixture(scope="module")
 def deploy_pool(accounts, swap_factory, cross_chain_interface, swap_pool_class, deployer):
@@ -43,7 +44,7 @@ def deploy_pool(accounts, swap_factory, cross_chain_interface, swap_pool_class, 
 
 @pytest.fixture(scope="module")
 def max_pool_assets():
-    return 3
+    return MAX_POOL_ASSETS
 
 
 @pytest.fixture(scope="module")
