@@ -15,7 +15,7 @@ def tokens_config(raw_config):
 
     raw_tokens_config = raw_config["tokens"]
 
-    assert len(raw_tokens_config) >= 4, "At least 4 tokens should be defined on the test config file"
+    assert len(raw_tokens_config) >= 4, "At least 4 tokens must be defined on the test config file"
 
     # Verify the tokens config
     for config in raw_tokens_config:
