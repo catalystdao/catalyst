@@ -641,7 +641,7 @@ contract CatalystSwapPoolAmplified is
                 // As a result, we compute it and cache.
                 uint256 W_BxBtoOMA = ampWeightAssetBalances[it];
                 tokenAmount = assetBalances[it] * (FixedPointMathLib.WAD - uint256(FixedPointMathLib.powWad(
-                    int256(FixedPointMathLib.divWadUp(W_BxBtoOMA - U, W_BxBtoOMA)),
+                    int256(FixedPointMathLib.divWadUp(W_BxBtoOMA - U_i, W_BxBtoOMA)),
                     int256(FixedPointMathLib.WAD * FixedPointMathLib.WAD / uint256(oneMinusAmp)))
                 )) / FixedPointMathLib.WAD;
             }
