@@ -17,6 +17,9 @@ _test_config = {
     "amplified" : None
 }
 
+_run_unit_tests        = False
+_run_integration_tests = False
+
 
 # Enable test isolation
 @pytest.fixture(autouse=True)
@@ -30,9 +33,14 @@ def pytest_addoption(parser):
     parser.addoption("--amplified", action="store_true", help="Run only tests of the amplified pool.")
     parser.addoption("--amplification", default=None, help="Override the config amplification constant.")
 
+    parser.addoption("--unit", action="store_true", help="Run only unit tests.")
+    parser.addoption("--integration", action="store_true", help="Run only integration tests.")
+
 
 
 def pytest_configure(config):
+    global _run_unit_tests
+    global _run_integration_tests
 
     # Note that if "--volatile" nor "--amplified" are specified, all tests will run
     run_all_tests = not config.getoption("--volatile") and not config.getoption("--amplified")
@@ -41,6 +49,12 @@ def pytest_configure(config):
     
     if not run_amp_tests and config.getoption("--amplification") is not None:
         raise Exception("--amplification cannot be specified when amplified tests are not set to run.")
+
+    
+    # Note that if "--unit" nor "--integration" are specified, all tests will run
+    run_unit_and_integration = not config.getoption("--unit") and not config.getoption("--integration")
+    _run_unit_tests        = run_unit_and_integration or config.getoption("--unit")
+    _run_integration_tests = run_unit_and_integration or config.getoption("--integration") 
 
     # Load config files
     config_name  = config.getoption("--config")
@@ -79,10 +93,23 @@ def pytest_ignore_collect(path, config):
     test_path     = Path(path)
     rel_test_path = test_path.relative_to(project_path).parts[2:]   # Ignore the first two 'parts' of the test path, as the tests are under './tests/catalyst'
 
+
+    if len(rel_test_path) == 0: return False    # Accept all tests on the root path (mostly for dev purposes, as no tests are planned to be there)
+
+
     if rel_test_path[0] == "test_volatile" and _test_config["volatile"] is None:
         return True
 
     if rel_test_path[0] == "test_amplified" and _test_config["amplified"] is None:
+        return True
+
+    if len(rel_test_path) == 1: return False    # Accept any other tests not catched by the conditions above (with path length == 1)
+
+
+    if rel_test_path[1] == "unit" and not _run_unit_tests:
+        return True
+    
+    if rel_test_path[1] == "integration" and not _run_integration_tests:
         return True
 
 
