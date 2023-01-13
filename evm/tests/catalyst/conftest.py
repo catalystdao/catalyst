@@ -52,7 +52,7 @@ def pytest_configure(config):
     if run_vol_tests:
 
         vol_config_path = project_path.joinpath(
-            "tests", "catalyst", "test_volatile", "test_configs", config_name + ".json"
+            "tests", "catalyst", "test_volatile", "configs", config_name + ".json"
         )
 
         if not vol_config_path.is_file():
@@ -65,7 +65,7 @@ def pytest_configure(config):
     if run_amp_tests:
 
         amp_config_path = project_path.joinpath(
-            "tests", "catalyst", "test_amplified", "test_configs", config_name + ".json"
+            "tests", "catalyst", "test_amplified", "configs", config_name + ".json"
         )
 
         if not amp_config_path.is_file():
