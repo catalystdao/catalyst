@@ -76,6 +76,19 @@ def pytest_configure(config):
 
 
 
+def pytest_ignore_collect(path, config):
+
+    project_path  = get_loaded_projects()[0]._path
+    test_path     = Path(path)
+    rel_test_path = test_path.relative_to(project_path).parts[2:]   # Ignore the first two 'parts' of the test path, as the tests are under './tests/catalyst'
+
+    if rel_test_path[0] == "test_volatile" and _test_config["volatile"] is None:
+        return True
+
+    if rel_test_path[0] == "test_amplified" and _test_config["amplified"] is None:
+        return True
+
+
 
 def pytest_generate_tests(metafunc):
 
