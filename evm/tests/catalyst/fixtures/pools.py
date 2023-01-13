@@ -56,9 +56,9 @@ def amplification(request, raw_config, swap_pool_type):
 
         # NOTE: the --amplification flag overrides the amplification value set on the config file if present
         amplification = request.config.getoption("--amplification") or raw_config["amplification"]
-        amplification = eval(amplification)     # Parse expressions such as '2**64'
+        amplification = eval(amplification)     # Parse expressions such as '10**18'
 
-        assert amplification < 2**64 and amplification > 0
+        assert amplification < 10**18 and amplification > 0
 
         yield amplification
 
@@ -101,7 +101,7 @@ def group_pools(group_config, group_tokens, deploy_pool, deployer):
             tokens         = tokens,
             token_balances = pool["initBalances"],
             weights        = pool["weights"],
-            amp            = pool["amplification"] if pool["amplification"] is not None else 2**64,
+            amp            = pool["amplification"] if pool["amplification"] is not None else 10**18,
             name           = pool["poolName"],
             symbol         = pool["poolSymbol"],
             deployer       = deployer,
@@ -136,7 +136,7 @@ def pool(pool_config, pool_tokens, deploy_pool, deployer):
             tokens         = pool_tokens,
             token_balances = pool_config["initBalances"],
             weights        = pool_config["weights"],
-            amp            = pool_config["amplification"] if pool_config["amplification"] is not None else 2**64,
+            amp            = pool_config["amplification"] if pool_config["amplification"] is not None else 10**18,
             name           = pool_config["poolName"],
             symbol         = pool_config["poolSymbol"],
             deployer       = deployer,
