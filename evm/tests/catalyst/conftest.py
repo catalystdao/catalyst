@@ -84,18 +84,21 @@ def pytest_generate_tests(metafunc):
     rel_test_path = test_path.relative_to(project_path).parts[2:]   # Ignore the first two 'parts' of the test path, as the tests are under './tests/catalyst'
 
     if rel_test_path[0] == "test_volatile":
-        volatile_config = _test_config["volatile"]
-
-        metafunc.parametrize("swap_pool_type", ["volatile"], scope="session")
-        metafunc.parametrize("raw_config", [volatile_config], indirect=True, scope="session")
-        metafunc.parametrize("raw_pool_config", volatile_config["pools"], indirect=True, scope="session")
+        config = _test_config["volatile"]
+        swap_pool_type = "volatile"
 
     elif rel_test_path[0] == "test_amplified":
-        amplified_config = _test_config["amplified"]
+        config = _test_config["amplified"]
+        swap_pool_type = "amplified"
 
-        metafunc.parametrize("swap_pool_type", ["amplified"], scope="session")
-        metafunc.parametrize("raw_config", [amplified_config], indirect=True, scope="session")
-        metafunc.parametrize("raw_pool_config", amplified_config["pools"], indirect=True, scope="session")
+
+    metafunc.parametrize("swap_pool_type", [swap_pool_type], scope="session")
+
+    if "raw_config" in metafunc.fixturenames:
+        metafunc.parametrize("raw_config", [config], indirect=True, scope="session")
+
+    if "raw_pool_config" in metafunc.fixturenames:
+        metafunc.parametrize("raw_pool_config", config["pools"], indirect=True, scope="session")
     
 
 
