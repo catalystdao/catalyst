@@ -93,7 +93,7 @@ def group_config(raw_config, amplification, max_pool_assets):
 def group_tokens(group_config, tokens):
     yield [[tokens[i] for i in pool["tokens"]] for pool in group_config]
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="module")
 def group_pools(group_config, group_tokens, deploy_pool, deployer):
 
     yield [
@@ -124,12 +124,12 @@ def pool_config(request, amplification, max_pool_assets):
     yield {**config, amplification: amplification}
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="module")
 def pool_tokens(pool_config, tokens):
     yield [tokens[i] for i in pool_config["tokens"]]
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="module")
 def pool(pool_config, pool_tokens, deploy_pool, deployer):
 
     yield deploy_pool(
