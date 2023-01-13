@@ -25,7 +25,7 @@
             "supply": 10000
         }
     ],
-    "amplification": "2**63",
+    "amplification": "10**16",
     "pools": [
         {
             "tokens": [0, 1, 2],
