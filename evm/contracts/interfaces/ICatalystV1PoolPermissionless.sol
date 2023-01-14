@@ -67,22 +67,21 @@ interface ICatalystV1PoolPermissionless {
 
     /**
      * @notice Initiate a cross-chain swap by purchasing units and transfer them to another pool.
-     * @param chain The target chain. Will be converted by the interface to channelId.
-     * @param targetPool The target pool on the target chain encoded in bytes32. For EVM chains this can be computed as:
-     * Vyper: convert(_poolAddress, bytes32)
-     * Solidity: abi.encode(_poolAddress)
-     * Brownie: brownie.convert.to_bytes(_poolAddress, type_str="bytes32")
-     * @param targetUser The recipient of the transaction on _chain. Encoded in bytes32. For EVM chains it can be derived similarly to targetPool.
+     * @dev Encoding addresses in bytes32 can be done be computed with:
+     * Vyper: convert(<poolAddress>, bytes32)
+     * Solidity: abi.encode(<poolAddress>)
+     * Brownie: brownie.convert.to_bytes(<poolAddress>, type_str="bytes32")
+     * @param channelId The target chain identifier.
+     * @param targetPool The target pool on the target chain encoded in bytes32.
+     * @param targetUser The recipient of the transaction on the target chain. Encoded in bytes32.
      * @param fromAsset The asset the user wants to sell.
      * @param toAssetIndex The index of the asset the user wants to buy in the target pool.
-     * @param amount The number of _fromAsset to sell to the pool.
+     * @param amount The number of fromAsset to sell to the pool.
      * @param minOut The minimum number of returned tokens to the targetUser on the target chain.
      * @param fallbackUser If the transaction fails send the escrowed funds to this address
-     * These are the same functions as used by the swap functions, so they will
-     * accurately predict the gas cost and swap return.
      */
     function swapToUnits(
-        bytes32 chain,
+        bytes32 channelId,
         bytes32 targetPool,
         bytes32 targetUser,
         address fromAsset,
@@ -93,8 +92,10 @@ interface ICatalystV1PoolPermissionless {
     ) external returns (uint256);
 
     /// @notice Includes calldata_
+    /// @param calldata_ Data field if a call should be made on the target chain. 
+    /// Should be encoded abi.encode(<address>,<data>)
     function swapToUnits(
-        bytes32 chain,
+        bytes32 channelId,
         bytes32 targetPool,
         bytes32 targetUser,
         address fromAsset,
@@ -135,7 +136,7 @@ interface ICatalystV1PoolPermissionless {
     /**
      * @notice Initiate a cross-chain liquidity swap by lowering liquidity
      * and transfer the liquidity units to another pool.
-     * @param chain The target chain. Will be converted by the interface to channelId.
+     * @param channelId The target chain identifier.
      * @param targetPool The target pool on the target chain encoded in bytes32. For EVM chains this can be computed as:
      * Vyper: convert(_poolAddress, bytes32)
      * Solidity: abi.encode(_poolAddress)
@@ -144,7 +145,7 @@ interface ICatalystV1PoolPermissionless {
      * @param baseAmount The number of pool tokens to liquidity Swap
      */
     function outLiquidity(
-        bytes32 chain,
+        bytes32 channelId,
         bytes32 targetPool,
         bytes32 who,
         uint256 baseAmount,

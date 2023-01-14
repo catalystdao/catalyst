@@ -6,4 +6,23 @@ pragma solidity ^0.8.16;
 interface ICatalystV1PoolDerived {
     /** @notice  Returns the current cross-chain unit capacity. */
     function getUnitCapacity() external view returns (uint256);
+
+    function dry_swap_to_unit(address from, uint256 amount) external view returns (uint256);
+
+    /**
+     * @notice Computes the output of SwapFromUnits, without executing one.
+     * @param to The address of the token to buy.
+     * @param U The number of units used to buy to.
+     * @return uint256 Number of purchased tokens.
+     */
+    function dry_swap_from_unit(address to, uint256 U) external view returns (uint256);
+
+    /**
+     * @notice Computes the output of SwapToAndFromUnits, without executing one.
+     * @param from The address of the token to sell.
+     * @param to The address of the token to buy.
+     * @param amount The amount of from token to sell for to token.
+     * @return Output denominated in to token.
+     */
+    function dry_swap_both(address from, address to, uint256 amount) external view returns (uint256);
 }

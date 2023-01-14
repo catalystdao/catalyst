@@ -379,19 +379,19 @@ contract CatalystSwapPoolAmplified is
      * @notice Computes the return of a SwapToAndFromUnits, without executing one.
      * @param from The address of the token to sell.
      * @param to The address of the token to buy.
-     * @param input The amount of _from token to sell for to token.
+     * @param amount The amount of _from token to sell for to token.
      * @return uint256 Output denominated in to token. */
     function dry_swap_both(
         address from,
         address to,
-        uint256 input
+        uint256 amount
     ) public view returns (uint256) {
         uint256 A = IERC20(from).balanceOf(address(this));
         uint256 B = IERC20(to).balanceOf(address(this)) - _escrowedTokens[to];
         uint256 W_A = _weight[from];
         uint256 W_B = _weight[to];
 
-        return complete_integral(input, A, B, W_A, W_B, _amp);
+        return complete_integral(amount, A, B, W_A, W_B, _amp);
     }
 
     /**
@@ -691,7 +691,7 @@ contract CatalystSwapPoolAmplified is
     }
 
     function swapToUnits(
-        bytes32 chain,
+        bytes32 channelId,
         bytes32 targetPool,
         bytes32 targetUser,
         address fromAsset,
@@ -737,7 +737,7 @@ contract CatalystSwapPoolAmplified is
 
             // Send the purchased units to targetPool on chain.
             messageHash = CatalystIBCInterface(_chaininterface).crossChainSwap(
-                chain,
+                channelId,
                 targetPool,
                 targetUser,
                 toAssetIndex,
@@ -790,7 +790,7 @@ contract CatalystSwapPoolAmplified is
 
     /**
      * @notice Initiate a cross-chain swap by purchasing units and transfer them to another pool.
-     * @param chain The target chain. Will be converted by the interface to channelId.
+     * @param channelId The target chain identifier.
      * @param targetPool The target pool on the target chain encoded in bytes32. For EVM chains this can be computed as:
      * Vyper: convert(_poolAddress, bytes32)
      * Solidity: abi.encode(_poolAddress)
@@ -803,7 +803,7 @@ contract CatalystSwapPoolAmplified is
      * @param fallbackUser If the transaction fails send the escrowed funds to this address
      */
     function swapToUnits(
-        bytes32 chain,
+        bytes32 channelId,
         bytes32 targetPool,
         bytes32 targetUser,
         address fromAsset,
@@ -815,7 +815,7 @@ contract CatalystSwapPoolAmplified is
         bytes memory calldata_ = new bytes(0);
         return
             swapToUnits(
-                chain,
+                channelId,
                 targetPool,
                 targetUser,
                 fromAsset,
@@ -919,7 +919,7 @@ contract CatalystSwapPoolAmplified is
     // @nonreentrant('lock')
     /**
      * @notice Initiate a cross-chain liquidity swap by lowering liquidity and transfer the liquidity units to another pool.
-     * @param chain The target chain. Will be converted by the interface to channelId.
+     * @param channelId The target chain identifier.
      * @param targetPool The target pool on the target chain encoded in bytes32. For EVM chains this can be computed as:
      * Vyper: convert(_poolAddress, bytes32)
      * Solidity: abi.encode(_poolAddress)
@@ -928,7 +928,7 @@ contract CatalystSwapPoolAmplified is
      * @param poolTokens The number of pool tokens to liquidity Swap
      */
     function outLiquidity(
-        bytes32 chain,
+        bytes32 channelId,
         bytes32 targetPool,
         bytes32 targetUser,
         uint256 poolTokens,
@@ -988,7 +988,7 @@ contract CatalystSwapPoolAmplified is
 
             // Sending the liquidity units over.
             messageHash = CatalystIBCInterface(_chaininterface).liquiditySwap(
-                chain,
+                channelId,
                 targetPool,
                 targetUser,
                 U,
