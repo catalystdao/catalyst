@@ -781,9 +781,8 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
 
     //--- Liquidity swapping ---//
     // Because of the way pool tokens work in a group of pools, there
-    // needs to be a way to manage an equilibrium between pool token
-    // value and token pool value. Liquidity swaps is a macro implemented
-    // on the smart contract level to:
+    // needs to be a way for users to easily get a distributed stake.
+    // Liquidity swaps is a macro implemented  on the smart contract level to:
     // 1. Withdraw tokens.
     // 2. Convert tokens to units & transfer to target pool.
     // 3. Convert units to an even mix of tokens.
@@ -793,13 +792,12 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
     /**
      * @notice Initiate a cross-chain liquidity swap by lowering liquidity
      * and transfer the liquidity units to another pool.
+     * @dev No reentry protection since only trusted contracts are called.
      * @param channelId The target chain identifier.
-     * @param targetPool The target pool on the target chain encoded in bytes32. For EVM chains this can be computed as:
-     * Vyper: convert(_poolAddress, bytes32)
-     * Solidity: abi.encode(_poolAddress)
-     * Brownie: brownie.convert.to_bytes(_poolAddress, type_str="bytes32")
-     * @param targetUser The recipient of the transaction on _chain. Encoded in bytes32. For EVM chains it can be found similarly to _targetPool.
-     * @param poolTokens The number of pool tokens to liquidity Swap
+     * @param targetPool The target pool on the target chain encoded in bytes32.
+     * @param targetUser The recipient of the transaction on the target chain. Encoded in bytes32.
+     * @param poolTokens The number of pool tokens to exchange
+     * @param minOut The minimum number of pool tokens to mint on target pool.
      */
     function outLiquidity(
         bytes32 channelId,
@@ -809,33 +807,40 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 minOut,
         address fallbackUser
     ) external returns (uint256) {
+        // There needs to be provided a valid fallbackUser.
         require(fallbackUser != address(0));
+        // Update weights
         _W();
-        // Cache totalSupply. This saves up to ~200 gas.
+
         uint256 initial_totalSupply = totalSupply() + _escrowedPoolTokens;
 
         // Since we have already cached totalSupply, we might as well burn the tokens
         // now. If the user doesn't have enough tokens, they save a bit of gas.
         _burn(msg.sender, poolTokens);
-        uint256 WSUM = 0; // Is not X64.
+
+        // Compute the weight sum.
+        uint256 WSUM = 0;
         for (uint256 it = 0; it < NUMASSETS; it++) {
             address token = _tokenIndexing[it];
             if (token == address(0)) break;
 
-            WSUM += _weight[token]; // Is not X64.
+            WSUM += _weight[token];
         }
 
+        // Compute the unit value of the provided poolTokens.
         uint256 U = uint256(FixedPointMathLib.lnWad(int256(
             FixedPointMathLib.divWadDown(initial_totalSupply, initial_totalSupply - poolTokens)
         ))) * WSUM;
 
+
         bytes32 messageHash;
         {
+            
             LiquidityEscrow memory escrowInformation = LiquidityEscrow({
                 poolTokens: poolTokens
             });
 
-            // 2 continued: transfer to target pool.
+            // Transfer the units to the target pools.
             messageHash = CatalystIBCInterface(_chaininterface).liquiditySwap(
                 channelId,
                 targetPool,
@@ -846,7 +851,7 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
             );
         }
 
-        // ! Reentrancy. It is not possible to abuse the reentry, since the storage change is checked for validity first.
+        
         // Escrow the pool tokens
         require(_escrowedLiquidityFor[messageHash] == address(0));
         _escrowedLiquidityFor[messageHash] = fallbackUser;
@@ -866,14 +871,14 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
         return U;
     }
 
-    // @nonreentrant('lock')
     /**
      * @notice Completes a cross-chain swap by converting liquidity units to pool tokens
+     * @dev No reentry protection since only trusted contracts are called.
      * Called exclusively by the chaininterface.
-     * @dev Can only be called by the chaininterface, as there is no way
-     * to check the validity of units.
      * @param who The recipient of pool tokens
      * @param U Number of units to convert into pool tokens.
+     * @param minOut Minimum number of tokens to mint, otherwise reject.
+     * @param messageHash Used to connect 2 swaps within a group. 
      */
     function inLiquidity(
         address who,
@@ -882,16 +887,13 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
         bytes32 messageHash
     ) external returns (uint256) {
         _W();
-        // The chaininterface is the only valid caller of this function, as there cannot
-        // be a check of _U. (It is purely a number)
+        // The chaininterface is the only valid caller of this function.
         require(msg.sender == _chaininterface);
 
         // Check if the swap is according to the swap limits
         checkAndSetUnitCapacity(U);
 
-        // We need to use the incoming units to purchace exactly the pool distribution.
-        // The pool contains _numberOfTokensInPool pool tokens, the incoming units needs
-        // to be distributed according to the pool weights.
+        // Compute the weight sum.
         address token0;
         uint256 WSUM = 0; // Is not X64.
         for (uint256 it = 0; it < NUMASSETS; it++) {
@@ -902,15 +904,14 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
             WSUM += _weight[token]; // Is not X64.
         }
 
-        // Since we know the relationship between the current pool assets (it being the current balances)
-        // we only need to derive one. For simplifity, the first asset is always used.
-        // address token0;
+        // Use the arbitarty integral to compute the pool ownership percentage.
+        // The function then converts ownership percentage into mint %.
         uint256 poolTokens = (arbitrary_solve_integral(U, WSUM) * totalSupply())/FixedPointMathLib.WAD;
 
-        // 4. Deposit the even mix of tokens.
+        // Check if the user would accept the mint.
         require(minOut <= poolTokens, SWAP_RETURN_INSUFFICIENT);
 
-        // Mint pool tokens for who
+        // Mint pool tokens for the user.
         _mint(who, poolTokens);
 
         emit SwapFromLiquidityUnits(who, U, poolTokens, messageHash);
