@@ -30,7 +30,7 @@ interface ICatalystV1PoolState {
     function _target_max_unit_inflow() external view returns (uint256);
 
     /// @notice The pool fee in X64. Implementation of fee: mulX64(_amount, self.poolFeeX64)
-    function _poolFeeX64() external view returns (uint256);
+    function _poolFee() external view returns (uint256);
 
     function _governanceFee() external view returns (uint256);
 

@@ -676,7 +676,7 @@ contract CatalystSwapPoolAmplified is
         uint256 minOut
     ) external returns (uint256) {
         _A();
-        uint256 fee = FixedPointMathLib.mulWadDown(amount, _poolFeeX64);
+        uint256 fee = FixedPointMathLib.mulWadDown(amount, _poolFee);
 
         // Calculate the swap return value.
         uint256 out = dry_swap_both(fromAsset, toAsset, amount - fee);
@@ -708,12 +708,12 @@ contract CatalystSwapPoolAmplified is
     ) public returns (uint256) {
         require(fallbackUser != address(0));
         _A();
-        // uint256 fee = FixedPointMathLib.mulWadDown(amount, _poolFeeX64);
+        // uint256 fee = FixedPointMathLib.mulWadDown(amount, _poolFee);
 
         // Calculate the group specific units bought.
         uint256 U = dry_swap_to_unit(
             fromAsset,
-            amount - FixedPointMathLib.mulWadDown(amount, _poolFeeX64)
+            amount - FixedPointMathLib.mulWadDown(amount, _poolFee)
         );
 
         // Track units for fee distribution.
@@ -725,7 +725,7 @@ contract CatalystSwapPoolAmplified is
             _max_unit_inflow += FixedPointMathLib.mulWadUp(
                 _ampUnitCONSTANT,
                 getModifyUnitCapacity(
-                    fromBalance - (amount - FixedPointMathLib.mulWadDown(amount, _poolFeeX64)),
+                    fromBalance - (amount - FixedPointMathLib.mulWadDown(amount, _poolFee)),
                     fromBalance,
                     fromAsset
                 )
@@ -736,7 +736,7 @@ contract CatalystSwapPoolAmplified is
 
         {
             TokenEscrow memory escrowInformation = TokenEscrow({
-                amount: amount - FixedPointMathLib.mulWadDown(amount, _poolFeeX64),
+                amount: amount - FixedPointMathLib.mulWadDown(amount, _poolFee),
                 token: fromAsset
             });
 
@@ -759,7 +759,7 @@ contract CatalystSwapPoolAmplified is
         // Escrow the tokens
         // ! Reentrancy. It is not possible to abuse the reentry, since the storage change is checked for validity first.
         require(_escrowedFor[messageHash] == address(0)); // User cannot supply fallbackUser = address(0)
-        _escrowedTokens[fromAsset] += amount - FixedPointMathLib.mulWadDown(amount, _poolFeeX64);
+        _escrowedTokens[fromAsset] += amount - FixedPointMathLib.mulWadDown(amount, _poolFee);
         _escrowedFor[messageHash] = fallbackUser;
 
 
@@ -768,7 +768,7 @@ contract CatalystSwapPoolAmplified is
             uint256 governanceFee = _governanceFee;
             if (governanceFee != 0) {
                 uint256 governancePart = FixedPointMathLib.mulWadDown(
-                    FixedPointMathLib.mulWadDown(amount, _poolFeeX64),
+                    FixedPointMathLib.mulWadDown(amount, _poolFee),
                     governanceFee
                 );
                 IERC20(fromAsset).safeTransfer(factoryOwner(), governancePart);

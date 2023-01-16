@@ -583,7 +583,7 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 minOut
     ) nonReentrant() public returns (uint256) {
         _W();
-        uint256 fee = FixedPointMathLib.mulWadDown(amount, _poolFeeX64);
+        uint256 fee = FixedPointMathLib.mulWadDown(amount, _poolFee);
 
         // Calculate the swap return value.
         uint256 out = dry_swap_both(fromAsset, toAsset, amount - fee);
@@ -629,18 +629,18 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
     ) public returns (uint256) {
         require(fallbackUser != address(0));
         _W();
-        // uint256 fee = mulX64(amount, _poolFeeX64);
+        // uint256 fee = mulX64(amount, _poolFee);
 
         // Calculate the group specific units bought.
         uint256 U = dry_swap_to_unit(
             fromAsset,
-            amount - FixedPointMathLib.mulWadDown(amount, _poolFeeX64)
+            amount - FixedPointMathLib.mulWadDown(amount, _poolFee)
         );
 
         bytes32 messageHash;
         {
             TokenEscrow memory escrowInformation = TokenEscrow({
-                amount: amount - FixedPointMathLib.mulWadDown(amount, _poolFeeX64),
+                amount: amount - FixedPointMathLib.mulWadDown(amount, _poolFee),
                 token: fromAsset
             });
 
@@ -659,7 +659,7 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
 
         // Escrow the tokens
         require(_escrowedFor[messageHash] == address(0)); // dev: Escrow already exists.
-        _escrowedTokens[fromAsset] += amount - FixedPointMathLib.mulWadDown(amount, _poolFeeX64);
+        _escrowedTokens[fromAsset] += amount - FixedPointMathLib.mulWadDown(amount, _poolFee);
         _escrowedFor[messageHash] = fallbackUser;
 
         {
@@ -667,7 +667,7 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
             uint256 governanceFee = _governanceFee;
             if (governanceFee != 0) {
                 uint256 governancePart = FixedPointMathLib.mulWadDown(
-                    FixedPointMathLib.mulWadDown(amount, _poolFeeX64),
+                    FixedPointMathLib.mulWadDown(amount, _poolFee),
                     governanceFee
                 );
                 IERC20(fromAsset).safeTransfer(factoryOwner(), governancePart);
