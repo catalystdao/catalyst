@@ -138,6 +138,32 @@ def pytest_configure(config):
         )
 
 
+def pytest_report_header(config):
+    header_msgs = []
+
+    if _test_config["volatile"] is not None:
+        if len(_test_config["volatile"]["pools"]) < 2:
+            header_msgs.append(
+                # Set text color to warning
+                "\033[93m" + \
+                "WARNING: Tests involving 2 pools will NOT RUN for volatile pool tests (need at least two pools defined on the config file)." + \
+                "\033[0m"
+            )
+
+    if _test_config["amplified"] is not None:
+        if len(_test_config["amplified"]["pools"]) < 2:
+            header_msgs.append(
+                # Set text color to warning
+                "\033[93m" + \
+                "WARNING: Tests involving 2 pools will NOT RUN for amplified pool tests (need at least two pools defined on the config file)." + \
+                "\033[0m"
+            )
+
+    
+    if len(header_msgs) > 0:
+        return "\n".join(header_msgs)
+
+
 def pytest_ignore_collect(path, config):
 
     project_path  = get_loaded_projects()[0]._path

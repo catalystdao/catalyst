@@ -74,7 +74,8 @@ def group_config(raw_config, amplification, max_pool_assets):
 
     raw_pools_config = raw_config["pools"]
 
-    assert len(raw_pools_config) >= 2, "At least 2 pools must be defined on the test config file."
+    assert len(raw_pools_config) >= 1, "At least 1 pool must be defined on the test config file."
+
 
     # Verify the pools config
     for config in raw_pools_config:
