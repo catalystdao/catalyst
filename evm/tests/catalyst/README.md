@@ -12,6 +12,8 @@ The following flags can be used to run specific collections/configurations of th
 | `--volatile`                   | Run tests for volatile pools.  |
 | `--amplified`                  | Run tests for amplified pools  |
 | `--amplification AMP_CONSTANT` | Override the amplification constant that is specified on the specified config file. (May only be set if amplified tests are set to be run.)  |
+| `--source-pool PARAM_TYPE` | Specify how to parametrize the source pool fixture:<ul><li>`'all'`: Go through all the pools.</li><li>`POOL_INDEX`: Only the specified pool.</li></ul>  |
+| `--target-pool PARAM_TYPE` | Specify how to parametrize the target pool fixture:<ul><li>`'all'`: Go through all the pools (skips the `source_pool`, i.e. avoid combinations with the same pool)</li><li>`'next'`: Use the *next* pool defined after the current `source_pool` (by index)</li><li>`POOL_INDEX`: Only the specified pool.</li></ul>  |
 | `--unit`                       | Run unit tests.  |
 | `--integration`                | Run integration tests.  |
 
@@ -60,12 +62,13 @@ Both the *volatile* and *amplified* tests run on Catalyst pools which are config
 
 # Fixtures
 ## Parametrized Fixtures
-There are 3 fixtures which get parametrized according to the loaded config file:
+There are 4 fixtures which get parametrized according to the specified test configuration and loaded config files:
 | Fixture           | Description|
 | ----              | ---------- |
 | `raw_config`      | Exposes the **full** config config file. (i.e. tests with fixtures that depend on `raw_config` will run only once.) |
 | `raw_pool_config` | Parametrizes **each** pool definition within the loaded config file. (i.e. tests with fixtures that depend on `raw_pool_config` will run once for every pool that is defined on the config file.) |
 | `swap_pool_type`  | Identifies the type of pool being used for the tests. Either `"volatile"` or `"amplified"`|
+| `source_target_indexes` | Paramterizes the source-target pool combinations (as tuples of indexes) |
 ## Other Fixtures
 All helper fixtures are defined within the `fixtures/` folder.
 
@@ -76,6 +79,11 @@ All helper fixtures are defined within the `fixtures/` folder.
         - `group_config`: The description of the pools contained in `raw_config` (verified and processed).
         - `group_pools`: An array of deployed pools, as defined on `group_config`.
         - `group_tokens`: An array of the deployed tokens contained by each of the pools of `group_pools`.
+        - For every tuple of `source_target_indexes`:
+            - `source_pool`: A pool from `group_pools` to act as a source pool. Selected according to `source_target_indexes`.
+            - `source_pool_tokens`: The tokens handled by `source_pool`.
+            - `target_pool`: A pool from `group_pools` to act as a target pool. Selected according to `source_target_indexes`.
+            - `target_pool_tokens`: The tokens handled by `target_pool`.
     - Based on `raw_pool_config`:
         - `pool_config`: The description of a pool contained in `raw_pool_config` (verified and processed).
         - `pool`: A deployed pool, as defined on `pool_config`.
