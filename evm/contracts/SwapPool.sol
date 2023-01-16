@@ -101,6 +101,7 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
         
         // Compute the security limit.
         {  //  Stack limitations.
+            uint256[] memory initialBalances = new uint256[](NUMASSETS);
             uint256 max_unit_inflow = 0;
             for (uint256 it = 0; it < init_assets.length; it++) {
                 address tokenAddress = init_assets[it];
@@ -112,6 +113,7 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
                     uint256 balanceOfSelf = IERC20(tokenAddress).balanceOf(
                         address(this)
                     );
+                    initialBalances[it] = balanceOfSelf;
                     require(balanceOfSelf > 0); // dev: 0 tokens provided in setup.
                 }
 
@@ -119,6 +121,9 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
                 // WAD since units are always WAD denominated.
                 max_unit_inflow += weights[it] * FixedPointMathLib.WAD;
             }
+            
+            emit Deposit(setupMaster, MINTAMOUNT, initialBalances);
+            
             _max_unit_inflow = max_unit_inflow * FixedPointMathLib.LN2;
         }
 

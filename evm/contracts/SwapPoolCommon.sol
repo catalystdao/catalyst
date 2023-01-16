@@ -29,6 +29,7 @@ abstract contract CatalystSwapPoolCommon is
     ///     Needs to be long enough for pool token providers to be notified
     ///     of a beach but short enough for volatility to not soft-freeze the pool.
     uint256 constant DECAYRATE = 60 * 60 * 24;
+    uint256 constant MINTAMOUNT = 10**18;
 
     /// @notice Maximum number of assets suppoed
     uint8 constant NUMASSETS = 3;
@@ -148,7 +149,7 @@ abstract contract CatalystSwapPoolCommon is
         // END ERC20 //
 
         // Mint 1 pool token to the short-term pool owner.
-        _mint(setupMaster, 10**18);
+        _mint(setupMaster, MINTAMOUNT);
     }
 
     /** @notice  Returns the current cross-chain unit capacity. */

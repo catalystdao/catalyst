@@ -85,7 +85,8 @@ contract CatalystSwapPoolAmplified is
         _amp = amp;
         _targetAmplification = amp;
         _governanceFee = governanceFee;
-        {
+        { //  Stack limitations.
+            uint256[] memory initialBalances = new uint256[](NUMASSETS);
             uint256 max_unit_inflow = 0;
             for (uint256 it = 0; it < init_assets.length; ++it) {
                 address tokenAddress = init_assets[it];
@@ -96,11 +97,15 @@ contract CatalystSwapPoolAmplified is
 
                 uint256 balanceOfSelf = IERC20(tokenAddress).balanceOf(address(this));
                 require(balanceOfSelf > 0); // dev: 0 tokens provided in setup.
+                initialBalances[it] = balanceOfSelf;
 
                 // The maximum unit flow is \sum Weights. The value is shifted 64
                 // since units are always X64.
                 max_unit_inflow += weights[it] * uint256(FixedPointMathLib.powWad(int256(balanceOfSelf * FixedPointMathLib.WAD), int256(FixedPointMathLib.WAD - amp)));
             }
+            
+            emit Deposit(setupMaster, MINTAMOUNT, initialBalances);
+
             _ampUnitCONSTANT = FixedPointMathLib.WAD - uint256(FixedPointMathLib.expWad(-int256(FixedPointMathLib.WAD - amp)));
             _max_unit_inflow = FixedPointMathLib.mulWadUp(_ampUnitCONSTANT, max_unit_inflow);
         }
