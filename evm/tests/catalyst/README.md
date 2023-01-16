@@ -55,7 +55,7 @@ Both the *volatile* and *amplified* tests run on Catalyst pools which are config
 - The `volatile` and `amplified` tests load **different** config files. Each within its own directory.
 - Each config file defines:
     - The token definitions to use (**minimum 4 tokens must be specified**)
-    - The pool definitions to use (**minimum 2 pools must be specified**)
+    - The pool definitions to use (**if only one pool is provided, tests involving two pools will not run**)
     - The amplification value (**only for amplified tests**)
 
 <br/>
