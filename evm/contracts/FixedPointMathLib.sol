@@ -9,6 +9,7 @@ library FixedPointMathLib {
     //////////////////////////////////////////////////////////////*/
 
     uint256 internal constant WAD = 1e18; // The scalar of ETH and most ERC20s.
+    uint256 internal constant LN2 = 693147180559945344; // from numpy import np; int(np.log(2)*10**18).
 
     function mulWadDown(uint256 x, uint256 y) internal pure returns (uint256) {
         return mulDivDown(x, y, WAD); // Equivalent to (x * y) / WAD rounded down.

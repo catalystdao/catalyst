@@ -113,18 +113,18 @@ interface ICatalystV1PoolEvents {
 
     /**
      * @notice Emitted on pool fee adjustment
-     * @param feeX64 The new pool fee
+     * @param fee The new pool fee
      */
     event SetPoolFee(
-        uint256 feeX64
+        uint256 fee
     );
 
     /**
      * @notice Emitted on governance fee adjustment
-     * @param feeX64 The new governance fee
+     * @param fee The new governance fee
      */
     event SetGovernanceFee(
-        uint256 feeX64
+        uint256 fee
     );
 
     /**

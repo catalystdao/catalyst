@@ -85,7 +85,8 @@ contract CatalystSwapPoolAmplified is
         _amp = amp;
         _targetAmplification = amp;
         _governanceFee = governanceFee;
-        {
+        { //  Stack limitations.
+            uint256[] memory initialBalances = new uint256[](NUMASSETS);
             uint256 max_unit_inflow = 0;
             for (uint256 it = 0; it < init_assets.length; ++it) {
                 address tokenAddress = init_assets[it];
@@ -96,11 +97,15 @@ contract CatalystSwapPoolAmplified is
 
                 uint256 balanceOfSelf = IERC20(tokenAddress).balanceOf(address(this));
                 require(balanceOfSelf > 0); // dev: 0 tokens provided in setup.
+                initialBalances[it] = balanceOfSelf;
 
                 // The maximum unit flow is \sum Weights. The value is shifted 64
                 // since units are always X64.
                 max_unit_inflow += weights[it] * uint256(FixedPointMathLib.powWad(int256(balanceOfSelf * FixedPointMathLib.WAD), int256(FixedPointMathLib.WAD - amp)));
             }
+            
+            emit Deposit(setupMaster, MINTAMOUNT, initialBalances);
+
             _ampUnitCONSTANT = FixedPointMathLib.WAD - uint256(FixedPointMathLib.expWad(-int256(FixedPointMathLib.WAD - amp)));
             _max_unit_inflow = FixedPointMathLib.mulWadUp(_ampUnitCONSTANT, max_unit_inflow);
         }
@@ -381,19 +386,19 @@ contract CatalystSwapPoolAmplified is
      * @notice Computes the return of a SwapToAndFromUnits, without executing one.
      * @param from The address of the token to sell.
      * @param to The address of the token to buy.
-     * @param input The amount of _from token to sell for to token.
+     * @param amount The amount of _from token to sell for to token.
      * @return uint256 Output denominated in to token. */
     function dry_swap_both(
         address from,
         address to,
-        uint256 input
+        uint256 amount
     ) public view returns (uint256) {
         uint256 A = IERC20(from).balanceOf(address(this));
         uint256 B = IERC20(to).balanceOf(address(this)) - _escrowedTokens[to];
         uint256 W_A = _weight[from];
         uint256 W_B = _weight[to];
 
-        return complete_integral(input, A, B, W_A, W_B, _amp);
+        return complete_integral(amount, A, B, W_A, W_B, _amp);
     }
 
     /**
@@ -643,7 +648,7 @@ contract CatalystSwapPoolAmplified is
                 // As a result, we compute it and cache.
                 uint256 W_BxBtoOMA = ampWeightAssetBalances[it];
                 tokenAmount = assetBalances[it] * (FixedPointMathLib.WAD - uint256(FixedPointMathLib.powWad(
-                    int256(FixedPointMathLib.divWadUp(W_BxBtoOMA - U, W_BxBtoOMA)),
+                    int256(FixedPointMathLib.divWadUp(W_BxBtoOMA - U_i, W_BxBtoOMA)),
                     int256(FixedPointMathLib.WAD * FixedPointMathLib.WAD / uint256(oneMinusAmp)))
                 )) / FixedPointMathLib.WAD;
             }
@@ -673,7 +678,7 @@ contract CatalystSwapPoolAmplified is
         uint256 minOut
     ) external returns (uint256) {
         _A();
-        uint256 fee = FixedPointMathLib.mulWadDown(amount, _poolFeeX64);
+        uint256 fee = FixedPointMathLib.mulWadDown(amount, _poolFee);
 
         // Calculate the swap return value.
         uint256 out = dry_swap_both(fromAsset, toAsset, amount - fee);
@@ -693,7 +698,7 @@ contract CatalystSwapPoolAmplified is
     }
 
     function swapToUnits(
-        bytes32 chain,
+        bytes32 channelId,
         bytes32 targetPool,
         bytes32 targetUser,
         address fromAsset,
@@ -705,12 +710,12 @@ contract CatalystSwapPoolAmplified is
     ) public returns (uint256) {
         require(fallbackUser != address(0));
         _A();
-        // uint256 fee = FixedPointMathLib.mulWadDown(amount, _poolFeeX64);
+        // uint256 fee = FixedPointMathLib.mulWadDown(amount, _poolFee);
 
         // Calculate the group specific units bought.
         uint256 U = dry_swap_to_unit(
             fromAsset,
-            amount - FixedPointMathLib.mulWadDown(amount, _poolFeeX64)
+            amount - FixedPointMathLib.mulWadDown(amount, _poolFee)
         );
 
         // Track units for fee distribution.
@@ -722,7 +727,7 @@ contract CatalystSwapPoolAmplified is
             _max_unit_inflow += FixedPointMathLib.mulWadUp(
                 _ampUnitCONSTANT,
                 getModifyUnitCapacity(
-                    fromBalance - (amount - FixedPointMathLib.mulWadDown(amount, _poolFeeX64)),
+                    fromBalance - (amount - FixedPointMathLib.mulWadDown(amount, _poolFee)),
                     fromBalance,
                     fromAsset
                 )
@@ -733,13 +738,13 @@ contract CatalystSwapPoolAmplified is
 
         {
             TokenEscrow memory escrowInformation = TokenEscrow({
-                amount: amount - FixedPointMathLib.mulWadDown(amount, _poolFeeX64),
+                amount: amount - FixedPointMathLib.mulWadDown(amount, _poolFee),
                 token: fromAsset
             });
 
             // Send the purchased units to targetPool on chain.
             messageHash = CatalystIBCInterface(_chaininterface).crossChainSwap(
-                chain,
+                channelId,
                 targetPool,
                 targetUser,
                 toAssetIndex,
@@ -756,7 +761,7 @@ contract CatalystSwapPoolAmplified is
         // Escrow the tokens
         // ! Reentrancy. It is not possible to abuse the reentry, since the storage change is checked for validity first.
         require(_escrowedFor[messageHash] == address(0)); // User cannot supply fallbackUser = address(0)
-        _escrowedTokens[fromAsset] += amount - FixedPointMathLib.mulWadDown(amount, _poolFeeX64);
+        _escrowedTokens[fromAsset] += amount - FixedPointMathLib.mulWadDown(amount, _poolFee);
         _escrowedFor[messageHash] = fallbackUser;
 
 
@@ -765,7 +770,7 @@ contract CatalystSwapPoolAmplified is
             uint256 governanceFee = _governanceFee;
             if (governanceFee != 0) {
                 uint256 governancePart = FixedPointMathLib.mulWadDown(
-                    FixedPointMathLib.mulWadDown(amount, _poolFeeX64),
+                    FixedPointMathLib.mulWadDown(amount, _poolFee),
                     governanceFee
                 );
                 IERC20(fromAsset).safeTransfer(factoryOwner(), governancePart);
@@ -792,7 +797,7 @@ contract CatalystSwapPoolAmplified is
 
     /**
      * @notice Initiate a cross-chain swap by purchasing units and transfer them to another pool.
-     * @param chain The target chain. Will be converted by the interface to channelId.
+     * @param channelId The target chain identifier.
      * @param targetPool The target pool on the target chain encoded in bytes32. For EVM chains this can be computed as:
      * Vyper: convert(_poolAddress, bytes32)
      * Solidity: abi.encode(_poolAddress)
@@ -805,7 +810,7 @@ contract CatalystSwapPoolAmplified is
      * @param fallbackUser If the transaction fails send the escrowed funds to this address
      */
     function swapToUnits(
-        bytes32 chain,
+        bytes32 channelId,
         bytes32 targetPool,
         bytes32 targetUser,
         address fromAsset,
@@ -817,7 +822,7 @@ contract CatalystSwapPoolAmplified is
         bytes memory calldata_ = new bytes(0);
         return
             swapToUnits(
-                chain,
+                channelId,
                 targetPool,
                 targetUser,
                 fromAsset,
@@ -921,7 +926,7 @@ contract CatalystSwapPoolAmplified is
     // @nonreentrant('lock')
     /**
      * @notice Initiate a cross-chain liquidity swap by lowering liquidity and transfer the liquidity units to another pool.
-     * @param chain The target chain. Will be converted by the interface to channelId.
+     * @param channelId The target chain identifier.
      * @param targetPool The target pool on the target chain encoded in bytes32. For EVM chains this can be computed as:
      * Vyper: convert(_poolAddress, bytes32)
      * Solidity: abi.encode(_poolAddress)
@@ -930,7 +935,7 @@ contract CatalystSwapPoolAmplified is
      * @param poolTokens The number of pool tokens to liquidity Swap
      */
     function outLiquidity(
-        bytes32 chain,
+        bytes32 channelId,
         bytes32 targetPool,
         bytes32 targetUser,
         uint256 poolTokens,
@@ -990,7 +995,7 @@ contract CatalystSwapPoolAmplified is
 
             // Sending the liquidity units over.
             messageHash = CatalystIBCInterface(_chaininterface).liquiditySwap(
-                chain,
+                channelId,
                 targetPool,
                 targetUser,
                 U,

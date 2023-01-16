@@ -24,7 +24,7 @@ class Catalyst:
         self,
         deployer,
         default=True,
-        amp=2**64,
+        amp=10**18,
         ibcinterface=ZERO_ADDRESS,
         poolname="poolname",
         poolsymbol="ps"
@@ -71,7 +71,7 @@ class Catalyst:
         )
 
     def deploy_swappool(
-        self, tokens, init_balances=None, weights=None, amp=2**64, name="Name", symbol="SYM"
+        self, tokens, init_balances=None, weights=None, amp=10**18, name="Name", symbol="SYM"
     ):
         
         if init_balances is None:

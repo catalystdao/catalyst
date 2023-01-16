@@ -25,7 +25,7 @@ def test_set_new_pool_fee(gov, accounts, default_amp_swappool_self):
         poolFee, {"from": feeAdministrator}
     )  # set to 12.5% (high for testing purposes)
 
-    assert swappool._poolFeeX64() == poolFee
+    assert swappool._poolFee() == poolFee
 
 
 depositValue = 10**18 * 100
@@ -44,7 +44,7 @@ def test_deposit_into_pool(gov, accounts, default_amp_swappool_self, token1, tok
     baseAmount = (
         int((depositValue * swappool.totalSupply()) / token1.balanceOf(swappool)) - 1000
     )
-    swappool.depositMixed([depositValue], baseAmount-1, {"from": balance_modifier})
+    swappool.depositMixed([depositValue], baseAmount - 1, {"from": balance_modifier})
 
     assert 10**5 > token1.balanceOf(balance_modifier)
     assert swappool.balanceOf(balance_modifier) == baseAmount
@@ -56,11 +56,11 @@ def test_swap_around_with_fees(
     swappool = default_amp_swappool_self
     swapValue = 10**18 * 1000
 
-    assert swappool._poolFeeX64() == 2**61
+    assert swappool._poolFee() == 2**61
 
     # Instead of actually swapping, lets just transfer tokens to the pool.
     # This emulates swapping one way and then the other and balancing the pool.
-    poolEarnings = (swapValue * swappool._poolFeeX64()) >> 64
+    poolEarnings = (swapValue * swappool._poolFee()) >> 64
     token1.transfer(swappool, poolEarnings, {"from": gov})
     token2.transfer(swappool, poolEarnings, {"from": gov})
 
