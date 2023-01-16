@@ -108,7 +108,7 @@ def group_pools(group_config, group_tokens, deploy_pool, deployer):
             weights        = pool["weights"],
             amp            = pool["amplification"] if pool["amplification"] is not None else 10**18,
             name           = pool["name"],
-            symbol         = pool["nymbol"],
+            symbol         = pool["symbol"],
             deployer       = deployer,
         ) for pool, tokens in zip(group_config, group_tokens)
     ]
