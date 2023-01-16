@@ -1,41 +1,39 @@
 import pytest
 from brownie import Token
 
+
 # An easy way to deploy a simple token.
 @pytest.fixture(scope="module")
 def create_token(deployer):
-    def create_token(name, symbol, decimals, supply, deployer=deployer):
-        return Token.deploy(name, symbol, decimals, supply*10**decimals, {"from": deployer})
+    def create_token(name="TokenName", symbol="TKN", decimal=18, deployer=deployer):
+        return Token.deploy(name, symbol, decimal, 10000*10**decimal, {"from": deployer})
 
     yield create_token
 
 
 @pytest.fixture(scope="module")
-def tokens_config(raw_config):
-
-    raw_tokens_config = raw_config["tokens"]
-
-    assert len(raw_tokens_config) >= 4, "At least 4 tokens must be defined on the test config file"
-
-    # Verify the tokens config
-    for config in raw_tokens_config:
-        assert "name" in config and isinstance(config["name"], str)
-        assert "symbol" in config and isinstance(config["symbol"], str)
-        assert "decimals" in config and isinstance(config["decimals"], int)
-        assert "supply" in config and isinstance(config["supply"], int) and config["supply"] > 0
-
-    yield raw_tokens_config
+def token1(create_token):
+    yield create_token("one", "T")
 
 
 @pytest.fixture(scope="module")
-def tokens(tokens_config, create_token):
+def token2(create_token):
+    yield create_token(
+        "very long name that is exactly 64 chars. When will this end,here",
+        "SYMBOL THAT IS JUST 32 CHAR LONG",
+    )
 
-    yield [
-        create_token(
-            token_config["name"],
-            token_config["symbol"],
-            token_config["decimals"],
-            token_config["supply"]
-        ) for token_config in tokens_config
-    ]
 
+@pytest.fixture(scope="module")
+def token3(create_token):
+    yield create_token("three", "TTT", decimal=6)
+
+
+@pytest.fixture(scope="module")
+def token4(create_token):
+    yield create_token("four", "TTTT", decimal=18)
+    
+
+@pytest.fixture(scope="module")
+def token_list(token1, token2, token3, token4):
+    yield [token1, token2, token3, token4]
