@@ -20,6 +20,9 @@ _test_config = {
 _run_unit_tests        = False
 _run_integration_tests = False
 
+_source_target_combinations_volatile  = []
+_source_target_combinations_amplified = []
+
 
 # Enable test isolation
 @pytest.fixture(autouse=True)
@@ -27,11 +30,42 @@ def isolation(fn_isolation):
     pass
 
 
+def source_pool_type_checker(value):
+    # source-pool should be either one of ["all"], or a specific pool index
+
+    try:
+        # Check if a pool index
+        int(value)
+    except:
+        # If not a pool index, check if it's an allowed string option
+        if not value in ["all"]:
+            raise pytest.UsageError("--source-pool should be either \"all\" or a pool index")
+    
+    return value
+
+
+def target_pool_type_checker(value):
+    # target-pool should be either one of ["next", "all"], or a specific pool index
+
+    try:
+        # Check if a pool index
+        int(value)
+    except:
+        # If not a pool index, check if it's an allowed string option
+        if not value in ["next", "all"]:
+            raise pytest.UsageError("--target-pool should be either (\"next\" | \"all\") or a pool index")
+    
+    return value
+
+
 def pytest_addoption(parser):
     parser.addoption("--config", default="default", help="Load the a specific test config definition.")
     parser.addoption("--volatile", action="store_true", help="Run only tests of the volatile pool.")
     parser.addoption("--amplified", action="store_true", help="Run only tests of the amplified pool.")
     parser.addoption("--amplification", default=None, help="Override the config amplification constant.")
+
+    parser.addoption("--source-pool", default="0", type=source_pool_type_checker, help="Specify how to parametrize the source pool fixture.")
+    parser.addoption("--target-pool", default="all", type=target_pool_type_checker, help="Specify how to parametrize the target pool fixture.")
 
     parser.addoption("--unit", action="store_true", help="Run only unit tests.")
     parser.addoption("--integration", action="store_true", help="Run only integration tests.")
@@ -41,6 +75,8 @@ def pytest_addoption(parser):
 def pytest_configure(config):
     global _run_unit_tests
     global _run_integration_tests
+    global _source_target_combinations_volatile
+    global _source_target_combinations_amplified
 
     # Note that if "--volatile" nor "--amplified" are specified, all tests will run
     run_all_tests = not config.getoption("--volatile") and not config.getoption("--amplified")
@@ -62,6 +98,7 @@ def pytest_configure(config):
     
     if run_vol_tests:
 
+        # Load volatile config file
         vol_config_path = project_path.joinpath(
             "tests", "catalyst", "test_volatile", "configs", config_name + ".json"
         )
@@ -71,10 +108,18 @@ def pytest_configure(config):
     
         with vol_config_path.open() as f:
             _test_config["volatile"] = json.load(f)
+        
+        # Compute the source-target pool combinations (indexes only)
+        _source_target_combinations_volatile = compute_pool_combinations(
+            config.getoption("--source-pool"),
+            config.getoption("--target-pool"),
+            len(_test_config["volatile"]["pools"])
+        )
     
     
     if run_amp_tests:
 
+        # Load amplified config file
         amp_config_path = project_path.joinpath(
             "tests", "catalyst", "test_amplified", "configs", config_name + ".json"
         )
@@ -84,7 +129,13 @@ def pytest_configure(config):
     
         with amp_config_path.open() as f:
             _test_config["amplified"] = json.load(f)
-
+        
+        # Compute the source-target pool combinations (indexes only)
+        _source_target_combinations_amplified = compute_pool_combinations(
+            config.getoption("--source-pool"),
+            config.getoption("--target-pool"),
+            len(_test_config["amplified"]["pools"])
+        )
 
 
 def pytest_ignore_collect(path, config):
@@ -123,10 +174,12 @@ def pytest_generate_tests(metafunc):
     if rel_test_path[0] == "test_volatile":
         config = _test_config["volatile"]
         swap_pool_type = "volatile"
+        source_target_indexes = _source_target_combinations_volatile
 
     elif rel_test_path[0] == "test_amplified":
         config = _test_config["amplified"]
         swap_pool_type = "amplified"
+        source_target_indexes = _source_target_combinations_amplified
 
 
     if "swap_pool_type" in metafunc.fixturenames:
@@ -137,6 +190,9 @@ def pytest_generate_tests(metafunc):
 
     if "raw_pool_config" in metafunc.fixturenames:
         metafunc.parametrize("raw_pool_config", config["pools"], indirect=True, scope="session")
+    
+    if "source_target_indexes" in metafunc.fixturenames:
+        metafunc.parametrize("source_target_indexes", source_target_indexes, scope="session")
     
 
 
@@ -151,3 +207,46 @@ def raw_config(request):
 def raw_pool_config(request):
     yield request.param
 
+
+
+
+def compute_pool_combinations(source_pool, target_pool, pool_count):
+    
+    if pool_count < 2:
+        return []
+
+    source_pool_indexes = []
+
+    if source_pool == "all":
+        source_pool_indexes = list(range(pool_count))
+    else:
+        try:
+            s_idx = int(source_pool)
+        except:
+            raise Exception("Unable to compute pool combinations with the provided parameters.")
+
+        if s_idx >= pool_count:
+            raise Exception("The provided source pool index exceeds the pool count.")
+
+        source_pool_indexes = [s_idx]
+
+
+    if target_pool == "all":
+        return [
+            (s_idx, t_idx) \
+            for s_idx in source_pool_indexes \
+            for t_idx in range(pool_count) \
+            if s_idx != t_idx
+        ]
+    elif target_pool == "next":
+        return [(s_idx, (s_idx + 1) % pool_count) for s_idx in source_pool_indexes]
+    else:
+        try:
+            t_idx = int(target_pool)
+        except:
+            raise Exception("Unable to compute pool combinations with the provided parameters.")
+
+        if t_idx >= pool_count:
+            raise Exception("The provided target pool index exceeds the pool count.")
+
+        return [(s_idx, t_idx) for s_idx in source_pool_indexes]

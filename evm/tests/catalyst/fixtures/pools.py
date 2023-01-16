@@ -114,6 +114,26 @@ def group_pools(group_config, group_tokens, deploy_pool, deployer):
     ]
 
 
+@pytest.fixture(scope="module")
+def source_pool(group_pools, source_target_indexes):
+    yield group_pools[source_target_indexes[0]]
+
+
+@pytest.fixture(scope="module")
+def source_pool_tokens(group_tokens, source_target_indexes):
+    yield group_tokens[source_target_indexes[0]]
+
+
+@pytest.fixture(scope="module")
+def target_pool(group_pools, source_target_indexes):
+    yield group_pools[source_target_indexes[1]]
+
+
+@pytest.fixture(scope="module")
+def target_pool_tokens(group_tokens, source_target_indexes):
+    yield group_tokens[source_target_indexes[1]]
+
+
 
 # 'pool_' fixtures
 # Each of these expose info on a SINGLE pool for each pool defined on the loaded test config file
