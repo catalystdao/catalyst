@@ -4,6 +4,7 @@ pragma solidity ^0.8.16;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "./FixedPointMathLib.sol";
 import "./CatalystIBCInterface.sol";
 import "./SwapPoolCommon.sol";
@@ -13,19 +14,21 @@ import "./ICatalystV1Pool.sol";
  * @title Catalyst: The Multi-Chain Swap pool
  * @author Catalyst Labs
  * @notice Catalyst multi-chain swap pool using the asset specific
- * pricing curve: W/(w · ln(2)) where W is an asset specific weight
- *  and w is the pool balance.
+ * pricing curve: 1/w^\theta (1 - \theta) where \theta is 
+ * the group amplification and w is the pool balance.
  *
  * The following contract supports between 1 and 3 assets for
  * atomic swaps. To increase the number of tokens supported,
  * change NUMASSETS to the desired maximum token amount.
+ * This constant is set in "SwapPoolCommon.sol"
  *
- * Implements the ERC20 specification, such that the contract
- * will be its own pool token.
- * @dev This contract is deployed /broken/: It cannot be used as a
+ * The swappool implements the ERC20 specification, such that the
+ * contract will be its own pool token.
+ * @dev This contract is deployed inactive: It cannot be used as a
  * swap pool as is. To use it, a proxy contract duplicating the
  * logic of this contract needs to be deployed. In vyper, this
- * can be done through (vy 0.3.4) create_minimal_proxy_to.
+ * can be done through (vy >=0.3.4) create_minimal_proxy_to.
+ * In Solidity, this can be done through OZ cllones: Clones.clone(...)
  * After deployment of the proxy, call setup(...). This will
  * initialize the pool and prepare it for cross-chain transactions.
  *
@@ -33,17 +36,20 @@ import "./ICatalystV1Pool.sol";
  * createConnection to connect the pool with pools on other chains.
  *
  * Finally, call finishSetup to give up the deployer's control
- * over the pool.
+ * over the pool. 
+ * !If finishSetup is not called, the pool can be drained!
  */
-contract CatalystSwapPoolAmplified is
-    CatalystSwapPoolCommon
-{
+contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     //--- ERRORS ---//
+    // Errors are defined in interfaces/ICatalystV1PoolErrors.sol
 
     //--- Config ---//
-    // The following section contains the configurable variables.
+    // Minimum time parameter adjustments can be made with.
+    uint256 constant MIN_ADJUSTMENT_TIME = 60 * 60 * 24 * 7;
+
+    // For other config options, see SwapPoolCommon.sol
 
     //-- Variables --//
     uint256 public _amp;
@@ -54,21 +60,33 @@ contract CatalystSwapPoolAmplified is
     // As a result, it is computed on pool deployment.
     uint256 _ampUnitCONSTANT;
 
-    // To keep track of group ownership, the pool needs to know the balance of units
-    // for the pool.
+    // To keep track of group ownership, the pool needs to keep track of
+    // the local unit balance. That is, does other pools own or owe this pool assets?
     int128 public _unitTracker;
 
-    // Is limited (*cannot overflow*) because the integral from 0 to C < \infty is finite. That means the number can never  < int_0^DepositedBalance
-    // And since the sum of all unitTracker in the system is 0. The top side is also limited.
-
     /**
-     * @notice Setup a pool.
-     * @dev The @param amp is only used as a sanity check and needs to be set to 2**64.
-     * If less than NUMASSETS are used to setup the pool, let the remaining init_assets be ZERO_ADDRESS
-     * The unused weights can be whatever. (however, 0 is recommended.)
-     * The initial token amounts should have been sent to the pool before setup.
-     * If any token has token amount 0, the pool will never be able to have more than
-     * 0 tokens for that token.
+     * @notice Configures an empty pool.
+     * @dev If less than NUMASSETS are used to setup the pool
+     * let the remaining <init_assets> be ZERO_ADDRESS / address(0)
+     *
+     * Unused weights can be whatever. (0 is recommended.)
+     *
+     * The initial token amounts should have been sent to the pool before setup is called.
+     * Since someone can call setup can claim the initial tokens, this needs to be
+     * done atomically!
+     *
+     * If 0 of a token in init_assets is provided, the setup reverts.
+     * @param init_assets A list of the token addresses associated with the pool
+     * @param weights The weights associated with the tokens. 
+     * If set to values with low resolotion (<= 10*5), this should be viewed as
+     * opt out of governance weight adjustment. This is not enforced.
+     * @param amp Amplification factor. Should be <= 10**18.
+     * @param governanceFee The Catalyst governance fee portion. Is WAD.
+     * @param name_ pool token name.
+     * @param symbol_ pool token symbol.
+     * @param chaininterface The message wrapper used by the pool.
+     * Set to ZERO_ADDRESS / address(0) to opt out of cross-chain swapping.
+     * @param setupMaster The address responsible for setting up the pool.
      */
     function setup(
         address[] calldata init_assets,
@@ -80,11 +98,17 @@ contract CatalystSwapPoolAmplified is
         address chaininterface,
         address setupMaster
     ) public {
+        // Check that the amplification is correct.
         require(amp <= FixedPointMathLib.WAD);
+        // Check for a misunderstanding regarding how many assets this pool supports.
         require(init_assets.length <= NUMASSETS);
         _amp = amp;
         _targetAmplification = amp;
+
+        // Store the governance fee.
         _governanceFee = governanceFee;
+
+        // Compute the security limit.
         { //  Stack limitations.
             uint256[] memory initialBalances = new uint256[](NUMASSETS);
             uint256 max_unit_inflow = 0;
@@ -96,113 +120,128 @@ contract CatalystSwapPoolAmplified is
                 // called. Make sure the pool has more than 0 tokens.
 
                 uint256 balanceOfSelf = IERC20(tokenAddress).balanceOf(address(this));
-                require(balanceOfSelf > 0); // dev: 0 tokens provided in setup.
                 initialBalances[it] = balanceOfSelf;
+                require(balanceOfSelf > 0); // dev: 0 tokens provided in setup.
 
-                // The maximum unit flow is \sum Weights. The value is shifted 64
-                // since units are always X64.
+                // The maximum unit flow is (1-2^{-(1-\theta)}) \sum W \alpha^{1-\theta}
                 max_unit_inflow += weights[it] * uint256(FixedPointMathLib.powWad(int256(balanceOfSelf * FixedPointMathLib.WAD), int256(FixedPointMathLib.WAD - amp)));
             }
             
             emit Deposit(setupMaster, MINTAMOUNT, initialBalances);
 
-            _ampUnitCONSTANT = FixedPointMathLib.WAD - uint256(FixedPointMathLib.expWad(-int256(FixedPointMathLib.WAD - amp)));
+            _ampUnitCONSTANT = FixedPointMathLib.WAD - uint256(FixedPointMathLib.powWad(
+                int256(2 * FixedPointMathLib.WAD),
+                -int256(FixedPointMathLib.WAD - amp)
+            ));
             _max_unit_inflow = FixedPointMathLib.mulWadUp(_ampUnitCONSTANT, max_unit_inflow);
         }
 
+        // Do common pool setup logic.
         setupBase(name_, symbol_, chaininterface, setupMaster);
     }
 
+    // TODO: Fix security limit
+    /**
+     * @notice Allows Governance to modify the pool weights to optimise liquidity.
+     * @dev targetTime needs to be more than MIN_ADJUSTMENT_TIME in the future.
+     * !Can be abused by governance to disable the security limit!
+     * @param targetTime Once reached, _weight[...] = newWeights[...]
+     * @param targetAmplification The new weights to apply
+     */
     function modifyAmplification(
         uint256 targetTime,
         uint256 targetAmplification
     ) external onlyFactoryOwner {
-        require(targetTime >= block.timestamp + 60 * 60 * 24 * 2); // dev: targetTime must be more than 2 days in the future.
-        if (_adjustmentTarget != 0) {
-            require(_targetAmplification != _amp); // dev: Weight and amplification changes are disallowed simultaneously.
-        }
+        require(targetTime >= block.timestamp + MIN_ADJUSTMENT_TIME); // dev: targetTime must be more than MIN_ADJUSTMENT_TIME in the future.
+
+        // Store adjustment information
         _adjustmentTarget = targetTime;
         _lastModificationTime = block.timestamp;
         _targetAmplification = targetAmplification;
 
+        // Recompute security limit.
         uint256 amp = targetAmplification;
         uint256 new_max_unit_inflow = 0;
         for (uint256 it = 0; it < NUMASSETS; ++it) {
             address token = _tokenIndexing[it];
             if (token == address(0)) break;
             uint256 balanceOfSelf = IERC20(token).balanceOf(address(this));
-            new_max_unit_inflow += _weight[token] * uint256(FixedPointMathLib.powWad(int256(balanceOfSelf * FixedPointMathLib.WAD), int256(FixedPointMathLib.WAD - amp)));
+            new_max_unit_inflow += _weight[token] * uint256(FixedPointMathLib.powWad(
+                int256(balanceOfSelf * FixedPointMathLib.WAD),
+                int256(FixedPointMathLib.WAD - amp)
+            ));
         }
-        uint256 newAmpUnitCONSTANT = FixedPointMathLib.WAD - uint256(FixedPointMathLib.expWad(-int256(FixedPointMathLib.WAD - amp)));
+        uint256 newAmpUnitCONSTANT = FixedPointMathLib.WAD - uint256(FixedPointMathLib.powWad(
+            int256(2 * FixedPointMathLib.WAD),
+            -int256(FixedPointMathLib.WAD - amp)
+        ));
+        _ampUnitCONSTANT = newAmpUnitCONSTANT;
         new_max_unit_inflow = FixedPointMathLib.mulWadDown(newAmpUnitCONSTANT, new_max_unit_inflow);
-        // The governance abuse of the way the security limit is updated is low-impact for amplification.
-        // Weight changes are way more efficient at removing the security limit.
+
+        // We don't want to spend gas to update the security limit on each swap. 
+        // As a result, we "disable" it by immediately increasing it.
+        // This is not an accurate way to do this but we will rely on deposits
+        // and withdrawals to fix issues which are caused by the lazy security limit
         if (new_max_unit_inflow >= _max_unit_inflow) {
+            // immediately set higher security limit to ensure the limit isn't reached.
             _max_unit_inflow = new_max_unit_inflow;
-            _target_max_unit_inflow = 0;
-        } else {
-            // _max_unit_inflow = current_unit_inflow
-            _target_max_unit_inflow = new_max_unit_inflow;
         }
 
         emit ModifyAmplification(targetTime, targetAmplification);
     }
 
     /**
-     * @notice If the governance requests an amplifiaction change, this function will adjust the pool amplification.
+     * @notice If the governance requests an amplification change,
+     * this function will adjust the pool weights.
+     * @dev Called first thing on every function depending on amplification.
      */
     function _A() internal {
+        // We might use adjustment target more than once. Since we don't change it, lets store it.
         uint256 adjTarget = _adjustmentTarget;
 
-        if ((adjTarget != 0) && (adjTarget % 2 == 1)) {
-            uint256 currTime = block.timestamp;
+        if (adjTarget != 0) {
+            // We need to use lastModification again. Store it.
             uint256 lastModification = _lastModificationTime;
-            if (currTime == lastModification) return; // If no time has passed since last update, then we don't need to update anything.
+            _lastModificationTime = block.timestamp;
 
-            // If the current time is past the adjustment, then we need to finalise.
-            if (currTime >= adjTarget) {
+            // If no time has passed since last update, then we don't need to update anything.
+            if (block.timestamp == lastModification) return;
+
+            // If the current time is past the adjustment the adjustment needs to be finalized.
+            if (block.timestamp >= adjTarget) {
                 _amp = _targetAmplification;
 
-                // Set weightAdjustmentTime to 0. This ensures the if statement is never entered.
+                // Set adjustmentTime to 0. This ensures the if statement is never entered.
                 _adjustmentTarget = 0;
-                _lastModificationTime = currTime;
 
-                // Check if security limit needs to be updated.
-                uint256 target_max_unit_inflow = _target_max_unit_inflow;
-                if (target_max_unit_inflow != 0) {
-                    _max_unit_inflow = target_max_unit_inflow;
-                    _target_max_unit_inflow = 0;
-                }
+                // Let deposits and withdrawals finalize the security limit change
                 return;
             }
-            uint256 currentAmplification = _amp;
+            
+            // Calculate partial amp change
             uint256 targetAmplification = _targetAmplification;
-            uint256 newAmp;
+            uint256 currentAmplification = _amp;
+
             if (targetAmplification > currentAmplification) {
-                newAmp =
-                    currentAmplification +
-                    ((targetAmplification - currentAmplification) *
-                        (currTime - lastModification)) /
-                    (adjTarget - lastModification);
+                // if ta > ca, amp is increased and ta - ca > 0.
+                // Add the change to the current amp.
+                _amp = currentAmplification + (
+                    (targetAmplification - currentAmplification) * (block.timestamp - lastModification)
+                ) / (adjTarget - lastModification);
             } else {
-                newAmp =
-                    currentAmplification -
-                    ((currentAmplification - targetAmplification) *
-                        (currTime - lastModification)) /
-                    (adjTarget - lastModification);
+                // if ca >= ta, amp is decreased and ta - ca < 0.
+                // Subtract the change to the current amp.
+                _amp = currentAmplification - (
+                    (currentAmplification - targetAmplification) * (block.timestamp - lastModification)
+                ) / (adjTarget - lastModification);
             }
-            _amp = newAmp;
-
-            _ampUnitCONSTANT = uint256(int256(FixedPointMathLib.WAD) - FixedPointMathLib.expWad(-int256(FixedPointMathLib.WAD - newAmp)));
-
-            _lastModificationTime = currTime;
         }
     }
 
     /**
      * @notice The maximum unit flow changes depending on the current
      * balance for amplified pools. The change is
-     *     (1-2^(k-1)) · W · b^(1-k) - (1-2^(k-1)) · W · a^(1-k)
+     *     (1-2^(k-1)) · wb^(1-k) - (1-2^(k-1)) · wa^(1-k)
      * where b is the balance after the swap and a is the balance
      * before the swap.
      * @dev Always returns uint256. If oldBalance > newBalance,
@@ -223,41 +262,45 @@ contract CatalystSwapPoolAmplified is
 
         // Cache the relevant amplification
         int256 oneMinusAmp = int256(FixedPointMathLib.WAD - _amp);
+        uint256 weight = _weight[asset];
         // Notice, a > b => a^(1-k) > b^(1-k) =>
         // a <= b => a^(1-k) <= b^(1-k)
-        uint256 weight = _weight[asset];
         if (oldBalance < newBalance)
             // Since a^(1-k) > b^(1-k), the return is positive
-            return uint256(FixedPointMathLib.powWad(int256(weight * newBalance * FixedPointMathLib.WAD), oneMinusAmp) 
-                    - FixedPointMathLib.powWad(int256(weight * oldBalance * FixedPointMathLib.WAD), oneMinusAmp));
+            return uint256(FixedPointMathLib.powWad(
+                int256(weight * newBalance * FixedPointMathLib.WAD),
+                oneMinusAmp
+            ) - FixedPointMathLib.powWad(
+                int256(weight * oldBalance * FixedPointMathLib.WAD),
+                oneMinusAmp
+            ));
 
         // Since a^(1-k) > b^(1-k), the return is negative
         // Since the function returns uint256, return
         // b^(1-k) - a^(1-k) instead. (since that is positive)
-        return uint256(FixedPointMathLib.powWad(int256(weight * oldBalance * FixedPointMathLib.WAD), oneMinusAmp) 
-                - FixedPointMathLib.powWad(int256(weight * newBalance * FixedPointMathLib.WAD), oneMinusAmp));
+        return uint256(FixedPointMathLib.powWad(
+            int256(weight * oldBalance * FixedPointMathLib.WAD),
+            oneMinusAmp
+        ) - FixedPointMathLib.powWad(
+            int256(weight * newBalance * FixedPointMathLib.WAD),
+            oneMinusAmp
+        ));
     }
 
     //--- Swap integrals ---//
-    // Unlike the ordinary swaps, amplified swaps do not get simpler
-    // by approximating the curve.
-    // When deriving the SwapFromUnits equation, _out is not directly
-    // given. Instead it has to be solved. And depending on the complexity
-    // of the price curve, the solution to _out = ... is not simple.
 
     /**
-     * @notice Computes the integral
-     * \int_{A}^{A+in} W/w^k · (1-k) dw
-     *     = W · ( (A + _in)^(1-k) - A^(1-k) )
-     * The value is returned as units, which is always in X64.
-     * @dev All input amounts should be the raw numbers and not X64.
-     * Since units are always denominated in X64, the function
+     * @notice Computes the integral \int_{wA}^{wA+wx} 1/w^k · (1-k) dw
+     *     = (wA + wx)^(1-k) - wA^(1-k)
+     * The value is returned as units, which is always WAD.
+     * @dev All input amounts should be the raw numbers and not WAD.
+     * Since units are always denominated in WAD, the function
      * should be treated as mathematically *native*.
      * @param input The input amount.
-     * @param A The current pool balance.
-     * @param W The pool weight of the token.
+     * @param A The current pool balance of the x token.
+     * @param W The weight of the x token.
      * @param amp The amplification.
-     * @return uint256 Group specific units in X64 (units are **always** X64).
+     * @return uint256 Group specific units (units are **always** WAD).
      */
     function compute_integral(
         uint256 input,
@@ -265,28 +308,31 @@ contract CatalystSwapPoolAmplified is
         uint256 W,
         uint256 amp
     ) internal pure returns (uint256) {
-        int256 oneMinusAmp = int256(FixedPointMathLib.WAD - amp); // Minor gas saving :)
-        return uint256(FixedPointMathLib.powWad(int256(W * (A + input) * FixedPointMathLib.WAD), oneMinusAmp) 
-                - FixedPointMathLib.powWad(int256(W * A * FixedPointMathLib.WAD), oneMinusAmp));
+        int256 oneMinusAmp = int256(FixedPointMathLib.WAD - amp);
+
+        return uint256(FixedPointMathLib.powWad(
+            int256(W * (A + input) * FixedPointMathLib.WAD),
+            oneMinusAmp
+        ) - FixedPointMathLib.powWad(
+            int256(W * A * FixedPointMathLib.WAD),
+            oneMinusAmp
+        ));
     }
 
     /**
-     * @notice Solves the equation U = \int_{A-_out}^{A} W/w^k · (1-k) dw for _out
-     *     = B ·
-     *     (
-     *         1 - (
-     *             (W_B · B^(1-k) - U) / (W_B · B^(1-k))
+     * @notice Solves the equation U = \int_{wA-_wy}^{wA} W/w^k · (1-k) dw for y
+     *     = B · (1 - (
+     *             (wB^(1-k) - U) / (wB^(1-k))
      *         )^(1/(1-k))
      *     )
-     *
-     * The value is returned as output token.
-     * @dev All input amounts should be the raw numbers and not X64.
-     * Since units are always denominated in X64, the function
+     * The value is returned as output token. (not WAD)
+     * @dev All input amounts should be the raw numbers and not WAD.
+     * Since units are always multiplifed by WAD, the function
      * should be treated as mathematically *native*.
-     * @param U Input units. Is technically X64 but can be treated as not.
-     * @param B The current pool balance of the _out token.
-     * @param W The pool weight of the _out token.
-     * @return uint256 Output denominated in output token.
+     * @param U Incoming group specific units.
+     * @param B The current pool balance of the y token.
+     * @param W The weight of the y token.
+     * @return uint25 Output denominated in output token. (not WAD)
      */
     function solve_integral(
         uint256 U,
@@ -294,10 +340,12 @@ contract CatalystSwapPoolAmplified is
         uint256 W,
         uint256 amp
     ) internal pure returns (uint256) {
-        int256 oneMinusAmp = int256(FixedPointMathLib.WAD - amp); // Minor gas saving :)
+        int256 oneMinusAmp = int256(FixedPointMathLib.WAD - amp);
+
         // W_B · B^(1-k) is repeated twice and requires 1 power.
         // As a result, we compute it and cache.
         uint256 W_BxBtoOMA = uint256(FixedPointMathLib.powWad(int256(W * B * FixedPointMathLib.WAD), oneMinusAmp));
+
         return B * (FixedPointMathLib.WAD - uint256(FixedPointMathLib.powWad(
                     int256(FixedPointMathLib.divWadUp(W_BxBtoOMA - U, W_BxBtoOMA)),
                     int256(FixedPointMathLib.WAD * FixedPointMathLib.WAD / uint256(oneMinusAmp)))
@@ -305,20 +353,18 @@ contract CatalystSwapPoolAmplified is
     }
 
     /**
-     * @notice Solves the equation
-     *     \int_{A}^{A + _in} W_A/w^k · (1-k) dw = \int_{B-_out}^{B} W_B/w^k · (1-k) dw for _out
-     *         => out = B ·
-     *         (
-     *             1 - (
-     *                 (W_B · B^(1-k) - W_A · ((A+x)^(1-k) - A^(1-k)) / (W_B · B^(1-k))
+     * @notice !Unused! Solves the equation
+     *     \int_{wA}^{wA + wx} 1/w^k · (1-k) dw = \int_{wB-wy}^{wB} 1/w^k · (1-k) dw for y
+     *         => out = B · (1 - (
+     *                 (wB^(1-k) - (wA+wx)^(1-k) - wA^(1-k)) / (wB^(1-k))
      *             )^(1/(1-k))
      *         )
      *
      * Alternatively, the integral can be computed through:
-     *     _solve_integral(_compute_integral(input, A, W_A, amp), _B, _W_B, amp).
-     *     However, _complete_integral is very slightly cheaper since it doesn't
-     *     compute oneMinusAmp twice. :)
-     *     (Apart from that, the mathematical operations are the same.)
+     * _solve_integral(_compute_integral(input, A, W_A, amp), B, W_B, amp).
+     * However, _complete_integral is very slightly cheaper since it doesn't
+     * compute oneMinusAmp twice. :)
+     * (Apart from that, the mathematical operations are the same.)
      * @dev All input amounts should be the raw numbers and not X64.
      * @param input The input amount.
      * @param A The current pool balance of the _in token.
@@ -336,58 +382,75 @@ contract CatalystSwapPoolAmplified is
         uint256 W_B,
         uint256 amp
     ) internal pure returns (uint256) {
-        int256 oneMinusAmp = int256(FixedPointMathLib.WAD - amp); // Minor gas saving :)
-        uint256 W_BxBtoOMA = uint256(FixedPointMathLib.powWad(int256(W_B * B * FixedPointMathLib.WAD), oneMinusAmp));
-        uint256 U = uint256(FixedPointMathLib.powWad(int256(W_A * (A + input) * FixedPointMathLib.WAD), oneMinusAmp) 
-                    - FixedPointMathLib.powWad(int256(W_A * A * FixedPointMathLib.WAD), oneMinusAmp));
-        return B * (FixedPointMathLib.WAD - uint256(FixedPointMathLib.powWad(
-                    int256(FixedPointMathLib.divWadUp(W_BxBtoOMA - U, W_BxBtoOMA)),
-                    int256(FixedPointMathLib.WAD * FixedPointMathLib.WAD / uint256(oneMinusAmp)))
-                )) / FixedPointMathLib.WAD;
+        // int256 oneMinusAmp = int256(FixedPointMathLib.WAD - amp);
+        // uint256 W_BxBtoOMA = uint256(FixedPointMathLib.powWad(
+        //     int256(W_B * B * FixedPointMathLib.WAD),
+        //     oneMinusAmp
+        // ));
+
+        // uint256 U = uint256(FixedPointMathLib.powWad(
+        //     int256(W_A * (A + input) * FixedPointMathLib.WAD),
+        //     oneMinusAmp
+        // ) - FixedPointMathLib.powWad(
+        //     int256(W_A * A * FixedPointMathLib.WAD),
+        //     oneMinusAmp
+        // )); // compute_integral(input, A, W_A, amp)
+
+        // return B * (FixedPointMathLib.WAD - uint256(FixedPointMathLib.powWad(
+        //             int256(FixedPointMathLib.divWadUp(W_BxBtoOMA - U, W_BxBtoOMA)),
+        //             int256(FixedPointMathLib.WAD * FixedPointMathLib.WAD / uint256(oneMinusAmp)))
+        //         )) / FixedPointMathLib.WAD; // solve_integral
+        return solve_integral(compute_integral(input, A, W_A, amp), B, W_B, amp);
     }
 
     /**
-     * @notice Computes the return of a SwapToUnits, without executing one.
-     * @dev Unlike a non-amplified pool, there is not simple swap curve approximation for amplified pools.
+     * @notice Computes the return of SwapToUnits.
      * @param from The address of the token to sell.
-     * @param amount The amount of _from token to sell.
-     * @return uint256 Group specific units in X64 (units are **always** X64).
+     * @param amount The amount of from token to sell.
+     * @return uint256 Group specific units.
      */
-    function dry_swap_to_unit(address from, uint256 amount)
-        public
-        view
-        returns (uint256)
-    {
-        uint256 W = _weight[from];
+    function dry_swap_to_unit(
+        address from,
+        uint256 amount
+    ) public view returns (uint256) {
+        // A high => less units returned. Do not subtract the escrow amount
         uint256 A = IERC20(from).balanceOf(address(this));
+        uint256 W = _weight[from];
 
+        // If a token is not part of the pool, W is 0. This returns 0 since
+        // 0^p = 0.
         return compute_integral(amount, A, W, _amp);
     }
 
     /**
-     * @notice Computes the output of a SwapFromUnits, without executing one.
-     * @dev Unlike a non-amplified pool, there is not simple swap curve approximation for amplified pools.
+     * @notice Computes the output of SwapFromUnits.
      * @param to The address of the token to buy.
      * @param U The number of units used to buy to.
-     * @return uint256 Output denominated in output token.
+     * @return uint256 Number of purchased tokens.
      */
-    function dry_swap_from_unit(address to, uint256 U)
-        public
-        view
-        returns (uint256)
-    {
-        uint256 W = _weight[to];
+    function dry_swap_from_unit(
+        address to, 
+        uint256 U
+    ) public view returns (uint256) {
+        // A low => less tokens returned. Subtract the escrow amount to decrease the balance.
         uint256 B = IERC20(to).balanceOf(address(this)) - _escrowedTokens[to];
+        uint256 W = _weight[to];
 
+        // If someone were to purchase a token which is not part of the pool on setup
+        // they would just add value to the pool. We don't care about it.
+        // However, it will revert since the solved integral contains U/W and when
+        // W = 0 then U/W returns division by 0 error.
         return solve_integral(U, B, W, _amp);
     }
 
     /**
-     * @notice Computes the return of a SwapToAndFromUnits, without executing one.
+     * @notice Computes the output of SwapToAndFromUnits.
+     * @dev Implemented through solve_integral(compute_integral and not complete_integral.
      * @param from The address of the token to sell.
      * @param to The address of the token to buy.
-     * @param amount The amount of _from token to sell for to token.
-     * @return uint256 Output denominated in to token. */
+     * @param amount The amount of from token to sell for to token.
+     * @return Output denominated in to token.
+     */
     function dry_swap_both(
         address from,
         address to,
@@ -397,27 +460,29 @@ contract CatalystSwapPoolAmplified is
         uint256 B = IERC20(to).balanceOf(address(this)) - _escrowedTokens[to];
         uint256 W_A = _weight[from];
         uint256 W_B = _weight[to];
+        uint256 amp = _amp;
 
-        return complete_integral(amount, A, B, W_A, W_B, _amp);
+        return solve_integral(compute_integral(amount, A, W_A, amp), B, W_B, amp);
     }
 
     /**
-     * @notice Deposits a symmetrical number of tokens such that in 1:1 wpt_a are deposited. This doesn't change the pool price.
+     * @notice Deposits a user configurable amount of tokens.
      * @dev Requires approvals for all tokens within the pool.
+     * It is advised that the deposit matches the pool's %token distribution.
      * @param tokenAmounts An array of the tokens amounts to be deposited.
      * @param minOut The minimum number of pool tokens to be minted.
      */
-    function depositMixed(uint256[] calldata tokenAmounts, uint256 minOut)
-        external returns(uint256)
-    {
-        // Cache weights and balances.
+    function depositMixed(
+        uint256[] calldata tokenAmounts,
+        uint256 minOut
+    ) external returns(uint256) {
         int256 oneMinusAmp = int256(FixedPointMathLib.WAD - _amp);
 
         uint256 walpha_0_ampped;
         uint256 U;
         uint256 it;
-        // First, lets derive walpha_0. This lets us evaluate the number of tokens the pool should have
-        // If the price in the group is 1:1.
+        // First, lets derive walpha_0. This lets us evaluate the number of tokens
+        // the pool should have If the price in the group is 1:1.
         {
             int256 intU = 0;
             // We don't need weightedAssetBalanceSum again.
