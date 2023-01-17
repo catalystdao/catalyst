@@ -71,14 +71,14 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
      * If 0 of a token in init_assets is provided, the setup reverts.
      * @param init_assets A list of the token addresses associated with the pool
      * @param weights The weights associated with the tokens. 
-     *                If set to values with low resolotion (<= 10*5), this should be viewed as opt out of governance
-     *                weight adjustment. This is not enforced.
+     * If set to values with low resolotion (<= 10*5), this should be viewed as
+     * opt out of governance weight adjustment. This is not enforced.
      * @param amp Amplification factor. Set to 10**18 for this pool
      * @param governanceFee The Catalyst governance fee portion. Is WAD.
      * @param name_ pool token name.
      * @param symbol_ pool token symbol.
-     * @param chaininterface The message wrapper used by the pool. If set to ZERO_ADDRESS / address(0)
-                             This should be viewed as opt out of cross-chain swapping.
+     * @param chaininterface The message wrapper used by the pool.
+     * Set to ZERO_ADDRESS / address(0) to opt out of cross-chain swapping.
      * @param setupMaster The address responsible for setting up the pool.
      */
     function setup(
@@ -191,6 +191,7 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
         if (adjTarget != 0) {
             // We need to use lastModification again. Store it.
             uint256 lastModification = _lastModificationTime;
+            _lastModificationTime = block.timestamp;
 
             // If no time has passed since last update, then we don't need to update anything.
             if (block.timestamp == lastModification) return; 
@@ -209,7 +210,6 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
                 }
                 // Set weightAdjustmentTime to 0. This ensures the first if statement is never entered.
                 _adjustmentTarget = 0;
-                _lastModificationTime = block.timestamp;
 
                 uint256 target_max_unit_inflow = _target_max_unit_inflow;
                 // If the security limit was decreased, decrease it now.
@@ -219,6 +219,7 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
                 }
                 return;
             }
+
             // Calculate partial weight change
             for (uint256 it = 0; it < NUMASSETS; it++) {
                 address token = _tokenIndexing[it];
@@ -246,7 +247,6 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
                     ) / (adjTarget - lastModification);
                 }
             }
-            _lastModificationTime = block.timestamp;
         }
     }
 
@@ -268,7 +268,7 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 A,
         uint256 W
     ) internal pure returns (uint256) {
-        // Notice, A + in and A are WAD but divWadDown is used anyway.
+        // Notice, A + in and A are not WAD but divWadDown is used anyway.
         // That is because lnWad requires a scaled number.
         return W * uint256(FixedPointMathLib.lnWad(int256(FixedPointMathLib.divWadDown(A + input, A))));
     }
@@ -289,7 +289,9 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 B,
         uint256 W
     ) internal pure returns (uint256) {
-        return (B * (FixedPointMathLib.WAD - uint256(FixedPointMathLib.expWad(-int256(U / W))))) / FixedPointMathLib.WAD;
+        return (B * (FixedPointMathLib.WAD - uint256(FixedPointMathLib.expWad(
+            -int256(U / W)
+        )))) / FixedPointMathLib.WAD;
     }
 
     /**
@@ -318,7 +320,10 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
         // (A+input)/A >= 1 as in >= 0. As a result, invfpow should be used.
         // Notice, bigdiv64 is used twice on value not x64. This is because a x64
         // shifted valued is required for invfpow in both arguments.
-        uint256 U = FixedPointMathLib.WAD - uint256(FixedPointMathLib.powWad(int256(FixedPointMathLib.divWadDown(A + input, A)), int256(FixedPointMathLib.divWadDown(W_A, W_B))));
+        uint256 U = FixedPointMathLib.WAD - uint256(FixedPointMathLib.powWad(
+            int256(FixedPointMathLib.divWadDown(A + input, A)),
+            int256(FixedPointMathLib.divWadDown(W_A, W_B))
+        ));
         return (B * U) / FixedPointMathLib.WAD;
     }
 
@@ -342,7 +347,7 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
     }
 
     /**
-     * @notice Computes the return of SwapToUnits, without executing one.
+     * @notice Computes the return of SwapToUnits.
      * @param from The address of the token to sell.
      * @param amount The amount of from token to sell.
      * @return uint256 Group specific units.
@@ -361,7 +366,7 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
     }
 
     /**
-     * @notice Computes the output of SwapFromUnits, without executing one.
+     * @notice Computes the output of SwapFromUnits.
      * @param to The address of the token to buy.
      * @param U The number of units used to buy to.
      * @return uint256 Number of purchased tokens.
@@ -382,7 +387,7 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
     }
 
     /**
-     * @notice Computes the output of SwapToAndFromUnits, without executing one.
+     * @notice Computes the output of SwapToAndFromUnits.
      * @dev If the pool weights of the 2 tokens are equal, a very simple curve is used.
      * @param from The address of the token to sell.
      * @param to The address of the token to buy.
