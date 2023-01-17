@@ -1,10 +1,14 @@
 import pytest
-from brownie import ZERO_ADDRESS
+from brownie import (
+    ZERO_ADDRESS,
+    CatalystSwapPool,
+    CatalystSwapPoolAmplified
+)
 
 MAX_POOL_ASSETS = 3
 
 @pytest.fixture(scope="module")
-def deploy_pool(accounts, swap_factory, cross_chain_interface, swap_pool_class, deployer):
+def deploy_pool(accounts, swap_factory, cross_chain_interface, swap_pool_type, deployer):
     def _deploy_pool(
         tokens,
         token_balances,
@@ -14,15 +18,19 @@ def deploy_pool(accounts, swap_factory, cross_chain_interface, swap_pool_class, 
         symbol,
         deployer = deployer,
         only_local = False,
-        template_index = None,
-        swap_pool_class = swap_pool_class
+        template_index = None
     ):
         for i, token in enumerate(tokens):
             token.transfer(deployer, token_balances[i], {"from": accounts[0]})
             token.approve(swap_factory, token_balances[i], {"from": deployer})
 
         if template_index is None:
-            template_index = 0 if swap_pool_class == "volatile" else 1
+            if swap_pool_type == "volatile":
+                template_index = 0
+            elif swap_pool_type == "amplified":
+                template_index = 1
+            else:
+                raise Exception(f"Unknown swap_pool_type \'{swap_pool_type}\'.")
 
         tx = swap_factory.deploy_swappool(
             template_index,
@@ -36,7 +44,10 @@ def deploy_pool(accounts, swap_factory, cross_chain_interface, swap_pool_class, 
             {"from": deployer},
         )
 
-        return swap_pool_class.at(tx.return_value)
+        if template_index == 0:
+            return CatalystSwapPool.at(tx.return_value)
+        else:
+            return CatalystSwapPoolAmplified.at(tx.return_value)
 
     yield _deploy_pool
 
