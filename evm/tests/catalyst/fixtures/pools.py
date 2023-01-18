@@ -1,5 +1,6 @@
 import pytest
 from brownie import (
+    convert,
     ZERO_ADDRESS,
     CatalystSwapPool,
     CatalystSwapPoolAmplified
@@ -76,6 +77,11 @@ def amplification(request, raw_config, swap_pool_type):
         assert amplification < 10**18 and amplification > 0
 
         yield amplification
+
+
+@pytest.fixture(scope="module")
+def channel_id():
+    yield convert.to_bytes(1, type_str="bytes32")
 
 
 
@@ -197,6 +203,44 @@ def _verify_pool_config(config, max_pool_assets):
     assert "symbol" in config and isinstance(config["symbol"], str)
 
 
+
+
+# Pool Modifiers ****************************************************************************************************************
+
+@pytest.fixture(scope="module")
+def group_finish_setup(group_pools, deployer):
+    for pool in group_pools:
+        pool.finishSetup({"from": deployer})
+
+@pytest.fixture(scope="module")
+def group_connect_pools(group_pools, channel_id, deployer):
+
+    for source_pool in group_pools:
+        for target_pool in group_pools:
+
+            if source_pool == target_pool:
+                continue
+            
+            source_pool.createConnection(
+                channel_id,
+                convert.to_bytes(target_pool.address.replace("0x", "")),
+                True,
+                {"from": deployer}
+            )
+
+
+@pytest.fixture(scope="module")
+def pool_finish_setup(pool, deployer):
+    pool.finishSetup({"from": deployer})
+
+@pytest.fixture(scope="module")
+def pool_connect_itself(pool, channel_id, deployer):
+    pool.createConnection(
+        channel_id,
+        convert.to_bytes(pool.address.replace("0x", "")),
+        True,
+        {"from": deployer}
+    )
 
 
 # Pool Query and Calculations Helpers *******************************************************************************************
