@@ -72,12 +72,6 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
         bytes32 pool,
         bool state
     ) external returns (bool) {
-        require(
-            ISwapPoolFactory(_poolFactory).IsCreatedByFactory(
-                address(this),
-                msg.sender
-            )
-        ); // dev: Only factory pools.
         bytes32 msgSenderB32 = bytes32(abi.encodePacked(msg.sender));
 
         checkConnection[channelId][msgSenderB32][pool] = state;
@@ -120,12 +114,6 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
             215-216 _customDataLength : uint16  # If custom data is passed.
             217-248+_customDataLength-1 _customData : bytes...
         */
-        require(
-            ISwapPoolFactory(_poolFactory).IsCreatedByFactory(
-                address(this),
-                msg.sender
-            )
-        ); // dev: Only factory pools.
 
         bytes memory preparedCalldata = abi.encodePacked(
             uint16(calldata_.length),
@@ -148,9 +136,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
             uint8(targetAssetIndex),
             minOut,
             preparedEscrowAndCalldata,
-            uint32(block.number % 2**32) // TODO: Considering the "randomness" of U, does this even make sense?
-            // TODO: The only way to find a collision is by deliberately making 2 very similar transactions.
-            // TODO: Which is a waste of gas.
+            uint32(block.number % 2**32) // Makes all hashes unique. (Since the hash contains msg.sender, targetPool and blocknumber)
         );
         // abi.encode allways encodes to 32 bytes.
         // abi.encodePacked encodes in the smallest possible bytes.
@@ -194,12 +180,6 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
             130-161 _minOut : uint256
             162-193 _escrowAmount : uint256
         */
-        require(
-            ISwapPoolFactory(_poolFactory).IsCreatedByFactory(
-                address(this),
-                msg.sender
-            )
-        ); // dev: Only factory pools.
 
         // require(
         //     checkConnection[channelId][bytes32(abi.encodePacked(msg.sender))][
@@ -219,9 +199,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
             minOut,
             escrowInformation.poolTokens,
             uint8(0),
-            uint32(block.number % 2**32) // TODO: Considering the "randomness" of U, does this even make sense?
-            // TODO: The only way to find a collision is by deliberately making 2 very similar transactions.
-            // TODO: Which is a waste of gas.
+            uint32(block.number % 2**32) // Makes all hashes unique. (Since the hash contains msg.sender, targetPool and blocknumber)
         );
         // abi.encode always encodes to 32 bytes.
         // abi.encodePacked encodes in the smallest possible bytes.
