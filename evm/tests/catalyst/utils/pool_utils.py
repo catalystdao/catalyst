@@ -1,6 +1,5 @@
 import pytest
 from decimal import Decimal
-from math import exp, log
 from functools import reduce
 
 # The following mathematical functions are implemented with full precision, rather than mirroring the exact contract implementation
@@ -84,12 +83,11 @@ def compute_expected_swap(
         }
     
     # Volatile pools
-
-    U = w_a * log((a + x)/a)
+    U = w_a * ((a + x)/a).ln()
 
     return {
         'U': int(U * 10**18),
-        'output': int(b * (1 - exp(-U/w_b)))
+        'output': int(b * (1 - (-U/w_b).exp()))
     }
 
 
@@ -109,7 +107,7 @@ def compute_expected_swap_given_U(U, to_weight, to_balance, amp):
         return int(b*w_b * (1 - ((b_amp - U)/(b_amp))**(1/(1-amp))))
     
     # Volatile pools
-    return int(b * (1 - exp(-U/w_b)))
+    return int(b * (1 - (-U/w_b).exp()))
 
 
 
@@ -161,7 +159,7 @@ def compute_expected_liquidity_swap(
     from_w_sum = Decimal(sum(from_weights))
     to_w_sum   = Decimal(sum(to_weights))
 
-    U = Decimal(log(ts_a/(ts_a-pt))) * from_w_sum
+    U = Decimal((ts_a/(ts_a-pt)).ln()) * from_w_sum
     
     share = Decimal(1) - Decimal(2)**(-U/to_w_sum)
 
@@ -191,7 +189,7 @@ def compute_withdraw_to_U(withdraw_amount, weights, balances, total_supply, unit
         return int((N * walpha**one_minus_amp * ((1 + y/ts)**one_minus_amp - 1)) * Decimal(10**18))
     
     # Volatile pools
-    return int(log(ts/(ts-y))*sum(weights) * Decimal(10**18))
+    return int((ts/(ts-y)).ln()*sum(weights) * Decimal(10**18))
 
 
 
