@@ -415,7 +415,7 @@ def compute_expected_local_swap(
             to_token.balanceOf(pool),
             pool_amp,
             pool_amp
-        )
+        )['output']
     
     yield _compute_expected_local_swap
 
