@@ -5,6 +5,9 @@ from brownie import (
     CatalystSwapPoolAmplified
 )
 
+import tests.catalyst.utils.pool_utils as pool_utils
+from tests.catalyst.utils.pool_utils import compute_balance_0, compute_invariant
+
 MAX_POOL_ASSETS = 3
 
 @pytest.fixture(scope="module")
@@ -192,3 +195,272 @@ def _verify_pool_config(config, max_pool_assets):
     assert "weights" in config and len(config["weights"]) == len(config["tokens"])
     assert "name" in config and isinstance(config["name"], str)
     assert "symbol" in config and isinstance(config["symbol"], str)
+
+
+
+
+# Pool Query and Calculations Helpers *******************************************************************************************
+
+# Weights
+
+@pytest.fixture(scope="module")
+def get_pool_weights(pool, pool_tokens):
+    def _get_pool_weights():
+        return [pool._weight(token) for token in pool_tokens]
+    
+    yield _get_pool_weights
+
+@pytest.fixture(scope="module")
+def get_source_pool_weights(source_pool, source_pool_tokens):
+    def _get_source_source_pool_weights():
+        return [source_pool._weight(token) for token in source_pool_tokens]
+    
+    yield _get_source_source_pool_weights
+
+@pytest.fixture(scope="module")
+def get_target_pool_weights(target_pool, target_pool_tokens):
+    def _get_target_pool_weights():
+        return [target_pool._weight(token) for token in target_pool_tokens]
+    
+    yield _get_target_pool_weights
+
+
+
+# Token Balances
+
+@pytest.fixture(scope="module")
+def get_pool_balances(pool, pool_tokens):
+    def _get_pool_balances():
+        return [token.balanceOf(pool) for token in pool_tokens]
+    
+    yield _get_pool_balances
+
+@pytest.fixture(scope="module")
+def get_source_pool_balances(source_pool, source_pool_tokens):
+    def _get_source_source_pool_balances():
+        return [token.balanceOf(source_pool) for token in source_pool_tokens]
+    
+    yield _get_source_source_pool_balances
+
+@pytest.fixture(scope="module")
+def get_target_pool_balances(target_pool, target_pool_tokens):
+    def _get_target_pool_balances():
+        return [token.balanceOf(target_pool) for token in target_pool_tokens]
+    
+    yield _get_target_pool_balances
+
+
+
+# Amplification
+
+@pytest.fixture(scope="module")
+def get_pool_amp(pool):
+    def _get_pool_amp():
+        try:
+            amp = pool._amp()   # Amplified pools
+        except AttributeError:
+            amp = 10**18        # Volatile pools
+
+        return amp
+    
+    yield _get_pool_amp
+
+@pytest.fixture(scope="module")
+def get_source_pool_amp(source_pool):
+    def _get_source_source_pool_amp():
+        try:
+            amp = source_pool._amp()   # Amplified pools
+        except AttributeError:
+            amp = 10**18               # Volatile pools
+
+        return amp
+    
+    yield _get_source_source_pool_amp
+
+@pytest.fixture(scope="module")
+def get_target_pool_amp(target_pool):
+    def _get_target_pool_amp():
+        try:
+            amp = target_pool._amp()   # Amplified pools
+        except AttributeError:
+            amp = 10**18               # Volatile pools
+
+        return amp
+    
+    yield _get_target_pool_amp
+
+
+
+# Unit Tracker
+
+@pytest.fixture(scope="module")
+def get_pool_unit_tracker(pool):
+    def _get_pool_unit_tracker():
+        return pool._unitTracker()
+    
+    yield _get_pool_unit_tracker
+
+@pytest.fixture(scope="module")
+def get_source_pool_unit_tracker(source_pool):
+    def _get_source_source_pool_unit_tracker():
+        return source_pool._unitTracker()
+    
+    yield _get_source_source_pool_unit_tracker
+
+@pytest.fixture(scope="module")
+def get_target_pool_unit_tracker(target_pool):
+    def _get_target_pool_unit_tracker():
+        return target_pool._unitTracker()
+    
+    yield _get_target_pool_unit_tracker
+
+
+
+# Invariant
+
+@pytest.fixture(scope="module")
+def get_pool_invariant(get_pool_weights, get_pool_balances, get_pool_amp):
+    def _get_pool_invariant():
+        return compute_invariant(get_pool_weights(), get_pool_balances(), get_pool_amp())
+
+    yield _get_pool_invariant
+
+@pytest.fixture(scope="module")
+def get_source_pool_invariant(get_source_pool_weights, get_source_pool_balances, get_source_pool_amp):
+    def _get_source_pool_invariant():
+        return compute_invariant(get_source_pool_weights(), get_source_pool_balances(), get_source_pool_amp())
+
+    yield _get_source_pool_invariant
+
+@pytest.fixture(scope="module")
+def get_target_pool_invariant(get_target_pool_weights, get_target_pool_balances, get_target_pool_amp):
+    def _get_target_pool_invariant():
+        return compute_invariant(get_target_pool_weights(), get_target_pool_balances(), get_target_pool_amp())
+
+    yield _get_target_pool_invariant
+
+
+
+# Balance 0 (Only Amplified!)
+
+@pytest.fixture(scope="module")
+def get_pool_balance_0(get_pool_weights, get_pool_balances, get_pool_unit_tracker, get_pool_amp):
+    def _get_pool_balance_0():
+        return compute_balance_0(
+            get_pool_weights(),
+            get_pool_balances(),
+            get_pool_unit_tracker(),
+            get_pool_amp()
+        )
+
+    yield _get_pool_balance_0
+
+@pytest.fixture(scope="module")
+def get_source_pool_balance_0(
+    get_source_pool_weights,
+    get_source_pool_balances,
+    get_source_pool_unit_tracker,
+    get_source_pool_amp
+):
+    def _get_source_pool_balance_0():
+        return compute_balance_0(
+            get_source_pool_weights(),
+            get_source_pool_balances(),
+            get_source_pool_unit_tracker(),
+            get_source_pool_amp()
+        )
+
+    yield _get_source_pool_balance_0
+
+@pytest.fixture(scope="module")
+def get_target_pool_balance_0(
+    get_target_pool_weights,
+    get_target_pool_balances,
+    get_target_pool_unit_tracker,
+    get_target_pool_amp
+):
+    def _get_target_pool_balance_0():
+        return compute_balance_0(
+            get_target_pool_weights(),
+            get_target_pool_balances(),
+            get_target_pool_unit_tracker(),
+            get_target_pool_amp()
+        )
+
+    yield _get_target_pool_balance_0
+
+
+
+
+# Swap Calculations Helpers *****************************************************************************************************
+
+# NOTE: this fixture is only expected to be used on tests that include the fixture 'pool'
+@pytest.fixture(scope="module")
+def compute_expected_local_swap(
+    pool,
+    get_pool_amp
+):
+    def _compute_expected_local_swap(
+        swap_amount,
+        from_token,
+        to_token
+    ):
+        pool_amp = get_pool_amp()
+
+        return pool_utils.compute_expected_swap(
+            swap_amount,
+            pool._weight(from_token),
+            from_token.balanceOf(pool),
+            pool._weight(to_token),
+            to_token.balanceOf(pool),
+            pool_amp,
+            pool_amp
+        )
+    
+    yield _compute_expected_local_swap
+
+
+# NOTE: this fixture is only expected to be used on tests that include the fixtures 'source_pool' and 'target_pool'
+@pytest.fixture(scope="module")
+def compute_expected_swap(
+    source_pool,
+    target_pool,
+    get_source_pool_amp,
+    get_target_pool_amp
+):
+    def _compute_expected_swap(
+        swap_amount,
+        from_token,
+        to_token
+    ):
+        return pool_utils.compute_expected_swap(
+            swap_amount,
+            source_pool._weight(from_token),
+            from_token.balanceOf(source_pool),
+            target_pool._weight(to_token),
+            to_token.balanceOf(target_pool),
+            get_source_pool_amp(),
+            get_target_pool_amp()
+        )
+    
+    yield _compute_expected_swap
+
+
+# NOTE: this fixture is only expected to be used on tests that include the fixture 'target_pool'
+@pytest.fixture(scope="module")
+def compute_expected_swap_given_U(
+    target_pool,
+    get_target_pool_amp
+):
+    def _compute_expected_swap_given_U(
+        U,
+        to_token
+    ):
+        return pool_utils.compute_expected_swap_given_U(
+            U,
+            target_pool._weight(to_token),
+            to_token.balanceOf(target_pool),
+            get_target_pool_amp()
+        )
+    
+    yield _compute_expected_swap_given_U
