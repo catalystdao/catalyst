@@ -52,7 +52,7 @@ def compute_expected_swap(
     amp,
     to_amp = None       # Allow to specify a different amplification value for the target pool
 ):
-    if to_amp is not None:
+    if to_amp is not None and amp != to_amp:
         #TODO implement amp/to_amp distinction
         raise Exception("to_amp NOT IMPLEMENTED YET")
 
@@ -131,7 +131,7 @@ def compute_expected_liquidity_swap(
     amp,
     to_amp = None       # Allow to specify a different amplification value for the target pool
 ):
-    if to_amp is not None:
+    if to_amp is not None and amp != to_amp:
         #TODO implement amp/to_amp distinction
         raise Exception("to_amp NOT IMPLEMENTED YET")
 
