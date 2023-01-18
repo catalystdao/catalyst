@@ -84,8 +84,6 @@ def compute_expected_swap(
         }
     
     # Volatile pools
-    if w_a == w_b:
-        return int((b*x)/(a+x))
 
     U = w_a * log((a + x)/a)
 
