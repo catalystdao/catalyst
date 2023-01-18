@@ -441,13 +441,16 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
              // A high => less units returned. Do not subtract the escrow amount
             uint256 At = IERC20(token).balanceOf(address(this)) - tokenAmounts[it];
 
+            // Save gas if the user provides no tokens.
+            if (tokenAmounts[it] == 0) continue;
+
             U += compute_integral(tokenAmounts[it], At, weight);
 
             IERC20(token).safeTransferFrom(
                 msg.sender,
                 address(this),
                 tokenAmounts[it]
-            ); // dev: User doesn't have enough tokens;
+            ); // dev: Token withdrawal from user failed.
         }
 
         uint256 poolTokens = (initial_totalSupply * arbitrary_solve_integral(U, WSUM)) / FixedPointMathLib.WAD;
@@ -471,9 +474,10 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
      * @param poolTokens The number of pool tokens to burn.
      * @param minOut The minimum token output. If less is returned, the tranasction reverts.
      */
-    function withdrawAll(uint256 poolTokens, uint256[] calldata minOut)
-        nonReentrant() external returns(uint256[] memory)
-    {
+    function withdrawAll(
+        uint256 poolTokens,
+        uint256[] calldata minOut
+    ) nonReentrant() external returns(uint256[] memory) {
         // Cache totalSupply. This saves up to ~200 gas.
         uint256 initial_totalSupply = totalSupply() + _escrowedPoolTokens;
 
@@ -742,9 +746,9 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 minOut,
         bytes32 messageHash
     ) public returns (uint256) {
-        _W();
         // The chaininterface is the only valid caller of this function.
         require(msg.sender == _chaininterface);
+        _W();
 
         // Convert the asset index (toAsset) into the asset to be purchased.
         address toAsset = _tokenIndexing[toAssetIndex];
@@ -898,9 +902,9 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 minOut,
         bytes32 messageHash
     ) external returns (uint256) {
-        _W();
         // The chaininterface is the only valid caller of this function.
         require(msg.sender == _chaininterface);
+        _W();
 
         // Check if the swap is according to the swap limits
         checkAndSetUnitCapacity(U);
