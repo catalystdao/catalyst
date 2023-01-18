@@ -38,8 +38,8 @@ def swapfactory(deployer, swappool_template, amplifiedswappool_template):
 
 
 @pytest.fixture(scope="module")
-def crosschaininterface(deployer, swapfactory, ibcemulator):
-    cci = deployer.deploy(CatalystIBCInterface, swapfactory, ibcemulator)
+def crosschaininterface(deployer, ibcemulator):
+    cci = deployer.deploy(CatalystIBCInterface, ibcemulator)
     cci.registerPort({"from": deployer})  # register port 1
     cci.registerPort({"from": deployer})  # register port 2
 

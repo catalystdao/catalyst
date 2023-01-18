@@ -37,8 +37,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
 
     uint256 constant MAXIMUM_TIME_FOR_TX = 60 * 60; // One hour.
 
-    address public immutable PolymeraseDispatcher;
-    address public _poolFactory;
+    address public immutable IBCDispatcher;
     mapping(address => bool) public validArriver;
 
     // Usage: assert self.checkConnection[chainID][from][target]
@@ -50,17 +49,15 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
     address public immutable _calldataRouter;
 
     constructor(
-        address factory,
-        address polymeraseDispatcher
+        address IBCDispatcher_
     ) {
-        _poolFactory = factory;
-        PolymeraseDispatcher = polymeraseDispatcher;
-        validArriver[polymeraseDispatcher] = true;
+        IBCDispatcher = IBCDispatcher_;
+        validArriver[IBCDispatcher] = true;
         _calldataRouter = address(0);
     }
 
     function registerPort() external onlyOwner {
-        IbcDispatcher(PolymeraseDispatcher).registerPort();
+        IbcDispatcher(IBCDispatcher).registerPort();
     }
 
     function chain_id() external view returns (uint256) {
@@ -143,7 +140,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
         // 32 bytes are reserved for addresses (for chain compatibility)..
         // Ethereum addresses only use 20 bytes, so abi.encodePacked returns 20 bytes where abi.encode returns 32 bytes.
 
-        IbcDispatcher(PolymeraseDispatcher).sendIbcPacket(
+        IbcDispatcher(IBCDispatcher).sendIbcPacket(
             channelId,
             data,
             uint64(block.timestamp + MAXIMUM_TIME_FOR_TX)
@@ -206,7 +203,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
         // 32 bytes are reserved for addresses (for chain compatibility).
         // Ethereum addresses only use 20 bytes, so abi.encodePacked returns 20 bytes where abi.encode returns 32 bytes.
 
-        IbcDispatcher(PolymeraseDispatcher).sendIbcPacket(
+        IbcDispatcher(IBCDispatcher).sendIbcPacket(
             channelId,
             data,
             uint64(block.timestamp + MAXIMUM_TIME_FOR_TX)
