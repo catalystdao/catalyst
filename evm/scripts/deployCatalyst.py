@@ -66,8 +66,7 @@ class Catalyst:
         )
 
     def _crosschaininterface(self):
-        self.crosschaininterface = CatalystIBCInterface.deploy(
-            self.swapFactory, self.ibcinterface, {"from": self.deployer}
+        self.crosschaininterface = CatalystIBCInterface.deploy(self.ibcinterface, {"from": self.deployer}
         )
 
     def deploy_swappool(
