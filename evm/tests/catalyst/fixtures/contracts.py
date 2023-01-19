@@ -31,8 +31,8 @@ def swap_factory(deployer, volatile_swap_pool_template, amplified_swap_pool_temp
     )
 
 @pytest.fixture(scope="module")
-def cross_chain_interface(deployer, swap_factory, ibc_emulator):
-    cci = deployer.deploy(CatalystIBCInterface, swap_factory, ibc_emulator)
+def cross_chain_interface(deployer, ibc_emulator):
+    cci = deployer.deploy(CatalystIBCInterface, ibc_emulator)
     cci.registerPort({"from": deployer})  # register port 1
     cci.registerPort({"from": deployer})  # register port 2
 
