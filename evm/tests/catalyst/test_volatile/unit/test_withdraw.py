@@ -5,6 +5,7 @@ from brownie.test import given, strategy
 
 # This function compares the output difference between withdrawAll and withdrawMixed
 @given(percentage=strategy("uint256", min_value=100, max_value=10000))
+@pytest.mark.no_call_coverage
 def test_withdrawall(pool, pool_tokens, berg, deployer, percentage):
     percentage /= 10000
     
@@ -24,6 +25,7 @@ def test_withdrawall(pool, pool_tokens, berg, deployer, percentage):
 
 # This function compares the output difference between withdrawAll and withdrawMixed
 @given(percentage=strategy("uint256", min_value=100, max_value=10000))
+@pytest.mark.no_call_coverage
 def test_compare_withdrawall_and_withdrawmixed(pool, pool_tokens, berg, deployer, percentage):
     percentage /= 10000
     

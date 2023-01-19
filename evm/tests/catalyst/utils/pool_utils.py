@@ -102,9 +102,9 @@ def compute_expected_swap_given_U(U, to_weight, to_balance, amp):
 
         amp /= Decimal(10**18)
 
-        b_amp = b**(1-amp)
+        b_amp = (b * w_b)**(1-amp)
         
-        return int(b*w_b * (1 - ((b_amp - U)/(b_amp))**(1/(1-amp))))
+        return int(b * (1 - ((b_amp - U)/(b_amp))**(1/(1-amp))))
     
     # Volatile pools
     return int(b * (1 - (-U/w_b).exp()))
@@ -173,10 +173,11 @@ def compute_expected_liquidity_swap(
 
 # Deposit/Withdraw Utils ********************************************************************************************************
 
-def compute_withdraw_to_U(withdraw_amount, weights, balances, total_supply, unit_tracker, amp):
+def compute_equal_withdrawal(withdraw_amount, weights, balances, total_supply, amp, unit_tracker=0):
     
-    y = Decimal(withdraw_amount)
+    pt = Decimal(withdraw_amount)
     ts = Decimal(total_supply)
+    balances = [Decimal(b) for b in balances]
 
     # Amplified pools
     if amp != 10**18:
@@ -184,12 +185,14 @@ def compute_withdraw_to_U(withdraw_amount, weights, balances, total_supply, unit
         one_minus_amp = Decimal(1) - amp
     
         walpha = compute_balance_0(weights, balances, unit_tracker, amp)
+        balances = [Decimal(b * w) for b, w in zip(balances, weights)]
+        inner = ((ts + pt)/ts)**one_minus_amp - 1
+        inner *= walpha**one_minus_amp
         
-        N = Decimal(len(balances))
-        return int((N * walpha**one_minus_amp * ((1 + y/ts)**one_minus_amp - 1)) * Decimal(10**18))
+        return [int((b**one_minus_amp + inner)**(Decimal(1)/one_minus_amp) - b) // w for b, w in zip(balances, weights)]
     
     # Volatile pools
-    return int((ts/(ts-y)).ln()*sum(weights) * Decimal(10**18))
+    return [int(balance * pt / ts) for balance in balances]
 
 
 
