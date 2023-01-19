@@ -48,6 +48,12 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
     //--- Config ---//
     // Minimum time parameter adjustments can be made with.
     uint256 constant MIN_ADJUSTMENT_TIME = 60 * 60 * 24 * 7;
+    // When the swap is a very small size of the pool, the swaps
+    // returns slightly more. To counteract this, an additional fee
+    // slightly larger than the error is added. The below constants
+    // determines when this fee is added and the size.
+    uint256 constant SMALL_SWAP_SIZE = 10**12;
+    uint256 constant SMALL_SWAP_RETURN = 95*10**18/100;
 
     // For other config options, see SwapPoolCommon.sol
 
@@ -417,9 +423,16 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 A = IERC20(from).balanceOf(address(this));
         uint256 W = _weight[from];
 
+
         // If a token is not part of the pool, W is 0. This returns 0 since
         // 0^p = 0.
-        return compute_integral(amount, A, W, _amp);
+        uint256 U = compute_integral(amount, A, W, _amp);
+
+        // If the swap is a very small portion of the pool
+        // Add an additional fee. This covers mathematical errors.
+        if (A/SMALL_SWAP_SIZE >= amount) return U * SMALL_SWAP_RETURN / FixedPointMathLib.WAD;
+        
+        return U;
     }
 
     /**
@@ -462,7 +475,14 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 W_B = _weight[to];
         uint256 amp = _amp;
 
-        return solve_integral(compute_integral(amount, A, W_A, amp), B, W_B, amp);
+        // return complete_integral(amount, A, B, W_A, W_B, amp);
+        uint256 output = solve_integral(compute_integral(amount, A, W_A, amp), B, W_B, amp);
+
+        // If the swap is a very small portion of the pool
+        // Add an additional fee. This covers mathematical errors.
+        if (A/SMALL_SWAP_SIZE >= amount) return output * SMALL_SWAP_RETURN / FixedPointMathLib.WAD;
+
+        return output;
     }
 
     /**
@@ -535,6 +555,11 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
             // Compute the reference liquidity.
             walpha_0_ampped = uint256(int256(weightedAssetBalanceSum) - _unitTracker) / it;
         }
+
+        // Subtract fee from U. This stops people from using deposit and withdrawal as method of swapping.
+        // To reduce costs, there the governance fee is not included. This does result in deposit+withdrawal
+        // working as a way to circumvent the governance fee.
+        U = int256(FixedPointMathLib.mulWadDown(uint256(U), FixedPointMathLib.WAD - _poolFee));
 
         uint256 walpha_0 = uint256(FixedPointMathLib.powWad(
             int256(walpha_0_ampped),
@@ -636,7 +661,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                 uint256 pt_fraction = ((ts + poolTokens) * FixedPointMathLib.WAD) / ts;
 
                 // The reduced equation:
-                innerdiff = FixedPointMathLib.mulWadUp(
+                innerdiff = FixedPointMathLib.mulWadDown(
                     walpha_0_ampped, 
                     uint256(FixedPointMathLib.powWad(
                         int256(pt_fraction),
