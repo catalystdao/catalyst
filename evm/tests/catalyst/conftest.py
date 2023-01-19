@@ -20,8 +20,7 @@ _test_config = {
 _run_unit_tests        = False
 _run_integration_tests = False
 
-_source_target_combinations_volatile  = []
-_source_target_combinations_amplified = []
+_source_target_combinations = []
 
 
 # Enable test isolation
@@ -75,8 +74,7 @@ def pytest_addoption(parser):
 def pytest_configure(config):
     global _run_unit_tests
     global _run_integration_tests
-    global _source_target_combinations_volatile
-    global _source_target_combinations_amplified
+    global _source_target_combinations
 
     # Note that if "--volatile" nor "--amplified" are specified, all tests will run
     run_all_tests = not config.getoption("--volatile") and not config.getoption("--amplified")
@@ -108,13 +106,6 @@ def pytest_configure(config):
     
         with vol_config_path.open() as f:
             _test_config["volatile"] = json.load(f)
-        
-        # Compute the source-target pool combinations (indexes only)
-        _source_target_combinations_volatile = compute_pool_combinations(
-            config.getoption("--source-pool"),
-            config.getoption("--target-pool"),
-            len(_test_config["volatile"]["pools"])
-        )
     
     
     if run_amp_tests:
@@ -129,13 +120,21 @@ def pytest_configure(config):
     
         with amp_config_path.open() as f:
             _test_config["amplified"] = json.load(f)
-        
-        # Compute the source-target pool combinations (indexes only)
-        _source_target_combinations_amplified = compute_pool_combinations(
-            config.getoption("--source-pool"),
-            config.getoption("--target-pool"),
-            len(_test_config["amplified"]["pools"])
-        )
+
+
+    # If both volatile and amplified configurations are loaded within the same test run, they must contain
+    # the same number of pools, otherwise user defined --source-pool and --target-pool may work for one of 
+    # the configurations but not for the other.
+    if run_vol_tests and run_amp_tests and \
+    len(_test_config["volatile"]["pools"]) != len(_test_config["amplified"]["pools"]):
+        raise Exception(f"The number of pools defined in {config_name}.json for both volatile and amplified definitions must match.")
+    
+    # Compute the source-target pool combinations (indexes only)
+    _source_target_combinations = compute_pool_combinations(
+        config.getoption("--source-pool"),
+        config.getoption("--target-pool"),
+        len((_test_config["volatile"] or _test_config["amplified"])["pools"])        # 'or' as 'volatile' config may be None (but in that case 'amplified' is not)
+    )
 
 
 def pytest_report_header(config):
@@ -236,11 +235,7 @@ def pytest_generate_tests(metafunc):
                     "target_index": indexes[1]
                 }
                 for config in configs
-                for indexes in (
-                    _source_target_combinations_volatile 
-                        if config["swap_pool_type"] == "volatile" 
-                        else _source_target_combinations_amplified
-                )
+                for indexes in _source_target_combinations
             ]
         
         else:
