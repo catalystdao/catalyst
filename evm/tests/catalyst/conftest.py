@@ -170,7 +170,7 @@ def pytest_ignore_collect(path, config):
     rel_test_path = test_path.relative_to(project_path).parts[2:]   # Ignore the first two 'parts' of the test path, as the tests are under './tests/catalyst'
 
 
-    if len(rel_test_path) == 0: return False    # Accept all tests on the root path (mostly for dev purposes, as no tests are planned to be there)
+    if len(rel_test_path) == 0: return None    # Accept all tests on the root path (mostly for dev purposes, as no tests are planned to be there)
 
 
     if rel_test_path[0] == "test_volatile" and _test_config["volatile"] is None:
@@ -179,7 +179,7 @@ def pytest_ignore_collect(path, config):
     if rel_test_path[0] == "test_amplified" and _test_config["amplified"] is None:
         return True
 
-    if len(rel_test_path) == 1: return False    # Accept any other tests not catched by the conditions above (with path length == 1)
+    if len(rel_test_path) == 1: return None    # Accept any other tests not catched by the conditions above (with path length == 1)
 
 
     if rel_test_path[1] == "unit" and not _run_unit_tests:
