@@ -197,41 +197,56 @@ def pytest_generate_tests(metafunc):
     test_path     = Path(metafunc.definition.fspath)
     rel_test_path = test_path.relative_to(project_path).parts[2:]   # Ignore the first two 'parts' of the test path, as the tests are under './tests/catalyst'
 
-    if rel_test_path[0] == "test_volatile":
-        config = _test_config["volatile"]
-        swap_pool_type = "volatile"
-        source_target_indexes = _source_target_combinations_volatile
+    configs = []
 
-    elif rel_test_path[0] == "test_amplified":
-        config = _test_config["amplified"]
-        swap_pool_type = "amplified"
-        source_target_indexes = _source_target_combinations_amplified
+    path_ref = rel_test_path[0]
+    if (path_ref == "test_volatile" or path_ref == "test_common") and _test_config["volatile"] is not None:
+        configs.append({
+            **_test_config["volatile"],
+            "swap_pool_type": "volatile",
+        })
+
+    if (path_ref == "test_amplified" or path_ref == "test_common") and _test_config["amplified"] is not None:
+        configs.append({
+            **_test_config["amplified"],
+            "swap_pool_type": "amplified",
+        })
 
 
-    if "swap_pool_type" in metafunc.fixturenames:
-        metafunc.parametrize("swap_pool_type", [swap_pool_type], scope="session")
 
     if "raw_config" in metafunc.fixturenames:
-        metafunc.parametrize("raw_config", [config], indirect=True, scope="session")
 
-    if "raw_pool_config" in metafunc.fixturenames:
-        metafunc.parametrize("raw_pool_config", config["pools"], indirect=True, scope="session")
-    
-    if "source_target_indexes" in metafunc.fixturenames:
-        metafunc.parametrize("source_target_indexes", source_target_indexes, scope="session")
-    
+        # For single-pool tests
+        if "pool_index" in metafunc.fixturenames:
+            parametrized_configs = [
+                {
+                    **config,
+                    "pool_index": i
+                }
+                for config in configs
+                for i in range(len(config["pools"]))
+            ]
 
+        # For dual-pool tests (i.e 'source_pool_index' + 'target_pool_index' combos)
+        elif "source_pool_index" in metafunc.fixturenames:
+            parametrized_configs = [
+                {
+                    **config,
+                    "source_index": indexes[0],
+                    "target_index": indexes[1]
+                }
+                for config in configs
+                for indexes in (
+                    _source_target_combinations_volatile 
+                        if config["swap_pool_type"] == "volatile" 
+                        else _source_target_combinations_amplified
+                )
+            ]
+        
+        else:
+            parametrized_configs = [*configs]
 
-# Main parametrized fixture to expose the entire test_config as selected by the user
-@pytest.fixture(scope="session")
-def raw_config(request):
-    yield request.param
-
-
-# Main parametrized fixture to expose each pool from test_config as selected by the user
-@pytest.fixture(scope="session")
-def raw_pool_config(request):
-    yield request.param
+        metafunc.parametrize("raw_config", parametrized_configs, scope="session")
 
 
 

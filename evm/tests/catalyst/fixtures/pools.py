@@ -63,6 +63,11 @@ def max_pool_assets():
 
 
 @pytest.fixture(scope="module")
+def swap_pool_type(raw_config):
+    yield raw_config["swap_pool_type"]
+
+
+@pytest.fixture(scope="module")
 def amplification(request, raw_config, swap_pool_type):
 
     if swap_pool_type == "volatile":
@@ -87,7 +92,6 @@ def channel_id():
 
 # 'group_' fixtures
 # Each of these expose info on ALL the pools defined on the loaded test config file
-# (i.e. they ARE NOT parametrized for every single pool defined on the test config file)
 
 @pytest.fixture(scope="module")
 def group_config(raw_config, amplification, max_pool_assets):
@@ -135,63 +139,62 @@ def group_pools(group_config, group_tokens, deploy_pool, deployer):
     ]
 
 
-@pytest.fixture(scope="module")
-def source_pool(group_pools, source_target_indexes):
-    yield group_pools[source_target_indexes[0]]
 
+# Single pool parametrized fixtures
 
 @pytest.fixture(scope="module")
-def source_pool_tokens(group_tokens, source_target_indexes):
-    yield group_tokens[source_target_indexes[0]]
-
-
-@pytest.fixture(scope="module")
-def target_pool(group_pools, source_target_indexes):
-    yield group_pools[source_target_indexes[1]]
-
+def pool_index(raw_config):
+    yield raw_config["pool_index"]
 
 @pytest.fixture(scope="module")
-def target_pool_tokens(group_tokens, source_target_indexes):
-    yield group_tokens[source_target_indexes[1]]
-
-
-
-# 'pool_' fixtures
-# Each of these expose info on a SINGLE pool for each pool defined on the loaded test config file
-# (i.e. they ARE parametrized for every single pool defined on the test config file)
+def pool(group_pools, pool_index):
+    yield group_pools[pool_index]
 
 @pytest.fixture(scope="module")
-def pool_config(raw_pool_config, amplification, max_pool_assets):
-
-    _verify_pool_config(raw_pool_config, max_pool_assets)
-
-    yield {
-        "tokens"        : raw_pool_config["tokens"],
-        "init_balances" : [eval(balance) for balance in raw_pool_config["initBalances"]],      # Evaluate balance expressions (e.g. '10**18')
-        "weights"       : raw_pool_config["weights"],
-        "name"          : raw_pool_config["name"],
-        "symbol"        : raw_pool_config["symbol"],
-        "amplification" : amplification
-    }
-
+def pool_config(group_config, pool_index):
+    yield group_config[pool_index]
 
 @pytest.fixture(scope="module")
-def pool_tokens(pool_config, tokens):
-    yield [tokens[i] for i in pool_config["tokens"]]
+def pool_tokens(group_tokens, pool_index):
+    yield group_tokens[pool_index]
+
+
+
+# Dual pool parametrized fixtures
+
+@pytest.fixture(scope="module")
+def source_pool_index(raw_config):
+    yield raw_config["source_index"]
+
+@pytest.fixture(scope="module")
+def source_pool(group_pools, source_pool_index):
+    yield group_pools[source_pool_index]
+
+@pytest.fixture(scope="module")
+def source_pool_config(group_config, source_pool_index):
+    yield group_config[source_pool_index]
+
+@pytest.fixture(scope="module")
+def source_pool_tokens(group_tokens, source_pool_index):
+    yield group_tokens[source_pool_index]
 
 
 @pytest.fixture(scope="module")
-def pool(pool_config, pool_tokens, deploy_pool, deployer):
+def target_pool_index(raw_config):
+    yield raw_config["target_index"]
 
-    yield deploy_pool(
-            tokens         = pool_tokens,
-            token_balances = pool_config["init_balances"],
-            weights        = pool_config["weights"],
-            amp            = pool_config["amplification"] if pool_config["amplification"] is not None else 10**18,
-            name           = pool_config["name"],
-            symbol         = pool_config["symbol"],
-            deployer       = deployer,
-        )
+@pytest.fixture(scope="module")
+def target_pool(group_pools, target_pool_index):
+    yield group_pools[target_pool_index]
+
+@pytest.fixture(scope="module")
+def target_pool_config(group_config, target_pool_index):
+    yield group_config[target_pool_index]
+
+@pytest.fixture(scope="module")
+def target_pool_tokens(group_tokens, target_pool_index):
+    yield group_tokens[target_pool_index]
+
 
 
 
