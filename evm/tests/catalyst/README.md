@@ -39,6 +39,12 @@ The following flags can be used to run specific collections/configurations of th
 |    └── unit/
 |        └── test_*.py
 |
+├── test_common/
+|    ├── integration/
+|    |   └── test_*.py
+|    └── unit/
+|        └── test_*.py
+|
 └── test_volatile/
      ├── configs/
      |   └── default.json
@@ -61,35 +67,31 @@ Both the *volatile* and *amplified* tests run on Catalyst pools which are config
 <br/>
 
 # Fixtures
-## Parametrized Fixtures
-There are 4 fixtures which get parametrized according to the specified test configuration and loaded config files:
-| Fixture           | Description|
-| ----              | ---------- |
-| `raw_config`      | Exposes the **full** config config file. (i.e. tests with fixtures that depend on `raw_config` will run only once.) |
-| `raw_pool_config` | Parametrizes **each** pool definition within the loaded config file. (i.e. tests with fixtures that depend on `raw_pool_config` will run once for every pool that is defined on the config file.) |
-| `swap_pool_type`  | Identifies the type of pool being used for the tests. Either `"volatile"` or `"amplified"`|
-| `source_target_indexes` | Paramterizes the source-target pool combinations (as tuples of indexes) |
-## Other Fixtures
 All helper fixtures are defined within the `fixtures/` folder.
-
 - `accounts.py`: Accounts with given roles (e.g. *deployer*).
 - `contracts.py`: The *deployed* contracts that are used by the tests (e.g. *swap_factory*).
-- `pools.py`: Fixtures related to Catalyst pools. There are several **important fixtures** to note:
-    - Based on `raw_config`:
-        - `group_config`: The description of the pools contained in `raw_config` (verified and processed).
-        - `group_pools`: An array of deployed pools, as defined on `group_config`.
-        - `group_tokens`: An array of the deployed tokens contained by each of the pools of `group_pools`.
-        - For every tuple of `source_target_indexes`:
-            - `source_pool`: A pool from `group_pools` to act as a source pool. Selected according to `source_target_indexes`.
-            - `source_pool_tokens`: The tokens handled by `source_pool`.
-            - `target_pool`: A pool from `group_pools` to act as a target pool. Selected according to `source_target_indexes`.
-            - `target_pool_tokens`: The tokens handled by `target_pool`.
-    - Based on `raw_pool_config`:
-        - `pool_config`: The description of a pool contained in `raw_pool_config` (verified and processed).
-        - `pool`: A deployed pool, as defined on `pool_config`.
-        - `pool_tokens`: An array of the deployed tokens contained by the pool of `pool`.
-    - `deploy_pool`: Exposes a factory to deploy Catalyst pools.
+- `pools.py`: The fixtures related to Catalyst pools. 
 - `tokens.py`: The tokens and token helpers that are used by the tests.
-    - `tokens_config`: The description of the tokens contained in `raw_config` (verified and processed).
-    - `tokens`: An array of deployed tokens, as defined on `tokens_config`
-    - `create_token`: Exposes a factory to deploy tokens.
+## Parametrized Fixtures
+The `raw_config` fixture is parametrized over the different test configurations to run the tests against. Usually, this means a volatile and an amplified test configuration, but may be different because of the user selected test settings (e.g. using only the `--volatile` flag). The `raw_config` fixture exposes the **full** unprocessed config data for each configuration. Further fixtures handle the data from this fixture further:
+| Fixture           | Description|
+| ----              | ---------- |
+| `tokens_config`   | The 'tokens' definitions contained in `raw_config` (verified and processed). |
+| `tokens`          | An array of deployed tokens, as defined on `tokens_config`. |
+| `group_config`    | The 'pools' configuration contained in `raw_config` (verified and processed). |
+| `group_pools`     | An array of deployed pools, as defined on `group_config`. |
+| `group_tokens`    | An array of the tokens contained by each of the pools of `group_pools`. |
+| `swap_pool_type`  | Identifies the current pool type, either `"volatile"` or `"amplified"`. |
+| `amplification`   | The amplification value at which to the pools have been initialized. Returns None for volatile pools. |
+
+Additionally, the `raw_config` fixture gets parametrized with further data according to the two following scenarios:
+### Single Pool Tests
+For tests involving a single pool, an extra field `pool_index` within `raw_config` gets parametrized over all the pools available on the config file. Using this parameter, further fixtures are defined:
+| Fixture           | Description|
+| ----              | ---------- |
+| `pool_index`        | The index used within the current parametrization. Goes through all the available pool indexes. |
+| `pool`              | The deployed pool from `group_pools` at index `pool_index`. |
+| `pool_config`       | The configuration data of the pool `pool`. |
+| `pool_tokens`       | The tokens contained by the pool `pool`. |
+### Dual Pool Tests
+For tests involving *source* and *target* pools, two extra fields `source_index` and `target_index` within `raw_config` get parametrized according to the test settings. Further fixtures are defined for these two parameters. These are the same as those defined for *Single Pool Tests* (described shortly above), but with `source_` and `target_` prepended to the fixture names.
