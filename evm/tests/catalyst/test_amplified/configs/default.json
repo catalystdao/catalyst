@@ -30,21 +30,21 @@
         {
             "tokens": [0, 1, 2],
             "initBalances": ["10 * 10**18", "1000 * 10**18", "1000 * 10**6"],
-            "weights": [1, 1, 1],
+            "weights": [100, 1, 1000000000000],
             "name": "Amp1_POOLNAME",
             "symbol": "A1_PS"
         },
         {
             "tokens": [0, 1],
             "initBalances": ["10 * 10**18", "100 * 10**18"],
-            "weights": [1,1],
+            "weights": [100, 10],
             "name": "Amp2_AnotherPoolName",
             "symbol": "A2_APN"
         }, 
         {
             "tokens": [2],
             "initBalances": ["1000 * 10**6"],
-            "weights": [1],
+            "weights": [1000000000000],
             "name": "Amp3_POOLNAME2",
             "symbol": "A3_PS2"
         }
