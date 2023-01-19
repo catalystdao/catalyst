@@ -11,7 +11,7 @@ The following flags can be used to run specific collections/configurations of th
 | `--config CONFIG_FILE_NAME`    | Use a specific config file ('default' used if not specified).  |
 | `--volatile`                   | Run tests for volatile pools.  |
 | `--amplified`                  | Run tests for amplified pools  |
-| `--amplification AMP_CONSTANT` | Override the amplification constant that is specified on the specified config file. (May only be set if amplified tests are set to be run.)  |
+| `--amplification VALUE` | Override the amplification constant that is specified on the specified config file. (May only be set if amplified tests are set to be run.)  |
 | `--source-pool PARAM_TYPE` | Specify how to parametrize the source pool fixture:<ul><li>`'all'`: Go through all the pools.</li><li>`POOL_INDEX`: Only the specified pool.</li></ul>  |
 | `--target-pool PARAM_TYPE` | Specify how to parametrize the target pool fixture:<ul><li>`'all'`: Go through all the pools (skips the `source_pool`, i.e. avoid combinations with the same pool)</li><li>`'next'`: Use the *next* pool defined after the current `source_pool` (by index)</li><li>`POOL_INDEX`: Only the specified pool.</li></ul>  |
 | `--unit`                       | Run unit tests.  |
