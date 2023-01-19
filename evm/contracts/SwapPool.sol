@@ -341,9 +341,9 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
     ) internal pure returns (uint256) {
         // Compute the non pool ownership share. (1 - pool ownership share)
         uint256 npos = uint256(FixedPointMathLib.expWad(-int256(U / W)));
-        // Convert the pool non ownership share to % of current pool.
-        // That is: y = share/(1-share) => (1-npos)/(1-(1-npos)) = (1-npos/npos)
-        return FixedPointMathLib.divWadDown(FixedPointMathLib.WAD - npos, npos);
+        
+        // Subtract it from 1.
+        return FixedPointMathLib.WAD - npos;
     }
 
     /**
@@ -452,6 +452,11 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
                 tokenAmounts[it]
             ); // dev: Token withdrawal from user failed.
         }
+
+        // Subtract fee from U. This stops people from using deposit and withdrawal as method of swapping.
+        // To reduce costs, there the governance fee is not included. This does result in deposit+withdrawal
+        // working as a way to circumvent the governance fee.
+        U = FixedPointMathLib.mulWadDown(U, FixedPointMathLib.WAD - _poolFee);
 
         uint256 poolTokens = (initial_totalSupply * arbitrary_solve_integral(U, WSUM)) / FixedPointMathLib.WAD;
 
