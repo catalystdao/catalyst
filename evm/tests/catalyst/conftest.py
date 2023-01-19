@@ -69,6 +69,8 @@ def pytest_addoption(parser):
     parser.addoption("--unit", action="store_true", help="Run only unit tests.")
     parser.addoption("--integration", action="store_true", help="Run only integration tests.")
 
+    parser.addoption("--filter", default=None, help="Run only tests which match the provided filter ([filename][::[test-name]])")
+
 
 
 def pytest_configure(config):
@@ -188,6 +190,13 @@ def pytest_ignore_collect(path, config):
     if rel_test_path[1] == "integration" and not _run_integration_tests:
         return True
 
+    # Filter tests by test name
+    name_filter = config.getoption("--filter")
+    if name_filter is not None and test_path.is_file():
+        file_name = rel_test_path[-1]
+        match_name = name_filter.split("::", maxsplit=1)[0]
+        if not match_name in file_name:
+            return True
 
 
 def pytest_generate_tests(metafunc):
@@ -243,6 +252,29 @@ def pytest_generate_tests(metafunc):
 
         metafunc.parametrize("raw_config", parametrized_configs, scope="session")
 
+
+def pytest_collection_modifyitems(session, config, items):
+    
+    # Get the desired test name filter (if any)
+    match_test_name = None
+    name_filter = config.getoption("--filter")
+    if name_filter is not None:
+        name_filter_split = name_filter.split("::", maxsplit=1)
+        if len(name_filter_split) == 2:
+            match_test_name = name_filter_split[1]
+
+    filtered_items = []
+    for item in items:
+
+        # Filter tests by test name
+        if match_test_name is not None and match_test_name not in item.originalname:
+            config.hook.pytest_deselected(items=[item])
+            continue
+
+        filtered_items.append(item)
+    
+    # Modify items inplace
+    items[:] = filtered_items
 
 
 
