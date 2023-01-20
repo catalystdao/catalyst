@@ -261,10 +261,10 @@ def get_pool_weights(pool, pool_tokens):
 
 @pytest.fixture(scope="module")
 def get_source_pool_weights(source_pool, source_pool_tokens):
-    def _get_source_source_pool_weights():
+    def _get_source_pool_weights():
         return [source_pool._weight(token) for token in source_pool_tokens]
     
-    yield _get_source_source_pool_weights
+    yield _get_source_pool_weights
 
 @pytest.fixture(scope="module")
 def get_target_pool_weights(target_pool, target_pool_tokens):
@@ -286,10 +286,10 @@ def get_pool_balances(pool, pool_tokens):
 
 @pytest.fixture(scope="module")
 def get_source_pool_balances(source_pool, source_pool_tokens):
-    def _get_source_source_pool_balances():
+    def _get_source_pool_balances():
         return [token.balanceOf(source_pool) for token in source_pool_tokens]
     
-    yield _get_source_source_pool_balances
+    yield _get_source_pool_balances
 
 @pytest.fixture(scope="module")
 def get_target_pool_balances(target_pool, target_pool_tokens):
@@ -316,7 +316,7 @@ def get_pool_amp(pool):
 
 @pytest.fixture(scope="module")
 def get_source_pool_amp(source_pool):
-    def _get_source_source_pool_amp():
+    def _get_source_pool_amp():
         try:
             amp = source_pool._amp()   # Amplified pools
         except AttributeError:
@@ -324,7 +324,7 @@ def get_source_pool_amp(source_pool):
 
         return amp
     
-    yield _get_source_source_pool_amp
+    yield _get_source_pool_amp
 
 @pytest.fixture(scope="module")
 def get_target_pool_amp(target_pool):
@@ -351,12 +351,12 @@ def get_pool_unit_tracker(pool):
 
 @pytest.fixture(scope="module")
 def get_source_pool_unit_tracker(source_pool, get_source_pool_amp):
-    def _get_source_source_pool_unit_tracker():
+    def _get_source_pool_unit_tracker():
         if get_source_pool_amp() == 10**18:
             return 0
         return source_pool._unitTracker()
     
-    yield _get_source_source_pool_unit_tracker
+    yield _get_source_pool_unit_tracker
 
 @pytest.fixture(scope="module")
 def get_target_pool_unit_tracker(target_pool, get_target_pool_amp):
