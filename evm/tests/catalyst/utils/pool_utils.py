@@ -155,7 +155,7 @@ def compute_expected_liquidity_swap(
         wpt = ( b0**one_minus_amp + U/len(to_balances) )**(WAD/(WAD-amp)) - b0
 
         return {
-            'l_U': int(U * 10**18),
+            'U': int(U * 10**18),
             'output': int(wpt*ts_b/b0)
         }
     
@@ -165,11 +165,11 @@ def compute_expected_liquidity_swap(
 
     U = Decimal((ts_a/(ts_a-pt)).ln()) * from_w_sum
     
-    share = Decimal(1) - Decimal(2)**(-U/to_w_sum)
+    share = Decimal(1) - Decimal(-U/to_w_sum).exp()
 
     return {
-        'l_U': int(U*10**18),
-        'output': int(ts_b * (share/(1-share)))
+        'U': int(U*10**18),
+        'output': int(ts_b * (share/(Decimal(1)-share)))
     }
 
 

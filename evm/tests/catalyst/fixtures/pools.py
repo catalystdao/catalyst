@@ -348,15 +348,19 @@ def get_pool_unit_tracker(pool):
     yield _get_pool_unit_tracker
 
 @pytest.fixture(scope="module")
-def get_source_pool_unit_tracker(source_pool):
+def get_source_pool_unit_tracker(source_pool, get_source_pool_amp):
     def _get_source_source_pool_unit_tracker():
+        if get_source_pool_amp() == 10**18:
+            return 0
         return source_pool._unitTracker()
     
     yield _get_source_source_pool_unit_tracker
 
 @pytest.fixture(scope="module")
-def get_target_pool_unit_tracker(target_pool):
+def get_target_pool_unit_tracker(target_pool, get_target_pool_amp):
     def _get_target_pool_unit_tracker():
+        if get_target_pool_amp() == 10**18:
+            return 0
         return target_pool._unitTracker()
     
     yield _get_target_pool_unit_tracker
@@ -491,6 +495,41 @@ def compute_expected_swap(
         )
     
     yield _compute_expected_swap
+
+
+# NOTE: this fixture is only expected to be used on tests that include the fixtures 'source_pool' and 'target_pool'
+@pytest.fixture(scope="module")
+def compute_expected_liquidity_swap(
+    source_pool,
+    target_pool,
+    get_source_pool_weights,
+    get_source_pool_balances,
+    get_source_pool_unit_tracker,
+    get_target_pool_weights,
+    get_target_pool_balances,
+    get_target_pool_unit_tracker,
+    get_source_pool_amp,
+    get_target_pool_amp
+):
+    def _compute_expected_liquidity_swap(
+        swap_amount
+    ):
+        return pool_utils.compute_expected_liquidity_swap(
+            swap_amount,
+            get_source_pool_weights(),
+            get_source_pool_balances(),
+            source_pool.totalSupply(),
+            get_source_pool_unit_tracker(),
+            get_target_pool_weights(),
+            get_target_pool_balances(),
+            target_pool.totalSupply(),
+            get_target_pool_unit_tracker(),
+            get_source_pool_amp(),
+            get_target_pool_amp()
+        )
+    
+    yield _compute_expected_liquidity_swap
+
 
 
 # NOTE: this fixture is only expected to be used on tests that include the fixture 'target_pool'
