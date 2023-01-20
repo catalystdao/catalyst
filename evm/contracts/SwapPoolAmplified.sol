@@ -1110,24 +1110,14 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
 
         uint256 U = 0;
         {
-            uint256 walpha_0 = uint256(FixedPointMathLib.powWad(
-                int256(walpha_0_ampped),
-                int256(FixedPointMathLib.WAD * FixedPointMathLib.WAD) / oneMinusAmp
-            ));
             // Plus _escrowedPoolTokens since we want the withdrawal to return less.
-            U = it * uint256(FixedPointMathLib.powWad(
-                int256((walpha_0 * poolTokens)/(totalSupply() + _escrowedPoolTokens + poolTokens)),
-                oneMinusAmp
-            ));
+            uint256 ts = totalSupply() + _escrowedPoolTokens + poolTokens;
+            uint256 pt_fraction = FixedPointMathLib.divWadDown(ts + poolTokens, ts);
 
-            //TODO: Optimise
-            // uint256 ts = totalSupply() + _escrowedPoolTokens + poolTokens;
-            // uint256 pt_fraction = FixedPointMathLib.divWadDown(ts + poolTokens, ts);
-
-            // U = it * FixedPointMathLib.mulWadDown(
-            //     walpha_0_ampped, 
-            //     uint256(FixedPointMathLib.powWad(int256(pt_fraction), oneMinusAmp)) - FixedPointMathLib.WAD
-            // );
+            U = it * FixedPointMathLib.mulWadDown(
+                walpha_0_ampped, 
+                uint256(FixedPointMathLib.powWad(int256(pt_fraction), oneMinusAmp)) - FixedPointMathLib.WAD
+            );
         }
 
         bytes32 messageHash;
@@ -1215,25 +1205,14 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
 
         uint256 ts = totalSupply(); // Not! + _escrowedPoolTokens, since a smaller supply results in fewer pool tokens.
 
-        uint256 walpha_0 = uint256(FixedPointMathLib.powWad(
-            int256(walpha_0_ampped),
+        uint256 it_times_walpha_amped = it * walpha_0_ampped;
+        uint256 poolTokens = (ts * (uint256(FixedPointMathLib.powWad(
+            int256(FixedPointMathLib.divWadDown(
+                it_times_walpha_amped + uint256(U),
+                it_times_walpha_amped
+            )),
             int256(FixedPointMathLib.WAD * FixedPointMathLib.WAD) / oneMinusAmp
-        ));
-        uint256 wpt_a = it * uint256(FixedPointMathLib.powWad(
-            int256(walpha_0_ampped + U / it),
-            int256(FixedPointMathLib.WAD * FixedPointMathLib.WAD) / oneMinusAmp
-        )) - walpha_0;
-        uint256 poolTokens = (wpt_a * ts) / walpha_0;
-
-        // todo: Check if this returns the same amount. 
-        // uint256 it_times_walpha_amped = it * walpha_0_ampped;
-        // uint256 poolTokens = (totalSupply() * (FixedPointMathLib.powWad(
-        //     int256(FixedPointMathLib.divWadDown(
-        //         it_times_walpha_amped + uint256(U),
-        //         it_times_walpha_amped
-        //     )),
-        //     int256(FixedPointMathLib.WAD * FixedPointMathLib.WAD) / oneMinusAmp
-        // ) - FixedPointMathLib.WAD)) / FixedPointMathLib.WAD;
+        )) - FixedPointMathLib.WAD)) / FixedPointMathLib.WAD;
 
         // Check if the user would accept the mint.
         require(minOut <= poolTokens, SWAP_RETURN_INSUFFICIENT);
