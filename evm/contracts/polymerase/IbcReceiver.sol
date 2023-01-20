@@ -3,8 +3,8 @@
 pragma solidity ^0.8.16;
 
 struct IbcEndpoint {
-    string portId;
-    string channelId;
+    bytes32 portId;
+    bytes32 channelId;
 }
 
 /// In IBC each package must set at least one type of timeout:

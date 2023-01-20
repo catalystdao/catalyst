@@ -111,6 +111,10 @@ interface ICatalystV1PoolEvents {
     /** @notice Called upon failed swap. */
     event EscrowTimeout(bytes32 messageHash, bool liquiditySwap);
 
+
+    /** @notice Pool setup has been finalised. */
+    event FinishSetup();
+
     /**
      * @notice Emitted on pool fee adjustment
      * @param fee The new pool fee
@@ -138,12 +142,24 @@ interface ICatalystV1PoolEvents {
     );
 
     /**
-     * @notice Emitted on amplification modification
+     * @notice Amplification has been modification
      * @param targetTime Time at which the amplification adjustment must complete.
      * @param targetAmplification The desired new amplification.
      */
     event ModifyAmplification(
         uint256 targetTime,
         uint256 targetAmplification
+    );
+
+    /**
+     * @notice A connection has been modified
+     * @param channelId Target chain identifier.
+     * @param poolReceiving Bytes32 representation of the target pool.
+     * @param newState Boolean indicating if the connection should be open or closed.
+     */
+    event CreateConnection(
+        bytes32 channelId,
+        bytes32 poolReceiving,
+        bool newState
     );
 }

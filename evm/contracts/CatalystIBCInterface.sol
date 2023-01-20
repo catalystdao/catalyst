@@ -58,7 +58,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
         bool state
     ) external {
         // Encode the sender in bytes32.
-        bytes32 msgSenderB32 = bytes32(abi.encodePacked(msg.sender));
+        bytes32 msgSenderB32 = bytes32(abi.encode(msg.sender));
 
         checkConnection[channelId][msgSenderB32][pool] = state;
     }
@@ -96,7 +96,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
         // don't send a message.
         {
             // Encode the sender in bytes32.
-            bytes32 msgSenderB32 = bytes32(abi.encodePacked(msg.sender));
+            bytes32 msgSenderB32 = bytes32(abi.encode(msg.sender));
 
             require(
                 checkConnection[channelId][msgSenderB32][targetPool],
@@ -191,7 +191,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
         // don't send a message.
         {
             // Encode the sender in bytes32.
-            bytes32 msgSenderB32 = bytes32(abi.encodePacked(msg.sender));
+            bytes32 msgSenderB32 = bytes32(abi.encode(msg.sender));
 
             require(
                 checkConnection[channelId][msgSenderB32][targetPool],
@@ -327,14 +327,13 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
         bytes1 _context = data[0];
         address pool = abi.decode(data[33:65], (address));
 
-        // TODO: Fix this in testing.
         {
-            // bytes32 channelId = bytes32(packet.src.channelId);
-            // bytes32 fromPool = bytes32(data[1:33]);
-            // require(
-            //     checkConnection[channelId][bytes32(data[33:65])][fromPool],
-            //     NO_CONNECTION
-            // );
+            bytes32 channelId = bytes32(packet.src.channelId);
+            bytes32 fromPool = bytes32(data[1:33]);
+            require(
+                checkConnection[channelId][bytes32(data[33:65])][fromPool],
+                NO_CONNECTION
+            );
         }
 
         // Check if the swap is a liquidity swap.

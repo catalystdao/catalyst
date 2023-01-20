@@ -46,11 +46,11 @@ contract IBCEmulator is IbcDispatcher {
         emit IncomingMetadata(PacketMetadata(target, msg.sender));
         emit IncomingPacket(
             IbcPacket(
-                IbcEndpoint("bytes32(abi.encode((port - 1)**2))", "0"),
-                IbcEndpoint("bytes32(abi.encode(port))", "0"),
+                IbcEndpoint(0, channelId),
+                IbcEndpoint(0, channelId),
                 0,
                 payload,
-                IbcTimeout(0, 0)
+                IbcTimeout(timeoutBlockHeight, 0)
             )
         );
     }

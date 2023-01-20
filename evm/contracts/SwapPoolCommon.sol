@@ -241,7 +241,6 @@ abstract contract CatalystSwapPoolCommon is
         emit SetPoolFee(newPoolFee);
     }
 
-    // TODO add to contract interface
     function setGovernanceFee(uint256 newPoolGovernanceFee) external {
         require(msg.sender == _feeAdministrator); // dev: Only feeAdministrator can set new fee
         require(newPoolGovernanceFee <= 75**17); // dev: GovernanceFee is maximum 75%.
@@ -250,7 +249,6 @@ abstract contract CatalystSwapPoolCommon is
         emit SetGovernanceFee(newPoolGovernanceFee);
     }
 
-    // TODO Event for connection
     /**
      * @notice Creates a connection to poolReceiving on the channel_channelId.
      * @dev Encoding addresses in bytes32 for EVM can be done be computed with:
@@ -262,8 +260,8 @@ abstract contract CatalystSwapPoolCommon is
      * However, it makes it easy to bundle call from an external contract
      * and no assets are at risk because the pool should not be used without
      * setupMaster == ZERO_ADDRESS
-     * @param channelId The target chain identifier.
-     * @param poolReceiving The bytes32 representation of the target pool.
+     * @param channelId Target chain identifier.
+     * @param poolReceiving Bytes32 representation of the target pool.
      * @param state Boolean indicating if the connection should be open or closed.
      */
     function createConnection(
@@ -283,9 +281,10 @@ abstract contract CatalystSwapPoolCommon is
             poolReceiving,
             state
         );
+
+        emit CreateConnection(channelId, poolReceiving, state);
     }
 
-    // TODO Event for pool finalisation
     /**
      * @notice Gives up short term ownership of the pool making the pool unstoppable.
      * @dev !Using tx.origin is not secure!
@@ -298,6 +297,8 @@ abstract contract CatalystSwapPoolCommon is
         require((tx.origin == _setupMaster) || (msg.sender == _setupMaster)); // dev: No auth
 
         _setupMaster = address(0);
+
+        emit FinishSetup();
     }
 
     /**

@@ -8,6 +8,8 @@ interface ICatalystV1PoolAdministration {
 
     function setPoolFee(uint256 newPoolFeeX64) external;
 
+    function setGovernanceFee(uint256 newPoolGovernanceFee) external;
+
     /**
      * @notice Creates a connection to the pool _poolReceiving on the channel _channelId.
      * @dev if _poolReceiving is an EVM pool, it can be computes as:

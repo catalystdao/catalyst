@@ -146,7 +146,6 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         setupBase(name_, symbol_, chaininterface, setupMaster);
     }
 
-    // TODO: Fix security limit
     /**
      * @notice Allows Governance to modify the pool weights to optimise liquidity.
      * @dev targetTime needs to be more than MIN_ADJUSTMENT_TIME in the future.
@@ -561,27 +560,15 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         // working as a way to circumvent the governance fee.
         U = int256(FixedPointMathLib.mulWadDown(uint256(U), FixedPointMathLib.WAD - _poolFee));
 
-        uint256 walpha_0 = uint256(FixedPointMathLib.powWad(
-            int256(walpha_0_ampped),
+        // Use the simplified conversion of units into pool tokens. Saves ~1000 gas.
+        uint256 it_times_walpha_amped = it * walpha_0_ampped;
+        uint256 poolTokens = (totalSupply() * uint256(FixedPointMathLib.powWad(
+            int256(FixedPointMathLib.divWadDown(
+                it_times_walpha_amped + uint256(U),
+                it_times_walpha_amped
+            )),
             int256(FixedPointMathLib.WAD * FixedPointMathLib.WAD) / oneMinusAmp
-        ));
-
-        uint256 wpt_a = uint256(FixedPointMathLib.powWad(
-            int256(walpha_0_ampped + uint256(U) / it),
-            int256(FixedPointMathLib.WAD * FixedPointMathLib.WAD) / oneMinusAmp
-        )) - walpha_0;
-
-        // todo: Check if this returns the same amount. 
-        // uint256 it_times_walpha_amped = it * walpha_0_ampped;
-        // uint256 poolTokens = (totalSupply() * (FixedPointMathLib.powWad(
-        //     int256(FixedPointMathLib.divWadDown(
-        //         it_times_walpha_amped + uint256(U),
-        //         it_times_walpha_amped
-        //     )),
-        //     int256(FixedPointMathLib.WAD * FixedPointMathLib.WAD) / oneMinusAmp
-        // ) - FixedPointMathLib.WAD)) / FixedPointMathLib.WAD;
-
-        uint256 poolTokens = (wpt_a * totalSupply()) / walpha_0;
+        ) - int256(FixedPointMathLib.WAD))) / FixedPointMathLib.WAD;
 
         // Check if the return satisfies the user.
         require(minOut <= poolTokens, SWAP_RETURN_INSUFFICIENT);
