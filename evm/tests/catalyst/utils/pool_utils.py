@@ -5,6 +5,10 @@ from functools import reduce
 # The following mathematical functions are implemented with full precision, rather than mirroring the exact contract implementation
 
 
+# Constants *********************************************************************************************************************
+
+WAD = Decimal(10**18)
+
 
 
 # State Utils *******************************************************************************************************************
@@ -17,7 +21,7 @@ def compute_invariant(weights, balances, amp) -> Decimal:
     # Amplified
     if amp != 10**18:
 
-        one_minus_amp = Decimal(1) - Decimal(amp)/Decimal(10**18)
+        one_minus_amp = Decimal(1) - Decimal(amp)/WAD
 
         return sum([(w * b)**one_minus_amp for w, b in zip(weights, balances)])
     
@@ -33,9 +37,9 @@ def compute_balance_0(weights, balances, unit_tracker, amp) -> Decimal:
     
     invariant = compute_invariant(balances, weights, amp)
 
-    walpha_theta = (invariant - Decimal(unit_tracker)/Decimal(10**18))/Decimal(len(balances))
+    walpha_theta = (invariant - Decimal(unit_tracker)/WAD)/Decimal(len(balances))
 
-    return walpha_theta ** (Decimal(10**18)/(Decimal(10**18)-amp))
+    return walpha_theta ** (WAD/(WAD-amp))
 
 
 
@@ -66,7 +70,7 @@ def compute_expected_swap(
     # Amplified pools
     if amp != 10**18:
 
-        amp /= Decimal(10**18)
+        amp /= WAD
         one_minus_amp = Decimal(1) - amp
 
         aw_a = a * w_a
@@ -93,14 +97,14 @@ def compute_expected_swap(
 
 def compute_expected_swap_given_U(U, to_weight, to_balance, amp):
 
-    U = Decimal(U) / Decimal(10**18)
+    U = Decimal(U) / WAD
     w_b = Decimal(to_weight)
     b = Decimal(to_balance)
     
     # Amplified pools
     if amp != 10**18:
 
-        amp /= Decimal(10**18)
+        amp /= WAD
 
         b_amp = (b * w_b)**(1-amp)
         
@@ -140,7 +144,7 @@ def compute_expected_liquidity_swap(
     # Amplified
     if amp != 10**18:
 
-        amp /= Decimal(10**18)
+        amp /= WAD
         one_minus_amp = Decimal(1) - amp
 
         a0 = compute_balance_0(from_weights, from_balances, from_unit_tracker, amp)
@@ -148,7 +152,7 @@ def compute_expected_liquidity_swap(
         
         
         U = ( (a0 + (a0 * pt)/ts_a)**one_minus_amp - a0**one_minus_amp ) * len(from_balances)
-        wpt = ( b0**one_minus_amp + U/len(to_balances) )**(Decimal(10**18)/(Decimal(10**18)-amp)) - b0
+        wpt = ( b0**one_minus_amp + U/len(to_balances) )**(WAD/(WAD-amp)) - b0
 
         return {
             'l_U': int(U * 10**18),
@@ -181,7 +185,7 @@ def compute_equal_withdrawal(withdraw_amount, weights, balances, total_supply, a
 
     # Amplified pools
     if amp != 10**18:
-        amp = Decimal(amp)/Decimal(10**18)
+        amp = Decimal(amp)/WAD
         one_minus_amp = Decimal(1) - amp
     
         walpha = compute_balance_0(weights, balances, unit_tracker, amp)
