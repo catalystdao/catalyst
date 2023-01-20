@@ -9,6 +9,8 @@ from brownie import (
 import tests.catalyst.utils.pool_utils as pool_utils
 from tests.catalyst.utils.pool_utils import compute_balance_0, compute_invariant
 
+from tests.catalyst.utils.pool_utils import compute_expected_max_unit_inflow
+
 MAX_POOL_ASSETS = 3
 
 @pytest.fixture(scope="module")
@@ -441,6 +443,53 @@ def get_target_pool_balance_0(
     yield _get_target_pool_balance_0
 
 
+
+# Max unit inflow
+
+@pytest.fixture(scope="module")
+def get_pool_max_unit_inflow(
+    get_pool_weights,
+    get_pool_balances,
+    get_pool_amp
+):
+    def _get_pool_max_unit_inflow():
+        return compute_expected_max_unit_inflow(
+            get_pool_weights(),
+            get_pool_balances(),
+            get_pool_amp()
+        )
+
+    yield _get_pool_max_unit_inflow
+
+@pytest.fixture(scope="module")
+def get_source_pool_max_unit_inflow(
+    get_source_pool_weights,
+    get_source_pool_balances,
+    get_source_pool_amp
+):
+    def _get_source_pool_max_unit_inflow():
+        return compute_expected_max_unit_inflow(
+            get_source_pool_weights(),
+            get_source_pool_balances(),
+            get_source_pool_amp()
+        )
+
+    yield _get_source_pool_max_unit_inflow
+
+@pytest.fixture(scope="module")
+def get_target_pool_max_unit_inflow(
+    get_target_pool_weights,
+    get_target_pool_balances,
+    get_target_pool_amp
+):
+    def _get_target_pool_max_unit_inflow():
+        return compute_expected_max_unit_inflow(
+            get_target_pool_weights(),
+            get_target_pool_balances(),
+            get_target_pool_amp()
+        )
+
+    yield _get_target_pool_max_unit_inflow
 
 
 # Swap Calculations Helpers *****************************************************************************************************

@@ -200,3 +200,42 @@ def compute_equal_withdrawal(withdraw_amount, weights, balances, total_supply, a
 
 
 
+# Security Limit Utils **********************************************************************************************************
+
+def compute_expected_max_unit_inflow(weights, balances, amp):
+
+    # Amplified pools
+    if amp != 10**18:
+        amp = Decimal(amp) / WAD
+        one_minus_amp = Decimal(1) - amp
+
+        weighted_sum = sum([Decimal(weight * balance) ** one_minus_amp for weight, balance in zip(weights, balances)])
+        amp_unit = Decimal(1) - Decimal(2) ** (-one_minus_amp)
+
+        return int(weighted_sum * amp_unit * WAD)
+
+    # Volatile pools
+    return int(Decimal(sum(weights)) * Decimal(2).ln() * WAD)
+
+
+def compute_expected_units_capacity(
+    ref_capacity,
+    ref_capacity_timestamp,
+    change_timestamp,
+    change_capacity_delta,
+    current_timestamp,
+    max_capacity,
+    decayrate=24*60*60
+):
+    # Since the units capacity is time dependant, it must be taken into account two changes:
+    #   - The capacity change since the ref_capacity value was taken until the capacity was modified by a transaction (the change_timestamp and change_capacity_delta)
+    #   - The capacity change since the transaction until now
+
+    # Compute the capacity at the time of the change
+    ref_capacity_at_change = min(max_capacity, ref_capacity + int(Decimal(max_capacity)*Decimal(change_timestamp - ref_capacity_timestamp)/Decimal(decayrate)))
+
+    # Compute the capacity after the change
+    change_capacity = max(0, min(max_capacity, ref_capacity_at_change + change_capacity_delta))
+
+    # Compute the capacity at the current time
+    return min(max_capacity, change_capacity + int(Decimal(max_capacity)*Decimal(current_timestamp - change_timestamp)/Decimal(decayrate)))
