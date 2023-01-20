@@ -508,7 +508,7 @@ def test_swap_too_large(
     finish_swap_result = swap_result_2.run_finish_swap_result
     assert finish_swap_result.revert_exception is not None
     assert finish_swap_result.revert_exception.args[0].args[0]['message'] == \
-        'VM Exception while processing transaction: revert Swap exceeds maximum swap amount. Please wait'
+        'VM Exception while processing transaction: revert Swap exceeds security limit. Please wait'
 
     # Check swapper balances
     assert swappool1_info.tokens[1].balanceOf(swapper1) == swap_amount_2                                # Source swapper recovers the funds of the second swap

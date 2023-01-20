@@ -28,7 +28,7 @@ def test_cross_pool_swap(channelId, swappool1, swappool2, token1, token3, berg, 
     assert token1.balanceOf(berg) == 0
     
     if swappool2.getUnitCapacity() < tx.events["SwapToUnits"]["output"]:
-        with reverts("Swap exceeds maximum swap amount. Please wait"):
+        with reverts("Swap exceeds security limit. Please wait"):
             txe = ibcemulator.execute(tx.events["IncomingMetadata"]["metadata"][0], tx.events["IncomingPacket"]["packet"], {"from": berg})
         return
     else:

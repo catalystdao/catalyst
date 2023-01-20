@@ -481,7 +481,7 @@ def test_liquidity_swap_too_large(
     run_finish_liquidity_swap_result = result.run_finish_liquidity_swap_result
     assert run_finish_liquidity_swap_result.revert_exception is not None
     assert run_finish_liquidity_swap_result.revert_exception.args[0].args[0]['message'] == \
-        'VM Exception while processing transaction: revert Swap exceeds maximum swap amount'
+        'VM Exception while processing transaction: revert Swap exceeds security limit'
 
     # Check swapper balances
 

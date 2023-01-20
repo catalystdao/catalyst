@@ -41,7 +41,7 @@ def test_liquidity_swap(channelId, swappool1, swappool2, berg, deployer, compute
     assert swappool1.balanceOf(berg) == pool1_tokens - pool1_tokens_swapped
     
     if swappool2.getUnitCapacity() < tx.events["SwapToLiquidityUnits"]["output"]:
-        with reverts("Swap exceeds maximum swap amount"):
+        with reverts("Swap exceeds security limit"):
             txe = ibcemulator.execute(tx.events["IncomingMetadata"]["metadata"][0], tx.events["IncomingPacket"]["packet"], {"from": berg})
         return
     else:
