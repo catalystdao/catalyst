@@ -38,7 +38,7 @@ def test_self_swap(
     assert token.balanceOf(berg) == 0
     
     if pool.getUnitCapacity() < tx.events["SwapToUnits"]["output"]:
-        with reverts("Swap exceeds maximum swap amount. Please wait"):
+        with reverts("Swap exceeds maximum swap amount"):
             txe = ibc_emulator.execute(tx.events["IncomingMetadata"]["metadata"][0], tx.events["IncomingPacket"]["packet"], {"from": berg})
         return
     else:

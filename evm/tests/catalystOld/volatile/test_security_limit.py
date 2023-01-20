@@ -62,7 +62,7 @@ def test_security_limit_swap_loop(
 
     # 2. swapFromUnits
     if swappool2.getUnitCapacity() < tx_units:
-        with reverts("Swap exceeds maximum swap amount. Please wait"):
+        with reverts("Swap exceeds maximum swap amount"):
             txe = ibcemulator.execute(
                 tx.events["IncomingMetadata"]["metadata"][0],
                 tx.events["IncomingPacket"]["packet"],
