@@ -342,8 +342,9 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
         // Compute the non pool ownership share. (1 - pool ownership share)
         uint256 npos = uint256(FixedPointMathLib.expWad(-int256(U / W)));
         
-        // Subtract it from 1.
-        return FixedPointMathLib.WAD - npos;
+        // Compute the pool owner share after liquidity has been added.
+        // (solve share = pt/(PT+pt) for pt.)
+        return FixedPointMathLib.divWadDown(FixedPointMathLib.WAD - npos, npos);
     }
 
     /**
@@ -439,7 +440,7 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
             WSUM += weight;
 
              // A high => less units returned. Do not subtract the escrow amount
-            uint256 At = IERC20(token).balanceOf(address(this)) - tokenAmounts[it];
+            uint256 At = IERC20(token).balanceOf(address(this));
 
             // Save gas if the user provides no tokens.
             if (tokenAmounts[it] == 0) continue;
