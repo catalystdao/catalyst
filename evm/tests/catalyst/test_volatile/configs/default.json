@@ -23,6 +23,18 @@
             "symbol": "TKN4",
             "decimals": 18,
             "supply": 10000
+        },
+        {
+            "name": "Token5",
+            "symbol": "TKN5",
+            "decimals": 18,
+            "supply": 10000
+        },
+        {
+            "name": "Token6",
+            "symbol": "TKN6",
+            "decimals": 18,
+            "supply": 10000
         }
     ],
     "pools": [
@@ -34,15 +46,15 @@
             "symbol": "V1_PS"
         },
         {
-            "tokens": [0, 1],
+            "tokens": [3, 4],
             "initBalances": ["10 * 10**18", "100 * 10**18"],
             "weights": [1,1],
             "name": "Vol2_AnotherPoolName",
             "symbol": "V2_APN"
         }, 
         {
-            "tokens": [2],
-            "initBalances": ["1000 * 10**6"],
+            "tokens": [5],
+            "initBalances": ["1000 * 10**18"],
             "weights": [1],
             "name": "Vol3_POOLNAME2",
             "symbol": "V3_PS2"
