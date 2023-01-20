@@ -50,7 +50,7 @@ def test_cross_pool_swap(
     
     # The swap may revert because of the security limit     #TODO mark these cases as 'skip'?
     if target_pool.getUnitCapacity() < tx.events["SwapToUnits"]["output"]:
-        with reverts("Swap exceeds security limit. Please wait"):
+        with reverts("Swap exceeds security limit"):
             txe = ibc_emulator.execute(tx.events["IncomingMetadata"]["metadata"][0], tx.events["IncomingPacket"]["packet"], {"from": berg})
         return
     else:
