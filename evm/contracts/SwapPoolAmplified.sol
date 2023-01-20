@@ -121,7 +121,8 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
             for (uint256 it = 0; it < init_assets.length; ++it) {
                 address tokenAddress = init_assets[it];
                 _tokenIndexing[it] = tokenAddress;
-                _weight[tokenAddress] = weights[it];
+                uint256 weight = weights[it];
+                _weight[tokenAddress] = weight;
                 // The contract expect the tokens to have been sent to it before setup is
                 // called. Make sure the pool has more than 0 tokens.
 
@@ -129,12 +130,12 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                 initialBalances[it] = balanceOfSelf;
                 require(balanceOfSelf > 0); // dev: 0 tokens provided in setup.
 
-                // The maximum unit flow is (1-2^{-(1-\theta)}) \sum W \alpha^{1-\theta}
-                max_unit_inflow += weights[it] * uint256(FixedPointMathLib.powWad(int256(balanceOfSelf * FixedPointMathLib.WAD), int256(FixedPointMathLib.WAD - amp)));
+                max_unit_inflow += uint256(FixedPointMathLib.powWad(int256(weight * balanceOfSelf * FixedPointMathLib.WAD), int256(FixedPointMathLib.WAD - amp)));
             }
             
             emit Deposit(setupMaster, MINTAMOUNT, initialBalances);
 
+            // The maximum unit flow is (1-2^{-(1-\theta)}) \sum [(W \alpha)^{1-\theta}]
             _ampUnitCONSTANT = FixedPointMathLib.WAD - uint256(FixedPointMathLib.powWad(
                 int256(2 * FixedPointMathLib.WAD),
                 -int256(FixedPointMathLib.WAD - amp)

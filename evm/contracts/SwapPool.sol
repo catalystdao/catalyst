@@ -117,13 +117,13 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
                     require(balanceOfSelf > 0); // dev: 0 tokens provided in setup.
                 }
 
-                // The maximum unit flow is \sum Weights * ln(2). The value is multiplied by 
-                // WAD since units are always WAD denominated.
-                max_unit_inflow += weights[it] * FixedPointMathLib.WAD;
+                max_unit_inflow += weights[it];
             }
             
             emit Deposit(setupMaster, MINTAMOUNT, initialBalances);
             
+            // The maximum unit flow is \sum Weights * ln(2). The value is multiplied by WAD 
+            // since units are always WAD denominated (note WAD is already included in the LN2 factor).
             _max_unit_inflow = max_unit_inflow * FixedPointMathLib.LN2;
         }
 
