@@ -254,7 +254,7 @@ def pytest_generate_tests(metafunc):
         else:
             parametrized_configs = [*configs]
 
-        metafunc.parametrize("raw_config", parametrized_configs, scope="session")
+        metafunc.parametrize("raw_config", parametrized_configs, ids=raw_config_ids_fn, scope="session")
 
 
 def pytest_collection_modifyitems(session, config, items):
@@ -378,3 +378,26 @@ def verify_config(config, type, config_name):
     
     if type == "amplified":
         assert "amplification" in config, f"{error_descriptor} 'amplification' missing from amplified config file."
+    
+
+def raw_config_ids_fn(args):
+
+    # Generates ids with the format:
+    #  - No pool param.:       [amp/vol]
+    #  - Single pool param.:   [amp/vol].pX        where X stands for the pool index
+    #  - Dual pool param.:     [amp/vol].pX1.pX2   where X1/X2 stand for the pool_1/pool_2 indexes
+
+    # NOTE: using the '.' as separator between the displayed arguments within the id, as any further 
+    # chained parametrizations of other fixtures will append the further parametrizations ids with dashes, 
+    # making the final test id difficult to understand.
+
+    swap_pool_type_id = args["swap_pool_type"][:3]
+
+    if "pool_index" in args:
+        return f"{swap_pool_type_id}.p{args['pool_index']}"
+    
+    elif "pool_1_index" in args:
+        return f"{swap_pool_type_id}.p{args['pool_1_index']}.p{args['pool_2_index']}"
+    
+    else:
+        return f"{swap_pool_type_id}"
