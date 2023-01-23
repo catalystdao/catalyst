@@ -96,16 +96,7 @@ def channel_id():
 # Each of these expose info on ALL the pools defined on the loaded test config file
 
 @pytest.fixture(scope="module")
-def group_config(raw_config, amplification, max_pool_assets):
-
-    raw_pools_config = raw_config["pools"]
-
-    assert len(raw_pools_config) >= 1, "At least 1 pool must be defined on the test config file."
-
-
-    # Verify the pools config
-    for config in raw_pools_config:
-        _verify_pool_config(config, max_pool_assets)
+def group_config(raw_config, amplification):
 
     # Inject the amplification value into each pool config object
     yield [
@@ -116,7 +107,7 @@ def group_config(raw_config, amplification, max_pool_assets):
             "name"          : config["name"],
             "symbol"        : config["symbol"],
             "amplification" : amplification
-        } for config in raw_pools_config
+        } for config in raw_config["pools"]
     ]
 
 
@@ -196,16 +187,6 @@ def target_pool_config(group_config, target_pool_index):
 @pytest.fixture(scope="module")
 def target_pool_tokens(group_tokens, target_pool_index):
     yield group_tokens[target_pool_index]
-
-
-
-
-def _verify_pool_config(config, max_pool_assets):
-    assert "tokens" in config and len(config["tokens"]) > 0 and len(config["tokens"]) <= max_pool_assets
-    assert "initBalances" in config and len(config["initBalances"]) == len(config["tokens"])
-    assert "weights" in config and len(config["weights"]) == len(config["tokens"])
-    assert "name" in config and isinstance(config["name"], str)
-    assert "symbol" in config and isinstance(config["symbol"], str)
 
 
 

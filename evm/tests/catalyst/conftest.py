@@ -4,6 +4,8 @@ import pytest
 
 from brownie.project.main import get_loaded_projects
 
+from tests.catalyst.fixtures.pools import MAX_POOL_ASSETS
+
 
 pytest_plugins = [
     "fixtures.accounts",
@@ -108,6 +110,7 @@ def pytest_configure(config):
     
         with vol_config_path.open() as f:
             _test_config["volatile"] = json.load(f)
+            verify_config(_test_config["volatile"], "volatile", config_name)
     
     
     if run_amp_tests:
@@ -122,6 +125,7 @@ def pytest_configure(config):
     
         with amp_config_path.open() as f:
             _test_config["amplified"] = json.load(f)
+            verify_config(_test_config["amplified"], "amplified", config_name)
 
 
     # If both volatile and amplified configurations are loaded within the same test run, they must contain
@@ -318,3 +322,52 @@ def compute_pool_combinations(source_pool, target_pool, pool_count):
             raise Exception("The provided target pool index exceeds the pool count.")
 
         return [(s_idx, t_idx) for s_idx in source_pool_indexes]
+
+
+def verify_config(config, type, config_name):
+
+    error_descriptor = f"CONFIG ERR ({type}, {config_name}.json):"
+
+    # Verify tokens
+    assert "tokens" in config, "No tokens defined in config file."
+
+    assert len(config["tokens"]) >= 4, f"{error_descriptor} At least 4 tokens must be defined on the test config file."
+
+    for i, token_config in enumerate(config["tokens"]):
+        assert "name" in token_config and isinstance(token_config["name"], str), \
+            f"{error_descriptor} 'name' field missing or of wrong type for token definition at position {i}."
+
+        assert "symbol" in token_config and isinstance(token_config["symbol"], str), \
+            f"{error_descriptor} 'symbol' field missing or of wrong type for token definition at position {i}."
+
+        assert "decimals" in token_config and isinstance(token_config["decimals"], int), \
+            f"{error_descriptor} 'decimals' field missing or of wrong type for token definition at position {i}."
+
+        assert "supply" in token_config and isinstance(token_config["supply"], int), \
+            f"{error_descriptor} 'supply' field missing or of wrong type for token definition at position {i}."
+    
+
+    # Verify pools
+    assert "pools" in config, "No pools defined in config file."
+
+    assert len(config["pools"]) >= 1, f"{error_descriptor} At least 1 pool must be defined on the test config file"
+
+    for i, pool_config in enumerate(config["pools"]):
+        assert "tokens" in pool_config and len(pool_config["tokens"]) > 0 and len(pool_config["tokens"]) <= MAX_POOL_ASSETS, \
+            f"{error_descriptor} 'tokens' field missing or of wrong length for pool definition at position {i}."
+
+        assert "initBalances" in pool_config and len(pool_config["initBalances"]) == len(pool_config["tokens"]), \
+            f"{error_descriptor} 'initBalances' field missing or of wrong length for pool definition at position {i}."
+
+        assert "weights" in pool_config and len(pool_config["weights"]) == len(pool_config["tokens"]), \
+            f"{error_descriptor} 'weights' field missing or of wrong length for pool definition at position {i}."
+
+        assert "name" in pool_config and isinstance(pool_config["name"], str), \
+            f"{error_descriptor} 'name' field missing or of wrong type for pool definition at position {i}."
+
+        assert "symbol" in pool_config and isinstance(pool_config["symbol"], str), \
+            f"{error_descriptor} 'symbol' field missing or of wrong type for pool definition at position {i}."
+
+    
+    if type == "amplified":
+        assert "amplification" in config, f"{error_descriptor} 'amplification' missing from amplified config file."
