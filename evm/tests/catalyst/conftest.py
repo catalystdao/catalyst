@@ -331,7 +331,8 @@ def verify_config(config, type, config_name):
     # Verify tokens
     assert "tokens" in config, "No tokens defined in config file."
 
-    assert len(config["tokens"]) >= 4, f"{error_descriptor} At least 4 tokens must be defined on the test config file."
+    token_count = len(config["tokens"])
+    assert token_count >= 4, f"{error_descriptor} At least 4 tokens must be defined on the test config file."
 
     for i, token_config in enumerate(config["tokens"]):
         assert "name" in token_config and isinstance(token_config["name"], str), \
@@ -368,6 +369,12 @@ def verify_config(config, type, config_name):
         assert "symbol" in pool_config and isinstance(pool_config["symbol"], str), \
             f"{error_descriptor} 'symbol' field missing or of wrong type for pool definition at position {i}."
 
+    # Verify that the tokens within the pools are valid and are not reused
+    tokens_used = [token_idx for pool_config in config["pools"] for token_idx in pool_config["tokens"]]
+    assert len(set(tokens_used)) == len(tokens_used), \
+        f"{error_descriptor} Tokens are reused across the pool definitions."
+    assert all(token_idx < token_count for token_idx in tokens_used), \
+        f"{error_descriptor} Mismatch between the token indexes used by the pools and the count of tokens defined."
     
     if type == "amplified":
         assert "amplification" in config, f"{error_descriptor} 'amplification' missing from amplified config file."
