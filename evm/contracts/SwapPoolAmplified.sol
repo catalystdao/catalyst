@@ -86,7 +86,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
      * @param weights The weights associated with the tokens. 
      * If set to values with low resolotion (<= 10*5), this should be viewed as
      * opt out of governance weight adjustment. This is not enforced.
-     * @param amp Amplification factor. Should be <= 10**18.
+     * @param amp Amplification factor. Should be < 10**18.
      * @param governanceFee The Catalyst governance fee portion. Is WAD.
      * @param name_ pool token name.
      * @param symbol_ pool token symbol.
@@ -105,7 +105,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         address setupMaster
     ) public {
         // Check that the amplification is correct.
-        require(amp <= FixedPointMathLib.WAD);
+        require(amp < FixedPointMathLib.WAD);
         // Check for a misunderstanding regarding how many assets this pool supports.
         require(init_assets.length <= NUMASSETS);
         _amp = amp;
