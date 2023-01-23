@@ -156,37 +156,37 @@ def pool_tokens(group_tokens, pool_index):
 # Dual pool parametrized fixtures
 
 @pytest.fixture(scope="module")
-def source_pool_index(raw_config):
-    yield raw_config["source_index"]
+def pool_1_index(raw_config):
+    yield raw_config["pool_1_index"]
 
 @pytest.fixture(scope="module")
-def source_pool(group_pools, source_pool_index):
-    yield group_pools[source_pool_index]
+def pool_1(group_pools, pool_1_index):
+    yield group_pools[pool_1_index]
 
 @pytest.fixture(scope="module")
-def source_pool_config(group_config, source_pool_index):
-    yield group_config[source_pool_index]
+def pool_1_config(group_config, pool_1_index):
+    yield group_config[pool_1_index]
 
 @pytest.fixture(scope="module")
-def source_pool_tokens(group_tokens, source_pool_index):
-    yield group_tokens[source_pool_index]
+def pool_1_tokens(group_tokens, pool_1_index):
+    yield group_tokens[pool_1_index]
 
 
 @pytest.fixture(scope="module")
-def target_pool_index(raw_config):
-    yield raw_config["target_index"]
+def pool_2_index(raw_config):
+    yield raw_config["pool_2_index"]
 
 @pytest.fixture(scope="module")
-def target_pool(group_pools, target_pool_index):
-    yield group_pools[target_pool_index]
+def pool_2(group_pools, pool_2_index):
+    yield group_pools[pool_2_index]
 
 @pytest.fixture(scope="module")
-def target_pool_config(group_config, target_pool_index):
-    yield group_config[target_pool_index]
+def pool_2_config(group_config, pool_2_index):
+    yield group_config[pool_2_index]
 
 @pytest.fixture(scope="module")
-def target_pool_tokens(group_tokens, target_pool_index):
-    yield group_tokens[target_pool_index]
+def pool_2_tokens(group_tokens, pool_2_index):
+    yield group_tokens[pool_2_index]
 
 
 
@@ -201,15 +201,15 @@ def group_finish_setup(group_pools, deployer):
 @pytest.fixture(scope="module")
 def group_connect_pools(group_pools, channel_id, deployer):
 
-    for source_pool in group_pools:
-        for target_pool in group_pools:
+    for pool_1 in group_pools:
+        for pool_2 in group_pools:
 
-            if source_pool == target_pool:
+            if pool_1 == pool_2:
                 continue
             
-            source_pool.createConnection(
+            pool_1.createConnection(
                 channel_id,
-                convert.to_bytes(target_pool.address.replace("0x", "")),
+                convert.to_bytes(pool_2.address.replace("0x", "")),
                 True,
                 {"from": deployer}
             )
@@ -241,18 +241,18 @@ def get_pool_weights(pool, pool_tokens):
     yield _get_pool_weights
 
 @pytest.fixture(scope="module")
-def get_source_pool_weights(source_pool, source_pool_tokens):
-    def _get_source_pool_weights():
-        return [source_pool._weight(token) for token in source_pool_tokens]
+def get_pool_1_weights(pool_1, pool_1_tokens):
+    def _get_pool_1_weights():
+        return [pool_1._weight(token) for token in pool_1_tokens]
     
-    yield _get_source_pool_weights
+    yield _get_pool_1_weights
 
 @pytest.fixture(scope="module")
-def get_target_pool_weights(target_pool, target_pool_tokens):
-    def _get_target_pool_weights():
-        return [target_pool._weight(token) for token in target_pool_tokens]
+def get_pool_2_weights(pool_2, pool_2_tokens):
+    def _get_pool_2_weights():
+        return [pool_2._weight(token) for token in pool_2_tokens]
     
-    yield _get_target_pool_weights
+    yield _get_pool_2_weights
 
 
 
@@ -266,18 +266,18 @@ def get_pool_balances(pool, pool_tokens):
     yield _get_pool_balances
 
 @pytest.fixture(scope="module")
-def get_source_pool_balances(source_pool, source_pool_tokens):
-    def _get_source_pool_balances():
-        return [token.balanceOf(source_pool) for token in source_pool_tokens]
+def get_pool_1_balances(pool_1, pool_1_tokens):
+    def _get_pool_1_balances():
+        return [token.balanceOf(pool_1) for token in pool_1_tokens]
     
-    yield _get_source_pool_balances
+    yield _get_pool_1_balances
 
 @pytest.fixture(scope="module")
-def get_target_pool_balances(target_pool, target_pool_tokens):
-    def _get_target_pool_balances():
-        return [token.balanceOf(target_pool) for token in target_pool_tokens]
+def get_pool_2_balances(pool_2, pool_2_tokens):
+    def _get_pool_2_balances():
+        return [token.balanceOf(pool_2) for token in pool_2_tokens]
     
-    yield _get_target_pool_balances
+    yield _get_pool_2_balances
 
 
 
@@ -296,28 +296,28 @@ def get_pool_amp(pool):
     yield _get_pool_amp
 
 @pytest.fixture(scope="module")
-def get_source_pool_amp(source_pool):
-    def _get_source_pool_amp():
+def get_pool_1_amp(pool_1):
+    def _get_pool_1_amp():
         try:
-            amp = source_pool._amp()   # Amplified pools
+            amp = pool_1._amp()   # Amplified pools
         except AttributeError:
             amp = 10**18               # Volatile pools
 
         return amp
     
-    yield _get_source_pool_amp
+    yield _get_pool_1_amp
 
 @pytest.fixture(scope="module")
-def get_target_pool_amp(target_pool):
-    def _get_target_pool_amp():
+def get_pool_2_amp(pool_2):
+    def _get_pool_2_amp():
         try:
-            amp = target_pool._amp()   # Amplified pools
+            amp = pool_2._amp()   # Amplified pools
         except AttributeError:
             amp = 10**18               # Volatile pools
 
         return amp
     
-    yield _get_target_pool_amp
+    yield _get_pool_2_amp
 
 
 
@@ -331,22 +331,22 @@ def get_pool_unit_tracker(pool):
     yield _get_pool_unit_tracker
 
 @pytest.fixture(scope="module")
-def get_source_pool_unit_tracker(source_pool, get_source_pool_amp):
-    def _get_source_pool_unit_tracker():
-        if get_source_pool_amp() == 10**18:
+def get_pool_1_unit_tracker(pool_1, get_pool_1_amp):
+    def _get_pool_1_unit_tracker():
+        if get_pool_1_amp() == 10**18:
             return 0
-        return source_pool._unitTracker()
+        return pool_1._unitTracker()
     
-    yield _get_source_pool_unit_tracker
+    yield _get_pool_1_unit_tracker
 
 @pytest.fixture(scope="module")
-def get_target_pool_unit_tracker(target_pool, get_target_pool_amp):
-    def _get_target_pool_unit_tracker():
-        if get_target_pool_amp() == 10**18:
+def get_pool_2_unit_tracker(pool_2, get_pool_2_amp):
+    def _get_pool_2_unit_tracker():
+        if get_pool_2_amp() == 10**18:
             return 0
-        return target_pool._unitTracker()
+        return pool_2._unitTracker()
     
-    yield _get_target_pool_unit_tracker
+    yield _get_pool_2_unit_tracker
 
 
 
@@ -360,18 +360,18 @@ def get_pool_invariant(get_pool_weights, get_pool_balances, get_pool_amp):
     yield _get_pool_invariant
 
 @pytest.fixture(scope="module")
-def get_source_pool_invariant(get_source_pool_weights, get_source_pool_balances, get_source_pool_amp):
-    def _get_source_pool_invariant():
-        return compute_invariant(get_source_pool_weights(), get_source_pool_balances(), get_source_pool_amp())
+def get_pool_1_invariant(get_pool_1_weights, get_pool_1_balances, get_pool_1_amp):
+    def _get_pool_1_invariant():
+        return compute_invariant(get_pool_1_weights(), get_pool_1_balances(), get_pool_1_amp())
 
-    yield _get_source_pool_invariant
+    yield _get_pool_1_invariant
 
 @pytest.fixture(scope="module")
-def get_target_pool_invariant(get_target_pool_weights, get_target_pool_balances, get_target_pool_amp):
-    def _get_target_pool_invariant():
-        return compute_invariant(get_target_pool_weights(), get_target_pool_balances(), get_target_pool_amp())
+def get_pool_2_invariant(get_pool_2_weights, get_pool_2_balances, get_pool_2_amp):
+    def _get_pool_2_invariant():
+        return compute_invariant(get_pool_2_weights(), get_pool_2_balances(), get_pool_2_amp())
 
-    yield _get_target_pool_invariant
+    yield _get_pool_2_invariant
 
 
 
@@ -390,38 +390,38 @@ def get_pool_balance_0(get_pool_weights, get_pool_balances, get_pool_unit_tracke
     yield _get_pool_balance_0
 
 @pytest.fixture(scope="module")
-def get_source_pool_balance_0(
-    get_source_pool_weights,
-    get_source_pool_balances,
-    get_source_pool_unit_tracker,
-    get_source_pool_amp
+def get_pool_1_balance_0(
+    get_pool_1_weights,
+    get_pool_1_balances,
+    get_pool_1_unit_tracker,
+    get_pool_1_amp
 ):
-    def _get_source_pool_balance_0():
+    def _get_pool_1_balance_0():
         return compute_balance_0(
-            get_source_pool_weights(),
-            get_source_pool_balances(),
-            get_source_pool_unit_tracker(),
-            get_source_pool_amp()
+            get_pool_1_weights(),
+            get_pool_1_balances(),
+            get_pool_1_unit_tracker(),
+            get_pool_1_amp()
         )
 
-    yield _get_source_pool_balance_0
+    yield _get_pool_1_balance_0
 
 @pytest.fixture(scope="module")
-def get_target_pool_balance_0(
-    get_target_pool_weights,
-    get_target_pool_balances,
-    get_target_pool_unit_tracker,
-    get_target_pool_amp
+def get_pool_2_balance_0(
+    get_pool_2_weights,
+    get_pool_2_balances,
+    get_pool_2_unit_tracker,
+    get_pool_2_amp
 ):
-    def _get_target_pool_balance_0():
+    def _get_pool_2_balance_0():
         return compute_balance_0(
-            get_target_pool_weights(),
-            get_target_pool_balances(),
-            get_target_pool_unit_tracker(),
-            get_target_pool_amp()
+            get_pool_2_weights(),
+            get_pool_2_balances(),
+            get_pool_2_unit_tracker(),
+            get_pool_2_amp()
         )
 
-    yield _get_target_pool_balance_0
+    yield _get_pool_2_balance_0
 
 
 
@@ -443,34 +443,34 @@ def get_pool_max_unit_inflow(
     yield _get_pool_max_unit_inflow
 
 @pytest.fixture(scope="module")
-def get_source_pool_max_unit_inflow(
-    get_source_pool_weights,
-    get_source_pool_balances,
-    get_source_pool_amp
+def get_pool_1_max_unit_inflow(
+    get_pool_1_weights,
+    get_pool_1_balances,
+    get_pool_1_amp
 ):
-    def _get_source_pool_max_unit_inflow():
+    def _get_pool_1_max_unit_inflow():
         return compute_expected_max_unit_inflow(
-            get_source_pool_weights(),
-            get_source_pool_balances(),
-            get_source_pool_amp()
+            get_pool_1_weights(),
+            get_pool_1_balances(),
+            get_pool_1_amp()
         )
 
-    yield _get_source_pool_max_unit_inflow
+    yield _get_pool_1_max_unit_inflow
 
 @pytest.fixture(scope="module")
-def get_target_pool_max_unit_inflow(
-    get_target_pool_weights,
-    get_target_pool_balances,
-    get_target_pool_amp
+def get_pool_2_max_unit_inflow(
+    get_pool_2_weights,
+    get_pool_2_balances,
+    get_pool_2_amp
 ):
-    def _get_target_pool_max_unit_inflow():
+    def _get_pool_2_max_unit_inflow():
         return compute_expected_max_unit_inflow(
-            get_target_pool_weights(),
-            get_target_pool_balances(),
-            get_target_pool_amp()
+            get_pool_2_weights(),
+            get_pool_2_balances(),
+            get_pool_2_amp()
         )
 
-    yield _get_target_pool_max_unit_inflow
+    yield _get_pool_2_max_unit_inflow
 
 
 # Swap Calculations Helpers *****************************************************************************************************
@@ -501,13 +501,13 @@ def compute_expected_local_swap(
     yield _compute_expected_local_swap
 
 
-# NOTE: this fixture is only expected to be used on tests that include the fixtures 'source_pool' and 'target_pool'
+# NOTE: this fixture is only expected to be used on tests that include the fixtures 'pool_1' and 'pool_2'
 @pytest.fixture(scope="module")
 def compute_expected_swap(
-    source_pool,
-    target_pool,
-    get_source_pool_amp,
-    get_target_pool_amp
+    pool_1,
+    pool_2,
+    get_pool_1_amp,
+    get_pool_2_amp
 ):
     def _compute_expected_swap(
         swap_amount,
@@ -516,57 +516,57 @@ def compute_expected_swap(
     ):
         return pool_utils.compute_expected_swap(
             swap_amount,
-            source_pool._weight(from_token),
-            from_token.balanceOf(source_pool),
-            target_pool._weight(to_token),
-            to_token.balanceOf(target_pool),
-            get_source_pool_amp(),
-            get_target_pool_amp()
+            pool_1._weight(from_token),
+            from_token.balanceOf(pool_1),
+            pool_2._weight(to_token),
+            to_token.balanceOf(pool_2),
+            get_pool_1_amp(),
+            get_pool_2_amp()
         )
     
     yield _compute_expected_swap
 
 
-# NOTE: this fixture is only expected to be used on tests that include the fixtures 'source_pool' and 'target_pool'
+# NOTE: this fixture is only expected to be used on tests that include the fixtures 'pool_1' and 'pool_2'
 @pytest.fixture(scope="module")
 def compute_expected_liquidity_swap(
-    source_pool,
-    target_pool,
-    get_source_pool_weights,
-    get_source_pool_balances,
-    get_source_pool_unit_tracker,
-    get_target_pool_weights,
-    get_target_pool_balances,
-    get_target_pool_unit_tracker,
-    get_source_pool_amp,
-    get_target_pool_amp
+    pool_1,
+    pool_2,
+    get_pool_1_weights,
+    get_pool_1_balances,
+    get_pool_1_unit_tracker,
+    get_pool_2_weights,
+    get_pool_2_balances,
+    get_pool_2_unit_tracker,
+    get_pool_1_amp,
+    get_pool_2_amp
 ):
     def _compute_expected_liquidity_swap(
         swap_amount
     ):
         return pool_utils.compute_expected_liquidity_swap(
             swap_amount,
-            get_source_pool_weights(),
-            get_source_pool_balances(),
-            source_pool.totalSupply(),
-            get_source_pool_unit_tracker(),
-            get_target_pool_weights(),
-            get_target_pool_balances(),
-            target_pool.totalSupply(),
-            get_target_pool_unit_tracker(),
-            get_source_pool_amp(),
-            get_target_pool_amp()
+            get_pool_1_weights(),
+            get_pool_1_balances(),
+            pool_1.totalSupply(),
+            get_pool_1_unit_tracker(),
+            get_pool_2_weights(),
+            get_pool_2_balances(),
+            pool_2.totalSupply(),
+            get_pool_2_unit_tracker(),
+            get_pool_1_amp(),
+            get_pool_2_amp()
         )
     
     yield _compute_expected_liquidity_swap
 
 
 
-# NOTE: this fixture is only expected to be used on tests that include the fixture 'target_pool'
+# NOTE: this fixture is only expected to be used on tests that include the fixture 'pool_2'
 @pytest.fixture(scope="module")
 def compute_expected_swap_given_U(
-    target_pool,
-    get_target_pool_amp
+    pool_2,
+    get_pool_2_amp
 ):
     def _compute_expected_swap_given_U(
         U,
@@ -574,9 +574,9 @@ def compute_expected_swap_given_U(
     ):
         return pool_utils.compute_expected_swap_given_U(
             U,
-            target_pool._weight(to_token),
-            to_token.balanceOf(target_pool),
-            get_target_pool_amp()
+            pool_2._weight(to_token),
+            to_token.balanceOf(pool_2),
+            get_pool_2_amp()
         )
     
     yield _compute_expected_swap_given_U

@@ -12,8 +12,8 @@ The following flags can be used to run specific collections/configurations of th
 | `--volatile`                   | Run tests for volatile pools.  |
 | `--amplified`                  | Run tests for amplified pools  |
 | `--amplification VALUE` | Override the amplification constant that is specified on the specified config file. (May only be set if amplified tests are set to be run.)  |
-| `--source-pool PARAM_TYPE` | Specify how to parametrize the source pool fixture:<ul><li>`'all'`: Go through all the pools.</li><li>`POOL_INDEX`: Only the specified pool.</li></ul>  |
-| `--target-pool PARAM_TYPE` | Specify how to parametrize the target pool fixture:<ul><li>`'all'`: Go through all the pools (skips the `source_pool`, i.e. avoid combinations with the same pool)</li><li>`'next'`: Use the *next* pool defined after the current `source_pool` (by index)</li><li>`POOL_INDEX`: Only the specified pool.</li></ul>  |
+| `--pool-1 PARAM_TYPE` | Specify how to parametrize the pool_1 fixture:<ul><li>`'all'`: Go through all the pools.</li><li>`POOL_INDEX`: Only the specified pool.</li></ul>  |
+| `--pool-2 PARAM_TYPE` | Specify how to parametrize the pool_2 fixture:<ul><li>`'all'`: Go through all the pools (skips the `pool_1`, i.e. avoid combinations with the same pool)</li><li>`'next'`: Use the *next* pool defined after the current `pool_1` (by index)</li><li>`POOL_INDEX`: Only the specified pool.</li></ul>  |
 | `--unit`                       | Run unit tests.  |
 | `--integration`                | Run integration tests.  |
 | `--filter FILTER`              | Filter the collected tests according to the provided filter (filtered by string inclusion): [file-name][::[test-name]] |
@@ -95,4 +95,4 @@ For tests involving a single pool, an extra field `pool_index` within `raw_confi
 | `pool_config`       | The configuration data of the pool `pool`. |
 | `pool_tokens`       | The tokens contained by the pool `pool`. |
 ### Dual Pool Tests
-For tests involving *source* and *target* pools, two extra fields `source_index` and `target_index` within `raw_config` get parametrized according to the test settings. Further fixtures are defined for these two parameters. These are the same as those defined for *Single Pool Tests* (described shortly above), but with `source_` and `target_` prepended to the fixture names.
+For tests involving two pools, two extra fields `pool_1_index` and `pool_2_index` within `raw_config` get parametrized according to the test settings. Further fixtures are defined for these two parameters. These are the same as those defined for *Single Pool Tests* (described shortly above), but with `pool_1_` and `pool_2_` prepended to the fixture names.

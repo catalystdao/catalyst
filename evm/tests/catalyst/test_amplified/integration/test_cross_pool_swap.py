@@ -11,10 +11,10 @@ pytestmark = pytest.mark.usefixtures("group_finish_setup", "group_connect_pools"
 @given(swap_amount=strategy("uint256", max_value=10*10**18))
 def test_cross_pool_swap(
     channel_id,
-    source_pool,
-    target_pool,
-    source_pool_tokens,
-    target_pool_tokens,
+    pool_1,
+    pool_2,
+    pool_1_tokens,
+    pool_2_tokens,
     berg,
     deployer,
     ibc_emulator,
@@ -22,22 +22,22 @@ def test_cross_pool_swap(
     swap_amount
 ):
     #TODO parametrize source_token and target_tokens?
-    source_token = source_pool_tokens[0]
-    target_token = target_pool_tokens[0]
+    source_token = pool_1_tokens[0]
+    target_token = pool_2_tokens[0]
 
     assert target_token.balanceOf(berg) == 0
 
     source_token.transfer(berg, swap_amount, {'from': deployer})
-    source_token.approve(source_pool, swap_amount, {'from': berg})
+    source_token.approve(pool_1, swap_amount, {'from': berg})
     
     try:
         y = compute_expected_swap(swap_amount, source_token, target_token)['output']
     except:
         pytest.skip()   #TODO For certain pool configs, there is no output for the specified swap amount (swap too large) => remove this workaround + be specific on the test configs to 'skip'
     
-    tx = source_pool.swapToUnits(
+    tx = pool_1.swapToUnits(
         channel_id,
-        convert.to_bytes(target_pool.address.replace("0x", "")),
+        convert.to_bytes(pool_2.address.replace("0x", "")),
         convert.to_bytes(berg.address.replace("0x", "")),
         source_token,
         0,
@@ -49,7 +49,7 @@ def test_cross_pool_swap(
     assert source_token.balanceOf(berg) == 0
     
     # The swap may revert because of the security limit     #TODO mark these cases as 'skip'?
-    if target_pool.getUnitCapacity() < tx.events["SwapToUnits"]["output"]:
+    if pool_2.getUnitCapacity() < tx.events["SwapToUnits"]["output"]:
         with reverts("Swap exceeds security limit"):
             txe = ibc_emulator.execute(tx.events["IncomingMetadata"]["metadata"][0], tx.events["IncomingPacket"]["packet"], {"from": berg})
         return
@@ -76,10 +76,10 @@ def test_cross_pool_swap(
 @given(swap_amount=strategy("uint256", max_value=10*10**18))
 def test_cross_pool_swap_min_out(
     channel_id,
-    source_pool,
-    target_pool,
-    source_pool_tokens,
-    target_pool_tokens,
+    pool_1,
+    pool_2,
+    pool_1_tokens,
+    pool_2_tokens,
     berg,
     deployer,
     compute_expected_swap,
@@ -87,13 +87,13 @@ def test_cross_pool_swap_min_out(
     swap_amount
 ):
     
-    source_token = source_pool_tokens[0]
-    target_token = target_pool_tokens[0]
+    source_token = pool_1_tokens[0]
+    target_token = pool_2_tokens[0]
 
     assert target_token.balanceOf(berg) == 0
 
     source_token.transfer(berg, swap_amount, {'from': deployer})
-    source_token.approve(source_pool, swap_amount, {'from': berg})
+    source_token.approve(pool_1, swap_amount, {'from': berg})
     
     try:
         y = compute_expected_swap(swap_amount, source_token, target_token)['output']
@@ -106,9 +106,9 @@ def test_cross_pool_swap_min_out(
     else:
         min_out = int(y * 1.2)
     
-    tx = source_pool.swapToUnits(
+    tx = pool_1.swapToUnits(
         channel_id,
-        convert.to_bytes(target_pool.address.replace("0x", "")),
+        convert.to_bytes(pool_2.address.replace("0x", "")),
         convert.to_bytes(berg.address.replace("0x", "")),
         source_token,
         0,
@@ -129,9 +129,9 @@ def test_cross_pool_swap_min_out(
 
 def test_swap_to_units_event(
     channel_id,
-    source_pool,
-    target_pool,
-    source_pool_tokens,
+    pool_1,
+    pool_2,
+    pool_1_tokens,
     berg,
     elwood,
     deployer
@@ -143,14 +143,14 @@ def test_swap_to_units_event(
     swap_amount = 10**8
     min_out     = 100
     
-    source_token = source_pool_tokens[0]
+    source_token = pool_1_tokens[0]
 
     source_token.transfer(berg, swap_amount, {'from': deployer})
-    source_token.approve(source_pool, swap_amount, {'from': berg})
+    source_token.approve(pool_1, swap_amount, {'from': berg})
     
-    tx = source_pool.swapToUnits(
+    tx = pool_1.swapToUnits(
         channel_id,
-        convert.to_bytes(target_pool.address.replace("0x", "")),
+        convert.to_bytes(pool_2.address.replace("0x", "")),
         convert.to_bytes(elwood.address.replace("0x", "")),     # NOTE: not using the same account as the caller of the tx to make sure the 'targetUser' is correctly reported
         source_token,
         1,                                                      # NOTE: use non-zero target asset index to make sure the field is set on the event (and not just left blank)
@@ -165,7 +165,7 @@ def test_swap_to_units_event(
 
     swap_to_units_event = tx.events['SwapToUnits']
 
-    assert swap_to_units_event['targetPool']   == target_pool
+    assert swap_to_units_event['targetPool']   == pool_2
     assert swap_to_units_event['targetUser']   == elwood
     assert swap_to_units_event['fromAsset']    == source_token
     assert swap_to_units_event['toAssetIndex'] == 1
@@ -177,10 +177,10 @@ def test_swap_to_units_event(
 
 def test_swap_from_units_event(
     channel_id,
-    source_pool,
-    target_pool,
-    source_pool_tokens,
-    target_pool_tokens,
+    pool_1,
+    pool_2,
+    pool_1_tokens,
+    pool_2_tokens,
     berg,
     elwood,
     deployer,
@@ -192,15 +192,15 @@ def test_swap_from_units_event(
 
     swap_amount = 10**8
 
-    source_token = source_pool_tokens[0]
-    target_token = target_pool_tokens[0]
+    source_token = pool_1_tokens[0]
+    target_token = pool_2_tokens[0]
 
     source_token.transfer(berg, swap_amount, {'from': deployer})
-    source_token.approve(source_pool, swap_amount, {'from': berg})
+    source_token.approve(pool_1, swap_amount, {'from': berg})
     
-    tx = source_pool.swapToUnits(
+    tx = pool_1.swapToUnits(
         channel_id,
-        convert.to_bytes(target_pool.address.replace("0x", "")),
+        convert.to_bytes(pool_2.address.replace("0x", "")),
         convert.to_bytes(elwood.address.replace("0x", "")),
         source_token,
         0,

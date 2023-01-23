@@ -22,7 +22,7 @@ _test_config = {
 _run_unit_tests        = False
 _run_integration_tests = False
 
-_source_target_combinations = []
+_pool_test_combinations = []
 
 
 # Enable test isolation
@@ -31,8 +31,8 @@ def isolation(fn_isolation):
     pass
 
 
-def source_pool_type_checker(value):
-    # source-pool should be either one of ["all"], or a specific pool index
+def pool_1_type_checker(value):
+    # pool-1 should be either one of ["all"], or a specific pool index
 
     try:
         # Check if a pool index
@@ -40,13 +40,13 @@ def source_pool_type_checker(value):
     except:
         # If not a pool index, check if it's an allowed string option
         if not value in ["all"]:
-            raise pytest.UsageError("--source-pool should be either \"all\" or a pool index")
+            raise pytest.UsageError("--pool-1 should be either \"all\" or a pool index")
     
     return value
 
 
-def target_pool_type_checker(value):
-    # target-pool should be either one of ["next", "all"], or a specific pool index
+def pool_2_type_checker(value):
+    # pool-2 should be either one of ["next", "all"], or a specific pool index
 
     try:
         # Check if a pool index
@@ -54,7 +54,7 @@ def target_pool_type_checker(value):
     except:
         # If not a pool index, check if it's an allowed string option
         if not value in ["next", "all"]:
-            raise pytest.UsageError("--target-pool should be either (\"next\" | \"all\") or a pool index")
+            raise pytest.UsageError("--pool-2 should be either (\"next\" | \"all\") or a pool index")
     
     return value
 
@@ -65,8 +65,8 @@ def pytest_addoption(parser):
     parser.addoption("--amplified", action="store_true", help="Run only tests of the amplified pool.")
     parser.addoption("--amplification", default=None, help="Override the config amplification constant.")
 
-    parser.addoption("--source-pool", default="0", type=source_pool_type_checker, help="Specify how to parametrize the source pool fixture.")
-    parser.addoption("--target-pool", default="all", type=target_pool_type_checker, help="Specify how to parametrize the target pool fixture.")
+    parser.addoption("--pool-1", default="0", type=pool_1_type_checker, help="Specify how to parametrize the pool-1 fixture.")
+    parser.addoption("--pool-2", default="all", type=pool_2_type_checker, help="Specify how to parametrize the pool-2 fixture.")
 
     parser.addoption("--unit", action="store_true", help="Run only unit tests.")
     parser.addoption("--integration", action="store_true", help="Run only integration tests.")
@@ -78,7 +78,7 @@ def pytest_addoption(parser):
 def pytest_configure(config):
     global _run_unit_tests
     global _run_integration_tests
-    global _source_target_combinations
+    global _pool_test_combinations
 
     # Note that if "--volatile" nor "--amplified" are specified, all tests will run
     run_all_tests = not config.getoption("--volatile") and not config.getoption("--amplified")
@@ -129,16 +129,16 @@ def pytest_configure(config):
 
 
     # If both volatile and amplified configurations are loaded within the same test run, they must contain
-    # the same number of pools, otherwise user defined --source-pool and --target-pool may work for one of 
+    # the same number of pools, otherwise user defined --pool-1 and --pool-2 may work for one of 
     # the configurations but not for the other.
     if run_vol_tests and run_amp_tests and \
     len(_test_config["volatile"]["pools"]) != len(_test_config["amplified"]["pools"]):
         raise Exception(f"The number of pools defined in {config_name}.json for both volatile and amplified definitions must match.")
     
-    # Compute the source-target pool combinations (indexes only)
-    _source_target_combinations = compute_pool_combinations(
-        config.getoption("--source-pool"),
-        config.getoption("--target-pool"),
+    # Compute the pool-1/pool-2 combinations (indexes only)
+    _pool_test_combinations = compute_pool_combinations(
+        config.getoption("--pool-1"),
+        config.getoption("--pool-2"),
         len((_test_config["volatile"] or _test_config["amplified"])["pools"])        # 'or' as 'volatile' config may be None (but in that case 'amplified' is not)
     )
 
@@ -239,16 +239,16 @@ def pytest_generate_tests(metafunc):
                 for i in range(len(config["pools"]))
             ]
 
-        # For dual-pool tests (i.e 'source_pool_index' + 'target_pool_index' combos)
-        elif "source_pool_index" in metafunc.fixturenames:
+        # For dual-pool tests (i.e 'pool_1_index' + 'pool_2_index' combos)
+        elif "pool_1_index" in metafunc.fixturenames:
             parametrized_configs = [
                 {
                     **config,
-                    "source_index": indexes[0],
-                    "target_index": indexes[1]
+                    "pool_1_index": indexes[0],
+                    "pool_2_index": indexes[1]
                 }
                 for config in configs
-                for indexes in _source_target_combinations
+                for indexes in _pool_test_combinations
             ]
         
         else:
@@ -282,46 +282,46 @@ def pytest_collection_modifyitems(session, config, items):
 
 
 
-def compute_pool_combinations(source_pool, target_pool, pool_count):
+def compute_pool_combinations(pool_1, pool_2, pool_count):
     
     if pool_count < 2:
         return []
 
-    source_pool_indexes = []
+    pool_1_indexes = []
 
-    if source_pool == "all":
-        source_pool_indexes = list(range(pool_count))
+    if pool_1 == "all":
+        pool_1_indexes = list(range(pool_count))
     else:
         try:
-            s_idx = int(source_pool)
+            p1_idx = int(pool_1)
         except:
             raise Exception("Unable to compute pool combinations with the provided parameters.")
 
-        if s_idx >= pool_count:
-            raise Exception("The provided source pool index exceeds the pool count.")
+        if p1_idx >= pool_count:
+            raise Exception("The provided pool-1 index exceeds the pool count.")
 
-        source_pool_indexes = [s_idx]
+        pool_1_indexes = [p1_idx]
 
 
-    if target_pool == "all":
+    if pool_2 == "all":
         return [
-            (s_idx, t_idx) \
-            for s_idx in source_pool_indexes \
-            for t_idx in range(pool_count) \
-            if s_idx != t_idx
+            (p1_idx, p2_idx) \
+            for p1_idx in pool_1_indexes \
+            for p2_idx in range(pool_count) \
+            if p1_idx != p2_idx
         ]
-    elif target_pool == "next":
-        return [(s_idx, (s_idx + 1) % pool_count) for s_idx in source_pool_indexes]
+    elif pool_2 == "next":
+        return [(p1_idx, (p1_idx + 1) % pool_count) for p1_idx in pool_1_indexes]
     else:
         try:
-            t_idx = int(target_pool)
+            p2_idx = int(pool_2)
         except:
             raise Exception("Unable to compute pool combinations with the provided parameters.")
 
-        if t_idx >= pool_count:
-            raise Exception("The provided target pool index exceeds the pool count.")
+        if p2_idx >= pool_count:
+            raise Exception("The provided pool-2 index exceeds the pool count.")
 
-        return [(s_idx, t_idx) for s_idx in source_pool_indexes]
+        return [(p1_idx, p2_idx) for p1_idx in pool_1_indexes]
 
 
 def verify_config(config, type, config_name):
