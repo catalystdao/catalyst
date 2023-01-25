@@ -22,7 +22,8 @@ _test_config = {
 _run_unit_tests        = False
 _run_integration_tests = False
 
-_pool_test_combinations = []
+_parametrized_pools      = []
+_parametrized_pool_pairs = []
 
 
 # Enable test isolation
@@ -31,8 +32,8 @@ def isolation(fn_isolation):
     pass
 
 
-def pool_1_type_checker(value):
-    # pool-1 should be either one of ["all"], or a specific pool index
+def pool_type_checker(value):
+    # pool should be either one of ["all"], or a specific pool index
 
     try:
         # Check if a pool index
@@ -40,9 +41,19 @@ def pool_1_type_checker(value):
     except:
         # If not a pool index, check if it's an allowed string option
         if not value in ["all"]:
-            raise pytest.UsageError("--pool-1 should be either \"all\" or a pool index")
+            raise pytest.UsageError("--pool should be either \"all\" or a pool index")
     
     return value
+
+
+def pool_1_type_checker(value):
+    # Same as the pool_type_checker:
+    # pool-1 should be either one of ["all"], or a specific pool index
+    try:
+        return pool_type_checker(value)
+    except:
+        # Rename the error
+        raise pytest.UsageError("--pool-1 should be either \"all\" or a pool index")
 
 
 def pool_2_type_checker(value):
@@ -65,6 +76,7 @@ def pytest_addoption(parser):
     parser.addoption("--amplified", action="store_true", help="Run only tests of the amplified pool.")
     parser.addoption("--amplification", default=None, help="Override the config amplification constant.")
 
+    parser.addoption("--pool", default="all", type=pool_type_checker, help="Specify how to parametrize the pool fixture.")
     parser.addoption("--pool-1", default="0", type=pool_1_type_checker, help="Specify how to parametrize the pool-1 fixture.")
     parser.addoption("--pool-2", default="all", type=pool_2_type_checker, help="Specify how to parametrize the pool-2 fixture.")
 
@@ -78,7 +90,8 @@ def pytest_addoption(parser):
 def pytest_configure(config):
     global _run_unit_tests
     global _run_integration_tests
-    global _pool_test_combinations
+    global _parametrized_pools
+    global _parametrized_pool_pairs
 
     # Note that if "--volatile" nor "--amplified" are specified, all tests will run
     run_all_tests = not config.getoption("--volatile") and not config.getoption("--amplified")
@@ -134,12 +147,20 @@ def pytest_configure(config):
     if run_vol_tests and run_amp_tests and \
     len(_test_config["volatile"]["pools"]) != len(_test_config["amplified"]["pools"]):
         raise Exception(f"The number of pools defined in {config_name}.json for both volatile and amplified definitions must match.")
+
+    pool_count = len((_test_config["volatile"] or _test_config["amplified"])["pools"])  # 'or' as 'volatile' config may be None (but in that case 'amplified' is not)
+
+    # Compute the pool parametrization (indexes only)
+    _parametrized_pools = compute_parametrized_pools(
+        config.getoption("--pool"),
+        pool_count
+    )
     
     # Compute the pool-1/pool-2 combinations (indexes only)
-    _pool_test_combinations = compute_pool_combinations(
+    _parametrized_pool_pairs = compute_parametrized_pool_pairs(
         config.getoption("--pool-1"),
         config.getoption("--pool-2"),
-        len((_test_config["volatile"] or _test_config["amplified"])["pools"])        # 'or' as 'volatile' config may be None (but in that case 'amplified' is not)
+        pool_count
     )
 
 
@@ -236,7 +257,7 @@ def pytest_generate_tests(metafunc):
                     "pool_index": i
                 }
                 for config in configs
-                for i in range(len(config["pools"]))
+                for i in _parametrized_pools
             ]
 
         # For dual-pool tests (i.e 'pool_1_index' + 'pool_2_index' combos)
@@ -248,7 +269,7 @@ def pytest_generate_tests(metafunc):
                     "pool_2_index": indexes[1]
                 }
                 for config in configs
-                for indexes in _pool_test_combinations
+                for indexes in _parametrized_pool_pairs
             ]
         
         else:
@@ -282,20 +303,37 @@ def pytest_collection_modifyitems(session, config, items):
 
 
 
-def compute_pool_combinations(pool_1, pool_2, pool_count):
+def compute_parametrized_pools(pool_param_type, pool_count):
+
+    if pool_param_type == "all":
+        return list(range(pool_count))
+    
+    try:
+        p_idx = int(pool_param_type)
+    except:
+        raise Exception("Unable to compute the parametrized pools with the provided parameters.")
+    
+    if p_idx >= pool_count:
+        raise Exception("The provided pool index exceeds the pool count.")
+    
+    return [p_idx]
+
+
+
+def compute_parametrized_pool_pairs(pool_1_param_type, pool_2_param_type, pool_count):
     
     if pool_count < 2:
         return []
 
     pool_1_indexes = []
 
-    if pool_1 == "all":
+    if pool_1_param_type == "all":
         pool_1_indexes = list(range(pool_count))
     else:
         try:
-            p1_idx = int(pool_1)
+            p1_idx = int(pool_1_param_type)
         except:
-            raise Exception("Unable to compute pool combinations with the provided parameters.")
+            raise Exception("Unable to compute the parametrized pool pairs with the provided parameters.")
 
         if p1_idx >= pool_count:
             raise Exception("The provided pool-1 index exceeds the pool count.")
@@ -303,20 +341,20 @@ def compute_pool_combinations(pool_1, pool_2, pool_count):
         pool_1_indexes = [p1_idx]
 
 
-    if pool_2 == "all":
+    if pool_2_param_type == "all":
         return [
             (p1_idx, p2_idx) \
             for p1_idx in pool_1_indexes \
             for p2_idx in range(pool_count) \
             if p1_idx != p2_idx
         ]
-    elif pool_2 == "next":
+    elif pool_2_param_type == "next":
         return [(p1_idx, (p1_idx + 1) % pool_count) for p1_idx in pool_1_indexes]
     else:
         try:
-            p2_idx = int(pool_2)
+            p2_idx = int(pool_2_param_type)
         except:
-            raise Exception("Unable to compute pool combinations with the provided parameters.")
+            raise Exception("Unable to compute the parametrized pool pairs with the provided parameters.")
 
         if p2_idx >= pool_count:
             raise Exception("The provided pool-2 index exceeds the pool count.")
