@@ -243,7 +243,7 @@ abstract contract CatalystSwapPoolCommon is
 
     function setGovernanceFee(uint256 newPoolGovernanceFee) external {
         require(msg.sender == _feeAdministrator); // dev: Only feeAdministrator can set new fee
-        require(newPoolGovernanceFee <= 75**17); // dev: GovernanceFee is maximum 75%.
+        require(newPoolGovernanceFee <= 75*10**16); // dev: GovernanceFee is maximum 75%.
         _governanceFee = newPoolGovernanceFee;
 
         emit SetGovernanceFee(newPoolGovernanceFee);
