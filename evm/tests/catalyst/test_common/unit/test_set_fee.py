@@ -19,6 +19,7 @@ def test_set_default_governance_fee(
     fee
 ):
     fee = int(fee * 10**18)
+    assert swap_factory._defaultGovernanceFee() != fee
 
 
     swap_factory.setNewDefaultGovernanceFee(fee, {"from": deployer})
@@ -57,20 +58,16 @@ def test_set_default_governance_fee_event(
     swap_factory,
     deployer
 ):
-    fee_1 = int(0.25 * 10**18)
-    swap_factory.setNewDefaultGovernanceFee(fee_1, {"from": deployer})
+    fee = int(0.25 * 10**18)
+    assert swap_factory._defaultGovernanceFee() != fee
 
 
-    # Change the fee twice, as the 'NewDefaultGovernanceFee' reports both the new and the old fee setting
-    # (this is to make sure the 'old' reported fee is also correct and not just left blank)
-    fee_2 = int(0.25 * 10**18)
-    tx_2 = swap_factory.setNewDefaultGovernanceFee(fee_2, {"from": deployer})
+    tx = swap_factory.setNewDefaultGovernanceFee(fee, {"from": deployer})
 
 
     # Check the event
-    event = tx_2.events["NewDefaultGovernanceFee"]
-    assert event["oldDefaultGovernanceFee"] == fee_1
-    assert event["newDefaultGovernanceFee"] == fee_2
+    event = tx.events["NewDefaultGovernanceFee"]
+    assert event["newDefaultGovernanceFee"] == fee
 
 
 

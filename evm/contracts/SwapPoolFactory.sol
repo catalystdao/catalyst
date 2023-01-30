@@ -35,7 +35,7 @@ contract CatalystSwapPoolFactory is Ownable, ICatalystV1FactoryEvents {
         _poolTemplate[1] = amplifiedPoolTemplate;
         emit AddPoolTemplate(1, amplifiedPoolTemplate);
 
-        emit NewDefaultGovernanceFee(0, initialDefaultGovernanceFee);
+        emit NewDefaultGovernanceFee(initialDefaultGovernanceFee);
         _defaultGovernanceFee = initialDefaultGovernanceFee;
     }
 
@@ -46,7 +46,6 @@ contract CatalystSwapPoolFactory is Ownable, ICatalystV1FactoryEvents {
         require(newDefaultGovernanceFee <= 10**18 / 2); // dev: GovernanceFee is maximum 50%.
 
         emit NewDefaultGovernanceFee(
-            _defaultGovernanceFee,
             newDefaultGovernanceFee
         );
 

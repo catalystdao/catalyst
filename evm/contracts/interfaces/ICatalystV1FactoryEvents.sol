@@ -24,11 +24,9 @@ interface ICatalystV1FactoryEvents {
     /**
      * @notice Describes governance fee changes.
      * @dev Only applies to new pools, has no impact on existing pools.
-     * @param oldDefaultGovernanceFee The governance fee which is to be overwritten.
      * @param newDefaultGovernanceFee The new governance fee.
      */
     event NewDefaultGovernanceFee(
-        uint256 oldDefaultGovernanceFee,
         uint256 newDefaultGovernanceFee
     );
 
