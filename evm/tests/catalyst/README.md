@@ -97,3 +97,10 @@ For tests involving a single pool, an extra field `pool_index` within `raw_confi
 | `pool_tokens`       | The tokens contained by the pool `pool`. |
 ### Dual Pool Tests
 For tests involving two pools, two extra fields `pool_1_index` and `pool_2_index` within `raw_config` get parametrized according to the test settings. Further fixtures are defined for these two parameters. These are the same as those defined for *Single Pool Tests* (described shortly above), but with `pool_1_` and `pool_2_` prepended to the fixture names.
+
+<br/>
+
+# Markers
+| Marker           | Description|
+| ----              | ---------- |
+| `no_pool_param`   | Don't parametrize the `pool` fixture more than once. (i.e. only use the first pool definition)

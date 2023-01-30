@@ -164,6 +164,10 @@ def pytest_configure(config):
     )
 
 
+    # Add custom pytest markers
+    config.addinivalue_line("markers", "no_pool_param: don't parametrize the 'pool' fixture more than once.")
+
+
 def pytest_report_header(config):
     header_msgs = []
 
@@ -251,13 +255,17 @@ def pytest_generate_tests(metafunc):
 
         # For single-pool tests
         if "pool_index" in metafunc.fixturenames:
+            no_pool_param = next(metafunc.definition.iter_markers(name="no_pool_param"), None) is not None
+
             parametrized_configs = [
                 {
                     **config,
                     "pool_index": i
                 }
                 for config in configs
-                for i in _parametrized_pools
+                for i in (
+                    _parametrized_pools if not no_pool_param else _parametrized_pools[:1]
+                )
             ]
 
         # For dual-pool tests (i.e 'pool_1_index' + 'pool_2_index' combos)
