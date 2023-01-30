@@ -116,6 +116,14 @@ interface ICatalystV1PoolEvents {
     event FinishSetup();
 
     /**
+     * @notice Emitted on fee administrator adjustment
+     * @param administrator The new pool fee administrator
+     */
+    event SetFeeAdministrator(
+        address administrator
+    );
+
+    /**
      * @notice Emitted on pool fee adjustment
      * @param fee The new pool fee
      */

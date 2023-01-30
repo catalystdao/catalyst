@@ -231,6 +231,8 @@ abstract contract CatalystSwapPoolCommon is
         onlyFactoryOwner
     {
         _feeAdministrator = newFeeAdministrator;
+
+        emit SetFeeAdministrator(newFeeAdministrator);
     }
 
     /// @dev There is no maximum pool fee.
