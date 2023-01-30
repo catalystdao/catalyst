@@ -1,7 +1,7 @@
 import pytest
 from brownie import reverts
 
-#TODO do not parametrize the following accross pools (how?)
+pytestmark = pytest.mark.no_pool_param
 
 
 @pytest.fixture(scope="module")
