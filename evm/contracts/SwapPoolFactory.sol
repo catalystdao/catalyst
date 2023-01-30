@@ -43,7 +43,7 @@ contract CatalystSwapPoolFactory is Ownable, ICatalystV1FactoryEvents {
         external
         onlyOwner
     {
-        require(newDefaultGovernanceFee <= 10**18 / 2); // dev: GovernanceFee is maximum 50%.
+        require(newDefaultGovernanceFee <= 75*10**16); // dev: GovernanceFee is maximum 75%.
 
         emit NewDefaultGovernanceFee(
             newDefaultGovernanceFee

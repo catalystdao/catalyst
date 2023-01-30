@@ -12,7 +12,7 @@ def set_molly_fee_administrator(pool, deployer, molly):
 
 # Default governance fee (set on pool factory) **********************************************************************************
 
-@pytest.mark.parametrize("fee", [0.25, 0.5])    # Max is 0.5
+@pytest.mark.parametrize("fee", [0.25, 0.75])    # Max is 0.75
 def test_set_default_governance_fee(
     swap_factory,
     deployer,
@@ -34,10 +34,10 @@ def test_set_default_governance_fee_over_max(
     swap_factory,
     deployer
 ):
-    fee = int(0.51 * 10**18)     # Maximum is 0.5
+    fee = int(0.76 * 10**18)     # Maximum is 0.75
 
 
-    with reverts(dev_revert_msg="dev: GovernanceFee is maximum 50%."):
+    with reverts(dev_revert_msg="dev: GovernanceFee is maximum 75%."):
         swap_factory.setNewDefaultGovernanceFee(fee, {"from": deployer})
 
 
