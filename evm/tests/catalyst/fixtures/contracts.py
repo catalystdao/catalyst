@@ -27,7 +27,7 @@ def amplified_swap_pool_template(deployer):
 @pytest.fixture(scope="module")
 def swap_factory(deployer, volatile_swap_pool_template, amplified_swap_pool_template):
     yield deployer.deploy(
-        CatalystSwapPoolFactory, volatile_swap_pool_template, amplified_swap_pool_template, 0
+        CatalystSwapPoolFactory, volatile_swap_pool_template, amplified_swap_pool_template, 0, 0
     )
 
 @pytest.fixture(scope="module")

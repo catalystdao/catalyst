@@ -28,7 +28,8 @@ contract CatalystSwapPoolFactory is Ownable, ICatalystV1FactoryEvents {
     constructor(
         address volatilePoolTemplate,
         address amplifiedPoolTemplate,
-        uint256 initialDefaultGovernanceFee
+        uint256 defaultPoolFee,
+        uint256 defaultGovernanceFee
     ) {
         _poolTemplate[0] = volatilePoolTemplate;
         emit AddPoolTemplate(0, volatilePoolTemplate);
@@ -36,11 +37,11 @@ contract CatalystSwapPoolFactory is Ownable, ICatalystV1FactoryEvents {
         _poolTemplate[1] = amplifiedPoolTemplate;
         emit AddPoolTemplate(1, amplifiedPoolTemplate);
 
-        emit SetDefaultGovernanceFee(initialDefaultGovernanceFee);
-        _defaultGovernanceFee = initialDefaultGovernanceFee;
+        setDefaultPoolFee(defaultPoolFee);
+        setDefaultGovernanceFee(defaultGovernanceFee);
     }
 
-    function setDefaultPoolFee(uint256 fee) external onlyOwner {
+    function setDefaultPoolFee(uint256 fee) public onlyOwner {
         require(fee <= 100*10**16);  // dev: PoolFee is maximum 100%.
 
         emit SetDefaultPoolFee(fee);
@@ -48,7 +49,7 @@ contract CatalystSwapPoolFactory is Ownable, ICatalystV1FactoryEvents {
         _defaultPoolFee = fee;        
     }
 
-    function setDefaultGovernanceFee(uint256 fee) external onlyOwner {
+    function setDefaultGovernanceFee(uint256 fee) public onlyOwner {
         require(fee <= 75*10**16); // dev: GovernanceFee is maximum 75%.
 
         emit SetDefaultGovernanceFee(fee);

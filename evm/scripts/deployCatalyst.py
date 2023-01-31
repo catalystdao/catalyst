@@ -62,7 +62,7 @@ class Catalyst:
 
     def _swapFactory(self):
         self.swapFactory = CatalystSwapPoolFactory.deploy(
-            self.swapTemplate, self.ampSwapTemplate, 0, {"from": self.deployer}
+            self.swapTemplate, self.ampSwapTemplate, 0, 0, {"from": self.deployer}
         )
 
     def _crosschaininterface(self):
