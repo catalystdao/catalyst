@@ -68,7 +68,7 @@ def test_finish_setup_only_local(deploy_pool, tokens, deployer, max_pool_assets,
 
     sp.finishSetup({"from": deployer})
 
-    assert sp._onlyLocal()
+    assert sp.onlyLocal()
 
 
 def test_finish_setup_not_only_local(deploy_pool, tokens, deployer, max_pool_assets, amplification):
@@ -86,5 +86,5 @@ def test_finish_setup_not_only_local(deploy_pool, tokens, deployer, max_pool_ass
 
     sp.finishSetup({"from": deployer})
 
-    assert not sp._onlyLocal()
+    assert not sp.onlyLocal()
 

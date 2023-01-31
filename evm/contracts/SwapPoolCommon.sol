@@ -50,9 +50,6 @@ abstract contract CatalystSwapPoolCommon is
     address public _chaininterface;
     address public _factory;
 
-    /// @notice True if the chain interface is set to address(0).
-    bool public _onlyLocal;
-
     /// @notice To indicate which token is desired on the target pool,
     /// the desired tokens is provided as an integer which maps to the
     /// asset address. This variable is the map.
@@ -141,6 +138,10 @@ abstract contract CatalystSwapPoolCommon is
         _;
     }
 
+    function onlyLocal() public view returns (bool) {
+        return _chaininterface == address(0);
+    }
+
     /** @notice Setup a pool. */
     function setup(
         string calldata name_,
@@ -155,9 +156,6 @@ abstract contract CatalystSwapPoolCommon is
         // On pool deployment check is set to TRUE, to stop anyone from using the pool without a proxy.
         // Likewise, it shouldn't be possible to setup the pool twice.
         require(!_CHECK); // dev: Pool Already setup.
-
-        // If the chaininterface is set to address(0), disable cross-chain swaps entirely.
-        _onlyLocal = chaininterface == address(0);
 
         _chaininterface = chaininterface;
         _setupMaster = setupMaster;

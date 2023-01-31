@@ -16,7 +16,7 @@ interface ICatalystV1PoolState {
     /// @notice
     ///     If the pool has no cross chain connection, this is true.
     ///     Should not be trusted if setupMaster != ZERO_ADDRESS
-    function _onlyLocal() external view returns (bool);
+    function onlyLocal() external view returns (bool);
 
     /// @notice The token weights. Used for maintaining a non symmetric pool balance.
     function _weight(address token) external view returns (uint256);

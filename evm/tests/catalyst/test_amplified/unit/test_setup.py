@@ -252,7 +252,7 @@ def test_setup_only_local(tokens, swap_factory, deployer, max_pool_assets, ampli
 
     sp = CatalystSwapPool.at(tx.return_value)
 
-    assert sp._onlyLocal()
+    assert sp.onlyLocal()
 
 
 
@@ -276,4 +276,4 @@ def test_setup_not_only_local(tokens, swap_factory, deployer, max_pool_assets, a
 
     sp = CatalystSwapPool.at(tx.return_value)
 
-    assert not sp._onlyLocal()
+    assert not sp.onlyLocal()
