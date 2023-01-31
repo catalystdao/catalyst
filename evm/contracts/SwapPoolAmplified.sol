@@ -1179,7 +1179,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                 oneMinusAmp
             ))));
             // Check if the swap is according to the swap limits
-            checkAndSetUnitCapacity(poolTokenEquiv / FixedPointMathLib.WAD);
+            checkAndSetUnitCapacity(poolTokenEquiv * 2 / FixedPointMathLib.WAD);
         }
 
         // Mint pool tokens for the user.
@@ -1225,6 +1225,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                 // when UF <= escrowAmount => UF - escrowAmount <= 0 => max(UF - escrowAmount, 0) = 0
                 _unit_flow = 0;
             }
+            _max_unit_inflow += escrowAmount * _weight[escrowToken];
         }
     }
 
