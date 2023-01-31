@@ -23,12 +23,12 @@ import "./ICatalystV1Pool.sol";
  * This constant is set in "SwapPoolCommon.sol"
  *
  * The swappool implements the ERC20 specification, such that the
- * contract will be its own pool token.
+ * swappool contract also defines the pool token.
  * @dev This contract is deployed inactive: It cannot be used as a
  * swap pool as is. To use it, a proxy contract duplicating the
- * logic of this contract needs to be deployed. In vyper, this
+ * logic of this contract needs to be deployed. In Vyper, this
  * can be done through (vy >=0.3.4) create_minimal_proxy_to.
- * In Solidity, this can be done through OZ cllones: Clones.clone(...)
+ * In Solidity, this can be done through OZ clones: Clones.clone(...)
  * After deployment of the proxy, call setup(...). This will
  * initialize the pool and prepare it for cross-chain transactions.
  *
@@ -62,12 +62,12 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
     uint256 public _targetAmplification;
 
     // To keep track of group ownership, the pool needs to keep track of
-    // the local unit balance. That is, does other pools own or owe this pool assets?
+    // the local unit balance. That is, do other pools own or owe assets to this pool?
     int256 public _unitTracker;
 
     /**
      * @notice Configures an empty pool.
-     * @dev If less than NUMASSETS are used to setup the pool
+     * @dev If less than NUMASSETS are used to initiate the pool
      * let the remaining <init_assets> be ZERO_ADDRESS / address(0)
      *
      * Unused weights can be whatever. (0 is recommended.)
@@ -79,7 +79,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
      * If 0 of a token in init_assets is provided, the setup reverts.
      * @param init_assets A list of the token addresses associated with the pool
      * @param weights The weights associated with the tokens. 
-     * If set to values with low resolotion (<= 10*5), this should be viewed as
+     * If set to values with low resolution (<= 10*5), this should be viewed as
      * opt out of governance weight adjustment. This is not enforced.
      * @param amp Amplification factor. Should be < 10**18.
      * @param depositor The address depositing the initial token balances.
@@ -90,24 +90,24 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 amp,
         address depositor
     ) public {
-        require(msg.sender == _factory && _tokenIndexing[0] == address(0));     // dev: swap curves may only be initialized once by the factory
+        require(msg.sender == _factory && _tokenIndexing[0] == address(0));  // dev: swap curves may only be initialized once by the factory
         // Check that the amplification is correct.
-        require(amp < FixedPointMathLib.WAD);
+        require(amp < FixedPointMathLib.WAD);  // dev: Amplification not set correctly.
         // Check for a misunderstanding regarding how many assets this pool supports.
-        require(init_assets.length <= NUMASSETS);
+        require(init_assets.length <= NUMASSETS);  // dev: Too many pool supplies for this pool template.
 
         _amp = amp;
         _targetAmplification = amp;
 
         // Compute the security limit.
-        { //  Stack limitations.
+        { //  Stack limitation.
             uint256[] memory initialBalances = new uint256[](NUMASSETS);
             for (uint256 it = 0; it < init_assets.length; ++it) {
                 address tokenAddress = init_assets[it];
                 _tokenIndexing[it] = tokenAddress;
                 uint256 weight = weights[it];
                 _weight[tokenAddress] = weight;
-                // The contract expect the tokens to have been sent to it before setup is
+                // The contract expects the tokens to have been sent to it before setup is
                 // called. Make sure the pool has more than 0 tokens.
 
                 uint256 balanceOfSelf = IERC20(tokenAddress).balanceOf(address(this));
@@ -120,26 +120,26 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
             emit Deposit(depositor, MINTAMOUNT, initialBalances);
         }
 
-        // Mint pool tokens
+        // Mint pool tokens for pool creator.
         _mint(depositor, MINTAMOUNT);
     }
 
     /** 
-     * @notice  Returns the current cross-chain swao capacity. 
+     * @notice  Returns the current cross-chain swap capacity. 
      * @dev Overwrites the common implementation because of the
      * differences as to how it is used. As a result, this always returns
      * half of the true limit.
      */
     function getUnitCapacity() external view override returns (uint256) {
         uint256 MUF = _max_unit_inflow;
-        // If the time since last update is more than DECAYRATE return maximum
+        // If the time since the last update is more than DECAYRATE return maximum
         if (block.timestamp > DECAYRATE + _last_change) return MUF / 2;
 
         // The delta change to the limit is: timePassed · slope = timePassed · Max/decayrate
         uint256 delta_flow = ((block.timestamp - _last_change) * MUF) / DECAYRATE;
 
         uint256 UF = _unit_flow;
-        // If the change is greater than the units which has passed through
+        // If the change is greater than the units which have passed through
         // return maximum. We do not want (MUF - (UF - delta_flow) > MUF)
         if (UF <= delta_flow) return MUF / 2;
 
