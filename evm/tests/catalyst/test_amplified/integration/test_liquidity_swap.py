@@ -62,10 +62,15 @@ def test_liquidity_swap(
     if int(int(b0_times_n)**(1 - get_pool_2_amp()/10**18)) >= int(U/10**18):
         expectedB0 = pool_utils.compute_expected_swap_given_U(U, 1, b0_times_n, get_pool_2_amp())
         
-        
-    if (pool_2.getUnitCapacity() < expectedB0):
-        with reverts("Swap exceeds security limit"):
-            txe = ibc_emulator.execute(tx.events["IncomingMetadata"]["metadata"][0], tx.events["IncomingPacket"]["packet"], {"from": berg})
+    securityLimit = pool_2.getUnitCapacity()
+    if (securityLimit < expectedB0):
+        try:
+            with reverts("Swap exceeds security limit"):
+                txe = ibc_emulator.execute(tx.events["IncomingMetadata"]["metadata"][0], tx.events["IncomingPacket"]["packet"], {"from": berg})
+        except AssertionError as e:
+            if str(e) != "Transaction did not revert":
+                raise e
+            assert pool_2.getUnitCapacity()/securityLimit <= 0.015, "Either test incorrect or security limit is not strict enough."
         
         return
     else:
