@@ -24,19 +24,19 @@ interface ICatalystV1FactoryEvents {
     /**
      * @notice Describes pool fee changes.
      * @dev Only applies to new pools, has no impact on existing pools.
-     * @param newDefaultPoolFee The new pool fee.
+     * @param fee The new pool fee.
      */
-    event NewDefaultPoolFee(
-        uint256 newDefaultPoolFee
+    event SetDefaultPoolFee(
+        uint256 fee
     );
 
     /**
      * @notice Describes governance fee changes.
      * @dev Only applies to new pools, has no impact on existing pools.
-     * @param newDefaultGovernanceFee The new governance fee.
+     * @param fee The new governance fee.
      */
-    event NewDefaultGovernanceFee(
-        uint256 newDefaultGovernanceFee
+    event SetDefaultGovernanceFee(
+        uint256 fee
     );
 
     /**

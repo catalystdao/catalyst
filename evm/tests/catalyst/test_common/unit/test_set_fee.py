@@ -22,7 +22,7 @@ def test_set_default_governance_fee(
     assert swap_factory._defaultGovernanceFee() != fee
 
 
-    swap_factory.setNewDefaultGovernanceFee(fee, {"from": deployer})
+    swap_factory.setDefaultGovernanceFee(fee, {"from": deployer})
 
 
     # Check fee is saved on-chain
@@ -38,7 +38,7 @@ def test_set_default_governance_fee_over_max(
 
 
     with reverts(dev_revert_msg="dev: GovernanceFee is maximum 75%."):
-        swap_factory.setNewDefaultGovernanceFee(fee, {"from": deployer})
+        swap_factory.setDefaultGovernanceFee(fee, {"from": deployer})
 
 
 
@@ -50,7 +50,7 @@ def test_set_default_governance_fee_no_auth(
 
 
     with reverts("Ownable: caller is not the owner"):
-        swap_factory.setNewDefaultGovernanceFee(fee, {"from": elwood})
+        swap_factory.setDefaultGovernanceFee(fee, {"from": elwood})
 
 
 
@@ -62,12 +62,12 @@ def test_set_default_governance_fee_event(
     assert swap_factory._defaultGovernanceFee() != fee
 
 
-    tx = swap_factory.setNewDefaultGovernanceFee(fee, {"from": deployer})
+    tx = swap_factory.setDefaultGovernanceFee(fee, {"from": deployer})
 
 
     # Check the event
-    event = tx.events["NewDefaultGovernanceFee"]
-    assert event["newDefaultGovernanceFee"] == fee
+    event = tx.events["SetDefaultGovernanceFee"]
+    assert event["fee"] == fee
 
 
 
