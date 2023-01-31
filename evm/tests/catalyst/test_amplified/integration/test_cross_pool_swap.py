@@ -8,7 +8,7 @@ pytestmark = pytest.mark.usefixtures("group_finish_setup", "group_connect_pools"
 #TODO add fees test (create fixture that sets up non-zero fees to the pool)
 
 @pytest.mark.no_call_coverage
-@given(swap_amount=strategy("uint256", max_value=10*10**18))
+@given(swap_percentage=strategy("uint256", max_value=1*10**18))
 def test_cross_pool_swap(
     channel_id,
     pool_1,
@@ -19,11 +19,13 @@ def test_cross_pool_swap(
     deployer,
     ibc_emulator,
     compute_expected_swap,
-    swap_amount
+    swap_percentage
 ):
+    swap_percentage /= 10**18
     #TODO parametrize source_token and target_tokens?
     source_token = pool_1_tokens[0]
     target_token = pool_2_tokens[0]
+    swap_amount = int(source_token.balanceOf(pool_1) * swap_percentage)
 
     assert target_token.balanceOf(berg) == 0
 
@@ -49,7 +51,7 @@ def test_cross_pool_swap(
     assert source_token.balanceOf(berg) == 0
     
     # The swap may revert because of the security limit     #TODO mark these cases as 'skip'?
-    if pool_2.getUnitCapacity() < pool_2.dry_swap_from_unit(pool_2._tokenIndexing(0), tx.events["SwapToUnits"]["output"]):
+    if pool_2.getUnitCapacity() < pool_2.dry_swap_from_unit(pool_2._tokenIndexing(0), tx.events["SwapToUnits"]["output"]) * pool_2._weight(pool_2._tokenIndexing(0)):
         with reverts("Swap exceeds security limit"):
             txe = ibc_emulator.execute(tx.events["IncomingMetadata"]["metadata"][0], tx.events["IncomingPacket"]["packet"], {"from": berg})
         return
@@ -73,7 +75,7 @@ def test_cross_pool_swap(
 
 
 @pytest.mark.no_call_coverage
-@given(swap_amount=strategy("uint256", max_value=10*10**18))
+@given(swap_percentage=strategy("uint256", max_value=5*10**17))
 def test_cross_pool_swap_min_out(
     channel_id,
     pool_1,
@@ -84,11 +86,14 @@ def test_cross_pool_swap_min_out(
     deployer,
     compute_expected_swap,
     ibc_emulator,
-    swap_amount
+    swap_percentage
 ):
+    swap_percentage /= 10**18
     
     source_token = pool_1_tokens[0]
     target_token = pool_2_tokens[0]
+    
+    swap_amount = int(source_token.balanceOf(pool_1) * swap_percentage)
 
     assert target_token.balanceOf(berg) == 0
 
