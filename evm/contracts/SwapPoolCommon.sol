@@ -238,6 +238,7 @@ abstract contract CatalystSwapPoolCommon is
     /// @dev There is no maximum pool fee.
     function setPoolFee(uint256 newPoolFee) external override {
         require((tx.origin == _setupMaster) || (msg.sender == _feeAdministrator)); // dev: Only feeAdministrator can set new fee
+        require(newPoolFee <= 10**18);  // dev: PoolFee is maximum 100%.
         _poolFee = newPoolFee;
 
         emit SetPoolFee(newPoolFee);

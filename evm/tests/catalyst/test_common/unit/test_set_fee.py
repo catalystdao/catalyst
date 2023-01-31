@@ -106,11 +106,13 @@ def test_set_fee_administrator_no_auth(
 
 #TODO tx.origin == setupMaster
 @pytest.mark.usefixtures("set_molly_fee_administrator")
+@pytest.mark.parametrize("fee", [0.15, 1])    # Max is 1
 def test_set_pool_fee(
     pool,
-    molly
+    molly,
+    fee
 ):
-    fee = int(0.15 * 10**18)
+    fee = int(fee * 10**18)
     assert pool._poolFee() != fee
 
 
@@ -118,6 +120,20 @@ def test_set_pool_fee(
 
 
     assert pool._poolFee() == fee
+
+
+
+@pytest.mark.usefixtures("set_molly_fee_administrator")
+def test_set_pool_fee_over_max(
+    pool,
+    molly
+):
+    fee = int(1.01 * 10**18)            # Max is 1
+    assert pool._poolFee() != fee
+
+
+    with reverts(dev_revert_msg="dev: PoolFee is maximum 100%."):
+        pool.setPoolFee(fee, {"from": molly})
 
 
 
