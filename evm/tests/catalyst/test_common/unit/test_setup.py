@@ -44,7 +44,7 @@ def test_setup(
 
 
 
-# Tokens tests ******************************************************************************************************************
+# Tokens and weights *************************************************************************************************************
 
 # TODO do we want deployment of a pool with no tokens to fail? (currently it does not fail)
 # def test_setup_no_tokens(deploy_swappool, deployer):
@@ -132,6 +132,34 @@ def test_setup_no_balance_set(
             tokens[:asset_count],
             [10**8]*(asset_count-1) + [0],  # ! Last balance argument set to 0
             [1]*asset_count,
+            amplification,
+            "",
+            "",
+            ZERO_ADDRESS,
+            {"from": deployer}
+        )
+
+
+def test_setup_no_weight_set(
+    tokens,
+    swap_factory,
+    amplification,
+    swap_pool_template_idx,
+    deployer,
+    max_pool_assets
+):
+    asset_count = max_pool_assets
+
+    for token in tokens[:asset_count]:
+        token.approve(swap_factory, 10**8)
+
+
+    with brownie.reverts(dev_revert_msg="dev: invalid 0-valued weight provided"):
+        swap_factory.deploy_swappool(
+            swap_pool_template_idx,
+            tokens[:asset_count],
+            [10**8]*asset_count,
+            [1]*(asset_count-1) + [0],  # ! Last weight argument set to 0
             amplification,
             "",
             "",
