@@ -84,7 +84,7 @@ The `raw_config` fixture is parametrized over the different test configurations 
 | `group_pools`     | An array of deployed pools, as defined on `group_config`. |
 | `group_tokens`    | An array of the tokens contained by each of the pools of `group_pools`. |
 | `swap_pool_type`  | Identifies the current pool type, either `"volatile"` or `"amplified"`. |
-| `amplification`   | The amplification value at which to the pools have been initialized. Returns None for volatile pools. |
+| `amplification`   | The amplification value with which the pools have been initialized. Returns 10**18 for volatile pools. |
 
 Additionally, the `raw_config` fixture gets parametrized with further data according to the two following scenarios:
 ### Single Pool Tests

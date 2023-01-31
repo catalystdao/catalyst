@@ -73,7 +73,7 @@ def swap_pool_type(raw_config):
 def amplification(request, raw_config, swap_pool_type):
 
     if swap_pool_type == "volatile":
-        yield None
+        yield 10**18
 
     elif swap_pool_type == "amplified":
 
@@ -124,7 +124,7 @@ def group_pools(group_config, group_tokens, deploy_pool, deployer):
             tokens         = tokens,
             token_balances = pool["init_balances"],
             weights        = pool["weights"],
-            amp            = pool["amplification"] if pool["amplification"] is not None else 10**18,
+            amp            = pool["amplification"],
             name           = pool["name"],
             symbol         = pool["symbol"],
             deployer       = deployer,
