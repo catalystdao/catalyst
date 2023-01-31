@@ -309,45 +309,16 @@ def test_setup_call_initialize_swap_curves_external(
 
 
 
+@pytest.mark.parametrize("onlyLocal", [True, False])
 def test_setup_only_local(
-    tokens,
-    swap_factory,
-    amplification,
-    swap_pool_template_idx,
-    deployer,
-    max_pool_assets
-):
-    asset_count = max_pool_assets
-
-    for token in tokens[:asset_count]:
-        token.approve(swap_factory, 10**8)
-    
-    tx = swap_factory.deploy_swappool(
-        swap_pool_template_idx,
-        tokens[:asset_count],
-        [10**8]*asset_count,
-        [1]*asset_count,
-        amplification,
-        "",
-        "",
-        ZERO_ADDRESS,
-        {"from": deployer}
-    )
-
-    sp = CatalystSwapPool.at(tx.return_value)
-
-    assert sp.onlyLocal()
-
-
-
-def test_setup_not_only_local(
     tokens,
     swap_factory,
     cross_chain_interface,
     amplification,
     swap_pool_template_idx,
     deployer,
-    max_pool_assets
+    max_pool_assets,
+    onlyLocal
 ):
     asset_count = max_pool_assets
 
@@ -362,10 +333,10 @@ def test_setup_not_only_local(
         amplification,
         "",
         "",
-        cross_chain_interface,
+        ZERO_ADDRESS if onlyLocal else cross_chain_interface,
         {"from": deployer}
     )
 
     sp = CatalystSwapPool.at(tx.return_value)
 
-    assert not sp.onlyLocal()
+    assert sp.onlyLocal() == onlyLocal
