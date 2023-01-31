@@ -10,6 +10,67 @@ def set_molly_fee_administrator(pool, deployer, molly):
 
 
 
+# Default pool fee (set on pool factory) **********************************************************************************
+
+@pytest.mark.parametrize("fee", [0.25, 1])    # Max is 1
+def test_set_default_pool_fee(
+    swap_factory,
+    deployer,
+    fee
+):
+    fee = int(fee * 10**18)
+    assert swap_factory._defaultPoolFee() != fee
+
+
+    swap_factory.setDefaultPoolFee(fee, {"from": deployer})
+
+
+    # Check fee is saved on-chain
+    assert swap_factory._defaultPoolFee() == fee, "Pool fee not saved on-chain."
+
+
+
+def test_set_default_pool_fee_over_max(
+    swap_factory,
+    deployer
+):
+    fee = int(1.01 * 10**18)     # Maximum is 1
+
+
+    with reverts(dev_revert_msg="dev: PoolFee is maximum 100%."):
+        swap_factory.setDefaultPoolFee(fee, {"from": deployer})
+
+
+
+def test_set_default_pool_fee_no_auth(
+    swap_factory,
+    elwood,
+):
+    fee = int(0.25 * 10**18)
+
+
+    with reverts("Ownable: caller is not the owner"):
+        swap_factory.setDefaultPoolFee(fee, {"from": elwood})
+
+
+
+def test_set_default_pool_fee_event(
+    swap_factory,
+    deployer
+):
+    fee = int(0.25 * 10**18)
+    assert swap_factory._defaultPoolFee() != fee
+
+
+    tx = swap_factory.setDefaultPoolFee(fee, {"from": deployer})
+
+
+    # Check the event
+    event = tx.events["SetDefaultPoolFee"]
+    assert event["fee"] == fee
+
+
+
 # Default governance fee (set on pool factory) **********************************************************************************
 
 @pytest.mark.parametrize("fee", [0.25, 0.75])    # Max is 0.75
