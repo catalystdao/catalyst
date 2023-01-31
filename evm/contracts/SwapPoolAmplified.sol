@@ -662,12 +662,12 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
      * @notice Deposits a symmetrical number of tokens such that in 1:1 wpt_a are deposited. This doesn't change the pool price.
      * @dev Requires approvals for all tokens within the pool.
      * @param poolTokens The number of pool tokens to withdraw
-     * @param withdrawRatioX64 The percentage of units used to withdraw. In the following special scheme: U_a = U · withdrawRatio[0], U_b = (U - U_a) · withdrawRatio[1], U_c = (U - U_a - U_b) · withdrawRatio[2], .... Is X64
+     * @param withdrawRatio The percentage of units used to withdraw. In the following special scheme: U_a = U · withdrawRatio[0], U_b = (U - U_a) · withdrawRatio[1], U_c = (U - U_a - U_b) · withdrawRatio[2], .... Is X64
      * @param minOuts The minimum number of tokens minted.
      */
     function withdrawMixed(
         uint256 poolTokens,
-        uint256[] calldata withdrawRatioX64,
+        uint256[] calldata withdrawRatio,
         uint256[] calldata minOuts
     ) nonReentrant() external returns(uint256[] memory) {
         _A();
@@ -735,7 +735,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         for (uint256 it = 0; it < NUMASSETS; ++it) {
             if (U == 0) break;
 
-            uint256 U_i = (U * withdrawRatioX64[it]) / FixedPointMathLib.WAD;
+            uint256 U_i = (U * withdrawRatio[it]) / FixedPointMathLib.WAD;
             if (U_i == 0) continue;
             U -= U_i;
 

@@ -133,6 +133,11 @@ abstract contract CatalystSwapPoolCommon is
         return CatalystSwapPoolFactory(_factory).owner();
     }
 
+    /**
+     * @notice Only allow Governance to change pool parameters
+     * @dev Because of dangours permissions (createConnection, weight changes, amplification changes):
+     * !CatalystSwapPoolFactory(_factory).owner() must be set to a timelock! 
+     */ 
     modifier onlyFactoryOwner() {
         require(msg.sender == CatalystSwapPoolFactory(_factory).owner());   // dev: Only factory owner
         _;

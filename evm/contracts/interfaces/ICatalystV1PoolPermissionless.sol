@@ -22,6 +22,8 @@ interface ICatalystV1PoolPermissionless {
         address depositor
     ) external;
 
+    //--- Balance Changes ---//
+
     /**
      * @notice Deposits a user configurable amount of tokens.
      * @dev Requires approvals for all tokens within the pool.
@@ -54,9 +56,11 @@ interface ICatalystV1PoolPermissionless {
      */
     function withdrawMixed(
         uint256 poolTokens,
-        uint256[] calldata withdrawRatioX64,
+        uint256[] calldata withdrawRatio,
         uint256[] calldata minOuts
     ) external returns(uint256[] memory);
+
+    //--- Swaps ---//
 
     /**
      * @notice A swap between 2 assets which both are inside the pool. Is atomic.
