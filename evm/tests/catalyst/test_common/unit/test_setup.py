@@ -8,20 +8,32 @@ from brownie import (
 from tests.catalyst.fixtures.pools import MAX_POOL_ASSETS
 
 
+@pytest.fixture(scope="module")
+def swap_pool_template_idx(swap_pool_type):
+    return 0 if swap_pool_type == "volatile" else 1
+
+
 
 # Main setup parametrized test **************************************************************************************************
 # Test that all provided pool configs get deployed correctly
-def test_setup(pool_config, pool_tokens, swap_factory, deployer):
+def test_setup(
+    pool_config,
+    pool_tokens,
+    swap_factory,
+    amplification,
+    swap_pool_template_idx,
+    deployer
+):
 
     for i, token in enumerate(pool_tokens):
         token.approve(swap_factory, pool_config["init_balances"][i])
     
     tx = swap_factory.deploy_swappool(
-        0,
+        swap_pool_template_idx,
         pool_tokens,
         pool_config["init_balances"],
         pool_config["weights"],
-        10**18,
+        amplification,
         pool_config["name"],
         pool_config["symbol"],
         ZERO_ADDRESS,
@@ -48,17 +60,24 @@ def test_setup(pool_config, pool_tokens, swap_factory, deployer):
 
 
 @pytest.mark.parametrize("asset_count", range(1, MAX_POOL_ASSETS+1))
-def test_setup_valid_token_count(tokens, swap_factory, deployer, asset_count):
+def test_setup_valid_token_count(
+    tokens,
+    swap_factory,
+    amplification,
+    swap_pool_template_idx,
+    deployer,
+    asset_count
+):
 
     for token in tokens[:asset_count]:
         token.approve(swap_factory, 10**8)
 
     swap_factory.deploy_swappool(
-        0,                              # Volatile contract
+        swap_pool_template_idx,
         tokens[:asset_count],
         [10**8]*asset_count,
         [1]*asset_count,
-        10**18,                         # Not amplified
+        amplification,
         "",
         "",
         ZERO_ADDRESS,
@@ -66,7 +85,14 @@ def test_setup_valid_token_count(tokens, swap_factory, deployer, asset_count):
     )
 
 
-def test_setup_too_many_tokens(tokens, swap_factory, deployer, max_pool_assets):
+def test_setup_too_many_tokens(
+    tokens,
+    swap_factory,
+    amplification,
+    swap_pool_template_idx,
+    deployer,
+    max_pool_assets
+):
     asset_count = max_pool_assets + 1
 
     for token in tokens[:asset_count]:
@@ -74,11 +100,11 @@ def test_setup_too_many_tokens(tokens, swap_factory, deployer, max_pool_assets):
 
     with brownie.reverts():     #TODO add dev revert message
         swap_factory.deploy_swappool(
-            0,                              # Volatile contract
+            swap_pool_template_idx,
             tokens[:asset_count],
             [10**8]*asset_count,
             [1]*asset_count,
-            10**18,                         # Not amplified
+            amplification,
             "",
             "",
             ZERO_ADDRESS,
@@ -86,7 +112,14 @@ def test_setup_too_many_tokens(tokens, swap_factory, deployer, max_pool_assets):
         )
 
 
-def test_setup_no_balance_set(tokens, swap_factory, deployer, max_pool_assets):
+def test_setup_no_balance_set(
+    tokens,
+    swap_factory,
+    amplification,
+    swap_pool_template_idx,
+    deployer,
+    max_pool_assets
+):
     asset_count = max_pool_assets
 
     for token in tokens[:asset_count]:
@@ -95,11 +128,11 @@ def test_setup_no_balance_set(tokens, swap_factory, deployer, max_pool_assets):
 
     with brownie.reverts():     #TODO add dev revert message
         swap_factory.deploy_swappool(
-            0,                              # Volatile contract
+            swap_pool_template_idx,
             tokens[:asset_count],
             [10**8]*(asset_count-1) + [0],  # ! Last balance argument set to 0
             [1]*asset_count,
-            10**18,                         # Not amplified
+            amplification,
             "",
             "",
             ZERO_ADDRESS,
@@ -107,18 +140,25 @@ def test_setup_no_balance_set(tokens, swap_factory, deployer, max_pool_assets):
         )
 
 
-def test_setup_without_funds(tokens, swap_factory, deployer, max_pool_assets):
+def test_setup_without_funds(
+    tokens,
+    swap_factory,
+    amplification,
+    swap_pool_template_idx,
+    deployer,
+    max_pool_assets
+):
     asset_count = max_pool_assets
 
     # ! Not approving tokens to the factory on purpose
 
     with brownie.reverts():     #TODO add dev revert message
         swap_factory.deploy_swappool(
-            0,                              # Volatile contract
+            swap_pool_template_idx,
             tokens[:asset_count],
             [10**8]*asset_count,
             [1]*asset_count,
-            10**18,                         # Not amplified
+            amplification,
             "",
             "",
             ZERO_ADDRESS,
@@ -129,7 +169,14 @@ def test_setup_without_funds(tokens, swap_factory, deployer, max_pool_assets):
 
 # Misc **************************************************************************************************************************
 
-def test_setup_invalid_volatile_contract(tokens, swap_factory, deployer, max_pool_assets):
+def test_setup_invalid_template(
+    tokens,
+    swap_factory,
+    amplification,
+    deployer,
+    max_pool_assets,
+    swap_pool_type
+):
     asset_count = max_pool_assets
 
     for token in tokens[:asset_count]:
@@ -137,11 +184,11 @@ def test_setup_invalid_volatile_contract(tokens, swap_factory, deployer, max_poo
     
     with brownie.reverts():     #TODO add dev revert message
         swap_factory.deploy_swappool(
-            1,                              # ! Amplified contract selected on purpose
+            1 if swap_pool_type == "volatile" else 0,          # ! Invalid template selected on purpose
             tokens[:asset_count],
             [10**8]*asset_count,
             [1]*asset_count,
-            10**18,                         # Not amplified
+            amplification,
             "",
             "",
             ZERO_ADDRESS,
@@ -149,38 +196,25 @@ def test_setup_invalid_volatile_contract(tokens, swap_factory, deployer, max_poo
         )
 
 
-def test_setup_invalid_amplification(tokens, swap_factory, deployer, max_pool_assets):
-    asset_count = max_pool_assets
-
-    for token in tokens[:asset_count]:
-        token.approve(swap_factory, 10**8)
-    
-    with brownie.reverts():     #TODO add dev revert message
-        swap_factory.deploy_swappool(
-            0,                              
-            tokens[:asset_count],
-            [10**8]*asset_count,
-            [1]*asset_count,
-            10**16,                         # ! Amplification set on purpose
-            "",
-            "",
-            ZERO_ADDRESS,
-            {"from": deployer}
-        )
-
-
-def test_setup_pool_token_mint(tokens, swap_factory, deployer, max_pool_assets):
+def test_setup_pool_token_mint(
+    tokens,
+    swap_factory,
+    amplification,
+    swap_pool_template_idx,
+    deployer,
+    max_pool_assets
+):
     asset_count = max_pool_assets
 
     for token in tokens[:asset_count]:
         token.approve(swap_factory, 10**8)
     
     tx = swap_factory.deploy_swappool(
-        0,                              # Volatile contract
+        swap_pool_template_idx,
         tokens[:asset_count],
         [10**8]*asset_count,
         [1]*asset_count,
-        10**18,                         # Not amplified
+        amplification,
         "",
         "",
         ZERO_ADDRESS,
@@ -194,18 +228,25 @@ def test_setup_pool_token_mint(tokens, swap_factory, deployer, max_pool_assets):
 
 
 
-def test_setup_call_setup_external(tokens, swap_factory, deployer, max_pool_assets):
+def test_setup_call_setup_external(
+    tokens,
+    swap_factory,
+    amplification,
+    swap_pool_template_idx,
+    deployer,
+    max_pool_assets
+):
     asset_count = max_pool_assets
 
     for token in tokens[:asset_count]:
         token.approve(swap_factory, 10**8)
     
     tx = swap_factory.deploy_swappool(
-        0,                              # Volatile contract
+        swap_pool_template_idx,
         tokens[:asset_count],
         [10**8]*asset_count,
         [1]*asset_count,
-        10**18,                         # Not amplified
+        amplification,
         "",
         "",
         ZERO_ADDRESS,
@@ -229,18 +270,25 @@ def test_setup_call_setup_external(tokens, swap_factory, deployer, max_pool_asse
 
 
 
-def test_setup_call_initialize_swap_curves_external(tokens, swap_factory, deployer, max_pool_assets):
+def test_setup_call_initialize_swap_curves_external(
+    tokens,
+    swap_factory,
+    amplification,
+    swap_pool_template_idx,
+    deployer,
+    max_pool_assets
+):
     asset_count = max_pool_assets
 
     for token in tokens[:asset_count]:
         token.approve(swap_factory, 10**8)
     
     tx = swap_factory.deploy_swappool(
-        0,                              # Volatile contract
+        swap_pool_template_idx,
         tokens[:asset_count],
         [10**8]*asset_count,
         [1]*asset_count,
-        10**18,                         # Not amplified
+        amplification,
         "",
         "",
         ZERO_ADDRESS,
@@ -261,18 +309,25 @@ def test_setup_call_initialize_swap_curves_external(tokens, swap_factory, deploy
 
 
 
-def test_setup_only_local(tokens, swap_factory, deployer, max_pool_assets):
+def test_setup_only_local(
+    tokens,
+    swap_factory,
+    amplification,
+    swap_pool_template_idx,
+    deployer,
+    max_pool_assets
+):
     asset_count = max_pool_assets
 
     for token in tokens[:asset_count]:
         token.approve(swap_factory, 10**8)
     
     tx = swap_factory.deploy_swappool(
-        0,                              # Volatile contract
+        swap_pool_template_idx,
         tokens[:asset_count],
         [10**8]*asset_count,
         [1]*asset_count,
-        10**18,                         # Not amplified
+        amplification,
         "",
         "",
         ZERO_ADDRESS,
@@ -285,18 +340,26 @@ def test_setup_only_local(tokens, swap_factory, deployer, max_pool_assets):
 
 
 
-def test_setup_not_only_local(tokens, swap_factory, deployer, max_pool_assets, cross_chain_interface):
+def test_setup_not_only_local(
+    tokens,
+    swap_factory,
+    cross_chain_interface,
+    amplification,
+    swap_pool_template_idx,
+    deployer,
+    max_pool_assets
+):
     asset_count = max_pool_assets
 
     for token in tokens[:asset_count]:
         token.approve(swap_factory, 10**8)
     
     tx = swap_factory.deploy_swappool(
-        0,                              # Volatile contract
+        swap_pool_template_idx,
         tokens[:asset_count],
         [10**8]*asset_count,
         [1]*asset_count,
-        10**18,                         # Not amplified
+        amplification,
         "",
         "",
         cross_chain_interface,
