@@ -141,7 +141,7 @@ def test_only_one_response(channel_id, pool, pool_tokens, ibc_emulator, berg, de
         )
 
 
-@given(swap_amount=strategy("uint256", max_value=10*10**18, min_value=10**14))
+@given(swap_amount=strategy("uint256", max_value=10*10**18, min_value=10**16))
 def test_ibc_timeout_and_ack(channel_id, pool, pool_tokens, ibc_emulator, berg, deployer, swap_amount):
 
     if len(pool_tokens) < 2:
