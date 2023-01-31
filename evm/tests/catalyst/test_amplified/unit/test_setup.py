@@ -229,6 +229,38 @@ def test_setup_call_setup_external(tokens, swap_factory, deployer, max_pool_asse
 
 
 
+def test_setup_call_initialize_swap_curves_external(tokens, swap_factory, deployer, max_pool_assets, amplification):
+    asset_count = max_pool_assets
+
+    for token in tokens[:asset_count]:
+        token.approve(swap_factory, 10**8)
+    
+    tx = swap_factory.deploy_swappool(
+        1,                              # Amplified contract
+        tokens[:asset_count],
+        [10**8]*asset_count,
+        [1]*asset_count,
+        amplification,
+        "",
+        "",
+        ZERO_ADDRESS,
+        {"from": deployer}
+    )
+
+    sp = CatalystSwapPool.at(tx.return_value)
+
+    # Call initializeSwapCurves again
+    with brownie.reverts(dev_revert_msg="dev: swap curves may only be initialized once by the factory"):
+        sp.initializeSwapCurves(
+            tokens[:asset_count],
+            [1]*asset_count,
+            amplification,
+            deployer,
+            {"from": deployer}
+        )
+
+
+
 def test_setup_only_local(tokens, swap_factory, deployer, max_pool_assets, amplification):
     asset_count = max_pool_assets
 
