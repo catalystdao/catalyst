@@ -194,7 +194,7 @@ def test_setup_pool_token_mint(tokens, swap_factory, deployer, max_pool_assets):
 
 
 
-def test_setup_call_setup_twice(tokens, swap_factory, deployer, max_pool_assets):
+def test_setup_call_setup_external(tokens, swap_factory, deployer, max_pool_assets):
     asset_count = max_pool_assets
 
     for token in tokens[:asset_count]:
@@ -215,9 +215,6 @@ def test_setup_call_setup_twice(tokens, swap_factory, deployer, max_pool_assets)
     sp = CatalystSwapPool.at(tx.return_value)
 
     # Call setup again
-    for token in tokens[:asset_count]:
-        token.approve(swap_factory, 10**8)
-
     with brownie.reverts(dev_revert_msg="dev: Pool Already setup."):
         sp.setup(
             "",
