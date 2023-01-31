@@ -46,17 +46,24 @@ def test_setup(
 
 # Tokens and weights *************************************************************************************************************
 
-# TODO do we want deployment of a pool with no tokens to fail? (currently it does not fail)
-# def test_setup_no_tokens(deploy_swappool, deployer):
-#     sp = deploy_swappool(
-#         [],
-#         [],
-#         [],
-#         10**18,
-#         "",
-#         "",
-#         deployer=deployer,
-#     )
+def test_setup_no_tokens(
+    swap_factory,
+    amplification,
+    swap_pool_template_idx,
+    deployer,
+):
+    with brownie.reverts():     #TODO add dev revert message
+        swap_factory.deploy_swappool(
+            swap_pool_template_idx,
+            [],
+            [],
+            [],
+            amplification,
+            "",
+            "",
+            ZERO_ADDRESS,
+            {"from": deployer}
+        )
 
 
 @pytest.mark.parametrize("asset_count", range(1, MAX_POOL_ASSETS+1))
