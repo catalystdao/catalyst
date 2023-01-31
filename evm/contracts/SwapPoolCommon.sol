@@ -228,28 +228,28 @@ abstract contract CatalystSwapPoolCommon is
         _unit_flow = newUnitFlow;
     }
 
-    function setFeeAdministrator(address newFeeAdministrator) public override {
+    function setFeeAdministrator(address administrator) public override {
         require(msg.sender == factoryOwner() || !_CHECK);   // dev: Only factory owner
-        _feeAdministrator = newFeeAdministrator;
+        _feeAdministrator = administrator;
 
-        emit SetFeeAdministrator(newFeeAdministrator);
+        emit SetFeeAdministrator(administrator);
     }
 
     /// @dev There is no maximum pool fee.
-    function setPoolFee(uint256 newPoolFee) public override {
+    function setPoolFee(uint256 fee) public override {
         require(msg.sender == _feeAdministrator || !_CHECK); // dev: Only feeAdministrator can set new fee
-        require(newPoolFee <= 10**18);  // dev: PoolFee is maximum 100%.
-        _poolFee = newPoolFee;
+        require(fee <= 10**18);  // dev: PoolFee is maximum 100%.
+        _poolFee = fee;
 
-        emit SetPoolFee(newPoolFee);
+        emit SetPoolFee(fee);
     }
 
-    function setGovernanceFee(uint256 newPoolGovernanceFee) public override {
+    function setGovernanceFee(uint256 fee) public override {
         require(msg.sender == _feeAdministrator || !_CHECK); // dev: Only feeAdministrator can set new fee
-        require(newPoolGovernanceFee <= 75*10**16); // dev: GovernanceFee is maximum 75%.
-        _governanceFee = newPoolGovernanceFee;
+        require(fee <= 75*10**16); // dev: GovernanceFee is maximum 75%.
+        _governanceFee = fee;
 
-        emit SetGovernanceFee(newPoolGovernanceFee);
+        emit SetGovernanceFee(fee);
     }
 
     /**

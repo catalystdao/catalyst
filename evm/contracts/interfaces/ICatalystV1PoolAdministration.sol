@@ -4,11 +4,11 @@ pragma solidity ^0.8.16;
 /// @title Administrative actions defined by Catalyst v1 Pools
 /// @notice Contains all functions which can only be called by privileged users.
 interface ICatalystV1PoolAdministration {
-    function setFeeAdministrator(address newFeeAdministrator) external;
+    function setFeeAdministrator(address administrator) external;
 
-    function setPoolFee(uint256 newPoolFeeX64) external;
+    function setPoolFee(uint256 fee) external;
 
-    function setGovernanceFee(uint256 newPoolGovernanceFee) external;
+    function setGovernanceFee(uint256 fee) external;
 
     /**
      * @notice Creates a connection to the pool _poolReceiving on the channel _channelId.
