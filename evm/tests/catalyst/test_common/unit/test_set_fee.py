@@ -96,7 +96,7 @@ def test_set_fee_administrator_no_auth(
     assert pool._feeAdministrator() != molly
 
 
-    with reverts():     # TODO dev revert msg
+    with reverts(dev_revert_msg="dev: Only factory owner"):
         pool.setFeeAdministrator(molly, {"from": molly})
 
 

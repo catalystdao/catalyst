@@ -137,7 +137,7 @@ abstract contract CatalystSwapPoolCommon is
     }
 
     modifier onlyFactoryOwner() {
-        require(msg.sender == CatalystSwapPoolFactory(_factory).owner());
+        require(msg.sender == CatalystSwapPoolFactory(_factory).owner());   // dev: Only factory owner
         _;
     }
 
