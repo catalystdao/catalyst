@@ -96,6 +96,7 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
                 address tokenAddress = init_assets[it];
                 _tokenIndexing[it] = tokenAddress;
                 _weight[tokenAddress] = weights[it];
+                require(weights[it] > 0);       // dev: invalid 0-valued weight provided
                 // The contract expect tokens to have been sent to it before setup is
                 // called. Make sure the pool has more than 0 tokens.
                 {
