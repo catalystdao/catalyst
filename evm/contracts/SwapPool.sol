@@ -86,7 +86,7 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
         // Check that the amplification is correct.
         require(amp == FixedPointMathLib.WAD);
         // Check for a misunderstanding regarding how many assets this pool supports.
-        require(init_assets.length <= NUMASSETS);
+        require(init_assets.length > 0 && init_assets.length <= NUMASSETS);
         
         // Compute the security limit.
         {  //  Stack limitations.

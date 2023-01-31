@@ -94,7 +94,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         // Check that the amplification is correct.
         require(amp < FixedPointMathLib.WAD);  // dev: Amplification not set correctly.
         // Check for a misunderstanding regarding how many assets this pool supports.
-        require(init_assets.length <= NUMASSETS);  // dev: Too many pool supplies for this pool template.
+        require(init_assets.length > 0 && init_assets.length <= NUMASSETS);
 
         _amp = amp;
         _targetAmplification = amp;
