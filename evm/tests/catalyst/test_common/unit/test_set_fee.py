@@ -101,6 +101,22 @@ def test_set_fee_administrator_no_auth(
 
 
 
+def test_set_fee_administrator_event(
+    pool,
+    deployer,
+    molly
+):
+    assert pool._feeAdministrator() != molly
+
+
+    tx = pool.setFeeAdministrator(molly, {"from": deployer})     # Only factory owner is allowed to set fee admin
+
+
+    event = tx.events["SetFeeAdministrator"]
+    assert event["administrator"] == molly
+
+
+
 
 # Pool fee **********************************************************************************************************************
 
