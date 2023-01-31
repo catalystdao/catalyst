@@ -52,7 +52,7 @@ def test_setup_no_tokens(
     swap_pool_template_idx,
     deployer,
 ):
-    with brownie.reverts():     #TODO add dev revert message
+    with brownie.reverts(dev_revert_msg="dev: invalid asset count"):
         swap_factory.deploy_swappool(
             swap_pool_template_idx,
             [],
@@ -105,7 +105,7 @@ def test_setup_too_many_tokens(
     for token in tokens[:asset_count]:
         token.approve(swap_factory, 10**8)
 
-    with brownie.reverts():     #TODO add dev revert message
+    with brownie.reverts(dev_revert_msg="dev: invalid asset count"):
         swap_factory.deploy_swappool(
             swap_pool_template_idx,
             tokens[:asset_count],
@@ -133,7 +133,7 @@ def test_setup_no_balance_set(
         token.approve(swap_factory, 10**8)
 
 
-    with brownie.reverts():     #TODO add dev revert message
+    with brownie.reverts(dev_revert_msg="dev: 0 tokens provided in setup."):
         swap_factory.deploy_swappool(
             swap_pool_template_idx,
             tokens[:asset_count],
@@ -187,7 +187,7 @@ def test_setup_without_funds(
 
     # ! Not approving tokens to the factory on purpose
 
-    with brownie.reverts():     #TODO add dev revert message
+    with brownie.reverts("ERC20: insufficient allowance"):
         swap_factory.deploy_swappool(
             swap_pool_template_idx,
             tokens[:asset_count],
@@ -217,7 +217,7 @@ def test_setup_invalid_template(
     for token in tokens[:asset_count]:
         token.approve(swap_factory, 10**8)
     
-    with brownie.reverts():     #TODO add dev revert message
+    with brownie.reverts(dev_revert_msg="dev: amplification not set correctly."):
         swap_factory.deploy_swappool(
             1 if swap_pool_type == "volatile" else 0,          # ! Invalid template selected on purpose
             tokens[:asset_count],

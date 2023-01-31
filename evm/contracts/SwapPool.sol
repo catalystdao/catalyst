@@ -82,11 +82,11 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 amp,
         address depositor
     ) public {
-        require(msg.sender == _factory && _tokenIndexing[0] == address(0));     // dev: swap curves may only be initialized once by the factory
+        require(msg.sender == _factory && _tokenIndexing[0] == address(0));  // dev: swap curves may only be initialized once by the factory
         // Check that the amplification is correct.
-        require(amp == FixedPointMathLib.WAD);
+        require(amp == FixedPointMathLib.WAD);  // dev: amplification not set correctly.
         // Check for a misunderstanding regarding how many assets this pool supports.
-        require(init_assets.length > 0 && init_assets.length <= NUMASSETS);
+        require(init_assets.length > 0 && init_assets.length <= NUMASSETS);  // dev: invalid asset count
         
         // Compute the security limit.
         {  //  Stack limitations.

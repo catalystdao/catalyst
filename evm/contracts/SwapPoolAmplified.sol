@@ -92,9 +92,9 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
     ) public {
         require(msg.sender == _factory && _tokenIndexing[0] == address(0));  // dev: swap curves may only be initialized once by the factory
         // Check that the amplification is correct.
-        require(amp < FixedPointMathLib.WAD);  // dev: Amplification not set correctly.
+        require(amp < FixedPointMathLib.WAD);  // dev: amplification not set correctly.
         // Check for a misunderstanding regarding how many assets this pool supports.
-        require(init_assets.length > 0 && init_assets.length <= NUMASSETS);
+        require(init_assets.length > 0 && init_assets.length <= NUMASSETS);  // dev: invalid asset count
 
         _amp = amp;
         _targetAmplification = amp;
