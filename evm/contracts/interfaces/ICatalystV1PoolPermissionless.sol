@@ -5,14 +5,21 @@ pragma solidity ^0.8.16;
 interface ICatalystV1PoolPermissionless {
     /** @notice Setup a pool. */
     function setup(
-        address[] calldata init_assets,
-        uint256[] calldata weights,
-        uint256 amp,
-        uint256 governanceFee,
         string calldata name_,
         string calldata symbol_,
         address chaininterface,
+        uint256 poolFee,
+        uint256 governanceFee,
+        address feeAdministrator,
         address setupMaster
+    ) external;
+
+    /** @notice Initialize the swap curves of the pool. */
+    function initializeSwapCurves(
+        address[] calldata init_assets,
+        uint256[] calldata weights,
+        uint256 amp,
+        address depositor
     ) external;
 
     /**

@@ -142,17 +142,19 @@ abstract contract CatalystSwapPoolCommon is
     }
 
     /** @notice Setup a pool. */
-    function setupBase(
+    function setup(
         string calldata name_,
         string calldata symbol_,
         address chaininterface,
+        uint256 poolFee,
+        uint256 governanceFee,
+        address feeAdministrator,
         address setupMaster
-    ) internal {
+    ) external {
         // The pool is designed to be used by a proxy and not as a standalone pool.
         // On pool deployment check is set to TRUE, to stop anyone from using the pool without a proxy.
         // Likewise, it shouldn't be possible to setup the pool twice.
         require(!_CHECK); // dev: Pool Already setup.
-        _CHECK = true;
 
         // If the chaininterface is set to address(0), disable cross-chain swaps entirely.
         _onlyLocal = chaininterface == address(0);
@@ -161,13 +163,16 @@ abstract contract CatalystSwapPoolCommon is
         _setupMaster = setupMaster;
         _factory = msg.sender;
 
+        setPoolFee(poolFee);
+        setGovernanceFee(governanceFee);
+        setFeeAdministrator(feeAdministrator);
+
         // Names the ERC20 pool token //
         __name = name_;
         __symbol = symbol_;
         // END ERC20 //
 
-        // Mint pool tokens to the short-term pool owner.
-        _mint(setupMaster, MINTAMOUNT);
+        _CHECK = true;
     }
 
     /** @notice  Returns the current cross-chain swao capacity. */
@@ -225,27 +230,24 @@ abstract contract CatalystSwapPoolCommon is
         _unit_flow = newUnitFlow;
     }
 
-    function setFeeAdministrator(address newFeeAdministrator)
-        external
-        override
-        onlyFactoryOwner
-    {
+    function setFeeAdministrator(address newFeeAdministrator) public override {
+        require(msg.sender == factoryOwner() || !_CHECK);   // dev: Only factory owner
         _feeAdministrator = newFeeAdministrator;
 
         emit SetFeeAdministrator(newFeeAdministrator);
     }
 
     /// @dev There is no maximum pool fee.
-    function setPoolFee(uint256 newPoolFee) external override {
-        require((tx.origin == _setupMaster) || (msg.sender == _feeAdministrator)); // dev: Only feeAdministrator can set new fee
+    function setPoolFee(uint256 newPoolFee) public override {
+        require(msg.sender == _feeAdministrator || !_CHECK); // dev: Only feeAdministrator can set new fee
         require(newPoolFee <= 10**18);  // dev: PoolFee is maximum 100%.
         _poolFee = newPoolFee;
 
         emit SetPoolFee(newPoolFee);
     }
 
-    function setGovernanceFee(uint256 newPoolGovernanceFee) external {
-        require(msg.sender == _feeAdministrator); // dev: Only feeAdministrator can set new fee
+    function setGovernanceFee(uint256 newPoolGovernanceFee) public override {
+        require(msg.sender == _feeAdministrator || !_CHECK); // dev: Only feeAdministrator can set new fee
         require(newPoolGovernanceFee <= 75*10**16); // dev: GovernanceFee is maximum 75%.
         _governanceFee = newPoolGovernanceFee;
 

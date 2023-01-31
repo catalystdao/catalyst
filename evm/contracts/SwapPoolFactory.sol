@@ -112,13 +112,20 @@ contract CatalystSwapPoolFactory is Ownable, ICatalystV1FactoryEvents {
 
         // Call setup
         ICatalystV1Pool(swapPool).setup(
-            init_assets,
-            weights,
-            amp,
-            _defaultGovernanceFee,
             name,
             symbol,
             chaininterface,
+            _defaultPoolFee,
+            _defaultGovernanceFee,
+            msg.sender,     // Fee administrator
+            msg.sender      // setup master
+        );
+
+        // Initialize swap curves
+        ICatalystV1Pool(swapPool).initializeSwapCurves(
+            init_assets,
+            weights,
+            amp,
             msg.sender
         );
 

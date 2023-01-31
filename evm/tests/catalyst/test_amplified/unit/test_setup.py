@@ -220,12 +220,11 @@ def test_setup_call_setup_twice(tokens, swap_factory, deployer, max_pool_assets,
 
     with brownie.reverts(dev_revert_msg="dev: Pool Already setup."):
         sp.setup(
-            tokens[:asset_count],
-            [1]*asset_count,
-            10**18,
+            "",
+            "",
+            ZERO_ADDRESS,
             0,
-            "",
-            "",
+            0,
             ZERO_ADDRESS,
             deployer,
             {"from": deployer}

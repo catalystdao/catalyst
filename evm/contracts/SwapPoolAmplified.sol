@@ -87,32 +87,22 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
      * If set to values with low resolotion (<= 10*5), this should be viewed as
      * opt out of governance weight adjustment. This is not enforced.
      * @param amp Amplification factor. Should be < 10**18.
-     * @param governanceFee The Catalyst governance fee portion. Is WAD.
-     * @param name_ pool token name.
-     * @param symbol_ pool token symbol.
-     * @param chaininterface The message wrapper used by the pool.
-     * Set to ZERO_ADDRESS / address(0) to opt out of cross-chain swapping.
-     * @param setupMaster The address responsible for setting up the pool.
+     * @param depositor The address depositing the initial token balances.
      */
-    function setup(
+    function initializeSwapCurves(
         address[] calldata init_assets,
         uint256[] calldata weights,
         uint256 amp,
-        uint256 governanceFee,
-        string calldata name_,
-        string calldata symbol_,
-        address chaininterface,
-        address setupMaster
+        address depositor
     ) public {
+        require(msg.sender == _factory && _tokenIndexing[0] == address(0));     // dev: swap curves may only be initialized once by the factory
         // Check that the amplification is correct.
         require(amp < FixedPointMathLib.WAD);
         // Check for a misunderstanding regarding how many assets this pool supports.
         require(init_assets.length <= NUMASSETS);
+
         _amp = amp;
         _targetAmplification = amp;
-
-        // Store the governance fee.
-        _governanceFee = governanceFee;
 
         // Compute the security limit.
         { //  Stack limitations.
@@ -133,7 +123,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                 max_unit_inflow += uint256(FixedPointMathLib.powWad(int256(weight * balanceOfSelf * FixedPointMathLib.WAD), int256(FixedPointMathLib.WAD - amp)));
             }
             
-            emit Deposit(setupMaster, MINTAMOUNT, initialBalances);
+            emit Deposit(depositor, MINTAMOUNT, initialBalances);
 
             // The maximum unit flow is (1-2^{-(1-\theta)}) \sum [(W \alpha)^{1-\theta}]
             _ampUnitCONSTANT = FixedPointMathLib.WAD - uint256(FixedPointMathLib.powWad(
@@ -143,8 +133,8 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
             _max_unit_inflow = FixedPointMathLib.mulWadUp(_ampUnitCONSTANT, max_unit_inflow);
         }
 
-        // Do common pool setup logic.
-        setupBase(name_, symbol_, chaininterface, setupMaster);
+        // Mint pool tokens
+        _mint(depositor, MINTAMOUNT);
     }
 
     /**
