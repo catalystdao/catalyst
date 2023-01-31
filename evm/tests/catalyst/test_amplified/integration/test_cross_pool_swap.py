@@ -49,7 +49,7 @@ def test_cross_pool_swap(
     assert source_token.balanceOf(berg) == 0
     
     # The swap may revert because of the security limit     #TODO mark these cases as 'skip'?
-    if pool_2.getUnitCapacity() < tx.events["SwapToUnits"]["output"]:
+    if pool_2.getUnitCapacity() < pool_2.dry_swap_from_unit(pool_2._tokenIndexing(0), tx.events["SwapToUnits"]["output"]):
         with reverts("Swap exceeds security limit"):
             txe = ibc_emulator.execute(tx.events["IncomingMetadata"]["metadata"][0], tx.events["IncomingPacket"]["packet"], {"from": berg})
         return

@@ -155,7 +155,9 @@ def test_ibc_timeout_and_ack(channel_id, pool, pool_tokens, ibc_emulator, berg, 
     source_token.transfer(berg, swap_amount, {'from': deployer})
     source_token.approve(pool, swap_amount, {'from': berg})
 
-    U = int(pool.getUnitCapacity()/1000)  # Example value used to test if the swap is corrected.
+    U = 0
+    for token in pool_tokens:
+        U += (pool._weight(token) * token.balanceOf(pool))**((10**18 - pool._amp())/10**18) * 1000000
 
     both1_12 = pool.dry_swap_both(source_token, target_token, 10**18)
     both1_21 = pool.dry_swap_both(target_token, source_token, 10**18)

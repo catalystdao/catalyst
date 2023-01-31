@@ -207,13 +207,9 @@ def compute_expected_max_unit_inflow(weights, balances, amp):
 
     # Amplified pools
     if amp != 10**18:
-        amp = Decimal(amp) / WAD
-        one_minus_amp = Decimal(1) - amp
+        weighted_sum = sum([Decimal(weight * balance) for weight, balance in zip(weights, balances)])
 
-        weighted_sum = sum([Decimal(weight * balance) ** one_minus_amp for weight, balance in zip(weights, balances)])
-        amp_unit = Decimal(1) - Decimal(2) ** (-one_minus_amp)
-
-        return int(weighted_sum * amp_unit * WAD)
+        return int(weighted_sum)
 
     # Volatile pools
     return int(Decimal(sum(weights)) * Decimal(2).ln() * WAD)

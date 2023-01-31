@@ -61,11 +61,6 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
     uint256 public _amp;
     uint256 public _targetAmplification;
 
-    // In the equation for the security limit, this constant appears.
-    // The constant depends only amp but not on the pool balance.
-    // As a result, it is computed on pool deployment.
-    uint256 _ampUnitCONSTANT;
-
     // To keep track of group ownership, the pool needs to keep track of
     // the local unit balance. That is, does other pools own or owe this pool assets?
     int256 public _unitTracker;
@@ -107,7 +102,6 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         // Compute the security limit.
         { //  Stack limitations.
             uint256[] memory initialBalances = new uint256[](NUMASSETS);
-            uint256 max_unit_inflow = 0;
             for (uint256 it = 0; it < init_assets.length; ++it) {
                 address tokenAddress = init_assets[it];
                 _tokenIndexing[it] = tokenAddress;
@@ -120,21 +114,39 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                 initialBalances[it] = balanceOfSelf;
                 require(balanceOfSelf > 0); // dev: 0 tokens provided in setup.
 
-                max_unit_inflow += uint256(FixedPointMathLib.powWad(int256(weight * balanceOfSelf * FixedPointMathLib.WAD), int256(FixedPointMathLib.WAD - amp)));
+                _max_unit_inflow += weight * balanceOfSelf;
             }
             
             emit Deposit(depositor, MINTAMOUNT, initialBalances);
-
-            // The maximum unit flow is (1-2^{-(1-\theta)}) \sum [(W \alpha)^{1-\theta}]
-            _ampUnitCONSTANT = FixedPointMathLib.WAD - uint256(FixedPointMathLib.powWad(
-                int256(2 * FixedPointMathLib.WAD),
-                -int256(FixedPointMathLib.WAD - amp)
-            ));
-            _max_unit_inflow = FixedPointMathLib.mulWadUp(_ampUnitCONSTANT, max_unit_inflow);
         }
 
         // Mint pool tokens
         _mint(depositor, MINTAMOUNT);
+    }
+
+    /** 
+     * @notice  Returns the current cross-chain swao capacity. 
+     * @dev Overwrites the common implementation because of the
+     * differences as to how it is used. As a result, this always returns
+     * half of the true limit.
+     */
+    function getUnitCapacity() external view override returns (uint256) {
+        uint256 MUF = _max_unit_inflow;
+        // If the time since last update is more than DECAYRATE return maximum
+        if (block.timestamp > DECAYRATE + _last_change) return MUF / 2;
+
+        // The delta change to the limit is: timePassed · slope = timePassed · Max/decayrate
+        uint256 delta_flow = ((block.timestamp - _last_change) * MUF) / DECAYRATE;
+
+        uint256 UF = _unit_flow;
+        // If the change is greater than the units which has passed through
+        // return maximum. We do not want (MUF - (UF - delta_flow) > MUF)
+        if (UF <= delta_flow) return MUF / 2;
+
+        // Amplified pools can have MUF <= UF since MUF is modified when swapping
+        if (MUF <= UF - delta_flow) return 0; 
+
+        return (MUF + delta_flow - UF) / 2;
     }
 
     /**
@@ -157,31 +169,6 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
 
         // Recompute security limit.
         uint256 amp = targetAmplification;
-        uint256 new_max_unit_inflow = 0;
-        for (uint256 it = 0; it < NUMASSETS; ++it) {
-            address token = _tokenIndexing[it];
-            if (token == address(0)) break;
-            uint256 balanceOfSelf = IERC20(token).balanceOf(address(this));
-            new_max_unit_inflow += _weight[token] * uint256(FixedPointMathLib.powWad(
-                int256(balanceOfSelf * FixedPointMathLib.WAD),
-                int256(FixedPointMathLib.WAD - amp)
-            ));
-        }
-        uint256 newAmpUnitCONSTANT = FixedPointMathLib.WAD - uint256(FixedPointMathLib.powWad(
-            int256(2 * FixedPointMathLib.WAD),
-            -int256(FixedPointMathLib.WAD - amp)
-        ));
-        _ampUnitCONSTANT = newAmpUnitCONSTANT;
-        new_max_unit_inflow = FixedPointMathLib.mulWadDown(newAmpUnitCONSTANT, new_max_unit_inflow);
-
-        // We don't want to spend gas to update the security limit on each swap. 
-        // As a result, we "disable" it by immediately increasing it.
-        // This is not an accurate way to do this but we will rely on deposits
-        // and withdrawals to fix issues which are caused by the lazy security limit
-        if (new_max_unit_inflow >= _max_unit_inflow) {
-            // immediately set higher security limit to ensure the limit isn't reached.
-            _max_unit_inflow = new_max_unit_inflow;
-        }
 
         emit ModifyAmplification(targetTime, targetAmplification);
     }
@@ -210,7 +197,6 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                 // Set adjustmentTime to 0. This ensures the if statement is never entered.
                 _adjustmentTarget = 0;
 
-                // Let deposits and withdrawals finalize the security limit change
                 return;
             }
             
@@ -232,55 +218,6 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                 ) / (adjTarget - lastModification);
             }
         }
-    }
-
-    /**
-     * @notice The maximum unit flow changes depending on the current
-     * balance for amplified pools. The change is
-     *     (1-2^(k-1)) · wb^(1-k) - (1-2^(k-1)) · wa^(1-k)
-     * where b is the balance after the swap and a is the balance
-     * before the swap.
-     * @dev Always returns uint256. If oldBalance > newBalance,
-     * the return should be negative. (but the absolute)
-     * value is returned instead.
-     * @param oldBalance The old balance.
-     * @param newBalance The new balance.
-     * @param asset The asset which is being updated.
-     * @return uint256 Returns the absolute change in unit capacity Returns without the ampConstant.
-     */
-    function getModifyUnitCapacity(
-        uint256 oldBalance,
-        uint256 newBalance,
-        address asset
-    ) internal view returns (uint256) {
-        // If the balances doesn't change, the change is 0.
-        if (oldBalance == newBalance) return 0;
-
-        // Cache the relevant amplification
-        int256 oneMinusAmp = int256(FixedPointMathLib.WAD - _amp);
-        uint256 weight = _weight[asset];
-        // Notice, a > b => a^(1-k) > b^(1-k) =>
-        // a <= b => a^(1-k) <= b^(1-k)
-        if (oldBalance < newBalance)
-            // Since a^(1-k) > b^(1-k), the return is positive
-            return uint256(FixedPointMathLib.powWad(
-                int256(weight * newBalance * FixedPointMathLib.WAD),
-                oneMinusAmp
-            ) - FixedPointMathLib.powWad(
-                int256(weight * oldBalance * FixedPointMathLib.WAD),
-                oneMinusAmp
-            ));
-
-        // Since a^(1-k) > b^(1-k), the return is negative
-        // Since the function returns uint256, return
-        // b^(1-k) - a^(1-k) instead. (since that is positive)
-        return uint256(FixedPointMathLib.powWad(
-            int256(weight * oldBalance * FixedPointMathLib.WAD),
-            oneMinusAmp
-        ) - FixedPointMathLib.powWad(
-            int256(weight * newBalance * FixedPointMathLib.WAD),
-            oneMinusAmp
-        ));
     }
 
     //--- Swap integrals ---//
@@ -506,13 +443,18 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                 uint256 weight = _weight[token];
 
                 // Not minus escrowedAmount, since we want the deposit to return less.
-                uint256 weightAssetBalance = weight * ERC20(token).balanceOf(address(this)) * FixedPointMathLib.WAD;
+                uint256 weightAssetBalance = weight * ERC20(token).balanceOf(address(this));
+
+                // Increase the security limit by the amount deposited.
+                _max_unit_inflow += weightAssetBalance;
+                // Short term decrease the security limit by the amount deposited.
+                _unit_flow += weightAssetBalance;
                 
                 {
                     // wa^(1-k) is required twice. It is F(A) in the
                     // swapToUnits equation and part of the wa_0^(1-k) calculation
                     uint256 wab = uint256(FixedPointMathLib.powWad(
-                        int256(weightAssetBalance),
+                        int256(weightAssetBalance * FixedPointMathLib.WAD),
                         oneMinusAmp
                     ));
                     weightedAssetBalanceSum += wab;
@@ -531,7 +473,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
 
                 // Add F(A+x)
                 U += FixedPointMathLib.powWad(
-                    int256(weightAssetBalance + weight * tokenAmounts[it] * FixedPointMathLib.WAD),
+                    int256((weightAssetBalance + weight * tokenAmounts[it]) * FixedPointMathLib.WAD),
                     oneMinusAmp
                 );
                 
@@ -672,16 +614,34 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                     // Set the token amount to the pool balance.
                     // Recalled that the escrow balance is subtracted from weightAssetBalances.
                     tokenAmount = weightAssetBalances[it] / weight;
+
+                    // Decrease the security limit by the amount withdrawn.
+                    _max_unit_inflow -=  weightAssetBalances[it]; // = tokenAmount * weight
+                    if (_unit_flow <= weightAssetBalances[it]) {
+                        _unit_flow = 0;
+                    } else {
+                        _unit_flow -= weightAssetBalances[it];
+                    }
+
                     // Check that the user is satisfied with this.
                     require(
                         tokenAmount >= minOut[it],
                         SWAP_RETURN_INSUFFICIENT
                     );
+
                     // Transfer the appropriate number of tokens from the user to the pool. (And store for event logging)
                     amounts[it] = tokenAmount;
                     IERC20(token).safeTransfer(msg.sender, tokenAmount); // dev: Transfer away from pool failed.
                     continue;
                 }
+                // Decrease the security limit by the amount withdrawn.
+                _max_unit_inflow -=  tokenAmount;
+                if (_unit_flow <= tokenAmount) {
+                    _unit_flow = 0;
+                } else {
+                    _unit_flow -= tokenAmount;
+                }
+
                 // remove the weight from tokenAmount.
                 tokenAmount /= weight;
                 // Check that the user is satisfied with this.
@@ -796,6 +756,16 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
             // Transfer the appropriate number of tokens from the user to the pool. (And store for event logging)
             amounts[it] = tokenAmount;
             IERC20(tokenIndexed[it]).safeTransfer(msg.sender, tokenAmount);
+
+            // Decrease the security limit by the amount withdrawn.
+            uint256 weight = _weight[tokenIndexed[it]];
+            tokenAmount *= weight;
+            _max_unit_inflow -=  tokenAmount;
+            if (_unit_flow <= tokenAmount) {
+                _unit_flow = 0;
+            } else {
+                _unit_flow -= tokenAmount;
+            }
         }
 
         emit Withdraw(msg.sender, poolTokens, amounts);
@@ -828,9 +798,13 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         IERC20(toAsset).safeTransfer(msg.sender, out);
         IERC20(fromAsset).safeTransferFrom(msg.sender, address(this), amount);
 
-        // The security limit is constant for local swaps.
-        // While the fee should increase the security limit slightly
-        // This can be delayed until deposits and withdrawals.
+        // For amplified pools, the security limit is based on the sum of the tokens
+        // in the pool.
+        if (out > amount) {
+            _max_unit_inflow -= out - amount;
+        } else {
+            _max_unit_inflow += amount - out;
+        }
 
         emit LocalSwap(msg.sender, fromAsset, toAsset, amount, out);
 
@@ -860,20 +834,6 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
 
         // Track units for computing balance0.
         _unitTracker += int256(U);
-
-        // Compute the change in max_unit_inflow.
-        // TODO: FIX. This can be abused.
-        {
-            uint256 fromBalance = ERC20(fromAsset).balanceOf(address(this));
-            _max_unit_inflow += FixedPointMathLib.mulWadUp(
-                _ampUnitCONSTANT,
-                getModifyUnitCapacity(
-                    fromBalance - (amount - FixedPointMathLib.mulWadDown(amount, _poolFee)),
-                    fromBalance,
-                    fromAsset
-                )
-            );
-        }
 
         bytes32 messageHash;
 
@@ -983,27 +943,20 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         // Convert the asset index (toAsset) into the asset to be purchased.
         address toAsset = _tokenIndexing[toAssetIndex];
 
-        // Check if the swap is according to the swap limits
-        checkAndSetUnitCapacity(U);
 
         // Calculate the swap return value.
         uint256 purchasedTokens = dry_swap_from_unit(toAsset, U);
+
+
+        // Check if the swap is according to the swap limits
+        uint256 deltaSecurityLimit = purchasedTokens * _weight[toAsset];
+        _max_unit_inflow -= deltaSecurityLimit;
+        checkAndSetUnitCapacity(deltaSecurityLimit);
 
         require(minOut <= purchasedTokens, SWAP_RETURN_INSUFFICIENT);
 
         // Track units for fee distribution.
         _unitTracker -= int256(U);
-
-        // Compute the change in max_unit_inflow.
-        uint256 toBalance = IERC20(toAsset).balanceOf(address(this));
-        _max_unit_inflow -= FixedPointMathLib.mulWadUp(
-            _ampUnitCONSTANT,
-            getModifyUnitCapacity(
-                toBalance + purchasedTokens,
-                toBalance,
-                toAsset
-            )
-        );
 
         // Send the return value to the user.
         IERC20(toAsset).safeTransfer(who, purchasedTokens);
@@ -1165,9 +1118,6 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         require(msg.sender == _chaininterface);
         _A();
 
-        // Check if the swap is according to the swap limits
-        checkAndSetUnitCapacity(U);
-
         int256 oneMinusAmp = int256(FixedPointMathLib.WAD - _amp);
         uint256 walpha_0_ampped;
         uint256 it;
@@ -1193,19 +1143,44 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
             walpha_0_ampped = uint256(int256(weightedAssetBalanceSum) - _unitTracker) / it;
         }
 
+        // While not very readable, reusing this variable makes a lot of sense.
+        // So from now one, oneMinusAmp is 1/oneMinusAmp
+        oneMinusAmp = int256(FixedPointMathLib.WAD * FixedPointMathLib.WAD) / oneMinusAmp;
+
         uint256 ts = totalSupply(); // Not! + _escrowedPoolTokens, since a smaller supply results in fewer pool tokens.
 
         uint256 it_times_walpha_amped = it * walpha_0_ampped;
         uint256 poolTokens = (ts * (uint256(FixedPointMathLib.powWad(
             int256(FixedPointMathLib.divWadDown(
-                it_times_walpha_amped + uint256(U),
+                it_times_walpha_amped + U,
                 it_times_walpha_amped
             )),
-            int256(FixedPointMathLib.WAD * FixedPointMathLib.WAD) / oneMinusAmp
+            oneMinusAmp
         )) - FixedPointMathLib.WAD)) / FixedPointMathLib.WAD;
 
         // Check if the user would accept the mint.
         require(minOut <= poolTokens, SWAP_RETURN_INSUFFICIENT);
+
+        // Security limit
+        {
+            // To calculate the poolTokenEquiv, we set \alpha_t = \alpha_0.
+            // This should be a close enough approximation.
+            // If U > it_times_walpha_amped, then U can purchase more than 50% of the pool.
+            // And the below calculation doesn't work.
+            require(it_times_walpha_amped > U, EXCEEDS_SECURITY_LIMIT);
+            uint256 poolTokenEquiv = FixedPointMathLib.mulWadUp(uint256(FixedPointMathLib.powWad(
+                int256(it_times_walpha_amped),
+                oneMinusAmp
+            )), (FixedPointMathLib.WAD - uint256(FixedPointMathLib.powWad(
+                int256(FixedPointMathLib.divWadDown(
+                    it_times_walpha_amped - U,
+                    it_times_walpha_amped
+                )),
+                oneMinusAmp
+            ))));
+            // Check if the swap is according to the swap limits
+            checkAndSetUnitCapacity(poolTokenEquiv / FixedPointMathLib.WAD);
+        }
 
         // Mint pool tokens for the user.
         _mint(who, poolTokens);
@@ -1213,5 +1188,95 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         emit SwapFromLiquidityUnits(who, U, poolTokens, messageHash);
 
         return poolTokens;
+    }
+
+    //-- Escrow Functions --//
+
+    /** 
+     * @notice Deletes and releases escrowed tokens to the pool.
+     * @dev Should never revert!  
+     * @param messageHash A hash of the cross-chain message used ensure the message arrives indentical to the sent message.
+     * @param U The number of units initially purchased.
+     * @param escrowAmount The number of tokens escrowed.
+     * @param escrowToken The token escrowed.
+     */
+    function releaseEscrowACK(
+        bytes32 messageHash,
+        uint256 U,
+        uint256 escrowAmount,
+        address escrowToken
+    ) external override {
+        baseReleaseEscrowACK(messageHash, U, escrowAmount, escrowToken);
+
+        // Incoming swaps should be subtracted from the unit flow.
+        // It is assumed if the router was fraudulent, that no-one would execute a trade.
+        // As a result, if people swap into the pool, we should expect that there is exactly
+        // the inswapped amount of trust in the pool. If this wasn't implemented, there would be
+        // a maximum daily cross chain volume, which is bad for liquidity providers.
+        {
+            // Calling timeout and then ack should not be possible. 
+            // The initial lines deleting the escrow protects against this.
+            uint256 UF = _unit_flow;
+            // If UF < escrowAmount and we do UF - escrowAmount < 0 underflow => bad.
+            if (UF > escrowAmount) {
+                _unit_flow = UF - escrowAmount; // Does not underflow since _unit_flow > escrowAmount.
+            } else if (UF != 0) {
+                // If UF == 0, then we shouldn't do anything. Skip that case.
+                // when UF <= escrowAmount => UF - escrowAmount <= 0 => max(UF - escrowAmount, 0) = 0
+                _unit_flow = 0;
+            }
+        }
+    }
+
+    /** 
+     * @notice Deletes and releases escrowed tokens to the user.
+     * @dev Should never revert!  
+     * @param messageHash A hash of the cross-chain message used ensure the message arrives indentical to the sent message.
+     * @param U The number of units initially purchased.
+     * @param escrowAmount The number of tokens escrowed.
+     * @param escrowToken The token escrowed.
+     */
+    function releaseEscrowTIMEOUT(
+        bytes32 messageHash,
+        uint256 U,
+        uint256 escrowAmount,
+        address escrowToken
+    ) external override {
+        baseReleaseEscrowTIMEOUT(messageHash, U, escrowAmount, escrowToken);
+    }
+
+    /** 
+     * @notice Deletes and releases liquidity escrowed tokens to the pool.
+     * @dev Should never revert!
+     * @param messageHash A hash of the cross-chain message used ensure the message arrives indentical to the sent message.
+     * @param U The number of units initially acquired.
+     * @param escrowAmount The number of pool tokens escrowed.
+     */
+    function releaseLiquidityEscrowACK(
+        bytes32 messageHash,
+        uint256 U,
+        uint256 escrowAmount
+    ) external override {
+        baseReleaseLiquidityEscrowACK(messageHash, U, escrowAmount);
+
+        // We are unable to increase the security limit in this case.
+        // If someone liquidity swapped a significant amount of assets
+        // it is assumed the pool has low liquidity. In these cases,
+        // liquidity swaps shouldn't be used.
+    }
+
+    /** 
+     * @notice Deletes and releases escrowed pools tokens to the user.
+     * @dev Should never revert!
+     * @param messageHash A hash of the cross-chain message used ensure the message arrives indentical to the sent message.
+     * @param U The number of units initially acquired.
+     * @param escrowAmount The number of pool tokens escrowed.
+     */
+    function releaseLiquidityEscrowTIMEOUT(
+        bytes32 messageHash,
+        uint256 U,
+        uint256 escrowAmount
+    ) external override {
+        baseReleaseLiquidityEscrowTIMEOUT(messageHash, U, escrowAmount);
     }
 }

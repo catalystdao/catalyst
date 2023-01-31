@@ -176,7 +176,7 @@ abstract contract CatalystSwapPoolCommon is
     }
 
     /** @notice  Returns the current cross-chain swao capacity. */
-    function getUnitCapacity() external view override returns (uint256) {
+    function getUnitCapacity() external view virtual override returns (uint256) {
         uint256 MUF = _max_unit_inflow;
         // If the time since last update is more than DECAYRATE return maximum
         if (block.timestamp > DECAYRATE + _last_change) return MUF;
@@ -326,12 +326,12 @@ abstract contract CatalystSwapPoolCommon is
      * @param escrowAmount The number of tokens escrowed.
      * @param escrowToken The token escrowed.
      */
-    function releaseEscrowACK(
+    function baseReleaseEscrowACK(
         bytes32 messageHash,
         uint256 U,
         uint256 escrowAmount,
         address escrowToken
-    ) external override {
+    ) internal {
         require(msg.sender == _chaininterface);  // dev: Only _chaininterface
 
         address fallbackUser = _escrowedFor[messageHash];  // Passing in an invalid messageHash returns address(0)
@@ -339,25 +339,6 @@ abstract contract CatalystSwapPoolCommon is
         delete _escrowedFor[messageHash];  // Stops timeout and further acks from being called
         _escrowedTokens[escrowToken] -= escrowAmount; // This does not revert, since escrowAmount \subseteq _escrowedTokens => escrowAmount <= _escrowedTokens. Cannot be called twice since the 3 lines before ensure this can only be reached once.
         emit EscrowAck(messageHash, false);  // Never reverts.
-
-        // Incoming swaps should be subtracted from the unit flow.
-        // It is assumed if the router was fraudulent, that no-one would execute a trade.
-        // As a result, if people swap into the pool, we should expect that there is exactly
-        // the inswapped amount of trust in the pool. If this wasn't implemented, there would be
-        // a maximum daily cross chain volume, which is bad for liquidity providers.
-        {
-            // Calling timeout and then ack should not be possible. 
-            // The initial lines deleting the escrow protects against this.
-            uint256 UF = _unit_flow;
-            // If UF < U and we do UF - U < 0 underflow => bad.
-            if (UF > U) {
-                _unit_flow = UF - U; // Does not underflow since _unit_flow > U.
-            } else if (UF != 0) {
-                // If UF == 0, then we shouldn't do anything. Skip that case.
-                // when UF <= U => UF - U <= 0 => max(UF - U, 0) = 0
-                _unit_flow = 0;
-            }
-        }
     }
 
     /** 
@@ -368,12 +349,12 @@ abstract contract CatalystSwapPoolCommon is
      * @param escrowAmount The number of tokens escrowed.
      * @param escrowToken The token escrowed.
      */
-    function releaseEscrowTIMEOUT(
+    function baseReleaseEscrowTIMEOUT(
         bytes32 messageHash,
         uint256 U,
         uint256 escrowAmount,
         address escrowToken
-    ) external override {
+    ) internal {
         require(msg.sender == _chaininterface);  // dev: Only _chaininterface
 
         address fallbackUser = _escrowedFor[messageHash];  // Passing in an invalid messageHash returns address(0)
@@ -394,11 +375,11 @@ abstract contract CatalystSwapPoolCommon is
      * @param U The number of units initially acquired.
      * @param escrowAmount The number of pool tokens escrowed.
      */
-    function releaseLiquidityEscrowACK(
+    function baseReleaseLiquidityEscrowACK(
         bytes32 messageHash,
         uint256 U,
         uint256 escrowAmount
-    ) external override {
+    ) internal {
         require(msg.sender == _chaininterface);   // dev: Only _chaininterface
 
         address fallbackUser = _escrowedLiquidityFor[messageHash];   // Passing in an invalid messageHash returns address(0)
@@ -407,25 +388,6 @@ abstract contract CatalystSwapPoolCommon is
         _escrowedPoolTokens -= escrowAmount;  // This does not revert, since escrowAmount \subseteq _escrowedPoolTokens => escrowAmount <= _escrowedPoolTokens. Cannot be called twice since the 3 lines before ensure this can only be reached once.
 
         emit EscrowAck(messageHash, true);  // Never reverts.
-
-        // Incoming swaps should be subtracted from the unit flow.
-        // It is assumed if the router was fraudulent, that no-one would execute a trade.
-        // As a result, if people swap into the pool, we should expect that there is exactly
-        // the inswapped amount of trust in the pool. If this wasn't implemented, there would be
-        // a maximum daily cross chain volume, which is bad for liquidity providers.
-        {
-            // Calling timeout and then ack should not be possible. 
-            // The initial lines deleting the escrow protects against this.
-            uint256 UF = _unit_flow;
-            // If UF < U and we do UF - U < 0 underflow => bad.
-            if (UF > U) {
-                _unit_flow = UF - U; // Does not underflow since _unit_flow > U.
-            } else if (UF != 0) {
-                // If UF == 0, then we shouldn't do anything. Skip that case.
-                // when UF <= U => UF - U <= 0 => max(UF - U, 0) = 0
-                _unit_flow = 0;
-            }
-        }
     }
 
     /** 
@@ -435,11 +397,11 @@ abstract contract CatalystSwapPoolCommon is
      * @param U The number of units initially acquired.
      * @param escrowAmount The number of pool tokens escrowed.
      */
-    function releaseLiquidityEscrowTIMEOUT(
+    function baseReleaseLiquidityEscrowTIMEOUT(
         bytes32 messageHash,
         uint256 U,
         uint256 escrowAmount
-    ) external override {
+    ) internal {
         require(msg.sender == _chaininterface);  // dev: Only _chaininterface
 
         address fallbackUser = _escrowedLiquidityFor[messageHash];  // Passing in an invalid messageHash returns address(0)

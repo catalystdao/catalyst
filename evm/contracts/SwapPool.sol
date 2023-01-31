@@ -929,4 +929,108 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
 
         return poolTokens;
     }
+
+    //-- Escrow Functions --//
+
+    /** 
+     * @notice Deletes and releases escrowed tokens to the pool.
+     * @dev Should never revert!  
+     * @param messageHash A hash of the cross-chain message used ensure the message arrives indentical to the sent message.
+     * @param U The number of units initially purchased.
+     * @param escrowAmount The number of tokens escrowed.
+     * @param escrowToken The token escrowed.
+     */
+    function releaseEscrowACK(
+        bytes32 messageHash,
+        uint256 U,
+        uint256 escrowAmount,
+        address escrowToken
+    ) external override {
+        baseReleaseEscrowACK(messageHash, U, escrowAmount, escrowToken);
+
+        // Incoming swaps should be subtracted from the unit flow.
+        // It is assumed if the router was fraudulent, that no-one would execute a trade.
+        // As a result, if people swap into the pool, we should expect that there is exactly
+        // the inswapped amount of trust in the pool. If this wasn't implemented, there would be
+        // a maximum daily cross chain volume, which is bad for liquidity providers.
+        {
+            // Calling timeout and then ack should not be possible. 
+            // The initial lines deleting the escrow protects against this.
+            uint256 UF = _unit_flow;
+            // If UF < U and we do UF - U < 0 underflow => bad.
+            if (UF > U) {
+                _unit_flow = UF - U; // Does not underflow since _unit_flow > U.
+            } else if (UF != 0) {
+                // If UF == 0, then we shouldn't do anything. Skip that case.
+                // when UF <= U => UF - U <= 0 => max(UF - U, 0) = 0
+                _unit_flow = 0;
+            }
+        }
+    }
+
+    /** 
+     * @notice Deletes and releases escrowed tokens to the user.
+     * @dev Should never revert!  
+     * @param messageHash A hash of the cross-chain message used ensure the message arrives indentical to the sent message.
+     * @param U The number of units initially purchased.
+     * @param escrowAmount The number of tokens escrowed.
+     * @param escrowToken The token escrowed.
+     */
+    function releaseEscrowTIMEOUT(
+        bytes32 messageHash,
+        uint256 U,
+        uint256 escrowAmount,
+        address escrowToken
+    ) external override {
+        baseReleaseEscrowTIMEOUT(messageHash, U, escrowAmount, escrowToken);
+    }
+
+    /** 
+     * @notice Deletes and releases liquidity escrowed tokens to the pool.
+     * @dev Should never revert!
+     * @param messageHash A hash of the cross-chain message used ensure the message arrives indentical to the sent message.
+     * @param U The number of units initially acquired.
+     * @param escrowAmount The number of pool tokens escrowed.
+     */
+    function releaseLiquidityEscrowACK(
+        bytes32 messageHash,
+        uint256 U,
+        uint256 escrowAmount
+    ) external override {
+        baseReleaseLiquidityEscrowACK(messageHash, U, escrowAmount);
+
+        // Incoming swaps should be subtracted from the unit flow.
+        // It is assumed if the router was fraudulent, that no-one would execute a trade.
+        // As a result, if people swap into the pool, we should expect that there is exactly
+        // the inswapped amount of trust in the pool. If this wasn't implemented, there would be
+        // a maximum daily cross chain volume, which is bad for liquidity providers.
+        {
+            // Calling timeout and then ack should not be possible. 
+            // The initial lines deleting the escrow protects against this.
+            uint256 UF = _unit_flow;
+            // If UF < U and we do UF - U < 0 underflow => bad.
+            if (UF > U) {
+                _unit_flow = UF - U; // Does not underflow since _unit_flow > U.
+            } else if (UF != 0) {
+                // If UF == 0, then we shouldn't do anything. Skip that case.
+                // when UF <= U => UF - U <= 0 => max(UF - U, 0) = 0
+                _unit_flow = 0;
+            }
+        }
+    }
+
+    /** 
+     * @notice Deletes and releases escrowed pools tokens to the user.
+     * @dev Should never revert!
+     * @param messageHash A hash of the cross-chain message used ensure the message arrives indentical to the sent message.
+     * @param U The number of units initially acquired.
+     * @param escrowAmount The number of pool tokens escrowed.
+     */
+    function releaseLiquidityEscrowTIMEOUT(
+        bytes32 messageHash,
+        uint256 U,
+        uint256 escrowAmount
+    ) external override {
+        baseReleaseLiquidityEscrowTIMEOUT(messageHash, U, escrowAmount);
+    }
 }

@@ -2,6 +2,8 @@ import brownie
 import pytest
 from brownie import ZERO_ADDRESS, chain, convert, reverts, web3
 from brownie.test import given, strategy
+import tests.catalyst.utils.pool_utils as pool_utils
+from math import inf
 
 pytestmark = pytest.mark.usefixtures("group_finish_setup", "group_connect_pools")
 
@@ -13,6 +15,10 @@ def test_liquidity_swap(
     pool_1,
     pool_2,
     pool_1_tokens,
+    get_pool_2_weights,
+    get_pool_2_balances,
+    get_pool_2_unit_tracker,
+    get_pool_2_amp,
     berg,
     deployer,
     ibc_emulator,
@@ -49,9 +55,18 @@ def test_liquidity_swap(
     )
     assert pool_1.balanceOf(berg) == pool1_tokens - pool1_tokens_swapped
     
-    if pool_2.getUnitCapacity() < tx.events["SwapToLiquidityUnits"]["output"]:
+    b0_times_n = len(pool_1_tokens) * pool_utils.compute_balance_0(get_pool_2_weights(), get_pool_2_balances(), get_pool_2_unit_tracker(), get_pool_2_amp())
+    
+    U = tx.events["SwapToLiquidityUnits"]["output"]
+    expectedB0 = 2**256
+    if int(int(b0_times_n)**(1 - get_pool_2_amp()/10**18)) >= int(U/10**18):
+        expectedB0 = pool_utils.compute_expected_swap_given_U(U, 1, b0_times_n, get_pool_2_amp())
+        
+        
+    if (pool_2.getUnitCapacity() < expectedB0):
         with reverts("Swap exceeds security limit"):
             txe = ibc_emulator.execute(tx.events["IncomingMetadata"]["metadata"][0], tx.events["IncomingPacket"]["packet"], {"from": berg})
+        
         return
     else:
         txe = ibc_emulator.execute(tx.events["IncomingMetadata"]["metadata"][0], tx.events["IncomingPacket"]["packet"], {"from": berg})
