@@ -533,7 +533,6 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
      * @param poolTokens The number of pool tokens to withdraw
      * @param withdrawRatio The percentage of units used to withdraw. In the following special scheme: U_a = U · withdrawRatio[0], U_b = (U - U_a) · withdrawRatio[1], U_c = (U - U_a - U_b) · withdrawRatio[2], .... Is Wad.
      * @param minOuts The minimum number of tokens withdrawn.
-     * @param uint256[] memory An array containing the amounts withdrawn
      */
     function withdrawMixed(
         uint256 poolTokens,
