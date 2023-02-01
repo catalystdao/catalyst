@@ -46,7 +46,8 @@ def test_finish_setup_twice(sample_pool, deployer):
         sample_pool.finishSetup({"from": deployer})
 
 
-def test_finish_setup_only_local(deploy_pool, tokens, deployer, amplification, max_pool_assets):
+@pytest.mark.parametrize("onlyLocal", [True, False])
+def test_finish_setup_only_local(deploy_pool, tokens, deployer, amplification, max_pool_assets, onlyLocal):
 
     sp = deploy_pool(
         tokens          = tokens[:max_pool_assets],
@@ -56,28 +57,9 @@ def test_finish_setup_only_local(deploy_pool, tokens, deployer, amplification, m
         name            = "",
         symbol          = "",
         deployer        = deployer,
-        only_local      = True
+        only_local      = onlyLocal
     )
 
     sp.finishSetup({"from": deployer})
 
-    assert sp.onlyLocal()
-
-
-def test_finish_setup_not_only_local(deploy_pool, tokens, deployer, amplification, max_pool_assets):
-
-    sp = deploy_pool(
-        tokens          = tokens[:max_pool_assets],
-        token_balances  = [10**8]*max_pool_assets,
-        weights         = [1]*max_pool_assets,
-        amp             = amplification,
-        name            = "",
-        symbol          = "",
-        deployer        = deployer,
-        only_local      = False
-    )
-
-    sp.finishSetup({"from": deployer})
-
-    assert not sp.onlyLocal()
-
+    assert sp.onlyLocal() == onlyLocal
