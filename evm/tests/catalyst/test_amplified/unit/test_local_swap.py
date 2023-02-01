@@ -31,11 +31,8 @@ def test_local_swap(
         source_token, target_token, swap_amount, 0, {'from': berg}
     )
     
-    if swap_amount/(source_token.balanceOf(pool)-swap_amount) < 1e-02:
-        assert tx.return_value <= int(y*1.000001), "Swap returns more than theoretical"
-    else:
-        assert tx.return_value <= int(y*1.000001), "Swap returns more than theoretical"
-        assert (y * 9 /10) <= tx.return_value, "Swap returns less than 9/10 theoretical"
+    assert tx.return_value <= int(y*1.000001), "Swap returns more than theoretical"
+    assert (y * 9 /10) <= tx.return_value, "Swap returns less than 9/10 theoretical"
     
     assert tx.return_value == target_token.balanceOf(berg)
     
