@@ -799,6 +799,14 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         IERC20(toAsset).safeTransfer(msg.sender, out);
         IERC20(fromAsset).safeTransferFrom(msg.sender, address(this), amount);
 
+        // Governance Fee
+        if (_governanceFee != 0) {
+            IERC20(fromAsset).safeTransfer(
+                factoryOwner(),
+                FixedPointMathLib.mulWadDown(fee, _governanceFee)
+            );
+        }
+
         // For amplified pools, the security limit is based on the sum of the tokens
         // in the pool.
         if (out > amount) {

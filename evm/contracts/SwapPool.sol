@@ -602,6 +602,14 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
         IERC20(toAsset).safeTransfer(msg.sender, out);
         IERC20(fromAsset).safeTransferFrom(msg.sender, address(this), amount);
 
+        // Governance Fee
+        if (_governanceFee != 0) {
+            IERC20(fromAsset).safeTransfer(
+                factoryOwner(),
+                FixedPointMathLib.mulWadDown(fee, _governanceFee)
+            );
+        }
+
         emit LocalSwap(msg.sender, fromAsset, toAsset, amount, out);
 
         return out;
