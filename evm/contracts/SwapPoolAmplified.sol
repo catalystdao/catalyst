@@ -1202,10 +1202,12 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
     //-- Escrow Functions --//
 
     /** 
-     * @notice Deletes and releases escrowed tokens to the pool.
+     * @notice Deletes and releases escrowed tokens to the pool and updates the security limit.
      * @dev Should never revert!  
+     * The base implementation exists in CatalystSwapPoolCommon. The function adds security limit
+     * adjustment to the implementation to swap volume supported.
      * @param messageHash A hash of the cross-chain message used ensure the message arrives indentical to the sent message.
-     * @param U The number of units initially purchased.
+     * @param U The number of units purchased.
      * @param escrowAmount The number of tokens escrowed.
      * @param escrowToken The token escrowed.
      */
@@ -1215,7 +1217,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 escrowAmount,
         address escrowToken
     ) external override {
-        baseReleaseEscrowACK(messageHash, U, escrowAmount, escrowToken);
+        _escrowACK(messageHash, U, escrowAmount, escrowToken);
 
         // Incoming swaps should be subtracted from the unit flow.
         // It is assumed if the router was fraudulent, that no-one would execute a trade.
@@ -1238,55 +1240,9 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         }
     }
 
-    /** 
-     * @notice Deletes and releases escrowed tokens to the user.
-     * @dev Should never revert!  
-     * @param messageHash A hash of the cross-chain message used ensure the message arrives indentical to the sent message.
-     * @param U The number of units initially purchased.
-     * @param escrowAmount The number of tokens escrowed.
-     * @param escrowToken The token escrowed.
-     */
-    function releaseEscrowTIMEOUT(
-        bytes32 messageHash,
-        uint256 U,
-        uint256 escrowAmount,
-        address escrowToken
-    ) external override {
-        baseReleaseEscrowTIMEOUT(messageHash, U, escrowAmount, escrowToken);
-    }
+    // releaseLiquidityEscrowACK is not overwritten since we are unable to increase
+    // the security limit. This is because it is very expensive to compute the update
+    // to the security limit. If someone liquidity swapped a significant amount of assets
+    // it is assumed the pool has low liquidity. In these cases, liquidity swaps shouldn't be used.
 
-    /** 
-     * @notice Deletes and releases liquidity escrowed tokens to the pool.
-     * @dev Should never revert!
-     * @param messageHash A hash of the cross-chain message used ensure the message arrives indentical to the sent message.
-     * @param U The number of units initially acquired.
-     * @param escrowAmount The number of pool tokens escrowed.
-     */
-    function releaseLiquidityEscrowACK(
-        bytes32 messageHash,
-        uint256 U,
-        uint256 escrowAmount
-    ) external override {
-        baseReleaseLiquidityEscrowACK(messageHash, U, escrowAmount);
-
-        // We are unable to increase the security limit in this case.
-        // If someone liquidity swapped a significant amount of assets
-        // it is assumed the pool has low liquidity. In these cases,
-        // liquidity swaps shouldn't be used.
-    }
-
-    /** 
-     * @notice Deletes and releases escrowed pools tokens to the user.
-     * @dev Should never revert!
-     * @param messageHash A hash of the cross-chain message used ensure the message arrives indentical to the sent message.
-     * @param U The number of units initially acquired.
-     * @param escrowAmount The number of pool tokens escrowed.
-     */
-    function releaseLiquidityEscrowTIMEOUT(
-        bytes32 messageHash,
-        uint256 U,
-        uint256 escrowAmount
-    ) external override {
-        baseReleaseLiquidityEscrowTIMEOUT(messageHash, U, escrowAmount);
-    }
 }

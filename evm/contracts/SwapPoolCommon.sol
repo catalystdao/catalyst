@@ -319,17 +319,17 @@ abstract contract CatalystSwapPoolCommon is
     }
 
 
-    //-- Escrow Functions --//
+    //-- Base Escrow Functions --//
 
     /** 
-     * @notice Deletes and releases escrowed tokens to the pool.
-     * @dev Should never revert!  
+     * @notice Implements basic ack logic: Deletes and release tokens to the pool
+     * @dev Should never revert! Needs to be exposed through an external function.
      * @param messageHash A hash of the cross-chain message used ensure the message arrives indentical to the sent message.
      * @param U The number of units initially purchased.
      * @param escrowAmount The number of tokens escrowed.
      * @param escrowToken The token escrowed.
      */
-    function baseReleaseEscrowACK(
+    function _escrowACK(
         bytes32 messageHash,
         uint256 U,
         uint256 escrowAmount,
@@ -345,14 +345,14 @@ abstract contract CatalystSwapPoolCommon is
     }
 
     /** 
-     * @notice Deletes and releases escrowed tokens to the user.
-     * @dev Should never revert!  
+     * @notice Implements basic timeout logic: Deletes and sends tokens to the user.
+     * @dev Should never revert! Needs to be exposed through an external function.
      * @param messageHash A hash of the cross-chain message used ensure the message arrives indentical to the sent message.
      * @param U The number of units initially purchased.
      * @param escrowAmount The number of tokens escrowed.
      * @param escrowToken The token escrowed.
      */
-    function baseReleaseEscrowTIMEOUT(
+    function _escrowTIMEOUT(
         bytes32 messageHash,
         uint256 U,
         uint256 escrowAmount,
@@ -372,13 +372,13 @@ abstract contract CatalystSwapPoolCommon is
     }
 
     /** 
-     * @notice Deletes and releases liquidity escrowed tokens to the pool.
+     * @notice Implements basic liquidity ack logic: Deletes and releases pool tokens to the pool.
      * @dev Should never revert!
      * @param messageHash A hash of the cross-chain message used ensure the message arrives indentical to the sent message.
      * @param U The number of units initially acquired.
      * @param escrowAmount The number of pool tokens escrowed.
      */
-    function baseReleaseLiquidityEscrowACK(
+    function _liquidityEscrowACK(
         bytes32 messageHash,
         uint256 U,
         uint256 escrowAmount
@@ -394,13 +394,13 @@ abstract contract CatalystSwapPoolCommon is
     }
 
     /** 
-     * @notice Deletes and releases escrowed pools tokens to the user.
+     * @notice Implements basic liquidity timeout logic: Deletes and sends pool tokens to the user.
      * @dev Should never revert!
      * @param messageHash A hash of the cross-chain message used ensure the message arrives indentical to the sent message.
      * @param U The number of units initially acquired.
      * @param escrowAmount The number of pool tokens escrowed.
      */
-    function baseReleaseLiquidityEscrowTIMEOUT(
+    function _liquidityEscrowTIMEOUT(
         bytes32 messageHash,
         uint256 U,
         uint256 escrowAmount
@@ -416,5 +416,55 @@ abstract contract CatalystSwapPoolCommon is
         _mint(fallbackUser, escrowAmount);  // Never reverts
 
         emit EscrowTimeout(messageHash, true);  // Never reverts.
+    }
+
+    //-- Common Escrow Functions --//
+
+    /** 
+     * @notice Exposes the base ack handler.
+     * @dev For security limit adjustments, the implementation should be overwritten.
+     */
+    function releaseEscrowACK(
+        bytes32 messageHash,
+        uint256 U,
+        uint256 escrowAmount,
+        address escrowToken
+    ) external virtual override {
+        _escrowACK(messageHash, U, escrowAmount, escrowToken);
+    }
+
+    /** 
+     * @notice Exposes the base timeout handler.
+     */
+    function releaseEscrowTIMEOUT(
+        bytes32 messageHash,
+        uint256 U,
+        uint256 escrowAmount,
+        address escrowToken
+    ) external virtual override {
+        _escrowTIMEOUT(messageHash, U, escrowAmount, escrowToken);
+    }
+
+    /** 
+     * @notice Exposes the base liquidity ack handler.
+     * @dev For security limit adjustments, the implementation should be overwritten.
+     */
+    function releaseLiquidityEscrowACK(
+        bytes32 messageHash,
+        uint256 U,
+        uint256 escrowAmount
+    ) external virtual override {
+        _liquidityEscrowACK(messageHash, U, escrowAmount);
+    }
+
+    /** 
+     * @notice Exposes the base liquidity timeout handler.
+     */
+    function releaseLiquidityEscrowTIMEOUT(
+        bytes32 messageHash,
+        uint256 U,
+        uint256 escrowAmount
+    ) external virtual override {
+        _liquidityEscrowTIMEOUT(messageHash, U, escrowAmount);
     }
 }

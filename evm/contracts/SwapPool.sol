@@ -173,9 +173,9 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
             // This avoid repetitions.
             _lastModificationTime = block.timestamp;
 
+            uint256 wsum = 0;
             // If the current time is past the adjustment the weights needs to be finalized.
             if (block.timestamp >= adjTarget) {
-                uint256 wsum = 0;
                 for (uint256 it = 0; it < NUMASSETS; it++) {
                     address token = _tokenIndexing[it];
                     if (token == address(0)) break;
@@ -197,7 +197,6 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
                 return;
             }
 
-            uint256 wsum = 0;
             // Calculate partial weight change
             for (uint256 it = 0; it < NUMASSETS; it++) {
                 address token = _tokenIndexing[it];
@@ -819,8 +818,8 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
     /**
      * @notice Initiate a cross-chain liquidity swap by withdrwaing tokens and converting then to units.
      * @dev No reentry protection since only trusted contracts are called.
-     * While the description says tokens are withdrawn and then converted to units, this is not true.
-     * Pool tokens are converted directly into units through the following equations:
+     * While the description says tokens are withdrawn and then converted to units, pool tokens are converted
+     * directly into units through the following equation:
      *      U = ln(PT/(PT-pt)) * \sum W_i
      * @param channelId The target chain identifier.
      * @param targetPool The target pool on the target chain encoded in bytes32.
@@ -862,7 +861,7 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
         {
             // Wrap the escrow information into a struct. This reduces the stack-print.
             // (Not really since only pool tokens are wrapped.)
-            // However, the struct keeps the implementation structure of swaps similar.
+            // However, the struct keeps the structure of swaps similar.
             LiquidityEscrow memory escrowInformation = LiquidityEscrow({
                 poolTokens: poolTokens
             });
@@ -901,8 +900,8 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
      * @notice Completes a cross-chain liquidity swap by converting units to tokens and depositing
      * @dev No reentry protection since only trusted contracts are called.
      * Called exclusively by the chaininterface.
-     * While the description says units are convert to tokens and then deposited this is not true.
-     * Units are converted directly to pool tokens through the following equation:
+     * While the description says units are convert to tokens and then deposited, units are converted
+     * directly to pool tokens through the following equation:
      *      pt = PT · (1 - exp(-U/sum W_i))/exp(-U/sum W_i)
      * @param who The recipient of the pool tokens
      * @param U Number of units to convert into pool tokens.
@@ -926,11 +925,11 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
         // Fetch wsum.
         uint256 wsum = _max_unit_inflow / FixedPointMathLib.LN2;
 
-        // Use the arbitarty integral to compute the pool ownership percentage.
-        // The function then converts ownership percentage into mint %.
+        // Use the arbitarty integral to compute mint %. It comes as WAD, multiply by totalSupply
+        // and divided by WAD to get number of pool tokens.
         uint256 poolTokens = (arbitrary_solve_integral(U, wsum) * totalSupply())/FixedPointMathLib.WAD;
 
-        // Check if the user would accept the mint.
+        // Check if more than the minimum output is returned.
         require(minOut <= poolTokens, SWAP_RETURN_INSUFFICIENT);
 
         // Mint pool tokens for the user.
@@ -938,16 +937,18 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
 
         emit SwapFromLiquidityUnits(who, U, poolTokens, messageHash);
 
-        return poolTokens;
+        return poolTokens; // Unused
     }
 
     //-- Escrow Functions --//
 
     /** 
-     * @notice Deletes and releases escrowed tokens to the pool.
+     * @notice Deletes and releases escrowed tokens to the pool and updates the security limit.
      * @dev Should never revert!  
+     * The base implementation exists in CatalystSwapPoolCommon. The function adds security limit
+     * adjustment to the implementation to swap volume supported.
      * @param messageHash A hash of the cross-chain message used ensure the message arrives indentical to the sent message.
-     * @param U The number of units initially purchased.
+     * @param U The number of units purchased.
      * @param escrowAmount The number of tokens escrowed.
      * @param escrowToken The token escrowed.
      */
@@ -957,7 +958,8 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 escrowAmount,
         address escrowToken
     ) external override {
-        baseReleaseEscrowACK(messageHash, U, escrowAmount, escrowToken);
+        // Execute common escrow logic.
+        _escrowACK(messageHash, U, escrowAmount, escrowToken);
 
         // Incoming swaps should be subtracted from the unit flow.
         // It is assumed if the router was fraudulent, that no-one would execute a trade.
@@ -980,27 +982,12 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
     }
 
     /** 
-     * @notice Deletes and releases escrowed tokens to the user.
-     * @dev Should never revert!  
-     * @param messageHash A hash of the cross-chain message used ensure the message arrives indentical to the sent message.
-     * @param U The number of units initially purchased.
-     * @param escrowAmount The number of tokens escrowed.
-     * @param escrowToken The token escrowed.
-     */
-    function releaseEscrowTIMEOUT(
-        bytes32 messageHash,
-        uint256 U,
-        uint256 escrowAmount,
-        address escrowToken
-    ) external override {
-        baseReleaseEscrowTIMEOUT(messageHash, U, escrowAmount, escrowToken);
-    }
-
-    /** 
-     * @notice Deletes and releases liquidity escrowed tokens to the pool.
+     * @notice Deletes and releases liquidity escrowed tokens to the pool and updates the security limit.
      * @dev Should never revert!
+     * The base implementation exists in CatalystSwapPoolCommon. The function adds security limit
+     * adjustment to the implementation to swap volume supported.
      * @param messageHash A hash of the cross-chain message used ensure the message arrives indentical to the sent message.
-     * @param U The number of units initially acquired.
+     * @param U The number of units acquired.
      * @param escrowAmount The number of pool tokens escrowed.
      */
     function releaseLiquidityEscrowACK(
@@ -1008,7 +995,8 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 U,
         uint256 escrowAmount
     ) external override {
-        baseReleaseLiquidityEscrowACK(messageHash, U, escrowAmount);
+        // Execute common escrow logic.
+        _liquidityEscrowACK(messageHash, U, escrowAmount);
 
         // Incoming swaps should be subtracted from the unit flow.
         // It is assumed if the router was fraudulent, that no-one would execute a trade.
@@ -1028,20 +1016,5 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
                 _unit_flow = 0;
             }
         }
-    }
-
-    /** 
-     * @notice Deletes and releases escrowed pools tokens to the user.
-     * @dev Should never revert!
-     * @param messageHash A hash of the cross-chain message used ensure the message arrives indentical to the sent message.
-     * @param U The number of units initially acquired.
-     * @param escrowAmount The number of pool tokens escrowed.
-     */
-    function releaseLiquidityEscrowTIMEOUT(
-        bytes32 messageHash,
-        uint256 U,
-        uint256 escrowAmount
-    ) external override {
-        baseReleaseLiquidityEscrowTIMEOUT(messageHash, U, escrowAmount);
     }
 }
