@@ -759,8 +759,8 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
     /**
      * @notice Completes a cross-chain swap by converting units to the desired token (toAsset)
      * @dev Can only be called by the chaininterface.
-     * @param toAssetIndex Index of the asset to be purchased with _U units.
-     * @param who The recipient of toAsset
+     * @param toAssetIndex Index of the asset to be purchased.
+     * @param who The recipient of the tokens.
      * @param U Number of units to convert into toAsset.
      * @param minOut Minimum number of tokens bought. Reverts if less.
      * @param messageHash Used to connect 2 swaps within a group. 
@@ -779,21 +779,24 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
         // Convert the asset index (toAsset) into the asset to be purchased.
         address toAsset = _tokenIndexing[toAssetIndex];
 
-        // Check if the swap is according to the swap limits
+        // Check and update the security limit.
         checkAndSetUnitCapacity(U);
 
-        // Calculate the swap return value.
+        // Calculate the swap return value. 
+        // Fee is always taken on the sending token.
         uint256 purchasedTokens = dry_swap_from_unit(toAsset, U);
 
+        // Ensure the user is satisfied by the number of tokens.
         require(minOut <= purchasedTokens, SWAP_RETURN_INSUFFICIENT);
 
-        // Send the return value to the user.
+        // Send the tokens to the user.
         IERC20(toAsset).safeTransfer(who, purchasedTokens);
 
         emit SwapFromUnits(who, toAsset, U, purchasedTokens, messageHash);
 
         return purchasedTokens; // Unused.
     }
+
 
     function swapFromUnits(
         uint256 toAssetIndex,
@@ -814,17 +817,17 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
 
         // Let users define custom logic which should be executed after the swap.
         // The logic is not contained within a try - except so if the logic reverts
-        // the transaction will timeout. If this is not desired, wrap further logic
-        // in a try - except at dataTarget.
+        // the transaction will timeout and the user gets the input tokens on the sending chain.
+        // If this is not desired, wrap further logic in a try - except at dataTarget.
         ICatalystReceiver(dataTarget).onCatalystCall(purchasedTokens, data);
 
-        return purchasedTokens;
+        return purchasedTokens;  // Unused.
     }
 
     //--- Liquidity swapping ---//
     // Because of the way pool tokens work in a group of pools, there
     // needs to be a way for users to easily get a distributed stake.
-    // Liquidity swaps is a macro implemented  on the smart contract level to:
+    // Liquidity swaps is a macro implemented on the smart contract level to:
     // 1. Withdraw tokens.
     // 2. Convert tokens to units & transfer to target pool.
     // 3. Convert units to an even mix of tokens.
@@ -832,14 +835,17 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
     // In 1 user invocation.
 
     /**
-     * @notice Initiate a cross-chain liquidity swap by lowering liquidity
-     * and transfer the liquidity units to another pool.
+     * @notice Initiate a cross-chain liquidity swap by withdrwaing tokens and converting then to units.
      * @dev No reentry protection since only trusted contracts are called.
+     * While the description says tokens are withdrawn and then converted to units, this is not true.
+     * Pool tokens are converted directly into units through the following equations:
+     *      U = ln(PT/(PT-pt)) * \sum W_i
      * @param channelId The target chain identifier.
      * @param targetPool The target pool on the target chain encoded in bytes32.
      * @param targetUser The recipient of the transaction on the target chain. Encoded in bytes32.
      * @param poolTokens The number of pool tokens to exchange
      * @param minOut The minimum number of pool tokens to mint on target pool.
+     * @return uint256 The number of units minted.x
      */
     function outLiquidity(
         bytes32 channelId,
@@ -849,13 +855,13 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 minOut,
         address fallbackUser
     ) external returns (uint256) {
-        // There needs to be provided a valid fallbackUser.
+        // Address(0) is not a valid fallback user. (As checking for escrow overlap
+        // checks if the fallbackUser != address(0))
         require(fallbackUser != address(0));
         // Update weights
         _W();
 
         uint256 initial_totalSupply = totalSupply() + _escrowedPoolTokens;
-
         // Since we have already cached totalSupply, we might as well burn the tokens
         // now. If the user doesn't have enough tokens, they save a bit of gas.
         _burn(msg.sender, poolTokens);
@@ -870,14 +876,17 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
         }
 
         // Compute the unit value of the provided poolTokens.
+        // This step simplifies withdrawing and swapping into a single calculation.
         uint256 U = uint256(FixedPointMathLib.lnWad(int256(
             FixedPointMathLib.divWadDown(initial_totalSupply, initial_totalSupply - poolTokens)
         ))) * WSUM;
 
-
+        // The message hash is needed later.
         bytes32 messageHash;
         {
-            
+            // Wrap the escrow information into a struct. This reduces the stack-print.
+            // (Not really since only pool tokens are wrapped.)
+            // However, the struct keeps the implementation structure of swaps similar.
             LiquidityEscrow memory escrowInformation = LiquidityEscrow({
                 poolTokens: poolTokens
             });
@@ -893,7 +902,6 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
             );
         }
 
-        
         // Escrow the pool tokens
         require(_escrowedLiquidityFor[messageHash] == address(0));
         _escrowedLiquidityFor[messageHash] = fallbackUser;
