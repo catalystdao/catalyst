@@ -922,15 +922,18 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
         return U;
     }
 
-    /**
-     * @notice Completes a cross-chain swap by converting liquidity units to pool tokens
+    /** 
+     * @notice Completes a cross-chain liquidity swap by converting units to tokens and depositing
      * @dev No reentry protection since only trusted contracts are called.
      * Called exclusively by the chaininterface.
-     * @param who The recipient of pool tokens
+     * While the description says units are convert to tokens and then deposited this is not true.
+     * Units are converted directly to pool tokens through the following equation:
+     *      pt = PT · (1 - exp(-U/sum W_i))/exp(-U/sum W_i)
+     * @param who The recipient of the pool tokens
      * @param U Number of units to convert into pool tokens.
      * @param minOut Minimum number of tokens to mint, otherwise reject.
      * @param messageHash Used to connect 2 swaps within a group. 
-     * @return uint256 Number of pool tokens provided to the user.
+     * @return uint256 Number of pool tokens minted to the recipient.
      */
     function inLiquidity(
         address who,
@@ -946,12 +949,12 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
         checkAndSetUnitCapacity(U);
 
         // Compute the weight sum.
-        uint256 WSUM = 0; // Is not X64.
+        uint256 WSUM = 0;
         for (uint256 it = 0; it < NUMASSETS; it++) {
             address token = _tokenIndexing[it];
             if (token == address(0)) break;
 
-            WSUM += _weight[token]; // Is not X64.
+            WSUM += _weight[token];
         }
 
         // Use the arbitarty integral to compute the pool ownership percentage.
