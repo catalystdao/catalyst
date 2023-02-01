@@ -1,6 +1,6 @@
 import pytest
 from brownie import reverts
-from brownie.test import given, strategy
+from brownie.test import given
 from hypothesis.strategies import floats
 
 from tests.catalyst.utils.common_utils import assert_abs_relative_error
