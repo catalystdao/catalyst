@@ -124,7 +124,6 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
     /**
      * @notice Allows Governance to modify the pool weights to optimise liquidity.
      * @dev targetTime needs to be more than MIN_ADJUSTMENT_TIME in the future.
-     * !Can be abused by governance to disable the security limit!
      * It is implied that if the existing weights are low <≈100, then 
      * the governance is not allowed to change pool weights. This is because
      * the update function is not made for step sizes (which the result would be if)
@@ -148,27 +147,6 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
             address token = _tokenIndexing[it];
             if (token == address(0)) break;
             _targetWeight[token] = newWeights[it];
-            sumWeights += newWeights[it];
-        }
-        uint256 new_max_unit_inflow = sumWeights * FixedPointMathLib.WAD;
-        // We don't want to spend gas to update the security limit on each swap. 
-        // As a result, we "disable" it by immediately increasing it.
-        if (new_max_unit_inflow >= _max_unit_inflow) {
-            // immediately set higher security limit to ensure the limit isn't reached.
-
-            // ! The governance can disable the security limit by setting targetTime = max(uint256)
-            // ! with newWeights = (max(uint256)/sumWeights) / FixedPointMathLib.WAD. 
-            // ! Since the router and the governance are assumbed to be independent, this is not a security issue.
-            // ! Alt: Call with higher weights and then immediately call with lower weights.
-            _max_unit_inflow = new_max_unit_inflow;
-            _target_max_unit_inflow = 0;
-        } else {
-            // Don't update the security limit now but delay it until the weights are set.
-
-            // Decreases of the security limit can also be a way to remove the security limit. However, if the
-            // weights are kept low (=1) (for cheaper tx costs), then this is non-issue since it cannot be
-            // decerased further.
-            _target_max_unit_inflow = new_max_unit_inflow;
         }
 
         emit ModifyWeights(targetTime, newWeights);
@@ -178,7 +156,7 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
      * @notice If the governance requests a weight change, this function will adjust the pool weights.
      * @dev Called first thing on every function depending on weights.
      * The partial weight change algorithm is not made for large step increases. As a result, 
-     * it is important that the original weights are high to increase the mathematical resolution.
+     * it is important that the original weights are large to increase the mathematical resolution.
      */
     function _W() internal {
         // We might use adjustment target more than once. Since we don't change it, lets store it.
@@ -197,28 +175,29 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
 
             // If the current time is past the adjustment the weights needs to be finalized.
             if (block.timestamp >= adjTarget) {
+                uint256 wsum = 0;
                 for (uint256 it = 0; it < NUMASSETS; it++) {
                     address token = _tokenIndexing[it];
                     if (token == address(0)) break;
 
                     uint256 targetWeight = _targetWeight[token];
-                    // Only save weights if they are differnet.
-                    if (_weight[token] != targetWeight) {
-                        _weight[token] = targetWeight;
-                    }
+
+                    // Add new weight to the weight sum.
+                    wsum += targetWeight;
+
+                    // Save the new weight.
+                    _weight[token] = targetWeight;
                 }
+                // Save weight sum.
+                _max_unit_inflow = wsum * FixedPointMathLib.LN2;
+
                 // Set weightAdjustmentTime to 0. This ensures the first if statement is never entered.
                 _adjustmentTarget = 0;
 
-                uint256 target_max_unit_inflow = _target_max_unit_inflow;
-                // If the security limit was decreased, decrease it now.
-                if (target_max_unit_inflow != 0) {
-                    _max_unit_inflow = target_max_unit_inflow;
-                    _target_max_unit_inflow = 0;
-                }
                 return;
             }
 
+            uint256 wsum = 0;
             // Calculate partial weight change
             for (uint256 it = 0; it < NUMASSETS; it++) {
                 address token = _tokenIndexing[it];
@@ -226,26 +205,32 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
 
                 uint256 targetWeight = _targetWeight[token];
                 uint256 currentWeight = _weight[token];
-
                 // If the weight has already been reached, skip the mathematics.
                 if (currentWeight == targetWeight) {
+                    wsum += targetWeight;
                     continue;
                 }
 
                 if (targetWeight > currentWeight) {
                     // if the weights are increased then targetWeight - currentWeight > 0.
                     // Add the change to the current weight.
-                    _weight[token] = currentWeight + (
+                    uint256 newWeight = currentWeight + (
                         (targetWeight - currentWeight) * (block.timestamp - lastModification)
                     ) / (adjTarget - lastModification);
+                    _weight[token] = newWeight;
+                    wsum += newWeight;
                 } else {
                     // if the weights are decreased then targetWeight - currentWeight < 0.
                     // Subtract the change from the current weights.
-                    _weight[token] = currentWeight - (
+                    uint256 newWeight = currentWeight - (
                         (currentWeight - targetWeight) * (block.timestamp - lastModification)
                     ) / (adjTarget - lastModification);
+                    _weight[token] = newWeight;
+                    wsum += newWeight;
                 }
             }
+            // Save new weight sum.
+            _max_unit_inflow = wsum * FixedPointMathLib.LN2;
         }
     }
 
@@ -436,14 +421,10 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
         // Smaller initial_totalSupply => fewer pool tokens minted: _escrowedPoolTokens is not added.
         uint256 initial_totalSupply = totalSupply(); 
 
-        uint256 WSUM = 0;
         uint256 U = 0;
         for (uint256 it = 0; it < NUMASSETS; it++) {
             address token = _tokenIndexing[it];
             if (token == address(0)) break;
-
-            uint256 weight = _weight[token];
-            WSUM += weight;
 
             // Save gas if the user provides no tokens.
             if (tokenAmounts[it] == 0) continue;
@@ -451,7 +432,7 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
              // A high => less units returned. Do not subtract the escrow amount
             uint256 At = IERC20(token).balanceOf(address(this));
 
-            U += compute_integral(tokenAmounts[it], At, weight);
+            U += compute_integral(tokenAmounts[it], At, _weight[token]);
 
             IERC20(token).safeTransferFrom(
                 msg.sender,
@@ -465,8 +446,11 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
         // circumvents the governance fee. However, traders are disincentivised by a higher gas cost.
         U = FixedPointMathLib.mulWadDown(U, FixedPointMathLib.WAD - _poolFee);
 
+        // Fetch wsum.
+        uint256 wsum = _max_unit_inflow / FixedPointMathLib.LN2;
+
         // arbitrary_solve_integral returns < 1 multiplied by FixedPointMathLib.WAD.
-        uint256 poolTokens = (initial_totalSupply * arbitrary_solve_integral(U, WSUM)) / FixedPointMathLib.WAD;
+        uint256 poolTokens = (initial_totalSupply * arbitrary_solve_integral(U, wsum)) / FixedPointMathLib.WAD;
 
         // Check that the minimum output is honored.
         require(minOut <= poolTokens, SWAP_RETURN_INSUFFICIENT);
@@ -547,24 +531,13 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
         // now. If the user doesn't have enough tokens, they save a bit of gas.
         _burn(msg.sender, poolTokens);
 
-        address[] memory tokenIndexed = new address[](NUMASSETS);
-        uint256[] memory weights = new uint256[](NUMASSETS);
-
-        // Compute the weight sum. And cache the storage used.
-        uint256 WSUM = 0;
-        for (uint256 it = 0; it < NUMASSETS; it++) {
-            address token = _tokenIndexing[it];
-            if (token == address(0)) break;
-            tokenIndexed[it] = token;
-            uint256 weight = _weight[token];
-            weights[it] = weight;
-            WSUM += weight;
-        }
+        // Fetch wsum.
+        uint256 wsum = _max_unit_inflow / FixedPointMathLib.LN2;
 
         // Compute the unit worth of the pool tokens.
         uint256 U = uint256(FixedPointMathLib.lnWad(
             int256(FixedPointMathLib.divWadDown(initial_totalSupply, initial_totalSupply - poolTokens)
-        ))) * WSUM;
+        ))) * wsum;
 
         // For later event logging, the amounts transferred to the pool are stored.
         uint256[] memory amounts = new uint256[](NUMASSETS);
@@ -577,14 +550,14 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
             if (U_i == 0) continue;  // If no tokens are to be used, skip the logic.
             U -= U_i;  // Subtract the number of units used.
 
-            address token = tokenIndexed[it]; // Collect token from memory
+            address token = _tokenIndexing[it]; // Collect token from memory
 
             // Withdrawals should returns less, so the escrowed tokens are subtracted.
             uint256 At = IERC20(token).balanceOf(address(this)) - _escrowedTokens[token];
 
             // Units are shared between "liquidity units" and "token units". As such, we just
             // need to convert the units to tokens.
-            uint256 tokenAmount = solve_integral(U_i, At, weights[it]);
+            uint256 tokenAmount = solve_integral(U_i, At, _weight[token]);
 
             // Ensure the output satisfies the user.
             require(minOuts[it] <= tokenAmount, SWAP_RETURN_INSUFFICIENT);
@@ -867,20 +840,14 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
         // now. If the user doesn't have enough tokens, they save a bit of gas.
         _burn(msg.sender, poolTokens);
 
-        // Compute the weight sum.
-        uint256 WSUM = 0;
-        for (uint256 it = 0; it < NUMASSETS; it++) {
-            address token = _tokenIndexing[it];
-            if (token == address(0)) break;
-
-            WSUM += _weight[token];
-        }
+        // Fetch wsum.
+        uint256 wsum = _max_unit_inflow / FixedPointMathLib.LN2;
 
         // Compute the unit value of the provided poolTokens.
         // This step simplifies withdrawing and swapping into a single calculation.
         uint256 U = uint256(FixedPointMathLib.lnWad(int256(
             FixedPointMathLib.divWadDown(initial_totalSupply, initial_totalSupply - poolTokens)
-        ))) * WSUM;
+        ))) * wsum;
 
         // The message hash is needed later.
         bytes32 messageHash;
@@ -948,18 +915,12 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
         // Check if the swap is according to the swap limits
         checkAndSetUnitCapacity(U);
 
-        // Compute the weight sum.
-        uint256 WSUM = 0;
-        for (uint256 it = 0; it < NUMASSETS; it++) {
-            address token = _tokenIndexing[it];
-            if (token == address(0)) break;
-
-            WSUM += _weight[token];
-        }
+        // Fetch wsum.
+        uint256 wsum = _max_unit_inflow / FixedPointMathLib.LN2;
 
         // Use the arbitarty integral to compute the pool ownership percentage.
         // The function then converts ownership percentage into mint %.
-        uint256 poolTokens = (arbitrary_solve_integral(U, WSUM) * totalSupply())/FixedPointMathLib.WAD;
+        uint256 poolTokens = (arbitrary_solve_integral(U, wsum) * totalSupply())/FixedPointMathLib.WAD;
 
         // Check if the user would accept the mint.
         require(minOut <= poolTokens, SWAP_RETURN_INSUFFICIENT);
