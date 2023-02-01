@@ -54,7 +54,9 @@ def compute_expected_swap(
     to_weight,
     to_balance,
     amp,
-    to_amp = None       # Allow to specify a different amplification value for the target pool
+    to_amp = None,       # Allow to specify a different amplification value for the target pool
+    pool_fee = 0,
+    governance_fee = 0
 ):
     if to_amp is not None and amp != to_amp:
         #TODO implement amp/to_amp distinction
@@ -62,11 +64,21 @@ def compute_expected_swap(
 
     to_amp = amp if to_amp is None else to_amp
     
-    x = Decimal(swap_amount)
+    swap_amount = Decimal(swap_amount)
+
     w_a = Decimal(from_weight)
     w_b = Decimal(to_weight)
     a = Decimal(from_balance)
     b = Decimal(to_balance)
+
+    pf = Decimal(pool_fee)
+    gf = Decimal(governance_fee)
+
+    net_fee = pf * swap_amount
+    net_pool_fee = int(pf * (1 - gf) * swap_amount)
+    net_governance_fee = int(pf * gf * swap_amount)
+
+    x = swap_amount - net_fee
 
     # Amplified pools
     if amp != 10**18:
@@ -84,7 +96,9 @@ def compute_expected_swap(
 
         return {
             'U': int(U * 10**18),
-            'output': int(b * (1 - ((b_amp - U)/(b_amp))**(1/one_minus_amp)))
+            'output': int(b * (1 - ((b_amp - U)/(b_amp))**(1/one_minus_amp))),
+            'pool_fee': net_pool_fee,
+            'governance_fee': net_governance_fee
         }
     
     # Volatile pools
@@ -92,7 +106,9 @@ def compute_expected_swap(
 
     return {
         'U': int(U * 10**18),
-        'output': int(b * (1 - (-U/w_b).exp()))
+        'output': int(b * (1 - (-U/w_b).exp())),
+        'pool_fee': net_pool_fee,
+        'governance_fee': net_governance_fee
     }
 
 

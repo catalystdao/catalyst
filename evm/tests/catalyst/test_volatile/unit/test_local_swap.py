@@ -3,7 +3,7 @@ from brownie import reverts
 from brownie.test import given, strategy
 from hypothesis.strategies import floats
 
-#TODO add fees test (create fixture that sets up non-zero fees to the pool)
+from tests.catalyst.utils.common_utils import assert_abs_relative_error
 
 
 @given(swap_amount_percentage=floats(min_value=0, max_value=10))    # From 0 to 10x the tokens hold by the pool
@@ -31,7 +31,7 @@ def test_local_swap(
     source_token.transfer(berg, swap_amount, {'from': deployer})
     source_token.approve(pool, swap_amount, {'from': berg})
     
-    y = compute_expected_local_swap(swap_amount, source_token, target_token)
+    y = compute_expected_local_swap(swap_amount, source_token, target_token)["output"]
     
     tx = pool.localswap(
         source_token, target_token, swap_amount, 0, {'from': berg}
@@ -69,7 +69,7 @@ def test_local_swap_minout_always_fails(
     source_token.transfer(berg, swap_amount, {'from': deployer})
     source_token.approve(pool, swap_amount, {'from': berg})
     
-    y = compute_expected_local_swap(swap_amount, source_token, target_token)
+    y = compute_expected_local_swap(swap_amount, source_token, target_token)["output"]
     
     with reverts("Insufficient Return"):
         pool.localswap(
@@ -142,3 +142,64 @@ def test_local_swap_event(pool, pool_tokens, berg, deployer):
     assert swap_event['toAsset']   == target_token
     assert swap_event['input']     == swap_amount
     assert swap_event['output']    == observed_return
+
+
+
+@given(swap_amount_percentage=floats(min_value=0, max_value=10))    # From 0 to 10x the tokens hold by the pool
+@pytest.mark.usefixtures("pool_set_fees")
+def test_local_swap_fees(
+    pool,
+    pool_tokens,
+    berg,
+    deployer,
+    compute_expected_local_swap,
+    swap_amount_percentage
+):
+    if len(pool_tokens) < 2:
+        pytest.skip("Need at least 2 tokens within a pool to run a local swap.")
+
+    source_token = pool_tokens[0]
+    target_token = pool_tokens[1]
+
+    init_pool_source_balance = source_token.balanceOf(pool)
+    init_pool_target_balance = target_token.balanceOf(pool)
+    init_gov_source_balance  = source_token.balanceOf(deployer)     #TODO replace the 'deployer' account with a 'governance' fixture (or rename deployer to governance)
+
+    swap_amount = swap_amount_percentage * init_pool_source_balance
+
+    assert target_token.balanceOf(berg) == 0
+    source_token.transfer(berg, swap_amount, {'from': deployer})
+    source_token.approve(pool, swap_amount, {'from': berg})
+    
+    expected_swap_result = compute_expected_local_swap(swap_amount, source_token, target_token)
+    
+
+    tx = pool.localswap(
+        source_token, target_token, swap_amount, 0, {'from': berg}
+    )
+
+
+    assert tx.return_value <= int(expected_swap_result["output"] * 1.000001), "Swap returns more than theoretical"
+    assert tx.return_value >= int(expected_swap_result["output"] * 9 /10), "Swap returns less than 9/10 theoretical"
+    
+    # Verify user token balances
+    assert source_token.balanceOf(berg) == 0
+    assert target_token.balanceOf(berg) == tx.return_value
+
+    # Verify pool balances
+    pool_fee = expected_swap_result["pool_fee"] # TODO how do we verify the correctness of this? Assert change (increase) in pool invariant? Or is the expected swap return enough?
+    governance_fee = expected_swap_result["governance_fee"]
+
+    assert_abs_relative_error(
+        source_token.balanceOf(pool),
+        init_pool_source_balance + swap_amount - governance_fee,  # Governance fee is sent directly to the governance account
+        1e-15
+    )
+    assert target_token.balanceOf(pool) == init_pool_target_balance - tx.return_value
+
+    # Verify governance balances
+    assert_abs_relative_error(
+        source_token.balanceOf(deployer),
+        init_gov_source_balance + governance_fee,
+        1e-15
+    )

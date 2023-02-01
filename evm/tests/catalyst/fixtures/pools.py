@@ -495,8 +495,10 @@ def compute_expected_local_swap(
             pool._weight(to_token),
             to_token.balanceOf(pool),
             pool_amp,
-            pool_amp
-        )['output']
+            pool_amp,
+            pool._poolFee() / 10**18,
+            pool._governanceFee() / 10**18
+        )
     
     yield _compute_expected_local_swap
 
@@ -521,7 +523,9 @@ def compute_expected_swap(
             pool_2._weight(to_token),
             to_token.balanceOf(pool_2),
             get_pool_1_amp(),
-            get_pool_2_amp()
+            get_pool_2_amp(),
+            pool_1._poolFee() / 10**18,
+            pool_1._governanceFee() / 10**18
         )
     
     yield _compute_expected_swap
