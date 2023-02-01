@@ -21,7 +21,10 @@ def test_local_swap(
     source_token = pool_tokens[0]
     target_token = pool_tokens[1]
 
-    swap_amount = swap_amount_percentage * source_token.balanceOf(pool)
+    init_pool_source_balance = source_token.balanceOf(pool)
+    init_pool_target_balance = target_token.balanceOf(pool)
+
+    swap_amount = swap_amount_percentage * init_pool_source_balance
 
     assert target_token.balanceOf(berg) == 0
 
@@ -37,7 +40,9 @@ def test_local_swap(
     assert tx.return_value <= int(y*1.000001), "Swap returns more than theoretical"
     assert (y * 9 /10) <= tx.return_value, "Swap returns less than 9/10 theoretical"
     
-    assert tx.return_value == target_token.balanceOf(berg)
+    assert target_token.balanceOf(berg) == tx.return_value
+    assert source_token.balanceOf(pool) == init_pool_source_balance + swap_amount
+    assert target_token.balanceOf(pool) == init_pool_target_balance - tx.return_value
     
     
 @given(swap_amount_percentage=floats(min_value=0.1, max_value=1))    # From 0.1x to 1x the tokens hold by the pool
