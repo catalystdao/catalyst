@@ -1,14 +1,9 @@
 import pytest
 import brownie
-from brownie import (
-    ZERO_ADDRESS,
-    CatalystSwapPool
-)
 
-from tests.catalyst.fixtures.pools import MAX_POOL_ASSETS
 
 @pytest.fixture(scope="module")
-def sample_pool(deploy_pool, tokens, deployer, max_pool_assets, amplification):
+def sample_pool(deploy_pool, tokens, deployer, amplification, max_pool_assets):
     yield deploy_pool(
         tokens          = tokens[:max_pool_assets],
         token_balances  = [10**8]*max_pool_assets,
@@ -53,7 +48,7 @@ def test_finish_setup_twice(sample_pool, deployer):
         sample_pool.finishSetup({"from": deployer})
 
 
-def test_finish_setup_only_local(deploy_pool, tokens, deployer, max_pool_assets, amplification):
+def test_finish_setup_only_local(deploy_pool, tokens, deployer, amplification, max_pool_assets):
 
     sp = deploy_pool(
         tokens          = tokens[:max_pool_assets],
@@ -71,7 +66,7 @@ def test_finish_setup_only_local(deploy_pool, tokens, deployer, max_pool_assets,
     assert sp.onlyLocal()
 
 
-def test_finish_setup_not_only_local(deploy_pool, tokens, deployer, max_pool_assets, amplification):
+def test_finish_setup_not_only_local(deploy_pool, tokens, deployer, amplification, max_pool_assets):
 
     sp = deploy_pool(
         tokens          = tokens[:max_pool_assets],
