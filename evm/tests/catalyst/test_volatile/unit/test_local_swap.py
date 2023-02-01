@@ -1,24 +1,27 @@
 import pytest
 from brownie import reverts
 from brownie.test import given, strategy
+from hypothesis.strategies import floats
 
 #TODO add fees test (create fixture that sets up non-zero fees to the pool)
 
 
-@given(swap_amount=strategy("uint256", max_value=2000*10**18))
+@given(swap_amount_percentage=floats(min_value=0, max_value=10))    # From 0 to 10x the tokens hold by the pool
 def test_local_swap(
     pool,
     pool_tokens,
     berg,
     deployer,
     compute_expected_local_swap,
-    swap_amount
+    swap_amount_percentage
 ):
     if len(pool_tokens) < 2:
         pytest.skip("Need at least 2 tokens within a pool to run a local swap.")
 
     source_token = pool_tokens[0]
     target_token = pool_tokens[1]
+
+    swap_amount = swap_amount_percentage * source_token.balanceOf(pool)
 
     assert target_token.balanceOf(berg) == 0
 
@@ -37,20 +40,22 @@ def test_local_swap(
     assert tx.return_value == target_token.balanceOf(berg)
     
     
-@given(swap_amount=strategy("uint256", min_value=1*10**18, max_value=2000*10**18))
+@given(swap_amount_percentage=floats(min_value=0.1, max_value=10))    # From 0.1x to 10x the tokens hold by the pool
 def test_local_swap_minout_always_fails(
     pool,
     pool_tokens,
     berg,
     deployer,
     compute_expected_local_swap,
-    swap_amount
+    swap_amount_percentage
 ):
     if len(pool_tokens) < 2:
         pytest.skip("Need at least 2 tokens within a pool to run a local swap.")
 
     source_token = pool_tokens[0]
     target_token = pool_tokens[1]
+
+    swap_amount = swap_amount_percentage * source_token.balanceOf(pool)
 
     source_token.transfer(berg, swap_amount, {'from': deployer})
     source_token.approve(pool, swap_amount, {'from': berg})
@@ -63,20 +68,26 @@ def test_local_swap_minout_always_fails(
         )
 
 
-@given(swap_amount=strategy("uint256", max_value=2000*10**18), min_out=strategy("uint256", max_value=2000*10**18))
+@given(
+    swap_amount_percentage=floats(min_value=0, max_value=10),
+    min_out_percentage=floats(min_value=0, max_value=10)
+)
 def test_local_swap_minout(
     pool,
     pool_tokens,
     berg,
     deployer,
-    swap_amount,
-    min_out
+    swap_amount_percentage,
+    min_out_percentage
 ):
     if len(pool_tokens) < 2:
         pytest.skip("Need at least 2 tokens within a pool to run a local swap.")
 
     source_token = pool_tokens[0]
     target_token = pool_tokens[1]
+
+    swap_amount = swap_amount_percentage * source_token.balanceOf(pool)
+    min_out     = min_out_percentage * target_token.balanceOf(pool)
 
     source_token.transfer(berg, swap_amount, {'from': deployer})
     source_token.approve(pool, swap_amount, {'from': berg})
