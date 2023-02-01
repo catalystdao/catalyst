@@ -63,3 +63,10 @@ def test_finish_setup_only_local(deploy_pool, tokens, deployer, amplification, m
     sp.finishSetup({"from": deployer})
 
     assert sp.onlyLocal() == onlyLocal
+
+
+def test_finish_setup_event(sample_pool, deployer):
+
+    tx = sample_pool.finishSetup({"from": deployer})
+
+    assert "FinishSetup" in tx.events
