@@ -11,7 +11,8 @@ pytest_plugins = [
     "fixtures.accounts",
     "fixtures.contracts",
     "fixtures.pools",
-    "fixtures.tokens"
+    "fixtures.tokens",
+    "fixtures.modifiers"
 ]
 
 _test_config = {
