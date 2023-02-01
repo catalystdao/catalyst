@@ -20,6 +20,8 @@ def sample_pool(deploy_pool, tokens, deployer, amplification, max_pool_assets):
 # Test that all provided pool configs work correctly
 def test_finish_setup(pool, deployer):
 
+    assert not pool.ready()
+
     pool.finishSetup({"from": deployer})
 
     assert pool.ready()
@@ -29,10 +31,6 @@ def test_finish_setup(pool, deployer):
 
 
 # Authority and state tests *****************************************************************************************************
-
-def test_pool_not_ready(sample_pool):
-    assert not sample_pool.ready()
-
 
 def test_finish_setup_unauthorized(sample_pool, molly):
 
