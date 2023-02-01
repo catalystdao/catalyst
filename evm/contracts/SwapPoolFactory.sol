@@ -109,7 +109,7 @@ contract CatalystSwapPoolFactory is Ownable, ICatalystV1FactoryEvents {
             chaininterface,
             _defaultPoolFee,
             _defaultGovernanceFee,
-            msg.sender,     // Fee administrator
+            msg.sender,     // Fee administrator    //TODO should we set governance instead?
             msg.sender      // setup master
         );
 
