@@ -135,6 +135,14 @@ def test_set_default_governance_fee_event(
 
 # Fee administrator *************************************************************************************************************
 
+def test_default_fee_administrator(
+    pool,
+    deployer
+):
+    assert pool._feeAdministrator() == deployer     # Default fee administrator is the pool deployer
+
+
+
 def test_set_fee_administrator(
     pool,
     deployer,
