@@ -846,7 +846,7 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
      * @param targetUser The recipient of the transaction on the target chain. Encoded in bytes32.
      * @param poolTokens The number of pool tokens to exchange
      * @param minOut The minimum number of pool tokens to mint on target pool.
-     * @return uint256 The number of units minted.x
+     * @return uint256 The number of units minted.
      */
     function outLiquidity(
         bytes32 channelId,
@@ -930,6 +930,7 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
      * @param U Number of units to convert into pool tokens.
      * @param minOut Minimum number of tokens to mint, otherwise reject.
      * @param messageHash Used to connect 2 swaps within a group. 
+     * @return uint256 Number of pool tokens provided to the user.
      */
     function inLiquidity(
         address who,
@@ -945,11 +946,9 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
         checkAndSetUnitCapacity(U);
 
         // Compute the weight sum.
-        address token0;
         uint256 WSUM = 0; // Is not X64.
         for (uint256 it = 0; it < NUMASSETS; it++) {
             address token = _tokenIndexing[it];
-            if (it == 0) token0 = token;
             if (token == address(0)) break;
 
             WSUM += _weight[token]; // Is not X64.
