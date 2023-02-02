@@ -12,7 +12,8 @@ import "./interfaces/ICatalystV1FactoryEvents.sol";
  * @title Catalyst Swap Factory
  * @author Catalyst Labs
  * @notice Allows permissionless deployment Catalyst Swap pools
- * and defines governance address for swap pools to read..
+ * and defines governance address for swap pools to read.
+ * !The owner of the factory must be a timelock!
  */
 contract CatalystSwapPoolFactory is Ownable, ICatalystV1FactoryEvents {
     using SafeERC20 for IERC20;

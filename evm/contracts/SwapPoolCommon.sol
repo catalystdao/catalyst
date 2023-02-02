@@ -34,14 +34,14 @@ abstract contract CatalystSwapPoolCommon is
     // The following section contains the configurable variables.
 
     /// @notice Determines how fast the security limit decreases.
-    /// @dev Needs to be long enough for pool token providers to be notified of a beach but short enough for volatility to not soft-freeze the pool.
+    /// @dev Needs to be long enough for pool token providers to be notified of a breach but short enough for volatility to not soft-freeze the pool.
     uint256 constant DECAYRATE = 60 * 60 * 24;
 
     /// @notice The pool tokens initially minted to the user who setup the pools.
     /// @dev The initial deposit along with this value determines the base value of a pool token.
     uint256 constant MINTAMOUNT = 10**18;
 
-    /// @notice Maximum number of assets suppoed
+    /// @notice Maximum number of assets supported
     /// @dev Impacts the cost of some for loops. Can be changed without breaking compatiblity.
     uint8 constant NUMASSETS = 3;
 
@@ -59,6 +59,7 @@ abstract contract CatalystSwapPoolCommon is
     mapping(address => uint256) public _weight;
 
     //-- Weight change variables --//
+    // todo: Do we want to move this into swappool.sol?
     mapping(address => uint256) public _targetWeight;
     uint256 public _adjustmentTarget;
     uint256 public _lastModificationTime;
@@ -81,8 +82,8 @@ abstract contract CatalystSwapPoolCommon is
     //--- Messaging router limit ---//
     // The router is not completely trusted. Some limits are
     // imposed on the DECAYRATE-ly unidirectional liquidity flow. That is:
-    // if the pool observes more than self.max_unit_inflow of incoming
-    // units, then it will not accept further volume. This means the router
+    // if the pool observes more than _max_unit_inflow of incoming
+    // units, then it will not accept further incoming units. This means the router
     // can only drain a prefigured percentage of the pool every DECAYRATE
 
     // Outgoing flow is subtracted incoming flow until 0.
