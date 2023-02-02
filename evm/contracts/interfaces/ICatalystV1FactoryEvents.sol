@@ -17,8 +17,9 @@ interface ICatalystV1FactoryEvents {
         address indexed deployer,
         address indexed pool_address,
         address indexed chaininterface, 
-        uint256 k,
-        address[] assets
+        address[] assets,
+        address poolTemplate,
+        uint256 k
     );
 
     /**

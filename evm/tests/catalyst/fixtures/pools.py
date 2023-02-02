@@ -14,7 +14,7 @@ from tests.catalyst.utils.pool_utils import compute_expected_max_unit_inflow
 MAX_POOL_ASSETS = 3
 
 @pytest.fixture(scope="module")
-def deploy_pool(accounts, swap_factory, cross_chain_interface, swap_pool_type, deployer):
+def deploy_pool(accounts, swap_factory, volatile_swap_pool_template, amplified_swap_pool_template,  cross_chain_interface, swap_pool_type, deployer):
     def _deploy_pool(
         tokens,
         token_balances,
@@ -24,33 +24,34 @@ def deploy_pool(accounts, swap_factory, cross_chain_interface, swap_pool_type, d
         symbol,
         deployer = deployer,
         only_local = False,
-        template_index = None
+        template_address = None
     ):
         for i, token in enumerate(tokens):
             token.transfer(deployer, token_balances[i], {"from": accounts[0]})
             token.approve(swap_factory, token_balances[i], {"from": deployer})
 
-        if template_index is None:
+        if template_address is None:
             if swap_pool_type == "volatile":
-                template_index = 0
+                template_address = volatile_swap_pool_template.address
             elif swap_pool_type == "amplified":
-                template_index = 1
+                template_address = amplified_swap_pool_template.address
             else:
                 raise Exception(f"Unknown swap_pool_type \'{swap_pool_type}\'.")
 
         tx = swap_factory.deploy_swappool(
-            template_index,
+            template_address,
             tokens,
             token_balances,
             weights,
             amp,
+            0,  # pool fee
             name,
             symbol,
             ZERO_ADDRESS if only_local else cross_chain_interface,
             {"from": deployer},
         )
 
-        if template_index == 0:
+        if template_address == volatile_swap_pool_template.address:
             return CatalystSwapPool.at(tx.return_value)
         else:
             return CatalystSwapPoolAmplified.at(tx.return_value)
