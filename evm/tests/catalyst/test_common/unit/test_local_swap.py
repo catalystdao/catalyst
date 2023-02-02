@@ -2,10 +2,12 @@ import pytest
 from brownie import reverts
 from brownie.test import given
 from hypothesis.strategies import floats
+from hypothesis import example
 
 from tests.catalyst.utils.common_utils import assert_abs_relative_error
 
 
+@example(swap_amount_percentage=0.1)
 @given(swap_amount_percentage=floats(min_value=0, max_value=1))    # From 0 to 1x the tokens hold by the pool
 def test_local_swap(
     pool,
@@ -48,7 +50,8 @@ def test_local_swap(
     assert source_token.balanceOf(pool) == init_pool_source_balance + swap_amount
     assert target_token.balanceOf(pool) == init_pool_target_balance - tx.return_value
     
-    
+
+@example(swap_amount_percentage=0.1)
 @given(swap_amount_percentage=floats(min_value=0.1, max_value=1))    # From 0.1x to 1x the tokens hold by the pool
 def test_local_swap_minout_always_fails(
     pool,
@@ -77,6 +80,8 @@ def test_local_swap_minout_always_fails(
         )
 
 
+@example(swap_amount_percentage=0.1, min_out_percentage=0.2)
+@example(swap_amount_percentage=0.0, min_out_percentage=0.05)
 @given(
     swap_amount_percentage=floats(min_value=0, max_value=1),
     min_out_percentage=floats(min_value=0, max_value=1)
@@ -145,6 +150,7 @@ def test_local_swap_event(pool, pool_tokens, berg, deployer):
 
 
 
+@example(swap_amount_percentage=0.1)
 @given(swap_amount_percentage=floats(min_value=0, max_value=1))    # From 0 to 1x the tokens hold by the pool
 @pytest.mark.usefixtures("pool_set_fees")
 def test_local_swap_fees(

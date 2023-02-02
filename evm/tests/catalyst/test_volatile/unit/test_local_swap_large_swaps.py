@@ -1,9 +1,11 @@
 import pytest
 from brownie.test import given
 from hypothesis.strategies import floats
+from hypothesis import example
 
 
 # ! Only testing the accuracy of large swaps. For the rest of the local swap tests, see test_local_swap.py under test_common/
+@example(swap_amount_percentage=4.7)
 @given(swap_amount_percentage=floats(min_value=1, max_value=10))    # From 1x to 10x the tokens hold by the pool
 def test_local_swap_large_swaps(
     pool,
