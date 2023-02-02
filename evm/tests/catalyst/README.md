@@ -18,6 +18,7 @@ The following flags can be used to run specific collections/configurations of th
 | `--unit`                       | Run unit tests.  |
 | `--integration`                | Run integration tests.  |
 | `--filter FILTER`              | Filter the collected tests according to the provided filter (filtered by string inclusion): [file-name][::[test-name]] |
+| `--fast`                       | Do not test the specified strategies of the `@given` parametrized tests, only test the `@example` values. |
 
 **NOTE:** If neither `--volatile` nor `--amplified` are specified, both sets will be tested. Similarly, if neither `--unit` nor `--integration` are specified, both sets will be tested.
 

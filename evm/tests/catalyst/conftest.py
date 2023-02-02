@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
 import pytest
+from hypothesis import settings, Phase
 
 from brownie.project.main import get_loaded_projects
 
@@ -86,6 +87,8 @@ def pytest_addoption(parser):
 
     parser.addoption("--filter", default=None, help="Run only tests which match the provided filter ([filename][::[test-name]])")
 
+    parser.addoption("--fast", action="store_true", help="Do not test the specified strategies of the `@given` parametrized tests.")
+
 
 
 def pytest_configure(config):
@@ -167,6 +170,16 @@ def pytest_configure(config):
 
     # Add custom pytest markers
     config.addinivalue_line("markers", "no_pool_param: don't parametrize the 'pool' fixture more than once.")
+
+
+    # Configure hypothesis
+    hypothesis_configure(config)
+
+
+def hypothesis_configure(config):
+    if config.getoption("--fast"):
+        settings.register_profile("fast", phases=[Phase.explicit])
+        settings.load_profile("fast")
 
 
 def pytest_report_header(config):
