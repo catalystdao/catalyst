@@ -9,8 +9,8 @@ from tests.catalyst.fixtures.pools import MAX_POOL_ASSETS
 
 
 @pytest.fixture(scope="module")
-def swap_pool_template_idx(swap_pool_type):
-    return 0 if swap_pool_type == "volatile" else 1
+def swap_pool_template_idx(swap_pool_type, volatile_swap_pool_template, amplified_swap_pool_template):
+    return volatile_swap_pool_template if swap_pool_type == "volatile" else amplified_swap_pool_template
 
 
 
@@ -34,6 +34,7 @@ def test_setup(
         pool_config["init_balances"],
         pool_config["weights"],
         amplification,
+        0,
         pool_config["name"],
         pool_config["symbol"],
         ZERO_ADDRESS,
@@ -59,6 +60,7 @@ def test_setup_no_tokens(
             [],
             [],
             amplification,
+            0,
             "",
             "",
             ZERO_ADDRESS,
@@ -85,6 +87,7 @@ def test_setup_valid_token_count(
         [10**8]*asset_count,
         [1]*asset_count,
         amplification,
+        0,
         "",
         "",
         ZERO_ADDRESS,
@@ -112,6 +115,7 @@ def test_setup_too_many_tokens(
             [10**8]*asset_count,
             [1]*asset_count,
             amplification,
+            0,
             "",
             "",
             ZERO_ADDRESS,
@@ -140,6 +144,7 @@ def test_setup_no_balance_set(
             [10**8]*(asset_count-1) + [0],  # ! Last balance argument set to 0
             [1]*asset_count,
             amplification,
+            0,
             "",
             "",
             ZERO_ADDRESS,
@@ -168,6 +173,7 @@ def test_setup_no_weight_set(
             [10**8]*asset_count,
             [1]*(asset_count-1) + [0],  # ! Last weight argument set to 0
             amplification,
+            0,
             "",
             "",
             ZERO_ADDRESS,
@@ -194,6 +200,7 @@ def test_setup_without_funds(
             [10**8]*asset_count,
             [1]*asset_count,
             amplification,
+            0,
             "",
             "",
             ZERO_ADDRESS,
@@ -210,7 +217,9 @@ def test_setup_invalid_template(
     amplification,
     deployer,
     max_pool_assets,
-    swap_pool_type
+    swap_pool_type,
+     volatile_swap_pool_template, 
+     amplified_swap_pool_template
 ):
     asset_count = max_pool_assets
 
@@ -219,11 +228,12 @@ def test_setup_invalid_template(
     
     with brownie.reverts(dev_revert_msg="dev: amplification not set correctly."):
         swap_factory.deploy_swappool(
-            1 if swap_pool_type == "volatile" else 0,          # ! Invalid template selected on purpose
+            amplified_swap_pool_template if swap_pool_type == "volatile" else volatile_swap_pool_template,          # ! Invalid template selected on purpose
             tokens[:asset_count],
             [10**8]*asset_count,
             [1]*asset_count,
             amplification,
+            0,
             "",
             "",
             ZERO_ADDRESS,
@@ -250,6 +260,7 @@ def test_setup_pool_token_mint(
         [10**8]*asset_count,
         [1]*asset_count,
         amplification,
+        0,
         "",
         "",
         ZERO_ADDRESS,
@@ -282,6 +293,7 @@ def test_setup_call_setup_external(
         [10**8]*asset_count,
         [1]*asset_count,
         amplification,
+        0,
         "",
         "",
         ZERO_ADDRESS,
@@ -324,6 +336,7 @@ def test_setup_call_initialize_swap_curves_external(
         [10**8]*asset_count,
         [1]*asset_count,
         amplification,
+        0,
         "",
         "",
         ZERO_ADDRESS,
@@ -366,6 +379,7 @@ def test_setup_only_local(
         [10**8]*asset_count,
         [1]*asset_count,
         amplification,
+        0,
         "",
         "",
         ZERO_ADDRESS if onlyLocal else cross_chain_interface,
