@@ -60,7 +60,7 @@ def test_decrease_amp(pool, pool_tokens, deployer):
     # Increase the weights
     currAmp = 10**17
     pool.modifyAmplification(startTime + TWOWEEK, currAmp, {"from": deployer})
-    chain.mine(1, timestamp=int(startTime + TWOWEEK))
+    chain.mine(1, timestamp=int(startTime + TWOWEEK + 10))
     pool.localswap(pool_tokens[0], pool_tokens[0], 0, 0, {"from": deployer})
     
     # Decrease the weights.
@@ -83,7 +83,7 @@ def test_decrease_amp(pool, pool_tokens, deployer):
     # Be mostly accurate.
     assert pool._amp()//10 == floor(currAmp * (1 - passedTime) + targetAmp * passedTime)//10
     
-    chain.mine(1, timestamp=int(startTime + TWOWEEK * 2))
+    chain.mine(1, timestamp=int(startTime + TWOWEEK * 2 + 100))
 
     pool.localswap(pool_tokens[0], pool_tokens[0], 0, 0, {"from": deployer})
 
