@@ -64,12 +64,10 @@ class Catalyst:
         self.ampSwapTemplate = CatalystSwapPoolAmplified.deploy({"from": self.deployer})
 
     def _swapFactory(self):
-        self.swapFactory = CatalystSwapPoolFactory.deploy(0, {"from": self.deployer}
-        )
+        self.swapFactory = CatalystSwapPoolFactory.deploy(0, {"from": self.deployer})
 
     def _crosschaininterface(self):
-        self.crosschaininterface = CatalystIBCInterface.deploy(self.ibcinterface, {"from": self.deployer}
-        )
+        self.crosschaininterface = CatalystIBCInterface.deploy(self.ibcinterface, {"from": self.deployer})
 
     def deploy_swappool(
         self, tokens, init_balances=None, weights=None, amp=10**18, name="Name", symbol="SYM"
