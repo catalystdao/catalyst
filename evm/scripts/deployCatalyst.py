@@ -7,7 +7,8 @@ from brownie import (
     CatalystIBCInterface,
     IBCEmulator
 )
-from brownie import ZERO_ADDRESS, accounts
+from brownie import ZERO_ADDRESS, accounts, convert
+from tests.catalyst.utils.pool_utils import decode_payload
 
 """
 Import code into terminal for interactive debugging with `brownie console`
@@ -17,6 +18,8 @@ ps = Catalyst(acct)
 """
 
 MAX_UINT256: int = 2**256 - 1
+
+
 
 
 class Catalyst:
@@ -106,15 +109,52 @@ class Catalyst:
 
 
 """
-from scripts.deployCatalyst import Catalyst
+from scripts.deployCatalyst import Catalyst, decode_payload
+from brownie import convert
 acct = accounts[0]
 
 ie = IBCEmulator.deploy({'from': acct})
 ps = Catalyst(acct, ibcinterface=ie)
-swappool = ps.swappool
+pool = ps.swappool
 tokens = ps.tokens
-tokens[0].approve(swappool, 2**256-1, {'from': acct})
-swappool.localswap(tokens[0], tokens[1], 50*10**18, 0, {'from': acct})
+tokens[0].approve(pool, 2**256-1, {'from': acct})
+# pool.localswap(tokens[0], tokens[1], 50*10**18, 0, {'from': acct})
+
+chid = convert.to_bytes(1, type_str="bytes32")
+
+# Registor IBC ports.
+ps.crosschaininterface.registerPort()
+ps.crosschaininterface.registerPort()
+
+# Create the connection between the pool and itself:
+pool.createConnection(
+    chid,
+    convert.to_bytes(pool.address.replace("0x", "")),
+    True,
+    {"from": acct}
+)
+
+swap_amount = tokens[0].balanceOf(pool)//10
+tx = pool.swapToUnits(
+    chid,
+    convert.to_bytes(pool.address.replace("0x", "")),
+    convert.to_bytes(acct.address.replace("0x", "")),
+    tokens[0],
+    1,
+    swap_amount,
+    0,
+    acct,
+    {"from": acct},
+)
+
+# The data package:
+tx.events["IncomingPacket"]["packet"][3]
+decode_payload(tx.events["IncomingPacket"]["packet"][3])
+
+# Execute the IBC package:
+txe = ie.execute(tx.events["IncomingMetadata"]["metadata"][0], tx.events["IncomingPacket"]["packet"], {"from": acct})
+
+txe.info()
 """
 
 
@@ -122,7 +162,7 @@ def main():
     acct = accounts[0]
     ie = IBCEmulator.deploy({'from': acct})
     ps = Catalyst(acct, ibcinterface=ie)
-    swappool = ps.swappool
+    pool = ps.pool
     tokens = ps.tokens
-    tokens[0].approve(swappool, 2**256-1, {'from': acct})
-    swappool.localswap(tokens[0], tokens[1], 50*10**18, 0, {'from': acct})
+    tokens[0].approve(pool, 2**256-1, {'from': acct})
+    pool.localswap(tokens[0], tokens[1], 50*10**18, 0, {'from': acct})
