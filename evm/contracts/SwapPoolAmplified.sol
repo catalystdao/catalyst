@@ -518,6 +518,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
      * @notice Burns poolTokens and releases the symmetrical share of tokens to the burner. 
      * This doesn't change the pool price.
      * @dev This is the cheapest way to withdraw.
+     * poolTokens == 0 or very small results: revert: Integer overflow. See note for why.
      * @param poolTokens The number of pool tokens to burn.
      * @param minOut The minimum token output. If less is returned, the tranasction reverts.
      */
@@ -600,6 +601,11 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
 
                 // wtk = (wa^(1-k) + (wa_0 + wpt)^(1-k) - wa_0^(1-k)))^(1/(1-k)) - wa
                 // wtk = (wa^(1-k) + innerDiff)^(1/(1-k)) - wa
+                // note: This underflows if innerdiff is very small / 0.
+                // Since ampWeightAssetBalances ** (1/(1-amp)) == weightAssetBalances but the
+                // mathematical lib returns ampWeightAssetBalances ** (1/(1-amp)) < weightAssetBalances.
+                // the result is that if innerdiff isn't big enough to make up for the difference
+                // the transaction reverts. This is "okay", since it means less tokens are returned.
                 uint256 tokenAmount = (uint256(FixedPointMathLib.powWad(
                     int256(ampWeightAssetBalances[it] + innerdiff),
                     oneMinusAmp // Is 1/(1-amp)
