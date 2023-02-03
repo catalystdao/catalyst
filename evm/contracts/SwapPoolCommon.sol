@@ -200,7 +200,7 @@ abstract contract CatalystSwapPoolCommon is
 
     /**
      * @notice Checks if the pool supports an inflow of units and decreases
-     * unit capacity by units.
+     * unit capacity by the inflow.
      * @dev Implement a lot of similar logic to getUnitCapacity. 
      * @param units The number of units to check and set.
      */
@@ -324,7 +324,7 @@ abstract contract CatalystSwapPoolCommon is
     /** 
      * @notice Implements basic ack logic: Deletes and release tokens to the pool
      * @dev Should never revert! Needs to be exposed through an external function.
-     * @param messageHash A hash of the cross-chain message used ensure the message arrives indentical to the sent message.
+     * @param messageHash A hash of the cross-chain message ensure the message arrives indentical to the sent message.
      * @param U The number of units initially purchased.
      * @param escrowAmount The number of tokens escrowed.
      * @param escrowToken The token escrowed.
@@ -347,7 +347,7 @@ abstract contract CatalystSwapPoolCommon is
     /** 
      * @notice Implements basic timeout logic: Deletes and sends tokens to the user.
      * @dev Should never revert! Needs to be exposed through an external function.
-     * @param messageHash A hash of the cross-chain message used ensure the message arrives indentical to the sent message.
+     * @param messageHash A hash of the cross-chain message ensure the message arrives indentical to the sent message.
      * @param U The number of units initially purchased.
      * @param escrowAmount The number of tokens escrowed.
      * @param escrowToken The token escrowed.
@@ -374,7 +374,7 @@ abstract contract CatalystSwapPoolCommon is
     /** 
      * @notice Implements basic liquidity ack logic: Deletes and releases pool tokens to the pool.
      * @dev Should never revert!
-     * @param messageHash A hash of the cross-chain message used ensure the message arrives indentical to the sent message.
+     * @param messageHash A hash of the cross-chain message ensure the message arrives indentical to the sent message.
      * @param U The number of units initially acquired.
      * @param escrowAmount The number of pool tokens escrowed.
      */
@@ -396,7 +396,7 @@ abstract contract CatalystSwapPoolCommon is
     /** 
      * @notice Implements basic liquidity timeout logic: Deletes and sends pool tokens to the user.
      * @dev Should never revert!
-     * @param messageHash A hash of the cross-chain message used ensure the message arrives indentical to the sent message.
+     * @param messageHash A hash of the cross-chain message ensure the message arrives indentical to the sent message.
      * @param U The number of units initially acquired.
      * @param escrowAmount The number of pool tokens escrowed.
      */
