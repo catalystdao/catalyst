@@ -19,7 +19,6 @@ contract CatalystSwapPoolFactory is Ownable, ICatalystV1FactoryEvents {
     using SafeERC20 for IERC20;
 
     mapping(address => mapping(address => bool)) public IsCreatedByFactory;
-    uint256 public _defaultPoolFee;
     uint256 public _defaultGovernanceFee;
 
     constructor(

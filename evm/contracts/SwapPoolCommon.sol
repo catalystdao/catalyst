@@ -63,7 +63,6 @@ abstract contract CatalystSwapPoolCommon is
     mapping(address => uint256) public _targetWeight;
     uint256 public _adjustmentTarget;
     uint256 public _lastModificationTime;
-    uint256 public _target_max_unit_inflow;
 
     /// @notice The total pool fee. Multiplied by 10**18. 
     /// @dev Implementation of fee: FixedPointMathLib.mulWadDown(amount, _poolFee);

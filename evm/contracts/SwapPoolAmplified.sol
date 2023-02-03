@@ -438,6 +438,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         // number of tokens the pool should have If the price in the group is 1:1.
         {
             uint256 weightedAssetBalanceSum = 0;
+            uint256 assetBalanceSum = 0;
             for (it = 0; it < NUMASSETS; ++it) {
                 address token = _tokenIndexing[it];
                 if (token == address(0)) break;
@@ -446,10 +447,8 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                 // Not minus escrowedAmount, since we want the deposit to return less.
                 uint256 weightAssetBalance = weight * ERC20(token).balanceOf(address(this));
 
-                // Increase the security limit by the amount deposited.
-                _max_unit_inflow += weightAssetBalance;
-                // Short term decrease the security limit by the amount deposited.
-                _unit_flow += weightAssetBalance;
+                // Store the amount deposited to later be used for modifying the security limit.
+                assetBalanceSum += weightAssetBalance;
                 
                 {
                     // wa^(1-k) is required twice. It is F(A) in the
@@ -471,6 +470,10 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                     // U must be able to go negative.
                     U -= int256(wab);
                 }
+                // Increase the security limit by the amount deposited.
+                _max_unit_inflow += assetBalanceSum;
+                // Short term decrease the security limit by the amount deposited.
+                _unit_flow += weightAssetBalance;
 
                 // Add F(A+x)
                 U += FixedPointMathLib.powWad(
@@ -594,6 +597,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
             // So from now one, oneMinusAmp is 1/oneMinusAmp
             oneMinusAmp = int256(FixedPointMathLib.WAD * FixedPointMathLib.WAD) / oneMinusAmp;
 
+            uint256 totalWithdrawn = 0;
             for (uint256 it = 0; it < NUMASSETS; ++it) {
                 address token = tokenIndexed[it];
                 if (token == address(0)) break;
@@ -616,13 +620,8 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                     // Recalled that the escrow balance is subtracted from weightAssetBalances.
                     tokenAmount = weightAssetBalances[it] / weight;
 
-                    // Decrease the security limit by the amount withdrawn.
-                    _max_unit_inflow -=  weightAssetBalances[it]; // = tokenAmount * weight
-                    if (_unit_flow <= weightAssetBalances[it]) {
-                        _unit_flow = 0;
-                    } else {
-                        _unit_flow -= weightAssetBalances[it];
-                    }
+                    // Store the amount withdrawn to subtract from the security limit later.
+                    totalWithdrawn +=  weightAssetBalances[it]; // = tokenAmount * weight
 
                     // Check that the user is satisfied with this.
                     require(
@@ -635,13 +634,9 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                     IERC20(token).safeTransfer(msg.sender, tokenAmount); // dev: Transfer away from pool failed.
                     continue;
                 }
-                // Decrease the security limit by the amount withdrawn.
-                _max_unit_inflow -=  tokenAmount;
-                if (_unit_flow <= tokenAmount) {
-                    _unit_flow = 0;
-                } else {
-                    _unit_flow -= tokenAmount;
-                }
+
+                // Store the amount withdrawn to subtract from the security limit later.
+                totalWithdrawn -=  tokenAmount;
 
                 // remove the weight from tokenAmount.
                 tokenAmount /= weight;
@@ -651,6 +646,15 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                 amounts[it] = tokenAmount;
                 IERC20(token).safeTransfer(msg.sender, tokenAmount);
             }
+
+            // Decrease the security limit by the amount withdrawn.
+            _max_unit_inflow -= totalWithdrawn;
+            if (_unit_flow <= totalWithdrawn) {
+                _unit_flow = 0;
+            } else {
+                _unit_flow -= totalWithdrawn;
+            }
+    
         }
 
         emit Withdraw(msg.sender, poolTokens, amounts);
@@ -732,6 +736,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
 
         // For later event logging, the transferred tokens are stored.
         uint256[] memory amounts = new uint256[](NUMASSETS);
+        uint256 totalWithdrawn = 0;
         for (uint256 it = 0; it < NUMASSETS; ++it) {
             if (U == 0) break;
 
@@ -761,12 +766,13 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
             // Decrease the security limit by the amount withdrawn.
             uint256 weight = _weight[tokenIndexed[it]];
             tokenAmount *= weight;
-            _max_unit_inflow -=  tokenAmount;
-            if (_unit_flow <= tokenAmount) {
-                _unit_flow = 0;
-            } else {
-                _unit_flow -= tokenAmount;
-            }
+            totalWithdrawn += tokenAmount;
+        }
+        _max_unit_inflow -=  totalWithdrawn;
+        if (_unit_flow <= totalWithdrawn) {
+            _unit_flow = 0;
+        } else {
+            _unit_flow -= totalWithdrawn;
         }
 
         emit Withdraw(msg.sender, poolTokens, amounts);
