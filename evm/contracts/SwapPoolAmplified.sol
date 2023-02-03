@@ -78,9 +78,9 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
      *
      * If 0 of a token in init_assets is provided, the setup reverts.
      * @param init_assets A list of the token addresses associated with the pool
-     * @param weights The weights associated with the tokens. 
-     * If set to values with low resolution (<= 10*5), this should be viewed as
-     * opt out of governance weight adjustment. This is not enforced.
+     * @param weights Amplified weights to bring the price into a true 1:1 swap. That is:
+     * i_t \cdot W_i = j_t \cdot W_j \forall i, j when P_i(i_t) = P_j(j_t).
+     * in other words, weights are used to compensate for the difference in decmials. (or non 1:1 swaps.)
      * @param amp Amplification factor. Should be < 10**18.
      * @param depositor The address depositing the initial token balances.
      */
@@ -129,7 +129,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
      * @notice  Returns the current cross-chain swap capacity. 
      * @dev Overwrites the common implementation because of the
      * differences as to how it is used. As a result, this always returns
-     * half of the true limit.
+     * half of _max_unit_inflow.
      */
     function getUnitCapacity() external view override returns (uint256) {
         uint256 MUF = _max_unit_inflow;
@@ -153,7 +153,6 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
     /**
      * @notice Allows Governance to modify the pool weights to optimise liquidity.
      * @dev targetTime needs to be more than MIN_ADJUSTMENT_TIME in the future.
-     * !Can be abused by governance to disable the security limit!
      * @param targetTime Once reached, _weight[...] = newWeights[...]
      * @param targetAmplification The new weights to apply
      */
@@ -168,9 +167,6 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         _lastModificationTime = block.timestamp;
         _targetAmplification = targetAmplification;
 
-        // Recompute security limit.
-        uint256 amp = targetAmplification;
-
         emit ModifyAmplification(targetTime, targetAmplification);
     }
 
@@ -180,7 +176,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
      * @dev Called first thing on every function depending on amplification.
      */
     function _A() internal {
-        // We might use adjustment target more than once. Since we don't change it, lets store it.
+        // We might use adjustment target more than once. Since it is constant, lets store it.
         uint256 adjTarget = _adjustmentTarget;
 
         if (adjTarget != 0) {
@@ -191,7 +187,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
             // If no time has passed since last update, then we don't need to update anything.
             if (block.timestamp == lastModification) return;
 
-            // If the current time is past the adjustment the adjustment needs to be finalized.
+            // If the current time is past the adjustment, the adjustment needs to be finalized.
             if (block.timestamp >= adjTarget) {
                 _amp = _targetAmplification;
 
