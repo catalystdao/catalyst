@@ -638,7 +638,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                 }
 
                 // Store the amount withdrawn to subtract from the security limit later.
-                totalWithdrawn -=  tokenAmount;
+                totalWithdrawn +=  tokenAmount;
 
                 // remove the weight from tokenAmount.
                 tokenAmount /= weight;
