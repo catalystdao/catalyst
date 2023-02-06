@@ -199,7 +199,7 @@ abstract contract CatalystSwapPoolCommon is
         // Amplified pools can have MUC <= UC since MUC is modified when swapping
         if (MUC <= UC - delta_flow) return 0; 
 
-        return MUC + delta_flow - UC;
+        return MUC + delta_flow - UC;     // MUC - (UC - delta_flow)
     }
 
     /**
