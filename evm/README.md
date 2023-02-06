@@ -191,7 +191,7 @@ which breaks pool setup:
 function setupBase(
     string calldata name_,
     string calldata symbol_,
-    address chaininterface,
+    address chainInterface,
     address setupMaster
 ) internal {
     // The pool is only designed to be used by a proxy and not as a standalone.

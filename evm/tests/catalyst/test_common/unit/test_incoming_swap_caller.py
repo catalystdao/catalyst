@@ -7,7 +7,7 @@ def test_swapFromUnits_must_be_called_by_cci(
     pool,
     berg,
 ):
-    cci = pool._chaininterface()
+    cci = pool._chainInterface()
     
     with reverts():
         pool.swapFromUnits(
@@ -33,7 +33,7 @@ def test_inLiquidity_must_be_called_by_cci(
     pool,
     berg,
 ):
-    cci = pool._chaininterface()
+    cci = pool._chainInterface()
     
     with reverts():
         pool.inLiquidity(
@@ -57,9 +57,9 @@ def test_release_escrow_must_be_called_cci(
     pool,
     berg,
 ):
-    cci = pool._chaininterface()
+    cci = pool._chainInterface()
     
-    with reverts("dev: Only _chaininterface"):
+    with reverts("dev: Only _chainInterface"):
         pool.releaseEscrowACK(
             web3.keccak(text="e"),
             0,
@@ -84,9 +84,9 @@ def test_timeout_escrow_must_be_called_cci(
     pool,
     berg,
 ):
-    cci = pool._chaininterface()
+    cci = pool._chainInterface()
     
-    with reverts("dev: Only _chaininterface"):
+    with reverts("dev: Only _chainInterface"):
         pool.releaseEscrowTIMEOUT(
             web3.keccak(text="e"),
             0,
@@ -112,9 +112,9 @@ def test_release_liquidity_escrow_must_be_called_cci(
     pool,
     berg,
 ):
-    cci = pool._chaininterface()
+    cci = pool._chainInterface()
     
-    with reverts("dev: Only _chaininterface"):
+    with reverts("dev: Only _chainInterface"):
         pool.releaseLiquidityEscrowACK(
             web3.keccak(text="e"),
             0,
@@ -138,9 +138,9 @@ def test_timeout_liquidity_escrow_must_be_called_cci(
     pool,
     berg,
 ):
-    cci = pool._chaininterface()
+    cci = pool._chainInterface()
     
-    with reverts("dev: Only _chaininterface"):
+    with reverts("dev: Only _chainInterface"):
         pool.releaseLiquidityEscrowTIMEOUT(
             web3.keccak(text="e"),
             0,

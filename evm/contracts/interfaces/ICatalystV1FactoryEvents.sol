@@ -9,14 +9,14 @@ interface ICatalystV1FactoryEvents {
      * @dev Should be used for pool discovery and pathing.
      * @param deployer msg.sender of the deploy function.
      * @param pool_address The minimal transparent proxy address for the swap pool.
-     * @param chaininterface The address of the CCI used by the transparent proxy.
+     * @param chainInterface The address of the CCI used by the transparent proxy.
      * @param k Set to 10**18 if the pool is volatile, otherwise the pool is a stable pool.
      * @param assets List of the assets the pool supports.
      */
     event PoolDeployed(
         address indexed deployer,
         address indexed pool_address,
-        address indexed chaininterface, 
+        address indexed chainInterface, 
         address[] assets,
         address poolTemplate,
         uint256 k

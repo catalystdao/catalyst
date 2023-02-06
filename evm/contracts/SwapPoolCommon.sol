@@ -48,7 +48,7 @@ abstract contract CatalystSwapPoolCommon is
     //-- Variables --//
 
     address public immutable FACTORY;
-    address public _chaininterface;
+    address public _chainInterface;
 
     /// @notice To indicate which token is desired on the target pool,
     /// the desired tokens is provided as an integer which maps to the
@@ -151,14 +151,14 @@ abstract contract CatalystSwapPoolCommon is
     }
 
     function onlyLocal() public view returns (bool) {
-        return _chaininterface == address(0);
+        return _chainInterface == address(0);
     }
 
     /** @notice Setup a pool. */
     function setup(
         string calldata name_,
         string calldata symbol_,
-        address chaininterface,
+        address chainInterface,
         uint256 poolFee,
         uint256 governanceFee,
         address feeAdministrator,
@@ -169,7 +169,7 @@ abstract contract CatalystSwapPoolCommon is
         // Likewise, it shouldn't be possible to setup the pool twice.
         require(!_CHECK); // dev: Pool Already setup.
 
-        _chaininterface = chaininterface;
+        _chainInterface = chainInterface;
         _setupMaster = setupMaster;
 
         setPoolFee(poolFee);
@@ -301,7 +301,7 @@ abstract contract CatalystSwapPoolCommon is
             (msg.sender == factoryOwner())
         ); // dev: No auth
 
-        CatalystIBCInterface(_chaininterface).CreateConnection(
+        CatalystIBCInterface(_chainInterface).CreateConnection(
             channelId,
             poolReceiving,
             state
@@ -352,7 +352,7 @@ abstract contract CatalystSwapPoolCommon is
         uint256 escrowAmount,
         address escrowToken
     ) internal {
-        require(msg.sender == _chaininterface);  // dev: Only _chaininterface
+        require(msg.sender == _chainInterface);  // dev: Only _chainInterface
 
         address fallbackUser = _escrowedFor[messageHash];  // Passing in an invalid messageHash returns address(0)
         require(fallbackUser != address(0));  // dev: Invalid messageHash. Alt: Escrow doesn't exist.
@@ -375,7 +375,7 @@ abstract contract CatalystSwapPoolCommon is
         uint256 escrowAmount,
         address escrowToken
     ) internal {
-        require(msg.sender == _chaininterface);  // dev: Only _chaininterface
+        require(msg.sender == _chainInterface);  // dev: Only _chainInterface
 
         address fallbackUser = _escrowedFor[messageHash];  // Passing in an invalid messageHash returns address(0)
         require(fallbackUser != address(0));   // dev: Invalid messageHash. Alt: Escrow doesn't exist.
@@ -400,7 +400,7 @@ abstract contract CatalystSwapPoolCommon is
         uint256 U,
         uint256 escrowAmount
     ) internal {
-        require(msg.sender == _chaininterface);   // dev: Only _chaininterface
+        require(msg.sender == _chainInterface);   // dev: Only _chainInterface
 
         address fallbackUser = _escrowedLiquidityFor[messageHash];   // Passing in an invalid messageHash returns address(0)
         require(fallbackUser != address(0));  // dev: Invalid messageHash. Alt: Escrow doesn't exist.
@@ -422,7 +422,7 @@ abstract contract CatalystSwapPoolCommon is
         uint256 U,
         uint256 escrowAmount
     ) internal {
-        require(msg.sender == _chaininterface);  // dev: Only _chaininterface
+        require(msg.sender == _chainInterface);  // dev: Only _chainInterface
 
         address fallbackUser = _escrowedLiquidityFor[messageHash];  // Passing in an invalid messageHash returns address(0)
         require(fallbackUser != address(0));  // dev: Invalid messageHash. Alt: Escrow doesn't exist.

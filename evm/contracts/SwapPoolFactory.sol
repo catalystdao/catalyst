@@ -46,7 +46,7 @@ contract CatalystSwapPoolFactory is Ownable, ICatalystV1FactoryEvents {
      * @param poolFee The pool fee.
      * @param name Name of the Pool token.
      * @param symbol Symbol for the Pool token.
-     * @param chaininterface The cross chain interface used for cross-chain swaps. (Can be address(0))
+     * @param chainInterface The cross chain interface used for cross-chain swaps. (Can be address(0))
      * @return address The address of the created Catalyst Swap Pool (minimal transparent proxy)
      */
     function deploy_swappool(
@@ -58,7 +58,7 @@ contract CatalystSwapPoolFactory is Ownable, ICatalystV1FactoryEvents {
         uint256 poolFee,
         string memory name,
         string memory symbol,
-        address chaininterface
+        address chainInterface
     ) external returns (address) {
         // Create a minimal transparent proxy:
         address swapPool = Clones.clone(poolTemplate);
@@ -77,7 +77,7 @@ contract CatalystSwapPoolFactory is Ownable, ICatalystV1FactoryEvents {
         ICatalystV1Pool(swapPool).setup(
             name,
             symbol,
-            chaininterface,
+            chainInterface,
             poolFee,
             _defaultGovernanceFee,
             msg.sender,     // Fee administrator    //TODO should we set governance instead?
@@ -96,12 +96,12 @@ contract CatalystSwapPoolFactory is Ownable, ICatalystV1FactoryEvents {
         emit PoolDeployed(
             msg.sender,
             swapPool,
-            chaininterface,
+            chainInterface,
             init_assets,
             poolTemplate,
             amp
         );
-        IsCreatedByFactory[chaininterface][swapPool] = true;
+        IsCreatedByFactory[chainInterface][swapPool] = true;
 
         return swapPool;
     }

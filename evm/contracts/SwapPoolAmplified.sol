@@ -863,7 +863,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
             });
 
             // Send the purchased units to targetPool on chain.
-            messageHash = CatalystIBCInterface(_chaininterface).crossChainSwap(
+            messageHash = CatalystIBCInterface(_chainInterface).crossChainSwap(
                 channelId,
                 targetPool,
                 targetUser,
@@ -940,7 +940,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
 
     /**
      * @notice Completes a cross-chain swap by converting units to the desired token (toAsset)
-     * @dev Can only be called by the chaininterface, as there is no way to check validity of units.
+     * @dev Can only be called by the chainInterface, as there is no way to check validity of units.
      * @param toAssetIndex Index of the asset to be purchased with _U units.
      * @param who The recipient of toAsset
      * @param U Number of units to convert into toAsset.
@@ -954,9 +954,9 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 minOut,
         bytes32 messageHash
     ) public returns (uint256) {
-        // The chaininterface is the only valid caller of this function, as there cannot
+        // The chainInterface is the only valid caller of this function, as there cannot
         // be a check of U. (It is purely a number)
-        require(msg.sender == _chaininterface);
+        require(msg.sender == _chainInterface);
         _A();
 
         // Convert the asset index (toAsset) into the asset to be purchased.
@@ -1089,7 +1089,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
             });
 
             // Sending the liquidity units over.
-            messageHash = CatalystIBCInterface(_chaininterface).liquiditySwap(
+            messageHash = CatalystIBCInterface(_chainInterface).liquiditySwap(
                 channelId,
                 targetPool,
                 targetUser,
@@ -1121,7 +1121,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
     /**
      * @notice Completes a cross-chain swap by converting liquidity units to pool tokens
      * @dev No reentry protection since only trusted contracts are called.
-     * Called exclusively by the chaininterface.
+     * Called exclusively by the chainInterface.
      * @param who The recipient of pool tokens
      * @param U Number of units to convert into pool tokens.
      * @param minOut Minimum number of tokens to mint, otherwise reject.
@@ -1133,8 +1133,8 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 minOut,
         bytes32 messageHash
     ) external returns (uint256) {
-        // The chaininterface is the only valid caller of this function.
-        require(msg.sender == _chaininterface);
+        // The chainInterface is the only valid caller of this function.
+        require(msg.sender == _chainInterface);
         _A();
 
         int256 oneMinusAmp = int256(FixedPointMathLib.WAD - _amp);

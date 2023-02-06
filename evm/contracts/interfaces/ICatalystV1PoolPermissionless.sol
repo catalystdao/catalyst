@@ -7,7 +7,7 @@ interface ICatalystV1PoolPermissionless {
     function setup(
         string calldata name_,
         string calldata symbol_,
-        address chaininterface,
+        address chainInterface,
         uint256 poolFee,
         uint256 governanceFee,
         address feeAdministrator,
@@ -119,8 +119,8 @@ interface ICatalystV1PoolPermissionless {
 
     /**
      * @notice Completes a cross-chain swap by converting units to the desired token (toAsset)
-     *  Called exclusively by the chaininterface.
-     * @dev Can only be called by the chaininterface, as there is no way to check the validity of units.
+     *  Called exclusively by the chainInterface.
+     * @dev Can only be called by the chainInterface, as there is no way to check the validity of units.
      * @param toAssetIndex Index of the asset to be purchased with _U units.
      * @param who The recipient of toAsset
      * @param U Number of units to convert into toAsset.
@@ -166,8 +166,8 @@ interface ICatalystV1PoolPermissionless {
 
     /**
      * @notice Completes a cross-chain swap by converting liquidity units to pool tokens
-     * Called exclusively by the chaininterface.
-     * @dev Can only be called by the chaininterface, as there is no way
+     * Called exclusively by the chainInterface.
+     * @dev Can only be called by the chainInterface, as there is no way
      * to check the validity of units.
      * @param who The recipient of pool tokens
      * @param U Number of units to convert into pool tokens.
