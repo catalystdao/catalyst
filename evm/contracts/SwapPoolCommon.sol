@@ -91,7 +91,7 @@ abstract contract CatalystSwapPoolCommon is
     uint256 public _maxUnitCapacity;
     // -- State related to unit flow calculation -- //
     // Use getUnitCapacity to indircetly access these variables.
-    uint256 _unit_flow;
+    uint256 _usedUnitCapacity;
     uint256 _last_change;
 
     // Escrow reference
@@ -193,15 +193,15 @@ abstract contract CatalystSwapPoolCommon is
         // The delta change to the limit is: timePassed · slope = timePassed · Max/decayrate
         uint256 delta_flow = ((block.timestamp - _last_change) * MUC) / DECAY_RATE;
 
-        uint256 UF = _unit_flow;
+        uint256 UC = _usedUnitCapacity;
         // If the change is greater than the units which has passed through
-        // return maximum. We do not want (MUC - (UF - delta_flow) > MUC)
-        if (UF <= delta_flow) return MUC;
+        // return maximum. We do not want (MUC - (UC - delta_flow) > MUC)
+        if (UC <= delta_flow) return MUC;
 
-        // Amplified pools can have MUC <= UF since MUC is modified when swapping
-        if (MUC <= UF - delta_flow) return 0; 
+        // Amplified pools can have MUC <= UC since MUC is modified when swapping
+        if (MUC <= UC - delta_flow) return 0; 
 
-        return MUC + delta_flow - UF;
+        return MUC + delta_flow - UC;
     }
 
     /**
@@ -215,7 +215,7 @@ abstract contract CatalystSwapPoolCommon is
         // If the time since last update is more than DECAY_RATE, the security limit is max
         if (block.timestamp > DECAY_RATE + _last_change) {
             require(units < MUC, EXCEEDS_SECURITY_LIMIT);
-            _unit_flow = units;
+            _usedUnitCapacity = units;
             _last_change = block.timestamp;
             return;
         }
@@ -226,17 +226,17 @@ abstract contract CatalystSwapPoolCommon is
         // Otherwise it would have to be repeated twice. (small deployment savings)
         _last_change = block.timestamp; 
 
-        uint256 UF = _unit_flow; 
+        uint256 UC = _usedUnitCapacity; 
         // If the change is greater than the units which has passed through the limit is max
-        if (UF <= delta_flow) {
+        if (UC <= delta_flow) {
             require(units < MUC, EXCEEDS_SECURITY_LIMIT);
-            _unit_flow = units;
+            _usedUnitCapacity = units;
             return;
         }
 
-        uint256 newUnitFlow = (UF + units) - delta_flow;
+        uint256 newUnitFlow = (UC + units) - delta_flow;
         require(newUnitFlow < MUC, EXCEEDS_SECURITY_LIMIT);
-        _unit_flow = newUnitFlow;
+        _usedUnitCapacity = newUnitFlow;
     }
 
     /** 

@@ -973,14 +973,14 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
         {
             // Calling timeout and then ack should not be possible. 
             // The initial lines deleting the escrow protects against this.
-            uint256 UF = _unit_flow;
-            // If UF < U and we do UF - U < 0 underflow => bad.
-            if (UF > U) {
-                _unit_flow = UF - U; // Does not underflow since _unit_flow > U.
-            } else if (UF != 0) {
-                // If UF == 0, then we shouldn't do anything. Skip that case.
-                // when UF <= U => UF - U <= 0 => max(UF - U, 0) = 0
-                _unit_flow = 0;
+            uint256 UC = _usedUnitCapacity;
+            // If UC < U and we do UC - U < 0 underflow => bad.
+            if (UC > U) {
+                _usedUnitCapacity = UC - U; // Does not underflow since _usedUnitCapacity > U.
+            } else if (UC != 0) {
+                // If UC == 0, then we shouldn't do anything. Skip that case.
+                // when UC <= U => UC - U <= 0 => max(UC - U, 0) = 0
+                _usedUnitCapacity = 0;
             }
         }
     }
@@ -1010,14 +1010,14 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
         {
             // Calling timeout and then ack should not be possible. 
             // The initial lines deleting the escrow protects against this.
-            uint256 UF = _unit_flow;
-            // If UF < U and we do UF - U < 0 underflow => bad.
-            if (UF > U) {
-                _unit_flow = UF - U; // Does not underflow since _unit_flow > U.
-            } else if (UF != 0) {
-                // If UF == 0, then we shouldn't do anything. Skip that case.
-                // when UF <= U => UF - U <= 0 => max(UF - U, 0) = 0
-                _unit_flow = 0;
+            uint256 UC = _usedUnitCapacity;
+            // If UC < U and we do UC - U < 0 underflow => bad.
+            if (UC > U) {
+                _usedUnitCapacity = UC - U; // Does not underflow since _usedUnitCapacity > U.
+            } else if (UC != 0) {
+                // If UC == 0, then we shouldn't do anything. Skip that case.
+                // when UC <= U => UC - U <= 0 => max(UC - U, 0) = 0
+                _usedUnitCapacity = 0;
             }
         }
     }

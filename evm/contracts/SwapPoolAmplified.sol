@@ -141,15 +141,15 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         // The delta change to the limit is: timePassed · slope = timePassed · Max/decayrate
         uint256 delta_flow = ((block.timestamp - _last_change) * MUC) / DECAY_RATE;
 
-        uint256 UF = _unit_flow;
+        uint256 UC = _usedUnitCapacity;
         // If the change is greater than the units which have passed through
-        // return maximum. We do not want (MUC - (UF - delta_flow) > MUC)
-        if (UF <= delta_flow) return MUC / 2;
+        // return maximum. We do not want (MUC - (UC - delta_flow) > MUC)
+        if (UC <= delta_flow) return MUC / 2;
 
-        // Amplified pools can have MUC <= UF since MUC is modified when swapping
-        if (MUC <= UF - delta_flow) return 0; 
+        // Amplified pools can have MUC <= UC since MUC is modified when swapping
+        if (MUC <= UC - delta_flow) return 0; 
 
-        return (MUC + delta_flow - UF) / 2;
+        return (MUC + delta_flow - UC) / 2;
     }
 
     /**
@@ -471,7 +471,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                 // Increase the security limit by the amount deposited.
                 _maxUnitCapacity += assetBalanceSum;
                 // Short term decrease the security limit by the amount deposited.
-                _unit_flow += weightAssetBalance;
+                _usedUnitCapacity += weightAssetBalance;
 
                 // Add F(A+x)
                 U += FixedPointMathLib.powWad(
@@ -653,10 +653,10 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
 
             // Decrease the security limit by the amount withdrawn.
             _maxUnitCapacity -= totalWithdrawn;
-            if (_unit_flow <= totalWithdrawn) {
-                _unit_flow = 0;
+            if (_usedUnitCapacity <= totalWithdrawn) {
+                _usedUnitCapacity = 0;
             } else {
-                _unit_flow -= totalWithdrawn;
+                _usedUnitCapacity -= totalWithdrawn;
             }
     
         }
@@ -773,10 +773,10 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
             totalWithdrawn += tokenAmount;
         }
         _maxUnitCapacity -=  totalWithdrawn;
-        if (_unit_flow <= totalWithdrawn) {
-            _unit_flow = 0;
+        if (_usedUnitCapacity <= totalWithdrawn) {
+            _usedUnitCapacity = 0;
         } else {
-            _unit_flow -= totalWithdrawn;
+            _usedUnitCapacity -= totalWithdrawn;
         }
 
         emit Withdraw(msg.sender, poolTokens, amounts);
@@ -1237,14 +1237,14 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         {
             // Calling timeout and then ack should not be possible. 
             // The initial lines deleting the escrow protects against this.
-            uint256 UF = _unit_flow;
-            // If UF < escrowAmount and we do UF - escrowAmount < 0 underflow => bad.
-            if (UF > escrowAmount) {
-                _unit_flow = UF - escrowAmount; // Does not underflow since _unit_flow > escrowAmount.
-            } else if (UF != 0) {
-                // If UF == 0, then we shouldn't do anything. Skip that case.
-                // when UF <= escrowAmount => UF - escrowAmount <= 0 => max(UF - escrowAmount, 0) = 0
-                _unit_flow = 0;
+            uint256 UC = _usedUnitCapacity;
+            // If UC < escrowAmount and we do UC - escrowAmount < 0 underflow => bad.
+            if (UC > escrowAmount) {
+                _usedUnitCapacity = UC - escrowAmount; // Does not underflow since _usedUnitCapacity > escrowAmount.
+            } else if (UC != 0) {
+                // If UC == 0, then we shouldn't do anything. Skip that case.
+                // when UC <= escrowAmount => UC - escrowAmount <= 0 => max(UC - escrowAmount, 0) = 0
+                _usedUnitCapacity = 0;
             }
             _maxUnitCapacity += escrowAmount * _weight[escrowToken];
         }
