@@ -208,7 +208,7 @@ abstract contract CatalystSwapPoolCommon is
      * @dev Implement a lot of similar logic to getUnitCapacity. 
      * @param units The number of units to check and set.
      */
-    function checkAndSetUnitCapacity(uint256 units) internal {
+    function updateUnitCapacity(uint256 units) internal {
         uint256 MUC = _maxUnitCapacity;
 
         uint256 delta_flow = (MUC * (block.timestamp - _usedUnitCapacityTimestamp)) / DECAY_RATE;

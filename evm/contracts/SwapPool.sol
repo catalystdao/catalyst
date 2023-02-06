@@ -765,7 +765,7 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
         address toAsset = _tokenIndexing[toAssetIndex];
 
         // Check and update the security limit.
-        checkAndSetUnitCapacity(U);
+        updateUnitCapacity(U);
 
         // Calculate the swap return value. 
         // Fee is always taken on the sending token.
@@ -924,7 +924,7 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
         _W();
 
         // Check if the swap is according to the swap limits
-        checkAndSetUnitCapacity(U);
+        updateUnitCapacity(U);
 
         // Fetch wsum.
         uint256 wsum = _maxUnitCapacity / FixedPointMathLib.LN2;

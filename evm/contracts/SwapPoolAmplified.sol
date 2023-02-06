@@ -970,7 +970,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         // Check if the swap is according to the swap limits
         uint256 deltaSecurityLimit = purchasedTokens * _weight[toAsset];
         _maxUnitCapacity -= deltaSecurityLimit;
-        checkAndSetUnitCapacity(deltaSecurityLimit);
+        updateUnitCapacity(deltaSecurityLimit);
 
         require(minOut <= purchasedTokens, SWAP_RETURN_INSUFFICIENT);
 
@@ -1198,7 +1198,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                 oneMinusAmp
             ))));
             // Check if the swap is according to the swap limits
-            checkAndSetUnitCapacity(poolTokenEquiv * 2 / FixedPointMathLib.WAD);
+            updateUnitCapacity(poolTokenEquiv * 2 / FixedPointMathLib.WAD);
         }
 
         // Mint pool tokens for the user.
