@@ -6,7 +6,7 @@ pragma solidity ^0.8.16;
 interface ICatalystV1PoolImmutables {
     function _chaininterface() external view returns (address);
 
-    function _factory() external view returns (address);
+    function FACTORY() external view returns (address);
 
     /// @notice
     ///     To indicate which token is desired on the target pool,

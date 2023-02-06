@@ -47,8 +47,8 @@ abstract contract CatalystSwapPoolCommon is
 
     //-- Variables --//
 
+    address public immutable FACTORY;
     address public _chaininterface;
-    address public _factory;
 
     /// @notice To indicate which token is desired on the target pool,
     /// the desired tokens is provided as an integer which maps to the
@@ -108,9 +108,16 @@ abstract contract CatalystSwapPoolCommon is
     /// @notice Variable to check if the pool has already been setup.
     bool _CHECK;
 
-    constructor() ERC20("Catalyst Pool Template", "") {
-        // Ensure setup cannot be called on the initial deployment.
-        _CHECK = true;
+    constructor(address factory_) ERC20("Catalyst Pool Template", "") {
+        FACTORY = factory_;
+
+        // Ensure setup cannot be called on the initial deployment. The following
+        // values are stored in contract state. Minimal transparent proxies only
+        // copy logic (through delegate call), not state. As a result, _CHECK = false
+        // on a newly created minimal transparent proxy
+        _CHECK = true; 
+        __name = "Catalyst Pool Template";
+        __symbol = "";
     }
 
     // Overriding the name and symbol storage variables
@@ -130,7 +137,7 @@ abstract contract CatalystSwapPoolCommon is
     }
 
     function factoryOwner() public view override returns (address) {
-        return CatalystSwapPoolFactory(_factory).owner();
+        return CatalystSwapPoolFactory(FACTORY).owner();
     }
 
     /**
@@ -139,7 +146,7 @@ abstract contract CatalystSwapPoolCommon is
      * !CatalystSwapPoolFactory(_factory).owner() must be set to a timelock! 
      */ 
     modifier onlyFactoryOwner() {
-        require(msg.sender == CatalystSwapPoolFactory(_factory).owner());   // dev: Only factory owner
+        require(msg.sender == CatalystSwapPoolFactory(FACTORY).owner());   // dev: Only factory owner
         _;
     }
 
@@ -164,7 +171,6 @@ abstract contract CatalystSwapPoolCommon is
 
         _chaininterface = chaininterface;
         _setupMaster = setupMaster;
-        _factory = msg.sender;
 
         setPoolFee(poolFee);
         setGovernanceFee(governanceFee);
@@ -233,6 +239,10 @@ abstract contract CatalystSwapPoolCommon is
         _unit_flow = newUnitFlow;
     }
 
+    /** 
+     * @dev This function is called during setup. This overwrites any value set before setup is called.
+     * Thus the free access before _CHECK is set to true is not a concern.
+     */
     function setFeeAdministrator(address administrator) public override {
         require(msg.sender == factoryOwner() || !_CHECK);   // dev: Only factory owner
         _feeAdministrator = administrator;
@@ -240,7 +250,10 @@ abstract contract CatalystSwapPoolCommon is
         emit SetFeeAdministrator(administrator);
     }
 
-    /// @dev There is no maximum pool fee.
+    /** 
+     * @dev This function is called during setup. This overwrites any value set before setup is called.
+     * Thus the free access before _CHECK is set to true is not a concern.
+     */
     function setPoolFee(uint256 fee) public override {
         require(msg.sender == _feeAdministrator || !_CHECK); // dev: Only feeAdministrator can set new fee
         require(fee <= 10**18);  // dev: PoolFee is maximum 100%.
@@ -249,6 +262,10 @@ abstract contract CatalystSwapPoolCommon is
         emit SetPoolFee(fee);
     }
 
+    /** 
+     * @dev This function is called during setup. This overwrites any value set before setup is called.
+     * Thus the free access before _CHECK is set to true is not a concern.
+     */
     function setGovernanceFee(uint256 fee) public override {
         require(msg.sender == _feeAdministrator || !_CHECK); // dev: Only feeAdministrator can set new fee
         require(fee <= 75*10**16); // dev: GovernanceFee is maximum 75%.

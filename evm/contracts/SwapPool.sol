@@ -56,6 +56,8 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
     //-- Variables --//
     // There are no variables specific to the volatile pool. See SwapPoolCommon.sol
 
+    constructor(address factory_) CatalystSwapPoolCommon(factory_) {}
+
     /**
      * @notice Configures an empty pool.
      * @dev The @param amp is only used as a sanity check and needs to be set to 10**18 (WAD).
@@ -82,7 +84,7 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 amp,
         address depositor
     ) public {
-        require(msg.sender == _factory && _tokenIndexing[0] == address(0));  // dev: swap curves may only be initialized once by the factory
+        require(msg.sender == FACTORY && _tokenIndexing[0] == address(0));  // dev: swap curves may only be initialized once by the factory
         // Check that the amplification is correct.
         require(amp == FixedPointMathLib.WAD);  // dev: amplification not set correctly.
         // Check for a misunderstanding regarding how many assets this pool supports.
@@ -128,6 +130,9 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
      * the governance is not allowed to change pool weights. This is because
      * the update function is not made for step sizes (which the result would be if)
      * trades are frequent and weights are small.
+     * Weights must not be set to 0. This allows someone to exploit the localswap simplification
+     * with a token not belonging to the pool. (Set weight to 0, localswap from token not part of
+     * the pool. Since 0 == 0 => use simplified swap curve. Swap goes through.)
      * @param targetTime Once reached, _weight[...] = newWeights[...]
      * @param newWeights The new weights to apply
      */
@@ -142,10 +147,10 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
         _lastModificationTime = block.timestamp;
 
         // Compute sum weight for security limit.
-        uint256 sumWeights = 0;
         for (uint256 it = 0; it < NUMASSETS; it++) {
             address token = _tokenIndexing[it];
             if (token == address(0)) break;
+            require(newWeights[it] != 0); // dev: newWeights must be greater than 0 to protect liquidity providers.
             _targetWeight[token] = newWeights[it];
         }
 
@@ -298,14 +303,12 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 W_A,
         uint256 W_B
     ) internal pure returns (uint256) {
-        // (A+input)/A >= 1 as in >= 0. As a result, invfpow should be used.
-        // Notice, divWadDown is used twice on values not WAD. This is because powWad
-        // requires WAD valyes for both arguments.
-        uint256 U = FixedPointMathLib.WAD - uint256(FixedPointMathLib.powWad(
-            int256(FixedPointMathLib.divWadDown(A + input, A)),
-            int256(FixedPointMathLib.divWadDown(W_A, W_B))
-        ));
-        return (B * U) / FixedPointMathLib.WAD;
+        // uint256 U = FixedPointMathLib.WAD - uint256(FixedPointMathLib.powWad(
+        //     int256(FixedPointMathLib.divWadDown(A + input, A)),
+        //     int256(FixedPointMathLib.divWadDown(W_A, W_B))
+        //)); 
+        // return (B * U) / FixedPointMathLib.WAD;
+        return solve_integral(compute_integral(input, A, W_A), B, W_B);
     }
 
     /**

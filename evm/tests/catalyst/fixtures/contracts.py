@@ -15,18 +15,19 @@ def ibc_emulator(deployer):
 
 
 @pytest.fixture(scope="module")
-def volatile_swap_pool_template(deployer):
-    yield deployer.deploy(CatalystSwapPool)
-
-
-@pytest.fixture(scope="module")
-def amplified_swap_pool_template(deployer):
-    yield deployer.deploy(CatalystSwapPoolAmplified)
-    
-
-@pytest.fixture(scope="module")
 def swap_factory(deployer):
     yield deployer.deploy(CatalystSwapPoolFactory, 0)
+
+
+@pytest.fixture(scope="module")
+def volatile_swap_pool_template(deployer, swap_factory):
+    yield deployer.deploy(CatalystSwapPool, swap_factory)
+
+
+@pytest.fixture(scope="module")
+def amplified_swap_pool_template(deployer, swap_factory):
+    yield deployer.deploy(CatalystSwapPoolAmplified, swap_factory)
+    
 
 @pytest.fixture(scope="module")
 def cross_chain_interface(deployer, ibc_emulator):

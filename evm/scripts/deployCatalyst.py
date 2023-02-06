@@ -38,8 +38,8 @@ class Catalyst:
         self.poolname = poolname
         self.poolsymbol = poolsymbol
 
-        self._swapTemplates()
         self._swapFactory()
+        self._swapTemplates()
         self._crosschaininterface()
 
         if default:
@@ -60,8 +60,8 @@ class Catalyst:
         )
 
     def _swapTemplates(self):
-        self.swapTemplate = CatalystSwapPool.deploy({"from": self.deployer})
-        self.ampSwapTemplate = CatalystSwapPoolAmplified.deploy({"from": self.deployer})
+        self.swapTemplate = CatalystSwapPool.deploy(self.swapFactory, {"from": self.deployer})
+        self.ampSwapTemplate = CatalystSwapPoolAmplified.deploy(self.swapFactory, {"from": self.deployer})
 
     def _swapFactory(self):
         self.swapFactory = CatalystSwapPoolFactory.deploy(0, {"from": self.deployer})
@@ -160,7 +160,7 @@ def main():
     acct = accounts[0]
     ie = IBCEmulator.deploy({'from': acct})
     ps = Catalyst(acct, ibcinterface=ie)
-    pool = ps.pool
+    pool = ps.swappool
     tokens = ps.tokens
     tokens[0].approve(pool, 2**256-1, {'from': acct})
     pool.localswap(tokens[0], tokens[1], 50*10**18, 0, {'from': acct})
