@@ -183,7 +183,7 @@ Swap Pools can inherit `SwapPoolCommon.sol` to automatically be compliant with I
 By inheriting `SwapPoolCommon.sol`, Swap Pools are deployed inactive:
 ```solidity
 constructor() ERC20("", "") {
-    _CHECK = true; // <----
+    _INITIALIZED = true; // <----
 }
 ```
 which breaks pool setup:
@@ -197,7 +197,7 @@ function setupBase(
     // The pool is only designed to be used by a proxy and not as a standalone.
     // as a result self.check is set to TRUE on init, to stop anyone from using
     // the pool without a proxy.
-    require(!_CHECK); // <----
+    require(!_INITIALIZED); // <----
     ...
 }
 ```

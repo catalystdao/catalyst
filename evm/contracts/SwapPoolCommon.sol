@@ -106,7 +106,7 @@ abstract contract CatalystSwapPoolCommon is
     mapping(bytes32 => address) public _escrowedLiquidityFor;
 
     /// @notice Variable to check if the pool has already been setup.
-    bool _CHECK;
+    bool _INITIALIZED;
 
     constructor(address factory_) ERC20("Catalyst Pool Template", "") {
         FACTORY = factory_;
@@ -115,7 +115,7 @@ abstract contract CatalystSwapPoolCommon is
         // values are stored in contract state. Minimal transparent proxies only
         // copy logic (through delegate call), not state. As a result, _CHECK = false
         // on a newly created minimal transparent proxy
-        _CHECK = true; 
+        _INITIALIZED = true; 
         __name = "Catalyst Pool Template";
         __symbol = "";
     }
@@ -167,7 +167,7 @@ abstract contract CatalystSwapPoolCommon is
         // The pool is designed to be used by a proxy and not as a standalone pool.
         // On pool deployment check is set to TRUE, to stop anyone from using the pool without a proxy.
         // Likewise, it shouldn't be possible to setup the pool twice.
-        require(!_CHECK); // dev: Pool Already setup.
+        require(!_INITIALIZED); // dev: Pool Already setup.
 
         _chainInterface = chainInterface;
         _setupMaster = setupMaster;
@@ -181,7 +181,7 @@ abstract contract CatalystSwapPoolCommon is
         __symbol = symbol_;
         // END ERC20 //
 
-        _CHECK = true;
+        _INITIALIZED = true;
     }
 
     /** @notice  Returns the current cross-chain swao capacity. */
@@ -244,7 +244,7 @@ abstract contract CatalystSwapPoolCommon is
      * Thus the free access before _CHECK is set to true is not a concern.
      */
     function setFeeAdministrator(address administrator) public override {
-        require(msg.sender == factoryOwner() || !_CHECK);   // dev: Only factory owner
+        require(msg.sender == factoryOwner() || !_INITIALIZED);   // dev: Only factory owner
         _feeAdministrator = administrator;
 
         emit SetFeeAdministrator(administrator);
@@ -255,7 +255,7 @@ abstract contract CatalystSwapPoolCommon is
      * Thus the free access before _CHECK is set to true is not a concern.
      */
     function setPoolFee(uint256 fee) public override {
-        require(msg.sender == _feeAdministrator || !_CHECK); // dev: Only feeAdministrator can set new fee
+        require(msg.sender == _feeAdministrator || !_INITIALIZED); // dev: Only feeAdministrator can set new fee
         require(fee <= 10**18);  // dev: PoolFee is maximum 100%.
         _poolFee = fee;
 
@@ -267,7 +267,7 @@ abstract contract CatalystSwapPoolCommon is
      * Thus the free access before _CHECK is set to true is not a concern.
      */
     function setGovernanceFee(uint256 fee) public override {
-        require(msg.sender == _feeAdministrator || !_CHECK); // dev: Only feeAdministrator can set new fee
+        require(msg.sender == _feeAdministrator || !_INITIALIZED); // dev: Only feeAdministrator can set new fee
         require(fee <= 75*10**16); // dev: GovernanceFee is maximum 75%.
         _governanceFeeShare = fee;
 
