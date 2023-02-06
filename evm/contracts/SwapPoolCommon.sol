@@ -187,8 +187,6 @@ abstract contract CatalystSwapPoolCommon is
     /** @notice  Returns the current cross-chain swao capacity. */
     function getUnitCapacity() external view virtual override returns (uint256) {
         uint256 MUC = _maxUnitCapacity;
-        // If the time since last update is more than DECAY_RATE return maximum
-        if (block.timestamp > DECAY_RATE + _usedUnitCapacityTimestamp) return MUC;
 
         // The delta change to the limit is: timePassed · slope = timePassed · Max/decayrate
         uint256 delta_flow = ((block.timestamp - _usedUnitCapacityTimestamp) * MUC) / DECAY_RATE;
@@ -212,13 +210,6 @@ abstract contract CatalystSwapPoolCommon is
      */
     function checkAndSetUnitCapacity(uint256 units) internal {
         uint256 MUC = _maxUnitCapacity;
-        // If the time since last update is more than DECAY_RATE, the security limit is max
-        if (block.timestamp > DECAY_RATE + _usedUnitCapacityTimestamp) {
-            require(units < MUC, EXCEEDS_SECURITY_LIMIT);
-            _usedUnitCapacity = units;
-            _usedUnitCapacityTimestamp = block.timestamp;
-            return;
-        }
 
         uint256 delta_flow = (MUC * (block.timestamp - _usedUnitCapacityTimestamp)) / DECAY_RATE;
 
