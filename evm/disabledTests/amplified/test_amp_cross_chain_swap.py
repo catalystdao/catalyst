@@ -144,8 +144,8 @@ def test_successful_swap(
     )
     swap_yield = result_1.run_finish_swap_result.output
 
-    assert sp1.getUnitCapacity() == sp1._max_unit_inflow()
-    assert sp2.getUnitCapacity() < sp2._max_unit_inflow()
+    assert sp1.getUnitCapacity() == sp1._maxUnitCapacity()
+    assert sp2.getUnitCapacity() < sp2._maxUnitCapacity()
     assert swappool1_info.tokens[0].balanceOf(sp1) == swappool1_info.init_token_balances[0] + initial_swap_amount
 
     # 2. Reverse swap half-way (that is, use only half of the yield of the previous operation)
@@ -170,8 +170,8 @@ def test_successful_swap(
     swap_yield_2 = result_2.run_finish_swap_result.output
     assert swappool1_info.tokens[0].balanceOf(sp1) == swappool1_info.init_token_balances[0] + initial_swap_amount - swap_yield_2
 
-    assert sp1.getUnitCapacity() < sp1._max_unit_inflow()
-    assert sp2.getUnitCapacity() < sp2._max_unit_inflow()
+    assert sp1.getUnitCapacity() < sp1._maxUnitCapacity()
+    assert sp2.getUnitCapacity() < sp2._maxUnitCapacity()
 
     # 3. Reverse swap again (swap again using the full 'swap_yield' balance, hence swapper2 exceeds the funds it recieved with the original forward swap. These funds are provided by 'gov')
     result_3 = run_amp_swap(
@@ -194,8 +194,8 @@ def test_successful_swap(
     swap_yield_3 = result_3.run_finish_swap_result.output
     assert swappool1_info.tokens[0].balanceOf(sp1) == swappool1_info.init_token_balances[0] + initial_swap_amount - swap_yield_2 - swap_yield_3
 
-    assert sp1.getUnitCapacity() < sp1._max_unit_inflow()
-    assert sp2.getUnitCapacity() == sp2._max_unit_inflow()
+    assert sp1.getUnitCapacity() < sp1._maxUnitCapacity()
+    assert sp2.getUnitCapacity() == sp2._maxUnitCapacity()
 
 
     # 4. Rebalance pools
@@ -482,8 +482,8 @@ def test_swap_too_large(
         ibc_gov            = gov
     )
 
-    assert sp1.getUnitCapacity() == sp1._max_unit_inflow()
-    assert sp2.getUnitCapacity() < sp2._max_unit_inflow()
+    assert sp1.getUnitCapacity() == sp1._maxUnitCapacity()
+    assert sp2.getUnitCapacity() < sp2._maxUnitCapacity()
 
     # Swap the other asset of pool 1 (exceed security limit)
     swap_amount_2 = int(swappool1_info.init_token_balances[1]/1.5)

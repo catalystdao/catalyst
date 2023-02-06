@@ -42,14 +42,14 @@ interface ICatalystV1PoolState {
     //--- Messaging router limit ---//
     // The router is not completely trusted. Some limits are
     // imposed on the DECAY_RATE-ly unidirectional liquidity flow. That is:
-    // if the pool observes more than self.max_unit_inflow of incoming
+    // if the pool observes more than self.maxUnitCapacity of incoming
     // units, then it will not accept further volume. This means the router
     // can only drain a prefigured percentage of the pool every DECAY_RATE
 
     // Outgoing flow is subtracted incoming flow until 0.
 
     /// @notice The max incoming liquidity flow from the router.
-    function _max_unit_inflow() external view returns (uint256);
+    function _maxUnitCapacity() external view returns (uint256);
 
     // uint256 public max_liquidity_unit_inflow = totalSupply / 2
 

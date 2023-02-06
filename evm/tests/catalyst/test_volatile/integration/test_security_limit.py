@@ -32,8 +32,8 @@ def test_security_limit_swap_loop(
 
 
     # Cache max capacities for speed
-    source_max_capacity = pool_1._max_unit_inflow()
-    target_max_capacity = pool_2._max_unit_inflow()
+    source_max_capacity = pool_1._maxUnitCapacity()
+    target_max_capacity = pool_2._maxUnitCapacity()
 
 
     # Swap from pool_1 to pool_2
@@ -275,6 +275,6 @@ def test_security_limit_swap_timeout(
             change_timestamp       = tx2.timestamp,
             change_capacity_delta  = 0,                         # ! Expected capacity change set to 0
             current_timestamp      = chain[-1].timestamp,
-            max_capacity           = pool_2._max_unit_inflow(),
+            max_capacity           = pool_2._maxUnitCapacity(),
         )
     ) <= 1      # Allow 1 unit for rounding errors

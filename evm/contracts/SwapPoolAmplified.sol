@@ -117,7 +117,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                 initialBalances[it] = balanceOfSelf;
                 require(balanceOfSelf > 0); // dev: 0 tokens provided in setup.
 
-                _max_unit_inflow += weight * balanceOfSelf;
+                _maxUnitCapacity += weight * balanceOfSelf;
             }
             
             emit Deposit(depositor, INITIAL_MINT_AMOUNT, initialBalances);
@@ -131,25 +131,25 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
      * @notice  Returns the current cross-chain swap capacity. 
      * @dev Overwrites the common implementation because of the
      * differences as to how it is used. As a result, this always returns
-     * half of _max_unit_inflow.
+     * half of _maxUnitCapacity.
      */
     function getUnitCapacity() external view override returns (uint256) {
-        uint256 MUF = _max_unit_inflow;
+        uint256 MUC = _maxUnitCapacity;
         // If the time since the last update is more than DECAY_RATE return maximum
-        if (block.timestamp > DECAY_RATE + _last_change) return MUF / 2;
+        if (block.timestamp > DECAY_RATE + _last_change) return MUC / 2;
 
         // The delta change to the limit is: timePassed · slope = timePassed · Max/decayrate
-        uint256 delta_flow = ((block.timestamp - _last_change) * MUF) / DECAY_RATE;
+        uint256 delta_flow = ((block.timestamp - _last_change) * MUC) / DECAY_RATE;
 
         uint256 UF = _unit_flow;
         // If the change is greater than the units which have passed through
-        // return maximum. We do not want (MUF - (UF - delta_flow) > MUF)
-        if (UF <= delta_flow) return MUF / 2;
+        // return maximum. We do not want (MUC - (UF - delta_flow) > MUC)
+        if (UF <= delta_flow) return MUC / 2;
 
-        // Amplified pools can have MUF <= UF since MUF is modified when swapping
-        if (MUF <= UF - delta_flow) return 0; 
+        // Amplified pools can have MUC <= UF since MUC is modified when swapping
+        if (MUC <= UF - delta_flow) return 0; 
 
-        return (MUF + delta_flow - UF) / 2;
+        return (MUC + delta_flow - UF) / 2;
     }
 
     /**
@@ -469,7 +469,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                     U -= int256(wab);
                 }
                 // Increase the security limit by the amount deposited.
-                _max_unit_inflow += assetBalanceSum;
+                _maxUnitCapacity += assetBalanceSum;
                 // Short term decrease the security limit by the amount deposited.
                 _unit_flow += weightAssetBalance;
 
@@ -652,7 +652,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
             }
 
             // Decrease the security limit by the amount withdrawn.
-            _max_unit_inflow -= totalWithdrawn;
+            _maxUnitCapacity -= totalWithdrawn;
             if (_unit_flow <= totalWithdrawn) {
                 _unit_flow = 0;
             } else {
@@ -772,7 +772,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
             tokenAmount *= weight;
             totalWithdrawn += tokenAmount;
         }
-        _max_unit_inflow -=  totalWithdrawn;
+        _maxUnitCapacity -=  totalWithdrawn;
         if (_unit_flow <= totalWithdrawn) {
             _unit_flow = 0;
         } else {
@@ -820,9 +820,9 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         // For amplified pools, the security limit is based on the sum of the tokens
         // in the pool.
         if (out > amount) {
-            _max_unit_inflow -= out - amount;
+            _maxUnitCapacity -= out - amount;
         } else {
-            _max_unit_inflow += amount - out;
+            _maxUnitCapacity += amount - out;
         }
 
         emit LocalSwap(msg.sender, fromAsset, toAsset, amount, out);
@@ -969,7 +969,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
 
         // Check if the swap is according to the swap limits
         uint256 deltaSecurityLimit = purchasedTokens * _weight[toAsset];
-        _max_unit_inflow -= deltaSecurityLimit;
+        _maxUnitCapacity -= deltaSecurityLimit;
         checkAndSetUnitCapacity(deltaSecurityLimit);
 
         require(minOut <= purchasedTokens, SWAP_RETURN_INSUFFICIENT);
@@ -1246,7 +1246,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                 // when UF <= escrowAmount => UF - escrowAmount <= 0 => max(UF - escrowAmount, 0) = 0
                 _unit_flow = 0;
             }
-            _max_unit_inflow += escrowAmount * _weight[escrowToken];
+            _maxUnitCapacity += escrowAmount * _weight[escrowToken];
         }
     }
 

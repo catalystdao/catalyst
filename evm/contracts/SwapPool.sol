@@ -93,7 +93,7 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
         // Compute the security limit.
         {  //  Stack limitations.
             uint256[] memory initialBalances = new uint256[](MAX_ASSETS);
-            uint256 max_unit_inflow = 0;
+            uint256 maxUnitCapacity = 0;
             for (uint256 it = 0; it < init_assets.length; it++) {
                 address tokenAddress = init_assets[it];
                 _tokenIndexing[it] = tokenAddress;
@@ -109,14 +109,14 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
                     require(balanceOfSelf > 0); // dev: 0 tokens provided in setup.
                 }
 
-                max_unit_inflow += weights[it];
+                maxUnitCapacity += weights[it];
             }
             
             emit Deposit(depositor, INITIAL_MINT_AMOUNT, initialBalances);
             
             // The maximum unit flow is \sum Weights * ln(2). The value is multiplied by WAD 
             // since units are always WAD denominated (note WAD is already included in the LN2 factor).
-            _max_unit_inflow = max_unit_inflow * FixedPointMathLib.LN2;
+            _maxUnitCapacity = maxUnitCapacity * FixedPointMathLib.LN2;
         }
 
         // Mint pool tokens
@@ -195,7 +195,7 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
                     _weight[token] = targetWeight;
                 }
                 // Save weight sum.
-                _max_unit_inflow = wsum * FixedPointMathLib.LN2;
+                _maxUnitCapacity = wsum * FixedPointMathLib.LN2;
 
                 // Set weightAdjustmentTime to 0. This ensures the first if statement is never entered.
                 _adjustmentTarget = 0;
@@ -235,7 +235,7 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
                 }
             }
             // Save new weight sum.
-            _max_unit_inflow = wsum * FixedPointMathLib.LN2;
+            _maxUnitCapacity = wsum * FixedPointMathLib.LN2;
         }
     }
 
@@ -450,7 +450,7 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
         U = FixedPointMathLib.mulWadDown(U, FixedPointMathLib.WAD - _poolFee);
 
         // Fetch wsum.
-        uint256 wsum = _max_unit_inflow / FixedPointMathLib.LN2;
+        uint256 wsum = _maxUnitCapacity / FixedPointMathLib.LN2;
 
         // arbitrary_solve_integral returns < 1 multiplied by FixedPointMathLib.WAD.
         uint256 poolTokens = (initial_totalSupply * arbitrary_solve_integral(U, wsum)) / FixedPointMathLib.WAD;
@@ -535,7 +535,7 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
         _burn(msg.sender, poolTokens);
 
         // Fetch wsum.
-        uint256 wsum = _max_unit_inflow / FixedPointMathLib.LN2;
+        uint256 wsum = _maxUnitCapacity / FixedPointMathLib.LN2;
 
         // Compute the unit worth of the pool tokens.
         uint256 U = uint256(FixedPointMathLib.lnWad(
@@ -852,7 +852,7 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
         _burn(msg.sender, poolTokens);
 
         // Fetch wsum.
-        uint256 wsum = _max_unit_inflow / FixedPointMathLib.LN2;
+        uint256 wsum = _maxUnitCapacity / FixedPointMathLib.LN2;
 
         // Compute the unit value of the provided poolTokens.
         // This step simplifies withdrawing and swapping into a single calculation.
@@ -927,7 +927,7 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
         checkAndSetUnitCapacity(U);
 
         // Fetch wsum.
-        uint256 wsum = _max_unit_inflow / FixedPointMathLib.LN2;
+        uint256 wsum = _maxUnitCapacity / FixedPointMathLib.LN2;
 
         // Use the arbitarty integral to compute mint %. It comes as WAD, multiply by totalSupply
         // and divided by WAD to get number of pool tokens.
