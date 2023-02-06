@@ -92,7 +92,7 @@ abstract contract CatalystSwapPoolCommon is
     // -- State related to unit flow calculation -- //
     // Use getUnitCapacity to indircetly access these variables.
     uint256 _usedUnitCapacity;
-    uint256 _last_change;
+    uint256 _usedUnitCapacityTimestamp;
 
     // Escrow reference
     /// @notice Total current escrowed tokens
@@ -188,10 +188,10 @@ abstract contract CatalystSwapPoolCommon is
     function getUnitCapacity() external view virtual override returns (uint256) {
         uint256 MUC = _maxUnitCapacity;
         // If the time since last update is more than DECAY_RATE return maximum
-        if (block.timestamp > DECAY_RATE + _last_change) return MUC;
+        if (block.timestamp > DECAY_RATE + _usedUnitCapacityTimestamp) return MUC;
 
         // The delta change to the limit is: timePassed · slope = timePassed · Max/decayrate
-        uint256 delta_flow = ((block.timestamp - _last_change) * MUC) / DECAY_RATE;
+        uint256 delta_flow = ((block.timestamp - _usedUnitCapacityTimestamp) * MUC) / DECAY_RATE;
 
         uint256 UC = _usedUnitCapacity;
         // If the change is greater than the units which has passed through
@@ -213,18 +213,18 @@ abstract contract CatalystSwapPoolCommon is
     function checkAndSetUnitCapacity(uint256 units) internal {
         uint256 MUC = _maxUnitCapacity;
         // If the time since last update is more than DECAY_RATE, the security limit is max
-        if (block.timestamp > DECAY_RATE + _last_change) {
+        if (block.timestamp > DECAY_RATE + _usedUnitCapacityTimestamp) {
             require(units < MUC, EXCEEDS_SECURITY_LIMIT);
             _usedUnitCapacity = units;
-            _last_change = block.timestamp;
+            _usedUnitCapacityTimestamp = block.timestamp;
             return;
         }
 
-        uint256 delta_flow = (MUC * (block.timestamp - _last_change)) / DECAY_RATE;
+        uint256 delta_flow = (MUC * (block.timestamp - _usedUnitCapacityTimestamp)) / DECAY_RATE;
 
         // Set last change to block.timestamp.
         // Otherwise it would have to be repeated twice. (small deployment savings)
-        _last_change = block.timestamp; 
+        _usedUnitCapacityTimestamp = block.timestamp; 
 
         uint256 UC = _usedUnitCapacity; 
         // If the change is greater than the units which has passed through the limit is max
