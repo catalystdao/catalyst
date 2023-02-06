@@ -120,11 +120,11 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                 _max_unit_inflow += weight * balanceOfSelf;
             }
             
-            emit Deposit(depositor, MINTAMOUNT, initialBalances);
+            emit Deposit(depositor, INITIAL_MINT_AMOUNT, initialBalances);
         }
 
         // Mint pool tokens for pool creator.
-        _mint(depositor, MINTAMOUNT);
+        _mint(depositor, INITIAL_MINT_AMOUNT);
     }
 
     /** 

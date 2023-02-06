@@ -112,7 +112,7 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
                 max_unit_inflow += weights[it];
             }
             
-            emit Deposit(depositor, MINTAMOUNT, initialBalances);
+            emit Deposit(depositor, INITIAL_MINT_AMOUNT, initialBalances);
             
             // The maximum unit flow is \sum Weights * ln(2). The value is multiplied by WAD 
             // since units are always WAD denominated (note WAD is already included in the LN2 factor).
@@ -120,7 +120,7 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
         }
 
         // Mint pool tokens
-        _mint(depositor, MINTAMOUNT);
+        _mint(depositor, INITIAL_MINT_AMOUNT);
     }
 
     /**

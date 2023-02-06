@@ -39,7 +39,7 @@ abstract contract CatalystSwapPoolCommon is
 
     /// @notice The pool tokens initially minted to the user who setup the pools.
     /// @dev The initial deposit along with this value determines the base value of a pool token.
-    uint256 constant MINTAMOUNT = 10**18;
+    uint256 constant INITIAL_MINT_AMOUNT = 10**18;
 
     /// @notice Maximum number of assets supported
     /// @dev Impacts the cost of some for loops. Can be changed without breaking compatiblity.
