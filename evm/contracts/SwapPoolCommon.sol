@@ -211,7 +211,7 @@ abstract contract CatalystSwapPoolCommon is
     function updateUnitCapacity(uint256 units) internal {
         uint256 MUC = _maxUnitCapacity;
 
-        uint256 unitCapacityReleased = (MUC * (block.timestamp - _usedUnitCapacityTimestamp)) / DECAY_RATE;
+        uint256 unitCapacityReleased = ((block.timestamp - _usedUnitCapacityTimestamp) * MUC) / DECAY_RATE;
 
         // Set last change to block.timestamp.
         // Otherwise it would have to be repeated twice. (small deployment savings)
