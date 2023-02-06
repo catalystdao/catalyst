@@ -135,11 +135,11 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
      */
     function getUnitCapacity() external view override returns (uint256) {
         uint256 MUF = _max_unit_inflow;
-        // If the time since the last update is more than DECAYRATE return maximum
-        if (block.timestamp > DECAYRATE + _last_change) return MUF / 2;
+        // If the time since the last update is more than DECAY_RATE return maximum
+        if (block.timestamp > DECAY_RATE + _last_change) return MUF / 2;
 
         // The delta change to the limit is: timePassed · slope = timePassed · Max/decayrate
-        uint256 delta_flow = ((block.timestamp - _last_change) * MUF) / DECAYRATE;
+        uint256 delta_flow = ((block.timestamp - _last_change) * MUF) / DECAY_RATE;
 
         uint256 UF = _unit_flow;
         // If the change is greater than the units which have passed through

@@ -35,7 +35,7 @@ abstract contract CatalystSwapPoolCommon is
 
     /// @notice Determines how fast the security limit decreases.
     /// @dev Needs to be long enough for pool token providers to be notified of a breach but short enough for volatility to not soft-freeze the pool.
-    uint256 constant DECAYRATE = 60 * 60 * 24;
+    uint256 constant DECAY_RATE = 60 * 60 * 24;
 
     /// @notice The pool tokens initially minted to the user who setup the pools.
     /// @dev The initial deposit along with this value determines the base value of a pool token.
@@ -80,10 +80,10 @@ abstract contract CatalystSwapPoolCommon is
 
     //--- Messaging router limit ---//
     // The router is not completely trusted. Some limits are
-    // imposed on the DECAYRATE-ly unidirectional liquidity flow. That is:
+    // imposed on the DECAY_RATE-ly unidirectional liquidity flow. That is:
     // if the pool observes more than _max_unit_inflow of incoming
     // units, then it will not accept further incoming units. This means the router
-    // can only drain a prefigured percentage of the pool every DECAYRATE
+    // can only drain a prefigured percentage of the pool every DECAY_RATE
 
     // Outgoing flow is subtracted incoming flow until 0.
 
@@ -187,11 +187,11 @@ abstract contract CatalystSwapPoolCommon is
     /** @notice  Returns the current cross-chain swao capacity. */
     function getUnitCapacity() external view virtual override returns (uint256) {
         uint256 MUF = _max_unit_inflow;
-        // If the time since last update is more than DECAYRATE return maximum
-        if (block.timestamp > DECAYRATE + _last_change) return MUF;
+        // If the time since last update is more than DECAY_RATE return maximum
+        if (block.timestamp > DECAY_RATE + _last_change) return MUF;
 
         // The delta change to the limit is: timePassed · slope = timePassed · Max/decayrate
-        uint256 delta_flow = ((block.timestamp - _last_change) * MUF) / DECAYRATE;
+        uint256 delta_flow = ((block.timestamp - _last_change) * MUF) / DECAY_RATE;
 
         uint256 UF = _unit_flow;
         // If the change is greater than the units which has passed through
@@ -212,15 +212,15 @@ abstract contract CatalystSwapPoolCommon is
      */
     function checkAndSetUnitCapacity(uint256 units) internal {
         uint256 MUF = _max_unit_inflow;
-        // If the time since last update is more than DECAYRATE, the security limit is max
-        if (block.timestamp > DECAYRATE + _last_change) {
+        // If the time since last update is more than DECAY_RATE, the security limit is max
+        if (block.timestamp > DECAY_RATE + _last_change) {
             require(units < MUF, EXCEEDS_SECURITY_LIMIT);
             _unit_flow = units;
             _last_change = block.timestamp;
             return;
         }
 
-        uint256 delta_flow = (MUF * (block.timestamp - _last_change)) / DECAYRATE;
+        uint256 delta_flow = (MUF * (block.timestamp - _last_change)) / DECAY_RATE;
 
         // Set last change to block.timestamp.
         // Otherwise it would have to be repeated twice. (small deployment savings)
