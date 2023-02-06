@@ -810,10 +810,10 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         IERC20(fromAsset).safeTransferFrom(msg.sender, address(this), amount);
 
         // Governance Fee
-        if (_governanceFee != 0) {
+        if (_governanceFeeShare != 0) {
             IERC20(fromAsset).safeTransfer(
                 factoryOwner(),
-                FixedPointMathLib.mulWadDown(fee, _governanceFee)
+                FixedPointMathLib.mulWadDown(fee, _governanceFeeShare)
             );
         }
 
@@ -883,7 +883,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
 
         {
             // Governance Fee
-            uint256 governanceFee = _governanceFee;
+            uint256 governanceFee = _governanceFeeShare;
             if (governanceFee != 0) {
                 uint256 governancePart = FixedPointMathLib.mulWadDown(
                     FixedPointMathLib.mulWadDown(amount, _poolFee),

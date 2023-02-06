@@ -30,7 +30,7 @@ interface ICatalystV1PoolState {
     /// @notice The pool fee in X64. Implementation of fee: mulX64(_amount, self.poolFeeX64)
     function _poolFee() external view returns (uint256);
 
-    function _governanceFee() external view returns (uint256);
+    function _governanceFeeShare() external view returns (uint256);
 
     /// @notice The address of the responsible for adjusting the fees.
     function _feeAdministrator() external view returns (address);

@@ -200,13 +200,13 @@ def test_set_governance_fee(
     fee
 ):
     fee = int(fee * 10**18)
-    assert pool._governanceFee() != fee
+    assert pool._governanceFeeShare() != fee
 
 
     pool.setGovernanceFee(fee, {"from": molly})
 
 
-    assert pool._governanceFee() == fee
+    assert pool._governanceFeeShare() == fee
 
 
 
@@ -216,7 +216,7 @@ def test_set_governance_fee_over_max(
     molly
 ):
     fee = int(0.76 * 10**18)            # Max is 0.75
-    assert pool._governanceFee() != fee
+    assert pool._governanceFeeShare() != fee
 
 
     with reverts(dev_revert_msg="dev: GovernanceFee is maximum 75%."):
@@ -242,7 +242,7 @@ def test_set_governance_fee_event(
     molly
 ):
     fee = int(0.15 * 10**18)
-    assert pool._governanceFee() != fee     # Make sure the event holds the new fee
+    assert pool._governanceFeeShare() != fee     # Make sure the event holds the new fee
 
 
     tx = pool.setGovernanceFee(fee, {"from": molly})

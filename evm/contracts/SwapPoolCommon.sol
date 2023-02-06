@@ -68,8 +68,8 @@ abstract contract CatalystSwapPoolCommon is
     /// @dev Implementation of fee: FixedPointMathLib.mulWadDown(amount, _poolFee);
     uint256 public _poolFee;
     /// @notice The governance's cut of _poolFee. 
-    /// @dev FixedPointMathLib.mulWadDown(FixedPointMathLib.mulWadDown(amount, _poolFee), _governanceFee);
-    uint256 public _governanceFee;
+    /// @dev FixedPointMathLib.mulWadDown(FixedPointMathLib.mulWadDown(amount, _poolFee), _governanceFeeShare);
+    uint256 public _governanceFeeShare;
     /// @notice The fee pool fee can be changed. _feeAdministrator is the address allowed to change it
     address public _feeAdministrator; 
 
@@ -269,7 +269,7 @@ abstract contract CatalystSwapPoolCommon is
     function setGovernanceFee(uint256 fee) public override {
         require(msg.sender == _feeAdministrator || !_CHECK); // dev: Only feeAdministrator can set new fee
         require(fee <= 75*10**16); // dev: GovernanceFee is maximum 75%.
-        _governanceFee = fee;
+        _governanceFeeShare = fee;
 
         emit SetGovernanceFee(fee);
     }

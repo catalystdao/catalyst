@@ -224,7 +224,7 @@ def test_fee_config(swapfactory, crosschaininterface, tokens, deployer, hacker, 
 
     # Valid caller
     sp.setGovernanceFee(gov_fee_x64, {"from": gov})
-    assert sp._governanceFee() == gov_fee_x64
+    assert sp._governanceFeeShare() == gov_fee_x64
 
     # Fee too high
     with brownie.reverts():  # TODO dev msg
