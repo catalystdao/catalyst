@@ -19,7 +19,7 @@ import "./ICatalystV1Pool.sol";
  *
  * The following contract supports between 1 and 3 assets for
  * atomic swaps. To increase the number of tokens supported,
- * change NUMASSETS to the desired maximum token amount.
+ * change MAX_ASSETS to the desired maximum token amount.
  * This constant is set in "SwapPoolCommon.sol"
  *
  * The swappool implements the ERC20 specification, such that the
@@ -69,7 +69,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
 
     /**
      * @notice Configures an empty pool.
-     * @dev If less than NUMASSETS are used to initiate the pool
+     * @dev If less than MAX_ASSETS are used to initiate the pool
      * let the remaining <init_assets> be ZERO_ADDRESS / address(0)
      *
      * Unused weights can be whatever. (0 is recommended.)
@@ -96,14 +96,14 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         // Check that the amplification is correct.
         require(amp < FixedPointMathLib.WAD);  // dev: amplification not set correctly.
         // Check for a misunderstanding regarding how many assets this pool supports.
-        require(init_assets.length > 0 && init_assets.length <= NUMASSETS);  // dev: invalid asset count
+        require(init_assets.length > 0 && init_assets.length <= MAX_ASSETS);  // dev: invalid asset count
 
         _amp = amp;
         _targetAmplification = amp;
 
         // Compute the security limit.
         { //  Stack limitation.
-            uint256[] memory initialBalances = new uint256[](NUMASSETS);
+            uint256[] memory initialBalances = new uint256[](MAX_ASSETS);
             for (uint256 it = 0; it < init_assets.length; ++it) {
                 address tokenAddress = init_assets[it];
                 _tokenIndexing[it] = tokenAddress;
@@ -437,7 +437,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         {
             uint256 weightedAssetBalanceSum = 0;
             uint256 assetBalanceSum = 0;
-            for (it = 0; it < NUMASSETS; ++it) {
+            for (it = 0; it < MAX_ASSETS; ++it) {
                 address token = _tokenIndexing[it];
                 if (token == address(0)) break;
                 uint256 weight = _weight[token];
@@ -536,9 +536,9 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
 
         // Cache weights and balances.
         int256 oneMinusAmp = int256(FixedPointMathLib.WAD - _amp);
-        address[] memory tokenIndexed = new address[](NUMASSETS);
-        uint256[] memory weightAssetBalances = new uint256[](NUMASSETS);
-        uint256[] memory ampWeightAssetBalances = new uint256[](NUMASSETS);
+        address[] memory tokenIndexed = new address[](MAX_ASSETS);
+        uint256[] memory weightAssetBalances = new uint256[](MAX_ASSETS);
+        uint256[] memory ampWeightAssetBalances = new uint256[](MAX_ASSETS);
 
         uint256 walpha_0_ampped;
         // Compute walpha_0 to find the reference balances. This lets us evaluate the
@@ -547,7 +547,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
             uint256 weightedAssetBalanceSum = 0;
             // "it" is needed breifly outside the loop.
             uint256 it;
-            for (it = 0; it < NUMASSETS; ++it) {
+            for (it = 0; it < MAX_ASSETS; ++it) {
                 address token = _tokenIndexing[it];
                 if (token == address(0)) break;
                 tokenIndexed[it] = token;
@@ -570,7 +570,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         }
 
         // For later event logging, the transferred tokens are stored.
-        uint256[] memory amounts = new uint256[](NUMASSETS);
+        uint256[] memory amounts = new uint256[](MAX_ASSETS);
         {
             // wtk = (wa^(1-k) + (wa_0 + wpt)^(1-k) - wa_0^(1-k)))^(1/(1-k)) - wa
             // The inner diff is (wa_0 + wpt)^(1-k) - wa_0^(1-k).
@@ -597,7 +597,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
             oneMinusAmp = int256(FixedPointMathLib.WAD * FixedPointMathLib.WAD) / oneMinusAmp;
 
             uint256 totalWithdrawn = 0;
-            for (uint256 it = 0; it < NUMASSETS; ++it) {
+            for (uint256 it = 0; it < MAX_ASSETS; ++it) {
                 address token = tokenIndexed[it];
                 if (token == address(0)) break;
 
@@ -686,9 +686,9 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
 
         // Cache weights and balances.
         int256 oneMinusAmp = int256(FixedPointMathLib.WAD - _amp);
-        address[] memory tokenIndexed = new address[](NUMASSETS);
-        uint256[] memory assetBalances = new uint256[](NUMASSETS);
-        uint256[] memory ampWeightAssetBalances = new uint256[](NUMASSETS);
+        address[] memory tokenIndexed = new address[](MAX_ASSETS);
+        uint256[] memory assetBalances = new uint256[](MAX_ASSETS);
+        uint256[] memory ampWeightAssetBalances = new uint256[](MAX_ASSETS);
 
         uint256 U = 0;
         // Compute walpha_0 to find the reference balances. This lets us evaluate the
@@ -702,7 +702,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                 // A very carefuly stack optimisation is made here.
                 // "it" is needed breifly outside the loop. However, to reduce the number
                 // of items in the stack, U = it.
-                for (U = 0; U < NUMASSETS; ++U) {
+                for (U = 0; U < MAX_ASSETS; ++U) {
                     address token = _tokenIndexing[U];
                     if (token == address(0)) break;
                     tokenIndexed[U] = token;
@@ -739,9 +739,9 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         oneMinusAmp = int256(FixedPointMathLib.WAD * FixedPointMathLib.WAD) / oneMinusAmp;
 
         // For later event logging, the transferred tokens are stored.
-        uint256[] memory amounts = new uint256[](NUMASSETS);
+        uint256[] memory amounts = new uint256[](MAX_ASSETS);
         uint256 totalWithdrawn = 0;
-        for (uint256 it = 0; it < NUMASSETS; ++it) {
+        for (uint256 it = 0; it < MAX_ASSETS; ++it) {
             if (U == 0) break;
 
             uint256 U_i = (U * withdrawRatio[it]) / FixedPointMathLib.WAD;
@@ -1053,7 +1053,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         {
             // We don't need weightedAssetBalanceSum again.
             uint256 weightedAssetBalanceSum = 0;
-            for (it = 0; it < NUMASSETS; ++it) {
+            for (it = 0; it < MAX_ASSETS; ++it) {
                 address token = _tokenIndexing[it];
                 if (token == address(0)) break;
                 uint256 weight = _weight[token];
@@ -1145,7 +1145,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         {
             // We don't need weightedAssetBalanceSum again.
             uint256 weightedAssetBalanceSum = 0;
-            for (it = 0; it < NUMASSETS; ++it) {
+            for (it = 0; it < MAX_ASSETS; ++it) {
                 address token = _tokenIndexing[it];
                 if (token == address(0)) break;
                 uint256 weight = _weight[token];

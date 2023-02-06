@@ -43,7 +43,7 @@ abstract contract CatalystSwapPoolCommon is
 
     /// @notice Maximum number of assets supported
     /// @dev Impacts the cost of some for loops. Can be changed without breaking compatiblity.
-    uint8 constant NUMASSETS = 3;
+    uint8 constant MAX_ASSETS = 3;
 
     //-- Variables --//
 

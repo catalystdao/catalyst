@@ -19,7 +19,7 @@ import "./ICatalystV1Pool.sol";
  *
  * The following contract supports between 1 and 3 assets for
  * atomic swaps. To increase the number of tokens supported,
- * change NUMASSETS to the desired maximum token amount.
+ * change MAX_ASSETS to the desired maximum token amount.
  * This constant is set in "SwapPoolCommon.sol"
  *
  * The swappool implements the ERC20 specification, such that the
@@ -61,7 +61,7 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
     /**
      * @notice Configures an empty pool.
      * @dev The @param amp is only used as a sanity check and needs to be set to 10**18 (WAD).
-     * If less than NUMASSETS are used to setup the pool
+     * If less than MAX_ASSETS are used to setup the pool
      * let the remaining <init_assets> be ZERO_ADDRESS / address(0)
      *
      * Unused weights can be whatever. (0 is recommended.)
@@ -88,11 +88,11 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
         // Check that the amplification is correct.
         require(amp == FixedPointMathLib.WAD);  // dev: amplification not set correctly.
         // Check for a misunderstanding regarding how many assets this pool supports.
-        require(init_assets.length > 0 && init_assets.length <= NUMASSETS);  // dev: invalid asset count
+        require(init_assets.length > 0 && init_assets.length <= MAX_ASSETS);  // dev: invalid asset count
         
         // Compute the security limit.
         {  //  Stack limitations.
-            uint256[] memory initialBalances = new uint256[](NUMASSETS);
+            uint256[] memory initialBalances = new uint256[](MAX_ASSETS);
             uint256 max_unit_inflow = 0;
             for (uint256 it = 0; it < init_assets.length; it++) {
                 address tokenAddress = init_assets[it];
@@ -147,7 +147,8 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
         _lastModificationTime = block.timestamp;
 
         // Compute sum weight for security limit.
-        for (uint256 it = 0; it < NUMASSETS; it++) {
+        uint256 sumWeights = 0;
+        for (uint256 it = 0; it < MAX_ASSETS; it++) {
             address token = _tokenIndexing[it];
             if (token == address(0)) break;
             require(newWeights[it] != 0); // dev: newWeights must be greater than 0 to protect liquidity providers.
@@ -181,7 +182,7 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
             uint256 wsum = 0;
             // If the current time is past the adjustment the weights needs to be finalized.
             if (block.timestamp >= adjTarget) {
-                for (uint256 it = 0; it < NUMASSETS; it++) {
+                for (uint256 it = 0; it < MAX_ASSETS; it++) {
                     address token = _tokenIndexing[it];
                     if (token == address(0)) break;
 
@@ -203,7 +204,7 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
             }
 
             // Calculate partial weight change
-            for (uint256 it = 0; it < NUMASSETS; it++) {
+            for (uint256 it = 0; it < MAX_ASSETS; it++) {
                 address token = _tokenIndexing[it];
                 if (token == address(0)) break;
 
@@ -424,7 +425,7 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 initial_totalSupply = totalSupply(); 
 
         uint256 U = 0;
-        for (uint256 it = 0; it < NUMASSETS; it++) {
+        for (uint256 it = 0; it < MAX_ASSETS; it++) {
             address token = _tokenIndexing[it];
             if (token == address(0)) break;
 
@@ -486,8 +487,8 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
         _burn(msg.sender, poolTokens);
 
         // For later event logging, the amounts transferred from the pool are stored.
-        uint256[] memory amounts = new uint256[](NUMASSETS);
-        for (uint256 it = 0; it < NUMASSETS; it++) {
+        uint256[] memory amounts = new uint256[](MAX_ASSETS);
+        for (uint256 it = 0; it < MAX_ASSETS; it++) {
             address token = _tokenIndexing[it];
             if (token == address(0)) break;
 
@@ -542,8 +543,8 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
         ))) * wsum;
 
         // For later event logging, the amounts transferred to the pool are stored.
-        uint256[] memory amounts = new uint256[](NUMASSETS);
-        for (uint256 it = 0; it < NUMASSETS; it++) {
+        uint256[] memory amounts = new uint256[](MAX_ASSETS);
+        for (uint256 it = 0; it < MAX_ASSETS; it++) {
             // If no units are remaining, stop the loop.
             if (U == 0) break;
 
