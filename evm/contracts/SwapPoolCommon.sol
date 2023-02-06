@@ -189,17 +189,17 @@ abstract contract CatalystSwapPoolCommon is
         uint256 MUC = _maxUnitCapacity;
 
         // The delta change to the limit is: timePassed · slope = timePassed · Max/decayrate
-        uint256 delta_flow = ((block.timestamp - _usedUnitCapacityTimestamp) * MUC) / DECAY_RATE;
+        uint256 unitCapacityReleased = ((block.timestamp - _usedUnitCapacityTimestamp) * MUC) / DECAY_RATE;
 
         uint256 UC = _usedUnitCapacity;
         // If the change is greater than the units which has passed through
-        // return maximum. We do not want (MUC - (UC - delta_flow) > MUC)
-        if (UC <= delta_flow) return MUC;
+        // return maximum. We do not want (MUC - (UC - unitCapacityReleased) > MUC)
+        if (UC <= unitCapacityReleased) return MUC;
 
         // Amplified pools can have MUC <= UC since MUC is modified when swapping
-        if (MUC <= UC - delta_flow) return 0; 
+        if (MUC <= UC - unitCapacityReleased) return 0; 
 
-        return MUC + delta_flow - UC;     // MUC - (UC - delta_flow)
+        return MUC + unitCapacityReleased - UC;     // MUC - (UC - unitCapacityReleased)
     }
 
     /**
@@ -211,7 +211,7 @@ abstract contract CatalystSwapPoolCommon is
     function updateUnitCapacity(uint256 units) internal {
         uint256 MUC = _maxUnitCapacity;
 
-        uint256 delta_flow = (MUC * (block.timestamp - _usedUnitCapacityTimestamp)) / DECAY_RATE;
+        uint256 unitCapacityReleased = (MUC * (block.timestamp - _usedUnitCapacityTimestamp)) / DECAY_RATE;
 
         // Set last change to block.timestamp.
         // Otherwise it would have to be repeated twice. (small deployment savings)
@@ -219,13 +219,13 @@ abstract contract CatalystSwapPoolCommon is
 
         uint256 UC = _usedUnitCapacity; 
         // If the change is greater than the units which has passed through the limit is max
-        if (UC <= delta_flow) {
+        if (UC <= unitCapacityReleased) {
             require(units <= MUC, EXCEEDS_SECURITY_LIMIT);
             _usedUnitCapacity = units;
             return;
         }
 
-        uint256 newUnitFlow = (UC + units) - delta_flow;
+        uint256 newUnitFlow = (UC + units) - unitCapacityReleased;
         require(newUnitFlow <= MUC, EXCEEDS_SECURITY_LIMIT);
         _usedUnitCapacity = newUnitFlow;
     }

@@ -139,17 +139,17 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         if (block.timestamp > DECAY_RATE + _usedUnitCapacityTimestamp) return MUC / 2;
 
         // The delta change to the limit is: timePassed · slope = timePassed · Max/decayrate
-        uint256 delta_flow = ((block.timestamp - _usedUnitCapacityTimestamp) * MUC) / DECAY_RATE;
+        uint256 unitCapacityReleased = ((block.timestamp - _usedUnitCapacityTimestamp) * MUC) / DECAY_RATE;
 
         uint256 UC = _usedUnitCapacity;
         // If the change is greater than the units which have passed through
-        // return maximum. We do not want (MUC - (UC - delta_flow) > MUC)
-        if (UC <= delta_flow) return MUC / 2;
+        // return maximum. We do not want (MUC - (UC - unitCapacityReleased) > MUC)
+        if (UC <= unitCapacityReleased) return MUC / 2;
 
         // Amplified pools can have MUC <= UC since MUC is modified when swapping
-        if (MUC <= UC - delta_flow) return 0; 
+        if (MUC <= UC - unitCapacityReleased) return 0; 
 
-        return (MUC + delta_flow - UC) / 2;
+        return (MUC + unitCapacityReleased - UC) / 2;
     }
 
     /**
