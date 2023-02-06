@@ -220,13 +220,13 @@ abstract contract CatalystSwapPoolCommon is
         uint256 UC = _usedUnitCapacity; 
         // If the change is greater than the units which has passed through the limit is max
         if (UC <= delta_flow) {
-            require(units < MUC, EXCEEDS_SECURITY_LIMIT);
+            require(units <= MUC, EXCEEDS_SECURITY_LIMIT);
             _usedUnitCapacity = units;
             return;
         }
 
         uint256 newUnitFlow = (UC + units) - delta_flow;
-        require(newUnitFlow < MUC, EXCEEDS_SECURITY_LIMIT);
+        require(newUnitFlow <= MUC, EXCEEDS_SECURITY_LIMIT);
         _usedUnitCapacity = newUnitFlow;
     }
 
