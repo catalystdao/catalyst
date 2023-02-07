@@ -41,7 +41,7 @@ contract CatalystSwapPoolFactory is Ownable, ICatalystV1FactoryEvents {
      * @notice Deploys a Catalyst swap pools, funds the swap pool with tokens and calls setup.
      * @dev The deployer needs to set approvals for this contract before calling deploy_swappool
      * @param poolTemplate The template the transparent proxy should target.
-     * @param init_assets The list of assets the pool should support
+     * @param assets The list of assets the pool should support
      * @param init_balances The initial balances of the swap pool. (Should be approved)
      * @param weights The weights of the tokens.
      * @param amp Token parameter 1. (Amplification)
@@ -53,7 +53,7 @@ contract CatalystSwapPoolFactory is Ownable, ICatalystV1FactoryEvents {
      */
     function deploy_swappool(
         address poolTemplate,
-        address[] memory init_assets,
+        address[] memory assets,
         uint256[] memory init_balances,
         uint256[] memory weights,
         uint256 amp,
@@ -67,8 +67,8 @@ contract CatalystSwapPoolFactory is Ownable, ICatalystV1FactoryEvents {
 
         // TODO move this into the initializeSwapCurves function of the SwapPool?
         // The pool expects the balances to exist in the pool when setup is called.
-        for (uint256 it = 0; it < init_assets.length; it++) {
-            IERC20(init_assets[it]).safeTransferFrom(
+        for (uint256 it = 0; it < assets.length; it++) {
+            IERC20(assets[it]).safeTransferFrom(
                 msg.sender,
                 swapPool,
                 init_balances[it]
@@ -88,7 +88,7 @@ contract CatalystSwapPoolFactory is Ownable, ICatalystV1FactoryEvents {
 
         // Initialize swap curves
         ICatalystV1Pool(swapPool).initializeSwapCurves(
-            init_assets,
+            assets,
             weights,
             amp,
             msg.sender
@@ -99,7 +99,7 @@ contract CatalystSwapPoolFactory is Ownable, ICatalystV1FactoryEvents {
             msg.sender,
             swapPool,
             chainInterface,
-            init_assets,
+            assets,
             poolTemplate,
             amp
         );

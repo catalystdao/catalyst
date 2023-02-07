@@ -16,7 +16,7 @@ interface ICatalystV1PoolPermissionless {
 
     /** @notice Initialize the swap curves of the pool. */
     function initializeSwapCurves(
-        address[] calldata init_assets,
+        address[] calldata assets,
         uint256[] calldata weights,
         uint256 amp,
         address depositor

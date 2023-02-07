@@ -70,7 +70,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
     /**
      * @notice Configures an empty pool.
      * @dev If less than MAX_ASSETS are used to initiate the pool
-     * let the remaining <init_assets> be ZERO_ADDRESS / address(0)
+     * let the remaining <assets> be ZERO_ADDRESS / address(0)
      *
      * Unused weights can be whatever. (0 is recommended.)
      *
@@ -78,8 +78,8 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
      * Since someone can call setup can claim the initial tokens, this needs to be
      * done atomically!
      *
-     * If 0 of a token in init_assets is provided, the setup reverts.
-     * @param init_assets A list of the token addresses associated with the pool
+     * If 0 of a token in assets is provided, the setup reverts.
+     * @param assets A list of the token addresses associated with the pool
      * @param weights Amplified weights to bring the price into a true 1:1 swap. That is:
      * i_t \cdot W_i = j_t \cdot W_j \forall i, j when P_i(i_t) = P_j(j_t).
      * in other words, weights are used to compensate for the difference in decmials. (or non 1:1 swaps.)
@@ -87,7 +87,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
      * @param depositor The address depositing the initial token balances.
      */
     function initializeSwapCurves(
-        address[] calldata init_assets,
+        address[] calldata assets,
         uint256[] calldata weights,
         uint256 amp,
         address depositor
@@ -96,7 +96,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         // Check that the amplification is correct.
         require(amp < FixedPointMathLib.WAD);  // dev: amplification not set correctly.
         // Check for a misunderstanding regarding how many assets this pool supports.
-        require(init_assets.length > 0 && init_assets.length <= MAX_ASSETS);  // dev: invalid asset count
+        require(assets.length > 0 && assets.length <= MAX_ASSETS);  // dev: invalid asset count
 
         _amp = amp;
         _targetAmplification = amp;
@@ -104,8 +104,8 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         // Compute the security limit.
         { //  Stack limitation.
             uint256[] memory initialBalances = new uint256[](MAX_ASSETS);
-            for (uint256 it = 0; it < init_assets.length; ++it) {
-                address tokenAddress = init_assets[it];
+            for (uint256 it = 0; it < assets.length; ++it) {
+                address tokenAddress = assets[it];
                 _tokenIndexing[it] = tokenAddress;
                 uint256 weight = weights[it];
                 require(weight > 0);       // dev: invalid 0-valued weight provided

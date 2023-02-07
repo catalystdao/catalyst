@@ -62,7 +62,7 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
      * @notice Configures an empty pool.
      * @dev The @param amp is only used as a sanity check and needs to be set to 10**18 (WAD).
      * If less than MAX_ASSETS are used to setup the pool
-     * let the remaining <init_assets> be ZERO_ADDRESS / address(0)
+     * let the remaining <assets> be ZERO_ADDRESS / address(0)
      *
      * Unused weights can be whatever. (0 is recommended.)
      *
@@ -70,8 +70,8 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
      * Since someone can call setup can claim the initial tokens, this needs to be
      * done atomically!
      *
-     * If 0 of a token in init_assets is provided, the setup reverts.
-     * @param init_assets A list of the token addresses associated with the pool
+     * If 0 of a token in assets is provided, the setup reverts.
+     * @param assets A list of the token addresses associated with the pool
      * @param weights The weights associated with the tokens. 
      * If set to values with low resolution (<= 10*5), this should be viewed as
      * opt out of governance weight adjustment. This is not enforced.
@@ -79,7 +79,7 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
      * @param depositor The address depositing the initial token balances.
      */
     function initializeSwapCurves(
-        address[] calldata init_assets,
+        address[] calldata assets,
         uint256[] calldata weights,
         uint256 amp,
         address depositor
@@ -88,14 +88,14 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
         // Check that the amplification is correct.
         require(amp == FixedPointMathLib.WAD);  // dev: amplification not set correctly.
         // Check for a misunderstanding regarding how many assets this pool supports.
-        require(init_assets.length > 0 && init_assets.length <= MAX_ASSETS);  // dev: invalid asset count
+        require(assets.length > 0 && assets.length <= MAX_ASSETS);  // dev: invalid asset count
         
         // Compute the security limit.
         {  //  Stack limitations.
             uint256[] memory initialBalances = new uint256[](MAX_ASSETS);
             uint256 maxUnitCapacity = 0;
-            for (uint256 it = 0; it < init_assets.length; it++) {
-                address tokenAddress = init_assets[it];
+            for (uint256 it = 0; it < assets.length; it++) {
+                address tokenAddress = assets[it];
                 _tokenIndexing[it] = tokenAddress;
                 _weight[tokenAddress] = weights[it];
                 require(weights[it] > 0);       // dev: invalid 0-valued weight provided
