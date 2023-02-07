@@ -1113,7 +1113,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
      * @param minOut Minimum number of tokens to mint, otherwise reject.
      * @param messageHash Used to connect 2 swaps within a group. 
      */
-    function inLiquidity(
+    function receiveLiquidity(
         address who,
         uint256 U,
         uint256 minOut,
@@ -1190,7 +1190,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         // Mint pool tokens for the user.
         _mint(who, poolTokens);
 
-        emit SwapFromLiquidityUnits(who, U, poolTokens, messageHash);
+        emit ReceiveLiquidity(who, U, poolTokens, messageHash);
 
         return poolTokens;
     }

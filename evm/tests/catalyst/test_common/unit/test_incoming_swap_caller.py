@@ -29,14 +29,14 @@ def test_receiveSwap_must_be_called_by_cci(
     )
 
 
-def test_inLiquidity_must_be_called_by_cci(
+def test_receiveLiquidity_must_be_called_by_cci(
     pool,
     berg,
 ):
     cci = pool._chainInterface()
     
     with reverts():
-        pool.inLiquidity(
+        pool.receiveLiquidity(
             berg,
             10**16,
             0,
@@ -44,7 +44,7 @@ def test_inLiquidity_must_be_called_by_cci(
             {'from': berg}
         )
     
-    pool.inLiquidity(
+    pool.receiveLiquidity(
         berg,
         10**16,
         0,

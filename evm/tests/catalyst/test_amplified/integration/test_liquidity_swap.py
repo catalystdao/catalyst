@@ -76,7 +76,7 @@ def test_liquidity_swap(
     else:
         txe = ibc_emulator.execute(tx.events["IncomingMetadata"]["metadata"][0], tx.events["IncomingPacket"]["packet"], {"from": berg})
     
-    purchased_tokens = txe.events["SwapFromLiquidityUnits"]["output"]
+    purchased_tokens = txe.events["ReceiveLiquidity"]["output"]
     
     assert purchased_tokens == pool_2.balanceOf(berg)
     

@@ -502,7 +502,7 @@ def test_direct_swap_from_liquidity_units_invocation(
 
     # Try to directly invoke receiveSwap
     with brownie.reverts(): # TODO dev msg
-        sp.inLiquidity(
+        sp.receiveLiquidity(
             hacker,
             2**60,
             0,

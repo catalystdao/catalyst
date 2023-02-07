@@ -348,7 +348,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
             uint256 U = uint256(bytes32(data[97:129]));
             uint256 minOut = uint256(bytes32(data[129:161]));
 
-            ICatalystV1Pool(pool).inLiquidity(
+            ICatalystV1Pool(pool).receiveLiquidity(
                 who,
                 U,
                 minOut,

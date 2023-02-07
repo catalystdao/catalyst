@@ -80,7 +80,7 @@ interface ICatalystV1PoolEvents {
      * @param input The number of liquidity units sent from the other chain.
      * @param output The number of pool tokens provided to _who
      */
-    event SwapFromLiquidityUnits(
+    event ReceiveLiquidity(
         address indexed who,
         uint256 input,
         uint256 output,

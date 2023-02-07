@@ -897,7 +897,7 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
      * @param messageHash Used to connect 2 swaps within a group. 
      * @return uint256 Number of pool tokens minted to the recipient.
      */
-    function inLiquidity(
+    function receiveLiquidity(
         address who,
         uint256 U,
         uint256 minOut,
@@ -923,7 +923,7 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
         // Mint pool tokens for the user.
         _mint(who, poolTokens);
 
-        emit SwapFromLiquidityUnits(who, U, poolTokens, messageHash);
+        emit ReceiveLiquidity(who, U, poolTokens, messageHash);
 
         return poolTokens; // Unused
     }

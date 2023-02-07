@@ -172,7 +172,7 @@ interface ICatalystV1PoolPermissionless {
      * @param who The recipient of pool tokens
      * @param U Number of units to convert into pool tokens.
      */
-    function inLiquidity(
+    function receiveLiquidity(
         address who,
         uint256 U,
         uint256 minOut,
