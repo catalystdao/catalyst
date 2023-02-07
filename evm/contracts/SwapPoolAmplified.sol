@@ -383,7 +383,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
     }
 
     /**
-     * @notice Computes the output of SwapToAndFromUnits.
+     * @notice Computes the output of localSwap.
      * @dev Implemented through calcPriceCurveLimit(calcPriceCurveArea and not calcCombinedPriceCurves.
      * @param from The address of the token to sell.
      * @param to The address of the token to buy.

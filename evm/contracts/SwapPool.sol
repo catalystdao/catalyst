@@ -372,7 +372,7 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
     }
 
     /**
-     * @notice Computes the output of SwapToAndFromUnits.
+     * @notice Computes the output of localSwap.
      * @dev If the pool weights of the 2 tokens are equal, a very simple curve is used.
      * If from or to is not part of the pool, the swap will either return 0 or revert.
      * If both from and to is not part of the pool, the swap can actually return a positive value.
