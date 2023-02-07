@@ -343,76 +343,96 @@ abstract contract CatalystSwapPoolCommon is
     }
 
 
-    //-- Base Escrow Functions --//
+    //-- Escrow Functions --//
 
-    /** 
-     * @notice Implements basic ack logic: Deletes and release tokens to the pool
-     * @dev Should never revert! Needs to be exposed through an external function.
-     * @param messageHash A hash of the cross-chain message ensure the message arrives indentical to the sent message.
-     * @param U The number of units initially purchased.
-     * @param escrowAmount The number of tokens escrowed.
-     * @param escrowToken The token escrowed.
-     */
-    function _escrowACK(
+    function releaseTokenEscrow(
         bytes32 messageHash,
-        uint256 U,
         uint256 escrowAmount,
         address escrowToken
-    ) internal {
+    ) internal returns(address) {
         require(msg.sender == _chainInterface);  // dev: Only _chainInterface
 
         address fallbackUser = _escrowedFor[messageHash];  // Passing in an invalid messageHash returns address(0)
         require(fallbackUser != address(0));  // dev: Invalid messageHash. Alt: Escrow doesn't exist.
         delete _escrowedFor[messageHash];  // Stops timeout and further acks from being called
+
         _escrowedTokens[escrowToken] -= escrowAmount; // This does not revert, since escrowAmount \subseteq _escrowedTokens => escrowAmount <= _escrowedTokens. Cannot be called twice since the 3 lines before ensure this can only be reached once.
-        emit EscrowAck(messageHash, false);  // Never reverts.
+        
+        return (fallbackUser);
     }
 
+    function releaseLiquidityEscrow(
+        bytes32 messageHash,
+        uint256 escrowAmount
+    ) internal returns(address) {
+        require(msg.sender == _chainInterface);  // dev: Only _chainInterface
+
+        address fallbackUser = _escrowedLiquidityFor[messageHash];  // Passing in an invalid messageHash returns address(0)
+        require(fallbackUser != address(0));  // dev: Invalid messageHash. Alt: Escrow doesn't exist.
+        delete _escrowedLiquidityFor[messageHash];  // Stops timeout and further acks from being called
+
+        _escrowedPoolTokens -= escrowAmount;  // This does not revert, since escrowAmount \subseteq _escrowedPoolTokens => escrowAmount <= _escrowedPoolTokens. Cannot be called twice since the 3 lines before ensure this can only be reached once.
+        
+        return fallbackUser;
+    }
+
+
     /** 
-     * @notice Implements basic timeout logic: Deletes and sends tokens to the user.
-     * @dev Should never revert! Needs to be exposed through an external function.
+     * @notice Implements basic ack logic: Deletes and release tokens to the pool
+     * @dev Should never revert! For security limit adjustments, the implementation should be overwritten.
      * @param messageHash A hash of the cross-chain message ensure the message arrives indentical to the sent message.
      * @param U The number of units initially purchased.
      * @param escrowAmount The number of tokens escrowed.
      * @param escrowToken The token escrowed.
      */
-    function _escrowTIMEOUT(
+    function sendSwapAck(
         bytes32 messageHash,
         uint256 U,
         uint256 escrowAmount,
         address escrowToken
-    ) internal {
-        require(msg.sender == _chainInterface);  // dev: Only _chainInterface
+    ) public virtual override {
 
-        address fallbackUser = _escrowedFor[messageHash];  // Passing in an invalid messageHash returns address(0)
-        require(fallbackUser != address(0));   // dev: Invalid messageHash. Alt: Escrow doesn't exist.
-        delete _escrowedFor[messageHash];  // Stops ack and further timeouts from being called.
-        _escrowedTokens[escrowToken] -= escrowAmount; // This does not revert, since escrowAmount \subseteq _escrowedTokens => escrowAmount <= _escrowedTokens. Cannot be called twice since the 3 lines before ensure this can only be reached once.
-        // sendSwapAck cannot be called with the same message hash after delete _escrowedFor[messageHash];
+        releaseTokenEscrow(messageHash, escrowAmount, escrowToken); // Only reverts for missing escrow
 
-        IERC20(escrowToken).safeTransfer(fallbackUser, escrowAmount);  // Would fail if there is no balance. To protect against this, the escrow amount is removed from what can be claimed by users.
+        emit EscrowAck(messageHash, false);  // Never reverts.
+    }
+
+    /** 
+     * @notice Implements basic timeout logic: Deletes and sends tokens to the user.
+     * @dev Should never revert!
+     * @param messageHash A hash of the cross-chain message ensure the message arrives indentical to the sent message.
+     * @param U The number of units initially purchased.
+     * @param escrowAmount The number of tokens escrowed.
+     * @param escrowToken The token escrowed.
+     */
+    function sendSwapTimeout(
+        bytes32 messageHash,
+        uint256 U,
+        uint256 escrowAmount,
+        address escrowToken
+    ) public virtual override {
+
+        address fallbackAddress = releaseTokenEscrow(messageHash, escrowAmount, escrowToken); // Only reverts for missing escrow,
+
+        IERC20(escrowToken).safeTransfer(fallbackAddress, escrowAmount);  // Would fail if there is no balance. To protect against this, the escrow amount is removed from what can be claimed by users.
 
         emit EscrowTimeout(messageHash, false);  // Never reverts.
     }
 
     /** 
      * @notice Implements basic liquidity ack logic: Deletes and releases pool tokens to the pool.
-     * @dev Should never revert!
+     * @dev Should never revert! For security limit adjustments, the implementation should be overwritten.
      * @param messageHash A hash of the cross-chain message ensure the message arrives indentical to the sent message.
      * @param U The number of units initially acquired.
      * @param escrowAmount The number of pool tokens escrowed.
      */
-    function _liquidityEscrowACK(
+    function sendLiquidityAck(
         bytes32 messageHash,
         uint256 U,
         uint256 escrowAmount
-    ) internal {
-        require(msg.sender == _chainInterface);   // dev: Only _chainInterface
+    ) public virtual override {
 
-        address fallbackUser = _escrowedLiquidityFor[messageHash];   // Passing in an invalid messageHash returns address(0)
-        require(fallbackUser != address(0));  // dev: Invalid messageHash. Alt: Escrow doesn't exist.
-        delete _escrowedLiquidityFor[messageHash];  // Stops timeout and further acks from being called
-        _escrowedPoolTokens -= escrowAmount;  // This does not revert, since escrowAmount \subseteq _escrowedPoolTokens => escrowAmount <= _escrowedPoolTokens. Cannot be called twice since the 3 lines before ensure this can only be reached once.
+        releaseLiquidityEscrow(messageHash, escrowAmount); // Only reverts for missing escrow
 
         emit EscrowAck(messageHash, true);  // Never reverts.
     }
@@ -424,71 +444,16 @@ abstract contract CatalystSwapPoolCommon is
      * @param U The number of units initially acquired.
      * @param escrowAmount The number of pool tokens escrowed.
      */
-    function _liquidityEscrowTIMEOUT(
-        bytes32 messageHash,
-        uint256 U,
-        uint256 escrowAmount
-    ) internal {
-        require(msg.sender == _chainInterface);  // dev: Only _chainInterface
-
-        address fallbackUser = _escrowedLiquidityFor[messageHash];  // Passing in an invalid messageHash returns address(0)
-        require(fallbackUser != address(0));  // dev: Invalid messageHash. Alt: Escrow doesn't exist.
-        delete _escrowedLiquidityFor[messageHash];  // Stops ack and further timeouts from being called.
-        _escrowedPoolTokens -= escrowAmount; // This does not revert, since escrowAmount \subseteq _escrowedTokens => escrowAmount <= _escrowedTokens. Cannot be called twice since the 3 lines before ensure this can only be reached once.
-        // sendSwapAck cannot be called with the same message hash after delete _escrowedFor[messageHash];
-
-        _mint(fallbackUser, escrowAmount);  // Never reverts
-
-        emit EscrowTimeout(messageHash, true);  // Never reverts.
-    }
-
-    //-- Common Escrow Functions --//
-
-    /** 
-     * @notice Exposes the base ack handler.
-     * @dev For security limit adjustments, the implementation should be overwritten.
-     */
-    function sendSwapAck(
-        bytes32 messageHash,
-        uint256 U,
-        uint256 escrowAmount,
-        address escrowToken
-    ) external virtual override {
-        _escrowACK(messageHash, U, escrowAmount, escrowToken);
-    }
-
-    /** 
-     * @notice Exposes the base timeout handler.
-     */
-    function sendSwapTimeout(
-        bytes32 messageHash,
-        uint256 U,
-        uint256 escrowAmount,
-        address escrowToken
-    ) external virtual override {
-        _escrowTIMEOUT(messageHash, U, escrowAmount, escrowToken);
-    }
-
-    /** 
-     * @notice Exposes the base liquidity ack handler.
-     * @dev For security limit adjustments, the implementation should be overwritten.
-     */
-    function sendLiquidityAck(
-        bytes32 messageHash,
-        uint256 U,
-        uint256 escrowAmount
-    ) external virtual override {
-        _liquidityEscrowACK(messageHash, U, escrowAmount);
-    }
-
-    /** 
-     * @notice Exposes the base liquidity timeout handler.
-     */
     function sendLiquidityTimeout(
         bytes32 messageHash,
         uint256 U,
         uint256 escrowAmount
-    ) external virtual override {
-        _liquidityEscrowTIMEOUT(messageHash, U, escrowAmount);
+    ) public virtual override {
+
+        address fallbackAddress = releaseLiquidityEscrow(messageHash, escrowAmount); // Only reverts for missing escrow
+
+        _mint(fallbackAddress, escrowAmount);  
+
+        emit EscrowTimeout(messageHash, true);  // Never reverts.
     }
 }

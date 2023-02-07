@@ -945,9 +945,9 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 U,
         uint256 escrowAmount,
         address escrowToken
-    ) external override {
+    ) public override {
         // Execute common escrow logic.
-        _escrowACK(messageHash, U, escrowAmount, escrowToken);
+        super.sendSwapAck(messageHash, U, escrowAmount, escrowToken);
 
         // Incoming swaps should be subtracted from the unit flow.
         // It is assumed if the router was fraudulent, that no-one would execute a trade.
@@ -982,9 +982,9 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
         bytes32 messageHash,
         uint256 U,
         uint256 escrowAmount
-    ) external override {
+    ) public override {
         // Execute common escrow logic.
-        _liquidityEscrowACK(messageHash, U, escrowAmount);
+        super.sendLiquidityAck(messageHash, U, escrowAmount);
 
         // Incoming swaps should be subtracted from the unit flow.
         // It is assumed if the router was fraudulent, that no-one would execute a trade.
