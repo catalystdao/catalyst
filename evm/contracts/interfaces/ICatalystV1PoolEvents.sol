@@ -162,12 +162,12 @@ interface ICatalystV1PoolEvents {
     /**
      * @notice A connection has been modified
      * @param channelId Target chain identifier.
-     * @param poolReceiving Bytes32 representation of the target pool.
+     * @param targetPool Bytes32 representation of the target pool.
      * @param newState Boolean indicating if the connection should be open or closed.
      */
     event SetConnection(
         bytes32 channelId,
-        bytes32 poolReceiving,
+        bytes32 targetPool,
         bool newState
     );
 }
