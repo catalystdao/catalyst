@@ -4,6 +4,7 @@ pragma solidity ^0.8.16;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "./SwapPoolFactory.sol";
 import "./FixedPointMathLib.sol";
 import "./CatalystIBCInterface.sol";
@@ -25,6 +26,7 @@ import "./interfaces/ICatalystV1PoolErrors.sol";
  * common swap pool logic.
  */
 abstract contract CatalystSwapPoolCommon is
+    Initializable,
     ERC20,
     ICatalystV1PoolErrors,
     ICatalystV1Pool
@@ -113,11 +115,7 @@ abstract contract CatalystSwapPoolCommon is
     constructor(address factory_) ERC20("Catalyst Pool Template", "") {
         FACTORY = factory_;
 
-        // Ensure setup cannot be called on the initial deployment. The following
-        // values are stored in contract state. Minimal transparent proxies only
-        // copy logic (through delegate call), not state. As a result, _CHECK = false
-        // on a newly created minimal transparent proxy
-        _INITIALIZED = true; 
+        _disableInitializers();
         __name = "Catalyst Pool Template";
         __symbol = "";
     }
@@ -165,7 +163,7 @@ abstract contract CatalystSwapPoolCommon is
         uint256 governanceFee,
         address feeAdministrator,
         address setupMaster
-    ) external {
+    ) initializer external {
         // The pool is designed to be used by a proxy and not as a standalone pool.
         // On pool deployment check is set to TRUE, to stop anyone from using the pool without a proxy.
         // Likewise, it shouldn't be possible to setup the pool twice.
@@ -232,35 +230,24 @@ abstract contract CatalystSwapPoolCommon is
         _usedUnitCapacity = newUnitFlow;
     }
 
-    /** 
-     * @dev This function is called during setup. This overwrites any value set before setup is called.
-     * Thus the free access before _CHECK is set to true is not a concern.
-     */
+    
     function setFeeAdministrator(address administrator) public override {
-        require(msg.sender == factoryOwner() || !_INITIALIZED);   // dev: Only factory owner
+        require(msg.sender == factoryOwner() || _isInitializing());   // dev: Only factory owner
         _feeAdministrator = administrator;
 
         emit SetFeeAdministrator(administrator);
     }
 
-    /** 
-     * @dev This function is called during setup. This overwrites any value set before setup is called.
-     * Thus the free access before _CHECK is set to true is not a concern.
-     */
     function setPoolFee(uint256 fee) public override {
-        require(msg.sender == _feeAdministrator || !_INITIALIZED); // dev: Only feeAdministrator can set new fee
+        require(msg.sender == _feeAdministrator || _isInitializing()); // dev: Only feeAdministrator can set new fee
         require(fee <= 10**18);  // dev: PoolFee is maximum 100%.
         _poolFee = fee;
 
         emit SetPoolFee(fee);
     }
 
-    /** 
-     * @dev This function is called during setup. This overwrites any value set before setup is called.
-     * Thus the free access before _CHECK is set to true is not a concern.
-     */
     function setGovernanceFee(uint256 fee) public override {
-        require(msg.sender == _feeAdministrator || !_INITIALIZED); // dev: Only feeAdministrator can set new fee
+        require(msg.sender == _feeAdministrator || _isInitializing()); // dev: Only feeAdministrator can set new fee
         require(fee <= MAX_GOVERNANCE_FEE_SHARE); // dev: Maximum GovernanceFeeSare exceeded.
         _governanceFeeShare = fee;
 
