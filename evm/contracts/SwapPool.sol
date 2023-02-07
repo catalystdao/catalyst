@@ -418,8 +418,8 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256[] calldata tokenAmounts,
         uint256 minOut
     ) nonReentrant() external returns(uint256) {
-        // Smaller initial_totalSupply => fewer pool tokens minted: _escrowedPoolTokens is not added.
-        uint256 initial_totalSupply = totalSupply(); 
+        // Smaller initialTotalSupply => fewer pool tokens minted: _escrowedPoolTokens is not added.
+        uint256 initialTotalSupply = totalSupply(); 
 
         uint256 U = 0;
         for (uint256 it = 0; it < MAX_ASSETS; it++) {
@@ -450,7 +450,7 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 wsum = _maxUnitCapacity / FixedPointMathLib.LN2;
 
         // calcPriceCurveLimitShare returns < 1 multiplied by FixedPointMathLib.WAD.
-        uint256 poolTokens = (initial_totalSupply * calcPriceCurveLimitShare(U, wsum)) / FixedPointMathLib.WAD;
+        uint256 poolTokens = (initialTotalSupply * calcPriceCurveLimitShare(U, wsum)) / FixedPointMathLib.WAD;
 
         // Check that the minimum output is honored.
         require(minOut <= poolTokens, SWAP_RETURN_INSUFFICIENT);
@@ -477,7 +477,7 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256[] calldata minOut
     ) nonReentrant() external returns(uint256[] memory) {
         // Cache totalSupply. This saves up to ~200 gas.
-        uint256 initial_totalSupply = totalSupply() + _escrowedPoolTokens;
+        uint256 initialTotalSupply = totalSupply() + _escrowedPoolTokens;
 
         // Since we have already cached totalSupply, we might as well burn the tokens
         // now. If the user doesn't have enough tokens, they save a bit of gas.
@@ -493,7 +493,7 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
             uint256 At = IERC20(token).balanceOf(address(this)) - _escrowedTokens[token];
 
             // Number of tokens which can be released given poolTokens.
-            uint256 tokenAmount = (At * poolTokens) / initial_totalSupply;
+            uint256 tokenAmount = (At * poolTokens) / initialTotalSupply;
 
             // Check if the user is satisfied with the output.
             require(tokenAmount >= minOut[it], SWAP_RETURN_INSUFFICIENT);
@@ -525,7 +525,7 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256[] calldata minOuts
     ) nonReentrant() external returns(uint256[] memory) {
         // cache totalSupply. This saves a bit of gas.
-        uint256 initial_totalSupply = totalSupply() + _escrowedPoolTokens;
+        uint256 initialTotalSupply = totalSupply() + _escrowedPoolTokens;
 
         // Since we have already cached totalSupply, we might as well burn the tokens
         // now. If the user doesn't have enough tokens, they save a bit of gas.
@@ -536,7 +536,7 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
 
         // Compute the unit worth of the pool tokens.
         uint256 U = uint256(FixedPointMathLib.lnWad(
-            int256(FixedPointMathLib.divWadDown(initial_totalSupply, initial_totalSupply - poolTokens)
+            int256(FixedPointMathLib.divWadDown(initialTotalSupply, initialTotalSupply - poolTokens)
         ))) * wsum;
 
         // For later event logging, the amounts transferred to the pool are stored.
@@ -843,7 +843,7 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
         // Update weights
         _adjustWeights();
 
-        uint256 initial_totalSupply = totalSupply() + _escrowedPoolTokens;
+        uint256 initialTotalSupply = totalSupply() + _escrowedPoolTokens;
         // Since we have already cached totalSupply, we might as well burn the tokens
         // now. If the user doesn't have enough tokens, they save a bit of gas.
         _burn(msg.sender, poolTokens);
@@ -854,7 +854,7 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
         // Compute the unit value of the provided poolTokens.
         // This step simplifies withdrawing and swapping into a single calculation.
         uint256 U = uint256(FixedPointMathLib.lnWad(int256(
-            FixedPointMathLib.divWadDown(initial_totalSupply, initial_totalSupply - poolTokens)
+            FixedPointMathLib.divWadDown(initialTotalSupply, initialTotalSupply - poolTokens)
         ))) * wsum;
 
         // The message hash is needed later.
