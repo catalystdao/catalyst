@@ -45,7 +45,7 @@ def test_increase_amp(pool, pool_tokens, deployer):
     passedTime = (tx.timestamp - lastModification)/(duration)
 
     # Be mostly accurate.
-    assert pool._amp()//10 == floor(currAmp * (1 - passedTime) + targetAmp * passedTime)//10
+    assert pool._amp()//1000 == floor(currAmp * (1 - passedTime) + targetAmp * passedTime)//1000
 
     chain.mine(1, timestamp=int(startTime + TWOWEEK))
 
@@ -81,7 +81,7 @@ def test_decrease_amp(pool, pool_tokens, deployer):
     passedTime = (tx.timestamp - lastModification)/(duration)
 
     # Be mostly accurate.
-    assert pool._amp()//10 == floor(currAmp * (1 - passedTime) + targetAmp * passedTime)//10
+    assert pool._amp()//1000 == floor(currAmp * (1 - passedTime) + targetAmp * passedTime)//1000
     
     chain.mine(1, timestamp=int(startTime + TWOWEEK * 2 + 100))
 
