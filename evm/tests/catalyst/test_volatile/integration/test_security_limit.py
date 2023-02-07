@@ -53,7 +53,7 @@ def test_security_limit_swap_loop(
     )
     tx_units = tx.events["SendSwap"]["output"]
 
-    # 2. swapFromUnits
+    # 2. receiveSwap
     if pool_2.getUnitCapacity() < tx_units:
         with reverts("Swap exceeds security limit"):
             txe = ibc_emulator.execute(
@@ -69,7 +69,7 @@ def test_security_limit_swap_loop(
             {"from": berg}
         )
 
-    purchased_tokens = txe.events["SwapFromUnits"]["output"]
+    purchased_tokens = txe.events["ReceiveSwap"]["output"]
 
     # 3. Ack
     ibc_emulator.ack(
@@ -139,7 +139,7 @@ def test_security_limit_swap_loop(
         )
     ) <= 1      # Allow 1 unit for rounding errors
 
-    # 5. swapFromUnits
+    # 5. receiveSwap
     txe2 = ibc_emulator.execute(tx2.events["IncomingMetadata"]["metadata"][0], tx2.events["IncomingPacket"]["packet"], {"from": berg})
 
     # 6. Ack
@@ -223,13 +223,13 @@ def test_security_limit_swap_timeout(
         {"from": berg},
     )
 
-    # 2. swapFromUnits
+    # 2. receiveSwap
     txe = ibc_emulator.execute(
         tx.events["IncomingMetadata"]["metadata"][0],
         tx.events["IncomingPacket"]["packet"],
         {"from": berg}
     )
-    purchased_tokens = txe.events["SwapFromUnits"]["output"]
+    purchased_tokens = txe.events["ReceiveSwap"]["output"]
 
     # 3. Ack
     ibc_emulator.ack(

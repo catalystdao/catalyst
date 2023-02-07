@@ -398,7 +398,7 @@ def test_min_out_swap(
 
     # Make sure the operation reverted
     finish_swap_result = swap_result.run_finish_swap_result
-    assert finish_swap_result.tx_swap_from_units is None
+    assert finish_swap_result.tx_receive_swap is None
     assert finish_swap_result.output is None
     assert finish_swap_result.tx_escrow_timeout is not None
 
@@ -539,7 +539,7 @@ def test_timed_out_swap(
 
     # Make sure the operation reverted
     finish_swap_result = swap_result.run_finish_swap_result
-    assert finish_swap_result.tx_swap_from_units is None
+    assert finish_swap_result.tx_receive_swap is None
     assert finish_swap_result.output is None
     assert finish_swap_result.tx_escrow_timeout is not None
 
@@ -599,7 +599,7 @@ def test_swap_too_large(
         ibcemulator         = ibcemulator,
         token_gov           = gov,
         ibc_gov             = gov,
-        allow_target_revert = True  # Expect revert of the swapFromUnits tx
+        allow_target_revert = True  # Expect revert of the receiveSwap tx
     )
 
     # Make sure the operation reverted
@@ -615,16 +615,16 @@ def test_swap_too_large(
 
 # TODO test including governance fee missing
 
-def test_direct_swap_from_units_invocation(
+def test_direct_receive_swap_invocation(
     swappool1_info,
     hacker,
     fn_isolation
 ):
     sp = swappool1_info.swappool
 
-    # Try to directly invoke swapFromUnits
+    # Try to directly invoke receiveSwap
     with brownie.reverts(): # TODO dev msg
-        sp.swapFromUnits(
+        sp.receiveSwap(
             0,
             hacker,
             2**64,
@@ -820,6 +820,6 @@ def test_swap_with_calldata(
     swap_yield = result_1.run_finish_swap_result.output
 
     # Verify call data was executed
-    call_data_event = result_1.run_finish_swap_result.tx_swap_from_units.events['OnCatalystCallReceived']
+    call_data_event = result_1.run_finish_swap_result.tx_receive_swap.events['OnCatalystCallReceived']
     assert call_data_event['purchasedTokens'] == swap_yield
     assert call_data_event['data']            == "0x1234"

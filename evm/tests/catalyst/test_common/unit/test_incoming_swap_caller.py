@@ -3,14 +3,14 @@ from brownie import reverts, web3
 
 pytestmark = pytest.mark.usefixtures("pool_connect_itself")
 
-def test_swapFromUnits_must_be_called_by_cci(
+def test_receiveSwap_must_be_called_by_cci(
     pool,
     berg,
 ):
     cci = pool._chainInterface()
     
     with reverts():
-        pool.swapFromUnits(
+        pool.receiveSwap(
             0,
             berg,
             10**16,
@@ -19,7 +19,7 @@ def test_swapFromUnits_must_be_called_by_cci(
             {'from': berg}
         )
     
-    pool.swapFromUnits(
+    pool.receiveSwap(
         0,
         berg,
         10**16,

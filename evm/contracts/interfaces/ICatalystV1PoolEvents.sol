@@ -51,7 +51,7 @@ interface ICatalystV1PoolEvents {
      * @param input The number of units sent from the other chain.
      * @param output The number of tokens provided to _who
      */
-    event SwapFromUnits(
+    event ReceiveSwap(
         address indexed who,
         address indexed toAsset,
         uint256 input,

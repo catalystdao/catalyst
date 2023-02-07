@@ -362,7 +362,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
     }
 
     /**
-     * @notice Computes the output of SwapFromUnits.
+     * @notice Computes the output of ReceiveSwap.
      * @param to The address of the token to buy.
      * @param U The number of units used to buy to.
      * @return uint256 Number of purchased tokens.
@@ -933,7 +933,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
      * @param minOut Minimum number of tokens bought. Reverts if less.
      * @param messageHash Used to connect 2 swaps within a group. 
      */
-    function swapFromUnits(
+    function receiveSwap(
         uint256 toAssetIndex,
         address who,
         uint256 U,
@@ -966,12 +966,12 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         // Send the return value to the user.
         IERC20(toAsset).safeTransfer(who, purchasedTokens);
 
-        emit SwapFromUnits(who, toAsset, U, purchasedTokens, messageHash);
+        emit ReceiveSwap(who, toAsset, U, purchasedTokens, messageHash);
 
         return purchasedTokens; // Unused.
     }
 
-    function swapFromUnits(
+    function receiveSwap(
         uint256 toAssetIndex,
         address who,
         uint256 U,
@@ -980,7 +980,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         address dataTarget,
         bytes calldata data
     ) external returns (uint256) {
-        uint256 purchasedTokens = swapFromUnits(
+        uint256 purchasedTokens = receiveSwap(
             toAssetIndex,
             who,
             U,

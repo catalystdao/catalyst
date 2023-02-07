@@ -380,7 +380,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
         if (customDataLength != 0) {
             address callDataTarget = abi.decode(data[228:260], (address));
             bytes memory calldata_ = data[260:260 + customDataLength - 32];
-            ICatalystV1Pool(pool).swapFromUnits(
+            ICatalystV1Pool(pool).receiveSwap(
                 uint8(data[129]), // assetIndex
                 abi.decode(data[65:97], (address)), // who
                 uint256(bytes32(data[97:129])), // U
@@ -391,7 +391,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
             );
             return;
         }
-        ICatalystV1Pool(pool).swapFromUnits(
+        ICatalystV1Pool(pool).receiveSwap(
             uint8(data[129]), // assetIndex
             abi.decode(data[65:97], (address)), // who
             uint256(bytes32(data[97:129])), // U

@@ -58,7 +58,7 @@ def test_cross_pool_swap(
     else:
         txe = ibc_emulator.execute(tx.events["IncomingMetadata"]["metadata"][0], tx.events["IncomingPacket"]["packet"], {"from": berg})
     
-    purchased_tokens = txe.events["SwapFromUnits"]["output"]
+    purchased_tokens = txe.events["ReceiveSwap"]["output"]
     
     assert purchased_tokens == target_token.balanceOf(berg)
 
@@ -180,7 +180,7 @@ def test_send_swap_event(
     assert send_swap_event['messageHash']  == expected_message_hash
 
 
-def test_swap_from_units_event(
+def test_receive_swap_event(
     channel_id,
     pool_1,
     pool_2,
@@ -220,10 +220,10 @@ def test_swap_from_units_event(
 
     txe = ibc_emulator.execute(tx.events["IncomingMetadata"]["metadata"][0], tx.events["IncomingPacket"]["packet"], {"from": berg})
 
-    swap_from_units_event = txe.events['SwapFromUnits']
+    receive_swap_event = txe.events['ReceiveSwap']
 
-    assert swap_from_units_event['who']         == elwood
-    assert swap_from_units_event['toAsset']     == target_token
-    assert swap_from_units_event['input']       == observed_units
-    assert swap_from_units_event['output']      == target_token.balanceOf(elwood)
-    assert swap_from_units_event['messageHash'] == expected_message_hash
+    assert receive_swap_event['who']         == elwood
+    assert receive_swap_event['toAsset']     == target_token
+    assert receive_swap_event['input']       == observed_units
+    assert receive_swap_event['output']      == target_token.balanceOf(elwood)
+    assert receive_swap_event['messageHash'] == expected_message_hash

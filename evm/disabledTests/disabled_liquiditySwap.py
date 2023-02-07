@@ -500,7 +500,7 @@ def test_direct_swap_from_liquidity_units_invocation(
 ):
     sp = swappool1_info.swappool
 
-    # Try to directly invoke swapFromUnits
+    # Try to directly invoke receiveSwap
     with brownie.reverts(): # TODO dev msg
         sp.inLiquidity(
             hacker,

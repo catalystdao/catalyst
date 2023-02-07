@@ -143,7 +143,7 @@ def test_not_connected_send_swap(
 
 
 
-def test_not_connected_swap_from_units(
+def test_not_connected_receive_swap(
     channel_id,
     pool,
     cross_chain_interface,

@@ -10,7 +10,7 @@ interface ICatalystV1PoolDerived {
     function calcSendSwap(address from, uint256 amount) external view returns (uint256);
 
     /**
-     * @notice Computes the output of SwapFromUnits, without executing one.
+     * @notice Computes the output of ReceiveSwap, without executing one.
      * @param to The address of the token to buy.
      * @param U The number of units used to buy to.
      * @return uint256 Number of purchased tokens.
