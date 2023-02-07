@@ -395,7 +395,9 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         // token weights are equal.
         if (W_A == W_B)
             // Saves gas and is exact.
-            // W_A = 0, W_B = 0 => W_A = W_B => the swap can return more than 0.
+            // NOTE: If W_A == 0 and W_B == 0 => W_A == W_B => The calculation will not fail.
+            // This is not a problem, since W_B != 0 for assets contained in the pool, and hence a 0-weighted asset 
+            // (i.e. not contained in the pool) cannot be used to extract an asset contained in the pool.
             return (B * amount) / (A + amount);
 
         // If either token doesn't exist, their weight is 0.
@@ -548,7 +550,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
             // Units allocated for the specific token.
             uint256 U_i = (U * withdrawRatio[it]) / FixedPointMathLib.WAD;
             if (U_i == 0) continue;  // If no tokens are to be used, skip the logic.
-            U -= U_i;  // Subtract the number of units used.
+            U -= U_i;  // Subtract the number of units used. This will underflow for malicious withdrawRatios > 1.
 
             address token = _tokenIndexing[it]; // Collect token from memory
 
