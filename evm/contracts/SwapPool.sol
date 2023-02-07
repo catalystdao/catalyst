@@ -453,7 +453,7 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 poolTokens = (initialTotalSupply * calcPriceCurveLimitShare(U, wsum)) / FixedPointMathLib.WAD;
 
         // Check that the minimum output is honored.
-        require(minOut <= poolTokens, SWAP_RETURN_INSUFFICIENT);
+        require(minOut <= poolTokens, RETURN_INSUFFICIENT);
 
         // Emit the deposit event
         emit Deposit(msg.sender, poolTokens, tokenAmounts);
@@ -496,7 +496,7 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
             uint256 tokenAmount = (At * poolTokens) / initialTotalSupply;
 
             // Check if the user is satisfied with the output.
-            require(tokenAmount >= minOut[it], SWAP_RETURN_INSUFFICIENT);
+            require(tokenAmount >= minOut[it], RETURN_INSUFFICIENT);
 
             // Store the token amount.
             amounts[it] = tokenAmount;
@@ -560,7 +560,7 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
             uint256 tokenAmount = calcPriceCurveLimit(U_i, At, _weight[token]);
 
             // Ensure the output satisfies the user.
-            require(minOut[it] <= tokenAmount, SWAP_RETURN_INSUFFICIENT);
+            require(minOut[it] <= tokenAmount, RETURN_INSUFFICIENT);
 
             // Store amount for withdraw event
             amounts[it] = tokenAmount;
@@ -596,7 +596,7 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 out = calcLocalSwap(fromAsset, toAsset, amount - fee);
 
         // Check if the calculated returned value is more than the minimum output.
-        require(minOut <= out, SWAP_RETURN_INSUFFICIENT);
+        require(minOut <= out, RETURN_INSUFFICIENT);
 
         // Transfer tokens to the user and collect tokens from the user.
         IERC20(toAsset).safeTransfer(msg.sender, out);
@@ -769,7 +769,7 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 purchasedTokens = calcReceiveSwap(toAsset, U);
 
         // Ensure the user is satisfied by the number of tokens.
-        require(minOut <= purchasedTokens, SWAP_RETURN_INSUFFICIENT);
+        require(minOut <= purchasedTokens, RETURN_INSUFFICIENT);
 
         // Send the tokens to the user.
         IERC20(toAsset).safeTransfer(who, purchasedTokens);
@@ -931,7 +931,7 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 poolTokens = (calcPriceCurveLimitShare(U, wsum) * totalSupply())/FixedPointMathLib.WAD;
 
         // Check if more than the minimum output is returned.
-        require(minOut <= poolTokens, SWAP_RETURN_INSUFFICIENT);
+        require(minOut <= poolTokens, RETURN_INSUFFICIENT);
 
         // Mint pool tokens for the user.
         _mint(who, poolTokens);

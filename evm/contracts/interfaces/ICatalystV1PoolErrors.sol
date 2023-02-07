@@ -6,5 +6,5 @@ pragma solidity ^0.8.16;
 contract ICatalystV1PoolErrors {
     string constant EXCEEDS_SECURITY_LIMIT =
         "Swap exceeds security limit";
-    string constant SWAP_RETURN_INSUFFICIENT = "Insufficient Return";
+    string constant RETURN_INSUFFICIENT = "Insufficient Return";
 }
