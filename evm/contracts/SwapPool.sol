@@ -332,17 +332,17 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
     /**
      * @notice Computes the return of SwapToUnits.
      * @dev Returns 0 if from is not a token in the pool
-     * @param from The address of the token to sell.
+     * @param fromAsset The address of the token to sell.
      * @param amount The amount of from token to sell.
      * @return uint256 Group specific units.
      */
     function calcSendSwap(
-        address from,
+        address fromAsset,
         uint256 amount
     ) public view returns (uint256) {
         // A high => less units returned. Do not subtract the escrow amount
-        uint256 A = IERC20(from).balanceOf(address(this));
-        uint256 W = _weight[from];
+        uint256 A = IERC20(fromAsset).balanceOf(address(this));
+        uint256 W = _weight[fromAsset];
 
         // If a token is not part of the pool, W is 0. This returns 0 by
         // multiplication with 0.
@@ -352,17 +352,17 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
     /**
      * @notice Computes the output of SwapFromUnits.
      * @dev Reverts if to is not a token in the pool
-     * @param to The address of the token to buy.
+     * @param toAsset The address of the token to buy.
      * @param U The number of units used to buy to.
      * @return uint256 Number of purchased tokens.
      */
     function calcReceiveSwap(
-        address to,
+        address toAsset,
         uint256 U
     ) public view returns (uint256) {
-        // A low => less tokens returned. Subtract the escrow amount to decrease the balance.
-        uint256 B = IERC20(to).balanceOf(address(this)) - _escrowedTokens[to];
-        uint256 W = _weight[to];
+        // B low => less tokens returned. Subtract the escrow amount to decrease the balance.
+        uint256 B = IERC20(toAsset).balanceOf(address(this)) - _escrowedTokens[toAsset];
+        uint256 W = _weight[toAsset];
 
         // If someone were to purchase a token which is not part of the pool on setup
         // they would just add value to the pool. We don't care about it.
@@ -376,23 +376,23 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
      * @dev If the pool weights of the 2 tokens are equal, a very simple curve is used.
      * If from or to is not part of the pool, the swap will either return 0 or revert.
      * If both from and to is not part of the pool, the swap can actually return a positive value.
-     * @param from The address of the token to sell.
-     * @param to The address of the token to buy.
+     * @param fromAsset The address of the token to sell.
+     * @param toAsset The address of the token to buy.
      * @param amount The amount of from token to sell for to token.
      * @return uint256 Output denominated in to token.
      */
     function calcLocalSwap(
-        address from,
-        address to,
+        address fromAsset,
+        address toAsset,
         uint256 amount
     ) public view returns (uint256) {
-        uint256 A = IERC20(from).balanceOf(address(this));
-        uint256 B = IERC20(to).balanceOf(address(this)) - _escrowedTokens[to];
-        uint256 W_A = _weight[from];
-        uint256 W_B = _weight[to];
+        uint256 A = IERC20(fromAsset).balanceOf(address(this));
+        uint256 B = IERC20(toAsset).balanceOf(address(this)) - _escrowedTokens[toAsset];
+        uint256 W_A = _weight[fromAsset];
+        uint256 W_B = _weight[toAsset];
 
         // The swap equation simplifies to the ordinary constant product if the
-        // token weights are equal. This equation is even simpler than approx.
+        // token weights are equal.
         if (W_A == W_B)
             // Saves gas and is exact.
             // W_A = 0, W_B = 0 => W_A = W_B => the swap can return more than 0.
