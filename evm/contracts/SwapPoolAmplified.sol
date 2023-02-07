@@ -234,7 +234,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
      * @param amp The amplification.
      * @return uint256 Group specific units (units are **always** WAD).
      */
-    function compute_integral(
+    function calcPriceCurveArea(
         uint256 input,
         uint256 A,
         uint256 W,
@@ -266,7 +266,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
      * @param W The weight of the y token.
      * @return uint25 Output denominated in output token. (not WAD)
      */
-    function solve_integral(
+    function calcPriceCurveLimit(
         uint256 U,
         uint256 B,
         uint256 W,
@@ -306,7 +306,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
      * @param amp The amplification.
      * @return uint256 Output denominated in output token.
      */
-    function complete_integral(
+    function calcCombinedPriceCurves(
         uint256 input,
         uint256 A,
         uint256 B,
@@ -326,13 +326,13 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         // ) - FixedPointMathLib.powWad(
         //     int256(W_A * A * FixedPointMathLib.WAD),
         //     oneMinusAmp
-        // )); // compute_integral(input, A, W_A, amp)
+        // )); // calcPriceCurveArea(input, A, W_A, amp)
 
         // return B * (FixedPointMathLib.WAD - uint256(FixedPointMathLib.powWad(
         //             int256(FixedPointMathLib.divWadUp(W_BxBtoOMA - U, W_BxBtoOMA)),
         //             int256(FixedPointMathLib.WAD * FixedPointMathLib.WAD / uint256(oneMinusAmp)))
-        //         )) / FixedPointMathLib.WAD; // solve_integral
-        return solve_integral(compute_integral(input, A, W_A, amp), B, W_B, amp);
+        //         )) / FixedPointMathLib.WAD; // calcPriceCurveLimit
+        return calcPriceCurveLimit(calcPriceCurveArea(input, A, W_A, amp), B, W_B, amp);
     }
 
     /**
@@ -352,7 +352,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
 
         // If a token is not part of the pool, W is 0. This returns 0 since
         // 0^p = 0.
-        uint256 U = compute_integral(amount, A, W, _amp);
+        uint256 U = calcPriceCurveArea(amount, A, W, _amp);
 
         // If the swap is a very small portion of the pool
         // Add an additional fee. This covers mathematical errors.
@@ -379,12 +379,12 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         // they would just add value to the pool. We don't care about it.
         // However, it will revert since the solved integral contains U/W and when
         // W = 0 then U/W returns division by 0 error.
-        return solve_integral(U, B, W, _amp);
+        return calcPriceCurveLimit(U, B, W, _amp);
     }
 
     /**
      * @notice Computes the output of SwapToAndFromUnits.
-     * @dev Implemented through solve_integral(compute_integral and not complete_integral.
+     * @dev Implemented through calcPriceCurveLimit(calcPriceCurveArea and not calcCombinedPriceCurves.
      * @param from The address of the token to sell.
      * @param to The address of the token to buy.
      * @param amount The amount of from token to sell for to token.
@@ -401,8 +401,8 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 W_B = _weight[to];
         uint256 amp = _amp;
 
-        // return complete_integral(amount, A, B, W_A, W_B, amp);
-        uint256 output = solve_integral(compute_integral(amount, A, W_A, amp), B, W_B, amp);
+        // return calcCombinedPriceCurves(amount, A, B, W_A, W_B, amp);
+        uint256 output = calcPriceCurveLimit(calcPriceCurveArea(amount, A, W_A, amp), B, W_B, amp);
 
         // If the swap is a very small portion of the pool
         // Add an additional fee. This covers mathematical errors.

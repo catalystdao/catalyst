@@ -249,7 +249,7 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
      * @param W The weight of the x token.
      * @return uint256 Group specific units (units are **always** WAD).
      */
-    function compute_integral(
+    function calcPriceCurveArea(
         uint256 input,
         uint256 A,
         uint256 W
@@ -270,7 +270,7 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
      * @param W The weight of the y token.
      * @return uint25 Output denominated in output token. (not WAD)
      */
-    function solve_integral(
+    function calcPriceCurveLimit(
         uint256 U,
         uint256 B,
         uint256 W
@@ -283,8 +283,8 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
      *     \int_{A}^{A+x} W_a/w dw = \int_{B-y}^{B} W_b/w dw for y = B · (1 - ((A+x)/A)^(-W_a/W_b))
      *
      * Alternatively, the integral can be computed through:
-     *      solve_integral(_compute_integral(input, A, W_A), B, W_B).
-     *      However, complete_integral is very slightly cheaper since it delays a division.
+     *      calcPriceCurveLimit(_compute_integral(input, A, W_A), B, W_B).
+     *      However, calcCombinedPriceCurves is very slightly cheaper since it delays a division.
      *      (Apart from that, the mathematical operations are the same.)
      * @dev All input amounts should be the raw numbers and not WAD.
      * @param input The input amount.
@@ -294,7 +294,7 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
      * @param W_B TThe weight of the y token.
      * @return uint256 Output denominated in output token.
      */
-    function complete_integral(
+    function calcCombinedPriceCurves(
         uint256 input,
         uint256 A,
         uint256 B,
@@ -306,18 +306,18 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
         //     int256(FixedPointMathLib.divWadDown(W_A, W_B))
         //)); 
         // return (B * U) / FixedPointMathLib.WAD;
-        return solve_integral(compute_integral(input, A, W_A), B, W_B);
+        return calcPriceCurveLimit(calcPriceCurveArea(input, A, W_A), B, W_B);
     }
 
     /**
      * @notice Solves the generalised swap integral.
-     * @dev Based on solve_integral but the multiplication by the
+     * @dev Based on calcPriceCurveLimit but the multiplication by the
      * specific token is never done.
      * @param U Input units.
      * @param W The generalised weights.
      * @return uint256 Output denominated in pool share.
      */
-    function arbitrary_solve_integral(
+    function calcPriceCurveLimitShare(
         uint256 U,
         uint256 W
     ) internal pure returns (uint256) {
@@ -346,7 +346,7 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
 
         // If a token is not part of the pool, W is 0. This returns 0 by
         // multiplication with 0.
-        return compute_integral(amount, A, W);
+        return calcPriceCurveArea(amount, A, W);
     }
 
     /**
@@ -368,7 +368,7 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
         // they would just add value to the pool. We don't care about it.
         // However, it will revert since the solved integral contains U/W and when
         // W = 0 then U/W returns division by 0 error.
-        return solve_integral(U, B, W);
+        return calcPriceCurveLimit(U, B, W);
     }
 
     /**
@@ -400,7 +400,7 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
 
         // If either token doesn't exist, their weight is 0.
         // Then powWad returns 1 which is subtracted from 1 => returns 0.
-        return complete_integral(amount, A, B, W_A, W_B);
+        return calcCombinedPriceCurves(amount, A, B, W_A, W_B);
     }
 
     /**
@@ -409,7 +409,7 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
      * Requires approvals for all tokens within the pool.
      * It is advised that the deposit matches the pool's %token distribution.
      * Deposit is done by converting tokenAmounts into units and then using
-     * the macro for units to pool tokens. (arbitrary_solve_integral)
+     * the macro for units to pool tokens. (calcPriceCurveLimitShare)
      * @param tokenAmounts An array of the tokens amounts to be deposited.
      * @param minOut The minimum number of pool tokens to be minted.
      * @return uint256 The number of minted pool tokens.
@@ -432,7 +432,7 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
              // A high => less units returned. Do not subtract the escrow amount
             uint256 At = IERC20(token).balanceOf(address(this));
 
-            U += compute_integral(tokenAmounts[it], At, _weight[token]);
+            U += calcPriceCurveArea(tokenAmounts[it], At, _weight[token]);
 
             IERC20(token).safeTransferFrom(
                 msg.sender,
@@ -449,8 +449,8 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
         // Fetch wsum.
         uint256 wsum = _maxUnitCapacity / FixedPointMathLib.LN2;
 
-        // arbitrary_solve_integral returns < 1 multiplied by FixedPointMathLib.WAD.
-        uint256 poolTokens = (initial_totalSupply * arbitrary_solve_integral(U, wsum)) / FixedPointMathLib.WAD;
+        // calcPriceCurveLimitShare returns < 1 multiplied by FixedPointMathLib.WAD.
+        uint256 poolTokens = (initial_totalSupply * calcPriceCurveLimitShare(U, wsum)) / FixedPointMathLib.WAD;
 
         // Check that the minimum output is honored.
         require(minOut <= poolTokens, SWAP_RETURN_INSUFFICIENT);
@@ -557,7 +557,7 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
 
             // Units are shared between "liquidity units" and "token units". As such, we just
             // need to convert the units to tokens.
-            uint256 tokenAmount = solve_integral(U_i, At, _weight[token]);
+            uint256 tokenAmount = calcPriceCurveLimit(U_i, At, _weight[token]);
 
             // Ensure the output satisfies the user.
             require(minOuts[it] <= tokenAmount, SWAP_RETURN_INSUFFICIENT);
@@ -928,7 +928,7 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
 
         // Use the arbitarty integral to compute mint %. It comes as WAD, multiply by totalSupply
         // and divided by WAD to get number of pool tokens.
-        uint256 poolTokens = (arbitrary_solve_integral(U, wsum) * totalSupply())/FixedPointMathLib.WAD;
+        uint256 poolTokens = (calcPriceCurveLimitShare(U, wsum) * totalSupply())/FixedPointMathLib.WAD;
 
         // Check if more than the minimum output is returned.
         require(minOut <= poolTokens, SWAP_RETURN_INSUFFICIENT);
