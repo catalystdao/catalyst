@@ -8,6 +8,8 @@ import "@openzeppelin/contracts/proxy/Clones.sol";
 import "./CatalystIBCInterface.sol";
 import "./interfaces/ICatalystV1FactoryEvents.sol";
 
+uint256 constant MAX_GOVERNANCE_FEE_SHARE = 75 * 10**16;   // 75%
+
 /**
  * @title Catalyst Swap Factory
  * @author Catalyst Labs
@@ -28,7 +30,7 @@ contract CatalystSwapPoolFactory is Ownable, ICatalystV1FactoryEvents {
     }
 
     function setDefaultGovernanceFee(uint256 fee) public onlyOwner {
-        require(fee <= 75*10**16); // dev: GovernanceFee is maximum 75%.
+        require(fee <= MAX_GOVERNANCE_FEE_SHARE); // dev: Maximum GovernanceFeeSare exceeded.
 
         emit SetDefaultGovernanceFee(fee);
 

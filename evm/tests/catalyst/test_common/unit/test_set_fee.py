@@ -36,7 +36,7 @@ def test_set_default_governance_fee_over_max(
     fee = int(0.76 * 10**18)     # Maximum is 0.75
 
 
-    with reverts(dev_revert_msg="dev: GovernanceFee is maximum 75%."):
+    with reverts(dev_revert_msg="dev: Maximum GovernanceFeeSare exceeded."):
         swap_factory.setDefaultGovernanceFee(fee, {"from": deployer})
 
 
@@ -219,7 +219,7 @@ def test_set_governance_fee_over_max(
     assert pool._governanceFeeShare() != fee
 
 
-    with reverts(dev_revert_msg="dev: GovernanceFee is maximum 75%."):
+    with reverts(dev_revert_msg="dev: Maximum GovernanceFeeSare exceeded."):
         pool.setGovernanceFee(fee, {"from": molly})
 
 
