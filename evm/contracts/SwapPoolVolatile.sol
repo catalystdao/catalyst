@@ -231,7 +231,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
                     wsum += newWeight;
                 }
             }
-            // Save new weight sum.
+            // Update security limit unit capacity
             _maxUnitCapacity = wsum * FixedPointMathLib.LN2;
         }
     }
