@@ -187,7 +187,7 @@ abstract contract CatalystSwapPoolCommon is
         _INITIALIZED = true;
     }
 
-    /** @notice  Returns the current cross-chain swao capacity. */
+    /** @notice  Returns the current cross-chain swap capacity. */
     function getUnitCapacity() external view virtual override returns (uint256) {
         uint256 MUC = _maxUnitCapacity;
 
