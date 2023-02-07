@@ -161,7 +161,7 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
      * The partial weight change algorithm is not made for large step increases. As a result, 
      * it is important that the original weights are large to increase the mathematical resolution.
      */
-    function _W() internal {
+    function _adjustWeights() internal {
         // We might use adjustment target more than once. Since we don't change it, lets store it.
         uint256 adjTarget = _adjustmentTarget;
 
@@ -589,7 +589,7 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 amount,
         uint256 minOut
     ) nonReentrant() public returns (uint256) {
-        _W();
+        _adjustWeights();
         uint256 fee = FixedPointMathLib.mulWadDown(amount, _poolFee);
 
         // Calculate the return value.
@@ -645,7 +645,7 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
         bytes memory calldata_
     ) public returns (uint256) {
         require(fallbackUser != address(0));
-        _W();
+        _adjustWeights();
 
         // Calculate the group specific units bought.
         uint256 U = dry_swap_to_unit(
@@ -756,7 +756,7 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
     ) public returns (uint256) {
         // The chainInterface is the only valid caller of this function.
         require(msg.sender == _chainInterface);
-        _W();
+        _adjustWeights();
 
         // Convert the asset index (toAsset) into the asset to be purchased.
         address toAsset = _tokenIndexing[toAssetIndex];
@@ -841,7 +841,7 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
         // checks if the fallbackUser != address(0))
         require(fallbackUser != address(0));
         // Update weights
-        _W();
+        _adjustWeights();
 
         uint256 initial_totalSupply = totalSupply() + _escrowedPoolTokens;
         // Since we have already cached totalSupply, we might as well burn the tokens
@@ -918,7 +918,7 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
     ) external returns (uint256) {
         // The chainInterface is the only valid caller of this function.
         require(msg.sender == _chainInterface);
-        _W();
+        _adjustWeights();
 
         // Check if the swap is according to the swap limits
         updateUnitCapacity(U);
