@@ -63,8 +63,6 @@ abstract contract CatalystSwapPoolCommon is
     mapping(address => uint256) public _weight;
 
     //-- Weight change variables --//
-    // todo: Do we want to move this into swappool.sol?
-    mapping(address => uint256) public _targetWeight;
     uint256 public _adjustmentTarget;
     uint256 public _lastModificationTime;
 

@@ -54,7 +54,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
 
 
     //-- Variables --//
-    // There are no variables specific to the volatile pool. See SwapPoolCommon.sol
+    mapping(address => uint256) public _targetWeight;
 
     constructor(address factory_) CatalystSwapPoolCommon(factory_) {}
 

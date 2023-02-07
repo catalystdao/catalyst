@@ -21,8 +21,6 @@ interface ICatalystV1PoolState {
     /// @notice The token weights. Used for maintaining a non symmetric pool balance.
     function _weight(address token) external view returns (uint256);
 
-    function _targetWeight(address token) external view returns (uint256);
-
     function _adjustmentTarget() external view returns (uint256);
 
     function _lastModificationTime() external view returns (uint256);
