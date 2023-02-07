@@ -145,7 +145,6 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
         _lastModificationTime = block.timestamp;
 
         // Compute sum weight for security limit.
-        uint256 sumWeights = 0;
         for (uint256 it = 0; it < MAX_ASSETS; it++) {
             address token = _tokenIndexing[it];
             if (token == address(0)) break;
