@@ -140,10 +140,10 @@ def test_ibc_timeout_and_ack(pool, channel_id, pool_tokens, ibc_emulator, berg, 
 
     U = int(693147180559945344 / 2)  # Example value used to test if the swap is corrected.
 
-    both1_12 = pool.dry_swap_both(token1, token2, 10**18)
-    both1_21 = pool.dry_swap_both(token2, token1, 10**18)
-    to1 = pool.dry_swap_to_unit(token1, 10**18)
-    from1 = pool.dry_swap_from_unit(token1, U)
+    both1_12 = pool.calcLocalSwap(token1, token2, 10**18)
+    both1_21 = pool.calcLocalSwap(token2, token1, 10**18)
+    to1 = pool.calcSendSwap(token1, 10**18)
+    from1 = pool.calcReceiveSwap(token1, U)
 
     tx1 = pool.swapToUnits(
         channel_id,
@@ -157,10 +157,10 @@ def test_ibc_timeout_and_ack(pool, channel_id, pool_tokens, ibc_emulator, berg, 
         {"from": berg},
     )
 
-    both2_12 = pool.dry_swap_both(token1, token2, 10**18)
-    both2_21 = pool.dry_swap_both(token2, token1, 10**18)
-    to2 = pool.dry_swap_to_unit(token1, 10**18)
-    from2 = pool.dry_swap_from_unit(token1, U)
+    both2_12 = pool.calcLocalSwap(token1, token2, 10**18)
+    both2_21 = pool.calcLocalSwap(token2, token1, 10**18)
+    to2 = pool.calcSendSwap(token1, 10**18)
+    from2 = pool.calcReceiveSwap(token1, U)
 
     assert both1_12 > both2_12
     assert both1_21 == both2_21
@@ -173,10 +173,10 @@ def test_ibc_timeout_and_ack(pool, channel_id, pool_tokens, ibc_emulator, berg, 
         {"from": berg},
     )
 
-    both3_12 = pool.dry_swap_both(token1, token2, 10**18)
-    both3_21 = pool.dry_swap_both(token2, token1, 10**18)
-    to3 = pool.dry_swap_to_unit(token1, 10**18)
-    from3 = pool.dry_swap_from_unit(token1, U)
+    both3_12 = pool.calcLocalSwap(token1, token2, 10**18)
+    both3_21 = pool.calcLocalSwap(token2, token1, 10**18)
+    to3 = pool.calcSendSwap(token1, 10**18)
+    from3 = pool.calcReceiveSwap(token1, U)
 
     assert both1_12 == both3_12
     assert both1_21 == both3_21
@@ -191,10 +191,10 @@ def test_ibc_timeout_and_ack(pool, channel_id, pool_tokens, ibc_emulator, berg, 
         {"from": berg},
     )
 
-    both3_12 = pool.dry_swap_both(token1, token2, 10**18)
-    both3_21 = pool.dry_swap_both(token2, token1, 10**18)
-    to3 = pool.dry_swap_to_unit(token1, 10**18)
-    from3 = pool.dry_swap_from_unit(token1, U)
+    both3_12 = pool.calcLocalSwap(token1, token2, 10**18)
+    both3_21 = pool.calcLocalSwap(token2, token1, 10**18)
+    to3 = pool.calcSendSwap(token1, 10**18)
+    from3 = pool.calcReceiveSwap(token1, U)
 
     assert both1_12 > both3_12
     assert both1_21 < both3_21

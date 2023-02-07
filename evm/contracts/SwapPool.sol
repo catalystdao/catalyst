@@ -336,7 +336,7 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
      * @param amount The amount of from token to sell.
      * @return uint256 Group specific units.
      */
-    function dry_swap_to_unit(
+    function calcSendSwap(
         address from,
         uint256 amount
     ) public view returns (uint256) {
@@ -356,7 +356,7 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
      * @param U The number of units used to buy to.
      * @return uint256 Number of purchased tokens.
      */
-    function dry_swap_from_unit(
+    function calcReceiveSwap(
         address to,
         uint256 U
     ) public view returns (uint256) {
@@ -381,7 +381,7 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
      * @param amount The amount of from token to sell for to token.
      * @return uint256 Output denominated in to token.
      */
-    function dry_swap_both(
+    function calcLocalSwap(
         address from,
         address to,
         uint256 amount
@@ -593,7 +593,7 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 fee = FixedPointMathLib.mulWadDown(amount, _poolFee);
 
         // Calculate the return value.
-        uint256 out = dry_swap_both(fromAsset, toAsset, amount - fee);
+        uint256 out = calcLocalSwap(fromAsset, toAsset, amount - fee);
 
         // Check if the calculated returned value is more than the minimum output.
         require(minOut <= out, SWAP_RETURN_INSUFFICIENT);
@@ -648,7 +648,7 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
         _adjustWeights();
 
         // Calculate the group specific units bought.
-        uint256 U = dry_swap_to_unit(
+        uint256 U = calcSendSwap(
             fromAsset,
             amount - FixedPointMathLib.mulWadDown(amount, _poolFee)
         );
@@ -766,7 +766,7 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
 
         // Calculate the swap return value. 
         // Fee is always taken on the sending token.
-        uint256 purchasedTokens = dry_swap_from_unit(toAsset, U);
+        uint256 purchasedTokens = calcReceiveSwap(toAsset, U);
 
         // Ensure the user is satisfied by the number of tokens.
         require(minOut <= purchasedTokens, SWAP_RETURN_INSUFFICIENT);

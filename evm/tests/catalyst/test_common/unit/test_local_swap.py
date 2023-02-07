@@ -106,7 +106,7 @@ def test_local_swap_minout(
     source_token.transfer(berg, swap_amount, {'from': deployer})
     source_token.approve(pool, swap_amount, {'from': berg})
     
-    simulated_swap_return = pool.dry_swap_both(source_token, target_token, swap_amount)
+    simulated_swap_return = pool.calcLocalSwap(source_token, target_token, swap_amount)
     
     if simulated_swap_return < min_out:
         with reverts("Insufficient Return"):

@@ -341,7 +341,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
      * @param amount The amount of from token to sell.
      * @return uint256 Group specific units.
      */
-    function dry_swap_to_unit(
+    function calcSendSwap(
         address from,
         uint256 amount
     ) public view returns (uint256) {
@@ -367,7 +367,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
      * @param U The number of units used to buy to.
      * @return uint256 Number of purchased tokens.
      */
-    function dry_swap_from_unit(
+    function calcReceiveSwap(
         address to, 
         uint256 U
     ) public view returns (uint256) {
@@ -390,7 +390,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
      * @param amount The amount of from token to sell for to token.
      * @return Output denominated in to token.
      */
-    function dry_swap_both(
+    function calcLocalSwap(
         address from,
         address to,
         uint256 amount
@@ -748,7 +748,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
             if (U_i == 0) continue;
             U -= U_i;
 
-            // uint256 tokenAmount = dry_swap_from_unit(_tokenIndexing[it], U_i);
+            // uint256 tokenAmount = calcReceiveSwap(_tokenIndexing[it], U_i);
             
             // W_B · B^(1-k) is repeated twice and requires 1 power.
             // As a result, we compute it and cache.
@@ -801,7 +801,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 fee = FixedPointMathLib.mulWadDown(amount, _poolFee);
 
         // Calculate the swap return value.
-        uint256 out = dry_swap_both(fromAsset, toAsset, amount - fee);
+        uint256 out = calcLocalSwap(fromAsset, toAsset, amount - fee);
 
         // Check if the calculated returned value is more than the minimum output.
         require(out >= minOut, SWAP_RETURN_INSUFFICIENT);
@@ -846,7 +846,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         // uint256 fee = FixedPointMathLib.mulWadDown(amount, _poolFee);
 
         // Calculate the group specific units bought.
-        uint256 U = dry_swap_to_unit(
+        uint256 U = calcSendSwap(
             fromAsset,
             amount - FixedPointMathLib.mulWadDown(amount, _poolFee)
         );
@@ -964,7 +964,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
 
 
         // Calculate the swap return value.
-        uint256 purchasedTokens = dry_swap_from_unit(toAsset, U);
+        uint256 purchasedTokens = calcReceiveSwap(toAsset, U);
 
 
         // Check if the swap is according to the swap limits

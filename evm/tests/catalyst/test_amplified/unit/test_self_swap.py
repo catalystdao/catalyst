@@ -38,7 +38,7 @@ def test_self_swap(
     assert token.balanceOf(berg) == 0
     
     # The security limit works a slightly different for amplified pools.
-    if pool.getUnitCapacity() <= pool.dry_swap_from_unit(pool._tokenIndexing(0), tx.events["SwapToUnits"]["output"]) * pool._weight(pool._tokenIndexing(0)):
+    if pool.getUnitCapacity() <= pool.calcReceiveSwap(pool._tokenIndexing(0), tx.events["SwapToUnits"]["output"]) * pool._weight(pool._tokenIndexing(0)):
         with reverts("Swap exceeds security limit"):
             txe = ibc_emulator.execute(tx.events["IncomingMetadata"]["metadata"][0], tx.events["IncomingPacket"]["packet"], {"from": berg})
         return

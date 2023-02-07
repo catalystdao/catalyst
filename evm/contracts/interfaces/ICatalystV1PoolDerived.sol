@@ -7,7 +7,7 @@ interface ICatalystV1PoolDerived {
     /** @notice  Returns the current cross-chain unit capacity. */
     function getUnitCapacity() external view returns (uint256);
 
-    function dry_swap_to_unit(address from, uint256 amount) external view returns (uint256);
+    function calcSendSwap(address from, uint256 amount) external view returns (uint256);
 
     /**
      * @notice Computes the output of SwapFromUnits, without executing one.
@@ -15,7 +15,7 @@ interface ICatalystV1PoolDerived {
      * @param U The number of units used to buy to.
      * @return uint256 Number of purchased tokens.
      */
-    function dry_swap_from_unit(address to, uint256 U) external view returns (uint256);
+    function calcReceiveSwap(address to, uint256 U) external view returns (uint256);
 
     /**
      * @notice Computes the output of SwapToAndFromUnits, without executing one.
@@ -24,5 +24,5 @@ interface ICatalystV1PoolDerived {
      * @param amount The amount of from token to sell for to token.
      * @return Output denominated in to token.
      */
-    function dry_swap_both(address from, address to, uint256 amount) external view returns (uint256);
+    function calcLocalSwap(address from, address to, uint256 amount) external view returns (uint256);
 }
