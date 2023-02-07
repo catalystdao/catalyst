@@ -155,7 +155,7 @@ interface ICatalystV1PoolPermissionless {
      * @param who The recipient of the transaction on _chain. Encoded in bytes32. For EVM chains it can be found similarly to _targetPool.
      * @param baseAmount The number of pool tokens to liquidity Swap
      */
-    function outLiquidity(
+    function sendLiquidity(
         bytes32 channelId,
         bytes32 targetPool,
         bytes32 who,

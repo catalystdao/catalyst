@@ -186,7 +186,7 @@ def test_not_connected_out_liquidity(
     swap_amount = int(pool.balanceOf(deployer) * 0.1)
 
     with reverts("No Connection"):
-        pool.outLiquidity(
+        pool.sendLiquidity(
             channel_id,
             convert.to_bytes(dummy_pool_address),   # to pool
             convert.to_bytes(berg.address),         # recipient

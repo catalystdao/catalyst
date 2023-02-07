@@ -293,7 +293,7 @@ class StateMachine:
         to_swap = user_pool_token_balance * percentage
 
         print(f"Liquidity swapping {to_swap} via {st_pools}")
-        tx = swapToUnitspingPool.outLiquidity(
+        tx = swapToUnitspingPool.sendLiquidity(
             self.chain_id,
             brownie.convert.to_bytes(inSwappingPool.address.replace("0x", "")),
             brownie.convert.to_bytes(user.address.replace("0x", "")),

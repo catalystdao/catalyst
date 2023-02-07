@@ -44,7 +44,7 @@ def test_liquidity_swap(
     computation = compute_expected_liquidity_swap(pool1_tokens_swapped)
     U, estimatedPool2Tokens = computation["U"], computation["output"]
     
-    tx = pool_1.outLiquidity(
+    tx = pool_1.sendLiquidity(
         channel_id,
         convert.to_bytes(pool_2.address.replace("0x", "")),
         convert.to_bytes(berg.address.replace("0x", "")),
@@ -57,7 +57,7 @@ def test_liquidity_swap(
     
     b0_times_n = len(pool_1_tokens) * pool_utils.compute_balance_0(get_pool_2_weights(), get_pool_2_balances(), get_pool_2_unit_tracker(), get_pool_2_amp())
     
-    U = tx.events["SwapToLiquidityUnits"]["output"]
+    U = tx.events["SendLiquidity"]["output"]
     expectedB0 = 2**256
     if int(int(b0_times_n)**(1 - get_pool_2_amp()/10**18)) >= int(U/10**18):
         expectedB0 = pool_utils.compute_expected_swap_given_U(U, 1, b0_times_n, get_pool_2_amp())

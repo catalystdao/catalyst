@@ -1017,7 +1017,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
      * @param poolTokens The number of pool tokens to exchange
      * @param minOut The minimum number of pool tokens to mint on target pool.
      */
-    function outLiquidity(
+    function sendLiquidity(
         bytes32 channelId,
         bytes32 targetPool,
         bytes32 targetUser,
@@ -1093,7 +1093,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         // Adjustment of the security limit is delayed until ack to avoid
         // a router abusing timeout to circumvent the security limit at low cost.
 
-        emit SwapToLiquidityUnits(
+        emit SendLiquidity(
             targetPool,
             targetUser,
             poolTokens,

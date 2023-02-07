@@ -66,7 +66,7 @@ interface ICatalystV1PoolEvents {
      * @param input The number of _fromAsset sold
      * @param output The calculated number of liquidity units bought.
      */
-    event SwapToLiquidityUnits(
+    event SendLiquidity(
         bytes32 indexed targetPool,
         bytes32 indexed targetUser,
         uint256 input,

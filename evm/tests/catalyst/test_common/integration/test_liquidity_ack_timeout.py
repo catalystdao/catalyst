@@ -15,7 +15,7 @@ def test_ibc_ack(pool, channel_id, ibc_emulator, berg, deployer, swap_percentage
     pool.transfer(berg, swap_amount, {'from': deployer})
     assert pool._escrowedPoolTokens() == 0
 
-    tx = pool.outLiquidity(
+    tx = pool.sendLiquidity(
         channel_id,
         convert.to_bytes(pool.address.replace("0x", "")),
         convert.to_bytes(berg.address.replace("0x", "")),
@@ -44,7 +44,7 @@ def test_ibc_timeout(pool, channel_id, ibc_emulator, berg, deployer, swap_percen
     pool.transfer(berg, swap_amount, {'from': deployer})
     assert pool._escrowedPoolTokens() == 0
 
-    tx = pool.outLiquidity(
+    tx = pool.sendLiquidity(
         channel_id,
         convert.to_bytes(pool.address.replace("0x", "")),
         convert.to_bytes(berg.address.replace("0x", "")),
@@ -71,7 +71,7 @@ def test_only_one_response(pool, channel_id, ibc_emulator, berg, deployer):
     
     pool.transfer(berg, swap_amount, {'from': deployer})
 
-    tx = pool.outLiquidity(
+    tx = pool.sendLiquidity(
         channel_id,
         convert.to_bytes(pool.address.replace("0x", "")),
         convert.to_bytes(berg.address.replace("0x", "")),
@@ -133,7 +133,7 @@ def test_ibc_ack_event(pool, channel_id, ibc_emulator, berg, deployer):
     
     pool.transfer(berg, swap_amount, {'from': deployer})
 
-    tx = pool.outLiquidity(
+    tx = pool.sendLiquidity(
         channel_id,
         convert.to_bytes(pool.address.replace("0x", "")),
         convert.to_bytes(berg.address.replace("0x", "")),
@@ -166,7 +166,7 @@ def test_ibc_timeout_event(pool, channel_id, ibc_emulator, berg, deployer):
     
     pool.transfer(berg, swap_amount, {'from': deployer})
 
-    tx = pool.outLiquidity(
+    tx = pool.sendLiquidity(
         channel_id,
         convert.to_bytes(pool.address.replace("0x", "")),
         convert.to_bytes(berg.address.replace("0x", "")),
