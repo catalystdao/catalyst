@@ -810,12 +810,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         IERC20(fromAsset).safeTransferFrom(msg.sender, address(this), amount);
 
         // Governance Fee
-        if (_governanceFeeShare != 0) {
-            IERC20(fromAsset).safeTransfer(
-                factoryOwner(),
-                FixedPointMathLib.mulWadDown(fee, _governanceFeeShare)
-            );
-        }
+        collectGovernanceFee(fee, fromAsset);
 
         // For amplified pools, the security limit is based on the sum of the tokens
         // in the pool.
@@ -881,17 +876,8 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         _escrowedTokens[fromAsset] += amount - FixedPointMathLib.mulWadDown(amount, _poolFee);
         _escrowedFor[messageHash] = fallbackUser;
 
-        {
-            // Governance Fee
-            uint256 governanceFee = _governanceFeeShare;
-            if (governanceFee != 0) {
-                uint256 governancePart = FixedPointMathLib.mulWadDown(
-                    FixedPointMathLib.mulWadDown(amount, _poolFee),
-                    governanceFee
-                );
-                IERC20(fromAsset).safeTransfer(factoryOwner(), governancePart);
-            }
-        }
+        // Governance Fee
+        collectGovernanceFee(FixedPointMathLib.mulWadDown(amount, _poolFee), fromAsset);
 
         // Collect the tokens from the user.
         IERC20(fromAsset).safeTransferFrom(msg.sender, address(this), amount);

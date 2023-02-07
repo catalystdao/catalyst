@@ -5,6 +5,7 @@ pragma solidity ^0.8.16;
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./SwapPoolFactory.sol";
+import "./FixedPointMathLib.sol";
 import "./CatalystIBCInterface.sol";
 import "./interfaces/IOnCatalyst.sol";
 import "./ICatalystV1Pool.sol";
@@ -266,6 +267,22 @@ abstract contract CatalystSwapPoolCommon is
         _governanceFeeShare = fee;
 
         emit SetGovernanceFee(fee);
+    }
+
+    /**
+     * @dev Collect the governance fee share of the specified pool fee
+     */
+    function collectGovernanceFee(uint256 poolFeeAmount, address asset) internal {
+
+        uint256 governanceFeeShare = _governanceFeeShare;
+
+        if (governanceFeeShare != 0) {
+            uint256 governanceFeeAmount = FixedPointMathLib.mulWadDown(
+                poolFeeAmount,
+                governanceFeeShare
+            );
+            IERC20(asset).safeTransfer(factoryOwner(), governanceFeeAmount);
+        }
     }
 
     /**
