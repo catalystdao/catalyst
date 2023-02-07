@@ -516,13 +516,13 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
      * @dev It is advised that the withdraw matches the pool's %token distribution.
      * @param poolTokens The number of pool tokens to withdraw
      * @param withdrawRatio The percentage of units used to withdraw. In the following special scheme: U_a = U · withdrawRatio[0], U_b = (U - U_a) · withdrawRatio[1], U_c = (U - U_a - U_b) · withdrawRatio[2], .... Is Wad.
-     * @param minOuts The minimum number of tokens withdrawn.
+     * @param minOut The minimum number of tokens withdrawn.
      * @return uint256[] memory An array containing the amounts withdrawn
      */
     function withdrawMixed(
         uint256 poolTokens,
         uint256[] calldata withdrawRatio,
-        uint256[] calldata minOuts
+        uint256[] calldata minOut
     ) nonReentrant() external returns(uint256[] memory) {
         // cache totalSupply. This saves a bit of gas.
         uint256 initialTotalSupply = totalSupply() + _escrowedPoolTokens;
@@ -560,7 +560,7 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
             uint256 tokenAmount = calcPriceCurveLimit(U_i, At, _weight[token]);
 
             // Ensure the output satisfies the user.
-            require(minOuts[it] <= tokenAmount, SWAP_RETURN_INSUFFICIENT);
+            require(minOut[it] <= tokenAmount, SWAP_RETURN_INSUFFICIENT);
 
             // Store amount for withdraw event
             amounts[it] = tokenAmount;

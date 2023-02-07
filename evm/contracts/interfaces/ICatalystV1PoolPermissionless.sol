@@ -52,12 +52,12 @@ interface ICatalystV1PoolPermissionless {
      *            Otherwise it should be weighted towards the tokens the pool has more of.
      * @param poolTokens The number of pool tokens to withdraw
      * @param withdrawRatio The percentage of units used to withdraw. In the following special scheme: U_a = U · withdrawRatio[0], U_b = (U - U_a) · withdrawRatio[1], U_c = (U - U_a - U_b) · withdrawRatio[2], .... Is X64
-     * @param minOuts The minimum number of tokens minted.
+     * @param minOut The minimum number of tokens minted.
      */
     function withdrawMixed(
         uint256 poolTokens,
         uint256[] calldata withdrawRatio,
-        uint256[] calldata minOuts
+        uint256[] calldata minOut
     ) external returns(uint256[] memory);
 
     //--- Swaps ---//

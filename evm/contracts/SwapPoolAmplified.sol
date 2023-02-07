@@ -671,12 +671,12 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
      * @dev Requires approvals for all tokens within the pool.
      * @param poolTokens The number of pool tokens to withdraw
      * @param withdrawRatio The percentage of units used to withdraw. In the following special scheme: U_a = U · withdrawRatio[0], U_b = (U - U_a) · withdrawRatio[1], U_c = (U - U_a - U_b) · withdrawRatio[2], .... Is X64
-     * @param minOuts The minimum number of tokens minted.
+     * @param minOut The minimum number of tokens minted.
      */
     function withdrawMixed(
         uint256 poolTokens,
         uint256[] calldata withdrawRatio,
-        uint256[] calldata minOuts
+        uint256[] calldata minOut
     ) nonReentrant() external returns(uint256[] memory) {
         _A();
         // Burn the desired number of pool tokens to the user.
@@ -762,7 +762,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
             // For this, we need a seperate check.
             require(assetBalances[it] >= tokenAmount); // dev: Pool balance too low.
             // Check that the user is satisfied with this.
-            require(minOuts[it] <= tokenAmount, SWAP_RETURN_INSUFFICIENT);
+            require(minOut[it] <= tokenAmount, SWAP_RETURN_INSUFFICIENT);
             // Transfer the appropriate number of tokens from the user to the pool. (And store for event logging)
             amounts[it] = tokenAmount;
             IERC20(tokenIndexed[it]).safeTransfer(msg.sender, tokenAmount);
