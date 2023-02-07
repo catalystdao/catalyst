@@ -649,26 +649,23 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         // Calculate the group specific units bought.
         uint256 U = calcSendSwap(fromAsset, amount - fee);
 
-        bytes32 messageHash;
-        {
-            // Wrap the escrow information into a struct. This reduces the stack-print.
-            TokenEscrow memory escrowInformation = TokenEscrow({
-                amount: amount - fee,
-                token: fromAsset
-            });
+        // Wrap the escrow information into a struct. This reduces the stack-print.
+        TokenEscrow memory escrowInformation = TokenEscrow({
+            amount: amount - fee,
+            token: fromAsset
+        });
 
-            // Send the purchased units to targetPool on the target chain..
-            messageHash = CatalystIBCInterface(_chainInterface).crossChainSwap(
-                channelId,
-                targetPool,
-                targetUser,
-                toAssetIndex,
-                U,
-                minOut,
-                escrowInformation,
-                calldata_
-            );
-        }
+        // Send the purchased units to targetPool on the target chain..
+        bytes32 messageHash = CatalystIBCInterface(_chainInterface).crossChainSwap(
+            channelId,
+            targetPool,
+            targetUser,
+            toAssetIndex,
+            U,
+            minOut,
+            escrowInformation,
+            calldata_
+        );
 
         // Escrow the tokens used to purchase units. These will be sent back if transaction
         // doesn't arrive / timeout.
