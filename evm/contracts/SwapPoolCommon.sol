@@ -37,9 +37,12 @@ abstract contract CatalystSwapPoolCommon is
     /// @dev Needs to be long enough for pool token providers to be notified of a breach but short enough for volatility to not soft-freeze the pool.
     uint256 constant DECAY_RATE = 60 * 60 * 24;
 
+    /// @notice Number of decimals used by the pool's pool tokens
+    uint8 constant DECIMALS = 18;
+
     /// @notice The pool tokens initially minted to the user who setup the pools.
     /// @dev The initial deposit along with this value determines the base value of a pool token.
-    uint256 constant INITIAL_MINT_AMOUNT = 10**18;
+    uint256 constant INITIAL_MINT_AMOUNT = 10**DECIMALS;
 
     /// @notice Maximum number of assets supported
     /// @dev Impacts the cost of some for loops. Can be changed without breaking compatiblity.
@@ -133,7 +136,7 @@ abstract contract CatalystSwapPoolCommon is
     }
 
     function decimals() public pure override returns (uint8) {
-        return 18;
+        return DECIMALS;
     }
 
     function factoryOwner() public view override returns (address) {
