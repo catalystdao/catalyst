@@ -644,17 +644,16 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         require(fallbackUser != address(0));
         _adjustWeights();
 
+        uint256 fee = FixedPointMathLib.mulWadDown(amount, _poolFee);
+
         // Calculate the group specific units bought.
-        uint256 U = calcSendSwap(
-            fromAsset,
-            amount - FixedPointMathLib.mulWadDown(amount, _poolFee)
-        );
+        uint256 U = calcSendSwap(fromAsset, amount - fee);
 
         bytes32 messageHash;
         {
             // Wrap the escrow information into a struct. This reduces the stack-print.
             TokenEscrow memory escrowInformation = TokenEscrow({
-                amount: amount - FixedPointMathLib.mulWadDown(amount, _poolFee),
+                amount: amount - fee,
                 token: fromAsset
             });
 
@@ -674,12 +673,12 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         // Escrow the tokens used to purchase units. These will be sent back if transaction
         // doesn't arrive / timeout.
         require(_escrowedFor[messageHash] == address(0)); // dev: Escrow already exists.
-        _escrowedTokens[fromAsset] += amount - FixedPointMathLib.mulWadDown(amount, _poolFee);
+        _escrowedTokens[fromAsset] += amount - fee;
         _escrowedFor[messageHash] = fallbackUser;
 
 
         // Governance Fee
-        collectGovernanceFee(FixedPointMathLib.mulWadDown(amount, _poolFee), fromAsset);
+        collectGovernanceFee(fee, fromAsset);
 
         // Collect the tokens from the user.
         IERC20(fromAsset).safeTransferFrom(msg.sender, address(this), amount);
