@@ -322,7 +322,7 @@ abstract contract CatalystSwapPoolCommon is
      * In other words, has finishSetup been called?
      */
     function ready() external view override returns (bool) {
-        return _setupMaster == address(0);
+        return _setupMaster == address(0) && _tokenIndexing[0] != address(0);
     }
 
 
