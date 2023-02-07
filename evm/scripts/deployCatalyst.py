@@ -1,6 +1,6 @@
 from mimetypes import init
 from brownie import (
-    CatalystSwapPool,
+    CatalystSwapPoolVolatile,
     CatalystSwapPoolAmplified,
     CatalystSwapPoolFactory,
     Token,
@@ -60,7 +60,7 @@ class Catalyst:
         )
 
     def _swapTemplates(self):
-        self.swapTemplate = CatalystSwapPool.deploy(self.swapFactory, {"from": self.deployer})
+        self.swapTemplate = CatalystSwapPoolVolatile.deploy(self.swapFactory, {"from": self.deployer})
         self.ampSwapTemplate = CatalystSwapPoolAmplified.deploy(self.swapFactory, {"from": self.deployer})
 
     def _swapFactory(self):
@@ -100,7 +100,7 @@ class Catalyst:
             {"from": self.deployer},
         )
         self.tokens = tokens
-        self.swappool = CatalystSwapPool.at(
+        self.swappool = CatalystSwapPoolVolatile.at(
             self.deploytx.events["PoolDeployed"]["pool_address"]
         )
         return self.swappool

@@ -2,7 +2,7 @@ import pytest
 from brownie import (
     convert,
     ZERO_ADDRESS,
-    CatalystSwapPool,
+    CatalystSwapPoolVolatile,
     CatalystSwapPoolAmplified
 )
 
@@ -52,7 +52,7 @@ def deploy_pool(accounts, swap_factory, volatile_swap_pool_template, amplified_s
         )
 
         if template_address == volatile_swap_pool_template.address:
-            return CatalystSwapPool.at(tx.return_value)
+            return CatalystSwapPoolVolatile.at(tx.return_value)
         else:
             return CatalystSwapPoolAmplified.at(tx.return_value)
 

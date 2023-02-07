@@ -39,7 +39,7 @@ import "./ICatalystV1Pool.sol";
  * over the pool. 
  * !If finishSetup is not called, the pool can be drained!
  */
-contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
+contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     //--- ERRORS ---//

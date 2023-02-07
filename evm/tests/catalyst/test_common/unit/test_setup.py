@@ -2,7 +2,7 @@ import pytest
 import brownie
 from brownie import (
     ZERO_ADDRESS,
-    CatalystSwapPool
+    CatalystSwapPoolVolatile
 )
 
 from tests.catalyst.fixtures.pools import MAX_POOL_ASSETS
@@ -267,7 +267,7 @@ def test_setup_pool_token_mint(
         {"from": deployer}
     )
 
-    sp = CatalystSwapPool.at(tx.return_value)
+    sp = CatalystSwapPoolVolatile.at(tx.return_value)
 
     # Verify pool tokens have been minted for the deployer
     assert sp.balanceOf(deployer) == 10**18
@@ -300,7 +300,7 @@ def test_setup_call_setup_external(
         {"from": deployer}
     )
 
-    sp = CatalystSwapPool.at(tx.return_value)
+    sp = CatalystSwapPoolVolatile.at(tx.return_value)
 
     # Call setup again
     with brownie.reverts(dev_revert_msg="dev: Pool Already setup."):
@@ -343,7 +343,7 @@ def test_setup_call_initialize_swap_curves_external(
         {"from": deployer}
     )
 
-    sp = CatalystSwapPool.at(tx.return_value)
+    sp = CatalystSwapPoolVolatile.at(tx.return_value)
 
     # Call initializeSwapCurves again
     with brownie.reverts(dev_revert_msg="dev: swap curves may only be initialized once by the factory"):
@@ -386,6 +386,6 @@ def test_setup_only_local(
         {"from": deployer}
     )
 
-    sp = CatalystSwapPool.at(tx.return_value)
+    sp = CatalystSwapPoolVolatile.at(tx.return_value)
 
     assert sp.onlyLocal() == onlyLocal

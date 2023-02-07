@@ -2,7 +2,7 @@ import pytest
 
 from brownie import (
     CatalystSwapPoolFactory,
-    CatalystSwapPool,
+    CatalystSwapPoolVolatile,
     CatalystSwapPoolAmplified,
     CatalystIBCInterface,
     IBCEmulator
@@ -21,7 +21,7 @@ def swap_factory(deployer):
 
 @pytest.fixture(scope="module")
 def volatile_swap_pool_template(deployer, swap_factory):
-    yield deployer.deploy(CatalystSwapPool, swap_factory)
+    yield deployer.deploy(CatalystSwapPoolVolatile, swap_factory)
 
 
 @pytest.fixture(scope="module")
@@ -41,5 +41,5 @@ def cross_chain_interface(deployer, ibc_emulator):
 # Parametrized fixtures
 @pytest.fixture(scope="module")
 def swap_pool_class(swap_pool_type):
-    if   swap_pool_type == "volatile"  : yield CatalystSwapPool
+    if   swap_pool_type == "volatile"  : yield CatalystSwapPoolVolatile
     elif swap_pool_type == "amplified" : yield CatalystSwapPoolAmplified
