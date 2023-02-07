@@ -289,11 +289,7 @@ abstract contract CatalystSwapPoolCommon is
         bool state
     ) external override {
         // ! tx.origin ! Read @dev.
-        require(
-            (tx.origin == _setupMaster) ||
-            (msg.sender == _setupMaster) ||
-            (msg.sender == factoryOwner())
-        ); // dev: No auth
+        require((tx.origin == _setupMaster) || (msg.sender == factoryOwner())); // dev: No auth
 
         CatalystIBCInterface(_chainInterface).setConnection(
             channelId,
@@ -313,7 +309,7 @@ abstract contract CatalystSwapPoolCommon is
      */
     function finishSetup() external override {
         // ! tx.origin ! Read @dev.
-        require((tx.origin == _setupMaster) || (msg.sender == _setupMaster)); // dev: No auth
+        require(tx.origin == _setupMaster); // dev: No auth
 
         _setupMaster = address(0);
 
