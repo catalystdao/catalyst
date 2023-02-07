@@ -9,7 +9,7 @@ autofetch_sources: true
 
 # require OpenZeppelin Contracts
 dependencies:
-  - "OpenZeppelin/openzeppelin-contracts@4.5.0"
+  - "OpenZeppelin/openzeppelin-contracts@4.8.1"
 # path remapping to support OpenZeppelin imports with NPM-style path
 
 compiler:
@@ -18,7 +18,7 @@ compiler:
         enabled: true
         runs: 10000
     remappings:
-      - "@openzeppelin=OpenZeppelin/openzeppelin-contracts@4.5.0"
+      - "@openzeppelin=OpenZeppelin/openzeppelin-contracts@4.8.1"
 
 hypothesis:
   max_examples: 40
