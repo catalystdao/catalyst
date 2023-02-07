@@ -256,7 +256,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
     ) internal pure returns (uint256) {
         // Notice, A + in and A are not WAD but divWadDown is used anyway.
         // That is because lnWad requires a scaled number.
-        return W * uint256(FixedPointMathLib.lnWad(int256(FixedPointMathLib.divWadDown(A + input, A))));
+        return W * uint256(FixedPointMathLib.lnWad(int256(FixedPointMathLib.divWadDown(A + input, A))));    //TODO explain possible overflow int256 conversion
     }
 
     /**
@@ -275,7 +275,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 B,
         uint256 W
     ) internal pure returns (uint256) {
-        return (B * (FixedPointMathLib.WAD - uint256(FixedPointMathLib.expWad(-int256(U / W))))) / FixedPointMathLib.WAD;
+        return (B * (FixedPointMathLib.WAD - uint256(FixedPointMathLib.expWad(-int256(U / W))))) / FixedPointMathLib.WAD;   //TODO explain possible overflow int256 conversion
     }
 
     /**
@@ -322,7 +322,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 W
     ) internal pure returns (uint256) {
         // Compute the non pool ownership share. (1 - pool ownership share)
-        uint256 npos = uint256(FixedPointMathLib.expWad(-int256(U / W)));
+        uint256 npos = uint256(FixedPointMathLib.expWad(-int256(U / W)));   //TODO explain possible overflow int256 conversion
         
         // Compute the pool owner share before liquidity has been added.
         // (solve share = pt/(PT+pt) for pt.)
@@ -536,7 +536,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
 
         // Compute the unit worth of the pool tokens.
         uint256 U = uint256(FixedPointMathLib.lnWad(
-            int256(FixedPointMathLib.divWadDown(initialTotalSupply, initialTotalSupply - poolTokens)
+            int256(FixedPointMathLib.divWadDown(initialTotalSupply, initialTotalSupply - poolTokens)    //TODO explain possible overflow int256 conversion
         ))) * wsum;
 
         // For later event logging, the amounts transferred to the pool are stored.
@@ -840,7 +840,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
 
         // Compute the unit value of the provided poolTokens.
         // This step simplifies withdrawing and swapping into a single calculation.
-        uint256 U = uint256(FixedPointMathLib.lnWad(int256(
+        uint256 U = uint256(FixedPointMathLib.lnWad(int256(     //TODO explain possible overflow int256 conversion
             FixedPointMathLib.divWadDown(initialTotalSupply, initialTotalSupply - poolTokens)
         ))) * wsum;
 
