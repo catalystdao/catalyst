@@ -940,7 +940,7 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
      * @param escrowAmount The number of tokens escrowed.
      * @param escrowToken The token escrowed.
      */
-    function releaseEscrowACK(
+    function sendSwapAck(
         bytes32 messageHash,
         uint256 U,
         uint256 escrowAmount,
@@ -978,7 +978,7 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
      * @param U The number of units acquired.
      * @param escrowAmount The number of pool tokens escrowed.
      */
-    function releaseLiquidityEscrowACK(
+    function sendLiquidityAck(
         bytes32 messageHash,
         uint256 U,
         uint256 escrowAmount

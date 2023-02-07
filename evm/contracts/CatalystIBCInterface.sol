@@ -251,7 +251,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
         // Check if the flag 0x01 is set. If it is, it is a liquidity swap.
         if ((_context & 0x01) != 0) {
             // Delete the escrow information for liquidity swaps.
-            ICatalystV1Pool(fromPool).releaseLiquidityEscrowACK(
+            ICatalystV1Pool(fromPool).sendLiquidityAck(
                 keccak256(data),
                 U,
                 uint256(bytes32(data[161:193])) // escrowAmount
@@ -261,7 +261,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
         // Otherwise, it is an ordinary swap.
 
         // Delete the escrow information for ordinary swaps.
-        ICatalystV1Pool(fromPool).releaseEscrowACK(
+        ICatalystV1Pool(fromPool).sendSwapAck(
             keccak256(data),
             U,
             uint256(bytes32(data[162:194])), // escrowAmount
@@ -292,7 +292,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
 
         if ((_context & 0x01) != 0) {
             // Release the liquidiy escrow.
-            ICatalystV1Pool(fromPool).releaseLiquidityEscrowTIMEOUT(
+            ICatalystV1Pool(fromPool).sendLiquidityTimeout(
                 keccak256(data), // ^^ Data is well formed.
                 U,
                 uint256(bytes32(data[161:193])) // escrowAmount
@@ -301,7 +301,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
         }
 
         // Release the ordinary escrow.
-        ICatalystV1Pool(fromPool).releaseEscrowTIMEOUT(
+        ICatalystV1Pool(fromPool).sendSwapTimeout(
             keccak256(data), // ^^ Data is well formed.
             U,
             uint256(bytes32(data[162:194])), // escrowAmount

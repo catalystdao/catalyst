@@ -1207,7 +1207,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
      * @param escrowAmount The number of tokens escrowed.
      * @param escrowToken The token escrowed.
      */
-    function releaseEscrowACK(
+    function sendSwapAck(
         bytes32 messageHash,
         uint256 U,
         uint256 escrowAmount,
@@ -1236,7 +1236,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         }
     }
 
-    // releaseLiquidityEscrowACK is not overwritten since we are unable to increase
+    // sendLiquidityAck is not overwritten since we are unable to increase
     // the security limit. This is because it is very expensive to compute the update
     // to the security limit. If someone liquidity swapped a significant amount of assets
     // it is assumed the pool has low liquidity. In these cases, liquidity swaps shouldn't be used.

@@ -388,7 +388,7 @@ abstract contract CatalystSwapPoolCommon is
         require(fallbackUser != address(0));   // dev: Invalid messageHash. Alt: Escrow doesn't exist.
         delete _escrowedFor[messageHash];  // Stops ack and further timeouts from being called.
         _escrowedTokens[escrowToken] -= escrowAmount; // This does not revert, since escrowAmount \subseteq _escrowedTokens => escrowAmount <= _escrowedTokens. Cannot be called twice since the 3 lines before ensure this can only be reached once.
-        // releaseEscrowACK cannot be called with the same message hash after delete _escrowedFor[messageHash];
+        // sendSwapAck cannot be called with the same message hash after delete _escrowedFor[messageHash];
 
         IERC20(escrowToken).safeTransfer(fallbackUser, escrowAmount);  // Would fail if there is no balance. To protect against this, the escrow amount is removed from what can be claimed by users.
 
@@ -435,7 +435,7 @@ abstract contract CatalystSwapPoolCommon is
         require(fallbackUser != address(0));  // dev: Invalid messageHash. Alt: Escrow doesn't exist.
         delete _escrowedLiquidityFor[messageHash];  // Stops ack and further timeouts from being called.
         _escrowedPoolTokens -= escrowAmount; // This does not revert, since escrowAmount \subseteq _escrowedTokens => escrowAmount <= _escrowedTokens. Cannot be called twice since the 3 lines before ensure this can only be reached once.
-        // releaseEscrowACK cannot be called with the same message hash after delete _escrowedFor[messageHash];
+        // sendSwapAck cannot be called with the same message hash after delete _escrowedFor[messageHash];
 
         _mint(fallbackUser, escrowAmount);  // Never reverts
 
@@ -448,7 +448,7 @@ abstract contract CatalystSwapPoolCommon is
      * @notice Exposes the base ack handler.
      * @dev For security limit adjustments, the implementation should be overwritten.
      */
-    function releaseEscrowACK(
+    function sendSwapAck(
         bytes32 messageHash,
         uint256 U,
         uint256 escrowAmount,
@@ -460,7 +460,7 @@ abstract contract CatalystSwapPoolCommon is
     /** 
      * @notice Exposes the base timeout handler.
      */
-    function releaseEscrowTIMEOUT(
+    function sendSwapTimeout(
         bytes32 messageHash,
         uint256 U,
         uint256 escrowAmount,
@@ -473,7 +473,7 @@ abstract contract CatalystSwapPoolCommon is
      * @notice Exposes the base liquidity ack handler.
      * @dev For security limit adjustments, the implementation should be overwritten.
      */
-    function releaseLiquidityEscrowACK(
+    function sendLiquidityAck(
         bytes32 messageHash,
         uint256 U,
         uint256 escrowAmount
@@ -484,7 +484,7 @@ abstract contract CatalystSwapPoolCommon is
     /** 
      * @notice Exposes the base liquidity timeout handler.
      */
-    function releaseLiquidityEscrowTIMEOUT(
+    function sendLiquidityTimeout(
         bytes32 messageHash,
         uint256 U,
         uint256 escrowAmount

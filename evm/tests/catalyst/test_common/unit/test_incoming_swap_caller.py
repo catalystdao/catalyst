@@ -60,7 +60,7 @@ def test_release_escrow_must_be_called_cci(
     cci = pool._chainInterface()
     
     with reverts("dev: Only _chainInterface"):
-        pool.releaseEscrowACK(
+        pool.sendSwapAck(
             web3.keccak(text="e"),
             0,
             0,
@@ -72,7 +72,7 @@ def test_release_escrow_must_be_called_cci(
     # we still want to check that we can get past the above requirement using
     # a valid sender.
     with reverts("dev: Invalid messageHash. Alt: Escrow doesn't exist."):
-        pool.releaseEscrowACK(
+        pool.sendSwapAck(
             web3.keccak(text="e"),
             0,
             0,
@@ -87,7 +87,7 @@ def test_timeout_escrow_must_be_called_cci(
     cci = pool._chainInterface()
     
     with reverts("dev: Only _chainInterface"):
-        pool.releaseEscrowTIMEOUT(
+        pool.sendSwapTimeout(
             web3.keccak(text="e"),
             0,
             0,
@@ -99,7 +99,7 @@ def test_timeout_escrow_must_be_called_cci(
     # we still want to check that we can get past the above requirement using
     # a valid sender.
     with reverts("dev: Invalid messageHash. Alt: Escrow doesn't exist."):
-        pool.releaseEscrowTIMEOUT(
+        pool.sendSwapTimeout(
             web3.keccak(text="e"),
             0,
             0,
@@ -115,7 +115,7 @@ def test_release_liquidity_escrow_must_be_called_cci(
     cci = pool._chainInterface()
     
     with reverts("dev: Only _chainInterface"):
-        pool.releaseLiquidityEscrowACK(
+        pool.sendLiquidityAck(
             web3.keccak(text="e"),
             0,
             0,
@@ -126,7 +126,7 @@ def test_release_liquidity_escrow_must_be_called_cci(
     # we still want to check that we can get past the above requirement using
     # a valid sender.
     with reverts("dev: Invalid messageHash. Alt: Escrow doesn't exist."):
-        pool.releaseLiquidityEscrowACK(
+        pool.sendLiquidityAck(
             web3.keccak(text="e"),
             0,
             0,
@@ -141,7 +141,7 @@ def test_timeout_liquidity_escrow_must_be_called_cci(
     cci = pool._chainInterface()
     
     with reverts("dev: Only _chainInterface"):
-        pool.releaseLiquidityEscrowTIMEOUT(
+        pool.sendLiquidityTimeout(
             web3.keccak(text="e"),
             0,
             0,
@@ -152,7 +152,7 @@ def test_timeout_liquidity_escrow_must_be_called_cci(
     # we still want to check that we can get past the above requirement using
     # a valid sender.
     with reverts("dev: Invalid messageHash. Alt: Escrow doesn't exist."):
-        pool.releaseLiquidityEscrowTIMEOUT(
+        pool.sendLiquidityTimeout(
             web3.keccak(text="e"),
             0,
             0,

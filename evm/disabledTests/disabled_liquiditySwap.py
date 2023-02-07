@@ -547,11 +547,11 @@ def test_direct_escrow_ack_timeout_invocation(
 
     # Try to directly invoke ack
     with brownie.reverts(): # TODO dev msg
-        sp1.releaseLiquidityEscrowACK(message_hash, transferred_units, escrowAmount, {"from": hacker})
+        sp1.sendLiquidityAck(message_hash, transferred_units, escrowAmount, {"from": hacker})
 
     # Try to directly invoke timeout
     with brownie.reverts(): # TODO dev msg
-        sp1.releaseLiquidityEscrowTIMEOUT(message_hash, transferred_units, escrowAmount, {"from": hacker})
+        sp1.sendLiquidityTimeout(message_hash, transferred_units, escrowAmount, {"from": hacker})
 
 
 

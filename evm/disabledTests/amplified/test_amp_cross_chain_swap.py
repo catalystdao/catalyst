@@ -576,11 +576,11 @@ def test_direct_escrow_ack_timeout_invocation(
 
     # Try to directly invoke ack
     with brownie.reverts(): # TODO dev msg
-        sp1.releaseEscrowACK(message_hash, transferred_units, escrowAmount, fromAsset, {"from": hacker})
+        sp1.sendSwapAck(message_hash, transferred_units, escrowAmount, fromAsset, {"from": hacker})
 
     # Try to directly invoke timeout
     with brownie.reverts(): # TODO dev msg
-        sp1.releaseEscrowTIMEOUT(message_hash, transferred_units, escrowAmount, fromAsset, {"from": hacker})
+        sp1.sendSwapTimeout(message_hash, transferred_units, escrowAmount, fromAsset, {"from": hacker})
 
 
 
