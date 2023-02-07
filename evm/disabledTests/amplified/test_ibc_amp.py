@@ -33,7 +33,7 @@ def swappool(accounts, gov, swapfactory, deploy_swappool, crosschaininterface, t
     )
     
     TARGET_CHAIN_ID = crosschaininterface.chain_id()
-    sp.createConnection(TARGET_CHAIN_ID, brownie.convert.to_bytes(sp.address.replace("0x", "")), True, {"from": base_account})
+    sp.setConnection(TARGET_CHAIN_ID, brownie.convert.to_bytes(sp.address.replace("0x", "")), True, {"from": base_account})
     sp.finishSetup({"from": base_account})
 
     # Validate swappool is correctly created

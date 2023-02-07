@@ -65,13 +65,13 @@ def swappool2_info(deploy_swappool, token4, deployer):
 def test_connect_pools(chainId, swappool1_info, swappool2_info, deployer):
 
     # Create connections between pools
-    swappool1_info.swappool.createConnection(
+    swappool1_info.swappool.setConnection(
         chainId,
         brownie.convert.to_bytes(swappool2_info.swappool.address.replace("0x", "")),
         True,
         {"from": deployer},
     )
-    swappool2_info.swappool.createConnection(
+    swappool2_info.swappool.setConnection(
         chainId,
         brownie.convert.to_bytes(swappool1_info.swappool.address.replace("0x", "")),
         True,

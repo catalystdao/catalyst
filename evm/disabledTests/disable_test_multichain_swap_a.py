@@ -163,7 +163,7 @@ def test_multipool_crosschain_swap(
     # crosschaininterface.setfriendlyChainInterfaces(ccsiB['chain_id'], ZERO_ADDRESS, {"from": ZERO_ADDRESS})
 
     # connect pool A and B
-    swappoolA.createConnection(
+    swappoolA.setConnection(
         ccsiB["chain_id"], swappoolB_address_bytes, True, {"from": gov}
     )
 

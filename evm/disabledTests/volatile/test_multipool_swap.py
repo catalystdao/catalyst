@@ -82,13 +82,13 @@ def test_multipool_swap(
     assert swappoolA._tokenIndexing(token2AssetIndex) == token2
 
     # connect pool A and B
-    swappoolA.createConnection(
+    swappoolA.setConnection(
         chainId,
         brownie.convert.to_bytes(swappoolB.address.replace("0x", "")),
         True,
         {"from": base_account},
     )
-    swappoolB.createConnection(
+    swappoolB.setConnection(
         chainId,
         brownie.convert.to_bytes(swappoolA.address.replace("0x", "")),
         True,

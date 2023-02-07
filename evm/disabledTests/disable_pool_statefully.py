@@ -82,7 +82,7 @@ class StateMachine:
             for j in range(num_chains):
                 if i == j:
                     continue
-                cls.swappool[i].createConnection(
+                cls.swappool[i].setConnection(
                     cls.chain_id,
                     brownie.convert.to_bytes(cls.swappool[j].address.replace("0x", "")),
                     True,

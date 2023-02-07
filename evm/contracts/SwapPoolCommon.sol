@@ -145,7 +145,7 @@ abstract contract CatalystSwapPoolCommon is
 
     /**
      * @notice Only allow Governance to change pool parameters
-     * @dev Because of dangours permissions (createConnection, weight changes, amplification changes):
+     * @dev Because of dangours permissions (setConnection, weight changes, amplification changes):
      * !CatalystSwapPoolFactory(_factory).owner() must be set to a timelock! 
      */ 
     modifier onlyFactoryOwner() {
@@ -283,7 +283,7 @@ abstract contract CatalystSwapPoolCommon is
      * @param poolReceiving Bytes32 representation of the target pool.
      * @param state Boolean indicating if the connection should be open or closed.
      */
-    function createConnection(
+    function setConnection(
         bytes32 channelId,
         bytes32 poolReceiving,
         bool state
@@ -295,13 +295,13 @@ abstract contract CatalystSwapPoolCommon is
             (msg.sender == factoryOwner())
         ); // dev: No auth
 
-        CatalystIBCInterface(_chainInterface).CreateConnection(
+        CatalystIBCInterface(_chainInterface).setConnection(
             channelId,
             poolReceiving,
             state
         );
 
-        emit CreateConnection(channelId, poolReceiving, state);
+        emit SetConnection(channelId, poolReceiving, state);
     }
 
     /**

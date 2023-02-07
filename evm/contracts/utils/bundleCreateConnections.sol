@@ -3,7 +3,7 @@
 pragma solidity ^0.8.16;
 
 interface ISwapPool {
-    function createConnection(
+    function setConnection(
         uint256 _chain,
         bytes32 _poolReceiving,
         bool _state
@@ -34,7 +34,7 @@ contract bundleConnections {
         for (uint256 i = 0; i < _connectionsBundle.length; i++) {
             connection memory connExtract = _connectionsBundle[i];
             require(
-                ISwapPool(_pool).createConnection(
+                ISwapPool(_pool).setConnection(
                     connExtract._chain,
                     connExtract._poolReceiving,
                     true

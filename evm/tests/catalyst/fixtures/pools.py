@@ -208,7 +208,7 @@ def group_connect_pools(group_pools, channel_id, deployer):
             if pool_1 == pool_2:
                 continue
             
-            pool_1.createConnection(
+            pool_1.setConnection(
                 channel_id,
                 convert.to_bytes(pool_2.address.replace("0x", "")),
                 True,
@@ -222,7 +222,7 @@ def pool_finish_setup(pool, deployer):
 
 @pytest.fixture(scope="module")
 def pool_connect_itself(pool, channel_id, deployer):
-    pool.createConnection(
+    pool.setConnection(
         channel_id,
         convert.to_bytes(pool.address.replace("0x", "")),
         True,

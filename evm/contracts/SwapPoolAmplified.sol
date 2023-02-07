@@ -33,7 +33,7 @@ import "./ICatalystV1Pool.sol";
  * initialize the pool and prepare it for cross-chain transactions.
  *
  * If connected to a supported cross-chain interface, call
- * createConnection to connect the pool with pools on other chains.
+ * setConnection to connect the pool with pools on other chains.
  *
  * Finally, call finishSetup to give up the deployer's control
  * over the pool. 

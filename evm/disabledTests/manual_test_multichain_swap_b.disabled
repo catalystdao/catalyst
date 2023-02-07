@@ -156,7 +156,7 @@ def test_multipool_crosschain_swap(
     token2AssetIndex = tokenArr.index(token2)
 
     # logically connect chain B/swappool B to chain A/swappool A. (Not really needed to test swapping from A --> B?)
-    swappoolB.createConnection(
+    swappoolB.setConnection(
         chainA_data["ccsi"]["chain_id"],
         brownie.convert.to_bytes(swappoolA["address"].replace("0x", "")),
         True,

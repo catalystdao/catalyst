@@ -25,7 +25,7 @@ def test_connect_pools(
     # Make sure pools are not connected
     assert not cross_chain_interface.checkConnection(channel_id, pool.address, dummy_pool_address)
 
-    pool.createConnection(
+    pool.setConnection(
         channel_id,
         dummy_pool_address,
         True,
@@ -45,7 +45,7 @@ def test_disconnect_pools(
     dummy_pool_address
 ):
 
-    pool.createConnection(
+    pool.setConnection(
         channel_id,
         dummy_pool_address,
         True,
@@ -55,7 +55,7 @@ def test_disconnect_pools(
     # Make sure pools are connected
     assert cross_chain_interface.checkConnection(channel_id, pool.address, dummy_pool_address)
 
-    pool.createConnection(
+    pool.setConnection(
         channel_id,
         dummy_pool_address,
         False,
@@ -77,14 +77,14 @@ def test_create_connection_event(
 ):
     channel_id = convert.to_bytes(10, type_str="bytes32")     # NOTE: using non-zero channel id to make sure event is correctly set
 
-    tx = pool.createConnection(
+    tx = pool.setConnection(
         channel_id,
         dummy_pool_address,
         connection_state,
         {"from": deployer}
     )
 
-    event = tx.events["CreateConnection"]
+    event = tx.events["SetConnection"]
 
     assert event["channelId"]     == convert.datatypes.HexString(channel_id, type_str="bytes32")
     assert event["poolReceiving"] == dummy_pool_address
@@ -100,7 +100,7 @@ def test_connect_pools_invalid_auth(
 ):
 
     with reverts(dev_revert_msg="dev: No auth"):
-        pool.createConnection(
+        pool.setConnection(
             channel_id,
             dummy_pool_address,
             True,

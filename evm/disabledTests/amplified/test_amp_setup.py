@@ -168,7 +168,7 @@ def test_finish_setup(
     )
 
     # Create connection with itself (set onlyLocal to false)
-    swap_pool_info_2.swappool.createConnection(
+    swap_pool_info_2.swappool.setConnection(
         chainId,
         brownie.convert.to_bytes(swap_pool_info_2.swappool.address.replace("0x", "")),
         True,

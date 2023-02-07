@@ -52,7 +52,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
      * @param pool The pool which is allowed to call using the connection
      * @param state boolean opening or closing the channel.
      */
-    function CreateConnection(
+    function setConnection(
         bytes32 channelId,
         bytes32 pool,
         bool state

@@ -39,14 +39,14 @@ def swappool2(deploy_swappool, accounts, token3):
 
 
 def test_create_connections(swappool1, swappool2, accounts, chainId):
-    swappool1.createConnection(
+    swappool1.setConnection(
         chainId,
         convert.to_bytes(swappool2.address.replace("0x", "")),
         True,
         {"from": accounts[0]},
     )
 
-    swappool2.createConnection(
+    swappool2.setConnection(
         chainId,
         convert.to_bytes(swappool1.address.replace("0x", "")),
         True,

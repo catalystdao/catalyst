@@ -24,7 +24,7 @@ interface ICatalystV1PoolAdministration {
      * @param poolReceiving The bytes32 representation of the target pool
      * @param state Boolean indicating if the connection should be open or closed.
      */
-    function createConnection(
+    function setConnection(
         bytes32 channelId,
         bytes32 poolReceiving,
         bool state

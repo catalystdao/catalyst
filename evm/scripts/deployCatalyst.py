@@ -125,7 +125,7 @@ ps.crosschaininterface.registerPort()
 ps.crosschaininterface.registerPort()
 
 # Create the connection between the pool and itself:
-pool.createConnection(
+pool.setConnection(
     chid,
     convert.to_bytes(pool.address.replace("0x", "")),
     True,
