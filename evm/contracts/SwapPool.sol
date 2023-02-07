@@ -91,36 +91,34 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
         require(assets.length > 0 && assets.length <= MAX_ASSETS);  // dev: invalid asset count
         
         // Compute the security limit.
-        {  //  Stack limitations.
-            uint256[] memory initialBalances = new uint256[](MAX_ASSETS);
-            uint256 maxUnitCapacity = 0;
-            for (uint256 it = 0; it < assets.length; it++) {
-                address tokenAddress = assets[it];
-                _tokenIndexing[it] = tokenAddress;
-                _weight[tokenAddress] = weights[it];
-                require(weights[it] > 0);       // dev: invalid 0-valued weight provided
-                // The contract expect tokens to have been sent to it before setup is
-                // called. Make sure the pool has more than 0 tokens.
-                {
-                    uint256 balanceOfSelf = IERC20(tokenAddress).balanceOf(
-                        address(this)
-                    );
-                    initialBalances[it] = balanceOfSelf;
-                    require(balanceOfSelf > 0); // dev: 0 tokens provided in setup.
-                }
-
-                maxUnitCapacity += weights[it];
+        uint256[] memory initialBalances = new uint256[](MAX_ASSETS);
+        uint256 maxUnitCapacity = 0;
+        for (uint256 it = 0; it < assets.length; it++) {
+            address tokenAddress = assets[it];
+            _tokenIndexing[it] = tokenAddress;
+            _weight[tokenAddress] = weights[it];
+            require(weights[it] > 0);       // dev: invalid 0-valued weight provided
+            // The contract expect tokens to have been sent to it before setup is
+            // called. Make sure the pool has more than 0 tokens.
+            {
+                uint256 balanceOfSelf = IERC20(tokenAddress).balanceOf(
+                    address(this)
+                );
+                initialBalances[it] = balanceOfSelf;
+                require(balanceOfSelf > 0); // dev: 0 tokens provided in setup.
             }
-            
-            emit Deposit(depositor, INITIAL_MINT_AMOUNT, initialBalances);
-            
-            // The maximum unit flow is \sum Weights * ln(2). The value is multiplied by WAD 
-            // since units are always WAD denominated (note WAD is already included in the LN2 factor).
-            _maxUnitCapacity = maxUnitCapacity * FixedPointMathLib.LN2;
+
+            maxUnitCapacity += weights[it];
         }
+        
+        // The maximum unit flow is \sum Weights * ln(2). The value is multiplied by WAD 
+        // since units are always WAD denominated (note WAD is already included in the LN2 factor).
+        _maxUnitCapacity = maxUnitCapacity * FixedPointMathLib.LN2;
 
         // Mint pool tokens
         _mint(depositor, INITIAL_MINT_AMOUNT);
+        
+        emit Deposit(depositor, INITIAL_MINT_AMOUNT, initialBalances);
     }
 
     /**
