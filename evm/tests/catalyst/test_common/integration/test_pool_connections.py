@@ -109,7 +109,7 @@ def test_connect_pools_invalid_auth(
 
 
 
-def test_not_connected_swap_to_units(
+def test_not_connected_send_swap(
     channel_id,
     pool,
     pool_tokens,
@@ -129,7 +129,7 @@ def test_not_connected_swap_to_units(
     source_token.approve(pool, swap_amount, {"from": deployer})
 
     with reverts("No Connection"):
-        pool.swapToUnits(
+        pool.sendSwap(
             channel_id,
             convert.to_bytes(dummy_pool_address),
             convert.to_bytes(berg.address),

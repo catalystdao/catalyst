@@ -47,7 +47,7 @@ def test_ibc_timeout(
     toAssetIndex = tokenArr.index(token2)
     assert swappool._tokenIndexing(toAssetIndex) == token2
 
-    tx = swappool.swapToUnits(
+    tx = swappool.sendSwap(
         chainId,
         brownie.convert.to_bytes(swappool.address.replace("0x", "")),
         brownie.convert.to_bytes(base_account.address.replace("0x", "")),
@@ -94,7 +94,7 @@ def test_ibc_ack(
     toAssetIndex = tokenArr.index(token2)
     assert swappool._tokenIndexing(toAssetIndex) == token2
 
-    tx = swappool.swapToUnits(
+    tx = swappool.sendSwap(
         chainId,
         brownie.convert.to_bytes(swappool.address.replace("0x", "")),
         brownie.convert.to_bytes(base_account.address.replace("0x", "")),
@@ -143,7 +143,7 @@ def test_ibc_timeout_and_ack(
     to1 = swappool.calcSendSwap(token1, 10**18, True)
     from1 = swappool.calcReceiveSwap(token1, U, False)
 
-    tx1 = swappool.swapToUnits(
+    tx1 = swappool.sendSwap(
         chainId,
         brownie.convert.to_bytes(swappool.address.replace("0x", "")),
         brownie.convert.to_bytes(base_account.address.replace("0x", "")),

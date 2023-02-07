@@ -85,7 +85,7 @@ def test_swap_one_direction(
     usr = accounts[0]
     token1.approve(swappool1, swapValue, {"from": usr})
 
-    tx = swappool1.swapToUnits(
+    tx = swappool1.sendSwap(
         chainId,
         convert.to_bytes(swappool2.address.replace("0x", "")),
         convert.to_bytes(usr.address.replace("0x", "")),

@@ -336,7 +336,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
     }
 
     /**
-     * @notice Computes the return of SwapToUnits.
+     * @notice Computes the return of SendSwap.
      * @param from The address of the token to sell.
      * @param amount The amount of from token to sell.
      * @return uint256 Group specific units.
@@ -450,7 +450,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                 
                 {
                     // wa^(1-k) is required twice. It is F(A) in the
-                    // swapToUnits equation and part of the wa_0^(1-k) calculation
+                    // sendSwap equation and part of the wa_0^(1-k) calculation
                     uint256 wab = uint256(FixedPointMathLib.powWad(
                         int256(weightAssetBalance * FixedPointMathLib.WAD),
                         oneMinusAmp
@@ -825,7 +825,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         return out;
     }
 
-    function swapToUnits(
+    function sendSwap(
         bytes32 channelId,
         bytes32 targetPool,
         bytes32 targetUser,
@@ -885,7 +885,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         // Adjustment of the security limit is delayed until ack to avoid
         // a router abusing timeout to circumvent the security limit at low cost.
 
-        emit SwapToUnits(
+        emit SendSwap(
             targetPool,
             targetUser,
             fromAsset,
@@ -899,7 +899,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         return U;
     }
 
-    function swapToUnits(
+    function sendSwap(
         bytes32 channelId,
         bytes32 targetPool,
         bytes32 targetUser,
@@ -911,7 +911,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
     ) external returns (uint256) {
         bytes memory calldata_ = new bytes(0);
         return
-            swapToUnits(
+            sendSwap(
                 channelId,
                 targetPool,
                 targetUser,

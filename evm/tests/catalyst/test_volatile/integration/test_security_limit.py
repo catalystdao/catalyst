@@ -37,10 +37,10 @@ def test_security_limit_swap_loop(
 
 
     # Swap from pool_1 to pool_2
-    # 1. swapToUnits
+    # 1. sendSwap
     source_token.transfer(berg, swap_amount, {'from': deployer})
     source_token.approve(pool_1, swap_amount, {'from': berg})
-    tx = pool_1.swapToUnits(
+    tx = pool_1.sendSwap(
         channel_id,
         convert.to_bytes(pool_2.address.replace("0x", "")),
         convert.to_bytes(berg.address.replace("0x", "")),
@@ -51,7 +51,7 @@ def test_security_limit_swap_loop(
         berg,
         {"from": berg},
     )
-    tx_units = tx.events["SwapToUnits"]["output"]
+    tx_units = tx.events["SendSwap"]["output"]
 
     # 2. swapFromUnits
     if pool_2.getUnitCapacity() < tx_units:
@@ -105,9 +105,9 @@ def test_security_limit_swap_loop(
     
 
     # Reverse-swap from pool_2 to pool_1
-    # 4. swapToUnits
+    # 4. sendSwap
     target_token.approve(pool_2, purchased_tokens, {'from': berg})
-    tx2 = pool_2.swapToUnits(
+    tx2 = pool_2.sendSwap(
         channel_id,
         convert.to_bytes(pool_1.address.replace("0x", "")),
         convert.to_bytes(berg.address.replace("0x", "")),
@@ -118,7 +118,7 @@ def test_security_limit_swap_loop(
         berg,
         {"from": berg},
     )
-    tx2_units = tx2.events["SwapToUnits"]["output"]
+    tx2_units = tx2.events["SendSwap"]["output"]
 
     
     # Make sure the security limit of pool-2 does not change before the ack. NOTE: the unit capacity may have increased
@@ -209,9 +209,9 @@ def test_security_limit_swap_timeout(
 
     # TODO create a fixture for this?
     # Swap from pool_1 to pool_2 to introduce a change in the security limit of pool_2
-    # 1. swapToUnits
+    # 1. sendSwap
     source_token.approve(pool_1, swap_amount, {'from': berg})
-    tx = pool_1.swapToUnits(
+    tx = pool_1.sendSwap(
         channel_id,
         convert.to_bytes(pool_2.address.replace("0x", "")),
         convert.to_bytes(berg.address.replace("0x", "")),
@@ -245,9 +245,9 @@ def test_security_limit_swap_timeout(
     capacity_timestamp = chain[-1].timestamp
 
     # Reverse-swap from pool_2 to pool_1
-    # 4. swapToUnits
+    # 4. sendSwap
     target_token.approve(pool_2, purchased_tokens, {'from': berg})
-    tx2 = pool_2.swapToUnits(
+    tx2 = pool_2.sendSwap(
         channel_id,
         convert.to_bytes(pool_1.address.replace("0x", "")),
         convert.to_bytes(berg.address.replace("0x", "")),

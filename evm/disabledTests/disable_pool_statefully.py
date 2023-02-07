@@ -250,7 +250,7 @@ class StateMachine:
             swapToUnitspingPool, st_value, {"from": self.accounts[st_user_index]}
         )
 
-        tx = swapToUnitspingPool.swapToUnits(
+        tx = swapToUnitspingPool.sendSwap(
             self.chain_id,
             brownie.convert.to_bytes(
                 self.swappool[st_pools[1]].address.replace("0x", "")

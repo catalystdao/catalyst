@@ -330,7 +330,7 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
     }
 
     /**
-     * @notice Computes the return of SwapToUnits.
+     * @notice Computes the return of SendSwap.
      * @dev Returns 0 if from is not a token in the pool
      * @param fromAsset The address of the token to sell.
      * @param amount The amount of from token to sell.
@@ -628,7 +628,7 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
      * Should be encoded abi.encode(<address>,<data>)
      * @return uint256 The number of units minted.
      */
-    function swapToUnits(
+    function sendSwap(
         bytes32 channelId,
         bytes32 targetPool,
         bytes32 targetUser,
@@ -685,7 +685,7 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
         // Adjustment of the security limit is delayed until ack to avoid
         // a router abusing timeout to circumvent the security limit.
 
-        emit SwapToUnits(
+        emit SendSwap(
             targetPool,
             targetUser,
             fromAsset,
@@ -699,8 +699,8 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
         return U;
     }
 
-    /** @notice Copy of swapToUnits with no calldata_ */
-    function swapToUnits(
+    /** @notice Copy of sendSwap with no calldata_ */
+    function sendSwap(
         bytes32 channelId,
         bytes32 targetPool,
         bytes32 targetUser,
@@ -712,7 +712,7 @@ contract CatalystSwapPool is CatalystSwapPoolCommon, ReentrancyGuard {
     ) external returns (uint256) {
         bytes memory calldata_ = new bytes(0);
         return
-            swapToUnits(
+            sendSwap(
                 channelId,
                 targetPool,
                 targetUser,

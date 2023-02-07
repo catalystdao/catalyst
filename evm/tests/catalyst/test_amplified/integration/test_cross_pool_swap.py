@@ -37,7 +37,7 @@ def test_cross_pool_swap(
     except:
         pytest.skip()   #TODO For certain pool configs, there is no output for the specified swap amount (swap too large) => remove this workaround + be specific on the test configs to 'skip'
     
-    tx = pool_1.swapToUnits(
+    tx = pool_1.sendSwap(
         channel_id,
         convert.to_bytes(pool_2.address.replace("0x", "")),
         convert.to_bytes(berg.address.replace("0x", "")),
@@ -51,7 +51,7 @@ def test_cross_pool_swap(
     assert source_token.balanceOf(berg) == 0
     
     # The swap may revert because of the security limit     #TODO mark these cases as 'skip'?
-    if pool_2.getUnitCapacity() < pool_2.calcReceiveSwap(pool_2._tokenIndexing(0), tx.events["SwapToUnits"]["output"]) * pool_2._weight(pool_2._tokenIndexing(0)):
+    if pool_2.getUnitCapacity() < pool_2.calcReceiveSwap(pool_2._tokenIndexing(0), tx.events["SendSwap"]["output"]) * pool_2._weight(pool_2._tokenIndexing(0)):
         with reverts("Swap exceeds security limit"):
             txe = ibc_emulator.execute(tx.events["IncomingMetadata"]["metadata"][0], tx.events["IncomingPacket"]["packet"], {"from": berg})
         return
@@ -111,7 +111,7 @@ def test_cross_pool_swap_min_out(
     else:
         min_out = int(y * 1.2)
     
-    tx = pool_1.swapToUnits(
+    tx = pool_1.sendSwap(
         channel_id,
         convert.to_bytes(pool_2.address.replace("0x", "")),
         convert.to_bytes(berg.address.replace("0x", "")),
@@ -132,7 +132,7 @@ def test_cross_pool_swap_min_out(
         ibc_emulator.execute(tx.events["IncomingMetadata"]["metadata"][0], tx.events["IncomingPacket"]["packet"], {"from": berg})
 
 
-def test_swap_to_units_event(
+def test_send_swap_event(
     channel_id,
     pool_1,
     pool_2,
@@ -142,7 +142,7 @@ def test_swap_to_units_event(
     deployer
 ):
     """
-        Test the SwapToUnits event gets fired.
+        Test the SendSwap event gets fired.
     """
 
     swap_amount = 10**8
@@ -153,7 +153,7 @@ def test_swap_to_units_event(
     source_token.transfer(berg, swap_amount, {'from': deployer})
     source_token.approve(pool_1, swap_amount, {'from': berg})
     
-    tx = pool_1.swapToUnits(
+    tx = pool_1.sendSwap(
         channel_id,
         convert.to_bytes(pool_2.address.replace("0x", "")),
         convert.to_bytes(elwood.address.replace("0x", "")),     # NOTE: not using the same account as the caller of the tx to make sure the 'targetUser' is correctly reported
@@ -168,16 +168,16 @@ def test_swap_to_units_event(
     observed_units = tx.return_value
     expected_message_hash = web3.keccak(tx.events["IncomingPacket"]["packet"][3]).hex()   # Keccak of the payload contained on the ibc packet
 
-    swap_to_units_event = tx.events['SwapToUnits']
+    send_swap_event = tx.events['SendSwap']
 
-    assert swap_to_units_event['targetPool']   == pool_2
-    assert swap_to_units_event['targetUser']   == elwood
-    assert swap_to_units_event['fromAsset']    == source_token
-    assert swap_to_units_event['toAssetIndex'] == 1
-    assert swap_to_units_event['input']        == swap_amount
-    assert swap_to_units_event['output']       == observed_units
-    assert swap_to_units_event['minOut']       == min_out
-    assert swap_to_units_event['messageHash']  == expected_message_hash
+    assert send_swap_event['targetPool']   == pool_2
+    assert send_swap_event['targetUser']   == elwood
+    assert send_swap_event['fromAsset']    == source_token
+    assert send_swap_event['toAssetIndex'] == 1
+    assert send_swap_event['input']        == swap_amount
+    assert send_swap_event['output']       == observed_units
+    assert send_swap_event['minOut']       == min_out
+    assert send_swap_event['messageHash']  == expected_message_hash
 
 
 def test_swap_from_units_event(
@@ -192,7 +192,7 @@ def test_swap_from_units_event(
     ibc_emulator
 ):
     """
-        Test the SwapToUnits event gets fired.
+        Test the SendSwap event gets fired.
     """
 
     swap_amount = 10**8
@@ -203,7 +203,7 @@ def test_swap_from_units_event(
     source_token.transfer(berg, swap_amount, {'from': deployer})
     source_token.approve(pool_1, swap_amount, {'from': berg})
     
-    tx = pool_1.swapToUnits(
+    tx = pool_1.sendSwap(
         channel_id,
         convert.to_bytes(pool_2.address.replace("0x", "")),
         convert.to_bytes(elwood.address.replace("0x", "")),

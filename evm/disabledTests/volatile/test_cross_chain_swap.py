@@ -667,10 +667,10 @@ def test_direct_escrow_ack_timeout_invocation(
         finish_swap        = False
     )
 
-    message_hash      = swap_result.tx_swap_to_units.events['SwapToUnits'][0]['messageHash']
-    transferred_units = swap_result.tx_swap_to_units.events['SwapToUnits']['output']
-    fromAsset         = swap_result.tx_swap_to_units.events['SwapToUnits']["fromAsset"]
-    escrowAmount      = decodePayload(swap_result.tx_swap_to_units.events["IncomingPacket"]["packet"][3])["_escrowAmount"]
+    message_hash      = swap_result.tx_send_swap.events['SendSwap'][0]['messageHash']
+    transferred_units = swap_result.tx_send_swap.events['SendSwap']['output']
+    fromAsset         = swap_result.tx_send_swap.events['SendSwap']["fromAsset"]
+    escrowAmount      = decodePayload(swap_result.tx_send_swap.events["IncomingPacket"]["packet"][3])["_escrowAmount"]
 
     # Try to directly invoke ack
     with brownie.reverts(): # TODO dev msg
@@ -714,8 +714,8 @@ def test_swap_finish_with_manipulated_packet(
     )
 
     # Try to finish the swap
-    ibc_target_contract = swap_result.tx_swap_to_units.events["IncomingMetadata"]["metadata"][0]
-    ibc_packet          = swap_result.tx_swap_to_units.events["IncomingPacket"]["packet"]
+    ibc_target_contract = swap_result.tx_send_swap.events["IncomingMetadata"]["metadata"][0]
+    ibc_packet          = swap_result.tx_send_swap.events["IncomingPacket"]["packet"]
 
     # Manipulate 'units' from within the packet
     data = ibc_packet[3]
@@ -767,7 +767,7 @@ def test_swap_from_asset_not_in_pool(
 
     # TODO: The transaction does not fail if the user sends some from_tokens to the pool before invoking the swap.
     # Add a require statement to make the error more explicit?
-    tx = sp1.swapToUnits(
+    tx = sp1.sendSwap(
         chainId,
         brownie.convert.to_bytes(sp2.address.replace("0x", "")),
         brownie.convert.to_bytes(swapper2.address.replace("0x", "")),
@@ -780,7 +780,7 @@ def test_swap_from_asset_not_in_pool(
         {"from": swapper1}
     )
 
-    assert tx.events['SwapToUnits'][0]['output'] == 0
+    assert tx.events['SendSwap'][0]['output'] == 0
 
 
 

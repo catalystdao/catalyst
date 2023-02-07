@@ -20,7 +20,7 @@ def test_ibc_ack(channel_id, pool, pool_tokens, ibc_emulator, berg, deployer, sw
     source_token.transfer(berg, swap_amount, {'from': deployer})
     source_token.approve(pool, swap_amount, {'from': berg})
 
-    tx = pool.swapToUnits(
+    tx = pool.sendSwap(
         channel_id,
         convert.to_bytes(pool.address.replace("0x", "")),
         convert.to_bytes(berg.address.replace("0x", "")),
@@ -55,7 +55,7 @@ def test_ibc_timeout(channel_id, pool, pool_tokens, ibc_emulator, berg, deployer
     source_token.transfer(berg, swap_amount, {'from': deployer})
     source_token.approve(pool, swap_amount, {'from': berg})
 
-    tx = pool.swapToUnits(
+    tx = pool.sendSwap(
         channel_id,
         convert.to_bytes(pool.address.replace("0x", "")),
         convert.to_bytes(berg.address.replace("0x", "")),
@@ -86,7 +86,7 @@ def test_only_one_response(channel_id, pool, pool_tokens, ibc_emulator, berg, de
     source_token.transfer(berg, swap_amount, {'from': deployer})
     source_token.approve(pool, swap_amount, {'from': berg})
 
-    tx = pool.swapToUnits(
+    tx = pool.sendSwap(
         channel_id,
         convert.to_bytes(pool.address.replace("0x", "")),
         convert.to_bytes(berg.address.replace("0x", "")),
@@ -162,7 +162,7 @@ def test_ibc_timeout_and_ack(channel_id, pool, pool_tokens, ibc_emulator, berg, 
     to1 = pool.calcSendSwap(source_token, 10**18)
     from1 = pool.calcReceiveSwap(source_token, U)
 
-    tx1 = pool.swapToUnits(
+    tx1 = pool.sendSwap(
         channel_id,
         convert.to_bytes(pool.address.replace("0x", "")),
         convert.to_bytes(berg.address.replace("0x", "")),
@@ -231,7 +231,7 @@ def test_ibc_ack_event(channel_id, pool, pool_tokens, ibc_emulator, berg, deploy
     source_token.transfer(berg, swap_amount, {'from': deployer})
     source_token.approve(pool, swap_amount, {'from': berg})
 
-    tx = pool.swapToUnits(
+    tx = pool.sendSwap(
         channel_id,
         convert.to_bytes(pool.address.replace("0x", "")),
         convert.to_bytes(berg.address.replace("0x", "")),
@@ -269,7 +269,7 @@ def test_ibc_timeout_event(channel_id, pool, pool_tokens, ibc_emulator, berg, de
     source_token.transfer(berg, swap_amount, {'from': deployer})
     source_token.approve(pool, swap_amount, {'from': berg})
 
-    tx = pool.swapToUnits(
+    tx = pool.sendSwap(
         channel_id,
         convert.to_bytes(pool.address.replace("0x", "")),
         convert.to_bytes(berg.address.replace("0x", "")),
