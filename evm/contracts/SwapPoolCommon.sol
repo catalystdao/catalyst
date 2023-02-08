@@ -343,7 +343,7 @@ abstract contract CatalystSwapPoolCommon is
 
         _escrowedTokens[escrowToken] -= escrowAmount; // This does not revert, since escrowAmount \subseteq _escrowedTokens => escrowAmount <= _escrowedTokens. Cannot be called twice since the 3 lines before ensure this can only be reached once.
         
-        return (fallbackUser);
+        return fallbackUser;
     }
 
     function releaseLiquidityEscrow(
@@ -365,17 +365,27 @@ abstract contract CatalystSwapPoolCommon is
     /** 
      * @notice Implements basic ack logic: Deletes and release tokens to the pool
      * @dev Should never revert! For security limit adjustments, the implementation should be overwritten.
-     * @param messageHash A hash of the cross-chain message ensure the message arrives indentical to the sent message.
+     * @param targetUser The recipient of the transaction on the target chain. Encoded in bytes32.
      * @param U The number of units initially purchased.
      * @param escrowAmount The number of tokens escrowed.
      * @param escrowToken The token escrowed.
+     * @param blockNumberMod The block number at which the swap transaction was commited (mod 32)
      */
     function sendSwapAck(
-        bytes32 messageHash,
+        bytes32 targetUser,
         uint256 U,
         uint256 escrowAmount,
-        address escrowToken
-    ) public virtual override {
+        address escrowToken,
+        uint32 blockNumberMod
+    ) public virtual {
+
+        bytes32 messageHash = computeAssetSwapHash(
+            targetUser, // Used to randomise the hash   //Do we even need this?
+            U,          // Used to randomise the hash
+            escrowAmount,     // ! Required to validate release escrow data
+            escrowToken,  // ! Required to validate release escrow data
+            blockNumberMod
+        );
 
         releaseTokenEscrow(messageHash, escrowAmount, escrowToken); // Only reverts for missing escrow
 
@@ -385,17 +395,27 @@ abstract contract CatalystSwapPoolCommon is
     /** 
      * @notice Implements basic timeout logic: Deletes and sends tokens to the user.
      * @dev Should never revert!
-     * @param messageHash A hash of the cross-chain message ensure the message arrives indentical to the sent message.
+     * @param targetUser The recipient of the transaction on the target chain. Encoded in bytes32.
      * @param U The number of units initially purchased.
      * @param escrowAmount The number of tokens escrowed.
      * @param escrowToken The token escrowed.
+     * @param blockNumberMod The block number at which the swap transaction was commited (mod 32)
      */
     function sendSwapTimeout(
-        bytes32 messageHash,
+        bytes32 targetUser,
         uint256 U,
         uint256 escrowAmount,
-        address escrowToken
-    ) public virtual override {
+        address escrowToken,
+        uint32 blockNumberMod
+    ) public virtual {
+
+        bytes32 messageHash = computeAssetSwapHash(
+            targetUser, // Used to randomise the hash   //Do we even need this?
+            U,          // Used to randomise the hash
+            escrowAmount,     // ! Required to validate release escrow data
+            escrowToken,  // ! Required to validate release escrow data
+            blockNumberMod
+        );
 
         address fallbackAddress = releaseTokenEscrow(messageHash, escrowAmount, escrowToken); // Only reverts for missing escrow,
 
@@ -407,15 +427,24 @@ abstract contract CatalystSwapPoolCommon is
     /** 
      * @notice Implements basic liquidity ack logic: Deletes and releases pool tokens to the pool.
      * @dev Should never revert! For security limit adjustments, the implementation should be overwritten.
-     * @param messageHash A hash of the cross-chain message ensure the message arrives indentical to the sent message.
+     * @param targetUser The recipient of the transaction on the target chain. Encoded in bytes32.
      * @param U The number of units initially acquired.
      * @param escrowAmount The number of pool tokens escrowed.
+     * @param blockNumberMod The block number at which the swap transaction was commited (mod 32)
      */
     function sendLiquidityAck(
-        bytes32 messageHash,
+        bytes32 targetUser,
         uint256 U,
-        uint256 escrowAmount
-    ) public virtual override {
+        uint256 escrowAmount,
+        uint32 blockNumberMod
+    ) public virtual {
+
+        bytes32 messageHash = computeLiquiditySwapHash(
+            targetUser, // Used to randomise the hash   //Do we even need this?
+            U,          // Used to randomise the hash
+            escrowAmount,     // ! Required to validate release escrow data
+            blockNumberMod
+        );
 
         releaseLiquidityEscrow(messageHash, escrowAmount); // Only reverts for missing escrow
 
@@ -425,15 +454,24 @@ abstract contract CatalystSwapPoolCommon is
     /** 
      * @notice Implements basic liquidity timeout logic: Deletes and sends pool tokens to the user.
      * @dev Should never revert!
-     * @param messageHash A hash of the cross-chain message ensure the message arrives indentical to the sent message.
+     * @param targetUser The recipient of the transaction on the target chain. Encoded in bytes32.
      * @param U The number of units initially acquired.
      * @param escrowAmount The number of pool tokens escrowed.
+     * @param blockNumberMod The block number at which the swap transaction was commited (mod 32)
      */
     function sendLiquidityTimeout(
-        bytes32 messageHash,
+        bytes32 targetUser,
         uint256 U,
-        uint256 escrowAmount
-    ) public virtual override {
+        uint256 escrowAmount,
+        uint32 blockNumberMod
+    ) public virtual {
+
+        bytes32 messageHash = computeLiquiditySwapHash(
+            targetUser, // Used to randomise the hash   //Do we even need this?
+            U,          // Used to randomise the hash
+            escrowAmount,     // ! Required to validate release escrow data
+            blockNumberMod
+        );
 
         address fallbackAddress = releaseLiquidityEscrow(messageHash, escrowAmount); // Only reverts for missing escrow
 
@@ -441,4 +479,39 @@ abstract contract CatalystSwapPoolCommon is
 
         emit EscrowTimeout(messageHash, true);  // Never reverts.
     }
+
+    function computeAssetSwapHash(
+        bytes32 targetUser,
+        uint256 U,
+        uint256 amount,
+        address fromAsset,
+        uint32 blockNumberMod
+    ) internal pure returns(bytes32) {
+        return keccak256(
+            abi.encodePacked(
+                targetUser, // Used to randomise the hash   //Do we even need this?
+                U,          // Used to randomise the hash
+                amount,     // ! Required to validate release escrow data
+                fromAsset,  // ! Required to validate release escrow data
+                blockNumberMod
+            )
+        );
+    }
+
+    function computeLiquiditySwapHash(
+        bytes32 targetUser,
+        uint256 U,
+        uint256 amount,
+        uint32 blockNumberMod
+    ) internal pure returns(bytes32) {
+        return keccak256(
+            abi.encodePacked(
+                targetUser, // Used to randomise the hash   //Do we even need this?
+                U,          // Used to randomise the hash
+                amount,     // ! Required to validate release escrow data
+                blockNumberMod
+            )
+        );
+    }
+
 }

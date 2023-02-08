@@ -86,7 +86,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
         uint256 minOut,
         TokenEscrow memory escrowInformation,
         bytes memory calldata_
-    ) external returns (bytes32) {
+    ) external {
         // Anyone can call this function. And anyone can pass the security check later,
         // but unless someone can also manage to pass the securiry check on onRecvPacket
         // they cannot drain any value.
@@ -159,8 +159,6 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
             uint64(block.timestamp + MAXIMUM_TIME_FOR_TX)
         );
 
-        // Return hash for escrow validation.
-        return keccak256(data);
     }
 
     /**
@@ -181,7 +179,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
         uint256 U,
         uint256 minOut,
         LiquidityEscrow memory escrowInformation
-    ) external returns (bytes32) {
+    ) external {
         // Anyone can call this function. And anyone can pass the security check later,
         // but unless someone can also manage to pass the securiry check on onRecvPacket
         // they cannot drain any value.
@@ -222,9 +220,6 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
             data,
             uint64(block.timestamp + MAXIMUM_TIME_FOR_TX)
         );
-
-        // Return hash for escrow validation.
-        return keccak256(data);
     }
 
     /**
@@ -252,9 +247,10 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
         if ((_context & 0x01) != 0) {
             // Delete the escrow information for liquidity swaps.
             ICatalystV1Pool(fromPool).sendLiquidityAck(
-                keccak256(data),
+                bytes32(data[65:97]), // targetUser
                 U,
-                uint256(bytes32(data[161:193])) // escrowAmount
+                uint256(bytes32(data[161:193])), // escrowAmount
+                uint32(bytes4(data[data.length-4:data.length])) // block number
             );
             return;
         } 
@@ -262,10 +258,11 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
 
         // Delete the escrow information for ordinary swaps.
         ICatalystV1Pool(fromPool).sendSwapAck(
-            keccak256(data),
+            bytes32(data[65:97]), // targetUser
             U,
             uint256(bytes32(data[162:194])), // escrowAmount
-            abi.decode(data[194:226], (address)) // escrowToken
+            abi.decode(data[194:226], (address)), // escrowToken
+            uint32(bytes4(data[data.length-4:data.length])) // block number
         );
     }
 
@@ -293,19 +290,21 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
         if ((_context & 0x01) != 0) {
             // Release the liquidiy escrow.
             ICatalystV1Pool(fromPool).sendLiquidityTimeout(
-                keccak256(data), // ^^ Data is well formed.
+                bytes32(data[65:97]), // targetUser
                 U,
-                uint256(bytes32(data[161:193])) // escrowAmount
+                uint256(bytes32(data[161:193])), // escrowAmount
+                uint32(bytes4(data[data.length-4:data.length])) // block number
             );
             return;
         }
 
         // Release the ordinary escrow.
         ICatalystV1Pool(fromPool).sendSwapTimeout(
-            keccak256(data), // ^^ Data is well formed.
+            bytes32(data[65:97]), // targetUser
             U,
             uint256(bytes32(data[162:194])), // escrowAmount
-            abi.decode(data[194:226], (address)) // escrowToken
+            abi.decode(data[194:226], (address)), // escrowToken
+            uint32(bytes4(data[data.length-4:data.length])) // block number
         );
         
     }

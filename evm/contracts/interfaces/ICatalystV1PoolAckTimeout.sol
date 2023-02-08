@@ -6,31 +6,35 @@ pragma solidity ^0.8.16;
 interface ICatalystV1PoolAckTimeout {
     /** @notice Release the escrowed tokens into the pool.  */
     function sendSwapAck(
-        bytes32 messageHash,
+        bytes32 targetUser,
         uint256 U,
         uint256 escrowAmount,
-        address escrowToken
+        address escrowToken,
+        uint32 blockNumberMod
     ) external;
 
     /** @notice Returned the escrowed tokens to the user */
     function sendSwapTimeout(
-        bytes32 messageHash,
+        bytes32 targetUser,
         uint256 U,
         uint256 escrowAmount,
-        address escrowToken
+        address escrowToken,
+        uint32 blockNumberMod
     ) external;
 
     /** @notice Release the escrowed tokens into the pool.  */
     function sendLiquidityAck(
-        bytes32 messageHash,
+        bytes32 targetUser,
         uint256 U,
-        uint256 escrowAmount
+        uint256 escrowAmount,
+        uint32 blockNumberMod
     ) external;
 
     /** @notice Returned the escrowed tokens to the user */
     function sendLiquidityTimeout(
-        bytes32 messageHash,
+        bytes32 targetUser,
         uint256 U,
-        uint256 escrowAmount
+        uint256 escrowAmount,
+        uint32 blockNumberMod
     ) external;
 }

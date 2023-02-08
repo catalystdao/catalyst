@@ -656,7 +656,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         });
 
         // Send the purchased units to targetPool on the target chain..
-        bytes32 messageHash = CatalystIBCInterface(_chainInterface).crossChainSwap(
+        CatalystIBCInterface(_chainInterface).crossChainSwap(
             channelId,
             targetPool,
             targetUser,
@@ -665,6 +665,18 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
             minOut,
             escrowInformation,
             calldata_
+        );
+
+        //TODO remove comments if accepted
+        // ! Only need to hash info that is required by the escrow (+ some extra for randomisation)
+        // ! No need to standardise what is used for the messageHash, as this is only specific to this implementation
+        // ! No need to hash context (as token/liquidity data hashed is different), fromPool, targetPool, targetAssetIndex, minOut, CallData
+        bytes32 messageHash = computeAssetSwapHash(
+            targetUser, // Used to randomise the hash   //Do we even need this?
+            U,          // Used to randomise the hash
+            amount,     // ! Required to validate release escrow data
+            fromAsset,  // ! Required to validate release escrow data
+            uint32(block.number % 2**32)
         );
 
         // Escrow the tokens used to purchase units. These will be sent back if transaction
@@ -842,26 +854,33 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
             FixedPointMathLib.divWadDown(initialTotalSupply, initialTotalSupply - poolTokens)
         ))) * wsum;
 
-        // The message hash is needed later.
-        bytes32 messageHash;
-        {
-            // Wrap the escrow information into a struct. This reduces the stack-print.
-            // (Not really since only pool tokens are wrapped.)
-            // However, the struct keeps the structure of swaps similar.
-            LiquidityEscrow memory escrowInformation = LiquidityEscrow({
-                poolTokens: poolTokens
-            });
+        // Wrap the escrow information into a struct. This reduces the stack-print.
+        // (Not really since only pool tokens are wrapped.)
+        // However, the struct keeps the structure of swaps similar.
+        LiquidityEscrow memory escrowInformation = LiquidityEscrow({
+            poolTokens: poolTokens
+        });
 
-            // Transfer the units to the target pools.
-            messageHash = CatalystIBCInterface(_chainInterface).liquiditySwap(
-                channelId,
-                targetPool,
-                targetUser,
-                U,
-                minOut,
-                escrowInformation
-            );
-        }
+        // Transfer the units to the target pools.
+        CatalystIBCInterface(_chainInterface).liquiditySwap(
+            channelId,
+            targetPool,
+            targetUser,
+            U,
+            minOut,
+            escrowInformation
+        );
+
+        //TODO remove comments if accepted
+        // ! Only need to hash info that is required by the escrow (+ some extra for randomisation)
+        // ! No need to standardise what is used for the messageHash, as this is only specific to this implementation
+        // ! No need to hash context (as token/liquidity data hashed is different), fromPool, targetPool, targetAssetIndex, minOut, CallData
+        bytes32 messageHash = computeLiquiditySwapHash(
+            targetUser, // Used to randomise the hash   //Do we even need this?
+            U,          // Used to randomise the hash
+            poolTokens,     // ! Required to validate release escrow data
+            uint32(block.number % 2**32)
+        );
 
         // Escrow the pool tokens
         require(_escrowedLiquidityFor[messageHash] == address(0));
@@ -933,19 +952,21 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
      * @dev Should never revert!  
      * The base implementation exists in CatalystSwapPoolCommon. The function adds security limit
      * adjustment to the implementation to swap volume supported.
-     * @param messageHash A hash of the cross-chain message used ensure the message arrives indentical to the sent message.
+     * @param targetUser The recipient of the transaction on the target chain. Encoded in bytes32.
      * @param U The number of units purchased.
      * @param escrowAmount The number of tokens escrowed.
      * @param escrowToken The token escrowed.
+     * @param blockNumberMod The block number at which the swap transaction was commited (mod 32)
      */
     function sendSwapAck(
-        bytes32 messageHash,
+        bytes32 targetUser,
         uint256 U,
         uint256 escrowAmount,
-        address escrowToken
+        address escrowToken,
+        uint32 blockNumberMod
     ) public override {
         // Execute common escrow logic.
-        super.sendSwapAck(messageHash, U, escrowAmount, escrowToken);
+        super.sendSwapAck(targetUser, U, escrowAmount, escrowToken, blockNumberMod);
 
         // Incoming swaps should be subtracted from the unit flow.
         // It is assumed if the router was fraudulent, that no-one would execute a trade.
@@ -967,22 +988,14 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         }
     }
 
-    /** 
-     * @notice Deletes and releases liquidity escrowed tokens to the pool and updates the security limit.
-     * @dev Should never revert!
-     * The base implementation exists in CatalystSwapPoolCommon. The function adds security limit
-     * adjustment to the implementation to swap volume supported.
-     * @param messageHash A hash of the cross-chain message used ensure the message arrives indentical to the sent message.
-     * @param U The number of units acquired.
-     * @param escrowAmount The number of pool tokens escrowed.
-     */
     function sendLiquidityAck(
-        bytes32 messageHash,
+        bytes32 targetUser,
         uint256 U,
-        uint256 escrowAmount
+        uint256 escrowAmount,
+        uint32 blockNumberMod
     ) public override {
         // Execute common escrow logic.
-        super.sendLiquidityAck(messageHash, U, escrowAmount);
+        super.sendLiquidityAck(targetUser, U, escrowAmount, blockNumberMod);
 
         // Incoming swaps should be subtracted from the unit flow.
         // It is assumed if the router was fraudulent, that no-one would execute a trade.
