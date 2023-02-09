@@ -5,6 +5,7 @@ pragma solidity ^0.8.16;
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts/utils/MultiCall.sol";
 import "./SwapPoolFactory.sol";
 import "./FixedPointMathLib.sol";
 import "./CatalystIBCInterface.sol";
@@ -27,6 +28,7 @@ import "./interfaces/ICatalystV1PoolErrors.sol";
  */
 abstract contract CatalystSwapPoolCommon is
     Initializable,
+    Multicall,
     ERC20,
     ICatalystV1PoolErrors,
     ICatalystV1Pool
@@ -276,11 +278,6 @@ abstract contract CatalystSwapPoolCommon is
      * Vyper: convert(<poolAddress>, bytes32)
      * Solidity: abi.encode(<poolAddress>)
      * Brownie: brownie.convert.to_bytes(<poolAddress>, type_str="bytes32")
-     *
-     * ! Notice, using tx.origin is not secure.
-     * However, it makes it easy to bundle call from an external contract
-     * and no assets are at risk because the pool should not be used without
-     * setupMaster == ZERO_ADDRESS
      * @param channelId Target chain identifier.
      * @param targetPool Bytes32 representation of the target pool.
      * @param state Boolean indicating if the connection should be open or closed.
@@ -290,8 +287,7 @@ abstract contract CatalystSwapPoolCommon is
         bytes32 targetPool,
         bool state
     ) external override {
-        // ! tx.origin ! Read @dev.
-        require((tx.origin == _setupMaster) || (msg.sender == factoryOwner())); // dev: No auth
+        require((msg.sender == _setupMaster) || (msg.sender == factoryOwner())); // dev: No auth
 
         CatalystIBCInterface(_chainInterface).setConnection(
             channelId,
@@ -304,14 +300,9 @@ abstract contract CatalystSwapPoolCommon is
 
     /**
      * @notice Gives up short term ownership of the pool making the pool unstoppable.
-     * @dev !Using tx.origin is not secure!
-     * However, it makes it easy to bundle call from an external contract
-     * and no assets are at risk because the pool should not be used without
-     * setupMaster == ZERO_ADDRESS
      */
     function finishSetup() external override {
-        // ! tx.origin ! Read @dev.
-        require(tx.origin == _setupMaster); // dev: No auth
+        require(msg.sender == _setupMaster); // dev: No auth
 
         _setupMaster = address(0);
 
