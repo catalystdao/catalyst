@@ -988,6 +988,16 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         }
     }
 
+    /** 
+     * @notice Deletes and releases liquidity escrowed tokens to the pool and updates the security limit.
+     * @dev Should never revert!
+     * The base implementation exists in CatalystSwapPoolCommon. The function adds security limit
+     * adjustment to the implementation to swap volume supported.
+     * @param targetUser The recipient of the transaction on the target chain. Encoded in bytes32.
+     * @param U The number of units acquired.
+     * @param escrowAmount The number of pool tokens escrowed.
+     * @param blockNumberMod The block number at which the swap transaction was commited (mod 32)
+     */
     function sendLiquidityAck(
         bytes32 targetUser,
         uint256 U,
