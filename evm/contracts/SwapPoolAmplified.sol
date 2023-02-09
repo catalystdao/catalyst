@@ -52,8 +52,8 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
     // returns slightly more. To counteract this, an additional fee
     // slightly larger than the error is added. The below constants
     // determines when this fee is added and the size.
-    uint256 constant SMALL_SWAP_SIZE = 10**12;
-    uint256 constant SMALL_SWAP_RETURN = 95*10**18/100;
+    uint256 constant SMALL_SWAP_SIZE = FixedPointMathLib.WAD/10**6;
+    uint256 constant SMALL_SWAP_RETURN = 95*FixedPointMathLib.WAD/100;
 
     // For other config options, see SwapPoolCommon.sol
 
