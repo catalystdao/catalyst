@@ -436,7 +436,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         // number of tokens the pool should have If the price in the group is 1:1.
         {
             uint256 weightedAssetBalanceSum = 0;
-            uint256 assetBalanceSum = 0;
+            uint256 assetDepositSum = 0;
             for (it = 0; it < MAX_ASSETS; ++it) {
                 address token = _tokenIndexing[it];
                 if (token == address(0)) break;
@@ -446,7 +446,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                 uint256 weightAssetBalance = weight * ERC20(token).balanceOf(address(this));
 
                 // Store the amount deposited to later be used for modifying the security limit.
-                assetBalanceSum += weightAssetBalance;
+                assetDepositSum += tokenAmounts[it] * weight;
                 
                 {
                     // wa^(1-k) is required twice. It is F(A) in the
@@ -468,10 +468,6 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                     // U must be able to go negative.
                     U -= int256(wab);
                 }
-                // Increase the security limit by the amount deposited.
-                _maxUnitCapacity += assetBalanceSum;
-                // Short term decrease the security limit by the amount deposited.
-                _usedUnitCapacity += weightAssetBalance;
 
                 // Add F(A+x)
                 U += FixedPointMathLib.powWad(
@@ -485,6 +481,10 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                     tokenAmounts[it]
                 );  // dev: Token withdrawal from user failed.
             }
+            // Increase the security limit by the amount deposited.
+            _maxUnitCapacity += assetDepositSum;
+            // Short term decrease the security limit by the amount deposited.
+            _usedUnitCapacity += assetDepositSum;
 
             // Compute the reference liquidity.
             walpha_0_ampped = uint256(int256(weightedAssetBalanceSum) - _unitTracker) / it;
