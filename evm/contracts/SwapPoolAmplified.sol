@@ -849,6 +849,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         // Track units for computing balance0. This will be done on ack. To ensure
         // The type conversion on ack doesn't result in overflow, check for overflow here.
         require(U < uint256(type(int256).max));
+        _unitTracker += int256(U);
 
         bytes32 messageHash;
 
@@ -1070,6 +1071,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
             // Track units for computing balance0. This will be done on ack. To ensure
             // The type conversion on ack doesn't result in overflow, check for overflow here.
             require(U < uint256(type(int256).max));
+            _unitTracker += int256(U);
         }
 
         bytes32 messageHash;
@@ -1223,9 +1225,6 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         // Execute common escrow logic.
         super.sendSwapAck(messageHash, U, escrowAmount, escrowToken);
 
-        // Add acked Units to the unit tracker.
-        _unitTracker += int256(U);
-
         // Incoming swaps should be subtracted from the unit flow.
         // It is assumed if the router was fraudulent, that no-one would execute a trade.
         // As a result, if people swap into the pool, we should expect that there is exactly
@@ -1248,26 +1247,53 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
     }
 
     /** 
+     * @notice Deletes and releases escrowed tokens to the pool and updates the security limit.
+     * @dev Should never revert!  
+     * The base implementation exists in CatalystSwapPoolCommon. The function adds security limit
+     * adjustment to the implementation to swap volume supported.
+     * @param messageHash A hash of the cross-chain message used ensure the message arrives indentical to the sent message.
+     * @param U The number of units purchased.
+     * @param escrowAmount The number of tokens escrowed.
+     * @param escrowToken The token escrowed.
+     */
+    function sendSwapTimeout(
+        bytes32 messageHash,
+        uint256 U,
+        uint256 escrowAmount,
+        address escrowToken
+    ) public override {
+        // Execute common escrow logic.
+        super.sendSwapTimeout(messageHash, U, escrowAmount, escrowToken);
+
+        // Removed timedout units from the unit tracker. This will keep the
+        // balance0 in balance, since tokens also leave the pool
+        _unitTracker -= int256(U);
+    }
+
+    // sendLiquidityAck is not overwritten since we are unable to increase
+    // the security limit. This is because it is very expensive to compute the update
+    // to the security limit. If someone liquidity swapped a significant amount of assets
+    // it is assumed the pool has low liquidity. In these cases, liquidity swaps shouldn't be used.
+
+    /** 
      * @notice Implements basic liquidity ack logic: Deletes and releases pool tokens to the pool.
      * @dev Should never revert!  
-     * The base implementation exists in CatalystSwapPoolCommon. The function does not adds security limit
-     * adjustment. This is because it is very expensive to compute the update
-     * to the security limit. If someone liquidity swapped a significant amount of assets
-     * it is assumed the pool has low liquidity. In these cases, liquidity swaps shouldn't be used.
+     * The base implementation exists in CatalystSwapPoolCommon.
      * @param messageHash A hash of the cross-chain message used en
      * @param messageHash A hash of the cross-chain message ensure the message arrives indentical to the sent message.
      * @param U The number of units initially acquired.
      * @param escrowAmount The number of pool tokens escrowed.
      */
-    function sendLiquidityAck(
+    function sendLiquidityTimeout(
         bytes32 messageHash,
         uint256 U,
         uint256 escrowAmount
     ) public virtual override {
-        super.sendLiquidityAck(messageHash, U, escrowAmount);
+        super.sendLiquidityTimeout(messageHash, U, escrowAmount);
 
-        // Add acked Units to the unit tracker.
-        _unitTracker += int256(U);
+        // Removed timedout units from the unit tracker. This will keep the
+        // balance0 in balance, since tokens also leave the pool
+        _unitTracker -= int256(U);
     }
 
 }
