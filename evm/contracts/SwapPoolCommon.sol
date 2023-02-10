@@ -5,7 +5,7 @@ pragma solidity ^0.8.16;
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
-import "@openzeppelin/contracts/utils/MultiCall.sol";
+import "@openzeppelin/contracts/utils/Multicall.sol";
 import "./SwapPoolFactory.sol";
 import "./FixedPointMathLib.sol";
 import "./CatalystIBCInterface.sol";
