@@ -8,6 +8,7 @@ import "@openzeppelin/contracts/token/ERC20/extensions/draft-ERC20Permit.sol";
 import "@openzeppelin/contracts/utils/Multicall.sol";
 import "./ICatalystV1Pool.sol";
 import "./interfaces/IOnCatalyst.sol";
+import "./interfaces/ICatalystV1PoolErrors.sol";
 
 struct SwapRoute {
     address[] pools;
@@ -86,7 +87,7 @@ contract CatalystSwapRouter is ICatalystReceiver, Multicall {
             workAmount = ICatalystV1Pool(route.pools[it]).localswap(route.assets[it], route.assets[it + 1], workAmount, 0);
         }
         // Check the output is more than the minimum.
-        require(minOut <= workAmount);
+        if (minOut > workAmount) revert ReturnInsufficient(workAmount, minOut);
 
         // Ensure the return values are set.
         swapReturn = workAmount;
