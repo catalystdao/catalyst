@@ -3,6 +3,7 @@ from brownie import reverts
 from brownie.test import given
 from hypothesis.strategies import floats
 from hypothesis import example
+import re
 
 from tests.catalyst.utils.common_utils import assert_abs_relative_error
 
@@ -74,7 +75,7 @@ def test_local_swap_minout_always_fails(
     
     y = compute_expected_local_swap(swap_amount, source_token, target_token)["output"]
     
-    with reverts("Insufficient Return"):
+    with reverts(revert_pattern=re.compile("typed error: 0x24557f05.*")):
         pool.localswap(
             source_token, target_token, swap_amount, y*1.1, {'from': berg}
         )
@@ -109,7 +110,7 @@ def test_local_swap_minout(
     simulated_swap_return = pool.calcLocalSwap(source_token, target_token, swap_amount)
     
     if simulated_swap_return < min_out:
-        with reverts("Insufficient Return"):
+        with reverts(revert_pattern=re.compile("typed error: 0x24557f05.*")):
             pool.localswap(
                 source_token, target_token, swap_amount, min_out, {'from': berg}
             )

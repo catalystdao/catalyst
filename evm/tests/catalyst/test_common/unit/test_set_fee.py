@@ -127,7 +127,6 @@ def test_set_fee_administrator_event(
 
 # Pool fee **********************************************************************************************************************
 
-#TODO tx.origin == setupMaster
 @pytest.mark.usefixtures("set_molly_fee_administrator")
 @pytest.mark.parametrize("fee", [0.15, 1])    # Max is 1
 def test_set_pool_fee(

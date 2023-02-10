@@ -52,8 +52,8 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
     // returns slightly more. To counteract this, an additional fee
     // slightly larger than the error is added. The below constants
     // determines when this fee is added and the size.
-    uint256 constant SMALL_SWAP_SIZE = 10**12;
-    uint256 constant SMALL_SWAP_RETURN = 95*10**18/100;
+    uint256 constant SMALL_SWAP_SIZE = FixedPointMathLib.WAD/10**6;
+    uint256 constant SMALL_SWAP_RETURN = 95*FixedPointMathLib.WAD/100;
 
     // For other config options, see SwapPoolCommon.sol
 
@@ -436,7 +436,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         // number of tokens the pool should have If the price in the group is 1:1.
         {
             uint256 weightedAssetBalanceSum = 0;
-            uint256 assetBalanceSum = 0;
+            uint256 assetDepositSum = 0;
             for (it = 0; it < MAX_ASSETS; ++it) {
                 address token = _tokenIndexing[it];
                 if (token == address(0)) break;
@@ -446,7 +446,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                 uint256 weightAssetBalance = weight * ERC20(token).balanceOf(address(this));
 
                 // Store the amount deposited to later be used for modifying the security limit.
-                assetBalanceSum += weightAssetBalance;
+                assetDepositSum += tokenAmounts[it] * weight;
                 
                 {
                     // wa^(1-k) is required twice. It is F(A) in the
@@ -468,10 +468,6 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                     // U must be able to go negative.
                     U -= int256(wab);
                 }
-                // Increase the security limit by the amount deposited.
-                _maxUnitCapacity += assetBalanceSum;
-                // Short term decrease the security limit by the amount deposited.
-                _usedUnitCapacity += weightAssetBalance;
 
                 // Add F(A+x)
                 U += FixedPointMathLib.powWad(
@@ -485,6 +481,10 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                     tokenAmounts[it]
                 );  // dev: Token withdrawal from user failed.
             }
+            // Increase the security limit by the amount deposited.
+            _maxUnitCapacity += assetDepositSum;
+            // Short term decrease the security limit by the amount deposited.
+            _usedUnitCapacity += assetDepositSum;
 
             // Compute the reference liquidity.
             walpha_0_ampped = uint256(int256(weightedAssetBalanceSum) - _unitTracker) / it;
@@ -506,7 +506,8 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         ) - int256(FixedPointMathLib.WAD))) / FixedPointMathLib.WAD;
 
         // Check if the return satisfies the user.
-        require(minOut <= poolTokens, RETURN_INSUFFICIENT);
+        if (minOut > poolTokens)
+            revert ReturnInsufficient(poolTokens, minOut);
 
         // Mint the desired number of pool tokens to the user.
         _mint(msg.sender, poolTokens);
@@ -628,10 +629,8 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                     totalWithdrawn +=  weightAssetBalances[it]; // = tokenAmount * weight
 
                     // Check that the user is satisfied with this.
-                    require(
-                        tokenAmount >= minOut[it],
-                        RETURN_INSUFFICIENT
-                    );
+                    if (minOut[it] > tokenAmount) 
+                        revert ReturnInsufficient(tokenAmount, minOut[it]);
 
                     // Transfer the appropriate number of tokens from the user to the pool. (And store for event logging)
                     amounts[it] = tokenAmount;
@@ -645,7 +644,9 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                 // remove the weight from tokenAmount.
                 tokenAmount /= weight;
                 // Check that the user is satisfied with this.
-                require(tokenAmount >= minOut[it], RETURN_INSUFFICIENT);
+                if (minOut[it] > tokenAmount)
+                    revert ReturnInsufficient(tokenAmount, minOut[it]);
+
                 // Transfer the appropriate number of tokens from the user to the pool. (And store for event logging)
                 amounts[it] = tokenAmount;
                 IERC20(token).safeTransfer(msg.sender, tokenAmount);
@@ -762,7 +763,9 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
             // For this, we need a seperate check.
             require(assetBalances[it] >= tokenAmount); // dev: Pool balance too low.
             // Check that the user is satisfied with this.
-            require(minOut[it] <= tokenAmount, RETURN_INSUFFICIENT);
+            if (minOut[it] > tokenAmount)
+                revert ReturnInsufficient(tokenAmount, minOut[it]);
+            
             // Transfer the appropriate number of tokens from the user to the pool. (And store for event logging)
             amounts[it] = tokenAmount;
             IERC20(tokenIndexed[it]).safeTransfer(msg.sender, tokenAmount);
@@ -804,7 +807,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 out = calcLocalSwap(fromAsset, toAsset, amount - fee);
 
         // Check if the calculated returned value is more than the minimum output.
-        require(out >= minOut, RETURN_INSUFFICIENT);
+        if (minOut > out) revert ReturnInsufficient(out, minOut);
 
         IERC20(toAsset).safeTransfer(msg.sender, out);
         IERC20(fromAsset).safeTransferFrom(msg.sender, address(this), amount);
@@ -846,7 +849,9 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
             amount - FixedPointMathLib.mulWadDown(amount, _poolFee)
         );
 
-        // Track units for computing balance0.
+        // Track units for computing balance0. This will be done on ack. To ensure
+        // The type conversion on ack doesn't result in overflow, check for overflow here.
+        require(U < uint256(type(int256).max));
         _unitTracker += int256(U);
 
         bytes32 messageHash;
@@ -958,7 +963,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         _maxUnitCapacity -= deltaSecurityLimit;
         updateUnitCapacity(deltaSecurityLimit);
 
-        require(minOut <= purchasedTokens, RETURN_INSUFFICIENT);
+        if(minOut > purchasedTokens) revert ReturnInsufficient(purchasedTokens, minOut);
 
         // Track units for fee distribution.
         _unitTracker -= int256(U);
@@ -1066,6 +1071,10 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                 walpha_0_ampped, 
                 uint256(FixedPointMathLib.powWad(int256(pt_fraction), oneMinusAmp)) - FixedPointMathLib.WAD
             );
+            // Track units for computing balance0. This will be done on ack. To ensure
+            // The type conversion on ack doesn't result in overflow, check for overflow here.
+            require(U < uint256(type(int256).max));
+            _unitTracker += int256(U);
         }
 
         bytes32 messageHash;
@@ -1164,7 +1173,10 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         )) - FixedPointMathLib.WAD)) / FixedPointMathLib.WAD;
 
         // Check if the user would accept the mint.
-        require(minOut <= poolTokens, RETURN_INSUFFICIENT);
+        if(minOut > poolTokens) revert ReturnInsufficient(poolTokens, minOut);
+
+        // Update the unit tracker:
+        _unitTracker -= int256(U);
 
         // Security limit
         {
@@ -1172,7 +1184,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
             // This should be a close enough approximation.
             // If U > it_times_walpha_amped, then U can purchase more than 50% of the pool.
             // And the below calculation doesn't work.
-            require(it_times_walpha_amped > U, EXCEEDS_SECURITY_LIMIT);
+            if (it_times_walpha_amped <= U) revert ExceedsSecurityLimit(U - it_times_walpha_amped);
             uint256 poolTokenEquiv = FixedPointMathLib.mulWadUp(uint256(FixedPointMathLib.powWad(
                 int256(it_times_walpha_amped),
                 oneMinusAmp
@@ -1237,9 +1249,54 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         }
     }
 
+    /** 
+     * @notice Deletes and releases escrowed tokens to the pool and updates the security limit.
+     * @dev Should never revert!  
+     * The base implementation exists in CatalystSwapPoolCommon. The function adds security limit
+     * adjustment to the implementation to swap volume supported.
+     * @param messageHash A hash of the cross-chain message used ensure the message arrives indentical to the sent message.
+     * @param U The number of units purchased.
+     * @param escrowAmount The number of tokens escrowed.
+     * @param escrowToken The token escrowed.
+     */
+    function sendSwapTimeout(
+        bytes32 messageHash,
+        uint256 U,
+        uint256 escrowAmount,
+        address escrowToken
+    ) public override {
+        // Execute common escrow logic.
+        super.sendSwapTimeout(messageHash, U, escrowAmount, escrowToken);
+
+        // Removed timedout units from the unit tracker. This will keep the
+        // balance0 in balance, since tokens also leave the pool
+        _unitTracker -= int256(U);
+    }
+
     // sendLiquidityAck is not overwritten since we are unable to increase
     // the security limit. This is because it is very expensive to compute the update
     // to the security limit. If someone liquidity swapped a significant amount of assets
     // it is assumed the pool has low liquidity. In these cases, liquidity swaps shouldn't be used.
+
+    /** 
+     * @notice Implements basic liquidity ack logic: Deletes and releases pool tokens to the pool.
+     * @dev Should never revert!  
+     * The base implementation exists in CatalystSwapPoolCommon.
+     * @param messageHash A hash of the cross-chain message used en
+     * @param messageHash A hash of the cross-chain message ensure the message arrives indentical to the sent message.
+     * @param U The number of units initially acquired.
+     * @param escrowAmount The number of pool tokens escrowed.
+     */
+    function sendLiquidityTimeout(
+        bytes32 messageHash,
+        uint256 U,
+        uint256 escrowAmount
+    ) public virtual override {
+        super.sendLiquidityTimeout(messageHash, U, escrowAmount);
+
+        // Removed timedout units from the unit tracker. This will keep the
+        // balance0 in balance, since tokens also leave the pool
+        _unitTracker -= int256(U);
+    }
 
 }

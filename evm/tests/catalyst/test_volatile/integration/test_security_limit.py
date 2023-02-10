@@ -2,6 +2,7 @@ import pytest
 from brownie import chain, convert, reverts
 from brownie.test import given
 from hypothesis.strategies import floats
+import re
 
 from tests.catalyst.utils.pool_utils import compute_expected_units_capacity
 from tests.catalyst.utils.common_utils import assert_abs_relative_error
@@ -55,7 +56,7 @@ def test_security_limit_swap_loop(
 
     # 2. receiveSwap
     if pool_2.getUnitCapacity() < tx_units:
-        with reverts("Swap exceeds security limit"):
+        with reverts(revert_pattern=re.compile("typed error: 0x249c4e65.*")):
             txe = ibc_emulator.execute(
                 tx.events["IncomingMetadata"]["metadata"][0],
                 tx.events["IncomingPacket"]["packet"],

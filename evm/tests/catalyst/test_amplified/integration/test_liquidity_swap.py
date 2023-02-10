@@ -1,9 +1,8 @@
-import brownie
 import pytest
-from brownie import ZERO_ADDRESS, chain, convert, reverts, web3
+from brownie import convert, reverts
 from brownie.test import given, strategy
 import tests.catalyst.utils.pool_utils as pool_utils
-from math import inf
+import re
 
 pytestmark = pytest.mark.usefixtures("group_finish_setup", "group_connect_pools")
 
@@ -65,7 +64,7 @@ def test_liquidity_swap(
     securityLimit = pool_2.getUnitCapacity()
     if (securityLimit < expectedB0):
         try:
-            with reverts("Swap exceeds security limit"):
+            with reverts(revert_pattern=re.compile("typed error: 0x249c4e65.*")):
                 txe = ibc_emulator.execute(tx.events["IncomingMetadata"]["metadata"][0], tx.events["IncomingPacket"]["packet"], {"from": berg})
         except AssertionError as e:
             if str(e) != "Transaction did not revert":
