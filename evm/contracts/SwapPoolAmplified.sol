@@ -613,21 +613,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                 if (tokenAmount > weightAssetBalances[it]) {
                     // Set the token amount to the pool balance.
                     // Recalled that the escrow balance is subtracted from weightAssetBalances.
-                    tokenAmount = weightAssetBalances[it] / weight;
-
-                    // Store the amount withdrawn to subtract from the security limit later.
-                    totalWithdrawn +=  weightAssetBalances[it]; // = tokenAmount * weight
-
-                    // Check that the user is satisfied with this.
-                    require(
-                        tokenAmount >= minOut[it],
-                        RETURN_INSUFFICIENT
-                    );
-
-                    // Transfer the appropriate number of tokens from the user to the pool. (And store for event logging)
-                    amounts[it] = tokenAmount;
-                    IERC20(token).safeTransfer(msg.sender, tokenAmount); // dev: Transfer away from pool failed.
-                    continue;
+                    tokenAmount = weightAssetBalances[it];
                 }
 
                 // Store the amount withdrawn to subtract from the security limit later.
