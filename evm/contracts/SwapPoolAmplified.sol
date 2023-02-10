@@ -506,7 +506,8 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         ) - int256(FixedPointMathLib.WAD))) / FixedPointMathLib.WAD;
 
         // Check if the return satisfies the user.
-        require(minOut <= poolTokens, RETURN_INSUFFICIENT);
+        if (minOut > poolTokens)
+            revert ReturnInsufficient(poolTokens, minOut);
 
         // Mint the desired number of pool tokens to the user.
         _mint(msg.sender, poolTokens);
@@ -628,10 +629,8 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                     totalWithdrawn +=  weightAssetBalances[it]; // = tokenAmount * weight
 
                     // Check that the user is satisfied with this.
-                    require(
-                        tokenAmount >= minOut[it],
-                        RETURN_INSUFFICIENT
-                    );
+                    if (minOut[it] > tokenAmount) 
+                        revert ReturnInsufficient(tokenAmount, minOut[it]);
 
                     // Transfer the appropriate number of tokens from the user to the pool. (And store for event logging)
                     amounts[it] = tokenAmount;
@@ -645,7 +644,9 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                 // remove the weight from tokenAmount.
                 tokenAmount /= weight;
                 // Check that the user is satisfied with this.
-                require(tokenAmount >= minOut[it], RETURN_INSUFFICIENT);
+                if (minOut[it] > tokenAmount)
+                    revert ReturnInsufficient(tokenAmount, minOut[it]);
+
                 // Transfer the appropriate number of tokens from the user to the pool. (And store for event logging)
                 amounts[it] = tokenAmount;
                 IERC20(token).safeTransfer(msg.sender, tokenAmount);
@@ -762,7 +763,9 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
             // For this, we need a seperate check.
             require(assetBalances[it] >= tokenAmount); // dev: Pool balance too low.
             // Check that the user is satisfied with this.
-            require(minOut[it] <= tokenAmount, RETURN_INSUFFICIENT);
+            if (minOut[it] > tokenAmount)
+                revert ReturnInsufficient(tokenAmount, minOut[it]);
+            
             // Transfer the appropriate number of tokens from the user to the pool. (And store for event logging)
             amounts[it] = tokenAmount;
             IERC20(tokenIndexed[it]).safeTransfer(msg.sender, tokenAmount);
@@ -804,7 +807,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 out = calcLocalSwap(fromAsset, toAsset, amount - fee);
 
         // Check if the calculated returned value is more than the minimum output.
-        require(out >= minOut, RETURN_INSUFFICIENT);
+        if (minOut > out) revert ReturnInsufficient(out, minOut);
 
         IERC20(toAsset).safeTransfer(msg.sender, out);
         IERC20(fromAsset).safeTransferFrom(msg.sender, address(this), amount);
@@ -960,7 +963,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         _maxUnitCapacity -= deltaSecurityLimit;
         updateUnitCapacity(deltaSecurityLimit);
 
-        require(minOut <= purchasedTokens, RETURN_INSUFFICIENT);
+        if(minOut > purchasedTokens) revert ReturnInsufficient(purchasedTokens, minOut);
 
         // Track units for fee distribution.
         _unitTracker -= int256(U);
@@ -1170,7 +1173,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         )) - FixedPointMathLib.WAD)) / FixedPointMathLib.WAD;
 
         // Check if the user would accept the mint.
-        require(minOut <= poolTokens, RETURN_INSUFFICIENT);
+        if(minOut > poolTokens) revert ReturnInsufficient(poolTokens, minOut);
 
         // Update the unit tracker:
         _unitTracker -= int256(U);
@@ -1181,7 +1184,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
             // This should be a close enough approximation.
             // If U > it_times_walpha_amped, then U can purchase more than 50% of the pool.
             // And the below calculation doesn't work.
-            require(it_times_walpha_amped > U, EXCEEDS_SECURITY_LIMIT);
+            if (it_times_walpha_amped <= U) revert ExceedsSecurityLimit(U - it_times_walpha_amped);
             uint256 poolTokenEquiv = FixedPointMathLib.mulWadUp(uint256(FixedPointMathLib.powWad(
                 int256(it_times_walpha_amped),
                 oneMinusAmp

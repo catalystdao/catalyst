@@ -2,6 +2,7 @@ import pytest
 from brownie import reverts, convert
 from brownie.test import given, strategy
 from hypothesis.strategies import floats
+import re
 
 pytestmark = pytest.mark.usefixtures("pool_connect_itself")
 
@@ -39,7 +40,7 @@ def test_self_swap(
     
     # The security limit works a slightly different for amplified pools.
     if pool.getUnitCapacity() <= pool.calcReceiveSwap(pool._tokenIndexing(0), tx.events["SendSwap"]["output"]) * pool._weight(pool._tokenIndexing(0)):
-        with reverts("Swap exceeds security limit"):
+        with reverts(revert_pattern=re.compile("typed error: 0x249c4e65.*")):
             txe = ibc_emulator.execute(tx.events["IncomingMetadata"]["metadata"][0], tx.events["IncomingPacket"]["packet"], {"from": berg})
         return
     else:
