@@ -376,7 +376,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
 
     /**
      * @notice Computes the output of localSwap.
-     * @dev Implemented through calcPriceCurveLimit(calcPriceCurveArea and not calcCombinedPriceCurves.
+     * @dev Implemented through calcCombinedPriceCurves.
      * @param fromAsset The address of the token to sell.
      * @param toAsset The address of the token to buy.
      * @param amount The amount of from token to sell for to token.
@@ -393,8 +393,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 W_B = _weight[toAsset];
         uint256 amp = _amp;
 
-        // return calcCombinedPriceCurves(amount, A, B, W_A, W_B, amp);
-        uint256 output = calcPriceCurveLimit(calcPriceCurveArea(amount, A, W_A, amp), B, W_B, amp);
+        uint256 output = calcCombinedPriceCurves(amount, A, B, W_A, W_B, amp);
 
         // If the swap is a very small portion of the pool
         // Add an additional fee. This covers mathematical errors.
