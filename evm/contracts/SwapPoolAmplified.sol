@@ -426,7 +426,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         // Compute walpha_0 to find the reference balances. This lets us evaluate the
         // number of tokens the pool should have If the price in the group is 1:1.
         {
-            uint256 weightedAssetBalanceSum = 0;
+            int256 weightedAssetBalanceSum = 0;
             uint256 assetDepositSum = 0;
             for (it = 0; it < MAX_ASSETS; ++it) {
                 address token = _tokenIndexing[it];
@@ -442,10 +442,10 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                 {
                     // wa^(1-k) is required twice. It is F(A) in the
                     // sendSwap equation and part of the wa_0^(1-k) calculation
-                    uint256 wab = uint256(FixedPointMathLib.powWad(
+                    int256 wab = FixedPointMathLib.powWad(
                         int256(weightAssetBalance * FixedPointMathLib.WAD),
                         oneMinusAmp
-                    ));
+                    );
                     weightedAssetBalanceSum += wab;
 
                     // This line is the origin of the stack too deep issue.
@@ -478,7 +478,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
             _usedUnitCapacity += assetDepositSum;
 
             // Compute the reference liquidity.
-            walpha_0_ampped = uint256(int256(weightedAssetBalanceSum) - _unitTracker) / it;
+            walpha_0_ampped = uint256(weightedAssetBalanceSum - _unitTracker) / it;
         }
 
         // Subtract fee from U. This stops people from using deposit and withdrawal as method of swapping.
@@ -529,13 +529,13 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         int256 oneMinusAmp = int256(FixedPointMathLib.WAD - _amp);
         address[MAX_ASSETS] memory tokenIndexed;
         uint256[MAX_ASSETS] memory weightAssetBalances;
-        uint256[MAX_ASSETS] memory ampWeightAssetBalances;
+        int256[MAX_ASSETS] memory ampWeightAssetBalances;
 
         uint256 walpha_0_ampped;
         // Compute walpha_0 to find the reference balances. This lets us evaluate the
         // number of tokens the pool should have If the price in the group is 1:1.
         {
-            uint256 weightedAssetBalanceSum = 0;
+            int256 weightedAssetBalanceSum = 0;
             // "it" is needed breifly outside the loop.
             uint256 it;
             for (it = 0; it < MAX_ASSETS; ++it) {
@@ -548,16 +548,16 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                 uint256 weightAssetBalance = weight * (ERC20(token).balanceOf(address(this)) - _escrowedTokens[token]);
                 weightAssetBalances[it] = weightAssetBalance; // Store 
 
-                uint256 wab = uint256(FixedPointMathLib.powWad(
+                int256 wab = FixedPointMathLib.powWad(
                     int256(weightAssetBalance * FixedPointMathLib.WAD),
-                    oneMinusAmp)
+                    oneMinusAmp
                 );
                 ampWeightAssetBalances[it] = wab; // Store
                 weightedAssetBalanceSum += wab;
             }
 
             // Compute the reference liquidity.
-            walpha_0_ampped = uint256(int256(weightedAssetBalanceSum) -_unitTracker) / it;
+            walpha_0_ampped = uint256(weightedAssetBalanceSum -_unitTracker) / it;
         }
 
         // For later event logging, the transferred tokens are stored.
@@ -600,7 +600,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                 // the result is that if innerdiff isn't big enough to make up for the difference
                 // the transaction reverts. This is "okay", since it means less tokens are returned.
                 uint256 tokenAmount = (uint256(FixedPointMathLib.powWad(
-                    int256(ampWeightAssetBalances[it] + innerdiff),
+                    ampWeightAssetBalances[it] + int256(innerdiff),
                     oneMinusAmp // Is 1/(1-amp)
                 )) - (weightAssetBalances[it] * FixedPointMathLib.WAD)) / FixedPointMathLib.WAD;
 
@@ -665,7 +665,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         int256 oneMinusAmp = int256(FixedPointMathLib.WAD - _amp);
         address[MAX_ASSETS] memory tokenIndexed;
         uint256[MAX_ASSETS] memory assetBalances;
-        uint256[MAX_ASSETS] memory ampWeightAssetBalances;
+        int256[MAX_ASSETS] memory ampWeightAssetBalances;
 
         uint256 U = 0;
         // Compute walpha_0 to find the reference balances. This lets us evaluate the
@@ -675,7 +675,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
             // As such, we don't need to remember the value beyond this section.
             uint256 walpha_0_ampped;
             {
-                uint256 weightedAssetBalanceSum = 0;
+                int256 weightedAssetBalanceSum = 0;
                 // A very carefuly stack optimisation is made here.
                 // "it" is needed breifly outside the loop. However, to reduce the number
                 // of items in the stack, U = it.
@@ -690,14 +690,14 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                     assetBalances[U] = ab;
                     uint256 weightAssetBalance = weight * ab;
 
-                    uint256 wab = uint256(FixedPointMathLib.powWad(
+                    int256 wab = FixedPointMathLib.powWad(
                         int256(weightAssetBalance * FixedPointMathLib.WAD),
                         oneMinusAmp
-                    ));
+                    );
                     ampWeightAssetBalances[U] = wab; // Store since it is an expensive calculation.
                     weightedAssetBalanceSum += wab;
                 }
-                walpha_0_ampped = uint256(int256(weightedAssetBalanceSum) - _unitTracker) / U;
+                walpha_0_ampped = uint256(weightedAssetBalanceSum - _unitTracker) / U;
 
                 // set U = number of tokens in the pool. But that is exactly what it is.
             }
@@ -731,7 +731,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
             
             // W_B · B^(1-k) is repeated twice and requires 1 power.
             // As a result, we compute it and cache.
-            uint256 W_BxBtoOMA = ampWeightAssetBalances[it];
+            uint256 W_BxBtoOMA = uint256(ampWeightAssetBalances[it]);
             uint256 tokenAmount = (assetBalances[it] * (FixedPointMathLib.WAD - uint256(FixedPointMathLib.powWad(
                 int256(FixedPointMathLib.divWadUp(W_BxBtoOMA - U_i, W_BxBtoOMA)),
                 oneMinusAmp // Is 1/(1-amp))
@@ -1016,7 +1016,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         // number of tokens the pool should have If the price in the group is 1:1.
         {
             // We don't need weightedAssetBalanceSum again.
-            uint256 weightedAssetBalanceSum = 0;
+            int256 weightedAssetBalanceSum = 0;
             for (it = 0; it < MAX_ASSETS; ++it) {
                 address token = _tokenIndexing[it];
                 if (token == address(0)) break;
@@ -1026,12 +1026,12 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                 // A smaller number here means less units are transfered.
                 uint256 weightAssetBalance = weight * (ERC20(token).balanceOf(address(this)) - _escrowedTokens[token]);
 
-                weightedAssetBalanceSum += uint256(FixedPointMathLib.powWad(
+                weightedAssetBalanceSum += FixedPointMathLib.powWad(
                     int256(weightAssetBalance * FixedPointMathLib.WAD),
                     oneMinusAmp
-                ));
+                );
             }
-            walpha_0_ampped = uint256(int256(weightedAssetBalanceSum) - _unitTracker) / it;
+            walpha_0_ampped = uint256(weightedAssetBalanceSum - _unitTracker) / it;
         }
 
         uint256 U = 0;
@@ -1111,7 +1111,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         // number of tokens the pool should have If the price in the group is 1:1.
         {
             // We don't need weightedAssetBalanceSum again.
-            uint256 weightedAssetBalanceSum = 0;
+            int256 weightedAssetBalanceSum = 0;
             for (it = 0; it < MAX_ASSETS; ++it) {
                 address token = _tokenIndexing[it];
                 if (token == address(0)) break;
@@ -1121,12 +1121,12 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                 // A larger number here means more units have to be transfered.
                 uint256 weightAssetBalance = weight * ERC20(token).balanceOf(address(this));
 
-                weightedAssetBalanceSum += uint256(FixedPointMathLib.powWad(
+                weightedAssetBalanceSum += FixedPointMathLib.powWad(
                     int256(weightAssetBalance * FixedPointMathLib.WAD),
                     oneMinusAmp
-                ));
+                );
             }
-            walpha_0_ampped = uint256(int256(weightedAssetBalanceSum) - _unitTracker) / it;
+            walpha_0_ampped = uint256(weightedAssetBalanceSum - _unitTracker) / it;
         }
 
         // While not very readable, reusing this variable makes a lot of sense.
