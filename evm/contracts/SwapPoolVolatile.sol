@@ -605,7 +605,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         IERC20(fromAsset).safeTransferFrom(msg.sender, address(this), amount);
 
         // Governance Fee
-        collectGovernanceFee(fee, fromAsset);
+        collectGovernanceFee(fromAsset, fee);
 
         emit LocalSwap(msg.sender, fromAsset, toAsset, amount, out);
 
@@ -675,7 +675,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
 
 
         // Governance Fee
-        collectGovernanceFee(fee, fromAsset);
+        collectGovernanceFee(fromAsset, fee);
 
         // Collect the tokens from the user.
         IERC20(fromAsset).safeTransferFrom(msg.sender, address(this), amount);

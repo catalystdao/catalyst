@@ -787,7 +787,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         IERC20(fromAsset).safeTransferFrom(msg.sender, address(this), amount);
 
         // Governance Fee
-        collectGovernanceFee(fee, fromAsset);
+        collectGovernanceFee(fromAsset, fee);
 
         // For amplified pools, the security limit is based on the sum of the tokens
         // in the pool.
@@ -855,7 +855,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         _escrowedFor[messageHash] = fallbackUser;
 
         // Governance Fee
-        collectGovernanceFee(fee, fromAsset);
+        collectGovernanceFee(fromAsset, fee);
 
         // Collect the tokens from the user.
         IERC20(fromAsset).safeTransferFrom(msg.sender, address(this), amount);

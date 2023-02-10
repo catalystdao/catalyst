@@ -259,7 +259,7 @@ abstract contract CatalystSwapPoolCommon is
     /**
      * @dev Collect the governance fee share of the specified pool fee
      */
-    function collectGovernanceFee(uint256 poolFeeAmount, address asset) internal {
+    function collectGovernanceFee(address asset, uint256 poolFeeAmount) internal {
 
         uint256 governanceFeeShare = _governanceFeeShare;
 
