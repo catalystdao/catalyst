@@ -527,9 +527,9 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
 
         // Cache weights and balances.
         int256 oneMinusAmp = int256(FixedPointMathLib.WAD - _amp);
-        address[] memory tokenIndexed = new address[](MAX_ASSETS);
-        uint256[] memory weightAssetBalances = new uint256[](MAX_ASSETS);
-        uint256[] memory ampWeightAssetBalances = new uint256[](MAX_ASSETS);
+        address[MAX_ASSETS] memory tokenIndexed;
+        uint256[MAX_ASSETS] memory weightAssetBalances;
+        uint256[MAX_ASSETS] memory ampWeightAssetBalances;
 
         uint256 walpha_0_ampped;
         // Compute walpha_0 to find the reference balances. This lets us evaluate the
@@ -677,9 +677,9 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
 
         // Cache weights and balances.
         int256 oneMinusAmp = int256(FixedPointMathLib.WAD - _amp);
-        address[] memory tokenIndexed = new address[](MAX_ASSETS);
-        uint256[] memory assetBalances = new uint256[](MAX_ASSETS);
-        uint256[] memory ampWeightAssetBalances = new uint256[](MAX_ASSETS);
+        address[MAX_ASSETS] memory tokenIndexed;
+        uint256[MAX_ASSETS] memory assetBalances;
+        uint256[MAX_ASSETS] memory ampWeightAssetBalances;
 
         uint256 U = 0;
         // Compute walpha_0 to find the reference balances. This lets us evaluate the
