@@ -102,29 +102,32 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         _targetAmplification = amp;
 
         // Compute the security limit.
-        { //  Stack limitation.
-            uint256[] memory initialBalances = new uint256[](MAX_ASSETS);
-            for (uint256 it = 0; it < assets.length; ++it) {
-                address tokenAddress = assets[it];
-                _tokenIndexing[it] = tokenAddress;
-                uint256 weight = weights[it];
-                require(weight > 0);       // dev: invalid 0-valued weight provided
-                _weight[tokenAddress] = weight;
-                // The contract expects the tokens to have been sent to it before setup is
-                // called. Make sure the pool has more than 0 tokens.
+        uint256[] memory initialBalances = new uint256[](MAX_ASSETS);
+        uint256 maxUnitCapacity = 0;
+        for (uint256 it = 0; it < assets.length; ++it) {
 
-                uint256 balanceOfSelf = IERC20(tokenAddress).balanceOf(address(this));
-                initialBalances[it] = balanceOfSelf;
-                require(balanceOfSelf > 0); // dev: 0 tokens provided in setup.
+            address tokenAddress = assets[it];
+            _tokenIndexing[it] = tokenAddress;
 
-                _maxUnitCapacity += weight * balanceOfSelf;
-            }
-            
-            emit Deposit(depositor, INITIAL_MINT_AMOUNT, initialBalances);
+            uint256 weight = weights[it];
+            require(weight > 0);       // dev: invalid 0-valued weight provided
+            _weight[tokenAddress] = weight;
+
+            // The contract expects the tokens to have been sent to it before setup is
+            // called. Make sure the pool has more than 0 tokens.
+            uint256 balanceOfSelf = IERC20(tokenAddress).balanceOf(address(this));
+            require(balanceOfSelf > 0); // dev: 0 tokens provided in setup.
+            initialBalances[it] = balanceOfSelf;
+
+            maxUnitCapacity += weight * balanceOfSelf;
         }
+
+        _maxUnitCapacity = maxUnitCapacity;
 
         // Mint pool tokens for pool creator.
         _mint(depositor, INITIAL_MINT_AMOUNT);
+
+        emit Deposit(depositor, INITIAL_MINT_AMOUNT, initialBalances);
     }
 
     /** 
