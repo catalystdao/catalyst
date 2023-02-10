@@ -187,7 +187,7 @@ abstract contract CatalystSwapPoolCommon is
     }
 
     /** @notice  Returns the current cross-chain swap capacity. */
-    function getUnitCapacity() external view virtual override returns (uint256) {
+    function getUnitCapacity() public view virtual override returns (uint256) {
         uint256 MUC = _maxUnitCapacity;
 
         // The delta change to the limit is: timePassed · slope = timePassed · Max/decayrate

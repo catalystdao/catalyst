@@ -136,23 +136,8 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
      * differences as to how it is used. As a result, this always returns
      * half of _maxUnitCapacity.
      */
-    function getUnitCapacity() external view override returns (uint256) {
-        uint256 MUC = _maxUnitCapacity;
-        // If the time since the last update is more than DECAY_RATE return maximum
-        if (block.timestamp > DECAY_RATE + _usedUnitCapacityTimestamp) return MUC / 2;
-
-        // The delta change to the limit is: timePassed · slope = timePassed · Max/decayrate
-        uint256 unitCapacityReleased = ((block.timestamp - _usedUnitCapacityTimestamp) * MUC) / DECAY_RATE;
-
-        uint256 UC = _usedUnitCapacity;
-        // If the change is greater than the units which have passed through
-        // return maximum. We do not want (MUC - (UC - unitCapacityReleased) > MUC)
-        if (UC <= unitCapacityReleased) return MUC / 2;
-
-        // Amplified pools can have MUC <= UC since MUC is modified when swapping
-        if (MUC <= UC - unitCapacityReleased) return 0; 
-
-        return (MUC + unitCapacityReleased - UC) / 2;
+    function getUnitCapacity() public view override returns (uint256) {
+        return super.getUnitCapacity() / 2;
     }
 
     /**
