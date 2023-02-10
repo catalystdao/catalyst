@@ -5,6 +5,7 @@ pragma solidity ^0.8.16;
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/draft-ERC20Permit.sol";
+import "@openzeppelin/contracts/utils/Multicall.sol";
 import "./ICatalystV1Pool.sol";
 import "./interfaces/IOnCatalyst.sol";
 
@@ -23,7 +24,6 @@ struct CrossChainSwapContext {
 }
 
 struct Permit {
-    uint256 amount;
     uint256 deadline;
     uint8 v;
     bytes32 r;
@@ -34,7 +34,7 @@ struct Permit {
  * @title Catalyst: Swap Router
  * @author Catalyst Labs
  */
-contract CatalystSwapRouter is ICatalystReceiver {
+contract CatalystSwapRouter is ICatalystReceiver, Multicall {
     using SafeERC20 for IERC20;
 
     address immutable WRAPPED_GAS_TOKEN;
@@ -43,45 +43,31 @@ contract CatalystSwapRouter is ICatalystReceiver {
         WRAPPED_GAS_TOKEN = wrappedGas;
     }
 
-    /// @dev Adds erc20 permit to functions, enabling 1 tx workflow.
-    function approveThroughPermit(address fromAsset, Permit calldata permit) internal {
-        ERC20Permit(fromAsset).permit(msg.sender, address(this), permit.amount, permit.deadline, permit.v, permit.r, permit.s);
+    /// @dev Adds erc20 permit to functions. Should be called through multicall.
+    function approveThroughPermit(address fromAsset, uint256 amount, Permit calldata permit) external {
+        ERC20Permit(fromAsset).permit(msg.sender, address(this), amount, permit.deadline, permit.v, permit.r, permit.s);
     }
 
     function localExactInput(
         address pool,
         address fromAsset,
         address toAsset,
-        uint256 amount,
+        uint256 inputAmount,
         uint256 minOut
-    ) public returns (uint256) {
+    ) external returns (uint256) {
         // Transfer tokens from the user to this contract.
-        IERC20(fromAsset).safeTransferFrom(msg.sender, address(this), amount);
+        IERC20(fromAsset).safeTransferFrom(msg.sender, address(this), inputAmount);
 
         // approve the swap pool for the amount to be sold
-        IERC20(fromAsset).approve(pool, amount);
+        IERC20(fromAsset).approve(pool, inputAmount);
         
         // Execute the Swap
-        uint256 swapOutput = ICatalystV1Pool(pool).localswap(fromAsset, toAsset, amount, minOut);
+        uint256 swapOutput = ICatalystV1Pool(pool).localswap(fromAsset, toAsset, inputAmount, minOut);
 
         // Transfer the tokens to the user
         IERC20(toAsset).safeTransfer(msg.sender, swapOutput);
         
         return swapOutput;
-    }
-
-    function localExactInputPermit(
-        address pool,
-        address fromAsset,
-        address toAsset,
-        uint256 amount,
-        uint256 minOut,
-        Permit calldata permit
-    ) external returns (uint256) {
-        // approve through permit
-        approveThroughPermit(fromAsset, permit);
-        // approval is set through modifyer. Do the swap
-        return localExactInput(pool, fromAsset, toAsset, amount, minOut);
     }
 
     function _swapViaRoute(
@@ -107,12 +93,15 @@ contract CatalystSwapRouter is ICatalystReceiver {
         outputToken = route.assets[lastTokenIndex];
     }
 
-    function localExactInputRoutePrivate(
+    /** 
+     * @dev This function is intended to be called by this contract to execute a swap
+     * which can revert.
+     */
+    function localExactInputRouteNoCollect(
         SwapRoute calldata route,
         uint256 inputAmount,
         uint256 minOut
     ) public returns (uint256 swapReturn, address outputToken) {
-        require(msg.sender == address(this));
         (swapReturn, outputToken) = _swapViaRoute(route, inputAmount, minOut);
     }
 
@@ -130,20 +119,6 @@ contract CatalystSwapRouter is ICatalystReceiver {
         IERC20(outputToken).safeTransfer(msg.sender, swapReturn);
 
         return swapReturn;
-    }
-
-    function localExactInputRoutePermit(
-        SwapRoute calldata route,
-        uint256 inputAmount,
-        uint256 minOut,
-        Permit calldata permit
-    ) external returns (uint256) {
-        // approve through permit
-        address originAsset = route.assets[0];
-        approveThroughPermit(originAsset, permit);
-        // Do the swap
-        return localExactInputRoute(route, inputAmount, minOut);
-        
     }
 
     function crossExactInputRoute(
@@ -188,27 +163,6 @@ contract CatalystSwapRouter is ICatalystReceiver {
         );
     }
 
-    function crossExactInputRoutePermit(
-        SwapRoute calldata route,
-        uint256 inputAmount,
-        uint256 localMinOut,
-        CrossChainSwapContext calldata swapContext,
-        Permit calldata permit,
-        bytes memory calldata_
-    ) external {
-        // approve through permit
-        address originAsset = route.assets[0];
-        approveThroughPermit(originAsset, permit);
-        // Do the swap
-        crossExactInputRoute(
-            route,
-            inputAmount,
-            localMinOut,
-            swapContext,
-            calldata_
-        );
-    }
-
     function _decodeSwapData(bytes calldata data) pure internal returns(bool allowRevert, uint256 minOut, address targetUser, SwapRoute memory route) {
        (allowRevert, minOut, targetUser, route) = abi.decode(data, (bool, uint256, address, SwapRoute));
     }
@@ -231,7 +185,7 @@ contract CatalystSwapRouter is ICatalystReceiver {
         IERC20(firstAsset).approve(address(this), purchasedTokens);
 
         // use the localswap route here.
-        try this.localExactInputRoutePrivate(route, purchasedTokens, minOut) returns (uint256 swapReturn, address outputToken) {
+        try this.localExactInputRouteNoCollect(route, purchasedTokens, minOut) returns (uint256 swapReturn, address outputToken) {
             IERC20(outputToken).safeTransfer(targetUser, swapReturn);
         } catch (bytes memory err) {
             if (!allowRevert) revert(string(err));
@@ -245,19 +199,26 @@ contract CatalystSwapRouter is ICatalystReceiver {
         uint256 inputAmount,
         uint256 localMinOut,
         uint256 remoteMinOut,
-        uint256 targetUser,
         CrossChainSwapContext calldata swapContext,
+        bytes32 targetRouter,
+        uint256 targetUser,
         bool allowRevert
     ) external {
-        // approve through permit
-        address originAsset = localRoute.assets[0];
-        // Do the swap
+        // Encode the remote route.
         bytes memory calldata_ = abi.encode(
             allowRevert,
             remoteMinOut,
             targetUser,
             remoteRoute
         );
+
+        // Encode the target router in the calldata.
+        calldata_ = abi.encode(
+            targetRouter,
+            calldata_
+        );
+
+
         crossExactInputRoute(
             localRoute,
             inputAmount,
