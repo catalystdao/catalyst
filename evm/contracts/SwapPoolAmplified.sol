@@ -747,9 +747,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
             IERC20(tokenIndexed[it]).safeTransfer(msg.sender, tokenAmount);
 
             // Decrease the security limit by the amount withdrawn.
-            uint256 weight = _weight[tokenIndexed[it]];
-            tokenAmount *= weight;
-            totalWithdrawn += tokenAmount;
+            totalWithdrawn += tokenAmount * _weight[tokenIndexed[it]];
         }
         _maxUnitCapacity -=  totalWithdrawn;
         if (_usedUnitCapacity <= totalWithdrawn) {
