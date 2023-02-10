@@ -151,6 +151,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 targetAmplification
     ) external onlyFactoryOwner {
         require(targetTime >= block.timestamp + MIN_ADJUSTMENT_TIME); // dev: targetTime must be more than MIN_ADJUSTMENT_TIME in the future.
+        require(targetAmplification < FixedPointMathLib.WAD);  // dev: amplification not set correctly.
 
         // Store adjustment information
         _adjustmentTarget = targetTime;
