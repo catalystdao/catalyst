@@ -167,18 +167,21 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
      * @dev Called first thing on every function depending on amplification.
      */
     function _adjustAmplification() internal {
-        // We might use adjustment target more than once. Since it is constant, lets store it.
+        // We might use adjustment target more than once. Since we don't change it, lets store it.
         uint256 adjTarget = _adjustmentTarget;
 
         if (adjTarget != 0) {
-            // We need to use lastModification again. Store it.
+            // We need to use lastModification multiple times. Store it.
             uint256 lastModification = _lastModificationTime;
-            _lastModificationTime = block.timestamp;
 
             // If no time has passed since last update, then we don't need to update anything.
             if (block.timestamp == lastModification) return;
 
-            // If the current time is past the adjustment, the adjustment needs to be finalized.
+            // Since we are storing lastModification, lets update the variable now.
+            // This avoid repetitions.
+            _lastModificationTime = block.timestamp;
+
+            // If the current time is past the adjustment, the amplification needs to be finalized.
             if (block.timestamp >= adjTarget) {
                 _amp = _targetAmplification;
 

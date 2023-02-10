@@ -170,7 +170,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
             uint256 lastModification = _lastModificationTime;
 
             // If no time has passed since last update, then we don't need to update anything.
-            if (block.timestamp == lastModification) return; 
+            if (block.timestamp == lastModification) return;
 
             // Since we are storing lastModification, lets update the variable now.
             // This avoid repetitions.
@@ -194,7 +194,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
                 // Save weight sum.
                 _maxUnitCapacity = wsum * FixedPointMathLib.LN2;
 
-                // Set weightAdjustmentTime to 0. This ensures the first if statement is never entered.
+                // Set adjustmentTime to 0. This ensures the if statement is never entered.
                 _adjustmentTarget = 0;
 
                 return;
