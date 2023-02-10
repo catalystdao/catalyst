@@ -166,7 +166,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
      * this function will adjust the pool weights.
      * @dev Called first thing on every function depending on amplification.
      */
-    function _A() internal {
+    function _adjustAmplification() internal {
         // We might use adjustment target more than once. Since it is constant, lets store it.
         uint256 adjTarget = _adjustmentTarget;
 
@@ -411,7 +411,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256[] calldata tokenAmounts,
         uint256 minOut
     ) nonReentrant() external returns(uint256) {
-        _A();
+        _adjustAmplification();
         int256 oneMinusAmp = int256(FixedPointMathLib.WAD - _amp);
 
         uint256 walpha_0_ampped;
@@ -517,7 +517,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 poolTokens,
         uint256[] calldata minOut
     ) nonReentrant() external returns(uint256[] memory) {
-        _A();
+        _adjustAmplification();
         // Burn the desired number of pool tokens to the user.
         // If they don't have it, it saves gas.
         // * Remember to add poolTokens when accessing totalSupply()
@@ -667,7 +667,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256[] calldata withdrawRatio,
         uint256[] calldata minOut
     ) nonReentrant() external returns(uint256[] memory) {
-        _A();
+        _adjustAmplification();
         // Burn the desired number of pool tokens to the user.
         // If they don't have it, it saves gas.
         // * Remember to add poolTokens when accessing totalSupply()
@@ -786,7 +786,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 amount,
         uint256 minOut
     ) nonReentrant() external returns (uint256) {
-        _A();
+        _adjustAmplification();
         uint256 fee = FixedPointMathLib.mulWadDown(amount, _poolFee);
 
         // Calculate the swap return value.
@@ -826,7 +826,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         bytes memory calldata_
     ) public returns (uint256) {
         require(fallbackUser != address(0));
-        _A();
+        _adjustAmplification();
         // uint256 fee = FixedPointMathLib.mulWadDown(amount, _poolFee);
 
         // Calculate the group specific units bought.
@@ -933,7 +933,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         // The chainInterface is the only valid caller of this function, as there cannot
         // be a check of U. (It is purely a number)
         require(msg.sender == _chainInterface);
-        _A();
+        _adjustAmplification();
 
         // Convert the asset index (toAsset) into the asset to be purchased.
         address toAsset = _tokenIndexing[toAssetIndex];
@@ -1017,7 +1017,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
     ) external returns (uint256) {
         // There needs to be provided a valid fallbackUser.
         require(fallbackUser != address(0));
-        _A();
+        _adjustAmplification();
 
         _burn(msg.sender, poolTokens);
 
@@ -1114,7 +1114,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
     ) external returns (uint256) {
         // The chainInterface is the only valid caller of this function.
         require(msg.sender == _chainInterface);
-        _A();
+        _adjustAmplification();
 
         int256 oneMinusAmp = int256(FixedPointMathLib.WAD - _amp);
         uint256 walpha_0_ampped;
