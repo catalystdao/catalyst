@@ -19,6 +19,7 @@ compiler:
         runs: 10000
     remappings:
       - "@openzeppelin=OpenZeppelin/openzeppelin-contracts@4.8.1"
+      - "solmate=node_modules/solmate"
 
 hypothesis:
   max_examples: 40

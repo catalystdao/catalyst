@@ -1,0 +1,37 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+pragma solidity ^0.8.17;
+
+/// @title Commands
+/// @notice Command Flags used to decode commands
+library Commands {
+    // Masks to extract certain bits of commands
+    bytes1 internal constant FLAG_ALLOW_REVERT = 0x80;
+    bytes1 internal constant COMMAND_TYPE_MASK = 0x3f;
+
+    // Command Types. Maximum supported command at this moment is 0x1F.
+
+    // Command Types where value<0x08, executed in the first nested-if block
+    uint256 constant LOCALSWAP = 0x00;
+    uint256 constant SWEEP = 0x01;
+    uint256 constant TRANSFER_PORTION = 0x02;
+    uint256 constant TRANSFER = 0x03;
+    uint256 constant PERMIT = 0x04;
+    uint256 constant WRAP_GAS = 0x05;
+    uint256 constant UNWRAP_GAS = 0x06;
+    // COMMAND_PLACEHOLDER = 0x07;
+
+    // Command Types where 0x08<=value<=0x0f, executed in the second nested-if block
+    uint256 constant SENDSWAP = 0x08;
+    uint256 constant WITHDRAW_EQUAL = 0x09;
+    uint256 constant WITHDRAW_MIXED = 0x0a;
+    uint256 constant DEPOSIT_MIXED = 0x0b;
+    // COMMAND_PLACEHOLDER = 0x0c;
+    // COMMAND_PLACEHOLDER = 0x0d;
+    // COMMAND_PLACEHOLDER = 0x0e;
+    // COMMAND_PLACEHOLDER = 0x0f;
+
+
+    // Command Types where 0x10<=value
+    uint256 constant EXECUTE_SUB_PLAN = 0x10;
+    // COMMAND_PLACEHOLDER for 0x11 to 0x3f
+}
