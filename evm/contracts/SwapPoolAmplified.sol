@@ -618,7 +618,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                 // mathematical lib returns ampWeightAssetBalances ** (1/(1-amp)) < weightAssetBalances.
                 // the result is that if innerdiff isn't big enough to make up for the difference
                 // the transaction reverts. This is "okay", since it means less tokens are returned.
-                uint256 tokenAmount = (uint256(FixedPointMathLib.powWad(        // Always casts a positive value
+                uint256 weightedTokenAmount = (uint256(FixedPointMathLib.powWad(        // Always casts a positive value
                     ampWeightAssetBalances[it] + int256(innerdiff),             // If casting overflows, either less is returned (if addition is positive) or powWad fails (if addition is negative)
                     oneMinusAmpInverse // 1/(1-amp)
                 )) - (weightAssetBalances[it] * FixedPointMathLib.WAD)) / FixedPointMathLib.WAD;
@@ -629,22 +629,22 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                 //! withdraw all of the pools assets. This should be protected against by setting minOut != 0.
                 //! This happens because the pool expects assets to come back. (it is owed assets)
                 //! We don't want to keep track of debt so we simply return less
-                if (tokenAmount > weightAssetBalances[it]) {
+                if (weightedTokenAmount > weightAssetBalances[it]) {
                     // Set the token amount to the pool balance.
                     // Recalled that the escrow balance is subtracted from weightAssetBalances.
-                    tokenAmount = weightAssetBalances[it];
+                    weightedTokenAmount = weightAssetBalances[it];
                 }
 
                 // Store the amount withdrawn to subtract from the security limit later.
-                totalWithdrawn +=  tokenAmount;
+                totalWithdrawn +=  weightedTokenAmount;
 
-                // remove the weight from tokenAmount.
-                tokenAmount /= weight;
+                // remove the weight from weightedTokenAmount.
+                weightedTokenAmount /= weight;
                 // Check that the user is satisfied with this.
-                require(tokenAmount >= minOut[it], RETURN_INSUFFICIENT);
+                require(weightedTokenAmount >= minOut[it], RETURN_INSUFFICIENT);
                 // Transfer the appropriate number of tokens from the user to the pool. (And store for event logging)
-                amounts[it] = tokenAmount;
-                IERC20(token).safeTransfer(msg.sender, tokenAmount);
+                amounts[it] = weightedTokenAmount;
+                IERC20(token).safeTransfer(msg.sender, weightedTokenAmount);
             }
 
             // Decrease the security limit by the amount withdrawn.
