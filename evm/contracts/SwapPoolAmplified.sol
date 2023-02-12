@@ -52,7 +52,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
     // returns slightly more. To counteract this, an additional fee
     // slightly larger than the error is added. The below constants
     // determines when this fee is added and the size.
-    uint256 constant SMALL_SWAP_SIZE = FixedPointMathLib.WAD/10**6;
+    uint256 constant SMALL_SWAP_RATIO = FixedPointMathLib.WAD/10**6;
     uint256 constant SMALL_SWAP_RETURN = 95*FixedPointMathLib.WAD/100;
 
     // For other config options, see SwapPoolCommon.sol
@@ -359,7 +359,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
 
         // If the swap is a very small portion of the pool
         // Add an additional fee. This covers mathematical errors.
-        if (A/SMALL_SWAP_SIZE >= amount) return U * SMALL_SWAP_RETURN / FixedPointMathLib.WAD;
+        if (A/SMALL_SWAP_RATIO >= amount) return U * SMALL_SWAP_RETURN / FixedPointMathLib.WAD;
         
         return U;
     }
@@ -408,7 +408,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
 
         // If the swap is a very small portion of the pool
         // Add an additional fee. This covers mathematical errors.
-        if (A/SMALL_SWAP_SIZE >= amount) return output * SMALL_SWAP_RETURN / FixedPointMathLib.WAD;
+        if (A/SMALL_SWAP_RATIO >= amount) return output * SMALL_SWAP_RETURN / FixedPointMathLib.WAD;
 
         return output;
     }
