@@ -462,7 +462,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                     // This line is the origin of the stack too deep issue.
                     // since it implies we cannot move intU += before this section.
                     // which would solve the issue.
-                    // Save gas if the user provides no tokens.
+                    // Save gas if the user provides no tokens, as the rest of the loop has no effect in that case
                     if (tokenAmounts[it] == 0) continue;
                     
                     // int_A^{A+x} f(w) dw = F(A+x) - F(A).
