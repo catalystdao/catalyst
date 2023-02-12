@@ -374,7 +374,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         address toAsset, 
         uint256 U
     ) public view returns (uint256) {
-        // A low => less tokens returned. Subtract the escrow amount to decrease the balance.
+        // B low => less tokens returned. Subtract the escrow amount to decrease the balance.
         uint256 B = IERC20(toAsset).balanceOf(address(this)) - _escrowedTokens[toAsset];
         uint256 W = _weight[toAsset];
 
