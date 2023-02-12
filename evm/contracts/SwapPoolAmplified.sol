@@ -1056,7 +1056,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
 
         uint256 U = 0;
         {
-            // Plus _escrowedPoolTokens since we want the withdrawal to return less.
+            // Plus _escrowedPoolTokens since we want the withdrawal to return less. Adding poolTokens as these have already been burnt.
             uint256 ts = totalSupply() + _escrowedPoolTokens + poolTokens;
             uint256 pt_fraction = FixedPointMathLib.divWadDown(ts + poolTokens, ts);
 
