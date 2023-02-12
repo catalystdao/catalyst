@@ -603,9 +603,8 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                     )) - FixedPointMathLib.WAD
                 );
             }
-            // While not very readable, reusing this variable makes a lot of sense.
-            // So from now one, oneMinusAmp is 1/oneMinusAmp
-            oneMinusAmp = int256(FixedPointMathLib.WAD * FixedPointMathLib.WAD) / oneMinusAmp;      // Casting never overflows, as WAD^2 is within int256 range
+
+            int256 oneMinusAmpInverse = int256(FixedPointMathLib.WAD * FixedPointMathLib.WAD) / oneMinusAmp;      // Casting never overflows, as WAD^2 is within int256 range
 
             uint256 totalWithdrawn = 0;
             for (uint256 it = 0; it < MAX_ASSETS; ++it) {
@@ -621,7 +620,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                 // the transaction reverts. This is "okay", since it means less tokens are returned.
                 uint256 tokenAmount = (uint256(FixedPointMathLib.powWad(        // Always casts a positive value
                     ampWeightAssetBalances[it] + int256(innerdiff),             // If casting overflows, either less is returned (if addition is positive) or powWad fails (if addition is negative)
-                    oneMinusAmp // Is 1/(1-amp)
+                    oneMinusAmpInverse // 1/(1-amp)
                 )) - (weightAssetBalances[it] * FixedPointMathLib.WAD)) / FixedPointMathLib.WAD;
 
                 // ideally, we would have cached this. But stack limit :|
@@ -734,9 +733,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
             );
         }
 
-        // While not very readable, reusing this variable makes a lot of sense.
-        // So from now one, oneMinusAmp is 1/oneMinusAmp
-        oneMinusAmp = int256(FixedPointMathLib.WAD * FixedPointMathLib.WAD) / oneMinusAmp;      // Casting never overflows, as WAD^2 is within int256 range
+        int256 oneMinusAmpInverse = int256(FixedPointMathLib.WAD * FixedPointMathLib.WAD) / oneMinusAmp;      // Casting never overflows, as WAD^2 is within int256 range
 
         // For later event logging, the transferred tokens are stored.
         uint256[] memory amounts = new uint256[](MAX_ASSETS);
@@ -759,7 +756,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                 assetBalances[it] * (
                     FixedPointMathLib.WAD - uint256(FixedPointMathLib.powWad(               // Always casts a positive value, and powWad is always <= 1, as 'base' is <= 1
                         int256(FixedPointMathLib.divWadUp(W_BxBtoOMA - U_i, W_BxBtoOMA)),   // Casting never overflows, as division result is always <= 1
-                        oneMinusAmp // Is 1/(1-amp))
+                        oneMinusAmpInverse // 1/(1-amp))
                     ))
                 )
             ) / FixedPointMathLib.WAD;
@@ -1157,9 +1154,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
             walpha_0_ampped = uint256(weightedAssetBalanceSum - _unitTracker) / it;     // By design, weightedAssetBalanceSum > _unitTracker    //TODO do we still wanna add a check for this?
         }
 
-        // While not very readable, reusing this variable makes a lot of sense.
-        // So from now one, oneMinusAmp is 1/oneMinusAmp
-        oneMinusAmp = int256(FixedPointMathLib.WAD * FixedPointMathLib.WAD) / oneMinusAmp;      // Casting never overflows, as WAD^2 is within int256 range
+        int256 oneMinusAmpInverse = int256(FixedPointMathLib.WAD * FixedPointMathLib.WAD) / oneMinusAmp;      // Casting never overflows, as WAD^2 is within int256 range
 
         uint256 ts = totalSupply(); // Not! + _escrowedPoolTokens, since a smaller supply results in fewer pool tokens.
 
@@ -1169,7 +1164,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                 it_times_walpha_amped + U,
                 it_times_walpha_amped
             )),
-            oneMinusAmp
+            oneMinusAmpInverse
         )) - FixedPointMathLib.WAD)) / FixedPointMathLib.WAD;
 
         // Check if the user would accept the mint.
@@ -1188,14 +1183,14 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
             uint256 poolTokenEquiv = FixedPointMathLib.mulWadUp(
                 uint256(FixedPointMathLib.powWad(                           // Always casts a positive value
                     int256(it_times_walpha_amped),                          // If casting overflows to a negative number, powWad fails
-                    oneMinusAmp
+                    oneMinusAmpInverse
                 )),
                 FixedPointMathLib.WAD - uint256(FixedPointMathLib.powWad(   // powWad is always <= 1, as 'base' is always <= 1
                     int256(FixedPointMathLib.divWadDown(                    // Casting never overflows, as division result is always <= 1
                         it_times_walpha_amped - U,
                         it_times_walpha_amped
                     )),
-                    oneMinusAmp
+                    oneMinusAmpInverse
                 ))
             );
             // Check if the swap is according to the swap limits
