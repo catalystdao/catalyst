@@ -760,10 +760,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                     ))
                 )
             ) / FixedPointMathLib.WAD;
-            
-            // We need to check that the withdrawal doesn't impact any escrowed balances.
-            // For this, we need a seperate check.
-            require(assetBalances[it] >= tokenAmount); // dev: Pool balance too low.
+
             // Check that the user is satisfied with this.
             require(minOut[it] <= tokenAmount, RETURN_INSUFFICIENT);
             // Transfer the appropriate number of tokens from the user to the pool. (And store for event logging)
