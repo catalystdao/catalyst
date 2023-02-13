@@ -547,7 +547,11 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         for (uint256 it = 0; it < MAX_ASSETS; it++) {
             // If no units are remaining, stop the loop.
             if (U == 0) break;
-
+            if (U_i == 0) {
+                if (minOut[it] != 0)
+                    revert ReturnInsufficient(0, minOut[it]);
+                continue;
+            }
             // Units allocated for the specific token.
             uint256 U_i = (U * withdrawRatio[it]) / FixedPointMathLib.WAD;
             if (U_i == 0) continue;  // If no tokens are to be used, skip the logic.
