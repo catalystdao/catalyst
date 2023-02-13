@@ -30,7 +30,6 @@ abstract contract CatalystSwapPoolCommon is
     Initializable,
     Multicall,
     ERC20,
-    ICatalystV1PoolErrors,
     ICatalystV1Pool
 {
     using SafeERC20 for IERC20;
@@ -222,13 +221,13 @@ abstract contract CatalystSwapPoolCommon is
         uint256 UC = _usedUnitCapacity; 
         // If the change is greater than the units which has passed through the limit is max
         if (UC <= unitCapacityReleased) {
-            require(units <= MUC, EXCEEDS_SECURITY_LIMIT);
+            if (units > MUC) revert ExceedsSecurityLimit(units - MUC);
             _usedUnitCapacity = units;
             return;
         }
 
         uint256 newUnitFlow = (UC + units) - unitCapacityReleased;
-        require(newUnitFlow <= MUC, EXCEEDS_SECURITY_LIMIT);
+        if (newUnitFlow > MUC) revert ExceedsSecurityLimit(newUnitFlow - MUC);
         _usedUnitCapacity = newUnitFlow;
     }
 
