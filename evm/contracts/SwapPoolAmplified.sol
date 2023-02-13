@@ -624,8 +624,6 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                     oneMinusAmpInverse // 1/(1-amp)
                 )) - (weightAssetBalances[it] * FixedPointMathLib.WAD)) / FixedPointMathLib.WAD;
 
-                // ideally, we would have cached this. But stack limit :|
-                uint256 weight = _weight[token];
                 //! If the pool doesn't have enough assets for a withdrawal, then
                 //! withdraw all of the pools assets. This should be protected against by setting minOut != 0.
                 //! This happens because the pool expects assets to come back. (it is owed assets)
@@ -640,7 +638,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                 totalWithdrawn +=  weightedTokenAmount;
 
                 // remove the weight from weightedTokenAmount.
-                weightedTokenAmount /= weight;
+                weightedTokenAmount /= _weight[token];
                 // Check that the user is satisfied with this.
                 if (minOut[it] > weightedTokenAmount)
                     revert ReturnInsufficient(weightedTokenAmount, minOut[it]);
