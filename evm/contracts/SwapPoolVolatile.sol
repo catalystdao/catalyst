@@ -256,7 +256,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
     ) internal pure returns (uint256) {
         // Notice, A + in and A are not WAD but divWadDown is used anyway.
         // That is because lnWad requires a scaled number.
-        return W * uint256(FixedPointMathLib.lnWad(int256(FixedPointMathLib.divWadDown(A + input, A))));    //TODO explain possible overflow int256 conversion
+        return W * uint256(FixedPointMathLib.lnWad(int256(FixedPointMathLib.divWadDown(A + input, A))));    // int256 casting is safe. If overflows, it returns negative. lnWad fails on negative numbers. If the pool balance is high, this is unlikely.
     }
 
     /**
@@ -275,7 +275,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 B,
         uint256 W
     ) internal pure returns (uint256) {
-        return (B * (FixedPointMathLib.WAD - uint256(FixedPointMathLib.expWad(-int256(U / W))))) / FixedPointMathLib.WAD;   //TODO explain possible overflow int256 conversion
+        return (B * (FixedPointMathLib.WAD - uint256(FixedPointMathLib.expWad(-int256(U / W))))) / FixedPointMathLib.WAD;   // int256 casting is initially not safe. If overflow, the equation becomes: 1 - exp(U/W) => exp(U/W) > 1. In this case, Solidity's built in safe math protection catches the overflow.
     }
 
     /**
@@ -322,7 +322,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 W
     ) internal pure returns (uint256) {
         // Compute the non pool ownership share. (1 - pool ownership share)
-        uint256 npos = uint256(FixedPointMathLib.expWad(-int256(U / W)));   //TODO explain possible overflow int256 conversion
+        uint256 npos = uint256(FixedPointMathLib.expWad(-int256(U / W)));   // int256 casting is initially not safe. If overflow, the equation becomes: exp(U/W). In this case, when subtracted from 1 (later), Solidity's built in safe math protection catches the overflow since exp(U/W) > 1.
         
         // Compute the pool owner share before liquidity has been added.
         // (solve share = pt/(PT+pt) for pt.)
@@ -539,22 +539,19 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
 
         // Compute the unit worth of the pool tokens.
         uint256 U = uint256(FixedPointMathLib.lnWad(
-            int256(FixedPointMathLib.divWadDown(initialTotalSupply, initialTotalSupply - poolTokens)    //TODO explain possible overflow int256 conversion
+            int256(FixedPointMathLib.divWadDown(initialTotalSupply, initialTotalSupply - poolTokens)    // int265: if poolTokens is almost equal to initialTotalSupply this can overflow the cast. The result is a negative input to lnWad which fails.
         ))) * wsum;
 
         // For later event logging, the amounts transferred to the pool are stored.
         uint256[] memory amounts = new uint256[](MAX_ASSETS);
         for (uint256 it = 0; it < MAX_ASSETS; it++) {
-            // If no units are remaining, stop the loop.
-            if (U == 0) break;
+            // Units allocated for the specific token.
+            uint256 U_i = (U * withdrawRatio[it]) / FixedPointMathLib.WAD;
             if (U_i == 0) {
                 if (minOut[it] != 0)
                     revert ReturnInsufficient(0, minOut[it]);
                 continue;
             }
-            // Units allocated for the specific token.
-            uint256 U_i = (U * withdrawRatio[it]) / FixedPointMathLib.WAD;
-            if (U_i == 0) continue;  // If no tokens are to be used, skip the logic.
             U -= U_i;  // Subtract the number of units used. This will underflow for malicious withdrawRatios > 1.
 
             address token = _tokenIndexing[it]; // Collect token from memory
@@ -844,7 +841,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
 
         // Compute the unit value of the provided poolTokens.
         // This step simplifies withdrawing and swapping into a single calculation.
-        uint256 U = uint256(FixedPointMathLib.lnWad(int256(     //TODO explain possible overflow int256 conversion
+        uint256 U = uint256(FixedPointMathLib.lnWad(int256(     // int256 if casting overflows, the result a negative input. This reverts.
             FixedPointMathLib.divWadDown(initialTotalSupply, initialTotalSupply - poolTokens)
         ))) * wsum;
 
