@@ -1,5 +1,5 @@
 import pytest
-from brownie import reverts, web3
+from brownie import reverts, web3, convert
 
 pytestmark = pytest.mark.usefixtures("pool_connect_itself")
 
@@ -61,10 +61,11 @@ def test_release_escrow_must_be_called_cci(
     
     with reverts("dev: Only _chainInterface"):
         pool.sendSwapAck(
-            web3.keccak(text="e"),
+            berg.address,
             0,
             0,
             berg,
+            convert.to_bytes(0, type_str="bytes32"),
             {'from': berg}
         )
     
@@ -73,10 +74,11 @@ def test_release_escrow_must_be_called_cci(
     # a valid sender.
     with reverts("dev: Invalid messageHash. Alt: Escrow doesn't exist."):
         pool.sendSwapAck(
-            web3.keccak(text="e"),
+            berg.address,
             0,
             0,
             berg,
+            convert.to_bytes(0, type_str="bytes32"),
             {'from': cci}
         )
         
@@ -88,10 +90,11 @@ def test_timeout_escrow_must_be_called_cci(
     
     with reverts("dev: Only _chainInterface"):
         pool.sendSwapTimeout(
-            web3.keccak(text="e"),
+            berg.address,
             0,
             0,
             berg,
+            convert.to_bytes(0, type_str="bytes32"),
             {'from': berg}
         )
     
@@ -100,10 +103,11 @@ def test_timeout_escrow_must_be_called_cci(
     # a valid sender.
     with reverts("dev: Invalid messageHash. Alt: Escrow doesn't exist."):
         pool.sendSwapTimeout(
-            web3.keccak(text="e"),
+            berg.address,
             0,
             0,
             berg,
+            convert.to_bytes(0, type_str="bytes32"),
             {'from': cci}
         )
 
@@ -116,9 +120,10 @@ def test_release_liquidity_escrow_must_be_called_cci(
     
     with reverts("dev: Only _chainInterface"):
         pool.sendLiquidityAck(
-            web3.keccak(text="e"),
+            berg.address,
             0,
             0,
+            convert.to_bytes(0, type_str="bytes32"),
             {'from': berg}
         )
     
@@ -127,9 +132,10 @@ def test_release_liquidity_escrow_must_be_called_cci(
     # a valid sender.
     with reverts("dev: Invalid messageHash. Alt: Escrow doesn't exist."):
         pool.sendLiquidityAck(
-            web3.keccak(text="e"),
+            berg.address,
             0,
             0,
+            convert.to_bytes(0, type_str="bytes32"),
             {'from': cci}
         )
     
@@ -142,9 +148,10 @@ def test_timeout_liquidity_escrow_must_be_called_cci(
     
     with reverts("dev: Only _chainInterface"):
         pool.sendLiquidityTimeout(
-            web3.keccak(text="e"),
+            berg.address,
             0,
             0,
+            convert.to_bytes(0, type_str="bytes32"),
             {'from': berg}
         )
     
@@ -153,8 +160,9 @@ def test_timeout_liquidity_escrow_must_be_called_cci(
     # a valid sender.
     with reverts("dev: Invalid messageHash. Alt: Escrow doesn't exist."):
         pool.sendLiquidityTimeout(
-            web3.keccak(text="e"),
+            berg.address,
             0,
             0,
+            convert.to_bytes(0, type_str="bytes32"),
             {'from': cci}
         )
