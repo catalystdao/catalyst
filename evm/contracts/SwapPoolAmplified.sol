@@ -740,6 +740,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256[] memory amounts = new uint256[](MAX_ASSETS);
         uint256 totalWithdrawn = 0;
         for (uint256 it = 0; it < MAX_ASSETS; ++it) {
+            if (tokenIndexed[it] == address(0)) break;
 
             uint256 U_i = (U * withdrawRatio[it]) / FixedPointMathLib.WAD;
             if (U_i == 0) {
