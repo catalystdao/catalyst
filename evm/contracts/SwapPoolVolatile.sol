@@ -89,35 +89,35 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         require(amp == FixedPointMathLib.WAD);  // dev: amplification not set correctly.
         // Check for a misunderstanding regarding how many assets this pool supports.
         require(assets.length > 0 && assets.length <= MAX_ASSETS);  // dev: invalid asset count
-        
+
         // Compute the security limit.
         uint256[] memory initialBalances = new uint256[](MAX_ASSETS);
         uint256 maxUnitCapacity = 0;
-        for (uint256 it = 0; it < assets.length; it++) {
+        for (uint256 it = 0; it < assets.length; ++it) {
+
             address tokenAddress = assets[it];
             _tokenIndexing[it] = tokenAddress;
-            _weight[tokenAddress] = weights[it];
-            require(weights[it] > 0);       // dev: invalid 0-valued weight provided
-            // The contract expect tokens to have been sent to it before setup is
-            // called. Make sure the pool has more than 0 tokens.
-            {
-                uint256 balanceOfSelf = IERC20(tokenAddress).balanceOf(
-                    address(this)
-                );
-                initialBalances[it] = balanceOfSelf;
-                require(balanceOfSelf > 0); // dev: 0 tokens provided in setup.
-            }
 
-            maxUnitCapacity += weights[it];
+            uint256 weight = weights[it];
+            require(weight > 0);       // dev: invalid 0-valued weight provided
+            _weight[tokenAddress] = weight;
+
+            // The contract expects the tokens to have been sent to it before setup is
+            // called. Make sure the pool has more than 0 tokens.
+            uint256 balanceOfSelf = IERC20(tokenAddress).balanceOf(address(this));
+            require(balanceOfSelf > 0); // dev: 0 tokens provided in setup.
+            initialBalances[it] = balanceOfSelf;
+
+            maxUnitCapacity += weight;
         }
         
         // The maximum unit flow is \sum Weights * ln(2). The value is multiplied by WAD 
         // since units are always WAD denominated (note WAD is already included in the LN2 factor).
         _maxUnitCapacity = maxUnitCapacity * FixedPointMathLib.LN2;
 
-        // Mint pool tokens
+        // Mint pool tokens for pool creator.
         _mint(depositor, INITIAL_MINT_AMOUNT);
-        
+
         emit Deposit(depositor, INITIAL_MINT_AMOUNT, initialBalances);
     }
 
@@ -170,7 +170,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
             uint256 lastModification = _lastModificationTime;
 
             // If no time has passed since last update, then we don't need to update anything.
-            if (block.timestamp == lastModification) return; 
+            if (block.timestamp == lastModification) return;
 
             // Since we are storing lastModification, lets update the variable now.
             // This avoid repetitions.
@@ -194,7 +194,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
                 // Save weight sum.
                 _maxUnitCapacity = wsum * FixedPointMathLib.LN2;
 
-                // Set weightAdjustmentTime to 0. This ensures the first if statement is never entered.
+                // Set adjustmentTime to 0. This ensures the if statement is never entered.
                 _adjustmentTarget = 0;
 
                 return;
@@ -455,7 +455,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 poolTokens = (initialTotalSupply * calcPriceCurveLimitShare(U, wsum)) / FixedPointMathLib.WAD;
 
         // Check that the minimum output is honored.
-        require(minOut <= poolTokens, RETURN_INSUFFICIENT);
+        if (minOut > poolTokens) revert ReturnInsufficient(poolTokens, minOut);
 
         // Emit the deposit event
         emit Deposit(msg.sender, poolTokens, tokenAmounts);
@@ -498,7 +498,8 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
             uint256 tokenAmount = (At * poolTokens) / initialTotalSupply;
 
             // Check if the user is satisfied with the output.
-            require(tokenAmount >= minOut[it], RETURN_INSUFFICIENT);
+            if (minOut[it] > tokenAmount)
+                revert ReturnInsufficient(tokenAmount, minOut[it]);
 
             // Store the token amount.
             amounts[it] = tokenAmount;
@@ -562,7 +563,8 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
             uint256 tokenAmount = calcPriceCurveLimit(U_i, At, _weight[token]);
 
             // Ensure the output satisfies the user.
-            require(minOut[it] <= tokenAmount, RETURN_INSUFFICIENT);
+            if (minOut[it] > tokenAmount)
+                revert ReturnInsufficient(tokenAmount, minOut[it]);
 
             // Store amount for withdraw event
             amounts[it] = tokenAmount;
@@ -598,14 +600,14 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 out = calcLocalSwap(fromAsset, toAsset, amount - fee);
 
         // Check if the calculated returned value is more than the minimum output.
-        require(minOut <= out, RETURN_INSUFFICIENT);
+        if(minOut > out) revert ReturnInsufficient(out, minOut);
 
         // Transfer tokens to the user and collect tokens from the user.
         IERC20(toAsset).safeTransfer(msg.sender, out);
         IERC20(fromAsset).safeTransferFrom(msg.sender, address(this), amount);
 
         // Governance Fee
-        collectGovernanceFee(fee, fromAsset);
+        collectGovernanceFee(fromAsset, fee);
 
         emit LocalSwap(msg.sender, fromAsset, toAsset, amount, out);
 
@@ -687,7 +689,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
 
 
         // Governance Fee
-        collectGovernanceFee(fee, fromAsset);
+        collectGovernanceFee(fromAsset, fee);
 
         // Collect the tokens from the user.
         IERC20(fromAsset).safeTransferFrom(msg.sender, address(this), amount);
@@ -766,7 +768,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 purchasedTokens = calcReceiveSwap(toAsset, U);
 
         // Ensure the user is satisfied by the number of tokens.
-        require(minOut <= purchasedTokens, RETURN_INSUFFICIENT);
+        if (minOut > purchasedTokens) revert ReturnInsufficient(purchasedTokens, minOut);
 
         // Send the tokens to the user.
         IERC20(toAsset).safeTransfer(who, purchasedTokens);
@@ -935,7 +937,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 poolTokens = (calcPriceCurveLimitShare(U, wsum) * totalSupply())/FixedPointMathLib.WAD;
 
         // Check if more than the minimum output is returned.
-        require(minOut <= poolTokens, RETURN_INSUFFICIENT);
+        if (minOut > poolTokens) revert ReturnInsufficient(poolTokens, minOut);
 
         // Mint pool tokens for the user.
         _mint(who, poolTokens);

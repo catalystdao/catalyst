@@ -5,6 +5,7 @@ pragma solidity ^0.8.16;
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts/utils/Multicall.sol";
 import "./SwapPoolFactory.sol";
 import "./FixedPointMathLib.sol";
 import "./CatalystIBCInterface.sol";
@@ -27,8 +28,8 @@ import "./interfaces/ICatalystV1PoolErrors.sol";
  */
 abstract contract CatalystSwapPoolCommon is
     Initializable,
+    Multicall,
     ERC20,
-    ICatalystV1PoolErrors,
     ICatalystV1Pool
 {
     using SafeERC20 for IERC20;
@@ -185,7 +186,7 @@ abstract contract CatalystSwapPoolCommon is
     }
 
     /** @notice  Returns the current cross-chain swap capacity. */
-    function getUnitCapacity() external view virtual override returns (uint256) {
+    function getUnitCapacity() public view virtual override returns (uint256) {
         uint256 MUC = _maxUnitCapacity;
 
         // The delta change to the limit is: timePassed · slope = timePassed · Max/decayrate
@@ -220,13 +221,13 @@ abstract contract CatalystSwapPoolCommon is
         uint256 UC = _usedUnitCapacity; 
         // If the change is greater than the units which has passed through the limit is max
         if (UC <= unitCapacityReleased) {
-            require(units <= MUC, EXCEEDS_SECURITY_LIMIT);
+            if (units > MUC) revert ExceedsSecurityLimit(units - MUC);
             _usedUnitCapacity = units;
             return;
         }
 
         uint256 newUnitFlow = (UC + units) - unitCapacityReleased;
-        require(newUnitFlow <= MUC, EXCEEDS_SECURITY_LIMIT);
+        if (newUnitFlow > MUC) revert ExceedsSecurityLimit(newUnitFlow - MUC);
         _usedUnitCapacity = newUnitFlow;
     }
 
@@ -257,7 +258,7 @@ abstract contract CatalystSwapPoolCommon is
     /**
      * @dev Collect the governance fee share of the specified pool fee
      */
-    function collectGovernanceFee(uint256 poolFeeAmount, address asset) internal {
+    function collectGovernanceFee(address asset, uint256 poolFeeAmount) internal {
 
         uint256 governanceFeeShare = _governanceFeeShare;
 
@@ -276,11 +277,6 @@ abstract contract CatalystSwapPoolCommon is
      * Vyper: convert(<poolAddress>, bytes32)
      * Solidity: abi.encode(<poolAddress>)
      * Brownie: brownie.convert.to_bytes(<poolAddress>, type_str="bytes32")
-     *
-     * ! Notice, using tx.origin is not secure.
-     * However, it makes it easy to bundle call from an external contract
-     * and no assets are at risk because the pool should not be used without
-     * setupMaster == ZERO_ADDRESS
      * @param channelId Target chain identifier.
      * @param targetPool Bytes32 representation of the target pool.
      * @param state Boolean indicating if the connection should be open or closed.
@@ -290,8 +286,7 @@ abstract contract CatalystSwapPoolCommon is
         bytes32 targetPool,
         bool state
     ) external override {
-        // ! tx.origin ! Read @dev.
-        require((tx.origin == _setupMaster) || (msg.sender == factoryOwner())); // dev: No auth
+        require((msg.sender == _setupMaster) || (msg.sender == factoryOwner())); // dev: No auth
 
         CatalystIBCInterface(_chainInterface).setConnection(
             channelId,
@@ -304,14 +299,9 @@ abstract contract CatalystSwapPoolCommon is
 
     /**
      * @notice Gives up short term ownership of the pool making the pool unstoppable.
-     * @dev !Using tx.origin is not secure!
-     * However, it makes it easy to bundle call from an external contract
-     * and no assets are at risk because the pool should not be used without
-     * setupMaster == ZERO_ADDRESS
      */
     function finishSetup() external override {
-        // ! tx.origin ! Read @dev.
-        require(tx.origin == _setupMaster); // dev: No auth
+        require(msg.sender == _setupMaster); // dev: No auth
 
         _setupMaster = address(0);
 

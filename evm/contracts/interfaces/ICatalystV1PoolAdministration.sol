@@ -16,9 +16,6 @@ interface ICatalystV1PoolAdministration {
      *     Vyper: convert(_poolAddress, bytes32)
      *     Solidity: abi.encode(_poolAddress)
      *     Brownie: brownie.convert.to_bytes(_poolAddress, type_str="bytes32")
-     * ! Notice, using tx.origin is not secure.
-     * However, it makes it easy to bundle call from an external contract
-     * and no assets are at risk because the pool should not be used without
      * setupMaster == ZERO_ADDRESS
      * @param channelId The _channelId of the target pool.
      * @param targetPool The bytes32 representation of the target pool
@@ -32,10 +29,6 @@ interface ICatalystV1PoolAdministration {
 
     /**
      * @notice Gives up short term ownership of the pool. This makes the pool unstoppable.
-     * @dev ! Using tx.origin is not secure.
-     * However, it makes it easy to bundle call from an external contract
-     * and no assets are at risk because the pool should not be used without
-     * setupMaster == ZERO_ADDRESS
      */
     function finishSetup() external;
 }

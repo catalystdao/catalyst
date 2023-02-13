@@ -52,8 +52,8 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
     // returns slightly more. To counteract this, an additional fee
     // slightly larger than the error is added. The below constants
     // determines when this fee is added and the size.
-    uint256 constant SMALL_SWAP_SIZE = 10**12;
-    uint256 constant SMALL_SWAP_RETURN = 95*10**18/100;
+    uint256 constant SMALL_SWAP_RATIO = FixedPointMathLib.WAD/10**6;
+    uint256 constant SMALL_SWAP_RETURN = 95*FixedPointMathLib.WAD/100;
 
     // For other config options, see SwapPoolCommon.sol
 
@@ -102,29 +102,32 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         _targetAmplification = amp;
 
         // Compute the security limit.
-        { //  Stack limitation.
-            uint256[] memory initialBalances = new uint256[](MAX_ASSETS);
-            for (uint256 it = 0; it < assets.length; ++it) {
-                address tokenAddress = assets[it];
-                _tokenIndexing[it] = tokenAddress;
-                uint256 weight = weights[it];
-                require(weight > 0);       // dev: invalid 0-valued weight provided
-                _weight[tokenAddress] = weight;
-                // The contract expects the tokens to have been sent to it before setup is
-                // called. Make sure the pool has more than 0 tokens.
+        uint256[] memory initialBalances = new uint256[](MAX_ASSETS);
+        uint256 maxUnitCapacity = 0;
+        for (uint256 it = 0; it < assets.length; ++it) {
 
-                uint256 balanceOfSelf = IERC20(tokenAddress).balanceOf(address(this));
-                initialBalances[it] = balanceOfSelf;
-                require(balanceOfSelf > 0); // dev: 0 tokens provided in setup.
+            address tokenAddress = assets[it];
+            _tokenIndexing[it] = tokenAddress;
 
-                _maxUnitCapacity += weight * balanceOfSelf;
-            }
-            
-            emit Deposit(depositor, INITIAL_MINT_AMOUNT, initialBalances);
+            uint256 weight = weights[it];
+            require(weight > 0);       // dev: invalid 0-valued weight provided
+            _weight[tokenAddress] = weight;
+
+            // The contract expects the tokens to have been sent to it before setup is
+            // called. Make sure the pool has more than 0 tokens.
+            uint256 balanceOfSelf = IERC20(tokenAddress).balanceOf(address(this));
+            require(balanceOfSelf > 0); // dev: 0 tokens provided in setup.
+            initialBalances[it] = balanceOfSelf;
+
+            maxUnitCapacity += weight * balanceOfSelf;
         }
+
+        _maxUnitCapacity = maxUnitCapacity;
 
         // Mint pool tokens for pool creator.
         _mint(depositor, INITIAL_MINT_AMOUNT);
+
+        emit Deposit(depositor, INITIAL_MINT_AMOUNT, initialBalances);
     }
 
     /** 
@@ -133,23 +136,8 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
      * differences as to how it is used. As a result, this always returns
      * half of _maxUnitCapacity.
      */
-    function getUnitCapacity() external view override returns (uint256) {
-        uint256 MUC = _maxUnitCapacity;
-        // If the time since the last update is more than DECAY_RATE return maximum
-        if (block.timestamp > DECAY_RATE + _usedUnitCapacityTimestamp) return MUC / 2;
-
-        // The delta change to the limit is: timePassed · slope = timePassed · Max/decayrate
-        uint256 unitCapacityReleased = ((block.timestamp - _usedUnitCapacityTimestamp) * MUC) / DECAY_RATE;
-
-        uint256 UC = _usedUnitCapacity;
-        // If the change is greater than the units which have passed through
-        // return maximum. We do not want (MUC - (UC - unitCapacityReleased) > MUC)
-        if (UC <= unitCapacityReleased) return MUC / 2;
-
-        // Amplified pools can have MUC <= UC since MUC is modified when swapping
-        if (MUC <= UC - unitCapacityReleased) return 0; 
-
-        return (MUC + unitCapacityReleased - UC) / 2;
+    function getUnitCapacity() public view override returns (uint256) {
+        return super.getUnitCapacity() / 2;
     }
 
     /**
@@ -163,6 +151,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 targetAmplification
     ) external onlyFactoryOwner {
         require(targetTime >= block.timestamp + MIN_ADJUSTMENT_TIME); // dev: targetTime must be more than MIN_ADJUSTMENT_TIME in the future.
+        require(targetAmplification < FixedPointMathLib.WAD);  // dev: amplification not set correctly.
 
         // Store adjustment information
         _adjustmentTarget = targetTime;
@@ -177,19 +166,22 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
      * this function will adjust the pool weights.
      * @dev Called first thing on every function depending on amplification.
      */
-    function _A() internal {
-        // We might use adjustment target more than once. Since it is constant, lets store it.
+    function _adjustAmplification() internal {
+        // We might use adjustment target more than once. Since we don't change it, lets store it.
         uint256 adjTarget = _adjustmentTarget;
 
         if (adjTarget != 0) {
-            // We need to use lastModification again. Store it.
+            // We need to use lastModification multiple times. Store it.
             uint256 lastModification = _lastModificationTime;
-            _lastModificationTime = block.timestamp;
 
             // If no time has passed since last update, then we don't need to update anything.
             if (block.timestamp == lastModification) return;
 
-            // If the current time is past the adjustment, the adjustment needs to be finalized.
+            // Since we are storing lastModification, lets update the variable now.
+            // This avoid repetitions.
+            _lastModificationTime = block.timestamp;
+
+            // If the current time is past the adjustment, the amplification needs to be finalized.
             if (block.timestamp >= adjTarget) {
                 _amp = _targetAmplification;
 
@@ -240,15 +232,17 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 W,
         uint256 amp
     ) internal pure returns (uint256) {
-        int256 oneMinusAmp = int256(FixedPointMathLib.WAD - amp);
+        int256 oneMinusAmp = int256(FixedPointMathLib.WAD - amp);   // int256 casting safe, result always < 10**18. Always positive, as amp < 10**18
 
-        return uint256(FixedPointMathLib.powWad(
-            int256(W * (A + input) * FixedPointMathLib.WAD),
-            oneMinusAmp
-        ) - FixedPointMathLib.powWad(
-            int256(W * A * FixedPointMathLib.WAD),
-            oneMinusAmp
-        ));
+        return uint256(                                             // Always casts a positive value, as the first powWad term is always larger than the second one
+            FixedPointMathLib.powWad(
+                int256(W * (A + input) * FixedPointMathLib.WAD),    // If casting overflows to a negative number, powWad fails
+                oneMinusAmp
+            ) - FixedPointMathLib.powWad(
+                int256(W * A * FixedPointMathLib.WAD),              // If casting overflows to a negative number, powWad fails
+                oneMinusAmp
+            )
+        );
     }
 
     /**
@@ -272,16 +266,25 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 W,
         uint256 amp
     ) internal pure returns (uint256) {
-        int256 oneMinusAmp = int256(FixedPointMathLib.WAD - amp);
+        int256 oneMinusAmp = int256(FixedPointMathLib.WAD - amp);   // int256 casting safe, result always < 10**18. Always positive, as amp < 10**18
 
         // W_B · B^(1-k) is repeated twice and requires 1 power.
         // As a result, we compute it and cache.
-        uint256 W_BxBtoOMA = uint256(FixedPointMathLib.powWad(int256(W * B * FixedPointMathLib.WAD), oneMinusAmp));
+        uint256 W_BxBtoOMA = uint256(                       // Always casts a positive value
+            FixedPointMathLib.powWad(
+                int256(W * B * FixedPointMathLib.WAD),      // If casting overflows to a negative number, powWad fails
+                oneMinusAmp
+            )
+        );
 
-        return B * (FixedPointMathLib.WAD - uint256(FixedPointMathLib.powWad(
-                    int256(FixedPointMathLib.divWadUp(W_BxBtoOMA - U, W_BxBtoOMA)),
-                    int256(FixedPointMathLib.WAD * FixedPointMathLib.WAD / uint256(oneMinusAmp)))
-                )) / FixedPointMathLib.WAD;
+        return B * (
+            FixedPointMathLib.WAD - uint256(                                                        // Always casts a positive value
+                FixedPointMathLib.powWad(
+                    int256(FixedPointMathLib.divWadUp(W_BxBtoOMA - U, W_BxBtoOMA)),                 // Casting never overflows, as division result is always < 1
+                    int256(FixedPointMathLib.WAD * FixedPointMathLib.WAD / uint256(oneMinusAmp))    // Casting never overflows, as result is always < WAD^2 (within int256 range)
+                )
+            )
+        ) / FixedPointMathLib.WAD;
     }
 
     /**
@@ -314,7 +317,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 W_B,
         uint256 amp
     ) internal pure returns (uint256) {
-        // int256 oneMinusAmp = int256(FixedPointMathLib.WAD - amp);
+        // int256 oneMinusAmp = int256(FixedPointMathLib.WAD - amp);   // int256 casting safe, result always < 10**18. Always positive, as amp < 10**18
         // uint256 W_BxBtoOMA = uint256(FixedPointMathLib.powWad(
         //     int256(W_B * B * FixedPointMathLib.WAD),
         //     oneMinusAmp
@@ -337,17 +340,17 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
 
     /**
      * @notice Computes the return of SendSwap.
-     * @param from The address of the token to sell.
+     * @param fromAsset The address of the token to sell.
      * @param amount The amount of from token to sell.
      * @return uint256 Group specific units.
      */
     function calcSendSwap(
-        address from,
+        address fromAsset,
         uint256 amount
     ) public view returns (uint256) {
         // A high => less units returned. Do not subtract the escrow amount
-        uint256 A = IERC20(from).balanceOf(address(this));
-        uint256 W = _weight[from];
+        uint256 A = IERC20(fromAsset).balanceOf(address(this));
+        uint256 W = _weight[fromAsset];
 
 
         // If a token is not part of the pool, W is 0. This returns 0 since
@@ -356,24 +359,24 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
 
         // If the swap is a very small portion of the pool
         // Add an additional fee. This covers mathematical errors.
-        if (A/SMALL_SWAP_SIZE >= amount) return U * SMALL_SWAP_RETURN / FixedPointMathLib.WAD;
+        if (A/SMALL_SWAP_RATIO >= amount) return U * SMALL_SWAP_RETURN / FixedPointMathLib.WAD;
         
         return U;
     }
 
     /**
      * @notice Computes the output of ReceiveSwap.
-     * @param to The address of the token to buy.
+     * @param toAsset The address of the token to buy.
      * @param U The number of units used to buy to.
      * @return uint256 Number of purchased tokens.
      */
     function calcReceiveSwap(
-        address to, 
+        address toAsset, 
         uint256 U
     ) public view returns (uint256) {
-        // A low => less tokens returned. Subtract the escrow amount to decrease the balance.
-        uint256 B = IERC20(to).balanceOf(address(this)) - _escrowedTokens[to];
-        uint256 W = _weight[to];
+        // B low => less tokens returned. Subtract the escrow amount to decrease the balance.
+        uint256 B = IERC20(toAsset).balanceOf(address(this)) - _escrowedTokens[toAsset];
+        uint256 W = _weight[toAsset];
 
         // If someone were to purchase a token which is not part of the pool on setup
         // they would just add value to the pool. We don't care about it.
@@ -384,29 +387,28 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
 
     /**
      * @notice Computes the output of localSwap.
-     * @dev Implemented through calcPriceCurveLimit(calcPriceCurveArea and not calcCombinedPriceCurves.
-     * @param from The address of the token to sell.
-     * @param to The address of the token to buy.
+     * @dev Implemented through calcCombinedPriceCurves.
+     * @param fromAsset The address of the token to sell.
+     * @param toAsset The address of the token to buy.
      * @param amount The amount of from token to sell for to token.
      * @return Output denominated in to token.
      */
     function calcLocalSwap(
-        address from,
-        address to,
+        address fromAsset,
+        address toAsset,
         uint256 amount
     ) public view returns (uint256) {
-        uint256 A = IERC20(from).balanceOf(address(this));
-        uint256 B = IERC20(to).balanceOf(address(this)) - _escrowedTokens[to];
-        uint256 W_A = _weight[from];
-        uint256 W_B = _weight[to];
+        uint256 A = IERC20(fromAsset).balanceOf(address(this));
+        uint256 B = IERC20(toAsset).balanceOf(address(this)) - _escrowedTokens[toAsset];
+        uint256 W_A = _weight[fromAsset];
+        uint256 W_B = _weight[toAsset];
         uint256 amp = _amp;
 
-        // return calcCombinedPriceCurves(amount, A, B, W_A, W_B, amp);
-        uint256 output = calcPriceCurveLimit(calcPriceCurveArea(amount, A, W_A, amp), B, W_B, amp);
+        uint256 output = calcCombinedPriceCurves(amount, A, B, W_A, W_B, amp);
 
         // If the swap is a very small portion of the pool
         // Add an additional fee. This covers mathematical errors.
-        if (A/SMALL_SWAP_SIZE >= amount) return output * SMALL_SWAP_RETURN / FixedPointMathLib.WAD;
+        if (A/SMALL_SWAP_RATIO >= amount) return output * SMALL_SWAP_RETURN / FixedPointMathLib.WAD;
 
         return output;
     }
@@ -422,8 +424,8 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256[] calldata tokenAmounts,
         uint256 minOut
     ) nonReentrant() external returns(uint256) {
-        _A();
-        int256 oneMinusAmp = int256(FixedPointMathLib.WAD - _amp);
+        _adjustAmplification();
+        int256 oneMinusAmp = int256(FixedPointMathLib.WAD - _amp);   // int256 casting safe, result always < 10**18. Always positive, as amp < 10**18
 
         uint256 walpha_0_ampped;
 
@@ -435,8 +437,8 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         // Compute walpha_0 to find the reference balances. This lets us evaluate the
         // number of tokens the pool should have If the price in the group is 1:1.
         {
-            uint256 weightedAssetBalanceSum = 0;
-            uint256 assetBalanceSum = 0;
+            int256 weightedAssetBalanceSum = 0;
+            uint256 assetDepositSum = 0;
             for (it = 0; it < MAX_ASSETS; ++it) {
                 address token = _tokenIndexing[it];
                 if (token == address(0)) break;
@@ -446,36 +448,32 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                 uint256 weightAssetBalance = weight * ERC20(token).balanceOf(address(this));
 
                 // Store the amount deposited to later be used for modifying the security limit.
-                assetBalanceSum += weightAssetBalance;
+                assetDepositSum += tokenAmounts[it] * weight;
                 
                 {
                     // wa^(1-k) is required twice. It is F(A) in the
                     // sendSwap equation and part of the wa_0^(1-k) calculation
-                    uint256 wab = uint256(FixedPointMathLib.powWad(
-                        int256(weightAssetBalance * FixedPointMathLib.WAD),
+                    int256 wab = FixedPointMathLib.powWad(
+                        int256(weightAssetBalance * FixedPointMathLib.WAD),     // If casting overflows to a negative number, powWad fails
                         oneMinusAmp
-                    ));
+                    );
                     weightedAssetBalanceSum += wab;
 
                     // This line is the origin of the stack too deep issue.
                     // since it implies we cannot move intU += before this section.
                     // which would solve the issue.
-                    // Save gas if the user provides no tokens.
+                    // Save gas if the user provides no tokens, as the rest of the loop has no effect in that case
                     if (tokenAmounts[it] == 0) continue;
                     
                     // int_A^{A+x} f(w) dw = F(A+x) - F(A).
                     // This is -F(A). Since we are subtracting first,
                     // U must be able to go negative.
-                    U -= int256(wab);
+                    U -= wab;
                 }
-                // Increase the security limit by the amount deposited.
-                _maxUnitCapacity += assetBalanceSum;
-                // Short term decrease the security limit by the amount deposited.
-                _usedUnitCapacity += weightAssetBalance;
 
                 // Add F(A+x)
                 U += FixedPointMathLib.powWad(
-                    int256((weightAssetBalance + weight * tokenAmounts[it]) * FixedPointMathLib.WAD),
+                    int256((weightAssetBalance + weight * tokenAmounts[it]) * FixedPointMathLib.WAD),   // If casting overflows to a negative number, powWad fails
                     oneMinusAmp
                 );
                 
@@ -485,28 +483,42 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                     tokenAmounts[it]
                 );  // dev: Token withdrawal from user failed.
             }
+            // Increase the security limit by the amount deposited.
+            _maxUnitCapacity += assetDepositSum;
+            // Short term decrease the security limit by the amount deposited.
+            _usedUnitCapacity += assetDepositSum;
 
             // Compute the reference liquidity.
-            walpha_0_ampped = uint256(int256(weightedAssetBalanceSum) - _unitTracker) / it;
+            walpha_0_ampped = uint256(weightedAssetBalanceSum - _unitTracker) / it;     // By design, weightedAssetBalanceSum > _unitTracker    //TODO do we still wanna add a check for this?
         }
 
         // Subtract fee from U. This stops people from using deposit and withdrawal as method of swapping.
         // To reduce costs, there the governance fee is not included. This does result in deposit+withdrawal
         // working as a way to circumvent the governance fee.
-        U = int256(FixedPointMathLib.mulWadDown(uint256(U), FixedPointMathLib.WAD - _poolFee));
+        U = int256(                                     // Casting never overflows, as mulWadDown returns a smaller 'U'
+            FixedPointMathLib.mulWadDown(
+                uint256(U),                             // U always positive by design //TODO REVIEW, what about numerical errors on the calculation. Does it still hold?
+                FixedPointMathLib.WAD - _poolFee        // Always > 1
+            )
+        );
 
         // Use the simplified conversion of units into pool tokens. Saves ~1000 gas.
         uint256 it_times_walpha_amped = it * walpha_0_ampped;
-        uint256 poolTokens = (totalSupply() * uint256(FixedPointMathLib.powWad(
-            int256(FixedPointMathLib.divWadDown(
-                it_times_walpha_amped + uint256(U),
-                it_times_walpha_amped
-            )),
-            int256(FixedPointMathLib.WAD * FixedPointMathLib.WAD) / oneMinusAmp
-        ) - int256(FixedPointMathLib.WAD))) / FixedPointMathLib.WAD;
+        uint256 poolTokens = (
+            totalSupply() * uint256(                                                        // Always casts a positive value, as powWad >= 1, hence powWad - WAD >= 0
+                FixedPointMathLib.powWad(                                                   // poWad always >= 1, as the 'base' is always >= 1
+                    int256(FixedPointMathLib.divWadDown(                                    // If casting overflows to a negative number, powWad fails
+                        it_times_walpha_amped + uint256(U),                                 // U always positive by design
+                        it_times_walpha_amped
+                    )),
+                    int256(FixedPointMathLib.WAD * FixedPointMathLib.WAD) / oneMinusAmp     // Casting never overflows, as result is always < WAD^2 (within int256 range)
+                ) - int256(FixedPointMathLib.WAD)
+            )
+        ) / FixedPointMathLib.WAD;
 
         // Check if the return satisfies the user.
-        require(minOut <= poolTokens, RETURN_INSUFFICIENT);
+        if (minOut > poolTokens)
+            revert ReturnInsufficient(poolTokens, minOut);
 
         // Mint the desired number of pool tokens to the user.
         _mint(msg.sender, poolTokens);
@@ -528,23 +540,23 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 poolTokens,
         uint256[] calldata minOut
     ) nonReentrant() external returns(uint256[] memory) {
-        _A();
+        _adjustAmplification();
         // Burn the desired number of pool tokens to the user.
         // If they don't have it, it saves gas.
         // * Remember to add poolTokens when accessing totalSupply()
         _burn(msg.sender, poolTokens);
 
         // Cache weights and balances.
-        int256 oneMinusAmp = int256(FixedPointMathLib.WAD - _amp);
-        address[] memory tokenIndexed = new address[](MAX_ASSETS);
-        uint256[] memory weightAssetBalances = new uint256[](MAX_ASSETS);
-        uint256[] memory ampWeightAssetBalances = new uint256[](MAX_ASSETS);
+        int256 oneMinusAmp = int256(FixedPointMathLib.WAD - _amp);   // int256 casting safe, result always < 10**18. Always positive, as amp < 10**18
+        address[MAX_ASSETS] memory tokenIndexed;
+        uint256[MAX_ASSETS] memory weightAssetBalances;
+        int256[MAX_ASSETS] memory ampWeightAssetBalances;
 
         uint256 walpha_0_ampped;
         // Compute walpha_0 to find the reference balances. This lets us evaluate the
         // number of tokens the pool should have If the price in the group is 1:1.
         {
-            uint256 weightedAssetBalanceSum = 0;
+            int256 weightedAssetBalanceSum = 0;
             // "it" is needed breifly outside the loop.
             uint256 it;
             for (it = 0; it < MAX_ASSETS; ++it) {
@@ -557,16 +569,16 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                 uint256 weightAssetBalance = weight * (ERC20(token).balanceOf(address(this)) - _escrowedTokens[token]);
                 weightAssetBalances[it] = weightAssetBalance; // Store 
 
-                uint256 wab = uint256(FixedPointMathLib.powWad(
-                    int256(weightAssetBalance * FixedPointMathLib.WAD),
-                    oneMinusAmp)
+                int256 wab = FixedPointMathLib.powWad(
+                    int256(weightAssetBalance * FixedPointMathLib.WAD),     // If casting overflows to a negative number, powWad fails
+                    oneMinusAmp
                 );
                 ampWeightAssetBalances[it] = wab; // Store
                 weightedAssetBalanceSum += wab;
             }
 
             // Compute the reference liquidity.
-            walpha_0_ampped = uint256(int256(weightedAssetBalanceSum) -_unitTracker) / it;
+            walpha_0_ampped = uint256(weightedAssetBalanceSum -_unitTracker) / it;     // By design, weightedAssetBalanceSum > _unitTracker    //TODO do we still wanna add a check for this?
         }
 
         // For later event logging, the transferred tokens are stored.
@@ -586,15 +598,14 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                 // The reduced equation:
                 innerdiff = FixedPointMathLib.mulWadDown(
                     walpha_0_ampped, 
-                    uint256(FixedPointMathLib.powWad(
-                        int256(pt_fraction),
+                    uint256(FixedPointMathLib.powWad(       // Always casts a positive value
+                        int256(pt_fraction),                // If casting overflows to a negative number, powWad fails
                         oneMinusAmp
                     )) - FixedPointMathLib.WAD
                 );
             }
-            // While not very readable, reusing this variable makes a lot of sense.
-            // So from now one, oneMinusAmp is 1/oneMinusAmp
-            oneMinusAmp = int256(FixedPointMathLib.WAD * FixedPointMathLib.WAD) / oneMinusAmp;
+
+            int256 oneMinusAmpInverse = int256(FixedPointMathLib.WAD * FixedPointMathLib.WAD) / oneMinusAmp;      // Casting never overflows, as WAD^2 is within int256 range
 
             uint256 totalWithdrawn = 0;
             for (uint256 it = 0; it < MAX_ASSETS; ++it) {
@@ -608,47 +619,33 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                 // mathematical lib returns ampWeightAssetBalances ** (1/(1-amp)) < weightAssetBalances.
                 // the result is that if innerdiff isn't big enough to make up for the difference
                 // the transaction reverts. This is "okay", since it means less tokens are returned.
-                uint256 tokenAmount = (uint256(FixedPointMathLib.powWad(
-                    int256(ampWeightAssetBalances[it] + innerdiff),
-                    oneMinusAmp // Is 1/(1-amp)
+                uint256 weightedTokenAmount = (uint256(FixedPointMathLib.powWad(        // Always casts a positive value
+                    ampWeightAssetBalances[it] + int256(innerdiff),             // If casting overflows, either less is returned (if addition is positive) or powWad fails (if addition is negative)
+                    oneMinusAmpInverse // 1/(1-amp)
                 )) - (weightAssetBalances[it] * FixedPointMathLib.WAD)) / FixedPointMathLib.WAD;
 
-                // ideally, we would have cached this. But stack limit :|
-                uint256 weight = _weight[token];
                 //! If the pool doesn't have enough assets for a withdrawal, then
                 //! withdraw all of the pools assets. This should be protected against by setting minOut != 0.
                 //! This happens because the pool expects assets to come back. (it is owed assets)
                 //! We don't want to keep track of debt so we simply return less
-                if (tokenAmount > weightAssetBalances[it]) {
+                if (weightedTokenAmount > weightAssetBalances[it]) {
                     // Set the token amount to the pool balance.
                     // Recalled that the escrow balance is subtracted from weightAssetBalances.
-                    tokenAmount = weightAssetBalances[it] / weight;
-
-                    // Store the amount withdrawn to subtract from the security limit later.
-                    totalWithdrawn +=  weightAssetBalances[it]; // = tokenAmount * weight
-
-                    // Check that the user is satisfied with this.
-                    require(
-                        tokenAmount >= minOut[it],
-                        RETURN_INSUFFICIENT
-                    );
-
-                    // Transfer the appropriate number of tokens from the user to the pool. (And store for event logging)
-                    amounts[it] = tokenAmount;
-                    IERC20(token).safeTransfer(msg.sender, tokenAmount); // dev: Transfer away from pool failed.
-                    continue;
+                    weightedTokenAmount = weightAssetBalances[it];
                 }
 
                 // Store the amount withdrawn to subtract from the security limit later.
-                totalWithdrawn +=  tokenAmount;
+                totalWithdrawn +=  weightedTokenAmount;
 
-                // remove the weight from tokenAmount.
-                tokenAmount /= weight;
+                // remove the weight from weightedTokenAmount.
+                weightedTokenAmount /= _weight[token];
                 // Check that the user is satisfied with this.
-                require(tokenAmount >= minOut[it], RETURN_INSUFFICIENT);
+                if (minOut[it] > weightedTokenAmount)
+                    revert ReturnInsufficient(weightedTokenAmount, minOut[it]);
+
                 // Transfer the appropriate number of tokens from the user to the pool. (And store for event logging)
-                amounts[it] = tokenAmount;
-                IERC20(token).safeTransfer(msg.sender, tokenAmount);
+                amounts[it] = weightedTokenAmount;
+                IERC20(token).safeTransfer(msg.sender, weightedTokenAmount);
             }
 
             // Decrease the security limit by the amount withdrawn.
@@ -678,17 +675,17 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256[] calldata withdrawRatio,
         uint256[] calldata minOut
     ) nonReentrant() external returns(uint256[] memory) {
-        _A();
+        _adjustAmplification();
         // Burn the desired number of pool tokens to the user.
         // If they don't have it, it saves gas.
         // * Remember to add poolTokens when accessing totalSupply()
         _burn(msg.sender, poolTokens);
 
         // Cache weights and balances.
-        int256 oneMinusAmp = int256(FixedPointMathLib.WAD - _amp);
-        address[] memory tokenIndexed = new address[](MAX_ASSETS);
-        uint256[] memory assetBalances = new uint256[](MAX_ASSETS);
-        uint256[] memory ampWeightAssetBalances = new uint256[](MAX_ASSETS);
+        int256 oneMinusAmp = int256(FixedPointMathLib.WAD - _amp);   // int256 casting safe, result always < 10**18. Always positive, as amp < 10**18
+        address[MAX_ASSETS] memory tokenIndexed;
+        uint256[MAX_ASSETS] memory assetBalances;
+        int256[MAX_ASSETS] memory ampWeightAssetBalances;
 
         uint256 U = 0;
         // Compute walpha_0 to find the reference balances. This lets us evaluate the
@@ -698,7 +695,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
             // As such, we don't need to remember the value beyond this section.
             uint256 walpha_0_ampped;
             {
-                uint256 weightedAssetBalanceSum = 0;
+                int256 weightedAssetBalanceSum = 0;
                 // A very carefuly stack optimisation is made here.
                 // "it" is needed breifly outside the loop. However, to reduce the number
                 // of items in the stack, U = it.
@@ -713,14 +710,14 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                     assetBalances[U] = ab;
                     uint256 weightAssetBalance = weight * ab;
 
-                    uint256 wab = uint256(FixedPointMathLib.powWad(
-                        int256(weightAssetBalance * FixedPointMathLib.WAD),
+                    int256 wab = FixedPointMathLib.powWad(
+                        int256(weightAssetBalance * FixedPointMathLib.WAD),     // If casting overflows to a negative number, powWad fails
                         oneMinusAmp
-                    ));
+                    );
                     ampWeightAssetBalances[U] = wab; // Store since it is an expensive calculation.
                     weightedAssetBalanceSum += wab;
                 }
-                walpha_0_ampped = uint256(int256(weightedAssetBalanceSum) - _unitTracker) / U;
+                walpha_0_ampped = uint256(weightedAssetBalanceSum - _unitTracker) / U;     // By design, weightedAssetBalanceSum > _unitTracker    //TODO do we still wanna add a check for this?
 
                 // set U = number of tokens in the pool. But that is exactly what it is.
             }
@@ -730,47 +727,53 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
 
             U *= FixedPointMathLib.mulWadDown(
                 walpha_0_ampped, 
-                uint256(FixedPointMathLib.powWad(int256(pt_fraction), oneMinusAmp)) - FixedPointMathLib.WAD
+                uint256(FixedPointMathLib.powWad(       // Always casts a positive value
+                    int256(pt_fraction),                // If casting overflows to a negative number, powWad fails
+                    oneMinusAmp
+                )) - FixedPointMathLib.WAD
             );
         }
 
-        // While not very readable, reusing this variable makes a lot of sense.
-        // So from now one, oneMinusAmp is 1/oneMinusAmp
-        oneMinusAmp = int256(FixedPointMathLib.WAD * FixedPointMathLib.WAD) / oneMinusAmp;
+        int256 oneMinusAmpInverse = int256(FixedPointMathLib.WAD * FixedPointMathLib.WAD) / oneMinusAmp;      // Casting never overflows, as WAD^2 is within int256 range
 
         // For later event logging, the transferred tokens are stored.
         uint256[] memory amounts = new uint256[](MAX_ASSETS);
         uint256 totalWithdrawn = 0;
         for (uint256 it = 0; it < MAX_ASSETS; ++it) {
-            if (U == 0) break;
+            if (tokenIndexed[it] == address(0)) break;
 
             uint256 U_i = (U * withdrawRatio[it]) / FixedPointMathLib.WAD;
-            if (U_i == 0) continue;
+            if (U_i == 0) {
+                if (minOut[it] != 0)
+                    revert ReturnInsufficient(0, minOut[it]);
+                continue;
+            }
             U -= U_i;
 
             // uint256 tokenAmount = calcReceiveSwap(_tokenIndexing[it], U_i);
             
             // W_B · B^(1-k) is repeated twice and requires 1 power.
             // As a result, we compute it and cache.
-            uint256 W_BxBtoOMA = ampWeightAssetBalances[it];
-            uint256 tokenAmount = (assetBalances[it] * (FixedPointMathLib.WAD - uint256(FixedPointMathLib.powWad(
-                int256(FixedPointMathLib.divWadUp(W_BxBtoOMA - U_i, W_BxBtoOMA)),
-                oneMinusAmp // Is 1/(1-amp))
-            )))) / FixedPointMathLib.WAD;
-            
-            // We need to check that the withdrawal doesn't impact any escrowed balances.
-            // For this, we need a seperate check.
-            require(assetBalances[it] >= tokenAmount); // dev: Pool balance too low.
+            uint256 W_BxBtoOMA = uint256(ampWeightAssetBalances[it]);   // Always casts a positive value
+            uint256 tokenAmount = (
+                assetBalances[it] * (
+                    FixedPointMathLib.WAD - uint256(FixedPointMathLib.powWad(               // Always casts a positive value, and powWad is always <= 1, as 'base' is <= 1
+                        int256(FixedPointMathLib.divWadUp(W_BxBtoOMA - U_i, W_BxBtoOMA)),   // Casting never overflows, as division result is always <= 1
+                        oneMinusAmpInverse // 1/(1-amp))
+                    ))
+                )
+            ) / FixedPointMathLib.WAD;
+
             // Check that the user is satisfied with this.
-            require(minOut[it] <= tokenAmount, RETURN_INSUFFICIENT);
+            if (minOut[it] > tokenAmount)
+                revert ReturnInsufficient(tokenAmount, minOut[it]);
+            
             // Transfer the appropriate number of tokens from the user to the pool. (And store for event logging)
             amounts[it] = tokenAmount;
             IERC20(tokenIndexed[it]).safeTransfer(msg.sender, tokenAmount);
 
             // Decrease the security limit by the amount withdrawn.
-            uint256 weight = _weight[tokenIndexed[it]];
-            tokenAmount *= weight;
-            totalWithdrawn += tokenAmount;
+            totalWithdrawn += tokenAmount * _weight[tokenIndexed[it]];
         }
         _maxUnitCapacity -=  totalWithdrawn;
         if (_usedUnitCapacity <= totalWithdrawn) {
@@ -797,20 +800,20 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 amount,
         uint256 minOut
     ) nonReentrant() external returns (uint256) {
-        _A();
+        _adjustAmplification();
         uint256 fee = FixedPointMathLib.mulWadDown(amount, _poolFee);
 
         // Calculate the swap return value.
         uint256 out = calcLocalSwap(fromAsset, toAsset, amount - fee);
 
         // Check if the calculated returned value is more than the minimum output.
-        require(out >= minOut, RETURN_INSUFFICIENT);
+        if (minOut > out) revert ReturnInsufficient(out, minOut);
 
         IERC20(toAsset).safeTransfer(msg.sender, out);
         IERC20(fromAsset).safeTransferFrom(msg.sender, address(this), amount);
 
         // Governance Fee
-        collectGovernanceFee(fee, fromAsset);
+        collectGovernanceFee(fromAsset, fee);
 
         // For amplified pools, the security limit is based on the sum of the tokens
         // in the pool.
@@ -837,20 +840,21 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         bytes memory calldata_
     ) public returns (uint256) {
         require(fallbackUser != address(0));
-        _A();
-        // uint256 fee = FixedPointMathLib.mulWadDown(amount, _poolFee);
+        _adjustAmplification();
+        uint256 fee = FixedPointMathLib.mulWadDown(amount, _poolFee);
 
         // Calculate the group specific units bought.
         uint256 U = calcSendSwap(
             fromAsset,
-            amount - FixedPointMathLib.mulWadDown(amount, _poolFee)
+            amount - fee
         );
 
-        // Track units for computing balance0.
+        // !IMPORTANT sendSwapAck requires casting U to int256 to update the _unitTracker and must never revert. Check for overflow here.
+        require(U < uint256(type(int256).max));     // int256 max fits in uint256
         _unitTracker += int256(U);
 
         TokenEscrow memory escrowInformation = TokenEscrow({
-            amount: amount - FixedPointMathLib.mulWadDown(amount, _poolFee),
+            amount: amount - fee,
             token: fromAsset
         });
 
@@ -880,11 +884,11 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
 
         // Escrow the tokens
         require(_escrowedFor[messageHash] == address(0)); // dev: Escrow already exists.
-        _escrowedTokens[fromAsset] += amount - FixedPointMathLib.mulWadDown(amount, _poolFee);
+        _escrowedTokens[fromAsset] += amount - fee;
         _escrowedFor[messageHash] = fallbackUser;
 
         // Governance Fee
-        collectGovernanceFee(FixedPointMathLib.mulWadDown(amount, _poolFee), fromAsset);
+        collectGovernanceFee(fromAsset, fee);
 
         // Collect the tokens from the user.
         IERC20(fromAsset).safeTransferFrom(msg.sender, address(this), amount);
@@ -950,7 +954,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         // The chainInterface is the only valid caller of this function, as there cannot
         // be a check of U. (It is purely a number)
         require(msg.sender == _chainInterface);
-        _A();
+        _adjustAmplification();
 
         // Convert the asset index (toAsset) into the asset to be purchased.
         address toAsset = _tokenIndexing[toAssetIndex];
@@ -965,7 +969,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         _maxUnitCapacity -= deltaSecurityLimit;
         updateUnitCapacity(deltaSecurityLimit);
 
-        require(minOut <= purchasedTokens, RETURN_INSUFFICIENT);
+        if(minOut > purchasedTokens) revert ReturnInsufficient(purchasedTokens, minOut);
 
         // Track units for fee distribution.
         _unitTracker -= int256(U);
@@ -1034,18 +1038,18 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
     ) external returns (uint256) {
         // There needs to be provided a valid fallbackUser.
         require(fallbackUser != address(0));
-        _A();
+        _adjustAmplification();
 
         _burn(msg.sender, poolTokens);
 
-        int256 oneMinusAmp = int256(FixedPointMathLib.WAD - _amp);
+        int256 oneMinusAmp = int256(FixedPointMathLib.WAD - _amp);   // int256 casting safe, result always < 10**18. Always positive, as amp < 10**18
         uint256 walpha_0_ampped;
         uint256 it;
         // Compute walpha_0 to find the reference balances. This lets us evaluate the
         // number of tokens the pool should have If the price in the group is 1:1.
         {
             // We don't need weightedAssetBalanceSum again.
-            uint256 weightedAssetBalanceSum = 0;
+            int256 weightedAssetBalanceSum = 0;
             for (it = 0; it < MAX_ASSETS; ++it) {
                 address token = _tokenIndexing[it];
                 if (token == address(0)) break;
@@ -1055,24 +1059,30 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                 // A smaller number here means less units are transfered.
                 uint256 weightAssetBalance = weight * (ERC20(token).balanceOf(address(this)) - _escrowedTokens[token]);
 
-                weightedAssetBalanceSum += uint256(FixedPointMathLib.powWad(
-                    int256(weightAssetBalance * FixedPointMathLib.WAD),
+                weightedAssetBalanceSum += FixedPointMathLib.powWad(
+                    int256(weightAssetBalance * FixedPointMathLib.WAD),     // If casting overflows to a negative number, powWad fails
                     oneMinusAmp
-                ));
+                );
             }
-            walpha_0_ampped = uint256(int256(weightedAssetBalanceSum) - _unitTracker) / it;
+            walpha_0_ampped = uint256(weightedAssetBalanceSum - _unitTracker) / it;     // By design, weightedAssetBalanceSum > _unitTracker    //TODO do we still wanna add a check for this?
         }
 
         uint256 U = 0;
         {
-            // Plus _escrowedPoolTokens since we want the withdrawal to return less.
+            // Plus _escrowedPoolTokens since we want the withdrawal to return less. Adding poolTokens as these have already been burnt.
             uint256 ts = totalSupply() + _escrowedPoolTokens + poolTokens;
             uint256 pt_fraction = FixedPointMathLib.divWadDown(ts + poolTokens, ts);
 
             U = it * FixedPointMathLib.mulWadDown(
                 walpha_0_ampped, 
-                uint256(FixedPointMathLib.powWad(int256(pt_fraction), oneMinusAmp)) - FixedPointMathLib.WAD
+                uint256(FixedPointMathLib.powWad(       // Always casts a positive value
+                    int256(pt_fraction),                // If casting overflows to a negative number, powWad fails
+                    oneMinusAmp
+                )) - FixedPointMathLib.WAD
             );
+            // !IMPORTANT sendLiquidityAck requires casting U to int256 to update the _unitTracker and must never revert. Check for overflow here.
+            require(U < uint256(type(int256).max));     // int256 max fits in uint256
+            _unitTracker += int256(U);
         }
 
         LiquidityEscrow memory escrowInformation = LiquidityEscrow({
@@ -1136,16 +1146,16 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
     ) external returns (uint256) {
         // The chainInterface is the only valid caller of this function.
         require(msg.sender == _chainInterface);
-        _A();
+        _adjustAmplification();
 
-        int256 oneMinusAmp = int256(FixedPointMathLib.WAD - _amp);
+        int256 oneMinusAmp = int256(FixedPointMathLib.WAD - _amp);   // int256 casting safe, result always < 10**18. Always positive, as amp < 10**18
         uint256 walpha_0_ampped;
         uint256 it;
         // Compute walpha_0 to find the reference balances. This lets us evaluate the
         // number of tokens the pool should have If the price in the group is 1:1.
         {
             // We don't need weightedAssetBalanceSum again.
-            uint256 weightedAssetBalanceSum = 0;
+            int256 weightedAssetBalanceSum = 0;
             for (it = 0; it < MAX_ASSETS; ++it) {
                 address token = _tokenIndexing[it];
                 if (token == address(0)) break;
@@ -1155,31 +1165,32 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                 // A larger number here means more units have to be transfered.
                 uint256 weightAssetBalance = weight * ERC20(token).balanceOf(address(this));
 
-                weightedAssetBalanceSum += uint256(FixedPointMathLib.powWad(
-                    int256(weightAssetBalance * FixedPointMathLib.WAD),
+                weightedAssetBalanceSum += FixedPointMathLib.powWad(
+                    int256(weightAssetBalance * FixedPointMathLib.WAD),     // If casting overflows to a negative number, powWad fails
                     oneMinusAmp
-                ));
+                );
             }
-            walpha_0_ampped = uint256(int256(weightedAssetBalanceSum) - _unitTracker) / it;
+            walpha_0_ampped = uint256(weightedAssetBalanceSum - _unitTracker) / it;     // By design, weightedAssetBalanceSum > _unitTracker    //TODO do we still wanna add a check for this?
         }
 
-        // While not very readable, reusing this variable makes a lot of sense.
-        // So from now one, oneMinusAmp is 1/oneMinusAmp
-        oneMinusAmp = int256(FixedPointMathLib.WAD * FixedPointMathLib.WAD) / oneMinusAmp;
+        int256 oneMinusAmpInverse = int256(FixedPointMathLib.WAD * FixedPointMathLib.WAD) / oneMinusAmp;      // Casting never overflows, as WAD^2 is within int256 range
 
         uint256 ts = totalSupply(); // Not! + _escrowedPoolTokens, since a smaller supply results in fewer pool tokens.
 
         uint256 it_times_walpha_amped = it * walpha_0_ampped;
-        uint256 poolTokens = (ts * (uint256(FixedPointMathLib.powWad(
-            int256(FixedPointMathLib.divWadDown(
+        uint256 poolTokens = (ts * (uint256(FixedPointMathLib.powWad(   // Always casts a positive value
+            int256(FixedPointMathLib.divWadDown(                        // If casting overflows to a negative number, powWad fails
                 it_times_walpha_amped + U,
                 it_times_walpha_amped
             )),
-            oneMinusAmp
+            oneMinusAmpInverse
         )) - FixedPointMathLib.WAD)) / FixedPointMathLib.WAD;
 
         // Check if the user would accept the mint.
-        require(minOut <= poolTokens, RETURN_INSUFFICIENT);
+        if(minOut > poolTokens) revert ReturnInsufficient(poolTokens, minOut);
+
+        // Update the unit tracker:
+        _unitTracker -= int256(U);
 
         // Security limit
         {
@@ -1187,17 +1198,20 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
             // This should be a close enough approximation.
             // If U > it_times_walpha_amped, then U can purchase more than 50% of the pool.
             // And the below calculation doesn't work.
-            require(it_times_walpha_amped > U, EXCEEDS_SECURITY_LIMIT);
-            uint256 poolTokenEquiv = FixedPointMathLib.mulWadUp(uint256(FixedPointMathLib.powWad(
-                int256(it_times_walpha_amped),
-                oneMinusAmp
-            )), (FixedPointMathLib.WAD - uint256(FixedPointMathLib.powWad(
-                int256(FixedPointMathLib.divWadDown(
-                    it_times_walpha_amped - U,
-                    it_times_walpha_amped
+            if (it_times_walpha_amped <= U) revert ExceedsSecurityLimit(U - it_times_walpha_amped);
+            uint256 poolTokenEquiv = FixedPointMathLib.mulWadUp(
+                uint256(FixedPointMathLib.powWad(                           // Always casts a positive value
+                    int256(it_times_walpha_amped),                          // If casting overflows to a negative number, powWad fails
+                    oneMinusAmpInverse
                 )),
-                oneMinusAmp
-            ))));
+                FixedPointMathLib.WAD - uint256(FixedPointMathLib.powWad(   // powWad is always <= 1, as 'base' is always <= 1
+                    int256(FixedPointMathLib.divWadDown(                    // Casting never overflows, as division result is always <= 1
+                        it_times_walpha_amped - U,
+                        it_times_walpha_amped
+                    )),
+                    oneMinusAmpInverse
+                ))
+            );
             // Check if the swap is according to the swap limits
             updateUnitCapacity(poolTokenEquiv * 2 / FixedPointMathLib.WAD);
         }
@@ -1254,9 +1268,56 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         }
     }
 
+    /** 
+     * @notice Deletes and releases escrowed tokens to the pool and updates the security limit.
+     * @dev Should never revert!  
+     * The base implementation exists in CatalystSwapPoolCommon. The function adds security limit
+     * adjustment to the implementation to swap volume supported.
+     * @param messageHash A hash of the cross-chain message used ensure the message arrives indentical to the sent message.
+     * @param U The number of units purchased.
+     * @param escrowAmount The number of tokens escrowed.
+     * @param escrowToken The token escrowed.
+     */
+    function sendSwapTimeout(
+        bytes32 messageHash,
+        uint256 U,
+        uint256 escrowAmount,
+        address escrowToken
+    ) public override {
+        // Execute common escrow logic.
+        super.sendSwapTimeout(messageHash, U, escrowAmount, escrowToken);
+
+        // Removed timedout units from the unit tracker. This will keep the
+        // balance0 in balance, since tokens also leave the pool
+        _unitTracker -= int256(U);      // It has already been checked on sendSwap that casting to int256 will not overflow.
+                                        // Cannot be manipulated by the router as otherwise the messageHash check will fail
+    }
+
     // sendLiquidityAck is not overwritten since we are unable to increase
     // the security limit. This is because it is very expensive to compute the update
     // to the security limit. If someone liquidity swapped a significant amount of assets
     // it is assumed the pool has low liquidity. In these cases, liquidity swaps shouldn't be used.
+
+    /** 
+     * @notice Implements basic liquidity ack logic: Deletes and releases pool tokens to the pool.
+     * @dev Should never revert!  
+     * The base implementation exists in CatalystSwapPoolCommon.
+     * @param messageHash A hash of the cross-chain message used en
+     * @param messageHash A hash of the cross-chain message ensure the message arrives indentical to the sent message.
+     * @param U The number of units initially acquired.
+     * @param escrowAmount The number of pool tokens escrowed.
+     */
+    function sendLiquidityTimeout(
+        bytes32 messageHash,
+        uint256 U,
+        uint256 escrowAmount
+    ) public virtual override {
+        super.sendLiquidityTimeout(messageHash, U, escrowAmount);
+
+        // Removed timedout units from the unit tracker. This will keep the
+        // balance0 in balance, since tokens also leave the pool
+        _unitTracker -= int256(U);      // It has already been checked on sendSwap that casting to int256 will not overflow.
+                                        // Cannot be manipulated by the router as otherwise the messageHash check will fail
+    }
 
 }

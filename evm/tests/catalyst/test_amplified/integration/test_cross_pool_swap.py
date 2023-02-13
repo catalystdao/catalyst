@@ -1,6 +1,7 @@
 import pytest
 from brownie import reverts, convert, web3
 from brownie.test import given, strategy
+import re
 
 
 pytestmark = pytest.mark.usefixtures("group_finish_setup", "group_connect_pools")
@@ -52,7 +53,7 @@ def test_cross_pool_swap(
     
     # The swap may revert because of the security limit     #TODO mark these cases as 'skip'?
     if pool_2.getUnitCapacity() < pool_2.calcReceiveSwap(pool_2._tokenIndexing(0), tx.events["SendSwap"]["output"]) * pool_2._weight(pool_2._tokenIndexing(0)):
-        with reverts("Swap exceeds security limit"):
+        with reverts(revert_pattern=re.compile("typed error: 0x249c4e65.*")):
             txe = ibc_emulator.execute(tx.events["IncomingMetadata"]["metadata"][0], tx.events["IncomingPacket"]["packet"], {"from": berg})
         return
     else:
@@ -128,7 +129,7 @@ def test_cross_pool_swap_min_out(
     if min_out == 0:
         return
 
-    with reverts("Insufficient Return"):
+    with reverts(revert_pattern=re.compile("typed error: 0x24557f05.*")):
         ibc_emulator.execute(tx.events["IncomingMetadata"]["metadata"][0], tx.events["IncomingPacket"]["packet"], {"from": berg})
 
 
