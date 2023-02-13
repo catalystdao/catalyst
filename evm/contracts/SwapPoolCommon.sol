@@ -5,7 +5,7 @@ pragma solidity ^0.8.16;
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
-import "@openzeppelin/contracts/utils/MultiCall.sol";
+import "@openzeppelin/contracts/utils/Multicall.sol";
 import "./SwapPoolFactory.sol";
 import "./FixedPointMathLib.sol";
 import "./CatalystIBCInterface.sol";
@@ -186,7 +186,7 @@ abstract contract CatalystSwapPoolCommon is
     }
 
     /** @notice  Returns the current cross-chain swap capacity. */
-    function getUnitCapacity() external view virtual override returns (uint256) {
+    function getUnitCapacity() public view virtual override returns (uint256) {
         uint256 MUC = _maxUnitCapacity;
 
         // The delta change to the limit is: timePassed · slope = timePassed · Max/decayrate
@@ -258,7 +258,7 @@ abstract contract CatalystSwapPoolCommon is
     /**
      * @dev Collect the governance fee share of the specified pool fee
      */
-    function collectGovernanceFee(uint256 poolFeeAmount, address asset) internal {
+    function collectGovernanceFee(address asset, uint256 poolFeeAmount) internal {
 
         uint256 governanceFeeShare = _governanceFeeShare;
 
