@@ -870,10 +870,8 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
             calldata_
         );
 
-        //TODO remove comments if accepted
         // ! Only need to hash info that is required by the escrow (+ some extra for randomisation)
-        // ! No need to standardise what is used for the messageHash, as this is only specific to this implementation
-        // ! No need to hash context (as token/liquidity data hashed is different), fromPool, targetPool, targetAssetIndex, minOut, CallData
+        // ! No need to hash context (as token/liquidity escrow data is different), fromPool, targetPool, targetAssetIndex, minOut, CallData
         bytes32 messageHash = computeAssetSwapHash(
             targetUser, // Used to randomise the hash   //Do we even need this?
             U,          // Used to randomise the hash
@@ -1099,10 +1097,8 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
             escrowInformation
         );
 
-        //TODO remove comments if accepted
         // ! Only need to hash info that is required by the escrow (+ some extra for randomisation)
-        // ! No need to standardise what is used for the messageHash, as this is only specific to this implementation
-        // ! No need to hash context (as token/liquidity data hashed is different), fromPool, targetPool, targetAssetIndex, minOut, CallData
+        // ! No need to hash context (as token/liquidity escrow data is different), fromPool, targetPool, targetAssetIndex, minOut, CallData
         bytes32 messageHash = computeLiquiditySwapHash(
             targetUser, // Used to randomise the hash   //Do we even need this?
             U,          // Used to randomise the hash
