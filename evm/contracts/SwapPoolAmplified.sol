@@ -1273,19 +1273,21 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
      * @dev Should never revert!  
      * The base implementation exists in CatalystSwapPoolCommon. The function adds security limit
      * adjustment to the implementation to swap volume supported.
-     * @param messageHash A hash of the cross-chain message used ensure the message arrives indentical to the sent message.
+     * @param targetUser The recipient of the transaction on the target chain. Encoded in bytes32.
      * @param U The number of units purchased.
      * @param escrowAmount The number of tokens escrowed.
      * @param escrowToken The token escrowed.
+     * @param blockNumberMod The block number at which the swap transaction was commited (mod 32)
      */
     function sendSwapTimeout(
-        bytes32 messageHash,
+        bytes32 targetUser,
         uint256 U,
         uint256 escrowAmount,
-        address escrowToken
+        address escrowToken,
+        uint32 blockNumberMod
     ) public override {
         // Execute common escrow logic.
-        super.sendSwapTimeout(messageHash, U, escrowAmount, escrowToken);
+        super.sendSwapTimeout(targetUser, U, escrowAmount, escrowToken, blockNumberMod);
 
         // Removed timedout units from the unit tracker. This will keep the
         // balance0 in balance, since tokens also leave the pool
@@ -1302,17 +1304,18 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
      * @notice Implements basic liquidity ack logic: Deletes and releases pool tokens to the pool.
      * @dev Should never revert!  
      * The base implementation exists in CatalystSwapPoolCommon.
-     * @param messageHash A hash of the cross-chain message used en
-     * @param messageHash A hash of the cross-chain message ensure the message arrives indentical to the sent message.
+     * @param targetUser The recipient of the transaction on the target chain. Encoded in bytes32.
      * @param U The number of units initially acquired.
      * @param escrowAmount The number of pool tokens escrowed.
+     * @param blockNumberMod The block number at which the swap transaction was commited (mod 32)
      */
     function sendLiquidityTimeout(
-        bytes32 messageHash,
+        bytes32 targetUser,
         uint256 U,
-        uint256 escrowAmount
+        uint256 escrowAmount,
+        uint32 blockNumberMod
     ) public virtual override {
-        super.sendLiquidityTimeout(messageHash, U, escrowAmount);
+        super.sendLiquidityTimeout(targetUser, U, escrowAmount, blockNumberMod);
 
         // Removed timedout units from the unit tracker. This will keep the
         // balance0 in balance, since tokens also leave the pool
