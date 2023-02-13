@@ -115,7 +115,16 @@ abstract contract Dispatcher is Payments, CatalystExchange, LockAndMsgSender {
                 }
                 // 0x08 <= command < 0x10
             } else {
-                if (command == Commands.SENDSWAP) {
+                if (command == Commands.TRANSFER_FROM) {
+                    // equivalent: abi.decode(inputs, (address, uint256))
+                    address token;
+                    uint256 amount;
+                    assembly {
+                        token := calldataload(inputs.offset)
+                        amount := calldataload(add(inputs.offset, 0x20))
+                    }
+                    Payments.transferFrom(token, amount);
+                } else if (command == Commands.SENDSWAP) {
                     address pool;
                     bytes32 channelId;
                     bytes32 targetPool;

@@ -21,10 +21,11 @@ library Commands {
     // COMMAND_PLACEHOLDER = 0x07;
 
     // Command Types where 0x08<=value<=0x0f, executed in the second nested-if block
-    uint256 constant SENDSWAP = 0x08;
-    uint256 constant WITHDRAW_EQUAL = 0x09;
-    uint256 constant WITHDRAW_MIXED = 0x0a;
-    uint256 constant DEPOSIT_MIXED = 0x0b;
+    uint256 constant TRANSFER_FROM = 0x08;
+    uint256 constant SENDSWAP = 0x09;
+    uint256 constant WITHDRAW_EQUAL = 0x0a;
+    uint256 constant WITHDRAW_MIXED = 0x0b;
+    uint256 constant DEPOSIT_MIXED = 0x0c;
     // COMMAND_PLACEHOLDER = 0x0c;
     // COMMAND_PLACEHOLDER = 0x0d;
     // COMMAND_PLACEHOLDER = 0x0e;

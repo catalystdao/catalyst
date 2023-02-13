@@ -72,4 +72,7 @@ contract CatalystRouter is RouterImmutables, ICatalystRouter, Dispatcher {
 
         this.execute(commands, inputs);
     }
+
+    /// @notice To receive ETH from WETH and NFT protocols
+    receive() external payable {}
 }

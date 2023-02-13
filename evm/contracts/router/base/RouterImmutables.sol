@@ -12,7 +12,7 @@ struct RouterParameters {
 /// @notice Used along with the `RouterParameters` struct for ease of cross-chain deployment
 contract RouterImmutables {
     /// @dev WETH9 address
-    IWETH9 internal immutable WETH9;
+    IWETH9 public immutable WETH9;
 
     constructor(RouterParameters memory params) {
         WETH9 = IWETH9(params.weth9);

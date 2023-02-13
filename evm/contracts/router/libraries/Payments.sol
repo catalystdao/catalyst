@@ -101,4 +101,8 @@ abstract contract Payments is RouterImmutables {
             }
         }
     }
+
+    function transferFrom(address token, uint256 amount) internal {
+        ERC20(token).safeTransferFrom(msg.sender, address(this), amount);
+    }
 }
