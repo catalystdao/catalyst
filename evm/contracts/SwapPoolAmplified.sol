@@ -134,7 +134,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
      * @notice  Returns the current cross-chain swap capacity. 
      * @dev Overwrites the common implementation because of the
      * differences as to how it is used. As a result, this always returns
-     * half of _maxUnitCapacity.
+     * half of the common implementation (or of _maxUnitCapacity)
      */
     function getUnitCapacity() public view override returns (uint256) {
         return super.getUnitCapacity() / 2;
@@ -489,15 +489,19 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
             _usedUnitCapacity += assetDepositSum;
 
             // Compute the reference liquidity.
-            walpha_0_ampped = uint256(weightedAssetBalanceSum - _unitTracker) / it;     // By design, weightedAssetBalanceSum > _unitTracker    //TODO do we still wanna add a check for this?
+            walpha_0_ampped = uint256(weightedAssetBalanceSum - _unitTracker) / it;     // By design, weightedAssetBalanceSum > _unitTracker    
+            //TODO do we still wanna add a check for this?
+            //TODO continued: If it is negative, then the pool is essentially broken. Do we want to add a recovery method?
         }
 
         // Subtract fee from U. This stops people from using deposit and withdrawal as method of swapping.
         // To reduce costs, there the governance fee is not included. This does result in deposit+withdrawal
         // working as a way to circumvent the governance fee.
+        // U shouldn't ever be negative. But in the case it is, the result is very bad. For safety, check it is above 0.
+        require(U >= 0); // dev: U needs to be positive, otherwise, the uint256 casting becomes too larger.
         U = int256(                                     // Casting never overflows, as mulWadDown returns a smaller 'U'
             FixedPointMathLib.mulWadDown(
-                uint256(U),                             // U always positive by design //TODO REVIEW, what about numerical errors on the calculation. Does it still hold?
+                uint256(U),                             // U shouldn't be negative but the above check ensures it is ALWAYS positive.
                 FixedPointMathLib.WAD - _poolFee        // Always > 1
             )
         );
