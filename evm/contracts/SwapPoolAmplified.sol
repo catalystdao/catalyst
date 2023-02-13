@@ -492,9 +492,10 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
             _usedUnitCapacity += assetDepositSum;
 
             // Compute the reference liquidity.
-            walpha_0_ampped = uint256(weightedAssetBalanceSum - _unitTracker) / it;     // By design, weightedAssetBalanceSum > _unitTracker    
-            //TODO do we still wanna add a check for this?
-            //TODO continued: If it is negative, then the pool is essentially broken. Do we want to add a recovery method?
+            // weightedAssetBalanceSum > _unitTracker always, since _unitTracker corrolates to exactly
+            // the difference between weightedAssetBalanceSum and weightedAssetBalance0Sum and thus
+            // _unitTracker < weightedAssetBalance0Sum
+            walpha_0_ampped = uint256(weightedAssetBalanceSum - _unitTracker) / it;     // By design, weightedAssetBalanceSum > _unitTracker
         }
 
         // Subtract fee from U. This stops people from using deposit and withdrawal as method of swapping.
