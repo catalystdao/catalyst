@@ -153,6 +153,9 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         require(targetTime >= block.timestamp + MIN_ADJUSTMENT_TIME); // dev: targetTime must be more than MIN_ADJUSTMENT_TIME in the future.
         require(targetAmplification < FixedPointMathLib.WAD);  // dev: amplification not set correctly.
 
+        // Because of the balance0 (_unitTracker) implementation, amplification adjustment has to be disabled for cross-chain pools.
+        require(_chainInterface == address(0));  // dev: Amplification adjustment is disabled for cross-chain pools.
+
         // Store adjustment information
         _adjustmentTarget = targetTime;
         _lastModificationTime = block.timestamp;
@@ -582,7 +585,10 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
             }
 
             // Compute the reference liquidity.
-            walpha_0_ampped = uint256(weightedAssetBalanceSum -_unitTracker) / it;     // By design, weightedAssetBalanceSum > _unitTracker    //TODO do we still wanna add a check for this?
+            // weightedAssetBalanceSum > _unitTracker always, since _unitTracker corrolates to exactly
+            // the difference between weightedAssetBalanceSum and weightedAssetBalance0Sum and thus
+            // _unitTracker < weightedAssetBalance0Sum
+            walpha_0_ampped = uint256(weightedAssetBalanceSum - _unitTracker) / it;     // By design, weightedAssetBalanceSum > _unitTracker
         }
 
         // For later event logging, the transferred tokens are stored.
@@ -721,7 +727,11 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                     ampWeightAssetBalances[U] = wab; // Store since it is an expensive calculation.
                     weightedAssetBalanceSum += wab;
                 }
-                walpha_0_ampped = uint256(weightedAssetBalanceSum - _unitTracker) / U;     // By design, weightedAssetBalanceSum > _unitTracker    //TODO do we still wanna add a check for this?
+
+                // weightedAssetBalanceSum > _unitTracker always, since _unitTracker corrolates to exactly
+                // the difference between weightedAssetBalanceSum and weightedAssetBalance0Sum and thus
+                // _unitTracker < weightedAssetBalance0Sum
+                walpha_0_ampped = uint256(weightedAssetBalanceSum - _unitTracker) / U;     // By design, weightedAssetBalanceSum > _unitTracker
 
                 // set U = number of tokens in the pool. But that is exactly what it is.
             }
@@ -1061,7 +1071,11 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                     oneMinusAmp
                 );
             }
-            walpha_0_ampped = uint256(weightedAssetBalanceSum - _unitTracker) / it;     // By design, weightedAssetBalanceSum > _unitTracker    //TODO do we still wanna add a check for this?
+
+            // weightedAssetBalanceSum > _unitTracker always, since _unitTracker corrolates to exactly
+            // the difference between weightedAssetBalanceSum and weightedAssetBalance0Sum and thus
+            // _unitTracker < weightedAssetBalance0Sum
+            walpha_0_ampped = uint256(weightedAssetBalanceSum - _unitTracker) / it;     // By design, weightedAssetBalanceSum > _unitTracker 
         }
 
         uint256 U = 0;
@@ -1159,7 +1173,11 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                     oneMinusAmp
                 );
             }
-            walpha_0_ampped = uint256(weightedAssetBalanceSum - _unitTracker) / it;     // By design, weightedAssetBalanceSum > _unitTracker    //TODO do we still wanna add a check for this?
+
+            // weightedAssetBalanceSum > _unitTracker always, since _unitTracker corrolates to exactly
+            // the difference between weightedAssetBalanceSum and weightedAssetBalance0Sum and thus
+            // _unitTracker < weightedAssetBalance0Sum
+            walpha_0_ampped = uint256(weightedAssetBalanceSum - _unitTracker) / it;     // By design, weightedAssetBalanceSum > _unitTracker
         }
 
         int256 oneMinusAmpInverse = int256(FixedPointMathLib.WAD * FixedPointMathLib.WAD) / oneMinusAmp;      // Casting never overflows, as WAD^2 is within int256 range
