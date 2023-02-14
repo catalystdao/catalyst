@@ -1,12 +1,14 @@
 import pytest
 from brownie import convert, reverts
 from brownie.test import given, strategy
+from hypothesis import example
 import re
 
 pytestmark = pytest.mark.usefixtures("group_finish_setup", "group_connect_pools")
 
 
 @pytest.mark.no_call_coverage
+@example(deposit_percentage=6000, swap_percentage=7000)
 @given(deposit_percentage=strategy("uint256", max_value=20000), swap_percentage=strategy("uint256", max_value=10000))
 def test_liquidity_swap(
     channel_id,

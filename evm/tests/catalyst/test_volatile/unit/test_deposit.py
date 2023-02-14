@@ -1,7 +1,9 @@
 import pytest
 from brownie.test import given, strategy
+from hypothesis import example
 
 
+@example(percentage=5*10**5)
 @given(percentage=strategy("uint256", max_value=1*10**6))
 def test_deposit_like_all(pool, pool_tokens, berg, deployer, percentage):
     percentage /= 10**6

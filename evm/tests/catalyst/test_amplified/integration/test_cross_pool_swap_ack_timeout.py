@@ -2,6 +2,7 @@ import pytest
 from brownie import reverts, convert, web3, chain
 from brownie.test import given, strategy
 from hypothesis.strategies import floats
+from hypothesis import example
 
 
 pytestmark = [
@@ -11,6 +12,7 @@ pytestmark = [
 
 #TODO do we want to parametrize the swap_amount? (as it is right now)
 @pytest.mark.no_call_coverage
+@example(swap_amount=0.12)
 @given(swap_amount=floats(min_value=0, max_value=0.5))    # From 0 to 2x the tokens hold by the pool
 def test_ibc_ack(channel_id, pool, pool_tokens, ibc_emulator, berg, deployer, swap_amount):
 
@@ -45,6 +47,7 @@ def test_ibc_ack(channel_id, pool, pool_tokens, ibc_emulator, berg, deployer, sw
 
 #TODO do we want to parametrize the swap_amount? (as it is right now)
 @pytest.mark.no_call_coverage
+@example(swap_amount=0.12)
 @given(swap_amount=floats(min_value=0, max_value=0.5))    # From 0 to 2x the tokens hold by the pool
 def test_ibc_timeout(channel_id, pool, pool_tokens, ibc_emulator, berg, deployer, swap_amount):
 
@@ -143,6 +146,7 @@ def test_only_one_response(channel_id, pool, pool_tokens, ibc_emulator, berg, de
 
 
 @given(swap_amount=strategy("uint256", max_value=10*10**18, min_value=10**16))
+@example(swap_amount=85*10**16)
 def test_ibc_timeout_and_ack(channel_id, pool, pool_tokens, ibc_emulator, berg, deployer, swap_amount):
 
     if len(pool_tokens) < 2:

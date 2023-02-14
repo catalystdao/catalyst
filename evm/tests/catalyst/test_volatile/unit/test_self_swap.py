@@ -1,12 +1,14 @@
 import pytest
 from brownie import reverts, convert
 from brownie.test import given, strategy
+from hypothesis import example
 from hypothesis.strategies import floats
 import re
 
 pytestmark = pytest.mark.usefixtures("pool_connect_itself")
 
 @pytest.mark.no_call_coverage
+@example(swap_percentage=0.8)
 @given(swap_percentage=floats(min_value=0, max_value=2))    # From 0 to 2x the tokens hold by the pool
 def test_self_swap(
     pool,

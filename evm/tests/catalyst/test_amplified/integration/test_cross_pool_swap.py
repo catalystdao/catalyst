@@ -1,6 +1,7 @@
 import pytest
 from brownie import reverts, convert, web3
 from brownie.test import given, strategy
+from hypothesis import example
 import re
 
 
@@ -9,6 +10,7 @@ pytestmark = pytest.mark.usefixtures("group_finish_setup", "group_connect_pools"
 #TODO add fees test (create fixture that sets up non-zero fees to the pool)
 
 @pytest.mark.no_call_coverage
+@example(swap_percentage=22*10**16)
 @given(swap_percentage=strategy("uint256", max_value=1*10**18))
 def test_cross_pool_swap(
     channel_id,
@@ -76,6 +78,7 @@ def test_cross_pool_swap(
 
 
 @pytest.mark.no_call_coverage
+@example(swap_percentage=8*10**15)
 @given(swap_percentage=strategy("uint256", max_value=5*10**17))
 def test_cross_pool_swap_min_out(
     channel_id,
