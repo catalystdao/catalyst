@@ -80,9 +80,9 @@ def pytest_addoption(parser):
     parser.addoption("--amplified", action="store_true", help="Run only tests of the amplified pool.")
     parser.addoption("--amplification", default=None, help="Override the config amplification constant.")
 
-    parser.addoption("--pool", default="all", type=pool_type_checker, help="Specify how to parametrize the pool fixture.")
-    parser.addoption("--pool-1", default="0", type=pool_1_type_checker, help="Specify how to parametrize the pool-1 fixture.")
-    parser.addoption("--pool-2", default="all", type=pool_2_type_checker, help="Specify how to parametrize the pool-2 fixture.")
+    parser.addoption("--pool", default=None, type=pool_type_checker, help="Specify how to parametrize the pool fixture. Defaults to 'all' if not running with --fast, otherwise it defaults to 0.")
+    parser.addoption("--pool-1", default=None, type=pool_1_type_checker, help="Specify how to parametrize the pool-1 fixture. Defaults to 0.")
+    parser.addoption("--pool-2", default=None, type=pool_2_type_checker, help="Specify how to parametrize the pool-2 fixture. Defaults to 'all' if not running with --fast, otherwise it defaults to 'next'.")
 
     parser.addoption("--unit", action="store_true", help="Run only unit tests.")
     parser.addoption("--integration", action="store_true", help="Run only integration tests.")
@@ -158,15 +158,19 @@ def pytest_configure(config):
     pool_count = len((_test_config["volatile"] or _test_config["amplified"])["pools"])  # 'or' as 'volatile' config may be None (but in that case 'amplified' is not)
 
     # Compute the pool parametrization (indexes only)
+    fast_option = config.getoption("--fast")
+    pool_option = config.getoption("--pool")
     _parametrized_pools = compute_parametrized_pools(
-        config.getoption("--pool"),
+        pool_option if pool_option is not None else ("all" if not fast_option else 0),      # If --pool is not specified: use "all" if not running in --fast mode, otherwise use 0
         pool_count
     )
     
     # Compute the pool-1/pool-2 combinations (indexes only)
+    pool_1_option = config.getoption("--pool-1")
+    pool_2_option = config.getoption("--pool-2")
     _parametrized_pool_pairs = compute_parametrized_pool_pairs(
-        config.getoption("--pool-1"),
-        config.getoption("--pool-2"),
+        pool_1_option if pool_1_option is not None else 0,                                          # If --pool-1 is not specified: use 0
+        pool_2_option if pool_2_option is not None else ("all" if not fast_option else "next"),     # If --pool-2 is not specified: use "all" if not running in --fast mode, otherwise use "next"
         pool_count
     )
 
