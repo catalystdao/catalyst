@@ -4,10 +4,12 @@ from brownie.test import given, strategy
 from hypothesis.strategies import floats
 
 
-pytestmark = pytest.mark.usefixtures("pool_connect_itself")
+pytestmark = [
+    pytest.mark.usefixtures("pool_connect_itself"),
+    pytest.mark.no_pool_param
+]
 
 #TODO do we want to parametrize the swap_amount? (as it is right now)
-#TODO do we want to parametrize this over the different 'pool's? (as it is right now)
 @pytest.mark.no_call_coverage
 @given(swap_amount=floats(min_value=0, max_value=0.5))    # From 0 to 2x the tokens hold by the pool
 def test_ibc_ack(channel_id, pool, pool_tokens, ibc_emulator, berg, deployer, swap_amount):
@@ -42,7 +44,6 @@ def test_ibc_ack(channel_id, pool, pool_tokens, ibc_emulator, berg, deployer, sw
 
 
 #TODO do we want to parametrize the swap_amount? (as it is right now)
-#TODO do we want to parametrize this over the different 'pool's? (as it is right now)
 @pytest.mark.no_call_coverage
 @given(swap_amount=floats(min_value=0, max_value=0.5))    # From 0 to 2x the tokens hold by the pool
 def test_ibc_timeout(channel_id, pool, pool_tokens, ibc_emulator, berg, deployer, swap_amount):

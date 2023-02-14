@@ -1,6 +1,8 @@
 import pytest
 from brownie import reverts
 
+pytestmark = pytest.mark.no_pool_param
+
 @pytest.fixture(scope="module")
 def berg_pool_token_balance(pool, pool_tokens, deployer, berg):
 

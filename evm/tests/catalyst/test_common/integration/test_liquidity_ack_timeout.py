@@ -5,7 +5,10 @@ from brownie import ZERO_ADDRESS, chain, convert, reverts, web3
 from brownie.test import given, strategy
 from hypothesis import settings
 
-pytestmark = pytest.mark.usefixtures("pool_connect_itself")
+pytestmark = [
+    pytest.mark.usefixtures("pool_connect_itself"),
+    pytest.mark.no_pool_param
+]
 
 @pytest.mark.no_call_coverage
 @given(swap_percentage=strategy("uint256", max_value=10000))
