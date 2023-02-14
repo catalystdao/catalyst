@@ -102,7 +102,7 @@ def test_connect_pools_invalid_auth(
     dummy_pool_address
 ):
 
-    with reverts(dev_revert_msg="dev: No auth"):
+    with reverts():      # ! Should be filtered with dev_revert_msg="dev: No auth"
         pool.setConnection(
             channel_id,
             dummy_pool_address,

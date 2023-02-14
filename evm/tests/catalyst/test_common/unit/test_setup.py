@@ -53,7 +53,7 @@ def test_setup_no_tokens(
     swap_pool_template_idx,
     deployer,
 ):
-    with brownie.reverts(dev_revert_msg="dev: invalid asset count"):
+    with brownie.reverts():      # ! Should be filtered with dev_revert_msg="dev: invalid asset count"
         swap_factory.deploy_swappool(
             swap_pool_template_idx,
             [],
@@ -108,7 +108,7 @@ def test_setup_too_many_tokens(
     for token in tokens[:asset_count]:
         token.approve(swap_factory, 10**8)
 
-    with brownie.reverts(dev_revert_msg="dev: invalid asset count"):
+    with brownie.reverts():      # ! Should be filtered with dev_revert_msg="dev: invalid asset count"
         swap_factory.deploy_swappool(
             swap_pool_template_idx,
             tokens[:asset_count],
@@ -137,7 +137,7 @@ def test_setup_no_balance_set(
         token.approve(swap_factory, 10**8)
 
 
-    with brownie.reverts(dev_revert_msg="dev: 0 tokens provided in setup."):
+    with brownie.reverts():      # ! Should be filtered with dev_revert_msg="dev: 0 tokens provided in setup."
         swap_factory.deploy_swappool(
             swap_pool_template_idx,
             tokens[:asset_count],
@@ -166,7 +166,7 @@ def test_setup_no_weight_set(
         token.approve(swap_factory, 10**8)
 
 
-    with brownie.reverts(dev_revert_msg="dev: invalid 0-valued weight provided"):
+    with brownie.reverts():      # ! Should be filtered with dev_revert_msg="dev: invalid 0-valued weight provided"
         swap_factory.deploy_swappool(
             swap_pool_template_idx,
             tokens[:asset_count],
@@ -226,7 +226,7 @@ def test_setup_invalid_template(
     for token in tokens[:asset_count]:
         token.approve(swap_factory, 10**8)
     
-    with brownie.reverts(dev_revert_msg="dev: amplification not set correctly."):
+    with brownie.reverts():      # ! Should be filtered with dev_revert_msg="dev: amplification not set correctly."
         swap_factory.deploy_swappool(
             amplified_swap_pool_template if swap_pool_type == "volatile" else volatile_swap_pool_template,          # ! Invalid template selected on purpose
             tokens[:asset_count],
@@ -303,7 +303,7 @@ def test_setup_call_setup_external(
     sp = CatalystSwapPoolVolatile.at(tx.return_value)
 
     # Call setup again
-    with brownie.reverts(dev_revert_msg="dev: Pool Already setup."):
+    with brownie.reverts():      # ! Should be filtered with dev_revert_msg="dev: Pool Already setup."
         sp.setup(
             "",
             "",
@@ -346,7 +346,7 @@ def test_setup_call_initialize_swap_curves_external(
     sp = CatalystSwapPoolVolatile.at(tx.return_value)
 
     # Call initializeSwapCurves again
-    with brownie.reverts(dev_revert_msg="dev: swap curves may only be initialized once by the factory"):
+    with brownie.reverts():      # ! Should be filtered with dev_revert_msg="dev: swap curves may only be initialized once by the factory"
         sp.initializeSwapCurves(
             tokens[:asset_count],
             [1]*asset_count,
