@@ -330,6 +330,9 @@ def pytest_collection_modifyitems(session, config, items):
 
         filtered_items.append(item)
     
+    # Make hypothesis parametrized tests run first
+    filtered_items.sort(key=lambda item: 'is_hypothesis_test' not in item.obj.__dir__())    # If condition is True => not a hypothesis test. List is sorted with False (0) before True (1)
+    
     # Modify items inplace
     items[:] = filtered_items
 
