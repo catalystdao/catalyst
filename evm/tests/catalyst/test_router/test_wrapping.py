@@ -5,20 +5,7 @@ MSG_SENDER = 0x01
 ADDRESS_THIS = 0x02
 
 
-def encode_router_payload(commands: list, parameters: list):
-    encoded_commands = b""
-    encoded_parameters = []
-    for command, parameter in zip(commands, parameters):
-        encoded_commands += convert.to_bytes(command, type_str="bytes1")
-        encoded_parameter = b""
-        for param in parameter:
-            encoded_parameter += convert.to_bytes(param, type_str="bytes32")
-        encoded_parameters.append(encoded_parameter)
-    
-    return [encoded_commands, encoded_parameters]
-
-
-def test_wrap_unwrap(catalyst_router, weth, deployer):
+def test_wrap_unwrap(catalyst_router, weth, deployer, encode_router_payload):
      
     amount = 10**18
     

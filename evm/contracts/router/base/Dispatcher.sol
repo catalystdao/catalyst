@@ -130,26 +130,27 @@ abstract contract Dispatcher is Payments, CatalystExchange, LockAndMsgSender {
                     bytes32 targetPool;
                     bytes32 targetUser;
                     address fromAsset;
-                    uint8 toAssetIndex;
+                    uint256 toAssetIndex256;
                     uint256 amount;
                     uint256 minOut;
                     address fallbackUser;
-                    bytes memory calldata_;
                     assembly {
                         pool := calldataload(inputs.offset)
                         channelId := calldataload(add(inputs.offset, 0x20))
                         targetPool := calldataload(add(inputs.offset, 0x40))
                         targetUser := calldataload(add(inputs.offset, 0x60))
                         fromAsset := calldataload(add(inputs.offset, 0x80))
-                        toAssetIndex := calldataload(add(inputs.offset, 0x100))
-                        amount := calldataload(add(inputs.offset, 0x120))
-                        minOut := calldataload(add(inputs.offset, 0x140))
-                        fallbackUser := calldataload(add(inputs.offset, 0x160))
-                        calldata_ := calldataload(add(inputs.offset, 0x180))
-                        // Todo: Check if calldata_ is correctly discovered.
+                        toAssetIndex256 := calldataload(add(inputs.offset, 0xa0))
+                        amount := calldataload(add(inputs.offset, 0xc0))
+                        minOut := calldataload(add(inputs.offset, 0xe0))
+                        fallbackUser := calldataload(add(inputs.offset, 0x100))
                     }
+
+                    bytes calldata calldata_ = inputs[0x120:];
+
+                    uint8 toAssetIndex8 = uint8(toAssetIndex256);
                     
-                    CatalystExchange.sendSwap(pool, channelId, targetPool, targetUser, fromAsset, toAssetIndex, amount, minOut, fallbackUser, calldata_);
+                    CatalystExchange.sendSwap(pool, channelId, targetPool, targetUser, fromAsset, toAssetIndex8, amount, minOut, fallbackUser, calldata_);
                 } else if (command == Commands.WITHDRAW_EQUAL) {
                     (address pool, uint256 amount, uint256[] memory withdrawRatio, uint256[] memory minOut) = abi.decode(
                         inputs, (address, uint256, uint256[], uint256[])

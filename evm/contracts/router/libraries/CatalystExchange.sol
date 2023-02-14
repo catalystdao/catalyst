@@ -48,9 +48,11 @@ abstract contract CatalystExchange is RouterImmutables {
         uint256 amount,
         uint256 minOut,
         address fallbackUser,
-        bytes memory calldata_
+        bytes calldata calldata_
     ) internal {
         amount = amount == Constants.CONTRACT_BALANCE ? ERC20(fromAsset).balanceOf(address(this)) : amount;
+
+        ERC20(fromAsset).approve(pool, amount);
 
         ICatalystV1Pool(pool).sendSwap(
             channelId,
