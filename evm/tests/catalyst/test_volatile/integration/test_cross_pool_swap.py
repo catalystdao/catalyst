@@ -3,6 +3,8 @@ from brownie import reverts, convert, web3
 from brownie.test import given, strategy
 import re
 
+from utils.pool_utils import compute_asset_swap_hash
+
 
 pytestmark = pytest.mark.usefixtures("group_finish_setup", "group_connect_pools")
 
@@ -148,7 +150,14 @@ def test_send_swap_event(
     )
 
     observed_units = tx.return_value
-    expected_message_hash = web3.keccak(tx.events["IncomingPacket"]["packet"][3]).hex()   # Keccak of the payload contained on the ibc packet
+
+    expected_message_hash = compute_asset_swap_hash(
+        berg,
+        observed_units,
+        swap_amount,
+        source_token,
+        tx.block_number
+    )
 
     send_swap_event = tx.events['SendSwap']
 
@@ -198,7 +207,13 @@ def test_receive_swap_event(
     )
 
     observed_units = tx.return_value
-    expected_message_hash = web3.keccak(tx.events["IncomingPacket"]["packet"][3]).hex()   # Keccak of the payload contained on the ibc packet
+    expected_message_hash = compute_asset_swap_hash(
+        berg,
+        observed_units,
+        swap_amount,
+        source_token,
+        tx.block_number
+    )
 
     txe = ibc_emulator.execute(tx.events["IncomingMetadata"]["metadata"][0], tx.events["IncomingPacket"]["packet"], {"from": berg})
 

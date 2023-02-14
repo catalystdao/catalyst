@@ -1,5 +1,5 @@
 import pytest
-from brownie import convert, ZERO_ADDRESS
+from brownie import convert, ZERO_ADDRESS, web3
 from decimal import Decimal
 from functools import reduce
 
@@ -252,6 +252,39 @@ def compute_expected_units_capacity(
 
     # Compute the capacity at the current time
     return min(max_capacity, change_capacity + int(Decimal(max_capacity)*Decimal(current_timestamp - change_timestamp)/Decimal(decayrate)))
+
+# Escrow Utils ******************************************************************************************************************
+
+def compute_asset_swap_hash(
+    target_user,
+    units,
+    escrowed_amount,
+    escrowed_token,
+    block_number
+):
+    
+    return web3.keccak(
+        convert.to_bytes(target_user.address, type_str="bytes32")
+        + convert.to_bytes(units, type_str="bytes32")
+        + convert.to_bytes(escrowed_amount, type_str="bytes32")
+        + convert.to_bytes(escrowed_token.address, type_str="bytes20")
+        + convert.to_bytes(block_number % 2**32, type_str="bytes4")
+    ).hex()
+
+
+def compute_liquidity_swap_hash(
+    target_user,
+    units,
+    escrowed_amount,
+    block_number
+):
+    
+    return web3.keccak(
+        convert.to_bytes(target_user.address, type_str="bytes32")
+        + convert.to_bytes(units, type_str="bytes32")
+        + convert.to_bytes(escrowed_amount, type_str="bytes32")
+        + convert.to_bytes(block_number % 2**32, type_str="bytes4")
+    ).hex()
 
 
 
