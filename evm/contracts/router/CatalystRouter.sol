@@ -5,6 +5,7 @@ pragma solidity ^0.8.16;
 import {Dispatcher} from './base/Dispatcher.sol';
 import {RouterParameters, RouterImmutables} from './base/RouterImmutables.sol';
 import {Commands} from './libraries/Commands.sol';
+import {BytesLib} from './libraries/BytesLib.sol';
 import {ICatalystRouter} from './interfaces/ICatalystRouter.sol';
 
 /**
@@ -14,6 +15,8 @@ import {ICatalystRouter} from './interfaces/ICatalystRouter.sol';
  * https://github.com/Uniswap/universal-router
  */
 contract CatalystRouter is RouterImmutables, ICatalystRouter, Dispatcher {
+    using BytesLib for bytes;
+
     modifier checkDeadline(uint256 deadline) {
         if (block.timestamp > deadline) revert TransactionDeadlinePassed();
         _;
@@ -68,7 +71,8 @@ contract CatalystRouter is RouterImmutables, ICatalystRouter, Dispatcher {
     }
 
     function onCatalystCall(uint256 purchasedTokens, bytes calldata data) external {
-        (bytes memory commands, bytes[] memory inputs) = abi.decode(data, (bytes, bytes[]));
+        bytes calldata commands = data.toBytes(0);
+        bytes[] calldata inputs = data.toBytesArray(1);
 
         this.execute(commands, inputs);
     }

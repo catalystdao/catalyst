@@ -37,6 +37,14 @@ library BytesLib {
         }
     }
 
+    function toBytesArray(bytes calldata _bytes, uint256 arg) internal pure returns (bytes[] calldata res) {
+        assembly {
+            let lengthPtr := add(_bytes.offset, calldataload(add(_bytes.offset, mul(0x20, arg))))
+            res.offset := add(lengthPtr, 0x20)
+            res.length := calldataload(lengthPtr)
+        }
+    }
+
     function toAddressArray(bytes calldata _bytes, uint256 arg) internal pure returns (address[] calldata res) {
         assembly {
             let lengthPtr := add(_bytes.offset, calldataload(add(_bytes.offset, mul(0x20, arg))))
