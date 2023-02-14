@@ -17,7 +17,7 @@ The following flags can be used to run specific collections/configurations of th
 | `--pool-2 PARAM_TYPE` | Specify how to parametrize the pool_2 fixture:<ul><li>`'all'`: Go through all the pools (skips the `pool_1`, i.e. avoid combinations with the same pool)</li><li>`'next'`: Use the *next* pool defined after the current `pool_1` (by index)</li><li>`POOL_INDEX`: Only the specified pool.</li></ul>  |
 | `--unit`                       | Run unit tests.  |
 | `--integration`                | Run integration tests.  |
-| `--filter FILTER`              | Filter the collected tests according to the provided filter (filtered by string inclusion): [file-name][::[test-name]] |
+| `--filter FILTER`              | Filter the collected tests according to the provided filter (filtered by string inclusion): [file-name][::[test-name]]. More than one filter may be specified. |
 | `--fast`                       | Do not test the specified strategies of the `@given` parametrized tests, only test the `@example` values. |
 
 **NOTE:** If neither `--volatile` nor `--amplified` are specified, both sets will be tested. Similarly, if neither `--unit` nor `--integration` are specified, both sets will be tested.
