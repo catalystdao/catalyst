@@ -270,7 +270,7 @@ def test_ibc_ack_event(channel_id, pool, pool_tokens, ibc_emulator, berg, deploy
         source_token,
         tx.block_number
     )
-    assert escrow_ack_event["messageHash"]   == expected_message_hash
+    assert escrow_ack_event["swapHash"]   == expected_message_hash
     assert escrow_ack_event["liquiditySwap"] == False
 
 
@@ -313,5 +313,5 @@ def test_ibc_timeout_event(channel_id, pool, pool_tokens, ibc_emulator, berg, de
         source_token,
         tx.block_number
     )
-    assert escrow_timeout_event["messageHash"]   == expected_message_hash
+    assert escrow_timeout_event["swapHash"]   == expected_message_hash
     assert escrow_timeout_event["liquiditySwap"] == False

@@ -75,7 +75,7 @@ def test_release_escrow_must_be_called_cci(
     # Since no swap has been executed, the escrow hash doesn't exist. However,
     # we still want to check that we can get past the above requirement using
     # a valid sender.
-    with reverts("dev: Invalid messageHash. Alt: Escrow doesn't exist."):
+    with reverts("dev: Invalid swapHash. Alt: Escrow doesn't exist."):
         pool.sendSwapAck(
             berg.address,
             0,
@@ -104,7 +104,7 @@ def test_timeout_escrow_must_be_called_cci(
     # Since no swap has been executed, the escrow hash doesn't exist. However,
     # we still want to check that we can get past the above requirement using
     # a valid sender.
-    with reverts("dev: Invalid messageHash. Alt: Escrow doesn't exist."):
+    with reverts("dev: Invalid swapHash. Alt: Escrow doesn't exist."):
         pool.sendSwapTimeout(
             berg.address,
             0,
@@ -133,7 +133,7 @@ def test_release_liquidity_escrow_must_be_called_cci(
     # Since no swap has been executed, the escrow hash doesn't exist. However,
     # we still want to check that we can get past the above requirement using
     # a valid sender.
-    with reverts("dev: Invalid messageHash. Alt: Escrow doesn't exist."):
+    with reverts("dev: Invalid swapHash. Alt: Escrow doesn't exist."):
         pool.sendLiquidityAck(
             berg.address,
             0,
@@ -161,7 +161,7 @@ def test_timeout_liquidity_escrow_must_be_called_cci(
     # Since no swap has been executed, the escrow hash doesn't exist. However,
     # we still want to check that we can get past the above requirement using
     # a valid sender.
-    with reverts("dev: Invalid messageHash. Alt: Escrow doesn't exist."):
+    with reverts("dev: Invalid swapHash. Alt: Escrow doesn't exist."):
         pool.sendLiquidityTimeout(
             berg.address,
             0,

@@ -173,7 +173,7 @@ def test_send_swap_event(
     assert send_swap_event['input']        == swap_amount
     assert send_swap_event['output']       == observed_units
     assert send_swap_event['minOut']       == min_out
-    assert send_swap_event['messageHash']  == expected_message_hash
+    assert send_swap_event['swapHash']  == expected_message_hash
 
 
 def test_receive_swap_event(
@@ -228,4 +228,4 @@ def test_receive_swap_event(
     assert receive_swap_event['toAsset']     == target_token
     assert receive_swap_event['input']       == observed_units
     assert receive_swap_event['output']      == target_token.balanceOf(elwood)
-    assert receive_swap_event['messageHash'] == expected_message_hash
+    assert receive_swap_event['swapHash'] == expected_message_hash
