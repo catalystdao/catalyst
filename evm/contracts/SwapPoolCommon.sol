@@ -321,15 +321,15 @@ abstract contract CatalystSwapPoolCommon is
     //-- Escrow Functions --//
 
     function releaseTokenEscrow(
-        bytes32 messageHash,
+        bytes32 assetSwapHash,
         uint256 escrowAmount,
         address escrowToken
     ) internal returns(address) {
         require(msg.sender == _chainInterface);  // dev: Only _chainInterface
 
-        address fallbackUser = _escrowedFor[messageHash];  // Passing in an invalid messageHash returns address(0)
-        require(fallbackUser != address(0));  // dev: Invalid messageHash. Alt: Escrow doesn't exist.
-        delete _escrowedFor[messageHash];  // Stops timeout and further acks from being called
+        address fallbackUser = _escrowedFor[assetSwapHash];  // Passing in an invalid assetSwapHash returns address(0)
+        require(fallbackUser != address(0));  // dev: Invalid assetSwapHash. Alt: Escrow doesn't exist.
+        delete _escrowedFor[assetSwapHash];  // Stops timeout and further acks from being called
 
         _escrowedTokens[escrowToken] -= escrowAmount; // This does not revert, since escrowAmount \subseteq _escrowedTokens => escrowAmount <= _escrowedTokens. Cannot be called twice since the 3 lines before ensure this can only be reached once.
         
@@ -337,14 +337,14 @@ abstract contract CatalystSwapPoolCommon is
     }
 
     function releaseLiquidityEscrow(
-        bytes32 messageHash,
+        bytes32 liquiditySwapHash,
         uint256 escrowAmount
     ) internal returns(address) {
         require(msg.sender == _chainInterface);  // dev: Only _chainInterface
 
-        address fallbackUser = _escrowedLiquidityFor[messageHash];  // Passing in an invalid messageHash returns address(0)
-        require(fallbackUser != address(0));  // dev: Invalid messageHash. Alt: Escrow doesn't exist.
-        delete _escrowedLiquidityFor[messageHash];  // Stops timeout and further acks from being called
+        address fallbackUser = _escrowedLiquidityFor[liquiditySwapHash];  // Passing in an invalid liquiditySwapHash returns address(0)
+        require(fallbackUser != address(0));  // dev: Invalid liquiditySwapHash. Alt: Escrow doesn't exist.
+        delete _escrowedLiquidityFor[liquiditySwapHash];  // Stops timeout and further acks from being called
 
         _escrowedPoolTokens -= escrowAmount;  // This does not revert, since escrowAmount \subseteq _escrowedPoolTokens => escrowAmount <= _escrowedPoolTokens. Cannot be called twice since the 3 lines before ensure this can only be reached once.
         
@@ -369,7 +369,7 @@ abstract contract CatalystSwapPoolCommon is
         uint32 blockNumberMod
     ) public virtual {
 
-        bytes32 messageHash = computeAssetSwapHash(
+        bytes32 assetSwapHash = computeAssetSwapHash(
             targetUser, // Used to randomise the hash   //Do we even need this?
             U,          // Used to randomise the hash
             escrowAmount,     // ! Required to validate release escrow data
@@ -377,7 +377,7 @@ abstract contract CatalystSwapPoolCommon is
             blockNumberMod
         );
 
-        releaseTokenEscrow(messageHash, escrowAmount, escrowToken); // Only reverts for missing escrow
+        releaseTokenEscrow(assetSwapHash, escrowAmount, escrowToken); // Only reverts for missing escrow
 
         emit EscrowAck(false);  // Never reverts.
     }
@@ -399,7 +399,7 @@ abstract contract CatalystSwapPoolCommon is
         uint32 blockNumberMod
     ) public virtual {
 
-        bytes32 messageHash = computeAssetSwapHash(
+        bytes32 assetSwapHash = computeAssetSwapHash(
             targetUser, // Used to randomise the hash   //Do we even need this?
             U,          // Used to randomise the hash
             escrowAmount,     // ! Required to validate release escrow data
@@ -407,7 +407,7 @@ abstract contract CatalystSwapPoolCommon is
             blockNumberMod
         );
 
-        address fallbackAddress = releaseTokenEscrow(messageHash, escrowAmount, escrowToken); // Only reverts for missing escrow,
+        address fallbackAddress = releaseTokenEscrow(assetSwapHash, escrowAmount, escrowToken); // Only reverts for missing escrow,
 
         IERC20(escrowToken).safeTransfer(fallbackAddress, escrowAmount);  // Would fail if there is no balance. To protect against this, the escrow amount is removed from what can be claimed by users.
 
@@ -429,14 +429,14 @@ abstract contract CatalystSwapPoolCommon is
         uint32 blockNumberMod
     ) public virtual {
 
-        bytes32 messageHash = computeLiquiditySwapHash(
+        bytes32 liquiditySwapHash = computeLiquiditySwapHash(
             targetUser, // Used to randomise the hash   //Do we even need this?
             U,          // Used to randomise the hash
             escrowAmount,     // ! Required to validate release escrow data
             blockNumberMod
         );
 
-        releaseLiquidityEscrow(messageHash, escrowAmount); // Only reverts for missing escrow
+        releaseLiquidityEscrow(liquiditySwapHash, escrowAmount); // Only reverts for missing escrow
 
         emit EscrowAck(true);  // Never reverts.
     }
@@ -456,14 +456,14 @@ abstract contract CatalystSwapPoolCommon is
         uint32 blockNumberMod
     ) public virtual {
 
-        bytes32 messageHash = computeLiquiditySwapHash(
+        bytes32 liquiditySwapHash = computeLiquiditySwapHash(
             targetUser, // Used to randomise the hash   //Do we even need this?
             U,          // Used to randomise the hash
             escrowAmount,     // ! Required to validate release escrow data
             blockNumberMod
         );
 
-        address fallbackAddress = releaseLiquidityEscrow(messageHash, escrowAmount); // Only reverts for missing escrow
+        address fallbackAddress = releaseLiquidityEscrow(liquiditySwapHash, escrowAmount); // Only reverts for missing escrow
 
         _mint(fallbackAddress, escrowAmount);  
 

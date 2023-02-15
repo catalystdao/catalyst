@@ -672,7 +672,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
 
         // ! Only need to hash info that is required by the escrow (+ some extra for randomisation)
         // ! No need to hash context (as token/liquidity escrow data is different), fromPool, targetPool, targetAssetIndex, minOut, CallData
-        bytes32 messageHash = computeAssetSwapHash(
+        bytes32 assetSwapHash = computeAssetSwapHash(
             targetUser, // Used to randomise the hash   //Do we even need this?
             U,          // Used to randomise the hash
             amount,     // ! Required to validate release escrow data
@@ -682,9 +682,9 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
 
         // Escrow the tokens used to purchase units. These will be sent back if transaction
         // doesn't arrive / timeout.
-        require(_escrowedFor[messageHash] == address(0)); // dev: Escrow already exists.
+        require(_escrowedFor[assetSwapHash] == address(0)); // dev: Escrow already exists.
         _escrowedTokens[fromAsset] += amount - fee;
-        _escrowedFor[messageHash] = fallbackUser;
+        _escrowedFor[assetSwapHash] = fallbackUser;
 
 
         // Governance Fee
@@ -869,7 +869,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
 
         // ! Only need to hash info that is required by the escrow (+ some extra for randomisation)
         // ! No need to hash context (as token/liquidity escrow data is different), fromPool, targetPool, targetAssetIndex, minOut, CallData
-        bytes32 messageHash = computeLiquiditySwapHash(
+        bytes32 liquiditySwapHash = computeLiquiditySwapHash(
             targetUser, // Used to randomise the hash   //Do we even need this?
             U,          // Used to randomise the hash
             poolTokens,     // ! Required to validate release escrow data
@@ -877,8 +877,8 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         );
 
         // Escrow the pool tokens
-        require(_escrowedLiquidityFor[messageHash] == address(0));
-        _escrowedLiquidityFor[messageHash] = fallbackUser;
+        require(_escrowedLiquidityFor[liquiditySwapHash] == address(0));
+        _escrowedLiquidityFor[liquiditySwapHash] = fallbackUser;
         _escrowedPoolTokens += poolTokens;
 
         // Adjustment of the security limit is delayed until ack to avoid

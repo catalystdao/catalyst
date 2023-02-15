@@ -887,7 +887,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
 
         // ! Only need to hash info that is required by the escrow (+ some extra for randomisation)
         // ! No need to hash context (as token/liquidity escrow data is different), fromPool, targetPool, targetAssetIndex, minOut, CallData
-        bytes32 messageHash = computeAssetSwapHash(
+        bytes32 assetSwapHash = computeAssetSwapHash(
             targetUser, // Used to randomise the hash   //Do we even need this?
             U,          // Used to randomise the hash
             amount,     // ! Required to validate release escrow data
@@ -896,9 +896,9 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         );
 
         // Escrow the tokens
-        require(_escrowedFor[messageHash] == address(0)); // dev: Escrow already exists.
+        require(_escrowedFor[assetSwapHash] == address(0)); // dev: Escrow already exists.
         _escrowedTokens[fromAsset] += amount - fee;
-        _escrowedFor[messageHash] = fallbackUser;
+        _escrowedFor[assetSwapHash] = fallbackUser;
 
         // Governance Fee
         collectGovernanceFee(fromAsset, fee);
@@ -1113,7 +1113,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
 
         // ! Only need to hash info that is required by the escrow (+ some extra for randomisation)
         // ! No need to hash context (as token/liquidity escrow data is different), fromPool, targetPool, targetAssetIndex, minOut, CallData
-        bytes32 messageHash = computeLiquiditySwapHash(
+        bytes32 liquiditySwapHash = computeLiquiditySwapHash(
             targetUser, // Used to randomise the hash   //Do we even need this?
             U,          // Used to randomise the hash
             poolTokens,     // ! Required to validate release escrow data
@@ -1121,8 +1121,8 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         );
 
         // Escrow the pool tokens
-        require(_escrowedLiquidityFor[messageHash] == address(0));
-        _escrowedLiquidityFor[messageHash] = fallbackUser;
+        require(_escrowedLiquidityFor[liquiditySwapHash] == address(0));
+        _escrowedLiquidityFor[liquiditySwapHash] = fallbackUser;
         _escrowedPoolTokens += poolTokens;
 
         // Adjustment of the security limit is delayed until ack to avoid
@@ -1303,7 +1303,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         // Removed timedout units from the unit tracker. This will keep the
         // balance0 in balance, since tokens also leave the pool
         _unitTracker -= int256(U);      // It has already been checked on sendSwap that casting to int256 will not overflow.
-                                        // Cannot be manipulated by the router as otherwise the messageHash check will fail
+                                        // Cannot be manipulated by the router as otherwise the escrow hash check will fail
     }
 
     // sendLiquidityAck is not overwritten since we are unable to increase
@@ -1331,7 +1331,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         // Removed timedout units from the unit tracker. This will keep the
         // balance0 in balance, since tokens also leave the pool
         _unitTracker -= int256(U);      // It has already been checked on sendSwap that casting to int256 will not overflow.
-                                        // Cannot be manipulated by the router as otherwise the messageHash check will fail
+                                        // Cannot be manipulated by the router as otherwise the escrow hash check will fail
     }
 
 }
