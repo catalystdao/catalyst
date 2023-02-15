@@ -38,7 +38,7 @@ contract CatalystSwapPoolFactory is Ownable, ICatalystV1FactoryEvents {
     }
 
     /**
-     * @notice Deploys a Catalyst swap pools, funds the swap pool with tokens and calls setup.
+     * @notice Deploys a Catalyst swap pools, funds the swap pool with tokens, and calls setup.
      * @dev The deployer needs to set approvals for this contract before calling deploy_swappool
      * @param poolTemplate The template the transparent proxy should target.
      * @param assets The list of assets the pool should support

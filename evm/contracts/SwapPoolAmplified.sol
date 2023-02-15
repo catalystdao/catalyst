@@ -82,7 +82,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
      * @param assets A list of the token addresses associated with the pool
      * @param weights Amplified weights to bring the price into a true 1:1 swap. That is:
      * i_t \cdot W_i = j_t \cdot W_j \forall i, j when P_i(i_t) = P_j(j_t).
-     * in other words, weights are used to compensate for the difference in decmials. (or non 1:1 swaps.)
+     * in other words, weights are used to compensate for the difference in decimals. (or non 1:1 swaps.)
      * @param amp Amplification factor. Should be < 10**18.
      * @param depositor The address depositing the initial token balances.
      */
@@ -170,18 +170,17 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
      * @dev Called first thing on every function depending on amplification.
      */
     function _adjustAmplification() internal {
-        // We might use adjustment target more than once. Since we don't change it, lets store it.
+        // We might use adjustment target more than once. Since we don't change it, let store it.
         uint256 adjTarget = _adjustmentTarget;
 
         if (adjTarget != 0) {
             // We need to use lastModification multiple times. Store it.
             uint256 lastModification = _lastModificationTime;
 
-            // If no time has passed since last update, then we don't need to update anything.
+            // If no time has passed since the last update, then we don't need to update anything.
             if (block.timestamp == lastModification) return;
 
-            // Since we are storing lastModification, lets update the variable now.
-            // This avoid repetitions.
+            // Since we are storing lastModification, update the variable now. This avoid repetitions.
             _lastModificationTime = block.timestamp;
 
             // If the current time is past the adjustment, the amplification needs to be finalized.
@@ -227,7 +226,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
      * @param A The current pool balance of the x token.
      * @param W The weight of the x token.
      * @param amp The amplification.
-     * @return uint256 Group specific units (units are **always** WAD).
+     * @return uint256 Group-specific units (units are **always** WAD).
      */
     function calcPriceCurveArea(
         uint256 input,
@@ -256,9 +255,9 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
      *     )
      * The value is returned as output token. (not WAD)
      * @dev All input amounts should be the raw numbers and not WAD.
-     * Since units are always multiplifed by WAD, the function
+     * Since units are always multiplied by WAD, the function
      * should be treated as mathematically *native*.
-     * @param U Incoming group specific units.
+     * @param U Incoming group-specific units.
      * @param B The current pool balance of the y token.
      * @param W The weight of the y token.
      * @return uint25 Output denominated in output token. (not WAD)
@@ -272,7 +271,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         int256 oneMinusAmp = int256(FixedPointMathLib.WAD - amp);   // int256 casting safe, result always < 10**18. Always positive, as amp < 10**18
 
         // W_B · B^(1-k) is repeated twice and requires 1 power.
-        // As a result, we compute it and cache.
+        // As a result, we compute it and cache it.
         uint256 W_BxBtoOMA = uint256(                       // Always casts a positive value
             FixedPointMathLib.powWad(
                 int256(W * B * FixedPointMathLib.WAD),      // If casting overflows to a negative number, powWad fails
@@ -345,13 +344,13 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
      * @notice Computes the return of SendSwap.
      * @param fromAsset The address of the token to sell.
      * @param amount The amount of from token to sell.
-     * @return uint256 Group specific units.
+     * @return uint256 Group-specific units.
      */
     function calcSendSwap(
         address fromAsset,
         uint256 amount
     ) public view returns (uint256) {
-        // A high => less units returned. Do not subtract the escrow amount
+        // A high => fewer units returned. Do not subtract the escrow amount
         uint256 A = IERC20(fromAsset).balanceOf(address(this));
         uint256 W = _weight[fromAsset];
 
@@ -377,7 +376,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         address toAsset, 
         uint256 U
     ) public view returns (uint256) {
-        // B low => less tokens returned. Subtract the escrow amount to decrease the balance.
+        // B low => fewer tokens returned. Subtract the escrow amount to decrease the balance.
         uint256 B = IERC20(toAsset).balanceOf(address(this)) - _escrowedTokens[toAsset];
         uint256 W = _weight[toAsset];
 
@@ -394,7 +393,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
      * @param fromAsset The address of the token to sell.
      * @param toAsset The address of the token to buy.
      * @param amount The amount of from token to sell for to token.
-     * @return Output denominated in to token.
+     * @return Output denominated in toAsset.
      */
     function calcLocalSwap(
         address fromAsset,
@@ -417,7 +416,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
     }
 
     /**
-     * @notice Deposits a user configurable amount of tokens.
+     * @notice Deposits a  user-configurable amount of tokens.
      * @dev Requires approvals for all tokens within the pool.
      * It is advised that the deposit matches the pool's %token distribution.
      * @param tokenAmounts An array of the tokens amounts to be deposited.
@@ -426,7 +425,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
     function depositMixed(
         uint256[] calldata tokenAmounts,
         uint256 minOut
-    ) nonReentrant() external returns(uint256) {
+    ) nonReentrant external returns(uint256) {
         _adjustAmplification();
         int256 oneMinusAmp = int256(FixedPointMathLib.WAD - _amp);   // int256 casting safe, result always < 10**18. Always positive, as amp < 10**18
 
@@ -492,13 +491,13 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
             _usedUnitCapacity += assetDepositSum;
 
             // Compute the reference liquidity.
-            // weightedAssetBalanceSum > _unitTracker always, since _unitTracker corrolates to exactly
+            // weightedAssetBalanceSum > _unitTracker always, since _unitTracker correlates to exactly
             // the difference between weightedAssetBalanceSum and weightedAssetBalance0Sum and thus
             // _unitTracker < weightedAssetBalance0Sum
             walpha_0_ampped = uint256(weightedAssetBalanceSum - _unitTracker) / it;     // By design, weightedAssetBalanceSum > _unitTracker
         }
 
-        // Subtract fee from U. This stops people from using deposit and withdrawal as method of swapping.
+        // Subtract fee from U. This stops people from using deposit and withdrawal as a method of swapping.
         // To reduce costs, there the governance fee is not included. This does result in deposit+withdrawal
         // working as a way to circumvent the governance fee.
         // U shouldn't ever be negative. But in the case it is, the result is very bad. For safety, check it is above 0.
@@ -542,12 +541,12 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
      * @dev This is the cheapest way to withdraw.
      * poolTokens == 0 or very small results: revert: Integer overflow. See note for why.
      * @param poolTokens The number of pool tokens to burn.
-     * @param minOut The minimum token output. If less is returned, the tranasction reverts.
+     * @param minOut The minimum token output. If less is returned, the transaction reverts.
      */
     function withdrawAll(
         uint256 poolTokens,
         uint256[] calldata minOut
-    ) nonReentrant() external returns(uint256[] memory) {
+    ) nonReentrant external returns(uint256[] memory) {
         _adjustAmplification();
         // Burn the desired number of pool tokens to the user.
         // If they don't have it, it saves gas.
@@ -565,7 +564,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         // number of tokens the pool should have If the price in the group is 1:1.
         {
             int256 weightedAssetBalanceSum = 0;
-            // "it" is needed breifly outside the loop.
+            // "it" is needed briefly outside the loop.
             uint256 it;
             for (it = 0; it < MAX_ASSETS; ++it) {
                 address token = _tokenIndexing[it];
@@ -586,7 +585,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
             }
 
             // Compute the reference liquidity.
-            // weightedAssetBalanceSum > _unitTracker always, since _unitTracker corrolates to exactly
+            // weightedAssetBalanceSum > _unitTracker always, since _unitTracker correlates to exactly
             // the difference between weightedAssetBalanceSum and weightedAssetBalance0Sum and thus
             // _unitTracker < weightedAssetBalance0Sum
             walpha_0_ampped = uint256(weightedAssetBalanceSum - _unitTracker) / it;     // By design, weightedAssetBalanceSum > _unitTracker
@@ -603,7 +602,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
             uint256 innerdiff;
             { 
                 // Remember to add the number of pool tokens burned to totalSupply
-                // _escrowedPoolTokens is added, since it makes makes pt_fraction smaller
+                // _escrowedPoolTokens is added, since it makes pt_fraction smaller
                 uint256 ts = (totalSupply() + _escrowedPoolTokens + poolTokens);
                 uint256 pt_fraction = ((ts + poolTokens) * FixedPointMathLib.WAD) / ts;
 
@@ -630,7 +629,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                 // Since ampWeightAssetBalances ** (1/(1-amp)) == weightAssetBalances but the
                 // mathematical lib returns ampWeightAssetBalances ** (1/(1-amp)) < weightAssetBalances.
                 // the result is that if innerdiff isn't big enough to make up for the difference
-                // the transaction reverts. This is "okay", since it means less tokens are returned.
+                // the transaction reverts. This is "okay", since it means fewer tokens are returned.
                 uint256 weightedTokenAmount = (uint256(FixedPointMathLib.powWad(        // Always casts a positive value
                     ampWeightAssetBalances[it] + int256(innerdiff),             // If casting overflows, either less is returned (if addition is positive) or powWad fails (if addition is negative)
                     oneMinusAmpInverse // 1/(1-amp)
@@ -686,7 +685,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 poolTokens,
         uint256[] calldata withdrawRatio,
         uint256[] calldata minOut
-    ) nonReentrant() external returns(uint256[] memory) {
+    ) nonReentrant external returns(uint256[] memory) {
         _adjustAmplification();
         // Burn the desired number of pool tokens to the user.
         // If they don't have it, it saves gas.
@@ -708,8 +707,8 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
             uint256 walpha_0_ampped;
             {
                 int256 weightedAssetBalanceSum = 0;
-                // A very carefuly stack optimisation is made here.
-                // "it" is needed breifly outside the loop. However, to reduce the number
+                // A very careful stack optimisation is made here.
+                // "it" is needed briefly outside the loop. However, to reduce the number
                 // of items in the stack, U = it.
                 for (U = 0; U < MAX_ASSETS; ++U) {
                     address token = _tokenIndexing[U];
@@ -730,7 +729,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                     weightedAssetBalanceSum += wab;
                 }
 
-                // weightedAssetBalanceSum > _unitTracker always, since _unitTracker corrolates to exactly
+                // weightedAssetBalanceSum > _unitTracker always, since _unitTracker correlates to exactly
                 // the difference between weightedAssetBalanceSum and weightedAssetBalance0Sum and thus
                 // _unitTracker < weightedAssetBalance0Sum
                 walpha_0_ampped = uint256(weightedAssetBalanceSum - _unitTracker) / U;     // By design, weightedAssetBalanceSum > _unitTracker
@@ -769,7 +768,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
             // uint256 tokenAmount = calcReceiveSwap(_tokenIndexing[it], U_i);
             
             // W_B · B^(1-k) is repeated twice and requires 1 power.
-            // As a result, we compute it and cache.
+            // As a result, we compute it and cache it.
             uint256 W_BxBtoOMA = uint256(ampWeightAssetBalances[it]);   // Always casts a positive value
             uint256 tokenAmount = (
                 assetBalances[it] * (
@@ -815,7 +814,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         address toAsset,
         uint256 amount,
         uint256 minOut
-    ) nonReentrant() external returns (uint256) {
+    ) nonReentrant external returns (uint256) {
         _adjustAmplification();
         uint256 fee = FixedPointMathLib.mulWadDown(amount, _poolFee);
 
@@ -859,7 +858,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         _adjustAmplification();
         uint256 fee = FixedPointMathLib.mulWadDown(amount, _poolFee);
 
-        // Calculate the group specific units bought.
+        // Calculate the group-specific units bought.
         uint256 U = calcSendSwap(
             fromAsset,
             amount - fee
@@ -903,7 +902,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         IERC20(fromAsset).safeTransferFrom(msg.sender, address(this), amount);
 
         // Adjustment of the security limit is delayed until ack to avoid
-        // a router abusing timeout to circumvent the security limit at low cost.
+        // a router abusing timeout to circumvent the security limit at a low cost.
 
         emit SendSwap(
             targetPool,
@@ -1065,7 +1064,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                 uint256 weight = _weight[token];
 
                 // minus escrowedAmount, since we want the withdrawal to return less.
-                // A smaller number here means less units are transfered.
+                // A smaller number here means fewer units are transferred.
                 uint256 weightAssetBalance = weight * (ERC20(token).balanceOf(address(this)) - _escrowedTokens[token]);
 
                 weightedAssetBalanceSum += FixedPointMathLib.powWad(
@@ -1074,7 +1073,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                 );
             }
 
-            // weightedAssetBalanceSum > _unitTracker always, since _unitTracker corrolates to exactly
+            // weightedAssetBalanceSum > _unitTracker always, since _unitTracker correlates to exactly
             // the difference between weightedAssetBalanceSum and weightedAssetBalance0Sum and thus
             // _unitTracker < weightedAssetBalance0Sum
             walpha_0_ampped = uint256(weightedAssetBalanceSum - _unitTracker) / it;     // By design, weightedAssetBalanceSum > _unitTracker 
@@ -1121,7 +1120,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         _escrowedPoolTokens += poolTokens;
 
         // Adjustment of the security limit is delayed until ack to avoid
-        // a router abusing timeout to circumvent the security limit at low cost.
+        // a router abusing timeout to circumvent the security limit at a low cost.
 
         emit SendLiquidity(
             targetPool,
@@ -1167,7 +1166,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                 uint256 weight = _weight[token];
 
                 // not minus escrowedAmount, since we want the withdrawal to return less.
-                // A larger number here means more units have to be transfered.
+                // A larger number here means more units have to be transferred.
                 uint256 weightAssetBalance = weight * ERC20(token).balanceOf(address(this));
 
                 weightedAssetBalanceSum += FixedPointMathLib.powWad(
@@ -1176,7 +1175,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                 );
             }
 
-            // weightedAssetBalanceSum > _unitTracker always, since _unitTracker corrolates to exactly
+            // weightedAssetBalanceSum > _unitTracker always, since _unitTracker correlates to exactly
             // the difference between weightedAssetBalanceSum and weightedAssetBalance0Sum and thus
             // _unitTracker < weightedAssetBalance0Sum
             walpha_0_ampped = uint256(weightedAssetBalanceSum - _unitTracker) / it;     // By design, weightedAssetBalanceSum > _unitTracker
@@ -1240,7 +1239,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
      * @dev Should never revert!  
      * The base implementation exists in CatalystSwapPoolCommon. The function adds security limit
      * adjustment to the implementation to swap volume supported.
-     * @param messageHash A hash of the cross-chain message used ensure the message arrives indentical to the sent message.
+     * @param messageHash A hash of the cross-chain message used to ensure the message arrives identical to the sent message.
      * @param U The number of units purchased.
      * @param escrowAmount The number of tokens escrowed.
      * @param escrowToken The token escrowed.
@@ -1280,7 +1279,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
      * @dev Should never revert!  
      * The base implementation exists in CatalystSwapPoolCommon. The function adds security limit
      * adjustment to the implementation to swap volume supported.
-     * @param messageHash A hash of the cross-chain message used ensure the message arrives indentical to the sent message.
+     * @param messageHash A hash of the cross-chain message used to ensure the message arrives identical to the sent message.
      * @param U The number of units purchased.
      * @param escrowAmount The number of tokens escrowed.
      * @param escrowToken The token escrowed.
@@ -1294,10 +1293,10 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         // Execute common escrow logic.
         super.sendSwapTimeout(messageHash, U, escrowAmount, escrowToken);
 
-        // Removed timedout units from the unit tracker. This will keep the
+        // Removed timed-out units from the unit tracker. This will keep the
         // balance0 in balance, since tokens also leave the pool
         _unitTracker -= int256(U);      // It has already been checked on sendSwap that casting to int256 will not overflow.
-                                        // Cannot be manipulated by the router as otherwise the messageHash check will fail
+                                        // Cannot be manipulated by the router as, otherwise, the messageHash check will fail
     }
 
     // sendLiquidityAck is not overwritten since we are unable to increase
@@ -1310,7 +1309,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
      * @dev Should never revert!  
      * The base implementation exists in CatalystSwapPoolCommon.
      * @param messageHash A hash of the cross-chain message used en
-     * @param messageHash A hash of the cross-chain message ensure the message arrives indentical to the sent message.
+     * @param messageHash A hash of the cross-chain message ensure the message arrives identical to the sent message.
      * @param U The number of units initially acquired.
      * @param escrowAmount The number of pool tokens escrowed.
      */
@@ -1321,10 +1320,10 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
     ) public virtual override {
         super.sendLiquidityTimeout(messageHash, U, escrowAmount);
 
-        // Removed timedout units from the unit tracker. This will keep the
+        // Removed timed-out units from the unit tracker. This will keep the
         // balance0 in balance, since tokens also leave the pool
         _unitTracker -= int256(U);      // It has already been checked on sendSwap that casting to int256 will not overflow.
-                                        // Cannot be manipulated by the router as otherwise the messageHash check will fail
+                                        // Cannot be manipulated by the router as, otherwise, the messageHash check will fail
     }
 
 }
