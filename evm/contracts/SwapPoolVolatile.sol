@@ -703,8 +703,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
             toAssetIndex,
             amount,
             U,
-            minOut,
-            messageHash
+            minOut
         );
 
         return U;
@@ -889,8 +888,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
             targetPool,
             targetUser,
             poolTokens,
-            U,
-            messageHash
+            U
         );
 
         return U;
