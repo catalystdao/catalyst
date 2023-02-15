@@ -350,12 +350,13 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
             address who = abi.decode(data[65:97], (address));
             uint256 U = uint256(bytes32(data[97:129]));
             uint256 minOut = uint256(bytes32(data[129:161]));
+            bytes32 swapHash = bytes32(data[197:229]);
 
             ICatalystV1Pool(pool).receiveLiquidity(
                 who,
                 U,
                 minOut,
-                bytes32(data[197:229]) // swapHash
+                swapHash
             );
             return;
         }
