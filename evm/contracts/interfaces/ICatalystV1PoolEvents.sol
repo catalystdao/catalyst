@@ -55,7 +55,8 @@ interface ICatalystV1PoolEvents {
         address indexed who,
         address indexed toAsset,
         uint256 input,
-        uint256 output
+        uint256 output,
+        bytes32 messageHash
     );
 
     /**
@@ -82,7 +83,8 @@ interface ICatalystV1PoolEvents {
     event ReceiveLiquidity(
         address indexed who,
         uint256 input,
-        uint256 output
+        uint256 output,
+        bytes32 messageHash
     );
 
     /**
