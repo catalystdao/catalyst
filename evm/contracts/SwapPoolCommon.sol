@@ -16,15 +16,13 @@ import "./interfaces/ICatalystV1PoolErrors.sol";
 /**
  * @title Catalyst: Common Swap Pool Logic
  * @author Catalyst Labs
- * @notice This abstract contract defines general logic of a
- * Catalyst swap pool like:
+ * @notice This abstract contract defines general logic of a Catalyst swap pool like:
  * - Pool Token
  * - Connection management
  * - Security limit
  * - Escrow
  *
- * By inheriting this contract, a Swap Pool automatically implements
- * common swap pool logic.
+ * By inheriting this contract, a Swap Pool automatically implements common swap pool logic.
  */
 abstract contract CatalystSwapPoolCommon is
     Initializable,
@@ -44,12 +42,12 @@ abstract contract CatalystSwapPoolCommon is
     /// @notice Number of decimals used by the pool's pool tokens
     uint8 constant DECIMALS = 18;
 
-    /// @notice The pool tokens initially minted to the user who setup the pools.
+    /// @notice The pool tokens initially minted to the user who set up the pool.
     /// @dev The initial deposit along with this value determines the base value of a pool token.
     uint256 constant INITIAL_MINT_AMOUNT = 10**DECIMALS;
 
     /// @notice Maximum number of assets supported
-    /// @dev Impacts the cost of some for loops. Can be changed without breaking compatiblity.
+    /// @dev Impacts the cost of some for loops. Can be changed without breaking compatibility.
     uint8 constant MAX_ASSETS = 3;
 
     //-- Variables --//
@@ -58,11 +56,11 @@ abstract contract CatalystSwapPoolCommon is
     address public _chainInterface;
 
     /// @notice To indicate which token is desired on the target pool,
-    /// the desired tokens is provided as an integer which maps to the
+    /// the desired tokens are provided as an integer which maps to the
     /// asset address. This variable is the map.
     mapping(uint256 => address) public _tokenIndexing;
 
-    /// @notice The token weights. Used for maintaining a non symmetric pool balance.
+    /// @notice The token weights. Used for maintaining a non-symmetric pool balance.
     mapping(address => uint256) public _weight;
 
     //-- Weight change variables --//
@@ -90,12 +88,12 @@ abstract contract CatalystSwapPoolCommon is
     // units, then it will not accept further incoming units. This means the router
     // can only drain a prefigured percentage of the pool every DECAY_RATE
 
-    // Outgoing flow is subtracted incoming flow until 0.
+    // Outgoing flow is subtracted from incoming flow until 0.
 
     /// @notice The max incoming liquidity flow from the router.
     uint256 public _maxUnitCapacity;
     // -- State related to unit flow calculation -- //
-    // Use getUnitCapacity to indircetly access these variables.
+    // Use getUnitCapacity to indirectly access these variables.
     uint256 _usedUnitCapacity;
     uint256 _usedUnitCapacityTimestamp;
 
@@ -109,9 +107,6 @@ abstract contract CatalystSwapPoolCommon is
     uint256 public _escrowedPoolTokens;
     /// @notice Specific escrow information (Liquidity)
     mapping(bytes32 => address) public _escrowedLiquidityFor;
-
-    /// @notice Variable to check if the pool has already been setup.
-    bool _INITIALIZED;
 
     constructor(address factory_) ERC20("Catalyst Pool Template", "") {
         FACTORY = factory_;
@@ -143,7 +138,7 @@ abstract contract CatalystSwapPoolCommon is
 
     /**
      * @notice Only allow Governance to change pool parameters
-     * @dev Because of dangours permissions (setConnection, weight changes, amplification changes):
+     * @dev Because of dangerous permissions (setConnection, weight changes, amplification changes):
      * !CatalystSwapPoolFactory(_factory).owner() must be set to a timelock! 
      */ 
     modifier onlyFactoryOwner() {
@@ -166,9 +161,7 @@ abstract contract CatalystSwapPoolCommon is
         address setupMaster
     ) initializer external {
         // The pool is designed to be used by a proxy and not as a standalone pool.
-        // On pool deployment check is set to TRUE, to stop anyone from using the pool without a proxy.
-        // Likewise, it shouldn't be possible to setup the pool twice.
-        require(!_INITIALIZED); // dev: Pool Already setup.
+        // initializer lets this function only be called once.
 
         _chainInterface = chainInterface;
         _setupMaster = setupMaster;
@@ -181,8 +174,6 @@ abstract contract CatalystSwapPoolCommon is
         __name = name_;
         __symbol = symbol_;
         // END ERC20 //
-
-        _INITIALIZED = true;
     }
 
     /** @notice  Returns the current cross-chain swap capacity. */
@@ -193,7 +184,7 @@ abstract contract CatalystSwapPoolCommon is
         uint256 unitCapacityReleased = ((block.timestamp - _usedUnitCapacityTimestamp) * MUC) / DECAY_RATE;
 
         uint256 UC = _usedUnitCapacity;
-        // If the change is greater than the units which has passed through
+        // If the change is greater than the units which have passed through
         // return maximum. We do not want (MUC - (UC - unitCapacityReleased) > MUC)
         if (UC <= unitCapacityReleased) return MUC;
 
@@ -219,7 +210,7 @@ abstract contract CatalystSwapPoolCommon is
         _usedUnitCapacityTimestamp = block.timestamp; 
 
         uint256 UC = _usedUnitCapacity; 
-        // If the change is greater than the units which has passed through the limit is max
+        // If the change is greater than the units which have passed through the limit is max
         if (UC <= unitCapacityReleased) {
             if (units > MUC) revert ExceedsSecurityLimit(units - MUC);
             _usedUnitCapacity = units;
@@ -298,7 +289,7 @@ abstract contract CatalystSwapPoolCommon is
     }
 
     /**
-     * @notice Gives up short term ownership of the pool making the pool unstoppable.
+     * @notice Gives up short-term ownership of the pool making the pool unstoppable.
      */
     function finishSetup() external override {
         require(msg.sender == _setupMaster); // dev: No auth
@@ -353,7 +344,7 @@ abstract contract CatalystSwapPoolCommon is
 
 
     /** 
-     * @notice Implements basic ack logic: Deletes and release tokens to the pool
+     * @notice Implements basic ack logic: Deletes and releases tokens to the pool
      * @dev Should never revert! For security limit adjustments, the implementation should be overwritten.
      * @param targetUser The recipient of the transaction on the target chain. Encoded in bytes32.
      * @param U The number of units initially purchased.
