@@ -888,10 +888,10 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         // ! Only need to hash info that is required by the escrow (+ some extra for randomisation)
         // ! No need to hash context (as token/liquidity escrow data is different), fromPool, targetPool, targetAssetIndex, minOut, CallData
         bytes32 assetSwapHash = computeAssetSwapHash(
-            targetUser, // Used to randomise the hash   //Do we even need this?
-            U,          // Used to randomise the hash
-            amount,     // ! Required to validate release escrow data
-            fromAsset,  // ! Required to validate release escrow data
+            targetUser,     // Used to randomise the hash   //Do we even need this?
+            U,              // Used to randomise the hash
+            amount - fee,   // ! Required to validate release escrow data
+            fromAsset,      // ! Required to validate release escrow data
             uint32(block.number % 2**32)
         );
 
