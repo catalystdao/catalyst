@@ -157,7 +157,7 @@ def test_send_swap_event(
     observed_units = tx.return_value
 
     expected_message_hash = compute_asset_swap_hash(
-        berg,
+        elwood,
         observed_units,
         swap_amount,
         source_token,
@@ -213,7 +213,7 @@ def test_receive_swap_event(
 
     observed_units = tx.return_value
     expected_message_hash = compute_asset_swap_hash(
-        berg,
+        elwood,
         observed_units,
         swap_amount,
         source_token,
