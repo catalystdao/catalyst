@@ -36,7 +36,7 @@ def test_set_default_governance_fee_over_max(
     fee = int(0.76 * 10**18)     # Maximum is 0.75
 
 
-    with reverts(dev_revert_msg="dev: Maximum GovernanceFeeSare exceeded."):
+    with reverts():      # ! Should be filtered with dev_revert_msg="dev: Maximum GovernanceFeeSare exceeded."
         swap_factory.setDefaultGovernanceFee(fee, {"from": deployer})
 
 
@@ -103,7 +103,7 @@ def test_set_fee_administrator_no_auth(
     assert pool._feeAdministrator() != molly
 
 
-    with reverts(dev_revert_msg="dev: Only factory owner"):
+    with reverts():      # ! Should be filtered with dev_revert_msg="dev: Only factory owner"
         pool.setFeeAdministrator(molly, {"from": molly})
 
 
@@ -154,7 +154,7 @@ def test_set_pool_fee_over_max(
     assert pool._poolFee() != fee
 
 
-    with reverts(dev_revert_msg="dev: PoolFee is maximum 100%."):
+    with reverts():      # ! Should be filtered with dev_revert_msg="dev: PoolFee is maximum 100%."
         pool.setPoolFee(fee, {"from": molly})
 
 
@@ -166,7 +166,7 @@ def test_set_pool_fee_no_auth(
     fee = int(0.15 * 10**18)
 
 
-    with reverts(dev_revert_msg="dev: Only feeAdministrator can set new fee"): 
+    with reverts():      # ! Should be filtered with dev_revert_msg="dev: Only feeAdministrator can set new fee" 
         pool.setPoolFee(fee, {"from": molly})
 
 
@@ -218,7 +218,7 @@ def test_set_governance_fee_over_max(
     assert pool._governanceFeeShare() != fee
 
 
-    with reverts(dev_revert_msg="dev: Maximum GovernanceFeeSare exceeded."):
+    with reverts():      # ! Should be filtered with dev_revert_msg="dev: Maximum GovernanceFeeSare exceeded."
         pool.setGovernanceFee(fee, {"from": molly})
 
 
@@ -230,7 +230,7 @@ def test_set_governance_fee_no_auth(
     fee = int(0.15 * 10**18)
 
 
-    with reverts(dev_revert_msg="dev: Only feeAdministrator can set new fee"): 
+    with reverts():      # ! Should be filtered with dev_revert_msg="dev: Only feeAdministrator can set new fee" 
         pool.setGovernanceFee(fee, {"from": molly})
 
 

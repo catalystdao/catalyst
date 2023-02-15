@@ -7,6 +7,7 @@ ONEWEEK = 60 * 60 * 24 * 7
 TWOWEEK = ONEWEEK * 2
 
 
+@pytest.mark.no_pool_param
 def test_only_administrator(pool, deployer, berg):
     startTime = chain.time()
     with reverts():
@@ -15,6 +16,7 @@ def test_only_administrator(pool, deployer, berg):
     pool.modifyWeights(startTime + TWOWEEK, [2, 3, 5], {"from": deployer})
 
 
+@pytest.mark.no_pool_param
 def test_1_week_minimum(pool, deployer):
     with reverts():
         pool.modifyWeights(chain.time() + ONEWEEK - 1, [2, 3, 5], {"from": deployer})

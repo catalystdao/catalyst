@@ -1,7 +1,10 @@
 import pytest
 from brownie import reverts, web3, convert
 
-pytestmark = pytest.mark.usefixtures("pool_connect_itself")
+pytestmark = [
+    pytest.mark.usefixtures("pool_connect_itself"),
+    pytest.mark.no_pool_param
+]
 
 def test_receiveSwap_must_be_called_by_cci(
     pool,

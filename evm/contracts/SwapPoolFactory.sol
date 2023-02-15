@@ -65,7 +65,6 @@ contract CatalystSwapPoolFactory is Ownable, ICatalystV1FactoryEvents {
         // Create a minimal transparent proxy:
         address swapPool = Clones.clone(poolTemplate);
 
-        // TODO move this into the initializeSwapCurves function of the SwapPool?
         // The pool expects the balances to exist in the pool when setup is called.
         for (uint256 it = 0; it < assets.length; it++) {
             IERC20(assets[it]).safeTransferFrom(
@@ -82,7 +81,7 @@ contract CatalystSwapPoolFactory is Ownable, ICatalystV1FactoryEvents {
             chainInterface,
             poolFee,
             _defaultGovernanceFee,
-            msg.sender,     // Fee administrator    //TODO should we set governance instead?
+            owner(),     // Fee administrator
             msg.sender      // setup master
         );
 

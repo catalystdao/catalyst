@@ -2,15 +2,19 @@ import pytest
 from brownie import reverts, convert, web3, chain
 from brownie.test import given, strategy
 from hypothesis.strategies import floats
+from hypothesis import example
 
 from utils.pool_utils import compute_asset_swap_hash
 
 
-pytestmark = pytest.mark.usefixtures("pool_connect_itself")
+pytestmark = [
+    pytest.mark.usefixtures("pool_connect_itself"),
+    pytest.mark.no_pool_param
+]
 
 #TODO do we want to parametrize the swap_amount? (as it is right now)
-#TODO do we want to parametrize this over the different 'pool's? (as it is right now)
 @pytest.mark.no_call_coverage
+@example(swap_amount=0.46)
 @given(swap_amount=floats(min_value=0, max_value=2))    # From 0 to 2x the tokens hold by the pool
 def test_ibc_ack(channel_id, pool, pool_tokens, ibc_emulator, berg, deployer, swap_amount):
 
@@ -44,8 +48,8 @@ def test_ibc_ack(channel_id, pool, pool_tokens, ibc_emulator, berg, deployer, sw
 
 
 #TODO do we want to parametrize the swap_amount? (as it is right now)
-#TODO do we want to parametrize this over the different 'pool's? (as it is right now)
 @pytest.mark.no_call_coverage
+@example(swap_amount=0.46)
 @given(swap_amount=floats(min_value=0, max_value=2))    # From 0 to 2x the tokens hold by the pool
 def test_ibc_timeout(channel_id, pool, pool_tokens, ibc_emulator, berg, deployer, swap_amount):
 
@@ -143,7 +147,8 @@ def test_only_one_response(channel_id, pool, pool_tokens, ibc_emulator, berg, de
         )
 
 
-@given(swap_amount=strategy("uint256", max_value=1000*10**18, min_value=10**14))
+@example(swap_amount=2)
+@given(swap_amount=floats(min_value=0.00001, max_value=5))    # From 0 to 10x the tokens hold by the pool
 def test_ibc_timeout_and_ack(channel_id, pool, pool_tokens, ibc_emulator, berg, deployer, swap_amount):
 
     if len(pool_tokens) < 2:
@@ -151,6 +156,8 @@ def test_ibc_timeout_and_ack(channel_id, pool, pool_tokens, ibc_emulator, berg, 
 
     source_token = pool_tokens[0]
     target_token = pool_tokens[1]
+
+    swap_amount = int(swap_amount * source_token.balanceOf(pool))
 
     assert source_token.balanceOf(berg) == 0
     

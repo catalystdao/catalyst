@@ -1,10 +1,12 @@
 import pytest
 from brownie import chain, reverts
 from brownie.test import given, strategy
+from hypothesis import example
 from brownie.exceptions import VirtualMachineError
 import tests.catalyst.utils.pool_utils as pool_utils
 
 
+@example(unbalance_percentage=8000, withdrawal_percentage=9000)
 @given(unbalance_percentage=strategy("uint256", min_value=100, max_value=10000), withdrawal_percentage=strategy("uint256", min_value=100, max_value=10000))
 @pytest.mark.no_call_coverage
 def test_withdrawall(pool, pool_tokens, get_pool_amp, berg, deployer, unbalance_percentage, withdrawal_percentage):
@@ -45,6 +47,7 @@ def test_withdrawall(pool, pool_tokens, get_pool_amp, berg, deployer, unbalance_
     
 
 # This function compares the output difference between withdrawAll and withdrawMixed
+@example(unbalance_percentage=8000, withdrawal_percentage=9000)
 @given(unbalance_percentage=strategy("uint256", min_value=100, max_value=10000), withdrawal_percentage=strategy("uint256", min_value=100, max_value=10000))
 @pytest.mark.no_call_coverage
 def test_compare_withdrawall_and_withdrawmixed(pool, pool_tokens, berg, deployer, unbalance_percentage, withdrawal_percentage):

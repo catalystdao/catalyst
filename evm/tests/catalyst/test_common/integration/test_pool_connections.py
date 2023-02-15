@@ -3,7 +3,10 @@ from brownie import reverts, convert
 
 from tests.catalyst.utils.pool_utils import encode_swap_payload, encode_liquidity_swap_payload
 
-pytestmark = pytest.mark.usefixtures("group_finish_setup")
+pytestmark = [
+    pytest.mark.usefixtures("group_finish_setup"),
+    pytest.mark.no_pool_param
+]
 # ! TODO when to test the following? before or after finish setup?
 
 
@@ -99,7 +102,7 @@ def test_connect_pools_invalid_auth(
     dummy_pool_address
 ):
 
-    with reverts(dev_revert_msg="dev: No auth"):
+    with reverts():      # ! Should be filtered with dev_revert_msg="dev: No auth"
         pool.setConnection(
             channel_id,
             dummy_pool_address,

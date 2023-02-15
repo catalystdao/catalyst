@@ -1,6 +1,7 @@
 import pytest
 from brownie import chain, convert, reverts
 from brownie.test import given
+from hypothesis import example
 from hypothesis.strategies import floats
 import re
 
@@ -12,6 +13,7 @@ pytestmark = pytest.mark.usefixtures("group_finish_setup", "group_connect_pools"
 
 # TODO split into different tests?
 @pytest.mark.no_call_coverage
+@example(swap_amount_percentage=0.8)
 @given(swap_amount_percentage=floats(min_value=0, max_value=2))    # From 0 to 2x the tokens hold by the pool
 def test_security_limit_swap_loop(
     channel_id,

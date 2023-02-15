@@ -3,13 +3,17 @@ import numpy as np
 import pytest
 from brownie import ZERO_ADDRESS, chain, convert, reverts, web3
 from brownie.test import given, strategy
-from hypothesis import settings
+from hypothesis import example, settings
 
 from utils.pool_utils import compute_liquidity_swap_hash
 
-pytestmark = pytest.mark.usefixtures("pool_connect_itself")
+pytestmark = [
+    pytest.mark.usefixtures("pool_connect_itself"),
+    pytest.mark.no_pool_param
+]
 
 @pytest.mark.no_call_coverage
+@example(swap_percentage=4000)
 @given(swap_percentage=strategy("uint256", max_value=10000))
 def test_ibc_ack(pool, channel_id, ibc_emulator, berg, deployer, swap_percentage):
     swap_amount = int(pool.totalSupply() * swap_percentage / 100000)
@@ -39,6 +43,7 @@ def test_ibc_ack(pool, channel_id, ibc_emulator, berg, deployer, swap_percentage
 
 
 @pytest.mark.no_call_coverage
+@example(swap_percentage=4000)
 @given(swap_percentage=strategy("uint256", max_value=10000))
 def test_ibc_timeout(pool, channel_id, ibc_emulator, berg, deployer, swap_percentage):
     swap_amount = int(pool.totalSupply() * swap_percentage / 100000)
