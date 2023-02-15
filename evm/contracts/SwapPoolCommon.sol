@@ -2,8 +2,8 @@
 
 pragma solidity ^0.8.16;
 
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {ERC20} from 'solmate/src/tokens/ERC20.sol';
+import {SafeTransferLib} from 'solmate/src/utils/SafeTransferLib.sol';
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/utils/Multicall.sol";
 import "./SwapPoolFactory.sol";
@@ -30,7 +30,7 @@ abstract contract CatalystSwapPoolCommon is
     ERC20,
     ICatalystV1Pool
 {
-    using SafeERC20 for IERC20;
+    using SafeTransferLib for ERC20;
 
     //--- Config ---//
     // The following section contains the configurable variables.
@@ -108,28 +108,10 @@ abstract contract CatalystSwapPoolCommon is
     /// @notice Specific escrow information (Liquidity)
     mapping(bytes32 => address) public _escrowedLiquidityFor;
 
-    constructor(address factory_) ERC20("Catalyst Pool Template", "") {
+    constructor(address factory_) ERC20("Catalyst Pool Template", "", DECIMALS) {
         FACTORY = factory_;
 
         _disableInitializers();
-        __name = "Catalyst Pool Template";
-        __symbol = "";
-    }
-
-    // Overriding the name and symbol storage variables
-    string private __name;
-    string private __symbol;
-
-    function name() public view override returns (string memory) {
-        return __name;
-    }
-
-    function symbol() public view override returns (string memory) {
-        return __symbol;
-    }
-
-    function decimals() public pure override returns (uint8) {
-        return DECIMALS;
     }
 
     function factoryOwner() public view override returns (address) {
@@ -171,8 +153,8 @@ abstract contract CatalystSwapPoolCommon is
         setFeeAdministrator(feeAdministrator);
 
         // Names the ERC20 pool token //
-        __name = name_;
-        __symbol = symbol_;
+        name = name_;
+        symbol = symbol_;
         // END ERC20 //
     }
 
@@ -258,7 +240,7 @@ abstract contract CatalystSwapPoolCommon is
                 poolFeeAmount,
                 governanceFeeShare
             );
-            IERC20(asset).safeTransfer(factoryOwner(), governanceFeeAmount);
+            ERC20(asset).safeTransfer(factoryOwner(), governanceFeeAmount);
         }
     }
 
@@ -380,7 +362,7 @@ abstract contract CatalystSwapPoolCommon is
 
         address fallbackAddress = releaseTokenEscrow(messageHash, escrowAmount, escrowToken); // Only reverts for missing escrow,
 
-        IERC20(escrowToken).safeTransfer(fallbackAddress, escrowAmount);  // Would fail if there is no balance. To protect against this, the escrow amount is removed from what can be claimed by users.
+        ERC20(escrowToken).safeTransfer(fallbackAddress, escrowAmount);  // Would fail if there is no balance. To protect against this, the escrow amount is removed from what can be claimed by users.
 
         emit EscrowTimeout(messageHash, false);  // Never reverts.
     }

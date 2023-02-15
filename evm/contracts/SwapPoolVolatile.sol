@@ -2,8 +2,9 @@
 
 pragma solidity ^0.8.16;
 
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+
+import {ERC20} from 'solmate/src/tokens/ERC20.sol';
+import {SafeTransferLib} from 'solmate/src/utils/SafeTransferLib.sol';
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "./FixedPointMathLib.sol";
 import "./CatalystIBCInterface.sol";
@@ -40,7 +41,7 @@ import "./ICatalystV1Pool.sol";
  * !If finishSetup is not called, the pool can be drained!
  */
 contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
-    using SafeERC20 for IERC20;
+    using SafeTransferLib for ERC20;
 
     //--- ERRORS ---//
     // Errors are defined in interfaces/ICatalystV1PoolErrors.sol
@@ -104,7 +105,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
 
             // The contract expects the tokens to have been sent to it before setup is
             // called. Make sure the pool has more than 0 tokens.
-            uint256 balanceOfSelf = IERC20(tokenAddress).balanceOf(address(this));
+            uint256 balanceOfSelf = ERC20(tokenAddress).balanceOf(address(this));
             require(balanceOfSelf > 0); // dev: 0 tokens provided in setup.
             initialBalances[it] = balanceOfSelf;
 
@@ -340,7 +341,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 amount
     ) public view returns (uint256) {
         // A high => fewer units returned. Do not subtract the escrow amount
-        uint256 A = IERC20(fromAsset).balanceOf(address(this));
+        uint256 A = ERC20(fromAsset).balanceOf(address(this));
         uint256 W = _weight[fromAsset];
 
         // If a token is not part of the pool, W is 0. This returns 0 by
@@ -360,7 +361,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 U
     ) public view returns (uint256) {
         // B low => fewer tokens returned. Subtract the escrow amount to decrease the balance.
-        uint256 B = IERC20(toAsset).balanceOf(address(this)) - _escrowedTokens[toAsset];
+        uint256 B = ERC20(toAsset).balanceOf(address(this)) - _escrowedTokens[toAsset];
         uint256 W = _weight[toAsset];
 
         // If someone were to purchase a token which is not part of the pool on setup
@@ -385,8 +386,8 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         address toAsset,
         uint256 amount
     ) public view returns (uint256) {
-        uint256 A = IERC20(fromAsset).balanceOf(address(this));
-        uint256 B = IERC20(toAsset).balanceOf(address(this)) - _escrowedTokens[toAsset];
+        uint256 A = ERC20(fromAsset).balanceOf(address(this));
+        uint256 B = ERC20(toAsset).balanceOf(address(this)) - _escrowedTokens[toAsset];
         uint256 W_A = _weight[fromAsset];
         uint256 W_B = _weight[toAsset];
 
@@ -420,7 +421,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 minOut
     ) nonReentrant external returns(uint256) {
         // Smaller initialTotalSupply => fewer pool tokens minted: _escrowedPoolTokens is not added.
-        uint256 initialTotalSupply = totalSupply(); 
+        uint256 initialTotalSupply = totalSupply; 
 
         uint256 U = 0;
         for (uint256 it = 0; it < MAX_ASSETS; it++) {
@@ -431,11 +432,11 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
             if (tokenAmounts[it] == 0) continue;
 
              // A high => fewer units returned. Do not subtract the escrow amount
-            uint256 At = IERC20(token).balanceOf(address(this));
+            uint256 At = ERC20(token).balanceOf(address(this));
 
             U += calcPriceCurveArea(tokenAmounts[it], At, _weight[token]);
 
-            IERC20(token).safeTransferFrom(
+            ERC20(token).safeTransferFrom(
                 msg.sender,
                 address(this),
                 tokenAmounts[it]
@@ -478,7 +479,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256[] calldata minOut
     ) nonReentrant external returns(uint256[] memory) {
         // Cache totalSupply. This saves up to ~200 gas.
-        uint256 initialTotalSupply = totalSupply() + _escrowedPoolTokens;
+        uint256 initialTotalSupply = totalSupply + _escrowedPoolTokens;
 
         // Since we have already cached totalSupply, we might as well burn the tokens
         // now. If the user doesn't have enough tokens, they save a bit of gas.
@@ -493,7 +494,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
             if (token == address(0)) break;
 
             // Withdrawals should return less, so the escrowed tokens are subtracted.
-            uint256 At = IERC20(token).balanceOf(address(this)) - _escrowedTokens[token];
+            uint256 At = ERC20(token).balanceOf(address(this)) - _escrowedTokens[token];
 
             // Number of tokens which can be released given poolTokens.
             uint256 tokenAmount = (At * poolTokens) / initialTotalSupply;
@@ -506,7 +507,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
             amounts[it] = tokenAmount;
 
             // Transfer the released tokens to the user.
-            IERC20(token).safeTransfer(msg.sender, tokenAmount);
+            ERC20(token).safeTransfer(msg.sender, tokenAmount);
         }
 
         // Emit the event
@@ -529,7 +530,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256[] calldata minOut
     ) nonReentrant external returns(uint256[] memory) {
         // cache totalSupply. This saves a bit of gas.
-        uint256 initialTotalSupply = totalSupply() + _escrowedPoolTokens;
+        uint256 initialTotalSupply = totalSupply + _escrowedPoolTokens;
 
         // Since we have already cached totalSupply, we might as well burn the tokens
         // now. If the user doesn't have enough tokens, they save a bit of gas.
@@ -560,7 +561,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
             address token = _tokenIndexing[it]; // Collect token from memory
 
             // Withdrawals should returns less, so the escrowed tokens are subtracted.
-            uint256 At = IERC20(token).balanceOf(address(this)) - _escrowedTokens[token];
+            uint256 At = ERC20(token).balanceOf(address(this)) - _escrowedTokens[token];
 
             // Units are shared between "liquidity units" and "token units". As such, we just
             // need to convert the units to tokens.
@@ -574,7 +575,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
             amounts[it] = tokenAmount;
 
             // Transfer the released tokens to the user.
-            IERC20(token).safeTransfer(msg.sender, tokenAmount);
+            ERC20(token).safeTransfer(msg.sender, tokenAmount);
         }
 
         // Emit the event
@@ -607,8 +608,8 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         if(minOut > out) revert ReturnInsufficient(out, minOut);
 
         // Transfer tokens to the user and collect tokens from the user.
-        IERC20(toAsset).safeTransfer(msg.sender, out);
-        IERC20(fromAsset).safeTransferFrom(msg.sender, address(this), amount);
+        ERC20(toAsset).safeTransfer(msg.sender, out);
+        ERC20(fromAsset).safeTransferFrom(msg.sender, address(this), amount);
 
         // Governance Fee
         collectGovernanceFee(fromAsset, fee);
@@ -684,7 +685,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         collectGovernanceFee(fromAsset, fee);
 
         // Collect the tokens from the user.
-        IERC20(fromAsset).safeTransferFrom(msg.sender, address(this), amount);
+        ERC20(fromAsset).safeTransferFrom(msg.sender, address(this), amount);
 
         // Adjustment of the security limit is delayed until ack to avoid
         // a router abusing timeout to circumvent the security limit.
@@ -763,7 +764,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         if (minOut > purchasedTokens) revert ReturnInsufficient(purchasedTokens, minOut);
 
         // Send the tokens to the user.
-        IERC20(toAsset).safeTransfer(who, purchasedTokens);
+        ERC20(toAsset).safeTransfer(who, purchasedTokens);
 
         emit ReceiveSwap(who, toAsset, U, purchasedTokens, messageHash);
 
@@ -834,7 +835,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         // Update weights
         _adjustWeights();
 
-        uint256 initialTotalSupply = totalSupply() + _escrowedPoolTokens;
+        uint256 initialTotalSupply = totalSupply + _escrowedPoolTokens;
         // Since we have already cached totalSupply, we might as well burn the tokens
         // now. If the user doesn't have enough tokens, they save a bit of gas.
         _burn(msg.sender, poolTokens);
@@ -919,7 +920,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
 
         // Use the arbitarty integral to compute mint %. It comes as WAD, multiply by totalSupply
         // and divided by WAD to get number of pool tokens.
-        uint256 poolTokens = (calcPriceCurveLimitShare(U, wsum) * totalSupply())/FixedPointMathLib.WAD;
+        uint256 poolTokens = (calcPriceCurveLimitShare(U, wsum) * totalSupply)/FixedPointMathLib.WAD;
 
         // Check if more than the minimum output is returned.
         if (minOut > poolTokens) revert ReturnInsufficient(poolTokens, minOut);

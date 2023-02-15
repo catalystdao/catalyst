@@ -56,7 +56,7 @@ def test_pool_token_transfer(
     event = tx.events["Transfer"]
     assert event["from"] == berg
     assert event["to"] == molly
-    assert event["value"] == transfer_amount
+    assert event["amount"] == transfer_amount
 
 
 
@@ -96,7 +96,7 @@ def test_pool_token_set_and_query_allowance(
     event = tx.events["Approval"]
     assert event["owner"] == berg
     assert event["spender"] == molly
-    assert event["value"] == allowance_amount
+    assert event["amount"] == allowance_amount
 
 
 
@@ -121,62 +121,7 @@ def test_pool_token_remove_allowance(
     event = tx.events["Approval"]
     assert event["owner"] == berg
     assert event["spender"] == molly
-    assert event["value"] == 0
-
-
-
-def test_pool_token_increase_allowance(
-    pool,
-    berg,
-    molly,
-    berg_pool_token_balance
-):
-
-    init_allowance_amount = int(0.2 * berg_pool_token_balance)
-    pool.approve(molly, init_allowance_amount, {"from": berg})
-
-    assert pool.allowance(berg, molly) == init_allowance_amount
-
-    increase_allowance_amount = int(0.25 * init_allowance_amount)
-
-
-    tx = pool.increaseAllowance(molly, increase_allowance_amount, {"from": berg})
-
-
-    assert pool.allowance(berg, molly) == init_allowance_amount + increase_allowance_amount
-
-    event = tx.events["Approval"]
-    assert event["owner"] == berg
-    assert event["spender"] == molly
-    assert event["value"] == init_allowance_amount + increase_allowance_amount
-
-
-
-def test_pool_token_decrease_allowance(
-    pool,
-    berg,
-    molly,
-    berg_pool_token_balance
-):
-
-    init_allowance_amount = int(0.2 * berg_pool_token_balance)
-    pool.approve(molly, init_allowance_amount, {"from": berg})
-
-    assert pool.allowance(berg, molly) == init_allowance_amount
-
-    decrease_allowance_amount = int(0.25 * init_allowance_amount)
-
-
-    tx = pool.decreaseAllowance(molly, decrease_allowance_amount, {"from": berg})
-
-
-    assert pool.allowance(berg, molly) == init_allowance_amount - decrease_allowance_amount
-
-    event = tx.events["Approval"]
-    assert event["owner"] == berg
-    assert event["spender"] == molly
-    assert event["value"] == init_allowance_amount - decrease_allowance_amount
-
+    assert event["amount"] == 0
 
 
 def test_pool_token_transfer_from(
@@ -205,7 +150,7 @@ def test_pool_token_transfer_from(
     event = tx.events["Transfer"]
     assert event["from"] == berg
     assert event["to"] == elwood
-    assert event["value"] == transfer_amount
+    assert event["amount"] == transfer_amount
 
 
 

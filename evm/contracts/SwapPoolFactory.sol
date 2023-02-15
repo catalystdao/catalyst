@@ -3,7 +3,8 @@
 pragma solidity ^0.8.16;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {ERC20} from 'solmate/src/tokens/ERC20.sol';
+import {SafeTransferLib} from 'solmate/src/utils/SafeTransferLib.sol';
 import "@openzeppelin/contracts/proxy/Clones.sol";
 import "./CatalystIBCInterface.sol";
 import "./interfaces/ICatalystV1FactoryEvents.sol";
@@ -18,7 +19,7 @@ uint256 constant MAX_GOVERNANCE_FEE_SHARE = 75 * 10**16;   // 75%
  * !The owner of the factory must be a timelock!
  */
 contract CatalystSwapPoolFactory is Ownable, ICatalystV1FactoryEvents {
-    using SafeERC20 for IERC20;
+    using SafeTransferLib for ERC20;
 
     mapping(address => mapping(address => bool)) public IsCreatedByFactory;
     uint256 public _defaultGovernanceFee;
@@ -67,7 +68,7 @@ contract CatalystSwapPoolFactory is Ownable, ICatalystV1FactoryEvents {
 
         // The pool expects the balances to exist in the pool when setup is called.
         for (uint256 it = 0; it < assets.length; it++) {
-            IERC20(assets[it]).safeTransferFrom(
+            ERC20(assets[it]).safeTransferFrom(
                 msg.sender,
                 swapPool,
                 init_balances[it]
