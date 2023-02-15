@@ -592,8 +592,9 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
             walpha_0_ampped = uint256(weightedAssetBalanceSum - _unitTracker) / it;     // By design, weightedAssetBalanceSum > _unitTracker
         }
 
+
         // For later event logging, the transferred tokens are stored.
-        uint256[] memory amounts = new uint256[](MAX_ASSETS);
+        uint256[] memory amounts = new uint256[](minOut.length < MAX_ASSETS ? minOut.length : MAX_ASSETS);
         {
             // wtk = (wa^(1-k) + (wa_0 + wpt)^(1-k) - wa_0^(1-k)))^(1/(1-k)) - wa
             // The inner diff is (wa_0 + wpt)^(1-k) - wa_0^(1-k).
@@ -752,7 +753,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         int256 oneMinusAmpInverse = int256(FixedPointMathLib.WAD * FixedPointMathLib.WAD) / oneMinusAmp;      // Casting never overflows, as WAD^2 is within int256 range
 
         // For later event logging, the transferred tokens are stored.
-        uint256[] memory amounts = new uint256[](MAX_ASSETS);
+        uint256[] memory amounts = new uint256[](minOut.length < MAX_ASSETS ? minOut.length : MAX_ASSETS);
         uint256 totalWithdrawn = 0;
         for (uint256 it = 0; it < MAX_ASSETS; ++it) {
             if (tokenIndexed[it] == address(0)) break;
