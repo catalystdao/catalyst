@@ -318,8 +318,8 @@ abstract contract CatalystSwapPoolCommon is
     ) internal returns(address) {
         require(msg.sender == _chainInterface);  // dev: Only _chainInterface
 
-        address fallbackUser = _escrowedFor[assetSwapHash];  // Passing in an invalid assetSwapHash returns address(0)
-        require(fallbackUser != address(0));  // dev: Invalid assetSwapHash. Alt: Escrow doesn't exist.
+        address fallbackUser = _escrowedFor[assetSwapHash];  // Passing in an invalid swapHash returns address(0)
+        require(fallbackUser != address(0));  // dev: Invalid swapHash. Alt: Escrow doesn't exist.
         delete _escrowedFor[assetSwapHash];  // Stops timeout and further acks from being called
 
         _escrowedTokens[escrowToken] -= escrowAmount; // This does not revert, since escrowAmount \subseteq _escrowedTokens => escrowAmount <= _escrowedTokens. Cannot be called twice since the 3 lines before ensure this can only be reached once.
@@ -333,8 +333,8 @@ abstract contract CatalystSwapPoolCommon is
     ) internal returns(address) {
         require(msg.sender == _chainInterface);  // dev: Only _chainInterface
 
-        address fallbackUser = _escrowedLiquidityFor[liquiditySwapHash];  // Passing in an invalid liquiditySwapHash returns address(0)
-        require(fallbackUser != address(0));  // dev: Invalid liquiditySwapHash. Alt: Escrow doesn't exist.
+        address fallbackUser = _escrowedLiquidityFor[liquiditySwapHash];  // Passing in an invalid swapHash returns address(0)
+        require(fallbackUser != address(0));  // dev: Invalid swapHash. Alt: Escrow doesn't exist.
         delete _escrowedLiquidityFor[liquiditySwapHash];  // Stops timeout and further acks from being called
 
         _escrowedPoolTokens -= escrowAmount;  // This does not revert, since escrowAmount \subseteq _escrowedPoolTokens => escrowAmount <= _escrowedPoolTokens. Cannot be called twice since the 3 lines before ensure this can only be reached once.
