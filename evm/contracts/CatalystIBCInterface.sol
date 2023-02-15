@@ -350,8 +350,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
             ICatalystV1Pool(pool).receiveLiquidity(
                 who,
                 U,
-                minOut,
-                keccak256(data)
+                minOut
             );
             return;
         }
@@ -384,7 +383,6 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
                 abi.decode(data[65:97], (address)), // who
                 uint256(bytes32(data[97:129])), // U
                 uint256(bytes32(data[130:162])), // minOut
-                keccak256(data), // messageHash
                 callDataTarget,
                 calldata_
             );
@@ -394,8 +392,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
             uint8(data[129]), // assetIndex
             abi.decode(data[65:97], (address)), // who
             uint256(bytes32(data[97:129])), // U
-            uint256(bytes32(data[130:162])), // minOut
-            keccak256(data) // messageHash
+            uint256(bytes32(data[130:162])) // minOut
         );
     }
 }

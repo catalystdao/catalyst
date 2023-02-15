@@ -130,8 +130,7 @@ interface ICatalystV1PoolPermissionless {
         uint256 toAssetIndex,
         address who,
         uint256 U,
-        uint256 minOut,
-        bytes32 messageHash
+        uint256 minOut
     ) external returns (uint256);
 
     function receiveSwap(
@@ -139,7 +138,6 @@ interface ICatalystV1PoolPermissionless {
         address who,
         uint256 U,
         uint256 minOut,
-        bytes32 messageHash,
         address dataTarget,
         bytes calldata data
     ) external returns (uint256);
@@ -175,7 +173,6 @@ interface ICatalystV1PoolPermissionless {
     function receiveLiquidity(
         address who,
         uint256 U,
-        uint256 minOut,
-        bytes32 messageHash
+        uint256 minOut
     ) external returns (uint256);
 }

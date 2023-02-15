@@ -743,14 +743,12 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
      * @param who The recipient of the tokens.
      * @param U Number of units to convert into toAsset.
      * @param minOut Minimum number of tokens bought. Reverts if less.
-     * @param messageHash Used to connect 2 swaps within a group. 
      */
     function receiveSwap(
         uint256 toAssetIndex,
         address who,
         uint256 U,
-        uint256 minOut,
-        bytes32 messageHash
+        uint256 minOut
     ) public returns (uint256) {
         // The chainInterface is the only valid caller of this function.
         require(msg.sender == _chainInterface);
@@ -772,7 +770,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         // Send the tokens to the user.
         IERC20(toAsset).safeTransfer(who, purchasedTokens);
 
-        emit ReceiveSwap(who, toAsset, U, purchasedTokens, messageHash);
+        emit ReceiveSwap(who, toAsset, U, purchasedTokens);
 
         return purchasedTokens; // Unused.
     }
@@ -783,7 +781,6 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         address who,
         uint256 U,
         uint256 minOut,
-        bytes32 messageHash,
         address dataTarget,
         bytes calldata data
     ) external returns (uint256) {
@@ -791,8 +788,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
             toAssetIndex,
             who,
             U,
-            minOut,
-            messageHash
+            minOut
         );
 
         // Let users define custom logic which should be executed after the swap.
@@ -910,14 +906,12 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
      * @param who The recipient of the pool tokens
      * @param U Number of units to convert into pool tokens.
      * @param minOut Minimum number of tokens to mint, otherwise reject.
-     * @param messageHash Used to connect 2 swaps within a group. 
      * @return uint256 Number of pool tokens minted to the recipient.
      */
     function receiveLiquidity(
         address who,
         uint256 U,
-        uint256 minOut,
-        bytes32 messageHash
+        uint256 minOut
     ) external returns (uint256) {
         // The chainInterface is the only valid caller of this function.
         require(msg.sender == _chainInterface);
@@ -939,7 +933,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         // Mint pool tokens for the user.
         _mint(who, poolTokens);
 
-        emit ReceiveLiquidity(who, U, poolTokens, messageHash);
+        emit ReceiveLiquidity(who, U, poolTokens);
 
         return poolTokens; // Unused
     }
