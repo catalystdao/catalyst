@@ -116,7 +116,8 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
         bytes memory preparedEscrowAndCalldata = abi.encodePacked(
             escrowInformation.amount,
             abi.encode(escrowInformation.token),
-            uint32(block.number % 2**32), // Helps identify the swap/randomize the local escrow hash
+            uint32(block.number % 2**32),
+            escrowInformation.swapHash,
             preparedCalldata
         );
 
@@ -132,9 +133,10 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
             130-161 _minOut : uint256
             162-193 _escrowAmount : uint256
             194-225 _escrowToken : bytes32
-            226-229 _blockNumber: bytes4
-            230-231 _customDataLength : uint16
-            232-253+_customDataLength-32 _customData : bytes...
+            226-257 _swapHash: bytes32
+            258-261 _blockNumber: bytes4
+            262-263 _customDataLength : uint16
+            264-295+_customDataLength-32 _customData : bytes...
         */
 
         // abi.encode allways encodes to 32 bytes.
@@ -212,7 +214,8 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
             U,
             minOut,
             escrowInformation.poolTokens,
-            uint32(block.number % 2**32), // Helps identify the swap/randomize the local escrow hash
+            uint32(block.number % 2**32),
+            escrowInformation.swapHash,
             uint8(0)
         );
 
@@ -352,7 +355,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
                 who,
                 U,
                 minOut,
-                keccak256(data)
+                bytes32(data[197:229]) // swapHash
             );
             return;
         }
@@ -385,7 +388,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
                 abi.decode(data[65:97], (address)), // who
                 uint256(bytes32(data[97:129])), // U
                 uint256(bytes32(data[130:162])), // minOut
-                keccak256(data), // messageHash
+                bytes32(data[230:262]), // swapHash
                 callDataTarget,
                 calldata_
             );
@@ -396,7 +399,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
             abi.decode(data[65:97], (address)), // who
             uint256(bytes32(data[97:129])), // U
             uint256(bytes32(data[130:162])), // minOut
-            keccak256(data) // messageHash
+            bytes32(data[230:262])  // swapHash
         );
     }
 }

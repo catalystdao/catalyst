@@ -4,10 +4,12 @@ pragma solidity ^0.8.16;
 struct TokenEscrow {
     uint256 amount;
     address token;
+    bytes32 swapHash;
 }
 
 struct LiquidityEscrow {
     uint256 poolTokens;
+    bytes32 swapHash;
 }
 
 /// @title Pool state

@@ -131,7 +131,7 @@ interface ICatalystV1PoolPermissionless {
         address who,
         uint256 U,
         uint256 minOut,
-        bytes32 messageHash
+        bytes32 swapHash
     ) external returns (uint256);
 
     function receiveSwap(
@@ -139,7 +139,7 @@ interface ICatalystV1PoolPermissionless {
         address who,
         uint256 U,
         uint256 minOut,
-        bytes32 messageHash,
+        bytes32 swapHash,
         address dataTarget,
         bytes calldata data
     ) external returns (uint256);
@@ -176,6 +176,6 @@ interface ICatalystV1PoolPermissionless {
         address who,
         uint256 U,
         uint256 minOut,
-        bytes32 messageHash
+        bytes32 swapHash
     ) external returns (uint256);
 }

@@ -868,9 +868,20 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         require(U < uint256(type(int256).max));     // int256 max fits in uint256
         _unitTracker += int256(U);
 
+        // ! Only need to hash info that is required by the escrow (+ some extra for randomisation)
+        // ! No need to hash context (as token/liquidity escrow data is different), fromPool, targetPool, targetAssetIndex, minOut, CallData
+        bytes32 assetSwapHash = computeAssetSwapHash(
+            targetUser,     // Used to randomise the hash   //Do we even need this?
+            U,              // Used to randomise the hash
+            amount - fee,   // ! Required to validate release escrow data
+            fromAsset,      // ! Required to validate release escrow data
+            uint32(block.number % 2**32)
+        );
+
         TokenEscrow memory escrowInformation = TokenEscrow({
             amount: amount - fee,
-            token: fromAsset
+            token: fromAsset,
+            swapHash: assetSwapHash
         });
 
         // Send the purchased units to targetPool on chain.
@@ -883,16 +894,6 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
             minOut,
             escrowInformation,
             calldata_
-        );
-
-        // ! Only need to hash info that is required by the escrow (+ some extra for randomisation)
-        // ! No need to hash context (as token/liquidity escrow data is different), fromPool, targetPool, targetAssetIndex, minOut, CallData
-        bytes32 assetSwapHash = computeAssetSwapHash(
-            targetUser,     // Used to randomise the hash   //Do we even need this?
-            U,              // Used to randomise the hash
-            amount - fee,   // ! Required to validate release escrow data
-            fromAsset,      // ! Required to validate release escrow data
-            uint32(block.number % 2**32)
         );
 
         // Escrow the tokens
@@ -917,7 +918,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
             amount,
             U,
             minOut,
-            messageHash
+            assetSwapHash
         );
 
         return U;
@@ -955,14 +956,14 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
      * @param who The recipient of toAsset
      * @param U Number of units to convert into toAsset.
      * @param minOut Minimum number of tokens bought. Reverts if less.
-     * @param messageHash Used to connect 2 swaps within a group. 
+     * @param swapHash Used to connect 2 swaps within a group. 
      */
     function receiveSwap(
         uint256 toAssetIndex,
         address who,
         uint256 U,
         uint256 minOut,
-        bytes32 messageHash
+        bytes32 swapHash
     ) public returns (uint256) {
         // The chainInterface is the only valid caller of this function, as there cannot
         // be a check of U. (It is purely a number)
@@ -990,7 +991,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         // Send the return value to the user.
         IERC20(toAsset).safeTransfer(who, purchasedTokens);
 
-        emit ReceiveSwap(who, toAsset, U, purchasedTokens, messageHash);
+        emit ReceiveSwap(who, toAsset, U, purchasedTokens, swapHash);
 
         return purchasedTokens; // Unused.
     }
@@ -1000,7 +1001,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         address who,
         uint256 U,
         uint256 minOut,
-        bytes32 messageHash,
+        bytes32 swapHash,
         address dataTarget,
         bytes calldata data
     ) external returns (uint256) {
@@ -1009,7 +1010,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
             who,
             U,
             minOut,
-            messageHash
+            swapHash
         );
 
         // Let users define custom logic which should be executed after the swap.
@@ -1102,8 +1103,18 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
             _unitTracker += int256(U);
         }
 
+        // ! Only need to hash info that is required by the escrow (+ some extra for randomisation)
+        // ! No need to hash context (as token/liquidity escrow data is different), fromPool, targetPool, targetAssetIndex, minOut, CallData
+        bytes32 liquiditySwapHash = computeLiquiditySwapHash(
+            targetUser, // Used to randomise the hash   //Do we even need this?
+            U,          // Used to randomise the hash
+            poolTokens,     // ! Required to validate release escrow data
+            uint32(block.number % 2**32)
+        );
+
         LiquidityEscrow memory escrowInformation = LiquidityEscrow({
-            poolTokens: poolTokens
+            poolTokens: poolTokens,
+            swapHash: liquiditySwapHash
         });
 
         // Sending the liquidity units over.
@@ -1114,15 +1125,6 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
             U,
             minOut,
             escrowInformation
-        );
-
-        // ! Only need to hash info that is required by the escrow (+ some extra for randomisation)
-        // ! No need to hash context (as token/liquidity escrow data is different), fromPool, targetPool, targetAssetIndex, minOut, CallData
-        bytes32 liquiditySwapHash = computeLiquiditySwapHash(
-            targetUser, // Used to randomise the hash   //Do we even need this?
-            U,          // Used to randomise the hash
-            poolTokens,     // ! Required to validate release escrow data
-            uint32(block.number % 2**32)
         );
 
         // Escrow the pool tokens
@@ -1138,7 +1140,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
             targetUser,
             poolTokens,
             U,
-            messageHash
+            liquiditySwapHash
         );
 
         return U;
@@ -1151,13 +1153,13 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
      * @param who The recipient of pool tokens
      * @param U Number of units to convert into pool tokens.
      * @param minOut Minimum number of tokens to mint, otherwise reject.
-     * @param messageHash Used to connect 2 swaps within a group. 
+     * @param swapHash Used to connect 2 swaps within a group. 
      */
     function receiveLiquidity(
         address who,
         uint256 U,
         uint256 minOut,
-        bytes32 messageHash
+        bytes32 swapHash
     ) external returns (uint256) {
         // The chainInterface is the only valid caller of this function.
         require(msg.sender == _chainInterface);
@@ -1238,7 +1240,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         // Mint pool tokens for the user.
         _mint(who, poolTokens);
 
-        emit ReceiveLiquidity(who, U, poolTokens, messageHash);
+        emit ReceiveLiquidity(who, U, poolTokens, swapHash);
 
         return poolTokens;
     }
