@@ -160,7 +160,7 @@ def test_ibc_ack_event(pool, channel_id, ibc_emulator, berg, deployer):
 
 
     expected_message_hash = compute_liquidity_swap_hash(
-        berg,
+        berg.address,
         tx.return_value,
         swap_amount,
         tx.block_number
@@ -198,7 +198,7 @@ def test_ibc_timeout_event(pool, channel_id, ibc_emulator, berg, deployer):
     escrow_timeout_event = txe.events['EscrowTimeout']
 
     expected_message_hash = compute_liquidity_swap_hash(
-        berg,
+        berg.address,
         tx.return_value,
         swap_amount,
         tx.block_number
