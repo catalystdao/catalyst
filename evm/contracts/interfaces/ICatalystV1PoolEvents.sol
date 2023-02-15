@@ -39,7 +39,8 @@ interface ICatalystV1PoolEvents {
         uint8 toAssetIndex,
         uint256 input,
         uint256 output,
-        uint256 minOut
+        uint256 minOut,
+        bytes32 messageHash
     );
 
     /**
@@ -68,7 +69,8 @@ interface ICatalystV1PoolEvents {
         bytes32 indexed targetPool,
         bytes32 indexed targetUser,
         uint256 input,
-        uint256 output
+        uint256 output,
+        bytes32 messageHash
     );
 
     /**
@@ -102,10 +104,10 @@ interface ICatalystV1PoolEvents {
     event Withdraw(address indexed who, uint256 burn, uint256[] assets);
 
     /** @notice Called upon successful swap. */
-    event EscrowAck(bool liquiditySwap);       //!TODO
+    event EscrowAck(bytes32 messageHash, bool liquiditySwap);
 
     /** @notice Called upon failed swap. */
-    event EscrowTimeout(bool liquiditySwap);   //!TODO
+    event EscrowTimeout(bytes32 messageHash, bool liquiditySwap);
 
 
     /** @notice Pool setup has been finalised. */

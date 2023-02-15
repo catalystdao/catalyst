@@ -916,7 +916,8 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
             toAssetIndex,
             amount,
             U,
-            minOut
+            minOut,
+            messageHash
         );
 
         return U;
@@ -1132,7 +1133,8 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
             targetPool,
             targetUser,
             poolTokens,
-            U
+            U,
+            messageHash
         );
 
         return U;
