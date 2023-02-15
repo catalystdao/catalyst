@@ -116,6 +116,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
         bytes memory preparedEscrowAndCalldata = abi.encodePacked(
             escrowInformation.amount,
             abi.encode(escrowInformation.token),
+            uint32(block.number % 2**32), // Helps identify the swap/randomize the local escrow hash
             preparedCalldata
         );
 
@@ -131,8 +132,9 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
             130-161 _minOut : uint256
             162-193 _escrowAmount : uint256
             194-225 _escrowToken : bytes32
-            226-227 _customDataLength : uint16
-            228-259+_customDataLength-32 _customData : bytes...
+            226-229 _blockNumber: bytes4
+            230-231 _customDataLength : uint16
+            232-253+_customDataLength-32 _customData : bytes...
         */
 
         // abi.encode allways encodes to 32 bytes.
@@ -149,8 +151,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
             U,
             uint8(targetAssetIndex),
             minOut,
-            preparedEscrowAndCalldata,
-            uint32(block.number % 2**32) // Makes all hashes unique. (Since the hash contains msg.sender, targetPool and blocknumber)
+            preparedEscrowAndCalldata
         );
 
         IbcDispatcher(IBCDispatcher).sendIbcPacket(
@@ -211,8 +212,8 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
             U,
             minOut,
             escrowInformation.poolTokens,
-            uint8(0),
-            uint32(block.number % 2**32) // Makes all hashes unique. (Since the hash contains msg.sender, targetPool and blocknumber)
+            uint32(block.number % 2**32), // Helps identify the swap/randomize the local escrow hash
+            uint8(0)
         );
 
         IbcDispatcher(IBCDispatcher).sendIbcPacket(
@@ -250,7 +251,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
                 bytes32(data[65:97]), // targetUser
                 U,
                 uint256(bytes32(data[161:193])), // escrowAmount
-                uint32(bytes4(data[data.length-4:data.length])) // block number
+                uint32(bytes4(data[193:197])) // block number
             );
             return;
         } 
@@ -262,7 +263,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
             U,
             uint256(bytes32(data[162:194])), // escrowAmount
             abi.decode(data[194:226], (address)), // escrowToken
-            uint32(bytes4(data[data.length-4:data.length])) // block number
+            uint32(bytes4(data[226:230])) // block number
         );
     }
 
@@ -293,7 +294,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
                 bytes32(data[65:97]), // targetUser
                 U,
                 uint256(bytes32(data[161:193])), // escrowAmount
-                uint32(bytes4(data[data.length-4:data.length])) // block number
+                uint32(bytes4(data[193:197])) // block number
             );
             return;
         }
@@ -304,7 +305,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
             U,
             uint256(bytes32(data[162:194])), // escrowAmount
             abi.decode(data[194:226], (address)), // escrowToken
-            uint32(bytes4(data[data.length-4:data.length])) // block number
+            uint32(bytes4(data[226:230])) // block number
         );
         
     }
