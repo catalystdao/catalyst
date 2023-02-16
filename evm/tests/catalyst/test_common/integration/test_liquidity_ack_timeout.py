@@ -5,6 +5,8 @@ from brownie import ZERO_ADDRESS, chain, convert, reverts, web3
 from brownie.test import given, strategy
 from hypothesis import example, settings
 
+from utils.pool_utils import compute_liquidity_swap_hash
+
 pytestmark = [
     pytest.mark.usefixtures("pool_connect_itself"),
     pytest.mark.no_pool_param
@@ -156,9 +158,15 @@ def test_ibc_ack_event(pool, channel_id, ibc_emulator, berg, deployer):
 
     escrow_ack_event = txe.events['EscrowAck']
 
-    expected_message_hash = web3.keccak(tx.events["IncomingPacket"]["packet"][3]).hex()   # Keccak of the payload contained on the ibc packet
 
-    assert escrow_ack_event["messageHash"]   == expected_message_hash
+    expected_message_hash = compute_liquidity_swap_hash(
+        berg.address,
+        tx.return_value,
+        swap_amount,
+        tx.block_number
+    )
+
+    assert escrow_ack_event["swapHash"]   == expected_message_hash
     assert escrow_ack_event["liquiditySwap"] == True
 
 
@@ -189,7 +197,12 @@ def test_ibc_timeout_event(pool, channel_id, ibc_emulator, berg, deployer):
 
     escrow_timeout_event = txe.events['EscrowTimeout']
 
-    expected_message_hash = web3.keccak(tx.events["IncomingPacket"]["packet"][3]).hex()   # Keccak of the payload contained on the ibc packet
+    expected_message_hash = compute_liquidity_swap_hash(
+        berg.address,
+        tx.return_value,
+        swap_amount,
+        tx.block_number
+    )
 
-    assert escrow_timeout_event["messageHash"]   == expected_message_hash
+    assert escrow_timeout_event["swapHash"]   == expected_message_hash
     assert escrow_timeout_event["liquiditySwap"] == True

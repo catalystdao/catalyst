@@ -569,7 +569,7 @@ def test_direct_escrow_ack_timeout_invocation(
         finish_swap        = False
     )
 
-    message_hash      = swap_result.tx_send_swap.events['SendSwap'][0]['messageHash']
+    message_hash      = swap_result.tx_send_swap.events['SendSwap'][0]['swapHash']
     transferred_units = swap_result.tx_send_swap.events['SendSwap']['output']
     fromAsset         = swap_result.tx_send_swap.events['SendSwap']["fromAsset"]
     escrowAmount      = decodePayload(swap_result.tx_send_swap.events["IncomingPacket"]["packet"][3])["_escrowAmount"]

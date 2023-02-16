@@ -4,6 +4,8 @@ from brownie.test import given, strategy
 from hypothesis import example
 import re
 
+from utils.pool_utils import compute_asset_swap_hash
+
 
 pytestmark = pytest.mark.usefixtures("group_finish_setup", "group_connect_pools")
 
@@ -153,7 +155,14 @@ def test_send_swap_event(
     )
 
     observed_units = tx.return_value
-    expected_message_hash = web3.keccak(tx.events["IncomingPacket"]["packet"][3]).hex()   # Keccak of the payload contained on the ibc packet
+
+    expected_message_hash = compute_asset_swap_hash(
+        elwood.address,
+        observed_units,
+        swap_amount,
+        source_token.address,
+        tx.block_number
+    )
 
     send_swap_event = tx.events['SendSwap']
 
@@ -164,7 +173,7 @@ def test_send_swap_event(
     assert send_swap_event['input']        == swap_amount
     assert send_swap_event['output']       == observed_units
     assert send_swap_event['minOut']       == min_out
-    assert send_swap_event['messageHash']  == expected_message_hash
+    assert send_swap_event['swapHash']  == expected_message_hash
 
 
 def test_receive_swap_event(
@@ -203,14 +212,21 @@ def test_receive_swap_event(
     )
 
     observed_units = tx.return_value
-    expected_message_hash = web3.keccak(tx.events["IncomingPacket"]["packet"][3]).hex()   # Keccak of the payload contained on the ibc packet
+    expected_message_hash = compute_asset_swap_hash(
+        elwood.address,
+        observed_units,
+        swap_amount,
+        source_token.address,
+        tx.block_number
+    )
 
     txe = ibc_emulator.execute(tx.events["IncomingMetadata"]["metadata"][0], tx.events["IncomingPacket"]["packet"], {"from": berg})
 
     receive_swap_event = txe.events['ReceiveSwap']
 
+    assert receive_swap_event['sourcePool']  == pool_1.address
     assert receive_swap_event['who']         == elwood
     assert receive_swap_event['toAsset']     == target_token
     assert receive_swap_event['input']       == observed_units
     assert receive_swap_event['output']      == target_token.balanceOf(elwood)
-    assert receive_swap_event['messageHash'] == expected_message_hash
+    assert receive_swap_event['swapHash'] == expected_message_hash

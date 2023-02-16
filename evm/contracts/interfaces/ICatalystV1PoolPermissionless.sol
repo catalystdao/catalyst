@@ -121,25 +121,28 @@ interface ICatalystV1PoolPermissionless {
      * @notice Completes a cross-chain swap by converting units to the desired token (toAsset)
      *  Called exclusively by the chainInterface.
      * @dev Can only be called by the chainInterface, as there is no way to check the validity of units.
+     * @param sourcePool The source pool.
      * @param toAssetIndex Index of the asset to be purchased with _U units.
      * @param who The recipient of toAsset
      * @param U Number of units to convert into toAsset.
      * @param minOut Minimum number of tokens bought. Reverts if less.
      */
     function receiveSwap(
+        bytes32 sourcePool,
         uint256 toAssetIndex,
         address who,
         uint256 U,
         uint256 minOut,
-        bytes32 messageHash
+        bytes32 swapHash
     ) external returns (uint256);
 
     function receiveSwap(
+        bytes32 sourcePool,
         uint256 toAssetIndex,
         address who,
         uint256 U,
         uint256 minOut,
-        bytes32 messageHash,
+        bytes32 swapHash,
         address dataTarget,
         bytes calldata data
     ) external returns (uint256);
@@ -169,13 +172,15 @@ interface ICatalystV1PoolPermissionless {
      * Called exclusively by the chainInterface.
      * @dev Can only be called by the chainInterface, as there is no way
      * to check the validity of units.
+     * @param sourcePool The source pool
      * @param who The recipient of pool tokens
      * @param U Number of units to convert into pool tokens.
      */
     function receiveLiquidity(
+        bytes32 sourcePool,
         address who,
         uint256 U,
         uint256 minOut,
-        bytes32 messageHash
+        bytes32 swapHash
     ) external returns (uint256);
 }
