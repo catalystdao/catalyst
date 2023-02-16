@@ -15,7 +15,7 @@ interface ICatalystV1PoolEvents {
      */
     event LocalSwap(
         address indexed who,
-        address indexed fromAsset,
+        address fromAsset,
         address toAsset,
         uint256 input,
         uint256 output
@@ -35,7 +35,7 @@ interface ICatalystV1PoolEvents {
     event SendSwap(
         bytes32 indexed targetPool,
         bytes32 indexed targetUser,
-        address indexed fromAsset,
+        address fromAsset,
         uint8 toAssetIndex,
         uint256 input,
         uint256 output,
@@ -53,7 +53,7 @@ interface ICatalystV1PoolEvents {
      */
     event ReceiveSwap(
         address indexed who,
-        address indexed toAsset,
+        address toAsset,
         uint256 input,
         uint256 output,
         bytes32 messageHash
@@ -110,7 +110,6 @@ interface ICatalystV1PoolEvents {
 
     /** @notice Called upon failed swap. */
     event EscrowTimeout(bytes32 messageHash, bool liquiditySwap);
-
 
     /** @notice Pool setup has been finalised. */
     event FinishSetup();
