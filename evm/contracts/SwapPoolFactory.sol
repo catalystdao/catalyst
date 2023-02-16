@@ -9,7 +9,7 @@ import "@openzeppelin/contracts/proxy/Clones.sol";
 import "./CatalystIBCInterface.sol";
 import "./interfaces/ICatalystV1FactoryEvents.sol";
 
-uint256 constant MAX_GOVERNANCE_FEE_SHARE = 75 * 10e16;   // 75%
+uint256 constant MAX_GOVERNANCE_FEE_SHARE = 75e16;   // 75%
 
 /**
  * @title Catalyst Swap Factory

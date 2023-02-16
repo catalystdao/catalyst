@@ -214,7 +214,7 @@ abstract contract CatalystSwapPoolCommon is
 
     function setPoolFee(uint256 fee) public override {
         require(msg.sender == _feeAdministrator || _isInitializing()); // dev: Only feeAdministrator can set new fee
-        require(fee <= 10e18);  // dev: PoolFee is maximum 100%.
+        require(fee <= 1e18);  // dev: PoolFee is maximum 100%.
         _poolFee = fee;
 
         emit SetPoolFee(fee);
