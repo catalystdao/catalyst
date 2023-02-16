@@ -74,7 +74,7 @@ contract CatalystRouter is RouterImmutables, ICatalystRouter, Dispatcher {
         bytes calldata commands = data.toBytes(0);
         bytes[] calldata inputs = data.toBytesArray(1);
 
-        this.execute(commands, inputs);
+        execute(commands, inputs);
     }
 
     /// @notice To receive ETH from WETH and NFT protocols
