@@ -224,6 +224,7 @@ def test_receive_swap_event(
 
     receive_swap_event = txe.events['ReceiveSwap']
 
+    assert receive_swap_event['sourcePool']  == pool_1.address
     assert receive_swap_event['who']         == elwood
     assert receive_swap_event['toAsset']     == target_token
     assert receive_swap_event['input']       == observed_units
