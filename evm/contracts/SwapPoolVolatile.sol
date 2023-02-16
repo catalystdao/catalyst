@@ -668,7 +668,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
             swapHash: assetSwapHash
         });
 
-        // Send the purchased units to targetPool on the target chain..
+        // Send the purchased units to targetPool on the target chain.
         CatalystIBCInterface(_chainInterface).crossChainSwap(
             channelId,
             targetPool,
@@ -685,7 +685,6 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         require(_escrowedFor[assetSwapHash] == address(0)); // dev: Escrow already exists.
         _escrowedTokens[fromAsset] += amount - fee;
         _escrowedFor[assetSwapHash] = fallbackUser;
-
 
         // Governance Fee
         collectGovernanceFee(fromAsset, fee);
@@ -739,8 +738,9 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
     /**
      * @notice Completes a cross-chain swap by converting units to the desired token (toAsset)
      * @dev Can only be called by the chainInterface.
-     * @param toAssetIndex Index of the asset to be purchased.
-     * @param who The recipient of the tokens.
+     * @param sourcePool The source pool.
+     * @param toAssetIndex Index of the asset to be purchased with Units.
+     * @param who The recipient.
      * @param U Number of units to convert into toAsset.
      * @param minOut Minimum number of tokens bought. Reverts if less.
      * @param swapHash Used to connect 2 swaps within a group. 
@@ -763,21 +763,20 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         // Check and update the security limit.
         updateUnitCapacity(U);
 
-        // Calculate the swap return value. 
+        // Calculate the swap return value.
         // Fee is always taken on the sending token.
         uint256 purchasedTokens = calcReceiveSwap(toAsset, U);
 
         // Ensure the user is satisfied by the number of tokens.
         if (minOut > purchasedTokens) revert ReturnInsufficient(purchasedTokens, minOut);
 
-        // Send the tokens to the user.
+        // Send the assets to the user.
         ERC20(toAsset).safeTransfer(who, purchasedTokens);
 
         emit ReceiveSwap(sourcePool, who, toAsset, U, purchasedTokens, swapHash);
 
-        return purchasedTokens; // Unused.
+        return purchasedTokens;
     }
-
 
     function receiveSwap(
         bytes32 sourcePool,
@@ -804,7 +803,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         // If this is not desired, wrap further logic in a try - except at dataTarget.
         ICatalystReceiver(dataTarget).onCatalystCall(purchasedTokens, data);
 
-        return purchasedTokens;  // Unused.
+        return purchasedTokens;
     }
 
     //--- Liquidity swapping ---//
@@ -904,7 +903,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         return U;
     }
 
-    /** 
+    /**
      * @notice Completes a cross-chain liquidity swap by converting units to tokens and depositing
      * @dev No reentry protection since only trusted contracts are called.
      * Called exclusively by the chainInterface.
@@ -947,7 +946,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
 
         emit ReceiveLiquidity(sourcePool, who, U, poolTokens, swapHash);
 
-        return poolTokens; // Unused
+        return poolTokens;
     }
 
     //-- Escrow Functions --//

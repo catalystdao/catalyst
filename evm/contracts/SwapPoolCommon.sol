@@ -222,7 +222,7 @@ abstract contract CatalystSwapPoolCommon is
 
     function setGovernanceFee(uint256 fee) public override {
         require(msg.sender == _feeAdministrator || _isInitializing()); // dev: Only feeAdministrator can set new fee
-        require(fee <=  ); // dev: Maximum GovernanceFeeSare exceeded.
+        require(fee <= MAX_GOVERNANCE_FEE_SHARE); // dev: Maximum GovernanceFeeSare exceeded.
         _governanceFeeShare = fee;
 
         emit SetGovernanceFee(fee);
