@@ -95,15 +95,11 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
 
         // Catch bad messages early. If there is no connection,
         // don't send a message.
-        {
-            // Encode the sender in bytes32.
-            bytes32 msgSenderB32 = bytes32(abi.encode(msg.sender));
-
-            require(
-                checkConnection[channelId][msgSenderB32][targetPool],
-                NO_CONNECTION
-            );
-        }
+        // Encode the sender in bytes32.
+        require(
+            checkConnection[channelId][bytes32(abi.encode(msg.sender))][toPool],
+            NO_CONNECTION
+        );
 
 
         // Encode payload. See CatalystIBCPayload.sol for the payload definition
@@ -176,15 +172,11 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
 
         // Catch bad messages early. If there is no connection,
         // don't send a message.
-        {
-            // Encode the sender in bytes32.
-            bytes32 msgSenderB32 = bytes32(abi.encode(msg.sender));
-
-            require(
-                checkConnection[channelId][msgSenderB32][targetPool],
-                NO_CONNECTION
-            );
-        }
+        // Encode the sender in bytes32.
+        require(
+            checkConnection[channelId][bytes32(abi.encode(msg.sender))][toPool],
+            NO_CONNECTION
+        );
 
         // Encode payload. See CatalystIBCPayload.sol for the payload definition
 
