@@ -323,8 +323,8 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
                 uint8(data[CTX0_TO_ASSET_INDEX_POS]),                                // toAssetIndex
                 abi.decode(data[ TO_ACCOUNT_START : TO_ACCOUNT_END ], (address)),    // toAccount
                 uint256(bytes32(data[ UNITS_START : UNITS_END ])),                   // units
-                uint256(bytes32(data[ CTX1_MIN_OUT_START : CTX1_MIN_OUT_END ])),     // minOut
-                bytes32(data[ CTX1_SWAP_HASH_START : CTX1_SWAP_HASH_END ]),          // swapHash
+                uint256(bytes32(data[ CTX0_MIN_OUT_START : CTX0_MIN_OUT_END ])),     // minOut
+                bytes32(data[ CTX0_SWAP_HASH_START : CTX0_SWAP_HASH_END ]),          // swapHash
                 abi.decode(data[ CTX0_DATA_START : CTX0_DATA_START+32 ], (address)), // dataTarget
                 data[ CTX0_DATA_START+32 : dataLength-32 ]                           // dataArguments
             );
@@ -336,8 +336,8 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
             uint8(data[CTX0_TO_ASSET_INDEX_POS]),                                    // toAssetIndex
             abi.decode(data[ TO_ACCOUNT_START : TO_ACCOUNT_END ], (address)),        // toAccount
             uint256(bytes32(data[ UNITS_START : UNITS_END ])),                       // units
-            uint256(bytes32(data[ CTX1_MIN_OUT_START : CTX1_MIN_OUT_END ])),         // minOut
-            bytes32(data[ CTX1_SWAP_HASH_START : CTX1_SWAP_HASH_END ])               // swapHash
+            uint256(bytes32(data[ CTX0_MIN_OUT_START : CTX0_MIN_OUT_END ])),         // minOut
+            bytes32(data[ CTX0_SWAP_HASH_START : CTX0_SWAP_HASH_END ])               // swapHash
         );
 
     }
