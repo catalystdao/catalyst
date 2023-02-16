@@ -18,7 +18,7 @@ import "./CatalystIBCPayload.sol";
  * It acts as an intermediate between the swap pool and the router to
  * abstract router logic away from the swap pools. This simplifies the
  * development of the swap pools and allows Catalyst to adopt or change
- * message routers with more flexiblity.
+ * message routers with more flexibility.
  */
 contract CatalystIBCInterface is Ownable, IbcReceiver {
     //--- ERRORS ---//
@@ -49,7 +49,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
 
     /**
      * @notice Configures an empty pool.
-     * @param channelId The channelId to that the pool connection is approved for.
+     * @param channelId The chain identifier to modify the pools connect with.
      * @param pool The pool which is allowed to call using the connection
      * @param state boolean opening or closing the channel.
      */
@@ -66,7 +66,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
 
     /**
      * @notice Packs cross-chain swap information into a bytearray and sends it to the target pool with IBC.
-     * @dev Callable by anyone but this cannot be abused since the connection mangement ensures no
+     * @dev Callable by anyone but this cannot be abused since the connection management ensures no
      * wrong messages enter a healthy pool.
      * @param channelId The target chain identifier.
      * @param targetPool The target pool on the target chain encoded in bytes32.
@@ -89,7 +89,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
         bytes memory calldata_
     ) external {
         // Anyone can call this function. And anyone can pass the security check later,
-        // but unless someone can also manage to pass the securiry check on onRecvPacket
+        // but unless someone can also manage to pass the security check on onRecvPacket
         // they cannot drain any value.
         // As such, the very worst they can do is waste gas.
 
@@ -109,14 +109,14 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
         // Encode payload. See CatalystIBCPayload.sol for the payload definition
 
         // To limit the number of active variables on the stack
-        // calldata is encoded seperately.
+        // calldata is encoded separately.
         bytes memory preparedCalldata = abi.encodePacked(
             uint16(calldata_.length),
             calldata_
         );
 
         // To limit the number of active variables on the stack
-        // escrow information is encoded seperately.
+        // escrow information is encoded separately.
         bytes memory preparedEscrowAndCalldata = abi.encodePacked(
             escrowInformation.amount,
             abi.encode(escrowInformation.token),
@@ -125,10 +125,10 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
             preparedCalldata
         );
 
-        // abi.encode allways encodes to 32 bytes.
+        // abi.encode always encodes to 32 bytes.
         // abi.encodePacked encodes in the smallest possible bytes.
         // 32 bytes are reserved for addresses (for chain compatibility)..
-        // Ethereum addresses only use 20 bytes, so abi.encodePacked returns 20 bytes where abi.encode returns 32 bytes.
+        // Ethereum addresses only use 20 bytes, so abi.encodePacked returns 20 bytes whereas abi.encode returns 32 bytes.
         // We want 32 just in case other chains use 32 bytes ids.
         // abi.encodePacked encodes the arguments as a concat.
         bytes memory data = abi.encodePacked(
@@ -152,7 +152,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
 
     /**
      * @notice Packs cross-chain swap information into a bytearray and sends it to the target pool with IBC.
-     * @dev Callable by anyone but this cannot be abused since the connection mangement ensures no
+     * @dev Callable by anyone but this cannot be abused since the connection management ensures no
      * wrong messages enter a healthy pool.
      * @param channelId The target chain identifier.
      * @param targetPool The target pool on the target chain encoded in bytes32.
@@ -170,7 +170,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
         LiquidityEscrow memory escrowInformation
     ) external {
         // Anyone can call this function. And anyone can pass the security check later,
-        // but unless someone can also manage to pass the securiry check on onRecvPacket
+        // but unless someone can also manage to pass the security check on onRecvPacket
         // they cannot drain any value.
         // As such, the very worst they can do is waste gas.
 
@@ -188,10 +188,10 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
 
         // Encode payload. See CatalystIBCPayload.sol for the payload definition
 
-        // abi.encode allways encodes to 32 bytes.
+        // abi.encode always encodes to 32 bytes.
         // abi.encodePacked encodes in the smallest possible bytes.
         // 32 bytes are reserved for addresses (for chain compatibility)..
-        // Ethereum addresses only use 20 bytes, so abi.encodePacked returns 20 bytes where abi.encode returns 32 bytes.
+        // Ethereum addresses only use 20 bytes, so abi.encodePacked returns 20 bytes whereas abi.encode returns 32 bytes.
         // We want 32 just in case other chains use 32 bytes ids.
         // abi.encodePacked encodes the arguments as a concat.
         bytes memory data = abi.encodePacked(
@@ -312,7 +312,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
 
             return;
         }
-        // It swap not, so it is an asset swap.
+        // It is not, so it is an asset swap.
 
         uint16 dataLength = uint16(bytes2(data[CTX0_DATA_LENGTH_START:CTX0_DATA_LENGTH_END]));
 

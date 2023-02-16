@@ -23,8 +23,8 @@ import "./ICatalystV1Pool.sol";
  * This constant is set in "SwapPoolCommon.sol"
  *
  * The swappool implements the ERC20 specification, such that the
- * swappool contract also defines the pool token.
- * @dev This contract is deployed inactive: It cannot be used as a
+ * contract will be its own pool token.
+ * @dev This contract is deployed inactive: It cannot be used as a∏
  * swap pool as is. To use it, a proxy contract duplicating the
  * logic of this contract needs to be deployed. In Vyper, this
  * can be done through (vy >=0.3.4) create_minimal_proxy_to.
@@ -45,8 +45,9 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
     //--- ERRORS ---//
     // Errors are defined in interfaces/ICatalystV1PoolErrors.sol
 
+
     //--- Config ---//
-    // Minimum time parameter adjustments can be made with.
+    // Minimum time parameter adjustments can be made over.
     uint256 constant MIN_ADJUSTMENT_TIME = 7 days;
     // When the swap is a very small size of the pool, the swaps
     // returns slightly more. To counteract this, an additional fee
@@ -80,7 +81,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
      *
      * If 0 of a token in assets is provided, the setup reverts.
      * @param assets A list of the token addresses associated with the pool
-     * @param weights Amplified weights to bring the price into a true 1:1 swap. That is:
+     * @param weights Amplified weights brings the price into a true 1:1 swap. That is:
      * i_t \cdot W_i = j_t \cdot W_j \forall i, j when P_i(i_t) = P_j(j_t).
      * in other words, weights are used to compensate for the difference in decimals. (or non 1:1 swaps.)
      * @param amp Amplification factor. Should be < 10**18.
@@ -122,6 +123,8 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
             maxUnitCapacity += weight * balanceOfSelf;
         }
 
+        // / The security limit is implemented as being 50% of the current balance. Since the security limit 
+        // is evaluated after balance changes, the limit in storage should be the current balance.
         _maxUnitCapacity = maxUnitCapacity;
 
         // Mint pool tokens for pool creator.
@@ -192,7 +195,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
 
                 return;
             }
-            
+
             // Calculate partial amp change
             uint256 targetAmplification = _targetAmplification;
             uint256 currentAmplification = _amp;
@@ -220,8 +223,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
      *     = (wA + wx)^(1-k) - wA^(1-k)
      * The value is returned as units, which is always WAD.
      * @dev All input amounts should be the raw numbers and not WAD.
-     * Since units are always denominated in WAD, the function
-     * should be treated as mathematically *native*.
+     * Since units are always denominated in WAD, the function should be treated as mathematically *native*.
      * @param input The input amount.
      * @param A The current pool balance of the x token.
      * @param W The weight of the x token.
@@ -298,11 +300,8 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
      *         )
      *
      * Alternatively, the integral can be computed through:
-     * _solve_integral(_compute_integral(input, A, W_A, amp), B, W_B, amp).
-     * However, _complete_integral is very slightly cheaper since it doesn't
-     * compute oneMinusAmp twice. :)
-     * (Apart from that, the mathematical operations are the same.)
-     * @dev All input amounts should be the raw numbers and not X64.
+     * calcPriceCurveLimit(calcPriceCurveArea(input, A, W_A, amp), B, W_B, amp).
+     * @dev All input amounts should be the raw numbers and not WAD.
      * @param input The input amount.
      * @param A The current pool balance of the _in token.
      * @param B The current pool balance of the _out token.
@@ -342,6 +341,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
 
     /**
      * @notice Computes the return of SendSwap.
+     * @dev Returns 0 if from is not a token in the pool
      * @param fromAsset The address of the token to sell.
      * @param amount The amount of from token to sell.
      * @return uint256 Group-specific units.
@@ -368,12 +368,13 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
 
     /**
      * @notice Computes the output of ReceiveSwap.
+     * @dev Reverts if to is not a token in the pool
      * @param toAsset The address of the token to buy.
      * @param U The number of units used to buy to.
      * @return uint256 Number of purchased tokens.
      */
     function calcReceiveSwap(
-        address toAsset, 
+        address toAsset,
         uint256 U
     ) public view returns (uint256) {
         // B low => fewer tokens returned. Subtract the escrow amount to decrease the balance.
@@ -393,7 +394,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
      * @param fromAsset The address of the token to sell.
      * @param toAsset The address of the token to buy.
      * @param amount The amount of from token to sell for to token.
-     * @return Output denominated in toAsset.
+     * @return uint256 Output denominated in toAsset.
      */
     function calcLocalSwap(
         address fromAsset,
@@ -542,6 +543,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
      * poolTokens == 0 or very small results: revert: Integer overflow. See note for why.
      * @param poolTokens The number of pool tokens to burn.
      * @param minOut The minimum token output. If less is returned, the transaction reverts.
+     * @return uint256[] memory An array containing the amounts withdrawn.
      */
     function withdrawAll(
         uint256 poolTokens,
@@ -650,12 +652,15 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
 
                 // remove the weight from weightedTokenAmount.
                 weightedTokenAmount /= _weight[token];
-                // Check that the user is satisfied with this.
+
+                // Check if the user is satisfied with the output.
                 if (minOut[it] > weightedTokenAmount)
                     revert ReturnInsufficient(weightedTokenAmount, minOut[it]);
 
-                // Transfer the appropriate number of tokens from the user to the pool. (And store for event logging)
+                // Store the token amount.
                 amounts[it] = weightedTokenAmount;
+
+                // Transfer the released tokens to the user.
                 ERC20(token).safeTransfer(msg.sender, weightedTokenAmount);
             }
 
@@ -669,17 +674,19 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
     
         }
 
+        // Emit the event
         emit Withdraw(msg.sender, poolTokens, amounts);
 
         return amounts;
     }
 
     /**
-     * @notice Deposits a symmetrical number of tokens such that in 1:1 wpt_a are deposited. This doesn't change the pool price.
-     * @dev Requires approvals for all tokens within the pool.
+     * @notice Burns poolTokens and release a token distribution which can be set by the user.
+     * @dev It is advised that the withdrawal matches the pool's %token distribution.
      * @param poolTokens The number of pool tokens to withdraw
-     * @param withdrawRatio The percentage of units used to withdraw. In the following special scheme: U_a = U · withdrawRatio[0], U_b = (U - U_a) · withdrawRatio[1], U_c = (U - U_a - U_b) · withdrawRatio[2], .... Is X64
-     * @param minOut The minimum number of tokens minted.
+     * @param withdrawRatio The percentage of units used to withdraw. In the following special scheme: U_a = U · withdrawRatio[0], U_b = (U - U_a) · withdrawRatio[1], U_c = (U - U_a - U_b) · withdrawRatio[2], .... Is WAD.
+     * @param minOut The minimum number of tokens withdrawn.
+     * @return uint256[] memory An array containing the amounts withdrawn
      */
     function withdrawMixed(
         uint256 poolTokens,
@@ -740,6 +747,8 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
             uint256 ts = totalSupply + _escrowedPoolTokens + poolTokens;
             uint256 pt_fraction = FixedPointMathLib.divWadDown(ts + poolTokens, ts);
 
+            // Compute the unit worth of the pool tokens.
+            // Recall that U is equal to N already. So we only need to multiply by the right side.
             U *= FixedPointMathLib.mulWadDown(
                 walpha_0_ampped, 
                 uint256(FixedPointMathLib.powWad(       // Always casts a positive value
@@ -763,12 +772,11 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                     revert ReturnInsufficient(0, minOut[it]);
                 continue;
             }
-            U -= U_i;
+            U -= U_i;  // Subtract the number of units used. This will underflow for malicious withdrawRatios > 1.
 
             // uint256 tokenAmount = calcReceiveSwap(_tokenIndexing[it], U_i);
             
-            // W_B · B^(1-k) is repeated twice and requires 1 power.
-            // As a result, we compute it and cache it.
+            // W_B · B^(1-k) is required twice and requires 1 power. We already computed it:
             uint256 W_BxBtoOMA = uint256(ampWeightAssetBalances[it]);   // Always casts a positive value
             uint256 tokenAmount = (
                 assetBalances[it] * (
@@ -779,24 +787,27 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                 )
             ) / FixedPointMathLib.WAD;
 
-            // Check that the user is satisfied with this.
+            // Ensure the output satisfies the user.
             if (minOut[it] > tokenAmount)
                 revert ReturnInsufficient(tokenAmount, minOut[it]);
-            
-            // Transfer the appropriate number of tokens from the user to the pool. (And store for event logging)
+
+            // Store amount for withdraw event
             amounts[it] = tokenAmount;
+
+            // Transfer the released tokens to the user.
             ERC20(tokenIndexed[it]).safeTransfer(msg.sender, tokenAmount);
 
             // Decrease the security limit by the amount withdrawn.
             totalWithdrawn += tokenAmount * _weight[tokenIndexed[it]];
         }
-        _maxUnitCapacity -=  totalWithdrawn;
+        _maxUnitCapacity -= totalWithdrawn;
         if (_usedUnitCapacity <= totalWithdrawn) {
             _usedUnitCapacity = 0;
         } else {
             _usedUnitCapacity -= totalWithdrawn;
         }
 
+        // Emit the event
         emit Withdraw(msg.sender, poolTokens, amounts);
 
         return amounts;
@@ -808,6 +819,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
      * @param toAsset The asset the user wants to buy
      * @param amount The amount of fromAsset the user wants to sell
      * @param minOut The minimum output of toAsset the user wants.
+     * @return uint256 The number of tokens purchased.
      */
     function localswap(
         address fromAsset,
@@ -818,12 +830,13 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         _adjustAmplification();
         uint256 fee = FixedPointMathLib.mulWadDown(amount, _poolFee);
 
-        // Calculate the swap return value.
+        // Calculate the return value.
         uint256 out = calcLocalSwap(fromAsset, toAsset, amount - fee);
 
         // Check if the calculated returned value is more than the minimum output.
         if (minOut > out) revert ReturnInsufficient(out, minOut);
 
+        // Transfer tokens to the user and collect tokens from the user.
         ERC20(toAsset).safeTransfer(msg.sender, out);
         ERC20(fromAsset).safeTransferFrom(msg.sender, address(this), amount);
 
@@ -843,6 +856,24 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         return out;
     }
 
+    /**
+     * @notice Initiate a cross-chain swap by purchasing units and transfer them to another pool.
+     * @dev To encode addresses in bytes32 the functions below can be used:
+     * Vyper: convert(<poolAddress>, bytes32)
+     * Solidity: abi.encode(<poolAddress>)
+     * Brownie: brownie.convert.to_bytes(<poolAddress>, type_str="bytes32")
+     * @param channelId The target chain identifier.
+     * @param targetPool The target pool on the target chain encoded in bytes32.
+     * @param targetUser The recipient of the transaction on the target chain. Encoded in bytes32.
+     * @param fromAsset The asset the user wants to sell.
+     * @param toAssetIndex The index of the asset the user wants to buy in the target pool.
+     * @param amount The number of fromAsset to sell to the pool.
+     * @param minOut The minimum number of returned tokens to the targetUser on the target chain.
+     * @param fallbackUser If the transaction fails, send the escrowed funds to this address
+     * @param calldata_ Data field if a call should be made on the target chain. 
+     * Should be encoded abi.encode(<address>,<data>)
+     * @return uint256 The number of units minted.
+     */
     function sendSwap(
         bytes32 channelId,
         bytes32 targetPool,
@@ -878,13 +909,14 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
             uint32(block.number % 2**32)
         );
 
+        // Wrap the escrow information into a struct. This reduces the stack-print.
         TokenEscrow memory escrowInformation = TokenEscrow({
             amount: amount - fee,
             token: fromAsset,
             swapHash: assetSwapHash
         });
 
-        // Send the purchased units to targetPool on chain.
+        // Send the purchased units to targetPool on the target chain.
         CatalystIBCInterface(_chainInterface).crossChainSwap(
             channelId,
             targetPool,
@@ -896,7 +928,8 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
             calldata_
         );
 
-        // Escrow the tokens
+        // Escrow the tokens used to purchase units. These will be sent back if transaction
+        // doesn't arrive / timeout.
         require(_escrowedFor[assetSwapHash] == address(0)); // dev: Escrow already exists.
         _escrowedTokens[fromAsset] += amount - fee;
         _escrowedFor[assetSwapHash] = fallbackUser;
@@ -908,7 +941,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         ERC20(fromAsset).safeTransferFrom(msg.sender, address(this), amount);
 
         // Adjustment of the security limit is delayed until ack to avoid
-        // a router abusing timeout to circumvent the security limit at a low cost.
+        // a router abusing timeout to circumvent the security limit.
 
         emit SendSwap(
             targetPool,
@@ -924,6 +957,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         return U;
     }
 
+    /** @notice Copy of sendSwap with no calldata_ */
     function sendSwap(
         bytes32 channelId,
         bytes32 targetPool,
@@ -951,10 +985,10 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
 
     /**
      * @notice Completes a cross-chain swap by converting units to the desired token (toAsset)
-     * @dev Can only be called by the chainInterface, as there is no way to check validity of units.
+     * @dev Can only be called by the chainInterface.
      * @param sourcePool The source pool.
-     * @param toAssetIndex Index of the asset to be purchased with _U units.
-     * @param who The recipient of toAsset
+     * @param toAssetIndex Index of the asset to be purchased with Units.
+     * @param who The recipient.
      * @param U Number of units to convert into toAsset.
      * @param minOut Minimum number of tokens bought. Reverts if less.
      * @param swapHash Used to connect 2 swaps within a group. 
@@ -967,8 +1001,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 minOut,
         bytes32 swapHash
     ) public returns (uint256) {
-        // The chainInterface is the only valid caller of this function, as there cannot
-        // be a check of U. (It is purely a number)
+        // The chainInterface is the only valid caller of this function.
         require(msg.sender == _chainInterface);
         _adjustAmplification();
 
@@ -977,25 +1010,26 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
 
 
         // Calculate the swap return value.
+        // Fee is always taken on the sending token.
         uint256 purchasedTokens = calcReceiveSwap(toAsset, U);
-
 
         // Check if the swap is according to the swap limits
         uint256 deltaSecurityLimit = purchasedTokens * _weight[toAsset];
         _maxUnitCapacity -= deltaSecurityLimit;
         updateUnitCapacity(deltaSecurityLimit);
 
-        if(minOut > purchasedTokens) revert ReturnInsufficient(purchasedTokens, minOut);
+        // Ensure the user is satisfied by the number of tokens.
+        if (minOut > purchasedTokens) revert ReturnInsufficient(purchasedTokens, minOut);
 
-        // Track units for fee distribution.
+        // Track units for balance0 computation.
         _unitTracker -= int256(U);
 
-        // Send the return value to the user.
+        // Send the assets to the user.
         ERC20(toAsset).safeTransfer(who, purchasedTokens);
 
         emit ReceiveSwap(sourcePool, who, toAsset, U, purchasedTokens, swapHash);
 
-        return purchasedTokens; // Unused.
+        return purchasedTokens;
     }
 
     function receiveSwap(
@@ -1019,8 +1053,8 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
 
         // Let users define custom logic which should be executed after the swap.
         // The logic is not contained within a try - except so if the logic reverts
-        // the transaction will timeout. If this is not desired, wrap further logic
-        // in a try - except at dataTarget.
+        // the transaction will timeout and the user gets the input tokens on the sending chain.
+        // If this is not desired, wrap further logic in a try - except at dataTarget.
         ICatalystReceiver(dataTarget).onCatalystCall(purchasedTokens, data);
 
         return purchasedTokens;
@@ -1029,7 +1063,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
     //--- Liquidity swapping ---//
     // Because of the way pool tokens work in a group of pools, there
     // needs to be a way for users to easily get a distributed stake.
-    // Liquidity swaps is a macro implemented  on the smart contract level to:
+    // Liquidity swaps is a macro implemented on the smart contract level to:
     // 1. Withdraw tokens.
     // 2. Convert tokens to units & transfer to target pool.
     // 3. Convert units to an even mix of tokens.
@@ -1037,8 +1071,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
     // In 1 user invocation.
 
     /**
-     * @notice Initiate a cross-chain liquidity swap by lowering liquidity
-     * and transfer the liquidity units to another pool.
+     * @notice Initiate a cross-chain liquidity swap by withdrawing tokens and converting them to units.
      * @dev No reentry protection since only trusted contracts are called.
      * @param channelId The target chain identifier.
      * @param targetPool The target pool on the target chain encoded in bytes32.
@@ -1054,8 +1087,10 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 minOut,
         address fallbackUser
     ) external returns (uint256) {
-        // There needs to be provided a valid fallbackUser.
+        // Address(0) is not a valid fallback user. (As checking for escrow overlap
+        // checks if the fallbackUser != address(0))
         require(fallbackUser != address(0));
+        // Update amplification
         _adjustAmplification();
 
         _burn(msg.sender, poolTokens);
@@ -1116,12 +1151,15 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
             uint32(block.number % 2**32)
         );
 
+        // Wrap the escrow information into a struct. This reduces the stack-print.
+        // (Not really since only pool tokens are wrapped.)
+        // However, the struct keeps the structure of swaps similar.
         LiquidityEscrow memory escrowInformation = LiquidityEscrow({
             poolTokens: poolTokens,
             swapHash: liquiditySwapHash
         });
 
-        // Sending the liquidity units over.
+        // Transfer the units to the target pools.
         CatalystIBCInterface(_chainInterface).liquiditySwap(
             channelId,
             targetPool,
@@ -1151,14 +1189,18 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
     }
 
     /**
-     * @notice Completes a cross-chain swap by converting liquidity units to pool tokens
+     * @notice Completes a cross-chain liquidity swap by converting units to tokens and depositing
      * @dev No reentry protection since only trusted contracts are called.
      * Called exclusively by the chainInterface.
+     * While the description says units are converted to tokens and then deposited, units are converted
+     * directly to pool tokens through the following equation:
+     *      pt = PT · (1 - exp(-U/sum W_i))/exp(-U/sum W_i)
      * @param sourcePool The source pool
-     * @param who The recipient of pool tokens
+     * @param who The recipient of the pool tokens
      * @param U Number of units to convert into pool tokens.
-     * @param minOut Minimum number of tokens to mint, otherwise reject.
+     * @param minOut Minimum number of tokens to mint. Otherwise: reject.
      * @param swapHash Used to connect 2 swaps within a group. 
+     * @return uint256 Number of pool tokens minted to the recipient.
      */
     function receiveLiquidity(
         bytes32 sourcePool,
@@ -1297,11 +1339,11 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
 
     /** 
      * @notice Deletes and releases escrowed tokens to the pool and updates the security limit.
-     * @dev Should never revert!  
+     * @dev Should never revert!
      * The base implementation exists in CatalystSwapPoolCommon. The function adds security limit
      * adjustment to the implementation to swap volume supported.
      * @param targetUser The recipient of the transaction on the target chain. Encoded in bytes32.
-     * @param U The number of units purchased.
+     * @param U The number of units acquired.
      * @param escrowAmount The number of tokens escrowed.
      * @param escrowToken The token escrowed.
      * @param blockNumberMod The block number at which the swap transaction was commited (mod 32)
