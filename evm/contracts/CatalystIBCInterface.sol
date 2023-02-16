@@ -197,27 +197,33 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
         bytes1 context = data[CONTEXT_POS];
         address fromPool = abi.decode(data[ FROM_POOL_START : FROM_POOL_END ], (address));
 
-        // Check if the flag 0x01 is set. If it is, it is a liquidity swap.
+        if (context == CTX0_ASSET_SWAP) {
+
+            ICatalystV1Pool(fromPool).sendSwapAck(
+                bytes32(data[ TO_ACCOUNT_START : TO_ACCOUNT_END ]),                             // toAccount
+                uint256(bytes32(data[ UNITS_START : UNITS_END ])),                              // units
+                uint256(bytes32(data[ CTX0_FROM_AMOUNT_START : CTX0_FROM_AMOUNT_END ])),        // fromAmount
+                abi.decode(data[ CTX0_FROM_ASSET_START : CTX0_FROM_ASSET_END ], (address)),     // fromAsset
+                uint32(bytes4(data[ CTX0_BLOCK_NUMBER_START : CTX0_BLOCK_NUMBER_END ]))         // block number
+            );
+
+            return;
+        }
+
         if (context == CTX1_LIQUIDITY_SWAP) {
-            // Delete the escrow information for liquidity swaps.
+
             ICatalystV1Pool(fromPool).sendLiquidityAck(
                 bytes32(data[ TO_ACCOUNT_START : TO_ACCOUNT_END ]),                         // toAccount
                 uint256(bytes32(data[ UNITS_START : UNITS_END ])),                          // units
                 uint256(bytes32(data[ CTX1_FROM_AMOUNT_START : CTX1_FROM_AMOUNT_END ])),    // fromAmount
                 uint32(bytes4(data[ CTX1_BLOCK_NUMBER_START : CTX1_BLOCK_NUMBER_END ]))     // block number
             );
+
             return;
         } 
-        // Otherwise, it is an ordinary swap.
+        
+        revert("Undefined Context");
 
-        // Delete the escrow information for ordinary swaps.
-        ICatalystV1Pool(fromPool).sendSwapAck(
-            bytes32(data[ TO_ACCOUNT_START : TO_ACCOUNT_END ]),                             // toAccount
-            uint256(bytes32(data[ UNITS_START : UNITS_END ])),                              // units
-            uint256(bytes32(data[ CTX0_FROM_AMOUNT_START : CTX0_FROM_AMOUNT_END ])),        // fromAmount
-            abi.decode(data[ CTX0_FROM_ASSET_START : CTX0_FROM_ASSET_END ], (address)),     // fromAsset
-            uint32(bytes4(data[ CTX0_BLOCK_NUMBER_START : CTX0_BLOCK_NUMBER_END ]))         // block number
-        );
     }
 
     /**
@@ -233,25 +239,32 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
         bytes1 context = data[CONTEXT_POS];
         address fromPool = abi.decode(data[FROM_POOL_START:FROM_POOL_END], (address));
 
+        if (context == CTX0_ASSET_SWAP) {
+
+            ICatalystV1Pool(fromPool).sendSwapTimeout(
+                bytes32(data[ TO_ACCOUNT_START : TO_ACCOUNT_END ]),                             // toAccount
+                uint256(bytes32(data[ UNITS_START : UNITS_END ])),                              // units
+                uint256(bytes32(data[ CTX0_FROM_AMOUNT_START : CTX0_FROM_AMOUNT_END ])),        // fromAmount
+                abi.decode(data[ CTX0_FROM_ASSET_START : CTX0_FROM_ASSET_END ], (address)),     // fromAsset
+                uint32(bytes4(data[ CTX0_BLOCK_NUMBER_START : CTX0_BLOCK_NUMBER_END ]))         // block number
+            );
+
+            return;
+        }
+
         if (context == CTX1_LIQUIDITY_SWAP) {
-            // Release the liquidiy escrow.
+
             ICatalystV1Pool(fromPool).sendLiquidityTimeout(
                 bytes32(data[ TO_ACCOUNT_START : TO_ACCOUNT_END ]),                         // toAccount
                 uint256(bytes32(data[ UNITS_START : UNITS_END ])),                          // units
                 uint256(bytes32(data[ CTX1_FROM_AMOUNT_START : CTX1_FROM_AMOUNT_END ])),    // fromAmount
                 uint32(bytes4(data[ CTX1_BLOCK_NUMBER_START : CTX1_BLOCK_NUMBER_END ]))     // block number
             );
+
             return;
         }
-
-        // Release the ordinary escrow.
-        ICatalystV1Pool(fromPool).sendSwapTimeout(
-            bytes32(data[ TO_ACCOUNT_START : TO_ACCOUNT_END ]),                             // toAccount
-            uint256(bytes32(data[ UNITS_START : UNITS_END ])),                              // units
-            uint256(bytes32(data[ CTX0_FROM_AMOUNT_START : CTX0_FROM_AMOUNT_END ])),        // fromAmount
-            abi.decode(data[ CTX0_FROM_ASSET_START : CTX0_FROM_ASSET_END ], (address)),     // fromAsset
-            uint32(bytes4(data[ CTX0_BLOCK_NUMBER_START : CTX0_BLOCK_NUMBER_END ]))         // block number
-        );
+        
+        revert("Undefined Context");
         
     }
 
@@ -273,7 +286,40 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
             NO_CONNECTION
         );
 
-        // Check if the swap is a liquidity swap.
+
+        if (context == CTX0_ASSET_SWAP) {
+
+            uint16 dataLength = uint16(bytes2(data[CTX0_DATA_LENGTH_START:CTX0_DATA_LENGTH_END]));
+
+            // CCI sets dataLength > 0 if calldata is passed.
+            if (dataLength != 0) {
+                ICatalystV1Pool(toPool).receiveSwap(
+                    fromPool,                                                            // fromPool
+                    uint8(data[CTX0_TO_ASSET_INDEX_POS]),                                // toAssetIndex
+                    abi.decode(data[ TO_ACCOUNT_START : TO_ACCOUNT_END ], (address)),    // toAccount
+                    uint256(bytes32(data[ UNITS_START : UNITS_END ])),                   // units
+                    uint256(bytes32(data[ CTX0_MIN_OUT_START : CTX0_MIN_OUT_END ])),     // minOut
+                    bytes32(data[ CTX0_SWAP_HASH_START : CTX0_SWAP_HASH_END ]),          // swapHash
+                    abi.decode(data[ CTX0_DATA_START : CTX0_DATA_START+32 ], (address)), // dataTarget
+                    data[ CTX0_DATA_START+32 : dataLength-32 ]                           // dataArguments
+                );
+
+                return;
+            }
+
+            ICatalystV1Pool(toPool).receiveSwap(
+                fromPool,                                                                // fromPool
+                uint8(data[CTX0_TO_ASSET_INDEX_POS]),                                    // toAssetIndex
+                abi.decode(data[ TO_ACCOUNT_START : TO_ACCOUNT_END ], (address)),        // toAccount
+                uint256(bytes32(data[ UNITS_START : UNITS_END ])),                       // units
+                uint256(bytes32(data[ CTX0_MIN_OUT_START : CTX0_MIN_OUT_END ])),         // minOut
+                bytes32(data[ CTX0_SWAP_HASH_START : CTX0_SWAP_HASH_END ])               // swapHash
+            );
+
+            return;
+
+        }
+
         if (context == CTX1_LIQUIDITY_SWAP) {
 
             ICatalystV1Pool(toPool).receiveLiquidity(
@@ -286,33 +332,8 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
 
             return;
         }
-        // It is not, so it is an asset swap.
-
-        uint16 dataLength = uint16(bytes2(data[CTX0_DATA_LENGTH_START:CTX0_DATA_LENGTH_END]));
-
-        // CCI sets dataLength > 0 if calldata is passed.
-        if (dataLength != 0) {
-            ICatalystV1Pool(toPool).receiveSwap(
-                fromPool,                                                            // fromPool
-                uint8(data[CTX0_TO_ASSET_INDEX_POS]),                                // toAssetIndex
-                abi.decode(data[ TO_ACCOUNT_START : TO_ACCOUNT_END ], (address)),    // toAccount
-                uint256(bytes32(data[ UNITS_START : UNITS_END ])),                   // units
-                uint256(bytes32(data[ CTX0_MIN_OUT_START : CTX0_MIN_OUT_END ])),     // minOut
-                bytes32(data[ CTX0_SWAP_HASH_START : CTX0_SWAP_HASH_END ]),          // swapHash
-                abi.decode(data[ CTX0_DATA_START : CTX0_DATA_START+32 ], (address)), // dataTarget
-                data[ CTX0_DATA_START+32 : dataLength-32 ]                           // dataArguments
-            );
-            return;
-        }
-
-        ICatalystV1Pool(toPool).receiveSwap(
-            fromPool,                                                                // fromPool
-            uint8(data[CTX0_TO_ASSET_INDEX_POS]),                                    // toAssetIndex
-            abi.decode(data[ TO_ACCOUNT_START : TO_ACCOUNT_END ], (address)),        // toAccount
-            uint256(bytes32(data[ UNITS_START : UNITS_END ])),                       // units
-            uint256(bytes32(data[ CTX0_MIN_OUT_START : CTX0_MIN_OUT_END ])),         // minOut
-            bytes32(data[ CTX0_SWAP_HASH_START : CTX0_SWAP_HASH_END ])               // swapHash
-        );
+        
+        revert("Undefined Context");
 
     }
 }
