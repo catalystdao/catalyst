@@ -69,20 +69,20 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
      * @dev Callable by anyone but this cannot be abused since the connection management ensures no
      * wrong messages enter a healthy pool.
      * @param channelId The target chain identifier.
-     * @param targetPool The target pool on the target chain encoded in bytes32.
-     * @param targetUser recipient of the transaction on the target chain. Encoded in bytes32.
-     * @param targetAssetIndex The index of the asset the user wants to buy in the target pool.
+     * @param toPool The target pool on the target chain encoded in bytes32.
+     * @param toAccount recipient of the transaction on the target chain. Encoded in bytes32.
+     * @param toAssetIndex The index of the asset the user wants to buy in the target pool.
      * @param U The calculated liquidity reference. (Units)
-     * @param minOut The minimum number of returned tokens to the targetUser on the target chain.
+     * @param minOut The minimum number of returned tokens to the toAccount on the target chain.
      * @param escrowInformation The escrow information.
      * @param calldata_ Data field if a call should be made on the target chain. 
      * Should be encoded abi.encode(<address>,<data>)
      */
     function crossChainSwap(
         bytes32 channelId,
-        bytes32 targetPool,
-        bytes32 targetUser,
-        uint8 targetAssetIndex,
+        bytes32 toPool,
+        bytes32 toAccount,
+        uint8 toAssetIndex,
         uint256 U,
         uint256 minOut,
         TokenEscrow memory escrowInformation,
@@ -134,10 +134,10 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
         bytes memory data = abi.encodePacked(
             CTX0_ASSET_SWAP,
             abi.encode(msg.sender),
-            targetPool,
-            targetUser,
+            toPool,
+            toAccount,
             U,
-            uint8(targetAssetIndex),
+            uint8(toAssetIndex),
             minOut,
             preparedEscrowAndCalldata
         );
@@ -155,16 +155,16 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
      * @dev Callable by anyone but this cannot be abused since the connection management ensures no
      * wrong messages enter a healthy pool.
      * @param channelId The target chain identifier.
-     * @param targetPool The target pool on the target chain encoded in bytes32.
-     * @param targetUser recipient of the transaction on the target chain. Encoded in bytes32.
+     * @param toPool The target pool on the target chain encoded in bytes32.
+     * @param toAccount recipient of the transaction on the target chain. Encoded in bytes32.
      * @param U The calculated liquidity reference. (Units)
-     * @param minOut The minimum number of returned tokens to the targetUser on the target chain.
+     * @param minOut The minimum number of returned tokens to the toAccount on the target chain.
      * @param escrowInformation The escrow information. 
      */
     function liquiditySwap(
         bytes32 channelId,
-        bytes32 targetPool,
-        bytes32 targetUser,
+        bytes32 toPool,
+        bytes32 toAccount,
         uint256 U,
         uint256 minOut,
         LiquidityEscrow memory escrowInformation
@@ -197,8 +197,8 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
         bytes memory data = abi.encodePacked(
             CTX1_LIQUIDITY_SWAP,
             abi.encode(msg.sender),
-            targetPool,
-            targetUser,
+            toPool,
+            toAccount,
             U,
             minOut,
             escrowInformation.poolTokens,
@@ -323,7 +323,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
         // CCI sets dataLength > 0 if calldata is passed.
         if (dataLength != 0) {
             ICatalystV1Pool(toPool).receiveSwap(
-                fromPool,                                                            // sourcePool
+                fromPool,                                                            // fromPool
                 uint8(data[CTX0_TO_ASSET_INDEX_POS]),                                // toAssetIndex
                 abi.decode(data[ TO_ACCOUNT_START : TO_ACCOUNT_END ], (address)),    // toAccount
                 uint256(bytes32(data[ UNITS_START : UNITS_END ])),                   // units
@@ -336,7 +336,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
         }
 
         ICatalystV1Pool(toPool).receiveSwap(
-            fromPool,                                                                // sourcePool
+            fromPool,                                                                // fromPool
             uint8(data[CTX0_TO_ASSET_INDEX_POS]),                                    // toAssetIndex
             abi.decode(data[ TO_ACCOUNT_START : TO_ACCOUNT_END ], (address)),        // toAccount
             uint256(bytes32(data[ UNITS_START : UNITS_END ])),                       // units
