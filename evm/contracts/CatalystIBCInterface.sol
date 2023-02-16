@@ -103,39 +103,24 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
 
 
         // Encode payload. See CatalystIBCPayload.sol for the payload definition
-
-        // To limit the number of active variables on the stack
-        // calldata is encoded separately.
-        bytes memory preparedCalldata = abi.encodePacked(
-            uint16(calldata_.length),
-            calldata_
-        );
-
-        // To limit the number of active variables on the stack
-        // escrow information is encoded separately.
-        bytes memory preparedEscrowAndCalldata = abi.encodePacked(
-            escrowInformation.amount,
-            abi.encode(escrowInformation.token),
-            uint32(block.number % 2**32),
-            escrowInformation.swapHash,
-            preparedCalldata
-        );
-
-        // abi.encode always encodes to 32 bytes.
-        // abi.encodePacked encodes in the smallest possible bytes.
-        // 32 bytes are reserved for addresses (for chain compatibility)..
-        // Ethereum addresses only use 20 bytes, so abi.encodePacked returns 20 bytes whereas abi.encode returns 32 bytes.
-        // We want 32 just in case other chains use 32 bytes ids.
-        // abi.encodePacked encodes the arguments as a concat.
-        bytes memory data = abi.encodePacked(
-            CTX0_ASSET_SWAP,
-            abi.encode(msg.sender),
-            toPool,
-            toAccount,
-            U,
-            uint8(toAssetIndex),
-            minOut,
-            preparedEscrowAndCalldata
+        bytes memory data = bytes.concat(       // Using bytes.concat to circumvent stack too deep error
+            abi.encodePacked(
+                CTX0_ASSET_SWAP,
+                abi.encode(msg.sender),         // Use abi.encode to encode address into 32 bytes
+                toPool,
+                toAccount,
+                U,
+                uint8(toAssetIndex),
+                minOut
+            ),
+            abi.encodePacked(
+                escrowInformation.amount,
+                abi.encode(escrowInformation.token),
+                uint32(block.number % 2**32),
+                escrowInformation.swapHash,
+                uint16(calldata_.length),
+                calldata_
+            )
         );
 
         IbcDispatcher(IBCDispatcher).sendIbcPacket(
@@ -179,16 +164,9 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
         );
 
         // Encode payload. See CatalystIBCPayload.sol for the payload definition
-
-        // abi.encode always encodes to 32 bytes.
-        // abi.encodePacked encodes in the smallest possible bytes.
-        // 32 bytes are reserved for addresses (for chain compatibility)..
-        // Ethereum addresses only use 20 bytes, so abi.encodePacked returns 20 bytes whereas abi.encode returns 32 bytes.
-        // We want 32 just in case other chains use 32 bytes ids.
-        // abi.encodePacked encodes the arguments as a concat.
         bytes memory data = abi.encodePacked(
             CTX1_LIQUIDITY_SWAP,
-            abi.encode(msg.sender),
+            abi.encode(msg.sender),         // Use abi.encode to encode address into 32 bytes
             toPool,
             toAccount,
             U,
