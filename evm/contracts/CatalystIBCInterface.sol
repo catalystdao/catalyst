@@ -329,10 +329,10 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
         */
         bytes1 _context = data[0];
         address pool = abi.decode(data[33:65], (address));
+        bytes32 fromPool = bytes32(data[1:33]);
 
         {
             bytes32 channelId = bytes32(packet.src.channelId);
-            bytes32 fromPool = bytes32(data[1:33]);
             require(
                 checkConnection[channelId][bytes32(data[33:65])][fromPool],
                 NO_CONNECTION
@@ -353,6 +353,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
             bytes32 swapHash = bytes32(data[197:229]);
 
             ICatalystV1Pool(pool).receiveLiquidity(
+                fromPool,
                 who,
                 U,
                 minOut,

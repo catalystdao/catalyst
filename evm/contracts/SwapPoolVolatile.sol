@@ -915,6 +915,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
      * While the description says units are converted to tokens and then deposited, units are converted
      * directly to pool tokens through the following equation:
      *      pt = PT · (1 - exp(-U/sum W_i))/exp(-U/sum W_i)
+     * @param sourcePool The source pool
      * @param who The recipient of the pool tokens
      * @param U Number of units to convert into pool tokens.
      * @param minOut Minimum number of tokens to mint. Otherwise: reject.
@@ -922,6 +923,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
      * @return uint256 Number of pool tokens minted to the recipient.
      */
     function receiveLiquidity(
+        bytes32 sourcePool,
         address who,
         uint256 U,
         uint256 minOut,
@@ -947,7 +949,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         // Mint pool tokens for the user.
         _mint(who, poolTokens);
 
-        emit ReceiveLiquidity(who, U, poolTokens, swapHash);
+        emit ReceiveLiquidity(sourcePool, who, U, poolTokens, swapHash);
 
         return poolTokens; // Unused
     }

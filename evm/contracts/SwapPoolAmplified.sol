@@ -1154,12 +1154,14 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
      * @notice Completes a cross-chain swap by converting liquidity units to pool tokens
      * @dev No reentry protection since only trusted contracts are called.
      * Called exclusively by the chainInterface.
+     * @param sourcePool The source pool
      * @param who The recipient of pool tokens
      * @param U Number of units to convert into pool tokens.
      * @param minOut Minimum number of tokens to mint, otherwise reject.
      * @param swapHash Used to connect 2 swaps within a group. 
      */
     function receiveLiquidity(
+        bytes32 sourcePool,
         address who,
         uint256 U,
         uint256 minOut,
@@ -1244,7 +1246,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         // Mint pool tokens for the user.
         _mint(who, poolTokens);
 
-        emit ReceiveLiquidity(who, U, poolTokens, swapHash);
+        emit ReceiveLiquidity(sourcePool, who, U, poolTokens, swapHash);
 
         return poolTokens;
     }

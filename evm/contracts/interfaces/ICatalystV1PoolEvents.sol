@@ -78,11 +78,13 @@ interface ICatalystV1PoolEvents {
 
     /**
      * @notice Describes the arrival of a liquidity swap
+     * @param sourcePool The source pool.
      * @param who The recipient of the liquidity.
      * @param input The number of liquidity units sent from the other chain.
      * @param output The number of pool tokens provided to _who
      */
     event ReceiveLiquidity(
+        bytes32 sourcePool,
         address indexed who,
         uint256 input,
         uint256 output,

@@ -42,6 +42,7 @@ def test_receiveLiquidity_must_be_called_by_cci(
     
     with reverts():
         pool.receiveLiquidity(
+            convert(pool.address, type_str="bytes32"),  # Use self as source pool
             berg,
             10**16,
             0,
@@ -50,6 +51,7 @@ def test_receiveLiquidity_must_be_called_by_cci(
         )
     
     pool.receiveLiquidity(
+        convert(pool.address, type_str="bytes32"),  # Use self as source pool
         berg,
         10**16,
         0,

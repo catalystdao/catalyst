@@ -172,10 +172,12 @@ interface ICatalystV1PoolPermissionless {
      * Called exclusively by the chainInterface.
      * @dev Can only be called by the chainInterface, as there is no way
      * to check the validity of units.
+     * @param sourcePool The source pool
      * @param who The recipient of pool tokens
      * @param U Number of units to convert into pool tokens.
      */
     function receiveLiquidity(
+        bytes32 sourcePool,
         address who,
         uint256 U,
         uint256 minOut,
