@@ -132,7 +132,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
         // We want 32 just in case other chains use 32 bytes ids.
         // abi.encodePacked encodes the arguments as a concat.
         bytes memory data = abi.encodePacked(
-            CTX0_ASSET_SWAP,
+            CTX0_ASSET_SWAP,  // Swaps has context flag 0.
             abi.encode(msg.sender),
             targetPool,
             targetUser,
@@ -229,6 +229,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
 
         // Check if the flag 0x01 is set. If it is, it is a liquidity swap.
         if (context == CTX1_LIQUIDITY_SWAP) {
+            // Delete the escrow information for liquidity swaps.
             ICatalystV1Pool(fromPool).sendLiquidityAck(
                 bytes32(data[ TO_ACCOUNT_START : TO_ACCOUNT_END ]),                         // toAccount
                 uint256(bytes32(data[ UNITS_START : UNITS_END ])),                          // units
@@ -239,6 +240,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
         } 
         // Otherwise, it is an ordinary swap.
 
+        // Delete the escrow information for ordinary swaps.
         ICatalystV1Pool(fromPool).sendSwapAck(
             bytes32(data[ TO_ACCOUNT_START : TO_ACCOUNT_END ]),                             // toAccount
             uint256(bytes32(data[ UNITS_START : UNITS_END ])),                              // units
@@ -262,6 +264,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
         address fromPool = abi.decode(data[FROM_POOL_START:FROM_POOL_END], (address));
 
         if (context == CTX1_LIQUIDITY_SWAP) {
+            // Release the liquidiy escrow.
             ICatalystV1Pool(fromPool).sendLiquidityTimeout(
                 bytes32(data[ TO_ACCOUNT_START : TO_ACCOUNT_END ]),                         // toAccount
                 uint256(bytes32(data[ UNITS_START : UNITS_END ])),                          // units
@@ -271,6 +274,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
             return;
         }
 
+        // Release the ordinary escrow.
         ICatalystV1Pool(fromPool).sendSwapTimeout(
             bytes32(data[ TO_ACCOUNT_START : TO_ACCOUNT_END ]),                             // toAccount
             uint256(bytes32(data[ UNITS_START : UNITS_END ])),                              // units
