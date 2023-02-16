@@ -2,8 +2,8 @@
 
 pragma solidity ^0.8.16;
 
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {ERC20} from 'solmate/src/tokens/ERC20.sol';
+import {SafeTransferLib} from 'solmate/src/utils/SafeTransferLib.sol';
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "./FixedPointMathLib.sol";
 import "./CatalystIBCInterface.sol";
@@ -40,14 +40,14 @@ import "./ICatalystV1Pool.sol";
  * !If finishSetup is not called, the pool can be drained!
  */
 contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
-    using SafeERC20 for IERC20;
+    using SafeTransferLib for ERC20;
 
     //--- ERRORS ---//
     // Errors are defined in interfaces/ICatalystV1PoolErrors.sol
 
     //--- Config ---//
     // Minimum time parameter adjustments can be made with.
-    uint256 constant MIN_ADJUSTMENT_TIME = 60 * 60 * 24 * 7;
+    uint256 constant MIN_ADJUSTMENT_TIME = 7 days;
     // When the swap is a very small size of the pool, the swaps
     // returns slightly more. To counteract this, an additional fee
     // slightly larger than the error is added. The below constants
@@ -115,7 +115,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
 
             // The contract expects the tokens to have been sent to it before setup is
             // called. Make sure the pool has more than 0 tokens.
-            uint256 balanceOfSelf = IERC20(tokenAddress).balanceOf(address(this));
+            uint256 balanceOfSelf = ERC20(tokenAddress).balanceOf(address(this));
             require(balanceOfSelf > 0); // dev: 0 tokens provided in setup.
             initialBalances[it] = balanceOfSelf;
 
@@ -351,7 +351,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 amount
     ) public view returns (uint256) {
         // A high => fewer units returned. Do not subtract the escrow amount
-        uint256 A = IERC20(fromAsset).balanceOf(address(this));
+        uint256 A = ERC20(fromAsset).balanceOf(address(this));
         uint256 W = _weight[fromAsset];
 
 
@@ -377,7 +377,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 U
     ) public view returns (uint256) {
         // B low => fewer tokens returned. Subtract the escrow amount to decrease the balance.
-        uint256 B = IERC20(toAsset).balanceOf(address(this)) - _escrowedTokens[toAsset];
+        uint256 B = ERC20(toAsset).balanceOf(address(this)) - _escrowedTokens[toAsset];
         uint256 W = _weight[toAsset];
 
         // If someone were to purchase a token which is not part of the pool on setup
@@ -400,8 +400,8 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         address toAsset,
         uint256 amount
     ) public view returns (uint256) {
-        uint256 A = IERC20(fromAsset).balanceOf(address(this));
-        uint256 B = IERC20(toAsset).balanceOf(address(this)) - _escrowedTokens[toAsset];
+        uint256 A = ERC20(fromAsset).balanceOf(address(this));
+        uint256 B = ERC20(toAsset).balanceOf(address(this)) - _escrowedTokens[toAsset];
         uint256 W_A = _weight[fromAsset];
         uint256 W_B = _weight[toAsset];
         uint256 amp = _amp;
@@ -479,7 +479,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                     oneMinusAmp
                 );
                 
-                IERC20(token).safeTransferFrom(
+                ERC20(token).safeTransferFrom(
                     msg.sender,
                     address(this),
                     tokenAmounts[it]
@@ -512,7 +512,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         // Use the simplified conversion of units into pool tokens. Saves ~1000 gas.
         uint256 it_times_walpha_amped = it * walpha_0_ampped;
         uint256 poolTokens = (
-            totalSupply() * uint256(                                                        // Always casts a positive value, as powWad >= 1, hence powWad - WAD >= 0
+            totalSupply * uint256(                                                        // Always casts a positive value, as powWad >= 1, hence powWad - WAD >= 0
                 FixedPointMathLib.powWad(                                                   // poWad always >= 1, as the 'base' is always >= 1
                     int256(FixedPointMathLib.divWadDown(                                    // If casting overflows to a negative number, powWad fails
                         it_times_walpha_amped + uint256(U),                                 // U always positive by design
@@ -550,7 +550,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         _adjustAmplification();
         // Burn the desired number of pool tokens to the user.
         // If they don't have it, it saves gas.
-        // * Remember to add poolTokens when accessing totalSupply()
+        // * Remember to add poolTokens when accessing totalSupply
         _burn(msg.sender, poolTokens);
 
         // Cache weights and balances.
@@ -603,7 +603,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
             { 
                 // Remember to add the number of pool tokens burned to totalSupply
                 // _escrowedPoolTokens is added, since it makes pt_fraction smaller
-                uint256 ts = (totalSupply() + _escrowedPoolTokens + poolTokens);
+                uint256 ts = (totalSupply + _escrowedPoolTokens + poolTokens);
                 uint256 pt_fraction = ((ts + poolTokens) * FixedPointMathLib.WAD) / ts;
 
                 // The reduced equation:
@@ -656,7 +656,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
 
                 // Transfer the appropriate number of tokens from the user to the pool. (And store for event logging)
                 amounts[it] = weightedTokenAmount;
-                IERC20(token).safeTransfer(msg.sender, weightedTokenAmount);
+                ERC20(token).safeTransfer(msg.sender, weightedTokenAmount);
             }
 
             // Decrease the security limit by the amount withdrawn.
@@ -689,7 +689,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         _adjustAmplification();
         // Burn the desired number of pool tokens to the user.
         // If they don't have it, it saves gas.
-        // * Remember to add poolTokens when accessing totalSupply()
+        // * Remember to add poolTokens when accessing totalSupply
         _burn(msg.sender, poolTokens);
 
         // Cache weights and balances.
@@ -737,7 +737,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                 // set U = number of tokens in the pool. But that is exactly what it is.
             }
             // Remember to add the number of pool tokens burned to totalSupply
-            uint256 ts = totalSupply() + _escrowedPoolTokens + poolTokens;
+            uint256 ts = totalSupply + _escrowedPoolTokens + poolTokens;
             uint256 pt_fraction = FixedPointMathLib.divWadDown(ts + poolTokens, ts);
 
             U *= FixedPointMathLib.mulWadDown(
@@ -785,7 +785,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
             
             // Transfer the appropriate number of tokens from the user to the pool. (And store for event logging)
             amounts[it] = tokenAmount;
-            IERC20(tokenIndexed[it]).safeTransfer(msg.sender, tokenAmount);
+            ERC20(tokenIndexed[it]).safeTransfer(msg.sender, tokenAmount);
 
             // Decrease the security limit by the amount withdrawn.
             totalWithdrawn += tokenAmount * _weight[tokenIndexed[it]];
@@ -824,8 +824,8 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         // Check if the calculated returned value is more than the minimum output.
         if (minOut > out) revert ReturnInsufficient(out, minOut);
 
-        IERC20(toAsset).safeTransfer(msg.sender, out);
-        IERC20(fromAsset).safeTransferFrom(msg.sender, address(this), amount);
+        ERC20(toAsset).safeTransfer(msg.sender, out);
+        ERC20(fromAsset).safeTransferFrom(msg.sender, address(this), amount);
 
         // Governance Fee
         collectGovernanceFee(fromAsset, fee);
@@ -905,7 +905,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         collectGovernanceFee(fromAsset, fee);
 
         // Collect the tokens from the user.
-        IERC20(fromAsset).safeTransferFrom(msg.sender, address(this), amount);
+        ERC20(fromAsset).safeTransferFrom(msg.sender, address(this), amount);
 
         // Adjustment of the security limit is delayed until ack to avoid
         // a router abusing timeout to circumvent the security limit at a low cost.
@@ -991,7 +991,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         _unitTracker -= int256(U);
 
         // Send the return value to the user.
-        IERC20(toAsset).safeTransfer(who, purchasedTokens);
+        ERC20(toAsset).safeTransfer(who, purchasedTokens);
 
         emit ReceiveSwap(sourcePool, who, toAsset, U, purchasedTokens, swapHash);
 
@@ -1092,7 +1092,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 U = 0;
         {
             // Plus _escrowedPoolTokens since we want the withdrawal to return less. Adding poolTokens as these have already been burnt.
-            uint256 ts = totalSupply() + _escrowedPoolTokens + poolTokens;
+            uint256 ts = totalSupply + _escrowedPoolTokens + poolTokens;
             uint256 pt_fraction = FixedPointMathLib.divWadDown(ts + poolTokens, ts);
 
             U = it * FixedPointMathLib.mulWadDown(
@@ -1202,7 +1202,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
 
         int256 oneMinusAmpInverse = int256(FixedPointMathLib.WAD * FixedPointMathLib.WAD) / oneMinusAmp;      // Casting never overflows, as WAD^2 is within int256 range
 
-        uint256 ts = totalSupply(); // Not! + _escrowedPoolTokens, since a smaller supply results in fewer pool tokens.
+        uint256 ts = totalSupply; // Not! + _escrowedPoolTokens, since a smaller supply results in fewer pool tokens.
 
         uint256 it_times_walpha_amped = it * walpha_0_ampped;
         uint256 poolTokens = (ts * (uint256(FixedPointMathLib.powWad(   // Always casts a positive value

@@ -193,7 +193,7 @@ def test_setup_without_funds(
 
     # ! Not approving tokens to the factory on purpose
 
-    with brownie.reverts("ERC20: insufficient allowance"):
+    with brownie.reverts("TRANSFER_FROM_FAILED"):
         swap_factory.deploy_swappool(
             swap_pool_template_idx,
             tokens[:asset_count],
