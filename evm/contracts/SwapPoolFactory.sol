@@ -9,7 +9,7 @@ import "@openzeppelin/contracts/proxy/Clones.sol";
 import "./CatalystIBCInterface.sol";
 import "./interfaces/ICatalystV1FactoryEvents.sol";
 
-uint256 constant MAX_GOVERNANCE_FEE_SHARE = 75 * 10**16;   // 75%
+uint256 constant MAX_GOVERNANCE_FEE_SHARE = 75 * 10e16;   // 75%
 
 /**
  * @title Catalyst Swap Factory
@@ -24,9 +24,7 @@ contract CatalystSwapPoolFactory is Ownable, ICatalystV1FactoryEvents {
     mapping(address => mapping(address => bool)) public IsCreatedByFactory;
     uint256 public _defaultGovernanceFee;
 
-    constructor(
-        uint256 defaultGovernanceFee
-    ) {
+    constructor(uint256 defaultGovernanceFee) {
         setDefaultGovernanceFee(defaultGovernanceFee);
     }
 
@@ -49,7 +47,7 @@ contract CatalystSwapPoolFactory is Ownable, ICatalystV1FactoryEvents {
      * @param poolFee The pool fee.
      * @param name Name of the Pool token.
      * @param symbol Symbol for the Pool token.
-     * @param chainInterface The cross chain interface used for cross-chain swaps. (Can be address(0))
+     * @param chainInterface The cross chain interface used for cross-chain swaps. (Can be address(0) to disable cross-chain swaps.)
      * @return address The address of the created Catalyst Swap Pool (minimal transparent proxy)
      */
     function deploy_swappool(

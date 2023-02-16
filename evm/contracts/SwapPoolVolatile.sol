@@ -49,7 +49,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
 
     //--- Config ---//
     // Minimum time parameter adjustments can be made over.
-    uint256 constant MIN_ADJUSTMENT_TIME = 60 * 60 * 24 * 7;
+    uint256 constant MIN_ADJUSTMENT_TIME = 7 days;
 
     // For other config options, see SwapPoolCommon.sol
 

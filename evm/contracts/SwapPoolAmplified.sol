@@ -47,7 +47,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
 
     //--- Config ---//
     // Minimum time parameter adjustments can be made with.
-    uint256 constant MIN_ADJUSTMENT_TIME = 60 * 60 * 24 * 7;
+    uint256 constant MIN_ADJUSTMENT_TIME = 7 days;
     // When the swap is a very small size of the pool, the swaps
     // returns slightly more. To counteract this, an additional fee
     // slightly larger than the error is added. The below constants

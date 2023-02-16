@@ -37,7 +37,7 @@ abstract contract CatalystSwapPoolCommon is
 
     /// @notice Determines how fast the security limit decreases.
     /// @dev Needs to be long enough for pool token providers to be notified of a breach but short enough for volatility to not soft-freeze the pool.
-    uint256 constant DECAY_RATE = 60 * 60 * 24;
+    uint256 constant DECAY_RATE = 1 days;
 
     /// @notice Number of decimals used by the pool's pool tokens
     uint8 constant DECIMALS = 18;
@@ -214,7 +214,7 @@ abstract contract CatalystSwapPoolCommon is
 
     function setPoolFee(uint256 fee) public override {
         require(msg.sender == _feeAdministrator || _isInitializing()); // dev: Only feeAdministrator can set new fee
-        require(fee <= 10**18);  // dev: PoolFee is maximum 100%.
+        require(fee <= 10e18);  // dev: PoolFee is maximum 100%.
         _poolFee = fee;
 
         emit SetPoolFee(fee);
