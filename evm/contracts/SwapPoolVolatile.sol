@@ -2,7 +2,6 @@
 
 pragma solidity ^0.8.16;
 
-
 import {ERC20} from 'solmate/src/tokens/ERC20.sol';
 import {SafeTransferLib} from 'solmate/src/utils/SafeTransferLib.sol';
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
@@ -53,7 +52,6 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
 
     // For other config options, see SwapPoolCommon.sol
 
-
     //-- Variables --//
     mapping(address => uint256) public _targetWeight;
 
@@ -62,12 +60,12 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
     /**
      * @notice Configures an empty pool.
      * @dev The @param amp is only used as a sanity check and needs to be set to 10**18 (WAD).
-     * If less than MAX_ASSETS are used to setup the pool
+     * If less than MAX_ASSETS are used to initiate the pool
      * let the remaining <assets> be ZERO_ADDRESS / address(0)
      *
      * Unused weights can be whatever. (0 is recommended.)
      *
-     * The initial token amounts should have been sent to the pool before set up is called.
+     * The initial token amounts should have been sent to the pool before setup is called.
      * Since someone can call setup can claim the initial tokens, this needs to be
      * done atomically!
      *
@@ -177,7 +175,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
             _lastModificationTime = block.timestamp;
 
             uint256 wsum = 0;
-            // If the current time is past the adjustment the weights need to be finalized.
+            // If the current time is past the adjustment, the weights need to be finalized.
             if (block.timestamp >= adjTarget) {
                 for (uint256 it = 0; it < MAX_ASSETS; it++) {
                     address token = _tokenIndexing[it];
@@ -242,12 +240,11 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
      * @notice Computes the integral \int_{A}^{A+x} W/w dw = W ln((A+x)/A)
      * The value is returned as units, which is always WAD.
      * @dev All input amounts should be the raw numbers and not WAD.
-     * Since units are always multiplied by WAD, the function
-     * should be treated as mathematically *native*.
+     * Since units are always denominated in WAD, the function should be treated as mathematically *native*.
      * @param input The input amount.
      * @param A The current pool balance of the x token.
      * @param W The weight of the x token.
-     * @return uint256 Group specific units (units are **always** WAD).
+     * @return uint256 Group-specific units (units are **always** WAD).
      */
     function calcPriceCurveArea(
         uint256 input,
@@ -283,9 +280,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
      *     \int_{A}^{A+x} W_a/w dw = \int_{B-y}^{B} W_b/w dw for y = B · (1 - ((A+x)/A)^(-W_a/W_b))
      *
      * Alternatively, the integral can be computed through:
-     *      calcPriceCurveLimit(_compute_integral(input, A, W_A), B, W_B).
-     *      However, calcCombinedPriceCurves is very slightly cheaper since it delays a division.
-     *      (Apart from that, the mathematical operations are the same.)
+     *      calcPriceCurveLimit(calcPriceCurveArea(input, A, W_A), B, W_B).
      * @dev All input amounts should be the raw numbers and not WAD.
      * @param input The input amount.
      * @param A The current pool balance of the x token.
@@ -334,7 +329,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
      * @dev Returns 0 if from is not a token in the pool
      * @param fromAsset The address of the token to sell.
      * @param amount The amount of from token to sell.
-     * @return uint256 Group specific units.
+     * @return uint256 Group-specific units.
      */
     function calcSendSwap(
         address fromAsset,
@@ -520,7 +515,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
      * @notice Burns poolTokens and release a token distribution which can be set by the user.
      * @dev It is advised that the withdrawal matches the pool's %token distribution.
      * @param poolTokens The number of pool tokens to withdraw
-     * @param withdrawRatio The percentage of units used to withdraw. In the following special scheme: U_a = U · withdrawRatio[0], U_b = (U - U_a) · withdrawRatio[1], U_c = (U - U_a - U_b) · withdrawRatio[2], .... Is Wad.
+     * @param withdrawRatio The percentage of units used to withdraw. In the following special scheme: U_a = U · withdrawRatio[0], U_b = (U - U_a) · withdrawRatio[1], U_c = (U - U_a - U_b) · withdrawRatio[2], .... Is WAD.
      * @param minOut The minimum number of tokens withdrawn.
      * @return uint256[] memory An array containing the amounts withdrawn
      */
@@ -597,7 +592,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         address toAsset,
         uint256 amount,
         uint256 minOut
-    ) nonReentrant public returns (uint256) {
+    ) nonReentrant external returns (uint256) {
         _adjustWeights();
         uint256 fee = FixedPointMathLib.mulWadDown(amount, _poolFee);
 
@@ -605,7 +600,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 out = calcLocalSwap(fromAsset, toAsset, amount - fee);
 
         // Check if the calculated returned value is more than the minimum output.
-        if(minOut > out) revert ReturnInsufficient(out, minOut);
+        if (minOut > out) revert ReturnInsufficient(out, minOut);
 
         // Transfer tokens to the user and collect tokens from the user.
         ERC20(toAsset).safeTransfer(msg.sender, out);
