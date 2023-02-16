@@ -110,7 +110,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
                 toPool,
                 toAccount,
                 U,
-                uint8(toAssetIndex),
+                toAssetIndex,
                 minOut
             ),
             abi.encodePacked(
