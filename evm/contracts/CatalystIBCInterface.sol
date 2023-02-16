@@ -132,7 +132,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
         // We want 32 just in case other chains use 32 bytes ids.
         // abi.encodePacked encodes the arguments as a concat.
         bytes memory data = abi.encodePacked(
-            CTX0_ASSET_SWAP,  // Swaps has context flag 0.
+            CTX0_ASSET_SWAP,
             abi.encode(msg.sender),
             targetPool,
             targetUser,
