@@ -14,11 +14,11 @@ interface ICatalystV1FactoryEvents {
      * @param assets List of the assets the pool supports.
      */
     event PoolDeployed(
-        address indexed deployer,
-        address indexed pool_address,
+        address indexed poolTemplate,
         address indexed chainInterface, 
+        address indexed deployer,
+        address pool_address,
         address[] assets,
-        address poolTemplate,
         uint256 k
     );
 

@@ -96,11 +96,11 @@ contract CatalystSwapPoolFactory is Ownable, ICatalystV1FactoryEvents {
 
         // Emit event for pool discovery.
         emit PoolDeployed(
+            poolTemplate,
+            chainInterface,
             msg.sender,
             swapPool,
-            chainInterface,
             assets,
-            poolTemplate,
             amp
         );
         IsCreatedByFactory[chainInterface][swapPool] = true;
