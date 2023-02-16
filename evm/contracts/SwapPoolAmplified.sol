@@ -952,6 +952,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
     /**
      * @notice Completes a cross-chain swap by converting units to the desired token (toAsset)
      * @dev Can only be called by the chainInterface, as there is no way to check validity of units.
+     * @param sourcePool The source pool.
      * @param toAssetIndex Index of the asset to be purchased with _U units.
      * @param who The recipient of toAsset
      * @param U Number of units to convert into toAsset.
@@ -959,6 +960,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
      * @param swapHash Used to connect 2 swaps within a group. 
      */
     function receiveSwap(
+        bytes32 sourcePool,
         uint256 toAssetIndex,
         address who,
         uint256 U,
@@ -991,12 +993,13 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         // Send the return value to the user.
         IERC20(toAsset).safeTransfer(who, purchasedTokens);
 
-        emit ReceiveSwap(who, toAsset, U, purchasedTokens, swapHash);
+        emit ReceiveSwap(sourcePool, who, toAsset, U, purchasedTokens, swapHash);
 
         return purchasedTokens; // Unused.
     }
 
     function receiveSwap(
+        bytes32 sourcePool,
         uint256 toAssetIndex,
         address who,
         uint256 U,
@@ -1006,6 +1009,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         bytes calldata data
     ) external returns (uint256) {
         uint256 purchasedTokens = receiveSwap(
+            sourcePool,
             toAssetIndex,
             who,
             U,

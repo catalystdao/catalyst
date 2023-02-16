@@ -750,6 +750,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
      * @param swapHash Used to connect 2 swaps within a group. 
      */
     function receiveSwap(
+        bytes32 sourcePool,
         uint256 toAssetIndex,
         address who,
         uint256 U,
@@ -776,13 +777,14 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         // Send the tokens to the user.
         IERC20(toAsset).safeTransfer(who, purchasedTokens);
 
-        emit ReceiveSwap(who, toAsset, U, purchasedTokens, swapHash);
+        emit ReceiveSwap(sourcePool, who, toAsset, U, purchasedTokens, swapHash);
 
         return purchasedTokens; // Unused.
     }
 
 
     function receiveSwap(
+        bytes32 sourcePool,
         uint256 toAssetIndex,
         address who,
         uint256 U,
@@ -792,6 +794,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         bytes calldata data
     ) external returns (uint256) {
         uint256 purchasedTokens = receiveSwap(
+            sourcePool,
             toAssetIndex,
             who,
             U,

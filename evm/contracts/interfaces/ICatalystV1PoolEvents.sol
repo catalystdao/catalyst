@@ -46,12 +46,14 @@ interface ICatalystV1PoolEvents {
     /**
      * @notice Describes the arrival of an external swap: Cross-chain swap.
      * @dev If _fromAsset is the proxy contract, the swap is a liquidity swap.
+     * @param sourcePool The source pool.
      * @param who The recipient of the trade.
      * @param toAsset The asset which was purchased with _fromAsset
      * @param input The number of units sent from the other chain.
      * @param output The number of tokens provided to _who
      */
     event ReceiveSwap(
+        bytes32 sourcePool,
         address indexed who,
         address indexed toAsset,
         uint256 input,
