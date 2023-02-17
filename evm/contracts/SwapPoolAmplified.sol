@@ -107,7 +107,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         // Compute the security limit.
         uint256[] memory initialBalances = new uint256[](MAX_ASSETS);
         uint256 maxUnitCapacity = 0;
-        for (uint256 it = 0; it < assets.length; ++it) {
+        for (uint256 it = 0; it < assets.length;) {
 
             address tokenAddress = assets[it];
             _tokenIndexing[it] = tokenAddress;
@@ -123,6 +123,10 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
             initialBalances[it] = balanceOfSelf;
 
             maxUnitCapacity += weight * balanceOfSelf;
+
+            unchecked {
+                it++;
+            }
         }
 
         // / The security limit is implemented as being 50% of the current balance. Since the security limit 
@@ -254,15 +258,20 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 W,
         int256 oneMinusAmp
     ) internal pure returns (uint256) {
-        return uint256(                                             // Always casts a positive value, as the first powWad term is always larger than the second one
-            FixedPointMathLib.powWad(
-                int256(W * (A + input) * FixedPointMathLib.WAD),    // If casting overflows to a negative number, powWad fails
-                oneMinusAmp
-            ) - FixedPointMathLib.powWad(
+        int256 calc = FixedPointMathLib.powWad(
+            int256(W * (A + input) * FixedPointMathLib.WAD),    // If casting overflows to a negative number, powWad fails
+            oneMinusAmp
+        );
+
+        unchecked {
+            // W * A * FixedPointMathLib.WAD < W * (A + input) * FixedPointMathLib.WAD 
+            calc -= FixedPointMathLib.powWad(
                 int256(W * A * FixedPointMathLib.WAD),              // If casting overflows to a negative number, powWad fails
                 oneMinusAmp
-            )
-        );
+            );
+        }
+
+        return uint256(calc);
     }
 
     /**
@@ -482,7 +491,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         {
             int256 weightedAssetBalanceSum = 0;
             uint256 assetDepositSum = 0;
-            for (it = 0; it < MAX_ASSETS; ++it) {
+            for (it = 0; it < MAX_ASSETS;) {
                 address token = _tokenIndexing[it];
                 if (token == address(0)) break;
                 uint256 weight = _weight[token];
@@ -506,7 +515,12 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                     // since it implies we cannot move intU += before this section.
                     // which would solve the issue.
                     // Save gas if the user provides no tokens, as the rest of the loop has no effect in that case
-                    if (tokenAmounts[it] == 0) continue;
+                    if (tokenAmounts[it] == 0) {
+                        unchecked {
+                            it++;
+                        }
+                        continue;
+                    }
                     
                     // int_A^{A+x} f(w) dw = F(A+x) - F(A).
                     // This is -F(A). Since we are subtracting first,
@@ -525,6 +539,10 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                     address(this),
                     tokenAmounts[it]
                 );  // dev: Token withdrawal from user failed.
+
+                unchecked {
+                    it++;
+                }
             }
             // Increase the security limit by the amount deposited.
             _maxUnitCapacity += assetDepositSum;
@@ -535,7 +553,11 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
             // weightedAssetBalanceSum > _unitTracker always, since _unitTracker correlates to exactly
             // the difference between weightedAssetBalanceSum and weightedAssetBalance0Sum and thus
             // _unitTracker < weightedAssetBalance0Sum
-            walpha_0_ampped = uint256(weightedAssetBalanceSum - _unitTracker) / it;     // By design, weightedAssetBalanceSum > _unitTracker
+            unchecked {
+                walpha_0_ampped = uint256(weightedAssetBalanceSum - _unitTracker) / it;   // By design, weightedAssetBalanceSum > _unitTracker
+            }
+
+        
         }
 
         // Subtract fee from U. This stops people from using deposit and withdrawal as a method of swapping.
@@ -610,7 +632,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
             int256 weightedAssetBalanceSum = 0;
             // "it" is needed briefly outside the loop.
             uint256 it;
-            for (it = 0; it < MAX_ASSETS; ++it) {
+            for (it = 0; it < MAX_ASSETS;) {
                 address token = _tokenIndexing[it];
                 if (token == address(0)) break;
                 tokenIndexed[it] = token;
@@ -626,13 +648,19 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                 );
                 ampWeightAssetBalances[it] = wab; // Store
                 weightedAssetBalanceSum += wab;
+
+                unchecked {
+                    it++;
+                }
             }
 
             // Compute the reference liquidity.
             // weightedAssetBalanceSum > _unitTracker always, since _unitTracker correlates to exactly
             // the difference between weightedAssetBalanceSum and weightedAssetBalance0Sum and thus
             // _unitTracker < weightedAssetBalance0Sum
-            walpha_0_ampped = uint256(weightedAssetBalanceSum - _unitTracker) / it;     // By design, weightedAssetBalanceSum > _unitTracker
+            unchecked {
+                walpha_0_ampped = uint256(weightedAssetBalanceSum - _unitTracker) / it;   // By design, weightedAssetBalanceSum > _unitTracker
+            }
         }
 
 
@@ -663,7 +691,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
             int256 oneMinusAmpInverse = FixedPointMathLib.WADWAD / oneMinusAmp;
 
             uint256 totalWithdrawn = 0;
-            for (uint256 it = 0; it < MAX_ASSETS; ++it) {
+            for (uint256 it = 0; it < MAX_ASSETS;) {
                 address token = tokenIndexed[it];
                 if (token == address(0)) break;
 
@@ -704,6 +732,10 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
 
                 // Transfer the released tokens to the user.
                 ERC20(token).safeTransfer(msg.sender, weightedTokenAmount);
+
+                unchecked {
+                    it++;
+                }
             }
 
             // Decrease the security limit by the amount withdrawn.
@@ -782,7 +814,9 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                 // weightedAssetBalanceSum > _unitTracker always, since _unitTracker correlates to exactly
                 // the difference between weightedAssetBalanceSum and weightedAssetBalance0Sum and thus
                 // _unitTracker < weightedAssetBalance0Sum
-                walpha_0_ampped = uint256(weightedAssetBalanceSum - _unitTracker) / U;     // By design, weightedAssetBalanceSum > _unitTracker
+                unchecked {
+                    walpha_0_ampped = uint256(weightedAssetBalanceSum - _unitTracker) / U;   // By design, weightedAssetBalanceSum > _unitTracker
+                }
 
                 // set U = number of tokens in the pool. But that is exactly what it is.
             }
@@ -806,13 +840,17 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         // For later event logging, the transferred tokens are stored.
         uint256[] memory amounts = new uint256[](minOut.length < MAX_ASSETS ? minOut.length : MAX_ASSETS);
         uint256 totalWithdrawn = 0;
-        for (uint256 it = 0; it < MAX_ASSETS; ++it) {
+        for (uint256 it = 0; it < MAX_ASSETS;) {
             if (tokenIndexed[it] == address(0)) break;
 
             uint256 U_i = (U * withdrawRatio[it]) / FixedPointMathLib.WAD;
             if (U_i == 0) {
                 if (minOut[it] != 0)
                     revert ReturnInsufficient(0, minOut[it]);
+
+                unchecked {
+                    it++;
+                }
                 continue;
             }
             U -= U_i;  // Subtract the number of units used. This will underflow for malicious withdrawRatios > 1.
@@ -841,7 +879,12 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
             ERC20(tokenIndexed[it]).safeTransfer(msg.sender, tokenAmount);
 
             // Decrease the security limit by the amount withdrawn.
+            
             totalWithdrawn += tokenAmount * _weight[tokenIndexed[it]];
+
+            unchecked {
+                it++;
+            }
         }
         _maxUnitCapacity -= totalWithdrawn;
         if (_usedUnitCapacity <= totalWithdrawn) {
@@ -888,10 +931,14 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
 
         // For amplified pools, the security limit is based on the sum of the tokens
         // in the pool.
-        if (out > amount) {
-            _maxUnitCapacity -= out - amount;
-        } else {
-            _maxUnitCapacity += amount - out;
+        unchecked {
+            // Since _maxUnitCapacity is the sum of the pool tokens, it cannot be negative.
+            // The if statement ensures the independent calculations never under or overflow.
+            if (out > amount) {
+                _maxUnitCapacity -= out - amount;
+            } else {
+                _maxUnitCapacity += amount - out;
+            }
         }
 
         emit LocalSwap(msg.sender, fromAsset, toAsset, amount, out);
@@ -1167,7 +1214,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         {
             // We don't need weightedAssetBalanceSum again.
             int256 weightedAssetBalanceSum = 0;
-            for (it = 0; it < MAX_ASSETS; ++it) {
+            for (it = 0; it < MAX_ASSETS;) {
                 address token = _tokenIndexing[it];
                 if (token == address(0)) break;
                 uint256 weight = _weight[token];
@@ -1180,12 +1227,18 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                     int256(weightAssetBalance * FixedPointMathLib.WAD),     // If casting overflows to a negative number, powWad fails
                     oneMinusAmp
                 );
+
+                unchecked {
+                    it++;
+                }
             }
 
             // weightedAssetBalanceSum > _unitTracker always, since _unitTracker correlates to exactly
             // the difference between weightedAssetBalanceSum and weightedAssetBalance0Sum and thus
             // _unitTracker < weightedAssetBalance0Sum
-            walpha_0_ampped = uint256(weightedAssetBalanceSum - _unitTracker) / it;     // By design, weightedAssetBalanceSum > _unitTracker 
+            unchecked {
+                walpha_0_ampped = uint256(weightedAssetBalanceSum - _unitTracker) / it;   // By design, weightedAssetBalanceSum > _unitTracker
+            }
         }
 
         uint256 U = 0;
@@ -1292,7 +1345,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         {
             // We don't need weightedAssetBalanceSum again.
             int256 weightedAssetBalanceSum = 0;
-            for (it = 0; it < MAX_ASSETS; ++it) {
+            for (it = 0; it < MAX_ASSETS;) {
                 address token = _tokenIndexing[it];
                 if (token == address(0)) break;
                 uint256 weight = _weight[token];
@@ -1305,12 +1358,18 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                     int256(weightAssetBalance * FixedPointMathLib.WAD),     // If casting overflows to a negative number, powWad fails
                     oneMinusAmp
                 );
+
+                unchecked {
+                    it++;
+                }
             }
 
             // weightedAssetBalanceSum > _unitTracker always, since _unitTracker correlates to exactly
             // the difference between weightedAssetBalanceSum and weightedAssetBalance0Sum and thus
             // _unitTracker < weightedAssetBalance0Sum
-            walpha_0_ampped = uint256(weightedAssetBalanceSum - _unitTracker) / it;     // By design, weightedAssetBalanceSum > _unitTracker
+            unchecked {
+                walpha_0_ampped = uint256(weightedAssetBalanceSum - _unitTracker) / it;   // By design, weightedAssetBalanceSum > _unitTracker
+            }
         }
 
         int256 oneMinusAmpInverse = FixedPointMathLib.WADWAD / oneMinusAmp;

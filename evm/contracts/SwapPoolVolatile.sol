@@ -92,7 +92,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         // Compute the security limit.
         uint256[] memory initialBalances = new uint256[](MAX_ASSETS);
         uint256 maxUnitCapacity = 0;
-        for (uint256 it = 0; it < assets.length; ++it) {
+        for (uint256 it = 0; it < assets.length;) {
 
             address tokenAddress = assets[it];
             _tokenIndexing[it] = tokenAddress;
@@ -108,6 +108,10 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
             initialBalances[it] = balanceOfSelf;
 
             maxUnitCapacity += weight;
+
+            unchecked {
+                it++;
+            }
         }
         
         // The maximum unit flow is \sum Weights * ln(2). The value is multiplied by WAD 
@@ -144,11 +148,15 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         _lastModificationTime = block.timestamp;
 
         // Compute sum weight for security limit.
-        for (uint256 it = 0; it < MAX_ASSETS; ++it) {
+        for (uint256 it = 0; it < MAX_ASSETS;) {
             address token = _tokenIndexing[it];
             if (token == address(0)) break;
             require(newWeights[it] != 0); // dev: newWeights must be greater than 0 to protect liquidity providers.
             _targetWeight[token] = newWeights[it];
+
+            unchecked {
+                it++;
+            }
         }
 
         emit ModifyWeights(targetTime, newWeights);
@@ -177,7 +185,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
             uint256 wsum = 0;
             // If the current time is past the adjustment, the weights need to be finalized.
             if (block.timestamp >= adjTarget) {
-                for (uint256 it = 0; it < MAX_ASSETS; ++it) {
+                for (uint256 it = 0; it < MAX_ASSETS;) {
                     address token = _tokenIndexing[it];
                     if (token == address(0)) break;
 
@@ -188,6 +196,10 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
 
                     // Save the new weight.
                     _weight[token] = targetWeight;
+
+                    unchecked {
+                        it++;
+                    }
                 }
                 // Save weight sum.
                 _maxUnitCapacity = wsum * FixedPointMathLib.LN2;
@@ -422,12 +434,17 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 initialTotalSupply = totalSupply; 
 
         uint256 U = 0;
-        for (uint256 it = 0; it < MAX_ASSETS; ++it) {
+        for (uint256 it = 0; it < MAX_ASSETS;) {
             address token = _tokenIndexing[it];
             if (token == address(0)) break;
 
             // Save gas if the user provides no tokens.
-            if (tokenAmounts[it] == 0) continue;
+            if (tokenAmounts[it] == 0) {
+                unchecked {
+                    it++;
+                }
+                continue;
+            }
 
              // A high => fewer units returned. Do not subtract the escrow amount
             uint256 At = ERC20(token).balanceOf(address(this));
@@ -439,6 +456,10 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
                 address(this),
                 tokenAmounts[it]
             ); // dev: Token withdrawal from user failed.
+
+            unchecked {
+                it++;
+            }
         }
 
         // Subtract fee from U. This stops people from using deposit and withdrawal as a method of swapping.
@@ -491,7 +512,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 loopLength = minOut.length < MAX_ASSETS ? minOut.length : MAX_ASSETS;
         // For later event logging, the amounts transferred from the pool are stored.
         uint256[] memory amounts = new uint256[](loopLength);
-        for (uint256 it = 0; it < loopLength; ++it) {
+        for (uint256 it = 0; it < loopLength;) {
             address token = _tokenIndexing[it];
             if (token == address(0)) break;
 
@@ -510,6 +531,10 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
 
             // Transfer the released tokens to the user.
             ERC20(token).safeTransfer(msg.sender, tokenAmount);
+
+            unchecked {
+                it++;
+            }
         }
 
         // Emit the event
@@ -550,12 +575,15 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 loopLength = minOut.length < MAX_ASSETS ? minOut.length : MAX_ASSETS;
         // For later event logging, the amounts transferred to the pool are stored.
         uint256[] memory amounts = new uint256[](loopLength);
-        for (uint256 it = 0; it < loopLength; ++it) {
+        for (uint256 it = 0; it < loopLength;) {
             // Units allocated for the specific token.
             uint256 U_i = (U * withdrawRatio[it]) / FixedPointMathLib.WAD;
             if (U_i == 0) {
                 if (minOut[it] != 0)
                     revert ReturnInsufficient(0, minOut[it]);
+                unchecked {
+                    it++;
+                }
                 continue;
             }
             U -= U_i;  // Subtract the number of units used. This will underflow for malicious withdrawRatios > 1.
@@ -578,6 +606,10 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
 
             // Transfer the released tokens to the user.
             ERC20(token).safeTransfer(msg.sender, tokenAmount);
+
+            unchecked {
+                it++;
+            }
         }
 
         // Emit the event
@@ -1047,7 +1079,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         // As a result, if people swap into the pool, we should expect that there is exactly
         // the inswapped amount of trust in the pool. If this wasn't implemented, there would be
         // a maximum daily cross chain volume, which is bad for liquidity providers.
-        {
+        unchecked {
             // Calling timeout and then ack should not be possible. 
             // The initial lines deleting the escrow protects against this.
             uint256 UC = _usedUnitCapacity;
