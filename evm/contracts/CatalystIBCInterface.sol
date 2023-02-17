@@ -26,7 +26,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
     string constant ONLY_IBC_CALLER = "IBC enabled function";
 
     //--- Config ---//
-    uint256 constant MAXIMUM_TIME_FOR_TX = 2 * 60 * 60; // two hours.
+    uint256 constant MAXIMUM_TIME_FOR_TX = 2 hours;
     address public immutable IBCDispatcher; // Set on deployment
 
     //-- Variables --//
