@@ -847,6 +847,8 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
      * @param targetUser The recipient of the transaction on the target chain. Encoded in bytes32.
      * @param poolTokens The number of pool tokens to exchange
      * @param minOut The minimum number of pool tokens to mint on target pool.
+     * @param calldata_ Data field if a call should be made on the target chain. 
+     * Should be encoded abi.encode(<address>,<data>)
      * @return uint256 The number of units minted.
      */
     function sendLiquidity(
@@ -855,8 +857,9 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         bytes32 targetUser,
         uint256 poolTokens,
         uint256 minOut,
-        address fallbackUser
-    ) external returns (uint256) {
+        address fallbackUser,
+        bytes memory calldata_
+    ) public returns (uint256) {
 
         // Only allow connected pools
         if (!_poolConnection[channelId][targetPool]) revert PoolNotConnected(channelId, targetPool);
@@ -906,7 +909,8 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
             targetUser,
             U,
             minOut,
-            swapMetadata
+            swapMetadata,
+            calldata_
         );
 
         // Escrow the pool tokens
@@ -926,6 +930,27 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         );
 
         return U;
+    }
+
+    /** @notice Copy of sendLiquidity with no calldata_ */
+    function sendLiquidity(
+        bytes32 channelId,
+        bytes32 targetPool,
+        bytes32 targetUser,
+        uint256 poolTokens,
+        uint256 minOut,
+        address fallbackUser
+    ) external returns (uint256) {
+        bytes memory calldata_ = new bytes(0);
+        return sendLiquidity(
+            channelId,
+            targetPool,
+            targetUser,
+            poolTokens,
+            minOut,
+            fallbackUser,
+            calldata_
+        );
     }
 
     /**
@@ -950,7 +975,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 U,
         uint256 minOut,
         bytes32 swapHash
-    ) external returns (uint256) {
+    ) public returns (uint256) {
 
         // Only allow connected pools
         if (!_poolConnection[channelId][sourcePool]) revert PoolNotConnected(channelId, sourcePool);
@@ -978,6 +1003,35 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         emit ReceiveLiquidity(sourcePool, who, U, poolTokens, swapHash);
 
         return poolTokens;
+    }
+
+    
+    function receiveLiquidity(
+        bytes32 channelId,
+        bytes32 sourcePool,
+        address who,
+        uint256 U,
+        uint256 minOut,
+        bytes32 swapHash,
+        address dataTarget,
+        bytes calldata data
+    ) external returns (uint256) {
+        uint256 purchasedPoolTokens = receiveLiquidity(
+            channelId,
+            sourcePool,
+            who,
+            U,
+            minOut,
+            swapHash
+        );
+
+        // Let users define custom logic which should be executed after the swap.
+        // The logic is not contained within a try - except so if the logic reverts
+        // the transaction will timeout and the user gets the input tokens on the sending chain.
+        // If this is not desired, wrap further logic in a try - except at dataTarget.
+        ICatalystReceiver(dataTarget).onCatalystCall(purchasedPoolTokens, data);
+
+        return purchasedPoolTokens;
     }
 
     //-- Escrow Functions --//
