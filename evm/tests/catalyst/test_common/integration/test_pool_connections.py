@@ -1,5 +1,6 @@
 import pytest
 from brownie import reverts, convert
+import re
 
 from tests.catalyst.utils.pool_utils import encode_swap_payload, encode_liquidity_swap_payload
 
@@ -20,13 +21,12 @@ def dummy_pool_address():
 def test_connect_pools(
     pool,
     deployer,
-    cross_chain_interface,
     channel_id,
     dummy_pool_address
 ):
 
     # Make sure pools are not connected
-    assert not cross_chain_interface.checkConnection(channel_id, pool.address, dummy_pool_address)
+    assert not pool._poolConnection(channel_id, dummy_pool_address)
 
     pool.setConnection(
         channel_id,
@@ -36,14 +36,13 @@ def test_connect_pools(
     )
     
     # Make sure pools are connected
-    assert cross_chain_interface.checkConnection(channel_id, pool.address, dummy_pool_address)
+    assert pool._poolConnection(channel_id, dummy_pool_address)
 
 
 
 def test_disconnect_pools(
     pool,
     deployer,
-    cross_chain_interface,
     channel_id,
     dummy_pool_address
 ):
@@ -56,7 +55,7 @@ def test_disconnect_pools(
     )
     
     # Make sure pools are connected
-    assert cross_chain_interface.checkConnection(channel_id, pool.address, dummy_pool_address)
+    assert pool._poolConnection(channel_id, dummy_pool_address)
 
     pool.setConnection(
         channel_id,
@@ -66,7 +65,7 @@ def test_disconnect_pools(
     )
     
     # Make sure pools are not connected
-    assert not cross_chain_interface.checkConnection(channel_id, pool.address, dummy_pool_address)
+    assert not pool._poolConnection(channel_id, dummy_pool_address)
 
 
 
@@ -116,14 +115,13 @@ def test_not_connected_send_swap(
     channel_id,
     pool,
     pool_tokens,
-    cross_chain_interface,
     deployer,
     berg,
     dummy_pool_address
 ):
 
     # Make sure pools are not connected
-    assert not cross_chain_interface.checkConnection(channel_id, pool.address, dummy_pool_address)
+    assert not pool._poolConnection(channel_id, dummy_pool_address)
 
     source_token = pool_tokens[0]
 
@@ -131,7 +129,7 @@ def test_not_connected_send_swap(
 
     source_token.approve(pool, swap_amount, {"from": deployer})
 
-    with reverts("No Connection"):
+    with reverts(revert_pattern=re.compile("typed error: 0xfc08ab42.*")):
         pool.sendSwap(
             channel_id,
             convert.to_bytes(dummy_pool_address),
@@ -156,7 +154,7 @@ def test_not_connected_receive_swap(
 ):
 
     # Make sure pools are not connected
-    assert not cross_chain_interface.checkConnection(channel_id, pool.address, dummy_pool_address)
+    assert not pool._poolConnection(channel_id, dummy_pool_address)
 
     units = int(pool.getUnitCapacity() * 0.1)
 
@@ -169,7 +167,7 @@ def test_not_connected_receive_swap(
     )
     fake_packet = [["", channel_id], ["", ""], 0, fake_payload, [0, 0]]
 
-    with reverts("No Connection"):
+    with reverts(revert_pattern=re.compile("typed error: 0xfc08ab42.*")):
         cross_chain_interface.onRecvPacket(fake_packet, {"from": ibc_emulator})
 
 
@@ -177,18 +175,17 @@ def test_not_connected_receive_swap(
 def test_not_connected_out_liquidity(
     channel_id,
     pool,
-    cross_chain_interface,
     deployer,
     berg,
     dummy_pool_address
 ):
 
     # Make sure pools are not connected
-    assert not cross_chain_interface.checkConnection(channel_id, pool.address, dummy_pool_address)
+    assert not pool._poolConnection(channel_id, dummy_pool_address)
 
     swap_amount = int(pool.balanceOf(deployer) * 0.1)
 
-    with reverts("No Connection"):
+    with reverts(revert_pattern=re.compile("typed error: 0xfc08ab42.*")):
         pool.sendLiquidity(
             channel_id,
             convert.to_bytes(dummy_pool_address),   # to pool
@@ -211,7 +208,7 @@ def test_not_connected_in_liquidity(
 ):
 
     # Make sure pools are not connected
-    assert not cross_chain_interface.checkConnection(channel_id, pool.address, dummy_pool_address)
+    assert not pool._poolConnection(channel_id, dummy_pool_address)
 
     units = int(pool.getUnitCapacity() * 0.1)
 
@@ -224,5 +221,5 @@ def test_not_connected_in_liquidity(
     )
     fake_packet = [["", channel_id], ["", ""], 0, fake_payload, [0, 0]]
 
-    with reverts("No Connection"):
+    with reverts(revert_pattern=re.compile("typed error: 0xfc08ab42.*")):
         cross_chain_interface.onRecvPacket(fake_packet, {"from": ibc_emulator})

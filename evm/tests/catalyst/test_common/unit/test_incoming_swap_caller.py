@@ -7,6 +7,7 @@ pytestmark = [
 ]
 
 def test_receiveSwap_must_be_called_by_cci(
+    channel_id,
     pool,
     berg,
 ):
@@ -14,6 +15,7 @@ def test_receiveSwap_must_be_called_by_cci(
     
     with reverts():
         pool.receiveSwap(
+        channel_id,
             pool.address,  # Use self as source pool
             0,
             berg,
@@ -24,6 +26,7 @@ def test_receiveSwap_must_be_called_by_cci(
         )
     
     pool.receiveSwap(
+        channel_id,
         pool.address,  # Use self as source pool
         0,
         berg,
@@ -35,6 +38,7 @@ def test_receiveSwap_must_be_called_by_cci(
 
 
 def test_receiveLiquidity_must_be_called_by_cci(
+    channel_id,
     pool,
     berg,
 ):
@@ -42,6 +46,7 @@ def test_receiveLiquidity_must_be_called_by_cci(
     
     with reverts():
         pool.receiveLiquidity(
+            channel_id,
             pool.address,  # Use self as source pool
             berg,
             10**16,
@@ -51,6 +56,7 @@ def test_receiveLiquidity_must_be_called_by_cci(
         )
     
     pool.receiveLiquidity(
+        channel_id,
         pool.address,  # Use self as source pool
         berg,
         10**16,

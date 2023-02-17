@@ -1,15 +1,19 @@
 //SPDX-License-Identifier: Unlicensed
 pragma solidity ^0.8.16;
 
-struct TokenEscrow {
-    uint256 amount;
-    address token;
+// Hold swap details that are not directly necessary for the swap calculations in a separate struct.
+// (Avoid 'stack too deep' issues)
+struct AssetSwapMetadata {
+    uint256 fromAmount;
+    address fromAsset;
     bytes32 swapHash;
+    uint32  blockNumber;
 }
 
-struct LiquidityEscrow {
-    uint256 poolTokens;
+struct LiquiditySwapMetadata {
+    uint256 fromAmount;
     bytes32 swapHash;
+    uint32  blockNumber;
 }
 
 /// @title Pool state

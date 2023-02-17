@@ -650,6 +650,10 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         address fallbackUser,
         bytes memory calldata_
     ) public returns (uint256) {
+
+        // Only allow connected pools
+        if (!_poolConnection[channelId][targetPool]) revert PoolNotConnected(channelId, targetPool);
+
         require(fallbackUser != address(0));
         _adjustWeights();
 
@@ -669,21 +673,22 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         );
 
         // Wrap the escrow information into a struct. This reduces the stack-print.
-        TokenEscrow memory escrowInformation = TokenEscrow({
-            amount: amount - fee,
-            token: fromAsset,
-            swapHash: assetSwapHash
+        AssetSwapMetadata memory swapMetadata = AssetSwapMetadata({
+            fromAmount: amount - fee,
+            fromAsset: fromAsset,
+            swapHash: assetSwapHash,
+            blockNumber: uint32(block.number % 2**32)
         });
 
         // Send the purchased units to targetPool on the target chain.
-        CatalystIBCInterface(_chainInterface).crossChainSwap(
+        CatalystIBCInterface(_chainInterface).sendCrossChainAsset(
             channelId,
             targetPool,
             targetUser,
             toAssetIndex,
             U,
             minOut,
-            escrowInformation,
+            swapMetadata,
             calldata_
         );
 
@@ -745,6 +750,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
     /**
      * @notice Completes a cross-chain swap by converting units to the desired token (toAsset)
      * @dev Can only be called by the chainInterface.
+     * @param channelId The incoming connection identifier.
      * @param sourcePool The source pool.
      * @param toAssetIndex Index of the asset to be purchased with Units.
      * @param who The recipient.
@@ -753,6 +759,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
      * @param swapHash Used to connect 2 swaps within a group. 
      */
     function receiveSwap(
+        bytes32 channelId,
         bytes32 sourcePool,
         uint256 toAssetIndex,
         address who,
@@ -760,6 +767,10 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 minOut,
         bytes32 swapHash
     ) public returns (uint256) {
+
+        // Only allow connected pools
+        if (!_poolConnection[channelId][sourcePool]) revert PoolNotConnected(channelId, sourcePool);
+
         // The chainInterface is the only valid caller of this function.
         require(msg.sender == _chainInterface);
         _adjustWeights();
@@ -786,6 +797,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
     }
 
     function receiveSwap(
+        bytes32 channelId,
         bytes32 sourcePool,
         uint256 toAssetIndex,
         address who,
@@ -796,6 +808,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         bytes calldata data
     ) external returns (uint256) {
         uint256 purchasedTokens = receiveSwap(
+            channelId,
             sourcePool,
             toAssetIndex,
             who,
@@ -844,6 +857,10 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 minOut,
         address fallbackUser
     ) external returns (uint256) {
+
+        // Only allow connected pools
+        if (!_poolConnection[channelId][targetPool]) revert PoolNotConnected(channelId, targetPool);
+
         // Address(0) is not a valid fallback user. (As checking for escrow overlap
         // checks if the fallbackUser != address(0))
         require(fallbackUser != address(0));
@@ -876,19 +893,20 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         // Wrap the escrow information into a struct. This reduces the stack-print.
         // (Not really since only pool tokens are wrapped.)
         // However, the struct keeps the structure of swaps similar.
-        LiquidityEscrow memory escrowInformation = LiquidityEscrow({
-            poolTokens: poolTokens,
-            swapHash: liquiditySwapHash
+        LiquiditySwapMetadata memory swapMetadata = LiquiditySwapMetadata({
+            fromAmount: poolTokens,
+            swapHash: liquiditySwapHash,
+            blockNumber: uint32(block.number % 2**32)
         });
 
         // Transfer the units to the target pools.
-        CatalystIBCInterface(_chainInterface).liquiditySwap(
+        CatalystIBCInterface(_chainInterface).sendCrossChainLiquidity(
             channelId,
             targetPool,
             targetUser,
             U,
             minOut,
-            escrowInformation
+            swapMetadata
         );
 
         // Escrow the pool tokens
@@ -917,6 +935,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
      * While the description says units are converted to tokens and then deposited, units are converted
      * directly to pool tokens through the following equation:
      *      pt = PT · (1 - exp(-U/sum W_i))/exp(-U/sum W_i)
+     * @param channelId The incoming connection identifier.
      * @param sourcePool The source pool
      * @param who The recipient of the pool tokens
      * @param U Number of units to convert into pool tokens.
@@ -925,12 +944,17 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
      * @return uint256 Number of pool tokens minted to the recipient.
      */
     function receiveLiquidity(
+        bytes32 channelId,
         bytes32 sourcePool,
         address who,
         uint256 U,
         uint256 minOut,
         bytes32 swapHash
     ) external returns (uint256) {
+
+        // Only allow connected pools
+        if (!_poolConnection[channelId][sourcePool]) revert PoolNotConnected(channelId, sourcePool);
+
         // The chainInterface is the only valid caller of this function.
         require(msg.sender == _chainInterface);
         _adjustWeights();
