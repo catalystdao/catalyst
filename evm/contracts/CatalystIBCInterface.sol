@@ -7,6 +7,7 @@ import "./polymerase/IbcReceiver.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./ICatalystV1Pool.sol";
 import "./interfaces/ICatalystV1PoolState.sol"; // structs
+import "./CatalystIBCPayload.sol";
 
 
 /**
@@ -104,6 +105,9 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
             );
         }
 
+
+        // Encode payload. See CatalystIBCPayload.sol for the payload definition
+
         // To limit the number of active variables on the stack
         // calldata is encoded separately.
         bytes memory preparedCalldata = abi.encodePacked(
@@ -121,24 +125,6 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
             preparedCalldata
         );
 
-        // Encode everything into:
-
-        /* 
-            0 _context : Bytes[1]
-            1-32 _fromPool : bytes32
-            33-64 _pool : bytes32
-            65-96 _targetUser : bytes32
-            97-128 _U : uint265
-            129 _assetIndex : uint8
-            130-161 _minOut : uint256
-            162-193 _escrowAmount : uint256
-            194-225 _escrowToken : bytes32
-            226-257 _swapHash: bytes32
-            258-261 _blockNumber: bytes4
-            262-263 _customDataLength : uint16
-            264-295+_customDataLength-32 _customData : bytes...
-        */
-
         // abi.encode always encodes to 32 bytes.
         // abi.encodePacked encodes in the smallest possible bytes.
         // 32 bytes are reserved for addresses (for chain compatibility)..
@@ -146,7 +132,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
         // We want 32 just in case other chains use 32 bytes ids.
         // abi.encodePacked encodes the arguments as a concat.
         bytes memory data = abi.encodePacked(
-            uint8(0),  // Swaps has context flag 0.
+            CTX0_ASSET_SWAP,
             abi.encode(msg.sender),
             targetPool,
             targetUser,
@@ -200,6 +186,8 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
             );
         }
 
+        // Encode payload. See CatalystIBCPayload.sol for the payload definition
+
         // abi.encode always encodes to 32 bytes.
         // abi.encodePacked encodes in the smallest possible bytes.
         // 32 bytes are reserved for addresses (for chain compatibility)..
@@ -207,7 +195,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
         // We want 32 just in case other chains use 32 bytes ids.
         // abi.encodePacked encodes the arguments as a concat.
         bytes memory data = abi.encodePacked(
-            uint8(1),
+            CTX1_LIQUIDITY_SWAP,
             abi.encode(msg.sender),
             targetPool,
             targetUser,
@@ -216,7 +204,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
             escrowInformation.poolTokens,
             uint32(block.number % 2**32),
             escrowInformation.swapHash,
-            uint8(0)
+            uint8(0)                        // Set DATA length to 0
         );
 
         IbcDispatcher(IBCDispatcher).sendIbcPacket(
@@ -236,25 +224,17 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
         // TODO: Enable
         // require(IBCDispatcher == msg.sender, ONLY_IBC_CALLER);
 
-        /* 
-            0 _context : Bytes[1]
-            1-32 _fromPool : bytes32
-            33-64 _pool : bytes32
-        */
-        bytes1 _context = data[0];
-        address fromPool = abi.decode(data[1:33], (address));
-
-        // Both flag 0 and 1 messages stores U in location 97-128
-        uint256 U = uint256(bytes32(data[97:129]));
+        bytes1 context = data[CONTEXT_POS];
+        address fromPool = abi.decode(data[ FROM_POOL_START : FROM_POOL_END ], (address));
 
         // Check if the flag 0x01 is set. If it is, it is a liquidity swap.
-        if ((_context & 0x01) != 0) {
+        if (context == CTX1_LIQUIDITY_SWAP) {
             // Delete the escrow information for liquidity swaps.
             ICatalystV1Pool(fromPool).sendLiquidityAck(
-                bytes32(data[65:97]), // targetUser
-                U,
-                uint256(bytes32(data[161:193])), // escrowAmount
-                uint32(bytes4(data[193:197])) // block number
+                bytes32(data[ TO_ACCOUNT_START : TO_ACCOUNT_END ]),                         // toAccount
+                uint256(bytes32(data[ UNITS_START : UNITS_END ])),                          // units
+                uint256(bytes32(data[ CTX1_FROM_AMOUNT_START : CTX1_FROM_AMOUNT_END ])),    // fromAmount
+                uint32(bytes4(data[ CTX1_BLOCK_NUMBER_START : CTX1_BLOCK_NUMBER_END ]))     // block number
             );
             return;
         } 
@@ -262,11 +242,11 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
 
         // Delete the escrow information for ordinary swaps.
         ICatalystV1Pool(fromPool).sendSwapAck(
-            bytes32(data[65:97]), // targetUser
-            U,
-            uint256(bytes32(data[162:194])), // escrowAmount
-            abi.decode(data[194:226], (address)), // escrowToken
-            uint32(bytes4(data[226:230])) // block number
+            bytes32(data[ TO_ACCOUNT_START : TO_ACCOUNT_END ]),                             // toAccount
+            uint256(bytes32(data[ UNITS_START : UNITS_END ])),                              // units
+            uint256(bytes32(data[ CTX0_FROM_AMOUNT_START : CTX0_FROM_AMOUNT_END ])),        // fromAmount
+            abi.decode(data[ CTX0_FROM_ASSET_START : CTX0_FROM_ASSET_END ], (address)),     // fromAsset
+            uint32(bytes4(data[ CTX0_BLOCK_NUMBER_START : CTX0_BLOCK_NUMBER_END ]))         // block number
         );
     }
 
@@ -280,35 +260,27 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
         // TODO: Enable
         // require(IBCDispatcher == msg.sender, ONLY_IBC_CALLER);
 
-        /* 
-            0 _context : Bytes[1]
-            1-32 _fromPool : bytes32
-            33-64 _pool : bytes32
-        */
-        bytes1 _context = data[0];
-        address fromPool = abi.decode(data[1:33], (address)); 
+        bytes1 context = data[CONTEXT_POS];
+        address fromPool = abi.decode(data[FROM_POOL_START:FROM_POOL_END], (address));
 
-        // Both flag 0 and 1 messages stores U in location 97-128
-        uint256 U = uint256(bytes32(data[97:129]));
-
-        if ((_context & 0x01) != 0) {
+        if (context == CTX1_LIQUIDITY_SWAP) {
             // Release the liquidiy escrow.
             ICatalystV1Pool(fromPool).sendLiquidityTimeout(
-                bytes32(data[65:97]), // targetUser
-                U,
-                uint256(bytes32(data[161:193])), // escrowAmount
-                uint32(bytes4(data[193:197])) // block number
+                bytes32(data[ TO_ACCOUNT_START : TO_ACCOUNT_END ]),                         // toAccount
+                uint256(bytes32(data[ UNITS_START : UNITS_END ])),                          // units
+                uint256(bytes32(data[ CTX1_FROM_AMOUNT_START : CTX1_FROM_AMOUNT_END ])),    // fromAmount
+                uint32(bytes4(data[ CTX1_BLOCK_NUMBER_START : CTX1_BLOCK_NUMBER_END ]))     // block number
             );
             return;
         }
 
         // Release the ordinary escrow.
         ICatalystV1Pool(fromPool).sendSwapTimeout(
-            bytes32(data[65:97]), // targetUser
-            U,
-            uint256(bytes32(data[162:194])), // escrowAmount
-            abi.decode(data[194:226], (address)), // escrowToken
-            uint32(bytes4(data[226:230])) // block number
+            bytes32(data[ TO_ACCOUNT_START : TO_ACCOUNT_END ]),                             // toAccount
+            uint256(bytes32(data[ UNITS_START : UNITS_END ])),                              // units
+            uint256(bytes32(data[ CTX0_FROM_AMOUNT_START : CTX0_FROM_AMOUNT_END ])),        // fromAmount
+            abi.decode(data[ CTX0_FROM_ASSET_START : CTX0_FROM_ASSET_END ], (address)),     // fromAsset
+            uint32(bytes4(data[ CTX0_BLOCK_NUMBER_START : CTX0_BLOCK_NUMBER_END ]))         // block number
         );
         
     }
@@ -322,88 +294,55 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
         // TODO: Enable
         // require(IBCDispatcher == msg.sender, ONLY_IBC_CALLER);
 
-        /* 
-            0 _context : Bytes[1]
-            1-32 _fromPool : bytes32
-            33-64 _pool : bytes32
-        */
-        bytes1 _context = data[0];
-        address pool = abi.decode(data[33:65], (address));
-        bytes32 fromPool = bytes32(data[1:33]);
+        bytes1 context = data[CONTEXT_POS];
+        bytes32 fromPool = bytes32(data[ FROM_POOL_START : FROM_POOL_END ]);
+        address toPool = abi.decode(data[ TO_POOL_START : TO_POOL_END ], (address));
 
-        {
-            bytes32 channelId = bytes32(packet.src.channelId);
-            require(
-                checkConnection[channelId][bytes32(data[33:65])][fromPool],
-                NO_CONNECTION
-            );
-        }
+        require(
+            checkConnection[bytes32(packet.src.channelId)][bytes32(data[ TO_POOL_START : TO_POOL_END ])][fromPool],
+            NO_CONNECTION
+        );
 
         // Check if the swap is a liquidity swap.
-        if ((_context & 0x01) != 0) {
-            /*
-                65-96 _who : bytes32
-                97-128 U : uint256
-                129-160 _minOut : uint256
-                161-192 _escrowAmount : uint256
-             */
-            address who = abi.decode(data[65:97], (address));
-            uint256 U = uint256(bytes32(data[97:129]));
-            uint256 minOut = uint256(bytes32(data[129:161]));
-            bytes32 swapHash = bytes32(data[197:229]);
+        if (context == CTX1_LIQUIDITY_SWAP) {
 
-            ICatalystV1Pool(pool).receiveLiquidity(
+            ICatalystV1Pool(toPool).receiveLiquidity(
                 fromPool,
-                who,
-                U,
-                minOut,
-                swapHash
+                abi.decode(data[ TO_ACCOUNT_START : TO_ACCOUNT_END ], (address)),   // toAccount
+                uint256(bytes32(data[ UNITS_START : UNITS_END ])),                  // units
+                uint256(bytes32(data[ CTX1_MIN_OUT_START : CTX1_MIN_OUT_END ])),    // minOut
+                bytes32(data[ CTX1_SWAP_HASH_START : CTX1_SWAP_HASH_END ])          // swapHash
             );
+
             return;
         }
         // It is not, so it is an asset swap.
-        
-        /* 
-            65-96 _who : bytes32
-            97-128 _U : uint256
-            129 _assetIndex : uint8
-            130-161 _minOut : uint256
-            162-193 _escrowAmount : uint256
-            194-225 _escrowToken : bytes32
-            226-227 _customDataLength : 
-            228-259+_customDataLength-32 _customData : bytes...
-        */
-        // Stack limit reached:
-        // uint8 assetIndex = uint8(data[129]);
-        // address who = abi.decode(data[65:97], (address));
-        // uint256 U = uint256(bytes32(data[97:129]));
-        // uint256 minOut = uint256(bytes32(data[130:162]));
 
-        uint16 customDataLength = uint16(bytes2(data[226:228]));
+        uint16 dataLength = uint16(bytes2(data[CTX0_DATA_LENGTH_START:CTX0_DATA_LENGTH_END]));
 
-        // CCI sets customDataLength > 0 if calldata is passed.
-        if (customDataLength != 0) {
-            address callDataTarget = abi.decode(data[228:260], (address));
-            bytes memory calldata_ = data[260:260 + customDataLength - 32];
-            ICatalystV1Pool(pool).receiveSwap(
-                bytes32(data[1:33]), // sourcePool
-                uint8(data[129]), // assetIndex
-                abi.decode(data[65:97], (address)), // who
-                uint256(bytes32(data[97:129])), // U
-                uint256(bytes32(data[130:162])), // minOut
-                bytes32(data[230:262]), // swapHash
-                callDataTarget,
-                calldata_
+        // CCI sets dataLength > 0 if calldata is passed.
+        if (dataLength != 0) {
+            ICatalystV1Pool(toPool).receiveSwap(
+                fromPool,                                                            // sourcePool
+                uint8(data[CTX0_TO_ASSET_INDEX_POS]),                                // toAssetIndex
+                abi.decode(data[ TO_ACCOUNT_START : TO_ACCOUNT_END ], (address)),    // toAccount
+                uint256(bytes32(data[ UNITS_START : UNITS_END ])),                   // units
+                uint256(bytes32(data[ CTX0_MIN_OUT_START : CTX0_MIN_OUT_END ])),     // minOut
+                bytes32(data[ CTX0_SWAP_HASH_START : CTX0_SWAP_HASH_END ]),          // swapHash
+                abi.decode(data[ CTX0_DATA_START : CTX0_DATA_START+32 ], (address)), // dataTarget
+                data[ CTX0_DATA_START+32 : dataLength-32 ]                           // dataArguments
             );
             return;
         }
-        ICatalystV1Pool(pool).receiveSwap(
-            bytes32(data[1:33]), // sourcePool
-            uint8(data[129]), // assetIndex
-            abi.decode(data[65:97], (address)), // who
-            uint256(bytes32(data[97:129])), // U
-            uint256(bytes32(data[130:162])), // minOut
-            bytes32(data[230:262])  // swapHash
+
+        ICatalystV1Pool(toPool).receiveSwap(
+            fromPool,                                                                // sourcePool
+            uint8(data[CTX0_TO_ASSET_INDEX_POS]),                                    // toAssetIndex
+            abi.decode(data[ TO_ACCOUNT_START : TO_ACCOUNT_END ], (address)),        // toAccount
+            uint256(bytes32(data[ UNITS_START : UNITS_END ])),                       // units
+            uint256(bytes32(data[ CTX0_MIN_OUT_START : CTX0_MIN_OUT_END ])),         // minOut
+            bytes32(data[ CTX0_SWAP_HASH_START : CTX0_SWAP_HASH_END ])               // swapHash
         );
+
     }
 }
