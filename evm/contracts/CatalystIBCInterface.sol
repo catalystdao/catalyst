@@ -23,6 +23,7 @@ import "./CatalystIBCPayload.sol";
 contract CatalystIBCInterface is Ownable, IbcReceiver {
     //--- ERRORS ---//
     string constant ONLY_IBC_CALLER = "IBC enabled function";
+    error InvalidContext(bytes1 context);
 
     //--- Config ---//
     uint256 constant MAXIMUM_TIME_FOR_TX = 2 hours;
@@ -167,10 +168,8 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
                 uint32(bytes4(data[ CTX0_BLOCK_NUMBER_START : CTX0_BLOCK_NUMBER_END ]))         // block number
             );
 
-            return;
         }
-
-        if (context == CTX1_LIQUIDITY_SWAP) {
+        else if (context == CTX1_LIQUIDITY_SWAP) {
 
             ICatalystV1Pool(fromPool).sendLiquidityAck(
                 bytes32(data[ TO_ACCOUNT_START : TO_ACCOUNT_END ]),                         // toAccount
@@ -179,10 +178,12 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
                 uint32(bytes4(data[ CTX1_BLOCK_NUMBER_START : CTX1_BLOCK_NUMBER_END ]))     // block number
             );
 
-            return;
-        } 
-        
-        revert("Undefined Context");
+        }
+        else {
+
+            revert InvalidContext(context);
+
+        }
 
     }
 
@@ -210,10 +211,8 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
                 uint32(bytes4(data[ CTX0_BLOCK_NUMBER_START : CTX0_BLOCK_NUMBER_END ]))         // block number
             );
 
-            return;
         }
-
-        if (context == CTX1_LIQUIDITY_SWAP) {
+        else if (context == CTX1_LIQUIDITY_SWAP) {
 
             ICatalystV1Pool(fromPool).sendLiquidityTimeout(
                 bytes32(data[ TO_ACCOUNT_START : TO_ACCOUNT_END ]),                         // toAccount
@@ -222,10 +221,12 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
                 uint32(bytes4(data[ CTX1_BLOCK_NUMBER_START : CTX1_BLOCK_NUMBER_END ]))     // block number
             );
 
-            return;
         }
-        
-        revert("Undefined Context");
+        else {
+
+            revert InvalidContext(context);
+
+        }
         
     }
 
@@ -261,8 +262,6 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
                     abi.decode(data[ CTX0_DATA_START : CTX0_DATA_START+32 ], (address)), // dataTarget
                     data[ CTX0_DATA_START+32 : dataLength-32 ]                           // dataArguments
                 );
-
-                return;
             }
 
             ICatalystV1Pool(toPool).receiveSwap(
@@ -275,12 +274,8 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
                 bytes32(data[ CTX0_SWAP_HASH_START : CTX0_SWAP_HASH_END ])               // swapHash
             );
 
-            return;
-
         }
-
-        if (context == CTX1_LIQUIDITY_SWAP) {
-
+        else if (context == CTX1_LIQUIDITY_SWAP) {
             ICatalystV1Pool(toPool).receiveLiquidity(
                 bytes32(packet.src.channelId),                                      // connectionId
                 fromPool,                                                           // fromPool
@@ -289,11 +284,12 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
                 uint256(bytes32(data[ CTX1_MIN_OUT_START : CTX1_MIN_OUT_END ])),    // minOut
                 bytes32(data[ CTX1_SWAP_HASH_START : CTX1_SWAP_HASH_END ])          // swapHash
             );
-
-            return;
         }
-        
-        revert("Undefined Context");
+        else {
+
+            revert InvalidContext(context);
+
+        }
 
     }
 }
