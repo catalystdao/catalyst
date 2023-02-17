@@ -190,9 +190,10 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
      * @param packet The IBC packet
      */
     function onAcknowledgementPacket(IbcPacket calldata packet) external {
-        bytes calldata data = packet.data;
         // TODO: Enable
         // require(IBCDispatcher == msg.sender, ONLY_IBC_CALLER);
+
+        bytes calldata data = packet.data;
 
         bytes1 context = data[CONTEXT_POS];
         address fromPool = abi.decode(data[ FROM_POOL_START : FROM_POOL_END ], (address));
@@ -232,9 +233,10 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
      * @param packet The IBC packet
      */
     function onTimeoutPacket(IbcPacket calldata packet) external {
-        bytes calldata data = packet.data;
         // TODO: Enable
         // require(IBCDispatcher == msg.sender, ONLY_IBC_CALLER);
+
+        bytes calldata data = packet.data;
 
         bytes1 context = data[CONTEXT_POS];
         address fromPool = abi.decode(data[FROM_POOL_START:FROM_POOL_END], (address));
@@ -273,9 +275,10 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
      * @param packet The IBC packet
      */
     function onRecvPacket(IbcPacket calldata packet) external {
-        bytes calldata data = packet.data;
         // TODO: Enable
         // require(IBCDispatcher == msg.sender, ONLY_IBC_CALLER);
+
+        bytes calldata data = packet.data;
 
         bytes1 context = data[CONTEXT_POS];
         bytes32 fromPool = bytes32(data[ FROM_POOL_START : FROM_POOL_END ]);
