@@ -1346,7 +1346,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         // As a result, if people swap into the pool, we should expect that there is exactly
         // the inswapped amount of trust in the pool. If this wasn't implemented, there would be
         // a maximum daily cross chain volume, which is bad for liquidity providers.
-        {
+        unchecked {
             // Calling timeout and then ack should not be possible. 
             // The initial lines deleting the escrow protects against this.
             uint256 UC = _usedUnitCapacity;
@@ -1358,7 +1358,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                 // when UC <= escrowAmount => UC - escrowAmount <= 0 => max(UC - escrowAmount, 0) = 0
                 _usedUnitCapacity = 0;
             }
-            _maxUnitCapacity += escrowAmount * _weight[escrowToken]; // TODO: protect against revert
+            _maxUnitCapacity += escrowAmount * _weight[escrowToken];  // Does not overflow, since weight times balance of the pool doesn't overflow. 
         }
     }
 
