@@ -55,6 +55,9 @@ abstract contract CatalystSwapPoolCommon is
     address public immutable FACTORY;
     address public _chainInterface;
 
+    // @notice The pools with which cross chain swaps are allowed, stoed as _poolConnection[connectionId][toPool]
+    mapping(bytes32 => mapping(bytes32 => bool)) public _poolConnection;
+
     /// @notice To indicate which token is desired on the target pool,
     /// the desired tokens are provided as an integer which maps to the
     /// asset address. This variable is the map.
@@ -261,11 +264,7 @@ abstract contract CatalystSwapPoolCommon is
     ) external override {
         require((msg.sender == _setupMaster) || (msg.sender == factoryOwner())); // dev: No auth
 
-        CatalystIBCInterface(_chainInterface).setConnection(
-            channelId,
-            targetPool,
-            state
-        );
+        _poolConnection[channelId][targetPool] = state;
 
         emit SetConnection(channelId, targetPool, state);
     }

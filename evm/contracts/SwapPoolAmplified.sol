@@ -885,6 +885,10 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         address fallbackUser,
         bytes memory calldata_
     ) public returns (uint256) {
+
+        // Only allow connected pools
+        if (!_poolConnection[channelId][targetPool]) revert PoolNotConnected(channelId, targetPool);
+
         require(fallbackUser != address(0));
         _adjustAmplification();
         uint256 fee = FixedPointMathLib.mulWadDown(amount, _poolFee);
@@ -987,6 +991,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
     /**
      * @notice Completes a cross-chain swap by converting units to the desired token (toAsset)
      * @dev Can only be called by the chainInterface.
+     * @param channelId The incoming connection identifier.
      * @param sourcePool The source pool.
      * @param toAssetIndex Index of the asset to be purchased with Units.
      * @param who The recipient.
@@ -995,6 +1000,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
      * @param swapHash Used to connect 2 swaps within a group. 
      */
     function receiveSwap(
+        bytes32 channelId,
         bytes32 sourcePool,
         uint256 toAssetIndex,
         address who,
@@ -1002,6 +1008,10 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 minOut,
         bytes32 swapHash
     ) public returns (uint256) {
+
+        // Only allow connected pools
+        if (!_poolConnection[channelId][sourcePool]) revert PoolNotConnected(channelId, sourcePool);
+
         // The chainInterface is the only valid caller of this function.
         require(msg.sender == _chainInterface);
         _adjustAmplification();
@@ -1034,6 +1044,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
     }
 
     function receiveSwap(
+        bytes32 channelId,
         bytes32 sourcePool,
         uint256 toAssetIndex,
         address who,
@@ -1044,6 +1055,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         bytes calldata data
     ) external returns (uint256) {
         uint256 purchasedTokens = receiveSwap(
+            channelId,
             sourcePool,
             toAssetIndex,
             who,
@@ -1088,6 +1100,10 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 minOut,
         address fallbackUser
     ) external returns (uint256) {
+
+        // Only allow connected pools
+        if (!_poolConnection[channelId][targetPool]) revert PoolNotConnected(channelId, targetPool);
+
         // Address(0) is not a valid fallback user. (As checking for escrow overlap
         // checks if the fallbackUser != address(0))
         require(fallbackUser != address(0));
@@ -1197,6 +1213,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
      * While the description says units are converted to tokens and then deposited, units are converted
      * directly to pool tokens through the following equation:
      *      pt = PT · (1 - exp(-U/sum W_i))/exp(-U/sum W_i)
+     * @param channelId The incoming connection identifier.
      * @param sourcePool The source pool
      * @param who The recipient of the pool tokens
      * @param U Number of units to convert into pool tokens.
@@ -1205,12 +1222,17 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
      * @return uint256 Number of pool tokens minted to the recipient.
      */
     function receiveLiquidity(
+        bytes32 channelId,
         bytes32 sourcePool,
         address who,
         uint256 U,
         uint256 minOut,
         bytes32 swapHash
     ) external returns (uint256) {
+
+        // Only allow connected pools
+        if (!_poolConnection[channelId][sourcePool]) revert PoolNotConnected(channelId, sourcePool);
+
         // The chainInterface is the only valid caller of this function.
         require(msg.sender == _chainInterface);
         _adjustAmplification();

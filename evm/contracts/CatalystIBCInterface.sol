@@ -22,18 +22,11 @@ import "./CatalystIBCPayload.sol";
  */
 contract CatalystIBCInterface is Ownable, IbcReceiver {
     //--- ERRORS ---//
-    string constant NO_CONNECTION = "No Connection";
     string constant ONLY_IBC_CALLER = "IBC enabled function";
 
     //--- Config ---//
     uint256 constant MAXIMUM_TIME_FOR_TX = 2 hours;
     address public immutable IBCDispatcher; // Set on deployment
-
-    //-- Variables --//
-
-    // Usage: assert self.checkConnection[chainID][from][target]
-    mapping(bytes32 => mapping(bytes32 => mapping(bytes32 => bool))) public checkConnection;
-
 
     constructor(address IBCDispatcher_) {
         IBCDispatcher = IBCDispatcher_;
@@ -45,23 +38,6 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
     /// IBC connection between the 2 contracts.
     function registerPort() external onlyOwner {
         IbcDispatcher(IBCDispatcher).registerPort();
-    }
-
-    /**
-     * @notice Configures an empty pool.
-     * @param channelId The chain identifier to modify the pools connect with.
-     * @param pool The pool which is allowed to call using the connection
-     * @param state boolean opening or closing the channel.
-     */
-    function setConnection(
-        bytes32 channelId,
-        bytes32 pool,
-        bool state
-    ) external {
-        // Encode the sender in bytes32.
-        bytes32 msgSenderB32 = bytes32(abi.encode(msg.sender));
-
-        checkConnection[channelId][msgSenderB32][pool] = state;
     }
 
     /**
@@ -92,15 +68,6 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
         // but unless someone can also manage to pass the security check on onRecvPacket
         // they cannot drain any value.
         // As such, the very worst they can do is waste gas.
-
-        // Catch bad messages early. If there is no connection,
-        // don't send a message.
-        // Encode the sender in bytes32.
-        require(
-            checkConnection[channelId][bytes32(abi.encode(msg.sender))][toPool],
-            NO_CONNECTION
-        );
-
 
         // Encode payload. See CatalystIBCPayload.sol for the payload definition
         bytes memory data = bytes.concat(       // Using bytes.concat to circumvent stack too deep error
@@ -154,14 +121,6 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
         // but unless someone can also manage to pass the security check on onRecvPacket
         // they cannot drain any value.
         // As such, the very worst they can do is waste gas.
-
-        // Catch bad messages early. If there is no connection,
-        // don't send a message.
-        // Encode the sender in bytes32.
-        require(
-            checkConnection[channelId][bytes32(abi.encode(msg.sender))][toPool],
-            NO_CONNECTION
-        );
 
         // Encode payload. See CatalystIBCPayload.sol for the payload definition
         bytes memory data = abi.encodePacked(
@@ -284,11 +243,6 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
         bytes32 fromPool = bytes32(data[ FROM_POOL_START : FROM_POOL_END ]);
         address toPool = abi.decode(data[ TO_POOL_START : TO_POOL_END ], (address));
 
-        require(
-            checkConnection[bytes32(packet.src.channelId)][bytes32(data[ TO_POOL_START : TO_POOL_END ])][fromPool],
-            NO_CONNECTION
-        );
-
 
         if (context == CTX0_ASSET_SWAP) {
 
@@ -297,6 +251,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
             // CCI sets dataLength > 0 if calldata is passed.
             if (dataLength != 0) {
                 ICatalystV1Pool(toPool).receiveSwap(
+                    bytes32(packet.src.channelId),                                       // connectionId
                     fromPool,                                                            // fromPool
                     uint8(data[CTX0_TO_ASSET_INDEX_POS]),                                // toAssetIndex
                     abi.decode(data[ TO_ACCOUNT_START : TO_ACCOUNT_END ], (address)),    // toAccount
@@ -311,6 +266,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
             }
 
             ICatalystV1Pool(toPool).receiveSwap(
+                bytes32(packet.src.channelId),                                           // connectionId
                 fromPool,                                                                // fromPool
                 uint8(data[CTX0_TO_ASSET_INDEX_POS]),                                    // toAssetIndex
                 abi.decode(data[ TO_ACCOUNT_START : TO_ACCOUNT_END ], (address)),        // toAccount
@@ -326,7 +282,8 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
         if (context == CTX1_LIQUIDITY_SWAP) {
 
             ICatalystV1Pool(toPool).receiveLiquidity(
-                fromPool,
+                bytes32(packet.src.channelId),                                      // connectionId
+                fromPool,                                                           // fromPool
                 abi.decode(data[ TO_ACCOUNT_START : TO_ACCOUNT_END ], (address)),   // toAccount
                 uint256(bytes32(data[ UNITS_START : UNITS_END ])),                  // units
                 uint256(bytes32(data[ CTX1_MIN_OUT_START : CTX1_MIN_OUT_END ])),    // minOut
