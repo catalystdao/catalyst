@@ -43,7 +43,7 @@ def test_increase_amp(pool, pool_tokens, deployer):
         
         pytest.skip("Amplification adjustment is disabled for cross-chain pools")
         
-    currAmp = pool._amp()
+    currAmp = 10**18 - pool._oneMinusAmp()
     
     startTime = chain.time()
     targetAmp = 8 * 10**17
@@ -53,7 +53,7 @@ def test_increase_amp(pool, pool_tokens, deployer):
     duration = pool._adjustmentTarget() - pool._lastModificationTime()
     
     # Weights should not change immediately.
-    assert pool._amp() == currAmp
+    assert 10**18 - pool._oneMinusAmp() == currAmp
     assert pool._targetAmplification() == targetAmp
 
     chain.mine(1, timestamp=int(startTime + TWOWEEK / 2))
@@ -64,13 +64,13 @@ def test_increase_amp(pool, pool_tokens, deployer):
     passedTime = (tx.timestamp - lastModification)/(duration)
 
     # Be mostly accurate.
-    assert pool._amp()//1000 == floor(currAmp * (1 - passedTime) + targetAmp * passedTime)//1000
+    assert (10**18 - pool._oneMinusAmp())//1000 == floor(currAmp * (1 - passedTime) + targetAmp * passedTime)//1000
 
     chain.mine(1, timestamp=int(startTime + TWOWEEK))
 
     pool.localswap(pool_tokens[0], pool_tokens[0], 0, 0, {"from": deployer})
 
-    assert pool._amp() == targetAmp
+    assert (10**18 - pool._oneMinusAmp()) == targetAmp
 
 
 @pytest.mark.no_call_coverage
@@ -95,7 +95,7 @@ def test_decrease_amp(pool, pool_tokens, deployer):
     duration = pool._adjustmentTarget() - pool._lastModificationTime()
 
     # Weights should not change immediately.
-    assert pool._amp() == currAmp
+    assert (10**18 - pool._oneMinusAmp()) == currAmp
     assert pool._targetAmplification() == targetAmp
 
     chain.mine(1, timestamp=int(startTime + TWOWEEK + TWOWEEK / 3))
@@ -106,11 +106,11 @@ def test_decrease_amp(pool, pool_tokens, deployer):
     passedTime = (tx.timestamp - lastModification)/(duration)
 
     # Be mostly accurate.
-    assert pool._amp()//1000 == floor(currAmp * (1 - passedTime) + targetAmp * passedTime)//1000
+    assert (10**18 - pool._oneMinusAmp())//1000 == floor(currAmp * (1 - passedTime) + targetAmp * passedTime)//1000
     
     chain.mine(1, timestamp=int(startTime + TWOWEEK * 2 + 100))
 
     pool.localswap(pool_tokens[0], pool_tokens[0], 0, 0, {"from": deployer})
 
-    assert pool._amp() == targetAmp
+    assert (10**18 - pool._oneMinusAmp()) == targetAmp
 

@@ -648,16 +648,16 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
 
         uint256 fee = FixedPointMathLib.mulWadDown(amount, _poolFee);
 
-        // Calculate the group specific units bought.
+        // Calculate the group-specific units bought.
         uint256 U = calcSendSwap(fromAsset, amount - fee);
 
-        // ! Only need to hash info that is required by the escrow (+ some extra for randomisation)
-        // ! No need to hash context (as token/liquidity escrow data is different), fromPool, targetPool, targetAssetIndex, minOut, CallData
+        // Only need to hash info that is required by the escrow (+ some extra for randomisation)
+        // No need to hash context (as token/liquidity escrow data is different), fromPool, targetPool, targetAssetIndex, minOut, CallData
         bytes32 assetSwapHash = computeAssetSwapHash(
-            targetUser,     // Used to randomise the hash   //Do we even need this?
+            targetUser,     // Ensures no collisions between different users
             U,              // Used to randomise the hash
-            amount - fee,   // ! Required to validate release escrow data
-            fromAsset,      // ! Required to validate release escrow data
+            amount - fee,   // Required! to validate release escrow data
+            fromAsset,      // Required! to validate release escrow data
             uint32(block.number % 2**32)
         );
 
@@ -857,12 +857,12 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
             FixedPointMathLib.divWadDown(initialTotalSupply, initialTotalSupply - poolTokens)
         ))) * wsum;
 
-        // ! Only need to hash info that is required by the escrow (+ some extra for randomisation)
-        // ! No need to hash context (as token/liquidity escrow data is different), fromPool, targetPool, targetAssetIndex, minOut, CallData
+        // Only need to hash info that is required by the escrow (+ some extra for randomisation)
+        // No need to hash context (as token/liquidity escrow data is different), fromPool, targetPool, targetAssetIndex, minOut, CallData
         bytes32 liquiditySwapHash = computeLiquiditySwapHash(
-            targetUser, // Used to randomise the hash   //Do we even need this?
-            U,          // Used to randomise the hash
-            poolTokens,     // ! Required to validate release escrow data
+            targetUser,     // Ensures no collisions between different users
+            U,              // Used to randomise the hash
+            poolTokens,     // Required! to validate release escrow data
             uint32(block.number % 2**32)
         );
 

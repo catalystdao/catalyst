@@ -288,7 +288,7 @@ def get_pool_2_balances(pool_2, pool_2_tokens):
 def get_pool_amp(pool):
     def _get_pool_amp():
         try:
-            amp = pool._amp()   # Amplified pools
+            amp = 10**18 - pool._oneMinusAmp()   # Amplified pools
         except AttributeError:
             amp = 10**18        # Volatile pools
 
@@ -300,7 +300,7 @@ def get_pool_amp(pool):
 def get_pool_1_amp(pool_1):
     def _get_pool_1_amp():
         try:
-            amp = pool_1._amp()   # Amplified pools
+            amp = 10**18 - pool_1._oneMinusAmp()   # Amplified pools
         except AttributeError:
             amp = 10**18               # Volatile pools
 
@@ -312,7 +312,7 @@ def get_pool_1_amp(pool_1):
 def get_pool_2_amp(pool_2):
     def _get_pool_2_amp():
         try:
-            amp = pool_2._amp()   # Amplified pools
+            amp = 10**18 - pool_2._oneMinusAmp()   # Amplified pools
         except AttributeError:
             amp = 10**18               # Volatile pools
 
