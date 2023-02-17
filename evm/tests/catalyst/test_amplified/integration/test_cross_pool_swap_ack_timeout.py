@@ -166,7 +166,7 @@ def test_ibc_timeout_and_ack(channel_id, pool, pool_tokens, ibc_emulator, berg, 
 
     U = 0
     for token in pool_tokens:
-        U += (pool._weight(token) * token.balanceOf(pool))**((10**18 - pool._amp())/10**18) * 1000000
+        U += (pool._weight(token) * token.balanceOf(pool))**((10**18 - (10**18 - pool._oneMinusAmp()))/10**18) * 1000000
 
     both1_12 = pool.calcLocalSwap(source_token, target_token, 10**18)
     both1_21 = pool.calcLocalSwap(target_token, source_token, 10**18)

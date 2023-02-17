@@ -144,7 +144,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         _lastModificationTime = block.timestamp;
 
         // Compute sum weight for security limit.
-        for (uint256 it = 0; it < MAX_ASSETS; it++) {
+        for (uint256 it = 0; it < MAX_ASSETS; ++it) {
             address token = _tokenIndexing[it];
             if (token == address(0)) break;
             require(newWeights[it] != 0); // dev: newWeights must be greater than 0 to protect liquidity providers.
@@ -177,7 +177,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
             uint256 wsum = 0;
             // If the current time is past the adjustment, the weights need to be finalized.
             if (block.timestamp >= adjTarget) {
-                for (uint256 it = 0; it < MAX_ASSETS; it++) {
+                for (uint256 it = 0; it < MAX_ASSETS; ++it) {
                     address token = _tokenIndexing[it];
                     if (token == address(0)) break;
 
@@ -199,7 +199,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
             }
 
             // Calculate partial weight change
-            for (uint256 it = 0; it < MAX_ASSETS; it++) {
+            for (uint256 it = 0; it < MAX_ASSETS; ++it) {
                 address token = _tokenIndexing[it];
                 if (token == address(0)) break;
 
@@ -388,12 +388,15 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
 
         // The swap equation simplifies to the ordinary constant product if the
         // token weights are equal.
-        if (W_A == W_B)
-            // Saves gas and is exact.
-            // NOTE: If W_A == 0 and W_B == 0 => W_A == W_B => The calculation will not fail.
-            // This is not a problem, since W_B != 0 for assets contained in the pool, and hence a 0-weighted asset 
-            // (i.e. not contained in the pool) cannot be used to extract an asset contained in the pool.
-            return (B * amount) / (A + amount);
+        unchecked {
+            // Any overflow returns less.
+            if (W_A == W_B)
+                // Saves gas and is exact.
+                // NOTE: If W_A == 0 and W_B == 0 => W_A == W_B => The calculation will not fail.
+                // This is not a problem, since W_B != 0 for assets contained in the pool, and hence a 0-weighted asset 
+                // (i.e. not contained in the pool) cannot be used to extract an asset contained in the pool.
+                return (B * amount) / (A + amount);
+        }
 
         // If either token doesn't exist, their weight is 0.
         // Then powWad returns 1 which is subtracted from 1 => returns 0.
@@ -419,7 +422,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 initialTotalSupply = totalSupply; 
 
         uint256 U = 0;
-        for (uint256 it = 0; it < MAX_ASSETS; it++) {
+        for (uint256 it = 0; it < MAX_ASSETS; ++it) {
             address token = _tokenIndexing[it];
             if (token == address(0)) break;
 
@@ -441,7 +444,11 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         // Subtract fee from U. This stops people from using deposit and withdrawal as a method of swapping.
         // To reduce costs, the governance fee is not taken. Swapping through deposit+withdrawal
         // circumvents the governance fee. However, traders are disincentivised by a higher gas cost.
-        U = FixedPointMathLib.mulWadDown(U, FixedPointMathLib.WAD - _poolFee);
+        unchecked {
+            // Normally U is lower than the sum of the weights * LN2. This is much lower than 2**256-1
+            // And if U overflows, then it becomes smaller.
+            U = (U * (FixedPointMathLib.WAD - _poolFee))/FixedPointMathLib.WAD;
+        }
 
         // Fetch wsum.
         uint256 wsum = _maxUnitCapacity / FixedPointMathLib.LN2;
@@ -484,7 +491,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 loopLength = minOut.length < MAX_ASSETS ? minOut.length : MAX_ASSETS;
         // For later event logging, the amounts transferred from the pool are stored.
         uint256[] memory amounts = new uint256[](loopLength);
-        for (uint256 it = 0; it < loopLength; it++) {
+        for (uint256 it = 0; it < loopLength; ++it) {
             address token = _tokenIndexing[it];
             if (token == address(0)) break;
 
@@ -652,16 +659,16 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
 
         uint256 fee = FixedPointMathLib.mulWadDown(amount, _poolFee);
 
-        // Calculate the group specific units bought.
+        // Calculate the group-specific units bought.
         uint256 U = calcSendSwap(fromAsset, amount - fee);
 
-        // ! Only need to hash info that is required by the escrow (+ some extra for randomisation)
-        // ! No need to hash context (as token/liquidity escrow data is different), fromPool, targetPool, targetAssetIndex, minOut, CallData
+        // Only need to hash info that is required by the escrow (+ some extra for randomisation)
+        // No need to hash context (as token/liquidity escrow data is different), fromPool, targetPool, targetAssetIndex, minOut, CallData
         bytes32 assetSwapHash = computeAssetSwapHash(
-            targetUser,     // Used to randomise the hash   //Do we even need this?
+            targetUser,     // Ensures no collisions between different users
             U,              // Used to randomise the hash
-            amount - fee,   // ! Required to validate release escrow data
-            fromAsset,      // ! Required to validate release escrow data
+            amount - fee,   // Required! to validate release escrow data
+            fromAsset,      // Required! to validate release escrow data
             uint32(block.number % 2**32)
         );
 
@@ -874,12 +881,12 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
             FixedPointMathLib.divWadDown(initialTotalSupply, initialTotalSupply - poolTokens)
         ))) * wsum;
 
-        // ! Only need to hash info that is required by the escrow (+ some extra for randomisation)
-        // ! No need to hash context (as token/liquidity escrow data is different), fromPool, targetPool, targetAssetIndex, minOut, CallData
+        // Only need to hash info that is required by the escrow (+ some extra for randomisation)
+        // No need to hash context (as token/liquidity escrow data is different), fromPool, targetPool, targetAssetIndex, minOut, CallData
         bytes32 liquiditySwapHash = computeLiquiditySwapHash(
-            targetUser, // Used to randomise the hash   //Do we even need this?
-            U,          // Used to randomise the hash
-            poolTokens,     // ! Required to validate release escrow data
+            targetUser,     // Ensures no collisions between different users
+            U,              // Used to randomise the hash
+            poolTokens,     // Required! to validate release escrow data
             uint32(block.number % 2**32)
         );
 
@@ -1001,7 +1008,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         // As a result, if people swap into the pool, we should expect that there is exactly
         // the inswapped amount of trust in the pool. If this wasn't implemented, there would be
         // a maximum daily cross chain volume, which is bad for liquidity providers.
-        {
+        unchecked {
             // Calling timeout and then ack should not be possible. 
             // The initial lines deleting the escrow protects against this.
             uint256 UC = _usedUnitCapacity;

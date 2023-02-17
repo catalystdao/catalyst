@@ -44,7 +44,7 @@ abstract contract CatalystSwapPoolCommon is
 
     /// @notice The pool tokens initially minted to the user who set up the pool.
     /// @dev The initial deposit along with this value determines the base value of a pool token.
-    uint256 constant INITIAL_MINT_AMOUNT = 10**DECIMALS;
+    uint256 constant INITIAL_MINT_AMOUNT = 1e18;  // 10**decimals
 
     /// @notice Maximum number of assets supported
     /// @dev Impacts the cost of some for loops. Can be changed without breaking compatibility.
@@ -342,10 +342,10 @@ abstract contract CatalystSwapPoolCommon is
     ) public virtual {
 
         bytes32 assetSwapHash = computeAssetSwapHash(
-            targetUser, // Used to randomise the hash   //Do we even need this?
+            targetUser, // Ensures no collisions between different users
             U,          // Used to randomise the hash
-            escrowAmount,     // ! Required to validate release escrow data
-            escrowToken,  // ! Required to validate release escrow data
+            escrowAmount,     // Required! to validate release escrow data
+            escrowToken,  // Required! to validate release escrow data
             blockNumberMod
         );
 
@@ -372,10 +372,10 @@ abstract contract CatalystSwapPoolCommon is
     ) public virtual {
 
         bytes32 assetSwapHash = computeAssetSwapHash(
-            targetUser, // Used to randomise the hash   //Do we even need this?
+            targetUser, // Ensures no collisions between different users
             U,          // Used to randomise the hash
-            escrowAmount,     // ! Required to validate release escrow data
-            escrowToken,  // ! Required to validate release escrow data
+            escrowAmount,     // Required! to validate release escrow data
+            escrowToken,  // Required! to validate release escrow data
             blockNumberMod
         );
 
@@ -402,9 +402,9 @@ abstract contract CatalystSwapPoolCommon is
     ) public virtual {
 
         bytes32 liquiditySwapHash = computeLiquiditySwapHash(
-            targetUser, // Used to randomise the hash   //Do we even need this?
+            targetUser, // Ensures no collisions between different users
             U,          // Used to randomise the hash
-            escrowAmount,     // ! Required to validate release escrow data
+            escrowAmount,     // Required! to validate release escrow data
             blockNumberMod
         );
 
@@ -429,9 +429,9 @@ abstract contract CatalystSwapPoolCommon is
     ) public virtual {
 
         bytes32 liquiditySwapHash = computeLiquiditySwapHash(
-            targetUser, // Used to randomise the hash   //Do we even need this?
+            targetUser, // Ensures no collisions between different users
             U,          // Used to randomise the hash
-            escrowAmount,     // ! Required to validate release escrow data
+            escrowAmount,     // Required! to validate release escrow data
             blockNumberMod
         );
 
@@ -451,10 +451,10 @@ abstract contract CatalystSwapPoolCommon is
     ) internal pure returns(bytes32) {
         return keccak256(
             abi.encodePacked(
-                targetUser, // Used to randomise the hash   //Do we even need this?
+                targetUser, // Ensures no collisions between different users
                 U,          // Used to randomise the hash
-                amount,     // ! Required to validate release escrow data
-                fromAsset,  // ! Required to validate release escrow data
+                amount,     // Required! to validate release escrow data
+                fromAsset,  // Required! to validate release escrow data
                 blockNumberMod
             )
         );
@@ -468,9 +468,9 @@ abstract contract CatalystSwapPoolCommon is
     ) internal pure returns(bytes32) {
         return keccak256(
             abi.encodePacked(
-                targetUser, // Used to randomise the hash   //Do we even need this?
+                targetUser, // Ensures no collisions between different users
                 U,          // Used to randomise the hash
-                amount,     // ! Required to validate release escrow data
+                amount,     // Required! to validate release escrow data
                 blockNumberMod
             )
         );
