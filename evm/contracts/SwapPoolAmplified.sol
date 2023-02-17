@@ -922,7 +922,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         });
 
         // Send the purchased units to targetPool on the target chain.
-        CatalystIBCInterface(_chainInterface).crossChainSwap(
+        CatalystIBCInterface(_chainInterface).sendCrossChainAsset(
             channelId,
             targetPool,
             targetUser,
@@ -1178,7 +1178,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         });
 
         // Transfer the units to the target pools.
-        CatalystIBCInterface(_chainInterface).liquiditySwap(
+        CatalystIBCInterface(_chainInterface).sendCrossChainLiquidity(
             channelId,
             targetPool,
             targetUser,

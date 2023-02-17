@@ -55,7 +55,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
      * @param calldata_ Data field if a call should be made on the target chain. 
      * Should be encoded abi.encode(<address>,<data>)
      */
-    function crossChainSwap(
+    function sendCrossChainAsset(
         bytes32 channelId,
         bytes32 toPool,
         bytes32 toAccount,
@@ -110,7 +110,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
      * @param minOut The minimum number of returned tokens to the toAccount on the target chain.
      * @param metadata Metadata on the asset swap, used for swap identification and ack/timeout.
      */
-    function liquiditySwap(
+    function sendCrossChainLiquidity(
         bytes32 channelId,
         bytes32 toPool,
         bytes32 toAccount,
