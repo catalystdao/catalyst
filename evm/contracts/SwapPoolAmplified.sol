@@ -532,12 +532,19 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         // working as a way to circumvent the governance fee.
         // U shouldn't ever be negative. But in the case it is, the result is very bad. For safety, check it is above 0.
         require(U >= 0); // dev: U needs to be positive, otherwise, the uint256 casting becomes too larger.
-        U = int256(                                     // Casting never overflows, as mulWadDown returns a smaller 'U'
-            FixedPointMathLib.mulWadDown(
-                uint256(U),                             // U shouldn't be negative but the above check ensures it is ALWAYS positive.
-                FixedPointMathLib.WAD - _poolFee        // Always > 1
-            )
-        );
+        unchecked {
+            // U is generally small, so the below equation should not overflow.
+            // If it does, it has to be (uint256(U) * (FixedPointMathLib.WAD - _poolFee)) that overflows.
+            // In which case, something close to 0 will be returned. When divided by FixedPointMathLib.WAD
+            // it will return 0.
+            // The casting to int256 is then 0.
+
+            // If the overflow doesn't happen inside uint256(...), 'U' will be smaller because of the division by FixedPointMathLib.WAD. Thus the int256 casting will now overflow.
+            U = int256(
+                // U shouldn't be negative but the above check ensures it is ALWAYS positive.
+                (uint256(U) * (FixedPointMathLib.WAD - _poolFee))/FixedPointMathLib.WAD
+            );
+        }
 
         int256 oneMinusAmpInverse = FixedPointMathLib.WADWAD / oneMinusAmp;
 

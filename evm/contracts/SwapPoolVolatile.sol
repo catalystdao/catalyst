@@ -444,7 +444,11 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         // Subtract fee from U. This stops people from using deposit and withdrawal as a method of swapping.
         // To reduce costs, the governance fee is not taken. Swapping through deposit+withdrawal
         // circumvents the governance fee. However, traders are disincentivised by a higher gas cost.
-        U = FixedPointMathLib.mulWadDown(U, FixedPointMathLib.WAD - _poolFee);
+        unchecked {
+            // Normally U is lower than the sum of the weights * LN2. This is much lower than 2**256-1
+            // And if U overflows, then it becomes smaller.
+            U = (U * (FixedPointMathLib.WAD - _poolFee))/FixedPointMathLib.WAD;
+        }
 
         // Fetch wsum.
         uint256 wsum = _maxUnitCapacity / FixedPointMathLib.LN2;
