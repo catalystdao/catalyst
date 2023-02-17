@@ -22,7 +22,7 @@ import "./CatalystIBCPayload.sol";
  */
 contract CatalystIBCInterface is Ownable, IbcReceiver {
     //--- ERRORS ---//
-    string constant ONLY_IBC_CALLER = "IBC enabled function";
+    error InvalidIBCCaller(address caller);
     error InvalidContext(bytes1 context);
 
     //--- Config ---//
@@ -150,8 +150,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
      * @param packet The IBC packet
      */
     function onAcknowledgementPacket(IbcPacket calldata packet) external {
-        // TODO: Enable
-        // require(IBCDispatcher == msg.sender, ONLY_IBC_CALLER);
+        if (msg.sender != IBCDispatcher) revert InvalidIBCCaller(msg.sender);
 
         bytes calldata data = packet.data;
 
@@ -193,8 +192,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
      * @param packet The IBC packet
      */
     function onTimeoutPacket(IbcPacket calldata packet) external {
-        // TODO: Enable
-        // require(IBCDispatcher == msg.sender, ONLY_IBC_CALLER);
+        if (msg.sender != IBCDispatcher) revert InvalidIBCCaller(msg.sender);
 
         bytes calldata data = packet.data;
 
@@ -235,8 +233,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
      * @param packet The IBC packet
      */
     function onRecvPacket(IbcPacket calldata packet) external {
-        // TODO: Enable
-        // require(IBCDispatcher == msg.sender, ONLY_IBC_CALLER);
+        if (msg.sender != IBCDispatcher) revert InvalidIBCCaller(msg.sender);
 
         bytes calldata data = packet.data;
 
