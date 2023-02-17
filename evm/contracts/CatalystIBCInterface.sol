@@ -74,7 +74,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
      * @param toAssetIndex The index of the asset the user wants to buy in the target pool.
      * @param U The calculated liquidity reference. (Units)
      * @param minOut The minimum number of returned tokens to the toAccount on the target chain.
-     * @param escrowInformation The escrow information.
+     * @param metadata Metadata on the asset swap, used for swap identification and ack/timeout.
      * @param calldata_ Data field if a call should be made on the target chain. 
      * Should be encoded abi.encode(<address>,<data>)
      */
@@ -85,7 +85,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
         uint8 toAssetIndex,
         uint256 U,
         uint256 minOut,
-        TokenEscrow memory escrowInformation,
+        AssetSwapMetadata memory metadata,
         bytes memory calldata_
     ) external {
         // Anyone can call this function. And anyone can pass the security check later,
@@ -114,10 +114,10 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
                 minOut
             ),
             abi.encodePacked(
-                escrowInformation.amount,
-                abi.encode(escrowInformation.token),
-                uint32(block.number % 2**32),
-                escrowInformation.swapHash,
+                metadata.fromAmount,
+                abi.encode(metadata.fromAsset),
+                metadata.blockNumber,
+                metadata.swapHash,
                 uint16(calldata_.length),
                 calldata_
             )
@@ -140,7 +140,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
      * @param toAccount recipient of the transaction on the target chain. Encoded in bytes32.
      * @param U The calculated liquidity reference. (Units)
      * @param minOut The minimum number of returned tokens to the toAccount on the target chain.
-     * @param escrowInformation The escrow information. 
+     * @param metadata Metadata on the asset swap, used for swap identification and ack/timeout.
      */
     function liquiditySwap(
         bytes32 channelId,
@@ -148,7 +148,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
         bytes32 toAccount,
         uint256 U,
         uint256 minOut,
-        LiquidityEscrow memory escrowInformation
+        LiquiditySwapMetadata memory metadata
     ) external {
         // Anyone can call this function. And anyone can pass the security check later,
         // but unless someone can also manage to pass the security check on onRecvPacket
@@ -171,9 +171,9 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
             toAccount,
             U,
             minOut,
-            escrowInformation.poolTokens,
-            uint32(block.number % 2**32),
-            escrowInformation.swapHash,
+            metadata.fromAmount,
+            metadata.blockNumber,
+            metadata.swapHash,
             uint8(0)                        // Set DATA length to 0
         );
 

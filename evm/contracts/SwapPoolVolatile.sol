@@ -662,10 +662,11 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         );
 
         // Wrap the escrow information into a struct. This reduces the stack-print.
-        TokenEscrow memory escrowInformation = TokenEscrow({
-            amount: amount - fee,
-            token: fromAsset,
-            swapHash: assetSwapHash
+        AssetSwapMetadata memory swapMetadata = AssetSwapMetadata({
+            fromAmount: amount - fee,
+            fromAsset: fromAsset,
+            swapHash: assetSwapHash,
+            blockNumber: uint32(block.number % 2**32)
         });
 
         // Send the purchased units to targetPool on the target chain.
@@ -676,7 +677,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
             toAssetIndex,
             U,
             minOut,
-            escrowInformation,
+            swapMetadata,
             calldata_
         );
 
@@ -869,9 +870,10 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         // Wrap the escrow information into a struct. This reduces the stack-print.
         // (Not really since only pool tokens are wrapped.)
         // However, the struct keeps the structure of swaps similar.
-        LiquidityEscrow memory escrowInformation = LiquidityEscrow({
-            poolTokens: poolTokens,
-            swapHash: liquiditySwapHash
+        LiquiditySwapMetadata memory swapMetadata = LiquiditySwapMetadata({
+            fromAmount: poolTokens,
+            swapHash: liquiditySwapHash,
+            blockNumber: uint32(block.number % 2**32)
         });
 
         // Transfer the units to the target pools.
@@ -881,7 +883,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
             targetUser,
             U,
             minOut,
-            escrowInformation
+            swapMetadata
         );
 
         // Escrow the pool tokens
