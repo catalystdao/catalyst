@@ -352,7 +352,18 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         return calcPriceCurveLimit(calcPriceCurveArea(input, A, W_A, oneMinusAmp), B, W_B, oneMinusAmp);
     }
 
-    function calcUnitsToPoolTokens(uint256 U, uint256 ts, uint256 it_times_walpha_amped, int256 oneMinusAmpInverse) internal pure returns (uint256) {
+
+    /**
+     * @notice Converts units into pool tokens with the below formula
+     *      pt = PT · (((N · wa_0^(1-k) + U)/(N · wa_0^(1-k))^(1/(1-k)) - 1)
+     * @dev The function leaves a lot of computation to the external implementation. This is done to avoid recomputing values several times.
+     * @param U Then number of units to convert into pool tokens.
+     * @param ts The current pool token supply. The escrowed pool tokens should not be added, since the function then returns more.
+     * @param it_times_walpha_amped wa_0^(1-k)
+     * @param oneMinusAmpInverse The pool amplification.
+     * @return uint256 Output denominated in pool tokens.
+     */
+    function calcPriceCurveLimitShare(uint256 U, uint256 ts, uint256 it_times_walpha_amped, int256 oneMinusAmpInverse) internal pure returns (uint256) {
         uint256 poolTokens = (
             ts * uint256(  // Always casts a positive value, as powWad >= 1, hence powWad - WAD >= 0
                 FixedPointMathLib.powWad(  // poWad always >= 1, as the 'base' is always >= 1
@@ -552,7 +563,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
 
         // On totalSupply. Do not add escrow amount, as higher amount
         // results in a larger return.
-        uint256 poolTokens = calcUnitsToPoolTokens(uint256(U), totalSupply, it_times_walpha_amped, oneMinusAmpInverse);  // uint256: U is positive by design.
+        uint256 poolTokens = calcPriceCurveLimitShare(uint256(U), totalSupply, it_times_walpha_amped, oneMinusAmpInverse);  // uint256: U is positive by design.
 
         // Check if the return satisfies the user.
         if (minOut > poolTokens)
@@ -1285,7 +1296,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
 
         // On totalSupply. Do not add escrow amount, as higher amount
         // results in a larger return.
-        uint256 poolTokens = calcUnitsToPoolTokens(U, totalSupply, it_times_walpha_amped, oneMinusAmpInverse);
+        uint256 poolTokens = calcPriceCurveLimitShare(U, totalSupply, it_times_walpha_amped, oneMinusAmpInverse);
 
         // Check if the user would accept the mint.
         if(minOut > poolTokens) revert ReturnInsufficient(poolTokens, minOut);
