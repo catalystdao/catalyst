@@ -186,7 +186,7 @@ def test_send_swap_event(
     assert send_swap_event['targetUser']   == elwood
     assert send_swap_event['fromAsset']    == source_token
     assert send_swap_event['toAssetIndex'] == 1
-    assert send_swap_event['input']        == swap_amount
+    assert send_swap_event['fromAmount']   == swap_amount
     assert send_swap_event['output']       == observed_units
     assert send_swap_event['minOut']       == min_out
     assert send_swap_event['swapHash']  == expected_message_hash
