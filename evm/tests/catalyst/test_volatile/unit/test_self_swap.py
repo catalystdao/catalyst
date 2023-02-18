@@ -40,7 +40,7 @@ def test_self_swap(
     )
     assert token.balanceOf(berg) == 0
     
-    if pool.getUnitCapacity() < tx.events["SendSwap"]["output"]:
+    if pool.getUnitCapacity() < tx.events["SendSwap"]["units"]:
         with reverts(revert_pattern=re.compile("typed error: 0x249c4e65.*")):
             txe = ibc_emulator.execute(tx.events["IncomingMetadata"]["metadata"][0], tx.events["IncomingPacket"]["packet"], {"from": berg})
         return

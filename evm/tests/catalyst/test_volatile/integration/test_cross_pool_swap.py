@@ -52,7 +52,7 @@ def test_cross_pool_swap(
     assert source_token.balanceOf(berg) == 0
     
     # The swap may revert because of the security limit     #TODO mark these cases as 'skip'?
-    if pool_2.getUnitCapacity() < tx.events["SendSwap"]["output"]:
+    if pool_2.getUnitCapacity() < tx.events["SendSwap"]["units"]:
         with reverts(revert_pattern=re.compile("typed error: 0x249c4e65.*")):
             txe = ibc_emulator.execute(tx.events["IncomingMetadata"]["metadata"][0], tx.events["IncomingPacket"]["packet"], {"from": berg})
         return
@@ -171,7 +171,7 @@ def test_send_swap_event(
     assert send_swap_event['fromAsset']    == source_token
     assert send_swap_event['toAssetIndex'] == 1
     assert send_swap_event['fromAmount']   == swap_amount
-    assert send_swap_event['output']       == observed_units
+    assert send_swap_event['units']        == observed_units
     assert send_swap_event['minOut']       == min_out
     assert send_swap_event['swapHash']  == expected_message_hash
 
@@ -227,6 +227,6 @@ def test_receive_swap_event(
     assert receive_swap_event['sourcePool']  == pool_1.address
     assert receive_swap_event['toAccount']   == elwood
     assert receive_swap_event['toAsset']     == target_token
-    assert receive_swap_event['input']       == observed_units
+    assert receive_swap_event['units']       == observed_units
     assert receive_swap_event['toAmount']    == target_token.balanceOf(elwood)
     assert receive_swap_event['swapHash'] == expected_message_hash

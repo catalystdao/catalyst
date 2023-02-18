@@ -29,7 +29,7 @@ interface ICatalystV1PoolEvents {
      * @param fromAsset The asset which was sold in exchange for _toAsset.
      * @param toAssetIndex The token index of the asset to purchase on _toChain.
      * @param fromAmount The number of _fromAsset sold
-     * @param output The calculated number of units bought. Will be sold to buy _toAsset
+     * @param units The calculated number of units bought. Will be sold to buy _toAsset
      * @param minOut The pool fee. Taken from fromAmount. Numerical losses/fees are for obvious reasons not included.
      */
     event SendSwap(
@@ -38,7 +38,7 @@ interface ICatalystV1PoolEvents {
         address fromAsset,
         uint8 toAssetIndex,
         uint256 fromAmount,
-        uint256 output,
+        uint256 units,
         uint256 minOut,
         bytes32 swapHash
     );
@@ -49,14 +49,14 @@ interface ICatalystV1PoolEvents {
      * @param sourcePool The source pool.
      * @param toAccount The recipient of the trade.
      * @param toAsset The asset which was purchased with _fromAsset
-     * @param input The number of units sent from the other chain.
+     * @param units The number of units sent from the other chain.
      * @param toAmount The number of tokens provided to toAccount
      */
     event ReceiveSwap(
         bytes32 sourcePool,
         address indexed toAccount,
         address toAsset,
-        uint256 input,
+        uint256 units,
         uint256 toAmount,
         bytes32 swapHash
     );
@@ -66,13 +66,13 @@ interface ICatalystV1PoolEvents {
      * @param targetPool The target pool.
      * @param targetUser The recipient of the liquidity. The person who bought the trade is not present.
      * @param fromAmount The number of _fromAsset sold
-     * @param output The calculated number of liquidity units bought.
+     * @param units The calculated number of liquidity units bought.
      */
     event SendLiquidity(
         bytes32 indexed targetPool,
         bytes32 indexed targetUser,
         uint256 fromAmount,
-        uint256 output,
+        uint256 units,
         bytes32 swapHash
     );
 
@@ -80,13 +80,13 @@ interface ICatalystV1PoolEvents {
      * @notice Describes the arrival of a liquidity swap
      * @param sourcePool The source pool.
      * @param toAccount The recipient of the liquidity.
-     * @param input The number of liquidity units sent from the other chain.
+     * @param units The number of liquidity units sent from the other chain.
      * @param toAmount The number of pool tokens provided to toAccount
      */
     event ReceiveLiquidity(
         bytes32 sourcePool,
         address indexed toAccount,
-        uint256 input,
+        uint256 units,
         uint256 toAmount,
         bytes32 swapHash
     );

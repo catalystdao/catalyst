@@ -54,7 +54,7 @@ def test_security_limit_swap_loop(
         berg,
         {"from": berg},
     )
-    tx_units = tx.events["SendSwap"]["output"]
+    tx_units = tx.events["SendSwap"]["units"]
 
     # 2. receiveSwap
     if pool_2.getUnitCapacity() < tx_units:
@@ -121,7 +121,7 @@ def test_security_limit_swap_loop(
         berg,
         {"from": berg},
     )
-    tx2_units = tx2.events["SendSwap"]["output"]
+    tx2_units = tx2.events["SendSwap"]["units"]
 
     
     # Make sure the security limit of pool-2 does not change before the ack. NOTE: the unit capacity may have increased
