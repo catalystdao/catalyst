@@ -142,7 +142,7 @@ def test_multipool_crosschain_swap(
 
     balanceZeros = [swappoolA.getBalance0(token1), swappoolB["balance"]]
 
-    # sendSwap
+    # sendAsset
     # (_chain : uint256, _targetPool : bytes32, _fromAsset : address, _toAsset : uint256, _toAccount : bytes32, _amount : uint256) -> uint256
     tokenArr = [
         swappoolA._tokenIndexing(0),
@@ -168,7 +168,7 @@ def test_multipool_crosschain_swap(
     )
 
     # perform the cross chain swap (w/o Polymerase nothing will happen)
-    tx = swappoolA.sendSwap(
+    tx = swappoolA.sendAsset(
         ccsiB["chain_id"],
         swappoolB_address_bytes,
         brownie.convert.to_bytes(base_account.address.replace("0x", "")),

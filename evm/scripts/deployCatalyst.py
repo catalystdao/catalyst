@@ -133,7 +133,7 @@ pool.setConnection(
 )
 
 swap_amount = tokens[0].balanceOf(pool)//10
-tx = pool.sendSwap(
+tx = pool.sendAsset(
     chid,
     convert.to_bytes(pool.address.replace("0x", "")),
     convert.to_bytes(acct.address.replace("0x", "")),

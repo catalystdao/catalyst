@@ -325,13 +325,13 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
     }
 
     /**
-     * @notice Computes the return of SendSwap.
+     * @notice Computes the return of SendAsset.
      * @dev Returns 0 if from is not a token in the pool
      * @param fromAsset The address of the token to sell.
      * @param amount The amount of from token to sell.
      * @return uint256 Group-specific units.
      */
-    function calcSendSwap(
+    function calcSendAsset(
         address fromAsset,
         uint256 amount
     ) public view returns (uint256) {
@@ -639,7 +639,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
      * Should be encoded abi.encode(<address>,<data>)
      * @return uint256 The number of units minted.
      */
-    function sendSwap(
+    function sendAsset(
         bytes32 channelId,
         bytes32 toPool,
         bytes32 toAccount,
@@ -660,7 +660,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 fee = FixedPointMathLib.mulWadDown(amount, _poolFee);
 
         // Calculate the group-specific units bought.
-        uint256 U = calcSendSwap(fromAsset, amount - fee);
+        uint256 U = calcSendAsset(fromAsset, amount - fee);
 
         // Only need to hash info that is required by the escrow (+ some extra for randomisation)
         // No need to hash context (as token/liquidity escrow data is different), fromPool, toPool, targetAssetIndex, minOut, CallData
@@ -707,7 +707,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         // Adjustment of the security limit is delayed until ack to avoid
         // a router abusing timeout to circumvent the security limit.
 
-        emit SendSwap(
+        emit SendAsset(
             toPool,
             toAccount,
             fromAsset,
@@ -721,8 +721,8 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         return U;
     }
 
-    /** @notice Copy of sendSwap with no calldata_ */
-    function sendSwap(
+    /** @notice Copy of sendAsset with no calldata_ */
+    function sendAsset(
         bytes32 channelId,
         bytes32 toPool,
         bytes32 toAccount,
@@ -734,7 +734,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
     ) external returns (uint256) {
         bytes memory calldata_ = new bytes(0);
         return
-            sendSwap(
+            sendAsset(
                 channelId,
                 toPool,
                 toAccount,
@@ -993,7 +993,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
      * @param escrowToken The token escrowed.
      * @param blockNumberMod The block number at which the swap transaction was commited (mod 32)
      */
-    function sendSwapAck(
+    function sendAssetAck(
         bytes32 toAccount,
         uint256 U,
         uint256 escrowAmount,
@@ -1001,7 +1001,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         uint32 blockNumberMod
     ) public override {
         // Execute common escrow logic.
-        super.sendSwapAck(toAccount, U, escrowAmount, escrowToken, blockNumberMod);
+        super.sendAssetAck(toAccount, U, escrowAmount, escrowToken, blockNumberMod);
 
         // Incoming swaps should be subtracted from the unit flow.
         // It is assumed if the router was fraudulent, that no-one would execute a trade.

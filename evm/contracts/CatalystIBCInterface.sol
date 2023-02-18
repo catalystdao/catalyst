@@ -159,7 +159,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
 
         if (context == CTX0_ASSET_SWAP) {
 
-            ICatalystV1Pool(fromPool).sendSwapAck(
+            ICatalystV1Pool(fromPool).sendAssetAck(
                 bytes32(data[ TO_ACCOUNT_START : TO_ACCOUNT_END ]),                             // toAccount
                 uint256(bytes32(data[ UNITS_START : UNITS_END ])),                              // units
                 uint256(bytes32(data[ CTX0_FROM_AMOUNT_START : CTX0_FROM_AMOUNT_END ])),        // fromAmount
@@ -201,7 +201,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
 
         if (context == CTX0_ASSET_SWAP) {
 
-            ICatalystV1Pool(fromPool).sendSwapTimeout(
+            ICatalystV1Pool(fromPool).sendAssetTimeout(
                 bytes32(data[ TO_ACCOUNT_START : TO_ACCOUNT_END ]),                             // toAccount
                 uint256(bytes32(data[ UNITS_START : UNITS_END ])),                              // units
                 uint256(bytes32(data[ CTX0_FROM_AMOUNT_START : CTX0_FROM_AMOUNT_END ])),        // fromAmount

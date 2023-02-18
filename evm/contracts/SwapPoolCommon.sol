@@ -333,7 +333,7 @@ abstract contract CatalystSwapPoolCommon is
      * @param escrowToken The token escrowed.
      * @param blockNumberMod The block number at which the swap transaction was commited (mod 32)
      */
-    function sendSwapAck(
+    function sendAssetAck(
         bytes32 toAccount,
         uint256 U,
         uint256 escrowAmount,
@@ -363,7 +363,7 @@ abstract contract CatalystSwapPoolCommon is
      * @param escrowToken The token escrowed.
      * @param blockNumberMod The block number at which the swap transaction was commited (mod 32)
      */
-    function sendSwapTimeout(
+    function sendAssetTimeout(
         bytes32 toAccount,
         uint256 U,
         uint256 escrowAmount,

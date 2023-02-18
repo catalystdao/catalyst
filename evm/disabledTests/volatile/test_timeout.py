@@ -47,7 +47,7 @@ def test_ibc_timeout(
     toAssetIndex = tokenArr.index(token2)
     assert swappool._tokenIndexing(toAssetIndex) == token2
 
-    tx = swappool.sendSwap(
+    tx = swappool.sendAsset(
         chainId,
         brownie.convert.to_bytes(swappool.address.replace("0x", "")),
         brownie.convert.to_bytes(base_account.address.replace("0x", "")),
@@ -94,7 +94,7 @@ def test_ibc_ack(
     toAssetIndex = tokenArr.index(token2)
     assert swappool._tokenIndexing(toAssetIndex) == token2
 
-    tx = swappool.sendSwap(
+    tx = swappool.sendAsset(
         chainId,
         brownie.convert.to_bytes(swappool.address.replace("0x", "")),
         brownie.convert.to_bytes(base_account.address.replace("0x", "")),
@@ -140,10 +140,10 @@ def test_ibc_timeout_and_ack(
 
     both1_12 = swappool.calcLocalSwap(token1, token2, 10**18, False)
     both1_21 = swappool.calcLocalSwap(token2, token1, 10**18, False)
-    to1 = swappool.calcSendSwap(token1, 10**18, True)
+    to1 = swappool.calcSendAsset(token1, 10**18, True)
     from1 = swappool.calcReceiveSwap(token1, U, False)
 
-    tx1 = swappool.sendSwap(
+    tx1 = swappool.sendAsset(
         chainId,
         brownie.convert.to_bytes(swappool.address.replace("0x", "")),
         brownie.convert.to_bytes(base_account.address.replace("0x", "")),
@@ -158,7 +158,7 @@ def test_ibc_timeout_and_ack(
 
     both2_12 = swappool.calcLocalSwap(token1, token2, 10**18, False)
     both2_21 = swappool.calcLocalSwap(token2, token1, 10**18, False)
-    to2 = swappool.calcSendSwap(token1, 10**18, True)
+    to2 = swappool.calcSendAsset(token1, 10**18, True)
     from2 = swappool.calcReceiveSwap(token1, U, False)
 
     assert both1_12 > both2_12
@@ -176,7 +176,7 @@ def test_ibc_timeout_and_ack(
 
     both3_12 = swappool.calcLocalSwap(token1, token2, 10**18, False)
     both3_21 = swappool.calcLocalSwap(token2, token1, 10**18, False)
-    to3 = swappool.calcSendSwap(token1, 10**18, True)
+    to3 = swappool.calcSendAsset(token1, 10**18, True)
     from3 = swappool.calcReceiveSwap(token1, U, False)
 
     assert both1_12 == both3_12
@@ -194,7 +194,7 @@ def test_ibc_timeout_and_ack(
 
     both3_12 = swappool.calcLocalSwap(token1, token2, 10**18, False)
     both3_21 = swappool.calcLocalSwap(token2, token1, 10**18, False)
-    to3 = swappool.calcSendSwap(token1, 10**18, True)
+    to3 = swappool.calcSendAsset(token1, 10**18, True)
     from3 = swappool.calcReceiveSwap(token1, U, False)
 
     assert both1_12 > both3_12

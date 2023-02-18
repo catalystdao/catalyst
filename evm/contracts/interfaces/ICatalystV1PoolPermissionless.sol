@@ -91,7 +91,7 @@ interface ICatalystV1PoolPermissionless {
      * @param minOut The minimum number of returned tokens to the toAccount on the target chain.
      * @param fallbackUser If the transaction fails send the escrowed funds to this address
      */
-    function sendSwap(
+    function sendAsset(
         bytes32 channelId,
         bytes32 toPool,
         bytes32 toAccount,
@@ -105,7 +105,7 @@ interface ICatalystV1PoolPermissionless {
     /// @notice Includes calldata_
     /// @param calldata_ Data field if a call should be made on the target chain. 
     /// Should be encoded abi.encode(<address>,<data>)
-    function sendSwap(
+    function sendAsset(
         bytes32 channelId,
         bytes32 toPool,
         bytes32 toAccount,

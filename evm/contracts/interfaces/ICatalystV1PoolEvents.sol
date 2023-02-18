@@ -32,7 +32,7 @@ interface ICatalystV1PoolEvents {
      * @param units The calculated number of units bought. Will be sold to buy _toAsset
      * @param minOut The pool fee. Taken from fromAmount. Numerical losses/fees are for obvious reasons not included.
      */
-    event SendSwap(
+    event SendAsset(
         bytes32 indexed toPool,
         bytes32 indexed toAccount,
         address fromAsset,

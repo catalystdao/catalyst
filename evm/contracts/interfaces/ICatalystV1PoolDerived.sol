@@ -7,7 +7,7 @@ interface ICatalystV1PoolDerived {
     /** @notice  Returns the current cross-chain unit capacity. */
     function getUnitCapacity() external view returns (uint256);
 
-    function calcSendSwap(address from, uint256 amount) external view returns (uint256);
+    function calcSendAsset(address from, uint256 amount) external view returns (uint256);
 
     /**
      * @notice Computes the output of ReceiveSwap, without executing one.

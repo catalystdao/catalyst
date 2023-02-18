@@ -83,7 +83,7 @@ def test_ibc_swap(
 
     diviation = 0.02 / 100
 
-    # sendSwap
+    # sendAsset
     # (_chain : uint256, _targetPool : bytes32, _fromAsset : address, _toAsset : uint256, _toAccount : bytes32, _amount : uint256) -> uint256
     tokenArr = [
         swappool._tokenIndexing(0),
@@ -100,7 +100,7 @@ def test_ibc_swap(
     # created by the catalyst template.
     TARGET_CHAIN_ID = crosschaininterface.chain_id()
 
-    tx = swappool.sendSwap(
+    tx = swappool.sendAsset(
         TARGET_CHAIN_ID,
         brownie.convert.to_bytes(swappool.address.replace("0x", "")),
         brownie.convert.to_bytes(base_account.address.replace("0x", "")),

@@ -73,7 +73,7 @@ def test_release_escrow_must_be_called_cci(
     cci = pool._chainInterface()
     
     with reverts(): #"dev: Only _chainInterface"
-        pool.sendSwapAck(
+        pool.sendAssetAck(
             berg.address,
             0,
             0,
@@ -86,7 +86,7 @@ def test_release_escrow_must_be_called_cci(
     # we still want to check that we can get past the above requirement using
     # a valid sender.
     with reverts(): #"dev: Invalid swapHash. Alt: Escrow doesn't exist."
-        pool.sendSwapAck(
+        pool.sendAssetAck(
             berg.address,
             0,
             0,
@@ -102,7 +102,7 @@ def test_timeout_escrow_must_be_called_cci(
     cci = pool._chainInterface()
     
     with reverts(): #"dev: Only _chainInterface"
-        pool.sendSwapTimeout(
+        pool.sendAssetTimeout(
             berg.address,
             0,
             0,
@@ -115,7 +115,7 @@ def test_timeout_escrow_must_be_called_cci(
     # we still want to check that we can get past the above requirement using
     # a valid sender.
     with reverts(): #"dev: Invalid swapHash. Alt: Escrow doesn't exist."
-        pool.sendSwapTimeout(
+        pool.sendAssetTimeout(
             berg.address,
             0,
             0,

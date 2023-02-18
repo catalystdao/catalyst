@@ -25,7 +25,7 @@ def test_self_swap(
     token.transfer(berg, swap_amount, {'from': deployer})
     token.approve(pool, swap_amount, {'from': berg})
     
-    tx = pool.sendSwap(
+    tx = pool.sendAsset(
         channel_id,
         convert.to_bytes(pool.address.replace("0x", "")),
         convert.to_bytes(berg.address.replace("0x", "")),
@@ -39,7 +39,7 @@ def test_self_swap(
     assert token.balanceOf(berg) == 0
     
     # The security limit works a slightly different for amplified pools.
-    if pool.getUnitCapacity() < pool.calcReceiveSwap(pool._tokenIndexing(0), tx.events["SendSwap"]["units"]) * pool._weight(pool._tokenIndexing(0)):
+    if pool.getUnitCapacity() < pool.calcReceiveSwap(pool._tokenIndexing(0), tx.events["SendAsset"]["units"]) * pool._weight(pool._tokenIndexing(0)):
         with reverts(revert_pattern=re.compile("typed error: 0x249c4e65.*")):
             txe = ibc_emulator.execute(tx.events["IncomingMetadata"]["metadata"][0], tx.events["IncomingPacket"]["packet"], {"from": berg})
         return

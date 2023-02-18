@@ -380,13 +380,13 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
     }
 
     /**
-     * @notice Computes the return of SendSwap.
+     * @notice Computes the return of SendAsset.
      * @dev Returns 0 if from is not a token in the pool
      * @param fromAsset The address of the token to sell.
      * @param amount The amount of from token to sell.
      * @return uint256 Group-specific units.
      */
-    function calcSendSwap(
+    function calcSendAsset(
         address fromAsset,
         uint256 amount
     ) public view returns (uint256) {
@@ -495,7 +495,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                 
                 {
                     // wa^(1-k) is required twice. It is F(A) in the
-                    // sendSwap equation and part of the wa_0^(1-k) calculation
+                    // sendAsset equation and part of the wa_0^(1-k) calculation
                     int256 wab = FixedPointMathLib.powWad(
                         int256(weightAssetBalance * FixedPointMathLib.WAD),     // If casting overflows to a negative number, powWad fails
                         oneMinusAmp
@@ -917,7 +917,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
      * Should be encoded abi.encode(<address>,<data>)
      * @return uint256 The number of units minted.
      */
-    function sendSwap(
+    function sendAsset(
         bytes32 channelId,
         bytes32 toPool,
         bytes32 toAccount,
@@ -937,12 +937,12 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 fee = FixedPointMathLib.mulWadDown(amount, _poolFee);
 
         // Calculate the group-specific units bought.
-        uint256 U = calcSendSwap(
+        uint256 U = calcSendAsset(
             fromAsset,
             amount - fee
         );
 
-        // sendSwapAck requires casting U to int256 to update the _unitTracker and must never revert. Check for overflow here.
+        // sendAssetAck requires casting U to int256 to update the _unitTracker and must never revert. Check for overflow here.
         require(U < uint256(type(int256).max));     // int256 max fits in uint256
         _unitTracker += int256(U);
 
@@ -991,7 +991,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         // Adjustment of the security limit is delayed until ack to avoid
         // a router abusing timeout to circumvent the security limit.
 
-        emit SendSwap(
+        emit SendAsset(
             toPool,
             toAccount,
             fromAsset,
@@ -1005,8 +1005,8 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         return U;
     }
 
-    /** @notice Copy of sendSwap with no calldata_ */
-    function sendSwap(
+    /** @notice Copy of sendAsset with no calldata_ */
+    function sendAsset(
         bytes32 channelId,
         bytes32 toPool,
         bytes32 toAccount,
@@ -1018,7 +1018,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
     ) external returns (uint256) {
         bytes memory calldata_ = new bytes(0);
         return
-            sendSwap(
+            sendAsset(
                 channelId,
                 toPool,
                 toAccount,
@@ -1372,7 +1372,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
      * @param escrowToken The token escrowed.
      * @param blockNumberMod The block number at which the swap transaction was commited (mod 32)
      */
-    function sendSwapAck(
+    function sendAssetAck(
         bytes32 toAccount,
         uint256 U,
         uint256 escrowAmount,
@@ -1380,7 +1380,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         uint32 blockNumberMod
     ) public override {
         // Execute common escrow logic.
-        super.sendSwapAck(toAccount, U, escrowAmount, escrowToken, blockNumberMod);
+        super.sendAssetAck(toAccount, U, escrowAmount, escrowToken, blockNumberMod);
 
         // Incoming swaps should be subtracted from the unit flow.
         // It is assumed if the router was fraudulent, that no-one would execute a trade.
@@ -1414,7 +1414,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
      * @param escrowToken The token escrowed.
      * @param blockNumberMod The block number at which the swap transaction was commited (mod 32)
      */
-    function sendSwapTimeout(
+    function sendAssetTimeout(
         bytes32 toAccount,
         uint256 U,
         uint256 escrowAmount,
@@ -1422,11 +1422,11 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         uint32 blockNumberMod
     ) public override {
         // Execute common escrow logic.
-        super.sendSwapTimeout(toAccount, U, escrowAmount, escrowToken, blockNumberMod);
+        super.sendAssetTimeout(toAccount, U, escrowAmount, escrowToken, blockNumberMod);
 
         // Removed timed-out units from the unit tracker. This will keep the
         // balance0 in balance, since tokens also leave the pool
-        _unitTracker -= int256(U);      // It has already been checked on sendSwap that casting to int256 will not overflow.
+        _unitTracker -= int256(U);      // It has already been checked on sendAsset that casting to int256 will not overflow.
                                         // Cannot be manipulated by the router as, otherwise, the swapHash check will fail
     }
 
@@ -1454,7 +1454,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
 
         // Removed timed-out units from the unit tracker. This will keep the
         // balance0 in balance, since tokens also leave the pool
-        _unitTracker -= int256(U);      // It has already been checked on sendSwap that casting to int256 will not overflow.
+        _unitTracker -= int256(U);      // It has already been checked on sendAsset that casting to int256 will not overflow.
                                         // Cannot be manipulated by the router as, otherwise, the swapHash check will fail
     }
 
