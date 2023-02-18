@@ -36,7 +36,7 @@ def test_cross_pool_swap(
     source_token.transfer(berg, swap_amount, {'from': deployer})
     source_token.approve(pool_1, swap_amount, {'from': berg})
     
-    y = compute_expected_swap(swap_amount, source_token, target_token)['output']
+    y = compute_expected_swap(swap_amount, source_token, target_token)['to_amount']
     
     tx = pool_1.sendSwap(
         channel_id,
@@ -59,7 +59,7 @@ def test_cross_pool_swap(
     else:
         txe = ibc_emulator.execute(tx.events["IncomingMetadata"]["metadata"][0], tx.events["IncomingPacket"]["packet"], {"from": berg})
     
-    purchased_tokens = txe.events["ReceiveSwap"]["output"]
+    purchased_tokens = txe.events["ReceiveSwap"]["toAmount"]
     
     assert purchased_tokens == target_token.balanceOf(berg)
 
@@ -97,7 +97,7 @@ def test_cross_pool_swap_min_out(
     source_token.transfer(berg, swap_amount, {'from': deployer})
     source_token.approve(pool_1, swap_amount, {'from': berg})
     
-    y = compute_expected_swap(swap_amount, source_token, target_token)['output']
+    y = compute_expected_swap(swap_amount, source_token, target_token)['to_amount']
     min_out = int(y * 1.2)  # Make sure the swap always fails
     
     tx = pool_1.sendSwap(
@@ -228,5 +228,5 @@ def test_receive_swap_event(
     assert receive_swap_event['toAccount']   == elwood
     assert receive_swap_event['toAsset']     == target_token
     assert receive_swap_event['input']       == observed_units
-    assert receive_swap_event['output']      == target_token.balanceOf(elwood)
+    assert receive_swap_event['toAmount']    == target_token.balanceOf(elwood)
     assert receive_swap_event['swapHash'] == expected_message_hash

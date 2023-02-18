@@ -72,7 +72,7 @@ def test_security_limit_swap_loop(
             {"from": berg}
         )
 
-    purchased_tokens = txe.events["ReceiveSwap"]["output"]
+    purchased_tokens = txe.events["ReceiveSwap"]["toAmount"]
 
     # 3. Ack
     ibc_emulator.ack(
@@ -232,7 +232,7 @@ def test_security_limit_swap_timeout(
         tx.events["IncomingPacket"]["packet"],
         {"from": berg}
     )
-    purchased_tokens = txe.events["ReceiveSwap"]["output"]
+    purchased_tokens = txe.events["ReceiveSwap"]["toAmount"]
 
     # 3. Ack
     ibc_emulator.ack(

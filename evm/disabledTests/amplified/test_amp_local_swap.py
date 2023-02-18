@@ -185,7 +185,7 @@ def test_local_swap_with_self(
         {"from": swapper}
     )
 
-    assert tx.events['LocalSwap'][0]['output'] <= swap_amount
+    assert tx.events['LocalSwap'][0]['toAmount'] <= swap_amount
 
 
 
@@ -292,4 +292,4 @@ def test_local_swap_with_invalid_input_asset(
         {"from": swapper}
     )
 
-    assert tx.events['LocalSwap'][0]['output'] == 0
+    assert tx.events['LocalSwap'][0]['toAmount'] == 0

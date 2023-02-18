@@ -38,7 +38,7 @@ def test_cross_pool_swap(
     source_token.approve(pool_1, swap_amount, {'from': berg})
     
     try:
-        y = compute_expected_swap(swap_amount, source_token, target_token)['output']
+        y = compute_expected_swap(swap_amount, source_token, target_token)['to_amount']
     except:
         pytest.skip()   #TODO For certain pool configs, there is no output for the specified swap amount (swap too large) => remove this workaround + be specific on the test configs to 'skip'
     
@@ -63,7 +63,7 @@ def test_cross_pool_swap(
     else:
         txe = ibc_emulator.execute(tx.events["IncomingMetadata"]["metadata"][0], tx.events["IncomingPacket"]["packet"], {"from": berg})
     
-    purchased_tokens = txe.events["ReceiveSwap"]["output"]
+    purchased_tokens = txe.events["ReceiveSwap"]["toAmount"]
     
     assert purchased_tokens == target_token.balanceOf(berg)
 
@@ -107,7 +107,7 @@ def test_cross_pool_swap_min_out(
     source_token.approve(pool_1, swap_amount, {'from': berg})
     
     try:
-        y = compute_expected_swap(swap_amount, source_token, target_token)['output']
+        y = compute_expected_swap(swap_amount, source_token, target_token)['to_amount']
     except:
         pytest.skip()   #TODO For certain pool configs, there is no output for the specified swap amount (swap too large) => remove this workaround + be specific on the test configs to 'skip'
     
@@ -244,5 +244,5 @@ def test_receive_swap_event(
     assert receive_swap_event['toAccount']   == elwood
     assert receive_swap_event['toAsset']     == target_token
     assert receive_swap_event['input']       == observed_units
-    assert receive_swap_event['output']      == target_token.balanceOf(elwood)
+    assert receive_swap_event['toAmount']    == target_token.balanceOf(elwood)
     assert receive_swap_event['swapHash'] == expected_message_hash

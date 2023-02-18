@@ -11,14 +11,14 @@ interface ICatalystV1PoolEvents {
      * @param fromAsset The asset which was sold in exchange for _toAsset
      * @param toAsset The asset which was purchased with _fromAsset
      * @param fromAmount The number of _fromAsset sold
-     * @param output The number of tokens provided to toAccount
+     * @param toAmount The number of tokens provided to toAccount
      */
     event LocalSwap(
         address indexed toAccount,
         address fromAsset,
         address toAsset,
         uint256 fromAmount,
-        uint256 output
+        uint256 toAmount
     );
 
     /**
@@ -50,14 +50,14 @@ interface ICatalystV1PoolEvents {
      * @param toAccount The recipient of the trade.
      * @param toAsset The asset which was purchased with _fromAsset
      * @param input The number of units sent from the other chain.
-     * @param output The number of tokens provided to toAccount
+     * @param toAmount The number of tokens provided to toAccount
      */
     event ReceiveSwap(
         bytes32 sourcePool,
         address indexed toAccount,
         address toAsset,
         uint256 input,
-        uint256 output,
+        uint256 toAmount,
         bytes32 swapHash
     );
 
@@ -81,13 +81,13 @@ interface ICatalystV1PoolEvents {
      * @param sourcePool The source pool.
      * @param toAccount The recipient of the liquidity.
      * @param input The number of liquidity units sent from the other chain.
-     * @param output The number of pool tokens provided to toAccount
+     * @param toAmount The number of pool tokens provided to toAccount
      */
     event ReceiveLiquidity(
         bytes32 sourcePool,
         address indexed toAccount,
         uint256 input,
-        uint256 output,
+        uint256 toAmount,
         bytes32 swapHash
     );
 

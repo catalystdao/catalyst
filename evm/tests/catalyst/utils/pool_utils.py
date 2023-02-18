@@ -96,7 +96,7 @@ def compute_expected_swap(
 
         return {
             'U': int(U * 10**18),
-            'output': int(b * (1 - ((b_amp - U)/(b_amp))**(1/one_minus_amp))),
+            'to_amount': int(b * (1 - ((b_amp - U)/(b_amp))**(1/one_minus_amp))),
             'pool_fee': net_pool_fee,
             'governance_fee': net_governance_fee
         }
@@ -106,7 +106,7 @@ def compute_expected_swap(
 
     return {
         'U': int(U * 10**18),
-        'output': int(b * (1 - (-U/w_b).exp())),
+        'to_amount': int(b * (1 - (-U/w_b).exp())),
         'pool_fee': net_pool_fee,
         'governance_fee': net_governance_fee
     }
@@ -172,7 +172,7 @@ def compute_expected_liquidity_swap(
         wpt = ( b0**one_minus_amp + U/len(to_balances) )**(1/(one_minus_amp)) - b0
         return {
             'U': int(U * 10**18),
-            'output': int(wpt*ts_b/b0)
+            'to_amount': int(wpt*ts_b/b0)
         }
     
     # Volatile
@@ -185,7 +185,7 @@ def compute_expected_liquidity_swap(
 
     return {
         'U': int(U*10**18),
-        'output': int(ts_b * (share/(Decimal(1)-share)))
+        'to_amount': int(ts_b * (share/(Decimal(1)-share)))
     }
 
 
