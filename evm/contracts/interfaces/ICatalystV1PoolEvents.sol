@@ -25,7 +25,7 @@ interface ICatalystV1PoolEvents {
      * @notice Describes the creation of an external swap: Cross-chain swap.
      * @dev If _fromAsset is the proxy contract or _toAsset is 2**8-1, the swap is a liquidity swap.
      * @param toPool The target pool.
-     * @param targetUser The recipient of the trade. The person who bought the trade is not present.
+     * @param toAccount The recipient of the trade. The person who bought the trade is not present.
      * @param fromAsset The asset which was sold in exchange for _toAsset.
      * @param toAssetIndex The token index of the asset to purchase on _toChain.
      * @param fromAmount The number of _fromAsset sold
@@ -34,7 +34,7 @@ interface ICatalystV1PoolEvents {
      */
     event SendSwap(
         bytes32 indexed toPool,
-        bytes32 indexed targetUser,
+        bytes32 indexed toAccount,
         address fromAsset,
         uint8 toAssetIndex,
         uint256 fromAmount,
@@ -64,13 +64,13 @@ interface ICatalystV1PoolEvents {
     /**
      * @notice Describes the creation of a liquidity swap
      * @param toPool The target pool.
-     * @param targetUser The recipient of the liquidity. The person who bought the trade is not present.
+     * @param toAccount The recipient of the liquidity. The person who bought the trade is not present.
      * @param fromAmount The number of _fromAsset sold
      * @param units The calculated number of liquidity units bought.
      */
     event SendLiquidity(
         bytes32 indexed toPool,
-        bytes32 indexed targetUser,
+        bytes32 indexed toAccount,
         uint256 fromAmount,
         uint256 units,
         bytes32 swapHash

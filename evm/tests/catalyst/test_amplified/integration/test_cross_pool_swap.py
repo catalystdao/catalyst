@@ -162,7 +162,7 @@ def test_send_swap_event(
     tx = pool_1.sendSwap(
         channel_id,
         convert.to_bytes(pool_2.address.replace("0x", "")),
-        convert.to_bytes(elwood.address.replace("0x", "")),     # NOTE: not using the same account as the caller of the tx to make sure the 'targetUser' is correctly reported
+        convert.to_bytes(elwood.address.replace("0x", "")),     # NOTE: not using the same account as the caller of the tx to make sure the 'toAccount' is correctly reported
         source_token,
         1,                                                      # NOTE: use non-zero target asset index to make sure the field is set on the event (and not just left blank)
         swap_amount,
@@ -183,7 +183,7 @@ def test_send_swap_event(
     send_swap_event = tx.events['SendSwap']
 
     assert send_swap_event['toPool']       == pool_2
-    assert send_swap_event['targetUser']   == elwood
+    assert send_swap_event['toAccount']    == elwood
     assert send_swap_event['fromAsset']    == source_token
     assert send_swap_event['toAssetIndex'] == 1
     assert send_swap_event['fromAmount']   == swap_amount

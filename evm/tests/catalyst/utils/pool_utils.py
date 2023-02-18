@@ -256,7 +256,7 @@ def compute_expected_units_capacity(
 # Escrow Utils ******************************************************************************************************************
 
 def compute_asset_swap_hash(
-    target_user,
+    to_account,
     units,
     escrowed_amount,
     escrowed_token,
@@ -264,7 +264,7 @@ def compute_asset_swap_hash(
 ):
     
     return web3.keccak(
-        convert.to_bytes(target_user, type_str="bytes32")
+        convert.to_bytes(to_account, type_str="bytes32")
         + convert.to_bytes(units, type_str="bytes32")
         + convert.to_bytes(escrowed_amount, type_str="bytes32")
         + convert.to_bytes(escrowed_token, type_str="bytes20")
@@ -273,14 +273,14 @@ def compute_asset_swap_hash(
 
 
 def compute_liquidity_swap_hash(
-    target_user,
+    to_account,
     units,
     escrowed_amount,
     block_number
 ):
     
     return web3.keccak(
-        convert.to_bytes(target_user, type_str="bytes32")
+        convert.to_bytes(to_account, type_str="bytes32")
         + convert.to_bytes(units, type_str="bytes32")
         + convert.to_bytes(escrowed_amount, type_str="bytes32")
         + convert.to_bytes(block_number % 2**32, type_str="bytes4")

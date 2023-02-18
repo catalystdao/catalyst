@@ -84,17 +84,17 @@ interface ICatalystV1PoolPermissionless {
      * Brownie: brownie.convert.to_bytes(<poolAddress>, type_str="bytes32")
      * @param channelId The target chain identifier.
      * @param toPool The target pool on the target chain encoded in bytes32.
-     * @param targetUser The recipient of the transaction on the target chain. Encoded in bytes32.
+     * @param toAccount The recipient of the transaction on the target chain. Encoded in bytes32.
      * @param fromAsset The asset the user wants to sell.
      * @param toAssetIndex The index of the asset the user wants to buy in the target pool.
      * @param amount The number of fromAsset to sell to the pool.
-     * @param minOut The minimum number of returned tokens to the targetUser on the target chain.
+     * @param minOut The minimum number of returned tokens to the toAccount on the target chain.
      * @param fallbackUser If the transaction fails send the escrowed funds to this address
      */
     function sendSwap(
         bytes32 channelId,
         bytes32 toPool,
-        bytes32 targetUser,
+        bytes32 toAccount,
         address fromAsset,
         uint8 toAssetIndex,
         uint256 amount,
@@ -108,7 +108,7 @@ interface ICatalystV1PoolPermissionless {
     function sendSwap(
         bytes32 channelId,
         bytes32 toPool,
-        bytes32 targetUser,
+        bytes32 toAccount,
         address fromAsset,
         uint8 toAssetIndex,
         uint256 amount,

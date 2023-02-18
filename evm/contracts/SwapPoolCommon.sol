@@ -327,14 +327,14 @@ abstract contract CatalystSwapPoolCommon is
     /** 
      * @notice Implements basic ack logic: Deletes and releases tokens to the pool
      * @dev Should never revert! For security limit adjustments, the implementation should be overwritten.
-     * @param targetUser The recipient of the transaction on the target chain. Encoded in bytes32.
+     * @param toAccount The recipient of the transaction on the target chain. Encoded in bytes32.
      * @param U The number of units initially purchased.
      * @param escrowAmount The number of tokens escrowed.
      * @param escrowToken The token escrowed.
      * @param blockNumberMod The block number at which the swap transaction was commited (mod 32)
      */
     function sendSwapAck(
-        bytes32 targetUser,
+        bytes32 toAccount,
         uint256 U,
         uint256 escrowAmount,
         address escrowToken,
@@ -342,7 +342,7 @@ abstract contract CatalystSwapPoolCommon is
     ) public virtual {
 
         bytes32 assetSwapHash = computeAssetSwapHash(
-            targetUser, // Ensures no collisions between different users
+            toAccount,  // Ensures no collisions between different users
             U,          // Used to randomise the hash
             escrowAmount,     // Required! to validate release escrow data
             escrowToken,  // Required! to validate release escrow data
@@ -357,14 +357,14 @@ abstract contract CatalystSwapPoolCommon is
     /** 
      * @notice Implements basic timeout logic: Deletes and sends tokens to the user.
      * @dev Should never revert!
-     * @param targetUser The recipient of the transaction on the target chain. Encoded in bytes32.
+     * @param toAccount The recipient of the transaction on the target chain. Encoded in bytes32.
      * @param U The number of units initially purchased.
      * @param escrowAmount The number of tokens escrowed.
      * @param escrowToken The token escrowed.
      * @param blockNumberMod The block number at which the swap transaction was commited (mod 32)
      */
     function sendSwapTimeout(
-        bytes32 targetUser,
+        bytes32 toAccount,
         uint256 U,
         uint256 escrowAmount,
         address escrowToken,
@@ -372,7 +372,7 @@ abstract contract CatalystSwapPoolCommon is
     ) public virtual {
 
         bytes32 assetSwapHash = computeAssetSwapHash(
-            targetUser, // Ensures no collisions between different users
+            toAccount,  // Ensures no collisions between different users
             U,          // Used to randomise the hash
             escrowAmount,     // Required! to validate release escrow data
             escrowToken,  // Required! to validate release escrow data
@@ -389,20 +389,20 @@ abstract contract CatalystSwapPoolCommon is
     /** 
      * @notice Implements basic liquidity ack logic: Deletes and releases pool tokens to the pool.
      * @dev Should never revert! For security limit adjustments, the implementation should be overwritten.
-     * @param targetUser The recipient of the transaction on the target chain. Encoded in bytes32.
+     * @param toAccount The recipient of the transaction on the target chain. Encoded in bytes32.
      * @param U The number of units initially acquired.
      * @param escrowAmount The number of pool tokens escrowed.
      * @param blockNumberMod The block number at which the swap transaction was commited (mod 32)
      */
     function sendLiquidityAck(
-        bytes32 targetUser,
+        bytes32 toAccount,
         uint256 U,
         uint256 escrowAmount,
         uint32 blockNumberMod
     ) public virtual {
 
         bytes32 liquiditySwapHash = computeLiquiditySwapHash(
-            targetUser, // Ensures no collisions between different users
+            toAccount,  // Ensures no collisions between different users
             U,          // Used to randomise the hash
             escrowAmount,     // Required! to validate release escrow data
             blockNumberMod
@@ -416,20 +416,20 @@ abstract contract CatalystSwapPoolCommon is
     /** 
      * @notice Implements basic liquidity timeout logic: Deletes and sends pool tokens to the user.
      * @dev Should never revert!
-     * @param targetUser The recipient of the transaction on the target chain. Encoded in bytes32.
+     * @param toAccount The recipient of the transaction on the target chain. Encoded in bytes32.
      * @param U The number of units initially acquired.
      * @param escrowAmount The number of pool tokens escrowed.
      * @param blockNumberMod The block number at which the swap transaction was commited (mod 32)
      */
     function sendLiquidityTimeout(
-        bytes32 targetUser,
+        bytes32 toAccount,
         uint256 U,
         uint256 escrowAmount,
         uint32 blockNumberMod
     ) public virtual {
 
         bytes32 liquiditySwapHash = computeLiquiditySwapHash(
-            targetUser, // Ensures no collisions between different users
+            toAccount,  // Ensures no collisions between different users
             U,          // Used to randomise the hash
             escrowAmount,     // Required! to validate release escrow data
             blockNumberMod
@@ -443,7 +443,7 @@ abstract contract CatalystSwapPoolCommon is
     }
 
     function computeAssetSwapHash(
-        bytes32 targetUser,
+        bytes32 toAccount,
         uint256 U,
         uint256 amount,
         address fromAsset,
@@ -451,7 +451,7 @@ abstract contract CatalystSwapPoolCommon is
     ) internal pure returns(bytes32) {
         return keccak256(
             abi.encodePacked(
-                targetUser, // Ensures no collisions between different users
+                toAccount,  // Ensures no collisions between different users
                 U,          // Used to randomise the hash
                 amount,     // Required! to validate release escrow data
                 fromAsset,  // Required! to validate release escrow data
@@ -461,14 +461,14 @@ abstract contract CatalystSwapPoolCommon is
     }
 
     function computeLiquiditySwapHash(
-        bytes32 targetUser,
+        bytes32 toAccount,
         uint256 U,
         uint256 amount,
         uint32 blockNumberMod
     ) internal pure returns(bytes32) {
         return keccak256(
             abi.encodePacked(
-                targetUser, // Ensures no collisions between different users
+                toAccount,  // Ensures no collisions between different users
                 U,          // Used to randomise the hash
                 amount,     // Required! to validate release escrow data
                 blockNumberMod
