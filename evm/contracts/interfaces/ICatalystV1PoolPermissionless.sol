@@ -122,7 +122,7 @@ interface ICatalystV1PoolPermissionless {
      *  Called exclusively by the chainInterface.
      * @dev Can only be called by the chainInterface, as there is no way to check the validity of units.
      * @param channelId The incoming connection identifier.
-     * @param sourcePool The source pool.
+     * @param fromPool The source pool.
      * @param toAssetIndex Index of the asset to be purchased with _U units.
      * @param toAccount The recipient of toAsset
      * @param U Number of units to convert into toAsset.
@@ -130,7 +130,7 @@ interface ICatalystV1PoolPermissionless {
      */
     function receiveSwap(
         bytes32 channelId,
-        bytes32 sourcePool,
+        bytes32 fromPool,
         uint256 toAssetIndex,
         address toAccount,
         uint256 U,
@@ -140,7 +140,7 @@ interface ICatalystV1PoolPermissionless {
 
     function receiveSwap(
         bytes32 channelId,
-        bytes32 sourcePool,
+        bytes32 fromPool,
         uint256 toAssetIndex,
         address toAccount,
         uint256 U,
@@ -176,13 +176,13 @@ interface ICatalystV1PoolPermissionless {
      * @dev Can only be called by the chainInterface, as there is no way
      * to check the validity of units.
      * @param channelId The incoming connection identifier.
-     * @param sourcePool The source pool
+     * @param fromPool The source pool
      * @param toAccount The recipient of pool tokens
      * @param U Number of units to convert into pool tokens.
      */
     function receiveLiquidity(
         bytes32 channelId,
-        bytes32 sourcePool,
+        bytes32 fromPool,
         address toAccount,
         uint256 U,
         uint256 minOut,

@@ -751,7 +751,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
      * @notice Completes a cross-chain swap by converting units to the desired token (toAsset)
      * @dev Can only be called by the chainInterface.
      * @param channelId The incoming connection identifier.
-     * @param sourcePool The source pool.
+     * @param fromPool The source pool.
      * @param toAssetIndex Index of the asset to be purchased with Units.
      * @param toAccount The recipient.
      * @param U Number of units to convert into toAsset.
@@ -760,7 +760,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
      */
     function receiveSwap(
         bytes32 channelId,
-        bytes32 sourcePool,
+        bytes32 fromPool,
         uint256 toAssetIndex,
         address toAccount,
         uint256 U,
@@ -769,7 +769,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
     ) public returns (uint256) {
 
         // Only allow connected pools
-        if (!_poolConnection[channelId][sourcePool]) revert PoolNotConnected(channelId, sourcePool);
+        if (!_poolConnection[channelId][fromPool]) revert PoolNotConnected(channelId, fromPool);
 
         // The chainInterface is the only valid caller of this function.
         require(msg.sender == _chainInterface);
@@ -791,14 +791,14 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         // Send the assets to the user.
         ERC20(toAsset).safeTransfer(toAccount, purchasedTokens);
 
-        emit ReceiveSwap(sourcePool, toAccount, toAsset, U, purchasedTokens, swapHash);
+        emit ReceiveSwap(fromPool, toAccount, toAsset, U, purchasedTokens, swapHash);
 
         return purchasedTokens;
     }
 
     function receiveSwap(
         bytes32 channelId,
-        bytes32 sourcePool,
+        bytes32 fromPool,
         uint256 toAssetIndex,
         address toAccount,
         uint256 U,
@@ -809,7 +809,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
     ) external returns (uint256) {
         uint256 purchasedTokens = receiveSwap(
             channelId,
-            sourcePool,
+            fromPool,
             toAssetIndex,
             toAccount,
             U,
@@ -936,7 +936,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
      * directly to pool tokens through the following equation:
      *      pt = PT · (1 - exp(-U/sum W_i))/exp(-U/sum W_i)
      * @param channelId The incoming connection identifier.
-     * @param sourcePool The source pool
+     * @param fromPool The source pool
      * @param toAccount The recipient of the pool tokens
      * @param U Number of units to convert into pool tokens.
      * @param minOut Minimum number of tokens to mint. Otherwise: reject.
@@ -945,7 +945,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
      */
     function receiveLiquidity(
         bytes32 channelId,
-        bytes32 sourcePool,
+        bytes32 fromPool,
         address toAccount,
         uint256 U,
         uint256 minOut,
@@ -953,7 +953,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
     ) external returns (uint256) {
 
         // Only allow connected pools
-        if (!_poolConnection[channelId][sourcePool]) revert PoolNotConnected(channelId, sourcePool);
+        if (!_poolConnection[channelId][fromPool]) revert PoolNotConnected(channelId, fromPool);
 
         // The chainInterface is the only valid caller of this function.
         require(msg.sender == _chainInterface);
@@ -975,7 +975,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         // Mint pool tokens for the user.
         _mint(toAccount, poolTokens);
 
-        emit ReceiveLiquidity(sourcePool, toAccount, U, poolTokens, swapHash);
+        emit ReceiveLiquidity(fromPool, toAccount, U, poolTokens, swapHash);
 
         return poolTokens;
     }
