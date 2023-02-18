@@ -1037,7 +1037,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
      * @param channelId The incoming connection identifier.
      * @param sourcePool The source pool.
      * @param toAssetIndex Index of the asset to be purchased with Units.
-     * @param who The recipient.
+     * @param toAccount The recipient.
      * @param U Number of units to convert into toAsset.
      * @param minOut Minimum number of tokens bought. Reverts if less.
      * @param swapHash Used to connect 2 swaps within a group. 
@@ -1046,7 +1046,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         bytes32 channelId,
         bytes32 sourcePool,
         uint256 toAssetIndex,
-        address who,
+        address toAccount,
         uint256 U,
         uint256 minOut,
         bytes32 swapHash
@@ -1079,9 +1079,9 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         _unitTracker -= int256(U);
 
         // Send the assets to the user.
-        ERC20(toAsset).safeTransfer(who, purchasedTokens);
+        ERC20(toAsset).safeTransfer(toAccount, purchasedTokens);
 
-        emit ReceiveSwap(sourcePool, who, toAsset, U, purchasedTokens, swapHash);
+        emit ReceiveSwap(sourcePool, toAccount, toAsset, U, purchasedTokens, swapHash);
 
         return purchasedTokens;
     }
@@ -1090,7 +1090,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         bytes32 channelId,
         bytes32 sourcePool,
         uint256 toAssetIndex,
-        address who,
+        address toAccount,
         uint256 U,
         uint256 minOut,
         bytes32 swapHash,
@@ -1101,7 +1101,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
             channelId,
             sourcePool,
             toAssetIndex,
-            who,
+            toAccount,
             U,
             minOut,
             swapHash
@@ -1261,7 +1261,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
      * directly to pool tokens through the following equation:
      *      pt = PT · (((N · wa_0^(1-k) + U)/(N · wa_0^(1-k))^(1/(1-k)) - 1)
      * @param sourcePool The source pool
-     * @param who The recipient of the pool tokens
+     * @param toAccount The recipient of the pool tokens
      * @param U Number of units to convert into pool tokens.
      * @param minOut Minimum number of tokens to mint. Otherwise: reject.
      * @param swapHash Used to connect 2 swaps within a group. 
@@ -1270,7 +1270,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
     function receiveLiquidity(
         bytes32 channelId,
         bytes32 sourcePool,
-        address who,
+        address toAccount,
         uint256 U,
         uint256 minOut,
         bytes32 swapHash
@@ -1352,9 +1352,9 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         }
 
         // Mint pool tokens for the user.
-        _mint(who, poolTokens);
+        _mint(toAccount, poolTokens);
 
-        emit ReceiveLiquidity(sourcePool, who, U, poolTokens, swapHash);
+        emit ReceiveLiquidity(sourcePool, toAccount, U, poolTokens, swapHash);
 
         return poolTokens;
     }

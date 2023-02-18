@@ -72,7 +72,7 @@ def test_multipool_swap(
     y = get_swap_return(swapValue, token1, token2, swappoolA, swappoolB)
 
     # sendSwap
-    # (_chain : uint256, _targetPool : bytes32, _fromAsset : address, _toAsset : uint256, _who : bytes32, _amount : uint256) -> uint256
+    # (_chain : uint256, _targetPool : bytes32, _fromAsset : address, _toAsset : uint256, _toAccount : bytes32, _amount : uint256) -> uint256
     tokenArr = [
         swappoolA._tokenIndexing(0),
         swappoolA._tokenIndexing(1),

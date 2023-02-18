@@ -64,7 +64,7 @@ The Asset Swap implements the general message format:
 0 _context : Bytes[1]
 1-32 _fromPool : bytes32
 33-64 _pool : bytes32
-65-96 _who : bytes32  # The recipient of the assets on the target chain.
+65-96 _toAccount : bytes32  # The recipient of the assets on the target chain.
 97-128 _U : uint256  # Number of units
 129 _assetIndex : uint8  # Asset index on target pool
 130-161 _minOut : uint256  # Minimum number of output assets. If the pool returns less, the transaction should revert.
@@ -94,9 +94,9 @@ The Liquidity Swap implements the general message format:
 0 _context : Bytes[1] 
 1-32 _fromPool : bytes32
 33-64 _pool : bytes32
-65-96 _who : bytes32  # The recipient of the pool tokens on the target chain.
+65-96 _toAccount : bytes32  # The recipient of the pool tokens on the target chain.
 97-128 _LU : uint256  # Number of units
-129-160 _minOut : uint256  # Minimum number of pool tokens minted to `_who`. If the pool returns less, the transaction should revert.
+129-160 _minOut : uint256  # Minimum number of pool tokens minted to `_toAccount`. If the pool returns less, the transaction should revert.
 161-192 _escrowAmount : uint256  # The number of pools tokens initially used.
 ```
 
@@ -110,7 +110,7 @@ from brownie import convert, ZERO_ADDRESS
 def payloadConstructor(
     _fromPool,
     _toPool,
-    _who,
+    _toAccount,
     _U,
     _assetIndex=0,
     _minOut=0,
@@ -122,7 +122,7 @@ def payloadConstructor(
         _context
         + convert.to_bytes(_fromPool, type_str="bytes32")
         + convert.to_bytes(_toPool, type_str="bytes32")
-        + _who
+        + _toAccount
         + convert.to_bytes(_U, type_str="bytes32")
         + convert.to_bytes(_assetIndex, type_str="bytes1")
         + convert.to_bytes(_minOut, type_str="bytes32")
@@ -143,7 +143,7 @@ def decodePayload(data, decode_address=evmBytes32ToAddress):
             "_context": data[0],
             "_fromPool": decode_address(data[1:33]),
             "_toPool": decode_address(data[33:65]),
-            "_who": decode_address(data[65:97]),
+            "_toAccount": decode_address(data[65:97]),
             "_LU": convert.to_uint(data[97:129]),
             "_minOut": convert.to_uint(data[129:161]),
             "_escrowAmount": convert.to_uint(data[161:193])
@@ -153,7 +153,7 @@ def decodePayload(data, decode_address=evmBytes32ToAddress):
         "_context": data[0],
         "_fromPool": decode_address(data[1:33]),
         "_toPool": decode_address(data[33:65]),
-        "_who": decode_address(data[65:97]),
+        "_toAccount": decode_address(data[65:97]),
         "_U": convert.to_uint(data[97:129]),
         "_assetIndex": convert.to_uint(data[129], type_str="uint8"),
         "_minOut": convert.to_uint(data[130:162]),

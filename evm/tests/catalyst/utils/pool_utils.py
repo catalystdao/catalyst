@@ -305,7 +305,7 @@ def decode_payload(data, decode_address=evm_bytes_32_to_address):
             "_context": data[0],
             "_fromPool": decode_address(data[1:33]),
             "_toPool": decode_address(data[33:65]),
-            "_who": decode_address(data[65:97]),
+            "_toAccount": decode_address(data[65:97]),
             "_LU": convert.to_uint(data[97:129]),
             "_minOut": convert.to_uint(data[129:161]),
             "_escrowAmount": convert.to_uint(data[161:193]),
@@ -319,7 +319,7 @@ def decode_payload(data, decode_address=evm_bytes_32_to_address):
         "_context": data[0],
         "_fromPool": decode_address(data[1:33]),
         "_toPool": decode_address(data[33:65]),
-        "_who": decode_address(data[65:97]),
+        "_toAccount": decode_address(data[65:97]),
         "_U": convert.to_uint(data[97:129]),
         "_assetIndex": convert.to_uint(data[129], type_str="uint8"),
         "_minOut": convert.to_uint(data[130:162]),
@@ -338,7 +338,7 @@ def decode_payload(data, decode_address=evm_bytes_32_to_address):
 def encode_swap_payload(
     from_pool,
     to_pool,
-    who,
+    to_account,
     U,
     asset_index=0,
     min_out=0,
@@ -354,7 +354,7 @@ def encode_swap_payload(
         convert.to_bytes(0, type_str="bytes1")
         + convert.to_bytes(from_pool, type_str="bytes32")
         + convert.to_bytes(to_pool, type_str="bytes32")
-        + convert.to_bytes(who, type_str="bytes32")
+        + convert.to_bytes(to_account, type_str="bytes32")
         + convert.to_bytes(U, type_str="bytes32")
         + convert.to_bytes(asset_index, type_str="bytes1")
         + convert.to_bytes(min_out, type_str="bytes32")
@@ -362,7 +362,7 @@ def encode_swap_payload(
         + convert.to_bytes(escrow_token, type_str="bytes32")
         + convert.to_bytes(block_number, type_str="bytes4")
         + convert.to_bytes(
-            compute_asset_swap_hash(who, U, escrow_amount, escrow_token, block_number),
+            compute_asset_swap_hash(to_account, U, escrow_amount, escrow_token, block_number),
             type_str="bytes32"
         )
         + convert.to_bytes(0, type_str="bytes2")
@@ -373,7 +373,7 @@ def encode_swap_payload(
 def encode_liquidity_swap_payload(
     from_pool,
     to_pool,
-    who,
+    to_account,
     U,
     min_out=0,
     escrow_amount=0,
@@ -383,13 +383,13 @@ def encode_liquidity_swap_payload(
         convert.to_bytes(1, type_str="bytes1")
         + convert.to_bytes(from_pool, type_str="bytes32")
         + convert.to_bytes(to_pool, type_str="bytes32")
-        + convert.to_bytes(who, type_str="bytes32")
+        + convert.to_bytes(to_account, type_str="bytes32")
         + convert.to_bytes(U, type_str="bytes32")
         + convert.to_bytes(min_out, type_str="bytes32")
         + convert.to_bytes(escrow_amount, type_str="bytes32")
         + convert.to_bytes(block_number, type_str="bytes4")
         + convert.to_bytes(
-            compute_liquidity_swap_hash(who, U, escrow_amount, block_number),
+            compute_liquidity_swap_hash(to_account, U, escrow_amount, block_number),
             type_str="bytes32"
         )
         + convert.to_bytes(0, type_str="bytes2")

@@ -7,14 +7,14 @@ interface ICatalystV1PoolEvents {
     /**
      * @notice  Describes an atomic swap between the 2 tokens: _fromAsset and _toAsset.
      * @dev Explain to a developer any extra details
-     * @param who The user / exchange who facilitated the trade (msg.sender)
+     * @param toAccount The user / exchange who facilitated the trade (msg.sender)
      * @param fromAsset The asset which was sold in exchange for _toAsset
      * @param toAsset The asset which was purchased with _fromAsset
      * @param input The number of _fromAsset sold
-     * @param output The number of tokens provided to _who
+     * @param output The number of tokens provided to toAccount
      */
     event LocalSwap(
-        address indexed who,
+        address indexed toAccount,
         address fromAsset,
         address toAsset,
         uint256 input,
@@ -47,14 +47,14 @@ interface ICatalystV1PoolEvents {
      * @notice Describes the arrival of an external swap: Cross-chain swap.
      * @dev If _fromAsset is the proxy contract, the swap is a liquidity swap.
      * @param sourcePool The source pool.
-     * @param who The recipient of the trade.
+     * @param toAccount The recipient of the trade.
      * @param toAsset The asset which was purchased with _fromAsset
      * @param input The number of units sent from the other chain.
-     * @param output The number of tokens provided to _who
+     * @param output The number of tokens provided to toAccount
      */
     event ReceiveSwap(
         bytes32 sourcePool,
-        address indexed who,
+        address indexed toAccount,
         address toAsset,
         uint256 input,
         uint256 output,
@@ -79,13 +79,13 @@ interface ICatalystV1PoolEvents {
     /**
      * @notice Describes the arrival of a liquidity swap
      * @param sourcePool The source pool.
-     * @param who The recipient of the liquidity.
+     * @param toAccount The recipient of the liquidity.
      * @param input The number of liquidity units sent from the other chain.
-     * @param output The number of pool tokens provided to _who
+     * @param output The number of pool tokens provided to toAccount
      */
     event ReceiveLiquidity(
         bytes32 sourcePool,
-        address indexed who,
+        address indexed toAccount,
         uint256 input,
         uint256 output,
         bytes32 swapHash
@@ -94,20 +94,20 @@ interface ICatalystV1PoolEvents {
     /**
      * @notice Emitted on liquidity deposits.
      * @dev Explain to a developer any extra details
-     * @param who The depositor. Is credited with _mints pool tokens.
-     * @param mint The number of minted pool tokens credited to _who
+     * @param toAccount The depositor. Is credited with _mints pool tokens.
+     * @param mint The number of minted pool tokens credited to toAccount
      * @param assets An array of the number of deposited assets.
      */
-    event Deposit(address indexed who, uint256 mint, uint256[] assets);
+    event Deposit(address indexed toAccount, uint256 mint, uint256[] assets);
 
     /**
      * @notice Emitted on liquidity withdrawal.
      * @dev Explain to a developer any extra details
-     * @param who The withdrawer. Is debited _burns pool tokens.
+     * @param toAccount The withdrawer. Is debited _burns pool tokens.
      * @param burn The number of burned pool tokens.
      * @param assets An array of the token amounts returned
      */
-    event Withdraw(address indexed who, uint256 burn, uint256[] assets);
+    event Withdraw(address indexed toAccount, uint256 burn, uint256[] assets);
 
     /** @notice Called upon successful swap. */
     event EscrowAck(bytes32 swapHash, bool liquiditySwap);

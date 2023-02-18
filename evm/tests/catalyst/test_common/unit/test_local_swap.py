@@ -143,7 +143,7 @@ def test_local_swap_event(pool, pool_tokens, berg, deployer):
 
     swap_event = tx.events['LocalSwap']
 
-    assert swap_event['who']       == berg
+    assert swap_event['toAccount'] == berg
     assert swap_event['fromAsset'] == source_token
     assert swap_event['toAsset']   == target_token
     assert swap_event['input']     == swap_amount

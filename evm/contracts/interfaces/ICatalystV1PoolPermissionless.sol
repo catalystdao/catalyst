@@ -124,7 +124,7 @@ interface ICatalystV1PoolPermissionless {
      * @param channelId The incoming connection identifier.
      * @param sourcePool The source pool.
      * @param toAssetIndex Index of the asset to be purchased with _U units.
-     * @param who The recipient of toAsset
+     * @param toAccount The recipient of toAsset
      * @param U Number of units to convert into toAsset.
      * @param minOut Minimum number of tokens bought. Reverts if less.
      */
@@ -132,7 +132,7 @@ interface ICatalystV1PoolPermissionless {
         bytes32 channelId,
         bytes32 sourcePool,
         uint256 toAssetIndex,
-        address who,
+        address toAccount,
         uint256 U,
         uint256 minOut,
         bytes32 swapHash
@@ -142,7 +142,7 @@ interface ICatalystV1PoolPermissionless {
         bytes32 channelId,
         bytes32 sourcePool,
         uint256 toAssetIndex,
-        address who,
+        address toAccount,
         uint256 U,
         uint256 minOut,
         bytes32 swapHash,
@@ -158,13 +158,13 @@ interface ICatalystV1PoolPermissionless {
      * Vyper: convert(_poolAddress, bytes32)
      * Solidity: abi.encode(_poolAddress)
      * Brownie: brownie.convert.to_bytes(_poolAddress, type_str="bytes32")
-     * @param who The recipient of the transaction on _chain. Encoded in bytes32. For EVM chains it can be found similarly to _targetPool.
+     * @param toAccount The recipient of the transaction on _chain. Encoded in bytes32. For EVM chains it can be found similarly to _targetPool.
      * @param baseAmount The number of pool tokens to liquidity Swap
      */
     function sendLiquidity(
         bytes32 channelId,
         bytes32 targetPool,
-        bytes32 who,
+        bytes32 toAccount,
         uint256 baseAmount,
         uint256 minOut,
         address fallbackUser
@@ -177,13 +177,13 @@ interface ICatalystV1PoolPermissionless {
      * to check the validity of units.
      * @param channelId The incoming connection identifier.
      * @param sourcePool The source pool
-     * @param who The recipient of pool tokens
+     * @param toAccount The recipient of pool tokens
      * @param U Number of units to convert into pool tokens.
      */
     function receiveLiquidity(
         bytes32 channelId,
         bytes32 sourcePool,
-        address who,
+        address toAccount,
         uint256 U,
         uint256 minOut,
         bytes32 swapHash

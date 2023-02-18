@@ -753,7 +753,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
      * @param channelId The incoming connection identifier.
      * @param sourcePool The source pool.
      * @param toAssetIndex Index of the asset to be purchased with Units.
-     * @param who The recipient.
+     * @param toAccount The recipient.
      * @param U Number of units to convert into toAsset.
      * @param minOut Minimum number of tokens bought. Reverts if less.
      * @param swapHash Used to connect 2 swaps within a group. 
@@ -762,7 +762,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         bytes32 channelId,
         bytes32 sourcePool,
         uint256 toAssetIndex,
-        address who,
+        address toAccount,
         uint256 U,
         uint256 minOut,
         bytes32 swapHash
@@ -789,9 +789,9 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         if (minOut > purchasedTokens) revert ReturnInsufficient(purchasedTokens, minOut);
 
         // Send the assets to the user.
-        ERC20(toAsset).safeTransfer(who, purchasedTokens);
+        ERC20(toAsset).safeTransfer(toAccount, purchasedTokens);
 
-        emit ReceiveSwap(sourcePool, who, toAsset, U, purchasedTokens, swapHash);
+        emit ReceiveSwap(sourcePool, toAccount, toAsset, U, purchasedTokens, swapHash);
 
         return purchasedTokens;
     }
@@ -800,7 +800,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         bytes32 channelId,
         bytes32 sourcePool,
         uint256 toAssetIndex,
-        address who,
+        address toAccount,
         uint256 U,
         uint256 minOut,
         bytes32 swapHash,
@@ -811,7 +811,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
             channelId,
             sourcePool,
             toAssetIndex,
-            who,
+            toAccount,
             U,
             minOut,
             swapHash
@@ -937,7 +937,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
      *      pt = PT · (1 - exp(-U/sum W_i))/exp(-U/sum W_i)
      * @param channelId The incoming connection identifier.
      * @param sourcePool The source pool
-     * @param who The recipient of the pool tokens
+     * @param toAccount The recipient of the pool tokens
      * @param U Number of units to convert into pool tokens.
      * @param minOut Minimum number of tokens to mint. Otherwise: reject.
      * @param swapHash Used to connect 2 swaps within a group. 
@@ -946,7 +946,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
     function receiveLiquidity(
         bytes32 channelId,
         bytes32 sourcePool,
-        address who,
+        address toAccount,
         uint256 U,
         uint256 minOut,
         bytes32 swapHash
@@ -973,9 +973,9 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         if (minOut > poolTokens) revert ReturnInsufficient(poolTokens, minOut);
 
         // Mint pool tokens for the user.
-        _mint(who, poolTokens);
+        _mint(toAccount, poolTokens);
 
-        emit ReceiveLiquidity(sourcePool, who, U, poolTokens, swapHash);
+        emit ReceiveLiquidity(sourcePool, toAccount, U, poolTokens, swapHash);
 
         return poolTokens;
     }

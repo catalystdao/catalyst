@@ -84,7 +84,7 @@ def test_ibc_swap(
     diviation = 0.02 / 100
 
     # sendSwap
-    # (_chain : uint256, _targetPool : bytes32, _fromAsset : address, _toAsset : uint256, _who : bytes32, _amount : uint256) -> uint256
+    # (_chain : uint256, _targetPool : bytes32, _fromAsset : address, _toAsset : uint256, _toAccount : bytes32, _amount : uint256) -> uint256
     tokenArr = [
         swappool._tokenIndexing(0),
         swappool._tokenIndexing(1),

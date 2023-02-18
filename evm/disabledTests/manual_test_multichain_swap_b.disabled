@@ -147,7 +147,7 @@ def test_multipool_crosschain_swap(
     )
 
     # sendSwap
-    # (_chain : uint256, _targetPool : bytes32, _fromAsset : address, _toAsset : uint256, _who : bytes32, _amount : uint256) -> uint256
+    # (_chain : uint256, _targetPool : bytes32, _fromAsset : address, _toAsset : uint256, _toAccount : bytes32, _amount : uint256) -> uint256
     tokenArr = [
         swappoolB._tokenIndexing(0),
         swappoolB._tokenIndexing(1),
