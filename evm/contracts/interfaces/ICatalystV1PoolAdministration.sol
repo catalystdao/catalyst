@@ -18,12 +18,12 @@ interface ICatalystV1PoolAdministration {
      *     Brownie: brownie.convert.to_bytes(_poolAddress, type_str="bytes32")
      * setupMaster == ZERO_ADDRESS
      * @param channelId The _channelId of the target pool.
-     * @param targetPool The bytes32 representation of the target pool
+     * @param toPool The bytes32 representation of the target pool
      * @param state Boolean indicating if the connection should be open or closed.
      */
     function setConnection(
         bytes32 channelId,
-        bytes32 targetPool,
+        bytes32 toPool,
         bool state
     ) external;
 

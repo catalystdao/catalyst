@@ -24,7 +24,7 @@ interface ICatalystV1PoolEvents {
     /**
      * @notice Describes the creation of an external swap: Cross-chain swap.
      * @dev If _fromAsset is the proxy contract or _toAsset is 2**8-1, the swap is a liquidity swap.
-     * @param targetPool The target pool.
+     * @param toPool The target pool.
      * @param targetUser The recipient of the trade. The person who bought the trade is not present.
      * @param fromAsset The asset which was sold in exchange for _toAsset.
      * @param toAssetIndex The token index of the asset to purchase on _toChain.
@@ -33,7 +33,7 @@ interface ICatalystV1PoolEvents {
      * @param minOut The pool fee. Taken from fromAmount. Numerical losses/fees are for obvious reasons not included.
      */
     event SendSwap(
-        bytes32 indexed targetPool,
+        bytes32 indexed toPool,
         bytes32 indexed targetUser,
         address fromAsset,
         uint8 toAssetIndex,
@@ -63,13 +63,13 @@ interface ICatalystV1PoolEvents {
 
     /**
      * @notice Describes the creation of a liquidity swap
-     * @param targetPool The target pool.
+     * @param toPool The target pool.
      * @param targetUser The recipient of the liquidity. The person who bought the trade is not present.
      * @param fromAmount The number of _fromAsset sold
      * @param units The calculated number of liquidity units bought.
      */
     event SendLiquidity(
-        bytes32 indexed targetPool,
+        bytes32 indexed toPool,
         bytes32 indexed targetUser,
         uint256 fromAmount,
         uint256 units,
@@ -165,12 +165,12 @@ interface ICatalystV1PoolEvents {
     /**
      * @notice A connection has been modified
      * @param channelId Target chain identifier.
-     * @param targetPool Bytes32 representation of the target pool.
+     * @param toPool Bytes32 representation of the target pool.
      * @param newState Boolean indicating if the connection should be open or closed.
      */
     event SetConnection(
         bytes32 channelId,
-        bytes32 targetPool,
+        bytes32 toPool,
         bool newState
     );
 }

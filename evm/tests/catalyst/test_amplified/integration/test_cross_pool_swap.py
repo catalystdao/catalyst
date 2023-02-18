@@ -182,7 +182,7 @@ def test_send_swap_event(
 
     send_swap_event = tx.events['SendSwap']
 
-    assert send_swap_event['targetPool']   == pool_2
+    assert send_swap_event['toPool']       == pool_2
     assert send_swap_event['targetUser']   == elwood
     assert send_swap_event['fromAsset']    == source_token
     assert send_swap_event['toAssetIndex'] == 1

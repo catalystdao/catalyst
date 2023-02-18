@@ -248,25 +248,25 @@ abstract contract CatalystSwapPoolCommon is
     }
 
     /**
-     * @notice Creates a connection to targetPool on the channel_channelId.
+     * @notice Creates a connection to toPool on the channel_channelId.
      * @dev Encoding addresses in bytes32 for EVM can be done be computed with:
      * Vyper: convert(<poolAddress>, bytes32)
      * Solidity: abi.encode(<poolAddress>)
      * Brownie: brownie.convert.to_bytes(<poolAddress>, type_str="bytes32")
      * @param channelId Target chain identifier.
-     * @param targetPool Bytes32 representation of the target pool.
+     * @param toPool Bytes32 representation of the target pool.
      * @param state Boolean indicating if the connection should be open or closed.
      */
     function setConnection(
         bytes32 channelId,
-        bytes32 targetPool,
+        bytes32 toPool,
         bool state
     ) external override {
         require((msg.sender == _setupMaster) || (msg.sender == factoryOwner())); // dev: No auth
 
-        _poolConnection[channelId][targetPool] = state;
+        _poolConnection[channelId][toPool] = state;
 
-        emit SetConnection(channelId, targetPool, state);
+        emit SetConnection(channelId, toPool, state);
     }
 
     /**

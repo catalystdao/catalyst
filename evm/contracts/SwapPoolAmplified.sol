@@ -906,7 +906,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
      * Solidity: abi.encode(<poolAddress>)
      * Brownie: brownie.convert.to_bytes(<poolAddress>, type_str="bytes32")
      * @param channelId The target chain identifier.
-     * @param targetPool The target pool on the target chain encoded in bytes32.
+     * @param toPool The target pool on the target chain encoded in bytes32.
      * @param targetUser The recipient of the transaction on the target chain. Encoded in bytes32.
      * @param fromAsset The asset the user wants to sell.
      * @param toAssetIndex The index of the asset the user wants to buy in the target pool.
@@ -919,7 +919,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
      */
     function sendSwap(
         bytes32 channelId,
-        bytes32 targetPool,
+        bytes32 toPool,
         bytes32 targetUser,
         address fromAsset,
         uint8 toAssetIndex,
@@ -930,7 +930,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
     ) public returns (uint256) {
 
         // Only allow connected pools
-        if (!_poolConnection[channelId][targetPool]) revert PoolNotConnected(channelId, targetPool);
+        if (!_poolConnection[channelId][toPool]) revert PoolNotConnected(channelId, toPool);
 
         require(fallbackUser != address(0));
         _adjustAmplification();
@@ -947,7 +947,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         _unitTracker += int256(U);
 
         // Only need to hash info that is required by the escrow (+ some extra for randomisation)
-        // No need to hash context (as token/liquidity escrow data is different), fromPool, targetPool, targetAssetIndex, minOut, CallData
+        // No need to hash context (as token/liquidity escrow data is different), fromPool, toPool, targetAssetIndex, minOut, CallData
         bytes32 assetSwapHash = computeAssetSwapHash(
             targetUser,     // Ensures no collisions between different users
             U,              // Used to randomise the hash
@@ -964,10 +964,10 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
             blockNumber: uint32(block.number % 2**32)
         });
 
-        // Send the purchased units to targetPool on the target chain.
+        // Send the purchased units to toPool on the target chain.
         CatalystIBCInterface(_chainInterface).sendCrossChainAsset(
             channelId,
-            targetPool,
+            toPool,
             targetUser,
             toAssetIndex,
             U,
@@ -992,7 +992,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         // a router abusing timeout to circumvent the security limit.
 
         emit SendSwap(
-            targetPool,
+            toPool,
             targetUser,
             fromAsset,
             toAssetIndex,
@@ -1008,7 +1008,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
     /** @notice Copy of sendSwap with no calldata_ */
     function sendSwap(
         bytes32 channelId,
-        bytes32 targetPool,
+        bytes32 toPool,
         bytes32 targetUser,
         address fromAsset,
         uint8 toAssetIndex,
@@ -1020,7 +1020,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         return
             sendSwap(
                 channelId,
-                targetPool,
+                toPool,
                 targetUser,
                 fromAsset,
                 toAssetIndex,
@@ -1133,14 +1133,14 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
      * directly into units through the following equation:
      *      U = N · wa^(1-k) · (((PT + pt)/PT)^(1-k) - 1)
      * @param channelId The target chain identifier.
-     * @param targetPool The target pool on the target chain encoded in bytes32.
+     * @param toPool The target pool on the target chain encoded in bytes32.
      * @param targetUser The recipient of the transaction on the target chain. Encoded in bytes32.
      * @param poolTokens The number of pool tokens to exchange
      * @param minOut The minimum number of pool tokens to mint on target pool.
      */
     function sendLiquidity(
         bytes32 channelId,
-        bytes32 targetPool,
+        bytes32 toPool,
         bytes32 targetUser,
         uint256 poolTokens,
         uint256 minOut,
@@ -1148,7 +1148,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
     ) external returns (uint256) {
 
         // Only allow connected pools
-        if (!_poolConnection[channelId][targetPool]) revert PoolNotConnected(channelId, targetPool);
+        if (!_poolConnection[channelId][toPool]) revert PoolNotConnected(channelId, toPool);
 
         // Address(0) is not a valid fallback user. (As checking for escrow overlap
         // checks if the fallbackUser != address(0))
@@ -1207,7 +1207,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         }
 
         // Only need to hash info that is required by the escrow (+ some extra for randomisation)
-        // No need to hash context (as token/liquidity escrow data is different), fromPool, targetPool, targetAssetIndex, minOut, CallData
+        // No need to hash context (as token/liquidity escrow data is different), fromPool, toPool, targetAssetIndex, minOut, CallData
         bytes32 liquiditySwapHash = computeLiquiditySwapHash(
             targetUser,     // Ensures no collisions between different users
             U,              // Used to randomise the hash
@@ -1227,7 +1227,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         // Transfer the units to the target pools.
         CatalystIBCInterface(_chainInterface).sendCrossChainLiquidity(
             channelId,
-            targetPool,
+            toPool,
             targetUser,
             U,
             minOut,
@@ -1243,7 +1243,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         // a router abusing timeout to circumvent the security limit at a low cost.
 
         emit SendLiquidity(
-            targetPool,
+            toPool,
             targetUser,
             poolTokens,
             U,

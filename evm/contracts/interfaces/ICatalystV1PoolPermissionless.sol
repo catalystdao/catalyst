@@ -83,7 +83,7 @@ interface ICatalystV1PoolPermissionless {
      * Solidity: abi.encode(<poolAddress>)
      * Brownie: brownie.convert.to_bytes(<poolAddress>, type_str="bytes32")
      * @param channelId The target chain identifier.
-     * @param targetPool The target pool on the target chain encoded in bytes32.
+     * @param toPool The target pool on the target chain encoded in bytes32.
      * @param targetUser The recipient of the transaction on the target chain. Encoded in bytes32.
      * @param fromAsset The asset the user wants to sell.
      * @param toAssetIndex The index of the asset the user wants to buy in the target pool.
@@ -93,7 +93,7 @@ interface ICatalystV1PoolPermissionless {
      */
     function sendSwap(
         bytes32 channelId,
-        bytes32 targetPool,
+        bytes32 toPool,
         bytes32 targetUser,
         address fromAsset,
         uint8 toAssetIndex,
@@ -107,7 +107,7 @@ interface ICatalystV1PoolPermissionless {
     /// Should be encoded abi.encode(<address>,<data>)
     function sendSwap(
         bytes32 channelId,
-        bytes32 targetPool,
+        bytes32 toPool,
         bytes32 targetUser,
         address fromAsset,
         uint8 toAssetIndex,
@@ -154,7 +154,7 @@ interface ICatalystV1PoolPermissionless {
      * @notice Initiate a cross-chain liquidity swap by lowering liquidity
      * and transfer the liquidity units to another pool.
      * @param channelId The target chain identifier.
-     * @param targetPool The target pool on the target chain encoded in bytes32. For EVM chains this can be computed as:
+     * @param toPool The target pool on the target chain encoded in bytes32. For EVM chains this can be computed as:
      * Vyper: convert(_poolAddress, bytes32)
      * Solidity: abi.encode(_poolAddress)
      * Brownie: brownie.convert.to_bytes(_poolAddress, type_str="bytes32")
@@ -163,7 +163,7 @@ interface ICatalystV1PoolPermissionless {
      */
     function sendLiquidity(
         bytes32 channelId,
-        bytes32 targetPool,
+        bytes32 toPool,
         bytes32 toAccount,
         uint256 baseAmount,
         uint256 minOut,

@@ -88,9 +88,9 @@ def test_create_connection_event(
 
     event = tx.events["SetConnection"]
 
-    assert event["channelId"]  == convert.datatypes.HexString(channel_id, type_str="bytes32")
-    assert event["targetPool"] == dummy_pool_address
-    assert event["newState"]   == connection_state
+    assert event["channelId"] == convert.datatypes.HexString(channel_id, type_str="bytes32")
+    assert event["toPool"]    == dummy_pool_address
+    assert event["newState"]  == connection_state
 
 
 
