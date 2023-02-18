@@ -232,7 +232,7 @@ def test_ibc_timeout_and_ack(channel_id, pool, pool_tokens, ibc_emulator, berg, 
 
 def test_ibc_ack_event(channel_id, pool, pool_tokens, ibc_emulator, berg, deployer):
     """
-        Test the EscrowAck event gets fired.
+        Test the SendAssetAck event gets fired.
     """
 
     swap_amount = 10**8
@@ -260,7 +260,7 @@ def test_ibc_ack_event(channel_id, pool, pool_tokens, ibc_emulator, berg, deploy
         {"from": deployer},
     )
 
-    escrow_ack_event = txe.events['EscrowAck']
+    ack_event = txe.events['SendAssetAck']
 
 
     expected_message_hash = compute_asset_swap_hash(
@@ -270,13 +270,12 @@ def test_ibc_ack_event(channel_id, pool, pool_tokens, ibc_emulator, berg, deploy
         source_token.address,
         tx.block_number
     )
-    assert escrow_ack_event["swapHash"]   == expected_message_hash
-    assert escrow_ack_event["liquiditySwap"] == False
+    assert ack_event["swapHash"] == expected_message_hash
 
 
 def test_ibc_timeout_event(channel_id, pool, pool_tokens, ibc_emulator, berg, deployer):
     """
-        Test the EscrowTimeout event gets fired.
+        Test the SendAssetTimeout event gets fired.
     """
 
     swap_amount = 10**8
@@ -304,7 +303,7 @@ def test_ibc_timeout_event(channel_id, pool, pool_tokens, ibc_emulator, berg, de
         {"from": deployer},
     )
 
-    escrow_timeout_event = txe.events['EscrowTimeout']
+    timeout_event = txe.events['SendAssetTimeout']
 
     expected_message_hash = compute_asset_swap_hash(
         berg.address,
@@ -313,5 +312,4 @@ def test_ibc_timeout_event(channel_id, pool, pool_tokens, ibc_emulator, berg, de
         source_token.address,
         tx.block_number
     )
-    assert escrow_timeout_event["swapHash"]   == expected_message_hash
-    assert escrow_timeout_event["liquiditySwap"] == False
+    assert timeout_event["swapHash"] == expected_message_hash

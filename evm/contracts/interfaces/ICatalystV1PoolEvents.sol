@@ -109,11 +109,17 @@ interface ICatalystV1PoolEvents {
      */
     event Withdraw(address indexed toAccount, uint256 burn, uint256[] assets);
 
-    /** @notice Called upon successful swap. */
-    event EscrowAck(bytes32 swapHash, bool liquiditySwap);
+    /** @notice Called upon successful asset swap. */
+    event SendAssetAck(bytes32 swapHash);
 
-    /** @notice Called upon failed swap. */
-    event EscrowTimeout(bytes32 swapHash, bool liquiditySwap);
+    /** @notice Called upon failed asset swap. */
+    event SendAssetTimeout(bytes32 swapHash);
+
+    /** @notice Called upon successful liquidity swap. */
+    event SendLiquidityAck(bytes32 swapHash);
+
+    /** @notice Called upon failed liquidity swap. */
+    event SendLiquidityTimeout(bytes32 swapHash);
 
     /** @notice Pool setup has been finalised. */
     event FinishSetup();
