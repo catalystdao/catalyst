@@ -22,8 +22,8 @@ def main():
             tx_hash = brownie.chain[-1].transactions[0]
             tx = brownie.chain.get_transaction(tx_hash)
             try:
-                if tx.events["ReceiveSwap"]["_output"] > 0:
-                    print(f'\n\n{tx.events["ReceiveSwap"]["_output"]/10**18:.6f} Tokens were swapped! 🎉')
+                if tx.events["ReceiveAsset"]["_output"] > 0:
+                    print(f'\n\n{tx.events["ReceiveAsset"]["_output"]/10**18:.6f} Tokens were swapped! 🎉')
                     passed = True
                     break
             except:

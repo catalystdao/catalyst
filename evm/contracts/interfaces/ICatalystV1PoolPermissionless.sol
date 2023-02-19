@@ -128,7 +128,7 @@ interface ICatalystV1PoolPermissionless {
      * @param U Number of units to convert into toAsset.
      * @param minOut Minimum number of tokens bought. Reverts if less.
      */
-    function receiveSwap(
+    function receiveAsset(
         bytes32 channelId,
         bytes32 fromPool,
         uint256 toAssetIndex,
@@ -138,7 +138,7 @@ interface ICatalystV1PoolPermissionless {
         bytes32 swapHash
     ) external returns (uint256);
 
-    function receiveSwap(
+    function receiveAsset(
         bytes32 channelId,
         bytes32 fromPool,
         uint256 toAssetIndex,

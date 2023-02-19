@@ -56,14 +56,14 @@ def test_cross_pool_swap(
     assert source_token.balanceOf(berg) == 0
     
     # The swap may revert because of the security limit     #TODO mark these cases as 'skip'?
-    if pool_2.getUnitCapacity() < pool_2.calcReceiveSwap(pool_2._tokenIndexing(0), tx.events["SendAsset"]["units"]) * pool_2._weight(pool_2._tokenIndexing(0)):
+    if pool_2.getUnitCapacity() < pool_2.calcReceiveAsset(pool_2._tokenIndexing(0), tx.events["SendAsset"]["units"]) * pool_2._weight(pool_2._tokenIndexing(0)):
         with reverts(revert_pattern=re.compile("typed error: 0x249c4e65.*")):
             txe = ibc_emulator.execute(tx.events["IncomingMetadata"]["metadata"][0], tx.events["IncomingPacket"]["packet"], {"from": berg})
         return
     else:
         txe = ibc_emulator.execute(tx.events["IncomingMetadata"]["metadata"][0], tx.events["IncomingPacket"]["packet"], {"from": berg})
     
-    purchased_tokens = txe.events["ReceiveSwap"]["toAmount"]
+    purchased_tokens = txe.events["ReceiveAsset"]["toAmount"]
     
     assert purchased_tokens == target_token.balanceOf(berg)
 
@@ -238,7 +238,7 @@ def test_receive_swap_event(
 
     txe = ibc_emulator.execute(tx.events["IncomingMetadata"]["metadata"][0], tx.events["IncomingPacket"]["packet"], {"from": berg})
 
-    receive_swap_event = txe.events['ReceiveSwap']
+    receive_swap_event = txe.events['ReceiveAsset']
 
     assert receive_swap_event['fromPool']    == pool_1.address
     assert receive_swap_event['toAccount']   == elwood

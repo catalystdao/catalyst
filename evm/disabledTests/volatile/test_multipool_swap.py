@@ -115,7 +115,7 @@ def test_multipool_swap(
         tx.events["IncomingPacket"]["packet"],
         {"from": base_account},
     )
-    # receiveSwap follows
+    # receiveAsset follows
     assert token2.balanceOf(base_account) > 0
     out = token2.balanceOf(base_account)
 

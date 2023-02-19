@@ -52,7 +52,7 @@ interface ICatalystV1PoolEvents {
      * @param units The number of units sent from the other chain.
      * @param toAmount The number of tokens provided to toAccount
      */
-    event ReceiveSwap(
+    event ReceiveAsset(
         bytes32 fromPool,
         address indexed toAccount,
         address toAsset,

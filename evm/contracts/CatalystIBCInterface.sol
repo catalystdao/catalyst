@@ -248,7 +248,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
 
             // CCI sets dataLength > 0 if calldata is passed.
             if (dataLength != 0) {
-                ICatalystV1Pool(toPool).receiveSwap(
+                ICatalystV1Pool(toPool).receiveAsset(
                     bytes32(packet.src.channelId),                                       // connectionId
                     fromPool,                                                            // fromPool
                     uint8(data[CTX0_TO_ASSET_INDEX_POS]),                                // toAssetIndex
@@ -261,7 +261,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
                 );
             }
             else {
-                ICatalystV1Pool(toPool).receiveSwap(
+                ICatalystV1Pool(toPool).receiveAsset(
                     bytes32(packet.src.channelId),                                       // connectionId
                     fromPool,                                                            // fromPool
                     uint8(data[CTX0_TO_ASSET_INDEX_POS]),                                // toAssetIndex

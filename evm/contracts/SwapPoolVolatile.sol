@@ -345,13 +345,13 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
     }
 
     /**
-     * @notice Computes the output of ReceiveSwap.
+     * @notice Computes the output of ReceiveAsset.
      * @dev Reverts if to is not a token in the pool
      * @param toAsset The address of the token to buy.
      * @param U The number of units used to buy to.
      * @return uint256 Number of purchased tokens.
      */
-    function calcReceiveSwap(
+    function calcReceiveAsset(
         address toAsset,
         uint256 U
     ) public view returns (uint256) {
@@ -758,7 +758,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
      * @param minOut Minimum number of tokens bought. Reverts if less.
      * @param swapHash Used to connect 2 swaps within a group. 
      */
-    function receiveSwap(
+    function receiveAsset(
         bytes32 channelId,
         bytes32 fromPool,
         uint256 toAssetIndex,
@@ -783,7 +783,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
 
         // Calculate the swap return value.
         // Fee is always taken on the sending token.
-        uint256 purchasedTokens = calcReceiveSwap(toAsset, U);
+        uint256 purchasedTokens = calcReceiveAsset(toAsset, U);
 
         // Ensure the user is satisfied by the number of tokens.
         if (minOut > purchasedTokens) revert ReturnInsufficient(purchasedTokens, minOut);
@@ -791,12 +791,12 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         // Send the assets to the user.
         ERC20(toAsset).safeTransfer(toAccount, purchasedTokens);
 
-        emit ReceiveSwap(fromPool, toAccount, toAsset, U, purchasedTokens, swapHash);
+        emit ReceiveAsset(fromPool, toAccount, toAsset, U, purchasedTokens, swapHash);
 
         return purchasedTokens;
     }
 
-    function receiveSwap(
+    function receiveAsset(
         bytes32 channelId,
         bytes32 fromPool,
         uint256 toAssetIndex,
@@ -807,7 +807,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         address dataTarget,
         bytes calldata data
     ) external returns (uint256) {
-        uint256 purchasedTokens = receiveSwap(
+        uint256 purchasedTokens = receiveAsset(
             channelId,
             fromPool,
             toAssetIndex,

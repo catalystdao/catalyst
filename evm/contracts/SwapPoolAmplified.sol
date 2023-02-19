@@ -407,13 +407,13 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
     }
 
     /**
-     * @notice Computes the output of ReceiveSwap.
+     * @notice Computes the output of ReceiveAsset.
      * @dev Reverts if to is not a token in the pool
      * @param toAsset The address of the token to buy.
      * @param U The number of units used to buy to.
      * @return uint256 Number of purchased tokens.
      */
-    function calcReceiveSwap(
+    function calcReceiveAsset(
         address toAsset,
         uint256 U
     ) public view returns (uint256) {
@@ -817,7 +817,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
             }
             U -= U_i;  // Subtract the number of units used. This will underflow for malicious withdrawRatios > 1.
 
-            // uint256 tokenAmount = calcReceiveSwap(_tokenIndexing[it], U_i);
+            // uint256 tokenAmount = calcReceiveAsset(_tokenIndexing[it], U_i);
             
             // W_B · B^(1-k) is required twice and requires 1 power. We already computed it:
             uint256 W_BxBtoOMA = uint256(ampWeightAssetBalances[it]);   // Always casts a positive value
@@ -1042,7 +1042,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
      * @param minOut Minimum number of tokens bought. Reverts if less.
      * @param swapHash Used to connect 2 swaps within a group. 
      */
-    function receiveSwap(
+    function receiveAsset(
         bytes32 channelId,
         bytes32 fromPool,
         uint256 toAssetIndex,
@@ -1065,7 +1065,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
 
         // Calculate the swap return value.
         // Fee is always taken on the sending token.
-        uint256 purchasedTokens = calcReceiveSwap(toAsset, U);
+        uint256 purchasedTokens = calcReceiveAsset(toAsset, U);
 
         // Check if the swap is according to the swap limits
         uint256 deltaSecurityLimit = purchasedTokens * _weight[toAsset];
@@ -1081,12 +1081,12 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         // Send the assets to the user.
         ERC20(toAsset).safeTransfer(toAccount, purchasedTokens);
 
-        emit ReceiveSwap(fromPool, toAccount, toAsset, U, purchasedTokens, swapHash);
+        emit ReceiveAsset(fromPool, toAccount, toAsset, U, purchasedTokens, swapHash);
 
         return purchasedTokens;
     }
 
-    function receiveSwap(
+    function receiveAsset(
         bytes32 channelId,
         bytes32 fromPool,
         uint256 toAssetIndex,
@@ -1097,7 +1097,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         address dataTarget,
         bytes calldata data
     ) external returns (uint256) {
-        uint256 purchasedTokens = receiveSwap(
+        uint256 purchasedTokens = receiveAsset(
             channelId,
             fromPool,
             toAssetIndex,

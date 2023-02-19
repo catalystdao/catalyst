@@ -171,7 +171,7 @@ def test_ibc_timeout_and_ack(channel_id, pool, pool_tokens, ibc_emulator, berg, 
     both1_12 = pool.calcLocalSwap(source_token, target_token, 10**18)
     both1_21 = pool.calcLocalSwap(target_token, source_token, 10**18)
     to1 = pool.calcSendAsset(source_token, 10**18)
-    from1 = pool.calcReceiveSwap(source_token, U)
+    from1 = pool.calcReceiveAsset(source_token, U)
 
     tx1 = pool.sendAsset(
         channel_id,
@@ -188,7 +188,7 @@ def test_ibc_timeout_and_ack(channel_id, pool, pool_tokens, ibc_emulator, berg, 
     both2_12 = pool.calcLocalSwap(source_token, target_token, 10**18)
     both2_21 = pool.calcLocalSwap(target_token, source_token, 10**18)
     to2 = pool.calcSendAsset(source_token, 10**18)
-    from2 = pool.calcReceiveSwap(source_token, U)
+    from2 = pool.calcReceiveAsset(source_token, U)
 
     assert both1_12 > both2_12
     assert both1_21 == both2_21
@@ -204,7 +204,7 @@ def test_ibc_timeout_and_ack(channel_id, pool, pool_tokens, ibc_emulator, berg, 
     both3_12 = pool.calcLocalSwap(source_token, target_token, 10**18)
     both3_21 = pool.calcLocalSwap(target_token, source_token, 10**18)
     to3 = pool.calcSendAsset(source_token, 10**18)
-    from3 = pool.calcReceiveSwap(source_token, U)
+    from3 = pool.calcReceiveAsset(source_token, U)
 
     assert both1_12 == both3_12
     assert both1_21 == both3_21
@@ -222,7 +222,7 @@ def test_ibc_timeout_and_ack(channel_id, pool, pool_tokens, ibc_emulator, berg, 
     both3_12 = pool.calcLocalSwap(source_token, target_token, 10**18)
     both3_21 = pool.calcLocalSwap(target_token, source_token, 10**18)
     to3 = pool.calcSendAsset(source_token, 10**18)
-    from3 = pool.calcReceiveSwap(source_token, U)
+    from3 = pool.calcReceiveAsset(source_token, U)
 
     assert both1_12 > both3_12
     assert both1_21 < both3_21

@@ -501,7 +501,7 @@ def test_swap_too_large(
         ibcemulator         = ibcemulator,
         token_gov           = gov,
         ibc_gov             = gov,
-        allow_target_revert = True  # Expect revert of the receiveSwap tx
+        allow_target_revert = True  # Expect revert of the receiveAsset tx
     )
 
     # Make sure the operation reverted
@@ -524,9 +524,9 @@ def test_direct_receive_swap_invocation(
 ):
     sp = swappool1_info.swappool
 
-    # Try to directly invoke receiveSwap
+    # Try to directly invoke receiveAsset
     with brownie.reverts(): # TODO dev msg
-        sp.receiveSwap(
+        sp.receiveAsset(
             0,
             hacker,
             2**64,

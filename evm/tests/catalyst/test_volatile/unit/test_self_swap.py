@@ -47,7 +47,7 @@ def test_self_swap(
     else:
         txe = ibc_emulator.execute(tx.events["IncomingMetadata"]["metadata"][0], tx.events["IncomingPacket"]["packet"], {"from": berg})
     
-    purchased_tokens = txe.events["ReceiveSwap"]["toAmount"]
+    purchased_tokens = txe.events["ReceiveAsset"]["toAmount"]
     
     assert token.balanceOf(berg) == purchased_tokens
     

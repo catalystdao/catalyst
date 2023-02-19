@@ -39,14 +39,14 @@ def test_self_swap(
     assert token.balanceOf(berg) == 0
     
     # The security limit works a slightly different for amplified pools.
-    if pool.getUnitCapacity() < pool.calcReceiveSwap(pool._tokenIndexing(0), tx.events["SendAsset"]["units"]) * pool._weight(pool._tokenIndexing(0)):
+    if pool.getUnitCapacity() < pool.calcReceiveAsset(pool._tokenIndexing(0), tx.events["SendAsset"]["units"]) * pool._weight(pool._tokenIndexing(0)):
         with reverts(revert_pattern=re.compile("typed error: 0x249c4e65.*")):
             txe = ibc_emulator.execute(tx.events["IncomingMetadata"]["metadata"][0], tx.events["IncomingPacket"]["packet"], {"from": berg})
         return
     else:
         txe = ibc_emulator.execute(tx.events["IncomingMetadata"]["metadata"][0], tx.events["IncomingPacket"]["packet"], {"from": berg})
     
-    purchased_tokens = txe.events["ReceiveSwap"]["toAmount"]
+    purchased_tokens = txe.events["ReceiveAsset"]["toAmount"]
     
     assert token.balanceOf(berg) == purchased_tokens
     

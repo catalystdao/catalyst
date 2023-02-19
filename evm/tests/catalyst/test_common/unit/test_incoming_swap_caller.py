@@ -6,7 +6,7 @@ pytestmark = [
     pytest.mark.no_pool_param
 ]
 
-def test_receiveSwap_must_be_called_by_cci(
+def test_receiveAsset_must_be_called_by_cci(
     channel_id,
     pool,
     berg,
@@ -14,7 +14,7 @@ def test_receiveSwap_must_be_called_by_cci(
     cci = pool._chainInterface()
     
     with reverts():
-        pool.receiveSwap(
+        pool.receiveAsset(
         channel_id,
             pool.address,  # Use self as source pool
             0,
@@ -25,7 +25,7 @@ def test_receiveSwap_must_be_called_by_cci(
             {'from': berg}
         )
     
-    pool.receiveSwap(
+    pool.receiveAsset(
         channel_id,
         pool.address,  # Use self as source pool
         0,
