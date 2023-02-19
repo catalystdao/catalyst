@@ -41,7 +41,7 @@ def test_local_swap(accounts, token1, token2, gov, default_amp_swappool, swapVal
     )
 
     diviation = 0.02 / 100
-    tx = swappool.localswap(token1, token2, swapValue, 0, {"from": base_account})
+    tx = swappool.localSwap(token1, token2, swapValue, 0, {"from": base_account})
     out = token2.balanceOf(base_account)
 
     assert token1.balanceOf(base_account) == 0
@@ -56,7 +56,7 @@ def test_local_swap(accounts, token1, token2, gov, default_amp_swappool, swapVal
 
     # swap the other way
     token2.approve(swappool, out, {"from": base_account})
-    tx2 = swappool.localswap(token2, token1, out, 0, {"from": base_account})
+    tx2 = swappool.localSwap(token2, token1, out, 0, {"from": base_account})
     assert token2.balanceOf(base_account) == 0
     out2 = token1.balanceOf(base_account)
 
@@ -93,7 +93,7 @@ def test_local_swapZERO(accounts, token1, token2, gov, default_amp_swappool, swa
     diviation = 0.02 / 100
     tx = False
     try:
-        tx = swappool.localswap(token1, token2, swapValue, 0, {"from": base_account})
+        tx = swappool.localSwap(token1, token2, swapValue, 0, {"from": base_account})
     except brownie.exceptions.VirtualMachineError:
         print("Reverted, but that is okay.")
         return True
@@ -116,7 +116,7 @@ def test_local_swapZERO(accounts, token1, token2, gov, default_amp_swappool, swa
         # swap the other way
         token2.approve(swappool, out, {"from": base_account})
         try:
-            tx2 = swappool.localswap(token2, token1, out, 0, {"from": base_account})
+            tx2 = swappool.localSwap(token2, token1, out, 0, {"from": base_account})
         except brownie.exceptions.VirtualMachineError:
             print("Reverted, but that is /mostly/ okay.")
 

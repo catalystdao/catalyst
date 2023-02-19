@@ -49,7 +49,7 @@ def test_increase_amp(pool, pool_tokens, deployer):
     targetAmp = 8 * 10**17
     assert targetAmp > currAmp
     pool.modifyAmplification(startTime + TWOWEEK, targetAmp, {"from": deployer})
-    pool.localswap(pool_tokens[0], pool_tokens[0], 0, 0, {"from": deployer})
+    pool.localSwap(pool_tokens[0], pool_tokens[0], 0, 0, {"from": deployer})
     duration = pool._adjustmentTarget() - pool._lastModificationTime()
     
     # Weights should not change immediately.
@@ -60,7 +60,7 @@ def test_increase_amp(pool, pool_tokens, deployer):
 
     # Sadly the weights are not updated automatically, we can call swap to update though.
     lastModification = pool._lastModificationTime()
-    tx = pool.localswap(pool_tokens[0], pool_tokens[0], 0, 0, {"from": deployer})
+    tx = pool.localSwap(pool_tokens[0], pool_tokens[0], 0, 0, {"from": deployer})
     passedTime = (tx.timestamp - lastModification)/(duration)
 
     # Be mostly accurate.
@@ -68,7 +68,7 @@ def test_increase_amp(pool, pool_tokens, deployer):
 
     chain.mine(1, timestamp=int(startTime + TWOWEEK))
 
-    pool.localswap(pool_tokens[0], pool_tokens[0], 0, 0, {"from": deployer})
+    pool.localSwap(pool_tokens[0], pool_tokens[0], 0, 0, {"from": deployer})
 
     assert (10**18 - pool._oneMinusAmp()) == targetAmp
 
@@ -86,12 +86,12 @@ def test_decrease_amp(pool, pool_tokens, deployer):
     currAmp = 10**17
     pool.modifyAmplification(startTime + TWOWEEK, currAmp, {"from": deployer})
     chain.mine(1, timestamp=int(startTime + TWOWEEK + 10))
-    pool.localswap(pool_tokens[0], pool_tokens[0], 0, 0, {"from": deployer})
+    pool.localSwap(pool_tokens[0], pool_tokens[0], 0, 0, {"from": deployer})
     
     # Decrease the weights.
     targetAmp = 10**15
     pool.modifyAmplification(startTime + TWOWEEK * 2, targetAmp, {"from": deployer})
-    pool.localswap(pool_tokens[0], pool_tokens[0], 0, 0, {"from": deployer})
+    pool.localSwap(pool_tokens[0], pool_tokens[0], 0, 0, {"from": deployer})
     duration = pool._adjustmentTarget() - pool._lastModificationTime()
 
     # Weights should not change immediately.
@@ -102,7 +102,7 @@ def test_decrease_amp(pool, pool_tokens, deployer):
     
     # Sadly the weights are not updated automatically, we can call swap to update though.
     lastModification = pool._lastModificationTime()
-    tx = pool.localswap(pool_tokens[0], pool_tokens[0], 0, 0, {"from": deployer})
+    tx = pool.localSwap(pool_tokens[0], pool_tokens[0], 0, 0, {"from": deployer})
     passedTime = (tx.timestamp - lastModification)/(duration)
 
     # Be mostly accurate.
@@ -110,7 +110,7 @@ def test_decrease_amp(pool, pool_tokens, deployer):
     
     chain.mine(1, timestamp=int(startTime + TWOWEEK * 2 + 100))
 
-    pool.localswap(pool_tokens[0], pool_tokens[0], 0, 0, {"from": deployer})
+    pool.localSwap(pool_tokens[0], pool_tokens[0], 0, 0, {"from": deployer})
 
     assert (10**18 - pool._oneMinusAmp()) == targetAmp
 

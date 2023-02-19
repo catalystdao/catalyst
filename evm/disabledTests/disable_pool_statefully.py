@@ -175,7 +175,7 @@ class StateMachine:
         st_fromAsset=st_index,
         st_toAsset=st_index,
     )
-    def localswap(
+    def localSwap(
         self,
         st_value,
         st_user_index,
@@ -200,7 +200,7 @@ class StateMachine:
         BES = balancerEquvilantSwap(st_value, pool, pool, fromAsset, toAsset)
 
         initialOutputTokenBalance = toAsset.balanceOf(self.accounts[st_user_index])
-        tx = pool.localswap(
+        tx = pool.localSwap(
             fromAsset,
             toAsset,
             st_value,

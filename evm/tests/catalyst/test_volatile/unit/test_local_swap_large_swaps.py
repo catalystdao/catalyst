@@ -33,7 +33,7 @@ def test_local_swap_large_swaps(
     
     y = compute_expected_local_swap(swap_amount, source_token, target_token)["to_amount"]
     
-    tx = pool.localswap(
+    tx = pool.localSwap(
         source_token, target_token, swap_amount, 0, {'from': berg}
     )
     

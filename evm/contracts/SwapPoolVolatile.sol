@@ -127,8 +127,8 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
      * the governance is not allowed to change pool weights. This is because
      * the update function is not made for step sizes (which the result would be if)
      * trades are frequent and weights are small.
-     * Weights must not be set to 0. This allows someone to exploit the localswap simplification
-     * with a token not belonging to the pool. (Set weight to 0, localswap from token not part of
+     * Weights must not be set to 0. This allows someone to exploit the localSwap simplification
+     * with a token not belonging to the pool. (Set weight to 0, localSwap from token not part of
      * the pool. Since 0 == 0 => use simplified swap curve. Swap goes through.)
      * @param targetTime Once reached, _weight[...] = newWeights[...]
      * @param newWeights The new weights to apply
@@ -594,7 +594,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
      * @param minOut The minimum output of toAsset the user wants.
      * @return uint256 The number of tokens purchased.
      */
-    function localswap(
+    function localSwap(
         address fromAsset,
         address toAsset,
         uint256 amount,

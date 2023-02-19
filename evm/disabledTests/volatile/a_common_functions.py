@@ -35,12 +35,12 @@ def check_swap_return(y: int, y_control: int, size_control=None, div=max_swap_di
 def return_swap_check(x, y, token2, token1, swappool, acct, allow_revert=False):
     if allow_revert:
         try:
-            swappool.localswap(token2, token1, y, 0, {"from": acct})
+            swappool.localSwap(token2, token1, y, 0, {"from": acct})
         except brownie.exceptions.VirtualMachineError:
             print("Reverted, but that is /mostly/ okay.")
     else:
         token2.approve(swappool, y, {"from": acct})
-        swappool.localswap(token2, token1, y, 0, {"from": acct})
+        swappool.localSwap(token2, token1, y, 0, {"from": acct})
         x2 = token1.balanceOf(acct)
 
         assert x2 <= x

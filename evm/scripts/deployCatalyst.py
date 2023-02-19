@@ -116,7 +116,7 @@ ps = Catalyst(acct, ibcinterface=ie)
 pool = ps.swappool
 tokens = ps.tokens
 tokens[0].approve(pool, 2**256-1, {'from': acct})
-# pool.localswap(tokens[0], tokens[1], 50*10**18, 0, {'from': acct})
+# pool.localSwap(tokens[0], tokens[1], 50*10**18, 0, {'from': acct})
 
 chid = convert.to_bytes(1, type_str="bytes32")
 
@@ -163,4 +163,4 @@ def main():
     pool = ps.swappool
     tokens = ps.tokens
     tokens[0].approve(pool, 2**256-1, {'from': acct})
-    pool.localswap(tokens[0], tokens[1], 50*10**18, 0, {'from': acct})
+    pool.localSwap(tokens[0], tokens[1], 50*10**18, 0, {'from': acct})

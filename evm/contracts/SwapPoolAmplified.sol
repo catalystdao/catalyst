@@ -864,7 +864,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
      * @param minOut The minimum output of toAsset the user wants.
      * @return uint256 The number of tokens purchased.
      */
-    function localswap(
+    function localSwap(
         address fromAsset,
         address toAsset,
         uint256 amount,

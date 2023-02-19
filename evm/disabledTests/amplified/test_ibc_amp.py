@@ -140,7 +140,7 @@ def test_ibc_swap(
 
     # swap the other way
     token2.approve(swappool, out, {"from": base_account})
-    tx2 = swappool.localswap(token2, token1, out, 0, {"from": base_account})
+    tx2 = swappool.localSwap(token2, token1, out, 0, {"from": base_account})
 
     assert token2.balanceOf(base_account) == 0
     out2 = token1.balanceOf(base_account)

@@ -69,7 +69,7 @@ interface ICatalystV1PoolPermissionless {
      * @param amount The amount of fromAsset the user wants to sell
      * @param minOut The minimum output of _toAsset the user wants.
      */
-    function localswap(
+    function localSwap(
         address fromAsset,
         address toAsset,
         uint256 amount,

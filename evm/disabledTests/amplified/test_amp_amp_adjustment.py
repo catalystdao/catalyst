@@ -54,7 +54,7 @@ def test_decrease_amp(gov, default_amp_swappool, token1, token2, token3, chain):
 
     startTime = chain.time()
     swappool.modifyAmplification(startTime + ONEWEEK + 1, 2**61, {"from": gov})
-    swappool.localswap(token1, token2, 0, 0, False, {"from": gov})
+    swappool.localSwap(token1, token2, 0, 0, False, {"from": gov})
     duration = swappool._adjustmentTarget() - swappool._lastModificationTime()
 
     targetAmp = swappool._targetAmplification()
@@ -66,7 +66,7 @@ def test_decrease_amp(gov, default_amp_swappool, token1, token2, token3, chain):
     # Sadly the weights are not updated automatically, we can call swap to update though.
     lastModification = swappool._lastModificationTime()
     # token1.approve(swappool, 2**256-1, {'from': gov}) # not needed, since 0.
-    tx = swappool.localswap(token1, token2, 0, 0, False, {"from": gov})
+    tx = swappool.localSwap(token1, token2, 0, 0, False, {"from": gov})
     passedTime = (tx.timestamp - lastModification)/(duration)
 
     assert ceil(currentAmp * (1 - passedTime) + targetAmp * (passedTime))*1.0001 >= swappool._amp() >= ceil(currentAmp * (1 - passedTime) + targetAmp * (passedTime)) * 0.9999
@@ -74,7 +74,7 @@ def test_decrease_amp(gov, default_amp_swappool, token1, token2, token3, chain):
     chain.mine(1, timestamp=int(startTime + (ONEWEEK + 1 + 5)))
 
     # token1.approve(swappool, 2**256-1, {'from': gov}) # not needed, since 0.
-    swappool.localswap(token1, token2, 0, 0, False, {"from": gov})
+    swappool.localSwap(token1, token2, 0, 0, False, {"from": gov})
 
     assert swappool._amp() == targetAmp
 
@@ -86,7 +86,7 @@ def test_increase_amp(gov, default_amp_swappool, token1, token2, token3, chain):
 
     startTime = chain.time()
     swappool.modifyAmplification(startTime + (ONEWEEK + 1), 2**63, {"from": gov})
-    swappool.localswap(token1, token2, 0, 0, False, {"from": gov})
+    swappool.localSwap(token1, token2, 0, 0, False, {"from": gov})
     duration = swappool._adjustmentTarget() - swappool._lastModificationTime()
 
     assert swappool._targetAmplification() == 2**63
@@ -98,7 +98,7 @@ def test_increase_amp(gov, default_amp_swappool, token1, token2, token3, chain):
     
     lastModification = swappool._lastModificationTime()
     # token1.approve(swappool, 2**256-1, {'from': gov}) # not needed, since 0.
-    tx = swappool.localswap(token1, token2, 0, 0, False, {"from": gov})
+    tx = swappool.localSwap(token1, token2, 0, 0, False, {"from": gov})
     passedTime = (tx.timestamp - lastModification)/(duration)
 
     assert floor(currentAmp * (1 - passedTime) + targetAmp * (passedTime))*1.0001 >= swappool._amp() >= floor(currentAmp * (1 - passedTime) + targetAmp * (passedTime)) * 0.9999
@@ -106,6 +106,6 @@ def test_increase_amp(gov, default_amp_swappool, token1, token2, token3, chain):
     chain.mine(1, timestamp=int(startTime + (ONEWEEK + 5)))
 
     # token1.approve(swappool, 2**256-1, {'from': gov}) # not needed, since 0.
-    swappool.localswap(token1, token2, 0, 0, False, {"from": gov})
+    swappool.localSwap(token1, token2, 0, 0, False, {"from": gov})
 
     assert swappool._amp() == targetAmp

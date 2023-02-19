@@ -31,7 +31,7 @@ def test_increase_weights(pool, pool_tokens, deployer):
     startTime = chain.time()
     targetWeights = [20, 30, 50]
     pool.modifyWeights(startTime + TWOWEEK, [20, 30, 50], {"from": deployer})
-    pool.localswap(pool_tokens[0], pool_tokens[0], 0, 0, {"from": deployer})
+    pool.localSwap(pool_tokens[0], pool_tokens[0], 0, 0, {"from": deployer})
     duration = pool._adjustmentTarget() - pool._lastModificationTime()
     
     targetWeight = [pool._targetWeight(tkn) for tkn in pool_tokens]
@@ -45,7 +45,7 @@ def test_increase_weights(pool, pool_tokens, deployer):
 
     # Sadly the weights are not updated automatically, we can call swap to update though.
     lastModification = pool._lastModificationTime()
-    tx = pool.localswap(pool_tokens[0], pool_tokens[0], 0, 0, {"from": deployer})
+    tx = pool.localSwap(pool_tokens[0], pool_tokens[0], 0, 0, {"from": deployer})
     passedTime = (tx.timestamp - lastModification)/(duration)
 
     for token, currWeight, targetWeight in zip(pool_tokens, currentWeights, targetWeights):
@@ -53,7 +53,7 @@ def test_increase_weights(pool, pool_tokens, deployer):
 
     chain.mine(1, timestamp=int(startTime + TWOWEEK))
 
-    pool.localswap(pool_tokens[0], pool_tokens[0], 0, 0, {"from": deployer})
+    pool.localSwap(pool_tokens[0], pool_tokens[0], 0, 0, {"from": deployer})
 
     for token, targetWeight in zip(pool_tokens, targetWeights):
         assert pool._weight(token) == targetWeight
@@ -65,13 +65,13 @@ def test_decrease_weights(pool, pool_tokens, deployer):
     # Increase the weights
     pool.modifyWeights(startTime + TWOWEEK, [2, 300, 500], {"from": deployer})
     chain.mine(1, timestamp=int(startTime + TWOWEEK))
-    pool.localswap(pool_tokens[0], pool_tokens[0], 0, 0, {"from": deployer})
+    pool.localSwap(pool_tokens[0], pool_tokens[0], 0, 0, {"from": deployer})
     currentWeights = [pool._weight(tkn) for tkn in pool_tokens]
     
     # Decrease the weights.
     targetWeights = [2, 100, 100]
     pool.modifyWeights(startTime + TWOWEEK * 2, targetWeights, {"from": deployer})
-    pool.localswap(pool_tokens[0], pool_tokens[0], 0, 0, {"from": deployer})
+    pool.localSwap(pool_tokens[0], pool_tokens[0], 0, 0, {"from": deployer})
     duration = pool._adjustmentTarget() - pool._lastModificationTime()
     
     targetWeight = [pool._targetWeight(tkn) for tkn in pool_tokens]
@@ -85,7 +85,7 @@ def test_decrease_weights(pool, pool_tokens, deployer):
     
     # Sadly the weights are not updated automatically, we can call swap to update though.
     lastModification = pool._lastModificationTime()
-    tx = pool.localswap(pool_tokens[0], pool_tokens[0], 0, 0, {"from": deployer})
+    tx = pool.localSwap(pool_tokens[0], pool_tokens[0], 0, 0, {"from": deployer})
     passedTime = (tx.timestamp - lastModification)/(duration)
 
 
@@ -94,7 +94,7 @@ def test_decrease_weights(pool, pool_tokens, deployer):
     
     chain.mine(1, timestamp=int(startTime + TWOWEEK * 2))
 
-    pool.localswap(pool_tokens[0], pool_tokens[0], 0, 0, {"from": deployer})
+    pool.localSwap(pool_tokens[0], pool_tokens[0], 0, 0, {"from": deployer})
 
     for token, targetWeight in zip(pool_tokens, targetWeights):
         assert pool._weight(token) == targetWeight
