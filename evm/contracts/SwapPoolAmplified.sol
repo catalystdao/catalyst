@@ -1208,7 +1208,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
 
         // Only need to hash info that is required by the escrow (+ some extra for randomisation)
         // No need to hash context (as token/liquidity escrow data is different), fromPool, toPool, targetAssetIndex, minOut, CallData
-        bytes32 liquiditySwapHash = computeLiquiditySwapHash(
+        bytes32 sendLiquidityHash = computeLiquiditySwapHash(
             toAccount,      // Ensures no collisions between different users
             U,              // Used to randomise the hash
             poolTokens,     // Required! to validate release escrow data
@@ -1220,7 +1220,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         // However, the struct keeps the structure of swaps similar.
         LiquiditySwapMetadata memory escrowInformation = LiquiditySwapMetadata({
             fromAmount: poolTokens,
-            swapHash: liquiditySwapHash,
+            swapHash: sendLiquidityHash,
             blockNumber: uint32(block.number % 2**32)
         });
 
@@ -1235,8 +1235,8 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         );
 
         // Escrow the pool tokens
-        require(_escrowedLiquidityFor[liquiditySwapHash] == address(0));
-        _escrowedLiquidityFor[liquiditySwapHash] = fallbackUser;
+        require(_escrowedLiquidityFor[sendLiquidityHash] == address(0));
+        _escrowedLiquidityFor[sendLiquidityHash] = fallbackUser;
         _escrowedPoolTokens += poolTokens;
 
         // Adjustment of the security limit is delayed until ack to avoid
@@ -1247,7 +1247,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
             toAccount,
             poolTokens,
             U,
-            liquiditySwapHash
+            sendLiquidityHash
         );
 
         return U;

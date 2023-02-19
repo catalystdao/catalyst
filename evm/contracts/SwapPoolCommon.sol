@@ -309,14 +309,14 @@ abstract contract CatalystSwapPoolCommon is
     }
 
     function releaseLiquidityEscrow(
-        bytes32 liquiditySwapHash,
+        bytes32 sendLiquidityHash,
         uint256 escrowAmount
     ) internal returns(address) {
         require(msg.sender == _chainInterface);  // dev: Only _chainInterface
 
-        address fallbackUser = _escrowedLiquidityFor[liquiditySwapHash];  // Passing in an invalid swapHash returns address(0)
+        address fallbackUser = _escrowedLiquidityFor[sendLiquidityHash];  // Passing in an invalid swapHash returns address(0)
         require(fallbackUser != address(0));  // dev: Invalid swapHash. Alt: Escrow doesn't exist.
-        delete _escrowedLiquidityFor[liquiditySwapHash];  // Stops timeout and further acks from being called
+        delete _escrowedLiquidityFor[sendLiquidityHash];  // Stops timeout and further acks from being called
 
         _escrowedPoolTokens -= escrowAmount;  // This does not revert, since escrowAmount \subseteq _escrowedPoolTokens => escrowAmount <= _escrowedPoolTokens. Cannot be called twice since the 3 lines before ensure this can only be reached once.
         
@@ -401,16 +401,16 @@ abstract contract CatalystSwapPoolCommon is
         uint32 blockNumberMod
     ) public virtual {
 
-        bytes32 liquiditySwapHash = computeLiquiditySwapHash(
+        bytes32 sendLiquidityHash = computeLiquiditySwapHash(
             toAccount,  // Ensures no collisions between different users
             U,          // Used to randomise the hash
             escrowAmount,     // Required! to validate release escrow data
             blockNumberMod
         );
 
-        releaseLiquidityEscrow(liquiditySwapHash, escrowAmount); // Only reverts for missing escrow
+        releaseLiquidityEscrow(sendLiquidityHash, escrowAmount); // Only reverts for missing escrow
 
-        emit SendLiquidityAck(liquiditySwapHash);  // Never reverts.
+        emit SendLiquidityAck(sendLiquidityHash);  // Never reverts.
     }
 
     /** 
@@ -428,18 +428,18 @@ abstract contract CatalystSwapPoolCommon is
         uint32 blockNumberMod
     ) public virtual {
 
-        bytes32 liquiditySwapHash = computeLiquiditySwapHash(
+        bytes32 sendLiquidityHash = computeLiquiditySwapHash(
             toAccount,  // Ensures no collisions between different users
             U,          // Used to randomise the hash
             escrowAmount,     // Required! to validate release escrow data
             blockNumberMod
         );
 
-        address fallbackAddress = releaseLiquidityEscrow(liquiditySwapHash, escrowAmount); // Only reverts for missing escrow
+        address fallbackAddress = releaseLiquidityEscrow(sendLiquidityHash, escrowAmount); // Only reverts for missing escrow
 
         _mint(fallbackAddress, escrowAmount);  
 
-        emit SendLiquidityTimeout(liquiditySwapHash);  // Never reverts.
+        emit SendLiquidityTimeout(sendLiquidityHash);  // Never reverts.
     }
 
     function computeAssetSwapHash(
