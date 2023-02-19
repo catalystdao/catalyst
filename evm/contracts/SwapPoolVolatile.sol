@@ -664,7 +664,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
 
         // Only need to hash info that is required by the escrow (+ some extra for randomisation)
         // No need to hash context (as token/liquidity escrow data is different), fromPool, toPool, targetAssetIndex, minOut, CallData
-        bytes32 assetSwapHash = computeAssetSwapHash(
+        bytes32 sendAssetHash = computeAssetSwapHash(
             toAccount,      // Ensures no collisions between different users
             U,              // Used to randomise the hash
             amount - fee,   // Required! to validate release escrow data
@@ -676,7 +676,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         AssetSwapMetadata memory swapMetadata = AssetSwapMetadata({
             fromAmount: amount - fee,
             fromAsset: fromAsset,
-            swapHash: assetSwapHash,
+            swapHash: sendAssetHash,
             blockNumber: uint32(block.number % 2**32)
         });
 
@@ -694,9 +694,9 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
 
         // Escrow the tokens used to purchase units. These will be sent back if transaction
         // doesn't arrive / timeout.
-        require(_escrowedFor[assetSwapHash] == address(0)); // dev: Escrow already exists.
+        require(_escrowedFor[sendAssetHash] == address(0)); // dev: Escrow already exists.
         _escrowedTokens[fromAsset] += amount - fee;
-        _escrowedFor[assetSwapHash] = fallbackUser;
+        _escrowedFor[sendAssetHash] = fallbackUser;
 
         // Governance Fee
         collectGovernanceFee(fromAsset, fee);
@@ -715,7 +715,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
             amount,
             U,
             minOut,
-            assetSwapHash
+            sendAssetHash
         );
 
         return U;

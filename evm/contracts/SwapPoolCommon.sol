@@ -293,15 +293,15 @@ abstract contract CatalystSwapPoolCommon is
     //-- Escrow Functions --//
 
     function releaseTokenEscrow(
-        bytes32 assetSwapHash,
+        bytes32 sendAssetHash,
         uint256 escrowAmount,
         address escrowToken
     ) internal returns(address) {
         require(msg.sender == _chainInterface);  // dev: Only _chainInterface
 
-        address fallbackUser = _escrowedFor[assetSwapHash];  // Passing in an invalid swapHash returns address(0)
+        address fallbackUser = _escrowedFor[sendAssetHash];  // Passing in an invalid swapHash returns address(0)
         require(fallbackUser != address(0));  // dev: Invalid swapHash. Alt: Escrow doesn't exist.
-        delete _escrowedFor[assetSwapHash];  // Stops timeout and further acks from being called
+        delete _escrowedFor[sendAssetHash];  // Stops timeout and further acks from being called
 
         _escrowedTokens[escrowToken] -= escrowAmount; // This does not revert, since escrowAmount \subseteq _escrowedTokens => escrowAmount <= _escrowedTokens. Cannot be called twice since the 3 lines before ensure this can only be reached once.
         
@@ -341,7 +341,7 @@ abstract contract CatalystSwapPoolCommon is
         uint32 blockNumberMod
     ) public virtual {
 
-        bytes32 assetSwapHash = computeAssetSwapHash(
+        bytes32 sendAssetHash = computeAssetSwapHash(
             toAccount,  // Ensures no collisions between different users
             U,          // Used to randomise the hash
             escrowAmount,     // Required! to validate release escrow data
@@ -349,9 +349,9 @@ abstract contract CatalystSwapPoolCommon is
             blockNumberMod
         );
 
-        releaseTokenEscrow(assetSwapHash, escrowAmount, escrowToken); // Only reverts for missing escrow
+        releaseTokenEscrow(sendAssetHash, escrowAmount, escrowToken); // Only reverts for missing escrow
 
-        emit SendAssetAck(assetSwapHash);  // Never reverts.
+        emit SendAssetAck(sendAssetHash);  // Never reverts.
     }
 
     /** 
@@ -371,7 +371,7 @@ abstract contract CatalystSwapPoolCommon is
         uint32 blockNumberMod
     ) public virtual {
 
-        bytes32 assetSwapHash = computeAssetSwapHash(
+        bytes32 sendAssetHash = computeAssetSwapHash(
             toAccount,  // Ensures no collisions between different users
             U,          // Used to randomise the hash
             escrowAmount,     // Required! to validate release escrow data
@@ -379,11 +379,11 @@ abstract contract CatalystSwapPoolCommon is
             blockNumberMod
         );
 
-        address fallbackAddress = releaseTokenEscrow(assetSwapHash, escrowAmount, escrowToken); // Only reverts for missing escrow,
+        address fallbackAddress = releaseTokenEscrow(sendAssetHash, escrowAmount, escrowToken); // Only reverts for missing escrow,
 
         ERC20(escrowToken).safeTransfer(fallbackAddress, escrowAmount);  // Would fail if there is no balance. To protect against this, the escrow amount is removed from what can be claimed by users.
 
-        emit SendAssetTimeout(assetSwapHash);  // Never reverts.
+        emit SendAssetTimeout(sendAssetHash);  // Never reverts.
     }
 
     /** 
