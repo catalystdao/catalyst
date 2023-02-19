@@ -497,7 +497,11 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                 uint256 weight = _weight[token];
 
                 // Not minus escrowedAmount, since we want the deposit to return less.
-                uint256 weightAssetBalance = weight * ERC20(token).balanceOf(address(this));
+                uint256 weightAssetBalance;
+                unchecked {
+                    // sum of weightAssetBalance = _maxUnitCapacity => _maxUnitCapacity > weightAssetBalance
+                    weightAssetBalance = weight * ERC20(token).balanceOf(address(this));
+                }
 
                 // Store the amount deposited to later be used for modifying the security limit.
                 assetDepositSum += tokenAmounts[it] * weight;
@@ -509,7 +513,11 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                         int256(weightAssetBalance * FixedPointMathLib.WAD),     // If casting overflows to a negative number, powWad fails
                         oneMinusAmp
                     );
-                    weightedAssetBalanceSum += wab;
+                    
+                    unchecked {
+                        // sum of weightAssetBalance > sum of weightAssetBalance^(1-k) where k < 1
+                        weightedAssetBalanceSum += wab;
+                    }
 
                     // This line is the origin of the stack too deep issue.
                     // since it implies we cannot move intU += before this section.
@@ -525,7 +533,10 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                     // int_A^{A+x} f(w) dw = F(A+x) - F(A).
                     // This is -F(A). Since we are subtracting first,
                     // U must be able to go negative.
-                    U -= wab;
+                    unchecked {
+                        // |U| < weightedAssetBalanceSum since U F(A+x) is added to U in the lines after this.
+                        U -= wab;
+                    }
                 }
 
                 // Add F(A+x)
@@ -639,7 +650,14 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                 uint256 weight = _weight[token];
 
                 // minus escrowedAmount, since we want the withdrawal to return less.
-                uint256 weightAssetBalance = weight * (ERC20(token).balanceOf(address(this)) - _escrowedTokens[token]);
+                // A smaller number here means fewer units are transferred.
+                uint256 weightAssetBalance;
+                unchecked {
+                    // ERC20(token).balanceOf(address(this) >  _escrowedTokens[token], since escrowed tokens are part of
+                    // the pool balance.
+                    // sum of weightAssetBalance = _maxUnitCapacity => _maxUnitCapacity > weightAssetBalance
+                    weightAssetBalance = weight * (ERC20(token).balanceOf(address(this)) - _escrowedTokens[token]);
+                }
                 weightAssetBalances[it] = weightAssetBalance; // Store 
 
                 int256 wab = FixedPointMathLib.powWad(
@@ -647,9 +665,10 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                     oneMinusAmp
                 );
                 ampWeightAssetBalances[it] = wab; // Store
-                weightedAssetBalanceSum += wab;
-
                 unchecked {
+                    // sum of weightAssetBalance > sum of weightAssetBalance^(1-k) where k < 1
+                    weightedAssetBalanceSum += wab;
+
                     it++;
                 }
             }
@@ -690,7 +709,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
 
             int256 oneMinusAmpInverse = FixedPointMathLib.WADWAD / oneMinusAmp;
 
-            uint256 totalWithdrawn = 0;
+            uint256 totalWithdrawn;
             for (uint256 it = 0; it < MAX_ASSETS;) {
                 address token = tokenIndexed[it];
                 if (token == address(0)) break;
@@ -718,7 +737,10 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                 }
 
                 // Store the amount withdrawn to subtract from the security limit later.
-                totalWithdrawn +=  weightedTokenAmount;
+                unchecked {
+                    // totalWithdrawn < _maxUnitCapacity. So it doesn't overflow.
+                    totalWithdrawn += weightedTokenAmount;
+                }
 
                 // remove the weight from weightedTokenAmount.
                 weightedTokenAmount /= _weight[token];
@@ -792,23 +814,34 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                 // A very careful stack optimisation is made here.
                 // "it" is needed briefly outside the loop. However, to reduce the number
                 // of items in the stack, U = it.
-                for (U = 0; U < MAX_ASSETS; ++U) {
+                for (U = 0; U < MAX_ASSETS;) {
                     address token = _tokenIndexing[U];
                     if (token == address(0)) break;
                     tokenIndexed[U] = token;
                     uint256 weight = _weight[token];
 
                     // minus escrowedAmount, since we want the withdrawal to return less.
-                    uint256 ab = (ERC20(token).balanceOf(address(this)) - _escrowedTokens[token]);
-                    assetBalances[U] = ab;
-                    uint256 weightAssetBalance = weight * ab;
+                    uint256 weightAssetBalance;
+                    unchecked {
+                        // ERC20(token).balanceOf(address(this) >  _escrowedTokens[token], since escrowed tokens are part of
+                        // the pool balance.
+                        uint256 ab = (ERC20(token).balanceOf(address(this)) - _escrowedTokens[token]);
+                        assetBalances[U] = ab;
+                        // sum of weightAssetBalance = _maxUnitCapacity => _maxUnitCapacity > weightAssetBalance
+                        weightAssetBalance = weight * ab;
+                    }
 
                     int256 wab = FixedPointMathLib.powWad(
                         int256(weightAssetBalance * FixedPointMathLib.WAD),     // If casting overflows to a negative number, powWad fails
                         oneMinusAmp
                     );
                     ampWeightAssetBalances[U] = wab; // Store since it is an expensive calculation.
-                    weightedAssetBalanceSum += wab;
+                    unchecked {
+                        // sum of weightAssetBalance > sum of weightAssetBalance^(1-k) where k < 1
+                        weightedAssetBalanceSum += wab;
+
+                        U++;
+                    }
                 }
 
                 // weightedAssetBalanceSum > _unitTracker always, since _unitTracker correlates to exactly
@@ -839,7 +872,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
 
         // For later event logging, the transferred tokens are stored.
         uint256[] memory amounts = new uint256[](minOut.length < MAX_ASSETS ? minOut.length : MAX_ASSETS);
-        uint256 totalWithdrawn = 0;
+        uint256 totalWithdrawn;
         for (uint256 it = 0; it < MAX_ASSETS;) {
             if (tokenIndexed[it] == address(0)) break;
 
@@ -880,7 +913,10 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
 
             // Decrease the security limit by the amount withdrawn.
             
-            totalWithdrawn += tokenAmount * _weight[tokenIndexed[it]];
+            unchecked {
+                // totalWithdrawn < _maxUnitCapacity. So it doesn't overflow.
+                totalWithdrawn += tokenAmount * _weight[tokenIndexed[it]];
+            }
 
             unchecked {
                 it++;
@@ -1221,14 +1257,22 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
 
                 // minus escrowedAmount, since we want the withdrawal to return less.
                 // A smaller number here means fewer units are transferred.
-                uint256 weightAssetBalance = weight * (ERC20(token).balanceOf(address(this)) - _escrowedTokens[token]);
+                uint256 weightAssetBalance;
+                unchecked {
+                    // ERC20(token).balanceOf(address(this) >  _escrowedTokens[token], since escrowed tokens are part of
+                    // the pool balance.
+                    // sum of weightAssetBalance = _maxUnitCapacity => _maxUnitCapacity > weightAssetBalance
+                    weightAssetBalance = weight * (ERC20(token).balanceOf(address(this)) - _escrowedTokens[token]);
+                }
 
-                weightedAssetBalanceSum += FixedPointMathLib.powWad(
+                int256 wab = FixedPointMathLib.powWad(
                     int256(weightAssetBalance * FixedPointMathLib.WAD),     // If casting overflows to a negative number, powWad fails
                     oneMinusAmp
                 );
 
                 unchecked {
+                    weightedAssetBalanceSum += wab;
+
                     it++;
                 }
             }
@@ -1352,14 +1396,20 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
 
                 // not minus escrowedAmount, since we want the withdrawal to return less.
                 // A larger number here means more units have to be transferred.
-                uint256 weightAssetBalance = weight * ERC20(token).balanceOf(address(this));
+                uint256 weightAssetBalance;
+                unchecked {
+                    // sum of weightAssetBalance = _maxUnitCapacity => _maxUnitCapacity > weightAssetBalance
+                    weightAssetBalance = weight * ERC20(token).balanceOf(address(this));
+                }
 
-                weightedAssetBalanceSum += FixedPointMathLib.powWad(
+                int256 wab = FixedPointMathLib.powWad(
                     int256(weightAssetBalance * FixedPointMathLib.WAD),     // If casting overflows to a negative number, powWad fails
                     oneMinusAmp
                 );
 
                 unchecked {
+                    weightedAssetBalanceSum += wab;
+
                     it++;
                 }
             }
