@@ -109,7 +109,7 @@ abstract contract CatalystSwapPoolCommon is
     /// @notice Total current escrowed pool tokens
     uint256 public _escrowedPoolTokens;
     /// @notice Specific escrow information (Liquidity)
-    mapping(bytes32 => address) public _escrowedLiquidityFor;
+    mapping(bytes32 => address) public _escrowedPoolTokensFor;
 
     constructor(address factory_) ERC20("Catalyst Pool Template", "", DECIMALS) {
         FACTORY = factory_;
@@ -314,9 +314,9 @@ abstract contract CatalystSwapPoolCommon is
     ) internal returns(address) {
         require(msg.sender == _chainInterface);  // dev: Only _chainInterface
 
-        address fallbackUser = _escrowedLiquidityFor[sendLiquidityHash];  // Passing in an invalid swapHash returns address(0)
+        address fallbackUser = _escrowedPoolTokensFor[sendLiquidityHash];  // Passing in an invalid swapHash returns address(0)
         require(fallbackUser != address(0));  // dev: Invalid swapHash. Alt: Escrow doesn't exist.
-        delete _escrowedLiquidityFor[sendLiquidityHash];  // Stops timeout and further acks from being called
+        delete _escrowedPoolTokensFor[sendLiquidityHash];  // Stops timeout and further acks from being called
 
         _escrowedPoolTokens -= escrowAmount;  // This does not revert, since escrowAmount \subseteq _escrowedPoolTokens => escrowAmount <= _escrowedPoolTokens. Cannot be called twice since the 3 lines before ensure this can only be reached once.
         
