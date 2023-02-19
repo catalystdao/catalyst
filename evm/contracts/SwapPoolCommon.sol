@@ -401,7 +401,7 @@ abstract contract CatalystSwapPoolCommon is
         uint32 blockNumberMod
     ) public virtual {
 
-        bytes32 sendLiquidityHash = computeLiquiditySwapHash(
+        bytes32 sendLiquidityHash = computeSendLiquidityHash(
             toAccount,  // Ensures no collisions between different users
             U,          // Used to randomise the hash
             escrowAmount,     // Required! to validate release escrow data
@@ -428,7 +428,7 @@ abstract contract CatalystSwapPoolCommon is
         uint32 blockNumberMod
     ) public virtual {
 
-        bytes32 sendLiquidityHash = computeLiquiditySwapHash(
+        bytes32 sendLiquidityHash = computeSendLiquidityHash(
             toAccount,  // Ensures no collisions between different users
             U,          // Used to randomise the hash
             escrowAmount,     // Required! to validate release escrow data
@@ -460,7 +460,7 @@ abstract contract CatalystSwapPoolCommon is
         );
     }
 
-    function computeLiquiditySwapHash(
+    function computeSendLiquidityHash(
         bytes32 toAccount,
         uint256 U,
         uint256 amount,
