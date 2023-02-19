@@ -694,9 +694,9 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
 
         // Escrow the tokens used to purchase units. These will be sent back if transaction
         // doesn't arrive / timeout.
-        require(_escrowedFor[sendAssetHash] == address(0)); // dev: Escrow already exists.
+        require(_escrowedTokensFor[sendAssetHash] == address(0)); // dev: Escrow already exists.
         _escrowedTokens[fromAsset] += amount - fee;
-        _escrowedFor[sendAssetHash] = fallbackUser;
+        _escrowedTokensFor[sendAssetHash] = fallbackUser;
 
         // Governance Fee
         collectGovernanceFee(fromAsset, fee);
