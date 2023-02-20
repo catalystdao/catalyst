@@ -55,7 +55,7 @@ abstract contract CatalystSwapPoolCommon is
     address public immutable FACTORY;
     address public _chainInterface;
 
-    // @notice The pools with which cross chain swaps are allowed, stoed as _poolConnection[connectionId][toPool]
+    // @notice The pools with which cross chain swaps are allowed, stored as _poolConnection[connectionId][toPool]
     mapping(bytes32 => mapping(bytes32 => bool)) public _poolConnection;
 
     /// @notice To indicate which token is desired on the target pool,
@@ -270,10 +270,12 @@ abstract contract CatalystSwapPoolCommon is
         uint256 governanceFeeShare = _governanceFeeShare;
 
         if (governanceFeeShare != 0) {
-            uint256 governanceFeeAmount = FixedPointMathLib.mulWadDown(
-                poolFeeAmount,
-                governanceFeeShare
-            );
+            unchecked {
+                // Since poolFeeAmount is calculated as swapAmount * poolFee / 1e18
+                // swapAmount * poolFee / 1e18 * governanceFeeShare < swapAmount * poolFee thus it can fit in
+                // uint256. See mathematical lib for how multiplication works.
+                uint256 governanceFeeAmount = poolFeeAmount * governanceFeeShare / 1e18;
+            }
             ERC20(asset).safeTransfer(factoryOwner(), governanceFeeAmount);
         }
     }
@@ -334,7 +336,10 @@ abstract contract CatalystSwapPoolCommon is
         require(fallbackUser != address(0));  // dev: Invalid swapHash. Alt: Escrow doesn't exist.
         delete _escrowedFor[assetSwapHash];  // Stops timeout and further acks from being called
 
-        _escrowedTokens[escrowToken] -= escrowAmount; // This does not revert, since escrowAmount \subseteq _escrowedTokens => escrowAmount <= _escrowedTokens. Cannot be called twice since the 3 lines before ensure this can only be reached once.
+        unchecked {
+            // escrowAmount \subseteq _escrowedTokens => escrowAmount <= _escrowedTokens. Cannot be called twice since the 3 lines before ensure this can only be reached once.
+            _escrowedTokens[escrowToken] -= escrowAmount;
+        }
         
         return fallbackUser;
     }
@@ -349,7 +354,10 @@ abstract contract CatalystSwapPoolCommon is
         require(fallbackUser != address(0));  // dev: Invalid swapHash. Alt: Escrow doesn't exist.
         delete _escrowedLiquidityFor[liquiditySwapHash];  // Stops timeout and further acks from being called
 
-        _escrowedPoolTokens -= escrowAmount;  // This does not revert, since escrowAmount \subseteq _escrowedPoolTokens => escrowAmount <= _escrowedPoolTokens. Cannot be called twice since the 3 lines before ensure this can only be reached once.
+        unchecked {
+            // escrowAmount \subseteq _escrowedPoolTokens => escrowAmount <= _escrowedPoolTokens. Cannot be called twice since the 3 lines before ensure this can only be reached once.
+            _escrowedPoolTokens -= escrowAmount;
+        }
         
         return fallbackUser;
     }
