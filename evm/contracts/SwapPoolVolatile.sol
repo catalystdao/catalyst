@@ -92,7 +92,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         // Compute the security limit.
         uint256[] memory initialBalances = new uint256[](MAX_ASSETS);
         uint256 maxUnitCapacity = 0;
-        for (uint256 it = 0; it < assets.length;) {
+        for (uint256 it; it < assets.length;) {
 
             address tokenAddress = assets[it];
             _tokenIndexing[it] = tokenAddress;
@@ -148,7 +148,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         _lastModificationTime = block.timestamp;
 
         // Compute sum weight for security limit.
-        for (uint256 it = 0; it < MAX_ASSETS;) {
+        for (uint256 it; it < MAX_ASSETS;) {
             address token = _tokenIndexing[it];
             if (token == address(0)) break;
             require(newWeights[it] != 0); // dev: newWeights must be greater than 0 to protect liquidity providers.
@@ -185,7 +185,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
             uint256 wsum = 0;
             // If the current time is past the adjustment, the weights need to be finalized.
             if (block.timestamp >= adjTarget) {
-                for (uint256 it = 0; it < MAX_ASSETS;) {
+                for (uint256 it; it < MAX_ASSETS;) {
                     address token = _tokenIndexing[it];
                     if (token == address(0)) break;
 
@@ -211,7 +211,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
             }
 
             // Calculate partial weight change
-            for (uint256 it = 0; it < MAX_ASSETS; ++it) {
+            for (uint256 it; it < MAX_ASSETS; ++it) {
                 address token = _tokenIndexing[it];
                 if (token == address(0)) break;
 
@@ -434,7 +434,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 initialTotalSupply = totalSupply; 
 
         uint256 U = 0;
-        for (uint256 it = 0; it < MAX_ASSETS;) {
+        for (uint256 it; it < MAX_ASSETS;) {
             address token = _tokenIndexing[it];
             if (token == address(0)) break;
 
@@ -512,7 +512,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 loopLength = minOut.length < MAX_ASSETS ? minOut.length : MAX_ASSETS;
         // For later event logging, the amounts transferred from the pool are stored.
         uint256[] memory amounts = new uint256[](loopLength);
-        for (uint256 it = 0; it < loopLength;) {
+        for (uint256 it; it < loopLength;) {
             address token = _tokenIndexing[it];
             if (token == address(0)) break;
 
@@ -575,7 +575,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 loopLength = minOut.length < MAX_ASSETS ? minOut.length : MAX_ASSETS;
         // For later event logging, the amounts transferred to the pool are stored.
         uint256[] memory amounts = new uint256[](loopLength);
-        for (uint256 it = 0; it < loopLength;) {
+        for (uint256 it; it < loopLength;) {
             // Units allocated for the specific token.
             uint256 U_i = (U * withdrawRatio[it]) / FixedPointMathLib.WAD;
             if (U_i == 0) {
