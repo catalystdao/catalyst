@@ -477,8 +477,24 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         // As such, we define an additional variable called intU which is signed
         int256 U;
         uint256 it;
+        
         // Compute walpha_0 to find the reference balances. This lets us evaluate the
         // number of tokens the pool should have If the price in the group is 1:1.
+        // walpha_0 is computed several times in this contract:
+        // - DepositMixed
+        // - WithdrawMixed
+        // - WithdrawAll
+        // - sendLiquidity
+        // - receiveLiquidity
+        // Since the implementation is very similar, it could be computed seperatly.
+        // However, none of the implementations are exactly the same.
+        // - DepositMixed: The for loop is reused for computing the value of incoming assets.
+        // - WithdrawMixed: The for loop is used to cache tokenIndexed, assetBalances, and ampWeightAssetBalances.
+        // - WithdrawAll: The for loop is used to cache tokenIndexed, weightAssetBalances, and ampWeightAssetBalances.
+        // - sendLiquidity and receiveLiquidity uses almost the same implementation except sendLiquidity subtracts the liquidity escrow.
+        // To simplify the code, these parts will remain fully in code and not within helper functions. This also slightly reduces
+        // the transaction costs. (While increase deployment costs)
+        // Before the other 3 implementations, there will be a short comment to describe how that implementation differs.
         {
             int256 weightedAssetBalanceSum = 0;
             uint256 assetDepositSum = 0;
@@ -606,6 +622,8 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 walpha_0_ampped;
         // Compute walpha_0 to find the reference balances. This lets us evaluate the
         // number of tokens the pool should have If the price in the group is 1:1.
+
+        // This is a balance0 implementation. The for loop is used to cache tokenIndexed, assetBalances, and ampWeightAssetBalances.
         {
             int256 weightedAssetBalanceSum = 0;
             // "it" is needed briefly outside the loop.
@@ -755,6 +773,8 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         {
             // As such, we don't need to remember the value beyond this section.
             uint256 walpha_0_ampped;
+
+            // This is a balance0 implementation. The for loop is used to cache tokenIndexed, weightAssetBalances, and ampWeightAssetBalances.
             {
                 int256 weightedAssetBalanceSum = 0;
                 // A very careful stack optimisation is made here.
@@ -1164,6 +1184,8 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 it;
         // Compute walpha_0 to find the reference balances. This lets us evaluate the
         // number of tokens the pool should have If the price in the group is 1:1.
+
+        // This is a balance0 implementation. The balance 0 implementation here is reference except the escrowed tokens are subtracted from the pool balance.
         {
             // We don't need weightedAssetBalanceSum again.
             int256 weightedAssetBalanceSum = 0;
@@ -1289,6 +1311,9 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 it;
         // Compute walpha_0 to find the reference balances. This lets us evaluate the
         // number of tokens the pool should have If the price in the group is 1:1.
+
+
+        // This is a balance0 implementation. The balance 0 implementation here is reference.
         {
             // We don't need weightedAssetBalanceSum again.
             int256 weightedAssetBalanceSum = 0;
