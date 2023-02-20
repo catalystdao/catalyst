@@ -515,9 +515,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                 uint256 weight = _weight[token];
 
                 // Not minus escrowedAmount, since we want the deposit to return less.
-                uint256 weightAssetBalance;
-                
-                weightAssetBalance = weight * ERC20(token).balanceOf(address(this));
+                uint256 weightAssetBalance = weight * ERC20(token).balanceOf(address(this));
 
                 
                 {
