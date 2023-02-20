@@ -65,7 +65,7 @@ contract CatalystSwapPoolFactory is Ownable, ICatalystV1FactoryEvents {
         address swapPool = Clones.clone(poolTemplate);
 
         // The pool expects the balances to exist in the pool when setup is called.
-        for (uint256 it = 0; it < assets.length; it++) {
+        for (uint256 it; it < assets.length; it++) {
             ERC20(assets[it]).safeTransferFrom(
                 msg.sender,
                 swapPool,
