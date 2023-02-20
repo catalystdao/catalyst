@@ -579,8 +579,8 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
             // the difference between weightedAssetBalanceSum and weightedAssetBalance0Sum and thus
             // _unitTracker < weightedAssetBalance0Sum
             unchecked {
-                // weightedAssetBalanceSum - _unitTracker can overflow into negative numbers. When casting the negative number into uint256, 
-                // however, the is exactly the sum of the 2 numbers. (after conversion).
+                // weightedAssetBalanceSum - _unitTracker can overflow for negative _unitTracker. The result will
+                // be correct once it is casted to uint256.
                 walpha_0_ampped = uint256(weightedAssetBalanceSum - _unitTracker) / it;   // By design, weightedAssetBalanceSum > _unitTracker
             }
 
@@ -688,8 +688,8 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
             // the difference between weightedAssetBalanceSum and weightedAssetBalance0Sum and thus
             // _unitTracker < weightedAssetBalance0Sum
             unchecked {
-                // weightedAssetBalanceSum - _unitTracker can overflow into negative numbers. When casting the negative number into uint256, 
-                // however, the is exactly the sum of the 2 numbers. (after conversion).
+                // weightedAssetBalanceSum - _unitTracker can overflow for negative _unitTracker. The result will
+                // be correct once it is casted to uint256.
                 walpha_0_ampped = uint256(weightedAssetBalanceSum - _unitTracker) / it;   // By design, weightedAssetBalanceSum > _unitTracker
             }
         }
@@ -860,8 +860,8 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                 // the difference between weightedAssetBalanceSum and weightedAssetBalance0Sum and thus
                 // _unitTracker < weightedAssetBalance0Sum
                 unchecked {
-                    // weightedAssetBalanceSum - _unitTracker can overflow into negative numbers. When casting the negative number into uint256, 
-                    // however, the is exactly the sum of the 2 numbers. (after conversion).
+                    // weightedAssetBalanceSum - _unitTracker can overflow for negative _unitTracker. The result will
+                    // be correct once it is casted to uint256.
                     walpha_0_ampped = uint256(weightedAssetBalanceSum - _unitTracker) / U;   // By design, weightedAssetBalanceSum > _unitTracker
                 }
 
@@ -1302,8 +1302,8 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
             // the difference between weightedAssetBalanceSum and weightedAssetBalance0Sum and thus
             // _unitTracker < weightedAssetBalance0Sum
             unchecked {
-                // weightedAssetBalanceSum - _unitTracker can overflow into negative numbers. When casting the negative number into uint256, 
-                // however, the is exactly the sum of the 2 numbers. (after conversion).
+                // weightedAssetBalanceSum - _unitTracker can overflow for negative _unitTracker. The result will
+                // be correct once it is casted to uint256.
                 walpha_0_ampped = uint256(weightedAssetBalanceSum - _unitTracker) / it;   // By design, weightedAssetBalanceSum > _unitTracker
             }
         }
@@ -1437,8 +1437,8 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
             // the difference between weightedAssetBalanceSum and weightedAssetBalance0Sum and thus
             // _unitTracker < weightedAssetBalance0Sum
             unchecked {
-                // weightedAssetBalanceSum - _unitTracker can overflow into negative numbers. When casting the negative number into uint256, 
-                // however, the is exactly the sum of the 2 numbers. (after conversion).
+                // weightedAssetBalanceSum - _unitTracker can overflow for negative _unitTracker. The result will
+                // be correct once it is casted to uint256.
                 walpha_0_ampped = uint256(weightedAssetBalanceSum - _unitTracker) / it;   // By design, weightedAssetBalanceSum > _unitTracker
             }
         }
