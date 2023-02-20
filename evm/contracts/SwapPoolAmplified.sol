@@ -1218,7 +1218,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         // Wrap the escrow information into a struct. This reduces the stack-print.
         // (Not really since only pool tokens are wrapped.)
         // However, the struct keeps the structure of swaps similar.
-        LiquiditySwapMetadata memory escrowInformation = LiquiditySwapMetadata({
+        LiquiditySwapMetadata memory swapMetadata = LiquiditySwapMetadata({
             fromAmount: poolTokens,
             swapHash: sendLiquidityHash,
             blockNumber: uint32(block.number % 2**32)
@@ -1231,7 +1231,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
             toAccount,
             U,
             minOut,
-            escrowInformation
+            swapMetadata
         );
 
         // Escrow the pool tokens
