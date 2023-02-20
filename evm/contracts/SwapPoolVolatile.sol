@@ -88,7 +88,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         require(amp == FixedPointMathLib.WAD);  // dev: amplification not set correctly.
         // Check for a misunderstanding regarding how many assets this pool supports.
         require(assets.length > 0 && assets.length <= MAX_ASSETS);  // dev: invalid asset count
-
+        
         // Compute the security limit.
         uint256[] memory initialBalances = new uint256[](MAX_ASSETS);
         uint256 maxUnitCapacity = 0;
@@ -113,7 +113,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
                 it++;
             }
         }
-        
+
         // The maximum unit flow is \sum Weights * ln(2). The value is multiplied by WAD 
         // since units are always WAD denominated (note WAD is already included in the LN2 factor).
         _maxUnitCapacity = maxUnitCapacity * FixedPointMathLib.LN2;
@@ -137,12 +137,12 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
      * @param targetTime Once reached, _weight[...] = newWeights[...]
      * @param newWeights The new weights to apply
      */
-    function modifyWeights(uint256 targetTime, uint256[] calldata newWeights)
-        external
-        onlyFactoryOwner
-    {
-        require(targetTime >= block.timestamp + MIN_ADJUSTMENT_TIME); // dev: targetTime must be more than MIN_ADJUSTMENT_TIME in the future.
-        
+    function modifyWeights(uint256 targetTime, uint256[] calldata newWeights) external onlyFactoryOwner {
+        unchecked {
+            require(targetTime >= block.timestamp + MIN_ADJUSTMENT_TIME); // dev: targetTime must be more than MIN_ADJUSTMENT_TIME in the future.
+            require(targetTime <= block.timestamp + 365 days); // dev: Target time cannot be too far into the future.
+        }
+
         // Store adjustment information
         _adjustmentTarget = targetTime;
         _lastModificationTime = block.timestamp;
@@ -682,11 +682,10 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         address fallbackUser,
         bytes memory calldata_
     ) public returns (uint256) {
-
         // Only allow connected pools
         if (!_poolConnection[channelId][targetPool]) revert PoolNotConnected(channelId, targetPool);
-
         require(fallbackUser != address(0));
+
         _adjustWeights();
 
         uint256 fee = FixedPointMathLib.mulWadDown(amount, _poolFee);
@@ -799,12 +798,11 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 minOut,
         bytes32 swapHash
     ) public returns (uint256) {
-
         // Only allow connected pools
         if (!_poolConnection[channelId][sourcePool]) revert PoolNotConnected(channelId, sourcePool);
-
         // The chainInterface is the only valid caller of this function.
         require(msg.sender == _chainInterface);
+
         _adjustWeights();
 
         // Convert the asset index (toAsset) into the asset to be purchased.
@@ -889,13 +887,12 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 minOut,
         address fallbackUser
     ) external returns (uint256) {
-
         // Only allow connected pools
         if (!_poolConnection[channelId][targetPool]) revert PoolNotConnected(channelId, targetPool);
-
         // Address(0) is not a valid fallback user. (As checking for escrow overlap
         // checks if the fallbackUser != address(0))
         require(fallbackUser != address(0));
+
         // Update weights
         _adjustWeights();
 
@@ -983,12 +980,11 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 minOut,
         bytes32 swapHash
     ) external returns (uint256) {
-
+        // The chainInterface is the only valid caller of this function.
+        require(msg.sender == _chainInterface);
         // Only allow connected pools
         if (!_poolConnection[channelId][sourcePool]) revert PoolNotConnected(channelId, sourcePool);
 
-        // The chainInterface is the only valid caller of this function.
-        require(msg.sender == _chainInterface);
         _adjustWeights();
 
         // Check if the swap is according to the swap limits
@@ -999,6 +995,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
 
         // Use the arbitarty integral to compute mint %. It comes as WAD, multiply by totalSupply
         // and divided by WAD to get number of pool tokens.
+        // On totalSupply. Do not add escrow amount, as higher amount results in a larger return.
         uint256 poolTokens = (calcPriceCurveLimitShare(U, wsum) * totalSupply)/FixedPointMathLib.WAD;
 
         // Check if more than the minimum output is returned.
