@@ -166,7 +166,17 @@ abstract contract CatalystSwapPoolCommon is
         uint256 MUC = _maxUnitCapacity;
 
         // The delta change to the limit is: timePassed · slope = timePassed · Max/decayrate
-        uint256 unitCapacityReleased = ((block.timestamp - _usedUnitCapacityTimestamp) * MUC) / DECAY_RATE;
+        uint256 unitCapacityReleased;
+        unchecked {
+            // block.timestamp > _usedUnitCapacityTimestamp, always.
+            // MUC is generally low.
+            unitCapacityReleased = (block.timestamp - _usedUnitCapacityTimestamp);
+        }
+        unitCapacityReleased *= MUC;
+        unchecked {
+            // DECAY_RATE != 0.
+            unitCapacityReleased /= DECAY_RATE;
+        }
 
         uint256 UC = _usedUnitCapacity;
         // If the change is greater than the units which have passed through
@@ -174,9 +184,15 @@ abstract contract CatalystSwapPoolCommon is
         if (UC <= unitCapacityReleased) return MUC;
 
         // Amplified pools can have MUC <= UC since MUC is modified when swapping
-        if (MUC <= UC - unitCapacityReleased) return 0; 
-
-        return MUC + unitCapacityReleased - UC;     // MUC - (UC - unitCapacityReleased)
+        unchecked {
+            // we know that UC > unitCapacityReleased
+            if (MUC <= UC - unitCapacityReleased) return 0; 
+        }
+        
+        unchecked {
+            // Since MUC >= UC - unitCapacityReleased => MUC + unitCapacityReleased > UC
+            return MUC + unitCapacityReleased - UC;  // MUC - (UC - unitCapacityReleased)
+        }
     }
 
     /**
@@ -188,7 +204,18 @@ abstract contract CatalystSwapPoolCommon is
     function updateUnitCapacity(uint256 units) internal {
         uint256 MUC = _maxUnitCapacity;
 
-        uint256 unitCapacityReleased = ((block.timestamp - _usedUnitCapacityTimestamp) * MUC) / DECAY_RATE;
+        // The delta change to the limit is: timePassed · slope = timePassed · Max/decayrate
+        uint256 unitCapacityReleased;
+        unchecked {
+            // block.timestamp > _usedUnitCapacityTimestamp, always.
+            // MUC is generally low.
+            unitCapacityReleased = (block.timestamp - _usedUnitCapacityTimestamp);
+        }
+        unitCapacityReleased *= MUC;
+        unchecked {
+            // DECAY_RATE != 0.
+            unitCapacityReleased /= DECAY_RATE;
+        }
 
         // Set last change to block.timestamp.
         // Otherwise it would have to be repeated twice. (small deployment savings)
@@ -201,8 +228,12 @@ abstract contract CatalystSwapPoolCommon is
             _usedUnitCapacity = units;
             return;
         }
-
-        uint256 newUnitFlow = (UC + units) - unitCapacityReleased;
+        
+        uint256 newUnitFlow = UC + units;  // (UC + units) - unitCapacityReleased
+        unchecked {
+            // We know that UC > unitCapacityReleased
+            newUnitFlow -= unitCapacityReleased;
+        }
         if (newUnitFlow > MUC) revert ExceedsSecurityLimit(newUnitFlow - MUC);
         _usedUnitCapacity = newUnitFlow;
     }
