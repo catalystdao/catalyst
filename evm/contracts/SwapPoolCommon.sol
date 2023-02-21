@@ -324,7 +324,7 @@ abstract contract CatalystSwapPoolCommon is
 
     //-- Escrow Functions --//
 
-    function releaseTokenEscrow(
+    function releaseAssetEscrow(
         bytes32 sendAssetHash,
         uint256 escrowAmount,
         address escrowToken
@@ -386,7 +386,7 @@ abstract contract CatalystSwapPoolCommon is
             blockNumberMod
         );
 
-        releaseTokenEscrow(sendAssetHash, escrowAmount, escrowToken); // Only reverts for missing escrow
+        releaseAssetEscrow(sendAssetHash, escrowAmount, escrowToken); // Only reverts for missing escrow
 
         emit SendAssetAck(sendAssetHash);  // Never reverts.
     }
@@ -416,7 +416,7 @@ abstract contract CatalystSwapPoolCommon is
             blockNumberMod
         );
 
-        address fallbackAddress = releaseTokenEscrow(sendAssetHash, escrowAmount, escrowToken); // Only reverts for missing escrow,
+        address fallbackAddress = releaseAssetEscrow(sendAssetHash, escrowAmount, escrowToken); // Only reverts for missing escrow,
 
         ERC20(escrowToken).safeTransfer(fallbackAddress, escrowAmount);  // Would fail if there is no balance. To protect against this, the escrow amount is removed from what can be claimed by users.
 
