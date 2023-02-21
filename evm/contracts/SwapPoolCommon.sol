@@ -203,7 +203,7 @@ abstract contract CatalystSwapPoolCommon is
      * @dev Implement a lot of similar logic to getUnitCapacity. 
      * @param units The number of units to check and set.
      */
-    function updateUnitCapacity(uint256 units) internal {
+    function _updateUnitCapacity(uint256 units) internal {
         uint256 MUC = _maxUnitCapacity;
 
         // The delta change to the limit is: timePassed · slope = timePassed · Max/decayrate
@@ -269,7 +269,7 @@ abstract contract CatalystSwapPoolCommon is
     /**
      * @dev Collect the governance fee share of the specified pool fee
      */
-    function collectGovernanceFee(address asset, uint256 poolFeeAmount) internal {
+    function _collectGovernanceFee(address asset, uint256 poolFeeAmount) internal {
 
         uint256 governanceFeeShare = _governanceFeeShare;
 
@@ -324,7 +324,7 @@ abstract contract CatalystSwapPoolCommon is
 
     //-- Escrow Functions --//
 
-    function releaseAssetEscrow(
+    function _releaseAssetEscrow(
         bytes32 sendAssetHash,
         uint256 escrowAmount,
         address escrowToken
@@ -343,7 +343,7 @@ abstract contract CatalystSwapPoolCommon is
         return fallbackUser;
     }
 
-    function releaseLiquidityEscrow(
+    function _releaseLiquidityEscrow(
         bytes32 sendLiquidityHash,
         uint256 escrowAmount
     ) internal returns(address) {
@@ -378,7 +378,7 @@ abstract contract CatalystSwapPoolCommon is
         uint32 blockNumberMod
     ) public virtual {
 
-        bytes32 sendAssetHash = computeSendAssetHash(
+        bytes32 sendAssetHash = _computeSendAssetHash(
             toAccount,  // Ensures no collisions between different users
             U,          // Used to randomise the hash
             escrowAmount,     // Required! to validate release escrow data
@@ -386,7 +386,7 @@ abstract contract CatalystSwapPoolCommon is
             blockNumberMod
         );
 
-        releaseAssetEscrow(sendAssetHash, escrowAmount, escrowToken); // Only reverts for missing escrow
+        _releaseAssetEscrow(sendAssetHash, escrowAmount, escrowToken); // Only reverts for missing escrow
 
         emit SendAssetAck(sendAssetHash);  // Never reverts.
     }
@@ -408,7 +408,7 @@ abstract contract CatalystSwapPoolCommon is
         uint32 blockNumberMod
     ) public virtual {
 
-        bytes32 sendAssetHash = computeSendAssetHash(
+        bytes32 sendAssetHash = _computeSendAssetHash(
             toAccount,  // Ensures no collisions between different users
             U,          // Used to randomise the hash
             escrowAmount,     // Required! to validate release escrow data
@@ -416,7 +416,7 @@ abstract contract CatalystSwapPoolCommon is
             blockNumberMod
         );
 
-        address fallbackAddress = releaseAssetEscrow(sendAssetHash, escrowAmount, escrowToken); // Only reverts for missing escrow,
+        address fallbackAddress = _releaseAssetEscrow(sendAssetHash, escrowAmount, escrowToken); // Only reverts for missing escrow,
 
         ERC20(escrowToken).safeTransfer(fallbackAddress, escrowAmount);  // Would fail if there is no balance. To protect against this, the escrow amount is removed from what can be claimed by users.
 
@@ -438,14 +438,14 @@ abstract contract CatalystSwapPoolCommon is
         uint32 blockNumberMod
     ) public virtual {
 
-        bytes32 sendLiquidityHash = computeSendLiquidityHash(
+        bytes32 sendLiquidityHash = _computeSendLiquidityHash(
             toAccount,  // Ensures no collisions between different users
             U,          // Used to randomise the hash
             escrowAmount,     // Required! to validate release escrow data
             blockNumberMod
         );
 
-        releaseLiquidityEscrow(sendLiquidityHash, escrowAmount); // Only reverts for missing escrow
+        _releaseLiquidityEscrow(sendLiquidityHash, escrowAmount); // Only reverts for missing escrow
 
         emit SendLiquidityAck(sendLiquidityHash);  // Never reverts.
     }
@@ -465,21 +465,21 @@ abstract contract CatalystSwapPoolCommon is
         uint32 blockNumberMod
     ) public virtual {
 
-        bytes32 sendLiquidityHash = computeSendLiquidityHash(
+        bytes32 sendLiquidityHash = _computeSendLiquidityHash(
             toAccount,  // Ensures no collisions between different users
             U,          // Used to randomise the hash
             escrowAmount,     // Required! to validate release escrow data
             blockNumberMod
         );
 
-        address fallbackAddress = releaseLiquidityEscrow(sendLiquidityHash, escrowAmount); // Only reverts for missing escrow
+        address fallbackAddress = _releaseLiquidityEscrow(sendLiquidityHash, escrowAmount); // Only reverts for missing escrow
 
         _mint(fallbackAddress, escrowAmount);  
 
         emit SendLiquidityTimeout(sendLiquidityHash);  // Never reverts.
     }
 
-    function computeSendAssetHash(
+    function _computeSendAssetHash(
         bytes32 toAccount,
         uint256 U,
         uint256 amount,
@@ -497,7 +497,7 @@ abstract contract CatalystSwapPoolCommon is
         );
     }
 
-    function computeSendLiquidityHash(
+    function _computeSendLiquidityHash(
         bytes32 toAccount,
         uint256 U,
         uint256 amount,

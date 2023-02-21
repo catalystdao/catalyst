@@ -266,7 +266,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
      * @param oneMinusAmp The amplification.
      * @return uint256 Group-specific units (units are **always** WAD).
      */
-    function calcPriceCurveArea(
+    function _calcPriceCurveArea(
         uint256 input,
         uint256 A,
         uint256 W,
@@ -303,7 +303,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
      * @param W The weight of the y token.
      * @return uint25 Output denominated in output token. (not WAD)
      */
-    function calcPriceCurveLimit(
+    function _calcPriceCurveLimit(
         uint256 U,
         uint256 B,
         uint256 W,
@@ -337,7 +337,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
      *         )
      *
      * Alternatively, the integral can be computed through:
-     * calcPriceCurveLimit(calcPriceCurveArea(input, A, W_A, amp), B, W_B, amp).
+     * _calcPriceCurveLimit(_calcPriceCurveArea(input, A, W_A, amp), B, W_B, amp).
      * @dev All input amounts should be the raw numbers and not WAD.
      * @param input The input amount.
      * @param A The current pool balance of the _in token.
@@ -347,7 +347,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
      * @param oneMinusAmp The amplification.
      * @return uint256 Output denominated in output token.
      */
-    function calcCombinedPriceCurves(
+    function _calcCombinedPriceCurves(
         uint256 input,
         uint256 A,
         uint256 B,
@@ -366,13 +366,13 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         // ) - FixedPointMathLib.powWad(
         //     int256(W_A * A * FixedPointMathLib.WAD),
         //     oneMinusAmp
-        // )); // calcPriceCurveArea(input, A, W_A, amp)
+        // )); // _calcPriceCurveArea(input, A, W_A, amp)
 
         // return B * (FixedPointMathLib.WAD - uint256(FixedPointMathLib.powWad(
         //             int256(FixedPointMathLib.divWadUp(W_BxBtoOMA - U, W_BxBtoOMA)),
         //             int256(FixedPointMathLib.WAD * FixedPointMathLib.WAD / uint256(oneMinusAmp)))
-        //         )) / FixedPointMathLib.WAD; // calcPriceCurveLimit
-        return calcPriceCurveLimit(calcPriceCurveArea(input, A, W_A, oneMinusAmp), B, W_B, oneMinusAmp);
+        //         )) / FixedPointMathLib.WAD; // _calcPriceCurveLimit
+        return _calcPriceCurveLimit(_calcPriceCurveArea(input, A, W_A, oneMinusAmp), B, W_B, oneMinusAmp);
     }
 
 
@@ -386,7 +386,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
      * @param oneMinusAmpInverse The pool amplification.
      * @return uint256 Output denominated in pool tokens.
      */
-    function calcPriceCurveLimitShare(uint256 U, uint256 ts, uint256 it_times_walpha_amped, int256 oneMinusAmpInverse) internal pure returns (uint256) {
+    function _calcPriceCurveLimitShare(uint256 U, uint256 ts, uint256 it_times_walpha_amped, int256 oneMinusAmpInverse) internal pure returns (uint256) {
         uint256 poolTokens = (
             ts * uint256(  // Always casts a positive value, as powWad >= 1, hence powWad - WAD >= 0
                 FixedPointMathLib.powWad(  // poWad always >= 1, as the 'base' is always >= 1
@@ -420,7 +420,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
 
         // If a token is not part of the pool, W is 0. This returns 0 since
         // 0^p = 0.
-        uint256 U = calcPriceCurveArea(amount, A, W, _oneMinusAmp);
+        uint256 U = _calcPriceCurveArea(amount, A, W, _oneMinusAmp);
 
         // If the swap is a very small portion of the pool
         // Add an additional fee. This covers mathematical errors.
@@ -448,12 +448,12 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         // they would just add value to the pool. We don't care about it.
         // However, it will revert since the solved integral contains U/W and when
         // W = 0 then U/W returns division by 0 error.
-        return calcPriceCurveLimit(U, B, W, _oneMinusAmp);
+        return _calcPriceCurveLimit(U, B, W, _oneMinusAmp);
     }
 
     /**
      * @notice Computes the output of localSwap.
-     * @dev Implemented through calcCombinedPriceCurves.
+     * @dev Implemented through _calcCombinedPriceCurves.
      * @param fromAsset The address of the token to sell.
      * @param toAsset The address of the token to buy.
      * @param amount The amount of from token to sell for to token.
@@ -470,7 +470,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 W_B = _weight[toAsset];
         int256 oneMinusAmp = _oneMinusAmp;
 
-        uint256 output = calcCombinedPriceCurves(amount, A, B, W_A, W_B, oneMinusAmp);
+        uint256 output = _calcCombinedPriceCurves(amount, A, B, W_A, W_B, oneMinusAmp);
 
         // If the swap is a very small portion of the pool
         // Add an additional fee. This covers mathematical errors.
@@ -624,7 +624,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
 
         // On totalSupply. Do not add escrow amount, as higher amount
         // results in a larger return.
-        uint256 poolTokens = calcPriceCurveLimitShare(uint256(U), totalSupply, it_times_walpha_amped, oneMinusAmpInverse);  // uint256: U is positive by design.
+        uint256 poolTokens = _calcPriceCurveLimitShare(uint256(U), totalSupply, it_times_walpha_amped, oneMinusAmpInverse);  // uint256: U is positive by design.
 
         // Check if the return satisfies the user.
         if (minOut > poolTokens)
@@ -998,7 +998,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         ERC20(fromAsset).safeTransferFrom(msg.sender, address(this), amount);
 
         // Governance Fee
-        collectGovernanceFee(fromAsset, fee);
+        _collectGovernanceFee(fromAsset, fee);
 
         // For amplified pools, the security limit is based on the sum of the tokens
         // in the pool.
@@ -1069,7 +1069,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
 
         // Only need to hash info that is required by the escrow (+ some extra for randomisation)
         // No need to hash context (as token/liquidity escrow data is different), fromPool, toPool, targetAssetIndex, minOut, CallData
-        bytes32 sendAssetHash = computeSendAssetHash(
+        bytes32 sendAssetHash = _computeSendAssetHash(
             toAccount,      // Ensures no collisions between different users
             U,              // Used to randomise the hash
             amount - fee,   // Required! to validate release escrow data
@@ -1104,7 +1104,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         _escrowedTokensFor[sendAssetHash] = fallbackUser;
 
         // Governance Fee
-        collectGovernanceFee(fromAsset, fee);
+        _collectGovernanceFee(fromAsset, fee);
 
         // Collect the tokens from the user.
         ERC20(fromAsset).safeTransferFrom(msg.sender, address(this), amount);
@@ -1190,7 +1190,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         // Check if the swap is according to the swap limits
         uint256 deltaSecurityLimit = purchasedTokens * _weight[toAsset];
         _maxUnitCapacity -= deltaSecurityLimit;
-        updateUnitCapacity(deltaSecurityLimit);
+        _updateUnitCapacity(deltaSecurityLimit);
 
         // Ensure the user is satisfied by the number of tokens.
         if (minOut > purchasedTokens) revert ReturnInsufficient(purchasedTokens, minOut);
@@ -1344,7 +1344,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
 
         // Only need to hash info that is required by the escrow (+ some extra for randomisation)
         // No need to hash context (as token/liquidity escrow data is different), fromPool, toPool, targetAssetIndex, minOut, CallData
-        bytes32 sendLiquidityHash = computeSendLiquidityHash(
+        bytes32 sendLiquidityHash = _computeSendLiquidityHash(
             toAccount,      // Ensures no collisions between different users
             U,              // Used to randomise the hash
             poolTokens,     // Required! to validate release escrow data
@@ -1488,7 +1488,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 it_times_walpha_amped = it * walpha_0_ampped;
 
         // On totalSupply. Do not add escrow amount, as higher amount results in a larger return.
-        uint256 poolTokens = calcPriceCurveLimitShare(U, totalSupply, it_times_walpha_amped, oneMinusAmpInverse);
+        uint256 poolTokens = _calcPriceCurveLimitShare(U, totalSupply, it_times_walpha_amped, oneMinusAmpInverse);
 
         // Check if more than the minimum output is returned.
         if(minOut > poolTokens) revert ReturnInsufficient(poolTokens, minOut);
@@ -1517,7 +1517,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                 ))
             );
             // Check if the swap is according to the swap limits
-            updateUnitCapacity(poolTokenEquiv * 2 / FixedPointMathLib.WAD);
+            _updateUnitCapacity(poolTokenEquiv * 2 / FixedPointMathLib.WAD);
         }
 
         // Mint pool tokens for the user.

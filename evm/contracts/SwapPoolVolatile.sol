@@ -258,7 +258,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
      * @param W The weight of the x token.
      * @return uint256 Group-specific units (units are **always** WAD).
      */
-    function calcPriceCurveArea(
+    function _calcPriceCurveArea(
         uint256 input,
         uint256 A,
         uint256 W
@@ -279,7 +279,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
      * @param W The weight of the y token.
      * @return uint25 Output denominated in output token. (not WAD)
      */
-    function calcPriceCurveLimit(
+    function _calcPriceCurveLimit(
         uint256 U,
         uint256 B,
         uint256 W
@@ -292,7 +292,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
      *     \int_{A}^{A+x} W_a/w dw = \int_{B-y}^{B} W_b/w dw for y = B · (1 - ((A+x)/A)^(-W_a/W_b))
      *
      * Alternatively, the integral can be computed through:
-     *      calcPriceCurveLimit(calcPriceCurveArea(input, A, W_A), B, W_B).
+     *      _calcPriceCurveLimit(_calcPriceCurveArea(input, A, W_A), B, W_B).
      * @dev All input amounts should be the raw numbers and not WAD.
      * @param input The input amount.
      * @param A The current pool balance of the x token.
@@ -301,7 +301,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
      * @param W_B TThe weight of the y token.
      * @return uint256 Output denominated in output token.
      */
-    function calcCombinedPriceCurves(
+    function _calcCombinedPriceCurves(
         uint256 input,
         uint256 A,
         uint256 B,
@@ -313,18 +313,18 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         //     int256(FixedPointMathLib.divWadDown(W_A, W_B))
         //)); 
         // return (B * U) / FixedPointMathLib.WAD;
-        return calcPriceCurveLimit(calcPriceCurveArea(input, A, W_A), B, W_B);
+        return _calcPriceCurveLimit(_calcPriceCurveArea(input, A, W_A), B, W_B);
     }
 
     /**
      * @notice Solves the generalised swap integral.
-     * @dev Based on calcPriceCurveLimit but the multiplication by the
+     * @dev Based on _calcPriceCurveLimit but the multiplication by the
      * specific token is never done.
      * @param U Input units.
      * @param W The generalised weights.
      * @return uint256 Output denominated in pool share.
      */
-    function calcPriceCurveLimitShare(
+    function _calcPriceCurveLimitShare(
         uint256 U,
         uint256 W
     ) internal pure returns (uint256) {
@@ -353,7 +353,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
 
         // If a token is not part of the pool, W is 0. This returns 0 by
         // multiplication with 0.
-        return calcPriceCurveArea(amount, A, W);
+        return _calcPriceCurveArea(amount, A, W);
     }
 
     /**
@@ -375,7 +375,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         // they would just add value to the pool. We don't care about it.
         // However, it will revert since the solved integral contains U/W and when
         // W = 0 then U/W returns division by 0 error.
-        return calcPriceCurveLimit(U, B, W);
+        return _calcPriceCurveLimit(U, B, W);
     }
 
     /**
@@ -412,7 +412,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
 
         // If either token doesn't exist, their weight is 0.
         // Then powWad returns 1 which is subtracted from 1 => returns 0.
-        return calcCombinedPriceCurves(amount, A, B, W_A, W_B);
+        return _calcCombinedPriceCurves(amount, A, B, W_A, W_B);
     }
 
     /**
@@ -421,7 +421,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
      * Requires approvals for all tokens within the pool.
      * It is advised that the deposit matches the pool's %token distribution.
      * Deposit is done by converting tokenAmounts into units and then using
-     * the macro for units to pool tokens. (calcPriceCurveLimitShare)
+     * the macro for units to pool tokens. (_calcPriceCurveLimitShare)
      * @param tokenAmounts An array of the tokens amounts to be deposited.
      * @param minOut The minimum number of pool tokens to be minted.
      * @return uint256 The number of minted pool tokens.
@@ -449,7 +449,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
              // A high => fewer units returned. Do not subtract the escrow amount
             uint256 At = ERC20(token).balanceOf(address(this));
 
-            U += calcPriceCurveArea(tokenAmounts[it], At, _weight[token]);
+            U += _calcPriceCurveArea(tokenAmounts[it], At, _weight[token]);
 
             ERC20(token).safeTransferFrom(
                 msg.sender,
@@ -474,8 +474,8 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         // Fetch wsum.
         uint256 wsum = _maxUnitCapacity / FixedPointMathLib.LN2;
 
-        // calcPriceCurveLimitShare returns < 1 multiplied by FixedPointMathLib.WAD.
-        uint256 poolTokens = (initialTotalSupply * calcPriceCurveLimitShare(U, wsum)) / FixedPointMathLib.WAD;
+        // _calcPriceCurveLimitShare returns < 1 multiplied by FixedPointMathLib.WAD.
+        uint256 poolTokens = (initialTotalSupply * _calcPriceCurveLimitShare(U, wsum)) / FixedPointMathLib.WAD;
 
         // Check that the minimum output is honoured.
         if (minOut > poolTokens) revert ReturnInsufficient(poolTokens, minOut);
@@ -595,7 +595,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
 
             // Units are shared between "liquidity units" and "token units". As such, we just
             // need to convert the units to tokens.
-            uint256 tokenAmount = calcPriceCurveLimit(U_i, At, _weight[token]);
+            uint256 tokenAmount = _calcPriceCurveLimit(U_i, At, _weight[token]);
 
             // Ensure the output satisfies the user.
             if (minOut[it] > tokenAmount)
@@ -646,7 +646,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         ERC20(fromAsset).safeTransferFrom(msg.sender, address(this), amount);
 
         // Governance Fee
-        collectGovernanceFee(fromAsset, fee);
+        _collectGovernanceFee(fromAsset, fee);
 
         emit LocalSwap(msg.sender, fromAsset, toAsset, amount, out);
 
@@ -695,7 +695,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
 
         // Only need to hash info that is required by the escrow (+ some extra for randomisation)
         // No need to hash context (as token/liquidity escrow data is different), fromPool, toPool, targetAssetIndex, minOut, CallData
-        bytes32 sendAssetHash = computeSendAssetHash(
+        bytes32 sendAssetHash = _computeSendAssetHash(
             toAccount,      // Ensures no collisions between different users
             U,              // Used to randomise the hash
             amount - fee,   // Required! to validate release escrow data
@@ -730,7 +730,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         _escrowedTokensFor[sendAssetHash] = fallbackUser;
 
         // Governance Fee
-        collectGovernanceFee(fromAsset, fee);
+        _collectGovernanceFee(fromAsset, fee);
 
         // Collect the tokens from the user.
         ERC20(fromAsset).safeTransferFrom(msg.sender, address(this), amount);
@@ -809,7 +809,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         address toAsset = _tokenIndexing[toAssetIndex];
 
         // Check and update the security limit.
-        updateUnitCapacity(U);
+        _updateUnitCapacity(U);
 
         // Calculate the swap return value.
         // Fee is always taken on the sending token.
@@ -916,7 +916,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
 
         // Only need to hash info that is required by the escrow (+ some extra for randomisation)
         // No need to hash context (as token/liquidity escrow data is different), fromPool, toPool, targetAssetIndex, minOut, CallData
-        bytes32 sendLiquidityHash = computeSendLiquidityHash(
+        bytes32 sendLiquidityHash = _computeSendLiquidityHash(
             toAccount,      // Ensures no collisions between different users
             U,              // Used to randomise the hash
             poolTokens,     // Required! to validate release escrow data
@@ -1014,7 +1014,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         _updateWeights();
 
         // Check if the swap is according to the swap limits
-        updateUnitCapacity(U);
+        _updateUnitCapacity(U);
 
         // Fetch wsum.
         uint256 wsum = _maxUnitCapacity / FixedPointMathLib.LN2;
@@ -1022,7 +1022,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         // Use the arbitarty integral to compute mint %. It comes as WAD, multiply by totalSupply
         // and divided by WAD to get number of pool tokens.
         // On totalSupply. Do not add escrow amount, as higher amount results in a larger return.
-        uint256 poolTokens = (calcPriceCurveLimitShare(U, wsum) * totalSupply)/FixedPointMathLib.WAD;
+        uint256 poolTokens = (_calcPriceCurveLimitShare(U, wsum) * totalSupply)/FixedPointMathLib.WAD;
 
         // Check if more than the minimum output is returned.
         if (minOut > poolTokens) revert ReturnInsufficient(poolTokens, minOut);
