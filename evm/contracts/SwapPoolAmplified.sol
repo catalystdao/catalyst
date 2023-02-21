@@ -1531,7 +1531,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
     
     function receiveLiquidity(
         bytes32 channelId,
-        bytes32 sourcePool,
+        bytes32 fromPool,
         address who,
         uint256 U,
         uint256 minOut,
@@ -1541,7 +1541,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
     ) external returns (uint256) {
         uint256 purchasedPoolTokens = receiveLiquidity(
             channelId,
-            sourcePool,
+            fromPool,
             who,
             U,
             minOut,

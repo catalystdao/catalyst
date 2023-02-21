@@ -204,7 +204,7 @@ interface ICatalystV1PoolPermissionless {
 
     function receiveLiquidity(
         bytes32 channelId,
-        bytes32 sourcePool,
+        bytes32 fromPool,
         address who,
         uint256 U,
         uint256 minOut,
