@@ -2,82 +2,29 @@
 
 The EVM implementation of Catalyst is used as a reference implementation for other development efforts. The main logic is split into 6 contracts:
 
-- `FixedPointMath.sol` : The mathematical library used for Catalyst. Implements the necessary mathematical functions the Catalyst documentation requires.
+- `FixedPointMathLib.sol` : The mathematical library used for Catalyst. Based on the [solmate](https://github.com/transmissions11/solmate/blob/ed67feda67b24fdeff8ad1032360f0ee6047ba0a/src/utils/FixedPointMathLib.sol).
 - `CatalystIBCInterface.sol` : Describes how the Catalyst protocol interfaces with the message router. This includes packing and unpacking of data and wrapping of various incoming calls.
 - `SwapPoolCommon.sol` : Implements logic which doesn't depend on the swap curve. Containing the implementation in one contract allows for less repetition and a simplified development experience.
 - `SwapPool.sol` : Extends `SwapPoolCommon.sol` with the price curve $P(w) = \frac{W}{w \ln(2)}$.
 - `SwapPoolAmplified.sol` : Extends `SwapPoolCommon.sol` with the price curve $P(w) = \frac{1 - \theta}{w^\theta}$.
 - `SwapPoolFactory.sol` : Simplifies deployment of swap pools through Open Zeppelin's Clones. Minimal proxies which uses delegate calls to the deployed contracts. This significantly reduces pool deployment cost. 
 
-## FixedPointMath.sol
-
-The mathematical library used to handle fixed point numbers. Fixed point numbers are  implemented transparently in `uint256` or `int128` by multiplying integers by $2^{64}$, such that $(4)_{64} = 4 \cdot 2^{64} = 73,786,976,294,838,206,464$. Similarly, decimal numbers can be represented: $(0.375)_{64} = 0.375 \cdot 2^{64} = 6,917,529,027,641,081,856$. The mathematical library contains functions which handle multiplication and division that could overflow in `uint256`.
-
-The library enables computation of: 
-
-- `log2X64`: Computes $\log_2$ for X64 input and output.
-
-- `p2X64`: Computes $2^x$ for X64 input and output.
-
-- `invp2X64`: Computes $2^{-x}$ for X64 input and output.
-
-- `fpowX64`: Computes $x^y$ for X64 inputs and outputs. Uses the identity $2^{y \cdot \log_2x}$
-
-- `invfpowX64`: Computes $x^{-y}$ for X64 inputs and outputs. Uses the identity $2^{-y \cdot \log_2x}$
-
-$log_2$ only works for $x ≥ 1$. If $x < 1$, use the identity: $log_2(x) = - log_2(x^{-1}).$ Since $x^y$ is implemented through $log_2$, the similar identity can be used: $x^p = \left(\frac{1}{x}\right)^{-p}$.
-
 ## CatalystIBCInterface.sol
 
 An intermediate contract between swap pools and the message router. This contract is specifically designed to sit between Catalyst swap pools and an IBC compliant message router.
 
-Wraps the cross-chain calls into a byte array. The byte array depends on the message purpose. The message purpose can be found in the first byte of the transaction:
-
-```jsx
-Context Flag
-    2^0: Asset (0) or Liquidity swap (1)
-      1: Non-approximate (0) or approximate (1)
-	  2: Unused # Proposed: Additional Payload for execution (1)
-	  3: Unused
-	  .
-	  .
-	  7: Unused
-```
-
-Generally, the message format is:
-```jsx
-0 _context : Bytes[1]  # Used by CII to unpack data.
-1-32 _fromPool : bytes32  # The sending pool. Since CCI sits between the pools and the message router, the CCI cannot infer the pool from the message router.
-33-64 _pool : bytes32  # The receiving pool. The payload target which the other CCI should deliver the data to.
-...
-```
+Wraps the cross-chain calls into a byte array. The byte array depends on the message purpose. The message packing can be found in `/contracts/CatalystIBCPayload.sol`
 
 Catalyst v1 implements 2 type of swaps, Asset swaps and Liquidity Swaps.
 
 ### 0x00: Asset Swap
 
-If `(_context & 0x01) == 0`, then the message is an asset swap. It could be called a cross-chain asset swap but there is nothing to stop a user from Asset Swapping between 2 pools on the same chain. As a result, it would be more fitting to call it cross-pool swap.
+If `_context == 0x00`, then the message is an asset swap. It could be called a cross-chain asset swap but there is nothing to stop a user from Asset Swapping between 2 pools on the same chain.
 
-The Asset Swap implements the general message format:
-
-```jsx
-0 _context : Bytes[1]
-1-32 _fromPool : bytes32
-33-64 _pool : bytes32
-65-96 _toAccount : bytes32  # The recipient of the assets on the target chain.
-97-128 _U : uint256  # Number of units
-129 _assetIndex : uint8  # Asset index on target pool
-130-161 _minOut : uint256  # Minimum number of output assets. If the pool returns less, the transaction should revert.
-162-193 _escrowAmount : uint256  # The number of tokens initially used.
-194-225 _escrowToken : bytes32  # The token initially used.
-226-227 _customDataLength : uint16  # If custom data is passed, then length.
-228-259+_customDataLength-32 _customData : bytes...  # The bytes passed to the custom Target.
-The calldata target should be encoded within the first 32 bytes of _customData.
-```
-The message is hashed on the sending chain. This allows the escrow storage to be moved into the cross-chain message, only true escrow information can be submitted to the escrow logic.
+Parts of the message is hashed on the sending chain. This allows the escrow storage to be moved into the cross-chain message. This allows the smart contract to validate escrow information coming from the router.
 
 ### 0x01: Liquidity Swap
-If `(_context & 0x01) == 1`, then the message is an liquidity swap. The purpose of liquidity swaps is to reduce the cost of acquiring an even distribution of liquidity. While the asset cost (through slippage) would be the same as getting an even distribution manually, the gas cost and number of interactions required could be substantially less.
+If `_context == 0x01`, then the message is an liquidity swap. The purpose of liquidity swaps is to reduce the cost of acquiring an even distribution of liquidity. While the asset cost (through slippage) would be the same as getting an even distribution manually, the gas cost and number of interactions required could be substantially less.
 
 This is done by converting the 4 actions:
 1. Withdraw tokens
@@ -87,19 +34,6 @@ This is done by converting the 4 actions:
 
 into a single transaction.
 
-
-The Liquidity Swap implements the general message format:
-
-```jsx
-0 _context : Bytes[1] 
-1-32 _fromPool : bytes32
-33-64 _pool : bytes32
-65-96 _toAccount : bytes32  # The recipient of the pool tokens on the target chain.
-97-128 _LU : uint256  # Number of units
-129-160 _minOut : uint256  # Minimum number of pool tokens minted to `_toAccount`. If the pool returns less, the transaction should revert.
-161-192 _escrowAmount : uint256  # The number of pools tokens initially used.
-```
-
 ### Encoding or decoding a Catalyst message
 
 Using brownie, the below code example shows how to encode and decode a Catalyst message.
@@ -107,37 +41,46 @@ Using brownie, the below code example shows how to encode and decode a Catalyst 
 ```py
 from brownie import convert, ZERO_ADDRESS
 
-def payloadConstructor(
-    _fromPool,
-    _toPool,
-    _toAccount,
-    _U,
-    _assetIndex=0,
-    _minOut=0,
-    _escrowAmount=0,
-    _escrowToken=ZERO_ADDRESS,
-    _context=convert.to_bytes(0, type_str="bytes1"),
+def encode_swap_payload(
+    from_pool,
+    to_pool,
+    to_account,
+    U,
+    asset_index=0,
+    min_out=0,
+    escrow_amount=0,
+    escrow_token=ZERO_ADDRESS,
+    block_number=0
 ):
+
     return (
-        _context
-        + convert.to_bytes(_fromPool, type_str="bytes32")
-        + convert.to_bytes(_toPool, type_str="bytes32")
-        + _toAccount
-        + convert.to_bytes(_U, type_str="bytes32")
-        + convert.to_bytes(_assetIndex, type_str="bytes1")
-        + convert.to_bytes(_minOut, type_str="bytes32")
-        + convert.to_bytes(_escrowAmount, type_str="bytes32")
-        + convert.to_bytes(_escrowToken, type_str="bytes32")
+        convert.to_bytes(0, type_str="bytes1")
+        + convert.to_bytes(from_pool, type_str="bytes32")
+        + convert.to_bytes(to_pool, type_str="bytes32")
+        + convert.to_bytes(to_account, type_str="bytes32")
+        + convert.to_bytes(U, type_str="bytes32")
+        + convert.to_bytes(asset_index, type_str="bytes1")
+        + convert.to_bytes(min_out, type_str="bytes32")
+        + convert.to_bytes(escrow_amount, type_str="bytes32")
+        + convert.to_bytes(escrow_token, type_str="bytes32")
+        + convert.to_bytes(block_number, type_str="bytes4")
+        + convert.to_bytes(
+            compute_asset_swap_hash(to_account, U, escrow_amount, escrow_token, block_number),
+            type_str="bytes32"
+        )
         + convert.to_bytes(0, type_str="bytes2")
     )
 
 
-def evmBytes32ToAddress(bytes32):
+def evm_bytes_32_to_address(bytes32):
     return convert.to_address(bytes32[12:])
 
 
-def decodePayload(data, decode_address=evmBytes32ToAddress):
+def decode_payload(data, decode_address=evm_bytes_32_to_address):
+
     context = data[0]
+
+    # Liquidity swap payload
     if context & 1:
         return {
             "_context": data[0],
@@ -146,9 +89,13 @@ def decodePayload(data, decode_address=evmBytes32ToAddress):
             "_toAccount": decode_address(data[65:97]),
             "_LU": convert.to_uint(data[97:129]),
             "_minOut": convert.to_uint(data[129:161]),
-            "_escrowAmount": convert.to_uint(data[161:193])
+            "_escrowAmount": convert.to_uint(data[161:193]),
+            "_blockNumber": convert.to_uint(data[193:197]),
+            "_swapHash": data[197:228],
         }
-    customDataLength = convert.to_uint(data[226:228], type_str="uint16")
+    
+    # Asset swap payload
+    custom_data_length = convert.to_uint(data[262:264], type_str="uint16")
     return {
         "_context": data[0],
         "_fromPool": decode_address(data[1:33]),
@@ -159,9 +106,11 @@ def decodePayload(data, decode_address=evmBytes32ToAddress):
         "_minOut": convert.to_uint(data[130:162]),
         "_escrowAmount": convert.to_uint(data[162:194]),
         "_escrowToken": decode_address(data[194:226]),
-        "customDataLength": customDataLength,
-        "_customDataTarget": decode_address(data[228:260]) if customDataLength > 0 else None,
-        "_customData": data[260:260+customDataLength - 32] if customDataLength > 0 else None
+        "_blockNumber": convert.to_uint(data[226:230]),
+        "_swapHash": data[230:262],
+        "customDataLength": custom_data_length,
+        "_customDataTarget": decode_address(data[264:296]) if custom_data_length > 0 else None,
+        "_customData": data[296:296+custom_data_length - 32] if custom_data_length > 0 else None
     }
 
 data = payloadConstructor("0x66aB6D9362d4F35596279692F0251Db635165871", "0x33A4622B82D4c04a53e170c638B944ce27cffce3", convert.to_bytes("0x0063046686E46Dc6F15918b61AE2B121458534a5"), 12786308645202655232)
@@ -180,29 +129,7 @@ A contract abstract, implementing logic which doesn't depend on the swap curve. 
 
 Swap Pools can inherit `SwapPoolCommon.sol` to automatically be compliant with IBC callbacks and the security limit. 
 
-By inheriting `SwapPoolCommon.sol`, Swap Pools are deployed inactive:
-```solidity
-constructor() ERC20("", "") {
-    _INITIALIZED = true; // <----
-}
-```
-which breaks pool setup:
-```solidity
-function setupBase(
-    string calldata name_,
-    string calldata symbol_,
-    address chainInterface,
-    address setupMaster
-) internal {
-    // The pool is only designed to be used by a proxy and not as a standalone.
-    // as a result self.check is set to TRUE on init, to stop anyone from using
-    // the pool without a proxy.
-    require(!_INITIALIZED); // <----
-    ...
-}
-```
-This makes it necessary to deploy a minimal proxy which uses the pool logic via delegateCall.
-
+`SwapPoolCommon.sol` implements [Initializable.sol](https://docs.openzeppelin.com/contracts/4.x/api/proxy#Initializable) to ensure the pool is correctly setup.
 
 ## SwapPool.sol
 
@@ -293,14 +220,6 @@ To compile solidity contracts directly (not through Brownie), one has to install
 
 Catalyst has been analyzed using Slither and no major bugs was found. To rerun the analytics, run:
 
-`slither contracts/<>.sol --solc-remaps @openzeppelin=node_modules/@openzeppelin --solc-args "--optimize --optimize-runs 1000" --exclude naming-convention`
+`slither contracts/<>.sol --solc-remaps @openzeppelin=node_modules/@openzeppelin --solc-args "--optimize --optimize-runs 9000" --exclude naming-convention`
 
 For each contract. `slither .` does not work.
-
-### Vyper
-
-To compile vyper contracts directly, the correct Vyper version should be installed independently of this project. eth-brownie depends on the newest version of Vyper, which the contracts might not be compatible with.
-
-- Vyper
-  - via pip: `pip install vyper==<version>`
-  - via docker: [vyper.readthedocs.io](https://vyper.readthedocs.io/en/latest/installing-vyper.html#docker)
