@@ -1393,7 +1393,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
     /** @notice Copy of sendLiquidity with no calldata_ */
     function sendLiquidity(
         bytes32 channelId,
-        bytes32 targetPool,
+        bytes32 toPool,
         bytes32 targetUser,
         uint256 poolTokens,
         uint256 minOut,
@@ -1402,7 +1402,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         bytes memory calldata_ = new bytes(0);
         return sendLiquidity(
             channelId,
-            targetPool,
+            toPool,
             targetUser,
             poolTokens,
             minOut,

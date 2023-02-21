@@ -158,7 +158,7 @@ interface ICatalystV1PoolPermissionless {
      * Vyper: convert(_poolAddress, bytes32)
      * Solidity: abi.encode(_poolAddress)
      * Brownie: brownie.convert.to_bytes(_poolAddress, type_str="bytes32")
-     * @param toAccount The recipient of the transaction on _chain. Encoded in bytes32. For EVM chains it can be found similarly to _targetPool.
+     * @param toAccount The recipient of the transaction on _chain. Encoded in bytes32. For EVM chains it can be found similarly to _toPool.
      * @param baseAmount The number of pool tokens to liquidity Swap
      */
     function sendLiquidity(
@@ -175,7 +175,7 @@ interface ICatalystV1PoolPermissionless {
     /// Should be encoded abi.encode(<address>,<data>)
     function sendLiquidity(
         bytes32 channelId,
-        bytes32 targetPool,
+        bytes32 toPool,
         bytes32 who,
         uint256 baseAmount,
         uint256 minOut,
