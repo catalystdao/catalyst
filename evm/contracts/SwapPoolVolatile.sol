@@ -966,7 +966,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
     function sendLiquidity(
         bytes32 channelId,
         bytes32 toPool,
-        bytes32 targetUser,
+        bytes32 toAccount,
         uint256 poolTokens,
         uint256 minOut,
         address fallbackUser
@@ -975,7 +975,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         return sendLiquidity(
             channelId,
             toPool,
-            targetUser,
+            toAccount,
             poolTokens,
             minOut,
             fallbackUser,
