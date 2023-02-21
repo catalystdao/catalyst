@@ -168,7 +168,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
      * The partial weight change algorithm is not made for large step increases. As a result, 
      * it is important that the original weights are large to increase the mathematical resolution.
      */
-    function _adjustWeights() internal {
+    function _updateWeights() internal {
         // We might use adjustment target more than once. Since we don't change it, store it.
         uint256 adjTarget = _adjustmentTarget;
 
@@ -632,7 +632,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 amount,
         uint256 minOut
     ) nonReentrant external returns (uint256) {
-        _adjustWeights();
+        _updateWeights();
         uint256 fee = FixedPointMathLib.mulWadDown(amount, _poolFee);
 
         // Calculate the return value.
@@ -686,7 +686,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         if (!_poolConnection[channelId][toPool]) revert PoolNotConnected(channelId, toPool);
         require(fallbackUser != address(0));
 
-        _adjustWeights();
+        _updateWeights();
 
         uint256 fee = FixedPointMathLib.mulWadDown(amount, _poolFee);
 
@@ -803,7 +803,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         // The chainInterface is the only valid caller of this function.
         require(msg.sender == _chainInterface);
 
-        _adjustWeights();
+        _updateWeights();
 
         // Convert the asset index (toAsset) into the asset to be purchased.
         address toAsset = _tokenIndexing[toAssetIndex];
@@ -898,7 +898,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         require(fallbackUser != address(0));
 
         // Update weights
-        _adjustWeights();
+        _updateWeights();
 
         uint256 initialTotalSupply = totalSupply + _escrowedPoolTokens;
         // Since we have already cached totalSupply, we might as well burn the tokens
@@ -1011,7 +1011,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         // Only allow connected pools
         if (!_poolConnection[channelId][fromPool]) revert PoolNotConnected(channelId, fromPool);
 
-        _adjustWeights();
+        _updateWeights();
 
         // Check if the swap is according to the swap limits
         updateUnitCapacity(U);
