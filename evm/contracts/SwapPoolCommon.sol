@@ -274,12 +274,7 @@ abstract contract CatalystSwapPoolCommon is
         uint256 governanceFeeShare = _governanceFeeShare;
 
         if (governanceFeeShare != 0) {
-            unchecked {
-                // Since poolFeeAmount is calculated as swapAmount * poolFee / 1e18
-                // swapAmount * poolFee / 1e18 * governanceFeeShare < swapAmount * poolFee thus it can fit in
-                // uint256. See mathematical lib for how multiplication works.
-                uint256 governanceFeeAmount = poolFeeAmount * governanceFeeShare / 1e18;
-            }
+            uint256 governanceFeeAmount = FixedPointMathLib.mulWadDown(poolFeeAmount, governanceFeeShare);
             ERC20(asset).safeTransfer(factoryOwner(), governanceFeeAmount);
         }
     }
