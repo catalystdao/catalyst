@@ -88,11 +88,11 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         require(amp == FixedPointMathLib.WAD);  // dev: amplification not set correctly.
         // Check for a misunderstanding regarding how many assets this pool supports.
         require(assets.length > 0 && assets.length <= MAX_ASSETS);  // dev: invalid asset count
-
+        
         // Compute the security limit.
         uint256[] memory initialBalances = new uint256[](MAX_ASSETS);
         uint256 maxUnitCapacity = 0;
-        for (uint256 it = 0; it < assets.length; ++it) {
+        for (uint256 it; it < assets.length;) {
 
             address tokenAddress = assets[it];
             _tokenIndexing[it] = tokenAddress;
@@ -108,8 +108,12 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
             initialBalances[it] = balanceOfSelf;
 
             maxUnitCapacity += weight;
+
+            unchecked {
+                it++;
+            }
         }
-        
+
         // The maximum unit flow is \sum Weights * ln(2). The value is multiplied by WAD 
         // since units are always WAD denominated (note WAD is already included in the LN2 factor).
         _maxUnitCapacity = maxUnitCapacity * FixedPointMathLib.LN2;
@@ -133,22 +137,26 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
      * @param targetTime Once reached, _weight[...] = newWeights[...]
      * @param newWeights The new weights to apply
      */
-    function modifyWeights(uint256 targetTime, uint256[] calldata newWeights)
-        external
-        onlyFactoryOwner
-    {
-        require(targetTime >= block.timestamp + MIN_ADJUSTMENT_TIME); // dev: targetTime must be more than MIN_ADJUSTMENT_TIME in the future.
-        
+    function modifyWeights(uint256 targetTime, uint256[] calldata newWeights) external onlyFactoryOwner {
+        unchecked {
+            require(targetTime >= block.timestamp + MIN_ADJUSTMENT_TIME); // dev: targetTime must be more than MIN_ADJUSTMENT_TIME in the future.
+            require(targetTime <= block.timestamp + 365 days); // dev: Target time cannot be too far into the future.
+        }
+
         // Store adjustment information
         _adjustmentTarget = targetTime;
         _lastModificationTime = block.timestamp;
 
         // Compute sum weight for security limit.
-        for (uint256 it = 0; it < MAX_ASSETS; ++it) {
+        for (uint256 it; it < MAX_ASSETS;) {
             address token = _tokenIndexing[it];
             if (token == address(0)) break;
             require(newWeights[it] != 0); // dev: newWeights must be greater than 0 to protect liquidity providers.
             _targetWeight[token] = newWeights[it];
+
+            unchecked {
+                it++;
+            }
         }
 
         emit ModifyWeights(targetTime, newWeights);
@@ -177,7 +185,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
             uint256 wsum = 0;
             // If the current time is past the adjustment, the weights need to be finalized.
             if (block.timestamp >= adjTarget) {
-                for (uint256 it = 0; it < MAX_ASSETS; ++it) {
+                for (uint256 it; it < MAX_ASSETS;) {
                     address token = _tokenIndexing[it];
                     if (token == address(0)) break;
 
@@ -188,6 +196,10 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
 
                     // Save the new weight.
                     _weight[token] = targetWeight;
+
+                    unchecked {
+                        it++;
+                    }
                 }
                 // Save weight sum.
                 _maxUnitCapacity = wsum * FixedPointMathLib.LN2;
@@ -199,7 +211,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
             }
 
             // Calculate partial weight change
-            for (uint256 it = 0; it < MAX_ASSETS; ++it) {
+            for (uint256 it; it < MAX_ASSETS; ++it) {
                 address token = _tokenIndexing[it];
                 if (token == address(0)) break;
 
@@ -422,12 +434,17 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 initialTotalSupply = totalSupply; 
 
         uint256 U = 0;
-        for (uint256 it = 0; it < MAX_ASSETS; ++it) {
+        for (uint256 it; it < MAX_ASSETS;) {
             address token = _tokenIndexing[it];
             if (token == address(0)) break;
 
             // Save gas if the user provides no tokens.
-            if (tokenAmounts[it] == 0) continue;
+            if (tokenAmounts[it] == 0) {
+                unchecked {
+                    it++;
+                }
+                continue;
+            }
 
              // A high => fewer units returned. Do not subtract the escrow amount
             uint256 At = ERC20(token).balanceOf(address(this));
@@ -439,6 +456,10 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
                 address(this),
                 tokenAmounts[it]
             ); // dev: Token withdrawal from user failed.
+
+            unchecked {
+                it++;
+            }
         }
 
         // Subtract fee from U. This stops people from using deposit and withdrawal as a method of swapping.
@@ -491,7 +512,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 loopLength = minOut.length < MAX_ASSETS ? minOut.length : MAX_ASSETS;
         // For later event logging, the amounts transferred from the pool are stored.
         uint256[] memory amounts = new uint256[](loopLength);
-        for (uint256 it = 0; it < loopLength; ++it) {
+        for (uint256 it; it < loopLength;) {
             address token = _tokenIndexing[it];
             if (token == address(0)) break;
 
@@ -510,6 +531,10 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
 
             // Transfer the released tokens to the user.
             ERC20(token).safeTransfer(msg.sender, tokenAmount);
+
+            unchecked {
+                it++;
+            }
         }
 
         // Emit the event
@@ -550,12 +575,15 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 loopLength = minOut.length < MAX_ASSETS ? minOut.length : MAX_ASSETS;
         // For later event logging, the amounts transferred to the pool are stored.
         uint256[] memory amounts = new uint256[](loopLength);
-        for (uint256 it = 0; it < loopLength; ++it) {
+        for (uint256 it; it < loopLength;) {
             // Units allocated for the specific token.
             uint256 U_i = (U * withdrawRatio[it]) / FixedPointMathLib.WAD;
             if (U_i == 0) {
                 if (minOut[it] != 0)
                     revert ReturnInsufficient(0, minOut[it]);
+                unchecked {
+                    it++;
+                }
                 continue;
             }
             U -= U_i;  // Subtract the number of units used. This will underflow for malicious withdrawRatios > 1.
@@ -578,6 +606,10 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
 
             // Transfer the released tokens to the user.
             ERC20(token).safeTransfer(msg.sender, tokenAmount);
+
+            unchecked {
+                it++;
+            }
         }
 
         // Emit the event
@@ -650,11 +682,10 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         address fallbackUser,
         bytes memory calldata_
     ) public returns (uint256) {
-
         // Only allow connected pools
         if (!_poolConnection[channelId][toPool]) revert PoolNotConnected(channelId, toPool);
-
         require(fallbackUser != address(0));
+
         _adjustWeights();
 
         uint256 fee = FixedPointMathLib.mulWadDown(amount, _poolFee);
@@ -767,12 +798,11 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 minOut,
         bytes32 swapHash
     ) public returns (uint256) {
-
         // Only allow connected pools
         if (!_poolConnection[channelId][fromPool]) revert PoolNotConnected(channelId, fromPool);
-
         // The chainInterface is the only valid caller of this function.
         require(msg.sender == _chainInterface);
+
         _adjustWeights();
 
         // Convert the asset index (toAsset) into the asset to be purchased.
@@ -847,6 +877,8 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
      * @param toAccount The recipient of the transaction on the target chain. Encoded in bytes32.
      * @param poolTokens The number of pool tokens to exchange
      * @param minOut The minimum number of pool tokens to mint on target pool.
+     * @param calldata_ Data field if a call should be made on the target chain. 
+     * Should be encoded abi.encode(<address>,<data>)
      * @return uint256 The number of units minted.
      */
     function sendLiquidity(
@@ -855,15 +887,16 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         bytes32 toAccount,
         uint256 poolTokens,
         uint256 minOut,
-        address fallbackUser
-    ) external returns (uint256) {
-
+        address fallbackUser,
+        bytes memory calldata_
+    ) public returns (uint256) {
         // Only allow connected pools
         if (!_poolConnection[channelId][toPool]) revert PoolNotConnected(channelId, toPool);
 
         // Address(0) is not a valid fallback user. (As checking for escrow overlap
         // checks if the fallbackUser != address(0))
         require(fallbackUser != address(0));
+
         // Update weights
         _adjustWeights();
 
@@ -906,7 +939,8 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
             toAccount,
             U,
             minOut,
-            swapMetadata
+            swapMetadata,
+            calldata_
         );
 
         // Escrow the pool tokens
@@ -926,6 +960,27 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         );
 
         return U;
+    }
+
+    /** @notice Copy of sendLiquidity with no calldata_ */
+    function sendLiquidity(
+        bytes32 channelId,
+        bytes32 targetPool,
+        bytes32 targetUser,
+        uint256 poolTokens,
+        uint256 minOut,
+        address fallbackUser
+    ) external returns (uint256) {
+        bytes memory calldata_ = new bytes(0);
+        return sendLiquidity(
+            channelId,
+            targetPool,
+            targetUser,
+            poolTokens,
+            minOut,
+            fallbackUser,
+            calldata_
+        );
     }
 
     /**
@@ -950,13 +1005,12 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 U,
         uint256 minOut,
         bytes32 swapHash
-    ) external returns (uint256) {
-
+    ) public returns (uint256) {
+        // The chainInterface is the only valid caller of this function.
+        require(msg.sender == _chainInterface);
         // Only allow connected pools
         if (!_poolConnection[channelId][fromPool]) revert PoolNotConnected(channelId, fromPool);
 
-        // The chainInterface is the only valid caller of this function.
-        require(msg.sender == _chainInterface);
         _adjustWeights();
 
         // Check if the swap is according to the swap limits
@@ -967,6 +1021,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
 
         // Use the arbitarty integral to compute mint %. It comes as WAD, multiply by totalSupply
         // and divided by WAD to get number of pool tokens.
+        // On totalSupply. Do not add escrow amount, as higher amount results in a larger return.
         uint256 poolTokens = (calcPriceCurveLimitShare(U, wsum) * totalSupply)/FixedPointMathLib.WAD;
 
         // Check if more than the minimum output is returned.
@@ -978,6 +1033,35 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         emit ReceiveLiquidity(fromPool, toAccount, U, poolTokens, swapHash);
 
         return poolTokens;
+    }
+
+    
+    function receiveLiquidity(
+        bytes32 channelId,
+        bytes32 sourcePool,
+        address who,
+        uint256 U,
+        uint256 minOut,
+        bytes32 swapHash,
+        address dataTarget,
+        bytes calldata data
+    ) external returns (uint256) {
+        uint256 purchasedPoolTokens = receiveLiquidity(
+            channelId,
+            sourcePool,
+            who,
+            U,
+            minOut,
+            swapHash
+        );
+
+        // Let users define custom logic which should be executed after the swap.
+        // The logic is not contained within a try - except so if the logic reverts
+        // the transaction will timeout and the user gets the input tokens on the sending chain.
+        // If this is not desired, wrap further logic in a try - except at dataTarget.
+        ICatalystReceiver(dataTarget).onCatalystCall(purchasedPoolTokens, data);
+
+        return purchasedPoolTokens;
     }
 
     //-- Escrow Functions --//
@@ -1047,7 +1131,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         // As a result, if people swap into the pool, we should expect that there is exactly
         // the inswapped amount of trust in the pool. If this wasn't implemented, there would be
         // a maximum daily cross chain volume, which is bad for liquidity providers.
-        {
+        unchecked {
             // Calling timeout and then ack should not be possible. 
             // The initial lines deleting the escrow protects against this.
             uint256 UC = _usedUnitCapacity;

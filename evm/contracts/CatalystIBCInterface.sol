@@ -65,10 +65,8 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
         AssetSwapMetadata memory metadata,
         bytes memory calldata_
     ) external {
-        // Anyone can call this function. And anyone can pass the security check later,
-        // but unless someone can also manage to pass the security check on onRecvPacket
-        // they cannot drain any value.
-        // As such, the very worst they can do is waste gas.
+        // Anyone can call this function, but unless someone can also manage to pass the security check on onRecvPacket
+        // they cannot drain any value. As such, the very worst they can do is waste gas.
 
         // Encode payload. See CatalystIBCPayload.sol for the payload definition
         bytes memory data = bytes.concat(       // Using bytes.concat to circumvent stack too deep error
@@ -109,6 +107,8 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
      * @param U The calculated liquidity reference. (Units)
      * @param minOut The minimum number of returned tokens to the toAccount on the target chain.
      * @param metadata Metadata on the asset swap, used for swap identification and ack/timeout.
+     * @param calldata_ Data field if a call should be made on the target chain. 
+     * Should be encoded abi.encode(<address>,<data>)
      */
     function sendCrossChainLiquidity(
         bytes32 channelId,
@@ -116,25 +116,29 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
         bytes32 toAccount,
         uint256 U,
         uint256 minOut,
-        LiquiditySwapMetadata memory metadata
+        LiquiditySwapMetadata memory metadata,
+        bytes memory calldata_
     ) external {
-        // Anyone can call this function. And anyone can pass the security check later,
-        // but unless someone can also manage to pass the security check on onRecvPacket
-        // they cannot drain any value.
-        // As such, the very worst they can do is waste gas.
+        // Anyone can call this function, but unless someone can also manage to pass the security check on onRecvPacket
+        // they cannot drain any value. As such, the very worst they can do is waste gas.
 
         // Encode payload. See CatalystIBCPayload.sol for the payload definition
-        bytes memory data = abi.encodePacked(
-            CTX1_LIQUIDITY_SWAP,
-            abi.encode(msg.sender),         // Use abi.encode to encode address into 32 bytes
-            toPool,
-            toAccount,
-            U,
-            minOut,
-            metadata.fromAmount,
-            metadata.blockNumber,
-            metadata.swapHash,
-            uint8(0)                        // Set DATA length to 0
+        bytes memory data = bytes.concat(       // Using bytes.concat to circumvent stack too deep error
+            abi.encodePacked(
+                CTX1_LIQUIDITY_SWAP,
+                abi.encode(msg.sender),         // Use abi.encode to encode address into 32 bytes
+                toPool,
+                toAccount,
+                U,
+                minOut
+            ),
+            abi.encodePacked(
+                metadata.fromAmount,
+                metadata.blockNumber,
+                metadata.swapHash,
+                uint16(calldata_.length),
+                calldata_
+            )
         );
 
         IbcDispatcher(IBCDispatcher).sendIbcPacket(
@@ -259,8 +263,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
                     abi.decode(data[ CTX0_DATA_START : CTX0_DATA_START+32 ], (address)), // dataTarget
                     data[ CTX0_DATA_START+32 : dataLength-32 ]                           // dataArguments
                 );
-            }
-            else {
+            } else {
                 ICatalystV1Pool(toPool).receiveAsset(
                     bytes32(packet.src.channelId),                                       // connectionId
                     fromPool,                                                            // fromPool
@@ -272,17 +275,34 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
                 );
             }
 
-
         }
         else if (context == CTX1_LIQUIDITY_SWAP) {
-            ICatalystV1Pool(toPool).receiveLiquidity(
-                bytes32(packet.src.channelId),                                      // connectionId
-                fromPool,                                                           // fromPool
-                abi.decode(data[ TO_ACCOUNT_START : TO_ACCOUNT_END ], (address)),   // toAccount
-                uint256(bytes32(data[ UNITS_START : UNITS_END ])),                  // units
-                uint256(bytes32(data[ CTX1_MIN_OUT_START : CTX1_MIN_OUT_END ])),    // minOut
-                bytes32(data[ CTX1_SWAP_HASH_START : CTX1_SWAP_HASH_END ])          // swapHash
-            );
+
+            uint16 dataLength = uint16(bytes2(data[CTX1_DATA_LENGTH_START:CTX1_DATA_LENGTH_END]));
+
+            // CCI sets dataLength > 0 if calldata is passed.
+            if (dataLength != 0) {
+                ICatalystV1Pool(toPool).receiveLiquidity(
+                    bytes32(packet.src.channelId),                                          // connectionId
+                    fromPool,                                                               // fromPool
+                    abi.decode(data[ TO_ACCOUNT_START : TO_ACCOUNT_END ], (address)),       // toAccount
+                    uint256(bytes32(data[ UNITS_START : UNITS_END ])),                      // units
+                    uint256(bytes32(data[ CTX1_MIN_OUT_START : CTX1_MIN_OUT_END ])),        // minOut
+                    bytes32(data[ CTX1_SWAP_HASH_START : CTX1_SWAP_HASH_END ]),             // swapHash
+                    abi.decode(data[ CTX1_DATA_START : CTX1_DATA_START+32 ], (address)),    // dataTarget
+                    data[ CTX1_DATA_START+32 : CTX1_DATA_START+dataLength-32 ]              // dataArguments
+                );
+            } else {
+                ICatalystV1Pool(toPool).receiveLiquidity(
+                    bytes32(packet.src.channelId),                                          // connectionId
+                    fromPool,                                                               // fromPool
+                    abi.decode(data[ TO_ACCOUNT_START : TO_ACCOUNT_END ], (address)),       // toAccount
+                    uint256(bytes32(data[ UNITS_START : UNITS_END ])),                      // units
+                    uint256(bytes32(data[ CTX1_MIN_OUT_START : CTX1_MIN_OUT_END ])),        // minOut
+                    bytes32(data[ CTX1_SWAP_HASH_START : CTX1_SWAP_HASH_END ])              // swapHash
+                );
+            }
+
         }
         else {
 

@@ -114,7 +114,7 @@ interface ICatalystV1PoolPermissionless {
         uint256 amount,
         uint256 minOut,
         address fallbackUser,
-        bytes calldata calldata_
+        bytes memory calldata_
     ) external returns (uint256);
 
     /**
@@ -170,6 +170,19 @@ interface ICatalystV1PoolPermissionless {
         address fallbackUser
     ) external returns (uint256);
 
+    /// @notice Includes calldata_
+    /// @param calldata_ Data field if a call should be made on the target chain. 
+    /// Should be encoded abi.encode(<address>,<data>)
+    function sendLiquidity(
+        bytes32 channelId,
+        bytes32 targetPool,
+        bytes32 who,
+        uint256 baseAmount,
+        uint256 minOut,
+        address fallbackUser,
+        bytes memory calldata_
+    ) external returns (uint256);
+
     /**
      * @notice Completes a cross-chain swap by converting liquidity units to pool tokens
      * Called exclusively by the chainInterface.
@@ -187,5 +200,16 @@ interface ICatalystV1PoolPermissionless {
         uint256 U,
         uint256 minOut,
         bytes32 swapHash
+    ) external returns (uint256);
+
+    function receiveLiquidity(
+        bytes32 channelId,
+        bytes32 sourcePool,
+        address who,
+        uint256 U,
+        uint256 minOut,
+        bytes32 swapHash,
+        address dataTarget,
+        bytes calldata data
     ) external returns (uint256);
 }

@@ -52,10 +52,11 @@ abstract contract CatalystSwapPoolCommon is
 
     //-- Variables --//
 
+    // immutable variables can be read by proxies, thus it is safe to set this on the constructor.
     address public immutable FACTORY;
     address public _chainInterface;
 
-    // @notice The pools with which cross chain swaps are allowed, stoed as _poolConnection[connectionId][toPool]
+    // @notice The pools with which cross chain swaps are allowed, stored as _poolConnection[connectionId][toPool]
     mapping(bytes32 => mapping(bytes32 => bool)) public _poolConnection;
 
     /// @notice To indicate which token is desired on the target pool,
@@ -66,10 +67,11 @@ abstract contract CatalystSwapPoolCommon is
     /// @notice The token weights. Used for maintaining a non-symmetric pool balance.
     mapping(address => uint256) public _weight;
 
-    //-- Weight change variables --//
+    //-- Parameter change variables --//
     uint256 public _adjustmentTarget;
     uint256 public _lastModificationTime;
 
+    //-- Pool fee variables --//
     /// @notice The total pool fee. Multiplied by 10**18. 
     /// @dev Implementation of fee: FixedPointMathLib.mulWadDown(amount, _poolFee);
     uint256 public _poolFee;
@@ -166,7 +168,17 @@ abstract contract CatalystSwapPoolCommon is
         uint256 MUC = _maxUnitCapacity;
 
         // The delta change to the limit is: timePassed · slope = timePassed · Max/decayrate
-        uint256 unitCapacityReleased = ((block.timestamp - _usedUnitCapacityTimestamp) * MUC) / DECAY_RATE;
+        uint256 unitCapacityReleased;
+        unchecked {
+            // block.timestamp > _usedUnitCapacityTimestamp, always.
+            // MUC is generally low.
+            unitCapacityReleased = (block.timestamp - _usedUnitCapacityTimestamp);
+        }
+        unitCapacityReleased *= MUC;
+        unchecked {
+            // DECAY_RATE != 0.
+            unitCapacityReleased /= DECAY_RATE;
+        }
 
         uint256 UC = _usedUnitCapacity;
         // If the change is greater than the units which have passed through
@@ -174,9 +186,15 @@ abstract contract CatalystSwapPoolCommon is
         if (UC <= unitCapacityReleased) return MUC;
 
         // Amplified pools can have MUC <= UC since MUC is modified when swapping
-        if (MUC <= UC - unitCapacityReleased) return 0; 
-
-        return MUC + unitCapacityReleased - UC;     // MUC - (UC - unitCapacityReleased)
+        unchecked {
+            // we know that UC > unitCapacityReleased
+            if (MUC <= UC - unitCapacityReleased) return 0; 
+        }
+        
+        unchecked {
+            // Since MUC >= UC - unitCapacityReleased => MUC + unitCapacityReleased > UC
+            return MUC + unitCapacityReleased - UC;  // MUC - (UC - unitCapacityReleased)
+        }
     }
 
     /**
@@ -188,7 +206,18 @@ abstract contract CatalystSwapPoolCommon is
     function updateUnitCapacity(uint256 units) internal {
         uint256 MUC = _maxUnitCapacity;
 
-        uint256 unitCapacityReleased = ((block.timestamp - _usedUnitCapacityTimestamp) * MUC) / DECAY_RATE;
+        // The delta change to the limit is: timePassed · slope = timePassed · Max/decayrate
+        uint256 unitCapacityReleased;
+        unchecked {
+            // block.timestamp > _usedUnitCapacityTimestamp, always.
+            // MUC is generally low.
+            unitCapacityReleased = (block.timestamp - _usedUnitCapacityTimestamp);
+        }
+        unitCapacityReleased *= MUC;
+        unchecked {
+            // DECAY_RATE != 0.
+            unitCapacityReleased /= DECAY_RATE;
+        }
 
         // Set last change to block.timestamp.
         // Otherwise it would have to be repeated twice. (small deployment savings)
@@ -201,13 +230,17 @@ abstract contract CatalystSwapPoolCommon is
             _usedUnitCapacity = units;
             return;
         }
-
-        uint256 newUnitFlow = (UC + units) - unitCapacityReleased;
+        
+        uint256 newUnitFlow = UC + units;  // (UC + units) - unitCapacityReleased
+        unchecked {
+            // We know that UC > unitCapacityReleased
+            newUnitFlow -= unitCapacityReleased;
+        }
         if (newUnitFlow > MUC) revert ExceedsSecurityLimit(newUnitFlow - MUC);
         _usedUnitCapacity = newUnitFlow;
     }
 
-    
+    /// @notice Sets a new fee fee administrator who can configure pool fees.
     function setFeeAdministrator(address administrator) public override {
         require(msg.sender == factoryOwner() || _isInitializing());   // dev: Only factory owner
         _feeAdministrator = administrator;
@@ -215,6 +248,7 @@ abstract contract CatalystSwapPoolCommon is
         emit SetFeeAdministrator(administrator);
     }
 
+    /// @notice Sets a new pool fee, taken from input amount.
     function setPoolFee(uint256 fee) public override {
         require(msg.sender == _feeAdministrator || _isInitializing()); // dev: Only feeAdministrator can set new fee
         require(fee <= 1e18);  // dev: PoolFee is maximum 100%.
@@ -223,9 +257,10 @@ abstract contract CatalystSwapPoolCommon is
         emit SetPoolFee(fee);
     }
 
+    /// @notice Sets a new governance fee. Taken out of the pool fee.
     function setGovernanceFee(uint256 fee) public override {
         require(msg.sender == _feeAdministrator || _isInitializing()); // dev: Only feeAdministrator can set new fee
-        require(fee <= MAX_GOVERNANCE_FEE_SHARE); // dev: Maximum GovernanceFeeSare exceeded.
+        require(fee <= MAX_GOVERNANCE_FEE_SHARE);  // dev: Maximum GovernanceFeeSare exceeded.
         _governanceFeeShare = fee;
 
         emit SetGovernanceFee(fee);
@@ -239,10 +274,7 @@ abstract contract CatalystSwapPoolCommon is
         uint256 governanceFeeShare = _governanceFeeShare;
 
         if (governanceFeeShare != 0) {
-            uint256 governanceFeeAmount = FixedPointMathLib.mulWadDown(
-                poolFeeAmount,
-                governanceFeeShare
-            );
+            uint256 governanceFeeAmount = FixedPointMathLib.mulWadDown(poolFeeAmount, governanceFeeShare);
             ERC20(asset).safeTransfer(factoryOwner(), governanceFeeAmount);
         }
     }
@@ -303,7 +335,10 @@ abstract contract CatalystSwapPoolCommon is
         require(fallbackUser != address(0));  // dev: Invalid swapHash. Alt: Escrow doesn't exist.
         delete _escrowedTokensFor[sendAssetHash];  // Stops timeout and further acks from being called
 
-        _escrowedTokens[escrowToken] -= escrowAmount; // This does not revert, since escrowAmount \subseteq _escrowedTokens => escrowAmount <= _escrowedTokens. Cannot be called twice since the 3 lines before ensure this can only be reached once.
+        unchecked {
+            // escrowAmount \subseteq _escrowedTokens => escrowAmount <= _escrowedTokens. Cannot be called twice since the 3 lines before ensure this can only be reached once.
+            _escrowedTokens[escrowToken] -= escrowAmount;
+        }
         
         return fallbackUser;
     }
@@ -318,11 +353,13 @@ abstract contract CatalystSwapPoolCommon is
         require(fallbackUser != address(0));  // dev: Invalid swapHash. Alt: Escrow doesn't exist.
         delete _escrowedPoolTokensFor[sendLiquidityHash];  // Stops timeout and further acks from being called
 
-        _escrowedPoolTokens -= escrowAmount;  // This does not revert, since escrowAmount \subseteq _escrowedPoolTokens => escrowAmount <= _escrowedPoolTokens. Cannot be called twice since the 3 lines before ensure this can only be reached once.
+        unchecked {
+            // escrowAmount \subseteq _escrowedPoolTokens => escrowAmount <= _escrowedPoolTokens. Cannot be called twice since the 3 lines before ensure this can only be reached once.
+            _escrowedPoolTokens -= escrowAmount;
+        }
         
         return fallbackUser;
     }
-
 
     /** 
      * @notice Implements basic ack logic: Deletes and releases tokens to the pool
