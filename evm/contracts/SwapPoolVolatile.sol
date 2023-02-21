@@ -137,7 +137,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
      * @param targetTime Once reached, _weight[...] = newWeights[...]
      * @param newWeights The new weights to apply
      */
-    function modifyWeights(uint256 targetTime, uint256[] calldata newWeights) external onlyFactoryOwner {
+    function setWeights(uint256 targetTime, uint256[] calldata newWeights) external onlyFactoryOwner {
         unchecked {
             require(targetTime >= block.timestamp + MIN_ADJUSTMENT_TIME); // dev: targetTime must be more than MIN_ADJUSTMENT_TIME in the future.
             require(targetTime <= block.timestamp + 365 days); // dev: Target time cannot be too far into the future.
@@ -159,7 +159,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
             }
         }
 
-        emit ModifyWeights(targetTime, newWeights);
+        emit SetWeights(targetTime, newWeights);
     }
 
     /**

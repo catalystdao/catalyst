@@ -153,7 +153,7 @@ interface ICatalystV1PoolEvents {
      * @param targetTime Time at which the weights adjustment must complete.
      * @param targetWeights The desired new weights.
      */
-    event ModifyWeights(
+    event SetWeights(
         uint256 targetTime,
         uint256[] targetWeights
     );
@@ -163,7 +163,7 @@ interface ICatalystV1PoolEvents {
      * @param targetTime Time at which the amplification adjustment must complete.
      * @param targetAmplification The desired new amplification.
      */
-    event ModifyAmplification(
+    event SetAmplification(
         uint256 targetTime,
         uint256 targetAmplification
     );

@@ -10,36 +10,36 @@ TWOWEEK = ONEWEEK * 2
 def test_only_administrator(pool, deployer, berg):
     if pool._chainInterface() != ZERO_ADDRESS:
         with reverts("dev: Amplification adjustment is disabled for cross-chain pools."):
-            pool.modifyAmplification(chain.time() + TWOWEEK, 10**15, {"from": deployer})
+            pool.setAmplification(chain.time() + TWOWEEK, 10**15, {"from": deployer})
         
         pytest.skip("Amplification adjustment is disabled for cross-chain pools")
         
     startTime = chain.time()
     with reverts():
-        pool.modifyAmplification(startTime + TWOWEEK, 10**15, {"from": berg})
+        pool.setAmplification(startTime + TWOWEEK, 10**15, {"from": berg})
 
-    pool.modifyAmplification(startTime + TWOWEEK, 10**15, {"from": deployer})
+    pool.setAmplification(startTime + TWOWEEK, 10**15, {"from": deployer})
 
 
 @pytest.mark.no_pool_param
 def test_1_week_minimum(pool, deployer):
     if pool._chainInterface() != ZERO_ADDRESS:
         with reverts("dev: Amplification adjustment is disabled for cross-chain pools."):
-            pool.modifyAmplification(chain.time() + TWOWEEK, 10**15, {"from": deployer})
+            pool.setAmplification(chain.time() + TWOWEEK, 10**15, {"from": deployer})
             
         pytest.skip("Amplification adjustment is disabled for cross-chain pools")
         
     with reverts():
-        pool.modifyAmplification(chain.time() + ONEWEEK - 1, 10**15, {"from": deployer})
+        pool.setAmplification(chain.time() + ONEWEEK - 1, 10**15, {"from": deployer})
 
-    pool.modifyAmplification(chain.time() + ONEWEEK + 1, 10**15, {"from": deployer})
+    pool.setAmplification(chain.time() + ONEWEEK + 1, 10**15, {"from": deployer})
 
 
 @pytest.mark.no_call_coverage
 def test_increase_amp(pool, pool_tokens, deployer):
     if pool._chainInterface() != ZERO_ADDRESS:
         with reverts("dev: Amplification adjustment is disabled for cross-chain pools."):
-            pool.modifyAmplification(chain.time() + TWOWEEK, 10**15, {"from": deployer})
+            pool.setAmplification(chain.time() + TWOWEEK, 10**15, {"from": deployer})
         
         pytest.skip("Amplification adjustment is disabled for cross-chain pools")
         
@@ -48,7 +48,7 @@ def test_increase_amp(pool, pool_tokens, deployer):
     startTime = chain.time()
     targetAmp = 8 * 10**17
     assert targetAmp > currAmp
-    pool.modifyAmplification(startTime + TWOWEEK, targetAmp, {"from": deployer})
+    pool.setAmplification(startTime + TWOWEEK, targetAmp, {"from": deployer})
     pool.localSwap(pool_tokens[0], pool_tokens[0], 0, 0, {"from": deployer})
     duration = pool._adjustmentTarget() - pool._lastModificationTime()
     
@@ -77,20 +77,20 @@ def test_increase_amp(pool, pool_tokens, deployer):
 def test_decrease_amp(pool, pool_tokens, deployer):
     if pool._chainInterface() != ZERO_ADDRESS:
         with reverts("dev: Amplification adjustment is disabled for cross-chain pools."):
-            pool.modifyAmplification(chain.time() + TWOWEEK, 10**15, {"from": deployer})
+            pool.setAmplification(chain.time() + TWOWEEK, 10**15, {"from": deployer})
         
         pytest.skip("Amplification adjustment is disabled for cross-chain pools")
         
     startTime = chain.time()
     # Increase the weights
     currAmp = 10**17
-    pool.modifyAmplification(startTime + TWOWEEK, currAmp, {"from": deployer})
+    pool.setAmplification(startTime + TWOWEEK, currAmp, {"from": deployer})
     chain.mine(1, timestamp=int(startTime + TWOWEEK + 10))
     pool.localSwap(pool_tokens[0], pool_tokens[0], 0, 0, {"from": deployer})
     
     # Decrease the weights.
     targetAmp = 10**15
-    pool.modifyAmplification(startTime + TWOWEEK * 2, targetAmp, {"from": deployer})
+    pool.setAmplification(startTime + TWOWEEK * 2, targetAmp, {"from": deployer})
     pool.localSwap(pool_tokens[0], pool_tokens[0], 0, 0, {"from": deployer})
     duration = pool._adjustmentTarget() - pool._lastModificationTime()
 

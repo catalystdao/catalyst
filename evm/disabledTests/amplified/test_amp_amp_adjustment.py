@@ -21,29 +21,29 @@ def test_only_administrator(gov, accounts, default_amp_swappool):
 
     startTime = chain.time()
     with brownie.reverts():
-        swappool.modifyAmplification(
+        swappool.setAmplification(
             startTime + ONEWEEK, 2**61, {"from": accounts[2]}
         )
 
-    swappool.modifyAmplification(startTime + ONEWEEK, 2**61, {"from": gov})
+    swappool.setAmplification(startTime + ONEWEEK, 2**61, {"from": gov})
 
 
 def test_2_days_minimum(gov, default_amp_swappool):
     swappool = default_amp_swappool
 
     with brownie.reverts():
-        swappool.modifyAmplification(chain.time() + TWODAYS - 1, 2**61, {"from": gov})
+        swappool.setAmplification(chain.time() + TWODAYS - 1, 2**61, {"from": gov})
 
-    swappool.modifyAmplification(chain.time() + TWODAYS + 1, 2**61, {"from": gov})
+    swappool.setAmplification(chain.time() + TWODAYS + 1, 2**61, {"from": gov})
 
 
 def test_adjustment_leads_to_uneven(gov, default_amp_swappool):
     swappool = default_amp_swappool
 
     newtime = chain.time() + ONEWEEK + 10
-    swappool.modifyAmplification(newtime, 2**61, {"from": gov})
+    swappool.setAmplification(newtime, 2**61, {"from": gov})
     swappool._adjustmentTarget() == newtime + 1
-    swappool.modifyAmplification(newtime + 5, 2**61, {"from": gov})
+    swappool.setAmplification(newtime + 5, 2**61, {"from": gov})
     swappool._adjustmentTarget() == newtime + 5
 
 
@@ -53,7 +53,7 @@ def test_decrease_amp(gov, default_amp_swappool, token1, token2, token3, chain):
     currentAmp = swappool._amp()
 
     startTime = chain.time()
-    swappool.modifyAmplification(startTime + ONEWEEK + 1, 2**61, {"from": gov})
+    swappool.setAmplification(startTime + ONEWEEK + 1, 2**61, {"from": gov})
     swappool.localSwap(token1, token2, 0, 0, False, {"from": gov})
     duration = swappool._adjustmentTarget() - swappool._lastModificationTime()
 
@@ -85,7 +85,7 @@ def test_increase_amp(gov, default_amp_swappool, token1, token2, token3, chain):
     currentAmp = swappool._amp()
 
     startTime = chain.time()
-    swappool.modifyAmplification(startTime + (ONEWEEK + 1), 2**63, {"from": gov})
+    swappool.setAmplification(startTime + (ONEWEEK + 1), 2**63, {"from": gov})
     swappool.localSwap(token1, token2, 0, 0, False, {"from": gov})
     duration = swappool._adjustmentTarget() - swappool._lastModificationTime()
 

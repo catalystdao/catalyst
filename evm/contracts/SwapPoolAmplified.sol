@@ -173,7 +173,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
      * @param targetTime Once reached, _weight[...] = newWeights[...]
      * @param targetAmplification The new weights to apply
      */
-    function modifyAmplification(uint256 targetTime, uint256 targetAmplification) external onlyFactoryOwner {
+    function setAmplification(uint256 targetTime, uint256 targetAmplification) external onlyFactoryOwner {
         unchecked {
             require(targetTime >= block.timestamp + MIN_ADJUSTMENT_TIME); // dev: targetTime must be more than MIN_ADJUSTMENT_TIME in the future.
             require(targetTime <= block.timestamp + 365 days); // dev: Target time cannot be too far into the future.
@@ -189,7 +189,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
             _targetAmplification = int256(FixedPointMathLib.WAD - targetAmplification);
         }
 
-        emit ModifyAmplification(targetTime, targetAmplification);
+        emit SetAmplification(targetTime, targetAmplification);
     }
 
     /**
