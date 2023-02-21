@@ -212,7 +212,7 @@ To compile solidity contracts directly (not through Brownie), one has to install
 
 - `pnpm install`
 
-- `solc <path-to-contract> --base-path node_modules`
+- `solc <path-to-contract> --base-path . --include-path node_modules`
 
 ### Slither
 
@@ -220,6 +220,6 @@ To compile solidity contracts directly (not through Brownie), one has to install
 
 Catalyst has been analyzed using Slither and no major bugs was found. To rerun the analytics, run:
 
-`slither contracts/<>.sol --solc-remaps @openzeppelin=node_modules/@openzeppelin --solc-args "--optimize --optimize-runs 9000" --exclude naming-convention`
+`slither contracts/<>.sol --solc-args "--base-path . --include-path node_modules --optimize --optimize-runs 9000" --exclude naming-convention`
 
-For each contract. `slither .` does not work.
+Alternativly, run `slither contracts` to analyse all contracts.
