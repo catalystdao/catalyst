@@ -129,7 +129,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
             }
         }
 
-        // / The security limit is implemented as being 50% of the current balance. Since the security limit 
+        // The security limit is implemented as being 50% of the current balance. Since the security limit 
         // is evaluated after balance changes, the limit in storage should be the current balance.
         _maxUnitCapacity = maxUnitCapacity;
 
@@ -173,16 +173,12 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
      * @param targetTime Once reached, _weight[...] = newWeights[...]
      * @param targetAmplification The new weights to apply
      */
-    function modifyAmplification(
-        uint256 targetTime,
-        uint256 targetAmplification
-    ) external onlyFactoryOwner {
+    function modifyAmplification(uint256 targetTime, uint256 targetAmplification) external onlyFactoryOwner {
         unchecked {
             require(targetTime >= block.timestamp + MIN_ADJUSTMENT_TIME); // dev: targetTime must be more than MIN_ADJUSTMENT_TIME in the future.
             require(targetTime <= block.timestamp + 365 days); // dev: Target time cannot be too far into the future.
         }
         require(targetAmplification < FixedPointMathLib.WAD);  // dev: amplification not set correctly.
-
         // Because of the balance0 (_unitTracker) implementation, amplification adjustment has to be disabled for cross-chain pools.
         require(_chainInterface == address(0));  // dev: Amplification adjustment is disabled for cross-chain pools.
 
@@ -1057,19 +1053,15 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         address fallbackUser,
         bytes memory calldata_
     ) public returns (uint256) {
-
         // Only allow connected pools
         if (!_poolConnection[channelId][targetPool]) revert PoolNotConnected(channelId, targetPool);
-
         require(fallbackUser != address(0));
+
         _adjustAmplification();
         uint256 fee = FixedPointMathLib.mulWadDown(amount, _poolFee);
 
         // Calculate the group-specific units bought.
-        uint256 U = calcSendSwap(
-            fromAsset,
-            amount - fee
-        );
+        uint256 U = calcSendSwap(fromAsset, amount - fee);
 
         // sendSwapAck requires casting U to int256 to update the _unitTracker and must never revert. Check for overflow here.
         require(U < uint256(type(int256).max));     // int256 max fits in uint256
@@ -1180,12 +1172,11 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 minOut,
         bytes32 swapHash
     ) public returns (uint256) {
-
         // Only allow connected pools
         if (!_poolConnection[channelId][sourcePool]) revert PoolNotConnected(channelId, sourcePool);
-
         // The chainInterface is the only valid caller of this function.
         require(msg.sender == _chainInterface);
+
         _adjustAmplification();
 
         // Convert the asset index (toAsset) into the asset to be purchased.
@@ -1281,10 +1272,10 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
 
         // Only allow connected pools
         if (!_poolConnection[channelId][targetPool]) revert PoolNotConnected(channelId, targetPool);
-
         // Address(0) is not a valid fallback user. (As checking for escrow overlap
         // checks if the fallbackUser != address(0))
         require(fallbackUser != address(0));
+
         // Update amplification
         _adjustAmplification();
 
@@ -1442,12 +1433,11 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 minOut,
         bytes32 swapHash
     ) public returns (uint256) {
-
+        // The chainInterface is the only valid caller of this function.
+        require(msg.sender == _chainInterface);
         // Only allow connected pools
         if (!_poolConnection[channelId][sourcePool]) revert PoolNotConnected(channelId, sourcePool);
 
-        // The chainInterface is the only valid caller of this function.
-        require(msg.sender == _chainInterface);
         _adjustAmplification();
 
         int256 oneMinusAmp = _oneMinusAmp;
@@ -1456,7 +1446,6 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 it;
         // Compute walpha_0 to find the reference balances. This lets us evaluate the
         // number of tokens the pool should have If the price in the group is 1:1.
-
 
         // This is a balance0 implementation. The balance 0 implementation here is reference.
         {
@@ -1493,16 +1482,15 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
             }
         }
 
-        
+
         int256 oneMinusAmpInverse = FixedPointMathLib.WADWAD / oneMinusAmp;
 
         uint256 it_times_walpha_amped = it * walpha_0_ampped;
 
-        // On totalSupply. Do not add escrow amount, as higher amount
-        // results in a larger return.
+        // On totalSupply. Do not add escrow amount, as higher amount results in a larger return.
         uint256 poolTokens = calcPriceCurveLimitShare(U, totalSupply, it_times_walpha_amped, oneMinusAmpInverse);
 
-        // Check if the user would accept the mint.
+        // Check if more than the minimum output is returned.
         if(minOut > poolTokens) revert ReturnInsufficient(poolTokens, minOut);
 
         // Update the unit tracker:
@@ -1647,7 +1635,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
     // it is assumed the pool has low liquidity. In these cases, liquidity swaps shouldn't be used.
 
     /** 
-     * @notice Implements basic liquidity ack logic: Deletes and releases pool tokens to the pool.
+     * @notice Deletes and releases liquidity escrowed tokens to the pool and updates the security limit.
      * @dev Should never revert!  
      * The base implementation exists in CatalystSwapPoolCommon.
      * @param targetUser The recipient of the transaction on the target chain. Encoded in bytes32.

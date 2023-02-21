@@ -52,10 +52,11 @@ abstract contract CatalystSwapPoolCommon is
 
     //-- Variables --//
 
+    // immutable variables can be read by proxies, thus it is safe to set this on the constructor.
     address public immutable FACTORY;
     address public _chainInterface;
 
-    // @notice The pools with which cross chain swaps are allowed, stoed as _poolConnection[connectionId][toPool]
+    // @notice The pools with which cross chain swaps are allowed, stored as _poolConnection[connectionId][toPool]
     mapping(bytes32 => mapping(bytes32 => bool)) public _poolConnection;
 
     /// @notice To indicate which token is desired on the target pool,
@@ -66,10 +67,11 @@ abstract contract CatalystSwapPoolCommon is
     /// @notice The token weights. Used for maintaining a non-symmetric pool balance.
     mapping(address => uint256) public _weight;
 
-    //-- Weight change variables --//
+    //-- Parameter change variables --//
     uint256 public _adjustmentTarget;
     uint256 public _lastModificationTime;
 
+    //-- Pool fee variables --//
     /// @notice The total pool fee. Multiplied by 10**18. 
     /// @dev Implementation of fee: FixedPointMathLib.mulWadDown(amount, _poolFee);
     uint256 public _poolFee;
@@ -238,7 +240,7 @@ abstract contract CatalystSwapPoolCommon is
         _usedUnitCapacity = newUnitFlow;
     }
 
-    
+    /// @notice Sets a new fee fee administrator who can configure pool fees.
     function setFeeAdministrator(address administrator) public override {
         require(msg.sender == factoryOwner() || _isInitializing());   // dev: Only factory owner
         _feeAdministrator = administrator;
@@ -246,6 +248,7 @@ abstract contract CatalystSwapPoolCommon is
         emit SetFeeAdministrator(administrator);
     }
 
+    /// @notice Sets a new pool fee, taken from input amount.
     function setPoolFee(uint256 fee) public override {
         require(msg.sender == _feeAdministrator || _isInitializing()); // dev: Only feeAdministrator can set new fee
         require(fee <= 1e18);  // dev: PoolFee is maximum 100%.
@@ -254,9 +257,10 @@ abstract contract CatalystSwapPoolCommon is
         emit SetPoolFee(fee);
     }
 
+    /// @notice Sets a new governance fee. Taken out of the pool fee.
     function setGovernanceFee(uint256 fee) public override {
         require(msg.sender == _feeAdministrator || _isInitializing()); // dev: Only feeAdministrator can set new fee
-        require(fee <= MAX_GOVERNANCE_FEE_SHARE); // dev: Maximum GovernanceFeeSare exceeded.
+        require(fee <= MAX_GOVERNANCE_FEE_SHARE);  // dev: Maximum GovernanceFeeSare exceeded.
         _governanceFeeShare = fee;
 
         emit SetGovernanceFee(fee);
@@ -270,10 +274,7 @@ abstract contract CatalystSwapPoolCommon is
         uint256 governanceFeeShare = _governanceFeeShare;
 
         if (governanceFeeShare != 0) {
-            uint256 governanceFeeAmount = FixedPointMathLib.mulWadDown(
-                poolFeeAmount,
-                governanceFeeShare
-            );
+            uint256 governanceFeeAmount = FixedPointMathLib.mulWadDown(poolFeeAmount, governanceFeeShare);
             ERC20(asset).safeTransfer(factoryOwner(), governanceFeeAmount);
         }
     }
@@ -334,7 +335,10 @@ abstract contract CatalystSwapPoolCommon is
         require(fallbackUser != address(0));  // dev: Invalid swapHash. Alt: Escrow doesn't exist.
         delete _escrowedFor[assetSwapHash];  // Stops timeout and further acks from being called
 
-        _escrowedTokens[escrowToken] -= escrowAmount; // This does not revert, since escrowAmount \subseteq _escrowedTokens => escrowAmount <= _escrowedTokens. Cannot be called twice since the 3 lines before ensure this can only be reached once.
+        unchecked {
+            // escrowAmount \subseteq _escrowedTokens => escrowAmount <= _escrowedTokens. Cannot be called twice since the 3 lines before ensure this can only be reached once.
+            _escrowedTokens[escrowToken] -= escrowAmount;
+        }
         
         return fallbackUser;
     }
@@ -349,11 +353,13 @@ abstract contract CatalystSwapPoolCommon is
         require(fallbackUser != address(0));  // dev: Invalid swapHash. Alt: Escrow doesn't exist.
         delete _escrowedLiquidityFor[liquiditySwapHash];  // Stops timeout and further acks from being called
 
-        _escrowedPoolTokens -= escrowAmount;  // This does not revert, since escrowAmount \subseteq _escrowedPoolTokens => escrowAmount <= _escrowedPoolTokens. Cannot be called twice since the 3 lines before ensure this can only be reached once.
+        unchecked {
+            // escrowAmount \subseteq _escrowedPoolTokens => escrowAmount <= _escrowedPoolTokens. Cannot be called twice since the 3 lines before ensure this can only be reached once.
+            _escrowedPoolTokens -= escrowAmount;
+        }
         
         return fallbackUser;
     }
-
 
     /** 
      * @notice Implements basic ack logic: Deletes and releases tokens to the pool

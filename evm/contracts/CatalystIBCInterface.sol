@@ -65,10 +65,8 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
         AssetSwapMetadata memory metadata,
         bytes memory calldata_
     ) external {
-        // Anyone can call this function. And anyone can pass the security check later,
-        // but unless someone can also manage to pass the security check on onRecvPacket
-        // they cannot drain any value.
-        // As such, the very worst they can do is waste gas.
+        // Anyone can call this function, but unless someone can also manage to pass the security check on onRecvPacket
+        // they cannot drain any value. As such, the very worst they can do is waste gas.
 
         // Encode payload. See CatalystIBCPayload.sol for the payload definition
         bytes memory data = bytes.concat(       // Using bytes.concat to circumvent stack too deep error
@@ -121,10 +119,8 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
         LiquiditySwapMetadata memory metadata,
         bytes memory calldata_
     ) external {
-        // Anyone can call this function. And anyone can pass the security check later,
-        // but unless someone can also manage to pass the security check on onRecvPacket
-        // they cannot drain any value.
-        // As such, the very worst they can do is waste gas.
+        // Anyone can call this function, but unless someone can also manage to pass the security check on onRecvPacket
+        // they cannot drain any value. As such, the very worst they can do is waste gas.
 
         // Encode payload. See CatalystIBCPayload.sol for the payload definition
         bytes memory data = bytes.concat(       // Using bytes.concat to circumvent stack too deep error
@@ -267,8 +263,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
                     abi.decode(data[ CTX0_DATA_START : CTX0_DATA_START+32 ], (address)),    // dataTarget
                     data[ CTX0_DATA_START+32 : dataLength-32 ]                              // dataArguments
                 );
-            }
-            else {
+            } else {
                 ICatalystV1Pool(toPool).receiveSwap(
                     bytes32(packet.src.channelId),                                          // connectionId
                     fromPool,                                                               // fromPool
@@ -297,8 +292,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
                     abi.decode(data[ CTX1_DATA_START : CTX1_DATA_START+32 ], (address)),    // dataTarget
                     data[ CTX1_DATA_START+32 : dataLength-32 ]                              // dataArguments
                 );
-            }
-            else {
+            } else {
                 ICatalystV1Pool(toPool).receiveLiquidity(
                     bytes32(packet.src.channelId),                                          // connectionId
                     fromPool,                                                               // fromPool
