@@ -98,8 +98,8 @@ def swappool_group(chainId, swappool1_info, swappool2_info, deployer):
 
 # Dev NOTE:
 # There is no test for approximate calcaulation of swaps as these do not exists for amp pools (contrary to non-amp pools).
-# Full coverage is achieved nonetheless, as even though some 'sendSwap' overloads do take an 'approx' parameter, they do nothing
-# else than to call the 'sendSwap' overload that does not include the 'approx' parameter. Given that the swap helpers use the
+# Full coverage is achieved nonetheless, as even though some 'sendAsset' overloads do take an 'approx' parameter, they do nothing
+# else than to call the 'sendAsset' overload that does not include the 'approx' parameter. Given that the swap helpers use the
 # overloads that include the 'approx' parameter, all overloads get tested, hence achieving full coverage.
 
 # TODO hypothesis?
@@ -501,7 +501,7 @@ def test_swap_too_large(
         ibcemulator         = ibcemulator,
         token_gov           = gov,
         ibc_gov             = gov,
-        allow_target_revert = True  # Expect revert of the receiveSwap tx
+        allow_target_revert = True  # Expect revert of the receiveAsset tx
     )
 
     # Make sure the operation reverted
@@ -524,9 +524,9 @@ def test_direct_receive_swap_invocation(
 ):
     sp = swappool1_info.swappool
 
-    # Try to directly invoke receiveSwap
+    # Try to directly invoke receiveAsset
     with brownie.reverts(): # TODO dev msg
-        sp.receiveSwap(
+        sp.receiveAsset(
             0,
             hacker,
             2**64,
@@ -569,18 +569,18 @@ def test_direct_escrow_ack_timeout_invocation(
         finish_swap        = False
     )
 
-    message_hash      = swap_result.tx_send_swap.events['SendSwap'][0]['swapHash']
-    transferred_units = swap_result.tx_send_swap.events['SendSwap']['output']
-    fromAsset         = swap_result.tx_send_swap.events['SendSwap']["fromAsset"]
-    escrowAmount      = decodePayload(swap_result.tx_send_swap.events["IncomingPacket"]["packet"][3])["_escrowAmount"]
+    message_hash      = swap_result.tx_send_asset.events['SendAsset'][0]['swapHash']
+    transferred_units = swap_result.tx_send_asset.events['SendAsset']['units']
+    fromAsset         = swap_result.tx_send_asset.events['SendAsset']["fromAsset"]
+    escrowAmount      = decodePayload(swap_result.tx_send_asset.events["IncomingPacket"]["packet"][3])["_escrowAmount"]
 
     # Try to directly invoke ack
     with brownie.reverts(): # TODO dev msg
-        sp1.sendSwapAck(message_hash, transferred_units, escrowAmount, fromAsset, {"from": hacker})
+        sp1.sendAssetAck(message_hash, transferred_units, escrowAmount, fromAsset, {"from": hacker})
 
     # Try to directly invoke timeout
     with brownie.reverts(): # TODO dev msg
-        sp1.sendSwapTimeout(message_hash, transferred_units, escrowAmount, fromAsset, {"from": hacker})
+        sp1.sendAssetTimeout(message_hash, transferred_units, escrowAmount, fromAsset, {"from": hacker})
 
 
 
@@ -617,8 +617,8 @@ def test_swap_finish_with_manipulated_packet(
     )
 
     # Try to finish the swap
-    ibc_target_contract = swap_result.tx_send_swap.events["IncomingMetadata"]["metadata"][0]
-    ibc_packet          = swap_result.tx_send_swap.events["IncomingPacket"]["packet"]
+    ibc_target_contract = swap_result.tx_send_asset.events["IncomingMetadata"]["metadata"][0]
+    ibc_packet          = swap_result.tx_send_asset.events["IncomingPacket"]["packet"]
 
     # Manipulate 'units' from within the packet
     data = ibc_packet[3]
@@ -672,7 +672,7 @@ def test_swap_from_asset_not_in_pool(
     # TODO: The transaction does not fail if the user sends some from_tokens to the pool before invoking the swap.
     # Add a require statement to make the error more explicit?
     with brownie.reverts():
-        tx = sp1.sendSwap(
+        tx = sp1.sendAsset(
             chainId,
             brownie.convert.to_bytes(sp2.address.replace("0x", "")),
             brownie.convert.to_bytes(swapper2.address.replace("0x", "")),
@@ -685,7 +685,7 @@ def test_swap_from_asset_not_in_pool(
             {"from": swapper1}
         )
 
-    # assert tx.events['SendSwap'][0]['output'] == 0
+    # assert tx.events['SendAsset'][0]['units'] == 0
 
 
 

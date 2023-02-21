@@ -133,7 +133,7 @@ def test_only_one_response(pool, channel_id, ibc_emulator, berg, deployer):
 
 def test_ibc_ack_event(pool, channel_id, ibc_emulator, berg, deployer):
     """
-        Test the EscrowAck event gets fired.
+        Test the SendLiquidityAck event gets fired.
     """
     swap_percentage = 10000
     swap_amount = int(pool.totalSupply() * swap_percentage / 100000)
@@ -156,7 +156,7 @@ def test_ibc_ack_event(pool, channel_id, ibc_emulator, berg, deployer):
         {"from": deployer},
     )
 
-    escrow_ack_event = txe.events['EscrowAck']
+    ack_event = txe.events['SendLiquidityAck']
 
 
     expected_message_hash = compute_liquidity_swap_hash(
@@ -166,13 +166,12 @@ def test_ibc_ack_event(pool, channel_id, ibc_emulator, berg, deployer):
         tx.block_number
     )
 
-    assert escrow_ack_event["swapHash"]   == expected_message_hash
-    assert escrow_ack_event["liquiditySwap"] == True
+    assert ack_event["swapHash"] == expected_message_hash
 
 
 def test_ibc_timeout_event(pool, channel_id, ibc_emulator, berg, deployer):
     """
-        Test the EscrowTimeout event gets fired.
+        Test the SendLiquidityTimeout event gets fired.
     """
     swap_percentage = 10000
     swap_amount = int(pool.totalSupply() * swap_percentage / 100000)
@@ -195,7 +194,7 @@ def test_ibc_timeout_event(pool, channel_id, ibc_emulator, berg, deployer):
         {"from": deployer},
     )
 
-    escrow_timeout_event = txe.events['EscrowTimeout']
+    timeout_event = txe.events['SendLiquidityTimeout']
 
     expected_message_hash = compute_liquidity_swap_hash(
         berg.address,
@@ -204,5 +203,4 @@ def test_ibc_timeout_event(pool, channel_id, ibc_emulator, berg, deployer):
         tx.block_number
     )
 
-    assert escrow_timeout_event["swapHash"]   == expected_message_hash
-    assert escrow_timeout_event["liquiditySwap"] == True
+    assert timeout_event["swapHash"] == expected_message_hash

@@ -26,7 +26,7 @@ def test_withdrawall(pool, pool_tokens, get_pool_amp, berg, deployer, unbalance_
     pool_tokens[0].approve(pool, swap_amount, {'from': berg})
     pool.transfer(berg, poolTokens, {'from': deployer})
     
-    tx_swap = pool.localswap(
+    tx_swap = pool.localSwap(
         pool_tokens[0], pool_tokens[1], swap_amount, 0, {'from': berg}
     )
     
@@ -64,7 +64,7 @@ def test_compare_withdrawall_and_withdrawmixed(pool, pool_tokens, berg, deployer
     pool_tokens[0].approve(pool, swap_amount, {'from': berg})
     pool.transfer(berg, poolTokens, {'from': deployer})
     
-    tx_swap = pool.localswap(
+    tx_swap = pool.localSwap(
          pool_tokens[0], pool_tokens[1], swap_amount, 0, {'from': berg})
     
     tx_all = pool.withdrawAll(poolTokens, [0 for _ in pool_tokens], {'from': berg})

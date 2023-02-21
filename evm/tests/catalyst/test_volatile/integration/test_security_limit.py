@@ -40,10 +40,10 @@ def test_security_limit_swap_loop(
 
 
     # Swap from pool_1 to pool_2
-    # 1. sendSwap
+    # 1. sendAsset
     source_token.transfer(berg, swap_amount, {'from': deployer})
     source_token.approve(pool_1, swap_amount, {'from': berg})
-    tx = pool_1.sendSwap(
+    tx = pool_1.sendAsset(
         channel_id,
         convert.to_bytes(pool_2.address.replace("0x", "")),
         convert.to_bytes(berg.address.replace("0x", "")),
@@ -54,9 +54,9 @@ def test_security_limit_swap_loop(
         berg,
         {"from": berg},
     )
-    tx_units = tx.events["SendSwap"]["output"]
+    tx_units = tx.events["SendAsset"]["units"]
 
-    # 2. receiveSwap
+    # 2. receiveAsset
     if pool_2.getUnitCapacity() < tx_units:
         with reverts(revert_pattern=re.compile("typed error: 0x249c4e65.*")):
             txe = ibc_emulator.execute(
@@ -72,7 +72,7 @@ def test_security_limit_swap_loop(
             {"from": berg}
         )
 
-    purchased_tokens = txe.events["ReceiveSwap"]["output"]
+    purchased_tokens = txe.events["ReceiveAsset"]["toAmount"]
 
     # 3. Ack
     ibc_emulator.ack(
@@ -108,9 +108,9 @@ def test_security_limit_swap_loop(
     
 
     # Reverse-swap from pool_2 to pool_1
-    # 4. sendSwap
+    # 4. sendAsset
     target_token.approve(pool_2, purchased_tokens, {'from': berg})
-    tx2 = pool_2.sendSwap(
+    tx2 = pool_2.sendAsset(
         channel_id,
         convert.to_bytes(pool_1.address.replace("0x", "")),
         convert.to_bytes(berg.address.replace("0x", "")),
@@ -121,7 +121,7 @@ def test_security_limit_swap_loop(
         berg,
         {"from": berg},
     )
-    tx2_units = tx2.events["SendSwap"]["output"]
+    tx2_units = tx2.events["SendAsset"]["units"]
 
     
     # Make sure the security limit of pool-2 does not change before the ack. NOTE: the unit capacity may have increased
@@ -142,7 +142,7 @@ def test_security_limit_swap_loop(
         )
     ) <= 1      # Allow 1 unit for rounding errors
 
-    # 5. receiveSwap
+    # 5. receiveAsset
     txe2 = ibc_emulator.execute(tx2.events["IncomingMetadata"]["metadata"][0], tx2.events["IncomingPacket"]["packet"], {"from": berg})
 
     # 6. Ack
@@ -212,9 +212,9 @@ def test_security_limit_swap_timeout(
 
     # TODO create a fixture for this?
     # Swap from pool_1 to pool_2 to introduce a change in the security limit of pool_2
-    # 1. sendSwap
+    # 1. sendAsset
     source_token.approve(pool_1, swap_amount, {'from': berg})
-    tx = pool_1.sendSwap(
+    tx = pool_1.sendAsset(
         channel_id,
         convert.to_bytes(pool_2.address.replace("0x", "")),
         convert.to_bytes(berg.address.replace("0x", "")),
@@ -226,13 +226,13 @@ def test_security_limit_swap_timeout(
         {"from": berg},
     )
 
-    # 2. receiveSwap
+    # 2. receiveAsset
     txe = ibc_emulator.execute(
         tx.events["IncomingMetadata"]["metadata"][0],
         tx.events["IncomingPacket"]["packet"],
         {"from": berg}
     )
-    purchased_tokens = txe.events["ReceiveSwap"]["output"]
+    purchased_tokens = txe.events["ReceiveAsset"]["toAmount"]
 
     # 3. Ack
     ibc_emulator.ack(
@@ -248,9 +248,9 @@ def test_security_limit_swap_timeout(
     capacity_timestamp = chain[-1].timestamp
 
     # Reverse-swap from pool_2 to pool_1
-    # 4. sendSwap
+    # 4. sendAsset
     target_token.approve(pool_2, purchased_tokens, {'from': berg})
-    tx2 = pool_2.sendSwap(
+    tx2 = pool_2.sendAsset(
         channel_id,
         convert.to_bytes(pool_1.address.replace("0x", "")),
         convert.to_bytes(berg.address.replace("0x", "")),

@@ -106,12 +106,12 @@ abstract contract CatalystSwapPoolCommon is
     /// @notice Total current escrowed tokens
     mapping(address => uint256) public _escrowedTokens;
     /// @notice Specific escrow information
-    mapping(bytes32 => address) public _escrowedFor;
+    mapping(bytes32 => address) public _escrowedTokensFor;
 
     /// @notice Total current escrowed pool tokens
     uint256 public _escrowedPoolTokens;
     /// @notice Specific escrow information (Liquidity)
-    mapping(bytes32 => address) public _escrowedLiquidityFor;
+    mapping(bytes32 => address) public _escrowedPoolTokensFor;
 
     constructor(address factory_) ERC20("Catalyst Pool Template", "", DECIMALS) {
         FACTORY = factory_;
@@ -203,7 +203,7 @@ abstract contract CatalystSwapPoolCommon is
      * @dev Implement a lot of similar logic to getUnitCapacity. 
      * @param units The number of units to check and set.
      */
-    function updateUnitCapacity(uint256 units) internal {
+    function _updateUnitCapacity(uint256 units) internal {
         uint256 MUC = _maxUnitCapacity;
 
         // The delta change to the limit is: timePassed · slope = timePassed · Max/decayrate
@@ -269,7 +269,7 @@ abstract contract CatalystSwapPoolCommon is
     /**
      * @dev Collect the governance fee share of the specified pool fee
      */
-    function collectGovernanceFee(address asset, uint256 poolFeeAmount) internal {
+    function _collectGovernanceFee(address asset, uint256 poolFeeAmount) internal {
 
         uint256 governanceFeeShare = _governanceFeeShare;
 
@@ -280,25 +280,25 @@ abstract contract CatalystSwapPoolCommon is
     }
 
     /**
-     * @notice Creates a connection to targetPool on the channel_channelId.
+     * @notice Creates a connection to toPool on the channel_channelId.
      * @dev Encoding addresses in bytes32 for EVM can be done be computed with:
      * Vyper: convert(<poolAddress>, bytes32)
      * Solidity: abi.encode(<poolAddress>)
      * Brownie: brownie.convert.to_bytes(<poolAddress>, type_str="bytes32")
      * @param channelId Target chain identifier.
-     * @param targetPool Bytes32 representation of the target pool.
+     * @param toPool Bytes32 representation of the target pool.
      * @param state Boolean indicating if the connection should be open or closed.
      */
     function setConnection(
         bytes32 channelId,
-        bytes32 targetPool,
+        bytes32 toPool,
         bool state
     ) external override {
         require((msg.sender == _setupMaster) || (msg.sender == factoryOwner())); // dev: No auth
 
-        _poolConnection[channelId][targetPool] = state;
+        _poolConnection[channelId][toPool] = state;
 
-        emit SetConnection(channelId, targetPool, state);
+        emit SetConnection(channelId, toPool, state);
     }
 
     /**
@@ -324,16 +324,16 @@ abstract contract CatalystSwapPoolCommon is
 
     //-- Escrow Functions --//
 
-    function releaseTokenEscrow(
-        bytes32 assetSwapHash,
+    function _releaseAssetEscrow(
+        bytes32 sendAssetHash,
         uint256 escrowAmount,
         address escrowToken
     ) internal returns(address) {
         require(msg.sender == _chainInterface);  // dev: Only _chainInterface
 
-        address fallbackUser = _escrowedFor[assetSwapHash];  // Passing in an invalid swapHash returns address(0)
+        address fallbackUser = _escrowedTokensFor[sendAssetHash];  // Passing in an invalid swapHash returns address(0)
         require(fallbackUser != address(0));  // dev: Invalid swapHash. Alt: Escrow doesn't exist.
-        delete _escrowedFor[assetSwapHash];  // Stops timeout and further acks from being called
+        delete _escrowedTokensFor[sendAssetHash];  // Stops timeout and further acks from being called
 
         unchecked {
             // escrowAmount \subseteq _escrowedTokens => escrowAmount <= _escrowedTokens. Cannot be called twice since the 3 lines before ensure this can only be reached once.
@@ -343,15 +343,15 @@ abstract contract CatalystSwapPoolCommon is
         return fallbackUser;
     }
 
-    function releaseLiquidityEscrow(
-        bytes32 liquiditySwapHash,
+    function _releaseLiquidityEscrow(
+        bytes32 sendLiquidityHash,
         uint256 escrowAmount
     ) internal returns(address) {
         require(msg.sender == _chainInterface);  // dev: Only _chainInterface
 
-        address fallbackUser = _escrowedLiquidityFor[liquiditySwapHash];  // Passing in an invalid swapHash returns address(0)
+        address fallbackUser = _escrowedPoolTokensFor[sendLiquidityHash];  // Passing in an invalid swapHash returns address(0)
         require(fallbackUser != address(0));  // dev: Invalid swapHash. Alt: Escrow doesn't exist.
-        delete _escrowedLiquidityFor[liquiditySwapHash];  // Stops timeout and further acks from being called
+        delete _escrowedPoolTokensFor[sendLiquidityHash];  // Stops timeout and further acks from being called
 
         unchecked {
             // escrowAmount \subseteq _escrowedPoolTokens => escrowAmount <= _escrowedPoolTokens. Cannot be called twice since the 3 lines before ensure this can only be reached once.
@@ -364,123 +364,123 @@ abstract contract CatalystSwapPoolCommon is
     /** 
      * @notice Implements basic ack logic: Deletes and releases tokens to the pool
      * @dev Should never revert! For security limit adjustments, the implementation should be overwritten.
-     * @param targetUser The recipient of the transaction on the target chain. Encoded in bytes32.
+     * @param toAccount The recipient of the transaction on the target chain. Encoded in bytes32.
      * @param U The number of units initially purchased.
      * @param escrowAmount The number of tokens escrowed.
      * @param escrowToken The token escrowed.
      * @param blockNumberMod The block number at which the swap transaction was commited (mod 32)
      */
-    function sendSwapAck(
-        bytes32 targetUser,
+    function sendAssetAck(
+        bytes32 toAccount,
         uint256 U,
         uint256 escrowAmount,
         address escrowToken,
         uint32 blockNumberMod
     ) public virtual {
 
-        bytes32 assetSwapHash = computeAssetSwapHash(
-            targetUser, // Ensures no collisions between different users
+        bytes32 sendAssetHash = _computeSendAssetHash(
+            toAccount,  // Ensures no collisions between different users
             U,          // Used to randomise the hash
             escrowAmount,     // Required! to validate release escrow data
             escrowToken,  // Required! to validate release escrow data
             blockNumberMod
         );
 
-        releaseTokenEscrow(assetSwapHash, escrowAmount, escrowToken); // Only reverts for missing escrow
+        _releaseAssetEscrow(sendAssetHash, escrowAmount, escrowToken); // Only reverts for missing escrow
 
-        emit EscrowAck(assetSwapHash, false);  // Never reverts.
+        emit SendAssetAck(sendAssetHash);  // Never reverts.
     }
 
     /** 
      * @notice Implements basic timeout logic: Deletes and sends tokens to the user.
      * @dev Should never revert!
-     * @param targetUser The recipient of the transaction on the target chain. Encoded in bytes32.
+     * @param toAccount The recipient of the transaction on the target chain. Encoded in bytes32.
      * @param U The number of units initially purchased.
      * @param escrowAmount The number of tokens escrowed.
      * @param escrowToken The token escrowed.
      * @param blockNumberMod The block number at which the swap transaction was commited (mod 32)
      */
-    function sendSwapTimeout(
-        bytes32 targetUser,
+    function sendAssetTimeout(
+        bytes32 toAccount,
         uint256 U,
         uint256 escrowAmount,
         address escrowToken,
         uint32 blockNumberMod
     ) public virtual {
 
-        bytes32 assetSwapHash = computeAssetSwapHash(
-            targetUser, // Ensures no collisions between different users
+        bytes32 sendAssetHash = _computeSendAssetHash(
+            toAccount,  // Ensures no collisions between different users
             U,          // Used to randomise the hash
             escrowAmount,     // Required! to validate release escrow data
             escrowToken,  // Required! to validate release escrow data
             blockNumberMod
         );
 
-        address fallbackAddress = releaseTokenEscrow(assetSwapHash, escrowAmount, escrowToken); // Only reverts for missing escrow,
+        address fallbackAddress = _releaseAssetEscrow(sendAssetHash, escrowAmount, escrowToken); // Only reverts for missing escrow,
 
         ERC20(escrowToken).safeTransfer(fallbackAddress, escrowAmount);  // Would fail if there is no balance. To protect against this, the escrow amount is removed from what can be claimed by users.
 
-        emit EscrowTimeout(assetSwapHash, false);  // Never reverts.
+        emit SendAssetTimeout(sendAssetHash);  // Never reverts.
     }
 
     /** 
      * @notice Implements basic liquidity ack logic: Deletes and releases pool tokens to the pool.
      * @dev Should never revert! For security limit adjustments, the implementation should be overwritten.
-     * @param targetUser The recipient of the transaction on the target chain. Encoded in bytes32.
+     * @param toAccount The recipient of the transaction on the target chain. Encoded in bytes32.
      * @param U The number of units initially acquired.
      * @param escrowAmount The number of pool tokens escrowed.
      * @param blockNumberMod The block number at which the swap transaction was commited (mod 32)
      */
     function sendLiquidityAck(
-        bytes32 targetUser,
+        bytes32 toAccount,
         uint256 U,
         uint256 escrowAmount,
         uint32 blockNumberMod
     ) public virtual {
 
-        bytes32 liquiditySwapHash = computeLiquiditySwapHash(
-            targetUser, // Ensures no collisions between different users
+        bytes32 sendLiquidityHash = _computeSendLiquidityHash(
+            toAccount,  // Ensures no collisions between different users
             U,          // Used to randomise the hash
             escrowAmount,     // Required! to validate release escrow data
             blockNumberMod
         );
 
-        releaseLiquidityEscrow(liquiditySwapHash, escrowAmount); // Only reverts for missing escrow
+        _releaseLiquidityEscrow(sendLiquidityHash, escrowAmount); // Only reverts for missing escrow
 
-        emit EscrowAck(liquiditySwapHash, true);  // Never reverts.
+        emit SendLiquidityAck(sendLiquidityHash);  // Never reverts.
     }
 
     /** 
      * @notice Implements basic liquidity timeout logic: Deletes and sends pool tokens to the user.
      * @dev Should never revert!
-     * @param targetUser The recipient of the transaction on the target chain. Encoded in bytes32.
+     * @param toAccount The recipient of the transaction on the target chain. Encoded in bytes32.
      * @param U The number of units initially acquired.
      * @param escrowAmount The number of pool tokens escrowed.
      * @param blockNumberMod The block number at which the swap transaction was commited (mod 32)
      */
     function sendLiquidityTimeout(
-        bytes32 targetUser,
+        bytes32 toAccount,
         uint256 U,
         uint256 escrowAmount,
         uint32 blockNumberMod
     ) public virtual {
 
-        bytes32 liquiditySwapHash = computeLiquiditySwapHash(
-            targetUser, // Ensures no collisions between different users
+        bytes32 sendLiquidityHash = _computeSendLiquidityHash(
+            toAccount,  // Ensures no collisions between different users
             U,          // Used to randomise the hash
             escrowAmount,     // Required! to validate release escrow data
             blockNumberMod
         );
 
-        address fallbackAddress = releaseLiquidityEscrow(liquiditySwapHash, escrowAmount); // Only reverts for missing escrow
+        address fallbackAddress = _releaseLiquidityEscrow(sendLiquidityHash, escrowAmount); // Only reverts for missing escrow
 
         _mint(fallbackAddress, escrowAmount);  
 
-        emit EscrowTimeout(liquiditySwapHash, true);  // Never reverts.
+        emit SendLiquidityTimeout(sendLiquidityHash);  // Never reverts.
     }
 
-    function computeAssetSwapHash(
-        bytes32 targetUser,
+    function _computeSendAssetHash(
+        bytes32 toAccount,
         uint256 U,
         uint256 amount,
         address fromAsset,
@@ -488,7 +488,7 @@ abstract contract CatalystSwapPoolCommon is
     ) internal pure returns(bytes32) {
         return keccak256(
             abi.encodePacked(
-                targetUser, // Ensures no collisions between different users
+                toAccount,  // Ensures no collisions between different users
                 U,          // Used to randomise the hash
                 amount,     // Required! to validate release escrow data
                 fromAsset,  // Required! to validate release escrow data
@@ -497,15 +497,15 @@ abstract contract CatalystSwapPoolCommon is
         );
     }
 
-    function computeLiquiditySwapHash(
-        bytes32 targetUser,
+    function _computeSendLiquidityHash(
+        bytes32 toAccount,
         uint256 U,
         uint256 amount,
         uint32 blockNumberMod
     ) internal pure returns(bytes32) {
         return keccak256(
             abi.encodePacked(
-                targetUser, // Ensures no collisions between different users
+                toAccount,  // Ensures no collisions between different users
                 U,          // Used to randomise the hash
                 amount,     // Required! to validate release escrow data
                 blockNumberMod

@@ -21,7 +21,7 @@ def main():
         BSCCONFIG["accounts"][0]["mnemonic"]["phrase"]
     )
     target_bytes = brownie.convert.to_bytes(target.address.replace("0x", ""))
-    brownie.SwapPool.at(swappool_ETH).sendSwap(
+    brownie.SwapPool.at(swappool_ETH).sendAsset(
         1234,
         swappool_bytes_BSC,
         target_bytes,

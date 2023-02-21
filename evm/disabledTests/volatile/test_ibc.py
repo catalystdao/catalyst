@@ -44,7 +44,7 @@ def test_ibc_swap(
     toAssetIndex = tokenArr.index(token2)
     assert swappool._tokenIndexing(toAssetIndex) == token2
 
-    tx = swappool.sendSwap(
+    tx = swappool.sendAsset(
         chainId,
         brownie.convert.to_bytes(swappool.address.replace("0x", "")),
         brownie.convert.to_bytes(base_account.address.replace("0x", "")),

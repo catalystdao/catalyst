@@ -71,8 +71,8 @@ def test_multipool_swap(
 
     y = get_swap_return(swapValue, token1, token2, swappoolA, swappoolB)
 
-    # sendSwap
-    # (_chain : uint256, _targetPool : bytes32, _fromAsset : address, _toAsset : uint256, _who : bytes32, _amount : uint256) -> uint256
+    # sendAsset
+    # (_chain : uint256, _targetPool : bytes32, _fromAsset : address, _toAsset : uint256, _toAccount : bytes32, _amount : uint256) -> uint256
     tokenArr = [
         swappoolA._tokenIndexing(0),
         swappoolA._tokenIndexing(1),
@@ -95,7 +95,7 @@ def test_multipool_swap(
         {"from": base_account},
     )
 
-    tx = swappoolA.sendSwap(
+    tx = swappoolA.sendAsset(
         chainId,
         brownie.convert.to_bytes(swappoolB.address.replace("0x", "")),
         brownie.convert.to_bytes(base_account.address.replace("0x", "")),
@@ -115,7 +115,7 @@ def test_multipool_swap(
         tx.events["IncomingPacket"]["packet"],
         {"from": base_account},
     )
-    # receiveSwap follows
+    # receiveAsset follows
     assert token2.balanceOf(base_account) > 0
     out = token2.balanceOf(base_account)
 

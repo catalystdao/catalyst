@@ -163,7 +163,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
 
         if (context == CTX0_ASSET_SWAP) {
 
-            ICatalystV1Pool(fromPool).sendSwapAck(
+            ICatalystV1Pool(fromPool).sendAssetAck(
                 bytes32(data[ TO_ACCOUNT_START : TO_ACCOUNT_END ]),                             // toAccount
                 uint256(bytes32(data[ UNITS_START : UNITS_END ])),                              // units
                 uint256(bytes32(data[ CTX0_FROM_AMOUNT_START : CTX0_FROM_AMOUNT_END ])),        // fromAmount
@@ -205,7 +205,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
 
         if (context == CTX0_ASSET_SWAP) {
 
-            ICatalystV1Pool(fromPool).sendSwapTimeout(
+            ICatalystV1Pool(fromPool).sendAssetTimeout(
                 bytes32(data[ TO_ACCOUNT_START : TO_ACCOUNT_END ]),                             // toAccount
                 uint256(bytes32(data[ UNITS_START : UNITS_END ])),                              // units
                 uint256(bytes32(data[ CTX0_FROM_AMOUNT_START : CTX0_FROM_AMOUNT_END ])),        // fromAmount
@@ -252,7 +252,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
 
             // CCI sets dataLength > 0 if calldata is passed.
             if (dataLength != 0) {
-                ICatalystV1Pool(toPool).receiveSwap(
+                ICatalystV1Pool(toPool).receiveAsset(
                     bytes32(packet.src.channelId),                                          // connectionId
                     fromPool,                                                               // fromPool
                     uint8(data[CTX0_TO_ASSET_INDEX_POS]),                                   // toAssetIndex
@@ -264,7 +264,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
                     data[ CTX0_DATA_START+32 : CTX0_DATA_START+dataLength-32 ]              // dataArguments
                 );
             } else {
-                ICatalystV1Pool(toPool).receiveSwap(
+                ICatalystV1Pool(toPool).receiveAsset(
                     bytes32(packet.src.channelId),                                          // connectionId
                     fromPool,                                                               // fromPool
                     uint8(data[CTX0_TO_ASSET_INDEX_POS]),                                   // toAssetIndex

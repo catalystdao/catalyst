@@ -26,7 +26,7 @@ def test_ibc_ack(channel_id, pool, pool_tokens, ibc_emulator, berg, deployer, sw
     source_token.transfer(berg, swap_amount, {'from': deployer})
     source_token.approve(pool, swap_amount, {'from': berg})
 
-    tx = pool.sendSwap(
+    tx = pool.sendAsset(
         channel_id,
         convert.to_bytes(pool.address.replace("0x", "")),
         convert.to_bytes(berg.address.replace("0x", "")),
@@ -61,7 +61,7 @@ def test_ibc_timeout(channel_id, pool, pool_tokens, ibc_emulator, berg, deployer
     source_token.transfer(berg, swap_amount, {'from': deployer})
     source_token.approve(pool, swap_amount, {'from': berg})
 
-    tx = pool.sendSwap(
+    tx = pool.sendAsset(
         channel_id,
         convert.to_bytes(pool.address.replace("0x", "")),
         convert.to_bytes(berg.address.replace("0x", "")),
@@ -92,7 +92,7 @@ def test_only_one_response(channel_id, pool, pool_tokens, ibc_emulator, berg, de
     source_token.transfer(berg, swap_amount, {'from': deployer})
     source_token.approve(pool, swap_amount, {'from': berg})
 
-    tx = pool.sendSwap(
+    tx = pool.sendAsset(
         channel_id,
         convert.to_bytes(pool.address.replace("0x", "")),
         convert.to_bytes(berg.address.replace("0x", "")),
@@ -170,10 +170,10 @@ def test_ibc_timeout_and_ack(channel_id, pool, pool_tokens, ibc_emulator, berg, 
 
     both1_12 = pool.calcLocalSwap(source_token, target_token, 10**18)
     both1_21 = pool.calcLocalSwap(target_token, source_token, 10**18)
-    to1 = pool.calcSendSwap(source_token, 10**18)
-    from1 = pool.calcReceiveSwap(source_token, U)
+    to1 = pool.calcSendAsset(source_token, 10**18)
+    from1 = pool.calcReceiveAsset(source_token, U)
 
-    tx1 = pool.sendSwap(
+    tx1 = pool.sendAsset(
         channel_id,
         convert.to_bytes(pool.address.replace("0x", "")),
         convert.to_bytes(berg.address.replace("0x", "")),
@@ -187,8 +187,8 @@ def test_ibc_timeout_and_ack(channel_id, pool, pool_tokens, ibc_emulator, berg, 
 
     both2_12 = pool.calcLocalSwap(source_token, target_token, 10**18)
     both2_21 = pool.calcLocalSwap(target_token, source_token, 10**18)
-    to2 = pool.calcSendSwap(source_token, 10**18)
-    from2 = pool.calcReceiveSwap(source_token, U)
+    to2 = pool.calcSendAsset(source_token, 10**18)
+    from2 = pool.calcReceiveAsset(source_token, U)
 
     assert both1_12 > both2_12
     assert both1_21 == both2_21
@@ -203,8 +203,8 @@ def test_ibc_timeout_and_ack(channel_id, pool, pool_tokens, ibc_emulator, berg, 
 
     both3_12 = pool.calcLocalSwap(source_token, target_token, 10**18)
     both3_21 = pool.calcLocalSwap(target_token, source_token, 10**18)
-    to3 = pool.calcSendSwap(source_token, 10**18)
-    from3 = pool.calcReceiveSwap(source_token, U)
+    to3 = pool.calcSendAsset(source_token, 10**18)
+    from3 = pool.calcReceiveAsset(source_token, U)
 
     assert both1_12 == both3_12
     assert both1_21 == both3_21
@@ -221,8 +221,8 @@ def test_ibc_timeout_and_ack(channel_id, pool, pool_tokens, ibc_emulator, berg, 
 
     both3_12 = pool.calcLocalSwap(source_token, target_token, 10**18)
     both3_21 = pool.calcLocalSwap(target_token, source_token, 10**18)
-    to3 = pool.calcSendSwap(source_token, 10**18)
-    from3 = pool.calcReceiveSwap(source_token, U)
+    to3 = pool.calcSendAsset(source_token, 10**18)
+    from3 = pool.calcReceiveAsset(source_token, U)
 
     assert both1_12 > both3_12
     assert both1_21 < both3_21
@@ -232,7 +232,7 @@ def test_ibc_timeout_and_ack(channel_id, pool, pool_tokens, ibc_emulator, berg, 
 
 def test_ibc_ack_event(channel_id, pool, pool_tokens, ibc_emulator, berg, deployer):
     """
-        Test the EscrowAck event gets fired.
+        Test the SendAssetAck event gets fired.
     """
 
     swap_amount = 10**8
@@ -242,7 +242,7 @@ def test_ibc_ack_event(channel_id, pool, pool_tokens, ibc_emulator, berg, deploy
     source_token.transfer(berg, swap_amount, {'from': deployer})
     source_token.approve(pool, swap_amount, {'from': berg})
 
-    tx = pool.sendSwap(
+    tx = pool.sendAsset(
         channel_id,
         convert.to_bytes(pool.address.replace("0x", "")),
         convert.to_bytes(berg.address.replace("0x", "")),
@@ -260,7 +260,7 @@ def test_ibc_ack_event(channel_id, pool, pool_tokens, ibc_emulator, berg, deploy
         {"from": deployer},
     )
 
-    escrow_ack_event = txe.events['EscrowAck']
+    ack_event = txe.events['SendAssetAck']
 
 
     expected_message_hash = compute_asset_swap_hash(
@@ -270,13 +270,12 @@ def test_ibc_ack_event(channel_id, pool, pool_tokens, ibc_emulator, berg, deploy
         source_token.address,
         tx.block_number
     )
-    assert escrow_ack_event["swapHash"]   == expected_message_hash
-    assert escrow_ack_event["liquiditySwap"] == False
+    assert ack_event["swapHash"] == expected_message_hash
 
 
 def test_ibc_timeout_event(channel_id, pool, pool_tokens, ibc_emulator, berg, deployer):
     """
-        Test the EscrowTimeout event gets fired.
+        Test the SendAssetTimeout event gets fired.
     """
 
     swap_amount = 10**8
@@ -286,7 +285,7 @@ def test_ibc_timeout_event(channel_id, pool, pool_tokens, ibc_emulator, berg, de
     source_token.transfer(berg, swap_amount, {'from': deployer})
     source_token.approve(pool, swap_amount, {'from': berg})
 
-    tx = pool.sendSwap(
+    tx = pool.sendAsset(
         channel_id,
         convert.to_bytes(pool.address.replace("0x", "")),
         convert.to_bytes(berg.address.replace("0x", "")),
@@ -304,7 +303,7 @@ def test_ibc_timeout_event(channel_id, pool, pool_tokens, ibc_emulator, berg, de
         {"from": deployer},
     )
 
-    escrow_timeout_event = txe.events['EscrowTimeout']
+    timeout_event = txe.events['SendAssetTimeout']
 
     expected_message_hash = compute_asset_swap_hash(
         berg.address,
@@ -313,5 +312,4 @@ def test_ibc_timeout_event(channel_id, pool, pool_tokens, ibc_emulator, berg, de
         source_token.address,
         tx.block_number
     )
-    assert escrow_timeout_event["swapHash"]   == expected_message_hash
-    assert escrow_timeout_event["liquiditySwap"] == False
+    assert timeout_event["swapHash"] == expected_message_hash

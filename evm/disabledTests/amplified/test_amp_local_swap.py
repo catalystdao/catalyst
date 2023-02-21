@@ -177,7 +177,7 @@ def test_local_swap_with_self(
     token.approve(sp, swap_amount, {"from": swapper})
 
     # Not using the 'run_local_swap' helper function, as its checks fail when the input and output assets are the same
-    tx = sp.localswap(
+    tx = sp.localSwap(
         token,
         token,
         swap_amount,
@@ -185,7 +185,7 @@ def test_local_swap_with_self(
         {"from": swapper}
     )
 
-    assert tx.events['LocalSwap'][0]['output'] <= swap_amount
+    assert tx.events['LocalSwap'][0]['toAmount'] <= swap_amount
 
 
 
@@ -240,8 +240,8 @@ def test_local_swap_no_approx_method(
     fn_isolation
 ):
     """
-        For coverage purposes: make sure the 'localswap' overload that excludes the 'approx' argument gets invoked.
-        TODO Make sure that the overload correctly invokes the full 'localswap' method with approx=False.
+        For coverage purposes: make sure the 'localSwap' overload that excludes the 'approx' argument gets invoked.
+        TODO Make sure that the overload correctly invokes the full 'localSwap' method with approx=False.
         TODO As of brownie 1.19.1 (on WSL Ubuntu), this invokation is not shown on the 'subcalls' property of the 'transaction' object.
         TODO No other (simple) means of testing this has been found. 
     """
@@ -284,7 +284,7 @@ def test_local_swap_with_invalid_input_asset(
     token_in.transfer(sp, 10**18, {"from": gov})
 
     # Not using the 'run_local_swap' helper function as its checks fail in these conditions
-    tx = sp.localswap(
+    tx = sp.localSwap(
         token_in,
         token_out,
         swap_amount,
@@ -292,4 +292,4 @@ def test_local_swap_with_invalid_input_asset(
         {"from": swapper}
     )
 
-    assert tx.events['LocalSwap'][0]['output'] == 0
+    assert tx.events['LocalSwap'][0]['toAmount'] == 0

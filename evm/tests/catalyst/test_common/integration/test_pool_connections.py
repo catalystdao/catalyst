@@ -88,9 +88,9 @@ def test_create_connection_event(
 
     event = tx.events["SetConnection"]
 
-    assert event["channelId"]  == convert.datatypes.HexString(channel_id, type_str="bytes32")
-    assert event["targetPool"] == dummy_pool_address
-    assert event["newState"]   == connection_state
+    assert event["channelId"] == convert.datatypes.HexString(channel_id, type_str="bytes32")
+    assert event["toPool"]    == dummy_pool_address
+    assert event["newState"]  == connection_state
 
 
 
@@ -111,7 +111,7 @@ def test_connect_pools_invalid_auth(
 
 
 
-def test_not_connected_send_swap(
+def test_not_connected_send_asset(
     channel_id,
     pool,
     pool_tokens,
@@ -130,7 +130,7 @@ def test_not_connected_send_swap(
     source_token.approve(pool, swap_amount, {"from": deployer})
 
     with reverts(revert_pattern=re.compile("typed error: 0xfc08ab42.*")):
-        pool.sendSwap(
+        pool.sendAsset(
             channel_id,
             convert.to_bytes(dummy_pool_address),
             convert.to_bytes(berg.address),

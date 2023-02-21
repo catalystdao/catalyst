@@ -43,7 +43,7 @@ def test_liquidity_swap(
     pool1_tokens_swapped = int(pool1_tokens * swap_percentage)
     
     computation = compute_expected_liquidity_swap(pool1_tokens_swapped)
-    U, estimatedPool2Tokens = computation["U"], computation["output"]
+    U, estimatedPool2Tokens = computation["U"], computation["to_amount"]
     
     tx = pool_1.sendLiquidity(
         channel_id,
@@ -58,7 +58,7 @@ def test_liquidity_swap(
     
     b0_times_n = len(pool_1_tokens) * pool_utils.compute_balance_0(get_pool_2_weights(), get_pool_2_balances(), get_pool_2_unit_tracker(), get_pool_2_amp())
     
-    U = tx.events["SendLiquidity"]["output"]
+    U = tx.events["SendLiquidity"]["units"]
     expectedB0 = 2**256
     if int(int(b0_times_n)**(1 - get_pool_2_amp()/10**18)) >= int(U/10**18):
         expectedB0 = pool_utils.compute_expected_swap_given_U(U, 1, b0_times_n, get_pool_2_amp())
@@ -77,7 +77,7 @@ def test_liquidity_swap(
     else:
         txe = ibc_emulator.execute(tx.events["IncomingMetadata"]["metadata"][0], tx.events["IncomingPacket"]["packet"], {"from": berg})
     
-    purchased_tokens = txe.events["ReceiveLiquidity"]["output"]
+    purchased_tokens = txe.events["ReceiveLiquidity"]["toAmount"]
     
     assert purchased_tokens == pool_2.balanceOf(berg)
     

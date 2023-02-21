@@ -542,7 +542,7 @@ def test_direct_escrow_ack_timeout_invocation(
     )
 
     message_hash      = swap_result.tx_swap_to_liquidity_units.events['SendLiquidity'][0]['swapHash']
-    transferred_units = swap_result.tx_swap_to_liquidity_units.events['SendLiquidity']['output']
+    transferred_units = swap_result.tx_swap_to_liquidity_units.events['SendLiquidity']['units']
     escrowAmount      = decodePayload(swap_result.tx_swap_to_liquidity_units.events["IncomingPacket"]["packet"][3])["_escrowAmount"]
 
     # Try to directly invoke ack

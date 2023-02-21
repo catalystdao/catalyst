@@ -62,13 +62,13 @@ interface ICatalystV1PoolState {
     function _escrowedTokens(address token) external view returns (uint256);
 
     /// @notice Specific escrow information
-    // function _escrowedFor(bytes32 assetSwapHash) external view returns (TokenEscrow calldata);
+    // function _escrowedTokensFor(bytes32 sendAssetHash) external view returns (TokenEscrow calldata);
 
     /// @notice Total current escrowed pool tokens
     function _escrowedPoolTokens() external view returns (uint256);
 
     /// @notice Specific escrow information (Pool Tokens)
-    // function _escrowedLiquidityFor(bytes32 liquiditySwapHash) external view returns (LiquidityEscrow memory);
+    // function _escrowedPoolTokensFor(bytes32 sendLiquidityHash) external view returns (LiquidityEscrow memory);
 
     function factoryOwner() external view returns (address);
 
