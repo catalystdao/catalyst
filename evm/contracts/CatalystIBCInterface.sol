@@ -253,25 +253,25 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
             // CCI sets dataLength > 0 if calldata is passed.
             if (dataLength != 0) {
                 ICatalystV1Pool(toPool).receiveAsset(
-                    bytes32(packet.src.channelId),                                       // connectionId
-                    fromPool,                                                            // fromPool
-                    uint8(data[CTX0_TO_ASSET_INDEX_POS]),                                // toAssetIndex
-                    abi.decode(data[ TO_ACCOUNT_START : TO_ACCOUNT_END ], (address)),    // toAccount
-                    uint256(bytes32(data[ UNITS_START : UNITS_END ])),                   // units
-                    uint256(bytes32(data[ CTX0_MIN_OUT_START : CTX0_MIN_OUT_END ])),     // minOut
-                    bytes32(data[ CTX0_SWAP_HASH_START : CTX0_SWAP_HASH_END ]),          // swapHash
-                    abi.decode(data[ CTX0_DATA_START : CTX0_DATA_START+32 ], (address)), // dataTarget
-                    data[ CTX0_DATA_START+32 : CTX0_DATA_START+dataLength-32 ]           // dataArguments
+                    bytes32(packet.src.channelId),                                          // connectionId
+                    fromPool,                                                               // fromPool
+                    uint8(data[CTX0_TO_ASSET_INDEX_POS]),                                   // toAssetIndex
+                    abi.decode(data[ TO_ACCOUNT_START : TO_ACCOUNT_END ], (address)),       // toAccount
+                    uint256(bytes32(data[ UNITS_START : UNITS_END ])),                      // units
+                    uint256(bytes32(data[ CTX0_MIN_OUT_START : CTX0_MIN_OUT_END ])),        // minOut
+                    bytes32(data[ CTX0_SWAP_HASH_START : CTX0_SWAP_HASH_END ]),             // swapHash
+                    abi.decode(data[ CTX0_DATA_START : CTX0_DATA_START+32 ], (address)),    // dataTarget
+                    data[ CTX0_DATA_START+32 : CTX0_DATA_START+dataLength-32 ]              // dataArguments
                 );
             } else {
                 ICatalystV1Pool(toPool).receiveAsset(
-                    bytes32(packet.src.channelId),                                       // connectionId
-                    fromPool,                                                            // fromPool
-                    uint8(data[CTX0_TO_ASSET_INDEX_POS]),                                // toAssetIndex
-                    abi.decode(data[ TO_ACCOUNT_START : TO_ACCOUNT_END ], (address)),    // toAccount
-                    uint256(bytes32(data[ UNITS_START : UNITS_END ])),                   // units
-                    uint256(bytes32(data[ CTX0_MIN_OUT_START : CTX0_MIN_OUT_END ])),     // minOut
-                    bytes32(data[ CTX0_SWAP_HASH_START : CTX0_SWAP_HASH_END ])           // swapHash
+                    bytes32(packet.src.channelId),                                          // connectionId
+                    fromPool,                                                               // fromPool
+                    uint8(data[CTX0_TO_ASSET_INDEX_POS]),                                   // toAssetIndex
+                    abi.decode(data[ TO_ACCOUNT_START : TO_ACCOUNT_END ], (address)),       // toAccount
+                    uint256(bytes32(data[ UNITS_START : UNITS_END ])),                      // units
+                    uint256(bytes32(data[ CTX0_MIN_OUT_START : CTX0_MIN_OUT_END ])),        // minOut
+                    bytes32(data[ CTX0_SWAP_HASH_START : CTX0_SWAP_HASH_END ])              // swapHash
                 );
             }
 
