@@ -573,6 +573,9 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         // For later event logging, the amounts transferred to the pool are stored.
         uint256[] memory amounts = new uint256[](MAX_ASSETS);
         for (uint256 it; it < MAX_ASSETS;) {
+            address token = _tokenIndexing[it]; // Collect token from memory
+            if (token == address(0)) break;
+
             // Units allocated for the specific token.
             uint256 U_i = (U * withdrawRatio[it]) / FixedPointMathLib.WAD;
             if (U_i == 0) {
@@ -584,8 +587,6 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
                 continue;
             }
             U -= U_i;  // Subtract the number of units used. This will underflow for malicious withdrawRatios > 1.
-
-            address token = _tokenIndexing[it]; // Collect token from memory
 
             // Withdrawals should returns less, so the escrowed tokens are subtracted.
             uint256 At = ERC20(token).balanceOf(address(this)) - _escrowedTokens[token];
