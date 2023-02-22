@@ -3,7 +3,16 @@
 pragma solidity ^0.8.16;
 
 interface ICatalystV1PoolPermissionless {
-    /** @notice Setup a pool. */
+    /** 
+     * @notice Setup a pool.
+     * @param name_ Name of the Pool token.
+     * @param symbol_ Symbol for the Pool token.
+     * @param chainInterface The cross chain interface used for cross-chain swaps. (Can be address(0) to disable cross-chain swaps.)
+     * @param poolFee The pool fee.
+     * @param governanceFee The governance fee share.
+     * @param feeAdministrator The account that can modify the fees.
+     * @param setupMaster The short-term owner of the pool (until finishSetup is called).
+     */
     function setup(
         string calldata name_,
         string calldata symbol_,
