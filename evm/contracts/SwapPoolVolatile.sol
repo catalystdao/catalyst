@@ -697,7 +697,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
             U,              // Used to randomise the hash
             amount - fee,   // Required! to validate release escrow data
             fromAsset,      // Required! to validate release escrow data
-            uint32(block.number % 2**32)
+            uint32(block.number) // May overflow, but this is desired (% 2**32)
         );
 
         // Wrap the escrow information into a struct. This reduces the stack-print.
@@ -705,7 +705,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
             fromAmount: amount - fee,
             fromAsset: fromAsset,
             swapHash: sendAssetHash,
-            blockNumber: uint32(block.number % 2**32)
+            blockNumber: uint32(block.number) // May overflow, but this is desired (% 2**32)
         });
 
         // Send the purchased units to toPool on the target chain.
@@ -919,7 +919,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
             toAccount,      // Ensures no collisions between different users
             U,              // Used to randomise the hash
             poolTokens,     // Required! to validate release escrow data
-            uint32(block.number % 2**32)
+            uint32(block.number) // May overflow, but this is desired (% 2**32)
         );
 
         // Wrap the escrow information into a struct. This reduces the stack-print.
@@ -928,7 +928,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         LiquiditySwapMetadata memory swapMetadata = LiquiditySwapMetadata({
             fromAmount: poolTokens,
             swapHash: sendLiquidityHash,
-            blockNumber: uint32(block.number % 2**32)
+            blockNumber: uint32(block.number) // May overflow, but this is desired (% 2**32)
         });
 
         // Transfer the units to the target pools.
