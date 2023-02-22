@@ -344,7 +344,6 @@ abstract contract CatalystSwapPoolCommon is
         uint256 escrowAmount,
         address escrowToken
     ) internal returns(address) {
-        require(msg.sender == _chainInterface);  // dev: Only _chainInterface
 
         address fallbackUser = _escrowedTokensFor[sendAssetHash];  // Passing in an invalid swapHash returns address(0)
         require(fallbackUser != address(0));  // dev: Invalid swapHash. Alt: Escrow doesn't exist.
@@ -362,7 +361,6 @@ abstract contract CatalystSwapPoolCommon is
         bytes32 sendLiquidityHash,
         uint256 escrowAmount
     ) internal returns(address) {
-        require(msg.sender == _chainInterface);  // dev: Only _chainInterface
 
         address fallbackUser = _escrowedPoolTokensFor[sendLiquidityHash];  // Passing in an invalid swapHash returns address(0)
         require(fallbackUser != address(0));  // dev: Invalid swapHash. Alt: Escrow doesn't exist.
@@ -392,6 +390,7 @@ abstract contract CatalystSwapPoolCommon is
         address escrowToken,
         uint32 blockNumberMod
     ) public virtual {
+        require(msg.sender == _chainInterface);  // dev: Only _chainInterface
 
         bytes32 sendAssetHash = _computeSendAssetHash(
             toAccount,  // Ensures no collisions between different users
@@ -422,6 +421,7 @@ abstract contract CatalystSwapPoolCommon is
         address escrowToken,
         uint32 blockNumberMod
     ) public virtual {
+        require(msg.sender == _chainInterface);  // dev: Only _chainInterface
 
         bytes32 sendAssetHash = _computeSendAssetHash(
             toAccount,  // Ensures no collisions between different users
@@ -452,6 +452,7 @@ abstract contract CatalystSwapPoolCommon is
         uint256 escrowAmount,
         uint32 blockNumberMod
     ) public virtual {
+        require(msg.sender == _chainInterface);  // dev: Only _chainInterface
 
         bytes32 sendLiquidityHash = _computeSendLiquidityHash(
             toAccount,  // Ensures no collisions between different users
@@ -479,6 +480,7 @@ abstract contract CatalystSwapPoolCommon is
         uint256 escrowAmount,
         uint32 blockNumberMod
     ) public virtual {
+        require(msg.sender == _chainInterface);  // dev: Only _chainInterface
 
         bytes32 sendLiquidityHash = _computeSendLiquidityHash(
             toAccount,  // Ensures no collisions between different users
