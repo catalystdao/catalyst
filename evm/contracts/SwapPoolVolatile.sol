@@ -403,15 +403,12 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
 
         // The swap equation simplifies to the ordinary constant product if the
         // token weights are equal.
-        unchecked {
-            // Any overflow returns less.
-            if (W_A == W_B)
-                // Saves gas and is exact.
-                // NOTE: If W_A == 0 and W_B == 0 => W_A == W_B => The calculation will not fail.
-                // This is not a problem, since W_B != 0 for assets contained in the pool, and hence a 0-weighted asset 
-                // (i.e. not contained in the pool) cannot be used to extract an asset contained in the pool.
-                return (B * amount) / (A + amount);
-        }
+        if (W_A == W_B)
+            // Saves gas and is exact.
+            // NOTE: If W_A == 0 and W_B == 0 => W_A == W_B => The calculation will not fail.
+            // This is not a problem, since W_B != 0 for assets contained in the pool, and hence a 0-weighted asset 
+            // (i.e. not contained in the pool) cannot be used to extract an asset contained in the pool.
+            return (B * amount) / (A + amount);
 
         // If either token doesn't exist, their weight is 0.
         // Then powWad returns 1 which is subtracted from 1 => returns 0.
@@ -729,8 +726,10 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         // Escrow the tokens used to purchase units. These will be sent back if transaction
         // doesn't arrive / timeout.
         require(_escrowedTokensFor[sendAssetHash] == address(0)); // dev: Escrow already exists.
-        _escrowedTokens[fromAsset] += amount - fee;
         _escrowedTokensFor[sendAssetHash] = fallbackUser;
+        unchecked {
+            _escrowedTokens[fromAsset] += amount - fee;
+        }
 
         // Governance Fee
         _collectGovernanceFee(fromAsset, fee);
@@ -949,7 +948,9 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         // Escrow the pool tokens
         require(_escrowedPoolTokensFor[sendLiquidityHash] == address(0));
         _escrowedPoolTokensFor[sendLiquidityHash] = fallbackUser;
-        _escrowedPoolTokens += poolTokens;
+        unchecked {
+            _escrowedPoolTokens += poolTokens;
+        }
 
         // Adjustment of the security limit is delayed until ack to avoid
         // a router abusing timeout to circumvent the security limit at a low cost.

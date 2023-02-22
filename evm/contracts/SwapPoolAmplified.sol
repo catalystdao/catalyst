@@ -427,7 +427,9 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
 
         // If the swap is a very small portion of the pool
         // Add an additional fee. This covers mathematical errors.
-        if (A/SMALL_SWAP_RATIO >= amount) return U * SMALL_SWAP_RETURN / FixedPointMathLib.WAD;
+        unchecked { //SMALL_SWAP_RATIO is not zero, and if U * SMALL_SWAP_RETURN overflows, less is returned to the user
+            if (A/SMALL_SWAP_RATIO >= amount) return U * SMALL_SWAP_RETURN / FixedPointMathLib.WAD;
+        }
         
         return U;
     }
@@ -477,7 +479,9 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
 
         // If the swap is a very small portion of the pool
         // Add an additional fee. This covers mathematical errors.
-        if (A/SMALL_SWAP_RATIO >= amount) return output * SMALL_SWAP_RETURN / FixedPointMathLib.WAD;
+        unchecked { //SMALL_SWAP_RATIO is not zero, and if output * SMALL_SWAP_RETURN overflows, less is returned to the user
+            if (A/SMALL_SWAP_RATIO >= amount) return output * SMALL_SWAP_RETURN / FixedPointMathLib.WAD;
+        }
 
         return output;
     }
@@ -770,10 +774,10 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                     // totalWithdrawn \subset WeightSumOfThePool
                     // totalWithdrawn < WeightSumOfThePool = _maxUnitCapacity. So it doesn't overflow.
                     totalWithdrawn += weightedTokenAmount;
-                }
 
-                // remove the weight from weightedTokenAmount.
-                weightedTokenAmount /= _weight[token];
+                    // remove the weight from weightedTokenAmount.
+                    weightedTokenAmount /= _weight[token];
+                }
 
                 // Check if the user is satisfied with the output.
                 if (minOut[it] > weightedTokenAmount)
@@ -791,11 +795,11 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
             }
 
             // Decrease the security limit by the amount withdrawn.
-            _maxUnitCapacity -= totalWithdrawn;
-            if (_usedUnitCapacity <= totalWithdrawn) {
-                _usedUnitCapacity = 0;
-            } else {
-                unchecked {
+            unchecked {
+                _maxUnitCapacity -= totalWithdrawn;
+                if (_usedUnitCapacity <= totalWithdrawn) {
+                    _usedUnitCapacity = 0;
+                } else {
                     // We know: _usedUnitCapacity > totalWithdrawn.
                     _usedUnitCapacity -= totalWithdrawn;
                 }
@@ -949,20 +953,18 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
             unchecked {
                 // totalWithdrawn < _maxUnitCapacity. So it doesn't overflow.
                 totalWithdrawn += tokenAmount * _weight[tokenIndexed[it]];
-            }
 
-            unchecked {
                 it++;
             }
         }
         
-        // Decrease the security limit by the amount withdrawn.
-        _maxUnitCapacity -= totalWithdrawn;
-        if (_usedUnitCapacity <= totalWithdrawn) {
-            _usedUnitCapacity = 0;
-        } else {
-            unchecked {
-            // We know: _usedUnitCapacity > totalWithdrawn >= 0.
+        unchecked {
+            // Decrease the security limit by the amount withdrawn.
+            _maxUnitCapacity -= totalWithdrawn;
+            if (_usedUnitCapacity <= totalWithdrawn) {
+                _usedUnitCapacity = 0;
+            } else {
+                // We know: _usedUnitCapacity > totalWithdrawn >= 0.
                 _usedUnitCapacity -= totalWithdrawn;
             }
         }
@@ -1005,11 +1007,10 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
 
         // For amplified pools, the security limit is based on the sum of the tokens
         // in the pool.
-        uint256 weightedAmount;
+        uint256 weightedAmount = amount * _weight[fromAsset];
         uint256 weightedOut;
         unchecked {
-            // Since _maxUnitCapacity is the balance sum, both of these must be less than _maxUnitCapacity
-            weightedAmount = amount * _weight[fromAsset];
+            // Since _maxUnitCapacity is the balance sum, this must be less than _maxUnitCapacity
             weightedOut = out * _weight[toAsset];
         }
         // The if statement ensures the independent calculations never under or overflow.
@@ -1103,8 +1104,10 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         // Escrow the tokens used to purchase units. These will be sent back if transaction
         // doesn't arrive / timeout.
         require(_escrowedTokensFor[sendAssetHash] == address(0)); // dev: Escrow already exists.
-        _escrowedTokens[fromAsset] += amount - fee;
         _escrowedTokensFor[sendAssetHash] = fallbackUser;
+        unchecked {
+            _escrowedTokens[fromAsset] += amount - fee;
+        }
 
         // Governance Fee
         _collectGovernanceFee(fromAsset, fee);
@@ -1377,7 +1380,9 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         // Escrow the pool tokens
         require(_escrowedPoolTokensFor[sendLiquidityHash] == address(0));
         _escrowedPoolTokensFor[sendLiquidityHash] = fallbackUser;
-        _escrowedPoolTokens += poolTokens;
+        unchecked {
+            _escrowedPoolTokens += poolTokens;
+        }
 
         // Adjustment of the security limit is delayed until ack to avoid
         // a router abusing timeout to circumvent the security limit at a low cost.

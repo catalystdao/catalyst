@@ -189,9 +189,7 @@ abstract contract CatalystSwapPoolCommon is
         unchecked {
             // we know that UC > unitCapacityReleased
             if (MUC <= UC - unitCapacityReleased) return 0; 
-        }
-        
-        unchecked {
+
             // Since MUC >= UC - unitCapacityReleased => MUC + unitCapacityReleased > UC
             return MUC + unitCapacityReleased - UC;  // MUC - (UC - unitCapacityReleased)
         }
