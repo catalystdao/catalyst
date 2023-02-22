@@ -153,9 +153,9 @@ abstract contract CatalystSwapPoolCommon is
         _chainInterface = chainInterface;
         _setupMaster = setupMaster;
 
-        setPoolFee(poolFee);
-        setGovernanceFee(governanceFee);
-        setFeeAdministrator(feeAdministrator);
+        _setPoolFee(poolFee);
+        _setGovernanceFee(governanceFee);
+        _setFeeAdministrator(feeAdministrator);
 
         // Names the ERC20 pool token //
         name = name_;
@@ -240,31 +240,46 @@ abstract contract CatalystSwapPoolCommon is
         _usedUnitCapacity = newUnitFlow;
     }
 
-    /// @notice Sets a new fee fee administrator who can configure pool fees.
-    function setFeeAdministrator(address administrator) public override {
-        require(msg.sender == factoryOwner() || _isInitializing());   // dev: Only factory owner
-        _feeAdministrator = administrator;
 
+    /// @notice Sets a new fee fee administrator who can configure pool fees.
+    function _setFeeAdministrator(address administrator) internal {
+        _feeAdministrator = administrator;
         emit SetFeeAdministrator(administrator);
     }
 
     /// @notice Sets a new pool fee, taken from input amount.
-    function setPoolFee(uint256 fee) public override {
-        require(msg.sender == _feeAdministrator || _isInitializing()); // dev: Only feeAdministrator can set new fee
+    function _setPoolFee(uint256 fee) internal {
         require(fee <= 1e18);  // dev: PoolFee is maximum 100%.
         _poolFee = fee;
-
         emit SetPoolFee(fee);
     }
 
     /// @notice Sets a new governance fee. Taken out of the pool fee.
-    function setGovernanceFee(uint256 fee) public override {
-        require(msg.sender == _feeAdministrator || _isInitializing()); // dev: Only feeAdministrator can set new fee
+    function _setGovernanceFee(uint256 fee) internal {
         require(fee <= MAX_GOVERNANCE_FEE_SHARE);  // dev: Maximum GovernanceFeeSare exceeded.
         _governanceFeeShare = fee;
-
         emit SetGovernanceFee(fee);
     }
+
+
+    /// @notice Allows the factory owner to modify the fee administrator
+    function setFeeAdministrator(address administrator) public override {
+        require(msg.sender == factoryOwner());   // dev: Only factory owner
+        _setFeeAdministrator(administrator);
+    }
+
+    /// @notice Allows the factory owner to modify the pool fee
+    function setPoolFee(uint256 fee) public override {
+        require(msg.sender == _feeAdministrator); // dev: Only feeAdministrator can set new fee
+        _setPoolFee(fee);
+    }
+
+    /// @notice Allows the factory owner to modify the governance fee
+    function setGovernanceFee(uint256 fee) public override {
+        require(msg.sender == _feeAdministrator); // dev: Only feeAdministrator can set new fee
+        _setGovernanceFee(fee);
+    }
+
 
     /**
      * @dev Collect the governance fee share of the specified pool fee
