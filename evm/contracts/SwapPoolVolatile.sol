@@ -508,11 +508,9 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         // now. If the user doesn't have enough tokens, they save a bit of gas.
         _burn(msg.sender, poolTokens);
 
-        // Simplify the loop length.
-        uint256 loopLength = minOut.length < MAX_ASSETS ? minOut.length : MAX_ASSETS;
         // For later event logging, the amounts transferred from the pool are stored.
-        uint256[] memory amounts = new uint256[](loopLength);
-        for (uint256 it; it < loopLength;) {
+        uint256[] memory amounts = new uint256[](MAX_ASSETS);
+        for (uint256 it; it < MAX_ASSETS;) {
             address token = _tokenIndexing[it];
             if (token == address(0)) break;
 
@@ -571,11 +569,9 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
             int256(FixedPointMathLib.divWadDown(initialTotalSupply, initialTotalSupply - poolTokens)    // int265: if poolTokens is almost equal to initialTotalSupply this can overflow the cast. The result is a negative input to lnWad which fails.
         ))) * wsum;
 
-        // Simplify the loop length.
-        uint256 loopLength = minOut.length < MAX_ASSETS ? minOut.length : MAX_ASSETS;
         // For later event logging, the amounts transferred to the pool are stored.
-        uint256[] memory amounts = new uint256[](loopLength);
-        for (uint256 it; it < loopLength;) {
+        uint256[] memory amounts = new uint256[](MAX_ASSETS);
+        for (uint256 it; it < MAX_ASSETS;) {
             // Units allocated for the specific token.
             uint256 U_i = (U * withdrawRatio[it]) / FixedPointMathLib.WAD;
             if (U_i == 0) {
