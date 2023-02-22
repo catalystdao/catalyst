@@ -120,6 +120,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
 
             // The contract expects the tokens to have been sent to it before setup is
             // called. Make sure the pool has more than 0 tokens.
+            // Reverts if tokenAddress is address(0).
             uint256 balanceOfSelf = ERC20(tokenAddress).balanceOf(address(this));
             require(balanceOfSelf > 0); // dev: 0 tokens provided in setup.
             initialBalances[it] = balanceOfSelf;
