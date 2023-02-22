@@ -100,14 +100,14 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
             _tokenIndexing[it] = tokenAddress;
 
             uint256 weight = weights[it];
-            require(weight > 0);       // dev: invalid 0-valued weight provided
+            require(weight != 0);       // dev: invalid 0-valued weight provided
             _weight[tokenAddress] = weight;
 
             // The contract expects the tokens to have been sent to it before setup is
             // called. Make sure the pool has more than 0 tokens.
             // Reverts if tokenAddress is address(0).
             uint256 balanceOfSelf = ERC20(tokenAddress).balanceOf(address(this));
-            require(balanceOfSelf > 0); // dev: 0 tokens provided in setup.
+            require(balanceOfSelf != 0); // dev: 0 tokens provided in setup.
             initialBalances[it] = balanceOfSelf;
 
             maxUnitCapacity += weight;
