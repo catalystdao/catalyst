@@ -2,10 +2,10 @@
 
 pragma solidity ^0.8.16;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/access/Ownable.sol";
 import {ERC20} from 'solmate/src/tokens/ERC20.sol';
 import {SafeTransferLib} from 'solmate/src/utils/SafeTransferLib.sol';
-import "@openzeppelin/contracts/proxy/Clones.sol";
+import "@openzeppelin/proxy/Clones.sol";
 import "./CatalystIBCInterface.sol";
 import "./interfaces/ICatalystV1FactoryEvents.sol";
 

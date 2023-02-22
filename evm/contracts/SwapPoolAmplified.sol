@@ -4,7 +4,7 @@ pragma solidity ^0.8.16;
 
 import {ERC20} from 'solmate/src/tokens/ERC20.sol';
 import {SafeTransferLib} from 'solmate/src/utils/SafeTransferLib.sol';
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/security/ReentrancyGuard.sol";
 import "./FixedPointMathLib.sol";
 import "./CatalystIBCInterface.sol";
 import "./SwapPoolCommon.sol";

@@ -4,7 +4,7 @@ pragma solidity ^0.8.16;
 
 import "./polymerase/IbcDispatcher.sol";
 import "./polymerase/IbcReceiver.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/access/Ownable.sol";
 import "./ICatalystV1Pool.sol";
 import "./interfaces/ICatalystV1PoolState.sol"; // structs
 import "./CatalystIBCPayload.sol";

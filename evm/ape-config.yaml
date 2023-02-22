@@ -1,0 +1,18 @@
+name: Catalyst
+  
+dependencies:
+  - name: OpenZeppelin
+    github: OpenZeppelin/openzeppelin-contracts
+    version: 4.8.1
+  - name: solmate
+    local: node_modules/solmate
+    contracts_folder: src
+
+solidity: 
+  import_remapping:
+    - "@openzeppelin=OpenZeppelin/4.8.1"
+    - "solmate=../../node_modules/solmate"
+
+test:
+  mnemonic: test test test test test test test test test test test test
+  number_of_accounts: 8

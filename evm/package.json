@@ -1,0 +1,9 @@
+{
+  "dependencies": {
+    "solmate": "^6.7.0"
+  },
+  "devDependencies": {
+  },
+  "scripts": {
+  }
+}
