@@ -199,6 +199,107 @@ SC
 
 The smart contract has now been deployed. Deployment scripts can be found in `./scripts/deploy/*`
 
+## First deployment and swap
+
+Catalyst contains a demonstration deployment script. It handles the deployment of the relevant Catalyst contracts, along with tokens and deploying a Catalyst pool.
+
+The script can be found in `/scripts/deployCatalyst.py/`. We will demonstrate how to execute a local swap and a cross-pool swap (from and to the same pool).
+
+Start by opening the Brownie interactive console. For simplicity, we will use a local ganache instance:
+
+`brownie console --network development`
+
+Import the relevant classes needed for the example:
+
+```python
+from scripts.deployCatalyst import Catalyst, decode_payload
+from brownie import convert  # Used to convert between values and bytes.
+```
+
+Next, we will define an account and deploy a message router emulator. The emulator contains no message router logic, except emitting cross-chain packages and facilitates execution of cross-chain packages.
+
+```python
+acct = accounts[0]  # Define the account used for testing
+
+ie = IBCEmulator.deploy({'from': acct})  # Deploy the Catalyst emulator.
+```
+
+Let's deploy Catalyst. This is done by calling `Catalyst(...)` from the imported script. This deploys all Catalyst contracts and creates an example pool for us.
+
+```python
+ps = Catalyst(acct, ibcinterface=ie)  # Deploys Catalyst
+pool = ps.swappool
+tokens = ps.tokens
+```
+
+For any contract interaction, the user needs to approve the pool to spend tokens.
+
+```python
+tokens[0].approve(pool, 2**256-1, {'from': acct})
+```
+
+Let's execute a localSwap. This swaps 50 token0 for token1. We also set a minimum output of 45 tokens, if less than 45 tokens are returned the swap reverts.
+
+```python
+localSwap_tx = pool.localSwap(tokens[0], tokens[1], 50 * 10**18, 45 * 10**18, {'from': acct})
+```
+
+Let's execute a cross-chain swap. Before we can do it, we need to connect the cross-chain interface with itself. This establishes a channel between the 2 ports allowing IBC messagse flow.
+
+```python
+# Registor IBC ports.
+ps.crosschaininterface.registerPort()
+ps.crosschaininterface.registerPort()
+```
+
+Once the cross-chain interface is properly connected, we can allow the pool to swap with itself. For a true deployment, connections would be created between different pools not from and to the same pool. But for the sake of simplicity, let's create a pool which connects with itself.
+
+```python
+chid = convert.to_bytes(1, type_str="bytes32")  # Define the channel id to be 1. The emulator ignores this but it is important for the connection.
+
+# Create the connection between the pool and itself:
+pool.setConnection(
+    chid,
+    convert.to_bytes(pool.address.replace("0x", "")),
+    True,
+    {"from": acct}
+)
+```
+
+We can now execute a swap. We will swap 10% of the pool value, through the channel we defined earlier.
+
+```python
+swap_amount = tokens[0].balanceOf(pool)//10
+sendAsset_tx = pool.sendAsset(
+    chid,
+    convert.to_bytes(pool.address.replace("0x", "")),  # Set the target pool as itself. (encoded in bytes32)
+    convert.to_bytes(acct.address.replace("0x", "")),  # Set the target user as acct.   (encoded in bytes32)
+    tokens[0],  # Swap out of token0.
+    1,  # Swap into token1.
+    swap_amount,  # Swap swap_amount of token0.
+    30 * 10**18,  # Return more than 30 tokens.
+    acct,  # If the transaction reverts, send the tokens back to acct.
+    {"from": acct},  # Acct pays for the transactions.
+)
+```
+
+The swap has now been initiated. But if you check `sendAsset_tx.info()` you will see that no tokens have been sent to the user. That makes sense since the cross-chain package has only been emitted but not executed yet. No relayer has collected the package and submitted it to the target chain. We can examine the payload to understand what Catalyst sends to the target chain:
+
+```python
+tx.events["IncomingPacket"]["packet"][3]
+decode_payload(tx.events["IncomingPacket"]["packet"][3])
+```
+
+Let's execute the IBC package.
+
+```python
+swap_execution_tx = ie.execute(tx.events["IncomingMetadata"]["metadata"][0], tx.events["IncomingPacket"]["packet"], {"from": acct})
+
+swap_execution_tx.info()
+```
+
+The user finally gets their tokens.
+
 ## Contracts
 
 Contracts are stored in *./contracts*. Contracts compiled by brownie, `brownie compile` are stored in *./build*. Brownie will automatically download compatible solidity and vyper versions for internal usage.
