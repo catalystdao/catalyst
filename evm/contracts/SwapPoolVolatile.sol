@@ -83,6 +83,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 amp,
         address depositor
     ) public {
+        // May only be invoked by the FACTORY. The factory only invokes this function for proxy contracts.
         require(msg.sender == FACTORY && _tokenIndexing[0] == address(0));  // dev: swap curves may only be initialized once by the factory
         // Check that the amplification is correct.
         require(amp == FixedPointMathLib.WAD);  // dev: amplification not set correctly.
@@ -150,7 +151,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         _adjustmentTarget = targetTime;
         _lastModificationTime = block.timestamp;
 
-        // Compute sum weight for security limit.
+        // Save the target weights
         for (uint256 it; it < MAX_ASSETS;) {
             address token = _tokenIndexing[it];
             if (token == address(0)) break;
@@ -565,7 +566,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 wsum = _maxUnitCapacity / FixedPointMathLib.LN2;
 
         // Compute the unit worth of the pool tokens.
-        uint256 U = uint256(FixedPointMathLib.lnWad(
+        uint256 U = uint256(FixedPointMathLib.lnWad( // uint256: ln computed of a value always > 1, hence always positive
             int256(FixedPointMathLib.divWadDown(initialTotalSupply, initialTotalSupply - poolTokens)    // int265: if poolTokens is almost equal to initialTotalSupply this can overflow the cast. The result is a negative input to lnWad which fails.
         ))) * wsum;
 
@@ -908,9 +909,9 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
 
         // Compute the unit value of the provided poolTokens.
         // This step simplifies withdrawing and swapping into a single calculation.
-        uint256 U = uint256(FixedPointMathLib.lnWad(int256(     // int256 if casting overflows, the result a negative input. This reverts.
-            FixedPointMathLib.divWadDown(initialTotalSupply, initialTotalSupply - poolTokens)
-        ))) * wsum;
+        uint256 U = uint256(FixedPointMathLib.lnWad(  // uint256: ln computed of a value always > 1, hence always positive
+            int256(FixedPointMathLib.divWadDown(initialTotalSupply, initialTotalSupply - poolTokens))   // int256: if casting overflows, the result is a negative input. This reverts.
+        )) * wsum;
 
         // Only need to hash info that is required by the escrow (+ some extra for randomisation)
         // No need to hash context (as token/liquidity escrow data is different), fromPool, toPool, targetAssetIndex, minOut, CallData

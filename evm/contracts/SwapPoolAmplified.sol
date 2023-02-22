@@ -93,6 +93,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 amp,
         address depositor
     ) public {
+        // May only be invoked by the FACTORY. The factory only invokes this function for proxy contracts.
         require(msg.sender == FACTORY && _tokenIndexing[0] == address(0));  // dev: swap curves may only be initialized once by the factory
         // Check that the amplification is correct.
         require(amp < FixedPointMathLib.WAD);  // dev: amplification not set correctly.
@@ -288,7 +289,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
             );
         }
 
-        return uint256(calc);
+        return uint256(calc);   // Casting always safe, as calc always > =0
     }
 
     /**
