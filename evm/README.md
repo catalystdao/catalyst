@@ -153,6 +153,9 @@ This repository uses Brownie for smart contract development, testing and deploym
   
   - `pnpm install -g ganache`
 
+- [@openzeppelin/contracts](https://www.npmjs.com/package/@openzeppelin/contracts) and [Solmate](https://www.npmjs.com/package/solmate)
+  - `pnpm install`
+
 - eth-brownie
   
   - via [poetry](https://python-poetry.org)  (`brew install poetry`): `poetry install` in `/`
@@ -162,7 +165,7 @@ This repository uses Brownie for smart contract development, testing and deploym
   
   - Note: You can set the poetry python version via `poetry env use python3.9` for example.
 
-- Blockchain API
+- To deploy Catalyst on testnets: a blockchain API
   
   - Default: [alchemy](https://www.alchemy.com), export key to `$ALCHEMY_API_TOKEN`
   
