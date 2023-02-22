@@ -11,6 +11,20 @@ interface ICatalystV1PoolAdministration {
     function setGovernanceFee(uint256 fee) external;
 
     /**
+     * @notice Initializes the pool pricing parameters.
+     * @param assets The list of assets the pool will support.
+     * @param weights The weights of the tokens.
+     * @param amp Pool amplification.
+     * @param depositor The account to which the initial pool tokens are minted to.
+     */
+    function initializeSwapCurves(
+        address[] calldata assets,
+        uint256[] calldata weights,
+        uint256 amp,
+        address depositor
+    ) external;
+
+    /**
      * @notice Creates a connection to the pool _poolReceiving on the channel _channelId.
      * @dev if _poolReceiving is an EVM pool, it can be computes as:
      *     Vyper: convert(_poolAddress, bytes32)
