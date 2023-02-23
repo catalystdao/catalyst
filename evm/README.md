@@ -1,13 +1,18 @@
-# Catalyst
+# Catalyst Overview
+Catalyst is structured in the following manner:
+- Multiple Catalyst **pool** contracts that facilitate swaps between assets (either within or across pools).
+- A Catalyst **factory** that is in charge of deploying pools.
+- A Catalyst **interface** that facilitates communication between the pools and the message router of choice.
 
-The EVM implementation of Catalyst is used as a reference implementation for other development efforts. The main logic is split into 6 contracts:
+This structure is implemented on EVM as follows:
+- `SwapPoolCommon.sol` : Defines the structure of a Catalyst pool and implements logic that is common to all pools.
+  - `SwapPoolVolatile.sol` : Extends `SwapPoolCommon.sol` with the price curve $P(w) = \frac{W}{w \ln(2)}$.
+  - `SwapPoolAmplified.sol` : Extends `SwapPoolCommon.sol` with the price curve $P(w) = \frac{1 - \theta}{w^\theta}$.
+  - `FixedPointMathLib.sol` : The mathematical library used by Catalyst (based on the [solmate](https://github.com/transmissions11/solmate/blob/ed67feda67b24fdeff8ad1032360f0ee6047ba0a/src/utils/FixedPointMathLib.sol)).
+- `SwapPoolFactory.sol` : Simplifies the deployment of swap pools via Open Zeppelin's *Clones*: pools are deployed as minimal proxies which employ delegate calls to core contracts. This significantly reduces pool deployment cost.
+- `CatalystIBCInterface.sol` : Bridges the Catalyst protocol with the message router of choice.
 
-- `FixedPointMathLib.sol` : The mathematical library used for Catalyst. Based on the [solmate](https://github.com/transmissions11/solmate/blob/ed67feda67b24fdeff8ad1032360f0ee6047ba0a/src/utils/FixedPointMathLib.sol).
-- `CatalystIBCInterface.sol` : Describes how the Catalyst protocol interfaces with the message router. This includes packing and unpacking of data and wrapping of various incoming calls.
-- `SwapPoolCommon.sol` : Implements logic which doesn't depend on the swap curve. Containing the implementation in one contract allows for less repetition and a simplified development experience.
-- `SwapPoolVolatile.sol` : Extends `SwapPoolCommon.sol` with the price curve $P(w) = \frac{W}{w \ln(2)}$.
-- `SwapPoolAmplified.sol` : Extends `SwapPoolCommon.sol` with the price curve $P(w) = \frac{1 - \theta}{w^\theta}$.
-- `SwapPoolFactory.sol` : Simplifies deployment of swap pools through Open Zeppelin's Clones. Minimal proxies which uses delegate calls to the deployed contracts. This significantly reduces pool deployment cost. 
+The EVM implementation is to be used as a reference implementation for further implementations.
 
 ## CatalystIBCInterface.sol
 
