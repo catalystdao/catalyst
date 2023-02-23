@@ -23,7 +23,7 @@ def deploy_pool(project, accounts, swap_factory, volatile_swap_pool_template, am
         template_address = None
     ):
         for i, token in enumerate(tokens):
-            token.transfer(gov, token_balances[i], {"from": accounts[0]})
+            token.transfer(gov, token_balances[i], sender=accounts[0])
             token.approve(swap_factory, token_balances[i], sender=gov)
 
         if template_address is None:
