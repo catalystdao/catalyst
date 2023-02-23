@@ -10,7 +10,7 @@ from utils.pool_utils import compute_expected_max_unit_inflow
 MAX_POOL_ASSETS = 3
 
 @pytest.fixture(scope="module")
-def deploy_pool(project, accounts, swap_factory, volatile_swap_pool_template, amplified_swap_pool_template,  cross_chain_interface, swap_pool_type, deployer):
+def deploy_pool(project, accounts, swap_factory, volatile_swap_pool_template, amplified_swap_pool_template,  cross_chain_interface, swap_pool_type, gov):
     def _deploy_pool(
         tokens,
         token_balances,
@@ -18,13 +18,13 @@ def deploy_pool(project, accounts, swap_factory, volatile_swap_pool_template, am
         amp,
         name,
         symbol,
-        deployer = deployer,
+        gov = gov,
         only_local = False,
         template_address = None
     ):
         for i, token in enumerate(tokens):
-            token.transfer(deployer, token_balances[i], {"from": accounts[0]})
-            token.approve(swap_factory, token_balances[i], sender=deployer)
+            token.transfer(gov, token_balances[i], {"from": accounts[0]})
+            token.approve(swap_factory, token_balances[i], sender=gov)
 
         if template_address is None:
             if swap_pool_type == "volatile":
@@ -44,7 +44,7 @@ def deploy_pool(project, accounts, swap_factory, volatile_swap_pool_template, am
             name,
             symbol,
             ZERO_ADDRESS if only_local else cross_chain_interface,
-            sender=deployer,
+            sender=gov,
         )
 
         if template_address == volatile_swap_pool_template.address:
@@ -114,7 +114,7 @@ def group_tokens(group_config, tokens):
 
 
 @pytest.fixture(scope="module")
-def group_pools(group_config, group_tokens, deploy_pool, deployer):
+def group_pools(group_config, group_tokens, deploy_pool, gov):
 
     yield [
         deploy_pool(
@@ -124,7 +124,7 @@ def group_pools(group_config, group_tokens, deploy_pool, deployer):
             amp            = pool["amplification"],
             name           = pool["name"],
             symbol         = pool["symbol"],
-            deployer       = deployer,
+            gov       = gov,
         ) for pool, tokens in zip(group_config, group_tokens)
     ]
 
@@ -191,12 +191,12 @@ def pool_2_tokens(group_tokens, pool_2_index):
 # Pool Modifiers ****************************************************************************************************************
 
 @pytest.fixture(scope="module")
-def group_finish_setup(group_pools, deployer):
+def group_finish_setup(group_pools, gov):
     for pool in group_pools:
-        pool.finishSetup(sender=deployer)
+        pool.finishSetup(sender=gov)
 
 @pytest.fixture(scope="module")
-def group_connect_pools(group_pools, channel_id, deployer):
+def group_connect_pools(group_pools, channel_id, gov):
 
     for pool_1 in group_pools:
         for pool_2 in group_pools:
@@ -208,21 +208,21 @@ def group_connect_pools(group_pools, channel_id, deployer):
                 channel_id,
                 convert.to_bytes(pool_2.address.replace("0x", "")),
                 True,
-                sender=deployer
+                sender=gov
             )
 
 
 @pytest.fixture(scope="module")
-def pool_finish_setup(pool, deployer):
-    pool.finishSetup(sender=deployer)
+def pool_finish_setup(pool, gov):
+    pool.finishSetup(sender=gov)
 
 @pytest.fixture(scope="module")
-def pool_connect_itself(pool, channel_id, deployer):
+def pool_connect_itself(pool, channel_id, gov):
     pool.setConnection(
         channel_id,
         convert.to_bytes(pool.address.replace("0x", "")),
         True,
-        sender=deployer
+        sender=gov
     )
 
 

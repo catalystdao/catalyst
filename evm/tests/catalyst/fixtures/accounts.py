@@ -1,8 +1,8 @@
 import pytest
 
-# The usual deployer of contracts.
+# The usual gov of contracts.
 @pytest.fixture(scope="module")
-def deployer(accounts):
+def gov(accounts):
     yield accounts[0]
 
 

@@ -2,9 +2,9 @@ import pytest
 
 # An easy way to deploy a simple token.
 @pytest.fixture(scope="module")
-def create_token(project, deployer):
-    def create_token(name, symbol, decimals, supply, deployer=deployer):
-        return deployer.deploy(project.Token, name, symbol, decimals, supply*10**decimals)
+def create_token(project, gov):
+    def create_token(name, symbol, decimals, supply, gov=gov):
+        return gov.deploy(project.Token, name, symbol, decimals, supply*10**decimals)
 
     yield create_token
 
