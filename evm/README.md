@@ -288,14 +288,14 @@ sendAsset_tx = pool.sendAsset(
 The swap has now been initiated. But if you check `sendAsset_tx.info()` you will see that no tokens have been sent to the user. That makes sense since the cross-chain package has only been emitted but not executed yet. No relayer has collected the package and submitted it to the target chain. We can examine the payload to understand what Catalyst sends to the target chain:
 
 ```python
-tx.events["IncomingPacket"]["packet"][3]
-decode_payload(tx.events["IncomingPacket"]["packet"][3])
+sendAsset_tx.events["IncomingPacket"]["packet"][3]
+decode_payload(sendAsset_tx.events["IncomingPacket"]["packet"][3])
 ```
 
 Let's execute the IBC package.
 
 ```python
-swap_execution_tx = ie.execute(tx.events["IncomingMetadata"]["metadata"][0], tx.events["IncomingPacket"]["packet"], {"from": acct})
+swap_execution_tx = ie.execute(sendAsset_tx.events["IncomingMetadata"]["metadata"][0], sendAsset_tx.events["IncomingPacket"]["packet"], {"from": acct})
 
 swap_execution_tx.info()
 ```
