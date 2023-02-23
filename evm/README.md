@@ -14,6 +14,32 @@ This structure is implemented on EVM as follows:
 
 The EVM implementation is to be used as a reference implementation for further implementations.
 
+# Catalyst Contracts
+## SwapPoolCommon.sol
+
+A contract abstract, implementing logic which doesn't depend on the swap curve. Among these are:
+
+- Security limit logic
+- Pool administration
+- Connection management
+- Escrow logic
+
+Swap Pools can inherit `SwapPoolCommon.sol` to automatically be compliant with IBC callbacks and the security limit. 
+
+`SwapPoolCommon.sol` implements [Initializable.sol](https://docs.openzeppelin.com/contracts/4.x/api/proxy#Initializable) to ensure the pool is correctly setup.
+
+## SwapPoolVolatile.sol
+
+Extends `SwapPoolCommon.sol` with the price curve $P(w) = \frac{W}{w \ln(2)}$. This approximates the constant product AMM, also called $x \cdot y = k$. The swap curve is known from Uniswap v2 and Balancer.
+
+## SwapPoolAmplified.sol
+
+Extends `SwapPoolCommon.sol` with the price curve $P(w) = \frac{1}{w^\theta} \cdot (1-\theta)$. This flattens the swap curve such that the marginal price is closer to 1:1. The flattening depends on $\theta$, where $\theta = 0$ always delivers 1:1 swaps. This is similar to Stable Swap except that the swap is computed asynchronously instead of synchronously.
+
+## SwapPoolFactory.sol
+
+Both `SwapPoolVolatile.sol` and `SwapPoolFactory.sol` are deployed disabled as a result of inheriting `SwapPoolCommon.sol`. To ease pool creation, `SwapPoolFactory.sol` wraps the deployment of minimal proxies and the associated setup of the Swap Pool in a single call.
+
 ## CatalystIBCInterface.sol
 
 An intermediate contract between swap pools and the message router. This contract is specifically designed to sit between Catalyst swap pools and an IBC compliant message router.
@@ -123,30 +149,6 @@ data = payloadConstructor("0x66aB6D9362d4F35596279692F0251Db635165871", "0x33A46
 
 `data = 0000000000000000000000000066ab6d9362d4f35596279692f0251db63516587100000000000000000000000033a4622b82d4c04a53e170c638b944ce27cffce30000000000000000000000000063046686e46dc6f15918b61ae2b121458534a5000000000000000000000000000000000000000000000000b17217f7d1cf7800000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000`
 
-## SwapPoolCommon.sol
-
-A contract abstract, implementing logic which doesn't depend on the swap curve. Among these are:
-
-- Security limit logic
-- Pool administration
-- Connection management
-- Escrow logic
-
-Swap Pools can inherit `SwapPoolCommon.sol` to automatically be compliant with IBC callbacks and the security limit. 
-
-`SwapPoolCommon.sol` implements [Initializable.sol](https://docs.openzeppelin.com/contracts/4.x/api/proxy#Initializable) to ensure the pool is correctly setup.
-
-## SwapPoolVolatile.sol
-
-Extends `SwapPoolCommon.sol` with the price curve $P(w) = \frac{W}{w \ln(2)}$. This approximates the constant product AMM, also called $x \cdot y = k$. The swap curve is known from Uniswap v2 and Balancer.
-
-## SwapPoolAmplified.sol
-
-Extends `SwapPoolCommon.sol` with the price curve $P(w) = \frac{1}{w^\theta} \cdot (1-\theta)$. This flattens the swap curve such that the marginal price is closer to 1:1. The flattening depends on $\theta$, where $\theta = 0$ always delivers 1:1 swaps. This is similar to Stable Swap except that the swap is computed asynchronously instead of synchronously.
-
-## SwapPoolFactory.sol
-
-Both `SwapPoolVolatile.sol` and `SwapPoolFactory.sol` are deployed disabled as a result of inheriting `SwapPoolCommon.sol`. To ease pool creation, `SwapPoolFactory.sol` wraps the deployment of minimal proxies and the associated setup of the Swap Pool in a single call.
 
 # EVM Development
 
