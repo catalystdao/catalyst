@@ -28,7 +28,7 @@ rm build/deployments/map.json
 
 
 echo "Deploying contract on ETH"
-brownie run scripts/startCatalystETH.py --network polymerase-geth
+brownie run scripts/devnet/startCatalystETH.py --network polymerase-geth
 exit_status=$?
 if [ "${exit_status}" -ne 0 ];
 then
@@ -37,7 +37,7 @@ fi
 
 
 echo "Deploying contract on BSC"
-brownie run scripts/startCatalystBSC.py --network polymerase-bsc-geth
+brownie run scripts/devnet/startCatalystBSC.py --network polymerase-bsc-geth
 exit_status=$?
 if [ "${exit_status}" -ne 0 ];
 then
@@ -45,7 +45,7 @@ then
 fi
 
 echo "Creating connection between pools from ETH to BSC"
-brownie run scripts/connectCatalystETH.py --network polymerase-geth
+brownie run scripts/devnet/connectCatalystETH.py --network polymerase-geth
 exit_status=$?
 if [ "${exit_status}" -ne 0 ];
 then
@@ -53,7 +53,7 @@ then
 fi
 
 echo "Creating connection between pools from BSC to ETH"
-brownie run scripts/connectCatalystBSC.py --network polymerase-bsc-geth
+brownie run scripts/devnet/connectCatalystBSC.py --network polymerase-bsc-geth
 exit_status=$?
 if [ "${exit_status}" -ne 0 ];
 then
