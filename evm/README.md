@@ -85,11 +85,10 @@ Not that the following dependencies have been tested to work with `python3.9`. T
 
 # Development with Brownie 
 
-Catalyst contains a demonstration deployment script. It handles the deployment of the relevant Catalyst contracts, along with tokens and deploying a Catalyst pool.
+This repository contains an example Catalyst deployment helper (found in `/scripts/deployCatalyst.py`). It handles the deployment of all the relevant Catalyst contracts, along with the tokens handling and pool creation. As an example, the steps to execute a local swap and a cross-pool swap (from and to the same pool) are further outlined:
 
-The script can be found in `/scripts/deployCatalyst.py`. We will demonstrate how to execute a local swap and a cross-pool swap (from and to the same pool).
-
-Start by opening the Brownie interactive console. For simplicity, we will use a local ganache instance:
+## Catalyst Setup
+Start by opening the Brownie interactive console. For simplicity, use a local ganache instance:
 
 ```bash
 brownie console --network development
@@ -102,7 +101,7 @@ from scripts.deployCatalyst import Catalyst, decode_payload
 from brownie import convert  # Used to convert between values and bytes.
 ```
 
-Next, we will define an account and deploy a message router emulator. The emulator contains no message router logic, except emitting cross-chain packages and facilitates execution of cross-chain packages.
+Next, define the account that will be used to sign the transactions, and deploy the provided message router emulator. The emulator contains no message routing logic but rather it only simulates the execution of cross-chain packages.
 
 ```python
 acct = accounts[0]  # Define the account used for testing
@@ -110,7 +109,7 @@ acct = accounts[0]  # Define the account used for testing
 ie = IBCEmulator.deploy({'from': acct})  # Deploy the IBC emulator.
 ```
 
-Let's deploy Catalyst. This is done by calling `Catalyst(...)` from the imported script. This deploys all Catalyst contracts and creates an example pool for us.
+Deploy Catalyst by invoking the helper `Catalyst(...)` from the imported script. This deploys all Catalyst contracts and creates a Catalyst pool.
 
 ```python
 ps = Catalyst(acct, ibcinterface=ie)  # Deploys Catalyst
@@ -118,19 +117,21 @@ pool = ps.swappool
 tokens = ps.tokens
 ```
 
-For any contract interaction, the user needs to approve the pool to spend tokens.
+Transactions which require tokens to be transferred to the pool require the user to always approve the required allowance to the pool first. For this example, the pool is allowed an unbounded amount of tokens on behalf of the user.
 
 ```python
 tokens[0].approve(pool, 2**256-1, {'from': acct})
 ```
 
-Let's execute a localSwap. This swaps 50 token0 for token1. We also set a minimum output of 45 tokens, if less than 45 tokens are returned the swap reverts.
+## Execute a LocalSwap
+The following transaction swaps 50 token0 for token1. A minimum output of 45 tokens is specified (if not fulfilled, the transaction will revert).
 
 ```python
 localSwap_tx = pool.localSwap(tokens[0], tokens[1], 50 * 10**18, 45 * 10**18, {'from': acct})
 ```
 
-Let's execute a cross-chain swap. Before we can do it, we need to connect the cross-chain interface with itself. This establishes a channel between the 2 ports allowing IBC messagse flow.
+## Cross-Chain Pool Setup
+Before being able of executing a cross-chain swap, an IBC channel between pools must be established. The following establishes a channel to and from the `CatalystIBCInterface.sol` contract, allowing cross-chain swaps between pools which use this interface.
 
 ```python
 # Registor IBC ports.
@@ -138,7 +139,7 @@ ps.crosschaininterface.registerPort()
 ps.crosschaininterface.registerPort()
 ```
 
-Once the cross-chain interface is properly connected, we can allow the pool to swap with itself. For a true deployment, connections would be created between different pools not from and to the same pool. But for the sake of simplicity, let's create a pool which connects with itself.
+Once the cross-chain interface is properly connected, swaps between the test pool and itself can be allowed. Note that this does not represent a real use case scenario, as pool connections are to be created between different pools and not within the same pool. However, this provides a simple manner in which to test the cross chain capabilities of Catalyst pools.
 
 ```python
 chid = convert.to_bytes(1, type_str="bytes32")  # Define the channel id to be 1. The emulator ignores this but it is important for the connection.
@@ -152,7 +153,8 @@ pool.setConnection(
 )
 ```
 
-We can now execute a swap. We will swap 10% of the pool value, through the channel we defined earlier.
+## Execute a Cross Chain Swap
+The following code swaps 10% of the pool value from token0 to token1 via the cross chain channel defined above.
 
 ```python
 swap_amount = tokens[0].balanceOf(pool)//10
@@ -169,22 +171,20 @@ sendAsset_tx = pool.sendAsset(
 )
 ```
 
-The swap has now been initiated. But if you check `sendAsset_tx.info()` you will see that no tokens have been sent to the user. That makes sense since the cross-chain package has only been emitted but not executed yet. No relayer has collected the package and submitted it to the target chain. We can examine the payload to understand what Catalyst sends to the target chain:
+The swap has been initiated, but the purchased tokens have not been yet sent to the user (this can be observed by inspecting `sendAsset_tx.info()`). This is because the cross-chain package has only been emitted but not yet executed. The relayer now has to collect the package and submit it to the target chain. Before doing this, the IBC payload can be examined to better understand what Catalyst is sending to the target chain:
 
 ```python
 sendAsset_tx.events["IncomingPacket"]["packet"][3]
 decode_payload(sendAsset_tx.events["IncomingPacket"]["packet"][3])
 ```
 
-Let's execute the IBC package.
+Finally, the IBC package can be executed as follows, making the user receive their purchased tokens.
 
 ```python
 swap_execution_tx = ie.execute(sendAsset_tx.events["IncomingMetadata"]["metadata"][0], sendAsset_tx.events["IncomingPacket"]["packet"], {"from": acct})
 
 swap_execution_tx.info()
 ```
-
-The user finally gets their tokens.
 
 ## Contracts
 
