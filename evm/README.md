@@ -6,7 +6,7 @@ Catalyst is structured in the following manner:
 
 This structure is implemented on EVM as follows:
 - `SwapPoolCommon.sol` : Defines the structure of a Catalyst pool and implements logic that is common to all pools.
-  - `SwapPoolVolatile.sol` : Extends `SwapPoolCommon.sol` with the price curve $P(w) = \frac{W}{w \ln(2)}$.
+  - `SwapPoolVolatile.sol` : Extends `SwapPoolCommon.sol` with the price curve $P(w) = \frac{W}{w}$.
   - `SwapPoolAmplified.sol` : Extends `SwapPoolCommon.sol` with the price curve $P(w) = \frac{1 - \theta}{w^\theta}$.
   - `FixedPointMathLib.sol` : The mathematical library used by Catalyst (based on the [solmate](https://github.com/transmissions11/solmate/blob/ed67feda67b24fdeff8ad1032360f0ee6047ba0a/src/utils/FixedPointMathLib.sol)).
 - `SwapPoolFactory.sol` : Simplifies the deployment of swap pools via Open Zeppelin's *Clones*: pools are deployed as minimal proxies which employ delegate calls to core contracts. This significantly reduces pool deployment cost.
@@ -30,7 +30,7 @@ Swap Pools can inherit `SwapPoolCommon.sol` to automatically be compliant with I
 
 ## SwapPoolVolatile.sol
 
-Extends `SwapPoolCommon.sol` with the price curve $P(w) = \frac{W}{w \ln(2)}$. This approximates the constant product AMM, also called $x \cdot y = k$. The swap curve is known from Uniswap v2 and Balancer.
+Extends `SwapPoolCommon.sol` with the price curve $P(w) = \frac{W}{w}$. This approximates the constant product AMM, also called $x \cdot y = k$. The swap curve is known from Uniswap v2 and Balancer.
 
 ## SwapPoolAmplified.sol
 
