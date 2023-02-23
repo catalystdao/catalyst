@@ -131,7 +131,7 @@ Swap Pools can inherit `SwapPoolCommon.sol` to automatically be compliant with I
 
 `SwapPoolCommon.sol` implements [Initializable.sol](https://docs.openzeppelin.com/contracts/4.x/api/proxy#Initializable) to ensure the pool is correctly setup.
 
-## SwapPool.sol
+## SwapPoolVolatile.sol
 
 Extends `SwapPoolCommon.sol` with the price curve $P(w) = \frac{W}{w \ln(2)}$. This approximates the constant product AMM, also called $x \cdot y = k$. The swap curve is known from Uniswap v2 and Balancer.
 
@@ -141,7 +141,7 @@ Extends `SwapPoolCommon.sol` with the price curve $P(w) = \frac{1}{w^\theta} \cd
 
 ## SwapPoolFactory.sol
 
-Both `SwapPool.sol` and `SwapPoolFactory.sol` are deployed disabled as a result of inheriting `SwapPoolCommon.sol`. To ease pool creation, `SwapPoolFactory.sol` wraps the deployment of minimal proxies and the associated setup of the Swap Pool in a single call.
+Both `SwapPoolVolatile.sol` and `SwapPoolFactory.sol` are deployed disabled as a result of inheriting `SwapPoolCommon.sol`. To ease pool creation, `SwapPoolFactory.sol` wraps the deployment of minimal proxies and the associated setup of the Swap Pool in a single call.
 
 # EVM Development
 
