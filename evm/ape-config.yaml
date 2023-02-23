@@ -16,6 +16,9 @@ solidity:
 hardhat:
   port: auto
 
+foundry:
+  port: auto
+
 test:
   mnemonic: test test test test test test test test test test test junk
   number_of_accounts: 8
@@ -23,3 +26,4 @@ test:
 plugins:
   - name: solidity
   - name: hardhat
+  - name: foundry
