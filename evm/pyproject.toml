@@ -1,0 +1,16 @@
+[tool.poetry]
+name = "evm"
+version = "0.1.0"
+description = ""
+authors = ["Alexander <alexander@lindgren.xyz>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = ">=3.8,<3.11"
+eth-ape = "^0.6.3"
+ape-foundry = "^0.6.1"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
