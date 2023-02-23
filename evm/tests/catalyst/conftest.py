@@ -259,7 +259,7 @@ def pytest_generate_tests(metafunc):
 
     project_path  = Path(__file__).parent
     test_path     = Path(metafunc.definition.fspath)
-    rel_test_path = test_path.relative_to(project_path).parts[2:]   # Ignore the first two 'parts' of the test path, as the tests are under './tests/catalyst'
+    rel_test_path = test_path.relative_to(project_path).parts[:]
 
     configs = []
 
