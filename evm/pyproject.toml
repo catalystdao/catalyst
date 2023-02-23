@@ -2,7 +2,7 @@
 name = "evm"
 version = "0.1.0"
 description = ""
-authors = ["Alexander <alexander@lindgren.xyz>"]
+authors = []
 readme = "README.md"
 
 [tool.poetry.dependencies]
