@@ -17,53 +17,41 @@ The EVM implementation is to be used as a reference implementation for further i
 # Catalyst Contracts
 ## SwapPoolCommon.sol
 
-A contract abstract, implementing logic which doesn't depend on the swap curve. Among these are:
+An `abstract` contract (i.e. a contract that is made to be overriden), which enforces the core structure of a Catalyst pool and implements features which are generic to any pricing curve. Among these are:
 
-- Security limit logic
-- Pool administration
-- Connection management
-- Escrow logic
+- Pool administration, including fees and pool connections management
+- Cross chain swaps acknowledgement and timeout
+- Security limit
 
-Swap Pools can inherit `SwapPoolCommon.sol` to automatically be compliant with IBC callbacks and the security limit. 
-
-`SwapPoolCommon.sol` implements [Initializable.sol](https://docs.openzeppelin.com/contracts/4.x/api/proxy#Initializable) to ensure the pool is correctly setup.
+Note that contracts derived from this one cannot be used directly but rather via proxy contracts. For this, `SwapPoolCommon.sol` implements [Initializable.sol](https://docs.openzeppelin.com/contracts/4.x/api/proxy#Initializable) to ensure that the pool proxies are correctly setup.
 
 ## SwapPoolVolatile.sol
 
-Extends `SwapPoolCommon.sol` with the price curve $P(w) = \frac{W}{w}$. This approximates the constant product AMM, also called $x \cdot y = k$. The swap curve is known from Uniswap v2 and Balancer.
+Extends `SwapPoolCommon.sol` with the price curve $P(w) = \frac{W}{w}$. This approximates the constant product AMM (also called $x \cdot y = k$), mostly known from Uniswap v2 and Balancer.
 
 ## SwapPoolAmplified.sol
 
-Extends `SwapPoolCommon.sol` with the price curve $P(w) = \frac{1}{w^\theta} \cdot (1-\theta)$. This flattens the swap curve such that the marginal price is closer to 1:1. The flattening depends on $\theta$, where $\theta = 0$ always delivers 1:1 swaps. This is similar to Stable Swap except that the swap is computed asynchronously instead of synchronously.
+Extends `SwapPoolCommon.sol` with the price curve $P(w) = \frac{1}{w^\theta} \cdot (1-\theta)$. This introduces an argument $\theta$ which gives control over the flattening of the swap curve, such that the marginal price between assets is closer to 1:1 for a greater amount of swaps. With $\theta = 0$ the pool always delivers 1:1 swaps. This resembles Stable Swap, but with the advantage of allowing for asynchronous swaps.
 
 ## SwapPoolFactory.sol
 
-Both `SwapPoolVolatile.sol` and `SwapPoolFactory.sol` are deployed disabled as a result of inheriting `SwapPoolCommon.sol`. To ease pool creation, `SwapPoolFactory.sol` wraps the deployment of minimal proxies and the associated setup of the Swap Pool in a single call.
+`SwapPoolFactory.sol` handles the deployment and configuration of Catalyst pools proxy contracts within a single call.
 
 ## CatalystIBCInterface.sol
 
-An intermediate contract between swap pools and the message router. This contract is specifically designed to sit between Catalyst swap pools and an IBC compliant message router.
+An intermediate contract designed to interface Catalyst swap pools with an IBC compliant messaging router. It wraps and unwraps the swaps calls to and from byte arrays so that they can be seamlessly sent and received by the router.
 
-Wraps the cross-chain calls into a byte array. The byte array depends on the message purpose. The message packing can be found in `/contracts/CatalystIBCPayload.sol`
+Catalyst v1 implements 2 type of swaps, *Asset Swaps* and *Liquidity Swaps*. The byte array specification for these can be found in `/contracts/CatalystIBCPayload.sol`.
 
-Catalyst v1 implements 2 type of swaps, Asset swaps and Liquidity Swaps.
+- <u>`0x00`: Asset Swap</u><br/> Swaps with context `0x00` define asset swaps. Although primarily designed for cross-chain asset swaps, there is nothing from stopping a user of *Asset Swapping* between 2 pools on the same chain.
+- <u>`0x01`: Liquidity Swap</u><br/> Swaps with context `0x01` define liquidity swaps. These reduce the cost of rebalancing the liquidity distribution across pools by combining the following steps into a single transaction:
+  1. Withdraw tokens
+  2. Convert tokens to units and transfer to target pool
+  3. Convert units to an even mix of tokens
+  4. Deposit the tokens into the pool.
 
-### 0x00: Asset Swap
+For both kind of swaps, a *swap hash* derived from parts of the message is included on the cross-chain message. This serves to identify the swap on both the source and destination pools, and for acknowledgment/timeout purposes on the source pool.
 
-If `_context == 0x00`, then the message is an asset swap. It could be called a cross-chain asset swap but there is nothing to stop a user from Asset Swapping between 2 pools on the same chain.
-
-Parts of the message is hashed on the sending chain. This allows the escrow storage to be moved into the cross-chain message. This allows the smart contract to validate escrow information coming from the router.
-
-### 0x01: Liquidity Swap
-If `_context == 0x01`, then the message is an liquidity swap. The purpose of liquidity swaps is to reduce the cost of acquiring an even distribution of liquidity. While the asset cost (through slippage) would be the same as getting an even distribution manually, the gas cost and number of interactions required could be substantially less.
-
-This is done by converting the 4 actions:
-1. Withdraw tokens
-2. Convert tokens to units and transfer to target pool
-3. Convert units to an even mix of tokens
-4. Deposit the tokens into the pool.
-
-into a single transaction.
 
 ### Encoding or decoding a Catalyst message
 
