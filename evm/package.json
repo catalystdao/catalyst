@@ -3,7 +3,7 @@
     "solmate": "^6.7.0"
   },
   "devDependencies": {
+    "hardhat": "^2.12.7"
   },
-  "scripts": {
-  }
+  "scripts": {}
 }

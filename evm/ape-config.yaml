@@ -13,6 +13,13 @@ solidity:
     - "@openzeppelin=OpenZeppelin/4.8.1"
     - "solmate=../../node_modules/solmate"
 
+hardhat:
+  port: auto
+
 test:
   mnemonic: test test test test test test test test test test test junk
   number_of_accounts: 8
+
+plugins:
+  - name: solidity
+  - name: hardhat
