@@ -3,8 +3,6 @@ from pathlib import Path
 import pytest
 # from hypothesis import settings, Phase
 
-from ape.api.projects import ProjectAPI
-
 from fixtures.pools import MAX_POOL_ASSETS
 
 
