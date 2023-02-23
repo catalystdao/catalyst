@@ -203,11 +203,13 @@ The smart contract has now been deployed. Deployment scripts can be found in `./
 
 Catalyst contains a demonstration deployment script. It handles the deployment of the relevant Catalyst contracts, along with tokens and deploying a Catalyst pool.
 
-The script can be found in `/scripts/deployCatalyst.py/`. We will demonstrate how to execute a local swap and a cross-pool swap (from and to the same pool).
+The script can be found in `/scripts/deployCatalyst.py`. We will demonstrate how to execute a local swap and a cross-pool swap (from and to the same pool).
 
 Start by opening the Brownie interactive console. For simplicity, we will use a local ganache instance:
 
-`brownie console --network development`
+```bash
+brownie console --network development
+```
 
 Import the relevant classes needed for the example:
 
@@ -221,7 +223,7 @@ Next, we will define an account and deploy a message router emulator. The emulat
 ```python
 acct = accounts[0]  # Define the account used for testing
 
-ie = IBCEmulator.deploy({'from': acct})  # Deploy the Catalyst emulator.
+ie = IBCEmulator.deploy({'from': acct})  # Deploy the IBC emulator.
 ```
 
 Let's deploy Catalyst. This is done by calling `Catalyst(...)` from the imported script. This deploys all Catalyst contracts and creates an example pool for us.

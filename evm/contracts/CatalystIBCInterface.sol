@@ -22,15 +22,15 @@ import "./CatalystIBCPayload.sol";
  */
 contract CatalystIBCInterface is Ownable, IbcReceiver {
     //--- ERRORS ---//
-    error InvalidIBCCaller(address caller);
+    error InvalidIBCCaller(address caller);  // Only the message router should be able to deliver messages.
     error InvalidContext(bytes1 context);
 
     //--- Config ---//
     uint256 constant MAXIMUM_TIME_FOR_TX = 2 hours;
-    address public immutable IBCDispatcher; // Set on deployment
+    address public immutable IBC_DISPATCHER; // Set on deployment
 
     constructor(address IBCDispatcher_) {
-        IBCDispatcher = IBCDispatcher_;
+        IBC_DISPATCHER = IBCDispatcher_;
     }
 
     /// @notice Registers IBC ports for this contract.
@@ -38,7 +38,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
     /// registerPort at the same time to establish an
     /// IBC connection between the 2 contracts.
     function registerPort() external onlyOwner {
-        IbcDispatcher(IBCDispatcher).registerPort();
+        IbcDispatcher(IBC_DISPATCHER).registerPort();
     }
 
     /**
@@ -89,7 +89,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
             )
         );
 
-        IbcDispatcher(IBCDispatcher).sendIbcPacket(
+        IbcDispatcher(IBC_DISPATCHER).sendIbcPacket(
             channelId,
             data,
             uint64(block.timestamp + MAXIMUM_TIME_FOR_TX)
@@ -141,7 +141,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
             )
         );
 
-        IbcDispatcher(IBCDispatcher).sendIbcPacket(
+        IbcDispatcher(IBC_DISPATCHER).sendIbcPacket(
             channelId,
             data,
             uint64(block.timestamp + MAXIMUM_TIME_FOR_TX)
@@ -154,7 +154,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
      * @param packet The IBC packet
      */
     function onAcknowledgementPacket(IbcPacket calldata packet) external {
-        if (msg.sender != IBCDispatcher) revert InvalidIBCCaller(msg.sender);
+        if (msg.sender != IBC_DISPATCHER) revert InvalidIBCCaller(msg.sender);
 
         bytes calldata data = packet.data;
 
@@ -196,7 +196,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
      * @param packet The IBC packet
      */
     function onTimeoutPacket(IbcPacket calldata packet) external {
-        if (msg.sender != IBCDispatcher) revert InvalidIBCCaller(msg.sender);
+        if (msg.sender != IBC_DISPATCHER) revert InvalidIBCCaller(msg.sender);
 
         bytes calldata data = packet.data;
 
@@ -237,7 +237,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
      * @param packet The IBC packet
      */
     function onRecvPacket(IbcPacket calldata packet) external {
-        if (msg.sender != IBCDispatcher) revert InvalidIBCCaller(msg.sender);
+        if (msg.sender != IBC_DISPATCHER) revert InvalidIBCCaller(msg.sender);
 
         bytes calldata data = packet.data;
 
