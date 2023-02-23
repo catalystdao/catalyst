@@ -55,7 +55,6 @@ For both kind of swaps, a *swap hash* derived from parts of the message is inclu
 Refer to the helpers `encode_swap_payload` and `decode_payload` on `tests/catalyst/utils/pool_utils.py` for examples on how to encode and decode a Catalyst message.
 
 
-
 # EVM Development
 
 This repository uses Brownie for the development, testing and deployment of the smart contracts. Brownie can handle multiple versions of Solidity and Vyper and will automatically combine contracts to be deploy-ready.
