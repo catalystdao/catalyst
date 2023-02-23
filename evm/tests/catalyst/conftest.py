@@ -30,12 +30,6 @@ _parametrized_pool_pairs = []
 _test_filters = None
 
 
-# Enable test isolation
-@pytest.fixture(autouse=True)
-def isolation(fn_isolation):
-    pass
-
-
 def pool_type_checker(value):
     # pool should be either one of ["all"], or a specific pool index
 
