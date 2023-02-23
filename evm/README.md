@@ -58,27 +58,26 @@ Refer to the helpers `encode_swap_payload` and `decode_payload` on `tests/cataly
 
 # EVM Development
 
-This repository uses Brownie for smart contract development, testing and deployment. Brownie can handle multiple versions of Solidity and Vyper and will automatically combine contracts to be deploy-ready. Brownie depends on `ganache`.
+This repository uses Brownie for the development, testing and deployment of the smart contracts. Brownie can handle multiple versions of Solidity and Vyper and will automatically combine contracts to be deploy-ready.
 
 ## Dev dependencies
+Not that the following dependencies have been tested to work with `python3.9`. The installation steps included here are for reference only, plese refer to the specific documentation of each of the mentioned packages for further information.
 
-- ganache-cli
-  
+- Install the `ganache-cli` globaly (required by `brownie`)
   - `pnpm install -g ganache`
 
-- [@openzeppelin/contracts](https://www.npmjs.com/package/@openzeppelin/contracts) and [Solmate](https://www.npmjs.com/package/solmate)
-  - `pnpm install`
+- Install the contract templates [@openzeppelin/contracts](https://www.npmjs.com/package/@openzeppelin/contracts) and [Solmate](https://www.npmjs.com/package/solmate)
+  - `pnpm install` (run from the `evm` root directory)
 
-- eth-brownie
-  
-  - via [poetry](https://python-poetry.org)  (`brew install poetry`): `poetry install` in `/`
-  - via pip: `pip3 install eth-brownie` (check that `$PATH` is properly configured).
+- Install `eth-brownie`
+  - via `pip`: `pip3 install eth-brownie` (check that `$PATH` is properly configured).
+  - via [`poetry`](https://python-poetry.org):
+    - If `poetry` is not installed on your system, use `brew install poetry`
+    - Set the `poetry` python version with `poetry env use python3.9`.
+    - `poetry install` (run from the `evm` root directory). This will install all the dependencies specified in `./pyproject.toml`.
 
-- Python dependencies in *./pyproject.toml*. Automatically installed with `poetry install`
-  
-  - Note: You can set the poetry python version via `poetry env use python3.9` for example.
-
-- To deploy Catalyst on testnets: a blockchain API
+### Further dependencies
+- To deploy Catalyst on testnets:
   
   - Default: [alchemy](https://www.alchemy.com), export key to `$ALCHEMY_API_TOKEN`
   
