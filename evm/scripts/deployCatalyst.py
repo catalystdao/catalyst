@@ -28,7 +28,8 @@ class Catalyst:
         deployer,
         default=True,
         amp=10**18,
-        ibcinterface=ZERO_ADDRESS,
+        ibcinterface="0xcAB0F1618A89abF9CaC22D1ad1a4928b5018Ce54",
+        CCI=None,
         poolname="poolname",
         poolsymbol="ps"
     ):
@@ -38,9 +39,9 @@ class Catalyst:
         self.poolname = poolname
         self.poolsymbol = poolsymbol
 
-        self._swapFactory()
-        self._swapTemplates()
-        self._crosschaininterface()
+        self.crosschaininterface = "0x3647d390c083AA81Fc4b6F86A0b39fA3AC6F16a5"
+        self.swapFactory = CatalystSwapPoolFactory.at("0xa3dd30d529aEec6607B02A8A2D138987A5b698C0") # self._swapFactory()
+        (self.swapTemplate, self.ampSwapTemplate) = self._swapTemplates()
 
         if default:
             self.defaultSetup()
@@ -54,20 +55,21 @@ class Catalyst:
         tokens = []
         tokens.append(self.create_token("one", "I"))
         tokens.append(self.create_token("two", "II"))
-        tokens.append(self.create_token("three", "III"))
         self.deploy_swappool(
             tokens, amp=self.amp, name=self.poolname, symbol=self.poolsymbol
         )
 
     def _swapTemplates(self):
-        self.swapTemplate = CatalystSwapPoolVolatile.deploy(self.swapFactory, {"from": self.deployer})
-        self.ampSwapTemplate = CatalystSwapPoolAmplified.deploy(self.swapFactory, {"from": self.deployer})
+        swapTemplate = CatalystSwapPoolVolatile.deploy(self.swapFactory, {"from": self.deployer})
+        ampSwapTemplate = CatalystSwapPoolAmplified.deploy(self.swapFactory, {"from": self.deployer})
+        
+        return (swapTemplate, ampSwapTemplate)
 
     def _swapFactory(self):
-        self.swapFactory = CatalystSwapPoolFactory.deploy(0, {"from": self.deployer})
+        return CatalystSwapPoolFactory.deploy(0, {"from": self.deployer})
 
     def _crosschaininterface(self):
-        self.crosschaininterface = CatalystIBCInterface.deploy(self.ibcinterface, {"from": self.deployer})
+        return CatalystIBCInterface.deploy(self.ibcinterface, {"from": self.deployer})
 
     def deploy_swappool(
         self, tokens, init_balances=None, weights=None, amp=10**18, name="Name", symbol="SYM"
@@ -118,7 +120,7 @@ tokens = ps.tokens
 tokens[0].approve(pool, 2**256-1, {'from': acct})
 # pool.localSwap(tokens[0], tokens[1], 50*10**18, 0, {'from': acct})
 
-chid = convert.to_bytes(1, type_str="bytes32")
+chid = convert.to_bytes(0, type_str="bytes32")
 
 # Registor IBC ports.
 ps.crosschaininterface.registerPort()
