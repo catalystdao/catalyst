@@ -261,8 +261,7 @@ abstract contract CatalystSwapPoolCommon is
 
 
     /// @notice Allows the factory owner to modify the fee administrator
-    function setFeeAdministrator(address administrator) public override {
-        require(msg.sender == factoryOwner());   // dev: Only factory owner
+    function setFeeAdministrator(address administrator) public override onlyFactoryOwner {
         _setFeeAdministrator(administrator);
     }
 
