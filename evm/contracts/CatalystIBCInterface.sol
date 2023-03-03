@@ -30,6 +30,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
     address public immutable IBC_DISPATCHER; // Set on deployment
 
     constructor(address IBCDispatcher_) {
+        require(IBCDispatcher_ != address(0));  // dev: Provided IBCDispatcher_ address cannot be zero
         IBC_DISPATCHER = IBCDispatcher_;
     }
 
