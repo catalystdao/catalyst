@@ -129,7 +129,7 @@ abstract contract CatalystSwapPoolCommon is
      * !CatalystSwapPoolFactory(_factory).owner() must be set to a timelock! 
      */ 
     modifier onlyFactoryOwner() {
-        require(msg.sender == CatalystSwapPoolFactory(FACTORY).owner());   // dev: Only factory owner
+        require(msg.sender == factoryOwner());   // dev: Only factory owner
         _;
     }
 
