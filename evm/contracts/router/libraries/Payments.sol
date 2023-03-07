@@ -34,6 +34,21 @@ abstract contract Payments is RouterImmutables {
         }
     }
 
+    /// @notice Approves a protocol to spend ERC20s in the router
+    /// @param token The token to approve
+    /// @param spenderID An ID signalling which protocol to approve
+    function approveERC20(address token, uint256 spenderID) internal {
+        // check spender is one of our approved spenders
+        address spender;
+        /// @dev use 0 = Opensea Conduit for both Seaport and Seaport1.2
+        if (spenderID == 0) spender = OPENSEA_CONDUIT;
+        else if (spenderID == 1) spender = SUDOSWAP;
+        else revert InvalidSpender();
+
+        // set approval
+        ERC20(token).safeApprove(spender, type(uint256).max);
+    }
+
     /// @notice Pays a proportion of the contract's ETH or ERC20 to a recipient
     /// @param token The token to pay (can be ETH using Constants.ETH)
     /// @param recipient The address that will receive payment

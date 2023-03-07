@@ -1,0 +1,3 @@
+[submodule "evm/lib/permit2"]
+	path = evm/lib/permit2
+	url = https://github.com/Uniswap/permit2.git
