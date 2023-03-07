@@ -27,7 +27,11 @@ pub enum ExecuteMsg {
     //     depositor: String
     // },
 
-    // SetPoolFee { pool_fee_x64: [u64; 4] },   //TODO use u64?
+    SetPoolFee { fee: u64 },
+
+    SetGovernanceFee { fee: u64 },
+
+    SetFeeAdministrator { administrator: String },
 
     // CreateConnection {
     //     channel_id: String,

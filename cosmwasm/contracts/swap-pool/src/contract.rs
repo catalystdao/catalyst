@@ -13,7 +13,7 @@ use cw20_base::contract::{
 };
 use cw20_base::state::{MinterData, TokenInfo, TOKEN_INFO};
 use sha3::{Digest, Keccak256};
-use swap_pool_common::state::{MAX_ASSETS, INITIAL_MINT_AMOUNT, SwapPoolState};
+use swap_pool_common::state::{MAX_ASSETS, INITIAL_MINT_AMOUNT, SwapPoolState, STATE};
 
 use crate::calculation_helpers;
 use crate::error::ContractError;
@@ -77,6 +77,9 @@ pub fn execute(
         //     depositor
         // ),
         // ExecuteMsg::FinishSetup {} => execute_finish_setup(deps, env, info),
+        ExecuteMsg::SetFeeAdministrator { administrator } => execute_set_fee_administrator(deps, info, administrator),
+        ExecuteMsg::SetPoolFee { fee } => execute_set_pool_fee(deps, info, fee),
+        ExecuteMsg::SetGovernanceFee { fee } => execute_set_governance_fee(deps, info, fee),
         // ExecuteMsg::Deposit { pool_tokens_amount } => execute_deposit(deps, env, info, pool_tokens_amount),
         // ExecuteMsg::Withdraw { pool_tokens_amount } => execute_withdraw(deps, env, info, pool_tokens_amount),
         // ExecuteMsg::Localswap {
@@ -297,6 +300,49 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
 
 //     Ok(Response::new())
 // }
+
+
+pub fn execute_set_fee_administrator(
+    mut deps: DepsMut,
+    _info: MessageInfo,
+    administrator: String
+) -> Result<Response, ContractError> {
+    let mut state = STATE.load(deps.storage)?;
+
+    //TODO verify sender is factory owner
+
+    state.set_fee_administrator(&mut deps, administrator).map_err(|err| ContractError::CommonError(err))
+}
+
+
+pub fn execute_set_pool_fee(
+    mut deps: DepsMut,
+    info: MessageInfo,
+    fee: u64
+) -> Result<Response, ContractError> {
+    let mut state = STATE.load(deps.storage)?;
+
+    if info.sender != state.fee_administrator {
+        return Err(ContractError::Unauthorized {})
+    }
+
+    state.set_pool_fee(&mut deps, fee).map_err(|err| ContractError::CommonError(err))
+}
+
+
+pub fn execute_set_governance_fee(
+    mut deps: DepsMut,
+    info: MessageInfo,
+    fee: u64
+) -> Result<Response, ContractError> {
+    let mut state = STATE.load(deps.storage)?;
+
+    if info.sender != state.fee_administrator {
+        return Err(ContractError::Unauthorized {})
+    }
+
+    state.set_governance_fee(&mut deps, fee).map_err(|err| ContractError::CommonError(err))
+}
 
 
 // pub fn execute_deposit(
