@@ -13,7 +13,7 @@ pub fn ibc_channel_open(
     _env: Env,
     msg: IbcChannelOpenMsg
 ) -> StdResult<()> {
-    enforce_order_and_version(msg.channel(), msg.counterparty_version())?;
+    // enforce_order_and_version(msg.channel(), msg.counterparty_version())?;
     Ok(())
 }
 
