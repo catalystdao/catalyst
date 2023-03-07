@@ -1,62 +1,31 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
 
-use cosmwasm_std::{Binary, Uint64, Uint128, Addr, DepsMut, StdResult, StdError};
+use cosmwasm_std::{Binary, Uint64, Uint128};
 use cw20::{Expiration, AllowanceResponse, BalanceResponse, TokenInfoResponse};
 
-use crate::state::NUMASSETS;
 
 #[cw_serde]
 pub struct InstantiateMsg {
-    pub setup_master: Option<String>,
-    pub ibc_interface: Option<String>,
-    pub assets: Vec<String>,
-    pub assets_weights: Vec<u64>,  //TODO type
-    pub amplification_x64: [u64; 4],    //TODO use math library U256 type directly
     pub name: String,       // Name for the pool token
     pub symbol: String,     // Symbol for the pool token
+    pub chain_interface: Option<String>,
+    pub pool_fee: u64,
+    pub governance_fee: u64,
+    pub fee_administrator: String,
+    pub setup_master: String,
 }
 
-impl InstantiateMsg {
-    pub fn get_validated_setup_master(&self, deps: &DepsMut) -> StdResult<Option<Addr>> {
-        match &self.setup_master {
-            Some(master_addr) => Ok(Some(deps.api.addr_validate(&master_addr)?)),
-            None => Ok(None)
-        }
-    }
-
-    pub fn get_validated_ibc_interface(&self, deps: &DepsMut) -> StdResult<Option<Addr>> {
-        match &self.ibc_interface {
-            Some(int_addr) => Ok(Some(deps.api.addr_validate(&int_addr)?)),
-            None => Ok(None)
-        }
-    }
-
-    pub fn get_validated_assets(&self, deps: &DepsMut) -> StdResult<Vec<Addr>> {
-        let asset_count = self.assets.len();
-        if asset_count == 0 || asset_count > NUMASSETS { return Err(StdError::GenericErr { msg: "".to_owned() }) }
-    
-        self.assets.iter().map(
-            |mint_addr| deps.api.addr_validate(&mint_addr)
-        ).collect::<StdResult<Vec<Addr>>>()
-    }
-
-    pub fn get_validated_assets_weights(&self) -> StdResult<Vec<u64>> {
-        let asset_count = self.assets.len();
-
-        if
-            self.assets_weights.len() != asset_count ||
-            self.assets_weights.iter().any(|weight| *weight == 0)
-        { return Err(StdError::GenericErr { msg: "".to_owned() }) }
-
-        Ok(self.assets_weights.clone())
-    }
-
-}
 
 #[cw_serde]
 pub enum ExecuteMsg {
 
-    InitializeBalances { assets_balances: Vec<Uint128> },
+    // InitializeSwapCurves {
+    //     assets: Vec<String>,
+    //     assets_balances: Vec<Uint128>,
+    //     weights: Vec<u64>,
+    //     amp: u64,
+    //     depositor: String
+    // },
 
     // SetPoolFee { pool_fee_x64: [u64; 4] },   //TODO use u64?
 
@@ -72,7 +41,7 @@ pub enum ExecuteMsg {
     //     state: bool
     // },
 
-    FinishSetup {},
+    // FinishSetup {},
 
     // ReleaseEscrowAck {
     //     message_hash: String,
@@ -111,30 +80,30 @@ pub enum ExecuteMsg {
     //     setup_master: String
     // },
 
-    Deposit { pool_tokens_amount: Uint128 },
+    // Deposit { pool_tokens_amount: Uint128 },
 
-    Withdraw { pool_tokens_amount: Uint128 },
+    // Withdraw { pool_tokens_amount: Uint128 },
 
-    Localswap {
-        from_asset: String,
-        to_asset: String,
-        amount: Uint128,
-        min_out: Uint128,
-        approx: bool
-    },
+    // Localswap {
+    //     from_asset: String,
+    //     to_asset: String,
+    //     amount: Uint128,
+    //     min_out: Uint128,
+    //     approx: bool
+    // },
 
-    SwapToUnits {
-        chain: u32,
-        target_pool: String,
-        target_user: String,
-        from_asset: String,
-        to_asset_index: u8,
-        amount: Uint128,
-        min_out: [u64; 4],
-        approx: u8,
-        fallback_address: String,
-        calldata: Vec<u8>
-    },
+    // SwapToUnits {
+    //     chain: u32,
+    //     target_pool: String,
+    //     target_user: String,
+    //     from_asset: String,
+    //     to_asset_index: u8,
+    //     amount: Uint128,
+    //     min_out: [u64; 4],
+    //     approx: u8,
+    //     fallback_address: String,
+    //     calldata: Vec<u8>
+    // },
 
     // SwapFromUnits {
     //     to_asset_index: u8,

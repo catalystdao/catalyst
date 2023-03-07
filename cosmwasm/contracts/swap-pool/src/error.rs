@@ -7,6 +7,9 @@ pub enum ContractError {
     #[error("{0}")]
     Std(#[from] StdError),
 
+    #[error("{0}")]
+    CommonError(#[from] swap_pool_common::ContractError),
+
     #[error("Unauthorized")]
     Unauthorized {},
 
