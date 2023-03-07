@@ -85,7 +85,7 @@ def test_sendSwap(catalyst_router, pool11, pool12, pool21, pool22, weth, token1,
     
     amount = 10**18
     
-    payload1 = encode_router_payload([0x05, 0x00, 0x09], [
+    payload1 = encode_router_payload([0x08, 0x00, 0x04], [
         [ADDRESS_THIS, amount],
         [pool11.address, weth.address, token1.address, amount, 0],
         [pool12.address, channel_id, pool21.address, berg.address, token1.address, 0, BALANCE_THIS, 0, berg.address]  # Leave the calldata param blank.

@@ -1,5 +1,5 @@
 import pytest
-from brownie import CatalystRouter, WETH9, ZERO_ADDRESS, CatalystSwapPoolVolatile, CatalystSwapPoolAmplified
+from brownie import CatalystRouter, WETH9, PERMIT2, ZERO_ADDRESS, CatalystSwapPoolVolatile, CatalystSwapPoolAmplified
 from brownie import convert
 
 @pytest.fixture(scope="module")
@@ -7,9 +7,12 @@ def weth(deployer):
     yield WETH9.deploy({'from': deployer})
     
 @pytest.fixture(scope="module")
-def catalyst_router(weth, deployer):
-    yield CatalystRouter.deploy([weth], {'from': deployer})
-
+def permit2(deployer):
+    yield PERMIT2.deploy({'from': deployer})
+    
+@pytest.fixture(scope="module")
+def catalyst_router(permit2, weth, deployer):
+    yield CatalystRouter.deploy([permit2, weth], {'from': deployer})
 
 @pytest.fixture(scope="module")
 def encode_router_payload():

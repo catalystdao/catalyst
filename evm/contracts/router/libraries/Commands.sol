@@ -10,29 +10,26 @@ library Commands {
 
     // Command Types. Maximum supported command at this moment is 0x1F.
 
-    // Command Types where value<0x08, executed in the first nested-if block
-    uint256 constant LOCALSWAP = 0x00;
-    uint256 constant SWEEP = 0x01;
-    uint256 constant TRANSFER_PORTION = 0x02;
-    uint256 constant TRANSFER = 0x03;
-    uint256 constant PERMIT = 0x04;
-    uint256 constant WRAP_GAS = 0x05;
-    uint256 constant UNWRAP_GAS = 0x06;
-    // COMMAND_PLACEHOLDER = 0x07;
+    // Block 1
+    uint256 constant LOCALSWAP              = 0x00;
+    uint256 constant SENDSWAP               = 0x01;
+    uint256 constant PERMIT2_TRANSFER_FROM  = 0x02;
+    uint256 constant PERMIT2_PERMIT_BATCH   = 0x03;
+    uint256 constant SWEEP                  = 0x04;
+    uint256 constant TRANSFER               = 0x05;
+    uint256 constant PAY_PORTION            = 0x06;
 
-    // Command Types where 0x08<=value<=0x0f, executed in the second nested-if block
-    uint256 constant TRANSFER_FROM = 0x08;
-    uint256 constant SENDSWAP = 0x09;
-    uint256 constant WITHDRAW_EQUAL = 0x0a;
-    uint256 constant WITHDRAW_MIXED = 0x0b;
-    uint256 constant DEPOSIT_MIXED = 0x0c;
-    // COMMAND_PLACEHOLDER = 0x0c;
-    // COMMAND_PLACEHOLDER = 0x0d;
-    // COMMAND_PLACEHOLDER = 0x0e;
-    // COMMAND_PLACEHOLDER = 0x0f;
-
+    // Block 2
+    uint256 constant PERMIT2_PERMIT         = 0x07;
+    uint256 constant WRAP_GAS               = 0x08;
+    uint256 constant UNWRAP_GAS             = 0x09;
+    uint256 constant WITHDRAW_EQUAL         = 0x0a;
+    uint256 constant WITHDRAW_MIXED         = 0x0b;
+    uint256 constant DEPOSIT_MIXED          = 0x0c;
+    uint256 constant SENDLIQUIDITY          = 0x0d;
+    uint256 constant ALLOW_CANCEL           = 0x0e;
+    uint256 constant BALANCE_CHECK_ERC20    = 0x0f;
 
     // Command Types where 0x10<=value
-    uint256 constant EXECUTE_SUB_PLAN = 0x10;
-    // COMMAND_PLACEHOLDER for 0x11 to 0x3f
+    uint256 constant EXECUTE_SUB_PLAN       = 0x10;
 }
