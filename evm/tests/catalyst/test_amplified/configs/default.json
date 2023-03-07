@@ -1,0 +1,64 @@
+{
+    "tokens": [
+        {
+            "name": "Token1",
+            "symbol": "TKN1",
+            "decimals": 18,
+            "supply": 10000
+        },
+        {
+            "name": "Token2",
+            "symbol": "TKN2",
+            "decimals": 18,
+            "supply": 10000
+        },
+        {
+            "name": "Token3",
+            "symbol": "TKN3",
+            "decimals": 6,
+            "supply": 10000
+        },
+        {
+            "name": "Token4",
+            "symbol": "TKN4",
+            "decimals": 18,
+            "supply": 10000
+        },
+        {
+            "name": "Token5",
+            "symbol": "TKN5",
+            "decimals": 18,
+            "supply": 10000
+        },
+        {
+            "name": "Token6",
+            "symbol": "TKN6",
+            "decimals": 18,
+            "supply": 10000
+        }
+    ],
+    "amplification": "10**16",
+    "pools": [
+        {
+            "tokens": [0, 1, 2],
+            "initBalances": ["10 * 10**18", "1000 * 10**18", "1000 * 10**6"],
+            "weights": [100, 1, 1000000000000],
+            "name": "Amp1_POOLNAME",
+            "symbol": "A1_PS"
+        },
+        {
+            "tokens": [3, 4],
+            "initBalances": ["10 * 10**18", "100 * 10**18"],
+            "weights": [100, 10],
+            "name": "Amp2_AnotherPoolName",
+            "symbol": "A2_APN"
+        }, 
+        {
+            "tokens": [5],
+            "initBalances": ["1000 * 10**6"],
+            "weights": [1000000000000],
+            "name": "Amp3_POOLNAME2",
+            "symbol": "A3_PS2"
+        }
+    ]
+}

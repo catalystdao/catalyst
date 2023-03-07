@@ -1,10 +1,10 @@
 //SPDX-License-Identifier: UNLICENSED
 
-pragma solidity ^0.8.9;
+pragma solidity ^0.8.16;
 
 struct IbcEndpoint {
-    string portId;
-    string channelId;
+    bytes32 portId;
+    bytes32 channelId;
 }
 
 /// In IBC each package must set at least one type of timeout:
@@ -22,8 +22,8 @@ struct IbcPacket {
     /// The sequence number of the packet on the given channel
     uint64 sequence;
     bytes data;
-    /// when packet times out, measured on remote chain  
-    IbcTimeout timeout;  // ! move this up over Sequence to take advantage of packing.
+    /// when packet times out, measured on remote chain
+    IbcTimeout timeout; // ! move this up over Sequence to take advantage of packing.
 }
 
 interface IbcReceiver {

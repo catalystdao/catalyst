@@ -1,447 +1,315 @@
 //SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.9;
+pragma solidity ^0.8.16;
 
 import "./polymerase/IbcDispatcher.sol";
 import "./polymerase/IbcReceiver.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./ICatalystV1Pool.sol";
-import "./interfaces/ICatalystV1PoolStructs.sol";
+import "./interfaces/ICatalystV1PoolState.sol"; // structs
+import "./CatalystIBCPayload.sol";
 
-interface ISwapPoolFactory {
-    function IsCreatedByFactory(address arg0, address arg1)
-        external
-        view
-        returns (bool);
-}
 
-/// @title CatalystIBCInterface
-/// @author Alexander @ Polymer Labs
-/// @notice Interface for PolySwap for sending IBC messages using Polymerase
 /**
- * Context Flag
- *      2^0: Asset (0) or Liquidity swap (1)
- *        1: Non-approximate (0) or approximate (1)
- *        2: Unused
- *        3: Unused
- *        .
- *        .
- *        7: Unused
+ * @title Catalyst: Generalised IBC Interface
+ * @author Catalyst Labs
+ * @notice This contract is a generalised proof of concept
+ * IBC interface using an example ABI.
+ * It acts as an intermediate between the swap pool and the router to
+ * abstract router logic away from the swap pools. This simplifies the
+ * development of the swap pools and allows Catalyst to adopt or change
+ * message routers with more flexibility.
  */
 contract CatalystIBCInterface is Ownable, IbcReceiver {
     //--- ERRORS ---//
-    string constant NO_CONNECTION = "Pools are not connected";
-    string constant SWAP_RETURN_INSUFFICIENT = "Insufficient swap return";
-    string constant BALANCE_SECURITY_LIMIT =
-        "Pool sanity limit (Balance too large)";
+    error InvalidIBCCaller(address caller);  // Only the message router should be able to deliver messages.
+    error InvalidContext(bytes1 context);
 
-    uint256 constant MAXIMUM_TIME_FOR_TX = 60 * 60; // One hour.
+    //--- Config ---//
+    uint256 constant MAXIMUM_TIME_FOR_TX = 2 hours;
+    address public immutable IBC_DISPATCHER; // Set on deployment
 
-    address public immutable PolymeraseDispatcher;
-    address public _poolFactory;
-    mapping(address => bool) public validArriver;
-
-    // Usage: assert self.checkConnection[chainID][from][target]
-    mapping(bytes32 => mapping(bytes32 => mapping(bytes32 => bool)))
-        public checkConnection;
-
-    mapping(uint256 => bytes32) public _channelForChain;
-
-    address public immutable _calldataRouter;
-
-    constructor(
-        address factory,
-        address polymeraseDispatcher,
-        bytes32 localChannelId
-    ) {
-        _poolFactory = factory;
-        PolymeraseDispatcher = polymeraseDispatcher;
-        validArriver[polymeraseDispatcher] = true;
-        _channelForChain[block.chainid] = localChannelId;
-        _calldataRouter = address(0);
+    constructor(address IBCDispatcher_) {
+        require(IBCDispatcher_ != address(0));  // dev: Provided IBCDispatcher_ address cannot be zero
+        IBC_DISPATCHER = IBCDispatcher_;
     }
 
+    /// @notice Registers IBC ports for this contract.
+    /// @dev The matching CatalystIBCInterface should call
+    /// registerPort at the same time to establish an
+    /// IBC connection between the 2 contracts.
     function registerPort() external onlyOwner {
-        IbcDispatcher(PolymeraseDispatcher).registerPort();
+        IbcDispatcher(IBC_DISPATCHER).registerPort();
     }
 
-    function chain_id() external view returns (uint256) {
-        return block.chainid;
-    }
-
-    function setChannelForChain(uint256 chainID, bytes32 channel)
-        external
-        onlyOwner
-    {
-        _channelForChain[chainID] = channel;
-    }
-
-    function CreateConnection(
+    /**
+     * @notice Packs cross-chain swap information into a bytearray and sends it to the target pool with IBC.
+     * @dev Callable by anyone but this cannot be abused since the connection management ensures no
+     * wrong messages enter a healthy pool.
+     * @param channelId The target chain identifier.
+     * @param toPool The target pool on the target chain encoded in bytes32.
+     * @param toAccount recipient of the transaction on the target chain. Encoded in bytes32.
+     * @param toAssetIndex The index of the asset the user wants to buy in the target pool.
+     * @param U The calculated liquidity reference. (Units)
+     * @param minOut The minimum number of returned tokens to the toAccount on the target chain.
+     * @param metadata Metadata on the asset swap, used for swap identification and ack/timeout.
+     * @param calldata_ Data field if a call should be made on the target chain. 
+     * Should be encoded abi.encode(<address>,<data>)
+     */
+    function sendCrossChainAsset(
         bytes32 channelId,
-        bytes32 pool,
-        bool state
-    ) external returns (bool) {
-        require(
-            ISwapPoolFactory(_poolFactory).IsCreatedByFactory(
-                address(this),
-                msg.sender
-            )
-        ); // dev: Only factory pools.
-        bytes32 msgSenderB32 = bytes32(abi.encodePacked(msg.sender));
-
-        checkConnection[channelId][msgSenderB32][pool] = state;
-        checkConnection[channelId][pool][msgSenderB32] = state;
-
-        return true;
-    }
-
-    function CreateConnectionWithChain(
-        uint256 chainId,
-        bytes32 pool,
-        bool state
-    ) external {
-        require(
-            ISwapPoolFactory(_poolFactory).IsCreatedByFactory(
-                address(this),
-                msg.sender
-            )
-        ); // dev: Only factory pools.
-        bytes32 msgSenderB32 = bytes32(abi.encode(msg.sender));
-        bytes32 channelId = _channelForChain[chainId];
-
-        checkConnection[channelId][msgSenderB32][pool] = state;
-        checkConnection[channelId][pool][msgSenderB32] = state;
-    }
-
-    function crossChainSwap(
-        uint32 chainId,
-        bytes32 targetPool,
-        bytes32 targetUser,
-        uint8 targetAssetIndex,
+        bytes32 toPool,
+        bytes32 toAccount,
+        uint8 toAssetIndex,
         uint256 U,
         uint256 minOut,
-        bool approx,
-        TokenEscrow memory escrowInformation,
+        AssetSwapMetadata memory metadata,
         bytes memory calldata_
-    ) external returns (bytes32) {
-        /**
-         * Context Flag
-         *      2^0: Asset (0) or Liquidity swap (1)
-         *        1: Non-approximate (0) or approximate (1)
-         *        2: Unused
-         *        3: Unused
-         *        .
-         *        .
-         *        7: Unused
-         */
+    ) external {
+        // Anyone can call this function, but unless someone can also manage to pass the security check on onRecvPacket
+        // they cannot drain any value. As such, the very worst they can do is waste gas.
 
-        /* 
-            0 _context : Bytes[1]
-            1-32 _fromPool : bytes32
-            33-64 _pool : bytes32
-            65-96 _targetUser : bytes32
-            97-128 _U : uint265
-            129 _assetIndex : uint8
-            130-161 _minOut : uint256
-            162-193 _escrowAmount : uint256
-            194-214 _escrowToken
-            215-216 _customDataLength : uint16  # If custom data is passed.
-            217-248+_customDataLength-1 _customData : bytes...
-        */
-        require(
-            ISwapPoolFactory(_poolFactory).IsCreatedByFactory(
-                address(this),
-                msg.sender
+        // Encode payload. See CatalystIBCPayload.sol for the payload definition
+        bytes memory data = bytes.concat(       // Using bytes.concat to circumvent stack too deep error
+            abi.encodePacked(
+                CTX0_ASSET_SWAP,
+                abi.encode(msg.sender),         // Use abi.encode to encode address into 32 bytes
+                toPool,
+                toAccount,
+                U,
+                toAssetIndex,
+                minOut
+            ),
+            abi.encodePacked(
+                metadata.fromAmount,
+                abi.encode(metadata.fromAsset),
+                metadata.blockNumber,
+                metadata.swapHash,
+                uint16(calldata_.length),
+                calldata_
             )
-        ); // dev: Only factory pools.
-
-        bytes32 channelId = _channelForChain[chainId]; // ! Default value is 0
-        // require(
-        //     checkConnection[channelId][bytes32(abi.encodePacked(msg.sender))][
-        //         _pool
-        //     ],
-        //     NO_CONNECTION
-        // );
-
-        bytes memory preparedCalldata = abi.encodePacked(
-            uint16(calldata_.length),
-            calldata_
         );
 
-        bytes memory preparedEscrowAndCalldata = abi.encodePacked(
-            escrowInformation.amount,
-            abi.encode(escrowInformation.token),
-            preparedCalldata
-        );
-
-        // abi.encodePacked encodes the arguments as a concat.
-        bytes memory data = abi.encodePacked(
-            uint8(approx ? 2 : 0), // Needs flag 1 for approximation.
-            abi.encode(msg.sender),
-            targetPool,
-            targetUser,
-            U,
-            uint8(targetAssetIndex),
-            minOut,
-            preparedEscrowAndCalldata,
-            uint32(block.number % 2**32)    // TODO: Considering the "randomness" of U, does this even make sense?
-                                            // TODO: The only way to find a collision is by deliberately making 2 very similar transactions.
-                                            // TODO: Which is a waste of gas.
-        );
-        // abi.encode allways encodes to 32 bytes.
-        // abi.encodePacked encodes in the smallest possible bytes.
-        // 32 bytes are reserved for addresses (for chain compatibility)..
-        // Ethereum addresses only use 20 bytes, so abi.encodePacked returns 20 bytes where abi.encode returns 32 bytes.
-
-        IbcDispatcher(PolymeraseDispatcher).sendIbcPacket(
+        IbcDispatcher(IBC_DISPATCHER).sendIbcPacket(
             channelId,
             data,
             uint64(block.timestamp + MAXIMUM_TIME_FOR_TX)
         );
 
-        return keccak256(data);
     }
 
-    function liquiditySwap(
-        uint256 chainId,
-        bytes32 targetPool,
-        bytes32 targetUser,
+    /**
+     * @notice Packs cross-chain swap information into a bytearray and sends it to the target pool with IBC.
+     * @dev Callable by anyone but this cannot be abused since the connection management ensures no
+     * wrong messages enter a healthy pool.
+     * @param channelId The target chain identifier.
+     * @param toPool The target pool on the target chain encoded in bytes32.
+     * @param toAccount recipient of the transaction on the target chain. Encoded in bytes32.
+     * @param U The calculated liquidity reference. (Units)
+     * @param minOut The minimum number of returned tokens to the toAccount on the target chain.
+     * @param metadata Metadata on the asset swap, used for swap identification and ack/timeout.
+     * @param calldata_ Data field if a call should be made on the target chain. 
+     * Should be encoded abi.encode(<address>,<data>)
+     */
+    function sendCrossChainLiquidity(
+        bytes32 channelId,
+        bytes32 toPool,
+        bytes32 toAccount,
         uint256 U,
         uint256 minOut,
-        bool approx,
-        LiquidityEscrow memory escrowInformation
-    ) external returns (bytes32) {
-        /*
-         * Context Flag
-         *      2^0: Asset (0) or Liquidity swap (1)
-         *        1: Non-approximate (0) or approximate (1)
-         *        2: Unused
-         *        3: Unused
-         *        .
-         *        .
-         *        7: Unused
-         */
+        LiquiditySwapMetadata memory metadata,
+        bytes memory calldata_
+    ) external {
+        // Anyone can call this function, but unless someone can also manage to pass the security check on onRecvPacket
+        // they cannot drain any value. As such, the very worst they can do is waste gas.
 
-        /*  // TODO
-            0 _context : Bytes[1]
-            1-32 _fromPool : bytes32
-            33-64 _pool : bytes32
-            65-96 _targetUser : bytes32
-            97-128 _U : uint265
-            130-161 _minOut : uint256
-            162-193 _escrowAmount : uint256
-        */
-        require(
-            ISwapPoolFactory(_poolFactory).IsCreatedByFactory(
-                address(this),
-                msg.sender
+        // Encode payload. See CatalystIBCPayload.sol for the payload definition
+        bytes memory data = bytes.concat(       // Using bytes.concat to circumvent stack too deep error
+            abi.encodePacked(
+                CTX1_LIQUIDITY_SWAP,
+                abi.encode(msg.sender),         // Use abi.encode to encode address into 32 bytes
+                toPool,
+                toAccount,
+                U,
+                minOut
+            ),
+            abi.encodePacked(
+                metadata.fromAmount,
+                metadata.blockNumber,
+                metadata.swapHash,
+                uint16(calldata_.length),
+                calldata_
             )
-        ); // dev: Only factory pools.
-
-        bytes32 channelId = _channelForChain[chainId]; // ! Default value is 0
-        // require(
-        //     checkConnection[channelId][bytes32(abi.encodePacked(msg.sender))][
-        //         _pool
-        //     ],
-        //     NO_CONNECTION
-        // );
-
-        // abi.encodePacked encodes the arguments as a concat. This should be the same as:
-        // _data: Bytes[130] = concat(0x00,  convert(msg.sender, bytes32), _pool, _who, assetIndex, C) in vyper
-        bytes memory data = abi.encodePacked(
-            uint8(approx ? 3 : 1),
-            abi.encode(msg.sender),
-            targetPool,
-            targetUser,
-            U,
-            minOut,
-            escrowInformation.poolTokens,
-            uint8(0),
-            uint32(block.number % 2**32)    // TODO: Considering the "randomness" of U, does this even make sense?
-                                            // TODO: The only way to find a collision is by deliberately making 2 very similar transactions.
-                                            // TODO: Which is a waste of gas.
         );
-        // abi.encode always encodes to 32 bytes.
-        // abi.encodePacked encodes in the smallest possible bytes.
-        // 32 bytes are reserved for addresses (for chain compatibility).
-        // Ethereum addresses only use 20 bytes, so abi.encodePacked returns 20 bytes where abi.encode returns 32 bytes.
 
-        IbcDispatcher(PolymeraseDispatcher).sendIbcPacket(
+        IbcDispatcher(IBC_DISPATCHER).sendIbcPacket(
             channelId,
             data,
             uint64(block.timestamp + MAXIMUM_TIME_FOR_TX)
         );
-
-        return keccak256(data);
     }
 
+    /**
+     * @notice IBC Acknowledgement package handler
+     * @dev Should never revert.
+     * @param packet The IBC packet
+     */
     function onAcknowledgementPacket(IbcPacket calldata packet) external {
+        if (msg.sender != IBC_DISPATCHER) revert InvalidIBCCaller(msg.sender);
+
         bytes calldata data = packet.data;
 
-        /**
-         *   Context Flag
-         *      2^0: Asset (0) or Liquidity swap (1)
-         *        1: Non-approximate (0) or approximate (1)
-         *        2: Unused
-         *        3: Unused
-         *        .
-         *        .
-         *        7: Unused
-         */
-        // require(validArriver[msg.sender], "Polymerase Only");  // dev: Only callable by Polymerase
+        bytes1 context = data[CONTEXT_POS];
+        address fromPool = abi.decode(data[ FROM_POOL_START : FROM_POOL_END ], (address));
 
-        /* 
-            0 _context : Bytes[1]
-            1-32 _fromPool : bytes32
-        */
-        bytes1 _context = data[0];
-        address fromPool = abi.decode(data[1:33], (address));
-        uint256 U = uint256(bytes32(data[97:129]));
+        if (context == CTX0_ASSET_SWAP) {
 
-        if ((_context & 0x01) == 0) {
-
-            /* 
-                97-128 _U : uint265
-            */
-            ICatalystV1Pool(fromPool).releaseEscrowACK(
-                keccak256(data),
-                U,
-                uint256(bytes32(data[162:194])), // escrowAmount
-                abi.decode(data[194:226], (address)) // escrowToken
+            ICatalystV1Pool(fromPool).sendAssetAck(
+                bytes32(data[ TO_ACCOUNT_START : TO_ACCOUNT_END ]),                             // toAccount
+                uint256(bytes32(data[ UNITS_START : UNITS_END ])),                              // units
+                uint256(bytes32(data[ CTX0_FROM_AMOUNT_START : CTX0_FROM_AMOUNT_END ])),        // fromAmount
+                abi.decode(data[ CTX0_FROM_ASSET_START : CTX0_FROM_ASSET_END ], (address)),     // fromAsset
+                uint32(bytes4(data[ CTX0_BLOCK_NUMBER_START : CTX0_BLOCK_NUMBER_END ]))         // block number
             );
-        } else {
-            ICatalystV1Pool(fromPool).releaseLiquidityEscrowACK(
-                keccak256(data),
-                U,
-                uint256(bytes32(data[161:193])) // escrowAmount
-            );
+
         }
+        else if (context == CTX1_LIQUIDITY_SWAP) {
+
+            ICatalystV1Pool(fromPool).sendLiquidityAck(
+                bytes32(data[ TO_ACCOUNT_START : TO_ACCOUNT_END ]),                         // toAccount
+                uint256(bytes32(data[ UNITS_START : UNITS_END ])),                          // units
+                uint256(bytes32(data[ CTX1_FROM_AMOUNT_START : CTX1_FROM_AMOUNT_END ])),    // fromAmount
+                uint32(bytes4(data[ CTX1_BLOCK_NUMBER_START : CTX1_BLOCK_NUMBER_END ]))     // block number
+            );
+
+        }
+        else {
+
+            revert InvalidContext(context);
+
+        }
+
     }
 
+    /**
+     * @notice IBC timeout package handler
+     * @dev Should never revert.
+     * @param packet The IBC packet
+     */
     function onTimeoutPacket(IbcPacket calldata packet) external {
-        bytes calldata data = packet.data; // Specificing the location of the data.
-        /**
-         * Context Flag
-         *      2^0: Asset (0) or Liquidity swap (1)
-         *        1: Non-approximate (0) or approximate (1)
-         *        2: Unused
-         *        3: Unused
-         *        .
-         *        .
-         *        7: Unused
-         */
-        // require(validArriver[msg.sender], "Polymerase Only");  // dev: Only callable by Polymerase
+        if (msg.sender != IBC_DISPATCHER) revert InvalidIBCCaller(msg.sender);
 
-        /* 
-            0 _context : Bytes[1]
-            1-32 _fromPool : bytes32
-        */
-        bytes1 _context = data[0]; // Only reverts if the data is truely empty. Well formed data is not.
-        address fromPool = abi.decode(data[1:33], (address)); // ^^ Data is well formed.
-        uint256 U = uint256(bytes32(data[97:129]));
+        bytes calldata data = packet.data;
+
+        bytes1 context = data[CONTEXT_POS];
+        address fromPool = abi.decode(data[FROM_POOL_START:FROM_POOL_END], (address));
+
+        if (context == CTX0_ASSET_SWAP) {
+
+            ICatalystV1Pool(fromPool).sendAssetTimeout(
+                bytes32(data[ TO_ACCOUNT_START : TO_ACCOUNT_END ]),                             // toAccount
+                uint256(bytes32(data[ UNITS_START : UNITS_END ])),                              // units
+                uint256(bytes32(data[ CTX0_FROM_AMOUNT_START : CTX0_FROM_AMOUNT_END ])),        // fromAmount
+                abi.decode(data[ CTX0_FROM_ASSET_START : CTX0_FROM_ASSET_END ], (address)),     // fromAsset
+                uint32(bytes4(data[ CTX0_BLOCK_NUMBER_START : CTX0_BLOCK_NUMBER_END ]))         // block number
+            );
+
+        }
+        else if (context == CTX1_LIQUIDITY_SWAP) {
+
+            ICatalystV1Pool(fromPool).sendLiquidityTimeout(
+                bytes32(data[ TO_ACCOUNT_START : TO_ACCOUNT_END ]),                         // toAccount
+                uint256(bytes32(data[ UNITS_START : UNITS_END ])),                          // units
+                uint256(bytes32(data[ CTX1_FROM_AMOUNT_START : CTX1_FROM_AMOUNT_END ])),    // fromAmount
+                uint32(bytes4(data[ CTX1_BLOCK_NUMBER_START : CTX1_BLOCK_NUMBER_END ]))     // block number
+            );
+
+        }
+        else {
+
+            revert InvalidContext(context);
+
+        }
         
-        if ((_context & 0x01) == 0) {
-            // Always true if token swaps.
-
-            ICatalystV1Pool(fromPool).releaseEscrowTIMEOUT(
-                keccak256(data), // ^^ Data is well formed.
-                U,
-                uint256(bytes32(data[162:194])), // escrowAmount
-                abi.decode(data[194:226], (address)) // escrowToken
-            );
-        } else {
-            ICatalystV1Pool(fromPool).releaseLiquidityEscrowTIMEOUT(
-                keccak256(data), // ^^ Data is well formed.
-                U,
-                uint256(bytes32(data[161:193])) // escrowAmount
-            );
-        } // Liquidity swaps.
     }
 
+    /**
+     * @notice IBC package handler
+     * @param packet The IBC packet
+     */
     function onRecvPacket(IbcPacket calldata packet) external {
+        if (msg.sender != IBC_DISPATCHER) revert InvalidIBCCaller(msg.sender);
+
         bytes calldata data = packet.data;
-        /* 
-            Context indicator
-                0x00: Ordinary
-                0x01: ApproxFromUnits
-                0x02: LiquiditySwap
-                0x03: ApproxFromLiquidityUnits
-         */
-        // require(validArriver[msg.sender]); // dev: Only callable by Polymerase
-        // string memory channelid = packet.src.channelId;
 
-        /* 
-            0 _context : Bytes[1]
-            1-32 _fromPool : bytes32
-            33-64 _pool : bytes32
-        */
-        bytes1 _context = data[0];
-        address pool = abi.decode(data[33:65], (address));
-        // bytes32 messageHash = keccak256(data);
+        bytes1 context = data[CONTEXT_POS];
+        bytes32 fromPool = bytes32(data[ FROM_POOL_START : FROM_POOL_END ]);
+        address toPool = abi.decode(data[ TO_POOL_START : TO_POOL_END ], (address));
 
-        {
-            /* bytes32 fromPool = bytes32(data[1:33]);
-        // require(
-        //     checkConnection[channelid][bytes32(data[33:65])][fromPool],
-        //     NO_CONNECTION
-        // ); */
-        }
 
-        if ((_context & 0x01) == 0) {
-            /* 
-                0 _context : Bytes[1]
-                1-32 _fromPool : bytes32
-                33-64 _pool : bytes32
-                65-96 _targetUser : bytes32
-                97-128 _U : uint265
-                129 _assetIndex : uint8
-                130-161 _minOut : uint256
-                162-193 _escrowAmount : uint256
-                194-214 _escrowToken
-                215-216 _customDataLength : uint16  # If custom data is passed.
-                217-248+_customDataLength-1 _customData : bytes...
-            */
-            // uint8 assetIndex = uint8(data[129]);
-            // address who = abi.decode(data[65:97], (address));
-            // uint256 U = uint256(bytes32(data[97:129]));
-            // uint256 minOut = uint256(bytes32(data[130:162]));
-            uint16 customDataLength = uint16(bytes2(data[226:228]));
+        if (context == CTX0_ASSET_SWAP) {
 
-            if (customDataLength > 0) {
-                address callDataTarget = abi.decode(data[228:260], (address));
-                bytes memory calldata_ = data[260:260 + customDataLength - 32];
-                ICatalystV1Pool(pool).swapFromUnits(
-                    uint8(data[129]), // assetIndex
-                    abi.decode(data[65:97], (address)), // who
-                    uint256(bytes32(data[97:129])), // U
-                    uint256(bytes32(data[130:162])), // minOut
-                    (_context & 0x02) > 0, // approx
-                    keccak256(data), // messageHash
-                    callDataTarget,
-                    calldata_
+            uint16 dataLength = uint16(bytes2(data[CTX0_DATA_LENGTH_START:CTX0_DATA_LENGTH_END]));
+
+            // CCI sets dataLength > 0 if calldata is passed.
+            if (dataLength != 0) {
+                ICatalystV1Pool(toPool).receiveAsset(
+                    bytes32(packet.src.channelId),                                          // connectionId
+                    fromPool,                                                               // fromPool
+                    uint8(data[CTX0_TO_ASSET_INDEX_POS]),                                   // toAssetIndex
+                    abi.decode(data[ TO_ACCOUNT_START : TO_ACCOUNT_END ], (address)),       // toAccount
+                    uint256(bytes32(data[ UNITS_START : UNITS_END ])),                      // units
+                    uint256(bytes32(data[ CTX0_MIN_OUT_START : CTX0_MIN_OUT_END ])),        // minOut
+                    bytes32(data[ CTX0_SWAP_HASH_START : CTX0_SWAP_HASH_END ]),             // swapHash
+                    abi.decode(data[ CTX0_DATA_START : CTX0_DATA_START+32 ], (address)),    // dataTarget
+                    data[ CTX0_DATA_START+32 : CTX0_DATA_START+dataLength-32 ]              // dataArguments
                 );
-                return;
+            } else {
+                ICatalystV1Pool(toPool).receiveAsset(
+                    bytes32(packet.src.channelId),                                          // connectionId
+                    fromPool,                                                               // fromPool
+                    uint8(data[CTX0_TO_ASSET_INDEX_POS]),                                   // toAssetIndex
+                    abi.decode(data[ TO_ACCOUNT_START : TO_ACCOUNT_END ], (address)),       // toAccount
+                    uint256(bytes32(data[ UNITS_START : UNITS_END ])),                      // units
+                    uint256(bytes32(data[ CTX0_MIN_OUT_START : CTX0_MIN_OUT_END ])),        // minOut
+                    bytes32(data[ CTX0_SWAP_HASH_START : CTX0_SWAP_HASH_END ])              // swapHash
+                );
             }
-            ICatalystV1Pool(pool).swapFromUnits(
-                uint8(data[129]), // assetIndex
-                abi.decode(data[65:97], (address)), // who
-                uint256(bytes32(data[97:129])), // U
-                uint256(bytes32(data[130:162])), // minOut
-                (_context & 0x02) > 0, // approx
-                keccak256(data) // messageHash
-            );
-        } else {
-            address who = abi.decode(data[65:97], (address));
-            uint256 U = uint256(bytes32(data[97:129]));
-            uint256 minOut = uint256(bytes32(data[129:161]));
 
-            ICatalystV1Pool(pool).inLiquidity(
-                who,
-                U,
-                minOut,
-                (_context & 0x02) > 0,
-                keccak256(data)
-            );
         }
+        else if (context == CTX1_LIQUIDITY_SWAP) {
+
+            uint16 dataLength = uint16(bytes2(data[CTX1_DATA_LENGTH_START:CTX1_DATA_LENGTH_END]));
+
+            // CCI sets dataLength > 0 if calldata is passed.
+            if (dataLength != 0) {
+                ICatalystV1Pool(toPool).receiveLiquidity(
+                    bytes32(packet.src.channelId),                                          // connectionId
+                    fromPool,                                                               // fromPool
+                    abi.decode(data[ TO_ACCOUNT_START : TO_ACCOUNT_END ], (address)),       // toAccount
+                    uint256(bytes32(data[ UNITS_START : UNITS_END ])),                      // units
+                    uint256(bytes32(data[ CTX1_MIN_OUT_START : CTX1_MIN_OUT_END ])),        // minOut
+                    bytes32(data[ CTX1_SWAP_HASH_START : CTX1_SWAP_HASH_END ]),             // swapHash
+                    abi.decode(data[ CTX1_DATA_START : CTX1_DATA_START+32 ], (address)),    // dataTarget
+                    data[ CTX1_DATA_START+32 : CTX1_DATA_START+dataLength-32 ]              // dataArguments
+                );
+            } else {
+                ICatalystV1Pool(toPool).receiveLiquidity(
+                    bytes32(packet.src.channelId),                                          // connectionId
+                    fromPool,                                                               // fromPool
+                    abi.decode(data[ TO_ACCOUNT_START : TO_ACCOUNT_END ], (address)),       // toAccount
+                    uint256(bytes32(data[ UNITS_START : UNITS_END ])),                      // units
+                    uint256(bytes32(data[ CTX1_MIN_OUT_START : CTX1_MIN_OUT_END ])),        // minOut
+                    bytes32(data[ CTX1_SWAP_HASH_START : CTX1_SWAP_HASH_END ])              // swapHash
+                );
+            }
+
+        }
+        else {
+
+            revert InvalidContext(context);
+
+        }
+
     }
 }

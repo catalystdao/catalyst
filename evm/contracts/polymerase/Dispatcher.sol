@@ -1,10 +1,10 @@
 //SPDX-License-Identifier: UNLICENSED
 
-pragma solidity ^0.8.9;
+pragma solidity ^0.8.16;
 
-import '@openzeppelin/contracts/access/Ownable.sol';
+import "@openzeppelin/contracts/access/Ownable.sol";
 
-import './IbcDispatcher.sol';
+import "./IbcDispatcher.sol";
 
 /// @title Dispatcher
 /// @author Polymer Labs

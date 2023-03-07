@@ -1,80 +1,107 @@
 // SPDX-License-Identifier: UNLICENSED
 
-pragma solidity ^0.8.17;
+pragma solidity ^0.8.16;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {ERC20} from 'solmate/src/tokens/ERC20.sol';
+import {SafeTransferLib} from 'solmate/src/utils/SafeTransferLib.sol';
 import "@openzeppelin/contracts/proxy/Clones.sol";
-import "./FixedPointMath.sol";
 import "./CatalystIBCInterface.sol";
+import "./interfaces/ICatalystV1FactoryEvents.sol";
+
+uint256 constant MAX_GOVERNANCE_FEE_SHARE = 75e16;   // 75%
 
 /**
- * @title Catalyst: Swap Pool Factory
+ * @title Catalyst Swap Factory
  * @author Catalyst Labs
+ * @notice Allows permissionless deployment Catalyst Swap pools
+ * and defines governance address for swap pools to read.
+ * !The owner of the factory must be a timelock!
  */
-contract CatalystSwapPoolFactory is Ownable {
-    using SafeERC20 for IERC20;
+contract CatalystSwapPoolFactory is Ownable, ICatalystV1FactoryEvents {
+    using SafeTransferLib for ERC20;
 
-    event PoolDeployed(
-        address indexed deployer, // msg.sender
-        address indexed pool_address, // The forwarder for the pool template
-        address indexed chaininterface, // Which cross chain messaging service is used?
-        uint256 k, // amplification
-        address[] assets // List of the 3 assets
-    );
-
-    // 0: Volatile v1
-    // 1: Amplified v1
-    mapping(uint256 => address) public _poolTemplate;
     mapping(address => mapping(address => bool)) public IsCreatedByFactory;
     uint256 public _defaultGovernanceFee;
-    uint256 constant ONE = 2**64;
 
-    constructor(address volatilePoolTemplate, address amplifiedPoolTemplate, uint256 initialDefaultGovernanceFee) {
-        _poolTemplate[0] = volatilePoolTemplate;
-        _poolTemplate[1] = amplifiedPoolTemplate;
-        _defaultGovernanceFee = initialDefaultGovernanceFee;
+    constructor(uint256 defaultGovernanceFee) {
+        setDefaultGovernanceFee(defaultGovernanceFee);
     }
 
-    function setNewDefaultGovernanceFee(uint256 newDefaultGovernanceFee) external onlyOwner {
-        require(newDefaultGovernanceFee <= 2**63); // GovernanceFee is maximum 50%.
-        _defaultGovernanceFee = newDefaultGovernanceFee;
+    function setDefaultGovernanceFee(uint256 fee) public onlyOwner {
+        require(fee <= MAX_GOVERNANCE_FEE_SHARE); // dev: Maximum GovernanceFeeSare exceeded.
+
+        emit SetDefaultGovernanceFee(fee);
+
+        _defaultGovernanceFee = fee;
     }
 
+    /**
+     * @notice Deploys a Catalyst swap pools, funds the swap pool with tokens, and calls setup.
+     * @dev The deployer needs to set approvals for this contract before calling deploy_swappool
+     * @param poolTemplate The template the transparent proxy should target.
+     * @param assets The list of assets the pool should support.
+     * @param init_balances The initial balances of the swap pool. (Should be approved)
+     * @param weights The weights of the tokens.
+     * @param amp Token parameter 1. (Amplification)
+     * @param poolFee The pool fee.
+     * @param name Name of the Pool token.
+     * @param symbol Symbol for the Pool token.
+     * @param chainInterface The cross chain interface used for cross-chain swaps. (Can be address(0) to disable cross-chain swaps.)
+     * @return address The address of the created Catalyst Swap Pool. (minimal transparent proxy)
+     */
     function deploy_swappool(
-        uint256 poolTemplateIndex,
-        address[] calldata init_assets,
+        address poolTemplate,
+        address[] memory assets,
         uint256[] memory init_balances,
-        uint256[] calldata weights,
+        uint256[] memory weights,
         uint256 amp,
+        uint256 poolFee,
         string memory name,
         string memory symbol,
-        address chaininterface
+        address chainInterface
     ) external returns (address) {
-        address swapPool = Clones.clone(_poolTemplate[poolTemplateIndex]);
+        // Create a minimal transparent proxy:
+        address swapPool = Clones.clone(poolTemplate);
 
-        // The pool expects the balance0s to exist in the pool when setup is called.
-        for (uint256 it = 0; it < init_assets.length; it++) {
-            IERC20(init_assets[it]).safeTransferFrom(
+        // The pool expects the balances to exist in the pool when setup is called.
+        for (uint256 it; it < assets.length; it++) {
+            ERC20(assets[it]).safeTransferFrom(
                 msg.sender,
                 swapPool,
                 init_balances[it]
             );
         }
 
+        // Call setup
         ICatalystV1Pool(swapPool).setup(
-            init_assets,
-            weights,
-            amp,
-            _defaultGovernanceFee,
             name,
             symbol,
-            chaininterface,
+            chainInterface,
+            poolFee,
+            _defaultGovernanceFee,
+            owner(),     // Fee administrator
+            msg.sender      // setup master
+        );
+
+        // Initialize swap curves
+        ICatalystV1Pool(swapPool).initializeSwapCurves(
+            assets,
+            weights,
+            amp,
             msg.sender
         );
 
-        emit PoolDeployed(msg.sender, swapPool, chaininterface, amp, init_assets);
-        IsCreatedByFactory[chaininterface][swapPool] = true;
+        // Emit event for pool discovery.
+        emit PoolDeployed(
+            poolTemplate,
+            chainInterface,
+            msg.sender,
+            swapPool,
+            assets,
+            amp
+        );
+        IsCreatedByFactory[chainInterface][swapPool] = true;
 
         return swapPool;
     }

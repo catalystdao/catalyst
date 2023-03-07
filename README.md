@@ -1,124 +1,123 @@
-# Polymer monorepo
+# Catalyst smart contracts monorepo
 
-Polymer DAO is focused on building trustless cross chain infrastructure for DeFi protocols.
+This monorepo contains all Catalyst implementations
 
-See subfolders for module specific README and code.
-  - /chain : Smart contracts
-  - /archive : Contains depreciated code
-  - /catalyst : Contains the implementation of a cross chain amm
-  - /nfts : Contains the implementation of a cross chain NFT market
+Catalyst is an implementation of the Asynchronous Swaps. A design which enables synchronously and asynchronously priced assets using shared liquidity for a large set of assets, supporting both volatile assets and stable assets. The design allows market markers to compete with exiting (volatile and stable coin) on-chain AMMs and (volatile and stable coin) cross-chain AMMs using the same amount of liquidity as a single competitor.
 
-# Polymer chain
+Each implementation is contained within its own folder.
 
-Contains all on chain Polymer contracts.
-Whenever mentioned [pnpm](https://pnpm.io) can be replaced by npm .
+- /evm : Solidity implementation targeting the Ethereum Virtual Machine.
+- /rust-common : Contains depreciated code
+- /simulator : Simulation of the Catalyst logic.
+- /solana : Rust implementation targeting the Solana Virtual Machine.
 
-## Dev dependencies
+The EVM implementation is used as a reference implementation.
 
-- ganache-cli
+The following section is best viewed on a MarkDown reader which supports inline and block $\LaTeX$ equations, like Github or VS code.
 
-  - `pnpm install -g ganache`
+# On Asset Pricing
 
-- eth-brownie
+Let $P(w)$ be a non-increasing function representing the marginal price for a token as a function of the current pool balance, $w$. The value of $\Delta w$ can then be naively calculated by multiplying the starting price by the purchase amount.
 
-  - via [poetry](https://python-poetry.org)  (`brew install poetry`): `poetry install` in `/chain`
-  - via pip: `pip3 install eth-brownie` (check that your $PATH is properly configured).
+$$U = \Delta w \cdot P(w_1) + o(f(\Delta w))$$
 
-- Python dependencies in *./pyproject.toml*. Automatically installed with `poetry install`
-  - Note: You can set the poetry python version via `poetry env use python3.9` for example.
+As $P(w)$ is a non-increasing function, this naive approach only works for small $\Delta w$, as otherwise selling a large batch has a greater return than selling many small batches:   $w_1 < w_2 \implies P(w_1) ≥ P(w_2)$. The opposite is true when buying. The error of such an implementation increases with as the offered input increases: $\Delta w$. The error can be reduced by subdividing the purchase amount, $\Delta w$.
+$$U = \sum_{i=0}^N \frac{\Delta w}{N} \cdot P\left(w_1+ i\frac{\Delta w}{N}\right)+o\left(f\left(\frac{\Delta w}{N}\right)\right)$$
+When the number of subdivisions, $N$, is increased the error $o\left(f \left(\frac{\Delta w}{N}\right)\right)$ is reduced. The limit of $N \rightarrow \infty$ is the integral over $P(w_1)$. This gives rise to the core equation of Catalyst.
 
-- Blockchain API
+## The Catalyst Equation
 
-  - Default: [alchemy](https://www.alchemy.com), export key to `$ALCHEMY_API_TOKEN`
+Let $P(w)$ be a non-increasing function. The unit gain when providing $\Delta \alpha = \alpha_2 - \alpha_1$ tokens is computed as
 
-  - Alt: [Infura](https://infura.io), edit *./.brownie/network-config.yaml* with Infura RPC.
+$$U = \int_{\alpha_1}^{\alpha_2} P_\alpha(w) \ dw$$
 
-# Introduction to Brownie & EVM Smart Contracts
+The user now owns $U$ units, which need to be released from a connected integral. 
 
-Brownie wraps smart contract development in a neat package. For this repository, any smart contract written in Solidity `^0.8.9` or Vyper `0.2.16` will automatically be compiled and deploy-ready. To deploy, fund an account loaded into Brownie:
+$$U = \int_{\beta_2}^{\beta_1} P_\beta(w) \ dw$$
 
-- `brownie accounts --help`
+$U$ is known. Solving the integral for $\Delta \beta = \beta_2 - \beta_1$ returns the amount of token $\beta$ returned in exchange for $\Delta \alpha$ tokens of token $\alpha$. Since the value of each integral is just a number, it can be wrapped into a token or sent as a payload to a connected integral on another chain, yielding the desired asynchronous property of the AMM. For swaps within the same pool, both equations can be combined into one:
 
-  - `brownie accounts new <NAME OF ACCOUNT>`
+$$\int_{\alpha_1}^{\alpha_2} P_\alpha(w) \ dw = \int_{\beta_2}^{\beta_1} P_\beta(w) \ dw$$
 
-    - Example: `brownie accounts new deployment` or `brownie accounts new 0` and provide a privatekey.
+Where the variables are the limits. When $U$ can be reused between integrals, they are said to communicate and a system of communicating integrals is called a **group**. By using integrals to measure liquidity for each asset within a group, liquidity is measured independently. This gives rise to the important asynchronous property which is required for cross-chain swaps.
 
-  - `brownie generate new <NAME OF ACCOUNT>`
+### Catalyst's Price
 
-- Fund the account generated by brownie. [Kovan faucet](https://github.com/kovan-testnet/faucet), [Rinkeby faucet](https://faucet.rinkeby.io).
+Catalyst defines 2 price curves to serve both demand for volatile tokens and tokens with a stable value.
 
-Open the brownie dev console:
+Volatile: $P(w) = \frac{W_\alpha}{w \cdot \ln(2)}$
 
-`brownie console --network <mainnet/kovan/development>`
+Amplification: $P^\theta(w)= \frac{1}{w^\theta} \cdot (1-\theta)$
 
-and load the account:
+For amplification, the core equation is slightly modified to adjust the price: $U = \int_{W_\alpha \alpha_1 }^{W_\alpha \alpha_2} P^{\theta}_\alpha(w) \ dw$
 
-```
-acct = accounts.load('<NAME OF ACCOUNT>')
-SC = SmartContractName.deploy(*init_vars, {'from': acct})
-SC
-```
+## The AMM Equations
 
-The smart contract has now been deployed. Deployment scripts can be found in `./scripts/deploy/*`
+Using the Catalyst Equation with the price curves, core mathematical equations can be derived.
 
-# Contracts
+**Marginal Price**, If someone were to buy/sell an infinitesimal in the pool. the marginal price is the price they would pay. It can be derived in 3 ways: $\lim_{x_\alpha \to 0} y_\beta/x_\alpha$, $\frac{\mathrm{d}}{\mathrm{d}i_\alpha} solve(Invariant, i_\beta)$, or $\frac{P_\alpha(w)}{P_\beta(w)}$.
 
-Contracts are stored in *./contracts*. Contracts compiled by brownie, `brownie compile` are stored in *./build*. Brownie will automatically download compatible solidity and vyper versions for internal usage.
+**SwapToAndFromUnits**, The full swap equation. Assuming the swap path has $\alpha_t$, $\beta_t$ liquidity and the user provides $x$, the user gets $y_\beta$.
 
-### Solidity
+**SwapToUnits**, The first swap of a Catalyst swap. It is completely independent of the state of the second leg of the transaction. Within a group $U$ can be used to transparently purchase any token via *SwapFromUnits*. 
 
-To compile solidity contracts directly (not through Brownie), one has to install:
+**SwapFromUnits**, The last (and second) leg of a Catalyst swap. It is completely independent of the state of the first leg of the transaction. It requires $U$ which can be acquired by selling any token in the group. 
 
-- Solidity
+**Invariant**, A measure used to measure the pool value. Specific to the *invariant* measure, is that it is constant whenever a swap is completed. If a pool implements a swap fee, the measure increases as fees accumulate in the pool. The invariant is not invariant to deposits or withdrawals..
 
-  - via brew: `brew tap ethereum/ethereum` then `brew install solidity`
-  - via npm: `pnpm install -g solc` (installs solcjs)
-  - [soliditylang.org](https://docs.soliditylang.org/en/latest/installing-solidity.html)
+### Volatile Tokens
 
-- `pnpm install`
+- Marginal price: $\lim_{x \to 0} y_\beta/x_\alpha = \frac{\beta_t}{\alpha_t}  \frac{W_\alpha}{W_\beta}$
 
-- `solc <path-to-contract> --base-path node_modules`
+- SwapToAndFromUnits: $y_\beta = \beta_t \cdot \left(1-\left(\frac{\alpha_t+x}{\alpha_t}\right)^{-\frac{W_\alpha}{W_\beta}}\right)$
 
-### Vyper
+- SwapToUnits: $U= W_\alpha \cdot \log\left(\frac{\alpha_t+x_\alpha}{\alpha_t}\right)$
 
-To compile vyper contracts directly, the correct Vyper version should be installed independently of this project. eth-brownie depends on the newest version of Vyper, which the contracts might not be compatible with.
+- SwapFromUnits: $y_\beta = \beta_t \cdot \left(1-\exp\left(-\frac{U}{W_\beta}\right)\right)$
 
-- Vyper
-  - via pip: `pip install vyper==<version>`
-  - via docker: [vyper.readthedocs.io](https://vyper.readthedocs.io/en/latest/installing-vyper.html#docker)
+- Invariant: $K = \prod_{i \in \{\alpha, \beta, \dots\}} i_t^{W_i}$
 
-## Polymer
+### Amplified Tokens
 
-2 Versions, one written in Vyper 0.2.16 and one written in Solidity 0.8.9
+- Marginal price: $\lim_{x \to 0} y_\beta/x_\alpha = \frac{\left(\alpha_t W_\alpha\right)^\theta}{\left(\beta_t W_\beta\right)^\theta} \frac{W_\beta}{W_\alpha}$
 
-### Polymer.vy
+- SwapToAndFromUnits: $y_\beta=\beta_t \left(1-\left(\frac{(\beta \cdot W_\beta)^{1-\theta}_t - \left(\left(\alpha_t \cdot W_\alpha +x_\alpha \cdot W_\alpha \right)^{1-\theta} - \left(\alpha_t\cdot W_\alpha\right)^{1-\theta}\right) }{\left(\beta_t \cdot W_{\beta}\right)^{1-\theta}}\right)^{\frac{1}{1-\theta}}\right)$
 
-Mintable and Burnable standard ERC20 token.
+- SwapToUnits: $U=\left((\alpha_t  \cdot W_\alpha + x_\alpha  \cdot W_\alpha)^{1-\theta} - \left(\alpha_t  \cdot W_\alpha \right)^{1-\theta} \right)$
 
-If approval is set to MAX_UINT256, it saves gas by not updating the approval amount.
+- SwapFromUnits: $y_\beta = \beta_t \cdot \left(1 -\left(\frac{\left(\beta_t \cdot W_\beta\right)^{1-\theta} - U }{\left(\beta_t \cdot W_\beta\right)^{1-\theta}}\right)^{\frac{1}{1-\theta}}\right)$
 
-### PolymerToken.sol
+- Invariant: $K = \sum_{i \in \{\alpha, \beta, \dots\}} i^{1-\theta} W_i^{1-\theta}$
 
-Exports PolymerToken.
 
-Mintable, Burnable (through OpenZeppelin ERC20Burnable) and supports ERC2612 (through OpenZeppelin draft-ERC20Permit)
+## On deposits and withdrawals.
 
-## Laboratory
+When depositing and withdrawing, the net debt distribution within a pool system, *a group*, must be maintained. Let $\alpha_0, \beta_0, ...$ be a reference to net system assets. Then the outstanding units is $U[\alpha_0] = \int_{\alpha_{0}}^{\alpha_{t}}P_{\alpha} \! \left(w\right)d w$. Keeping the outstanding units constant:
 
-2 Smart contracts, `Reagent.vy` and `Laboratory.vy`. Reagent will hold tokens awaiting distribution.
+$$U[\alpha_0] = \int_{\alpha_{0}}^{\alpha_{t}}P \! \left(w\right)d w = \int_{\alpha_{0} +pt_\alpha}^{\alpha_{t} +tk_\alpha}P \! \left( w\right)d w$$
 
-`Laboratory.vy` provides incentives for users to stake tokens. Every block a fixed amount of Polymer will be withdrawn from `Reagent.vy`. The Polymer will be distributed across all tokens according to their weight. The Polymer not be withdrawn before `_updateExperiment` is called. (for example via `deposit`).
+Where $P(w)$ is the pricing function, $\alpha_t$ is the current asset balance, $tk_\alpha$ is the asset input amount, $\alpha_0$ is net asset reference, and $pt$ is the net asset reference output amount.
 
-Via `recover` the owner can recover ERC20 not activated. Recovered ERC20s are sent to the contract owner.
-Polymer cannot be recovered from the contract. Unrecoverable tokens can be considered burned if no other recover function is available. 
+In a pool with a price function such that $\int_0^\tau P(w) \ dw < \infty$  for any $\tau > 0$, debt maintenance is slightly different. Intuitively, this is because when tokens are swapped, the value leaves one and enters another. However, when the curve is tight enough that there is a limited amount of liquidity on one side, the pool can Is *emptied*. If one-sided is empty, the other side shouldn’t own 100%. Examine the debt maintenance equation:
 
-The contract allows the owner to adjust the minted Polymer per block via `setYield`. 
+$$
+ U[\alpha_0] = \int_{w\alpha_{0}}^{w\alpha_{t}}P^\theta \! \left(w\right)d w = \int_{w\alpha_{0} +wpt_\alpha}^{w\alpha_{t} +wtk_\alpha}P^\theta \! \left( w\right)d w$$
 
-In `/chain` run:
+Without loss of generality, assume $\alpha_0 < \alpha_t$, then $U[\alpha_0] > 0$:
 
-> brownie test tests/polymer -n auto
+$$0< \int_{w\alpha_{0} +pt_\alpha}^{w\alpha_{t} +tk_\alpha}P^\theta \! \left( w\right)d w$$
 
-# Connecting to devnet
+Then examine $pt_\alpha = -\alpha_0 \implies \alpha_0 - pt_\alpha = 0$
+
+$$0< U[\alpha_0'] = \int_{0}^{w\alpha_{t} +wtk_\alpha}P^\theta \! \left( w\right)d w$$
+
+However, since $0<\int_0^\tau P^\theta(w) \ dw < \infty$ for any $\tau > 0$ we can find $\tau > 0$ such that $U[\alpha_0'] = \int_0^\tau P^\theta(w) \ dw$. The result is that $0 < \tau = w\alpha_t+wtk_\alpha, \ tk_\alpha \neq - \alpha_t$ and tokens are left in the pool.
+
+# Development
+
+
+## Devnet
+
 The VPS does not expose **geth**, so to connect one has to execute the commands on the VPS's localhost.
 
 The easiest way to achieve this is via ssh port forwarding. To connect localhost on port 10000 (geth) execute:
@@ -136,83 +135,3 @@ Then add the 2 networks to brownie:
 > brownie networks add Ethereum polymerase-geth  host=http://127.0.0.1:10000 chainid=1337
 
 > brownie networks add 'Binance Smart Chain' polymerase-bsc-geth  host=http://127.0.0.10001 chainid=1234
-
-The following accounts are used by the devnet:
-
-
-## ETH
-Dispatcher contract address: 0x615FC00cB4160fC02c0297d83E8d6928c53e03a1
-
-PolymerLabs = `accounts.from_mnemonic("sample trigger van weather case attack sleep program fantasy awkward govern scrub")`
-
-ProtocolUser = `accounts.from_mnemonic("pond hurdle must coast current mixture seat victory sheriff record install cheese")`
-
-### Setup devnet (OUTDATED)
-
-First run:
-`brownie console --network polymerase-geth`
-
-```py
-import brownie
-dispatch = "0x615FC00cB4160fC02c0297d83E8d6928c53e03a1"
-assert web3.eth.get_code(dispatch) != web3.eth.get_code(ZERO_ADDRESS), "Dispatch is incorrect"
-acct = accounts.from_mnemonic("sample trigger van weather case attack sleep program fantasy awkward govern scrub")
-assert acct.balance() > 0, "Account is not funded"
-from scripts.easyCatalyst import *
-ps = Catalyst(acct, poolname="psETHEREUM", poolsymbol="psETH", ibcinterface=dispatch)
-ps.crosschaininterface.registerPort({'from': acct})
-ch0 = brownie.convert.datatypes.HexString("0x6368616e6e656c2d310000000000000000000000000000000000000000000000", type_str="bytes32")
-ps.crosschaininterface.setChannelForChain(1234, ch0, {'from':
-acct})
-```
-
-The address of the swap pool on BSC is needed.
-
-```py
-swappool = <...>
-swappool_bytes = brownie.convert.to_bytes(swappool.replace("0x", ""))
-ps.swappool.createConnectionWithChain(1234, swappool_bytes, True, {"from": acct})
-```
-
-The swap
-
-```py
-ps.tokens[0].approve(ps.swappool, 2**256-1, {'from': acct})
-target = accounts.from_mnemonic("wrap diagram afraid install miss speed hidden clip zoo lizard tattoo install")
-target_bytes = brownie.convert.to_bytes(target.address.replace("0x", ""))
-ps.swappool.swapToUnits(1234, swappool_bytes, ps.tokens[0], 0, target_bytes
-, 1 * 10**18, {'from': acct})
-```
-
-
-## BSC
-Dispatcher contract address: 0xa2D36936Aa8Ca2d0312f4B4965B6688f030EcB9C
-
-PolymerLabs = `accounts.from_mnemonic("wrap diagram afraid install miss speed hidden clip zoo lizard tattoo install")`
-
-ProtocolUser = `accounts.from_mnemonic("claw assist lava gravity meadow anger salt luxury crumble flash merge suit")`
-
-### Setup devnet
-
-First run:
-`brownie console --network polymerase-bsc-geth`
-
-```py
-import brownie
-dispatch = "0xa2D36936Aa8Ca2d0312f4B4965B6688f030EcB9C"
-assert web3.eth.get_code(dispatch) != web3.eth.get_code(ZERO_ADDRESS), "Dispatch is incorrect"
-acct = accounts.from_mnemonic("wrap diagram afraid install miss speed hidden clip zoo lizard tattoo install")
-assert acct.balance() > 0, "Account is not funded"
-from scripts.easyCatalyst import *
-ps = Catalyst(acct, poolname="psBINANCE", poolsymbol="psBSC", ibcinterface=dispatch)
-ps.crosschaininterface.registerPort({'from': acct})
-ch0 = brownie.convert.datatypes.HexString("0x6368616e6e656c2d300000000000000000000000000000000000000000000000", type_str="bytes32")
-ps.crosschaininterface.setChannelForChain(1337, ch0, {'from':
-acct})
-```
-The address of the swap pool on ETH is needed.
-```py
-swappool = <...>
-swappool_bytes = brownie.convert.to_bytes(swappool.replace("0x", ""))
-ps.swappool.createConnectionWithChain(1337, swappool_bytes, True, {"from": acct})
-```

@@ -1,9 +1,9 @@
 {
   "dependencies": {
-    "@openzeppelin/contracts": "4.3.2",
-    "@openzeppelin/contracts-upgradeable": "^3.4.2",
+    "@openzeppelin/contracts": "^4.8.1",
     "commitlint": "^14.1.0",
-    "solium": "^1.2.5"
+    "solium": "^1.2.5",
+    "solmate": "^6.7.0"
   },
   "devDependencies": {
     "@commitlint/cli": "^11.0.0",
