@@ -47,7 +47,7 @@ pub fn instantiate(
         msg.governance_fee,
         msg.fee_administrator,
         msg.setup_master
-    ).map_err(|err| ContractError::CommonError(err))
+    ).map_err(|err| err.into())
 
 }
 
@@ -318,7 +318,7 @@ pub fn execute_set_fee_administrator(
 
     //TODO verify sender is factory owner
 
-    state.set_fee_administrator(&mut deps, administrator).map_err(|err| ContractError::CommonError(err))
+    state.set_fee_administrator(&mut deps, administrator).map_err(|err| err.into())
 }
 
 
@@ -333,7 +333,7 @@ pub fn execute_set_pool_fee(
         return Err(ContractError::Unauthorized {})
     }
 
-    state.set_pool_fee(&mut deps, fee).map_err(|err| ContractError::CommonError(err))
+    state.set_pool_fee(&mut deps, fee).map_err(|err| err.into())
 }
 
 
@@ -348,7 +348,7 @@ pub fn execute_set_governance_fee(
         return Err(ContractError::Unauthorized {})
     }
 
-    state.set_governance_fee(&mut deps, fee).map_err(|err| ContractError::CommonError(err))
+    state.set_governance_fee(&mut deps, fee).map_err(|err| err.into())
 }
 
 

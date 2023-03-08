@@ -7,9 +7,6 @@ pub enum ContractError {
     #[error("{0}")]
     Std(#[from] StdError),
 
-    #[error("{0}")]
-    CommonError(#[from] swap_pool_common::ContractError),
-
     #[error("Unauthorized")]
     Unauthorized {},
 
@@ -36,6 +33,12 @@ pub enum ContractError {
 
     #[error("Invalid assets balances: incorrect balances count or 0 balance provided.")]
     InvalidAssetsBalances {},
+
+    #[error("Invalid pool fee")]
+    InvalidPoolFee { requested_fee: u64, max_fee: u64 },
+
+    #[error("Invalid governance fee")]
+    InvalidGovernanceFee { requested_fee: u64, max_fee: u64 },
 
 
     // Swaps
@@ -77,6 +80,20 @@ pub enum ContractError {
 
     // Add any other custom errors you like here.
     // Look at https://docs.rs/thiserror/1.0.21/thiserror/ for details.
+}
+
+impl From<swap_pool_common::ContractError> for ContractError {
+    fn from(err: swap_pool_common::ContractError) -> Self {
+        match err {
+            swap_pool_common::ContractError::Std(error) => ContractError::Std(error),
+            swap_pool_common::ContractError::Unauthorized {} => ContractError::Unauthorized {},
+            swap_pool_common::ContractError::InvalidAssets {} => ContractError::InvalidAssets {},
+            swap_pool_common::ContractError::InvalidPoolFee { requested_fee, max_fee }
+                => ContractError::InvalidPoolFee {requested_fee, max_fee},
+            swap_pool_common::ContractError::InvalidGovernanceFee { requested_fee, max_fee }
+                => ContractError::InvalidGovernanceFee {requested_fee, max_fee}
+        }
+    }
 }
 
 impl From<cw20_base::ContractError> for ContractError {
