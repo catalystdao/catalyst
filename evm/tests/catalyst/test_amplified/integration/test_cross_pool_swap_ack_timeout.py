@@ -2,13 +2,19 @@ import pytest
 from brownie import reverts, convert, web3, chain
 from brownie.test import given, strategy
 from hypothesis.strategies import floats
+from hypothesis import example
+
+from utils.pool_utils import compute_asset_swap_hash
 
 
-pytestmark = pytest.mark.usefixtures("pool_connect_itself")
+pytestmark = [
+    pytest.mark.usefixtures("pool_connect_itself"),
+    pytest.mark.no_pool_param
+]
 
 #TODO do we want to parametrize the swap_amount? (as it is right now)
-#TODO do we want to parametrize this over the different 'pool's? (as it is right now)
 @pytest.mark.no_call_coverage
+@example(swap_amount=0.12)
 @given(swap_amount=floats(min_value=0, max_value=0.5))    # From 0 to 2x the tokens hold by the pool
 def test_ibc_ack(channel_id, pool, pool_tokens, ibc_emulator, berg, deployer, swap_amount):
 
@@ -20,7 +26,7 @@ def test_ibc_ack(channel_id, pool, pool_tokens, ibc_emulator, berg, deployer, sw
     source_token.transfer(berg, swap_amount, {'from': deployer})
     source_token.approve(pool, swap_amount, {'from': berg})
 
-    tx = pool.sendSwap(
+    tx = pool.sendAsset(
         channel_id,
         convert.to_bytes(pool.address.replace("0x", "")),
         convert.to_bytes(berg.address.replace("0x", "")),
@@ -42,8 +48,8 @@ def test_ibc_ack(channel_id, pool, pool_tokens, ibc_emulator, berg, deployer, sw
 
 
 #TODO do we want to parametrize the swap_amount? (as it is right now)
-#TODO do we want to parametrize this over the different 'pool's? (as it is right now)
 @pytest.mark.no_call_coverage
+@example(swap_amount=0.12)
 @given(swap_amount=floats(min_value=0, max_value=0.5))    # From 0 to 2x the tokens hold by the pool
 def test_ibc_timeout(channel_id, pool, pool_tokens, ibc_emulator, berg, deployer, swap_amount):
 
@@ -55,7 +61,7 @@ def test_ibc_timeout(channel_id, pool, pool_tokens, ibc_emulator, berg, deployer
     source_token.transfer(berg, swap_amount, {'from': deployer})
     source_token.approve(pool, swap_amount, {'from': berg})
 
-    tx = pool.sendSwap(
+    tx = pool.sendAsset(
         channel_id,
         convert.to_bytes(pool.address.replace("0x", "")),
         convert.to_bytes(berg.address.replace("0x", "")),
@@ -86,7 +92,7 @@ def test_only_one_response(channel_id, pool, pool_tokens, ibc_emulator, berg, de
     source_token.transfer(berg, swap_amount, {'from': deployer})
     source_token.approve(pool, swap_amount, {'from': berg})
 
-    tx = pool.sendSwap(
+    tx = pool.sendAsset(
         channel_id,
         convert.to_bytes(pool.address.replace("0x", "")),
         convert.to_bytes(berg.address.replace("0x", "")),
@@ -141,7 +147,8 @@ def test_only_one_response(channel_id, pool, pool_tokens, ibc_emulator, berg, de
         )
 
 
-@given(swap_amount=strategy("uint256", max_value=10*10**18, min_value=10**16))
+@example(swap_amount=2)
+@given(swap_amount=floats(min_value=0.00001, max_value=5))    # From 0 to 5x the tokens hold by the pool
 def test_ibc_timeout_and_ack(channel_id, pool, pool_tokens, ibc_emulator, berg, deployer, swap_amount):
 
     if len(pool_tokens) < 2:
@@ -150,6 +157,8 @@ def test_ibc_timeout_and_ack(channel_id, pool, pool_tokens, ibc_emulator, berg, 
     source_token = pool_tokens[0]
     target_token = pool_tokens[1]
 
+    swap_amount = int(swap_amount * source_token.balanceOf(pool))
+
     assert source_token.balanceOf(berg) == 0
     
     source_token.transfer(berg, swap_amount, {'from': deployer})
@@ -157,14 +166,14 @@ def test_ibc_timeout_and_ack(channel_id, pool, pool_tokens, ibc_emulator, berg, 
 
     U = 0
     for token in pool_tokens:
-        U += (pool._weight(token) * token.balanceOf(pool))**((10**18 - pool._amp())/10**18) * 1000000
+        U += (pool._weight(token) * token.balanceOf(pool))**((10**18 - (10**18 - pool._oneMinusAmp()))/10**18) * 1000000
 
     both1_12 = pool.calcLocalSwap(source_token, target_token, 10**18)
     both1_21 = pool.calcLocalSwap(target_token, source_token, 10**18)
-    to1 = pool.calcSendSwap(source_token, 10**18)
-    from1 = pool.calcReceiveSwap(source_token, U)
+    to1 = pool.calcSendAsset(source_token, 10**18)
+    from1 = pool.calcReceiveAsset(source_token, U)
 
-    tx1 = pool.sendSwap(
+    tx1 = pool.sendAsset(
         channel_id,
         convert.to_bytes(pool.address.replace("0x", "")),
         convert.to_bytes(berg.address.replace("0x", "")),
@@ -178,8 +187,8 @@ def test_ibc_timeout_and_ack(channel_id, pool, pool_tokens, ibc_emulator, berg, 
 
     both2_12 = pool.calcLocalSwap(source_token, target_token, 10**18)
     both2_21 = pool.calcLocalSwap(target_token, source_token, 10**18)
-    to2 = pool.calcSendSwap(source_token, 10**18)
-    from2 = pool.calcReceiveSwap(source_token, U)
+    to2 = pool.calcSendAsset(source_token, 10**18)
+    from2 = pool.calcReceiveAsset(source_token, U)
 
     assert both1_12 > both2_12
     assert both1_21 == both2_21
@@ -194,8 +203,8 @@ def test_ibc_timeout_and_ack(channel_id, pool, pool_tokens, ibc_emulator, berg, 
 
     both3_12 = pool.calcLocalSwap(source_token, target_token, 10**18)
     both3_21 = pool.calcLocalSwap(target_token, source_token, 10**18)
-    to3 = pool.calcSendSwap(source_token, 10**18)
-    from3 = pool.calcReceiveSwap(source_token, U)
+    to3 = pool.calcSendAsset(source_token, 10**18)
+    from3 = pool.calcReceiveAsset(source_token, U)
 
     assert both1_12 == both3_12
     assert both1_21 == both3_21
@@ -212,8 +221,8 @@ def test_ibc_timeout_and_ack(channel_id, pool, pool_tokens, ibc_emulator, berg, 
 
     both3_12 = pool.calcLocalSwap(source_token, target_token, 10**18)
     both3_21 = pool.calcLocalSwap(target_token, source_token, 10**18)
-    to3 = pool.calcSendSwap(source_token, 10**18)
-    from3 = pool.calcReceiveSwap(source_token, U)
+    to3 = pool.calcSendAsset(source_token, 10**18)
+    from3 = pool.calcReceiveAsset(source_token, U)
 
     assert both1_12 > both3_12
     assert both1_21 < both3_21
@@ -223,7 +232,7 @@ def test_ibc_timeout_and_ack(channel_id, pool, pool_tokens, ibc_emulator, berg, 
 
 def test_ibc_ack_event(channel_id, pool, pool_tokens, ibc_emulator, berg, deployer):
     """
-        Test the EscrowAck event gets fired.
+        Test the SendAssetAck event gets fired.
     """
 
     swap_amount = 10**8
@@ -233,7 +242,7 @@ def test_ibc_ack_event(channel_id, pool, pool_tokens, ibc_emulator, berg, deploy
     source_token.transfer(berg, swap_amount, {'from': deployer})
     source_token.approve(pool, swap_amount, {'from': berg})
 
-    tx = pool.sendSwap(
+    tx = pool.sendAsset(
         channel_id,
         convert.to_bytes(pool.address.replace("0x", "")),
         convert.to_bytes(berg.address.replace("0x", "")),
@@ -251,17 +260,22 @@ def test_ibc_ack_event(channel_id, pool, pool_tokens, ibc_emulator, berg, deploy
         {"from": deployer},
     )
 
-    escrow_ack_event = txe.events['EscrowAck']
+    ack_event = txe.events['SendAssetAck']
 
-    expected_message_hash = web3.keccak(tx.events["IncomingPacket"]["packet"][3]).hex()   # Keccak of the payload contained on the ibc packet
 
-    assert escrow_ack_event["messageHash"]   == expected_message_hash
-    assert escrow_ack_event["liquiditySwap"] == False
+    expected_message_hash = compute_asset_swap_hash(
+        berg.address,
+        tx.return_value,
+        swap_amount,
+        source_token.address,
+        tx.block_number
+    )
+    assert ack_event["swapHash"] == expected_message_hash
 
 
 def test_ibc_timeout_event(channel_id, pool, pool_tokens, ibc_emulator, berg, deployer):
     """
-        Test the EscrowTimeout event gets fired.
+        Test the SendAssetTimeout event gets fired.
     """
 
     swap_amount = 10**8
@@ -271,7 +285,7 @@ def test_ibc_timeout_event(channel_id, pool, pool_tokens, ibc_emulator, berg, de
     source_token.transfer(berg, swap_amount, {'from': deployer})
     source_token.approve(pool, swap_amount, {'from': berg})
 
-    tx = pool.sendSwap(
+    tx = pool.sendAsset(
         channel_id,
         convert.to_bytes(pool.address.replace("0x", "")),
         convert.to_bytes(berg.address.replace("0x", "")),
@@ -289,9 +303,13 @@ def test_ibc_timeout_event(channel_id, pool, pool_tokens, ibc_emulator, berg, de
         {"from": deployer},
     )
 
-    escrow_timeout_event = txe.events['EscrowTimeout']
+    timeout_event = txe.events['SendAssetTimeout']
 
-    expected_message_hash = web3.keccak(tx.events["IncomingPacket"]["packet"][3]).hex()   # Keccak of the payload contained on the ibc packet
-
-    assert escrow_timeout_event["messageHash"]   == expected_message_hash
-    assert escrow_timeout_event["liquiditySwap"] == False
+    expected_message_hash = compute_asset_swap_hash(
+        berg.address,
+        tx.return_value,
+        swap_amount,
+        source_token.address,
+        tx.block_number
+    )
+    assert timeout_event["swapHash"] == expected_message_hash

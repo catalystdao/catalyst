@@ -1,12 +1,14 @@
 import pytest
 from brownie import reverts, convert
 from brownie.test import given, strategy
+from hypothesis import example
 from hypothesis.strategies import floats
 import re
 
 pytestmark = pytest.mark.usefixtures("pool_connect_itself")
 
 @pytest.mark.no_call_coverage
+@example(swap_percentage=0.8)
 @given(swap_percentage=floats(min_value=0, max_value=2))    # From 0 to 2x the tokens hold by the pool
 def test_self_swap(
     pool,
@@ -25,7 +27,7 @@ def test_self_swap(
     token.transfer(berg, swap_amount, {'from': deployer})
     token.approve(pool, swap_amount, {'from': berg})
     
-    tx = pool.sendSwap(
+    tx = pool.sendAsset(
         channel_id,
         convert.to_bytes(pool.address.replace("0x", "")),
         convert.to_bytes(berg.address.replace("0x", "")),
@@ -38,14 +40,14 @@ def test_self_swap(
     )
     assert token.balanceOf(berg) == 0
     
-    if pool.getUnitCapacity() < tx.events["SendSwap"]["output"]:
+    if pool.getUnitCapacity() < tx.events["SendAsset"]["units"]:
         with reverts(revert_pattern=re.compile("typed error: 0x249c4e65.*")):
             txe = ibc_emulator.execute(tx.events["IncomingMetadata"]["metadata"][0], tx.events["IncomingPacket"]["packet"], {"from": berg})
         return
     else:
         txe = ibc_emulator.execute(tx.events["IncomingMetadata"]["metadata"][0], tx.events["IncomingPacket"]["packet"], {"from": berg})
     
-    purchased_tokens = txe.events["ReceiveSwap"]["output"]
+    purchased_tokens = txe.events["ReceiveAsset"]["toAmount"]
     
     assert token.balanceOf(berg) == purchased_tokens
     

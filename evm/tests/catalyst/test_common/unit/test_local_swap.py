@@ -34,9 +34,9 @@ def test_local_swap(
     source_token.transfer(berg, swap_amount, {'from': deployer})
     source_token.approve(pool, swap_amount, {'from': berg})
     
-    y = compute_expected_local_swap(swap_amount, source_token, target_token)["output"]
+    y = compute_expected_local_swap(swap_amount, source_token, target_token)["to_amount"]
     
-    tx = pool.localswap(
+    tx = pool.localSwap(
         source_token, target_token, swap_amount, 0, {'from': berg}
     )
     
@@ -73,10 +73,10 @@ def test_local_swap_minout_always_fails(
     source_token.transfer(berg, swap_amount, {'from': deployer})
     source_token.approve(pool, swap_amount, {'from': berg})
     
-    y = compute_expected_local_swap(swap_amount, source_token, target_token)["output"]
+    y = compute_expected_local_swap(swap_amount, source_token, target_token)["to_amount"]
     
     with reverts(revert_pattern=re.compile("typed error: 0x24557f05.*")):
-        pool.localswap(
+        pool.localSwap(
             source_token, target_token, swap_amount, y*1.1, {'from': berg}
         )
 
@@ -111,11 +111,11 @@ def test_local_swap_minout(
     
     if simulated_swap_return < min_out:
         with reverts(revert_pattern=re.compile("typed error: 0x24557f05.*")):
-            pool.localswap(
+            pool.localSwap(
                 source_token, target_token, swap_amount, min_out, {'from': berg}
             )
     else:
-        tx = pool.localswap(
+        tx = pool.localSwap(
             source_token, target_token, swap_amount, min_out, {'from': berg}
         )
         assert min_out <= tx.return_value
@@ -137,17 +137,17 @@ def test_local_swap_event(pool, pool_tokens, berg, deployer):
     source_token.transfer(berg, swap_amount, {'from': deployer})      # Fund berg's account with tokens to swap
     source_token.approve(pool, swap_amount, {'from': berg})
     
-    tx = pool.localswap(source_token, target_token, swap_amount, 0, {'from': berg})
+    tx = pool.localSwap(source_token, target_token, swap_amount, 0, {'from': berg})
 
     observed_return = tx.return_value
 
     swap_event = tx.events['LocalSwap']
 
-    assert swap_event['who']       == berg
-    assert swap_event['fromAsset'] == source_token
-    assert swap_event['toAsset']   == target_token
-    assert swap_event['input']     == swap_amount
-    assert swap_event['output']    == observed_return
+    assert swap_event['toAccount']  == berg
+    assert swap_event['fromAsset']  == source_token
+    assert swap_event['toAsset']    == target_token
+    assert swap_event['fromAmount'] == swap_amount
+    assert swap_event['toAmount']   == observed_return
 
 
 
@@ -181,13 +181,13 @@ def test_local_swap_fees(
     expected_swap_result = compute_expected_local_swap(swap_amount, source_token, target_token)
     
 
-    tx = pool.localswap(
+    tx = pool.localSwap(
         source_token, target_token, swap_amount, 0, {'from': berg}
     )
 
 
-    assert tx.return_value <= int(expected_swap_result["output"] * 1.000001), "Swap returns more than theoretical"
-    assert tx.return_value >= int(expected_swap_result["output"] * 9/10), "Swap returns less than 9/10 theoretical"
+    assert tx.return_value <= int(expected_swap_result["to_amount"] * 1.000001), "Swap returns more than theoretical"
+    assert tx.return_value >= int(expected_swap_result["to_amount"] * 9/10), "Swap returns less than 9/10 theoretical"
     
     # Verify user token balances
     assert source_token.balanceOf(berg) == 0

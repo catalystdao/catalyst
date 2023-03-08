@@ -27,6 +27,8 @@ _run_integration_tests = False
 _parametrized_pools      = []
 _parametrized_pool_pairs = []
 
+_test_filters = None
+
 
 # Enable test isolation
 @pytest.fixture(autouse=True)
@@ -78,14 +80,14 @@ def pytest_addoption(parser):
     parser.addoption("--amplified", action="store_true", help="Run only tests of the amplified pool.")
     parser.addoption("--amplification", default=None, help="Override the config amplification constant.")
 
-    parser.addoption("--pool", default="all", type=pool_type_checker, help="Specify how to parametrize the pool fixture.")
-    parser.addoption("--pool-1", default="0", type=pool_1_type_checker, help="Specify how to parametrize the pool-1 fixture.")
-    parser.addoption("--pool-2", default="all", type=pool_2_type_checker, help="Specify how to parametrize the pool-2 fixture.")
+    parser.addoption("--pool", default=None, type=pool_type_checker, help="Specify how to parametrize the pool fixture. Defaults to 'all' if not running with --fast, otherwise it defaults to 0.")
+    parser.addoption("--pool-1", default=None, type=pool_1_type_checker, help="Specify how to parametrize the pool-1 fixture. Defaults to 0.")
+    parser.addoption("--pool-2", default=None, type=pool_2_type_checker, help="Specify how to parametrize the pool-2 fixture. Defaults to 'all' if not running with --fast, otherwise it defaults to 'next'.")
 
     parser.addoption("--unit", action="store_true", help="Run only unit tests.")
     parser.addoption("--integration", action="store_true", help="Run only integration tests.")
 
-    parser.addoption("--filter", default=None, help="Run only tests which match the provided filter ([filename][::[test-name]])")
+    parser.addoption("--filter", default=None, action="append", help="Run only tests which match the provided filter ([filename][::[test-name]]). More than one filter may be specified.")
 
     parser.addoption("--fast", action="store_true", help="Do not test the specified strategies of the `@given` parametrized tests.")
 
@@ -96,6 +98,7 @@ def pytest_configure(config):
     global _run_integration_tests
     global _parametrized_pools
     global _parametrized_pool_pairs
+    global _test_filters
 
     # Note that if "--volatile" nor "--amplified" are specified, all tests will run
     run_all_tests = not config.getoption("--volatile") and not config.getoption("--amplified")
@@ -155,17 +158,27 @@ def pytest_configure(config):
     pool_count = len((_test_config["volatile"] or _test_config["amplified"])["pools"])  # 'or' as 'volatile' config may be None (but in that case 'amplified' is not)
 
     # Compute the pool parametrization (indexes only)
+    fast_option = config.getoption("--fast")
+    pool_option = config.getoption("--pool")
     _parametrized_pools = compute_parametrized_pools(
-        config.getoption("--pool"),
+        pool_option if pool_option is not None else ("all" if not fast_option else 0),      # If --pool is not specified: use "all" if not running in --fast mode, otherwise use 0
         pool_count
     )
     
     # Compute the pool-1/pool-2 combinations (indexes only)
+    pool_1_option = config.getoption("--pool-1")
+    pool_2_option = config.getoption("--pool-2")
     _parametrized_pool_pairs = compute_parametrized_pool_pairs(
-        config.getoption("--pool-1"),
-        config.getoption("--pool-2"),
+        pool_1_option if pool_1_option is not None else 0,                                          # If --pool-1 is not specified: use 0
+        pool_2_option if pool_2_option is not None else ("all" if not fast_option else "next"),     # If --pool-2 is not specified: use "all" if not running in --fast mode, otherwise use "next"
         pool_count
     )
+
+    # Process filter config
+    filter_config = config.getoption("--filter")
+    if filter_config is not None:
+        _test_filters = [filter_name.split("::", maxsplit=1) for filter_name in filter_config]              # Convert filters into [file_name, test_name]. Note test_name might not be present (i.e. only [file_name])
+        _test_filters = [filter_split + [None]*(2-len(filter_split)) for filter_split in _test_filters]     # If a filter does not specify a test_name, set the value to None (i.e. always have [file_name, test_name])
 
 
     # Add custom pytest markers
@@ -233,13 +246,11 @@ def pytest_ignore_collect(path, config):
     if rel_test_path[1] == "integration" and not _run_integration_tests:
         return True
 
-    # Filter tests by test name
-    name_filter = config.getoption("--filter")
-    if name_filter is not None and test_path.is_file():
+    # Filter tests by file name
+    if test_path.is_file() and _test_filters is not None:
         file_name = rel_test_path[-1]
-        match_name = name_filter.split("::", maxsplit=1)[0]
-        if not match_name in file_name:
-            return True
+        if not any([test_file_filter in file_name for test_file_filter, _ in _test_filters]):   # Check that the test file name is not matched by any of the filters
+            return True    
 
 
 def pytest_generate_tests(metafunc):
@@ -301,24 +312,26 @@ def pytest_generate_tests(metafunc):
 
 
 def pytest_collection_modifyitems(session, config, items):
-    
-    # Get the desired test name filter (if any)
-    match_test_name = None
-    name_filter = config.getoption("--filter")
-    if name_filter is not None:
-        name_filter_split = name_filter.split("::", maxsplit=1)
-        if len(name_filter_split) == 2:
-            match_test_name = name_filter_split[1]
 
     filtered_items = []
     for item in items:
 
+        test_name = item.originalname
+        test_file_name = Path(item.location[0]).parts[-1]
+
         # Filter tests by test name
-        if match_test_name is not None and match_test_name not in item.originalname:
+        # For a test to be DESELECTED, at least a filter has to be specified (_test_filters is not None) AND the test name + file name combo must NOT match any of the filters
+        if _test_filters is not None and not any([
+            test_file_filter in test_file_name and (test_name_filter is None or test_name_filter in test_name)
+            for test_file_filter, test_name_filter in _test_filters
+        ]):
             config.hook.pytest_deselected(items=[item])
             continue
 
         filtered_items.append(item)
+    
+    # Make hypothesis parametrized tests run first
+    filtered_items.sort(key=lambda item: 'is_hypothesis_test' not in item.obj.__dir__())    # If condition is True => not a hypothesis test. List is sorted with False (0) before True (1)
     
     # Modify items inplace
     items[:] = filtered_items

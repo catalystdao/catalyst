@@ -71,9 +71,9 @@ Using the Catalyst Equation with the price curves, core mathematical equations c
 
 - SwapToAndFromUnits: $y_\beta = \beta_t \cdot \left(1-\left(\frac{\alpha_t+x}{\alpha_t}\right)^{-\frac{W_\alpha}{W_\beta}}\right)$
 
-- SwapToUnits: $U= W_\alpha \cdot \log_2\left(\frac{\alpha_t+x_\alpha}{\alpha_t}\right)$
+- SwapToUnits: $U= W_\alpha \cdot \log\left(\frac{\alpha_t+x_\alpha}{\alpha_t}\right)$
 
-- SwapFromUnits: $y_\beta = \beta_t \cdot \left(1-2^{-\frac{U}{W_\beta}}\right)$
+- SwapFromUnits: $y_\beta = \beta_t \cdot \left(1-\exp\left(-\frac{U}{W_\beta}\right)\right)$
 
 - Invariant: $K = \prod_{i \in \{\alpha, \beta, \dots\}} i_t^{W_i}$
 
@@ -88,21 +88,6 @@ Using the Catalyst Equation with the price curves, core mathematical equations c
 - SwapFromUnits: $y_\beta = \beta_t \cdot \left(1 -\left(\frac{\left(\beta_t \cdot W_\beta\right)^{1-\theta} - U }{\left(\beta_t \cdot W_\beta\right)^{1-\theta}}\right)^{\frac{1}{1-\theta}}\right)$
 
 - Invariant: $K = \sum_{i \in \{\alpha, \beta, \dots\}} i^{1-\theta} W_i^{1-\theta}$
-
-### On Mathematics
-
-Because the swap equations contains $log_2$ and fractional powers, there will be numerical errors. At the same time, the numerical methods used to compute $log_2$ are expensive. As a result, it can make sense to approximate the swap curve rather than using the exact mathematical formulas.
-
-The idea is to offer all assets at a constant price, which is the price at the end of the action. When assets are sold to the pool, the price is constant at $P_\alpha(\alpha_t + x)$. Since $P$ is non-increasing: $P_\alpha(\alpha_t) > P_\alpha(\alpha_t + x)$ and the user gets the lowest price for their assets. Likewise, when assets are purchased: $P_\beta(\beta_t) < P_\beta(\beta_t - y)$. This gives rise to the equations:
-
-SwapToUnits: $U=\frac{W_\alpha}{(\alpha_t+x_\alpha)\cdot\ln(2)}\cdot x_\alpha$
-
-SwapFromUnits: $y_\beta=\frac{\beta_t}{\frac{W_\beta}{U\cdot\ln(2)}+1}$
-
-Notice these equations are only valid for volatile tokens: $P(w) = \frac{W_\alpha}{w \cdot \ln(2)}$. This is because deriving SwapFromUnits requires solving $U = P(\beta_t - y_\beta) \cdot y_\beta$ for $y_\beta$. For the amplified price curve, this is difficult and neither cheaper nor more accurate than the alternative. 
-
-An alternative approximation is using a linear line to approximate the price. For selling, the tangent is used and for buying a line connecting starting and end price is used. However, these methods are more gas intensive with only minor improvement to the approximation.
-
 
 
 ## On deposits and withdrawals.

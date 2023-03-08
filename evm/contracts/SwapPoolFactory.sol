@@ -3,12 +3,13 @@
 pragma solidity ^0.8.16;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {ERC20} from 'solmate/src/tokens/ERC20.sol';
+import {SafeTransferLib} from 'solmate/src/utils/SafeTransferLib.sol';
 import "@openzeppelin/contracts/proxy/Clones.sol";
 import "./CatalystIBCInterface.sol";
 import "./interfaces/ICatalystV1FactoryEvents.sol";
 
-uint256 constant MAX_GOVERNANCE_FEE_SHARE = 75 * 10**16;   // 75%
+uint256 constant MAX_GOVERNANCE_FEE_SHARE = 75e16;   // 75%
 
 /**
  * @title Catalyst Swap Factory
@@ -18,14 +19,12 @@ uint256 constant MAX_GOVERNANCE_FEE_SHARE = 75 * 10**16;   // 75%
  * !The owner of the factory must be a timelock!
  */
 contract CatalystSwapPoolFactory is Ownable, ICatalystV1FactoryEvents {
-    using SafeERC20 for IERC20;
+    using SafeTransferLib for ERC20;
 
     mapping(address => mapping(address => bool)) public IsCreatedByFactory;
     uint256 public _defaultGovernanceFee;
 
-    constructor(
-        uint256 defaultGovernanceFee
-    ) {
+    constructor(uint256 defaultGovernanceFee) {
         setDefaultGovernanceFee(defaultGovernanceFee);
     }
 
@@ -38,18 +37,18 @@ contract CatalystSwapPoolFactory is Ownable, ICatalystV1FactoryEvents {
     }
 
     /**
-     * @notice Deploys a Catalyst swap pools, funds the swap pool with tokens and calls setup.
+     * @notice Deploys a Catalyst swap pools, funds the swap pool with tokens, and calls setup.
      * @dev The deployer needs to set approvals for this contract before calling deploy_swappool
      * @param poolTemplate The template the transparent proxy should target.
-     * @param assets The list of assets the pool should support
+     * @param assets The list of assets the pool should support.
      * @param init_balances The initial balances of the swap pool. (Should be approved)
      * @param weights The weights of the tokens.
      * @param amp Token parameter 1. (Amplification)
      * @param poolFee The pool fee.
      * @param name Name of the Pool token.
      * @param symbol Symbol for the Pool token.
-     * @param chainInterface The cross chain interface used for cross-chain swaps. (Can be address(0))
-     * @return address The address of the created Catalyst Swap Pool (minimal transparent proxy)
+     * @param chainInterface The cross chain interface used for cross-chain swaps. (Can be address(0) to disable cross-chain swaps.)
+     * @return address The address of the created Catalyst Swap Pool. (minimal transparent proxy)
      */
     function deploy_swappool(
         address poolTemplate,
@@ -65,10 +64,9 @@ contract CatalystSwapPoolFactory is Ownable, ICatalystV1FactoryEvents {
         // Create a minimal transparent proxy:
         address swapPool = Clones.clone(poolTemplate);
 
-        // TODO move this into the initializeSwapCurves function of the SwapPool?
         // The pool expects the balances to exist in the pool when setup is called.
-        for (uint256 it = 0; it < assets.length; it++) {
-            IERC20(assets[it]).safeTransferFrom(
+        for (uint256 it; it < assets.length; it++) {
+            ERC20(assets[it]).safeTransferFrom(
                 msg.sender,
                 swapPool,
                 init_balances[it]
@@ -82,7 +80,7 @@ contract CatalystSwapPoolFactory is Ownable, ICatalystV1FactoryEvents {
             chainInterface,
             poolFee,
             _defaultGovernanceFee,
-            msg.sender,     // Fee administrator    //TODO should we set governance instead?
+            owner(),     // Fee administrator
             msg.sender      // setup master
         );
 
@@ -96,11 +94,11 @@ contract CatalystSwapPoolFactory is Ownable, ICatalystV1FactoryEvents {
 
         // Emit event for pool discovery.
         emit PoolDeployed(
+            poolTemplate,
+            chainInterface,
             msg.sender,
             swapPool,
-            chainInterface,
             assets,
-            poolTemplate,
             amp
         );
         IsCreatedByFactory[chainInterface][swapPool] = true;

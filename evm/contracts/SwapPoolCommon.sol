@@ -2,8 +2,8 @@
 
 pragma solidity ^0.8.16;
 
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {ERC20} from 'solmate/src/tokens/ERC20.sol';
+import {SafeTransferLib} from 'solmate/src/utils/SafeTransferLib.sol';
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/utils/Multicall.sol";
 import "./SwapPoolFactory.sol";
@@ -16,15 +16,13 @@ import "./interfaces/ICatalystV1PoolErrors.sol";
 /**
  * @title Catalyst: Common Swap Pool Logic
  * @author Catalyst Labs
- * @notice This abstract contract defines general logic of a
- * Catalyst swap pool like:
+ * @notice This abstract contract defines general logic of a Catalyst swap pool like:
  * - Pool Token
  * - Connection management
  * - Security limit
  * - Escrow
  *
- * By inheriting this contract, a Swap Pool automatically implements
- * common swap pool logic.
+ * By inheriting this contract, a Swap Pool automatically implements common swap pool logic.
  */
 abstract contract CatalystSwapPoolCommon is
     Initializable,
@@ -32,43 +30,48 @@ abstract contract CatalystSwapPoolCommon is
     ERC20,
     ICatalystV1Pool
 {
-    using SafeERC20 for IERC20;
+    using SafeTransferLib for ERC20;
 
     //--- Config ---//
     // The following section contains the configurable variables.
 
     /// @notice Determines how fast the security limit decreases.
     /// @dev Needs to be long enough for pool token providers to be notified of a breach but short enough for volatility to not soft-freeze the pool.
-    uint256 constant DECAY_RATE = 60 * 60 * 24;
+    uint256 constant DECAY_RATE = 1 days;
 
     /// @notice Number of decimals used by the pool's pool tokens
     uint8 constant DECIMALS = 18;
 
-    /// @notice The pool tokens initially minted to the user who setup the pools.
+    /// @notice The pool tokens initially minted to the user who set up the pool.
     /// @dev The initial deposit along with this value determines the base value of a pool token.
-    uint256 constant INITIAL_MINT_AMOUNT = 10**DECIMALS;
+    uint256 constant INITIAL_MINT_AMOUNT = 1e18;  // 10**decimals
 
     /// @notice Maximum number of assets supported
-    /// @dev Impacts the cost of some for loops. Can be changed without breaking compatiblity.
+    /// @dev Impacts the cost of some for loops. Can be changed without breaking compatibility.
     uint8 constant MAX_ASSETS = 3;
 
     //-- Variables --//
 
+    // immutable variables can be read by proxies, thus it is safe to set this on the constructor.
     address public immutable FACTORY;
     address public _chainInterface;
 
+    // @notice The pools with which cross chain swaps are allowed, stored as _poolConnection[connectionId][toPool]
+    mapping(bytes32 => mapping(bytes32 => bool)) public _poolConnection;
+
     /// @notice To indicate which token is desired on the target pool,
-    /// the desired tokens is provided as an integer which maps to the
+    /// the desired tokens are provided as an integer which maps to the
     /// asset address. This variable is the map.
     mapping(uint256 => address) public _tokenIndexing;
 
-    /// @notice The token weights. Used for maintaining a non symmetric pool balance.
+    /// @notice The token weights. Used for maintaining a non-symmetric pool balance.
     mapping(address => uint256) public _weight;
 
-    //-- Weight change variables --//
+    //-- Parameter change variables --//
     uint256 public _adjustmentTarget;
     uint256 public _lastModificationTime;
 
+    //-- Pool fee variables --//
     /// @notice The total pool fee. Multiplied by 10**18. 
     /// @dev Implementation of fee: FixedPointMathLib.mulWadDown(amount, _poolFee);
     uint256 public _poolFee;
@@ -90,12 +93,12 @@ abstract contract CatalystSwapPoolCommon is
     // units, then it will not accept further incoming units. This means the router
     // can only drain a prefigured percentage of the pool every DECAY_RATE
 
-    // Outgoing flow is subtracted incoming flow until 0.
+    // Outgoing flow is subtracted from incoming flow until 0.
 
     /// @notice The max incoming liquidity flow from the router.
     uint256 public _maxUnitCapacity;
     // -- State related to unit flow calculation -- //
-    // Use getUnitCapacity to indircetly access these variables.
+    // Use getUnitCapacity to indirectly access these variables.
     uint256 _usedUnitCapacity;
     uint256 _usedUnitCapacityTimestamp;
 
@@ -103,38 +106,17 @@ abstract contract CatalystSwapPoolCommon is
     /// @notice Total current escrowed tokens
     mapping(address => uint256) public _escrowedTokens;
     /// @notice Specific escrow information
-    mapping(bytes32 => address) public _escrowedFor;
+    mapping(bytes32 => address) public _escrowedTokensFor;
 
     /// @notice Total current escrowed pool tokens
     uint256 public _escrowedPoolTokens;
     /// @notice Specific escrow information (Liquidity)
-    mapping(bytes32 => address) public _escrowedLiquidityFor;
+    mapping(bytes32 => address) public _escrowedPoolTokensFor;
 
-    /// @notice Variable to check if the pool has already been setup.
-    bool _INITIALIZED;
-
-    constructor(address factory_) ERC20("Catalyst Pool Template", "") {
+    constructor(address factory_) ERC20("Catalyst Pool Template", "", DECIMALS) {
         FACTORY = factory_;
 
         _disableInitializers();
-        __name = "Catalyst Pool Template";
-        __symbol = "";
-    }
-
-    // Overriding the name and symbol storage variables
-    string private __name;
-    string private __symbol;
-
-    function name() public view override returns (string memory) {
-        return __name;
-    }
-
-    function symbol() public view override returns (string memory) {
-        return __symbol;
-    }
-
-    function decimals() public pure override returns (uint8) {
-        return DECIMALS;
     }
 
     function factoryOwner() public view override returns (address) {
@@ -143,11 +125,11 @@ abstract contract CatalystSwapPoolCommon is
 
     /**
      * @notice Only allow Governance to change pool parameters
-     * @dev Because of dangours permissions (setConnection, weight changes, amplification changes):
+     * @dev Because of dangerous permissions (setConnection, weight changes, amplification changes):
      * !CatalystSwapPoolFactory(_factory).owner() must be set to a timelock! 
      */ 
     modifier onlyFactoryOwner() {
-        require(msg.sender == CatalystSwapPoolFactory(FACTORY).owner());   // dev: Only factory owner
+        require(msg.sender == factoryOwner());   // dev: Only factory owner
         _;
     }
 
@@ -166,23 +148,19 @@ abstract contract CatalystSwapPoolCommon is
         address setupMaster
     ) initializer external {
         // The pool is designed to be used by a proxy and not as a standalone pool.
-        // On pool deployment check is set to TRUE, to stop anyone from using the pool without a proxy.
-        // Likewise, it shouldn't be possible to setup the pool twice.
-        require(!_INITIALIZED); // dev: Pool Already setup.
+        // initializer lets this function only be called once.
 
         _chainInterface = chainInterface;
         _setupMaster = setupMaster;
 
-        setPoolFee(poolFee);
-        setGovernanceFee(governanceFee);
-        setFeeAdministrator(feeAdministrator);
+        _setPoolFee(poolFee);
+        _setGovernanceFee(governanceFee);
+        _setFeeAdministrator(feeAdministrator);
 
         // Names the ERC20 pool token //
-        __name = name_;
-        __symbol = symbol_;
+        name = name_;
+        symbol = symbol_;
         // END ERC20 //
-
-        _INITIALIZED = true;
     }
 
     /** @notice  Returns the current cross-chain swap capacity. */
@@ -190,17 +168,31 @@ abstract contract CatalystSwapPoolCommon is
         uint256 MUC = _maxUnitCapacity;
 
         // The delta change to the limit is: timePassed · slope = timePassed · Max/decayrate
-        uint256 unitCapacityReleased = ((block.timestamp - _usedUnitCapacityTimestamp) * MUC) / DECAY_RATE;
+        uint256 unitCapacityReleased;
+        unchecked {
+            // block.timestamp > _usedUnitCapacityTimestamp, always.
+            // MUC is generally low.
+            unitCapacityReleased = (block.timestamp - _usedUnitCapacityTimestamp);
+        }
+        unitCapacityReleased *= MUC;
+        unchecked {
+            // DECAY_RATE != 0.
+            unitCapacityReleased /= DECAY_RATE;
+        }
 
         uint256 UC = _usedUnitCapacity;
-        // If the change is greater than the units which has passed through
+        // If the change is greater than the units which have passed through
         // return maximum. We do not want (MUC - (UC - unitCapacityReleased) > MUC)
         if (UC <= unitCapacityReleased) return MUC;
 
         // Amplified pools can have MUC <= UC since MUC is modified when swapping
-        if (MUC <= UC - unitCapacityReleased) return 0; 
+        unchecked {
+            // we know that UC > unitCapacityReleased
+            if (MUC <= UC - unitCapacityReleased) return 0; 
 
-        return MUC + unitCapacityReleased - UC;     // MUC - (UC - unitCapacityReleased)
+            // Since MUC >= UC - unitCapacityReleased => MUC + unitCapacityReleased > UC
+            return MUC + unitCapacityReleased - UC;  // MUC - (UC - unitCapacityReleased)
+        }
     }
 
     /**
@@ -209,96 +201,120 @@ abstract contract CatalystSwapPoolCommon is
      * @dev Implement a lot of similar logic to getUnitCapacity. 
      * @param units The number of units to check and set.
      */
-    function updateUnitCapacity(uint256 units) internal {
+    function _updateUnitCapacity(uint256 units) internal {
         uint256 MUC = _maxUnitCapacity;
 
-        uint256 unitCapacityReleased = ((block.timestamp - _usedUnitCapacityTimestamp) * MUC) / DECAY_RATE;
+        // The delta change to the limit is: timePassed · slope = timePassed · Max/decayrate
+        uint256 unitCapacityReleased;
+        unchecked {
+            // block.timestamp > _usedUnitCapacityTimestamp, always.
+            // MUC is generally low.
+            unitCapacityReleased = (block.timestamp - _usedUnitCapacityTimestamp);
+        }
+        unitCapacityReleased *= MUC;
+        unchecked {
+            // DECAY_RATE != 0.
+            unitCapacityReleased /= DECAY_RATE;
+        }
 
         // Set last change to block.timestamp.
         // Otherwise it would have to be repeated twice. (small deployment savings)
         _usedUnitCapacityTimestamp = block.timestamp; 
 
         uint256 UC = _usedUnitCapacity; 
-        // If the change is greater than the units which has passed through the limit is max
+        // If the change is greater than the units which have passed through the limit is max
         if (UC <= unitCapacityReleased) {
             if (units > MUC) revert ExceedsSecurityLimit(units - MUC);
             _usedUnitCapacity = units;
             return;
         }
-
-        uint256 newUnitFlow = (UC + units) - unitCapacityReleased;
+        
+        uint256 newUnitFlow = UC + units;  // (UC + units) - unitCapacityReleased
+        unchecked {
+            // We know that UC > unitCapacityReleased
+            newUnitFlow -= unitCapacityReleased;
+        }
         if (newUnitFlow > MUC) revert ExceedsSecurityLimit(newUnitFlow - MUC);
         _usedUnitCapacity = newUnitFlow;
     }
 
-    
-    function setFeeAdministrator(address administrator) public override {
-        require(msg.sender == factoryOwner() || _isInitializing());   // dev: Only factory owner
-        _feeAdministrator = administrator;
 
+    /// @notice Sets a new fee fee administrator who can configure pool fees.
+    function _setFeeAdministrator(address administrator) internal {
+        _feeAdministrator = administrator;
         emit SetFeeAdministrator(administrator);
     }
 
-    function setPoolFee(uint256 fee) public override {
-        require(msg.sender == _feeAdministrator || _isInitializing()); // dev: Only feeAdministrator can set new fee
-        require(fee <= 10**18);  // dev: PoolFee is maximum 100%.
+    /// @notice Sets a new pool fee, taken from input amount.
+    function _setPoolFee(uint256 fee) internal {
+        require(fee <= 1e18);  // dev: PoolFee is maximum 100%.
         _poolFee = fee;
-
         emit SetPoolFee(fee);
     }
 
-    function setGovernanceFee(uint256 fee) public override {
-        require(msg.sender == _feeAdministrator || _isInitializing()); // dev: Only feeAdministrator can set new fee
-        require(fee <= MAX_GOVERNANCE_FEE_SHARE); // dev: Maximum GovernanceFeeSare exceeded.
+    /// @notice Sets a new governance fee. Taken out of the pool fee.
+    function _setGovernanceFee(uint256 fee) internal {
+        require(fee <= MAX_GOVERNANCE_FEE_SHARE);  // dev: Maximum GovernanceFeeSare exceeded.
         _governanceFeeShare = fee;
-
         emit SetGovernanceFee(fee);
     }
+
+
+    /// @notice Allows the factory owner to modify the fee administrator
+    function setFeeAdministrator(address administrator) public override onlyFactoryOwner {
+        _setFeeAdministrator(administrator);
+    }
+
+    /// @notice Allows the factory owner to modify the pool fee
+    function setPoolFee(uint256 fee) public override {
+        require(msg.sender == _feeAdministrator); // dev: Only feeAdministrator can set new fee
+        _setPoolFee(fee);
+    }
+
+    /// @notice Allows the factory owner to modify the governance fee
+    function setGovernanceFee(uint256 fee) public override {
+        require(msg.sender == _feeAdministrator); // dev: Only feeAdministrator can set new fee
+        _setGovernanceFee(fee);
+    }
+
 
     /**
      * @dev Collect the governance fee share of the specified pool fee
      */
-    function collectGovernanceFee(address asset, uint256 poolFeeAmount) internal {
+    function _collectGovernanceFee(address asset, uint256 poolFeeAmount) internal {
 
         uint256 governanceFeeShare = _governanceFeeShare;
 
         if (governanceFeeShare != 0) {
-            uint256 governanceFeeAmount = FixedPointMathLib.mulWadDown(
-                poolFeeAmount,
-                governanceFeeShare
-            );
-            IERC20(asset).safeTransfer(factoryOwner(), governanceFeeAmount);
+            uint256 governanceFeeAmount = FixedPointMathLib.mulWadDown(poolFeeAmount, governanceFeeShare);
+            ERC20(asset).safeTransfer(factoryOwner(), governanceFeeAmount);
         }
     }
 
     /**
-     * @notice Creates a connection to targetPool on the channel_channelId.
+     * @notice Creates a connection to toPool on the channel_channelId.
      * @dev Encoding addresses in bytes32 for EVM can be done be computed with:
      * Vyper: convert(<poolAddress>, bytes32)
      * Solidity: abi.encode(<poolAddress>)
      * Brownie: brownie.convert.to_bytes(<poolAddress>, type_str="bytes32")
      * @param channelId Target chain identifier.
-     * @param targetPool Bytes32 representation of the target pool.
+     * @param toPool Bytes32 representation of the target pool.
      * @param state Boolean indicating if the connection should be open or closed.
      */
     function setConnection(
         bytes32 channelId,
-        bytes32 targetPool,
+        bytes32 toPool,
         bool state
     ) external override {
         require((msg.sender == _setupMaster) || (msg.sender == factoryOwner())); // dev: No auth
 
-        CatalystIBCInterface(_chainInterface).setConnection(
-            channelId,
-            targetPool,
-            state
-        );
+        _poolConnection[channelId][toPool] = state;
 
-        emit SetConnection(channelId, targetPool, state);
+        emit SetConnection(channelId, toPool, state);
     }
 
     /**
-     * @notice Gives up short term ownership of the pool making the pool unstoppable.
+     * @notice Gives up short-term ownership of the pool making the pool unstoppable.
      */
     function finishSetup() external override {
         require(msg.sender == _setupMaster); // dev: No auth
@@ -320,115 +336,195 @@ abstract contract CatalystSwapPoolCommon is
 
     //-- Escrow Functions --//
 
-    function releaseTokenEscrow(
-        bytes32 messageHash,
+    function _releaseAssetEscrow(
+        bytes32 sendAssetHash,
         uint256 escrowAmount,
         address escrowToken
     ) internal returns(address) {
-        require(msg.sender == _chainInterface);  // dev: Only _chainInterface
 
-        address fallbackUser = _escrowedFor[messageHash];  // Passing in an invalid messageHash returns address(0)
-        require(fallbackUser != address(0));  // dev: Invalid messageHash. Alt: Escrow doesn't exist.
-        delete _escrowedFor[messageHash];  // Stops timeout and further acks from being called
+        address fallbackUser = _escrowedTokensFor[sendAssetHash];  // Passing in an invalid swapHash returns address(0)
+        require(fallbackUser != address(0));  // dev: Invalid swapHash. Alt: Escrow doesn't exist.
+        delete _escrowedTokensFor[sendAssetHash];  // Stops timeout and further acks from being called
 
-        _escrowedTokens[escrowToken] -= escrowAmount; // This does not revert, since escrowAmount \subseteq _escrowedTokens => escrowAmount <= _escrowedTokens. Cannot be called twice since the 3 lines before ensure this can only be reached once.
-        
-        return (fallbackUser);
-    }
-
-    function releaseLiquidityEscrow(
-        bytes32 messageHash,
-        uint256 escrowAmount
-    ) internal returns(address) {
-        require(msg.sender == _chainInterface);  // dev: Only _chainInterface
-
-        address fallbackUser = _escrowedLiquidityFor[messageHash];  // Passing in an invalid messageHash returns address(0)
-        require(fallbackUser != address(0));  // dev: Invalid messageHash. Alt: Escrow doesn't exist.
-        delete _escrowedLiquidityFor[messageHash];  // Stops timeout and further acks from being called
-
-        _escrowedPoolTokens -= escrowAmount;  // This does not revert, since escrowAmount \subseteq _escrowedPoolTokens => escrowAmount <= _escrowedPoolTokens. Cannot be called twice since the 3 lines before ensure this can only be reached once.
+        unchecked {
+            // escrowAmount \subseteq _escrowedTokens => escrowAmount <= _escrowedTokens. Cannot be called twice since the 3 lines before ensure this can only be reached once.
+            _escrowedTokens[escrowToken] -= escrowAmount;
+        }
         
         return fallbackUser;
     }
 
+    function _releaseLiquidityEscrow(
+        bytes32 sendLiquidityHash,
+        uint256 escrowAmount
+    ) internal returns(address) {
+
+        address fallbackUser = _escrowedPoolTokensFor[sendLiquidityHash];  // Passing in an invalid swapHash returns address(0)
+        require(fallbackUser != address(0));  // dev: Invalid swapHash. Alt: Escrow doesn't exist.
+        delete _escrowedPoolTokensFor[sendLiquidityHash];  // Stops timeout and further acks from being called
+
+        unchecked {
+            // escrowAmount \subseteq _escrowedPoolTokens => escrowAmount <= _escrowedPoolTokens. Cannot be called twice since the 3 lines before ensure this can only be reached once.
+            _escrowedPoolTokens -= escrowAmount;
+        }
+        
+        return fallbackUser;
+    }
 
     /** 
-     * @notice Implements basic ack logic: Deletes and release tokens to the pool
+     * @notice Implements basic ack logic: Deletes and releases tokens to the pool
      * @dev Should never revert! For security limit adjustments, the implementation should be overwritten.
-     * @param messageHash A hash of the cross-chain message ensure the message arrives indentical to the sent message.
+     * @param toAccount The recipient of the transaction on the target chain. Encoded in bytes32.
      * @param U The number of units initially purchased.
      * @param escrowAmount The number of tokens escrowed.
      * @param escrowToken The token escrowed.
+     * @param blockNumberMod The block number at which the swap transaction was commited (mod 32)
      */
-    function sendSwapAck(
-        bytes32 messageHash,
+    function sendAssetAck(
+        bytes32 toAccount,
         uint256 U,
         uint256 escrowAmount,
-        address escrowToken
-    ) public virtual override {
+        address escrowToken,
+        uint32 blockNumberMod
+    ) public virtual {
+        require(msg.sender == _chainInterface);  // dev: Only _chainInterface
 
-        releaseTokenEscrow(messageHash, escrowAmount, escrowToken); // Only reverts for missing escrow
+        bytes32 sendAssetHash = _computeSendAssetHash(
+            toAccount,  // Ensures no collisions between different users
+            U,          // Used to randomise the hash
+            escrowAmount,     // Required! to validate release escrow data
+            escrowToken,  // Required! to validate release escrow data
+            blockNumberMod
+        );
 
-        emit EscrowAck(messageHash, false);  // Never reverts.
+        _releaseAssetEscrow(sendAssetHash, escrowAmount, escrowToken); // Only reverts for missing escrow
+
+        emit SendAssetAck(sendAssetHash);  // Never reverts.
     }
 
     /** 
      * @notice Implements basic timeout logic: Deletes and sends tokens to the user.
      * @dev Should never revert!
-     * @param messageHash A hash of the cross-chain message ensure the message arrives indentical to the sent message.
+     * @param toAccount The recipient of the transaction on the target chain. Encoded in bytes32.
      * @param U The number of units initially purchased.
      * @param escrowAmount The number of tokens escrowed.
      * @param escrowToken The token escrowed.
+     * @param blockNumberMod The block number at which the swap transaction was commited (mod 32)
      */
-    function sendSwapTimeout(
-        bytes32 messageHash,
+    function sendAssetTimeout(
+        bytes32 toAccount,
         uint256 U,
         uint256 escrowAmount,
-        address escrowToken
-    ) public virtual override {
+        address escrowToken,
+        uint32 blockNumberMod
+    ) public virtual {
+        require(msg.sender == _chainInterface);  // dev: Only _chainInterface
 
-        address fallbackAddress = releaseTokenEscrow(messageHash, escrowAmount, escrowToken); // Only reverts for missing escrow,
+        bytes32 sendAssetHash = _computeSendAssetHash(
+            toAccount,  // Ensures no collisions between different users
+            U,          // Used to randomise the hash
+            escrowAmount,     // Required! to validate release escrow data
+            escrowToken,  // Required! to validate release escrow data
+            blockNumberMod
+        );
 
-        IERC20(escrowToken).safeTransfer(fallbackAddress, escrowAmount);  // Would fail if there is no balance. To protect against this, the escrow amount is removed from what can be claimed by users.
+        address fallbackAddress = _releaseAssetEscrow(sendAssetHash, escrowAmount, escrowToken); // Only reverts for missing escrow,
 
-        emit EscrowTimeout(messageHash, false);  // Never reverts.
+        ERC20(escrowToken).safeTransfer(fallbackAddress, escrowAmount);  // Would fail if there is no balance. To protect against this, the escrow amount is removed from what can be claimed by users.
+
+        emit SendAssetTimeout(sendAssetHash);  // Never reverts.
     }
 
     /** 
      * @notice Implements basic liquidity ack logic: Deletes and releases pool tokens to the pool.
      * @dev Should never revert! For security limit adjustments, the implementation should be overwritten.
-     * @param messageHash A hash of the cross-chain message ensure the message arrives indentical to the sent message.
+     * @param toAccount The recipient of the transaction on the target chain. Encoded in bytes32.
      * @param U The number of units initially acquired.
      * @param escrowAmount The number of pool tokens escrowed.
+     * @param blockNumberMod The block number at which the swap transaction was commited (mod 32)
      */
     function sendLiquidityAck(
-        bytes32 messageHash,
+        bytes32 toAccount,
         uint256 U,
-        uint256 escrowAmount
-    ) public virtual override {
+        uint256 escrowAmount,
+        uint32 blockNumberMod
+    ) public virtual {
+        require(msg.sender == _chainInterface);  // dev: Only _chainInterface
 
-        releaseLiquidityEscrow(messageHash, escrowAmount); // Only reverts for missing escrow
+        bytes32 sendLiquidityHash = _computeSendLiquidityHash(
+            toAccount,  // Ensures no collisions between different users
+            U,          // Used to randomise the hash
+            escrowAmount,     // Required! to validate release escrow data
+            blockNumberMod
+        );
 
-        emit EscrowAck(messageHash, true);  // Never reverts.
+        _releaseLiquidityEscrow(sendLiquidityHash, escrowAmount); // Only reverts for missing escrow
+
+        emit SendLiquidityAck(sendLiquidityHash);  // Never reverts.
     }
 
     /** 
      * @notice Implements basic liquidity timeout logic: Deletes and sends pool tokens to the user.
      * @dev Should never revert!
-     * @param messageHash A hash of the cross-chain message ensure the message arrives indentical to the sent message.
+     * @param toAccount The recipient of the transaction on the target chain. Encoded in bytes32.
      * @param U The number of units initially acquired.
      * @param escrowAmount The number of pool tokens escrowed.
+     * @param blockNumberMod The block number at which the swap transaction was commited (mod 32)
      */
     function sendLiquidityTimeout(
-        bytes32 messageHash,
+        bytes32 toAccount,
         uint256 U,
-        uint256 escrowAmount
-    ) public virtual override {
+        uint256 escrowAmount,
+        uint32 blockNumberMod
+    ) public virtual {
+        require(msg.sender == _chainInterface);  // dev: Only _chainInterface
 
-        address fallbackAddress = releaseLiquidityEscrow(messageHash, escrowAmount); // Only reverts for missing escrow
+        bytes32 sendLiquidityHash = _computeSendLiquidityHash(
+            toAccount,  // Ensures no collisions between different users
+            U,          // Used to randomise the hash
+            escrowAmount,     // Required! to validate release escrow data
+            blockNumberMod
+        );
+
+        address fallbackAddress = _releaseLiquidityEscrow(sendLiquidityHash, escrowAmount); // Only reverts for missing escrow
 
         _mint(fallbackAddress, escrowAmount);  
 
-        emit EscrowTimeout(messageHash, true);  // Never reverts.
+        emit SendLiquidityTimeout(sendLiquidityHash);  // Never reverts.
     }
+
+    function _computeSendAssetHash(
+        bytes32 toAccount,
+        uint256 U,
+        uint256 amount,
+        address fromAsset,
+        uint32 blockNumberMod
+    ) internal pure returns(bytes32) {
+        return keccak256(
+            abi.encodePacked(
+                toAccount,  // Ensures no collisions between different users
+                U,          // Used to randomise the hash
+                amount,     // Required! to validate release escrow data
+                fromAsset,  // Required! to validate release escrow data
+                blockNumberMod
+            )
+        );
+    }
+
+    function _computeSendLiquidityHash(
+        bytes32 toAccount,
+        uint256 U,
+        uint256 amount,
+        uint32 blockNumberMod
+    ) internal pure returns(bytes32) {
+        return keccak256(
+            abi.encodePacked(
+                toAccount,  // Ensures no collisions between different users
+                U,          // Used to randomise the hash
+                amount,     // Required! to validate release escrow data
+                blockNumberMod
+            )
+        );
+    }
+
 }

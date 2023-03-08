@@ -17,10 +17,11 @@ compiler:
   solc:
     optimizer:
         enabled: true
-        runs: 10000
+        runs: 9000
     remappings:
       - "@openzeppelin=OpenZeppelin/openzeppelin-contracts@4.8.1"
       - "solmate=node_modules/solmate"
+
 
 hypothesis:
   max_examples: 40

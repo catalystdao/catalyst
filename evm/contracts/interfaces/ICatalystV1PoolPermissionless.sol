@@ -3,7 +3,16 @@
 pragma solidity ^0.8.16;
 
 interface ICatalystV1PoolPermissionless {
-    /** @notice Setup a pool. */
+    /** 
+     * @notice Setup a pool.
+     * @param name_ Name of the Pool token.
+     * @param symbol_ Symbol for the Pool token.
+     * @param chainInterface The cross chain interface used for cross-chain swaps. (Can be address(0) to disable cross-chain swaps.)
+     * @param poolFee The pool fee.
+     * @param governanceFee The governance fee share.
+     * @param feeAdministrator The account that can modify the fees.
+     * @param setupMaster The short-term owner of the pool (until finishSetup is called).
+     */
     function setup(
         string calldata name_,
         string calldata symbol_,
@@ -12,14 +21,6 @@ interface ICatalystV1PoolPermissionless {
         uint256 governanceFee,
         address feeAdministrator,
         address setupMaster
-    ) external;
-
-    /** @notice Initialize the swap curves of the pool. */
-    function initializeSwapCurves(
-        address[] calldata assets,
-        uint256[] calldata weights,
-        uint256 amp,
-        address depositor
     ) external;
 
     //--- Balance Changes ---//
@@ -69,7 +70,7 @@ interface ICatalystV1PoolPermissionless {
      * @param amount The amount of fromAsset the user wants to sell
      * @param minOut The minimum output of _toAsset the user wants.
      */
-    function localswap(
+    function localSwap(
         address fromAsset,
         address toAsset,
         uint256 amount,
@@ -83,18 +84,18 @@ interface ICatalystV1PoolPermissionless {
      * Solidity: abi.encode(<poolAddress>)
      * Brownie: brownie.convert.to_bytes(<poolAddress>, type_str="bytes32")
      * @param channelId The target chain identifier.
-     * @param targetPool The target pool on the target chain encoded in bytes32.
-     * @param targetUser The recipient of the transaction on the target chain. Encoded in bytes32.
+     * @param toPool The target pool on the target chain encoded in bytes32.
+     * @param toAccount The recipient of the transaction on the target chain. Encoded in bytes32.
      * @param fromAsset The asset the user wants to sell.
      * @param toAssetIndex The index of the asset the user wants to buy in the target pool.
      * @param amount The number of fromAsset to sell to the pool.
-     * @param minOut The minimum number of returned tokens to the targetUser on the target chain.
+     * @param minOut The minimum number of returned tokens to the toAccount on the target chain.
      * @param fallbackUser If the transaction fails send the escrowed funds to this address
      */
-    function sendSwap(
+    function sendAsset(
         bytes32 channelId,
-        bytes32 targetPool,
-        bytes32 targetUser,
+        bytes32 toPool,
+        bytes32 toAccount,
         address fromAsset,
         uint8 toAssetIndex,
         uint256 amount,
@@ -105,41 +106,47 @@ interface ICatalystV1PoolPermissionless {
     /// @notice Includes calldata_
     /// @param calldata_ Data field if a call should be made on the target chain. 
     /// Should be encoded abi.encode(<address>,<data>)
-    function sendSwap(
+    function sendAsset(
         bytes32 channelId,
-        bytes32 targetPool,
-        bytes32 targetUser,
+        bytes32 toPool,
+        bytes32 toAccount,
         address fromAsset,
         uint8 toAssetIndex,
         uint256 amount,
         uint256 minOut,
         address fallbackUser,
-        bytes calldata calldata_
+        bytes memory calldata_
     ) external returns (uint256);
 
     /**
      * @notice Completes a cross-chain swap by converting units to the desired token (toAsset)
      *  Called exclusively by the chainInterface.
      * @dev Can only be called by the chainInterface, as there is no way to check the validity of units.
+     * @param channelId The incoming connection identifier.
+     * @param fromPool The source pool.
      * @param toAssetIndex Index of the asset to be purchased with _U units.
-     * @param who The recipient of toAsset
+     * @param toAccount The recipient of toAsset
      * @param U Number of units to convert into toAsset.
      * @param minOut Minimum number of tokens bought. Reverts if less.
      */
-    function receiveSwap(
+    function receiveAsset(
+        bytes32 channelId,
+        bytes32 fromPool,
         uint256 toAssetIndex,
-        address who,
+        address toAccount,
         uint256 U,
         uint256 minOut,
-        bytes32 messageHash
+        bytes32 swapHash
     ) external returns (uint256);
 
-    function receiveSwap(
+    function receiveAsset(
+        bytes32 channelId,
+        bytes32 fromPool,
         uint256 toAssetIndex,
-        address who,
+        address toAccount,
         uint256 U,
         uint256 minOut,
-        bytes32 messageHash,
+        bytes32 swapHash,
         address dataTarget,
         bytes calldata data
     ) external returns (uint256);
@@ -148,20 +155,33 @@ interface ICatalystV1PoolPermissionless {
      * @notice Initiate a cross-chain liquidity swap by lowering liquidity
      * and transfer the liquidity units to another pool.
      * @param channelId The target chain identifier.
-     * @param targetPool The target pool on the target chain encoded in bytes32. For EVM chains this can be computed as:
+     * @param toPool The target pool on the target chain encoded in bytes32. For EVM chains this can be computed as:
      * Vyper: convert(_poolAddress, bytes32)
      * Solidity: abi.encode(_poolAddress)
      * Brownie: brownie.convert.to_bytes(_poolAddress, type_str="bytes32")
-     * @param who The recipient of the transaction on _chain. Encoded in bytes32. For EVM chains it can be found similarly to _targetPool.
+     * @param toAccount The recipient of the transaction on _chain. Encoded in bytes32. For EVM chains it can be found similarly to _toPool.
      * @param baseAmount The number of pool tokens to liquidity Swap
      */
     function sendLiquidity(
         bytes32 channelId,
-        bytes32 targetPool,
-        bytes32 who,
+        bytes32 toPool,
+        bytes32 toAccount,
         uint256 baseAmount,
         uint256 minOut,
         address fallbackUser
+    ) external returns (uint256);
+
+    /// @notice Includes calldata_
+    /// @param calldata_ Data field if a call should be made on the target chain. 
+    /// Should be encoded abi.encode(<address>,<data>)
+    function sendLiquidity(
+        bytes32 channelId,
+        bytes32 toPool,
+        bytes32 who,
+        uint256 baseAmount,
+        uint256 minOut,
+        address fallbackUser,
+        bytes memory calldata_
     ) external returns (uint256);
 
     /**
@@ -169,13 +189,28 @@ interface ICatalystV1PoolPermissionless {
      * Called exclusively by the chainInterface.
      * @dev Can only be called by the chainInterface, as there is no way
      * to check the validity of units.
-     * @param who The recipient of pool tokens
+     * @param channelId The incoming connection identifier.
+     * @param fromPool The source pool
+     * @param toAccount The recipient of pool tokens
      * @param U Number of units to convert into pool tokens.
      */
     function receiveLiquidity(
+        bytes32 channelId,
+        bytes32 fromPool,
+        address toAccount,
+        uint256 U,
+        uint256 minOut,
+        bytes32 swapHash
+    ) external returns (uint256);
+
+    function receiveLiquidity(
+        bytes32 channelId,
+        bytes32 fromPool,
         address who,
         uint256 U,
         uint256 minOut,
-        bytes32 messageHash
+        bytes32 swapHash,
+        address dataTarget,
+        bytes calldata data
     ) external returns (uint256);
 }

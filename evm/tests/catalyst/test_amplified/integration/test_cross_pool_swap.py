@@ -1,7 +1,10 @@
 import pytest
 from brownie import reverts, convert, web3
 from brownie.test import given, strategy
+from hypothesis import example
 import re
+
+from utils.pool_utils import compute_asset_swap_hash
 
 
 pytestmark = pytest.mark.usefixtures("group_finish_setup", "group_connect_pools")
@@ -9,6 +12,7 @@ pytestmark = pytest.mark.usefixtures("group_finish_setup", "group_connect_pools"
 #TODO add fees test (create fixture that sets up non-zero fees to the pool)
 
 @pytest.mark.no_call_coverage
+@example(swap_percentage=22*10**16)
 @given(swap_percentage=strategy("uint256", max_value=1*10**18))
 def test_cross_pool_swap(
     channel_id,
@@ -34,11 +38,11 @@ def test_cross_pool_swap(
     source_token.approve(pool_1, swap_amount, {'from': berg})
     
     try:
-        y = compute_expected_swap(swap_amount, source_token, target_token)['output']
+        y = compute_expected_swap(swap_amount, source_token, target_token)['to_amount']
     except:
         pytest.skip()   #TODO For certain pool configs, there is no output for the specified swap amount (swap too large) => remove this workaround + be specific on the test configs to 'skip'
     
-    tx = pool_1.sendSwap(
+    tx = pool_1.sendAsset(
         channel_id,
         convert.to_bytes(pool_2.address.replace("0x", "")),
         convert.to_bytes(berg.address.replace("0x", "")),
@@ -52,14 +56,14 @@ def test_cross_pool_swap(
     assert source_token.balanceOf(berg) == 0
     
     # The swap may revert because of the security limit     #TODO mark these cases as 'skip'?
-    if pool_2.getUnitCapacity() < pool_2.calcReceiveSwap(pool_2._tokenIndexing(0), tx.events["SendSwap"]["output"]) * pool_2._weight(pool_2._tokenIndexing(0)):
+    if pool_2.getUnitCapacity() < pool_2.calcReceiveAsset(pool_2._tokenIndexing(0), tx.events["SendAsset"]["units"]) * pool_2._weight(pool_2._tokenIndexing(0)):
         with reverts(revert_pattern=re.compile("typed error: 0x249c4e65.*")):
             txe = ibc_emulator.execute(tx.events["IncomingMetadata"]["metadata"][0], tx.events["IncomingPacket"]["packet"], {"from": berg})
         return
     else:
         txe = ibc_emulator.execute(tx.events["IncomingMetadata"]["metadata"][0], tx.events["IncomingPacket"]["packet"], {"from": berg})
     
-    purchased_tokens = txe.events["ReceiveSwap"]["output"]
+    purchased_tokens = txe.events["ReceiveAsset"]["toAmount"]
     
     assert purchased_tokens == target_token.balanceOf(berg)
 
@@ -76,6 +80,7 @@ def test_cross_pool_swap(
 
 
 @pytest.mark.no_call_coverage
+@example(swap_percentage=8*10**15)
 @given(swap_percentage=strategy("uint256", max_value=5*10**17))
 def test_cross_pool_swap_min_out(
     channel_id,
@@ -102,7 +107,7 @@ def test_cross_pool_swap_min_out(
     source_token.approve(pool_1, swap_amount, {'from': berg})
     
     try:
-        y = compute_expected_swap(swap_amount, source_token, target_token)['output']
+        y = compute_expected_swap(swap_amount, source_token, target_token)['to_amount']
     except:
         pytest.skip()   #TODO For certain pool configs, there is no output for the specified swap amount (swap too large) => remove this workaround + be specific on the test configs to 'skip'
     
@@ -112,7 +117,7 @@ def test_cross_pool_swap_min_out(
     else:
         min_out = int(y * 1.2)
     
-    tx = pool_1.sendSwap(
+    tx = pool_1.sendAsset(
         channel_id,
         convert.to_bytes(pool_2.address.replace("0x", "")),
         convert.to_bytes(berg.address.replace("0x", "")),
@@ -133,7 +138,7 @@ def test_cross_pool_swap_min_out(
         ibc_emulator.execute(tx.events["IncomingMetadata"]["metadata"][0], tx.events["IncomingPacket"]["packet"], {"from": berg})
 
 
-def test_send_swap_event(
+def test_send_asset_event(
     channel_id,
     pool_1,
     pool_2,
@@ -143,7 +148,7 @@ def test_send_swap_event(
     deployer
 ):
     """
-        Test the SendSwap event gets fired.
+        Test the SendAsset event gets fired.
     """
 
     swap_amount = 10**8
@@ -154,10 +159,10 @@ def test_send_swap_event(
     source_token.transfer(berg, swap_amount, {'from': deployer})
     source_token.approve(pool_1, swap_amount, {'from': berg})
     
-    tx = pool_1.sendSwap(
+    tx = pool_1.sendAsset(
         channel_id,
         convert.to_bytes(pool_2.address.replace("0x", "")),
-        convert.to_bytes(elwood.address.replace("0x", "")),     # NOTE: not using the same account as the caller of the tx to make sure the 'targetUser' is correctly reported
+        convert.to_bytes(elwood.address.replace("0x", "")),     # NOTE: not using the same account as the caller of the tx to make sure the 'toAccount' is correctly reported
         source_token,
         1,                                                      # NOTE: use non-zero target asset index to make sure the field is set on the event (and not just left blank)
         swap_amount,
@@ -167,18 +172,24 @@ def test_send_swap_event(
     )
 
     observed_units = tx.return_value
-    expected_message_hash = web3.keccak(tx.events["IncomingPacket"]["packet"][3]).hex()   # Keccak of the payload contained on the ibc packet
+    expected_message_hash = compute_asset_swap_hash(
+        elwood.address,
+        observed_units,
+        swap_amount,
+        source_token.address,
+        tx.block_number
+    )
 
-    send_swap_event = tx.events['SendSwap']
+    send_asset_event = tx.events['SendAsset']
 
-    assert send_swap_event['targetPool']   == pool_2
-    assert send_swap_event['targetUser']   == elwood
-    assert send_swap_event['fromAsset']    == source_token
-    assert send_swap_event['toAssetIndex'] == 1
-    assert send_swap_event['input']        == swap_amount
-    assert send_swap_event['output']       == observed_units
-    assert send_swap_event['minOut']       == min_out
-    assert send_swap_event['messageHash']  == expected_message_hash
+    assert send_asset_event['toPool']       == pool_2
+    assert send_asset_event['toAccount']    == elwood
+    assert send_asset_event['fromAsset']    == source_token
+    assert send_asset_event['toAssetIndex'] == 1
+    assert send_asset_event['fromAmount']   == swap_amount
+    assert send_asset_event['units']        == observed_units
+    assert send_asset_event['minOut']       == min_out
+    assert send_asset_event['swapHash']  == expected_message_hash
 
 
 def test_receive_swap_event(
@@ -193,7 +204,7 @@ def test_receive_swap_event(
     ibc_emulator
 ):
     """
-        Test the SendSwap event gets fired.
+        Test the SendAsset event gets fired.
     """
 
     swap_amount = 10**8
@@ -204,7 +215,7 @@ def test_receive_swap_event(
     source_token.transfer(berg, swap_amount, {'from': deployer})
     source_token.approve(pool_1, swap_amount, {'from': berg})
     
-    tx = pool_1.sendSwap(
+    tx = pool_1.sendAsset(
         channel_id,
         convert.to_bytes(pool_2.address.replace("0x", "")),
         convert.to_bytes(elwood.address.replace("0x", "")),
@@ -217,14 +228,21 @@ def test_receive_swap_event(
     )
 
     observed_units = tx.return_value
-    expected_message_hash = web3.keccak(tx.events["IncomingPacket"]["packet"][3]).hex()   # Keccak of the payload contained on the ibc packet
+    expected_message_hash = compute_asset_swap_hash(
+        elwood.address,
+        observed_units,
+        swap_amount,
+        source_token.address,
+        tx.block_number
+    )
 
     txe = ibc_emulator.execute(tx.events["IncomingMetadata"]["metadata"][0], tx.events["IncomingPacket"]["packet"], {"from": berg})
 
-    receive_swap_event = txe.events['ReceiveSwap']
+    receive_swap_event = txe.events['ReceiveAsset']
 
-    assert receive_swap_event['who']         == elwood
+    assert receive_swap_event['fromPool']    == pool_1.address
+    assert receive_swap_event['toAccount']   == elwood
     assert receive_swap_event['toAsset']     == target_token
-    assert receive_swap_event['input']       == observed_units
-    assert receive_swap_event['output']      == target_token.balanceOf(elwood)
-    assert receive_swap_event['messageHash'] == expected_message_hash
+    assert receive_swap_event['units']       == observed_units
+    assert receive_swap_event['toAmount']    == target_token.balanceOf(elwood)
+    assert receive_swap_event['swapHash'] == expected_message_hash

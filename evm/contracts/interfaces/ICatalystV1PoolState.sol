@@ -1,13 +1,19 @@
 //SPDX-License-Identifier: Unlicensed
 pragma solidity ^0.8.16;
 
-struct TokenEscrow {
-    uint256 amount;
-    address token;
+// Hold swap details that are not directly necessary for the swap calculations in a separate struct.
+// (Avoid 'stack too deep' issues)
+struct AssetSwapMetadata {
+    uint256 fromAmount;
+    address fromAsset;
+    bytes32 swapHash;
+    uint32  blockNumber;
 }
 
-struct LiquidityEscrow {
-    uint256 poolTokens;
+struct LiquiditySwapMetadata {
+    uint256 fromAmount;
+    bytes32 swapHash;
+    uint32  blockNumber;
 }
 
 /// @title Pool state
@@ -56,13 +62,13 @@ interface ICatalystV1PoolState {
     function _escrowedTokens(address token) external view returns (uint256);
 
     /// @notice Specific escrow information
-    // function _escrowedFor(bytes32 messageHash) external view returns (TokenEscrow calldata);
+    // function _escrowedTokensFor(bytes32 sendAssetHash) external view returns (TokenEscrow calldata);
 
     /// @notice Total current escrowed pool tokens
     function _escrowedPoolTokens() external view returns (uint256);
 
     /// @notice Specific escrow information (Pool Tokens)
-    // function _escrowedLiquidityFor(bytes32 messageHash) external view returns (LiquidityEscrow memory);
+    // function _escrowedPoolTokensFor(bytes32 sendLiquidityHash) external view returns (LiquidityEscrow memory);
 
     function factoryOwner() external view returns (address);
 

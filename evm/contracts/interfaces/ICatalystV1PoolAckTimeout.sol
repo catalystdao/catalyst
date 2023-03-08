@@ -5,32 +5,36 @@ pragma solidity ^0.8.16;
 /// @notice Contains the functions used to manage escrows by the cross-chain interface.
 interface ICatalystV1PoolAckTimeout {
     /** @notice Release the escrowed tokens into the pool.  */
-    function sendSwapAck(
-        bytes32 messageHash,
+    function sendAssetAck(
+        bytes32 toAccount,
         uint256 U,
         uint256 escrowAmount,
-        address escrowToken
+        address escrowToken,
+        uint32 blockNumberMod
     ) external;
 
     /** @notice Returned the escrowed tokens to the user */
-    function sendSwapTimeout(
-        bytes32 messageHash,
+    function sendAssetTimeout(
+        bytes32 toAccount,
         uint256 U,
         uint256 escrowAmount,
-        address escrowToken
+        address escrowToken,
+        uint32 blockNumberMod
     ) external;
 
     /** @notice Release the escrowed tokens into the pool.  */
     function sendLiquidityAck(
-        bytes32 messageHash,
+        bytes32 toAccount,
         uint256 U,
-        uint256 escrowAmount
+        uint256 escrowAmount,
+        uint32 blockNumberMod
     ) external;
 
     /** @notice Returned the escrowed tokens to the user */
     function sendLiquidityTimeout(
-        bytes32 messageHash,
+        bytes32 toAccount,
         uint256 U,
-        uint256 escrowAmount
+        uint256 escrowAmount,
+        uint32 blockNumberMod
     ) external;
 }
