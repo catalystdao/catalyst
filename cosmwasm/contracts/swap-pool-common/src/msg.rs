@@ -19,13 +19,13 @@ pub struct InstantiateMsg {
 #[cw_serde]
 pub enum ExecuteMsg {
 
-    // InitializeSwapCurves {
-    //     assets: Vec<String>,
-    //     assets_balances: Vec<Uint128>,
-    //     weights: Vec<u64>,
-    //     amp: u64,
-    //     depositor: String
-    // },
+    InitializeSwapCurves {
+        assets: Vec<String>,
+        assets_balances: Vec<Uint128>,
+        weights: Vec<u64>,
+        amp: u64,
+        depositor: String
+    },
 
     SetPoolFee { fee: u64 },
 

@@ -1,3 +1,4 @@
+use fixed_point_math_lib::fixed_point_math_x64::LN2_X64;
 #[cfg(not(feature = "library"))]
 use fixed_point_math_lib::{u256::U256, fixed_point_math_x64::ONE_X64};
 use cosmwasm_std::{entry_point, Addr, StdError};
@@ -60,22 +61,22 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
-        // ExecuteMsg::InitializeSwapCurves {
-        //     assets,
-        //     assets_balances,
-        //     weights,
-        //     amp,
-        //     depositor
-        // } => execute_initialize_swap_curves(
-        //     deps,
-        //     env,
-        //     info,
-        //     assets,
-        //     assets_balances,
-        //     weights,
-        //     amp,
-        //     depositor
-        // ),
+        ExecuteMsg::InitializeSwapCurves {
+            assets,
+            assets_balances,
+            weights,
+            amp,
+            depositor
+        } => execute_initialize_swap_curves(
+            deps,
+            env,
+            info,
+            assets,
+            assets_balances,
+            weights,
+            amp,
+            depositor
+        ),
         // ExecuteMsg::FinishSetup {} => execute_finish_setup(deps, env, info),
         ExecuteMsg::SetFeeAdministrator { administrator } => execute_set_fee_administrator(deps, info, administrator),
         ExecuteMsg::SetPoolFee { fee } => execute_set_pool_fee(deps, info, fee),
@@ -170,109 +171,115 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     }
 }
 
-// pub fn execute_initialize_swap_curves(
-//     deps: DepsMut,
-//     env: Env,
-//     info: MessageInfo,
-//     assets: Vec<String>,
-//     assets_balances: Vec<Uint128>,  //TODO EVM MISMATCH
-//     weights: Vec<u64>,
-//     amp: u64,
-//     depositor: String
-// ) -> Result<Response, ContractError> {
+pub fn execute_initialize_swap_curves(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    assets: Vec<String>,
+    assets_balances: Vec<Uint128>,  //TODO EVM MISMATCH
+    weights: Vec<u64>,
+    amp: u64,
+    depositor: String
+) -> Result<Response, ContractError> {
 
-//     let mut state = STATE.load(deps.storage)?;
+    let mut state = STATE.load(deps.storage)?;
 
-//     // Check the caller is the Factory
-//     //TODO this has to check the caller to be the FACTORY, not setup_master
-//     let setup_master = state.setup_master.clone().ok_or(ContractError::Unauthorized {})?;
-//     if info.sender != setup_master {
-//         return Err(ContractError::Unauthorized {});
-//     }
+    // Check the caller is the Factory
+    //TODO verify info sender is Factory
 
-//     // Make sure this function may only be invoked once (check whether assets have been saved)
-//     if state.assets.len() > 0 {
-//         return Err(ContractError::Unauthorized {});
-//     }
+    // Make sure this function may only be invoked once (check whether assets have already been saved)
+    if state.assets.len() > 0 {
+        return Err(ContractError::Unauthorized {});
+    }
 
-//     // Check that the amplification is correct (set to 1)
-//     if amp != 10u64.pow(18) {     //TODO maths WAD
-//         return Err(ContractError::InvalidAmplification {})
-//     }
+    // Check that the amplification is correct (set to 1)
+    if amp != 10u64.pow(18) {     //TODO maths WAD
+        return Err(ContractError::InvalidAmplification {})
+    }
 
-//     // Validate the depositor address
-//     deps.api.addr_validate(&depositor)?;
+    // Check the provided assets and weights count
+    if
+        assets.len() == 0 || assets.len() > MAX_ASSETS ||
+        weights.len() != assets.len()
+    {
+        return Err(ContractError::GenericError {}); //TODO error
+    }
 
-//     // Check the provided assets and weights count
-//     if
-//         assets.len() == 0 || assets.len() > MAX_ASSETS ||
-//         weights.len() != assets.len()
-//     {
-//         return Err(ContractError::GenericError {}); //TODO error
-//     }
+    // Validate the depositor address
+    deps.api.addr_validate(&depositor)?;
 
-//     // Validate and save assets
-//     state.assets = assets
-//         .iter()
-//         .map(|asset_addr| deps.api.addr_validate(&asset_addr))
-//         .collect::<StdResult<Vec<Addr>>>()
-//         .map_err(|_| ContractError::InvalidAssets {})?;
+    // Validate and save assets
+    state.assets = assets
+        .iter()
+        .map(|asset_addr| deps.api.addr_validate(&asset_addr))
+        .collect::<StdResult<Vec<Addr>>>()
+        .map_err(|_| ContractError::InvalidAssets {})?;
 
-//     // Validate and save weights
-//     if weights.iter().any(|weight| *weight == 0) {
-//         return Err(ContractError::GenericError {}); //TODO error
-//     }
-//     state.weights = weights.clone();
+    // Validate asset balances
+    if assets_balances.iter().any(|balance| balance.is_zero()) {
+        return Err(ContractError::GenericError {}); //TODO error
+    }
 
-//     // Compute the security limit
-//     //TODO
+    // Validate and save weights
+    if weights.iter().any(|weight| *weight == 0) {
+        return Err(ContractError::GenericError {}); //TODO error
+    }
+    state.weights = weights.clone();
 
-//     // Save state
-//     STATE.save(deps.storage, &state)?;
+    // Compute the security limit
+    state.max_limit_capacity = (
+        LN2_X64 * weights.iter().fold(
+            U256::zero(), |acc, next| acc + U256::from(*next)     // Overflow safe, as U256 >> u64    //TODO maths
+        )
+    ).0;
 
-//     // Mint pool tokens for the depositor
-//     // Make up a 'MessageInfo' with the sender set to this contract itself => this is to allow the use of the 'execute_mint'
-//     // function as provided by cw20-base, which will match the 'sender' of 'MessageInfo' with the allowed minter that
-//     // was set when initializing the cw20 token (this contract itself).
-//     let execute_mint_info = MessageInfo {
-//         sender: env.contract.address.clone(),
-//         funds: vec![],
-//     };
-//     let minted_amount = INITIAL_MINT_AMOUNT;
-//     execute_mint(
-//         deps,
-//         env.clone(),
-//         execute_mint_info,
-//         depositor.to_string(),
-//         minted_amount
-//     )?;
+    // Save state
+    STATE.save(deps.storage, &state)?;
 
-//     // TODO overhaul: are tokens transferred from the factory? Or will they already be hold by the contract at this point?
-//     // Build messages to order the transfer of tokens from setup_master to the swap pool
-//     let setup_master_addr_str = setup_master.to_string();
-//     let self_addr_str = env.contract.address.to_string();
-//     let transfer_msgs: Vec<CosmosMsg> = state.assets.iter().zip(&assets_balances).map(|(asset, balance)| {
-//         Ok(CosmosMsg::Wasm(
-//             cosmwasm_std::WasmMsg::Execute {
-//                 contract_addr: asset.to_string(),
-//                 msg: to_binary(&Cw20ExecuteMsg::TransferFrom {
-//                     owner: setup_master_addr_str.clone(),
-//                     recipient: self_addr_str.clone(),
-//                     amount: *balance
-//                 })?,
-//                 funds: vec![]
-//             }
-//         ))
-//     }).collect::<StdResult<Vec<CosmosMsg>>>()?;
+    // Mint pool tokens for the depositor
+    // Make up a 'MessageInfo' with the sender set to this contract itself => this is to allow the use of the 'execute_mint'
+    // function as provided by cw20-base, which will match the 'sender' of 'MessageInfo' with the allowed minter that
+    // was set when initializing the cw20 token (this contract itself).
+    let execute_mint_info = MessageInfo {
+        sender: env.contract.address.clone(),
+        funds: vec![],
+    };
+    let minted_amount = INITIAL_MINT_AMOUNT;
+    execute_mint(
+        deps,
+        env.clone(),
+        execute_mint_info,
+        depositor.clone(),
+        minted_amount
+    )?;
 
-//     Ok(
-//         Response::new()
-//             .add_messages(transfer_msgs)
-//             .add_attribute("to_account", format!("{:?}", depositor))
-//             .add_attribute("mint", minted_amount)
-//             .add_attribute("assets", format!("{:?}", assets_balances))
-//     )
-// }
+    // TODO EVM MISMATCH // TODO overhaul: are tokens transferred from the factory? Or will they already be hold by the contract at this point?
+    // Build messages to order the transfer of tokens from setup_master to the swap pool
+    let sender_addr_str = info.sender.to_string();
+    let self_addr_str = env.contract.address.to_string();
+    let transfer_msgs: Vec<CosmosMsg> = state.assets.iter().zip(&assets_balances).map(|(asset, balance)| {
+        Ok(CosmosMsg::Wasm(
+            cosmwasm_std::WasmMsg::Execute {
+                contract_addr: asset.to_string(),
+                msg: to_binary(&Cw20ExecuteMsg::TransferFrom {
+                    owner: sender_addr_str.clone(),
+                    recipient: self_addr_str.clone(),
+                    amount: *balance
+                })?,
+                funds: vec![]
+            }
+        ))
+    }).collect::<StdResult<Vec<CosmosMsg>>>()?;
+
+    //TODO include attributes of the execute_mint response in this response?
+    Ok(
+        Response::new()
+            .add_messages(transfer_msgs)
+            .add_attribute("to_account", depositor)
+            .add_attribute("mint", minted_amount)
+            .add_attribute("assets", format!("{:?}", assets_balances))
+    )
+}
 
 
 // pub fn execute_finish_setup(
@@ -743,159 +750,167 @@ pub fn execute_set_governance_fee(
 
 #[cfg(test)]
 mod tests {
-    // use cw_multi_test::{App, Contract, ContractWrapper, Executor};
+    use cw_multi_test::{App, Contract, ContractWrapper, Executor};
 
-    // use cosmwasm_std::{Addr, Empty, Uint128, Attribute};
-    // use cw20::{Cw20Coin, Cw20ExecuteMsg, MinterResponse, Cw20QueryMsg, BalanceResponse};
-    // use swap_pool_common::msg::{InstantiateMsg, ExecuteMsg};
+    use cosmwasm_std::{Addr, Empty, Uint128, Attribute};
+    use cw20::{Cw20Coin, Cw20ExecuteMsg, MinterResponse, Cw20QueryMsg, BalanceResponse};
+    use swap_pool_common::{msg::{InstantiateMsg, ExecuteMsg}, state::INITIAL_MINT_AMOUNT};
 
-    // pub const INSTANTIATOR_ADDR: &str = "inst_addr";
-    // pub const OTHER_ADDR: &str = "other_addr";
+    pub const INSTANTIATOR_ADDR: &str = "inst_addr";
+    pub const OTHER_ADDR: &str = "other_addr";
 
-    // pub fn contract_swap_pool() -> Box<dyn Contract<Empty>> {
-    //     let contract = ContractWrapper::new(
-    //         crate::contract::execute,
-    //         crate::contract::instantiate,
-    //         crate::contract::query,
-    //     );
-    //     Box::new(contract)
-    // }
+    pub fn contract_swap_pool() -> Box<dyn Contract<Empty>> {
+        let contract = ContractWrapper::new(
+            crate::contract::execute,
+            crate::contract::instantiate,
+            crate::contract::query,
+        );
+        Box::new(contract)
+    }
 
-    // pub fn contract_cw20() -> Box<dyn Contract<Empty>> {
-    //     let contract = ContractWrapper::new(
-    //         cw20_base::contract::execute,
-    //         cw20_base::contract::instantiate,
-    //         cw20_base::contract::query
-    //     );
-    //     Box::new(contract)
-    // }
+    pub fn contract_cw20() -> Box<dyn Contract<Empty>> {
+        let contract = ContractWrapper::new(
+            cw20_base::contract::execute,
+            cw20_base::contract::instantiate,
+            cw20_base::contract::query
+        );
+        Box::new(contract)
+    }
 
-    // //TODO add instantiate tests
+    //TODO add instantiate tests
 
-    // #[test]
-    // fn test_setup_and_instantiate() {
-    //     //TODO should this be considered an integration test? => Move somewhere else
+    #[test]
+    fn test_setup_and_instantiate() {
+        //TODO should this be considered an integration test? => Move somewhere else
 
-    //     let mut router = App::default();
+        let mut router = App::default();
 
-    //     let setup_master = Addr::unchecked(INSTANTIATOR_ADDR);
-
-
-    //     // Create test token
-    //     let cw20_id = router.store_code(contract_cw20());
-
-    //     let msg = cw20_base::msg::InstantiateMsg {
-    //         name: "Test Token A".to_string(),
-    //         symbol: "TTA".to_string(),
-    //         decimals: 2,
-    //         initial_balances: vec![Cw20Coin {
-    //             address: setup_master.to_string(),
-    //             amount: Uint128::new(5000)
-    //         }],
-    //         mint: Some(MinterResponse {
-    //             minter: setup_master.to_string(),
-    //             cap: None
-    //         }),
-    //         marketing: None
-    //     };
-
-    //     let test_token_1_addr = router
-    //         .instantiate_contract(cw20_id, setup_master.clone(), &msg, &[], "TTA", None)
-    //         .unwrap();
+        let setup_master = Addr::unchecked(INSTANTIATOR_ADDR);
 
 
-    //     // Create swap pool - upload and instantiate
-    //     let sp_id = router.store_code(contract_swap_pool());
+        // Create test token
+        let cw20_id = router.store_code(contract_cw20());
 
-    //     let sp_addr = router
-    //         .instantiate_contract(
-    //             sp_id,
-    //             setup_master.clone(),
-    //             &InstantiateMsg {
-    //                 setup_master: None,
-    //                 chain_interface: None,
-    //                 assets: vec![test_token_1_addr.to_string()],
-    //                 weights: vec![1u64],
-    //                 amplification_x64: [0, 1, 0, 0],
-    //                 name: "SP1".to_owned(),
-    //                 symbol: "SP1".to_owned(),
-    //             },
-    //             &[],
-    //             "sp",
-    //             None
-    //         ).unwrap();
+        let msg = cw20_base::msg::InstantiateMsg {
+            name: "Test Token A".to_string(),
+            symbol: "TTA".to_string(),
+            decimals: 2,
+            initial_balances: vec![Cw20Coin {
+                address: setup_master.to_string(),
+                amount: Uint128::new(5000)
+            }],
+            mint: Some(MinterResponse {
+                minter: setup_master.to_string(),
+                cap: None
+            }),
+            marketing: None
+        };
 
-
-
-    //     // Set allowance for the swap pool
-    //     let deposit_amount = Uint128::from(1000_u64);
-    //     let allowance_msg = Cw20ExecuteMsg::IncreaseAllowance {
-    //         spender: sp_addr.to_string(),
-    //         amount: deposit_amount,
-    //         expires: None
-    //     };
-
-    //     router.execute_contract(
-    //         setup_master.clone(),
-    //         test_token_1_addr.clone(),
-    //         &allowance_msg,
-    //         &[]
-    //     ).unwrap();
+        let test_token_1_addr = router
+            .instantiate_contract(cw20_id, setup_master.clone(), &msg, &[], "TTA", None)
+            .unwrap();
 
 
-    //     // Initialize sp balances
-    //     let initialize_balances_msg = ExecuteMsg::InitializeSwapCurves {
-    //         assets_balances: vec![Uint128::from(1000_u64)]
-    //     };
+        // Create swap pool - upload and instantiate
+        let sp_id = router.store_code(contract_swap_pool());
 
-    //     let response = router.execute_contract(
-    //         setup_master.clone(),
-    //         sp_addr.clone(),
-    //         &initialize_balances_msg,
-    //         &[]
-    //     ).unwrap();
-
-    //     // Verify attributes
-    //     let initialize_event = response.events[1].clone();
-    //     assert_eq!(
-    //         initialize_event.attributes[1],
-    //         Attribute { key: "initial_asset_balances".to_string(), value: format!("{:?}", vec![Uint128::from(1000_u64)])}
-    //     );
-    //     assert_eq!(
-    //         initialize_event.attributes[2],
-    //         Attribute { key: "minted_amount".to_string(), value: Uint128::from(2_u32).pow(64_u32).to_string()}
-    //     );
+        let sp_addr = router
+            .instantiate_contract(
+                sp_id,
+                setup_master.clone(),
+                &InstantiateMsg {
+                    name: "Pool1".to_owned(),
+                    symbol: "P1".to_owned(),
+                    chain_interface: None,
+                    pool_fee: 0u64,
+                    governance_fee: 0u64,
+                    fee_administrator: setup_master.to_string(),
+                    setup_master: setup_master.to_string(),
+                },
+                &[],
+                "sp",
+                None
+            ).unwrap();
 
 
-    //     // Verify token balances
-    //     // Swap pool balance of test token 1
-    //     let balance_msg = Cw20QueryMsg::Balance { address: sp_addr.to_string() };
-    //     let balance_response: BalanceResponse = router
-    //         .wrap()
-    //         .query_wasm_smart(test_token_1_addr.clone(), &balance_msg)
-    //         .unwrap();
-    //     assert_eq!(balance_response.balance, Uint128::from(1000_u64));
 
-    //     // User balance of test token 1
-    //     let balance_msg = Cw20QueryMsg::Balance { address: setup_master.to_string() };
-    //     let balance_response: BalanceResponse = router
-    //         .wrap()
-    //         .query_wasm_smart(test_token_1_addr.clone(), &balance_msg)
-    //         .unwrap();
+        // Set allowance for the swap pool
+        let deposit_amount = Uint128::from(1000_u64);
+        let allowance_msg = Cw20ExecuteMsg::IncreaseAllowance {
+            spender: sp_addr.to_string(),
+            amount: deposit_amount,
+            expires: None
+        };
 
-    //     assert_eq!(balance_response.balance, Uint128::from(4000_u64));
+        router.execute_contract(
+            setup_master.clone(),
+            test_token_1_addr.clone(),
+            &allowance_msg,
+            &[]
+        ).unwrap();
 
 
-    //     // Verify pool token balance
-    //     let balance_msg = Cw20QueryMsg::Balance { address: setup_master.to_string() };
-    //     let balance_response: BalanceResponse = router
-    //         .wrap()
-    //         .query_wasm_smart(sp_addr.clone(), &balance_msg)
-    //         .unwrap();
+        // Initialize sp balances
+        let initialize_balances_msg = ExecuteMsg::InitializeSwapCurves {
+            assets: vec![test_token_1_addr.to_string()],
+            assets_balances: vec![Uint128::from(1000_u64)],
+            weights: vec![1u64],
+            amp: 1000000000000000000u64,
+            depositor: setup_master.to_string()
+        };
 
-    //     assert_eq!(balance_response.balance, Uint128::from(2_u32).pow(64_u32));
+        let response = router.execute_contract(
+            setup_master.clone(),
+            sp_addr.clone(),
+            &initialize_balances_msg,
+            &[]
+        ).unwrap();
 
-    // }
+        // Verify attributes
+        let initialize_event = response.events[1].clone();
+        assert_eq!(
+            initialize_event.attributes[1],
+            Attribute { key: "to_account".to_string(), value: setup_master.to_string()}
+        );
+        assert_eq!(
+            initialize_event.attributes[2],
+            Attribute { key: "mint".to_string(), value: INITIAL_MINT_AMOUNT.to_string()}
+        );
+        assert_eq!(
+            initialize_event.attributes[3],
+            Attribute { key: "assets".to_string(), value: format!("{:?}", vec![Uint128::from(1000_u64)])}
+        );
+
+
+        // Verify token balances
+        // Swap pool balance of test token 1
+        let balance_msg = Cw20QueryMsg::Balance { address: sp_addr.to_string() };
+        let balance_response: BalanceResponse = router
+            .wrap()
+            .query_wasm_smart(test_token_1_addr.clone(), &balance_msg)
+            .unwrap();
+        assert_eq!(balance_response.balance, Uint128::from(1000_u64));
+
+        // User balance of test token 1
+        let balance_msg = Cw20QueryMsg::Balance { address: setup_master.to_string() };
+        let balance_response: BalanceResponse = router
+            .wrap()
+            .query_wasm_smart(test_token_1_addr.clone(), &balance_msg)
+            .unwrap();
+
+        assert_eq!(balance_response.balance, Uint128::from(4000_u64));
+
+
+        // Verify pool token balance
+        let balance_msg = Cw20QueryMsg::Balance { address: setup_master.to_string() };
+        let balance_response: BalanceResponse = router
+            .wrap()
+            .query_wasm_smart(sp_addr.clone(), &balance_msg)
+            .unwrap();
+
+        assert_eq!(balance_response.balance, INITIAL_MINT_AMOUNT);
+
+    }
 
     // TODO make sure 'InitializeSwapCurves' can only be called once
 
