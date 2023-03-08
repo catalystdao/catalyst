@@ -1,6 +1,6 @@
 use cosmwasm_schema::cw_serde;
 
-use cosmwasm_std::{Addr, Uint128, DepsMut, Env, Response, Event, MessageInfo};
+use cosmwasm_std::{Addr, Uint128, DepsMut, Env, Response, Event, MessageInfo, Deps, StdResult};
 use cw_storage_plus::{Item, Map};
 use cw20_base::state::{MinterData, TokenInfo, TOKEN_INFO};
 
@@ -179,6 +179,14 @@ impl SwapPoolState {
                 .add_attribute("to_pool", to_pool)
                 .add_attribute("state", state.to_string())
         )
+    }
+
+
+    pub fn ready(deps: Deps) -> StdResult<bool> {
+    
+        let state = STATE.load(deps.storage)?;
+
+        Ok(state.setup_master.is_none() && state.assets.len() > 0)
     }
 
 

@@ -237,8 +237,8 @@ pub enum QueryMsg {
     // // #[returns(FactoryOwnerResponse)]
     // // FactoryOwner {},
 
-    // #[returns(IsReadyResponse)]
-    // IsReady {},
+    #[returns(ReadyResponse)]
+    Ready {},
 
 
     // CW20 Implementation
@@ -343,7 +343,7 @@ pub struct EscrowedPoolTokensResponse {
 // }
 
 #[cw_serde]
-pub struct IsReadyResponse {
+pub struct ReadyResponse {
     pub ready: Binary
 }
 

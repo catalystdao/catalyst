@@ -164,6 +164,7 @@ pub fn execute(
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
+        QueryMsg::Ready {} => to_binary(&query_ready(deps)?),
 
         // CW20 query msgs - Use cw20-base for the implementation
         QueryMsg::TokenInfo {} => to_binary(&query_token_info(deps)?),
@@ -733,6 +734,10 @@ pub fn execute_set_connection(
 
 // }
 
+
+pub fn query_ready(deps: Deps) -> StdResult<bool> {
+    SwapPoolState::ready(deps)
+}
 
 
 // //TODO move this fn somewhere else?
