@@ -105,38 +105,53 @@ impl SwapPoolState {
     }
 
     pub fn set_fee_administrator(
-        &mut self,
         deps: &mut DepsMut,
+        info: MessageInfo,
         administrator: String
     ) -> Result<Response, ContractError> {
+        let mut state = STATE.load(deps.storage)?;
 
-        let event = self._set_fee_administrator(deps, administrator.as_str())?;
+        //TODO verify sender is factory owner
 
-        STATE.save(deps.storage, self)?;
+        let event = state._set_fee_administrator(deps, administrator.as_str())?;
+
+        STATE.save(deps.storage, &state)?;
 
         Ok(Response::new().add_event(event))
     }
 
     pub fn set_pool_fee(
-        &mut self,
         deps: &mut DepsMut,
+        info: MessageInfo,
         fee: u64
     ) -> Result<Response, ContractError> {
-        let event = self._set_pool_fee(fee)?;
+        let mut state = STATE.load(deps.storage)?;
 
-        STATE.save(deps.storage, self)?;
+        if info.sender != state.fee_administrator {
+            return Err(ContractError::Unauthorized {})
+        }
+
+        let event = state._set_pool_fee(fee)?;
+
+        STATE.save(deps.storage, &state)?;
 
         Ok(Response::new().add_event(event))
     }
 
     pub fn set_governance_fee(
-        &mut self,
         deps: &mut DepsMut,
+        info: MessageInfo,
         fee: u64
     ) -> Result<Response, ContractError> {
-        let event = self._set_governance_fee(fee)?;
+        let mut state = STATE.load(deps.storage)?;
 
-        STATE.save(deps.storage, self)?;
+        if info.sender != state.fee_administrator {
+            return Err(ContractError::Unauthorized {})
+        }
+
+        let event = state._set_governance_fee(fee)?;
+
+        STATE.save(deps.storage, &state)?;
 
         Ok(Response::new().add_event(event))
     }

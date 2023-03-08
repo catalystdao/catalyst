@@ -315,14 +315,10 @@ pub fn execute_finish_setup(mut deps: DepsMut, info: MessageInfo) -> Result<Resp
 
 pub fn execute_set_fee_administrator(
     mut deps: DepsMut,
-    _info: MessageInfo,
+    info: MessageInfo,
     administrator: String
 ) -> Result<Response, ContractError> {
-    let mut state = STATE.load(deps.storage)?;
-
-    //TODO verify sender is factory owner
-
-    state.set_fee_administrator(&mut deps, administrator).map_err(|err| err.into())
+    SwapPoolState::set_fee_administrator(&mut deps, info, administrator).map_err(|err| err.into())
 }
 
 
@@ -331,13 +327,7 @@ pub fn execute_set_pool_fee(
     info: MessageInfo,
     fee: u64
 ) -> Result<Response, ContractError> {
-    let mut state = STATE.load(deps.storage)?;
-
-    if info.sender != state.fee_administrator {
-        return Err(ContractError::Unauthorized {})
-    }
-
-    state.set_pool_fee(&mut deps, fee).map_err(|err| err.into())
+    SwapPoolState::set_pool_fee(&mut deps, info, fee).map_err(|err| err.into())
 }
 
 
@@ -346,13 +336,7 @@ pub fn execute_set_governance_fee(
     info: MessageInfo,
     fee: u64
 ) -> Result<Response, ContractError> {
-    let mut state = STATE.load(deps.storage)?;
-
-    if info.sender != state.fee_administrator {
-        return Err(ContractError::Unauthorized {})
-    }
-
-    state.set_governance_fee(&mut deps, fee).map_err(|err| err.into())
+    SwapPoolState::set_governance_fee(&mut deps, info, fee).map_err(|err| err.into())
 }
 
 
