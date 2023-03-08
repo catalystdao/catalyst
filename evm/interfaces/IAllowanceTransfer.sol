@@ -1,0 +1,1 @@
+../lib/permit2/src/interfaces/IAllowanceTransfer.sol

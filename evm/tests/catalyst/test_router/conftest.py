@@ -1,5 +1,5 @@
 import pytest
-from brownie import CatalystRouter, WETH9, PERMIT2, ZERO_ADDRESS, CatalystSwapPoolVolatile, CatalystSwapPoolAmplified
+from brownie import CatalystRouter, WETH9, ZERO_ADDRESS, CatalystSwapPoolVolatile, CatalystSwapPoolAmplified, interface
 from brownie import convert
 
 @pytest.fixture(scope="module")
@@ -7,8 +7,8 @@ def weth(deployer):
     yield WETH9.deploy({'from': deployer})
     
 @pytest.fixture(scope="module")
-def permit2(deployer):
-    yield PERMIT2.deploy({'from': deployer})
+def permit2():
+    yield interface.IAllowanceTransfer("0x000000000022D473030F116dDEE9F6B43aC78BA3")  # Ethereum Mainnet
     
 @pytest.fixture(scope="module")
 def catalyst_router(permit2, weth, deployer):

@@ -85,7 +85,7 @@ def test_sendSwap(catalyst_router, pool11, pool12, pool21, pool22, weth, token1,
     
     amount = 10**18
     
-    payload1 = encode_router_payload([0x08, 0x00, 0x04], [
+    payload1 = encode_router_payload([0x08, 0x00, 0x01], [
         [ADDRESS_THIS, amount],
         [pool11.address, weth.address, token1.address, amount, 0],
         [pool12.address, channel_id, pool21.address, berg.address, token1.address, 0, BALANCE_THIS, 0, berg.address]  # Leave the calldata param blank.
@@ -105,14 +105,14 @@ def test_route_route(catalyst_router, pool11, pool12, pool21, pool22, weth, toke
     
     amount = 10**18
     
-    payload2 = encode_router_payload([0x00, 0x01], [
+    payload2 = encode_router_payload([0x00, 0x04], [
         [pool22.address, token2.address, token3.address, BALANCE_THIS, 0], 
         [token3.address, berg.address, 0]
     ])
     
     payloadTarget = convert.to_bytes(catalyst_router.address, type_str="bytes32") + convert.to_bytes(catalyst_router.execute.encode_input(*payload2)[10:], "bytes")
     
-    payload1 = encode_router_payload([0x05, 0x00, 0x09], [
+    payload1 = encode_router_payload([0x08, 0x00, 0x01], [
         [ADDRESS_THIS, amount],
         [pool11.address, weth.address, token1.address, amount, 0],
         [pool12.address, channel_id, pool21.address, catalyst_router.address, token1.address, 0, BALANCE_THIS, 0, berg.address, payloadTarget]

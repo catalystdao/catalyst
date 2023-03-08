@@ -3,6 +3,7 @@ networks:
   mainnet-fork:
     cmd_settings:
       fork: "https://eth-mainnet.alchemyapi.io/v2/$ALCHEMY_API_TOKEN"
+  default: mainnet-fork
   
 
 autofetch_sources: true
