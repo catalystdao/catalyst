@@ -82,6 +82,7 @@ pub enum ContractError {
     // Look at https://docs.rs/thiserror/1.0.21/thiserror/ for details.
 }
 
+//TODO overhaul error definitions (currently there is a mixture of definitions across contracts)
 impl From<swap_pool_common::ContractError> for ContractError {
     fn from(err: swap_pool_common::ContractError) -> Self {
         match err {
@@ -91,7 +92,14 @@ impl From<swap_pool_common::ContractError> for ContractError {
             swap_pool_common::ContractError::InvalidPoolFee { requested_fee, max_fee }
                 => ContractError::InvalidPoolFee {requested_fee, max_fee},
             swap_pool_common::ContractError::InvalidGovernanceFee { requested_fee, max_fee }
-                => ContractError::InvalidGovernanceFee {requested_fee, max_fee}
+                => ContractError::InvalidGovernanceFee {requested_fee, max_fee},
+            swap_pool_common::ContractError::CannotSetOwnAccount {} => ContractError::CannotSetOwnAccount {},
+            swap_pool_common::ContractError::InvalidExpiration {} => ContractError::InvalidExpiration {},
+            swap_pool_common::ContractError::InvalidZeroAmount {} => ContractError::InvalidZeroAmount {},
+            swap_pool_common::ContractError::Expired {} => ContractError::Expired {},
+            swap_pool_common::ContractError::NoAllowance {} => ContractError::NoAllowance {},
+            swap_pool_common::ContractError::CannotExceedCap {} => ContractError::CannotExceedCap {},
+            swap_pool_common::ContractError::DuplicateInitialBalanceAddresses {} => ContractError::DuplicateInitialBalanceAddresses {}
         }
     }
 }

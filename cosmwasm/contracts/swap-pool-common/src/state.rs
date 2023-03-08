@@ -1,8 +1,11 @@
 use cosmwasm_schema::cw_serde;
 
-use cosmwasm_std::{Addr, Uint128, DepsMut, Env, Response, Event, MessageInfo, Deps, StdResult};
+use cosmwasm_std::{Addr, Uint128, DepsMut, Env, Response, Event, MessageInfo, Deps, StdResult, CosmosMsg, to_binary};
+use cw20::Cw20ExecuteMsg;
 use cw_storage_plus::{Item, Map};
-use cw20_base::state::{MinterData, TokenInfo, TOKEN_INFO};
+use cw20_base::{state::{MinterData, TokenInfo, TOKEN_INFO}, contract::execute_mint};
+use sha3::{Digest, Keccak256};
+use fixed_point_math_lib::{u256::U256};
 
 use crate::ContractError;
 
@@ -18,9 +21,17 @@ pub const MAX_GOVERNANCE_FEE_SHARE : u64 = 75u64 * 10000000000000000u64;        
 pub const DECAYRATE: u64 = 60*60*24;
 
 pub const STATE: Item<SwapPoolState> = Item::new("catalyst-pool-state");
-pub const ESCROWS: Map<&str, Escrow> = Map::new("catalyst-pool-escrows");
+pub const ASSET_ESCROWS: Map<&str, String> = Map::new("catalyst-pool-asset-escrows");
+pub const LIQUIDITY_ESCROWS: Map<&str, String> = Map::new("catalyst-pool-liquidity-escrows");
 pub const CONNECTIONS: Map<(&str, &str), bool> = Map::new("catalyst-pool-connections");   //TODO channelId and toPool types
 
+
+// TODO move to utils/similar?
+fn calc_keccak256(message: Vec<u8>) -> String {
+    let mut hasher = Keccak256::new();
+    hasher.update(message);
+    format!("{:?}", hasher.finalize().to_vec())
+}
 
 #[cw_serde]
 pub struct SwapPoolState {
@@ -36,6 +47,7 @@ pub struct SwapPoolState {
     pub governance_fee: u64,
 
     pub escrowed_assets: Vec<Uint128>,
+    pub escrowed_pool_tokens: Uint128,
 
     pub max_limit_capacity: [u64; 4],       // TODO EVM mismatch (name maxUnitCapacity) // TODO use U256 directly
     pub used_limit_capacity: [u64; 4],      // TODO EVM mismatch (name maxUnitCapacity) // TODO use U256 directly
@@ -45,11 +57,11 @@ pub struct SwapPoolState {
 
 impl SwapPoolState {
 
-    pub fn get_asset_index(&self, asset: &String) -> Result<usize, ContractError> {
+    pub fn get_asset_index(&self, asset: &str) -> Result<usize, ContractError> {
         self.assets
             .iter()
             .enumerate()
-            .find_map(|(index, a): (usize, &Addr)| if *a == *asset { Some(index) } else { None })
+            .find_map(|(index, a): (usize, &Addr)| if *a == asset { Some(index) } else { None })
             .ok_or(ContractError::InvalidAssets {})
     }
 
@@ -190,6 +202,260 @@ impl SwapPoolState {
     }
 
 
+    fn release_asset_escrow(
+        &mut self,
+        deps: &mut DepsMut,
+        send_asset_hash: &str,
+        amount: Uint128,
+        asset: &str
+    ) -> Result<String, ContractError> {
+
+        let fallback_account = ASSET_ESCROWS.load(deps.storage, send_asset_hash)?;
+        ASSET_ESCROWS.remove(deps.storage, send_asset_hash);
+
+        let asset_index = self.get_asset_index(asset)?;
+        self.escrowed_assets[asset_index] -= amount;               // Safe, as 'amount' is always contained in 'escrowed_assets'
+
+        Ok(fallback_account)
+    }
+
+
+    fn release_liquidity_escrow(
+        &mut self,
+        deps: &mut DepsMut,
+        send_liquidity_hash: &str,
+        amount: Uint128
+    ) -> Result<String, ContractError> {
+
+        let fallback_account = LIQUIDITY_ESCROWS.load(deps.storage, send_liquidity_hash)?;
+        LIQUIDITY_ESCROWS.remove(deps.storage, send_liquidity_hash);
+
+        self.escrowed_pool_tokens -= amount;               // Safe, as 'amount' is always contained in 'escrowed_assets'
+
+        Ok(fallback_account)
+    }
+
+    pub fn send_asset_ack(
+        deps: &mut DepsMut,
+        info: MessageInfo,
+        to_account: String,
+        u: U256,    // TODO maths
+        amount: Uint128,
+        asset: String,
+        block_number_mod: u32
+    ) -> Result<Response, ContractError> {
+
+        let mut state = STATE.load(deps.storage)?;
+
+        if Some(info.sender) != state.chain_interface {
+            return Err(ContractError::Unauthorized {})
+        }
+
+        let send_asset_hash = SwapPoolState::compute_send_asset_hash(
+            to_account.as_str(),
+            u,
+            amount,
+            asset.as_str(),
+            block_number_mod
+        );
+
+        state.release_asset_escrow(deps, &send_asset_hash, amount, &asset)?;
+
+        STATE.save(deps.storage, &state)?;
+
+        Ok(
+            Response::new()
+                .add_attribute("swap_hash", send_asset_hash)
+        )
+    }
+
+    pub fn send_asset_timeout(
+        deps: &mut DepsMut,
+        env: Env,
+        info: MessageInfo,
+        to_account: String,
+        u: U256,    // TODO maths
+        amount: Uint128,
+        asset: String,
+        block_number_mod: u32
+    ) -> Result<Response, ContractError> {
+
+        let mut state = STATE.load(deps.storage)?;
+
+        if Some(info.sender) != state.chain_interface {
+            return Err(ContractError::Unauthorized {})
+        }
+
+        let send_asset_hash = SwapPoolState::compute_send_asset_hash(
+            to_account.as_str(),
+            u,
+            amount,
+            asset.as_str(),
+            block_number_mod
+        );
+
+        let fallback_address = state.release_asset_escrow(deps, &send_asset_hash, amount, &asset)?;
+
+        STATE.save(deps.storage, &state)?;
+
+        // Transfer escrowed asset to fallback user
+        let transfer_msg: CosmosMsg = CosmosMsg::Wasm(
+            cosmwasm_std::WasmMsg::Execute {
+                contract_addr: asset.to_string(),
+                msg: to_binary(&Cw20ExecuteMsg::TransferFrom {
+                    owner: env.contract.address.to_string(),
+                    recipient: fallback_address,
+                    amount
+                })?,
+                funds: vec![]
+            }
+        );
+
+        Ok(
+            Response::new()
+                .add_message(transfer_msg)
+                .add_attribute("swap_hash", send_asset_hash)
+        )
+    }
+
+    pub fn send_liquidity_ack(
+        deps: &mut DepsMut,
+        info: MessageInfo,
+        to_account: String,
+        u: U256,    // TODO maths
+        amount: Uint128,
+        block_number_mod: u32
+    ) -> Result<Response, ContractError> {
+
+        let mut state = STATE.load(deps.storage)?;
+
+        if Some(info.sender) != state.chain_interface {
+            return Err(ContractError::Unauthorized {})
+        }
+
+        let send_liquidity_hash = SwapPoolState::compute_send_liquidity_hash(
+            to_account.as_str(),
+            u,
+            amount,
+            block_number_mod
+        );
+
+        state.release_liquidity_escrow(deps, &send_liquidity_hash, amount)?;
+
+        STATE.save(deps.storage, &state)?;
+
+        Ok(
+            Response::new()
+                .add_attribute("swap_hash", send_liquidity_hash)
+        )
+    }
+
+    pub fn send_liquidity_timeout(
+        deps: &mut DepsMut,
+        env: Env,
+        info: MessageInfo,
+        to_account: String,
+        u: U256,    // TODO maths
+        amount: Uint128,
+        block_number_mod: u32
+    ) -> Result<Response, ContractError> {
+
+        let mut state = STATE.load(deps.storage)?;
+
+        if Some(info.sender) != state.chain_interface {
+            return Err(ContractError::Unauthorized {})
+        }
+
+        let send_liquidity_hash = SwapPoolState::compute_send_liquidity_hash(
+            to_account.as_str(),
+            u,
+            amount,
+            block_number_mod
+        );
+
+        let fallback_address = state.release_liquidity_escrow(deps, &send_liquidity_hash, amount)?;
+
+        STATE.save(deps.storage, &state)?;
+
+        // Mint pool tokens for the fallbackAccount
+        let execute_mint_info = MessageInfo {
+            sender: env.contract.address.clone(),
+            funds: vec![],
+        };
+        let mint_response = execute_mint(
+            deps.branch(),  //TODO is '.branch()' correct to get a copy of the object?
+            env,
+            execute_mint_info,
+            fallback_address,
+            amount
+        )?;
+
+        Ok(
+            Response::new()
+                .add_attribute("swap_hash", send_liquidity_hash)
+                .add_attributes(mint_response.attributes)   //TODO better way to do this?
+        )
+    }
+
+    fn compute_send_asset_hash(
+        to_account: &str,
+        u: U256,                    // TODO maths
+        amount: Uint128,
+        asset: &str,
+        block_number_mod: u32        
+    ) -> String {
+        
+        let to_account_bytes = to_account.as_bytes();
+        let asset_bytes = asset.as_bytes();
+
+        let mut hash_data: Vec<u8> = Vec::with_capacity(    // Initialize vec with the specified capacity (avoid reallocations)
+            to_account_bytes.len()
+                + 32
+                + 16
+                + asset_bytes.len()
+                + 4
+        );
+
+        hash_data.extend_from_slice(to_account_bytes);
+
+        hash_data.extend_from_slice(&[0u8; 32usize]);
+        u.to_big_endian(&mut hash_data[to_account_bytes.len()..to_account_bytes.len()+32usize]);    
+
+        hash_data.extend_from_slice(&amount.to_be_bytes());
+        hash_data.extend_from_slice(asset_bytes);
+        hash_data.extend_from_slice(&block_number_mod.to_be_bytes());
+        
+        calc_keccak256(hash_data)
+    }
+
+    fn compute_send_liquidity_hash(
+        to_account: &str,
+        u: U256,                    // TODO maths
+        amount: Uint128,
+        block_number_mod: u32        
+    ) -> String {
+        
+        let to_account_bytes = to_account.as_bytes();
+
+        let mut hash_data: Vec<u8> = Vec::with_capacity(    // Initialize vec with the specified capacity (avoid reallocations)
+            to_account_bytes.len()
+                + 32
+                + 16
+                + 4
+        );
+
+        hash_data.extend_from_slice(to_account_bytes);
+
+        hash_data.extend_from_slice(&[0u8; 32usize]);
+        u.to_big_endian(&mut hash_data[to_account_bytes.len()..to_account_bytes.len()+32usize]);    
+
+        hash_data.extend_from_slice(&amount.to_be_bytes());
+        hash_data.extend_from_slice(&block_number_mod.to_be_bytes());
+        
+        calc_keccak256(hash_data)
+    }
+
+
 
     pub fn setup(
         deps: &mut DepsMut,
@@ -223,6 +489,7 @@ impl SwapPoolState {
             governance_fee: 0u64,
     
             escrowed_assets: vec![],
+            escrowed_pool_tokens: Uint128::zero(),
     
             max_limit_capacity: [0u64; 4],
             used_limit_capacity: [0u64; 4],

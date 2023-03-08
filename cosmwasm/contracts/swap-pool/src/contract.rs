@@ -13,7 +13,6 @@ use cw20_base::contract::{
     execute_burn, execute_mint, execute_send, execute_transfer, query_balance, query_token_info,
 };
 use cw20_base::state::{MinterData, TokenInfo, TOKEN_INFO};
-use sha3::{Digest, Keccak256};
 use swap_pool_common::state::{MAX_ASSETS, INITIAL_MINT_AMOUNT, SwapPoolState, STATE};
 
 use crate::calculation_helpers;
@@ -82,6 +81,32 @@ pub fn execute(
         ExecuteMsg::SetPoolFee { fee } => execute_set_pool_fee(deps, info, fee),
         ExecuteMsg::SetGovernanceFee { fee } => execute_set_governance_fee(deps, info, fee),
         ExecuteMsg::SetConnection { channel_id, to_pool, state } => execute_set_connection(deps, info, channel_id, to_pool, state),
+        ExecuteMsg::SendAssetAck {
+            to_account,
+            u,
+            amount,
+            asset,
+            block_number_mod
+        } => execute_send_asset_ack(deps, info, to_account, u, amount, asset, block_number_mod),
+        ExecuteMsg::SendAssetTimeout {
+            to_account,
+            u,
+            amount,
+            asset,
+            block_number_mod
+        } => execute_send_asset_timeout(deps, env, info, to_account, u, amount, asset, block_number_mod),
+        ExecuteMsg::SendLiquidityAck {
+            to_account,
+            u,
+            amount,
+            block_number_mod
+        } => execute_send_liquidity_ack(deps, info, to_account, u, amount, block_number_mod),
+        ExecuteMsg::SendLiquidityTimeout {
+            to_account,
+            u,
+            amount,
+            block_number_mod
+        } => execute_send_liquidity_timeout(deps, env, info, to_account, u, amount, block_number_mod),
         // ExecuteMsg::Deposit { pool_tokens_amount } => execute_deposit(deps, env, info, pool_tokens_amount),
         // ExecuteMsg::Withdraw { pool_tokens_amount } => execute_withdraw(deps, env, info, pool_tokens_amount),
         // ExecuteMsg::Localswap {
@@ -351,6 +376,87 @@ pub fn execute_set_connection(
 ) -> Result<Response, ContractError> {
     SwapPoolState::set_connection(&mut deps, info, channel_id, to_pool, state).map_err(|err| err.into())
 }
+
+pub fn execute_send_asset_ack(
+    mut deps: DepsMut,
+    info: MessageInfo,
+    to_account: String,
+    u: [u64; 4],
+    amount: Uint128,
+    asset: String,
+    block_number_mod: u32
+) -> Result<Response, ContractError> {
+    SwapPoolState::send_asset_ack(
+        &mut deps,
+        info,
+        to_account,
+        U256(u),
+        amount,
+        asset,
+        block_number_mod
+    ).map_err(|err| err.into())
+}
+
+pub fn execute_send_asset_timeout(
+    mut deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    to_account: String,
+    u: [u64; 4],
+    amount: Uint128,
+    asset: String,
+    block_number_mod: u32
+) -> Result<Response, ContractError> {
+    SwapPoolState::send_asset_timeout(
+        &mut deps,
+        env,
+        info,
+        to_account,
+        U256(u),
+        amount,
+        asset,
+        block_number_mod
+    ).map_err(|err| err.into())
+}
+
+pub fn execute_send_liquidity_ack(
+    mut deps: DepsMut,
+    info: MessageInfo,
+    to_account: String,
+    u: [u64; 4],
+    amount: Uint128,
+    block_number_mod: u32
+) -> Result<Response, ContractError> {
+    SwapPoolState::send_liquidity_ack(
+        &mut deps,
+        info,
+        to_account,
+        U256(u),
+        amount,
+        block_number_mod
+    ).map_err(|err| err.into())
+}
+
+pub fn execute_send_liquidity_timeout(
+    mut deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    to_account: String,
+    u: [u64; 4],
+    amount: Uint128,
+    block_number_mod: u32
+) -> Result<Response, ContractError> {
+    SwapPoolState::send_liquidity_timeout(
+        &mut deps,
+        env,
+        info,
+        to_account,
+        U256(u),
+        amount,
+        block_number_mod
+    ).map_err(|err| err.into())
+}
+
 
 
 // pub fn execute_deposit(
@@ -745,13 +851,6 @@ pub fn query_ready(deps: Deps) -> StdResult<bool> {
 //     let info = TOKEN_INFO.load(deps.storage)?;
 //     Ok(info.total_supply)
 // }
-
-// fn calc_keccak256(message: Vec<u8>) -> String {
-//     let mut hasher = Keccak256::new();
-//     hasher.update(message);
-//     format!("{:?}", hasher.finalize().to_vec())
-// }
-
 
 #[cfg(test)]
 mod tests {

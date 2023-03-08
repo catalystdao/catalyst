@@ -29,9 +29,11 @@ cw-storage-plus = "1.0.1"
 cw2 = "1.0.1"
 cw20 = "1.0.1"
 cw20-base = { version = "1.0.1", features = ["library"] }
+sha3 = "0.10.6"
 schemars = "0.8.10"
 serde = { version = "1.0.145", default-features = false, features = ["derive"] }
 thiserror = { version = "1.0.31" }
+fixed-point-math-lib = { path = "../../../rust-common/fixed_point_math_lib" }
 
 [dev-dependencies]
 cw-multi-test = "0.16.2"

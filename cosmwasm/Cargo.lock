@@ -816,7 +816,6 @@ dependencies = [
  "fixed-point-math-lib",
  "schemars",
  "serde",
- "sha3",
  "swap-pool-common",
  "thiserror",
 ]
@@ -848,8 +847,10 @@ dependencies = [
  "cw2",
  "cw20",
  "cw20-base",
+ "fixed-point-math-lib",
  "schemars",
  "serde",
+ "sha3",
  "thiserror",
 ]
 

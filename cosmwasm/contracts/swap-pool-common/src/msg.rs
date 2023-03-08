@@ -41,37 +41,35 @@ pub enum ExecuteMsg {
         state: bool
     },
 
-    // CreateConnectionWithChain {
-    //     chain_id: [u64; 4],
-    //     pool: String,
-    //     state: bool
-    // },
+    SendAssetAck {
+        to_account: String,
+        u: [u64; 4],
+        amount: Uint128,
+        asset: String,
+        block_number_mod: u32
+    },
 
-    // ReleaseEscrowAck {
-    //     message_hash: String,
-    //     units: [u64; 4],
-    //     token: String,
-    //     amount: Uint128
-    // },
+    SendAssetTimeout {
+        to_account: String,
+        u: [u64; 4],
+        amount: Uint128,
+        asset: String,
+        block_number_mod: u32
+    },
 
-    // ReleaseEscrowTimeout {
-    //     message_hash: String,
-    //     units: [u64; 4],
-    //     token: String,
-    //     amount: Uint128
-    // },
+    SendLiquidityAck {
+        to_account: String,
+        u: [u64; 4],
+        amount: Uint128,
+        block_number_mod: u32
+    },
 
-    // ReleaseLiquidityEscrowAck {
-    //     message_hash: String,
-    //     units: [u64; 4],
-    //     amount: [u64; 4]
-    // },
-
-    // ReleaseLiquidityEscrowTimeout {
-    //     message_hash: String,
-    //     units: [u64; 4],
-    //     amount: [u64; 4]
-    // },
+    SendLiquidityTimeout {
+        to_account: String,
+        u: [u64; 4],
+        amount: Uint128,
+        block_number_mod: u32
+    },
 
     // Setup {
     //     assets: Vec<String>,
