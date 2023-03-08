@@ -35,11 +35,11 @@ pub enum ExecuteMsg {
 
     SetFeeAdministrator { administrator: String },
 
-    // CreateConnection {
-    //     channel_id: String,
-    //     pool: String,
-    //     state: bool
-    // },
+    SetConnection {
+        channel_id: String,
+        to_pool: String,
+        state: bool
+    },
 
     // CreateConnectionWithChain {
     //     chain_id: [u64; 4],

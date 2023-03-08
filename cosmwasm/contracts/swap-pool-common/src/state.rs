@@ -19,6 +19,7 @@ pub const DECAYRATE: u64 = 60*60*24;
 
 pub const STATE: Item<SwapPoolState> = Item::new("catalyst-pool-state");
 pub const ESCROWS: Map<&str, Escrow> = Map::new("catalyst-pool-escrows");
+pub const CONNECTIONS: Map<(&str, &str), bool> = Map::new("catalyst-pool-connections");   //TODO channelId and toPool types
 
 
 #[cw_serde]
@@ -154,6 +155,30 @@ impl SwapPoolState {
         STATE.save(deps.storage, &state)?;
 
         Ok(Response::new().add_event(event))
+    }
+
+    
+    pub fn set_connection(
+        deps: &mut DepsMut,
+        info: MessageInfo,
+        channel_id: String,
+        to_pool: String,
+        state: bool
+    ) -> Result<Response, ContractError> {
+        let pool_state = STATE.load(deps.storage)?;
+
+        if pool_state.setup_master != Some(info.sender) {   // TODO check also for factory owner
+            return Err(ContractError::Unauthorized {});
+        }
+
+        CONNECTIONS.save(deps.storage, (channel_id.as_str(), to_pool.as_str()), &state)?;
+
+        Ok(
+            Response::new()
+                .add_attribute("channel_id", channel_id)
+                .add_attribute("to_pool", to_pool)
+                .add_attribute("state", state.to_string())
+        )
     }
 
 

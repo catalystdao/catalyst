@@ -81,6 +81,7 @@ pub fn execute(
         ExecuteMsg::SetFeeAdministrator { administrator } => execute_set_fee_administrator(deps, info, administrator),
         ExecuteMsg::SetPoolFee { fee } => execute_set_pool_fee(deps, info, fee),
         ExecuteMsg::SetGovernanceFee { fee } => execute_set_governance_fee(deps, info, fee),
+        ExecuteMsg::SetConnection { channel_id, to_pool, state } => execute_set_connection(deps, info, channel_id, to_pool, state),
         // ExecuteMsg::Deposit { pool_tokens_amount } => execute_deposit(deps, env, info, pool_tokens_amount),
         // ExecuteMsg::Withdraw { pool_tokens_amount } => execute_withdraw(deps, env, info, pool_tokens_amount),
         // ExecuteMsg::Localswap {
@@ -337,6 +338,17 @@ pub fn execute_set_governance_fee(
     fee: u64
 ) -> Result<Response, ContractError> {
     SwapPoolState::set_governance_fee(&mut deps, info, fee).map_err(|err| err.into())
+}
+
+
+pub fn execute_set_connection(
+    mut deps: DepsMut,
+    info: MessageInfo,
+    channel_id: String,
+    to_pool: String,
+    state: bool
+) -> Result<Response, ContractError> {
+    SwapPoolState::set_connection(&mut deps, info, channel_id, to_pool, state).map_err(|err| err.into())
 }
 
 
