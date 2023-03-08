@@ -77,7 +77,7 @@ pub fn execute(
             amp,
             depositor
         ),
-        // ExecuteMsg::FinishSetup {} => execute_finish_setup(deps, env, info),
+        ExecuteMsg::FinishSetup {} => execute_finish_setup(deps, info),
         ExecuteMsg::SetFeeAdministrator { administrator } => execute_set_fee_administrator(deps, info, administrator),
         ExecuteMsg::SetPoolFee { fee } => execute_set_pool_fee(deps, info, fee),
         ExecuteMsg::SetGovernanceFee { fee } => execute_set_governance_fee(deps, info, fee),
@@ -279,6 +279,10 @@ pub fn execute_initialize_swap_curves(
             .add_attribute("mint", minted_amount)
             .add_attribute("assets", format!("{:?}", assets_balances))
     )
+}
+
+pub fn execute_finish_setup(mut deps: DepsMut, info: MessageInfo) -> Result<Response, ContractError> {
+    SwapPoolState::finish_setup(&mut deps, info).map_err(|err| err.into())
 }
 
 

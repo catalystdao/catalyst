@@ -1,6 +1,6 @@
 use cosmwasm_schema::cw_serde;
 
-use cosmwasm_std::{Addr, Uint128, DepsMut, Env, Response, Event};
+use cosmwasm_std::{Addr, Uint128, DepsMut, Env, Response, Event, MessageInfo};
 use cw_storage_plus::{Item, Map};
 use cw20_base::state::{MinterData, TokenInfo, TOKEN_INFO};
 
@@ -206,6 +206,22 @@ impl SwapPoolState {
                 .add_event(pool_fee_event)
                 .add_event(gov_fee_event)
         )
+    }
+
+    pub fn finish_setup(
+        deps: &mut DepsMut,
+        info: MessageInfo
+    ) -> Result<Response, ContractError> {
+        let mut state = STATE.load(deps.storage)?;
+
+        if state.setup_master != Some(info.sender) {
+            return Err(ContractError::Unauthorized {})
+        }
+
+        state.setup_master = None;
+        STATE.save(deps.storage, &state)?;
+
+        Ok(Response::new())
     }
 
     // pub fn update_units_inflow(

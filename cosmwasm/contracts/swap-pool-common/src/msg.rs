@@ -27,6 +27,8 @@ pub enum ExecuteMsg {
         depositor: String
     },
 
+    FinishSetup {},
+
     SetPoolFee { fee: u64 },
 
     SetGovernanceFee { fee: u64 },
@@ -44,8 +46,6 @@ pub enum ExecuteMsg {
     //     pool: String,
     //     state: bool
     // },
-
-    // FinishSetup {},
 
     // ReleaseEscrowAck {
     //     message_hash: String,
