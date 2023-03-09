@@ -1,3 +1,5 @@
+use std::ops::{Div, Sub};
+
 use cosmwasm_schema::cw_serde;
 
 use cosmwasm_std::{Addr, Uint128, DepsMut, Env, Response, Event, MessageInfo, Deps, StdResult, CosmosMsg, to_binary};
@@ -18,13 +20,12 @@ pub const INITIAL_MINT_AMOUNT: Uint128 = Uint128::new(1000000000000000000u128); 
 pub const MAX_POOL_FEE_SHARE       : u64 = 1000000000000000000u64;              // 100%
 pub const MAX_GOVERNANCE_FEE_SHARE : u64 = 75u64 * 10000000000000000u64;        // 75%    //TODO EVM mismatch (move to factory)
 
-pub const DECAYRATE: u64 = 60*60*24;
+pub const DECAY_RATE: u64 = 60*60*24;
 
 pub const STATE: Item<SwapPoolState> = Item::new("catalyst-pool-state");
 pub const ASSET_ESCROWS: Map<&str, String> = Map::new("catalyst-pool-asset-escrows");
 pub const LIQUIDITY_ESCROWS: Map<&str, String> = Map::new("catalyst-pool-liquidity-escrows");
 pub const CONNECTIONS: Map<(&str, &str), bool> = Map::new("catalyst-pool-connections");   //TODO channelId and toPool types
-
 
 // TODO move to utils/similar?
 fn calc_keccak256(message: Vec<u8>) -> String {
@@ -545,6 +546,37 @@ impl SwapPoolState {
         STATE.save(deps.storage, &state)?;
 
         Ok(Response::new())
+    }
+
+    pub fn get_unit_capacity(
+        deps: Deps,
+        env: Env
+    ) -> Result<U256, ContractError> {
+
+        let state = STATE.load(deps.storage)?;
+
+        let max_limit_capacity = U256(state.max_limit_capacity);
+        let used_limit_capacity = U256(state.used_limit_capacity);
+
+        let released_limit_capacity = max_limit_capacity
+            .checked_mul(
+                U256::from(env.block.time.minus_nanos(state.used_limit_capacity_timestamp).seconds())
+            ).ok_or(ContractError::ArithmeticError {})?   //TODO error
+            .div(DECAY_RATE);
+
+            if used_limit_capacity <= released_limit_capacity {
+                return Ok(max_limit_capacity);
+            }
+
+            if max_limit_capacity <= used_limit_capacity - released_limit_capacity {
+                return Ok(U256::zero());
+            }
+
+            Ok(
+                max_limit_capacity
+                    .checked_add(released_limit_capacity).ok_or(ContractError::ArithmeticError {})?
+                    .sub(used_limit_capacity)
+            )
     }
 
     // pub fn update_units_inflow(

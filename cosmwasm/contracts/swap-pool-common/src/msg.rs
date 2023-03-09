@@ -173,12 +173,6 @@ pub enum ExecuteMsg {
 #[derive(QueryResponses)]
 pub enum QueryMsg {
 
-    // #[returns(UnitCapacityResponse)]
-    // UnitCapacity {},
-
-    // #[returns(LiquidityUnitCapacityResponse)]
-    // LiquidityUnitCapacity {},
-    
     // #[returns(ChainInterfaceResponse)]
     // ChainInterface {},
 
@@ -236,6 +230,8 @@ pub enum QueryMsg {
     Ready {},
     #[returns(OnlyLocalResponse)]
     OnlyLocal {},
+    #[returns(GetUnitCapacityResponse)]
+    GetUnitCapacity {},
 
 
     // CW20 Implementation
@@ -342,6 +338,11 @@ pub struct ReadyResponse {
 #[cw_serde]
 pub struct OnlyLocalResponse {
     pub only_local: Binary
+}
+
+#[cw_serde]
+pub struct GetUnitCapacityResponse {
+    pub capacity: [u64; 4]
 }
 
 

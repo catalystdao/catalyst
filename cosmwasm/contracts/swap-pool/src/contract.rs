@@ -187,10 +187,11 @@ pub fn execute(
 
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
+pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::Ready {} => to_binary(&query_ready(deps)?),
         QueryMsg::OnlyLocal {} => to_binary(&query_only_local(deps)?),
+        QueryMsg::GetUnitCapacity {} => to_binary(&query_get_unit_capacity(deps, env)?),
 
         // CW20 query msgs - Use cw20-base for the implementation
         QueryMsg::TokenInfo {} => to_binary(&query_token_info(deps)?),
@@ -875,6 +876,12 @@ pub fn query_ready(deps: Deps) -> StdResult<bool> {
 
 pub fn query_only_local(deps: Deps) -> StdResult<bool> {
     SwapPoolState::only_local(deps)
+}
+
+pub fn query_get_unit_capacity(deps: Deps, env: Env) -> StdResult<[u64; 4]> { //TODO maths
+    SwapPoolState::get_unit_capacity(deps, env)
+        .map(|capacity| capacity.0)
+        .map_err(|_| StdError::GenericErr { msg: "".to_owned() })   //TODO error
 }
 
 

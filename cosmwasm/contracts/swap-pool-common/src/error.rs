@@ -9,6 +9,9 @@ pub enum ContractError {
     #[error("Unauthorized")]
     Unauthorized {},
 
+    #[error("Arithmetic error")]
+    ArithmeticError {},
+
     #[error("Invalid assets (invalid number of assets or invalid asset address)")]
     InvalidAssets {},
 
