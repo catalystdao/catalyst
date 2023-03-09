@@ -386,7 +386,8 @@ pub fn execute_send_asset_ack(
     asset: String,
     block_number_mod: u32
 ) -> Result<Response, ContractError> {
-    SwapPoolState::send_asset_ack(
+
+    let common_response = SwapPoolState::send_asset_ack(
         &mut deps,
         info,
         to_account,
@@ -394,7 +395,19 @@ pub fn execute_send_asset_ack(
         amount,
         asset,
         block_number_mod
-    ).map_err(|err| err.into())
+    ).map_err(|err| err.into());
+
+    // TODO better approach at implementing this? Currently storage is read and written twice
+    // TODO once in send_asset_ack and once to adjust the security limit
+    // Adjust security limit
+    let mut state = STATE.load(deps.storage)?;
+
+    let used_capacity = U256(state.used_limit_capacity);
+    state.used_limit_capacity = (used_capacity.saturating_sub(U256(u))).0;
+
+    STATE.save(deps.storage, &state)?;
+
+    common_response
 }
 
 pub fn execute_send_asset_timeout(
@@ -427,14 +440,27 @@ pub fn execute_send_liquidity_ack(
     amount: Uint128,
     block_number_mod: u32
 ) -> Result<Response, ContractError> {
-    SwapPoolState::send_liquidity_ack(
+
+    let common_response = SwapPoolState::send_liquidity_ack(
         &mut deps,
         info,
         to_account,
         U256(u),
         amount,
         block_number_mod
-    ).map_err(|err| err.into())
+    ).map_err(|err| err.into());
+
+    // TODO better approach at implementing this? Currently storage is read and written twice
+    // TODO once in send_asset_ack and once to adjust the security limit
+    // Adjust security limit
+    let mut state = STATE.load(deps.storage)?;
+
+    let used_capacity = U256(state.used_limit_capacity);
+    state.used_limit_capacity = (used_capacity.saturating_sub(U256(u))).0;
+
+    STATE.save(deps.storage, &state)?;
+
+    common_response
 }
 
 pub fn execute_send_liquidity_timeout(
