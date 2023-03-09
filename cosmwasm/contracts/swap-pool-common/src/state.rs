@@ -2,7 +2,7 @@ use std::ops::{Div, Sub};
 
 use cosmwasm_schema::cw_serde;
 
-use cosmwasm_std::{Addr, Uint128, DepsMut, Env, Response, Event, MessageInfo, Deps, StdResult, CosmosMsg, to_binary};
+use cosmwasm_std::{Addr, Uint128, DepsMut, Env, Response, Event, MessageInfo, Deps, StdResult, CosmosMsg, to_binary, Timestamp};
 use cw20::Cw20ExecuteMsg;
 use cw_storage_plus::{Item, Map};
 use cw20_base::{state::{MinterData, TokenInfo, TOKEN_INFO}, contract::execute_mint};
@@ -548,19 +548,17 @@ impl SwapPoolState {
         Ok(Response::new())
     }
 
-    pub fn get_unit_capacity(
-        deps: Deps,
-        env: Env
+    fn _get_unit_capacity(
+        &self,
+        time: Timestamp
     ) -> Result<U256, ContractError> {
 
-        let state = STATE.load(deps.storage)?;
-
-        let max_limit_capacity = U256(state.max_limit_capacity);
-        let used_limit_capacity = U256(state.used_limit_capacity);
+        let max_limit_capacity = U256(self.max_limit_capacity);
+        let used_limit_capacity = U256(self.used_limit_capacity);
 
         let released_limit_capacity = max_limit_capacity
             .checked_mul(
-                U256::from(env.block.time.minus_nanos(state.used_limit_capacity_timestamp).seconds())
+                U256::from(time.minus_nanos(self.used_limit_capacity_timestamp).seconds())  //TODO use seconds instead of nanos (overflow wise)
             ).ok_or(ContractError::ArithmeticError {})?   //TODO error
             .div(DECAY_RATE);
 
@@ -577,6 +575,40 @@ impl SwapPoolState {
                     .checked_add(released_limit_capacity).ok_or(ContractError::ArithmeticError {})?
                     .sub(used_limit_capacity)
             )
+
+    }
+
+    pub fn get_unit_capacity(
+        deps: Deps,
+        env: Env
+    ) -> Result<U256, ContractError> {
+
+        let state = STATE.load(deps.storage)?;
+
+        state._get_unit_capacity(env.block.time)
+    }
+
+    pub fn update_unit_capacity(
+        deps: &mut DepsMut,
+        env: Env,
+        units: U256
+    ) -> Result<(), ContractError> {
+
+        let mut state = STATE.load(deps.storage)?;
+
+        //TODO EVM mismatch
+        let capacity = state._get_unit_capacity(env.block.time)?;
+
+        if units > capacity {
+            return Err(ContractError::SecurityLimitExceeded { units: units.0, capacity: capacity.0 });
+        }
+
+        state.used_limit_capacity_timestamp = env.block.time.nanos();
+        state.used_limit_capacity = (capacity - units).0;
+
+        STATE.save(deps.storage, &state)?;
+
+        Ok(())
     }
 
     // pub fn update_units_inflow(

@@ -21,6 +21,9 @@ pub enum ContractError {
     #[error("Invalid governance fee")]
     InvalidGovernanceFee { requested_fee: u64, max_fee: u64 },
 
+    #[error("Security limit exceeded")]
+    SecurityLimitExceeded { units: [u64; 4], capacity: [u64; 4] },
+
 
     // CW20 Errors
     #[error("Cannot set to own account")]

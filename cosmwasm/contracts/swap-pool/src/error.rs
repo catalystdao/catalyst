@@ -40,6 +40,9 @@ pub enum ContractError {
     #[error("Invalid governance fee")]
     InvalidGovernanceFee { requested_fee: u64, max_fee: u64 },
 
+    #[error("Security limit exceeded")]
+    SecurityLimitExceeded { units: [u64; 4], capacity: [u64; 4] },
+
 
     // Swaps
     #[error("Swap yield is less than the specified minimum.")]
@@ -94,6 +97,8 @@ impl From<swap_pool_common::ContractError> for ContractError {
                 => ContractError::InvalidPoolFee {requested_fee, max_fee},
             swap_pool_common::ContractError::InvalidGovernanceFee { requested_fee, max_fee }
                 => ContractError::InvalidGovernanceFee {requested_fee, max_fee},
+            swap_pool_common::ContractError::SecurityLimitExceeded { units, capacity } =>
+                ContractError::SecurityLimitExceeded { units, capacity },
             swap_pool_common::ContractError::CannotSetOwnAccount {} => ContractError::CannotSetOwnAccount {},
             swap_pool_common::ContractError::InvalidExpiration {} => ContractError::InvalidExpiration {},
             swap_pool_common::ContractError::InvalidZeroAmount {} => ContractError::InvalidZeroAmount {},
