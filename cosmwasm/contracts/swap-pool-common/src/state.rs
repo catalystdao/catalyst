@@ -588,7 +588,7 @@ impl SwapPoolState {
         state._get_unit_capacity(env.block.time)
     }
 
-    pub fn update_unit_capacity(
+    fn _update_unit_capacity(
         deps: &mut DepsMut,
         env: Env,
         units: U256
