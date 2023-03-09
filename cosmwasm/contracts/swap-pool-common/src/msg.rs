@@ -184,9 +184,6 @@ pub enum QueryMsg {
 
     // // TokenIndexing(tokenIndex: [u64; 4]),
 
-    // #[returns(IsLocalResponse)]
-    // IsLocal {},
-
     // #[returns(Balance0Response)]
     // Balance0 {
     //     token: String
@@ -237,6 +234,8 @@ pub enum QueryMsg {
 
     #[returns(ReadyResponse)]
     Ready {},
+    #[returns(OnlyLocalResponse)]
+    OnlyLocal {},
 
 
     // CW20 Implementation
@@ -263,11 +262,6 @@ pub struct LiquidityUnitCapacityResponse {
 #[cw_serde]
 pub struct ChainInterfaceResponse {
     pub contract: String,
-}
-
-#[cw_serde]
-pub struct IsLocalResponse {
-    pub is_local: Binary,
 }
 
 #[cw_serde]
@@ -343,6 +337,11 @@ pub struct EscrowedPoolTokensResponse {
 #[cw_serde]
 pub struct ReadyResponse {
     pub ready: Binary
+}
+
+#[cw_serde]
+pub struct OnlyLocalResponse {
+    pub only_local: Binary
 }
 
 

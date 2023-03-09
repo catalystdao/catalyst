@@ -190,6 +190,7 @@ pub fn execute(
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::Ready {} => to_binary(&query_ready(deps)?),
+        QueryMsg::OnlyLocal {} => to_binary(&query_only_local(deps)?),
 
         // CW20 query msgs - Use cw20-base for the implementation
         QueryMsg::TokenInfo {} => to_binary(&query_token_info(deps)?),
@@ -869,6 +870,11 @@ pub fn execute_send_liquidity_timeout(
 
 pub fn query_ready(deps: Deps) -> StdResult<bool> {
     SwapPoolState::ready(deps)
+}
+
+
+pub fn query_only_local(deps: Deps) -> StdResult<bool> {
+    SwapPoolState::only_local(deps)
 }
 
 

@@ -202,6 +202,14 @@ impl SwapPoolState {
     }
 
 
+    pub fn only_local(deps: Deps) -> StdResult<bool> {
+
+        let state = STATE.load(deps.storage)?;
+
+        Ok(state.chain_interface.is_none())
+    }
+
+
     fn release_asset_escrow(
         &mut self,
         deps: &mut DepsMut,
