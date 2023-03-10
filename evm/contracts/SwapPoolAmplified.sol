@@ -92,7 +92,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256[] calldata weights,
         uint256 amp,
         address depositor
-    ) public {
+    ) public override {
         // May only be invoked by the FACTORY. The factory only invokes this function for proxy contracts.
         require(msg.sender == FACTORY && _tokenIndexing[0] == address(0));  // dev: swap curves may only be initialized once by the factory
         // Check that the amplification is correct.
@@ -416,7 +416,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
     function calcSendAsset(
         address fromAsset,
         uint256 amount
-    ) public view returns (uint256) {
+    ) public view override returns (uint256) {
         // A high => fewer units returned. Do not subtract the escrow amount
         uint256 A = ERC20(fromAsset).balanceOf(address(this));
         uint256 W = _weight[fromAsset];
@@ -445,7 +445,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
     function calcReceiveAsset(
         address toAsset,
         uint256 U
-    ) public view returns (uint256) {
+    ) public view override returns (uint256) {
         // B low => fewer tokens returned. Subtract the escrow amount to decrease the balance.
         uint256 B = ERC20(toAsset).balanceOf(address(this)) - _escrowedTokens[toAsset];
         uint256 W = _weight[toAsset];
@@ -469,7 +469,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         address fromAsset,
         address toAsset,
         uint256 amount
-    ) public view returns (uint256) {
+    ) public view override returns (uint256) {
         uint256 A = ERC20(fromAsset).balanceOf(address(this));
         uint256 B = ERC20(toAsset).balanceOf(address(this)) - _escrowedTokens[toAsset];
         uint256 W_A = _weight[fromAsset];
@@ -497,7 +497,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
     function depositMixed(
         uint256[] calldata tokenAmounts,
         uint256 minOut
-    ) nonReentrant external returns(uint256) {
+    ) nonReentrant external override returns(uint256) {
         _updateAmplification();
         int256 oneMinusAmp = _oneMinusAmp;
 
@@ -658,7 +658,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
     function withdrawAll(
         uint256 poolTokens,
         uint256[] calldata minOut
-    ) nonReentrant external returns(uint256[] memory) {
+    ) nonReentrant external override returns(uint256[] memory) {
         _updateAmplification();
         // Burn the desired number of pool tokens to the user.
         // If they don't have it, it saves gas.
@@ -826,7 +826,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 poolTokens,
         uint256[] calldata withdrawRatio,
         uint256[] calldata minOut
-    ) nonReentrant external returns(uint256[] memory) {
+    ) nonReentrant external override returns(uint256[] memory) {
         _updateAmplification();
         // Burn the desired number of pool tokens to the user.
         // If they don't have it, it saves gas.
@@ -989,7 +989,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         address toAsset,
         uint256 amount,
         uint256 minOut
-    ) nonReentrant external returns (uint256) {
+    ) nonReentrant external override returns (uint256) {
         _updateAmplification();
         uint256 fee = FixedPointMathLib.mulWadDown(amount, _poolFee);
 
@@ -1057,7 +1057,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 minOut,
         address fallbackUser,
         bytes memory calldata_
-    ) public returns (uint256) {
+    ) public override returns (uint256) {
         // Only allow connected pools
         if (!_poolConnection[channelId][toPool]) revert PoolNotConnected(channelId, toPool);
         require(fallbackUser != address(0));
@@ -1143,7 +1143,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 amount,
         uint256 minOut,
         address fallbackUser
-    ) external returns (uint256) {
+    ) external override returns (uint256) {
         bytes memory calldata_ = new bytes(0);
         return
             sendAsset(
@@ -1178,7 +1178,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 U,
         uint256 minOut,
         bytes32 swapHash
-    ) public returns (uint256) {
+    ) public override returns (uint256) {
         // Only allow connected pools
         if (!_poolConnection[channelId][fromPool]) revert PoolNotConnected(channelId, fromPool);
         // The chainInterface is the only valid caller of this function.
@@ -1223,7 +1223,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         bytes32 swapHash,
         address dataTarget,
         bytes calldata data
-    ) external returns (uint256) {
+    ) external override returns (uint256) {
         uint256 purchasedTokens = receiveAsset(
             channelId,
             fromPool,
@@ -1275,7 +1275,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 minOut,
         address fallbackUser,
         bytes memory calldata_
-    ) public returns (uint256) {
+    ) public override returns (uint256) {
 
         // Only allow connected pools
         if (!_poolConnection[channelId][toPool]) revert PoolNotConnected(channelId, toPool);
@@ -1407,7 +1407,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 poolTokens,
         uint256 minOut,
         address fallbackUser
-    ) external returns (uint256) {
+    ) external override returns (uint256) {
         bytes memory calldata_ = new bytes(0);
         return sendLiquidity(
             channelId,
@@ -1441,7 +1441,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 U,
         uint256 minOut,
         bytes32 swapHash
-    ) public returns (uint256) {
+    ) public override returns (uint256) {
         // The chainInterface is the only valid caller of this function.
         require(msg.sender == _chainInterface);
         // Only allow connected pools
@@ -1547,7 +1547,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         bytes32 swapHash,
         address dataTarget,
         bytes calldata data
-    ) external returns (uint256) {
+    ) external override returns (uint256) {
         uint256 purchasedPoolTokens = receiveLiquidity(
             channelId,
             fromPool,

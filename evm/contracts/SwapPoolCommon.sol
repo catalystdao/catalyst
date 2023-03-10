@@ -133,7 +133,7 @@ abstract contract CatalystSwapPoolCommon is
         _;
     }
 
-    function onlyLocal() public view returns (bool) {
+    function onlyLocal() public view override returns (bool) {
         return _chainInterface == address(0);
     }
 
@@ -146,7 +146,7 @@ abstract contract CatalystSwapPoolCommon is
         uint256 governanceFee,
         address feeAdministrator,
         address setupMaster
-    ) initializer external {
+    ) initializer external override {
         // The pool is designed to be used by a proxy and not as a standalone pool.
         // initializer lets this function only be called once.
 
@@ -386,7 +386,7 @@ abstract contract CatalystSwapPoolCommon is
         uint256 escrowAmount,
         address escrowToken,
         uint32 blockNumberMod
-    ) public virtual {
+    ) public override virtual {
         require(msg.sender == _chainInterface);  // dev: Only _chainInterface
 
         bytes32 sendAssetHash = _computeSendAssetHash(
@@ -417,7 +417,7 @@ abstract contract CatalystSwapPoolCommon is
         uint256 escrowAmount,
         address escrowToken,
         uint32 blockNumberMod
-    ) public virtual {
+    ) public override virtual {
         require(msg.sender == _chainInterface);  // dev: Only _chainInterface
 
         bytes32 sendAssetHash = _computeSendAssetHash(
@@ -448,7 +448,7 @@ abstract contract CatalystSwapPoolCommon is
         uint256 U,
         uint256 escrowAmount,
         uint32 blockNumberMod
-    ) public virtual {
+    ) public override virtual {
         require(msg.sender == _chainInterface);  // dev: Only _chainInterface
 
         bytes32 sendLiquidityHash = _computeSendLiquidityHash(
@@ -476,7 +476,7 @@ abstract contract CatalystSwapPoolCommon is
         uint256 U,
         uint256 escrowAmount,
         uint32 blockNumberMod
-    ) public virtual {
+    ) public override virtual {
         require(msg.sender == _chainInterface);  // dev: Only _chainInterface
 
         bytes32 sendLiquidityHash = _computeSendLiquidityHash(
