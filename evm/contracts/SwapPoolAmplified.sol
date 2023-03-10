@@ -959,6 +959,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                 it++;
             }
         }
+        if (U != 0) revert UnusedUnitsAfterWithdrawal(U);
         
         unchecked {
             // Decrease the security limit by the amount withdrawn.

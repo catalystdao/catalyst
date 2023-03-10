@@ -612,6 +612,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
             }
         }
 
+
         // Emit the event
         emit Withdraw(msg.sender, poolTokens, amounts);
 
