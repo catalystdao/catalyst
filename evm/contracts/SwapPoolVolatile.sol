@@ -611,7 +611,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
                 it++;
             }
         }
-
+        if (U != 0) revert UnusedUnitsAfterWithdrawal(U);
 
         // Emit the event
         emit Withdraw(msg.sender, poolTokens, amounts);
