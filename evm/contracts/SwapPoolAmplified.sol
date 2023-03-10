@@ -322,14 +322,15 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
             )
         );
 
-        return B * (
+        return FixedPointMathLib.mulWadDown(
+            B,
             FixedPointMathLib.WAD - uint256(                                                        // Always casts a positive value
                 FixedPointMathLib.powWad(
                     int256(FixedPointMathLib.divWadUp(W_BxBtoOMA - U, W_BxBtoOMA)),                 // Casting never overflows, as division result is always < 1
                     FixedPointMathLib.WADWAD / oneMinusAmp 
                 )
             )
-        ) / FixedPointMathLib.WAD;
+        );
     }
 
     /**
@@ -391,8 +392,9 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
      * @return uint256 Output denominated in pool tokens.
      */
     function _calcPriceCurveLimitShare(uint256 U, uint256 ts, uint256 it_times_walpha_amped, int256 oneMinusAmpInverse) internal pure returns (uint256) {
-        uint256 poolTokens = (
-            ts * uint256(  // Always casts a positive value, as powWad >= 1, hence powWad - WAD >= 0
+        uint256 poolTokens = FixedPointMathLib.mulWadDown(
+            ts,
+            uint256(  // Always casts a positive value, as powWad >= 1, hence powWad - WAD >= 0
                 FixedPointMathLib.powWad(  // poWad always >= 1, as the 'base' is always >= 1
                     int256(FixedPointMathLib.divWadDown(  // If casting overflows to a negative number, powWad fails
                         it_times_walpha_amped + U,
@@ -401,7 +403,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                     oneMinusAmpInverse
                 ) - int256(FixedPointMathLib.WAD)
             )
-        ) / FixedPointMathLib.WAD;
+        );
 
         return poolTokens;
     }
@@ -914,7 +916,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         for (uint256 it; it < MAX_ASSETS;) {
             if (tokenIndexed[it] == address(0)) break;
 
-            uint256 U_i = (U * withdrawRatio[it]) / FixedPointMathLib.WAD;
+            uint256 U_i = (U * withdrawRatio[it]) / FixedPointMathLib.WAD;  // Not using mulWadDown because of "stack too deep" compile error
             if (U_i == 0) {
                 if (minOut[it] != 0)
                     revert ReturnInsufficient(0, minOut[it]);
@@ -930,14 +932,13 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
             
             // W_B · B^(1-k) is required twice and requires 1 power. We already computed it:
             uint256 W_BxBtoOMA = uint256(ampWeightAssetBalances[it]);   // Always casts a positive value
-            uint256 tokenAmount = (
-                assetBalances[it] * (
-                    FixedPointMathLib.WAD - uint256(FixedPointMathLib.powWad(               // Always casts a positive value, and powWad is always <= 1, as 'base' is <= 1
-                        int256(FixedPointMathLib.divWadUp(W_BxBtoOMA - U_i, W_BxBtoOMA)),   // Casting never overflows, as division result is always <= 1
-                        oneMinusAmpInverse // 1/(1-amp))
-                    ))
-                )
-            ) / FixedPointMathLib.WAD;
+            uint256 tokenAmount = FixedPointMathLib.mulWadDown(
+                assetBalances[it],
+                FixedPointMathLib.WAD - uint256(FixedPointMathLib.powWad(               // Always casts a positive value, and powWad is always <= 1, as 'base' is <= 1
+                    int256(FixedPointMathLib.divWadUp(W_BxBtoOMA - U_i, W_BxBtoOMA)),   // Casting never overflows, as division result is always <= 1
+                    oneMinusAmpInverse // 1/(1-amp))
+                ))
+            );
 
             // Ensure the output satisfies the user.
             if (minOut[it] > tokenAmount)
@@ -1526,7 +1527,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                 ))
             );
             // Check if the swap is according to the swap limits
-            _updateUnitCapacity(poolTokenEquiv * 2 / FixedPointMathLib.WAD);
+            _updateUnitCapacity(FixedPointMathLib.mulWadDown(2, poolTokenEquiv));
         }
 
         // Mint pool tokens for the user.
