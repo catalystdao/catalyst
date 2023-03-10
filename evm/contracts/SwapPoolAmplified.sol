@@ -1057,7 +1057,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 minOut,
         address fallbackUser,
         bytes memory calldata_
-    ) public returns (uint256) {
+    ) nonReentrant public returns (uint256) {
         // Only allow connected pools
         if (!_poolConnection[channelId][toPool]) revert PoolNotConnected(channelId, toPool);
         require(fallbackUser != address(0));
@@ -1110,11 +1110,11 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
             _escrowedTokens[fromAsset] += amount - fee;
         }
 
-        // Governance Fee
-        _collectGovernanceFee(fromAsset, fee);
-
         // Collect the tokens from the user.
         ERC20(fromAsset).safeTransferFrom(msg.sender, address(this), amount);
+
+        // Governance Fee
+        _collectGovernanceFee(fromAsset, fee);
 
         // Adjustment of the security limit is delayed until ack to avoid
         // a router abusing timeout to circumvent the security limit.
