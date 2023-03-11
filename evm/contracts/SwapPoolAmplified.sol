@@ -97,10 +97,11 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         require(msg.sender == FACTORY && _tokenIndexing[0] == address(0));  // dev: swap curves may only be initialized once by the factory
         // Check that the amplification is correct.
         require(amp < FixedPointMathLib.WAD);  // dev: amplification not set correctly.
-        // Check for a misunderstanding regarding how many assets this pool supports.
-        require(assets.length > 0 && assets.length <= MAX_ASSETS);  // dev: invalid asset count
-        // Check if an invalid weight count has been provided
-        require(weights.length == assets.length); //dev: invalid weight count
+        // Note there is no need to check whether assets.length/weights.length are valid, as invalid arguments
+        // will either cause the function to fail (e.g. if assets.length > MAX_ASSETS the assignment
+        // to initialBalances[it] will fail) or will cause the pool to get initialized with an undesired state
+        // (and the pool shouldn't be used by anyone until its configuration has been finalised). 
+        // In any case, the factory does check for valid assets/weights arguments to prevent erroneous configurations. 
         
         unchecked {
             _oneMinusAmp = int256(FixedPointMathLib.WAD - amp);
