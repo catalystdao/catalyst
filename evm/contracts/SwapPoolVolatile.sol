@@ -580,8 +580,10 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
             // Units allocated for the specific token.
             uint256 U_i = (U * withdrawRatio[it]) / FixedPointMathLib.WAD;
             if (U_i == 0) {
-                if (minOut[it] != 0)
-                    revert ReturnInsufficient(0, minOut[it]);
+                // There should not be a non-zero withdrawRatio after a withdraw ratio of 1
+                if (withdrawRatio[it] != 0) revert WithdrawRatioNotZero();
+                if (minOut[it] != 0) revert ReturnInsufficient(0, minOut[it]);
+                
                 unchecked {
                     it++;
                 }
@@ -610,6 +612,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
                 it++;
             }
         }
+        if (U != 0) revert UnusedUnitsAfterWithdrawal(U);
 
         // Emit the event
         emit Withdraw(msg.sender, poolTokens, amounts);
