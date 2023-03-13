@@ -186,12 +186,19 @@ abstract contract CatalystSwapPoolCommon is
         if (UC <= unitCapacityReleased) return MUC;
 
         // Amplified pools can have MUC <= UC since MUC is modified when swapping
+        // If this is not the case and the if statement is removed, also remove the
+        // unchecked block.
         unchecked {
             // we know that UC > unitCapacityReleased
             if (MUC <= UC - unitCapacityReleased) return 0; 
+
+            // we know UC > unitCapacityReleased 
+            // and because of the above if statement, we know
+            // MUC > (UC - unitCapacityReleased)
+            // Thus we can compute the difference unchecked.
+            return MUC - (UC - unitCapacityReleased);
         }
 
-        return MUC + unitCapacityReleased - UC;  // MUC - (UC - unitCapacityReleased)
     }
 
     /**
