@@ -1657,7 +1657,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 U,
         uint256 escrowAmount,
         uint32 blockNumberMod
-    ) public virtual override {
+    ) public override {
         super.sendLiquidityTimeout(toAccount, U, escrowAmount, blockNumberMod);
 
         // Removed timed-out units from the unit tracker. This will keep the
