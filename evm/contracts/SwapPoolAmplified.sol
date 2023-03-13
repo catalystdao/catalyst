@@ -97,10 +97,11 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         require(msg.sender == FACTORY && _tokenIndexing[0] == address(0));  // dev: swap curves may only be initialized once by the factory
         // Check that the amplification is correct.
         require(amp < FixedPointMathLib.WAD);  // dev: amplification not set correctly.
-        // Check for a misunderstanding regarding how many assets this pool supports.
-        require(assets.length > 0 && assets.length <= MAX_ASSETS);  // dev: invalid asset count
-        // Check if an invalid weight count has been provided
-        require(weights.length == assets.length); //dev: invalid weight count
+        // Note there is no need to check whether assets.length/weights.length are valid, as invalid arguments
+        // will either cause the function to fail (e.g. if assets.length > MAX_ASSETS the assignment
+        // to initialBalances[it] will fail) or will cause the pool to get initialized with an undesired state
+        // (and the pool shouldn't be used by anyone until its configuration has been finalised). 
+        // In any case, the factory does check for valid assets/weights arguments to prevent erroneous configurations. 
         
         unchecked {
             _oneMinusAmp = int256(FixedPointMathLib.WAD - amp);
@@ -916,8 +917,9 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
 
             uint256 U_i = (U * withdrawRatio[it]) / FixedPointMathLib.WAD;
             if (U_i == 0) {
-                if (minOut[it] != 0)
-                    revert ReturnInsufficient(0, minOut[it]);
+                // There should not be a non-zero withdrawRatio after a withdraw ratio of 1
+                if (withdrawRatio[it] != 0) revert WithdrawRatioNotZero();
+                if (minOut[it] != 0) revert ReturnInsufficient(0, minOut[it]);
 
                 unchecked {
                     it++;
@@ -958,6 +960,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                 it++;
             }
         }
+        if (U != 0) revert UnusedUnitsAfterWithdrawal(U);
         
         unchecked {
             // Decrease the security limit by the amount withdrawn.
@@ -1057,7 +1060,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 minOut,
         address fallbackUser,
         bytes memory calldata_
-    ) public override returns (uint256) {
+    ) nonReentrant public override returns (uint256) {
         // Only allow connected pools
         if (!_poolConnection[channelId][toPool]) revert PoolNotConnected(channelId, toPool);
         require(fallbackUser != address(0));
@@ -1110,11 +1113,11 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
             _escrowedTokens[fromAsset] += amount - fee;
         }
 
-        // Governance Fee
-        _collectGovernanceFee(fromAsset, fee);
-
         // Collect the tokens from the user.
         ERC20(fromAsset).safeTransferFrom(msg.sender, address(this), amount);
+
+        // Governance Fee
+        _collectGovernanceFee(fromAsset, fee);
 
         // Adjustment of the security limit is delayed until ack to avoid
         // a router abusing timeout to circumvent the security limit.
