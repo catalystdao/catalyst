@@ -61,6 +61,13 @@ contract CatalystSwapPoolFactory is Ownable, ICatalystV1FactoryEvents {
         string memory symbol,
         address chainInterface
     ) external returns (address) {
+        // Check if an invalid asset count has been provided
+        require(assets.length > 0);  // dev: invalid asset count
+        // Check if an invalid weight count has been provided
+        require(weights.length == assets.length); //dev: invalid weight count
+        // init_balances length not checked: if shorter than assets, the funds transfer loop
+        // will fail. If longer, values will just be ignored.
+
         // Create a minimal transparent proxy:
         address swapPool = Clones.clone(poolTemplate);
 

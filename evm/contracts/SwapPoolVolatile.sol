@@ -82,16 +82,17 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256[] calldata weights,
         uint256 amp,
         address depositor
-    ) public {
+    ) public override {
         // May only be invoked by the FACTORY. The factory only invokes this function for proxy contracts.
         require(msg.sender == FACTORY && _tokenIndexing[0] == address(0));  // dev: swap curves may only be initialized once by the factory
         // Check that the amplification is correct.
         require(amp == FixedPointMathLib.WAD);  // dev: amplification not set correctly.
-        // Check for a misunderstanding regarding how many assets this pool supports.
-        require(assets.length > 0 && assets.length <= MAX_ASSETS);  // dev: invalid asset count
-        // Check if an invalid weight count has been provided
-        require(weights.length == assets.length); //dev: invalid weight count
-        
+        // Note there is no need to check whether assets.length/weights.length are valid, as invalid arguments
+        // will either cause the function to fail (e.g. if assets.length > MAX_ASSETS the assignment
+        // to initialBalances[it] will fail) or will cause the pool to get initialized with an undesired state
+        // (and the pool shouldn't be used by anyone until its configuration has been finalised). 
+        // In any case, the factory does check for valid assets/weights arguments to prevent erroneous configurations. 
+
         // Compute the security limit.
         uint256[] memory initialBalances = new uint256[](MAX_ASSETS);
         uint256 maxUnitCapacity = 0;
@@ -288,7 +289,10 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 B,
         uint256 W
     ) internal pure returns (uint256) {
-        return (B * (FixedPointMathLib.WAD - uint256(FixedPointMathLib.expWad(-int256(U / W))))) / FixedPointMathLib.WAD;   // int256 casting is initially not safe. If overflow, the equation becomes: 1 - exp(U/W) => exp(U/W) > 1. In this case, Solidity's built-in safe math protection catches the overflow.
+        return FixedPointMathLib.mulWadDown(
+            B,
+            FixedPointMathLib.WAD - uint256(FixedPointMathLib.expWad(-int256(U / W)))   // int256 casting is initially not safe. If overflow, the equation becomes: 1 - exp(U/W) => exp(U/W) > 1. In this case, Solidity's built-in safe math protection catches the overflow.
+        );
     }
 
     /**
@@ -350,7 +354,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
     function calcSendAsset(
         address fromAsset,
         uint256 amount
-    ) public view returns (uint256) {
+    ) public view override returns (uint256) {
         // A high => fewer units returned. Do not subtract the escrow amount
         uint256 A = ERC20(fromAsset).balanceOf(address(this));
         uint256 W = _weight[fromAsset];
@@ -370,7 +374,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
     function calcReceiveAsset(
         address toAsset,
         uint256 U
-    ) public view returns (uint256) {
+    ) public view override returns (uint256) {
         // B low => fewer tokens returned. Subtract the escrow amount to decrease the balance.
         uint256 B = ERC20(toAsset).balanceOf(address(this)) - _escrowedTokens[toAsset];
         uint256 W = _weight[toAsset];
@@ -396,7 +400,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         address fromAsset,
         address toAsset,
         uint256 amount
-    ) public view returns (uint256) {
+    ) public view override returns (uint256) {
         uint256 A = ERC20(fromAsset).balanceOf(address(this));
         uint256 B = ERC20(toAsset).balanceOf(address(this)) - _escrowedTokens[toAsset];
         uint256 W_A = _weight[fromAsset];
@@ -430,7 +434,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
     function depositMixed(
         uint256[] calldata tokenAmounts,
         uint256 minOut
-    ) nonReentrant external returns(uint256) {
+    ) nonReentrant external override returns(uint256) {
         // Smaller initialTotalSupply => fewer pool tokens minted: _escrowedPoolTokens is not added.
         uint256 initialTotalSupply = totalSupply; 
 
@@ -476,7 +480,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 wsum = _maxUnitCapacity / FixedPointMathLib.LN2;
 
         // _calcPriceCurveLimitShare returns < 1 multiplied by FixedPointMathLib.WAD.
-        uint256 poolTokens = (initialTotalSupply * _calcPriceCurveLimitShare(U, wsum)) / FixedPointMathLib.WAD;
+        uint256 poolTokens = FixedPointMathLib.mulWadDown(initialTotalSupply, _calcPriceCurveLimitShare(U, wsum));
 
         // Check that the minimum output is honoured.
         if (minOut > poolTokens) revert ReturnInsufficient(poolTokens, minOut);
@@ -501,7 +505,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
     function withdrawAll(
         uint256 poolTokens,
         uint256[] calldata minOut
-    ) nonReentrant external returns(uint256[] memory) {
+    ) nonReentrant external override returns(uint256[] memory) {
         // Cache totalSupply. This saves up to ~200 gas.
         uint256 initialTotalSupply = totalSupply + _escrowedPoolTokens;
 
@@ -554,7 +558,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 poolTokens,
         uint256[] calldata withdrawRatio,
         uint256[] calldata minOut
-    ) nonReentrant external returns(uint256[] memory) {
+    ) nonReentrant external override returns(uint256[] memory) {
         // cache totalSupply. This saves a bit of gas.
         uint256 initialTotalSupply = totalSupply + _escrowedPoolTokens;
 
@@ -577,10 +581,12 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
             if (token == address(0)) break;
 
             // Units allocated for the specific token.
-            uint256 U_i = (U * withdrawRatio[it]) / FixedPointMathLib.WAD;
+            uint256 U_i = FixedPointMathLib.mulWadDown(U, withdrawRatio[it]);
             if (U_i == 0) {
-                if (minOut[it] != 0)
-                    revert ReturnInsufficient(0, minOut[it]);
+                // There should not be a non-zero withdrawRatio after a withdraw ratio of 1
+                if (withdrawRatio[it] != 0) revert WithdrawRatioNotZero();
+                if (minOut[it] != 0) revert ReturnInsufficient(0, minOut[it]);
+                
                 unchecked {
                     it++;
                 }
@@ -609,6 +615,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
                 it++;
             }
         }
+        if (U != 0) revert UnusedUnitsAfterWithdrawal(U);
 
         // Emit the event
         emit Withdraw(msg.sender, poolTokens, amounts);
@@ -629,7 +636,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         address toAsset,
         uint256 amount,
         uint256 minOut
-    ) nonReentrant external returns (uint256) {
+    ) nonReentrant external override returns (uint256) {
         _updateWeights();
         uint256 fee = FixedPointMathLib.mulWadDown(amount, _poolFee);
 
@@ -679,7 +686,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 minOut,
         address fallbackUser,
         bytes memory calldata_
-    ) public returns (uint256) {
+    ) nonReentrant public override returns (uint256) {
         // Only allow connected pools
         if (!_poolConnection[channelId][toPool]) revert PoolNotConnected(channelId, toPool);
         require(fallbackUser != address(0));
@@ -729,11 +736,11 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
             _escrowedTokens[fromAsset] += amount - fee;
         }
 
-        // Governance Fee
-        _collectGovernanceFee(fromAsset, fee);
-
         // Collect the tokens from the user.
         ERC20(fromAsset).safeTransferFrom(msg.sender, address(this), amount);
+
+        // Governance Fee
+        _collectGovernanceFee(fromAsset, fee);
 
         // Adjustment of the security limit is delayed until ack to avoid
         // a router abusing timeout to circumvent the security limit.
@@ -762,7 +769,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 amount,
         uint256 minOut,
         address fallbackUser
-    ) external returns (uint256) {
+    ) external override returns (uint256) {
         bytes memory calldata_ = new bytes(0);
         return
             sendAsset(
@@ -797,7 +804,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 U,
         uint256 minOut,
         bytes32 swapHash
-    ) public returns (uint256) {
+    ) public override returns (uint256) {
         // Only allow connected pools
         if (!_poolConnection[channelId][fromPool]) revert PoolNotConnected(channelId, fromPool);
         // The chainInterface is the only valid caller of this function.
@@ -836,7 +843,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         bytes32 swapHash,
         address dataTarget,
         bytes calldata data
-    ) external returns (uint256) {
+    ) external override returns (uint256) {
         uint256 purchasedTokens = receiveAsset(
             channelId,
             fromPool,
@@ -889,7 +896,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 minOut,
         address fallbackUser,
         bytes memory calldata_
-    ) public returns (uint256) {
+    ) public override returns (uint256) {
         // Only allow connected pools
         if (!_poolConnection[channelId][toPool]) revert PoolNotConnected(channelId, toPool);
 
@@ -972,7 +979,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 poolTokens,
         uint256 minOut,
         address fallbackUser
-    ) external returns (uint256) {
+    ) external override returns (uint256) {
         bytes memory calldata_ = new bytes(0);
         return sendLiquidity(
             channelId,
@@ -1007,7 +1014,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 U,
         uint256 minOut,
         bytes32 swapHash
-    ) public returns (uint256) {
+    ) public override returns (uint256) {
         // The chainInterface is the only valid caller of this function.
         require(msg.sender == _chainInterface);
         // Only allow connected pools
@@ -1022,9 +1029,9 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 wsum = _maxUnitCapacity / FixedPointMathLib.LN2;
 
         // Use the arbitarty integral to compute mint %. It comes as WAD, multiply by totalSupply
-        // and divided by WAD to get number of pool tokens.
+        // and divide by WAD (mulWadDown) to get number of pool tokens.
         // On totalSupply. Do not add escrow amount, as higher amount results in a larger return.
-        uint256 poolTokens = (_calcPriceCurveLimitShare(U, wsum) * totalSupply)/FixedPointMathLib.WAD;
+        uint256 poolTokens = FixedPointMathLib.mulWadDown(_calcPriceCurveLimitShare(U, wsum), totalSupply);
 
         // Check if more than the minimum output is returned.
         if (minOut > poolTokens) revert ReturnInsufficient(poolTokens, minOut);
@@ -1047,7 +1054,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         bytes32 swapHash,
         address dataTarget,
         bytes calldata data
-    ) external returns (uint256) {
+    ) external override returns (uint256) {
         uint256 purchasedPoolTokens = receiveLiquidity(
             channelId,
             fromPool,

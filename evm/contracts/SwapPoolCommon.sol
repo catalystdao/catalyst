@@ -133,7 +133,7 @@ abstract contract CatalystSwapPoolCommon is
         _;
     }
 
-    function onlyLocal() public view returns (bool) {
+    function onlyLocal() public view override returns (bool) {
         return _chainInterface == address(0);
     }
 
@@ -146,7 +146,7 @@ abstract contract CatalystSwapPoolCommon is
         uint256 governanceFee,
         address feeAdministrator,
         address setupMaster
-    ) initializer external {
+    ) initializer external override {
         // The pool is designed to be used by a proxy and not as a standalone pool.
         // initializer lets this function only be called once.
 
@@ -186,13 +186,19 @@ abstract contract CatalystSwapPoolCommon is
         if (UC <= unitCapacityReleased) return MUC;
 
         // Amplified pools can have MUC <= UC since MUC is modified when swapping
+        // If this is not the case and the if statement is removed, also remove the
+        // unchecked block.
         unchecked {
             // we know that UC > unitCapacityReleased
             if (MUC <= UC - unitCapacityReleased) return 0; 
 
-            // Since MUC >= UC - unitCapacityReleased => MUC + unitCapacityReleased > UC
-            return MUC + unitCapacityReleased - UC;  // MUC - (UC - unitCapacityReleased)
+            // we know UC > unitCapacityReleased 
+            // and because of the above if statement, we know
+            // MUC > (UC - unitCapacityReleased)
+            // Thus we can compute the difference unchecked.
+            return MUC - (UC - unitCapacityReleased);
         }
+
     }
 
     /**
@@ -386,7 +392,7 @@ abstract contract CatalystSwapPoolCommon is
         uint256 escrowAmount,
         address escrowToken,
         uint32 blockNumberMod
-    ) public virtual {
+    ) public override virtual {
         require(msg.sender == _chainInterface);  // dev: Only _chainInterface
 
         bytes32 sendAssetHash = _computeSendAssetHash(
@@ -417,7 +423,7 @@ abstract contract CatalystSwapPoolCommon is
         uint256 escrowAmount,
         address escrowToken,
         uint32 blockNumberMod
-    ) public virtual {
+    ) public override virtual {
         require(msg.sender == _chainInterface);  // dev: Only _chainInterface
 
         bytes32 sendAssetHash = _computeSendAssetHash(
@@ -448,7 +454,7 @@ abstract contract CatalystSwapPoolCommon is
         uint256 U,
         uint256 escrowAmount,
         uint32 blockNumberMod
-    ) public virtual {
+    ) public override virtual {
         require(msg.sender == _chainInterface);  // dev: Only _chainInterface
 
         bytes32 sendLiquidityHash = _computeSendLiquidityHash(
@@ -476,7 +482,7 @@ abstract contract CatalystSwapPoolCommon is
         uint256 U,
         uint256 escrowAmount,
         uint32 blockNumberMod
-    ) public virtual {
+    ) public override virtual {
         require(msg.sender == _chainInterface);  // dev: Only _chainInterface
 
         bytes32 sendLiquidityHash = _computeSendLiquidityHash(
