@@ -2,6 +2,17 @@ use cosmwasm_schema::{cw_serde, QueryResponses};
 
 use cosmwasm_std::{Binary, Uint64, Uint128};
 use cw20::{Expiration, AllowanceResponse, BalanceResponse, TokenInfoResponse};
+use ethnum::U256;
+use schemars::JsonSchema;
+use serde::{Serialize, Deserialize};
+
+
+// Implement JsonSchema for U256, see https://graham.cool/schemars/examples/5-remote_derive/
+//TODO VERIFY THIS IS CORRECT AND SAFE!
+//TODO move to common place
+#[derive(Serialize, Deserialize, JsonSchema)]
+#[serde(remote = "U256")]
+pub struct U256Def([u128; 2]);
 
 
 #[cw_serde]
@@ -43,7 +54,8 @@ pub enum ExecuteMsg {
 
     SendAssetAck {
         to_account: String,
-        u: [u64; 4],
+        #[serde(with = "U256Def")]
+        u: U256,
         amount: Uint128,
         asset: String,
         block_number_mod: u32
@@ -51,7 +63,8 @@ pub enum ExecuteMsg {
 
     SendAssetTimeout {
         to_account: String,
-        u: [u64; 4],
+        #[serde(with = "U256Def")]
+        u: U256,
         amount: Uint128,
         asset: String,
         block_number_mod: u32
@@ -59,14 +72,16 @@ pub enum ExecuteMsg {
 
     SendLiquidityAck {
         to_account: String,
-        u: [u64; 4],
+        #[serde(with = "U256Def")]
+        u: U256,
         amount: Uint128,
         block_number_mod: u32
     },
 
     SendLiquidityTimeout {
         to_account: String,
-        u: [u64; 4],
+        #[serde(with = "U256Def")]
+        u: U256,
         amount: Uint128,
         block_number_mod: u32
     },
@@ -247,12 +262,14 @@ pub enum QueryMsg {
 
 #[cw_serde]
 pub struct UnitCapacityResponse {
-    pub amount: [u64; 4],
+    #[serde(with = "U256Def")]
+    pub amount: U256,
 }
 
 #[cw_serde]
 pub struct LiquidityUnitCapacityResponse {
-    pub amount: [u64; 4],
+    #[serde(with = "U256Def")]
+    pub amount: U256,
 }
 
 #[cw_serde]
@@ -262,7 +279,8 @@ pub struct ChainInterfaceResponse {
 
 #[cw_serde]
 pub struct Balance0Response {
-    pub balance: [u64; 4],
+    #[serde(with = "U256Def")]
+    pub balance: U256,
 }
 
 #[cw_serde]
@@ -287,17 +305,20 @@ pub struct LastModificationTimeResponse {
 
 #[cw_serde]
 pub struct TargetMaxUnitInflowResponse {
-    pub amount: [u64; 4]
+    #[serde(with = "U256Def")]
+    pub amount: U256
 }
 
 #[cw_serde]
 pub struct PoolFeeX64Response {
-    pub fee: [u64; 4]    //TODO use u64?
+    #[serde(with = "U256Def")]
+    pub fee: U256    //TODO use u64?
 }
 
 #[cw_serde]
 pub struct GovernanceFeeResponse {
-    pub fee: [u64; 4]    //TODO use u64?
+    #[serde(with = "U256Def")]
+    pub fee: U256    //TODO use u64?
 }
 
 #[cw_serde]
@@ -312,7 +333,8 @@ pub struct SetupMasterResponse {
 
 #[cw_serde]
 pub struct MaxUnitInflowResponse {
-    pub amount: [u64; 4]
+    #[serde(with = "U256Def")]
+    pub amount: U256
 }
 
 #[cw_serde]
@@ -342,7 +364,8 @@ pub struct OnlyLocalResponse {
 
 #[cw_serde]
 pub struct GetUnitCapacityResponse {
-    pub capacity: [u64; 4]
+    #[serde(with = "U256Def")]
+    pub capacity: U256
 }
 
 

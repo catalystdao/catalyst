@@ -33,7 +33,8 @@ schemars = "0.8.10"
 serde = { version = "1.0.145", default-features = false, features = ["derive"] }
 thiserror = { version = "1.0.31" }
 swap-pool-common = { path = "../swap-pool-common" }
-fixed-point-math-lib = { path = "../../../rust-common/fixed_point_math_lib" }
+ethnum = { version = "1.3.2", features = ["macros"] }
+fixed-point-math-lib-solmate = { path = "../../../rust-common/fixed-point-math-lib-solmate" }
 
 [dev-dependencies]
 cw-multi-test = "0.16.2"

@@ -1,6 +1,4 @@
-use fixed_point_math_lib::fixed_point_math_x64::LN2_X64;
 #[cfg(not(feature = "library"))]
-use fixed_point_math_lib::{u256::U256, fixed_point_math_x64::ONE_X64};
 use cosmwasm_std::{entry_point, Addr, StdError};
 use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, Uint128, CosmosMsg, to_binary};
 use cw2::set_contract_version;
@@ -13,6 +11,8 @@ use cw20_base::contract::{
     execute_burn, execute_mint, execute_send, execute_transfer, query_balance, query_token_info,
 };
 use cw20_base::state::{MinterData, TokenInfo, TOKEN_INFO};
+use ethnum::U256;
+use fixed_point_math_lib_solmate::fixed_point_math::LN2;
 use swap_pool_common::state::{MAX_ASSETS, INITIAL_MINT_AMOUNT, SwapPoolState, STATE};
 
 use crate::calculation_helpers;
@@ -256,11 +256,9 @@ pub fn execute_initialize_swap_curves(
     state.weights = weights.clone();
 
     // Compute the security limit
-    state.max_limit_capacity = (
-        LN2_X64 * weights.iter().fold(
-            U256::zero(), |acc, next| acc + U256::from(*next)     // Overflow safe, as U256 >> u64    //TODO maths
-        )
-    ).0;
+    state.max_limit_capacity = LN2 * weights.iter().fold(
+        U256::ZERO, |acc, next| acc + U256::from(*next)     // Overflow safe, as U256 >> u64    //TODO maths
+    );
 
     // Save state
     STATE.save(deps.storage, &state)?;
@@ -383,7 +381,7 @@ pub fn execute_send_asset_ack(
     mut deps: DepsMut,
     info: MessageInfo,
     to_account: String,
-    u: [u64; 4],
+    u: U256,
     amount: Uint128,
     asset: String,
     block_number_mod: u32
@@ -393,7 +391,7 @@ pub fn execute_send_asset_ack(
         &mut deps,
         info,
         to_account,
-        U256(u),
+        u,
         amount,
         asset,
         block_number_mod
@@ -404,8 +402,8 @@ pub fn execute_send_asset_ack(
     // Adjust security limit
     let mut state = STATE.load(deps.storage)?;
 
-    let used_capacity = U256(state.used_limit_capacity);
-    state.used_limit_capacity = (used_capacity.saturating_sub(U256(u))).0;
+    let used_capacity = state.used_limit_capacity;
+    state.used_limit_capacity = used_capacity.saturating_sub(u);
 
     STATE.save(deps.storage, &state)?;
 
@@ -417,7 +415,7 @@ pub fn execute_send_asset_timeout(
     env: Env,
     info: MessageInfo,
     to_account: String,
-    u: [u64; 4],
+    u: U256,
     amount: Uint128,
     asset: String,
     block_number_mod: u32
@@ -427,7 +425,7 @@ pub fn execute_send_asset_timeout(
         env,
         info,
         to_account,
-        U256(u),
+        u,
         amount,
         asset,
         block_number_mod
@@ -438,7 +436,7 @@ pub fn execute_send_liquidity_ack(
     mut deps: DepsMut,
     info: MessageInfo,
     to_account: String,
-    u: [u64; 4],
+    u: U256,
     amount: Uint128,
     block_number_mod: u32
 ) -> Result<Response, ContractError> {
@@ -447,7 +445,7 @@ pub fn execute_send_liquidity_ack(
         &mut deps,
         info,
         to_account,
-        U256(u),
+        u,
         amount,
         block_number_mod
     ).map_err(|err| err.into());
@@ -457,8 +455,8 @@ pub fn execute_send_liquidity_ack(
     // Adjust security limit
     let mut state = STATE.load(deps.storage)?;
 
-    let used_capacity = U256(state.used_limit_capacity);
-    state.used_limit_capacity = (used_capacity.saturating_sub(U256(u))).0;
+    let used_capacity = state.used_limit_capacity;
+    state.used_limit_capacity = used_capacity.saturating_sub(u);
 
     STATE.save(deps.storage, &state)?;
 
@@ -470,7 +468,7 @@ pub fn execute_send_liquidity_timeout(
     env: Env,
     info: MessageInfo,
     to_account: String,
-    u: [u64; 4],
+    u: U256,
     amount: Uint128,
     block_number_mod: u32
 ) -> Result<Response, ContractError> {
@@ -479,7 +477,7 @@ pub fn execute_send_liquidity_timeout(
         env,
         info,
         to_account,
-        U256(u),
+        u,
         amount,
         block_number_mod
     ).map_err(|err| err.into())
@@ -878,9 +876,9 @@ pub fn query_only_local(deps: Deps) -> StdResult<bool> {
     SwapPoolState::only_local(deps)
 }
 
-pub fn query_get_unit_capacity(deps: Deps, env: Env) -> StdResult<[u64; 4]> { //TODO maths
+pub fn query_get_unit_capacity(deps: Deps, env: Env) -> StdResult<U256> { //TODO maths
     SwapPoolState::get_unit_capacity(deps, env)
-        .map(|capacity| capacity.0)
+        .map(|capacity| capacity)
         .map_err(|_| StdError::GenericErr { msg: "".to_owned() })   //TODO error
 }
 

@@ -1,4 +1,5 @@
 use cosmwasm_std::StdError;
+use ethnum::U256;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -22,7 +23,7 @@ pub enum ContractError {
     InvalidGovernanceFee { requested_fee: u64, max_fee: u64 },
 
     #[error("Security limit exceeded")]
-    SecurityLimitExceeded { units: [u64; 4], capacity: [u64; 4] },
+    SecurityLimitExceeded { units: U256, capacity: U256 },
 
 
     // CW20 Errors

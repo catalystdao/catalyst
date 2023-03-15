@@ -6,8 +6,10 @@ use cosmwasm_std::{Addr, Uint128, DepsMut, Env, Response, Event, MessageInfo, De
 use cw20::Cw20ExecuteMsg;
 use cw_storage_plus::{Item, Map};
 use cw20_base::{state::{MinterData, TokenInfo, TOKEN_INFO}, contract::execute_mint};
+use ethnum::{U256, uint};
+use schemars::JsonSchema;
+use serde::{Serialize, Deserialize};
 use sha3::{Digest, Keccak256};
-use fixed_point_math_lib::{u256::U256};
 
 use crate::ContractError;
 
@@ -20,7 +22,7 @@ pub const INITIAL_MINT_AMOUNT: Uint128 = Uint128::new(1000000000000000000u128); 
 pub const MAX_POOL_FEE_SHARE       : u64 = 1000000000000000000u64;              // 100%
 pub const MAX_GOVERNANCE_FEE_SHARE : u64 = 75u64 * 10000000000000000u64;        // 75%    //TODO EVM mismatch (move to factory)
 
-pub const DECAY_RATE: u64 = 60*60*24;
+pub const DECAY_RATE: U256 = uint!("86400");    // 60*60*24
 
 pub const STATE: Item<SwapPoolState> = Item::new("catalyst-pool-state");
 pub const ASSET_ESCROWS: Map<&str, String> = Map::new("catalyst-pool-asset-escrows");
@@ -33,6 +35,13 @@ fn calc_keccak256(message: Vec<u8>) -> String {
     hasher.update(message);
     format!("{:?}", hasher.finalize().to_vec())
 }
+
+// Implement JsonSchema for U256, see https://graham.cool/schemars/examples/5-remote_derive/
+//TODO VERIFY THIS IS CORRECT AND SAFE!
+//TODO move to common place
+#[derive(Serialize, Deserialize, JsonSchema)]
+#[serde(remote = "U256")]
+pub struct U256Def([u128; 2]);
 
 #[cw_serde]
 pub struct SwapPoolState {
@@ -50,8 +59,10 @@ pub struct SwapPoolState {
     pub escrowed_assets: Vec<Uint128>,
     pub escrowed_pool_tokens: Uint128,
 
-    pub max_limit_capacity: [u64; 4],       // TODO EVM mismatch (name maxUnitCapacity) // TODO use U256 directly
-    pub used_limit_capacity: [u64; 4],      // TODO EVM mismatch (name maxUnitCapacity) // TODO use U256 directly
+    #[serde(with = "U256Def")]
+    pub max_limit_capacity: U256,       // TODO EVM mismatch (name maxUnitCapacity) // TODO use U256 directly
+    #[serde(with = "U256Def")]
+    pub used_limit_capacity: U256,      // TODO EVM mismatch (name maxUnitCapacity) // TODO use U256 directly
     pub used_limit_capacity_timestamp: u64
 }
 
@@ -426,10 +437,7 @@ impl SwapPoolState {
         );
 
         hash_data.extend_from_slice(to_account_bytes);
-
-        hash_data.extend_from_slice(&[0u8; 32usize]);
-        u.to_big_endian(&mut hash_data[to_account_bytes.len()..to_account_bytes.len()+32usize]);    
-
+        hash_data.extend_from_slice(&u.to_be_bytes());
         hash_data.extend_from_slice(&amount.to_be_bytes());
         hash_data.extend_from_slice(asset_bytes);
         hash_data.extend_from_slice(&block_number_mod.to_be_bytes());
@@ -454,10 +462,7 @@ impl SwapPoolState {
         );
 
         hash_data.extend_from_slice(to_account_bytes);
-
-        hash_data.extend_from_slice(&[0u8; 32usize]);
-        u.to_big_endian(&mut hash_data[to_account_bytes.len()..to_account_bytes.len()+32usize]);    
-
+        hash_data.extend_from_slice(&u.to_be_bytes());
         hash_data.extend_from_slice(&amount.to_be_bytes());
         hash_data.extend_from_slice(&block_number_mod.to_be_bytes());
         
@@ -500,8 +505,8 @@ impl SwapPoolState {
             escrowed_assets: vec![],
             escrowed_pool_tokens: Uint128::zero(),
     
-            max_limit_capacity: [0u64; 4],
-            used_limit_capacity: [0u64; 4],
+            max_limit_capacity: U256::ZERO,
+            used_limit_capacity: U256::ZERO,
             used_limit_capacity_timestamp: 0u64
         };
 
@@ -553,8 +558,8 @@ impl SwapPoolState {
         time: Timestamp
     ) -> Result<U256, ContractError> {
 
-        let max_limit_capacity = U256(self.max_limit_capacity);
-        let used_limit_capacity = U256(self.used_limit_capacity);
+        let max_limit_capacity = self.max_limit_capacity;
+        let used_limit_capacity = self.used_limit_capacity;
 
         let released_limit_capacity = max_limit_capacity
             .checked_mul(
@@ -567,7 +572,7 @@ impl SwapPoolState {
             }
 
             if max_limit_capacity <= used_limit_capacity - released_limit_capacity {
-                return Ok(U256::zero());
+                return Ok(U256::ZERO);
             }
 
             Ok(
@@ -600,11 +605,11 @@ impl SwapPoolState {
         let capacity = state._get_unit_capacity(env.block.time)?;
 
         if units > capacity {
-            return Err(ContractError::SecurityLimitExceeded { units: units.0, capacity: capacity.0 });
+            return Err(ContractError::SecurityLimitExceeded { units, capacity });
         }
 
         state.used_limit_capacity_timestamp = env.block.time.nanos();
-        state.used_limit_capacity = (capacity - units).0;
+        state.used_limit_capacity = capacity - units;
 
         STATE.save(deps.storage, &state)?;
 
