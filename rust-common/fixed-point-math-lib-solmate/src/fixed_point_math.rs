@@ -180,7 +180,7 @@ pub fn mul_div_up(x: U256, y: U256, denominator: U256) -> Result<U256, ()> {
     // First, divide z - 1 by the denominator and add 1.
     // We allow z - 1 to underflow if z is 0, because we multiply the
     // end result by 0 if z is zero, ensuring we return 0 if z is zero.
-    Ok((z != U256::ZERO).as_u256() * (z - 1) / denominator + 1)     //TODO is '(z != U256::ZERO).as_u256()' more efficient than an if statement? //TODO does (bool).as_u256() always give the desired result?
+    Ok((z != U256::ZERO).as_u256() * ((z - 1) / denominator + 1))     //TODO is '(z != U256::ZERO).as_u256()' more efficient than an if statement? //TODO does (bool).as_u256() always give the desired result?
 }
 
 /***************************************************************
