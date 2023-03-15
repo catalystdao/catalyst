@@ -12,7 +12,7 @@ use cw20_base::contract::{
 };
 use cw20_base::state::{MinterData, TokenInfo, TOKEN_INFO};
 use ethnum::U256;
-use fixed_point_math_lib_solmate::fixed_point_math::LN2;
+use fixed_point_math_lib::fixed_point_math::LN2;
 use swap_pool_common::state::{MAX_ASSETS, INITIAL_MINT_AMOUNT, SwapPoolState, STATE};
 
 use crate::calculation_helpers;

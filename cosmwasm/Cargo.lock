@@ -451,7 +451,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "fixed-point-math-lib-solmate"
+name = "fixed-point-math-lib"
 version = "0.1.0"
 dependencies = [
  "ethnum",
@@ -830,7 +830,7 @@ dependencies = [
  "cw20",
  "cw20-base",
  "ethnum",
- "fixed-point-math-lib-solmate",
+ "fixed-point-math-lib",
  "schemars",
  "serde",
  "swap-pool-common",
@@ -865,7 +865,7 @@ dependencies = [
  "cw20",
  "cw20-base",
  "ethnum",
- "fixed-point-math-lib-solmate",
+ "fixed-point-math-lib",
  "schemars",
  "serde",
  "sha3",
