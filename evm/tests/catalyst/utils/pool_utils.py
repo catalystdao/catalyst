@@ -311,7 +311,7 @@ def decode_payload(data, decode_address=evm_bytes_32_to_address):
             "_minReferenceAsset": convert.to_uint(data[161:193]),
             "_escrowAmount": convert.to_uint(data[193:225]),
             "_blockNumber": convert.to_uint(data[225:229]),
-            "_swapHash": data[229:251],
+            "_swapHash": data[229:261],
         }
     
     # Asset swap payload
