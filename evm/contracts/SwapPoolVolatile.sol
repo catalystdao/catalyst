@@ -289,7 +289,10 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 B,
         uint256 W
     ) internal pure returns (uint256) {
-        return (B * (FixedPointMathLib.WAD - uint256(FixedPointMathLib.expWad(-int256(U / W))))) / FixedPointMathLib.WAD;   // int256 casting is initially not safe. If overflow, the equation becomes: 1 - exp(U/W) => exp(U/W) > 1. In this case, Solidity's built-in safe math protection catches the overflow.
+        return FixedPointMathLib.mulWadDown(
+            B,
+            FixedPointMathLib.WAD - uint256(FixedPointMathLib.expWad(-int256(U / W)))   // int256 casting is initially not safe. If overflow, the equation becomes: 1 - exp(U/W) => exp(U/W) > 1. In this case, Solidity's built-in safe math protection catches the overflow.
+        );
     }
 
     /**
@@ -477,7 +480,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 wsum = _maxUnitCapacity / FixedPointMathLib.LN2;
 
         // _calcPriceCurveLimitShare returns < 1 multiplied by FixedPointMathLib.WAD.
-        uint256 poolTokens = (initialTotalSupply * _calcPriceCurveLimitShare(U, wsum)) / FixedPointMathLib.WAD;
+        uint256 poolTokens = FixedPointMathLib.mulWadDown(initialTotalSupply, _calcPriceCurveLimitShare(U, wsum));
 
         // Check that the minimum output is honoured.
         if (minOut > poolTokens) revert ReturnInsufficient(poolTokens, minOut);
@@ -578,7 +581,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
             if (token == address(0)) break;
 
             // Units allocated for the specific token.
-            uint256 U_i = (U * withdrawRatio[it]) / FixedPointMathLib.WAD;
+            uint256 U_i = FixedPointMathLib.mulWadDown(U, withdrawRatio[it]);
             if (U_i == 0) {
                 // There should not be a non-zero withdrawRatio after a withdraw ratio of 1
                 if (withdrawRatio[it] != 0) revert WithdrawRatioNotZero();
@@ -1026,9 +1029,9 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 wsum = _maxUnitCapacity / FixedPointMathLib.LN2;
 
         // Use the arbitarty integral to compute mint %. It comes as WAD, multiply by totalSupply
-        // and divided by WAD to get number of pool tokens.
+        // and divide by WAD (mulWadDown) to get number of pool tokens.
         // On totalSupply. Do not add escrow amount, as higher amount results in a larger return.
-        uint256 poolTokens = (_calcPriceCurveLimitShare(U, wsum) * totalSupply)/FixedPointMathLib.WAD;
+        uint256 poolTokens = FixedPointMathLib.mulWadDown(_calcPriceCurveLimitShare(U, wsum), totalSupply);
 
         // Check if more than the minimum output is returned.
         if (minOut > poolTokens) revert ReturnInsufficient(poolTokens, minOut);
