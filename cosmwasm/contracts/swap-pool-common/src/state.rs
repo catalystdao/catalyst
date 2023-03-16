@@ -2,13 +2,11 @@ use std::ops::{Div, Sub};
 
 use cosmwasm_schema::cw_serde;
 
-use cosmwasm_std::{Addr, Uint128, DepsMut, Env, Response, Event, MessageInfo, Deps, StdResult, CosmosMsg, to_binary, Timestamp};
+use cosmwasm_std::{Addr, Uint128, DepsMut, Env, Response, Event, MessageInfo, Deps, StdResult, CosmosMsg, to_binary, Timestamp, Storage};
 use cw20::Cw20ExecuteMsg;
-use cw_storage_plus::{Item, Map};
+use cw_storage_plus::Map;
 use cw20_base::{state::{MinterData, TokenInfo, TOKEN_INFO}, contract::execute_mint};
 use ethnum::{U256, uint};
-use schemars::JsonSchema;
-use serde::{Serialize, Deserialize};
 use sha3::{Digest, Keccak256};
 
 use crate::ContractError;
@@ -24,7 +22,6 @@ pub const MAX_GOVERNANCE_FEE_SHARE : u64 = 75u64 * 10000000000000000u64;        
 
 pub const DECAY_RATE: U256 = uint!("86400");    // 60*60*24
 
-pub const STATE: Item<SwapPoolState> = Item::new("catalyst-pool-state");
 pub const ASSET_ESCROWS: Map<&str, String> = Map::new("catalyst-pool-asset-escrows");
 pub const LIQUIDITY_ESCROWS: Map<&str, String> = Map::new("catalyst-pool-liquidity-escrows");
 pub const CONNECTIONS: Map<(&str, &str), bool> = Map::new("catalyst-pool-connections");   //TODO channelId and toPool types
@@ -36,54 +33,70 @@ fn calc_keccak256(message: Vec<u8>) -> String {
     format!("{:?}", hasher.finalize().to_vec())
 }
 
-// Implement JsonSchema for U256, see https://graham.cool/schemars/examples/5-remote_derive/
-//TODO VERIFY THIS IS CORRECT AND SAFE!
-//TODO move to common place
-#[derive(Serialize, Deserialize, JsonSchema)]
-#[serde(remote = "U256")]
-pub struct U256Def([u128; 2]);
+// TODO split into different traits
+pub trait SwapPoolCommon: Sized {
 
-#[cw_serde]
-pub struct SwapPoolState {
-    pub setup_master: Option<Addr>,
-    pub chain_interface: Option<Addr>,
+    fn load_state(store: &dyn Storage) -> StdResult<Self>;
+    fn save_state(self, store: &mut dyn Storage) -> StdResult<()>;
 
-    pub assets: Vec<Addr>,
-    pub weights: Vec<u64>,
-    pub amplification: u64,
-    
-    pub fee_administrator: Addr,
-    pub pool_fee: u64,
-    pub governance_fee: u64,
+    fn setup_master(&self) -> &Option<Addr>;
+    fn setup_master_mut(&mut self) -> &mut Option<Addr>;
 
-    pub escrowed_assets: Vec<Uint128>,
-    pub escrowed_pool_tokens: Uint128,
+    fn chain_interface(&self) -> &Option<Addr>;
+    fn chain_interface_mut(&mut self) -> &mut Option<Addr>;
 
-    #[serde(with = "U256Def")]
-    pub max_limit_capacity: U256,       // TODO EVM mismatch (name maxUnitCapacity) // TODO use U256 directly
-    #[serde(with = "U256Def")]
-    pub used_limit_capacity: U256,      // TODO EVM mismatch (name maxUnitCapacity) // TODO use U256 directly
-    pub used_limit_capacity_timestamp: u64
-}
+    fn assets(&self) -> &Vec<Addr>;
+    fn assets_mut(&mut self) -> &mut Vec<Addr>;
+
+    fn weights(&self) -> &Vec<u64>;
+    fn weights_mut(&mut self) -> &mut Vec<u64>;
+
+    fn amplification(&self) -> &u64;
+    fn amplification_mut(&mut self) -> &mut u64;
+
+    fn fee_administrator(&self) -> &Addr;
+    fn fee_administrator_mut(&mut self) -> &mut Addr;
+
+    fn pool_fee(&self) -> &u64;
+    fn pool_fee_mut(&mut self) -> &mut u64;
+
+    fn governance_fee(&self) -> &u64;
+    fn governance_fee_mut(&mut self) -> &mut u64;
+
+    fn escrowed_assets(&self) -> &Vec<Uint128>;
+    fn escrowed_assets_mut(&mut self) -> &mut Vec<Uint128>;
+
+    fn escrowed_pool_tokens(&self) -> &Uint128;
+    fn escrowed_pool_tokens_mut(&mut self) -> &mut Uint128;
+
+    fn max_limit_capacity(&self) -> &U256;           // TODO EVM mismatch (name maxUnitCapacity)
+    fn max_limit_capacity_mut(&mut self) -> &mut U256;
+
+    fn used_limit_capacity(&self) -> &U256;          // TODO EVM mismatch (name usedUnitCapacity)
+    fn used_limit_capacity_mut(&mut self) -> &mut U256;
+
+    fn used_limit_capacity_timestamp(&self) -> &u64;
+    fn used_limit_capacity_timestamp_mut(&mut self) -> &mut u64;
 
 
-impl SwapPoolState {
+    // Default implementations
 
-    pub fn get_asset_index(&self, asset: &str) -> Result<usize, ContractError> {
-        self.assets
+    fn get_asset_index(&self, asset: &str) -> Result<usize, ContractError> {
+        self.assets()
             .iter()
             .enumerate()
             .find_map(|(index, a): (usize, &Addr)| if *a == asset { Some(index) } else { None })
             .ok_or(ContractError::InvalidAssets {})
     }
 
-
-    fn _set_fee_administrator(
+    fn set_fee_administrator_unchecked(
         &mut self,
         deps: &DepsMut,
         administrator: &str
     ) -> Result<Event, ContractError> {
-        self.fee_administrator = deps.api.addr_validate(administrator)?;
+
+        let fee_administrator = self.fee_administrator_mut();
+        *fee_administrator = deps.api.addr_validate(administrator)?;
 
         return Ok(
             Event::new(String::from("SetFeeAdministrator"))
@@ -91,7 +104,7 @@ impl SwapPoolState {
         )
     }
 
-    fn _set_pool_fee(
+    fn set_pool_fee_unchecked(
         &mut self,
         fee: u64
     ) -> Result<Event, ContractError> {
@@ -102,7 +115,8 @@ impl SwapPoolState {
             )
         }
 
-        self.pool_fee = fee;
+        let pool_fee = self.pool_fee_mut();
+        *pool_fee = fee;
 
         return Ok(
             Event::new(String::from("SetPoolFee"))
@@ -110,7 +124,7 @@ impl SwapPoolState {
         )
     }
 
-    fn _set_governance_fee(
+    fn set_governance_fee_unchecked(
         &mut self,
         fee: u64
     ) -> Result<Event, ContractError> {
@@ -121,7 +135,8 @@ impl SwapPoolState {
             )
         }
 
-        self.pool_fee = fee;
+        let governance_fee = self.governance_fee_mut();
+        *governance_fee = fee;
 
         return Ok(
             Event::new(String::from("SetGovernanceFee"))
@@ -129,69 +144,69 @@ impl SwapPoolState {
         )
     }
 
-    pub fn set_fee_administrator(
+    fn set_fee_administrator(
         deps: &mut DepsMut,
         info: MessageInfo,
         administrator: String
     ) -> Result<Response, ContractError> {
-        let mut state = STATE.load(deps.storage)?;
+        let mut state = Self::load_state(deps.storage)?;
 
         //TODO verify sender is factory owner
 
-        let event = state._set_fee_administrator(deps, administrator.as_str())?;
+        let event = state.set_fee_administrator_unchecked(deps, administrator.as_str())?;
 
-        STATE.save(deps.storage, &state)?;
-
-        Ok(Response::new().add_event(event))
-    }
-
-    pub fn set_pool_fee(
-        deps: &mut DepsMut,
-        info: MessageInfo,
-        fee: u64
-    ) -> Result<Response, ContractError> {
-        let mut state = STATE.load(deps.storage)?;
-
-        if info.sender != state.fee_administrator {
-            return Err(ContractError::Unauthorized {})
-        }
-
-        let event = state._set_pool_fee(fee)?;
-
-        STATE.save(deps.storage, &state)?;
+        state.save_state(deps.storage)?;
 
         Ok(Response::new().add_event(event))
     }
 
-    pub fn set_governance_fee(
+    fn set_pool_fee(
         deps: &mut DepsMut,
         info: MessageInfo,
         fee: u64
     ) -> Result<Response, ContractError> {
-        let mut state = STATE.load(deps.storage)?;
+        let mut state = Self::load_state(deps.storage)?;
 
-        if info.sender != state.fee_administrator {
+        if info.sender != *state.fee_administrator() {
             return Err(ContractError::Unauthorized {})
         }
 
-        let event = state._set_governance_fee(fee)?;
+        let event = state.set_pool_fee_unchecked(fee)?;
 
-        STATE.save(deps.storage, &state)?;
+        state.save_state(deps.storage)?;
+
+        Ok(Response::new().add_event(event))
+    }
+
+    fn set_governance_fee(
+        deps: &mut DepsMut,
+        info: MessageInfo,
+        fee: u64
+    ) -> Result<Response, ContractError> {
+        let mut state = Self::load_state(deps.storage)?;
+
+        if info.sender != *state.fee_administrator() {
+            return Err(ContractError::Unauthorized {})
+        }
+
+        let event = state.set_governance_fee_unchecked(fee)?;
+
+        state.save_state(deps.storage)?;
 
         Ok(Response::new().add_event(event))
     }
 
     
-    pub fn set_connection(
+    fn set_connection(
         deps: &mut DepsMut,
         info: MessageInfo,
         channel_id: String,
         to_pool: String,
         state: bool
     ) -> Result<Response, ContractError> {
-        let pool_state = STATE.load(deps.storage)?;
+        let pool_state = Self::load_state(deps.storage)?;
 
-        if pool_state.setup_master != Some(info.sender) {   // TODO check also for factory owner
+        if *pool_state.setup_master() != Some(info.sender) {   // TODO check also for factory owner
             return Err(ContractError::Unauthorized {});
         }
 
@@ -206,20 +221,21 @@ impl SwapPoolState {
     }
 
 
-    pub fn ready(deps: Deps) -> StdResult<bool> {
+    fn ready(deps: Deps) -> StdResult<bool> {
     
-        let state = STATE.load(deps.storage)?;
+        let state = Self::load_state(deps.storage)?;
 
-        Ok(state.setup_master.is_none() && state.assets.len() > 0)
+        Ok(state.setup_master().is_none() && state.assets().len() > 0)
     }
 
 
-    pub fn only_local(deps: Deps) -> StdResult<bool> {
+    fn only_local(deps: Deps) -> StdResult<bool> {
+    
+        let state = Self::load_state(deps.storage)?;
 
-        let state = STATE.load(deps.storage)?;
-
-        Ok(state.chain_interface.is_none())
+        Ok(state.chain_interface().is_none())
     }
+
 
 
     fn release_asset_escrow(
@@ -234,7 +250,8 @@ impl SwapPoolState {
         ASSET_ESCROWS.remove(deps.storage, send_asset_hash);
 
         let asset_index = self.get_asset_index(asset)?;
-        self.escrowed_assets[asset_index] -= amount;               // Safe, as 'amount' is always contained in 'escrowed_assets'
+        let escrowed_assets = self.escrowed_assets_mut();
+        escrowed_assets[asset_index] -= amount;               // Safe, as 'amount' is always contained in 'escrowed_assets'
 
         Ok(fallback_account)
     }
@@ -250,28 +267,29 @@ impl SwapPoolState {
         let fallback_account = LIQUIDITY_ESCROWS.load(deps.storage, send_liquidity_hash)?;
         LIQUIDITY_ESCROWS.remove(deps.storage, send_liquidity_hash);
 
-        self.escrowed_pool_tokens -= amount;               // Safe, as 'amount' is always contained in 'escrowed_assets'
+        let escrowed_pool_tokens = self.escrowed_pool_tokens_mut();
+        *escrowed_pool_tokens -= amount;               // Safe, as 'amount' is always contained in 'escrowed_assets'
 
         Ok(fallback_account)
     }
 
-    pub fn send_asset_ack(
+
+    fn on_send_asset_ack(
+        &mut self,
         deps: &mut DepsMut,
         info: MessageInfo,
         to_account: String,
-        u: U256,    // TODO maths
+        u: U256,
         amount: Uint128,
         asset: String,
         block_number_mod: u32
     ) -> Result<Response, ContractError> {
 
-        let mut state = STATE.load(deps.storage)?;
-
-        if Some(info.sender) != state.chain_interface {
+        if Some(info.sender) != *self.chain_interface() {
             return Err(ContractError::Unauthorized {})
         }
 
-        let send_asset_hash = SwapPoolState::compute_send_asset_hash(
+        let send_asset_hash = Self::compute_send_asset_hash(
             to_account.as_str(),
             u,
             amount,
@@ -279,9 +297,7 @@ impl SwapPoolState {
             block_number_mod
         );
 
-        state.release_asset_escrow(deps, &send_asset_hash, amount, &asset)?;
-
-        STATE.save(deps.storage, &state)?;
+        self.release_asset_escrow(deps, &send_asset_hash, amount, &asset)?;
 
         Ok(
             Response::new()
@@ -289,24 +305,51 @@ impl SwapPoolState {
         )
     }
 
-    pub fn send_asset_timeout(
+    fn send_asset_ack(
         deps: &mut DepsMut,
-        env: Env,
         info: MessageInfo,
         to_account: String,
-        u: U256,    // TODO maths
+        u: U256,
         amount: Uint128,
         asset: String,
         block_number_mod: u32
     ) -> Result<Response, ContractError> {
 
-        let mut state = STATE.load(deps.storage)?;
+        let mut state = Self::load_state(deps.storage)?;
 
-        if Some(info.sender) != state.chain_interface {
+        let response = state.on_send_asset_ack(
+            deps,
+            info,
+            to_account,
+            u,
+            amount,
+            asset,
+            block_number_mod
+        )?;
+
+        state.save_state(deps.storage)?;
+
+        Ok(response)
+    }
+
+
+    fn on_send_asset_timeout(
+        &mut self,
+        deps: &mut DepsMut,
+        env: Env,
+        info: MessageInfo,
+        to_account: String,
+        u: U256,
+        amount: Uint128,
+        asset: String,
+        block_number_mod: u32
+    ) -> Result<Response, ContractError> {
+
+        if Some(info.sender) != *self.chain_interface() {
             return Err(ContractError::Unauthorized {})
         }
 
-        let send_asset_hash = SwapPoolState::compute_send_asset_hash(
+        let send_asset_hash = Self::compute_send_asset_hash(
             to_account.as_str(),
             u,
             amount,
@@ -314,9 +357,7 @@ impl SwapPoolState {
             block_number_mod
         );
 
-        let fallback_address = state.release_asset_escrow(deps, &send_asset_hash, amount, &asset)?;
-
-        STATE.save(deps.storage, &state)?;
+        let fallback_address = self.release_asset_escrow(deps, &send_asset_hash, amount, &asset)?;
 
         // Transfer escrowed asset to fallback user
         let transfer_msg: CosmosMsg = CosmosMsg::Wasm(
@@ -338,31 +379,58 @@ impl SwapPoolState {
         )
     }
 
-    pub fn send_liquidity_ack(
+    fn send_asset_timeout(
+        deps: &mut DepsMut,
+        env: Env,
+        info: MessageInfo,
+        to_account: String,
+        u: U256,
+        amount: Uint128,
+        asset: String,
+        block_number_mod: u32
+    ) -> Result<Response, ContractError> {
+
+        let mut state = Self::load_state(deps.storage)?;
+
+        let response = state.on_send_asset_timeout(
+            deps,
+            env,
+            info,
+            to_account,
+            u,
+            amount,
+            asset,
+            block_number_mod
+        )?;
+
+        state.save_state(deps.storage)?;
+
+        Ok(response)
+    }
+
+
+    fn on_send_liquidity_ack(
+        &mut self,
         deps: &mut DepsMut,
         info: MessageInfo,
         to_account: String,
-        u: U256,    // TODO maths
+        u: U256,
         amount: Uint128,
         block_number_mod: u32
     ) -> Result<Response, ContractError> {
 
-        let mut state = STATE.load(deps.storage)?;
-
-        if Some(info.sender) != state.chain_interface {
+        if Some(info.sender) != *self.chain_interface() {
             return Err(ContractError::Unauthorized {})
         }
 
-        let send_liquidity_hash = SwapPoolState::compute_send_liquidity_hash(
+        let send_liquidity_hash = Self::compute_send_liquidity_hash(
             to_account.as_str(),
             u,
             amount,
             block_number_mod
         );
 
-        state.release_liquidity_escrow(deps, &send_liquidity_hash, amount)?;
-
-        STATE.save(deps.storage, &state)?;
+        self.release_liquidity_escrow(deps, &send_liquidity_hash, amount)?;
 
         Ok(
             Response::new()
@@ -370,32 +438,54 @@ impl SwapPoolState {
         )
     }
 
-    pub fn send_liquidity_timeout(
+    fn send_liquidity_ack(
         deps: &mut DepsMut,
-        env: Env,
         info: MessageInfo,
         to_account: String,
-        u: U256,    // TODO maths
+        u: U256,
         amount: Uint128,
         block_number_mod: u32
     ) -> Result<Response, ContractError> {
 
-        let mut state = STATE.load(deps.storage)?;
+        let mut state = Self::load_state(deps.storage)?;
 
-        if Some(info.sender) != state.chain_interface {
+        let response = state.on_send_liquidity_ack(
+            deps,
+            info,
+            to_account,
+            u,
+            amount,
+            block_number_mod
+        )?;
+
+        state.save_state(deps.storage)?;
+
+        Ok(response)
+    }
+
+    fn on_send_liquidity_timeout(
+        &mut self,
+        deps: &mut DepsMut,
+        env: Env,
+        info: MessageInfo,
+        to_account: String,
+        u: U256,
+        amount: Uint128,
+        block_number_mod: u32
+    ) -> Result<Response, ContractError> {
+
+        if Some(info.sender) != *self.chain_interface() {
             return Err(ContractError::Unauthorized {})
         }
 
-        let send_liquidity_hash = SwapPoolState::compute_send_liquidity_hash(
+        let send_liquidity_hash = Self::compute_send_liquidity_hash(
             to_account.as_str(),
             u,
             amount,
             block_number_mod
         );
 
-        let fallback_address = state.release_liquidity_escrow(deps, &send_liquidity_hash, amount)?;
-
-        STATE.save(deps.storage, &state)?;
+        let fallback_address = self.release_liquidity_escrow(deps, &send_liquidity_hash, amount)?;
 
         // Mint pool tokens for the fallbackAccount
         let execute_mint_info = MessageInfo {
@@ -417,9 +507,36 @@ impl SwapPoolState {
         )
     }
 
+    fn send_liquidity_timeout(
+        deps: &mut DepsMut,
+        env: Env,
+        info: MessageInfo,
+        to_account: String,
+        u: U256,
+        amount: Uint128,
+        block_number_mod: u32
+    ) -> Result<Response, ContractError> {
+
+        let mut state = Self::load_state(deps.storage)?;
+
+        let response = state.on_send_liquidity_timeout(
+            deps,
+            env,
+            info,
+            to_account,
+            u,
+            amount,
+            block_number_mod
+        )?;
+
+        state.save_state(deps.storage)?;
+
+        Ok(response)
+    }
+
     fn compute_send_asset_hash(
         to_account: &str,
-        u: U256,                    // TODO maths
+        u: U256,
         amount: Uint128,
         asset: &str,
         block_number_mod: u32        
@@ -447,7 +564,7 @@ impl SwapPoolState {
 
     fn compute_send_liquidity_hash(
         to_account: &str,
-        u: U256,                    // TODO maths
+        u: U256,
         amount: Uint128,
         block_number_mod: u32        
     ) -> String {
@@ -469,9 +586,10 @@ impl SwapPoolState {
         calc_keccak256(hash_data)
     }
 
+    fn new() -> Self;
 
-
-    pub fn setup(
+    //TODO merge setup and initializeSwapCurves?
+    fn setup(
         deps: &mut DepsMut,
         env: &Env,
         name: String,
@@ -483,38 +601,23 @@ impl SwapPoolState {
         setup_master: String,
     ) -> Result<Response, ContractError> {
 
-        let setup_master = Some(deps.api.addr_validate(&setup_master)?);
+        let mut state = Self::new();
+
+        let setup_master_state = state.setup_master_mut();
+        *setup_master_state = Some(deps.api.addr_validate(&setup_master)?);
     
-        let chain_interface = match chain_interface {
+        let chain_interface_state = state.chain_interface_mut();
+        *chain_interface_state = match chain_interface {
             Some(chain_interface) => Some(deps.api.addr_validate(&chain_interface)?),
             None => None
         };
 
-        let mut state = SwapPoolState {
-            setup_master,
-            chain_interface,
-    
-            assets: vec![],
-            weights: vec![],
-            amplification: 0,
-    
-            fee_administrator: Addr::unchecked(""),
-            pool_fee: 0u64,
-            governance_fee: 0u64,
-    
-            escrowed_assets: vec![],
-            escrowed_pool_tokens: Uint128::zero(),
-    
-            max_limit_capacity: U256::ZERO,
-            used_limit_capacity: U256::ZERO,
-            used_limit_capacity_timestamp: 0u64
-        };
 
-        let admin_fee_event = state._set_fee_administrator(deps, fee_administrator.as_str())?;
-        let pool_fee_event = state._set_pool_fee(pool_fee)?;
-        let gov_fee_event = state._set_governance_fee(governance_fee)?;
+        let admin_fee_event = state.set_fee_administrator_unchecked(deps, fee_administrator.as_str())?;
+        let pool_fee_event = state.set_pool_fee_unchecked(pool_fee)?;
+        let gov_fee_event = state.set_governance_fee_unchecked(governance_fee)?;
 
-        STATE.save(deps.storage, &state)?;
+        state.save_state(deps.storage)?;
 
         // Setup the Pool Token (store token info using cw20-base format)
         let data = TokenInfo {
@@ -537,33 +640,37 @@ impl SwapPoolState {
         )
     }
 
-    pub fn finish_setup(
+    fn finish_setup(
         deps: &mut DepsMut,
         info: MessageInfo
     ) -> Result<Response, ContractError> {
-        let mut state = STATE.load(deps.storage)?;
 
-        if state.setup_master != Some(info.sender) {
+        let mut state = Self::load_state(deps.storage)?;
+
+        let setup_master = state.setup_master_mut();
+
+        if *setup_master != Some(info.sender) {
             return Err(ContractError::Unauthorized {})
         }
 
-        state.setup_master = None;
-        STATE.save(deps.storage, &state)?;
+        *setup_master = None;
+        state.save_state(deps.storage)?;
 
         Ok(Response::new())
     }
 
-    fn _get_unit_capacity(
+
+    fn calc_unit_capacity(
         &self,
         time: Timestamp
     ) -> Result<U256, ContractError> {
 
-        let max_limit_capacity = self.max_limit_capacity;
-        let used_limit_capacity = self.used_limit_capacity;
+        let max_limit_capacity = *self.max_limit_capacity();
+        let used_limit_capacity = *self.used_limit_capacity();
 
         let released_limit_capacity = max_limit_capacity
             .checked_mul(
-                U256::from(time.minus_nanos(self.used_limit_capacity_timestamp).seconds())  //TODO use seconds instead of nanos (overflow wise)
+                U256::from(time.minus_nanos(*self.used_limit_capacity_timestamp()).seconds())  //TODO use seconds instead of nanos (overflow wise)
             ).ok_or(ContractError::ArithmeticError {})?   //TODO error
             .div(DECAY_RATE);
 
@@ -583,143 +690,44 @@ impl SwapPoolState {
 
     }
 
-    pub fn get_unit_capacity(
+    fn get_unit_capacity(
         deps: Deps,
         env: Env
     ) -> Result<U256, ContractError> {
 
-        let state = STATE.load(deps.storage)?;
+        let state = Self::load_state(deps.storage)?;
 
-        state._get_unit_capacity(env.block.time)
+        state.calc_unit_capacity(env.block.time)
     }
 
-    fn _update_unit_capacity(
+    fn update_unit_capacity(
         deps: &mut DepsMut,
         env: Env,
         units: U256
     ) -> Result<(), ContractError> {
 
-        let mut state = STATE.load(deps.storage)?;
+        let mut state = Self::load_state(deps.storage)?;
 
         //TODO EVM mismatch
-        let capacity = state._get_unit_capacity(env.block.time)?;
+        let capacity = state.calc_unit_capacity(env.block.time)?;
 
         if units > capacity {
             return Err(ContractError::SecurityLimitExceeded { units, capacity });
         }
 
-        state.used_limit_capacity_timestamp = env.block.time.nanos();
-        state.used_limit_capacity = capacity - units;
+        let used_limit_capacity_timestamp = state.used_limit_capacity_timestamp_mut();
+        *used_limit_capacity_timestamp = env.block.time.nanos();
 
-        STATE.save(deps.storage, &state)?;
+        let used_limit_capacity = state.used_limit_capacity_mut();
+        *used_limit_capacity = capacity - units;
+
+        state.save_state(deps.storage)?;
 
         Ok(())
     }
 
-    // pub fn update_units_inflow(
-    //     &mut self,
-    //     units_inflow_x64: U256,
-    //     current_timestamp: u64
-    // ) -> Result<(), ContractError> {
-
-    //     let max_units_inflow_x64 = U256(self.max_units_inflow_x64);
-
-    //     // If more time has passed since the last update than DECAYRATE, the current inflow state does not matter (it has fully decayed)
-    //     if current_timestamp > self.current_units_inflow_timestamp + DECAYRATE {
-    //         if units_inflow_x64 > max_units_inflow_x64 {
-    //             return Err(ContractError::SwapLimitExceeded {});
-    //         }
-
-    //         self.current_units_inflow_x64       = units_inflow_x64.0;
-    //         self.current_units_inflow_timestamp = current_timestamp;
-
-    //         return Ok(());
-    //     }
-
-    //     // Compute how much inflow has decayed since last update
-    //     let current_units_inflow_x64 = U256(self.current_units_inflow_x64);
-
-    //     let decayed_inflow = max_units_inflow_x64.checked_mul(
-    //         U256::from(current_timestamp.checked_sub(self.current_units_inflow_timestamp).unwrap())  // TODO checked_sub required?
-    //     ).unwrap() / DECAYRATE;
-
-    //     // If the current inflow is less then the (max allowed) decayed one
-    //     if current_units_inflow_x64 <= decayed_inflow {
-    //         if units_inflow_x64 > max_units_inflow_x64 {
-    //             return Err(ContractError::SwapLimitExceeded {});
-    //         }
-
-    //         self.current_units_inflow_x64 = units_inflow_x64.0;
-    //     }
-    //     // If some of the current inflow still matters
-    //     else {
-    //         let new_net_units_inflow_x64 = (current_units_inflow_x64 - decayed_inflow).checked_add(units_inflow_x64).unwrap();  // Substraction is safe, as current_units_inflow_x64 > decayed_inflow is guaranteed by if statement
-
-    //         if new_net_units_inflow_x64 > max_units_inflow_x64 {
-    //             return Err(ContractError::SwapLimitExceeded {});
-    //         }
-
-    //         self.current_units_inflow_x64 = new_net_units_inflow_x64.0;
-    //     }
-
-    //     self.current_units_inflow_timestamp = current_timestamp;
-
-    //     Ok(())
-    // }
-
-
-    // pub fn update_liquidity_units_inflow(
-    //     &mut self,
-    //     pool_tokens_flow: Uint128,
-    //     current_pool_token_supply: Uint128,
-    //     current_timestamp: u64
-    // ) -> Result<(), ContractError> {
-
-    //     // Allows 1/3 of the pool to be drained through liquidity swaps
-    //     let max_pool_tokens_flow = current_pool_token_supply / Uint128::from(2_u64);
-
-    //     // If more time has passed since the last update than DECAYRATE, the current inflow state does not matter (it has fully decayed)
-    //     if current_timestamp > self.current_liquidity_inflow_timestamp + DECAYRATE {
-    //         if pool_tokens_flow > max_pool_tokens_flow {
-    //             return Err(ContractError::LiquiditySwapLimitExceeded {});
-    //         }
-
-    //         self.current_liquidity_inflow           = pool_tokens_flow;
-    //         self.current_liquidity_inflow_timestamp = current_timestamp;
-
-    //         return Ok(());
-    //     }
-
-    //     // Compute how much inflow has decayed since last update
-    //     let decayed_inflow = max_pool_tokens_flow.checked_mul(
-    //         current_timestamp.checked_sub(self.current_liquidity_inflow_timestamp).unwrap().try_into().unwrap()  // TODO checked_sub required?
-    //     ).unwrap() / Uint128::new(DECAYRATE as u128);
-
-    //     // If the current inflow is less then the (max allowed) decayed one
-    //     if self.current_liquidity_inflow <= decayed_inflow {
-    //         if pool_tokens_flow > max_pool_tokens_flow {
-    //             return Err(ContractError::LiquiditySwapLimitExceeded {});
-    //         }
-
-    //         self.current_liquidity_inflow = pool_tokens_flow;
-    //     }
-    //     // If some of the current inflow still matters
-    //     else {
-    //         let new_net_liquidity_inflow = (self.current_liquidity_inflow - decayed_inflow).checked_add(pool_tokens_flow).unwrap();  // Substraction is safe, as current_liquidity_inflow > decayed_inflow is guaranteed by if statement
-
-    //         if new_net_liquidity_inflow > max_pool_tokens_flow {
-    //             return Err(ContractError::LiquiditySwapLimitExceeded {});
-    //         }
-
-    //         self.current_liquidity_inflow = new_net_liquidity_inflow;
-    //     }
-
-    //     self.current_liquidity_inflow_timestamp = current_timestamp;
-
-    //     Ok(())
-    // }
-
 }
+
 
 #[cw_serde]
 pub struct Escrow {

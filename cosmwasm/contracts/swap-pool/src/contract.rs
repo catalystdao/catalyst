@@ -1,23 +1,20 @@
 #[cfg(not(feature = "library"))]
-use cosmwasm_std::{entry_point, Addr, StdError};
-use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, Uint128, CosmosMsg, to_binary};
+use cosmwasm_std::{entry_point, StdError};
+use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, Uint128, to_binary};
 use cw2::set_contract_version;
-use cw20::{Cw20ExecuteMsg, Cw20QueryMsg};
 use cw20_base::allowances::{
-    execute_burn_from, execute_decrease_allowance, execute_increase_allowance, execute_send_from,
+    execute_decrease_allowance, execute_increase_allowance, execute_send_from,
     execute_transfer_from, query_allowance,
 };
 use cw20_base::contract::{
-    execute_burn, execute_mint, execute_send, execute_transfer, query_balance, query_token_info,
+    execute_send, execute_transfer, query_balance, query_token_info,
 };
-use cw20_base::state::{MinterData, TokenInfo, TOKEN_INFO};
 use ethnum::U256;
-use fixed_point_math_lib::fixed_point_math::LN2;
-use swap_pool_common::state::{MAX_ASSETS, INITIAL_MINT_AMOUNT, SwapPoolState, STATE};
+use swap_pool_common::state::SwapPoolCommon;
 
-use crate::calculation_helpers;
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
+use crate::state::SwapPoolVolatileState;
 
 
 // version info for migration info
@@ -36,7 +33,7 @@ pub fn instantiate(
 
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
-    SwapPoolState::setup(
+    SwapPoolVolatileState::setup(
         &mut deps,
         &env,
         msg.name,
@@ -210,134 +207,21 @@ pub fn execute_initialize_swap_curves(
     amp: u64,
     depositor: String
 ) -> Result<Response, ContractError> {
-
-    let mut state = STATE.load(deps.storage)?;
-
-    // Check the caller is the Factory
-    //TODO verify info sender is Factory
-
-    // Make sure this function may only be invoked once (check whether assets have already been saved)
-    if state.assets.len() > 0 {
-        return Err(ContractError::Unauthorized {});
-    }
-
-    // Check that the amplification is correct (set to 1)
-    if amp != 10u64.pow(18) {     //TODO maths WAD
-        return Err(ContractError::InvalidAmplification {})
-    }
-
-    // Check the provided assets and weights count
-    if
-        assets.len() == 0 || assets.len() > MAX_ASSETS ||
-        weights.len() != assets.len()
-    {
-        return Err(ContractError::GenericError {}); //TODO error
-    }
-
-    // Validate the depositor address
-    deps.api.addr_validate(&depositor)?;
-
-    // Validate and save assets
-    state.assets = assets
-        .iter()
-        .map(|asset_addr| deps.api.addr_validate(&asset_addr))
-        .collect::<StdResult<Vec<Addr>>>()
-        .map_err(|_| ContractError::InvalidAssets {})?;
-
-    // Validate asset balances
-    if assets_balances.iter().any(|balance| balance.is_zero()) {
-        return Err(ContractError::GenericError {}); //TODO error
-    }
-
-    // Validate and save weights
-    if weights.iter().any(|weight| *weight == 0) {
-        return Err(ContractError::GenericError {}); //TODO error
-    }
-    state.weights = weights.clone();
-
-    // Compute the security limit
-    state.max_limit_capacity = LN2 * weights.iter().fold(
-        U256::ZERO, |acc, next| acc + U256::from(*next)     // Overflow safe, as U256 >> u64    //TODO maths
-    );
-
-    // Save state
-    STATE.save(deps.storage, &state)?;
-
-    // Mint pool tokens for the depositor
-    // Make up a 'MessageInfo' with the sender set to this contract itself => this is to allow the use of the 'execute_mint'
-    // function as provided by cw20-base, which will match the 'sender' of 'MessageInfo' with the allowed minter that
-    // was set when initializing the cw20 token (this contract itself).
-    let execute_mint_info = MessageInfo {
-        sender: env.contract.address.clone(),
-        funds: vec![],
-    };
-    let minted_amount = INITIAL_MINT_AMOUNT;
-    execute_mint(
+    SwapPoolVolatileState::initialize_swap_curves(
         deps,
-        env.clone(),
-        execute_mint_info,
-        depositor.clone(),
-        minted_amount
-    )?;
-
-    // TODO EVM MISMATCH // TODO overhaul: are tokens transferred from the factory? Or will they already be hold by the contract at this point?
-    // Build messages to order the transfer of tokens from setup_master to the swap pool
-    let sender_addr_str = info.sender.to_string();
-    let self_addr_str = env.contract.address.to_string();
-    let transfer_msgs: Vec<CosmosMsg> = state.assets.iter().zip(&assets_balances).map(|(asset, balance)| {
-        Ok(CosmosMsg::Wasm(
-            cosmwasm_std::WasmMsg::Execute {
-                contract_addr: asset.to_string(),
-                msg: to_binary(&Cw20ExecuteMsg::TransferFrom {
-                    owner: sender_addr_str.clone(),
-                    recipient: self_addr_str.clone(),
-                    amount: *balance
-                })?,
-                funds: vec![]
-            }
-        ))
-    }).collect::<StdResult<Vec<CosmosMsg>>>()?;
-
-    //TODO include attributes of the execute_mint response in this response?
-    Ok(
-        Response::new()
-            .add_messages(transfer_msgs)
-            .add_attribute("to_account", depositor)
-            .add_attribute("mint", minted_amount)
-            .add_attribute("assets", format!("{:?}", assets_balances))
+        env,
+        info,
+        assets,
+        assets_balances,
+        weights,
+        amp,
+        depositor
     )
 }
 
 pub fn execute_finish_setup(mut deps: DepsMut, info: MessageInfo) -> Result<Response, ContractError> {
-    SwapPoolState::finish_setup(&mut deps, info).map_err(|err| err.into())
+    SwapPoolVolatileState::finish_setup(&mut deps, info).map_err(|err| err.into())
 }
-
-
-// pub fn execute_finish_setup(
-//     deps: DepsMut,
-//     _env: Env,
-//     info: MessageInfo
-// ) -> Result<Response, ContractError> {
-
-//     let mut state = STATE.load(deps.storage)?;
-
-//     // Verify the caller
-//     let setup_master = state.setup_master.ok_or(ContractError::Unauthorized {})?;
-//     if info.sender != setup_master {
-//         return Err(ContractError::Unauthorized {});
-//     }
-
-//     // Make sure the pool has been properly set-up (some assets have been added, and pool tokens have been minted)  //TODO add any more checks?
-//     if query_token_info(deps.as_ref())?.total_supply.is_zero() {
-//         return Err(ContractError::Unauthorized {});        
-//     }
-
-//     // Set setup_master to None (prevent any further changes)
-//     state.setup_master = None;
-//     STATE.save(deps.storage, &state)?;
-
-//     Ok(Response::new())
-// }
 
 
 pub fn execute_set_fee_administrator(
@@ -345,7 +229,7 @@ pub fn execute_set_fee_administrator(
     info: MessageInfo,
     administrator: String
 ) -> Result<Response, ContractError> {
-    SwapPoolState::set_fee_administrator(&mut deps, info, administrator).map_err(|err| err.into())
+    SwapPoolVolatileState::set_fee_administrator(&mut deps, info, administrator).map_err(|err| err.into())
 }
 
 
@@ -354,7 +238,7 @@ pub fn execute_set_pool_fee(
     info: MessageInfo,
     fee: u64
 ) -> Result<Response, ContractError> {
-    SwapPoolState::set_pool_fee(&mut deps, info, fee).map_err(|err| err.into())
+    SwapPoolVolatileState::set_pool_fee(&mut deps, info, fee).map_err(|err| err.into())
 }
 
 
@@ -363,7 +247,7 @@ pub fn execute_set_governance_fee(
     info: MessageInfo,
     fee: u64
 ) -> Result<Response, ContractError> {
-    SwapPoolState::set_governance_fee(&mut deps, info, fee).map_err(|err| err.into())
+    SwapPoolVolatileState::set_governance_fee(&mut deps, info, fee).map_err(|err| err.into())
 }
 
 
@@ -374,7 +258,7 @@ pub fn execute_set_connection(
     to_pool: String,
     state: bool
 ) -> Result<Response, ContractError> {
-    SwapPoolState::set_connection(&mut deps, info, channel_id, to_pool, state).map_err(|err| err.into())
+    SwapPoolVolatileState::set_connection(&mut deps, info, channel_id, to_pool, state).map_err(|err| err.into())
 }
 
 pub fn execute_send_asset_ack(
@@ -386,8 +270,7 @@ pub fn execute_send_asset_ack(
     asset: String,
     block_number_mod: u32
 ) -> Result<Response, ContractError> {
-
-    let common_response = SwapPoolState::send_asset_ack(
+    SwapPoolVolatileState::send_asset_ack(
         &mut deps,
         info,
         to_account,
@@ -395,19 +278,7 @@ pub fn execute_send_asset_ack(
         amount,
         asset,
         block_number_mod
-    ).map_err(|err| err.into());
-
-    // TODO better approach at implementing this? Currently storage is read and written twice
-    // TODO once in send_asset_ack and once to adjust the security limit
-    // Adjust security limit
-    let mut state = STATE.load(deps.storage)?;
-
-    let used_capacity = state.used_limit_capacity;
-    state.used_limit_capacity = used_capacity.saturating_sub(u);
-
-    STATE.save(deps.storage, &state)?;
-
-    common_response
+    ).map_err(|err| err.into())
 }
 
 pub fn execute_send_asset_timeout(
@@ -420,7 +291,7 @@ pub fn execute_send_asset_timeout(
     asset: String,
     block_number_mod: u32
 ) -> Result<Response, ContractError> {
-    SwapPoolState::send_asset_timeout(
+    SwapPoolVolatileState::send_asset_timeout(
         &mut deps,
         env,
         info,
@@ -440,27 +311,14 @@ pub fn execute_send_liquidity_ack(
     amount: Uint128,
     block_number_mod: u32
 ) -> Result<Response, ContractError> {
-
-    let common_response = SwapPoolState::send_liquidity_ack(
+    SwapPoolVolatileState::send_liquidity_ack(
         &mut deps,
         info,
         to_account,
         u,
         amount,
         block_number_mod
-    ).map_err(|err| err.into());
-
-    // TODO better approach at implementing this? Currently storage is read and written twice
-    // TODO once in send_asset_ack and once to adjust the security limit
-    // Adjust security limit
-    let mut state = STATE.load(deps.storage)?;
-
-    let used_capacity = state.used_limit_capacity;
-    state.used_limit_capacity = used_capacity.saturating_sub(u);
-
-    STATE.save(deps.storage, &state)?;
-
-    common_response
+    ).map_err(|err| err.into())
 }
 
 pub fn execute_send_liquidity_timeout(
@@ -472,7 +330,7 @@ pub fn execute_send_liquidity_timeout(
     amount: Uint128,
     block_number_mod: u32
 ) -> Result<Response, ContractError> {
-    SwapPoolState::send_liquidity_timeout(
+    SwapPoolVolatileState::send_liquidity_timeout(
         &mut deps,
         env,
         info,
@@ -868,16 +726,16 @@ pub fn execute_send_liquidity_timeout(
 
 
 pub fn query_ready(deps: Deps) -> StdResult<bool> {
-    SwapPoolState::ready(deps)
+    SwapPoolVolatileState::ready(deps)
 }
 
 
 pub fn query_only_local(deps: Deps) -> StdResult<bool> {
-    SwapPoolState::only_local(deps)
+    SwapPoolVolatileState::only_local(deps)
 }
 
 pub fn query_get_unit_capacity(deps: Deps, env: Env) -> StdResult<U256> { //TODO maths
-    SwapPoolState::get_unit_capacity(deps, env)
+    SwapPoolVolatileState::get_unit_capacity(deps, env)
         .map(|capacity| capacity)
         .map_err(|_| StdError::GenericErr { msg: "".to_owned() })   //TODO error
 }
