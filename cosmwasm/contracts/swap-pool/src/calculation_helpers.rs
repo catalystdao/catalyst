@@ -2,8 +2,71 @@ use std::ops::{Shr, Shl};
 
 use cosmwasm_std::{StdResult, Uint128};
 use ethnum::U256;
+use fixed_point_math_lib::fixed_point_math::{ln_wad, div_wad_down, mul_wad_down, WAD, exp_wad};
 
 
+
+// Integral Helpers *************************************************************************************************************
+
+pub fn calc_price_curve_area(
+    input: U256,
+    a: U256,
+    w: U256
+) -> Result<U256, ()> {
+    w.checked_mul(
+        ln_wad(
+            div_wad_down(
+                a.checked_add(input).ok_or(())?,
+                a
+            )?.as_i256()
+        )?.as_u256()
+    ).ok_or(())
+}
+
+
+
+pub fn calc_price_curve_limit(
+    u: U256,
+    b: U256,
+    w: U256
+) -> Result<U256, ()> {
+    mul_wad_down(
+        b,
+        WAD.checked_sub(
+            exp_wad(-(u / w).as_i256())?.as_u256()
+        ).ok_or(())?
+    )
+}
+
+
+
+pub fn calc_combined_price_curves(
+    input: U256,
+    a: U256,
+    b: U256,
+    w_a: U256,
+    w_b: U256
+) -> Result<U256, ()> {
+    calc_price_curve_limit(
+        calc_price_curve_area(input, a, w_a)?,
+        b,
+        w_b
+    )
+}
+
+
+
+pub fn calc_price_curve_limit_share(
+    u: U256,
+    w: U256
+) -> Result<U256, ()> {
+    let npos: U256 = exp_wad(-(u / w).as_i256())?.as_u256();
+
+    div_wad_down(
+        WAD.checked_sub(npos).ok_or(())?,
+        npos
+    )
+}
 
 // Deposits and Withdrawals *****************************************************************************************************
 
