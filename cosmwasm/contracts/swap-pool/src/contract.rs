@@ -51,19 +51,20 @@ pub fn instantiate(
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(
-    deps: DepsMut,
+    mut deps: DepsMut,
     env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
+
         ExecuteMsg::InitializeSwapCurves {
             assets,
             assets_balances,
             weights,
             amp,
             depositor
-        } => execute_initialize_swap_curves(
+        } => SwapPoolVolatileState::initialize_swap_curves(
             deps,
             env,
             info,
@@ -73,37 +74,104 @@ pub fn execute(
             amp,
             depositor
         ),
-        ExecuteMsg::FinishSetup {} => execute_finish_setup(deps, info),
-        ExecuteMsg::SetFeeAdministrator { administrator } => execute_set_fee_administrator(deps, info, administrator),
-        ExecuteMsg::SetPoolFee { fee } => execute_set_pool_fee(deps, info, fee),
-        ExecuteMsg::SetGovernanceFee { fee } => execute_set_governance_fee(deps, info, fee),
-        ExecuteMsg::SetConnection { channel_id, to_pool, state } => execute_set_connection(deps, info, channel_id, to_pool, state),
+
+        ExecuteMsg::FinishSetup {} => SwapPoolVolatileState::finish_setup(
+            &mut deps,
+            info
+        ).map_err(|err| err.into()),
+
+        ExecuteMsg::SetFeeAdministrator { administrator } => SwapPoolVolatileState::set_fee_administrator(
+            &mut deps,
+            info,
+            administrator
+        ).map_err(|err| err.into()),
+
+        ExecuteMsg::SetPoolFee { fee } => SwapPoolVolatileState::set_pool_fee(
+            &mut deps,
+            info,
+            fee
+        ).map_err(|err| err.into()),
+
+        ExecuteMsg::SetGovernanceFee { fee } => SwapPoolVolatileState::set_governance_fee(
+            &mut deps,
+            info,
+            fee
+        ).map_err(|err| err.into()),
+
+        ExecuteMsg::SetConnection {
+            channel_id,
+            to_pool,
+            state
+        } => SwapPoolVolatileState::set_connection(
+            &mut deps,
+            info,
+            channel_id,
+            to_pool,
+            state
+        ).map_err(|err| err.into()),
+
         ExecuteMsg::SendAssetAck {
             to_account,
             u,
             amount,
             asset,
             block_number_mod
-        } => execute_send_asset_ack(deps, info, to_account, u, amount, asset, block_number_mod),
+        } => SwapPoolVolatileState::send_asset_ack(
+            &mut deps,
+            info,
+            to_account,
+            u,
+            amount,
+            asset,
+            block_number_mod
+        ).map_err(|err| err.into()),
+
         ExecuteMsg::SendAssetTimeout {
             to_account,
             u,
             amount,
             asset,
             block_number_mod
-        } => execute_send_asset_timeout(deps, env, info, to_account, u, amount, asset, block_number_mod),
+        } => SwapPoolVolatileState::send_asset_timeout(
+            &mut deps,
+            env,
+            info,
+            to_account,
+            u,
+            amount,
+            asset,
+            block_number_mod
+        ).map_err(|err| err.into()),
+
         ExecuteMsg::SendLiquidityAck {
             to_account,
             u,
             amount,
             block_number_mod
-        } => execute_send_liquidity_ack(deps, info, to_account, u, amount, block_number_mod),
+        } => SwapPoolVolatileState::send_liquidity_ack(
+            &mut deps,
+            info,
+            to_account,
+            u,
+            amount,
+            block_number_mod
+        ).map_err(|err| err.into()),
+
         ExecuteMsg::SendLiquidityTimeout {
             to_account,
             u,
             amount,
             block_number_mod
-        } => execute_send_liquidity_timeout(deps, env, info, to_account, u, amount, block_number_mod),
+        } => SwapPoolVolatileState::send_liquidity_timeout(
+            &mut deps,
+            env,
+            info,
+            to_account,
+            u,
+            amount,
+            block_number_mod
+        ).map_err(|err| err.into()),
+
         // ExecuteMsg::Deposit { pool_tokens_amount } => execute_deposit(deps, env, info, pool_tokens_amount),
         // ExecuteMsg::Withdraw { pool_tokens_amount } => execute_withdraw(deps, env, info, pool_tokens_amount),
         // ExecuteMsg::Localswap {
@@ -197,149 +265,6 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     }
 }
 
-pub fn execute_initialize_swap_curves(
-    deps: DepsMut,
-    env: Env,
-    info: MessageInfo,
-    assets: Vec<String>,
-    assets_balances: Vec<Uint128>,  //TODO EVM MISMATCH
-    weights: Vec<u64>,
-    amp: u64,
-    depositor: String
-) -> Result<Response, ContractError> {
-    SwapPoolVolatileState::initialize_swap_curves(
-        deps,
-        env,
-        info,
-        assets,
-        assets_balances,
-        weights,
-        amp,
-        depositor
-    )
-}
-
-pub fn execute_finish_setup(mut deps: DepsMut, info: MessageInfo) -> Result<Response, ContractError> {
-    SwapPoolVolatileState::finish_setup(&mut deps, info).map_err(|err| err.into())
-}
-
-
-pub fn execute_set_fee_administrator(
-    mut deps: DepsMut,
-    info: MessageInfo,
-    administrator: String
-) -> Result<Response, ContractError> {
-    SwapPoolVolatileState::set_fee_administrator(&mut deps, info, administrator).map_err(|err| err.into())
-}
-
-
-pub fn execute_set_pool_fee(
-    mut deps: DepsMut,
-    info: MessageInfo,
-    fee: u64
-) -> Result<Response, ContractError> {
-    SwapPoolVolatileState::set_pool_fee(&mut deps, info, fee).map_err(|err| err.into())
-}
-
-
-pub fn execute_set_governance_fee(
-    mut deps: DepsMut,
-    info: MessageInfo,
-    fee: u64
-) -> Result<Response, ContractError> {
-    SwapPoolVolatileState::set_governance_fee(&mut deps, info, fee).map_err(|err| err.into())
-}
-
-
-pub fn execute_set_connection(
-    mut deps: DepsMut,
-    info: MessageInfo,
-    channel_id: String,
-    to_pool: String,
-    state: bool
-) -> Result<Response, ContractError> {
-    SwapPoolVolatileState::set_connection(&mut deps, info, channel_id, to_pool, state).map_err(|err| err.into())
-}
-
-pub fn execute_send_asset_ack(
-    mut deps: DepsMut,
-    info: MessageInfo,
-    to_account: String,
-    u: U256,
-    amount: Uint128,
-    asset: String,
-    block_number_mod: u32
-) -> Result<Response, ContractError> {
-    SwapPoolVolatileState::send_asset_ack(
-        &mut deps,
-        info,
-        to_account,
-        u,
-        amount,
-        asset,
-        block_number_mod
-    ).map_err(|err| err.into())
-}
-
-pub fn execute_send_asset_timeout(
-    mut deps: DepsMut,
-    env: Env,
-    info: MessageInfo,
-    to_account: String,
-    u: U256,
-    amount: Uint128,
-    asset: String,
-    block_number_mod: u32
-) -> Result<Response, ContractError> {
-    SwapPoolVolatileState::send_asset_timeout(
-        &mut deps,
-        env,
-        info,
-        to_account,
-        u,
-        amount,
-        asset,
-        block_number_mod
-    ).map_err(|err| err.into())
-}
-
-pub fn execute_send_liquidity_ack(
-    mut deps: DepsMut,
-    info: MessageInfo,
-    to_account: String,
-    u: U256,
-    amount: Uint128,
-    block_number_mod: u32
-) -> Result<Response, ContractError> {
-    SwapPoolVolatileState::send_liquidity_ack(
-        &mut deps,
-        info,
-        to_account,
-        u,
-        amount,
-        block_number_mod
-    ).map_err(|err| err.into())
-}
-
-pub fn execute_send_liquidity_timeout(
-    mut deps: DepsMut,
-    env: Env,
-    info: MessageInfo,
-    to_account: String,
-    u: U256,
-    amount: Uint128,
-    block_number_mod: u32
-) -> Result<Response, ContractError> {
-    SwapPoolVolatileState::send_liquidity_timeout(
-        &mut deps,
-        env,
-        info,
-        to_account,
-        u,
-        amount,
-        block_number_mod
-    ).map_err(|err| err.into())
-}
 
 
 
