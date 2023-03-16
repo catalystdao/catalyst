@@ -1,6 +1,6 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::{entry_point, StdError};
-use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, Uint128, to_binary};
+use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, to_binary};
 use cw2::set_contract_version;
 use cw20_base::allowances::{
     execute_decrease_allowance, execute_increase_allowance, execute_send_from,
@@ -209,43 +209,66 @@ pub fn execute(
         // ),
 
         // CW20 execute msgs - Use cw20-base for the implementation
-        ExecuteMsg::Transfer { recipient, amount } => Ok(execute_transfer(deps, env, info, recipient, amount)?),
-        ExecuteMsg::Burn { amount } => Err(ContractError::Unauthorized {}),     // Pool token burn handled by withdraw function
+        ExecuteMsg::Transfer {
+            recipient,
+            amount
+        } => Ok(
+            execute_transfer(deps, env, info, recipient, amount)?
+        ),
+
+        ExecuteMsg::Burn {
+            amount: _
+         } => Err(
+            ContractError::Unauthorized {}     // Pool token burn handled by withdraw function
+        ),
+
         ExecuteMsg::Send {
             contract,
             amount,
             msg,
-        } => Ok(execute_send(deps, env, info, contract, amount, msg)?),
+        } => Ok(
+            execute_send(deps, env, info, contract, amount, msg)?
+        ),
+
         ExecuteMsg::IncreaseAllowance {
             spender,
             amount,
             expires,
-        } => Ok(execute_increase_allowance(
-            deps, env, info, spender, amount, expires,
-        )?),
+        } => Ok(
+            execute_increase_allowance(deps, env, info, spender, amount, expires)?
+        ),
+
         ExecuteMsg::DecreaseAllowance {
             spender,
             amount,
             expires,
-        } => Ok(execute_decrease_allowance(
-            deps, env, info, spender, amount, expires,
-        )?),
+        } => Ok(
+            execute_decrease_allowance(deps, env, info, spender, amount, expires)?
+        ),
+
         ExecuteMsg::TransferFrom {
             owner,
             recipient,
             amount,
-        } => Ok(execute_transfer_from(
-            deps, env, info, owner, recipient, amount,
-        )?),
-        ExecuteMsg::BurnFrom { owner, amount } => Err(ContractError::Unauthorized {}),  // Pool token burn handled by withdraw function
+        } => Ok(
+            execute_transfer_from(deps, env, info, owner, recipient, amount)?
+        ),
+
+        ExecuteMsg::BurnFrom {
+            owner: _,
+            amount: _
+        } => Err(
+            ContractError::Unauthorized {}      // Pool token burn handled by withdraw function
+        ),
+
         ExecuteMsg::SendFrom {
             owner,
             contract,
             amount,
             msg,
-        } => Ok(execute_send_from(
-            deps, env, info, owner, contract, amount, msg,
-        )?),
+        } => Ok(
+            execute_send_from(deps, env, info, owner, contract, amount, msg)?
+        ),
     }
 }
 
