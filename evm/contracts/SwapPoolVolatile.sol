@@ -1079,11 +1079,6 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
             if (minReferenceAsset > referenceAmount) revert ReturnInsufficient(referenceAmount, minReferenceAsset);
         }
 
-        // 
-        // TODO: Store the number of tokens.
-        // TODO: Compute the n'th of the tokens.
-        // TODO: Ensure the above calculation is above a certain minimum output.
-
         // Mint pool tokens for the user.
         _mint(toAccount, poolTokens);
 
