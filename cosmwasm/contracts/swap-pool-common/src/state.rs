@@ -33,11 +33,18 @@ fn calc_keccak256(message: Vec<u8>) -> String {
     format!("{:?}", hasher.finalize().to_vec())
 }
 
-// TODO split into different traits
-pub trait SwapPoolCommon: Sized {
+
+pub trait CatalystV1PoolState: Sized {
+
+    // State access functions
+
+    fn new_unsafe() -> Self;
 
     fn load_state(store: &dyn Storage) -> StdResult<Self>;
     fn save_state(self, store: &mut dyn Storage) -> StdResult<()>;
+
+    fn factory(&self) -> &Addr;
+    fn factory_owner(&self) -> &Addr;
 
     fn setup_master(&self) -> &Option<Addr>;
     fn setup_master_mut(&mut self) -> &mut Option<Addr>;
@@ -79,6 +86,7 @@ pub trait SwapPoolCommon: Sized {
     fn used_limit_capacity_timestamp_mut(&mut self) -> &mut u64;
 
 
+
     // Default implementations
 
     fn get_asset_index(&self, asset: &str) -> Result<usize, ContractError> {
@@ -89,111 +97,117 @@ pub trait SwapPoolCommon: Sized {
             .ok_or(ContractError::InvalidAssets {})
     }
 
-    fn set_fee_administrator_unchecked(
-        &mut self,
-        deps: &DepsMut,
-        administrator: &str
-    ) -> Result<Event, ContractError> {
 
-        let fee_administrator = self.fee_administrator_mut();
-        *fee_administrator = deps.api.addr_validate(administrator)?;
+    fn only_local(deps: Deps) -> StdResult<bool> {
+    
+        let state = Self::load_state(deps.storage)?;
 
-        return Ok(
-            Event::new(String::from("SetFeeAdministrator"))
-                .add_attribute("administrator", administrator)
-        )
+        Ok(state.chain_interface().is_none())
     }
 
-    fn set_pool_fee_unchecked(
-        &mut self,
-        fee: u64
-    ) -> Result<Event, ContractError> {
 
-        if fee > MAX_POOL_FEE_SHARE {
-            return Err(
-                ContractError::InvalidPoolFee { requested_fee: fee, max_fee: MAX_POOL_FEE_SHARE }
+    fn ready(deps: Deps) -> StdResult<bool> {
+    
+        let state = Self::load_state(deps.storage)?;
+
+        Ok(state.setup_master().is_none() && state.assets().len() > 0)
+    }
+
+    
+    //TODO move these somewhere else? (Note both update_unit_capacity and get_unit_capacity (in Derived) depend on calc_unit_capacity)
+    fn calc_unit_capacity(
+        &self,
+        time: Timestamp
+    ) -> Result<U256, ContractError> {
+
+        let max_limit_capacity = *self.max_limit_capacity();
+        let used_limit_capacity = *self.used_limit_capacity();
+
+        let released_limit_capacity = max_limit_capacity
+            .checked_mul(
+                U256::from(time.minus_nanos(*self.used_limit_capacity_timestamp()).seconds())  //TODO use seconds instead of nanos (overflow wise)
+            ).ok_or(ContractError::ArithmeticError {})?   //TODO error
+            .div(DECAY_RATE);
+
+            if used_limit_capacity <= released_limit_capacity {
+                return Ok(max_limit_capacity);
+            }
+
+            if max_limit_capacity <= used_limit_capacity - released_limit_capacity {
+                return Ok(U256::ZERO);
+            }
+
+            Ok(
+                max_limit_capacity
+                    .checked_add(released_limit_capacity).ok_or(ContractError::ArithmeticError {})?
+                    .sub(used_limit_capacity)
             )
-        }
 
-        let pool_fee = self.pool_fee_mut();
-        *pool_fee = fee;
-
-        return Ok(
-            Event::new(String::from("SetPoolFee"))
-                .add_attribute("fee", fee.to_string())
-        )
     }
 
-    fn set_governance_fee_unchecked(
-        &mut self,
-        fee: u64
-    ) -> Result<Event, ContractError> {
-
-        if fee > MAX_GOVERNANCE_FEE_SHARE {
-            return Err(
-                ContractError::InvalidGovernanceFee { requested_fee: fee, max_fee: MAX_GOVERNANCE_FEE_SHARE }
-            )
-        }
-
-        let governance_fee = self.governance_fee_mut();
-        *governance_fee = fee;
-
-        return Ok(
-            Event::new(String::from("SetGovernanceFee"))
-                .add_attribute("fee", fee.to_string())
-        )
-    }
-
-    fn set_fee_administrator(
+    fn update_unit_capacity(
         deps: &mut DepsMut,
-        info: MessageInfo,
-        administrator: String
-    ) -> Result<Response, ContractError> {
+        env: Env,
+        units: U256
+    ) -> Result<(), ContractError> {
+
         let mut state = Self::load_state(deps.storage)?;
 
-        //TODO verify sender is factory owner
+        //TODO EVM mismatch
+        let capacity = state.calc_unit_capacity(env.block.time)?;
 
-        let event = state.set_fee_administrator_unchecked(deps, administrator.as_str())?;
+        if units > capacity {
+            return Err(ContractError::SecurityLimitExceeded { units, capacity });
+        }
+
+        let used_limit_capacity_timestamp = state.used_limit_capacity_timestamp_mut();
+        *used_limit_capacity_timestamp = env.block.time.nanos();
+
+        let used_limit_capacity = state.used_limit_capacity_mut();
+        *used_limit_capacity = capacity - units;
 
         state.save_state(deps.storage)?;
 
-        Ok(Response::new().add_event(event))
+        Ok(())
     }
 
-    fn set_pool_fee(
-        deps: &mut DepsMut,
+
+}    
+
+
+
+pub trait CatalystV1PoolAdministration: CatalystV1PoolState {
+
+    //TODO provide a basic default implementation?
+    fn initialize_swap_curves(
+        deps: DepsMut,
+        env: Env,
         info: MessageInfo,
-        fee: u64
+        assets: Vec<String>,
+        assets_balances: Vec<Uint128>,  //TODO EVM MISMATCH
+        weights: Vec<u64>,
+        amp: u64,
+        depositor: String
+    ) -> Result<Response, ContractError>;
+
+
+    fn finish_setup(
+        deps: &mut DepsMut,
+        info: MessageInfo
     ) -> Result<Response, ContractError> {
+
         let mut state = Self::load_state(deps.storage)?;
 
-        if info.sender != *state.fee_administrator() {
+        let setup_master = state.setup_master_mut();
+
+        if *setup_master != Some(info.sender) {
             return Err(ContractError::Unauthorized {})
         }
 
-        let event = state.set_pool_fee_unchecked(fee)?;
-
+        *setup_master = None;
         state.save_state(deps.storage)?;
 
-        Ok(Response::new().add_event(event))
-    }
-
-    fn set_governance_fee(
-        deps: &mut DepsMut,
-        info: MessageInfo,
-        fee: u64
-    ) -> Result<Response, ContractError> {
-        let mut state = Self::load_state(deps.storage)?;
-
-        if info.sender != *state.fee_administrator() {
-            return Err(ContractError::Unauthorized {})
-        }
-
-        let event = state.set_governance_fee_unchecked(fee)?;
-
-        state.save_state(deps.storage)?;
-
-        Ok(Response::new().add_event(event))
+        Ok(Response::new())
     }
 
     
@@ -221,22 +235,218 @@ pub trait SwapPoolCommon: Sized {
     }
 
 
-    fn ready(deps: Deps) -> StdResult<bool> {
-    
-        let state = Self::load_state(deps.storage)?;
 
-        Ok(state.setup_master().is_none() && state.assets().len() > 0)
+    fn set_fee_administrator_unchecked(
+        &mut self,
+        deps: &DepsMut,
+        administrator: &str
+    ) -> Result<Event, ContractError> {
+
+        let fee_administrator = self.fee_administrator_mut();
+        *fee_administrator = deps.api.addr_validate(administrator)?;
+
+        return Ok(
+            Event::new(String::from("SetFeeAdministrator"))
+                .add_attribute("administrator", administrator)
+        )
+    }
+
+    fn set_fee_administrator(
+        deps: &mut DepsMut,
+        info: MessageInfo,
+        administrator: String
+    ) -> Result<Response, ContractError> {
+        let mut state = Self::load_state(deps.storage)?;
+
+        //TODO verify sender is factory owner
+
+        let event = state.set_fee_administrator_unchecked(deps, administrator.as_str())?;
+
+        state.save_state(deps.storage)?;
+
+        Ok(Response::new().add_event(event))
     }
 
 
-    fn only_local(deps: Deps) -> StdResult<bool> {
-    
-        let state = Self::load_state(deps.storage)?;
 
-        Ok(state.chain_interface().is_none())
+    fn set_pool_fee_unchecked(
+        &mut self,
+        fee: u64
+    ) -> Result<Event, ContractError> {
+
+        if fee > MAX_POOL_FEE_SHARE {
+            return Err(
+                ContractError::InvalidPoolFee { requested_fee: fee, max_fee: MAX_POOL_FEE_SHARE }
+            )
+        }
+
+        let pool_fee = self.pool_fee_mut();
+        *pool_fee = fee;
+
+        return Ok(
+            Event::new(String::from("SetPoolFee"))
+                .add_attribute("fee", fee.to_string())
+        )
+    }
+
+    fn set_pool_fee(
+        deps: &mut DepsMut,
+        info: MessageInfo,
+        fee: u64
+    ) -> Result<Response, ContractError> {
+        let mut state = Self::load_state(deps.storage)?;
+
+        if info.sender != *state.fee_administrator() {
+            return Err(ContractError::Unauthorized {})
+        }
+
+        let event = state.set_pool_fee_unchecked(fee)?;
+
+        state.save_state(deps.storage)?;
+
+        Ok(Response::new().add_event(event))
     }
 
 
+
+    fn set_governance_fee_unchecked(
+        &mut self,
+        fee: u64
+    ) -> Result<Event, ContractError> {
+
+        if fee > MAX_GOVERNANCE_FEE_SHARE {
+            return Err(
+                ContractError::InvalidGovernanceFee { requested_fee: fee, max_fee: MAX_GOVERNANCE_FEE_SHARE }
+            )
+        }
+
+        let governance_fee = self.governance_fee_mut();
+        *governance_fee = fee;
+
+        return Ok(
+            Event::new(String::from("SetGovernanceFee"))
+                .add_attribute("fee", fee.to_string())
+        )
+    }
+
+    fn set_governance_fee(
+        deps: &mut DepsMut,
+        info: MessageInfo,
+        fee: u64
+    ) -> Result<Response, ContractError> {
+        let mut state = Self::load_state(deps.storage)?;
+
+        if info.sender != *state.fee_administrator() {
+            return Err(ContractError::Unauthorized {})
+        }
+
+        let event = state.set_governance_fee_unchecked(fee)?;
+
+        state.save_state(deps.storage)?;
+
+        Ok(Response::new().add_event(event))
+    }
+
+}
+
+
+
+pub trait CatalystV1PoolPermissionless: CatalystV1PoolState + CatalystV1PoolAdministration {
+
+    //TODO merge setup and initializeSwapCurves?
+    fn setup(
+        deps: &mut DepsMut,
+        env: &Env,
+        name: String,
+        symbol: String,
+        chain_interface: Option<String>,
+        pool_fee: u64,
+        governance_fee: u64,
+        fee_administrator: String,
+        setup_master: String,
+    ) -> Result<Response, ContractError> {
+
+        let mut state = Self::new_unsafe();
+
+        let setup_master_state = state.setup_master_mut();
+        *setup_master_state = Some(deps.api.addr_validate(&setup_master)?);
+    
+        let chain_interface_state = state.chain_interface_mut();
+        *chain_interface_state = match chain_interface {
+            Some(chain_interface) => Some(deps.api.addr_validate(&chain_interface)?),
+            None => None
+        };
+
+
+        let admin_fee_event = state.set_fee_administrator_unchecked(deps, fee_administrator.as_str())?;
+        let pool_fee_event = state.set_pool_fee_unchecked(pool_fee)?;
+        let gov_fee_event = state.set_governance_fee_unchecked(governance_fee)?;
+
+        state.save_state(deps.storage)?;
+
+        // Setup the Pool Token (store token info using cw20-base format)
+        let data = TokenInfo {
+            name,
+            symbol,
+            decimals: DECIMALS,
+            total_supply: Uint128::zero(),
+            mint: Some(MinterData {
+                minter: env.contract.address.clone(),  // Set self as minter
+                cap: None
+            })
+        };
+        TOKEN_INFO.save(deps.storage, &data)?;
+
+        Ok(
+            Response::new()
+                .add_event(admin_fee_event)
+                .add_event(pool_fee_event)
+                .add_event(gov_fee_event)
+        )
+    }
+
+    //TODO depositMixed
+
+    //TODO withdrawAll
+
+    //TODO withdrawMixed
+
+    //TODO localSwap
+
+    //TODO sendAsset
+
+    //TODO receiveAsset
+
+    //TODO sendLiquidity
+
+    //TODO receiveLiquidity
+
+}
+
+
+
+pub trait CatalystV1PoolDerived: CatalystV1PoolState {
+
+    fn get_unit_capacity(
+        deps: Deps,
+        env: Env
+    ) -> Result<U256, ContractError> {
+
+        let state = Self::load_state(deps.storage)?;
+
+        state.calc_unit_capacity(env.block.time)
+    }
+
+    //TODO calc_send_asset
+
+    //TODO calc_receive_asset
+
+    //TODO calc_local_swap
+}
+
+
+
+pub trait CatalystV1PoolAckTimeout: CatalystV1PoolState + CatalystV1PoolAdministration {
 
     fn release_asset_escrow(
         &mut self,
@@ -272,6 +482,7 @@ pub trait SwapPoolCommon: Sized {
 
         Ok(fallback_account)
     }
+
 
 
     fn on_send_asset_ack(
@@ -331,6 +542,7 @@ pub trait SwapPoolCommon: Sized {
 
         Ok(response)
     }
+
 
 
     fn on_send_asset_timeout(
@@ -409,6 +621,7 @@ pub trait SwapPoolCommon: Sized {
     }
 
 
+
     fn on_send_liquidity_ack(
         &mut self,
         deps: &mut DepsMut,
@@ -462,6 +675,8 @@ pub trait SwapPoolCommon: Sized {
 
         Ok(response)
     }
+
+
 
     fn on_send_liquidity_timeout(
         &mut self,
@@ -534,6 +749,8 @@ pub trait SwapPoolCommon: Sized {
         Ok(response)
     }
 
+
+
     fn compute_send_asset_hash(
         to_account: &str,
         u: U256,
@@ -586,147 +803,8 @@ pub trait SwapPoolCommon: Sized {
         calc_keccak256(hash_data)
     }
 
-    fn new() -> Self;
-
-    //TODO merge setup and initializeSwapCurves?
-    fn setup(
-        deps: &mut DepsMut,
-        env: &Env,
-        name: String,
-        symbol: String,
-        chain_interface: Option<String>,
-        pool_fee: u64,
-        governance_fee: u64,
-        fee_administrator: String,
-        setup_master: String,
-    ) -> Result<Response, ContractError> {
-
-        let mut state = Self::new();
-
-        let setup_master_state = state.setup_master_mut();
-        *setup_master_state = Some(deps.api.addr_validate(&setup_master)?);
-    
-        let chain_interface_state = state.chain_interface_mut();
-        *chain_interface_state = match chain_interface {
-            Some(chain_interface) => Some(deps.api.addr_validate(&chain_interface)?),
-            None => None
-        };
-
-
-        let admin_fee_event = state.set_fee_administrator_unchecked(deps, fee_administrator.as_str())?;
-        let pool_fee_event = state.set_pool_fee_unchecked(pool_fee)?;
-        let gov_fee_event = state.set_governance_fee_unchecked(governance_fee)?;
-
-        state.save_state(deps.storage)?;
-
-        // Setup the Pool Token (store token info using cw20-base format)
-        let data = TokenInfo {
-            name,
-            symbol,
-            decimals: DECIMALS,
-            total_supply: Uint128::zero(),
-            mint: Some(MinterData {
-                minter: env.contract.address.clone(),  // Set self as minter
-                cap: None
-            })
-        };
-        TOKEN_INFO.save(deps.storage, &data)?;
-
-        Ok(
-            Response::new()
-                .add_event(admin_fee_event)
-                .add_event(pool_fee_event)
-                .add_event(gov_fee_event)
-        )
-    }
-
-    fn finish_setup(
-        deps: &mut DepsMut,
-        info: MessageInfo
-    ) -> Result<Response, ContractError> {
-
-        let mut state = Self::load_state(deps.storage)?;
-
-        let setup_master = state.setup_master_mut();
-
-        if *setup_master != Some(info.sender) {
-            return Err(ContractError::Unauthorized {})
-        }
-
-        *setup_master = None;
-        state.save_state(deps.storage)?;
-
-        Ok(Response::new())
-    }
-
-
-    fn calc_unit_capacity(
-        &self,
-        time: Timestamp
-    ) -> Result<U256, ContractError> {
-
-        let max_limit_capacity = *self.max_limit_capacity();
-        let used_limit_capacity = *self.used_limit_capacity();
-
-        let released_limit_capacity = max_limit_capacity
-            .checked_mul(
-                U256::from(time.minus_nanos(*self.used_limit_capacity_timestamp()).seconds())  //TODO use seconds instead of nanos (overflow wise)
-            ).ok_or(ContractError::ArithmeticError {})?   //TODO error
-            .div(DECAY_RATE);
-
-            if used_limit_capacity <= released_limit_capacity {
-                return Ok(max_limit_capacity);
-            }
-
-            if max_limit_capacity <= used_limit_capacity - released_limit_capacity {
-                return Ok(U256::ZERO);
-            }
-
-            Ok(
-                max_limit_capacity
-                    .checked_add(released_limit_capacity).ok_or(ContractError::ArithmeticError {})?
-                    .sub(used_limit_capacity)
-            )
-
-    }
-
-    fn get_unit_capacity(
-        deps: Deps,
-        env: Env
-    ) -> Result<U256, ContractError> {
-
-        let state = Self::load_state(deps.storage)?;
-
-        state.calc_unit_capacity(env.block.time)
-    }
-
-    fn update_unit_capacity(
-        deps: &mut DepsMut,
-        env: Env,
-        units: U256
-    ) -> Result<(), ContractError> {
-
-        let mut state = Self::load_state(deps.storage)?;
-
-        //TODO EVM mismatch
-        let capacity = state.calc_unit_capacity(env.block.time)?;
-
-        if units > capacity {
-            return Err(ContractError::SecurityLimitExceeded { units, capacity });
-        }
-
-        let used_limit_capacity_timestamp = state.used_limit_capacity_timestamp_mut();
-        *used_limit_capacity_timestamp = env.block.time.nanos();
-
-        let used_limit_capacity = state.used_limit_capacity_mut();
-        *used_limit_capacity = capacity - units;
-
-        state.save_state(deps.storage)?;
-
-        Ok(())
-    }
-
 }
+
 
 
 #[cw_serde]

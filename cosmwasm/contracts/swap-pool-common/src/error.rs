@@ -10,11 +10,17 @@ pub enum ContractError {
     #[error("Unauthorized")]
     Unauthorized {},
 
+    #[error("GenericError")]    //TODO replace this error with a custom one
+    GenericError {},
+
     #[error("Arithmetic error")]
     ArithmeticError {},
 
     #[error("Invalid assets (invalid number of assets or invalid asset address)")]
     InvalidAssets {},
+
+    #[error("Amplification must be set to 1_x64 for non-amplified pools.")]
+    InvalidAmplification {},
 
     #[error("Invalid pool fee")]
     InvalidPoolFee { requested_fee: u64, max_fee: u64 },

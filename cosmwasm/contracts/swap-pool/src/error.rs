@@ -92,8 +92,10 @@ impl From<swap_pool_common::ContractError> for ContractError {
         match err {
             swap_pool_common::ContractError::Std(error) => ContractError::Std(error),
             swap_pool_common::ContractError::Unauthorized {} => ContractError::Unauthorized {},
+            swap_pool_common::ContractError::GenericError {} => ContractError::GenericError {},
             swap_pool_common::ContractError::ArithmeticError {} => ContractError::ArithmeticError {},
             swap_pool_common::ContractError::InvalidAssets {} => ContractError::InvalidAssets {},
+            swap_pool_common::ContractError::InvalidAmplification {} => ContractError::InvalidAmplification {},
             swap_pool_common::ContractError::InvalidPoolFee { requested_fee, max_fee }
                 => ContractError::InvalidPoolFee {requested_fee, max_fee},
             swap_pool_common::ContractError::InvalidGovernanceFee { requested_fee, max_fee }
