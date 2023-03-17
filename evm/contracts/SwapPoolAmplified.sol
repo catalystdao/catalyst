@@ -411,7 +411,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
 
     /**
      * @notice Computes the return of SendAsset.
-     * @dev Returns 0 if from is not a token in the pool
+     * @dev Reverts if from is not a token in the pool
      * @param fromAsset The address of the token to sell.
      * @param amount The amount of from token to sell.
      * @return uint256 Group-specific units.
@@ -425,8 +425,8 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 W = _weight[fromAsset];
 
 
-        // If a token is not part of the pool, W is 0. This returns 0 since
-        // 0^p = 0.
+        // If a token is not part of the pool, W is 0. This revert
+        // since 0**p is implemented as exp(ln(0) * p) but ln(0) is undefined.
         uint256 U = _calcPriceCurveArea(amount, A, W, _oneMinusAmp);
 
         // If the swap is a very small portion of the pool
@@ -462,7 +462,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
 
     /**
      * @notice Computes the output of localSwap.
-     * @dev Implemented through _calcCombinedPriceCurves.
+     * @dev Implemented through _calcCombinedPriceCurves. Reverts if either from or to is not in the pool.
      * @param fromAsset The address of the token to sell.
      * @param toAsset The address of the token to buy.
      * @param amount The amount of from token to sell for to token.
