@@ -592,10 +592,9 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
             // Increase the security limit by the amount deposited.
             _maxUnitCapacity += assetDepositSum;
             // Short term decrease the security limit by the amount deposited.
-            unchecked {
-                // _usedUnitCapacity < _maxUnitCapacity => _usedUnitCapacity + assetDepositSum < _maxUnitCapacity + assetDepositSum
-                _usedUnitCapacity += assetDepositSum;
-            }
+            // While one may assume _usedUnitCapacity < _maxUnitCapacity, this is not always the case. As such, this remains checked.
+            _usedUnitCapacity += assetDepositSum;
+            
 
             // Compute the reference liquidity.
             // weightedAssetBalanceSum > _unitTracker always, since _unitTracker correlates to exactly
