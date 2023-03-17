@@ -953,9 +953,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         // Escrow the pool tokens
         require(_escrowedPoolTokensFor[sendLiquidityHash] == address(0));
         _escrowedPoolTokensFor[sendLiquidityHash] = fallbackUser;
-        unchecked {
-            _escrowedPoolTokens += poolTokens;
-        }
+        _escrowedPoolTokens += poolTokens;
 
         // Adjustment of the security limit is delayed until ack to avoid
         // a router abusing timeout to circumvent the security limit at a low cost.
