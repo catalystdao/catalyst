@@ -1033,14 +1033,20 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
         // Then check if the minimum number of reference assets is honoured.
         if (minReferenceAsset > 0) {
             // This is done by computing the reference balance through a locally observable method.
-            // This means we don't have to keep track of the units going in and out.
-            // First, we need to find the localInvariant. Here the local invariant:
-            // sum ln(balance) * weight is used.
-            // Then the weighted average is found: (sum ln(balance) * weight)/(sum weights)
-            // The reference asset is then: exp((sum ln(balance) * weight)/(sum weights)) = 
-            // prod exp((ln(balance) * weight)/(sum weights)) = (prod balance**weight)**(1/sum weights)
+            // The balance0s are a point on the invariant. As such, another way of deriving balance0
+            // is by finding a balance such that \prod balance0 = \prod balance**weight.
+            // First, we need to find the localInvariant: 
+            // \prod balance ** weight 
+            // balance0 = (\prod_i balance_i ** weight_i)**(1/(\sum_j weights_j)).
+            // \prod_l ((\prod_i balance_i ** weight_i)**(1/(\sum_j weights_j))**weight_l) = 
+            // ((\prod_i balance_i ** weight_i)**(1/(\sum_j weights_j))**(\sum_l weight_l)) = 
+            // (\prod_i balance_i ** weight_i)**((\sum_l weight_l))/(\sum_j weights_j)) =
+            // (\prod_i balance_i ** weight_i)**1 = \prod_i balance_i ** weight_i
+            // Thus balance0 is a point on the invariant.
+            // It is computed as: balance0 = exp((\sum (ln(balance_i) * weight_i)/(\sum_j weights_j)).
             uint256 localInvariant= 0;
             uint256 sumWeights = 0;
+            // Computes \sum (ln(balance_i) * weight_i
             for (uint256 it; it < MAX_ASSETS;) {
                 address token = _tokenIndexing[it];
                 if (token == address(0)) break;
@@ -1060,19 +1066,20 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon, ReentrancyGuard {
                 }
             }
 
-            // Then find the weighted averaged.
+            // Compute (\sum (ln(balance_i) * weight_i)/(\sum_j weights_j)
             unchecked {
                 // sumWeights is not 0.
                 localInvariant = localInvariant / sumWeights;
             }
 
-            // And the refernce amount:
+            // Compute exp((\sum (ln(balance_i) * weight_i)/(\sum_j weights_j))
             uint256 referenceAmount = uint256(FixedPointMathLib.expWad( // uint256 casting: expWad cannot be negative.
                 int256(localInvariant) // int256 casting: If this overflows, reference amount is 0 or almost 0. Thus it will never pass line 1076. Thus the casting is safe.
                 // If we actually look at what the calculation here is: (prod balance**weight)**(1/sum weights), we observe that the result should be limited by
                 // max (ERC20(i).balanceOf(address(this))). So it will never overflow.
             )) / FixedPointMathLib.WAD;
 
+            // Find the fraction of the referenceAmount that the user owns.
             // Add escrow to ensure that even if all ongoing transaction revert, the user gets their expected amount.
             // Add pool tokens because they are going to be minted.
             referenceAmount = (referenceAmount * poolTokens)/(totalSupply + _escrowedPoolTokens + poolTokens);
