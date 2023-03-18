@@ -183,7 +183,10 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
             require(targetTime >= block.timestamp + MIN_ADJUSTMENT_TIME); // dev: targetTime must be more than MIN_ADJUSTMENT_TIME in the future.
             require(targetTime <= block.timestamp + 365 days); // dev: Target time cannot be too far into the future.
         }
+
+        uint256 currentAmplification = FixedPointMathLib.WAD - uint256(_oneMinusAmp);
         require(targetAmplification < FixedPointMathLib.WAD);  // dev: amplification not set correctly.
+        require(targetAmplification <= currentAmplification*2 && targetAmplification >= currentAmplification/2); // dev: targetAmplification must be maximum a factor of 2 larger/smaller than the current amplification to protect liquidity providers.
         // Because of the balance0 (_unitTracker) implementation, amplification adjustment has to be disabled for cross-chain pools.
         require(_chainInterface == address(0));  // dev: Amplification adjustment is disabled for cross-chain pools.
 
