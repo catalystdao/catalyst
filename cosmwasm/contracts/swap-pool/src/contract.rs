@@ -10,9 +10,11 @@ use cw20_base::contract::{
     execute_send, execute_transfer, query_balance, query_token_info,
 };
 use ethnum::U256;
-use swap_pool_common::state::{CatalystV1PoolAdministration, CatalystV1PoolAckTimeout, CatalystV1PoolPermissionless, CatalystV1PoolState, CatalystV1PoolDerived};
+use swap_pool_common::{
+    state::{CatalystV1PoolAdministration, CatalystV1PoolAckTimeout, CatalystV1PoolPermissionless, CatalystV1PoolState, CatalystV1PoolDerived},
+    ContractError
+};
 
-use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
 use crate::state::SwapPoolVolatileState;
 
@@ -55,7 +57,7 @@ pub fn execute(
     env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
-) -> Result<Response, swap_pool_common::ContractError> {
+) -> Result<Response, ContractError> {
     match msg {
 
         ExecuteMsg::InitializeSwapCurves {
@@ -219,7 +221,7 @@ pub fn execute(
         ExecuteMsg::Burn {
             amount: _
          } => Err(
-            swap_pool_common::ContractError::Unauthorized {}     // Pool token burn handled by withdraw function
+            ContractError::Unauthorized {}     // Pool token burn handled by withdraw function
         ),
 
         ExecuteMsg::Send {
@@ -258,7 +260,7 @@ pub fn execute(
             owner: _,
             amount: _
         } => Err(
-            swap_pool_common::ContractError::Unauthorized {}      // Pool token burn handled by withdraw function
+            ContractError::Unauthorized {}      // Pool token burn handled by withdraw function
         ),
 
         ExecuteMsg::SendFrom {
