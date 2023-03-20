@@ -7,6 +7,7 @@ use cw20::Cw20ExecuteMsg;
 use cw_storage_plus::Map;
 use cw20_base::{state::{MinterData, TokenInfo, TOKEN_INFO}, contract::execute_mint};
 use ethnum::{U256, uint};
+use fixed_point_math_lib::fixed_point_math::mul_wad_down;
 use sha3::{Digest, Keccak256};
 
 use crate::ContractError;
@@ -345,6 +346,32 @@ pub trait CatalystV1PoolAdministration: CatalystV1PoolState {
         state.save_state(deps.storage)?;
 
         Ok(Response::new().add_event(event))
+    }
+
+    fn collect_governance_fee_message(
+        &self,
+        env: Env,
+        asset: String,
+        pool_fee_amount: Uint128
+    ) -> Result<CosmosMsg, ContractError> {
+
+        let gov_fee_amount: Uint128 = mul_wad_down(
+            U256::from(pool_fee_amount.u128()),
+            U256::from(self.governance_fee().clone())
+        )?.as_u128().into();     //TODO unsafe as_u128 casting
+
+        Ok(CosmosMsg::Wasm(
+            cosmwasm_std::WasmMsg::Execute {
+                contract_addr: asset,
+                msg: to_binary(&Cw20ExecuteMsg::TransferFrom {
+                    owner: env.contract.address.to_string(),
+                    recipient: self.factory_owner().to_string(),
+                    amount: gov_fee_amount
+                })?,
+                funds: vec![]
+            }
+        ))
+        
     }
 
 }
