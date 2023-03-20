@@ -732,15 +732,17 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                 // Remember to add the number of pool tokens burned to totalSupply
                 // _escrowedPoolTokens is added, since it makes pt_fraction smaller
                 uint256 ts = (totalSupply + _escrowedPoolTokens + poolTokens);
-                uint256 pt_fraction = ((ts + poolTokens) * FixedPointMathLib.WAD) / ts;
+                // Since pool tokens are getting subtracted from the total supply, remember
+                // to add a negative sign to pool tokens.
+                uint256 pt_fraction = ((ts - poolTokens) * FixedPointMathLib.WAD) / ts;
 
                 // The reduced equation:
                 innerdiff = FixedPointMathLib.mulWadDown(
                     walpha_0_ampped, 
-                    uint256(FixedPointMathLib.powWad(       // Always casts a positive value
+                    FixedPointMathLib.WAD - uint256(FixedPointMathLib.powWad(       // Always casts a positive value
                         int256(pt_fraction),                // If casting overflows to a negative number, powWad fails
                         oneMinusAmp
-                    )) - FixedPointMathLib.WAD
+                    )) 
                 );
             }
 
@@ -758,10 +760,12 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                 // mathematical lib returns ampWeightAssetBalances ** (1/(1-amp)) < weightAssetBalances.
                 // the result is that if innerdiff isn't big enough to make up for the difference
                 // the transaction reverts. This is "okay", since it means fewer tokens are returned.
-                uint256 weightedTokenAmount = (uint256(FixedPointMathLib.powWad(        // Always casts a positive value
-                    ampWeightAssetBalances[it] + int256(innerdiff),             // If casting overflows, either less is returned (if addition is positive) or powWad fails (if addition is negative)
+                // Since tokens are withdrawn, the change is negative. As such, multiply the
+                // equation by -1.
+                uint256 weightedTokenAmount = ((weightAssetBalances[it] * FixedPointMathLib.WAD) - uint256(FixedPointMathLib.powWad(        // Always casts a positive value
+                    ampWeightAssetBalances[it] - int256(innerdiff),             // If casting overflows, either less is returned (if addition is positive) or powWad fails (if addition is negative)
                     oneMinusAmpInverse // 1/(1-amp)
-                )) - (weightAssetBalances[it] * FixedPointMathLib.WAD)) / FixedPointMathLib.WAD;
+                ))) / FixedPointMathLib.WAD;
 
                 //! If the pool doesn't have enough assets for a withdrawal, then
                 //! withdraw all of the pools assets. This should be protected against by setting minOut != 0.
@@ -896,16 +900,20 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
             }
             // Remember to add the number of pool tokens burned to totalSupply
             uint256 ts = totalSupply + _escrowedPoolTokens + poolTokens;
-            uint256 pt_fraction = FixedPointMathLib.divWadDown(ts + poolTokens, ts);
+            // Since pool tokens are getting subtracted from the total supply, remember
+            // to add a negative sign to pool tokens.
+            uint256 pt_fraction = FixedPointMathLib.divWadDown(ts - poolTokens, ts);
 
             // Compute the unit worth of the pool tokens.
             // Recall that U is equal to N already. So we only need to multiply by the right side.
+            // Since pt_fraction < 1, FixedPointMathLib.WAD is moved in front to make U positive.
+            // This doesn't have to be compensated for on tokens.
             U *= FixedPointMathLib.mulWadDown(
                 walpha_0_ampped, 
-                uint256(FixedPointMathLib.powWad(       // Always casts a positive value
+                FixedPointMathLib.WAD - uint256(FixedPointMathLib.powWad(       // Always casts a positive value
                     int256(pt_fraction),                // If casting overflows to a negative number, powWad fails
                     oneMinusAmp
-                )) - FixedPointMathLib.WAD
+                )) 
             );
         }
         
