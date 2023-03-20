@@ -482,6 +482,8 @@ impl CatalystV1PoolPermissionless for SwapPoolVolatileState {
             pool_fee
         )?;
 
+        state.save_state(deps.storage)?;    //TODO Is this only needed if the weights are updated?
+
         Ok(Response::new()
             .add_message(transfer_from_asset_msg)
             .add_message(collect_governance_fee_message)
