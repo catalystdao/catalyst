@@ -45,7 +45,7 @@ pub fn instantiate(
         msg.governance_fee,
         msg.fee_administrator,
         msg.setup_master
-    ).map_err(|err| err.into())
+    )
 
 }
 
@@ -80,25 +80,25 @@ pub fn execute(
         ExecuteMsg::FinishSetup {} => SwapPoolVolatileState::finish_setup(
             &mut deps,
             info
-        ).map_err(|err| err.into()),
+        ),
 
         ExecuteMsg::SetFeeAdministrator { administrator } => SwapPoolVolatileState::set_fee_administrator(
             &mut deps,
             info,
             administrator
-        ).map_err(|err| err.into()),
+        ),
 
         ExecuteMsg::SetPoolFee { fee } => SwapPoolVolatileState::set_pool_fee(
             &mut deps,
             info,
             fee
-        ).map_err(|err| err.into()),
+        ),
 
         ExecuteMsg::SetGovernanceFee { fee } => SwapPoolVolatileState::set_governance_fee(
             &mut deps,
             info,
             fee
-        ).map_err(|err| err.into()),
+        ),
 
         ExecuteMsg::SetConnection {
             channel_id,
@@ -110,7 +110,7 @@ pub fn execute(
             channel_id,
             to_pool,
             state
-        ).map_err(|err| err.into()),
+        ),
 
         ExecuteMsg::SendAssetAck {
             to_account,
@@ -126,7 +126,7 @@ pub fn execute(
             amount,
             asset,
             block_number_mod
-        ).map_err(|err| err.into()),
+        ),
 
         ExecuteMsg::SendAssetTimeout {
             to_account,
@@ -143,7 +143,7 @@ pub fn execute(
             amount,
             asset,
             block_number_mod
-        ).map_err(|err| err.into()),
+        ),
 
         ExecuteMsg::SendLiquidityAck {
             to_account,
@@ -157,7 +157,7 @@ pub fn execute(
             u,
             amount,
             block_number_mod
-        ).map_err(|err| err.into()),
+        ),
 
         ExecuteMsg::SendLiquidityTimeout {
             to_account,
@@ -172,7 +172,7 @@ pub fn execute(
             u,
             amount,
             block_number_mod
-        ).map_err(|err| err.into()),
+        ),
 
         // ExecuteMsg::Deposit { pool_tokens_amount } => execute_deposit(deps, env, info, pool_tokens_amount),
         // ExecuteMsg::Withdraw { pool_tokens_amount } => execute_withdraw(deps, env, info, pool_tokens_amount),
@@ -190,7 +190,7 @@ pub fn execute(
             to_asset,
             amount,
             min_out
-        ).map_err(|err| err.into()),
+        ),
 
         // ExecuteMsg::SwapToUnits {
         //     chain,
