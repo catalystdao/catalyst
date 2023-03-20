@@ -345,7 +345,7 @@ impl CatalystV1PoolPermissionless for SwapPoolVolatileState {
 
         let pool_fee: Uint128 = mul_wad_down(            //TODO alternative to not have to use U256 conversion? (or wrapper?)
             U256::from(amount.u128()),
-            U256::from(*state.governance_fee())
+            U256::from(*state.pool_fee())
         )?.as_u128().into();    // Casting safe, as fee < amount, and amount is Uint128
 
         // Calculate the return value
