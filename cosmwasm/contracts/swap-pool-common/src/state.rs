@@ -438,7 +438,15 @@ pub trait CatalystV1PoolPermissionless: CatalystV1PoolState + CatalystV1PoolAdmi
 
     //TODO withdrawMixed
 
-    //TODO localSwap
+    fn local_swap(
+        deps: &Deps,
+        env: Env,
+        info: MessageInfo,
+        from_asset: String,
+        to_asset: String,
+        amount: Uint128,
+        min_out: Uint128
+    ) -> Result<Response, ContractError>;
 
     //TODO sendAsset
 

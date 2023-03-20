@@ -1,4 +1,4 @@
-use cosmwasm_std::{StdError, OverflowError};
+use cosmwasm_std::{StdError, OverflowError, Uint128};
 use ethnum::U256;
 use thiserror::Error;
 
@@ -30,6 +30,10 @@ pub enum ContractError {
 
     #[error("Security limit exceeded")]
     SecurityLimitExceeded { units: U256, capacity: U256 },
+
+
+    #[error("Return insufficient")]
+    ReturnInsufficient { out: Uint128, min_out: Uint128 },
 
 
     // CW20 Errors

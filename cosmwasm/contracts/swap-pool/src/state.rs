@@ -5,7 +5,7 @@ use cw20::{Cw20ExecuteMsg, Cw20QueryMsg};
 use cw20_base::contract::execute_mint;
 use cw_storage_plus::Item;
 use ethnum::U256;
-use fixed_point_math_lib::fixed_point_math::LN2;
+use fixed_point_math_lib::fixed_point_math::{LN2, mul_wad_down};
 use schemars::JsonSchema;
 use serde::{Serialize, Deserialize};
 use swap_pool_common::{
@@ -327,7 +327,86 @@ impl CatalystV1PoolAdministration for SwapPoolVolatileState {
 
 
 
-impl CatalystV1PoolPermissionless for SwapPoolVolatileState {}
+impl CatalystV1PoolPermissionless for SwapPoolVolatileState {
+
+    fn local_swap(
+        deps: &Deps,
+        env: Env,
+        info: MessageInfo,
+        from_asset: String,
+        to_asset: String,
+        amount: Uint128,
+        min_out: Uint128
+    ) -> Result<Response, ContractError> {
+
+        let mut state = Self::load_state(deps.storage)?;
+
+        state.update_weights()?;
+
+        let pool_fee: Uint128 = mul_wad_down(            //TODO alternative to not have to use U256 conversion? (or wrapper?)
+            U256::from(amount.u128()),
+            U256::from(*state.governance_fee())
+        )?.as_u128().into();    // Casting safe, as fee < amount, and amount is Uint128
+
+        // Calculate the return value
+        let out: Uint128 = state.calc_local_swap(
+            *deps,
+            env.clone(),
+            &from_asset,
+            &to_asset,
+            amount - pool_fee
+        )?;
+
+        if min_out > out {
+            return Err(ContractError::ReturnInsufficient { out, min_out });
+        }
+
+        // Build message to transfer input assets to the pool
+        let transfer_from_asset_msg = CosmosMsg::Wasm(
+            cosmwasm_std::WasmMsg::Execute {
+                contract_addr: from_asset.clone(),
+                msg: to_binary(&Cw20ExecuteMsg::TransferFrom {
+                    owner: info.sender.to_string(),
+                    recipient: env.contract.address.to_string(),
+                    amount
+                })?,
+                funds: vec![]
+            }
+        );
+
+        // Build message to transfer output assets to the swapper
+        let transfer_to_asset_msg = CosmosMsg::Wasm(
+            cosmwasm_std::WasmMsg::Execute {
+                contract_addr: to_asset.clone(),
+                msg: to_binary(&Cw20ExecuteMsg::TransferFrom {
+                    owner: env.contract.address.to_string(),
+                    recipient: info.sender.to_string(),
+                    amount: out
+                })?,
+                funds: vec![]
+            }
+        );
+
+        // Build collect governance fee message
+        let collect_governance_fee_message = state.collect_governance_fee_message(
+            env,
+            from_asset.clone(),
+            pool_fee
+        )?;
+
+        Ok(Response::new()
+            .add_message(transfer_from_asset_msg)
+            .add_message(transfer_to_asset_msg)
+            .add_message(collect_governance_fee_message)
+            .add_attribute("to_account", info.sender.to_string())
+            .add_attribute("from_asset", from_asset)
+            .add_attribute("to_asset", to_asset)
+            .add_attribute("from_amount", amount)
+            .add_attribute("to_amount", out)
+        )
+    }
+
+}
 
 
 
@@ -480,6 +559,11 @@ impl CatalystV1PoolAckTimeout for SwapPoolVolatileState {
     }
 }
 
+
 impl SwapPoolVolatileState {
+
+    fn update_weights(&mut self) -> Result<(), ContractError> {
+        todo!()
+    }
     
 }
