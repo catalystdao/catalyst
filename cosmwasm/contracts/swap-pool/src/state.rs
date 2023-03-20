@@ -406,6 +406,95 @@ impl CatalystV1PoolPermissionless for SwapPoolVolatileState {
         )
     }
 
+
+    fn send_asset(
+        deps: &mut DepsMut,
+        env: Env,
+        info: MessageInfo,
+        channel_id: String,
+        to_pool: String,
+        to_account: String,
+        from_asset: String,
+        to_asset_index: u8,
+        amount: Uint128,
+        min_out: Uint128,
+        fallback_account: String,   //TODO EVM mismatch
+        calldata: Vec<u8>
+    ) -> Result<Response, ContractError> {
+
+        let mut state = Self::load_state(deps.storage)?;
+
+        // Only allow connected pools
+        if !SwapPoolVolatileState::is_connected(&deps.as_ref(), &channel_id, &to_pool) {
+            return Err(ContractError::PoolNotConnected { channel_id, to_pool })
+        }
+
+        state.update_weights()?;
+
+        let pool_fee: Uint128 = mul_wad_down(            //TODO alternative to not have to use U256 conversion? (or wrapper?)
+            U256::from(amount.u128()),
+            U256::from(*state.pool_fee())
+        )?.as_u128().into();    // Casting safe, as fee < amount, and amount is Uint128
+
+        // Calculate the group-specific units bought
+        let u = state.calc_send_asset(
+            deps.as_ref(),
+            env.clone(),
+            &from_asset,
+            amount - pool_fee
+        )?;
+
+        let send_asset_hash = SwapPoolVolatileState::compute_send_asset_hash(
+            to_account.as_str(),
+            u,
+            amount - pool_fee,
+            &from_asset,
+            env.block.height as u32
+        );
+
+        //TODO invoke interface
+
+        state.create_asset_escrow(
+            deps,
+            &send_asset_hash,
+            amount - pool_fee,
+            &from_asset,
+            fallback_account
+        )?;
+
+        // Build message to transfer input assets to the pool
+        let transfer_from_asset_msg = CosmosMsg::Wasm(
+            cosmwasm_std::WasmMsg::Execute {
+                contract_addr: from_asset.clone(),
+                msg: to_binary(&Cw20ExecuteMsg::TransferFrom {
+                    owner: info.sender.to_string(),
+                    recipient: env.contract.address.to_string(),
+                    amount
+                })?,
+                funds: vec![]
+            }
+        );
+
+        // Build collect governance fee message
+        let collect_governance_fee_message = state.collect_governance_fee_message(
+            env,
+            from_asset.clone(),
+            pool_fee
+        )?;
+
+        Ok(Response::new()
+            .add_message(transfer_from_asset_msg)
+            .add_message(collect_governance_fee_message)
+            .add_attribute("to_pool", to_pool)
+            .add_attribute("to_account", info.sender.to_string())
+            .add_attribute("from_asset", from_asset)
+            .add_attribute("to_asset_index", to_asset_index.to_string())
+            .add_attribute("units", u.to_string())
+            .add_attribute("min_out", min_out)
+            .add_attribute("swap_hash", send_asset_hash)
+        )
+    }
+
 }
 
 

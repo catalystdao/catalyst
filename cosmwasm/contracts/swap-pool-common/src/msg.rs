@@ -108,18 +108,17 @@ pub enum ExecuteMsg {
         min_out: Uint128,
     },
 
-    // SwapToUnits {
-    //     chain: u32,
-    //     target_pool: String,
-    //     target_user: String,
-    //     from_asset: String,
-    //     to_asset_index: u8,
-    //     amount: Uint128,
-    //     min_out: [u64; 4],
-    //     approx: u8,
-    //     fallback_address: String,
-    //     calldata: Vec<u8>
-    // },
+    SendAsset {
+        channel_id: String,
+        to_pool: String,
+        to_account: String,
+        from_asset: String,
+        to_asset_index: u8,
+        amount: Uint128,
+        min_out: Uint128,
+        fallback_account: String,   //TODO EVM mismatch
+        calldata: Vec<u8>
+    },
 
     // SwapFromUnits {
     //     to_asset_index: u8,

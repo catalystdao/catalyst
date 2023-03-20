@@ -236,6 +236,19 @@ pub trait CatalystV1PoolAdministration: CatalystV1PoolState {
     }
 
 
+    fn is_connected(
+        deps: &Deps,
+        channel_id: &str,
+        to_pool: &str
+    ) -> bool {
+
+        CONNECTIONS
+            .load(deps.storage, (channel_id, to_pool))
+            .unwrap_or(false)
+
+    }
+
+
 
     fn set_fee_administrator_unchecked(
         &mut self,
@@ -448,7 +461,20 @@ pub trait CatalystV1PoolPermissionless: CatalystV1PoolState + CatalystV1PoolAdmi
         min_out: Uint128
     ) -> Result<Response, ContractError>;
 
-    //TODO sendAsset
+    fn send_asset(
+        deps: &mut DepsMut,
+        env: Env,
+        info: MessageInfo,
+        channel_id: String,
+        to_pool: String,
+        to_account: String,
+        from_asset: String,
+        to_asset_index: u8,
+        amount: Uint128,
+        min_out: Uint128,
+        fallback_account: String,   //TODO EVM mismatch
+        calldata: Vec<u8>
+    ) -> Result<Response, ContractError>;
 
     //TODO receiveAsset
 
@@ -503,6 +529,48 @@ pub trait CatalystV1PoolDerived: CatalystV1PoolState {
 
 
 pub trait CatalystV1PoolAckTimeout: CatalystV1PoolState + CatalystV1PoolAdministration {
+
+    fn create_asset_escrow(
+        &mut self,
+        deps: &mut DepsMut,
+        send_asset_hash: &str,
+        amount: Uint128,
+        asset: &str,
+        fallback_account: String
+    ) -> Result<(), ContractError> {
+
+        if ASSET_ESCROWS.has(deps.storage, send_asset_hash) {
+            return Err(ContractError::Unauthorized {});
+        }
+
+        ASSET_ESCROWS.save(deps.storage, send_asset_hash, &fallback_account)?;
+
+        let asset_index = self.get_asset_index(asset)?;
+        let escrowed_assets = self.escrowed_assets_mut();
+        escrowed_assets[asset_index] = escrowed_assets[asset_index].checked_add(amount)?;
+
+        Ok(())
+    }
+
+    fn create_liquidity_escrow(
+        &mut self,
+        deps: &mut DepsMut,
+        send_liquidity_hash: &str,
+        amount: Uint128,
+        fallback_account: String
+    ) -> Result<(), ContractError> {
+
+        if LIQUIDITY_ESCROWS.has(deps.storage, send_liquidity_hash) {
+            return Err(ContractError::Unauthorized {});
+        }
+
+        LIQUIDITY_ESCROWS.save(deps.storage, send_liquidity_hash, &fallback_account)?;
+
+        let escrowed_pool_tokens = self.escrowed_pool_tokens_mut();
+        *escrowed_pool_tokens = escrowed_pool_tokens.checked_add(amount)?;
+
+        Ok(())
+    }
 
     fn release_asset_escrow(
         &mut self,
