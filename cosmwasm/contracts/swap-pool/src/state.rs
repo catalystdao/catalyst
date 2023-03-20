@@ -1,7 +1,7 @@
 use cosmwasm_schema::cw_serde;
 
-use cosmwasm_std::{Addr, Uint128, DepsMut, Env, MessageInfo, Response, StdResult, CosmosMsg, to_binary};
-use cw20::Cw20ExecuteMsg;
+use cosmwasm_std::{Addr, Uint128, DepsMut, Env, MessageInfo, Response, StdResult, CosmosMsg, to_binary, Deps};
+use cw20::{Cw20ExecuteMsg, Cw20QueryMsg};
 use cw20_base::contract::execute_mint;
 use cw_storage_plus::Item;
 use ethnum::U256;
@@ -10,7 +10,7 @@ use schemars::JsonSchema;
 use serde::{Serialize, Deserialize};
 use swap_pool_common::state::{MAX_ASSETS, INITIAL_MINT_AMOUNT, CatalystV1PoolState, CatalystV1PoolAdministration, CatalystV1PoolAckTimeout, CatalystV1PoolPermissionless, CatalystV1PoolDerived};
 
-use crate::error::ContractError;
+use crate::calculation_helpers::{calc_price_curve_area, calc_price_curve_limit, calc_combined_price_curves};
 
 pub const STATE: Item<SwapPoolVolatileState> = Item::new("catalyst-pool-state");
 
@@ -326,7 +326,93 @@ impl CatalystV1PoolPermissionless for SwapPoolVolatileState {}
 
 
 
-impl CatalystV1PoolDerived for SwapPoolVolatileState {}
+impl CatalystV1PoolDerived for SwapPoolVolatileState {
+
+    fn calc_send_asset(
+        &self,
+        deps: Deps,
+        env: Env,
+        from_asset: &Addr,
+        amount: Uint128
+    ) -> Result<U256, swap_pool_common::ContractError> {
+
+        let from_asset_index: usize = self.get_asset_index(from_asset.as_ref())?;
+        let from_asset_balance: Uint128 = deps.querier.query_wasm_smart(
+            from_asset,
+            &Cw20QueryMsg::Balance { address: env.contract.address.to_string() }
+        )?;
+        let from_asset_weight = self.weights[from_asset_index];
+
+        calc_price_curve_area(
+            amount.u128().into(),
+            from_asset_balance.u128().into(),
+            U256::from(from_asset_weight),
+        ).map_err(|_| swap_pool_common::ContractError::GenericError {})
+    }
+
+    fn calc_receive_asset(
+        &self,
+        deps: Deps,
+        env: Env,
+        to_asset: &Addr,
+        u: U256
+    ) -> Result<Uint128, swap_pool_common::ContractError> {
+
+        let to_asset_index: usize = self.get_asset_index(to_asset.as_ref())?;
+        let to_asset_balance: Uint128 = deps.querier.query_wasm_smart::<Uint128>(
+            to_asset,
+            &Cw20QueryMsg::Balance { address: env.contract.address.to_string() }
+        )?.checked_sub(self.escrowed_assets[to_asset_index])?;      // pool balance minus escrowed balance
+        let to_asset_weight = self.weights[to_asset_index];
+        
+        calc_price_curve_limit(
+            u,
+            to_asset_balance.u128().into(),
+            U256::from(to_asset_weight),
+        ).map(
+            |val| Uint128::from(val.as_u128())
+        ).map_err(
+            |_| swap_pool_common::ContractError::GenericError {}
+        )      //TODO! .as_u128 may overflow silently
+    }
+
+    fn calc_local_swap(
+        &self,
+        deps: Deps,
+        env: Env,
+        from_asset: &Addr,
+        to_asset: &Addr,
+        amount: Uint128
+    ) -> Result<Uint128, swap_pool_common::ContractError> {
+
+        let from_asset_index: usize = self.get_asset_index(from_asset.as_ref())?;
+        let from_asset_balance: Uint128 = deps.querier.query_wasm_smart(
+            from_asset,
+            &Cw20QueryMsg::Balance { address: env.contract.address.to_string() }
+        )?;
+        let from_asset_weight = self.weights[from_asset_index];
+
+        let to_asset_index: usize = self.get_asset_index(to_asset.as_ref())?;
+        let to_asset_balance: Uint128 = deps.querier.query_wasm_smart::<Uint128>(
+            to_asset,
+            &Cw20QueryMsg::Balance { address: env.contract.address.to_string() }
+        )?.checked_sub(self.escrowed_assets[to_asset_index])?;      // pool balance minus escrowed balance
+        let to_asset_weight = self.weights[to_asset_index];
+
+        calc_combined_price_curves(
+            amount.u128().into(),
+            from_asset_balance.u128().into(),
+            to_asset_balance.u128().into(),
+            U256::from(from_asset_weight),
+            U256::from(to_asset_weight)
+        ).map(
+            |val| Uint128::from(val.as_u128())
+        ).map_err(
+            |_| swap_pool_common::ContractError::GenericError {}
+        ) 
+    }
+
+}
 
 
 impl CatalystV1PoolAckTimeout for SwapPoolVolatileState {

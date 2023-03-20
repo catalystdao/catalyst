@@ -1,4 +1,4 @@
-use cosmwasm_std::StdError;
+use cosmwasm_std::{StdError, OverflowError};
 use ethnum::U256;
 use thiserror::Error;
 
@@ -79,5 +79,18 @@ impl From<cw20_base::ContractError> for ContractError {
                 ContractError::DuplicateInitialBalanceAddresses {}
             }
         }
+    }
+}
+
+impl From<OverflowError> for ContractError {
+    fn from(_err: OverflowError) -> Self {
+        ContractError::ArithmeticError {}
+    }
+}
+
+//TODO replace these (i.e. ()) errors with other ones?
+impl From<()> for ContractError {
+    fn from(_err: ()) -> Self {
+        ContractError::GenericError {}
     }
 }

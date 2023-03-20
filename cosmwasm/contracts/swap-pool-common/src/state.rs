@@ -427,6 +427,7 @@ pub trait CatalystV1PoolPermissionless: CatalystV1PoolState + CatalystV1PoolAdmi
 
 pub trait CatalystV1PoolDerived: CatalystV1PoolState {
 
+    //TODO depend directly on self
     fn get_unit_capacity(
         deps: Deps,
         env: Env
@@ -437,11 +438,31 @@ pub trait CatalystV1PoolDerived: CatalystV1PoolState {
         state.calc_unit_capacity(env.block.time)
     }
 
-    //TODO calc_send_asset
+    fn calc_send_asset(
+        &self,
+        deps: Deps,
+        env: Env,
+        from_asset: &Addr,
+        amount: Uint128
+    ) -> Result<U256, ContractError>;
 
-    //TODO calc_receive_asset
+    fn calc_receive_asset(
+        &self,
+        deps: Deps,
+        env: Env,
+        to_asset: &Addr,
+        u: U256
+    ) -> Result<Uint128, ContractError>;
 
-    //TODO calc_local_swap
+    fn calc_local_swap(
+        &self,
+        deps: Deps,
+        env: Env,
+        from_asset: &Addr,
+        to_asset: &Addr,
+        amount: Uint128
+    ) -> Result<Uint128, ContractError>;
+
 }
 
 
