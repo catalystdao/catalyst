@@ -8,7 +8,12 @@ use ethnum::U256;
 use fixed_point_math_lib::fixed_point_math::LN2;
 use schemars::JsonSchema;
 use serde::{Serialize, Deserialize};
-use swap_pool_common::state::{MAX_ASSETS, INITIAL_MINT_AMOUNT, CatalystV1PoolState, CatalystV1PoolAdministration, CatalystV1PoolAckTimeout, CatalystV1PoolPermissionless, CatalystV1PoolDerived};
+use swap_pool_common::{
+    state::{
+        MAX_ASSETS, INITIAL_MINT_AMOUNT, CatalystV1PoolState, CatalystV1PoolAdministration, CatalystV1PoolAckTimeout, CatalystV1PoolPermissionless, CatalystV1PoolDerived
+    },
+    ContractError
+};
 
 use crate::calculation_helpers::{calc_price_curve_area, calc_price_curve_limit, calc_combined_price_curves};
 
@@ -219,7 +224,7 @@ impl CatalystV1PoolAdministration for SwapPoolVolatileState {
         weights: Vec<u64>,
         amp: u64,
         depositor: String
-    ) -> Result<Response, swap_pool_common::ContractError> {
+    ) -> Result<Response, ContractError> {
 
         let mut state = STATE.load(deps.storage)?;
 
@@ -228,12 +233,12 @@ impl CatalystV1PoolAdministration for SwapPoolVolatileState {
 
         // Make sure this function may only be invoked once (check whether assets have already been saved)
         if state.assets.len() > 0 {
-            return Err(swap_pool_common::ContractError::Unauthorized {});
+            return Err(ContractError::Unauthorized {});
         }
 
         // Check that the amplification is correct (set to 1)
         if amp != 10u64.pow(18) {     //TODO maths WAD
-            return Err(swap_pool_common::ContractError::InvalidAmplification {})
+            return Err(ContractError::InvalidAmplification {})
         }
 
         // Check the provided assets and weights count
@@ -241,7 +246,7 @@ impl CatalystV1PoolAdministration for SwapPoolVolatileState {
             assets.len() == 0 || assets.len() > MAX_ASSETS ||
             weights.len() != assets.len()
         {
-            return Err(swap_pool_common::ContractError::GenericError {}); //TODO error
+            return Err(ContractError::GenericError {}); //TODO error
         }
 
         // Validate the depositor address
@@ -252,16 +257,16 @@ impl CatalystV1PoolAdministration for SwapPoolVolatileState {
             .iter()
             .map(|asset_addr| deps.api.addr_validate(&asset_addr))
             .collect::<StdResult<Vec<Addr>>>()
-            .map_err(|_| swap_pool_common::ContractError::InvalidAssets {})?;
+            .map_err(|_| ContractError::InvalidAssets {})?;
 
         // Validate asset balances
         if assets_balances.iter().any(|balance| balance.is_zero()) {
-            return Err(swap_pool_common::ContractError::GenericError {}); //TODO error
+            return Err(ContractError::GenericError {}); //TODO error
         }
 
         // Validate and save weights
         if weights.iter().any(|weight| *weight == 0) {
-            return Err(swap_pool_common::ContractError::GenericError {}); //TODO error
+            return Err(ContractError::GenericError {}); //TODO error
         }
         state.weights = weights.clone();
 
@@ -334,7 +339,7 @@ impl CatalystV1PoolDerived for SwapPoolVolatileState {
         env: Env,
         from_asset: &str,
         amount: Uint128
-    ) -> Result<U256, swap_pool_common::ContractError> {
+    ) -> Result<U256, ContractError> {
 
         let from_asset_index: usize = self.get_asset_index(from_asset.as_ref())?;
         let from_asset_balance: Uint128 = deps.querier.query_wasm_smart(
@@ -347,7 +352,7 @@ impl CatalystV1PoolDerived for SwapPoolVolatileState {
             amount.u128().into(),
             from_asset_balance.u128().into(),
             U256::from(from_asset_weight),
-        ).map_err(|_| swap_pool_common::ContractError::GenericError {})
+        ).map_err(|_| ContractError::GenericError {})
     }
 
     fn calc_receive_asset(
@@ -356,7 +361,7 @@ impl CatalystV1PoolDerived for SwapPoolVolatileState {
         env: Env,
         to_asset: &str,
         u: U256
-    ) -> Result<Uint128, swap_pool_common::ContractError> {
+    ) -> Result<Uint128, ContractError> {
 
         let to_asset_index: usize = self.get_asset_index(to_asset.as_ref())?;
         let to_asset_balance: Uint128 = deps.querier.query_wasm_smart::<Uint128>(
@@ -372,7 +377,7 @@ impl CatalystV1PoolDerived for SwapPoolVolatileState {
         ).map(
             |val| Uint128::from(val.as_u128())
         ).map_err(
-            |_| swap_pool_common::ContractError::GenericError {}
+            |_| ContractError::GenericError {}
         )      //TODO! .as_u128 may overflow silently
     }
 
@@ -383,7 +388,7 @@ impl CatalystV1PoolDerived for SwapPoolVolatileState {
         from_asset: &str,
         to_asset: &str,
         amount: Uint128
-    ) -> Result<Uint128, swap_pool_common::ContractError> {
+    ) -> Result<Uint128, ContractError> {
 
         let from_asset_index: usize = self.get_asset_index(from_asset.as_ref())?;
         let from_asset_balance: Uint128 = deps.querier.query_wasm_smart(
@@ -408,7 +413,7 @@ impl CatalystV1PoolDerived for SwapPoolVolatileState {
         ).map(
             |val| Uint128::from(val.as_u128())
         ).map_err(
-            |_| swap_pool_common::ContractError::GenericError {}
+            |_| ContractError::GenericError {}
         ) 
     }
 
@@ -424,7 +429,7 @@ impl CatalystV1PoolAckTimeout for SwapPoolVolatileState {
         amount: Uint128,
         asset: String,
         block_number_mod: u32
-    ) -> Result<Response, swap_pool_common::ContractError> {    //TODO error
+    ) -> Result<Response, ContractError> {
 
         let mut state = Self::load_state(deps.storage)?;
 
@@ -453,7 +458,7 @@ impl CatalystV1PoolAckTimeout for SwapPoolVolatileState {
         u: U256,
         amount: Uint128,
         block_number_mod: u32
-    ) -> Result<Response, swap_pool_common::ContractError> {    //TODO error
+    ) -> Result<Response, ContractError> {
 
         let mut state = Self::load_state(deps.storage)?;
 
