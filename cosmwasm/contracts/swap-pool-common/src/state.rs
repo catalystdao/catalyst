@@ -442,7 +442,7 @@ pub trait CatalystV1PoolDerived: CatalystV1PoolState {
         &self,
         deps: Deps,
         env: Env,
-        from_asset: &Addr,
+        from_asset: &str,
         amount: Uint128
     ) -> Result<U256, ContractError>;
 
@@ -450,7 +450,7 @@ pub trait CatalystV1PoolDerived: CatalystV1PoolState {
         &self,
         deps: Deps,
         env: Env,
-        to_asset: &Addr,
+        to_asset: &str,
         u: U256
     ) -> Result<Uint128, ContractError>;
 
@@ -458,8 +458,8 @@ pub trait CatalystV1PoolDerived: CatalystV1PoolState {
         &self,
         deps: Deps,
         env: Env,
-        from_asset: &Addr,
-        to_asset: &Addr,
+        from_asset: &str,
+        to_asset: &str,
         amount: Uint128
     ) -> Result<Uint128, ContractError>;
 

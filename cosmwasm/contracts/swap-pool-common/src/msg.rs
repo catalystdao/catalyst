@@ -248,6 +248,24 @@ pub enum QueryMsg {
     #[returns(GetUnitCapacityResponse)]
     GetUnitCapacity {},
 
+    #[returns(CalcSendAssetResponse)]
+    CalcSendAsset {
+        from_asset: String,
+        amount: Uint128
+    },
+    #[returns(CalcReceiveAssetResponse)]
+    CalcReceiveAsset {
+        to_asset: String,
+        #[serde(with = "U256Def")]
+        u: U256
+    },
+    #[returns(CalcLocalSwapResponse)]
+    CalcLocalSwap {
+        from_asset: String,
+        to_asset: String,
+        amount: Uint128
+    },
+
 
     // CW20 Implementation
     #[returns(BalanceResponse)]
@@ -368,5 +386,19 @@ pub struct GetUnitCapacityResponse {
     pub capacity: U256
 }
 
+#[cw_serde]
+pub struct CalcSendAssetResponse {
+    #[serde(with = "U256Def")]
+    pub u: U256
+}
 
+#[cw_serde]
+pub struct CalcReceiveAssetResponse {
+    pub to_amount: Uint128
+}
+
+#[cw_serde]
+pub struct CalcLocalSwapResponse {
+    pub to_amount: Uint128
+}
 

@@ -1,6 +1,6 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::{entry_point, StdError};
-use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, to_binary};
+use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, to_binary, Uint128};
 use cw2::set_contract_version;
 use cw20_base::allowances::{
     execute_decrease_allowance, execute_increase_allowance, execute_send_from,
@@ -282,6 +282,16 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::Ready {} => to_binary(&query_ready(deps)?),
         QueryMsg::OnlyLocal {} => to_binary(&query_only_local(deps)?),
         QueryMsg::GetUnitCapacity {} => to_binary(&query_get_unit_capacity(deps, env)?),
+
+        QueryMsg::CalcSendAsset { from_asset, amount } => to_binary(
+            &query_calc_send_asset(deps, env, &from_asset, amount)?
+        ),
+        QueryMsg::CalcReceiveAsset { to_asset, u } => to_binary(
+            &query_calc_receive_asset(deps, env, &to_asset, u)?
+        ),
+        QueryMsg::CalcLocalSwap { from_asset, to_asset, amount } => to_binary(
+            &query_calc_local_swap(deps, env, &from_asset, &to_asset, amount)?
+        ),
 
         // CW20 query msgs - Use cw20-base for the implementation
         QueryMsg::TokenInfo {} => to_binary(&query_token_info(deps)?),
@@ -688,6 +698,49 @@ pub fn query_get_unit_capacity(deps: Deps, env: Env) -> StdResult<U256> { //TODO
     SwapPoolVolatileState::get_unit_capacity(deps, env)
         .map(|capacity| capacity)
         .map_err(|_| StdError::GenericErr { msg: "".to_owned() })   //TODO error
+}
+
+
+pub fn query_calc_send_asset(
+    deps: Deps,
+    env: Env,
+    from_asset: &str,
+    amount: Uint128
+) -> StdResult<U256> {
+
+    SwapPoolVolatileState::load_state(deps.storage)?
+        .calc_send_asset(deps, env, from_asset, amount)
+        .map_err(|err| err.into())
+
+}
+
+
+pub fn query_calc_receive_asset(
+    deps: Deps,
+    env: Env,
+    to_asset: &str,
+    u: U256
+) -> StdResult<Uint128> {
+
+    SwapPoolVolatileState::load_state(deps.storage)?
+        .calc_receive_asset(deps, env, to_asset, u)
+        .map_err(|err| err.into())
+
+}
+
+
+pub fn query_calc_local_swap(
+    deps: Deps,
+    env: Env,
+    from_asset: &str,
+    to_asset: &str,
+    amount: Uint128
+) -> StdResult<Uint128> {
+
+    SwapPoolVolatileState::load_state(deps.storage)?
+        .calc_local_swap(deps, env, from_asset, to_asset, amount)
+        .map_err(|err| err.into())
+
 }
 
 

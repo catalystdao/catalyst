@@ -94,3 +94,10 @@ impl From<()> for ContractError {
         ContractError::GenericError {}
     }
 }
+
+//TODO overhaul
+impl From<ContractError> for StdError {
+    fn from(_err: ContractError) -> StdError {
+        StdError::GenericErr { msg: "".to_owned() } //TODO error (use _err)
+    }
+}

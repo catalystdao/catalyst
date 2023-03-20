@@ -332,7 +332,7 @@ impl CatalystV1PoolDerived for SwapPoolVolatileState {
         &self,
         deps: Deps,
         env: Env,
-        from_asset: &Addr,
+        from_asset: &str,
         amount: Uint128
     ) -> Result<U256, swap_pool_common::ContractError> {
 
@@ -354,7 +354,7 @@ impl CatalystV1PoolDerived for SwapPoolVolatileState {
         &self,
         deps: Deps,
         env: Env,
-        to_asset: &Addr,
+        to_asset: &str,
         u: U256
     ) -> Result<Uint128, swap_pool_common::ContractError> {
 
@@ -380,8 +380,8 @@ impl CatalystV1PoolDerived for SwapPoolVolatileState {
         &self,
         deps: Deps,
         env: Env,
-        from_asset: &Addr,
-        to_asset: &Addr,
+        from_asset: &str,
+        to_asset: &str,
         amount: Uint128
     ) -> Result<Uint128, swap_pool_common::ContractError> {
 
