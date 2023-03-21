@@ -906,8 +906,8 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
 
             // Compute the unit worth of the pool tokens.
             // Recall that U is equal to N already. So we only need to multiply by the right side.
-            // Since pt_fraction < 1, FixedPointMathLib.WAD is moved in front to make U positive.
-            // This doesn't have to be compensated for on tokens.
+            // Since pt_fraction < 1, the units are negative. This is expected for swap to tokens. As such
+            // FixedPointMathLib.WAD is moved in front to make U positive.
             U *= FixedPointMathLib.mulWadDown(
                 walpha_0_ampped, 
                 FixedPointMathLib.WAD - uint256(FixedPointMathLib.powWad(       // Always casts a positive value
