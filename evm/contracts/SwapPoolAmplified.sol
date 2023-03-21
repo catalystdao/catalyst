@@ -1273,7 +1273,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
 
         // This is a balance0 implementation. The balance 0 implementation here is reference except the escrowed tokens are subtracted from the pool balance.
         int256 weightedAssetBalanceSum = 0;
-        for (it = 0; it < MAX_ASSETS;) {
+        for (it; it < MAX_ASSETS;) {
             address token = _tokenIndexing[it];
             if (token == address(0)) break;
             uint256 weight = _weight[token];
