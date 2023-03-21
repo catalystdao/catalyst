@@ -1261,13 +1261,11 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
      * @dev Whenever balance0 is computed, the true balance should be used instead of the one
      * modifed by the escrow. This is because balance0 is constant during swaps. Thus, if the
      * balance was modified, it would not be constant during swaps.
-     * The function returns several helpers to reduce the number of storage reads. The external function does not.
+     * The function also returns the pool asset count as it is always used in conjunction with walpha_0_ampped. The external function does not.
      * @return walpha_0_ampped Balance0**(1-amp)
-     * @return oneMinusAmp (1-amp)
-     * @return it the return variables of a contract’s function state variable
+     * @return it the pool asset count
      */
-    function _computeBalance0() internal view returns(uint256 walpha_0_ampped, int256 oneMinusAmp, uint256 it) {
-        oneMinusAmp = _oneMinusAmp;
+    function _computeBalance0(int256 oneMinusAmp) internal view returns(uint256 walpha_0_ampped, uint256 it) {
         // Compute walpha_0 to find the reference balances. This lets us evaluate the
         // number of tokens the pool should have If the price in the group is 1:1.
 
@@ -1309,7 +1307,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
      * @return walpha_0_ampped Balance0**(1-amp)
      */
     function computeBalance0() external view returns(uint256) {
-       (uint256 walpha_0_ampped, int256 oneMinusAmp, uint256 it) = _computeBalance0();
+       (uint256 walpha_0_ampped, uint256 it) = _computeBalance0(_oneMinusAmp);
        return walpha_0_ampped;
     }
 
@@ -1348,9 +1346,11 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
 
         _burn(msg.sender, poolTokens);
 
+        int256 oneMinusAmp = _oneMinusAmp;
+
         // Compute walpha_0 to find the reference balances. This lets us evaluate the
         // number of tokens the pool should have If the price in the group is 1:1.
-        (uint256 walpha_0_ampped, int256 oneMinusAmp, uint256 it) = _computeBalance0();
+        (uint256 walpha_0_ampped, uint256 it) = _computeBalance0(oneMinusAmp);
 
         uint256 U = 0;
         {
@@ -1470,9 +1470,11 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
 
         _updateAmplification();
 
+        int256 oneMinusAmp = _oneMinusAmp;
+
         // Compute walpha_0 to find the reference balances. This lets us evaluate the
         // number of tokens the pool should have If the price in the group is 1:1.
-        (uint256 walpha_0_ampped, int256 oneMinusAmp, uint256 it) = _computeBalance0();
+        (uint256 walpha_0_ampped, uint256 it) = _computeBalance0(oneMinusAmp);
 
         int256 oneMinusAmpInverse = FixedPointMathLib.WADWAD / oneMinusAmp;
 
