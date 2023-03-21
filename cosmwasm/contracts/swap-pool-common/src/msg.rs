@@ -132,15 +132,15 @@ pub enum ExecuteMsg {
         calldata: Vec<u8>
     },
 
-    // OutLiquidity {
-    //     chain: [u64; 4],
-    //     target_pool: String,
-    //     who: String,
-    //     base_amount: [u64; 4],
-    //     min_out: [u64; 4],
-    //     approx: u8,
-    //     fallback_user: String
-    // },
+    SendLiquidity {
+        channel_id: String,
+        to_pool: String,
+        to_account: String,
+        amount: Uint128,            //TODO EVM mismatch
+        min_out: Uint128,
+        fallback_account: String,   //TODO EVM mismatch
+        calldata: Vec<u8>
+    },
 
     // InLiquidity {
     //     who: String,

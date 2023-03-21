@@ -2,10 +2,10 @@ use cosmwasm_schema::cw_serde;
 
 use cosmwasm_std::{Addr, Uint128, DepsMut, Env, MessageInfo, Response, StdResult, CosmosMsg, to_binary, Deps};
 use cw20::{Cw20ExecuteMsg, Cw20QueryMsg};
-use cw20_base::contract::execute_mint;
+use cw20_base::{contract::execute_mint, allowances::execute_burn_from};
 use cw_storage_plus::Item;
 use ethnum::U256;
-use fixed_point_math_lib::fixed_point_math::{LN2, mul_wad_down};
+use fixed_point_math_lib::fixed_point_math::{LN2, mul_wad_down, self};
 use schemars::JsonSchema;
 use serde::{Serialize, Deserialize};
 use swap_pool_common::{
@@ -560,6 +560,82 @@ impl CatalystV1PoolPermissionless for SwapPoolVolatileState {
             .add_attribute("units", u.to_string())  //TODO format of .to_string()?
             .add_attribute("to_amount", out)
             .add_attribute("swap_hash", swap_hash)
+        )
+    }
+
+    fn send_liquidity(
+        deps: &mut DepsMut,
+        env: Env,
+        info: MessageInfo,
+        channel_id: String,
+        to_pool: String,
+        to_account: String,
+        amount: Uint128,            //TODO EVM mismatch
+        min_out: Uint128,
+        fallback_account: String,   //TODO EVM mismatch
+        calldata: Vec<u8>
+    ) -> Result<Response, ContractError> {
+
+        let mut state = Self::load_state(deps.storage)?;
+
+        // Only allow connected pools
+        if !SwapPoolVolatileState::is_connected(&deps.as_ref(), &channel_id, &to_pool) {
+            return Err(ContractError::PoolNotConnected { channel_id, pool: to_pool })
+        }
+
+        // Update weights
+        state.update_weights()?;
+
+        // Include the 'escrowed' pool tokens in the total supply of pool tokens of the pool
+        let effective_supply = U256::from(Self::total_supply(deps.as_ref())?.u128()) 
+            + U256::from(state.escrowed_pool_tokens.u128());        // Addition is overflow safe because of casting into U256
+
+        // Burn the pool tokens of the sender
+        let sender = info.sender.to_string();
+        execute_burn_from(deps.branch(), env.clone(), info, sender, amount)?;
+
+        // Derive the weight sum (w_sum) from the security limit capacity       //TODO do we want this in this implementation?
+        let w_sum = state.max_limit_capacity() / fixed_point_math::LN2;
+
+        // Compute the unit value of the provided poolTokens
+        // This step simplifies withdrawing and swapping into a single step
+        let u = fixed_point_math::ln_wad(
+            fixed_point_math::div_wad_down(
+                effective_supply,
+                effective_supply - U256::from(amount.u128())   // subtraction is safe, as 'amount' is always contained in 'effective_supply'
+            )?.as_i256()                                         // if casting overflows into a negative value, posterior 'ln' calc will fail
+        )?.as_u256()                                         // casting safe as 'ln' is computed of a value >= 1 (hence result always positive)
+            .checked_mul(w_sum)
+            .ok_or(ContractError::ArithmeticError {})?;
+
+        // Compute the hash of the 'send_liquidity' transaction
+        let send_liquidity_hash = SwapPoolVolatileState::compute_send_liquidity_hash(
+            to_account.as_str(),
+            u,
+            amount,
+            env.block.height as u32
+        );
+
+
+        //TODO invoke interface
+
+
+        // Escrow the pool tokens
+        state.create_liquidity_escrow(
+            deps,
+            &send_liquidity_hash,
+            amount,
+            fallback_account
+        )?;
+
+        state.save_state(deps.storage)?;    //TODO Is this only needed if the weights are updated?
+
+        Ok(Response::new()
+            .add_attribute("to_pool", to_pool)
+            .add_attribute("to_account", to_account)
+            .add_attribute("from_amount", amount)
+            .add_attribute("units", u.to_string())
+            .add_attribute("swap_hash", send_liquidity_hash)
         )
     }
 

@@ -240,6 +240,27 @@ pub fn execute(
             calldata
         ),
 
+        ExecuteMsg::SendLiquidity {
+            channel_id,
+            to_pool,
+            to_account,
+            amount,
+            min_out,
+            fallback_account,
+            calldata
+        } => SwapPoolVolatileState::send_liquidity(
+            &mut deps,
+            env,
+            info,
+            channel_id,
+            to_pool,
+            to_account,
+            amount,
+            min_out,
+            fallback_account,
+            calldata
+        ),
+
 
         // CW20 execute msgs - Use cw20-base for the implementation
         ExecuteMsg::Transfer {
@@ -583,11 +604,6 @@ pub fn query_calc_local_swap(
 }
 
 
-// //TODO move this fn somewhere else?
-// fn get_pool_token_supply(deps: Deps) -> StdResult<Uint128> {
-//     let info = TOKEN_INFO.load(deps.storage)?;
-//     Ok(info.total_supply)
-// }
 
 #[cfg(test)]
 mod tests {
