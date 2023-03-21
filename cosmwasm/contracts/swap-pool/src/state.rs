@@ -426,7 +426,7 @@ impl CatalystV1PoolPermissionless for SwapPoolVolatileState {
 
         // Only allow connected pools
         if !SwapPoolVolatileState::is_connected(&deps.as_ref(), &channel_id, &to_pool) {
-            return Err(ContractError::PoolNotConnected { channel_id, to_pool })
+            return Err(ContractError::PoolNotConnected { channel_id, pool: to_pool })
         }
 
         state.update_weights()?;
@@ -494,6 +494,71 @@ impl CatalystV1PoolPermissionless for SwapPoolVolatileState {
             .add_attribute("units", u.to_string())
             .add_attribute("min_out", min_out)
             .add_attribute("swap_hash", send_asset_hash)
+        )
+    }
+
+    fn receive_asset(
+        deps: &mut DepsMut,
+        env: Env,
+        info: MessageInfo,
+        channel_id: String,
+        from_pool: String,
+        to_asset_index: u8,
+        to_account: String,
+        u: U256,
+        min_out: Uint128,
+        swap_hash: String,
+        calldata: Vec<u8>   //TODO calldata
+    ) -> Result<Response, ContractError> {
+
+        let mut state = Self::load_state(deps.storage)?;
+
+        // Only allow connected pools
+        if !SwapPoolVolatileState::is_connected(&deps.as_ref(), &channel_id, &from_pool) {
+            return Err(ContractError::PoolNotConnected { channel_id, pool: from_pool })
+        }
+
+        if Some(info.sender) != *state.chain_interface() {
+            return Err(ContractError::Unauthorized {});
+        }
+
+        state.update_weights()?;
+
+        let to_asset = state.assets
+            .get(to_asset_index as usize)
+            .ok_or(ContractError::GenericError {})?
+            .clone(); //TODO error
+
+        state.update_unit_capacity(env.block.time, u)?;
+
+        let out = state.calc_receive_asset(deps.as_ref(), env.clone(), to_asset.as_str(), u)?;
+        
+
+        if min_out > out {
+            return Err(ContractError::ReturnInsufficient { out, min_out });
+        }
+
+        // Build message to transfer output assets to to_account
+        let transfer_to_asset_msg = CosmosMsg::Wasm(
+            cosmwasm_std::WasmMsg::Execute {
+                contract_addr: to_asset.to_string(),
+                msg: to_binary(&Cw20ExecuteMsg::TransferFrom {
+                    owner: env.contract.address.to_string(),
+                    recipient: to_account.to_string(),
+                    amount: out
+                })?,
+                funds: vec![]
+            }
+        );
+
+        Ok(Response::new()
+            .add_message(transfer_to_asset_msg)
+            .add_attribute("from_pool", from_pool)
+            .add_attribute("to_account", to_account)
+            .add_attribute("to_asset", to_asset)
+            .add_attribute("units", u.to_string())  //TODO format of .to_string()?
+            .add_attribute("to_amount", out)
+            .add_attribute("swap_hash", swap_hash)
         )
     }
 

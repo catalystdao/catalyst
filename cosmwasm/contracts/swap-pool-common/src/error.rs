@@ -36,7 +36,7 @@ pub enum ContractError {
     ReturnInsufficient { out: Uint128, min_out: Uint128 },
 
     #[error("Pool not connected")]
-    PoolNotConnected { channel_id: String, to_pool: String },
+    PoolNotConnected { channel_id: String, pool: String },
 
 
     // CW20 Errors

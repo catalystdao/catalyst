@@ -120,16 +120,17 @@ pub enum ExecuteMsg {
         calldata: Vec<u8>
     },
 
-    // SwapFromUnits {
-    //     to_asset_index: u8,
-    //     who: String,
-    //     units: [u64; 4],
-    //     min_out: [u64; 4],
-    //     approx: bool,
-    //     message_hash: String,
-    //     data_target: String,
-    //     // bytes calldata data // TODO vec<>?
-    // },
+    ReceiveAsset {
+        channel_id: String,
+        from_pool: String,
+        to_asset_index: u8,
+        to_account: String,
+        #[serde(with = "U256Def")]
+        u: U256,
+        min_out: Uint128,
+        swap_hash: String,
+        calldata: Vec<u8>
+    },
 
     // OutLiquidity {
     //     chain: [u64; 4],

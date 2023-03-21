@@ -217,6 +217,29 @@ pub fn execute(
             calldata
         ),
 
+        ExecuteMsg::ReceiveAsset {
+            channel_id,
+            from_pool,
+            to_asset_index,
+            to_account,
+            u,
+            min_out,
+            swap_hash,
+            calldata
+        } => SwapPoolVolatileState::receive_asset(
+            &mut deps,
+            env,
+            info,
+            channel_id,
+            from_pool,
+            to_asset_index,
+            to_account,
+            u,
+            min_out,
+            swap_hash,
+            calldata
+        ),
+
 
         // CW20 execute msgs - Use cw20-base for the implementation
         ExecuteMsg::Transfer {

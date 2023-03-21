@@ -147,27 +147,23 @@ pub trait CatalystV1PoolState: Sized {
     }
 
     fn update_unit_capacity(
-        deps: &mut DepsMut,
-        env: Env,
+        &mut self,
+        current_time: Timestamp,
         units: U256
     ) -> Result<(), ContractError> {
 
-        let mut state = Self::load_state(deps.storage)?;
-
         //TODO EVM mismatch
-        let capacity = state.calc_unit_capacity(env.block.time)?;
+        let capacity = self.calc_unit_capacity(current_time)?;
 
         if units > capacity {
             return Err(ContractError::SecurityLimitExceeded { units, capacity });
         }
 
-        let used_limit_capacity_timestamp = state.used_limit_capacity_timestamp_mut();
-        *used_limit_capacity_timestamp = env.block.time.nanos();
+        let used_limit_capacity_timestamp = self.used_limit_capacity_timestamp_mut();
+        *used_limit_capacity_timestamp = current_time.nanos();
 
-        let used_limit_capacity = state.used_limit_capacity_mut();
+        let used_limit_capacity = self.used_limit_capacity_mut();
         *used_limit_capacity = capacity - units;
-
-        state.save_state(deps.storage)?;
 
         Ok(())
     }
@@ -476,7 +472,19 @@ pub trait CatalystV1PoolPermissionless: CatalystV1PoolState + CatalystV1PoolAdmi
         calldata: Vec<u8>
     ) -> Result<Response, ContractError>;
 
-    //TODO receiveAsset
+    fn receive_asset(
+        deps: &mut DepsMut,
+        env: Env,
+        info: MessageInfo,
+        channel_id: String,
+        from_pool: String,
+        to_asset_index: u8,
+        to_account: String,
+        u: U256,
+        min_out: Uint128,
+        swap_hash: String,
+        calldata: Vec<u8>
+    ) -> Result<Response, ContractError>;
 
     //TODO sendLiquidity
 
