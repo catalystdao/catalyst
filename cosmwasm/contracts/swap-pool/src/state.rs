@@ -491,6 +491,7 @@ impl CatalystV1PoolPermissionless for SwapPoolVolatileState {
             .add_attribute("to_account", info.sender.to_string())
             .add_attribute("from_asset", from_asset)
             .add_attribute("to_asset_index", to_asset_index.to_string())
+            .add_attribute("from_amount", amount)
             .add_attribute("units", u.to_string())
             .add_attribute("min_out", min_out)
             .add_attribute("swap_hash", send_asset_hash)
