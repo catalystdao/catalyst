@@ -523,8 +523,8 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         // Since the implementation is very similar, it could be computed seperatly.
         // However, some of the implementations differ notably:
         // - DepositMixed: The for loop is reused for computing the value of incoming assets.
-        // - WithdrawMixed: The for loop is used to cache tokenIndexed, assetBalances, and ampWeightAssetBalances.
-        // - WithdrawAll: The for loop is used to cache tokenIndexed, weightAssetBalances, and ampWeightAssetBalances.
+        // - WithdrawMixed: The for loop is used to cache tokenIndexed, effAssetBalances, and assetWeight.
+        // - WithdrawAll: The for loop is used to cache tokenIndexed, effWeightAssetBalances.
         // - Both sendLiquidity and receiveLiquidity implements the reference computation: computeBalance0().
         // Before each implementation, there will be a short comment to describe how the implementation is different.
         {
@@ -668,13 +668,13 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
 
         // Cache weights and balances.
         address[MAX_ASSETS] memory tokenIndexed;
-        uint256[MAX_ASSETS] memory weightAssetBalances;
+        uint256[MAX_ASSETS] memory effWeightAssetBalances;  // The 'effective' balances (compensated with the escrowed balances)
 
         uint256 walpha_0_ampped;
         // Compute walpha_0 to find the reference balances. This lets us evaluate the
         // number of tokens the pool should have If the price in the group is 1:1.
 
-        // This is a balance0 implementation. The for loop is used to cache tokenIndexed, assetBalances, and ampWeightAssetBalances.
+        // This is a balance0 implementation. The for loop is used to cache tokenIndexed and effWeightAssetBalances.
         {
             int256 weightedAssetBalanceSum = 0;
             // "it" is needed briefly outside the loop.
@@ -689,7 +689,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                 uint256 weightAssetBalance = weight * ERC20(token).balanceOf(address(this));
 
                 // Since this is used for a withdrawal, the escrow amount needs to be subtracted to return less.
-                weightAssetBalances[it] = weightAssetBalance - _escrowedTokens[token] * weight; // Store 
+                effWeightAssetBalances[it] = weightAssetBalance - _escrowedTokens[token] * weight; // Store 
 
                 int256 wab = FixedPointMathLib.powWad(
                     int256(weightAssetBalance * FixedPointMathLib.WAD),     // If casting overflows to a negative number, powWad fails
@@ -748,32 +748,32 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                 // ampWeightAssetBalance cannot be cached because the balance0 computation does it without the escrow.
                 // This computation needs to do it with the escrow.
                 uint256 ampWeightAssetBalance = uint256(FixedPointMathLib.powWad( // Powwad is always positive.
-                    int256(weightAssetBalances[it] * FixedPointMathLib.WAD),     // If casting overflows to a negative number, powWad fails
+                    int256(effWeightAssetBalances[it] * FixedPointMathLib.WAD),     // If casting overflows to a negative number, powWad fails
                     oneMinusAmp
                 ));
 
                 // wtk = (wa^(1-k) + (wa_0 + wpt)^(1-k) - wa_0^(1-k)))^(1/(1-k)) - wa
                 // wtk = (wa^(1-k) + innerDiff)^(1/(1-k)) - wa
                 // note: This underflows if innerdiff is very small / 0.
-                // Since ampWeightAssetBalances ** (1/(1-amp)) == weightAssetBalances but the
-                // mathematical lib returns ampWeightAssetBalances ** (1/(1-amp)) < weightAssetBalances.
+                // Since ampWeightAssetBalances ** (1/(1-amp)) == effWeightAssetBalances but the
+                // mathematical lib returns ampWeightAssetBalances ** (1/(1-amp)) < effWeightAssetBalances.
                 // the result is that if innerdiff isn't big enough to make up for the difference
                 // the transaction reverts. This is "okay", since it means fewer tokens are returned.
                 uint256 weightedTokenAmount = (uint256(FixedPointMathLib.powWad(        // Always casts a positive value
                     int256(ampWeightAssetBalance + innerdiff),             // If casting overflows, either less is returned (if addition is positive) or powWad fails (if addition is negative)
                     oneMinusAmpInverse // 1/(1-amp)
-                )) - (weightAssetBalances[it] * FixedPointMathLib.WAD)) / FixedPointMathLib.WAD;
+                )) - (effWeightAssetBalances[it] * FixedPointMathLib.WAD)) / FixedPointMathLib.WAD;
 
                 //! If the pool doesn't have enough assets for a withdrawal, then
                 //! withdraw all of the pools assets. This should be protected against by setting minOut != 0.
                 //! This happens because the pool expects assets to come back. (it is owed assets)
                 //! We don't want to keep track of debt so we simply return less.
                 unchecked {
-                    // since _escrowedTokens * weight \subseq weightAssetBalances, it is bound by weightAssetBalances.
+                    // since _escrowedTokens * weight \subseq effWeightAssetBalances, it is bound by effWeightAssetBalances.
                     // This applies to all of the below calculations.
-                    if (weightedTokenAmount > weightAssetBalances[it]) {
+                    if (weightedTokenAmount > effWeightAssetBalances[it]) {
                         // Set the token amount to the pool balance.
-                        weightedTokenAmount = weightAssetBalances[it];
+                        weightedTokenAmount = effWeightAssetBalances[it];
                     }
                 }
 
@@ -844,7 +844,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
 
         // Cache weights and balances.
         address[MAX_ASSETS] memory tokenIndexed;
-        uint256[MAX_ASSETS] memory assetBalances;
+        uint256[MAX_ASSETS] memory effAssetBalances;  // The 'effective' balances (compensated with the escrowed balances)
         uint256[MAX_ASSETS] memory assetWeight;
 
         uint256 U = 0;
@@ -873,7 +873,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
 
                     // Later we need to use the asset balances. Since it is for a withdrawal, we should subtract the escrowed tokens
                     // suh that less is returned.
-                    assetBalances[U] = ab - _escrowedTokens[token];
+                    effAssetBalances[U] = ab - _escrowedTokens[token];
                     
                     uint256 weightAssetBalance = weight * ab;
                     
@@ -939,7 +939,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
 
             // uint256 tokenAmount = calcReceiveAsset(_tokenIndexing[it], U_i);
             
-            uint256 tokenAmount = _calcPriceCurveLimit(U_i, assetBalances[it], assetWeight[it], oneMinusAmp);
+            uint256 tokenAmount = _calcPriceCurveLimit(U_i, effAssetBalances[it], assetWeight[it], oneMinusAmp);
 
             // Ensure the output satisfies the user.
             if (minOut[it] > tokenAmount)
