@@ -4,6 +4,7 @@ pragma solidity ^0.8.16;
 
 import {ERC20} from 'solmate/src/tokens/ERC20.sol';
 import {SafeTransferLib} from 'solmate/src/utils/SafeTransferLib.sol';
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/utils/Multicall.sol";
 import "./SwapPoolFactory.sol";
@@ -27,6 +28,7 @@ import "./interfaces/ICatalystV1PoolErrors.sol";
 abstract contract CatalystSwapPoolCommon is
     Initializable,
     Multicall,
+    ReentrancyGuard,
     ERC20,
     ICatalystV1Pool
 {
@@ -392,7 +394,7 @@ abstract contract CatalystSwapPoolCommon is
         uint256 escrowAmount,
         address escrowToken,
         uint32 blockNumberMod
-    ) public override virtual {
+    ) nonReentrant public override virtual {
         require(msg.sender == _chainInterface);  // dev: Only _chainInterface
 
         bytes32 sendAssetHash = _computeSendAssetHash(
@@ -423,7 +425,7 @@ abstract contract CatalystSwapPoolCommon is
         uint256 escrowAmount,
         address escrowToken,
         uint32 blockNumberMod
-    ) public override virtual {
+    ) nonReentrant public override virtual {
         require(msg.sender == _chainInterface);  // dev: Only _chainInterface
 
         bytes32 sendAssetHash = _computeSendAssetHash(
@@ -454,7 +456,7 @@ abstract contract CatalystSwapPoolCommon is
         uint256 U,
         uint256 escrowAmount,
         uint32 blockNumberMod
-    ) public override virtual {
+    ) nonReentrant public override virtual {
         require(msg.sender == _chainInterface);  // dev: Only _chainInterface
 
         bytes32 sendLiquidityHash = _computeSendLiquidityHash(
@@ -482,7 +484,7 @@ abstract contract CatalystSwapPoolCommon is
         uint256 U,
         uint256 escrowAmount,
         uint32 blockNumberMod
-    ) public override virtual {
+    ) nonReentrant public override virtual {
         require(msg.sender == _chainInterface);  // dev: Only _chainInterface
 
         bytes32 sendLiquidityHash = _computeSendLiquidityHash(
