@@ -419,6 +419,73 @@ impl CatalystV1PoolPermissionless for SwapPoolVolatileState {
         )
     }
 
+    fn withdraw_all(
+        deps: &mut DepsMut,
+        env: Env,
+        info: MessageInfo,
+        pool_tokens: Uint128,
+        min_out: Vec<Uint128>,
+    ) -> Result<Response, ContractError> {
+        
+        // Load as not mutable, as no state variable gets modified
+        let state = Self::load_state(deps.storage)?;
+
+        // Include the 'escrowed' pool tokens in the total supply of pool tokens of the pool
+        let effective_supply = Self::total_supply(deps.as_ref())?.checked_add(state.escrowed_pool_tokens)?;
+
+        // Burn the pool tokens of the withdrawer
+        let sender = info.sender.to_string();
+        let burn_response = execute_burn_from(deps.branch(), env.clone(), info.clone(), sender.clone(), pool_tokens)?;
+
+        // Compute the withdraw amounts
+        let withdraw_amounts: Vec<Uint128> = state.assets()
+            .iter()
+            .zip(state.escrowed_assets())
+            .zip(&min_out)
+            .map(|((asset, escrowed_balance), asset_min_out)| {
+            
+            let pool_asset_balance = deps.querier.query_wasm_smart::<Uint128>(
+                asset,
+                &Cw20QueryMsg::Balance { address: env.contract.address.to_string() }
+            )? - escrowed_balance;
+
+            //TODO use U256 for the calculation?
+            let withdraw_amount = (pool_asset_balance * pool_tokens) / effective_supply;
+
+            // Check that the minimum output is honoured.
+            if *asset_min_out > withdraw_amount {
+                return Err(ContractError::ReturnInsufficient { out: withdraw_amount.clone(), min_out: *asset_min_out });
+            };
+
+            Ok(withdraw_amount)
+        }).collect::<Result<Vec<Uint128>, ContractError>>()?;
+
+        // Build messages to order the transfer of tokens from the swap pool to the depositor
+        let transfer_msgs: Vec<CosmosMsg> = state.assets.iter().zip(&withdraw_amounts).map(|(asset, amount)| {
+            Ok(CosmosMsg::Wasm(
+                cosmwasm_std::WasmMsg::Execute {
+                    contract_addr: asset.to_string(),
+                    msg: to_binary(&Cw20ExecuteMsg::TransferFrom {
+                        owner: env.contract.address.to_string(),
+                        recipient: sender.clone(),
+                        amount: *amount
+                    })?,
+                    funds: vec![]
+                }
+            ))
+        }).collect::<StdResult<Vec<CosmosMsg>>>()?;
+
+
+        Ok(Response::new()
+            .add_messages(transfer_msgs)
+            .add_events(burn_response.events)                           // Add burn events //TODO overhaul
+            .add_attribute("to_account", info.sender.to_string())
+            .add_attribute("burn", pool_tokens)
+            .add_attribute("assets", format!("{:?}", withdraw_amounts))  //TODO withdraw_amounts format
+        )
+        
+    }
+
     fn local_swap(
         deps: &Deps,
         env: Env,

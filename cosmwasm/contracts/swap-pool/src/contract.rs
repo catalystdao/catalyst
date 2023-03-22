@@ -185,6 +185,17 @@ pub fn execute(
             min_out
         ),
 
+        ExecuteMsg::WithdrawAll {
+            pool_tokens,
+            min_out
+        } => SwapPoolVolatileState::withdraw_all(
+            &mut deps,
+            env,
+            info,
+            pool_tokens,
+            min_out
+        ),
+
         // ExecuteMsg::Withdraw { pool_tokens_amount } => execute_withdraw(deps, env, info, pool_tokens_amount),
 
         ExecuteMsg::LocalSwap {

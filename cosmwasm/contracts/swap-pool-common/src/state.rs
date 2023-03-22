@@ -455,7 +455,13 @@ pub trait CatalystV1PoolPermissionless: CatalystV1PoolState + CatalystV1PoolAdmi
         min_out: Uint128
     ) -> Result<Response, ContractError>;
 
-    //TODO withdrawAll
+    fn withdraw_all(        //TODO withdraw_mixed?
+        deps: &mut DepsMut,
+        env: Env,
+        info: MessageInfo,
+        pool_tokens: Uint128,
+        min_out: Vec<Uint128>,
+    ) -> Result<Response, ContractError>;
 
     //TODO withdrawMixed
 

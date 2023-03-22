@@ -102,6 +102,11 @@ pub enum ExecuteMsg {
         min_out: Uint128
     },
 
+    WithdrawAll {
+        pool_tokens: Uint128,
+        min_out: Vec<Uint128>
+    },
+
     // Withdraw { pool_tokens_amount: Uint128 },
 
     LocalSwap {
