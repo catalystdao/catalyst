@@ -5,7 +5,7 @@ use ethnum::U256;
 use fixed_point_math_lib::fixed_point_math::{ln_wad, div_wad_down, mul_wad_down, WAD, exp_wad};
 
 
-
+// TODO use Uint128 where suitable instead of U256?
 // Integral Helpers *************************************************************************************************************
 
 pub fn calc_price_curve_area(
