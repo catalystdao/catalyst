@@ -35,11 +35,11 @@ pub fn pow_wad(x: I256, y: I256) -> Result<I256, ()> {
     )
 }
 
-pub fn exp_wad(x: I256) -> Result<I256, ()> {   //TODO make input U256?   //TODO make output be U256? (result will always be positive)
+pub fn exp_wad(x: I256) -> Result<I256, ()> {   //TODO make output be U256? (result will always be positive)
 
     // When the result is < 0.5 we return zero. This happens when
     // x <= floor(log(0.5e18) * 1e18) ~ -42e18
-    if x <= int!("-42139678854452767551") { return Ok(I256::ZERO) }     //TODO assume x is positive and skip this?
+    if x <= int!("-42139678854452767551") { return Ok(I256::ZERO) }
 
     // When the result is > (2**255 - 1) / 1e18 we can not represent it as an
     // int. This happens when x >= floor(log((2**255 - 1) / 1e18) * 1e18) ~ 135.
