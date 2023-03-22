@@ -39,7 +39,7 @@ import "./ICatalystV1Pool.sol";
  * over the pool. 
  * !If finishSetup is not called, the pool can be drained!
  */
-contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
+contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
     using SafeTransferLib for ERC20;
 
     //--- ERRORS ---//
@@ -1184,7 +1184,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 U,
         uint256 minOut,
         bytes32 swapHash
-    ) public override returns (uint256) {
+    ) nonReentrant public override returns (uint256) {
         // Only allow connected pools
         if (!_poolConnection[channelId][fromPool]) revert PoolNotConnected(channelId, fromPool);
         // The chainInterface is the only valid caller of this function.
@@ -1342,7 +1342,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 minOut,
         address fallbackUser,
         bytes memory calldata_
-    ) public override returns (uint256) {
+    ) nonReentrant public override returns (uint256) {
 
         // Only allow connected pools
         if (!_poolConnection[channelId][toPool]) revert PoolNotConnected(channelId, toPool);
@@ -1469,7 +1469,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 U,
         uint256 minOut,
         bytes32 swapHash
-    ) public override returns (uint256) {
+    ) nonReentrant public override returns (uint256) {
         // The chainInterface is the only valid caller of this function.
         require(msg.sender == _chainInterface);
         // Only allow connected pools
