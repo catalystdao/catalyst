@@ -509,7 +509,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         // There is a Stack too deep issue in a later branch. To counteract this,
         // wab is stored short-lived. This requires letting U get negative.
         // As such, we define an additional variable called intU which is signed
-        int256 U;
+        int256 intU;
         uint256 it;
         
         // Compute walpha_0 to find the reference balances. This lets us evaluate the
@@ -564,15 +564,15 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                     
                     // int_A^{A+x} f(w) dw = F(A+x) - F(A).
                     // This is -F(A). Since we are subtracting first,
-                    // U must be able to go negative.
+                    // U (i.e. intU) must be able to go negative.
                     unchecked {
-                        // |U| < weightedAssetBalanceSum since U F(A+x) is added to U in the lines after this.
-                        U -= wab;
+                        // |intU| < weightedAssetBalanceSum since U F(A+x) is added to intU in the lines after this.
+                        intU -= wab;
                     }
                 }
                 
                 // Add F(A+x)
-                U += FixedPointMathLib.powWad(
+                intU += FixedPointMathLib.powWad(
                     int256((weightAssetBalance + weight * tokenAmounts[it]) * FixedPointMathLib.WAD),   // If casting overflows to a negative number, powWad fails
                     oneMinusAmp
                 );
@@ -610,22 +610,22 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         
         }
 
-        // Subtract fee from U. This stops people from using deposit and withdrawal as a method of swapping.
+        // Subtract fee from U (i.e. intU). This stops people from using deposit and withdrawal as a method of swapping.
         // To reduce costs, there the governance fee is not included. This does result in deposit+withdrawal
         // working as a way to circumvent the governance fee.
-        // U shouldn't ever be negative. But in the case it is, the result is very bad. For safety, check it is above 0.
-        require(U >= 0); // dev: U needs to be positive, otherwise, the uint256 casting becomes too larger.
+        // intU shouldn't ever be negative. But in the case it is, the result is very bad. For safety, check it is above 0.
+        require(intU >= 0); // dev: U needs to be positive, otherwise, the uint256 casting becomes too larger.
         unchecked {
-            // U is generally small, so the below equation should not overflow.
-            // If it does, it has to be (uint256(U) * (FixedPointMathLib.WAD - _poolFee)) that overflows.
+            // U (i.e. intU) is generally small, so the below equation should not overflow.
+            // If it does, it has to be (uint256(intU) * (FixedPointMathLib.WAD - _poolFee)) that overflows.
             // In which case, something close to 0 will be returned. When divided by FixedPointMathLib.WAD
             // it will return 0.
             // The casting to int256 is then 0.
 
-            // If the overflow doesn't happen inside uint256(...), 'U' will be smaller because of the division by FixedPointMathLib.WAD. Thus the int256 casting will now overflow.
-            U = int256(
-                // U shouldn't be negative but the above check ensures it is ALWAYS positive.
-                (uint256(U) * (FixedPointMathLib.WAD - _poolFee))/FixedPointMathLib.WAD
+            // If the overflow doesn't happen inside uint256(...), 'intU' will be smaller because of the division by FixedPointMathLib.WAD. Thus the int256 casting will now overflow.
+            intU = int256(
+                // intU shouldn't be negative but the above check ensures it is ALWAYS positive.
+                (uint256(intU) * (FixedPointMathLib.WAD - _poolFee))/FixedPointMathLib.WAD
             );
         }
 
@@ -635,7 +635,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
 
         // On totalSupply. Do not add escrow amount, as higher amount
         // results in a larger return.
-        uint256 poolTokens = _calcPriceCurveLimitShare(uint256(U), totalSupply, it_times_walpha_amped, oneMinusAmpInverse);  // uint256: U is positive by design.
+        uint256 poolTokens = _calcPriceCurveLimitShare(uint256(intU), totalSupply, it_times_walpha_amped, oneMinusAmpInverse);  // uint256: intU is positive by design.
 
         // Check if the return satisfies the user.
         if (minOut > poolTokens)
