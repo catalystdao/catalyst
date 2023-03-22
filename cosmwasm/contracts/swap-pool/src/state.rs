@@ -15,7 +15,7 @@ use swap_pool_common::{
     ContractError
 };
 
-use crate::calculation_helpers::{calc_price_curve_area, calc_price_curve_limit, calc_combined_price_curves};
+use crate::calculation_helpers::{calc_price_curve_area, calc_price_curve_limit, calc_combined_price_curves, calc_price_curve_limit_share};
 
 pub const STATE: Item<SwapPoolVolatileState> = Item::new("catalyst-pool-state");
 
@@ -636,6 +636,77 @@ impl CatalystV1PoolPermissionless for SwapPoolVolatileState {
             .add_attribute("from_amount", amount)
             .add_attribute("units", u.to_string())
             .add_attribute("swap_hash", send_liquidity_hash)
+        )
+    }
+
+    fn receive_liquidity(
+        deps: &mut DepsMut,
+        env: Env,
+        info: MessageInfo,
+        channel_id: String,
+        from_pool: String,
+        to_account: String,
+        u: U256,
+        min_out: Uint128,
+        swap_hash: String,
+        calldata: Vec<u8>   //TODO calldata
+    ) -> Result<Response, ContractError> {
+
+        let mut state = Self::load_state(deps.storage)?;
+
+        // Only allow connected pools
+        if !SwapPoolVolatileState::is_connected(&deps.as_ref(), &channel_id, &from_pool) {
+            return Err(ContractError::PoolNotConnected { channel_id, pool: from_pool })
+        }
+
+        if Some(info.sender) != *state.chain_interface() {
+            return Err(ContractError::Unauthorized {});
+        }
+
+        state.update_weights()?;
+
+        state.update_unit_capacity(env.block.time, u)?;
+
+        // Derive the weight sum (w_sum) from the security limit capacity       //TODO do we want this in this implementation?
+        let w_sum = state.max_limit_capacity() / fixed_point_math::LN2;
+
+        // Do not include the 'escrowed' pool tokens in the total supply of pool tokens of the pool (return less)
+        let effective_supply = U256::from(Self::total_supply(deps.as_ref())?.u128());
+    
+        // Use 'calc_price_curve_limit_share' to get the % of pool tokens that should be minted (in WAD terms)
+        // Multiply by 'effective_supply' to get the absolute amount (not in WAD terms) using 'mul_wad_down' so
+        // that the result is also NOT in WAD terms.
+        let out = fixed_point_math::mul_wad_down(
+            calc_price_curve_limit_share(u, w_sum)?,
+            effective_supply
+        ).map(|val| Uint128::from(val.as_u128()))?;     //TODO OVERFLOW when casting U256 to Uint128. Theoretically calc_price_curve_limit_share < 1, hence casting is safe
+    
+        if min_out > out {
+            return Err(ContractError::ReturnInsufficient { out, min_out });
+        }
+
+        // Validate the to_account
+        deps.api.addr_validate(&to_account)?;
+
+        // Mint the pool tokens
+        let mint_response = execute_mint(
+            deps.branch(),
+            env.clone(),
+            MessageInfo {
+                sender: env.contract.address.clone(),   // This contract itself is the one 'sending' the mint operation
+                funds: vec![],
+            },
+            to_account.clone(),
+            out
+        )?;
+
+        Ok(Response::new()
+            .add_attribute("from_pool", from_pool)
+            .add_attribute("to_account", to_account)
+            .add_attribute("units", u.to_string())  //TODO format of .to_string()?
+            .add_attribute("to_amount", out)
+            .add_attribute("swap_hash", swap_hash)
+            .add_events(mint_response.events)       //TODO overhaul
         )
     }
 

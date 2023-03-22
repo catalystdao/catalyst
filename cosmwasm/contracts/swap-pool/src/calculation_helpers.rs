@@ -58,9 +58,18 @@ pub fn calc_combined_price_curves(
 
 pub fn calc_price_curve_limit_share(
     u: U256,
-    w: U256
+    w_sum: U256
 ) -> Result<U256, ()> {
-    let npos: U256 = exp_wad(-(u / w).as_i256())?.as_u256();
+    let npos = (
+        // If the casting to i256 overflows to a negative value:
+        //   - If the result is exactly i256::MIN (i.e. overflows exactly by 1), when the value is
+        //     negated it again overflows and remains unchanged (as the operation is unchecked),
+        //     i.e. -i256::MIN = i256::MIN. This is not a problem, as it is exactly what it is desired.
+        //   - Otherwise, the value becomes positive when it gets negated. This will cause the result 
+        //     of the exponent (i.e. npos) to be greater than one, which will cause the 'checked_sub' 
+        //     operation inside the following 'div_wad_down' to fail.
+        exp_wad(-(u / w_sum).as_i256())?
+    ).as_u256();
 
     div_wad_down(
         WAD.checked_sub(npos).ok_or(())?,

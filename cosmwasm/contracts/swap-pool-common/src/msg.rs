@@ -142,13 +142,16 @@ pub enum ExecuteMsg {
         calldata: Vec<u8>
     },
 
-    // InLiquidity {
-    //     who: String,
-    //     units: [u64; 4],
-    //     min_out: [u64; 4],
-    //     approx: bool,
-    //     message_hash: String
-    // }
+    ReceiveLiquidity {
+        channel_id: String,
+        from_pool: String,
+        to_account: String,
+        #[serde(with = "U256Def")]
+        u: U256,
+        min_out: Uint128,
+        swap_hash: String,
+        calldata: Vec<u8>
+    },
 
 
     // CW20 Implementation

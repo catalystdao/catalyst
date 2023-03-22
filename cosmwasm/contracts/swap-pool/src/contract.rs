@@ -261,6 +261,27 @@ pub fn execute(
             calldata
         ),
 
+        ExecuteMsg::ReceiveLiquidity {
+            channel_id,
+            from_pool,
+            to_account,
+            u,
+            min_out,
+            swap_hash,
+            calldata
+        } => SwapPoolVolatileState::receive_liquidity(
+            &mut deps,
+            env,
+            info,
+            channel_id,
+            from_pool,
+            to_account,
+            u,
+            min_out,
+            swap_hash,
+            calldata
+        ),
+
 
         // CW20 execute msgs - Use cw20-base for the implementation
         ExecuteMsg::Transfer {

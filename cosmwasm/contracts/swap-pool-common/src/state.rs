@@ -505,7 +505,18 @@ pub trait CatalystV1PoolPermissionless: CatalystV1PoolState + CatalystV1PoolAdmi
         calldata: Vec<u8>
     ) -> Result<Response, ContractError>;
 
-    //TODO receiveLiquidity
+    fn receive_liquidity(
+        deps: &mut DepsMut,
+        env: Env,
+        info: MessageInfo,
+        channel_id: String,
+        from_pool: String,
+        to_account: String,
+        u: U256,
+        min_out: Uint128,
+        swap_hash: String,
+        calldata: Vec<u8>   //TODO calldata
+    ) -> Result<Response, ContractError>;
 
 }
 
