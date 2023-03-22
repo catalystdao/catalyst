@@ -38,6 +38,14 @@ pub enum ContractError {
     #[error("Pool not connected")]
     PoolNotConnected { channel_id: String, pool: String },
 
+    #[error("A non zero withdraw ratio is specified after all units have been consumed.")]
+    WithdrawRatioNotZero { ratio: u64 },    //TODO EVM mismatch
+
+    #[error("Not all withdrawal units have been consumed after all assets have been processed.")]
+    UnusedUnitsAfterWithdrawal { units: U256 },
+
+
+
 
     // CW20 Errors
     #[error("Cannot set to own account")]

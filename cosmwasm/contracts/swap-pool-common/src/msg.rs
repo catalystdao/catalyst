@@ -107,7 +107,11 @@ pub enum ExecuteMsg {
         min_out: Vec<Uint128>
     },
 
-    // Withdraw { pool_tokens_amount: Uint128 },
+    WithdrawMixed {
+        pool_tokens: Uint128,
+        withdraw_ratio: Vec<u64>,   //TODO type
+        min_out: Vec<Uint128>,
+    },
 
     LocalSwap {
         from_asset: String,

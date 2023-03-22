@@ -463,7 +463,14 @@ pub trait CatalystV1PoolPermissionless: CatalystV1PoolState + CatalystV1PoolAdmi
         min_out: Vec<Uint128>,
     ) -> Result<Response, ContractError>;
 
-    //TODO withdrawMixed
+    fn withdraw_mixed(
+        deps: &mut DepsMut,
+        env: Env,
+        info: MessageInfo,
+        pool_tokens: Uint128,
+        withdraw_ratio: Vec<u64>,   //TODO type
+        min_out: Vec<Uint128>,
+    ) -> Result<Response, ContractError>;
 
     fn local_swap(
         deps: &Deps,

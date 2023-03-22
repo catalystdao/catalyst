@@ -196,7 +196,18 @@ pub fn execute(
             min_out
         ),
 
-        // ExecuteMsg::Withdraw { pool_tokens_amount } => execute_withdraw(deps, env, info, pool_tokens_amount),
+        ExecuteMsg::WithdrawMixed {
+            pool_tokens,
+            withdraw_ratio,
+            min_out
+        } => SwapPoolVolatileState::withdraw_mixed(
+            &mut deps,
+            env,
+            info,
+            pool_tokens,
+            withdraw_ratio,
+            min_out
+        ),
 
         ExecuteMsg::LocalSwap {
             from_asset,

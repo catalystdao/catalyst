@@ -486,6 +486,121 @@ impl CatalystV1PoolPermissionless for SwapPoolVolatileState {
         
     }
 
+
+    fn withdraw_mixed(
+        deps: &mut DepsMut,
+        env: Env,
+        info: MessageInfo,
+        pool_tokens: Uint128,
+        withdraw_ratio: Vec<u64>,
+        min_out: Vec<Uint128>,
+    ) -> Result<Response, ContractError> {
+        
+        // Load as not mutable, as no state variable gets modified
+        let state = Self::load_state(deps.storage)?;
+
+        // Include the 'escrowed' pool tokens in the total supply of pool tokens of the pool
+        let effective_supply = U256::from(
+            Self::total_supply(deps.as_ref())?.checked_add(state.escrowed_pool_tokens)?.u128()
+        );
+
+        // Burn the pool tokens of the withdrawer
+        let sender = info.sender.to_string();
+        let burn_response = execute_burn_from(deps.branch(), env.clone(), info.clone(), sender.clone(), pool_tokens)?;
+
+        // Derive the weight sum (w_sum) from the security limit capacity       //TODO do we want this in this implementation?
+        let w_sum = state.max_limit_capacity() / fixed_point_math::LN2;
+
+        // Compute the unit worth of the pool tokens.
+        let mut u: U256 = fixed_point_math::ln_wad(
+            fixed_point_math::div_wad_down(
+                effective_supply,
+                effective_supply - U256::from(pool_tokens.u128())  // Subtraction is underflow safe, as the above 'execute_burn_from' guarantees that 'pool_tokens' is contained in 'effective_supply'
+            )?.as_i256()                                           // Casting my overflow to a negative value. In that case, 'ln_wad' will fail.
+        )?.as_u256()                                               // Casting is safe, as ln is computed of values >= 1, hence output is always positive
+            .checked_mul(w_sum).ok_or(ContractError::ArithmeticError {})?;
+
+        // Compute the withdraw amounts
+        let withdraw_amounts: Vec<Uint128> = state.assets()
+            .iter()
+            .zip(state.weights())
+            .zip(state.escrowed_assets())
+            .zip(&withdraw_ratio)
+            .zip(&min_out)
+            .map(|((((asset, weight), escrowed_balance), asset_withdraw_ratio), asset_min_out)| {
+
+                // Calculate the units allocated for the specific asset
+                let units_for_asset = fixed_point_math::mul_wad_down(u, U256::from(*asset_withdraw_ratio))?;
+                if units_for_asset == U256::ZERO {
+
+                    // There should not be a non-zero withdraw ratio after a withdraw ratio of 1 (protect against user error)
+                    if *asset_withdraw_ratio != 0 {
+                        return Err(ContractError::WithdrawRatioNotZero { ratio: *asset_withdraw_ratio }) 
+                    };
+
+                    // Check that the minimum output is honoured.
+                    if asset_min_out != Uint128::zero() {
+                        return Err(ContractError::ReturnInsufficient { out: Uint128::zero(), min_out: *asset_min_out })
+                    };
+
+                    return Ok(Uint128::zero());
+                }
+
+                // Subtract the units used from the total units amount. This will underflow for malicious withdraw ratios (i.e. ratios > 1).
+                u = u.checked_sub(units_for_asset).ok_or(ContractError::ArithmeticError {})?;
+            
+                // Get the pool asset balance (subtract the escrowed assets to return less)
+                let pool_asset_balance = deps.querier.query_wasm_smart::<Uint128>(
+                    asset,
+                    &Cw20QueryMsg::Balance { address: env.contract.address.to_string() }
+                )? - escrowed_balance;
+
+                // Calculate the asset amount corresponding to the asset units
+                let withdraw_amount = Uint128::from(
+                    calc_price_curve_limit(
+                        units_for_asset,
+                        U256::from(pool_asset_balance.u128()),
+                        U256::from(*weight)
+                    )?.as_u128()        // TODO unsafe overflow
+                );
+
+                // Check that the minimum output is honoured.
+                if *asset_min_out > withdraw_amount {
+                    return Err(ContractError::ReturnInsufficient { out: withdraw_amount.clone(), min_out: *asset_min_out });
+                };
+
+                Ok(withdraw_amount)
+            }).collect::<Result<Vec<Uint128>, ContractError>>()?;
+
+        // Make sure all units have been consumed
+        if u != U256::ZERO { return Err(ContractError::UnusedUnitsAfterWithdrawal { units: u }) };       //TODO error
+
+        // Build messages to order the transfer of tokens from the swap pool to the depositor
+        let transfer_msgs: Vec<CosmosMsg> = state.assets.iter().zip(&withdraw_amounts).map(|(asset, amount)| {
+            Ok(CosmosMsg::Wasm(
+                cosmwasm_std::WasmMsg::Execute {
+                    contract_addr: asset.to_string(),
+                    msg: to_binary(&Cw20ExecuteMsg::TransferFrom {
+                        owner: env.contract.address.to_string(),
+                        recipient: sender.clone(),
+                        amount: *amount
+                    })?,
+                    funds: vec![]
+                }
+            ))
+        }).collect::<StdResult<Vec<CosmosMsg>>>()?;
+
+
+        Ok(Response::new()
+            .add_messages(transfer_msgs)
+            .add_events(burn_response.events)                           // Add burn events //TODO overhaul
+            .add_attribute("to_account", info.sender.to_string())
+            .add_attribute("burn", pool_tokens)
+            .add_attribute("assets", format!("{:?}", withdraw_amounts))  //TODO withdraw_amounts format
+        )
+        
+    }
+
     fn local_swap(
         deps: &Deps,
         env: Env,
