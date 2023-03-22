@@ -156,8 +156,12 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon {
         for (uint256 it; it < MAX_ASSETS;) {
             address token = _tokenIndexing[it];
             if (token == address(0)) break;
-            require(newWeights[it] != 0); // dev: newWeights must be greater than 0 to protect liquidity providers.
-            _targetWeight[token] = newWeights[it];
+
+            uint256 newWeight = newWeights[it];
+            uint256 currentWeight = _weight[token];
+            require(newWeight != 0); // dev: newWeights must be greater than 0 to protect liquidity providers.
+            require(newWeight <= currentWeight*10 && newWeight >= currentWeight/10); // dev: newWeights must be maximum a factor of 10 larger/smaller than the current weights to protect liquidity providers.
+            _targetWeight[token] = newWeight;
 
             unchecked {
                 it++;
