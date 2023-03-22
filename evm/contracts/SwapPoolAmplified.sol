@@ -740,7 +740,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                 innerdiff = FixedPointMathLib.mulWadDown(
                     walpha_0_ampped, 
                     FixedPointMathLib.WAD - uint256(FixedPointMathLib.powWad(       // Always casts a positive value
-                        int256(pt_fraction),                // If casting overflows to a negative number, powWad fails
+                        int256(pt_fraction),                // Casting always safe, as pt_fraction < 1
                         oneMinusAmp
                     )) 
                 );
