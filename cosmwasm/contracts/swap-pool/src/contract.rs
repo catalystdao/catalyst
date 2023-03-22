@@ -174,7 +174,17 @@ pub fn execute(
             block_number_mod
         ),
 
-        // ExecuteMsg::Deposit { pool_tokens_amount } => execute_deposit(deps, env, info, pool_tokens_amount),
+        ExecuteMsg::DepositMixed {
+            deposit_amounts,
+            min_out
+        } => SwapPoolVolatileState::deposit_mixed(
+            &mut deps,
+            env,
+            info,
+            deposit_amounts,
+            min_out
+        ),
+
         // ExecuteMsg::Withdraw { pool_tokens_amount } => execute_withdraw(deps, env, info, pool_tokens_amount),
 
         ExecuteMsg::LocalSwap {

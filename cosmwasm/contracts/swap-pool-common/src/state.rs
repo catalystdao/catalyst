@@ -447,7 +447,13 @@ pub trait CatalystV1PoolPermissionless: CatalystV1PoolState + CatalystV1PoolAdmi
         )
     }
 
-    //TODO depositMixed
+    fn deposit_mixed(
+        deps: &mut DepsMut,
+        env: Env,
+        info: MessageInfo,
+        deposit_amounts: Vec<Uint128>,  //TODO EVM MISMATCH
+        min_out: Uint128
+    ) -> Result<Response, ContractError>;
 
     //TODO withdrawAll
 

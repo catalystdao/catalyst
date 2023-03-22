@@ -97,7 +97,10 @@ pub enum ExecuteMsg {
     //     setup_master: String
     // },
 
-    // Deposit { pool_tokens_amount: Uint128 },
+    DepositMixed {
+        deposit_amounts: Vec<Uint128>,  //TODO EVM MISMATCH
+        min_out: Uint128
+    },
 
     // Withdraw { pool_tokens_amount: Uint128 },
 

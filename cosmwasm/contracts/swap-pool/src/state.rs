@@ -37,8 +37,8 @@ pub struct SwapPoolVolatileState {
     pub amplification: u64,
     
     pub fee_administrator: Addr,
-    pub pool_fee: u64,
-    pub governance_fee: u64,
+    pub pool_fee: u64,              // TODO store as U256?
+    pub governance_fee: u64,        // TODO store as U256?
 
     pub escrowed_assets: Vec<Uint128>,
     pub escrowed_pool_tokens: Uint128,
@@ -328,6 +328,96 @@ impl CatalystV1PoolAdministration for SwapPoolVolatileState {
 
 
 impl CatalystV1PoolPermissionless for SwapPoolVolatileState {
+
+    fn deposit_mixed(
+        deps: &mut DepsMut,
+        env: Env,
+        info: MessageInfo,
+        deposit_amounts: Vec<Uint128>,  //TODO EVM MISMATCH
+        min_out: Uint128
+    ) -> Result<Response, ContractError> {
+        
+        // Load as not mutable, as no state variable gets modified
+        let state = Self::load_state(deps.storage)?;
+
+        // Compute how much 'units' the assets are worth.
+        // Iterate over the assets, weights and deposit_amounts)
+        let u = state.assets().iter()
+            .zip(state.weights())
+            .zip(&deposit_amounts)
+            .try_fold(U256::ZERO, |acc, ((asset, weight), deposit_amount)| {
+
+                let pool_asset_balance = deps.querier.query_wasm_smart(
+                    asset,
+                    &Cw20QueryMsg::Balance { address: env.contract.address.to_string() }
+                )?;
+
+                acc.checked_add(
+                    calc_price_curve_area(
+                        U256::from(deposit_amount.u128()),
+                        pool_asset_balance,
+                        U256::from(weight.clone())
+                    )?
+                ).ok_or(ContractError::ArithmeticError {})
+            })?;
+
+        // Subtract the pool fee from U to prevent deposit and withdrawals being employed as a method of swapping.
+        // To recude costs, the governance fee is not taken. This is not an issue as swapping via this method is 
+        // disincentivized by its higher gas costs.
+        let u = fixed_point_math::mul_wad_down(u, fixed_point_math::WAD - U256::from(state.pool_fee))?;
+
+        // Do not include the 'escrowed' pool tokens in the total supply of pool tokens (return less)
+        let effective_supply = U256::from(Self::total_supply(deps.as_ref())?.u128());
+
+        // Derive the weight sum (w_sum) from the security limit capacity       //TODO do we want this in this implementation?
+        let w_sum = state.max_limit_capacity() / fixed_point_math::LN2;
+
+        // Compute the pool tokens to be minted.
+        let out = Uint128::from(fixed_point_math::mul_wad_down(
+            effective_supply,                                                       // Note 'effective_supply' is not WAD, hence result will not be either
+            calc_price_curve_limit_share(u, w_sum)?
+        )?.as_u128());      //TODO OVERFLOW
+
+        // Check that the minimum output is honoured.
+        if min_out > out {
+            return Err(ContractError::ReturnInsufficient { out, min_out });
+        }
+
+        // Mint the pool tokens
+        let mint_response = execute_mint(
+            deps.branch(),
+            env.clone(),
+            MessageInfo {
+                sender: env.contract.address.clone(),   // This contract itself is the one 'sending' the mint operation
+                funds: vec![],
+            },
+            info.sender.to_string(),
+            out
+        )?;
+
+        // Build messages to order the transfer of tokens from the depositor to the swap pool
+        let transfer_msgs: Vec<CosmosMsg> = state.assets.iter().zip(&deposit_amounts).map(|(asset, balance)| {
+            Ok(CosmosMsg::Wasm(
+                cosmwasm_std::WasmMsg::Execute {
+                    contract_addr: asset.to_string(),
+                    msg: to_binary(&Cw20ExecuteMsg::TransferFrom {
+                        owner: info.sender.to_string(),
+                        recipient: env.contract.address.to_string(),
+                        amount: *balance
+                    })?,
+                    funds: vec![]
+                }
+            ))
+        }).collect::<StdResult<Vec<CosmosMsg>>>()?;
+
+        Ok(Response::new()
+            .add_messages(transfer_msgs)
+            .add_events(mint_response.events)                           // Add mint events //TODO overhaul
+            .add_attribute("to_account", info.sender.to_string())
+            .add_attribute("mint", out)
+            .add_attribute("assets", format!("{:?}", deposit_amounts))  //TODO deposit_amounts event format
+        )
+    }
 
     fn local_swap(
         deps: &Deps,
