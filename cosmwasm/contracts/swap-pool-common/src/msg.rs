@@ -91,17 +91,6 @@ pub enum ExecuteMsg {
         target_timestamp: u64   //TODO EVM mismatch (targetTime)
     },
 
-    // Setup {
-    //     assets: Vec<String>,
-    //     weights: Vec<u64>,          // TODO type? (originally u256)
-    //     amp: [u64; 4],
-    //     governance_fee: [u64; 4],
-    //     name: String,
-    //     symbol: String,
-    //     chain_interface: String,
-    //     setup_master: String
-    // },
-
     DepositMixed {
         deposit_amounts: Vec<Uint128>,  //TODO EVM MISMATCH
         min_out: Uint128
