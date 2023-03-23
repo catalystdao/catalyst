@@ -34,7 +34,11 @@ pub struct SwapPoolVolatileState {
 
     pub assets: Vec<Addr>,
     pub weights: Vec<u64>,
+    pub target_weights: Vec<u64>,
     pub amplification: u64,
+
+    pub param_update_timestamp: u64,            // TODO EVM mismatch (name lastModificationTime)
+    pub param_update_finish_timestamp: u64,     // TODO EVM mismatch (name _adjustmentTarget)
     
     pub fee_administrator: Addr,
     pub pool_fee: u64,              // TODO store as U256?
@@ -59,7 +63,11 @@ impl CatalystV1PoolState for SwapPoolVolatileState {
     
             assets: vec![],
             weights: vec![],
+            target_weights: vec![],
             amplification: 0,
+
+            param_update_timestamp: 0,
+            param_update_finish_timestamp: 0,
     
             fee_administrator: Addr::unchecked(""),
             pool_fee: 0u64,
@@ -613,7 +621,7 @@ impl CatalystV1PoolPermissionless for SwapPoolVolatileState {
 
         let mut state = Self::load_state(deps.storage)?;
 
-        state.update_weights()?;
+        state.update_weights(env.block.time.nanos())?;
 
         let pool_fee: Uint128 = mul_wad_down(            //TODO alternative to not have to use U256 conversion? (or wrapper?)
             U256::from(amount.u128()),
@@ -701,7 +709,7 @@ impl CatalystV1PoolPermissionless for SwapPoolVolatileState {
             return Err(ContractError::PoolNotConnected { channel_id, pool: to_pool })
         }
 
-        state.update_weights()?;
+        state.update_weights(env.block.time.nanos())?;
 
         let pool_fee: Uint128 = mul_wad_down(            //TODO alternative to not have to use U256 conversion? (or wrapper?)
             U256::from(amount.u128()),
@@ -795,7 +803,7 @@ impl CatalystV1PoolPermissionless for SwapPoolVolatileState {
             return Err(ContractError::Unauthorized {});
         }
 
-        state.update_weights()?;
+        state.update_weights(env.block.time.nanos())?;
 
         let to_asset = state.assets
             .get(to_asset_index as usize)
@@ -856,7 +864,7 @@ impl CatalystV1PoolPermissionless for SwapPoolVolatileState {
         }
 
         // Update weights
-        state.update_weights()?;
+        state.update_weights(env.block.time.nanos())?;
 
         // Include the 'escrowed' pool tokens in the total supply of pool tokens of the pool
         let effective_supply = U256::from(Self::total_supply(deps.as_ref())?.u128()) 
@@ -935,7 +943,7 @@ impl CatalystV1PoolPermissionless for SwapPoolVolatileState {
             return Err(ContractError::Unauthorized {});
         }
 
-        state.update_weights()?;
+        state.update_weights(env.block.time.nanos())?;
 
         state.update_unit_capacity(env.block.time, u)?;
 
@@ -1138,8 +1146,102 @@ impl CatalystV1PoolAckTimeout for SwapPoolVolatileState {
 
 impl SwapPoolVolatileState {
 
-    fn update_weights(&mut self) -> Result<(), ContractError> {
-        todo!()
+    fn update_weights(
+        &mut self,
+        current_timestamp: u64
+    ) -> Result<(), ContractError> {
+        
+        // Only run update logic if 'param_update_finish_timestamp' is set
+        if self.param_update_finish_timestamp == 0 {    //TODO EVM mismatch - allow the cheaper 'no jump' for when updating the weights
+            return Ok(());
+        }
+
+        // Skip the update if the weights have already been updated on the same block
+        if current_timestamp == self.param_update_timestamp {
+            return Ok(());
+        }
+
+        let mut new_weight_sum = U256::ZERO;
+
+        // If the 'param_update_finish_timestamp' has been reached, finish the weights update
+        if current_timestamp >= self.param_update_finish_timestamp {
+
+            // Set the weights equal to the target_weights
+            self.weights = self.target_weights
+                .iter()
+                .map(|target_weight| {
+
+                    new_weight_sum = new_weight_sum
+                        .checked_add(U256::from(*target_weight))
+                        .ok_or(ContractError::ArithmeticError {})?;
+
+                    Ok(*target_weight)
+
+                }).collect::<Result<Vec<u64>, ContractError>>()?;
+
+            // Clear the 'param_update_finish_timestamp' to disable the update logic
+            self.param_update_finish_timestamp = 0;
+
+        }
+        else {
+
+            // Calculate and set the partial weight change
+            self.weights = self.weights()
+                .iter()
+                .zip(&self.target_weights)
+                .map(|(current_weight, target_weight)| {
+
+                    // Skip the partial update if the weight has already reached the target
+                    if current_weight == target_weight {
+
+                        new_weight_sum = new_weight_sum
+                            .checked_add(U256::from(*target_weight))
+                            .ok_or(ContractError::ArithmeticError {})?;
+
+                        return Ok(*target_weight);
+
+                    }
+
+                    // Compute the partial update (linear update)
+                    //     current_weight +/- [
+                    //        (distance to the target weight) x (time since last update) / (time from last update until update finish)
+                    //     ]
+                    let new_weight: u64;
+                    if target_weight > current_weight {
+                        new_weight = current_weight + (
+                            (target_weight - current_weight)
+                                .checked_mul(current_timestamp - self.param_update_timestamp)
+                                .ok_or(ContractError::ArithmeticError {})?
+                                .div_euclid(self.param_update_finish_timestamp - self.param_update_timestamp)
+                        );
+                    }
+                    else {
+                        new_weight = current_weight - (
+                            (current_weight - target_weight)
+                            .checked_mul(current_timestamp - self.param_update_timestamp)
+                            .ok_or(ContractError::ArithmeticError {})?
+                            .div_euclid(self.param_update_finish_timestamp - self.param_update_timestamp)
+                        );
+                    }
+
+                    new_weight_sum = new_weight_sum
+                        .checked_add(U256::from(new_weight))
+                        .ok_or(ContractError::ArithmeticError {})?;
+
+                    Ok(*target_weight)
+
+                }).collect::<Result<Vec<u64>, ContractError>>()?;
+
+        }
+            
+        // Update the maximum limit capacity
+        self.max_limit_capacity = new_weight_sum.checked_mul(fixed_point_math::LN2).ok_or(ContractError::ArithmeticError {})?;
+
+        // Update the update timestamp
+        self.param_update_timestamp = current_timestamp;
+
+        Ok(())
+
     }
-    
+
 }
