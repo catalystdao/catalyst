@@ -753,28 +753,29 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                 address token = tokenIndexed[it];
                 if (token == address(0)) break;
 
-                // wtk = (wa^(1-k) + (wa_0 + wpt)^(1-k) - wa_0^(1-k)))^(1/(1-k)) - wa
-                // wtk = (wa^(1-k) + innerDiff)^(1/(1-k)) - wa
-                // note: This underflows if innerdiff is very small / 0.
-                // Since ampWeightAssetBalances ** (1/(1-amp)) == weightAssetBalances but the
-                // mathematical lib returns ampWeightAssetBalances ** (1/(1-amp)) < weightAssetBalances.
-                // the result is that if innerdiff isn't big enough to make up for the difference
-                // the transaction reverts. This is "okay", since it means fewer tokens are returned.
-                // Since tokens are withdrawn, the change is negative. As such, multiply the
-                // equation by -1.
-                uint256 weightedTokenAmount = ((weightAssetBalances[it] * FixedPointMathLib.WAD) - uint256(FixedPointMathLib.powWad(        // Always casts a positive value
-                    ampWeightAssetBalances[it] - int256(innerdiff),             // If casting overflows, either less is returned (if addition is positive) or powWad fails (if addition is negative)
-                    oneMinusAmpInverse // 1/(1-amp)
-                ))) / FixedPointMathLib.WAD;
-
                 //! If the pool doesn't have enough assets for a withdrawal, then
                 //! withdraw all of the pools assets. This should be protected against by setting minOut != 0.
                 //! This happens because the pool expects assets to come back. (it is owed assets)
                 //! We don't want to keep track of debt so we simply return less
-                if (weightedTokenAmount > weightAssetBalances[it]) {
-                    // Set the token amount to the pool balance.
-                    // Recalled that the escrow balance is subtracted from weightAssetBalances.
-                    weightedTokenAmount = weightAssetBalances[it];
+                uint256 weightedTokenAmount = weightAssetBalances[it];
+                //! The above happens if int256(innerdiff) >= ampWeightAssetBalances[it].
+                if (int256(innerdiff) < ampWeightAssetBalances[it]) {
+                    // wtk = (wa^(1-k) + (wa_0 + wpt)^(1-k) - wa_0^(1-k)))^(1/(1-k)) - wa
+                    // wtk = wa - (wa^(1-k) - innerDiff)^(1/(1-k))
+                    // note: This underflows if innerdiff is very small / 0.
+                    // Since ampWeightAssetBalances ** (1/(1-amp)) == weightAssetBalances but the
+                    // mathematical lib returns ampWeightAssetBalances ** (1/(1-amp)) < weightAssetBalances.
+                    // the result is that if innerdiff isn't big enough to make up for the difference
+                    // the transaction reverts. This is "okay", since it means fewer tokens are returned.
+                    // Since tokens are withdrawn, the change is negative. As such, multiply the
+                    // equation by -1.
+                    weightedTokenAmount = (
+                        // Remember weightedTokenAmount == weightAssetBalances[it]
+                        (weightedTokenAmount * FixedPointMathLib.WAD) - uint256(FixedPointMathLib.powWad(        // Always casts a positive value
+                            ampWeightAssetBalances[it] - int256(innerdiff),             // If casting overflows, either less is returned (if addition is positive) or powWad fails (if addition is negative)
+                            oneMinusAmpInverse // 1/(1-amp)
+                        ))
+                    ) / FixedPointMathLib.WAD;
                 }
 
                 // Store the amount withdrawn to subtract from the security limit later.
