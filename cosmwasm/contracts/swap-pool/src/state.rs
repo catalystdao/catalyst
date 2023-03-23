@@ -19,6 +19,10 @@ use crate::calculation_helpers::{calc_price_curve_area, calc_price_curve_limit, 
 
 pub const STATE: Item<SwapPoolVolatileState> = Item::new("catalyst-pool-state");
 
+const MIN_ADJUSTMENT_TIME_NANOS    : u64 = 7 * 24 * 60 * 60 * 1000000000;     // 7 days
+const MAX_ADJUSTMENT_TIME_NANOS    : u64 = 365 * 24 * 60 * 60 * 1000000000;   // 1 year
+const MAX_WEIGHT_ADJUSTMENT_FACTOR : u64 = 10;
+
 // Implement JsonSchema for U256, see https://graham.cool/schemars/examples/5-remote_derive/
 //TODO VERIFY THIS IS CORRECT AND SAFE!
 //TODO move to common place
@@ -1145,6 +1149,58 @@ impl CatalystV1PoolAckTimeout for SwapPoolVolatileState {
 
 
 impl SwapPoolVolatileState {
+
+    pub fn set_weights(         //TODO EVM mismatch arguments order
+        deps: &mut DepsMut,
+        env: &Env,
+        weights: Vec<u64>,      //TODO EVM mismatch (name newWeights)
+        target_timestamp: u64   //TODO EVM mismatch (targetTime)
+    ) -> Result<Response, ContractError> {
+
+        // Load the pool state
+        let mut state = Self::load_state(deps.storage)?;
+
+        // Check 'target_timestamp' is within the defined acceptable bounds
+        let current_time = env.block.time.nanos();
+        if
+            target_timestamp < current_time + MIN_ADJUSTMENT_TIME_NANOS ||
+            target_timestamp > current_time + MAX_ADJUSTMENT_TIME_NANOS
+        {
+            return Err(ContractError::GenericError {});  //TODO error
+        }
+
+        // Check the new requested weights and store them
+        state.target_weights = state.weights()
+            .iter()
+            .zip(&weights)
+            .map(|(current_weight, new_weight)| {
+
+                // Check that the new weight is neither 0 nor larger than the maximum allowed relative change
+                if 
+                    *new_weight == 0 ||
+                    *new_weight > current_weight
+                        .checked_mul(MAX_WEIGHT_ADJUSTMENT_FACTOR).ok_or(ContractError::ArithmeticError {})? ||
+                    *new_weight < current_weight / MAX_WEIGHT_ADJUSTMENT_FACTOR
+                {
+                    return Err(ContractError::GenericError {});     //TODO error
+                }
+
+                Ok(*new_weight)
+
+            }).collect::<Result<Vec<u64>, ContractError>>()?;
+        
+        // Set the weight update time parameters
+        state.param_update_finish_timestamp = target_timestamp;
+        state.param_update_timestamp = current_time;
+        
+        // Store the new pool state
+        state.save_state(deps.storage)?;
+
+        Ok(Response::new()
+            .add_attribute("weights", format!("{:?}", weights))
+            .add_attribute("target_timestamp", target_timestamp.to_string())
+        )
+    }
 
     fn update_weights(
         &mut self,

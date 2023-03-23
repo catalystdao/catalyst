@@ -112,6 +112,16 @@ pub fn execute(
             state
         ),
 
+        ExecuteMsg::SetWeights {
+            weights,
+            target_timestamp
+        } => SwapPoolVolatileState::set_weights(
+            &mut deps,
+            &env,
+            weights,
+            target_timestamp
+        ),
+
         ExecuteMsg::SendAssetAck {
             to_account,
             u,

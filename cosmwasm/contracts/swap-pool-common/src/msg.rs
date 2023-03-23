@@ -86,6 +86,11 @@ pub enum ExecuteMsg {
         block_number_mod: u32
     },
 
+    SetWeights {
+        weights: Vec<u64>,      //TODO EVM mismatch (name newWeights)
+        target_timestamp: u64   //TODO EVM mismatch (targetTime)
+    },
+
     // Setup {
     //     assets: Vec<String>,
     //     weights: Vec<u64>,          // TODO type? (originally u256)
