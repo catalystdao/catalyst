@@ -15,7 +15,7 @@ use swap_pool_common::{
     ContractError
 };
 
-use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
+use crate::msg::{VolatileExecuteMsg, InstantiateMsg, QueryMsg, VolatileExecuteExtension};
 use crate::state::SwapPoolVolatileState;
 
 
@@ -56,11 +56,11 @@ pub fn execute(
     mut deps: DepsMut,
     env: Env,
     info: MessageInfo,
-    msg: ExecuteMsg,
+    msg: VolatileExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
 
-        ExecuteMsg::InitializeSwapCurves {
+        VolatileExecuteMsg::InitializeSwapCurves {
             assets,
             assets_balances,
             weights,
@@ -77,30 +77,30 @@ pub fn execute(
             depositor
         ),
 
-        ExecuteMsg::FinishSetup {} => SwapPoolVolatileState::finish_setup(
+        VolatileExecuteMsg::FinishSetup {} => SwapPoolVolatileState::finish_setup(
             &mut deps,
             info
         ),
 
-        ExecuteMsg::SetFeeAdministrator { administrator } => SwapPoolVolatileState::set_fee_administrator(
+        VolatileExecuteMsg::SetFeeAdministrator { administrator } => SwapPoolVolatileState::set_fee_administrator(
             &mut deps,
             info,
             administrator
         ),
 
-        ExecuteMsg::SetPoolFee { fee } => SwapPoolVolatileState::set_pool_fee(
+        VolatileExecuteMsg::SetPoolFee { fee } => SwapPoolVolatileState::set_pool_fee(
             &mut deps,
             info,
             fee
         ),
 
-        ExecuteMsg::SetGovernanceFee { fee } => SwapPoolVolatileState::set_governance_fee(
+        VolatileExecuteMsg::SetGovernanceFee { fee } => SwapPoolVolatileState::set_governance_fee(
             &mut deps,
             info,
             fee
         ),
 
-        ExecuteMsg::SetConnection {
+        VolatileExecuteMsg::SetConnection {
             channel_id,
             to_pool,
             state
@@ -112,17 +112,7 @@ pub fn execute(
             state
         ),
 
-        ExecuteMsg::SetWeights {
-            weights,
-            target_timestamp
-        } => SwapPoolVolatileState::set_weights(
-            &mut deps,
-            &env,
-            weights,
-            target_timestamp
-        ),
-
-        ExecuteMsg::SendAssetAck {
+        VolatileExecuteMsg::SendAssetAck {
             to_account,
             u,
             amount,
@@ -138,7 +128,7 @@ pub fn execute(
             block_number_mod
         ),
 
-        ExecuteMsg::SendAssetTimeout {
+        VolatileExecuteMsg::SendAssetTimeout {
             to_account,
             u,
             amount,
@@ -155,7 +145,7 @@ pub fn execute(
             block_number_mod
         ),
 
-        ExecuteMsg::SendLiquidityAck {
+        VolatileExecuteMsg::SendLiquidityAck {
             to_account,
             u,
             amount,
@@ -169,7 +159,7 @@ pub fn execute(
             block_number_mod
         ),
 
-        ExecuteMsg::SendLiquidityTimeout {
+        VolatileExecuteMsg::SendLiquidityTimeout {
             to_account,
             u,
             amount,
@@ -184,7 +174,7 @@ pub fn execute(
             block_number_mod
         ),
 
-        ExecuteMsg::DepositMixed {
+        VolatileExecuteMsg::DepositMixed {
             deposit_amounts,
             min_out
         } => SwapPoolVolatileState::deposit_mixed(
@@ -195,7 +185,7 @@ pub fn execute(
             min_out
         ),
 
-        ExecuteMsg::WithdrawAll {
+        VolatileExecuteMsg::WithdrawAll {
             pool_tokens,
             min_out
         } => SwapPoolVolatileState::withdraw_all(
@@ -206,7 +196,7 @@ pub fn execute(
             min_out
         ),
 
-        ExecuteMsg::WithdrawMixed {
+        VolatileExecuteMsg::WithdrawMixed {
             pool_tokens,
             withdraw_ratio,
             min_out
@@ -219,7 +209,7 @@ pub fn execute(
             min_out
         ),
 
-        ExecuteMsg::LocalSwap {
+        VolatileExecuteMsg::LocalSwap {
             from_asset,
             to_asset,
             amount,
@@ -234,7 +224,7 @@ pub fn execute(
             min_out
         ),
 
-        ExecuteMsg::SendAsset {
+        VolatileExecuteMsg::SendAsset {
             channel_id,
             to_pool,
             to_account,
@@ -259,7 +249,7 @@ pub fn execute(
             calldata
         ),
 
-        ExecuteMsg::ReceiveAsset {
+        VolatileExecuteMsg::ReceiveAsset {
             channel_id,
             from_pool,
             to_asset_index,
@@ -282,7 +272,7 @@ pub fn execute(
             calldata
         ),
 
-        ExecuteMsg::SendLiquidity {
+        VolatileExecuteMsg::SendLiquidity {
             channel_id,
             to_pool,
             to_account,
@@ -303,7 +293,7 @@ pub fn execute(
             calldata
         ),
 
-        ExecuteMsg::ReceiveLiquidity {
+        VolatileExecuteMsg::ReceiveLiquidity {
             channel_id,
             from_pool,
             to_account,
@@ -324,22 +314,32 @@ pub fn execute(
             calldata
         ),
 
+        VolatileExecuteMsg::Custom(VolatileExecuteExtension::SetWeights {
+            weights,
+            target_timestamp
+        }) => SwapPoolVolatileState::set_weights(
+            &mut deps,
+            &env,
+            weights,
+            target_timestamp
+        ),
+
 
         // CW20 execute msgs - Use cw20-base for the implementation
-        ExecuteMsg::Transfer {
+        VolatileExecuteMsg::Transfer {
             recipient,
             amount
         } => Ok(
             execute_transfer(deps, env, info, recipient, amount)?
         ),
 
-        ExecuteMsg::Burn {
+        VolatileExecuteMsg::Burn {
             amount: _
          } => Err(
             ContractError::Unauthorized {}     // Pool token burn handled by withdraw function
         ),
 
-        ExecuteMsg::Send {
+        VolatileExecuteMsg::Send {
             contract,
             amount,
             msg,
@@ -347,7 +347,7 @@ pub fn execute(
             execute_send(deps, env, info, contract, amount, msg)?
         ),
 
-        ExecuteMsg::IncreaseAllowance {
+        VolatileExecuteMsg::IncreaseAllowance {
             spender,
             amount,
             expires,
@@ -355,7 +355,7 @@ pub fn execute(
             execute_increase_allowance(deps, env, info, spender, amount, expires)?
         ),
 
-        ExecuteMsg::DecreaseAllowance {
+        VolatileExecuteMsg::DecreaseAllowance {
             spender,
             amount,
             expires,
@@ -363,7 +363,7 @@ pub fn execute(
             execute_decrease_allowance(deps, env, info, spender, amount, expires)?
         ),
 
-        ExecuteMsg::TransferFrom {
+        VolatileExecuteMsg::TransferFrom {
             owner,
             recipient,
             amount,
@@ -371,14 +371,14 @@ pub fn execute(
             execute_transfer_from(deps, env, info, owner, recipient, amount)?
         ),
 
-        ExecuteMsg::BurnFrom {
+        VolatileExecuteMsg::BurnFrom {
             owner: _,
             amount: _
         } => Err(
             ContractError::Unauthorized {}      // Pool token burn handled by withdraw function
         ),
 
-        ExecuteMsg::SendFrom {
+        VolatileExecuteMsg::SendFrom {
             owner,
             contract,
             amount,
@@ -485,7 +485,9 @@ mod tests {
 
     use cosmwasm_std::{Addr, Empty, Uint128, Attribute};
     use cw20::{Cw20Coin, Cw20ExecuteMsg, MinterResponse, Cw20QueryMsg, BalanceResponse};
-    use swap_pool_common::{msg::{InstantiateMsg, ExecuteMsg}, state::INITIAL_MINT_AMOUNT};
+    use swap_pool_common::{msg::InstantiateMsg, state::INITIAL_MINT_AMOUNT};
+
+    use crate::msg::VolatileExecuteMsg;
 
     pub const INSTANTIATOR_ADDR: &str = "inst_addr";
     pub const OTHER_ADDR: &str = "other_addr";
@@ -582,7 +584,7 @@ mod tests {
 
 
         // Initialize sp balances
-        let initialize_balances_msg = ExecuteMsg::InitializeSwapCurves {
+        let initialize_balances_msg = VolatileExecuteMsg::InitializeSwapCurves {
             assets: vec![test_token_1_addr.to_string()],
             assets_balances: vec![Uint128::from(1000_u64)],
             weights: vec![1u64],

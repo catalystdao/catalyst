@@ -28,7 +28,7 @@ pub struct InstantiateMsg {
 
 
 #[cw_serde]
-pub enum ExecuteMsg {
+pub enum ExecuteMsg<T> {
 
     InitializeSwapCurves {
         assets: Vec<String>,
@@ -84,11 +84,6 @@ pub enum ExecuteMsg {
         u: U256,
         amount: Uint128,
         block_number_mod: u32
-    },
-
-    SetWeights {
-        weights: Vec<u64>,      //TODO EVM mismatch (name newWeights)
-        target_timestamp: u64   //TODO EVM mismatch (targetTime)
     },
 
     DepositMixed {
@@ -158,6 +153,8 @@ pub enum ExecuteMsg {
         swap_hash: String,
         calldata: Vec<u8>
     },
+
+    Custom (T),
 
 
     // CW20 Implementation
