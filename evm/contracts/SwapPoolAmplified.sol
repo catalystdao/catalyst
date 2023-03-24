@@ -649,7 +649,6 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
      * @notice Burns poolTokens and releases the symmetrical share of tokens to the burner. 
      * This doesn't change the pool price.
      * @dev This is the cheapest way to withdraw.
-     * poolTokens == 0 or very small results: revert: Integer overflow. See note for why.
      * @param poolTokens The number of pool tokens to burn.
      * @param minOut The minimum token output. If less is returned, the transaction reverts.
      * @return uint256[] memory An array containing the amounts withdrawn.
@@ -717,26 +716,23 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         // For later event logging, the transferred tokens are stored.
         uint256[] memory amounts = new uint256[](MAX_ASSETS);
         {
-            // wtk = (wa^(1-k) + (wa_0 + wpt)^(1-k) - wa_0^(1-k)))^(1/(1-k)) - wa
-            // The inner diff is (wa_0 + wpt)^(1-k) - wa_0^(1-k).
+            // The following equation has already assumed that pt is negative. Thus it should be positive.
+            // wtk = wa ·(1 - ((wa^(1-k) - wa_0^(1-k) · (pt/PT)^(1-k))/wa^(1-k))^(1/(1-k))
+            // The inner diff is wa_0^(1-k) · (pt/PT)^(1-k).
             // since it doesn't depend on the token, it should only be computed once
-            // The following is a reduction of the equation to reduce costs.
             uint256 innerdiff;
-            { 
+            {
                 // Remember to add the number of pool tokens burned to totalSupply
                 // _escrowedPoolTokens is added, since it makes pt_fraction smaller
                 uint256 ts = (totalSupply + _escrowedPoolTokens + poolTokens);
-                // Since pool tokens are getting subtracted from the total supply, remember
-                // to add a negative sign to pool tokens.
                 uint256 pt_fraction = ((ts - poolTokens) * FixedPointMathLib.WAD) / ts;
 
-                // The reduced equation:
                 innerdiff = FixedPointMathLib.mulWadDown(
                     walpha_0_ampped, 
-                    FixedPointMathLib.WAD - uint256(FixedPointMathLib.powWad(       // Always casts a positive value
-                        int256(pt_fraction),                // Casting always safe, as pt_fraction < 1
+                     FixedPointMathLib.WAD - uint256(FixedPointMathLib.powWad(  // Always casts a positive value
+                        int256(pt_fraction),           // Casting always safe, as pt_fraction < 1
                         oneMinusAmp
-                    )) 
+                    ))
                 );
             }
 
@@ -760,22 +756,24 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                 uint256 weightedTokenAmount = effWeightAssetBalances[it];
                 //! The above happens if innerdiff >= ampWeightAssetBalance.
                 if (innerdiff < ampWeightAssetBalance) {
-                    // wtk = (wa^(1-k) + (wa_0 + wpt)^(1-k) - wa_0^(1-k)))^(1/(1-k)) - wa
-                    // wtk = wa - (wa^(1-k) - innerDiff)^(1/(1-k))
-                    // note: This underflows if innerdiff is very small / 0.
+                    // wtk = wa ·(1 - ((wa^(1-k) - wa_0^(1-k) · (pt/PT)^(1-k))/wa^(1-k))^(1/(1-k))
+                    // wtk = wa ·(1 - ((wa^(1-k) - innerdiff)/wa^(1-k))^(1/(1-k))
                     // Since ampWeightAssetBalance ** (1/(1-amp)) == effWeightAssetBalances but the
                     // mathematical lib returns ampWeightAssetBalance ** (1/(1-amp)) < effWeightAssetBalances.
                     // the result is that if innerdiff isn't big enough to make up for the difference
                     // the transaction reverts. This is "okay", since it means fewer tokens are returned.
                     // Since tokens are withdrawn, the change is negative. As such, multiply the
                     // equation by -1.
-                    weightedTokenAmount = (
-                        // Remember weightedTokenAmount == effWeightAssetBalances[it]
-                        (weightedTokenAmount * FixedPointMathLib.WAD) - uint256(FixedPointMathLib.powWad(        // Always casts a positive value
-                            int256(ampWeightAssetBalance - innerdiff),             // If casting overflows, powWad fails
+                    weightedTokenAmount = FixedPointMathLib.mulWadDown(
+                        weightedTokenAmount,
+                        FixedPointMathLib.WAD - uint256(FixedPointMathLib.powWad(       // The inner is between 0 and 1. Power of < 1 is always between 0 and 1.
+                            int256(FixedPointMathLib.divWadUp(  // 0 < innerdiff < ampWeightAssetBalance => < 1 thus casting never overflows. 
+                                ampWeightAssetBalance - innerdiff,
+                                ampWeightAssetBalance
+                            )),
                             oneMinusAmpInverse // 1/(1-amp)
                         ))
-                    ) / FixedPointMathLib.WAD;
+                    );
                 }
 
                 // Store the amount withdrawn to subtract from the security limit later.

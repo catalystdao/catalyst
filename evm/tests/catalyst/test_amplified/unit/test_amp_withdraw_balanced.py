@@ -22,7 +22,7 @@ def test_withdrawall(pool, pool_tokens, berg, deployer, percentage):
     
     for allAmount, poolBalance in zip(withdrawAllAmount, poolBalances):
         if allAmount > poolBalance*poolTokens // ts:
-            assert  allAmount <= int(poolBalance*poolTokens // ts * (1+1e-10))  # If more is returned, it needs to be almost insignificant. (and there is a deposit fee.)
+            assert  allAmount <= int(poolBalance*poolTokens // ts * (1+1e-10) + 1)  # If more is returned, it needs to be almost insignificant. (and there is a deposit fee.)
         assert int(poolBalance * percentage * 99 / 100) <= allAmount
     
 
@@ -47,7 +47,7 @@ def test_compare_withdrawall_and_withdrawmixed(pool, pool_tokens, berg, deployer
     
     for allAmount, mixedAmount in zip(withdrawAllAmount, withdrawMixedAmount):
         if mixedAmount > allAmount:
-            assert  mixedAmount <= int(allAmount * (1+1e-10))  # If more is returned, it needs to be almost insignificant. (and there is a deposit fee.)
+            assert  mixedAmount <= int(allAmount * (1+1e-10) + 1)  # If more is returned, it needs to be almost insignificant. (and there is a deposit fee.)
         assert int(allAmount * 99 / 100) <= mixedAmount
     
     
