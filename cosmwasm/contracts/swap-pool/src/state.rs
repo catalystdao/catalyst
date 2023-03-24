@@ -30,6 +30,7 @@ const MAX_WEIGHT_ADJUSTMENT_FACTOR : u64 = 10;
 #[serde(remote = "U256")]
 pub struct U256Def([u128; 2]);
 
+//TODO Split state into different storage items? (i.e. how expensive is it to always load/save the entire state from memory)
 //TODO rename remove State
 #[cw_serde]
 pub struct SwapPoolVolatileState {
