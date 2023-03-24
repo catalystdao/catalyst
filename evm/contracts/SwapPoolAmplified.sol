@@ -758,13 +758,13 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                 //! This happens because the pool expects assets to come back. (it is owed assets)
                 //! We don't want to keep track of debt so we simply return less
                 uint256 weightedTokenAmount = effWeightAssetBalances[it];
-                //! The above happens if int256(innerdiff) >= ampWeightAssetBalance.
-                if (int256(innerdiff) < ampWeightAssetBalances[it]) {
+                //! The above happens if innerdiff >= ampWeightAssetBalance.
+                if (innerdiff < ampWeightAssetBalance) {
                     // wtk = (wa^(1-k) + (wa_0 + wpt)^(1-k) - wa_0^(1-k)))^(1/(1-k)) - wa
                     // wtk = wa - (wa^(1-k) - innerDiff)^(1/(1-k))
                     // note: This underflows if innerdiff is very small / 0.
-                    // Since ampWeightAssetBalances ** (1/(1-amp)) == effWeightAssetBalances but the
-                    // mathematical lib returns ampWeightAssetBalances ** (1/(1-amp)) < effWeightAssetBalances.
+                    // Since ampWeightAssetBalance ** (1/(1-amp)) == effWeightAssetBalances but the
+                    // mathematical lib returns ampWeightAssetBalance ** (1/(1-amp)) < effWeightAssetBalances.
                     // the result is that if innerdiff isn't big enough to make up for the difference
                     // the transaction reverts. This is "okay", since it means fewer tokens are returned.
                     // Since tokens are withdrawn, the change is negative. As such, multiply the
@@ -772,7 +772,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
                     weightedTokenAmount = (
                         // Remember weightedTokenAmount == effWeightAssetBalances[it]
                         (weightedTokenAmount * FixedPointMathLib.WAD) - uint256(FixedPointMathLib.powWad(        // Always casts a positive value
-                            ampWeightAssetBalance - int256(innerdiff),             // If casting overflows, either less is returned (if addition is positive) or powWad fails (if addition is negative)
+                            int256(ampWeightAssetBalance - innerdiff),             // If casting overflows, powWad fails
                             oneMinusAmpInverse // 1/(1-amp)
                         ))
                     ) / FixedPointMathLib.WAD;
