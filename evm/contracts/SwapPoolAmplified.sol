@@ -1260,7 +1260,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
     // In 1 user invocation.
 
     /** 
-     * @notice Computes balance0 without any special caching.
+     * @notice Computes balance0**(1-amp) without any special caching.
      * @dev Whenever balance0 is computed, the true balance should be used instead of the one
      * modifed by the escrow. This is because balance0 is constant during swaps. Thus, if the
      * balance was modified, it would not be constant during swaps.
@@ -1307,11 +1307,17 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
     /** 
      * @notice Computes balance0
      * @dev Is constant for swaps
-     * @return walpha_0_ampped Balance0**(1-amp)
+     * @return walpha_0 Balance0**(1-amp)
      */
-    function computeBalance0() external view returns(uint256) {
+    function computeBalance0() external view returns(uint256 walpha_0) {
        (uint256 walpha_0_ampped, uint256 it) = _computeBalance0(_oneMinusAmp);
-       return walpha_0_ampped;
+
+        walpha_0 = uint256( // casting: powWad is not negative.
+            FixedPointMathLib.powWad(
+                int256(walpha_0_ampped),  // Casting: If overflow, then powWad fails as the overflow is into negative.
+                FixedPointMathLib.WADWAD / _oneMinusAmp
+            )
+        );
     }
 
     /**
