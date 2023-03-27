@@ -166,14 +166,13 @@ def test_send_asset_event(
 
     send_asset_event = tx.events['SendAsset']
 
-    assert send_asset_event['toPool']       == pool_2
-    assert send_asset_event['toAccount']    == elwood
-    assert send_asset_event['fromAsset']    == source_token
-    assert send_asset_event['toAssetIndex'] == 1
-    assert send_asset_event['fromAmount']   == swap_amount
-    assert send_asset_event['units']        == observed_units
-    assert send_asset_event['minOut']       == min_out
-    assert send_asset_event['swapHash']  == expected_message_hash
+    assert send_asset_event['toPool']                       == pool_2
+    assert send_asset_event['toAccount']                    == elwood
+    assert send_asset_event['fromAndToAssetIndexPacked']    == "0x" + (convert.to_bytes(1, "bytes1") + convert.to_bytes(source_token.address, "bytes31")).hex()
+    assert send_asset_event['fromAmount']                   == swap_amount
+    assert send_asset_event['units']                        == observed_units
+    assert send_asset_event['minOut']                       == min_out
+    assert send_asset_event['swapHash']                     == expected_message_hash
 
 
 def test_receive_swap_event(

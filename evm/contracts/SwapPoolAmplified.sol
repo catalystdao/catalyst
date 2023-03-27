@@ -1123,16 +1123,18 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
         // Adjustment of the security limit is delayed until ack to avoid
         // a router abusing timeout to circumvent the security limit.
 
-        emit SendAsset(
-            toPool,
-            toAccount,
-            fromAsset,
-            toAssetIndex,
-            amount,
-            U,
-            minOut,
-            sendAssetHash
-        );
+        unchecked {
+            emit SendAsset(
+                channelId,
+                toAccount,
+                toPool,
+                bytes32((uint256(toAssetIndex) << 248) + (uint256(uint160(fromAsset)))),  // (32-1) * 8 = 248 thus we should shift with 248 to move the asset index into the last byte.
+                amount,
+                U,
+                minOut,
+                sendAssetHash
+            );
+        }
 
         return U;
     }
@@ -1391,8 +1393,9 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
         // a router abusing timeout to circumvent the security limit at a low cost.
 
         emit SendLiquidity(
-            toPool,
+            channelId,
             toAccount,
+            toPool,
             poolTokens,
             U,
             sendLiquidityHash
