@@ -277,7 +277,8 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 W,
         int256 oneMinusAmp
     ) internal pure returns (uint256) {
-        // Will rervert if W = 0.
+        // Will revert if W = 0. 
+        // Or if A + input == 0.
         int256 calc = FixedPointMathLib.powWad(
             int256(W * (A + input) * FixedPointMathLib.WAD),    // If casting overflows to a negative number, powWad fails
             oneMinusAmp
@@ -710,7 +711,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
 
                 // If weightAssetBalance == 0, then this computation would fail. However since 0^(1-k) = 0, we can set it to 0.
                 int256 wab = 0;
-                if (weightAssetBalance != 0){
+                if (weightAssetBalance != 0) {
                     wab = FixedPointMathLib.powWad(
                         int256(weightAssetBalance * FixedPointMathLib.WAD),     // If casting overflows to a negative number, powWad fails
                         oneMinusAmp
@@ -718,8 +719,9 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
 
                     // if wab == 0, there is no need to add it. So only add if != 0.
                     weightedAssetBalanceSum += wab;
+
+                    ampWeightAssetBalances[it] = wab; // Store
                 }
-                ampWeightAssetBalances[it] = wab; // Store
 
                 unchecked {
                     it++;
@@ -898,8 +900,9 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
 
                         // if wab == 0, there is no need to add it. So only add if != 0.
                         weightedAssetBalanceSum += wab;
+                        
+                        ampWeightAssetBalances[U] = wab; // Store since it is an expensive calculation.
                     }
-                    ampWeightAssetBalances[U] = wab; // Store since it is an expensive calculation.
 
                     unchecked {
                         U++;
