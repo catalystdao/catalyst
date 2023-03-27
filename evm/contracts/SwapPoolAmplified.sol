@@ -431,8 +431,9 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
         uint256 W = _weight[fromAsset];
 
 
-        // If a token is not part of the pool, W is 0. This revert
-        // since 0**p is implemented as exp(ln(0) * p) but ln(0) is undefined.
+        // If 'fromAsset' is not part of the pool (i.e. W is 0) or if 'amount' and 
+        // the pool asset balance (i.e. 'A') are both 0 this will revert, since 0**p is 
+        // implemented as exp(ln(0) * p) and ln(0) is undefined.
         uint256 U = _calcPriceCurveArea(amount, A, W, _oneMinusAmp);
 
         // If the swap is a very small portion of the pool
