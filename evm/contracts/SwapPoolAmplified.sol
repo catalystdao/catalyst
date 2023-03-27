@@ -416,7 +416,8 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
 
     /**
      * @notice Computes the return of SendAsset.
-     * @dev Reverts if from is not a token in the pool
+     * @dev Reverts if 'fromAsset' is not a token in the pool or if the input 
+     * 'amount' and the pool asset balance are both 0.
      * @param fromAsset The address of the token to sell.
      * @param amount The amount of from token to sell.
      * @return uint256 Group-specific units.
