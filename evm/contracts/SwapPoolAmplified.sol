@@ -467,7 +467,8 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
 
     /**
      * @notice Computes the output of localSwap.
-     * @dev Implemented through _calcCombinedPriceCurves. Reverts if either from or to is not in the pool.
+     * @dev Implemented through _calcCombinedPriceCurves. Reverts if either from or to is not in the pool,
+     * or if the pool 'fromAsset' balance and 'amount' are both 0.
      * @param fromAsset The address of the token to sell.
      * @param toAsset The address of the token to buy.
      * @param amount The amount of from token to sell for to token.
