@@ -283,7 +283,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
             oneMinusAmp
         );
 
-        // If the token contains 0 assets, the below computation will fail. This is bad.
+        // If the pool contains 0 assets, the below computation will fail. This is bad.
         // Instead, check if A is 0. If it is then skip because:: (W · A)^(1-k) = (W · 0)^(1-k) = 0
         if (A != 0) {
             unchecked {
