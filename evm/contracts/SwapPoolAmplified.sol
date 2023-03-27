@@ -186,7 +186,11 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon, ReentrancyGuard {
 
         uint256 currentAmplification = FixedPointMathLib.WAD - uint256(_oneMinusAmp);
         require(targetAmplification < FixedPointMathLib.WAD);  // dev: amplification not set correctly.
-        require(targetAmplification <= currentAmplification*2 && targetAmplification >= currentAmplification/2); // dev: targetAmplification must be maximum a factor of 2 larger/smaller than the current amplification to protect liquidity providers.
+        // Limit the maximum allowed relative amplification change to a factor of 2. Note that this effectively 'locks'
+        // the amplification if it gets intialized to 0. Similarly, the amplification will never be allowed to be set to
+        // 0 if it is initialized to any other value (note how 'targetAmplification*2 >= currentAmplification' is used
+        // instead of 'targetAmplification >= currentAmplification/2').
+        require(targetAmplification <= currentAmplification*2 && targetAmplification*2 >= currentAmplification); // dev: targetAmplification must be maximum a factor of 2 larger/smaller than the current amplification to protect liquidity providers.
         // Because of the balance0 (_unitTracker) implementation, amplification adjustment has to be disabled for cross-chain pools.
         require(_chainInterface == address(0));  // dev: Amplification adjustment is disabled for cross-chain pools.
 
