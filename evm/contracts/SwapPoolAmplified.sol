@@ -1250,6 +1250,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
         // the transaction will timeout and the user gets the input tokens on the sending chain.
         // If this is not desired, wrap further logic in a try - except at dataTarget.
         ICatalystReceiver(dataTarget).onCatalystCall(purchasedTokens, data);
+        // If dataTarget doesn't implement onCatalystCall BUT implements a fallback function, the call will still succeed.
 
         return purchasedTokens;
     }
@@ -1571,6 +1572,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
         // the transaction will timeout and the user gets the input tokens on the sending chain.
         // If this is not desired, wrap further logic in a try - except at dataTarget.
         ICatalystReceiver(dataTarget).onCatalystCall(purchasedPoolTokens, data);
+        // If dataTarget doesn't implement onCatalystCall BUT implements a fallback function, the call will still succeed.
 
         return purchasedPoolTokens;
     }
