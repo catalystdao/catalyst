@@ -1130,18 +1130,19 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
         // Adjustment of the security limit is delayed until ack to avoid
         // a router abusing timeout to circumvent the security limit.
 
-        unchecked {
-            emit SendAsset(
-                channelId,
-                toAccount,
-                toPool,
-                bytes32((uint256(toAssetIndex) << 248) + (uint256(uint160(fromAsset)))),  // (32-1) * 8 = 248 thus we should shift with 248 to move the asset index into the last byte.
-                amount,
-                U,
-                minOut,
-                sendAssetHash
-            );
-        }
+        emit SendAsset(
+            channelId,
+            toPool,
+            toAccount,
+            msg.sender,
+            fallbackUser,
+            toAssetIndex,
+            fromAsset,
+            amount,
+            U,
+            minOut,
+            sendAssetHash
+        );
 
         return U;
     }
@@ -1221,7 +1222,15 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
         // Send the assets to the user.
         ERC20(toAsset).safeTransfer(toAccount, purchasedTokens);
 
-        emit ReceiveAsset(fromPool, toAccount, toAsset, U, purchasedTokens, swapHash);
+        emit ReceiveAsset(
+            channelId,
+            fromPool, 
+            toAccount, 
+            toAsset, 
+            U, 
+            purchasedTokens, 
+            swapHash
+        );
 
         return purchasedTokens;
     }
@@ -1401,8 +1410,10 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
 
         emit SendLiquidity(
             channelId,
-            toAccount,
             toPool,
+            toAccount,
+            msg.sender,
+            fallbackUser,
             poolTokens,
             U,
             sendLiquidityHash
@@ -1544,7 +1555,14 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
         // Mint pool tokens for the user.
         _mint(toAccount, poolTokens);
 
-        emit ReceiveLiquidity(fromPool, toAccount, U, poolTokens, swapHash);
+        emit ReceiveLiquidity(
+            channelId,
+            fromPool, 
+            toAccount, 
+            U, 
+            poolTokens, 
+            swapHash
+        );
 
         return poolTokens;
     }

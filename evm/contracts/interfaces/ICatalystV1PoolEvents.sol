@@ -7,14 +7,14 @@ interface ICatalystV1PoolEvents {
     /**
      * @notice  Describes an atomic swap between the 2 tokens: _fromAsset and _toAsset.
      * @dev Explain to a developer any extra details
-     * @param toAccount The user / exchange who facilitated the trade (msg.sender)
+     * @param swapAccount The user / exchange who facilitated the trade (msg.sender)
      * @param fromAsset The asset which was sold in exchange for _toAsset
      * @param toAsset The asset which was purchased with _fromAsset
      * @param fromAmount The number of _fromAsset sold
      * @param toAmount The number of tokens provided to toAccount
      */
     event LocalSwap(
-        address indexed toAccount,
+        address indexed swapAccount,
         address fromAsset,
         address toAsset,
         uint256 fromAmount,
@@ -25,18 +25,24 @@ interface ICatalystV1PoolEvents {
      * @notice Describes the creation of an external swap: Cross-chain swap.
      * @dev If _fromAsset is the proxy contract or _toAsset is 2**8-1, the swap is a liquidity swap.
      * @param channelId The target chain identifier.
-     * @param toAccount The recipient of the trade. The person who bought the trade is not present.
      * @param toPool The target pool.
-     * @param fromAndToAssetIndexPacked The first 24 bytes represents the address of the asset which was sold in exchange for _toAsset and the 32'th byte is the index of the asset to purchase.
+     * @param toAccount The recipient of the trade.
+     * @param fromAccount The sender of the trader.
+     * @param escrowAccount The account who gets the tokens if the transaction reverts. 
+     * @param toAsset The target pool.
+     * @param fromAsset The target pool.
      * @param fromAmount The number of _fromAsset sold
      * @param units The calculated number of units bought. Will be sold to buy _toAsset
      * @param minOut The pool fee. Taken from fromAmount. Numerical losses/fees are for obvious reasons not included.
      */
     event SendAsset(
         bytes32 indexed channelId,
-        bytes32 indexed toAccount,
-        bytes32 toPool,
-        bytes32 fromAndToAssetIndexPacked,
+        bytes32 indexed toPool,
+        bytes32 toAccount,
+        address fromAccount,
+        address escrowAccount,
+        uint8 toAsset,
+        address fromAsset,
         uint256 fromAmount,
         uint256 units,
         uint256 minOut,
@@ -53,8 +59,9 @@ interface ICatalystV1PoolEvents {
      * @param toAmount The number of tokens provided to toAccount
      */
     event ReceiveAsset(
-        bytes32 fromPool,
-        address indexed toAccount,
+        bytes32 indexed channelId,
+        bytes32 indexed fromPool,
+        address toAccount,
         address toAsset,
         uint256 units,
         uint256 toAmount,
@@ -64,15 +71,19 @@ interface ICatalystV1PoolEvents {
     /**
      * @notice Describes the creation of a liquidity swap
      * @param channelId The target chain identifier.
-     * @param toAccount The recipient of the liquidity. The person who bought the trade is not present.
+     * @param toAccount The recipient of the trade.
+     * @param fromAccount The sender of the trader.
+     * @param escrowAccount The account who gets the pool tokens if the transaction reverts. 
      * @param toPool The target pool.
      * @param fromAmount The number of _fromAsset sold
      * @param units The calculated number of liquidity units bought.
      */
     event SendLiquidity(
         bytes32 indexed channelId,
-        bytes32 indexed toAccount,
-        bytes32 toPool,
+        bytes32 indexed toPool,
+        bytes32 toAccount,
+        address fromAccount,
+        address escrowAccount,
         uint256 fromAmount,
         uint256 units,
         bytes32 swapHash
@@ -86,8 +97,9 @@ interface ICatalystV1PoolEvents {
      * @param toAmount The number of pool tokens provided to toAccount
      */
     event ReceiveLiquidity(
-        bytes32 fromPool,
-        address indexed toAccount,
+        bytes32 indexed channelId,
+        bytes32 indexed fromPool,
+        address toAccount,
         uint256 units,
         uint256 toAmount,
         bytes32 swapHash
