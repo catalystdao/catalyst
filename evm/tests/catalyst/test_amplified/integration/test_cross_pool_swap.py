@@ -167,7 +167,7 @@ def test_send_asset_event(
         1,                                                      # NOTE: use non-zero target asset index to make sure the field is set on the event (and not just left blank)
         swap_amount,
         min_out,
-        elwood,
+        deployer,
         {"from": berg},
     )
 
@@ -182,9 +182,11 @@ def test_send_asset_event(
 
     send_asset_event = tx.events['SendAsset']
 
+    assert send_asset_event['channelId']                    == "0x" + channel_id.hex()
     assert send_asset_event['toPool']                       == pool_2
     assert send_asset_event['toAccount']                    == elwood
-    assert send_asset_event['fromAndToAssetIndexPacked']    == "0x" + (convert.to_bytes(1, "bytes1") + convert.to_bytes(source_token.address, "bytes31")).hex()
+    assert send_asset_event['fromAccount']                  == berg
+    assert send_asset_event['escrowAccount']                == deployer
     assert send_asset_event['fromAmount']                   == swap_amount
     assert send_asset_event['units']                        == observed_units
     assert send_asset_event['minOut']                       == min_out
