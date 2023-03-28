@@ -14,6 +14,7 @@ dependencies:
 
 compiler:
   solc:
+    viaIR: true
     optimizer:
         enabled: true
         runs: 9000
