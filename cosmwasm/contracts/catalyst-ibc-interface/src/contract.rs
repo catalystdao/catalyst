@@ -1,10 +1,11 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, Uint128, Addr};
+use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
 use cw2::set_contract_version;
+use ethnum::U256;
 
 use crate::error::ContractError;
-use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
+use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg, AssetSwapMetadata, LiquiditySwapMetadata};
 use crate::state::{CatalystIBCInterfaceState, CATALYST_IBC_INTERFACE_STATE};
 
 // version info for migration info
@@ -45,32 +46,51 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
-        ExecuteMsg::CrossChainSwap {
-            chain_id,
-            target_pool,
-            target_user,
+
+        ExecuteMsg::SendCrossChainAsset {
+            channel_id,
+            to_pool,
+            to_account,
             target_asset_index,
-            units_x64,
+            u,
             min_out,
-            approx,
-            source_amount,
-            source_asset,
+            metadata,
             calldata
-        } => execute_cross_chain_swap(
-            deps,
+        } => execute_send_cross_chain_asset(
+            deps.as_ref(),
             env,
             info,
-            chain_id,
-            target_pool,
-            target_user,
+            channel_id,
+            to_pool,
+            to_account,
             target_asset_index,
-            units_x64,
+            u,
             min_out,
-            approx,
-            source_amount,
-            source_asset,
+            metadata,
+            calldata
+        ),
+
+        ExecuteMsg::SendCrossChainLiquidity {
+            channel_id,
+            to_pool,
+            to_account,
+            u,
+            min_out,
+            metadata,
+            calldata
+        } => execute_send_cross_chain_liquidity(
+            deps.as_ref(),
+            env,
+            info,
+            channel_id,
+            to_pool,
+            to_account,
+            u,
+            min_out,
+            metadata,
             calldata
         )
+
     }
 }
 
@@ -83,23 +103,38 @@ fn execute_register_pool(
     unimplemented!();
 }
 
-fn execute_cross_chain_swap(
-    deps: DepsMut,
+fn execute_send_cross_chain_asset(
+    deps: Deps,
     env: Env,
     info: MessageInfo,
-    chain_id: String,
-    target_pool: [u8; 32],
-    target_user: [u8; 32],
+    channel_id: String,
+    to_pool: String,
+    to_account: String,
     target_asset_index: u8,
-    units_x64: [u8; 32],
-    min_out: [u8; 32],
-    approx: bool,
-    source_amount: Uint128,
-    source_asset: Addr,
+    u: U256,
+    min_out: U256,
+    metadata: AssetSwapMetadata,    //TODO do we want this?
     calldata: Vec<u8>
 ) -> Result<Response, ContractError> {
-    unimplemented!();
+    todo!();
 }
+
+fn execute_send_cross_chain_liquidity(
+    deps: Deps,
+    env: Env,
+    info: MessageInfo,
+    channel_id: String,
+    to_pool: String,
+    to_account: String,
+    u: U256,
+    min_out: U256,
+    metadata: LiquiditySwapMetadata,    //TODO do we want this?
+    calldata: Vec<u8>
+) -> Result<Response, ContractError> {
+    todo!();
+}
+
+
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(_deps: Deps, _env: Env, _msg: QueryMsg) -> StdResult<Binary> {
