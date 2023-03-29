@@ -28,10 +28,9 @@ class Catalyst:
         deployer,
         default=True,
         amp=10**18,
-        ibcinterface="0xcAB0F1618A89abF9CaC22D1ad1a4928b5018Ce54",
-        CCI=None,
-        poolname="poolname",
-        poolsymbol="ps"
+        ibcinterface="",
+        poolname="CatalystVEvent",
+        poolsymbol="CVE"
     ):
         self.deployer = deployer
         self.amp = amp
@@ -39,8 +38,8 @@ class Catalyst:
         self.poolname = poolname
         self.poolsymbol = poolsymbol
 
-        self.crosschaininterface = "0x3647d390c083AA81Fc4b6F86A0b39fA3AC6F16a5"
-        self.swapFactory = CatalystSwapPoolFactory.at("0xa3dd30d529aEec6607B02A8A2D138987A5b698C0") # self._swapFactory()
+        self.crosschaininterface = self._crosschaininterface()
+        self.swapFactory = self._swapFactory()
         (self.swapTemplate, self.ampSwapTemplate) = self._swapTemplates()
 
         if default:
@@ -53,8 +52,8 @@ class Catalyst:
 
     def defaultSetup(self):
         tokens = []
-        tokens.append(self.create_token("one", "I"))
-        tokens.append(self.create_token("two", "II"))
+        tokens.append(self.create_token("TokenOne", "ONE"))
+        tokens.append(self.create_token("TokenTwo", "TWO"))
         self.deploy_swappool(
             tokens, amp=self.amp, name=self.poolname, symbol=self.poolsymbol
         )
@@ -109,52 +108,16 @@ class Catalyst:
 
 
 """
-from scripts.deployCatalyst import Catalyst, decode_payload
-from brownie import convert
-acct = accounts[0]
-
+acct = accounts.add()
+from scripts.deployCatalyst import *
 ie = IBCEmulator.deploy({'from': acct})
-ps = Catalyst(acct, ibcinterface=ie)
-pool = ps.swappool
-tokens = ps.tokens
-tokens[0].approve(pool, 2**256-1, {'from': acct})
-# pool.localSwap(tokens[0], tokens[1], 50*10**18, 0, {'from': acct})
+cxt = Catalyst(acct, ibcinterface=ie)
 
 chid = convert.to_bytes(0, type_str="bytes32")
 
-# Registor IBC ports.
-ps.crosschaininterface.registerPort()
-ps.crosschaininterface.registerPort()
+cxt.swappool.setConnection(chid, swappool, True, {'from': acct})
 
-# Create the connection between the pool and itself:
-pool.setConnection(
-    chid,
-    convert.to_bytes(pool.address.replace("0x", "")),
-    True,
-    {"from": acct}
-)
-
-swap_amount = tokens[0].balanceOf(pool)//10
-tx = pool.sendAsset(
-    chid,
-    convert.to_bytes(pool.address.replace("0x", "")),
-    convert.to_bytes(acct.address.replace("0x", "")),
-    tokens[0],
-    1,
-    swap_amount,
-    0,
-    acct,
-    {"from": acct},
-)
-
-# The data package:
-tx.events["IncomingPacket"]["packet"][3]
-decode_payload(tx.events["IncomingPacket"]["packet"][3])
-
-# Execute the IBC package:
-txe = ie.execute(tx.events["IncomingMetadata"]["metadata"][0], tx.events["IncomingPacket"]["packet"], {"from": acct})
-
-txe.info()
+cxt.swappool.finishSetup({'from': acct})
 """
 
 

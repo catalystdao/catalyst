@@ -7,30 +7,30 @@ from time import sleep
 import os
 
 mumbai_url = os.environ['MUMBAI_ALCHEMY']
-goerli_url = os.environ['GOERLI_ALCHEMY']
+sepolia_url = os.environ['SEPOLIA_ALCHEMY']
 
 w3_mumbai = Web3(w3.WebsocketProvider(mumbai_url))
 w3_mumbai.middleware_onion.inject(geth_poa_middleware, layer=0)
-w3_goerli = Web3(w3.WebsocketProvider(goerli_url))
+w3_sepolia = Web3(w3.WebsocketProvider(sepolia_url))
 
-emulator_mumbai = w3_mumbai.eth.contract(address="0xcAB0F1618A89abF9CaC22D1ad1a4928b5018Ce54", abi=e_abi)
-emulator_goerli = w3_goerli.eth.contract(address="0xcAB0F1618A89abF9CaC22D1ad1a4928b5018Ce54", abi=e_abi)
+emulator_mumbai = w3_mumbai.eth.contract(address="0xbD0125334A81087bEFa472dDB4755dB4F80b23D0", abi=e_abi)
+emulator_sepolia = w3_sepolia.eth.contract(address="0xcAB0F1618A89abF9CaC22D1ad1a4928b5018Ce54", abi=e_abi)
 
-CCI_mumbai = w3_mumbai.eth.contract(address="0x3647d390c083AA81Fc4b6F86A0b39fA3AC6F16a5", abi=cci_abi)
-CCI_goerli = w3_goerli.eth.contract(address="0x3647d390c083AA81Fc4b6F86A0b39fA3AC6F16a5", abi=cci_abi)
+CCI_mumbai = w3_mumbai.eth.contract(address="0xFc44709dD35fe4321f39Fe96a6Cde2F13638896B", abi=cci_abi)
+CCI_sepolia = w3_sepolia.eth.contract(address="0x3647d390c083AA81Fc4b6F86A0b39fA3AC6F16a5", abi=cci_abi)
 
 account_mumbai = w3_mumbai.eth.account.from_key(os.environ['PRIVATE_KEY_ROUTER'])
-account_goerli = w3_goerli.eth.account.from_key(os.environ['PRIVATE_KEY_ROUTER'])
+account_sepolia = w3_sepolia.eth.account.from_key(os.environ['PRIVATE_KEY_ROUTER'])
 
 Mumbai = dict(
     target_emulator=emulator_mumbai, target_contract=CCI_mumbai, target_account=account_mumbai,
-    sending_emulator=emulator_goerli, sending_contract=CCI_goerli, sending_account=account_goerli,
-    target_web3=w3_mumbai, sending_web3=w3_goerli, target="Mumbai", sending="Goerli"
+    sending_emulator=emulator_sepolia, sending_contract=CCI_sepolia, sending_account=account_sepolia,
+    target_web3=w3_mumbai, sending_web3=w3_sepolia, target="Mumbai", sending="Sepolia"
 )
-Goerli = dict(
+Sepolia = dict(
     sending_emulator=emulator_mumbai, sending_contract=CCI_mumbai, sending_account=account_mumbai,
-    target_emulator=emulator_goerli, target_contract=CCI_goerli, target_account=account_goerli,
-    target_web3=w3_goerli, sending_web3=w3_mumbai, sending="Mumbai", target="Goerli"
+    target_emulator=emulator_sepolia, target_contract=CCI_sepolia, target_account=account_sepolia,
+    target_web3=w3_sepolia, sending_web3=w3_mumbai, sending="Mumbai", target="Sepolia"
 )
 
 def fetch_logs(Chain, fromBlock, toBlock):
@@ -54,7 +54,7 @@ def relay(Chain, event):
             packet
         ).build_transaction({
             'from': target_account.address,
-            'nonce': target_web3.eth.get_transaction_count(target_account.address)
+            'nonce': target_web3.eth.get_transaction_count(target_account.address),
         })
         
         signed_txn = target_web3.eth.account.sign_transaction(tx, private_key=os.environ['PRIVATE_KEY_ROUTER'])
@@ -72,7 +72,7 @@ def relay(Chain, event):
                 packet
             ).build_transaction({
                 'from': sending_account.address,
-                'nonce': sending_web3.eth.get_transaction_count(sending_account.address)
+                'nonce': sending_web3.eth.get_transaction_count(sending_account.address),
             })
             signed_txn = sending_web3.eth.account.sign_transaction(tx_timeout, private_key=os.environ['PRIVATE_KEY_ROUTER'])
             tx_hash = sending_web3.eth.send_raw_transaction(signed_txn.rawTransaction)
@@ -83,7 +83,7 @@ def relay(Chain, event):
                 packet
             ).build_transaction({
                 'from': sending_account.address,
-                'nonce': sending_web3.eth.get_transaction_count(sending_account.address)
+                'nonce': sending_web3.eth.get_transaction_count(sending_account.address),
             })
             signed_txn = sending_web3.eth.account.sign_transaction(tx_ack, private_key=os.environ['PRIVATE_KEY_ROUTER'])
             tx_hash = sending_web3.eth.send_raw_transaction(signed_txn.rawTransaction)
@@ -95,7 +95,7 @@ def relay(Chain, event):
             packet
         ).build_transaction({
             'from': sending_account.address,
-            'nonce': sending_web3.eth.get_transaction_count(sending_account.address)
+            'nonce': sending_web3.eth.get_transaction_count(sending_account.address),
         })
         signed_txn = sending_web3.eth.account.sign_transaction(tx_timeout, private_key=os.environ['PRIVATE_KEY_ROUTER'])
         tx_hash = sending_web3.eth.send_raw_transaction(signed_txn.rawTransaction)
@@ -103,19 +103,19 @@ def relay(Chain, event):
 
 
 def main():
-    print(f"Goerli account: {account_goerli.address}, Mumbai account {account_mumbai.address}")
-    blockNumber = {"Goerli": w3_goerli.eth.blockNumber, "Mumbai": w3_mumbai.eth.blockNumber}
+    print(f"Sepolia account: {account_sepolia.address}, Mumbai account {account_mumbai.address}")
+    blockNumber = {"Sepolia": w3_sepolia.eth.blockNumber, "Mumbai": w3_mumbai.eth.blockNumber}
     while True:
-        fromBlock = blockNumber["Goerli"]
-        toBlock = w3_goerli.eth.blockNumber
+        fromBlock = blockNumber["Sepolia"]
+        toBlock = w3_sepolia.eth.blockNumber
         
         if fromBlock <= toBlock:
-            blockNumber["Goerli"] = toBlock + 1
-            goerli_logs = fetch_logs(Goerli, fromBlock, toBlock)
+            blockNumber["Sepolia"] = toBlock + 1
+            sepolia_logs = fetch_logs(Sepolia, fromBlock, toBlock)
             print(
-                f"Goerli: {len(goerli_logs)} logs between block {fromBlock}-{toBlock}"
+                f"Sepolia: {len(sepolia_logs)} logs between block {fromBlock}-{toBlock}"
             )
-            for log in goerli_logs:
+            for log in sepolia_logs:
                 relay(Mumbai, log)
         
         fromBlock = blockNumber["Mumbai"]
@@ -127,7 +127,7 @@ def main():
                 f"Mumbai: {len(mumbai_logs)} logs between block {fromBlock}-{toBlock}"
             )
             for log in mumbai_logs:
-                relay(Goerli, log)
+                relay(Sepolia, log)
             
             sleep(5)
     
