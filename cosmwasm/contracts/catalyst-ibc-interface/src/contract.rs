@@ -94,15 +94,6 @@ pub fn execute(
     }
 }
 
-fn execute_register_pool(
-    deps: DepsMut,
-    env: Env,
-    info: MessageInfo,
-    pool: String
-) -> Result<Response, ContractError> {
-    unimplemented!();
-}
-
 fn execute_send_cross_chain_asset(
     deps: Deps,
     env: Env,
