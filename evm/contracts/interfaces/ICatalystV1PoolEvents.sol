@@ -33,8 +33,8 @@ interface ICatalystV1PoolEvents {
      * @param minOut The pool fee. Taken from fromAmount. Numerical losses/fees are for obvious reasons not included.
      */
     event SendAsset(
-        bytes32 indexed toPool,
-        bytes32 indexed toAccount,
+        bytes indexed toPool,
+        bytes indexed toAccount,
         address fromAsset,
         uint8 toAssetIndex,
         uint256 fromAmount,
@@ -53,7 +53,7 @@ interface ICatalystV1PoolEvents {
      * @param toAmount The number of tokens provided to toAccount
      */
     event ReceiveAsset(
-        bytes32 fromPool,
+        bytes fromPool,
         address indexed toAccount,
         address toAsset,
         uint256 units,
@@ -69,8 +69,8 @@ interface ICatalystV1PoolEvents {
      * @param units The calculated number of liquidity units bought.
      */
     event SendLiquidity(
-        bytes32 indexed toPool,
-        bytes32 indexed toAccount,
+        bytes indexed toPool,
+        bytes indexed toAccount,
         uint256 fromAmount,
         uint256 units,
         bytes32 swapHash
@@ -84,7 +84,7 @@ interface ICatalystV1PoolEvents {
      * @param toAmount The number of pool tokens provided to toAccount
      */
     event ReceiveLiquidity(
-        bytes32 fromPool,
+        bytes fromPool,
         address indexed toAccount,
         uint256 units,
         uint256 toAmount,
@@ -176,7 +176,7 @@ interface ICatalystV1PoolEvents {
      */
     event SetConnection(
         bytes32 channelId,
-        bytes32 toPool,
+        bytes toPool,
         bool newState
     );
 }

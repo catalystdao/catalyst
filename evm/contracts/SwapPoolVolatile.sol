@@ -682,8 +682,8 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon {
      */
     function sendAsset(
         bytes32 channelId,
-        bytes32 toPool,
-        bytes32 toAccount,
+        bytes memory toPool,
+        bytes calldata toAccount,
         address fromAsset,
         uint8 toAssetIndex,
         uint256 amount,
@@ -766,8 +766,8 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon {
     /** @notice Copy of sendAsset with no calldata_ */
     function sendAsset(
         bytes32 channelId,
-        bytes32 toPool,
-        bytes32 toAccount,
+        bytes memory toPool,
+        bytes calldata toAccount,
         address fromAsset,
         uint8 toAssetIndex,
         uint256 amount,
@@ -802,7 +802,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon {
      */
     function receiveAsset(
         bytes32 channelId,
-        bytes32 fromPool,
+        bytes calldata fromPool,
         uint256 toAssetIndex,
         address toAccount,
         uint256 U,
@@ -839,7 +839,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon {
 
     function receiveAsset(
         bytes32 channelId,
-        bytes32 fromPool,
+        bytes calldata fromPool,
         uint256 toAssetIndex,
         address toAccount,
         uint256 U,
@@ -895,8 +895,8 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon {
      */
     function sendLiquidity(
         bytes32 channelId,
-        bytes32 toPool,
-        bytes32 toAccount,
+        bytes calldata toPool,
+        bytes calldata toAccount,
         uint256 poolTokens,
         uint256 minOut,
         address fallbackUser,
@@ -977,8 +977,8 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon {
     /** @notice Copy of sendLiquidity with no calldata_ */
     function sendLiquidity(
         bytes32 channelId,
-        bytes32 toPool,
-        bytes32 toAccount,
+        bytes calldata toPool,
+        bytes calldata toAccount,
         uint256 poolTokens,
         uint256 minOut,
         address fallbackUser
@@ -1012,7 +1012,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon {
      */
     function receiveLiquidity(
         bytes32 channelId,
-        bytes32 fromPool,
+        bytes calldata fromPool,
         address toAccount,
         uint256 U,
         uint256 minOut,
@@ -1050,7 +1050,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon {
     
     function receiveLiquidity(
         bytes32 channelId,
-        bytes32 fromPool,
+        bytes calldata fromPool,
         address who,
         uint256 U,
         uint256 minOut,
@@ -1091,7 +1091,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon {
      * @param blockNumberMod The block number at which the swap transaction was commited (mod 32)
      */
     function sendAssetAck(
-        bytes32 toAccount,
+        bytes calldata toAccount,
         uint256 U,
         uint256 escrowAmount,
         address escrowToken,
@@ -1131,7 +1131,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon {
      * @param blockNumberMod The block number at which the swap transaction was commited (mod 32)
      */
     function sendLiquidityAck(
-        bytes32 toAccount,
+        bytes calldata toAccount,
         uint256 U,
         uint256 escrowAmount,
         uint32 blockNumberMod
