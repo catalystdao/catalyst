@@ -21,17 +21,17 @@ pub struct InstantiateMsg {
 
 #[cw_serde]
 pub struct AssetSwapMetadata{
-    from_amount: Uint128,
-    from_asset: String,
-    swap_hash: String,
-    block_number: u32
+    pub from_amount: Uint128,
+    pub from_asset: String,
+    pub swap_hash: String,
+    pub block_number: u32
 }
 
 #[cw_serde]
 pub struct LiquiditySwapMetadata{
-    from_amount: Uint128,
-    swap_hash: String,
-    block_number: u32
+    pub from_amount: Uint128,
+    pub swap_hash: String,
+    pub block_number: u32
 }
 
 #[cw_serde]
@@ -41,7 +41,7 @@ pub enum ExecuteMsg {
         channel_id: String,
         to_pool: String,                    //TODO type: use [u8; 32] or Vec<u8>?
         to_account: String,                 //TODO type: use [u8; 32] or Vec<u8>?
-        target_asset_index: u8,
+        to_asset_index: u8,
         #[serde(with = "U256Def")]
         u: U256,
         #[serde(with = "U256Def")]

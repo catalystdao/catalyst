@@ -10,7 +10,13 @@ pub enum ContractError {
     Unauthorized {},
 
     #[error("Only IBC channel version 'catalyst-v1' is supported, got {version}.")]
-    InvalidIbcChannelVersion { version: String }
+    InvalidIbcChannelVersion { version: String },
+
+    #[error("Payload encoding failed.")]
+    PayloadEncodingError {},
+
+    #[error("Payload deoding failed.")]
+    PayloadDecodingError {},
 
     // Add any other custom errors you like here.
     // Look at https://docs.rs/thiserror/1.0.21/thiserror/ for details.

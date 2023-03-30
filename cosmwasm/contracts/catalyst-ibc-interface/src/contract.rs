@@ -1,9 +1,10 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
+use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, IbcMsg};
 use cw2::set_contract_version;
 use ethnum::U256;
 
+use crate::catalyst_ibc_payload::{CTX0_ASSET_SWAP, CTX0_DATA_START, CTX1_DATA_START, CTX1_LIQUIDITY_SWAP};
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg, AssetSwapMetadata, LiquiditySwapMetadata};
 use crate::state::{CatalystIBCInterfaceState, CATALYST_IBC_INTERFACE_STATE};
@@ -11,6 +12,10 @@ use crate::state::{CatalystIBCInterfaceState, CATALYST_IBC_INTERFACE_STATE};
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:catalyst-ibc-interface";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
+
+const TRANSACTION_TIMEOUT: u64 = 2 * 60 * 60;   // 2 hours      //TODO allow this to be set on interface instantiation?
+                                                                //TODO allow this to be customized on a per-channel basis?
+                                                                //TODO allow this to be overriden on 'sendAsset' and 'sendLiquidity'?
 
 
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -25,7 +30,7 @@ pub fn instantiate(
 
     let catalyst_ibc_interface_state = CatalystIBCInterfaceState {
         admin: deps.api.addr_validate(&msg.gov_contract)?,   // Validate ibc_endpoint
-        default_timeout: msg.default_timeout
+        default_timeout: msg.default_timeout                 //TODO remove
     };
 
     CATALYST_IBC_INTERFACE_STATE.save(deps.storage, &catalyst_ibc_interface_state)?;
@@ -51,19 +56,18 @@ pub fn execute(
             channel_id,
             to_pool,
             to_account,
-            target_asset_index,
+            to_asset_index,
             u,
             min_out,
             metadata,
             calldata
         } => execute_send_cross_chain_asset(
-            deps.as_ref(),
             env,
             info,
             channel_id,
             to_pool,
             to_account,
-            target_asset_index,
+            to_asset_index,
             u,
             min_out,
             metadata,
@@ -79,7 +83,6 @@ pub fn execute(
             metadata,
             calldata
         } => execute_send_cross_chain_liquidity(
-            deps.as_ref(),
             env,
             info,
             channel_id,
@@ -95,23 +98,104 @@ pub fn execute(
 }
 
 fn execute_send_cross_chain_asset(
-    deps: Deps,
     env: Env,
     info: MessageInfo,
     channel_id: String,
     to_pool: String,
     to_account: String,
-    target_asset_index: u8,
+    to_asset_index: u8,
     u: U256,
     min_out: U256,
     metadata: AssetSwapMetadata,    //TODO do we want this?
     calldata: Vec<u8>
 ) -> Result<Response, ContractError> {
-    todo!();
+
+    // Encode the parameters into a byte vector
+
+    let from_pool  = info.sender.as_bytes();
+    let to_pool    = to_pool.as_bytes();
+    let to_account = to_account.as_bytes();
+    let from_asset = metadata.from_asset.as_bytes();
+
+    // Preallocate the required size for the IBC payload to avoid runtime reallocations.
+    let mut data: Vec<u8> = Vec::with_capacity(
+        CTX0_DATA_START     // This defines the size of all the fixed-length elements of the payload
+        + from_pool.len()
+        + to_pool.len()
+        + to_account.len()
+        + from_asset.len()
+        + calldata.len()
+    );   // Addition is way below the overflow threshold, and even if it were to overflow the code would still function properly, as this is just a runtime optimization.
+
+    // Context
+    data.push(CTX0_ASSET_SWAP);
+
+    // From pool
+    data.push(
+        from_pool.len().try_into().map_err(|_| ContractError::PayloadEncodingError {})?    // Cast length into u8 catching overflow
+    );
+    data.extend_from_slice(&from_pool);
+
+    // To pool
+    data.push(
+        to_pool.len().try_into().map_err(|_| ContractError::PayloadEncodingError {})?    // Cast length into u8 catching overflow
+    );
+    data.extend_from_slice(&to_pool);
+
+    // To account
+    data.push(
+        to_account.len().try_into().map_err(|_| ContractError::PayloadEncodingError {})?    // Cast length into u8 catching overflow
+    );
+    data.extend_from_slice(&to_account);
+
+    // Units
+    data.extend_from_slice(&u.to_be_bytes());
+
+    // To asset index
+    data.push(to_asset_index);
+
+    // Min out
+    data.extend_from_slice(&min_out.to_be_bytes());
+
+    // From amount
+    data.extend_from_slice(&U256::from(metadata.from_amount.u128()).to_be_bytes());
+
+    // From asset
+    data.push(
+        from_asset.len().try_into().map_err(|_| ContractError::PayloadEncodingError {})?    // Cast length into u8 catching overflow
+    );
+    data.extend_from_slice(&from_asset);
+
+    // Block number
+    data.extend_from_slice(&metadata.block_number.to_be_bytes());
+
+    // Swap hash
+    let swap_hash = metadata.swap_hash.as_bytes();
+    if swap_hash.len() != 32 {
+        return Err(ContractError::PayloadDecodingError {});
+    }
+    data.extend_from_slice(&swap_hash);
+
+    // Calldata
+    let calldata_length: u16 = calldata.len().try_into().map_err(|_| ContractError::PayloadEncodingError {})?;    // Cast length into u16 catching overflow
+    data.extend_from_slice(&calldata_length.to_be_bytes());
+    data.extend_from_slice(&calldata);
+
+
+    // Build the ibc message
+    let ibc_msg = IbcMsg::SendPacket {
+        channel_id,
+        data: data.into(),
+        timeout: env.block.time.plus_seconds(TRANSACTION_TIMEOUT).into()
+    };
+
+    //TODO since this is permissionless, do we want to add a log here (e.g. sender and target pool)?
+    Ok(Response::new()
+        .add_message(ibc_msg)
+    )
 }
 
 fn execute_send_cross_chain_liquidity(
-    deps: Deps,
     env: Env,
     info: MessageInfo,
     channel_id: String,
@@ -122,7 +206,79 @@ fn execute_send_cross_chain_liquidity(
     metadata: LiquiditySwapMetadata,    //TODO do we want this?
     calldata: Vec<u8>
 ) -> Result<Response, ContractError> {
-    todo!();
+
+    // Encode the parameters into a byte vector
+
+    let from_pool  = info.sender.as_bytes();
+    let to_pool    = to_pool.as_bytes();
+    let to_account = to_account.as_bytes();
+
+    // Preallocate the required size for the IBC payload to avoid runtime reallocations.
+    let mut data: Vec<u8> = Vec::with_capacity(
+        CTX1_DATA_START     // This defines the size of all the fixed-length elements of the payload
+        + from_pool.len()
+        + to_pool.len()
+        + to_account.len()
+        + calldata.len()
+    );   // Addition is way below the overflow threshold, and even if it were to overflow the code would still function properly, as this is just a runtime optimization.
+
+    // Context
+    data.push(CTX1_LIQUIDITY_SWAP);
+
+    // From pool
+    data.push(
+        from_pool.len().try_into().map_err(|_| ContractError::PayloadEncodingError {})?    // Cast length into u8 catching overflow
+    );
+    data.extend_from_slice(&from_pool);
+
+    // To pool
+    data.push(
+        to_pool.len().try_into().map_err(|_| ContractError::PayloadEncodingError {})?    // Cast length into u8 catching overflow
+    );
+    data.extend_from_slice(&to_pool);
+
+    // To account
+    data.push(
+        to_account.len().try_into().map_err(|_| ContractError::PayloadEncodingError {})?    // Cast length into u8 catching overflow
+    );
+    data.extend_from_slice(&to_account);
+
+    // Units
+    data.extend_from_slice(&u.to_be_bytes());
+
+    // Min out
+    data.extend_from_slice(&min_out.to_be_bytes());
+
+    // From amount
+    data.extend_from_slice(&U256::from(metadata.from_amount.u128()).to_be_bytes());
+
+    // Block number
+    data.extend_from_slice(&metadata.block_number.to_be_bytes());
+
+    // Swap hash
+    let swap_hash = metadata.swap_hash.as_bytes();
+    if swap_hash.len() != 32 {
+        return Err(ContractError::PayloadDecodingError {});
+    }
+    data.extend_from_slice(&swap_hash);
+
+    // Calldata
+    let calldata_length: u16 = calldata.len().try_into().map_err(|_| ContractError::PayloadEncodingError {})?;    // Cast length into u16 catching overflow
+    data.extend_from_slice(&calldata_length.to_be_bytes());
+    data.extend_from_slice(&calldata);
+
+
+    // Build the ibc message
+    let ibc_msg = IbcMsg::SendPacket {
+        channel_id,
+        data: data.into(),
+        timeout: env.block.time.plus_seconds(TRANSACTION_TIMEOUT).into()
+    };
+
+    //TODO since this is permissionless, do we want to add a log here (e.g. sender and target pool)?
+    Ok(Response::new()
+        .add_message(ibc_msg)
+    )
 }
 
 
