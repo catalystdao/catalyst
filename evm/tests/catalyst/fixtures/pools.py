@@ -224,7 +224,7 @@ def pool_finish_setup(pool, deployer):
 def pool_connect_itself(pool, channel_id, deployer):
     pool.setConnection(
         channel_id,
-        convert.to_bytes(0)+convert.to_bytes(pool.address.replace("0x", "")),
+        convert.to_bytes(20, "bytes1")+convert.to_bytes(0)+convert.to_bytes(pool.address.replace("0x", "")),
         True,
         {"from": deployer}
     )

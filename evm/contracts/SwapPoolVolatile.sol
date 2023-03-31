@@ -694,8 +694,8 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon {
         // Only allow connected pools
         if (!_poolConnection[channelId][toPool]) revert PoolNotConnected(channelId, toPool);
         require(fallbackUser != address(0));
-        require(toPool.length == 64);  // dev: Pool addresses are 64 bytes.
-        require(toAccount.length == 64);  // dev: Account addresses are 64 bytes.
+        require(toPool.length == 65);  // dev: Pool addresses are uint8 + 64 bytes.
+        require(toAccount.length == 65);  // dev: Account addresses are uint8 + 64 bytes.
 
         _updateWeights();
 
@@ -906,8 +906,8 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon {
     ) nonReentrant public override returns (uint256) {
         // Only allow connected pools
         if (!_poolConnection[channelId][toPool]) revert PoolNotConnected(channelId, toPool);
-        require(toPool.length == 64);  // dev: Pool addresses are 64 bytes.
-        require(toAccount.length == 64);  // dev: Account addresses are 64 bytes.
+        require(toPool.length == 65);  // dev: Pool addresses are uint8 + 64 bytes.
+        require(toAccount.length == 65);  // dev: Account addresses are uint8 + 64 bytes.
 
         // Address(0) is not a valid fallback user. (As checking for escrow overlap
         // checks if the fallbackUser != address(0))

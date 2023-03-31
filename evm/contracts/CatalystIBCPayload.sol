@@ -3,28 +3,34 @@
 pragma solidity ^0.8.16;
 
 // Catalyst IBC payload structure ***********************************************************************************************
+// Note: Addresses have 65 bytes reserved, however, the first byte should only be used for the address size.
+// It can, therefore, generally be ignored if the one doesn't care about prepended 0 bytes.
 //
 // Common Payload (beginning)
-//    CONTEXT               0   (1 byte)   
-//    + FROM_POOL           1   (64 bytes) 
-//    + TO_POOL             65  (64 bytes)
-//    + TO_ACCOUNT          129  (64 bytes) 
-//    + UNITS               193  (32 bytes) 
+//    CONTEXT               0   (1 byte)
+//    + FROM_POOL_LENGTH    1   (1 byte)
+//    + FROM_POOL           2   (64 bytes)
+//    + TO_POOL_LENGTH      66  (1 byte)
+//    + TO_POOL             67  (64 bytes)
+//    + TO_ACCOUNT_LENGTH   131 (1 byte)
+//    + TO_ACCOUNT          132 (64 bytes)
+//    + UNITS               196 (32 bytes)
 // 
 // Context-depending Payload
 //    CTX0 - 0x00 - Asset Swap Payload
-//       + TO_ASSET_INDEX   225 (1 byte)
-//       + MIN_OUT          226 (32 bytes)
-//       + FROM_AMOUNT      258 (32 bytes)
-//       + FROM_ASSET       290 (64 bytes)
-//       + BLOCK_NUMBER     354 (4 bytes)
-//       + SWAP_HASH        358 (32 bytes)
+//       + TO_ASSET_INDEX   228 (1 byte)
+//       + MIN_OUT          229 (32 bytes)
+//       + FROM_AMOUNT      261 (32 bytes)
+//       + FROM_ASSET_LEN   293 (1 byte)
+//       + FROM_ASSET       294 (64 bytes)
+//       + BLOCK_NUMBER     358 (4 bytes)
+//       + SWAP_HASH        362 (32 bytes)
 //
 //    CTX1 - 0x01 - Liquidity Swap Payload
-//       + MIN_OUT          225 (32 bytes)
-//       + FROM_AMOUNT      257 (32 bytes)
-//       + BLOCK_NUMBER     289 (4 bytes)
-//       + SWAP_HASH        293 (32 bytes)
+//       + MIN_OUT          228 (32 bytes)
+//       + FROM_AMOUNT      260 (32 bytes)
+//       + BLOCK_NUMBER     292 (4 bytes)
+//       + SWAP_HASH        296 (32 bytes)
 //
 // Common Payload (end)
 //    + DATA_LENGTH         LENGTH-N-2 (2 bytes)
@@ -43,65 +49,69 @@ bytes1 constant CTX1_LIQUIDITY_SWAP = 0x01;
 
 uint constant CONTEXT_POS           = 0;
 
-uint constant FROM_POOL_START       = 1;
-uint constant FROM_POOL_START_EVM   = 45;  // If the address is an EVM address, this is the start
-uint constant FROM_POOL_END         = 65;
+uint constant FROM_POOL_LENGTH_POS  = 1;
+uint constant FROM_POOL_START       = 2;
+uint constant FROM_POOL_START_EVM   = 46;  // If the address is an EVM address, this is the start
+uint constant FROM_POOL_END         = 66;
 
-uint constant TO_POOL_START         = 65;
-uint constant TO_POOL_START_EVM     = 109;  // If the address is an EVM address, this is the start
-uint constant TO_POOL_END           = 129;
+uint constant TO_POOL_LENGTH_POS    = 66;
+uint constant TO_POOL_START         = 67;
+uint constant TO_POOL_START_EVM     = 111;  // If the address is an EVM address, this is the start
+uint constant TO_POOL_END           = 131;
 
-uint constant TO_ACCOUNT_START      = 129;
-uint constant TO_ACCOUNT_START_EVM  = 173;  // If the address is an EVM address, this is the start
-uint constant TO_ACCOUNT_END        = 193;
+uint constant TO_ACCOUNT_LENGTH_POS = 131;
+uint constant TO_ACCOUNT_START      = 132;
+uint constant TO_ACCOUNT_START_EVM  = 176;  // If the address is an EVM address, this is the start
+uint constant TO_ACCOUNT_END        = 196;
 
-uint constant UNITS_START           = 193;
-uint constant UNITS_END             = 225;
+uint constant UNITS_START           = 196;
+uint constant UNITS_END             = 228;
 
 
 
 // CTX0 Asset Swap Payload ******************************************************************************************************
 
-uint constant CTX0_TO_ASSET_INDEX_POS    = 225;
+uint constant CTX0_TO_ASSET_INDEX_POS    = 228;
 
-uint constant CTX0_MIN_OUT_START         = 226;
-uint constant CTX0_MIN_OUT_END           = 258;
+uint constant CTX0_MIN_OUT_START         = 229;
+uint constant CTX0_MIN_OUT_END           = 261;
 
-uint constant CTX0_FROM_AMOUNT_START     = 258;
-uint constant CTX0_FROM_AMOUNT_END       = 290;
+uint constant CTX0_FROM_AMOUNT_START     = 261;
+uint constant CTX0_FROM_AMOUNT_END       = 293;
 
-uint constant CTX0_FROM_ASSET_START      = 290; 
-uint constant CTX0_FROM_ASSET_START_EVM  = 334;  // If the address is an EVM address, this is the start
-uint constant CTX0_FROM_ASSET_END        = 354;
+uint constant CTX0_FROM_ASSET_LENGTH_POS = 293; 
+uint constant CTX0_FROM_ASSET_START      = 294; 
+uint constant CTX0_FROM_ASSET_START_EVM  = 338;  // If the address is an EVM address, this is the start
+uint constant CTX0_FROM_ASSET_END        = 358;
 
-uint constant CTX0_BLOCK_NUMBER_START    = 354;
-uint constant CTX0_BLOCK_NUMBER_END      = 358;
+uint constant CTX0_BLOCK_NUMBER_START    = 358;
+uint constant CTX0_BLOCK_NUMBER_END      = 362;
 
-uint constant CTX0_SWAP_HASH_START       = 358;
-uint constant CTX0_SWAP_HASH_END         = 390;
+uint constant CTX0_SWAP_HASH_START       = 362;
+uint constant CTX0_SWAP_HASH_END         = 394;
 
-uint constant CTX0_DATA_LENGTH_START     = 390;
-uint constant CTX0_DATA_LENGTH_END       = 392;
+uint constant CTX0_DATA_LENGTH_START     = 394;
+uint constant CTX0_DATA_LENGTH_END       = 396;
 
-uint constant CTX0_DATA_START            = 392;
+uint constant CTX0_DATA_START            = 396;
 
 
 
 // CTX1 Liquidity Swap Payload **************************************************************************************************
 
-uint constant CTX1_MIN_OUT_START         = 225;
-uint constant CTX1_MIN_OUT_END           = 257;
+uint constant CTX1_MIN_OUT_START         = 228;
+uint constant CTX1_MIN_OUT_END           = 260;
 
-uint constant CTX1_FROM_AMOUNT_START     = 257;
-uint constant CTX1_FROM_AMOUNT_END       = 289;
+uint constant CTX1_FROM_AMOUNT_START     = 260;
+uint constant CTX1_FROM_AMOUNT_END       = 292;
 
-uint constant CTX1_BLOCK_NUMBER_START    = 289;
-uint constant CTX1_BLOCK_NUMBER_END      = 293;
+uint constant CTX1_BLOCK_NUMBER_START    = 292;
+uint constant CTX1_BLOCK_NUMBER_END      = 296;
 
-uint constant CTX1_SWAP_HASH_START       = 293;
-uint constant CTX1_SWAP_HASH_END         = 325;
+uint constant CTX1_SWAP_HASH_START       = 296;
+uint constant CTX1_SWAP_HASH_END         = 328;
 
-uint constant CTX1_DATA_LENGTH_START     = 325;
-uint constant CTX1_DATA_LENGTH_END       = 327;
+uint constant CTX1_DATA_LENGTH_START     = 328;
+uint constant CTX1_DATA_LENGTH_END       = 330;
 
-uint constant CTX1_DATA_START            = 327;
+uint constant CTX1_DATA_START            = 330;

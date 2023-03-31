@@ -29,8 +29,8 @@ def test_self_swap(
     
     tx = pool.sendAsset(
         channel_id,
-        convert.to_bytes(0)+convert.to_bytes(pool.address.replace("0x", "")),
-        convert.to_bytes(0)+convert.to_bytes(berg.address.replace("0x", "")),
+        convert.to_bytes(20, "bytes1")+convert.to_bytes(0)+convert.to_bytes(pool.address.replace("0x", "")),
+        convert.to_bytes(20, "bytes1")+convert.to_bytes(0)+convert.to_bytes(berg.address.replace("0x", "")),
         token,
         0,
         swap_amount,

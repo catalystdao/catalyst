@@ -73,16 +73,18 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
         bytes memory data = bytes.concat(  // Using bytes.concat to circumvent stack too deep error
             abi.encodePacked(
                 CTX0_ASSET_SWAP,
+                uint8(20),  // EVM addresses are 20 bytes.
                 bytes32(0),  // EVM only uses 20 bytes. abi.encode packs the 20 bytes into 32 then we need to add 32 more
                 abi.encode(msg.sender),  // Use abi.encode to encode address into 32 bytes
-                toPool,
-                toAccount,
+                toPool,  // Length is expected to be pre-encoded.
+                toAccount,  // Length is expected to be pre-encoded.
                 U,
                 toAssetIndex,
                 minOut
             ),
             abi.encodePacked(
                 metadata.fromAmount,
+                uint8(20),  // EVM addresses are 20 bytes.
                 bytes32(0),  // EVM only uses 20 bytes. abi.encode packs the 20 bytes into 32 then we need to add 32 more
                 abi.encode(metadata.fromAsset),
                 metadata.blockNumber,
@@ -131,10 +133,11 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
         bytes memory data = bytes.concat(  // Using bytes.concat to circumvent stack too deep error
             abi.encodePacked(
                 CTX1_LIQUIDITY_SWAP,
+                uint8(20),  // EVM addresses are 20 bytes.
                 bytes32(0),  // EVM only uses 20 bytes. abi.encode packs the 20 bytes into 32 then we need to add 32 more
                 abi.encode(msg.sender),  // Use abi.encode to encode address into 32 bytes
-                toPool,
-                toAccount,
+                toPool,  // Length is expected to be pre-encoded.
+                toAccount,  // Length is expected to be pre-encoded.
                 U,
                 minOut
             ),
@@ -171,7 +174,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
         if (context == CTX0_ASSET_SWAP) {
 
             ICatalystV1Pool(fromPool).sendAssetAck(
-                data[ TO_ACCOUNT_START : TO_ACCOUNT_END ],                                      // toAccount
+                data[ TO_ACCOUNT_LENGTH_POS : TO_ACCOUNT_END ],                            // toAccount
                 uint256(bytes32(data[ UNITS_START : UNITS_END ])),                              // units
                 uint256(bytes32(data[ CTX0_FROM_AMOUNT_START : CTX0_FROM_AMOUNT_END ])),        // fromAmouant
                 address(uint160(bytes20(data[ CTX0_FROM_ASSET_START_EVM : CTX0_FROM_ASSET_END ]))), // fromAsset
@@ -182,7 +185,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
         else if (context == CTX1_LIQUIDITY_SWAP) {
 
             ICatalystV1Pool(fromPool).sendLiquidityAck(
-                data[ TO_ACCOUNT_START : TO_ACCOUNT_END ],                                  // toAccount
+                data[ TO_ACCOUNT_LENGTH_POS : TO_ACCOUNT_END ],                        // toAccount
                 uint256(bytes32(data[ UNITS_START : UNITS_END ])),                          // units
                 uint256(bytes32(data[ CTX1_FROM_AMOUNT_START : CTX1_FROM_AMOUNT_END ])),    // fromAmount
                 uint32(bytes4(data[ CTX1_BLOCK_NUMBER_START : CTX1_BLOCK_NUMBER_END ]))     // block number
@@ -214,7 +217,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
         if (context == CTX0_ASSET_SWAP) {
 
             ICatalystV1Pool(fromPool).sendAssetTimeout(
-                data[ TO_ACCOUNT_START : TO_ACCOUNT_END ],                                      // toAccount
+                data[ TO_ACCOUNT_LENGTH_POS : TO_ACCOUNT_END ],                        // toAccount
                 uint256(bytes32(data[ UNITS_START : UNITS_END ])),                              // units
                 uint256(bytes32(data[ CTX0_FROM_AMOUNT_START : CTX0_FROM_AMOUNT_END ])),        // fromAmount
                 abi.decode(data[ CTX0_FROM_ASSET_START : CTX0_FROM_ASSET_END ], (address)),     // fromAsset
@@ -225,7 +228,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
         else if (context == CTX1_LIQUIDITY_SWAP) {
 
             ICatalystV1Pool(fromPool).sendLiquidityTimeout(
-                data[ TO_ACCOUNT_START : TO_ACCOUNT_END ],                                  // toAccount
+                data[ TO_ACCOUNT_LENGTH_POS : TO_ACCOUNT_END ],                        // toAccount
                 uint256(bytes32(data[ UNITS_START : UNITS_END ])),                          // units
                 uint256(bytes32(data[ CTX1_FROM_AMOUNT_START : CTX1_FROM_AMOUNT_END ])),    // fromAmount
                 uint32(bytes4(data[ CTX1_BLOCK_NUMBER_START : CTX1_BLOCK_NUMBER_END ]))     // block number
@@ -250,7 +253,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
         bytes calldata data = packet.data;
 
         bytes1 context = data[CONTEXT_POS];
-        bytes memory fromPool = data[ FROM_POOL_START : FROM_POOL_END ];
+        bytes memory fromPool = data[ FROM_POOL_LENGTH_POS : FROM_POOL_END ];
         // We know that toPool is an EVM address
         address toPool = address(uint160(bytes20(data[ TO_POOL_START_EVM : TO_POOL_END ])));
 
