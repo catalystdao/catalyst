@@ -337,9 +337,9 @@ fn on_packet_receive(
         RECEIVE_REPLY_ID
     );
 
-    Ok(IbcReceiveResponse::new()
-        .set_ack(Into::<Binary>::into(vec![ACK_SUCCESS]))   //TODO overhaul ack success format
-        .add_submessage(sub_msg)                            //TODO add attributes?
+    Ok(IbcReceiveResponse::new()        //TODO add attributes?
+        .set_ack(ack_success())
+        .add_submessage(sub_msg)
     )
 }
 
