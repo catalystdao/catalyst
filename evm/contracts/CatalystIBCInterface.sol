@@ -58,8 +58,8 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
      */
     function sendCrossChainAsset(
         bytes32 channelId,
-        bytes32 toPool,
-        bytes32 toAccount,
+        bytes calldata toPool,
+        bytes calldata toAccount,
         uint8 toAssetIndex,
         uint256 U,
         uint256 minOut,
@@ -70,10 +70,11 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
         // they cannot drain any value. As such, the very worst they can do is waste gas.
 
         // Encode payload. See CatalystIBCPayload.sol for the payload definition
-        bytes memory data = bytes.concat(       // Using bytes.concat to circumvent stack too deep error
+        bytes memory data = bytes.concat(  // Using bytes.concat to circumvent stack too deep error
             abi.encodePacked(
                 CTX0_ASSET_SWAP,
-                abi.encode(msg.sender),         // Use abi.encode to encode address into 32 bytes
+                bytes32(0),  // EVM only uses 20 bytes. abi.encode packs the 20 bytes into 32 then we need to add 32 more
+                abi.encode(msg.sender),  // Use abi.encode to encode address into 32 bytes
                 toPool,
                 toAccount,
                 U,
@@ -82,6 +83,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
             ),
             abi.encodePacked(
                 metadata.fromAmount,
+                bytes32(0),  // EVM only uses 20 bytes. abi.encode packs the 20 bytes into 32 then we need to add 32 more
                 abi.encode(metadata.fromAsset),
                 metadata.blockNumber,
                 metadata.swapHash,
@@ -113,21 +115,24 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
      */
     function sendCrossChainLiquidity(
         bytes32 channelId,
-        bytes32 toPool,
-        bytes32 toAccount,
+        bytes calldata toPool,
+        bytes calldata toAccount,
         uint256 U,
         uint256 minOut,
         LiquiditySwapMetadata memory metadata,
         bytes memory calldata_
     ) external {
+        require(toPool.length == 64);  // dev: External addresses needs to be of length 64
+        require(toAccount.length == 64);  // dev: External addresses needs to be of length 64
         // Anyone can call this function, but unless someone can also manage to pass the security check on onRecvPacket
         // they cannot drain any value. As such, the very worst they can do is waste gas.
 
         // Encode payload. See CatalystIBCPayload.sol for the payload definition
-        bytes memory data = bytes.concat(       // Using bytes.concat to circumvent stack too deep error
+        bytes memory data = bytes.concat(  // Using bytes.concat to circumvent stack too deep error
             abi.encodePacked(
                 CTX1_LIQUIDITY_SWAP,
-                abi.encode(msg.sender),         // Use abi.encode to encode address into 32 bytes
+                bytes32(0),  // EVM only uses 20 bytes. abi.encode packs the 20 bytes into 32 then we need to add 32 more
+                abi.encode(msg.sender),  // Use abi.encode to encode address into 32 bytes
                 toPool,
                 toAccount,
                 U,
@@ -160,15 +165,16 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
         bytes calldata data = packet.data;
 
         bytes1 context = data[CONTEXT_POS];
-        address fromPool = abi.decode(data[ FROM_POOL_START : FROM_POOL_END ], (address));
+        // Since this is a callback, fromPool must be an EVM address.
+        address fromPool = address(uint160(bytes20(data[ FROM_POOL_START_EVM : FROM_POOL_END ])));
 
         if (context == CTX0_ASSET_SWAP) {
 
             ICatalystV1Pool(fromPool).sendAssetAck(
-                bytes32(data[ TO_ACCOUNT_START : TO_ACCOUNT_END ]),                             // toAccount
+                data[ TO_ACCOUNT_START : TO_ACCOUNT_END ],                                      // toAccount
                 uint256(bytes32(data[ UNITS_START : UNITS_END ])),                              // units
-                uint256(bytes32(data[ CTX0_FROM_AMOUNT_START : CTX0_FROM_AMOUNT_END ])),        // fromAmount
-                abi.decode(data[ CTX0_FROM_ASSET_START : CTX0_FROM_ASSET_END ], (address)),     // fromAsset
+                uint256(bytes32(data[ CTX0_FROM_AMOUNT_START : CTX0_FROM_AMOUNT_END ])),        // fromAmouant
+                address(uint160(bytes20(data[ CTX0_FROM_ASSET_START_EVM : CTX0_FROM_ASSET_END ]))), // fromAsset
                 uint32(bytes4(data[ CTX0_BLOCK_NUMBER_START : CTX0_BLOCK_NUMBER_END ]))         // block number
             );
 
@@ -176,7 +182,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
         else if (context == CTX1_LIQUIDITY_SWAP) {
 
             ICatalystV1Pool(fromPool).sendLiquidityAck(
-                bytes32(data[ TO_ACCOUNT_START : TO_ACCOUNT_END ]),                         // toAccount
+                data[ TO_ACCOUNT_START : TO_ACCOUNT_END ],                                  // toAccount
                 uint256(bytes32(data[ UNITS_START : UNITS_END ])),                          // units
                 uint256(bytes32(data[ CTX1_FROM_AMOUNT_START : CTX1_FROM_AMOUNT_END ])),    // fromAmount
                 uint32(bytes4(data[ CTX1_BLOCK_NUMBER_START : CTX1_BLOCK_NUMBER_END ]))     // block number
@@ -202,12 +208,13 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
         bytes calldata data = packet.data;
 
         bytes1 context = data[CONTEXT_POS];
-        address fromPool = abi.decode(data[FROM_POOL_START:FROM_POOL_END], (address));
+        // Since this is a callback, fromPool must be an EVM address.
+        address fromPool = address(uint160(bytes20(data[ FROM_POOL_START_EVM : FROM_POOL_END ])));
 
         if (context == CTX0_ASSET_SWAP) {
 
             ICatalystV1Pool(fromPool).sendAssetTimeout(
-                bytes32(data[ TO_ACCOUNT_START : TO_ACCOUNT_END ]),                             // toAccount
+                data[ TO_ACCOUNT_START : TO_ACCOUNT_END ],                                      // toAccount
                 uint256(bytes32(data[ UNITS_START : UNITS_END ])),                              // units
                 uint256(bytes32(data[ CTX0_FROM_AMOUNT_START : CTX0_FROM_AMOUNT_END ])),        // fromAmount
                 abi.decode(data[ CTX0_FROM_ASSET_START : CTX0_FROM_ASSET_END ], (address)),     // fromAsset
@@ -218,7 +225,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
         else if (context == CTX1_LIQUIDITY_SWAP) {
 
             ICatalystV1Pool(fromPool).sendLiquidityTimeout(
-                bytes32(data[ TO_ACCOUNT_START : TO_ACCOUNT_END ]),                         // toAccount
+                data[ TO_ACCOUNT_START : TO_ACCOUNT_END ],                                  // toAccount
                 uint256(bytes32(data[ UNITS_START : UNITS_END ])),                          // units
                 uint256(bytes32(data[ CTX1_FROM_AMOUNT_START : CTX1_FROM_AMOUNT_END ])),    // fromAmount
                 uint32(bytes4(data[ CTX1_BLOCK_NUMBER_START : CTX1_BLOCK_NUMBER_END ]))     // block number
@@ -243,9 +250,9 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
         bytes calldata data = packet.data;
 
         bytes1 context = data[CONTEXT_POS];
-        bytes32 fromPool = bytes32(data[ FROM_POOL_START : FROM_POOL_END ]);
-        address toPool = abi.decode(data[ TO_POOL_START : TO_POOL_END ], (address));
-
+        bytes memory fromPool = data[ FROM_POOL_START : FROM_POOL_END ];
+        // We know that toPool is an EVM address
+        address toPool = address(uint160(bytes20(data[ TO_POOL_START_EVM : TO_POOL_END ])));
 
         if (context == CTX0_ASSET_SWAP) {
 
@@ -254,25 +261,25 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
             // CCI sets dataLength > 0 if calldata is passed.
             if (dataLength != 0) {
                 ICatalystV1Pool(toPool).receiveAsset(
-                    bytes32(packet.src.channelId),                                          // connectionId
-                    fromPool,                                                               // fromPool
-                    uint8(data[CTX0_TO_ASSET_INDEX_POS]),                                   // toAssetIndex
-                    abi.decode(data[ TO_ACCOUNT_START : TO_ACCOUNT_END ], (address)),       // toAccount
-                    uint256(bytes32(data[ UNITS_START : UNITS_END ])),                      // units
-                    uint256(bytes32(data[ CTX0_MIN_OUT_START : CTX0_MIN_OUT_END ])),        // minOut
-                    bytes32(data[ CTX0_SWAP_HASH_START : CTX0_SWAP_HASH_END ]),             // swapHash
-                    abi.decode(data[ CTX0_DATA_START : CTX0_DATA_START+32 ], (address)),    // dataTarget
-                    data[ CTX0_DATA_START+32 : CTX0_DATA_START+dataLength-32 ]              // dataArguments
+                    bytes32(packet.src.channelId),                                              // connectionId
+                    fromPool,                                                                   // fromPool
+                    uint8(data[CTX0_TO_ASSET_INDEX_POS]),                                       // toAssetIndex
+                    address(uint160(bytes20(data[ TO_ACCOUNT_START_EVM : TO_ACCOUNT_END ]))),   // toAccount
+                    uint256(bytes32(data[ UNITS_START : UNITS_END ])),                          // units
+                    uint256(bytes32(data[ CTX0_MIN_OUT_START : CTX0_MIN_OUT_END ])),            // minOut
+                    bytes32(data[ CTX0_SWAP_HASH_START : CTX0_SWAP_HASH_END ]),                 // swapHash
+                    address(uint160(bytes20(data[ CTX0_DATA_START : CTX0_DATA_START+20 ]))),    // dataTarget
+                    data[ CTX0_DATA_START+20 : CTX0_DATA_START+dataLength-20 ]                  // dataArguments
                 );
             } else {
                 ICatalystV1Pool(toPool).receiveAsset(
-                    bytes32(packet.src.channelId),                                          // connectionId
-                    fromPool,                                                               // fromPool
-                    uint8(data[CTX0_TO_ASSET_INDEX_POS]),                                   // toAssetIndex
-                    abi.decode(data[ TO_ACCOUNT_START : TO_ACCOUNT_END ], (address)),       // toAccount
-                    uint256(bytes32(data[ UNITS_START : UNITS_END ])),                      // units
-                    uint256(bytes32(data[ CTX0_MIN_OUT_START : CTX0_MIN_OUT_END ])),        // minOut
-                    bytes32(data[ CTX0_SWAP_HASH_START : CTX0_SWAP_HASH_END ])              // swapHash
+                    bytes32(packet.src.channelId),                                              // connectionId
+                    fromPool,                                                                   // fromPool
+                    uint8(data[CTX0_TO_ASSET_INDEX_POS]),                                       // toAssetIndex
+                    address(uint160(bytes20(data[ TO_ACCOUNT_START_EVM : TO_ACCOUNT_END ]))),   // toAccount
+                    uint256(bytes32(data[ UNITS_START : UNITS_END ])),                          // units
+                    uint256(bytes32(data[ CTX0_MIN_OUT_START : CTX0_MIN_OUT_END ])),            // minOut
+                    bytes32(data[ CTX0_SWAP_HASH_START : CTX0_SWAP_HASH_END ])                  // swapHash
                 );
             }
 
@@ -284,23 +291,23 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
             // CCI sets dataLength > 0 if calldata is passed.
             if (dataLength != 0) {
                 ICatalystV1Pool(toPool).receiveLiquidity(
-                    bytes32(packet.src.channelId),                                          // connectionId
-                    fromPool,                                                               // fromPool
-                    abi.decode(data[ TO_ACCOUNT_START : TO_ACCOUNT_END ], (address)),       // toAccount
-                    uint256(bytes32(data[ UNITS_START : UNITS_END ])),                      // units
-                    uint256(bytes32(data[ CTX1_MIN_OUT_START : CTX1_MIN_OUT_END ])),        // minOut
-                    bytes32(data[ CTX1_SWAP_HASH_START : CTX1_SWAP_HASH_END ]),             // swapHash
-                    abi.decode(data[ CTX1_DATA_START : CTX1_DATA_START+32 ], (address)),    // dataTarget
-                    data[ CTX1_DATA_START+32 : CTX1_DATA_START+dataLength-32 ]              // dataArguments
+                    bytes32(packet.src.channelId),                                              // connectionId
+                    fromPool,                                                                   // fromPool
+                    address(uint160(bytes20(data[ TO_ACCOUNT_START_EVM : TO_ACCOUNT_END ]))),   // toAccount
+                    uint256(bytes32(data[ UNITS_START : UNITS_END ])),                          // units
+                    uint256(bytes32(data[ CTX1_MIN_OUT_START : CTX1_MIN_OUT_END ])),            // minOut
+                    bytes32(data[ CTX1_SWAP_HASH_START : CTX1_SWAP_HASH_END ]),                 // swapHash
+                    address(uint160(bytes20(data[ CTX1_DATA_START : CTX1_DATA_START+20 ]))),    // dataTarget
+                    data[ CTX1_DATA_START+20 : CTX1_DATA_START+dataLength-20 ]                  // dataArguments
                 );
             } else {
                 ICatalystV1Pool(toPool).receiveLiquidity(
-                    bytes32(packet.src.channelId),                                          // connectionId
-                    fromPool,                                                               // fromPool
-                    abi.decode(data[ TO_ACCOUNT_START : TO_ACCOUNT_END ], (address)),       // toAccount
-                    uint256(bytes32(data[ UNITS_START : UNITS_END ])),                      // units
-                    uint256(bytes32(data[ CTX1_MIN_OUT_START : CTX1_MIN_OUT_END ])),        // minOut
-                    bytes32(data[ CTX1_SWAP_HASH_START : CTX1_SWAP_HASH_END ])              // swapHash
+                    bytes32(packet.src.channelId),                                              // connectionId
+                    fromPool,                                                                   // fromPool
+                    address(uint160(bytes20(data[ TO_ACCOUNT_START_EVM : TO_ACCOUNT_END ]))),   // toAccount
+                    uint256(bytes32(data[ UNITS_START : UNITS_END ])),                          // units
+                    uint256(bytes32(data[ CTX1_MIN_OUT_START : CTX1_MIN_OUT_END ])),            // minOut
+                    bytes32(data[ CTX1_SWAP_HASH_START : CTX1_SWAP_HASH_END ])                  // swapHash
                 );
             }
 

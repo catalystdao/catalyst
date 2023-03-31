@@ -94,8 +94,8 @@ interface ICatalystV1PoolPermissionless {
      */
     function sendAsset(
         bytes32 channelId,
-        bytes32 toPool,
-        bytes32 toAccount,
+        bytes calldata toPool,
+        bytes calldata toAccount,
         address fromAsset,
         uint8 toAssetIndex,
         uint256 amount,
@@ -108,8 +108,8 @@ interface ICatalystV1PoolPermissionless {
     /// Should be encoded abi.encode(<address>,<data>)
     function sendAsset(
         bytes32 channelId,
-        bytes32 toPool,
-        bytes32 toAccount,
+        bytes calldata toPool,
+        bytes calldata toAccount,
         address fromAsset,
         uint8 toAssetIndex,
         uint256 amount,
@@ -131,7 +131,7 @@ interface ICatalystV1PoolPermissionless {
      */
     function receiveAsset(
         bytes32 channelId,
-        bytes32 fromPool,
+        bytes calldata fromPool,
         uint256 toAssetIndex,
         address toAccount,
         uint256 U,
@@ -141,7 +141,7 @@ interface ICatalystV1PoolPermissionless {
 
     function receiveAsset(
         bytes32 channelId,
-        bytes32 fromPool,
+        bytes calldata fromPool,
         uint256 toAssetIndex,
         address toAccount,
         uint256 U,
@@ -164,8 +164,8 @@ interface ICatalystV1PoolPermissionless {
      */
     function sendLiquidity(
         bytes32 channelId,
-        bytes32 toPool,
-        bytes32 toAccount,
+        bytes calldata toPool,
+        bytes calldata toAccount,
         uint256 baseAmount,
         uint256 minOut,
         address fallbackUser
@@ -176,8 +176,8 @@ interface ICatalystV1PoolPermissionless {
     /// Should be encoded abi.encode(<address>,<data>)
     function sendLiquidity(
         bytes32 channelId,
-        bytes32 toPool,
-        bytes32 who,
+        bytes calldata toPool,
+        bytes calldata toAccount,
         uint256 baseAmount,
         uint256 minOut,
         address fallbackUser,
@@ -196,7 +196,7 @@ interface ICatalystV1PoolPermissionless {
      */
     function receiveLiquidity(
         bytes32 channelId,
-        bytes32 fromPool,
+        bytes calldata fromPool,
         address toAccount,
         uint256 U,
         uint256 minOut,
@@ -205,7 +205,7 @@ interface ICatalystV1PoolPermissionless {
 
     function receiveLiquidity(
         bytes32 channelId,
-        bytes32 fromPool,
+        bytes calldata fromPool,
         address who,
         uint256 U,
         uint256 minOut,

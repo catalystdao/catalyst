@@ -1060,8 +1060,8 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
      */
     function sendAsset(
         bytes32 channelId,
-        bytes32 toPool,
-        bytes32 toAccount,
+        bytes memory toPool,
+        bytes calldata toAccount,
         address fromAsset,
         uint8 toAssetIndex,
         uint256 amount,
@@ -1072,6 +1072,8 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
         // Only allow connected pools
         if (!_poolConnection[channelId][toPool]) revert PoolNotConnected(channelId, toPool);
         require(fallbackUser != address(0));
+        require(toPool.length == 64);  // dev: Pool addresses are 64 bytes.
+        require(toAccount.length == 64);  // dev: Account addresses are 64 bytes.
 
         _updateAmplification();
         uint256 fee = FixedPointMathLib.mulWadDown(amount, _poolFee);
@@ -1147,8 +1149,8 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
     /** @notice Copy of sendAsset with no calldata_ */
     function sendAsset(
         bytes32 channelId,
-        bytes32 toPool,
-        bytes32 toAccount,
+        bytes memory toPool,
+        bytes calldata toAccount,
         address fromAsset,
         uint8 toAssetIndex,
         uint256 amount,
@@ -1183,7 +1185,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
      */
     function receiveAsset(
         bytes32 channelId,
-        bytes32 fromPool,
+        bytes calldata fromPool,
         uint256 toAssetIndex,
         address toAccount,
         uint256 U,
@@ -1226,7 +1228,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
 
     function receiveAsset(
         bytes32 channelId,
-        bytes32 fromPool,
+        bytes calldata fromPool,
         uint256 toAssetIndex,
         address toAccount,
         uint256 U,
@@ -1281,8 +1283,8 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
      */
     function sendLiquidity(
         bytes32 channelId,
-        bytes32 toPool,
-        bytes32 toAccount,
+        bytes memory toPool,
+        bytes calldata toAccount,
         uint256 poolTokens,
         uint256 minOut,
         address fallbackUser,
@@ -1294,6 +1296,8 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
         // Address(0) is not a valid fallback user. (As checking for escrow overlap
         // checks if the fallbackUser != address(0))
         require(fallbackUser != address(0));
+        require(toPool.length == 64);  // dev: Pool addresses are 64 bytes.
+        require(toAccount.length == 64);  // dev: Account addresses are 64 bytes.
 
         // Update amplification
         _updateAmplification();
@@ -1412,8 +1416,8 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
     /** @notice Copy of sendLiquidity with no calldata_ */
     function sendLiquidity(
         bytes32 channelId,
-        bytes32 toPool,
-        bytes32 toAccount,
+        bytes memory toPool,
+        bytes calldata toAccount,
         uint256 poolTokens,
         uint256 minOut,
         address fallbackUser
@@ -1446,7 +1450,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
      */
     function receiveLiquidity(
         bytes32 channelId,
-        bytes32 fromPool,
+        bytes calldata fromPool,
         address toAccount,
         uint256 U,
         uint256 minOut,
@@ -1550,7 +1554,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
     
     function receiveLiquidity(
         bytes32 channelId,
-        bytes32 fromPool,
+        bytes calldata fromPool,
         address who,
         uint256 U,
         uint256 minOut,
@@ -1592,7 +1596,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
      * @param blockNumberMod The block number at which the swap transaction was commited (mod 32)
      */
     function sendAssetAck(
-        bytes32 toAccount,
+        bytes calldata toAccount,
         uint256 U,
         uint256 escrowAmount,
         address escrowToken,
@@ -1634,7 +1638,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
      * @param blockNumberMod The block number at which the swap transaction was commited (mod 32)
      */
     function sendAssetTimeout(
-        bytes32 toAccount,
+        bytes calldata toAccount,
         uint256 U,
         uint256 escrowAmount,
         address escrowToken,
@@ -1664,7 +1668,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
      * @param blockNumberMod The block number at which the swap transaction was commited (mod 32)
      */
     function sendLiquidityTimeout(
-        bytes32 toAccount,
+        bytes calldata toAccount,
         uint256 U,
         uint256 escrowAmount,
         uint32 blockNumberMod

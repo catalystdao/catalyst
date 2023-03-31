@@ -59,7 +59,7 @@ abstract contract CatalystSwapPoolCommon is
     address public _chainInterface;
 
     // @notice The pools with which cross chain swaps are allowed, stored as _poolConnection[connectionId][toPool]
-    mapping(bytes32 => mapping(bytes32 => bool)) public _poolConnection;
+    mapping(bytes32 => mapping(bytes => bool)) public _poolConnection;
 
     /// @notice To indicate which token is desired on the target pool,
     /// the desired tokens are provided as an integer which maps to the
@@ -311,10 +311,11 @@ abstract contract CatalystSwapPoolCommon is
      */
     function setConnection(
         bytes32 channelId,
-        bytes32 toPool,
+        bytes calldata toPool,
         bool state
     ) external override {
         require((msg.sender == _setupMaster) || (msg.sender == factoryOwner())); // dev: No auth
+        require(toPool.length == 64);  // dev: Pool addresses are 64 bytes.
 
         _poolConnection[channelId][toPool] = state;
 
@@ -389,7 +390,7 @@ abstract contract CatalystSwapPoolCommon is
      * @param blockNumberMod The block number at which the swap transaction was commited (mod 32)
      */
     function sendAssetAck(
-        bytes32 toAccount,
+        bytes calldata toAccount,
         uint256 U,
         uint256 escrowAmount,
         address escrowToken,
@@ -420,7 +421,7 @@ abstract contract CatalystSwapPoolCommon is
      * @param blockNumberMod The block number at which the swap transaction was commited (mod 32)
      */
     function sendAssetTimeout(
-        bytes32 toAccount,
+        bytes calldata toAccount,
         uint256 U,
         uint256 escrowAmount,
         address escrowToken,
@@ -452,7 +453,7 @@ abstract contract CatalystSwapPoolCommon is
      * @param blockNumberMod The block number at which the swap transaction was commited (mod 32)
      */
     function sendLiquidityAck(
-        bytes32 toAccount,
+        bytes calldata toAccount,
         uint256 U,
         uint256 escrowAmount,
         uint32 blockNumberMod
@@ -480,7 +481,7 @@ abstract contract CatalystSwapPoolCommon is
      * @param blockNumberMod The block number at which the swap transaction was commited (mod 32)
      */
     function sendLiquidityTimeout(
-        bytes32 toAccount,
+        bytes calldata toAccount,
         uint256 U,
         uint256 escrowAmount,
         uint32 blockNumberMod
@@ -502,7 +503,7 @@ abstract contract CatalystSwapPoolCommon is
     }
 
     function _computeSendAssetHash(
-        bytes32 toAccount,
+        bytes calldata toAccount,
         uint256 U,
         uint256 amount,
         address fromAsset,
@@ -520,7 +521,7 @@ abstract contract CatalystSwapPoolCommon is
     }
 
     function _computeSendLiquidityHash(
-        bytes32 toAccount,
+        bytes calldata toAccount,
         uint256 U,
         uint256 amount,
         uint32 blockNumberMod

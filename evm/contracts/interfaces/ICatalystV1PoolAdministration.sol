@@ -37,7 +37,7 @@ interface ICatalystV1PoolAdministration {
      */
     function setConnection(
         bytes32 channelId,
-        bytes32 toPool,
+        bytes calldata toPool,
         bool state
     ) external;
 
