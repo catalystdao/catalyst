@@ -133,7 +133,7 @@ pub fn ibc_packet_receive(
     msg: IbcPacketReceiveMsg,
 ) -> Result<IbcReceiveResponse, Never> {
 
-    process_packet_receive(deps, msg.packet).or_else(|err| {
+    on_packet_receive(deps, msg.packet).or_else(|err| {
         Ok(IbcReceiveResponse::new()            //TODO add attributes?
             .set_ack(ack_fail(err.to_string()))
         )
@@ -141,7 +141,7 @@ pub fn ibc_packet_receive(
 
 }
 
-fn process_packet_receive(
+fn on_packet_receive(
     deps: DepsMut,
     packet: IbcPacket
 ) -> Result<IbcReceiveResponse, ContractError> {
