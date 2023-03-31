@@ -165,67 +165,67 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
 
         bytes calldata data = packet.data;
 
-        unchecked {
-            // All of the additons within this block will be limited to the size of the cross-chain
-            // message except the data length which can extend beyond the data length. This implies
-            // no addition can overflow.
-            // Notice that all from addresses are EVM while all target addresses are unknown.
+        // unchecked {
+        //     // All of the additons within this block will be limited to the size of the cross-chain
+        //     // message except the data length which can extend beyond the data length. This implies
+        //     // no addition can overflow.
+        //     // Notice that all from addresses are EVM while all target addresses are unknown.
 
-            // variable_data_length is used to adjust the indexes of the message to compensate for differences in the address size
-            // between different implementations.
-            uint256 variable_data_length = 0;
+        //     // variable_data_length is used to adjust the indexes of the message to compensate for differences in the address size
+        //     // between different implementations.
+        //     uint256 variable_data_length = 0;
 
-            bytes1 context = data[0];  // Context position is always 0
+        //     bytes1 context = data[0];  // Context position is always 0
 
-            // Fetch the sending pool length. We know that fromPool is an Ethereum address, so we know the length: 20 bytes.
-            // uint256 address_length = uint256(uint8(data[FROM_POOL_LENGTH_POS]));
-            address fromPool = address(uint160(bytes20(data[ FROM_POOL_START : FROM_POOL_START + 20 ])));
-            variable_data_length += 20;
+        //     // Fetch the sending pool length. We know that fromPool is an Ethereum address, so we know the length: 20 bytes.
+        //     // uint256 address_length = uint256(uint8(data[FROM_POOL_LENGTH_POS]));
+        //     address fromPool = address(uint160(bytes20(data[ FROM_POOL_START : FROM_POOL_START + 20 ])));
+        //     variable_data_length += 20;
 
-            // Fetch the target pool length. We don't know anything about the address except that it is less than 256 bytes.
-            uint256 address_length = uint256(uint8(data[ TO_POOL_LENGTH_POS + variable_data_length ]));
-            variable_data_length += address_length;
+        //     // Fetch the target pool length. We don't know anything about the address except that it is less than 256 bytes.
+        //     uint256 address_length = uint256(uint8(data[ TO_POOL_LENGTH_POS + variable_data_length ]));
+        //     variable_data_length += address_length;
 
-            // Fetch the target account. We don't know anything about the address except that it is less than 256 bytes.
-            address_length = uint256(uint8(data[ TO_ACCOUNT_POS + variable_data_length ]));
-            bytes memory toAccount = bytes(data[ TO_ACCOUNT_START + variable_data_length : TO_ACCOUNT_START + address_length + variable_data_length ]);
-            variable_data_length += address_length;
+        //     // Fetch the target account. We don't know anything about the address except that it is less than 256 bytes.
+        //     address_length = uint256(uint8(data[ TO_ACCOUNT_POS + variable_data_length ]));
+        //     bytes memory toAccount = bytes(data[ TO_ACCOUNT_START + variable_data_length : TO_ACCOUNT_START + address_length + variable_data_length ]);
+        //     variable_data_length += address_length;
 
-            uint256 units = uint256(bytes32(data[ UNITS_START + variable_data_length : UNITS_END + variable_data_length ]));
+        //     uint256 units = uint256(bytes32(data[ UNITS_START + variable_data_length : UNITS_END + variable_data_length ]));
         
-            if (context == CTX0_ASSET_SWAP) {
+        //     if (context == CTX0_ASSET_SWAP) {
 
-                // Fetch the from asset size. We know that from asset is an Ethereum address, so we know the length: 20 bytes.
-                address_length = 20;
-                address fromAsset = address(uint160(bytes20(data[CTX0_FROM_ASSET_START+variable_data_length:CTX0_FROM_ASSET_START+20+variable_data_length])));
-                // The order of variables is now important, as every variable loaded after to account
-                // requires taking the size of to account into consideration.
+        //         // Fetch the from asset size. We know that from asset is an Ethereum address, so we know the length: 20 bytes.
+        //         address_length = 20;
+        //         address fromAsset = address(uint160(bytes20(data[CTX0_FROM_ASSET_START+variable_data_length:CTX0_FROM_ASSET_START+20+variable_data_length])));
+        //         // The order of variables is now important, as every variable loaded after to account
+        //         // requires taking the size of to account into consideration.
 
-                ICatalystV1Pool(fromPool).sendAssetAck(
-                    toAccount,                          // toAccount
-                    units,                              // units
-                    uint256(bytes32(data[CTX0_FROM_AMOUNT_START+variable_data_length:CTX0_FROM_AMOUNT_END+variable_data_length])),          // fromAmount
-                    fromAsset,                          // fromAsset
-                    uint32(bytes4(data[CTX0_BLOCK_NUMBER_START+20+variable_data_length:CTX0_BLOCK_NUMBER_END+20+variable_data_length]))     // block number
-                );
+        //         ICatalystV1Pool(fromPool).sendAssetAck(
+        //             toAccount,                          // toAccount
+        //             units,                              // units
+        //             uint256(bytes32(data[CTX0_FROM_AMOUNT_START+variable_data_length:CTX0_FROM_AMOUNT_END+variable_data_length])),          // fromAmount
+        //             fromAsset,                          // fromAsset
+        //             uint32(bytes4(data[CTX0_BLOCK_NUMBER_START+20+variable_data_length:CTX0_BLOCK_NUMBER_END+20+variable_data_length]))     // block number
+        //         );
 
-            }
-            else if (context == CTX1_LIQUIDITY_SWAP) {
+        //     }
+        //     else if (context == CTX1_LIQUIDITY_SWAP) {
 
-                ICatalystV1Pool(fromPool).sendLiquidityAck(
-                    toAccount,                          // toAccount
-                    units,                              // units
-                    uint256(bytes32(data[CTX1_FROM_AMOUNT_START+variable_data_length:CTX1_FROM_AMOUNT_END+variable_data_length])),    // fromAmount
-                    uint32(bytes4(data[CTX1_BLOCK_NUMBER_START+variable_data_length:CTX1_BLOCK_NUMBER_END+variable_data_length]))     // block number
-                );
+        //         ICatalystV1Pool(fromPool).sendLiquidityAck(
+        //             toAccount,                          // toAccount
+        //             units,                              // units
+        //             uint256(bytes32(data[CTX1_FROM_AMOUNT_START+variable_data_length:CTX1_FROM_AMOUNT_END+variable_data_length])),    // fromAmount
+        //             uint32(bytes4(data[CTX1_BLOCK_NUMBER_START+variable_data_length:CTX1_BLOCK_NUMBER_END+variable_data_length]))     // block number
+        //         );
 
-            }
-            else {
+        //     }
+        //     else {
 
-                revert InvalidContext(context);
+        //         revert InvalidContext(context);
 
-            }
-        }
+        //     }
+        // }
 
     }
 
@@ -239,69 +239,75 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
 
         bytes calldata data = packet.data;
 
-        unchecked {
-            // All of the additons within this block will be limited to the size of the cross-chain
-            // message except the data length which can extend beyond the data length. This implies
-            // no addition can overflow.
-            // Notice that all from addresses are EVM while all target addresses are unknown.
+        // unchecked {
+        //     // All of the additons within this block will be limited to the size of the cross-chain
+        //     // message except the data length which can extend beyond the data length. This implies
+        //     // no addition can overflow.
+        //     // Notice that all from addresses are EVM while all target addresses are unknown.
 
-            // variable_data_length is used to adjust the indexes of the message to compensate for differences in the address size
-            // between different implementations.
-            uint256 variable_data_length = 0;
+        //     // variable_data_length is used to adjust the indexes of the message to compensate for differences in the address size
+        //     // between different implementations.
+        //     uint256 variable_data_length = 0;
 
-            bytes1 context = data[0];  // Context position is always 0
+        //     bytes1 context = data[0];  // Context position is always 0
 
-            // Fetch the sending pool length. We know that fromPool is an Ethereum address, so we know the length: 20 bytes.
-            // uint256 address_length = uint256(uint8(data[FROM_POOL_LENGTH_POS]));
-            address fromPool = address(uint160(bytes20(data[ FROM_POOL_START : FROM_POOL_START + 20 ])));
-            variable_data_length += 20;
+        //     // Fetch the sending pool length. We know that fromPool is an Ethereum address, so we know the length: 20 bytes.
+        //     // uint256 address_length = uint256(uint8(data[FROM_POOL_LENGTH_POS]));
+        //     address fromPool = address(uint160(bytes20(data[ FROM_POOL_START : FROM_POOL_START + 20 ])));
+        //     variable_data_length += 20;
 
-            // Fetch the target pool length. We don't know anything about the address except that it is less than 256 bytes.
-            uint256 address_length = uint256(uint8(data[ TO_POOL_LENGTH_POS + variable_data_length ]));
-            variable_data_length += address_length;
+        //     // Fetch the target pool length. We don't know anything about the address except that it is less than 256 bytes.
+        //     uint256 address_length = uint256(uint8(data[ TO_POOL_LENGTH_POS + variable_data_length ]));
+        //     variable_data_length += address_length;
 
-            // Fetch the target account. We don't know anything about the address except that it is less than 256 bytes.
-            address_length = uint256(uint8(data[ TO_ACCOUNT_POS + variable_data_length ]));
-            bytes memory toAccount = bytes(data[ TO_ACCOUNT_START + variable_data_length : TO_ACCOUNT_START + address_length + variable_data_length ]);
-            variable_data_length += address_length;
+        //     // Fetch the target account. We don't know anything about the address except that it is less than 256 bytes.
+        //     address_length = uint256(uint8(data[ TO_ACCOUNT_POS + variable_data_length ]));
+        //     bytes memory toAccount = bytes(data[ TO_ACCOUNT_START + variable_data_length : TO_ACCOUNT_START + address_length + variable_data_length ]);
+        //     variable_data_length += address_length;
 
-            uint256 units = uint256(bytes32(data[ UNITS_START + variable_data_length : UNITS_END + variable_data_length ]));
+        //     uint256 units = uint256(bytes32(data[ UNITS_START + variable_data_length : UNITS_END + variable_data_length ]));
         
-            if (context == CTX0_ASSET_SWAP) {
+        //     if (context == CTX0_ASSET_SWAP) {
 
-                // Fetch the from asset size. We know that from asset is an Ethereum address, so we know the length: 20 bytes.
-                // address_length = 20;
-                address fromAsset = address(uint160(bytes20(data[CTX0_FROM_ASSET_START+variable_data_length:CTX0_FROM_ASSET_START+20+variable_data_length])));
-                // The order of variables is now important, as every variable loaded after to account
-                // requires taking the size of to account into consideration.
+        //         // Fetch the from asset size. We know that from asset is an Ethereum address, so we know the length: 20 bytes.
+        //         // address_length = 20;
+        //         address fromAsset = address(uint160(bytes20(data[CTX0_FROM_ASSET_START+variable_data_length:CTX0_FROM_ASSET_START+20+variable_data_length])));
+        //         // The order of variables is now important, as every variable loaded after to account
+        //         // requires taking the size of to account into consideration.
 
-                ICatalystV1Pool(fromPool).sendAssetTimeout(
-                    toAccount,                          // toAccount
-                    units,                              // units
-                    uint256(bytes32(data[CTX0_FROM_AMOUNT_START+variable_data_length:CTX0_FROM_AMOUNT_END+variable_data_length])),          // fromAmount
-                    fromAsset,                          // fromAsset
-                    uint32(bytes4(data[CTX0_BLOCK_NUMBER_START+20+variable_data_length:CTX0_BLOCK_NUMBER_END+20+variable_data_length]))     // block number
-                );
+        //         ICatalystV1Pool(fromPool).sendAssetTimeout(
+        //             toAccount,                          // toAccount
+        //             units,                              // units
+        //             uint256(bytes32(data[CTX0_FROM_AMOUNT_START+variable_data_length:CTX0_FROM_AMOUNT_END+variable_data_length])),          // fromAmount
+        //             fromAsset,                          // fromAsset
+        //             uint32(bytes4(data[CTX0_BLOCK_NUMBER_START+20+variable_data_length:CTX0_BLOCK_NUMBER_END+20+variable_data_length]))     // block number
+        //         );
 
-            }
-            else if (context == CTX1_LIQUIDITY_SWAP) {
+        //     }
+        //     else if (context == CTX1_LIQUIDITY_SWAP) {
 
-                ICatalystV1Pool(fromPool).sendLiquidityTimeout(
-                    toAccount,                          // toAccount
-                    units,                              // units
-                    uint256(bytes32(data[CTX1_FROM_AMOUNT_START+variable_data_length:CTX1_FROM_AMOUNT_END+variable_data_length])),    // fromAmount
-                    uint32(bytes4(data[CTX1_BLOCK_NUMBER_START+variable_data_length:CTX1_BLOCK_NUMBER_END+variable_data_length]))     // block number
-                );
+        //         ICatalystV1Pool(fromPool).sendLiquidityTimeout(
+        //             toAccount,                          // toAccount
+        //             units,                              // units
+        //             uint256(bytes32(data[CTX1_FROM_AMOUNT_START+variable_data_length:CTX1_FROM_AMOUNT_END+variable_data_length])),    // fromAmount
+        //             uint32(bytes4(data[CTX1_BLOCK_NUMBER_START+variable_data_length:CTX1_BLOCK_NUMBER_END+variable_data_length]))     // block number
+        //         );
 
-            }
-            else {
+        //     }
+        //     else {
 
-                revert InvalidContext(context);
+        //         revert InvalidContext(context);
 
-            }
-        }
+        //     }
+        // }
         
     }
+
+    event debug(
+        bytes addr_bytes,
+        address addr,
+        uint256 num1
+    );
 
     /**
      * @notice IBC package handler
@@ -318,91 +324,146 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
             // no addition can overflow.
             // Notice that all target addresses are EVM while all from addresses are unknown.
 
-            // variable_data_length is used to adjust the indexes of the message to compensate for differences in the address size
-            // between different implementations.
-            uint256 variable_data_length = 0;
-
             bytes1 context = data[0];  // Context position is always 0
 
-            // Fetch the sending pool. We doesn't know anything about the address except that it is less than 256 bytes.
-            uint256 address_length = uint256(uint8(data[FROM_POOL_LENGTH_POS]));
+            // To decode the message, two varaibles: counter_start and counter_end is used. Counter_start keeps track of
+            // the beginning of the next varirable while counter_end keeps track of the ned.
+            uint256 counter_start   = 2; // counter_start starts at 2, since context is always at position 0. And we know that fromPool_length is at position 1.
+            // The variable address_length keeps track for variable length addresses.
+            uint256 address_length = uint256(uint8(data[1]));
+            uint256 counter_end    = counter_start + address_length; // Set counter_end
             // We now know the size of the sending address and we can find the address.
-            bytes memory fromPool = bytes(data[ FROM_POOL_START : FROM_POOL_START + address_length ]);
-            variable_data_length += address_length;
+            bytes memory from_pool = bytes(data[ counter_start : counter_end ]);
 
             // Fetch the target pool. We know that toPool is an Ethereum address, so we know the length: 20 bytes.
-            address_length = uint256(uint8(data[ TO_POOL_LENGTH_POS + variable_data_length ]));
+            address_length = uint256(uint8(data[ counter_end ]));
             require(address_length == 20);  // dev: Addresses are 20 bytes for EVM.
-            address toPool = address(uint160(bytes20(data[ TO_POOL_START + variable_data_length : TO_POOL_START + 20 + variable_data_length ])));
-            variable_data_length += 20;
+            counter_start = counter_end + 1; // Add 1 to adjust the counter past the toPoolLength
+            counter_end += 20 + 1;
+            address to_pool = address(uint160(bytes20(data[ counter_start : counter_end ])));
 
             // Fetch the target account. We know that toAccount is an Ethereum address, so we know the length: 20 bytes.
-            address_length = uint256(uint8(data[ TO_ACCOUNT_POS + variable_data_length ]));
+            address_length = uint256(uint8(data[ counter_end ]));
             require(address_length == 20);  // dev: Addresses are 20 bytes for EVM.
-            address toAccount = address(uint160(bytes20(data[ TO_ACCOUNT_START + variable_data_length : TO_ACCOUNT_START + 20 + variable_data_length ])));
-            variable_data_length += 20;
+            counter_start = counter_end + 1; // Add 1 to adjust the counter past the toPoolLength
+            counter_end += 20 + 1;
+            address to_account = address(uint160(bytes20(data[ counter_start : counter_end ])));
 
-            uint256 units = uint256(bytes32(data[ UNITS_START + variable_data_length : UNITS_END + variable_data_length ]));
+            counter_start = counter_end;
+            counter_end += UNIT_BYTES;
+            uint256 units = uint256(bytes32(data[ counter_start : counter_end ]));
 
             if (context == CTX0_ASSET_SWAP) {
 
-                // Fetch the from asset size.
-                address_length = uint256(uint8(data[ CTX0_FROM_ASSET_POS + variable_data_length ]));
-                // The order of variables is now important, as every variable loaded after to account
-                // requires taking the size of to account into consideration.
+                // Fetch to_asset_index
+                uint8 to_asset_index = uint8(data[counter_end]);
 
-                uint16 dataLength = uint16(bytes2(data[CTX0_DATA_LENGTH_START+address_length+variable_data_length:CTX0_DATA_LENGTH_END+address_length+variable_data_length]));
+                // Fetch minout
+                counter_start = counter_end + 1; // Add 1 to adjust the counter past to_asset_index
+                counter_end += CTX0_MIN_OUT + 1;
+                uint256 min_out = uint256(bytes32(data[counter_start:counter_end]));
+
+                // skip from_amount
+                // counter_start = counter_end;
+                counter_end += CTX0_FROM_AMOUNT;
+                // uint256 from_amount = uint256(bytes32(data[counter_start:counter_end]));
+                
+                // Fetch from_asset_length (but not from_asset)
+                address_length = uint256(uint8(data[counter_end]));
+                counter_end += address_length;
+
+                // skip block_number
+                // counter_start = counter_end + 1; // Add 1 to adjust the counter past from_asset_length
+                counter_end += CTX0_BLOCK_NUMBER + 1;
+                // uint32 block_number = uint32(bytes4(data[counter_start:counter_end]))
+
+                // fetch swap_hash
+                counter_start = counter_end; 
+                counter_end += CTX0_SWAP_HASH;
+                bytes32 swap_hash = bytes32(data[counter_start:counter_end]);
+
+                // fetch data_length
+                counter_start = counter_end; 
+                counter_end += CTX0_DATA_LENGTH;
+                uint16 dataLength = uint16(bytes2(data[counter_start:counter_end]));
 
                 // CCI sets dataLength > 0 if calldata is passed.
                 if (dataLength != 0) {
-                    ICatalystV1Pool(toPool).receiveAsset(
-                        bytes32(packet.src.channelId),                                                                                  // connectionId
-                        fromPool,                                                                                                       // fromPool
-                        uint8(data[CTX0_TO_ASSET_INDEX_POS+variable_data_length]),                                                      // toAssetIndex
-                        toAccount,                                                                                                      // toAccount
-                        units,                                                                                                          // units
-                        uint256(bytes32(data[CTX0_MIN_OUT_START+address_length+variable_data_length:CTX0_MIN_OUT_END+address_length+variable_data_length])),            // minOut
-                        bytes32(data[CTX0_SWAP_HASH_START+address_length+variable_data_length:CTX0_SWAP_HASH_END+address_length+variable_data_length]),                 // swapHash
-                        address(uint160(bytes20(data[CTX0_DATA_START+address_length+variable_data_length:CTX0_DATA_START+20+address_length+variable_data_length]))),    // dataTarget
-                        data[CTX0_DATA_START+20+address_length+variable_data_length:CTX0_DATA_START+dataLength-20+address_length+variable_data_length]                  // dataArguments
+                    counter_start = counter_end;
+                    counter_end += 20;
+                    ICatalystV1Pool(to_pool).receiveAsset(
+                        bytes32(packet.src.channelId),                                  // connectionId
+                        from_pool,                                                      // fromPool
+                        to_asset_index,                                                 // toAssetIndex
+                        to_account,                                                     // toAccount
+                        units,                                                          // units
+                        min_out,                                                        // minOut
+                        swap_hash,                                                      // swapHash
+                        address(uint160(bytes20(data[counter_start:counter_end]))),     // dataTarget
+                        data[counter_start:counter_end-20+dataLength]                   // dataArguments
                     );
                 } else {
-                    ICatalystV1Pool(toPool).receiveAsset(
-                        bytes32(packet.src.channelId),                                                                                  // connectionId
-                        fromPool,                                                                                                       // fromPool
-                        uint8(data[CTX0_TO_ASSET_INDEX_POS+variable_data_length]),                                                      // toAssetIndex
-                        toAccount,                                                                                                      // toAccount
-                        units,                                                                                                          // units
-                        uint256(bytes32(data[CTX0_MIN_OUT_START+20+variable_data_length:CTX0_MIN_OUT_END+20+variable_data_length])),    // minOut
-                        bytes32(data[CTX0_SWAP_HASH_START+20+variable_data_length:CTX0_SWAP_HASH_END+20+variable_data_length])          // swapHash
+                    ICatalystV1Pool(to_pool).receiveAsset(
+                        bytes32(packet.src.channelId),                                  // connectionId
+                        from_pool,                                                      // fromPool
+                        to_asset_index,                                                 // toAssetIndex
+                        to_account,                                                     // toAccount
+                        units,                                                          // units
+                        min_out,                                                        // minOut
+                        swap_hash                                                       // swapHash
                     );
                 }
 
             }
             else if (context == CTX1_LIQUIDITY_SWAP) {
 
-                uint16 dataLength = uint16(bytes2(data[CTX1_DATA_LENGTH_START+variable_data_length:CTX1_DATA_LENGTH_END+variable_data_length]));
+                // Fetch minout
+                counter_start = counter_end;
+                counter_end += CTX0_MIN_OUT;
+                uint256 min_out = uint256(bytes32(data[counter_start:counter_end]));
+
+                // skip from_amount
+                // counter_start = counter_end;
+                counter_end += CTX0_FROM_AMOUNT;
+                // uint256 from_amount = uint256(bytes32(data[counter_start:counter_end]));
+
+                // skip block_number
+                // counter_start = counter_end;
+                counter_end += CTX0_BLOCK_NUMBER;
+                // uint32 block_number = uint32(bytes4(data[counter_start:counter_end]))
+
+                // fetch swap_hash
+                counter_start = counter_end; 
+                counter_end += CTX0_SWAP_HASH;
+                bytes32 swap_hash = bytes32(data[counter_start:counter_end]);
+
+                // fetch data_length
+                counter_start = counter_end; 
+                counter_end += CTX0_DATA_LENGTH;
+                uint16 dataLength = uint16(bytes2(data[counter_start:counter_end]));
 
                 // CCI sets dataLength > 0 if calldata is passed.
                 if (dataLength != 0) {
-                    ICatalystV1Pool(toPool).receiveLiquidity(
-                        bytes32(packet.src.channelId),                                          // connectionId
-                        fromPool,                                                               // fromPool
-                        toAccount,                                                              // toAccount
-                        units,                                                                  // units
-                        uint256(bytes32(data[CTX1_MIN_OUT_START+variable_data_length:CTX1_MIN_OUT_END+variable_data_length])),          // minOut
-                        bytes32(data[CTX1_SWAP_HASH_START+variable_data_length:CTX1_SWAP_HASH_END+variable_data_length]),               // swapHash
-                        address(uint160(bytes20(data[CTX1_DATA_START+variable_data_length:CTX1_DATA_START+32+variable_data_length]))),  // dataTarget
-                        data[CTX1_DATA_START+32+variable_data_length:CTX1_DATA_START+dataLength-32+variable_data_length]                // dataArguments
+                    counter_start = counter_end;
+                    counter_end += 20;
+                    ICatalystV1Pool(to_pool).receiveLiquidity(
+                        bytes32(packet.src.channelId),                                  // connectionId
+                        from_pool,                                                      // fromPool
+                        to_account,                                                     // toAccount
+                        units,                                                          // units
+                        min_out,                                                        // minOut
+                        swap_hash,                                                      // swapHash
+                        address(uint160(bytes20(data[counter_start:counter_end]))),     // dataTarget
+                        data[counter_start:counter_end-20+dataLength]                   // dataArguments
                     );
                 } else {
-                    ICatalystV1Pool(toPool).receiveLiquidity(
-                        bytes32(packet.src.channelId),                                          // connectionId
-                        fromPool,                                                               // fromPool
-                        toAccount,                                                              // toAccount
-                        units,                                                                  // units
-                        uint256(bytes32(data[CTX1_MIN_OUT_START+variable_data_length:CTX1_MIN_OUT_END+variable_data_length])),          // minOut
-                        bytes32(data[CTX1_SWAP_HASH_START+variable_data_length:CTX1_SWAP_HASH_END+variable_data_length])                // swapHash
+                    ICatalystV1Pool(to_pool).receiveLiquidity(
+                        bytes32(packet.src.channelId),                                  // connectionId
+                        from_pool,                                                      // fromPool
+                        to_account,                                                     // toAccount
+                        units,                                                          // units
+                        min_out,                                                        // minOut
+                        swap_hash                                                       // swapHash
                     );
                 }
 
