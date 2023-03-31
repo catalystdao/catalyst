@@ -20,7 +20,7 @@ abstract contract CatalystExchange is RouterImmutables {
      * @param amount The amount of fromAsset the user wants to sell
      * @param minOut The minimum output of _toAsset the user wants.
      */
-    function localswap(
+    function localSwap(
         address pool,
         address fromAsset,
         address toAsset,
@@ -31,7 +31,7 @@ abstract contract CatalystExchange is RouterImmutables {
 
         ERC20(fromAsset).approve(pool, amount);
 
-        ICatalystV1Pool(pool).localswap(
+        ICatalystV1Pool(pool).localSwap(
             fromAsset,
             toAsset,
             amount,
@@ -39,7 +39,7 @@ abstract contract CatalystExchange is RouterImmutables {
         );
     }
 
-    function sendSwap(
+    function sendAsset(
         address pool,
         bytes32 channelId,
         bytes32 targetPool,
@@ -55,7 +55,7 @@ abstract contract CatalystExchange is RouterImmutables {
 
         ERC20(fromAsset).approve(pool, amount);
 
-        ICatalystV1Pool(pool).sendSwap(
+        ICatalystV1Pool(pool).sendAsset(
             channelId,
             targetPool,
             targetUser,
@@ -120,7 +120,4 @@ abstract contract CatalystExchange is RouterImmutables {
         
         ICatalystV1Pool(pool).withdrawMixed(amount, withdrawRatio, minOut);
     }
-
-    
-
 }

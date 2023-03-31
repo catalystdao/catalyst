@@ -12,7 +12,7 @@ library Commands {
 
     // Block 1
     uint256 constant LOCALSWAP              = 0x00;
-    uint256 constant SENDSWAP               = 0x01;
+    uint256 constant SENDASSET              = 0x01;
     uint256 constant PERMIT2_TRANSFER_FROM  = 0x02;
     uint256 constant PERMIT2_PERMIT_BATCH   = 0x03;
     uint256 constant SWEEP                  = 0x04;

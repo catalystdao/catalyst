@@ -50,8 +50,8 @@ abstract contract Dispatcher is Permit2Payments, CatalystExchange, LockAndMsgSen
                         amount := calldataload(add(inputs.offset, 0x60))
                         minOut := calldataload(add(inputs.offset, 0x80))
                     }
-                    CatalystExchange.localswap(pool, fromAsset, toAsset, amount, minOut);
-                }  else if (command == Commands.SENDSWAP) {
+                    CatalystExchange.localSwap(pool, fromAsset, toAsset, amount, minOut);
+                }  else if (command == Commands.SENDASSET) {
                     address pool;
                     bytes32 channelId;
                     bytes32 targetPool;
@@ -77,7 +77,7 @@ abstract contract Dispatcher is Permit2Payments, CatalystExchange, LockAndMsgSen
 
                     uint8 toAssetIndex8 = uint8(toAssetIndex256);
                     
-                    CatalystExchange.sendSwap(pool, channelId, targetPool, targetUser, fromAsset, toAssetIndex8, amount, minOut, fallbackUser, calldata_);
+                    CatalystExchange.sendAsset(pool, channelId, targetPool, targetUser, fromAsset, toAssetIndex8, amount, minOut, fallbackUser, calldata_);
                 } else if (command == Commands.PERMIT2_TRANSFER_FROM) {
                     // equivalent: abi.decode(inputs, (address, address, uint160))
                     address token;

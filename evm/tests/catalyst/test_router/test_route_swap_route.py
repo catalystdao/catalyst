@@ -106,7 +106,7 @@ def test_route_route(catalyst_router, pool11, pool12, pool21, pool22, weth, toke
     amount = 10**18
     
     payload2 = encode_router_payload([0x00, 0x04], [
-        [pool22.address, token2.address, token3.address, BALANCE_THIS, 0], 
+        [pool22.address, token2.address, token3.address, BALANCE_THIS, 0],
         [token3.address, berg.address, 0]
     ])
     

@@ -7,6 +7,7 @@ import {RouterParameters, RouterImmutables} from './base/RouterImmutables.sol';
 import {Commands} from './libraries/Commands.sol';
 import {BytesLib} from './libraries/BytesLib.sol';
 import {ICatalystRouter} from './interfaces/ICatalystRouter.sol';
+import {ICatalystReceiver} from '../interfaces/IOnCatalyst.sol';
 
 /**
  * @title Catalyst: Swap Router
@@ -14,7 +15,7 @@ import {ICatalystRouter} from './interfaces/ICatalystRouter.sol';
  * @notice Based on the Universal Router by Uniswap
  * https://github.com/Uniswap/universal-router
  */
-contract CatalystRouter is RouterImmutables, ICatalystRouter, Dispatcher {
+contract CatalystRouter is RouterImmutables, ICatalystRouter, Dispatcher, ICatalystReceiver {
     using BytesLib for bytes;
 
     modifier checkDeadline(uint256 deadline) {

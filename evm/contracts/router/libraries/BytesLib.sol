@@ -15,20 +15,6 @@ library BytesLib {
         }
     }
 
-    /// @notice Returns the pool details starting at byte 0
-    /// @dev length and overflow checks must be carried out before calling
-    /// @param _bytes The input bytes string to slice
-    /// @return token0 The address at byte 0
-    /// @return fee The uint24 starting at byte 20
-    /// @return token1 The address at byte 23
-    function toPool(bytes calldata _bytes) internal pure returns (address token0, uint24 fee, address token1) {
-        assembly {
-            token0 := shr(96, calldataload(_bytes.offset))
-            fee := shr(232, calldataload(add(_bytes.offset, 20)))
-            token1 := shr(96, calldataload(add(_bytes.offset, 23)))
-        }
-    }
-
     function toBytes(bytes calldata _bytes, uint256 arg) internal pure returns (bytes calldata res) {
         assembly {
             let lengthPtr := add(_bytes.offset, calldataload(add(_bytes.offset, mul(0x20, arg))))
