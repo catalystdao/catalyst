@@ -3,9 +3,10 @@ use cosmwasm_std::{
     IbcPacketReceiveMsg, IbcReceiveResponse, IbcPacketAckMsg, IbcPacketTimeoutMsg, IbcChannel, IbcPacket, Binary, Uint128, CosmosMsg, to_binary, SubMsg, Reply, Response, SubMsgResult
 };
 use ethnum::U256;
-use swap_pool::msg::VolatileExecuteMsg;
 
-use crate::{ContractError, state::{IbcChannelInfo, OPEN_CHANNELS}, catalyst_ibc_payload::{CTX0_ASSET_SWAP, CTX1_LIQUIDITY_SWAP, FROM_POOL_LENGTH_POS, FROM_POOL_START, TO_POOL_LENGTH_POS, TO_POOL_START, CONTEXT_POS, TO_ACCOUNT_POS, TO_ACCOUNT_START, UNITS_START, UNITS_END, CTX0_TO_ASSET_INDEX_POS, CTX0_MIN_OUT_END, CTX0_MIN_OUT_START, CTX0_FROM_ASSET_POS, CTX0_SWAP_HASH_START, CTX0_SWAP_HASH_END, CTX0_DATA_START, CTX0_DATA_LENGTH_END, CTX0_DATA_LENGTH_START, CTX1_MIN_OUT_END, CTX1_SWAP_HASH_END, CTX1_DATA_LENGTH_END, CTX1_DATA_START, CTX1_MIN_OUT_START, CTX1_SWAP_HASH_START, CTX1_DATA_LENGTH_START}, error::Never};
+use swap_pool_common::msg::ExecuteMsg as SwapPoolExecuteMsg;
+
+use crate::{ContractError, state::{IbcChannelInfo, OPEN_CHANNELS}, catalyst_ibc_payload::{CTX0_ASSET_SWAP, CTX1_LIQUIDITY_SWAP, FROM_POOL_LENGTH_POS, FROM_POOL_START, TO_POOL_LENGTH_POS, TO_POOL_START, CONTEXT_POS, TO_ACCOUNT_POS, TO_ACCOUNT_START, UNITS_START, UNITS_END, CTX0_TO_ASSET_INDEX_POS, CTX0_MIN_OUT_END, CTX0_MIN_OUT_START, CTX0_FROM_ASSET_POS, CTX0_SWAP_HASH_START, CTX0_SWAP_HASH_END, CTX0_DATA_START, CTX0_DATA_LENGTH_END, CTX0_DATA_LENGTH_START, CTX1_MIN_OUT_END, CTX1_SWAP_HASH_END, CTX1_DATA_LENGTH_END, CTX1_DATA_START, CTX1_MIN_OUT_START, CTX1_SWAP_HASH_START, CTX1_DATA_LENGTH_START, CTX0_FROM_AMOUNT_START, CTX0_FROM_AMOUNT_END, CTX0_FROM_ASSET_START, CTX0_BLOCK_NUMBER_END, CTX0_BLOCK_NUMBER_START, CTX1_FROM_AMOUNT_START, CTX1_FROM_AMOUNT_END, CTX1_BLOCK_NUMBER_START, CTX1_BLOCK_NUMBER_END}, error::Never};
 
 
 // NOTE: Large parts of this IBC section are based on the cw20-ics20 example repository.
@@ -213,7 +214,7 @@ fn on_packet_receive(
 
 
     // Extract the context dependent payload and build up contract invocation submessage
-    let receive_msg: CosmosMsg = match *context {
+    let receive_asset_execute_msg: SwapPoolExecuteMsg<()> = match *context {
         CTX0_ASSET_SWAP => {
 
             // To asset index
@@ -260,24 +261,18 @@ fn on_packet_receive(
 
 
             // Build execute message
-            let receive_asset_execute_msg = VolatileExecuteMsg::ReceiveAsset {
-                channel_id: packet.dest.channel_id,
-                from_pool,
-                to_asset_index,
-                to_account,
-                u,
-                min_out,
-                swap_hash,
-                calldata
-            };
-
-            Ok::<CosmosMsg, ContractError>(CosmosMsg::Wasm(
-                cosmwasm_std::WasmMsg::Execute {
-                    contract_addr: to_pool,
-                    msg: to_binary(&receive_asset_execute_msg)?,
-                    funds: vec![]
+            Ok::<SwapPoolExecuteMsg<()>, ContractError>(
+                SwapPoolExecuteMsg::ReceiveAsset {
+                    channel_id: packet.dest.channel_id,
+                    from_pool,
+                    to_asset_index,
+                    to_account,
+                    u,
+                    min_out,
+                    swap_hash,
+                    calldata
                 }
-            ))
+            )
 
         },
         CTX1_LIQUIDITY_SWAP => {
@@ -299,7 +294,7 @@ fn on_packet_receive(
             // Swap hash
             let swap_hash = data.get(
                 CTX1_SWAP_HASH_START + offset .. CTX1_SWAP_HASH_END + offset
-            ).ok_or(ContractError::PayloadDecodingError {})?;
+            ).ok_or(ContractError::PayloadDecodingError {})?.to_vec();
 
             // Calldata
             let calldata_length: usize = u16::from_be_bytes(
@@ -313,18 +308,32 @@ fn on_packet_receive(
             let calldata = data.get(
                 CTX1_DATA_START + offset ..
                 CTX1_DATA_START + offset + calldata_length
-            ).ok_or(ContractError::PayloadDecodingError {})?;
+            ).ok_or(ContractError::PayloadDecodingError {})?.to_vec();
 
 
             // Build execute message
-            todo!()
+            Ok::<SwapPoolExecuteMsg<()>, ContractError>(
+                SwapPoolExecuteMsg::ReceiveLiquidity {
+                    channel_id: packet.dest.channel_id,
+                    from_pool,
+                    to_account,
+                    u,
+                    min_out,
+                    swap_hash,
+                    calldata
+                }
+            )
 
         },
         _ => return Err(ContractError::PayloadDecodingError {})
     }?;
 
     let sub_msg = SubMsg::reply_always(
-        receive_msg,
+        cosmwasm_std::WasmMsg::Execute {
+            contract_addr: to_pool,
+            msg: to_binary(&receive_asset_execute_msg)?,
+            funds: vec![]
+        },
         RECEIVE_REPLY_ID
     );
 
