@@ -63,8 +63,8 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
         uint8 toAssetIndex,
         uint256 U,
         uint256 minOut,
-        AssetSwapMetadata memory metadata,
-        bytes memory calldata_
+        AssetSwapMetadata calldata metadata,
+        bytes calldata calldata_
     ) external {
         // Anyone can call this function, but unless someone can also manage to pass the security check on onRecvPacket
         // they cannot drain any value. As such, the very worst they can do is waste gas.
@@ -121,8 +121,8 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
         bytes calldata toAccount,
         uint256 U,
         uint256 minOut,
-        LiquiditySwapMetadata memory metadata,
-        bytes memory calldata_
+        LiquiditySwapMetadata calldata metadata,
+        bytes calldata calldata_
     ) external {
         require(toPool.length == 64);  // dev: External addresses needs to be of length 64
         require(toAccount.length == 64);  // dev: External addresses needs to be of length 64
@@ -253,7 +253,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
         bytes calldata data = packet.data;
 
         bytes1 context = data[CONTEXT_POS];
-        bytes memory fromPool = data[ FROM_POOL_LENGTH_POS : FROM_POOL_END ];
+        bytes calldata fromPool = data[ FROM_POOL_LENGTH_POS : FROM_POOL_END ];
         // We know that toPool is an EVM address
         address toPool = address(uint160(bytes20(data[ TO_POOL_START_EVM : TO_POOL_END ])));
 

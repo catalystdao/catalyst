@@ -768,7 +768,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon {
     /** @notice Copy of sendAsset with no calldata_ */
     function sendAsset(
         bytes32 channelId,
-        bytes memory toPool,
+        bytes calldata toPool,
         bytes calldata toAccount,
         address fromAsset,
         uint8 toAssetIndex,
@@ -897,7 +897,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon {
      */
     function sendLiquidity(
         bytes32 channelId,
-        bytes memory toPool,
+        bytes calldata toPool,
         bytes calldata toAccount,
         uint256 poolTokens,
         uint256 minOut,
@@ -981,7 +981,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon {
     /** @notice Copy of sendLiquidity with no calldata_ */
     function sendLiquidity(
         bytes32 channelId,
-        bytes memory toPool,
+        bytes calldata toPool,
         bytes calldata toAccount,
         uint256 poolTokens,
         uint256 minOut,
