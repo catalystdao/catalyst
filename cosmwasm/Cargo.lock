@@ -81,6 +81,7 @@ dependencies = [
  "ethnum",
  "schemars",
  "serde",
+ "swap-pool",
  "thiserror",
 ]
 

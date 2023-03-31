@@ -507,7 +507,7 @@ pub trait CatalystV1PoolPermissionless: CatalystV1PoolState + CatalystV1PoolAdmi
         to_account: String,
         u: U256,
         min_out: Uint128,
-        swap_hash: String,
+        swap_hash: Vec<u8>,
         calldata: Vec<u8>
     ) -> Result<Response, ContractError>;
 
@@ -533,7 +533,7 @@ pub trait CatalystV1PoolPermissionless: CatalystV1PoolState + CatalystV1PoolAdmi
         to_account: String,
         u: U256,
         min_out: Uint128,
-        swap_hash: String,
+        swap_hash: Vec<u8>,
         calldata: Vec<u8>   //TODO calldata
     ) -> Result<Response, ContractError>;
 

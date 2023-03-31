@@ -793,7 +793,7 @@ impl CatalystV1PoolPermissionless for SwapPoolVolatileState {
         to_account: String,
         u: U256,
         min_out: Uint128,
-        swap_hash: String,
+        swap_hash: Vec<u8>,
         calldata: Vec<u8>   //TODO calldata
     ) -> Result<Response, ContractError> {
 
@@ -844,7 +844,7 @@ impl CatalystV1PoolPermissionless for SwapPoolVolatileState {
             .add_attribute("to_asset", to_asset)
             .add_attribute("units", u.to_string())  //TODO format of .to_string()?
             .add_attribute("to_amount", out)
-            .add_attribute("swap_hash", swap_hash)
+            .add_attribute("swap_hash", format!("{:x?}", swap_hash))    // TODO overhaul
         )
     }
 
@@ -933,7 +933,7 @@ impl CatalystV1PoolPermissionless for SwapPoolVolatileState {
         to_account: String,
         u: U256,
         min_out: Uint128,
-        swap_hash: String,
+        swap_hash: Vec<u8>,
         calldata: Vec<u8>   //TODO calldata
     ) -> Result<Response, ContractError> {
 
@@ -990,7 +990,7 @@ impl CatalystV1PoolPermissionless for SwapPoolVolatileState {
             .add_attribute("to_account", to_account)
             .add_attribute("units", u.to_string())  //TODO format of .to_string()?
             .add_attribute("to_amount", out)
-            .add_attribute("swap_hash", swap_hash)
+            .add_attribute("swap_hash", format!("{:x?}", swap_hash))    // TODO overhaul
             .add_events(mint_response.events)       //TODO overhaul
         )
     }
