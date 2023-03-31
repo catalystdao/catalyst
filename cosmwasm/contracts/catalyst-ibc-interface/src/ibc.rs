@@ -119,6 +119,81 @@ fn validate_ibc_channel_config(
 
 // Channel communication ********************************************************************************************************
 
+#[cfg_attr(not(feature = "library"), entry_point)]
+pub fn ibc_packet_receive(
+    deps: DepsMut,
+    _env: Env,
+    msg: IbcPacketReceiveMsg,
+) -> Result<IbcReceiveResponse, Never> {
+
+    // Invoke the receive function (either 'ReceiveAsset' or 'ReceiveLiquidity') of the destination pool.
+    // This function should never error, rather it should send a failure message within the returned ack.   //TODO overhaul
+    on_packet_receive(deps, msg.packet)
+        .or_else(|err| {
+            Ok(IbcReceiveResponse::new()            //TODO add attributes?
+                .set_ack(ack_fail(err.to_string()))
+            )
+        })
+
+}
+
+
+// If the swap pool invocation errors (i.e. the submessage created within 'on_packet_receive'), return a custom fail ack.
+// TODO overhaul:
+// TODO     The following is used to return a custom 'error' ack upon a 'receive' submessage error. This is done by 
+// TODO     overriding the 'data' field of the response via '.set_data(ack_fail(err))'.
+// TODO     In theory this is not needed, as by default an 'error' ack should be created automatically.
+#[cfg_attr(not(feature = "library"), entry_point)]
+pub fn reply(
+    _deps: DepsMut,
+    _env: Env,
+    reply: Reply
+) -> Result<Response, ContractError> {
+    match reply.id {
+        RECEIVE_REPLY_ID => match reply.result {
+            SubMsgResult::Ok(_) => Ok(Response::new()),
+            SubMsgResult::Err(err) => Ok(Response::new().set_data(ack_fail(err)))
+        },
+        _ => Err(ContractError::UnknownReplyId { id: reply.id }),
+    }
+}
+
+
+#[cfg_attr(not(feature = "library"), entry_point)]
+pub fn ibc_packet_ack(
+    deps: DepsMut,
+    _env: Env,
+    msg: IbcPacketAckMsg,
+) -> Result<IbcBasicResponse, ContractError> {
+    //TODO should this never error?
+    //TODO Wrap in closure like ibc_packet_receive and make 'Result' error <Never>?
+    let ack = msg.acknowledgement.data.0.get(0);        //TODO overhaul ack format
+    match ack {
+        Some(ack_id) => {
+            match ack_id {
+                &ACK_SUCCESS => on_packet_success(deps, msg.original_packet),
+                &ACK_FAIL => on_packet_failure(deps, msg.original_packet),
+                _ => Ok(IbcBasicResponse::new())    // If ack type is not recognized, just exit without error   //TODO overhaul
+            }
+        },
+        None => Ok(IbcBasicResponse::new())         // If ack type is not recognized, just exit without error   //TODO overhaul
+    }
+}
+
+
+#[cfg_attr(not(feature = "library"), entry_point)]
+pub fn ibc_packet_timeout(
+    deps: DepsMut,
+    _env: Env,
+    msg: IbcPacketTimeoutMsg,
+) -> Result<IbcBasicResponse, ContractError> {
+    //TODO should this never error?
+    //TODO Wrap in closure like ibc_packet_receive and make 'Result' error <Never>?
+    on_packet_failure(deps, msg.packet)
+}
+
+
+
 fn ack_success() -> Binary {
     Into::<Binary>::into(vec![ACK_SUCCESS])     //TODO overhaul ack success format
 }
@@ -127,20 +202,7 @@ fn ack_fail(_err: String) -> Binary {
     Into::<Binary>::into(vec![ACK_FAIL])        //TODO overhaul ack fail format
 }
 
-#[cfg_attr(not(feature = "library"), entry_point)]
-pub fn ibc_packet_receive(
-    deps: DepsMut,
-    _env: Env,
-    msg: IbcPacketReceiveMsg,
-) -> Result<IbcReceiveResponse, Never> {
 
-    on_packet_receive(deps, msg.packet).or_else(|err| {
-        Ok(IbcReceiveResponse::new()            //TODO add attributes?
-            .set_ack(ack_fail(err.to_string()))
-        )
-    })
-
-}
 
 fn on_packet_receive(
     deps: DepsMut,
@@ -213,7 +275,7 @@ fn on_packet_receive(
     );
 
 
-    // Extract the context dependent payload and build up contract invocation submessage
+    // Extract the context dependent payload and build up the execute message
     let receive_asset_execute_msg: SwapPoolExecuteMsg<()> = match *context {
         CTX0_ASSET_SWAP => {
 
@@ -328,7 +390,8 @@ fn on_packet_receive(
         _ => return Err(ContractError::PayloadDecodingError {})
     }?;
 
-    let sub_msg = SubMsg::reply_always(
+    // Build the response 'execute' message
+    let sub_msg = SubMsg::reply_always(             // ! Set 'reply_always' so that upon an error of the submessage the 'reply' function of this contract is invoked
         cosmwasm_std::WasmMsg::Execute {
             contract_addr: to_pool,
             msg: to_binary(&receive_asset_execute_msg)?,
@@ -344,41 +407,379 @@ fn on_packet_receive(
 }
 
 
-#[cfg_attr(not(feature = "library"), entry_point)]
-pub fn ibc_packet_ack(
-    _deps: DepsMut,
-    _env: Env,
-    _msg: IbcPacketAckMsg,
-) -> StdResult<IbcBasicResponse> {
-    unimplemented!();
-}
 
+fn on_packet_success(
+    deps: DepsMut,
+    packet: IbcPacket
+) -> Result<IbcBasicResponse, ContractError> {
 
-#[cfg_attr(not(feature = "library"), entry_point)]
-pub fn ibc_packet_timeout(
-    _deps: DepsMut,
-    _env: Env,
-    _msg: IbcPacketTimeoutMsg,
-) -> StdResult<IbcBasicResponse> {
-    unimplemented!();
-}
+    let data = packet.data.to_vec();
 
+    let context = data.get(CONTEXT_POS).ok_or(ContractError::PayloadDecodingError {})?;
 
-// If, on IBC packet receive, the triggered submessage errors, return a custom fail ack.
-// TODO overhaul: in theory the following is not needed, but is used to return a custom
-// TODO           ack on submessage error. This is done by overriding the 'data' field
-// TODO           of the response via '.set_data(ack_fail(err))'.
-#[cfg_attr(not(feature = "library"), entry_point)]
-pub fn reply(
-    _deps: DepsMut,
-    _env: Env,
-    reply: Reply
-) -> Result<Response, ContractError> {
-    match reply.id {
-        RECEIVE_REPLY_ID => match reply.result {
-            SubMsgResult::Ok(_) => Ok(Response::new()),
-            SubMsgResult::Err(err) => Ok(Response::new().set_data(ack_fail(err)))
+    // Build the sendAsset/sendLiquidity ack response message
+    let (from_pool, response_msg): (String, swap_pool_common::msg::ExecuteMsg<()>) = match *context {
+        CTX0_ASSET_SWAP => {
+
+            let response = SendAssetResponse::try_from_payload(deps, data)?;
+
+            Ok::<(String, swap_pool_common::msg::ExecuteMsg<()>), ContractError>((
+                response.from_pool.clone(),
+                response.into_ack()
+            ))
+
         },
-        _ => Err(ContractError::UnknownReplyId { id: reply.id }),
+        CTX1_LIQUIDITY_SWAP => {
+
+            let response = SendLiquidityResponse::try_from_payload(deps, data)?;
+
+            Ok::<(String, swap_pool_common::msg::ExecuteMsg<()>), ContractError>((
+                response.from_pool.clone(),
+                response.into_ack()
+            ))
+
+        },
+        _ => return Err(ContractError::PayloadDecodingError {})
+    }?;
+
+    // Build the 'execute' messsage
+    let response_msg = CosmosMsg::Wasm(
+        cosmwasm_std::WasmMsg::Execute {
+            contract_addr: from_pool,
+            msg: to_binary(&response_msg)?,
+            funds: vec![]
+        }
+    );
+
+    Ok(IbcBasicResponse::new()      //TODO add attributes?
+        .add_message(response_msg)
+    )
+}
+
+
+fn on_packet_failure(
+    deps: DepsMut,
+    packet: IbcPacket
+) -> Result<IbcBasicResponse, ContractError> {
+
+    let data = packet.data.to_vec();
+
+    let context = data.get(CONTEXT_POS).ok_or(ContractError::PayloadDecodingError {})?;
+
+    // Build the sendAsset/sendLiquidity timeout response message
+    let (from_pool, response_msg): (String, swap_pool_common::msg::ExecuteMsg<()>) = match *context {
+        CTX0_ASSET_SWAP => {
+
+            let response = SendAssetResponse::try_from_payload(deps, data)?;
+
+            Ok::<(String, swap_pool_common::msg::ExecuteMsg<()>), ContractError>((
+                response.from_pool.clone(),
+                response.into_timeout()
+            ))
+
+        },
+        CTX1_LIQUIDITY_SWAP => {
+
+            let response = SendLiquidityResponse::try_from_payload(deps, data)?;
+
+            Ok::<(String, swap_pool_common::msg::ExecuteMsg<()>), ContractError>((
+                response.from_pool.clone(),
+                response.into_timeout()
+            ))
+
+        },
+        _ => return Err(ContractError::PayloadDecodingError {})
+    }?;
+
+    // Build the 'execute' messsage
+    let response_msg = CosmosMsg::Wasm(
+        cosmwasm_std::WasmMsg::Execute {
+            contract_addr: from_pool,
+            msg: to_binary(&response_msg)?,
+            funds: vec![]
+        }
+    );
+
+    Ok(IbcBasicResponse::new()      //TODO add attributes?
+        .add_message(response_msg)
+    )
+}
+
+
+
+// Helper to parse a packet payload into a SendAssetAck/Timeout
+
+struct SendAssetResponse {
+    from_pool: String,
+    to_account: String,
+    u: U256,
+    amount: Uint128,
+    asset: String,
+    block_number_mod: u32
+}
+
+impl SendAssetResponse {
+
+    pub fn try_from_payload(
+        deps: DepsMut,
+        data: Vec<u8>
+    ) -> Result<SendAssetResponse, ContractError> {
+
+        // Extract the common payload
+        let mut offset: usize = 0;
+    
+        // From pool
+        let from_pool_length: usize = *data.get(FROM_POOL_LENGTH_POS)
+            .ok_or(ContractError::PayloadDecodingError {})? as usize;
+    
+        let from_pool = String::from_utf8(
+            data.get(
+                FROM_POOL_START ..
+                FROM_POOL_START + from_pool_length
+            ).ok_or(ContractError::PayloadDecodingError {})?.to_vec()
+        ).map_err(|_| ContractError::PayloadDecodingError {})?;
+        
+        offset += from_pool_length;
+    
+    
+        // To pool
+        let to_pool_length: usize = *data.get(TO_POOL_LENGTH_POS + offset)
+            .ok_or(ContractError::PayloadDecodingError {})? as usize;
+    
+        let to_pool = String::from_utf8(
+            data.get(
+                TO_POOL_START + offset ..
+                TO_POOL_START + offset + to_pool_length
+            ).ok_or(ContractError::PayloadDecodingError {})?.to_vec()
+        ).map_err(|_| ContractError::PayloadDecodingError {})?;
+        
+        offset += to_pool_length;
+    
+        // Verify to pool
+        deps.api.addr_validate(&to_pool)?;
+    
+    
+        // To account
+        let to_account_length: usize = *data.get(TO_ACCOUNT_POS + offset)
+            .ok_or(ContractError::PayloadDecodingError {})? as usize;
+    
+        let to_account = String::from_utf8(
+            data.get(
+                TO_ACCOUNT_START + offset ..
+                TO_ACCOUNT_START + offset + to_account_length
+            ).ok_or(ContractError::PayloadDecodingError {})?.to_vec()
+        ).map_err(|_| ContractError::PayloadDecodingError {})?;
+        
+        offset += to_account_length;
+    
+        // Verify to account
+        deps.api.addr_validate(&to_account)?;
+    
+    
+        // Units
+        let u = U256::from_be_bytes(
+            data.get(
+                UNITS_START + offset .. UNITS_END + offset
+            ).ok_or(
+                ContractError::PayloadDecodingError {}
+            )?.try_into().unwrap()                          // If 'UNITS_START' and 'UNITS_END' are 32 bytes apart, this should never panic //TODO overhaul
+        );
+    
+        // Amount
+        let amount = U256::from_be_bytes(
+            data.get(
+                CTX0_FROM_AMOUNT_START + offset .. CTX0_FROM_AMOUNT_END + offset
+            ).ok_or(
+                ContractError::PayloadDecodingError {}
+            )?.try_into().unwrap()                          // If 'UNITS_START' and 'UNITS_END' are 32 bytes apart, this should never panic //TODO overhaul
+        );
+        // For CosmWasm pools, amount should be Uint128
+        if amount > U256::from(Uint128::MAX.u128()) {             //TODO overhaul - more efficient way to do this?
+            return Err(ContractError::PayloadDecodingError {});
+        }
+        let amount = Uint128::from(amount.as_u128());
+    
+        // From asset length
+        let from_asset_length: usize = *data.get(CTX0_FROM_ASSET_POS + offset)
+            .ok_or(ContractError::PayloadDecodingError {})? as usize;
+    
+        let asset = String::from_utf8(
+            data.get(
+                CTX0_FROM_ASSET_START + offset ..
+                CTX0_FROM_ASSET_START + offset + from_asset_length
+            ).ok_or(ContractError::PayloadDecodingError {})?.to_vec()
+        ).map_err(|_| ContractError::PayloadDecodingError {})?;
+    
+        deps.api.addr_validate(&asset)?;
+    
+        // Block number mod
+        let block_number_mod = u32::from_be_bytes(
+            data.get(
+                CTX0_BLOCK_NUMBER_START + offset .. CTX0_BLOCK_NUMBER_END + offset
+            ).ok_or(
+                ContractError::PayloadDecodingError {}
+            )?.try_into().unwrap()                          // If 'CTX0_BLOCK_NUMBER_START' and 'CTX0_BLOCK_NUMBER_END' are 4 bytes apart, this should never panic //TODO overhaul
+        );
+    
+        // Return fields
+        Ok(SendAssetResponse {
+            from_pool,
+            to_account,
+            u,
+            amount,
+            asset,
+            block_number_mod
+        })
+    }
+
+    pub fn into_ack(self) -> SwapPoolExecuteMsg<()> {
+        SwapPoolExecuteMsg::SendAssetAck {
+            to_account: self.to_account,
+            u: self.u,
+            amount: self.amount,
+            asset: self.asset,
+            block_number_mod: self.block_number_mod
+        }
+    }
+
+    pub fn into_timeout(self) -> SwapPoolExecuteMsg<()> {
+        SwapPoolExecuteMsg::SendAssetTimeout {
+            to_account: self.to_account,
+            u: self.u,
+            amount: self.amount,
+            asset: self.asset,
+            block_number_mod: self.block_number_mod
+        }
+    }
+}
+
+
+
+// Helper to parse a packet payload into a SendLiquidityAck/Timeout
+
+struct SendLiquidityResponse {
+    from_pool: String,
+    to_account: String,
+    u: U256,
+    amount: Uint128,
+    block_number_mod: u32
+}
+
+impl SendLiquidityResponse {
+
+    pub fn try_from_payload(
+        deps: DepsMut,
+        data: Vec<u8>
+    ) -> Result<SendLiquidityResponse, ContractError> {
+
+        // Extract the common payload
+        let mut offset: usize = 0;
+    
+        // From pool
+        let from_pool_length: usize = *data.get(FROM_POOL_LENGTH_POS)
+            .ok_or(ContractError::PayloadDecodingError {})? as usize;
+    
+        let from_pool = String::from_utf8(
+            data.get(
+                FROM_POOL_START ..
+                FROM_POOL_START + from_pool_length
+            ).ok_or(ContractError::PayloadDecodingError {})?.to_vec()
+        ).map_err(|_| ContractError::PayloadDecodingError {})?;
+        
+        offset += from_pool_length;
+    
+    
+        // To pool
+        let to_pool_length: usize = *data.get(TO_POOL_LENGTH_POS + offset)
+            .ok_or(ContractError::PayloadDecodingError {})? as usize;
+    
+        let to_pool = String::from_utf8(
+            data.get(
+                TO_POOL_START + offset ..
+                TO_POOL_START + offset + to_pool_length
+            ).ok_or(ContractError::PayloadDecodingError {})?.to_vec()
+        ).map_err(|_| ContractError::PayloadDecodingError {})?;
+        
+        offset += to_pool_length;
+    
+        // Verify to pool
+        deps.api.addr_validate(&to_pool)?;
+    
+    
+        // To account
+        let to_account_length: usize = *data.get(TO_ACCOUNT_POS + offset)
+            .ok_or(ContractError::PayloadDecodingError {})? as usize;
+    
+        let to_account = String::from_utf8(
+            data.get(
+                TO_ACCOUNT_START + offset ..
+                TO_ACCOUNT_START + offset + to_account_length
+            ).ok_or(ContractError::PayloadDecodingError {})?.to_vec()
+        ).map_err(|_| ContractError::PayloadDecodingError {})?;
+        
+        offset += to_account_length;
+    
+        // Verify to account
+        deps.api.addr_validate(&to_account)?;
+    
+    
+        // Units
+        let u = U256::from_be_bytes(
+            data.get(
+                UNITS_START + offset .. UNITS_END + offset
+            ).ok_or(
+                ContractError::PayloadDecodingError {}
+            )?.try_into().unwrap()                          // If 'UNITS_START' and 'UNITS_END' are 32 bytes apart, this should never panic //TODO overhaul
+        );
+    
+        // Amount
+        let amount = U256::from_be_bytes(
+            data.get(
+                CTX1_FROM_AMOUNT_START + offset .. CTX1_FROM_AMOUNT_END + offset
+            ).ok_or(
+                ContractError::PayloadDecodingError {}
+            )?.try_into().unwrap()                          // If 'UNITS_START' and 'UNITS_END' are 32 bytes apart, this should never panic //TODO overhaul
+        );
+        // For CosmWasm pools, amount should be Uint128
+        if amount > U256::from(Uint128::MAX.u128()) {             //TODO overhaul - more efficient way to do this?
+            return Err(ContractError::PayloadDecodingError {});
+        }
+        let amount = Uint128::from(amount.as_u128());
+    
+        // Block number mod
+        let block_number_mod = u32::from_be_bytes(
+            data.get(
+                CTX1_BLOCK_NUMBER_START + offset .. CTX1_BLOCK_NUMBER_END + offset
+            ).ok_or(
+                ContractError::PayloadDecodingError {}
+            )?.try_into().unwrap()                          // If 'CTX0_BLOCK_NUMBER_START' and 'CTX0_BLOCK_NUMBER_END' are 4 bytes apart, this should never panic //TODO overhaul
+        );
+    
+        // Return fields
+        Ok(SendLiquidityResponse {
+            from_pool,
+            to_account,
+            u,
+            amount,
+            block_number_mod
+        })
+    }
+
+    pub fn into_ack(self) -> SwapPoolExecuteMsg<()> {
+        SwapPoolExecuteMsg::SendLiquidityAck {
+            to_account: self.to_account,
+            u: self.u,
+            amount: self.amount,
+            block_number_mod: self.block_number_mod
+        }
+    }
+
+    pub fn into_timeout(self) -> SwapPoolExecuteMsg<()> {
+        SwapPoolExecuteMsg::SendLiquidityTimeout {
+            to_account: self.to_account,
+            u: self.u,
+            amount: self.amount,
+            block_number_mod: self.block_number_mod
+        }
     }
 }
