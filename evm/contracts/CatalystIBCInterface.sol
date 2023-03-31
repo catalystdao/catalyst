@@ -272,7 +272,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
                     uint256(bytes32(data[ CTX0_MIN_OUT_START : CTX0_MIN_OUT_END ])),            // minOut
                     bytes32(data[ CTX0_SWAP_HASH_START : CTX0_SWAP_HASH_END ]),                 // swapHash
                     address(uint160(bytes20(data[ CTX0_DATA_START : CTX0_DATA_START+20 ]))),    // dataTarget
-                    data[ CTX0_DATA_START+20 : CTX0_DATA_START+dataLength-20 ]                  // dataArguments
+                    data[ CTX0_DATA_START+20 : CTX0_DATA_START+dataLength ]                  // dataArguments
                 );
             } else {
                 ICatalystV1Pool(toPool).receiveAsset(
@@ -301,7 +301,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
                     uint256(bytes32(data[ CTX1_MIN_OUT_START : CTX1_MIN_OUT_END ])),            // minOut
                     bytes32(data[ CTX1_SWAP_HASH_START : CTX1_SWAP_HASH_END ]),                 // swapHash
                     address(uint160(bytes20(data[ CTX1_DATA_START : CTX1_DATA_START+20 ]))),    // dataTarget
-                    data[ CTX1_DATA_START+20 : CTX1_DATA_START+dataLength-20 ]                  // dataArguments
+                    data[ CTX1_DATA_START+20 : CTX1_DATA_START+dataLength ]                  // dataArguments
                 );
             } else {
                 ICatalystV1Pool(toPool).receiveLiquidity(
