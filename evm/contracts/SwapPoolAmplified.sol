@@ -1275,7 +1275,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
      * @param toPool The target pool on the target chain encoded in bytes32.
      * @param toAccount The recipient of the transaction on the target chain. Encoded in bytes32.
      * @param poolTokens The number of pool tokens to exchange
-     * @param minOut The minimum number of pool tokens to mint on target pool.
+     * @param minOut An array of minout describing: [the minimum number of pool tokens, the minimum number of reference assets]
      * @param calldata_ Data field if a call should be made on the target chain. 
      * Should be encoded abi.encode(<address>,<data>)
      */
@@ -1284,7 +1284,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
         bytes32 toPool,
         bytes32 toAccount,
         uint256 poolTokens,
-        uint256 minOut,
+        uint256[2] memory minOut,
         address fallbackUser,
         bytes memory calldata_
     ) nonReentrant public override returns (uint256) {
@@ -1415,7 +1415,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
         bytes32 toPool,
         bytes32 toAccount,
         uint256 poolTokens,
-        uint256 minOut,
+        uint256[2] memory minOut,
         address fallbackUser
     ) external override returns (uint256) {
         bytes memory calldata_ = new bytes(0);
@@ -1440,7 +1440,8 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
      * @param fromPool The source pool
      * @param toAccount The recipient of the pool tokens
      * @param U Number of units to convert into pool tokens.
-     * @param minOut Minimum number of tokens to mint. Otherwise: reject.
+     * @param minPoolTokens The minimum number of pool tokens to mint on target pool. Otherwise: Reject
+     * @param minReferenceAsset The minimum number of reference asset the pools tokens are worth. Otherwise: Reject
      * @param swapHash Used to connect 2 swaps within a group. 
      * @return uint256 Number of pool tokens minted to the recipient.
      */
@@ -1449,7 +1450,8 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
         bytes32 fromPool,
         address toAccount,
         uint256 U,
-        uint256 minOut,
+        uint256 minPoolTokens,
+        uint256 minReferenceAsset,
         bytes32 swapHash
     ) nonReentrant public override returns (uint256) {
         // The chainInterface is the only valid caller of this function.
@@ -1510,7 +1512,18 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
         uint256 poolTokens = _calcPriceCurveLimitShare(U, totalSupply, it_times_walpha_amped, oneMinusAmpInverse);
 
         // Check if more than the minimum output is returned.
-        if(minOut > poolTokens) revert ReturnInsufficient(poolTokens, minOut);
+        // To check which minOut was hit, check which minimum was mentioned in the error.
+        if(minPoolTokens > poolTokens) revert ReturnInsufficient(poolTokens, minPoolTokens);
+        if (minReferenceAsset != 0) {
+            uint256 walpha_0 = uint256(FixedPointMathLib.powWad(  // uint256 casting: Is always positive.
+                int256(walpha_0_ampped), // int256 casting: If casts to a negative number, powWad fails because it uses ln which can't take negative numbers.
+                oneMinusAmpInverse
+            )); 
+            // Add escrow to ensure that even if all ongoing transaction revert, the user gets their expected amount.
+            // Add pool tokens because they are going to be minted.
+            uint256 walpha_0_owned = ((walpha_0 * poolTokens) / (totalSupply + _escrowedPoolTokens + poolTokens)) / FixedPointMathLib.WAD;
+            if (minReferenceAsset > walpha_0_owned) revert ReturnInsufficient(walpha_0_owned, minReferenceAsset);
+        }
 
         // Update the unit tracker:
         _unitTracker -= int256(U);
@@ -1553,7 +1566,8 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
         bytes32 fromPool,
         address who,
         uint256 U,
-        uint256 minOut,
+        uint256 minPoolTokens,
+        uint256 minReferenceAsset,
         bytes32 swapHash,
         address dataTarget,
         bytes calldata data
@@ -1563,7 +1577,8 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
             fromPool,
             who,
             U,
-            minOut,
+            minPoolTokens,
+            minReferenceAsset,
             swapHash
         );
 
