@@ -820,27 +820,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6bdef32e8150c2a081110b42772ffe7d7c9032b606bc226c8260fd97e0976601"
 
 [[package]]
-name = "swap-pool"
-version = "0.1.0"
-dependencies = [
- "catalyst-ibc-interface",
- "cosmwasm-schema",
- "cosmwasm-std",
- "cosmwasm-storage",
- "cw-multi-test",
- "cw-storage-plus",
- "cw2",
- "cw20",
- "cw20-base",
- "ethnum",
- "fixed-point-math-lib",
- "schemars",
- "serde",
- "swap-pool-common",
- "thiserror",
-]
-
-[[package]]
 name = "swap-pool-amplified"
 version = "0.1.0"
 dependencies = [
@@ -872,6 +851,27 @@ dependencies = [
  "schemars",
  "serde",
  "sha3",
+ "thiserror",
+]
+
+[[package]]
+name = "swap-pool-volatile"
+version = "0.1.0"
+dependencies = [
+ "catalyst-ibc-interface",
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cosmwasm-storage",
+ "cw-multi-test",
+ "cw-storage-plus",
+ "cw2",
+ "cw20",
+ "cw20-base",
+ "ethnum",
+ "fixed-point-math-lib",
+ "schemars",
+ "serde",
+ "swap-pool-common",
  "thiserror",
 ]
 

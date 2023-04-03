@@ -20,7 +20,7 @@ use crate::state::SwapPoolVolatileState;
 
 
 // version info for migration info
-const CONTRACT_NAME: &str = "crates.io:catalyst-swap-pool";
+const CONTRACT_NAME: &str = "crates.io:catalyst-swap-pool-volatile";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 
