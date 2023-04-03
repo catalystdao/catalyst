@@ -106,7 +106,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
      * @param toPool The target pool on the target chain encoded in bytes32.
      * @param toAccount recipient of the transaction on the target chain. Encoded in bytes32.
      * @param U The calculated liquidity reference. (Units)
-     * @param minOut The minimum number of returned tokens to the toAccount on the target chain.
+     * @param minOut An array of minout describing: [the minimum number of pool tokens, the minimum number of reference assets]
      * @param metadata Metadata on the asset swap, used for swap identification and ack/timeout.
      * @param calldata_ Data field if a call should be made on the target chain. 
      * Should be encoded abi.encode(<address>,<data>)
@@ -116,7 +116,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
         bytes32 toPool,
         bytes32 toAccount,
         uint256 U,
-        uint256 minOut,
+        uint256[2] memory minOut,
         LiquiditySwapMetadata memory metadata,
         bytes memory calldata_
     ) external {
@@ -131,7 +131,8 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
                 toPool,
                 toAccount,
                 U,
-                minOut
+                minOut[0],
+                minOut[1]
             ),
             abi.encodePacked(
                 metadata.fromAmount,
@@ -284,23 +285,25 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
             // CCI sets dataLength > 0 if calldata is passed.
             if (dataLength != 0) {
                 ICatalystV1Pool(toPool).receiveLiquidity(
-                    bytes32(packet.src.channelId),                                          // connectionId
-                    fromPool,                                                               // fromPool
-                    abi.decode(data[ TO_ACCOUNT_START : TO_ACCOUNT_END ], (address)),       // toAccount
-                    uint256(bytes32(data[ UNITS_START : UNITS_END ])),                      // units
-                    uint256(bytes32(data[ CTX1_MIN_OUT_START : CTX1_MIN_OUT_END ])),        // minOut
-                    bytes32(data[ CTX1_SWAP_HASH_START : CTX1_SWAP_HASH_END ]),             // swapHash
-                    abi.decode(data[ CTX1_DATA_START : CTX1_DATA_START+32 ], (address)),    // dataTarget
-                    data[ CTX1_DATA_START+32 : CTX1_DATA_START+dataLength-32 ]              // dataArguments
+                    bytes32(packet.src.channelId),                                                      // connectionId
+                    fromPool,                                                                           // fromPool
+                    abi.decode(data[ TO_ACCOUNT_START : TO_ACCOUNT_END ], (address)),                   // toAccount
+                    uint256(bytes32(data[ UNITS_START : UNITS_END ])),                                  // units
+                    uint256(bytes32(data[ CTX1_MIN_POOL_TOKEN_START : CTX1_MIN_POOL_TOKEN_END ])),      // minOut
+                    uint256(bytes32(data[ CTX1_MIN_REFERENCE_START : CTX1_MIN_REFERENCE_END ])),        // minOut
+                    bytes32(data[ CTX1_SWAP_HASH_START : CTX1_SWAP_HASH_END ]),                         // swapHash
+                    abi.decode(data[ CTX1_DATA_START : CTX1_DATA_START+32 ], (address)),                // dataTarget
+                    data[ CTX1_DATA_START+32 : CTX1_DATA_START+dataLength-32 ]                          // dataArguments
                 );
             } else {
                 ICatalystV1Pool(toPool).receiveLiquidity(
-                    bytes32(packet.src.channelId),                                          // connectionId
-                    fromPool,                                                               // fromPool
-                    abi.decode(data[ TO_ACCOUNT_START : TO_ACCOUNT_END ], (address)),       // toAccount
-                    uint256(bytes32(data[ UNITS_START : UNITS_END ])),                      // units
-                    uint256(bytes32(data[ CTX1_MIN_OUT_START : CTX1_MIN_OUT_END ])),        // minOut
-                    bytes32(data[ CTX1_SWAP_HASH_START : CTX1_SWAP_HASH_END ])              // swapHash
+                    bytes32(packet.src.channelId),                                                      // connectionId
+                    fromPool,                                                                           // fromPool
+                    abi.decode(data[ TO_ACCOUNT_START : TO_ACCOUNT_END ], (address)),                   // toAccount
+                    uint256(bytes32(data[ UNITS_START : UNITS_END ])),                                  // units
+                    uint256(bytes32(data[ CTX1_MIN_POOL_TOKEN_START : CTX1_MIN_POOL_TOKEN_END ])),      // minOut
+                    uint256(bytes32(data[ CTX1_MIN_REFERENCE_START : CTX1_MIN_REFERENCE_END ])),        // minOut
+                    bytes32(data[ CTX1_SWAP_HASH_START : CTX1_SWAP_HASH_END ])                          // swapHash
                 );
             }
 

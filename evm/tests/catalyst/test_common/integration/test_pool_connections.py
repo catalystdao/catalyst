@@ -191,7 +191,7 @@ def test_not_connected_out_liquidity(
             convert.to_bytes(dummy_pool_address),   # to pool
             convert.to_bytes(berg.address),         # recipient
             swap_amount,
-            0,
+            [0, 0],
             deployer,
             {"from": deployer}
         )
@@ -217,7 +217,7 @@ def test_not_connected_in_liquidity(
         pool.address,                               # to pool
         convert.to_bytes(berg.address),             # recipient
         units,
-        1,
+        [1, 0],
     )
     fake_packet = [["", channel_id], ["", ""], 0, fake_payload, [0, 0]]
 
