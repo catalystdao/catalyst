@@ -801,11 +801,9 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
                 }
 
                 // Store the amount withdrawn to subtract from the security limit later.
-                unchecked {
-                    // totalWithdrawn \subset WeightSumOfThePool
-                    // totalWithdrawn < WeightSumOfThePool = _maxUnitCapacity. So it doesn't overflow.
-                    totalWithdrawn += weightedTokenAmount;
+                totalWithdrawn += weightedTokenAmount;
 
+                unchecked {
                     // remove the weight from weightedTokenAmount.
                     weightedTokenAmount /= _weight[token];
                 }
@@ -826,11 +824,11 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
             }
 
             // Decrease the security limit by the amount withdrawn.
-            unchecked {
-                _maxUnitCapacity -= totalWithdrawn;
-                if (_usedUnitCapacity <= totalWithdrawn) {
-                    _usedUnitCapacity = 0;
-                } else {
+            _maxUnitCapacity -= totalWithdrawn;
+            if (_usedUnitCapacity <= totalWithdrawn) {
+                _usedUnitCapacity = 0;
+            } else {
+                unchecked {
                     // We know: _usedUnitCapacity > totalWithdrawn.
                     _usedUnitCapacity -= totalWithdrawn;
                 }
@@ -986,22 +984,20 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
             ERC20(tokenIndexed[it]).safeTransfer(msg.sender, tokenAmount);
 
             // Decrease the security limit by the amount withdrawn.
-            
-            unchecked {
-                // totalWithdrawn < _maxUnitCapacity. So it doesn't overflow.
-                totalWithdrawn += tokenAmount * _weight[tokenIndexed[it]];
+            totalWithdrawn += tokenAmount * _weight[tokenIndexed[it]];
 
+            unchecked {
                 it++;
             }
         }
         if (U != 0) revert UnusedUnitsAfterWithdrawal(U);
         
-        unchecked {
-            // Decrease the security limit by the amount withdrawn.
-            _maxUnitCapacity -= totalWithdrawn;
-            if (_usedUnitCapacity <= totalWithdrawn) {
-                _usedUnitCapacity = 0;
-            } else {
+        // Decrease the security limit by the amount withdrawn.
+        _maxUnitCapacity -= totalWithdrawn;
+        if (_usedUnitCapacity <= totalWithdrawn) {
+            _usedUnitCapacity = 0;
+        } else {
+            unchecked {
                 // We know: _usedUnitCapacity > totalWithdrawn >= 0.
                 _usedUnitCapacity -= totalWithdrawn;
             }
@@ -1046,18 +1042,11 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
         // For amplified pools, the security limit is based on the sum of the tokens
         // in the pool.
         uint256 weightedAmount = amount * _weight[fromAsset];
-        uint256 weightedOut;
-        unchecked {
-            // Since _maxUnitCapacity is the balance sum, this must be less than _maxUnitCapacity
-            weightedOut = out * _weight[toAsset];
-        }
+        uint256 weightedOut = out * _weight[toAsset];
         // The if statement ensures the independent calculations never under or overflow.
         if (weightedOut > weightedAmount) {
-            unchecked {
-                _maxUnitCapacity -= weightedOut - weightedAmount;
-            }
+            _maxUnitCapacity -= weightedOut - weightedAmount;
         } else {
-            // The below code could overflow.
             _maxUnitCapacity += weightedAmount - weightedOut;
         }
 
@@ -1668,7 +1657,19 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
                 // when UC <= escrowAmount => UC - escrowAmount <= 0 => max(UC - escrowAmount, 0) = 0
                 _usedUnitCapacity = 0;
             }
-            _maxUnitCapacity += escrowAmount * _weight[escrowToken];  // Does not overflow, since weight times balance of the pool doesn't overflow. 
+
+            // There is a chance that _maxUnitCapacity + escrowAmount * _weight[escrowToken] will overflow.
+            // since the number has never been calculated before. This function should never revert so the computation
+            // has to be done unchecked.
+            uint256 muc = _maxUnitCapacity;
+            uint256 new_muc = muc + escrowAmount * _weight[escrowToken]; // Might overflow. Can be checked by comparing it against MUC.
+
+            // If new_muc < muc, then new_muc has overflown. As a result, we should set muc = uint256::MAX
+            if (new_muc < muc) {
+                _maxUnitCapacity = type(uint256).max;
+            } else {
+                _maxUnitCapacity = new_muc;
+            }
         }
     }
 
