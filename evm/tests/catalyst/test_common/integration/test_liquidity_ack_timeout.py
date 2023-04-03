@@ -26,7 +26,7 @@ def test_ibc_ack(pool, channel_id, ibc_emulator, berg, deployer, swap_percentage
         convert.to_bytes(pool.address.replace("0x", "")),
         convert.to_bytes(berg.address.replace("0x", "")),
         swap_amount,
-        0,
+        [0, 0],
         berg,
         {"from": berg},
     )
@@ -56,7 +56,7 @@ def test_ibc_timeout(pool, channel_id, ibc_emulator, berg, deployer, swap_percen
         convert.to_bytes(pool.address.replace("0x", "")),
         convert.to_bytes(berg.address.replace("0x", "")),
         swap_amount,
-        0,
+        [0, 0],
         berg,
         {"from": berg},
     )
@@ -83,7 +83,7 @@ def test_only_one_response(pool, channel_id, ibc_emulator, berg, deployer):
         convert.to_bytes(pool.address.replace("0x", "")),
         convert.to_bytes(berg.address.replace("0x", "")),
         swap_amount,
-        0,
+        [0, 0],
         berg,
         {"from": berg},
     )
@@ -145,7 +145,7 @@ def test_ibc_ack_event(pool, channel_id, ibc_emulator, berg, deployer):
         convert.to_bytes(pool.address.replace("0x", "")),
         convert.to_bytes(berg.address.replace("0x", "")),
         swap_amount,
-        0,
+        [0, 0],
         berg,
         {"from": berg},
     )
@@ -183,7 +183,7 @@ def test_ibc_timeout_event(pool, channel_id, ibc_emulator, berg, deployer):
         convert.to_bytes(pool.address.replace("0x", "")),
         convert.to_bytes(berg.address.replace("0x", "")),
         swap_amount,
-        0,
+        [0, 0],
         berg,
         {"from": berg},
     )

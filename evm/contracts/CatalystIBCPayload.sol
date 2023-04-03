@@ -85,19 +85,22 @@ uint constant CTX0_DATA_START            = 264;
 
 // CTX1 Liquidity Swap Payload **************************************************************************************************
 
-uint constant CTX1_MIN_OUT_START         = 129;
-uint constant CTX1_MIN_OUT_END           = 161;
+uint constant CTX1_MIN_POOL_TOKEN_START  = 129;
+uint constant CTX1_MIN_POOL_TOKEN_END    = 161;
 
-uint constant CTX1_FROM_AMOUNT_START     = 161;
-uint constant CTX1_FROM_AMOUNT_END       = 193;
+uint constant CTX1_MIN_REFERENCE_START   = 161;
+uint constant CTX1_MIN_REFERENCE_END     = 193;
 
-uint constant CTX1_BLOCK_NUMBER_START    = 193;
-uint constant CTX1_BLOCK_NUMBER_END      = 197;
+uint constant CTX1_FROM_AMOUNT_START     = 193;
+uint constant CTX1_FROM_AMOUNT_END       = 225;
 
-uint constant CTX1_SWAP_HASH_START       = 197;
-uint constant CTX1_SWAP_HASH_END         = 229;
+uint constant CTX1_BLOCK_NUMBER_START    = 225;
+uint constant CTX1_BLOCK_NUMBER_END      = 229;
 
-uint constant CTX1_DATA_LENGTH_START     = 229;
-uint constant CTX1_DATA_LENGTH_END       = 231;
+uint constant CTX1_SWAP_HASH_START       = 229;
+uint constant CTX1_SWAP_HASH_END         = 261;
 
-uint constant CTX1_DATA_START            = 231;
+uint constant CTX1_DATA_LENGTH_START     = 261;
+uint constant CTX1_DATA_LENGTH_END       = 263;
+
+uint constant CTX1_DATA_START            = 263;

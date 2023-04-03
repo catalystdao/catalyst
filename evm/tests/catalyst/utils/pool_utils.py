@@ -206,10 +206,17 @@ def compute_equal_withdrawal(withdraw_amount, weights, balances, total_supply, a
     
         walpha = compute_balance_0(weights, balances, unit_tracker, amp)
         balances = [Decimal(b * w) for b, w in zip(balances, weights)]
-        inner = ((ts + pt)/ts)**one_minus_amp - 1
+        inner = 1 - ((ts - pt)/ts)**one_minus_amp
+        assert inner < 1
         inner *= walpha**one_minus_amp
         
-        return [int((b**one_minus_amp + inner)**(Decimal(1)/one_minus_amp) - b) // w for b, w in zip(balances, weights)]
+        return [
+            (
+                (int(b - (b**one_minus_amp - inner)**(Decimal(1)/one_minus_amp)) // w) 
+                if (b**one_minus_amp >= inner)
+                else (b // w)
+            ) for b, w in zip(balances, weights)
+        ]
     
     # Volatile pools
     return [int(balance * pt / ts) for balance in balances]
@@ -307,10 +314,11 @@ def decode_payload(data, decode_address=evm_bytes_32_to_address):
             "_toPool": decode_address(data[33:65]),
             "_toAccount": decode_address(data[65:97]),
             "_LU": convert.to_uint(data[97:129]),
-            "_minOut": convert.to_uint(data[129:161]),
-            "_escrowAmount": convert.to_uint(data[161:193]),
-            "_blockNumber": convert.to_uint(data[193:197]),
-            "_swapHash": data[197:228],
+            "_minPoolToken": convert.to_uint(data[129:161]),
+            "_minReferenceAsset": convert.to_uint(data[161:193]),
+            "_escrowAmount": convert.to_uint(data[193:225]),
+            "_blockNumber": convert.to_uint(data[225:229]),
+            "_swapHash": data[229:261],
         }
     
     # Asset swap payload
@@ -375,7 +383,7 @@ def encode_liquidity_swap_payload(
     to_pool,
     to_account,
     U,
-    min_out=0,
+    min_out=[0,0],
     escrow_amount=0,
     block_number=0
 ):
@@ -385,7 +393,8 @@ def encode_liquidity_swap_payload(
         + convert.to_bytes(to_pool, type_str="bytes32")
         + convert.to_bytes(to_account, type_str="bytes32")
         + convert.to_bytes(U, type_str="bytes32")
-        + convert.to_bytes(min_out, type_str="bytes32")
+        + convert.to_bytes(min_out[0], type_str="bytes32")
+        + convert.to_bytes(min_out[1], type_str="bytes32")
         + convert.to_bytes(escrow_amount, type_str="bytes32")
         + convert.to_bytes(block_number, type_str="bytes4")
         + convert.to_bytes(

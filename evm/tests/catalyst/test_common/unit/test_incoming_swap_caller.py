@@ -51,6 +51,7 @@ def test_receiveLiquidity_must_be_called_by_cci(
             berg,
             10**16,
             0,
+            0,
             web3.keccak(text="e"),
             {'from': berg}
         )
@@ -60,6 +61,7 @@ def test_receiveLiquidity_must_be_called_by_cci(
         pool.address,  # Use self as source pool
         berg,
         10**16,
+        0,
         0,
         web3.keccak(text="e"),
         {'from': cci}
