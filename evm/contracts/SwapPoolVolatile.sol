@@ -483,7 +483,8 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon {
         // Fetch wsum.
         uint256 wsum = _maxUnitCapacity / FixedPointMathLib.LN2;
 
-        // _calcPriceCurveLimitShare returns < 1 multiplied by FixedPointMathLib.WAD.
+        // Compute the number of pool tokens minted to the user. Notice that _calcPriceCurveLimitShare > 1 thus more
+        // than the totalSupply can be minted given sufficiently large U.
         uint256 poolTokens = FixedPointMathLib.mulWadDown(initialTotalSupply, _calcPriceCurveLimitShare(U, wsum));
 
         // Check that the minimum output is honoured.
