@@ -206,10 +206,17 @@ def compute_equal_withdrawal(withdraw_amount, weights, balances, total_supply, a
     
         walpha = compute_balance_0(weights, balances, unit_tracker, amp)
         balances = [Decimal(b * w) for b, w in zip(balances, weights)]
-        inner = ((ts + pt)/ts)**one_minus_amp - 1
+        inner = 1 - ((ts - pt)/ts)**one_minus_amp
+        assert inner < 1
         inner *= walpha**one_minus_amp
         
-        return [int((b**one_minus_amp + inner)**(Decimal(1)/one_minus_amp) - b) // w for b, w in zip(balances, weights)]
+        return [
+            (
+                (int(b - (b**one_minus_amp - inner)**(Decimal(1)/one_minus_amp)) // w) 
+                if (b**one_minus_amp >= inner)
+                else (b // w)
+            ) for b, w in zip(balances, weights)
+        ]
     
     # Volatile pools
     return [int(balance * pt / ts) for balance in balances]
