@@ -1305,13 +1305,19 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
             if (token == address(0)) break;
             uint256 weight = _weight[token];
 
-            // Whenever balance0 is computed, the true balance should be used.
             uint256 weightAssetBalance = weight * ERC20(token).balanceOf(address(this));
 
-            int256 wab = FixedPointMathLib.powWad(
-                int256(weightAssetBalance * FixedPointMathLib.WAD),     // If casting overflows to a negative number, powWad fails
-                oneMinusAmp
-            );
+            // If weightAssetBalance == 0, then this computation would fail. However since 0^(1-k) = 0, we can set it to 0.
+            int256 wab = 0;
+            if (weightAssetBalance != 0){
+                wab = FixedPointMathLib.powWad(
+                    int256(weightAssetBalance * FixedPointMathLib.WAD),     // If casting overflows to a negative number, powWad fails
+                    oneMinusAmp
+                );
+
+                // if wab == 0, there is no need to add it. So only add if != 0.
+                weightedAssetBalanceSum += wab;
+            }
 
             weightedAssetBalanceSum += wab;
 
