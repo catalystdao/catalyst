@@ -14,7 +14,6 @@ pub struct U256Def([u128; 2]);
 
 #[cw_serde]
 pub struct InstantiateMsg {
-    pub gov_contract: String
 }
 
 

@@ -7,7 +7,6 @@ use ethnum::U256;
 use crate::catalyst_ibc_payload::{CTX0_ASSET_SWAP, CTX0_DATA_START, CTX1_DATA_START, CTX1_LIQUIDITY_SWAP};
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg, AssetSwapMetadata, LiquiditySwapMetadata};
-use crate::state::{CatalystIBCInterfaceState, CATALYST_IBC_INTERFACE_STATE};
 
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:catalyst-ibc-interface";
@@ -23,20 +22,13 @@ pub fn instantiate(
     deps: DepsMut,
     _env: Env,
     _info: MessageInfo,
-    msg: InstantiateMsg,
+    _msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
 
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
-    let catalyst_ibc_interface_state = CatalystIBCInterfaceState {
-        admin: deps.api.addr_validate(&msg.gov_contract)?   // TODO do we want an admin? //TODO validate gov_contract
-    };
-
-    CATALYST_IBC_INTERFACE_STATE.save(deps.storage, &catalyst_ibc_interface_state)?;
-
     Ok(
         Response::new()
-            .add_attribute("gov_contract", msg.gov_contract)
     )
 }
 
