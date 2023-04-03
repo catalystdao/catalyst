@@ -1319,8 +1319,6 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
                 weightedAssetBalanceSum += wab;
             }
 
-            weightedAssetBalanceSum += wab;
-
             unchecked {
                 it++;
             }
