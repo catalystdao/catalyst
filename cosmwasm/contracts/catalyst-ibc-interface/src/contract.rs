@@ -280,12 +280,11 @@ pub fn query(_deps: Deps, _env: Env, _msg: QueryMsg) -> StdResult<Binary> {
 
 
 #[cfg(test)]
-mod tests {
+mod catalyst_ibc_interface_tests {
     use super::*;
-    use cosmwasm_std::{testing::{mock_dependencies, mock_env, mock_info}, Attribute};
+    use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
 
     pub const SOME_ADDR: &str = "some_addr";
-    pub const GOV_ADDR: &str = "gov_addr";
 
     #[test]
     fn test_instantiate() {
@@ -293,25 +292,13 @@ mod tests {
         let mut deps = mock_dependencies();
         let env = mock_env();
         let info = mock_info(SOME_ADDR, &vec![]);
-      
-        let msg = InstantiateMsg {
-            gov_contract: GOV_ADDR.to_string()
-        };
+        let msg = InstantiateMsg {};
       
         // Instantiate contract
         let response = instantiate(deps.as_mut(), env, info, msg).unwrap();
 
-        // Verify response attributes
-        assert_eq!(
-            response.attributes[0],
-            Attribute { key: "gov_contract".to_string(), value: GOV_ADDR.to_string() }
-        );
+        // No response attributes are expected
+        assert_eq!(response.attributes.len(), 0usize);
 
-        assert_eq!(
-            response.attributes[1],
-            Attribute { key: "default_timeout".to_string(), value: 3600.to_string() }
-        );
-
-        // TODO Verify state
     }
 }
