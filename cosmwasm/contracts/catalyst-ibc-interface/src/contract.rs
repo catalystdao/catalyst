@@ -1,12 +1,13 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, IbcMsg};
+use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, IbcMsg, to_binary, IbcQuery, PortIdResponse, Order};
 use cw2::set_contract_version;
 use ethnum::U256;
 
 use crate::catalyst_ibc_payload::{CTX0_ASSET_SWAP, CTX0_DATA_START, CTX1_DATA_START, CTX1_LIQUIDITY_SWAP};
 use crate::error::ContractError;
-use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg, AssetSwapMetadata, LiquiditySwapMetadata};
+use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg, AssetSwapMetadata, LiquiditySwapMetadata, PortResponse, ListChannelsResponse};
+use crate::state::OPEN_CHANNELS;
 
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:catalyst-ibc-interface";
@@ -272,10 +273,28 @@ fn execute_send_cross_chain_liquidity(
 }
 
 
-
+// The following 'query' code has been taken in part from the cw20-ics20 contract of the cw-plus repository.
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(_deps: Deps, _env: Env, _msg: QueryMsg) -> StdResult<Binary> {
-    unimplemented!()
+pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
+    match msg {
+        QueryMsg::Port {} => to_binary(&query_port(deps)?),
+        QueryMsg::ListChannels {} => to_binary(&query_list(deps)?)
+    }
+}
+
+fn query_port(deps: Deps) -> StdResult<PortResponse> {
+    let query = IbcQuery::PortId {}.into();
+    let PortIdResponse { port_id } = deps.querier.query(&query)?;
+    Ok(PortResponse { port_id })
+}
+
+fn query_list(deps: Deps) -> StdResult<ListChannelsResponse> {
+    //TODO use IbcQuery like with query_port?
+    let channels = OPEN_CHANNELS
+        .range_raw(deps.storage, None, None, Order::Ascending)
+        .map(|r| r.map(|(_, v)| v))
+        .collect::<StdResult<_>>()?;
+    Ok(ListChannelsResponse { channels })
 }
 
 
