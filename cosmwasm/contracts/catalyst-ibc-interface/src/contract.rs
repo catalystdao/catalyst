@@ -29,7 +29,7 @@ pub fn instantiate(
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
     let catalyst_ibc_interface_state = CatalystIBCInterfaceState {
-        admin: deps.api.addr_validate(&msg.gov_contract)?   // Validate ibc_endpoint
+        admin: deps.api.addr_validate(&msg.gov_contract)?   // TODO do we want an admin? //TODO validate gov_contract
     };
 
     CATALYST_IBC_INTERFACE_STATE.save(deps.storage, &catalyst_ibc_interface_state)?;
