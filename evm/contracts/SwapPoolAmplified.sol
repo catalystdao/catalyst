@@ -721,8 +721,6 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
 
                     // if wab == 0, there is no need to add it. So only add if != 0.
                     weightedAssetBalanceSum += wab;
-
-                    ampWeightAssetBalances[it] = wab; // Store
                 }
 
                 unchecked {
@@ -881,7 +879,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
             // As such, we don't need to remember the value beyond this section.
             uint256 walpha_0_ampped;
 
-            // This is a balance0 implementation. The for loop is used to cache tokenIndexed, weightAssetBalances, and ampWeightAssetBalances.
+            // This is a balance0 implementation. The for loop is used to cache tokenIndexed, effAssetBalances and assetWeight.
             {
                 int256 weightedAssetBalanceSum = 0;
                 // A very careful stack optimisation is made here.
@@ -914,8 +912,6 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
 
                         // if wab == 0, there is no need to add it. So only add if != 0.
                         weightedAssetBalanceSum += wab;
-                        
-                        ampWeightAssetBalances[U] = wab; // Store since it is an expensive calculation.
                     }
 
                     unchecked {
