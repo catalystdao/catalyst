@@ -29,8 +29,7 @@ pub fn instantiate(
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
     let catalyst_ibc_interface_state = CatalystIBCInterfaceState {
-        admin: deps.api.addr_validate(&msg.gov_contract)?,   // Validate ibc_endpoint
-        default_timeout: msg.default_timeout                 //TODO remove
+        admin: deps.api.addr_validate(&msg.gov_contract)?   // Validate ibc_endpoint
     };
 
     CATALYST_IBC_INTERFACE_STATE.save(deps.storage, &catalyst_ibc_interface_state)?;
@@ -38,7 +37,6 @@ pub fn instantiate(
     Ok(
         Response::new()
             .add_attribute("gov_contract", msg.gov_contract)
-            .add_attribute("default_timeout", msg.default_timeout.to_string())
     )
 }
 
@@ -305,8 +303,7 @@ mod tests {
         let info = mock_info(SOME_ADDR, &vec![]);
       
         let msg = InstantiateMsg {
-            gov_contract: GOV_ADDR.to_string(),
-            default_timeout: 3600       // 1 hour
+            gov_contract: GOV_ADDR.to_string()
         };
       
         // Instantiate contract

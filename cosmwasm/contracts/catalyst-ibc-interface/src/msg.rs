@@ -14,8 +14,7 @@ pub struct U256Def([u128; 2]);
 
 #[cw_serde]
 pub struct InstantiateMsg {
-    pub gov_contract: String,
-    pub default_timeout: u64
+    pub gov_contract: String
 }
 
 

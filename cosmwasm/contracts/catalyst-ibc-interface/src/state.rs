@@ -8,8 +8,7 @@ pub const OPEN_CHANNELS: Map<&str, IbcChannelInfo> = Map::new("catalyst-ibc-inte
 
 #[cw_serde]
 pub struct CatalystIBCInterfaceState {
-    pub admin: Addr,
-    pub default_timeout: u64
+    pub admin: Addr
 }
 
 #[cw_serde]
