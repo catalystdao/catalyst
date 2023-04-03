@@ -38,6 +38,9 @@ pub enum ContractError {
     #[error("Pool not connected")]
     PoolNotConnected { channel_id: String, pool: String },
 
+    #[error("The pool only allows for local swaps, as it has no cross chain interface.")]
+    PoolHasNoInterface {},
+
     #[error("A non zero withdraw ratio is specified after all units have been consumed.")]
     WithdrawRatioNotZero { ratio: u64 },    //TODO EVM mismatch
 

@@ -15,6 +15,8 @@ use swap_pool_common::{
     ContractError
 };
 
+use catalyst_ibc_interface::msg::{ExecuteMsg as InterfaceExecuteMsg, AssetSwapMetadata, LiquiditySwapMetadata};
+
 use crate::calculation_helpers::{calc_price_curve_area, calc_price_curve_limit, calc_combined_price_curves, calc_price_curve_limit_share};
 
 pub const STATE: Item<SwapPoolVolatileState> = Item::new("catalyst-pool-state");
@@ -729,15 +731,14 @@ impl CatalystV1PoolPermissionless for SwapPoolVolatileState {
             amount - pool_fee
         )?;
 
+        let block_number = env.block.height as u32;
         let send_asset_hash = SwapPoolVolatileState::compute_send_asset_hash(
             to_account.as_str(),
             u,
             amount - pool_fee,
             &from_asset,
-            env.block.height as u32
+            block_number
         );
-
-        //TODO invoke interface
 
         state.create_asset_escrow(
             deps,
@@ -767,11 +768,36 @@ impl CatalystV1PoolPermissionless for SwapPoolVolatileState {
             pool_fee
         )?;
 
+        // Build message to 'send' the asset via the IBC interface
+        let send_cross_chain_asset_msg = InterfaceExecuteMsg::SendCrossChainAsset {
+            channel_id,
+            to_pool: to_pool.clone(),
+            to_account,
+            to_asset_index,
+            u,
+            min_out,
+            metadata: AssetSwapMetadata {
+                from_amount: amount,
+                from_asset: from_asset.clone(),
+                swap_hash: send_asset_hash.clone(),
+                block_number
+            },
+            calldata
+        };
+        let send_asset_execute_msg = CosmosMsg::Wasm(
+            cosmwasm_std::WasmMsg::Execute {
+                contract_addr: state.chain_interface().as_ref().ok_or(ContractError::PoolHasNoInterface {})?.to_string(),
+                msg: to_binary(&send_cross_chain_asset_msg)?,
+                funds: vec![]
+            }
+        );
+
         state.save_state(deps.storage)?;    //TODO Is this only needed if the weights are updated?
 
         Ok(Response::new()
             .add_message(transfer_from_asset_msg)
             .add_message(collect_governance_fee_message)
+            .add_message(send_asset_execute_msg)
             .add_attribute("to_pool", to_pool)
             .add_attribute("to_account", info.sender.to_string())
             .add_attribute("from_asset", from_asset)
@@ -894,16 +920,13 @@ impl CatalystV1PoolPermissionless for SwapPoolVolatileState {
             .ok_or(ContractError::ArithmeticError {})?;
 
         // Compute the hash of the 'send_liquidity' transaction
+        let block_number = env.block.height as u32;
         let send_liquidity_hash = SwapPoolVolatileState::compute_send_liquidity_hash(
             to_account.as_str(),
             u,
             amount,
-            env.block.height as u32
+            block_number
         );
-
-
-        //TODO invoke interface
-
 
         // Escrow the pool tokens
         state.create_liquidity_escrow(
@@ -913,10 +936,33 @@ impl CatalystV1PoolPermissionless for SwapPoolVolatileState {
             fallback_account
         )?;
 
+        // Build message to 'send' the liquidity via the IBC interface
+        let send_cross_chain_asset_msg = InterfaceExecuteMsg::SendCrossChainLiquidity {
+            channel_id,
+            to_pool: to_pool.clone(),
+            to_account: to_account.clone(),
+            u,
+            min_out,
+            metadata: LiquiditySwapMetadata {
+                from_amount: amount,
+                swap_hash: send_liquidity_hash.clone(),
+                block_number
+            },
+            calldata
+        };
+        let send_liquidity_execute_msg = CosmosMsg::Wasm(
+            cosmwasm_std::WasmMsg::Execute {
+                contract_addr: state.chain_interface().as_ref().ok_or(ContractError::PoolHasNoInterface {})?.to_string(),
+                msg: to_binary(&send_cross_chain_asset_msg)?,
+                funds: vec![]
+            }
+        );
+
         state.save_state(deps.storage)?;    //TODO Is this only needed if the weights are updated?
 
         //TODO add min_out? (it is present on send_asset)
         Ok(Response::new()
+            .add_message(send_liquidity_execute_msg)
             .add_attribute("to_pool", to_pool)
             .add_attribute("to_account", to_account)
             .add_attribute("from_amount", amount)
