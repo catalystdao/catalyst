@@ -492,7 +492,7 @@ pub trait CatalystV1PoolPermissionless: CatalystV1PoolState + CatalystV1PoolAdmi
         from_asset: String,
         to_asset_index: u8,
         amount: Uint128,
-        min_out: Uint128,
+        min_out: U256,
         fallback_account: String,   //TODO EVM mismatch
         calldata: Vec<u8>
     ) -> Result<Response, ContractError>;
@@ -519,7 +519,7 @@ pub trait CatalystV1PoolPermissionless: CatalystV1PoolState + CatalystV1PoolAdmi
         to_pool: String,
         to_account: String,
         amount: Uint128,            //TODO EVM mismatch
-        min_out: Uint128,
+        min_out: U256,
         fallback_account: String,   //TODO EVM mismatch
         calldata: Vec<u8>
     ) -> Result<Response, ContractError>;

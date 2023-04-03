@@ -702,7 +702,7 @@ impl CatalystV1PoolPermissionless for SwapPoolVolatileState {
         from_asset: String,
         to_asset_index: u8,
         amount: Uint128,
-        min_out: Uint128,
+        min_out: U256,
         fallback_account: String,   //TODO EVM mismatch
         calldata: Vec<u8>
     ) -> Result<Response, ContractError> {
@@ -778,7 +778,7 @@ impl CatalystV1PoolPermissionless for SwapPoolVolatileState {
             .add_attribute("to_asset_index", to_asset_index.to_string())
             .add_attribute("from_amount", amount)
             .add_attribute("units", u.to_string())
-            .add_attribute("min_out", min_out)
+            .add_attribute("min_out", min_out.to_string())      //TODO review string format
             .add_attribute("swap_hash", send_asset_hash)
         )
     }
@@ -856,7 +856,7 @@ impl CatalystV1PoolPermissionless for SwapPoolVolatileState {
         to_pool: String,
         to_account: String,
         amount: Uint128,            //TODO EVM mismatch
-        min_out: Uint128,
+        min_out: U256,
         fallback_account: String,   //TODO EVM mismatch
         calldata: Vec<u8>
     ) -> Result<Response, ContractError> {
@@ -915,6 +915,7 @@ impl CatalystV1PoolPermissionless for SwapPoolVolatileState {
 
         state.save_state(deps.storage)?;    //TODO Is this only needed if the weights are updated?
 
+        //TODO add min_out? (it is present on send_asset)
         Ok(Response::new()
             .add_attribute("to_pool", to_pool)
             .add_attribute("to_account", to_account)
