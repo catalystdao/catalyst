@@ -300,24 +300,193 @@ fn query_list(deps: Deps) -> StdResult<ListChannelsResponse> {
 
 #[cfg(test)]
 mod catalyst_ibc_interface_tests {
-    use super::*;
-    use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
 
-    pub const SOME_ADDR: &str = "some_addr";
+    use crate::ibc_test_helpers::{open_channel, mock_channel_info, TEST_LOCAL_PORT, close_channel};
+
+    use super::*;
+    use cosmwasm_std::{testing::{mock_dependencies, mock_env, mock_info}, from_binary};
+
+    pub const DEPLOYER_ADDR: &str = "deployer_addr";
+
 
     #[test]
     fn test_instantiate() {
 
         let mut deps = mock_dependencies();
-        let env = mock_env();
-        let info = mock_info(SOME_ADDR, &vec![]);
-        let msg = InstantiateMsg {};
       
-        // Instantiate contract
-        let response = instantiate(deps.as_mut(), env, info, msg).unwrap();
+
+        // Tested action: instantiate contract
+        let response = instantiate(
+            deps.as_mut(),
+            mock_env(),
+            mock_info(DEPLOYER_ADDR, &vec![]),
+            InstantiateMsg {}
+        ).unwrap();
+
 
         // No response attributes are expected
         assert_eq!(response.attributes.len(), 0usize);
 
+        //TODO add more checks?
+
     }
+
+
+    #[test]
+    fn test_open_channel_and_query() {
+
+        let mut deps = mock_dependencies();
+      
+        // Instantiate contract
+        instantiate(
+            deps.as_mut(),
+            mock_env(),
+            mock_info(DEPLOYER_ADDR, &vec![]),
+            InstantiateMsg {}
+        ).unwrap();
+
+        // Add mock channel
+        let channel_id = "mock-channel-1";
+
+
+        // Tested action: open channel
+        open_channel(deps.as_mut(), channel_id, None, None);
+
+
+        // Query open channels
+        let open_channels: ListChannelsResponse = from_binary(
+            &query(deps.as_ref(), mock_env(), QueryMsg::ListChannels {}).unwrap()
+        ).unwrap();
+
+        assert_eq!(open_channels.channels.len(), 1);
+        assert_eq!(open_channels.channels[0], mock_channel_info(channel_id));
+
+    }
+
+
+    #[test]
+    fn test_open_multiple_channels_and_query() {
+
+        let mut deps = mock_dependencies();
+      
+        // Instantiate contract
+        instantiate(
+            deps.as_mut(),
+            mock_env(),
+            mock_info(DEPLOYER_ADDR, &vec![]),
+            InstantiateMsg {}
+        ).unwrap();
+
+        // Open mock channels
+        let channel_id_1 = "mock-channel-1";
+        let channel_id_2 = "mock-channel-2";
+
+        open_channel(deps.as_mut(), channel_id_1, None, None);
+        open_channel(deps.as_mut(), channel_id_2, None, None);
+
+
+        // Tested action: query open channels
+        let open_channels: ListChannelsResponse = from_binary(
+            &query(deps.as_ref(), mock_env(), QueryMsg::ListChannels {}).unwrap()
+        ).unwrap();
+
+        assert_eq!(open_channels.channels.len(), 2);
+        assert_eq!(open_channels.channels[0], mock_channel_info(channel_id_1));
+        assert_eq!(open_channels.channels[1], mock_channel_info(channel_id_2));
+
+    }
+
+
+    #[test]
+    fn test_query_open_channels_empty() {
+
+        let mut deps = mock_dependencies();
+      
+        // Instantiate contract
+        instantiate(
+            deps.as_mut(),
+            mock_env(),
+            mock_info(DEPLOYER_ADDR, &vec![]),
+            InstantiateMsg {}
+        ).unwrap();
+
+
+        // Tested action: query open channels
+        let open_channels: ListChannelsResponse = from_binary(
+            &query(deps.as_ref(), mock_env(), QueryMsg::ListChannels {}).unwrap()
+        ).unwrap();
+
+        assert_eq!(open_channels.channels.len(), 0);
+
+    }
+
+
+    #[test]
+    fn test_delete_channel_and_query() {
+
+        let mut deps = mock_dependencies();
+      
+        // Instantiate contract
+        instantiate(
+            deps.as_mut(),
+            mock_env(),
+            mock_info(DEPLOYER_ADDR, &vec![]),
+            InstantiateMsg {}
+        ).unwrap();
+
+        // Open mock channel
+        let channel_id = "mock-channel-1";
+        open_channel(deps.as_mut(), channel_id, None, None);
+
+        // Query open channels
+        let open_channels: ListChannelsResponse = from_binary(
+            &query(deps.as_ref(), mock_env(), QueryMsg::ListChannels {}).unwrap()
+        ).unwrap();
+
+        assert_eq!(open_channels.channels.len(), 1);
+        assert_eq!(open_channels.channels[0], mock_channel_info(channel_id));
+
+
+        // Tested action: delete channel
+        close_channel(deps.as_mut(), channel_id, None, None);
+
+
+        // Query open channels
+        let open_channels: ListChannelsResponse = from_binary(
+            &query(deps.as_ref(), mock_env(), QueryMsg::ListChannels {}).unwrap()
+        ).unwrap();
+
+        assert_eq!(open_channels.channels.len(), 0);
+
+    }
+
+
+    // //TODO test_port not working! 'query(...).unwrap' fails
+    // #[test]
+    // fn test_port() {
+
+
+    //     let mut deps = mock_dependencies();
+      
+    //     // Instantiate contract
+    //     instantiate(
+    //         deps.as_mut(),
+    //         mock_env(),
+    //         mock_info(DEPLOYER_ADDR, &vec![]),
+    //         InstantiateMsg {}
+    //     ).unwrap();
+
+
+    //     // Tested action: query port
+    //     let port: PortResponse = from_binary(
+    //         &query(deps.as_ref(), mock_env(), QueryMsg::Port {}).unwrap()
+    //     ).unwrap();
+
+    //     assert_eq!(port.port_id, TEST_LOCAL_PORT);
+
+    // }
+
+
+    //TODO add tests to open/close channels with invalid configuration
+
 }
