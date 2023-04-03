@@ -35,7 +35,7 @@ pub fn instantiate(
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(
-    deps: DepsMut,
+    _deps: DepsMut,
     env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
