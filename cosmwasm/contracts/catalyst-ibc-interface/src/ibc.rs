@@ -1,12 +1,11 @@
 use cosmwasm_std::{
-    entry_point, DepsMut, Env, StdResult, IbcChannelOpenMsg, IbcChannelConnectMsg, IbcBasicResponse, IbcChannelCloseMsg, 
-    IbcPacketReceiveMsg, IbcReceiveResponse, IbcPacketAckMsg, IbcPacketTimeoutMsg, IbcChannel, IbcPacket, Binary, Uint128, CosmosMsg, to_binary, SubMsg, Reply, Response, SubMsgResult
+    entry_point, DepsMut, Env, IbcChannelOpenMsg, IbcChannelConnectMsg, IbcBasicResponse, IbcChannelCloseMsg, 
+    IbcPacketReceiveMsg, IbcReceiveResponse, IbcPacketAckMsg, IbcPacketTimeoutMsg, IbcChannel, IbcPacket, Binary, CosmosMsg, to_binary, SubMsg, Reply, Response, SubMsgResult
 };
-use ethnum::U256;
 
 use swap_pool_common::msg::ExecuteMsg as SwapPoolExecuteMsg;
 
-use crate::{ContractError, state::{IbcChannelInfo, OPEN_CHANNELS}, catalyst_ibc_payload::{CTX0_ASSET_SWAP, CTX1_LIQUIDITY_SWAP, FROM_POOL_LENGTH_POS, FROM_POOL_START, TO_POOL_LENGTH_POS, TO_POOL_START, CONTEXT_POS, TO_ACCOUNT_POS, TO_ACCOUNT_START, UNITS_START, UNITS_END, CTX0_TO_ASSET_INDEX_POS, CTX0_MIN_OUT_END, CTX0_MIN_OUT_START, CTX0_FROM_ASSET_POS, CTX0_SWAP_HASH_START, CTX0_SWAP_HASH_END, CTX0_DATA_START, CTX0_DATA_LENGTH_END, CTX0_DATA_LENGTH_START, CTX1_MIN_OUT_END, CTX1_SWAP_HASH_END, CTX1_DATA_LENGTH_END, CTX1_DATA_START, CTX1_MIN_OUT_START, CTX1_SWAP_HASH_START, CTX1_DATA_LENGTH_START, CTX0_FROM_AMOUNT_START, CTX0_FROM_AMOUNT_END, CTX0_FROM_ASSET_START, CTX0_BLOCK_NUMBER_END, CTX0_BLOCK_NUMBER_START, CTX1_FROM_AMOUNT_START, CTX1_FROM_AMOUNT_END, CTX1_BLOCK_NUMBER_START, CTX1_BLOCK_NUMBER_END}, error::Never};
+use crate::{ContractError, state::{IbcChannelInfo, OPEN_CHANNELS}, catalyst_ibc_payload::CatalystV1Packet, error::Never};
 
 
 // NOTE: Large parts of this IBC section are based on the cw20-ics20 example repository.
@@ -211,192 +210,52 @@ fn on_packet_receive(
 
     let data = packet.data.to_vec();
 
-    let context = data.get(CONTEXT_POS).ok_or(ContractError::PayloadDecodingError {})?;
+    let catalyst_packet = CatalystV1Packet::try_decode(&data)?;
 
-    let mut offset: usize = 0;
-
-    // Extract the common payload
-
-    // From pool
-    let from_pool_length: usize = *data.get(FROM_POOL_LENGTH_POS)
-        .ok_or(ContractError::PayloadDecodingError {})? as usize;
-
-    let from_pool = String::from_utf8(
-        data.get(
-            FROM_POOL_START ..
-            FROM_POOL_START + from_pool_length
-        ).ok_or(ContractError::PayloadDecodingError {})?.to_vec()
-    ).map_err(|_| ContractError::PayloadDecodingError {})?;
-    
-    offset += from_pool_length;
-
-
-    // To pool
-    let to_pool_length: usize = *data.get(TO_POOL_LENGTH_POS + offset)
-        .ok_or(ContractError::PayloadDecodingError {})? as usize;
-
-    let to_pool = String::from_utf8(
-        data.get(
-            TO_POOL_START + offset ..
-            TO_POOL_START + offset + to_pool_length
-        ).ok_or(ContractError::PayloadDecodingError {})?.to_vec()
-    ).map_err(|_| ContractError::PayloadDecodingError {})?;
-    
-    offset += to_pool_length;
-
-    // Verify to pool
-    deps.api.addr_validate(&to_pool)?;
-
-
-    // To account
-    let to_account_length: usize = *data.get(TO_ACCOUNT_POS + offset)
-        .ok_or(ContractError::PayloadDecodingError {})? as usize;
-
-    let to_account = String::from_utf8(
-        data.get(
-            TO_ACCOUNT_START + offset ..
-            TO_ACCOUNT_START + offset + to_account_length
-        ).ok_or(ContractError::PayloadDecodingError {})?.to_vec()
-    ).map_err(|_| ContractError::PayloadDecodingError {})?;
-    
-    offset += to_account_length;
-
-    // Verify to account
-    deps.api.addr_validate(&to_account)?;
-
-
-    // Units
-    let u = U256::from_be_bytes(
-        data.get(
-            UNITS_START + offset .. UNITS_END + offset
-        ).ok_or(
-            ContractError::PayloadDecodingError {}
-        )?.try_into().unwrap()                          // If 'UNITS_START' and 'UNITS_END' are 32 bytes apart, this should never panic //TODO overhaul
-    );
-
-
-    // Extract the context dependent payload and build up the execute message
-    let receive_asset_execute_msg: SwapPoolExecuteMsg<()> = match *context {
-        CTX0_ASSET_SWAP => {
-
-            // To asset index
-            let to_asset_index = data.get(CTX0_TO_ASSET_INDEX_POS + offset)
-                .ok_or(ContractError::PayloadDecodingError {})?.clone();
-
-            // Min out
-            let min_out = U256::from_be_bytes(
-                data.get(
-                    CTX0_MIN_OUT_START + offset .. CTX0_MIN_OUT_END + offset
-                ).ok_or(
-                    ContractError::PayloadDecodingError {}
-                )?.try_into().unwrap()                          // If 'UNITS_START' and 'UNITS_END' are 32 bytes apart, this should never panic //TODO overhaul
-            );
-            // For CosmWasm pools, min_out should be Uint128
-            if min_out > U256::from(Uint128::MAX.u128()) {             //TODO overhaul - more efficient way to do this?
-                return Err(ContractError::PayloadDecodingError {});
-            }
-            let min_out = Uint128::from(min_out.as_u128());
-
-            // From asset length
-            let from_asset_length: usize = *data.get(CTX0_FROM_ASSET_POS + offset)
-                .ok_or(ContractError::PayloadDecodingError {})? as usize;
-            offset += from_asset_length;
-
-            // Swap hash
-            let swap_hash = data.get(
-                CTX0_SWAP_HASH_START + offset .. CTX0_SWAP_HASH_END + offset
-            ).ok_or(ContractError::PayloadDecodingError {})?.to_vec();
-
-            // Calldata
-            let calldata_length: usize = u16::from_be_bytes(
-                data.get(
-                    CTX0_DATA_LENGTH_START + offset .. CTX0_DATA_LENGTH_END + offset
-                ).ok_or(
-                    ContractError::PayloadDecodingError {}
-                )?.try_into().unwrap()                          // If 'CTX0_DATA_LENGTH_START' and 'CTX0_DATA_LENGTH_END' are 2 bytes apart, this should never panic //TODO overhaul
-            ) as usize;
-
-            let calldata = data.get(
-                CTX0_DATA_START + offset ..
-                CTX0_DATA_START + offset + calldata_length
-            ).ok_or(ContractError::PayloadDecodingError {})?.to_vec();
-
+    // Match payload type and build up the execute message
+    let receive_asset_execute_msg: cosmwasm_std::WasmMsg = match catalyst_packet {
+        CatalystV1Packet::SendAsset(payload) => {
 
             // Build execute message
-            Ok::<SwapPoolExecuteMsg<()>, ContractError>(
-                SwapPoolExecuteMsg::ReceiveAsset {
+            Ok::<cosmwasm_std::WasmMsg, ContractError>(cosmwasm_std::WasmMsg::Execute {
+                contract_addr: payload.to_pool(deps.as_ref())?.into_string(),       // Validate to_pool
+                msg: to_binary(&SwapPoolExecuteMsg::<()>::ReceiveAsset {
                     channel_id: packet.dest.channel_id,
-                    from_pool,
-                    to_asset_index,
-                    to_account,
-                    u,
-                    min_out,
-                    swap_hash,
-                    calldata
-                }
-            )
+                    from_pool: payload.from_pool_unsafe_string()?,                  // Do not validate from_pool as its format is unknown. It is only used for logging
+                    to_asset_index: payload.variable_payload.to_asset_index,
+                    to_account: payload.to_account(deps.as_ref())?.into_string(),   // Validate to_account
+                    u: payload.u,
+                    min_out: payload.variable_payload.min_out()?,                   // Convert min_out into Uint128
+                    swap_hash: payload.variable_payload.swap_hash.to_vec(),
+                    calldata: payload.variable_payload.calldata
+                })?,
+                funds: vec![]
+            })
 
         },
-        CTX1_LIQUIDITY_SWAP => {
-
-            // Min out
-            let min_out = U256::from_be_bytes(
-                data.get(
-                    CTX1_MIN_OUT_START + offset .. CTX1_MIN_OUT_END + offset
-                ).ok_or(
-                    ContractError::PayloadDecodingError {}
-                )?.try_into().unwrap()                          // If 'UNITS_START' and 'UNITS_END' are 32 bytes apart, this should never panic //TODO overhaul
-            );
-            // For CosmWasm pools, min_out should be Uint128
-            if min_out > U256::from(Uint128::MAX.u128()) {             //TODO overhaul - more efficient way to do this?
-                return Err(ContractError::PayloadDecodingError {});
-            }
-            let min_out = Uint128::from(min_out.as_u128());
-
-            // Swap hash
-            let swap_hash = data.get(
-                CTX1_SWAP_HASH_START + offset .. CTX1_SWAP_HASH_END + offset
-            ).ok_or(ContractError::PayloadDecodingError {})?.to_vec();
-
-            // Calldata
-            let calldata_length: usize = u16::from_be_bytes(
-                data.get(
-                    CTX1_DATA_LENGTH_START + offset .. CTX1_DATA_LENGTH_END + offset
-                ).ok_or(
-                    ContractError::PayloadDecodingError {}
-                )?.try_into().unwrap()                          // If 'CTX1_DATA_LENGTH_START' and 'CTX1_DATA_LENGTH_END' are 2 bytes apart, this should never panic //TODO overhaul
-            ) as usize;
-
-            let calldata = data.get(
-                CTX1_DATA_START + offset ..
-                CTX1_DATA_START + offset + calldata_length
-            ).ok_or(ContractError::PayloadDecodingError {})?.to_vec();
-
+        CatalystV1Packet::SendLiquidity(payload) => {
 
             // Build execute message
-            Ok::<SwapPoolExecuteMsg<()>, ContractError>(
-                SwapPoolExecuteMsg::ReceiveLiquidity {
+            Ok::<cosmwasm_std::WasmMsg, ContractError>(cosmwasm_std::WasmMsg::Execute {
+                contract_addr: payload.to_pool(deps.as_ref())?.into_string(),       // Validate to_pool
+                msg: to_binary(&SwapPoolExecuteMsg::<()>::ReceiveLiquidity {
                     channel_id: packet.dest.channel_id,
-                    from_pool,
-                    to_account,
-                    u,
-                    min_out,
-                    swap_hash,
-                    calldata
-                }
-            )
+                    from_pool: payload.from_pool_unsafe_string()?,                  // Do not validate from_pool as its format is unknown. It is only used for logging
+                    to_account: payload.to_account(deps.as_ref())?.into_string(),   // Validate to_account
+                    u: payload.u,
+                    min_out: payload.variable_payload.min_out()?,                   // Convert min_out into Uint128
+                    swap_hash: payload.variable_payload.swap_hash.to_vec(),
+                    calldata: payload.variable_payload.calldata
+                })?,
+                funds: vec![]
+            })
 
-        },
-        _ => return Err(ContractError::PayloadDecodingError {})
+        }
     }?;
 
     // Build the response 'execute' message
     let sub_msg = SubMsg::reply_always(             // ! Set 'reply_always' so that upon an error of the submessage the 'reply' function of this contract is invoked
-        cosmwasm_std::WasmMsg::Execute {
-            contract_addr: to_pool,
-            msg: to_binary(&receive_asset_execute_msg)?,
-            funds: vec![]
-        },
+        receive_asset_execute_msg,
         RECEIVE_REPLY_ID
     );
 
@@ -408,52 +267,86 @@ fn on_packet_receive(
 
 
 
-fn on_packet_success(
+fn on_packet(
     deps: DepsMut,
-    packet: IbcPacket
+    packet: IbcPacket,
+    success: bool
 ) -> Result<IbcBasicResponse, ContractError> {
 
     let data = packet.data.to_vec();
 
-    let context = data.get(CONTEXT_POS).ok_or(ContractError::PayloadDecodingError {})?;
-
+    let catalyst_packet = CatalystV1Packet::try_decode(&data)?;
+    
     // Build the sendAsset/sendLiquidity ack response message
-    let (from_pool, response_msg): (String, swap_pool_common::msg::ExecuteMsg<()>) = match *context {
-        CTX0_ASSET_SWAP => {
+    let receive_asset_execute_msg: cosmwasm_std::WasmMsg = match catalyst_packet {
+        CatalystV1Packet::SendAsset(payload) => {
 
-            let response = SendAssetResponse::try_from_payload(deps, data)?;
+            // Build execute message
+            let msg = match success {
+                true => SwapPoolExecuteMsg::<()>::SendAssetAck {
+                    to_account: payload.to_account_unsafe_string()?,                    // Can be 'unsafe' as it must match the one with which the 'swap_hash' was derived
+                    u: payload.u,
+                    amount: payload.variable_payload.from_amount()?,
+                    asset: payload.variable_payload.from_asset_unsafe_string()?,        // Can be 'unsafe' as it must match the one with which the 'swap_hash' was derived
+                    block_number_mod: payload.variable_payload.block_number
+                },
+                false => SwapPoolExecuteMsg::<()>::SendAssetTimeout {
+                    to_account: payload.to_account_unsafe_string()?,                    // Can be 'unsafe' as it must match the one with which the 'swap_hash' was derived
+                    u: payload.u,
+                    amount: payload.variable_payload.from_amount()?,
+                    asset: payload.variable_payload.from_asset_unsafe_string()?,        // Can be 'unsafe' as it must match the one with which the 'swap_hash' was derived
+                    block_number_mod: payload.variable_payload.block_number
+                },
+            };
 
-            Ok::<(String, swap_pool_common::msg::ExecuteMsg<()>), ContractError>((
-                response.from_pool.clone(),
-                response.into_ack()
-            ))
+            Ok::<cosmwasm_std::WasmMsg, ContractError>(cosmwasm_std::WasmMsg::Execute {
+                contract_addr: payload.from_pool(deps.as_ref())?.into_string(),         // Validate from_pool
+                msg: to_binary(&msg)?,
+                funds: vec![]
+            })
 
         },
-        CTX1_LIQUIDITY_SWAP => {
+        CatalystV1Packet::SendLiquidity(payload) => {
 
-            let response = SendLiquidityResponse::try_from_payload(deps, data)?;
+            // Build execute message
+            let msg = match success {
+                true => SwapPoolExecuteMsg::<()>::SendLiquidityAck {
+                    to_account: payload.to_account_unsafe_string()?,                    // Can be 'unsafe' as it must match the one with which the 'swap_hash' was derived
+                    u: payload.u,
+                    amount: payload.variable_payload.from_amount()?,                    // Can be 'unsafe' as it must match the one with which the 'swap_hash' was derived
+                    block_number_mod: payload.variable_payload.block_number
+                },
+                false => SwapPoolExecuteMsg::<()>::SendLiquidityTimeout {
+                    to_account: payload.to_account_unsafe_string()?,                    // Can be 'unsafe' as it must match the one with which the 'swap_hash' was derived
+                    u: payload.u,
+                    amount: payload.variable_payload.from_amount()?,                    // Can be 'unsafe' as it must match the one with which the 'swap_hash' was derived
+                    block_number_mod: payload.variable_payload.block_number
+                },
+            };
 
-            Ok::<(String, swap_pool_common::msg::ExecuteMsg<()>), ContractError>((
-                response.from_pool.clone(),
-                response.into_ack()
-            ))
+            Ok::<cosmwasm_std::WasmMsg, ContractError>(cosmwasm_std::WasmMsg::Execute {
+                contract_addr: payload.from_pool(deps.as_ref())?.into_string(),         // Validate from_pool
+                msg: to_binary(&msg)?,
+                funds: vec![]
+            })
 
-        },
-        _ => return Err(ContractError::PayloadDecodingError {})
+        }
     }?;
 
     // Build the 'execute' messsage
-    let response_msg = CosmosMsg::Wasm(
-        cosmwasm_std::WasmMsg::Execute {
-            contract_addr: from_pool,
-            msg: to_binary(&response_msg)?,
-            funds: vec![]
-        }
-    );
+    let response_msg = CosmosMsg::Wasm(receive_asset_execute_msg);
 
     Ok(IbcBasicResponse::new()      //TODO add attributes?
         .add_message(response_msg)
     )
+}
+
+
+fn on_packet_success(
+    deps: DepsMut,
+    packet: IbcPacket
+) -> Result<IbcBasicResponse, ContractError> {
+    on_packet(deps, packet, true)
 }
 
 
@@ -461,325 +354,5 @@ fn on_packet_failure(
     deps: DepsMut,
     packet: IbcPacket
 ) -> Result<IbcBasicResponse, ContractError> {
-
-    let data = packet.data.to_vec();
-
-    let context = data.get(CONTEXT_POS).ok_or(ContractError::PayloadDecodingError {})?;
-
-    // Build the sendAsset/sendLiquidity timeout response message
-    let (from_pool, response_msg): (String, swap_pool_common::msg::ExecuteMsg<()>) = match *context {
-        CTX0_ASSET_SWAP => {
-
-            let response = SendAssetResponse::try_from_payload(deps, data)?;
-
-            Ok::<(String, swap_pool_common::msg::ExecuteMsg<()>), ContractError>((
-                response.from_pool.clone(),
-                response.into_timeout()
-            ))
-
-        },
-        CTX1_LIQUIDITY_SWAP => {
-
-            let response = SendLiquidityResponse::try_from_payload(deps, data)?;
-
-            Ok::<(String, swap_pool_common::msg::ExecuteMsg<()>), ContractError>((
-                response.from_pool.clone(),
-                response.into_timeout()
-            ))
-
-        },
-        _ => return Err(ContractError::PayloadDecodingError {})
-    }?;
-
-    // Build the 'execute' messsage
-    let response_msg = CosmosMsg::Wasm(
-        cosmwasm_std::WasmMsg::Execute {
-            contract_addr: from_pool,
-            msg: to_binary(&response_msg)?,
-            funds: vec![]
-        }
-    );
-
-    Ok(IbcBasicResponse::new()      //TODO add attributes?
-        .add_message(response_msg)
-    )
-}
-
-
-
-// Helper to parse a packet payload into a SendAssetAck/Timeout
-
-struct SendAssetResponse {
-    from_pool: String,
-    to_account: String,
-    u: U256,
-    amount: Uint128,
-    asset: String,
-    block_number_mod: u32
-}
-
-impl SendAssetResponse {
-
-    pub fn try_from_payload(
-        deps: DepsMut,
-        data: Vec<u8>
-    ) -> Result<SendAssetResponse, ContractError> {
-
-        // Extract the common payload
-        let mut offset: usize = 0;
-    
-        // From pool
-        let from_pool_length: usize = *data.get(FROM_POOL_LENGTH_POS)
-            .ok_or(ContractError::PayloadDecodingError {})? as usize;
-    
-        let from_pool = String::from_utf8(
-            data.get(
-                FROM_POOL_START ..
-                FROM_POOL_START + from_pool_length
-            ).ok_or(ContractError::PayloadDecodingError {})?.to_vec()
-        ).map_err(|_| ContractError::PayloadDecodingError {})?;
-        
-        offset += from_pool_length;
-    
-    
-        // To pool
-        let to_pool_length: usize = *data.get(TO_POOL_LENGTH_POS + offset)
-            .ok_or(ContractError::PayloadDecodingError {})? as usize;
-    
-        let to_pool = String::from_utf8(
-            data.get(
-                TO_POOL_START + offset ..
-                TO_POOL_START + offset + to_pool_length
-            ).ok_or(ContractError::PayloadDecodingError {})?.to_vec()
-        ).map_err(|_| ContractError::PayloadDecodingError {})?;
-        
-        offset += to_pool_length;
-    
-        // Verify to pool
-        deps.api.addr_validate(&to_pool)?;
-    
-    
-        // To account
-        let to_account_length: usize = *data.get(TO_ACCOUNT_POS + offset)
-            .ok_or(ContractError::PayloadDecodingError {})? as usize;
-    
-        let to_account = String::from_utf8(
-            data.get(
-                TO_ACCOUNT_START + offset ..
-                TO_ACCOUNT_START + offset + to_account_length
-            ).ok_or(ContractError::PayloadDecodingError {})?.to_vec()
-        ).map_err(|_| ContractError::PayloadDecodingError {})?;
-        
-        offset += to_account_length;
-    
-        // Verify to account
-        deps.api.addr_validate(&to_account)?;
-    
-    
-        // Units
-        let u = U256::from_be_bytes(
-            data.get(
-                UNITS_START + offset .. UNITS_END + offset
-            ).ok_or(
-                ContractError::PayloadDecodingError {}
-            )?.try_into().unwrap()                          // If 'UNITS_START' and 'UNITS_END' are 32 bytes apart, this should never panic //TODO overhaul
-        );
-    
-        // Amount
-        let amount = U256::from_be_bytes(
-            data.get(
-                CTX0_FROM_AMOUNT_START + offset .. CTX0_FROM_AMOUNT_END + offset
-            ).ok_or(
-                ContractError::PayloadDecodingError {}
-            )?.try_into().unwrap()                          // If 'UNITS_START' and 'UNITS_END' are 32 bytes apart, this should never panic //TODO overhaul
-        );
-        // For CosmWasm pools, amount should be Uint128
-        if amount > U256::from(Uint128::MAX.u128()) {             //TODO overhaul - more efficient way to do this?
-            return Err(ContractError::PayloadDecodingError {});
-        }
-        let amount = Uint128::from(amount.as_u128());
-    
-        // From asset length
-        let from_asset_length: usize = *data.get(CTX0_FROM_ASSET_POS + offset)
-            .ok_or(ContractError::PayloadDecodingError {})? as usize;
-    
-        let asset = String::from_utf8(
-            data.get(
-                CTX0_FROM_ASSET_START + offset ..
-                CTX0_FROM_ASSET_START + offset + from_asset_length
-            ).ok_or(ContractError::PayloadDecodingError {})?.to_vec()
-        ).map_err(|_| ContractError::PayloadDecodingError {})?;
-    
-        deps.api.addr_validate(&asset)?;
-    
-        // Block number mod
-        let block_number_mod = u32::from_be_bytes(
-            data.get(
-                CTX0_BLOCK_NUMBER_START + offset .. CTX0_BLOCK_NUMBER_END + offset
-            ).ok_or(
-                ContractError::PayloadDecodingError {}
-            )?.try_into().unwrap()                          // If 'CTX0_BLOCK_NUMBER_START' and 'CTX0_BLOCK_NUMBER_END' are 4 bytes apart, this should never panic //TODO overhaul
-        );
-    
-        // Return fields
-        Ok(SendAssetResponse {
-            from_pool,
-            to_account,
-            u,
-            amount,
-            asset,
-            block_number_mod
-        })
-    }
-
-    pub fn into_ack(self) -> SwapPoolExecuteMsg<()> {
-        SwapPoolExecuteMsg::SendAssetAck {
-            to_account: self.to_account,
-            u: self.u,
-            amount: self.amount,
-            asset: self.asset,
-            block_number_mod: self.block_number_mod
-        }
-    }
-
-    pub fn into_timeout(self) -> SwapPoolExecuteMsg<()> {
-        SwapPoolExecuteMsg::SendAssetTimeout {
-            to_account: self.to_account,
-            u: self.u,
-            amount: self.amount,
-            asset: self.asset,
-            block_number_mod: self.block_number_mod
-        }
-    }
-}
-
-
-
-// Helper to parse a packet payload into a SendLiquidityAck/Timeout
-
-struct SendLiquidityResponse {
-    from_pool: String,
-    to_account: String,
-    u: U256,
-    amount: Uint128,
-    block_number_mod: u32
-}
-
-impl SendLiquidityResponse {
-
-    pub fn try_from_payload(
-        deps: DepsMut,
-        data: Vec<u8>
-    ) -> Result<SendLiquidityResponse, ContractError> {
-
-        // Extract the common payload
-        let mut offset: usize = 0;
-    
-        // From pool
-        let from_pool_length: usize = *data.get(FROM_POOL_LENGTH_POS)
-            .ok_or(ContractError::PayloadDecodingError {})? as usize;
-    
-        let from_pool = String::from_utf8(
-            data.get(
-                FROM_POOL_START ..
-                FROM_POOL_START + from_pool_length
-            ).ok_or(ContractError::PayloadDecodingError {})?.to_vec()
-        ).map_err(|_| ContractError::PayloadDecodingError {})?;
-        
-        offset += from_pool_length;
-    
-    
-        // To pool
-        let to_pool_length: usize = *data.get(TO_POOL_LENGTH_POS + offset)
-            .ok_or(ContractError::PayloadDecodingError {})? as usize;
-    
-        let to_pool = String::from_utf8(
-            data.get(
-                TO_POOL_START + offset ..
-                TO_POOL_START + offset + to_pool_length
-            ).ok_or(ContractError::PayloadDecodingError {})?.to_vec()
-        ).map_err(|_| ContractError::PayloadDecodingError {})?;
-        
-        offset += to_pool_length;
-    
-        // Verify to pool
-        deps.api.addr_validate(&to_pool)?;
-    
-    
-        // To account
-        let to_account_length: usize = *data.get(TO_ACCOUNT_POS + offset)
-            .ok_or(ContractError::PayloadDecodingError {})? as usize;
-    
-        let to_account = String::from_utf8(
-            data.get(
-                TO_ACCOUNT_START + offset ..
-                TO_ACCOUNT_START + offset + to_account_length
-            ).ok_or(ContractError::PayloadDecodingError {})?.to_vec()
-        ).map_err(|_| ContractError::PayloadDecodingError {})?;
-        
-        offset += to_account_length;
-    
-        // Verify to account
-        deps.api.addr_validate(&to_account)?;
-    
-    
-        // Units
-        let u = U256::from_be_bytes(
-            data.get(
-                UNITS_START + offset .. UNITS_END + offset
-            ).ok_or(
-                ContractError::PayloadDecodingError {}
-            )?.try_into().unwrap()                          // If 'UNITS_START' and 'UNITS_END' are 32 bytes apart, this should never panic //TODO overhaul
-        );
-    
-        // Amount
-        let amount = U256::from_be_bytes(
-            data.get(
-                CTX1_FROM_AMOUNT_START + offset .. CTX1_FROM_AMOUNT_END + offset
-            ).ok_or(
-                ContractError::PayloadDecodingError {}
-            )?.try_into().unwrap()                          // If 'UNITS_START' and 'UNITS_END' are 32 bytes apart, this should never panic //TODO overhaul
-        );
-        // For CosmWasm pools, amount should be Uint128
-        if amount > U256::from(Uint128::MAX.u128()) {             //TODO overhaul - more efficient way to do this?
-            return Err(ContractError::PayloadDecodingError {});
-        }
-        let amount = Uint128::from(amount.as_u128());
-    
-        // Block number mod
-        let block_number_mod = u32::from_be_bytes(
-            data.get(
-                CTX1_BLOCK_NUMBER_START + offset .. CTX1_BLOCK_NUMBER_END + offset
-            ).ok_or(
-                ContractError::PayloadDecodingError {}
-            )?.try_into().unwrap()                          // If 'CTX0_BLOCK_NUMBER_START' and 'CTX0_BLOCK_NUMBER_END' are 4 bytes apart, this should never panic //TODO overhaul
-        );
-    
-        // Return fields
-        Ok(SendLiquidityResponse {
-            from_pool,
-            to_account,
-            u,
-            amount,
-            block_number_mod
-        })
-    }
-
-    pub fn into_ack(self) -> SwapPoolExecuteMsg<()> {
-        SwapPoolExecuteMsg::SendLiquidityAck {
-            to_account: self.to_account,
-            u: self.u,
-            amount: self.amount,
-            block_number_mod: self.block_number_mod
-        }
-    }
-
-    pub fn into_timeout(self) -> SwapPoolExecuteMsg<()> {
-        SwapPoolExecuteMsg::SendLiquidityTimeout {
-            to_account: self.to_account,
-            u: self.u,
-            amount: self.amount,
-            block_number_mod: self.block_number_mod
-        }
-    }
+    on_packet(deps, packet, false)
 }
