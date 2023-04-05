@@ -132,6 +132,18 @@ pub enum CatalystV1Packet<'a> {
 }
 
 impl<'a> CatalystV1Packet<'a> {
+    #[cfg(test)]
+    pub fn try_encode(
+        &self
+    ) -> Result<Vec<u8>, ContractError> {
+        
+        match self {
+            CatalystV1Packet::SendAsset(payload) => payload.try_encode(),
+            CatalystV1Packet::SendLiquidity(payload) => payload.try_encode(),
+        }
+
+    }
+
     //TODO pass the 'IbcPacket' to try_decode and return a copy of the data and not references to it?
     //TODO Or make CatalystV1SendAssetPayload/CatalystV1SendLiquidityPayload accept the IBC packet directly (rename them to CatalystV1SendAssetPACKET)
     pub fn try_decode(
