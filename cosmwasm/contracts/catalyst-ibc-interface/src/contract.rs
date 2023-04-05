@@ -200,14 +200,128 @@ fn query_list(deps: Deps) -> StdResult<ListChannelsResponse> {
 #[cfg(test)]
 mod catalyst_ibc_interface_tests {
 
-    use crate::{ibc_test_helpers::{open_channel, mock_channel_info, TEST_LOCAL_PORT, close_channel}, catalyst_ibc_payload::CatalystV1Packet};
+    use crate::{ibc_test_helpers::{open_channel, mock_channel_info, TEST_LOCAL_PORT, close_channel, TEST_REMOTE_PORT}, catalyst_ibc_payload::CatalystV1Packet, ibc::ibc_packet_receive};
 
     use super::*;
-    use cosmwasm_std::{testing::{mock_dependencies, mock_env, mock_info}, from_binary, Uint128, SubMsg, IbcTimeout};
+    use cosmwasm_std::{testing::{mock_dependencies, mock_env, mock_info}, from_binary, Uint128, SubMsg, IbcTimeout, IbcPacket, IbcEndpoint, Timestamp, IbcPacketReceiveMsg};
     use ethnum::uint;
 
     pub const DEPLOYER_ADDR: &str = "deployer_addr";
 
+
+
+    // Helpers ******************************************************************************************************************
+    //TODO move helpers somewhere else?
+
+    fn mock_send_asset_msg(
+        channel_id: &str,
+        min_out: Option<U256>,          // Allow to override the default value to provide invalid configs
+        from_amount: Option<Uint128>    // Allow to override the default value to provide invalid configs
+    ) -> ExecuteMsg {
+        ExecuteMsg::SendCrossChainAsset {
+            channel_id: channel_id.into(),
+            to_pool: b"to_pool".to_vec(),
+            to_account: b"to_account".to_vec(),
+            to_asset_index: 1u8,
+            u: uint!("78456988731590487483448276103933454935747871349630657124267302091643025406701"),          // Some large U256 number
+            min_out: min_out.unwrap_or(
+                uint!("323476719582585693194107115743132847255")                                              // Some large Uint128 number (as U256)
+            ),
+            metadata: AssetSwapMetadata {
+                from_amount: from_amount.unwrap_or(
+                    Uint128::from(4920222095670429824873974121747892731u128)                                    // Some large Uint128 number
+                ),
+                from_asset: "from_asset".to_string(),
+                swap_hash: "1aefweftegnedtwdwaagwwetgajyrgwd".to_string(),
+                block_number: 1356u32
+            },
+            calldata: vec![]
+        }
+    }
+    
+    fn mock_receive_asset_packet(
+        channel_id: &str,
+        from_pool: &str,
+        send_msg: ExecuteMsg
+    ) -> IbcPacket {
+        IbcPacket::new(
+            Binary::from(build_payload(from_pool.as_bytes(), &send_msg).unwrap()),
+            IbcEndpoint {
+                port_id: TEST_REMOTE_PORT.to_string(),
+                channel_id: format!("{}-remote", channel_id),
+            },
+            IbcEndpoint {
+                port_id: TEST_LOCAL_PORT.to_string(),
+                channel_id: channel_id.to_string(),
+            },
+            7,
+            mock_env().block.time.plus_seconds(TRANSACTION_TIMEOUT).into(),     // Note mock_env() always returns the same block time
+        )
+    }
+
+    // TODO move into struct implementation?
+    fn build_payload(
+        from_pool: &[u8],
+        msg: &ExecuteMsg
+    ) -> Result<Vec<u8>, ContractError> {
+        let packet = match msg {
+            ExecuteMsg::SendCrossChainAsset {
+                channel_id: _,
+                to_pool,
+                to_account,
+                to_asset_index,
+                u,
+                min_out,
+                metadata,
+                calldata
+            } => CatalystV1Packet::SendAsset(
+                CatalystV1SendAssetPayload {
+                    from_pool,
+                    to_pool: to_pool.as_slice(),
+                    to_account: to_account.as_slice(),
+                    u: *u,
+                    variable_payload: SendAssetVariablePayload {
+                        to_asset_index: *to_asset_index,
+                        min_out: *min_out,
+                        from_amount: U256::from(metadata.from_amount.u128()),
+                        from_asset: metadata.from_asset.as_bytes(),
+                        block_number: metadata.block_number,
+                        swap_hash: metadata.swap_hash.as_bytes(),
+                        calldata: calldata.clone()
+                    },
+                }
+            ),
+            ExecuteMsg::SendCrossChainLiquidity {
+                channel_id: _,
+                to_pool,
+                to_account,
+                u,
+                min_out,
+                metadata,
+                calldata
+            } => CatalystV1Packet::SendLiquidity(
+                CatalystV1SendLiquidityPayload {
+                    from_pool,
+                    to_pool: to_pool.as_slice(),
+                    to_account: to_account.as_slice(),
+                    u: *u,
+                    variable_payload: SendLiquidityVariablePayload {
+                        min_out: *min_out,
+                        from_amount: U256::from(metadata.from_amount.u128()),
+                        block_number: metadata.block_number,
+                        swap_hash: metadata.swap_hash.as_bytes(),
+                        calldata: calldata.clone()
+                    },
+                }
+            )
+        };
+
+        packet.try_encode()
+    }
+
+
+
+    // Tests ********************************************************************************************************************
 
     #[test]
     fn test_instantiate() {
@@ -388,89 +502,6 @@ mod catalyst_ibc_interface_tests {
 
 
     //TODO add tests to open/close channels with invalid configuration
-
-    fn mock_send_asset_msg(
-        channel_id: &str
-    ) -> ExecuteMsg {
-        ExecuteMsg::SendCrossChainAsset {
-            channel_id: channel_id.into(),
-            to_pool: b"to_pool".to_vec(),
-            to_account: b"to_account".to_vec(),
-            to_asset_index: 1u8,
-            u: uint!("78556986031590987483442276103933364935747871949630657171867302091643025206701"),          // Some large U256 number
-            min_out: uint!("77771416171275077608607853342894031286390393230134350600148629070726594954633"),    // Some large U256 number
-            metadata: AssetSwapMetadata {
-                from_amount: Uint128::from(4920222095670429824873974121747892731u128),                          // Some large Uint128 number
-                from_asset: "from_asset".to_string(),
-                swap_hash: "1aefweftegnedtwdwaagwwetgajyrgwd".to_string(),
-                block_number: 1356u32
-            },
-            calldata: vec![]
-        }
-    }
-
-    
-    // TODO move into struct implementation?
-    fn build_payload(
-        from_pool: &[u8],
-        msg: &ExecuteMsg
-    ) -> Result<Vec<u8>, ContractError> {
-        let packet = match msg {
-            ExecuteMsg::SendCrossChainAsset {
-                channel_id: _,
-                to_pool,
-                to_account,
-                to_asset_index,
-                u,
-                min_out,
-                metadata,
-                calldata
-            } => CatalystV1Packet::SendAsset(
-                CatalystV1SendAssetPayload {
-                    from_pool,
-                    to_pool: to_pool.as_slice(),
-                    to_account: to_account.as_slice(),
-                    u: *u,
-                    variable_payload: SendAssetVariablePayload {
-                        to_asset_index: *to_asset_index,
-                        min_out: *min_out,
-                        from_amount: U256::from(metadata.from_amount.u128()),
-                        from_asset: metadata.from_asset.as_bytes(),
-                        block_number: metadata.block_number,
-                        swap_hash: metadata.swap_hash.as_bytes(),
-                        calldata: calldata.clone()
-                    },
-                }
-            ),
-            ExecuteMsg::SendCrossChainLiquidity {
-                channel_id: _,
-                to_pool,
-                to_account,
-                u,
-                min_out,
-                metadata,
-                calldata
-            } => CatalystV1Packet::SendLiquidity(
-                CatalystV1SendLiquidityPayload {
-                    from_pool,
-                    to_pool: to_pool.as_slice(),
-                    to_account: to_account.as_slice(),
-                    u: *u,
-                    variable_payload: SendLiquidityVariablePayload {
-                        min_out: *min_out,
-                        from_amount: U256::from(metadata.from_amount.u128()),
-                        block_number: metadata.block_number,
-                        swap_hash: metadata.swap_hash.as_bytes(),
-                        calldata: calldata.clone()
-                    },
-                }
-            )
-        };
-
-        packet.try_encode()
-    }
-
-
     #[test]
     fn test_send_asset() {
 
@@ -489,7 +520,7 @@ mod catalyst_ibc_interface_tests {
 
         // Get mock params
         let from_pool = "sender";
-        let execute_msg = mock_send_asset_msg(channel_id);
+        let execute_msg = mock_send_asset_msg(channel_id, None, None);
 
         // Test action: send asset
         let response = execute(
