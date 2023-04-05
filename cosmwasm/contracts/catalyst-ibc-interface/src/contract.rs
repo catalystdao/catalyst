@@ -546,4 +546,47 @@ mod catalyst_ibc_interface_tests {
     }
 
 
+    #[test]
+    fn test_receive_asset() {
+
+        let mut deps = mock_dependencies();
+      
+        // Instantiate contract and open channel
+        instantiate(
+            deps.as_mut(),
+            mock_env(),
+            mock_info(DEPLOYER_ADDR, &vec![]),
+            InstantiateMsg {}
+        ).unwrap();
+
+        let channel_id = "mock-channel-1";
+        open_channel(deps.as_mut(), channel_id, None, None);
+
+        // Get mock params
+        let from_pool = "sender";
+        let send_msg = mock_send_asset_msg(channel_id, None, None);
+        let receive_packet = mock_receive_asset_packet(channel_id, from_pool, send_msg);
+
+        // Test action: receive asset
+        let response = ibc_packet_receive(
+            deps.as_mut(),
+            mock_env(),
+            IbcPacketReceiveMsg::new(receive_packet.clone())
+        ).unwrap();
+
+        // Check transaction passes
+        assert_eq!(
+            response.acknowledgement.clone(),
+            Binary(vec![0u8])                   // ! Check ack returned has value of 0 (i.e. no error)
+        );
+    
+        // Check pool is invoked
+        assert_eq!(response.messages.len(), 1);
+
+        let _receive_asset_execute_msg = response.messages[0].clone();
+        //TODO verify correctness of receive_asset_execute_msg
+
+    }
+
+
 }
