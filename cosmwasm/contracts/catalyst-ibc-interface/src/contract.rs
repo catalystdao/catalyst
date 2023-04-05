@@ -589,4 +589,47 @@ mod catalyst_ibc_interface_tests {
     }
 
 
+    #[test]
+    fn test_receive_asset_invalid_min_out() {
+
+        let mut deps = mock_dependencies();
+      
+        // Instantiate contract and open channel
+        instantiate(
+            deps.as_mut(),
+            mock_env(),
+            mock_info(DEPLOYER_ADDR, &vec![]),
+            InstantiateMsg {}
+        ).unwrap();
+
+        let channel_id = "mock-channel-1";
+        open_channel(deps.as_mut(), channel_id, None, None);
+
+        // Get mock params
+        let from_pool = "sender";
+        let send_msg = mock_send_asset_msg(
+            channel_id,
+            Some(U256::MAX),                                // ! Specify a min_out larger than Uint128
+            None
+        );
+        let receive_packet = mock_receive_asset_packet(channel_id, from_pool, send_msg);
+
+        // Test action: receive asset
+        let response = ibc_packet_receive(
+            deps.as_mut(),
+            mock_env(),
+            IbcPacketReceiveMsg::new(receive_packet.clone())
+        ).unwrap();
+
+        // Check transaction passes
+        assert_eq!(
+            response.acknowledgement.clone(),
+            Binary(vec![1u8])                   // ! Check ack returned has value of 1 (i.e. error)
+        );
+    
+        // Check pool is not invoked
+        assert_eq!(response.messages.len(), 0);
+
+    }
+
 }
