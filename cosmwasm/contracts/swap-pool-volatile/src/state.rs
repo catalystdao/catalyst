@@ -699,8 +699,8 @@ impl CatalystV1PoolPermissionless for SwapPoolVolatileState {
         env: Env,
         info: MessageInfo,
         channel_id: String,
-        to_pool: String,
-        to_account: String,
+        to_pool: Vec<u8>,
+        to_account: Vec<u8>,
         from_asset: String,
         to_asset_index: u8,
         amount: Uint128,
@@ -712,7 +712,7 @@ impl CatalystV1PoolPermissionless for SwapPoolVolatileState {
         let mut state = Self::load_state(deps.storage)?;
 
         // Only allow connected pools
-        if !SwapPoolVolatileState::is_connected(&deps.as_ref(), &channel_id, &to_pool) {
+        if !SwapPoolVolatileState::is_connected(&deps.as_ref(), &channel_id, to_pool.clone()) {
             return Err(ContractError::PoolNotConnected { channel_id, pool: to_pool })
         }
 
@@ -733,7 +733,7 @@ impl CatalystV1PoolPermissionless for SwapPoolVolatileState {
 
         let block_number = env.block.height as u32;
         let send_asset_hash = SwapPoolVolatileState::compute_send_asset_hash(
-            to_account.as_str(),
+            to_account.as_slice(),
             u,
             amount - pool_fee,
             &from_asset,
@@ -772,7 +772,7 @@ impl CatalystV1PoolPermissionless for SwapPoolVolatileState {
         let send_cross_chain_asset_msg = InterfaceExecuteMsg::SendCrossChainAsset {
             channel_id,
             to_pool: to_pool.clone(),
-            to_account,
+            to_account: to_account.clone(),
             to_asset_index,
             u,
             min_out,
@@ -798,8 +798,8 @@ impl CatalystV1PoolPermissionless for SwapPoolVolatileState {
             .add_message(transfer_from_asset_msg)
             .add_message(collect_governance_fee_message)
             .add_message(send_asset_execute_msg)
-            .add_attribute("to_pool", to_pool)
-            .add_attribute("to_account", info.sender.to_string())
+            .add_attribute("to_pool", format!("{:x?}", to_pool))
+            .add_attribute("to_account", format!("{:x?}", to_account))
             .add_attribute("from_asset", from_asset)
             .add_attribute("to_asset_index", to_asset_index.to_string())
             .add_attribute("from_amount", amount)
@@ -814,7 +814,7 @@ impl CatalystV1PoolPermissionless for SwapPoolVolatileState {
         env: Env,
         info: MessageInfo,
         channel_id: String,
-        from_pool: String,
+        from_pool: Vec<u8>,
         to_asset_index: u8,
         to_account: String,
         u: U256,
@@ -826,7 +826,7 @@ impl CatalystV1PoolPermissionless for SwapPoolVolatileState {
         let mut state = Self::load_state(deps.storage)?;
 
         // Only allow connected pools
-        if !SwapPoolVolatileState::is_connected(&deps.as_ref(), &channel_id, &from_pool) {
+        if !SwapPoolVolatileState::is_connected(&deps.as_ref(), &channel_id, from_pool.clone()) {
             return Err(ContractError::PoolNotConnected { channel_id, pool: from_pool })
         }
 
@@ -865,7 +865,7 @@ impl CatalystV1PoolPermissionless for SwapPoolVolatileState {
 
         Ok(Response::new()
             .add_message(transfer_to_asset_msg)
-            .add_attribute("from_pool", from_pool)
+            .add_attribute("from_pool", format!("{:x?}", from_pool))
             .add_attribute("to_account", to_account)
             .add_attribute("to_asset", to_asset)
             .add_attribute("units", u.to_string())  //TODO format of .to_string()?
@@ -879,8 +879,8 @@ impl CatalystV1PoolPermissionless for SwapPoolVolatileState {
         env: Env,
         info: MessageInfo,
         channel_id: String,
-        to_pool: String,
-        to_account: String,
+        to_pool: Vec<u8>,
+        to_account: Vec<u8>,
         amount: Uint128,            //TODO EVM mismatch
         min_out: U256,
         fallback_account: String,   //TODO EVM mismatch
@@ -890,7 +890,7 @@ impl CatalystV1PoolPermissionless for SwapPoolVolatileState {
         let mut state = Self::load_state(deps.storage)?;
 
         // Only allow connected pools
-        if !SwapPoolVolatileState::is_connected(&deps.as_ref(), &channel_id, &to_pool) {
+        if !SwapPoolVolatileState::is_connected(&deps.as_ref(), &channel_id, to_pool.clone()) {
             return Err(ContractError::PoolNotConnected { channel_id, pool: to_pool })
         }
 
@@ -922,7 +922,7 @@ impl CatalystV1PoolPermissionless for SwapPoolVolatileState {
         // Compute the hash of the 'send_liquidity' transaction
         let block_number = env.block.height as u32;
         let send_liquidity_hash = SwapPoolVolatileState::compute_send_liquidity_hash(
-            to_account.as_str(),
+            to_account.as_slice(),
             u,
             amount,
             block_number
@@ -963,8 +963,8 @@ impl CatalystV1PoolPermissionless for SwapPoolVolatileState {
         //TODO add min_out? (it is present on send_asset)
         Ok(Response::new()
             .add_message(send_liquidity_execute_msg)
-            .add_attribute("to_pool", to_pool)
-            .add_attribute("to_account", to_account)
+            .add_attribute("to_pool", format!("{:x?}", to_pool))
+            .add_attribute("to_account", format!("{:x?}", to_account))
             .add_attribute("from_amount", amount)
             .add_attribute("units", u.to_string())
             .add_attribute("swap_hash", send_liquidity_hash)
@@ -976,7 +976,7 @@ impl CatalystV1PoolPermissionless for SwapPoolVolatileState {
         env: Env,
         info: MessageInfo,
         channel_id: String,
-        from_pool: String,
+        from_pool: Vec<u8>,
         to_account: String,
         u: U256,
         min_out: Uint128,
@@ -987,7 +987,7 @@ impl CatalystV1PoolPermissionless for SwapPoolVolatileState {
         let mut state = Self::load_state(deps.storage)?;
 
         // Only allow connected pools
-        if !SwapPoolVolatileState::is_connected(&deps.as_ref(), &channel_id, &from_pool) {
+        if !SwapPoolVolatileState::is_connected(&deps.as_ref(), &channel_id, from_pool.clone()) {
             return Err(ContractError::PoolNotConnected { channel_id, pool: from_pool })
         }
 
@@ -1033,7 +1033,7 @@ impl CatalystV1PoolPermissionless for SwapPoolVolatileState {
         )?;
 
         Ok(Response::new()
-            .add_attribute("from_pool", from_pool)
+            .add_attribute("from_pool", format!("{:x?}", from_pool))
             .add_attribute("to_account", to_account)
             .add_attribute("units", u.to_string())  //TODO format of .to_string()?
             .add_attribute("to_amount", out)
@@ -1139,7 +1139,7 @@ impl CatalystV1PoolAckTimeout for SwapPoolVolatileState {
     fn send_asset_ack(
         deps: &mut DepsMut,
         info: MessageInfo,
-        to_account: String,
+        to_account: Vec<u8>,
         u: U256,
         amount: Uint128,
         asset: String,
@@ -1169,7 +1169,7 @@ impl CatalystV1PoolAckTimeout for SwapPoolVolatileState {
     fn send_liquidity_ack(
         deps: &mut DepsMut,
         info: MessageInfo,
-        to_account: String,
+        to_account: Vec<u8>,
         u: U256,
         amount: Uint128,
         block_number_mod: u32

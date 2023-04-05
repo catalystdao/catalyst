@@ -48,12 +48,12 @@ pub enum ExecuteMsg<T> {
 
     SetConnection {
         channel_id: String,
-        to_pool: String,            //TODO should be bytes
+        to_pool: Vec<u8>,
         state: bool
     },
 
     SendAssetAck {
-        to_account: String,         //TODO should be bytes
+        to_account: Vec<u8>,
         #[serde(with = "U256Def")]
         u: U256,
         amount: Uint128,
@@ -62,7 +62,7 @@ pub enum ExecuteMsg<T> {
     },
 
     SendAssetTimeout {
-        to_account: String,         //TODO should be bytes
+        to_account: Vec<u8>,
         #[serde(with = "U256Def")]
         u: U256,
         amount: Uint128,
@@ -71,7 +71,7 @@ pub enum ExecuteMsg<T> {
     },
 
     SendLiquidityAck {
-        to_account: String,         //TODO should be bytes
+        to_account: Vec<u8>,
         #[serde(with = "U256Def")]
         u: U256,
         amount: Uint128,
@@ -79,7 +79,7 @@ pub enum ExecuteMsg<T> {
     },
 
     SendLiquidityTimeout {
-        to_account: String,         //TODO should be bytes
+        to_account: Vec<u8>,
         #[serde(with = "U256Def")]
         u: U256,
         amount: Uint128,
@@ -111,8 +111,8 @@ pub enum ExecuteMsg<T> {
 
     SendAsset {
         channel_id: String,
-        to_pool: String,            //TODO should be bytes
-        to_account: String,         //TODO should be bytes
+        to_pool: Vec<u8>,
+        to_account: Vec<u8>,
         from_asset: String,
         to_asset_index: u8,
         amount: Uint128,
@@ -124,7 +124,7 @@ pub enum ExecuteMsg<T> {
 
     ReceiveAsset {
         channel_id: String,
-        from_pool: String,          //TODO should be bytes
+        from_pool: Vec<u8>,
         to_asset_index: u8,
         to_account: String,
         #[serde(with = "U256Def")]
@@ -136,8 +136,8 @@ pub enum ExecuteMsg<T> {
 
     SendLiquidity {
         channel_id: String,
-        to_pool: String,            //TODO should be bytes
-        to_account: String,         //TODO should be bytes
+        to_pool: Vec<u8>,
+        to_account: Vec<u8>,
         amount: Uint128,            //TODO EVM mismatch
         #[serde(with = "U256Def")]
         min_out: U256,
@@ -147,7 +147,7 @@ pub enum ExecuteMsg<T> {
 
     ReceiveLiquidity {
         channel_id: String,
-        from_pool: String,          //TODO should be bytes
+        from_pool: Vec<u8>,
         to_account: String,
         #[serde(with = "U256Def")]
         u: U256,

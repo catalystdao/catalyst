@@ -39,8 +39,8 @@ pub enum ExecuteMsg {
 
     SendCrossChainAsset {
         channel_id: String,
-        to_pool: String,                    //TODO type: use [u8; 32] or Vec<u8>?
-        to_account: String,                 //TODO type: use [u8; 32] or Vec<u8>?
+        to_pool: Vec<u8>,
+        to_account: Vec<u8>,
         to_asset_index: u8,
         #[serde(with = "U256Def")]
         u: U256,
@@ -52,8 +52,8 @@ pub enum ExecuteMsg {
 
     SendCrossChainLiquidity {
         channel_id: String,
-        to_pool: String,                    //TODO type: use [u8; 32] or Vec<u8>?
-        to_account: String,                 //TODO type: use [u8; 32] or Vec<u8>?
+        to_pool: Vec<u8>,
+        to_account: Vec<u8>,
         #[serde(with = "U256Def")]
         u: U256,
         #[serde(with = "U256Def")]

@@ -92,8 +92,8 @@ fn execute_send_cross_chain_asset(
     env: Env,
     info: MessageInfo,
     channel_id: String,
-    to_pool: String,
-    to_account: String,
+    to_pool: Vec<u8>,
+    to_account: Vec<u8>,
     to_asset_index: u8,
     u: U256,
     min_out: U256,
@@ -104,8 +104,8 @@ fn execute_send_cross_chain_asset(
     // Build payload
     let payload = CatalystV1SendAssetPayload {
         from_pool: info.sender.as_bytes(),
-        to_pool: to_pool.as_bytes(),
-        to_account: to_account.as_bytes(),
+        to_pool: to_pool.as_slice(),
+        to_account: to_account.as_slice(),
         u,
         variable_payload: SendAssetVariablePayload {
             to_asset_index,
@@ -135,8 +135,8 @@ fn execute_send_cross_chain_liquidity(
     env: Env,
     info: MessageInfo,
     channel_id: String,
-    to_pool: String,
-    to_account: String,
+    to_pool: Vec<u8>,
+    to_account: Vec<u8>,
     u: U256,
     min_out: U256,
     metadata: LiquiditySwapMetadata,    //TODO do we want this?
@@ -146,8 +146,8 @@ fn execute_send_cross_chain_liquidity(
     // Build payload
     let payload = CatalystV1SendLiquidityPayload {
         from_pool: info.sender.as_bytes(),
-        to_pool: to_pool.as_bytes(),
-        to_account: to_account.as_bytes(),
+        to_pool: to_pool.as_slice(),
+        to_account: to_account.as_slice(),
         u,
         variable_payload: SendLiquidityVariablePayload {
             min_out,

@@ -221,7 +221,7 @@ fn on_packet_receive(
                 contract_addr: payload.to_pool(deps.as_ref())?.into_string(),       // Validate to_pool
                 msg: to_binary(&SwapPoolExecuteMsg::<()>::ReceiveAsset {
                     channel_id: packet.dest.channel_id,
-                    from_pool: payload.from_pool_unsafe_string()?,                  // Do not validate from_pool as its format is unknown. It is only used for logging
+                    from_pool: payload.from_pool.to_vec(),                          // Do not validate from_pool as its format is unknown. It is only used for logging
                     to_asset_index: payload.variable_payload.to_asset_index,
                     to_account: payload.to_account(deps.as_ref())?.into_string(),   // Validate to_account
                     u: payload.u,
@@ -240,7 +240,7 @@ fn on_packet_receive(
                 contract_addr: payload.to_pool(deps.as_ref())?.into_string(),       // Validate to_pool
                 msg: to_binary(&SwapPoolExecuteMsg::<()>::ReceiveLiquidity {
                     channel_id: packet.dest.channel_id,
-                    from_pool: payload.from_pool_unsafe_string()?,                  // Do not validate from_pool as its format is unknown. It is only used for logging
+                    from_pool: payload.from_pool.to_vec(),                          // Do not validate from_pool as its format is unknown. It is only used for logging
                     to_account: payload.to_account(deps.as_ref())?.into_string(),   // Validate to_account
                     u: payload.u,
                     min_out: payload.variable_payload.min_out()?,                   // Convert min_out into Uint128
@@ -284,14 +284,14 @@ fn on_packet(
             // Build execute message
             let msg = match success {
                 true => SwapPoolExecuteMsg::<()>::SendAssetAck {
-                    to_account: payload.to_account_unsafe_string()?,                    // Can be 'unsafe' as it must match the one with which the 'swap_hash' was derived
+                    to_account: payload.to_account.to_vec(),                            // Can be 'unsafe' as it must match the one with which the 'swap_hash' was derived
                     u: payload.u,
                     amount: payload.variable_payload.from_amount()?,
                     asset: payload.variable_payload.from_asset_unsafe_string()?,        // Can be 'unsafe' as it must match the one with which the 'swap_hash' was derived
                     block_number_mod: payload.variable_payload.block_number
                 },
                 false => SwapPoolExecuteMsg::<()>::SendAssetTimeout {
-                    to_account: payload.to_account_unsafe_string()?,                    // Can be 'unsafe' as it must match the one with which the 'swap_hash' was derived
+                    to_account: payload.to_account.to_vec(),                            // Can be 'unsafe' as it must match the one with which the 'swap_hash' was derived
                     u: payload.u,
                     amount: payload.variable_payload.from_amount()?,
                     asset: payload.variable_payload.from_asset_unsafe_string()?,        // Can be 'unsafe' as it must match the one with which the 'swap_hash' was derived
@@ -311,13 +311,13 @@ fn on_packet(
             // Build execute message
             let msg = match success {
                 true => SwapPoolExecuteMsg::<()>::SendLiquidityAck {
-                    to_account: payload.to_account_unsafe_string()?,                    // Can be 'unsafe' as it must match the one with which the 'swap_hash' was derived
+                    to_account: payload.to_account.to_vec(),                            // Can be 'unsafe' as it must match the one with which the 'swap_hash' was derived
                     u: payload.u,
                     amount: payload.variable_payload.from_amount()?,                    // Can be 'unsafe' as it must match the one with which the 'swap_hash' was derived
                     block_number_mod: payload.variable_payload.block_number
                 },
                 false => SwapPoolExecuteMsg::<()>::SendLiquidityTimeout {
-                    to_account: payload.to_account_unsafe_string()?,                    // Can be 'unsafe' as it must match the one with which the 'swap_hash' was derived
+                    to_account: payload.to_account.to_vec(),                            // Can be 'unsafe' as it must match the one with which the 'swap_hash' was derived
                     u: payload.u,
                     amount: payload.variable_payload.from_amount()?,                    // Can be 'unsafe' as it must match the one with which the 'swap_hash' was derived
                     block_number_mod: payload.variable_payload.block_number

@@ -25,7 +25,7 @@ pub const DECAY_RATE: U256 = uint!("86400");    // 60*60*24
 
 pub const ASSET_ESCROWS: Map<&str, String> = Map::new("catalyst-pool-asset-escrows");
 pub const LIQUIDITY_ESCROWS: Map<&str, String> = Map::new("catalyst-pool-liquidity-escrows");
-pub const CONNECTIONS: Map<(&str, &str), bool> = Map::new("catalyst-pool-connections");   //TODO channelId and toPool types
+pub const CONNECTIONS: Map<(&str, Vec<u8>), bool> = Map::new("catalyst-pool-connections");   //TODO channelId and toPool types
 
 // TODO move to utils/similar?
 fn calc_keccak256(message: Vec<u8>) -> String {
@@ -218,7 +218,7 @@ pub trait CatalystV1PoolAdministration: CatalystV1PoolState {
         deps: &mut DepsMut,
         info: MessageInfo,
         channel_id: String,
-        to_pool: String,
+        to_pool: Vec<u8>,
         state: bool
     ) -> Result<Response, ContractError> {
         let pool_state = Self::load_state(deps.storage)?;
@@ -227,12 +227,12 @@ pub trait CatalystV1PoolAdministration: CatalystV1PoolState {
             return Err(ContractError::Unauthorized {});
         }
 
-        CONNECTIONS.save(deps.storage, (channel_id.as_str(), to_pool.as_str()), &state)?;
+        CONNECTIONS.save(deps.storage, (channel_id.as_str(), to_pool.clone()), &state)?;
 
         Ok(
             Response::new()
                 .add_attribute("channel_id", channel_id)
-                .add_attribute("to_pool", to_pool)
+                .add_attribute("to_pool",  format!("{:x?}", to_pool))
                 .add_attribute("state", state.to_string())
         )
     }
@@ -241,7 +241,7 @@ pub trait CatalystV1PoolAdministration: CatalystV1PoolState {
     fn is_connected(
         deps: &Deps,
         channel_id: &str,
-        to_pool: &str
+        to_pool: Vec<u8>
     ) -> bool {
 
         CONNECTIONS
@@ -487,8 +487,8 @@ pub trait CatalystV1PoolPermissionless: CatalystV1PoolState + CatalystV1PoolAdmi
         env: Env,
         info: MessageInfo,
         channel_id: String,
-        to_pool: String,
-        to_account: String,
+        to_pool: Vec<u8>,
+        to_account: Vec<u8>,
         from_asset: String,
         to_asset_index: u8,
         amount: Uint128,
@@ -502,7 +502,7 @@ pub trait CatalystV1PoolPermissionless: CatalystV1PoolState + CatalystV1PoolAdmi
         env: Env,
         info: MessageInfo,
         channel_id: String,
-        from_pool: String,
+        from_pool: Vec<u8>,
         to_asset_index: u8,
         to_account: String,
         u: U256,
@@ -516,8 +516,8 @@ pub trait CatalystV1PoolPermissionless: CatalystV1PoolState + CatalystV1PoolAdmi
         env: Env,
         info: MessageInfo,
         channel_id: String,
-        to_pool: String,
-        to_account: String,
+        to_pool: Vec<u8>,
+        to_account: Vec<u8>,
         amount: Uint128,            //TODO EVM mismatch
         min_out: U256,
         fallback_account: String,   //TODO EVM mismatch
@@ -529,7 +529,7 @@ pub trait CatalystV1PoolPermissionless: CatalystV1PoolState + CatalystV1PoolAdmi
         env: Env,
         info: MessageInfo,
         channel_id: String,
-        from_pool: String,
+        from_pool: Vec<u8>,
         to_account: String,
         u: U256,
         min_out: Uint128,
@@ -668,7 +668,7 @@ pub trait CatalystV1PoolAckTimeout: CatalystV1PoolState + CatalystV1PoolAdminist
         &mut self,
         deps: &mut DepsMut,
         info: MessageInfo,
-        to_account: String,
+        to_account: Vec<u8>,
         u: U256,
         amount: Uint128,
         asset: String,
@@ -680,7 +680,7 @@ pub trait CatalystV1PoolAckTimeout: CatalystV1PoolState + CatalystV1PoolAdminist
         }
 
         let send_asset_hash = Self::compute_send_asset_hash(
-            to_account.as_str(),
+            to_account.as_slice(),
             u,
             amount,
             asset.as_str(),
@@ -698,7 +698,7 @@ pub trait CatalystV1PoolAckTimeout: CatalystV1PoolState + CatalystV1PoolAdminist
     fn send_asset_ack(
         deps: &mut DepsMut,
         info: MessageInfo,
-        to_account: String,
+        to_account: Vec<u8>,
         u: U256,
         amount: Uint128,
         asset: String,
@@ -729,7 +729,7 @@ pub trait CatalystV1PoolAckTimeout: CatalystV1PoolState + CatalystV1PoolAdminist
         deps: &mut DepsMut,
         env: Env,
         info: MessageInfo,
-        to_account: String,
+        to_account: Vec<u8>,
         u: U256,
         amount: Uint128,
         asset: String,
@@ -741,7 +741,7 @@ pub trait CatalystV1PoolAckTimeout: CatalystV1PoolState + CatalystV1PoolAdminist
         }
 
         let send_asset_hash = Self::compute_send_asset_hash(
-            to_account.as_str(),
+            to_account.as_slice(),
             u,
             amount,
             asset.as_str(),
@@ -774,7 +774,7 @@ pub trait CatalystV1PoolAckTimeout: CatalystV1PoolState + CatalystV1PoolAdminist
         deps: &mut DepsMut,
         env: Env,
         info: MessageInfo,
-        to_account: String,
+        to_account: Vec<u8>,
         u: U256,
         amount: Uint128,
         asset: String,
@@ -805,7 +805,7 @@ pub trait CatalystV1PoolAckTimeout: CatalystV1PoolState + CatalystV1PoolAdminist
         &mut self,
         deps: &mut DepsMut,
         info: MessageInfo,
-        to_account: String,
+        to_account: Vec<u8>,
         u: U256,
         amount: Uint128,
         block_number_mod: u32
@@ -816,7 +816,7 @@ pub trait CatalystV1PoolAckTimeout: CatalystV1PoolState + CatalystV1PoolAdminist
         }
 
         let send_liquidity_hash = Self::compute_send_liquidity_hash(
-            to_account.as_str(),
+            to_account.as_slice(),
             u,
             amount,
             block_number_mod
@@ -833,7 +833,7 @@ pub trait CatalystV1PoolAckTimeout: CatalystV1PoolState + CatalystV1PoolAdminist
     fn send_liquidity_ack(
         deps: &mut DepsMut,
         info: MessageInfo,
-        to_account: String,
+        to_account: Vec<u8>,
         u: U256,
         amount: Uint128,
         block_number_mod: u32
@@ -862,7 +862,7 @@ pub trait CatalystV1PoolAckTimeout: CatalystV1PoolState + CatalystV1PoolAdminist
         deps: &mut DepsMut,
         env: Env,
         info: MessageInfo,
-        to_account: String,
+        to_account: Vec<u8>,
         u: U256,
         amount: Uint128,
         block_number_mod: u32
@@ -873,7 +873,7 @@ pub trait CatalystV1PoolAckTimeout: CatalystV1PoolState + CatalystV1PoolAdminist
         }
 
         let send_liquidity_hash = Self::compute_send_liquidity_hash(
-            to_account.as_str(),
+            to_account.as_slice(),
             u,
             amount,
             block_number_mod
@@ -905,7 +905,7 @@ pub trait CatalystV1PoolAckTimeout: CatalystV1PoolState + CatalystV1PoolAdminist
         deps: &mut DepsMut,
         env: Env,
         info: MessageInfo,
-        to_account: String,
+        to_account: Vec<u8>,
         u: U256,
         amount: Uint128,
         block_number_mod: u32
@@ -931,25 +931,24 @@ pub trait CatalystV1PoolAckTimeout: CatalystV1PoolState + CatalystV1PoolAdminist
 
 
     fn compute_send_asset_hash(
-        to_account: &str,
+        to_account: &[u8],
         u: U256,
         amount: Uint128,
         asset: &str,
         block_number_mod: u32        
     ) -> String {
-        
-        let to_account_bytes = to_account.as_bytes();
+
         let asset_bytes = asset.as_bytes();
 
         let mut hash_data: Vec<u8> = Vec::with_capacity(    // Initialize vec with the specified capacity (avoid reallocations)
-            to_account_bytes.len()
+            to_account.len()
                 + 32
                 + 16
                 + asset_bytes.len()
                 + 4
         );
 
-        hash_data.extend_from_slice(to_account_bytes);
+        hash_data.extend_from_slice(to_account);
         hash_data.extend_from_slice(&u.to_be_bytes());
         hash_data.extend_from_slice(&amount.to_be_bytes());
         hash_data.extend_from_slice(asset_bytes);
@@ -959,22 +958,20 @@ pub trait CatalystV1PoolAckTimeout: CatalystV1PoolState + CatalystV1PoolAdminist
     }
 
     fn compute_send_liquidity_hash(
-        to_account: &str,
+        to_account: &[u8],
         u: U256,
         amount: Uint128,
         block_number_mod: u32        
     ) -> String {
-        
-        let to_account_bytes = to_account.as_bytes();
 
         let mut hash_data: Vec<u8> = Vec::with_capacity(    // Initialize vec with the specified capacity (avoid reallocations)
-            to_account_bytes.len()
+            to_account.len()
                 + 32
                 + 16
                 + 4
         );
 
-        hash_data.extend_from_slice(to_account_bytes);
+        hash_data.extend_from_slice(to_account);
         hash_data.extend_from_slice(&u.to_be_bytes());
         hash_data.extend_from_slice(&amount.to_be_bytes());
         hash_data.extend_from_slice(&block_number_mod.to_be_bytes());

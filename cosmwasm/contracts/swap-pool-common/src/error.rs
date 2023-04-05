@@ -36,7 +36,7 @@ pub enum ContractError {
     ReturnInsufficient { out: Uint128, min_out: Uint128 },
 
     #[error("Pool not connected")]
-    PoolNotConnected { channel_id: String, pool: String },
+    PoolNotConnected { channel_id: String, pool: Vec<u8> },
 
     #[error("The pool only allows for local swaps, as it has no cross chain interface.")]
     PoolHasNoInterface {},
