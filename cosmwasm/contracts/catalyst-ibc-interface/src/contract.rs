@@ -200,7 +200,7 @@ fn query_list(deps: Deps) -> StdResult<ListChannelsResponse> {
 #[cfg(test)]
 mod catalyst_ibc_interface_tests {
 
-    use crate::{ibc_test_helpers::{open_channel, mock_channel_info, TEST_LOCAL_PORT, close_channel, TEST_REMOTE_PORT}, catalyst_ibc_payload::CatalystV1Packet, ibc::ibc_packet_receive};
+    use crate::{ibc_test_helpers::{open_channel, mock_channel_info, TEST_LOCAL_PORT, close_channel, TEST_REMOTE_PORT}, catalyst_ibc_payload::CatalystV1Packet, ibc::{ibc_packet_receive, RECEIVE_REPLY_ID}};
 
     use super::*;
     use cosmwasm_std::{testing::{mock_dependencies, mock_env, mock_info}, from_binary, Uint128, SubMsg, IbcTimeout, IbcPacket, IbcEndpoint, Timestamp, IbcPacketReceiveMsg};
@@ -215,12 +215,13 @@ mod catalyst_ibc_interface_tests {
 
     fn mock_send_asset_msg(
         channel_id: &str,
+        to_pool: Vec<u8>,
         min_out: Option<U256>,          // Allow to override the default value to provide invalid configs
         from_amount: Option<Uint128>    // Allow to override the default value to provide invalid configs
     ) -> ExecuteMsg {
         ExecuteMsg::SendCrossChainAsset {
             channel_id: channel_id.into(),
-            to_pool: b"to_pool".to_vec(),
+            to_pool,
             to_account: b"to_account".to_vec(),
             to_asset_index: 1u8,
             u: uint!("78456988731590487483448276103933454935747871349630657124267302091643025406701"),          // Some large U256 number
@@ -257,6 +258,22 @@ mod catalyst_ibc_interface_tests {
             7,
             mock_env().block.time.plus_seconds(TRANSACTION_TIMEOUT).into(),     // Note mock_env() always returns the same block time
         )
+    }
+
+    fn mock_pool_receive_asset_msg(
+        channel_id: &str,
+        from_pool: Vec<u8>,
+    ) -> swap_pool_common::msg::ExecuteMsg<()> {
+        swap_pool_common::msg::ExecuteMsg::ReceiveAsset {
+            channel_id: channel_id.into(),
+            from_pool,
+            to_asset_index: 1u8,
+            to_account: "to_account".to_string(),
+            u: uint!("78456988731590487483448276103933454935747871349630657124267302091643025406701"),          // Some large U256 number
+            min_out: Uint128::from(323476719582585693194107115743132847255u128),                                // Some large Uint128 number
+            swap_hash: b"1aefweftegnedtwdwaagwwetgajyrgwd".to_vec(),
+            calldata: vec![]
+        }
     }
 
     // TODO move into struct implementation?
@@ -523,7 +540,8 @@ mod catalyst_ibc_interface_tests {
 
         // Get mock params
         let from_pool = "sender";
-        let execute_msg = mock_send_asset_msg(channel_id, None, None);
+        let to_pool = b"to_pool";
+        let execute_msg = mock_send_asset_msg(channel_id, to_pool.to_vec(), None, None);
 
 
         // Tested action: send asset
@@ -569,7 +587,8 @@ mod catalyst_ibc_interface_tests {
 
         // Get mock params
         let from_pool = "sender";
-        let send_msg = mock_send_asset_msg(channel_id, None, None);
+        let to_pool = "to_pool";
+        let send_msg = mock_send_asset_msg(channel_id, to_pool.as_bytes().to_vec(), None, None);
         let receive_packet = mock_receive_asset_packet(channel_id, from_pool, send_msg);
 
 
@@ -590,8 +609,20 @@ mod catalyst_ibc_interface_tests {
         // Check pool is invoked
         assert_eq!(response.messages.len(), 1);
 
-        let _receive_asset_execute_msg = response.messages[0].clone();
-        //TODO verify correctness of receive_asset_execute_msg
+        assert_eq!(
+            response.messages[0],
+            SubMsg {
+                id: RECEIVE_REPLY_ID,
+                msg: cosmwasm_std::WasmMsg::Execute {
+                    contract_addr: to_pool.to_string(),
+                    msg: to_binary(&mock_pool_receive_asset_msg(channel_id, from_pool.as_bytes().to_vec())).unwrap(),
+                    funds: vec![]
+                }.into(),
+                reply_on: cosmwasm_std::ReplyOn::Always,
+                gas_limit: None
+
+            }
+        )
 
     }
 
@@ -614,8 +645,10 @@ mod catalyst_ibc_interface_tests {
 
         // Get mock params
         let from_pool = "sender";
+        let to_pool = b"to_pool";
         let send_msg = mock_send_asset_msg(
             channel_id,
+            to_pool.to_vec(),
             Some(U256::MAX),                                // ! Specify a min_out larger than Uint128
             None
         );
