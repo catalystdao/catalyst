@@ -200,10 +200,10 @@ fn query_list(deps: Deps) -> StdResult<ListChannelsResponse> {
 #[cfg(test)]
 mod catalyst_ibc_interface_tests {
 
-    use crate::{ibc_test_helpers::{open_channel, mock_channel_info, TEST_LOCAL_PORT, close_channel, TEST_REMOTE_PORT}, catalyst_ibc_payload::CatalystV1Packet, ibc::{ibc_packet_receive, RECEIVE_REPLY_ID, ibc_packet_ack, ibc_packet_timeout}};
+    use crate::{ibc_test_helpers::{open_channel, mock_channel_info, TEST_LOCAL_PORT, close_channel, TEST_REMOTE_PORT}, catalyst_ibc_payload::CatalystV1Packet, ibc::{ibc_packet_receive, RECEIVE_REPLY_ID, ibc_packet_ack, ibc_packet_timeout, reply}};
 
     use super::*;
-    use cosmwasm_std::{testing::{mock_dependencies, mock_env, mock_info}, from_binary, Uint128, SubMsg, IbcTimeout, IbcPacket, IbcEndpoint, Timestamp, IbcPacketReceiveMsg, IbcPacketAckMsg, IbcAcknowledgement, IbcPacketTimeoutMsg};
+    use cosmwasm_std::{testing::{mock_dependencies, mock_env, mock_info}, from_binary, Uint128, SubMsg, IbcTimeout, IbcPacket, IbcEndpoint, Timestamp, IbcPacketReceiveMsg, IbcPacketAckMsg, IbcAcknowledgement, IbcPacketTimeoutMsg, Reply, SubMsgResponse, SubMsgResult};
     use ethnum::uint;
 
     pub const DEPLOYER_ADDR: &str = "deployer_addr";
@@ -1387,6 +1387,72 @@ mod catalyst_ibc_interface_tests {
     
         // Check pool ack is not invoked
         assert_eq!(response.messages.len(), 0);
+
+    }
+
+
+
+    // Common Tests *************************************************************************************************************
+    
+
+    #[test]
+    fn test_receive_reply() {
+
+        let mut deps = mock_dependencies();
+      
+        // Instantiate contract and open channel
+        instantiate(
+            deps.as_mut(),
+            mock_env(),
+            mock_info(DEPLOYER_ADDR, &vec![]),
+            InstantiateMsg {}
+        ).unwrap();
+
+
+        // Tested action: reply ok
+        let response_result = reply(
+            deps.as_mut(),
+            mock_env(),
+            Reply {
+                id: RECEIVE_REPLY_ID,
+                result: SubMsgResult::Ok(
+                    SubMsgResponse { events: vec![], data: None }       // SubMsgResponse contents do not matter
+                )
+            }
+        );
+
+        // Check the transaction passes
+        let response = response_result.unwrap();
+
+        // Check response
+        // TODO overhaul this is the desired result
+        assert_eq!(response.messages.len(), 0);
+        assert_eq!(
+            response.data,
+            None                        //  ! If the submessage call by 'ibc_packet_receive' does not return error, leave the response 'data' field untouched
+        );
+
+
+
+        // Tested action: reply error
+        let response_result = reply(
+            deps.as_mut(),
+            mock_env(),
+            Reply {
+                id: RECEIVE_REPLY_ID,
+                result: SubMsgResult::Err("".to_string())
+            }
+        );
+
+        // Check the transaction passes
+        let response = response_result.unwrap();
+
+        // Check response contains an ack-fail
+        assert_eq!(response.messages.len(), 0);
+        assert_eq!(
+            response.data,
+            Some(Binary((vec![1])))     // ! If the submessage call by 'ibc_packet_receive' returns error, overwrite the response 'data' field to a failed ack
+        );
 
     }
 
