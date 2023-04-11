@@ -344,6 +344,7 @@ fn on_packet_success(
     deps: DepsMut,
     packet: IbcPacket
 ) -> Result<IbcBasicResponse, Never> {
+    //TODO The following makes sure packet response processing never fails. Do we want this? If the payload is corrupt (e.g. from_amount > Uint128::MAX), why catch the error?
     on_packet_response(deps, packet, true)
         .or_else(|_| { Ok(IbcBasicResponse::new()) })           //TODO add attributes? (e.g. indicate success ack failed)
 }
@@ -353,6 +354,7 @@ fn on_packet_failure(
     deps: DepsMut,
     packet: IbcPacket
 ) -> Result<IbcBasicResponse, Never> {
+    //TODO The following makes sure packet response processing never fails. Do we want this? If the payload is corrupt (e.g. from_amount > Uint128::MAX), why catch the error?
     on_packet_response(deps, packet, false)
         .or_else(|_| { Ok(IbcBasicResponse::new()) })           //TODO add attributes? (e.g. indicate failed ack/timeout failed)
 }
