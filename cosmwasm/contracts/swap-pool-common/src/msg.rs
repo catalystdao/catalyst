@@ -52,6 +52,7 @@ pub enum ExecuteMsg<T> {
         state: bool
     },
 
+    //TODO rename SendAssetSuccess
     SendAssetAck {
         to_account: Vec<u8>,
         #[serde(with = "U256Def")]
@@ -61,6 +62,7 @@ pub enum ExecuteMsg<T> {
         block_number_mod: u32
     },
 
+    //TODO rename SendAssetFailure
     SendAssetTimeout {
         to_account: Vec<u8>,
         #[serde(with = "U256Def")]
@@ -70,6 +72,7 @@ pub enum ExecuteMsg<T> {
         block_number_mod: u32
     },
 
+    //TODO rename SendLiquiditySuccess
     SendLiquidityAck {
         to_account: Vec<u8>,
         #[serde(with = "U256Def")]
@@ -78,6 +81,7 @@ pub enum ExecuteMsg<T> {
         block_number_mod: u32
     },
 
+    //TODO rename SendLiquidityFailure
     SendLiquidityTimeout {
         to_account: Vec<u8>,
         #[serde(with = "U256Def")]
