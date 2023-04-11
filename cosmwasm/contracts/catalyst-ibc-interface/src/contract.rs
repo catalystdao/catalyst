@@ -404,6 +404,7 @@ mod catalyst_ibc_interface_tests {
             &query(deps.as_ref(), mock_env(), QueryMsg::ListChannels {}).unwrap()
         ).unwrap();
 
+
         assert_eq!(open_channels.channels.len(), 2);
         assert_eq!(open_channels.channels[0], mock_channel_info(channel_id_1));
         assert_eq!(open_channels.channels[1], mock_channel_info(channel_id_2));
@@ -429,6 +430,7 @@ mod catalyst_ibc_interface_tests {
         let open_channels: ListChannelsResponse = from_binary(
             &query(deps.as_ref(), mock_env(), QueryMsg::ListChannels {}).unwrap()
         ).unwrap();
+
 
         assert_eq!(open_channels.channels.len(), 0);
 
@@ -496,6 +498,7 @@ mod catalyst_ibc_interface_tests {
     //         &query(deps.as_ref(), mock_env(), QueryMsg::Port {}).unwrap()
     //     ).unwrap();
 
+
     //     assert_eq!(port.port_id, TEST_LOCAL_PORT);
 
     // }
@@ -522,13 +525,15 @@ mod catalyst_ibc_interface_tests {
         let from_pool = "sender";
         let execute_msg = mock_send_asset_msg(channel_id, None, None);
 
-        // Test action: send asset
+
+        // Tested action: send asset
         let response = execute(
             deps.as_mut(),
             mock_env(),
             mock_info(from_pool, &[]),
             execute_msg.clone()
         ).unwrap();
+
 
         // Response should include a message to send the IBC message
         assert_eq!(response.messages.len(), 1);
@@ -567,12 +572,14 @@ mod catalyst_ibc_interface_tests {
         let send_msg = mock_send_asset_msg(channel_id, None, None);
         let receive_packet = mock_receive_asset_packet(channel_id, from_pool, send_msg);
 
-        // Test action: receive asset
+
+        // Tested action: receive asset
         let response = ibc_packet_receive(
             deps.as_mut(),
             mock_env(),
             IbcPacketReceiveMsg::new(receive_packet.clone())
         ).unwrap();
+
 
         // Check transaction passes
         assert_eq!(
@@ -614,12 +621,14 @@ mod catalyst_ibc_interface_tests {
         );
         let receive_packet = mock_receive_asset_packet(channel_id, from_pool, send_msg);
 
-        // Test action: receive asset
+
+        // Tested action: receive asset
         let response = ibc_packet_receive(
             deps.as_mut(),
             mock_env(),
             IbcPacketReceiveMsg::new(receive_packet.clone())
         ).unwrap();
+
 
         // Check transaction passes
         assert_eq!(
