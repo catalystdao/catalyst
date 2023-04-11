@@ -72,7 +72,7 @@ pub const CTX0_MIN_OUT_END           : usize = 69;
 pub const CTX0_FROM_AMOUNT_START     : usize = 69;
 pub const CTX0_FROM_AMOUNT_END       : usize = 101;
 
-pub const CTX0_FROM_ASSET_POS        : usize = 101; 
+pub const CTX0_FROM_ASSET_LENGTH_POS : usize = 101; 
 pub const CTX0_FROM_ASSET_START      : usize = 102;
 
 pub const CTX0_BLOCK_NUMBER_START    : usize = 102;
@@ -439,7 +439,7 @@ impl<'a> CatalystV1VariablePayload<'a> for SendAssetVariablePayload<'a> {
         );
 
         // From asset
-        let from_asset_length: usize = *buffer.get(CTX0_FROM_ASSET_POS + offset)
+        let from_asset_length: usize = *buffer.get(CTX0_FROM_ASSET_LENGTH_POS + offset)
             .ok_or(ContractError::PayloadDecodingError {})? as usize;
         offset += from_asset_length;
     
