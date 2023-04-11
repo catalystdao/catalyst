@@ -441,12 +441,13 @@ impl<'a> CatalystV1VariablePayload<'a> for SendAssetVariablePayload<'a> {
         // From asset
         let from_asset_length: usize = *buffer.get(CTX0_FROM_ASSET_LENGTH_POS + offset)
             .ok_or(ContractError::PayloadDecodingError {})? as usize;
-        offset += from_asset_length;
     
         let from_asset = buffer.get(
             CTX0_FROM_ASSET_START + offset ..
             CTX0_FROM_ASSET_START + offset + from_asset_length
         ).ok_or(ContractError::PayloadDecodingError {})?;
+
+        offset += from_asset_length;
     
         // Block number
         let block_number = u32::from_be_bytes(
