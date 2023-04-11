@@ -236,9 +236,8 @@ mod catalyst_ibc_interface_tests {
             calldata: vec![]
         }
     }
-    
-    //TODO rename to mock_send_ibc_packet
-    fn mock_receive_asset_packet(
+
+    fn mock_ibc_packet(
         channel_id: &str,
         from_pool: &str,
         send_msg: ExecuteMsg,
@@ -614,7 +613,7 @@ mod catalyst_ibc_interface_tests {
         let from_pool = "sender";
         let to_pool = "to_pool";
         let send_msg = mock_send_asset_msg(channel_id, to_pool.as_bytes().to_vec(), None);
-        let receive_packet = mock_receive_asset_packet(channel_id, from_pool, send_msg, None);
+        let receive_packet = mock_ibc_packet(channel_id, from_pool, send_msg, None);
 
 
         // Tested action: receive asset
@@ -679,7 +678,7 @@ mod catalyst_ibc_interface_tests {
             to_pool.to_vec(),
             Some(U256::MAX)                                // ! Specify a min_out larger than Uint128
         );
-        let receive_packet = mock_receive_asset_packet(channel_id, from_pool, send_msg, None);
+        let receive_packet = mock_ibc_packet(channel_id, from_pool, send_msg, None);
 
 
         // Tested action: receive asset
@@ -725,7 +724,7 @@ mod catalyst_ibc_interface_tests {
         let from_pool = "sender";
         let to_pool = "to_pool";
         let send_msg = mock_send_asset_msg(channel_id, to_pool.as_bytes().to_vec(), None);
-        let ibc_packet = mock_receive_asset_packet(channel_id, from_pool, send_msg, None);
+        let ibc_packet = mock_ibc_packet(channel_id, from_pool, send_msg, None);
 
 
 
@@ -824,7 +823,7 @@ mod catalyst_ibc_interface_tests {
         let from_pool = "sender";
         let to_pool = "to_pool";
         let send_msg = mock_send_asset_msg(channel_id, to_pool.as_bytes().to_vec(), None);
-        let ibc_packet = mock_receive_asset_packet(channel_id, from_pool, send_msg, None);
+        let ibc_packet = mock_ibc_packet(channel_id, from_pool, send_msg, None);
 
 
         // Tested action: send asset timeout
@@ -874,7 +873,7 @@ mod catalyst_ibc_interface_tests {
         let from_pool = "sender";
         let to_pool = "to_pool";
         let send_msg = mock_send_asset_msg(channel_id, to_pool.as_bytes().to_vec(), None);
-        let ibc_packet = mock_receive_asset_packet(channel_id, from_pool, send_msg, Some(U256::from(Uint128::MAX.u128()) + U256::from(1u64)));   // ! Inject an invalid from_amount into the ibc_packet
+        let ibc_packet = mock_ibc_packet(channel_id, from_pool, send_msg, Some(U256::from(Uint128::MAX.u128()) + U256::from(1u64)));   // ! Inject an invalid from_amount into the ibc_packet
 
 
 
