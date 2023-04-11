@@ -163,19 +163,18 @@ pub fn ibc_packet_ack(
     deps: DepsMut,
     _env: Env,
     msg: IbcPacketAckMsg,
-) -> Result<IbcBasicResponse, ContractError> {
-    //TODO should this never error?
-    //TODO Wrap in closure like ibc_packet_receive and make 'Result' error <Never>?
+) -> Result<IbcBasicResponse, Never> {
+
     let ack = msg.acknowledgement.data.0.get(0);        //TODO overhaul ack format
     match ack {
         Some(ack_id) => {
             match ack_id {
                 &ACK_SUCCESS => on_packet_success(deps, msg.original_packet),
                 &ACK_FAIL => on_packet_failure(deps, msg.original_packet),
-                _ => Ok(IbcBasicResponse::new())    // If ack type is not recognized, just exit without error   //TODO overhaul
+                _ => Ok(IbcBasicResponse::new())    // If ack type is not recognized, just exit without error
             }
         },
-        None => Ok(IbcBasicResponse::new())         // If ack type is not recognized, just exit without error   //TODO overhaul
+        None => Ok(IbcBasicResponse::new())         // If ack type is not recognized, just exit without error
     }
 }
 
@@ -185,9 +184,7 @@ pub fn ibc_packet_timeout(
     deps: DepsMut,
     _env: Env,
     msg: IbcPacketTimeoutMsg,
-) -> Result<IbcBasicResponse, ContractError> {
-    //TODO should this never error?
-    //TODO Wrap in closure like ibc_packet_receive and make 'Result' error <Never>?
+) -> Result<IbcBasicResponse, Never> {
     on_packet_failure(deps, msg.packet)
 }
 
@@ -345,14 +342,16 @@ fn on_packet_response(
 fn on_packet_success(
     deps: DepsMut,
     packet: IbcPacket
-) -> Result<IbcBasicResponse, ContractError> {
+) -> Result<IbcBasicResponse, Never> {
     on_packet_response(deps, packet, true)
+        .or_else(|_| { Ok(IbcBasicResponse::new()) })           //TODO add attributes? (e.g. indicate success ack failed)
 }
 
 
 fn on_packet_failure(
     deps: DepsMut,
     packet: IbcPacket
-) -> Result<IbcBasicResponse, ContractError> {
+) -> Result<IbcBasicResponse, Never> {
     on_packet_response(deps, packet, false)
+        .or_else(|_| { Ok(IbcBasicResponse::new()) })           //TODO add attributes? (e.g. indicate failed ack/timeout failed)
 }
