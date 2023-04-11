@@ -200,10 +200,10 @@ fn query_list(deps: Deps) -> StdResult<ListChannelsResponse> {
 #[cfg(test)]
 mod catalyst_ibc_interface_tests {
 
-    use crate::{ibc_test_helpers::{open_channel, mock_channel_info, TEST_LOCAL_PORT, close_channel, TEST_REMOTE_PORT}, catalyst_ibc_payload::CatalystV1Packet, ibc::{ibc_packet_receive, RECEIVE_REPLY_ID}};
+    use crate::{ibc_test_helpers::{open_channel, mock_channel_info, TEST_LOCAL_PORT, close_channel, TEST_REMOTE_PORT}, catalyst_ibc_payload::CatalystV1Packet, ibc::{ibc_packet_receive, RECEIVE_REPLY_ID, ibc_packet_ack, ibc_packet_timeout}};
 
     use super::*;
-    use cosmwasm_std::{testing::{mock_dependencies, mock_env, mock_info}, from_binary, Uint128, SubMsg, IbcTimeout, IbcPacket, IbcEndpoint, Timestamp, IbcPacketReceiveMsg};
+    use cosmwasm_std::{testing::{mock_dependencies, mock_env, mock_info}, from_binary, Uint128, SubMsg, IbcTimeout, IbcPacket, IbcEndpoint, Timestamp, IbcPacketReceiveMsg, IbcPacketAckMsg, IbcAcknowledgement, IbcPacketTimeoutMsg};
     use ethnum::uint;
 
     pub const DEPLOYER_ADDR: &str = "deployer_addr";
@@ -216,8 +216,7 @@ mod catalyst_ibc_interface_tests {
     fn mock_send_asset_msg(
         channel_id: &str,
         to_pool: Vec<u8>,
-        min_out: Option<U256>,          // Allow to override the default value to provide invalid configs
-        from_amount: Option<Uint128>    // Allow to override the default value to provide invalid configs
+        min_out: Option<U256>          // Allow to override the default value to provide invalid configs
     ) -> ExecuteMsg {
         ExecuteMsg::SendCrossChainAsset {
             channel_id: channel_id.into(),
@@ -226,12 +225,10 @@ mod catalyst_ibc_interface_tests {
             to_asset_index: 1u8,
             u: uint!("78456988731590487483448276103933454935747871349630657124267302091643025406701"),          // Some large U256 number
             min_out: min_out.unwrap_or(
-                uint!("323476719582585693194107115743132847255")                                              // Some large Uint128 number (as U256)
+                uint!("323476719582585693194107115743132847255")                                                // Some large Uint128 number (as U256)
             ),
             metadata: AssetSwapMetadata {
-                from_amount: from_amount.unwrap_or(
-                    Uint128::from(4920222095670429824873974121747892731u128)                                    // Some large Uint128 number
-                ),
+                from_amount: Uint128::from(4920222095670429824873974121747892731u128),                          // Some large Uint128 number
                 from_asset: "from_asset".to_string(),
                 swap_hash: "1aefweftegnedtwdwaagwwetgajyrgwd".to_string(),
                 block_number: 1356u32
@@ -240,13 +237,15 @@ mod catalyst_ibc_interface_tests {
         }
     }
     
+    //TODO rename to mock_send_ibc_packet
     fn mock_receive_asset_packet(
         channel_id: &str,
         from_pool: &str,
-        send_msg: ExecuteMsg
+        send_msg: ExecuteMsg,
+        from_amount: Option<U256>    // Allow to override the send_msg from_amount to provide invalid configs
     ) -> IbcPacket {
         IbcPacket::new(
-            Binary::from(build_payload(from_pool.as_bytes(), &send_msg).unwrap()),
+            Binary::from(build_payload(from_pool.as_bytes(), &send_msg, from_amount).unwrap()),
             IbcEndpoint {
                 port_id: TEST_REMOTE_PORT.to_string(),
                 channel_id: format!("{}-remote", channel_id),
@@ -276,10 +275,33 @@ mod catalyst_ibc_interface_tests {
         }
     }
 
+    fn mock_pool_send_asset_success_msg(
+    ) -> swap_pool_common::msg::ExecuteMsg<()> {
+        swap_pool_common::msg::ExecuteMsg::SendAssetAck {
+            to_account: "to_account".as_bytes().to_vec(),
+            u: uint!("78456988731590487483448276103933454935747871349630657124267302091643025406701"),          // Some large U256 number
+            amount: Uint128::from(4920222095670429824873974121747892731u128),                                   // Some large Uint128 number
+            asset: "from_asset".to_string(),
+            block_number_mod: 1356u32
+        }
+    }
+
+    fn mock_pool_send_asset_failure_msg(
+    ) -> swap_pool_common::msg::ExecuteMsg<()> {
+        swap_pool_common::msg::ExecuteMsg::SendAssetTimeout {
+            to_account: "to_account".as_bytes().to_vec(),
+            u: uint!("78456988731590487483448276103933454935747871349630657124267302091643025406701"),          // Some large U256 number
+            amount: Uint128::from(4920222095670429824873974121747892731u128),                                   // Some large Uint128 number
+            asset: "from_asset".to_string(),
+            block_number_mod: 1356u32
+        }
+    }
+
     // TODO move into struct implementation?
     fn build_payload(
         from_pool: &[u8],
-        msg: &ExecuteMsg
+        msg: &ExecuteMsg,
+        from_amount: Option<U256>    // Allow to override the msg 'from_amount' to provide invalid configs
     ) -> Result<Vec<u8>, ContractError> {
         let packet = match msg {
             ExecuteMsg::SendCrossChainAsset {
@@ -300,7 +322,7 @@ mod catalyst_ibc_interface_tests {
                     variable_payload: SendAssetVariablePayload {
                         to_asset_index: *to_asset_index,
                         min_out: *min_out,
-                        from_amount: U256::from(metadata.from_amount.u128()),
+                        from_amount: from_amount.unwrap_or(U256::from(metadata.from_amount.u128())),
                         from_asset: metadata.from_asset.as_bytes(),
                         block_number: metadata.block_number,
                         swap_hash: metadata.swap_hash.as_bytes(),
@@ -541,17 +563,20 @@ mod catalyst_ibc_interface_tests {
         // Get mock params
         let from_pool = "sender";
         let to_pool = b"to_pool";
-        let execute_msg = mock_send_asset_msg(channel_id, to_pool.to_vec(), None, None);
+        let execute_msg = mock_send_asset_msg(channel_id, to_pool.to_vec(), None);
 
 
         // Tested action: send asset
-        let response = execute(
+        let response_result = execute(
             deps.as_mut(),
             mock_env(),
             mock_info(from_pool, &[]),
             execute_msg.clone()
-        ).unwrap();
+        );
 
+
+        // Check the transaction passes
+        let response = response_result.unwrap();
 
         // Response should include a message to send the IBC message
         assert_eq!(response.messages.len(), 1);
@@ -561,7 +586,7 @@ mod catalyst_ibc_interface_tests {
             &response.messages[0],
             &SubMsg::new(IbcMsg::SendPacket {
                 channel_id: channel_id.to_string(),
-                data: build_payload(from_pool.as_bytes(), &execute_msg).unwrap().into(),
+                data: build_payload(from_pool.as_bytes(), &execute_msg, None).unwrap().into(),
                 timeout: IbcTimeout::with_timestamp(mock_env().block.time.plus_seconds(TRANSACTION_TIMEOUT))
             })
         );
@@ -588,19 +613,22 @@ mod catalyst_ibc_interface_tests {
         // Get mock params
         let from_pool = "sender";
         let to_pool = "to_pool";
-        let send_msg = mock_send_asset_msg(channel_id, to_pool.as_bytes().to_vec(), None, None);
-        let receive_packet = mock_receive_asset_packet(channel_id, from_pool, send_msg);
+        let send_msg = mock_send_asset_msg(channel_id, to_pool.as_bytes().to_vec(), None);
+        let receive_packet = mock_receive_asset_packet(channel_id, from_pool, send_msg, None);
 
 
         // Tested action: receive asset
-        let response = ibc_packet_receive(
+        let response_result = ibc_packet_receive(
             deps.as_mut(),
             mock_env(),
             IbcPacketReceiveMsg::new(receive_packet.clone())
-        ).unwrap();
+        );
 
 
-        // Check transaction passes
+        // Check the transaction passes
+        let response = response_result.unwrap();
+
+        // Check the returned ack
         assert_eq!(
             response.acknowledgement.clone(),
             Binary(vec![0u8])                   // ! Check ack returned has value of 0 (i.e. no error)
@@ -649,27 +677,256 @@ mod catalyst_ibc_interface_tests {
         let send_msg = mock_send_asset_msg(
             channel_id,
             to_pool.to_vec(),
-            Some(U256::MAX),                                // ! Specify a min_out larger than Uint128
-            None
+            Some(U256::MAX)                                // ! Specify a min_out larger than Uint128
         );
-        let receive_packet = mock_receive_asset_packet(channel_id, from_pool, send_msg);
+        let receive_packet = mock_receive_asset_packet(channel_id, from_pool, send_msg, None);
 
 
         // Tested action: receive asset
-        let response = ibc_packet_receive(
+        let response_result = ibc_packet_receive(
             deps.as_mut(),
             mock_env(),
             IbcPacketReceiveMsg::new(receive_packet.clone())
-        ).unwrap();
+        );
 
 
-        // Check transaction passes
+        // Check the transaction passes
+        let response = response_result.unwrap();
+
+        // Check the returned ack
         assert_eq!(
             response.acknowledgement.clone(),
             Binary(vec![1u8])                   // ! Check ack returned has value of 1 (i.e. error)
         );
     
         // Check pool is not invoked
+        assert_eq!(response.messages.len(), 0);
+
+    }
+
+
+    #[test]
+    fn test_send_asset_ack() {
+
+        let mut deps = mock_dependencies();
+      
+        // Instantiate contract and open channel
+        instantiate(
+            deps.as_mut(),
+            mock_env(),
+            mock_info(DEPLOYER_ADDR, &vec![]),
+            InstantiateMsg {}
+        ).unwrap();
+
+        let channel_id = "mock-channel-1";
+        open_channel(deps.as_mut(), channel_id, None, None);
+
+        // Get mock params
+        let from_pool = "sender";
+        let to_pool = "to_pool";
+        let send_msg = mock_send_asset_msg(channel_id, to_pool.as_bytes().to_vec(), None);
+        let ibc_packet = mock_receive_asset_packet(channel_id, from_pool, send_msg, None);
+
+
+
+        // Tested action: send asset ack SUCCESSFUL
+        let response_result = ibc_packet_ack(
+            deps.as_mut(),
+            mock_env(),
+            IbcPacketAckMsg::new(
+                IbcAcknowledgement::new(Binary(vec![0u8])),         // ! Test for success
+                ibc_packet.clone()
+            )
+        );
+
+        // Check the transaction passes
+        let response = response_result.unwrap();
+    
+        // Check pool ack is invoked
+        assert_eq!(response.messages.len(), 1);
+        assert_eq!(
+            response.messages[0],
+            SubMsg::new(
+                cosmwasm_std::WasmMsg::Execute {
+                    contract_addr: from_pool.to_string(),
+                    msg: to_binary(&mock_pool_send_asset_success_msg()).unwrap(),
+                    funds: vec![]
+                }
+            )
+        );
+
+
+
+        // Tested action: send asset ack UNSUCCESSFUL
+        let response_result = ibc_packet_ack(
+            deps.as_mut(),
+            mock_env(),
+            IbcPacketAckMsg::new(
+                IbcAcknowledgement::new(Binary(vec![1u8])),         // ! Test for failure
+                ibc_packet.clone()
+            )
+        );
+
+        // Check the transaction passes
+        let response = response_result.unwrap();
+    
+        // Check pool ack is invoked
+        assert_eq!(response.messages.len(), 1);
+        assert_eq!(
+            response.messages[0],
+            SubMsg::new(
+                cosmwasm_std::WasmMsg::Execute {
+                    contract_addr: from_pool.to_string(),
+                    msg: to_binary(&mock_pool_send_asset_failure_msg()).unwrap(),
+                    funds: vec![]
+                }
+            )
+        );
+
+
+
+        // Tested action: send asset ack INVALID
+        let response_result = ibc_packet_ack(
+            deps.as_mut(),
+            mock_env(),
+            IbcPacketAckMsg::new(
+                IbcAcknowledgement::new(Binary(vec![9u8])),         // ! Some invalid response
+                ibc_packet.clone()
+            )
+        );
+
+        // Check the transaction passes
+        let response = response_result.unwrap();    // ! Make sure the transaction does not return error even for the invalid response
+
+        // Check pool is not invoked
+        assert_eq!(response.messages.len(), 0);
+
+    }
+
+
+    #[test]
+    fn test_send_asset_timeout() {
+
+        let mut deps = mock_dependencies();
+      
+        // Instantiate contract and open channel
+        instantiate(
+            deps.as_mut(),
+            mock_env(),
+            mock_info(DEPLOYER_ADDR, &vec![]),
+            InstantiateMsg {}
+        ).unwrap();
+
+        let channel_id = "mock-channel-1";
+        open_channel(deps.as_mut(), channel_id, None, None);
+
+        // Get mock params
+        let from_pool = "sender";
+        let to_pool = "to_pool";
+        let send_msg = mock_send_asset_msg(channel_id, to_pool.as_bytes().to_vec(), None);
+        let ibc_packet = mock_receive_asset_packet(channel_id, from_pool, send_msg, None);
+
+
+        // Tested action: send asset timeout
+        let response_result = ibc_packet_timeout(
+            deps.as_mut(),
+            mock_env(),
+            IbcPacketTimeoutMsg::new(ibc_packet.clone())
+        );
+
+
+        // Check the transaction passes
+        let response = response_result.unwrap();
+    
+        // Check pool timeout is invoked
+        assert_eq!(response.messages.len(), 1);
+        assert_eq!(
+            response.messages[0],
+            SubMsg::new(
+                cosmwasm_std::WasmMsg::Execute {
+                    contract_addr: from_pool.to_string(),
+                    msg: to_binary(&mock_pool_send_asset_failure_msg()).unwrap(),
+                    funds: vec![]
+                }
+            )
+        )
+
+    }
+
+
+    #[test]
+    fn test_send_asset_ack_timeout_invalid_from_amount() {
+
+        let mut deps = mock_dependencies();
+      
+        // Instantiate contract and open channel
+        instantiate(
+            deps.as_mut(),
+            mock_env(),
+            mock_info(DEPLOYER_ADDR, &vec![]),
+            InstantiateMsg {}
+        ).unwrap();
+
+        let channel_id = "mock-channel-1";
+        open_channel(deps.as_mut(), channel_id, None, None);
+
+        // Get mock params
+        let from_pool = "sender";
+        let to_pool = "to_pool";
+        let send_msg = mock_send_asset_msg(channel_id, to_pool.as_bytes().to_vec(), None);
+        let ibc_packet = mock_receive_asset_packet(channel_id, from_pool, send_msg, Some(U256::from(Uint128::MAX.u128()) + U256::from(1u64)));   // ! Inject an invalid from_amount into the ibc_packet
+
+
+
+        // Tested action: send asset ACK SUCCESSFUL with invalid packet (from_amount)
+        let response_result = ibc_packet_ack(
+            deps.as_mut(),
+            mock_env(),
+            IbcPacketAckMsg::new(
+                IbcAcknowledgement::new(Binary(vec![0u8])),         // ! Test for ack-success
+                ibc_packet.clone()
+            )
+        );
+
+        // Check the transaction passes
+        let response = response_result.unwrap();
+    
+        // Check pool ack is not invoked
+        assert_eq!(response.messages.len(), 0);
+
+
+
+        // Tested action: send asset ACK UNSUCCESSFUL with invalid packet
+        let response_result = ibc_packet_ack(
+            deps.as_mut(),
+            mock_env(),
+            IbcPacketAckMsg::new(
+                IbcAcknowledgement::new(Binary(vec![1u8])),         // ! Test for ack-failure
+                ibc_packet.clone()
+            )
+        );
+
+        // Check the transaction passes
+        let response = response_result.unwrap();
+    
+        // Check pool ack is not invoked
+        assert_eq!(response.messages.len(), 0);
+
+
+
+        // Tested action: send asset TIMEOUT with invalid packet
+        let response_result = ibc_packet_timeout(
+            deps.as_mut(),
+            mock_env(),
+            IbcPacketTimeoutMsg::new(                               // ! Test for timeout
+                ibc_packet.clone()
+            )
+        );
+
+        // Check the transaction passes
+        let response = response_result.unwrap();
+    
+        // Check pool ack is not invoked
         assert_eq!(response.messages.len(), 0);
 
     }
