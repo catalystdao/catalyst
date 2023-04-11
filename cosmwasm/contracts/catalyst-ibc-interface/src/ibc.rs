@@ -267,7 +267,7 @@ fn on_packet_receive(
 
 
 
-fn on_packet(
+fn on_packet_response(
     deps: DepsMut,
     packet: IbcPacket,
     success: bool
@@ -346,7 +346,7 @@ fn on_packet_success(
     deps: DepsMut,
     packet: IbcPacket
 ) -> Result<IbcBasicResponse, ContractError> {
-    on_packet(deps, packet, true)
+    on_packet_response(deps, packet, true)
 }
 
 
@@ -354,5 +354,5 @@ fn on_packet_failure(
     deps: DepsMut,
     packet: IbcPacket
 ) -> Result<IbcBasicResponse, ContractError> {
-    on_packet(deps, packet, false)
+    on_packet_response(deps, packet, false)
 }
