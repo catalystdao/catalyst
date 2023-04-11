@@ -165,6 +165,7 @@ pub fn ibc_packet_ack(
     msg: IbcPacketAckMsg,
 ) -> Result<IbcBasicResponse, Never> {
 
+    //TODO only the first byte of the response is checked, the rest is ignored. Do we want this?
     let ack = msg.acknowledgement.data.0.get(0);        //TODO overhaul ack format
     match ack {
         Some(ack_id) => {
