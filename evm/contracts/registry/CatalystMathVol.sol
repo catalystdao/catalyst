@@ -16,7 +16,7 @@ import "../SwapPoolVolatile.sol";
  */
 contract CatalystMathVol is ICatalystMathLibVol {
     
-    /// @notice Helper function which returns the true weight. If weights are being adjusted, the pure pool weights might lie.
+    /// @notice Helper function which returns the true weight. If weights are being adjusted, the pure vault weights might lie.
     function getTrueWeight(address vault, address asset) public view returns(uint256) {
         // First, lets check if we actually needs to do any adjustments:
         uint256 adjTarget = CatalystSwapPoolVolatile(vault)._adjustmentTarget();
@@ -66,7 +66,7 @@ contract CatalystMathVol is ICatalystMathLibVol {
      * @dev All input amounts should be the raw numbers and not WAD.
      * Since units are always denominated in WAD, the function should be treated as mathematically *native*.
      * @param input The input amount.
-     * @param A The current pool balance of the x token.
+     * @param A The current vault balance of the x token.
      * @param W The weight of the x token.
      * @return uint256 Group-specific units (units are **always** WAD).
      */
@@ -77,7 +77,7 @@ contract CatalystMathVol is ICatalystMathLibVol {
     ) public pure returns (uint256) {
         // Notice, A + in and A are not WAD but divWadDown is used anyway.
         // That is because lnWad requires a scaled number.
-        return W * uint256(FixedPointMathLib.lnWad(int256(FixedPointMathLib.divWadDown(A + input, A))));    // int256 casting is safe. If overflows, it returns negative. lnWad fails on negative numbers. If the pool balance is high, this is unlikely.
+        return W * uint256(FixedPointMathLib.lnWad(int256(FixedPointMathLib.divWadDown(A + input, A))));    // int256 casting is safe. If overflows, it returns negative. lnWad fails on negative numbers. If the vault balance is high, this is unlikely.
     }
 
     /**
@@ -87,7 +87,7 @@ contract CatalystMathVol is ICatalystMathLibVol {
      * Since units are always multiplied by WAD, the function
      * should be treated as mathematically *native*.
      * @param U Incoming group specific units.
-     * @param B The current pool balance of the y token.
+     * @param B The current vault balance of the y token.
      * @param W The weight of the y token.
      * @return uint25 Output denominated in output token. (not WAD)
      */
@@ -107,8 +107,8 @@ contract CatalystMathVol is ICatalystMathLibVol {
      *     \int_{A}^{A+x} W_a/w dw = \int_{B-y}^{B} W_b/w dw for y = B · (1 - ((A+x)/A)^(-W_a/W_b))
      * @dev All input amounts should be the raw numbers and not WAD. Is computed through calcPriceCurveLimit(calcPriceCurveArea).
      * @param input The input amount.
-     * @param A The current pool balance of the x token.
-     * @param B The current pool balance of the y token.
+     * @param A The current vault balance of the x token.
+     * @param B The current vault balance of the y token.
      * @param W_A The weight of the x token.
      * @param W_B TThe weight of the y token.
      * @return uint256 Output denominated in output token.
@@ -134,16 +134,16 @@ contract CatalystMathVol is ICatalystMathLibVol {
      * specific token is never done.
      * @param U Input units.
      * @param W The generalised weights.
-     * @return uint256 Output denominated in pool share.
+     * @return uint256 Output denominated in vault share.
      */
     function calcPriceCurveLimitShare(
         uint256 U,
         uint256 W
     ) public pure returns (uint256) {
-        // Compute the non pool ownership share. (1 - pool ownership share)
+        // Compute the non vault ownership share. (1 - vault ownership share)
         uint256 npos = uint256(FixedPointMathLib.expWad(-int256(U / W)));   // int256 casting is initially not safe. If overflow, the equation becomes: exp(U/W). In this case, when subtracted from 1 (later), Solidity's built-in safe math protection catches the overflow since exp(U/W) > 1.
         
-        // Compute the pool owner share before liquidity has been added.
+        // Compute the vault owner share before liquidity has been added.
         // (solve share = pt/(PT+pt) for pt.)
         return FixedPointMathLib.divWadDown(FixedPointMathLib.WAD - npos, npos);
     }
@@ -157,7 +157,7 @@ contract CatalystMathVol is ICatalystMathLibVol {
 
     /**
      * @notice Computes the exchange of assets to units. This is the first part of a swap.
-     * @dev Returns 0 if from is not a token in the pool
+     * @dev Returns 0 if from is not a token in the vault
      * @param vault The vault address to examine.
      * @param fromAsset The address of the token to sell.
      * @param amount The amount of from token to sell.
@@ -172,14 +172,14 @@ contract CatalystMathVol is ICatalystMathLibVol {
         uint256 A = calcFee(vault, ERC20(fromAsset).balanceOf(vault));
         uint256 W = getTrueWeight(vault, fromAsset);
 
-        // If a token is not part of the pool, W is 0. This returns 0 by
+        // If a token is not part of the vault, W is 0. This returns 0 by
         // multiplication with 0.
         return calcPriceCurveArea(amount, A, W);
     }
 
     /**
      * @notice Computes the exchange of units to assets. This is the second and last part of a swap.
-     * @dev Reverts if to is not a token in the pool
+     * @dev Reverts if to is not a token in the vault
      * @param vault The vault address to examine.
      * @param toAsset The address of the token to buy.
      * @param U The number of units used to buy to.
@@ -194,8 +194,8 @@ contract CatalystMathVol is ICatalystMathLibVol {
         uint256 B = ERC20(toAsset).balanceOf(vault) - CatalystSwapPoolVolatile(vault)._escrowedTokens(toAsset);
         uint256 W = getTrueWeight(vault, toAsset);
 
-        // If someone were to purchase a token which is not part of the pool on setup
-        // they would just add value to the pool. We don't care about it.
+        // If someone were to purchase a token which is not part of the vault on setup
+        // they would just add value to the vault. We don't care about it.
         // However, it will revert since the solved integral contains U/W and when
         // W = 0 then U/W returns division by 0 error.
         return calcPriceCurveLimit(U, B, W);
@@ -203,9 +203,9 @@ contract CatalystMathVol is ICatalystMathLibVol {
 
     /**
      * @notice Computes the output of localSwap.
-     * @dev If the pool weights of the 2 tokens are equal, a very simple curve is used.
-     * If from or to is not part of the pool, the swap will either return 0 or revert.
-     * If both from and to are not part of the pool, the swap can actually return a positive value.
+     * @dev If the vault weights of the 2 tokens are equal, a very simple curve is used.
+     * If from or to is not part of the vault, the swap will either return 0 or revert.
+     * If both from and to are not part of the vault, the swap can actually return a positive value.
      * @param vault The vault address to examine.
      * @param fromAsset The address of the token to sell.
      * @param toAsset The address of the token to buy.
@@ -228,8 +228,8 @@ contract CatalystMathVol is ICatalystMathLibVol {
         if (W_A == W_B)
             // Saves gas and is exact.
             // NOTE: If W_A == 0 and W_B == 0 => W_A == W_B => The calculation will not fail.
-            // This is not a problem, since W_B != 0 for assets contained in the pool, and hence a 0-weighted asset 
-            // (i.e. not contained in the pool) cannot be used to extract an asset contained in the pool.
+            // This is not a problem, since W_B != 0 for assets contained in the vault, and hence a 0-weighted asset 
+            // (i.e. not contained in the vault) cannot be used to extract an asset contained in the vault.
             return (B * amount) / (A + amount);
 
         // If either token doesn't exist, their weight is 0.

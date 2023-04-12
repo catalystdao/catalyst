@@ -13,22 +13,22 @@ contract CatalystDescriberRegistry is Ownable {
         address catalystDescriber
     );
 
-    address[] private _pool_describers;
+    address[] private _vault_describers;
     mapping(address => uint256) private _describer_version;
     uint256 public catalystVersions;
 
 
     /** 
-    * Given a Catalyst version, returns the current pool describer.
+    * Given a Catalyst version, returns the current vault describer.
     * @dev Returns address(0) if no describer exists.
     */
-    function get_pool_describer(uint256 catalystVersion) public view returns(address) {
-        if (_pool_describers.length <= catalystVersion) return address(0);
-        return _pool_describers[catalystVersion];
+    function get_vault_describer(uint256 catalystVersion) public view returns(address) {
+        if (_vault_describers.length <= catalystVersion) return address(0);
+        return _vault_describers[catalystVersion];
     }
 
     /**
-     * Given a pool describer, returns the catalyst version. 
+     * Given a vault describer, returns the catalyst version. 
      * @dev Returns 0 if address is not a CatalystDescriber.
      */
     function get_describer_version(address catalystDescriber) external view returns (uint256) {
@@ -38,8 +38,8 @@ contract CatalystDescriberRegistry is Ownable {
     /**
     * @notice Returns all CatalystDescribers.
     */
-    function get_pool_describers() public view returns (address[] memory catalystDescribers) {
-        return _pool_describers;
+    function get_vault_describers() public view returns (address[] memory catalystDescribers) {
+        return _vault_describers;
     }
 
     /**
@@ -48,10 +48,10 @@ contract CatalystDescriberRegistry is Ownable {
     function add_describer(address catalystDescriber) external onlyOwner {
         if (catalystDescriber == address(0)) revert  ZeroDescriber(); 
 
-        _pool_describers.push(catalystDescriber);
-        _describer_version[catalystDescriber] = _pool_describers.length;
+        _vault_describers.push(catalystDescriber);
+        _describer_version[catalystDescriber] = _vault_describers.length;
 
-        emit CatalystDescriber(_pool_describers.length, catalystDescriber);
+        emit CatalystDescriber(_vault_describers.length, catalystDescriber);
     }
 
 }

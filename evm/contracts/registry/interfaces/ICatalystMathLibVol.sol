@@ -9,12 +9,12 @@ import "../../interfaces/ICatalystV1PoolState.sol";
 import "./ICatalystMathLibCommon.sol";
 
 /**
- * @title Catalyst: The Multi-Chain Swap pool
+ * @title Catalyst: The Multi-Chain Swap vault
  * @author Catalyst Labs
  * @notice This contract is not optimised and serves to aid in off-chain quering.
  */
 interface ICatalystMathLibVol is ICatalystMathLib {
-    // This function serves to get the actual weight. If weights are being adjusted, the pure pool weights might lie.
+    // This function serves to get the actual weight. If weights are being adjusted, the pure vault weights might lie.
     function getTrueWeight(address vault, address asset) external view returns(uint256);
 
     //--- Swap integrals ---//
@@ -25,7 +25,7 @@ interface ICatalystMathLibVol is ICatalystMathLib {
      * @dev All input amounts should be the raw numbers and not WAD.
      * Since units are always denominated in WAD, the function should be treated as mathematically *native*.
      * @param input The input amount.
-     * @param A The current pool balance of the x token.
+     * @param A The current vault balance of the x token.
      * @param W The weight of the x token.
      * @return uint256 Group-specific units (units are **always** WAD).
      */
@@ -42,7 +42,7 @@ interface ICatalystMathLibVol is ICatalystMathLib {
      * Since units are always multiplied by WAD, the function
      * should be treated as mathematically *native*.
      * @param U Incoming group specific units.
-     * @param B The current pool balance of the y token.
+     * @param B The current vault balance of the y token.
      * @param W The weight of the y token.
      * @return uint25 Output denominated in output token. (not WAD)
      */
@@ -60,8 +60,8 @@ interface ICatalystMathLibVol is ICatalystMathLib {
      *      _calcPriceCurveLimit(_calcPriceCurveArea(input, A, W_A), B, W_B).
      * @dev All input amounts should be the raw numbers and not WAD.
      * @param input The input amount.
-     * @param A The current pool balance of the x token.
-     * @param B The current pool balance of the y token.
+     * @param A The current vault balance of the x token.
+     * @param B The current vault balance of the y token.
      * @param W_A The weight of the x token.
      * @param W_B TThe weight of the y token.
      * @return uint256 Output denominated in output token.
@@ -80,7 +80,7 @@ interface ICatalystMathLibVol is ICatalystMathLib {
      * specific token is never done.
      * @param U Input units.
      * @param W The generalised weights.
-     * @return uint256 Output denominated in pool share.
+     * @return uint256 Output denominated in vault share.
      */
     function calcPriceCurveLimitShare(
         uint256 U,

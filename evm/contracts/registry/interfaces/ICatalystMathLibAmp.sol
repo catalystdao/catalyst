@@ -9,12 +9,12 @@ import "../../interfaces/ICatalystV1PoolState.sol";
 import "./ICatalystMathLibCommon.sol";
 
 /**
- * @title Catalyst: The Multi-Chain Swap pool
+ * @title Catalyst: The Multi-Chain Swap vault
  * @author Catalyst Labs
  * @notice This contract is not optimised and serves to aid in off-chain quering.
  */
 interface ICatalystMathLibAmp is ICatalystMathLib {
-    // This function serves to get the actual amplification. If amp is being adjusted, the pure pool amp might lie.
+    // This function serves to get the actual amplification. If amp is being adjusted, the pure vault amp might lie.
     function getTrueAmp(address vault) external view returns(int256);
     //--- Swap integrals ---//
 
@@ -25,7 +25,7 @@ interface ICatalystMathLibAmp is ICatalystMathLib {
      * @dev All input amounts should be the raw numbers and not WAD.
      * Since units are always denominated in WAD, the function should be treated as mathematically *native*.
      * @param input The input amount.
-     * @param A The current pool balance of the x token.
+     * @param A The current vault balance of the x token.
      * @param W The weight of the x token.
      * @param oneMinusAmp The amplification.
      * @return uint256 Group-specific units (units are **always** WAD).
@@ -48,7 +48,7 @@ interface ICatalystMathLibAmp is ICatalystMathLib {
      * Since units are always multiplied by WAD, the function
      * should be treated as mathematically *native*.
      * @param U Incoming group-specific units.
-     * @param B The current pool balance of the y token.
+     * @param B The current vault balance of the y token.
      * @param W The weight of the y token.
      * @return uint25 Output denominated in output token. (not WAD)
      */
@@ -71,10 +71,10 @@ interface ICatalystMathLibAmp is ICatalystMathLib {
      * _calcPriceCurveLimit(_calcPriceCurveArea(input, A, W_A, amp), B, W_B, amp).
      * @dev All input amounts should be the raw numbers and not WAD.
      * @param input The input amount.
-     * @param A The current pool balance of the _in token.
-     * @param B The current pool balance of the _out token.
-     * @param W_A The pool weight of the _in token.
-     * @param W_B The pool weight of the _out token.
+     * @param A The current vault balance of the _in token.
+     * @param B The current vault balance of the _out token.
+     * @param W_A The vault weight of the _in token.
+     * @param W_B The vault weight of the _out token.
      * @param oneMinusAmp The amplification.
      * @return uint256 Output denominated in output token.
      */
@@ -88,14 +88,14 @@ interface ICatalystMathLibAmp is ICatalystMathLib {
     ) external pure returns (uint256);
 
     /**
-     * @notice Converts units into pool tokens with the below formula
+     * @notice Converts units into vault tokens with the below formula
      *      pt = PT · (((N · wa_0^(1-k) + U)/(N · wa_0^(1-k))^(1/(1-k)) - 1)
      * @dev The function leaves a lot of computation to the external implementation. This is done to avoid recomputing values several times.
-     * @param U Then number of units to convert into pool tokens.
-     * @param ts The current pool token supply. The escrowed pool tokens should not be added, since the function then returns more.
+     * @param U Then number of units to convert into vault tokens.
+     * @param ts The current vault token supply. The escrowed vault tokens should not be added, since the function then returns more.
      * @param it_times_walpha_amped wa_0^(1-k)
-     * @param oneMinusAmpInverse The pool amplification.
-     * @return uint256 Output denominated in pool tokens.
+     * @param oneMinusAmpInverse The vault amplification.
+     * @return uint256 Output denominated in vault tokens.
      */
     function calcPriceCurveLimitShare(
         uint256 U,

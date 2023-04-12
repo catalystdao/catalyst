@@ -8,7 +8,7 @@ import "../../interfaces/ICatalystV1PoolDerived.sol";
 import "../../interfaces/ICatalystV1PoolState.sol";
 
 /**
- * @title Catalyst: The Multi-Chain Swap pool
+ * @title Catalyst: The Multi-Chain Swap vault
  * @author Catalyst Labs
  * @notice This contract is not optimised and serves to aid in off-chain quering.
  */
@@ -17,7 +17,7 @@ interface ICatalystMathLib {
 
     /**
      * @notice Computes the return of SendAsset.
-     * @dev Returns 0 if from is not a token in the pool
+     * @dev Returns 0 if from is not a token in the vault
      * @param fromAsset The address of the token to sell.
      * @param amount The amount of from token to sell.
      * @return uint256 Group-specific units.
@@ -30,7 +30,7 @@ interface ICatalystMathLib {
 
     /**
      * @notice Computes the output of ReceiveAsset.
-     * @dev Reverts if to is not a token in the pool
+     * @dev Reverts if to is not a token in the vault
      * @param toAsset The address of the token to buy.
      * @param U The number of units used to buy to.
      * @return uint256 Number of purchased tokens.
@@ -43,9 +43,9 @@ interface ICatalystMathLib {
 
     /**
      * @notice Computes the output of localSwap.
-     * @dev If the pool weights of the 2 tokens are equal, a very simple curve is used.
-     * If from or to is not part of the pool, the swap will either return 0 or revert.
-     * If both from and to are not part of the pool, the swap can actually return a positive value.
+     * @dev If the vault weights of the 2 tokens are equal, a very simple curve is used.
+     * If from or to is not part of the vault, the swap will either return 0 or revert.
+     * If both from and to are not part of the vault, the swap can actually return a positive value.
      * @param fromAsset The address of the token to sell.
      * @param toAsset The address of the token to buy.
      * @param amount The amount of from token to sell for to token.

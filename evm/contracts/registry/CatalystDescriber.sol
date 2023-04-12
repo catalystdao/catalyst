@@ -27,8 +27,8 @@ contract CatalystDescriber is Ownable {
         bool state
     );
 
-    event ModifyPoolFactory(
-        address pool_factory,
+    event ModifyVaultFactory(
+        address vault_factory,
         bool state
     );
 
@@ -61,7 +61,7 @@ contract CatalystDescriber is Ownable {
     } 
 
     // Returns an array of vault factories.
-    function get_vault_factories() external view returns (address[] memory poolFactories) {
+    function get_vault_factories() external view returns (address[] memory vaultFactories) {
         return _vault_factories;
     }
 
@@ -70,7 +70,7 @@ contract CatalystDescriber is Ownable {
         return _vault_factories.length;
     }
 
-    // Returns a pool’s factory.
+    // Returns a vault’s factory.
     // This is fetched by asking the vault which factory deployed it, then checking with the factory.
     // Returns address(0) if the `address` lies.
     function get_vault_factory(address vault) external view returns (address factory) {
@@ -87,37 +87,43 @@ contract CatalystDescriber is Ownable {
 
 
     // Returns the abi_version using a whitelisted table. Returns -1 if the address is not known
-    function get_pool_abi_version(address vault) public view returns (int256 abi_version) {
+    function get_vault_abi_version(address vault) public view returns (int256 abi_version) {
         abi_version = _vault_abi_version[get_vault_type(vault)];
         if (abi_version == 0) abi_version = -1;
     }
 
 
-    // Returns the pool tokens supported by a pool by iterating over _tokenIndexing until it returns 0
-    function get_pool_tokens(address vault) public view returns (address[] memory vaultTokens) {
-        vaultTokens = new address[](ICatalystV1PoolImmutables(vault).MAX_ASSETS());
-        for (uint256 it; true; ++it) {
+    // Returns the vault tokens supported by a vault by iterating over _tokenIndexing until it returns 0
+    function get_vault_tokens(address vault) public view returns (address[] memory vaultTokens) {
+        address[] memory tempVaultTokens = new address[](ICatalystV1PoolImmutables(vault).MAX_ASSETS());
+        uint256 it;
+        for (it = 0; true; ++it) {
             address token = ICatalystV1PoolImmutables(vault)._tokenIndexing(it);
             if (token == address(0)) break;
-            vaultTokens[it] = token;
+            tempVaultTokens[it] = token;
+        }
+        // Resize array
+        vaultTokens = new address[](it);
+        for (uint256 i; i < it; ++i) {
+            vaultTokens[i] = tempVaultTokens[i];
         }
     }
 
 
-    // Returns an address which implements and exposes the pool’s mathematical methods.
-    // Uses get_pool_type to find a mathematical lib. Returns address(0) if no mathematical lib is set. (whitelist)
-    function get_pool_mathematical_lib(address vault) public view returns (address math_lib) {
+    // Returns an address which implements and exposes the vault’s mathematical methods.
+    // Uses get_vault_type to find a mathematical lib. Returns address(0) if no mathematical lib is set. (whitelist)
+    function get_vault_mathematical_lib(address vault) public view returns (address math_lib) {
         math_lib = ICatalystV1PoolImmutables(vault).MATHLIB();
     }
 
 
     // Returns a list of token prices. The first element is always a reference balance. (what is “1”)
-    // Requires get_pool_mathematical_lib() ≠ address(0)
-    function get_pool_prices(address vault) external view returns (uint256[] memory quotes) {
-        quotes = new uint256[](ICatalystV1PoolImmutables(vault).MAX_ASSETS());
-        address math_lib = get_pool_mathematical_lib(vault);
+    // Requires get_vault_mathematical_lib() ≠ address(0)
+    function get_vault_prices(address vault) external view returns (uint256[] memory quotes) {
+        address[] memory tokens = get_vault_tokens(vault);
+        quotes = new uint256[](tokens.length);
+        address math_lib = get_vault_mathematical_lib(vault);
         if (math_lib == address(0)) return quotes;
-        address[] memory tokens = get_pool_tokens(vault);
         for (uint256 it; it < tokens.length; ++it) {
             address token = tokens[it];
             quotes[it] = ICatalystMathLib(math_lib).calcAsyncPriceFrom(vault, token);
@@ -148,7 +154,7 @@ contract CatalystDescriber is Ownable {
      * @notice Defines a new Catalyst Describer and incremenets the Catalyst version
      */
     function modify_vault_abi(address vault, int256 vault_abi) external onlyOwner {
-        if (get_pool_abi_version(vault) == -1) revert ZeroAddress();
+        if (get_vault_abi_version(vault) == -1) revert ZeroAddress();
         if (vault_abi <= 0) revert IncorrectAbi(); 
 
         // Set abi
@@ -198,23 +204,23 @@ contract CatalystDescriber is Ownable {
     /**
      * @notice Defines a new Catalyst Describer and incremenets the Catalyst version
      */
-    function add_pool_factory(address pool_factory) external onlyOwner {
-        if (pool_factory == address(0)) revert ZeroAddress(); 
+    function add_vault_factory(address vault_factory) external onlyOwner {
+        if (vault_factory == address(0)) revert ZeroAddress(); 
 
-        _vault_factories.push(pool_factory);
+        _vault_factories.push(vault_factory);
 
-        emit ModifyPoolFactory(pool_factory, true);
+        emit ModifyVaultFactory(vault_factory, true);
     }
 
     /**
      * @notice Defines a new Catalyst Describer and incremenets the Catalyst version
      */
-    function remove_pool_factory(address pool_factory, uint256 factory_index) external onlyOwner {
-        if (pool_factory == address(0)) revert ZeroAddress(); 
-        if (_vault_factories[factory_index] != pool_factory) revert InvalidIndex(pool_factory, _vault_factories[factory_index]);
+    function remove_vault_factory(address vault_factory, uint256 factory_index) external onlyOwner {
+        if (vault_factory == address(0)) revert ZeroAddress(); 
+        if (_vault_factories[factory_index] != vault_factory) revert InvalidIndex(vault_factory, _vault_factories[factory_index]);
 
         delete _vault_factories[factory_index];
 
-        emit ModifyPoolFactory(pool_factory, false);
+        emit ModifyVaultFactory(vault_factory, false);
     }
 }
