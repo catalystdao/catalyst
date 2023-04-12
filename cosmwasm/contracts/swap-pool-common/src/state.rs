@@ -4,7 +4,7 @@ use cosmwasm_schema::cw_serde;
 
 use cosmwasm_std::{Addr, Uint128, DepsMut, Env, Response, Event, MessageInfo, Deps, StdResult, CosmosMsg, to_binary, Timestamp, Storage};
 use cw20::Cw20ExecuteMsg;
-use cw_storage_plus::Map;
+use cw_storage_plus::{Map, Item};
 use cw20_base::{state::{MinterData, TokenInfo, TOKEN_INFO}, contract::execute_mint};
 use ethnum::{U256, uint};
 use fixed_point_math_lib::fixed_point_math::mul_wad_down;
@@ -13,6 +13,7 @@ use sha3::{Digest, Keccak256};
 use crate::ContractError;
 
 
+// Pool Constants
 pub const MAX_ASSETS: usize = 3;
 
 pub const DECIMALS: u8 = 18;
@@ -23,9 +24,29 @@ pub const MAX_GOVERNANCE_FEE_SHARE : u64 = 75u64 * 10000000000000000u64;        
 
 pub const DECAY_RATE: U256 = uint!("86400");    // 60*60*24
 
+
+// Pool Storage
+pub const SETUP_MASTER: Item<Option<Addr>> = Item::new("catalyst-pool-setup-master");
+pub const CHAIN_INTERFACE: Item<Option<Addr>> = Item::new("catalyst-pool-chain-interface");
+
+pub const ASSETS: Item<Vec<Addr>> = Item::new("catalyst-pool-assets");
+pub const WEIGHTS: Item<Vec<u64>> = Item::new("catalyst-pool-weights");                                 //TODO use mapping instead?
+
+pub const FEE_ADMINISTRATOR: Item<Addr> = Item::new("catalyst-pool-fee-administrator");
+pub const POOL_FEE: Item<u64> = Item::new("catalyst-pool-pool-fee");
+pub const GOVERNANCE_FEE: Item<u64> = Item::new("catalyst-pool-governance-fee");
+
+pub const POOL_CONNECTIONS: Map<(&str, Vec<u8>), bool> = Map::new("catalyst-pool-connections");         //TODO channelId and toPool types
+
+pub const TOTAL_ESCROWED_ASSETS: Map<&str, Uint128> = Map::new("catalyst-pool-escrowed-assets");        //TODO use mapping instead?
+pub const TOTAL_ESCROWED_LIQUIDITY: Item<Uint128> = Item::new("catalyst-pool-escrowed-pool-tokens");
 pub const ASSET_ESCROWS: Map<&str, String> = Map::new("catalyst-pool-asset-escrows");
 pub const LIQUIDITY_ESCROWS: Map<&str, String> = Map::new("catalyst-pool-liquidity-escrows");
-pub const CONNECTIONS: Map<(&str, Vec<u8>), bool> = Map::new("catalyst-pool-connections");   //TODO channelId and toPool types
+
+pub const MAX_LIMIT_CAPACITY: Item<U256> = Item::new("catalyst-pool-max-limit-capacity");
+pub const USED_LIMIT_CAPACITY: Item<U256> = Item::new("catalyst-pool-used-limit-capacity");
+pub const USED_LIMIT_CAPACITY_TIMESTAMP: Item<u64> = Item::new("catalyst-pool-used-limit-capacity-timestamp");
+
 
 // TODO move to utils/similar?
 fn calc_keccak256(message: Vec<u8>) -> String {
@@ -35,950 +56,712 @@ fn calc_keccak256(message: Vec<u8>) -> String {
 }
 
 
-pub trait CatalystV1PoolState: Sized {
+// TODO replace with implementation
+fn factory_owner() -> String {
+    todo!()
+}
 
-    // State access functions
 
-    fn new_unsafe() -> Self;
+pub fn get_asset_index(assets: &Vec<Addr>, asset: &str) -> Result<usize, ContractError> {
+    assets
+        .iter()
+        .enumerate()
+        .find_map(|(index, a): (usize, &Addr)| if *a == asset { Some(index) } else { None })
+        .ok_or(ContractError::InvalidAssets {})
+}
 
-    fn load_state(store: &dyn Storage) -> StdResult<Self>;
-    fn save_state(self, store: &mut dyn Storage) -> StdResult<()>;
 
-    fn factory(&self) -> &Addr;
-    fn factory_owner(&self) -> &Addr;
+pub fn only_local(deps: &Deps) -> StdResult<bool> {
 
-    fn setup_master(&self) -> &Option<Addr>;
-    fn setup_master_mut(&mut self) -> &mut Option<Addr>;
-
-    fn chain_interface(&self) -> &Option<Addr>;
-    fn chain_interface_mut(&mut self) -> &mut Option<Addr>;
-
-    fn assets(&self) -> &Vec<Addr>;
-    fn assets_mut(&mut self) -> &mut Vec<Addr>;
-
-    fn weights(&self) -> &Vec<u64>;
-    fn weights_mut(&mut self) -> &mut Vec<u64>;
-
-    fn amplification(&self) -> &u64;
-    fn amplification_mut(&mut self) -> &mut u64;
-
-    fn fee_administrator(&self) -> &Addr;
-    fn fee_administrator_mut(&mut self) -> &mut Addr;
-
-    fn pool_fee(&self) -> &u64;
-    fn pool_fee_mut(&mut self) -> &mut u64;
-
-    fn governance_fee(&self) -> &u64;
-    fn governance_fee_mut(&mut self) -> &mut u64;
-
-    fn escrowed_assets(&self) -> &Vec<Uint128>;
-    fn escrowed_assets_mut(&mut self) -> &mut Vec<Uint128>;
-
-    fn escrowed_pool_tokens(&self) -> &Uint128;
-    fn escrowed_pool_tokens_mut(&mut self) -> &mut Uint128;
-
-    fn max_limit_capacity(&self) -> &U256;           // TODO EVM mismatch (name maxUnitCapacity)
-    fn max_limit_capacity_mut(&mut self) -> &mut U256;
-
-    fn used_limit_capacity(&self) -> &U256;          // TODO EVM mismatch (name usedUnitCapacity)
-    fn used_limit_capacity_mut(&mut self) -> &mut U256;
-
-    fn used_limit_capacity_timestamp(&self) -> &u64;
-    fn used_limit_capacity_timestamp_mut(&mut self) -> &mut u64;
-
-
-
-    // Default implementations
-
-    fn get_asset_index(&self, asset: &str) -> Result<usize, ContractError> {
-        self.assets()
-            .iter()
-            .enumerate()
-            .find_map(|(index, a): (usize, &Addr)| if *a == asset { Some(index) } else { None })
-            .ok_or(ContractError::InvalidAssets {})
-    }
-
-
-    fn only_local(deps: Deps) -> StdResult<bool> {
-    
-        let state = Self::load_state(deps.storage)?;
-
-        Ok(state.chain_interface().is_none())
-    }
-
-
-    fn ready(deps: Deps) -> StdResult<bool> {
-    
-        let state = Self::load_state(deps.storage)?;
-
-        Ok(state.setup_master().is_none() && state.assets().len() > 0)
-    }
-
-    
-    //TODO move these somewhere else? (Note both update_unit_capacity and get_unit_capacity (in Derived) depend on calc_unit_capacity)
-    fn calc_unit_capacity(
-        &self,
-        time: Timestamp
-    ) -> Result<U256, ContractError> {
-
-        let max_limit_capacity = *self.max_limit_capacity();
-        let used_limit_capacity = *self.used_limit_capacity();
-
-        let released_limit_capacity = max_limit_capacity
-            .checked_mul(
-                U256::from(time.minus_nanos(*self.used_limit_capacity_timestamp()).seconds())  //TODO use seconds instead of nanos (overflow wise)
-            ).ok_or(ContractError::ArithmeticError {})?   //TODO error
-            .div(DECAY_RATE);
-
-            if used_limit_capacity <= released_limit_capacity {
-                return Ok(max_limit_capacity);
-            }
-
-            if max_limit_capacity <= used_limit_capacity - released_limit_capacity {
-                return Ok(U256::ZERO);
-            }
-
-            Ok(
-                max_limit_capacity
-                    .checked_add(released_limit_capacity).ok_or(ContractError::ArithmeticError {})?
-                    .sub(used_limit_capacity)
-            )
-
-    }
-
-    fn update_unit_capacity(
-        &mut self,
-        current_time: Timestamp,
-        units: U256
-    ) -> Result<(), ContractError> {
-
-        //TODO EVM mismatch
-        let capacity = self.calc_unit_capacity(current_time)?;
-
-        if units > capacity {
-            return Err(ContractError::SecurityLimitExceeded { units, capacity });
-        }
-
-        let used_limit_capacity_timestamp = self.used_limit_capacity_timestamp_mut();
-        *used_limit_capacity_timestamp = current_time.nanos();
-
-        let used_limit_capacity = self.used_limit_capacity_mut();
-        *used_limit_capacity = capacity - units;
-
-        Ok(())
-    }
-
-
-    fn total_supply(deps: Deps) -> Result<Uint128, ContractError> {
-        let info = TOKEN_INFO.load(deps.storage)?;
-        Ok(info.total_supply)
-    }
-
-
-}    
-
-
-
-pub trait CatalystV1PoolAdministration: CatalystV1PoolState {
-
-    //TODO provide a basic default implementation?
-    fn initialize_swap_curves(
-        deps: DepsMut,
-        env: Env,
-        info: MessageInfo,
-        assets: Vec<String>,
-        assets_balances: Vec<Uint128>,  //TODO EVM MISMATCH
-        weights: Vec<u64>,
-        amp: u64,
-        depositor: String
-    ) -> Result<Response, ContractError>;
-
-
-    fn finish_setup(
-        deps: &mut DepsMut,
-        info: MessageInfo
-    ) -> Result<Response, ContractError> {
-
-        let mut state = Self::load_state(deps.storage)?;
-
-        let setup_master = state.setup_master_mut();
-
-        if *setup_master != Some(info.sender) {
-            return Err(ContractError::Unauthorized {})
-        }
-
-        *setup_master = None;
-        state.save_state(deps.storage)?;
-
-        Ok(Response::new())
-    }
-
-    
-    fn set_connection(
-        deps: &mut DepsMut,
-        info: MessageInfo,
-        channel_id: String,
-        to_pool: Vec<u8>,
-        state: bool
-    ) -> Result<Response, ContractError> {
-        let pool_state = Self::load_state(deps.storage)?;
-
-        if *pool_state.setup_master() != Some(info.sender) {   // TODO check also for factory owner
-            return Err(ContractError::Unauthorized {});
-        }
-
-        CONNECTIONS.save(deps.storage, (channel_id.as_str(), to_pool.clone()), &state)?;
-
-        Ok(
-            Response::new()
-                .add_attribute("channel_id", channel_id)
-                .add_attribute("to_pool",  format!("{:x?}", to_pool))
-                .add_attribute("state", state.to_string())
-        )
-    }
-
-
-    fn is_connected(
-        deps: &Deps,
-        channel_id: &str,
-        to_pool: Vec<u8>
-    ) -> bool {
-
-        CONNECTIONS
-            .load(deps.storage, (channel_id, to_pool))
-            .unwrap_or(false)
-
-    }
-
-
-
-    fn set_fee_administrator_unchecked(
-        &mut self,
-        deps: &DepsMut,
-        administrator: &str
-    ) -> Result<Event, ContractError> {
-
-        let fee_administrator = self.fee_administrator_mut();
-        *fee_administrator = deps.api.addr_validate(administrator)?;
-
-        return Ok(
-            Event::new(String::from("SetFeeAdministrator"))
-                .add_attribute("administrator", administrator)
-        )
-    }
-
-    fn set_fee_administrator(
-        deps: &mut DepsMut,
-        info: MessageInfo,
-        administrator: String
-    ) -> Result<Response, ContractError> {
-        let mut state = Self::load_state(deps.storage)?;
-
-        //TODO verify sender is factory owner
-
-        let event = state.set_fee_administrator_unchecked(deps, administrator.as_str())?;
-
-        state.save_state(deps.storage)?;
-
-        Ok(Response::new().add_event(event))
-    }
-
-
-
-    fn set_pool_fee_unchecked(
-        &mut self,
-        fee: u64
-    ) -> Result<Event, ContractError> {
-
-        if fee > MAX_POOL_FEE_SHARE {
-            return Err(
-                ContractError::InvalidPoolFee { requested_fee: fee, max_fee: MAX_POOL_FEE_SHARE }
-            )
-        }
-
-        let pool_fee = self.pool_fee_mut();
-        *pool_fee = fee;
-
-        return Ok(
-            Event::new(String::from("SetPoolFee"))
-                .add_attribute("fee", fee.to_string())
-        )
-    }
-
-    fn set_pool_fee(
-        deps: &mut DepsMut,
-        info: MessageInfo,
-        fee: u64
-    ) -> Result<Response, ContractError> {
-        let mut state = Self::load_state(deps.storage)?;
-
-        if info.sender != *state.fee_administrator() {
-            return Err(ContractError::Unauthorized {})
-        }
-
-        let event = state.set_pool_fee_unchecked(fee)?;
-
-        state.save_state(deps.storage)?;
-
-        Ok(Response::new().add_event(event))
-    }
-
-
-
-    fn set_governance_fee_unchecked(
-        &mut self,
-        fee: u64
-    ) -> Result<Event, ContractError> {
-
-        if fee > MAX_GOVERNANCE_FEE_SHARE {
-            return Err(
-                ContractError::InvalidGovernanceFee { requested_fee: fee, max_fee: MAX_GOVERNANCE_FEE_SHARE }
-            )
-        }
-
-        let governance_fee = self.governance_fee_mut();
-        *governance_fee = fee;
-
-        return Ok(
-            Event::new(String::from("SetGovernanceFee"))
-                .add_attribute("fee", fee.to_string())
-        )
-    }
-
-    fn set_governance_fee(
-        deps: &mut DepsMut,
-        info: MessageInfo,
-        fee: u64
-    ) -> Result<Response, ContractError> {
-        let mut state = Self::load_state(deps.storage)?;
-
-        if info.sender != *state.fee_administrator() {
-            return Err(ContractError::Unauthorized {})
-        }
-
-        let event = state.set_governance_fee_unchecked(fee)?;
-
-        state.save_state(deps.storage)?;
-
-        Ok(Response::new().add_event(event))
-    }
-
-    fn collect_governance_fee_message(
-        &self,
-        env: Env,
-        asset: String,
-        pool_fee_amount: Uint128
-    ) -> Result<CosmosMsg, ContractError> {
-
-        let gov_fee_amount: Uint128 = mul_wad_down(
-            U256::from(pool_fee_amount.u128()),
-            U256::from(self.governance_fee().clone())
-        )?.as_u128().into();     //TODO unsafe as_u128 casting
-
-        Ok(CosmosMsg::Wasm(
-            cosmwasm_std::WasmMsg::Execute {
-                contract_addr: asset,
-                msg: to_binary(&Cw20ExecuteMsg::TransferFrom {
-                    owner: env.contract.address.to_string(),
-                    recipient: self.factory_owner().to_string(),
-                    amount: gov_fee_amount
-                })?,
-                funds: vec![]
-            }
-        ))
-        
-    }
+    Ok(CHAIN_INTERFACE.load(deps.storage)?.is_none())
 
 }
 
 
+pub fn ready(deps: &Deps) -> StdResult<bool> {
 
-pub trait CatalystV1PoolPermissionless: CatalystV1PoolState + CatalystV1PoolAdministration {
+    let setup_master = SETUP_MASTER.load(deps.storage)?;
+    let assets = ASSETS.load(deps.storage)?;
 
-    //TODO merge setup and initializeSwapCurves?
-    fn setup(
-        deps: &mut DepsMut,
-        env: &Env,
-        name: String,
-        symbol: String,
-        chain_interface: Option<String>,
-        pool_fee: u64,
-        governance_fee: u64,
-        fee_administrator: String,
-        setup_master: String,
-    ) -> Result<Response, ContractError> {
+    Ok(setup_master.is_none() && assets.len() > 0)
 
-        let mut state = Self::new_unsafe();
+}
 
-        let setup_master_state = state.setup_master_mut();
-        *setup_master_state = Some(deps.api.addr_validate(&setup_master)?);
+
+pub fn calc_unit_capacity(
+    deps: &Deps,
+    time: Timestamp
+) -> Result<U256, ContractError> {
+
+    let max_limit_capacity = MAX_LIMIT_CAPACITY.load(deps.storage)?;
+    let used_limit_capacity = USED_LIMIT_CAPACITY.load(deps.storage)?;
+    let used_limit_capacity_timestamp = USED_LIMIT_CAPACITY_TIMESTAMP.load(deps.storage)?;
+
+    let released_limit_capacity = max_limit_capacity
+        .checked_mul(
+            U256::from(time.minus_nanos(used_limit_capacity_timestamp).seconds())  //TODO use seconds instead of nanos (overflow wise)
+        ).ok_or(ContractError::ArithmeticError {})?   //TODO error
+        .div(DECAY_RATE);
+
+        if used_limit_capacity <= released_limit_capacity {
+            return Ok(max_limit_capacity);
+        }
+
+        if max_limit_capacity <= used_limit_capacity - released_limit_capacity {
+            return Ok(U256::ZERO);
+        }
+
+        Ok(
+            max_limit_capacity
+                .checked_add(released_limit_capacity).ok_or(ContractError::ArithmeticError {})?
+                .sub(used_limit_capacity)
+        )
+
+}
+
+
+pub fn update_unit_capacity(
+    deps: &mut DepsMut,
+    current_time: Timestamp,
+    units: U256
+) -> Result<(), ContractError> {
+
+    //TODO EVM mismatch
+    let capacity = calc_unit_capacity(&deps.as_ref(), current_time)?;
+
+    if units > capacity {
+        return Err(ContractError::SecurityLimitExceeded { units, capacity });
+    }
+
+    let new_capacity = capacity - units;
+    let timestamp = current_time.nanos();
+
+    USED_LIMIT_CAPACITY.save(deps.storage, &new_capacity)?;
+    USED_LIMIT_CAPACITY_TIMESTAMP.save(deps.storage, &timestamp)?;
+
+    Ok(())
+}
+
+
+pub fn total_supply(deps: Deps) -> Result<Uint128, ContractError> {
+    let info = TOKEN_INFO.load(deps.storage)?;
+    Ok(info.total_supply)
+}
+
+
+pub fn finish_setup(
+    deps: &mut DepsMut,
+    info: MessageInfo
+) -> Result<Response, ContractError> {
+
+    let setup_master = SETUP_MASTER.load(deps.storage)?;
+
+    if setup_master != Some(info.sender) {
+        return Err(ContractError::Unauthorized {})
+    }
+
+    SETUP_MASTER.save(deps.storage, &None)?;
+
+    Ok(Response::new())
+}
+
     
-        let chain_interface_state = state.chain_interface_mut();
-        *chain_interface_state = match chain_interface {
+pub fn set_connection(
+    deps: &mut DepsMut,
+    info: MessageInfo,
+    channel_id: String,
+    to_pool: Vec<u8>,
+    state: bool
+) -> Result<Response, ContractError> {
+
+    let setup_master = SETUP_MASTER.load(deps.storage)?;
+
+    if setup_master != Some(info.sender) {   // TODO check also for factory owner
+        return Err(ContractError::Unauthorized {});
+    }
+
+    POOL_CONNECTIONS.save(deps.storage, (channel_id.as_str(), to_pool.clone()), &state)?;
+
+    Ok(
+        Response::new()
+            .add_attribute("channel_id", channel_id)
+            .add_attribute("to_pool",  format!("{:x?}", to_pool))
+            .add_attribute("state", state.to_string())
+    )
+}
+
+
+pub fn is_connected(
+    deps: &Deps,
+    channel_id: &str,
+    to_pool: Vec<u8>
+) -> bool {
+
+    POOL_CONNECTIONS
+        .load(deps.storage, (channel_id, to_pool))
+        .unwrap_or(false)
+
+}
+
+
+pub fn set_fee_administrator_unchecked(
+    deps: &mut DepsMut,
+    administrator: &str
+) -> Result<Event, ContractError> {
+
+    FEE_ADMINISTRATOR.save(
+        deps.storage,
+        &deps.api.addr_validate(administrator)?
+    )?;
+
+    return Ok(
+        Event::new(String::from("SetFeeAdministrator"))
+            .add_attribute("administrator", administrator)
+    )
+}
+
+
+pub fn set_pool_fee_unchecked(
+    deps: &mut DepsMut,
+    fee: u64
+) -> Result<Event, ContractError> {
+
+    if fee > MAX_POOL_FEE_SHARE {
+        return Err(
+            ContractError::InvalidPoolFee { requested_fee: fee, max_fee: MAX_POOL_FEE_SHARE }
+        )
+    }
+
+    POOL_FEE.save(deps.storage, &fee)?;
+
+    return Ok(
+        Event::new(String::from("SetPoolFee"))
+            .add_attribute("fee", fee.to_string())
+    )
+}
+
+
+pub fn set_pool_fee(
+    deps: &mut DepsMut,
+    info: MessageInfo,
+    fee: u64
+) -> Result<Response, ContractError> {
+
+    let fee_administrator = FEE_ADMINISTRATOR.load(deps.storage)?;
+
+    if info.sender != fee_administrator {
+        return Err(ContractError::Unauthorized {})
+    }
+
+    let event = set_pool_fee_unchecked(deps, fee)?;
+
+    Ok(Response::new().add_event(event))
+}
+
+
+pub fn set_governance_fee_unchecked(
+    deps: &mut DepsMut,
+    fee: u64
+) -> Result<Event, ContractError> {
+
+    if fee > MAX_GOVERNANCE_FEE_SHARE {
+        return Err(
+            ContractError::InvalidGovernanceFee { requested_fee: fee, max_fee: MAX_GOVERNANCE_FEE_SHARE }
+        )
+    }
+
+    GOVERNANCE_FEE.save(deps.storage, &fee)?;
+
+    return Ok(
+        Event::new(String::from("SetGovernanceFee"))
+            .add_attribute("fee", fee.to_string())
+    )
+}
+
+
+pub fn set_governance_fee(
+    deps: &mut DepsMut,
+    info: MessageInfo,
+    fee: u64
+) -> Result<Response, ContractError> {
+
+    let fee_administrator = FEE_ADMINISTRATOR.load(deps.storage)?;
+
+    if info.sender != fee_administrator {
+        return Err(ContractError::Unauthorized {})
+    }
+
+    let event = set_governance_fee_unchecked(deps, fee)?;
+
+    Ok(Response::new().add_event(event))
+}
+
+
+pub fn collect_governance_fee_message(
+    deps: &Deps,
+    env: Env,
+    asset: String,
+    pool_fee_amount: Uint128
+) -> Result<CosmosMsg, ContractError> {
+
+    let gov_fee_amount: Uint128 = mul_wad_down(
+        U256::from(pool_fee_amount.u128()),
+        U256::from(GOVERNANCE_FEE.load(deps.storage)?)
+    )?.as_u128().into();     //TODO unsafe as_u128 casting
+
+    Ok(CosmosMsg::Wasm(
+        cosmwasm_std::WasmMsg::Execute {
+            contract_addr: asset,
+            msg: to_binary(&Cw20ExecuteMsg::TransferFrom {
+                owner: env.contract.address.to_string(),
+                recipient: factory_owner().to_string(),
+                amount: gov_fee_amount
+            })?,
+            funds: vec![]
+        }
+    ))
+    
+}
+
+
+pub fn set_fee_administrator(
+    deps: &mut DepsMut,
+    _info: MessageInfo,
+    administrator: String
+) -> Result<Response, ContractError> {
+
+    //TODO verify sender is factory owner
+
+    let event = set_fee_administrator_unchecked(deps, administrator.as_str())?;
+
+    Ok(Response::new().add_event(event))
+}
+
+
+//TODO merge setup and initializeSwapCurves?
+pub fn setup(
+    deps: &mut DepsMut,
+    env: &Env,
+    name: String,
+    symbol: String,
+    chain_interface: Option<String>,
+    pool_fee: u64,
+    governance_fee: u64,
+    fee_administrator: String,
+    setup_master: String,
+) -> Result<Response, ContractError> {
+
+    SETUP_MASTER.save(
+        deps.storage,
+        &Some(deps.api.addr_validate(&setup_master)?)
+    )?;
+    
+    CHAIN_INTERFACE.save(
+        deps.storage,
+        &match chain_interface {
             Some(chain_interface) => Some(deps.api.addr_validate(&chain_interface)?),
             None => None
-        };
+        }
+    )?;
 
 
-        let admin_fee_event = state.set_fee_administrator_unchecked(deps, fee_administrator.as_str())?;
-        let pool_fee_event = state.set_pool_fee_unchecked(pool_fee)?;
-        let gov_fee_event = state.set_governance_fee_unchecked(governance_fee)?;
+    let admin_fee_event = set_fee_administrator_unchecked(deps, fee_administrator.as_str())?;
+    let pool_fee_event = set_pool_fee_unchecked(deps, pool_fee)?;
+    let gov_fee_event = set_governance_fee_unchecked(deps, governance_fee)?;
 
-        state.save_state(deps.storage)?;
+    // Setup the Pool Token (store token info using cw20-base format)
+    let data = TokenInfo {
+        name,
+        symbol,
+        decimals: DECIMALS,
+        total_supply: Uint128::zero(),
+        mint: Some(MinterData {
+            minter: env.contract.address.clone(),  // Set self as minter
+            cap: None
+        })
+    };
+    TOKEN_INFO.save(deps.storage, &data)?;
 
-        // Setup the Pool Token (store token info using cw20-base format)
-        let data = TokenInfo {
-            name,
-            symbol,
-            decimals: DECIMALS,
-            total_supply: Uint128::zero(),
-            mint: Some(MinterData {
-                minter: env.contract.address.clone(),  // Set self as minter
-                cap: None
-            })
-        };
-        TOKEN_INFO.save(deps.storage, &data)?;
+    Ok(
+        Response::new()
+            .add_event(admin_fee_event)
+            .add_event(pool_fee_event)
+            .add_event(gov_fee_event)
+    )
+}
 
-        Ok(
-            Response::new()
-                .add_event(admin_fee_event)
-                .add_event(pool_fee_event)
-                .add_event(gov_fee_event)
-        )
-    }
 
-    fn deposit_mixed(
-        deps: &mut DepsMut,
-        env: Env,
-        info: MessageInfo,
-        deposit_amounts: Vec<Uint128>,  //TODO EVM MISMATCH
-        min_out: Uint128
-    ) -> Result<Response, ContractError>;
+pub fn get_unit_capacity(
+    deps: &Deps,
+    env: Env
+) -> Result<U256, ContractError> {
 
-    fn withdraw_all(        //TODO withdraw_mixed?
-        deps: &mut DepsMut,
-        env: Env,
-        info: MessageInfo,
-        pool_tokens: Uint128,
-        min_out: Vec<Uint128>,
-    ) -> Result<Response, ContractError>;
-
-    fn withdraw_mixed(
-        deps: &mut DepsMut,
-        env: Env,
-        info: MessageInfo,
-        pool_tokens: Uint128,
-        withdraw_ratio: Vec<u64>,   //TODO type
-        min_out: Vec<Uint128>,
-    ) -> Result<Response, ContractError>;
-
-    fn local_swap(
-        deps: &Deps,
-        env: Env,
-        info: MessageInfo,
-        from_asset: String,
-        to_asset: String,
-        amount: Uint128,
-        min_out: Uint128
-    ) -> Result<Response, ContractError>;
-
-    fn send_asset(
-        deps: &mut DepsMut,
-        env: Env,
-        info: MessageInfo,
-        channel_id: String,
-        to_pool: Vec<u8>,
-        to_account: Vec<u8>,
-        from_asset: String,
-        to_asset_index: u8,
-        amount: Uint128,
-        min_out: U256,
-        fallback_account: String,   //TODO EVM mismatch
-        calldata: Vec<u8>
-    ) -> Result<Response, ContractError>;
-
-    fn receive_asset(
-        deps: &mut DepsMut,
-        env: Env,
-        info: MessageInfo,
-        channel_id: String,
-        from_pool: Vec<u8>,
-        to_asset_index: u8,
-        to_account: String,
-        u: U256,
-        min_out: Uint128,
-        swap_hash: Vec<u8>,
-        calldata: Vec<u8>
-    ) -> Result<Response, ContractError>;
-
-    fn send_liquidity(
-        deps: &mut DepsMut,
-        env: Env,
-        info: MessageInfo,
-        channel_id: String,
-        to_pool: Vec<u8>,
-        to_account: Vec<u8>,
-        amount: Uint128,            //TODO EVM mismatch
-        min_out: U256,
-        fallback_account: String,   //TODO EVM mismatch
-        calldata: Vec<u8>
-    ) -> Result<Response, ContractError>;
-
-    fn receive_liquidity(
-        deps: &mut DepsMut,
-        env: Env,
-        info: MessageInfo,
-        channel_id: String,
-        from_pool: Vec<u8>,
-        to_account: String,
-        u: U256,
-        min_out: Uint128,
-        swap_hash: Vec<u8>,
-        calldata: Vec<u8>   //TODO calldata
-    ) -> Result<Response, ContractError>;
+    calc_unit_capacity(deps, env.block.time)
 
 }
 
 
+pub fn create_asset_escrow(
+    deps: &mut DepsMut,
+    send_asset_hash: &str,
+    amount: Uint128,
+    asset: &str,
+    fallback_account: String
+) -> Result<(), ContractError> {
 
-pub trait CatalystV1PoolDerived: CatalystV1PoolState {
-
-    //TODO depend directly on self
-    fn get_unit_capacity(
-        deps: Deps,
-        env: Env
-    ) -> Result<U256, ContractError> {
-
-        let state = Self::load_state(deps.storage)?;
-
-        state.calc_unit_capacity(env.block.time)
+    if ASSET_ESCROWS.has(deps.storage, send_asset_hash) {
+        return Err(ContractError::Unauthorized {});
     }
 
-    fn calc_send_asset(
-        &self,
-        deps: Deps,
-        env: Env,
-        from_asset: &str,
-        amount: Uint128
-    ) -> Result<U256, ContractError>;
+    ASSET_ESCROWS.save(deps.storage, send_asset_hash, &fallback_account)?;
 
-    fn calc_receive_asset(
-        &self,
-        deps: Deps,
-        env: Env,
-        to_asset: &str,
-        u: U256
-    ) -> Result<Uint128, ContractError>;
+    let escrowed_assets = TOTAL_ESCROWED_ASSETS.load(deps.storage, asset)?;
+    TOTAL_ESCROWED_ASSETS.save(deps.storage, asset, &escrowed_assets.checked_add(amount)?)?;
 
-    fn calc_local_swap(
-        &self,
-        deps: Deps,
-        env: Env,
-        from_asset: &str,
-        to_asset: &str,
-        amount: Uint128
-    ) -> Result<Uint128, ContractError>;
+    Ok(())
+}
+
+
+pub fn create_liquidity_escrow(
+    deps: &mut DepsMut,
+    send_liquidity_hash: &str,
+    amount: Uint128,
+    fallback_account: String
+) -> Result<(), ContractError> {
+
+    if LIQUIDITY_ESCROWS.has(deps.storage, send_liquidity_hash) {
+        return Err(ContractError::Unauthorized {});
+    }
+
+    LIQUIDITY_ESCROWS.save(deps.storage, send_liquidity_hash, &fallback_account)?;
+
+    let escrowed_pool_tokens = TOTAL_ESCROWED_LIQUIDITY.load(deps.storage)?;
+    TOTAL_ESCROWED_LIQUIDITY.save(deps.storage, &escrowed_pool_tokens.checked_add(amount)?)?;
+
+    Ok(())
+}
+
+
+pub fn release_asset_escrow(
+    deps: &mut DepsMut,
+    send_asset_hash: &str,
+    amount: Uint128,
+    asset: &str
+) -> Result<String, ContractError> {
+
+    let fallback_account = ASSET_ESCROWS.load(deps.storage, send_asset_hash)?;
+    ASSET_ESCROWS.remove(deps.storage, send_asset_hash);
+
+    let escrowed_assets = TOTAL_ESCROWED_ASSETS.load(deps.storage, asset)?;
+    TOTAL_ESCROWED_ASSETS.save(deps.storage, asset, &(escrowed_assets - amount))?;        // Safe, as 'amount' is always contained in 'escrowed_assets'
+
+    Ok(fallback_account)
+}
+
+
+pub fn release_liquidity_escrow(
+    deps: &mut DepsMut,
+    send_liquidity_hash: &str,
+    amount: Uint128
+) -> Result<String, ContractError> {
+
+    let fallback_account = LIQUIDITY_ESCROWS.load(deps.storage, send_liquidity_hash)?;
+    LIQUIDITY_ESCROWS.remove(deps.storage, send_liquidity_hash);
+
+    let escrowed_pool_tokens = TOTAL_ESCROWED_LIQUIDITY.load(deps.storage)?;
+    TOTAL_ESCROWED_LIQUIDITY.save(deps.storage, &(escrowed_pool_tokens - amount))?;     // Safe, as 'amount' is always contained in 'escrowed_assets'
+
+    Ok(fallback_account)
+}
+
+
+pub fn on_send_asset_ack(
+    deps: &mut DepsMut,
+    info: MessageInfo,
+    to_account: Vec<u8>,
+    u: U256,
+    amount: Uint128,
+    asset: String,
+    block_number_mod: u32
+) -> Result<Response, ContractError> {
+
+    if Some(info.sender) != CHAIN_INTERFACE.load(deps.storage)? {
+        return Err(ContractError::Unauthorized {})
+    }
+
+    let send_asset_hash = compute_send_asset_hash(
+        to_account.as_slice(),
+        u,
+        amount,
+        asset.as_str(),
+        block_number_mod
+    );
+
+    release_asset_escrow(deps, &send_asset_hash, amount, &asset)?;
+
+    Ok(
+        Response::new()
+            .add_attribute("swap_hash", send_asset_hash)
+    )
+}
+
+
+pub fn send_asset_ack(
+    deps: &mut DepsMut,
+    info: MessageInfo,
+    to_account: Vec<u8>,
+    u: U256,
+    amount: Uint128,
+    asset: String,
+    block_number_mod: u32
+) -> Result<Response, ContractError> {
+
+    on_send_asset_ack(
+        deps,
+        info,
+        to_account,
+        u,
+        amount,
+        asset,
+        block_number_mod
+    )
+}
+
+
+pub fn on_send_asset_timeout(
+    deps: &mut DepsMut,
+    env: Env,
+    info: MessageInfo,
+    to_account: Vec<u8>,
+    u: U256,
+    amount: Uint128,
+    asset: String,
+    block_number_mod: u32
+) -> Result<Response, ContractError> {
+
+    if Some(info.sender) != CHAIN_INTERFACE.load(deps.storage)? {
+        return Err(ContractError::Unauthorized {})
+    }
+
+    let send_asset_hash = compute_send_asset_hash(
+        to_account.as_slice(),
+        u,
+        amount,
+        asset.as_str(),
+        block_number_mod
+    );
+
+    let fallback_address = release_asset_escrow(deps, &send_asset_hash, amount, &asset)?;
+
+    // Transfer escrowed asset to fallback user
+    let transfer_msg: CosmosMsg = CosmosMsg::Wasm(
+        cosmwasm_std::WasmMsg::Execute {
+            contract_addr: asset.to_string(),
+            msg: to_binary(&Cw20ExecuteMsg::TransferFrom {
+                owner: env.contract.address.to_string(),
+                recipient: fallback_address,
+                amount
+            })?,
+            funds: vec![]
+        }
+    );
+
+    Ok(
+        Response::new()
+            .add_message(transfer_msg)
+            .add_attribute("swap_hash", send_asset_hash)
+    )
+}
+
+
+pub fn send_asset_timeout(
+    deps: &mut DepsMut,
+    env: Env,
+    info: MessageInfo,
+    to_account: Vec<u8>,
+    u: U256,
+    amount: Uint128,
+    asset: String,
+    block_number_mod: u32
+) -> Result<Response, ContractError> {
+
+    on_send_asset_timeout(
+        deps,
+        env,
+        info,
+        to_account,
+        u,
+        amount,
+        asset,
+        block_number_mod
+    )
 
 }
 
 
+pub fn on_send_liquidity_ack(
+    deps: &mut DepsMut,
+    info: MessageInfo,
+    to_account: Vec<u8>,
+    u: U256,
+    amount: Uint128,
+    block_number_mod: u32
+) -> Result<Response, ContractError> {
 
-pub trait CatalystV1PoolAckTimeout: CatalystV1PoolState + CatalystV1PoolAdministration {
-
-    fn create_asset_escrow(
-        &mut self,
-        deps: &mut DepsMut,
-        send_asset_hash: &str,
-        amount: Uint128,
-        asset: &str,
-        fallback_account: String
-    ) -> Result<(), ContractError> {
-
-        if ASSET_ESCROWS.has(deps.storage, send_asset_hash) {
-            return Err(ContractError::Unauthorized {});
-        }
-
-        ASSET_ESCROWS.save(deps.storage, send_asset_hash, &fallback_account)?;
-
-        let asset_index = self.get_asset_index(asset)?;
-        let escrowed_assets = self.escrowed_assets_mut();
-        escrowed_assets[asset_index] = escrowed_assets[asset_index].checked_add(amount)?;
-
-        Ok(())
+    if Some(info.sender) != CHAIN_INTERFACE.load(deps.storage)? {
+        return Err(ContractError::Unauthorized {})
     }
 
-    fn create_liquidity_escrow(
-        &mut self,
-        deps: &mut DepsMut,
-        send_liquidity_hash: &str,
-        amount: Uint128,
-        fallback_account: String
-    ) -> Result<(), ContractError> {
+    let send_liquidity_hash = compute_send_liquidity_hash(
+        to_account.as_slice(),
+        u,
+        amount,
+        block_number_mod
+    );
 
-        if LIQUIDITY_ESCROWS.has(deps.storage, send_liquidity_hash) {
-            return Err(ContractError::Unauthorized {});
-        }
+    release_liquidity_escrow(deps, &send_liquidity_hash, amount)?;
 
-        LIQUIDITY_ESCROWS.save(deps.storage, send_liquidity_hash, &fallback_account)?;
+    Ok(
+        Response::new()
+            .add_attribute("swap_hash", send_liquidity_hash)
+    )
+}
 
-        let escrowed_pool_tokens = self.escrowed_pool_tokens_mut();
-        *escrowed_pool_tokens = escrowed_pool_tokens.checked_add(amount)?;
 
-        Ok(())
+pub fn send_liquidity_ack(
+    deps: &mut DepsMut,
+    info: MessageInfo,
+    to_account: Vec<u8>,
+    u: U256,
+    amount: Uint128,
+    block_number_mod: u32
+) -> Result<Response, ContractError> {
+
+    on_send_liquidity_ack(
+        deps,
+        info,
+        to_account,
+        u,
+        amount,
+        block_number_mod
+    )
+
+}
+
+
+pub fn on_send_liquidity_timeout(
+    deps: &mut DepsMut,
+    env: Env,
+    info: MessageInfo,
+    to_account: Vec<u8>,
+    u: U256,
+    amount: Uint128,
+    block_number_mod: u32
+) -> Result<Response, ContractError> {
+
+    if Some(info.sender) != CHAIN_INTERFACE.load(deps.storage)? {
+        return Err(ContractError::Unauthorized {})
     }
 
-    fn release_asset_escrow(
-        &mut self,
-        deps: &mut DepsMut,
-        send_asset_hash: &str,
-        amount: Uint128,
-        asset: &str
-    ) -> Result<String, ContractError> {
-
-        let fallback_account = ASSET_ESCROWS.load(deps.storage, send_asset_hash)?;
-        ASSET_ESCROWS.remove(deps.storage, send_asset_hash);
-
-        let asset_index = self.get_asset_index(asset)?;
-        let escrowed_assets = self.escrowed_assets_mut();
-        escrowed_assets[asset_index] -= amount;               // Safe, as 'amount' is always contained in 'escrowed_assets'
-
-        Ok(fallback_account)
-    }
-
-
-    fn release_liquidity_escrow(
-        &mut self,
-        deps: &mut DepsMut,
-        send_liquidity_hash: &str,
-        amount: Uint128
-    ) -> Result<String, ContractError> {
-
-        let fallback_account = LIQUIDITY_ESCROWS.load(deps.storage, send_liquidity_hash)?;
-        LIQUIDITY_ESCROWS.remove(deps.storage, send_liquidity_hash);
-
-        let escrowed_pool_tokens = self.escrowed_pool_tokens_mut();
-        *escrowed_pool_tokens -= amount;               // Safe, as 'amount' is always contained in 'escrowed_assets'
-
-        Ok(fallback_account)
-    }
-
-
-
-    fn on_send_asset_ack(
-        &mut self,
-        deps: &mut DepsMut,
-        info: MessageInfo,
-        to_account: Vec<u8>,
-        u: U256,
-        amount: Uint128,
-        asset: String,
-        block_number_mod: u32
-    ) -> Result<Response, ContractError> {
-
-        if Some(info.sender) != *self.chain_interface() {
-            return Err(ContractError::Unauthorized {})
-        }
-
-        let send_asset_hash = Self::compute_send_asset_hash(
-            to_account.as_slice(),
-            u,
-            amount,
-            asset.as_str(),
-            block_number_mod
-        );
-
-        self.release_asset_escrow(deps, &send_asset_hash, amount, &asset)?;
-
-        Ok(
-            Response::new()
-                .add_attribute("swap_hash", send_asset_hash)
-        )
-    }
-
-    fn send_asset_ack(
-        deps: &mut DepsMut,
-        info: MessageInfo,
-        to_account: Vec<u8>,
-        u: U256,
-        amount: Uint128,
-        asset: String,
-        block_number_mod: u32
-    ) -> Result<Response, ContractError> {
-
-        let mut state = Self::load_state(deps.storage)?;
-
-        let response = state.on_send_asset_ack(
-            deps,
-            info,
-            to_account,
-            u,
-            amount,
-            asset,
-            block_number_mod
-        )?;
-
-        state.save_state(deps.storage)?;
-
-        Ok(response)
-    }
-
-
-
-    fn on_send_asset_timeout(
-        &mut self,
-        deps: &mut DepsMut,
-        env: Env,
-        info: MessageInfo,
-        to_account: Vec<u8>,
-        u: U256,
-        amount: Uint128,
-        asset: String,
-        block_number_mod: u32
-    ) -> Result<Response, ContractError> {
-
-        if Some(info.sender) != *self.chain_interface() {
-            return Err(ContractError::Unauthorized {})
-        }
-
-        let send_asset_hash = Self::compute_send_asset_hash(
-            to_account.as_slice(),
-            u,
-            amount,
-            asset.as_str(),
-            block_number_mod
-        );
-
-        let fallback_address = self.release_asset_escrow(deps, &send_asset_hash, amount, &asset)?;
-
-        // Transfer escrowed asset to fallback user
-        let transfer_msg: CosmosMsg = CosmosMsg::Wasm(
-            cosmwasm_std::WasmMsg::Execute {
-                contract_addr: asset.to_string(),
-                msg: to_binary(&Cw20ExecuteMsg::TransferFrom {
-                    owner: env.contract.address.to_string(),
-                    recipient: fallback_address,
-                    amount
-                })?,
-                funds: vec![]
-            }
-        );
-
-        Ok(
-            Response::new()
-                .add_message(transfer_msg)
-                .add_attribute("swap_hash", send_asset_hash)
-        )
-    }
-
-    fn send_asset_timeout(
-        deps: &mut DepsMut,
-        env: Env,
-        info: MessageInfo,
-        to_account: Vec<u8>,
-        u: U256,
-        amount: Uint128,
-        asset: String,
-        block_number_mod: u32
-    ) -> Result<Response, ContractError> {
-
-        let mut state = Self::load_state(deps.storage)?;
-
-        let response = state.on_send_asset_timeout(
-            deps,
-            env,
-            info,
-            to_account,
-            u,
-            amount,
-            asset,
-            block_number_mod
-        )?;
-
-        state.save_state(deps.storage)?;
-
-        Ok(response)
-    }
-
-
-
-    fn on_send_liquidity_ack(
-        &mut self,
-        deps: &mut DepsMut,
-        info: MessageInfo,
-        to_account: Vec<u8>,
-        u: U256,
-        amount: Uint128,
-        block_number_mod: u32
-    ) -> Result<Response, ContractError> {
-
-        if Some(info.sender) != *self.chain_interface() {
-            return Err(ContractError::Unauthorized {})
-        }
-
-        let send_liquidity_hash = Self::compute_send_liquidity_hash(
-            to_account.as_slice(),
-            u,
-            amount,
-            block_number_mod
-        );
-
-        self.release_liquidity_escrow(deps, &send_liquidity_hash, amount)?;
-
-        Ok(
-            Response::new()
-                .add_attribute("swap_hash", send_liquidity_hash)
-        )
-    }
-
-    fn send_liquidity_ack(
-        deps: &mut DepsMut,
-        info: MessageInfo,
-        to_account: Vec<u8>,
-        u: U256,
-        amount: Uint128,
-        block_number_mod: u32
-    ) -> Result<Response, ContractError> {
-
-        let mut state = Self::load_state(deps.storage)?;
-
-        let response = state.on_send_liquidity_ack(
-            deps,
-            info,
-            to_account,
-            u,
-            amount,
-            block_number_mod
-        )?;
-
-        state.save_state(deps.storage)?;
-
-        Ok(response)
-    }
-
-
-
-    fn on_send_liquidity_timeout(
-        &mut self,
-        deps: &mut DepsMut,
-        env: Env,
-        info: MessageInfo,
-        to_account: Vec<u8>,
-        u: U256,
-        amount: Uint128,
-        block_number_mod: u32
-    ) -> Result<Response, ContractError> {
-
-        if Some(info.sender) != *self.chain_interface() {
-            return Err(ContractError::Unauthorized {})
-        }
-
-        let send_liquidity_hash = Self::compute_send_liquidity_hash(
-            to_account.as_slice(),
-            u,
-            amount,
-            block_number_mod
-        );
-
-        let fallback_address = self.release_liquidity_escrow(deps, &send_liquidity_hash, amount)?;
-
-        // Mint pool tokens for the fallbackAccount
-        let execute_mint_info = MessageInfo {
-            sender: env.contract.address.clone(),
-            funds: vec![],
-        };
-        let mint_response = execute_mint(
-            deps.branch(),  //TODO is '.branch()' correct to get a copy of the object?
-            env,
-            execute_mint_info,
-            fallback_address,
-            amount
-        )?;
-
-        Ok(
-            Response::new()
-                .add_attribute("swap_hash", send_liquidity_hash)
-                .add_attributes(mint_response.attributes)   //TODO better way to do this?
-        )
-    }
-
-    fn send_liquidity_timeout(
-        deps: &mut DepsMut,
-        env: Env,
-        info: MessageInfo,
-        to_account: Vec<u8>,
-        u: U256,
-        amount: Uint128,
-        block_number_mod: u32
-    ) -> Result<Response, ContractError> {
-
-        let mut state = Self::load_state(deps.storage)?;
-
-        let response = state.on_send_liquidity_timeout(
-            deps,
-            env,
-            info,
-            to_account,
-            u,
-            amount,
-            block_number_mod
-        )?;
-
-        state.save_state(deps.storage)?;
-
-        Ok(response)
-    }
-
-
-
-    fn compute_send_asset_hash(
-        to_account: &[u8],
-        u: U256,
-        amount: Uint128,
-        asset: &str,
-        block_number_mod: u32        
-    ) -> String {
-
-        let asset_bytes = asset.as_bytes();
-
-        let mut hash_data: Vec<u8> = Vec::with_capacity(    // Initialize vec with the specified capacity (avoid reallocations)
-            to_account.len()
-                + 32
-                + 16
-                + asset_bytes.len()
-                + 4
-        );
-
-        hash_data.extend_from_slice(to_account);
-        hash_data.extend_from_slice(&u.to_be_bytes());
-        hash_data.extend_from_slice(&amount.to_be_bytes());
-        hash_data.extend_from_slice(asset_bytes);
-        hash_data.extend_from_slice(&block_number_mod.to_be_bytes());
-        
-        calc_keccak256(hash_data)
-    }
-
-    fn compute_send_liquidity_hash(
-        to_account: &[u8],
-        u: U256,
-        amount: Uint128,
-        block_number_mod: u32        
-    ) -> String {
-
-        let mut hash_data: Vec<u8> = Vec::with_capacity(    // Initialize vec with the specified capacity (avoid reallocations)
-            to_account.len()
-                + 32
-                + 16
-                + 4
-        );
-
-        hash_data.extend_from_slice(to_account);
-        hash_data.extend_from_slice(&u.to_be_bytes());
-        hash_data.extend_from_slice(&amount.to_be_bytes());
-        hash_data.extend_from_slice(&block_number_mod.to_be_bytes());
-        
-        calc_keccak256(hash_data)
-    }
-
+    let send_liquidity_hash = compute_send_liquidity_hash(
+        to_account.as_slice(),
+        u,
+        amount,
+        block_number_mod
+    );
+
+    let fallback_address = release_liquidity_escrow(deps, &send_liquidity_hash, amount)?;
+
+    // Mint pool tokens for the fallbackAccount
+    let execute_mint_info = MessageInfo {
+        sender: env.contract.address.clone(),
+        funds: vec![],
+    };
+    let mint_response = execute_mint(
+        deps.branch(),
+        env,
+        execute_mint_info,
+        fallback_address,
+        amount
+    )?;
+
+    Ok(
+        Response::new()
+            .add_attribute("swap_hash", send_liquidity_hash)
+            .add_attributes(mint_response.attributes)   //TODO better way to do this?
+    )
+}
+
+pub fn send_liquidity_timeout(
+    deps: &mut DepsMut,
+    env: Env,
+    info: MessageInfo,
+    to_account: Vec<u8>,
+    u: U256,
+    amount: Uint128,
+    block_number_mod: u32
+) -> Result<Response, ContractError> {
+
+    on_send_liquidity_timeout(
+        deps,
+        env,
+        info,
+        to_account,
+        u,
+        amount,
+        block_number_mod
+    )
+}
+
+
+pub fn compute_send_asset_hash(
+    to_account: &[u8],
+    u: U256,
+    amount: Uint128,
+    asset: &str,
+    block_number_mod: u32        
+) -> String {
+
+    let asset_bytes = asset.as_bytes();
+
+    let mut hash_data: Vec<u8> = Vec::with_capacity(    // Initialize vec with the specified capacity (avoid reallocations)
+        to_account.len()
+            + 32
+            + 16
+            + asset_bytes.len()
+            + 4
+    );
+
+    hash_data.extend_from_slice(to_account);
+    hash_data.extend_from_slice(&u.to_be_bytes());
+    hash_data.extend_from_slice(&amount.to_be_bytes());
+    hash_data.extend_from_slice(asset_bytes);
+    hash_data.extend_from_slice(&block_number_mod.to_be_bytes());
+    
+    calc_keccak256(hash_data)
+}
+
+
+pub fn compute_send_liquidity_hash(
+    to_account: &[u8],
+    u: U256,
+    amount: Uint128,
+    block_number_mod: u32        
+) -> String {
+
+    let mut hash_data: Vec<u8> = Vec::with_capacity(    // Initialize vec with the specified capacity (avoid reallocations)
+        to_account.len()
+            + 32
+            + 16
+            + 4
+    );
+
+    hash_data.extend_from_slice(to_account);
+    hash_data.extend_from_slice(&u.to_be_bytes());
+    hash_data.extend_from_slice(&amount.to_be_bytes());
+    hash_data.extend_from_slice(&block_number_mod.to_be_bytes());
+    
+    calc_keccak256(hash_data)
 }
 
 

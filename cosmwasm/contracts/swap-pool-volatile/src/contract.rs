@@ -10,13 +10,17 @@ use cw20_base::contract::{
     execute_send, execute_transfer, query_balance, query_token_info,
 };
 use ethnum::U256;
-use swap_pool_common::{
-    state::{CatalystV1PoolAdministration, CatalystV1PoolAckTimeout, CatalystV1PoolPermissionless, CatalystV1PoolState, CatalystV1PoolDerived},
-    ContractError
+use swap_pool_common::ContractError;
+use swap_pool_common::state::{
+    setup, finish_setup, set_fee_administrator, set_pool_fee, set_governance_fee, set_connection, send_asset_ack,
+    send_asset_timeout, send_liquidity_ack, send_liquidity_timeout, ready, only_local, get_unit_capacity
 };
 
 use crate::msg::{VolatileExecuteMsg, InstantiateMsg, QueryMsg, VolatileExecuteExtension};
-use crate::state::SwapPoolVolatileState;
+use crate::state::{
+    initialize_swap_curves, set_weights, deposit_mixed, withdraw_all, withdraw_mixed, local_swap, send_asset, receive_asset,
+    send_liquidity, receive_liquidity, calc_send_asset, calc_receive_asset, calc_local_swap
+};
 
 
 // version info for migration info
@@ -35,7 +39,7 @@ pub fn instantiate(
 
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
-    SwapPoolVolatileState::setup(
+    setup(
         &mut deps,
         &env,
         msg.name,
@@ -66,8 +70,8 @@ pub fn execute(
             weights,
             amp,
             depositor
-        } => SwapPoolVolatileState::initialize_swap_curves(
-            deps,
+        } => initialize_swap_curves(
+            &mut deps,
             env,
             info,
             assets,
@@ -77,24 +81,24 @@ pub fn execute(
             depositor
         ),
 
-        VolatileExecuteMsg::FinishSetup {} => SwapPoolVolatileState::finish_setup(
+        VolatileExecuteMsg::FinishSetup {} => finish_setup(
             &mut deps,
             info
         ),
 
-        VolatileExecuteMsg::SetFeeAdministrator { administrator } => SwapPoolVolatileState::set_fee_administrator(
+        VolatileExecuteMsg::SetFeeAdministrator { administrator } => set_fee_administrator(
             &mut deps,
             info,
             administrator
         ),
 
-        VolatileExecuteMsg::SetPoolFee { fee } => SwapPoolVolatileState::set_pool_fee(
+        VolatileExecuteMsg::SetPoolFee { fee } => set_pool_fee(
             &mut deps,
             info,
             fee
         ),
 
-        VolatileExecuteMsg::SetGovernanceFee { fee } => SwapPoolVolatileState::set_governance_fee(
+        VolatileExecuteMsg::SetGovernanceFee { fee } => set_governance_fee(
             &mut deps,
             info,
             fee
@@ -104,7 +108,7 @@ pub fn execute(
             channel_id,
             to_pool,
             state
-        } => SwapPoolVolatileState::set_connection(
+        } => set_connection(
             &mut deps,
             info,
             channel_id,
@@ -118,7 +122,7 @@ pub fn execute(
             amount,
             asset,
             block_number_mod
-        } => SwapPoolVolatileState::send_asset_ack(
+        } => send_asset_ack(
             &mut deps,
             info,
             to_account,
@@ -134,7 +138,7 @@ pub fn execute(
             amount,
             asset,
             block_number_mod
-        } => SwapPoolVolatileState::send_asset_timeout(
+        } => send_asset_timeout(
             &mut deps,
             env,
             info,
@@ -150,7 +154,7 @@ pub fn execute(
             u,
             amount,
             block_number_mod
-        } => SwapPoolVolatileState::send_liquidity_ack(
+        } => send_liquidity_ack(
             &mut deps,
             info,
             to_account,
@@ -164,7 +168,7 @@ pub fn execute(
             u,
             amount,
             block_number_mod
-        } => SwapPoolVolatileState::send_liquidity_timeout(
+        } => send_liquidity_timeout(
             &mut deps,
             env,
             info,
@@ -177,7 +181,7 @@ pub fn execute(
         VolatileExecuteMsg::DepositMixed {
             deposit_amounts,
             min_out
-        } => SwapPoolVolatileState::deposit_mixed(
+        } => deposit_mixed(
             &mut deps,
             env,
             info,
@@ -188,7 +192,7 @@ pub fn execute(
         VolatileExecuteMsg::WithdrawAll {
             pool_tokens,
             min_out
-        } => SwapPoolVolatileState::withdraw_all(
+        } => withdraw_all(
             &mut deps,
             env,
             info,
@@ -200,7 +204,7 @@ pub fn execute(
             pool_tokens,
             withdraw_ratio,
             min_out
-        } => SwapPoolVolatileState::withdraw_mixed(
+        } => withdraw_mixed(
             &mut deps,
             env,
             info,
@@ -214,8 +218,8 @@ pub fn execute(
             to_asset,
             amount,
             min_out
-        } => SwapPoolVolatileState::local_swap(
-            &deps.as_ref(),
+        } => local_swap(
+            &mut deps,
             env,
             info,
             from_asset,
@@ -234,7 +238,7 @@ pub fn execute(
             min_out,
             fallback_account,
             calldata
-        } => SwapPoolVolatileState::send_asset(
+        } => send_asset(
             &mut deps,
             env,
             info,
@@ -258,7 +262,7 @@ pub fn execute(
             min_out,
             swap_hash,
             calldata
-        } => SwapPoolVolatileState::receive_asset(
+        } => receive_asset(
             &mut deps,
             env,
             info,
@@ -280,7 +284,7 @@ pub fn execute(
             min_out,
             fallback_account,
             calldata
-        } => SwapPoolVolatileState::send_liquidity(
+        } => send_liquidity(
             &mut deps,
             env,
             info,
@@ -301,7 +305,7 @@ pub fn execute(
             min_out,
             swap_hash,
             calldata
-        } => SwapPoolVolatileState::receive_liquidity(
+        } => receive_liquidity(
             &mut deps,
             env,
             info,
@@ -317,7 +321,7 @@ pub fn execute(
         VolatileExecuteMsg::Custom(VolatileExecuteExtension::SetWeights {
             weights,
             target_timestamp
-        }) => SwapPoolVolatileState::set_weights(
+        }) => set_weights(
             &mut deps,
             &env,
             weights,
@@ -420,18 +424,20 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
 
 
 pub fn query_ready(deps: Deps) -> StdResult<bool> {
-    SwapPoolVolatileState::ready(deps)
+    ready(&deps)
 }
 
 
 pub fn query_only_local(deps: Deps) -> StdResult<bool> {
-    SwapPoolVolatileState::only_local(deps)
+    only_local(&deps)
 }
 
 pub fn query_get_unit_capacity(deps: Deps, env: Env) -> StdResult<U256> { //TODO maths
-    SwapPoolVolatileState::get_unit_capacity(deps, env)
+
+    get_unit_capacity(&deps, env)
         .map(|capacity| capacity)
         .map_err(|_| StdError::GenericErr { msg: "".to_owned() })   //TODO error
+
 }
 
 
@@ -442,8 +448,7 @@ pub fn query_calc_send_asset(
     amount: Uint128
 ) -> StdResult<U256> {
 
-    SwapPoolVolatileState::load_state(deps.storage)?
-        .calc_send_asset(deps, env, from_asset, amount)
+    calc_send_asset(&deps, env, from_asset, amount)
         .map_err(|err| err.into())
 
 }
@@ -456,8 +461,7 @@ pub fn query_calc_receive_asset(
     u: U256
 ) -> StdResult<Uint128> {
 
-    SwapPoolVolatileState::load_state(deps.storage)?
-        .calc_receive_asset(deps, env, to_asset, u)
+    calc_receive_asset(&deps, env, to_asset, u)
         .map_err(|err| err.into())
 
 }
@@ -471,8 +475,7 @@ pub fn query_calc_local_swap(
     amount: Uint128
 ) -> StdResult<Uint128> {
 
-    SwapPoolVolatileState::load_state(deps.storage)?
-        .calc_local_swap(deps, env, from_asset, to_asset, amount)
+    calc_local_swap(&deps, env, from_asset, to_asset, amount)
         .map_err(|err| err.into())
 
 }
