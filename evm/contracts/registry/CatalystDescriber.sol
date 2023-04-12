@@ -7,7 +7,25 @@ import "../interfaces/ICatalystV1PoolImmutables.sol";
 import "./interfaces/ICatalystMathLib.sol";
 import "../SwapPoolFactory.sol";
 
-contract CatalystDescriber {
+contract CatalystDescriber is Ownable {
+    error ZeroAddress();
+    error InvalidIndex(address providedAddress, address readAddress);
+    error IncorrectAbi();
+
+    event ModifyWhitelistedTemplate(
+        address template,
+        bool state
+    );
+
+    event ModifyVaultAbi(
+        address template,
+        int256 abi_version
+    );
+
+    event ModifyWhitelistedCCI(
+        address cci,
+        bool state
+    );
 
     uint256 internal _num_whitelisted_templates;
     mapping(uint256 => address) internal _whitelisted_templates;
@@ -15,12 +33,10 @@ contract CatalystDescriber {
     uint256 internal _num_whitelisted_ccis;
     mapping(uint256 => address) internal _whitelisted_ccis;
 
-
     uint256 internal _num_vault_factories;
     mapping(uint256 => address) internal _vault_factories;
 
     mapping(bytes32 => int256) internal _vault_abi_version;
-    mapping(bytes32 => address) internal _vault_mathlib;  // TODO: Do we want to add this to vaults? It would simplify adding new contracts.
 
 
     // Returns an array of whitelisted vault templates.
@@ -65,7 +81,7 @@ contract CatalystDescriber {
 
 
     // Returns the abi_version using a whitelisted table. Returns -1 if the address is not known
-    function get_pool_abi_version(address) external view returns (int256 abi_version) {
+    function get_pool_abi_version(address vault) external view returns (int256 abi_version) {
         abi_version = _vault_abi_version[get_vault_type(vault)];
         if (abi_version == 0) abi_version = -1;
     }
@@ -84,7 +100,7 @@ contract CatalystDescriber {
     // Returns an address which implements and exposes the pool’s mathematical methods.
     // Uses get_pool_type to find a mathematical lib. Returns address(0) if no mathematical lib is set. (whitelist)
     function get_pool_mathematical_lib(address vault) public view returns (address math_lib) {
-        math_lib = _vault_mathlib[vault];
+        math_lib = ICatalystV1PoolImmutables(vault).MATHLIB();
     }
 
 
@@ -98,5 +114,103 @@ contract CatalystDescriber {
             address token = tokens[it];
             quotes[it] = CatalystMathLib(math_lib).calcAsyncPriceFrom(vault, token);
         }
+    }
+
+    /**
+     * @notice Defines a new Catalyst Describer and incremenets the Catalyst version
+     */
+    function add_whitelisted_template(address template_to_whitelist, int256 vault_abi) external onlyOwner {
+        uint256 nextIndex = _num_whitelisted_templates + 1;
+        if (template_to_whitelist == address(0)) revert ZeroAddress(); 
+        if (vault_abi <= 0) revert IncorrectAbi();
+
+        // Update whitelist table
+        _whitelisted_templates[nextIndex] = template_to_whitelist;
+        _num_whitelisted_templates += 1;
+
+        emit ModifyWhitelistedTemplate(template_to_whitelist, true);
+
+        // Set abi
+        bytes32 vault_type = get_vault_type(template_to_whitelist);
+        _vault_abi_version[vault_type] = vault_abi;
+
+        emit ModifyVaultAbi(template_to_whitelist, vault_abi);
+
+    }
+
+    /**
+     * @notice Defines a new Catalyst Describer and incremenets the Catalyst version
+     */
+    function modify_vault_abi(address vault, int256 vault_abi) external onlyOwner {
+        uint256 nextIndex = _num_whitelisted_templates + 1;
+        if (get_pool_abi_version(vault) == -1) revert ZeroAddress();
+        if (vault_abi <= 0) revert IncorrectAbi(); 
+
+        // Set abi
+        bytes32 vault_type = get_vault_type(vault);
+        _vault_abi_version[vault_type] = vault_abi;
+
+        emit ModifyVaultAbi(vault, vault_abi);
+
+    }
+
+    /**
+     * @notice Defines a new Catalyst Describer and incremenets the Catalyst version
+     */
+    function remove_whitelisted_template(address template_to_unwhitelist, uint256 template_index) external onlyOwner {
+        if (template_to_unwhitelist == address(0)) revert ZeroAddress(); 
+        if (_whitelisted_templates[template_index] != template_to_unwhitelist) revert InvalidIndex(template_to_unwhitelist, _whitelisted_templates[nextIndex]);
+
+        _whitelisted_templates[template_index] = address(0);
+
+        emit ModifyWhitelistedTemplate(template_to_whitelist, false);
+    }
+
+
+    /**
+     * @notice Defines a new Catalyst Describer and incremenets the Catalyst version
+     */
+    function add_whitelisted_cii(address cci_to_whitelist) external onlyOwner {
+        uint256 nextIndex = _whitelisted_templates + 1;
+        if (cci_to_whitelist == address(0)) revert ZeroAddress(); 
+
+        _whitelisted_ccis[nextIndex] = cci_to_whitelist;
+        _num_whitelisted_ccis += 1;
+
+        emit ModifyWhitelistedCCI(cci_to_whitelist, true);
+    }
+
+    /**
+     * @notice Defines a new Catalyst Describer and incremenets the Catalyst version
+     */
+    function remove_whitelisted_template(address cci_to_whitelist, uint256 cci_index) external onlyOwner {
+        if (cci_to_whitelist == address(0)) revert ZeroAddress(); 
+        if (_whitelisted_ccis[cci_index] != cci_to_whitelist) revert InvalidIndex(cci_to_whitelist, _whitelisted_ccis[nextIndex]);
+
+        _whitelisted_ccis[cci_index] = address(0);
+
+        emit ModifyWhitelistedTemplate(cci_to_whitelist, false);
+    }
+
+    /**
+     * @notice Defines a new Catalyst Describer and incremenets the Catalyst version
+     */
+    function add_pool_factory(address template_to_whitelist, int256 vault_abi) external onlyOwner {
+        uint256 nextIndex = _num_whitelisted_templates + 1;
+        if (template_to_whitelist == address(0)) revert ZeroAddress(); 
+        if (vault_abi <= 0) revert IncorrectAbi();
+
+        // Update whitelist table
+        _whitelisted_templates[nextIndex] = template_to_whitelist;
+        _num_whitelisted_templates += 1;
+
+        emit ModifyWhitelistedTemplate(template_to_whitelist, true);
+
+        // Set abi
+        bytes32 vault_type = get_vault_type(template_to_whitelist);
+        _vault_abi_version[vault_type] = vault_abi;
+
+        emit ModifyVaultAbi(template_to_whitelist, vault_abi);
+
     }
 }

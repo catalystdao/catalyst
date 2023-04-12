@@ -8,6 +8,8 @@ interface ICatalystV1PoolImmutables {
 
     function FACTORY() external view returns (address);
 
+    function MATHLIB() external view returns (address);
+
     /// @notice
     ///     To indicate which token is desired on the target pool,
     ///     the _toAsset is an integer from 0 to MAX_ASSETS indicating

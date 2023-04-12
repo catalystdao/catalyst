@@ -115,8 +115,13 @@ abstract contract CatalystSwapPoolCommon is
     /// @notice Specific escrow information (Liquidity)
     mapping(bytes32 => address) public _escrowedPoolTokensFor;
 
-    constructor(address factory_) ERC20("Catalyst Pool Template", "", DECIMALS) {
+    /// @notice A mathematical lib which describes various properties of this contract. These helper functions are not contained the swap template, since they notisably inflate the contract side which reduceses the number of optimizer runs => incåreases the gas cost.
+    address constant public MATHLIB;
+
+    constructor(address factory_, address mathlib) ERC20("Catalyst Pool Template", "", DECIMALS) {
         FACTORY = factory_;
+        MATHLIB = mathlib;
+
 
         _disableInitializers();
     }

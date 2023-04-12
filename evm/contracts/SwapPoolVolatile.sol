@@ -55,7 +55,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon {
     //-- Variables --//
     mapping(address => uint256) public _targetWeight;
 
-    constructor(address factory_) CatalystSwapPoolCommon(factory_) {}
+    constructor(address factory_, address mathlib_) CatalystSwapPoolCommon(factory_, mathlib_) {}
 
     /**
      * @notice Configures an empty pool.

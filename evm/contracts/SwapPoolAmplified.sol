@@ -66,7 +66,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
     // the local unit balance. That is, do other pools own or owe assets to this pool?
     int256 public _unitTracker;
 
-    constructor(address factory_) CatalystSwapPoolCommon(factory_) {}
+    constructor(address factory_, address mathlib_) CatalystSwapPoolCommon(factory_, mathlib_) {}
 
     /**
      * @notice Configures an empty pool.
