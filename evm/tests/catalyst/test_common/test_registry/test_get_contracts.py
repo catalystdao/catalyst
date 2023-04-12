@@ -19,12 +19,12 @@ def test_get_templates_filled(
 def test_get_describer(
     catalyst_describer_registry_filled, catalyst_describer_blank
 ):
-    describer = catalyst_describer_registry_filled.get_pool_describer(0)
+    describer = catalyst_describer_registry_filled.get_vault_describer(0)
     
     assert describer == catalyst_describer_blank.address
     
     
-    describer = catalyst_describer_registry_filled.get_pool_describer(1)
+    describer = catalyst_describer_registry_filled.get_vault_describer(1)
     
     assert describer == ZERO_ADDRESS
 
@@ -32,7 +32,7 @@ def test_get_describer(
 def test_get_describers(
     catalyst_describer_registry_filled, catalyst_describer_blank
 ):
-    describers = catalyst_describer_registry_filled.get_pool_describers()
+    describers = catalyst_describer_registry_filled.get_vault_describers()
     
     assert len(describers) == 1
     
