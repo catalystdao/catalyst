@@ -13,7 +13,7 @@ contract CatalystDescriberRegistry is Ownable {
         address catalystDescriber
     );
 
-    mapping(uint256 => address) private _pool_describer;
+    address[] private _pool_describers;
     mapping(address => uint256) private _describer_version;
     uint256 public catalystVersions;
 
@@ -23,7 +23,8 @@ contract CatalystDescriberRegistry is Ownable {
     * @dev Returns address(0) if no describer exists.
     */
     function get_pool_describer(uint256 catalystVersion) public view returns(address) {
-        return _pool_describer[catalystVersion];
+        if (_pool_describers.length <= catalystVersion) return address(0);
+        return _pool_describers[catalystVersion];
     }
 
     /**
@@ -38,25 +39,19 @@ contract CatalystDescriberRegistry is Ownable {
     * @notice Returns all CatalystDescribers.
     */
     function get_pool_describers() public view returns (address[] memory catalystDescribers) {
-        for (uint256 it; it <= catalystVersions; ++it) {
-            address catalystDescriber = get_pool_describer(it);
-            catalystDescribers[it] = catalystDescriber;
-        }
+        return _pool_describers;
     }
 
     /**
      * @notice Defines a new Catalyst Describer and incremenets the Catalyst version
      */
-    function set_describer(uint256 catalystVersion, address catalystDescriber) external onlyOwner {
-        uint256 nextCatalystVersion = catalystVersions + 1;
-        if (nextCatalystVersion != catalystVersion) revert  WrongCatalystVersion(catalystVersion, nextCatalystVersion); 
+    function add_describer(address catalystDescriber) external onlyOwner {
         if (catalystDescriber == address(0)) revert  ZeroDescriber(); 
 
-        _describer_version[catalystDescriber] = catalystVersion;
-        _pool_describer[catalystVersion] = catalystDescriber;
-        catalystVersions += 1;
+        _pool_describers.push(catalystDescriber);
+        _describer_version[catalystDescriber] = _pool_describers.length;
 
-        emit CatalystDescriber(catalystVersion, catalystDescriber);
+        emit CatalystDescriber(_pool_describers.length, catalystDescriber);
     }
 
 }

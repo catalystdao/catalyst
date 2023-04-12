@@ -3,6 +3,7 @@
 pragma solidity ^0.8.16;
 
 import {ERC20} from 'solmate/src/tokens/ERC20.sol';
+import {ICatalystMathLibAmp} from "./interfaces/ICatalystMathLibAmp.sol";
 import "../FixedPointMathLib.sol";
 import "../interfaces/ICatalystV1PoolDerived.sol";
 import "../interfaces/ICatalystV1PoolState.sol";
@@ -13,7 +14,7 @@ import "../SwapPoolAmplified.sol";
  * @author Catalyst Labs
  * @notice This contract is not optimised for on-chain calls and serves to aid in off-chain quering.
  */
-contract CatalystMathAmp {
+contract CatalystMathAmp is ICatalystMathLibAmp {
 
     // When the swap is a very small size of the pool, the swaps
     // returns slightly more. To counteract this, an additional fee
@@ -23,18 +24,18 @@ contract CatalystMathAmp {
     uint256 constant public SMALL_SWAP_RETURN = 95e16;
     
     /// @notice Helper function which returns the true amplification. If amp is being adjusted, the pure pool amp might lie.
-    function getTrueAmp(address vault) public view returns(uint256) {
+    function getTrueAmp(address vault) public view returns(int256) {
         // We might use adjustment target more than once. Since we don't change it, let store it.
-        uint256 adjTarget = _adjustmentTarget;
+        uint256 adjTarget = CatalystSwapPoolAmplified(vault)._adjustmentTarget();
 
-        uint256 currentAmplification = CatalystSwapPoolAmplified(vault)._oneMinusAmp();
+        int256 currentAmplification = CatalystSwapPoolAmplified(vault)._oneMinusAmp();
 
         if (adjTarget == 0) 
             return currentAmplification; // Great, we don't need to do any adjustments:
 
         // We need to do the adjustment. Fetch relevant variables.
-        uint256 targetAmplification = CatalystSwapPoolVolatile(vault)._targetAmplification();
-        uint256 lastModification = _lastModificationTime;
+        int256 targetAmplification = CatalystSwapPoolAmplified(vault)._targetAmplification();
+        uint256 lastModification = CatalystSwapPoolAmplified(vault)._lastModificationTime();
 
         // If the current time is past the adjustment, we should return the final weights.
         if (block.timestamp >= adjTarget) 
@@ -71,7 +72,7 @@ contract CatalystMathAmp {
     function calcFee(address vault, uint256 amount) public view returns(uint256) {
         uint256 fee = CatalystSwapPoolAmplified(vault)._poolFee();
 
-        return FixedPointMathLib.mulWadDown(amount, FixedPointMathLib.WAD - _poolFee);
+        return FixedPointMathLib.mulWadDown(amount, FixedPointMathLib.WAD - fee);
     }
     
     //--- Swap integrals ---//
@@ -201,7 +202,7 @@ contract CatalystMathAmp {
         //             int256(FixedPointMathLib.divWadUp(W_BxBtoOMA - U, W_BxBtoOMA)),
         //             int256(FixedPointMathLib.WAD * FixedPointMathLib.WAD / uint256(oneMinusAmp)))
         //         )) / FixedPointMathLib.WAD; // _calcPriceCurveLimit
-        return _calcPriceCurveLimit(_calcPriceCurveArea(input, A, W_A, oneMinusAmp), B, W_B, oneMinusAmp);
+        return calcPriceCurveLimit(calcPriceCurveArea(input, A, W_A, oneMinusAmp), B, W_B, oneMinusAmp);
     }
 
     /**
@@ -253,7 +254,7 @@ contract CatalystMathAmp {
     ) external view override returns (uint256) {
         // A high => fewer units returned. Do not subtract the escrow amount
         uint256 A = calcFee(vault, ERC20(fromAsset).balanceOf(vault));
-        uint256 W = SwapPoolAmplified(vault)._weight(fromAsset);
+        uint256 W = CatalystSwapPoolAmplified(vault)._weight(fromAsset);
 
         // If 'fromAsset' is not part of the pool (i.e. W is 0) or if 'amount' and 
         // the pool asset balance (i.e. 'A') are both 0 this will revert, since 0**p is 
@@ -273,8 +274,7 @@ contract CatalystMathAmp {
      * @notice Computes the exchange of units to assets. This is the second and last part of a swap.
      * @dev Reverts if toAsset is not in the pool.
      * @param vault The vault address to examine.
-     * @param fromAsset The address of the token to sell.
-     * @param amount The amount of from token to sell.
+     * @param toAsset The address of the token to buy.
      * @return uint256 tokens.
      */
     function calcReceiveAsset(
@@ -283,8 +283,8 @@ contract CatalystMathAmp {
         uint256 U
     ) external view override returns (uint256) {
         // B low => fewer tokens returned. Subtract the escrow amount to decrease the balance.
-        uint256 B = ERC20(toAsset).balanceOf(vault) - SwapPoolAmplified(vault)._escrowedTokens(toAsset);
-        uint256 W = SwapPoolAmplified(vault)._weight(fromAsset);
+        uint256 B = ERC20(toAsset).balanceOf(vault) - CatalystSwapPoolAmplified(vault)._escrowedTokens(toAsset);
+        uint256 W = CatalystSwapPoolAmplified(vault)._weight(toAsset);
 
         // If someone were to purchase a token which is not part of the pool on setup
         // they would just add value to the pool. We don't care about it.
@@ -310,9 +310,9 @@ contract CatalystMathAmp {
         uint256 amount
     ) external view override returns (uint256) {
         uint256 A = ERC20(fromAsset).balanceOf(vault);
-        uint256 B = ERC20(toAsset).balanceOf(vault) - _escrowedTokens[toAsset];
-        uint256 W_A = SwapPoolAmplified(vault)._weight(fromAsset);
-        uint256 W_B = SwapPoolAmplified(vault)._weight(toAsset);
+        uint256 B = ERC20(toAsset).balanceOf(vault) - CatalystSwapPoolAmplified(vault)._escrowedTokens(toAsset);
+        uint256 W_A = CatalystSwapPoolAmplified(vault)._weight(fromAsset);
+        uint256 W_B = CatalystSwapPoolAmplified(vault)._weight(toAsset);
         int256 oneMinusAmp = getTrueAmp(vault);
 
         uint256 output = calcCombinedPriceCurves(amount, A, B, W_A, W_B, oneMinusAmp);
@@ -341,16 +341,16 @@ contract CatalystMathAmp {
     function calcAsyncPriceFrom(
         address vault,
         address fromAsset
-    ) external pure returns (uint256) {
+    ) public view returns (uint256) {
         uint256 fromBalance = ERC20(fromAsset).balanceOf(vault);
-        uint256 W_from = getTrueWeight(vault, fromAsset);
+        uint256 W_from = CatalystSwapPoolAmplified(vault)._weight(fromAsset);
         int256 oneMinusAmp = getTrueAmp(vault);
         if (W_from == 0) return 0;
 
-        return FixedPointMathlib.powWad(
+        return uint256(FixedPointMathLib.powWad(
             int256(fromBalance * W_from * FixedPointMathLib.WAD),
             oneMinusAmp
-        ) / W_from;
+        )) / W_from;
     }
 
     /**
@@ -363,12 +363,12 @@ contract CatalystMathAmp {
     function calcCurrentPriceTo(
         address vault,
         address toAsset,
-        address calcAsyncPriceFromQuote
-    ) external pure returns (uint256) {
-        uint256 toBalance = ERC20(toAsset).balanceOf(vault) - CatalystSwapPoolVolatile(vault)._escrowedTokens(toAsset);
-        uint256 W_to = getTrueWeight(vault, toAsset);
+        uint256 calcAsyncPriceFromQuote
+    ) public view returns (uint256) {
+        uint256 toBalance = ERC20(toAsset).balanceOf(vault) - CatalystSwapPoolAmplified(vault)._escrowedTokens(toAsset);
+        uint256 W_to = CatalystSwapPoolAmplified(vault)._weight(toAsset);
         int256 oneMinusAmp = getTrueAmp(vault);
-        if (calcAsyncPriceFromQuote == 0 | W_to == 0) return 0;
+        if ((calcAsyncPriceFromQuote == 0) || (W_to == 0)) return 0;
 
         uint256 toQuote = uint256(FixedPointMathLib.powWad(
             int256(toBalance * W_to * FixedPointMathLib.WAD),
@@ -390,7 +390,7 @@ contract CatalystMathAmp {
         address vault,
         address fromAsset,
         address toAsset
-    ) external pure returns (uint256) {
+    ) external view returns (uint256) {
         uint256 calcAsyncPriceFromQuote = calcAsyncPriceFrom(vault, fromAsset);
 
         return calcCurrentPriceTo(vault, toAsset, calcAsyncPriceFromQuote);

@@ -10,6 +10,8 @@ interface ICatalystV1PoolImmutables {
 
     function MATHLIB() external view returns (address);
 
+    function MAX_ASSETS() external view returns (uint8);
+
     /// @notice
     ///     To indicate which token is desired on the target pool,
     ///     the _toAsset is an integer from 0 to MAX_ASSETS indicating

@@ -3,6 +3,7 @@
 pragma solidity ^0.8.16;
 
 import {ERC20} from 'solmate/src/tokens/ERC20.sol';
+import {ICatalystMathLibVol} from "./interfaces/ICatalystMathLibVol.sol";
 import "../FixedPointMathLib.sol";
 import "../interfaces/ICatalystV1PoolDerived.sol";
 import "../interfaces/ICatalystV1PoolState.sol";
@@ -13,7 +14,7 @@ import "../SwapPoolVolatile.sol";
  * @author Catalyst Labs
  * @notice This contract is not optimised for on-chain calls and serves to aid in off-chain quering.
  */
-contract CatalystMathVol {
+contract CatalystMathVol is ICatalystMathLibVol {
     
     /// @notice Helper function which returns the true weight. If weights are being adjusted, the pure pool weights might lie.
     function getTrueWeight(address vault, address asset) public view returns(uint256) {
@@ -52,9 +53,9 @@ contract CatalystMathVol {
 
     /// @notice Helper function which returns the amount after fee.
     function calcFee(address vault, uint256 amount) public view returns(uint256) {
-        uint256 fee = CatalystSwapPoolAmplified(vault)._poolFee();
+        uint256 fee = CatalystSwapPoolVolatile(vault)._poolFee();
 
-        return FixedPointMathLib.mulWadDown(amount, FixedPointMathLib.WAD - _poolFee);
+        return FixedPointMathLib.mulWadDown(amount, FixedPointMathLib.WAD - fee);
     }
     
     //--- Swap integrals ---//
@@ -118,7 +119,7 @@ contract CatalystMathVol {
         uint256 B,
         uint256 W_A,
         uint256 W_B
-    ) external pure returns (uint256) {
+    ) public pure returns (uint256) {
         // uint256 U = FixedPointMathLib.WAD - uint256(FixedPointMathLib.powWad(
         //     int256(FixedPointMathLib.divWadDown(A + input, A)),
         //     int256(FixedPointMathLib.divWadDown(W_A, W_B))
@@ -138,7 +139,7 @@ contract CatalystMathVol {
     function calcPriceCurveLimitShare(
         uint256 U,
         uint256 W
-    ) external pure returns (uint256) {
+    ) public pure returns (uint256) {
         // Compute the non pool ownership share. (1 - pool ownership share)
         uint256 npos = uint256(FixedPointMathLib.expWad(-int256(U / W)));   // int256 casting is initially not safe. If overflow, the equation becomes: exp(U/W). In this case, when subtracted from 1 (later), Solidity's built-in safe math protection catches the overflow since exp(U/W) > 1.
         
@@ -244,7 +245,7 @@ contract CatalystMathVol {
     function calcAsyncPriceFrom(
         address vault,
         address fromAsset
-    ) external pure returns (uint256) {
+    ) public view returns (uint256) {
         uint256 fromBalance = ERC20(fromAsset).balanceOf(vault);
         uint256 W_from = getTrueWeight(vault, fromAsset);
         if (W_from == 0) return 0;
@@ -261,11 +262,11 @@ contract CatalystMathVol {
     function calcCurrentPriceTo(
         address vault,
         address toAsset,
-        address calcAsyncPriceFromQuote
-    ) external pure returns (uint256) {
+        uint256 calcAsyncPriceFromQuote
+    ) public view returns (uint256) {
         uint256 toBalance = ERC20(toAsset).balanceOf(vault) - CatalystSwapPoolVolatile(vault)._escrowedTokens(toAsset);
         uint256 W_to = getTrueWeight(vault, toAsset);
-        if (calcAsyncPriceFromQuote == 0 | W_to == 0) return 0;
+        if ((calcAsyncPriceFromQuote == 0) || (W_to == 0)) return 0;
 
         return (toBalance * 10**18)/(W_to * calcAsyncPriceFromQuote);
     }
@@ -282,7 +283,7 @@ contract CatalystMathVol {
         address vault,
         address fromAsset,
         address toAsset
-    ) external pure returns (uint256) {
+    ) external view returns (uint256) {
         uint256 calcAsyncPriceFromQuote = calcAsyncPriceFrom(vault, fromAsset);
 
         return calcCurrentPriceTo(vault, toAsset, calcAsyncPriceFromQuote);
