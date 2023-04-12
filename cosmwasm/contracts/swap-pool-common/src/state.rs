@@ -40,8 +40,8 @@ pub const POOL_CONNECTIONS: Map<(&str, Vec<u8>), bool> = Map::new("catalyst-pool
 
 pub const TOTAL_ESCROWED_ASSETS: Map<&str, Uint128> = Map::new("catalyst-pool-escrowed-assets");        //TODO use mapping instead?
 pub const TOTAL_ESCROWED_LIQUIDITY: Item<Uint128> = Item::new("catalyst-pool-escrowed-pool-tokens");
-pub const ASSET_ESCROWS: Map<&str, String> = Map::new("catalyst-pool-asset-escrows");
-pub const LIQUIDITY_ESCROWS: Map<&str, String> = Map::new("catalyst-pool-liquidity-escrows");
+pub const ASSET_ESCROWS: Map<&str, String> = Map::new("catalyst-pool-asset-escrows");                   //TODO use Addr instead of String (for fallback_account)
+pub const LIQUIDITY_ESCROWS: Map<&str, String> = Map::new("catalyst-pool-liquidity-escrows");           //TODO use Addr instead of String (for fallback_account)
 
 pub const MAX_LIMIT_CAPACITY: Item<U256> = Item::new("catalyst-pool-max-limit-capacity");
 pub const USED_LIMIT_CAPACITY: Item<U256> = Item::new("catalyst-pool-used-limit-capacity");
@@ -391,6 +391,7 @@ pub fn setup(
 }
 
 
+//TODO rename
 pub fn get_unit_capacity(
     deps: &Deps,
     env: Env
@@ -769,4 +770,64 @@ pub fn compute_send_liquidity_hash(
 #[cw_serde]
 pub struct Escrow {
     pub fallback_address: Addr
+}
+
+
+
+// Query helpers ****************************************************************************************************************
+
+pub fn query_chain_interface(deps: Deps) -> StdResult<Option<Addr>> {
+    CHAIN_INTERFACE.load(deps.storage)
+}
+
+pub fn query_setup_master(deps: Deps) -> StdResult<Option<Addr>> {
+    SETUP_MASTER.load(deps.storage)
+}
+
+pub fn query_ready(deps: Deps) -> StdResult<bool> {
+    ready(&deps)
+}
+
+pub fn query_only_local(deps: Deps) -> StdResult<bool> {
+    only_local(&deps)
+}
+
+pub fn query_assets(deps: Deps) -> StdResult<Vec<Addr>> {
+    ASSETS.load(deps.storage)
+}
+
+pub fn query_weights(deps: Deps) -> StdResult<Vec<u64>> {
+    WEIGHTS.load(deps.storage)
+}
+
+pub fn query_pool_fee(deps: Deps) -> StdResult<u64> {
+    POOL_FEE.load(deps.storage)
+}
+
+pub fn query_governance_fee_share(deps: Deps) -> StdResult<u64> {
+    GOVERNANCE_FEE_SHARE.load(deps.storage)
+}
+
+pub fn query_fee_administrator(deps: Deps) -> StdResult<Addr> {
+    FEE_ADMINISTRATOR.load(deps.storage)
+}
+
+pub fn query_total_escrowed_asset(deps: Deps, asset: &str) -> StdResult<Uint128> {
+    TOTAL_ESCROWED_ASSETS.load(deps.storage, asset)
+}
+
+pub fn query_total_escrowed_liquidity(deps: Deps) -> StdResult<Uint128> {
+    TOTAL_ESCROWED_LIQUIDITY.load(deps.storage)
+}
+
+pub fn query_asset_escrow(deps: Deps, hash: &str) -> StdResult<String> {
+    ASSET_ESCROWS.load(deps.storage, hash)
+}
+
+pub fn query_liquidity_escrow(deps: Deps, hash: &str) -> StdResult<String> {
+    LIQUIDITY_ESCROWS.load(deps.storage, hash)
+}
+
+pub fn query_pool_connection_state(deps: Deps, channel_id: &str, pool: Vec<u8>) -> StdResult<bool> {
+    POOL_CONNECTIONS.load(deps.storage, (channel_id, pool))
 }

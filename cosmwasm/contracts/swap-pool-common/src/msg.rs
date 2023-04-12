@@ -1,6 +1,6 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
 
-use cosmwasm_std::{Binary, Uint64, Uint128};
+use cosmwasm_std::{Binary, Uint128, Addr};
 use cw20::{Expiration, AllowanceResponse, BalanceResponse, TokenInfoResponse};
 use ethnum::U256;
 use schemars::JsonSchema;
@@ -199,82 +199,101 @@ pub enum ExecuteMsg<T> {
 #[derive(QueryResponses)]
 pub enum QueryMsg {
 
-    // #[returns(ChainInterfaceResponse)]
-    // ChainInterface {},
+    #[returns(ChainInterfaceResponse)]
+    ChainInterface {},
 
-    // // TokenIndexing(tokenIndex: [u64; 4]),
+    #[returns(SetupMasterResponse)]
+    SetupMaster {},
 
-    // #[returns(Balance0Response)]
-    // Balance0 {
-    //     token: String
-    // },
+    // #[returns(FactoryResponse)]
+    // Factory {},
 
-    // #[returns(WeightResponse)]
-    // Weight {
-    //     token: String
-    // },
-
-    // #[returns(WeightResponse)]
-    // TargetWeight{
-    //     token: String
-    // },
-
-    // #[returns(AdjustmentTargetResponse)]
-    // AdjustmentTarget {},
-
-    // #[returns(LastModificationTimeResponse)]
-    // LastModificationTime {},
-
-    // #[returns(TargetMaxUnitInflowResponse)]
-    // TargetMaxUnitInflow {},
-
-    // #[returns(PoolFeeX64Response)]
-    // PoolFeeX64 {},
-
-    // #[returns(GovernanceFeeResponse)]
-    // GovernanceFee {},
-
-    // #[returns(FeeAdministratorResponse)]
-    // FeeAdministrator {},
-
-    // #[returns(SetupMasterResponse)]
-    // SetupMaster {},
-
-    // #[returns(MaxUnitInflowResponse)]
-    // MaxUnitInflow {},
-
-    // #[returns(EscrowedTokensResponse)]
-    // EscrowedTokens { token: String },
-
-    // #[returns(EscrowedPoolTokensResponse)]
-    // EscrowedPoolTokens {},
-
-    // // #[returns(FactoryOwnerResponse)]
-    // // FactoryOwner {},
+    // #[returns(FactoryOwnerResponse)]
+    // FactoryOwner {},
 
     #[returns(ReadyResponse)]
     Ready {},
+
     #[returns(OnlyLocalResponse)]
     OnlyLocal {},
-    #[returns(GetUnitCapacityResponse)]
-    GetUnitCapacity {},
+
+    #[returns(AssetsResponse)]
+    Assets {
+    },
+
+    #[returns(WeightsResponse)]
+    Weights {
+    },
+
+
+    //TODO this does not belong in common
+    // #[returns(TargetWeightsResponse)]
+    // TargetWeights {
+    // },
+
+
+    //TODO this does not belong in common
+    // #[returns(WeightsUpdateFinishTimestampResponse)]
+    // WeightsUpdateFinishTimestamp {
+    // },
+
+
+    #[returns(PoolFeeResponse)]
+    PoolFee {},
+
+    #[returns(GovernanceFeeShareResponse)]
+    GovernanceFeeShare {},
+
+    #[returns(FeeAdministratorResponse)]
+    FeeAdministrator {},
+
 
     #[returns(CalcSendAssetResponse)]
     CalcSendAsset {
         from_asset: String,
         amount: Uint128
     },
+
     #[returns(CalcReceiveAssetResponse)]
     CalcReceiveAsset {
         to_asset: String,
         #[serde(with = "U256Def")]
         u: U256
     },
+
     #[returns(CalcLocalSwapResponse)]
     CalcLocalSwap {
         from_asset: String,
         to_asset: String,
         amount: Uint128
+    },
+
+    #[returns(GetLimitCapacityResponse)]
+    GetLimitCapacity {},
+
+
+    #[returns(TotalEscrowedAssetResponse)]
+    TotalEscrowedAsset {
+        asset: String
+    },
+
+    #[returns(TotalEscrowedLiquidityResponse)]
+    TotalEscrowedLiquidity {},
+
+    #[returns(AssetEscrowResponse)]
+    AssetEscrow {
+        hash: String
+    },
+
+    #[returns(LiquidityEscrowResponse)]
+    LiquidityEscrow {
+        hash: String
+    },
+
+    #[returns(PoolConnectionStateResponse)]
+    PoolConnectionState {
+        channel_id: String,
+        pool: Vec<u8>
     },
 
 
@@ -290,111 +309,58 @@ pub enum QueryMsg {
 
 
 #[cw_serde]
-pub struct UnitCapacityResponse {
-    #[serde(with = "U256Def")]
-    pub amount: U256,
-}
-
-#[cw_serde]
-pub struct LiquidityUnitCapacityResponse {
-    #[serde(with = "U256Def")]
-    pub amount: U256,
-}
-
-#[cw_serde]
 pub struct ChainInterfaceResponse {
-    pub contract: String,
-}
-
-#[cw_serde]
-pub struct Balance0Response {
-    #[serde(with = "U256Def")]
-    pub balance: U256,
-}
-
-#[cw_serde]
-pub struct WeightResponse {
-    pub weight: Uint64,     //TODO TYPE
-}
-
-#[cw_serde]
-pub struct TargetWeightResponse {
-    pub weight: Uint64,     //TODO TYPE
-}
-
-#[cw_serde]
-pub struct AdjustmentTargetResponse {
-    // TODO
-}
-
-#[cw_serde]
-pub struct LastModificationTimeResponse {
-    // TODO
-}
-
-#[cw_serde]
-pub struct TargetMaxUnitInflowResponse {
-    #[serde(with = "U256Def")]
-    pub amount: U256
-}
-
-#[cw_serde]
-pub struct PoolFeeX64Response {
-    #[serde(with = "U256Def")]
-    pub fee: U256    //TODO use u64?
-}
-
-#[cw_serde]
-pub struct GovernanceFeeResponse {
-    #[serde(with = "U256Def")]
-    pub fee: U256    //TODO use u64?
-}
-
-#[cw_serde]
-pub struct FeeAdministratorResponse {
-    pub admin: String
+    pub chain_interface: Option<Addr>
 }
 
 #[cw_serde]
 pub struct SetupMasterResponse {
-    pub setup_master: String
+    pub setup_master: Option<Addr>
 }
-
-#[cw_serde]
-pub struct MaxUnitInflowResponse {
-    #[serde(with = "U256Def")]
-    pub amount: U256
-}
-
-#[cw_serde]
-pub struct EscrowedTokensResponse {
-    pub amount: Uint128
-}
-
-#[cw_serde]
-pub struct EscrowedPoolTokensResponse {
-    pub amount: Uint128
-}
-
-// #[cw_serde]
-// pub struct FactoryOwnerResponse {
-
-// }
 
 #[cw_serde]
 pub struct ReadyResponse {
-    pub ready: Binary
+    pub ready: bool
 }
 
 #[cw_serde]
 pub struct OnlyLocalResponse {
-    pub only_local: Binary
+    pub only_local: bool
 }
 
 #[cw_serde]
-pub struct GetUnitCapacityResponse {
-    #[serde(with = "U256Def")]
-    pub capacity: U256
+pub struct AssetsResponse {
+    pub assets: Vec<Addr>
+}
+
+#[cw_serde]
+pub struct WeightsResponse {
+    pub weights: Vec<u64>
+}
+
+#[cw_serde]
+pub struct TargetWeightsResponse {
+    pub target_weights: Vec<u64>
+}
+
+#[cw_serde]
+pub struct WeightsUpdateFinishTimestampResponse {
+    pub timestamp: u64
+}
+
+#[cw_serde]
+pub struct PoolFeeResponse {
+    pub fee: u64
+}
+
+#[cw_serde]
+pub struct GovernanceFeeShareResponse {
+    pub fee: u64
+}
+
+#[cw_serde]
+pub struct FeeAdministratorResponse {
+    pub administrator: Addr
 }
 
 #[cw_serde]
@@ -413,3 +379,33 @@ pub struct CalcLocalSwapResponse {
     pub to_amount: Uint128
 }
 
+#[cw_serde]
+pub struct GetLimitCapacityResponse {
+    #[serde(with = "U256Def")]
+    pub capacity: U256
+}
+
+#[cw_serde]
+pub struct TotalEscrowedAssetResponse {
+    pub amount: Uint128
+}
+
+#[cw_serde]
+pub struct TotalEscrowedLiquidityResponse {
+    pub amount: Uint128
+}
+
+#[cw_serde]
+pub struct AssetEscrowResponse {
+    pub fallback_account: String        //TODO use Addr?
+}
+
+#[cw_serde]
+pub struct LiquidityEscrowResponse {
+    pub fallback_account: String        //TODO use Addr?
+}
+
+#[cw_serde]
+pub struct PoolConnectionStateResponse {
+    pub state: bool
+}
