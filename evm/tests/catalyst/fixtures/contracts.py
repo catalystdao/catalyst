@@ -70,7 +70,7 @@ def catalyst_describer_filled(deployer, catalyst_describer_blank, volatile_swap_
 def catalyst_describer_registry_filled(deployer, catalyst_describer_filled):
     catalyst_registry = deployer.deploy(CatalystDescriberRegistry)
     
-    catalyst_registry.set_describer(catalyst_describer_filled, 1, {'from': deployer})
+    catalyst_registry.add_describer(catalyst_describer_filled, {'from': deployer})
 
     yield catalyst_registry
 
