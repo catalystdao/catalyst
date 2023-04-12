@@ -42,7 +42,7 @@ pub enum ExecuteMsg<T> {
 
     SetPoolFee { fee: u64 },
 
-    SetGovernanceFee { fee: u64 },
+    SetGovernanceFeeShare { fee: u64 },
 
     SetFeeAdministrator { administrator: String },
 

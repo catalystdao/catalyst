@@ -34,7 +34,7 @@ pub const WEIGHTS: Item<Vec<u64>> = Item::new("catalyst-pool-weights");         
 
 pub const FEE_ADMINISTRATOR: Item<Addr> = Item::new("catalyst-pool-fee-administrator");
 pub const POOL_FEE: Item<u64> = Item::new("catalyst-pool-pool-fee");
-pub const GOVERNANCE_FEE: Item<u64> = Item::new("catalyst-pool-governance-fee");
+pub const GOVERNANCE_FEE_SHARE: Item<u64> = Item::new("catalyst-pool-governance-fee");
 
 pub const POOL_CONNECTIONS: Map<(&str, Vec<u8>), bool> = Map::new("catalyst-pool-connections");         //TODO channelId and toPool types
 
@@ -259,7 +259,7 @@ pub fn set_pool_fee(
 }
 
 
-pub fn set_governance_fee_unchecked(
+pub fn set_governance_fee_share_unchecked(
     deps: &mut DepsMut,
     fee: u64
 ) -> Result<Event, ContractError> {
@@ -270,16 +270,16 @@ pub fn set_governance_fee_unchecked(
         )
     }
 
-    GOVERNANCE_FEE.save(deps.storage, &fee)?;
+    GOVERNANCE_FEE_SHARE.save(deps.storage, &fee)?;
 
     return Ok(
-        Event::new(String::from("SetGovernanceFee"))
+        Event::new(String::from("SetGovernanceFeeShare"))
             .add_attribute("fee", fee.to_string())
     )
 }
 
 
-pub fn set_governance_fee(
+pub fn set_governance_fee_share(
     deps: &mut DepsMut,
     info: MessageInfo,
     fee: u64
@@ -291,7 +291,7 @@ pub fn set_governance_fee(
         return Err(ContractError::Unauthorized {})
     }
 
-    let event = set_governance_fee_unchecked(deps, fee)?;
+    let event = set_governance_fee_share_unchecked(deps, fee)?;
 
     Ok(Response::new().add_event(event))
 }
@@ -306,7 +306,7 @@ pub fn collect_governance_fee_message(
 
     let gov_fee_amount: Uint128 = mul_wad_down(
         U256::from(pool_fee_amount.u128()),
-        U256::from(GOVERNANCE_FEE.load(deps.storage)?)
+        U256::from(GOVERNANCE_FEE_SHARE.load(deps.storage)?)
     )?.as_u128().into();     //TODO unsafe as_u128 casting
 
     Ok(CosmosMsg::Wasm(
@@ -367,7 +367,7 @@ pub fn setup(
 
     let admin_fee_event = set_fee_administrator_unchecked(deps, fee_administrator.as_str())?;
     let pool_fee_event = set_pool_fee_unchecked(deps, pool_fee)?;
-    let gov_fee_event = set_governance_fee_unchecked(deps, governance_fee)?;
+    let gov_fee_event = set_governance_fee_share_unchecked(deps, governance_fee)?;
 
     // Setup the Pool Token (store token info using cw20-base format)
     let data = TokenInfo {

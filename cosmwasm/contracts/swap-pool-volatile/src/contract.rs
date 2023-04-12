@@ -12,7 +12,7 @@ use cw20_base::contract::{
 use ethnum::U256;
 use swap_pool_common::ContractError;
 use swap_pool_common::state::{
-    setup, finish_setup, set_fee_administrator, set_pool_fee, set_governance_fee, set_connection, send_asset_ack,
+    setup, finish_setup, set_fee_administrator, set_pool_fee, set_governance_fee_share, set_connection, send_asset_ack,
     send_asset_timeout, send_liquidity_ack, send_liquidity_timeout, ready, only_local, get_unit_capacity
 };
 
@@ -98,7 +98,7 @@ pub fn execute(
             fee
         ),
 
-        VolatileExecuteMsg::SetGovernanceFee { fee } => set_governance_fee(
+        VolatileExecuteMsg::SetGovernanceFeeShare { fee } => set_governance_fee_share(
             &mut deps,
             info,
             fee
