@@ -21,7 +21,7 @@ pub struct InstantiateMsg {
     pub symbol: String,     // Symbol for the pool token
     pub chain_interface: Option<String>,
     pub pool_fee: u64,
-    pub governance_fee: u64,
+    pub governance_fee: u64,        // TODO rename gov_fee_share
     pub fee_administrator: String,
     pub setup_master: String,
 }
