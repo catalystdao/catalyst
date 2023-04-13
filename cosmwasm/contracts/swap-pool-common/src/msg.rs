@@ -1,7 +1,7 @@
-use cosmwasm_schema::{cw_serde, QueryResponses};
+use cosmwasm_schema::cw_serde;
 
 use cosmwasm_std::{Binary, Uint128, Addr};
-use cw20::{Expiration, AllowanceResponse, BalanceResponse, TokenInfoResponse};
+use cw20::Expiration;
 use ethnum::U256;
 use schemars::JsonSchema;
 use serde::{Serialize, Deserialize};

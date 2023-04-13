@@ -1,6 +1,6 @@
 #[cfg(not(feature = "library"))]
-use cosmwasm_std::{entry_point, StdError};
-use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, to_binary, Uint128};
+use cosmwasm_std::entry_point;
+use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, to_binary};
 use cw2::set_contract_version;
 use cw20_base::allowances::{
     execute_decrease_allowance, execute_increase_allowance, execute_send_from,

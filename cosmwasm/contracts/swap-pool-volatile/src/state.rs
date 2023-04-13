@@ -623,7 +623,7 @@ pub fn receive_asset(
     u: U256,
     min_out: Uint128,
     swap_hash: Vec<u8>,
-    calldata: Vec<u8>   //TODO calldata
+    _calldata: Vec<u8>   //TODO calldata
 ) -> Result<Response, ContractError> {
 
     // Only allow connected pools
@@ -781,7 +781,7 @@ pub fn receive_liquidity(
     u: U256,
     min_out: Uint128,
     swap_hash: Vec<u8>,
-    calldata: Vec<u8>   //TODO calldata
+    _calldata: Vec<u8>   //TODO calldata
 ) -> Result<Response, ContractError> {
 
     // Only allow connected pools
@@ -1047,7 +1047,7 @@ pub fn update_weights(
 ) -> Result<(), ContractError> {
     
     // Only run update logic if 'param_update_finish_timestamp' is set
-    let mut param_update_finish_timestamp = WEIGHT_UPDATE_FINISH_TIMESTAMP.load(deps.storage)?;
+    let param_update_finish_timestamp = WEIGHT_UPDATE_FINISH_TIMESTAMP.load(deps.storage)?;
     if param_update_finish_timestamp == 0 {    //TODO EVM mismatch - allow the cheaper 'no jump' for when updating the weights
         return Ok(());
     }
