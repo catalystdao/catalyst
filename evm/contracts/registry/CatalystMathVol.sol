@@ -28,7 +28,7 @@ contract CatalystMathVol is IntegralsVolatile, ICatalystMathLibVol {
             return currentWeight; // Great, we don't need to do any adjustments:
 
         // We need to do the adjustment. Fetch relevant variables.
-        uint256 targetWeight = CatalystSwapPoolVolatile(vault)._weight(asset);
+        uint256 targetWeight = CatalystSwapPoolVolatile(vault)._targetWeight(asset);
         uint256 lastModification = CatalystSwapPoolVolatile(vault)._lastModificationTime();
 
         // If the current time is past the adjustment, we should return the final weights
@@ -38,17 +38,15 @@ contract CatalystMathVol is IntegralsVolatile, ICatalystMathLibVol {
         if (targetWeight > currentWeight) {
             // if the weights are increased then targetWeight - currentWeight > 0.
             // Add the change to the current weight.
-            uint256 newWeight = currentWeight + (
+            return currentWeight + (
                 (targetWeight - currentWeight) * (block.timestamp - lastModification)
             ) / (adjTarget - lastModification);
-            return newWeight;
         } else {
             // if the weights are decreased then targetWeight - currentWeight < 0.
             // Subtract the change from the current weights.
-            uint256 newWeight = currentWeight - (
+            return currentWeight - (
                 (currentWeight - targetWeight) * (block.timestamp - lastModification)
             ) / (adjTarget - lastModification);
-            return newWeight;
         }
     }
 
