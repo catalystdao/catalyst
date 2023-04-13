@@ -962,7 +962,7 @@ pub fn send_asset_ack(
     )?;
 
     let used_capacity = USED_LIMIT_CAPACITY.load(deps.storage)?;
-    USED_LIMIT_CAPACITY.save(deps.storage, &used_capacity.saturating_sub(u));
+    USED_LIMIT_CAPACITY.save(deps.storage, &used_capacity.saturating_sub(u))?;
 
     Ok(response)
 }
@@ -986,7 +986,7 @@ pub fn send_liquidity_ack(
     )?;
 
     let used_capacity = USED_LIMIT_CAPACITY.load(deps.storage)?;
-    USED_LIMIT_CAPACITY.save(deps.storage, &used_capacity.saturating_sub(u));
+    USED_LIMIT_CAPACITY.save(deps.storage, &used_capacity.saturating_sub(u))?;
 
     Ok(response)
 }
