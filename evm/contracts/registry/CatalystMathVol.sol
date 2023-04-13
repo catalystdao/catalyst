@@ -8,13 +8,14 @@ import "../FixedPointMathLib.sol";
 import "../interfaces/ICatalystV1PoolDerived.sol";
 import "../interfaces/ICatalystV1PoolState.sol";
 import "../SwapPoolVolatile.sol";
+import "../IntegralsVolatile.sol";
 
 /**
  * @title Catalyst: Volatile mathematics implementation
  * @author Catalyst Labs
  * @notice This contract is not optimised for on-chain calls and serves to aid in off-chain quering.
  */
-contract CatalystMathVol is ICatalystMathLibVol {
+contract CatalystMathVol is IntegralsVolatile, ICatalystMathLibVol {
     
     /// @notice Helper function which returns the true weight. If weights are being adjusted, the pure vault weights might lie.
     function getTrueWeight(address vault, address asset) public view returns(uint256) {
@@ -58,8 +59,6 @@ contract CatalystMathVol is ICatalystMathLibVol {
         return FixedPointMathLib.mulWadDown(amount, FixedPointMathLib.WAD - fee);
     }
     
-    //--- Swap integrals ---//
-
     /**
      * @notice Computes the integral \int_{A}^{A+x} W/w dw = W ln((A+x)/A)
      * The value is returned as units, which is always WAD.
@@ -74,10 +73,8 @@ contract CatalystMathVol is ICatalystMathLibVol {
         uint256 input,
         uint256 A,
         uint256 W
-    ) public pure returns (uint256) {
-        // Notice, A + in and A are not WAD but divWadDown is used anyway.
-        // That is because lnWad requires a scaled number.
-        return W * uint256(FixedPointMathLib.lnWad(int256(FixedPointMathLib.divWadDown(A + input, A))));    // int256 casting is safe. If overflows, it returns negative. lnWad fails on negative numbers. If the vault balance is high, this is unlikely.
+    ) external pure returns (uint256) {
+        return _calcPriceCurveArea(input, A, W);
     }
 
     /**
@@ -95,11 +92,8 @@ contract CatalystMathVol is ICatalystMathLibVol {
         uint256 U,
         uint256 B,
         uint256 W
-    ) public pure returns (uint256) {
-        return FixedPointMathLib.mulWadDown(
-            B,
-            FixedPointMathLib.WAD - uint256(FixedPointMathLib.expWad(-int256(U / W)))   // int256 casting is initially not safe. If overflow, the equation becomes: 1 - exp(U/W) => exp(U/W) > 1. In this case, Solidity's built-in safe math protection catches the overflow.
-        );
+    ) external pure returns (uint256) {
+        return _calcPriceCurveLimit(U, B, W);
     }
 
     /**
@@ -119,13 +113,8 @@ contract CatalystMathVol is ICatalystMathLibVol {
         uint256 B,
         uint256 W_A,
         uint256 W_B
-    ) public pure returns (uint256) {
-        // uint256 U = FixedPointMathLib.WAD - uint256(FixedPointMathLib.powWad(
-        //     int256(FixedPointMathLib.divWadDown(A + input, A)),
-        //     int256(FixedPointMathLib.divWadDown(W_A, W_B))
-        //)); 
-        // return (B * U) / FixedPointMathLib.WAD;
-        return calcPriceCurveLimit(calcPriceCurveArea(input, A, W_A), B, W_B);
+    ) external pure returns (uint256) {
+        return _calcPriceCurveLimit(_calcPriceCurveArea(input, A, W_A), B, W_B);
     }
 
     /**
@@ -139,7 +128,7 @@ contract CatalystMathVol is ICatalystMathLibVol {
     function calcPriceCurveLimitShare(
         uint256 U,
         uint256 W
-    ) public pure returns (uint256) {
+    ) external pure returns (uint256) {
         // Compute the non vault ownership share. (1 - vault ownership share)
         uint256 npos = uint256(FixedPointMathLib.expWad(-int256(U / W)));   // int256 casting is initially not safe. If overflow, the equation becomes: exp(U/W). In this case, when subtracted from 1 (later), Solidity's built-in safe math protection catches the overflow since exp(U/W) > 1.
         
@@ -174,7 +163,7 @@ contract CatalystMathVol is ICatalystMathLibVol {
 
         // If a token is not part of the vault, W is 0. This returns 0 by
         // multiplication with 0.
-        return calcPriceCurveArea(amount, A, W);
+        return _calcPriceCurveArea(amount, A, W);
     }
 
     /**
@@ -198,7 +187,7 @@ contract CatalystMathVol is ICatalystMathLibVol {
         // they would just add value to the vault. We don't care about it.
         // However, it will revert since the solved integral contains U/W and when
         // W = 0 then U/W returns division by 0 error.
-        return calcPriceCurveLimit(U, B, W);
+        return _calcPriceCurveLimit(U, B, W);
     }
 
     /**
@@ -217,9 +206,9 @@ contract CatalystMathVol is ICatalystMathLibVol {
         address fromAsset,
         address toAsset,
         uint256 amount
-    ) external view override returns (uint256) {
-        uint256 A = ERC20(fromAsset).balanceOf(address(this));
-        uint256 B = ERC20(toAsset).balanceOf(address(this)) - CatalystSwapPoolVolatile(vault)._escrowedTokens(toAsset);
+    ) public view override returns (uint256) {
+        uint256 A = calcFee(vault, ERC20(fromAsset).balanceOf(vault));
+        uint256 B = ERC20(toAsset).balanceOf(vault) - CatalystSwapPoolVolatile(vault)._escrowedTokens(toAsset);
         uint256 W_A = getTrueWeight(vault, fromAsset);
         uint256 W_B = getTrueWeight(vault, toAsset);
 
@@ -234,7 +223,16 @@ contract CatalystMathVol is ICatalystMathLibVol {
 
         // If either token doesn't exist, their weight is 0.
         // Then powWad returns 1 which is subtracted from 1 => returns 0.
-        return calcCombinedPriceCurves(amount, A, B, W_A, W_B);
+        return _calcCombinedPriceCurves(amount, A, B, W_A, W_B);
+    }
+
+    function ecalcLocalSwap(
+        address vault,
+        address fromAsset,
+        address toAsset,
+        uint256 amount
+    ) external returns (uint256) {
+        return calcLocalSwap(vault, fromAsset, toAsset, amount);
     }
 
     /**

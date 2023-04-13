@@ -54,5 +54,17 @@ contract CatalystDescriberRegistry is Ownable {
         emit CatalystDescriber(_vault_describers.length, catalystDescriber);
     }
 
+    /**
+     * @notice Defines a new Catalyst Describer and incremenets the Catalyst version
+     */
+    function modify_describer(address catalystDescriber) external onlyOwner {
+        if (catalystDescriber == address(0)) revert  ZeroDescriber(); 
+
+        _vault_describers.push(catalystDescriber);
+        _describer_version[catalystDescriber] = _vault_describers.length;
+
+        emit CatalystDescriber(_vault_describers.length, catalystDescriber);
+    }
+
 }
 

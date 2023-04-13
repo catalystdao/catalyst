@@ -9,6 +9,8 @@ import "./FixedPointMathLib.sol";
 import "./CatalystIBCInterface.sol";
 import "./SwapPoolCommon.sol";
 import "./ICatalystV1Pool.sol";
+import "./IntegralsVolatile.sol";
+import "./registry/interfaces/ICatalystMathLibVol.sol";
 
 /**
  * @title Catalyst: The Multi-Chain Swap pool
@@ -39,7 +41,7 @@ import "./ICatalystV1Pool.sol";
  * over the pool. 
  * !If finishSetup is not called, the pool can be drained!
  */
-contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon {
+contract CatalystSwapPoolVolatile is IntegralsVolatile, CatalystSwapPoolCommon {
     using SafeTransferLib for ERC20;
 
     //--- ERRORS ---//
@@ -256,97 +258,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon {
     }
 
     //--- Swap integrals ---//
-
-    /**
-     * @notice Computes the integral \int_{A}^{A+x} W/w dw = W ln((A+x)/A)
-     * The value is returned as units, which is always WAD.
-     * @dev All input amounts should be the raw numbers and not WAD.
-     * Since units are always denominated in WAD, the function should be treated as mathematically *native*.
-     * @param input The input amount.
-     * @param A The current pool balance of the x token.
-     * @param W The weight of the x token.
-     * @return uint256 Group-specific units (units are **always** WAD).
-     */
-    function _calcPriceCurveArea(
-        uint256 input,
-        uint256 A,
-        uint256 W
-    ) internal pure returns (uint256) {
-        // Notice, A + in and A are not WAD but divWadDown is used anyway.
-        // That is because lnWad requires a scaled number.
-        return W * uint256(FixedPointMathLib.lnWad(int256(FixedPointMathLib.divWadDown(A + input, A))));    // int256 casting is safe. If overflows, it returns negative. lnWad fails on negative numbers. If the pool balance is high, this is unlikely.
-    }
-
-    /**
-     * @notice Solves the equation U = \int_{B-y}^{B} W/w dw for y = B · (1 - exp(-U/W))
-     * The value is returned as output token. (not WAD)
-     * @dev All input amounts should be the raw numbers and not WAD.
-     * Since units are always multiplied by WAD, the function
-     * should be treated as mathematically *native*.
-     * @param U Incoming group specific units.
-     * @param B The current pool balance of the y token.
-     * @param W The weight of the y token.
-     * @return uint25 Output denominated in output token. (not WAD)
-     */
-    function _calcPriceCurveLimit(
-        uint256 U,
-        uint256 B,
-        uint256 W
-    ) internal pure returns (uint256) {
-        return FixedPointMathLib.mulWadDown(
-            B,
-            FixedPointMathLib.WAD - uint256(FixedPointMathLib.expWad(-int256(U / W)))   // int256 casting is initially not safe. If overflow, the equation becomes: 1 - exp(U/W) => exp(U/W) > 1. In this case, Solidity's built-in safe math protection catches the overflow.
-        );
-    }
-
-    /**
-     * @notice Solves the equation
-     *     \int_{A}^{A+x} W_a/w dw = \int_{B-y}^{B} W_b/w dw for y = B · (1 - ((A+x)/A)^(-W_a/W_b))
-     *
-     * Alternatively, the integral can be computed through:
-     *      _calcPriceCurveLimit(_calcPriceCurveArea(input, A, W_A), B, W_B).
-     * @dev All input amounts should be the raw numbers and not WAD.
-     * @param input The input amount.
-     * @param A The current pool balance of the x token.
-     * @param B The current pool balance of the y token.
-     * @param W_A The weight of the x token.
-     * @param W_B TThe weight of the y token.
-     * @return uint256 Output denominated in output token.
-     */
-    function _calcCombinedPriceCurves(
-        uint256 input,
-        uint256 A,
-        uint256 B,
-        uint256 W_A,
-        uint256 W_B
-    ) internal pure returns (uint256) {
-        // uint256 U = FixedPointMathLib.WAD - uint256(FixedPointMathLib.powWad(
-        //     int256(FixedPointMathLib.divWadDown(A + input, A)),
-        //     int256(FixedPointMathLib.divWadDown(W_A, W_B))
-        //)); 
-        // return (B * U) / FixedPointMathLib.WAD;
-        return _calcPriceCurveLimit(_calcPriceCurveArea(input, A, W_A), B, W_B);
-    }
-
-    /**
-     * @notice Solves the generalised swap integral.
-     * @dev Based on _calcPriceCurveLimit but the multiplication by the
-     * specific token is never done.
-     * @param U Input units.
-     * @param W The generalised weights.
-     * @return uint256 Output denominated in pool share.
-     */
-    function _calcPriceCurveLimitShare(
-        uint256 U,
-        uint256 W
-    ) internal pure returns (uint256) {
-        // Compute the non pool ownership share. (1 - pool ownership share)
-        uint256 npos = uint256(FixedPointMathLib.expWad(-int256(U / W)));   // int256 casting is initially not safe. If overflow, the equation becomes: exp(U/W). In this case, when subtracted from 1 (later), Solidity's built-in safe math protection catches the overflow since exp(U/W) > 1.
-        
-        // Compute the pool owner share before liquidity has been added.
-        // (solve share = pt/(PT+pt) for pt.)
-        return FixedPointMathLib.divWadDown(FixedPointMathLib.WAD - npos, npos);
-    }
+    // IntegralsVolatile.sol
 
     /**
      * @notice Computes the return of SendAsset.
@@ -355,10 +267,10 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon {
      * @param amount The amount of from token to sell.
      * @return uint256 Group-specific units.
      */
-    function calcSendAsset(
+    function _calcSendAsset(
         address fromAsset,
         uint256 amount
-    ) public view override returns (uint256) {
+    ) internal view returns (uint256) {
         // A high => fewer units returned. Do not subtract the escrow amount
         uint256 A = ERC20(fromAsset).balanceOf(address(this));
         uint256 W = _weight[fromAsset];
@@ -369,16 +281,33 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon {
     }
 
     /**
+     * @notice Computes the return of SendAsset.
+     * @dev Returns 0 if from is not a token in the pool
+     * Is implemented through an external mathematical library,
+     * which more accuratly reproduces the output of a swap by considering
+     * pending weight changes and the swap fee.
+     * @param fromAsset The address of the token to sell.
+     * @param amount The amount of from token to sell.
+     * @return uint256 Group-specific units.
+     */
+    function calcSendAsset(
+        address fromAsset,
+        uint256 amount
+    ) external view override returns (uint256) {
+        return ICatalystMathLibVol(MATHLIB).calcSendAsset(address(this), fromAsset, amount);
+    }
+
+    /**
      * @notice Computes the output of ReceiveAsset.
      * @dev Reverts if to is not a token in the pool
      * @param toAsset The address of the token to buy.
      * @param U The number of units used to buy to.
      * @return uint256 Number of purchased tokens.
      */
-    function calcReceiveAsset(
+    function _calcReceiveAsset(
         address toAsset,
         uint256 U
-    ) public view override returns (uint256) {
+    ) internal view returns (uint256) {
         // B low => fewer tokens returned. Subtract the escrow amount to decrease the balance.
         uint256 B = ERC20(toAsset).balanceOf(address(this)) - _escrowedTokens[toAsset];
         uint256 W = _weight[toAsset];
@@ -391,6 +320,23 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon {
     }
 
     /**
+     * @notice Computes the output of ReceiveAsset.
+     * @dev Reverts if to is not a token in the pool
+     * Is implemented through an external mathematical library,
+     * which more accuratly reproduces the output of a swap by considering
+     * pending weight changes and the swap fee.
+     * @param toAsset The address of the token to buy.
+     * @param U The number of units used to buy to.
+     * @return uint256 Number of purchased tokens.
+     */
+    function calcReceiveAsset(
+        address toAsset,
+        uint256 U
+    ) external view override returns (uint256) {
+        return ICatalystMathLibVol(MATHLIB).calcReceiveAsset(address(this), toAsset, U);
+    }
+
+    /**
      * @notice Computes the output of localSwap.
      * @dev If the pool weights of the 2 tokens are equal, a very simple curve is used.
      * If from or to is not part of the pool, the swap will either return 0 or revert.
@@ -400,11 +346,11 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon {
      * @param amount The amount of from token to sell for to token.
      * @return uint256 Output denominated in toAsset.
      */
-    function calcLocalSwap(
+    function _calcLocalSwap(
         address fromAsset,
         address toAsset,
         uint256 amount
-    ) public view override returns (uint256) {
+    ) internal view returns (uint256) {
         uint256 A = ERC20(fromAsset).balanceOf(address(this));
         uint256 B = ERC20(toAsset).balanceOf(address(this)) - _escrowedTokens[toAsset];
         uint256 W_A = _weight[fromAsset];
@@ -422,6 +368,27 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon {
         // If either token doesn't exist, their weight is 0.
         // Then powWad returns 1 which is subtracted from 1 => returns 0.
         return _calcCombinedPriceCurves(amount, A, B, W_A, W_B);
+    }
+
+    /**
+     * @notice Computes the output of localSwap.
+     * @dev If the pool weights of the 2 tokens are equal, a very simple curve is used.
+     * If from or to is not part of the pool, the swap will either return 0 or revert.
+     * If both from and to are not part of the pool, the swap can actually return a positive value.
+     * Is implemented through an external mathematical library,
+     * which more accuratly reproduces the output of a swap by considering
+     * pending weight changes and the swap fee.
+     * @param fromAsset The address of the token to sell.
+     * @param toAsset The address of the token to buy.
+     * @param amount The amount of from token to sell for to token.
+     * @return uint256 Output denominated in toAsset.
+     */
+    function calcLocalSwap(
+        address fromAsset,
+        address toAsset,
+        uint256 amount
+    ) external view override returns (uint256) {
+        return ICatalystMathLibVol(MATHLIB).calcLocalSwap(address(this), fromAsset, toAsset, amount);
     }
 
     /**
@@ -646,7 +613,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon {
         uint256 fee = FixedPointMathLib.mulWadDown(amount, _poolFee);
 
         // Calculate the return value.
-        uint256 out = calcLocalSwap(fromAsset, toAsset, amount - fee);
+        uint256 out = _calcLocalSwap(fromAsset, toAsset, amount - fee);
 
         // Check if the calculated returned value is more than the minimum output.
         if (minOut > out) revert ReturnInsufficient(out, minOut);
@@ -701,7 +668,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon {
         uint256 fee = FixedPointMathLib.mulWadDown(amount, _poolFee);
 
         // Calculate the group-specific units bought.
-        uint256 U = calcSendAsset(fromAsset, amount - fee);
+        uint256 U = _calcSendAsset(fromAsset, amount - fee);
 
         // Only need to hash info that is required by the escrow (+ some extra for randomisation)
         // No need to hash context (as token/liquidity escrow data is different), fromPool, toPool, targetAssetIndex, minOut, CallData
@@ -825,7 +792,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon {
 
         // Calculate the swap return value.
         // Fee is always taken on the sending token.
-        uint256 purchasedTokens = calcReceiveAsset(toAsset, U);
+        uint256 purchasedTokens = _calcReceiveAsset(toAsset, U);
 
         // Ensure the user is satisfied by the number of tokens.
         if (minOut > purchasedTokens) revert ReturnInsufficient(purchasedTokens, minOut);

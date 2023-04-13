@@ -8,13 +8,14 @@ import "../FixedPointMathLib.sol";
 import "../interfaces/ICatalystV1PoolDerived.sol";
 import "../interfaces/ICatalystV1PoolState.sol";
 import "../SwapPoolAmplified.sol";
+import "../IntegralsAmplified.sol";
 
 /**
  * @title Catalyst: Amplified mathematics implementation
  * @author Catalyst Labs
  * @notice This contract is not optimised for on-chain calls and serves to aid in off-chain quering.
  */
-contract CatalystMathAmp is ICatalystMathLibAmp {
+contract CatalystMathAmp is IntegralsAmplified, ICatalystMathLibAmp {
 
     // When the swap is a very small size of the pool, the swaps
     // returns slightly more. To counteract this, an additional fee
@@ -95,26 +96,7 @@ contract CatalystMathAmp is ICatalystMathLibAmp {
         uint256 W,
         int256 oneMinusAmp
     ) public pure returns (uint256) {
-        // Will revert if W = 0. 
-        // Or if A + input == 0.
-        int256 calc = FixedPointMathLib.powWad(
-            int256(W * (A + input) * FixedPointMathLib.WAD),    // If casting overflows to a negative number, powWad fails
-            oneMinusAmp
-        );
-
-        // If the pool contains 0 assets, the below computation will fail. This is bad.
-        // Instead, check if A is 0. If it is then skip because:: (W · A)^(1-k) = (W · 0)^(1-k) = 0
-        if (A != 0) {
-            unchecked {
-                // W * A * FixedPointMathLib.WAD < W * (A + input) * FixedPointMathLib.WAD 
-                calc -= FixedPointMathLib.powWad(
-                    int256(W * A * FixedPointMathLib.WAD),              // If casting overflows to a negative number, powWad fails
-                    oneMinusAmp
-                );
-            }
-        }
-        
-        return uint256(calc);   // Casting always safe, as calc always > =0
+        return _calcPriceCurveArea(input, A, W, oneMinusAmp);
     }
 
     /**
@@ -138,24 +120,7 @@ contract CatalystMathAmp is ICatalystMathLibAmp {
         uint256 W,
         int256 oneMinusAmp
     ) public pure returns (uint256) {
-        // W_B · B^(1-k) is repeated twice and requires 1 power.
-        // As a result, we compute it and cache it.
-        uint256 W_BxBtoOMA = uint256(                       // Always casts a positive value
-            FixedPointMathLib.powWad(
-                int256(W * B * FixedPointMathLib.WAD),      // If casting overflows to a negative number, powWad fails
-                oneMinusAmp
-            )
-        );
-
-        return FixedPointMathLib.mulWadDown(
-            B,
-            FixedPointMathLib.WAD - uint256(                                                        // Always casts a positive value
-                FixedPointMathLib.powWad(
-                    int256(FixedPointMathLib.divWadUp(W_BxBtoOMA - U, W_BxBtoOMA)),                 // Casting never overflows, as division result is always < 1
-                    FixedPointMathLib.WADWAD / oneMinusAmp 
-                )
-            )
-        );
+        return _calcPriceCurveLimit(U, B, W, oneMinusAmp);
     }
 
     /**
@@ -185,24 +150,7 @@ contract CatalystMathAmp is ICatalystMathLibAmp {
         uint256 W_B,
         int256 oneMinusAmp
     ) public pure returns (uint256) {
-        // uint256 W_BxBtoOMA = uint256(FixedPointMathLib.powWad(
-        //     int256(W_B * B * FixedPointMathLib.WAD),
-        //     oneMinusAmp
-        // ));
-
-        // uint256 U = uint256(FixedPointMathLib.powWad(
-        //     int256(W_A * (A + input) * FixedPointMathLib.WAD),
-        //     oneMinusAmp
-        // ) - FixedPointMathLib.powWad(
-        //     int256(W_A * A * FixedPointMathLib.WAD),
-        //     oneMinusAmp
-        // )); // _calcPriceCurveArea(input, A, W_A, amp)
-
-        // return B * (FixedPointMathLib.WAD - uint256(FixedPointMathLib.powWad(
-        //             int256(FixedPointMathLib.divWadUp(W_BxBtoOMA - U, W_BxBtoOMA)),
-        //             int256(FixedPointMathLib.WAD * FixedPointMathLib.WAD / uint256(oneMinusAmp)))
-        //         )) / FixedPointMathLib.WAD; // _calcPriceCurveLimit
-        return calcPriceCurveLimit(calcPriceCurveArea(input, A, W_A, oneMinusAmp), B, W_B, oneMinusAmp);
+        return _calcCombinedPriceCurves(input, A, B, W_A, W_B, oneMinusAmp);
     }
 
     /**
@@ -216,20 +164,7 @@ contract CatalystMathAmp is ICatalystMathLibAmp {
      * @return uint256 Output denominated in pool tokens.
      */
     function calcPriceCurveLimitShare(uint256 U, uint256 ts, uint256 it_times_walpha_amped, int256 oneMinusAmpInverse) external pure returns (uint256) {
-        uint256 poolTokens = FixedPointMathLib.mulWadDown(
-            ts,
-            uint256(  // Always casts a positive value, as powWad >= 1, hence powWad - WAD >= 0
-                FixedPointMathLib.powWad(  // poWad always >= 1, as the 'base' is always >= 1
-                    int256(FixedPointMathLib.divWadDown(  // If casting overflows to a negative number, powWad fails
-                        it_times_walpha_amped + U,
-                        it_times_walpha_amped
-                    )),
-                    oneMinusAmpInverse
-                ) - int256(FixedPointMathLib.WAD)
-            )
-        );
-
-        return poolTokens;
+        return _calcPriceCurveLimitShare(U, ts, it_times_walpha_amped, oneMinusAmpInverse);
     }
 
     // To compute the result of a cross-chain swap, find the mathematical contract for each chain which you want to swap to.
