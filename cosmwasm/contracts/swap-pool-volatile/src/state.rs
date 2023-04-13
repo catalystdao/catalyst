@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, Uint128, DepsMut, Env, MessageInfo, Response, StdResult, CosmosMsg, to_binary, Deps};
+use cosmwasm_std::{Addr, Uint128, DepsMut, Env, MessageInfo, Response, StdResult, CosmosMsg, to_binary, Deps, StdError};
 use cw20::{Cw20ExecuteMsg, Cw20QueryMsg};
 use cw20_base::{contract::execute_mint, allowances::execute_burn_from};
 use cw_storage_plus::Item;
@@ -11,7 +11,7 @@ use swap_pool_common::{
         ASSETS, MAX_ASSETS, WEIGHTS, INITIAL_MINT_AMOUNT, POOL_FEE, MAX_LIMIT_CAPACITY, USED_LIMIT_CAPACITY, CHAIN_INTERFACE,
         TOTAL_ESCROWED_LIQUIDITY, TOTAL_ESCROWED_ASSETS, is_connected, get_asset_index, update_unit_capacity,
         collect_governance_fee_message, compute_send_asset_hash, compute_send_liquidity_hash, create_asset_escrow,
-        create_liquidity_escrow, on_send_asset_ack, on_send_liquidity_ack, total_supply,
+        create_liquidity_escrow, on_send_asset_ack, on_send_liquidity_ack, total_supply, get_unit_capacity,
     },
     ContractError
 };
@@ -1158,4 +1158,64 @@ pub fn update_weights(
 
     Ok(())
 
+}
+
+
+
+// Query helpers ****************************************************************************************************************
+
+pub fn query_calc_send_asset(
+    deps: Deps,
+    env: Env,
+    from_asset: &str,
+    amount: Uint128
+) -> StdResult<U256> {
+
+    calc_send_asset(&deps, env, from_asset, amount)
+        .map_err(|err| err.into())
+
+}
+
+
+pub fn query_calc_receive_asset(
+    deps: Deps,
+    env: Env,
+    to_asset: &str,
+    u: U256
+) -> StdResult<Uint128> {
+
+    calc_receive_asset(&deps, env, to_asset, u)
+        .map_err(|err| err.into())
+
+}
+
+
+pub fn query_calc_local_swap(
+    deps: Deps,
+    env: Env,
+    from_asset: &str,
+    to_asset: &str,
+    amount: Uint128
+) -> StdResult<Uint128> {
+
+    calc_local_swap(&deps, env, from_asset, to_asset, amount)
+        .map_err(|err| err.into())
+
+}
+
+
+pub fn query_get_limit_capacity(deps: Deps, env: Env) -> StdResult<U256> {
+
+    get_unit_capacity(&deps, env)
+        .map_err(|_| StdError::GenericErr { msg: "".to_owned() })   //TODO error
+
+}
+
+
+pub fn query_target_weights(deps: Deps) -> StdResult<Vec<u64>> {
+    TARGET_WEIGHTS.load(deps.storage)
+}
+
+pub fn query_weights_update_finish_timestamp(deps: Deps) -> StdResult<u64> {
+    WEIGHT_UPDATE_FINISH_TIMESTAMP.load(deps.storage)
 }

@@ -195,118 +195,6 @@ pub enum ExecuteMsg<T> {
     BurnFrom { owner: String, amount: Uint128 },
 }
 
-#[cw_serde]
-#[derive(QueryResponses)]
-pub enum QueryMsg {
-
-    #[returns(ChainInterfaceResponse)]
-    ChainInterface {},
-
-    #[returns(SetupMasterResponse)]
-    SetupMaster {},
-
-    // #[returns(FactoryResponse)]
-    // Factory {},
-
-    // #[returns(FactoryOwnerResponse)]
-    // FactoryOwner {},
-
-    #[returns(ReadyResponse)]
-    Ready {},
-
-    #[returns(OnlyLocalResponse)]
-    OnlyLocal {},
-
-    #[returns(AssetsResponse)]
-    Assets {
-    },
-
-    #[returns(WeightsResponse)]
-    Weights {
-    },
-
-
-    //TODO this does not belong in common
-    // #[returns(TargetWeightsResponse)]
-    // TargetWeights {
-    // },
-
-
-    //TODO this does not belong in common
-    // #[returns(WeightsUpdateFinishTimestampResponse)]
-    // WeightsUpdateFinishTimestamp {
-    // },
-
-
-    #[returns(PoolFeeResponse)]
-    PoolFee {},
-
-    #[returns(GovernanceFeeShareResponse)]
-    GovernanceFeeShare {},
-
-    #[returns(FeeAdministratorResponse)]
-    FeeAdministrator {},
-
-
-    #[returns(CalcSendAssetResponse)]
-    CalcSendAsset {
-        from_asset: String,
-        amount: Uint128
-    },
-
-    #[returns(CalcReceiveAssetResponse)]
-    CalcReceiveAsset {
-        to_asset: String,
-        #[serde(with = "U256Def")]
-        u: U256
-    },
-
-    #[returns(CalcLocalSwapResponse)]
-    CalcLocalSwap {
-        from_asset: String,
-        to_asset: String,
-        amount: Uint128
-    },
-
-    #[returns(GetLimitCapacityResponse)]
-    GetLimitCapacity {},
-
-
-    #[returns(TotalEscrowedAssetResponse)]
-    TotalEscrowedAsset {
-        asset: String
-    },
-
-    #[returns(TotalEscrowedLiquidityResponse)]
-    TotalEscrowedLiquidity {},
-
-    #[returns(AssetEscrowResponse)]
-    AssetEscrow {
-        hash: String
-    },
-
-    #[returns(LiquidityEscrowResponse)]
-    LiquidityEscrow {
-        hash: String
-    },
-
-    #[returns(PoolConnectionStateResponse)]
-    PoolConnectionState {
-        channel_id: String,
-        pool: Vec<u8>
-    },
-
-
-    // CW20 Implementation
-    #[returns(BalanceResponse)]
-    Balance { address: String },
-    #[returns(TokenInfoResponse)]
-    TokenInfo {},
-    #[returns(AllowanceResponse)]
-    Allowance { owner: String, spender: String },
-
-}
-
 
 #[cw_serde]
 pub struct ChainInterfaceResponse {
@@ -336,16 +224,6 @@ pub struct AssetsResponse {
 #[cw_serde]
 pub struct WeightsResponse {
     pub weights: Vec<u64>
-}
-
-#[cw_serde]
-pub struct TargetWeightsResponse {
-    pub target_weights: Vec<u64>
-}
-
-#[cw_serde]
-pub struct WeightsUpdateFinishTimestampResponse {
-    pub timestamp: u64
 }
 
 #[cw_serde]

@@ -9,17 +9,16 @@ use cw20_base::allowances::{
 use cw20_base::contract::{
     execute_send, execute_transfer, query_balance, query_token_info,
 };
-use ethnum::U256;
 use swap_pool_common::ContractError;
 use swap_pool_common::state::{
     setup, finish_setup, set_fee_administrator, set_pool_fee, set_governance_fee_share, set_connection, send_asset_ack,
-    send_asset_timeout, send_liquidity_ack, send_liquidity_timeout, get_unit_capacity, query_chain_interface, query_setup_master, query_ready, query_only_local, query_assets, query_weights, query_pool_fee, query_governance_fee_share, query_fee_administrator, query_total_escrowed_liquidity, query_total_escrowed_asset, query_asset_escrow, query_liquidity_escrow, query_pool_connection_state
+    send_asset_timeout, send_liquidity_ack, send_liquidity_timeout, query_chain_interface, query_setup_master, query_ready, query_only_local, query_assets, query_weights, query_pool_fee, query_governance_fee_share, query_fee_administrator, query_total_escrowed_liquidity, query_total_escrowed_asset, query_asset_escrow, query_liquidity_escrow, query_pool_connection_state
 };
 
 use crate::msg::{VolatileExecuteMsg, InstantiateMsg, QueryMsg, VolatileExecuteExtension};
 use crate::state::{
     initialize_swap_curves, set_weights, deposit_mixed, withdraw_all, withdraw_mixed, local_swap, send_asset, receive_asset,
-    send_liquidity, receive_liquidity, calc_send_asset, calc_receive_asset, calc_local_swap
+    send_liquidity, receive_liquidity, query_calc_send_asset, query_calc_receive_asset, query_calc_local_swap, query_get_limit_capacity, query_target_weights, query_weights_update_finish_timestamp
 };
 
 
@@ -398,15 +397,25 @@ pub fn execute(
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
+
+        // Common Queries
         QueryMsg::ChainInterface {} => to_binary(&query_chain_interface(deps)?),
         QueryMsg::SetupMaster {} => to_binary(&query_setup_master(deps)?),
+
+        QueryMsg::PoolConnectionState {
+            channel_id,
+            pool 
+        } => to_binary(&query_pool_connection_state(deps, channel_id.as_ref(), pool)?),
+
         QueryMsg::Ready{} => to_binary(&query_ready(deps)?),
         QueryMsg::OnlyLocal{} => to_binary(&query_only_local(deps)?),
         QueryMsg::Assets {} => to_binary(&query_assets(deps)?),
         QueryMsg::Weights {} => to_binary(&query_weights(deps)?),
+
         QueryMsg::PoolFee {} => to_binary(&query_pool_fee(deps)?),
         QueryMsg::GovernanceFeeShare {} => to_binary(&query_governance_fee_share(deps)?),
         QueryMsg::FeeAdministrator {} => to_binary(&query_fee_administrator(deps)?),
+
         QueryMsg::CalcSendAsset{
             from_asset,
             amount
@@ -420,14 +429,19 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
             to_asset,
             amount
         } => to_binary(&query_calc_local_swap(deps,env, &from_asset, &to_asset,amount)?),
+
         QueryMsg::GetLimitCapacity{} => to_binary(&query_get_limit_capacity(deps,env)?),
+
         QueryMsg::TotalEscrowedAsset {
             asset
         } => to_binary(&query_total_escrowed_asset(deps, asset.as_ref())?),
         QueryMsg::TotalEscrowedLiquidity {} => to_binary(&query_total_escrowed_liquidity(deps)?),
         QueryMsg::AssetEscrow { hash } => to_binary(&query_asset_escrow(deps, hash.as_str())?),
         QueryMsg::LiquidityEscrow { hash } => to_binary(&query_liquidity_escrow(deps, hash.as_str())?),
-        QueryMsg::PoolConnectionState { channel_id, pool } => to_binary(&query_pool_connection_state(deps, channel_id.as_ref(), pool)?),
+
+        // Volatile-Specific Queries
+        QueryMsg::TargetWeights {} => to_binary(&query_target_weights(deps)?),
+        QueryMsg::WeightsUpdateFinishTimestamp {} => to_binary(&query_weights_update_finish_timestamp(deps)?),
 
         // CW20 query msgs - Use cw20-base for the implementation
         QueryMsg::TokenInfo {} => to_binary(&query_token_info(deps)?),
@@ -436,56 +450,6 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     }
 }
 
-
-
-
-pub fn query_get_limit_capacity(deps: Deps, env: Env) -> StdResult<U256> { //TODO maths
-
-    get_unit_capacity(&deps, env)
-        .map(|capacity| capacity)
-        .map_err(|_| StdError::GenericErr { msg: "".to_owned() })   //TODO error
-
-}
-
-
-pub fn query_calc_send_asset(
-    deps: Deps,
-    env: Env,
-    from_asset: &str,
-    amount: Uint128
-) -> StdResult<U256> {
-
-    calc_send_asset(&deps, env, from_asset, amount)
-        .map_err(|err| err.into())
-
-}
-
-
-pub fn query_calc_receive_asset(
-    deps: Deps,
-    env: Env,
-    to_asset: &str,
-    u: U256
-) -> StdResult<Uint128> {
-
-    calc_receive_asset(&deps, env, to_asset, u)
-        .map_err(|err| err.into())
-
-}
-
-
-pub fn query_calc_local_swap(
-    deps: Deps,
-    env: Env,
-    from_asset: &str,
-    to_asset: &str,
-    amount: Uint128
-) -> StdResult<Uint128> {
-
-    calc_local_swap(&deps, env, from_asset, to_asset, amount)
-        .map_err(|err| err.into())
-
-}
 
 
 
