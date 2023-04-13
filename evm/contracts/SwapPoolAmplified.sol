@@ -302,7 +302,7 @@ contract CatalystSwapPoolAmplified is IntegralsAmplified, CatalystSwapPoolCommon
     }
 
     /**
-     * @notice Computes the true return of SendAsset.
+     * @notice Computes the true return of SendAsset via the math lib.
      * @dev Returns 0 if from is not a token in the pool
      * Is implemented through an external mathematical library,
      * which more accuratly reproduces the output of a swap by considering
@@ -341,7 +341,7 @@ contract CatalystSwapPoolAmplified is IntegralsAmplified, CatalystSwapPoolCommon
     }
 
     /**
-     * @notice Computes the output of ReceiveAsset.
+     * @notice Computes the output of ReceiveAsset via the math lib.
      * @dev Reverts if to is not a token in the pool
      * Is implemented through an external mathematical library,
      * which more accuratly reproduces the output of a swap by considering
@@ -389,7 +389,7 @@ contract CatalystSwapPoolAmplified is IntegralsAmplified, CatalystSwapPoolCommon
     }
 
     /**
-     * @notice Computes the output of localSwap.
+     * @notice Computes the output of localSwap via the math lib.
      * @dev If the pool weights of the 2 tokens are equal, a very simple curve is used.
      * If from or to is not part of the pool, the swap will either return 0 or revert.
      * If both from and to are not part of the pool, the swap can actually return a positive value.
