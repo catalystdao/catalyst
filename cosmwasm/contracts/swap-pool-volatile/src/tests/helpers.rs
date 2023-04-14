@@ -4,6 +4,7 @@ use swap_pool_common::msg::InstantiateMsg;
 use crate::contract::instantiate;
 
 pub const DEPLOYER_ADDR: &str = "deployer_addr";
+pub const FACTORY_OWNER_ADDR: &str = "factory_owner_addr";
 pub const SETUP_MASTER_ADDR: &str = "setup_master_addr";
 pub const CHAIN_INTERFACE_ADDR: &str = "chain_interface";
 pub const DEPOSITOR_ADDR: &str = "depositor_addr";
