@@ -4,7 +4,10 @@ use swap_pool_common::msg::InstantiateMsg;
 use crate::contract::instantiate;
 
 pub const DEPLOYER_ADDR: &str = "deployer_addr";
+pub const SETUP_MASTER_ADDR: &str = "setup_master_addr";
+pub const CHAIN_INTERFACE_ADDR: &str = "chain_interface";
 pub const DEPOSITOR_ADDR: &str = "depositor_addr";
+pub const FEE_ADMINISTRATOR: &str = "fee_administrator_addr";
 
 pub fn mock_instantiate_msg(
     chain_interface: Option<String>
@@ -15,8 +18,8 @@ pub fn mock_instantiate_msg(
         chain_interface,
         pool_fee: 10000u64,
         governance_fee: 50000u64,
-        fee_administrator: "fee_administrator".to_string(),
-        setup_master: "setup_master".to_string()
+        fee_administrator: FEE_ADMINISTRATOR.to_string(),
+        setup_master: SETUP_MASTER_ADDR.to_string()
     }
 }
 
@@ -25,6 +28,6 @@ pub fn mock_instantiate(deps: DepsMut) -> Response {
         deps,
         mock_env(),
         mock_info(DEPLOYER_ADDR, &vec![]),
-        mock_instantiate_msg(Some("chain_interface".to_string()))
+        mock_instantiate_msg(Some(CHAIN_INTERFACE_ADDR.to_string()))
     ).unwrap()
 }
