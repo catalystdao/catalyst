@@ -51,7 +51,7 @@ pub fn initialize_swap_curves(
     //TODO verify info sender is Factory
 
     // Make sure this function may only be invoked once (check whether assets have already been saved)
-    if ASSETS.load(deps.storage)?.len() > 0 {
+    if ASSETS.may_load(deps.storage) != Ok(None) {
         return Err(ContractError::Unauthorized {});
     }
 
