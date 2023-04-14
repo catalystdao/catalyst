@@ -2,25 +2,8 @@
 mod test_volatile_instantiate {
     use cosmwasm_std::{testing::{mock_dependencies, mock_env, mock_info}, from_binary, Uint128, Addr};
     use cw20_base::state::TokenInfo;
-    use swap_pool_common::msg::InstantiateMsg;
 
-    use crate::{contract::{instantiate, query}, msg::QueryMsg};
-
-    pub const DEPLOYER_ADDR: &str = "deployer_addr";
-
-    fn mock_instantiate_msg(
-        chain_interface: Option<String>
-    ) -> InstantiateMsg {
-        InstantiateMsg {
-            name: "TestPool".to_string(),
-            symbol: "TP".to_string(),
-            chain_interface,
-            pool_fee: 10000u64,
-            governance_fee: 50000u64,
-            fee_administrator: "fee_administrator".to_string(),
-            setup_master: "setup_master".to_string()
-        }
-    }
+    use crate::{contract::{instantiate, query}, msg::QueryMsg, tests::helpers::{mock_instantiate_msg, DEPLOYER_ADDR}};
 
 
     #[test]
