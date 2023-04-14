@@ -167,8 +167,11 @@ def test_not_connected_receive_swap(
     )
     fake_packet = [["", channel_id], ["", ""], 0, fake_payload, [0, 0]]
 
-    with reverts(revert_pattern=re.compile("typed error: 0xfc08ab42.*")):
-        cross_chain_interface.onRecvPacket(fake_packet, {"from": ibc_emulator})
+    # with reverts(revert_pattern=re.compile("typed error: 0xfc08ab42.*")):
+    txe = cross_chain_interface.onRecvPacket(fake_packet, {"from": ibc_emulator})
+    
+    # Ensure no tokens are transfered.
+    assert "Transfer" not in txe.events.keys()
 
 
 
@@ -221,5 +224,8 @@ def test_not_connected_in_liquidity(
     )
     fake_packet = [["", channel_id], ["", ""], 0, fake_payload, [0, 0]]
 
-    with reverts(revert_pattern=re.compile("typed error: 0xfc08ab42.*")):
-        cross_chain_interface.onRecvPacket(fake_packet, {"from": ibc_emulator})
+    # with reverts(revert_pattern=re.compile("typed error: 0xfc08ab42.*")):
+    txe = cross_chain_interface.onRecvPacket(fake_packet, {"from": ibc_emulator})
+    
+    # Ensure no tokens are transfered.
+    assert "Transfer" not in txe.events.keys()

@@ -41,6 +41,7 @@ def test_ibc_ack(channel_id, pool, pool_tokens, ibc_emulator, berg, deployer, sw
     
     ibc_emulator.ack(
         tx.events["IncomingMetadata"]["metadata"][0],
+        convert.to_bytes(0, "bytes"),
         tx.events["IncomingPacket"]["packet"],
         {"from": deployer},
     )
@@ -120,6 +121,7 @@ def test_only_one_response(channel_id, pool, pool_tokens, ibc_emulator, berg, de
     with reverts():
         ibc_emulator.ack(
             tx.events["IncomingMetadata"]["metadata"][0],
+            convert.to_bytes(0, "bytes"),
             tx.events["IncomingPacket"]["packet"],
             {"from": deployer},
         )
@@ -128,6 +130,7 @@ def test_only_one_response(channel_id, pool, pool_tokens, ibc_emulator, berg, de
     
     ibc_emulator.ack(
         tx.events["IncomingMetadata"]["metadata"][0],
+        convert.to_bytes(0, "bytes"),
         tx.events["IncomingPacket"]["packet"],
         {"from": deployer},
     )
@@ -142,6 +145,7 @@ def test_only_one_response(channel_id, pool, pool_tokens, ibc_emulator, berg, de
     with reverts():
         ibc_emulator.ack(
             tx.events["IncomingMetadata"]["metadata"][0],
+            convert.to_bytes(0, "bytes"),
             tx.events["IncomingPacket"]["packet"],
             {"from": deployer},
         )
@@ -210,9 +214,29 @@ def test_ibc_timeout_and_ack(channel_id, pool, pool_tokens, ibc_emulator, berg, 
     assert from1 == from3
 
     chain.undo()
+    
+    txe = ibc_emulator.ack(
+        tx1.events["IncomingMetadata"]["metadata"][0],
+        convert.to_bytes(1, "bytes"),
+        tx1.events["IncomingPacket"]["packet"],
+        {"from": berg},
+    )
+
+    both3_12 = pool.calcLocalSwap(source_token, target_token, 10**18)
+    both3_21 = pool.calcLocalSwap(target_token, source_token, 10**18)
+    to3 = pool.calcSendAsset(source_token, 10**18)
+    from3 = pool.calcReceiveAsset(source_token, U)
+
+    assert both1_12 == both3_12
+    assert both1_21 == both3_21
+    assert to1 == to3
+    assert from1 == from3
+
+    chain.undo()
 
     txe = ibc_emulator.ack(
         tx1.events["IncomingMetadata"]["metadata"][0],
+        convert.to_bytes(0, "bytes"),
         tx1.events["IncomingPacket"]["packet"],
         {"from": berg},
     )
@@ -254,6 +278,7 @@ def test_ibc_ack_event(channel_id, pool, pool_tokens, ibc_emulator, berg, deploy
     
     txe = ibc_emulator.ack(
         tx.events["IncomingMetadata"]["metadata"][0],
+        convert.to_bytes(0, "bytes"),
         tx.events["IncomingPacket"]["packet"],
         {"from": deployer},
     )

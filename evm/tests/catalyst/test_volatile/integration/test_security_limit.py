@@ -77,6 +77,7 @@ def test_security_limit_swap_loop(
     # 3. Ack
     ibc_emulator.ack(
         tx.events["IncomingMetadata"]["metadata"][0],
+        txe.events["Acknowledgement"]["acknowledgement"],
         tx.events["IncomingPacket"]["packet"],
         {"from": deployer}
     )
@@ -148,6 +149,7 @@ def test_security_limit_swap_loop(
     # 6. Ack
     ibc_emulator.ack(
         tx2.events["IncomingMetadata"]["metadata"][0],
+        txe2.events["Acknowledgement"]["acknowledgement"],
         tx2.events["IncomingPacket"]["packet"],
         {"from": deployer}
     )
@@ -237,6 +239,7 @@ def test_security_limit_swap_timeout(
     # 3. Ack
     ibc_emulator.ack(
         tx.events["IncomingMetadata"]["metadata"][0],
+        txe.events["Acknowledgement"]["acknowledgement"],
         tx.events["IncomingPacket"]["packet"],
         {"from": deployer}
     )
