@@ -20,6 +20,7 @@ contract Dispatcher is Ownable, IbcDispatcher {
     );
 
     event PortRegistration(address indexed sender);
+    event Acknowledgement(bytes acknowledgement);
 
     function registerPort() external {
         emit PortRegistration(msg.sender);
@@ -34,5 +35,11 @@ contract Dispatcher is Ownable, IbcDispatcher {
         uint64 timeoutBlockHeight
     ) external {
         emit IbcPacket(msg.sender, channelId, payload, timeoutBlockHeight);
+    }
+
+    function ackIbcPacket(
+        bytes calldata acknowledgement
+    ) external {
+        emit Acknowledgement(acknowledgement);
     }
 }

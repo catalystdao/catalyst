@@ -10,4 +10,8 @@ interface IbcDispatcher {
         bytes calldata payload,
         uint64 timeoutBlockHeight
     ) external;
+
+    function ackIbcPacket(
+        bytes calldata acknowledgement
+    ) external;
 }
