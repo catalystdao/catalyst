@@ -60,9 +60,10 @@ pub fn initialize_swap_curves(
         return Err(ContractError::InvalidAmplification {})
     }
 
-    // Check the provided assets and weights count
+    // Check the provided assets, assets balances and weights count
     if
         assets.len() == 0 || assets.len() > MAX_ASSETS ||
+        assets_balances.len() != assets.len() ||
         weights.len() != assets.len()
     {
         return Err(ContractError::GenericError {}); //TODO error
