@@ -11,7 +11,7 @@ use swap_pool_common::{
         ASSETS, MAX_ASSETS, WEIGHTS, INITIAL_MINT_AMOUNT, POOL_FEE, MAX_LIMIT_CAPACITY, USED_LIMIT_CAPACITY, CHAIN_INTERFACE,
         TOTAL_ESCROWED_LIQUIDITY, TOTAL_ESCROWED_ASSETS, is_connected, get_asset_index, update_unit_capacity,
         collect_governance_fee_message, compute_send_asset_hash, compute_send_liquidity_hash, create_asset_escrow,
-        create_liquidity_escrow, on_send_asset_ack, on_send_liquidity_ack, total_supply, get_unit_capacity,
+        create_liquidity_escrow, on_send_asset_ack, on_send_liquidity_ack, total_supply, get_unit_capacity, USED_LIMIT_CAPACITY_TIMESTAMP,
     },
     ContractError
 };
@@ -100,6 +100,15 @@ pub fn initialize_swap_curves(
             U256::ZERO, |acc, next| acc + U256::from(*next)     // Overflow safe, as U256 >> u64    //TODO maths
         ))
     )?;
+    USED_LIMIT_CAPACITY.save(deps.storage, &U256::ZERO)?;       //TODO move intialization to 'setup'?
+    USED_LIMIT_CAPACITY_TIMESTAMP.save(deps.storage, &0u64)?;   //TODO move intialization to 'setup'?
+
+    // Initialize escrow totals
+    assets
+        .iter()
+        .map(|asset| TOTAL_ESCROWED_ASSETS.save(deps.storage, asset, &Uint128::zero()))
+        .collect::<StdResult<Vec<_>>>()?;
+    TOTAL_ESCROWED_LIQUIDITY.save(deps.storage, &Uint128::zero())?;
 
     // Mint pool tokens for the depositor
     // Make up a 'MessageInfo' with the sender set to this contract itself => this is to allow the use of the 'execute_mint'
