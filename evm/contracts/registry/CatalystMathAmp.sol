@@ -24,9 +24,15 @@ contract CatalystMathAmp is IntegralsAmplified, ICatalystMathLibAmp {
     uint256 constant public SMALL_SWAP_RATIO = 1e12;
     uint256 constant public SMALL_SWAP_RETURN = 95e16;
     
-    /// @notice Helper function which returns the true amplification. If amp is being adjusted, the pure pool amp might lie.
+    /**
+     * @notice Helper function which returns the true amplification. If amp is being adjusted, the pure pool amp might be inaccurate.
+     * @dev If amplification is being changed, the amplification read directly from the pools are only updated when they are needed. (swaps, balance changes, etc)
+     * This function implements the amp change logic (almost exactly), such that one can read the amplifications if one were to execute a balance change.
+     * @param vault The address of the vault to fetch the amp for.
+     * @return uint256 Returns the (estimated) true amp.
+     */
     function getTrueAmp(address vault) public view returns(int256) {
-        // We might use adjustment target more than once. Since we don't change it, let store it.
+        // First, lets check if we actually needs to do any adjustments:
         uint256 adjTarget = CatalystSwapPoolAmplified(vault)._adjustmentTarget();
 
         int256 currentAmplification = CatalystSwapPoolAmplified(vault)._oneMinusAmp();
@@ -38,7 +44,7 @@ contract CatalystMathAmp is IntegralsAmplified, ICatalystMathLibAmp {
         int256 targetAmplification = CatalystSwapPoolAmplified(vault)._targetAmplification();
         uint256 lastModification = CatalystSwapPoolAmplified(vault)._lastModificationTime();
 
-        // If the current time is past the adjustment, we should return the final weights.
+        // If the current time is past the adjustment, we should return the final amplification.
         if (block.timestamp >= adjTarget) 
             return targetAmplification;
         
@@ -69,15 +75,19 @@ contract CatalystMathAmp is IntegralsAmplified, ICatalystMathLibAmp {
         
     }
 
-    /// @notice Helper function which returns the amount after fee.
+    /** 
+     * @notice Helper function which returns the amount after fee.
+     * @dev The fee is taken from the input amount
+     * @param vault Vault to read pool fee.
+     * @param amount Input swap amount
+     * @return uint256 Input amount after pool fee.
+     */
     function calcFee(address vault, uint256 amount) public view returns(uint256) {
         uint256 fee = CatalystSwapPoolAmplified(vault)._poolFee();
 
         return FixedPointMathLib.mulWadDown(amount, FixedPointMathLib.WAD - fee);
     }
     
-    //--- Swap integrals ---//
-
     /**
      * @notice Computes the integral \int_{wA}^{wA+wx} 1/w^k · (1-k) dw
      *     = (wA + wx)^(1-k) - wA^(1-k)
@@ -85,7 +95,7 @@ contract CatalystMathAmp is IntegralsAmplified, ICatalystMathLibAmp {
      * @dev All input amounts should be the raw numbers and not WAD.
      * Since units are always denominated in WAD, the function should be treated as mathematically *native*.
      * @param input The input amount.
-     * @param A The current pool balance of the x token.
+     * @param A The current vault balance of the x token.
      * @param W The weight of the x token.
      * @param oneMinusAmp The amplification.
      * @return uint256 Group-specific units (units are **always** WAD).
@@ -95,7 +105,7 @@ contract CatalystMathAmp is IntegralsAmplified, ICatalystMathLibAmp {
         uint256 A,
         uint256 W,
         int256 oneMinusAmp
-    ) public pure returns (uint256) {
+    ) external pure returns (uint256) {
         return _calcPriceCurveArea(input, A, W, oneMinusAmp);
     }
 
@@ -109,8 +119,8 @@ contract CatalystMathAmp is IntegralsAmplified, ICatalystMathLibAmp {
      * @dev All input amounts should be the raw numbers and not WAD.
      * Since units are always multiplied by WAD, the function
      * should be treated as mathematically *native*.
-     * @param U Incoming group-specific units.
-     * @param B The current pool balance of the y token.
+     * @param U Incoming pool specific units.
+     * @param B The current vault balance of the y token.
      * @param W The weight of the y token.
      * @return uint25 Output denominated in output token. (not WAD)
      */
@@ -150,7 +160,7 @@ contract CatalystMathAmp is IntegralsAmplified, ICatalystMathLibAmp {
         uint256 W_B,
         int256 oneMinusAmp
     ) public pure returns (uint256) {
-        return _calcCombinedPriceCurves(input, A, B, W_A, W_B, oneMinusAmp);
+        return _calcPriceCurveLimit(_calcPriceCurveArea(input, A, W_A, oneMinusAmp), B, W_B, oneMinusAmp);
     }
 
     /**
@@ -194,7 +204,7 @@ contract CatalystMathAmp is IntegralsAmplified, ICatalystMathLibAmp {
         // If 'fromAsset' is not part of the pool (i.e. W is 0) or if 'amount' and 
         // the pool asset balance (i.e. 'A') are both 0 this will revert, since 0**p is 
         // implemented as exp(ln(0) * p) and ln(0) is undefined.
-        uint256 U = calcPriceCurveArea(amount, A, W, getTrueAmp(vault));
+        uint256 U = _calcPriceCurveArea(amount, A, W, getTrueAmp(vault));
 
         // If the swap is a very small portion of the pool
         // Add an additional fee. This covers mathematical errors.
@@ -221,16 +231,16 @@ contract CatalystMathAmp is IntegralsAmplified, ICatalystMathLibAmp {
         uint256 B = ERC20(toAsset).balanceOf(vault) - CatalystSwapPoolAmplified(vault)._escrowedTokens(toAsset);
         uint256 W = CatalystSwapPoolAmplified(vault)._weight(toAsset);
 
-        // If someone were to purchase a token which is not part of the pool on setup
-        // they would just add value to the pool. We don't care about it.
+        // If someone were to purchase a token which is not part of the vault on setup
+        // they would just add value to the vault. We don't care about it.
         // However, it will revert since the solved integral contains U/W and when
         // W = 0 then U/W returns division by 0 error.
-        return calcPriceCurveLimit(U, B, W, getTrueAmp(vault));
+        return _calcPriceCurveLimit(U, B, W, getTrueAmp(vault));
     }
 
     /**
      * @notice Computes the output of localSwap.
-     * @dev Implemented through _calcCombinedPriceCurves. Reverts if either from or to is not in the pool,
+     * @dev Reverts if either from or to is not in the pool,
      * or if the pool 'fromAsset' balance and 'amount' are both 0.
      * @param vault The vault address to examine.
      * @param fromAsset The address of the token to sell.
@@ -250,7 +260,7 @@ contract CatalystMathAmp is IntegralsAmplified, ICatalystMathLibAmp {
         uint256 W_B = CatalystSwapPoolAmplified(vault)._weight(toAsset);
         int256 oneMinusAmp = getTrueAmp(vault);
 
-        uint256 output = calcCombinedPriceCurves(amount, A, B, W_A, W_B, oneMinusAmp);
+        uint256 output = _calcCombinedPriceCurves(amount, A, B, W_A, W_B, oneMinusAmp);
 
         // If the swap is a very small portion of the pool
         // Add an additional fee. This covers mathematical errors.
@@ -269,7 +279,8 @@ contract CatalystMathAmp is IntegralsAmplified, ICatalystMathLibAmp {
     // the trade price is y/x. The difference between y/x and z:  1 - (y/x)/z is the price impact.
 
     /**
-    * @notice Computes part of the mid price. Requires calcCurrentPriceTo to convert into a pairwise price.
+    * @notice Computes part of the mid price. calcCurrentPriceTo can be used to compute the pairwise price.
+    * @dev Alternativly, dividing calcAsyncPriceFrom by another calcAsyncPriceFrom, results in the pairwise price.
     * @param vault The vault address to examine.
     * @param fromAsset The address of the token to sell.
     */

@@ -146,7 +146,7 @@ contract CatalystDescriber is Ownable {
      * @notice Unwhitelist a cross-chain interface.
      * @dev While only template_index is needed to unwhitelist a template, template_to_unwhitelist is used 
      * to ensure a wrong template is not mistakenly unwhitelisted.
-     * @param cci_to_whitelist The address of the CCI to whitelisted.
+     * @param cci_to_unwhitelist The address of the CCI to whitelisted.
      * @param cci_index The index of the cci to unwhitelist.
      */
     function remove_whitelisted_cci(address cci_to_unwhitelist, uint256 cci_index) external onlyOwner {
@@ -299,8 +299,6 @@ contract CatalystDescriber is Ownable {
     }
 
 
-    // Returns a list of token prices. The first element is always a reference balance. (what is “1”)
-    // Requires get_vault_mathematical_lib() ≠ address(0)
     /** 
      * @notice Returns a list of token prices for a vault.
      * @dev To compute a token price, the ratio of 2 elements within the array has to be compared.

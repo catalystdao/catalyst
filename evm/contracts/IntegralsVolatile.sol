@@ -35,7 +35,7 @@ contract IntegralsVolatile {
      * @dev All input amounts should be the raw numbers and not WAD.
      * Since units are always multiplied by WAD, the function
      * should be treated as mathematically *native*.
-     * @param U Incoming group specific units.
+     * @param U Incoming pool specific units.
      * @param B The current pool balance of the y token.
      * @param W The weight of the y token.
      * @return uint25 Output denominated in output token. (not WAD)
@@ -56,13 +56,13 @@ contract IntegralsVolatile {
      *     \int_{A}^{A+x} W_a/w dw = \int_{B-y}^{B} W_b/w dw for y = B · (1 - ((A+x)/A)^(-W_a/W_b))
      *
      * Alternatively, the integral can be computed through:
-     *      _calcPriceCurveLimit(_calcPriceCurveArea(input, A, W_A), B, W_B).
+     * _calcPriceCurveLimit(_calcPriceCurveArea(input, A, W_A), B, W_B).
      * @dev All input amounts should be the raw numbers and not WAD.
      * @param input The input amount.
      * @param A The current pool balance of the x token.
      * @param B The current pool balance of the y token.
      * @param W_A The weight of the x token.
-     * @param W_B TThe weight of the y token.
+     * @param W_B The weight of the y token.
      * @return uint256 Output denominated in output token.
      */
     function _calcCombinedPriceCurves(
@@ -72,7 +72,7 @@ contract IntegralsVolatile {
         uint256 W_A,
         uint256 W_B
     ) internal pure returns (uint256) {
-        return _calcCombinedPriceCurves(input, A, B, W_A, W_B);
+        return _calcPriceCurveLimit(_calcPriceCurveArea(input, A, W_A), B, W_B);
     }
 
     /**

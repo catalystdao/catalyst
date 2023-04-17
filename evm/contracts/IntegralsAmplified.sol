@@ -59,7 +59,7 @@ contract IntegralsAmplified {
      * @dev All input amounts should be the raw numbers and not WAD.
      * Since units are always multiplied by WAD, the function
      * should be treated as mathematically *native*.
-     * @param U Incoming group-specific units.
+     * @param U Incoming pool specific units.
      * @param B The current pool balance of the y token.
      * @param W The weight of the y token.
      * @return uint25 Output denominated in output token. (not WAD)
@@ -91,7 +91,7 @@ contract IntegralsAmplified {
     }
 
     /**
-     * @notice !Unused! Solves the equation
+     * @notice Solves the equation
      *     \int_{wA}^{wA + wx} 1/w^k · (1-k) dw = \int_{wB-wy}^{wB} 1/w^k · (1-k) dw for y
      *         => out = B · (1 - (
      *                 (wB^(1-k) - (wA+wx)^(1-k) - wA^(1-k)) / (wB^(1-k))
@@ -102,10 +102,10 @@ contract IntegralsAmplified {
      * _calcPriceCurveLimit(_calcPriceCurveArea(input, A, W_A, amp), B, W_B, amp).
      * @dev All input amounts should be the raw numbers and not WAD.
      * @param input The input amount.
-     * @param A The current pool balance of the _in token.
-     * @param B The current pool balance of the _out token.
-     * @param W_A The pool weight of the _in token.
-     * @param W_B The pool weight of the _out token.
+     * @param A The current pool balance of the x token.
+     * @param B The current pool balance of the y token.
+     * @param W_A The weight of the x token.
+     * @param W_B The weight of the y token.
      * @param oneMinusAmp The amplification.
      * @return uint256 Output denominated in output token.
      */
