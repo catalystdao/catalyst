@@ -9,7 +9,7 @@ mod test_volatile_finish_setup {
     fn test_finish_setup() {
     
         let mut deps = mock_dependencies();
-        mock_instantiate(deps.as_mut());
+        mock_instantiate(deps.as_mut(), false);
 
 
         // Tested action: finish setup
@@ -37,7 +37,7 @@ mod test_volatile_finish_setup {
     fn test_invalid_caller() {
     
         let mut deps = mock_dependencies();
-        mock_instantiate(deps.as_mut());
+        mock_instantiate(deps.as_mut(), false);
 
 
         // Tested action: finish setup

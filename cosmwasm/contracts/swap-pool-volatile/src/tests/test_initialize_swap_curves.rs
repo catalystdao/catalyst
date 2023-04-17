@@ -14,7 +14,7 @@ mod test_volatile_initialize_swap_curves {
     fn test_initialize() {
 
         let mut deps = mock_dependencies();
-        mock_instantiate(deps.as_mut());
+        mock_instantiate(deps.as_mut(), false);
 
         let initialize_msg = InitializeSwapCurvesMockMsg {
             assets: vec!["asset_1".to_string(), "asset_2".to_string(), "asset_3".to_string()],
@@ -149,7 +149,7 @@ mod test_volatile_initialize_swap_curves {
     fn test_initialize_twice() {
 
         let mut deps = mock_dependencies();
-        mock_instantiate(deps.as_mut());
+        mock_instantiate(deps.as_mut(), false);
 
         let initialize_msg = InitializeSwapCurvesMockMsg {
             assets: vec!["asset_1".to_string(), "asset_2".to_string(), "asset_3".to_string()],
@@ -190,7 +190,7 @@ mod test_volatile_initialize_swap_curves {
     fn test_no_assets() {
 
         let mut deps = mock_dependencies();
-        mock_instantiate(deps.as_mut());
+        mock_instantiate(deps.as_mut(), false);
 
         let initialize_msg = InitializeSwapCurvesMockMsg {
             assets: vec![],
@@ -223,7 +223,7 @@ mod test_volatile_initialize_swap_curves {
     fn test_too_many_assets() {
 
         let mut deps = mock_dependencies();
-        mock_instantiate(deps.as_mut());
+        mock_instantiate(deps.as_mut(), false);
 
         let initialize_msg = InitializeSwapCurvesMockMsg {
             assets: vec!["asset_1".to_string(), "asset_2".to_string(), "asset_3".to_string(), "asset_4".to_string()],
@@ -256,7 +256,7 @@ mod test_volatile_initialize_swap_curves {
     fn test_invalid_asset_balances_count() {
 
         let mut deps = mock_dependencies();
-        mock_instantiate(deps.as_mut());
+        mock_instantiate(deps.as_mut(), false);
 
         let initialize_msg = InitializeSwapCurvesMockMsg {
             assets: vec!["asset_1".to_string(), "asset_2".to_string(), "asset_3".to_string()],
@@ -289,7 +289,7 @@ mod test_volatile_initialize_swap_curves {
     fn test_zero_asset_balance() {
 
         let mut deps = mock_dependencies();
-        mock_instantiate(deps.as_mut());
+        mock_instantiate(deps.as_mut(), false);
 
         let initialize_msg = InitializeSwapCurvesMockMsg {
             assets: vec!["asset_1".to_string(), "asset_2".to_string(), "asset_3".to_string()],
@@ -322,7 +322,7 @@ mod test_volatile_initialize_swap_curves {
     fn test_invalid_weights_count() {
 
         let mut deps = mock_dependencies();
-        mock_instantiate(deps.as_mut());
+        mock_instantiate(deps.as_mut(), false);
 
         let initialize_msg = InitializeSwapCurvesMockMsg {
             assets: vec!["asset_1".to_string(), "asset_2".to_string(), "asset_3".to_string()],
@@ -355,7 +355,7 @@ mod test_volatile_initialize_swap_curves {
     fn test_zero_weight() {
 
         let mut deps = mock_dependencies();
-        mock_instantiate(deps.as_mut());
+        mock_instantiate(deps.as_mut(), false);
 
         let initialize_msg = InitializeSwapCurvesMockMsg {
             assets: vec!["asset_1".to_string(), "asset_2".to_string(), "asset_3".to_string()],
@@ -388,7 +388,7 @@ mod test_volatile_initialize_swap_curves {
     fn test_invalid_amp() {
 
         let mut deps = mock_dependencies();
-        mock_instantiate(deps.as_mut());
+        mock_instantiate(deps.as_mut(), false);
 
         let initialize_msg = InitializeSwapCurvesMockMsg {
             assets: vec!["asset_1".to_string(), "asset_2".to_string(), "asset_3".to_string()],

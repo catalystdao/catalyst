@@ -12,7 +12,7 @@ mod test_volatile_fees {
     fn test_set_fee_administrator() {
     
         let mut deps = mock_dependencies();
-        mock_instantiate(deps.as_mut());
+        mock_instantiate(deps.as_mut(), false);
 
         let new_fee_administrator: &str = "new_fee_administrator";
 
@@ -45,7 +45,7 @@ mod test_volatile_fees {
     fn test_set_fee_administrator_invalid_caller() {
     
         let mut deps = mock_dependencies();
-        mock_instantiate(deps.as_mut());
+        mock_instantiate(deps.as_mut(), false);
 
         let new_fee_administrator: &str = "new_fee_administrator";
 
@@ -75,7 +75,7 @@ mod test_volatile_fees {
     fn test_set_pool_fee() {
     
         let mut deps = mock_dependencies();
-        mock_instantiate(deps.as_mut());
+        mock_instantiate(deps.as_mut(), false);
 
         let new_pool_fee: u64 = 500;
 
@@ -108,7 +108,7 @@ mod test_volatile_fees {
     fn test_set_pool_fee_max() {
     
         let mut deps = mock_dependencies();
-        mock_instantiate(deps.as_mut());
+        mock_instantiate(deps.as_mut(), false);
 
         let new_pool_fee: u64 = 1000000000000000000u64;
 
@@ -139,7 +139,7 @@ mod test_volatile_fees {
     fn test_set_pool_fee_larger_than_max() {
     
         let mut deps = mock_dependencies();
-        mock_instantiate(deps.as_mut());
+        mock_instantiate(deps.as_mut(), false);
 
         let new_pool_fee: u64 = 1000000000000000000u64 + 1u64;
 
@@ -167,7 +167,7 @@ mod test_volatile_fees {
     fn test_set_pool_fee_invalid_caller() {
     
         let mut deps = mock_dependencies();
-        mock_instantiate(deps.as_mut());
+        mock_instantiate(deps.as_mut(), false);
 
         let new_pool_fee: u64 = 1000000000000000000u64 + 1u64;
 
@@ -197,7 +197,7 @@ mod test_volatile_fees {
     fn test_set_gov_fee_share() {
     
         let mut deps = mock_dependencies();
-        mock_instantiate(deps.as_mut());
+        mock_instantiate(deps.as_mut(), false);
 
         let new_gov_fee_share: u64 = 500;
 
@@ -230,7 +230,7 @@ mod test_volatile_fees {
     fn test_set_gov_fee_share_max() {
     
         let mut deps = mock_dependencies();
-        mock_instantiate(deps.as_mut());
+        mock_instantiate(deps.as_mut(), false);
 
         let new_gov_fee_share: u64 = 750000000000000000u64;
 
@@ -261,7 +261,7 @@ mod test_volatile_fees {
     fn test_set_gov_fee_share_larger_than_max() {
     
         let mut deps = mock_dependencies();
-        mock_instantiate(deps.as_mut());
+        mock_instantiate(deps.as_mut(), false);
 
         let new_gov_fee_share: u64 = 750000000000000000u64 + 1u64;
 
@@ -289,7 +289,7 @@ mod test_volatile_fees {
     fn test_set_gov_fee_share_invalid_caller() {
     
         let mut deps = mock_dependencies();
-        mock_instantiate(deps.as_mut());
+        mock_instantiate(deps.as_mut(), false);
 
         let new_gov_fee_share: u64 = 1000000000000000000u64 + 1u64;
 

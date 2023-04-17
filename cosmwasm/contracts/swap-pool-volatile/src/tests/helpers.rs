@@ -46,12 +46,20 @@ pub fn mock_instantiate_msg(
     }
 }
 
-pub fn mock_instantiate(deps: DepsMut) -> Response {
+pub fn mock_instantiate(
+    deps: DepsMut,
+    only_local: bool
+) -> Response {
+    let chain_interface = match only_local {
+        true => None,
+        false => Some(CHAIN_INTERFACE_ADDR.to_string())
+    };
+
     instantiate(
         deps,
         mock_env(),
         mock_info(DEPLOYER_ADDR, &vec![]),
-        mock_instantiate_msg(Some(CHAIN_INTERFACE_ADDR.to_string()))
+        mock_instantiate_msg(chain_interface)
     ).unwrap()
 }
 

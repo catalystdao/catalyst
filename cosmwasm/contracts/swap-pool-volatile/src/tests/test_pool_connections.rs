@@ -9,7 +9,7 @@ mod test_volatile_pool_connections {
     fn test_set_connection() {
 
         let mut deps = mock_dependencies();
-        mock_instantiate(deps.as_mut());
+        mock_instantiate(deps.as_mut(), false);
 
         let channel_id = "channel_0";
         let target_pool = b"target_pool".to_vec();
@@ -53,7 +53,7 @@ mod test_volatile_pool_connections {
     fn test_unset_connection() {
 
         let mut deps = mock_dependencies();
-        mock_instantiate(deps.as_mut());
+        mock_instantiate(deps.as_mut(), false);
 
         let channel_id = "channel_0";
         let target_pool = b"target_pool".to_vec();
@@ -109,7 +109,7 @@ mod test_volatile_pool_connections {
     fn test_setup_master_after_setup_finish() {
 
         let mut deps = mock_dependencies();
-        mock_instantiate(deps.as_mut());
+        mock_instantiate(deps.as_mut(), false);
 
         let channel_id = "channel_0";
         let target_pool = b"target_pool".to_vec();
@@ -143,7 +143,7 @@ mod test_volatile_pool_connections {
     fn test_set_connection_factory_owner() {
 
         let mut deps = mock_dependencies();
-        mock_instantiate(deps.as_mut());
+        mock_instantiate(deps.as_mut(), false);
 
         let channel_id = "channel_0";
         let target_pool = b"target_pool".to_vec();
@@ -188,7 +188,7 @@ mod test_volatile_pool_connections {
     fn test_set_connection_invalid_caller() {
 
         let mut deps = mock_dependencies();
-        mock_instantiate(deps.as_mut());
+        mock_instantiate(deps.as_mut(), false);
 
         let channel_id = "channel_0";
         let target_pool = b"target_pool".to_vec();
