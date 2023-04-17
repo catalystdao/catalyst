@@ -1,4 +1,4 @@
-use cosmwasm_std::{Response, DepsMut, testing::{mock_env, mock_info}};
+use cosmwasm_std::{Response, DepsMut, testing::{mock_env, mock_info}, Uint128};
 use swap_pool_common::msg::InstantiateMsg;
 
 use crate::{contract::{instantiate, execute}, msg::VolatileExecuteMsg};
@@ -9,6 +9,28 @@ pub const SETUP_MASTER_ADDR: &str = "setup_master_addr";
 pub const CHAIN_INTERFACE_ADDR: &str = "chain_interface";
 pub const DEPOSITOR_ADDR: &str = "depositor_addr";
 pub const FEE_ADMINISTRATOR: &str = "fee_administrator_addr";
+
+#[derive(Clone)]
+pub struct InitializeSwapCurvesMockMsg {
+    pub assets: Vec<String>,
+    pub assets_balances: Vec<Uint128>,
+    pub weights: Vec<u64>,
+    pub amp: u64,
+    pub depositor: String
+}
+
+impl Into<VolatileExecuteMsg> for InitializeSwapCurvesMockMsg {
+    fn into(self) -> VolatileExecuteMsg {
+        VolatileExecuteMsg::InitializeSwapCurves {
+            assets: self.assets,
+            assets_balances: self.assets_balances,
+            weights: self.weights,
+            amp: self.amp,
+            depositor: self.depositor
+        }
+    }
+}
+
 
 pub fn mock_instantiate_msg(
     chain_interface: Option<String>

@@ -6,29 +6,8 @@ mod test_volatile_initialize_swap_curves {
     use fixed_point_math_lib::fixed_point_math::LN2;
     use swap_pool_common::ContractError;
 
-    use crate::{msg::VolatileExecuteMsg, tests::helpers::{mock_instantiate, DEPOSITOR_ADDR, DEPLOYER_ADDR}, contract::{execute, query}};
+    use crate::{tests::helpers::{mock_instantiate, DEPOSITOR_ADDR, DEPLOYER_ADDR, InitializeSwapCurvesMockMsg}, contract::{execute, query}};
 
-
-    #[derive(Clone)]
-    struct InitializeSwapCurvesMockMsg {
-        assets: Vec<String>,
-        assets_balances: Vec<Uint128>,
-        weights: Vec<u64>,
-        amp: u64,
-        depositor: String
-    }
-    
-    impl Into<VolatileExecuteMsg> for InitializeSwapCurvesMockMsg {
-        fn into(self) -> VolatileExecuteMsg {
-            VolatileExecuteMsg::InitializeSwapCurves {
-                assets: self.assets,
-                assets_balances: self.assets_balances,
-                weights: self.weights,
-                amp: self.amp,
-                depositor: self.depositor
-            }
-        }
-    }
 
 
     #[test]
