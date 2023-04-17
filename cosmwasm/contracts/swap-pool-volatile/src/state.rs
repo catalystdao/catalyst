@@ -92,6 +92,9 @@ pub fn initialize_swap_curves(
         return Err(ContractError::GenericError {}); //TODO error
     }
     WEIGHTS.save(deps.storage, &weights)?;
+    TARGET_WEIGHTS.save(deps.storage, &weights)?;               // Initialize the target_weights storage (values do not matter)
+    WEIGHT_UPDATE_TIMESTAMP.save(deps.storage, &0u64)?;         //TODO move intialization to 'setup'?
+    WEIGHT_UPDATE_FINISH_TIMESTAMP.save(deps.storage, &0u64)?;  //TODO move intialization to 'setup'?
 
     // Compute the security limit
     MAX_LIMIT_CAPACITY.save(
