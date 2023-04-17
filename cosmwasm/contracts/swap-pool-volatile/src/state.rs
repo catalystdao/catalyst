@@ -298,8 +298,7 @@ pub fn withdraw_all(
         Ok(CosmosMsg::Wasm(
             cosmwasm_std::WasmMsg::Execute {
                 contract_addr: asset.to_string(),
-                msg: to_binary(&Cw20ExecuteMsg::TransferFrom {
-                    owner: env.contract.address.to_string(),
+                msg: to_binary(&Cw20ExecuteMsg::Transfer {
                     recipient: sender.clone(),
                     amount: *amount
                 })?,
@@ -482,8 +481,7 @@ pub fn local_swap(
     let transfer_to_asset_msg = CosmosMsg::Wasm(
         cosmwasm_std::WasmMsg::Execute {
             contract_addr: to_asset.clone(),
-            msg: to_binary(&Cw20ExecuteMsg::TransferFrom {
-                owner: env.contract.address.to_string(),
+            msg: to_binary(&Cw20ExecuteMsg::Transfer {
                 recipient: info.sender.to_string(),
                 amount: out
             })?,
@@ -669,8 +667,7 @@ pub fn receive_asset(
     let transfer_to_asset_msg = CosmosMsg::Wasm(
         cosmwasm_std::WasmMsg::Execute {
             contract_addr: to_asset.to_string(),
-            msg: to_binary(&Cw20ExecuteMsg::TransferFrom {
-                owner: env.contract.address.to_string(),
+            msg: to_binary(&Cw20ExecuteMsg::Transfer {
                 recipient: to_account.to_string(),
                 amount: out
             })?,

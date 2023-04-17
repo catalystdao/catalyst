@@ -312,8 +312,7 @@ pub fn collect_governance_fee_message(
     Ok(CosmosMsg::Wasm(
         cosmwasm_std::WasmMsg::Execute {
             contract_addr: asset,
-            msg: to_binary(&Cw20ExecuteMsg::TransferFrom {
-                owner: env.contract.address.to_string(),
+            msg: to_binary(&Cw20ExecuteMsg::Transfer {
                 recipient: factory_owner().to_string(),
                 amount: gov_fee_amount
             })?,
