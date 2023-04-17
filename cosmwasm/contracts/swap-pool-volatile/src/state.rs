@@ -497,10 +497,16 @@ pub fn local_swap(
         pool_fee
     )?;
 
-    Ok(Response::new()
+    // Build response
+    let mut response = Response::new()
         .add_message(transfer_from_asset_msg)
-        .add_message(transfer_to_asset_msg)
-        .add_message(collect_governance_fee_message)
+        .add_message(transfer_to_asset_msg);
+
+    if let Some(msg) = collect_governance_fee_message {
+        response = response.add_message(msg);
+    }
+
+    Ok(response
         .add_attribute("to_account", info.sender.to_string())
         .add_attribute("from_asset", from_asset)
         .add_attribute("to_asset", to_asset)
@@ -608,10 +614,17 @@ pub fn send_asset(
         }
     );
 
-    Ok(Response::new()
-        .add_message(transfer_from_asset_msg)
-        .add_message(collect_governance_fee_message)
-        .add_message(send_asset_execute_msg)
+    // Build response
+    let mut response = Response::new()
+        .add_message(transfer_from_asset_msg);
+
+    if let Some(msg) = collect_governance_fee_message {
+        response = response.add_message(msg);
+    }
+
+    response = response.add_message(send_asset_execute_msg);
+
+    Ok(response
         .add_attribute("to_pool", format!("{:x?}", to_pool))
         .add_attribute("to_account", format!("{:x?}", to_account))
         .add_attribute("from_asset", from_asset)

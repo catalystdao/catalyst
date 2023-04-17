@@ -302,14 +302,18 @@ pub fn collect_governance_fee_message(
     env: Env,
     asset: String,
     pool_fee_amount: Uint128
-) -> Result<CosmosMsg, ContractError> {
+) -> Result<Option<CosmosMsg>, ContractError> {
 
     let gov_fee_amount: Uint128 = mul_wad_down(
         U256::from(pool_fee_amount.u128()),
         U256::from(GOVERNANCE_FEE_SHARE.load(deps.storage)?)
     )?.as_u128().into();     //TODO unsafe as_u128 casting
 
-    Ok(CosmosMsg::Wasm(
+    if gov_fee_amount.is_zero() {
+        return Ok(None)
+    }
+
+    Ok(Some(CosmosMsg::Wasm(
         cosmwasm_std::WasmMsg::Execute {
             contract_addr: asset,
             msg: to_binary(&Cw20ExecuteMsg::Transfer {
@@ -318,7 +322,7 @@ pub fn collect_governance_fee_message(
             })?,
             funds: vec![]
         }
-    ))
+    )))
     
 }
 
