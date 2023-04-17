@@ -1,6 +1,6 @@
 mod test_volatile_initialize_swap_curves {
 
-    use cosmwasm_std::{testing::{mock_dependencies, mock_env, mock_info}, Uint128, from_binary, Addr, SubMsg, CosmosMsg, to_binary, StdResult};
+    use cosmwasm_std::{testing::{mock_dependencies, mock_env, mock_info}, Uint128, from_binary, Addr, SubMsg, CosmosMsg, to_binary};
     use cw20::{Cw20ExecuteMsg, TokenInfoResponse, BalanceResponse};
     use ethnum::U256;
     use fixed_point_math_lib::fixed_point_math::LN2;

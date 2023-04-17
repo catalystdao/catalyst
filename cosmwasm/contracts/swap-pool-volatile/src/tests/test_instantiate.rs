@@ -15,7 +15,7 @@ mod test_volatile_instantiate {
 
 
         // Tested action: instantiate contract
-        let response = instantiate(
+        let _response = instantiate(
             deps.as_mut(),
             mock_env(),
             mock_info(DEPLOYER_ADDR, &vec![]),
@@ -103,7 +103,7 @@ mod test_volatile_instantiate {
 
 
         // Tested action: instantiate contract
-        let response = instantiate(
+        let _response = instantiate(
             deps.as_mut(),
             mock_env(),
             mock_info(DEPLOYER_ADDR, &vec![]),
