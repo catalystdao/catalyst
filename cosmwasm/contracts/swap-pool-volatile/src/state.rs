@@ -1,5 +1,5 @@
 use cosmwasm_std::{Addr, Uint128, DepsMut, Env, MessageInfo, Response, StdResult, CosmosMsg, to_binary, Deps, StdError};
-use cw20::{Cw20ExecuteMsg, Cw20QueryMsg};
+use cw20::{Cw20ExecuteMsg, Cw20QueryMsg, BalanceResponse};
 use cw20_base::{contract::execute_mint, allowances::execute_burn_from};
 use cw_storage_plus::Item;
 use ethnum::U256;
@@ -179,15 +179,15 @@ pub fn deposit_mixed(
         .zip(&deposit_amounts)
         .try_fold(U256::ZERO, |acc, ((asset, weight), deposit_amount)| {
 
-            let pool_asset_balance = deps.querier.query_wasm_smart(
+            let pool_asset_balance = deps.querier.query_wasm_smart::<BalanceResponse>(
                 asset,
                 &Cw20QueryMsg::Balance { address: env.contract.address.to_string() }
-            )?;
+            )?.balance;
 
             acc.checked_add(
                 calc_price_curve_area(
                     U256::from(deposit_amount.u128()),
-                    pool_asset_balance,
+                    U256::from(pool_asset_balance.u128()),
                     U256::from(weight.clone())
                 )?
             ).ok_or(ContractError::ArithmeticError {})
@@ -277,10 +277,10 @@ pub fn withdraw_all(
 
         let escrowed_balance = TOTAL_ESCROWED_ASSETS.load(deps.storage, asset.as_str())?;
         
-        let pool_asset_balance = deps.querier.query_wasm_smart::<Uint128>(
+        let pool_asset_balance = deps.querier.query_wasm_smart::<BalanceResponse>(
             asset,
             &Cw20QueryMsg::Balance { address: env.contract.address.to_string() }
-        )? - escrowed_balance;
+        )?.balance - escrowed_balance;
 
         //TODO use U256 for the calculation?
         let withdraw_amount = (pool_asset_balance * pool_tokens) / effective_supply;
@@ -384,10 +384,10 @@ pub fn withdraw_mixed(
             u = u.checked_sub(units_for_asset).ok_or(ContractError::ArithmeticError {})?;
         
             // Get the pool asset balance (subtract the escrowed assets to return less)
-            let pool_asset_balance = deps.querier.query_wasm_smart::<Uint128>(
+            let pool_asset_balance = deps.querier.query_wasm_smart::<BalanceResponse>(
                 asset,
                 &Cw20QueryMsg::Balance { address: env.contract.address.to_string() }
-            )? - escrowed_balance;
+            )?.balance - escrowed_balance;
 
             // Calculate the asset amount corresponding to the asset units
             let withdraw_amount = Uint128::from(
@@ -866,10 +866,10 @@ pub fn calc_send_asset(
     let weights = WEIGHTS.load(deps.storage)?;
 
     let from_asset_index: usize = get_asset_index(&assets, from_asset.as_ref())?;
-    let from_asset_balance: Uint128 = deps.querier.query_wasm_smart(
+    let from_asset_balance: Uint128 = deps.querier.query_wasm_smart::<BalanceResponse>(
         from_asset,
         &Cw20QueryMsg::Balance { address: env.contract.address.to_string() }
-    )?;
+    )?.balance;
     let from_asset_weight = weights[from_asset_index];
 
     calc_price_curve_area(
@@ -894,10 +894,10 @@ pub fn calc_receive_asset(
         deps.storage,
         to_asset
     )?;
-    let to_asset_balance: Uint128 = deps.querier.query_wasm_smart::<Uint128>(
+    let to_asset_balance: Uint128 = deps.querier.query_wasm_smart::<BalanceResponse>(
         to_asset,
         &Cw20QueryMsg::Balance { address: env.contract.address.to_string() }
-    )?.checked_sub(to_asset_escrowed_balance)?;      // pool balance minus escrowed balance
+    )?.balance.checked_sub(to_asset_escrowed_balance)?;      // pool balance minus escrowed balance
     let to_asset_weight = weights[to_asset_index];
     
     calc_price_curve_limit(
@@ -923,10 +923,10 @@ pub fn calc_local_swap(
     let weights = WEIGHTS.load(deps.storage)?;
 
     let from_asset_index: usize = get_asset_index(&assets, from_asset.as_ref())?;
-    let from_asset_balance: Uint128 = deps.querier.query_wasm_smart(
+    let from_asset_balance: Uint128 = deps.querier.query_wasm_smart::<BalanceResponse>(
         from_asset,
         &Cw20QueryMsg::Balance { address: env.contract.address.to_string() }
-    )?;
+    )?.balance;
     let from_asset_weight = weights[from_asset_index];
 
     let to_asset_index: usize = get_asset_index(&assets, to_asset.as_ref())?;
@@ -934,10 +934,10 @@ pub fn calc_local_swap(
         deps.storage,
         to_asset
     )?;
-    let to_asset_balance: Uint128 = deps.querier.query_wasm_smart::<Uint128>(
+    let to_asset_balance: Uint128 = deps.querier.query_wasm_smart::<BalanceResponse>(
         to_asset,
         &Cw20QueryMsg::Balance { address: env.contract.address.to_string() }
-    )?.checked_sub(to_asset_escrowed_balance)?;      // pool balance minus escrowed balance
+    )?.balance.checked_sub(to_asset_escrowed_balance)?;      // pool balance minus escrowed balance
     let to_asset_weight = weights[to_asset_index];
 
     calc_combined_price_curves(
