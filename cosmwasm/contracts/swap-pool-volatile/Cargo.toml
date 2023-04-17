@@ -38,4 +38,4 @@ fixed-point-math-lib = { path = "../../../rust-common/fixed-point-math-lib" }
 catalyst-ibc-interface = { path = "../catalyst-ibc-interface", feature = ["library"] }
 
 [dev-dependencies]
-cw-multi-test = "0.16.2"
+cw-multi-test = "0.16.4"
