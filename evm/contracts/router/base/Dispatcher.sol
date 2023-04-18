@@ -9,11 +9,12 @@ import {Permit2Payments} from '../libraries/Permit2Payments.sol';
 import {CatalystExchange} from '../libraries/CatalystExchange.sol';
 import {Commands} from '../libraries/Commands.sol';
 import {BytesLib} from '../libraries/BytesLib.sol';
+import {CancelSwap} from '../libraries/CancelSwap.sol';
 import {LockAndMsgSender} from './LockAndMsgSender.sol';
 
 /// @title Decodes and Executes Commands
 /// @notice Called by the UniversalRouter contract to efficiently decode and execute a singular command
-abstract contract Dispatcher is Permit2Payments, CatalystExchange, LockAndMsgSender {
+abstract contract Dispatcher is Permit2Payments, CatalystExchange, CancelSwap, LockAndMsgSender {
     using BytesLib for bytes;
 
     error InvalidCommandType(uint256 commandType);
@@ -52,6 +53,7 @@ abstract contract Dispatcher is Permit2Payments, CatalystExchange, LockAndMsgSen
                     }
                     CatalystExchange.localSwap(pool, fromAsset, toAsset, amount, minOut);
                 }  else if (command == Commands.SENDASSET) {
+                    // equivalent: abi.decode(inputs, (address, bytes32, bytes32, bytes32, address, uint256, uint256, uint256, address, bytes))
                     address pool;
                     bytes32 channelId;
                     bytes32 targetPool;
@@ -156,23 +158,52 @@ abstract contract Dispatcher is Permit2Payments, CatalystExchange, LockAndMsgSen
                     }
                     Payments.unwrapWETH9(map(recipient), amountMin);
                 } else if (command == Commands.WITHDRAW_EQUAL) {
-                    (address pool, uint256 amount, uint256[] memory withdrawRatio, uint256[] memory minOut) = abi.decode(
-                        inputs, (address, uint256, uint256[], uint256[])
-                    );
+                    // equivalent:  abi.decode(inputs, (address, uint256, uint256[]))
+                    address pool;
+                    uint256 amount;
+                    assembly {
+                        pool := calldataload(inputs.offset)
+                        amount := calldataload(add(inputs.offset, 0x20))
+                    }
+
+                    uint256[] calldata minOut = inputs.toUintArray(2);
                     
-                    CatalystExchange.withdrawMixed(pool, amount, withdrawRatio, minOut);
+                    CatalystExchange.withdrawAll(pool, amount, minOut);
                 } else if (command == Commands.WITHDRAW_MIXED) {
-                    (address pool, uint256 amount, uint256[] memory withdrawRatio, uint256[] memory minOut) = abi.decode(
-                        inputs, (address, uint256, uint256[], uint256[])
-                    );
+                    // equivalent:  abi.decode(inputs, (address, uint256, uint256[], uint256[]))
+                    address pool;
+                    uint256 amount;
+                    assembly {
+                        pool := calldataload(inputs.offset)
+                        amount := calldataload(add(inputs.offset, 0x20))
+                    }
+
+                    uint256[] calldata withdrawRatio = inputs.toUintArray(2);
+                    uint256[] calldata minOut = inputs.toUintArray(3);
 
                     CatalystExchange.withdrawMixed(pool, amount, withdrawRatio, minOut);
                 } else if (command == Commands.DEPOSIT_MIXED) {
-                    (address pool, address[] memory tokens, uint256[] memory tokenAmounts, uint256 minOut) = abi.decode(
-                        inputs, (address, address[], uint256[], uint256)
-                    );
+                    // equivalent:  abi.decode(inputs, (address, address[], uint256[], uint256))
+                    address pool;
+                    uint256 minOut;
+                    assembly {
+                        pool := calldataload(inputs.offset)
+                        minOut := calldataload(add(inputs.offset, 0x60))
+                    }
+
+                    address[] calldata tokens = inputs.toAddressArray(1);
+                    uint256[] calldata tokenAmounts = inputs.toUintArray(2);
 
                     CatalystExchange.depositMixed(pool, tokens, tokenAmounts, minOut);
+                } else if (command == Commands.ALLOW_CANCEL) {
+                    // equivalent: abi.decode(inputs, (address, bytes32))
+                    address swappie;
+                    bytes32 cancelIdentifier;
+                    assembly {
+                        swappie := calldataload(inputs.offset)
+                        cancelIdentifier := calldataload(add(inputs.offset, 0x20))
+                    }
+                    CancelSwap.requireNotCanceled(swappie, cancelIdentifier);
                 } else if (command == Commands.BALANCE_CHECK_ERC20) {
                     // equivalent: abi.decode(inputs, (address, address, uint256))
                     address owner;

@@ -26,9 +26,8 @@ library Commands {
     uint256 constant WITHDRAW_EQUAL         = 0x0a;
     uint256 constant WITHDRAW_MIXED         = 0x0b;
     uint256 constant DEPOSIT_MIXED          = 0x0c;
-    uint256 constant SENDLIQUIDITY          = 0x0d;
-    uint256 constant ALLOW_CANCEL           = 0x0e;
-    uint256 constant BALANCE_CHECK_ERC20    = 0x0f;
+    uint256 constant ALLOW_CANCEL           = 0x0d;
+    uint256 constant BALANCE_CHECK_ERC20    = 0x0e;
 
     // Command Types where 0x10<=value
     uint256 constant EXECUTE_SUB_PLAN       = 0x10;

@@ -38,4 +38,12 @@ library BytesLib {
             res.length := calldataload(lengthPtr)
         }
     }
+
+    function toUintArray(bytes calldata _bytes, uint256 arg) internal pure returns (uint256[] calldata res) {
+        assembly {
+            let lengthPtr := add(_bytes.offset, calldataload(add(_bytes.offset, mul(0x20, arg))))
+            res.offset := add(lengthPtr, 0x20)
+            res.length := calldataload(lengthPtr)
+        }
+    }
 }
