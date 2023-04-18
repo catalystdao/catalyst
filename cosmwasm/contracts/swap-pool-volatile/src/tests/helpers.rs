@@ -193,14 +193,14 @@ impl InitializeSwapCurvesMockMsg {
         &self,
         app: &mut App,
         vault: String,
-        spender: Addr
+        depositor: Addr
     ) {
         self.assets
             .iter()
             .zip(&self.assets_balances)
             .for_each(|(asset, amount)| {
                 app.execute_contract::<Cw20ExecuteMsg>(
-                    spender.clone(),
+                    depositor.clone(),
                     Addr::unchecked(asset),
                     &Cw20ExecuteMsg::IncreaseAllowance {
                         spender: vault.to_string(),
