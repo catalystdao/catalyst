@@ -1,32 +1,37 @@
 mod test_volatile_finish_setup {
-    use cosmwasm_std::{testing::{mock_dependencies, mock_env, mock_info}, Addr, from_binary};
-    use swap_pool_common::ContractError;
+    use cosmwasm_std::Addr;
+    use cw_multi_test::{App, Executor};
+    use swap_pool_common::{ContractError, msg::SetupMasterResponse};
 
-    use crate::{msg::VolatileExecuteMsg, tests::helpers::{mock_instantiate, SETUP_MASTER_ADDR}, contract::{execute, query}};
+    use crate::{msg::{VolatileExecuteMsg, QueryMsg}, tests::helpers::{mock_instantiate, SETUP_MASTER_ADDR}};
 
 
     #[test]
     fn test_finish_setup() {
-    
-        let mut deps = mock_dependencies();
-        mock_instantiate(deps.as_mut(), false);
+
+        let mut app = App::default();
+
+        // Instantiate vault
+        let vault = mock_instantiate(&mut app, false);
 
 
         // Tested action: finish setup
-        let _response = execute(
-            deps.as_mut(),
-            mock_env(),
-            mock_info(SETUP_MASTER_ADDR, &[]),
-            VolatileExecuteMsg::FinishSetup {}
+        let _response = app.execute_contract::<VolatileExecuteMsg>(
+            Addr::unchecked(SETUP_MASTER_ADDR),
+            vault.clone(),
+            &VolatileExecuteMsg::FinishSetup {},
+            &[]
         ).unwrap();
 
         
         // TODO verify response attributes (event)
 
         // Verify the setup master is removed
-        let setup_master: Option<Addr> = from_binary(
-            &query(deps.as_ref(), mock_env(), crate::msg::QueryMsg::SetupMaster {}).unwrap()
-        ).unwrap();
+        let setup_master: Option<Addr> = app
+            .wrap()
+            .query_wasm_smart::<SetupMasterResponse>(vault, &QueryMsg::SetupMaster {})
+            .unwrap()
+            .setup_master;
 
         assert!(setup_master.is_none());
 
@@ -35,23 +40,25 @@ mod test_volatile_finish_setup {
 
     #[test]
     fn test_invalid_caller() {
-    
-        let mut deps = mock_dependencies();
-        mock_instantiate(deps.as_mut(), false);
+
+        let mut app = App::default();
+
+        // Instantiate vault
+        let vault = mock_instantiate(&mut app, false);
 
 
         // Tested action: finish setup
-        let response_result = execute(
-            deps.as_mut(),
-            mock_env(),
-            mock_info("not_setup_master", &[]),     // ! Not SETUP_MASTER_ADDR
-            VolatileExecuteMsg::FinishSetup {}
+        let response_result = app.execute_contract::<VolatileExecuteMsg>(
+            Addr::unchecked("not_setup_master"),     // ! Not SETUP_MASTER_ADDR
+            vault.clone(),
+            &VolatileExecuteMsg::FinishSetup {},
+            &[]
         );
 
 
         // Make sure finish_setup fails
         assert!(matches!(
-            response_result.err().unwrap(),
+            response_result.err().unwrap().downcast().unwrap(),
             ContractError::Unauthorized {}
         ));
 
