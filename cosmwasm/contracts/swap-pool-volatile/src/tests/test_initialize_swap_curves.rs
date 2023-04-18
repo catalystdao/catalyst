@@ -1,75 +1,89 @@
 mod test_volatile_initialize_swap_curves {
 
-    use cosmwasm_std::{testing::{mock_dependencies, mock_env, mock_info}, Uint128, from_binary, Addr, SubMsg, CosmosMsg, to_binary};
-    use cw20::{Cw20ExecuteMsg, TokenInfoResponse, BalanceResponse};
+    use cosmwasm_std::{Uint128, Addr};
+    use cw20::{ TokenInfoResponse, BalanceResponse, Cw20QueryMsg};
+    use cw_multi_test::{App, Executor};
     use ethnum::U256;
     use fixed_point_math_lib::fixed_point_math::LN2;
-    use swap_pool_common::ContractError;
+    use swap_pool_common::{ContractError, msg::{AssetsResponse, WeightsResponse, GetLimitCapacityResponse, TotalEscrowedAssetResponse, TotalEscrowedLiquidityResponse}};
 
-    use crate::{tests::helpers::{mock_instantiate, DEPOSITOR_ADDR, DEPLOYER_ADDR, InitializeSwapCurvesMockMsg}, contract::{execute, query}};
+    use crate::{tests::helpers::{mock_instantiate, DEPOSITOR_ADDR, DEPLOYER_ADDR, InitializeSwapCurvesMockMsg, deploy_test_tokens, mock_test_token_definitions, WAD, SETUP_MASTER_ADDR}, msg::VolatileExecuteMsg};
 
 
 
     #[test]
     fn test_initialize() {
 
-        let mut deps = mock_dependencies();
-        mock_instantiate(deps.as_mut(), false);
+        let mut app = App::default();
 
+        // Instantiate vault
+        let vault = mock_instantiate(&mut app, false);
+
+        // Create tokens and set vault allowances
+        let test_tokens = deploy_test_tokens(
+            &mut app,
+            None,
+            None
+        );
+
+        // Define InitializeSwapCurves parameters
         let initialize_msg = InitializeSwapCurvesMockMsg {
-            assets: vec!["asset_1".to_string(), "asset_2".to_string(), "asset_3".to_string()],
-            assets_balances: vec![Uint128::from(1000u64), Uint128::from(2000u64), Uint128::from(3000u64)],
+            assets: test_tokens.iter().map(|addr| addr.to_string()).collect(),
+            assets_balances: vec![
+                Uint128::from(1u64) * WAD,
+                Uint128::from(2u64) * WAD,
+                Uint128::from(3u64) * WAD
+            ],
             weights: vec![1u64, 1u64, 1u64],
             amp: 1000000000000000000u64,
             depositor: DEPOSITOR_ADDR.to_string()
         };
 
-
-        // Tested action: initialize swap curves
-        let response = execute(
-            deps.as_mut(),
-            mock_env(),
-            mock_info(DEPLOYER_ADDR, &[]),
-            initialize_msg.clone().into()
-        ).unwrap();
-
-
-        //TODO check response attributes (event)
-
-        //TODO verify only the factory can invoke initialize_swap_curves
-
-        // Verify the asset transfer messages   //TODO overhaul how assets are transferred to the contract once the factory is developped
-        let contract_addr = mock_env().contract.address;
-        let expected_transfer_msgs = initialize_msg.assets
-            .iter()
-            .zip(initialize_msg.assets_balances)
-            .map(|(asset, balance)| {
-                SubMsg::new(
-                    CosmosMsg::Wasm(
-                        cosmwasm_std::WasmMsg::Execute {
-                            contract_addr: asset.to_string(),
-                            msg: to_binary(&Cw20ExecuteMsg::TransferFrom {
-                                owner: DEPLOYER_ADDR.to_string(),       // ! From the caller //TODO note this is not the 'DEPOSITOR_ADDR', but the caller of the tx. Review
-                                recipient: contract_addr.to_string(),   // ! To the vault
-                                amount: balance                         // ! Of amount 'balance'
-                            }).unwrap(),
-                            funds: vec![]
-                        }
-                    )
-                )
-            })
-            .collect::<Vec<SubMsg>>();
-
-        assert_eq!(response.messages.len(), 3);
-        assert_eq!(
-            response.messages,
-            expected_transfer_msgs
+        // Set token allowances
+        initialize_msg.set_vault_allowances(
+            &mut app,
+            vault.to_string(),
+            Addr::unchecked(SETUP_MASTER_ADDR)
         );
 
-        // Query and verify the assets
-        let assets: Vec<Addr> = from_binary(
-            &query(deps.as_ref(), mock_env(), crate::msg::QueryMsg::Assets {}).unwrap()
+
+
+        // Tested action: initialize swap curves
+        let _response = app.execute_contract::<VolatileExecuteMsg>(
+            Addr::unchecked(SETUP_MASTER_ADDR),
+            vault.clone(),
+            &initialize_msg.clone().into(),
+            &[]
         ).unwrap();
+
+
+
+    //     //TODO check response attributes (event)
+
+    //     //TODO verify only the factory can invoke initialize_swap_curves
+
+        // Verify the assets have been transferred to the vault
+        test_tokens
+            .iter()
+            .zip(&initialize_msg.assets_balances)
+            .for_each(|(asset, balance)| {
+                let queried_balance: Uint128 = app.wrap().query_wasm_smart::<BalanceResponse>(
+                    asset,
+                    &Cw20QueryMsg::Balance { address: vault.to_string() }
+                ).unwrap().balance;
+
+                assert_eq!(
+                    queried_balance,
+                    balance
+                );
+            });
+
+        // Query and verify the assets
+        let assets: Vec<Addr> = app
+            .wrap()
+            .query_wasm_smart::<AssetsResponse>(vault.clone(), &crate::msg::QueryMsg::Assets {})
+            .unwrap()
+            .assets;
 
         assert_eq!(
             assets,
@@ -80,9 +94,11 @@ mod test_volatile_initialize_swap_curves {
         );
 
         // Query and verify the weights
-        let weights: Vec<u64> = from_binary(
-            &query(deps.as_ref(), mock_env(), crate::msg::QueryMsg::Weights {}).unwrap()
-        ).unwrap();
+        let weights: Vec<u64> = app
+            .wrap()
+            .query_wasm_smart::<WeightsResponse>(vault.clone(), &crate::msg::QueryMsg::Weights {})
+            .unwrap()
+            .weights;
 
         assert_eq!(
             weights,
@@ -90,9 +106,11 @@ mod test_volatile_initialize_swap_curves {
         );
 
         // Query and verify the security limit
-        let max_limit_capacity: U256 = from_binary(
-            &query(deps.as_ref(), mock_env(), crate::msg::QueryMsg::GetLimitCapacity {}).unwrap()
-        ).unwrap();
+        let max_limit_capacity: U256 = app
+            .wrap()
+            .query_wasm_smart::<GetLimitCapacityResponse>(vault.clone(), &crate::msg::QueryMsg::GetLimitCapacity {})
+            .unwrap()
+            .capacity;
 
         assert_eq!(
             max_limit_capacity,
@@ -100,9 +118,11 @@ mod test_volatile_initialize_swap_curves {
         );
 
         // Query and verify the pool token supply
-        let pool_token_supply: Uint128 = from_binary::<TokenInfoResponse>(
-            &query(deps.as_ref(), mock_env(), crate::msg::QueryMsg::TokenInfo {}).unwrap()
-        ).unwrap().total_supply;
+        let pool_token_supply: Uint128 = app
+            .wrap()
+            .query_wasm_smart::<TokenInfoResponse>(vault.clone(), &crate::msg::QueryMsg::TokenInfo {})
+            .unwrap()
+            .total_supply;
 
         assert_eq!(
             pool_token_supply,
@@ -110,9 +130,11 @@ mod test_volatile_initialize_swap_curves {
         );
 
         // Query and verify the pool tokens of the depositor
-        let depositor_pool_tokens: Uint128 = from_binary::<BalanceResponse>(
-            &query(deps.as_ref(), mock_env(), crate::msg::QueryMsg::Balance { address: DEPOSITOR_ADDR.to_string() }).unwrap()
-        ).unwrap().balance;
+        let depositor_pool_tokens: Uint128 = app
+            .wrap()
+            .query_wasm_smart::<BalanceResponse>(vault.clone(), &crate::msg::QueryMsg::Balance { address: DEPOSITOR_ADDR.to_string() })
+            .unwrap()
+            .balance;
 
         assert_eq!(
             depositor_pool_tokens,
@@ -123,9 +145,13 @@ mod test_volatile_initialize_swap_curves {
         initialize_msg.assets
             .iter()
             .for_each(|asset| {
-                let total_escrowed_balance: Uint128 = from_binary(
-                    &query(deps.as_ref(), mock_env(), crate::msg::QueryMsg::TotalEscrowedAsset { asset: asset.to_string() }).unwrap()
-                ).unwrap();
+                let total_escrowed_balance: Uint128 = app
+                    .wrap()
+                    .query_wasm_smart::<TotalEscrowedAssetResponse>(
+                        vault.clone(),
+                        &crate::msg::QueryMsg::TotalEscrowedAsset { asset: asset.to_string() })
+                    .unwrap()
+                    .amount;
 
                 assert_eq!(
                     total_escrowed_balance,
@@ -133,9 +159,11 @@ mod test_volatile_initialize_swap_curves {
                 );
             });
 
-        let total_escrowed_liquidity: Uint128 = from_binary(
-            &query(deps.as_ref(), mock_env(), crate::msg::QueryMsg::TotalEscrowedLiquidity {}).unwrap()
-        ).unwrap();
+        let total_escrowed_liquidity: Uint128 = app
+            .wrap()
+            .query_wasm_smart::<TotalEscrowedLiquidityResponse>(vault.clone(), &crate::msg::QueryMsg::TotalEscrowedLiquidity {})
+            .unwrap()
+            .amount;
 
         assert_eq!(
             total_escrowed_liquidity,
@@ -148,38 +176,61 @@ mod test_volatile_initialize_swap_curves {
     #[test]
     fn test_initialize_twice() {
 
-        let mut deps = mock_dependencies();
-        mock_instantiate(deps.as_mut(), false);
+        let mut app = App::default();
 
+        // Instantiate vault
+        let vault = mock_instantiate(&mut app, false);
+
+        // Create tokens and set vault allowances
+        let test_tokens = deploy_test_tokens(
+            &mut app,
+            None,
+            None
+        );
+
+        // Define InitializeSwapCurves parameters
         let initialize_msg = InitializeSwapCurvesMockMsg {
-            assets: vec!["asset_1".to_string(), "asset_2".to_string(), "asset_3".to_string()],
-            assets_balances: vec![Uint128::from(1000u64), Uint128::from(2000u64), Uint128::from(3000u64)],
+            assets: test_tokens.iter().map(|addr| addr.to_string()).collect(),
+            assets_balances: vec![
+                Uint128::from(1u64) * WAD,
+                Uint128::from(2u64) * WAD,
+                Uint128::from(3u64) * WAD
+            ],
             weights: vec![1u64, 1u64, 1u64],
             amp: 1000000000000000000u64,
-            depositor: DEPLOYER_ADDR.to_string()
+            depositor: DEPOSITOR_ADDR.to_string()
         };
 
+        // Set token allowances
+        initialize_msg.set_vault_allowances(
+            &mut app,
+            vault.to_string(),
+            Addr::unchecked(SETUP_MASTER_ADDR)
+        );
+
         // Initialize swap curves
-        execute(
-            deps.as_mut(),
-            mock_env(),
-            mock_info(DEPLOYER_ADDR, &[]),
-            initialize_msg.clone().into()
+        let _response = app.execute_contract::<VolatileExecuteMsg>(
+            Addr::unchecked(SETUP_MASTER_ADDR),
+            vault.clone(),
+            &initialize_msg.clone().into(),
+            &[]
         ).unwrap();
 
 
+
         // Tested action: initialize swap curves twice
-        let response_result = execute(
-            deps.as_mut(),
-            mock_env(),
-            mock_info(DEPLOYER_ADDR, &[]),
-            initialize_msg.into()
+        let response_result = app.execute_contract::<VolatileExecuteMsg>(
+            Addr::unchecked(SETUP_MASTER_ADDR),
+            vault.clone(),
+            &initialize_msg.clone().into(),
+            &[]
         );
+
 
 
         // Make sure second initialization fails
         assert!(matches!(
-            response_result.err().unwrap(),
+            response_result.err().unwrap().downcast().unwrap(),
             ContractError::Unauthorized {}
         ));
 
@@ -189,8 +240,10 @@ mod test_volatile_initialize_swap_curves {
     #[test]
     fn test_no_assets() {
 
-        let mut deps = mock_dependencies();
-        mock_instantiate(deps.as_mut(), false);
+        let mut app = App::default();
+
+        // Instantiate vault
+        let vault = mock_instantiate(&mut app, false);
 
         let initialize_msg = InitializeSwapCurvesMockMsg {
             assets: vec![],
@@ -202,17 +255,17 @@ mod test_volatile_initialize_swap_curves {
 
 
         // Tested action: initialize swap curves without assets
-        let response_result = execute(
-            deps.as_mut(),
-            mock_env(),
-            mock_info(DEPLOYER_ADDR, &[]),
-            initialize_msg.into()
+        let response_result = app.execute_contract::<VolatileExecuteMsg>(
+            Addr::unchecked(SETUP_MASTER_ADDR),
+            vault.clone(),
+            &initialize_msg.clone().into(),
+            &[]
         );
 
 
         // Make sure initialization fails
         assert!(matches!(
-            response_result.err().unwrap(),
+            response_result.err().unwrap().downcast().unwrap(),
             ContractError::GenericError {}
         ));
 
@@ -222,30 +275,55 @@ mod test_volatile_initialize_swap_curves {
     #[test]
     fn test_too_many_assets() {
 
-        let mut deps = mock_dependencies();
-        mock_instantiate(deps.as_mut(), false);
+        let mut app = App::default();
 
+        // Instantiate vault
+        let vault = mock_instantiate(&mut app, false);
+
+        // Create tokens and set vault allowances
+        let test_tokens_definitions = mock_test_token_definitions(4);    // ! Generate 4 tokens definitions
+        let test_tokens = deploy_test_tokens(
+            &mut app,
+            None,
+            Some(test_tokens_definitions)
+        );
+
+        // Define InitializeSwapCurves parameters
         let initialize_msg = InitializeSwapCurvesMockMsg {
-            assets: vec!["asset_1".to_string(), "asset_2".to_string(), "asset_3".to_string(), "asset_4".to_string()],
-            assets_balances: vec![Uint128::from(1000u64), Uint128::from(2000u64), Uint128::from(3000u64), Uint128::from(4000u64)],
+            assets: test_tokens.iter().map(|addr| addr.to_string()).collect(),
+            assets_balances: vec![
+                Uint128::from(1u64) * WAD,
+                Uint128::from(2u64) * WAD,
+                Uint128::from(3u64) * WAD,
+                Uint128::from(4u64) * WAD
+            ],
             weights: vec![1u64, 1u64, 1u64, 1u64],
             amp: 1000000000000000000u64,
-            depositor: DEPLOYER_ADDR.to_string()
+            depositor: DEPOSITOR_ADDR.to_string()
         };
+
+        // Set token allowances
+        initialize_msg.set_vault_allowances(
+            &mut app,
+            vault.to_string(),
+            Addr::unchecked(SETUP_MASTER_ADDR)
+        );
+
 
 
         // Tested action: initialize swap curves with too many assets
-        let response_result = execute(
-            deps.as_mut(),
-            mock_env(),
-            mock_info(DEPLOYER_ADDR, &[]),
-            initialize_msg.into()
+        let response_result = app.execute_contract::<VolatileExecuteMsg>(
+            Addr::unchecked(SETUP_MASTER_ADDR),
+            vault.clone(),
+            &initialize_msg.clone().into(),
+            &[]
         );
+
 
 
         // Make sure initialization fails
         assert!(matches!(
-            response_result.err().unwrap(),
+            response_result.err().unwrap().downcast().unwrap(),
             ContractError::GenericError {}
         ));
 
@@ -255,30 +333,52 @@ mod test_volatile_initialize_swap_curves {
     #[test]
     fn test_invalid_asset_balances_count() {
 
-        let mut deps = mock_dependencies();
-        mock_instantiate(deps.as_mut(), false);
+        let mut app = App::default();
 
+        // Instantiate vault
+        let vault = mock_instantiate(&mut app, false);
+
+        // Create tokens and set vault allowances
+        let test_tokens = deploy_test_tokens(
+            &mut app,
+            None,
+            None
+        );
+
+        // Define InitializeSwapCurves parameters
         let initialize_msg = InitializeSwapCurvesMockMsg {
-            assets: vec!["asset_1".to_string(), "asset_2".to_string(), "asset_3".to_string()],
-            assets_balances: vec![Uint128::from(1000u64), Uint128::from(2000u64)],
+            assets: test_tokens.iter().map(|addr| addr.to_string()).collect(),
+            assets_balances: vec![
+                Uint128::from(1u64) * WAD,
+                Uint128::from(2u64) * WAD       // ! Only 2 asset balances are specified
+            ],
             weights: vec![1u64, 1u64, 1u64],
             amp: 1000000000000000000u64,
-            depositor: DEPLOYER_ADDR.to_string()
+            depositor: DEPOSITOR_ADDR.to_string()
         };
 
-
-        // Tested action: initialize swap curves with too many assets
-        let response_result = execute(
-            deps.as_mut(),
-            mock_env(),
-            mock_info(DEPLOYER_ADDR, &[]),
-            initialize_msg.into()
+        // Set token allowances
+        initialize_msg.set_vault_allowances(
+            &mut app,
+            vault.to_string(),
+            Addr::unchecked(SETUP_MASTER_ADDR)
         );
+
+
+
+        // Tested action: initialize swap curves with an invalid asset balance count
+        let response_result = app.execute_contract::<VolatileExecuteMsg>(
+            Addr::unchecked(SETUP_MASTER_ADDR),
+            vault.clone(),
+            &initialize_msg.clone().into(),
+            &[]
+        );
+
 
 
         // Make sure initialization fails
         assert!(matches!(
-            response_result.err().unwrap(),
+            response_result.err().unwrap().downcast().unwrap(),
             ContractError::GenericError {}
         ));
         
@@ -288,30 +388,53 @@ mod test_volatile_initialize_swap_curves {
     #[test]
     fn test_zero_asset_balance() {
 
-        let mut deps = mock_dependencies();
-        mock_instantiate(deps.as_mut(), false);
+        let mut app = App::default();
 
+        // Instantiate vault
+        let vault = mock_instantiate(&mut app, false);
+
+        // Create tokens and set vault allowances
+        let test_tokens = deploy_test_tokens(
+            &mut app,
+            None,
+            None
+        );
+
+        // Define InitializeSwapCurves parameters
         let initialize_msg = InitializeSwapCurvesMockMsg {
-            assets: vec!["asset_1".to_string(), "asset_2".to_string(), "asset_3".to_string()],
-            assets_balances: vec![Uint128::from(1000u64), Uint128::from(2000u64), Uint128::from(0u64)],
+            assets: test_tokens.iter().map(|addr| addr.to_string()).collect(),
+            assets_balances: vec![
+                Uint128::from(1u64) * WAD,
+                Uint128::from(2u64) * WAD,
+                Uint128::zero()                 // ! Asset balance is set to 0
+            ],
             weights: vec![1u64, 1u64, 1u64],
             amp: 1000000000000000000u64,
-            depositor: DEPLOYER_ADDR.to_string()
+            depositor: DEPOSITOR_ADDR.to_string()
         };
 
-
-        // Tested action: initialize swap curves with too many assets
-        let response_result = execute(
-            deps.as_mut(),
-            mock_env(),
-            mock_info(DEPLOYER_ADDR, &[]),
-            initialize_msg.into()
+        // Set token allowances
+        initialize_msg.set_vault_allowances(
+            &mut app,
+            vault.to_string(),
+            Addr::unchecked(SETUP_MASTER_ADDR)
         );
+
+
+
+        // Tested action: initialize swap curves with an asset balance set to 0
+        let response_result = app.execute_contract::<VolatileExecuteMsg>(
+            Addr::unchecked(SETUP_MASTER_ADDR),
+            vault.clone(),
+            &initialize_msg.clone().into(),
+            &[]
+        );
+
 
 
         // Make sure initialization fails
         assert!(matches!(
-            response_result.err().unwrap(),
+            response_result.err().unwrap().downcast().unwrap(),
             ContractError::GenericError {}
         ));
         
@@ -321,30 +444,53 @@ mod test_volatile_initialize_swap_curves {
     #[test]
     fn test_invalid_weights_count() {
 
-        let mut deps = mock_dependencies();
-        mock_instantiate(deps.as_mut(), false);
+        let mut app = App::default();
 
+        // Instantiate vault
+        let vault = mock_instantiate(&mut app, false);
+
+        // Create tokens and set vault allowances
+        let test_tokens = deploy_test_tokens(
+            &mut app,
+            None,
+            None
+        );
+
+        // Define InitializeSwapCurves parameters
         let initialize_msg = InitializeSwapCurvesMockMsg {
-            assets: vec!["asset_1".to_string(), "asset_2".to_string(), "asset_3".to_string()],
-            assets_balances: vec![Uint128::from(1000u64), Uint128::from(2000u64), Uint128::from(3000u64)],
-            weights: vec![1u64, 1u64],
+            assets: test_tokens.iter().map(|addr| addr.to_string()).collect(),
+            assets_balances: vec![
+                Uint128::from(1u64) * WAD,
+                Uint128::from(2u64) * WAD,
+                Uint128::from(3u64) * WAD
+            ],
+            weights: vec![1u64, 1u64],    // ! Only 2 weights are specified
             amp: 1000000000000000000u64,
-            depositor: DEPLOYER_ADDR.to_string()
+            depositor: DEPOSITOR_ADDR.to_string()
         };
 
-
-        // Tested action: initialize swap curves with too many assets
-        let response_result = execute(
-            deps.as_mut(),
-            mock_env(),
-            mock_info(DEPLOYER_ADDR, &[]),
-            initialize_msg.into()
+        // Set token allowances
+        initialize_msg.set_vault_allowances(
+            &mut app,
+            vault.to_string(),
+            Addr::unchecked(SETUP_MASTER_ADDR)
         );
+
+
+
+        // Tested action: initialize swap curves with an invalid weights count
+        let response_result = app.execute_contract::<VolatileExecuteMsg>(
+            Addr::unchecked(SETUP_MASTER_ADDR),
+            vault.clone(),
+            &initialize_msg.clone().into(),
+            &[]
+        );
+
 
 
         // Make sure initialization fails
         assert!(matches!(
-            response_result.err().unwrap(),
+            response_result.err().unwrap().downcast().unwrap(),
             ContractError::GenericError {}
         ));
         
@@ -354,30 +500,53 @@ mod test_volatile_initialize_swap_curves {
     #[test]
     fn test_zero_weight() {
 
-        let mut deps = mock_dependencies();
-        mock_instantiate(deps.as_mut(), false);
+        let mut app = App::default();
 
+        // Instantiate vault
+        let vault = mock_instantiate(&mut app, false);
+
+        // Create tokens and set vault allowances
+        let test_tokens = deploy_test_tokens(
+            &mut app,
+            None,
+            None
+        );
+
+        // Define InitializeSwapCurves parameters
         let initialize_msg = InitializeSwapCurvesMockMsg {
-            assets: vec!["asset_1".to_string(), "asset_2".to_string(), "asset_3".to_string()],
-            assets_balances: vec![Uint128::from(1000u64), Uint128::from(2000u64), Uint128::from(3000u64)],
-            weights: vec![1u64, 1u64, 0u64],
+            assets: test_tokens.iter().map(|addr| addr.to_string()).collect(),
+            assets_balances: vec![
+                Uint128::from(1u64) * WAD,
+                Uint128::from(2u64) * WAD,
+                Uint128::from(3u64) * WAD
+            ],
+            weights: vec![1u64, 1u64, 0u64],    // ! Weight set to 0
             amp: 1000000000000000000u64,
-            depositor: DEPLOYER_ADDR.to_string()
+            depositor: DEPOSITOR_ADDR.to_string()
         };
 
-
-        // Tested action: initialize swap curves with too many assets
-        let response_result = execute(
-            deps.as_mut(),
-            mock_env(),
-            mock_info(DEPLOYER_ADDR, &[]),
-            initialize_msg.into()
+        // Set token allowances
+        initialize_msg.set_vault_allowances(
+            &mut app,
+            vault.to_string(),
+            Addr::unchecked(SETUP_MASTER_ADDR)
         );
+
+
+
+        // Tested action: initialize swap curves with a weight set to 0
+        let response_result = app.execute_contract::<VolatileExecuteMsg>(
+            Addr::unchecked(SETUP_MASTER_ADDR),
+            vault.clone(),
+            &initialize_msg.clone().into(),
+            &[]
+        );
+
 
 
         // Make sure initialization fails
         assert!(matches!(
-            response_result.err().unwrap(),
+            response_result.err().unwrap().downcast().unwrap(),
             ContractError::GenericError {}
         ));
         
@@ -387,30 +556,52 @@ mod test_volatile_initialize_swap_curves {
     #[test]
     fn test_invalid_amp() {
 
-        let mut deps = mock_dependencies();
-        mock_instantiate(deps.as_mut(), false);
+        let mut app = App::default();
 
+        // Instantiate vault
+        let vault = mock_instantiate(&mut app, false);
+
+        // Create tokens and set vault allowances
+        let test_tokens = deploy_test_tokens(
+            &mut app,
+            None,
+            None
+        );
+
+        // Define InitializeSwapCurves parameters
         let initialize_msg = InitializeSwapCurvesMockMsg {
-            assets: vec!["asset_1".to_string(), "asset_2".to_string(), "asset_3".to_string()],
-            assets_balances: vec![Uint128::from(1000u64), Uint128::from(2000u64), Uint128::from(3000u64)],
+            assets: test_tokens.iter().map(|addr| addr.to_string()).collect(),
+            assets_balances: vec![
+                Uint128::from(1u64) * WAD,
+                Uint128::from(2u64) * WAD,
+                Uint128::from(3u64) * WAD
+            ],
             weights: vec![1u64, 1u64, 1u64],
-            amp: 900000000000000000u64,
-            depositor: DEPLOYER_ADDR.to_string()
+            amp: 900000000000000000u64,                 // ! Invalid amplification is specified
+            depositor: DEPOSITOR_ADDR.to_string()
         };
 
+        // Set token allowances
+        initialize_msg.set_vault_allowances(
+            &mut app,
+            vault.to_string(),
+            Addr::unchecked(SETUP_MASTER_ADDR)
+        );
 
-        // Tested action: initialize swap curves with too many assets
-        let response_result = execute(
-            deps.as_mut(),
-            mock_env(),
-            mock_info(DEPLOYER_ADDR, &[]),
-            initialize_msg.into()
+
+
+        // Tested action: initialize swap curves with an invalid amplification value
+        let response_result = app.execute_contract::<VolatileExecuteMsg>(
+            Addr::unchecked(SETUP_MASTER_ADDR),
+            vault.clone(),
+            &initialize_msg.clone().into(),
+            &[]
         );
 
 
         // Make sure initialization fails
         assert!(matches!(
-            response_result.err().unwrap(),
+            response_result.err().unwrap().downcast().unwrap(),
             ContractError::InvalidAmplification {}
         ));
         
