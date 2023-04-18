@@ -3,8 +3,8 @@ pragma solidity ^0.8.17;
 
 import {Constants} from '../libraries/Constants.sol';
 import {RouterImmutables} from '../base/RouterImmutables.sol';
-import {SafeTransferLib} from 'solmate/src/utils/SafeTransferLib.sol';
-import {ERC20} from 'solmate/src/tokens/ERC20.sol';
+import {SafeTransferLib} from 'lib/solmate/src/utils/SafeTransferLib.sol';
+import {ERC20} from 'lib/solmate/src/tokens/ERC20.sol';
 
 /// @title Payments contract
 /// @notice Performs various operations around the payment of ETH and tokens

@@ -3,7 +3,7 @@ pragma solidity ^0.8.17;
 
 import {Constants} from '../libraries/Constants.sol';
 import {RouterImmutables} from '../base/RouterImmutables.sol';
-import {ERC20} from 'solmate/src/tokens/ERC20.sol';
+import {ERC20} from 'lib/solmate/src/tokens/ERC20.sol';
 import {Payments} from './Payments.sol';
 import {ICatalystV1Pool} from '../../ICatalystV1Pool.sol';
 import {BytesLib} from './BytesLib.sol';
