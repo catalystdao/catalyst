@@ -13,12 +13,12 @@ use swap_pool_common::{
         collect_governance_fee_message, compute_send_asset_hash, compute_send_liquidity_hash, create_asset_escrow,
         create_liquidity_escrow, on_send_asset_ack, on_send_liquidity_ack, total_supply, get_unit_capacity, USED_LIMIT_CAPACITY_TIMESTAMP,
     },
-    ContractError
+    ContractError, msg::{CalcSendAssetResponse, CalcReceiveAssetResponse, CalcLocalSwapResponse, GetLimitCapacityResponse}
 };
 
 use catalyst_ibc_interface::msg::{ExecuteMsg as InterfaceExecuteMsg, AssetSwapMetadata, LiquiditySwapMetadata};
 
-use crate::calculation_helpers::{calc_price_curve_area, calc_price_curve_limit, calc_combined_price_curves, calc_price_curve_limit_share};
+use crate::{calculation_helpers::{calc_price_curve_area, calc_price_curve_limit, calc_combined_price_curves, calc_price_curve_limit_share}, msg::{TargetWeightsResponse, WeightsUpdateFinishTimestampResponse}};
 
 pub const TARGET_WEIGHTS: Item<Vec<u64>> = Item::new("catalyst-pool-target-weights");       //TODO use mapping instead? (see also WEIGHTS definition)
 pub const WEIGHT_UPDATE_TIMESTAMP: Item<u64> = Item::new("catalyst-pool-weight-update-timestamp");
@@ -1192,10 +1192,13 @@ pub fn query_calc_send_asset(
     env: Env,
     from_asset: &str,
     amount: Uint128
-) -> StdResult<U256> {
+) -> StdResult<CalcSendAssetResponse> {
 
-    calc_send_asset(&deps, env, from_asset, amount)
-        .map_err(|err| err.into())
+    Ok(
+        CalcSendAssetResponse {
+            u: calc_send_asset(&deps, env, from_asset, amount)?
+        }
+    )
 
 }
 
@@ -1205,10 +1208,13 @@ pub fn query_calc_receive_asset(
     env: Env,
     to_asset: &str,
     u: U256
-) -> StdResult<Uint128> {
+) -> StdResult<CalcReceiveAssetResponse> {
 
-    calc_receive_asset(&deps, env, to_asset, u)
-        .map_err(|err| err.into())
+    Ok(
+        CalcReceiveAssetResponse {
+            to_amount: calc_receive_asset(&deps, env, to_asset, u)?
+        }
+    )
 
 }
 
@@ -1219,26 +1225,51 @@ pub fn query_calc_local_swap(
     from_asset: &str,
     to_asset: &str,
     amount: Uint128
-) -> StdResult<Uint128> {
+) -> StdResult<CalcLocalSwapResponse> {
 
-    calc_local_swap(&deps, env, from_asset, to_asset, amount)
-        .map_err(|err| err.into())
-
-}
-
-
-pub fn query_get_limit_capacity(deps: Deps, env: Env) -> StdResult<U256> {
-
-    get_unit_capacity(&deps, env)
-        .map_err(|_| StdError::GenericErr { msg: "".to_owned() })   //TODO error
+    Ok(
+        CalcLocalSwapResponse {
+            to_amount: calc_local_swap(&deps, env, from_asset, to_asset, amount)?
+        }
+    )
 
 }
 
 
-pub fn query_target_weights(deps: Deps) -> StdResult<Vec<u64>> {
-    TARGET_WEIGHTS.load(deps.storage)
+pub fn query_get_limit_capacity(
+    deps: Deps,
+    env: Env
+) -> StdResult<GetLimitCapacityResponse> {
+
+    Ok(
+        GetLimitCapacityResponse {
+            capacity: get_unit_capacity(&deps, env)?
+        }
+    )
+
 }
 
-pub fn query_weights_update_finish_timestamp(deps: Deps) -> StdResult<u64> {
-    WEIGHT_UPDATE_FINISH_TIMESTAMP.load(deps.storage)
+
+pub fn query_target_weights(
+    deps: Deps
+) -> StdResult<TargetWeightsResponse> {
+    
+    Ok(
+        TargetWeightsResponse {
+            target_weights: TARGET_WEIGHTS.load(deps.storage)?
+        }
+    )
+
+}
+
+pub fn query_weights_update_finish_timestamp(
+    deps: Deps
+) -> StdResult<WeightsUpdateFinishTimestampResponse> {
+
+    Ok(
+        WeightsUpdateFinishTimestampResponse {
+            timestamp: WEIGHT_UPDATE_FINISH_TIMESTAMP.load(deps.storage)?
+        }
+    )
+
 }
