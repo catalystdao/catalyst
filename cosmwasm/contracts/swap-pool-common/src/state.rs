@@ -10,7 +10,7 @@ use ethnum::{U256, uint};
 use fixed_point_math_lib::fixed_point_math::mul_wad_down;
 use sha3::{Digest, Keccak256};
 
-use crate::ContractError;
+use crate::{ContractError, msg::{ChainInterfaceResponse, SetupMasterResponse, ReadyResponse, OnlyLocalResponse, AssetsResponse, WeightsResponse, PoolFeeResponse, GovernanceFeeShareResponse, FeeAdministratorResponse, TotalEscrowedAssetResponse, TotalEscrowedLiquidityResponse, AssetEscrowResponse, LiquidityEscrowResponse, PoolConnectionStateResponse}};
 
 
 // Pool Constants
@@ -779,58 +779,114 @@ pub struct Escrow {
 
 // Query helpers ****************************************************************************************************************
 
-pub fn query_chain_interface(deps: Deps) -> StdResult<Option<Addr>> {
-    CHAIN_INTERFACE.load(deps.storage)
+pub fn query_chain_interface(deps: Deps) -> StdResult<ChainInterfaceResponse> {
+    Ok(
+        ChainInterfaceResponse {
+            chain_interface: CHAIN_INTERFACE.load(deps.storage)?
+        }
+    )
 }
 
-pub fn query_setup_master(deps: Deps) -> StdResult<Option<Addr>> {
-    SETUP_MASTER.load(deps.storage)
+pub fn query_setup_master(deps: Deps) -> StdResult<SetupMasterResponse> {
+    Ok(
+        SetupMasterResponse {
+            setup_master: SETUP_MASTER.load(deps.storage)?
+        }
+    )
 }
 
-pub fn query_ready(deps: Deps) -> StdResult<bool> {
-    ready(&deps)
+pub fn query_ready(deps: Deps) -> StdResult<ReadyResponse> {
+    Ok(
+        ReadyResponse {
+            ready: ready(&deps)?
+        }
+    )
 }
 
-pub fn query_only_local(deps: Deps) -> StdResult<bool> {
-    only_local(&deps)
+pub fn query_only_local(deps: Deps) -> StdResult<OnlyLocalResponse> {
+    Ok(
+        OnlyLocalResponse {
+            only_local: only_local(&deps)?
+        }
+    )
 }
 
-pub fn query_assets(deps: Deps) -> StdResult<Vec<Addr>> {
-    ASSETS.load(deps.storage)
+pub fn query_assets(deps: Deps) -> StdResult<AssetsResponse> {
+    Ok(
+        AssetsResponse {
+            assets: ASSETS.load(deps.storage)?
+        }
+    )
 }
 
-pub fn query_weights(deps: Deps) -> StdResult<Vec<u64>> {
-    WEIGHTS.load(deps.storage)
+pub fn query_weights(deps: Deps) -> StdResult<WeightsResponse> {
+    Ok(
+        WeightsResponse {
+            weights: WEIGHTS.load(deps.storage)?
+        }
+    )
 }
 
-pub fn query_pool_fee(deps: Deps) -> StdResult<u64> {
-    POOL_FEE.load(deps.storage)
+pub fn query_pool_fee(deps: Deps) -> StdResult<PoolFeeResponse> {
+    Ok(
+        PoolFeeResponse {
+            fee: POOL_FEE.load(deps.storage)?
+        }
+    )
 }
 
-pub fn query_governance_fee_share(deps: Deps) -> StdResult<u64> {
-    GOVERNANCE_FEE_SHARE.load(deps.storage)
+pub fn query_governance_fee_share(deps: Deps) -> StdResult<GovernanceFeeShareResponse> {
+    Ok(
+        GovernanceFeeShareResponse {
+            fee: GOVERNANCE_FEE_SHARE.load(deps.storage)?
+        }
+    )
 }
 
-pub fn query_fee_administrator(deps: Deps) -> StdResult<Addr> {
-    FEE_ADMINISTRATOR.load(deps.storage)
+pub fn query_fee_administrator(deps: Deps) -> StdResult<FeeAdministratorResponse> {
+    Ok(
+        FeeAdministratorResponse {
+            administrator: FEE_ADMINISTRATOR.load(deps.storage)?
+        }
+    )
 }
 
-pub fn query_total_escrowed_asset(deps: Deps, asset: &str) -> StdResult<Uint128> {
-    TOTAL_ESCROWED_ASSETS.load(deps.storage, asset)
+pub fn query_total_escrowed_asset(deps: Deps, asset: &str) -> StdResult<TotalEscrowedAssetResponse> {
+    Ok(
+        TotalEscrowedAssetResponse {
+            amount: TOTAL_ESCROWED_ASSETS.load(deps.storage, asset)?
+        }
+    )
 }
 
-pub fn query_total_escrowed_liquidity(deps: Deps) -> StdResult<Uint128> {
-    TOTAL_ESCROWED_LIQUIDITY.load(deps.storage)
+pub fn query_total_escrowed_liquidity(deps: Deps) -> StdResult<TotalEscrowedLiquidityResponse> {
+    Ok(
+        TotalEscrowedLiquidityResponse {
+            amount: TOTAL_ESCROWED_LIQUIDITY.load(deps.storage)?
+        }
+    )
 }
 
-pub fn query_asset_escrow(deps: Deps, hash: &str) -> StdResult<String> {
-    ASSET_ESCROWS.load(deps.storage, hash)
+pub fn query_asset_escrow(deps: Deps, hash: &str) -> StdResult<AssetEscrowResponse> {
+    Ok(
+        AssetEscrowResponse {
+            fallback_account: ASSET_ESCROWS.load(deps.storage, hash)?
+        }
+    )
 }
 
-pub fn query_liquidity_escrow(deps: Deps, hash: &str) -> StdResult<String> {
-    LIQUIDITY_ESCROWS.load(deps.storage, hash)
+pub fn query_liquidity_escrow(deps: Deps, hash: &str) -> StdResult<LiquidityEscrowResponse> {
+    Ok(
+        LiquidityEscrowResponse {
+            fallback_account: LIQUIDITY_ESCROWS.load(deps.storage, hash)?
+        }
+    )
 }
 
-pub fn query_pool_connection_state(deps: Deps, channel_id: &str, pool: Vec<u8>) -> StdResult<bool> {
-    POOL_CONNECTIONS.load(deps.storage, (channel_id, pool))
+pub fn query_pool_connection_state(deps: Deps, channel_id: &str, pool: Vec<u8>) -> StdResult<PoolConnectionStateResponse> {
+    Ok(
+        PoolConnectionStateResponse {
+            state: POOL_CONNECTIONS.load(deps.storage, (channel_id, pool))?
+        }
+    )
 }
