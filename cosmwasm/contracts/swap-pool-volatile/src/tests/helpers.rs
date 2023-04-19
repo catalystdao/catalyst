@@ -16,6 +16,9 @@ pub const LOCAL_SWAPPER         : &str = "local_swapper_addr";
 
 pub const WAD: Uint128 = Uint128::new(1000000000000000000u128);
 
+pub const DEFAULT_TEST_POOL_FEE : u64 = 70000000000000000u64;   // 7%
+pub const DEFAULT_TEST_GOV_FEE  : u64 = 50000000000000000u64;   // 5%
+
 
 // Contracts
 pub fn volatile_vault_contract_storage(
@@ -198,8 +201,8 @@ pub fn mock_instantiate_msg(
         name: "TestPool".to_string(),
         symbol: "TP".to_string(),
         chain_interface,
-        pool_fee: 10000u64,
-        governance_fee: 50000u64,
+        pool_fee: DEFAULT_TEST_POOL_FEE,
+        governance_fee: DEFAULT_TEST_GOV_FEE,
         fee_administrator: FEE_ADMINISTRATOR.to_string(),
         setup_master: SETUP_MASTER_ADDR.to_string()
     }
