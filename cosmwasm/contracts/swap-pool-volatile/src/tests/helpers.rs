@@ -1,9 +1,10 @@
 use cosmwasm_std::{Uint128, Addr};
 use cw20::{Cw20Coin, MinterResponse, Cw20ExecuteMsg};
 use cw_multi_test::{ContractWrapper, App, Executor, AppResponse};
+use ethnum::U256;
 use swap_pool_common::msg::InstantiateMsg;
 
-use crate::msg::VolatileExecuteMsg;
+use crate::{msg::VolatileExecuteMsg, tests::math_helpers::{f64_to_u256, f64_to_uint128, u256_to_f64}};
 
 pub const DEPLOYER_ADDR         : &str = "deployer_addr";
 pub const FACTORY_OWNER_ADDR    : &str = "factory_owner_addr";
@@ -235,4 +236,103 @@ pub fn mock_finish_pool_setup(
         &VolatileExecuteMsg::FinishSetup {},
         &[]
     ).unwrap()
+}
+
+
+
+// Swap Utils
+
+pub struct ExpectedLocalSwapResult {
+    u: U256,
+    to_amount: Uint128,
+    pool_fee: Uint128,
+    governance_fee: Uint128
+}
+
+pub fn compute_expected_swap(
+    swap_amount: Uint128,
+    from_weight: u64,
+    from_balance: Uint128,
+    to_weight: u64,
+    to_balance: Uint128,
+    pool_fee: Option<u64>,
+    governance_fee_share: Option<u64>
+) -> ExpectedLocalSwapResult {
+
+    // Convert arguments to float
+    let swap_amount = swap_amount.u128() as f64;
+    let from_weight = from_weight as f64;
+    let from_balance = from_balance.u128() as f64;
+    let to_weight = to_weight as f64;
+    let to_balance = to_balance.u128() as f64;
+
+    // Compute fees
+    let pool_fee = (pool_fee.unwrap_or(0u64) / WAD.u128() as u64) as f64;
+    let governance_fee_share = (governance_fee_share.unwrap_or(0u64) / WAD.u128() as u64) as f64;
+
+    let net_fee = pool_fee * swap_amount;
+    let net_pool_fee = pool_fee * (1. - governance_fee_share) * swap_amount;
+    let net_governance_fee = pool_fee * governance_fee_share * swap_amount;
+
+    // Compute swap
+    let x = swap_amount - net_fee;
+    let u = from_weight * ((from_balance + x)/from_balance).ln();
+    let to_amount = to_balance * (1. - (-u/to_weight).exp());
+
+    ExpectedLocalSwapResult {
+        u: f64_to_u256(u * 1e18).unwrap(),
+        to_amount: f64_to_uint128(to_amount).unwrap(),
+        pool_fee: f64_to_uint128(net_pool_fee).unwrap(),
+        governance_fee: f64_to_uint128(net_governance_fee).unwrap()
+    }
+}
+
+pub fn compute_expected_swap_given_u(
+    u: U256,
+    to_weight: u64,
+    to_balance: Uint128
+) -> Uint128 {
+
+    // Convert arguments into float
+    let u = u256_to_f64(u);
+    let to_weight = to_weight as f64;
+    let to_balance = to_balance.u128() as f64;
+
+    // Compute swap
+    f64_to_uint128(to_balance * (1. - (-u/to_weight).exp())).unwrap()
+    
+}
+
+pub struct ExpectedLiquiditySwapResult {
+    u: U256,
+    to_amount: Uint128
+}
+
+pub fn compute_expected_liquidity_swap(
+    swap_amount: Uint128,
+    from_weights: Vec<u64>,
+    from_total_supply: Uint128,
+    to_weights: Vec<u64>,
+    to_total_supply: Uint128
+) -> ExpectedLiquiditySwapResult {
+
+    // Convert arguments to float
+    let swap_amount = swap_amount.u128() as f64;
+    let from_total_supply = from_total_supply.u128() as f64;
+    let to_total_supply = to_total_supply.u128() as f64;
+
+    // Compute swap
+    let from_weights_sum: f64 = from_weights.iter().sum::<u64>() as f64;
+    let to_weights_sum: f64 = to_weights.iter().sum::<u64>() as f64;
+
+    let u = (from_total_supply/(from_total_supply - swap_amount)).ln() * from_weights_sum;
+
+    let share = 1. - (-u/to_weights_sum).exp();
+    let to_amount = to_total_supply * (share/(1.-share));
+
+    ExpectedLiquiditySwapResult {
+        u: f64_to_u256(u * 1e18).unwrap(),
+        to_amount: f64_to_uint128(to_amount).unwrap()
+    }
+
 }
