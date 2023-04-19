@@ -1,9 +1,7 @@
+from constants import MSG_SENDER, ADDRESS_THIS, BALANCE_THIS
 import pytest
 from brownie import convert
 
-MSG_SENDER = 0x01
-ADDRESS_THIS = 0x02
-BALANCE_THIS = 2**255
 
 def byte_sum(elements: list):
     b = b""
@@ -84,7 +82,6 @@ def test_sendSwap(catalyst_router, pool11, pool12, pool21, pool22, weth, token1,
     pool21.setConnection(channel_id, convert.to_bytes(pool12.address), True, {'from': accounts[0]})
     
     amount = 10**18
-    
     payload1 = encode_router_payload([0x08, 0x00, 0x01], [
         [ADDRESS_THIS, amount],
         [pool11.address, weth.address, token1.address, amount, 0],

@@ -1,9 +1,5 @@
-
+from constants import MSG_SENDER, ADDRESS_THIS, BALANCE_THIS
 from brownie import convert
-
-MSG_SENDER = 0x01
-ADDRESS_THIS = 0x02
-
 
 def test_wrap_unwrap(catalyst_router, weth, deployer, permit2, encode_router_payload):
      
