@@ -1,5 +1,5 @@
 use cosmwasm_std::{Uint128, Addr};
-use cw20::{Cw20Coin, MinterResponse, Cw20ExecuteMsg};
+use cw20::{Cw20Coin, MinterResponse, Cw20ExecuteMsg, BalanceResponse, Cw20QueryMsg};
 use cw_multi_test::{ContractWrapper, App, Executor, AppResponse};
 use ethnum::U256;
 use swap_pool_common::msg::InstantiateMsg;
@@ -138,6 +138,55 @@ pub fn deploy_test_tokens(
         .collect()
 }
 
+pub fn query_token_balance(
+    app: &mut App,
+    asset: Addr,
+    account: String
+) -> Uint128 {
+    
+    app.wrap().query_wasm_smart::<BalanceResponse>(
+        asset,
+        &Cw20QueryMsg::Balance { address: account }
+    ).unwrap().balance
+
+}
+
+pub fn set_token_allowance(
+    app: &mut App,
+    amount: Uint128,
+    asset: Addr,
+    account: Addr,
+    spender: String,
+) -> AppResponse {
+    app.execute_contract::<Cw20ExecuteMsg>(
+        account,
+        asset,
+        &Cw20ExecuteMsg::IncreaseAllowance {
+            spender,
+            amount,
+            expires: None
+        },
+        &[]
+    ).unwrap()
+}
+
+pub fn transfer_tokens(
+    app: &mut App,
+    amount: Uint128,
+    asset: Addr,
+    account: Addr,
+    recipient: String
+) -> AppResponse {
+    app.execute_contract::<Cw20ExecuteMsg>(
+        account,
+        asset,
+        &Cw20ExecuteMsg::Transfer {
+            recipient,
+            amount
+        },
+        &[]
+    ).unwrap()
+}
 
 
 // Vault management helpers
