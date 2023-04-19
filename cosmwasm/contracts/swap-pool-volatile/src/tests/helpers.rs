@@ -4,7 +4,7 @@ use cw_multi_test::{ContractWrapper, App, Executor, AppResponse};
 use ethnum::U256;
 use swap_pool_common::msg::InstantiateMsg;
 
-use crate::{msg::VolatileExecuteMsg, tests::math_helpers::{f64_to_u256, f64_to_uint128, u256_to_f64}};
+use crate::{msg::VolatileExecuteMsg, tests::math_helpers::u256_to_f64};
 
 pub const DEPLOYER_ADDR         : &str = "deployer_addr";
 pub const FACTORY_OWNER_ADDR    : &str = "factory_owner_addr";
@@ -278,6 +278,44 @@ impl Into<VolatileExecuteMsg> for InitializeSwapCurvesMockMsg {
     }
 }
 
+
+pub fn mock_initialize_pool(
+    app: &mut App,
+    vault: Addr,
+    assets: Vec<String>,
+    assets_balances: Vec<Uint128>,
+    weights: Vec<u64>
+) -> InitializeSwapCurvesMockMsg {
+
+    // Define InitializeSwapCurves parameters
+    let initialize_msg = InitializeSwapCurvesMockMsg {
+        assets,
+        assets_balances,
+        weights,
+        amp: 1000000000000000000u64,
+        depositor: DEPOSITOR_ADDR.to_string()
+    };
+
+    // Set token allowances
+    initialize_msg.set_vault_allowances(
+        app,
+        vault.to_string(),
+        Addr::unchecked(SETUP_MASTER_ADDR)
+    );
+
+    // Execute initialize swap curves
+    app.execute_contract::<VolatileExecuteMsg>(
+        Addr::unchecked(SETUP_MASTER_ADDR),
+        vault,
+        &initialize_msg.clone().into(),
+        &[]
+    ).unwrap();
+
+    initialize_msg
+
+}
+
+
 pub fn mock_finish_pool_setup(
     app: &mut App,
     vault_contract: Addr
@@ -295,10 +333,10 @@ pub fn mock_finish_pool_setup(
 // Swap Utils
 
 pub struct ExpectedLocalSwapResult {
-    pub u: U256,
-    pub to_amount: Uint128,
-    pub pool_fee: Uint128,
-    pub governance_fee: Uint128
+    pub u: f64,
+    pub to_amount: f64,
+    pub pool_fee: f64,
+    pub governance_fee: f64
 }
 
 pub fn compute_expected_swap(
@@ -332,10 +370,10 @@ pub fn compute_expected_swap(
     let to_amount = to_balance * (1. - (-u/to_weight).exp());
 
     ExpectedLocalSwapResult {
-        u: f64_to_u256(u * 1e18).unwrap(),
-        to_amount: f64_to_uint128(to_amount).unwrap(),
-        pool_fee: f64_to_uint128(net_pool_fee).unwrap(),
-        governance_fee: f64_to_uint128(net_governance_fee).unwrap()
+        u,
+        to_amount,
+        pool_fee: net_pool_fee,
+        governance_fee: net_governance_fee
     }
 }
 
@@ -343,7 +381,7 @@ pub fn compute_expected_swap_given_u(
     u: U256,
     to_weight: u64,
     to_balance: Uint128
-) -> Uint128 {
+) -> f64 {
 
     // Convert arguments into float
     let u = u256_to_f64(u);
@@ -351,13 +389,13 @@ pub fn compute_expected_swap_given_u(
     let to_balance = to_balance.u128() as f64;
 
     // Compute swap
-    f64_to_uint128(to_balance * (1. - (-u/to_weight).exp())).unwrap()
+    to_balance * (1. - (-u/to_weight).exp())
     
 }
 
 pub struct ExpectedLiquiditySwapResult {
-    pub u: U256,
-    pub to_amount: Uint128
+    pub u: f64,
+    pub to_amount: f64
 }
 
 pub fn compute_expected_liquidity_swap(
@@ -383,8 +421,8 @@ pub fn compute_expected_liquidity_swap(
     let to_amount = to_total_supply * (share/(1.-share));
 
     ExpectedLiquiditySwapResult {
-        u: f64_to_u256(u * 1e18).unwrap(),
-        to_amount: f64_to_uint128(to_amount).unwrap()
+        u,
+        to_amount
     }
 
 }

@@ -13,6 +13,10 @@ pub fn u256_to_f64(val: U256) -> f64 {
     out
 }
 
+pub fn uint128_to_f64(val: Uint128) -> f64 {
+    u256_to_f64(U256::from(val.u128()))
+}
+
 pub fn f64_to_u256(val: f64) -> Result<U256, String> {
     // f64 standard => See IEEE-754-2008
     //      exponent: 11 bits
