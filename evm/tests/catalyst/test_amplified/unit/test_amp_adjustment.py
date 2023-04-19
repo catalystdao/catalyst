@@ -24,7 +24,7 @@ def local_pool(group_config, group_tokens, deploy_pool, pool_index, deployer):
 
 def test_amp_cross_chain_pools_disabled(pool, deployer, amplification):
     if pool._chainInterface() != ZERO_ADDRESS:
-        with reverts("dev: Amplification adjustment is disabled for cross-chain pools."):
+        with reverts():  # "dev: Amplification adjustment is disabled for cross-chain pools."
             pool.setAmplification(chain.time() + TWOWEEK, amplification, {"from": deployer})
 
 

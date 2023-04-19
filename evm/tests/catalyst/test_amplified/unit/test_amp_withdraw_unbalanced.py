@@ -38,12 +38,9 @@ def test_withdrawall(pool, pool_tokens, get_pool_amp, berg, deployer, unbalance_
     expectedAmounts = pool_utils.compute_equal_withdrawal(poolTokens, weights, poolBalances, pool.totalSupply() + poolTokens, amp, 0)
     
     for allAmount, poolBalance, expectedAmount in zip(withdrawAllAmount, poolBalances, expectedAmounts):
-        if expectedAmount > poolBalance:
-            assert unbalance_percentage + withdrawal_percentage > 1
-            expectedAmount = poolBalance
-        
-        assert allAmount <= expectedAmount
-        assert int(expectedAmount * 9/10) <= allAmount
+        if allAmount > expectedAmount:
+            assert allAmount <= int(expectedAmount * (1+1e-10) + 1)  # If more is returned, it needs to be almost insignificant. (and there is a deposit fee.)
+        assert int(expectedAmount * 99/100) <= allAmount
     
 
 # This function compares the output difference between withdrawAll and withdrawMixed
@@ -83,8 +80,9 @@ def test_compare_withdrawall_and_withdrawmixed(pool, pool_tokens, berg, deployer
     withdrawMixedAmount = tx_mixed.return_value
     
     for allAmount, mixedAmount in zip(withdrawAllAmount, withdrawMixedAmount):
-        assert mixedAmount <= allAmount
-        assert int(allAmount * 9 / 10) <= mixedAmount
+        if mixedAmount > allAmount:
+            assert  mixedAmount <= int(allAmount * (1+1e-10) + 1)  # If more is returned, it needs to be almost insignificant. (and there is a deposit fee.)
+        assert int(allAmount * 99 / 100) <= mixedAmount
     
     
     

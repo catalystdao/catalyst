@@ -167,7 +167,7 @@ interface ICatalystV1PoolPermissionless {
         bytes calldata toPool,
         bytes calldata toAccount,
         uint256 baseAmount,
-        uint256 minOut,
+        uint256[2] calldata minOut,
         address fallbackUser
     ) external returns (uint256);
 
@@ -179,7 +179,7 @@ interface ICatalystV1PoolPermissionless {
         bytes calldata toPool,
         bytes calldata toAccount,
         uint256 baseAmount,
-        uint256 minOut,
+        uint256[2] calldata minOut,
         address fallbackUser,
         bytes memory calldata_
     ) external returns (uint256);
@@ -199,7 +199,8 @@ interface ICatalystV1PoolPermissionless {
         bytes calldata fromPool,
         address toAccount,
         uint256 U,
-        uint256 minOut,
+        uint256 minPoolTokens,
+        uint256 minReferenceAsset,
         bytes32 swapHash
     ) external returns (uint256);
 
@@ -208,7 +209,8 @@ interface ICatalystV1PoolPermissionless {
         bytes calldata fromPool,
         address who,
         uint256 U,
-        uint256 minOut,
+        uint256 minPoolTokens,
+        uint256 minReferenceAsset,
         bytes32 swapHash,
         address dataTarget,
         bytes calldata data

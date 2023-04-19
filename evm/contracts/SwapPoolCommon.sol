@@ -187,9 +187,7 @@ abstract contract CatalystSwapPoolCommon is
         // return maximum. We do not want (MUC - (UC - unitCapacityReleased) > MUC)
         if (UC <= unitCapacityReleased) return MUC;
 
-        // Amplified pools can have MUC <= UC since MUC is modified when swapping
-        // If this is not the case and the if statement is removed, also remove the
-        // unchecked block.
+        // Amplified pools can have MUC <= UC since MUC is modified when swapping.
         unchecked {
             // we know that UC > unitCapacityReleased
             if (MUC <= UC - unitCapacityReleased) return 0; 
