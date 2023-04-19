@@ -77,11 +77,12 @@ abstract contract CatalystExchange is RouterImmutables {
      * @param tokenAmounts An array of the tokens amounts to be deposited.
      * @param minOut The minimum number of pool tokens to be minted.
      */
-    function depositMixed(address pool, address[] memory tokens, uint256[] memory tokenAmounts, uint256 minOut) internal {
+    function depositMixed(address pool, address[] calldata tokens, uint256[] memory tokenAmounts, uint256 minOut) internal {
         uint256 numberOfTokens = tokenAmounts.length;
         for (uint256 it = 0; it < numberOfTokens; ++it) {
             uint256 tknAmount = tokenAmounts[it];
             if (tknAmount == Constants.CONTRACT_BALANCE) tknAmount = ERC20(tokens[it]).balanceOf(address(this));
+            tokenAmounts[it] = tknAmount;
 
             ERC20(tokens[it]).approve(pool, tknAmount);
         }
@@ -94,7 +95,7 @@ abstract contract CatalystExchange is RouterImmutables {
      * of tokens to the burner. This doesn't change the pool price.
      * @param amount The number of pool tokens to burn.
      */
-    function withdrawAll(address pool, uint256 amount, uint256[] memory minOut) internal {
+    function withdrawAll(address pool, uint256 amount, uint256[] calldata minOut) internal {
         amount = amount == Constants.CONTRACT_BALANCE ? ERC20(pool).balanceOf(address(this)) : amount;
 
         ICatalystV1Pool(pool).withdrawAll(amount, minOut);
@@ -113,8 +114,8 @@ abstract contract CatalystExchange is RouterImmutables {
     function withdrawMixed(
         address pool,
         uint256 amount,
-        uint256[] memory withdrawRatio,
-        uint256[] memory minOut
+        uint256[] calldata withdrawRatio,
+        uint256[] calldata minOut
     ) internal {
         amount = amount == Constants.CONTRACT_BALANCE ? ERC20(pool).balanceOf(address(this)) : amount;
         

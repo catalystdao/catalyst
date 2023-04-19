@@ -26,7 +26,7 @@ encode_table = {
     7: ["IAllowanceTransfer.PermitSingle", "bytes"],  # PERMIT2_PERMIT
     8: ["address", "uint256"],  # UNWRAP_GAS
     9: ["address", "uint256"],  # WRAP_GAS
-    10: ["address", "uint256", "uint256[]", "uint256[]"],  # WITHDRAW_EQUAL
+    10: ["address", "uint256", "uint256[]"],  # WITHDRAW_EQUAL
     11: ["address", "uint256", "uint256[]", "uint256[]"],  # WITHDRAW_MIXED
     12: ["address", "address[]", "uint256[]", "uint256"],  # DEPOSIT_MIXED
     13: ["address", "bytes32"],  # ALLOW_CANCEL
