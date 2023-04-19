@@ -16,7 +16,7 @@ abstract contract CancelSwap {
     /// @param swappie The address to check for cancelment
     /// @param cancelIdentifier The token to pay (can be ETH using Constants.ETH)
     function requireNotCanceled(address swappie, bytes32 cancelIdentifier) internal view {
-        if (!swapIdentifier[swappie][cancelIdentifier]) revert SwapCanceled();
+        if (swapIdentifier[swappie][cancelIdentifier]) revert SwapCanceled();
     }
 
     /// @notice If an ognoing swap has cancelIdentifier, calling this function will cancel the swap
