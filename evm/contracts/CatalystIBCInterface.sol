@@ -66,6 +66,8 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
         AssetSwapMetadata calldata metadata,
         bytes calldata calldata_
     ) external {
+        require(toPool.length == 65);  // dev: External addresses needs to be of length 64
+        require(toAccount.length == 65);  // dev: External addresses needs to be of length 64
         // Anyone can call this function, but unless someone can also manage to pass the security check on onRecvPacket
         // they cannot drain any value. As such, the very worst they can do is waste gas.
 
@@ -124,8 +126,8 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
         LiquiditySwapMetadata calldata metadata,
         bytes memory calldata_
     ) external {
-        require(toPool.length == 64);  // dev: External addresses needs to be of length 64
-        require(toAccount.length == 64);  // dev: External addresses needs to be of length 64
+        require(toPool.length == 65);  // dev: External addresses needs to be of length 64
+        require(toAccount.length == 65);  // dev: External addresses needs to be of length 64
         // Anyone can call this function, but unless someone can also manage to pass the security check on onRecvPacket
         // they cannot drain any value. As such, the very worst they can do is waste gas.
 
@@ -175,21 +177,21 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
         if (context == CTX0_ASSET_SWAP) {
 
             ICatalystV1Pool(fromPool).sendAssetAck(
-                data[ TO_ACCOUNT_LENGTH_POS : TO_ACCOUNT_END ],                            // toAccount
-                uint256(bytes32(data[ UNITS_START : UNITS_END ])),                              // units
-                uint256(bytes32(data[ CTX0_FROM_AMOUNT_START : CTX0_FROM_AMOUNT_END ])),        // fromAmouant
+                data[ TO_ACCOUNT_LENGTH_POS : TO_ACCOUNT_END ],                                     // toAccount
+                uint256(bytes32(data[ UNITS_START : UNITS_END ])),                                  // units
+                uint256(bytes32(data[ CTX0_FROM_AMOUNT_START : CTX0_FROM_AMOUNT_END ])),            // fromAmouant
                 address(uint160(bytes20(data[ CTX0_FROM_ASSET_START_EVM : CTX0_FROM_ASSET_END ]))), // fromAsset
-                uint32(bytes4(data[ CTX0_BLOCK_NUMBER_START : CTX0_BLOCK_NUMBER_END ]))         // block number
+                uint32(bytes4(data[ CTX0_BLOCK_NUMBER_START : CTX0_BLOCK_NUMBER_END ]))             // block number
             );
 
         }
         else if (context == CTX1_LIQUIDITY_SWAP) {
 
             ICatalystV1Pool(fromPool).sendLiquidityAck(
-                data[ TO_ACCOUNT_LENGTH_POS : TO_ACCOUNT_END ],                        // toAccount
-                uint256(bytes32(data[ UNITS_START : UNITS_END ])),                          // units
-                uint256(bytes32(data[ CTX1_FROM_AMOUNT_START : CTX1_FROM_AMOUNT_END ])),    // fromAmount
-                uint32(bytes4(data[ CTX1_BLOCK_NUMBER_START : CTX1_BLOCK_NUMBER_END ]))     // block number
+                data[ TO_ACCOUNT_LENGTH_POS : TO_ACCOUNT_END ],                                     // toAccount
+                uint256(bytes32(data[ UNITS_START : UNITS_END ])),                                  // units
+                uint256(bytes32(data[ CTX1_FROM_AMOUNT_START : CTX1_FROM_AMOUNT_END ])),            // fromAmount
+                uint32(bytes4(data[ CTX1_BLOCK_NUMBER_START : CTX1_BLOCK_NUMBER_END ]))             // block number
             );
 
         }
@@ -218,21 +220,21 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
         if (context == CTX0_ASSET_SWAP) {
 
             ICatalystV1Pool(fromPool).sendAssetTimeout(
-                data[ TO_ACCOUNT_LENGTH_POS : TO_ACCOUNT_END ],                        // toAccount
-                uint256(bytes32(data[ UNITS_START : UNITS_END ])),                              // units
-                uint256(bytes32(data[ CTX0_FROM_AMOUNT_START : CTX0_FROM_AMOUNT_END ])),        // fromAmount
-                abi.decode(data[ CTX0_FROM_ASSET_START : CTX0_FROM_ASSET_END ], (address)),     // fromAsset
-                uint32(bytes4(data[ CTX0_BLOCK_NUMBER_START : CTX0_BLOCK_NUMBER_END ]))         // block number
+                data[ TO_ACCOUNT_LENGTH_POS : TO_ACCOUNT_END ],                                     // toAccount
+                uint256(bytes32(data[ UNITS_START : UNITS_END ])),                                  // units
+                uint256(bytes32(data[ CTX0_FROM_AMOUNT_START : CTX0_FROM_AMOUNT_END ])),            // fromAmount
+                address(uint160(bytes20(data[ CTX0_FROM_ASSET_START_EVM : CTX0_FROM_ASSET_END ]))), // fromAsset
+                uint32(bytes4(data[ CTX0_BLOCK_NUMBER_START : CTX0_BLOCK_NUMBER_END ]))             // block number
             );
 
         }
         else if (context == CTX1_LIQUIDITY_SWAP) {
 
             ICatalystV1Pool(fromPool).sendLiquidityTimeout(
-                data[ TO_ACCOUNT_LENGTH_POS : TO_ACCOUNT_END ],                        // toAccount
-                uint256(bytes32(data[ UNITS_START : UNITS_END ])),                          // units
-                uint256(bytes32(data[ CTX1_FROM_AMOUNT_START : CTX1_FROM_AMOUNT_END ])),    // fromAmount
-                uint32(bytes4(data[ CTX1_BLOCK_NUMBER_START : CTX1_BLOCK_NUMBER_END ]))     // block number
+                data[ TO_ACCOUNT_LENGTH_POS : TO_ACCOUNT_END ],                                     // toAccount
+                uint256(bytes32(data[ UNITS_START : UNITS_END ])),                                  // units
+                uint256(bytes32(data[ CTX1_FROM_AMOUNT_START : CTX1_FROM_AMOUNT_END ])),            // fromAmount
+                uint32(bytes4(data[ CTX1_BLOCK_NUMBER_START : CTX1_BLOCK_NUMBER_END ]))             // block number
             );
 
         }
