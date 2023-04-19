@@ -501,7 +501,7 @@ abstract contract CatalystSwapPoolCommon is
     }
 
     function _computeSendAssetHash(
-        bytes calldata toAccount,
+        bytes memory toAccount,
         uint256 U,
         uint256 amount,
         address fromAsset,

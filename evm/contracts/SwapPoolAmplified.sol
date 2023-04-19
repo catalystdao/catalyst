@@ -1077,7 +1077,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
     function sendAsset(
         bytes32 channelId,
         bytes memory toPool,
-        bytes calldata toAccount,
+        bytes memory toAccount,
         address fromAsset,
         uint8 toAssetIndex,
         uint256 amount,
@@ -1367,7 +1367,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
         bytes calldata toPool,
         bytes calldata toAccount,
         uint256 poolTokens,
-        uint256[2] memory minOut,
+        uint256[2] calldata minOut,
         address fallbackUser,
         bytes memory calldata_
     ) nonReentrant public override returns (uint256) {
@@ -1463,7 +1463,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
         bytes calldata toPool,
         bytes calldata toAccount,
         uint256 poolTokens,
-        uint256[2] memory minOut,
+        uint256[2] calldata minOut,
         address fallbackUser
     ) external override returns (uint256) {
         bytes memory calldata_ = new bytes(0);
