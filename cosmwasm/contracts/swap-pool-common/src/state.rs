@@ -58,7 +58,7 @@ fn calc_keccak256(message: Vec<u8>) -> String {
 
 // TODO replace with implementation
 fn factory_owner() -> String {
-    "factory_owner".to_string()
+    "factory_owner_addr".to_string()
 }
 
 
