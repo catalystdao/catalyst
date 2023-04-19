@@ -243,10 +243,10 @@ pub fn mock_finish_pool_setup(
 // Swap Utils
 
 pub struct ExpectedLocalSwapResult {
-    u: U256,
-    to_amount: Uint128,
-    pool_fee: Uint128,
-    governance_fee: Uint128
+    pub u: U256,
+    pub to_amount: Uint128,
+    pub pool_fee: Uint128,
+    pub governance_fee: Uint128
 }
 
 pub fn compute_expected_swap(
@@ -304,8 +304,8 @@ pub fn compute_expected_swap_given_u(
 }
 
 pub struct ExpectedLiquiditySwapResult {
-    u: U256,
-    to_amount: Uint128
+    pub u: U256,
+    pub to_amount: Uint128
 }
 
 pub fn compute_expected_liquidity_swap(
