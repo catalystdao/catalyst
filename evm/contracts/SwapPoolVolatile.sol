@@ -705,24 +705,6 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon {
         // Calculate the group-specific units bought.
         uint256 U = calcSendAsset(fromAsset, amount - fee);
 
-        // Only need to hash info that is required by the escrow (+ some extra for randomisation)
-        // No need to hash context (as token/liquidity escrow data is different), fromPool, toPool, targetAssetIndex, minOut, CallData
-        bytes32 sendAssetHash = _computeSendAssetHash(
-            toAccount,      // Ensures no collisions between different users
-            U,              // Used to randomise the hash
-            amount - fee,   // Required! to validate release escrow data
-            fromAsset,      // Required! to validate release escrow data
-            uint32(block.number) // May overflow, but this is desired (% 2**32)
-        );
-
-        // Wrap the escrow information into a struct. This reduces the stack-print.
-        AssetSwapMetadata memory swapMetadata = AssetSwapMetadata({
-            fromAmount: amount - fee,
-            fromAsset: fromAsset,
-            swapHash: sendAssetHash,
-            blockNumber: uint32(block.number) // May overflow, but this is desired (% 2**32)
-        });
-
         // Send the purchased units to toPool on the target chain.
         CatalystIBCInterface(_chainInterface).sendCrossChainAsset(
             channelId,
@@ -731,8 +713,19 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon {
             toAssetIndex,
             U,
             minOut,
-            swapMetadata,
+            amount - fee,
+            fromAsset,
             calldata_
+        );
+
+        // Only need to hash info that is required by the escrow (+ some extra for randomisation)
+        // No need to hash context (as token/liquidity escrow data is different), fromPool, toPool, targetAssetIndex, minOut, CallData
+        bytes32 sendAssetHash = _computeSendAssetHash(
+            toAccount,      // Ensures no collisions between different users
+            U,              // Used to randomise the hash
+            amount - fee,   // Required! to validate release escrow data
+            fromAsset,      // Required! to validate release escrow data
+            uint32(block.number) // May overflow, but this is desired (% 2**32)
         );
 
         // Escrow the tokens used to purchase units. These will be sent back if transaction
@@ -932,24 +925,6 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon {
             int256(FixedPointMathLib.divWadDown(initialTotalSupply, initialTotalSupply - poolTokens))   // int256: if casting overflows, the result is a negative input. This reverts.
         )) * wsum;
 
-        // Only need to hash info that is required by the escrow (+ some extra for randomisation)
-        // No need to hash context (as token/liquidity escrow data is different), fromPool, toPool, targetAssetIndex, minOut, CallData
-        bytes32 sendLiquidityHash = _computeSendLiquidityHash(
-            toAccount,      // Ensures no collisions between different users
-            U,              // Used to randomise the hash
-            poolTokens,     // Required! to validate release escrow data
-            uint32(block.number) // May overflow, but this is desired (% 2**32)
-        );
-
-        // Wrap the escrow information into a struct. This reduces the stack-print.
-        // (Not really since only pool tokens are wrapped.)
-        // However, the struct keeps the structure of swaps similar.
-        LiquiditySwapMetadata memory swapMetadata = LiquiditySwapMetadata({
-            fromAmount: poolTokens,
-            swapHash: sendLiquidityHash,
-            blockNumber: uint32(block.number) // May overflow, but this is desired (% 2**32)
-        });
-
         // Transfer the units to the target pools.
         CatalystIBCInterface(_chainInterface).sendCrossChainLiquidity(
             channelId,
@@ -957,8 +932,17 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon {
             toAccount,
             U,
             minOut,
-            swapMetadata,
+            poolTokens,
             calldata_
+        );
+
+        // Only need to hash info that is required by the escrow (+ some extra for randomisation)
+        // No need to hash context (as token/liquidity escrow data is different), fromPool, toPool, targetAssetIndex, minOut, CallData
+        bytes32 sendLiquidityHash = _computeSendLiquidityHash(
+            toAccount,      // Ensures no collisions between different users
+            U,              // Used to randomise the hash
+            poolTokens,     // Required! to validate release escrow data
+            uint32(block.number) // May overflow, but this is desired (% 2**32)
         );
 
         // Escrow the pool tokens

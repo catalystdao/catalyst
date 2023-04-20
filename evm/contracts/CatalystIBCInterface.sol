@@ -52,7 +52,8 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
      * @param toAssetIndex The index of the asset the user wants to buy in the target pool.
      * @param U The calculated liquidity reference. (Units)
      * @param minOut The minimum number of returned tokens to the toAccount on the target chain.
-     * @param metadata Metadata on the asset swap, used for swap identification and ack/timeout.
+     * @param fromAmount Escrow related value. The amount returned if the swap fails.
+     * @param fromAsset Escrow related value. The asset that was sold.
      * @param calldata_ Data field if a call should be made on the target chain. 
      * Should be encoded abi.encode(<address>,<data>)
      */
@@ -63,7 +64,8 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
         uint8 toAssetIndex,
         uint256 U,
         uint256 minOut,
-        AssetSwapMetadata calldata metadata,
+        uint256 fromAmount,
+        address fromAsset,
         bytes calldata calldata_
     ) external {
         require(toPool.length == 65);  // dev: External addresses needs to be of length 64
@@ -85,12 +87,11 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
                 minOut
             ),
             abi.encodePacked(
-                metadata.fromAmount,
+                fromAmount,
                 uint8(20),  // EVM addresses are 20 bytes.
                 bytes32(0),  // EVM only uses 20 bytes. abi.encode packs the 20 bytes into 32 then we need to add 32 more
-                abi.encode(metadata.fromAsset),
-                metadata.blockNumber,
-                metadata.swapHash,
+                abi.encode(fromAsset),
+                uint32(block.number),
                 uint16(calldata_.length),
                 calldata_
             )
@@ -112,8 +113,8 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
      * @param toPool The target pool on the target chain encoded in bytes32.
      * @param toAccount recipient of the transaction on the target chain. Encoded in bytes32.
      * @param U The calculated liquidity reference. (Units)
-     * @param minOut An array of minout describing: [the minimum number of pool tokens, the minimum number of reference assets]
-     * @param metadata Metadata on the asset swap, used for swap identification and ack/timeout.
+     * @param minOut An array of minout describing: [the minimum number of pool tokens, the minimum number of reference assets]* 
+     * @param fromAmount Escrow related value. The amount returned if the swap fails.
      * @param calldata_ Data field if a call should be made on the target chain. 
      * Should be encoded abi.encode(<address>,<data>)
      */
@@ -123,7 +124,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
         bytes calldata toAccount,
         uint256 U,
         uint256[2] calldata minOut,
-        LiquiditySwapMetadata calldata metadata,
+        uint256 fromAmount,
         bytes memory calldata_
     ) external {
         require(toPool.length == 65);  // dev: External addresses needs to be of length 64
@@ -145,9 +146,8 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
                 minOut[1]
             ),
             abi.encodePacked(
-                metadata.fromAmount,
-                metadata.blockNumber,
-                metadata.swapHash,
+                fromAmount,
+                uint32(block.number),
                 uint16(calldata_.length),
                 calldata_
             )

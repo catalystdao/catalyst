@@ -1,21 +1,6 @@
 //SPDX-License-Identifier: Unlicensed
 pragma solidity ^0.8.16;
 
-// Hold swap details that are not directly necessary for the swap calculations in a separate struct.
-// (Avoid 'stack too deep' issues)
-struct AssetSwapMetadata {
-    uint256 fromAmount;
-    address fromAsset;
-    bytes32 swapHash;
-    uint32  blockNumber;
-}
-
-struct LiquiditySwapMetadata {
-    uint256 fromAmount;
-    bytes32 swapHash;
-    uint32  blockNumber;
-}
-
 /// @title Pool state
 /// @notice Contains all pool storage which depends on the pool state.
 interface ICatalystV1PoolState {
