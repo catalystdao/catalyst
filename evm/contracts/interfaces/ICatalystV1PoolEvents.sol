@@ -34,13 +34,14 @@ interface ICatalystV1PoolEvents {
      */
     event SendAsset(
         bytes toPool,
+        bytes32 channelId,
         bytes toAccount,
         address fromAsset,
         uint8 toAssetIndex,
         uint256 fromAmount,
         uint256 units,
         uint256 minOut,
-        bytes32 swapHash
+        uint256 sourceBlockNumberMod
     );
 
     /**
@@ -54,11 +55,12 @@ interface ICatalystV1PoolEvents {
      */
     event ReceiveAsset(
         bytes fromPool,
+        bytes32 channelId,
         address toAccount,
         address toAsset,
         uint256 units,
         uint256 toAmount,
-        bytes32 swapHash
+        uint256 sourceBlockNumberMod
     );
 
     /**
@@ -70,10 +72,11 @@ interface ICatalystV1PoolEvents {
      */
     event SendLiquidity(
         bytes toPool,
+        bytes32 channelId,
         bytes toAccount,
         uint256 fromAmount,
         uint256 units,
-        bytes32 swapHash
+        uint256 sourceBlockNumberMod
     );
 
     /**
@@ -85,10 +88,11 @@ interface ICatalystV1PoolEvents {
      */
     event ReceiveLiquidity(
         bytes fromPool,
+        bytes32 channelId,
         address toAccount,
         uint256 units,
         uint256 toAmount,
-        bytes32 swapHash
+        uint256 sourceBlockNumberMod
     );
 
     /**

@@ -24,14 +24,12 @@ pragma solidity ^0.8.16;
 //       + FROM_ASSET_LEN   293 (1 byte)
 //       + FROM_ASSET       294 (64 bytes)
 //       + BLOCK_NUMBER     358 (4 bytes)
-//       + SWAP_HASH        362 (32 bytes)
 //
 //    CTX1 - 0x01 - Liquidity Swap Payload
 //       + MIN_OUT          228 (32 bytes)
 //       + MIN_REFERENCE    260 (32 bytes)
 //       + FROM_AMOUNT      292 (32 bytes)
 //       + BLOCK_NUMBER     324 (4 bytes)
-//       + SWAP_HASH        328 (32 bytes)
 //
 // Common Payload (end)
 //    + DATA_LENGTH         LENGTH-N-2 (2 bytes)
@@ -88,13 +86,10 @@ uint constant CTX0_FROM_ASSET_END        = 358;
 uint constant CTX0_BLOCK_NUMBER_START    = 358;
 uint constant CTX0_BLOCK_NUMBER_END      = 362;
 
-uint constant CTX0_SWAP_HASH_START       = 362;
-uint constant CTX0_SWAP_HASH_END         = 394;
+uint constant CTX0_DATA_LENGTH_START     = 362;
+uint constant CTX0_DATA_LENGTH_END       = 364;
 
-uint constant CTX0_DATA_LENGTH_START     = 394;
-uint constant CTX0_DATA_LENGTH_END       = 396;
-
-uint constant CTX0_DATA_START            = 396;
+uint constant CTX0_DATA_START            = 364;
 
 
 
@@ -112,10 +107,7 @@ uint constant CTX1_FROM_AMOUNT_END       = 324;
 uint constant CTX1_BLOCK_NUMBER_START    = 324;
 uint constant CTX1_BLOCK_NUMBER_END      = 328;
 
-uint constant CTX1_SWAP_HASH_START       = 328;
-uint constant CTX1_SWAP_HASH_END         = 360;
+uint constant CTX1_DATA_LENGTH_START     = 328;
+uint constant CTX1_DATA_LENGTH_END       = 330;
 
-uint constant CTX1_DATA_LENGTH_START     = 360;
-uint constant CTX1_DATA_LENGTH_END       = 362;
-
-uint constant CTX1_DATA_START            = 362;
+uint constant CTX1_DATA_START            = 330;

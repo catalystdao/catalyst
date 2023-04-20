@@ -754,13 +754,14 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon {
 
         emit SendAsset(
             toPool,
+            channelId,
             toAccount,
             fromAsset,
             toAssetIndex,
             amount,
             U,
             minOut,
-            sendAssetHash
+            uint32(block.number)
         );
 
         return U;
@@ -801,7 +802,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon {
      * @param toAccount The recipient.
      * @param U Number of units to convert into toAsset.
      * @param minOut Minimum number of tokens bought. Reverts if less.
-     * @param swapHash Used to connect 2 swaps within a group. 
+     * @param blockNumberMod Used to connect 2 swaps within a group. 
      */
     function receiveAsset(
         bytes32 channelId,
@@ -810,7 +811,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon {
         address toAccount,
         uint256 U,
         uint256 minOut,
-        bytes32 swapHash
+        uint32 blockNumberMod
     ) nonReentrant public override returns (uint256) {
         // Only allow connected pools
         if (!_poolConnection[channelId][fromPool]) revert PoolNotConnected(channelId, fromPool);
@@ -835,7 +836,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon {
         // Send the assets to the user.
         ERC20(toAsset).safeTransfer(toAccount, purchasedTokens);
 
-        emit ReceiveAsset(fromPool, toAccount, toAsset, U, purchasedTokens, swapHash);
+        emit ReceiveAsset(fromPool, channelId, toAccount, toAsset, U, purchasedTokens, blockNumberMod);
 
         return purchasedTokens;
     }
@@ -847,7 +848,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon {
         address toAccount,
         uint256 U,
         uint256 minOut,
-        bytes32 swapHash,
+        uint32 blockNumberMod,
         address dataTarget,
         bytes calldata data
     ) external override returns (uint256) {
@@ -858,7 +859,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon {
             toAccount,
             U,
             minOut,
-            swapHash
+            blockNumberMod
         );
 
         // Let users define custom logic which should be executed after the swap.
@@ -970,10 +971,11 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon {
 
         emit SendLiquidity(
             toPool,
+            channelId,
             toAccount,
             poolTokens,
             U,
-            sendLiquidityHash
+            uint32(block.number)
         );
 
         return U;
@@ -1013,7 +1015,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon {
      * @param U Number of units to convert into pool tokens.
      * @param minPoolTokens The minimum number of pool tokens to mint on target pool. Otherwise: Reject
      * @param minReferenceAsset The minimum number of reference asset the pools tokens are worth. Otherwise: Reject
-     * @param swapHash Used to connect 2 swaps within a group. 
+     * @param blockNumberMod Used to connect 2 swaps within a group. 
      * @return uint256 Number of pool tokens minted to the recipient.
      */
     function receiveLiquidity(
@@ -1023,7 +1025,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon {
         uint256 U,
         uint256 minPoolTokens,
         uint256 minReferenceAsset,
-        bytes32 swapHash
+        uint32 blockNumberMod
     ) nonReentrant public override returns (uint256) {
         // The chainInterface is the only valid caller of this function.
         require(msg.sender == _chainInterface);
@@ -1104,7 +1106,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon {
         // Mint pool tokens for the user.
         _mint(toAccount, poolTokens);
 
-        emit ReceiveLiquidity(fromPool, toAccount, U, poolTokens, swapHash);
+        emit ReceiveLiquidity(fromPool, channelId, toAccount, U, poolTokens, blockNumberMod);
 
         return poolTokens;
     }
@@ -1117,7 +1119,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon {
         uint256 U,
         uint256 minPoolTokens,
         uint256 minReferenceAsset,
-        bytes32 swapHash,
+        uint32 blockNumberMod,
         address dataTarget,
         bytes calldata data
     ) external override returns (uint256) {
@@ -1128,7 +1130,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon {
             U,
             minPoolTokens,
             minReferenceAsset,
-            swapHash
+            blockNumberMod
         );
 
         // Let users define custom logic which should be executed after the swap.

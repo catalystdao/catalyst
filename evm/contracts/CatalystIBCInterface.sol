@@ -273,7 +273,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
                     address(uint160(bytes20(data[ TO_ACCOUNT_START_EVM : TO_ACCOUNT_END ]))),   // toAccount
                     uint256(bytes32(data[ UNITS_START : UNITS_END ])),                          // units
                     uint256(bytes32(data[ CTX0_MIN_OUT_START : CTX0_MIN_OUT_END ])),            // minOut
-                    bytes32(data[ CTX0_SWAP_HASH_START : CTX0_SWAP_HASH_END ]),                 // swapHash
+                    uint32(bytes4(data[ CTX0_BLOCK_NUMBER_START : CTX0_BLOCK_NUMBER_END ])),    // swapHash
                     address(uint160(bytes20(data[ CTX0_DATA_START : CTX0_DATA_START+20 ]))),    // dataTarget
                     data[ CTX0_DATA_START+20 : CTX0_DATA_START+dataLength ]                     // dataArguments
                 );
@@ -285,7 +285,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
                     address(uint160(bytes20(data[ TO_ACCOUNT_START_EVM : TO_ACCOUNT_END ]))),   // toAccount
                     uint256(bytes32(data[ UNITS_START : UNITS_END ])),                          // units
                     uint256(bytes32(data[ CTX0_MIN_OUT_START : CTX0_MIN_OUT_END ])),            // minOut
-                    bytes32(data[ CTX0_SWAP_HASH_START : CTX0_SWAP_HASH_END ])                  // swapHash
+                    uint32(bytes4(data[ CTX0_BLOCK_NUMBER_START : CTX0_BLOCK_NUMBER_END ]))     // swapHash
                 );
             }
 
@@ -303,7 +303,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
                     uint256(bytes32(data[ UNITS_START : UNITS_END ])),                          // units
                     uint256(bytes32(data[ CTX1_MIN_POOL_TOKEN_START : CTX1_MIN_POOL_TOKEN_END ])), // minOut
                     uint256(bytes32(data[ CTX1_MIN_REFERENCE_START : CTX1_MIN_REFERENCE_END ])),// minOut
-                    bytes32(data[ CTX1_SWAP_HASH_START : CTX1_SWAP_HASH_END ]),                 // swapHash
+                    uint32(bytes4(data[ CTX1_BLOCK_NUMBER_START : CTX1_BLOCK_NUMBER_END ])),    // swapHash
                     address(uint160(bytes20(data[ CTX1_DATA_START : CTX1_DATA_START+20 ]))),    // dataTarget
                     data[ CTX1_DATA_START+20 : CTX1_DATA_START+dataLength ]                     // dataArguments
                 );
@@ -315,7 +315,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
                     uint256(bytes32(data[ UNITS_START : UNITS_END ])),                          // units
                     uint256(bytes32(data[ CTX1_MIN_POOL_TOKEN_START : CTX1_MIN_POOL_TOKEN_END ])), // minOut
                     uint256(bytes32(data[ CTX1_MIN_REFERENCE_START : CTX1_MIN_REFERENCE_END ])),// minOut
-                    bytes32(data[ CTX1_SWAP_HASH_START : CTX1_SWAP_HASH_END ])                  // swapHash
+                    uint32(bytes4(data[ CTX1_BLOCK_NUMBER_START : CTX1_BLOCK_NUMBER_END ]))     // swapHash
                 );
             }
 
