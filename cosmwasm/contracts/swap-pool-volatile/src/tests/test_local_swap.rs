@@ -15,23 +15,23 @@ mod test_volatile_local_swap {
 
         // Instantiate and initialize vault
         let vault = mock_instantiate(&mut app, false);
-        let test_tokens = deploy_test_tokens(&mut app, None, None);
+        let vault_tokens = deploy_test_tokens(&mut app, None, None);
         let vault_config = mock_initialize_pool(
             &mut app,
             vault.clone(),
-            test_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
+            vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
             vec![Uint128::from(1u64) * WAD, Uint128::from(2u64) * WAD, Uint128::from(3u64) * WAD],
             vec![1u64, 1u64, 1u64]
         );
 
         // Define local swap config
         let from_asset_idx = 0;
-        let from_asset = test_tokens[from_asset_idx].clone();
+        let from_asset = vault_tokens[from_asset_idx].clone();
         let from_weight = vault_config.weights[from_asset_idx];
         let from_balance = vault_config.assets_balances[from_asset_idx];
 
         let to_asset_idx = 1;
-        let to_asset = test_tokens[to_asset_idx].clone();
+        let to_asset = vault_tokens[to_asset_idx].clone();
         let to_weight = vault_config.weights[from_asset_idx];
         let to_balance = vault_config.assets_balances[to_asset_idx];
 
@@ -89,35 +89,41 @@ mod test_volatile_local_swap {
             .value.parse::<Uint128>().unwrap();
 
         assert!(uint128_to_f64(observed_return) <= expected_swap.to_amount * 1.000001);
-        assert!(uint128_to_f64(observed_return) >= 0.95);
+        assert!(uint128_to_f64(observed_return) >= expected_swap.to_amount * 0.999999);
 
 
-        // Verify the input assets have been transferred to the pool
+        // Verify the input assets have been transferred from the swapper to the pool
         let swapper_from_asset_balance = query_token_balance(&mut app, from_asset.clone(), LOCAL_SWAPPER.to_string());
         assert_eq!(
             swapper_from_asset_balance,
             Uint128::zero()
         );
 
+        // Verify the input assets have been received by the pool and the governance fee has been collected
+        // Note: the pool fee calculation is indirectly tested via the governance fee calculation
         let vault_from_asset_balance = query_token_balance(&mut app, from_asset.clone(), vault.to_string());
         let factory_owner_from_asset_balance = query_token_balance(&mut app, from_asset.clone(), FACTORY_OWNER_ADDR.to_string());
         assert_eq!(
-            vault_from_asset_balance + factory_owner_from_asset_balance,
+            vault_from_asset_balance + factory_owner_from_asset_balance,    // Some of the swappers balance will have gone to the factory owner (governance fee)
             vault_config.assets_balances[from_asset_idx] + swap_amount
         );
 
+        assert!(uint128_to_f64(factory_owner_from_asset_balance) <= expected_swap.governance_fee * 1.000001);
+        assert!(uint128_to_f64(factory_owner_from_asset_balance) >= expected_swap.governance_fee * 0.999999);
+
         // Verify the output assets have been transferred to the swapper
+        let vault_to_asset_balance = query_token_balance(&mut app, to_asset.clone(), vault.to_string());
+        assert_eq!(
+            vault_to_asset_balance,
+            vault_config.assets_balances[to_asset_idx] - observed_return
+        );
+
+        // Verify the output assets have been received by the swapper
         let swapper_to_asset_balance = query_token_balance(&mut app, to_asset.clone(), LOCAL_SWAPPER.to_string());
         assert_eq!(
             swapper_to_asset_balance,
             observed_return
         );
-
-        let vault_to_asset_balance = query_token_balance(&mut app, to_asset.clone(), vault.to_string());
-        assert_eq!(
-            vault_to_asset_balance,
-            vault_config.assets_balances[to_asset_idx] - observed_return
-        )
 
     }
 
