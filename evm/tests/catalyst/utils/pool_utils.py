@@ -370,9 +370,6 @@ def encode_swap_payload(
         + convert.to_bytes(escrow_amount)
         + convert_64_bytes_address(escrow_token)
         + convert.to_bytes(block_number, "bytes4")
-        + convert.to_bytes(
-            compute_asset_swap_hash(to_account, U, escrow_amount, escrow_token, block_number), "bytes32"
-        )
         + convert.to_bytes(0, "bytes2")
     )
     
@@ -397,9 +394,6 @@ def encode_liquidity_swap_payload(
         + convert.to_bytes(min_out[1])
         + convert.to_bytes(escrow_amount)
         + convert.to_bytes(block_number, "bytes4")
-        + convert.to_bytes(
-            compute_liquidity_swap_hash(to_account, U, escrow_amount, block_number), "bytes32"
-        )
         + convert.to_bytes(0, type_str="bytes2")
     )
 

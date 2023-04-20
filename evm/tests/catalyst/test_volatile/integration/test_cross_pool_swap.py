@@ -167,6 +167,7 @@ def test_send_asset_event(
 
     send_asset_event = tx.events['SendAsset']
 
+    assert send_asset_event['channelId'].hex()    == channel_id.hex()
     assert send_asset_event['toPool'].hex()       == convert_64_bytes_address(pool_2.address).hex()
     assert send_asset_event['toAccount'].hex()    == convert_64_bytes_address(elwood.address).hex()
     assert send_asset_event['fromAsset']    == source_token
@@ -174,7 +175,6 @@ def test_send_asset_event(
     assert send_asset_event['fromAmount']   == swap_amount
     assert send_asset_event['units']        == observed_units
     assert send_asset_event['minOut']       == min_out
-    assert send_asset_event['swapHash']  == expected_message_hash
 
 
 def test_receive_swap_event(
@@ -225,9 +225,10 @@ def test_receive_swap_event(
 
     receive_swap_event = txe.events['ReceiveAsset']
 
+
+    assert receive_swap_event['channelId'].hex()   == channel_id.hex()
     assert receive_swap_event['fromPool'].hex()    == convert_64_bytes_address(pool_1.address).hex()
     assert receive_swap_event['toAccount']   == elwood.address
     assert receive_swap_event['toAsset']     == target_token
     assert receive_swap_event['units']       == observed_units
     assert receive_swap_event['toAmount']    == target_token.balanceOf(elwood)
-    assert receive_swap_event['swapHash'] == expected_message_hash

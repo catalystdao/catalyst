@@ -1,5 +1,5 @@
 import pytest
-from brownie import reverts, web3, convert
+from brownie import reverts, web3, convert, chain
 
 from utils.common_utils import convert_64_bytes_address
 pytestmark = [
@@ -22,7 +22,7 @@ def test_receiveAsset_must_be_called_by_cci(
             berg,
             10**16,
             0,
-            web3.keccak(text="e"),
+            chain[-1].number,
             {'from': berg}
         )
     
@@ -33,7 +33,7 @@ def test_receiveAsset_must_be_called_by_cci(
         berg,
         10**16,
         0,
-        web3.keccak(text="e"),
+        chain[-1].number,
         {'from': cci}
     )
 
@@ -53,7 +53,7 @@ def test_receiveLiquidity_must_be_called_by_cci(
             10**16,
             0,
             0,
-            web3.keccak(text="e"),
+            chain[-1].number,
             {'from': berg}
         )
     
@@ -64,7 +64,7 @@ def test_receiveLiquidity_must_be_called_by_cci(
         10**16,
         0,
         0,
-        web3.keccak(text="e"),
+        chain[-1].number,
         {'from': cci}
     )
     
