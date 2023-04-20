@@ -3,7 +3,7 @@ mod test_volatile_pool_connections {
     use cw_multi_test::{Executor, App};
     use swap_pool_common::{ContractError, msg::PoolConnectionStateResponse};
 
-    use crate::{msg::VolatileExecuteMsg, tests::helpers::{mock_instantiate, SETUP_MASTER_ADDR, mock_finish_pool_setup, FACTORY_OWNER_ADDR}};
+    use crate::{msg::VolatileExecuteMsg, tests::helpers::{mock_instantiate, SETUP_MASTER, mock_finish_pool_setup, FACTORY_OWNER}};
 
 
     #[test]
@@ -21,7 +21,7 @@ mod test_volatile_pool_connections {
 
         // Tested action: set connection
         let _response = app.execute_contract::<VolatileExecuteMsg>(
-            Addr::unchecked(SETUP_MASTER_ADDR),
+            Addr::unchecked(SETUP_MASTER),
             vault.clone(),
             &VolatileExecuteMsg::SetConnection {
                 channel_id: channel_id.to_string(),
@@ -64,7 +64,7 @@ mod test_volatile_pool_connections {
 
         // Set the connection
         app.execute_contract::<VolatileExecuteMsg>(
-            Addr::unchecked(SETUP_MASTER_ADDR),
+            Addr::unchecked(SETUP_MASTER),
             vault.clone(),
             &VolatileExecuteMsg::SetConnection {
                 channel_id: channel_id.to_string(),
@@ -78,7 +78,7 @@ mod test_volatile_pool_connections {
 
         // Tested action: unset the connection
         let _response = app.execute_contract::<VolatileExecuteMsg>(
-            Addr::unchecked(SETUP_MASTER_ADDR),
+            Addr::unchecked(SETUP_MASTER),
             vault.clone(),
             &VolatileExecuteMsg::SetConnection {
                 channel_id: channel_id.to_string(),
@@ -123,7 +123,7 @@ mod test_volatile_pool_connections {
 
         // Tested action: set connection
         let response_result = app.execute_contract::<VolatileExecuteMsg>(
-            Addr::unchecked(SETUP_MASTER_ADDR),
+            Addr::unchecked(SETUP_MASTER),
             vault.clone(),
             &VolatileExecuteMsg::SetConnection {
                 channel_id: channel_id.to_string(),
@@ -159,7 +159,7 @@ mod test_volatile_pool_connections {
 
         // Tested action: set connection invoked by factory owner
         let _response = app.execute_contract::<VolatileExecuteMsg>(
-            Addr::unchecked(FACTORY_OWNER_ADDR),     // ! Invoked by the factory owner
+            Addr::unchecked(FACTORY_OWNER),     // ! Invoked by the factory owner
             vault.clone(),
             &VolatileExecuteMsg::SetConnection {
                 channel_id: channel_id.to_string(),

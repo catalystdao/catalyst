@@ -6,11 +6,11 @@ use swap_pool_common::msg::InstantiateMsg;
 
 use crate::{msg::VolatileExecuteMsg, tests::math_helpers::u256_to_f64};
 
-pub const DEPLOYER_ADDR         : &str = "deployer_addr";
-pub const FACTORY_OWNER_ADDR    : &str = "factory_owner_addr";
-pub const SETUP_MASTER_ADDR     : &str = "setup_master_addr";
-pub const CHAIN_INTERFACE_ADDR  : &str = "chain_interface";
-pub const DEPOSITOR_ADDR        : &str = "depositor_addr";
+pub const DEPLOYER              : &str = "deployer_addr";
+pub const FACTORY_OWNER         : &str = "factory_owner_addr";
+pub const SETUP_MASTER          : &str = "setup_master_addr";
+pub const CHAIN_INTERFACE       : &str = "chain_interface";
+pub const DEPOSITOR             : &str = "depositor_addr";
 pub const FEE_ADMINISTRATOR     : &str = "fee_administrator_addr";
 pub const LOCAL_SWAPPER         : &str = "local_swapper_addr";
 
@@ -70,11 +70,11 @@ impl Into<cw20_base::msg::InstantiateMsg> for TestTokenDefinition {
             symbol: self.symbol.clone(),
             decimals: self.decimals,
             initial_balances: vec![Cw20Coin {
-                address: SETUP_MASTER_ADDR.to_string(),
+                address: SETUP_MASTER.to_string(),
                 amount: self.initial_mint
             }],
             mint: Some(MinterResponse {
-                minter: SETUP_MASTER_ADDR.to_string(),
+                minter: SETUP_MASTER.to_string(),
                 cap: None
             }),
             marketing: None
@@ -131,7 +131,7 @@ pub fn deploy_test_tokens(
         .map(|definition| {
             app.instantiate_contract::<cw20_base::msg::InstantiateMsg, _>(
                 cw20_contract,
-                Addr::unchecked(SETUP_MASTER_ADDR),
+                Addr::unchecked(SETUP_MASTER),
                 &(definition.clone()).into(),
                 &[],
                 definition.symbol.clone(),
@@ -204,7 +204,7 @@ pub fn mock_instantiate_msg(
         pool_fee: DEFAULT_TEST_POOL_FEE,
         governance_fee: DEFAULT_TEST_GOV_FEE,
         fee_administrator: FEE_ADMINISTRATOR.to_string(),
-        setup_master: SETUP_MASTER_ADDR.to_string()
+        setup_master: SETUP_MASTER.to_string()
     }
 }
 
@@ -215,7 +215,7 @@ pub fn mock_instantiate(
 
     let chain_interface = match only_local {
         true => None,
-        false => Some(CHAIN_INTERFACE_ADDR.to_string())
+        false => Some(CHAIN_INTERFACE.to_string())
     };
 
     let instantiate_msg = mock_instantiate_msg(chain_interface);
@@ -224,7 +224,7 @@ pub fn mock_instantiate(
 
     app.instantiate_contract(
         contract_code_storage,
-        Addr::unchecked(SETUP_MASTER_ADDR),
+        Addr::unchecked(SETUP_MASTER),
         &instantiate_msg,
         &[],
         "vault",
@@ -293,19 +293,19 @@ pub fn mock_initialize_pool(
         assets_balances,
         weights,
         amp: 1000000000000000000u64,
-        depositor: DEPOSITOR_ADDR.to_string()
+        depositor: DEPOSITOR.to_string()
     };
 
     // Set token allowances
     initialize_msg.set_vault_allowances(
         app,
         vault.to_string(),
-        Addr::unchecked(SETUP_MASTER_ADDR)
+        Addr::unchecked(SETUP_MASTER)
     );
 
     // Execute initialize swap curves
     app.execute_contract::<VolatileExecuteMsg>(
-        Addr::unchecked(SETUP_MASTER_ADDR),
+        Addr::unchecked(SETUP_MASTER),
         vault,
         &initialize_msg.clone().into(),
         &[]
@@ -321,7 +321,7 @@ pub fn mock_finish_pool_setup(
     vault_contract: Addr
 ) -> AppResponse {
     app.execute_contract(
-        Addr::unchecked(SETUP_MASTER_ADDR),
+        Addr::unchecked(SETUP_MASTER),
         vault_contract,
         &VolatileExecuteMsg::FinishSetup {},
         &[]

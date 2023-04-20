@@ -3,7 +3,7 @@ mod test_volatile_fees {
     use cw_multi_test::{App, Executor};
     use swap_pool_common::{ContractError, msg::{FeeAdministratorResponse, PoolFeeResponse, GovernanceFeeShareResponse}};
 
-    use crate::{msg::{VolatileExecuteMsg, QueryMsg}, tests::helpers::{mock_instantiate, FACTORY_OWNER_ADDR, FEE_ADMINISTRATOR}};
+    use crate::{msg::{VolatileExecuteMsg, QueryMsg}, tests::helpers::{mock_instantiate, FACTORY_OWNER, FEE_ADMINISTRATOR}};
 
 
 
@@ -22,7 +22,7 @@ mod test_volatile_fees {
 
         // Tested action: set fee administrator
         let _response = app.execute_contract::<VolatileExecuteMsg>(
-            Addr::unchecked(FACTORY_OWNER_ADDR),
+            Addr::unchecked(FACTORY_OWNER),
             vault.clone(),
             &VolatileExecuteMsg::SetFeeAdministrator { administrator: new_fee_administrator.to_string() },
             &[]
@@ -59,7 +59,7 @@ mod test_volatile_fees {
 
         // Tested action: set fee administrator
         let response_result = app.execute_contract::<VolatileExecuteMsg>(
-            Addr::unchecked("not_factory_owner"),   // ! Not FACTORY_OWNER_ADDR
+            Addr::unchecked("not_factory_owner"),   // ! Not FACTORY_OWNER
             vault.clone(),
             &VolatileExecuteMsg::SetFeeAdministrator { administrator: new_fee_administrator.to_string() },
             &[]

@@ -3,7 +3,7 @@ mod test_volatile_finish_setup {
     use cw_multi_test::{App, Executor};
     use swap_pool_common::{ContractError, msg::SetupMasterResponse};
 
-    use crate::{msg::{VolatileExecuteMsg, QueryMsg}, tests::helpers::{mock_instantiate, SETUP_MASTER_ADDR}};
+    use crate::{msg::{VolatileExecuteMsg, QueryMsg}, tests::helpers::{mock_instantiate, SETUP_MASTER}};
 
 
     #[test]
@@ -17,7 +17,7 @@ mod test_volatile_finish_setup {
 
         // Tested action: finish setup
         let _response = app.execute_contract::<VolatileExecuteMsg>(
-            Addr::unchecked(SETUP_MASTER_ADDR),
+            Addr::unchecked(SETUP_MASTER),
             vault.clone(),
             &VolatileExecuteMsg::FinishSetup {},
             &[]
@@ -49,7 +49,7 @@ mod test_volatile_finish_setup {
 
         // Tested action: finish setup
         let response_result = app.execute_contract::<VolatileExecuteMsg>(
-            Addr::unchecked("not_setup_master"),     // ! Not SETUP_MASTER_ADDR
+            Addr::unchecked("not_setup_master"),     // ! Not SETUP_MASTER
             vault.clone(),
             &VolatileExecuteMsg::FinishSetup {},
             &[]

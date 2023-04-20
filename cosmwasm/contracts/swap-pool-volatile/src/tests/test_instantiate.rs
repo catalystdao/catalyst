@@ -5,7 +5,7 @@ mod test_volatile_instantiate {
     use cw_multi_test::{App, Executor};
     use swap_pool_common::msg::{SetupMasterResponse, ChainInterfaceResponse, OnlyLocalResponse, PoolFeeResponse, GovernanceFeeShareResponse};
 
-    use crate::{msg::QueryMsg, tests::helpers::{mock_instantiate_msg, DEPLOYER_ADDR, volatile_vault_contract_storage}};
+    use crate::{msg::QueryMsg, tests::helpers::{mock_instantiate_msg, DEPLOYER, volatile_vault_contract_storage}};
 
 
     #[test]
@@ -21,7 +21,7 @@ mod test_volatile_instantiate {
         let contract_code_storage = volatile_vault_contract_storage(&mut app);
         let vault_contract = app.instantiate_contract(
             contract_code_storage,
-            Addr::unchecked(DEPLOYER_ADDR),
+            Addr::unchecked(DEPLOYER),
             &instantiate_msg,
             &[],
             "volatile_vault",
@@ -124,7 +124,7 @@ mod test_volatile_instantiate {
         let contract_code_storage = volatile_vault_contract_storage(&mut app);
         let vault_contract = app.instantiate_contract(
             contract_code_storage,
-            Addr::unchecked(DEPLOYER_ADDR),
+            Addr::unchecked(DEPLOYER),
             &instantiate_msg,
             &[],
             "volatile_vault",

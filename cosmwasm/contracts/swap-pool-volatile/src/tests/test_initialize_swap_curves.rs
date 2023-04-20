@@ -7,7 +7,7 @@ mod test_volatile_initialize_swap_curves {
     use fixed_point_math_lib::fixed_point_math::LN2;
     use swap_pool_common::{ContractError, msg::{AssetsResponse, WeightsResponse, GetLimitCapacityResponse, TotalEscrowedAssetResponse, TotalEscrowedLiquidityResponse}};
 
-    use crate::{tests::helpers::{mock_instantiate, DEPOSITOR_ADDR, DEPLOYER_ADDR, InitializeSwapCurvesMockMsg, deploy_test_tokens, mock_test_token_definitions, WAD, SETUP_MASTER_ADDR}, msg::VolatileExecuteMsg};
+    use crate::{tests::helpers::{mock_instantiate, DEPOSITOR, DEPLOYER, InitializeSwapCurvesMockMsg, deploy_test_tokens, mock_test_token_definitions, WAD, SETUP_MASTER}, msg::VolatileExecuteMsg};
 
 
 
@@ -36,21 +36,21 @@ mod test_volatile_initialize_swap_curves {
             ],
             weights: vec![1u64, 1u64, 1u64],
             amp: 1000000000000000000u64,
-            depositor: DEPOSITOR_ADDR.to_string()
+            depositor: DEPOSITOR.to_string()
         };
 
         // Set token allowances
         initialize_msg.set_vault_allowances(
             &mut app,
             vault.to_string(),
-            Addr::unchecked(SETUP_MASTER_ADDR)
+            Addr::unchecked(SETUP_MASTER)
         );
 
 
 
         // Tested action: initialize swap curves
         let _response = app.execute_contract::<VolatileExecuteMsg>(
-            Addr::unchecked(SETUP_MASTER_ADDR),
+            Addr::unchecked(SETUP_MASTER),
             vault.clone(),
             &initialize_msg.clone().into(),
             &[]
@@ -132,7 +132,7 @@ mod test_volatile_initialize_swap_curves {
         // Query and verify the pool tokens of the depositor
         let depositor_pool_tokens: Uint128 = app
             .wrap()
-            .query_wasm_smart::<BalanceResponse>(vault.clone(), &crate::msg::QueryMsg::Balance { address: DEPOSITOR_ADDR.to_string() })
+            .query_wasm_smart::<BalanceResponse>(vault.clone(), &crate::msg::QueryMsg::Balance { address: DEPOSITOR.to_string() })
             .unwrap()
             .balance;
 
@@ -198,19 +198,19 @@ mod test_volatile_initialize_swap_curves {
             ],
             weights: vec![1u64, 1u64, 1u64],
             amp: 1000000000000000000u64,
-            depositor: DEPOSITOR_ADDR.to_string()
+            depositor: DEPOSITOR.to_string()
         };
 
         // Set token allowances
         initialize_msg.set_vault_allowances(
             &mut app,
             vault.to_string(),
-            Addr::unchecked(SETUP_MASTER_ADDR)
+            Addr::unchecked(SETUP_MASTER)
         );
 
         // Initialize swap curves
         let _response = app.execute_contract::<VolatileExecuteMsg>(
-            Addr::unchecked(SETUP_MASTER_ADDR),
+            Addr::unchecked(SETUP_MASTER),
             vault.clone(),
             &initialize_msg.clone().into(),
             &[]
@@ -220,7 +220,7 @@ mod test_volatile_initialize_swap_curves {
 
         // Tested action: initialize swap curves twice
         let response_result = app.execute_contract::<VolatileExecuteMsg>(
-            Addr::unchecked(SETUP_MASTER_ADDR),
+            Addr::unchecked(SETUP_MASTER),
             vault.clone(),
             &initialize_msg.clone().into(),
             &[]
@@ -250,13 +250,13 @@ mod test_volatile_initialize_swap_curves {
             assets_balances: vec![],
             weights: vec![],
             amp: 1000000000000000000u64,
-            depositor: DEPLOYER_ADDR.to_string()
+            depositor: DEPLOYER.to_string()
         };
 
 
         // Tested action: initialize swap curves without assets
         let response_result = app.execute_contract::<VolatileExecuteMsg>(
-            Addr::unchecked(SETUP_MASTER_ADDR),
+            Addr::unchecked(SETUP_MASTER),
             vault.clone(),
             &initialize_msg.clone().into(),
             &[]
@@ -299,21 +299,21 @@ mod test_volatile_initialize_swap_curves {
             ],
             weights: vec![1u64, 1u64, 1u64, 1u64],
             amp: 1000000000000000000u64,
-            depositor: DEPOSITOR_ADDR.to_string()
+            depositor: DEPOSITOR.to_string()
         };
 
         // Set token allowances
         initialize_msg.set_vault_allowances(
             &mut app,
             vault.to_string(),
-            Addr::unchecked(SETUP_MASTER_ADDR)
+            Addr::unchecked(SETUP_MASTER)
         );
 
 
 
         // Tested action: initialize swap curves with too many assets
         let response_result = app.execute_contract::<VolatileExecuteMsg>(
-            Addr::unchecked(SETUP_MASTER_ADDR),
+            Addr::unchecked(SETUP_MASTER),
             vault.clone(),
             &initialize_msg.clone().into(),
             &[]
@@ -354,21 +354,21 @@ mod test_volatile_initialize_swap_curves {
             ],
             weights: vec![1u64, 1u64, 1u64],
             amp: 1000000000000000000u64,
-            depositor: DEPOSITOR_ADDR.to_string()
+            depositor: DEPOSITOR.to_string()
         };
 
         // Set token allowances
         initialize_msg.set_vault_allowances(
             &mut app,
             vault.to_string(),
-            Addr::unchecked(SETUP_MASTER_ADDR)
+            Addr::unchecked(SETUP_MASTER)
         );
 
 
 
         // Tested action: initialize swap curves with an invalid asset balance count
         let response_result = app.execute_contract::<VolatileExecuteMsg>(
-            Addr::unchecked(SETUP_MASTER_ADDR),
+            Addr::unchecked(SETUP_MASTER),
             vault.clone(),
             &initialize_msg.clone().into(),
             &[]
@@ -410,21 +410,21 @@ mod test_volatile_initialize_swap_curves {
             ],
             weights: vec![1u64, 1u64, 1u64],
             amp: 1000000000000000000u64,
-            depositor: DEPOSITOR_ADDR.to_string()
+            depositor: DEPOSITOR.to_string()
         };
 
         // Set token allowances
         initialize_msg.set_vault_allowances(
             &mut app,
             vault.to_string(),
-            Addr::unchecked(SETUP_MASTER_ADDR)
+            Addr::unchecked(SETUP_MASTER)
         );
 
 
 
         // Tested action: initialize swap curves with an asset balance set to 0
         let response_result = app.execute_contract::<VolatileExecuteMsg>(
-            Addr::unchecked(SETUP_MASTER_ADDR),
+            Addr::unchecked(SETUP_MASTER),
             vault.clone(),
             &initialize_msg.clone().into(),
             &[]
@@ -466,21 +466,21 @@ mod test_volatile_initialize_swap_curves {
             ],
             weights: vec![1u64, 1u64],    // ! Only 2 weights are specified
             amp: 1000000000000000000u64,
-            depositor: DEPOSITOR_ADDR.to_string()
+            depositor: DEPOSITOR.to_string()
         };
 
         // Set token allowances
         initialize_msg.set_vault_allowances(
             &mut app,
             vault.to_string(),
-            Addr::unchecked(SETUP_MASTER_ADDR)
+            Addr::unchecked(SETUP_MASTER)
         );
 
 
 
         // Tested action: initialize swap curves with an invalid weights count
         let response_result = app.execute_contract::<VolatileExecuteMsg>(
-            Addr::unchecked(SETUP_MASTER_ADDR),
+            Addr::unchecked(SETUP_MASTER),
             vault.clone(),
             &initialize_msg.clone().into(),
             &[]
@@ -522,21 +522,21 @@ mod test_volatile_initialize_swap_curves {
             ],
             weights: vec![1u64, 1u64, 0u64],    // ! Weight set to 0
             amp: 1000000000000000000u64,
-            depositor: DEPOSITOR_ADDR.to_string()
+            depositor: DEPOSITOR.to_string()
         };
 
         // Set token allowances
         initialize_msg.set_vault_allowances(
             &mut app,
             vault.to_string(),
-            Addr::unchecked(SETUP_MASTER_ADDR)
+            Addr::unchecked(SETUP_MASTER)
         );
 
 
 
         // Tested action: initialize swap curves with a weight set to 0
         let response_result = app.execute_contract::<VolatileExecuteMsg>(
-            Addr::unchecked(SETUP_MASTER_ADDR),
+            Addr::unchecked(SETUP_MASTER),
             vault.clone(),
             &initialize_msg.clone().into(),
             &[]
@@ -578,21 +578,21 @@ mod test_volatile_initialize_swap_curves {
             ],
             weights: vec![1u64, 1u64, 1u64],
             amp: 900000000000000000u64,                 // ! Invalid amplification is specified
-            depositor: DEPOSITOR_ADDR.to_string()
+            depositor: DEPOSITOR.to_string()
         };
 
         // Set token allowances
         initialize_msg.set_vault_allowances(
             &mut app,
             vault.to_string(),
-            Addr::unchecked(SETUP_MASTER_ADDR)
+            Addr::unchecked(SETUP_MASTER)
         );
 
 
 
         // Tested action: initialize swap curves with an invalid amplification value
         let response_result = app.execute_contract::<VolatileExecuteMsg>(
-            Addr::unchecked(SETUP_MASTER_ADDR),
+            Addr::unchecked(SETUP_MASTER),
             vault.clone(),
             &initialize_msg.clone().into(),
             &[]

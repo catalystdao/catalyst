@@ -3,7 +3,7 @@ mod test_volatile_local_swap {
     use cw_multi_test::{App, Executor};
     use swap_pool_common::ContractError;
 
-    use crate::{msg::VolatileExecuteMsg, tests::{helpers::{mock_instantiate, SETUP_MASTER_ADDR, deploy_test_tokens, WAD, mock_initialize_pool, set_token_allowance, compute_expected_swap, DEFAULT_TEST_POOL_FEE, DEFAULT_TEST_GOV_FEE, query_token_balance, transfer_tokens, LOCAL_SWAPPER, FACTORY_OWNER_ADDR, mock_test_token_definitions, mock_set_governance_fee_share}, math_helpers::{uint128_to_f64, f64_to_uint128}}};
+    use crate::{msg::VolatileExecuteMsg, tests::{helpers::{mock_instantiate, SETUP_MASTER, deploy_test_tokens, WAD, mock_initialize_pool, set_token_allowance, compute_expected_swap, DEFAULT_TEST_POOL_FEE, DEFAULT_TEST_GOV_FEE, query_token_balance, transfer_tokens, LOCAL_SWAPPER, FACTORY_OWNER, mock_test_token_definitions, mock_set_governance_fee_share}, math_helpers::{uint128_to_f64, f64_to_uint128}}};
 
 
     //TODO add test for the local swap event
@@ -44,7 +44,7 @@ mod test_volatile_local_swap {
             &mut app,
             swap_amount,
             from_asset.clone(),
-            Addr::unchecked(SETUP_MASTER_ADDR),
+            Addr::unchecked(SETUP_MASTER),
             LOCAL_SWAPPER.to_string(),
         );
 
@@ -103,7 +103,7 @@ mod test_volatile_local_swap {
         // Verify the input assets have been received by the pool and the governance fee has been collected
         // Note: the pool fee calculation is indirectly tested via the governance fee calculation
         let vault_from_asset_balance = query_token_balance(&mut app, from_asset.clone(), vault.to_string());
-        let factory_owner_from_asset_balance = query_token_balance(&mut app, from_asset.clone(), FACTORY_OWNER_ADDR.to_string());
+        let factory_owner_from_asset_balance = query_token_balance(&mut app, from_asset.clone(), FACTORY_OWNER.to_string());
         assert_eq!(
             vault_from_asset_balance + factory_owner_from_asset_balance,    // Some of the swappers balance will have gone to the factory owner (governance fee)
             vault_config.assets_balances[from_asset_idx] + swap_amount
@@ -164,7 +164,7 @@ mod test_volatile_local_swap {
             &mut app,
             swap_amount,
             from_asset.clone(),
-            Addr::unchecked(SETUP_MASTER_ADDR),
+            Addr::unchecked(SETUP_MASTER),
             LOCAL_SWAPPER.to_string(),
         );
 
@@ -263,7 +263,7 @@ mod test_volatile_local_swap {
             &mut app,
             swap_amount,
             from_asset.clone(),
-            Addr::unchecked(SETUP_MASTER_ADDR),
+            Addr::unchecked(SETUP_MASTER),
             LOCAL_SWAPPER.to_string(),
         );
 
@@ -332,7 +332,7 @@ mod test_volatile_local_swap {
             &mut app,
             swap_amount,
             from_asset.clone(),
-            Addr::unchecked(SETUP_MASTER_ADDR),
+            Addr::unchecked(SETUP_MASTER),
             LOCAL_SWAPPER.to_string(),
         );
 
@@ -403,7 +403,7 @@ mod test_volatile_local_swap {
             &mut app,
             swap_amount,
             from_asset.clone(),
-            Addr::unchecked(SETUP_MASTER_ADDR),
+            Addr::unchecked(SETUP_MASTER),
             LOCAL_SWAPPER.to_string(),
         );
 
@@ -471,7 +471,7 @@ mod test_volatile_local_swap {
             &mut app,
             swap_amount,
             from_asset.clone(),
-            Addr::unchecked(SETUP_MASTER_ADDR),
+            Addr::unchecked(SETUP_MASTER),
             LOCAL_SWAPPER.to_string(),
         );
 
@@ -559,7 +559,7 @@ mod test_volatile_local_swap {
             &mut app,
             swap_amount,
             from_asset.clone(),
-            Addr::unchecked(SETUP_MASTER_ADDR),
+            Addr::unchecked(SETUP_MASTER),
             LOCAL_SWAPPER.to_string(),
         );
 
@@ -589,7 +589,7 @@ mod test_volatile_local_swap {
 
 
         // Verify no governance fee was collected
-        let factory_owner_from_asset_balance = query_token_balance(&mut app, from_asset.clone(), FACTORY_OWNER_ADDR.to_string());
+        let factory_owner_from_asset_balance = query_token_balance(&mut app, from_asset.clone(), FACTORY_OWNER.to_string());
         assert_eq!(
             factory_owner_from_asset_balance,
             Uint128::zero()
