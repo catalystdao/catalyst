@@ -357,8 +357,8 @@ pub fn compute_expected_swap(
     let to_balance = to_balance.u128() as f64;
 
     // Compute fees
-    let pool_fee = (pool_fee.unwrap_or(0u64) / WAD.u128() as u64) as f64;
-    let governance_fee_share = (governance_fee_share.unwrap_or(0u64) / WAD.u128() as u64) as f64;
+    let pool_fee = (pool_fee.unwrap_or(0u64) as f64) / 1e18;
+    let governance_fee_share = (governance_fee_share.unwrap_or(0u64) as f64) / 1e18;
 
     let net_fee = pool_fee * swap_amount;
     let net_pool_fee = pool_fee * (1. - governance_fee_share) * swap_amount;
