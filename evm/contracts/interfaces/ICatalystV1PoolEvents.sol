@@ -28,9 +28,9 @@ interface ICatalystV1PoolEvents {
      * @param toAccount The recipient of the trade. The person who bought the trade is not present.
      * @param fromAsset The asset which was sold in exchange for _toAsset.
      * @param toAssetIndex The token index of the asset to purchase on _toChain.
-     * @param fromAmount The number of _fromAsset sold
-     * @param units The calculated number of units bought. Will be sold to buy _toAsset
+     * @param fromAmount The number of _fromAsset sold.
      * @param minOut The pool fee. Taken from fromAmount. Numerical losses/fees are for obvious reasons not included.
+     * @param units The calculated number of units bought. Will be sold to buy _toAsset
      */
     event SendAsset(
         bytes toPool,
@@ -39,9 +39,8 @@ interface ICatalystV1PoolEvents {
         address fromAsset,
         uint8 toAssetIndex,
         uint256 fromAmount,
-        uint256 units,
         uint256 minOut,
-        uint256 sourceBlockNumberMod
+        uint256 units
     );
 
     /**
@@ -75,8 +74,8 @@ interface ICatalystV1PoolEvents {
         bytes32 channelId,
         bytes toAccount,
         uint256 fromAmount,
-        uint256 units,
-        uint256 sourceBlockNumberMod
+        uint256[2] minOuts,
+        uint256 units
     );
 
     /**

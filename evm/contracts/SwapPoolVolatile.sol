@@ -752,9 +752,8 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon {
             fromAsset,
             toAssetIndex,
             amount,
-            U,
             minOut,
-            uint32(block.number)
+            U
         );
 
         return U;
@@ -958,8 +957,8 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon {
             channelId,
             toAccount,
             poolTokens,
-            U,
-            uint32(block.number)
+            minOut,
+            U
         );
 
         return U;

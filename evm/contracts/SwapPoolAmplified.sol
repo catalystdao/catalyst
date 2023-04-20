@@ -1148,9 +1148,8 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
             fromAsset,
             toAssetIndex,
             amount,
-            U,
             minOut,
-            uint32(block.number)
+            U
         );
 
         return U;
@@ -1436,8 +1435,8 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
             channelId,
             toAccount,
             poolTokens,
-            U,
-            uint32(block.number)
+            minOut,
+            U
         );
 
         return U;
