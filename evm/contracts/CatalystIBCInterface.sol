@@ -299,7 +299,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
                 ICatalystV1Pool(toPool).receiveLiquidity(
                     bytes32(packet.src.channelId),                                              // connectionId
                     fromPool,                                                                   // fromPool
-                    abi.decode(data[ TO_ACCOUNT_START : TO_ACCOUNT_END ], (address)),           // toAccount
+                    address(uint160(bytes20(data[ TO_ACCOUNT_START_EVM : TO_ACCOUNT_END ]))),   // toAccount
                     uint256(bytes32(data[ UNITS_START : UNITS_END ])),                          // units
                     uint256(bytes32(data[ CTX1_MIN_POOL_TOKEN_START : CTX1_MIN_POOL_TOKEN_END ])), // minOut
                     uint256(bytes32(data[ CTX1_MIN_REFERENCE_START : CTX1_MIN_REFERENCE_END ])),// minOut
@@ -311,7 +311,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
                 ICatalystV1Pool(toPool).receiveLiquidity(
                     bytes32(packet.src.channelId),                                              // connectionId
                     fromPool,                                                                   // fromPool
-                    abi.decode(data[ TO_ACCOUNT_START : TO_ACCOUNT_END ], (address)),           // toAccount
+                    address(uint160(bytes20(data[ TO_ACCOUNT_START_EVM : TO_ACCOUNT_END ]))),   // toAccount
                     uint256(bytes32(data[ UNITS_START : UNITS_END ])),                          // units
                     uint256(bytes32(data[ CTX1_MIN_POOL_TOKEN_START : CTX1_MIN_POOL_TOKEN_END ])), // minOut
                     uint256(bytes32(data[ CTX1_MIN_REFERENCE_START : CTX1_MIN_REFERENCE_END ])),// minOut
