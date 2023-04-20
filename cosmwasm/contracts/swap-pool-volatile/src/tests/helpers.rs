@@ -329,6 +329,34 @@ pub fn mock_finish_pool_setup(
 }
 
 
+pub fn mock_set_pool_fee(
+    app: &mut App,
+    vault_contract: Addr,
+    fee: u64
+) -> AppResponse {
+    app.execute_contract(
+        Addr::unchecked(FEE_ADMINISTRATOR),
+        vault_contract,
+        &VolatileExecuteMsg::SetPoolFee { fee },
+        &[]
+    ).unwrap()
+}
+
+
+pub fn mock_set_governance_fee_share(
+    app: &mut App,
+    vault_contract: Addr,
+    fee: u64
+) -> AppResponse {
+    app.execute_contract(
+        Addr::unchecked(FEE_ADMINISTRATOR),
+        vault_contract,
+        &VolatileExecuteMsg::SetGovernanceFeeShare { fee },
+        &[]
+    ).unwrap()
+}
+
+
 
 // Swap Utils
 
