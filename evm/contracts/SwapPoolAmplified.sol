@@ -1142,8 +1142,8 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
         // a router abusing timeout to circumvent the security limit.
 
         emit SendAsset(
-            toPool,
             channelId,
+            toPool,
             toAccount,
             fromAsset,
             toAssetIndex,
@@ -1230,7 +1230,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
         // Send the assets to the user.
         ERC20(toAsset).safeTransfer(toAccount, purchasedTokens);
 
-        emit ReceiveAsset(fromPool, channelId, toAccount, toAsset, U, purchasedTokens, blockNumberMod);
+        emit ReceiveAsset(channelId, fromPool, toAccount, toAsset, U, purchasedTokens, blockNumberMod);
 
         return purchasedTokens;
     }
@@ -1431,8 +1431,8 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
         // a router abusing timeout to circumvent the security limit at a low cost.
 
         emit SendLiquidity(
-            toPool,
             channelId,
+            toPool,
             toAccount,
             poolTokens,
             minOut,
@@ -1551,7 +1551,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
         // Mint pool tokens for the user.
         _mint(toAccount, poolTokens);
 
-        emit ReceiveLiquidity(fromPool, channelId, toAccount, U, poolTokens, blockNumberMod);
+        emit ReceiveLiquidity(channelId, fromPool, toAccount, U, poolTokens, blockNumberMod);
 
         return poolTokens;
     }

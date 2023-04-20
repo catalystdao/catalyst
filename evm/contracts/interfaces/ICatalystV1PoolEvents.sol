@@ -33,8 +33,8 @@ interface ICatalystV1PoolEvents {
      * @param units The calculated number of units bought. Will be sold to buy _toAsset
      */
     event SendAsset(
-        bytes toPool,
         bytes32 channelId,
+        bytes toPool,
         bytes toAccount,
         address fromAsset,
         uint8 toAssetIndex,
@@ -53,8 +53,8 @@ interface ICatalystV1PoolEvents {
      * @param toAmount The number of tokens provided to toAccount
      */
     event ReceiveAsset(
-        bytes fromPool,
         bytes32 channelId,
+        bytes fromPool,
         address toAccount,
         address toAsset,
         uint256 units,
@@ -70,8 +70,8 @@ interface ICatalystV1PoolEvents {
      * @param units The calculated number of liquidity units bought.
      */
     event SendLiquidity(
-        bytes toPool,
         bytes32 channelId,
+        bytes toPool,
         bytes toAccount,
         uint256 fromAmount,
         uint256[2] minOuts,
@@ -86,8 +86,8 @@ interface ICatalystV1PoolEvents {
      * @param toAmount The number of pool tokens provided to toAccount
      */
     event ReceiveLiquidity(
-        bytes fromPool,
         bytes32 channelId,
+        bytes fromPool,
         address toAccount,
         uint256 units,
         uint256 toAmount,
