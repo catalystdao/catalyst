@@ -3,6 +3,7 @@ from brownie import reverts, convert, web3, chain
 from brownie.test import given, strategy
 from hypothesis.strategies import floats
 from hypothesis import example
+from utils.common_utils import convert_64_bytes_address
 
 from utils.pool_utils import compute_asset_swap_hash
 
@@ -28,8 +29,8 @@ def test_ibc_ack(channel_id, pool, pool_tokens, ibc_emulator, berg, deployer, sw
 
     tx = pool.sendAsset(
         channel_id,
-        convert.to_bytes(pool.address.replace("0x", "")),
-        convert.to_bytes(berg.address.replace("0x", "")),
+        convert_64_bytes_address(pool.address),
+        convert_64_bytes_address(berg.address),
         source_token,
         1,
         swap_amount,
@@ -63,8 +64,8 @@ def test_ibc_timeout(channel_id, pool, pool_tokens, ibc_emulator, berg, deployer
 
     tx = pool.sendAsset(
         channel_id,
-        convert.to_bytes(pool.address.replace("0x", "")),
-        convert.to_bytes(berg.address.replace("0x", "")),
+        convert_64_bytes_address(pool.address),
+        convert_64_bytes_address(berg.address),
         source_token,
         1,
         swap_amount,
@@ -94,8 +95,8 @@ def test_only_one_response(channel_id, pool, pool_tokens, ibc_emulator, berg, de
 
     tx = pool.sendAsset(
         channel_id,
-        convert.to_bytes(pool.address.replace("0x", "")),
-        convert.to_bytes(berg.address.replace("0x", "")),
+        convert_64_bytes_address(pool.address),
+        convert_64_bytes_address(berg.address),
         source_token,
         1,
         swap_amount,
@@ -173,8 +174,8 @@ def test_ibc_timeout_and_ack(channel_id, pool, pool_tokens, ibc_emulator, berg, 
 
     tx1 = pool.sendAsset(
         channel_id,
-        convert.to_bytes(pool.address.replace("0x", "")),
-        convert.to_bytes(berg.address.replace("0x", "")),
+        convert_64_bytes_address(pool.address),
+        convert_64_bytes_address(berg.address),
         source_token,
         1,
         swap_amount,
@@ -242,8 +243,8 @@ def test_ibc_ack_event(channel_id, pool, pool_tokens, ibc_emulator, berg, deploy
 
     tx = pool.sendAsset(
         channel_id,
-        convert.to_bytes(pool.address.replace("0x", "")),
-        convert.to_bytes(berg.address.replace("0x", "")),
+        convert_64_bytes_address(pool.address),
+        convert_64_bytes_address(berg.address),
         source_token,
         1,
         swap_amount,
@@ -284,8 +285,8 @@ def test_ibc_timeout_event(channel_id, pool, pool_tokens, ibc_emulator, berg, de
 
     tx = pool.sendAsset(
         channel_id,
-        convert.to_bytes(pool.address.replace("0x", "")),
-        convert.to_bytes(berg.address.replace("0x", "")),
+        convert_64_bytes_address(pool.address),
+        convert_64_bytes_address(berg.address),
         source_token,
         1,
         swap_amount,

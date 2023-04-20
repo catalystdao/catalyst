@@ -210,7 +210,7 @@ def group_connect_pools(group_pools, channel_id, deployer):
             
             pool_1.setConnection(
                 channel_id,
-                convert.to_bytes(pool_2.address.replace("0x", "")),
+                convert.to_bytes(20, "bytes1")+convert.to_bytes(0)+convert.to_bytes(pool_2.address.replace("0x", "")),
                 True,
                 {"from": deployer}
             )
