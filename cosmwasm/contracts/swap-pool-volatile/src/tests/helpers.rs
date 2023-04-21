@@ -293,7 +293,7 @@ pub fn mock_initialize_pool(
         assets_balances,
         weights,
         amp: 1000000000000000000u64,
-        depositor: DEPOSITOR.to_string()
+        depositor: SETUP_MASTER.to_string()
     };
 
     // Set token allowances
