@@ -229,19 +229,23 @@ pub fn deposit_mixed(
     )?;
 
     // Build messages to order the transfer of tokens from the depositor to the swap pool
-    let transfer_msgs: Vec<CosmosMsg> = assets.iter().zip(&deposit_amounts).map(|(asset, balance)| {
-        Ok(CosmosMsg::Wasm(
-            cosmwasm_std::WasmMsg::Execute {
-                contract_addr: asset.to_string(),
-                msg: to_binary(&Cw20ExecuteMsg::TransferFrom {
-                    owner: info.sender.to_string(),
-                    recipient: env.contract.address.to_string(),
-                    amount: *balance
-                })?,
-                funds: vec![]
-            }
-        ))
-    }).collect::<StdResult<Vec<CosmosMsg>>>()?;
+    let transfer_msgs: Vec<CosmosMsg> = assets.iter()
+        .zip(&deposit_amounts)
+        .filter(|(_, balance)| **balance != Uint128::zero())     // Do not create transfer messages for zero-valued deposits
+        .map(|(asset, balance)| {
+            Ok(CosmosMsg::Wasm(
+                cosmwasm_std::WasmMsg::Execute {
+                    contract_addr: asset.to_string(),
+                    msg: to_binary(&Cw20ExecuteMsg::TransferFrom {
+                        owner: info.sender.to_string(),
+                        recipient: env.contract.address.to_string(),
+                        amount: *balance
+                    })?,
+                    funds: vec![]
+                }
+            ))
+        })
+        .collect::<StdResult<Vec<CosmosMsg>>>()?;
 
     Ok(Response::new()
         .add_messages(transfer_msgs)
