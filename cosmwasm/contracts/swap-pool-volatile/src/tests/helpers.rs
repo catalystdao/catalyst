@@ -1,10 +1,12 @@
-use cosmwasm_std::{Uint128, Addr};
-use cw20::{Cw20Coin, MinterResponse, Cw20ExecuteMsg, BalanceResponse, Cw20QueryMsg};
+use std::str::FromStr;
+
+use cosmwasm_std::{Uint128, Addr, Event};
+use cw20::{Cw20Coin, MinterResponse, Cw20ExecuteMsg, BalanceResponse, Cw20QueryMsg, TokenInfoResponse};
 use cw_multi_test::{ContractWrapper, App, Executor, AppResponse};
 use ethnum::U256;
 use swap_pool_common::msg::InstantiateMsg;
 
-use crate::{msg::VolatileExecuteMsg, tests::math_helpers::u256_to_f64};
+use crate::{msg::VolatileExecuteMsg, tests::math_helpers::{u256_to_f64, uint128_to_f64}};
 
 pub const DEPLOYER              : &str = "deployer_addr";
 pub const FACTORY_OWNER         : &str = "factory_owner_addr";
@@ -151,6 +153,18 @@ pub fn query_token_balance(
         asset,
         &Cw20QueryMsg::Balance { address: account }
     ).unwrap().balance
+
+}
+
+pub fn query_token_info(
+    app: &mut App,
+    asset: Addr
+) -> TokenInfoResponse {
+    
+    app.wrap().query_wasm_smart::<TokenInfoResponse>(
+        asset,
+        &Cw20QueryMsg::TokenInfo {}
+    ).unwrap()
 
 }
 
@@ -453,4 +467,51 @@ pub fn compute_expected_liquidity_swap(
         to_amount
     }
 
+}
+
+
+pub fn compute_expected_deposit_mixed(
+    deposit_amounts: Vec<Uint128>,
+    from_weights: Vec<u64>,
+    from_balances: Vec<Uint128>,
+    from_total_supply: Uint128,
+    pool_fee: Option<u64>,
+) -> f64 {
+    
+    // Compute units
+    let units: f64 = deposit_amounts.iter()
+        .zip(&from_weights)
+        .zip(&from_balances)
+        .map(|((deposit_amount, from_weight), from_balance)| {
+            let deposit_amount = uint128_to_f64(*deposit_amount);
+            let from_weight = *from_weight as f64;
+            let from_balance = uint128_to_f64(*from_balance);
+
+            from_weight * (1. + deposit_amount/from_balance).ln()
+        })
+        .sum();
+
+    // Take pool fee
+    let units = units * (1. - (pool_fee.unwrap_or(0u64) as f64)/1e18);
+
+    // Compute the deposit share
+    let weights_sum = from_weights.iter().sum::<u64>() as f64;
+    let from_total_supply = uint128_to_f64(from_total_supply);
+
+    let deposit_share = (units / weights_sum).exp() - 1.;
+
+    from_total_supply * deposit_share
+
+}
+
+
+
+// Misc helpers
+
+pub fn get_response_attribute<T: FromStr>(event: Event, attribute: &str) -> Result<T, String> {
+    event.attributes
+        .iter()
+        .find(|attr| attr.key == attribute).ok_or("Attribute not found")?
+        .value
+        .parse::<T>().map_err(|_| "Parse error".to_string())
 }
