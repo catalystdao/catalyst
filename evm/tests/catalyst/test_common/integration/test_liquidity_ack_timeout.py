@@ -159,14 +159,6 @@ def test_ibc_ack_event(pool, channel_id, ibc_emulator, berg, deployer):
 
     ack_event = txe.events['SendLiquidityAck']
 
-
-    expected_message_hash = compute_liquidity_swap_hash(
-        berg.address,
-        tx.return_value,
-        swap_amount,
-        tx.block_number
-    )
-
     assert ack_event["toAccount"].hex() == convert_64_bytes_address(berg.address).hex()
     assert ack_event["U"] == tx.return_value
     assert ack_event["escrowAmount"] == swap_amount

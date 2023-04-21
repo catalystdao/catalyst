@@ -173,13 +173,6 @@ def test_send_asset_event(
     )
 
     observed_units = tx.return_value
-    expected_message_hash = compute_asset_swap_hash(
-        elwood.address,
-        observed_units,
-        swap_amount,
-        source_token.address,
-        tx.block_number
-    )
 
     send_asset_event = tx.events['SendAsset']
 
@@ -229,13 +222,6 @@ def test_receive_swap_event(
     )
 
     observed_units = tx.return_value
-    expected_message_hash = compute_asset_swap_hash(
-        elwood.address,
-        observed_units,
-        swap_amount,
-        source_token.address,
-        tx.block_number
-    )
 
     txe = ibc_emulator.execute(tx.events["IncomingMetadata"]["metadata"][0], tx.events["IncomingPacket"]["packet"], {"from": berg})
 
