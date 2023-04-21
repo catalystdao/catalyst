@@ -167,7 +167,10 @@ def test_ibc_ack_event(pool, channel_id, ibc_emulator, berg, deployer):
         tx.block_number
     )
 
-    assert ack_event["swapHash"] == expected_message_hash
+    assert ack_event["toAccount"].hex() == convert_64_bytes_address(berg.address).hex()
+    assert ack_event["U"] == tx.return_value
+    assert ack_event["escrowAmount"] == swap_amount
+    assert ack_event["blockNumberMod"] == tx.block_number
 
 
 def test_ibc_timeout_event(pool, channel_id, ibc_emulator, berg, deployer):
@@ -196,12 +199,9 @@ def test_ibc_timeout_event(pool, channel_id, ibc_emulator, berg, deployer):
     )
 
     timeout_event = txe.events['SendLiquidityTimeout']
+    
+    assert timeout_event["toAccount"].hex() == convert_64_bytes_address(berg.address).hex()
+    assert timeout_event["U"] == tx.return_value
+    assert timeout_event["escrowAmount"] == swap_amount
+    assert timeout_event["blockNumberMod"] == tx.block_number
 
-    expected_message_hash = compute_liquidity_swap_hash(
-        berg.address,
-        tx.return_value,
-        swap_amount,
-        tx.block_number
-    )
-
-    assert timeout_event["swapHash"] == expected_message_hash

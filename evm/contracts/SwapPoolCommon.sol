@@ -406,7 +406,13 @@ abstract contract CatalystSwapPoolCommon is
 
         _releaseAssetEscrow(sendAssetHash, escrowAmount, escrowToken); // Only reverts for missing escrow
 
-        emit SendAssetAck(sendAssetHash);  // Never reverts.
+        emit SendAssetAck(
+            toAccount,
+            U,
+            escrowAmount,
+            escrowToken,
+            blockNumberMod
+        );  // Never reverts.
     }
 
     /** 
@@ -439,7 +445,13 @@ abstract contract CatalystSwapPoolCommon is
 
         ERC20(escrowToken).safeTransfer(fallbackAddress, escrowAmount);  // Would fail if there is no balance. To protect against this, the escrow amount is removed from what can be claimed by users.
 
-        emit SendAssetTimeout(sendAssetHash);  // Never reverts.
+        emit SendAssetTimeout(
+            toAccount,
+            U,
+            escrowAmount,
+            escrowToken,
+            blockNumberMod
+        );  // Never reverts.
     }
 
     /** 
@@ -467,7 +479,12 @@ abstract contract CatalystSwapPoolCommon is
 
         _releaseLiquidityEscrow(sendLiquidityHash, escrowAmount); // Only reverts for missing escrow
 
-        emit SendLiquidityAck(sendLiquidityHash);  // Never reverts.
+        emit SendLiquidityAck(
+            toAccount,
+            U,
+            escrowAmount,
+            blockNumberMod
+        );  // Never reverts.
     }
 
     /** 
@@ -497,7 +514,12 @@ abstract contract CatalystSwapPoolCommon is
 
         _mint(fallbackAddress, escrowAmount);  
 
-        emit SendLiquidityTimeout(sendLiquidityHash);  // Never reverts.
+        emit SendLiquidityTimeout(
+            toAccount,
+            U,
+            escrowAmount,
+            blockNumberMod
+        );  // Never reverts.
     }
 
     function _computeSendAssetHash(

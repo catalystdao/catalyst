@@ -263,15 +263,11 @@ def test_ibc_ack_event(channel_id, pool, pool_tokens, ibc_emulator, berg, deploy
 
     ack_event = txe.events['SendAssetAck']
 
-
-    expected_message_hash = compute_asset_swap_hash(
-        berg.address,
-        tx.return_value,
-        swap_amount,
-        source_token.address,
-        tx.block_number
-    )
-    assert ack_event["swapHash"] == expected_message_hash
+    assert ack_event["toAccount"].hex() == convert_64_bytes_address(berg.address).hex()
+    assert ack_event["U"] == tx.return_value
+    assert ack_event["escrowAmount"] == swap_amount
+    assert ack_event["escrowToken"] == source_token.address
+    assert ack_event["blockNumberMod"] == tx.block_number
 
 
 def test_ibc_timeout_event(channel_id, pool, pool_tokens, ibc_emulator, berg, deployer):
@@ -305,12 +301,9 @@ def test_ibc_timeout_event(channel_id, pool, pool_tokens, ibc_emulator, berg, de
     )
 
     timeout_event = txe.events['SendAssetTimeout']
-
-    expected_message_hash = compute_asset_swap_hash(
-        berg.address,
-        tx.return_value,
-        swap_amount,
-        source_token.address,
-        tx.block_number
-    )
-    assert timeout_event["swapHash"] == expected_message_hash
+    
+    assert timeout_event["toAccount"].hex() == convert_64_bytes_address(berg.address).hex()
+    assert timeout_event["U"] == tx.return_value
+    assert timeout_event["escrowAmount"] == swap_amount
+    assert timeout_event["escrowToken"] == source_token.address
+    assert timeout_event["blockNumberMod"] == tx.block_number
