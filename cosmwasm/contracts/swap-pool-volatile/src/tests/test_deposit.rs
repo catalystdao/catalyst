@@ -3,7 +3,7 @@ mod test_volatile_deposit{
     use cw_multi_test::{App, Executor};
     use swap_pool_common::{ContractError, state::INITIAL_MINT_AMOUNT};
 
-    use crate::{msg::VolatileExecuteMsg, tests::{helpers::{mock_instantiate, SETUP_MASTER, deploy_test_tokens, WAD, mock_initialize_pool, set_token_allowance, compute_expected_swap, DEFAULT_TEST_POOL_FEE, DEFAULT_TEST_GOV_FEE, query_token_balance, transfer_tokens, LOCAL_SWAPPER, FACTORY_OWNER, mock_test_token_definitions, mock_set_governance_fee_share, DEPOSITOR, get_response_attribute, mock_set_pool_fee, query_token_info, compute_expected_deposit_mixed}, math_helpers::{uint128_to_f64, f64_to_uint128}}};
+    use crate::{msg::VolatileExecuteMsg, tests::{helpers::{mock_instantiate, SETUP_MASTER, deploy_test_tokens, WAD, mock_initialize_pool, set_token_allowance, DEFAULT_TEST_POOL_FEE, query_token_balance, transfer_tokens, DEPOSITOR, get_response_attribute, query_token_info, compute_expected_deposit_mixed}, math_helpers::{uint128_to_f64, f64_to_uint128}}};
 
 
     //TODO add test for the deposit event
@@ -222,7 +222,7 @@ mod test_volatile_deposit{
         // Instantiate and initialize vault
         let vault = mock_instantiate(&mut app, false);
         let vault_tokens = deploy_test_tokens(&mut app, None, None);
-        let vault_config = mock_initialize_pool(
+        mock_initialize_pool(
             &mut app,
             vault.clone(),
             vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
