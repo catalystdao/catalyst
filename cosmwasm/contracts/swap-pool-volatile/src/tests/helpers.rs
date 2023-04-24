@@ -506,6 +506,48 @@ pub fn compute_expected_deposit_mixed(
 }
 
 
+pub fn compute_expected_withdraw_mixed(
+    withdraw_amount: Uint128,
+    withdraw_ratio: Vec<u64>,
+    vault_weights: Vec<u64>,
+    vault_balances: Vec<Uint128>,
+    vault_supply: Uint128
+) -> Vec<f64> {
+
+    // Compute the units corresponding to the pool tokens
+    let withdraw_amount = uint128_to_f64(withdraw_amount);
+    let vault_supply = uint128_to_f64(vault_supply);
+
+    let vault_weights_sum = vault_weights.iter().sum::<u64>() as f64;
+
+    let mut units: f64 = (
+        vault_supply/(vault_supply - withdraw_amount)
+    ).ln() * vault_weights_sum;
+
+    vault_balances.iter()
+        .zip(vault_weights)
+        .zip(withdraw_ratio)
+        .map(|((balance, weight), ratio)| {
+
+            let balance = uint128_to_f64(*balance);
+            let weight = weight as f64;
+            let ratio = (ratio as f64) / 1e18;
+
+            let units_for_asset = units * ratio;
+            if units_for_asset > units {
+                panic!("Invalid withdraw ratios.");
+            }
+            units -= units_for_asset;
+
+            balance * (
+                1. - (-units_for_asset / weight).exp()
+            )
+        })
+        .collect::<Vec<f64>>()
+
+}
+
+
 
 // Misc helpers
 
