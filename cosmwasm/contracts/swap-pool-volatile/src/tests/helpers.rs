@@ -13,6 +13,7 @@ pub const FACTORY_OWNER         : &str = "factory_owner_addr";
 pub const SETUP_MASTER          : &str = "setup_master_addr";
 pub const CHAIN_INTERFACE       : &str = "chain_interface";
 pub const DEPOSITOR             : &str = "depositor_addr";
+pub const WITHDRAWER            : &str = "withdrawer_addr";
 pub const FEE_ADMINISTRATOR     : &str = "fee_administrator_addr";
 pub const LOCAL_SWAPPER         : &str = "local_swapper_addr";
 
