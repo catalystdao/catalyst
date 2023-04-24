@@ -420,8 +420,7 @@ pub fn withdraw_mixed(
             Ok(CosmosMsg::Wasm(
                 cosmwasm_std::WasmMsg::Execute {
                     contract_addr: asset.to_string(),
-                    msg: to_binary(&Cw20ExecuteMsg::TransferFrom {
-                        owner: env.contract.address.to_string(),
+                    msg: to_binary(&Cw20ExecuteMsg::Transfer {
                         recipient: sender.clone(),
                         amount: *amount
                     })?,
