@@ -413,19 +413,23 @@ pub fn withdraw_mixed(
     if u != U256::ZERO { return Err(ContractError::UnusedUnitsAfterWithdrawal { units: u }) };       //TODO error
 
     // Build messages to order the transfer of tokens from the swap pool to the depositor
-    let transfer_msgs: Vec<CosmosMsg> = assets.iter().zip(&withdraw_amounts).map(|(asset, amount)| {
-        Ok(CosmosMsg::Wasm(
-            cosmwasm_std::WasmMsg::Execute {
-                contract_addr: asset.to_string(),
-                msg: to_binary(&Cw20ExecuteMsg::TransferFrom {
-                    owner: env.contract.address.to_string(),
-                    recipient: sender.clone(),
-                    amount: *amount
-                })?,
-                funds: vec![]
-            }
-        ))
-    }).collect::<StdResult<Vec<CosmosMsg>>>()?;
+    let transfer_msgs: Vec<CosmosMsg> = assets.iter()
+        .zip(&withdraw_amounts)
+        .filter(|(_, withdraw_amount)| **withdraw_amount != Uint128::zero())     // Do not create transfer messages for zero-valued withdrawals
+        .map(|(asset, amount)| {
+            Ok(CosmosMsg::Wasm(
+                cosmwasm_std::WasmMsg::Execute {
+                    contract_addr: asset.to_string(),
+                    msg: to_binary(&Cw20ExecuteMsg::TransferFrom {
+                        owner: env.contract.address.to_string(),
+                        recipient: sender.clone(),
+                        amount: *amount
+                    })?,
+                    funds: vec![]
+                }
+            ))
+        })
+        .collect::<StdResult<Vec<CosmosMsg>>>()?;
 
 
     Ok(Response::new()
