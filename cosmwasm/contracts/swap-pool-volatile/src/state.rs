@@ -1,6 +1,6 @@
 use cosmwasm_std::{Addr, Uint128, DepsMut, Env, MessageInfo, Response, StdResult, CosmosMsg, to_binary, Deps, StdError};
 use cw20::{Cw20ExecuteMsg, Cw20QueryMsg, BalanceResponse};
-use cw20_base::{contract::execute_mint, allowances::execute_burn_from};
+use cw20_base::{contract::{execute_mint, execute_burn}};
 use cw_storage_plus::Item;
 use ethnum::U256;
 use fixed_point_math_lib::fixed_point_math::{LN2, mul_wad_down, self};
@@ -270,7 +270,7 @@ pub fn withdraw_all(
 
     // Burn the pool tokens of the withdrawer
     let sender = info.sender.to_string();
-    let burn_response = execute_burn_from(deps.branch(), env.clone(), info.clone(), sender.clone(), pool_tokens)?;
+    let burn_response = execute_burn(deps.branch(), env.clone(), info.clone(), pool_tokens)?;
 
     // Compute the withdraw amounts
     let assets = ASSETS.load(deps.storage)?;
@@ -340,7 +340,7 @@ pub fn withdraw_mixed(
 
     // Burn the pool tokens of the withdrawer
     let sender = info.sender.to_string();
-    let burn_response = execute_burn_from(deps.branch(), env.clone(), info.clone(), sender.clone(), pool_tokens)?;
+    let burn_response = execute_burn(deps.branch(), env.clone(), info.clone(), pool_tokens)?;
 
     // Derive the weight sum (w_sum) from the security limit capacity       //TODO do we want this in this implementation?
     let w_sum = MAX_LIMIT_CAPACITY.load(deps.storage)? / fixed_point_math::LN2;
@@ -349,7 +349,7 @@ pub fn withdraw_mixed(
     let mut u: U256 = fixed_point_math::ln_wad(
         fixed_point_math::div_wad_down(
             effective_supply,
-            effective_supply - U256::from(pool_tokens.u128())  // Subtraction is underflow safe, as the above 'execute_burn_from' guarantees that 'pool_tokens' is contained in 'effective_supply'
+            effective_supply - U256::from(pool_tokens.u128())  // Subtraction is underflow safe, as the above 'execute_burn' guarantees that 'pool_tokens' is contained in 'effective_supply'
         )?.as_i256()                                           // Casting my overflow to a negative value. In that case, 'ln_wad' will fail.
     )?.as_u256()                                               // Casting is safe, as ln is computed of values >= 1, hence output is always positive
         .checked_mul(w_sum).ok_or(ContractError::ArithmeticError {})?;
@@ -730,8 +730,7 @@ pub fn send_liquidity(
         + U256::from(escrowed_pool_tokens.u128());        // Addition is overflow safe because of casting into U256
 
     // Burn the pool tokens of the sender
-    let sender = info.sender.to_string();
-    execute_burn_from(deps.branch(), env.clone(), info, sender, amount)?;
+    execute_burn(deps.branch(), env.clone(), info, amount)?;
 
     // Derive the weight sum (w_sum) from the security limit capacity       //TODO do we want this in this implementation?
     let w_sum = MAX_LIMIT_CAPACITY.load(deps.storage)? / fixed_point_math::LN2;
