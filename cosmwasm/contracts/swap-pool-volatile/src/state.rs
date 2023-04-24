@@ -154,7 +154,7 @@ pub fn initialize_swap_curves(
             .add_messages(transfer_msgs)
             .add_attribute("to_account", depositor)
             .add_attribute("mint", minted_amount)
-            .add_attribute("assets", format!("{:?}", assets_balances))
+            .add_attribute("assets", format_vec_for_event(assets_balances))
     )
 }
 
@@ -252,7 +252,7 @@ pub fn deposit_mixed(
         .add_events(mint_response.events)                           // Add mint events //TODO overhaul
         .add_attribute("to_account", info.sender.to_string())
         .add_attribute("mint", out)
-        .add_attribute("assets", format!("{:?}", deposit_amounts))  //TODO deposit_amounts event format
+        .add_attribute("assets", format_vec_for_event(deposit_amounts))  //TODO deposit_amounts event format
     )
 }
 
@@ -317,7 +317,7 @@ pub fn withdraw_all(
         .add_events(burn_response.events)                           // Add burn events //TODO overhaul
         .add_attribute("to_account", info.sender.to_string())
         .add_attribute("burn", pool_tokens)
-        .add_attribute("assets", format!("{:?}", withdraw_amounts))  //TODO withdraw_amounts format
+        .add_attribute("assets", format_vec_for_event(withdraw_amounts))  //TODO withdraw_amounts format
     )
     
 }
@@ -437,7 +437,7 @@ pub fn withdraw_mixed(
         .add_events(burn_response.events)                           // Add burn events //TODO overhaul
         .add_attribute("to_account", info.sender.to_string())
         .add_attribute("burn", pool_tokens)
-        .add_attribute("assets", format!("{:?}", withdraw_amounts))  //TODO withdraw_amounts format
+        .add_attribute("assets", format_vec_for_event(withdraw_amounts))  //TODO withdraw_amounts format
     )
     
 }
@@ -1279,4 +1279,16 @@ pub fn query_weights_update_finish_timestamp(
         }
     )
 
+}
+
+
+
+// Misc helpers *****************************************************************************************************************
+//TODO move helper somewhere else? (To reuse across implementations)
+pub fn format_vec_for_event<T: ToString>(vec: Vec<T>) -> String {
+    //TODO review output format
+    vec
+        .iter()
+        .map(T::to_string)
+        .collect::<Vec<String>>().join(", ")
 }
