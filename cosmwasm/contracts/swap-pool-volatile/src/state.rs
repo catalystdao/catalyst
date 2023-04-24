@@ -134,7 +134,7 @@ pub fn initialize_swap_curves(
     // Build messages to order the transfer of tokens from setup_master to the swap pool
     let sender_addr_str = info.sender.to_string();
     let self_addr_str = env.contract.address.to_string();
-    let transfer_msgs: Vec<CosmosMsg> = assets.iter().zip(&assets_balances).map(|(asset, balance)| {
+    let transfer_msgs: Vec<CosmosMsg> = assets.iter().zip(&assets_balances).map(|(asset, balance)| {    // zip: assets_balances.len() == assets.len()
         Ok(CosmosMsg::Wasm(
             cosmwasm_std::WasmMsg::Execute {
                 contract_addr: asset.to_string(),
@@ -172,11 +172,15 @@ pub fn deposit_mixed(
     let assets = ASSETS.load(deps.storage)?;
     let weights = WEIGHTS.load(deps.storage)?;
 
+    if deposit_amounts.len() != assets.len() {
+        return Err(ContractError::GenericError {});     //TODO error
+    }
+
     // Compute how much 'units' the assets are worth.
     // Iterate over the assets, weights and deposit_amounts)
     let u = assets.iter()
-        .zip(weights)
-        .zip(&deposit_amounts)
+        .zip(weights)                           // zip: weights.len() == assets.len()
+        .zip(&deposit_amounts)                  // zip: deposit_amounts.len() == assets.len()
         .try_fold(U256::ZERO, |acc, ((asset, weight), deposit_amount)| {
 
             let pool_asset_balance = deps.querier.query_wasm_smart::<BalanceResponse>(
@@ -230,7 +234,7 @@ pub fn deposit_mixed(
 
     // Build messages to order the transfer of tokens from the depositor to the swap pool
     let transfer_msgs: Vec<CosmosMsg> = assets.iter()
-        .zip(&deposit_amounts)
+        .zip(&deposit_amounts)                                              // zip: depsoit_amounts.len() == assets.len()
         .filter(|(_, balance)| **balance != Uint128::zero())     // Do not create transfer messages for zero-valued deposits
         .map(|(asset, balance)| {
             Ok(CosmosMsg::Wasm(
@@ -274,9 +278,14 @@ pub fn withdraw_all(
 
     // Compute the withdraw amounts
     let assets = ASSETS.load(deps.storage)?;
+
+    if min_out.len() != assets.len() {
+        return Err(ContractError::GenericError {});     //TODO error
+    }
+
     let withdraw_amounts: Vec<Uint128> = assets
         .iter()
-        .zip(&min_out)
+        .zip(&min_out)                                      // zip: assets.len() == min_out.len()
         .map(|(asset, asset_min_out)| {
 
         let escrowed_balance = TOTAL_ESCROWED_ASSETS.load(deps.storage, asset.as_str())?;
@@ -298,7 +307,7 @@ pub fn withdraw_all(
     }).collect::<Result<Vec<Uint128>, ContractError>>()?;
 
     // Build messages to order the transfer of tokens from the swap pool to the depositor
-    let transfer_msgs: Vec<CosmosMsg> = assets.iter().zip(&withdraw_amounts).map(|(asset, amount)| {
+    let transfer_msgs: Vec<CosmosMsg> = assets.iter().zip(&withdraw_amounts).map(|(asset, amount)| {    // zip: withdraw_amounts.len() == assets.len()
         Ok(CosmosMsg::Wasm(
             cosmwasm_std::WasmMsg::Execute {
                 contract_addr: asset.to_string(),
@@ -357,11 +366,16 @@ pub fn withdraw_mixed(
     // Compute the withdraw amounts
     let assets = ASSETS.load(deps.storage)?;
     let weights = WEIGHTS.load(deps.storage)?;
+
+    if withdraw_ratio.len() != assets.len() || min_out.len() != assets.len() {
+        return Err(ContractError::GenericError {})
+    }
+
     let withdraw_amounts: Vec<Uint128> = assets
         .iter()
-        .zip(weights)
-        .zip(&withdraw_ratio)
-        .zip(&min_out)
+        .zip(weights)                       // zip: weights.len() == assets.len()    
+        .zip(&withdraw_ratio)               // zip: withdraw_ratio.len() == assets.len()
+        .zip(&min_out)                      // zip: min_out.len() == assets.len()
         .map(|(((asset, weight), asset_withdraw_ratio), asset_min_out)| {
 
             let escrowed_balance = TOTAL_ESCROWED_ASSETS.load(deps.storage, asset.as_ref())?;
@@ -414,7 +428,7 @@ pub fn withdraw_mixed(
 
     // Build messages to order the transfer of tokens from the swap pool to the depositor
     let transfer_msgs: Vec<CosmosMsg> = assets.iter()
-        .zip(&withdraw_amounts)
+        .zip(&withdraw_amounts)                                                             // zip: withdraw_amounts.len() == assets.len()
         .filter(|(_, withdraw_amount)| **withdraw_amount != Uint128::zero())     // Do not create transfer messages for zero-valued withdrawals
         .map(|(asset, amount)| {
             Ok(CosmosMsg::Wasm(
@@ -1040,9 +1054,13 @@ pub fn set_weights(         //TODO EVM mismatch arguments order
     }
 
     // Check the new requested weights and store them
+    if weights.len() != current_weights.len() {
+        return Err(ContractError::GenericError {});     //TODO error
+    }
+
     let target_weights = current_weights
         .iter()
-        .zip(&weights)
+        .zip(&weights)                                      // zip: weights.len() == current_weights.len()
         .map(|(current_weight, new_weight)| {
 
             // Check that the new weight is neither 0 nor larger than the maximum allowed relative change
@@ -1121,7 +1139,7 @@ pub fn update_weights(
         let weights = WEIGHTS.load(deps.storage)?;
         new_weights = weights
             .iter()
-            .zip(&target_weights)
+            .zip(&target_weights)                                       // zip: target_weights.len() == weights.len()
             .map(|(current_weight, target_weight)| {
 
                 // Skip the partial update if the weight has already reached the target
