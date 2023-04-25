@@ -436,8 +436,8 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
             asset
         } => to_binary(&query_total_escrowed_asset(deps, asset.as_ref())?),
         QueryMsg::TotalEscrowedLiquidity {} => to_binary(&query_total_escrowed_liquidity(deps)?),
-        QueryMsg::AssetEscrow { hash } => to_binary(&query_asset_escrow(deps, hash.as_str())?),
-        QueryMsg::LiquidityEscrow { hash } => to_binary(&query_liquidity_escrow(deps, hash.as_str())?),
+        QueryMsg::AssetEscrow { hash } => to_binary(&query_asset_escrow(deps, hash)?),
+        QueryMsg::LiquidityEscrow { hash } => to_binary(&query_liquidity_escrow(deps, hash)?),
 
         // Volatile-Specific Queries
         QueryMsg::TargetWeights {} => to_binary(&query_target_weights(deps)?),

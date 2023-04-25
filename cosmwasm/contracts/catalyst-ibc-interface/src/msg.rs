@@ -23,14 +23,14 @@ pub struct InstantiateMsg {
 pub struct AssetSwapMetadata{
     pub from_amount: Uint128,
     pub from_asset: String,
-    pub swap_hash: String,
+    pub swap_hash: Vec<u8>,
     pub block_number: u32
 }
 
 #[cw_serde]
 pub struct LiquiditySwapMetadata{
     pub from_amount: Uint128,
-    pub swap_hash: String,
+    pub swap_hash: Vec<u8>,
     pub block_number: u32
 }
 

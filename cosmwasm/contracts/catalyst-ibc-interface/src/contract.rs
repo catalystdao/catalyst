@@ -113,7 +113,7 @@ fn execute_send_cross_chain_asset(
             from_amount: U256::from(metadata.from_amount.u128()),
             from_asset: metadata.from_asset.as_bytes(),
             block_number: metadata.block_number,
-            swap_hash: metadata.swap_hash.as_bytes(),
+            swap_hash: metadata.swap_hash,
             calldata,
         },
     };
@@ -153,7 +153,7 @@ fn execute_send_cross_chain_liquidity(
             min_out,
             from_amount: U256::from(metadata.from_amount.u128()),
             block_number: metadata.block_number,
-            swap_hash: metadata.swap_hash.as_bytes(),
+            swap_hash: metadata.swap_hash,
             calldata,
         },
     };
@@ -254,7 +254,7 @@ mod catalyst_ibc_interface_tests {
             metadata: AssetSwapMetadata {
                 from_amount: Uint128::from(4920222095670429824873974121747892731u128),                          // Some large Uint128 number
                 from_asset: "from_asset".to_string(),
-                swap_hash: "1aefweftegnedtwdwaagwwetgajyrgwd".to_string(),
+                swap_hash: b"1aefweftegnedtwdwaagwwetgajyrgwd".to_vec(),
                 block_number: 1356u32
             },
             calldata: vec![]
@@ -317,7 +317,7 @@ mod catalyst_ibc_interface_tests {
             ),
             metadata: LiquiditySwapMetadata {
                 from_amount: Uint128::from(4920222095670429824873974121747892731u128),                          // Some large Uint128 number
-                swap_hash: "1aefweftegnedtwdwaagwwetgajyrgwd".to_string(),
+                swap_hash: b"1aefweftegnedtwdwaagwwetgajyrgwd".to_vec(),
                 block_number: 1356u32
             },
             calldata: vec![]
@@ -388,7 +388,7 @@ mod catalyst_ibc_interface_tests {
                         from_amount: from_amount.unwrap_or(U256::from(metadata.from_amount.u128())),
                         from_asset: metadata.from_asset.as_bytes(),
                         block_number: metadata.block_number,
-                        swap_hash: metadata.swap_hash.as_bytes(),
+                        swap_hash: metadata.swap_hash.clone(),
                         calldata: calldata.clone()
                     },
                 }
@@ -411,7 +411,7 @@ mod catalyst_ibc_interface_tests {
                         min_out: *min_out,
                         from_amount: from_amount.unwrap_or(U256::from(metadata.from_amount.u128())),
                         block_number: metadata.block_number,
-                        swap_hash: metadata.swap_hash.as_bytes(),
+                        swap_hash: metadata.swap_hash.clone(),
                         calldata: calldata.clone()
                     },
                 }

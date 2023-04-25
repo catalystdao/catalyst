@@ -40,8 +40,8 @@ pub const POOL_CONNECTIONS: Map<(&str, Vec<u8>), bool> = Map::new("catalyst-pool
 
 pub const TOTAL_ESCROWED_ASSETS: Map<&str, Uint128> = Map::new("catalyst-pool-escrowed-assets");        //TODO use mapping instead?
 pub const TOTAL_ESCROWED_LIQUIDITY: Item<Uint128> = Item::new("catalyst-pool-escrowed-pool-tokens");
-pub const ASSET_ESCROWS: Map<&str, String> = Map::new("catalyst-pool-asset-escrows");                   //TODO use Addr instead of String (for fallback_account)
-pub const LIQUIDITY_ESCROWS: Map<&str, String> = Map::new("catalyst-pool-liquidity-escrows");           //TODO use Addr instead of String (for fallback_account)
+pub const ASSET_ESCROWS: Map<Vec<u8>, String> = Map::new("catalyst-pool-asset-escrows");                   //TODO use Addr instead of String (for fallback_account)
+pub const LIQUIDITY_ESCROWS: Map<Vec<u8>, String> = Map::new("catalyst-pool-liquidity-escrows");           //TODO use Addr instead of String (for fallback_account)
 
 pub const MAX_LIMIT_CAPACITY: Item<U256> = Item::new("catalyst-pool-max-limit-capacity");
 pub const USED_LIMIT_CAPACITY: Item<U256> = Item::new("catalyst-pool-used-limit-capacity");
@@ -49,10 +49,10 @@ pub const USED_LIMIT_CAPACITY_TIMESTAMP: Item<u64> = Item::new("catalyst-pool-us
 
 
 // TODO move to utils/similar?
-fn calc_keccak256(message: Vec<u8>) -> String {
+fn calc_keccak256(message: Vec<u8>) -> Vec<u8> {
     let mut hasher = Keccak256::new();
     hasher.update(message);
-    format!("{:?}", hasher.finalize().to_vec())
+    hasher.finalize().to_vec()
 }
 
 
@@ -407,13 +407,13 @@ pub fn get_unit_capacity(
 
 pub fn create_asset_escrow(
     deps: &mut DepsMut,
-    send_asset_hash: &str,
+    send_asset_hash: Vec<u8>,
     amount: Uint128,
     asset: &str,
     fallback_account: String
 ) -> Result<(), ContractError> {
 
-    if ASSET_ESCROWS.has(deps.storage, send_asset_hash) {
+    if ASSET_ESCROWS.has(deps.storage, send_asset_hash.clone()) {
         return Err(ContractError::Unauthorized {});
     }
 
@@ -428,12 +428,12 @@ pub fn create_asset_escrow(
 
 pub fn create_liquidity_escrow(
     deps: &mut DepsMut,
-    send_liquidity_hash: &str,
+    send_liquidity_hash: Vec<u8>,
     amount: Uint128,
     fallback_account: String
 ) -> Result<(), ContractError> {
 
-    if LIQUIDITY_ESCROWS.has(deps.storage, send_liquidity_hash) {
+    if LIQUIDITY_ESCROWS.has(deps.storage, send_liquidity_hash.clone()) {
         return Err(ContractError::Unauthorized {});
     }
 
@@ -448,12 +448,12 @@ pub fn create_liquidity_escrow(
 
 pub fn release_asset_escrow(
     deps: &mut DepsMut,
-    send_asset_hash: &str,
+    send_asset_hash: Vec<u8>,
     amount: Uint128,
     asset: &str
 ) -> Result<String, ContractError> {
 
-    let fallback_account = ASSET_ESCROWS.load(deps.storage, send_asset_hash)?;
+    let fallback_account = ASSET_ESCROWS.load(deps.storage, send_asset_hash.clone())?;
     ASSET_ESCROWS.remove(deps.storage, send_asset_hash);
 
     let escrowed_assets = TOTAL_ESCROWED_ASSETS.load(deps.storage, asset)?;
@@ -465,11 +465,11 @@ pub fn release_asset_escrow(
 
 pub fn release_liquidity_escrow(
     deps: &mut DepsMut,
-    send_liquidity_hash: &str,
+    send_liquidity_hash: Vec<u8>,
     amount: Uint128
 ) -> Result<String, ContractError> {
 
-    let fallback_account = LIQUIDITY_ESCROWS.load(deps.storage, send_liquidity_hash)?;
+    let fallback_account = LIQUIDITY_ESCROWS.load(deps.storage, send_liquidity_hash.clone())?;
     LIQUIDITY_ESCROWS.remove(deps.storage, send_liquidity_hash);
 
     let escrowed_pool_tokens = TOTAL_ESCROWED_LIQUIDITY.load(deps.storage)?;
@@ -501,11 +501,11 @@ pub fn on_send_asset_ack(
         block_number_mod
     );
 
-    release_asset_escrow(deps, &send_asset_hash, amount, &asset)?;
+    release_asset_escrow(deps, send_asset_hash.clone(), amount, &asset)?;
 
     Ok(
         Response::new()
-            .add_attribute("swap_hash", send_asset_hash)
+            .add_attribute("swap_hash", format!("{:?}", send_asset_hash))
     )
 }
 
@@ -555,7 +555,7 @@ pub fn on_send_asset_timeout(
         block_number_mod
     );
 
-    let fallback_address = release_asset_escrow(deps, &send_asset_hash, amount, &asset)?;
+    let fallback_address = release_asset_escrow(deps, send_asset_hash.clone(), amount, &asset)?;
 
     // Transfer escrowed asset to fallback user
     let transfer_msg: CosmosMsg = CosmosMsg::Wasm(
@@ -573,7 +573,7 @@ pub fn on_send_asset_timeout(
     Ok(
         Response::new()
             .add_message(transfer_msg)
-            .add_attribute("swap_hash", send_asset_hash)
+            .add_attribute("swap_hash", format!("{:?}", send_asset_hash))
     )
 }
 
@@ -623,11 +623,11 @@ pub fn on_send_liquidity_ack(
         block_number_mod
     );
 
-    release_liquidity_escrow(deps, &send_liquidity_hash, amount)?;
+    release_liquidity_escrow(deps, send_liquidity_hash.clone(), amount)?;
 
     Ok(
         Response::new()
-            .add_attribute("swap_hash", send_liquidity_hash)
+            .add_attribute("swap_hash",  format!("{:?}", send_liquidity_hash))
     )
 }
 
@@ -674,7 +674,7 @@ pub fn on_send_liquidity_timeout(
         block_number_mod
     );
 
-    let fallback_address = release_liquidity_escrow(deps, &send_liquidity_hash, amount)?;
+    let fallback_address = release_liquidity_escrow(deps, send_liquidity_hash.clone(), amount)?;
 
     // Mint pool tokens for the fallbackAccount
     let execute_mint_info = MessageInfo {
@@ -691,7 +691,7 @@ pub fn on_send_liquidity_timeout(
 
     Ok(
         Response::new()
-            .add_attribute("swap_hash", send_liquidity_hash)
+            .add_attribute("swap_hash", format!("{:?}", send_liquidity_hash))
             .add_attributes(mint_response.attributes)   //TODO better way to do this?
     )
 }
@@ -724,7 +724,7 @@ pub fn compute_send_asset_hash(
     amount: Uint128,
     asset: &str,
     block_number_mod: u32        
-) -> String {
+) -> Vec<u8> {
 
     let asset_bytes = asset.as_bytes();
 
@@ -751,7 +751,7 @@ pub fn compute_send_liquidity_hash(
     u: U256,
     amount: Uint128,
     block_number_mod: u32        
-) -> String {
+) -> Vec<u8> {
 
     let mut hash_data: Vec<u8> = Vec::with_capacity(    // Initialize vec with the specified capacity (avoid reallocations)
         to_account.len()
@@ -867,7 +867,7 @@ pub fn query_total_escrowed_liquidity(deps: Deps) -> StdResult<TotalEscrowedLiqu
     )
 }
 
-pub fn query_asset_escrow(deps: Deps, hash: &str) -> StdResult<AssetEscrowResponse> {
+pub fn query_asset_escrow(deps: Deps, hash: Vec<u8>) -> StdResult<AssetEscrowResponse> {
     Ok(
         AssetEscrowResponse {
             fallback_account: ASSET_ESCROWS.load(deps.storage, hash)?
@@ -875,7 +875,7 @@ pub fn query_asset_escrow(deps: Deps, hash: &str) -> StdResult<AssetEscrowRespon
     )
 }
 
-pub fn query_liquidity_escrow(deps: Deps, hash: &str) -> StdResult<LiquidityEscrowResponse> {
+pub fn query_liquidity_escrow(deps: Deps, hash: Vec<u8>) -> StdResult<LiquidityEscrowResponse> {
     Ok(
         LiquidityEscrowResponse {
             fallback_account: LIQUIDITY_ESCROWS.load(deps.storage, hash)?

@@ -103,11 +103,11 @@ pub enum QueryMsg {
     TotalEscrowedLiquidity {},
     #[returns(AssetEscrowResponse)]
     AssetEscrow {
-        hash: String
+        hash: Vec<u8>
     },
     #[returns(LiquidityEscrowResponse)]
     LiquidityEscrow {
-        hash: String
+        hash: Vec<u8>
     },
 
 

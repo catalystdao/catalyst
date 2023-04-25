@@ -583,7 +583,7 @@ pub fn send_asset(
 
     create_asset_escrow(
         deps,
-        &send_asset_hash,
+        send_asset_hash.clone(),
         amount - pool_fee,
         &from_asset,
         fallback_account
@@ -653,7 +653,7 @@ pub fn send_asset(
         .add_attribute("from_amount", amount)
         .add_attribute("units", u.to_string())
         .add_attribute("min_out", min_out.to_string())      //TODO review string format
-        .add_attribute("swap_hash", send_asset_hash)
+        .add_attribute("swap_hash", format!("{:?}", send_asset_hash))
     )
 }
 
@@ -775,7 +775,7 @@ pub fn send_liquidity(
     // Escrow the pool tokens
     create_liquidity_escrow(
         deps,
-        &send_liquidity_hash,
+        send_liquidity_hash.clone(),
         amount,
         fallback_account
     )?;
@@ -810,7 +810,7 @@ pub fn send_liquidity(
         .add_attribute("to_account", format!("{:x?}", to_account))
         .add_attribute("from_amount", amount)
         .add_attribute("units", u.to_string())
-        .add_attribute("swap_hash", send_liquidity_hash)
+        .add_attribute("swap_hash", format!("{:?}", send_liquidity_hash))
     )
 }
 

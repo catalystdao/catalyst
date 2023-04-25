@@ -166,7 +166,7 @@ impl<'a> CatalystV1Packet<'a> {
 }
 
 pub type CatalystV1SendAssetPayload<'a> = CatalystV1Payload<'a, SendAssetVariablePayload<'a>>;
-pub type CatalystV1SendLiquidityPayload<'a> = CatalystV1Payload<'a, SendLiquidityVariablePayload<'a>>;
+pub type CatalystV1SendLiquidityPayload<'a> = CatalystV1Payload<'a, SendLiquidityVariablePayload>;
 
 pub struct CatalystV1Payload<'a, T: CatalystV1VariablePayload<'a>> {
     pub from_pool: &'a [u8],
@@ -364,7 +364,7 @@ pub struct SendAssetVariablePayload<'a> {
     pub from_amount: U256,
     pub from_asset: &'a [u8],
     pub block_number: u32,
-    pub swap_hash: &'a [u8],
+    pub swap_hash: Vec<u8>,
     pub calldata: Vec<u8>
 }
 
@@ -461,7 +461,7 @@ impl<'a> CatalystV1VariablePayload<'a> for SendAssetVariablePayload<'a> {
         // Swap hash
         let swap_hash = buffer.get(
             CTX0_SWAP_HASH_START + offset .. CTX0_SWAP_HASH_END + offset
-        ).ok_or(ContractError::PayloadDecodingError {})?;
+        ).ok_or(ContractError::PayloadDecodingError {})?.to_vec();
 
         // Calldata
         let calldata_length: usize = u16::from_be_bytes(
@@ -532,15 +532,15 @@ impl<'a> SendAssetVariablePayload<'a> {
 }
 
 
-pub struct SendLiquidityVariablePayload<'a> {
+pub struct SendLiquidityVariablePayload {
     pub min_out: U256,
     pub from_amount: U256,
     pub block_number: u32,
-    pub swap_hash: &'a [u8],
+    pub swap_hash: Vec<u8>,
     pub calldata: Vec<u8>
 }
 
-impl<'a> CatalystV1VariablePayload<'a> for SendLiquidityVariablePayload<'a> {
+impl CatalystV1VariablePayload<'_> for SendLiquidityVariablePayload {
 
     fn context() -> u8 {
         CTX1_LIQUIDITY_SWAP
@@ -576,7 +576,7 @@ impl<'a> CatalystV1VariablePayload<'a> for SendLiquidityVariablePayload<'a> {
         Ok(())
     }
 
-    fn try_decode(buffer: &'a Vec<u8>, offset: usize) -> Result<Self, ContractError> {
+    fn try_decode(buffer: &Vec<u8>, offset: usize) -> Result<Self, ContractError> {
 
         // Min out
         let min_out = U256::from_be_bytes(
@@ -608,7 +608,7 @@ impl<'a> CatalystV1VariablePayload<'a> for SendLiquidityVariablePayload<'a> {
         // Swap hash
         let swap_hash = buffer.get(
             CTX1_SWAP_HASH_START + offset .. CTX1_SWAP_HASH_END + offset
-        ).ok_or(ContractError::PayloadDecodingError {})?;
+        ).ok_or(ContractError::PayloadDecodingError {})?.to_vec();
 
         // Calldata
         let calldata_length: usize = u16::from_be_bytes(
@@ -635,7 +635,7 @@ impl<'a> CatalystV1VariablePayload<'a> for SendLiquidityVariablePayload<'a> {
     }
 }
 
-impl<'a> SendLiquidityVariablePayload<'a> {
+impl SendLiquidityVariablePayload {
 
     pub fn min_out(
         &self
