@@ -16,7 +16,7 @@ mod test_volatile_withdraw_even {
         let mut app = App::default();
 
         // Instantiate and initialize vault
-        let vault = mock_instantiate(&mut app, false);
+        let vault = mock_instantiate(&mut app, None);
         let vault_tokens = deploy_test_tokens(&mut app, None, None);
         let vault_config = mock_initialize_pool(
             &mut app,
@@ -123,7 +123,7 @@ mod test_volatile_withdraw_even {
         let mut app = App::default();
 
         // Instantiate and initialize vault
-        let vault = mock_instantiate(&mut app, false);
+        let vault = mock_instantiate(&mut app, None);
         let vault_tokens = deploy_test_tokens(&mut app, None, None);
         mock_initialize_pool(
             &mut app,
@@ -177,7 +177,7 @@ mod test_volatile_withdraw_even {
         let mut app = App::default();
 
         // Instantiate and initialize vault
-        let vault = mock_instantiate(&mut app, false);
+        let vault = mock_instantiate(&mut app, None);
         let vault_tokens = deploy_test_tokens(&mut app, None, None);
         let vault_config = mock_initialize_pool(
             &mut app,
@@ -260,7 +260,7 @@ mod test_volatile_withdraw_even {
         let mut app = App::default();
 
         // Instantiate and initialize vault
-        let vault = mock_instantiate(&mut app, false);
+        let vault = mock_instantiate(&mut app, None);
         let vault_tokens = deploy_test_tokens(&mut app, None, None);
         mock_initialize_pool(
             &mut app,

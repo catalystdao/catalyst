@@ -17,7 +17,7 @@ mod test_volatile_initialize_swap_curves {
         let mut app = App::default();
 
         // Instantiate vault
-        let vault = mock_instantiate(&mut app, false);
+        let vault = mock_instantiate(&mut app, None);
 
         // Create tokens and set vault allowances
         let test_tokens = deploy_test_tokens(
@@ -179,7 +179,7 @@ mod test_volatile_initialize_swap_curves {
         let mut app = App::default();
 
         // Instantiate vault
-        let vault = mock_instantiate(&mut app, false);
+        let vault = mock_instantiate(&mut app, None);
 
         // Create tokens and set vault allowances
         let test_tokens = deploy_test_tokens(
@@ -243,7 +243,7 @@ mod test_volatile_initialize_swap_curves {
         let mut app = App::default();
 
         // Instantiate vault
-        let vault = mock_instantiate(&mut app, false);
+        let vault = mock_instantiate(&mut app, None);
 
         let initialize_msg = InitializeSwapCurvesMockMsg {
             assets: vec![],
@@ -278,7 +278,7 @@ mod test_volatile_initialize_swap_curves {
         let mut app = App::default();
 
         // Instantiate vault
-        let vault = mock_instantiate(&mut app, false);
+        let vault = mock_instantiate(&mut app, None);
 
         // Create tokens and set vault allowances
         let test_tokens_definitions = mock_test_token_definitions(4);    // ! Generate 4 tokens definitions
@@ -336,7 +336,7 @@ mod test_volatile_initialize_swap_curves {
         let mut app = App::default();
 
         // Instantiate vault
-        let vault = mock_instantiate(&mut app, false);
+        let vault = mock_instantiate(&mut app, None);
 
         // Create tokens and set vault allowances
         let test_tokens = deploy_test_tokens(
@@ -391,7 +391,7 @@ mod test_volatile_initialize_swap_curves {
         let mut app = App::default();
 
         // Instantiate vault
-        let vault = mock_instantiate(&mut app, false);
+        let vault = mock_instantiate(&mut app, None);
 
         // Create tokens and set vault allowances
         let test_tokens = deploy_test_tokens(
@@ -447,7 +447,7 @@ mod test_volatile_initialize_swap_curves {
         let mut app = App::default();
 
         // Instantiate vault
-        let vault = mock_instantiate(&mut app, false);
+        let vault = mock_instantiate(&mut app, None);
 
         // Create tokens and set vault allowances
         let test_tokens = deploy_test_tokens(
@@ -503,7 +503,7 @@ mod test_volatile_initialize_swap_curves {
         let mut app = App::default();
 
         // Instantiate vault
-        let vault = mock_instantiate(&mut app, false);
+        let vault = mock_instantiate(&mut app, None);
 
         // Create tokens and set vault allowances
         let test_tokens = deploy_test_tokens(
@@ -559,7 +559,7 @@ mod test_volatile_initialize_swap_curves {
         let mut app = App::default();
 
         // Instantiate vault
-        let vault = mock_instantiate(&mut app, false);
+        let vault = mock_instantiate(&mut app, None);
 
         // Create tokens and set vault allowances
         let test_tokens = deploy_test_tokens(

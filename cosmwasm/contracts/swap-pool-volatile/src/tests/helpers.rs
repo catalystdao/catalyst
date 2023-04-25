@@ -225,15 +225,12 @@ pub fn mock_instantiate_msg(
 
 pub fn mock_instantiate(
     app: &mut App,
-    only_local: bool
+    chain_interface: Option<Addr>
 ) -> Addr {
 
-    let chain_interface = match only_local {
-        true => None,
-        false => Some(CHAIN_INTERFACE.to_string())
-    };
-
-    let instantiate_msg = mock_instantiate_msg(chain_interface);
+    let instantiate_msg = mock_instantiate_msg(
+        chain_interface.map(|addr| addr.to_string())
+    );
 
     let contract_code_storage = volatile_vault_contract_storage(app);
 

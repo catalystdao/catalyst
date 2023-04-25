@@ -12,7 +12,7 @@ mod test_volatile_pool_connections {
         let mut app = App::default();
 
         // Instantiate vault
-        let vault = mock_instantiate(&mut app, false);
+        let vault = mock_instantiate(&mut app, None);
 
         let channel_id = "channel_0";
         let target_pool = b"target_pool".to_vec();
@@ -57,7 +57,7 @@ mod test_volatile_pool_connections {
         let mut app = App::default();
 
         // Instantiate vault
-        let vault = mock_instantiate(&mut app, false);
+        let vault = mock_instantiate(&mut app, None);
 
         let channel_id = "channel_0";
         let target_pool = b"target_pool".to_vec();
@@ -112,7 +112,7 @@ mod test_volatile_pool_connections {
         let mut app = App::default();
 
         // Instantiate vault
-        let vault = mock_instantiate(&mut app, false);
+        let vault = mock_instantiate(&mut app, None);
 
         let channel_id = "channel_0";
         let target_pool = b"target_pool".to_vec();
@@ -148,7 +148,7 @@ mod test_volatile_pool_connections {
         let mut app = App::default();
 
         // Instantiate vault
-        let vault = mock_instantiate(&mut app, false);
+        let vault = mock_instantiate(&mut app, None);
 
         let channel_id = "channel_0";
         let target_pool = b"target_pool".to_vec();
@@ -192,7 +192,7 @@ mod test_volatile_pool_connections {
         let mut app = App::default();
 
         // Instantiate vault
-        let vault = mock_instantiate(&mut app, false);
+        let vault = mock_instantiate(&mut app, None);
 
         let channel_id = "channel_0";
         let target_pool = b"target_pool".to_vec();

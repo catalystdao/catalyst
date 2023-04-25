@@ -12,7 +12,7 @@ mod test_volatile_finish_setup {
         let mut app = App::default();
 
         // Instantiate vault
-        let vault = mock_instantiate(&mut app, false);
+        let vault = mock_instantiate(&mut app, None);
 
 
         // Tested action: finish setup
@@ -44,7 +44,7 @@ mod test_volatile_finish_setup {
         let mut app = App::default();
 
         // Instantiate vault
-        let vault = mock_instantiate(&mut app, false);
+        let vault = mock_instantiate(&mut app, None);
 
 
         // Tested action: finish setup
