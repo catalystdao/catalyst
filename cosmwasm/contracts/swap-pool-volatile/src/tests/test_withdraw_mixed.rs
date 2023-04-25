@@ -329,5 +329,156 @@ mod test_volatile_withdraw_mixed {
     }
     
 
+    #[test]
+    fn test_withdraw_mixed_invalid_ratios() {
+
+        let mut app = App::default();
+
+        // Instantiate and initialize vault
+        let vault = mock_instantiate(&mut app, false);
+        let vault_tokens = deploy_test_tokens(&mut app, None, None);
+        mock_initialize_pool(
+            &mut app,
+            vault.clone(),
+            vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
+            vec![Uint128::from(1u64) * WAD, Uint128::from(2u64) * WAD, Uint128::from(3u64) * WAD],
+            vec![1u64, 1u64, 1u64]
+        );
+
+        // Define withdraw config
+        let withdraw_percentage = 0.15;     // Percentage of pool tokens supply
+        let withdraw_amount = f64_to_uint128(uint128_to_f64(INITIAL_MINT_AMOUNT) * withdraw_percentage).unwrap();
+
+
+    
+        // Tested action 1: invalid withdraw ratio length (too short)
+        let response_result = app.execute_contract(
+            Addr::unchecked(SETUP_MASTER),
+            vault.clone(),
+            &VolatileExecuteMsg::WithdrawMixed {
+                pool_tokens: withdraw_amount,
+                withdraw_ratio: vec![0.5, 1.].iter().map(|ratio| (ratio * 1e18) as u64).collect::<Vec<u64>>(),
+                min_out: vec![Uint128::zero(), Uint128::zero(), Uint128::one()]
+            },
+            &[]
+        );
+    
+        // Make sure the transaction fails
+        assert!(matches!(
+            response_result.err().unwrap().downcast().unwrap(),
+            ContractError::GenericError {}
+        ));
+
+
+    
+        // Tested action 2: invalid withdraw ratio length (too long)
+        let response_result = app.execute_contract(
+            Addr::unchecked(SETUP_MASTER),
+            vault.clone(),
+            &VolatileExecuteMsg::WithdrawMixed {
+                pool_tokens: withdraw_amount,
+                withdraw_ratio: vec![0.5, 0., 0., 1.].iter().map(|ratio| (ratio * 1e18) as u64).collect::<Vec<u64>>(),
+                min_out: vec![Uint128::zero(), Uint128::zero(), Uint128::one()]
+            },
+            &[]
+        );
+    
+        // Make sure the transaction fails
+        assert!(matches!(
+            response_result.err().unwrap().downcast().unwrap(),
+            ContractError::GenericError {}
+        ));
+
+    
+        // Tested action 3: withdraw ratio all zero
+        let response_result = app.execute_contract(
+            Addr::unchecked(SETUP_MASTER),
+            vault.clone(),
+            &VolatileExecuteMsg::WithdrawMixed {
+                pool_tokens: withdraw_amount,
+                withdraw_ratio: vec![0u64, 0u64, 0u64],
+                min_out: vec![Uint128::zero(), Uint128::zero(), Uint128::zero()]
+            },
+            &[]
+        );
+    
+        // Make sure the transaction fails
+        assert!(matches!(
+            response_result.err().unwrap().downcast().unwrap(),
+            ContractError::UnusedUnitsAfterWithdrawal { units: _ }
+        ));
+
+    
+        // Tested action 4: withdraw ratio larger than 1
+        let response_result = app.execute_contract(
+            Addr::unchecked(SETUP_MASTER),
+            vault.clone(),
+            &VolatileExecuteMsg::WithdrawMixed {
+                pool_tokens: withdraw_amount,
+                withdraw_ratio: vec![0.5, 0.5, 1.2].iter().map(|ratio| (ratio * 1e18) as u64).collect::<Vec<u64>>(),
+                min_out: vec![Uint128::zero(), Uint128::zero(), Uint128::zero()]
+            },
+            &[]
+        );
+    
+        // Make sure the transaction fails
+        assert_eq!(
+            response_result.err().unwrap().root_cause().to_string(),
+            "Arithmetic error"
+        );
+
+    
+        // Tested action 5: withdraw ratio without 1
+        let response_result = app.execute_contract(
+            Addr::unchecked(SETUP_MASTER),
+            vault.clone(),
+            &VolatileExecuteMsg::WithdrawMixed {
+                pool_tokens: withdraw_amount,
+                withdraw_ratio: vec![0.5, 0.5, 0.].iter().map(|ratio| (ratio * 1e18) as u64).collect::<Vec<u64>>(),
+                min_out: vec![Uint128::zero(), Uint128::zero(), Uint128::zero()]
+            },
+            &[]
+        );
+    
+        // Make sure the transaction fails
+        assert!(matches!(
+            response_result.err().unwrap().downcast().unwrap(),
+            ContractError::UnusedUnitsAfterWithdrawal { units: _ }
+        ));
+
+    
+        // Tested action 5: withdraw ratio with non-zero value after 1
+        let response_result = app.execute_contract(
+            Addr::unchecked(SETUP_MASTER),
+            vault.clone(),
+            &VolatileExecuteMsg::WithdrawMixed {
+                pool_tokens: withdraw_amount,
+                withdraw_ratio: vec![0.5, 1., 0.5].iter().map(|ratio| (ratio * 1e18) as u64).collect::<Vec<u64>>(),
+                min_out: vec![Uint128::zero(), Uint128::zero(), Uint128::zero()]
+            },
+            &[]
+        );
+    
+        // Make sure the transaction fails
+        assert!(matches!(
+            response_result.err().unwrap().downcast().unwrap(),
+            ContractError::WithdrawRatioNotZero { ratio: err_ratio }
+                if err_ratio == (0.5 * 1e18) as u64
+        ));
+
+
+        // Make sure withdrawal works with a valid withdraw_ratio
+        app.execute_contract(
+            Addr::unchecked(SETUP_MASTER),
+            vault.clone(),
+            &VolatileExecuteMsg::WithdrawMixed {
+                pool_tokens: withdraw_amount,
+                withdraw_ratio: vec![1./3., 1./2., 1.].iter().map(|ratio| (ratio * 1e18) as u64).collect::<Vec<u64>>(),
+                min_out: vec![Uint128::zero(), Uint128::zero(), Uint128::zero()]
+            },
+            &[]
+        ).unwrap();     // Make sure transaction succeeds
+
+    }
 
 }
