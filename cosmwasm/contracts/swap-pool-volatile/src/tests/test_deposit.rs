@@ -314,18 +314,21 @@ mod test_volatile_deposit{
         // Compute the expected return
         let expected_return = uint128_to_f64(INITIAL_MINT_AMOUNT) * deposit_percentage * (1. - (DEFAULT_TEST_POOL_FEE as f64)/1e18);
 
-        // Set min_out to be slightly larger than the expected return
-        let min_out = f64_to_uint128(expected_return * 1.01).unwrap();
+        // Set min_out_valid to be slightly smaller than the expected return
+        let min_out_valid = f64_to_uint128(expected_return * 0.99).unwrap();
+
+        // Set min_out_invalid to be slightly larger than the expected return
+        let min_out_invalid = f64_to_uint128(expected_return * 1.01).unwrap();
 
 
 
-        // Tested action: deposit
+        // Tested action 1: deposit with min_out > expected_return fails
         let response_result = app.execute_contract(
             Addr::unchecked(DEPOSITOR),
             vault.clone(),
             &VolatileExecuteMsg::DepositMixed {
                 deposit_amounts: deposit_amounts.clone(),
-                min_out
+                min_out: min_out_invalid
             },
             &[]
         );
@@ -336,8 +339,21 @@ mod test_volatile_deposit{
         assert!(matches!(
             response_result.err().unwrap().downcast().unwrap(),
             ContractError::ReturnInsufficient { min_out: err_min_out, out: err_out}
-                if err_min_out == min_out && err_out < err_min_out
+                if err_min_out == min_out_invalid && err_out < err_min_out
         ));
+
+
+
+        // Tested action 2: deposit with min_out <= expected_return succeeds
+        app.execute_contract(
+            Addr::unchecked(DEPOSITOR),
+            vault.clone(),
+            &VolatileExecuteMsg::DepositMixed {
+                deposit_amounts: deposit_amounts.clone(),
+                min_out: min_out_valid
+            },
+            &[]
+        ).unwrap();     // Make sure the transaction succeeds
 
     }
 
