@@ -4,7 +4,6 @@ pragma solidity ^0.8.16;
 
 // Catalyst IBC payload structure ***********************************************************************************************
 // Note: Addresses have 65 bytes reserved, however, the first byte should only be used for the address size.
-// It can, therefore, generally be ignored if the one doesn't care about prepended 0 bytes.
 //
 // Common Payload (beginning)
 //    CONTEXT               0   (1 byte)

@@ -24,6 +24,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
     //--- ERRORS ---//
     error InvalidIBCCaller(address caller);  // Only the message router should be able to deliver messages.
     error InvalidContext(bytes1 context);
+    error InvalidAddress();
 
     //--- Config ---//
     uint256 constant MAXIMUM_TIME_FOR_TX = 2 hours;
@@ -259,6 +260,13 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
         bytes calldata fromPool = data[ FROM_POOL_LENGTH_POS : FROM_POOL_END ];
         // We know that toPool is an EVM address
         address toPool = address(uint160(bytes20(data[ TO_POOL_START_EVM : TO_POOL_END ])));
+
+        // Check that toAccount is the correct length and only contains 0 bytes beyond the address.
+        if (uint8(data[TO_ACCOUNT_LENGTH_POS]) != 20) revert InvalidAddress();  // Check correct length
+        if (uint256(bytes32(data[TO_ACCOUNT_START:TO_ACCOUNT_START+32])) != 0) revert InvalidAddress();  // Check first 32 bytes are 0.
+        if (uint96(bytes12(data[TO_ACCOUNT_START+32:TO_ACCOUNT_START_EVM])) != 0) revert InvalidAddress();  // Check the next 32-20=12 bytes are 0.
+        // To pool will not be checked. If it is assumed that any error is random, then an incorrect toPool will result in the call failling.
+
 
         if (context == CTX0_ASSET_SWAP) {
 

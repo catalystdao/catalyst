@@ -3,6 +3,8 @@ pragma solidity ^0.8.16;
 
 /// @title Events emitted by Catalyst v1 Pools
 /// @notice Contains all events emitted by the pool
+/// @dev When using events to match transations, the combination of: channelId, fromPool, toAccount, toAsset, units, and block number is semi-guranteed to be unique.
+///     If more than 2**32 blocks exist, then all instances are guaranteed to be non-overlapping
 interface ICatalystV1PoolEvents {
     /**
      * @notice  Describes an atomic swap between the 2 tokens: _fromAsset and _toAsset.
@@ -24,6 +26,7 @@ interface ICatalystV1PoolEvents {
     /**
      * @notice Describes the creation of an external swap: Cross-chain swap.
      * @dev If _fromAsset is the proxy contract or _toAsset is 2**8-1, the swap is a liquidity swap.
+     * @param channelId The target chain identifier
      * @param toPool The target pool.
      * @param toAccount The recipient of the trade. The person who bought the trade is not present.
      * @param fromAsset The asset which was sold in exchange for _toAsset.
@@ -46,11 +49,13 @@ interface ICatalystV1PoolEvents {
     /**
      * @notice Describes the arrival of an external swap: Cross-chain swap.
      * @dev If _fromAsset is the proxy contract, the swap is a liquidity swap.
+     * @param channelId The target chain identifier
      * @param fromPool The source pool.
      * @param toAccount The recipient of the trade.
      * @param toAsset The asset which was purchased with _fromAsset
      * @param units The number of units sent from the other chain.
      * @param toAmount The number of tokens provided to toAccount
+     * @param sourceBlockNumberMod The block number of the sending transaction mod 2**32
      */
     event ReceiveAsset(
         bytes32 channelId,
@@ -64,9 +69,11 @@ interface ICatalystV1PoolEvents {
 
     /**
      * @notice Describes the creation of a liquidity swap
+     * @param channelId The target chain identifier
      * @param toPool The target pool.
      * @param toAccount The recipient of the liquidity. The person who bought the trade is not present.
      * @param fromAmount The number of _fromAsset sold
+     * @param minOut An array containing a list of minimum outputs [minPoolTokens, minReferenceAssets]
      * @param units The calculated number of liquidity units bought.
      */
     event SendLiquidity(
@@ -74,16 +81,18 @@ interface ICatalystV1PoolEvents {
         bytes toPool,
         bytes toAccount,
         uint256 fromAmount,
-        uint256[2] minOuts,
+        uint256[2] minOut,
         uint256 units
     );
 
     /**
      * @notice Describes the arrival of a liquidity swap
+     * @param channelId The target chain identifier
      * @param fromPool The source pool.
      * @param toAccount The recipient of the liquidity.
      * @param units The number of liquidity units sent from the other chain.
      * @param toAmount The number of pool tokens provided to toAccount
+     * @param sourceBlockNumberMod The block number of the sending transaction mod 2**32
      */
     event ReceiveLiquidity(
         bytes32 channelId,
