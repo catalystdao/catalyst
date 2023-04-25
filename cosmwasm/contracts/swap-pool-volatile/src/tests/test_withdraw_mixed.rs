@@ -280,6 +280,81 @@ mod test_volatile_withdraw_mixed {
 
 
     #[test]
+    fn test_withdraw_mixed_min_out_for_0_ratio() {
+        // Test specifically the 'min_out' logic for an asset with a 0-valued withdraw ratio,
+        // as the 'min_out' logic for this case is implemented differently than for non-zero ratios.
+
+        let mut app = App::default();
+
+        // Instantiate and initialize vault
+        let vault = mock_instantiate(&mut app, false);
+        let vault_tokens = deploy_test_tokens(&mut app, None, None);
+        mock_initialize_pool(
+            &mut app,
+            vault.clone(),
+            vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
+            vec![Uint128::from(1u64) * WAD, Uint128::from(2u64) * WAD, Uint128::from(3u64) * WAD],
+            vec![1u64, 1u64, 1u64]
+        );
+
+        // Define withdraw config
+        let withdraw_percentage = 0.15;     // Percentage of pool tokens supply
+        let withdraw_amount = f64_to_uint128(uint128_to_f64(INITIAL_MINT_AMOUNT) * withdraw_percentage).unwrap();
+        let withdraw_ratio_f64 = vec![0., 0.2, 1.];        // ! The ratio for the first asset is set to 0
+        let withdraw_ratio = withdraw_ratio_f64.iter()
+            .map(|val| (val * 1e18) as u64).collect::<Vec<u64>>();
+
+        // Fund withdrawer with pool tokens
+        transfer_tokens(
+            &mut app,
+            withdraw_amount,
+            vault.clone(),
+            Addr::unchecked(SETUP_MASTER),
+            WITHDRAWER.to_string()
+        );
+
+
+    
+        // Tested action: withdraw mixed fails for ratio == 0 and min_out != 0
+        let response_result = app.execute_contract(
+            Addr::unchecked(WITHDRAWER),
+            vault.clone(),
+            &VolatileExecuteMsg::WithdrawMixed {
+                pool_tokens: withdraw_amount,
+                withdraw_ratio: withdraw_ratio.clone(),
+                min_out: vec![Uint128::MAX, Uint128::zero(), Uint128::zero()]   // ! Non-zero min_out specified for the first asset
+            },
+            &[]
+        );
+
+
+
+        // Make sure the transaction fails
+        assert!(matches!(
+            response_result.err().unwrap().downcast().unwrap(),
+            ContractError::ReturnInsufficient { out: err_out, min_out: err_min_out }
+                if (
+                    err_out == Uint128::zero() &&
+                    err_min_out == Uint128::MAX
+                )
+        ));
+    
+        // Make sure the withdraw ratio does work when 'min_out' is not provided
+        app.execute_contract(
+            Addr::unchecked(WITHDRAWER),
+            vault.clone(),
+            &VolatileExecuteMsg::WithdrawMixed {
+                pool_tokens: withdraw_amount,
+                withdraw_ratio: withdraw_ratio.clone(),
+                min_out: vec![Uint128::zero(), Uint128::zero(), Uint128::zero()]
+            },
+            &[]
+        ).unwrap();     // Make sure the transaction succeeds
+
+    }
+
+
+    #[test]
     fn test_withdraw_mixed_with_no_funds() {
 
         let mut app = App::default();
