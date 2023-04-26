@@ -275,12 +275,12 @@ pub struct TotalEscrowedLiquidityResponse {
 
 #[cw_serde]
 pub struct AssetEscrowResponse {
-    pub fallback_account: String        //TODO use Addr?
+    pub fallback_account: Addr
 }
 
 #[cw_serde]
 pub struct LiquidityEscrowResponse {
-    pub fallback_account: String        //TODO use Addr?
+    pub fallback_account: Addr
 }
 
 #[cw_serde]

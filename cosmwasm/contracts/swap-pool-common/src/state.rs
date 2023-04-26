@@ -40,8 +40,8 @@ pub const POOL_CONNECTIONS: Map<(&str, Vec<u8>), bool> = Map::new("catalyst-pool
 
 pub const TOTAL_ESCROWED_ASSETS: Map<&str, Uint128> = Map::new("catalyst-pool-escrowed-assets");        //TODO use mapping instead?
 pub const TOTAL_ESCROWED_LIQUIDITY: Item<Uint128> = Item::new("catalyst-pool-escrowed-pool-tokens");
-pub const ASSET_ESCROWS: Map<Vec<u8>, String> = Map::new("catalyst-pool-asset-escrows");                   //TODO use Addr instead of String (for fallback_account)
-pub const LIQUIDITY_ESCROWS: Map<Vec<u8>, String> = Map::new("catalyst-pool-liquidity-escrows");           //TODO use Addr instead of String (for fallback_account)
+pub const ASSET_ESCROWS: Map<Vec<u8>, Addr> = Map::new("catalyst-pool-asset-escrows");
+pub const LIQUIDITY_ESCROWS: Map<Vec<u8>, Addr> = Map::new("catalyst-pool-liquidity-escrows");
 
 pub const MAX_LIMIT_CAPACITY: Item<U256> = Item::new("catalyst-pool-max-limit-capacity");
 pub const USED_LIMIT_CAPACITY: Item<U256> = Item::new("catalyst-pool-used-limit-capacity");
@@ -417,6 +417,8 @@ pub fn create_asset_escrow(
         return Err(ContractError::Unauthorized {});
     }
 
+    // Verify the fallback account before saving
+    let fallback_account = deps.api.addr_validate(&fallback_account)?;
     ASSET_ESCROWS.save(deps.storage, send_asset_hash, &fallback_account)?;
 
     let escrowed_assets = TOTAL_ESCROWED_ASSETS.load(deps.storage, asset)?;
@@ -437,6 +439,8 @@ pub fn create_liquidity_escrow(
         return Err(ContractError::Unauthorized {});
     }
 
+    // Verify the fallback account before saving
+    let fallback_account = deps.api.addr_validate(&fallback_account)?;
     LIQUIDITY_ESCROWS.save(deps.storage, send_liquidity_hash, &fallback_account)?;
 
     let escrowed_pool_tokens = TOTAL_ESCROWED_LIQUIDITY.load(deps.storage)?;
@@ -451,7 +455,7 @@ pub fn release_asset_escrow(
     send_asset_hash: Vec<u8>,
     amount: Uint128,
     asset: &str
-) -> Result<String, ContractError> {
+) -> Result<Addr, ContractError> {
 
     let fallback_account = ASSET_ESCROWS.load(deps.storage, send_asset_hash.clone())?;
     ASSET_ESCROWS.remove(deps.storage, send_asset_hash);
@@ -467,7 +471,7 @@ pub fn release_liquidity_escrow(
     deps: &mut DepsMut,
     send_liquidity_hash: Vec<u8>,
     amount: Uint128
-) -> Result<String, ContractError> {
+) -> Result<Addr, ContractError> {
 
     let fallback_account = LIQUIDITY_ESCROWS.load(deps.storage, send_liquidity_hash.clone())?;
     LIQUIDITY_ESCROWS.remove(deps.storage, send_liquidity_hash);
@@ -563,7 +567,7 @@ pub fn on_send_asset_timeout(
             contract_addr: asset.to_string(),
             msg: to_binary(&Cw20ExecuteMsg::TransferFrom {
                 owner: env.contract.address.to_string(),
-                recipient: fallback_address,
+                recipient: fallback_address.to_string(),
                 amount
             })?,
             funds: vec![]
@@ -685,7 +689,7 @@ pub fn on_send_liquidity_timeout(
         deps.branch(),
         env,
         execute_mint_info,
-        fallback_address,
+        fallback_address.to_string(),
         amount
     )?;
 
