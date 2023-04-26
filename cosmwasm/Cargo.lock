@@ -565,6 +565,22 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "db6d7e329c562c5dfab7a46a2afabc8b987ab9a4834c9d1ca04dc54c1546cef8"
 
 [[package]]
+name = "mock-catalyst-ibc-interface"
+version = "0.1.0"
+dependencies = [
+ "catalyst-ibc-interface",
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cosmwasm-storage",
+ "cw-controllers",
+ "cw-storage-plus",
+ "cw2",
+ "schemars",
+ "serde",
+ "thiserror",
+]
+
+[[package]]
 name = "once_cell"
 version = "1.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -870,6 +886,7 @@ dependencies = [
  "cw20-base",
  "ethnum",
  "fixed-point-math-lib",
+ "mock-catalyst-ibc-interface",
  "schemars",
  "serde",
  "swap-pool-common",
