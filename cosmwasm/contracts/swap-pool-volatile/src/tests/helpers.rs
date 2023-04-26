@@ -17,6 +17,7 @@ pub const FEE_ADMINISTRATOR     : &str = "fee_administrator_addr";
 pub const LOCAL_SWAPPER         : &str = "local_swapper_addr";
 pub const SWAPPER_A             : &str = "swapper_a_addr";
 pub const SWAPPER_B             : &str = "swapper_b_addr";
+pub const SWAPPER_C             : &str = "swapper_c_addr";
 pub const CHANNEL_ID            : &str = "channel_id";
 
 pub const WAD: Uint128 = Uint128::new(1000000000000000000u128);
@@ -535,35 +536,50 @@ pub fn compute_expected_receive_asset(
     
 }
 
-pub struct ExpectedLiquiditySwapResult {
-    pub u: f64,
+pub struct ExpectedSendLiquidityResult {
+    pub u: f64
+}
+
+pub struct ExpectedReceiveLiquidityResult {
     pub to_amount: f64
 }
 
-pub fn compute_expected_liquidity_swap(
+pub fn compute_expected_send_liquidity(
     swap_amount: Uint128,
     from_weights: Vec<u64>,
-    from_total_supply: Uint128,
-    to_weights: Vec<u64>,
-    to_total_supply: Uint128
-) -> ExpectedLiquiditySwapResult {
+    from_total_supply: Uint128
+) -> ExpectedSendLiquidityResult {
 
     // Convert arguments to float
     let swap_amount = swap_amount.u128() as f64;
     let from_total_supply = from_total_supply.u128() as f64;
-    let to_total_supply = to_total_supply.u128() as f64;
 
     // Compute swap
     let from_weights_sum: f64 = from_weights.iter().sum::<u64>() as f64;
-    let to_weights_sum: f64 = to_weights.iter().sum::<u64>() as f64;
-
     let u = (from_total_supply/(from_total_supply - swap_amount)).ln() * from_weights_sum;
 
+    ExpectedSendLiquidityResult {
+        u
+    }
+
+}
+
+pub fn compute_expected_receive_liquidity(
+    u: U256,
+    to_weights: Vec<u64>,
+    to_total_supply: Uint128
+) -> ExpectedReceiveLiquidityResult {
+
+    // Convert arguments to float
+    let u = u256_to_f64(u);
+    let to_total_supply = to_total_supply.u128() as f64;
+
+    // Compute swap
+    let to_weights_sum: f64 = to_weights.iter().sum::<u64>() as f64;
     let share = 1. - (-u/to_weights_sum).exp();
     let to_amount = to_total_supply * (share/(1.-share));
 
-    ExpectedLiquiditySwapResult {
-        u,
+    ExpectedReceiveLiquidityResult {
         to_amount
     }
 
