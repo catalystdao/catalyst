@@ -1,4 +1,4 @@
-mod test_volatile_cross_chain_swap {
+mod test_volatile_send_asset {
     use cosmwasm_std::{Uint128, Addr};
     use cw_multi_test::{App, Executor};
     use ethnum::U256;
