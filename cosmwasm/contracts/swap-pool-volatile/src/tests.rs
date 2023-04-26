@@ -9,3 +9,4 @@ mod test_local_swap;
 mod test_deposit;
 mod test_withdraw_even;
 mod test_withdraw_mixed;
+mod test_send_asset;

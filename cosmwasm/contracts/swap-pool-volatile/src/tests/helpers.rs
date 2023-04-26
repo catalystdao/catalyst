@@ -11,17 +11,20 @@ use crate::{msg::VolatileExecuteMsg, tests::math_helpers::{u256_to_f64, uint128_
 pub const DEPLOYER              : &str = "deployer_addr";
 pub const FACTORY_OWNER         : &str = "factory_owner_addr";
 pub const SETUP_MASTER          : &str = "setup_master_addr";
-pub const CHAIN_INTERFACE       : &str = "chain_interface";
 pub const DEPOSITOR             : &str = "depositor_addr";
 pub const WITHDRAWER            : &str = "withdrawer_addr";
 pub const FEE_ADMINISTRATOR     : &str = "fee_administrator_addr";
 pub const LOCAL_SWAPPER         : &str = "local_swapper_addr";
+pub const SWAPPER_A             : &str = "swapper_a_addr";
+pub const SWAPPER_B             : &str = "swapper_b_addr";
+pub const CHANNEL_ID            : &str = "channel_id";
 
 pub const WAD: Uint128 = Uint128::new(1000000000000000000u128);
 
 pub const DEFAULT_TEST_POOL_FEE : u64 = 70000000000000000u64;   // 7%
 pub const DEFAULT_TEST_GOV_FEE  : u64 = 50000000000000000u64;   // 5%
 
+//TODO move common helpers somewhere else
 
 // Contracts
 pub fn volatile_vault_contract_storage(
@@ -35,6 +38,21 @@ pub fn volatile_vault_contract_storage(
         crate::contract::query,
     );
     
+    // 'Deploy' the contract
+    app.store_code(Box::new(contract))
+}
+
+pub fn interface_contract_storage(
+    app: &mut App
+) -> u64 {
+
+    // Create contract wrapper
+    let contract = ContractWrapper::new(
+        mock_catalyst_ibc_interface::contract::execute,
+        mock_catalyst_ibc_interface::contract::instantiate,
+        mock_catalyst_ibc_interface::contract::query,
+    );
+
     // 'Deploy' the contract
     app.store_code(Box::new(contract))
 }
@@ -207,6 +225,26 @@ pub fn transfer_tokens(
 }
 
 
+
+// Interface helpers
+
+pub fn mock_instantiate_interface(
+    app: &mut App
+) -> Addr {
+
+    let contract_code_storage = interface_contract_storage(app);
+
+    app.instantiate_contract(
+        contract_code_storage,
+        Addr::unchecked(SETUP_MASTER),
+        &catalyst_ibc_interface::msg::InstantiateMsg {},
+        &[],
+        "interface",
+        None
+    ).unwrap()
+}
+
+
 // Vault management helpers
 
 pub fn mock_instantiate_msg(
@@ -341,6 +379,26 @@ pub fn mock_finish_pool_setup(
 }
 
 
+pub fn mock_set_pool_connection(
+    app: &mut App,
+    vault_contract: Addr,
+    channel_id: String,
+    to_pool: Vec<u8>,
+    state: bool
+) -> AppResponse {
+    app.execute_contract::<VolatileExecuteMsg>(
+        Addr::unchecked(SETUP_MASTER),          //TODO replace with factory_owner once implemented
+        vault_contract,
+        &VolatileExecuteMsg::SetConnection {
+            channel_id,
+            to_pool,
+            state
+        },
+        &[]
+    ).unwrap()
+}
+
+
 pub fn mock_set_pool_fee(
     app: &mut App,
     vault_contract: Addr,
@@ -377,6 +435,16 @@ pub struct ExpectedLocalSwapResult {
     pub to_amount: f64,
     pub pool_fee: f64,
     pub governance_fee: f64
+}
+
+pub struct ExpectedSendAssetResult {
+    pub u: f64,
+    pub pool_fee: f64,
+    pub governance_fee: f64
+}
+
+pub struct ExpectedReceiveAssetResult {
+    pub to_amount: f64,
 }
 
 pub fn compute_expected_local_swap(
@@ -417,11 +485,43 @@ pub fn compute_expected_local_swap(
     }
 }
 
+pub fn compute_expected_send_asset(
+    swap_amount: Uint128,
+    from_weight: u64,
+    from_balance: Uint128,
+    pool_fee: Option<u64>,
+    governance_fee_share: Option<u64>
+) -> ExpectedSendAssetResult {
+
+    // Convert arguments to float
+    let swap_amount = swap_amount.u128() as f64;
+    let from_weight = from_weight as f64;
+    let from_balance = from_balance.u128() as f64;
+
+    // Compute fees
+    let pool_fee = (pool_fee.unwrap_or(0u64) as f64) / 1e18;
+    let governance_fee_share = (governance_fee_share.unwrap_or(0u64) as f64) / 1e18;
+
+    let net_fee = pool_fee * swap_amount;
+    let net_pool_fee = pool_fee * (1. - governance_fee_share) * swap_amount;
+    let net_governance_fee = pool_fee * governance_fee_share * swap_amount;
+
+    // Compute swap
+    let x = swap_amount - net_fee;
+    let u = from_weight * ((from_balance + x)/from_balance).ln();
+
+    ExpectedSendAssetResult {
+        u,
+        pool_fee: net_pool_fee,
+        governance_fee: net_governance_fee
+    }
+}
+
 pub fn compute_expected_receive_asset(
     u: U256,
     to_weight: u64,
     to_balance: Uint128
-) -> f64 {
+) -> ExpectedReceiveAssetResult {
 
     // Convert arguments into float
     let u = u256_to_f64(u);
@@ -429,7 +529,9 @@ pub fn compute_expected_receive_asset(
     let to_balance = to_balance.u128() as f64;
 
     // Compute swap
-    to_balance * (1. - (-u/to_weight).exp())
+    ExpectedReceiveAssetResult {
+        to_amount: to_balance * (1. - (-u/to_weight).exp())
+    }
     
 }
 
