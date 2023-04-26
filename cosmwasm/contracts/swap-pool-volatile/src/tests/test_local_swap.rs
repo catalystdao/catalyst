@@ -33,7 +33,7 @@ mod test_volatile_local_swap {
 
         let to_asset_idx = 1;
         let to_asset = vault_tokens[to_asset_idx].clone();
-        let to_weight = vault_config.weights[from_asset_idx];
+        let to_weight = vault_config.weights[to_asset_idx];
         let to_balance = vault_config.assets_balances[to_asset_idx];
 
         // Swap 25% of the pool
@@ -153,7 +153,7 @@ mod test_volatile_local_swap {
 
         let to_asset_idx = 1;
         let to_asset = vault_tokens[to_asset_idx].clone();
-        let to_weight = vault_config.weights[from_asset_idx];
+        let to_weight = vault_config.weights[to_asset_idx];
         let to_balance = vault_config.assets_balances[to_asset_idx];
 
         // Swap 25% of the pool
@@ -460,7 +460,7 @@ mod test_volatile_local_swap {
 
         let to_asset_idx = 1;
         let to_asset = vault_tokens[to_asset_idx].clone();
-        let to_weight = vault_config.weights[from_asset_idx];
+        let to_weight = vault_config.weights[to_asset_idx];
         let to_balance = vault_config.assets_balances[to_asset_idx];
 
         // Swap 10% of the pool
