@@ -3,7 +3,7 @@ mod test_volatile_local_swap {
     use cw_multi_test::{App, Executor};
     use swap_pool_common::ContractError;
 
-    use crate::{msg::VolatileExecuteMsg, tests::{helpers::{mock_instantiate, SETUP_MASTER, deploy_test_tokens, WAD, mock_initialize_pool, set_token_allowance, compute_expected_swap, DEFAULT_TEST_POOL_FEE, DEFAULT_TEST_GOV_FEE, query_token_balance, transfer_tokens, LOCAL_SWAPPER, FACTORY_OWNER, mock_test_token_definitions, mock_set_governance_fee_share}, math_helpers::{uint128_to_f64, f64_to_uint128}}};
+    use crate::{msg::VolatileExecuteMsg, tests::{helpers::{mock_instantiate, SETUP_MASTER, deploy_test_tokens, WAD, mock_initialize_pool, set_token_allowance, compute_expected_local_swap, DEFAULT_TEST_POOL_FEE, DEFAULT_TEST_GOV_FEE, query_token_balance, transfer_tokens, LOCAL_SWAPPER, FACTORY_OWNER, mock_test_token_definitions, mock_set_governance_fee_share}, math_helpers::{uint128_to_f64, f64_to_uint128}}};
 
 
     //TODO add test for the local swap event
@@ -75,7 +75,7 @@ mod test_volatile_local_swap {
 
 
         // Verify the swap return
-        let expected_swap = compute_expected_swap(
+        let expected_swap = compute_expected_local_swap(
             swap_amount,
             from_weight,
             from_balance,
@@ -178,7 +178,7 @@ mod test_volatile_local_swap {
         );
 
         // Compute the expected swap return
-        let expected_swap = compute_expected_swap(
+        let expected_swap = compute_expected_local_swap(
             swap_amount,
             from_weight,
             from_balance,
@@ -485,7 +485,7 @@ mod test_volatile_local_swap {
         );
 
         // Check the expected swap return is 0 (make sure the test is properly configured)
-        let expected_swap = compute_expected_swap(
+        let expected_swap = compute_expected_local_swap(
             swap_amount,
             from_weight,
             from_balance,

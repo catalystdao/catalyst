@@ -379,7 +379,7 @@ pub struct ExpectedLocalSwapResult {
     pub governance_fee: f64
 }
 
-pub fn compute_expected_swap(
+pub fn compute_expected_local_swap(
     swap_amount: Uint128,
     from_weight: u64,
     from_balance: Uint128,
@@ -417,7 +417,7 @@ pub fn compute_expected_swap(
     }
 }
 
-pub fn compute_expected_swap_given_u(
+pub fn compute_expected_receive_asset(
     u: U256,
     to_weight: u64,
     to_balance: Uint128
