@@ -1149,7 +1149,8 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
             toAssetIndex,
             amount,
             minOut,
-            U
+            U,
+            fee
         );
 
         return U;
@@ -1199,6 +1200,8 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
         address toAccount,
         uint256 U,
         uint256 minOut,
+        uint256 fromAmount,
+        bytes calldata fromAsset,
         uint32 blockNumberMod
     ) nonReentrant public override returns (uint256) {
         // Only allow connected pools
@@ -1230,7 +1233,17 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
         // Send the assets to the user.
         ERC20(toAsset).safeTransfer(toAccount, purchasedTokens);
 
-        emit ReceiveAsset(channelId, fromPool, toAccount, toAsset, U, purchasedTokens, blockNumberMod);
+        emit ReceiveAsset(
+            channelId, 
+            fromPool, 
+            toAccount, 
+            toAsset, 
+            U, 
+            purchasedTokens, 
+            fromAmount,
+            fromAsset,
+            blockNumberMod
+        );
 
         return purchasedTokens;
     }
@@ -1242,6 +1255,8 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
         address toAccount,
         uint256 U,
         uint256 minOut,
+        uint256 fromAmount,
+        bytes calldata fromAsset,
         uint32 blockNumberMod,
         address dataTarget,
         bytes calldata data
@@ -1253,6 +1268,8 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
             toAccount,
             U,
             minOut,
+            fromAmount,
+            fromAsset,
             blockNumberMod
         );
 
@@ -1485,6 +1502,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
         uint256 U,
         uint256 minPoolTokens,
         uint256 minReferenceAsset,
+        uint256 fromAmount,
         uint32 blockNumberMod
     ) nonReentrant public override returns (uint256) {
         // The chainInterface is the only valid caller of this function.
@@ -1551,7 +1569,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
         // Mint pool tokens for the user.
         _mint(toAccount, poolTokens);
 
-        emit ReceiveLiquidity(channelId, fromPool, toAccount, U, poolTokens, blockNumberMod);
+        emit ReceiveLiquidity(channelId, fromPool, toAccount, U, poolTokens, fromAmount, blockNumberMod);
 
         return poolTokens;
     }
@@ -1564,6 +1582,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
         uint256 U,
         uint256 minPoolTokens,
         uint256 minReferenceAsset,
+        uint256 fromAmount,
         uint32 blockNumberMod,
         address dataTarget,
         bytes calldata data
@@ -1575,6 +1594,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
             U,
             minPoolTokens,
             minReferenceAsset,
+            fromAmount,
             blockNumberMod
         );
 

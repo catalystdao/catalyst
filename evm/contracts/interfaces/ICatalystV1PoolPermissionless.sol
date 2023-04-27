@@ -136,6 +136,8 @@ interface ICatalystV1PoolPermissionless {
         address toAccount,
         uint256 U,
         uint256 minOut,
+        uint256 fromAmount,
+        bytes calldata fromAsset,
         uint32 sourceBlockNumberMod
     ) external returns (uint256);
 
@@ -146,6 +148,8 @@ interface ICatalystV1PoolPermissionless {
         address toAccount,
         uint256 U,
         uint256 minOut,
+        uint256 fromAmount,
+        bytes calldata fromAsset,
         uint32 sourceBlockNumberMod,
         address dataTarget,
         bytes calldata data
@@ -201,6 +205,7 @@ interface ICatalystV1PoolPermissionless {
         uint256 U,
         uint256 minPoolTokens,
         uint256 minReferenceAsset,
+        uint256 fromAmount,
         uint32 sourceBlockNumberMod
     ) external returns (uint256);
 
@@ -211,6 +216,7 @@ interface ICatalystV1PoolPermissionless {
         uint256 U,
         uint256 minPoolTokens,
         uint256 minReferenceAsset,
+        uint256 fromAmount,
         uint32 sourceBlockNumberMod,
         address dataTarget,
         bytes calldata data
