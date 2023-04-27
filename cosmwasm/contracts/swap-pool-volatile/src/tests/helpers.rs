@@ -8,6 +8,7 @@ use swap_pool_common::msg::InstantiateMsg;
 
 use crate::{msg::VolatileExecuteMsg, tests::math_helpers::{u256_to_f64, uint128_to_f64}};
 
+pub const CHAIN_INTERFACE       : &str = "chain_interface_addr";
 pub const DEPLOYER              : &str = "deployer_addr";
 pub const FACTORY_OWNER         : &str = "factory_owner_addr";
 pub const SETUP_MASTER          : &str = "setup_master_addr";
@@ -525,7 +526,7 @@ pub fn compute_expected_receive_asset(
 ) -> ExpectedReceiveAssetResult {
 
     // Convert arguments into float
-    let u = u256_to_f64(u);
+    let u = u256_to_f64(u) / 1e18;
     let to_weight = to_weight as f64;
     let to_balance = to_balance.u128() as f64;
 
