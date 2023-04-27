@@ -572,7 +572,7 @@ pub fn compute_expected_receive_liquidity(
 ) -> ExpectedReceiveLiquidityResult {
 
     // Convert arguments to float
-    let u = u256_to_f64(u);
+    let u = u256_to_f64(u) / 1e18;
     let to_total_supply = to_total_supply.u128() as f64;
 
     // Compute swap

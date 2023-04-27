@@ -12,3 +12,4 @@ mod test_withdraw_mixed;
 mod test_send_asset;
 mod test_send_liquidity;
 mod test_receive_asset;
+mod test_receive_liquidity;
