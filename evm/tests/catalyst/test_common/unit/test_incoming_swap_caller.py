@@ -22,6 +22,8 @@ def test_receiveAsset_must_be_called_by_cci(
             berg,
             10**16,
             0,
+            0,
+            convert_64_bytes_address(pool.address),
             chain[-1].number,
             {'from': berg}
         )
@@ -33,6 +35,8 @@ def test_receiveAsset_must_be_called_by_cci(
         berg,
         10**16,
         0,
+        0,
+        convert_64_bytes_address(pool.address),
         chain[-1].number,
         {'from': cci}
     )
@@ -53,6 +57,7 @@ def test_receiveLiquidity_must_be_called_by_cci(
             10**16,
             0,
             0,
+            0,
             chain[-1].number,
             {'from': berg}
         )
@@ -62,6 +67,7 @@ def test_receiveLiquidity_must_be_called_by_cci(
         convert_64_bytes_address(pool.address),  # Use self as source pool
         berg,
         10**16,
+        0,
         0,
         0,
         chain[-1].number,

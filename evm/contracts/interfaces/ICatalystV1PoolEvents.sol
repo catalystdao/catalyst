@@ -31,6 +31,7 @@ interface ICatalystV1PoolEvents {
      * @param fromAmount The number of _fromAsset sold.
      * @param minOut The pool fee. Taken from fromAmount. Numerical losses/fees are for obvious reasons not included.
      * @param units The calculated number of units bought. Will be sold to buy _toAsset
+     * @param fee The number of tokens paid to the pool in fees.
      */
     event SendAsset(
         bytes32 channelId,
@@ -40,17 +41,22 @@ interface ICatalystV1PoolEvents {
         uint8 toAssetIndex,
         uint256 fromAmount,
         uint256 minOut,
-        uint256 units
+        uint256 units,
+        uint256 fee
     );
 
     /**
      * @notice Describes the arrival of an external swap: Cross-chain swap.
      * @dev If _fromAsset is the proxy contract, the swap is a liquidity swap.
+     * If toAccount is used to match trades, remember to convert it into 64 + 1 bytes.
      * @param fromPool The source pool.
      * @param toAccount The recipient of the trade.
      * @param toAsset The asset which was purchased with _fromAsset
      * @param units The number of units sent from the other chain.
      * @param toAmount The number of tokens provided to toAccount
+     * @param fromAmount The amount spent to get units on the source side.
+     * @param fromAsset The provided asset on the source side.
+     * @param sourceBlockNumberMod The source block number mod 2**32 - 1
      */
     event ReceiveAsset(
         bytes32 channelId,
@@ -59,7 +65,10 @@ interface ICatalystV1PoolEvents {
         address toAsset,
         uint256 units,
         uint256 toAmount,
-        uint256 sourceBlockNumberMod
+        uint256 fromAmount,
+        bytes fromAsset,
+        uint32 sourceBlockNumberMod
+
     );
 
     /**
@@ -84,6 +93,8 @@ interface ICatalystV1PoolEvents {
      * @param toAccount The recipient of the liquidity.
      * @param units The number of liquidity units sent from the other chain.
      * @param toAmount The number of pool tokens provided to toAccount
+     * @param fromAmount The amount spent to get units on the source side.
+     * @param sourceBlockNumberMod The source block number mod 2**32 - 1
      */
     event ReceiveLiquidity(
         bytes32 channelId,
@@ -91,6 +102,7 @@ interface ICatalystV1PoolEvents {
         address toAccount,
         uint256 units,
         uint256 toAmount,
+        uint256 fromAmount,
         uint256 sourceBlockNumberMod
     );
 
