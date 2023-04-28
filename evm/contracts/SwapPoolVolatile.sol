@@ -483,7 +483,8 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon {
         // Fetch wsum.
         uint256 wsum = _maxUnitCapacity / FixedPointMathLib.LN2;
 
-        // _calcPriceCurveLimitShare returns < 1 multiplied by FixedPointMathLib.WAD.
+        // Compute the number of pool tokens minted to the user. Notice that _calcPriceCurveLimitShare > 1 thus more
+        // than the totalSupply can be minted given sufficiently large U.
         uint256 poolTokens = FixedPointMathLib.mulWadDown(initialTotalSupply, _calcPriceCurveLimitShare(U, wsum));
 
         // Check that the minimum output is honoured.
@@ -863,6 +864,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon {
         // the transaction will timeout and the user gets the input tokens on the sending chain.
         // If this is not desired, wrap further logic in a try - except at dataTarget.
         ICatalystReceiver(dataTarget).onCatalystCall(purchasedTokens, data);
+        // If dataTarget doesn't implement onCatalystCall BUT implements a fallback function, the call will still succeed.
 
         return purchasedTokens;
     }
@@ -887,7 +889,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon {
      * @param toPool The target pool on the target chain encoded in bytes32.
      * @param toAccount The recipient of the transaction on the target chain. Encoded in bytes32.
      * @param poolTokens The number of pool tokens to exchange
-     * @param minOut The minimum number of pool tokens to mint on target pool.
+     * @param minOut An array of minout describing: [the minimum number of pool tokens, the minimum number of reference assets]
      * @param calldata_ Data field if a call should be made on the target chain. 
      * Should be encoded abi.encode(<address>,<data>)
      * @return uint256 The number of units minted.
@@ -897,7 +899,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon {
         bytes32 toPool,
         bytes32 toAccount,
         uint256 poolTokens,
-        uint256 minOut,
+        uint256[2] memory minOut,
         address fallbackUser,
         bytes memory calldata_
     ) nonReentrant public override returns (uint256) {
@@ -979,7 +981,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon {
         bytes32 toPool,
         bytes32 toAccount,
         uint256 poolTokens,
-        uint256 minOut,
+        uint256[2] memory minOut,
         address fallbackUser
     ) external override returns (uint256) {
         bytes memory calldata_ = new bytes(0);
@@ -1005,7 +1007,8 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon {
      * @param fromPool The source pool
      * @param toAccount The recipient of the pool tokens
      * @param U Number of units to convert into pool tokens.
-     * @param minOut Minimum number of tokens to mint. Otherwise: reject.
+     * @param minPoolTokens The minimum number of pool tokens to mint on target pool. Otherwise: Reject
+     * @param minReferenceAsset The minimum number of reference asset the pools tokens are worth. Otherwise: Reject
      * @param swapHash Used to connect 2 swaps within a group. 
      * @return uint256 Number of pool tokens minted to the recipient.
      */
@@ -1014,7 +1017,8 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon {
         bytes32 fromPool,
         address toAccount,
         uint256 U,
-        uint256 minOut,
+        uint256 minPoolTokens,
+        uint256 minReferenceAsset,
         bytes32 swapHash
     ) nonReentrant public override returns (uint256) {
         // The chainInterface is the only valid caller of this function.
@@ -1036,7 +1040,62 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon {
         uint256 poolTokens = FixedPointMathLib.mulWadDown(_calcPriceCurveLimitShare(U, wsum), totalSupply);
 
         // Check if more than the minimum output is returned.
-        if (minOut > poolTokens) revert ReturnInsufficient(poolTokens, minOut);
+        if (minPoolTokens > poolTokens) revert ReturnInsufficient(poolTokens, minPoolTokens);
+        // Then check if the minimum number of reference assets is honoured.
+        if (minReferenceAsset > 0) {
+            // This is done by computing the reference balance through a locally observable method.
+            // The balance0s are a point on the invariant. As such, another way of deriving balance0
+            // is by finding a balance such that \prod balance0 = \prod balance**weight.
+            // First, we need to find the localInvariant: 
+            // \prod balance ** weight 
+            // balance0 = (\prod_i balance_i ** weight_i)**(1/(\sum_j weights_j)).
+            // \prod_l ((\prod_i balance_i ** weight_i)**(1/(\sum_j weights_j))**weight_l) = 
+            // ((\prod_i balance_i ** weight_i)**(1/(\sum_j weights_j))**(\sum_l weight_l)) = 
+            // (\prod_i balance_i ** weight_i)**((\sum_l weight_l))/(\sum_j weights_j)) =
+            // (\prod_i balance_i ** weight_i)**1 = \prod_i balance_i ** weight_i
+            // Thus balance0 is a point on the invariant.
+            // It is computed as: balance0 = exp((\sum (ln(balance_i) * weight_i)/(\sum_j weights_j)).
+            uint256 localInvariant= 0;
+            uint256 sumWeights = 0;
+            // Computes \sum (ln(balance_i) * weight_i
+            for (uint256 it; it < MAX_ASSETS;) {
+                address token = _tokenIndexing[it];
+                if (token == address(0)) break;
+                uint256 weight = _weight[token];
+                unchecked {
+                    // _maxUnitCapacity = sumWeight * ln2, thus this is save. It is just cheaper to recompute
+                    // rather than refetch since we need the weight anyway.
+                    sumWeights += weight;
+                }
+                uint256 balance = ERC20(token).balanceOf(address(this));
+                localInvariant += uint256(FixedPointMathLib.lnWad( // uint256 casting: Since balance*FixedPointMathLib.WAD >= FixedPointMathLib.WAD, lnWad always returns more than 0.
+                    int256(balance*FixedPointMathLib.WAD) // int256 casting: If it overflows and becomes negative, then the ln function fails.
+                )) * weight; 
+
+                unchecked {
+                    it++;
+                }
+            }
+
+            // Compute (\sum (ln(balance_i) * weight_i)/(\sum_j weights_j)
+            unchecked {
+                // sumWeights is not 0.
+                localInvariant = localInvariant / sumWeights;
+            }
+
+            // Compute exp((\sum (ln(balance_i) * weight_i)/(\sum_j weights_j))
+            uint256 referenceAmount = uint256(FixedPointMathLib.expWad( // uint256 casting: expWad cannot be negative.
+                int256(localInvariant) // int256 casting: If this overflows, reference amount is 0 or almost 0. Thus it will never pass line 1076. Thus the casting is safe.
+                // If we actually look at what the calculation here is: (prod balance**weight)**(1/sum weights), we observe that the result should be limited by
+                // max (ERC20(i).balanceOf(address(this))). So it will never overflow.
+            )) / FixedPointMathLib.WAD;
+
+            // Find the fraction of the referenceAmount that the user owns.
+            // Add escrow to ensure that even if all ongoing transaction revert, the user gets their expected amount.
+            // Add pool tokens because they are going to be minted.
+            referenceAmount = (referenceAmount * poolTokens)/(totalSupply + _escrowedPoolTokens + poolTokens);
+            if (minReferenceAsset > referenceAmount) revert ReturnInsufficient(referenceAmount, minReferenceAsset);
+        }
 
         // Mint pool tokens for the user.
         _mint(toAccount, poolTokens);
@@ -1052,7 +1111,8 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon {
         bytes32 fromPool,
         address who,
         uint256 U,
-        uint256 minOut,
+        uint256 minPoolTokens,
+        uint256 minReferenceAsset,
         bytes32 swapHash,
         address dataTarget,
         bytes calldata data
@@ -1062,7 +1122,8 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon {
             fromPool,
             who,
             U,
-            minOut,
+            minPoolTokens,
+            minReferenceAsset,
             swapHash
         );
 
@@ -1071,6 +1132,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon {
         // the transaction will timeout and the user gets the input tokens on the sending chain.
         // If this is not desired, wrap further logic in a try - except at dataTarget.
         ICatalystReceiver(dataTarget).onCatalystCall(purchasedPoolTokens, data);
+        // If dataTarget doesn't implement onCatalystCall BUT implements a fallback function, the call will still succeed.
 
         return purchasedPoolTokens;
     }

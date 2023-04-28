@@ -45,7 +45,7 @@ def test_liquidity_swap(
         convert.to_bytes(pool_2.address.replace("0x", "")),
         convert.to_bytes(berg.address.replace("0x", "")),
         pool1_tokens_swapped,
-        int(estimatedPool2Tokens*9/10),
+        [int(estimatedPool2Tokens*9/10), 0],
         berg,
         {"from": berg}
     )
