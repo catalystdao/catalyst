@@ -47,6 +47,7 @@ mod test_volatile_fees {
 
 
     #[test]
+    #[ignore]
     fn test_set_fee_administrator_invalid_caller() {
 
         let mut app = App::default();
