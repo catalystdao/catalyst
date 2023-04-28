@@ -651,6 +651,7 @@ pub fn send_asset(
         .add_attribute("from_asset", from_asset)
         .add_attribute("to_asset_index", to_asset_index.to_string())
         .add_attribute("from_amount", amount)
+        .add_attribute("fee", pool_fee)                     //TODO review once implemented on EVM
         .add_attribute("units", u.to_string())
         .add_attribute("min_out", min_out.to_string())      //TODO review string format
         .add_attribute("swap_hash", format!("{:?}", send_asset_hash))
