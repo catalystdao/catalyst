@@ -16,7 +16,7 @@ use swap_pool_common::{
     ContractError, msg::{CalcSendAssetResponse, CalcReceiveAssetResponse, CalcLocalSwapResponse, GetLimitCapacityResponse}
 };
 
-use catalyst_ibc_interface::msg::{ExecuteMsg as InterfaceExecuteMsg, AssetSwapMetadata, LiquiditySwapMetadata};
+use catalyst_ibc_interface::msg::ExecuteMsg as InterfaceExecuteMsg;
 
 use crate::{calculation_helpers::{calc_price_curve_area, calc_price_curve_limit, calc_combined_price_curves, calc_price_curve_limit_share}, msg::{TargetWeightsResponse, WeightsUpdateFinishTimestampResponse}};
 
@@ -618,12 +618,9 @@ pub fn send_asset(
         to_asset_index,
         u,
         min_out,
-        metadata: AssetSwapMetadata {
-            from_amount: amount,
-            from_asset: from_asset.clone(),
-            swap_hash: send_asset_hash.clone(),
-            block_number
-        },
+        from_amount: amount,
+        from_asset: from_asset.clone(),
+        block_number,
         calldata
     };
     let chain_interface = CHAIN_INTERFACE.load(deps.storage)?;
@@ -785,11 +782,8 @@ pub fn send_liquidity(
         to_account: to_account.clone(),
         u,
         min_out,
-        metadata: LiquiditySwapMetadata {
-            from_amount: amount,
-            swap_hash: send_liquidity_hash.clone(),
-            block_number
-        },
+        from_amount: amount,
+        block_number,
         calldata
     };
     let chain_interface = CHAIN_INTERFACE.load(deps.storage)?;

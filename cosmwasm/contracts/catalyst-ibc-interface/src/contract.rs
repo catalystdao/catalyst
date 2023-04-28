@@ -1,12 +1,12 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, IbcMsg, to_binary, IbcQuery, PortIdResponse, Order};
+use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, IbcMsg, to_binary, IbcQuery, PortIdResponse, Order, Uint128};
 use cw2::set_contract_version;
 use ethnum::U256;
 
 use crate::catalyst_ibc_payload::{CatalystV1SendAssetPayload, SendAssetVariablePayload, CatalystV1SendLiquidityPayload, SendLiquidityVariablePayload};
 use crate::error::ContractError;
-use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg, AssetSwapMetadata, LiquiditySwapMetadata, PortResponse, ListChannelsResponse};
+use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg, PortResponse, ListChannelsResponse};
 use crate::state::OPEN_CHANNELS;
 
 // version info for migration info
@@ -50,7 +50,9 @@ pub fn execute(
             to_asset_index,
             u,
             min_out,
-            metadata,
+            from_amount,
+            from_asset,
+            block_number,
             calldata
         } => execute_send_cross_chain_asset(
             env,
@@ -61,7 +63,9 @@ pub fn execute(
             to_asset_index,
             u,
             min_out,
-            metadata,
+            from_amount,
+            from_asset,
+            block_number,
             calldata
         ),
 
@@ -71,7 +75,8 @@ pub fn execute(
             to_account,
             u,
             min_out,
-            metadata,
+            from_amount,
+            block_number,
             calldata
         } => execute_send_cross_chain_liquidity(
             env,
@@ -81,7 +86,8 @@ pub fn execute(
             to_account,
             u,
             min_out,
-            metadata,
+            from_amount,
+            block_number,
             calldata
         )
 
@@ -97,7 +103,9 @@ fn execute_send_cross_chain_asset(
     to_asset_index: u8,
     u: U256,
     min_out: U256,
-    metadata: AssetSwapMetadata,    //TODO do we want this?
+    from_amount: Uint128,
+    from_asset: String,
+    block_number: u32,
     calldata: Vec<u8>
 ) -> Result<Response, ContractError> {
 
@@ -110,9 +118,9 @@ fn execute_send_cross_chain_asset(
         variable_payload: SendAssetVariablePayload {
             to_asset_index,
             min_out,
-            from_amount: U256::from(metadata.from_amount.u128()),
-            from_asset: metadata.from_asset.as_bytes(),
-            block_number: metadata.block_number,
+            from_amount: U256::from(from_amount.u128()),
+            from_asset: from_asset.as_bytes(),
+            block_number,
             calldata,
         },
     };
@@ -138,7 +146,8 @@ fn execute_send_cross_chain_liquidity(
     to_account: Vec<u8>,
     u: U256,
     min_out: U256,
-    metadata: LiquiditySwapMetadata,    //TODO do we want this?
+    from_amount: Uint128,
+    block_number: u32,
     calldata: Vec<u8>
 ) -> Result<Response, ContractError> {
 
@@ -150,8 +159,8 @@ fn execute_send_cross_chain_liquidity(
         u,
         variable_payload: SendLiquidityVariablePayload {
             min_out,
-            from_amount: U256::from(metadata.from_amount.u128()),
-            block_number: metadata.block_number,
+            from_amount: U256::from(from_amount.u128()),
+            block_number,
             calldata,
         },
     };
@@ -249,12 +258,9 @@ mod catalyst_ibc_interface_tests {
             min_out: min_out.unwrap_or(
                 uint!("323476719582585693194107115743132847255")                                                // Some large Uint128 number (as U256)
             ),
-            metadata: AssetSwapMetadata {
-                from_amount: Uint128::from(4920222095670429824873974121747892731u128),                          // Some large Uint128 number
-                from_asset: "from_asset".to_string(),
-                swap_hash: b"1aefweftegnedtwdwaagwwetgajyrgwd".to_vec(),
-                block_number: 1356u32
-            },
+            from_amount: Uint128::from(4920222095670429824873974121747892731u128),                          // Some large Uint128 number
+            from_asset: "from_asset".to_string(),
+            block_number: 1356u32,
             calldata: vec![]
         }
     }
@@ -312,11 +318,8 @@ mod catalyst_ibc_interface_tests {
             min_out: min_out.unwrap_or(
                 uint!("323476719582585693194107115743132847255")                                                // Some large Uint128 number (as U256)
             ),
-            metadata: LiquiditySwapMetadata {
-                from_amount: Uint128::from(4920222095670429824873974121747892731u128),                          // Some large Uint128 number
-                swap_hash: b"1aefweftegnedtwdwaagwwetgajyrgwd".to_vec(),
-                block_number: 1356u32
-            },
+            from_amount: Uint128::from(4920222095670429824873974121747892731u128),                          // Some large Uint128 number
+            block_number: 1356u32,
             calldata: vec![]
         }
     }
@@ -360,7 +363,7 @@ mod catalyst_ibc_interface_tests {
     fn build_payload(
         from_pool: &[u8],
         msg: &ExecuteMsg,
-        from_amount: Option<U256>    // Allow to override the msg 'from_amount' to provide invalid configs
+        override_from_amount: Option<U256>    // Allow to override the msg 'from_amount' to provide invalid configs
     ) -> Result<Vec<u8>, ContractError> {
         let packet = match msg {
             ExecuteMsg::SendCrossChainAsset {
@@ -370,7 +373,9 @@ mod catalyst_ibc_interface_tests {
                 to_asset_index,
                 u,
                 min_out,
-                metadata,
+                from_amount,
+                from_asset,
+                block_number,
                 calldata
             } => CatalystV1Packet::SendAsset(
                 CatalystV1SendAssetPayload {
@@ -381,9 +386,9 @@ mod catalyst_ibc_interface_tests {
                     variable_payload: SendAssetVariablePayload {
                         to_asset_index: *to_asset_index,
                         min_out: *min_out,
-                        from_amount: from_amount.unwrap_or(U256::from(metadata.from_amount.u128())),
-                        from_asset: metadata.from_asset.as_bytes(),
-                        block_number: metadata.block_number,
+                        from_amount: override_from_amount.unwrap_or(U256::from(from_amount.u128())),
+                        from_asset: from_asset.as_bytes(),
+                        block_number: *block_number,
                         calldata: calldata.clone()
                     },
                 }
@@ -394,7 +399,8 @@ mod catalyst_ibc_interface_tests {
                 to_account,
                 u,
                 min_out,
-                metadata,
+                from_amount,
+                block_number,
                 calldata
             } => CatalystV1Packet::SendLiquidity(
                 CatalystV1SendLiquidityPayload {
@@ -404,8 +410,8 @@ mod catalyst_ibc_interface_tests {
                     u: *u,
                     variable_payload: SendLiquidityVariablePayload {
                         min_out: *min_out,
-                        from_amount: from_amount.unwrap_or(U256::from(metadata.from_amount.u128())),
-                        block_number: metadata.block_number,
+                        from_amount: override_from_amount.unwrap_or(U256::from(from_amount.u128())),
+                        block_number: *block_number,
                         calldata: calldata.clone()
                     },
                 }

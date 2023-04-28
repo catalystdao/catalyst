@@ -20,21 +20,6 @@ pub struct InstantiateMsg {
 
 
 #[cw_serde]
-pub struct AssetSwapMetadata{
-    pub from_amount: Uint128,
-    pub from_asset: String,
-    pub swap_hash: Vec<u8>,
-    pub block_number: u32
-}
-
-#[cw_serde]
-pub struct LiquiditySwapMetadata{
-    pub from_amount: Uint128,
-    pub swap_hash: Vec<u8>,
-    pub block_number: u32
-}
-
-#[cw_serde]
 pub enum ExecuteMsg {
 
     SendCrossChainAsset {
@@ -46,7 +31,9 @@ pub enum ExecuteMsg {
         u: U256,
         #[serde(with = "U256Def")]
         min_out: U256,
-        metadata: AssetSwapMetadata,        //TODO do we want this?
+        from_amount: Uint128,
+        from_asset: String,
+        block_number: u32,
         calldata: Vec<u8>
     },
 
@@ -58,7 +45,8 @@ pub enum ExecuteMsg {
         u: U256,
         #[serde(with = "U256Def")]
         min_out: U256,
-        metadata: LiquiditySwapMetadata,    //TODO do we want this?
+        from_amount: Uint128,
+        block_number: u32,
         calldata: Vec<u8>
     }
 
