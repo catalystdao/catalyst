@@ -208,7 +208,7 @@ fn on_packet_receive(
 
     let data = packet.data.to_vec();
 
-    let catalyst_packet = CatalystV1Packet::try_decode(&data)?;
+    let catalyst_packet = CatalystV1Packet::try_decode(data)?;
 
     // Match payload type and build up the execute message
     let receive_asset_execute_msg: cosmwasm_std::WasmMsg = match catalyst_packet {
@@ -271,7 +271,7 @@ fn on_packet_response(
 
     let data = packet.data.to_vec();
 
-    let catalyst_packet = CatalystV1Packet::try_decode(&data)?;
+    let catalyst_packet = CatalystV1Packet::try_decode(data)?;
     
     // Build the sendAsset/sendLiquidity ack response message
     let receive_asset_execute_msg: cosmwasm_std::WasmMsg = match catalyst_packet {

@@ -111,15 +111,15 @@ fn execute_send_cross_chain_asset(
 
     // Build payload
     let payload = CatalystV1SendAssetPayload {
-        from_pool: info.sender.as_bytes(),
-        to_pool: to_pool.as_slice(),
-        to_account: to_account.as_slice(),
+        from_pool: info.sender.as_bytes().to_vec(),
+        to_pool,
+        to_account,
         u,
         variable_payload: SendAssetVariablePayload {
             to_asset_index,
             min_out,
             from_amount: U256::from(from_amount.u128()),
-            from_asset: from_asset.as_bytes(),
+            from_asset: from_asset.as_bytes().to_vec(),
             block_number,
             calldata,
         },
@@ -153,9 +153,9 @@ fn execute_send_cross_chain_liquidity(
 
     // Build payload
     let payload = CatalystV1SendLiquidityPayload {
-        from_pool: info.sender.as_bytes(),
-        to_pool: to_pool.as_slice(),
-        to_account: to_account.as_slice(),
+        from_pool: info.sender.as_bytes().to_vec(),
+        to_pool,
+        to_account,
         u,
         variable_payload: SendLiquidityVariablePayload {
             min_out,
@@ -227,7 +227,7 @@ mod catalyst_ibc_interface_tests {
         from_amount: Option<U256>    // Allow to override the send_msg from_amount to provide invalid configs
     ) -> IbcPacket {
         IbcPacket::new(
-            Binary::from(build_payload(from_pool.as_bytes(), &send_msg, from_amount).unwrap()),
+            Binary::from(build_payload(from_pool.as_bytes(), send_msg, from_amount).unwrap()),
             IbcEndpoint {
                 port_id: TEST_REMOTE_PORT.to_string(),
                 channel_id: format!("{}-remote", channel_id),
@@ -362,7 +362,7 @@ mod catalyst_ibc_interface_tests {
     // TODO move into struct implementation?
     fn build_payload(
         from_pool: &[u8],
-        msg: &ExecuteMsg,
+        msg: ExecuteMsg,
         override_from_amount: Option<U256>    // Allow to override the msg 'from_amount' to provide invalid configs
     ) -> Result<Vec<u8>, ContractError> {
         let packet = match msg {
@@ -379,17 +379,17 @@ mod catalyst_ibc_interface_tests {
                 calldata
             } => CatalystV1Packet::SendAsset(
                 CatalystV1SendAssetPayload {
-                    from_pool,
-                    to_pool: to_pool.as_slice(),
-                    to_account: to_account.as_slice(),
-                    u: *u,
+                    from_pool: from_pool.to_vec(),
+                    to_pool,
+                    to_account,
+                    u,
                     variable_payload: SendAssetVariablePayload {
-                        to_asset_index: *to_asset_index,
-                        min_out: *min_out,
+                        to_asset_index,
+                        min_out,
                         from_amount: override_from_amount.unwrap_or(U256::from(from_amount.u128())),
-                        from_asset: from_asset.as_bytes(),
-                        block_number: *block_number,
-                        calldata: calldata.clone()
+                        from_asset: from_asset.as_bytes().to_vec(),
+                        block_number,
+                        calldata
                     },
                 }
             ),
@@ -404,15 +404,15 @@ mod catalyst_ibc_interface_tests {
                 calldata
             } => CatalystV1Packet::SendLiquidity(
                 CatalystV1SendLiquidityPayload {
-                    from_pool,
-                    to_pool: to_pool.as_slice(),
-                    to_account: to_account.as_slice(),
-                    u: *u,
+                    from_pool: from_pool.to_vec(),
+                    to_pool,
+                    to_account,
+                    u,
                     variable_payload: SendLiquidityVariablePayload {
-                        min_out: *min_out,
+                        min_out,
                         from_amount: override_from_amount.unwrap_or(U256::from(from_amount.u128())),
-                        block_number: *block_number,
-                        calldata: calldata.clone()
+                        block_number,
+                        calldata
                     },
                 }
             )
@@ -654,7 +654,7 @@ mod catalyst_ibc_interface_tests {
             &response.messages[0],
             &SubMsg::new(IbcMsg::SendPacket {
                 channel_id: channel_id.to_string(),
-                data: build_payload(from_pool.as_bytes(), &execute_msg, None).unwrap().into(),
+                data: build_payload(from_pool.as_bytes(), execute_msg, None).unwrap().into(),
                 timeout: IbcTimeout::with_timestamp(mock_env().block.time.plus_seconds(TRANSACTION_TIMEOUT))
             })
         );
@@ -1045,7 +1045,7 @@ mod catalyst_ibc_interface_tests {
             &response.messages[0],
             &SubMsg::new(IbcMsg::SendPacket {
                 channel_id: channel_id.to_string(),
-                data: build_payload(from_pool.as_bytes(), &execute_msg, None).unwrap().into(),
+                data: build_payload(from_pool.as_bytes(), execute_msg, None).unwrap().into(),
                 timeout: IbcTimeout::with_timestamp(mock_env().block.time.plus_seconds(TRANSACTION_TIMEOUT))
             })
         );
