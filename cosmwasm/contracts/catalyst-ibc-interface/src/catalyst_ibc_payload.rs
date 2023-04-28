@@ -18,13 +18,11 @@
 //       + FROM_ASSET_LENGTH  (1 byte)
 //       + FROM_ASSET         (FROM_ASSET_LENGTH bytes)
 //       + BLOCK_NUMBER       (4 bytes)
-//       + SWAP_HASH          (32 bytes)
 //
 //    CTX1 - 0x01 - Liquidity Swap Payload
 //       + MIN_OUT            (32 bytes)
 //       + FROM_AMOUNT        (32 bytes)
 //       + BLOCK_NUMBER       (4 bytes)
-//       + SWAP_HASH          (32 bytes)
 //
 // Common Payload (end)
 //    + DATA_LENGTH           (2 bytes)
@@ -78,13 +76,10 @@ pub const CTX0_FROM_ASSET_START      : usize = 102;
 pub const CTX0_BLOCK_NUMBER_START    : usize = 102;
 pub const CTX0_BLOCK_NUMBER_END      : usize = 106;
 
-pub const CTX0_SWAP_HASH_START       : usize = 106;
-pub const CTX0_SWAP_HASH_END         : usize = 138;
+pub const CTX0_DATA_LENGTH_START     : usize = 106;
+pub const CTX0_DATA_LENGTH_END       : usize = 108;
 
-pub const CTX0_DATA_LENGTH_START     : usize = 138;
-pub const CTX0_DATA_LENGTH_END       : usize = 140;
-
-pub const CTX0_DATA_START            : usize = 140;
+pub const CTX0_DATA_START            : usize = 108;
 
 
 
@@ -99,13 +94,10 @@ pub const CTX1_FROM_AMOUNT_END       : usize = 100;
 pub const CTX1_BLOCK_NUMBER_START    : usize = 100;
 pub const CTX1_BLOCK_NUMBER_END      : usize = 104;
 
-pub const CTX1_SWAP_HASH_START       : usize = 104;
-pub const CTX1_SWAP_HASH_END         : usize = 136;
+pub const CTX1_DATA_LENGTH_START     : usize = 104;
+pub const CTX1_DATA_LENGTH_END       : usize = 106;
 
-pub const CTX1_DATA_LENGTH_START     : usize = 136;
-pub const CTX1_DATA_LENGTH_END       : usize = 138;
-
-pub const CTX1_DATA_START            : usize = 138;
+pub const CTX1_DATA_START            : usize = 106;
 
 
 
@@ -364,7 +356,6 @@ pub struct SendAssetVariablePayload<'a> {
     pub from_amount: U256,
     pub from_asset: &'a [u8],
     pub block_number: u32,
-    pub swap_hash: Vec<u8>,
     pub calldata: Vec<u8>
 }
 
@@ -399,12 +390,6 @@ impl<'a> CatalystV1VariablePayload<'a> for SendAssetVariablePayload<'a> {
     
         // Block number
         buffer.extend_from_slice(&self.block_number.to_be_bytes());
-    
-        // Swap hash
-        if self.swap_hash.len() != 32 {
-            return Err(ContractError::PayloadEncodingError {});
-        }
-        buffer.extend_from_slice(&self.swap_hash);
     
         // Calldata
         let calldata_length: u16 = self.calldata.len().try_into().map_err(|_| ContractError::PayloadEncodingError {})?;    // Cast length into u16 catching overflow
@@ -458,11 +443,6 @@ impl<'a> CatalystV1VariablePayload<'a> for SendAssetVariablePayload<'a> {
             )?.try_into().unwrap()                          // If 'CTX0_BLOCK_NUMBER_START' and 'CTX0_BLOCK_NUMBER_END' are 4 bytes apart, this should never panic //TODO overhaul
         );
 
-        // Swap hash
-        let swap_hash = buffer.get(
-            CTX0_SWAP_HASH_START + offset .. CTX0_SWAP_HASH_END + offset
-        ).ok_or(ContractError::PayloadDecodingError {})?.to_vec();
-
         // Calldata
         let calldata_length: usize = u16::from_be_bytes(
             buffer.get(
@@ -482,7 +462,6 @@ impl<'a> CatalystV1VariablePayload<'a> for SendAssetVariablePayload<'a> {
             min_out,
             from_amount,
             from_asset,
-            swap_hash,
             block_number,
             calldata
         })
@@ -536,7 +515,6 @@ pub struct SendLiquidityVariablePayload {
     pub min_out: U256,
     pub from_amount: U256,
     pub block_number: u32,
-    pub swap_hash: Vec<u8>,
     pub calldata: Vec<u8>
 }
 
@@ -561,12 +539,6 @@ impl CatalystV1VariablePayload<'_> for SendLiquidityVariablePayload {
     
         // Block number
         buffer.extend_from_slice(&self.block_number.to_be_bytes());
-    
-        // Swap hash
-        if self.swap_hash.len() != 32 {
-            return Err(ContractError::PayloadEncodingError {});
-        }
-        buffer.extend_from_slice(&self.swap_hash);
     
         // Calldata
         let calldata_length: u16 = self.calldata.len().try_into().map_err(|_| ContractError::PayloadEncodingError {})?;    // Cast length into u16 catching overflow
@@ -605,11 +577,6 @@ impl CatalystV1VariablePayload<'_> for SendLiquidityVariablePayload {
             )?.try_into().unwrap()                          // If 'CTX1_BLOCK_NUMBER_START' and 'CTX1_BLOCK_NUMBER_END' are 4 bytes apart, this should never panic //TODO overhaul
         );
 
-        // Swap hash
-        let swap_hash = buffer.get(
-            CTX1_SWAP_HASH_START + offset .. CTX1_SWAP_HASH_END + offset
-        ).ok_or(ContractError::PayloadDecodingError {})?.to_vec();
-
         // Calldata
         let calldata_length: usize = u16::from_be_bytes(
             buffer.get(
@@ -627,7 +594,6 @@ impl CatalystV1VariablePayload<'_> for SendLiquidityVariablePayload {
         Ok(SendLiquidityVariablePayload {
             min_out,
             from_amount,
-            swap_hash,
             block_number,
             calldata
         })

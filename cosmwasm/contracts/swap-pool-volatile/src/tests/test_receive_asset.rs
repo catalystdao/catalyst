@@ -55,7 +55,6 @@ mod test_volatile_receive_asset {
                 to_account: SWAPPER_B.to_string(),
                 u: swap_units,
                 min_out: Uint128::zero(),
-                swap_hash: b"1aefweftegnedtwdwaagwwetgajyrgwd".to_vec(),
                 calldata: vec![]
             },
             &[]
@@ -139,7 +138,6 @@ mod test_volatile_receive_asset {
                 to_account: SWAPPER_B.to_string(),
                 u: swap_units,
                 min_out: Uint128::zero(),
-                swap_hash: b"1aefweftegnedtwdwaagwwetgajyrgwd".to_vec(),
                 calldata: vec![]
             },
             &[]
@@ -228,7 +226,6 @@ mod test_volatile_receive_asset {
                 to_account: SWAPPER_B.to_string(),
                 u: swap_units,
                 min_out: min_out_invalid,
-                swap_hash: b"1aefweftegnedtwdwaagwwetgajyrgwd".to_vec(),
                 calldata: vec![]
             },
             &[]
@@ -256,7 +253,6 @@ mod test_volatile_receive_asset {
                 to_account: SWAPPER_B.to_string(),
                 u: swap_units,
                 min_out: min_out_valid,
-                swap_hash: b"1aefweftegnedtwdwaagwwetgajyrgwd".to_vec(),
                 calldata: vec![]
             },
             &[]
@@ -301,7 +297,6 @@ mod test_volatile_receive_asset {
                 to_account: SWAPPER_B.to_string(),
                 u: swap_units,
                 min_out: Uint128::zero(),
-                swap_hash: b"1aefweftegnedtwdwaagwwetgajyrgwd".to_vec(),
                 calldata: vec![]
             },
             &[]
@@ -362,7 +357,6 @@ mod test_volatile_receive_asset {
                 to_account: SWAPPER_B.to_string(),
                 u: swap_units,
                 min_out: Uint128::zero(),
-                swap_hash: b"1aefweftegnedtwdwaagwwetgajyrgwd".to_vec(),
                 calldata: vec![]
             },
             &[]
@@ -422,7 +416,6 @@ mod test_volatile_receive_asset {
                 to_account: SWAPPER_B.to_string(),
                 u: swap_units,
                 min_out: Uint128::zero(),
-                swap_hash: b"1aefweftegnedtwdwaagwwetgajyrgwd".to_vec(),
                 calldata: vec![]
             },
             &[]

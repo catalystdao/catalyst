@@ -259,7 +259,6 @@ pub fn execute(
             to_account,
             u,
             min_out,
-            swap_hash,
             calldata
         } => receive_asset(
             &mut deps,
@@ -271,7 +270,6 @@ pub fn execute(
             to_account,
             u,
             min_out,
-            swap_hash,
             calldata
         ),
 
@@ -302,7 +300,6 @@ pub fn execute(
             to_account,
             u,
             min_out,
-            swap_hash,
             calldata
         } => receive_liquidity(
             &mut deps,
@@ -313,7 +310,6 @@ pub fn execute(
             to_account,
             u,
             min_out,
-            swap_hash,
             calldata
         ),
 

@@ -224,7 +224,6 @@ fn on_packet_receive(
                     to_account: payload.to_account(deps.as_ref())?.into_string(),   // Validate to_account
                     u: payload.u,
                     min_out: payload.variable_payload.min_out()?,                   // Convert min_out into Uint128
-                    swap_hash: payload.variable_payload.swap_hash.to_vec(),
                     calldata: payload.variable_payload.calldata
                 })?,
                 funds: vec![]
@@ -242,7 +241,6 @@ fn on_packet_receive(
                     to_account: payload.to_account(deps.as_ref())?.into_string(),   // Validate to_account
                     u: payload.u,
                     min_out: payload.variable_payload.min_out()?,                   // Convert min_out into Uint128
-                    swap_hash: payload.variable_payload.swap_hash.to_vec(),
                     calldata: payload.variable_payload.calldata
                 })?,
                 funds: vec![]

@@ -654,7 +654,6 @@ pub fn send_asset(
         .add_attribute("fee", pool_fee)                     //TODO review once implemented on EVM
         .add_attribute("units", u.to_string())
         .add_attribute("min_out", min_out.to_string())      //TODO review string format
-        .add_attribute("swap_hash", format!("{:?}", send_asset_hash))
     )
 }
 
@@ -668,7 +667,6 @@ pub fn receive_asset(
     to_account: String,
     u: U256,
     min_out: Uint128,
-    swap_hash: Vec<u8>,
     _calldata: Vec<u8>   //TODO calldata
 ) -> Result<Response, ContractError> {
 
@@ -717,7 +715,6 @@ pub fn receive_asset(
         .add_attribute("to_asset", to_asset)
         .add_attribute("units", u.to_string())  //TODO format of .to_string()?
         .add_attribute("to_amount", out)
-        .add_attribute("swap_hash", format!("{:x?}", swap_hash))    // TODO overhaul
     )
 }
 
@@ -811,7 +808,6 @@ pub fn send_liquidity(
         .add_attribute("to_account", format!("{:x?}", to_account))
         .add_attribute("from_amount", amount)
         .add_attribute("units", u.to_string())
-        .add_attribute("swap_hash", format!("{:?}", send_liquidity_hash))
     )
 }
 
@@ -824,7 +820,6 @@ pub fn receive_liquidity(
     to_account: String,
     u: U256,
     min_out: Uint128,
-    swap_hash: Vec<u8>,
     _calldata: Vec<u8>   //TODO calldata
 ) -> Result<Response, ContractError> {
 
@@ -879,7 +874,6 @@ pub fn receive_liquidity(
         .add_attribute("to_account", to_account)
         .add_attribute("units", u.to_string())  //TODO format of .to_string()?
         .add_attribute("to_amount", out)
-        .add_attribute("swap_hash", format!("{:x?}", swap_hash))    // TODO overhaul
         .add_events(mint_response.events)       //TODO overhaul
     )
 }

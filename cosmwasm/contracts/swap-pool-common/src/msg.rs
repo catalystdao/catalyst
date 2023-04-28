@@ -134,7 +134,6 @@ pub enum ExecuteMsg<T> {
         #[serde(with = "U256Def")]
         u: U256,
         min_out: Uint128,
-        swap_hash: Vec<u8>,
         calldata: Vec<u8>
     },
 
@@ -156,7 +155,6 @@ pub enum ExecuteMsg<T> {
         #[serde(with = "U256Def")]
         u: U256,
         min_out: Uint128,
-        swap_hash: Vec<u8>,
         calldata: Vec<u8>
     },
 
