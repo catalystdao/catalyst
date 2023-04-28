@@ -873,7 +873,7 @@ pub fn query_total_escrowed_liquidity(deps: Deps) -> StdResult<TotalEscrowedLiqu
 pub fn query_asset_escrow(deps: Deps, hash: Vec<u8>) -> StdResult<AssetEscrowResponse> {
     Ok(
         AssetEscrowResponse {
-            fallback_account: ASSET_ESCROWS.load(deps.storage, hash)?
+            fallback_account: ASSET_ESCROWS.may_load(deps.storage, hash)?
         }
     )
 }
@@ -881,7 +881,7 @@ pub fn query_asset_escrow(deps: Deps, hash: Vec<u8>) -> StdResult<AssetEscrowRes
 pub fn query_liquidity_escrow(deps: Deps, hash: Vec<u8>) -> StdResult<LiquidityEscrowResponse> {
     Ok(
         LiquidityEscrowResponse {
-            fallback_account: LIQUIDITY_ESCROWS.load(deps.storage, hash)?
+            fallback_account: LIQUIDITY_ESCROWS.may_load(deps.storage, hash)?
         }
     )
 }

@@ -120,7 +120,7 @@ mod test_volatile_send_liquidity {
 
         assert_eq!(
             queried_fallback_account,
-            Addr::unchecked(SWAPPER_C)
+            Some(Addr::unchecked(SWAPPER_C))
         );
         
 
