@@ -1,5 +1,8 @@
-// Catalyst IBC payload structure ***********************************************************************************************
-//
+
+// ******************************************************************************************************************************
+// Catalyst IBC payload structure
+// ******************************************************************************************************************************
+
 // Common Payload (beginning)
 //    CONTEXT                   0   (1 byte)
 //    + FROM_POOL               1   (65 bytes)
@@ -91,23 +94,22 @@ pub const CTX1_DATA_START            : usize = 298;
 
 
 
-// Helpers **********************************************************************************************************************
+
+
+// ******************************************************************************************************************************
+// Payload Helpers
+// ******************************************************************************************************************************
 use cosmwasm_std::{Deps, Addr, Uint128};
 use ethnum::U256;
 use crate::ContractError;
 
-pub trait CatalystV1VariablePayload: Sized {
 
-    fn context() -> u8;
+// Catalyst Packet **************************************************************************************************************
 
-    fn size(&self) -> usize;
+pub type CatalystV1SendAssetPayload = CatalystV1Payload<SendAssetVariablePayload>;
+pub type CatalystV1SendLiquidityPayload = CatalystV1Payload<SendLiquidityVariablePayload>;
 
-    fn try_encode(&self, buffer: &mut Vec<u8>) -> Result<(), ContractError>;
-
-    fn try_decode(buffer: Vec<u8>) -> Result<Self, ContractError>;
-
-}
-
+// The CatalystV1Packet enum describes the different structures the Catalyst payload may take
 pub enum CatalystV1Packet {
     SendAsset(CatalystV1SendAssetPayload),
     SendLiquidity(CatalystV1SendLiquidityPayload)
@@ -147,8 +149,13 @@ impl CatalystV1Packet {
     }
 }
 
-pub type CatalystV1SendAssetPayload = CatalystV1Payload<SendAssetVariablePayload>;
-pub type CatalystV1SendLiquidityPayload = CatalystV1Payload<SendLiquidityVariablePayload>;
+
+
+// Catalyst payload *************************************************************************************************************
+
+// The CatalystV1Payload struct is used to encode/decode a Catalyst payload. It itself encodes/decodes the common part of the
+// Catalyst payload, and uses a generic `variable_payload` to encode/decode the variable part of the payload.
+
 
 pub struct CatalystV1Payload<T: CatalystV1VariablePayload> {
     pub from_pool: Vec<u8>,
@@ -317,6 +324,22 @@ impl<T: CatalystV1VariablePayload> CatalystV1Payload<T> {
 }
 
 
+
+// Variable Payloads ************************************************************************************************************
+pub trait CatalystV1VariablePayload: Sized {
+
+    fn context() -> u8;
+
+    fn size(&self) -> usize;
+
+    fn try_encode(&self, buffer: &mut Vec<u8>) -> Result<(), ContractError>;
+
+    fn try_decode(buffer: Vec<u8>) -> Result<Self, ContractError>;
+
+}
+
+
+// Send asset payload
 pub struct SendAssetVariablePayload {
     pub to_asset_index: u8,
     pub min_out: U256,
@@ -324,6 +347,46 @@ pub struct SendAssetVariablePayload {
     pub from_asset: Vec<u8>,
     pub block_number: u32,
     pub calldata: Vec<u8>
+}
+
+impl SendAssetVariablePayload {
+
+    pub fn from_asset_unsafe_string(
+        &self
+    ) -> Result<String, ContractError> {
+        
+        String::from_utf8(
+            self.from_asset.to_vec()
+        ).map_err(|_| ContractError::PayloadDecodingError {})
+
+    }
+
+    pub fn min_out(
+        &self
+    ) -> Result<Uint128, ContractError> {
+
+        let min_out = self.min_out;
+        // For CosmWasm pools, min_out should be Uint128
+        if min_out > U256::from(Uint128::MAX.u128()) {             //TODO overhaul - more efficient way to do this?
+            return Err(ContractError::PayloadDecodingError {});
+        }
+        Ok(Uint128::from(min_out.as_u128()))
+
+    }
+
+    pub fn from_amount(
+        &self
+    ) -> Result<Uint128, ContractError> {
+
+        let from_amount = self.from_amount;
+        // For CosmWasm pools, from_amount should be Uint128
+        if from_amount > U256::from(Uint128::MAX.u128()) {             //TODO overhaul - more efficient way to do this?
+            return Err(ContractError::PayloadDecodingError {});
+        }
+        Ok(Uint128::from(from_amount.as_u128()))
+
+    }
+
 }
 
 impl CatalystV1VariablePayload for SendAssetVariablePayload {
@@ -429,17 +492,16 @@ impl CatalystV1VariablePayload for SendAssetVariablePayload {
 
 }
 
-impl SendAssetVariablePayload {
 
-    pub fn from_asset_unsafe_string(
-        &self
-    ) -> Result<String, ContractError> {
-        
-        String::from_utf8(
-            self.from_asset.to_vec()
-        ).map_err(|_| ContractError::PayloadDecodingError {})
+// Send liquidity payload
+pub struct SendLiquidityVariablePayload {
+    pub min_out: U256,
+    pub from_amount: U256,
+    pub block_number: u32,
+    pub calldata: Vec<u8>
+}
 
-    }
+impl SendLiquidityVariablePayload {
 
     pub fn min_out(
         &self
@@ -467,14 +529,6 @@ impl SendAssetVariablePayload {
 
     }
 
-}
-
-
-pub struct SendLiquidityVariablePayload {
-    pub min_out: U256,
-    pub from_amount: U256,
-    pub block_number: u32,
-    pub calldata: Vec<u8>
 }
 
 impl CatalystV1VariablePayload for SendLiquidityVariablePayload {
@@ -560,36 +614,10 @@ impl CatalystV1VariablePayload for SendLiquidityVariablePayload {
     }
 }
 
-impl SendLiquidityVariablePayload {
 
-    pub fn min_out(
-        &self
-    ) -> Result<Uint128, ContractError> {
 
-        let min_out = self.min_out;
-        // For CosmWasm pools, min_out should be Uint128
-        if min_out > U256::from(Uint128::MAX.u128()) {             //TODO overhaul - more efficient way to do this?
-            return Err(ContractError::PayloadDecodingError {});
-        }
-        Ok(Uint128::from(min_out.as_u128()))
 
-    }
-
-    pub fn from_amount(
-        &self
-    ) -> Result<Uint128, ContractError> {
-
-        let from_amount = self.from_amount;
-        // For CosmWasm pools, from_amount should be Uint128
-        if from_amount > U256::from(Uint128::MAX.u128()) {             //TODO overhaul - more efficient way to do this?
-            return Err(ContractError::PayloadDecodingError {});
-        }
-        Ok(Uint128::from(from_amount.as_u128()))
-
-    }
-
-}
-
+// Misc helpers *****************************************************************************************************************
 
 fn encode_address(address: &[u8]) -> Result<Vec<u8>, ContractError> {
 
