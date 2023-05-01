@@ -554,10 +554,10 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon {
     /**
      * @notice Burns poolTokens and release a token distribution which can be set by the user.
      * @dev It is advised that the withdrawal matches the pool's %token distribution.
-     * @param poolTokens The number of pool tokens to withdraw
+     * @param poolTokens The number of pool tokens to withdraw.
      * @param withdrawRatio The percentage of units used to withdraw. In the following special scheme: U_a = U · withdrawRatio[0], U_b = (U - U_a) · withdrawRatio[1], U_c = (U - U_a - U_b) · withdrawRatio[2], .... Is WAD.
      * @param minOut The minimum number of tokens withdrawn.
-     * @return uint256[] memory An array containing the amounts withdrawn
+     * @return uint256[] memory An array containing the amounts withdrawn.
      */
     function withdrawMixed(
         uint256 poolTokens,
@@ -677,8 +677,8 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon {
      * @param amount The number of fromAsset to sell to the pool.
      * @param minOut The minimum number of returned tokens to the toAccount on the target chain.
      * @param fallbackUser If the transaction fails, send the escrowed funds to this address
-     * @param calldata_ Data field if a call should be made on the target chain. 
-     * Should be encoded abi.encode(<address>,<data>)
+     * @param calldata_ Data field if a call should be made on the target chain.
+     * Encoding depends on the target chain, with evm being: abi.encode(bytes20(<address>), <data>)
      * @return uint256 The number of units minted.
      */
     function sendAsset(
@@ -795,7 +795,9 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon {
      * @param toAccount The recipient.
      * @param U Number of units to convert into toAsset.
      * @param minOut Minimum number of tokens bought. Reverts if less.
-     * @param blockNumberMod Used to connect 2 swaps within a group. 
+     * @param fromAmount Used to connect swaps cross-chain. The input amount on the sending chain.
+     * @param fromAsset Used to connect swaps cross-chain. The input asset on the sending chain.
+     * @param blockNumberMod Used to connect swaps cross-chain. The block number from the host side.
      */
     function receiveAsset(
         bytes32 channelId,
@@ -893,8 +895,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon {
 
     /**
      * @notice Initiate a cross-chain liquidity swap by withdrawing tokens and converting them to units.
-     * @dev No reentry protection since only trusted contracts are called.
-     * While the description says tokens are withdrawn and then converted to units, pool tokens are converted
+     * @dev While the description says tokens are withdrawn and then converted to units, pool tokens are converted
      * directly into units through the following equation:
      *      U = ln(PT/(PT-pt)) * \sum W_i
      * @param channelId The target chain identifier.
@@ -902,6 +903,7 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon {
      * @param toAccount The recipient of the transaction on the target chain. Encoded in bytes32.
      * @param poolTokens The number of pool tokens to exchange
      * @param minOut An array of minout describing: [the minimum number of pool tokens, the minimum number of reference assets]
+     * @param fallbackUser If the transaction fails, send the escrowed funds to this address
      * @param calldata_ Data field if a call should be made on the target chain. 
      * Should be encoded abi.encode(<address>,<data>)
      * @return uint256 The number of units minted.
@@ -1003,9 +1005,8 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon {
     }
 
     /**
-     * @notice Completes a cross-chain liquidity swap by converting units to tokens and depositing
-     * @dev No reentry protection since only trusted contracts are called.
-     * Called exclusively by the chainInterface.
+     * @notice Completes a cross-chain liquidity swap by converting units to tokens and depositing.
+     * @dev Called exclusively by the chainInterface.
      * While the description says units are converted to tokens and then deposited, units are converted
      * directly to pool tokens through the following equation:
      *      pt = PT · (1 - exp(-U/sum W_i))/exp(-U/sum W_i)
@@ -1015,7 +1016,8 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon {
      * @param U Number of units to convert into pool tokens.
      * @param minPoolTokens The minimum number of pool tokens to mint on target pool. Otherwise: Reject
      * @param minReferenceAsset The minimum number of reference asset the pools tokens are worth. Otherwise: Reject
-     * @param blockNumberMod Used to connect 2 swaps within a group. 
+     * @param fromAmount Used to connect swaps cross-chain. The input amount on the sending chain.
+     * @param blockNumberMod Used to connect swaps cross-chain. The block number from the host side.
      * @return uint256 Number of pool tokens minted to the recipient.
      */
     function receiveLiquidity(

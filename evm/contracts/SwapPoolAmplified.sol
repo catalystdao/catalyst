@@ -1058,20 +1058,16 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
 
     /**
      * @notice Initiate a cross-chain swap by purchasing units and transfer them to another pool.
-     * @dev To encode addresses in bytes32 the functions below can be used:
-     * Vyper: convert(<poolAddress>, bytes32)
-     * Solidity: abi.encode(<poolAddress>)
-     * Brownie: brownie.convert.to_bytes(<poolAddress>, type_str="bytes32")
+     * @dev Addresses are encoded in 64 + 1 bytes. To encode for EVM, encode as:
+     * Solidity: abi.encodePacket(uint8(20), bytes32(0), abi.encode(<poolAddress>))
      * @param channelId The target chain identifier.
-     * @param toPool The target pool on the target chain encoded in bytes32.
-     * @param toAccount The recipient of the transaction on the target chain. Encoded in bytes32.
+     * @param toPool The target pool on the target chain encoded in 64 + 1 bytes.
+     * @param toAccount The recipient of the transaction on the target chain. Encoded in 64 + 1 bytes.
      * @param fromAsset The asset the user wants to sell.
      * @param toAssetIndex The index of the asset the user wants to buy in the target pool.
      * @param amount The number of fromAsset to sell to the pool.
      * @param minOut The minimum number of returned tokens to the toAccount on the target chain.
-     * @param fallbackUser If the transaction fails, send the escrowed funds to this address
-     * @param calldata_ Data field if a call should be made on the target chain. 
-     * Should be encoded abi.encode(<address>,<data>)
+     * @param fallbackUser If the transaction fails, send the escrowed funds to this address.
      * @return uint256 The number of units minted.
      */
     function sendAsset(
@@ -1191,7 +1187,9 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
      * @param toAccount The recipient.
      * @param U Number of units to convert into toAsset.
      * @param minOut Minimum number of tokens bought. Reverts if less.
-     * @param blockNumberMod Used to connect 2 swaps within a group. 
+     * @param fromAmount Used to connect swaps cross-chain. The input amount on the sending chain.
+     * @param fromAsset Used to connect swaps cross-chain. The input asset on the sending chain.
+     * @param blockNumberMod Used to connect swaps cross-chain. The block number from the host side.
      */
     function receiveAsset(
         bytes32 channelId,
@@ -1360,17 +1358,16 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
 
     /**
      * @notice Initiate a cross-chain liquidity swap by withdrawing tokens and converting them to units.
-     * @dev No reentry protection since only trusted contracts are called.
-     * While the description says tokens are withdrawn and then converted to units, pool tokens are converted
+     * @dev While the description says tokens are withdrawn and then converted to units, pool tokens are converted
      * directly into units through the following equation:
      *      U = N · wa^(1-k) · (((PT + pt)/PT)^(1-k) - 1)
      * @param channelId The target chain identifier.
-     * @param toPool The target pool on the target chain encoded in bytes32.
-     * @param toAccount The recipient of the transaction on the target chain. Encoded in bytes32.
-     * @param poolTokens The number of pool tokens to exchange
-     * @param minOut An array of minout describing: [the minimum number of pool tokens, the minimum number of reference assets]
-     * @param calldata_ Data field if a call should be made on the target chain. 
-     * Should be encoded abi.encode(<address>,<data>)
+     * @param toPool The target pool on the target chain encoded in 64 + 1 bytes.
+     * @param toAccount The recipient of the transaction on the target chain. Encoded in 64 bytes + 1.
+     * @param poolTokens The number of pool tokens to exchange.
+     * @param minOut An array of minout describing: [the minimum number of pool tokens, the minimum number of reference assets].
+     * @param fallbackUser If the transaction fails, send the escrowed funds to this address.
+     * @return uint256 The number of units minted.
      */
     function sendLiquidity(
         bytes32 channelId,
@@ -1481,9 +1478,8 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
     }
 
     /**
-     * @notice Completes a cross-chain liquidity swap by converting units to tokens and depositing
-     * @dev No reentry protection since only trusted contracts are called.
-     * Called exclusively by the chainInterface.
+     * @notice Completes a cross-chain liquidity swap by converting units to tokens and depositing.
+     * @dev Called exclusively by the chainInterface.
      * While the description says units are converted to tokens and then deposited, units are converted
      * directly to pool tokens through the following equation:
      *      pt = PT · (((N · wa_0^(1-k) + U)/(N · wa_0^(1-k))^(1/(1-k)) - 1)
@@ -1492,7 +1488,8 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
      * @param U Number of units to convert into pool tokens.
      * @param minPoolTokens The minimum number of pool tokens to mint on target pool. Otherwise: Reject
      * @param minReferenceAsset The minimum number of reference asset the pools tokens are worth. Otherwise: Reject
-     * @param blockNumberMod Used to connect 2 swaps within a group. 
+     * @param fromAmount Used to connect swaps cross-chain. The input amount on the sending chain.
+     * @param blockNumberMod Used to connect swaps cross-chain. The block number from the host side.
      * @return uint256 Number of pool tokens minted to the recipient.
      */
     function receiveLiquidity(
