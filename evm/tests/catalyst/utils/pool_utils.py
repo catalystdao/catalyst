@@ -2,6 +2,7 @@ import pytest
 from brownie import convert, ZERO_ADDRESS, web3
 from decimal import Decimal
 from functools import reduce
+from .common_utils import convert_64_bytes_address
 
 # The following mathematical functions are implemented with full precision, rather than mirroring the exact contract implementation
 
@@ -271,7 +272,7 @@ def compute_asset_swap_hash(
 ):
     
     return web3.keccak(
-        convert.to_bytes(to_account, type_str="bytes32")
+        convert_64_bytes_address(to_account)
         + convert.to_bytes(units, type_str="bytes32")
         + convert.to_bytes(escrowed_amount, type_str="bytes32")
         + convert.to_bytes(escrowed_token, type_str="bytes20")
@@ -287,7 +288,7 @@ def compute_liquidity_swap_hash(
 ):
     
     return web3.keccak(
-        convert.to_bytes(to_account, type_str="bytes32")
+        convert_64_bytes_address(to_account)
         + convert.to_bytes(units, type_str="bytes32")
         + convert.to_bytes(escrowed_amount, type_str="bytes32")
         + convert.to_bytes(block_number % 2**32, type_str="bytes4")
@@ -359,21 +360,17 @@ def encode_swap_payload(
         raise Exception("custom_data is not implemented on encode_swap_payload")
 
     return (
-        convert.to_bytes(0, type_str="bytes1")
-        + convert.to_bytes(from_pool, type_str="bytes32")
-        + convert.to_bytes(to_pool, type_str="bytes32")
-        + convert.to_bytes(to_account, type_str="bytes32")
-        + convert.to_bytes(U, type_str="bytes32")
-        + convert.to_bytes(asset_index, type_str="bytes1")
-        + convert.to_bytes(min_out, type_str="bytes32")
-        + convert.to_bytes(escrow_amount, type_str="bytes32")
-        + convert.to_bytes(escrow_token, type_str="bytes32")
-        + convert.to_bytes(block_number, type_str="bytes4")
-        + convert.to_bytes(
-            compute_asset_swap_hash(to_account, U, escrow_amount, escrow_token, block_number),
-            type_str="bytes32"
-        )
-        + convert.to_bytes(0, type_str="bytes2")
+        convert.to_bytes(0, "bytes1")
+        + convert_64_bytes_address(from_pool)
+        + convert_64_bytes_address(to_pool)
+        + convert_64_bytes_address(to_account)
+        + convert.to_bytes(U)
+        + convert.to_bytes(asset_index, "bytes1")
+        + convert.to_bytes(min_out)
+        + convert.to_bytes(escrow_amount)
+        + convert_64_bytes_address(escrow_token)
+        + convert.to_bytes(block_number, "bytes4")
+        + convert.to_bytes(0, "bytes2")
     )
     
     
@@ -388,19 +385,15 @@ def encode_liquidity_swap_payload(
     block_number=0
 ):
     return (
-        convert.to_bytes(1, type_str="bytes1")
-        + convert.to_bytes(from_pool, type_str="bytes32")
-        + convert.to_bytes(to_pool, type_str="bytes32")
-        + convert.to_bytes(to_account, type_str="bytes32")
-        + convert.to_bytes(U, type_str="bytes32")
-        + convert.to_bytes(min_out[0], type_str="bytes32")
-        + convert.to_bytes(min_out[1], type_str="bytes32")
-        + convert.to_bytes(escrow_amount, type_str="bytes32")
-        + convert.to_bytes(block_number, type_str="bytes4")
-        + convert.to_bytes(
-            compute_liquidity_swap_hash(to_account, U, escrow_amount, block_number),
-            type_str="bytes32"
-        )
+        convert.to_bytes(1, "bytes1")
+        + convert_64_bytes_address(from_pool)
+        + convert_64_bytes_address(to_pool)
+        + convert_64_bytes_address(to_account)
+        + convert.to_bytes(U)
+        + convert.to_bytes(min_out[0])
+        + convert.to_bytes(min_out[1])
+        + convert.to_bytes(escrow_amount)
+        + convert.to_bytes(block_number, "bytes4")
         + convert.to_bytes(0, type_str="bytes2")
     )
 

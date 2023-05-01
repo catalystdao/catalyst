@@ -4,6 +4,7 @@ from brownie.test import given, strategy
 from hypothesis import example
 from hypothesis.strategies import floats
 import re
+from utils.common_utils import convert_64_bytes_address
 
 pytestmark = pytest.mark.usefixtures("pool_connect_itself")
 
@@ -29,8 +30,8 @@ def test_self_swap(
     
     tx = pool.sendAsset(
         channel_id,
-        convert.to_bytes(pool.address.replace("0x", "")),
-        convert.to_bytes(berg.address.replace("0x", "")),
+        convert_64_bytes_address(pool.address),
+        convert_64_bytes_address(berg.address),
         token,
         0,
         swap_amount,

@@ -52,13 +52,13 @@ contract CatalystSwapPoolFactory is Ownable, ICatalystV1FactoryEvents {
      */
     function deploy_swappool(
         address poolTemplate,
-        address[] memory assets,
-        uint256[] memory init_balances,
-        uint256[] memory weights,
+        address[] calldata assets,
+        uint256[] calldata init_balances,
+        uint256[] calldata weights,
         uint256 amp,
         uint256 poolFee,
-        string memory name,
-        string memory symbol,
+        string calldata name,
+        string calldata symbol,
         address chainInterface
     ) external returns (address) {
         // Check if an invalid asset count has been provided
