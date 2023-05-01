@@ -1,4 +1,5 @@
 import pytest
+from brownie import convert
 
 def relative_error(a, b):
     if a is None or b is None:
@@ -26,3 +27,7 @@ def assert_abs_relative_error(a, b, error_bound, error_id=None):
             f"RELATIVE ERROR{'' if error_id is None else ' '+error_id}: Absolute error {error} is larger than the maximum allowed {error_bound}",
             pytrace=False   # Do not print the python traceback
         )
+
+
+def convert_64_bytes_address(address):
+    return convert.to_bytes(20, "bytes1")+convert.to_bytes(0)+convert.to_bytes(address.replace("0x", ""))
