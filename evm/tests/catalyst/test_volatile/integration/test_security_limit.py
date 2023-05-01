@@ -6,7 +6,7 @@ from hypothesis.strategies import floats
 import re
 
 from tests.catalyst.utils.pool_utils import compute_expected_units_capacity
-from tests.catalyst.utils.common_utils import assert_abs_relative_error
+from tests.catalyst.utils.common_utils import assert_abs_relative_error, convert_64_bytes_address
 
 
 pytestmark = pytest.mark.usefixtures("group_finish_setup", "group_connect_pools")
@@ -45,8 +45,8 @@ def test_security_limit_swap_loop(
     source_token.approve(pool_1, swap_amount, {'from': berg})
     tx = pool_1.sendAsset(
         channel_id,
-        convert.to_bytes(pool_2.address.replace("0x", "")),
-        convert.to_bytes(berg.address.replace("0x", "")),
+        convert_64_bytes_address(pool_2.address),
+        convert_64_bytes_address(berg.address),
         source_token,
         0,
         swap_amount,
@@ -113,8 +113,8 @@ def test_security_limit_swap_loop(
     target_token.approve(pool_2, purchased_tokens, {'from': berg})
     tx2 = pool_2.sendAsset(
         channel_id,
-        convert.to_bytes(pool_1.address.replace("0x", "")),
-        convert.to_bytes(berg.address.replace("0x", "")),
+        convert_64_bytes_address(pool_1.address),
+        convert_64_bytes_address(berg.address),
         target_token,
         0,
         purchased_tokens,
@@ -218,8 +218,8 @@ def test_security_limit_swap_timeout(
     source_token.approve(pool_1, swap_amount, {'from': berg})
     tx = pool_1.sendAsset(
         channel_id,
-        convert.to_bytes(pool_2.address.replace("0x", "")),
-        convert.to_bytes(berg.address.replace("0x", "")),
+        convert_64_bytes_address(pool_2.address),
+        convert_64_bytes_address(berg.address),
         source_token,
         0,
         swap_amount,
@@ -255,8 +255,8 @@ def test_security_limit_swap_timeout(
     target_token.approve(pool_2, purchased_tokens, {'from': berg})
     tx2 = pool_2.sendAsset(
         channel_id,
-        convert.to_bytes(pool_1.address.replace("0x", "")),
-        convert.to_bytes(berg.address.replace("0x", "")),
+        convert_64_bytes_address(pool_1.address),
+        convert_64_bytes_address(berg.address),
         target_token,
         0,
         purchased_tokens,

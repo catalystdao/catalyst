@@ -59,7 +59,7 @@ abstract contract CatalystSwapPoolCommon is
     address public _chainInterface;
 
     // @notice The pools with which cross chain swaps are allowed, stored as _poolConnection[connectionId][toPool]
-    mapping(bytes32 => mapping(bytes32 => bool)) public _poolConnection;
+    mapping(bytes32 => mapping(bytes => bool)) public _poolConnection;
 
     /// @notice To indicate which token is desired on the target pool,
     /// the desired tokens are provided as an integer which maps to the
@@ -309,10 +309,11 @@ abstract contract CatalystSwapPoolCommon is
      */
     function setConnection(
         bytes32 channelId,
-        bytes32 toPool,
+        bytes calldata toPool,
         bool state
     ) external override {
         require((msg.sender == _setupMaster) || (msg.sender == factoryOwner())); // dev: No auth
+        require(toPool.length == 65);  // dev: Pool addresses are uint8 + 64 bytes.
 
         _poolConnection[channelId][toPool] = state;
 
@@ -387,7 +388,7 @@ abstract contract CatalystSwapPoolCommon is
      * @param blockNumberMod The block number at which the swap transaction was commited (mod 32)
      */
     function sendAssetAck(
-        bytes32 toAccount,
+        bytes calldata toAccount,
         uint256 U,
         uint256 escrowAmount,
         address escrowToken,
@@ -405,7 +406,13 @@ abstract contract CatalystSwapPoolCommon is
 
         _releaseAssetEscrow(sendAssetHash, escrowAmount, escrowToken); // Only reverts for missing escrow
 
-        emit SendAssetAck(sendAssetHash);  // Never reverts.
+        emit SendAssetAck(
+            toAccount,
+            U,
+            escrowAmount,
+            escrowToken,
+            blockNumberMod
+        );  // Never reverts.
     }
 
     /** 
@@ -418,7 +425,7 @@ abstract contract CatalystSwapPoolCommon is
      * @param blockNumberMod The block number at which the swap transaction was commited (mod 32)
      */
     function sendAssetTimeout(
-        bytes32 toAccount,
+        bytes calldata toAccount,
         uint256 U,
         uint256 escrowAmount,
         address escrowToken,
@@ -438,7 +445,13 @@ abstract contract CatalystSwapPoolCommon is
 
         ERC20(escrowToken).safeTransfer(fallbackAddress, escrowAmount);  // Would fail if there is no balance. To protect against this, the escrow amount is removed from what can be claimed by users.
 
-        emit SendAssetTimeout(sendAssetHash);  // Never reverts.
+        emit SendAssetTimeout(
+            toAccount,
+            U,
+            escrowAmount,
+            escrowToken,
+            blockNumberMod
+        );  // Never reverts.
     }
 
     /** 
@@ -450,7 +463,7 @@ abstract contract CatalystSwapPoolCommon is
      * @param blockNumberMod The block number at which the swap transaction was commited (mod 32)
      */
     function sendLiquidityAck(
-        bytes32 toAccount,
+        bytes calldata toAccount,
         uint256 U,
         uint256 escrowAmount,
         uint32 blockNumberMod
@@ -466,7 +479,12 @@ abstract contract CatalystSwapPoolCommon is
 
         _releaseLiquidityEscrow(sendLiquidityHash, escrowAmount); // Only reverts for missing escrow
 
-        emit SendLiquidityAck(sendLiquidityHash);  // Never reverts.
+        emit SendLiquidityAck(
+            toAccount,
+            U,
+            escrowAmount,
+            blockNumberMod
+        );  // Never reverts.
     }
 
     /** 
@@ -478,7 +496,7 @@ abstract contract CatalystSwapPoolCommon is
      * @param blockNumberMod The block number at which the swap transaction was commited (mod 32)
      */
     function sendLiquidityTimeout(
-        bytes32 toAccount,
+        bytes calldata toAccount,
         uint256 U,
         uint256 escrowAmount,
         uint32 blockNumberMod
@@ -496,11 +514,16 @@ abstract contract CatalystSwapPoolCommon is
 
         _mint(fallbackAddress, escrowAmount);  
 
-        emit SendLiquidityTimeout(sendLiquidityHash);  // Never reverts.
+        emit SendLiquidityTimeout(
+            toAccount,
+            U,
+            escrowAmount,
+            blockNumberMod
+        );  // Never reverts.
     }
 
     function _computeSendAssetHash(
-        bytes32 toAccount,
+        bytes memory toAccount,
         uint256 U,
         uint256 amount,
         address fromAsset,
@@ -518,7 +541,7 @@ abstract contract CatalystSwapPoolCommon is
     }
 
     function _computeSendLiquidityHash(
-        bytes32 toAccount,
+        bytes calldata toAccount,
         uint256 U,
         uint256 amount,
         uint32 blockNumberMod

@@ -3,6 +3,7 @@ from brownie import reverts, convert, web3
 from brownie.test import given, strategy
 from hypothesis import example
 import re
+from utils.common_utils import convert_64_bytes_address
 
 from utils.pool_utils import compute_asset_swap_hash
 
@@ -44,8 +45,8 @@ def test_cross_pool_swap(
     
     tx = pool_1.sendAsset(
         channel_id,
-        convert.to_bytes(pool_2.address.replace("0x", "")),
-        convert.to_bytes(berg.address.replace("0x", "")),
+        convert_64_bytes_address(pool_2.address),
+        convert_64_bytes_address(berg.address),
         source_token,
         0,
         swap_amount,
@@ -122,8 +123,8 @@ def test_cross_pool_swap_min_out(
     
     tx = pool_1.sendAsset(
         channel_id,
-        convert.to_bytes(pool_2.address.replace("0x", "")),
-        convert.to_bytes(berg.address.replace("0x", "")),
+        convert_64_bytes_address(pool_2.address),
+        convert_64_bytes_address(berg.address),
         source_token,
         0,
         swap_amount,
@@ -169,8 +170,8 @@ def test_send_asset_event(
     
     tx = pool_1.sendAsset(
         channel_id,
-        convert.to_bytes(pool_2.address.replace("0x", "")),
-        convert.to_bytes(elwood.address.replace("0x", "")),     # NOTE: not using the same account as the caller of the tx to make sure the 'toAccount' is correctly reported
+        convert_64_bytes_address(pool_2.address),
+        convert_64_bytes_address(elwood.address),     # NOTE: not using the same account as the caller of the tx to make sure the 'toAccount' is correctly reported
         source_token,
         1,                                                      # NOTE: use non-zero target asset index to make sure the field is set on the event (and not just left blank)
         swap_amount,
@@ -180,24 +181,17 @@ def test_send_asset_event(
     )
 
     observed_units = tx.return_value
-    expected_message_hash = compute_asset_swap_hash(
-        elwood.address,
-        observed_units,
-        swap_amount,
-        source_token.address,
-        tx.block_number
-    )
 
     send_asset_event = tx.events['SendAsset']
 
-    assert send_asset_event['toPool']       == pool_2
-    assert send_asset_event['toAccount']    == elwood
+    assert send_asset_event['channelId'].hex()    == channel_id.hex()
+    assert send_asset_event['toPool'].hex()       == convert_64_bytes_address(pool_2.address).hex()
+    assert send_asset_event['toAccount'].hex()    == convert_64_bytes_address(elwood.address).hex()
     assert send_asset_event['fromAsset']    == source_token
     assert send_asset_event['toAssetIndex'] == 1
     assert send_asset_event['fromAmount']   == swap_amount
     assert send_asset_event['units']        == observed_units
     assert send_asset_event['minOut']       == min_out
-    assert send_asset_event['swapHash']  == expected_message_hash
 
 
 def test_receive_swap_event(
@@ -225,8 +219,8 @@ def test_receive_swap_event(
     
     tx = pool_1.sendAsset(
         channel_id,
-        convert.to_bytes(pool_2.address.replace("0x", "")),
-        convert.to_bytes(elwood.address.replace("0x", "")),
+        convert_64_bytes_address(pool_2.address),
+        convert_64_bytes_address(elwood.address),
         source_token,
         0,
         swap_amount,
@@ -236,21 +230,14 @@ def test_receive_swap_event(
     )
 
     observed_units = tx.return_value
-    expected_message_hash = compute_asset_swap_hash(
-        elwood.address,
-        observed_units,
-        swap_amount,
-        source_token.address,
-        tx.block_number
-    )
 
     txe = ibc_emulator.execute(tx.events["IncomingMetadata"]["metadata"][0], tx.events["IncomingPacket"]["packet"], {"from": berg})
 
     receive_swap_event = txe.events['ReceiveAsset']
 
-    assert receive_swap_event['fromPool']    == pool_1.address
-    assert receive_swap_event['toAccount']   == elwood
+    assert receive_swap_event['channelId'].hex()   == channel_id.hex()
+    assert receive_swap_event['fromPool'].hex()    == convert_64_bytes_address(pool_1.address).hex()
+    assert receive_swap_event['toAccount']   == elwood.address
     assert receive_swap_event['toAsset']     == target_token
     assert receive_swap_event['units']       == observed_units
     assert receive_swap_event['toAmount']    == target_token.balanceOf(elwood)
-    assert receive_swap_event['swapHash'] == expected_message_hash

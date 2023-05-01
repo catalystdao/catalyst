@@ -5,6 +5,7 @@ from brownie import ZERO_ADDRESS, chain, convert, reverts, web3
 from brownie.test import given, strategy
 from hypothesis import example, settings
 
+from utils.common_utils import convert_64_bytes_address
 from utils.pool_utils import compute_liquidity_swap_hash
 
 pytestmark = [
@@ -23,8 +24,8 @@ def test_ibc_ack(pool, channel_id, ibc_emulator, berg, deployer, swap_percentage
 
     tx = pool.sendLiquidity(
         channel_id,
-        convert.to_bytes(pool.address.replace("0x", "")),
-        convert.to_bytes(berg.address.replace("0x", "")),
+        convert_64_bytes_address(pool.address),
+        convert_64_bytes_address(berg.address),
         swap_amount,
         [0, 0],
         berg,
@@ -54,8 +55,8 @@ def test_ibc_timeout(pool, channel_id, ibc_emulator, berg, deployer, swap_percen
 
     tx = pool.sendLiquidity(
         channel_id,
-        convert.to_bytes(pool.address.replace("0x", "")),
-        convert.to_bytes(berg.address.replace("0x", "")),
+        convert_64_bytes_address(pool.address),
+        convert_64_bytes_address(berg.address),
         swap_amount,
         [0, 0],
         berg,
@@ -81,8 +82,8 @@ def test_only_one_response(pool, channel_id, ibc_emulator, berg, deployer):
 
     tx = pool.sendLiquidity(
         channel_id,
-        convert.to_bytes(pool.address.replace("0x", "")),
-        convert.to_bytes(berg.address.replace("0x", "")),
+        convert_64_bytes_address(pool.address),
+        convert_64_bytes_address(berg.address),
         swap_amount,
         [0, 0],
         berg,
@@ -146,8 +147,8 @@ def test_ibc_ack_event(pool, channel_id, ibc_emulator, berg, deployer):
 
     tx = pool.sendLiquidity(
         channel_id,
-        convert.to_bytes(pool.address.replace("0x", "")),
-        convert.to_bytes(berg.address.replace("0x", "")),
+        convert_64_bytes_address(pool.address),
+        convert_64_bytes_address(berg.address),
         swap_amount,
         [0, 0],
         berg,
@@ -163,15 +164,10 @@ def test_ibc_ack_event(pool, channel_id, ibc_emulator, berg, deployer):
 
     ack_event = txe.events['SendLiquidityAck']
 
-
-    expected_message_hash = compute_liquidity_swap_hash(
-        berg.address,
-        tx.return_value,
-        swap_amount,
-        tx.block_number
-    )
-
-    assert ack_event["swapHash"] == expected_message_hash
+    assert ack_event["toAccount"].hex() == convert_64_bytes_address(berg.address).hex()
+    assert ack_event["U"] == tx.return_value
+    assert ack_event["escrowAmount"] == swap_amount
+    assert ack_event["blockNumberMod"] == tx.block_number
 
 
 def test_ibc_timeout_event(pool, channel_id, ibc_emulator, berg, deployer):
@@ -185,8 +181,8 @@ def test_ibc_timeout_event(pool, channel_id, ibc_emulator, berg, deployer):
 
     tx = pool.sendLiquidity(
         channel_id,
-        convert.to_bytes(pool.address.replace("0x", "")),
-        convert.to_bytes(berg.address.replace("0x", "")),
+        convert_64_bytes_address(pool.address),
+        convert_64_bytes_address(berg.address),
         swap_amount,
         [0, 0],
         berg,
@@ -200,12 +196,9 @@ def test_ibc_timeout_event(pool, channel_id, ibc_emulator, berg, deployer):
     )
 
     timeout_event = txe.events['SendLiquidityTimeout']
+    
+    assert timeout_event["toAccount"].hex() == convert_64_bytes_address(berg.address).hex()
+    assert timeout_event["U"] == tx.return_value
+    assert timeout_event["escrowAmount"] == swap_amount
+    assert timeout_event["blockNumberMod"] == tx.block_number
 
-    expected_message_hash = compute_liquidity_swap_hash(
-        berg.address,
-        tx.return_value,
-        swap_amount,
-        tx.block_number
-    )
-
-    assert timeout_event["swapHash"] == expected_message_hash

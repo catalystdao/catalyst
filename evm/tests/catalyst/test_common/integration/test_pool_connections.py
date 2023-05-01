@@ -2,6 +2,7 @@ import pytest
 from brownie import reverts, convert
 import re
 
+from utils.common_utils import convert_64_bytes_address
 from tests.catalyst.utils.pool_utils import encode_swap_payload, encode_liquidity_swap_payload
 
 pytestmark = [
@@ -26,17 +27,17 @@ def test_connect_pools(
 ):
 
     # Make sure pools are not connected
-    assert not pool._poolConnection(channel_id, dummy_pool_address)
+    assert not pool._poolConnection(channel_id, convert_64_bytes_address(dummy_pool_address))
 
     pool.setConnection(
         channel_id,
-        dummy_pool_address,
+        convert_64_bytes_address(dummy_pool_address),
         True,
         {"from": deployer}
     )
     
     # Make sure pools are connected
-    assert pool._poolConnection(channel_id, dummy_pool_address)
+    assert pool._poolConnection(channel_id, convert_64_bytes_address(dummy_pool_address))
 
 
 
@@ -49,23 +50,23 @@ def test_disconnect_pools(
 
     pool.setConnection(
         channel_id,
-        dummy_pool_address,
+        convert_64_bytes_address(dummy_pool_address),
         True,
         {"from": deployer}
     )
     
     # Make sure pools are connected
-    assert pool._poolConnection(channel_id, dummy_pool_address)
+    assert pool._poolConnection(channel_id, convert_64_bytes_address(dummy_pool_address))
 
     pool.setConnection(
         channel_id,
-        dummy_pool_address,
+        convert_64_bytes_address(dummy_pool_address),
         False,
         {"from": deployer}
     )
     
     # Make sure pools are not connected
-    assert not pool._poolConnection(channel_id, dummy_pool_address)
+    assert not pool._poolConnection(channel_id, convert_64_bytes_address(dummy_pool_address))
 
 
 
@@ -81,7 +82,7 @@ def test_create_connection_event(
 
     tx = pool.setConnection(
         channel_id,
-        dummy_pool_address,
+        convert_64_bytes_address(dummy_pool_address),
         connection_state,
         {"from": deployer}
     )
@@ -89,7 +90,7 @@ def test_create_connection_event(
     event = tx.events["SetConnection"]
 
     assert event["channelId"] == convert.datatypes.HexString(channel_id, type_str="bytes32")
-    assert event["toPool"]    == dummy_pool_address
+    assert event["toPool"].hex()    == convert_64_bytes_address(dummy_pool_address).hex()
     assert event["newState"]  == connection_state
 
 
@@ -104,7 +105,7 @@ def test_connect_pools_invalid_auth(
     with reverts():      # ! Should be filtered with dev_revert_msg="dev: No auth"
         pool.setConnection(
             channel_id,
-            dummy_pool_address,
+            convert_64_bytes_address(dummy_pool_address),
             True,
             {"from": elwood}
         )
@@ -121,7 +122,7 @@ def test_not_connected_send_asset(
 ):
 
     # Make sure pools are not connected
-    assert not pool._poolConnection(channel_id, dummy_pool_address)
+    assert not pool._poolConnection(channel_id, convert_64_bytes_address(dummy_pool_address))
 
     source_token = pool_tokens[0]
 
@@ -129,11 +130,11 @@ def test_not_connected_send_asset(
 
     source_token.approve(pool, swap_amount, {"from": deployer})
 
-    with reverts(revert_pattern=re.compile("typed error: 0xfc08ab42.*")):
+    with reverts(revert_pattern=re.compile("typed error: 0xcecce1bf.*")):
         pool.sendAsset(
             channel_id,
-            convert.to_bytes(dummy_pool_address),
-            convert.to_bytes(berg.address),
+            convert_64_bytes_address(dummy_pool_address),
+            convert_64_bytes_address(berg.address),
             source_token,
             0,
             swap_amount,
@@ -154,20 +155,20 @@ def test_not_connected_receive_swap(
 ):
 
     # Make sure pools are not connected
-    assert not pool._poolConnection(channel_id, dummy_pool_address)
+    assert not pool._poolConnection(channel_id, convert_64_bytes_address(dummy_pool_address))
 
     units = int(pool.getUnitCapacity() * 0.1)
 
     fake_payload = encode_swap_payload(
-        dummy_pool_address,                         # from pool
-        pool.address,                               # to pool
-        convert.to_bytes(berg.address),             # recipient
+        dummy_pool_address,       # from pool
+        pool.address,             # to pool
+        berg.address,             # recipient
         units,
         0
     )
     fake_packet = [["", channel_id], ["", ""], 0, fake_payload, [0, 0]]
 
-    # with reverts(revert_pattern=re.compile("typed error: 0xfc08ab42.*")):
+    # with reverts(revert_pattern=re.compile("typed error: 0xcecce1bf.*")):
     txe = cross_chain_interface.onRecvPacket(fake_packet, {"from": ibc_emulator})
     
     # Ensure no tokens are transfered.
@@ -184,15 +185,15 @@ def test_not_connected_out_liquidity(
 ):
 
     # Make sure pools are not connected
-    assert not pool._poolConnection(channel_id, dummy_pool_address)
+    assert not pool._poolConnection(channel_id, convert_64_bytes_address(dummy_pool_address))
 
     swap_amount = int(pool.balanceOf(deployer) * 0.1)
 
-    with reverts(revert_pattern=re.compile("typed error: 0xfc08ab42.*")):
+    with reverts(revert_pattern=re.compile("typed error: 0xcecce1bf.*")):
         pool.sendLiquidity(
             channel_id,
-            convert.to_bytes(dummy_pool_address),   # to pool
-            convert.to_bytes(berg.address),         # recipient
+            convert_64_bytes_address(dummy_pool_address),   # to pool
+            convert_64_bytes_address(berg.address),         # recipient
             swap_amount,
             [0, 0],
             deployer,
@@ -211,20 +212,20 @@ def test_not_connected_in_liquidity(
 ):
 
     # Make sure pools are not connected
-    assert not pool._poolConnection(channel_id, dummy_pool_address)
+    assert not pool._poolConnection(channel_id, convert_64_bytes_address(dummy_pool_address))
 
     units = int(pool.getUnitCapacity() * 0.1)
 
     fake_payload = encode_liquidity_swap_payload(
-        dummy_pool_address,                         # from pool
-        pool.address,                               # to pool
-        convert.to_bytes(berg.address),             # recipient
+        dummy_pool_address,   # from pool
+        pool.address,         # to pool
+        berg.address,         # recipient
         units,
         [1, 0],
     )
     fake_packet = [["", channel_id], ["", ""], 0, fake_payload, [0, 0]]
 
-    # with reverts(revert_pattern=re.compile("typed error: 0xfc08ab42.*")):
+    # with reverts(revert_pattern=re.compile("typed error: 0xcecce1bf.*")):
     txe = cross_chain_interface.onRecvPacket(fake_packet, {"from": ibc_emulator})
     
     # Ensure no tokens are transfered.
