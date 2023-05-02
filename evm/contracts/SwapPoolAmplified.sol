@@ -987,8 +987,10 @@ contract CatalystSwapPoolAmplified is IntegralsAmplified, CatalystSwapPoolCommon
         // Only allow connected pools
         if (!_poolConnection[channelId][toPool]) revert PoolNotConnected(channelId, toPool);
         require(fallbackUser != address(0));
-        require(toPool.length == 65);  // dev: Pool addresses are uint8 + 64 bytes.
-        require(toAccount.length == 65);  // dev: Account addresses are uint8 + 64 bytes.
+
+        // Checking correct pool and account length is done by the CCI.
+        // require(toPool.length == 65);  // dev: Pool addresses are uint8 + 64 bytes.
+        // require(toAccount.length == 65);  // dev: Account addresses are uint8 + 64 bytes.
 
         _updateAmplification();
         uint256 fee = FixedPointMathLib.mulWadDown(amount, _poolFee);
@@ -1287,8 +1289,10 @@ contract CatalystSwapPoolAmplified is IntegralsAmplified, CatalystSwapPoolCommon
         // Address(0) is not a valid fallback user. (As checking for escrow overlap
         // checks if the fallbackUser != address(0))
         require(fallbackUser != address(0));
-        require(toPool.length == 65);  // dev: Pool addresses are uint8 + 64 bytes.
-        require(toAccount.length == 65);  // dev: Account addresses are uint8 + 64 bytes.
+
+        // Checking correct pool and account length is done by the CCI.
+        // require(toPool.length == 65);  // dev: Pool addresses are uint8 + 64 bytes.
+        // require(toAccount.length == 65);  // dev: Account addresses are uint8 + 64 bytes.
 
         // Update amplification
         _updateAmplification();

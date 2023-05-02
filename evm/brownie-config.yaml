@@ -17,7 +17,7 @@ compiler:
     viaIR: true
     optimizer:
         enabled: true
-        runs: 20000
+        runs: 15000
     remappings:
       - "@openzeppelin=OpenZeppelin/openzeppelin-contracts@4.8.1"
       - "solmate=node_modules/solmate"
