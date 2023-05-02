@@ -276,7 +276,8 @@ mod catalyst_ibc_interface_tests {
             to_account: "to_account".to_string(),
             u: uint!("78456988731590487483448276103933454935747871349630657124267302091643025406701"),          // Some large U256 number
             min_out: Uint128::from(323476719582585693194107115743132847255u128),                                // Some large Uint128 number
-            calldata: vec![]
+            calldata_target: None,
+            calldata: None
         }
     }
 
@@ -334,7 +335,8 @@ mod catalyst_ibc_interface_tests {
             to_account: "to_account".to_string(),
             u: uint!("78456988731590487483448276103933454935747871349630657124267302091643025406701"),          // Some large U256 number
             min_out: Uint128::from(323476719582585693194107115743132847255u128),                                // Some large Uint128 number
-            calldata: vec![]
+            calldata_target: None,
+            calldata: None
         }
     }
 

@@ -134,7 +134,8 @@ pub enum ExecuteMsg<T> {
         #[serde(with = "U256Def")]
         u: U256,
         min_out: Uint128,
-        calldata: Vec<u8>
+        calldata_target: Option<Addr>,
+        calldata: Option<Vec<u8>>
     },
 
     SendLiquidity {
@@ -155,7 +156,8 @@ pub enum ExecuteMsg<T> {
         #[serde(with = "U256Def")]
         u: U256,
         min_out: Uint128,
-        calldata: Vec<u8>
+        calldata_target: Option<Addr>,
+        calldata: Option<Vec<u8>>
     },
 
     Custom (T),

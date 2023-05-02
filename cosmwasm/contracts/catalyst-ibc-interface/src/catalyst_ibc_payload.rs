@@ -94,6 +94,15 @@ pub const CTX1_DATA_START            : usize = 298;
 
 
 
+// CosmWasm Calldata Specific Payload *******************************************************************************************
+
+pub const CALLDATA_TARGET_START      : usize = 0;
+pub const CALLDATA_TARGET_END        : usize = 65;
+
+pub const CALLDATA_BYTES_START       : usize = 65;
+
+
+
 
 
 // ******************************************************************************************************************************
@@ -339,6 +348,13 @@ pub trait CatalystV1VariablePayload: Sized {
 }
 
 
+#[derive(Clone)]
+pub struct CatalystCalldata {
+    pub target: Addr,
+    pub bytes: Vec<u8>
+}
+
+
 // Send asset payload
 pub struct SendAssetVariablePayload {
     pub to_asset_index: u8,
@@ -384,6 +400,15 @@ impl SendAssetVariablePayload {
             return Err(ContractError::PayloadDecodingError {});
         }
         Ok(Uint128::from(from_amount.as_u128()))
+
+    }
+
+    pub fn parse_calldata(
+        &self,
+        deps: Deps
+    ) -> Result<Option<CatalystCalldata>, ContractError> {
+        
+        parse_calldata(deps, self.calldata.clone())
 
     }
 
@@ -529,6 +554,15 @@ impl SendLiquidityVariablePayload {
 
     }
 
+    pub fn parse_calldata(
+        &self,
+        deps: Deps
+    ) -> Result<Option<CatalystCalldata>, ContractError> {
+        
+        parse_calldata(deps, self.calldata.clone())
+
+    }
+
 }
 
 impl CatalystV1VariablePayload for SendLiquidityVariablePayload {
@@ -651,4 +685,31 @@ fn decode_address(payload: &[u8]) -> Result<Vec<u8>, ContractError> {
         .ok_or(ContractError::PayloadDecodingError {})
         .map(|slice| slice.to_vec())
 
+}
+
+fn parse_calldata(
+    deps: Deps,
+    calldata: Vec<u8>
+) -> Result<Option<CatalystCalldata>, ContractError> {
+
+    if calldata.len() == 0 {
+        return Ok(None);
+    }
+
+    let target_bytes = decode_address(
+        calldata.get(CALLDATA_TARGET_START..CALLDATA_TARGET_END).ok_or(ContractError::PayloadDecodingError {})?
+    )?;
+
+    let target = deps.api.addr_validate(
+        String::from_utf8(target_bytes).map_err(|_| ContractError::PayloadDecodingError {})?.as_str()
+    )?;
+
+    let bytes = calldata.get(CALLDATA_BYTES_START..).ok_or(ContractError::PayloadDecodingError {})?.to_vec();
+
+    Ok(
+        Some(CatalystCalldata {
+            target,
+            bytes
+        })
+    )
 }

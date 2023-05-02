@@ -215,6 +215,7 @@ fn on_packet_receive(
         CatalystV1Packet::SendAsset(payload) => {
 
             // Build execute message
+            let parsed_calldata = payload.variable_payload.parse_calldata(deps.as_ref())?;
             Ok::<cosmwasm_std::WasmMsg, ContractError>(cosmwasm_std::WasmMsg::Execute {
                 contract_addr: payload.to_pool(deps.as_ref())?.into_string(),       // Validate to_pool
                 msg: to_binary(&SwapPoolExecuteMsg::<()>::ReceiveAsset {
@@ -224,7 +225,8 @@ fn on_packet_receive(
                     to_account: payload.to_account(deps.as_ref())?.into_string(),   // Validate to_account
                     u: payload.u,
                     min_out: payload.variable_payload.min_out()?,                   // Convert min_out into Uint128
-                    calldata: payload.variable_payload.calldata
+                    calldata_target: parsed_calldata.clone().map(|data| data.target),
+                    calldata: parsed_calldata.map(|data| data.bytes)
                 })?,
                 funds: vec![]
             })
@@ -233,6 +235,7 @@ fn on_packet_receive(
         CatalystV1Packet::SendLiquidity(payload) => {
 
             // Build execute message
+            let parsed_calldata = payload.variable_payload.parse_calldata(deps.as_ref())?;
             Ok::<cosmwasm_std::WasmMsg, ContractError>(cosmwasm_std::WasmMsg::Execute {
                 contract_addr: payload.to_pool(deps.as_ref())?.into_string(),       // Validate to_pool
                 msg: to_binary(&SwapPoolExecuteMsg::<()>::ReceiveLiquidity {
@@ -241,7 +244,8 @@ fn on_packet_receive(
                     to_account: payload.to_account(deps.as_ref())?.into_string(),   // Validate to_account
                     u: payload.u,
                     min_out: payload.variable_payload.min_out()?,                   // Convert min_out into Uint128
-                    calldata: payload.variable_payload.calldata
+                    calldata_target: parsed_calldata.clone().map(|data| data.target),
+                    calldata: parsed_calldata.map(|data| data.bytes)
                 })?,
                 funds: vec![]
             })

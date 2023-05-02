@@ -49,7 +49,8 @@ mod test_volatile_receive_liquidity {
                 to_account: SWAPPER_B.to_string(),
                 u: swap_units,
                 min_out: Uint128::zero(),
-                calldata: vec![]
+                calldata_target: None,
+                calldata: None
             },
             &[]
         ).unwrap();
@@ -128,7 +129,8 @@ mod test_volatile_receive_liquidity {
                 to_account: SWAPPER_B.to_string(),
                 u: swap_units,
                 min_out: Uint128::zero(),
-                calldata: vec![]
+                calldata_target: None,
+                calldata: None
             },
             &[]
         ).unwrap();
@@ -211,7 +213,8 @@ mod test_volatile_receive_liquidity {
                 to_account: SWAPPER_B.to_string(),
                 u: swap_units,
                 min_out: min_out_invalid,
-                calldata: vec![]
+                calldata_target: None,
+                calldata: None
             },
             &[]
         );
@@ -237,7 +240,8 @@ mod test_volatile_receive_liquidity {
                 to_account: SWAPPER_B.to_string(),
                 u: swap_units,
                 min_out: min_out_valid,
-                calldata: vec![]
+                calldata_target: None,
+                calldata: None
             },
             &[]
         ).unwrap();
@@ -279,7 +283,8 @@ mod test_volatile_receive_liquidity {
                 to_account: SWAPPER_B.to_string(),
                 u: swap_units,
                 min_out: Uint128::zero(),
-                calldata: vec![]
+                calldata_target: None,
+                calldata: None
             },
             &[]
         );
@@ -337,7 +342,8 @@ mod test_volatile_receive_liquidity {
                 to_account: SWAPPER_B.to_string(),
                 u: swap_units,
                 min_out: Uint128::zero(),
-                calldata: vec![]
+                calldata_target: None,
+                calldata: None
             },
             &[]
         );

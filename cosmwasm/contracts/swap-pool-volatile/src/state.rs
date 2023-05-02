@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, Uint128, DepsMut, Env, MessageInfo, Response, StdResult, CosmosMsg, to_binary, Deps, StdError};
+use cosmwasm_std::{Addr, Uint128, DepsMut, Env, MessageInfo, Response, StdResult, CosmosMsg, to_binary, Deps, StdError, Binary};
 use cw20::{Cw20ExecuteMsg, Cw20QueryMsg, BalanceResponse};
 use cw20_base::{contract::{execute_mint, execute_burn}};
 use cw_storage_plus::Item;
@@ -300,6 +300,7 @@ pub fn withdraw_all(
 
         // Check that the minimum output is honoured.
         if *asset_min_out > withdraw_amount {
+            //TODO include in error the asset?
             return Err(ContractError::ReturnInsufficient { out: withdraw_amount.clone(), min_out: *asset_min_out });
         };
 
@@ -664,7 +665,8 @@ pub fn receive_asset(
     to_account: String,
     u: U256,
     min_out: Uint128,
-    _calldata: Vec<u8>   //TODO calldata
+    calldata_target: Option<Addr>,
+    calldata: Option<Vec<u8>>
 ) -> Result<Response, ContractError> {
 
     // Only allow connected pools
@@ -705,7 +707,25 @@ pub fn receive_asset(
         }
     );
 
-    Ok(Response::new()
+    // Build data message
+    let calldata_message = calldata_target.map(|target| {
+        CosmosMsg::Wasm(
+            cosmwasm_std::WasmMsg::Execute {
+                contract_addr: target.to_string(),
+                msg: Binary::from(calldata.unwrap_or(vec![])),
+                funds: vec![]
+            }
+        )
+    });
+
+    // Build and send response
+    let mut response = Response::new();
+
+    if let Some(msg) = calldata_message {
+        response = response.add_message(msg);
+    }
+
+    Ok(response
         .add_message(transfer_to_asset_msg)
         .add_attribute("from_pool", format!("{:x?}", from_pool))
         .add_attribute("to_account", to_account)
@@ -814,7 +834,8 @@ pub fn receive_liquidity(
     to_account: String,
     u: U256,
     min_out: Uint128,
-    _calldata: Vec<u8>   //TODO calldata
+    calldata_target: Option<Addr>,
+    calldata: Option<Vec<u8>>
 ) -> Result<Response, ContractError> {
 
     // Only allow connected pools
@@ -863,7 +884,25 @@ pub fn receive_liquidity(
         out
     )?;
 
-    Ok(Response::new()
+    // Build data message
+    let calldata_message = calldata_target.map(|target| {
+        CosmosMsg::Wasm(
+            cosmwasm_std::WasmMsg::Execute {
+                contract_addr: target.to_string(),
+                msg: Binary::from(calldata.unwrap_or(vec![])),
+                funds: vec![]
+            }
+        )
+    });
+
+    // Build and send response
+    let mut response = Response::new();
+
+    if let Some(msg) = calldata_message {
+        response = response.add_message(msg);
+    }
+
+    Ok(response
         .add_attribute("from_pool", format!("{:x?}", from_pool))
         .add_attribute("to_account", to_account)
         .add_attribute("units", u.to_string())  //TODO format of .to_string()?
