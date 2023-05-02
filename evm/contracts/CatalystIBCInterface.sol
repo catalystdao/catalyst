@@ -35,6 +35,11 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
         IBC_DISPATCHER = IBCDispatcher_;
     }
 
+    modifier onlyIbcDispatcher() {
+        if (msg.sender != IBC_DISPATCHER) revert InvalidIBCCaller(msg.sender);
+        _;
+    }
+
     /// @notice Registers IBC ports for this contract.
     /// @dev The matching CatalystIBCInterface should call
     /// registerPort at the same time to establish an
@@ -162,16 +167,11 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
     }
 
     /**
-     * @notice IBC Acknowledgement package handler
+     * @notice Cross-chain message success handler
      * @dev Should never revert.
      * @param packet The IBC packet
      */
-    function onAcknowledgementPacket(bytes calldata acknowledgement, IbcPacket calldata packet) external {
-        // If the transaction executed but some logic failed, an ack is sent back with an acknowledgement of not 0x00.
-        // This is known as "fail on ack". The package should be timed-out.
-        if (acknowledgement[0]  != 0x00) return onTimeoutPacket(packet);
-        if (msg.sender != IBC_DISPATCHER) revert InvalidIBCCaller(msg.sender);
-
+    function _onPacketSuccess(IbcPacket calldata packet) internal {
         bytes calldata data = packet.data;
 
         bytes1 context = data[CONTEXT_POS];
@@ -180,7 +180,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
 
         if (context == CTX0_ASSET_SWAP) {
 
-            ICatalystV1Pool(fromPool).sendAssetAck(
+            ICatalystV1Pool(fromPool).onSendAssetSuccess(
                 data[ TO_ACCOUNT_LENGTH_POS : TO_ACCOUNT_END ],                                     // toAccount
                 uint256(bytes32(data[ UNITS_START : UNITS_END ])),                                  // units
                 uint256(bytes32(data[ CTX0_FROM_AMOUNT_START : CTX0_FROM_AMOUNT_END ])),            // fromAmount
@@ -191,7 +191,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
         }
         else if (context == CTX1_LIQUIDITY_SWAP) {
 
-            ICatalystV1Pool(fromPool).sendLiquidityAck(
+            ICatalystV1Pool(fromPool).onSendLiquiditySuccess(
                 data[ TO_ACCOUNT_LENGTH_POS : TO_ACCOUNT_END ],                                     // toAccount
                 uint256(bytes32(data[ UNITS_START : UNITS_END ])),                                  // units
                 uint256(bytes32(data[ CTX1_FROM_AMOUNT_START : CTX1_FROM_AMOUNT_END ])),            // fromAmount
@@ -208,12 +208,11 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
     }
 
     /**
-     * @notice IBC timeout package handler
+     * @notice Cross-chain message failure handler
      * @dev Should never revert.
      * @param packet The IBC packet
      */
-    function onTimeoutPacket(IbcPacket calldata packet) public {
-        if (msg.sender != IBC_DISPATCHER) revert InvalidIBCCaller(msg.sender);
+    function _onPacketFailure(IbcPacket calldata packet) internal {
 
         bytes calldata data = packet.data;
 
@@ -223,7 +222,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
 
         if (context == CTX0_ASSET_SWAP) {
 
-            ICatalystV1Pool(fromPool).sendAssetTimeout(
+            ICatalystV1Pool(fromPool).onSendAssetFailure(
                 data[ TO_ACCOUNT_LENGTH_POS : TO_ACCOUNT_END ],                                     // toAccount
                 uint256(bytes32(data[ UNITS_START : UNITS_END ])),                                  // units
                 uint256(bytes32(data[ CTX0_FROM_AMOUNT_START : CTX0_FROM_AMOUNT_END ])),            // fromAmount
@@ -234,7 +233,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
         }
         else if (context == CTX1_LIQUIDITY_SWAP) {
 
-            ICatalystV1Pool(fromPool).sendLiquidityTimeout(
+            ICatalystV1Pool(fromPool).onSendLiquidityFailure(
                 data[ TO_ACCOUNT_LENGTH_POS : TO_ACCOUNT_END ],                                     // toAccount
                 uint256(bytes32(data[ UNITS_START : UNITS_END ])),                                  // units
                 uint256(bytes32(data[ CTX1_FROM_AMOUNT_START : CTX1_FROM_AMOUNT_END ])),            // fromAmount
@@ -251,10 +250,35 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
     }
 
     /**
-     * @notice IBC package handler
+     * @notice IBC Acknowledgement package handler
+     * @dev Should never revert.
+     * @param packet The IBC packet
+     * @param acknowledgement The acknowledgement bytes for the cross-chain swap.
+     */
+    function onAcknowledgementPacket(bytes calldata acknowledgement, IbcPacket calldata packet) onlyIbcDispatcher external {
+        // If the transaction executed but some logic failed, an ack is sent back with an acknowledgement of not 0x00.
+        // This is known as "fail on ack". The package should be timed-out.
+        if (acknowledgement[0]  != 0x00) return _onPacketFailure(packet);
+        // Otherwise, it must be a success:
+        _onPacketSuccess(packet);
+    }
+
+    /**
+     * @notice IBC timeout package handler
+     * @dev Should never revert.
      * @param packet The IBC packet
      */
-    function onRecvPacket(IbcPacket calldata packet) external {
+    function onTimeoutPacket(IbcPacket calldata packet) onlyIbcDispatcher external {
+        // Timeouts always implies failure.
+        _onPacketFailure(packet);
+    }
+
+    /**
+     * @notice IBC package handler
+     * @param packet The IBC packet
+     * @return acknowledgement The acknowledgement status of the transaction after execution
+     */
+    function onRecvPacket(IbcPacket calldata packet) external returns (bytes memory) {
         if (msg.sender != IBC_DISPATCHER) revert InvalidIBCCaller(msg.sender);
 
         bytes calldata data = packet.data;
@@ -339,6 +363,6 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
             /* revert InvalidContext(context); */
             /* acknowledgement = 0x01; */
         }
-        IbcDispatcher(IBC_DISPATCHER).ackIbcPacket(abi.encodePacked(acknowledgement));
+        return abi.encodePacked(acknowledgement);
     }
 }

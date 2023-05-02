@@ -387,7 +387,7 @@ abstract contract CatalystSwapPoolCommon is
      * @param escrowToken The token escrowed.
      * @param blockNumberMod The block number at which the swap transaction was commited (mod 32)
      */
-    function sendAssetAck(
+    function onSendAssetSuccess(
         bytes calldata toAccount,
         uint256 U,
         uint256 escrowAmount,
@@ -406,7 +406,7 @@ abstract contract CatalystSwapPoolCommon is
 
         _releaseAssetEscrow(sendAssetHash, escrowAmount, escrowToken); // Only reverts for missing escrow
 
-        emit SendAssetAck(
+        emit OnSendAssetSuccess(
             toAccount,
             U,
             escrowAmount,
@@ -424,7 +424,7 @@ abstract contract CatalystSwapPoolCommon is
      * @param escrowToken The token escrowed.
      * @param blockNumberMod The block number at which the swap transaction was commited (mod 32)
      */
-    function sendAssetTimeout(
+    function onSendAssetFailure(
         bytes calldata toAccount,
         uint256 U,
         uint256 escrowAmount,
@@ -445,7 +445,7 @@ abstract contract CatalystSwapPoolCommon is
 
         ERC20(escrowToken).safeTransfer(fallbackAddress, escrowAmount);  // Would fail if there is no balance. To protect against this, the escrow amount is removed from what can be claimed by users.
 
-        emit SendAssetTimeout(
+        emit OnSendAssetFailure(
             toAccount,
             U,
             escrowAmount,
@@ -462,7 +462,7 @@ abstract contract CatalystSwapPoolCommon is
      * @param escrowAmount The number of pool tokens escrowed.
      * @param blockNumberMod The block number at which the swap transaction was commited (mod 32)
      */
-    function sendLiquidityAck(
+    function onSendLiquiditySuccess(
         bytes calldata toAccount,
         uint256 U,
         uint256 escrowAmount,
@@ -479,7 +479,7 @@ abstract contract CatalystSwapPoolCommon is
 
         _releaseLiquidityEscrow(sendLiquidityHash, escrowAmount); // Only reverts for missing escrow
 
-        emit SendLiquidityAck(
+        emit OnSendLiquiditySuccess(
             toAccount,
             U,
             escrowAmount,
@@ -495,7 +495,7 @@ abstract contract CatalystSwapPoolCommon is
      * @param escrowAmount The number of pool tokens escrowed.
      * @param blockNumberMod The block number at which the swap transaction was commited (mod 32)
      */
-    function sendLiquidityTimeout(
+    function onSendLiquidityFailure(
         bytes calldata toAccount,
         uint256 U,
         uint256 escrowAmount,
@@ -514,7 +514,7 @@ abstract contract CatalystSwapPoolCommon is
 
         _mint(fallbackAddress, escrowAmount);  
 
-        emit SendLiquidityTimeout(
+        emit OnSendLiquidityFailure(
             toAccount,
             U,
             escrowAmount,

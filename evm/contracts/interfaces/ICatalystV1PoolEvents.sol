@@ -132,7 +132,7 @@ interface ICatalystV1PoolEvents {
     event Withdraw(address indexed toAccount, uint256 burn, uint256[] assets);
 
     /** @notice Called upon successful asset swap. */
-    event SendAssetAck(
+    event OnSendAssetSuccess(
         bytes toAccount,
         uint256 U,
         uint256 escrowAmount,
@@ -141,7 +141,7 @@ interface ICatalystV1PoolEvents {
     );
 
     /** @notice Called upon failed asset swap. */
-    event SendAssetTimeout(
+    event OnSendAssetFailure(
         bytes toAccount,
         uint256 U,
         uint256 escrowAmount,
@@ -150,7 +150,7 @@ interface ICatalystV1PoolEvents {
     );
 
     /** @notice Called upon successful liquidity swap. */
-    event SendLiquidityAck(
+    event OnSendLiquiditySuccess(
         bytes toAccount,
         uint256 U,
         uint256 escrowAmount,
@@ -158,7 +158,7 @@ interface ICatalystV1PoolEvents {
         );
 
     /** @notice Called upon failed liquidity swap. */
-    event SendLiquidityTimeout(
+    event OnSendLiquidityFailure(
         bytes toAccount,
         uint256 U,
         uint256 escrowAmount,

@@ -12,7 +12,6 @@ struct PacketMetadata {
 
 contract IBCEmulator is IbcDispatcher {
     address[2] public _ports;
-    bytes private _acknowledgement;
 
     event IncomingMetadata(PacketMetadata metadata);
     event IncomingPacket(IbcPacket packet);
@@ -58,21 +57,13 @@ contract IBCEmulator is IbcDispatcher {
         );
     }
 
-    function ackIbcPacket(
-        bytes calldata acknowledgement
-    ) external {
-        _acknowledgement = acknowledgement;
-    }
 
     function execute(address targetContract, IbcPacket calldata packet)
         external
-    {
-        _acknowledgement = abi.encodePacked(bytes1(0xff));
-        
-        IbcReceiver(targetContract).onRecvPacket(packet);
+    {   
+        bytes memory acknowledgement = IbcReceiver(targetContract).onRecvPacket(packet);
 
-        emit Acknowledgement(_acknowledgement);
-        _acknowledgement = abi.encodePacked(bytes1(0xff));
+        emit Acknowledgement(acknowledgement);
     }
 
     function timeout(address targetContract, IbcPacket calldata packet)
