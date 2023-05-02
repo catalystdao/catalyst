@@ -136,7 +136,7 @@ def test_only_one_response(pool, channel_id, ibc_emulator, berg, deployer):
 
 def test_ibc_ack_event(pool, channel_id, ibc_emulator, berg, deployer):
     """
-    Test the OnSendLiquiditySuccess event gets fired.
+    Test the SendLiquiditySuccess event gets fired.
     """
     swap_percentage = 10000
     swap_amount = int(pool.totalSupply() * swap_percentage / 100000)
@@ -160,7 +160,7 @@ def test_ibc_ack_event(pool, channel_id, ibc_emulator, berg, deployer):
         {"from": deployer},
     )
 
-    ack_event = txe.events["OnSendLiquiditySuccess"]
+    ack_event = txe.events["SendLiquiditySuccess"]
 
     assert ack_event["toAccount"].hex() == convert_64_bytes_address(berg.address).hex()
     assert ack_event["U"] == tx.return_value
@@ -170,7 +170,7 @@ def test_ibc_ack_event(pool, channel_id, ibc_emulator, berg, deployer):
 
 def test_ibc_timeout_event(pool, channel_id, ibc_emulator, berg, deployer):
     """
-    Test the OnSendLiquidityFailure event gets fired.
+    Test the SendLiquidityFailure event gets fired.
     """
     swap_percentage = 10000
     swap_amount = int(pool.totalSupply() * swap_percentage / 100000)
@@ -193,7 +193,7 @@ def test_ibc_timeout_event(pool, channel_id, ibc_emulator, berg, deployer):
         {"from": deployer},
     )
 
-    timeout_event = txe.events["OnSendLiquidityFailure"]
+    timeout_event = txe.events["SendLiquidityFailure"]
 
     assert (
         timeout_event["toAccount"].hex() == convert_64_bytes_address(berg.address).hex()

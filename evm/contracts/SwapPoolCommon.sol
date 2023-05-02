@@ -445,7 +445,7 @@ abstract contract CatalystSwapPoolCommon is
 
         ERC20(escrowToken).safeTransfer(fallbackAddress, escrowAmount);  // Would fail if there is no balance. To protect against this, the escrow amount is removed from what can be claimed by users.
 
-        emit OnSendAssetFailure(
+        emit SendAssetFailure(
             toAccount,
             U,
             escrowAmount,
@@ -479,7 +479,7 @@ abstract contract CatalystSwapPoolCommon is
 
         _releaseLiquidityEscrow(sendLiquidityHash, escrowAmount); // Only reverts for missing escrow
 
-        emit OnSendLiquiditySuccess(
+        emit SendLiquiditySuccess(
             toAccount,
             U,
             escrowAmount,
@@ -514,7 +514,7 @@ abstract contract CatalystSwapPoolCommon is
 
         _mint(fallbackAddress, escrowAmount);  
 
-        emit OnSendLiquidityFailure(
+        emit SendLiquidityFailure(
             toAccount,
             U,
             escrowAmount,

@@ -141,7 +141,7 @@ interface ICatalystV1PoolEvents {
     );
 
     /** @notice Called upon failed asset swap. */
-    event OnSendAssetFailure(
+    event SendAssetFailure(
         bytes toAccount,
         uint256 U,
         uint256 escrowAmount,
@@ -150,7 +150,7 @@ interface ICatalystV1PoolEvents {
     );
 
     /** @notice Called upon successful liquidity swap. */
-    event OnSendLiquiditySuccess(
+    event SendLiquiditySuccess(
         bytes toAccount,
         uint256 U,
         uint256 escrowAmount,
@@ -158,7 +158,7 @@ interface ICatalystV1PoolEvents {
         );
 
     /** @notice Called upon failed liquidity swap. */
-    event OnSendLiquidityFailure(
+    event SendLiquidityFailure(
         bytes toAccount,
         uint256 U,
         uint256 escrowAmount,

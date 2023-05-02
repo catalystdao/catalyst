@@ -306,7 +306,7 @@ def test_ibc_ack_event(channel_id, pool, pool_tokens, ibc_emulator, berg, deploy
 
 def test_ibc_timeout_event(channel_id, pool, pool_tokens, ibc_emulator, berg, deployer):
     """
-    Test the OnSendAssetFailure event gets fired.
+    Test the SendAssetFailure event gets fired.
     """
 
     swap_amount = 10**8
@@ -334,7 +334,7 @@ def test_ibc_timeout_event(channel_id, pool, pool_tokens, ibc_emulator, berg, de
         {"from": deployer},
     )
 
-    timeout_event = txe.events["OnSendAssetFailure"]
+    timeout_event = txe.events["SendAssetFailure"]
 
     assert (
         timeout_event["toAccount"].hex() == convert_64_bytes_address(berg.address).hex()
