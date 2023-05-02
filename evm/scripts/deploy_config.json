@@ -1,0 +1,117 @@
+{
+    "relayer_address": "",
+    "tokens": {
+        "wSEP": "",
+        "wMUM": ""
+    },
+    "Stables": {
+        "amplification": 0.25,
+        "sepolia": {
+            "weights": [1e12, 1, 1e2],
+            "tokens": {
+                "sepUSDC": {
+                    "decimals": 6,
+                    "supply": 1e6,
+                    "deposited": 1e4
+                },
+                "sepUSDT": {
+                    "decimals": 18,
+                    "supply": 1e6,
+                    "deposited": 1e4
+                },
+                "SuperStable100": {
+                    "decimals": 16,
+                    "supply": 1e6,
+                    "deposited": 1e4
+                }
+            }
+        },
+        "mumbai": {
+            "weights": [1e12, 1],
+            "tokens": {
+                "mumUSDC": {
+                    "decimals": 6,
+                    "supply": 1e6,
+                    "deposited": 1e4
+                },
+                "mumUSDT": {
+                    "decimals": 18,
+                    "supply": 1e6,
+                    "deposited": 1e4
+                }
+            }
+        }
+    },
+    "Gas Token": {
+        "sepolia": {
+            "weights": [100, 200],
+            "tokens": {
+                "wSEP": {
+                    "deposited": 1
+                },
+                "seppoi": {
+                    "decimals": 18,
+                    "supply": 1e6,
+                    "deposited": 1e4
+                }
+            }
+        },
+        "mumbai": {
+            "weights": [100, 50],
+            "tokens": {
+                "wMUM": {
+                    "deposited": 2
+                },
+                "mummi": {
+                    "decimals": 18,
+                    "supply": 1e6,
+                    "deposited": 1e3
+                }
+            }
+        }
+    },
+    "Pool 1": {
+        "sepolia": {
+            "weights": [1],
+            "tokens": {
+                "seppoi": {
+                    "deposited": 1e4
+                }
+            }
+        },
+        "mumbai": {
+            "weights": [1],
+            "tokens": {
+                "mumUSDC": {
+                    "deposited": 1e3
+                }
+            }
+        }
+    },
+    "SepStableGas": {
+        "sepolia": {
+            "weights": [1],
+            "tokens": {
+                "wSEP": {
+                    "deposited": 1
+                },
+                "sepUSDC": {
+                    "deposited": 100
+                }
+            }
+        }
+    },
+    "MumStableGas": {
+        "sepolia": {
+            "weights": [1],
+            "tokens": {
+                "wMUM": {
+                    "deposited": 1
+                },
+                "mumUSDC": {
+                    "deposited": 100
+                }
+            }
+        }
+    }
+}
