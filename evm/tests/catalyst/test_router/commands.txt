@@ -1,0 +1,17 @@
+uint256 constant LOCALSWAP              = 0x00; // test_route_swap_route.py
+uint256 constant SENDASSET              = 0x01; // test_route_swap_route.py
+uint256 constant PERMIT2_TRANSFER_FROM  = 0x02; // test_wrapping.py
+uint256 constant PERMIT2_PERMIT_BATCH   = 0x03;
+uint256 constant SWEEP                  = 0x04; // test_route_swap_route.py, test_wrapping.py, test_deposit_and_withdraw.py
+uint256 constant TRANSFER               = 0x05; // test_transfer.py
+uint256 constant PAY_PORTION            = 0x06; // test_transfer.py
+
+// Block 2
+uint256 constant PERMIT2_PERMIT         = 0x07;
+uint256 constant WRAP_GAS               = 0x08; // test_route_swap_route.py, test_wrapping.py
+uint256 constant UNWRAP_GAS             = 0x09; // test_wrapping.py
+uint256 constant WITHDRAW_EQUAL         = 0x0a; // test_deposit_and_withdraw.py
+uint256 constant WITHDRAW_MIXED         = 0x0b; // test_deposit_and_withdraw.py
+uint256 constant DEPOSIT_MIXED          = 0x0c; // test_deposit_and_withdraw.py
+uint256 constant ALLOW_CANCEL           = 0x0d; // test_cancel.py
+uint256 constant BALANCE_CHECK_ERC20    = 0x0e;
