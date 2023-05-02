@@ -42,8 +42,8 @@ abstract contract CatalystExchange is RouterImmutables {
     function sendAsset(
         address pool,
         bytes32 channelId,
-        bytes calldata toPool,
-        bytes calldata toAccount,
+        bytes memory toPool,
+        bytes memory toAccount,
         address fromAsset,
         uint8 toAssetIndex,
         uint256 amount,
@@ -71,10 +71,10 @@ abstract contract CatalystExchange is RouterImmutables {
     function sendLiquidity(
         address pool,
         bytes32 channelId,
-        bytes calldata toPool,
-        bytes calldata toAccount,
+        bytes memory toPool,
+        bytes memory toAccount,
         uint256 poolTokens,
-        uint256[2] calldata minOut,
+        uint256[2] memory minOut,
         address fallbackUser,
         bytes memory calldata_
     ) internal {

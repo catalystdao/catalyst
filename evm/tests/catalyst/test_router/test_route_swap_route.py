@@ -108,7 +108,7 @@ def test_route_route(catalyst_router, pool11, pool12, pool21, pool22, weth, toke
         [token3.address, berg.address, 0]
     ])
     
-    payloadTarget = convert.to_bytes(catalyst_router.address, type_str="bytes32") + convert.to_bytes(catalyst_router.execute.encode_input(*payload2)[10:], "bytes")
+    payloadTarget = convert.to_bytes(catalyst_router.address, type_str="bytes20") + convert.to_bytes(catalyst_router.execute.encode_input(*payload2)[10:], "bytes")
     
     payload1 = encode_router_payload([0x08, 0x00, 0x01], [
         [ADDRESS_THIS, amount],

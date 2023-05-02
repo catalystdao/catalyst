@@ -17,6 +17,7 @@ import {LockAndMsgSender} from './LockAndMsgSender.sol';
 abstract contract Dispatcher is Permit2Payments, CatalystExchange, CancelSwap, LockAndMsgSender {
     using BytesLib for bytes;
 
+    error debugError(bytes tt);
     error InvalidCommandType(uint256 commandType);
     error BuyPunkFailed();
     error InvalidOwnerERC721();
@@ -53,31 +54,37 @@ abstract contract Dispatcher is Permit2Payments, CatalystExchange, CancelSwap, L
                     }
                     CatalystExchange.localSwap(pool, fromAsset, toAsset, amount, minOut);
                 }  else if (command == Commands.SENDASSET) {
-                    // equivalent: abi.decode(inputs, (address, bytes32, bytes[65], bytes, address, uint256, uint256, uint256, address))
-                    address pool;
-                    bytes32 channelId;
-                    bytes calldata toPool = inputs.toBytes(0x40);
-                    bytes calldata toUser = inputs.toBytes(0x60);
-                    address fromAsset;
-                    uint256 toAssetIndex256;
-                    uint256 amount;
-                    uint256 minOut;
-                    address fallbackUser;
-                    assembly {
-                        pool := calldataload(inputs.offset)
-                        channelId := calldataload(add(inputs.offset, 0x20))
-                        // toPool := calldataload(add(inputs.offset, 0x40))
-                        // toUser := calldataload(add(inputs.offset, 0x60))
-                        fromAsset := calldataload(add(inputs.offset, 0x80))
-                        toAssetIndex256 := calldataload(add(inputs.offset, 0xa0))
-                        amount := calldataload(add(inputs.offset, 0xc0))
-                        minOut := calldataload(add(inputs.offset, 0xe0))
-                        fallbackUser := calldataload(add(inputs.offset, 0x100))
-                    }
+                    // equivalent: abi.decode(inputs, (address, bytes32, bytes, bytes, address, uint256, uint256, uint256, address))
+                    // address pool;
+                    // bytes32 channelId;
+                    // bytes calldata toPool = inputs.toBytes(0x40);
+                    // bytes calldata toUser = inputs.toBytes(0x60);
+                    // address fromAsset;
+                    // uint256 toAssetIndex256;
+                    // uint256 amount;
+                    // uint256 minOut;
+                    // address fallbackUser;
+                    // assembly {
+                    //     pool := calldataload(inputs.offset)
+                    //     channelId := calldataload(add(inputs.offset, 0x20))
+                    //     // toPool := calldataload(add(inputs.offset, 0x40))
+                    //     // toUser := calldataload(add(inputs.offset, 0x60))
+                    //     fromAsset := calldataload(add(inputs.offset, 0x80))
+                    //     toAssetIndex256 := calldataload(add(inputs.offset, 0xa0))
+                    //     amount := calldataload(add(inputs.offset, 0xc0))
+                    //     minOut := calldataload(add(inputs.offset, 0xe0))
+                    //     fallbackUser := calldataload(add(inputs.offset, 0x100))
+                    // }
 
-                    bytes calldata calldata_ = inputs[0x120:];
+                    // TODO: Decode memory bytes in calldata. See above.
+                    (address pool, bytes32 channelId, bytes memory toPool, bytes memory toUser, address fromAsset, uint8 toAssetIndex8, uint256 amount, uint256 minOut, address fallbackUser) = abi.decode(inputs, (address, bytes32, bytes, bytes, address, uint8, uint256, uint256, address));
 
-                    uint8 toAssetIndex8 = uint8(toAssetIndex256);
+                    // We don't have space in the stack do dynamically decode the calldata. 
+                    // To circumvent that, we have to decode it as a slice. We need to start after
+                    // all initial variables (ends at 0x120) AND after the dynamically decoded bytes.
+                    // Luckly, we know that toPool and toUser is 65 bytes long. With 2 length indicators of 32 bytes
+                    // Calldata must be everything after: 0x120 + 65 * 2 + (32*3-65) * 2 + 2 * 32 = 544 = 0x220.
+                    bytes calldata calldata_ = inputs[0x220:];
                     
                     CatalystExchange.sendAsset(pool, channelId, toPool, toUser, fromAsset, toAssetIndex8, amount, minOut, fallbackUser, calldata_);
                 } else if (command == Commands.PERMIT2_TRANSFER_FROM) {
@@ -200,27 +207,15 @@ abstract contract Dispatcher is Permit2Payments, CatalystExchange, CancelSwap, L
                 // 0x0e <= command < 0x10
             } else if (command < 0x10) {
                 if (command == Commands.SENDLIQUIDITY) {
-                    // equivalent: abi.decode(inputs, (address, bytes32, bytes, bytes, uint256, uint256[2], address, bytes))
-                    address pool;
-                    bytes32 channelId;
-                    bytes calldata toPool = inputs.toBytes(0x40);
-                    bytes calldata toUser = inputs.toBytes(0x60);
-                    uint256 toAssetIndex256;
-                    uint256 amount;
-                    uint256[2] calldata minOut;
-                    address fallbackUser;
-                    assembly {
-                        pool := calldataload(inputs.offset)
-                        channelId := calldataload(add(inputs.offset, 0x20))
-                        // toPool := calldataload(add(inputs.offset, 0x40))
-                        // toUser := calldataload(add(inputs.offset, 0x60))
-                        toAssetIndex256 := calldataload(add(inputs.offset, 0x80))
-                        amount := calldataload(add(inputs.offset, 0xa0))
-                        minOut := calldataload(add(inputs.offset, 0xc0)) // fills 2
-                        fallbackUser := calldataload(add(inputs.offset, 0x100))
-                    }
+                    // TODO: Decode memory variables in calldata. See sendAsset.
+                    (address pool, bytes32 channelId, bytes memory toPool, bytes memory toUser, address fromAsset, uint256 amount, uint256[2] memory minOut, address fallbackUser) = abi.decode(inputs, (address, bytes32, bytes, bytes, address, uint256, uint256[2], address));
 
-                    bytes calldata calldata_ = inputs[0x120:];
+                    // We don't have space in the stack do dynamically decode the calldata. 
+                    // To circumvent that, we have to decode it as a slice. We need to start after
+                    // all initial variables (ends at 0x120) AND after the dynamically decoded bytes.
+                    // Luckly, we know that toPool and toUser is 65 bytes long. With 2 length indicators of 32 bytes
+                    // Calldata must be everything after: 0x120 + 65 * 2 + (32*3-65) * 2 + 2 * 32 = 544 = 0x220.
+                    bytes calldata calldata_ = inputs[0x220:];
                     
                     CatalystExchange.sendLiquidity(pool, channelId, toPool, toUser, amount, minOut, fallbackUser, calldata_);
                 } else if (command == Commands.ALLOW_CANCEL) {

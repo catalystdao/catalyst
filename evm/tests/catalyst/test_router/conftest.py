@@ -42,7 +42,7 @@ def encode_router_payload():
         encoded_parameters = []
         for command, parameter in zip(commands, parameters):
             encoded_commands += convert.to_bytes(command, type_str="bytes1")
-            if command == 1 and len(parameter) == 10:  
+            if command == 1 and len(parameter) == 10:
                 # If call is send asset and custom calldata is provided, the calldata
                 # needs to be appended the other calldata.
                 encoded = encode(encode_table[command], parameter[:-1])
