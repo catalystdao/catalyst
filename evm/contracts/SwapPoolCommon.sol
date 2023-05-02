@@ -50,7 +50,7 @@ abstract contract CatalystSwapPoolCommon is
 
     /// @notice Maximum number of assets supported
     /// @dev Impacts the cost of some for loops. Can be changed without breaking compatibility.
-    uint8 constant MAX_ASSETS = 3;
+    uint8 constant public MAX_ASSETS = 3;
 
     //-- Variables --//
 
@@ -115,8 +115,13 @@ abstract contract CatalystSwapPoolCommon is
     /// @notice Specific escrow information (Liquidity)
     mapping(bytes32 => address) public _escrowedPoolTokensFor;
 
-    constructor(address factory_) ERC20("Catalyst Pool Template", "", DECIMALS) {
+    /// @notice A mathematical lib which describes various properties of this contract. These helper functions are not contained the swap template, since they notisably inflate the contract side which reduceses the number of optimizer runs => incåreases the gas cost.
+    address immutable public MATHLIB;
+
+    constructor(address factory_, address mathlib) ERC20("Catalyst Pool Template", "", DECIMALS) {
         FACTORY = factory_;
+        MATHLIB = mathlib;
+
 
         _disableInitializers();
     }
