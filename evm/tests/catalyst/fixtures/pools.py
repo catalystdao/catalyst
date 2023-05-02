@@ -7,6 +7,7 @@ from brownie import (
 )
 
 import tests.catalyst.utils.pool_utils as pool_utils
+from tests.catalyst.utils.common_utils import convert_64_bytes_address
 from tests.catalyst.utils.pool_utils import compute_balance_0, compute_invariant
 
 from tests.catalyst.utils.pool_utils import compute_expected_max_unit_inflow
@@ -210,7 +211,7 @@ def group_connect_pools(group_pools, channel_id, deployer):
             
             pool_1.setConnection(
                 channel_id,
-                convert.to_bytes(20, "bytes1")+convert.to_bytes(0)+convert.to_bytes(pool_2.address.replace("0x", "")),
+                convert_64_bytes_address(pool_2.address),
                 True,
                 {"from": deployer}
             )
@@ -224,7 +225,7 @@ def pool_finish_setup(pool, deployer):
 def pool_connect_itself(pool, channel_id, deployer):
     pool.setConnection(
         channel_id,
-        convert.to_bytes(20, "bytes1")+convert.to_bytes(0)+convert.to_bytes(pool.address.replace("0x", "")),
+        convert_64_bytes_address(pool.address),
         True,
         {"from": deployer}
     )

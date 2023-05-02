@@ -1,6 +1,7 @@
 from constants import MSG_SENDER, ADDRESS_THIS, BALANCE_THIS
 import pytest
 from brownie import convert
+from utils.common_utils import convert_64_bytes_address
 
 
 def byte_sum(elements: list):
@@ -78,14 +79,14 @@ def pool22(deploypool, pool2_tkns):
 
 def test_sendSwap(catalyst_router, pool11, pool12, pool21, pool22, weth, token1, token2, token3, channel_id, ibc_emulator, accounts, berg, encode_router_payload):
     
-    pool12.setConnection(channel_id, convert.to_bytes(pool21.address), True, {'from': accounts[0]})
-    pool21.setConnection(channel_id, convert.to_bytes(pool12.address), True, {'from': accounts[0]})
+    pool12.setConnection(channel_id, convert_64_bytes_address(pool21.address), True, {'from': accounts[0]})
+    pool21.setConnection(channel_id, convert_64_bytes_address(pool12.address), True, {'from': accounts[0]})
     
     amount = 10**18
     payload1 = encode_router_payload([0x08, 0x00, 0x01], [
         [ADDRESS_THIS, amount],
         [pool11.address, weth.address, token1.address, amount, 0],
-        [pool12.address, channel_id, pool21.address, berg.address, token1.address, 0, BALANCE_THIS, 0, berg.address]  # Leave the calldata param blank.
+        [pool12.address, channel_id, convert_64_bytes_address(pool21.address), convert_64_bytes_address(berg.address), token1.address, 0, BALANCE_THIS, 0, berg.address]  # Leave the calldata param blank.
     ])
     
     tx = catalyst_router.execute(*payload1, {'from': berg.address, 'value': amount})
@@ -97,8 +98,8 @@ def test_sendSwap(catalyst_router, pool11, pool12, pool21, pool22, weth, token1,
 
 def test_route_route(catalyst_router, pool11, pool12, pool21, pool22, weth, token1, token2, token3, channel_id, ibc_emulator, accounts, berg, encode_router_payload):
     
-    pool12.setConnection(channel_id, convert.to_bytes(pool21.address), True, {'from': accounts[0]})
-    pool21.setConnection(channel_id, convert.to_bytes(pool12.address), True, {'from': accounts[0]})
+    pool12.setConnection(channel_id, convert_64_bytes_address(pool21.address), True, {'from': accounts[0]})
+    pool21.setConnection(channel_id, convert_64_bytes_address(pool12.address), True, {'from': accounts[0]})
     
     amount = 10**18
     
@@ -112,7 +113,7 @@ def test_route_route(catalyst_router, pool11, pool12, pool21, pool22, weth, toke
     payload1 = encode_router_payload([0x08, 0x00, 0x01], [
         [ADDRESS_THIS, amount],
         [pool11.address, weth.address, token1.address, amount, 0],
-        [pool12.address, channel_id, pool21.address, catalyst_router.address, token1.address, 0, BALANCE_THIS, 0, berg.address, payloadTarget]
+        [pool12.address, channel_id, convert_64_bytes_address(pool21.address), convert_64_bytes_address(catalyst_router.address), token1.address, 0, BALANCE_THIS, 0, berg.address, payloadTarget]
     ])
     
     tx = catalyst_router.execute(*payload1, {'from': berg.address, 'value': amount})

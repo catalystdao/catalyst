@@ -42,8 +42,8 @@ abstract contract CatalystExchange is RouterImmutables {
     function sendAsset(
         address pool,
         bytes32 channelId,
-        bytes32 targetPool,
-        bytes32 targetUser,
+        bytes calldata toPool,
+        bytes calldata toAccount,
         address fromAsset,
         uint8 toAssetIndex,
         uint256 amount,
@@ -57,11 +57,34 @@ abstract contract CatalystExchange is RouterImmutables {
 
         ICatalystV1Pool(pool).sendAsset(
             channelId,
-            targetPool,
-            targetUser,
+            toPool,
+            toAccount,
             fromAsset,
             toAssetIndex,
             amount,
+            minOut,
+            fallbackUser,
+            calldata_
+        );
+    }
+
+    function sendLiquidity(
+        address pool,
+        bytes32 channelId,
+        bytes calldata toPool,
+        bytes calldata toAccount,
+        uint256 poolTokens,
+        uint256[2] calldata minOut,
+        address fallbackUser,
+        bytes memory calldata_
+    ) internal {
+        poolTokens = poolTokens == Constants.CONTRACT_BALANCE ? ERC20(pool).balanceOf(address(this)) : poolTokens;
+
+        ICatalystV1Pool(pool).sendLiquidity(
+            channelId,
+            toPool,
+            toAccount,
+            poolTokens,
             minOut,
             fallbackUser,
             calldata_

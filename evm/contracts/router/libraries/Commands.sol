@@ -8,8 +8,6 @@ library Commands {
     bytes1 internal constant FLAG_ALLOW_REVERT = 0x80;
     bytes1 internal constant COMMAND_TYPE_MASK = 0x3f;
 
-    // Command Types. Maximum supported command at this moment is 0x1F.
-
     // Block 1
     uint256 constant LOCALSWAP              = 0x00;
     uint256 constant SENDASSET              = 0x01;
@@ -26,8 +24,9 @@ library Commands {
     uint256 constant WITHDRAW_EQUAL         = 0x0a;
     uint256 constant WITHDRAW_MIXED         = 0x0b;
     uint256 constant DEPOSIT_MIXED          = 0x0c;
-    uint256 constant ALLOW_CANCEL           = 0x0d;
-    uint256 constant BALANCE_CHECK_ERC20    = 0x0e;
+    uint256 constant SENDLIQUIDITY          = 0x0d;
+    uint256 constant ALLOW_CANCEL           = 0x0e;
+    uint256 constant BALANCE_CHECK_ERC20    = 0x0f;
 
     // Command Types where 0x10<=value
     uint256 constant EXECUTE_SUB_PLAN       = 0x10;

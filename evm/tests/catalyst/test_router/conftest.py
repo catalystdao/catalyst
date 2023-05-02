@@ -17,7 +17,7 @@ def catalyst_router(permit2, weth, deployer):
 
 encode_table = {
     0: ["address", "address", "address", "uint256", "uint256"],  # LOCALSWAP
-    1: ["address", "bytes32", "bytes32", "bytes32", "address", "uint256", "uint256", "uint256", "address"],  # SENDASSET
+    1: ["address", "bytes32", "bytes", "bytes", "address", "uint256", "uint256", "uint256", "address"],  # SENDASSET
     2: ["address", "address", "uint160"],  # PERMIT2_TRANSFER_FROM
     3: ["IAllowanceTransfer.PermitBatch", "bytes"],  # PERMIT2_PERMIT_BATCH
     4: ["address", "address", "uint256"],  # SWEEP
@@ -29,7 +29,8 @@ encode_table = {
     10: ["address", "uint256", "uint256[]"],  # WITHDRAW_EQUAL
     11: ["address", "uint256", "uint256[]", "uint256[]"],  # WITHDRAW_MIXED
     12: ["address", "address[]", "uint256[]", "uint256"],  # DEPOSIT_MIXED
-    13: ["address", "bytes32"],  # ALLOW_CANCEL
+    13: ["address", "bytes32", "bytes", "bytes", "uint256", "uint256[2]", "address"],  # SENDLIQUIDITY
+    14: ["address", "bytes32"],  # ALLOW_CANCEL
 }
 
 
@@ -41,9 +42,6 @@ def encode_router_payload():
         encoded_parameters = []
         for command, parameter in zip(commands, parameters):
             encoded_commands += convert.to_bytes(command, type_str="bytes1")
-            if command == 1:
-                parameter[2] = convert.to_bytes(parameter[2])  # Convert target pool address to bytes32
-                parameter[3] = convert.to_bytes(parameter[3])  # Convert target user address to bytes32
             if command == 1 and len(parameter) == 10:  
                 # If call is send asset and custom calldata is provided, the calldata
                 # needs to be appended the other calldata.

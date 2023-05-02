@@ -8,7 +8,7 @@ def test_no_cancel(catalyst_router, weth, deployer, encode_router_payload):
     amount = 10**18
     
     # Actions: Wrap ETH, transfer to account, sweep. Then check that exactly a certain amount is transfered.
-    payload = encode_router_payload([0x0d, 0x08, 0x04], [[deployer.address, convert.to_bytes(123)], [ADDRESS_THIS, amount], [weth.address, MSG_SENDER, int(amount/2)]])
+    payload = encode_router_payload([0x0e, 0x08, 0x04], [[deployer.address, convert.to_bytes(123)], [ADDRESS_THIS, amount], [weth.address, MSG_SENDER, int(amount/2)]])
     
     tx = catalyst_router.execute(*payload, {'from': deployer, 'value': amount})
     
@@ -21,7 +21,7 @@ def test_cancel(catalyst_router, weth, deployer, encode_router_payload):
     amount = 10**18
     
     # Actions: Wrap ETH, transfer to account, sweep. Then check that exactly a certain amount is transfered.
-    payload = encode_router_payload([0x0d, 0x08, 0x04], [[deployer.address, convert.to_bytes(123)], [ADDRESS_THIS, amount], [weth.address, MSG_SENDER, int(amount/2)]])
+    payload = encode_router_payload([0x0e, 0x08, 0x04], [[deployer.address, convert.to_bytes(123)], [ADDRESS_THIS, amount], [weth.address, MSG_SENDER, int(amount/2)]])
     
     catalyst_router.cancelSwap(convert.to_bytes(123), {'from': deployer})
     
