@@ -54,8 +54,11 @@ def test_cross_pool_swap(
     
     # The swap may revert because of the security limit     #TODO mark these cases as 'skip'?
     if pool_2.getUnitCapacity() < tx.events["SendAsset"]["units"]:
-        with reverts(revert_pattern=re.compile("typed error: 0x249c4e65.*")):
-            txe = ibc_emulator.execute(tx.events["IncomingMetadata"]["metadata"][0], tx.events["IncomingPacket"]["packet"], {"from": berg})
+        txe = ibc_emulator.execute(tx.events["IncomingMetadata"]["metadata"][0], tx.events["IncomingPacket"]["packet"], {"from": berg})
+        # Check that the transaction is fail on ack
+        assert txe.events["Acknowledgement"]["acknowledgement"] == hex(1)
+        # Ensure no tokens are transfered.
+        assert "Transfer" not in txe.events.keys()
         return
     else:
         txe = ibc_emulator.execute(tx.events["IncomingMetadata"]["metadata"][0], tx.events["IncomingPacket"]["packet"], {"from": berg})
@@ -117,9 +120,13 @@ def test_cross_pool_swap_min_out(
 
     if min_out == 0:
         return
-
-    with reverts(revert_pattern=re.compile("typed error: 0x24557f05.*")):
-        ibc_emulator.execute(tx.events["IncomingMetadata"]["metadata"][0], tx.events["IncomingPacket"]["packet"], {"from": berg})
+    
+    tx_e = ibc_emulator.execute(tx.events["IncomingMetadata"]["metadata"][0], tx.events["IncomingPacket"]["packet"], {"from": berg})
+    
+    assert tx_e.events["Acknowledgement"]["acknowledgement"] == hex(1)
+    
+    # Ensure no tokens are transfered.
+    assert "Transfer" not in tx_e.events.keys()
 
 
 def test_send_asset_event(

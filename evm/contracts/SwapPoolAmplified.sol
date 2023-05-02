@@ -1093,7 +1093,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
         // Calculate the group-specific units bought.
         uint256 U = calcSendAsset(fromAsset, amount - fee);
 
-        // sendAssetAck requires casting U to int256 to update the _unitTracker and must never revert. Check for overflow here.
+        // onSendAssetSuccess requires casting U to int256 to update the _unitTracker and must never revert. Check for overflow here.
         require(U < uint256(type(int256).max));     // int256 max fits in uint256
         _unitTracker += int256(U);
 
@@ -1411,7 +1411,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
                     oneMinusAmp
                 )) - FixedPointMathLib.WAD
             );
-            // sendLiquidityAck requires casting U to int256 to update the _unitTracker and must never revert. Check for overflow here.
+            // onSendLiquiditySuccess requires casting U to int256 to update the _unitTracker and must never revert. Check for overflow here.
             require(U < uint256(type(int256).max));     // int256 max fits in uint256
             _unitTracker += int256(U);
         }
@@ -1619,7 +1619,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
      * @param escrowToken The token escrowed.
      * @param blockNumberMod The block number at which the swap transaction was commited (mod 32)
      */
-    function sendAssetAck(
+    function onSendAssetSuccess(
         bytes calldata toAccount,
         uint256 U,
         uint256 escrowAmount,
@@ -1627,7 +1627,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
         uint32 blockNumberMod
     ) public override {
         // Execute common escrow logic.
-        super.sendAssetAck(toAccount, U, escrowAmount, escrowToken, blockNumberMod);
+        super.onSendAssetSuccess(toAccount, U, escrowAmount, escrowToken, blockNumberMod);
 
         // Incoming swaps should be subtracted from the unit flow.
         // It is assumed if the router was fraudulent, that no-one would execute a trade.
@@ -1673,7 +1673,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
      * @param escrowToken The token escrowed.
      * @param blockNumberMod The block number at which the swap transaction was commited (mod 32)
      */
-    function sendAssetTimeout(
+    function onSendAssetFailure(
         bytes calldata toAccount,
         uint256 U,
         uint256 escrowAmount,
@@ -1681,7 +1681,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
         uint32 blockNumberMod
     ) public override {
         // Execute common escrow logic.
-        super.sendAssetTimeout(toAccount, U, escrowAmount, escrowToken, blockNumberMod);
+        super.onSendAssetFailure(toAccount, U, escrowAmount, escrowToken, blockNumberMod);
 
         // Removed timed-out units from the unit tracker. This will keep the
         // balance0 in balance, since tokens also leave the pool
@@ -1689,7 +1689,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
                                         // Cannot be manipulated by the router as, otherwise, the swapHash check will fail
     }
 
-    // sendLiquidityAck is not overwritten since we are unable to increase
+    // onSendLiquiditySuccess is not overwritten since we are unable to increase
     // the security limit. This is because it is very expensive to compute the update
     // to the security limit. If someone liquidity swapped a significant amount of assets
     // it is assumed the pool has low liquidity. In these cases, liquidity swaps shouldn't be used.
@@ -1703,13 +1703,13 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
      * @param escrowAmount The number of pool tokens escrowed.
      * @param blockNumberMod The block number at which the swap transaction was commited (mod 32)
      */
-    function sendLiquidityTimeout(
+    function onSendLiquidityFailure(
         bytes calldata toAccount,
         uint256 U,
         uint256 escrowAmount,
         uint32 blockNumberMod
     ) public override {
-        super.sendLiquidityTimeout(toAccount, U, escrowAmount, blockNumberMod);
+        super.onSendLiquidityFailure(toAccount, U, escrowAmount, blockNumberMod);
 
         // Removed timed-out units from the unit tracker. This will keep the
         // balance0 in balance, since tokens also leave the pool

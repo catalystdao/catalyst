@@ -35,6 +35,11 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
         IBC_DISPATCHER = IBCDispatcher_;
     }
 
+    modifier onlyIbcDispatcher() {
+        if (msg.sender != IBC_DISPATCHER) revert InvalidIBCCaller(msg.sender);
+        _;
+    }
+
     /// @notice Registers IBC ports for this contract.
     /// @dev The matching CatalystIBCInterface should call
     /// registerPort at the same time to establish an
@@ -162,13 +167,11 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
     }
 
     /**
-     * @notice IBC Acknowledgement package handler
+     * @notice Cross-chain message success handler
      * @dev Should never revert.
      * @param packet The IBC packet
      */
-    function onAcknowledgementPacket(IbcPacket calldata packet) external {
-        if (msg.sender != IBC_DISPATCHER) revert InvalidIBCCaller(msg.sender);
-
+    function _onPacketSuccess(IbcPacket calldata packet) internal {
         bytes calldata data = packet.data;
 
         bytes1 context = data[CONTEXT_POS];
@@ -177,7 +180,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
 
         if (context == CTX0_ASSET_SWAP) {
 
-            ICatalystV1Pool(fromPool).sendAssetAck(
+            ICatalystV1Pool(fromPool).onSendAssetSuccess(
                 data[ TO_ACCOUNT_LENGTH_POS : TO_ACCOUNT_END ],                                     // toAccount
                 uint256(bytes32(data[ UNITS_START : UNITS_END ])),                                  // units
                 uint256(bytes32(data[ CTX0_FROM_AMOUNT_START : CTX0_FROM_AMOUNT_END ])),            // fromAmount
@@ -188,7 +191,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
         }
         else if (context == CTX1_LIQUIDITY_SWAP) {
 
-            ICatalystV1Pool(fromPool).sendLiquidityAck(
+            ICatalystV1Pool(fromPool).onSendLiquiditySuccess(
                 data[ TO_ACCOUNT_LENGTH_POS : TO_ACCOUNT_END ],                                     // toAccount
                 uint256(bytes32(data[ UNITS_START : UNITS_END ])),                                  // units
                 uint256(bytes32(data[ CTX1_FROM_AMOUNT_START : CTX1_FROM_AMOUNT_END ])),            // fromAmount
@@ -205,12 +208,11 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
     }
 
     /**
-     * @notice IBC timeout package handler
+     * @notice Cross-chain message failure handler
      * @dev Should never revert.
      * @param packet The IBC packet
      */
-    function onTimeoutPacket(IbcPacket calldata packet) external {
-        if (msg.sender != IBC_DISPATCHER) revert InvalidIBCCaller(msg.sender);
+    function _onPacketFailure(IbcPacket calldata packet) internal {
 
         bytes calldata data = packet.data;
 
@@ -220,7 +222,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
 
         if (context == CTX0_ASSET_SWAP) {
 
-            ICatalystV1Pool(fromPool).sendAssetTimeout(
+            ICatalystV1Pool(fromPool).onSendAssetFailure(
                 data[ TO_ACCOUNT_LENGTH_POS : TO_ACCOUNT_END ],                                     // toAccount
                 uint256(bytes32(data[ UNITS_START : UNITS_END ])),                                  // units
                 uint256(bytes32(data[ CTX0_FROM_AMOUNT_START : CTX0_FROM_AMOUNT_END ])),            // fromAmount
@@ -231,7 +233,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
         }
         else if (context == CTX1_LIQUIDITY_SWAP) {
 
-            ICatalystV1Pool(fromPool).sendLiquidityTimeout(
+            ICatalystV1Pool(fromPool).onSendLiquidityFailure(
                 data[ TO_ACCOUNT_LENGTH_POS : TO_ACCOUNT_END ],                                     // toAccount
                 uint256(bytes32(data[ UNITS_START : UNITS_END ])),                                  // units
                 uint256(bytes32(data[ CTX1_FROM_AMOUNT_START : CTX1_FROM_AMOUNT_END ])),            // fromAmount
@@ -248,10 +250,35 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
     }
 
     /**
-     * @notice IBC package handler
+     * @notice IBC Acknowledgement package handler
+     * @dev Should never revert.
+     * @param packet The IBC packet
+     * @param acknowledgement The acknowledgement bytes for the cross-chain swap.
+     */
+    function onAcknowledgementPacket(bytes calldata acknowledgement, IbcPacket calldata packet) onlyIbcDispatcher external {
+        // If the transaction executed but some logic failed, an ack is sent back with an acknowledgement of not 0x00.
+        // This is known as "fail on ack". The package should be timed-out.
+        if (acknowledgement[0]  != 0x00) return _onPacketFailure(packet);
+        // Otherwise, it must be a success:
+        _onPacketSuccess(packet);
+    }
+
+    /**
+     * @notice IBC timeout package handler
+     * @dev Should never revert.
      * @param packet The IBC packet
      */
-    function onRecvPacket(IbcPacket calldata packet) external {
+    function onTimeoutPacket(IbcPacket calldata packet) onlyIbcDispatcher external {
+        // Timeouts always implies failure.
+        _onPacketFailure(packet);
+    }
+
+    /**
+     * @notice IBC package handler
+     * @param packet The IBC packet
+     * @return acknowledgement The acknowledgement status of the transaction after execution
+     */
+    function onRecvPacket(IbcPacket calldata packet) external returns (bytes memory) {
         if (msg.sender != IBC_DISPATCHER) revert InvalidIBCCaller(msg.sender);
 
         bytes calldata data = packet.data;
@@ -267,14 +294,14 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
         if (uint96(bytes12(data[TO_ACCOUNT_START+32:TO_ACCOUNT_START_EVM])) != 0) revert InvalidAddress();  // Check the next 32-20=12 bytes are 0.
         // To pool will not be checked. If it is assumed that any error is random, then an incorrect toPool will result in the call failling.
 
-
+        bytes1 acknowledgement = 0x01; // Default status of a transaction is failed.
         if (context == CTX0_ASSET_SWAP) {
 
             uint16 dataLength = uint16(bytes2(data[CTX0_DATA_LENGTH_START:CTX0_DATA_LENGTH_END]));
 
             // CCI sets dataLength > 0 if calldata is passed.
             if (dataLength != 0) {
-                ICatalystV1Pool(toPool).receiveAsset(
+                try ICatalystV1Pool(toPool).receiveAsset(
                     bytes32(packet.src.channelId),                                              // connectionId
                     fromPool,                                                                   // fromPool
                     uint8(data[CTX0_TO_ASSET_INDEX_POS]),                                       // toAssetIndex
@@ -286,9 +313,9 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
                     uint32(bytes4(data[ CTX0_BLOCK_NUMBER_START : CTX0_BLOCK_NUMBER_END ])),    // block number
                     address(uint160(bytes20(data[ CTX0_DATA_START : CTX0_DATA_START+20 ]))),    // dataTarget
                     data[ CTX0_DATA_START+20 : CTX0_DATA_START+dataLength ]                     // dataArguments
-                );
+                ) {acknowledgement = 0x00;} catch {/* acknowledgement = 0x02;*/}
             } else {
-                ICatalystV1Pool(toPool).receiveAsset(
+                try ICatalystV1Pool(toPool).receiveAsset(
                     bytes32(packet.src.channelId),                                              // connectionId
                     fromPool,                                                                   // fromPool
                     uint8(data[CTX0_TO_ASSET_INDEX_POS]),                                       // toAssetIndex
@@ -298,9 +325,8 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
                     uint256(bytes32(data[ CTX0_FROM_AMOUNT_START : CTX0_FROM_AMOUNT_END ])),    // fromAmount
                     bytes(data[ CTX0_FROM_ASSET_LENGTH_POS : CTX0_FROM_ASSET_END ]),            // fromAsset
                     uint32(bytes4(data[ CTX0_BLOCK_NUMBER_START : CTX0_BLOCK_NUMBER_END ]))     // blocknumber
-                );
+                ) {acknowledgement = 0x00;} catch {/* acknowledgement = 0x02;*/}
             }
-
         }
         else if (context == CTX1_LIQUIDITY_SWAP) {
 
@@ -308,7 +334,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
 
             // CCI sets dataLength > 0 if calldata is passed.
             if (dataLength != 0) {
-                ICatalystV1Pool(toPool).receiveLiquidity(
+                try ICatalystV1Pool(toPool).receiveLiquidity(
                     bytes32(packet.src.channelId),                                              // connectionId
                     fromPool,                                                                   // fromPool
                     address(uint160(bytes20(data[ TO_ACCOUNT_START_EVM : TO_ACCOUNT_END ]))),   // toAccount
@@ -319,9 +345,9 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
                     uint32(bytes4(data[ CTX1_BLOCK_NUMBER_START : CTX1_BLOCK_NUMBER_END ])),    // block number
                     address(uint160(bytes20(data[ CTX1_DATA_START : CTX1_DATA_START+20 ]))),    // dataTarget
                     data[ CTX1_DATA_START+20 : CTX1_DATA_START+dataLength ]                     // dataArguments
-                );
+                ) {acknowledgement = 0x00;} catch {/* acknowledgement = 0x02; */}
             } else {
-                ICatalystV1Pool(toPool).receiveLiquidity(
+                try ICatalystV1Pool(toPool).receiveLiquidity(
                     bytes32(packet.src.channelId),                                              // connectionId
                     fromPool,                                                                   // fromPool
                     address(uint160(bytes20(data[ TO_ACCOUNT_START_EVM : TO_ACCOUNT_END ]))),   // toAccount
@@ -330,15 +356,13 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
                     uint256(bytes32(data[ CTX1_MIN_REFERENCE_START : CTX1_MIN_REFERENCE_END ])),// minOut
                     uint256(bytes32(data[ CTX1_FROM_AMOUNT_START : CTX1_FROM_AMOUNT_END ])),    // fromAmount
                     uint32(bytes4(data[ CTX1_BLOCK_NUMBER_START : CTX1_BLOCK_NUMBER_END ]))     // blocknumber
-                );
+                ) {acknowledgement = 0x00;} catch {/* acknowledgement = 0x02; */}
             }
-
         }
         else {
-
-            revert InvalidContext(context);
-
+            /* revert InvalidContext(context); */
+            /* acknowledgement = 0x01; */
         }
-
+        return abi.encodePacked(acknowledgement);
     }
 }
