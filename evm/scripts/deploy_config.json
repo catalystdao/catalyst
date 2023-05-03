@@ -5,17 +5,29 @@
             "ibcinterface": "",
             "crosschaininterface": "",
             "volatile_template": "",
-            "amplified_template": ""
+            "volatile_mathlib": "",
+            "amplified_template": "",
+            "amplified_mathlib": "",
+            "describer": "",
+            "describer_registry": "",
+            "router": "",
+            "permit2": ""
         },
         "mumbai": {
             "factory": "",
             "ibcinterface": "",
             "crosschaininterface": "",
             "volatile_template": "",
-            "amplified_template": ""
+            "volatile_mathlib": "",
+            "amplified_template": "",
+            "amplified_mathlib": "",
+            "describer": "",
+            "describer_registry": "",
+            "router": "",
+            "permit2": ""
         }
     },
-    "relayer_address": "",
+    "relayer_address": "0x0e479a0438d25B5b10C2186Bee1256d437b9C582",
     "tokens": {
         "sepolia": {
             "wSEP": "",
