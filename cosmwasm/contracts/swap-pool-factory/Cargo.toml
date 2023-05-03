@@ -1,0 +1,39 @@
+[package]
+name = "swap-pool-factory"
+version = "0.1.0"
+authors = ["Catalyst"]
+edition = "2021"
+
+exclude = [
+  # Those files are rust-optimizer artifacts. You might want to commit them for convenience but they should not be part of the source code publication.
+  "contract.wasm",
+  "hash.txt",
+]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[features]
+# for more explicit tests, cargo test --features=backtraces
+backtraces = ["cosmwasm-std/backtraces"]
+# use library feature to disable all instantiate/execute/query exports
+library = []
+
+[dependencies]
+cosmwasm-schema = "1.1.9"
+cosmwasm-std = { version = "1.1.9", features = ["stargate"] }
+cosmwasm-storage = "1.1.9"
+cw-storage-plus = "1.0.1"
+cw-controllers = "1.0.1"
+cw0 = "0.10.3"
+cw2 = "1.0.1"
+cw20 = "1.0.1"
+schemars = "0.8.10"
+serde = { version = "1.0.145", default-features = false, features = ["derive"] }
+thiserror = { version = "1.0.31" }
+swap-pool-common = { path = "../swap-pool-common" }
+
+[dev-dependencies]
+cw-multi-test = "0.16.2"
