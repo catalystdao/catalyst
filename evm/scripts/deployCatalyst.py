@@ -9,10 +9,13 @@ from tests.catalyst.utils.pool_utils import decode_payload
 
 """
 Test snippit:
-from scripts.deployCatalyst import Catalyst; acct = accounts[0]; cat = Catalyst(acct, "sepolia", "scripts/deploy_config.json", True, "wSEP"); WETH9.at(cat.config["tokens"]["sepolia"]["wSEP"]).deposit({'from': cat.deployer, 'value': 10*10**18}); cat.deploy_config()
+from scripts.deployCatalyst import Catalyst; acct = accounts[0]; cat = Catalyst(acct, "sepolia", "scripts/deploy_config.json", True, "wSEP"); WETH9.at(cat.config["tokens"]["sepolia"]["wSEP"]).deposit({'from': cat.deployer, 'value': 1*10**18}); cat.deploy_config()
 
 # Then run
-from scripts.deployCatalyst import Catalyst; acct = accounts[0]; cat = Catalyst(acct, "mumbai", "scripts/deploy_config.json", True, "wMUM"); WETH9.at(cat.config["tokens"]["mumbai"]["wMUM"]).deposit({'from': cat.deployer, 'value': 10*10**18}); cat.deploy_config(); cat.set_connections()
+from scripts.deployCatalyst import Catalyst; acct = accounts[0]; cat = Catalyst(acct, "mumbai", "scripts/deploy_config.json", True, "wMUM"); WETH9.at(cat.config["tokens"]["mumbai"]["wMUM"]).deposit({'from': cat.deployer, 'value': 1*10**18}); cat.deploy_config(); cat.set_connections()
+
+# Potentially use:
+from brownie.network.gas.strategies import LinearScalingStrategy; from brownie.network import gas_price; gas_strategy = LinearScalingStrategy("0.000001 gwei", "0.01 gwei", 1.1); gas_price(gas_strategy)
 """
 
 MAX_UINT256: int = 2**256 - 1
