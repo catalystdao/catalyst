@@ -1,12 +1,12 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{DepsMut, Env, MessageInfo, Response, Uint128, CosmosMsg, to_binary, StdError, SubMsg, Reply, SubMsgResult, StdResult, Uint64};
+use cosmwasm_std::{DepsMut, Env, MessageInfo, Response, Uint128, CosmosMsg, to_binary, StdError, SubMsg, Reply, SubMsgResult, StdResult, Uint64, Deps, Binary};
 use cw0::parse_reply_instantiate_data;
 use cw2::set_contract_version;
 use cw20::Cw20ExecuteMsg;
 
 use crate::error::ContractError;
-use crate::msg::{ExecuteMsg, InstantiateMsg};
+use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg, OwnerResponse};
 use crate::state::{set_default_governance_fee_share_unchecked, owner, default_governance_fee_share, save_deploy_vault_reply_args, DeployVaultReplyArgs, DEPLOY_VAULT_REPLY_ID, load_deploy_vault_reply_args};
 
 // version info for migration info
@@ -207,4 +207,21 @@ fn handle_deploy_vault_reply(
             .add_attribute("amplification", Uint64::from(deploy_args.amplification))    //TODO EVM mismatch: key name (k)
     )
 
+}
+
+
+
+#[cfg_attr(not(feature = "library"), entry_point)]
+pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
+    match msg {
+        QueryMsg::Owner {} => to_binary(&query_owner(deps)?)
+    }
+}
+
+fn query_owner(deps: Deps) -> StdResult<OwnerResponse> {
+    Ok(
+        OwnerResponse {
+            owner: owner(deps).map_err(|_| StdError::generic_err("Query owner error."))?    //TODO error
+        }
+    )
 }

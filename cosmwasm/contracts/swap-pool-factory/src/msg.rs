@@ -1,5 +1,5 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::Uint128;
+use cosmwasm_std::{Uint128, Addr};
 
 
 #[cw_serde]
@@ -27,5 +27,11 @@ pub enum ExecuteMsg {
 #[cw_serde]
 #[derive(QueryResponses)]
 pub enum QueryMsg {
+    #[returns(OwnerResponse)]
+    Owner {}
+}
 
+#[cw_serde]
+pub struct OwnerResponse {
+    pub owner: Option<Addr>
 }
