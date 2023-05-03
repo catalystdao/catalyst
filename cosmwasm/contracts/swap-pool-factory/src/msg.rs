@@ -4,7 +4,7 @@ use cosmwasm_std::{Uint128, Addr};
 
 #[cw_serde]
 pub struct InstantiateMsg {
-    pub default_governance_fee: u64
+    pub default_governance_fee_share: u64
 }
 
 

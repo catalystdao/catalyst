@@ -26,7 +26,7 @@ pub fn instantiate(
 
     let set_default_fee_event = set_default_governance_fee_share_unchecked(
         &mut deps,
-        msg.default_governance_fee
+        msg.default_governance_fee_share
     )?;
 
     Ok(
