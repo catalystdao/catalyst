@@ -56,10 +56,24 @@ fn calc_keccak256(message: Vec<u8>) -> Vec<u8> {
     hasher.finalize().to_vec()
 }
 
+//TODO make sure this works
+// Redefine the types used by the 'factory' for queries (the factory contract cannot be imported by this contract, 
+// as it would create a cyclic dependency)
+#[cw_serde]
+struct QueryOwner {}
 
-// TODO replace with implementation
-fn factory_owner() -> String {
-    "factory_owner_addr".to_string()
+#[cw_serde]
+pub struct OwnerResponse {
+    pub owner: Option<Addr>
+}
+
+pub fn factory_owner(deps: &Deps) -> Result<Addr, ContractError> {
+    let response = deps.querier.query_wasm_smart::<OwnerResponse>(
+        FACTORY.load(deps.storage)?,
+        &QueryOwner {}
+    )?;
+
+    response.owner.ok_or(ContractError::Unauthorized {})
 }
 
 
@@ -318,7 +332,7 @@ pub fn collect_governance_fee_message(
         cosmwasm_std::WasmMsg::Execute {
             contract_addr: asset,
             msg: to_binary(&Cw20ExecuteMsg::Transfer {
-                recipient: factory_owner().to_string(),
+                recipient: factory_owner(deps)?.to_string(),
                 amount: gov_fee_amount
             })?,
             funds: vec![]
