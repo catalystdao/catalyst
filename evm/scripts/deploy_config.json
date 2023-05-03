@@ -1,115 +1,136 @@
 {
+    "chain_config": {
+        "sepolia": {
+            "factory": "",
+            "ibcinterface": "",
+            "crosschaininterface": "",
+            "volatile_template": "",
+            "amplified_template": ""
+        },
+        "mumbai": {
+            "factory": "",
+            "ibcinterface": "",
+            "crosschaininterface": "",
+            "volatile_template": "",
+            "amplified_template": ""
+        }
+    },
     "relayer_address": "",
     "tokens": {
-        "wSEP": "",
-        "wMUM": ""
-    },
-    "Stables": {
-        "amplification": 0.25,
         "sepolia": {
-            "weights": [1e12, 1, 1e2],
-            "tokens": {
-                "sepUSDC": {
-                    "decimals": 6,
-                    "supply": 1e6,
-                    "deposited": 1e4
-                },
-                "sepUSDT": {
-                    "decimals": 18,
-                    "supply": 1e6,
-                    "deposited": 1e4
-                },
-                "SuperStable100": {
-                    "decimals": 16,
-                    "supply": 1e6,
-                    "deposited": 1e4
-                }
+            "wSEP": "",
+            "sepUSDC": {
+                "address": "",
+                "decimals": 6,
+                "supply": 1e6
+            },
+            "sepUSDT": {
+                "address": "",
+                "decimals": 18,
+                "supply": 1e6
+            },
+            "SuperStable100": {
+                "address": "",
+                "decimals": 16,
+                "supply": 1e8
+            },
+            "seppoi": {
+                "address": "",
+                "decimals": 18,
+                "supply": 1e6
             }
         },
         "mumbai": {
-            "weights": [1e12, 1],
-            "tokens": {
-                "mumUSDC": {
-                    "decimals": 6,
-                    "supply": 1e6,
-                    "deposited": 1e4
-                },
-                "mumUSDT": {
-                    "decimals": 18,
-                    "supply": 1e6,
-                    "deposited": 1e4
-                }
+            "wMUM": "",
+            "mumUSDC": {
+                "address": "",
+                "decimals": 6,
+                "supply": 1e6
+            },
+            "mumUSDT": {
+                "address": "",
+                "decimals": 18,
+                "supply": 1e6
+            },
+            "mummi": {
+                "address": "",
+                "decimals": 18,
+                "supply": 1e6
             }
         }
     },
-    "Gas Token": {
-        "sepolia": {
-            "weights": [100, 200],
-            "tokens": {
-                "wSEP": {
-                    "deposited": 1
-                },
-                "seppoi": {
-                    "decimals": 18,
-                    "supply": 1e6,
-                    "deposited": 1e4
+    "pools": {
+        "Stables": {
+            "amplification": 0.25,
+            "sepolia": {
+                "address": "",
+                "weights": [1e12, 1, 1e2],
+                "tokens": {
+                    "sepUSDC": 1e4,
+                    "sepUSDT": 1e4,
+                    "SuperStable100": 1e4
+                }
+            },
+            "mumbai": {
+                "address": "",
+                "weights": [1e12, 1],
+                "tokens": {
+                    "mumUSDC": 1e4,
+                    "mumUSDT": 1e4
                 }
             }
         },
-        "mumbai": {
-            "weights": [100, 50],
-            "tokens": {
-                "wMUM": {
-                    "deposited": 2
-                },
-                "mummi": {
-                    "decimals": 18,
-                    "supply": 1e6,
-                    "deposited": 1e3
+        "Gas Tokens": {
+            "sepolia": {
+                "address": "",
+                "weights": [100, 200],
+                "tokens": {
+                    "wSEP": 1,
+                    "seppoi": 1e4
                 }
-            }
-        }
-    },
-    "Pool 1": {
-        "sepolia": {
-            "weights": [1],
-            "tokens": {
-                "seppoi": {
-                    "deposited": 1e4
+            },
+            "mumbai": {
+                "address": "",
+                "weights": [100, 50],
+                "tokens": {
+                    "wMUM": 2,
+                    "mummi": 1e3
                 }
             }
         },
-        "mumbai": {
-            "weights": [1],
-            "tokens": {
-                "mumUSDC": {
-                    "deposited": 1e3
+        "Pool 1": {
+            "sepolia": {
+                "address": "",
+                "weights": [1],
+                "tokens": {
+                    "seppoi": 1e4
+                }
+            },
+            "mumbai": {
+                "address": "",
+                "weights": [1],
+                "tokens": {
+                    "mumUSDC": 1e3
                 }
             }
-        }
-    },
-    "SepStableGas": {
-        "sepolia": {
-            "weights": [1],
-            "tokens": {
-                "wSEP": {
-                    "deposited": 1
-                },
-                "sepUSDC": {
-                    "deposited": 100
+        },
+        "SepStableGas": {
+            "sepolia": {
+                "address": "",
+                "weights": [1, 1],
+                "tokens": {
+                    "wSEP": 1,
+                    "sepUSDC": 100
                 }
             }
-        }
-    },
-    "MumStableGas": {
-        "sepolia": {
-            "weights": [1],
-            "tokens": {
-                "wMUM": {
-                    "deposited": 1
-                },
-                "mumUSDC": {
-                    "deposited": 100
+        },
+        "MumStableGas": {
+            "sepolia": {
+                "address": "",
+                "weights": [1, 1],
+                "tokens": {
+                    "wMUM": 1,
+                    "mumUSDC": 100
                 }
             }
         }

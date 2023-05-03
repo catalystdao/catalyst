@@ -1,13 +1,10 @@
-from mimetypes import init
-from brownie import (
-    CatalystSwapPoolVolatile,
-    CatalystSwapPoolAmplified,
-    CatalystSwapPoolFactory,
-    Token,
-    CatalystIBCInterface,
-    IBCEmulator
-)
-from brownie import ZERO_ADDRESS, accounts, convert
+import json
+
+from brownie import (WETH9, ZERO_ADDRESS, CatalystIBCInterface,
+                     CatalystSwapPoolAmplified, CatalystSwapPoolFactory,
+                     CatalystSwapPoolVolatile, IBCEmulator, Token, accounts,
+                     convert)
+
 from tests.catalyst.utils.pool_utils import decode_payload
 
 """
@@ -20,54 +17,90 @@ ps = Catalyst(acct)
 MAX_UINT256: int = 2**256 - 1
 
 
-
-
 class Catalyst:
+    def read_config(self):
+        with open(self.config_name) as f:
+            return json.load(f)
+        
+    def write_config(self):
+        with open(self.config_name, 'w') as f:
+            json.dump(self.config, f)
+    
+    def blank_setup(self, wTKN):
+        # Check if a wrapped gas token is provided.
+        tkn = self.config['tokens'][self.chain][wTKN]
+        if tkn == '':
+            tkn = self.deployer.deploy(WETH9)
+        self.config['tokens'][self.chain][wTKN] = tkn.address
+        
+        # deploy the other tokens
+        for token in self.config['tokens'][self.chain].keys():
+            if token == "wTKN":
+                continue
+            if self.config['tokens'][self.chain][token]["address"] == "":
+                deployed_tkn = Token.deploy(
+                    token,
+                    token[0]+token[3]+token[-1],
+                    self.config['tokens'][self.chain][token]["decimals"],
+                    self.config['tokens'][self.chain][token]["supply"],
+                    {"from": self.deployer}
+                )
+                self.config['tokens'][self.chain][token]["address"] = deployed_tkn.address
+        
+        # Check if factory have been deployed
+        factory = self.config['chain_config'][self.chain]["factory"]
+        if factory == '':
+            factory = self.deployer.deploy(CatalystSwapPoolFactory, 0)
+        self.config['chain_config'][self.chain]["factory"] = factory.address
+        
+        # Deploy IBC contracts
+        ibcinterface = self.config['chain_config'][self.chain]["ibcinterface"]
+        crosschaininterface = self.config['chain_config'][self.chain]["crosschaininterface"]
+        if ibcinterface == '':
+            ibcinterface = self.deployer.deploy(IBCEmulator)
+            relayer = self.config['chain_config'][self.chain]["relayer_address"]
+            ibcinterface.transferOwnership(relayer, {'from': self.deployer})
+        if crosschaininterface == '':
+            crosschaininterface = self.deployer.deploy(CatalystIBCInterface, ibcinterface)
+        self.config['chain_config'][self.chain]["ibcinterface"] = ibcinterface.address
+        self.config['chain_config'][self.chain]["crosschaininterface"] = crosschaininterface.address
+        
+        # Templates
+        volatile_template = self.config['chain_config'][self.chain]["volatile_template"]
+        amplified_template = self.config['chain_config'][self.chain]["amplified_template"]
+        if volatile_template == '':
+            volatile_template = self.deployer.deploy(IBCEmulator, factory)
+        if amplified_template == '':
+            amplified_template = self.deployer.deploy(amplified_template, factory)
+        self.config['chain_config'][self.chain]["volatile_template"] = volatile_template.address
+        self.config['chain_config'][self.chain]["amplified_template"] = amplified_template.address
+        
+        self.write_config()
+    
     def __init__(
         self,
         deployer,
-        default=True,
-        amp=10**18,
-        ibcinterface=ZERO_ADDRESS,
-        poolname="poolname",
-        poolsymbol="ps"
+        chain,
+        config_name="deploy_config.json",
+        run_blank_setup=False,
+        wTKN=""
     ):
         self.deployer = deployer
-        self.amp = amp
-        self.ibcinterface = ibcinterface
-        self.poolname = poolname
-        self.poolsymbol = poolsymbol
-
-        self._swapFactory()
-        self._swapTemplates()
-        self._crosschaininterface()
-
-        if default:
-            self.defaultSetup()
-
-    def create_token(self, name="TokenName", symbol="TKN", decimal=18):
-        return Token.deploy(
-            name, symbol, decimal, 10000, {"from": self.deployer}
-        )
-
-    def defaultSetup(self):
-        tokens = []
-        tokens.append(self.create_token("one", "I"))
-        tokens.append(self.create_token("two", "II"))
-        tokens.append(self.create_token("three", "III"))
-        self.deploy_swappool(
-            tokens, amp=self.amp, name=self.poolname, symbol=self.poolsymbol
-        )
-
-    def _swapTemplates(self):
-        self.swapTemplate = CatalystSwapPoolVolatile.deploy(self.swapFactory, {"from": self.deployer})
-        self.ampSwapTemplate = CatalystSwapPoolAmplified.deploy(self.swapFactory, {"from": self.deployer})
-
-    def _swapFactory(self):
-        self.swapFactory = CatalystSwapPoolFactory.deploy(0, {"from": self.deployer})
-
-    def _crosschaininterface(self):
-        self.crosschaininterface = CatalystIBCInterface.deploy(self.ibcinterface, {"from": self.deployer})
+        assert self.config['chain_config'].get(chain) is not None, "Chain name not found in config"
+        self.chain = chain
+        self.config_name = config_name
+        self.config = self.read_config()
+        
+        if run_blank_setup is True:
+            assert self.config['tokens'][self.chain].get(wTKN) is not None, "Please provide a corrent wTKN name"
+            assert type(self.config['tokens'][self.chain].get(wTKN)) is str, "Please provide a wTKN name which represents a wrapped token"
+            self.blank_setup(wTKN)
+    
+    def deploy_config(self):
+        pass
+    
+    def set_connections(self):
+        pass
 
     def deploy_swappool(
         self, tokens, init_balances=None, weights=None, amp=10**18, name="Name", symbol="SYM"
