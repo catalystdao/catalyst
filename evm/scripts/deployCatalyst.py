@@ -15,7 +15,7 @@ from scripts.deployCatalyst import Catalyst; acct = accounts[0]; cat = Catalyst(
 from scripts.deployCatalyst import Catalyst; acct = accounts[0]; cat = Catalyst(acct, "mumbai", "scripts/deploy_config.json", True, "wMUM"); WETH9.at(cat.config["tokens"]["mumbai"]["wMUM"]).deposit({'from': cat.deployer, 'value': 1*10**18}); cat.deploy_config(); cat.set_connections()
 
 # Potentially use:
-from brownie.network.gas.strategies import LinearScalingStrategy; from brownie.network import gas_price; gas_strategy = LinearScalingStrategy("0.000001 gwei", "0.01 gwei", 1.1); gas_price(gas_strategy)
+from brownie.network.gas.strategies import LinearScalingStrategy; from brownie.network import gas_price; gas_strategy = LinearScalingStrategy("0.000001 gwei", "2 gwei", 10); gas_price(gas_strategy)
 """
 
 MAX_UINT256: int = 2**256 - 1
@@ -41,23 +41,6 @@ class Catalyst:
         if tkn == '':
             tkn = self.deployer.deploy(WETH9)
             self.config['tokens'][self.chain][wTKN] = tkn.address
-        
-        
-        # deploy the other tokens
-        for token in self.config['tokens'][self.chain].keys():
-            if token == wTKN:
-                continue
-            if self.config['tokens'][self.chain][token]["address"] == "":
-                deployed_tkn = Token.deploy(
-                    token,
-                    token[0]+token[3]+token[-1],
-                    self.config['tokens'][self.chain][token]["decimals"],
-                    self.config['tokens'][self.chain][token]["supply"],
-                    {"from": self.deployer}
-                )
-                
-                self.config['tokens'][self.chain][token]["address"] = deployed_tkn.address
-        
         
         # Deploy mathematical libs
         volatile_mathlib = self.config['chain_config'][self.chain]["volatile_mathlib"]
@@ -142,6 +125,20 @@ class Catalyst:
             
             self.config['chain_config'][self.chain]["router"] = router.address
         
+        # deploy the other tokens
+        for token in self.config['tokens'][self.chain].keys():
+            if token == wTKN:
+                continue
+            if self.config['tokens'][self.chain][token]["address"] == "":
+                deployed_tkn = Token.deploy(
+                    token,
+                    token[0]+token[3]+token[-1],
+                    self.config['tokens'][self.chain][token]["decimals"],
+                    self.config['tokens'][self.chain][token]["supply"],
+                    {"from": self.deployer}
+                )
+                
+                self.config['tokens'][self.chain][token]["address"] = deployed_tkn.address
         
         self.write_config()
         self.config = self.read_config()
@@ -234,7 +231,7 @@ class Catalyst:
             if self.chain not in self.config["pools"][pool].keys():
                 continue
             swapPoolContainer = CatalystSwapPoolVolatile if self.config["pools"][pool].get("amplification") is None else CatalystSwapPoolAmplified
-            pool_container = swapPoolContainer.at(self.config["pools"][pool][chain]["address"])
+            pool_container = swapPoolContainer.at(self.config["pools"][pool][self.chain]["address"])
             assert pool_container.ready() is False, "Pool has already been finalised"
             
             for chain in self.config["pools"][pool].keys():
