@@ -32,7 +32,7 @@ const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 pub fn instantiate(
     mut deps: DepsMut,
     env: Env,
-    _info: MessageInfo,
+    info: MessageInfo,
     msg: InstantiateMsg
 ) -> Result<Response, ContractError> {
 
@@ -47,7 +47,8 @@ pub fn instantiate(
         msg.pool_fee,
         msg.governance_fee,
         msg.fee_administrator,
-        msg.setup_master
+        msg.setup_master,
+        info.sender                 //TODO EVM mismatch/review: setting the 'info.sender' as the 'factory'
     )
 
 }

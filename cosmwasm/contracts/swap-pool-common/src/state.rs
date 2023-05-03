@@ -26,6 +26,7 @@ pub const DECAY_RATE: U256 = uint!("86400");    // 60*60*24
 
 
 // Pool Storage
+pub const FACTORY: Item<Addr> = Item::new("catalyst-pool-factory");                                     //TODO can this be implemented as an 'immutable' like in EVM?
 pub const SETUP_MASTER: Item<Option<Addr>> = Item::new("catalyst-pool-setup-master");
 pub const CHAIN_INTERFACE: Item<Option<Addr>> = Item::new("catalyst-pool-chain-interface");
 
@@ -352,7 +353,13 @@ pub fn setup(
     governance_fee: u64,
     fee_administrator: String,
     setup_master: String,
+    factory: Addr             //TODO EVM mismatch
 ) -> Result<Response, ContractError> {
+
+    FACTORY.save(
+        deps.storage,
+        &factory
+    )?;
 
     SETUP_MASTER.save(
         deps.storage,
