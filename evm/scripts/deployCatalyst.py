@@ -9,8 +9,10 @@ from tests.catalyst.utils.pool_utils import decode_payload
 
 """
 Test snippit:
-from scripts.deployCatalyst import Catalyst; acct = accounts[0]; cat = Catalyst(acct, "sepolia", "scripts/deploy_config.json", True, "wSEP"); WETH9.at(cat.config["tokens"]["sepolia"]["wSEP"]).depos
-it({'from': cat.deployer, 'value': 10*10**18}); cat.deploy_config()
+from scripts.deployCatalyst import Catalyst; acct = accounts[0]; cat = Catalyst(acct, "sepolia", "scripts/deploy_config.json", True, "wSEP"); WETH9.at(cat.config["tokens"]["sepolia"]["wSEP"]).deposit({'from': cat.deployer, 'value': 10*10**18}); cat.deploy_config()
+
+# Then run
+from scripts.deployCatalyst import Catalyst; acct = accounts[0]; cat = Catalyst(acct, "mumbai", "scripts/deploy_config.json", True, "wMUM"); WETH9.at(cat.config["tokens"]["mumbai"]["wMUM"]).deposit({'from': cat.deployer, 'value': 10*10**18}); cat.deploy_config(); cat.set_connections()
 """
 
 MAX_UINT256: int = 2**256 - 1
@@ -139,6 +141,7 @@ class Catalyst:
         
         
         self.write_config()
+        self.config = self.read_config()
     
     def __init__(
         self,
@@ -205,29 +208,34 @@ class Catalyst:
                 self.config["pools"][pool][self.chain]["address"] = deploytx.events["PoolDeployed"]["pool_address"]
         
         self.write_config()
-                
+        self.config = self.read_config()
                     
-    
     def set_connections(self):
         volatile_template = self.config['chain_config'][self.chain]["volatile_template"]
         amplified_template = self.config['chain_config'][self.chain]["amplified_template"]
         # Check that all pools have been setup.
         for pool in self.config["pools"].keys():
+            if self.chain not in self.config["pools"][pool].keys():
+                continue
             for chain in self.config["pools"][pool].keys():
+                if chain == "amplification":
+                    continue
                 assert self.config["pools"][pool][chain]["address"] != ""
             # Check that the pool hasn't been set as ready
-            swapPoolContainer = volatile_template if self.config["pools"][pool].get("amplification") is None else amplified_template
-            pool_container = swapPoolContainer.at(pool[chain]["address"])
-            assert pool_container.ready() is False, "Pool has already been finalised"
+            swapPoolContainer = CatalystSwapPoolVolatile if self.config["pools"][pool].get("amplification") is None else CatalystSwapPoolAmplified
+            pool_container = swapPoolContainer.at(self.config["pools"][pool][self.chain]["address"])
+            assert pool_container.ready() is False, "Pool heas already been finalised"
             
         
         for pool in self.config["pools"].keys():
-            swapPoolContainer = volatile_template if self.config["pools"][pool].get("amplification") is None else amplified_template
-            pool_container = swapPoolContainer.at(pool[chain]["address"])
+            if self.chain not in self.config["pools"][pool].keys():
+                continue
+            swapPoolContainer = CatalystSwapPoolVolatile if self.config["pools"][pool].get("amplification") is None else CatalystSwapPoolAmplified
+            pool_container = swapPoolContainer.at(self.config["pools"][pool][chain]["address"])
             assert pool_container.ready() is False, "Pool has already been finalised"
             
             for chain in self.config["pools"][pool].keys():
-                if chain == self.chain:
+                if (chain == "amplification") or (chain == self.chain):
                     continue
                 target_pool =  self.config["pools"][pool][chain]["address"]
                 pool_container.setConnection(
