@@ -8,10 +8,9 @@ from brownie import (WETH9, ZERO_ADDRESS, CatalystIBCInterface,
 from tests.catalyst.utils.pool_utils import decode_payload
 
 """
-Import code into terminal for interactive debugging with `brownie console`
-from scripts.catalyst.deployCatalyst import Catalyst
-acct = accounts[0]
-cat = Catalyst(acct, "sepolia", "scripts/deploy_config.json", True, "wSEP")
+Test snippit:
+from scripts.deployCatalyst import Catalyst; acct = accounts[0]; cat = Catalyst(acct, "sepolia", "scripts/deploy_config.json", True, "wSEP"); WETH9.at(cat.config["tokens"]["sepolia"]["wSEP"]).depos
+it({'from': cat.deployer, 'value': 10*10**18}); cat.deploy_config()
 """
 
 MAX_UINT256: int = 2**256 - 1
@@ -166,21 +165,27 @@ class Catalyst:
         amplified_template = self.config['chain_config'][self.chain]["amplified_template"]
         
         for pool in self.config["pools"].keys():
-            if pool[self.chain]["address"] == "":
+            if self.config["pools"][pool][self.chain]["address"] == "":
                 initial_balances = []
                 tokens = []
                 # Approve all tokens to the factory
                 for token in self.config["pools"][pool][self.chain]["tokens"].keys():
-                    token_address = self.config[self.chain]["tokens"][self.chain][token] if type(token) is str else self.config[self.chain]["tokens"][self.chain][token]["address"]
-                    token_container = Token.at(
+                    token_address = self.config["tokens"][self.chain][token] if type(self.config["tokens"][self.chain][token]) is str else self.config["tokens"][self.chain][token]["address"]
+                    assert type(token_address) is str, f"{token}, {token_address} is not a string"
+                    token_container = WETH9.at(
+                        token_address
+                    ) if type(self.config["tokens"][self.chain][token]) is str else Token.at(
                         token_address
                     )
+                    
+                    decimals = 18 if type(self.config["tokens"][self.chain][token]) is str else self.config["tokens"][self.chain][token]["decimals"]
+                    
                     token_container.approve(
                         factory,
-                        self.config["pools"][pool][self.chain]["tokens"][token],
+                        self.config["pools"][pool][self.chain]["tokens"][token] * 10**decimals,
                         {'from': self.deployer}
                     )
-                    initial_balances.append(self.config["pools"][pool][self.chain]["tokens"][token] * 10**self.config["tokens"][self.chain][token]["decimals"])
+                    initial_balances.append(self.config["pools"][pool][self.chain]["tokens"][token] * 10**decimals)
                     tokens.append(token_container)
                 
                 deploytx = factory.deploy_swappool(
