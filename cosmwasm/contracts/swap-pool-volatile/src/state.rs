@@ -41,7 +41,6 @@ pub fn initialize_swap_curves(
     env: Env,
     info: MessageInfo,
     assets: Vec<String>,
-    assets_balances: Vec<Uint128>,  //TODO EVM MISMATCH
     weights: Vec<u64>,
     amp: u64,
     depositor: String
@@ -63,7 +62,6 @@ pub fn initialize_swap_curves(
     // Check the provided assets, assets balances and weights count
     if
         assets.len() == 0 || assets.len() > MAX_ASSETS ||
-        assets_balances.len() != assets.len() ||
         weights.len() != assets.len()
     {
         return Err(ContractError::GenericError {}); //TODO error
@@ -82,7 +80,16 @@ pub fn initialize_swap_curves(
             .map_err(|_| ContractError::InvalidAssets {})?
     )?;
 
-    // Validate asset balances
+    // Query and validate the vault asset balances
+    let assets_balances = assets.iter()
+        .map(|asset| {
+            deps.querier.query_wasm_smart::<BalanceResponse>(
+                asset,
+                &Cw20QueryMsg::Balance { address: env.contract.address.to_string() }
+            ).map(|response| response.balance)
+        })
+        .collect::<StdResult<Vec<Uint128>>>()?;
+    
     if assets_balances.iter().any(|balance| balance.is_zero()) {
         return Err(ContractError::GenericError {}); //TODO error
     }
@@ -130,28 +137,9 @@ pub fn initialize_swap_curves(
         minted_amount
     )?;
 
-    // TODO EVM MISMATCH // TODO overhaul: are tokens transferred from the factory? Or will they already be hold by the contract at this point?
-    // Build messages to order the transfer of tokens from setup_master to the swap pool
-    let sender_addr_str = info.sender.to_string();
-    let self_addr_str = env.contract.address.to_string();
-    let transfer_msgs: Vec<CosmosMsg> = assets.iter().zip(&assets_balances).map(|(asset, balance)| {    // zip: assets_balances.len() == assets.len()
-        Ok(CosmosMsg::Wasm(
-            cosmwasm_std::WasmMsg::Execute {
-                contract_addr: asset.to_string(),
-                msg: to_binary(&Cw20ExecuteMsg::TransferFrom {
-                    owner: sender_addr_str.clone(),
-                    recipient: self_addr_str.clone(),
-                    amount: *balance
-                })?,
-                funds: vec![]
-            }
-        ))
-    }).collect::<StdResult<Vec<CosmosMsg>>>()?;
-
     //TODO include attributes of the execute_mint response in this response?
     Ok(
         Response::new()
-            .add_messages(transfer_msgs)
             .add_attribute("to_account", depositor)
             .add_attribute("mint", minted_amount)
             .add_attribute("assets", format_vec_for_event(assets_balances))

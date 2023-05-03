@@ -65,7 +65,6 @@ pub fn execute(
 
         VolatileExecuteMsg::InitializeSwapCurves {
             assets,
-            assets_balances,
             weights,
             amp,
             depositor
@@ -74,7 +73,6 @@ pub fn execute(
             env,
             info,
             assets,
-            assets_balances,
             weights,
             amp,
             depositor

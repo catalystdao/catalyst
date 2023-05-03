@@ -322,7 +322,6 @@ impl Into<VolatileExecuteMsg> for InitializeSwapCurvesMockMsg {
     fn into(self) -> VolatileExecuteMsg {
         VolatileExecuteMsg::InitializeSwapCurves {
             assets: self.assets,
-            assets_balances: self.assets_balances,
             weights: self.weights,
             amp: self.amp,
             depositor: self.depositor

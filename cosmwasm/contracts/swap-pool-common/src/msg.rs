@@ -32,7 +32,6 @@ pub enum ExecuteMsg<T> {
 
     InitializeSwapCurves {
         assets: Vec<String>,
-        assets_balances: Vec<Uint128>,
         weights: Vec<u64>,
         amp: u64,
         depositor: String
