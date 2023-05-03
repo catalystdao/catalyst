@@ -165,6 +165,8 @@ class Catalyst:
         amplified_template = self.config['chain_config'][self.chain]["amplified_template"]
         
         for pool in self.config["pools"].keys():
+            if self.config["pools"][pool].get(self.chain) is None:
+                continue
             if self.config["pools"][pool][self.chain]["address"] == "":
                 initial_balances = []
                 tokens = []
@@ -200,11 +202,7 @@ class Catalyst:
                     self.config['chain_config'][self.chain]["crosschaininterface"],
                     {"from": self.deployer},
                 )
-                self.config["pools"][pool][self.chain]["address"] = CatalystSwapPoolVolatile.at(
-                    deploytx.events["PoolDeployed"]["pool_address"]
-                ) if self.config["pools"][pool].get("amplification") is None else CatalystSwapPoolAmplified.at(
-                    deploytx.events["PoolDeployed"]["pool_address"]
-                )
+                self.config["pools"][pool][self.chain]["address"] = deploytx.events["PoolDeployed"]["pool_address"]
         
         self.write_config()
                 
