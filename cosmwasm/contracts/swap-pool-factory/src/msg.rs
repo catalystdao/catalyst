@@ -11,7 +11,7 @@ pub struct InstantiateMsg {
 #[cw_serde]
 pub enum ExecuteMsg {
     DeployVault {
-        vault_template_id: u64,
+        vault_code_id: u64,
         assets: Vec<String>,
         assets_balances: Vec<Uint128>,
         weights: Vec<u64>,

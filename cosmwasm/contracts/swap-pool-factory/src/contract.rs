@@ -48,7 +48,7 @@ pub fn execute(
 
     match msg {
         ExecuteMsg::DeployVault {
-            vault_template_id,
+            vault_code_id,
             assets,
             assets_balances,
             weights,
@@ -60,7 +60,7 @@ pub fn execute(
         } => execute_deploy_vault(
             deps,
             info,
-            vault_template_id,
+            vault_code_id,
             assets,
             assets_balances,
             weights,
