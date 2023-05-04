@@ -346,11 +346,13 @@ pub fn collect_governance_fee_message(
 
 pub fn set_fee_administrator(
     deps: &mut DepsMut,
-    _info: MessageInfo,
+    info: MessageInfo,
     administrator: String
 ) -> Result<Response, ContractError> {
 
-    //TODO verify sender is factory owner
+    if info.sender != factory_owner(&deps.as_ref())? {
+        return Err(ContractError::Unauthorized {})
+    }
 
     let event = set_fee_administrator_unchecked(deps, administrator.as_str())?;
 
