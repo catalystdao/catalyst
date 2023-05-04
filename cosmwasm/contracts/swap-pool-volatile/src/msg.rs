@@ -8,7 +8,7 @@ use swap_pool_common::msg::{
     AssetEscrowResponse, AssetsResponse, CalcLocalSwapResponse, CalcReceiveAssetResponse, CalcSendAssetResponse,
     ChainInterfaceResponse, FeeAdministratorResponse, GetLimitCapacityResponse, GovernanceFeeShareResponse,
     LiquidityEscrowResponse, OnlyLocalResponse, PoolConnectionStateResponse, PoolFeeResponse, ReadyResponse,
-    SetupMasterResponse, TotalEscrowedAssetResponse, TotalEscrowedLiquidityResponse, WeightsResponse
+    SetupMasterResponse, TotalEscrowedAssetResponse, TotalEscrowedLiquidityResponse, WeightsResponse, FactoryResponse, FactoryOwnerResponse
 };
 use cw20::{AllowanceResponse, BalanceResponse, TokenInfoResponse};
 use schemars::JsonSchema;
@@ -47,10 +47,10 @@ pub enum QueryMsg {
     ChainInterface {},
     #[returns(SetupMasterResponse)]
     SetupMaster {},
-    // #[returns(FactoryResponse)]
-    // Factory {},
-    // #[returns(FactoryOwnerResponse)]
-    // FactoryOwner {},
+    #[returns(FactoryResponse)]
+    Factory {},
+    #[returns(FactoryOwnerResponse)]
+    FactoryOwner {},
 
     #[returns(PoolConnectionStateResponse)]
     PoolConnectionState {

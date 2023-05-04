@@ -2,7 +2,7 @@ use std::ops::{Div, Sub};
 
 use cosmwasm_schema::cw_serde;
 
-use cosmwasm_std::{Addr, Uint128, DepsMut, Env, Response, Event, MessageInfo, Deps, StdResult, CosmosMsg, to_binary, Timestamp};
+use cosmwasm_std::{Addr, Uint128, DepsMut, Env, Response, Event, MessageInfo, Deps, StdResult, CosmosMsg, to_binary, Timestamp, StdError};
 use cw20::Cw20ExecuteMsg;
 use cw_storage_plus::{Map, Item};
 use cw20_base::{state::{MinterData, TokenInfo, TOKEN_INFO}, contract::execute_mint};
@@ -10,7 +10,7 @@ use ethnum::{U256, uint};
 use fixed_point_math_lib::fixed_point_math::mul_wad_down;
 use sha3::{Digest, Keccak256};
 
-use crate::{ContractError, msg::{ChainInterfaceResponse, SetupMasterResponse, ReadyResponse, OnlyLocalResponse, AssetsResponse, WeightsResponse, PoolFeeResponse, GovernanceFeeShareResponse, FeeAdministratorResponse, TotalEscrowedAssetResponse, TotalEscrowedLiquidityResponse, AssetEscrowResponse, LiquidityEscrowResponse, PoolConnectionStateResponse}};
+use crate::{ContractError, msg::{ChainInterfaceResponse, SetupMasterResponse, ReadyResponse, OnlyLocalResponse, AssetsResponse, WeightsResponse, PoolFeeResponse, GovernanceFeeShareResponse, FeeAdministratorResponse, TotalEscrowedAssetResponse, TotalEscrowedLiquidityResponse, AssetEscrowResponse, LiquidityEscrowResponse, PoolConnectionStateResponse, FactoryResponse, FactoryOwnerResponse}};
 
 
 // Pool Constants
@@ -815,6 +815,22 @@ pub fn query_setup_master(deps: Deps) -> StdResult<SetupMasterResponse> {
     Ok(
         SetupMasterResponse {
             setup_master: SETUP_MASTER.load(deps.storage)?
+        }
+    )
+}
+
+pub fn query_factory(deps: Deps) -> StdResult<FactoryResponse> {
+    Ok(
+        FactoryResponse {
+            factory: FACTORY.load(deps.storage)?
+        }
+    )
+}
+
+pub fn query_factory_owner(deps: Deps) -> StdResult<FactoryOwnerResponse> {
+    Ok(
+        FactoryOwnerResponse {
+            factory_owner: factory_owner(&deps).map_err(|_| StdError::generic_err("Unable to get factory_owner."))?
         }
     )
 }

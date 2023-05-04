@@ -206,6 +206,16 @@ pub struct SetupMasterResponse {
 }
 
 #[cw_serde]
+pub struct FactoryResponse {
+    pub factory: Addr
+}
+
+#[cw_serde]
+pub struct FactoryOwnerResponse {
+    pub factory_owner: Addr
+}
+
+#[cw_serde]
 pub struct ReadyResponse {
     pub ready: bool
 }

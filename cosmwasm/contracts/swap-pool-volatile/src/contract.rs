@@ -12,7 +12,7 @@ use cw20_base::contract::{
 use swap_pool_common::ContractError;
 use swap_pool_common::state::{
     setup, finish_setup, set_fee_administrator, set_pool_fee, set_governance_fee_share, set_connection, send_asset_ack,
-    send_asset_timeout, send_liquidity_ack, send_liquidity_timeout, query_chain_interface, query_setup_master, query_ready, query_only_local, query_assets, query_weights, query_pool_fee, query_governance_fee_share, query_fee_administrator, query_total_escrowed_liquidity, query_total_escrowed_asset, query_asset_escrow, query_liquidity_escrow, query_pool_connection_state
+    send_asset_timeout, send_liquidity_ack, send_liquidity_timeout, query_chain_interface, query_setup_master, query_ready, query_only_local, query_assets, query_weights, query_pool_fee, query_governance_fee_share, query_fee_administrator, query_total_escrowed_liquidity, query_total_escrowed_asset, query_asset_escrow, query_liquidity_escrow, query_pool_connection_state, query_factory, query_factory_owner
 };
 
 use crate::msg::{VolatileExecuteMsg, InstantiateMsg, QueryMsg, VolatileExecuteExtension};
@@ -400,6 +400,8 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
         // Common Queries
         QueryMsg::ChainInterface {} => to_binary(&query_chain_interface(deps)?),
         QueryMsg::SetupMaster {} => to_binary(&query_setup_master(deps)?),
+        QueryMsg::Factory {} => to_binary(&query_factory(deps)?),
+        QueryMsg::FactoryOwner {} => to_binary(&query_factory_owner(deps)?),
 
         QueryMsg::PoolConnectionState {
             channel_id,
