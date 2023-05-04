@@ -156,7 +156,6 @@ mod test_volatile_pool_connections {
 
 
     #[test]
-    #[ignore]
     fn test_set_connection_factory_owner() {
 
         let mut app = App::default();

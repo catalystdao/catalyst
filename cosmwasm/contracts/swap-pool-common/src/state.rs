@@ -193,7 +193,11 @@ pub fn set_connection(
 
     let setup_master = SETUP_MASTER.load(deps.storage)?;
 
-    if setup_master != Some(info.sender) {   // TODO check also for factory owner
+    // Only allow a connection setup if the caller is the setup master or the factory owner
+    if
+        Some(info.sender.clone()) != setup_master &&
+        info.sender != factory_owner(&deps.as_ref())?
+    {
         return Err(ContractError::Unauthorized {});
     }
 
