@@ -249,7 +249,7 @@ pub fn mock_instantiate_interface(
 
 // Vault management helpers
 
-pub fn mock_instantiate_msg(
+pub fn mock_instantiate_vault_msg(
     chain_interface: Option<String>
 ) -> InstantiateMsg {
     InstantiateMsg {
@@ -263,12 +263,12 @@ pub fn mock_instantiate_msg(
     }
 }
 
-pub fn mock_instantiate(
+pub fn mock_instantiate_vault(
     app: &mut App,
     chain_interface: Option<Addr>
 ) -> Addr {
 
-    let instantiate_msg = mock_instantiate_msg(
+    let instantiate_msg = mock_instantiate_vault_msg(
         chain_interface.map(|addr| addr.to_string())
     );
 

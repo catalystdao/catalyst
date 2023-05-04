@@ -3,7 +3,7 @@ mod test_volatile_fees {
     use cw_multi_test::{App, Executor};
     use swap_pool_common::{ContractError, msg::{FeeAdministratorResponse, PoolFeeResponse, GovernanceFeeShareResponse}};
 
-    use crate::{msg::{VolatileExecuteMsg, QueryMsg}, tests::helpers::{mock_instantiate, FACTORY_OWNER, FEE_ADMINISTRATOR}};
+    use crate::{msg::{VolatileExecuteMsg, QueryMsg}, tests::helpers::{mock_instantiate_vault, FACTORY_OWNER, FEE_ADMINISTRATOR}};
 
 
 
@@ -15,7 +15,7 @@ mod test_volatile_fees {
         let mut app = App::default();
 
         // Instantiate vault
-        let vault = mock_instantiate(&mut app, None);
+        let vault = mock_instantiate_vault(&mut app, None);
 
         let new_fee_administrator: &str = "new_fee_administrator";
 
@@ -53,7 +53,7 @@ mod test_volatile_fees {
         let mut app = App::default();
 
         // Instantiate vault
-        let vault = mock_instantiate(&mut app, None);
+        let vault = mock_instantiate_vault(&mut app, None);
 
         let new_fee_administrator: &str = "new_fee_administrator";
 
@@ -85,7 +85,7 @@ mod test_volatile_fees {
         let mut app = App::default();
 
         // Instantiate vault
-        let vault = mock_instantiate(&mut app, None);
+        let vault = mock_instantiate_vault(&mut app, None);
 
         let new_pool_fee: u64 = 500;
 
@@ -122,7 +122,7 @@ mod test_volatile_fees {
         let mut app = App::default();
 
         // Instantiate vault
-        let vault = mock_instantiate(&mut app, None);
+        let vault = mock_instantiate_vault(&mut app, None);
 
         let new_pool_fee: u64 = 1000000000000000000u64;
 
@@ -157,7 +157,7 @@ mod test_volatile_fees {
         let mut app = App::default();
 
         // Instantiate vault
-        let vault = mock_instantiate(&mut app, None);
+        let vault = mock_instantiate_vault(&mut app, None);
 
         let new_pool_fee: u64 = 1000000000000000000u64 + 1u64;
 
@@ -187,7 +187,7 @@ mod test_volatile_fees {
         let mut app = App::default();
 
         // Instantiate vault
-        let vault = mock_instantiate(&mut app, None);
+        let vault = mock_instantiate_vault(&mut app, None);
 
         let new_pool_fee: u64 = 500;
 
@@ -219,7 +219,7 @@ mod test_volatile_fees {
         let mut app = App::default();
 
         // Instantiate vault
-        let vault = mock_instantiate(&mut app, None);
+        let vault = mock_instantiate_vault(&mut app, None);
 
         let new_gov_fee_share: u64 = 700;
 
@@ -256,7 +256,7 @@ mod test_volatile_fees {
         let mut app = App::default();
 
         // Instantiate vault
-        let vault = mock_instantiate(&mut app, None);
+        let vault = mock_instantiate_vault(&mut app, None);
 
         let new_gov_fee_share: u64 = 750000000000000000u64;
 
@@ -291,7 +291,7 @@ mod test_volatile_fees {
         let mut app = App::default();
 
         // Instantiate vault
-        let vault = mock_instantiate(&mut app, None);
+        let vault = mock_instantiate_vault(&mut app, None);
 
         let new_gov_fee_share: u64 = 750000000000000000u64 + 1u64;
 
@@ -321,7 +321,7 @@ mod test_volatile_fees {
         let mut app = App::default();
 
         // Instantiate vault
-        let vault = mock_instantiate(&mut app, None);
+        let vault = mock_instantiate_vault(&mut app, None);
 
         let new_gov_fee_share: u64 = 700;
 

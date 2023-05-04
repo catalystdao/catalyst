@@ -4,7 +4,7 @@ mod test_volatile_send_asset {
     use ethnum::U256;
     use swap_pool_common::{ContractError, msg::TotalEscrowedAssetResponse};
 
-    use crate::{msg::VolatileExecuteMsg, tests::{helpers::{mock_instantiate, SETUP_MASTER, deploy_test_tokens, WAD, mock_initialize_pool, set_token_allowance, DEFAULT_TEST_POOL_FEE, query_token_balance, transfer_tokens, get_response_attribute, mock_set_pool_connection, CHANNEL_ID, SWAPPER_B, SWAPPER_A, mock_instantiate_interface, FACTORY_OWNER, DEFAULT_TEST_GOV_FEE, compute_expected_send_asset, mock_test_token_definitions}, math_helpers::{uint128_to_f64, f64_to_uint128, u256_to_f64}}};
+    use crate::{msg::VolatileExecuteMsg, tests::{helpers::{mock_instantiate_vault, SETUP_MASTER, deploy_test_tokens, WAD, mock_initialize_pool, set_token_allowance, DEFAULT_TEST_POOL_FEE, query_token_balance, transfer_tokens, get_response_attribute, mock_set_pool_connection, CHANNEL_ID, SWAPPER_B, SWAPPER_A, mock_instantiate_interface, FACTORY_OWNER, DEFAULT_TEST_GOV_FEE, compute_expected_send_asset, mock_test_token_definitions}, math_helpers::{uint128_to_f64, f64_to_uint128, u256_to_f64}}};
 
     //TODO check event
 
@@ -15,7 +15,7 @@ mod test_volatile_send_asset {
 
         // Instantiate and initialize vault
         let interface = mock_instantiate_interface(&mut app);
-        let vault = mock_instantiate(&mut app, Some(interface.clone()));
+        let vault = mock_instantiate_vault(&mut app, Some(interface.clone()));
         let vault_tokens = deploy_test_tokens(&mut app, None, None);
         let vault_config = mock_initialize_pool(
             &mut app,
@@ -152,7 +152,7 @@ mod test_volatile_send_asset {
 
         // Instantiate and initialize vault
         let interface = mock_instantiate_interface(&mut app);
-        let vault = mock_instantiate(&mut app, Some(interface.clone()));
+        let vault = mock_instantiate_vault(&mut app, Some(interface.clone()));
         let vault_tokens = deploy_test_tokens(&mut app, None, None);
         mock_initialize_pool(
             &mut app,
@@ -226,7 +226,7 @@ mod test_volatile_send_asset {
 
         // Instantiate and initialize vault
         let interface = mock_instantiate_interface(&mut app);
-        let vault = mock_instantiate(&mut app, Some(interface.clone()));
+        let vault = mock_instantiate_vault(&mut app, Some(interface.clone()));
         let vault_tokens = deploy_test_tokens(&mut app, None, None);
         let vault_config = mock_initialize_pool(
             &mut app,
@@ -305,7 +305,7 @@ mod test_volatile_send_asset {
 
         // Instantiate and initialize vault
         let interface = mock_instantiate_interface(&mut app);
-        let vault = mock_instantiate(&mut app, Some(interface.clone()));
+        let vault = mock_instantiate_vault(&mut app, Some(interface.clone()));
         let tokens = deploy_test_tokens(&mut app, None, Some(mock_test_token_definitions(4)));
         let vault_tokens = tokens[0..3].to_vec();
         mock_initialize_pool(

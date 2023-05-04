@@ -3,7 +3,7 @@ mod test_volatile_pool_connections {
     use cw_multi_test::{Executor, App};
     use swap_pool_common::{ContractError, msg::PoolConnectionStateResponse};
 
-    use crate::{msg::VolatileExecuteMsg, tests::helpers::{mock_instantiate, SETUP_MASTER, mock_finish_pool_setup, FACTORY_OWNER}};
+    use crate::{msg::VolatileExecuteMsg, tests::helpers::{mock_instantiate_vault, SETUP_MASTER, mock_finish_pool_setup, FACTORY_OWNER}};
 
 
     #[test]
@@ -12,7 +12,7 @@ mod test_volatile_pool_connections {
         let mut app = App::default();
 
         // Instantiate vault
-        let vault = mock_instantiate(&mut app, None);
+        let vault = mock_instantiate_vault(&mut app, None);
 
         let channel_id = "channel_0";
         let target_pool = b"target_pool".to_vec();
@@ -57,7 +57,7 @@ mod test_volatile_pool_connections {
         let mut app = App::default();
 
         // Instantiate vault
-        let vault = mock_instantiate(&mut app, None);
+        let vault = mock_instantiate_vault(&mut app, None);
 
         let channel_id = "channel_0";
         let target_pool = b"target_pool".to_vec();
@@ -112,7 +112,7 @@ mod test_volatile_pool_connections {
         let mut app = App::default();
 
         // Instantiate vault
-        let vault = mock_instantiate(&mut app, None);
+        let vault = mock_instantiate_vault(&mut app, None);
 
         let channel_id = "channel_0";
         let target_pool = b"target_pool".to_vec();
@@ -149,7 +149,7 @@ mod test_volatile_pool_connections {
         let mut app = App::default();
 
         // Instantiate vault
-        let vault = mock_instantiate(&mut app, None);
+        let vault = mock_instantiate_vault(&mut app, None);
 
         let channel_id = "channel_0";
         let target_pool = b"target_pool".to_vec();
@@ -193,7 +193,7 @@ mod test_volatile_pool_connections {
         let mut app = App::default();
 
         // Instantiate vault
-        let vault = mock_instantiate(&mut app, None);
+        let vault = mock_instantiate_vault(&mut app, None);
 
         let channel_id = "channel_0";
         let target_pool = b"target_pool".to_vec();

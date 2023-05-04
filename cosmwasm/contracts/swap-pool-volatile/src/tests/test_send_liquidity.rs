@@ -4,7 +4,7 @@ mod test_volatile_send_liquidity {
     use ethnum::U256;
     use swap_pool_common::{ContractError, msg::{TotalEscrowedLiquidityResponse, LiquidityEscrowResponse}, state::{INITIAL_MINT_AMOUNT, compute_send_liquidity_hash}};
 
-    use crate::{msg::VolatileExecuteMsg, tests::{helpers::{mock_instantiate, SETUP_MASTER, deploy_test_tokens, WAD, mock_initialize_pool, query_token_balance, transfer_tokens, get_response_attribute, mock_set_pool_connection, CHANNEL_ID, SWAPPER_B, SWAPPER_A, mock_instantiate_interface, compute_expected_send_liquidity, query_token_info, SWAPPER_C}, math_helpers::{uint128_to_f64, f64_to_uint128, u256_to_f64}}};
+    use crate::{msg::VolatileExecuteMsg, tests::{helpers::{mock_instantiate_vault, SETUP_MASTER, deploy_test_tokens, WAD, mock_initialize_pool, query_token_balance, transfer_tokens, get_response_attribute, mock_set_pool_connection, CHANNEL_ID, SWAPPER_B, SWAPPER_A, mock_instantiate_interface, compute_expected_send_liquidity, query_token_info, SWAPPER_C}, math_helpers::{uint128_to_f64, f64_to_uint128, u256_to_f64}}};
 
     //TODO check event
 
@@ -15,7 +15,7 @@ mod test_volatile_send_liquidity {
 
         // Instantiate and initialize vault
         let interface = mock_instantiate_interface(&mut app);
-        let vault = mock_instantiate(&mut app, Some(interface.clone()));
+        let vault = mock_instantiate_vault(&mut app, Some(interface.clone()));
         let vault_tokens = deploy_test_tokens(&mut app, None, None);
         let vault_config = mock_initialize_pool(
             &mut app,
@@ -143,7 +143,7 @@ mod test_volatile_send_liquidity {
 
         // Instantiate and initialize vault
         let interface = mock_instantiate_interface(&mut app);
-        let vault = mock_instantiate(&mut app, Some(interface.clone()));
+        let vault = mock_instantiate_vault(&mut app, Some(interface.clone()));
         let vault_tokens = deploy_test_tokens(&mut app, None, None);
         mock_initialize_pool(
             &mut app,
@@ -203,7 +203,7 @@ mod test_volatile_send_liquidity {
 
         // Instantiate and initialize vault
         let interface = mock_instantiate_interface(&mut app);
-        let vault = mock_instantiate(&mut app, Some(interface.clone()));
+        let vault = mock_instantiate_vault(&mut app, Some(interface.clone()));
         let vault_tokens = deploy_test_tokens(&mut app, None, None);
         mock_initialize_pool(
             &mut app,

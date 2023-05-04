@@ -4,7 +4,7 @@ mod test_volatile_receive_liquidity {
     use ethnum::{U256, uint};
     use swap_pool_common::{ContractError, state::INITIAL_MINT_AMOUNT};
 
-    use crate::{msg::VolatileExecuteMsg, tests::{helpers::{mock_instantiate, deploy_test_tokens, WAD, mock_initialize_pool, query_token_balance, get_response_attribute, mock_set_pool_connection, CHANNEL_ID, SWAPPER_B, CHAIN_INTERFACE, compute_expected_receive_liquidity, query_token_info}, math_helpers::{uint128_to_f64, f64_to_uint128}}};
+    use crate::{msg::VolatileExecuteMsg, tests::{helpers::{mock_instantiate_vault, deploy_test_tokens, WAD, mock_initialize_pool, query_token_balance, get_response_attribute, mock_set_pool_connection, CHANNEL_ID, SWAPPER_B, CHAIN_INTERFACE, compute_expected_receive_liquidity, query_token_info}, math_helpers::{uint128_to_f64, f64_to_uint128}}};
 
     //TODO check event
 
@@ -14,7 +14,7 @@ mod test_volatile_receive_liquidity {
         let mut app = App::default();
 
         // Instantiate and initialize vault
-        let vault = mock_instantiate(&mut app, Some(Addr::unchecked(CHAIN_INTERFACE)));
+        let vault = mock_instantiate_vault(&mut app, Some(Addr::unchecked(CHAIN_INTERFACE)));
         let vault_tokens = deploy_test_tokens(&mut app, None, None);
         let vault_config = mock_initialize_pool(
             &mut app,
@@ -94,7 +94,7 @@ mod test_volatile_receive_liquidity {
         let mut app = App::default();
 
         // Instantiate and initialize vault
-        let vault = mock_instantiate(&mut app, Some(Addr::unchecked(CHAIN_INTERFACE)));
+        let vault = mock_instantiate_vault(&mut app, Some(Addr::unchecked(CHAIN_INTERFACE)));
         let vault_tokens = deploy_test_tokens(&mut app, None, None);
         mock_initialize_pool(
             &mut app,
@@ -165,7 +165,7 @@ mod test_volatile_receive_liquidity {
         let mut app = App::default();
 
         // Instantiate and initialize vault
-        let vault = mock_instantiate(&mut app, Some(Addr::unchecked(CHAIN_INTERFACE)));
+        let vault = mock_instantiate_vault(&mut app, Some(Addr::unchecked(CHAIN_INTERFACE)));
         let vault_tokens = deploy_test_tokens(&mut app, None, None);
         let vault_config = mock_initialize_pool(
             &mut app,
@@ -255,7 +255,7 @@ mod test_volatile_receive_liquidity {
         let mut app = App::default();
 
         // Instantiate and initialize vault
-        let vault = mock_instantiate(&mut app, Some(Addr::unchecked(CHAIN_INTERFACE)));
+        let vault = mock_instantiate_vault(&mut app, Some(Addr::unchecked(CHAIN_INTERFACE)));
         let vault_tokens = deploy_test_tokens(&mut app, None, None);
         mock_initialize_pool(
             &mut app,
@@ -307,7 +307,7 @@ mod test_volatile_receive_liquidity {
         let mut app = App::default();
 
         // Instantiate and initialize vault
-        let vault = mock_instantiate(&mut app, Some(Addr::unchecked(CHAIN_INTERFACE)));
+        let vault = mock_instantiate_vault(&mut app, Some(Addr::unchecked(CHAIN_INTERFACE)));
         let vault_tokens = deploy_test_tokens(&mut app, None, None);
         mock_initialize_pool(
             &mut app,

@@ -3,7 +3,7 @@ mod test_volatile_local_swap {
     use cw_multi_test::{App, Executor};
     use swap_pool_common::ContractError;
 
-    use crate::{msg::VolatileExecuteMsg, tests::{helpers::{mock_instantiate, SETUP_MASTER, deploy_test_tokens, WAD, mock_initialize_pool, set_token_allowance, compute_expected_local_swap, DEFAULT_TEST_POOL_FEE, DEFAULT_TEST_GOV_FEE, query_token_balance, transfer_tokens, LOCAL_SWAPPER, FACTORY_OWNER, mock_test_token_definitions, mock_set_governance_fee_share}, math_helpers::{uint128_to_f64, f64_to_uint128}}};
+    use crate::{msg::VolatileExecuteMsg, tests::{helpers::{mock_instantiate_vault, SETUP_MASTER, deploy_test_tokens, WAD, mock_initialize_pool, set_token_allowance, compute_expected_local_swap, DEFAULT_TEST_POOL_FEE, DEFAULT_TEST_GOV_FEE, query_token_balance, transfer_tokens, LOCAL_SWAPPER, FACTORY_OWNER, mock_test_token_definitions, mock_set_governance_fee_share}, math_helpers::{uint128_to_f64, f64_to_uint128}}};
 
 
     //TODO add test for the local swap event
@@ -15,7 +15,7 @@ mod test_volatile_local_swap {
         let mut app = App::default();
 
         // Instantiate and initialize vault
-        let vault = mock_instantiate(&mut app, None);
+        let vault = mock_instantiate_vault(&mut app, None);
         let vault_tokens = deploy_test_tokens(&mut app, None, None);
         let vault_config = mock_initialize_pool(
             &mut app,
@@ -135,7 +135,7 @@ mod test_volatile_local_swap {
         let mut app = App::default();
 
         // Instantiate and initialize vault
-        let vault = mock_instantiate(&mut app, None);
+        let vault = mock_instantiate_vault(&mut app, None);
         let vault_tokens = deploy_test_tokens(&mut app, None, None);
         let vault_config = mock_initialize_pool(
             &mut app,
@@ -239,7 +239,7 @@ mod test_volatile_local_swap {
         let mut app = App::default();
 
         // Instantiate and initialize vault
-        let vault = mock_instantiate(&mut app, None);
+        let vault = mock_instantiate_vault(&mut app, None);
         let tokens = deploy_test_tokens(&mut app, None, Some(mock_test_token_definitions(4)));
         let vault_tokens = tokens[0..3].to_vec();
         mock_initialize_pool(
@@ -308,7 +308,7 @@ mod test_volatile_local_swap {
         let mut app = App::default();
 
         // Instantiate and initialize vault
-        let vault = mock_instantiate(&mut app, None);
+        let vault = mock_instantiate_vault(&mut app, None);
         let tokens = deploy_test_tokens(&mut app, None, Some(mock_test_token_definitions(4)));
         let vault_tokens = tokens[0..3].to_vec();
         mock_initialize_pool(
@@ -378,7 +378,7 @@ mod test_volatile_local_swap {
         let mut app = App::default();
 
         // Instantiate and initialize vault
-        let vault = mock_instantiate(&mut app, None);
+        let vault = mock_instantiate_vault(&mut app, None);
         let vault_tokens = deploy_test_tokens(&mut app, None, None);
         mock_initialize_pool(
             &mut app,
@@ -442,7 +442,7 @@ mod test_volatile_local_swap {
         let mut app = App::default();
 
         // Instantiate and initialize vault
-        let vault = mock_instantiate(&mut app, None);
+        let vault = mock_instantiate_vault(&mut app, None);
         let vault_tokens = deploy_test_tokens(&mut app, None, None);
         let vault_config = mock_initialize_pool(
             &mut app,
@@ -527,7 +527,7 @@ mod test_volatile_local_swap {
         let mut app = App::default();
 
         // Instantiate and initialize vault
-        let vault = mock_instantiate(&mut app, None);
+        let vault = mock_instantiate_vault(&mut app, None);
         let vault_tokens = deploy_test_tokens(&mut app, None, None);
         let vault_config = mock_initialize_pool(
             &mut app,

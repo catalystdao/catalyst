@@ -4,7 +4,7 @@ mod test_volatile_send_asset_ack_timeout {
     use ethnum::{U256, uint};
     use swap_pool_common::{ContractError, msg::{TotalEscrowedAssetResponse, AssetEscrowResponse}, state::compute_send_asset_hash};
 
-    use crate::{msg::{VolatileExecuteMsg, QueryMsg}, tests::{helpers::{mock_instantiate, SETUP_MASTER, deploy_test_tokens, WAD, mock_initialize_pool, set_token_allowance, query_token_balance, transfer_tokens, get_response_attribute, mock_set_pool_connection, CHANNEL_ID, SWAPPER_B, SWAPPER_A, mock_instantiate_interface, FACTORY_OWNER, InitializeSwapCurvesMockMsg}, math_helpers::{uint128_to_f64, f64_to_uint128}}};
+    use crate::{msg::{VolatileExecuteMsg, QueryMsg}, tests::{helpers::{mock_instantiate_vault, SETUP_MASTER, deploy_test_tokens, WAD, mock_initialize_pool, set_token_allowance, query_token_balance, transfer_tokens, get_response_attribute, mock_set_pool_connection, CHANNEL_ID, SWAPPER_B, SWAPPER_A, mock_instantiate_interface, FACTORY_OWNER, InitializeSwapCurvesMockMsg}, math_helpers::{uint128_to_f64, f64_to_uint128}}};
 
     //TODO check events
 
@@ -26,7 +26,7 @@ mod test_volatile_send_asset_ack_timeout {
         pub fn initiate_mock_env(app: &mut App) -> Self {
             // Instantiate and initialize vault
             let interface = mock_instantiate_interface(app);
-            let vault = mock_instantiate(app, Some(interface.clone()));
+            let vault = mock_instantiate_vault(app, Some(interface.clone()));
             let vault_tokens = deploy_test_tokens(app, None, None);
             let vault_config = mock_initialize_pool(
                 app,

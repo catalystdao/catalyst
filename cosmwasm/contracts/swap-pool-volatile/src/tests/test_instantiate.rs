@@ -5,7 +5,7 @@ mod test_volatile_instantiate {
     use cw_multi_test::{App, Executor};
     use swap_pool_common::msg::{SetupMasterResponse, ChainInterfaceResponse, OnlyLocalResponse, PoolFeeResponse, GovernanceFeeShareResponse};
 
-    use crate::{msg::QueryMsg, tests::helpers::{mock_instantiate_msg, DEPLOYER, volatile_vault_contract_storage}};
+    use crate::{msg::QueryMsg, tests::helpers::{mock_instantiate_vault_msg, DEPLOYER, volatile_vault_contract_storage}};
 
 
     #[test]
@@ -14,7 +14,7 @@ mod test_volatile_instantiate {
         let mut app = App::default();
 
         let chain_interface = Some("chain_interface".to_string());
-        let instantiate_msg = mock_instantiate_msg(chain_interface);
+        let instantiate_msg = mock_instantiate_vault_msg(chain_interface);
 
 
         // Tested action: instantiate contract
@@ -117,7 +117,7 @@ mod test_volatile_instantiate {
         let mut app = App::default();
 
         let chain_interface = None;
-        let instantiate_msg = mock_instantiate_msg(chain_interface);
+        let instantiate_msg = mock_instantiate_vault_msg(chain_interface);
 
 
         // Tested action: instantiate contract

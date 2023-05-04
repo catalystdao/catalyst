@@ -3,7 +3,7 @@ mod test_volatile_finish_setup {
     use cw_multi_test::{App, Executor};
     use swap_pool_common::{ContractError, msg::SetupMasterResponse};
 
-    use crate::{msg::{VolatileExecuteMsg, QueryMsg}, tests::helpers::{mock_instantiate, SETUP_MASTER}};
+    use crate::{msg::{VolatileExecuteMsg, QueryMsg}, tests::helpers::{mock_instantiate_vault, SETUP_MASTER}};
 
 
     #[test]
@@ -12,7 +12,7 @@ mod test_volatile_finish_setup {
         let mut app = App::default();
 
         // Instantiate vault
-        let vault = mock_instantiate(&mut app, None);
+        let vault = mock_instantiate_vault(&mut app, None);
 
 
         // Tested action: finish setup
@@ -44,7 +44,7 @@ mod test_volatile_finish_setup {
         let mut app = App::default();
 
         // Instantiate vault
-        let vault = mock_instantiate(&mut app, None);
+        let vault = mock_instantiate_vault(&mut app, None);
 
 
         // Tested action: finish setup
