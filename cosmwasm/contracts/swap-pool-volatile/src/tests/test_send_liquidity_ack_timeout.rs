@@ -4,7 +4,7 @@ mod test_volatile_send_liquidity_ack_timeout {
     use ethnum::{U256, uint};
     use swap_pool_common::{ContractError, msg::{TotalEscrowedLiquidityResponse, LiquidityEscrowResponse}, state::{compute_send_liquidity_hash, INITIAL_MINT_AMOUNT}};
 
-    use crate::{msg::{VolatileExecuteMsg, QueryMsg}, tests::{helpers::{mock_instantiate_vault, SETUP_MASTER, deploy_test_tokens, WAD, mock_initialize_pool, query_token_balance, transfer_tokens, get_response_attribute, mock_set_pool_connection, CHANNEL_ID, SWAPPER_B, SWAPPER_A, mock_instantiate_interface, query_token_info}, math_helpers::{uint128_to_f64, f64_to_uint128}}};
+    use crate::{msg::{VolatileExecuteMsg, QueryMsg}, tests::{helpers::{SETUP_MASTER, deploy_test_tokens, WAD, query_token_balance, transfer_tokens, get_response_attribute, mock_set_pool_connection, CHANNEL_ID, SWAPPER_B, SWAPPER_A, mock_instantiate_interface, query_token_info, mock_factory_deploy_vault}, math_helpers::{uint128_to_f64, f64_to_uint128}}};
 
     //TODO check events
 
@@ -22,14 +22,17 @@ mod test_volatile_send_liquidity_ack_timeout {
         pub fn initiate_mock_env(app: &mut App) -> Self {
             // Instantiate and initialize vault
             let interface = mock_instantiate_interface(app);
-            let vault = mock_instantiate_vault(app, Some(interface.clone()));
-            let vault_tokens = deploy_test_tokens(app, None, None);
-            mock_initialize_pool(
+            let vault_assets = deploy_test_tokens(app, None, None);
+            let vault_initial_balances = vec![Uint128::from(1u64) * WAD, Uint128::from(2u64) * WAD, Uint128::from(3u64) * WAD];
+            let vault_weights = vec![1u64, 1u64, 1u64];
+            let vault = mock_factory_deploy_vault(
                 app,
-                vault.clone(),
-                vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
-                vec![Uint128::from(1u64) * WAD, Uint128::from(2u64) * WAD, Uint128::from(3u64) * WAD],
-                vec![1u64, 1u64, 1u64]
+                vault_assets.iter().map(|token_addr| token_addr.to_string()).collect(),
+                vault_initial_balances.clone(),
+                vault_weights.clone(),
+                None,
+                Some(interface.clone()),
+                None
             );
     
             // Connect pool with a mock pool

@@ -4,7 +4,7 @@ mod test_volatile_send_asset {
     use ethnum::U256;
     use swap_pool_common::{ContractError, msg::TotalEscrowedAssetResponse};
 
-    use crate::{msg::VolatileExecuteMsg, tests::{helpers::{mock_instantiate_vault, SETUP_MASTER, deploy_test_tokens, WAD, mock_initialize_pool, set_token_allowance, DEFAULT_TEST_POOL_FEE, query_token_balance, transfer_tokens, get_response_attribute, mock_set_pool_connection, CHANNEL_ID, SWAPPER_B, SWAPPER_A, mock_instantiate_interface, FACTORY_OWNER, DEFAULT_TEST_GOV_FEE, compute_expected_send_asset, mock_test_token_definitions}, math_helpers::{uint128_to_f64, f64_to_uint128, u256_to_f64}}};
+    use crate::{msg::VolatileExecuteMsg, tests::{helpers::{SETUP_MASTER, deploy_test_tokens, WAD, set_token_allowance, DEFAULT_TEST_POOL_FEE, query_token_balance, transfer_tokens, get_response_attribute, mock_set_pool_connection, CHANNEL_ID, SWAPPER_B, SWAPPER_A, mock_instantiate_interface, FACTORY_OWNER, DEFAULT_TEST_GOV_FEE, compute_expected_send_asset, mock_test_token_definitions, mock_factory_deploy_vault}, math_helpers::{uint128_to_f64, f64_to_uint128, u256_to_f64}}};
 
     //TODO check event
 
@@ -15,14 +15,17 @@ mod test_volatile_send_asset {
 
         // Instantiate and initialize vault
         let interface = mock_instantiate_interface(&mut app);
-        let vault = mock_instantiate_vault(&mut app, Some(interface.clone()));
         let vault_tokens = deploy_test_tokens(&mut app, None, None);
-        let vault_config = mock_initialize_pool(
+        let vault_initial_balances = vec![Uint128::from(1u64) * WAD, Uint128::from(2u64) * WAD, Uint128::from(3u64) * WAD];
+        let vault_weights = vec![1u64, 1u64, 1u64];
+        let vault = mock_factory_deploy_vault(
             &mut app,
-            vault.clone(),
             vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
-            vec![Uint128::from(1u64) * WAD, Uint128::from(2u64) * WAD, Uint128::from(3u64) * WAD],
-            vec![1u64, 1u64, 1u64]
+            vault_initial_balances.clone(),
+            vault_weights.clone(),
+            None,
+            Some(interface.clone()),
+            None
         );
 
         // Connect pool with a mock pool
@@ -38,8 +41,8 @@ mod test_volatile_send_asset {
         // Define send asset configuration
         let from_asset_idx = 0;
         let from_asset = vault_tokens[from_asset_idx].clone();
-        let from_weight = vault_config.weights[from_asset_idx];
-        let from_balance = vault_config.assets_balances[from_asset_idx];
+        let from_weight = vault_weights[from_asset_idx];
+        let from_balance = vault_initial_balances[from_asset_idx];
         let send_percentage = 0.15;
         let swap_amount = f64_to_uint128(uint128_to_f64(from_balance) * send_percentage).unwrap();
 
@@ -111,7 +114,7 @@ mod test_volatile_send_asset {
         let factory_owner_from_asset_balance = query_token_balance(&mut app, from_asset.clone(), FACTORY_OWNER.to_string());
         assert_eq!(
             vault_from_asset_balance + factory_owner_from_asset_balance,    // Some of the swappers balance will have gone to the factory owner (governance fee)
-            vault_config.assets_balances[from_asset_idx] + swap_amount
+            vault_initial_balances[from_asset_idx] + swap_amount
         );
 
         assert!(uint128_to_f64(factory_owner_from_asset_balance) <= expected_return.governance_fee * 1.000001);
@@ -152,14 +155,17 @@ mod test_volatile_send_asset {
 
         // Instantiate and initialize vault
         let interface = mock_instantiate_interface(&mut app);
-        let vault = mock_instantiate_vault(&mut app, Some(interface.clone()));
         let vault_tokens = deploy_test_tokens(&mut app, None, None);
-        mock_initialize_pool(
+        let vault_initial_balances = vec![Uint128::from(1u64) * WAD, Uint128::from(2u64) * WAD, Uint128::from(3u64) * WAD];
+        let vault_weights = vec![1u64, 1u64, 1u64];
+        let vault = mock_factory_deploy_vault(
             &mut app,
-            vault.clone(),
             vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
-            vec![Uint128::from(1u64) * WAD, Uint128::from(2u64) * WAD, Uint128::from(3u64) * WAD],
-            vec![1u64, 1u64, 1u64]
+            vault_initial_balances.clone(),
+            vault_weights.clone(),
+            None,
+            Some(interface.clone()),
+            None
         );
 
         // Connect pool with a mock pool
@@ -226,14 +232,17 @@ mod test_volatile_send_asset {
 
         // Instantiate and initialize vault
         let interface = mock_instantiate_interface(&mut app);
-        let vault = mock_instantiate_vault(&mut app, Some(interface.clone()));
         let vault_tokens = deploy_test_tokens(&mut app, None, None);
-        let vault_config = mock_initialize_pool(
+        let vault_initial_balances = vec![Uint128::from(1u64) * WAD, Uint128::from(2u64) * WAD, Uint128::from(3u64) * WAD];
+        let vault_weights = vec![1u64, 1u64, 1u64];
+        let vault = mock_factory_deploy_vault(
             &mut app,
-            vault.clone(),
             vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
-            vec![Uint128::from(1u64) * WAD, Uint128::from(2u64) * WAD, Uint128::from(3u64) * WAD],
-            vec![1u64, 1u64, 1u64]
+            vault_initial_balances.clone(),
+            vault_weights.clone(),
+            None,
+            Some(interface.clone()),
+            None
         );
 
         // Connect pool with a mock pool
@@ -243,7 +252,7 @@ mod test_volatile_send_asset {
         // Define send asset configuration
         let from_asset_idx = 0;
         let from_asset = vault_tokens[from_asset_idx].clone();
-        let from_balance = vault_config.assets_balances[from_asset_idx];
+        let from_balance = vault_initial_balances[from_asset_idx];
         let send_percentage = 0.15;
         let swap_amount = f64_to_uint128(uint128_to_f64(from_balance) * send_percentage).unwrap();
 
@@ -305,15 +314,18 @@ mod test_volatile_send_asset {
 
         // Instantiate and initialize vault
         let interface = mock_instantiate_interface(&mut app);
-        let vault = mock_instantiate_vault(&mut app, Some(interface.clone()));
         let tokens = deploy_test_tokens(&mut app, None, Some(mock_test_token_definitions(4)));
         let vault_tokens = tokens[0..3].to_vec();
-        mock_initialize_pool(
+        let vault_initial_balances = vec![Uint128::from(1u64) * WAD, Uint128::from(2u64) * WAD, Uint128::from(3u64) * WAD];
+        let vault_weights = vec![1u64, 1u64, 1u64];
+        let vault = mock_factory_deploy_vault(
             &mut app,
-            vault.clone(),
             vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
-            vec![Uint128::from(1u64) * WAD, Uint128::from(2u64) * WAD, Uint128::from(3u64) * WAD],
-            vec![1u64, 1u64, 1u64]
+            vault_initial_balances.clone(),
+            vault_weights.clone(),
+            None,
+            Some(interface.clone()),
+            None
         );
 
         // Connect pool with a mock pool

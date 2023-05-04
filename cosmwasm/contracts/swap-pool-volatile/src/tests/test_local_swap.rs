@@ -3,7 +3,7 @@ mod test_volatile_local_swap {
     use cw_multi_test::{App, Executor};
     use swap_pool_common::ContractError;
 
-    use crate::{msg::VolatileExecuteMsg, tests::{helpers::{mock_instantiate_vault, SETUP_MASTER, deploy_test_tokens, WAD, mock_initialize_pool, set_token_allowance, compute_expected_local_swap, DEFAULT_TEST_POOL_FEE, DEFAULT_TEST_GOV_FEE, query_token_balance, transfer_tokens, LOCAL_SWAPPER, FACTORY_OWNER, mock_test_token_definitions, mock_set_governance_fee_share}, math_helpers::{uint128_to_f64, f64_to_uint128}}};
+    use crate::{msg::VolatileExecuteMsg, tests::{helpers::{SETUP_MASTER, deploy_test_tokens, WAD, set_token_allowance, compute_expected_local_swap, DEFAULT_TEST_POOL_FEE, DEFAULT_TEST_GOV_FEE, query_token_balance, transfer_tokens, LOCAL_SWAPPER, FACTORY_OWNER, mock_test_token_definitions, mock_set_governance_fee_share, mock_factory_deploy_vault}, math_helpers::{uint128_to_f64, f64_to_uint128}}};
 
 
     //TODO add test for the local swap event
@@ -15,29 +15,32 @@ mod test_volatile_local_swap {
         let mut app = App::default();
 
         // Instantiate and initialize vault
-        let vault = mock_instantiate_vault(&mut app, None);
         let vault_tokens = deploy_test_tokens(&mut app, None, None);
-        let vault_config = mock_initialize_pool(
+        let vault_initial_balances = vec![Uint128::from(1u64) * WAD, Uint128::from(2u64) * WAD, Uint128::from(3u64) * WAD];
+        let vault_weights = vec![1u64, 1u64, 1u64];
+        let vault = mock_factory_deploy_vault(
             &mut app,
-            vault.clone(),
             vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
-            vec![Uint128::from(1u64) * WAD, Uint128::from(2u64) * WAD, Uint128::from(3u64) * WAD],
-            vec![1u64, 1u64, 1u64]
+            vault_initial_balances.clone(),
+            vault_weights.clone(),
+            None,
+            None,
+            None
         );
 
         // Define local swap config
         let from_asset_idx = 0;
         let from_asset = vault_tokens[from_asset_idx].clone();
-        let from_weight = vault_config.weights[from_asset_idx];
-        let from_balance = vault_config.assets_balances[from_asset_idx];
+        let from_weight = vault_weights[from_asset_idx];
+        let from_balance = vault_initial_balances[from_asset_idx];
 
         let to_asset_idx = 1;
         let to_asset = vault_tokens[to_asset_idx].clone();
-        let to_weight = vault_config.weights[to_asset_idx];
-        let to_balance = vault_config.assets_balances[to_asset_idx];
+        let to_weight = vault_weights[to_asset_idx];
+        let to_balance = vault_initial_balances[to_asset_idx];
 
         // Swap 25% of the pool
-        let swap_amount = vault_config.assets_balances[from_asset_idx] * Uint128::from(25u64)/ Uint128::from(100u64);
+        let swap_amount = from_balance * Uint128::from(25u64)/ Uint128::from(100u64);
 
         // Fund swapper with tokens
         transfer_tokens(
@@ -106,7 +109,7 @@ mod test_volatile_local_swap {
         let factory_owner_from_asset_balance = query_token_balance(&mut app, from_asset.clone(), FACTORY_OWNER.to_string());
         assert_eq!(
             vault_from_asset_balance + factory_owner_from_asset_balance,    // Some of the swappers balance will have gone to the factory owner (governance fee)
-            vault_config.assets_balances[from_asset_idx] + swap_amount
+            from_balance + swap_amount
         );
 
         assert!(uint128_to_f64(factory_owner_from_asset_balance) <= expected_swap.governance_fee * 1.000001);
@@ -116,7 +119,7 @@ mod test_volatile_local_swap {
         let vault_to_asset_balance = query_token_balance(&mut app, to_asset.clone(), vault.to_string());
         assert_eq!(
             vault_to_asset_balance,
-            vault_config.assets_balances[to_asset_idx] - observed_return
+            to_balance - observed_return
         );
 
         // Verify the output assets have been received by the swapper
@@ -135,29 +138,32 @@ mod test_volatile_local_swap {
         let mut app = App::default();
 
         // Instantiate and initialize vault
-        let vault = mock_instantiate_vault(&mut app, None);
         let vault_tokens = deploy_test_tokens(&mut app, None, None);
-        let vault_config = mock_initialize_pool(
+        let vault_initial_balances = vec![Uint128::from(1u64) * WAD, Uint128::from(2u64) * WAD, Uint128::from(3u64) * WAD];
+        let vault_weights = vec![1u64, 1u64, 1u64];
+        let vault = mock_factory_deploy_vault(
             &mut app,
-            vault.clone(),
             vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
-            vec![Uint128::from(1u64) * WAD, Uint128::from(2u64) * WAD, Uint128::from(3u64) * WAD],
-            vec![1u64, 1u64, 1u64]
+            vault_initial_balances.clone(),
+            vault_weights.clone(),
+            None,
+            None,
+            None
         );
 
         // Define local swap config
         let from_asset_idx = 0;
         let from_asset = vault_tokens[from_asset_idx].clone();
-        let from_weight = vault_config.weights[from_asset_idx];
-        let from_balance = vault_config.assets_balances[from_asset_idx];
+        let from_weight = vault_weights[from_asset_idx];
+        let from_balance = vault_initial_balances[from_asset_idx];
 
         let to_asset_idx = 1;
         let to_asset = vault_tokens[to_asset_idx].clone();
-        let to_weight = vault_config.weights[to_asset_idx];
-        let to_balance = vault_config.assets_balances[to_asset_idx];
+        let to_weight = vault_weights[to_asset_idx];
+        let to_balance = vault_initial_balances[to_asset_idx];
 
         // Swap 25% of the pool
-        let swap_amount = vault_config.assets_balances[from_asset_idx] * Uint128::from(25u64)/ Uint128::from(100u64);
+        let swap_amount = vault_initial_balances[from_asset_idx] * Uint128::from(25u64)/ Uint128::from(100u64);
 
         // Fund swapper with tokens
         transfer_tokens(
@@ -239,15 +245,18 @@ mod test_volatile_local_swap {
         let mut app = App::default();
 
         // Instantiate and initialize vault
-        let vault = mock_instantiate_vault(&mut app, None);
         let tokens = deploy_test_tokens(&mut app, None, Some(mock_test_token_definitions(4)));
         let vault_tokens = tokens[0..3].to_vec();
-        mock_initialize_pool(
+        let vault_initial_balances = vec![Uint128::from(1u64) * WAD, Uint128::from(2u64) * WAD, Uint128::from(3u64) * WAD];
+        let vault_weights = vec![1u64, 1u64, 1u64];
+        let vault = mock_factory_deploy_vault(
             &mut app,
-            vault.clone(),
             vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
-            vec![Uint128::from(1u64) * WAD, Uint128::from(2u64) * WAD, Uint128::from(3u64) * WAD],
-            vec![1u64, 1u64, 1u64]
+            vault_initial_balances.clone(),
+            vault_weights.clone(),
+            None,
+            None,
+            None
         );
 
         // Define local swap config
@@ -308,15 +317,18 @@ mod test_volatile_local_swap {
         let mut app = App::default();
 
         // Instantiate and initialize vault
-        let vault = mock_instantiate_vault(&mut app, None);
         let tokens = deploy_test_tokens(&mut app, None, Some(mock_test_token_definitions(4)));
         let vault_tokens = tokens[0..3].to_vec();
-        mock_initialize_pool(
+        let vault_initial_balances = vec![Uint128::from(1u64) * WAD, Uint128::from(2u64) * WAD, Uint128::from(3u64) * WAD];
+        let vault_weights = vec![1u64, 1u64, 1u64];
+        let vault = mock_factory_deploy_vault(
             &mut app,
-            vault.clone(),
             vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
-            vec![Uint128::from(1u64) * WAD, Uint128::from(2u64) * WAD, Uint128::from(3u64) * WAD],
-            vec![1u64, 1u64, 1u64]
+            vault_initial_balances.clone(),
+            vault_weights.clone(),
+            None,
+            None,
+            None
         );
 
         // Define local swap config
@@ -378,14 +390,17 @@ mod test_volatile_local_swap {
         let mut app = App::default();
 
         // Instantiate and initialize vault
-        let vault = mock_instantiate_vault(&mut app, None);
         let vault_tokens = deploy_test_tokens(&mut app, None, None);
-        mock_initialize_pool(
+        let vault_initial_balances = vec![Uint128::from(1u64) * WAD, Uint128::from(2u64) * WAD, Uint128::from(3u64) * WAD];
+        let vault_weights = vec![1u64, 1u64, 1u64];
+        let vault = mock_factory_deploy_vault(
             &mut app,
-            vault.clone(),
             vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
-            vec![Uint128::from(1u64) * WAD, Uint128::from(2u64) * WAD, Uint128::from(3u64) * WAD],
-            vec![1u64, 1u64, 1u64]
+            vault_initial_balances.clone(),
+            vault_weights.clone(),
+            None,
+            None,
+            None
         );
 
         // Define local swap config
@@ -442,29 +457,32 @@ mod test_volatile_local_swap {
         let mut app = App::default();
 
         // Instantiate and initialize vault
-        let vault = mock_instantiate_vault(&mut app, None);
         let vault_tokens = deploy_test_tokens(&mut app, None, None);
-        let vault_config = mock_initialize_pool(
+        let vault_initial_balances = vec![Uint128::from(1u64) * WAD, Uint128::from(2u64), Uint128::from(3u64) * WAD];   // ! Initialize to_asset's vault balance to a very small value, to force the output of swaps to be 0
+        let vault_weights = vec![1u64, 1u64, 1u64];
+        let vault = mock_factory_deploy_vault(
             &mut app,
-            vault.clone(),
             vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
-            vec![Uint128::from(1u64) * WAD, Uint128::from(2u64), Uint128::from(3u64) * WAD],    // ! Initialize to_asset's vault balance to a very small value, to force the output of swaps to be 0
-            vec![1u64, 1u64, 1u64]
+            vault_initial_balances.clone(),
+            vault_weights.clone(),
+            None,
+            None,
+            None
         );
 
         // Define local swap config
         let from_asset_idx = 0;
         let from_asset = vault_tokens[from_asset_idx].clone();
-        let from_weight = vault_config.weights[from_asset_idx];
-        let from_balance = vault_config.assets_balances[from_asset_idx];
+        let from_weight = vault_weights[from_asset_idx];
+        let from_balance = vault_initial_balances[from_asset_idx];
 
         let to_asset_idx = 1;
         let to_asset = vault_tokens[to_asset_idx].clone();
-        let to_weight = vault_config.weights[to_asset_idx];
-        let to_balance = vault_config.assets_balances[to_asset_idx];
+        let to_weight = vault_weights[to_asset_idx];
+        let to_balance = vault_initial_balances[to_asset_idx];
 
         // Swap 10% of the pool
-        let swap_amount = vault_config.assets_balances[from_asset_idx] * Uint128::from(10u64)/ Uint128::from(100u64);
+        let swap_amount = vault_initial_balances[from_asset_idx] * Uint128::from(10u64)/ Uint128::from(100u64);
 
         // Fund swapper with tokens
         transfer_tokens(
@@ -527,14 +545,17 @@ mod test_volatile_local_swap {
         let mut app = App::default();
 
         // Instantiate and initialize vault
-        let vault = mock_instantiate_vault(&mut app, None);
         let vault_tokens = deploy_test_tokens(&mut app, None, None);
-        let vault_config = mock_initialize_pool(
+        let vault_initial_balances = vec![Uint128::from(1u64) * WAD, Uint128::from(2u64) * WAD, Uint128::from(3u64) * WAD];
+        let vault_weights = vec![1u64, 1u64, 1u64];
+        let vault = mock_factory_deploy_vault(
             &mut app,
-            vault.clone(),
             vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
-            vec![Uint128::from(1u64) * WAD, Uint128::from(2u64) * WAD, Uint128::from(3u64) * WAD],
-            vec![1u64, 1u64, 1u64]
+            vault_initial_balances.clone(),
+            vault_weights.clone(),
+            None,
+            None,
+            None
         );
 
         // Set the governance fee to 0 (note the default mock vault has a non-zero governance fee)
@@ -552,7 +573,7 @@ mod test_volatile_local_swap {
         let to_asset = vault_tokens[to_asset_idx].clone();
 
         // Swap 25% of the pool
-        let swap_amount = vault_config.assets_balances[from_asset_idx] * Uint128::from(25u64)/ Uint128::from(100u64);
+        let swap_amount = vault_initial_balances[from_asset_idx] * Uint128::from(25u64)/ Uint128::from(100u64);
 
         // Fund swapper with tokens
         transfer_tokens(

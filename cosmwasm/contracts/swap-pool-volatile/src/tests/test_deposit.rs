@@ -3,7 +3,7 @@ mod test_volatile_deposit{
     use cw_multi_test::{App, Executor};
     use swap_pool_common::{ContractError, state::INITIAL_MINT_AMOUNT};
 
-    use crate::{msg::VolatileExecuteMsg, tests::{helpers::{mock_instantiate_vault, SETUP_MASTER, deploy_test_tokens, WAD, mock_initialize_pool, set_token_allowance, DEFAULT_TEST_POOL_FEE, query_token_balance, transfer_tokens, DEPOSITOR, get_response_attribute, query_token_info, compute_expected_deposit_mixed}, math_helpers::{uint128_to_f64, f64_to_uint128}}};
+    use crate::{msg::VolatileExecuteMsg, tests::{helpers::{SETUP_MASTER, deploy_test_tokens, WAD, set_token_allowance, DEFAULT_TEST_POOL_FEE, query_token_balance, transfer_tokens, DEPOSITOR, get_response_attribute, query_token_info, compute_expected_deposit_mixed, mock_factory_deploy_vault}, math_helpers::{uint128_to_f64, f64_to_uint128}}};
 
 
     //TODO add test for the deposit event
@@ -15,19 +15,22 @@ mod test_volatile_deposit{
         let mut app = App::default();
 
         // Instantiate and initialize vault
-        let vault = mock_instantiate_vault(&mut app, None);
         let vault_tokens = deploy_test_tokens(&mut app, None, None);
-        let vault_config = mock_initialize_pool(
+        let vault_initial_balances = vec![Uint128::from(1u64) * WAD, Uint128::from(2u64) * WAD, Uint128::from(3u64) * WAD];
+        let vault_weights = vec![1u64, 1u64, 1u64];
+        let vault = mock_factory_deploy_vault(
             &mut app,
-            vault.clone(),
             vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
-            vec![Uint128::from(1u64) * WAD, Uint128::from(2u64) * WAD, Uint128::from(3u64) * WAD],
-            vec![1u64, 1u64, 1u64]
+            vault_initial_balances.clone(),
+            vault_weights.clone(),
+            None,
+            None,
+            None
         );
 
         // Define deposit config
         let deposit_percentage = 0.15;
-        let deposit_amounts: Vec<Uint128> = vault_config.assets_balances.iter()
+        let deposit_amounts: Vec<Uint128> = vault_initial_balances.iter()
             .map(|pool_balance| {
                 f64_to_uint128(
                     uint128_to_f64(*pool_balance) * deposit_percentage
@@ -35,7 +38,7 @@ mod test_volatile_deposit{
             }).collect();
 
         // Fund swapper with tokens and set vault allowance
-        vault_config.assets.iter()
+        vault_tokens.iter()
             .zip(&deposit_amounts)
             .for_each(|(asset, deposit_amount)| {
                 
@@ -86,7 +89,7 @@ mod test_volatile_deposit{
 
 
         // Verify the deposited assets have been transferred from the swapper to the pool
-        vault_config.assets.iter()
+        vault_tokens.iter()
             .for_each(|asset| {
                 let swapper_asset_balance = query_token_balance(&mut app, Addr::unchecked(asset), DEPOSITOR.to_string());
                 assert_eq!(
@@ -97,8 +100,8 @@ mod test_volatile_deposit{
             });
 
         // Verify the deposited assets have been received by the pool
-        vault_config.assets.iter()
-            .zip(&vault_config.assets_balances)
+        vault_tokens.iter()
+            .zip(&vault_initial_balances)
             .zip(&deposit_amounts)
             .for_each(|((asset, vault_balance), deposit_amount)| {
                 let vault_from_asset_balance = query_token_balance(&mut app, Addr::unchecked(asset), vault.to_string());
@@ -134,19 +137,22 @@ mod test_volatile_deposit{
         let mut app = App::default();
 
         // Instantiate and initialize vault
-        let vault = mock_instantiate_vault(&mut app, None);
         let vault_tokens = deploy_test_tokens(&mut app, None, None);
-        let vault_config = mock_initialize_pool(
+        let vault_initial_balances = vec![Uint128::from(1u64) * WAD, Uint128::from(2u64) * WAD, Uint128::from(3u64) * WAD];
+        let vault_weights = vec![1u64, 1u64, 1u64];
+        let vault = mock_factory_deploy_vault(
             &mut app,
-            vault.clone(),
             vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
-            vec![Uint128::from(1u64) * WAD, Uint128::from(2u64) * WAD, Uint128::from(3u64) * WAD],
-            vec![1u64, 1u64, 1u64]
+            vault_initial_balances.clone(),
+            vault_weights.clone(),
+            None,
+            None,
+            None
         );
 
         // Define deposit config
         let deposit_percentages = vec![0.1, 0., 0.3];
-        let deposit_amounts: Vec<Uint128> = vault_config.assets_balances.iter()
+        let deposit_amounts: Vec<Uint128> = vault_initial_balances.iter()
             .zip(&deposit_percentages)
             .map(|(pool_balance, deposit_percentage)| {
                 f64_to_uint128(
@@ -155,7 +161,7 @@ mod test_volatile_deposit{
             }).collect();
 
         // Fund swapper with tokens and set vault allowance
-        vault_config.assets.iter()
+        vault_tokens.iter()
             .zip(&deposit_amounts)
             .filter(|(_, deposit_amount)| *deposit_amount != Uint128::zero())
             .for_each(|(asset, deposit_amount)| {
@@ -200,8 +206,8 @@ mod test_volatile_deposit{
 
         let expected_return = compute_expected_deposit_mixed(
             deposit_amounts,
-            vault_config.weights,
-            vault_config.assets_balances,
+            vault_weights,
+            vault_initial_balances,
             INITIAL_MINT_AMOUNT,
             Some(DEFAULT_TEST_POOL_FEE)
         );
@@ -220,14 +226,17 @@ mod test_volatile_deposit{
         let mut app = App::default();
 
         // Instantiate and initialize vault
-        let vault = mock_instantiate_vault(&mut app, None);
         let vault_tokens = deploy_test_tokens(&mut app, None, None);
-        mock_initialize_pool(
+        let vault_initial_balances = vec![Uint128::from(1u64) * WAD, Uint128::from(2u64) * WAD, Uint128::from(3u64) * WAD];
+        let vault_weights = vec![1u64, 1u64, 1u64];
+        let vault = mock_factory_deploy_vault(
             &mut app,
-            vault.clone(),
             vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
-            vec![Uint128::from(1u64) * WAD, Uint128::from(2u64) * WAD, Uint128::from(3u64) * WAD],
-            vec![1u64, 1u64, 1u64]
+            vault_initial_balances.clone(),
+            vault_weights.clone(),
+            None,
+            None,
+            None
         );
 
         // Define deposit config
@@ -270,19 +279,22 @@ mod test_volatile_deposit{
         let mut app = App::default();
 
         // Instantiate and initialize vault
-        let vault = mock_instantiate_vault(&mut app, None);
         let vault_tokens = deploy_test_tokens(&mut app, None, None);
-        let vault_config = mock_initialize_pool(
+        let vault_initial_balances = vec![Uint128::from(1u64) * WAD, Uint128::from(2u64) * WAD, Uint128::from(3u64) * WAD];
+        let vault_weights = vec![1u64, 1u64, 1u64];
+        let vault = mock_factory_deploy_vault(
             &mut app,
-            vault.clone(),
             vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
-            vec![Uint128::from(1u64) * WAD, Uint128::from(2u64) * WAD, Uint128::from(3u64) * WAD],
-            vec![1u64, 1u64, 1u64]
+            vault_initial_balances.clone(),
+            vault_weights.clone(),
+            None,
+            None,
+            None
         );
 
         // Define deposit config
         let deposit_percentage = 0.05;
-        let deposit_amounts: Vec<Uint128> = vault_config.assets_balances.iter()
+        let deposit_amounts: Vec<Uint128> = vault_initial_balances.iter()
             .map(|pool_balance| {
                 f64_to_uint128(
                     uint128_to_f64(*pool_balance) * deposit_percentage
@@ -290,7 +302,7 @@ mod test_volatile_deposit{
             }).collect();
 
         // Fund swapper with tokens and set vault allowance
-        vault_config.assets.iter()
+        vault_tokens.iter()
             .zip(&deposit_amounts)
             .for_each(|(asset, deposit_amount)| {
                 
@@ -364,19 +376,22 @@ mod test_volatile_deposit{
         let mut app = App::default();
 
         // Instantiate and initialize vault
-        let vault = mock_instantiate_vault(&mut app, None);
         let vault_tokens = deploy_test_tokens(&mut app, None, None);
-        let vault_config = mock_initialize_pool(
+        let vault_initial_balances = vec![Uint128::from(1u64) * WAD, Uint128::from(2u64) * WAD, Uint128::from(3u64) * WAD];
+        let vault_weights = vec![1u64, 1u64, 1u64];
+        let vault = mock_factory_deploy_vault(
             &mut app,
-            vault.clone(),
             vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
-            vec![Uint128::from(1u64) * WAD, Uint128::from(2u64) * WAD, Uint128::from(3u64) * WAD],
-            vec![1u64, 1u64, 1u64]
+            vault_initial_balances.clone(),
+            vault_weights.clone(),
+            None,
+            None,
+            None
         );
 
         // Define deposit config
         let deposit_percentage = 0.25;
-        let deposit_amounts: Vec<Uint128> = vault_config.assets_balances.iter()
+        let deposit_amounts: Vec<Uint128> = vault_initial_balances.iter()
             .map(|pool_balance| {
                 f64_to_uint128(
                     uint128_to_f64(*pool_balance) * deposit_percentage
@@ -384,7 +399,7 @@ mod test_volatile_deposit{
             }).collect();
 
         // Fund swapper with tokens and set vault allowance
-        vault_config.assets.iter()
+        vault_tokens.iter()
             .zip(&deposit_amounts)
             .for_each(|(asset, deposit_amount)| {
                 

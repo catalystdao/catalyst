@@ -4,7 +4,7 @@ mod test_volatile_receive_liquidity {
     use ethnum::{U256, uint};
     use swap_pool_common::{ContractError, state::INITIAL_MINT_AMOUNT};
 
-    use crate::{msg::VolatileExecuteMsg, tests::{helpers::{mock_instantiate_vault, deploy_test_tokens, WAD, mock_initialize_pool, query_token_balance, get_response_attribute, mock_set_pool_connection, CHANNEL_ID, SWAPPER_B, CHAIN_INTERFACE, compute_expected_receive_liquidity, query_token_info}, math_helpers::{uint128_to_f64, f64_to_uint128}}};
+    use crate::{msg::VolatileExecuteMsg, tests::{helpers::{deploy_test_tokens, WAD, query_token_balance, get_response_attribute, mock_set_pool_connection, CHANNEL_ID, SWAPPER_B, CHAIN_INTERFACE, compute_expected_receive_liquidity, query_token_info, mock_factory_deploy_vault}, math_helpers::{uint128_to_f64, f64_to_uint128}}};
 
     //TODO check event
 
@@ -14,14 +14,17 @@ mod test_volatile_receive_liquidity {
         let mut app = App::default();
 
         // Instantiate and initialize vault
-        let vault = mock_instantiate_vault(&mut app, Some(Addr::unchecked(CHAIN_INTERFACE)));
         let vault_tokens = deploy_test_tokens(&mut app, None, None);
-        let vault_config = mock_initialize_pool(
+        let vault_initial_balances = vec![Uint128::from(1u64) * WAD, Uint128::from(2u64) * WAD, Uint128::from(3u64) * WAD];
+        let vault_weights = vec![1u64, 1u64, 1u64];
+        let vault = mock_factory_deploy_vault(
             &mut app,
-            vault.clone(),
             vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
-            vec![Uint128::from(1u64) * WAD, Uint128::from(2u64) * WAD, Uint128::from(3u64) * WAD],
-            vec![1u64, 1u64, 1u64]
+            vault_initial_balances.clone(),
+            vault_weights.clone(),
+            None,
+            Some(Addr::unchecked(CHAIN_INTERFACE)),         // Using a mock address, no need for an interface to be deployed
+            None
         );
 
         // Connect pool with a mock pool
@@ -60,7 +63,7 @@ mod test_volatile_receive_liquidity {
         // Verify the swap return
         let expected_return = compute_expected_receive_liquidity(
             swap_units,
-            vault_config.weights.clone(),
+            vault_weights.clone(),
             INITIAL_MINT_AMOUNT
         );
 
@@ -94,14 +97,17 @@ mod test_volatile_receive_liquidity {
         let mut app = App::default();
 
         // Instantiate and initialize vault
-        let vault = mock_instantiate_vault(&mut app, Some(Addr::unchecked(CHAIN_INTERFACE)));
         let vault_tokens = deploy_test_tokens(&mut app, None, None);
-        mock_initialize_pool(
+        let vault_initial_balances = vec![Uint128::from(1u64) * WAD, Uint128::from(2u64) * WAD, Uint128::from(3u64) * WAD];
+        let vault_weights = vec![1u64, 1u64, 1u64];
+        let vault = mock_factory_deploy_vault(
             &mut app,
-            vault.clone(),
             vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
-            vec![Uint128::from(1u64) * WAD, Uint128::from(2u64) * WAD, Uint128::from(3u64) * WAD],
-            vec![1u64, 1u64, 1u64]
+            vault_initial_balances.clone(),
+            vault_weights.clone(),
+            None,
+            Some(Addr::unchecked(CHAIN_INTERFACE)),         // Using a mock address, no need for an interface to be deployed
+            None
         );
 
         // Connect pool with a mock pool
@@ -165,14 +171,17 @@ mod test_volatile_receive_liquidity {
         let mut app = App::default();
 
         // Instantiate and initialize vault
-        let vault = mock_instantiate_vault(&mut app, Some(Addr::unchecked(CHAIN_INTERFACE)));
         let vault_tokens = deploy_test_tokens(&mut app, None, None);
-        let vault_config = mock_initialize_pool(
+        let vault_initial_balances = vec![Uint128::from(1u64) * WAD, Uint128::from(2u64) * WAD, Uint128::from(3u64) * WAD];
+        let vault_weights = vec![1u64, 1u64, 1u64];
+        let vault = mock_factory_deploy_vault(
             &mut app,
-            vault.clone(),
             vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
-            vec![Uint128::from(1u64) * WAD, Uint128::from(2u64) * WAD, Uint128::from(3u64) * WAD],
-            vec![1u64, 1u64, 1u64]
+            vault_initial_balances.clone(),
+            vault_weights.clone(),
+            None,
+            Some(Addr::unchecked(CHAIN_INTERFACE)),         // Using a mock address, no need for an interface to be deployed
+            None
         );
 
         // Connect pool with a mock pool
@@ -191,7 +200,7 @@ mod test_volatile_receive_liquidity {
         // Compute the expected return
         let expected_return = compute_expected_receive_liquidity(
             swap_units,
-            vault_config.weights.clone(),
+            vault_weights.clone(),
              INITIAL_MINT_AMOUNT
         ).to_amount;
 
@@ -255,14 +264,17 @@ mod test_volatile_receive_liquidity {
         let mut app = App::default();
 
         // Instantiate and initialize vault
-        let vault = mock_instantiate_vault(&mut app, Some(Addr::unchecked(CHAIN_INTERFACE)));
         let vault_tokens = deploy_test_tokens(&mut app, None, None);
-        mock_initialize_pool(
+        let vault_initial_balances = vec![Uint128::from(1u64) * WAD, Uint128::from(2u64) * WAD, Uint128::from(3u64) * WAD];
+        let vault_weights = vec![1u64, 1u64, 1u64];
+        let vault = mock_factory_deploy_vault(
             &mut app,
-            vault.clone(),
             vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
-            vec![Uint128::from(1u64) * WAD, Uint128::from(2u64) * WAD, Uint128::from(3u64) * WAD],
-            vec![1u64, 1u64, 1u64]
+            vault_initial_balances.clone(),
+            vault_weights.clone(),
+            None,
+            Some(Addr::unchecked(CHAIN_INTERFACE)),         // Using a mock address, no need for an interface to be deployed
+            None
         );
 
         // ! Do not connect the pool with the mock source pool
@@ -307,14 +319,17 @@ mod test_volatile_receive_liquidity {
         let mut app = App::default();
 
         // Instantiate and initialize vault
-        let vault = mock_instantiate_vault(&mut app, Some(Addr::unchecked(CHAIN_INTERFACE)));
         let vault_tokens = deploy_test_tokens(&mut app, None, None);
-        mock_initialize_pool(
+        let vault_initial_balances = vec![Uint128::from(1u64) * WAD, Uint128::from(2u64) * WAD, Uint128::from(3u64) * WAD];
+        let vault_weights = vec![1u64, 1u64, 1u64];
+        let vault = mock_factory_deploy_vault(
             &mut app,
-            vault.clone(),
             vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
-            vec![Uint128::from(1u64) * WAD, Uint128::from(2u64) * WAD, Uint128::from(3u64) * WAD],
-            vec![1u64, 1u64, 1u64]
+            vault_initial_balances.clone(),
+            vault_weights.clone(),
+            None,
+            Some(Addr::unchecked(CHAIN_INTERFACE)),         // Using a mock address, no need for an interface to be deployed
+            None
         );
 
         // Connect pool with a mock pool

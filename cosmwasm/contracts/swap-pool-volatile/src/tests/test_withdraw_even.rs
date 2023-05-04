@@ -5,7 +5,7 @@ mod test_volatile_withdraw_even {
     use cw_multi_test::{App, Executor};
     use swap_pool_common::{ContractError, state::INITIAL_MINT_AMOUNT};
 
-    use crate::{msg::VolatileExecuteMsg, tests::{helpers::{mock_instantiate_vault, SETUP_MASTER, deploy_test_tokens, WAD, mock_initialize_pool, query_token_balance, transfer_tokens, get_response_attribute, query_token_info, WITHDRAWER}, math_helpers::{uint128_to_f64, f64_to_uint128}}};
+    use crate::{msg::VolatileExecuteMsg, tests::{helpers::{SETUP_MASTER, deploy_test_tokens, WAD, query_token_balance, transfer_tokens, get_response_attribute, query_token_info, WITHDRAWER, mock_factory_deploy_vault}, math_helpers::{uint128_to_f64, f64_to_uint128}}};
 
 
     //TODO add test for the withdraw event
@@ -16,14 +16,17 @@ mod test_volatile_withdraw_even {
         let mut app = App::default();
 
         // Instantiate and initialize vault
-        let vault = mock_instantiate_vault(&mut app, None);
         let vault_tokens = deploy_test_tokens(&mut app, None, None);
-        let vault_config = mock_initialize_pool(
+        let vault_initial_balances = vec![Uint128::from(1u64) * WAD, Uint128::from(2u64) * WAD, Uint128::from(3u64) * WAD];
+        let vault_weights = vec![1u64, 1u64, 1u64];
+        let vault = mock_factory_deploy_vault(
             &mut app,
-            vault.clone(),
             vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
-            vec![Uint128::from(1u64) * WAD, Uint128::from(2u64) * WAD, Uint128::from(3u64) * WAD],
-            vec![1u64, 1u64, 1u64]
+            vault_initial_balances.clone(),
+            vault_weights.clone(),
+            None,
+            None,
+            None
         );
 
         // Define withdraw config
@@ -64,7 +67,7 @@ mod test_volatile_withdraw_even {
             .collect::<Result<Vec<Uint128>, _>>()
             .unwrap();
 
-        let expected_returns = vault_config.assets_balances.iter()
+        let expected_returns = vault_initial_balances.iter()
             .map(|balance| uint128_to_f64(*balance) * withdraw_percentage)
             .collect::<Vec<f64>>();
     
@@ -76,8 +79,8 @@ mod test_volatile_withdraw_even {
 
 
         // Verify the withdrawn assets have been sent by the pool and received by the withdrawer
-        vault_config.assets.iter()
-            .zip(&vault_config.assets_balances)
+        vault_tokens.iter()
+            .zip(&vault_initial_balances)
             .zip(&observed_returns)
             .for_each(|((asset, initial_vault_balance), withdraw_amount) | {
 
@@ -123,14 +126,17 @@ mod test_volatile_withdraw_even {
         let mut app = App::default();
 
         // Instantiate and initialize vault
-        let vault = mock_instantiate_vault(&mut app, None);
         let vault_tokens = deploy_test_tokens(&mut app, None, None);
-        mock_initialize_pool(
+        let vault_initial_balances = vec![Uint128::from(1u64) * WAD, Uint128::from(2u64) * WAD, Uint128::from(3u64) * WAD];
+        let vault_weights = vec![1u64, 1u64, 1u64];
+        let vault = mock_factory_deploy_vault(
             &mut app,
-            vault.clone(),
             vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
-            vec![Uint128::from(1u64) * WAD, Uint128::from(2u64) * WAD, Uint128::from(3u64) * WAD],
-            vec![1u64, 1u64, 1u64]
+            vault_initial_balances.clone(),
+            vault_weights.clone(),
+            None,
+            None,
+            None
         );
 
         // Define withdraw config
@@ -177,14 +183,17 @@ mod test_volatile_withdraw_even {
         let mut app = App::default();
 
         // Instantiate and initialize vault
-        let vault = mock_instantiate_vault(&mut app, None);
         let vault_tokens = deploy_test_tokens(&mut app, None, None);
-        let vault_config = mock_initialize_pool(
+        let vault_initial_balances = vec![Uint128::from(1u64) * WAD, Uint128::from(2u64) * WAD, Uint128::from(3u64) * WAD];
+        let vault_weights = vec![1u64, 1u64, 1u64];
+        let vault = mock_factory_deploy_vault(
             &mut app,
-            vault.clone(),
             vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
-            vec![Uint128::from(1u64) * WAD, Uint128::from(2u64) * WAD, Uint128::from(3u64) * WAD],
-            vec![1u64, 1u64, 1u64]
+            vault_initial_balances.clone(),
+            vault_weights.clone(),
+            None,
+            None,
+            None
         );
 
         // Define withdraw config
@@ -201,7 +210,7 @@ mod test_volatile_withdraw_even {
         );
 
         // Compute the expected return
-        let expected_return = vault_config.assets_balances.iter()
+        let expected_return = vault_initial_balances.iter()
             .map(|balance| uint128_to_f64(*balance) * withdraw_percentage)
             .collect::<Vec<f64>>();
 
@@ -260,14 +269,17 @@ mod test_volatile_withdraw_even {
         let mut app = App::default();
 
         // Instantiate and initialize vault
-        let vault = mock_instantiate_vault(&mut app, None);
         let vault_tokens = deploy_test_tokens(&mut app, None, None);
-        mock_initialize_pool(
+        let vault_initial_balances = vec![Uint128::from(1u64) * WAD, Uint128::from(2u64) * WAD, Uint128::from(3u64) * WAD];
+        let vault_weights = vec![1u64, 1u64, 1u64];
+        let vault = mock_factory_deploy_vault(
             &mut app,
-            vault.clone(),
             vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
-            vec![Uint128::from(1u64) * WAD, Uint128::from(2u64) * WAD, Uint128::from(3u64) * WAD],
-            vec![1u64, 1u64, 1u64]
+            vault_initial_balances.clone(),
+            vault_weights.clone(),
+            None,
+            None,
+            None
         );
 
         // Define withdraw config

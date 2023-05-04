@@ -921,6 +921,7 @@ dependencies = [
  "schemars",
  "serde",
  "swap-pool-common",
+ "swap-pool-factory",
  "thiserror",
 ]
 

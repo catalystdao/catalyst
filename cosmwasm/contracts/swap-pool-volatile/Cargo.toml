@@ -40,3 +40,4 @@ catalyst-ibc-interface = { path = "../catalyst-ibc-interface", feature = ["libra
 [dev-dependencies]
 cw-multi-test = "0.16.4"
 mock-catalyst-ibc-interface = { path = "../mock-catalyst-ibc-interface", feature = ["library"] }
+swap-pool-factory = { path = "../swap-pool-factory", feature = ["library"] }

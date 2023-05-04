@@ -39,8 +39,8 @@ mod test_volatile_initialize_swap_curves {
             depositor: DEPOSITOR.to_string()
         };
 
-        // Set token allowances
-        initialize_msg.set_vault_allowances(
+        // Transfer tokens to the vault
+        initialize_msg.transfer_vault_allowances(
             &mut app,
             vault.to_string(),
             Addr::unchecked(SETUP_MASTER)
@@ -201,8 +201,8 @@ mod test_volatile_initialize_swap_curves {
             depositor: DEPOSITOR.to_string()
         };
 
-        // Set token allowances
-        initialize_msg.set_vault_allowances(
+        // Transfer tokens to the vault
+        initialize_msg.transfer_vault_allowances(
             &mut app,
             vault.to_string(),
             Addr::unchecked(SETUP_MASTER)
@@ -302,8 +302,8 @@ mod test_volatile_initialize_swap_curves {
             depositor: DEPOSITOR.to_string()
         };
 
-        // Set token allowances
-        initialize_msg.set_vault_allowances(
+        // Transfer tokens to the vault
+        initialize_msg.transfer_vault_allowances(
             &mut app,
             vault.to_string(),
             Addr::unchecked(SETUP_MASTER)
@@ -357,8 +357,8 @@ mod test_volatile_initialize_swap_curves {
             depositor: DEPOSITOR.to_string()
         };
 
-        // Set token allowances
-        initialize_msg.set_vault_allowances(
+        // Transfer tokens to the vault
+        initialize_msg.transfer_vault_allowances(
             &mut app,
             vault.to_string(),
             Addr::unchecked(SETUP_MASTER)
@@ -413,8 +413,8 @@ mod test_volatile_initialize_swap_curves {
             depositor: DEPOSITOR.to_string()
         };
 
-        // Set token allowances
-        initialize_msg.set_vault_allowances(
+        // Transfer tokens to the vault
+        initialize_msg.transfer_vault_allowances(
             &mut app,
             vault.to_string(),
             Addr::unchecked(SETUP_MASTER)
@@ -469,8 +469,8 @@ mod test_volatile_initialize_swap_curves {
             depositor: DEPOSITOR.to_string()
         };
 
-        // Set token allowances
-        initialize_msg.set_vault_allowances(
+        // Transfer tokens to the vault
+        initialize_msg.transfer_vault_allowances(
             &mut app,
             vault.to_string(),
             Addr::unchecked(SETUP_MASTER)
@@ -525,8 +525,8 @@ mod test_volatile_initialize_swap_curves {
             depositor: DEPOSITOR.to_string()
         };
 
-        // Set token allowances
-        initialize_msg.set_vault_allowances(
+        // Transfer tokens to the vault
+        initialize_msg.transfer_vault_allowances(
             &mut app,
             vault.to_string(),
             Addr::unchecked(SETUP_MASTER)
@@ -581,8 +581,8 @@ mod test_volatile_initialize_swap_curves {
             depositor: DEPOSITOR.to_string()
         };
 
-        // Set token allowances
-        initialize_msg.set_vault_allowances(
+        // Transfer tokens to the vault
+        initialize_msg.transfer_vault_allowances(
             &mut app,
             vault.to_string(),
             Addr::unchecked(SETUP_MASTER)

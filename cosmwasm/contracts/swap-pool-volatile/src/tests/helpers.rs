@@ -28,6 +28,21 @@ pub const DEFAULT_TEST_GOV_FEE  : u64 = 50000000000000000u64;   // 5%
 //TODO move common helpers somewhere else
 
 // Contracts
+pub fn vault_factory_contract_storage(
+    app: &mut App
+) -> u64 {
+
+    // Create contract wrapper
+    let contract = ContractWrapper::new(
+        swap_pool_factory::contract::execute,
+        swap_pool_factory::contract::instantiate,
+        swap_pool_factory::contract::query,
+    ).with_reply(swap_pool_factory::contract::reply);
+    
+    // 'Deploy' the contract
+    app.store_code(Box::new(contract))
+}
+
 pub fn volatile_vault_contract_storage(
     app: &mut App
 ) -> u64 {
@@ -246,6 +261,88 @@ pub fn mock_instantiate_interface(
 }
 
 
+// Factory management helpers
+pub fn mock_instantiate_factory(
+    app: &mut App,
+    default_governance_fee_share: Option<u64>
+) -> Addr {
+
+    let factory_contract_code = vault_factory_contract_storage(app);
+
+    app.instantiate_contract(
+        factory_contract_code,
+        Addr::unchecked(FACTORY_OWNER),
+        &swap_pool_factory::msg::InstantiateMsg {
+            default_governance_fee_share: default_governance_fee_share.unwrap_or(DEFAULT_TEST_GOV_FEE)
+        },
+        &[],
+        "factory",
+        None
+    ).unwrap()
+}
+
+pub fn mock_factory_deploy_vault(
+    app: &mut App,
+    assets: Vec<String>,
+    assets_balances: Vec<Uint128>,
+    weights: Vec<u64>,
+    vault_code_id: Option<u64>,
+    chain_interface: Option<Addr>,
+    factory: Option<Addr>
+) -> Addr {
+
+    // Deploy factory if not provided
+    let factory = factory.unwrap_or(
+        mock_instantiate_factory(app, None)
+    );
+
+    // Deploy vault contract if not provided
+    let vault_code_id = vault_code_id.unwrap_or(
+        volatile_vault_contract_storage(app)
+    );
+
+    // Set asset allowances for the factory
+    assets
+        .iter()
+        .zip(&assets_balances)
+        .filter(|(_, amount)| *amount != Uint128::zero())
+        .for_each(|(asset, amount)| {
+            app.execute_contract::<Cw20ExecuteMsg>(
+                Addr::unchecked(SETUP_MASTER),
+                Addr::unchecked(asset),
+                &Cw20ExecuteMsg::IncreaseAllowance {
+                    spender: factory.to_string(),
+                    amount: *amount,
+                    expires: None
+                },
+                &[]
+            ).unwrap();
+        });
+
+    // Deploy the new vault
+    let response = app.execute_contract(
+        Addr::unchecked(SETUP_MASTER),
+        factory,
+        &swap_pool_factory::msg::ExecuteMsg::DeployVault {
+            vault_code_id,
+            assets,
+            assets_balances,
+            weights,
+            amplification: 1000000000000000000u64,
+            pool_fee: DEFAULT_TEST_POOL_FEE,
+            name: "TestPool".to_string(),
+            symbol: "TP".to_string(),
+            chain_interface: chain_interface.map(|value| value.to_string())
+        },
+        &[]
+    ).unwrap();
+
+    let vault = get_response_attribute::<String>(response.events[7].clone(), "vault").unwrap();
+
+    Addr::unchecked(vault)
+}
+
+
 // Vault management helpers
 
 pub fn mock_instantiate_vault_msg(
@@ -293,7 +390,7 @@ pub struct InitializeSwapCurvesMockConfig {
 }
 
 impl InitializeSwapCurvesMockConfig {
-    pub fn set_vault_allowances(
+    pub fn transfer_vault_allowances(
         &self,
         app: &mut App,
         vault: String,
@@ -302,14 +399,14 @@ impl InitializeSwapCurvesMockConfig {
         self.assets
             .iter()
             .zip(&self.assets_balances)
+            .filter(|(_, amount)| *amount != Uint128::zero())
             .for_each(|(asset, amount)| {
                 app.execute_contract::<Cw20ExecuteMsg>(
                     depositor.clone(),
                     Addr::unchecked(asset),
-                    &Cw20ExecuteMsg::IncreaseAllowance {
-                        spender: vault.to_string(),
-                        amount: *amount,
-                        expires: None
+                    &Cw20ExecuteMsg::Transfer {
+                        recipient: vault.clone(),
+                        amount: *amount
                     },
                     &[]
                 ).unwrap();
@@ -346,8 +443,8 @@ pub fn mock_initialize_pool(
         depositor: SETUP_MASTER.to_string()
     };
 
-    // Set token allowances
-    initialize_msg.set_vault_allowances(
+    // Transfer the tokens to the vault
+    initialize_msg.transfer_vault_allowances(
         app,
         vault.to_string(),
         Addr::unchecked(SETUP_MASTER)
