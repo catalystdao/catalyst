@@ -3,7 +3,7 @@ mod test_volatile_fees {
     use cw_multi_test::{App, Executor};
     use swap_pool_common::{ContractError, msg::{FeeAdministratorResponse, PoolFeeResponse, GovernanceFeeShareResponse}};
 
-    use crate::{msg::{VolatileExecuteMsg, QueryMsg}, tests::helpers::{mock_instantiate_vault, FACTORY_OWNER, FEE_ADMINISTRATOR}};
+    use crate::{msg::{VolatileExecuteMsg, QueryMsg}, tests::helpers::{mock_instantiate_vault, FACTORY_OWNER}};
 
 
 
@@ -92,7 +92,7 @@ mod test_volatile_fees {
 
         // Tested action: set pool fee
         let _response = app.execute_contract::<VolatileExecuteMsg>(
-            Addr::unchecked(FEE_ADMINISTRATOR),
+            Addr::unchecked(FACTORY_OWNER),
             vault.clone(),
             &VolatileExecuteMsg::SetPoolFee { fee: new_pool_fee },
             &[]
@@ -129,7 +129,7 @@ mod test_volatile_fees {
 
         // Tested action: set max pool fee
         let _response = app.execute_contract::<VolatileExecuteMsg>(
-            Addr::unchecked(FEE_ADMINISTRATOR),
+            Addr::unchecked(FACTORY_OWNER),
             vault.clone(),
             &VolatileExecuteMsg::SetPoolFee { fee: new_pool_fee },
             &[]
@@ -164,7 +164,7 @@ mod test_volatile_fees {
 
         // Tested action: set pool fee larger than maximum allowed
         let response_result = app.execute_contract::<VolatileExecuteMsg>(
-            Addr::unchecked(FEE_ADMINISTRATOR),
+            Addr::unchecked(FACTORY_OWNER),
             vault.clone(),
             &VolatileExecuteMsg::SetPoolFee { fee: new_pool_fee },
             &[]
@@ -194,7 +194,7 @@ mod test_volatile_fees {
 
         // Tested action: set pool fee
         let response_result = app.execute_contract::<VolatileExecuteMsg>(
-            Addr::unchecked("not_fee_administrator"),       // ! Not FEE_ADMINISTRATOR
+            Addr::unchecked("not_fee_administrator"),       // ! Not FACTORY_OWNER
             vault.clone(),
             &VolatileExecuteMsg::SetPoolFee { fee: new_pool_fee },
             &[]
@@ -226,7 +226,7 @@ mod test_volatile_fees {
 
         // Tested action: set governance fee share
         let _response = app.execute_contract::<VolatileExecuteMsg>(
-            Addr::unchecked(FEE_ADMINISTRATOR),
+            Addr::unchecked(FACTORY_OWNER),
             vault.clone(),
             &VolatileExecuteMsg::SetGovernanceFeeShare { fee: new_gov_fee_share },
             &[]
@@ -263,7 +263,7 @@ mod test_volatile_fees {
 
         // Tested action: set max governance fee share
         let _response = app.execute_contract::<VolatileExecuteMsg>(
-            Addr::unchecked(FEE_ADMINISTRATOR),
+            Addr::unchecked(FACTORY_OWNER),
             vault.clone(),
             &VolatileExecuteMsg::SetGovernanceFeeShare { fee: new_gov_fee_share },
             &[]
@@ -298,7 +298,7 @@ mod test_volatile_fees {
 
         // Tested action: set governance fee share larger than maximum allowed
         let response_result = app.execute_contract::<VolatileExecuteMsg>(
-            Addr::unchecked(FEE_ADMINISTRATOR),
+            Addr::unchecked(FACTORY_OWNER),
             vault.clone(),
             &VolatileExecuteMsg::SetGovernanceFeeShare { fee: new_gov_fee_share },
             &[]
@@ -328,7 +328,7 @@ mod test_volatile_fees {
 
         // Tested action: set governance fee share with invalid caller
         let response_result = app.execute_contract::<VolatileExecuteMsg>(
-            Addr::unchecked("not_fee_administrator"),       // ! Not FEE_ADMINISTRATOR
+            Addr::unchecked("not_fee_administrator"),       // ! Not FACTORY_OWNER
             vault.clone(),
             &VolatileExecuteMsg::SetGovernanceFeeShare { fee: new_gov_fee_share },
             &[]

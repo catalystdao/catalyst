@@ -14,7 +14,6 @@ pub const FACTORY_OWNER         : &str = "factory_owner_addr";
 pub const SETUP_MASTER          : &str = "setup_master_addr";
 pub const DEPOSITOR             : &str = "depositor_addr";
 pub const WITHDRAWER            : &str = "withdrawer_addr";
-pub const FEE_ADMINISTRATOR     : &str = "fee_administrator_addr";
 pub const LOCAL_SWAPPER         : &str = "local_swapper_addr";
 pub const SWAPPER_A             : &str = "swapper_a_addr";
 pub const SWAPPER_B             : &str = "swapper_b_addr";
@@ -258,7 +257,7 @@ pub fn mock_instantiate_vault_msg(
         chain_interface,
         pool_fee: DEFAULT_TEST_POOL_FEE,
         governance_fee: DEFAULT_TEST_GOV_FEE,
-        fee_administrator: FEE_ADMINISTRATOR.to_string(),
+        fee_administrator: FACTORY_OWNER.to_string(),   // The 'fee_administrator' is set to the 'factory_owner' as this is the default when vaults are deployed via the factory
         setup_master: SETUP_MASTER.to_string()
     }
 }
@@ -406,7 +405,7 @@ pub fn mock_set_pool_fee(
     fee: u64
 ) -> AppResponse {
     app.execute_contract(
-        Addr::unchecked(FEE_ADMINISTRATOR),
+        Addr::unchecked(FACTORY_OWNER),
         vault_contract,
         &VolatileExecuteMsg::SetPoolFee { fee },
         &[]
@@ -420,7 +419,7 @@ pub fn mock_set_governance_fee_share(
     fee: u64
 ) -> AppResponse {
     app.execute_contract(
-        Addr::unchecked(FEE_ADMINISTRATOR),
+        Addr::unchecked(FACTORY_OWNER),
         vault_contract,
         &VolatileExecuteMsg::SetGovernanceFeeShare { fee },
         &[]
