@@ -1,21 +1,33 @@
 mod test_volatile_fees {
-    use cosmwasm_std::Addr;
+    use cosmwasm_std::{Addr, Uint128};
     use cw_multi_test::{App, Executor};
     use swap_pool_common::{ContractError, msg::{FeeAdministratorResponse, PoolFeeResponse, GovernanceFeeShareResponse}};
 
-    use crate::{msg::{VolatileExecuteMsg, QueryMsg}, tests::helpers::{mock_instantiate_vault, FACTORY_OWNER}};
+    use crate::{msg::{VolatileExecuteMsg, QueryMsg}, tests::helpers::{FACTORY_OWNER, mock_factory_deploy_vault, WAD, deploy_test_tokens}};
 
 
 
     // Set Fee Administrator Tests **********************************************************************************************
+    fn deploy_mock_vault(app: &mut App) -> Addr {
+        let vault_tokens = deploy_test_tokens(app, None, None);
+        mock_factory_deploy_vault(
+            app,
+            vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
+            vec![Uint128::from(1u64) * WAD, Uint128::from(2u64) * WAD, Uint128::from(3u64) * WAD],
+            vec![1u64, 1u64, 1u64],
+            None,
+            None,
+            None
+        )
+    }
 
     #[test]
     fn test_set_fee_administrator() {
 
         let mut app = App::default();
 
-        // Instantiate vault
-        let vault = mock_instantiate_vault(&mut app, None);
+        // Deploy vault
+        let vault = deploy_mock_vault(&mut app);
 
         let new_fee_administrator: &str = "new_fee_administrator";
 
@@ -52,8 +64,8 @@ mod test_volatile_fees {
 
         let mut app = App::default();
 
-        // Instantiate vault
-        let vault = mock_instantiate_vault(&mut app, None);
+        // Deploy vault
+        let vault = deploy_mock_vault(&mut app);
 
         let new_fee_administrator: &str = "new_fee_administrator";
 
@@ -84,8 +96,8 @@ mod test_volatile_fees {
 
         let mut app = App::default();
 
-        // Instantiate vault
-        let vault = mock_instantiate_vault(&mut app, None);
+        // Deploy vault
+        let vault = deploy_mock_vault(&mut app);
 
         let new_pool_fee: u64 = 500;
 
@@ -121,8 +133,8 @@ mod test_volatile_fees {
 
         let mut app = App::default();
 
-        // Instantiate vault
-        let vault = mock_instantiate_vault(&mut app, None);
+        // Deploy vault
+        let vault = deploy_mock_vault(&mut app);
 
         let new_pool_fee: u64 = 1000000000000000000u64;
 
@@ -156,8 +168,8 @@ mod test_volatile_fees {
 
         let mut app = App::default();
 
-        // Instantiate vault
-        let vault = mock_instantiate_vault(&mut app, None);
+        // Deploy vault
+        let vault = deploy_mock_vault(&mut app);
 
         let new_pool_fee: u64 = 1000000000000000000u64 + 1u64;
 
@@ -186,8 +198,8 @@ mod test_volatile_fees {
 
         let mut app = App::default();
 
-        // Instantiate vault
-        let vault = mock_instantiate_vault(&mut app, None);
+        // Deploy vault
+        let vault = deploy_mock_vault(&mut app);
 
         let new_pool_fee: u64 = 500;
 
@@ -218,8 +230,8 @@ mod test_volatile_fees {
 
         let mut app = App::default();
 
-        // Instantiate vault
-        let vault = mock_instantiate_vault(&mut app, None);
+        // Deploy vault
+        let vault = deploy_mock_vault(&mut app);
 
         let new_gov_fee_share: u64 = 700;
 
@@ -255,8 +267,8 @@ mod test_volatile_fees {
 
         let mut app = App::default();
 
-        // Instantiate vault
-        let vault = mock_instantiate_vault(&mut app, None);
+        // Deploy vault
+        let vault = deploy_mock_vault(&mut app);
 
         let new_gov_fee_share: u64 = 750000000000000000u64;
 
@@ -290,8 +302,8 @@ mod test_volatile_fees {
 
         let mut app = App::default();
 
-        // Instantiate vault
-        let vault = mock_instantiate_vault(&mut app, None);
+        // Deploy vault
+        let vault = deploy_mock_vault(&mut app);
 
         let new_gov_fee_share: u64 = 750000000000000000u64 + 1u64;
 
@@ -320,8 +332,8 @@ mod test_volatile_fees {
 
         let mut app = App::default();
 
-        // Instantiate vault
-        let vault = mock_instantiate_vault(&mut app, None);
+        // Deploy vault
+        let vault = deploy_mock_vault(&mut app);
 
         let new_gov_fee_share: u64 = 700;
 
