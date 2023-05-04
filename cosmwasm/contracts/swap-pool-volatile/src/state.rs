@@ -11,7 +11,7 @@ use swap_pool_common::{
         ASSETS, MAX_ASSETS, WEIGHTS, INITIAL_MINT_AMOUNT, POOL_FEE, MAX_LIMIT_CAPACITY, USED_LIMIT_CAPACITY, CHAIN_INTERFACE,
         TOTAL_ESCROWED_LIQUIDITY, TOTAL_ESCROWED_ASSETS, is_connected, get_asset_index, update_unit_capacity,
         collect_governance_fee_message, compute_send_asset_hash, compute_send_liquidity_hash, create_asset_escrow,
-        create_liquidity_escrow, on_send_asset_ack, on_send_liquidity_ack, total_supply, get_unit_capacity, USED_LIMIT_CAPACITY_TIMESTAMP,
+        create_liquidity_escrow, on_send_asset_ack, on_send_liquidity_ack, total_supply, get_unit_capacity, USED_LIMIT_CAPACITY_TIMESTAMP, FACTORY,
     },
     ContractError, msg::{CalcSendAssetResponse, CalcReceiveAssetResponse, CalcLocalSwapResponse, GetLimitCapacityResponse}
 };
@@ -46,8 +46,10 @@ pub fn initialize_swap_curves(
     depositor: String
 ) -> Result<Response, ContractError> {
 
-    // Check the caller is the Factory
-    //TODO verify info sender is Factory
+    // Check the caller is the Factory    //TODO does this make sense? Unlike on EVM, the 'factory' is not set as 'immutable', but rather it is set as the caller of 'instantiate'
+    if info.sender != FACTORY.load(deps.storage)? {
+        return Err(ContractError::Unauthorized {});
+    }
 
     // Make sure this function may only be invoked once (check whether assets have already been saved)
     if ASSETS.may_load(deps.storage) != Ok(None) {
