@@ -484,7 +484,7 @@ pub fn mock_set_pool_connection(
     state: bool
 ) -> AppResponse {
     app.execute_contract::<VolatileExecuteMsg>(
-        Addr::unchecked(SETUP_MASTER),          //TODO replace with factory_owner once implemented
+        Addr::unchecked(FACTORY_OWNER),
         vault_contract,
         &VolatileExecuteMsg::SetConnection {
             channel_id,
