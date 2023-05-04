@@ -1,18 +1,17 @@
 import json
 
-from brownie import (WETH9, ZERO_ADDRESS, CatalystIBCInterface,
+from brownie import (WETH9, CatalystIBCInterface,
                      CatalystSwapPoolAmplified, CatalystSwapPoolFactory,
-                     CatalystSwapPoolVolatile, IBCEmulator, Token, accounts,
-                     convert, CatalystDescriber, CatalystDescriberRegistry, CatalystMathAmp, CatalystMathVol, CatalystRouter, p2)
+                     CatalystSwapPoolVolatile, IBCEmulator, Token,
+                     convert, CatalystDescriber, CatalystDescriberRegistry, CatalystMathAmp, CatalystMathVol, CatalystRouter, p2, Contract)
 
-from tests.catalyst.utils.pool_utils import decode_payload
 
 """
-Test snippit:
-from scripts.deployCatalyst import Catalyst; acct = accounts[0]; cat = Catalyst(acct, "sepolia", "scripts/deploy_config.json", True, "wSEP"); WETH9.at(cat.config["tokens"]["sepolia"]["wSEP"]).deposit({'from': cat.deployer, 'value': 1*10**18}); cat.deploy_config()
+# one liner deployment
+from scripts.deployCatalyst import Catalyst; cat = Catalyst(acct, "sepolia", "scripts/deploy_config.json", True, "wSEP"); WETH9.at(cat.config["tokens"]["sepolia"]["wSEP"]).deposit({'from': cat.deployer, 'value': 1*10**18}); cat.deploy_config()
 
 # Then run
-from scripts.deployCatalyst import Catalyst; acct = accounts[0]; cat = Catalyst(acct, "mumbai", "scripts/deploy_config.json", True, "wMUM"); WETH9.at(cat.config["tokens"]["mumbai"]["wMUM"]).deposit({'from': cat.deployer, 'value': 1*10**18}); cat.deploy_config(); cat.set_connections()
+from scripts.deployCatalyst import Catalyst; cat = Catalyst(acct, "mumbai", "scripts/deploy_config.json", True, "wMUM"); WETH9.at(cat.config["tokens"]["mumbai"]["wMUM"]).deposit({'from': cat.deployer, 'value': 1*10**18}); cat.deploy_config(); cat.set_connections()
 
 # Potentially use:
 from brownie.network.gas.strategies import LinearScalingStrategy; from brownie.network import gas_price; gas_strategy = LinearScalingStrategy("0.000001 gwei", "2 gwei", 10); gas_price(gas_strategy)
@@ -245,63 +244,4 @@ class Catalyst:
                     {'from': self.deployer}
                 )
             pool_container.finishSetup({'from': self.deployer})
-
-
-"""
-from scripts.deployCatalyst import Catalyst, decode_payload
-from brownie import convert
-acct = accounts[0]
-
-ie = IBCEmulator.deploy({'from': acct})
-ps = Catalyst(acct, ibcinterface=ie)
-pool = ps.swappool
-tokens = ps.tokens
-tokens[0].approve(pool, 2**256-1, {'from': acct})
-# pool.localSwap(tokens[0], tokens[1], 50*10**18, 0, {'from': acct})
-
-chid = convert.to_bytes(1, type_str="bytes32")
-
-# Registor IBC ports.
-ps.crosschaininterface.registerPort()
-ps.crosschaininterface.registerPort()
-
-# Create the connection between the pool and itself:
-pool.setConnection(
-    chid,
-    convert.to_bytes(pool.address.replace("0x", "")),
-    True,
-    {"from": acct}
-)
-
-swap_amount = tokens[0].balanceOf(pool)//10
-tx = pool.sendAsset(
-    chid,
-    convert.to_bytes(pool.address.replace("0x", "")),
-    convert.to_bytes(acct.address.replace("0x", "")),
-    tokens[0],
-    1,
-    swap_amount,
-    0,
-    acct,
-    {"from": acct},
-)
-
-# The data package:
-tx.events["IncomingPacket"]["packet"][3]
-decode_payload(tx.events["IncomingPacket"]["packet"][3])
-
-# Execute the IBC package:
-txe = ie.execute(tx.events["IncomingMetadata"]["metadata"][0], tx.events["IncomingPacket"]["packet"], {"from": acct})
-
-txe.info()
-"""
-
-
-def main():
-    acct = accounts[0]
-    ie = IBCEmulator.deploy({'from': acct})
-    ps = Catalyst(acct, ibcinterface=ie)
-    pool = ps.swappool
-    tokens = ps.tokens
-    tokens[0].approve(pool, 2**256-1, {'from': acct})
-    pool.localSwap(tokens[0], tokens[1], 50*10**18, 0, {'from': acct})
+        
