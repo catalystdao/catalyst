@@ -56,11 +56,12 @@ fn calc_keccak256(message: Vec<u8>) -> Vec<u8> {
     hasher.finalize().to_vec()
 }
 
-//TODO make sure this works
 // Redefine the types used by the 'factory' for queries (the factory contract cannot be imported by this contract, 
 // as it would create a cyclic dependency)
 #[cw_serde]
-struct QueryOwner {}
+pub enum QueryMsg {
+    Owner {}
+}
 
 #[cw_serde]
 pub struct OwnerResponse {
@@ -68,9 +69,10 @@ pub struct OwnerResponse {
 }
 
 pub fn factory_owner(deps: &Deps) -> Result<Addr, ContractError> {
+
     let response = deps.querier.query_wasm_smart::<OwnerResponse>(
         FACTORY.load(deps.storage)?,
-        &QueryOwner {}
+        &QueryMsg::Owner {}
     )?;
 
     response.owner.ok_or(ContractError::Unauthorized {})
