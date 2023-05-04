@@ -285,7 +285,7 @@ pub fn mock_instantiate_vault(
 }
 
 #[derive(Clone)]
-pub struct InitializeSwapCurvesMockMsg {
+pub struct InitializeSwapCurvesMockConfig {
     pub assets: Vec<String>,
     pub assets_balances: Vec<Uint128>,
     pub weights: Vec<u64>,
@@ -293,7 +293,7 @@ pub struct InitializeSwapCurvesMockMsg {
     pub depositor: String
 }
 
-impl InitializeSwapCurvesMockMsg {
+impl InitializeSwapCurvesMockConfig {
     pub fn set_vault_allowances(
         &self,
         app: &mut App,
@@ -318,7 +318,7 @@ impl InitializeSwapCurvesMockMsg {
     }
 }
 
-impl Into<VolatileExecuteMsg> for InitializeSwapCurvesMockMsg {
+impl Into<VolatileExecuteMsg> for InitializeSwapCurvesMockConfig {
     fn into(self) -> VolatileExecuteMsg {
         VolatileExecuteMsg::InitializeSwapCurves {
             assets: self.assets,
@@ -336,10 +336,10 @@ pub fn mock_initialize_pool(
     assets: Vec<String>,
     assets_balances: Vec<Uint128>,
     weights: Vec<u64>
-) -> InitializeSwapCurvesMockMsg {
+) -> InitializeSwapCurvesMockConfig {
 
     // Define InitializeSwapCurves parameters
-    let initialize_msg = InitializeSwapCurvesMockMsg {
+    let initialize_msg = InitializeSwapCurvesMockConfig {
         assets,
         assets_balances,
         weights,

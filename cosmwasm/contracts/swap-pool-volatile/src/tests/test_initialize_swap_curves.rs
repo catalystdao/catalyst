@@ -7,7 +7,7 @@ mod test_volatile_initialize_swap_curves {
     use fixed_point_math_lib::fixed_point_math::LN2;
     use swap_pool_common::{ContractError, msg::{AssetsResponse, WeightsResponse, GetLimitCapacityResponse, TotalEscrowedAssetResponse, TotalEscrowedLiquidityResponse}};
 
-    use crate::{tests::helpers::{mock_instantiate_vault, DEPOSITOR, DEPLOYER, InitializeSwapCurvesMockMsg, deploy_test_tokens, mock_test_token_definitions, WAD, SETUP_MASTER}, msg::VolatileExecuteMsg};
+    use crate::{tests::helpers::{mock_instantiate_vault, DEPOSITOR, DEPLOYER, InitializeSwapCurvesMockConfig, deploy_test_tokens, mock_test_token_definitions, WAD, SETUP_MASTER}, msg::VolatileExecuteMsg};
 
 
 
@@ -27,7 +27,7 @@ mod test_volatile_initialize_swap_curves {
         );
 
         // Define InitializeSwapCurves parameters
-        let initialize_msg = InitializeSwapCurvesMockMsg {
+        let initialize_msg = InitializeSwapCurvesMockConfig {
             assets: test_tokens.iter().map(|addr| addr.to_string()).collect(),
             assets_balances: vec![
                 Uint128::from(1u64) * WAD,
@@ -189,7 +189,7 @@ mod test_volatile_initialize_swap_curves {
         );
 
         // Define InitializeSwapCurves parameters
-        let initialize_msg = InitializeSwapCurvesMockMsg {
+        let initialize_msg = InitializeSwapCurvesMockConfig {
             assets: test_tokens.iter().map(|addr| addr.to_string()).collect(),
             assets_balances: vec![
                 Uint128::from(1u64) * WAD,
@@ -245,7 +245,7 @@ mod test_volatile_initialize_swap_curves {
         // Instantiate vault
         let vault = mock_instantiate_vault(&mut app, None);
 
-        let initialize_msg = InitializeSwapCurvesMockMsg {
+        let initialize_msg = InitializeSwapCurvesMockConfig {
             assets: vec![],
             assets_balances: vec![],
             weights: vec![],
@@ -289,7 +289,7 @@ mod test_volatile_initialize_swap_curves {
         );
 
         // Define InitializeSwapCurves parameters
-        let initialize_msg = InitializeSwapCurvesMockMsg {
+        let initialize_msg = InitializeSwapCurvesMockConfig {
             assets: test_tokens.iter().map(|addr| addr.to_string()).collect(),
             assets_balances: vec![
                 Uint128::from(1u64) * WAD,
@@ -346,7 +346,7 @@ mod test_volatile_initialize_swap_curves {
         );
 
         // Define InitializeSwapCurves parameters
-        let initialize_msg = InitializeSwapCurvesMockMsg {
+        let initialize_msg = InitializeSwapCurvesMockConfig {
             assets: test_tokens.iter().map(|addr| addr.to_string()).collect(),
             assets_balances: vec![
                 Uint128::from(1u64) * WAD,
@@ -401,7 +401,7 @@ mod test_volatile_initialize_swap_curves {
         );
 
         // Define InitializeSwapCurves parameters
-        let initialize_msg = InitializeSwapCurvesMockMsg {
+        let initialize_msg = InitializeSwapCurvesMockConfig {
             assets: test_tokens.iter().map(|addr| addr.to_string()).collect(),
             assets_balances: vec![
                 Uint128::from(1u64) * WAD,
@@ -457,7 +457,7 @@ mod test_volatile_initialize_swap_curves {
         );
 
         // Define InitializeSwapCurves parameters
-        let initialize_msg = InitializeSwapCurvesMockMsg {
+        let initialize_msg = InitializeSwapCurvesMockConfig {
             assets: test_tokens.iter().map(|addr| addr.to_string()).collect(),
             assets_balances: vec![
                 Uint128::from(1u64) * WAD,
@@ -513,7 +513,7 @@ mod test_volatile_initialize_swap_curves {
         );
 
         // Define InitializeSwapCurves parameters
-        let initialize_msg = InitializeSwapCurvesMockMsg {
+        let initialize_msg = InitializeSwapCurvesMockConfig {
             assets: test_tokens.iter().map(|addr| addr.to_string()).collect(),
             assets_balances: vec![
                 Uint128::from(1u64) * WAD,
@@ -569,7 +569,7 @@ mod test_volatile_initialize_swap_curves {
         );
 
         // Define InitializeSwapCurves parameters
-        let initialize_msg = InitializeSwapCurvesMockMsg {
+        let initialize_msg = InitializeSwapCurvesMockConfig {
             assets: test_tokens.iter().map(|addr| addr.to_string()).collect(),
             assets_balances: vec![
                 Uint128::from(1u64) * WAD,

@@ -4,14 +4,14 @@ mod test_volatile_send_asset_ack_timeout {
     use ethnum::{U256, uint};
     use swap_pool_common::{ContractError, msg::{TotalEscrowedAssetResponse, AssetEscrowResponse}, state::compute_send_asset_hash};
 
-    use crate::{msg::{VolatileExecuteMsg, QueryMsg}, tests::{helpers::{mock_instantiate_vault, SETUP_MASTER, deploy_test_tokens, WAD, mock_initialize_pool, set_token_allowance, query_token_balance, transfer_tokens, get_response_attribute, mock_set_pool_connection, CHANNEL_ID, SWAPPER_B, SWAPPER_A, mock_instantiate_interface, FACTORY_OWNER, InitializeSwapCurvesMockMsg}, math_helpers::{uint128_to_f64, f64_to_uint128}}};
+    use crate::{msg::{VolatileExecuteMsg, QueryMsg}, tests::{helpers::{mock_instantiate_vault, SETUP_MASTER, deploy_test_tokens, WAD, mock_initialize_pool, set_token_allowance, query_token_balance, transfer_tokens, get_response_attribute, mock_set_pool_connection, CHANNEL_ID, SWAPPER_B, SWAPPER_A, mock_instantiate_interface, FACTORY_OWNER, InitializeSwapCurvesMockConfig}, math_helpers::{uint128_to_f64, f64_to_uint128}}};
 
     //TODO check events
 
     struct TestEnv {
         pub interface: Addr,
         pub vault: Addr,
-        pub vault_config: InitializeSwapCurvesMockMsg,
+        pub vault_config: InitializeSwapCurvesMockConfig,
         pub from_asset_idx: usize,
         pub from_asset: Addr,
         pub from_amount: Uint128,
