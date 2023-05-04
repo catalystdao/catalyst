@@ -1,18 +1,31 @@
 mod test_volatile_pool_connections {
-    use cosmwasm_std::Addr;
+    use cosmwasm_std::{Addr, Uint128};
     use cw_multi_test::{Executor, App};
     use swap_pool_common::{ContractError, msg::PoolConnectionStateResponse};
 
-    use crate::{msg::VolatileExecuteMsg, tests::helpers::{mock_instantiate_vault, SETUP_MASTER, mock_finish_pool_setup, FACTORY_OWNER}};
+    use crate::{msg::VolatileExecuteMsg, tests::helpers::{SETUP_MASTER, mock_finish_pool_setup, FACTORY_OWNER, deploy_test_tokens, mock_factory_deploy_vault, WAD, mock_instantiate_interface}};
 
+    fn deploy_mock_vault(app: &mut App) -> Addr {
+        let interface = mock_instantiate_interface(app);
+        let vault_tokens = deploy_test_tokens(app, None, None);
+        mock_factory_deploy_vault(
+            app,
+            vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
+            vec![Uint128::from(1u64) * WAD, Uint128::from(2u64) * WAD, Uint128::from(3u64) * WAD],
+            vec![1u64, 1u64, 1u64],
+            None,
+            Some(interface.clone()),
+            None
+        )
+    }
 
     #[test]
     fn test_set_connection() {
 
         let mut app = App::default();
 
-        // Instantiate vault
-        let vault = mock_instantiate_vault(&mut app, None);
+        // Deploy vault
+        let vault = deploy_mock_vault(&mut app);
 
         let channel_id = "channel_0";
         let target_pool = b"target_pool".to_vec();
@@ -56,8 +69,8 @@ mod test_volatile_pool_connections {
 
         let mut app = App::default();
 
-        // Instantiate vault
-        let vault = mock_instantiate_vault(&mut app, None);
+        // Deploy vault
+        let vault = deploy_mock_vault(&mut app);
 
         let channel_id = "channel_0";
         let target_pool = b"target_pool".to_vec();
@@ -111,8 +124,8 @@ mod test_volatile_pool_connections {
 
         let mut app = App::default();
 
-        // Instantiate vault
-        let vault = mock_instantiate_vault(&mut app, None);
+        // Deploy vault
+        let vault = deploy_mock_vault(&mut app);
 
         let channel_id = "channel_0";
         let target_pool = b"target_pool".to_vec();
@@ -148,8 +161,8 @@ mod test_volatile_pool_connections {
 
         let mut app = App::default();
 
-        // Instantiate vault
-        let vault = mock_instantiate_vault(&mut app, None);
+        // Deploy vault
+        let vault = deploy_mock_vault(&mut app);
 
         let channel_id = "channel_0";
         let target_pool = b"target_pool".to_vec();
@@ -192,8 +205,8 @@ mod test_volatile_pool_connections {
 
         let mut app = App::default();
 
-        // Instantiate vault
-        let vault = mock_instantiate_vault(&mut app, None);
+        // Deploy vault
+        let vault = deploy_mock_vault(&mut app);
 
         let channel_id = "channel_0";
         let target_pool = b"target_pool".to_vec();
