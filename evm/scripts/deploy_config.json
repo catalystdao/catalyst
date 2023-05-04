@@ -1,71 +1,71 @@
 {
     "chain_config": {
         "sepolia": {
-            "factory": "0xA1BfeA8Dea0806e58f32fC3b2887cf44b4B25886",
-            "ibcinterface": "0x234e4b6cc84c5224c70c315E4e6Cb57aD1E5Dd53",
-            "crosschaininterface": "0xC25a39c3e98A2661A96FfBe0154dEEdfcd5AADa3",
-            "volatile_template": "0x722d053Bd3A8C19b2223a94a234e30A4e428C0eE",
-            "volatile_mathlib": "0x7c4488638b83283b4cdC03016d4678a6aC3d0d1c",
-            "amplified_template": "0x4223b39D71C118a9C6bd45d6c1652d0b7139e813",
-            "amplified_mathlib": "0x103a17A4B82249c248Db62f91d2967B7d148dAb3",
-            "describer": "0x160897f6146A410ab0A13fd6770FfcceD7fecfaf",
-            "describer_registry": "0x160897f6146A410ab0A13fd6770FfcceD7fecfaf",
-            "router": "0xE86418EF887F63b2ed3B0c2BbA9Eec9ac2CD886c",
-            "permit2": "0x0d3BA0D2096eC24AB3702B834659cC4083A1E00b"
+            "factory": "",
+            "ibcinterface": "",
+            "crosschaininterface": "",
+            "volatile_template": "",
+            "volatile_mathlib": "",
+            "amplified_template": "",
+            "amplified_mathlib": "",
+            "describer": "",
+            "describer_registry": "",
+            "router": "",
+            "permit2": ""
         },
         "mumbai": {
-            "factory": "0xA1BfeA8Dea0806e58f32fC3b2887cf44b4B25886",
-            "ibcinterface": "0x234e4b6cc84c5224c70c315E4e6Cb57aD1E5Dd53",
-            "crosschaininterface": "0xC25a39c3e98A2661A96FfBe0154dEEdfcd5AADa3",
-            "volatile_template": "0x722d053Bd3A8C19b2223a94a234e30A4e428C0eE",
-            "volatile_mathlib": "0x7c4488638b83283b4cdC03016d4678a6aC3d0d1c",
-            "amplified_template": "0x4223b39D71C118a9C6bd45d6c1652d0b7139e813",
-            "amplified_mathlib": "0x103a17A4B82249c248Db62f91d2967B7d148dAb3",
-            "describer": "0x160897f6146A410ab0A13fd6770FfcceD7fecfaf",
-            "describer_registry": "0x160897f6146A410ab0A13fd6770FfcceD7fecfaf",
-            "router": "0xE86418EF887F63b2ed3B0c2BbA9Eec9ac2CD886c",
-            "permit2": "0x0d3BA0D2096eC24AB3702B834659cC4083A1E00b"
+            "factory": "",
+            "ibcinterface": "",
+            "crosschaininterface": "",
+            "volatile_template": "",
+            "volatile_mathlib": "",
+            "amplified_template": "",
+            "amplified_mathlib": "",
+            "describer": "",
+            "describer_registry": "",
+            "router": "",
+            "permit2": ""
         }
     },
     "relayer_address": "0x0e479a0438d25B5b10C2186Bee1256d437b9C582",
     "tokens": {
         "sepolia": {
-            "wSEP": "0x988b30CF8BfaecCD9DdBabb997B575fd51AE7DEC",
+            "wSEP": "",
             "sepUSDC": {
-                "address": "0x7D515244CecbF76cbB4443C3789ca2b4fEED2D41",
+                "address": "",
                 "decimals": 6,
                 "supply": 1000000.0
             },
             "sepUSDT": {
-                "address": "0x5300273c9F0e846abfe73d10ED7a997bC5e971C2",
+                "address": "",
                 "decimals": 18,
                 "supply": 1000000.0
             },
             "SuperStable100": {
-                "address": "0x50E8185F08f2E568D2f75b08a06cFbd69D8F6165",
+                "address": "",
                 "decimals": 16,
                 "supply": 100000000.0
             },
             "seppoi": {
-                "address": "0x990d7FC5988e6a7711184902d95e65aFB467D498",
+                "address": "",
                 "decimals": 18,
                 "supply": 1000000.0
             }
         },
         "mumbai": {
-            "wMUM": "0x988b30CF8BfaecCD9DdBabb997B575fd51AE7DEC",
+            "wMUM": "",
             "mumUSDC": {
-                "address": "0x7D515244CecbF76cbB4443C3789ca2b4fEED2D41",
+                "address": "",
                 "decimals": 6,
                 "supply": 1000000.0
             },
             "mumUSDT": {
-                "address": "0x5300273c9F0e846abfe73d10ED7a997bC5e971C2",
+                "address": "",
                 "decimals": 18,
                 "supply": 1000000.0
             },
             "mummi": {
-                "address": "0x50E8185F08f2E568D2f75b08a06cFbd69D8F6165",
+                "address": "",
                 "decimals": 18,
                 "supply": 1000000.0
             }
@@ -75,7 +75,7 @@
         "Stables": {
             "amplification": 0.25,
             "sepolia": {
-                "address": "0x856F4c63aeCC09959FabbeC4697C0460731C87d9",
+                "address": "",
                 "weights": [
                     1000000000000.0,
                     1,
@@ -88,7 +88,7 @@
                 }
             },
             "mumbai": {
-                "address": "0x856F4c63aeCC09959FabbeC4697C0460731C87d9",
+                "address": "",
                 "weights": [
                     1000000000000.0,
                     1
@@ -101,7 +101,7 @@
         },
         "Gas Tokens": {
             "sepolia": {
-                "address": "0x1Cdd9ACc9E9Fb1c0C6b127322259154bD8C7DB8d",
+                "address": "",
                 "weights": [
                     100,
                     200
@@ -112,7 +112,7 @@
                 }
             },
             "mumbai": {
-                "address": "0x1Cdd9ACc9E9Fb1c0C6b127322259154bD8C7DB8d",
+                "address": "",
                 "weights": [
                     100,
                     50
@@ -125,7 +125,7 @@
         },
         "Pool 1": {
             "sepolia": {
-                "address": "0xf96C0C59d3ae57427b64D31b3f1d937DFc957297",
+                "address": "",
                 "weights": [
                     1
                 ],
@@ -134,7 +134,7 @@
                 }
             },
             "mumbai": {
-                "address": "0xf96C0C59d3ae57427b64D31b3f1d937DFc957297",
+                "address": "",
                 "weights": [
                     1
                 ],
@@ -145,7 +145,7 @@
         },
         "SepStableGas": {
             "sepolia": {
-                "address": "0x77161093D8fAC479F3fdfcb8e37557EEdF19d31B",
+                "address": "",
                 "weights": [
                     1,
                     1
@@ -158,7 +158,7 @@
         },
         "MumStableGas": {
             "mumbai": {
-                "address": "0x77161093D8fAC479F3fdfcb8e37557EEdF19d31B",
+                "address": "",
                 "weights": [
                     1,
                     1

@@ -67,7 +67,7 @@ class Catalyst:
         ibcinterface = self.config['chain_config'][self.chain]["ibcinterface"]
         crosschaininterface = self.config['chain_config'][self.chain]["crosschaininterface"]
         if ibcinterface == '':
-            ibcinterface = self.deployer.deploy(IBCEmulator)
+            ibcinterface = self.deployer.deploy(IBCEmulator, convert.to_bytes(self.chain.encode()))
             relayer = self.config["relayer_address"]
             ibcinterface.transferOwnership(relayer, {'from': self.deployer})
             

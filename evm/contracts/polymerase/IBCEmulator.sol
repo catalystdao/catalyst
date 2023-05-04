@@ -7,7 +7,13 @@ import "./IbcReceiver.sol";
 import "./IbcDispatcher.sol";
 
 contract IBCEmulator is IbcDispatcher, Ownable {
+    bytes32 public immutable LOCALCHANNELID;
+
     event Packet(IbcPacket packet);
+
+    constructor(bytes32 localChannelId) {
+        LOCALCHANNELID = localChannelId;
+    }
 
     function registerPort() external {}
 
@@ -18,7 +24,7 @@ contract IBCEmulator is IbcDispatcher, Ownable {
     ) external {
         emit Packet(
             IbcPacket(
-                IbcEndpoint(0, channelId),
+                IbcEndpoint(0, LOCALCHANNELID),
                 IbcEndpoint(0, channelId),
                 0,
                 payload,
