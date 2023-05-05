@@ -272,3 +272,148 @@ fn query_default_governance_fee_share(deps: Deps) -> StdResult<DefaultGovernance
 }
 
 
+#[cfg(test)]
+mod catalyst_swap_pool_factory_tests {
+    use cosmwasm_std::Addr;
+    use cw_multi_test::{App, Executor, ContractWrapper};
+
+    use crate::{msg::{InstantiateMsg, QueryMsg, OwnerResponse, ExecuteMsg}, state::MAX_GOVERNANCE_FEE_SHARE, error::ContractError};
+
+    const GOVERNANCE: &str = "governance_addr";
+
+
+    fn mock_factory_contract(app: &mut App) -> u64 {
+        app.store_code(
+            Box::new(
+                ContractWrapper::new(
+                    crate::contract::execute,
+                    crate::contract::instantiate,
+                    crate::contract::query,
+                )
+            )
+        )
+    }
+
+
+    // Ownership tests
+    // TODO events
+
+    #[test]
+    fn test_owner_is_set_on_instantiation_and_query() {
+
+        let mut app = App::default();
+    
+        // 'Deploy' the contract
+        let code_id = mock_factory_contract(&mut app);
+
+
+
+        // Tested action
+        let factory = app.instantiate_contract(
+            code_id,
+            Addr::unchecked(GOVERNANCE),
+            &InstantiateMsg { default_governance_fee_share: 0u64 },
+            &[],
+            "catalyst-factory",
+            None
+        ).unwrap();     // Make sure the transaction passes
+
+
+
+        // Query owner
+        let owner_response = app.wrap().query_wasm_smart::<OwnerResponse>(factory, &QueryMsg::Owner {}).unwrap();
+
+        assert_eq!(
+            owner_response.owner,
+            Some(Addr::unchecked(GOVERNANCE))
+        )
+
+    }
+
+
+    #[test]
+    fn test_transfer_ownership_and_query() {
+
+        let mut app = App::default();
+    
+        // 'Deploy' the contract
+        let code_id = mock_factory_contract(&mut app);
+
+        // Instantiate a factory
+        let factory = app.instantiate_contract(
+            code_id,
+            Addr::unchecked(GOVERNANCE),
+            &InstantiateMsg { default_governance_fee_share: 0u64 },
+            &[],
+            "catalyst-factory",
+            None
+        ).unwrap();     // Make sure the transaction passes
+
+        let new_owner = "new_owner_addr".to_string();
+
+
+
+        // Tested action: transfer ownership
+        let _response = app.execute_contract(
+            Addr::unchecked(GOVERNANCE),
+            factory.clone(),
+            &ExecuteMsg::TransferOwnership { new_owner: new_owner.clone() },
+            &[]
+        ).unwrap();     // Make sure the transaction passes
+
+
+
+        //TODO check event
+
+        // Query owner
+        let owner_response = app.wrap().query_wasm_smart::<OwnerResponse>(factory, &QueryMsg::Owner {}).unwrap();
+
+        assert_eq!(
+            owner_response.owner,
+            Some(Addr::unchecked(new_owner))
+        )
+
+    }
+
+
+    #[test]
+    fn test_transfer_ownership_no_auth() {
+
+        let mut app = App::default();
+    
+        // 'Deploy' the contract
+        let code_id = mock_factory_contract(&mut app);
+
+        // Instantiate a factory
+        let factory = app.instantiate_contract(
+            code_id,
+            Addr::unchecked(GOVERNANCE),
+            &InstantiateMsg { default_governance_fee_share: 0u64 },
+            &[],
+            "catalyst-factory",
+            None
+        ).unwrap();     // Make sure the transaction passes
+
+        let new_owner = "new_owner_addr".to_string();
+
+
+
+        // Tested action: transfer ownership
+        let response_result = app.execute_contract(
+            Addr::unchecked("not-factory-owner"),           // ! Not the factory owner (i.e. GOVERNANCE)
+            factory.clone(),
+            &ExecuteMsg::TransferOwnership { new_owner: new_owner.clone() },
+            &[]
+        );
+
+
+
+        // Make sure the transaction fails
+        assert!(matches!(
+            response_result.err().unwrap().downcast().unwrap(),
+            ContractError::Unauthorized {}
+        ))
+
+    }
+
+}
