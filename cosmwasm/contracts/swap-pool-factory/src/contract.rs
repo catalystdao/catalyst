@@ -6,8 +6,8 @@ use cw2::set_contract_version;
 use cw20::Cw20ExecuteMsg;
 
 use crate::error::ContractError;
-use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg, OwnerResponse};
-use crate::state::{set_default_governance_fee_share_unchecked, owner, default_governance_fee_share, save_deploy_vault_reply_args, DeployVaultReplyArgs, DEPLOY_VAULT_REPLY_ID, load_deploy_vault_reply_args, set_owner_unchecked, set_default_governance_fee_share};
+use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg, OwnerResponse, DefaultGovernanceFeeShareResponse};
+use crate::state::{set_default_governance_fee_share_unchecked, owner, default_governance_fee_share, save_deploy_vault_reply_args, DeployVaultReplyArgs, DEPLOY_VAULT_REPLY_ID, load_deploy_vault_reply_args, set_owner_unchecked, set_default_governance_fee_share, DEFAULT_GOVERNANCE_FEE_SHARE};
 
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:catalyst-vault-factory";
@@ -232,7 +232,8 @@ fn handle_deploy_vault_reply(
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
-        QueryMsg::Owner {} => to_binary(&query_owner(deps)?)
+        QueryMsg::Owner {} => to_binary(&query_owner(deps)?),
+        QueryMsg::DefaultGovernanceFeeShare {} => to_binary(&query_default_governance_fee_share(deps)?)
     }
 }
 
@@ -243,3 +244,14 @@ fn query_owner(deps: Deps) -> StdResult<OwnerResponse> {
         }
     )
 }
+
+
+fn query_default_governance_fee_share(deps: Deps) -> StdResult<DefaultGovernanceFeeShareResponse> {
+    Ok(
+        DefaultGovernanceFeeShareResponse {
+            fee: DEFAULT_GOVERNANCE_FEE_SHARE.load(deps.storage)?
+        }
+    )
+}
+
+

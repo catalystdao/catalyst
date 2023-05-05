@@ -34,10 +34,17 @@ pub enum ExecuteMsg {
 #[derive(QueryResponses)]
 pub enum QueryMsg {
     #[returns(OwnerResponse)]
-    Owner {}
+    Owner {},
+    #[returns(DefaultGovernanceFeeShareResponse)]
+    DefaultGovernanceFeeShare {}
 }
 
 #[cw_serde]
 pub struct OwnerResponse {
     pub owner: Option<Addr>
+}
+
+#[cw_serde]
+pub struct DefaultGovernanceFeeShareResponse {
+    pub fee: u64
 }
