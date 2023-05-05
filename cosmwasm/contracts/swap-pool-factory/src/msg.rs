@@ -27,6 +27,13 @@ pub enum ExecuteMsg {
     },
 
 
+    // Ownership msgs
+
+    TransferOwnership {
+        new_owner: String
+    }
+
+
 }
 
 
