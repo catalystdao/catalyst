@@ -20,7 +20,13 @@ pub enum ExecuteMsg {
         name: String,
         symbol: String,
         chain_interface: Option<String>
-    }
+    },
+
+    SetDefaultGovernanceFeeShare {
+        fee: u64
+    },
+
+
 }
 
 

@@ -7,7 +7,7 @@ use cw20::Cw20ExecuteMsg;
 
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg, OwnerResponse};
-use crate::state::{set_default_governance_fee_share_unchecked, owner, default_governance_fee_share, save_deploy_vault_reply_args, DeployVaultReplyArgs, DEPLOY_VAULT_REPLY_ID, load_deploy_vault_reply_args, set_owner_unchecked};
+use crate::state::{set_default_governance_fee_share_unchecked, owner, default_governance_fee_share, save_deploy_vault_reply_args, DeployVaultReplyArgs, DEPLOY_VAULT_REPLY_ID, load_deploy_vault_reply_args, set_owner_unchecked, set_default_governance_fee_share};
 
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:catalyst-vault-factory";
@@ -70,6 +70,14 @@ pub fn execute(
             symbol,
             chain_interface               
         ),
+
+        ExecuteMsg::SetDefaultGovernanceFeeShare {
+            fee
+        } => execute_set_default_governance_fee_share(
+            deps,
+            info,
+            fee
+        )
     }
 }
 
@@ -138,6 +146,14 @@ fn execute_deploy_vault(
             .add_attribute("chain_interface", chain_interface.unwrap_or("None".to_string()))    //TODO review 'chain_interface' format
             .add_attribute("deployer", info.sender)
     )
+}
+
+fn execute_set_default_governance_fee_share(
+    mut deps: DepsMut,
+    info: MessageInfo,
+    fee: u64
+) -> Result<Response, ContractError> {
+    set_default_governance_fee_share(&mut deps, info, fee)
 }
 
 
