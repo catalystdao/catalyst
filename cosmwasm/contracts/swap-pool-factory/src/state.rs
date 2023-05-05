@@ -16,6 +16,8 @@ pub const DEPLOY_VAULT_REPLY_ARGS: Item<DeployVaultReplyArgs> = Item::new("catal
 
 
 // Contract owner helpers
+
+//TODO return 'Addr' instead of 'Option<Addr>'? Or keep the 'option' in case 'renounce_ownership' is implemented in the future?
 pub fn owner(
     deps: Deps
 ) -> Result<Option<Addr>, ContractError> {
