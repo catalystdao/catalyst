@@ -95,10 +95,10 @@ class ProxyRelayer:
                 tx_hash = sending_w3.eth.send_raw_transaction(signed_txn.rawTransaction)
                 print("Timeout:", from_chain, Web3.toHex(tx_hash))
             else:
-                ack = receipt
+                # ack = receipt
                 tx_ack = sending_ibcinterface.functions.ack(
                     sending_cci.address,
-                    ack,
+                    0,
                     packet
                 ).build_transaction({
                     'from': relayer_address,

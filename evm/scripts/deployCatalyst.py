@@ -14,7 +14,7 @@ from scripts.deployCatalyst import Catalyst; cat = Catalyst(acct, "sepolia", "sc
 from scripts.deployCatalyst import Catalyst; cat = Catalyst(acct, "mumbai", "scripts/deploy_config.json", True, "wMUM"); WETH9.at(cat.config["tokens"]["mumbai"]["wMUM"]).deposit({'from': cat.deployer, 'value': 1*10**18}); cat.deploy_config(); cat.set_connections()
 
 # Potentially use:
-from brownie.network.gas.strategies import LinearScalingStrategy; from brownie.network import gas_price; gas_strategy = LinearScalingStrategy("0.01 gwei", "10 gwei", 400); gas_price(gas_strategy)
+from brownie.network.gas.strategies import LinearScalingStrategy; from brownie.network import gas_price; gas_strategy = LinearScalingStrategy("1.6 gwei", "10 gwei", 2); gas_price(gas_strategy)
 """
 
 MAX_UINT256: int = 2**256 - 1

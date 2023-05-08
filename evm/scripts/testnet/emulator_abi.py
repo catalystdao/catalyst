@@ -1,4 +1,29 @@
-abi = [
+[
+    {
+        'inputs': [
+            {
+                'internalType': "bytes32",
+                'name': "localChannelId",
+                'type': "bytes32"
+            }
+        ],
+        'name': "constructor",
+        'stateMutability': "nonpayable",
+        'type': "constructor"
+    },
+    {
+        'anonymous': False,
+        'inputs': [
+            {
+                'indexed': False,
+                'internalType': "bytes",
+                'name': "acknowledgement",
+                'type': "bytes"
+            }
+        ],
+        'name': "Acknowledgement",
+        'type': "event"
+    },
     {
         'anonymous': False,
         'inputs': [
@@ -95,11 +120,29 @@ abi = [
         'type': "event"
     },
     {
+        'inputs': [],
+        'name': "LOCALCHANNELID",
+        'outputs': [
+            {
+                'internalType': "bytes32",
+                'name': "",
+                'type': "bytes32"
+            }
+        ],
+        'stateMutability': "view",
+        'type': "function"
+    },
+    {
         'inputs': [
             {
                 'internalType': "address",
                 'name': "targetContract",
                 'type': "address"
+            },
+            {
+                'internalType': "bytes",
+                'name': "acknowledgement",
+                'type': "bytes"
             },
             {
                 'components': [
