@@ -1,0 +1,18 @@
+[package]
+name = "token-helpers"
+version = "0.1.0"
+authors = ["Catalyst"]
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+cosmwasm-schema = "1.1.9"
+cosmwasm-std = "1.1.9"
+cosmwasm-storage = "1.1.9"
+cw-storage-plus = "1.0.1"
+cw2 = "1.0.1"
+cw20 = "1.0.1"
+cw20-base = { version = "1.0.1", features = ["library"] }
+cw-multi-test = "0.16.4"

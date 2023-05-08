@@ -924,6 +924,7 @@ dependencies = [
  "serde",
  "swap-pool-common",
  "thiserror",
+ "token-helpers",
 ]
 
 [[package]]
@@ -989,6 +990,20 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.15",
+]
+
+[[package]]
+name = "token-helpers"
+version = "0.1.0"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cosmwasm-storage",
+ "cw-multi-test",
+ "cw-storage-plus",
+ "cw2",
+ "cw20",
+ "cw20-base",
 ]
 
 [[package]]
