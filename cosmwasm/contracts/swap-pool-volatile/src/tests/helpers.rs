@@ -640,6 +640,10 @@ pub struct ExpectedReceiveLiquidityResult {
     pub to_amount: f64
 }
 
+pub struct ExpectedReferenceAsset {
+    pub amount: f64
+}
+
 pub fn compute_expected_send_liquidity(
     swap_amount: Uint128,
     from_weights: Vec<u64>,
@@ -679,6 +683,38 @@ pub fn compute_expected_receive_liquidity(
         to_amount
     }
 
+}
+
+pub fn compute_expected_reference_asset(
+    pool_tokens: Uint128,
+    vault_balances: Vec<Uint128>,
+    vault_weights: Vec<u64>,
+    vault_total_supply: Uint128,
+    vault_escrowed_pool_tokens: Uint128
+) -> ExpectedReferenceAsset {
+
+    let weights_sum = vault_weights.iter().sum::<u64>() as f64;
+
+    let vault_reference_amount: f64 = vault_balances.iter()
+        .zip(vault_weights)
+        .map(|(balance, weight)| {
+
+            let balance = uint128_to_f64(*balance);
+            let weight = weight as f64;
+
+            balance.powf(weight/weights_sum)
+        })
+        .product::<f64>();
+
+    let pool_tokens = uint128_to_f64(pool_tokens);
+    let vault_total_supply = uint128_to_f64(vault_total_supply);
+    let vault_escrowed_pool_tokens = uint128_to_f64(vault_escrowed_pool_tokens);
+
+    let user_reference_amount = (vault_reference_amount * pool_tokens) / (vault_total_supply + vault_escrowed_pool_tokens + pool_tokens);
+
+    ExpectedReferenceAsset {
+        amount: user_reference_amount
+    }
 }
 
 

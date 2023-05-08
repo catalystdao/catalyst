@@ -4,7 +4,7 @@ mod test_volatile_receive_liquidity {
     use ethnum::{U256, uint};
     use swap_pool_common::{ContractError, state::INITIAL_MINT_AMOUNT};
 
-    use crate::{msg::VolatileExecuteMsg, tests::{helpers::{deploy_test_tokens, WAD, query_token_balance, get_response_attribute, mock_set_pool_connection, CHANNEL_ID, SWAPPER_B, CHAIN_INTERFACE, compute_expected_receive_liquidity, query_token_info, mock_factory_deploy_vault}, math_helpers::{uint128_to_f64, f64_to_uint128}}};
+    use crate::{msg::VolatileExecuteMsg, tests::{helpers::{deploy_test_tokens, WAD, query_token_balance, get_response_attribute, mock_set_pool_connection, CHANNEL_ID, SWAPPER_B, CHAIN_INTERFACE, compute_expected_receive_liquidity, query_token_info, mock_factory_deploy_vault, compute_expected_reference_asset}, math_helpers::{uint128_to_f64, f64_to_uint128}}};
 
     //TODO check event
 
@@ -168,7 +168,7 @@ mod test_volatile_receive_liquidity {
 
 
     #[test]
-    fn test_receive_liquidity_minout() {
+    fn test_receive_liquidity_min_pool_tokens() {
 
         let mut app = App::default();
 
@@ -253,6 +253,110 @@ mod test_volatile_receive_liquidity {
                 u: swap_units,
                 min_pool_tokens: min_out_valid,
                 min_reference_asset: Uint128::zero(),
+                calldata_target: None,
+                calldata: None
+            },
+            &[]
+        ).unwrap();
+
+    }
+
+
+
+    #[test]
+    fn test_receive_liquidity_min_reference_asset() {
+
+        let mut app = App::default();
+
+        // Instantiate and initialize vault
+        let vault_tokens = deploy_test_tokens(&mut app, None, None);
+        let vault_initial_balances = vec![Uint128::from(1u64) * WAD, Uint128::from(2u64) * WAD, Uint128::from(3u64) * WAD];
+        let vault_weights = vec![1u64, 1u64, 1u64];
+        let vault = mock_factory_deploy_vault(
+            &mut app,
+            vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
+            vault_initial_balances.clone(),
+            vault_weights.clone(),
+            None,
+            Some(Addr::unchecked(CHAIN_INTERFACE)),         // Using a mock address, no need for an interface to be deployed
+            None
+        );
+
+        // Connect pool with a mock pool
+        let from_pool = Addr::unchecked("from_pool");
+        mock_set_pool_connection(
+            &mut app,
+            vault.clone(),
+            CHANNEL_ID.to_string(),
+            from_pool.as_bytes().to_vec(),
+            true
+        );
+
+        // Define the receive liquidity configuration
+        let swap_units = uint!("500000000000000000");
+        
+        // Compute the expected return and the expected reference asset value
+        let expected_return = compute_expected_receive_liquidity(
+            swap_units,
+            vault_weights.clone(),
+             INITIAL_MINT_AMOUNT
+        ).to_amount;
+
+        let expected_reference_asset_amount = compute_expected_reference_asset(
+            f64_to_uint128(expected_return).unwrap(),
+            vault_initial_balances,
+            vault_weights,
+            INITIAL_MINT_AMOUNT,
+            Uint128::zero()
+        ).amount;
+
+        // Set min_out_valid to be slightly smaller than the expected reference asset value
+        let min_out_valid = f64_to_uint128(expected_reference_asset_amount * 0.99).unwrap();
+
+        // Set min_out_invalid to be slightly larger than the expected reference asset value
+        let min_out_invalid = f64_to_uint128(expected_reference_asset_amount * 1.01).unwrap();
+
+
+
+        // Tested action 1: receive liquidity with min_reference_asset > expected_reference_asset_amount fails
+        let response_result = app.execute_contract(
+            Addr::unchecked(CHAIN_INTERFACE),
+            vault.clone(),
+            &VolatileExecuteMsg::ReceiveLiquidity {
+                channel_id: CHANNEL_ID.to_string(),
+                from_pool: from_pool.as_bytes().to_vec(),
+                to_account: SWAPPER_B.to_string(),
+                u: swap_units,
+                min_pool_tokens: Uint128::zero(),
+                min_reference_asset: min_out_invalid,
+                calldata_target: None,
+                calldata: None
+            },
+            &[]
+        );
+
+
+
+        // Make sure the transaction fails
+        assert!(matches!(
+            response_result.err().unwrap().downcast::<ContractError>().unwrap(),
+            ContractError::ReturnInsufficient { min_out: err_min_out, out: err_out}
+                if err_min_out == min_out_invalid && err_out < err_min_out
+        ));
+        
+
+
+        // Tested action 2: receive liquidity with min_reference_asset <= expected_reference_asset_amount succeeds
+        app.execute_contract(
+            Addr::unchecked(CHAIN_INTERFACE),
+            vault.clone(),
+            &VolatileExecuteMsg::ReceiveLiquidity {
+                channel_id: CHANNEL_ID.to_string(),
+                from_pool: from_pool.as_bytes().to_vec(),
+                to_account: SWAPPER_B.to_string(),
+                u: swap_units,
+                min_pool_tokens: Uint128::zero(),
+                min_reference_asset: min_out_valid,
                 calldata_target: None,
                 calldata: None
             },
