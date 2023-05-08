@@ -34,6 +34,8 @@ schemars = "0.8.10"
 serde = { version = "1.0.145", default-features = false, features = ["derive"] }
 thiserror = { version = "1.0.31" }
 swap-pool-common = { path = "../swap-pool-common" }
+mock-swap-pool = { path = "../mock-swap-pool" }
 
 [dev-dependencies]
 cw-multi-test = "0.16.2"
+token-helpers = { path = "../../helpers/token-helpers" }
