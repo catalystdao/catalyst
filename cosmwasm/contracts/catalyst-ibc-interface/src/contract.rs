@@ -1128,7 +1128,7 @@ mod catalyst_ibc_interface_tests {
 
 
     #[test]
-    fn test_receive_liquidity_invalid_min_out() {
+    fn test_receive_liquidity_invalid_min_pool_tokens() {
 
         let mut deps = mock_dependencies();
       
@@ -1149,8 +1149,59 @@ mod catalyst_ibc_interface_tests {
         let send_msg = mock_send_liquidity_msg(
             channel_id,
             to_pool.to_vec(),
-            Some(U256::MAX),                                // ! Specify a min_out larger than Uint128
+            Some(U256::MAX),                                // ! Specify a min_pool_token that is larger than Uint128
             None,
+        );
+        let receive_packet = mock_ibc_packet(channel_id, from_pool, send_msg, None);
+
+
+        // Tested action: receive liquidity
+        let response_result = ibc_packet_receive(
+            deps.as_mut(),
+            mock_env(),
+            IbcPacketReceiveMsg::new(receive_packet.clone())
+        );
+
+
+        // Check the transaction passes
+        let response = response_result.unwrap();
+
+        // Check the returned ack
+        assert_eq!(
+            response.acknowledgement.clone(),
+            Binary(vec![1u8])                   // ! Check ack returned has value of 1 (i.e. error)
+        );
+    
+        // Check pool is not invoked
+        assert_eq!(response.messages.len(), 0);
+
+    }
+
+
+    #[test]
+    fn test_receive_liquidity_invalid_min_reference_asset() {
+
+        let mut deps = mock_dependencies();
+      
+        // Instantiate contract and open channel
+        instantiate(
+            deps.as_mut(),
+            mock_env(),
+            mock_info(DEPLOYER_ADDR, &vec![]),
+            InstantiateMsg {}
+        ).unwrap();
+
+        let channel_id = "mock-channel-1";
+        open_channel(deps.as_mut(), channel_id, None, None);
+
+        // Get mock params
+        let from_pool = "sender";
+        let to_pool = b"to_pool";
+        let send_msg = mock_send_liquidity_msg(
+            channel_id,
+            to_pool.to_vec(),
+            None,
+            Some(U256::MAX)                                // ! Specify a min_reference_asset that is larger than Uint128
         );
         let receive_packet = mock_ibc_packet(channel_id, from_pool, send_msg, None);
 
