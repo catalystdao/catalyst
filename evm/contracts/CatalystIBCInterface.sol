@@ -332,7 +332,6 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
                     bytes(data[ CTX0_FROM_ASSET_LENGTH_POS : CTX0_FROM_ASSET_END ]),            // fromAsset
                     uint32(bytes4(data[ CTX0_BLOCK_NUMBER_START : CTX0_BLOCK_NUMBER_END ]))     // blocknumber
                 ) {acknowledgement = 0x00;} catch (bytes memory err) {
-                    emit Debug(err, keccak256(err));
                     // Ensure that relayers provided a bare minimum of gas.
                     if (keccak256(err) == OUT_OF_GAS) revert SubcallOutOfGas();
                 }
