@@ -81,7 +81,7 @@ class ProxyRelayer:
             receipt = target_w3.eth.wait_for_transaction_receipt(tx_hash)
         
             sending_ibcinterface = self.chains[from_chain]["ibcinterface"]
-            sending_cci = self.chains[from_chain]["ibcinterface"]
+            sending_cci = self.chains[from_chain]["crosschaininterface"]
             sending_w3 = self.chains[from_chain]["w3"]
             if receipt.status != 1:
                 tx_timeout = sending_ibcinterface.functions.timeout(
@@ -95,10 +95,10 @@ class ProxyRelayer:
                 tx_hash = sending_w3.eth.send_raw_transaction(signed_txn.rawTransaction)
                 print("Timeout:", from_chain, Web3.toHex(tx_hash))
             else:
-                # ack = receipt
+                ack = sending_ibcinterface.events.Acknowledgement().processReceipt(receipt)[0]["args"]["acknowledgement"]
                 tx_ack = sending_ibcinterface.functions.ack(
                     sending_cci.address,
-                    0,
+                    ack,
                     packet
                 ).build_transaction({
                     'from': relayer_address,
@@ -110,7 +110,7 @@ class ProxyRelayer:
         except Exception as e:
             print(e)
             sending_ibcinterface = self.chains[from_chain]["ibcinterface"]
-            sending_cci = self.chains[from_chain]["ibcinterface"]
+            sending_cci = self.chains[from_chain]["crosschaininterface"]
             sending_w3 = self.chains[from_chain]["w3"]
             tx_timeout = sending_ibcinterface.functions.timeout(
                 sending_cci.address,
@@ -121,7 +121,7 @@ class ProxyRelayer:
             })
             signed_txn = sending_w3.eth.account.sign_transaction(tx_timeout, private_key=self.chains[from_chain]["key"])
             tx_hash = sending_w3.eth.send_raw_transaction(signed_txn.rawTransaction)
-            print("Timeout:", from_chain, Web3.toHex(tx_hash))
+            print("error -> Timeout:", from_chain, Web3.toHex(tx_hash))
 
     def run(self, wait=5):
         chains = self.chains.keys()
