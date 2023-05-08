@@ -28,7 +28,6 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
     error InvalidContext(bytes1 context);
     error InvalidAddress();
     error SubcallOutOfGas();
-    event Debug(bytes hh, bytes32 kk);
 
     //--- Config ---//
     uint256 constant MAXIMUM_TIME_FOR_TX = 2 hours;
