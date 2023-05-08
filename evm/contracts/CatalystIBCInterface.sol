@@ -21,10 +21,14 @@ import "./CatalystIBCPayload.sol";
  * message routers with more flexibility.
  */
 contract CatalystIBCInterface is Ownable, IbcReceiver {
+    bytes32 constant OUT_OF_GAS = keccak256(""); // 0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470
+
     //--- ERRORS ---//
     error InvalidIBCCaller(address caller);  // Only the message router should be able to deliver messages.
     error InvalidContext(bytes1 context);
     error InvalidAddress();
+    error SubcallOutOfGas();
+    event Debug(bytes hh, bytes32 kk);
 
     //--- Config ---//
     uint256 constant MAXIMUM_TIME_FOR_TX = 2 hours;
@@ -313,7 +317,10 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
                     uint32(bytes4(data[ CTX0_BLOCK_NUMBER_START : CTX0_BLOCK_NUMBER_END ])),    // block number
                     address(uint160(bytes20(data[ CTX0_DATA_START : CTX0_DATA_START+20 ]))),    // dataTarget
                     data[ CTX0_DATA_START+20 : CTX0_DATA_START+dataLength ]                     // dataArguments
-                ) {acknowledgement = 0x00;} catch {/* acknowledgement = 0x02;*/}
+                ) {acknowledgement = 0x00;} catch (bytes memory err) {
+                    // Ensure that relayers provided a bare minimum of gas.
+                    if (keccak256(err) == OUT_OF_GAS) revert SubcallOutOfGas();
+                }
             } else {
                 try ICatalystV1Pool(toPool).receiveAsset(
                     bytes32(packet.src.channelId),                                              // connectionId
@@ -325,7 +332,11 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
                     uint256(bytes32(data[ CTX0_FROM_AMOUNT_START : CTX0_FROM_AMOUNT_END ])),    // fromAmount
                     bytes(data[ CTX0_FROM_ASSET_LENGTH_POS : CTX0_FROM_ASSET_END ]),            // fromAsset
                     uint32(bytes4(data[ CTX0_BLOCK_NUMBER_START : CTX0_BLOCK_NUMBER_END ]))     // blocknumber
-                ) {acknowledgement = 0x00;} catch {/* acknowledgement = 0x02;*/}
+                ) {acknowledgement = 0x00;} catch (bytes memory err) {
+                    emit Debug(err, keccak256(err));
+                    // Ensure that relayers provided a bare minimum of gas.
+                    if (keccak256(err) == OUT_OF_GAS) revert SubcallOutOfGas();
+                }
             }
         }
         else if (context == CTX1_LIQUIDITY_SWAP) {
@@ -345,7 +356,10 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
                     uint32(bytes4(data[ CTX1_BLOCK_NUMBER_START : CTX1_BLOCK_NUMBER_END ])),    // block number
                     address(uint160(bytes20(data[ CTX1_DATA_START : CTX1_DATA_START+20 ]))),    // dataTarget
                     data[ CTX1_DATA_START+20 : CTX1_DATA_START+dataLength ]                     // dataArguments
-                ) {acknowledgement = 0x00;} catch {/* acknowledgement = 0x02; */}
+                ) {acknowledgement = 0x00;} catch (bytes memory err) {
+                    // Ensure that relayers provided a bare minimum of gas.
+                    if (keccak256(err) == OUT_OF_GAS) revert SubcallOutOfGas();
+                }
             } else {
                 try ICatalystV1Pool(toPool).receiveLiquidity(
                     bytes32(packet.src.channelId),                                              // connectionId
@@ -356,13 +370,24 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
                     uint256(bytes32(data[ CTX1_MIN_REFERENCE_START : CTX1_MIN_REFERENCE_END ])),// minOut
                     uint256(bytes32(data[ CTX1_FROM_AMOUNT_START : CTX1_FROM_AMOUNT_END ])),    // fromAmount
                     uint32(bytes4(data[ CTX1_BLOCK_NUMBER_START : CTX1_BLOCK_NUMBER_END ]))     // blocknumber
-                ) {acknowledgement = 0x00;} catch {/* acknowledgement = 0x02; */}
+                ) {acknowledgement = 0x00;} catch (bytes memory err) {
+                    // Ensure that relayers provided a bare minimum of gas.
+                    if (keccak256(err) == OUT_OF_GAS) revert SubcallOutOfGas();
+                }
             }
         }
         else {
             /* revert InvalidContext(context); */
             /* acknowledgement = 0x01; */
         }
+
+        // To ensure relayers provide enough gas, we need to make sure that the transaction didn't
+        // fail because too little gas was provided. The check inside the try/catch helps but doesn't
+        // solve everything. The safe-erc20 lib used also has a try/catch style check. If that call
+        // runs out of gas, the error is TRANSFER_FAILED which does not revert on our side because we
+        // sometimes wants to catch that.
+        // The "solution" is to check if be have more than 21000 gas left.
+        if (gasleft() < 21000) revert SubcallOutOfGas();
         return abi.encodePacked(acknowledgement);
     }
 }
