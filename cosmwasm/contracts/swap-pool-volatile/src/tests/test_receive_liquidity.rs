@@ -51,7 +51,8 @@ mod test_volatile_receive_liquidity {
                 from_pool: from_pool.as_bytes().to_vec(),
                 to_account: SWAPPER_B.to_string(),
                 u: swap_units,
-                min_out: Uint128::zero(),
+                min_pool_tokens: Uint128::zero(),
+                min_reference_asset: Uint128::zero(),
                 calldata_target: None,
                 calldata: None
             },
@@ -134,7 +135,8 @@ mod test_volatile_receive_liquidity {
                 from_pool: from_pool.as_bytes().to_vec(),
                 to_account: SWAPPER_B.to_string(),
                 u: swap_units,
-                min_out: Uint128::zero(),
+                min_pool_tokens: Uint128::zero(),
+                min_reference_asset: Uint128::zero(),
                 calldata_target: None,
                 calldata: None
             },
@@ -221,7 +223,8 @@ mod test_volatile_receive_liquidity {
                 from_pool: from_pool.as_bytes().to_vec(),
                 to_account: SWAPPER_B.to_string(),
                 u: swap_units,
-                min_out: min_out_invalid,
+                min_pool_tokens: min_out_invalid,
+                min_reference_asset: Uint128::zero(),
                 calldata_target: None,
                 calldata: None
             },
@@ -248,7 +251,8 @@ mod test_volatile_receive_liquidity {
                 from_pool: from_pool.as_bytes().to_vec(),
                 to_account: SWAPPER_B.to_string(),
                 u: swap_units,
-                min_out: min_out_valid,
+                min_pool_tokens: min_out_valid,
+                min_reference_asset: Uint128::zero(),
                 calldata_target: None,
                 calldata: None
             },
@@ -294,7 +298,8 @@ mod test_volatile_receive_liquidity {
                 from_pool: from_pool.as_bytes().to_vec(),
                 to_account: SWAPPER_B.to_string(),
                 u: swap_units,
-                min_out: Uint128::zero(),
+                min_pool_tokens: Uint128::zero(),
+                min_reference_asset: Uint128::zero(),
                 calldata_target: None,
                 calldata: None
             },
@@ -356,7 +361,8 @@ mod test_volatile_receive_liquidity {
                 from_pool: from_pool.as_bytes().to_vec(),
                 to_account: SWAPPER_B.to_string(),
                 u: swap_units,
-                min_out: Uint128::zero(),
+                min_pool_tokens: Uint128::zero(),
+                min_reference_asset: Uint128::zero(),
                 calldata_target: None,
                 calldata: None
             },

@@ -74,7 +74,8 @@ pub fn execute(
             to_pool,
             to_account,
             u,
-            min_out,
+            min_pool_tokens,
+            min_reference_asset,
             from_amount,
             block_number,
             calldata
@@ -85,7 +86,8 @@ pub fn execute(
             to_pool,
             to_account,
             u,
-            min_out,
+            min_pool_tokens,
+            min_reference_asset,
             from_amount,
             block_number,
             calldata
@@ -145,7 +147,8 @@ fn execute_send_cross_chain_liquidity(
     to_pool: Vec<u8>,
     to_account: Vec<u8>,
     u: U256,
-    min_out: U256,
+    min_pool_tokens: U256,
+    min_reference_asset: U256,
     from_amount: Uint128,
     block_number: u32,
     calldata: Vec<u8>
@@ -158,7 +161,8 @@ fn execute_send_cross_chain_liquidity(
         to_account,
         u,
         variable_payload: SendLiquidityVariablePayload {
-            min_out,
+            min_pool_tokens,
+            min_reference_asset,
             from_amount: U256::from(from_amount.u128()),
             block_number,
             calldata,
@@ -309,17 +313,21 @@ mod catalyst_ibc_interface_tests {
     fn mock_send_liquidity_msg(
         channel_id: &str,
         to_pool: Vec<u8>,
-        min_out: Option<U256>          // Allow to override the default value to provide invalid configs
+        min_pool_tokens: Option<U256>,          // Allow to override the default value to provide invalid configs
+        min_reference_asset: Option<U256>       // Allow to override the default value to provide invalid configs
     ) -> ExecuteMsg {
         ExecuteMsg::SendCrossChainLiquidity {
             channel_id: channel_id.into(),
             to_pool,
             to_account: b"to_account".to_vec(),
             u: uint!("78456988731590487483448276103933454935747871349630657124267302091643025406701"),          // Some large U256 number
-            min_out: min_out.unwrap_or(
+            min_pool_tokens: min_pool_tokens.unwrap_or(
                 uint!("323476719582585693194107115743132847255")                                                // Some large Uint128 number (as U256)
             ),
-            from_amount: Uint128::from(4920222095670429824873974121747892731u128),                          // Some large Uint128 number
+            min_reference_asset: min_reference_asset.unwrap_or(
+                uint!("1385371954613879816514345798135479")                                                     // Some large Uint128 number (as U256)
+            ),
+            from_amount: Uint128::from(4920222095670429824873974121747892731u128),                              // Some large Uint128 number
             block_number: 1356u32,
             calldata: vec![]
         }
@@ -334,7 +342,8 @@ mod catalyst_ibc_interface_tests {
             from_pool,
             to_account: "to_account".to_string(),
             u: uint!("78456988731590487483448276103933454935747871349630657124267302091643025406701"),          // Some large U256 number
-            min_out: Uint128::from(323476719582585693194107115743132847255u128),                                // Some large Uint128 number
+            min_pool_tokens: Uint128::from(323476719582585693194107115743132847255u128),                        // Some large Uint128 number
+            min_reference_asset: Uint128::from(1385371954613879816514345798135479u128),                         // Some large Uint128 number
             calldata_target: None,
             calldata: None
         }
@@ -400,7 +409,8 @@ mod catalyst_ibc_interface_tests {
                 to_pool,
                 to_account,
                 u,
-                min_out,
+                min_pool_tokens,
+                min_reference_asset,
                 from_amount,
                 block_number,
                 calldata
@@ -411,7 +421,8 @@ mod catalyst_ibc_interface_tests {
                     to_account,
                     u,
                     variable_payload: SendLiquidityVariablePayload {
-                        min_out,
+                        min_pool_tokens,
+                        min_reference_asset,
                         from_amount: override_from_amount.unwrap_or(U256::from(from_amount.u128())),
                         block_number,
                         calldata
@@ -1024,7 +1035,7 @@ mod catalyst_ibc_interface_tests {
         // Get mock params
         let from_pool = "sender";
         let to_pool = b"to_pool";
-        let execute_msg = mock_send_liquidity_msg(channel_id, to_pool.to_vec(), None);
+        let execute_msg = mock_send_liquidity_msg(channel_id, to_pool.to_vec(), None, None);
 
 
         // Tested action: send liquidity
@@ -1074,7 +1085,7 @@ mod catalyst_ibc_interface_tests {
         // Get mock params
         let from_pool = "sender";
         let to_pool = "to_pool";
-        let send_msg = mock_send_liquidity_msg(channel_id, to_pool.as_bytes().to_vec(), None);
+        let send_msg = mock_send_liquidity_msg(channel_id, to_pool.as_bytes().to_vec(), None, None);
         let receive_packet = mock_ibc_packet(channel_id, from_pool, send_msg, None);
 
 
@@ -1138,7 +1149,8 @@ mod catalyst_ibc_interface_tests {
         let send_msg = mock_send_liquidity_msg(
             channel_id,
             to_pool.to_vec(),
-            Some(U256::MAX)                                // ! Specify a min_out larger than Uint128
+            Some(U256::MAX),                                // ! Specify a min_out larger than Uint128
+            None,
         );
         let receive_packet = mock_ibc_packet(channel_id, from_pool, send_msg, None);
 
@@ -1185,7 +1197,7 @@ mod catalyst_ibc_interface_tests {
         // Get mock params
         let from_pool = "sender";
         let to_pool = "to_pool";
-        let send_msg = mock_send_liquidity_msg(channel_id, to_pool.as_bytes().to_vec(), None);
+        let send_msg = mock_send_liquidity_msg(channel_id, to_pool.as_bytes().to_vec(), None, None);
         let ibc_packet = mock_ibc_packet(channel_id, from_pool, send_msg, None);
 
 
@@ -1284,7 +1296,7 @@ mod catalyst_ibc_interface_tests {
         // Get mock params
         let from_pool = "sender";
         let to_pool = "to_pool";
-        let send_msg = mock_send_liquidity_msg(channel_id, to_pool.as_bytes().to_vec(), None);
+        let send_msg = mock_send_liquidity_msg(channel_id, to_pool.as_bytes().to_vec(), None, None);
         let ibc_packet = mock_ibc_packet(channel_id, from_pool, send_msg, None);
 
 
@@ -1334,7 +1346,7 @@ mod catalyst_ibc_interface_tests {
         // Get mock params
         let from_pool = "sender";
         let to_pool = "to_pool";
-        let send_msg = mock_send_liquidity_msg(channel_id, to_pool.as_bytes().to_vec(), None);
+        let send_msg = mock_send_liquidity_msg(channel_id, to_pool.as_bytes().to_vec(), None, None);
         let ibc_packet = mock_ibc_packet(channel_id, from_pool, send_msg, Some(U256::from(Uint128::MAX.u128()) + U256::from(1u64)));   // ! Inject an invalid from_amount into the ibc_packet
 
 

@@ -2,8 +2,8 @@ use cosmwasm_std::{Addr, Uint128, DepsMut, Env, MessageInfo, Response, StdResult
 use cw20::{Cw20ExecuteMsg, Cw20QueryMsg, BalanceResponse};
 use cw20_base::{contract::{execute_mint, execute_burn}};
 use cw_storage_plus::Item;
-use ethnum::U256;
-use fixed_point_math_lib::fixed_point_math::{LN2, mul_wad_down, self};
+use ethnum::{U256, AsI256};
+use fixed_point_math_lib::fixed_point_math::{LN2, mul_wad_down, self, ln_wad, WAD, exp_wad};
 use schemars::JsonSchema;
 use serde::{Serialize, Deserialize};
 use swap_pool_common::{
@@ -733,7 +733,8 @@ pub fn send_liquidity(
     to_pool: Vec<u8>,
     to_account: Vec<u8>,
     amount: Uint128,            //TODO EVM mismatch
-    min_out: U256,
+    min_pool_tokens: U256,
+    min_reference_asset: U256,
     fallback_account: String,   //TODO EVM mismatch
     calldata: Vec<u8>
 ) -> Result<Response, ContractError> {
@@ -791,7 +792,8 @@ pub fn send_liquidity(
         to_pool: to_pool.clone(),
         to_account: to_account.clone(),
         u,
-        min_out,
+        min_pool_tokens,
+        min_reference_asset,
         from_amount: amount,
         block_number,
         calldata
@@ -812,6 +814,8 @@ pub fn send_liquidity(
         .add_attribute("to_account", format!("{:x?}", to_account))
         .add_attribute("from_amount", amount)
         .add_attribute("units", u.to_string())
+        .add_attribute("min_pool_tokens", min_pool_tokens.to_string())
+        .add_attribute("min_reference_asset", min_reference_asset.to_string())
     )
 }
 
@@ -823,7 +827,8 @@ pub fn receive_liquidity(
     from_pool: Vec<u8>,
     to_account: String,
     u: U256,
-    min_out: Uint128,
+    min_pool_tokens: Uint128,
+    min_reference_asset: Uint128,       //TODO type
     calldata_target: Option<Addr>,
     calldata: Option<Vec<u8>>
 ) -> Result<Response, ContractError> {
@@ -855,8 +860,55 @@ pub fn receive_liquidity(
         effective_supply
     ).map(|val| Uint128::from(val.as_u128()))?;     //TODO OVERFLOW when casting U256 to Uint128. Theoretically calc_price_curve_limit_share < 1, hence casting is safe
 
-    if min_out > out {
-        return Err(ContractError::ReturnInsufficient { out, min_out });
+    if min_pool_tokens > out {
+        return Err(ContractError::ReturnInsufficient { out, min_out: min_pool_tokens });
+    }
+
+    if !min_reference_asset.is_zero() {
+
+        let assets = ASSETS.load(deps.storage)?;
+        let weights = WEIGHTS.load(deps.storage)?;
+
+        // Compute the vault reference amount: product(balance(i)**weight(i))**(1/weights_sum)
+        // The direct calculation of this value would overflow, hence it is calculated as:
+        //      exp( sum( ln(balance(i)) * weight(i) ) / weights_sum )
+
+        // Compute first: sum( ln(balance(i)) * weight(i) )
+        let mut weighted_balance_sum = assets.iter()
+            .zip(weights)       // zip: weights.len() == assets.len()
+            .try_fold(U256::ZERO, |acc, (asset, weight)| {
+
+                let pool_asset_balance = deps.querier.query_wasm_smart::<BalanceResponse>(
+                    asset,
+                    &Cw20QueryMsg::Balance { address: env.contract.address.to_string() }
+                )?.balance;
+
+                acc.checked_add(
+                    ln_wad(     // TODO what if the pool gets depleted ==> ln(0)
+                        pool_asset_balance.u128().as_i256() * WAD.as_i256()     // i256 casting: 'pool_asset_balance * WAD' always fits in an I256 (~2^128 * ~2^64)
+                    )?.as_u256()                                                // u256 casting: 'pool_asset_balance * WAD' >= WAD (for balance != 0), hence 'ln_wad' return is always positive //TODO review 0 condition
+                    .checked_mul(U256::from(weight)).ok_or(ContractError::ArithmeticError {})?
+                ).ok_or(ContractError::ArithmeticError {})
+            })?;
+
+        // Finish the calculation: exp( 'weighted_balance_sum' / weights_sum )
+        let vault_reference_amount = exp_wad(
+            (weighted_balance_sum / w_sum)          // Division is safe, as w_sum is never 0
+                .as_i256()                          // If casting overflows to a negative number, the result of the exponent will be 0, which will cause the min_reference_asset check to fail //TODO denial of service attack?
+        )?.as_u256() / WAD;                         // Division is safe, as WAD != 0
+
+        // Compute the fraction of the 'vault_reference_amount' that the swapper owns.
+        // Include the escrowed pool tokens in the total supply to ensure that even if all the ongoing transactions revert, the specified min_reference_asset is fulfilled.
+        // Include the pool tokens as they are going to be minted.
+        let escrowed_pool_tokens = TOTAL_ESCROWED_LIQUIDITY.load(deps.storage)?;
+        let user_reference_amount = Uint128::from((     //TODO is the use of Uint128/U256 correct in this calculation?
+            (vault_reference_amount * U256::from(out.u128()))/(effective_supply + U256::from(escrowed_pool_tokens.u128()) + U256::from(out.u128()))
+        ).as_u128());        //TODO casting overflow
+
+        if min_reference_asset > user_reference_amount {
+            return Err(ContractError::ReturnInsufficient { out: user_reference_amount, min_out: min_reference_asset });
+        }
+
     }
 
     // Validate the to_account

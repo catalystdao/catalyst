@@ -78,19 +78,22 @@ pub const CTX0_DATA_START            : usize = 364;
 
 // CTX1 Liquidity Swap Payload **************************************************************************************************
 
-pub const CTX1_MIN_OUT_START         : usize = 228;
-pub const CTX1_MIN_OUT_END           : usize = 260;
+pub const CTX1_MIN_POOL_TOKEN_START  : usize = 228;
+pub const CTX1_MIN_POOL_TOKEN_END    : usize = 260;
 
-pub const CTX1_FROM_AMOUNT_START     : usize = 260;
-pub const CTX1_FROM_AMOUNT_END       : usize = 292;
+pub const CTX1_MIN_REFERENCE_START   : usize = 260;
+pub const CTX1_MIN_REFERENCE_END     : usize = 292;
 
-pub const CTX1_BLOCK_NUMBER_START    : usize = 292;
-pub const CTX1_BLOCK_NUMBER_END      : usize = 296;
+pub const CTX1_FROM_AMOUNT_START     : usize = 292;
+pub const CTX1_FROM_AMOUNT_END       : usize = 324;
 
-pub const CTX1_DATA_LENGTH_START     : usize = 296;
-pub const CTX1_DATA_LENGTH_END       : usize = 298;
+pub const CTX1_BLOCK_NUMBER_START    : usize = 324;
+pub const CTX1_BLOCK_NUMBER_END      : usize = 328;
 
-pub const CTX1_DATA_START            : usize = 298;
+pub const CTX1_DATA_LENGTH_START     : usize = 328;
+pub const CTX1_DATA_LENGTH_END       : usize = 330;
+
+pub const CTX1_DATA_START            : usize = 330;
 
 
 
@@ -520,7 +523,8 @@ impl CatalystV1VariablePayload for SendAssetVariablePayload {
 
 // Send liquidity payload
 pub struct SendLiquidityVariablePayload {
-    pub min_out: U256,
+    pub min_pool_tokens: U256,
+    pub min_reference_asset: U256,
     pub from_amount: U256,
     pub block_number: u32,
     pub calldata: Vec<u8>
@@ -528,16 +532,28 @@ pub struct SendLiquidityVariablePayload {
 
 impl SendLiquidityVariablePayload {
 
-    pub fn min_out(
+    pub fn min_pool_tokens(
         &self
     ) -> Result<Uint128, ContractError> {
 
-        let min_out = self.min_out;
         // For CosmWasm pools, min_out should be Uint128
-        if min_out > U256::from(Uint128::MAX.u128()) {             //TODO overhaul - more efficient way to do this?
+        if self.min_pool_tokens > U256::from(Uint128::MAX.u128()) {             //TODO overhaul - more efficient way to do this?
             return Err(ContractError::PayloadDecodingError {});
         }
-        Ok(Uint128::from(min_out.as_u128()))
+        Ok(Uint128::from(self.min_pool_tokens.as_u128()))
+
+    }
+
+    //TODO overhaul - is the 'Uint128' type for this correct, or use U256?
+    pub fn min_reference_asset(
+        &self
+    ) -> Result<Uint128, ContractError> {
+
+        // For CosmWasm pools, min_out should be Uint128
+        if self.min_reference_asset > U256::from(Uint128::MAX.u128()) {             //TODO overhaul - more efficient way to do this?
+            return Err(ContractError::PayloadDecodingError {});
+        }
+        Ok(Uint128::from(self.min_reference_asset.as_u128()))
 
     }
 
@@ -578,8 +594,9 @@ impl CatalystV1VariablePayload for SendLiquidityVariablePayload {
 
     fn try_encode(&self, buffer: &mut Vec<u8>) -> Result<(), ContractError> {
     
-        // Min out
-        buffer.extend_from_slice(&self.min_out.to_be_bytes());
+        // Min out (pool tokens and reference amount)
+        buffer.extend_from_slice(&self.min_pool_tokens.to_be_bytes());
+        buffer.extend_from_slice(&self.min_reference_asset.to_be_bytes());
     
         // From amount
         buffer.extend_from_slice(&self.from_amount.to_be_bytes());
@@ -597,13 +614,22 @@ impl CatalystV1VariablePayload for SendLiquidityVariablePayload {
 
     fn try_decode(buffer: Vec<u8>) -> Result<Self, ContractError> {
 
-        // Min out
-        let min_out = U256::from_be_bytes(
+        // Min pool tokens
+        let min_pool_tokens = U256::from_be_bytes(
             buffer.get(
-                CTX1_MIN_OUT_START .. CTX1_MIN_OUT_END
+                CTX1_MIN_POOL_TOKEN_START .. CTX1_MIN_POOL_TOKEN_END
             ).ok_or(
                 ContractError::PayloadDecodingError {}
-            )?.try_into().unwrap()                          // If 'CTX1_MIN_OUT_START' and 'CTX1_MIN_OUT_END' are 32 bytes apart, this should never panic //TODO overhaul
+            )?.try_into().unwrap()                          // If 'CTX1_MIN_POOL_TOKEN_START' and 'CTX1_MIN_POOL_TOKEN_END' are 32 bytes apart, this should never panic //TODO overhaul
+        );
+
+        // Min reference asset
+        let min_reference_asset = U256::from_be_bytes(
+            buffer.get(
+                CTX1_MIN_REFERENCE_START .. CTX1_MIN_REFERENCE_END
+            ).ok_or(
+                ContractError::PayloadDecodingError {}
+            )?.try_into().unwrap()                          // If 'CTX1_MIN_REFERENCE_START' and 'CTX1_MIN_REFERENCE_END' are 32 bytes apart, this should never panic //TODO overhaul
         );
 
         // From amount
@@ -639,7 +665,8 @@ impl CatalystV1VariablePayload for SendLiquidityVariablePayload {
         ).ok_or(ContractError::PayloadDecodingError {})?.to_vec();
 
         Ok(SendLiquidityVariablePayload {
-            min_out,
+            min_pool_tokens,
+            min_reference_asset,
             from_amount,
             block_number,
             calldata

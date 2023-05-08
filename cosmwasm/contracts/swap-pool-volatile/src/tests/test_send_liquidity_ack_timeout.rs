@@ -67,7 +67,8 @@ mod test_volatile_send_liquidity_ack_timeout {
                     to_pool: target_pool.as_bytes().to_vec(),
                     to_account: SWAPPER_B.as_bytes().to_vec(),
                     amount: swap_amount,
-                    min_out: U256::ZERO,
+                    min_pool_tokens: U256::ZERO,
+                    min_reference_asset: U256::ZERO,
                     fallback_account: SWAPPER_A.to_string(),
                     calldata: vec![]
                 },

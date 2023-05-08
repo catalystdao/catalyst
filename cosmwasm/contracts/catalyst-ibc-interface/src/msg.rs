@@ -44,7 +44,9 @@ pub enum ExecuteMsg {
         #[serde(with = "U256Def")]
         u: U256,
         #[serde(with = "U256Def")]
-        min_out: U256,
+        min_pool_tokens: U256,      //TODO EVM mismatch
+        #[serde(with = "U256Def")]
+        min_reference_asset: U256,  //TODO EVM mismatch
         from_amount: Uint128,
         block_number: u32,
         calldata: Vec<u8>

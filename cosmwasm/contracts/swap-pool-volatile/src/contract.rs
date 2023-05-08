@@ -279,7 +279,8 @@ pub fn execute(
             to_pool,
             to_account,
             amount,
-            min_out,
+            min_pool_tokens,
+            min_reference_asset,
             fallback_account,
             calldata
         } => send_liquidity(
@@ -290,7 +291,8 @@ pub fn execute(
             to_pool,
             to_account,
             amount,
-            min_out,
+            min_pool_tokens,
+            min_reference_asset,
             fallback_account,
             calldata
         ),
@@ -300,7 +302,8 @@ pub fn execute(
             from_pool,
             to_account,
             u,
-            min_out,
+            min_pool_tokens,
+            min_reference_asset,
             calldata_target,
             calldata
         } => receive_liquidity(
@@ -311,7 +314,8 @@ pub fn execute(
             from_pool,
             to_account,
             u,
-            min_out,
+            min_pool_tokens,
+            min_reference_asset,
             calldata_target,
             calldata
         ),

@@ -143,7 +143,9 @@ pub enum ExecuteMsg<T> {
         to_account: Vec<u8>,
         amount: Uint128,            //TODO EVM mismatch
         #[serde(with = "U256Def")]
-        min_out: U256,
+        min_pool_tokens: U256,      //TODO EVM mismatch
+        #[serde(with = "U256Def")]
+        min_reference_asset: U256,  //TODO EVM mismatch
         fallback_account: String,   //TODO EVM mismatch
         calldata: Vec<u8>
     },
@@ -154,7 +156,8 @@ pub enum ExecuteMsg<T> {
         to_account: String,
         #[serde(with = "U256Def")]
         u: U256,
-        min_out: Uint128,
+        min_pool_tokens: Uint128,
+        min_reference_asset: Uint128,   // ! TODO type?
         calldata_target: Option<Addr>,
         calldata: Option<Vec<u8>>
     },
