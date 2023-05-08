@@ -11,6 +11,8 @@ contract IBCEmulator is IbcDispatcher, Ownable {
 
     event Packet(IbcPacket packet);
 
+    event Acknowledgement(bytes acknowledgement);
+
     constructor(bytes32 localChannelId) {
         LOCALCHANNELID = localChannelId;
     }
@@ -36,7 +38,9 @@ contract IBCEmulator is IbcDispatcher, Ownable {
     function execute(address targetContract, IbcPacket calldata packet)
         external onlyOwner
     {
-        IbcReceiver(targetContract).onRecvPacket(packet);
+        bytes memory acknowledgement = IbcReceiver(targetContract).onRecvPacket(packet);
+
+        emit Acknowledgement(acknowledgement);
     }
 
     function timeout(address targetContract, IbcPacket calldata packet)

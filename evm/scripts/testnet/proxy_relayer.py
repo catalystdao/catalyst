@@ -17,10 +17,9 @@ class ProxyRelayer:
         with open(self.config_name, 'w') as f:
             json.dump(self.config, f, indent=4)
     
-    
     def __init__(
         self,
-        chains = {
+        chains={
             "mumbai": {"url": os.environ['MUMBAI_ALCHEMY'], "middleware": geth_poa_middleware, "key": os.environ['PRIVATE_KEY_ROUTER']},
             "sepolia": {"url": os.environ['SEPOLIA_ALCHEMY'], "key": os.environ['PRIVATE_KEY_ROUTER']}
         },
@@ -48,22 +47,20 @@ class ProxyRelayer:
             # Router
             self.chains[chain]["acct"] = w3.eth.account.from_key(self.chains[chain]["key"])
             
-
     def fetch_logs(self, chain, fromBlock, toBlock):
         logs = self.chains[chain]["ibcinterface"].events.Packet.getLogs(fromBlock=fromBlock, toBlock=toBlock)
         return logs
 
-
     def relay(self, from_chain, event):
         packet = event["args"]["packet"]
-        target_chain = packet[0][1]
+        target_chain = packet[1][1]
         target_chain = target_chain.decode().replace("\x00", "")
         relayer_address = self.chains[target_chain]["acct"].address
         
         try:
             # Execute the transaction on the target side:
             target_ibcinterface = self.chains[target_chain]["ibcinterface"]
-            target_cci = self.chains[target_chain]["ibcinterface"]
+            target_cci = self.chains[target_chain]["crosschaininterface"]
             target_w3 = self.chains[target_chain]["w3"]
             tx = target_ibcinterface.functions.execute(
                 target_cci.address,
@@ -71,6 +68,7 @@ class ProxyRelayer:
             ).build_transaction({
                 'from': relayer_address,
                 'nonce': target_w3.eth.get_transaction_count(relayer_address),
+                "gas": 300000
             })
             
             signed_txn = target_w3.eth.account.sign_transaction(tx, private_key=self.chains[target_chain]["key"])
@@ -79,10 +77,9 @@ class ProxyRelayer:
             
             print("Execute", target_chain, Web3.toHex(tx_hash))
             
-            ## Check if transaction has been mined.
+            # Check if transaction has been mined.
             receipt = target_w3.eth.wait_for_transaction_receipt(tx_hash)
-            
-            
+        
             sending_ibcinterface = self.chains[from_chain]["ibcinterface"]
             sending_cci = self.chains[from_chain]["ibcinterface"]
             sending_w3 = self.chains[from_chain]["w3"]
@@ -101,6 +98,7 @@ class ProxyRelayer:
                 ack = receipt
                 tx_ack = sending_ibcinterface.functions.ack(
                     sending_cci.address,
+                    ack,
                     packet
                 ).build_transaction({
                     'from': relayer_address,
@@ -149,8 +147,8 @@ class ProxyRelayer:
                     for log in logs:
                         self.relay(chain, log)
             
-                
             sleep(wait)
+
 
 def main():
     relayer = ProxyRelayer()
