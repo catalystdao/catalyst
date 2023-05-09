@@ -6,6 +6,7 @@ from cci_abi import abi as cci_abi
 from time import sleep
 import json
 import os
+import argparse
 
 
 class ProxyRelayer:
@@ -151,7 +152,14 @@ class ProxyRelayer:
 
 
 def main():
-    relayer = ProxyRelayer()
+    parser = argparse.ArgumentParser("proxy relayer")
+    parser.add_argument("config_location", nargs='?', help="The path to the config location", type=str)
+    args = parser.parse_args()
+    config_location = "./scripts/deploy_config.json"
+    if args.config_location:
+        config_location = args.config_location
+        
+    relayer = ProxyRelayer(config_name=config_location)
     relayer.run()
     
 
