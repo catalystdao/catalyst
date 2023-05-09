@@ -129,131 +129,6 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon {
         emit Deposit(depositor, INITIAL_MINT_AMOUNT, initialBalances);
     }
 
-    /**
-     * @notice Allows Governance to modify the pool weights to optimise liquidity.
-     * @dev targetTime needs to be more than MIN_ADJUSTMENT_TIME in the future.
-     * It is implied that if the existing weights are low <≈100, then 
-     * the governance is not allowed to change pool weights. This is because
-     * the update function is not made for step sizes (which the result would be if)
-     * trades are frequent and weights are small.
-     * Weights must not be set to 0. This allows someone to exploit the localSwap simplification
-     * with a token not belonging to the pool. (Set weight to 0, localSwap from token not part of
-     * the pool. Since 0 == 0 => use simplified swap curve. Swap goes through.)
-     * @param targetTime Once reached, _weight[...] = newWeights[...]
-     * @param newWeights The new weights to apply
-     */
-    function setWeights(uint256 targetTime, uint256[] calldata newWeights) external onlyFactoryOwner {
-        unchecked {
-            require(targetTime >= block.timestamp + MIN_ADJUSTMENT_TIME); // dev: targetTime must be more than MIN_ADJUSTMENT_TIME in the future.
-            require(targetTime <= block.timestamp + 365 days); // dev: Target time cannot be too far into the future.
-        }
-
-        // Store adjustment information
-        _adjustmentTarget = targetTime;
-        _lastModificationTime = block.timestamp;
-
-        // Save the target weights
-        for (uint256 it; it < MAX_ASSETS;) {
-            address token = _tokenIndexing[it];
-            if (token == address(0)) break;
-
-            uint256 newWeight = newWeights[it];
-            uint256 currentWeight = _weight[token];
-            require(newWeight != 0); // dev: newWeights must be greater than 0 to protect liquidity providers.
-            require(newWeight <= currentWeight*10 && newWeight >= currentWeight/10); // dev: newWeights must be maximum a factor of 10 larger/smaller than the current weights to protect liquidity providers.
-            _targetWeight[token] = newWeight;
-
-            unchecked {
-                it++;
-            }
-        }
-
-        emit SetWeights(targetTime, newWeights);
-    }
-
-    /**
-     * @notice If the governance requests a weight change, this function will adjust the pool weights.
-     * @dev Called first thing on every function depending on weights.
-     * The partial weight change algorithm is not made for large step increases. As a result, 
-     * it is important that the original weights are large to increase the mathematical resolution.
-     */
-    function _updateWeights() internal {
-        // We might use adjustment target more than once. Since we don't change it, store it.
-        uint256 adjTarget = _adjustmentTarget;
-
-        if (adjTarget != 0) {
-            // We need to use lastModification multiple times. Store it.
-            uint256 lastModification = _lastModificationTime;
-
-            // If no time has passed since the last update, then we don't need to update anything.
-            if (block.timestamp == lastModification) return;
-
-            // Since we are storing lastModification, update the variable now. This avoid repetitions.
-            _lastModificationTime = block.timestamp;
-
-            uint256 wsum = 0;
-            // If the current time is past the adjustment, the weights need to be finalized.
-            if (block.timestamp >= adjTarget) {
-                for (uint256 it; it < MAX_ASSETS;) {
-                    address token = _tokenIndexing[it];
-                    if (token == address(0)) break;
-
-                    uint256 targetWeight = _targetWeight[token];
-
-                    // Add new weight to the weight sum.
-                    wsum += targetWeight;
-
-                    // Save the new weight.
-                    _weight[token] = targetWeight;
-
-                    unchecked {
-                        it++;
-                    }
-                }
-                // Save weight sum.
-                _maxUnitCapacity = wsum * FixedPointMathLib.LN2;
-
-                // Set adjustmentTime to 0. This ensures the if statement is never entered.
-                _adjustmentTarget = 0;
-
-                return;
-            }
-
-            // Calculate partial weight change
-            for (uint256 it; it < MAX_ASSETS; ++it) {
-                address token = _tokenIndexing[it];
-                if (token == address(0)) break;
-
-                uint256 targetWeight = _targetWeight[token];
-                uint256 currentWeight = _weight[token];
-                // If the weight has already been reached, skip the mathematics.
-                if (currentWeight == targetWeight) {
-                    wsum += targetWeight;
-                    continue;
-                }
-
-                if (targetWeight > currentWeight) {
-                    // if the weights are increased then targetWeight - currentWeight > 0.
-                    // Add the change to the current weight.
-                    uint256 newWeight = currentWeight + (
-                        (targetWeight - currentWeight) * (block.timestamp - lastModification)
-                    ) / (adjTarget - lastModification);
-                    _weight[token] = newWeight;
-                    wsum += newWeight;
-                } else {
-                    // if the weights are decreased then targetWeight - currentWeight < 0.
-                    // Subtract the change from the current weights.
-                    uint256 newWeight = currentWeight - (
-                        (currentWeight - targetWeight) * (block.timestamp - lastModification)
-                    ) / (adjTarget - lastModification);
-                    _weight[token] = newWeight;
-                    wsum += newWeight;
-                }
-            }
-            // Update security limit unit capacity
-            _maxUnitCapacity = wsum * FixedPointMathLib.LN2;
-        }
-    }
 
     //--- Swap integrals ---//
 
@@ -642,7 +517,6 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon {
         uint256 amount,
         uint256 minOut
     ) nonReentrant external override returns (uint256) {
-        _updateWeights();
         uint256 fee = FixedPointMathLib.mulWadDown(amount, _poolFee);
 
         // Calculate the return value.
@@ -697,8 +571,6 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon {
         require(fallbackUser != address(0));
         require(toPool.length == 65);  // dev: Pool addresses are uint8 + 64 bytes.
         require(toAccount.length == 65);  // dev: Account addresses are uint8 + 64 bytes.
-
-        _updateWeights();
 
         uint256 fee = FixedPointMathLib.mulWadDown(amount, _poolFee);
 
@@ -815,8 +687,6 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon {
         // The chainInterface is the only valid caller of this function.
         require(msg.sender == _chainInterface);
 
-        _updateWeights();
-
         // Convert the asset index (toAsset) into the asset to be purchased.
         address toAsset = _tokenIndexing[toAssetIndex];
 
@@ -926,9 +796,6 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon {
         // checks if the fallbackUser != address(0))
         require(fallbackUser != address(0));
 
-        // Update weights
-        _updateWeights();
-
         uint256 initialTotalSupply = totalSupply + _escrowedPoolTokens;
         // Since we have already cached totalSupply, we might as well burn the tokens
         // now. If the user doesn't have enough tokens, they save a bit of gas.
@@ -1034,8 +901,6 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon {
         require(msg.sender == _chainInterface);
         // Only allow connected pools
         if (!_poolConnection[channelId][fromPool]) revert PoolNotConnected(channelId, fromPool);
-
-        _updateWeights();
 
         // Check if the swap is according to the swap limits
         _updateUnitCapacity(U);

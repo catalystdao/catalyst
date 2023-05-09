@@ -5,7 +5,7 @@ from hypothesis import example
 import re
 from utils.common_utils import convert_64_bytes_address
 
-pytestmark = pytest.mark.usefixtures("group_finish_setup", "group_connect_pools")
+pytestmark = pytest.mark.usefixtures("group_connect_pools", "group_finish_setup")
 
 
 @pytest.mark.no_call_coverage

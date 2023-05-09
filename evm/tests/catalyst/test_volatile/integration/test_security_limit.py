@@ -9,7 +9,7 @@ from tests.catalyst.utils.pool_utils import compute_expected_units_capacity
 from tests.catalyst.utils.common_utils import assert_abs_relative_error, convert_64_bytes_address
 
 
-pytestmark = pytest.mark.usefixtures("group_finish_setup", "group_connect_pools")
+pytestmark = pytest.mark.usefixtures("group_connect_pools", "group_finish_setup")
 
 # TODO split into different tests?
 @pytest.mark.no_call_coverage

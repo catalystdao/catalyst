@@ -8,7 +8,7 @@ from utils.common_utils import convert_64_bytes_address
 from utils.pool_utils import compute_asset_swap_hash
 
 
-pytestmark = pytest.mark.usefixtures("group_finish_setup", "group_connect_pools")
+pytestmark = pytest.mark.usefixtures("group_connect_pools", "group_finish_setup")
 
 #TODO add fees test (create fixture that sets up non-zero fees to the pool)
 

@@ -312,7 +312,7 @@ abstract contract CatalystSwapPoolCommon is
         bytes calldata toPool,
         bool state
     ) external override {
-        require((msg.sender == _setupMaster) || (msg.sender == factoryOwner())); // dev: No auth
+        require((msg.sender == _setupMaster)); // dev: No auth
         require(toPool.length == 65);  // dev: Pool addresses are uint8 + 64 bytes.
 
         _poolConnection[channelId][toPool] = state;
