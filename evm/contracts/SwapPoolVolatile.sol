@@ -1065,17 +1065,11 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon {
             // Thus balance0 is a point on the invariant.
             // It is computed as: balance0 = exp((\sum (ln(balance_i) * weight_i)/(\sum_j weights_j)).
             uint256 localInvariant= 0;
-            uint256 sumWeights = 0;
             // Computes \sum (ln(balance_i) * weight_i
             for (uint256 it; it < MAX_ASSETS;) {
                 address token = _tokenIndexing[it];
                 if (token == address(0)) break;
                 uint256 weight = _weight[token];
-                unchecked {
-                    // _maxUnitCapacity = sumWeight * ln2, thus this is save. It is just cheaper to recompute
-                    // rather than refetch since we need the weight anyway.
-                    sumWeights += weight;
-                }
                 uint256 balance = ERC20(token).balanceOf(address(this));
                 localInvariant += uint256(FixedPointMathLib.lnWad( // uint256 casting: Since balance*FixedPointMathLib.WAD >= FixedPointMathLib.WAD, lnWad always returns more than 0.
                     int256(balance*FixedPointMathLib.WAD) // int256 casting: If it overflows and becomes negative, then the ln function fails.
@@ -1088,8 +1082,8 @@ contract CatalystSwapPoolVolatile is CatalystSwapPoolCommon {
 
             // Compute (\sum (ln(balance_i) * weight_i)/(\sum_j weights_j)
             unchecked {
-                // sumWeights is not 0.
-                localInvariant = localInvariant / sumWeights;
+                // wsum is not 0.
+                localInvariant = localInvariant / wsum;
             }
 
             // Compute exp((\sum (ln(balance_i) * weight_i)/(\sum_j weights_j))
