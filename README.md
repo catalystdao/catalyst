@@ -2,7 +2,7 @@
 
 This monorepo contains all Catalyst implementations
 
-Catalyst is an implementation of the Asynchronous Swaps. A design which enables synchronously and asynchronously priced assets using shared liquidity for a large set of assets, supporting both volatile assets and stable assets. The design allows market markers to compete with exiting (volatile and stable coin) on-chain AMMs and (volatile and stable coin) cross-chain AMMs using the same amount of liquidity as a single competitor.
+Catalyst is an implementation of the `Unit of Liquidity` AMM design. A design which used independent pricing to asynchronously price assets using shared liquidity, supporting both volatile assets and stable assets.
 
 Each implementation is contained within its own folder.
 
@@ -13,125 +13,63 @@ Each implementation is contained within its own folder.
 
 The EVM implementation is used as a reference implementation.
 
-The following section is best viewed on a MarkDown reader which supports inline and block $\LaTeX$ equations, like Github or VS code.
-
 # On Asset Pricing
 
-Let $P(w)$ be a non-increasing function representing the marginal price for a token as a function of the current pool balance, $w$. The value of $\Delta w$ can then be naively calculated by multiplying the starting price by the purchase amount.
-
-$$U = \Delta w \cdot P(w_1) + o(f(\Delta w))$$
-
-As $P(w)$ is a non-increasing function, this naive approach only works for small $\Delta w$, as otherwise selling a large batch has a greater return than selling many small batches:   $w_1 < w_2 \implies P(w_1) ≥ P(w_2)$. The opposite is true when buying. The error of such an implementation increases with as the offered input increases: $\Delta w$. The error can be reduced by subdividing the purchase amount, $\Delta w$.
-$$U = \sum_{i=0}^N \frac{\Delta w}{N} \cdot P\left(w_1+ i\frac{\Delta w}{N}\right)+o\left(f\left(\frac{\Delta w}{N}\right)\right)$$
-When the number of subdivisions, $N$, is increased the error $o\left(f \left(\frac{\Delta w}{N}\right)\right)$ is reduced. The limit of $N \rightarrow \infty$ is the integral over $P(w_1)$. This gives rise to the core equation of Catalyst.
-
+For an indepth description of how to price assets, read `Unit of Liquidity`. The below seciton contains notable equations.
 ## The Catalyst Equation
 
-Let $P(w)$ be a non-increasing function. The unit gain when providing $\Delta \alpha = \alpha_2 - \alpha_1$ tokens is computed as
+Let $P_i(w)$ be a decreasing, non-negative marginal price function for a token $i$. The equation which describes a Catalyst swap is then defined as:
 
-$$U = \int_{\alpha_1}^{\alpha_2} P_\alpha(w) \ dw$$
+$$U = \int_{i_t}^{i_t + \Delta i} P_i(w) \ dw$$
 
-The user now owns $U$ units, which need to be released from a connected integral. 
+Where $i_t$ is the current balance in the pool, $\Delta i$ is the change in balance caused by the user and $U$ is Units: A measure of the value change by the user. The equation can be used both ways, where a positive change implies a "swap in" and a negative change implies a "swap out". It is implies that when assets are swapped out, $U$ the sign is flipped from positive to negative. 
 
-$$U = \int_{\beta_2}^{\beta_1} P_\beta(w) \ dw$$
+This implies that the full swap from a token $i$ to another token $j$ can be computed as:
 
-$U$ is known. Solving the integral for $\Delta \beta = \beta_2 - \beta_1$ returns the amount of token $\beta$ returned in exchange for $\Delta \alpha$ tokens of token $\alpha$. Since the value of each integral is just a number, it can be wrapped into a token or sent as a payload to a connected integral on another chain, yielding the desired asynchronous property of the AMM. For swaps within the same pool, both equations can be combined into one:
+$$\int_{i_t}^{i_t + \Delta i} P_i(w) \ dw =- \int_{j_t}^{j_t + \Delta j} P_j(w) \ dw = \int_{j_t + \Delta j}^{j_t} P_j(w) \ dw$$
 
-$$\int_{\alpha_1}^{\alpha_2} P_\alpha(w) \ dw = \int_{\beta_2}^{\beta_1} P_\beta(w) \ dw$$
-
-Where the variables are the limits. When $U$ can be reused between integrals, they are said to communicate and a system of communicating integrals is called a **group**. By using integrals to measure liquidity for each asset within a group, liquidity is measured independently. This gives rise to the important asynchronous property which is required for cross-chain swaps.
+Notice that even though the full swap is written as a single equation, it can be evaluated in 2 independent slices (based on the previous equation).
 
 ### Catalyst's Price
 
 Catalyst defines 2 price curves to serve both demand for volatile tokens and tokens with a stable value.
 
-Volatile: $P(w) = \frac{W_\alpha}{w \cdot \ln(2)}$
+Volatile: $P(w) = \frac{W_i}{w}$
 
-Amplification: $P^\theta(w)= \frac{1}{w^\theta} \cdot (1-\theta)$
+Amplification: $P^\theta(w)= \frac{W_i}{(W_i \cdot w)^\theta} \cdot (1-\theta)$
 
-For amplification, the core equation is slightly modified to adjust the price: $U = \int_{W_\alpha \alpha_1 }^{W_\alpha \alpha_2} P^{\theta}_\alpha(w) \ dw$
+## AMM Terms
+
+**Marginal Price**: If someone were to buy/sell an infinitesimal in the pool. the marginal price is the price they would pay. The marginal price can generally be derived in 3 ways: $\lim_{x_\alpha \to 0} y_\beta/x_\alpha$, $\frac{\mathrm{d}}{\mathrm{d}i_\alpha} solve(Invariant, i_\beta)$, or $\frac{P_\alpha(w)}{P_\beta(w)}$.
+
+**sendAsset**: The first swap of a Catalyst swap. It is independent of the state of the second leg of the transaction. Within a pool $U$ can be used to transparently purchase any token via *receiveAsset*. 
+
+**receiveAsset**: The last (and second) leg of a Catalyst swap. It is completely independent of the state of the first leg of the transaction. It requires $U$ which can be acquired by selling any token in the group. 
+
+**LocalSwap**: A combination of *sendAsset* and *receiveAsset* executed atomically, often on a single chain.
+
+**Invariant**: A measure used to measure the pool value. Specific to the *invariant* measure, is that it is constant whenever a swap is completed. If a pool implements a swap fee, the measure increases as fees accumulate in the pool. The invariant is not invariant to deposits or withdrawals.
 
 ## The AMM Equations
 
-Using the Catalyst Equation with the price curves, core mathematical equations can be derived.
-
-**Marginal Price**, If someone were to buy/sell an infinitesimal in the pool. the marginal price is the price they would pay. It can be derived in 3 ways: $\lim_{x_\alpha \to 0} y_\beta/x_\alpha$, $\frac{\mathrm{d}}{\mathrm{d}i_\alpha} solve(Invariant, i_\beta)$, or $\frac{P_\alpha(w)}{P_\beta(w)}$.
-
-**SwapToAndFromUnits**, The full swap equation. Assuming the swap path has $\alpha_t$, $\beta_t$ liquidity and the user provides $x$, the user gets $y_\beta$.
-
-**SwapToUnits**, The first swap of a Catalyst swap. It is completely independent of the state of the second leg of the transaction. Within a group $U$ can be used to transparently purchase any token via *SwapFromUnits*. 
-
-**SwapFromUnits**, The last (and second) leg of a Catalyst swap. It is completely independent of the state of the first leg of the transaction. It requires $U$ which can be acquired by selling any token in the group. 
-
-**Invariant**, A measure used to measure the pool value. Specific to the *invariant* measure, is that it is constant whenever a swap is completed. If a pool implements a swap fee, the measure increases as fees accumulate in the pool. The invariant is not invariant to deposits or withdrawals..
+Using the Catalyst Equation with the price curves, the mathematical swap equations can be derived.
 
 ### Volatile Tokens
 
-- Marginal price: $\lim_{x \to 0} y_\beta/x_\alpha = \frac{\beta_t}{\alpha_t}  \frac{W_\alpha}{W_\beta}$
+- Marginal price: $\lim_{x \to 0} y_j/x_i = \frac{j}{i} \frac{W_i}{W_j}$
 
-- SwapToAndFromUnits: $y_\beta = \beta_t \cdot \left(1-\left(\frac{\alpha_t+x}{\alpha_t}\right)^{-\frac{W_\alpha}{W_\beta}}\right)$
+- SwapToUnits: $U = W_i \cdot \log\left(\frac{i_t+x_i}{i_t}\right)$
 
-- SwapToUnits: $U= W_\alpha \cdot \log\left(\frac{\alpha_t+x_\alpha}{\alpha_t}\right)$
+- SwapFromUnits: $y_j = j_t \cdot \left(1-\exp\left(-\frac{U}{W_j}\right)\right)$
 
-- SwapFromUnits: $y_\beta = \beta_t \cdot \left(1-\exp\left(-\frac{U}{W_\beta}\right)\right)$
-
-- Invariant: $K = \prod_{i \in \{\alpha, \beta, \dots\}} i_t^{W_i}$
+- Invariant: $K = \prod_{i} i_t^{W_i}$
 
 ### Amplified Tokens
 
-- Marginal price: $\lim_{x \to 0} y_\beta/x_\alpha = \frac{\left(\alpha_t W_\alpha\right)^\theta}{\left(\beta_t W_\beta\right)^\theta} \frac{W_\beta}{W_\alpha}$
+- Marginal price: $\lim_{x \to 0} y_j/x_i = \frac{\left(i_t W_i\right)^\theta}{\left(j_t W_j\right)^\theta} \frac{W_j}{W_i}$
 
-- SwapToAndFromUnits: $y_\beta=\beta_t \left(1-\left(\frac{(\beta \cdot W_\beta)^{1-\theta}_t - \left(\left(\alpha_t \cdot W_\alpha +x_\alpha \cdot W_\alpha \right)^{1-\theta} - \left(\alpha_t\cdot W_\alpha\right)^{1-\theta}\right) }{\left(\beta_t \cdot W_{\beta}\right)^{1-\theta}}\right)^{\frac{1}{1-\theta}}\right)$
+- SwapToUnits: $U = \left((i_t  \cdot W_i + x_i  \cdot W_i)^{1-\theta} - \left(i_t  \cdot W_i \right)^{1-\theta} \right)$
 
-- SwapToUnits: $U=\left((\alpha_t  \cdot W_\alpha + x_\alpha  \cdot W_\alpha)^{1-\theta} - \left(\alpha_t  \cdot W_\alpha \right)^{1-\theta} \right)$
-
-- SwapFromUnits: $y_\beta = \beta_t \cdot \left(1 -\left(\frac{\left(\beta_t \cdot W_\beta\right)^{1-\theta} - U }{\left(\beta_t \cdot W_\beta\right)^{1-\theta}}\right)^{\frac{1}{1-\theta}}\right)$
+- SwapFromUnits: $y_j = j_t \cdot \left(1 -\left(\frac{\left(j_t \cdot W_j\right)^{1-\theta} - U }{\left(j_t \cdot W_j\right)^{1-\theta}}\right)^{\frac{1}{1-\theta}}\right)$
 
 - Invariant: $K = \sum_{i \in \{\alpha, \beta, \dots\}} i^{1-\theta} W_i^{1-\theta}$
-
-
-## On deposits and withdrawals.
-
-When depositing and withdrawing, the net debt distribution within a pool system, *a group*, must be maintained. Let $\alpha_0, \beta_0, ...$ be a reference to net system assets. Then the outstanding units is $U[\alpha_0] = \int_{\alpha_{0}}^{\alpha_{t}}P_{\alpha} \! \left(w\right)d w$. Keeping the outstanding units constant:
-
-$$U[\alpha_0] = \int_{\alpha_{0}}^{\alpha_{t}}P \! \left(w\right)d w = \int_{\alpha_{0} +pt_\alpha}^{\alpha_{t} +tk_\alpha}P \! \left( w\right)d w$$
-
-Where $P(w)$ is the pricing function, $\alpha_t$ is the current asset balance, $tk_\alpha$ is the asset input amount, $\alpha_0$ is net asset reference, and $pt$ is the net asset reference output amount.
-
-In a pool with a price function such that $\int_0^\tau P(w) \ dw < \infty$  for any $\tau > 0$, debt maintenance is slightly different. Intuitively, this is because when tokens are swapped, the value leaves one and enters another. However, when the curve is tight enough that there is a limited amount of liquidity on one side, the pool can Is *emptied*. If one-sided is empty, the other side shouldn’t own 100%. Examine the debt maintenance equation:
-
-$$
- U[\alpha_0] = \int_{w\alpha_{0}}^{w\alpha_{t}}P^\theta \! \left(w\right)d w = \int_{w\alpha_{0} +wpt_\alpha}^{w\alpha_{t} +wtk_\alpha}P^\theta \! \left( w\right)d w$$
-
-Without loss of generality, assume $\alpha_0 < \alpha_t$, then $U[\alpha_0] > 0$:
-
-$$0< \int_{w\alpha_{0} +pt_\alpha}^{w\alpha_{t} +tk_\alpha}P^\theta \! \left( w\right)d w$$
-
-Then examine $pt_\alpha = -\alpha_0 \implies \alpha_0 - pt_\alpha = 0$
-
-$$0< U[\alpha_0'] = \int_{0}^{w\alpha_{t} +wtk_\alpha}P^\theta \! \left( w\right)d w$$
-
-However, since $0<\int_0^\tau P^\theta(w) \ dw < \infty$ for any $\tau > 0$ we can find $\tau > 0$ such that $U[\alpha_0'] = \int_0^\tau P^\theta(w) \ dw$. The result is that $0 < \tau = w\alpha_t+wtk_\alpha, \ tk_\alpha \neq - \alpha_t$ and tokens are left in the pool.
-
-# Development
-
-
-## Devnet
-
-The VPS does not expose **geth**, so to connect one has to execute the commands on the VPS's localhost.
-
-The easiest way to achieve this is via ssh port forwarding. To connect localhost on port 10000 (geth) execute:
-
-> ssh -f -N -L 10000:localhost:10000 root@143.198.168.233 
-
-and to connect localhost on port 10001 (bsc_geth) execute:
-
-> ssh -f -N -L 10001:localhost:10001 root@143.198.168.233
-
-All networking connections sent to port 10000 and 10001 will be sent to the VPS's localhost on the respective ports.
-
-Then add the 2 networks to brownie:
-
-> brownie networks add Ethereum polymerase-geth  host=http://127.0.0.1:10000 chainid=1337
-
-> brownie networks add 'Binance Smart Chain' polymerase-bsc-geth  host=http://127.0.0.10001 chainid=1234
