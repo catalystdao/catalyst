@@ -3,39 +3,42 @@ from brownie import reverts, web3, convert, chain
 
 from utils.common_utils import convert_64_bytes_address
 
-pytestmark = [pytest.mark.usefixtures("pool_connect_itself"), pytest.mark.no_pool_param]
+pytestmark = [
+    pytest.mark.usefixtures("vault_connect_itself"),
+    pytest.mark.no_vault_param,
+]
 
 
 def test_receiveAsset_must_be_called_by_cci(
     channel_id,
-    pool,
+    vault,
     berg,
 ):
-    cci = pool._chainInterface()
+    cci = vault._chainInterface()
 
     with reverts():
-        pool.receiveAsset(
+        vault.receiveAsset(
             channel_id,
-            convert_64_bytes_address(pool.address),  # Use self as source pool
+            convert_64_bytes_address(vault.address),  # Use self as source vault
             0,
             berg,
             10**16,
             0,
             0,
-            convert_64_bytes_address(pool.address),
+            convert_64_bytes_address(vault.address),
             chain[-1].number,
             {"from": berg},
         )
 
-    pool.receiveAsset(
+    vault.receiveAsset(
         channel_id,
-        convert_64_bytes_address(pool.address),  # Use self as source pool
+        convert_64_bytes_address(vault.address),  # Use self as source vault
         0,
         berg,
         10**16,
         0,
         0,
-        convert_64_bytes_address(pool.address),
+        convert_64_bytes_address(vault.address),
         chain[-1].number,
         {"from": cci},
     )
@@ -43,15 +46,15 @@ def test_receiveAsset_must_be_called_by_cci(
 
 def test_receiveLiquidity_must_be_called_by_cci(
     channel_id,
-    pool,
+    vault,
     berg,
 ):
-    cci = pool._chainInterface()
+    cci = vault._chainInterface()
 
     with reverts():
-        pool.receiveLiquidity(
+        vault.receiveLiquidity(
             channel_id,
-            convert_64_bytes_address(pool.address),  # Use self as source pool
+            convert_64_bytes_address(vault.address),  # Use self as source vault
             berg,
             10**16,
             0,
@@ -61,9 +64,9 @@ def test_receiveLiquidity_must_be_called_by_cci(
             {"from": berg},
         )
 
-    pool.receiveLiquidity(
+    vault.receiveLiquidity(
         channel_id,
-        convert_64_bytes_address(pool.address),  # Use self as source pool
+        convert_64_bytes_address(vault.address),  # Use self as source vault
         berg,
         10**16,
         0,
@@ -75,13 +78,13 @@ def test_receiveLiquidity_must_be_called_by_cci(
 
 
 def test_release_escrow_must_be_called_cci(
-    pool,
+    vault,
     berg,
 ):
-    cci = pool._chainInterface()
+    cci = vault._chainInterface()
 
     with reverts():  # "dev: Only _chainInterface"
-        pool.onSendAssetSuccess(
+        vault.onSendAssetSuccess(
             convert_64_bytes_address(berg.address),
             0,
             0,
@@ -94,7 +97,7 @@ def test_release_escrow_must_be_called_cci(
     # we still want to check that we can get past the above requirement using
     # a valid sender.
     with reverts():  # "dev: Invalid swapHash. Alt: Escrow doesn't exist."
-        pool.onSendAssetSuccess(
+        vault.onSendAssetSuccess(
             convert_64_bytes_address(berg.address),
             0,
             0,
@@ -105,13 +108,13 @@ def test_release_escrow_must_be_called_cci(
 
 
 def test_timeout_escrow_must_be_called_cci(
-    pool,
+    vault,
     berg,
 ):
-    cci = pool._chainInterface()
+    cci = vault._chainInterface()
 
     with reverts():  # "dev: Only _chainInterface"
-        pool.onSendAssetFailure(
+        vault.onSendAssetFailure(
             convert_64_bytes_address(berg.address),
             0,
             0,
@@ -124,7 +127,7 @@ def test_timeout_escrow_must_be_called_cci(
     # we still want to check that we can get past the above requirement using
     # a valid sender.
     with reverts():  # "dev: Invalid swapHash. Alt: Escrow doesn't exist."
-        pool.onSendAssetFailure(
+        vault.onSendAssetFailure(
             convert_64_bytes_address(berg.address),
             0,
             0,
@@ -135,13 +138,13 @@ def test_timeout_escrow_must_be_called_cci(
 
 
 def test_release_liquidity_escrow_must_be_called_cci(
-    pool,
+    vault,
     berg,
 ):
-    cci = pool._chainInterface()
+    cci = vault._chainInterface()
 
     with reverts():  # "dev: Only _chainInterface"
-        pool.onSendLiquiditySuccess(
+        vault.onSendLiquiditySuccess(
             convert_64_bytes_address(berg.address),
             0,
             0,
@@ -153,7 +156,7 @@ def test_release_liquidity_escrow_must_be_called_cci(
     # we still want to check that we can get past the above requirement using
     # a valid sender.
     with reverts():  # "dev: Invalid swapHash. Alt: Escrow doesn't exist."
-        pool.onSendLiquiditySuccess(
+        vault.onSendLiquiditySuccess(
             convert_64_bytes_address(berg.address),
             0,
             0,
@@ -163,13 +166,13 @@ def test_release_liquidity_escrow_must_be_called_cci(
 
 
 def test_timeout_liquidity_escrow_must_be_called_cci(
-    pool,
+    vault,
     berg,
 ):
-    cci = pool._chainInterface()
+    cci = vault._chainInterface()
 
     with reverts():  # "dev: Only _chainInterface"
-        pool.onSendLiquidityFailure(
+        vault.onSendLiquidityFailure(
             convert_64_bytes_address(berg.address),
             0,
             0,
@@ -181,7 +184,7 @@ def test_timeout_liquidity_escrow_must_be_called_cci(
     # we still want to check that we can get past the above requirement using
     # a valid sender.
     with reverts():  # "dev: Invalid swapHash. Alt: Escrow doesn't exist."
-        pool.onSendLiquidityFailure(
+        vault.onSendLiquidityFailure(
             convert_64_bytes_address(berg.address),
             0,
             0,

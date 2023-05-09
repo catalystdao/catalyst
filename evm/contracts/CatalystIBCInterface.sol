@@ -5,8 +5,8 @@ pragma solidity ^0.8.16;
 import "./polymerase/IbcDispatcher.sol";
 import "./polymerase/IbcReceiver.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "./ICatalystV1Pool.sol";
-import "./interfaces/ICatalystV1PoolState.sol"; // structs
+import "./ICatalystV1Vault.sol";
+import "./interfaces/ICatalystV1VaultState.sol"; // structs
 import "./CatalystIBCPayload.sol";
 
 
@@ -15,9 +15,9 @@ import "./CatalystIBCPayload.sol";
  * @author Catalyst Labs
  * @notice This contract is a generalised proof of concept
  * IBC interface using an example ABI.
- * It acts as an intermediate between the swap pool and the router to
- * abstract router logic away from the swap pools. This simplifies the
- * development of the swap pools and allows Catalyst to adopt or change
+ * It acts as an intermediate between the swap vault and the router to
+ * abstract router logic away from the swap vaults. This simplifies the
+ * development of the swap vaults and allows Catalyst to adopt or change
  * message routers with more flexibility.
  */
 contract CatalystIBCInterface is Ownable, IbcReceiver {
@@ -52,13 +52,13 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
     }
 
     /**
-     * @notice Packs cross-chain swap information into a bytearray and sends it to the target pool with IBC.
+     * @notice Packs cross-chain swap information into a bytearray and sends it to the target vault with IBC.
      * @dev Callable by anyone but this cannot be abused since the connection management ensures no
-     * wrong messages enter a healthy pool.
+     * wrong messages enter a healthy vault.
      * @param channelId The target chain identifier.
-     * @param toPool The target pool on the target chain encoded in bytes32.
+     * @param toVault The target vault on the target chain encoded in bytes32.
      * @param toAccount recipient of the transaction on the target chain. Encoded in bytes32.
-     * @param toAssetIndex The index of the asset the user wants to buy in the target pool.
+     * @param toAssetIndex The index of the asset the user wants to buy in the target vault.
      * @param U The calculated liquidity reference. (Units)
      * @param minOut The minimum number of returned tokens to the toAccount on the target chain.
      * @param fromAmount Escrow related value. The amount returned if the swap fails.
@@ -68,7 +68,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
      */
     function sendCrossChainAsset(
         bytes32 channelId,
-        bytes calldata toPool,
+        bytes calldata toVault,
         bytes calldata toAccount,
         uint8 toAssetIndex,
         uint256 U,
@@ -77,7 +77,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
         address fromAsset,
         bytes calldata calldata_
     ) external {
-        require(toPool.length == 65);  // dev: External addresses needs to be of length 64
+        require(toVault.length == 65);  // dev: External addresses needs to be of length 64
         require(toAccount.length == 65);  // dev: External addresses needs to be of length 64
         // Anyone can call this function, but unless someone can also manage to pass the security check on onRecvPacket
         // they cannot drain any value. As such, the very worst they can do is waste gas.
@@ -89,7 +89,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
                 uint8(20),  // EVM addresses are 20 bytes.
                 bytes32(0),  // EVM only uses 20 bytes. abi.encode packs the 20 bytes into 32 then we need to add 32 more
                 abi.encode(msg.sender),  // Use abi.encode to encode address into 32 bytes
-                toPool,  // Length is expected to be pre-encoded.
+                toVault,  // Length is expected to be pre-encoded.
                 toAccount,  // Length is expected to be pre-encoded.
                 U,
                 toAssetIndex,
@@ -115,28 +115,28 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
     }
 
     /**
-     * @notice Packs cross-chain swap information into a bytearray and sends it to the target pool with IBC.
+     * @notice Packs cross-chain swap information into a bytearray and sends it to the target vault with IBC.
      * @dev Callable by anyone but this cannot be abused since the connection management ensures no
-     * wrong messages enter a healthy pool.
+     * wrong messages enter a healthy vault.
      * @param channelId The target chain identifier.
-     * @param toPool The target pool on the target chain encoded in bytes32.
+     * @param toVault The target vault on the target chain encoded in bytes32.
      * @param toAccount recipient of the transaction on the target chain. Encoded in bytes32.
      * @param U The calculated liquidity reference. (Units)
-     * @param minOut An array of minout describing: [the minimum number of pool tokens, the minimum number of reference assets]* 
+     * @param minOut An array of minout describing: [the minimum number of vault tokens, the minimum number of reference assets]* 
      * @param fromAmount Escrow related value. The amount returned if the swap fails.
      * @param calldata_ Data field if a call should be made on the target chain. 
      * Should be encoded abi.encode(<address>,<data>)
      */
     function sendCrossChainLiquidity(
         bytes32 channelId,
-        bytes calldata toPool,
+        bytes calldata toVault,
         bytes calldata toAccount,
         uint256 U,
         uint256[2] calldata minOut,
         uint256 fromAmount,
         bytes memory calldata_
     ) external {
-        require(toPool.length == 65);  // dev: External addresses needs to be of length 64
+        require(toVault.length == 65);  // dev: External addresses needs to be of length 64
         require(toAccount.length == 65);  // dev: External addresses needs to be of length 64
         // Anyone can call this function, but unless someone can also manage to pass the security check on onRecvPacket
         // they cannot drain any value. As such, the very worst they can do is waste gas.
@@ -148,7 +148,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
                 uint8(20),  // EVM addresses are 20 bytes.
                 bytes32(0),  // EVM only uses 20 bytes. abi.encode packs the 20 bytes into 32 then we need to add 32 more
                 abi.encode(msg.sender),  // Use abi.encode to encode address into 32 bytes
-                toPool,  // Length is expected to be pre-encoded.
+                toVault,  // Length is expected to be pre-encoded.
                 toAccount,  // Length is expected to be pre-encoded.
                 U,
                 minOut[0],
@@ -178,12 +178,12 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
         bytes calldata data = packet.data;
 
         bytes1 context = data[CONTEXT_POS];
-        // Since this is a callback, fromPool must be an EVM address.
-        address fromPool = address(uint160(bytes20(data[ FROM_POOL_START_EVM : FROM_POOL_END ])));
+        // Since this is a callback, fromVault must be an EVM address.
+        address fromVault = address(uint160(bytes20(data[ FROM_VAULT_START_EVM : FROM_VAULT_END ])));
 
         if (context == CTX0_ASSET_SWAP) {
 
-            ICatalystV1Pool(fromPool).onSendAssetSuccess(
+            ICatalystV1Vault(fromVault).onSendAssetSuccess(
                 data[ TO_ACCOUNT_LENGTH_POS : TO_ACCOUNT_END ],                                     // toAccount
                 uint256(bytes32(data[ UNITS_START : UNITS_END ])),                                  // units
                 uint256(bytes32(data[ CTX0_FROM_AMOUNT_START : CTX0_FROM_AMOUNT_END ])),            // fromAmount
@@ -194,7 +194,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
         }
         else if (context == CTX1_LIQUIDITY_SWAP) {
 
-            ICatalystV1Pool(fromPool).onSendLiquiditySuccess(
+            ICatalystV1Vault(fromVault).onSendLiquiditySuccess(
                 data[ TO_ACCOUNT_LENGTH_POS : TO_ACCOUNT_END ],                                     // toAccount
                 uint256(bytes32(data[ UNITS_START : UNITS_END ])),                                  // units
                 uint256(bytes32(data[ CTX1_FROM_AMOUNT_START : CTX1_FROM_AMOUNT_END ])),            // fromAmount
@@ -220,12 +220,12 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
         bytes calldata data = packet.data;
 
         bytes1 context = data[CONTEXT_POS];
-        // Since this is a callback, fromPool must be an EVM address.
-        address fromPool = address(uint160(bytes20(data[ FROM_POOL_START_EVM : FROM_POOL_END ])));
+        // Since this is a callback, fromVault must be an EVM address.
+        address fromVault = address(uint160(bytes20(data[ FROM_VAULT_START_EVM : FROM_VAULT_END ])));
 
         if (context == CTX0_ASSET_SWAP) {
 
-            ICatalystV1Pool(fromPool).onSendAssetFailure(
+            ICatalystV1Vault(fromVault).onSendAssetFailure(
                 data[ TO_ACCOUNT_LENGTH_POS : TO_ACCOUNT_END ],                                     // toAccount
                 uint256(bytes32(data[ UNITS_START : UNITS_END ])),                                  // units
                 uint256(bytes32(data[ CTX0_FROM_AMOUNT_START : CTX0_FROM_AMOUNT_END ])),            // fromAmount
@@ -236,7 +236,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
         }
         else if (context == CTX1_LIQUIDITY_SWAP) {
 
-            ICatalystV1Pool(fromPool).onSendLiquidityFailure(
+            ICatalystV1Vault(fromVault).onSendLiquidityFailure(
                 data[ TO_ACCOUNT_LENGTH_POS : TO_ACCOUNT_END ],                                     // toAccount
                 uint256(bytes32(data[ UNITS_START : UNITS_END ])),                                  // units
                 uint256(bytes32(data[ CTX1_FROM_AMOUNT_START : CTX1_FROM_AMOUNT_END ])),            // fromAmount
@@ -287,15 +287,15 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
         bytes calldata data = packet.data;
 
         bytes1 context = data[CONTEXT_POS];
-        bytes calldata fromPool = data[ FROM_POOL_LENGTH_POS : FROM_POOL_END ];
-        // We know that toPool is an EVM address
-        address toPool = address(uint160(bytes20(data[ TO_POOL_START_EVM : TO_POOL_END ])));
+        bytes calldata fromVault = data[ FROM_VAULT_LENGTH_POS : FROM_VAULT_END ];
+        // We know that toVault is an EVM address
+        address toVault = address(uint160(bytes20(data[ TO_VAULT_START_EVM : TO_VAULT_END ])));
 
         // Check that toAccount is the correct length and only contains 0 bytes beyond the address.
         if (uint8(data[TO_ACCOUNT_LENGTH_POS]) != 20) revert InvalidAddress();  // Check correct length
         if (uint256(bytes32(data[TO_ACCOUNT_START:TO_ACCOUNT_START+32])) != 0) revert InvalidAddress();  // Check first 32 bytes are 0.
         if (uint96(bytes12(data[TO_ACCOUNT_START+32:TO_ACCOUNT_START_EVM])) != 0) revert InvalidAddress();  // Check the next 32-20=12 bytes are 0.
-        // To pool will not be checked. If it is assumed that any error is random, then an incorrect toPool will result in the call failling.
+        // To vault will not be checked. If it is assumed that any error is random, then an incorrect toVault will result in the call failling.
 
         bytes1 acknowledgement = 0x01; // Default status of a transaction is failed.
         if (context == CTX0_ASSET_SWAP) {
@@ -304,9 +304,9 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
 
             // CCI sets dataLength > 0 if calldata is passed.
             if (dataLength != 0) {
-                try ICatalystV1Pool(toPool).receiveAsset(
+                try ICatalystV1Vault(toVault).receiveAsset(
                     bytes32(packet.src.channelId),                                              // connectionId
-                    fromPool,                                                                   // fromPool
+                    fromVault,                                                                   // fromVault
                     uint8(data[CTX0_TO_ASSET_INDEX_POS]),                                       // toAssetIndex
                     address(uint160(bytes20(data[ TO_ACCOUNT_START_EVM : TO_ACCOUNT_END ]))),   // toAccount
                     uint256(bytes32(data[ UNITS_START : UNITS_END ])),                          // units
@@ -321,9 +321,9 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
                     if (keccak256(err) == OUT_OF_GAS) revert SubcallOutOfGas();
                 }
             } else {
-                try ICatalystV1Pool(toPool).receiveAsset(
+                try ICatalystV1Vault(toVault).receiveAsset(
                     bytes32(packet.src.channelId),                                              // connectionId
-                    fromPool,                                                                   // fromPool
+                    fromVault,                                                                   // fromVault
                     uint8(data[CTX0_TO_ASSET_INDEX_POS]),                                       // toAssetIndex
                     address(uint160(bytes20(data[ TO_ACCOUNT_START_EVM : TO_ACCOUNT_END ]))),   // toAccount
                     uint256(bytes32(data[ UNITS_START : UNITS_END ])),                          // units
@@ -343,12 +343,12 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
 
             // CCI sets dataLength > 0 if calldata is passed.
             if (dataLength != 0) {
-                try ICatalystV1Pool(toPool).receiveLiquidity(
+                try ICatalystV1Vault(toVault).receiveLiquidity(
                     bytes32(packet.src.channelId),                                              // connectionId
-                    fromPool,                                                                   // fromPool
+                    fromVault,                                                                   // fromVault
                     address(uint160(bytes20(data[ TO_ACCOUNT_START_EVM : TO_ACCOUNT_END ]))),   // toAccount
                     uint256(bytes32(data[ UNITS_START : UNITS_END ])),                          // units
-                    uint256(bytes32(data[ CTX1_MIN_POOL_TOKEN_START : CTX1_MIN_POOL_TOKEN_END ])), // minOut
+                    uint256(bytes32(data[ CTX1_MIN_VAULT_TOKEN_START : CTX1_MIN_VAULT_TOKEN_END ])), // minOut
                     uint256(bytes32(data[ CTX1_MIN_REFERENCE_START : CTX1_MIN_REFERENCE_END ])),// minOut
                     uint256(bytes32(data[ CTX1_FROM_AMOUNT_START : CTX1_FROM_AMOUNT_END ])),    // fromAmount
                     uint32(bytes4(data[ CTX1_BLOCK_NUMBER_START : CTX1_BLOCK_NUMBER_END ])),    // block number
@@ -359,12 +359,12 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
                     if (keccak256(err) == OUT_OF_GAS) revert SubcallOutOfGas();
                 }
             } else {
-                try ICatalystV1Pool(toPool).receiveLiquidity(
+                try ICatalystV1Vault(toVault).receiveLiquidity(
                     bytes32(packet.src.channelId),                                              // connectionId
-                    fromPool,                                                                   // fromPool
+                    fromVault,                                                                   // fromVault
                     address(uint160(bytes20(data[ TO_ACCOUNT_START_EVM : TO_ACCOUNT_END ]))),   // toAccount
                     uint256(bytes32(data[ UNITS_START : UNITS_END ])),                          // units
-                    uint256(bytes32(data[ CTX1_MIN_POOL_TOKEN_START : CTX1_MIN_POOL_TOKEN_END ])), // minOut
+                    uint256(bytes32(data[ CTX1_MIN_VAULT_TOKEN_START : CTX1_MIN_VAULT_TOKEN_END ])), // minOut
                     uint256(bytes32(data[ CTX1_MIN_REFERENCE_START : CTX1_MIN_REFERENCE_END ])),// minOut
                     uint256(bytes32(data[ CTX1_FROM_AMOUNT_START : CTX1_FROM_AMOUNT_END ])),    // fromAmount
                     uint32(bytes4(data[ CTX1_BLOCK_NUMBER_START : CTX1_BLOCK_NUMBER_END ]))     // blocknumber

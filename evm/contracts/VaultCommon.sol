@@ -7,30 +7,30 @@ import {SafeTransferLib} from 'solmate/src/utils/SafeTransferLib.sol';
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/utils/Multicall.sol";
-import "./SwapPoolFactory.sol";
+import "./CatalystVaultFactory.sol";
 import "./FixedPointMathLib.sol";
 import "./CatalystIBCInterface.sol";
 import "./interfaces/IOnCatalyst.sol";
-import "./ICatalystV1Pool.sol";
-import "./interfaces/ICatalystV1PoolErrors.sol";
+import "./ICatalystV1Vault.sol";
+import "./interfaces/ICatalystV1VaultErrors.sol";
 
 /**
- * @title Catalyst: Common Swap Pool Logic
+ * @title Catalyst: Common Swap Vault Logic
  * @author Catalyst Labs
- * @notice This abstract contract defines general logic of a Catalyst swap pool like:
- * - Pool Token
+ * @notice This abstract contract defines general logic of a Catalyst swap vault like:
+ * - Vault Token
  * - Connection management
  * - Security limit
  * - Escrow
  *
- * By inheriting this contract, a Swap Pool automatically implements common swap pool logic.
+ * By inheriting this contract, a Swap Vault automatically implements common swap vault logic.
  */
-abstract contract CatalystSwapPoolCommon is
+abstract contract CatalystVaultCommon is
     Initializable,
     Multicall,
     ReentrancyGuard,
     ERC20,
-    ICatalystV1Pool
+    ICatalystV1Vault
 {
     using SafeTransferLib for ERC20;
 
@@ -38,14 +38,14 @@ abstract contract CatalystSwapPoolCommon is
     // The following section contains the configurable variables.
 
     /// @notice Determines how fast the security limit decreases.
-    /// @dev Needs to be long enough for pool token providers to be notified of a breach but short enough for volatility to not soft-freeze the pool.
+    /// @dev Needs to be long enough for vault token providers to be notified of a breach but short enough for volatility to not soft-freeze the vault.
     uint256 constant DECAY_RATE = 1 days;
 
-    /// @notice Number of decimals used by the pool's pool tokens
+    /// @notice Number of decimals used by the vault's vault tokens
     uint8 constant DECIMALS = 18;
 
-    /// @notice The pool tokens initially minted to the user who set up the pool.
-    /// @dev The initial deposit along with this value determines the base value of a pool token.
+    /// @notice The vault tokens initially minted to the user who set up the vault.
+    /// @dev The initial deposit along with this value determines the base value of a vault token.
     uint256 constant INITIAL_MINT_AMOUNT = 1e18;  // 10**decimals
 
     /// @notice Maximum number of assets supported
@@ -58,42 +58,42 @@ abstract contract CatalystSwapPoolCommon is
     address public immutable FACTORY;
     address public _chainInterface;
 
-    // @notice The pools with which cross chain swaps are allowed, stored as _poolConnection[connectionId][toPool]
-    mapping(bytes32 => mapping(bytes => bool)) public _poolConnection;
+    // @notice The vaults with which cross chain swaps are allowed, stored as _vaultConnection[connectionId][toVault]
+    mapping(bytes32 => mapping(bytes => bool)) public _vaultConnection;
 
-    /// @notice To indicate which token is desired on the target pool,
+    /// @notice To indicate which token is desired on the target vault,
     /// the desired tokens are provided as an integer which maps to the
     /// asset address. This variable is the map.
     mapping(uint256 => address) public _tokenIndexing;
 
-    /// @notice The token weights. Used for maintaining a non-symmetric pool balance.
+    /// @notice The token weights. Used for maintaining a non-symmetric vault balance.
     mapping(address => uint256) public _weight;
 
     //-- Parameter change variables --//
     uint256 public _adjustmentTarget;
     uint256 public _lastModificationTime;
 
-    //-- Pool fee variables --//
-    /// @notice The total pool fee. Multiplied by 10**18. 
-    /// @dev Implementation of fee: FixedPointMathLib.mulWadDown(amount, _poolFee);
-    uint256 public _poolFee;
-    /// @notice The governance's cut of _poolFee. 
-    /// @dev FixedPointMathLib.mulWadDown(FixedPointMathLib.mulWadDown(amount, _poolFee), _governanceFeeShare);
+    //-- Vault fee variables --//
+    /// @notice The total vault fee. Multiplied by 10**18. 
+    /// @dev Implementation of fee: FixedPointMathLib.mulWadDown(amount, _vaultFee);
+    uint256 public _vaultFee;
+    /// @notice The governance's cut of _vaultFee. 
+    /// @dev FixedPointMathLib.mulWadDown(FixedPointMathLib.mulWadDown(amount, _vaultFee), _governanceFeeShare);
     uint256 public _governanceFeeShare;
-    /// @notice The fee pool fee can be changed. _feeAdministrator is the address allowed to change it
+    /// @notice The fee vault fee can be changed. _feeAdministrator is the address allowed to change it
     address public _feeAdministrator; 
 
-    /// @notice The setupMaster is the short-term owner of the pool.
-    /// They can connect the pool to pools on other chains.
-    /// @dev !Can extract all of the pool value!
+    /// @notice The setupMaster is the short-term owner of the vault.
+    /// They can connect the vault to vaults on other chains.
+    /// @dev !Can extract all of the vault value!
     address public _setupMaster;
 
     //--- Messaging router limit ---//
     // The router is not completely trusted. Some limits are
     // imposed on the DECAY_RATE-ly unidirectional liquidity flow. That is:
-    // if the pool observes more than _maxUnitCapacity of incoming
+    // if the vault observes more than _maxUnitCapacity of incoming
     // units, then it will not accept further incoming units. This means the router
-    // can only drain a prefigured percentage of the pool every DECAY_RATE
+    // can only drain a prefigured percentage of the vault every DECAY_RATE
 
     // Outgoing flow is subtracted from incoming flow until 0.
 
@@ -110,25 +110,25 @@ abstract contract CatalystSwapPoolCommon is
     /// @notice Specific escrow information
     mapping(bytes32 => address) public _escrowedTokensFor;
 
-    /// @notice Total current escrowed pool tokens
-    uint256 public _escrowedPoolTokens;
+    /// @notice Total current escrowed vault tokens
+    uint256 public _escrowedVaultTokens;
     /// @notice Specific escrow information (Liquidity)
-    mapping(bytes32 => address) public _escrowedPoolTokensFor;
+    mapping(bytes32 => address) public _escrowedVaultTokensFor;
 
-    constructor(address factory_) ERC20("Catalyst Pool Template", "", DECIMALS) {
+    constructor(address factory_) ERC20("Catalyst Vault Template", "", DECIMALS) {
         FACTORY = factory_;
 
         _disableInitializers();
     }
 
     function factoryOwner() public view override returns (address) {
-        return CatalystSwapPoolFactory(FACTORY).owner();
+        return CatalystVaultFactory(FACTORY).owner();
     }
 
     /**
-     * @notice Only allow Governance to change pool parameters
+     * @notice Only allow Governance to change vault parameters
      * @dev Because of dangerous permissions (setConnection, weight changes, amplification changes):
-     * !CatalystSwapPoolFactory(_factory).owner() must be set to a timelock! 
+     * !CatalystVaultFactory(_factory).owner() must be set to a timelock! 
      */ 
     modifier onlyFactoryOwner() {
         require(msg.sender == factoryOwner());   // dev: Only factory owner
@@ -139,27 +139,27 @@ abstract contract CatalystSwapPoolCommon is
         return _chainInterface == address(0);
     }
 
-    /** @notice Setup a pool. */
+    /** @notice Setup a vault. */
     function setup(
         string calldata name_,
         string calldata symbol_,
         address chainInterface,
-        uint256 poolFee,
+        uint256 vaultFee,
         uint256 governanceFee,
         address feeAdministrator,
         address setupMaster
     ) initializer external override {
-        // The pool is designed to be used by a proxy and not as a standalone pool.
+        // The vault is designed to be used by a proxy and not as a standalone vault.
         // initializer lets this function only be called once.
 
         _chainInterface = chainInterface;
         _setupMaster = setupMaster;
 
-        _setPoolFee(poolFee);
+        _setVaultFee(vaultFee);
         _setGovernanceFee(governanceFee);
         _setFeeAdministrator(feeAdministrator);
 
-        // Names the ERC20 pool token //
+        // Names the ERC20 vault token //
         name = name_;
         symbol = symbol_;
         // END ERC20 //
@@ -187,7 +187,7 @@ abstract contract CatalystSwapPoolCommon is
         // return maximum. We do not want (MUC - (UC - unitCapacityReleased) > MUC)
         if (UC <= unitCapacityReleased) return MUC;
 
-        // Amplified pools can have MUC <= UC since MUC is modified when swapping.
+        // Amplified vaults can have MUC <= UC since MUC is modified when swapping.
         unchecked {
             // we know that UC > unitCapacityReleased
             if (MUC <= UC - unitCapacityReleased) return 0; 
@@ -202,7 +202,7 @@ abstract contract CatalystSwapPoolCommon is
     }
 
     /**
-     * @notice Checks if the pool supports an inflow of units and decreases
+     * @notice Checks if the vault supports an inflow of units and decreases
      * unit capacity by the inflow.
      * @dev Implement a lot of similar logic to getUnitCapacity. 
      * @param units The number of units to check and set.
@@ -245,20 +245,20 @@ abstract contract CatalystSwapPoolCommon is
     }
 
 
-    /// @notice Sets a new fee fee administrator who can configure pool fees.
+    /// @notice Sets a new fee fee administrator who can configure vault fees.
     function _setFeeAdministrator(address administrator) internal {
         _feeAdministrator = administrator;
         emit SetFeeAdministrator(administrator);
     }
 
-    /// @notice Sets a new pool fee, taken from input amount.
-    function _setPoolFee(uint256 fee) internal {
-        require(fee <= 1e18);  // dev: PoolFee is maximum 100%.
-        _poolFee = fee;
-        emit SetPoolFee(fee);
+    /// @notice Sets a new vault fee, taken from input amount.
+    function _setVaultFee(uint256 fee) internal {
+        require(fee <= 1e18);  // dev: VaultFee is maximum 100%.
+        _vaultFee = fee;
+        emit SetVaultFee(fee);
     }
 
-    /// @notice Sets a new governance fee. Taken out of the pool fee.
+    /// @notice Sets a new governance fee. Taken out of the vault fee.
     function _setGovernanceFee(uint256 fee) internal {
         require(fee <= MAX_GOVERNANCE_FEE_SHARE);  // dev: Maximum GovernanceFeeSare exceeded.
         _governanceFeeShare = fee;
@@ -271,10 +271,10 @@ abstract contract CatalystSwapPoolCommon is
         _setFeeAdministrator(administrator);
     }
 
-    /// @notice Allows the factory owner to modify the pool fee
-    function setPoolFee(uint256 fee) public override {
+    /// @notice Allows the factory owner to modify the vault fee
+    function setVaultFee(uint256 fee) public override {
         require(msg.sender == _feeAdministrator); // dev: Only feeAdministrator can set new fee
-        _setPoolFee(fee);
+        _setVaultFee(fee);
     }
 
     /// @notice Allows the factory owner to modify the governance fee
@@ -285,43 +285,43 @@ abstract contract CatalystSwapPoolCommon is
 
 
     /**
-     * @dev Collect the governance fee share of the specified pool fee
+     * @dev Collect the governance fee share of the specified vault fee
      */
-    function _collectGovernanceFee(address asset, uint256 poolFeeAmount) internal {
+    function _collectGovernanceFee(address asset, uint256 vaultFeeAmount) internal {
 
         uint256 governanceFeeShare = _governanceFeeShare;
 
         if (governanceFeeShare != 0) {
-            uint256 governanceFeeAmount = FixedPointMathLib.mulWadDown(poolFeeAmount, governanceFeeShare);
+            uint256 governanceFeeAmount = FixedPointMathLib.mulWadDown(vaultFeeAmount, governanceFeeShare);
             ERC20(asset).safeTransfer(factoryOwner(), governanceFeeAmount);
         }
     }
 
     /**
-     * @notice Creates a connection to toPool on the channel_channelId.
+     * @notice Creates a connection to toVault on the channel_channelId.
      * @dev Encoding addresses in bytes32 for EVM can be done be computed with:
-     * Vyper: convert(<poolAddress>, bytes32)
-     * Solidity: abi.encode(<poolAddress>)
-     * Brownie: brownie.convert.to_bytes(<poolAddress>, type_str="bytes32")
+     * Vyper: convert(<vaultAddress>, bytes32)
+     * Solidity: abi.encode(<vaultAddress>)
+     * Brownie: brownie.convert.to_bytes(<vaultAddress>, type_str="bytes32")
      * @param channelId Target chain identifier.
-     * @param toPool Bytes32 representation of the target pool.
+     * @param toVault Bytes32 representation of the target vault.
      * @param state Boolean indicating if the connection should be open or closed.
      */
     function setConnection(
         bytes32 channelId,
-        bytes calldata toPool,
+        bytes calldata toVault,
         bool state
     ) external override {
         require((msg.sender == _setupMaster) || (msg.sender == factoryOwner())); // dev: No auth
-        require(toPool.length == 65);  // dev: Pool addresses are uint8 + 64 bytes.
+        require(toVault.length == 65);  // dev: Vault addresses are uint8 + 64 bytes.
 
-        _poolConnection[channelId][toPool] = state;
+        _vaultConnection[channelId][toVault] = state;
 
-        emit SetConnection(channelId, toPool, state);
+        emit SetConnection(channelId, toVault, state);
     }
 
     /**
-     * @notice Gives up short-term ownership of the pool making the pool unstoppable.
+     * @notice Gives up short-term ownership of the vault making the vault unstoppable.
      */
     function finishSetup() external override {
         require(msg.sender == _setupMaster); // dev: No auth
@@ -332,7 +332,7 @@ abstract contract CatalystSwapPoolCommon is
     }
 
     /**
-     * @notice View function to signal if a pool is safe to use.
+     * @notice View function to signal if a vault is safe to use.
      * @dev Checks if the setup master has been set to ZERO_ADDRESS.
      * In other words, has finishSetup been called?
      */
@@ -366,20 +366,20 @@ abstract contract CatalystSwapPoolCommon is
         uint256 escrowAmount
     ) internal returns(address) {
 
-        address fallbackUser = _escrowedPoolTokensFor[sendLiquidityHash];  // Passing in an invalid swapHash returns address(0)
+        address fallbackUser = _escrowedVaultTokensFor[sendLiquidityHash];  // Passing in an invalid swapHash returns address(0)
         require(fallbackUser != address(0));  // dev: Invalid swapHash. Alt: Escrow doesn't exist.
-        delete _escrowedPoolTokensFor[sendLiquidityHash];  // Stops timeout and further acks from being called
+        delete _escrowedVaultTokensFor[sendLiquidityHash];  // Stops timeout and further acks from being called
 
         unchecked {
-            // escrowAmount \subseteq _escrowedPoolTokens => escrowAmount <= _escrowedPoolTokens. Cannot be called twice since the 3 lines before ensure this can only be reached once.
-            _escrowedPoolTokens -= escrowAmount;
+            // escrowAmount \subseteq _escrowedVaultTokens => escrowAmount <= _escrowedVaultTokens. Cannot be called twice since the 3 lines before ensure this can only be reached once.
+            _escrowedVaultTokens -= escrowAmount;
         }
         
         return fallbackUser;
     }
 
     /** 
-     * @notice Implements basic ack logic: Deletes and releases tokens to the pool
+     * @notice Implements basic ack logic: Deletes and releases tokens to the vault
      * @dev Should never revert! For security limit adjustments, the implementation should be overwritten.
      * @param toAccount The recipient of the transaction on the target chain. Encoded in bytes32.
      * @param U The number of units initially purchased.
@@ -455,11 +455,11 @@ abstract contract CatalystSwapPoolCommon is
     }
 
     /** 
-     * @notice Implements basic liquidity ack logic: Deletes and releases pool tokens to the pool.
+     * @notice Implements basic liquidity ack logic: Deletes and releases vault tokens to the vault.
      * @dev Should never revert! For security limit adjustments, the implementation should be overwritten.
      * @param toAccount The recipient of the transaction on the target chain. Encoded in bytes32.
      * @param U The number of units initially acquired.
-     * @param escrowAmount The number of pool tokens escrowed.
+     * @param escrowAmount The number of vault tokens escrowed.
      * @param blockNumberMod The block number at which the swap transaction was commited (mod 32)
      */
     function onSendLiquiditySuccess(
@@ -488,11 +488,11 @@ abstract contract CatalystSwapPoolCommon is
     }
 
     /** 
-     * @notice Implements basic liquidity timeout logic: Deletes and sends pool tokens to the user.
+     * @notice Implements basic liquidity timeout logic: Deletes and sends vault tokens to the user.
      * @dev Should never revert!
      * @param toAccount The recipient of the transaction on the target chain. Encoded in bytes32.
      * @param U The number of units initially acquired.
-     * @param escrowAmount The number of pool tokens escrowed.
+     * @param escrowAmount The number of vault tokens escrowed.
      * @param blockNumberMod The block number at which the swap transaction was commited (mod 32)
      */
     function onSendLiquidityFailure(

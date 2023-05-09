@@ -22,7 +22,7 @@ Let $P_i(w)$ be a decreasing, non-negative marginal price function for a token $
 
 $$U = \int_{i_t}^{i_t + \Delta i} P_i(w) \ dw$$
 
-Where $i_t$ is the current balance in the pool, $\Delta i$ is the change in balance caused by the user and $U$ is Units: A measure of the value change by the user. The equation can be used both ways, where a positive change implies a "swap in" and a negative change implies a "swap out". It is implies that when assets are swapped out, $U$ the sign is flipped from positive to negative. 
+Where $i_t$ is the current balance in the vault, $\Delta i$ is the change in balance caused by the user and $U$ is Units: A measure of the value change by the user. The equation can be used both ways, where a positive change implies a "swap in" and a negative change implies a "swap out". It is implies that when assets are swapped out, $U$ the sign is flipped from positive to negative. 
 
 This implies that the full swap from a token $i$ to another token $j$ can be computed as:
 
@@ -40,15 +40,15 @@ Amplification: $P^\theta(w)= \frac{W_i}{(W_i \cdot w)^\theta} \cdot (1-\theta)$
 
 ## AMM Terms
 
-**Marginal Price**: If someone were to buy/sell an infinitesimal in the pool. the marginal price is the price they would pay. The marginal price can generally be derived in 3 ways: $\lim_{x_\alpha \to 0} y_\beta/x_\alpha$, $\frac{\mathrm{d}}{\mathrm{d}i_\alpha} solve(Invariant, i_\beta)$, or $\frac{P_\alpha(w)}{P_\beta(w)}$.
+**Marginal Price**: If someone were to buy/sell an infinitesimal in the vault. the marginal price is the price they would pay. The marginal price can generally be derived in 3 ways: $\lim_{x_\alpha \to 0} y_\beta/x_\alpha$, $\frac{\mathrm{d}}{\mathrm{d}i_\alpha} solve(Invariant, i_\beta)$, or $\frac{P_\alpha(w)}{P_\beta(w)}$.
 
-**sendAsset**: The first swap of a Catalyst swap. It is independent of the state of the second leg of the transaction. Within a pool $U$ can be used to transparently purchase any token via *receiveAsset*. 
+**sendAsset**: The first swap of a Catalyst swap. It is independent of the state of the second leg of the transaction. Within a vault $U$ can be used to transparently purchase any token via *receiveAsset*. 
 
 **receiveAsset**: The last (and second) leg of a Catalyst swap. It is completely independent of the state of the first leg of the transaction. It requires $U$ which can be acquired by selling any token in the group. 
 
 **LocalSwap**: A combination of *sendAsset* and *receiveAsset* executed atomically, often on a single chain.
 
-**Invariant**: A measure used to measure the pool value. Specific to the *invariant* measure, is that it is constant whenever a swap is completed. If a pool implements a swap fee, the measure increases as fees accumulate in the pool. The invariant is not invariant to deposits or withdrawals.
+**Invariant**: A measure used to measure the vault value. Specific to the *invariant* measure, is that it is constant whenever a swap is completed. If a vault implements a swap fee, the measure increases as fees accumulate in the vault. The invariant is not invariant to deposits or withdrawals.
 
 ## The AMM Equations
 

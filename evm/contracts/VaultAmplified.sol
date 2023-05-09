@@ -7,80 +7,80 @@ import {SafeTransferLib} from 'solmate/src/utils/SafeTransferLib.sol';
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "./FixedPointMathLib.sol";
 import "./CatalystIBCInterface.sol";
-import "./SwapPoolCommon.sol";
-import "./ICatalystV1Pool.sol";
+import "./VaultCommon.sol";
+import "./ICatalystV1Vault.sol";
 
 /**
- * @title Catalyst: The Multi-Chain Swap pool
+ * @title Catalyst: The Multi-Chain Swap vault
  * @author Catalyst Labs
- * @notice Catalyst multi-chain swap pool using the asset specific
+ * @notice Catalyst multi-chain swap vault using the asset specific
  * pricing curve: 1/w^\theta (1 - \theta) where \theta is 
- * the group amplification and w is the pool balance.
+ * the group amplification and w is the vault balance.
  *
  * The following contract supports between 1 and 3 assets for
  * atomic swaps. To increase the number of tokens supported,
  * change MAX_ASSETS to the desired maximum token amount.
- * This constant is set in "SwapPoolCommon.sol"
+ * This constant is set in "SwapVaultCommon.sol"
  *
- * The swappool implements the ERC20 specification, such that the
- * contract will be its own pool token.
+ * The swapvault implements the ERC20 specification, such that the
+ * contract will be its own vault token.
  * @dev This contract is deployed inactive: It cannot be used as a
- * swap pool as is. To use it, a proxy contract duplicating the
+ * swap vault as is. To use it, a proxy contract duplicating the
  * logic of this contract needs to be deployed. In Vyper, this
  * can be done through (vy >=0.3.4) create_minimal_proxy_to.
  * In Solidity, this can be done through OZ clones: Clones.clone(...)
  * After deployment of the proxy, call setup(...). This will
- * initialize the pool and prepare it for cross-chain transactions.
+ * initialize the vault and prepare it for cross-chain transactions.
  *
  * If connected to a supported cross-chain interface, call
- * setConnection to connect the pool with pools on other chains.
+ * setConnection to connect the vault with vaults on other chains.
  *
  * Finally, call finishSetup to give up the deployer's control
- * over the pool. 
- * !If finishSetup is not called, the pool can be drained!
+ * over the vault. 
+ * !If finishSetup is not called, the vault can be drained!
  */
-contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
+contract CatalystVaultAmplified is CatalystVaultCommon {
     using SafeTransferLib for ERC20;
 
     //--- ERRORS ---//
-    // Errors are defined in interfaces/ICatalystV1PoolErrors.sol
+    // Errors are defined in interfaces/ICatalystV1VaultErrors.sol
 
 
     //--- Config ---//
     // Minimum time parameter adjustments can be made over.
     uint256 constant MIN_ADJUSTMENT_TIME = 7 days;
-    // When the swap is a very small size of the pool, the swaps
+    // When the swap is a very small size of the vault, the swaps
     // returns slightly more. To counteract this, an additional fee
     // slightly larger than the error is added. The below constants
     // determines when this fee is added and the size.
     uint256 constant SMALL_SWAP_RATIO = 1e12;
     uint256 constant SMALL_SWAP_RETURN = 95e16;
 
-    // For other config options, see SwapPoolCommon.sol
+    // For other config options, see SwapVaultCommon.sol
 
     //-- Variables --//
     int256 public _oneMinusAmp;
     int256 public _targetAmplification;
 
-    // To keep track of group ownership, the pool needs to keep track of
-    // the local unit balance. That is, do other pools own or owe assets to this pool?
+    // To keep track of group ownership, the vault needs to keep track of
+    // the local unit balance. That is, do other vaults own or owe assets to this vault?
     int256 public _unitTracker;
 
-    constructor(address factory_) CatalystSwapPoolCommon(factory_) {}
+    constructor(address factory_) CatalystVaultCommon(factory_) {}
 
     /**
-     * @notice Configures an empty pool.
-     * @dev If less than MAX_ASSETS are used to initiate the pool
+     * @notice Configures an empty vault.
+     * @dev If less than MAX_ASSETS are used to initiate the vault
      * let the remaining <assets> be ZERO_ADDRESS / address(0)
      *
      * Unused weights can be whatever. (0 is recommended.)
      *
-     * The initial token amounts should have been sent to the pool before setup is called.
+     * The initial token amounts should have been sent to the vault before setup is called.
      * Since someone can call setup can claim the initial tokens, this needs to be
      * done atomically!
      *
      * If 0 of a token in assets is provided, the setup reverts.
-     * @param assets A list of the token addresses associated with the pool
+     * @param assets A list of the token addresses associated with the vault
      * @param weights Amplified weights brings the price into a true 1:1 swap. That is:
      * i_t \cdot W_i = j_t \cdot W_j \forall i, j when P_i(i_t) = P_j(j_t).
      * in other words, weights are used to compensate for the difference in decimals. (or non 1:1 swaps.)
@@ -99,8 +99,8 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
         require(amp < FixedPointMathLib.WAD);  // dev: amplification not set correctly.
         // Note there is no need to check whether assets.length/weights.length are valid, as invalid arguments
         // will either cause the function to fail (e.g. if assets.length > MAX_ASSETS the assignment
-        // to initialBalances[it] will fail) or will cause the pool to get initialized with an undesired state
-        // (and the pool shouldn't be used by anyone until its configuration has been finalised). 
+        // to initialBalances[it] will fail) or will cause the vault to get initialized with an undesired state
+        // (and the vault shouldn't be used by anyone until its configuration has been finalised). 
         // In any case, the factory does check for valid assets/weights arguments to prevent erroneous configurations. 
         
         unchecked {
@@ -121,7 +121,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
             _weight[tokenAddress] = weight;
 
             // The contract expects the tokens to have been sent to it before setup is
-            // called. Make sure the pool has more than 0 tokens.
+            // called. Make sure the vault has more than 0 tokens.
             // Reverts if tokenAddress is address(0).
             uint256 balanceOfSelf = ERC20(tokenAddress).balanceOf(address(this));
             require(balanceOfSelf != 0); // dev: 0 tokens provided in setup.
@@ -138,7 +138,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
         // is evaluated after balance changes, the limit in storage should be the current balance.
         _maxUnitCapacity = maxUnitCapacity;
 
-        // Mint pool tokens for pool creator.
+        // Mint vault tokens for vault creator.
         _mint(depositor, INITIAL_MINT_AMOUNT);
 
         emit Deposit(depositor, INITIAL_MINT_AMOUNT, initialBalances);
@@ -155,7 +155,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
     }
 
     /**
-     * @notice Re-computes the security limit incase funds have been sents to the pool
+     * @notice Re-computes the security limit incase funds have been sents to the vault
      */
     function updateMaxUnitCapacity() external {
         uint256 maxUnitCapacity;
@@ -173,7 +173,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
     }
 
     /**
-     * @notice Allows Governance to modify the pool weights to optimise liquidity.
+     * @notice Allows Governance to modify the vault weights to optimise liquidity.
      * @dev targetTime needs to be more than MIN_ADJUSTMENT_TIME in the future.
      * @param targetTime Once reached, _weight[...] = newWeights[...]
      * @param targetAmplification The new weights to apply
@@ -191,8 +191,8 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
         // 0 if it is initialized to any other value (note how 'targetAmplification*2 >= currentAmplification' is used
         // instead of 'targetAmplification >= currentAmplification/2').
         require(targetAmplification <= currentAmplification*2 && targetAmplification*2 >= currentAmplification); // dev: targetAmplification must be maximum a factor of 2 larger/smaller than the current amplification to protect liquidity providers.
-        // Because of the balance0 (_unitTracker) implementation, amplification adjustment has to be disabled for cross-chain pools.
-        require(_chainInterface == address(0));  // dev: Amplification adjustment is disabled for cross-chain pools.
+        // Because of the balance0 (_unitTracker) implementation, amplification adjustment has to be disabled for cross-chain vaults.
+        require(_chainInterface == address(0));  // dev: Amplification adjustment is disabled for cross-chain vaults.
 
         // Store adjustment information
         _adjustmentTarget = targetTime;
@@ -206,7 +206,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
 
     /**
      * @notice If the governance requests an amplification change,
-     * this function will adjust the pool weights.
+     * this function will adjust the vault weights.
      * @dev Called first thing on every function depending on amplification.
      */
     function _updateAmplification() internal {
@@ -273,7 +273,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
      * @dev All input amounts should be the raw numbers and not WAD.
      * Since units are always denominated in WAD, the function should be treated as mathematically *native*.
      * @param input The input amount.
-     * @param A The current pool balance of the x token.
+     * @param A The current vault balance of the x token.
      * @param W The weight of the x token.
      * @param oneMinusAmp The amplification.
      * @return uint256 Group-specific units (units are **always** WAD).
@@ -291,7 +291,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
             oneMinusAmp
         );
 
-        // If the pool contains 0 assets, the below computation will fail. This is bad.
+        // If the vault contains 0 assets, the below computation will fail. This is bad.
         // Instead, check if A is 0. If it is then skip because:: (W · A)^(1-k) = (W · 0)^(1-k) = 0
         if (A != 0) {
             unchecked {
@@ -317,7 +317,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
      * Since units are always multiplied by WAD, the function
      * should be treated as mathematically *native*.
      * @param U Incoming group-specific units.
-     * @param B The current pool balance of the y token.
+     * @param B The current vault balance of the y token.
      * @param W The weight of the y token.
      * @return uint25 Output denominated in output token. (not WAD)
      */
@@ -359,10 +359,10 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
      * _calcPriceCurveLimit(_calcPriceCurveArea(input, A, W_A, amp), B, W_B, amp).
      * @dev All input amounts should be the raw numbers and not WAD.
      * @param input The input amount.
-     * @param A The current pool balance of the _in token.
-     * @param B The current pool balance of the _out token.
-     * @param W_A The pool weight of the _in token.
-     * @param W_B The pool weight of the _out token.
+     * @param A The current vault balance of the _in token.
+     * @param B The current vault balance of the _out token.
+     * @param W_A The vault weight of the _in token.
+     * @param W_B The vault weight of the _out token.
      * @param oneMinusAmp The amplification.
      * @return uint256 Output denominated in output token.
      */
@@ -396,17 +396,17 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
 
 
     /**
-     * @notice Converts units into pool tokens with the below formula
+     * @notice Converts units into vault tokens with the below formula
      *      pt = PT · (((N · wa_0^(1-k) + U)/(N · wa_0^(1-k))^(1/(1-k)) - 1)
      * @dev The function leaves a lot of computation to the external implementation. This is done to avoid recomputing values several times.
-     * @param U Then number of units to convert into pool tokens.
-     * @param ts The current pool token supply. The escrowed pool tokens should not be added, since the function then returns more.
+     * @param U Then number of units to convert into vault tokens.
+     * @param ts The current vault token supply. The escrowed vault tokens should not be added, since the function then returns more.
      * @param it_times_walpha_amped wa_0^(1-k)
-     * @param oneMinusAmpInverse The pool amplification.
-     * @return uint256 Output denominated in pool tokens.
+     * @param oneMinusAmpInverse The vault amplification.
+     * @return uint256 Output denominated in vault tokens.
      */
     function _calcPriceCurveLimitShare(uint256 U, uint256 ts, uint256 it_times_walpha_amped, int256 oneMinusAmpInverse) internal pure returns (uint256) {
-        uint256 poolTokens = FixedPointMathLib.mulWadDown(
+        uint256 vaultTokens = FixedPointMathLib.mulWadDown(
             ts,
             uint256(  // Always casts a positive value, as powWad >= 1, hence powWad - WAD >= 0
                 FixedPointMathLib.powWad(  // poWad always >= 1, as the 'base' is always >= 1
@@ -419,13 +419,13 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
             )
         );
 
-        return poolTokens;
+        return vaultTokens;
     }
 
     /**
      * @notice Computes the return of SendAsset.
-     * @dev Reverts if 'fromAsset' is not a token in the pool or if the input 
-     * 'amount' and the pool asset balance are both 0.
+     * @dev Reverts if 'fromAsset' is not a token in the vault or if the input 
+     * 'amount' and the vault asset balance are both 0.
      * @param fromAsset The address of the token to sell.
      * @param amount The amount of from token to sell.
      * @return uint256 Group-specific units.
@@ -439,12 +439,12 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
         uint256 W = _weight[fromAsset];
 
 
-        // If 'fromAsset' is not part of the pool (i.e. W is 0) or if 'amount' and 
-        // the pool asset balance (i.e. 'A') are both 0 this will revert, since 0**p is 
+        // If 'fromAsset' is not part of the vault (i.e. W is 0) or if 'amount' and 
+        // the vault asset balance (i.e. 'A') are both 0 this will revert, since 0**p is 
         // implemented as exp(ln(0) * p) and ln(0) is undefined.
         uint256 U = _calcPriceCurveArea(amount, A, W, _oneMinusAmp);
 
-        // If the swap is a very small portion of the pool
+        // If the swap is a very small portion of the vault
         // Add an additional fee. This covers mathematical errors.
         unchecked { //SMALL_SWAP_RATIO is not zero, and if U * SMALL_SWAP_RETURN overflows, less is returned to the user
             if (A/SMALL_SWAP_RATIO >= amount) return U * SMALL_SWAP_RETURN / FixedPointMathLib.WAD;
@@ -455,7 +455,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
 
     /**
      * @notice Computes the output of ReceiveAsset.
-     * @dev Reverts if to is not a token in the pool
+     * @dev Reverts if to is not a token in the vault
      * @param toAsset The address of the token to buy.
      * @param U The number of units used to buy to.
      * @return uint256 Number of purchased tokens.
@@ -468,8 +468,8 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
         uint256 B = ERC20(toAsset).balanceOf(address(this)) - _escrowedTokens[toAsset];
         uint256 W = _weight[toAsset];
 
-        // If someone were to purchase a token which is not part of the pool on setup
-        // they would just add value to the pool. We don't care about it.
+        // If someone were to purchase a token which is not part of the vault on setup
+        // they would just add value to the vault. We don't care about it.
         // However, it will revert since the solved integral contains U/W and when
         // W = 0 then U/W returns division by 0 error.
         return _calcPriceCurveLimit(U, B, W, _oneMinusAmp);
@@ -477,8 +477,8 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
 
     /**
      * @notice Computes the output of localSwap.
-     * @dev Implemented through _calcCombinedPriceCurves. Reverts if either from or to is not in the pool,
-     * or if the pool 'fromAsset' balance and 'amount' are both 0.
+     * @dev Implemented through _calcCombinedPriceCurves. Reverts if either from or to is not in the vault,
+     * or if the vault 'fromAsset' balance and 'amount' are both 0.
      * @param fromAsset The address of the token to sell.
      * @param toAsset The address of the token to buy.
      * @param amount The amount of from token to sell for to token.
@@ -497,7 +497,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
 
         uint256 output = _calcCombinedPriceCurves(amount, A, B, W_A, W_B, oneMinusAmp);
 
-        // If the swap is a very small portion of the pool
+        // If the swap is a very small portion of the vault
         // Add an additional fee. This covers mathematical errors.
         unchecked { //SMALL_SWAP_RATIO is not zero, and if output * SMALL_SWAP_RETURN overflows, less is returned to the user
             if (A/SMALL_SWAP_RATIO >= amount) return output * SMALL_SWAP_RETURN / FixedPointMathLib.WAD;
@@ -508,10 +508,10 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
 
     /**
      * @notice Deposits a  user-configurable amount of tokens.
-     * @dev Requires approvals for all tokens within the pool.
-     * It is advised that the deposit matches the pool's %token distribution.
+     * @dev Requires approvals for all tokens within the vault.
+     * It is advised that the deposit matches the vault's %token distribution.
      * @param tokenAmounts An array of the tokens amounts to be deposited.
-     * @param minOut The minimum number of pool tokens to be minted.
+     * @param minOut The minimum number of vault tokens to be minted.
      */
     function depositMixed(
         uint256[] calldata tokenAmounts,
@@ -529,7 +529,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
         uint256 it;
         
         // Compute walpha_0 to find the reference balances. This lets us evaluate the
-        // number of tokens the pool should have If the price in the group is 1:1.
+        // number of tokens the vault should have If the price in the group is 1:1.
         // walpha_0 is computed several times in this contract:
         // - DepositMixed
         // - WithdrawMixed
@@ -634,7 +634,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
         require(intU >= 0); // dev: U needs to be positive, otherwise, the uint256 casting becomes too larger.
         unchecked {
             // U (i.e. intU) is generally small, so the below equation should not overflow.
-            // If it does, it has to be (uint256(intU) * (FixedPointMathLib.WAD - _poolFee)) that overflows.
+            // If it does, it has to be (uint256(intU) * (FixedPointMathLib.WAD - _vaultFee)) that overflows.
             // In which case, something close to 0 will be returned. When divided by FixedPointMathLib.WAD
             // it will return 0.
             // The casting to int256 is then 0.
@@ -642,7 +642,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
             // If the overflow doesn't happen inside uint256(...), 'intU' will be smaller because of the division by FixedPointMathLib.WAD. Thus the int256 casting will now overflow.
             intU = int256(
                 // intU shouldn't be negative but the above check ensures it is ALWAYS positive.
-                (uint256(intU) * (FixedPointMathLib.WAD - _poolFee))/FixedPointMathLib.WAD
+                (uint256(intU) * (FixedPointMathLib.WAD - _vaultFee))/FixedPointMathLib.WAD
             );
         }
 
@@ -652,37 +652,37 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
 
         // On totalSupply. Do not add escrow amount, as higher amount
         // results in a larger return.
-        uint256 poolTokens = _calcPriceCurveLimitShare(uint256(intU), totalSupply, it_times_walpha_amped, oneMinusAmpInverse);  // uint256: intU is positive by design.
+        uint256 vaultTokens = _calcPriceCurveLimitShare(uint256(intU), totalSupply, it_times_walpha_amped, oneMinusAmpInverse);  // uint256: intU is positive by design.
 
         // Check if the return satisfies the user.
-        if (minOut > poolTokens)
-            revert ReturnInsufficient(poolTokens, minOut);
+        if (minOut > vaultTokens)
+            revert ReturnInsufficient(vaultTokens, minOut);
 
-        // Mint the desired number of pool tokens to the user.
-        _mint(msg.sender, poolTokens);
+        // Mint the desired number of vault tokens to the user.
+        _mint(msg.sender, vaultTokens);
 
-        emit Deposit(msg.sender, poolTokens, tokenAmounts);
+        emit Deposit(msg.sender, vaultTokens, tokenAmounts);
 
-        return poolTokens;
+        return vaultTokens;
     }
 
     /**
-     * @notice Burns poolTokens and releases the symmetrical share of tokens to the burner. 
-     * This doesn't change the pool price.
+     * @notice Burns vaultTokens and releases the symmetrical share of tokens to the burner. 
+     * This doesn't change the vault price.
      * @dev This is the cheapest way to withdraw.
-     * @param poolTokens The number of pool tokens to burn.
+     * @param vaultTokens The number of vault tokens to burn.
      * @param minOut The minimum token output. If less is returned, the transaction reverts.
      * @return uint256[] memory An array containing the amounts withdrawn.
      */
     function withdrawAll(
-        uint256 poolTokens,
+        uint256 vaultTokens,
         uint256[] calldata minOut
     ) nonReentrant external override returns(uint256[] memory) {
         _updateAmplification();
-        // Burn the desired number of pool tokens to the user.
+        // Burn the desired number of vault tokens to the user.
         // If they don't have it, it saves gas.
-        // * Remember to add poolTokens when accessing totalSupply
-        _burn(msg.sender, poolTokens);
+        // * Remember to add vaultTokens when accessing totalSupply
+        _burn(msg.sender, vaultTokens);
 
         int256 oneMinusAmp = _oneMinusAmp;
 
@@ -692,7 +692,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
 
         uint256 walpha_0_ampped;
         // Compute walpha_0 to find the reference balances. This lets us evaluate the
-        // number of tokens the pool should have If the price in the group is 1:1.
+        // number of tokens the vault should have If the price in the group is 1:1.
 
         // This is a balance0 implementation. The for loop is used to cache tokenIndexed and effWeightAssetBalances.
         {
@@ -749,10 +749,10 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
             // since it doesn't depend on the token, it should only be computed once
             uint256 innerdiff;
             {
-                // Remember to add the number of pool tokens burned to totalSupply
-                // _escrowedPoolTokens is added, since it makes pt_fraction smaller
-                uint256 ts = (totalSupply + _escrowedPoolTokens + poolTokens);
-                uint256 pt_fraction = ((ts - poolTokens) * FixedPointMathLib.WAD) / ts;
+                // Remember to add the number of vault tokens burned to totalSupply
+                // _escrowedVaultTokens is added, since it makes pt_fraction smaller
+                uint256 ts = (totalSupply + _escrowedVaultTokens + vaultTokens);
+                uint256 pt_fraction = ((ts - vaultTokens) * FixedPointMathLib.WAD) / ts;
 
                 innerdiff = FixedPointMathLib.mulWadDown(
                     walpha_0_ampped, 
@@ -776,9 +776,9 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
                     int256(effWeightAssetBalances[it] * FixedPointMathLib.WAD),     // If casting overflows to a negative number, powWad fails
                     oneMinusAmp
                 ));
-                //! If the pool doesn't have enough assets for a withdrawal, then
-                //! withdraw all of the pools assets. This should be protected against by setting minOut != 0.
-                //! This happens because the pool expects assets to come back. (it is owed assets)
+                //! If the vault doesn't have enough assets for a withdrawal, then
+                //! withdraw all of the vaults assets. This should be protected against by setting minOut != 0.
+                //! This happens because the vault expects assets to come back. (it is owed assets)
                 //! We don't want to keep track of debt so we simply return less
                 uint256 weightedTokenAmount = effWeightAssetBalances[it];
                 //! The above happens if innerdiff >= ampWeightAssetBalance.
@@ -840,29 +840,29 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
         }
 
         // Emit the event
-        emit Withdraw(msg.sender, poolTokens, amounts);
+        emit Withdraw(msg.sender, vaultTokens, amounts);
 
         return amounts;
     }
 
     /**
-     * @notice Burns poolTokens and release a token distribution which can be set by the user.
-     * @dev It is advised that the withdrawal matches the pool's %token distribution.
-     * @param poolTokens The number of pool tokens to withdraw
+     * @notice Burns vaultTokens and release a token distribution which can be set by the user.
+     * @dev It is advised that the withdrawal matches the vault's %token distribution.
+     * @param vaultTokens The number of vault tokens to withdraw
      * @param withdrawRatio The percentage of units used to withdraw. In the following special scheme: U_a = U · withdrawRatio[0], U_b = (U - U_a) · withdrawRatio[1], U_c = (U - U_a - U_b) · withdrawRatio[2], .... Is WAD.
      * @param minOut The minimum number of tokens withdrawn.
      * @return uint256[] memory An array containing the amounts withdrawn
      */
     function withdrawMixed(
-        uint256 poolTokens,
+        uint256 vaultTokens,
         uint256[] calldata withdrawRatio,
         uint256[] calldata minOut
     ) nonReentrant external override returns(uint256[] memory) {
         _updateAmplification();
-        // Burn the desired number of pool tokens to the user.
+        // Burn the desired number of vault tokens to the user.
         // If they don't have it, it saves gas.
-        // * Remember to add poolTokens when accessing totalSupply
-        _burn(msg.sender, poolTokens);
+        // * Remember to add vaultTokens when accessing totalSupply
+        _burn(msg.sender, vaultTokens);
 
         int256 oneMinusAmp = _oneMinusAmp;
 
@@ -873,7 +873,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
 
         uint256 U = 0;
         // Compute walpha_0 to find the reference balances. This lets us evaluate the
-        // number of tokens the pool should have If the price in the group is 1:1.
+        // number of tokens the vault should have If the price in the group is 1:1.
         // unlike in withdrawAll, this value is only needed to compute U.
         {
             // As such, we don't need to remember the value beyond this section.
@@ -928,15 +928,15 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
                     walpha_0_ampped = uint256(weightedAssetBalanceSum - _unitTracker) / U;   // By design, weightedAssetBalanceSum > _unitTracker
                 }
 
-                // set U = number of tokens in the pool. But that is exactly what it is.
+                // set U = number of tokens in the vault. But that is exactly what it is.
             }
-            // Remember to add the number of pool tokens burned to totalSupply
-            uint256 ts = totalSupply + _escrowedPoolTokens + poolTokens;
-            // Since pool tokens are getting subtracted from the total supply, remember
-            // to add a negative sign to pool tokens.
-            uint256 pt_fraction = FixedPointMathLib.divWadDown(ts - poolTokens, ts);
+            // Remember to add the number of vault tokens burned to totalSupply
+            uint256 ts = totalSupply + _escrowedVaultTokens + vaultTokens;
+            // Since vault tokens are getting subtracted from the total supply, remember
+            // to add a negative sign to vault tokens.
+            uint256 pt_fraction = FixedPointMathLib.divWadDown(ts - vaultTokens, ts);
 
-            // Compute the unit worth of the pool tokens.
+            // Compute the unit worth of the vault tokens.
             // Recall that U is equal to N already. So we only need to multiply by the right side.
             // Since pt_fraction < 1, the units are negative. This is expected for swap to tokens. As such
             // FixedPointMathLib.WAD is moved in front to make U positive.
@@ -1005,13 +1005,13 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
         }
 
         // Emit the event
-        emit Withdraw(msg.sender, poolTokens, amounts);
+        emit Withdraw(msg.sender, vaultTokens, amounts);
 
         return amounts;
     }
 
     /**
-     * @notice A swap between 2 assets within the pool. Is atomic.
+     * @notice A swap between 2 assets within the vault. Is atomic.
      * @param fromAsset The asset the user wants to sell.
      * @param toAsset The asset the user wants to buy
      * @param amount The amount of fromAsset the user wants to sell
@@ -1025,7 +1025,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
         uint256 minOut
     ) nonReentrant external override returns (uint256) {
         _updateAmplification();
-        uint256 fee = FixedPointMathLib.mulWadDown(amount, _poolFee);
+        uint256 fee = FixedPointMathLib.mulWadDown(amount, _vaultFee);
 
         // Calculate the return value.
         uint256 out = calcLocalSwap(fromAsset, toAsset, amount - fee);
@@ -1040,8 +1040,8 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
         // Governance Fee
         _collectGovernanceFee(fromAsset, fee);
 
-        // For amplified pools, the security limit is based on the sum of the tokens
-        // in the pool.
+        // For amplified vaults, the security limit is based on the sum of the tokens
+        // in the vault.
         uint256 weightedAmount = amount * _weight[fromAsset];
         uint256 weightedOut = out * _weight[toAsset];
         // The if statement ensures the independent calculations never under or overflow.
@@ -1057,22 +1057,22 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
     }
 
     /**
-     * @notice Initiate a cross-chain swap by purchasing units and transfer them to another pool.
+     * @notice Initiate a cross-chain swap by purchasing units and transfer them to another vault.
      * @dev Addresses are encoded in 64 + 1 bytes. To encode for EVM, encode as:
-     * Solidity: abi.encodePacket(uint8(20), bytes32(0), abi.encode(<poolAddress>))
+     * Solidity: abi.encodePacket(uint8(20), bytes32(0), abi.encode(<vaultAddress>))
      * @param channelId The target chain identifier.
-     * @param toPool The target pool on the target chain encoded in 64 + 1 bytes.
+     * @param toVault The target vault on the target chain encoded in 64 + 1 bytes.
      * @param toAccount The recipient of the transaction on the target chain. Encoded in 64 + 1 bytes.
      * @param fromAsset The asset the user wants to sell.
-     * @param toAssetIndex The index of the asset the user wants to buy in the target pool.
-     * @param amount The number of fromAsset to sell to the pool.
+     * @param toAssetIndex The index of the asset the user wants to buy in the target vault.
+     * @param amount The number of fromAsset to sell to the vault.
      * @param minOut The minimum number of returned tokens to the toAccount on the target chain.
      * @param fallbackUser If the transaction fails, send the escrowed funds to this address.
      * @return uint256 The number of units minted.
      */
     function sendAsset(
         bytes32 channelId,
-        bytes memory toPool,
+        bytes memory toVault,
         bytes memory toAccount,
         address fromAsset,
         uint8 toAssetIndex,
@@ -1081,14 +1081,14 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
         address fallbackUser,
         bytes memory calldata_
     ) nonReentrant public override returns (uint256) {
-        // Only allow connected pools
-        if (!_poolConnection[channelId][toPool]) revert PoolNotConnected(channelId, toPool);
+        // Only allow connected vaults
+        if (!_vaultConnection[channelId][toVault]) revert VaultNotConnected(channelId, toVault);
         require(fallbackUser != address(0));
-        require(toPool.length == 65);  // dev: Pool addresses are uint8 + 64 bytes.
+        require(toVault.length == 65);  // dev: Vault addresses are uint8 + 64 bytes.
         require(toAccount.length == 65);  // dev: Account addresses are uint8 + 64 bytes.
 
         _updateAmplification();
-        uint256 fee = FixedPointMathLib.mulWadDown(amount, _poolFee);
+        uint256 fee = FixedPointMathLib.mulWadDown(amount, _vaultFee);
 
         // Calculate the group-specific units bought.
         uint256 U = calcSendAsset(fromAsset, amount - fee);
@@ -1097,10 +1097,10 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
         require(U < uint256(type(int256).max));     // int256 max fits in uint256
         _unitTracker += int256(U);
 
-        // Send the purchased units to toPool on the target chain.
+        // Send the purchased units to toVault on the target chain.
         CatalystIBCInterface(_chainInterface).sendCrossChainAsset(
             channelId,
-            toPool,
+            toVault,
             toAccount,
             toAssetIndex,
             U,
@@ -1111,7 +1111,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
         );
 
         // Only need to hash info that is required by the escrow (+ some extra for randomisation)
-        // No need to hash context (as token/liquidity escrow data is different), fromPool, toPool, targetAssetIndex, minOut, CallData
+        // No need to hash context (as token/liquidity escrow data is different), fromVault, toVault, targetAssetIndex, minOut, CallData
         bytes32 sendAssetHash = _computeSendAssetHash(
             toAccount,      // Ensures no collisions between different users
             U,              // Used to randomise the hash
@@ -1139,7 +1139,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
 
         emit SendAsset(
             channelId,
-            toPool,
+            toVault,
             toAccount,
             fromAsset,
             toAssetIndex,
@@ -1155,7 +1155,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
     /** @notice Copy of sendAsset with no calldata_ */
     function sendAsset(
         bytes32 channelId,
-        bytes calldata toPool,
+        bytes calldata toVault,
         bytes calldata toAccount,
         address fromAsset,
         uint8 toAssetIndex,
@@ -1167,7 +1167,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
         return
             sendAsset(
                 channelId,
-                toPool,
+                toVault,
                 toAccount,
                 fromAsset,
                 toAssetIndex,
@@ -1182,7 +1182,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
      * @notice Completes a cross-chain swap by converting units to the desired token (toAsset)
      * @dev Can only be called by the chainInterface.
      * @param channelId The incoming connection identifier.
-     * @param fromPool The source pool.
+     * @param fromVault The source vault.
      * @param toAssetIndex Index of the asset to be purchased with Units.
      * @param toAccount The recipient.
      * @param U Number of units to convert into toAsset.
@@ -1193,7 +1193,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
      */
     function receiveAsset(
         bytes32 channelId,
-        bytes calldata fromPool,
+        bytes calldata fromVault,
         uint256 toAssetIndex,
         address toAccount,
         uint256 U,
@@ -1202,8 +1202,8 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
         bytes calldata fromAsset,
         uint32 blockNumberMod
     ) nonReentrant public override returns (uint256) {
-        // Only allow connected pools
-        if (!_poolConnection[channelId][fromPool]) revert PoolNotConnected(channelId, fromPool);
+        // Only allow connected vaults
+        if (!_vaultConnection[channelId][fromVault]) revert VaultNotConnected(channelId, fromVault);
         // The chainInterface is the only valid caller of this function.
         require(msg.sender == _chainInterface);
 
@@ -1233,7 +1233,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
 
         emit ReceiveAsset(
             channelId, 
-            fromPool, 
+            fromVault, 
             toAccount, 
             toAsset, 
             U, 
@@ -1248,7 +1248,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
 
     function receiveAsset(
         bytes32 channelId,
-        bytes calldata fromPool,
+        bytes calldata fromVault,
         uint256 toAssetIndex,
         address toAccount,
         uint256 U,
@@ -1261,7 +1261,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
     ) external override returns (uint256) {
         uint256 purchasedTokens = receiveAsset(
             channelId,
-            fromPool,
+            fromVault,
             toAssetIndex,
             toAccount,
             U,
@@ -1282,11 +1282,11 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
     }
 
     //--- Liquidity swapping ---//
-    // Because of the way pool tokens work in a group of pools, there
+    // Because of the way vault tokens work in a group of vaults, there
     // needs to be a way for users to easily get a distributed stake.
     // Liquidity swaps is a macro implemented on the smart contract level to:
     // 1. Withdraw tokens.
-    // 2. Convert tokens to units & transfer to target pool.
+    // 2. Convert tokens to units & transfer to target vault.
     // 3. Convert units to an even mix of tokens.
     // 4. Deposit the even mix of tokens.
     // In 1 user invocation.
@@ -1296,15 +1296,15 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
      * @dev Whenever balance0 is computed, the true balance should be used instead of the one
      * modifed by the escrow. This is because balance0 is constant during swaps. Thus, if the
      * balance was modified, it would not be constant during swaps.
-     * The function also returns the pool asset count as it is always used in conjunction with walpha_0_ampped. The external function does not.
+     * The function also returns the vault asset count as it is always used in conjunction with walpha_0_ampped. The external function does not.
      * @return walpha_0_ampped Balance0**(1-amp)
-     * @return it the pool asset count
+     * @return it the vault asset count
      */
     function _computeBalance0(int256 oneMinusAmp) internal view returns(uint256 walpha_0_ampped, uint256 it) {
         // Compute walpha_0 to find the reference balances. This lets us evaluate the
-        // number of tokens the pool should have If the price in the group is 1:1.
+        // number of tokens the vault should have If the price in the group is 1:1.
 
-        // This is a balance0 implementation. The balance 0 implementation here is reference except the escrowed tokens are subtracted from the pool balance.
+        // This is a balance0 implementation. The balance 0 implementation here is reference except the escrowed tokens are subtracted from the vault balance.
         int256 weightedAssetBalanceSum = 0;
         for (it; it < MAX_ASSETS;) {
             address token = _tokenIndexing[it];
@@ -1358,51 +1358,51 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
 
     /**
      * @notice Initiate a cross-chain liquidity swap by withdrawing tokens and converting them to units.
-     * @dev While the description says tokens are withdrawn and then converted to units, pool tokens are converted
+     * @dev While the description says tokens are withdrawn and then converted to units, vault tokens are converted
      * directly into units through the following equation:
      *      U = N · wa^(1-k) · (((PT + pt)/PT)^(1-k) - 1)
      * @param channelId The target chain identifier.
-     * @param toPool The target pool on the target chain encoded in 64 + 1 bytes.
+     * @param toVault The target vault on the target chain encoded in 64 + 1 bytes.
      * @param toAccount The recipient of the transaction on the target chain. Encoded in 64 bytes + 1.
-     * @param poolTokens The number of pool tokens to exchange.
-     * @param minOut An array of minout describing: [the minimum number of pool tokens, the minimum number of reference assets].
+     * @param vaultTokens The number of vault tokens to exchange.
+     * @param minOut An array of minout describing: [the minimum number of vault tokens, the minimum number of reference assets].
      * @param fallbackUser If the transaction fails, send the escrowed funds to this address.
      * @return uint256 The number of units minted.
      */
     function sendLiquidity(
         bytes32 channelId,
-        bytes calldata toPool,
+        bytes calldata toVault,
         bytes calldata toAccount,
-        uint256 poolTokens,
+        uint256 vaultTokens,
         uint256[2] calldata minOut,
         address fallbackUser,
         bytes memory calldata_
     ) nonReentrant public override returns (uint256) {
 
-        // Only allow connected pools
-        if (!_poolConnection[channelId][toPool]) revert PoolNotConnected(channelId, toPool);
+        // Only allow connected vaults
+        if (!_vaultConnection[channelId][toVault]) revert VaultNotConnected(channelId, toVault);
         // Address(0) is not a valid fallback user. (As checking for escrow overlap
         // checks if the fallbackUser != address(0))
         require(fallbackUser != address(0));
-        require(toPool.length == 65);  // dev: Pool addresses are uint8 + 64 bytes.
+        require(toVault.length == 65);  // dev: Vault addresses are uint8 + 64 bytes.
         require(toAccount.length == 65);  // dev: Account addresses are uint8 + 64 bytes.
 
         // Update amplification
         _updateAmplification();
 
-        _burn(msg.sender, poolTokens);
+        _burn(msg.sender, vaultTokens);
 
         int256 oneMinusAmp = _oneMinusAmp;
 
         // Compute walpha_0 to find the reference balances. This lets us evaluate the
-        // number of tokens the pool should have If the price in the group is 1:1.
+        // number of tokens the vault should have If the price in the group is 1:1.
         (uint256 walpha_0_ampped, uint256 it) = _computeBalance0(oneMinusAmp);
 
         uint256 U = 0;
         {
-            // Plus _escrowedPoolTokens since we want the withdrawal to return less. Adding poolTokens as these have already been burnt.
-            uint256 ts = totalSupply + _escrowedPoolTokens + poolTokens;
-            uint256 pt_fraction = FixedPointMathLib.divWadDown(ts + poolTokens, ts);
+            // Plus _escrowedVaultTokens since we want the withdrawal to return less. Adding vaultTokens as these have already been burnt.
+            uint256 ts = totalSupply + _escrowedVaultTokens + vaultTokens;
+            uint256 pt_fraction = FixedPointMathLib.divWadDown(ts + vaultTokens, ts);
 
             U = it * FixedPointMathLib.mulWadDown(
                 walpha_0_ampped, 
@@ -1416,39 +1416,39 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
             _unitTracker += int256(U);
         }
 
-        // Transfer the units to the target pools.
+        // Transfer the units to the target vaults.
         CatalystIBCInterface(_chainInterface).sendCrossChainLiquidity(
             channelId,
-            toPool,
+            toVault,
             toAccount,
             U,
             minOut,
-            poolTokens,
+            vaultTokens,
             calldata_
         );
 
         // Only need to hash info that is required by the escrow (+ some extra for randomisation)
-        // No need to hash context (as token/liquidity escrow data is different), fromPool, toPool, targetAssetIndex, minOut, CallData
+        // No need to hash context (as token/liquidity escrow data is different), fromVault, toVault, targetAssetIndex, minOut, CallData
         bytes32 sendLiquidityHash = _computeSendLiquidityHash(
             toAccount,      // Ensures no collisions between different users
             U,              // Used to randomise the hash
-            poolTokens,     // Required! to validate release escrow data
+            vaultTokens,     // Required! to validate release escrow data
             uint32(block.number) // May overflow, but this is desired (% 2**32)
         );
 
-        // Escrow the pool tokens
-        require(_escrowedPoolTokensFor[sendLiquidityHash] == address(0));
-        _escrowedPoolTokensFor[sendLiquidityHash] = fallbackUser;
-        _escrowedPoolTokens += poolTokens;
+        // Escrow the vault tokens
+        require(_escrowedVaultTokensFor[sendLiquidityHash] == address(0));
+        _escrowedVaultTokensFor[sendLiquidityHash] = fallbackUser;
+        _escrowedVaultTokens += vaultTokens;
 
         // Adjustment of the security limit is delayed until ack to avoid
         // a router abusing timeout to circumvent the security limit at a low cost.
 
         emit SendLiquidity(
             channelId,
-            toPool,
+            toVault,
             toAccount,
-            poolTokens,
+            vaultTokens,
             minOut,
             U
         );
@@ -1459,18 +1459,18 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
     /** @notice Copy of sendLiquidity with no calldata_ */
     function sendLiquidity(
         bytes32 channelId,
-        bytes calldata toPool,
+        bytes calldata toVault,
         bytes calldata toAccount,
-        uint256 poolTokens,
+        uint256 vaultTokens,
         uint256[2] calldata minOut,
         address fallbackUser
     ) external override returns (uint256) {
         bytes memory calldata_ = new bytes(0);
         return sendLiquidity(
             channelId,
-            toPool,
+            toVault,
             toAccount,
-            poolTokens,
+            vaultTokens,
             minOut,
             fallbackUser,
             calldata_
@@ -1481,38 +1481,38 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
      * @notice Completes a cross-chain liquidity swap by converting units to tokens and depositing.
      * @dev Called exclusively by the chainInterface.
      * While the description says units are converted to tokens and then deposited, units are converted
-     * directly to pool tokens through the following equation:
+     * directly to vault tokens through the following equation:
      *      pt = PT · (((N · wa_0^(1-k) + U)/(N · wa_0^(1-k))^(1/(1-k)) - 1)
-     * @param fromPool The source pool
-     * @param toAccount The recipient of the pool tokens
-     * @param U Number of units to convert into pool tokens.
-     * @param minPoolTokens The minimum number of pool tokens to mint on target pool. Otherwise: Reject
-     * @param minReferenceAsset The minimum number of reference asset the pools tokens are worth. Otherwise: Reject
+     * @param fromVault The source vault
+     * @param toAccount The recipient of the vault tokens
+     * @param U Number of units to convert into vault tokens.
+     * @param minVaultTokens The minimum number of vault tokens to mint on target vault. Otherwise: Reject
+     * @param minReferenceAsset The minimum number of reference asset the vaults tokens are worth. Otherwise: Reject
      * @param fromAmount Used to connect swaps cross-chain. The input amount on the sending chain.
      * @param blockNumberMod Used to connect swaps cross-chain. The block number from the host side.
-     * @return uint256 Number of pool tokens minted to the recipient.
+     * @return uint256 Number of vault tokens minted to the recipient.
      */
     function receiveLiquidity(
         bytes32 channelId,
-        bytes calldata fromPool,
+        bytes calldata fromVault,
         address toAccount,
         uint256 U,
-        uint256 minPoolTokens,
+        uint256 minVaultTokens,
         uint256 minReferenceAsset,
         uint256 fromAmount,
         uint32 blockNumberMod
     ) nonReentrant public override returns (uint256) {
         // The chainInterface is the only valid caller of this function.
         require(msg.sender == _chainInterface);
-        // Only allow connected pools
-        if (!_poolConnection[channelId][fromPool]) revert PoolNotConnected(channelId, fromPool);
+        // Only allow connected vaults
+        if (!_vaultConnection[channelId][fromVault]) revert VaultNotConnected(channelId, fromVault);
 
         _updateAmplification();
 
         int256 oneMinusAmp = _oneMinusAmp;
 
         // Compute walpha_0 to find the reference balances. This lets us evaluate the
-        // number of tokens the pool should have If the price in the group is 1:1.
+        // number of tokens the vault should have If the price in the group is 1:1.
         (uint256 walpha_0_ampped, uint256 it) = _computeBalance0(oneMinusAmp);
 
         int256 oneMinusAmpInverse = FixedPointMathLib.WADWAD / oneMinusAmp;
@@ -1520,19 +1520,19 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
         uint256 it_times_walpha_amped = it * walpha_0_ampped;
 
         // On totalSupply. Do not add escrow amount, as higher amount results in a larger return.
-        uint256 poolTokens = _calcPriceCurveLimitShare(U, totalSupply, it_times_walpha_amped, oneMinusAmpInverse);
+        uint256 vaultTokens = _calcPriceCurveLimitShare(U, totalSupply, it_times_walpha_amped, oneMinusAmpInverse);
 
         // Check if more than the minimum output is returned.
         // To check which minOut was hit, check which minimum was mentioned in the error.
-        if(minPoolTokens > poolTokens) revert ReturnInsufficient(poolTokens, minPoolTokens);
+        if(minVaultTokens > vaultTokens) revert ReturnInsufficient(vaultTokens, minVaultTokens);
         if (minReferenceAsset != 0) {
             uint256 walpha_0 = uint256(FixedPointMathLib.powWad(  // uint256 casting: Is always positive.
                 int256(walpha_0_ampped), // int256 casting: If casts to a negative number, powWad fails because it uses ln which can't take negative numbers.
                 oneMinusAmpInverse
             )); 
             // Add escrow to ensure that even if all ongoing transaction revert, the user gets their expected amount.
-            // Add pool tokens because they are going to be minted.
-            uint256 walpha_0_owned = ((walpha_0 * poolTokens) / (totalSupply + _escrowedPoolTokens + poolTokens)) / FixedPointMathLib.WAD;
+            // Add vault tokens because they are going to be minted.
+            uint256 walpha_0_owned = ((walpha_0 * vaultTokens) / (totalSupply + _escrowedVaultTokens + vaultTokens)) / FixedPointMathLib.WAD;
             if (minReferenceAsset > walpha_0_owned) revert ReturnInsufficient(walpha_0_owned, minReferenceAsset);
         }
 
@@ -1541,12 +1541,12 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
 
         // Security limit
         {
-            // To calculate the poolTokenEquiv, we set \alpha_t = \alpha_0.
+            // To calculate the vaultTokenEquiv, we set \alpha_t = \alpha_0.
             // This should be a close enough approximation.
-            // If U > it_times_walpha_amped, then U can purchase more than 50% of the pool.
+            // If U > it_times_walpha_amped, then U can purchase more than 50% of the vault.
             // And the below calculation doesn't work.
             if (it_times_walpha_amped <= U) revert ExceedsSecurityLimit(U - it_times_walpha_amped);
-            uint256 poolTokenEquiv = FixedPointMathLib.mulWadUp(
+            uint256 vaultTokenEquiv = FixedPointMathLib.mulWadUp(
                 uint256(FixedPointMathLib.powWad(                           // Always casts a positive value
                     int256(it_times_walpha_amped),                          // If casting overflows to a negative number, powWad fails
                     oneMinusAmpInverse
@@ -1560,36 +1560,36 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
                 ))
             );
             // Check if the swap is according to the swap limits
-            _updateUnitCapacity(FixedPointMathLib.mulWadDown(2, poolTokenEquiv));
+            _updateUnitCapacity(FixedPointMathLib.mulWadDown(2, vaultTokenEquiv));
         }
 
-        // Mint pool tokens for the user.
-        _mint(toAccount, poolTokens);
+        // Mint vault tokens for the user.
+        _mint(toAccount, vaultTokens);
 
-        emit ReceiveLiquidity(channelId, fromPool, toAccount, U, poolTokens, fromAmount, blockNumberMod);
+        emit ReceiveLiquidity(channelId, fromVault, toAccount, U, vaultTokens, fromAmount, blockNumberMod);
 
-        return poolTokens;
+        return vaultTokens;
     }
 
     
     function receiveLiquidity(
         bytes32 channelId,
-        bytes calldata fromPool,
+        bytes calldata fromVault,
         address who,
         uint256 U,
-        uint256 minPoolTokens,
+        uint256 minVaultTokens,
         uint256 minReferenceAsset,
         uint256 fromAmount,
         uint32 blockNumberMod,
         address dataTarget,
         bytes calldata data
     ) external override returns (uint256) {
-        uint256 purchasedPoolTokens = receiveLiquidity(
+        uint256 purchasedVaultTokens = receiveLiquidity(
             channelId,
-            fromPool,
+            fromVault,
             who,
             U,
-            minPoolTokens,
+            minVaultTokens,
             minReferenceAsset,
             fromAmount,
             blockNumberMod
@@ -1599,19 +1599,19 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
         // The logic is not contained within a try - except so if the logic reverts
         // the transaction will timeout and the user gets the input tokens on the sending chain.
         // If this is not desired, wrap further logic in a try - except at dataTarget.
-        ICatalystReceiver(dataTarget).onCatalystCall(purchasedPoolTokens, data);
+        ICatalystReceiver(dataTarget).onCatalystCall(purchasedVaultTokens, data);
         // If dataTarget doesn't implement onCatalystCall BUT implements a fallback function, the call will still succeed.
 
-        return purchasedPoolTokens;
+        return purchasedVaultTokens;
     }
 
 
     //-- Escrow Functions --//
 
     /** 
-     * @notice Deletes and releases escrowed tokens to the pool and updates the security limit.
+     * @notice Deletes and releases escrowed tokens to the vault and updates the security limit.
      * @dev Should never revert!  
-     * The base implementation exists in CatalystSwapPoolCommon. The function adds security limit
+     * The base implementation exists in CatalystVaultCommon. The function adds security limit
      * adjustment to the implementation to swap volume supported.
      * @param toAccount The recipient of the transaction on the target chain. Encoded in bytes32.
      * @param U The number of units purchased.
@@ -1631,8 +1631,8 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
 
         // Incoming swaps should be subtracted from the unit flow.
         // It is assumed if the router was fraudulent, that no-one would execute a trade.
-        // As a result, if people swap into the pool, we should expect that there is exactly
-        // the inswapped amount of trust in the pool. If this wasn't implemented, there would be
+        // As a result, if people swap into the vault, we should expect that there is exactly
+        // the inswapped amount of trust in the vault. If this wasn't implemented, there would be
         // a maximum daily cross chain volume, which is bad for liquidity providers.
         unchecked {
             // Calling timeout and then ack should not be possible. 
@@ -1663,9 +1663,9 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
     }
 
     /** 
-     * @notice Deletes and releases escrowed tokens to the pool and updates the security limit.
+     * @notice Deletes and releases escrowed tokens to the vault and updates the security limit.
      * @dev Should never revert!
-     * The base implementation exists in CatalystSwapPoolCommon. The function adds security limit
+     * The base implementation exists in CatalystVaultCommon. The function adds security limit
      * adjustment to the implementation to swap volume supported.
      * @param toAccount The recipient of the transaction on the target chain. Encoded in bytes32.
      * @param U The number of units acquired.
@@ -1684,7 +1684,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
         super.onSendAssetFailure(toAccount, U, escrowAmount, escrowToken, blockNumberMod);
 
         // Removed timed-out units from the unit tracker. This will keep the
-        // balance0 in balance, since tokens also leave the pool
+        // balance0 in balance, since tokens also leave the vault
         _unitTracker -= int256(U);      // It has already been checked on sendAsset that casting to int256 will not overflow.
                                         // Cannot be manipulated by the router as, otherwise, the swapHash check will fail
     }
@@ -1692,15 +1692,15 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
     // onSendLiquiditySuccess is not overwritten since we are unable to increase
     // the security limit. This is because it is very expensive to compute the update
     // to the security limit. If someone liquidity swapped a significant amount of assets
-    // it is assumed the pool has low liquidity. In these cases, liquidity swaps shouldn't be used.
+    // it is assumed the vault has low liquidity. In these cases, liquidity swaps shouldn't be used.
 
     /** 
-     * @notice Deletes and releases liquidity escrowed tokens to the pool and updates the security limit.
+     * @notice Deletes and releases liquidity escrowed tokens to the vault and updates the security limit.
      * @dev Should never revert!  
-     * The base implementation exists in CatalystSwapPoolCommon.
+     * The base implementation exists in CatalystVaultCommon.
      * @param toAccount The recipient of the transaction on the target chain. Encoded in bytes32.
      * @param U The number of units initially acquired.
-     * @param escrowAmount The number of pool tokens escrowed.
+     * @param escrowAmount The number of vault tokens escrowed.
      * @param blockNumberMod The block number at which the swap transaction was commited (mod 32)
      */
     function onSendLiquidityFailure(
@@ -1712,7 +1712,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
         super.onSendLiquidityFailure(toAccount, U, escrowAmount, blockNumberMod);
 
         // Removed timed-out units from the unit tracker. This will keep the
-        // balance0 in balance, since tokens also leave the pool
+        // balance0 in balance, since tokens also leave the vault
         _unitTracker -= int256(U);      // It has already been checked on sendAsset that casting to int256 will not overflow.
                                         // Cannot be manipulated by the router as, otherwise, the swapHash check will fail
     }
