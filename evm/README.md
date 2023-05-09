@@ -1,18 +1,21 @@
-# Catalyst Overview
-Catalyst is structured in the following manner:
-- **Vaults** holds assets on different chains and holds the logic for converting tokens into untis.
-- **Factory** simplifies the deployment of new vaults.
-- Cross-chain **interface** converts swap context into a message which can be sent cross-chain.
+# The EVM implementation
+The EVM implementation of Catalyst is in Solidity. 
 
-This structure is implemented on EVM as follows:
+The EVM implementation serves as a reference implementation while also being optimised and efficient. It also defines the message structure that other implementations should honor.
+
+The general structure of a Catalyst implementation is based around Vaults:
+- **Vaults** holds assets on different chains and holds the logic for converting tokens into Units.
+  - Vaults can be connected together to form a pool. Within a pool, all assets contained within vaults can be swapped for each other.
+- **Factory** simplifies the deployment of new vaults.
+- **Cross-chain interface** converts swap context into a message which can be sent cross-chain.
+
+More specifically, the code structure is as follows:
 - `VaultCommon.sol` : Defines the structure of a Catalyst vault and implements logic that is common to all vaults.
   - `VaultVolatile.sol` : Extends `VaultCommon.sol` with the price curve $P(w) = \frac{W}{w}$.
-  - `VaultAmplified.sol` : Extends `VaultCommon.sol` with the price curve $P(w) = \frac{1 - \theta}{w^\theta}$.
+  - `VaultAmplified.sol` : Extends `VaultCommon.sol` with the price curve $P(w) = \left(1 - \theta\right) \frac{W}{(W w)^\theta}$.
   - `FixedPointMathLib.sol` : The mathematical library used by Catalyst (based on the [solmate](https://github.com/transmissions11/solmate/blob/ed67feda67b24fdeff8ad1032360f0ee6047ba0a/src/utils/FixedPointMathLib.sol)).
-- `CatalystVaultFactory.sol` : Simplifies the deployment of swap vaults via Open Zeppelin's *Clones*: vaults are deployed as minimal proxies which employ delegate calls to core contracts. This significantly reduces vault deployment cost.
+- `CatalystVaultFactory.sol` : Simplifies the deployment of swap vaults via Open Zeppelin's *Clones*: vaults are deployed as minimal proxies which delegate call to vault contracts. This significantly reduces vault deployment cost.
 - `CatalystIBCInterface.sol` : Bridges the Catalyst protocol with the message router of choice.
-
-The EVM implementation is to be used as a reference implementation for further implementations.
 
 # Catalyst Contracts
 ## SwapVaultCommon.sol
@@ -23,15 +26,15 @@ An `abstract` contract (i.e. a contract that is made to be overriden), which enf
 - Cross chain swaps acknowledgement and timeout
 - Security limit
 
-Note that contracts derived from this one cannot be used directly but rather via proxy contracts. For this, `SwapVaultCommon.sol` implements [Initializable.sol](https://docs.openzeppelin.com/contracts/4.x/api/proxy#Initializable) to ensure that the vault proxies are correctly setup.
+Note that contracts derived from this one cannot be used directly but should be used via proxy contracts. For this, `SwapVaultCommon.sol` implements [Initializable.sol](https://docs.openzeppelin.com/contracts/4.x/api/proxy#Initializable) to ensure that vault proxies are correctly setup.
 
 ## SwapVaultVolatile.sol
 
-Extends `SwapVaultCommon.sol` with the price curve $P(w) = \frac{W}{w}$. This approximates the constant product AMM (also called $x \cdot y = k$), mostly known from Uniswap v2 and Balancer.
+Extends `SwapVaultCommon.sol` with the price curve $P(w) = \frac{W}{w}$. This implements the constant product AMM (also called $x \cdot y = k$), known from Uniswap v2 and Balancer.
 
 ## SwapVaultAmplified.sol
 
-Extends `SwapVaultCommon.sol` with the price curve $P(w) = \frac{1}{w^\theta} \cdot (1-\theta)$. This introduces an argument $\theta$ which gives control over the flattening of the swap curve, such that the marginal price between assets is closer to 1:1 for a greater amount of swaps. With $\theta = 0$ the pool always delivers 1:1 swaps. This resembles Stable Swap, but with the advantage of allowing for asynchronous swaps.
+Extends `SwapVaultCommon.sol` with the price curve $P(w) = \left(1 - \theta\right) \frac{W}{(W w)^\theta}$. This introduces an argument $\theta$ which gives control over the flattening of the swap curve, such that the marginal price between assets is closer to 1:1 for a greater amount of swaps. With $\theta = 0$ the pool always delivers 1:1 swaps. This resembles Stable Swap, but with the advantage of allowing for asynchronous swaps.
 
 ## SwapVaultFactory.sol
 
