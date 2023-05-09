@@ -124,14 +124,12 @@ pub fn calc_unit_capacity(
             return Ok(max_limit_capacity);
         }
 
-        if max_limit_capacity <= used_limit_capacity - released_limit_capacity {
+        if max_limit_capacity <= used_limit_capacity - released_limit_capacity {    // subtraction is safe because of the previous 'if' statement
             return Ok(U256::ZERO);
         }
 
         Ok(
-            max_limit_capacity
-                .checked_add(released_limit_capacity).ok_or(ContractError::ArithmeticError {})?
-                .sub(used_limit_capacity)
+            max_limit_capacity - (used_limit_capacity - released_limit_capacity)    // subtraction is safe because of the previous 'if' statement
         )
 
 }
