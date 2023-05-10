@@ -36,6 +36,7 @@ pub fn instantiate(
     msg: InstantiateMsg
 ) -> Result<Response, ContractError> {
 
+    //TODO move to 'setup'
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
     setup(

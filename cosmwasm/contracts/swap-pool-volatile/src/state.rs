@@ -70,7 +70,7 @@ pub fn initialize_swap_curves(
     }
 
     // Validate the depositor address
-    deps.api.addr_validate(&depositor)?;
+    deps.api.addr_validate(&depositor)?;    //TODO is this needed? Won't the address be validated by 'execute_mint` below?
 
     // Validate and save assets
     ASSETS.save(
@@ -92,6 +92,7 @@ pub fn initialize_swap_curves(
         })
         .collect::<StdResult<Vec<Uint128>>>()?;
     
+    //TODO merge this check within the above balance-query code
     if assets_balances.iter().any(|balance| balance.is_zero()) {
         return Err(ContractError::GenericError {}); //TODO error
     }
@@ -172,6 +173,8 @@ pub fn deposit_mixed(
         .zip(weights)                           // zip: weights.len() == assets.len()
         .zip(&deposit_amounts)                  // zip: deposit_amounts.len() == assets.len()
         .try_fold(U256::ZERO, |acc, ((asset, weight), deposit_amount)| {
+
+            //TODO add gas optimization: if deposit_amount == 0, skip
 
             let pool_asset_balance = deps.querier.query_wasm_smart::<BalanceResponse>(
                 asset,
@@ -278,24 +281,24 @@ pub fn withdraw_all(
         .zip(&min_out)                                      // zip: assets.len() == min_out.len()
         .map(|(asset, asset_min_out)| {
 
-        let escrowed_balance = TOTAL_ESCROWED_ASSETS.load(deps.storage, asset.as_str())?;
-        
-        let pool_asset_balance = deps.querier.query_wasm_smart::<BalanceResponse>(
-            asset,
-            &Cw20QueryMsg::Balance { address: env.contract.address.to_string() }
-        )?.balance - escrowed_balance;
+            let escrowed_balance = TOTAL_ESCROWED_ASSETS.load(deps.storage, asset.as_str())?;
+            
+            let pool_asset_balance = deps.querier.query_wasm_smart::<BalanceResponse>(
+                asset,
+                &Cw20QueryMsg::Balance { address: env.contract.address.to_string() }
+            )?.balance - escrowed_balance;
 
-        //TODO use U256 for the calculation?
-        let withdraw_amount = (pool_asset_balance * pool_tokens) / effective_supply;
+            //TODO use U256 for the calculation?
+            let withdraw_amount = (pool_asset_balance * pool_tokens) / effective_supply;
 
-        // Check that the minimum output is honoured.
-        if *asset_min_out > withdraw_amount {
-            //TODO include in error the asset?
-            return Err(ContractError::ReturnInsufficient { out: withdraw_amount.clone(), min_out: *asset_min_out });
-        };
+            // Check that the minimum output is honoured.
+            if *asset_min_out > withdraw_amount {
+                //TODO include in error the asset?
+                return Err(ContractError::ReturnInsufficient { out: withdraw_amount.clone(), min_out: *asset_min_out });
+            };
 
-        Ok(withdraw_amount)
-    }).collect::<Result<Vec<Uint128>, ContractError>>()?;
+            Ok(withdraw_amount)
+        }).collect::<Result<Vec<Uint128>, ContractError>>()?;
 
     // Build messages to order the transfer of tokens from the swap pool to the depositor
     let transfer_msgs: Vec<CosmosMsg> = assets.iter().zip(&withdraw_amounts).map(|(asset, amount)| {    // zip: withdraw_amounts.len() == assets.len()
@@ -547,6 +550,8 @@ pub fn send_asset(
     if !is_connected(&deps.as_ref(), &channel_id, to_pool.clone()) {
         return Err(ContractError::PoolNotConnected { channel_id, pool: to_pool })
     }
+
+    //TODO verify to_pool and to_account are 65 bytes long
 
     update_weights(deps, env.block.time.nanos())?;
 
@@ -874,7 +879,7 @@ pub fn receive_liquidity(
         //      exp( sum( ln(balance(i)) * weight(i) ) / weights_sum )
 
         // Compute first: sum( ln(balance(i)) * weight(i) )
-        let mut weighted_balance_sum = assets.iter()
+        let weighted_balance_sum = assets.iter()
             .zip(weights)       // zip: weights.len() == assets.len()
             .try_fold(U256::ZERO, |acc, (asset, weight)| {
 
@@ -912,7 +917,7 @@ pub fn receive_liquidity(
     }
 
     // Validate the to_account
-    deps.api.addr_validate(&to_account)?;
+    deps.api.addr_validate(&to_account)?;   //TODO is this necessary? Isn't the account validated by `execute_mint`?
 
     // Mint the pool tokens
     let mint_response = execute_mint(
@@ -1005,10 +1010,10 @@ pub fn calc_receive_asset(
         to_asset_balance.u128().into(),
         U256::from(to_asset_weight),
     ).map(
-        |val| Uint128::from(val.as_u128())
+        |val| Uint128::from(val.as_u128())      //TODO! .as_u128 may overflow silently
     ).map_err(
         |_| ContractError::GenericError {}
-    )      //TODO! .as_u128 may overflow silently
+    )
 }
 
 pub fn calc_local_swap(
@@ -1040,6 +1045,8 @@ pub fn calc_local_swap(
     )?.balance.checked_sub(to_asset_escrowed_balance)?;      // pool balance minus escrowed balance
     let to_asset_weight = weights[to_asset_index];
 
+    //TODO add simplified formula for the case from_weight == to_weight
+
     calc_combined_price_curves(
         amount.u128().into(),
         from_asset_balance.u128().into(),
@@ -1047,7 +1054,7 @@ pub fn calc_local_swap(
         U256::from(from_asset_weight),
         U256::from(to_asset_weight)
     ).map(
-        |val| Uint128::from(val.as_u128())
+        |val| Uint128::from(val.as_u128())  //TODO! silent overflow possible!
     ).map_err(
         |_| ContractError::GenericError {}
     ) 
@@ -1108,7 +1115,7 @@ pub fn send_liquidity_ack(
 pub fn set_weights(         //TODO EVM mismatch arguments order
     deps: &mut DepsMut,
     env: &Env,
-    weights: Vec<u64>,      //TODO EVM mismatch (name newWeights)
+    weights: Vec<u64>,      //TODO rename new_weights
     target_timestamp: u64   //TODO EVM mismatch (targetTime)
 ) -> Result<Response, ContractError> {
 
@@ -1138,7 +1145,7 @@ pub fn set_weights(         //TODO EVM mismatch arguments order
                 *new_weight == 0 ||
                 *new_weight > current_weight
                     .checked_mul(MAX_WEIGHT_ADJUSTMENT_FACTOR).ok_or(ContractError::ArithmeticError {})? ||
-                *new_weight < current_weight / MAX_WEIGHT_ADJUSTMENT_FACTOR
+                *new_weight < current_weight / MAX_WEIGHT_ADJUSTMENT_FACTOR     //TODO fix: replace MAX_WEIGHT_ADJUSTMENT_FACTOR with MIN_WEIGHT_ADJUSTMENT_FACTOR
             {
                 return Err(ContractError::GenericError {});     //TODO error
             }
@@ -1165,7 +1172,7 @@ pub fn update_weights(
     
     // Only run update logic if 'param_update_finish_timestamp' is set
     let param_update_finish_timestamp = WEIGHT_UPDATE_FINISH_TIMESTAMP.load(deps.storage)?;
-    if param_update_finish_timestamp == 0 {    //TODO EVM mismatch - allow the cheaper 'no jump' for when updating the weights
+    if param_update_finish_timestamp == 0 {
         return Ok(());
     }
 
@@ -1183,6 +1190,7 @@ pub fn update_weights(
     // If the 'param_update_finish_timestamp' has been reached, finish the weights update
     if current_timestamp >= param_update_finish_timestamp {
 
+        //TODO: why using 'map' here? use 'fold' or 'forEach'
         // Set the weights equal to the target_weights
         new_weights = target_weights
             .iter()

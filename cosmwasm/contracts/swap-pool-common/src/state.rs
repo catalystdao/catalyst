@@ -19,7 +19,7 @@ pub const MAX_ASSETS: usize = 3;
 pub const DECIMALS: u8 = 18;
 pub const INITIAL_MINT_AMOUNT: Uint128 = Uint128::new(1000000000000000000u128); // 1e18
 
-pub const MAX_POOL_FEE_SHARE       : u64 = 1000000000000000000u64;              // 100%
+pub const MAX_POOL_FEE_SHARE       : u64 = 1000000000000000000u64;              // 100%   //TODO rename MAX_POOL_FEE
 pub const MAX_GOVERNANCE_FEE_SHARE : u64 = 75u64 * 10000000000000000u64;        // 75%    //TODO EVM mismatch (move to factory)
 
 pub const DECAY_RATE: U256 = uint!("86400");    // 60*60*24
@@ -116,7 +116,7 @@ pub fn calc_unit_capacity(
 
     let released_limit_capacity = max_limit_capacity
         .checked_mul(
-            U256::from(time.minus_nanos(used_limit_capacity_timestamp).seconds())  //TODO use seconds instead of nanos (overflow wise)
+            U256::from(time.minus_nanos(used_limit_capacity_timestamp).seconds())  //TODO use seconds instead of nanos (overflow wise)  //TODO if the provided 'time' is correct, the time difference is always positive. But what if it is not correct? 
         ).ok_or(ContractError::ArithmeticError {})?   //TODO error
         .div(DECAY_RATE);
 
@@ -129,7 +129,7 @@ pub fn calc_unit_capacity(
         }
 
         Ok(
-            max_limit_capacity - (used_limit_capacity - released_limit_capacity)    // subtraction is safe because of the previous 'if' statement
+            max_limit_capacity - (used_limit_capacity - released_limit_capacity)    // subtractions are safe because of the previous 'if' statements
         )
 
 }
@@ -198,6 +198,8 @@ pub fn set_connection(
     {
         return Err(ContractError::Unauthorized {});
     }
+
+    //TODO check the 'to_pool' address is 65 bytes long
 
     POOL_CONNECTIONS.save(deps.storage, (channel_id.as_str(), to_pool.clone()), &state)?;
 
@@ -346,6 +348,7 @@ pub fn collect_governance_fee_message(
 }
 
 
+//TODO move function definition below 'set_fee_administrator_unchecked'
 pub fn set_fee_administrator(
     deps: &mut DepsMut,
     info: MessageInfo,
@@ -373,7 +376,7 @@ pub fn setup(
     governance_fee: u64,
     fee_administrator: String,
     setup_master: String,
-    factory: Addr             //TODO EVM mismatch
+    factory: Addr             //TODO EVM mismatch   //TODO pass 'info: MessageInfo' instead (do not leave it up to the vault implementation)
 ) -> Result<Response, ContractError> {
 
     FACTORY.save(
@@ -510,6 +513,7 @@ pub fn release_liquidity_escrow(
 }
 
 
+//TODO rename `on_send_asset_success`
 pub fn on_send_asset_ack(
     deps: &mut DepsMut,
     info: MessageInfo,
