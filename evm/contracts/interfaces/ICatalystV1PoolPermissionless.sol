@@ -51,7 +51,7 @@ interface ICatalystV1PoolPermissionless {
      * Volatile: It is advised that the deposit matches the pool's %token distribution.
      * Amplified: It is advised that the deposit matches the pool's %token distribution.
      *            Otherwise it should be weighted towards the tokens the pool has more of.
-     * @param poolTokens The number of pool tokens to withdraw
+     * @param poolTokens The number of pool tokens to withdraw.
      * @param withdrawRatio The percentage of units used to withdraw. In the following special scheme: U_a = U · withdrawRatio[0], U_b = (U - U_a) · withdrawRatio[1], U_c = (U - U_a - U_b) · withdrawRatio[2], .... Is X64
      * @param minOut The minimum number of tokens minted.
      */
@@ -66,8 +66,8 @@ interface ICatalystV1PoolPermissionless {
     /**
      * @notice A swap between 2 assets which both are inside the pool. Is atomic.
      * @param fromAsset The asset the user wants to sell.
-     * @param toAsset The asset the user wants to buy
-     * @param amount The amount of fromAsset the user wants to sell
+     * @param toAsset The asset the user wants to buy.
+     * @param amount The amount of fromAsset the user wants to sell.
      * @param minOut The minimum output of _toAsset the user wants.
      */
     function localSwap(
@@ -79,23 +79,22 @@ interface ICatalystV1PoolPermissionless {
 
     /**
      * @notice Initiate a cross-chain swap by purchasing units and transfer them to another pool.
-     * @dev Encoding addresses in bytes32 can be done be computed with:
-     * Vyper: convert(<poolAddress>, bytes32)
-     * Solidity: abi.encode(<poolAddress>)
-     * Brownie: brownie.convert.to_bytes(<poolAddress>, type_str="bytes32")
+     * @dev Addresses are encoded in 64 + 1 bytes. To encode for EVM, encode as:
+     * Solidity: abi.encodePacket(uint8(20), bytes32(0), abi.encode(<poolAddress>))
      * @param channelId The target chain identifier.
-     * @param toPool The target pool on the target chain encoded in bytes32.
-     * @param toAccount The recipient of the transaction on the target chain. Encoded in bytes32.
+     * @param toPool The target pool on the target chain encoded in 64 + 1 bytes.
+     * @param toAccount The recipient of the transaction on the target chain. Encoded in 64 + 1 bytes.
      * @param fromAsset The asset the user wants to sell.
      * @param toAssetIndex The index of the asset the user wants to buy in the target pool.
      * @param amount The number of fromAsset to sell to the pool.
      * @param minOut The minimum number of returned tokens to the toAccount on the target chain.
-     * @param fallbackUser If the transaction fails send the escrowed funds to this address
+     * @param fallbackUser If the transaction fails, send the escrowed funds to this address.
+     * @return uint256 The number of units minted.
      */
     function sendAsset(
         bytes32 channelId,
-        bytes32 toPool,
-        bytes32 toAccount,
+        bytes calldata toPool,
+        bytes calldata toAccount,
         address fromAsset,
         uint8 toAssetIndex,
         uint256 amount,
@@ -104,12 +103,12 @@ interface ICatalystV1PoolPermissionless {
     ) external returns (uint256);
 
     /// @notice Includes calldata_
-    /// @param calldata_ Data field if a call should be made on the target chain. 
-    /// Should be encoded abi.encode(<address>,<data>)
+    /// @param calldata_ Data field if a call should be made on the target chain.
+    /// Encoding depends on the target chain, with evm being: abi.encode(bytes20(<address>), <data>)
     function sendAsset(
         bytes32 channelId,
-        bytes32 toPool,
-        bytes32 toAccount,
+        bytes calldata toPool,
+        bytes calldata toAccount,
         address fromAsset,
         uint8 toAssetIndex,
         uint256 amount,
@@ -120,98 +119,110 @@ interface ICatalystV1PoolPermissionless {
 
     /**
      * @notice Completes a cross-chain swap by converting units to the desired token (toAsset)
-     *  Called exclusively by the chainInterface.
-     * @dev Can only be called by the chainInterface, as there is no way to check the validity of units.
+     * @dev Can only be called by the chainInterface.
      * @param channelId The incoming connection identifier.
      * @param fromPool The source pool.
-     * @param toAssetIndex Index of the asset to be purchased with _U units.
-     * @param toAccount The recipient of toAsset
+     * @param toAssetIndex Index of the asset to be purchased with Units.
+     * @param toAccount The recipient.
      * @param U Number of units to convert into toAsset.
      * @param minOut Minimum number of tokens bought. Reverts if less.
+     * @param fromAmount Used to connect swaps cross-chain. The input amount on the sending chain.
+     * @param fromAsset Used to connect swaps cross-chain. The input asset on the sending chain.
+     * @param blockNumberMod Used to connect swaps cross-chain. The block number from the host side.
      */
     function receiveAsset(
         bytes32 channelId,
-        bytes32 fromPool,
+        bytes calldata fromPool,
         uint256 toAssetIndex,
         address toAccount,
         uint256 U,
         uint256 minOut,
-        bytes32 swapHash
+        uint256 fromAmount,
+        bytes calldata fromAsset,
+        uint32 blockNumberMod
     ) external returns (uint256);
 
     function receiveAsset(
         bytes32 channelId,
-        bytes32 fromPool,
+        bytes calldata fromPool,
         uint256 toAssetIndex,
         address toAccount,
         uint256 U,
         uint256 minOut,
-        bytes32 swapHash,
+        uint256 fromAmount,
+        bytes calldata fromAsset,
+        uint32 blockNumberMod,
         address dataTarget,
         bytes calldata data
     ) external returns (uint256);
 
     /**
-     * @notice Initiate a cross-chain liquidity swap by lowering liquidity
-     * and transfer the liquidity units to another pool.
+     * @notice Initiate a cross-chain liquidity swap by withdrawing tokens and converting them to units.
+     * @dev While the description says tokens are withdrawn and then converted to units, pool tokens are converted
+     * directly into units through the following equation:
+     *      U = ln(PT/(PT-pt)) * \sum W_i
      * @param channelId The target chain identifier.
-     * @param toPool The target pool on the target chain encoded in bytes32. For EVM chains this can be computed as:
-     * Vyper: convert(_poolAddress, bytes32)
-     * Solidity: abi.encode(_poolAddress)
-     * Brownie: brownie.convert.to_bytes(_poolAddress, type_str="bytes32")
-     * @param toAccount The recipient of the transaction on _chain. Encoded in bytes32. For EVM chains it can be found similarly to _toPool.
-     * @param baseAmount The number of pool tokens to liquidity Swap
+     * @param toPool The target pool on the target chain encoded in 64 + 1 bytes.
+     * @param toAccount The recipient of the transaction on the target chain. Encoded in 64 bytes + 1.
+     * @param poolTokens The number of pool tokens to exchange.
+     * @param minOut An array of minout describing: [the minimum number of pool tokens, the minimum number of reference assets].
+     * @param fallbackUser If the transaction fails, send the escrowed funds to this address.
+     * @return uint256 The number of units minted.
      */
     function sendLiquidity(
         bytes32 channelId,
-        bytes32 toPool,
-        bytes32 toAccount,
-        uint256 baseAmount,
+        bytes calldata toPool,
+        bytes calldata toAccount,
+        uint256 poolTokens,
         uint256[2] calldata minOut,
         address fallbackUser
     ) external returns (uint256);
 
     /// @notice Includes calldata_
-    /// @param calldata_ Data field if a call should be made on the target chain. 
-    /// Should be encoded abi.encode(<address>,<data>)
+    /// @param calldata_ Data field if a call should be made on the target chain.
+    /// Encoding depends on the target chain, with evm being: abi.encode(bytes20(<address>), <data>)
     function sendLiquidity(
         bytes32 channelId,
-        bytes32 toPool,
-        bytes32 who,
-        uint256 baseAmount,
+        bytes calldata toPool,
+        bytes calldata toAccount,
+        uint256 poolTokens,
         uint256[2] calldata minOut,
         address fallbackUser,
         bytes memory calldata_
     ) external returns (uint256);
 
     /**
-     * @notice Completes a cross-chain swap by converting liquidity units to pool tokens
-     * Called exclusively by the chainInterface.
-     * @dev Can only be called by the chainInterface, as there is no way
-     * to check the validity of units.
-     * @param channelId The incoming connection identifier.
+     * @notice Completes a cross-chain liquidity swap by converting units to tokens and depositing.
+     * @dev Called exclusively by the chainInterface.
      * @param fromPool The source pool
-     * @param toAccount The recipient of pool tokens
+     * @param toAccount The recipient of the pool tokens
      * @param U Number of units to convert into pool tokens.
+     * @param minPoolTokens The minimum number of pool tokens to mint on target pool. Otherwise: Reject
+     * @param minReferenceAsset The minimum number of reference asset the pools tokens are worth. Otherwise: Reject
+     * @param fromAmount Used to connect swaps cross-chain. The input amount on the sending chain.
+     * @param blockNumberMod Used to connect swaps cross-chain. The block number from the host side.
+     * @return uint256 Number of pool tokens minted to the recipient.
      */
     function receiveLiquidity(
         bytes32 channelId,
-        bytes32 fromPool,
+        bytes calldata fromPool,
         address toAccount,
         uint256 U,
         uint256 minPoolTokens,
         uint256 minReferenceAsset,
-        bytes32 swapHash
+        uint256 fromAmount,
+        uint32 blockNumberMod
     ) external returns (uint256);
 
     function receiveLiquidity(
         bytes32 channelId,
-        bytes32 fromPool,
+        bytes calldata fromPool,
         address who,
         uint256 U,
         uint256 minPoolTokens,
         uint256 minReferenceAsset,
-        bytes32 swapHash,
+        uint256 fromAmount,
+        uint32 blockNumberMod,
         address dataTarget,
         bytes calldata data
     ) external returns (uint256);

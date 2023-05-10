@@ -4,6 +4,7 @@ from brownie.test import given, strategy
 from hypothesis import example
 import tests.catalyst.utils.pool_utils as pool_utils
 import re
+from utils.common_utils import convert_64_bytes_address
 
 pytestmark = pytest.mark.usefixtures("group_finish_setup", "group_connect_pools")
 
@@ -47,8 +48,8 @@ def test_liquidity_swap(
     
     tx = pool_1.sendLiquidity(
         channel_id,
-        convert.to_bytes(pool_2.address.replace("0x", "")),
-        convert.to_bytes(berg.address.replace("0x", "")),
+        convert_64_bytes_address(pool_2.address),
+        convert_64_bytes_address(berg.address),
         pool1_tokens_swapped,
         [int(estimatedPool2Tokens*9/10), 0],
         berg,

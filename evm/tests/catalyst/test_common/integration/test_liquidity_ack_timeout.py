@@ -5,26 +5,25 @@ from brownie import ZERO_ADDRESS, chain, convert, reverts, web3
 from brownie.test import given, strategy
 from hypothesis import example, settings
 
+from utils.common_utils import convert_64_bytes_address
 from utils.pool_utils import compute_liquidity_swap_hash
 
-pytestmark = [
-    pytest.mark.usefixtures("pool_connect_itself"),
-    pytest.mark.no_pool_param
-]
+pytestmark = [pytest.mark.usefixtures("pool_connect_itself"), pytest.mark.no_pool_param]
+
 
 @pytest.mark.no_call_coverage
 @example(swap_percentage=4000)
 @given(swap_percentage=strategy("uint256", max_value=10000))
 def test_ibc_ack(pool, channel_id, ibc_emulator, berg, deployer, swap_percentage):
     swap_amount = int(pool.totalSupply() * swap_percentage / 100000)
-    
-    pool.transfer(berg, swap_amount, {'from': deployer})
+
+    pool.transfer(berg, swap_amount, {"from": deployer})
     assert pool._escrowedPoolTokens() == 0
 
     tx = pool.sendLiquidity(
         channel_id,
-        convert.to_bytes(pool.address.replace("0x", "")),
-        convert.to_bytes(berg.address.replace("0x", "")),
+        convert_64_bytes_address(pool.address),
+        convert_64_bytes_address(berg.address),
         swap_amount,
         [0, 0],
         berg,
@@ -32,9 +31,10 @@ def test_ibc_ack(pool, channel_id, ibc_emulator, berg, deployer, swap_percentage
     )
     userBalance = pool.balanceOf(berg)
     assert pool._escrowedPoolTokens() == swap_amount
-    
+
     txe = ibc_emulator.ack(
         tx.events["IncomingMetadata"]["metadata"][0],
+        convert.to_bytes(0, "bytes"),
         tx.events["IncomingPacket"]["packet"],
         {"from": deployer},
     )
@@ -47,14 +47,14 @@ def test_ibc_ack(pool, channel_id, ibc_emulator, berg, deployer, swap_percentage
 @given(swap_percentage=strategy("uint256", max_value=10000))
 def test_ibc_timeout(pool, channel_id, ibc_emulator, berg, deployer, swap_percentage):
     swap_amount = int(pool.totalSupply() * swap_percentage / 100000)
-    
-    pool.transfer(berg, swap_amount, {'from': deployer})
+
+    pool.transfer(berg, swap_amount, {"from": deployer})
     assert pool._escrowedPoolTokens() == 0
 
     tx = pool.sendLiquidity(
         channel_id,
-        convert.to_bytes(pool.address.replace("0x", "")),
-        convert.to_bytes(berg.address.replace("0x", "")),
+        convert_64_bytes_address(pool.address),
+        convert_64_bytes_address(berg.address),
         swap_amount,
         [0, 0],
         berg,
@@ -62,7 +62,7 @@ def test_ibc_timeout(pool, channel_id, ibc_emulator, berg, deployer, swap_percen
     )
     userBalance = pool.balanceOf(berg)
     assert pool._escrowedPoolTokens() == swap_amount
-    
+
     txe = ibc_emulator.timeout(
         tx.events["IncomingMetadata"]["metadata"][0],
         tx.events["IncomingPacket"]["packet"],
@@ -75,57 +75,60 @@ def test_ibc_timeout(pool, channel_id, ibc_emulator, berg, deployer, swap_percen
 def test_only_one_response(pool, channel_id, ibc_emulator, berg, deployer):
     swap_percentage = 10000
     swap_amount = int(pool.totalSupply() * swap_percentage / 100000)
-    
-    pool.transfer(berg, swap_amount, {'from': deployer})
+
+    pool.transfer(berg, swap_amount, {"from": deployer})
 
     tx = pool.sendLiquidity(
         channel_id,
-        convert.to_bytes(pool.address.replace("0x", "")),
-        convert.to_bytes(berg.address.replace("0x", "")),
+        convert_64_bytes_address(pool.address),
+        convert_64_bytes_address(berg.address),
         swap_amount,
         [0, 0],
         berg,
         {"from": berg},
     )
-    
+
     ibc_emulator.timeout(
         tx.events["IncomingMetadata"]["metadata"][0],
         tx.events["IncomingPacket"]["packet"],
         {"from": deployer},
     )
-    
+
     with reverts():
         ibc_emulator.timeout(
             tx.events["IncomingMetadata"]["metadata"][0],
             tx.events["IncomingPacket"]["packet"],
             {"from": deployer},
         )
-    
+
     with reverts():
         ibc_emulator.ack(
             tx.events["IncomingMetadata"]["metadata"][0],
+            convert.to_bytes(0, "bytes"),
             tx.events["IncomingPacket"]["packet"],
             {"from": deployer},
         )
-    
+
     chain.undo(3)
-    
+
     ibc_emulator.ack(
         tx.events["IncomingMetadata"]["metadata"][0],
+        convert.to_bytes(0, "bytes"),
         tx.events["IncomingPacket"]["packet"],
         {"from": deployer},
     )
-    
+
     with reverts():
         ibc_emulator.timeout(
             tx.events["IncomingMetadata"]["metadata"][0],
             tx.events["IncomingPacket"]["packet"],
             {"from": deployer},
         )
-    
+
     with reverts():
         ibc_emulator.ack(
             tx.events["IncomingMetadata"]["metadata"][0],
+            convert.to_bytes(0, "bytes"),
             tx.events["IncomingPacket"]["packet"],
             {"from": deployer},
         )
@@ -133,74 +136,68 @@ def test_only_one_response(pool, channel_id, ibc_emulator, berg, deployer):
 
 def test_ibc_ack_event(pool, channel_id, ibc_emulator, berg, deployer):
     """
-        Test the SendLiquidityAck event gets fired.
+    Test the SendLiquiditySuccess event gets fired.
     """
     swap_percentage = 10000
     swap_amount = int(pool.totalSupply() * swap_percentage / 100000)
-    
-    pool.transfer(berg, swap_amount, {'from': deployer})
+
+    pool.transfer(berg, swap_amount, {"from": deployer})
 
     tx = pool.sendLiquidity(
         channel_id,
-        convert.to_bytes(pool.address.replace("0x", "")),
-        convert.to_bytes(berg.address.replace("0x", "")),
+        convert_64_bytes_address(pool.address),
+        convert_64_bytes_address(berg.address),
         swap_amount,
         [0, 0],
         berg,
         {"from": berg},
     )
-    
+
     txe = ibc_emulator.ack(
         tx.events["IncomingMetadata"]["metadata"][0],
+        convert.to_bytes(0, "bytes"),
         tx.events["IncomingPacket"]["packet"],
         {"from": deployer},
     )
 
-    ack_event = txe.events['SendLiquidityAck']
+    ack_event = txe.events["SendLiquiditySuccess"]
 
-
-    expected_message_hash = compute_liquidity_swap_hash(
-        berg.address,
-        tx.return_value,
-        swap_amount,
-        tx.block_number
-    )
-
-    assert ack_event["swapHash"] == expected_message_hash
+    assert ack_event["toAccount"].hex() == convert_64_bytes_address(berg.address).hex()
+    assert ack_event["U"] == tx.return_value
+    assert ack_event["escrowAmount"] == swap_amount
+    assert ack_event["blockNumberMod"] == tx.block_number
 
 
 def test_ibc_timeout_event(pool, channel_id, ibc_emulator, berg, deployer):
     """
-        Test the SendLiquidityTimeout event gets fired.
+    Test the SendLiquidityFailure event gets fired.
     """
     swap_percentage = 10000
     swap_amount = int(pool.totalSupply() * swap_percentage / 100000)
-    
-    pool.transfer(berg, swap_amount, {'from': deployer})
+
+    pool.transfer(berg, swap_amount, {"from": deployer})
 
     tx = pool.sendLiquidity(
         channel_id,
-        convert.to_bytes(pool.address.replace("0x", "")),
-        convert.to_bytes(berg.address.replace("0x", "")),
+        convert_64_bytes_address(pool.address),
+        convert_64_bytes_address(berg.address),
         swap_amount,
         [0, 0],
         berg,
         {"from": berg},
     )
-    
+
     txe = ibc_emulator.timeout(
         tx.events["IncomingMetadata"]["metadata"][0],
         tx.events["IncomingPacket"]["packet"],
         {"from": deployer},
     )
 
-    timeout_event = txe.events['SendLiquidityTimeout']
+    timeout_event = txe.events["SendLiquidityFailure"]
 
-    expected_message_hash = compute_liquidity_swap_hash(
-        berg.address,
-        tx.return_value,
-        swap_amount,
-        tx.block_number
+    assert (
+        timeout_event["toAccount"].hex() == convert_64_bytes_address(berg.address).hex()
     )
-
-    assert timeout_event["swapHash"] == expected_message_hash
+    assert timeout_event["U"] == tx.return_value
+    assert timeout_event["escrowAmount"] == swap_amount
+    assert timeout_event["blockNumberMod"] == tx.block_number

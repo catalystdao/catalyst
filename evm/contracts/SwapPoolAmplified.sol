@@ -1058,26 +1058,22 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
 
     /**
      * @notice Initiate a cross-chain swap by purchasing units and transfer them to another pool.
-     * @dev To encode addresses in bytes32 the functions below can be used:
-     * Vyper: convert(<poolAddress>, bytes32)
-     * Solidity: abi.encode(<poolAddress>)
-     * Brownie: brownie.convert.to_bytes(<poolAddress>, type_str="bytes32")
+     * @dev Addresses are encoded in 64 + 1 bytes. To encode for EVM, encode as:
+     * Solidity: abi.encodePacket(uint8(20), bytes32(0), abi.encode(<poolAddress>))
      * @param channelId The target chain identifier.
-     * @param toPool The target pool on the target chain encoded in bytes32.
-     * @param toAccount The recipient of the transaction on the target chain. Encoded in bytes32.
+     * @param toPool The target pool on the target chain encoded in 64 + 1 bytes.
+     * @param toAccount The recipient of the transaction on the target chain. Encoded in 64 + 1 bytes.
      * @param fromAsset The asset the user wants to sell.
      * @param toAssetIndex The index of the asset the user wants to buy in the target pool.
      * @param amount The number of fromAsset to sell to the pool.
      * @param minOut The minimum number of returned tokens to the toAccount on the target chain.
-     * @param fallbackUser If the transaction fails, send the escrowed funds to this address
-     * @param calldata_ Data field if a call should be made on the target chain. 
-     * Should be encoded abi.encode(<address>,<data>)
+     * @param fallbackUser If the transaction fails, send the escrowed funds to this address.
      * @return uint256 The number of units minted.
      */
     function sendAsset(
         bytes32 channelId,
-        bytes32 toPool,
-        bytes32 toAccount,
+        bytes memory toPool,
+        bytes memory toAccount,
         address fromAsset,
         uint8 toAssetIndex,
         uint256 amount,
@@ -1088,6 +1084,8 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
         // Only allow connected pools
         if (!_poolConnection[channelId][toPool]) revert PoolNotConnected(channelId, toPool);
         require(fallbackUser != address(0));
+        require(toPool.length == 65);  // dev: Pool addresses are uint8 + 64 bytes.
+        require(toAccount.length == 65);  // dev: Account addresses are uint8 + 64 bytes.
 
         _updateAmplification();
         uint256 fee = FixedPointMathLib.mulWadDown(amount, _poolFee);
@@ -1095,27 +1093,9 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
         // Calculate the group-specific units bought.
         uint256 U = calcSendAsset(fromAsset, amount - fee);
 
-        // sendAssetAck requires casting U to int256 to update the _unitTracker and must never revert. Check for overflow here.
+        // onSendAssetSuccess requires casting U to int256 to update the _unitTracker and must never revert. Check for overflow here.
         require(U < uint256(type(int256).max));     // int256 max fits in uint256
         _unitTracker += int256(U);
-
-        // Only need to hash info that is required by the escrow (+ some extra for randomisation)
-        // No need to hash context (as token/liquidity escrow data is different), fromPool, toPool, targetAssetIndex, minOut, CallData
-        bytes32 sendAssetHash = _computeSendAssetHash(
-            toAccount,      // Ensures no collisions between different users
-            U,              // Used to randomise the hash
-            amount - fee,   // Required! to validate release escrow data
-            fromAsset,      // Required! to validate release escrow data
-            uint32(block.number) // May overflow, but this is desired (% 2**32)
-        );
-
-        // Wrap the escrow information into a struct. This reduces the stack-print.
-        AssetSwapMetadata memory swapMetadata = AssetSwapMetadata({
-            fromAmount: amount - fee,
-            fromAsset: fromAsset,
-            swapHash: sendAssetHash,
-            blockNumber: uint32(block.number) // May overflow, but this is desired (% 2**32)
-        });
 
         // Send the purchased units to toPool on the target chain.
         CatalystIBCInterface(_chainInterface).sendCrossChainAsset(
@@ -1125,8 +1105,19 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
             toAssetIndex,
             U,
             minOut,
-            swapMetadata,
+            amount - fee,
+            fromAsset,
             calldata_
+        );
+
+        // Only need to hash info that is required by the escrow (+ some extra for randomisation)
+        // No need to hash context (as token/liquidity escrow data is different), fromPool, toPool, targetAssetIndex, minOut, CallData
+        bytes32 sendAssetHash = _computeSendAssetHash(
+            toAccount,      // Ensures no collisions between different users
+            U,              // Used to randomise the hash
+            amount - fee,   // Required! to validate release escrow data
+            fromAsset,      // Required! to validate release escrow data
+            uint32(block.number) // May overflow, but this is desired (% 2**32)
         );
 
         // Escrow the tokens used to purchase units. These will be sent back if transaction
@@ -1147,14 +1138,15 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
         // a router abusing timeout to circumvent the security limit.
 
         emit SendAsset(
+            channelId,
             toPool,
             toAccount,
             fromAsset,
             toAssetIndex,
             amount,
-            U,
             minOut,
-            sendAssetHash
+            U,
+            fee
         );
 
         return U;
@@ -1163,8 +1155,8 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
     /** @notice Copy of sendAsset with no calldata_ */
     function sendAsset(
         bytes32 channelId,
-        bytes32 toPool,
-        bytes32 toAccount,
+        bytes calldata toPool,
+        bytes calldata toAccount,
         address fromAsset,
         uint8 toAssetIndex,
         uint256 amount,
@@ -1195,16 +1187,20 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
      * @param toAccount The recipient.
      * @param U Number of units to convert into toAsset.
      * @param minOut Minimum number of tokens bought. Reverts if less.
-     * @param swapHash Used to connect 2 swaps within a group. 
+     * @param fromAmount Used to connect swaps cross-chain. The input amount on the sending chain.
+     * @param fromAsset Used to connect swaps cross-chain. The input asset on the sending chain.
+     * @param blockNumberMod Used to connect swaps cross-chain. The block number from the host side.
      */
     function receiveAsset(
         bytes32 channelId,
-        bytes32 fromPool,
+        bytes calldata fromPool,
         uint256 toAssetIndex,
         address toAccount,
         uint256 U,
         uint256 minOut,
-        bytes32 swapHash
+        uint256 fromAmount,
+        bytes calldata fromAsset,
+        uint32 blockNumberMod
     ) nonReentrant public override returns (uint256) {
         // Only allow connected pools
         if (!_poolConnection[channelId][fromPool]) revert PoolNotConnected(channelId, fromPool);
@@ -1235,19 +1231,31 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
         // Send the assets to the user.
         ERC20(toAsset).safeTransfer(toAccount, purchasedTokens);
 
-        emit ReceiveAsset(fromPool, toAccount, toAsset, U, purchasedTokens, swapHash);
+        emit ReceiveAsset(
+            channelId, 
+            fromPool, 
+            toAccount, 
+            toAsset, 
+            U, 
+            purchasedTokens, 
+            fromAmount,
+            fromAsset,
+            blockNumberMod
+        );
 
         return purchasedTokens;
     }
 
     function receiveAsset(
         bytes32 channelId,
-        bytes32 fromPool,
+        bytes calldata fromPool,
         uint256 toAssetIndex,
         address toAccount,
         uint256 U,
         uint256 minOut,
-        bytes32 swapHash,
+        uint256 fromAmount,
+        bytes calldata fromAsset,
+        uint32 blockNumberMod,
         address dataTarget,
         bytes calldata data
     ) external override returns (uint256) {
@@ -1258,7 +1266,9 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
             toAccount,
             U,
             minOut,
-            swapHash
+            fromAmount,
+            fromAsset,
+            blockNumberMod
         );
 
         // Let users define custom logic which should be executed after the swap.
@@ -1348,24 +1358,23 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
 
     /**
      * @notice Initiate a cross-chain liquidity swap by withdrawing tokens and converting them to units.
-     * @dev No reentry protection since only trusted contracts are called.
-     * While the description says tokens are withdrawn and then converted to units, pool tokens are converted
+     * @dev While the description says tokens are withdrawn and then converted to units, pool tokens are converted
      * directly into units through the following equation:
      *      U = N · wa^(1-k) · (((PT + pt)/PT)^(1-k) - 1)
      * @param channelId The target chain identifier.
-     * @param toPool The target pool on the target chain encoded in bytes32.
-     * @param toAccount The recipient of the transaction on the target chain. Encoded in bytes32.
-     * @param poolTokens The number of pool tokens to exchange
-     * @param minOut An array of minout describing: [the minimum number of pool tokens, the minimum number of reference assets]
-     * @param calldata_ Data field if a call should be made on the target chain. 
-     * Should be encoded abi.encode(<address>,<data>)
+     * @param toPool The target pool on the target chain encoded in 64 + 1 bytes.
+     * @param toAccount The recipient of the transaction on the target chain. Encoded in 64 bytes + 1.
+     * @param poolTokens The number of pool tokens to exchange.
+     * @param minOut An array of minout describing: [the minimum number of pool tokens, the minimum number of reference assets].
+     * @param fallbackUser If the transaction fails, send the escrowed funds to this address.
+     * @return uint256 The number of units minted.
      */
     function sendLiquidity(
         bytes32 channelId,
-        bytes32 toPool,
-        bytes32 toAccount,
+        bytes calldata toPool,
+        bytes calldata toAccount,
         uint256 poolTokens,
-        uint256[2] memory minOut,
+        uint256[2] calldata minOut,
         address fallbackUser,
         bytes memory calldata_
     ) nonReentrant public override returns (uint256) {
@@ -1375,6 +1384,8 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
         // Address(0) is not a valid fallback user. (As checking for escrow overlap
         // checks if the fallbackUser != address(0))
         require(fallbackUser != address(0));
+        require(toPool.length == 65);  // dev: Pool addresses are uint8 + 64 bytes.
+        require(toAccount.length == 65);  // dev: Account addresses are uint8 + 64 bytes.
 
         // Update amplification
         _updateAmplification();
@@ -1400,28 +1411,10 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
                     oneMinusAmp
                 )) - FixedPointMathLib.WAD
             );
-            // sendLiquidityAck requires casting U to int256 to update the _unitTracker and must never revert. Check for overflow here.
+            // onSendLiquiditySuccess requires casting U to int256 to update the _unitTracker and must never revert. Check for overflow here.
             require(U < uint256(type(int256).max));     // int256 max fits in uint256
             _unitTracker += int256(U);
         }
-
-        // Only need to hash info that is required by the escrow (+ some extra for randomisation)
-        // No need to hash context (as token/liquidity escrow data is different), fromPool, toPool, targetAssetIndex, minOut, CallData
-        bytes32 sendLiquidityHash = _computeSendLiquidityHash(
-            toAccount,      // Ensures no collisions between different users
-            U,              // Used to randomise the hash
-            poolTokens,     // Required! to validate release escrow data
-            uint32(block.number) // May overflow, but this is desired (% 2**32)
-        );
-
-        // Wrap the escrow information into a struct. This reduces the stack-print.
-        // (Not really since only pool tokens are wrapped.)
-        // However, the struct keeps the structure of swaps similar.
-        LiquiditySwapMetadata memory swapMetadata = LiquiditySwapMetadata({
-            fromAmount: poolTokens,
-            swapHash: sendLiquidityHash,
-            blockNumber: uint32(block.number) // May overflow, but this is desired (% 2**32)
-        });
 
         // Transfer the units to the target pools.
         CatalystIBCInterface(_chainInterface).sendCrossChainLiquidity(
@@ -1430,8 +1423,17 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
             toAccount,
             U,
             minOut,
-            swapMetadata,
+            poolTokens,
             calldata_
+        );
+
+        // Only need to hash info that is required by the escrow (+ some extra for randomisation)
+        // No need to hash context (as token/liquidity escrow data is different), fromPool, toPool, targetAssetIndex, minOut, CallData
+        bytes32 sendLiquidityHash = _computeSendLiquidityHash(
+            toAccount,      // Ensures no collisions between different users
+            U,              // Used to randomise the hash
+            poolTokens,     // Required! to validate release escrow data
+            uint32(block.number) // May overflow, but this is desired (% 2**32)
         );
 
         // Escrow the pool tokens
@@ -1443,11 +1445,12 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
         // a router abusing timeout to circumvent the security limit at a low cost.
 
         emit SendLiquidity(
+            channelId,
             toPool,
             toAccount,
             poolTokens,
-            U,
-            sendLiquidityHash
+            minOut,
+            U
         );
 
         return U;
@@ -1456,10 +1459,10 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
     /** @notice Copy of sendLiquidity with no calldata_ */
     function sendLiquidity(
         bytes32 channelId,
-        bytes32 toPool,
-        bytes32 toAccount,
+        bytes calldata toPool,
+        bytes calldata toAccount,
         uint256 poolTokens,
-        uint256[2] memory minOut,
+        uint256[2] calldata minOut,
         address fallbackUser
     ) external override returns (uint256) {
         bytes memory calldata_ = new bytes(0);
@@ -1475,9 +1478,8 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
     }
 
     /**
-     * @notice Completes a cross-chain liquidity swap by converting units to tokens and depositing
-     * @dev No reentry protection since only trusted contracts are called.
-     * Called exclusively by the chainInterface.
+     * @notice Completes a cross-chain liquidity swap by converting units to tokens and depositing.
+     * @dev Called exclusively by the chainInterface.
      * While the description says units are converted to tokens and then deposited, units are converted
      * directly to pool tokens through the following equation:
      *      pt = PT · (((N · wa_0^(1-k) + U)/(N · wa_0^(1-k))^(1/(1-k)) - 1)
@@ -1486,17 +1488,19 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
      * @param U Number of units to convert into pool tokens.
      * @param minPoolTokens The minimum number of pool tokens to mint on target pool. Otherwise: Reject
      * @param minReferenceAsset The minimum number of reference asset the pools tokens are worth. Otherwise: Reject
-     * @param swapHash Used to connect 2 swaps within a group. 
+     * @param fromAmount Used to connect swaps cross-chain. The input amount on the sending chain.
+     * @param blockNumberMod Used to connect swaps cross-chain. The block number from the host side.
      * @return uint256 Number of pool tokens minted to the recipient.
      */
     function receiveLiquidity(
         bytes32 channelId,
-        bytes32 fromPool,
+        bytes calldata fromPool,
         address toAccount,
         uint256 U,
         uint256 minPoolTokens,
         uint256 minReferenceAsset,
-        bytes32 swapHash
+        uint256 fromAmount,
+        uint32 blockNumberMod
     ) nonReentrant public override returns (uint256) {
         // The chainInterface is the only valid caller of this function.
         require(msg.sender == _chainInterface);
@@ -1562,7 +1566,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
         // Mint pool tokens for the user.
         _mint(toAccount, poolTokens);
 
-        emit ReceiveLiquidity(fromPool, toAccount, U, poolTokens, swapHash);
+        emit ReceiveLiquidity(channelId, fromPool, toAccount, U, poolTokens, fromAmount, blockNumberMod);
 
         return poolTokens;
     }
@@ -1570,12 +1574,13 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
     
     function receiveLiquidity(
         bytes32 channelId,
-        bytes32 fromPool,
+        bytes calldata fromPool,
         address who,
         uint256 U,
         uint256 minPoolTokens,
         uint256 minReferenceAsset,
-        bytes32 swapHash,
+        uint256 fromAmount,
+        uint32 blockNumberMod,
         address dataTarget,
         bytes calldata data
     ) external override returns (uint256) {
@@ -1586,7 +1591,8 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
             U,
             minPoolTokens,
             minReferenceAsset,
-            swapHash
+            fromAmount,
+            blockNumberMod
         );
 
         // Let users define custom logic which should be executed after the swap.
@@ -1613,15 +1619,15 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
      * @param escrowToken The token escrowed.
      * @param blockNumberMod The block number at which the swap transaction was commited (mod 32)
      */
-    function sendAssetAck(
-        bytes32 toAccount,
+    function onSendAssetSuccess(
+        bytes calldata toAccount,
         uint256 U,
         uint256 escrowAmount,
         address escrowToken,
         uint32 blockNumberMod
     ) public override {
         // Execute common escrow logic.
-        super.sendAssetAck(toAccount, U, escrowAmount, escrowToken, blockNumberMod);
+        super.onSendAssetSuccess(toAccount, U, escrowAmount, escrowToken, blockNumberMod);
 
         // Incoming swaps should be subtracted from the unit flow.
         // It is assumed if the router was fraudulent, that no-one would execute a trade.
@@ -1667,15 +1673,15 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
      * @param escrowToken The token escrowed.
      * @param blockNumberMod The block number at which the swap transaction was commited (mod 32)
      */
-    function sendAssetTimeout(
-        bytes32 toAccount,
+    function onSendAssetFailure(
+        bytes calldata toAccount,
         uint256 U,
         uint256 escrowAmount,
         address escrowToken,
         uint32 blockNumberMod
     ) public override {
         // Execute common escrow logic.
-        super.sendAssetTimeout(toAccount, U, escrowAmount, escrowToken, blockNumberMod);
+        super.onSendAssetFailure(toAccount, U, escrowAmount, escrowToken, blockNumberMod);
 
         // Removed timed-out units from the unit tracker. This will keep the
         // balance0 in balance, since tokens also leave the pool
@@ -1683,7 +1689,7 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
                                         // Cannot be manipulated by the router as, otherwise, the swapHash check will fail
     }
 
-    // sendLiquidityAck is not overwritten since we are unable to increase
+    // onSendLiquiditySuccess is not overwritten since we are unable to increase
     // the security limit. This is because it is very expensive to compute the update
     // to the security limit. If someone liquidity swapped a significant amount of assets
     // it is assumed the pool has low liquidity. In these cases, liquidity swaps shouldn't be used.
@@ -1697,13 +1703,13 @@ contract CatalystSwapPoolAmplified is CatalystSwapPoolCommon {
      * @param escrowAmount The number of pool tokens escrowed.
      * @param blockNumberMod The block number at which the swap transaction was commited (mod 32)
      */
-    function sendLiquidityTimeout(
-        bytes32 toAccount,
+    function onSendLiquidityFailure(
+        bytes calldata toAccount,
         uint256 U,
         uint256 escrowAmount,
         uint32 blockNumberMod
     ) public override {
-        super.sendLiquidityTimeout(toAccount, U, escrowAmount, blockNumberMod);
+        super.onSendLiquidityFailure(toAccount, U, escrowAmount, blockNumberMod);
 
         // Removed timed-out units from the unit tracker. This will keep the
         // balance0 in balance, since tokens also leave the pool
