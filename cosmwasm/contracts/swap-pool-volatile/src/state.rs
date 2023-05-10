@@ -202,7 +202,7 @@ pub fn deposit_mixed(
     // Do not include the 'escrowed' pool tokens in the total supply of pool tokens (return less)
     let effective_supply = U256::from(total_supply(deps.as_ref())?.u128());
 
-    // Derive the weight sum (w_sum) from the security limit capacity       //TODO do we want this in this implementation?
+    // Derive the weight sum (w_sum) from the security limit capacity
     let w_sum = MAX_LIMIT_CAPACITY.load(deps.storage)? / fixed_point_math::LN2;
 
     // Compute the pool tokens to be minted.
@@ -348,7 +348,7 @@ pub fn withdraw_mixed(
     let sender = info.sender.to_string();
     let burn_response = execute_burn(deps.branch(), env.clone(), info.clone(), pool_tokens)?;
 
-    // Derive the weight sum (w_sum) from the security limit capacity       //TODO do we want this in this implementation?
+    // Derive the weight sum (w_sum) from the security limit capacity
     let w_sum = MAX_LIMIT_CAPACITY.load(deps.storage)? / fixed_point_math::LN2;
 
     // Compute the unit worth of the pool tokens.
@@ -763,7 +763,7 @@ pub fn send_liquidity(
     // Burn the pool tokens of the sender
     execute_burn(deps.branch(), env.clone(), info, amount)?;
 
-    // Derive the weight sum (w_sum) from the security limit capacity       //TODO do we want this in this implementation?
+    // Derive the weight sum (w_sum) from the security limit capacity
     let w_sum = MAX_LIMIT_CAPACITY.load(deps.storage)? / fixed_point_math::LN2;
 
     // Compute the unit value of the provided poolTokens
@@ -854,7 +854,7 @@ pub fn receive_liquidity(
 
     update_limit_capacity(deps, env.block.time, u)?;
 
-    // Derive the weight sum (w_sum) from the security limit capacity       //TODO do we want this in this implementation?
+    // Derive the weight sum (w_sum) from the security limit capacity
     let w_sum = MAX_LIMIT_CAPACITY.load(deps.storage)? / fixed_point_math::LN2;
 
     // Do not include the 'escrowed' pool tokens in the total supply of pool tokens of the pool (return less)
