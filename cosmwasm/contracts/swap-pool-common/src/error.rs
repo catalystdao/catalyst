@@ -29,7 +29,7 @@ pub enum ContractError {
     InvalidGovernanceFee { requested_fee: u64, max_fee: u64 },
 
     #[error("Security limit exceeded")]
-    SecurityLimitExceeded { units: U256, capacity: U256 },
+    SecurityLimitExceeded { amount: U256, capacity: U256 },
 
 
     #[error("Return insufficient")]

@@ -105,7 +105,7 @@ pub fn ready(deps: &Deps) -> StdResult<bool> {
 }
 
 
-pub fn calc_unit_capacity(
+pub fn calc_limit_capacity(
     deps: &Deps,
     time: Timestamp
 ) -> Result<U256, ContractError> {
@@ -135,20 +135,20 @@ pub fn calc_unit_capacity(
 }
 
 
-pub fn update_unit_capacity(
+pub fn update_limit_capacity(
     deps: &mut DepsMut,
     current_time: Timestamp,
-    units: U256
+    amount: U256
 ) -> Result<(), ContractError> {
 
     //TODO EVM mismatch
-    let capacity = calc_unit_capacity(&deps.as_ref(), current_time)?;
+    let capacity = calc_limit_capacity(&deps.as_ref(), current_time)?;
 
-    if units > capacity {
-        return Err(ContractError::SecurityLimitExceeded { units, capacity });
+    if amount > capacity {
+        return Err(ContractError::SecurityLimitExceeded { amount, capacity });
     }
 
-    let new_capacity = capacity - units;
+    let new_capacity = capacity - amount;
     let timestamp = current_time.nanos();
 
     USED_LIMIT_CAPACITY.save(deps.storage, &new_capacity)?;
@@ -424,13 +424,12 @@ pub fn setup(
 }
 
 
-//TODO rename
-pub fn get_unit_capacity(
+pub fn get_limit_capacity(
     deps: &Deps,
     env: Env
 ) -> Result<U256, ContractError> {
 
-    calc_unit_capacity(deps, env.block.time)
+    calc_limit_capacity(deps, env.block.time)
 
 }
 

@@ -9,9 +9,9 @@ use serde::{Serialize, Deserialize};
 use swap_pool_common::{
     state::{
         ASSETS, MAX_ASSETS, WEIGHTS, INITIAL_MINT_AMOUNT, POOL_FEE, MAX_LIMIT_CAPACITY, USED_LIMIT_CAPACITY, CHAIN_INTERFACE,
-        TOTAL_ESCROWED_LIQUIDITY, TOTAL_ESCROWED_ASSETS, is_connected, get_asset_index, update_unit_capacity,
+        TOTAL_ESCROWED_LIQUIDITY, TOTAL_ESCROWED_ASSETS, is_connected, get_asset_index, update_limit_capacity,
         collect_governance_fee_message, compute_send_asset_hash, compute_send_liquidity_hash, create_asset_escrow,
-        create_liquidity_escrow, on_send_asset_ack, on_send_liquidity_ack, total_supply, get_unit_capacity, USED_LIMIT_CAPACITY_TIMESTAMP, FACTORY,
+        create_liquidity_escrow, on_send_asset_ack, on_send_liquidity_ack, total_supply, get_limit_capacity, USED_LIMIT_CAPACITY_TIMESTAMP, FACTORY,
     },
     ContractError, msg::{CalcSendAssetResponse, CalcReceiveAssetResponse, CalcLocalSwapResponse, GetLimitCapacityResponse}
 };
@@ -681,7 +681,7 @@ pub fn receive_asset(
         .ok_or(ContractError::GenericError {})?
         .clone(); //TODO error
 
-    update_unit_capacity(deps, env.block.time, u)?;
+    update_limit_capacity(deps, env.block.time, u)?;
 
     let out = calc_receive_asset(&deps.as_ref(), env.clone(), to_asset.as_str(), u)?;
     
@@ -849,7 +849,7 @@ pub fn receive_liquidity(
 
     update_weights(deps, env.block.time.nanos())?;
 
-    update_unit_capacity(deps, env.block.time, u)?;
+    update_limit_capacity(deps, env.block.time, u)?;
 
     // Derive the weight sum (w_sum) from the security limit capacity       //TODO do we want this in this implementation?
     let w_sum = MAX_LIMIT_CAPACITY.load(deps.storage)? / fixed_point_math::LN2;
@@ -1345,7 +1345,7 @@ pub fn query_get_limit_capacity(
 
     Ok(
         GetLimitCapacityResponse {
-            capacity: get_unit_capacity(&deps, env)?
+            capacity: get_limit_capacity(&deps, env)?
         }
     )
 
