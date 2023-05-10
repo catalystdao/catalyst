@@ -174,7 +174,10 @@ pub fn deposit_mixed(
         .zip(&deposit_amounts)                  // zip: deposit_amounts.len() == assets.len()
         .try_fold(U256::ZERO, |acc, ((asset, weight), deposit_amount)| {
 
-            //TODO add gas optimization: if deposit_amount == 0, skip
+            // Save gas if the user provides no tokens for the specific asset
+            if deposit_amount.is_zero() {
+                return Ok(acc);
+            }
 
             let pool_asset_balance = deps.querier.query_wasm_smart::<BalanceResponse>(
                 asset,
