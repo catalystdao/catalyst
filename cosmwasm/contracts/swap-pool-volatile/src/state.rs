@@ -1045,7 +1045,16 @@ pub fn calc_local_swap(
     )?.balance.checked_sub(to_asset_escrowed_balance)?;      // pool balance minus escrowed balance
     let to_asset_weight = weights[to_asset_index];
 
-    //TODO add simplified formula for the case from_weight == to_weight
+    //TODO move condition into 'calc_combined_price_curves'?
+    if from_asset_weight == to_asset_weight {
+        // Saves gas and is exact
+        // NOTE: If W_A == 0 and W_B == 0 then W_A == W_B and the calculation will not fail (unlike with the full calculation).
+        // This cannot be used to extract an asset from the pool using an asset that is not in the pool, as all assets in 
+        // the pool have a non-zero weight.
+        return Ok(
+            to_asset_balance.checked_mul(amount)? / from_asset_balance.checked_add(amount)?
+        )
+    }
 
     calc_combined_price_curves(
         amount.u128().into(),
