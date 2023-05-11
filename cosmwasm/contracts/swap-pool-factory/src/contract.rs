@@ -154,6 +154,7 @@ fn execute_deploy_vault(
             .add_attribute("vault_contract_id", Uint64::from(vault_contract_id))                //TODO EVM mismatch event name
             .add_attribute("chain_interface", chain_interface.unwrap_or("None".to_string()))    //TODO review 'chain_interface' format
             .add_attribute("deployer", info.sender)
+            .add_attribute("k", Uint64::new(amplification))
     )
 }
 
