@@ -667,13 +667,14 @@ pub fn receive_asset(
     calldata: Option<Vec<u8>>
 ) -> Result<Response, ContractError> {
 
+    // Only allow the 'chain_interface' to invoke this function
+    if Some(info.sender) != CHAIN_INTERFACE.load(deps.storage)? {
+        return Err(ContractError::Unauthorized {});
+    }
+
     // Only allow connected pools
     if !is_connected(&deps.as_ref(), &channel_id, from_pool.clone()) {
         return Err(ContractError::PoolNotConnected { channel_id, pool: from_pool })
-    }
-
-    if Some(info.sender) != CHAIN_INTERFACE.load(deps.storage)? {
-        return Err(ContractError::Unauthorized {});
     }
 
     update_weights(deps, env.block.time.nanos())?;
@@ -841,13 +842,14 @@ pub fn receive_liquidity(
     calldata: Option<Vec<u8>>
 ) -> Result<Response, ContractError> {
 
+    // Only allow the 'chain_interface' to invoke this function
+    if Some(info.sender) != CHAIN_INTERFACE.load(deps.storage)? {
+        return Err(ContractError::Unauthorized {});
+    }
+
     // Only allow connected pools
     if !is_connected(&deps.as_ref(), &channel_id, from_pool.clone()) {
         return Err(ContractError::PoolNotConnected { channel_id, pool: from_pool })
-    }
-
-    if Some(info.sender) != CHAIN_INTERFACE.load(deps.storage)? {
-        return Err(ContractError::Unauthorized {});
     }
 
     update_weights(deps, env.block.time.nanos())?;
