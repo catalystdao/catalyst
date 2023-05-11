@@ -1096,7 +1096,11 @@ pub fn on_send_asset_success_volatile(
     )?;
 
     let used_capacity = USED_LIMIT_CAPACITY.load(deps.storage)?;
-    USED_LIMIT_CAPACITY.save(deps.storage, &used_capacity.saturating_sub(u))?;
+
+    // Minor optimization: avoid storage write if the used capacity is already at zero
+    if used_capacity != U256::ZERO {
+        USED_LIMIT_CAPACITY.save(deps.storage, &used_capacity.saturating_sub(u))?;
+    }
 
     Ok(response)
 }
@@ -1120,7 +1124,11 @@ pub fn on_send_liquidity_success_volatile(
     )?;
 
     let used_capacity = USED_LIMIT_CAPACITY.load(deps.storage)?;
-    USED_LIMIT_CAPACITY.save(deps.storage, &used_capacity.saturating_sub(u))?;
+
+    // Minor optimization: avoid storage write if the used capacity is already at zero
+    if used_capacity != U256::ZERO {
+        USED_LIMIT_CAPACITY.save(deps.storage, &used_capacity.saturating_sub(u))?;
+    }
 
     Ok(response)
 }
