@@ -1201,12 +1201,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
         uint256 fromAmount,
         bytes calldata fromAsset,
         uint32 blockNumberMod
-    ) nonReentrant public override returns (uint256) {
-        // Only allow connected vaults
-        if (!_vaultConnection[channelId][fromVault]) revert VaultNotConnected(channelId, fromVault);
-        // The chainInterface is the only valid caller of this function.
-        require(msg.sender == _chainInterface);
-
+    ) nonReentrant verifyIncomingMessage(channelId, fromVault) public override returns (uint256) {
         _updateAmplification();
 
         // Convert the asset index (toAsset) into the asset to be purchased.
@@ -1501,12 +1496,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
         uint256 minReferenceAsset,
         uint256 fromAmount,
         uint32 blockNumberMod
-    ) nonReentrant public override returns (uint256) {
-        // The chainInterface is the only valid caller of this function.
-        require(msg.sender == _chainInterface);
-        // Only allow connected vaults
-        if (!_vaultConnection[channelId][fromVault]) revert VaultNotConnected(channelId, fromVault);
-
+    ) nonReentrant verifyIncomingMessage(channelId, fromVault) public override returns (uint256) {
         _updateAmplification();
 
         int256 oneMinusAmp = _oneMinusAmp;

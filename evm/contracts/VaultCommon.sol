@@ -135,6 +135,18 @@ abstract contract CatalystVaultCommon is
         _;
     }
 
+    /**
+     * @notice Checks that an incoming message is coming from a sender and that the context of the message is valid. (connection)
+     */ 
+    modifier verifyIncomingMessage(bytes32 channelId, bytes calldata fromVault) {
+        // The chainInterface is the only valid caller of this function.
+        require(msg.sender == _chainInterface);
+        // Only allow connected vaults
+        if (!_vaultConnection[channelId][fromVault]) revert VaultNotConnected(channelId, fromVault);
+
+        _;
+    }
+
     function onlyLocal() public view override returns (bool) {
         return _chainInterface == address(0);
     }
