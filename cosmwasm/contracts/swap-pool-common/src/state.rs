@@ -512,8 +512,7 @@ pub fn release_liquidity_escrow(
 }
 
 
-//TODO rename `on_send_asset_success`
-pub fn on_send_asset_ack(
+pub fn on_send_asset_success(
     deps: &mut DepsMut,
     info: MessageInfo,
     to_account: Vec<u8>,
@@ -544,29 +543,7 @@ pub fn on_send_asset_ack(
 }
 
 
-pub fn send_asset_ack(
-    deps: &mut DepsMut,
-    info: MessageInfo,
-    to_account: Vec<u8>,
-    u: U256,
-    amount: Uint128,
-    asset: String,
-    block_number_mod: u32
-) -> Result<Response, ContractError> {
-
-    on_send_asset_ack(
-        deps,
-        info,
-        to_account,
-        u,
-        amount,
-        asset,
-        block_number_mod
-    )
-}
-
-
-pub fn on_send_asset_timeout(
+pub fn on_send_asset_failure(
     deps: &mut DepsMut,
     env: Env,
     info: MessageInfo,
@@ -611,32 +588,7 @@ pub fn on_send_asset_timeout(
 }
 
 
-pub fn send_asset_timeout(
-    deps: &mut DepsMut,
-    env: Env,
-    info: MessageInfo,
-    to_account: Vec<u8>,
-    u: U256,
-    amount: Uint128,
-    asset: String,
-    block_number_mod: u32
-) -> Result<Response, ContractError> {
-
-    on_send_asset_timeout(
-        deps,
-        env,
-        info,
-        to_account,
-        u,
-        amount,
-        asset,
-        block_number_mod
-    )
-
-}
-
-
-pub fn on_send_liquidity_ack(
+pub fn on_send_liquidity_success(
     deps: &mut DepsMut,
     info: MessageInfo,
     to_account: Vec<u8>,
@@ -665,28 +617,7 @@ pub fn on_send_liquidity_ack(
 }
 
 
-pub fn send_liquidity_ack(
-    deps: &mut DepsMut,
-    info: MessageInfo,
-    to_account: Vec<u8>,
-    u: U256,
-    amount: Uint128,
-    block_number_mod: u32
-) -> Result<Response, ContractError> {
-
-    on_send_liquidity_ack(
-        deps,
-        info,
-        to_account,
-        u,
-        amount,
-        block_number_mod
-    )
-
-}
-
-
-pub fn on_send_liquidity_timeout(
+pub fn on_send_liquidity_failure(
     deps: &mut DepsMut,
     env: Env,
     info: MessageInfo,
@@ -726,27 +657,6 @@ pub fn on_send_liquidity_timeout(
         Response::new()
             .add_attribute("swap_hash", format!("{:?}", send_liquidity_hash))
             .add_attributes(mint_response.attributes)   //TODO better way to do this?
-    )
-}
-
-pub fn send_liquidity_timeout(
-    deps: &mut DepsMut,
-    env: Env,
-    info: MessageInfo,
-    to_account: Vec<u8>,
-    u: U256,
-    amount: Uint128,
-    block_number_mod: u32
-) -> Result<Response, ContractError> {
-
-    on_send_liquidity_timeout(
-        deps,
-        env,
-        info,
-        to_account,
-        u,
-        amount,
-        block_number_mod
     )
 }
 

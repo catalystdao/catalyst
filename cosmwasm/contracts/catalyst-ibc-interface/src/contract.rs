@@ -287,7 +287,7 @@ mod catalyst_ibc_interface_tests {
 
     fn mock_pool_send_asset_success_msg(
     ) -> swap_pool_common::msg::ExecuteMsg<()> {
-        swap_pool_common::msg::ExecuteMsg::SendAssetAck {
+        swap_pool_common::msg::ExecuteMsg::OnSendAssetSuccess {
             to_account: "to_account".as_bytes().to_vec(),
             u: uint!("78456988731590487483448276103933454935747871349630657124267302091643025406701"),          // Some large U256 number
             amount: Uint128::from(4920222095670429824873974121747892731u128),                                   // Some large Uint128 number
@@ -298,7 +298,7 @@ mod catalyst_ibc_interface_tests {
 
     fn mock_pool_send_asset_failure_msg(
     ) -> swap_pool_common::msg::ExecuteMsg<()> {
-        swap_pool_common::msg::ExecuteMsg::SendAssetTimeout {
+        swap_pool_common::msg::ExecuteMsg::OnSendAssetFailure {
             to_account: "to_account".as_bytes().to_vec(),
             u: uint!("78456988731590487483448276103933454935747871349630657124267302091643025406701"),          // Some large U256 number
             amount: Uint128::from(4920222095670429824873974121747892731u128),                                   // Some large Uint128 number
@@ -351,7 +351,7 @@ mod catalyst_ibc_interface_tests {
 
     fn mock_pool_send_liquidity_success_msg(
     ) -> swap_pool_common::msg::ExecuteMsg<()> {
-        swap_pool_common::msg::ExecuteMsg::SendLiquidityAck {
+        swap_pool_common::msg::ExecuteMsg::OnSendLiquiditySuccess {
             to_account: "to_account".as_bytes().to_vec(),
             u: uint!("78456988731590487483448276103933454935747871349630657124267302091643025406701"),          // Some large U256 number
             amount: Uint128::from(4920222095670429824873974121747892731u128),                                   // Some large Uint128 number
@@ -361,7 +361,7 @@ mod catalyst_ibc_interface_tests {
 
     fn mock_pool_send_liquidity_failure_msg(
     ) -> swap_pool_common::msg::ExecuteMsg<()> {
-        swap_pool_common::msg::ExecuteMsg::SendLiquidityTimeout {
+        swap_pool_common::msg::ExecuteMsg::OnSendLiquidityFailure {
             to_account: "to_account".as_bytes().to_vec(),
             u: uint!("78456988731590487483448276103933454935747871349630657124267302091643025406701"),          // Some large U256 number
             amount: Uint128::from(4920222095670429824873974121747892731u128),                                   // Some large Uint128 number
@@ -787,7 +787,7 @@ mod catalyst_ibc_interface_tests {
 
 
     #[test]
-    fn test_send_asset_ack() {
+    fn test_send_asset_success() {
 
         let mut deps = mock_dependencies();
       
@@ -886,7 +886,7 @@ mod catalyst_ibc_interface_tests {
 
 
     #[test]
-    fn test_send_asset_timeout() {
+    fn test_send_asset_failure() {
 
         let mut deps = mock_dependencies();
       
@@ -936,7 +936,7 @@ mod catalyst_ibc_interface_tests {
 
 
     #[test]
-    fn test_send_asset_ack_timeout_invalid_from_amount() {
+    fn test_send_asset_success_failure_invalid_from_amount() {
 
         let mut deps = mock_dependencies();
       
@@ -1230,7 +1230,7 @@ mod catalyst_ibc_interface_tests {
 
 
     #[test]
-    fn test_send_liquidity_ack() {
+    fn test_send_liquidity_success() {
 
         let mut deps = mock_dependencies();
       
@@ -1329,7 +1329,7 @@ mod catalyst_ibc_interface_tests {
 
 
     #[test]
-    fn test_send_liquidity_timeout() {
+    fn test_send_liquidity_failure() {
 
         let mut deps = mock_dependencies();
       
@@ -1379,7 +1379,7 @@ mod catalyst_ibc_interface_tests {
 
 
     #[test]
-    fn test_send_liquidity_ack_timeout_invalid_from_amount() {
+    fn test_send_liquidity_success_failure_invalid_from_amount() {
 
         let mut deps = mock_dependencies();
       

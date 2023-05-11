@@ -282,14 +282,14 @@ fn on_packet_response(
 
             // Build execute message
             let msg = match success {
-                true => SwapPoolExecuteMsg::<()>::SendAssetAck {
+                true => SwapPoolExecuteMsg::<()>::OnSendAssetSuccess {
                     to_account: payload.to_account.to_vec(),                            // Can be 'unsafe' as it must match the one with which the 'swap_hash' was derived
                     u: payload.u,
                     amount: payload.variable_payload.from_amount()?,
                     asset: payload.variable_payload.from_asset_unsafe_string()?,        // Can be 'unsafe' as it must match the one with which the 'swap_hash' was derived
                     block_number_mod: payload.variable_payload.block_number
                 },
-                false => SwapPoolExecuteMsg::<()>::SendAssetTimeout {
+                false => SwapPoolExecuteMsg::<()>::OnSendAssetFailure {
                     to_account: payload.to_account.to_vec(),                            // Can be 'unsafe' as it must match the one with which the 'swap_hash' was derived
                     u: payload.u,
                     amount: payload.variable_payload.from_amount()?,
@@ -309,13 +309,13 @@ fn on_packet_response(
 
             // Build execute message
             let msg = match success {
-                true => SwapPoolExecuteMsg::<()>::SendLiquidityAck {
+                true => SwapPoolExecuteMsg::<()>::OnSendLiquiditySuccess {
                     to_account: payload.to_account.to_vec(),                            // Can be 'unsafe' as it must match the one with which the 'swap_hash' was derived
                     u: payload.u,
                     amount: payload.variable_payload.from_amount()?,                    // Can be 'unsafe' as it must match the one with which the 'swap_hash' was derived
                     block_number_mod: payload.variable_payload.block_number
                 },
-                false => SwapPoolExecuteMsg::<()>::SendLiquidityTimeout {
+                false => SwapPoolExecuteMsg::<()>::OnSendLiquidityFailure {
                     to_account: payload.to_account.to_vec(),                            // Can be 'unsafe' as it must match the one with which the 'swap_hash' was derived
                     u: payload.u,
                     amount: payload.variable_payload.from_amount()?,                    // Can be 'unsafe' as it must match the one with which the 'swap_hash' was derived

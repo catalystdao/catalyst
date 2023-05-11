@@ -1,17 +1,22 @@
-mod test_volatile_send_liquidity_ack_timeout {
+mod test_volatile_send_asset_success_failure {
     use cosmwasm_std::{Uint128, Addr};
     use cw_multi_test::{App, Executor};
     use ethnum::{U256, uint};
-    use swap_pool_common::{ContractError, msg::{TotalEscrowedLiquidityResponse, LiquidityEscrowResponse}, state::{compute_send_liquidity_hash, INITIAL_MINT_AMOUNT}};
+    use swap_pool_common::{ContractError, msg::{TotalEscrowedAssetResponse, AssetEscrowResponse}, state::compute_send_asset_hash};
 
-    use crate::{msg::{VolatileExecuteMsg, QueryMsg}, tests::{helpers::{SETUP_MASTER, deploy_test_tokens, WAD, query_token_balance, transfer_tokens, get_response_attribute, mock_set_pool_connection, CHANNEL_ID, SWAPPER_B, SWAPPER_A, mock_instantiate_interface, query_token_info, mock_factory_deploy_vault}, math_helpers::{uint128_to_f64, f64_to_uint128}}};
+    use crate::{msg::{VolatileExecuteMsg, QueryMsg}, tests::{helpers::{SETUP_MASTER, deploy_test_tokens, WAD, set_token_allowance, query_token_balance, transfer_tokens, get_response_attribute, mock_set_pool_connection, CHANNEL_ID, SWAPPER_B, SWAPPER_A, mock_instantiate_interface, FACTORY_OWNER, mock_factory_deploy_vault}, math_helpers::{uint128_to_f64, f64_to_uint128}}};
 
     //TODO check events
 
     struct TestEnv {
         pub interface: Addr,
         pub vault: Addr,
+        pub vault_assets: Vec<Addr>,
+        pub vault_initial_balances: Vec<Uint128>,
+        pub from_asset_idx: usize,
+        pub from_asset: Addr,
         pub from_amount: Uint128,
+        pub fee: Uint128,
         pub u: U256,
         pub to_account: Vec<u8> ,
         pub block_number: u32
@@ -45,30 +50,44 @@ mod test_volatile_send_liquidity_ack_timeout {
                 true
             );
     
-            // Define send liquidity configuration
+            // Define send asset configuration
+            let from_asset_idx = 0;
+            let from_asset = vault_assets[from_asset_idx].clone();
+            let from_balance = vault_initial_balances[from_asset_idx];
             let send_percentage = 0.15;
-            let swap_amount = f64_to_uint128(uint128_to_f64(INITIAL_MINT_AMOUNT) * send_percentage).unwrap();
+            let swap_amount = f64_to_uint128(uint128_to_f64(from_balance) * send_percentage).unwrap();
+    
+            let to_asset_idx = 1;
     
             // Fund swapper with tokens and set vault allowance
             transfer_tokens(
                 app,
                 swap_amount,
-                vault.clone(),
+                from_asset.clone(),
                 Addr::unchecked(SETUP_MASTER),
                 SWAPPER_A.to_string()
             );
     
-            // Execute send liquidity
+            set_token_allowance(
+                app,
+                swap_amount,
+                from_asset.clone(),
+                Addr::unchecked(SWAPPER_A),
+                vault.to_string()
+            );
+    
+            // Execute send asset
             let response = app.execute_contract(
                 Addr::unchecked(SWAPPER_A),
                 vault.clone(),
-                &VolatileExecuteMsg::SendLiquidity {
+                &VolatileExecuteMsg::SendAsset {
                     channel_id: CHANNEL_ID.to_string(),
                     to_pool: target_pool.as_bytes().to_vec(),
                     to_account: SWAPPER_B.as_bytes().to_vec(),
+                    from_asset: from_asset.to_string(),
+                    to_asset_index: to_asset_idx,
                     amount: swap_amount,
-                    min_pool_tokens: U256::ZERO,
-                    min_reference_asset: U256::ZERO,
+                    min_out: U256::ZERO,
                     fallback_account: SWAPPER_A.to_string(),
                     calldata: vec![]
                 },
@@ -76,12 +95,18 @@ mod test_volatile_send_liquidity_ack_timeout {
             ).unwrap();
 
             let u = get_response_attribute::<U256>(response.events[1].clone(), "units").unwrap();
+            let fee = get_response_attribute::<Uint128>(response.events[1].clone(), "fee").unwrap();
             let block_number = app.block_info().height as u32;
 
             TestEnv {
                 interface,
                 vault,
+                vault_assets,
+                vault_initial_balances,
+                from_asset_idx,
+                from_asset,
                 from_amount: swap_amount,
+                fee,
                 u,
                 to_account: SWAPPER_B.as_bytes().to_vec(),
                 block_number
@@ -93,7 +118,7 @@ mod test_volatile_send_liquidity_ack_timeout {
 
 
     #[test]
-    fn test_send_liquidity_ack() {
+    fn test_send_asset_success() {
 
         // Setup test
         let mut app = App::default();
@@ -101,14 +126,15 @@ mod test_volatile_send_liquidity_ack_timeout {
 
     
 
-        // Tested action: send liquidity ack
+        // Tested action: send asset ack
         app.execute_contract(
             env.interface,
             env.vault.clone(),
-            &VolatileExecuteMsg::SendLiquidityAck {
+            &VolatileExecuteMsg::OnSendAssetSuccess {
                 to_account: env.to_account.clone(),
                 u: env.u,
-                amount: env.from_amount,
+                amount: env.from_amount - env.fee,
+                asset: env.from_asset.to_string(),
                 block_number_mod: env.block_number,
             },
             &[]
@@ -117,47 +143,51 @@ mod test_volatile_send_liquidity_ack_timeout {
 
 
         // Verify escrow is released
-        let swap_hash = compute_send_liquidity_hash(
+        let swap_hash = compute_send_asset_hash(
             env.to_account.as_slice(),
             env.u,
-            env.from_amount,
+            env.from_amount - env.fee,
+            env.from_asset.as_ref(),
             env.block_number
         );
 
         let queried_escrow = app
             .wrap()
-            .query_wasm_smart::<LiquidityEscrowResponse>(
+            .query_wasm_smart::<AssetEscrowResponse>(
                 env.vault.clone(),
-                &QueryMsg::LiquidityEscrow { hash: swap_hash }
+                &QueryMsg::AssetEscrow { hash: swap_hash }
             ).unwrap();
 
         assert!(queried_escrow.fallback_account.is_none());
 
 
         // Verify total escrowed balance is updated
-        let queried_total_escrowed_balance = app
+        let queried_total_escrowed_balances = app
             .wrap()
-            .query_wasm_smart::<TotalEscrowedLiquidityResponse>(
+            .query_wasm_smart::<TotalEscrowedAssetResponse>(
                 env.vault.clone(),
-                &QueryMsg::TotalEscrowedLiquidity {}
+                &QueryMsg::TotalEscrowedAsset { asset: env.from_asset.to_string() }
             ).unwrap();
         
         assert_eq!(
-            queried_total_escrowed_balance.amount,
+            queried_total_escrowed_balances.amount,
             Uint128::zero()
         );
 
-        // Verify the vault token supply remains unchanged
-        let vault_supply = query_token_info(&mut app, env.vault.clone()).total_supply;
+        // Verify the swap assets have NOT been returned to the swapper
+        let vault_from_asset_balance = query_token_balance(&mut app, env.from_asset.clone(), env.vault.to_string());
+        let factory_owner_from_asset_balance = query_token_balance(&mut app, env.from_asset.clone(), FACTORY_OWNER.to_string());
         assert_eq!(
-            vault_supply,
-            INITIAL_MINT_AMOUNT - env.from_amount
+            vault_from_asset_balance,
+            env.vault_initial_balances[env.from_asset_idx]                // Initial vault supply
+                + env.from_amount                                               // plus swap amount
+                - factory_owner_from_asset_balance                              // minus the governance fee
         );
 
-        // Verify vault tokens have not been received by the swapper
-        let swapper_vault_token_balance = query_token_balance(&mut app, env.vault.clone(), SWAPPER_A.to_string());
+        // Verify the swap assets have NOT been received by the swapper
+        let swapper_from_asset_balance = query_token_balance(&mut app, env.from_asset.clone(), SWAPPER_A.to_string());
         assert_eq!(
-            swapper_vault_token_balance,
+            swapper_from_asset_balance,
             Uint128::zero()
         );
 
@@ -165,7 +195,7 @@ mod test_volatile_send_liquidity_ack_timeout {
 
 
     #[test]
-    fn test_send_liquidity_timeout() {
+    fn test_send_asset_failure() {
 
         // Setup test
         let mut app = App::default();
@@ -173,14 +203,15 @@ mod test_volatile_send_liquidity_ack_timeout {
 
     
 
-        // Tested action: send liquidity timeout
+        // Tested action: send asset timeout
         app.execute_contract(
             env.interface,
             env.vault.clone(),
-            &VolatileExecuteMsg::SendLiquidityTimeout {
+            &VolatileExecuteMsg::OnSendAssetFailure {
                 to_account: env.to_account.clone(),
                 u: env.u,
-                amount: env.from_amount,
+                amount: env.from_amount - env.fee,
+                asset: env.from_asset.to_string(),
                 block_number_mod: env.block_number,
             },
             &[]
@@ -189,67 +220,72 @@ mod test_volatile_send_liquidity_ack_timeout {
 
 
         // Verify escrow is released
-        let swap_hash = compute_send_liquidity_hash(
+        let swap_hash = compute_send_asset_hash(
             env.to_account.as_slice(),
             env.u,
-            env.from_amount,
+            env.from_amount - env.fee,
+            env.from_asset.as_ref(),
             env.block_number
         );
 
         let queried_escrow = app
             .wrap()
-            .query_wasm_smart::<LiquidityEscrowResponse>(
+            .query_wasm_smart::<AssetEscrowResponse>(
                 env.vault.clone(),
-                &QueryMsg::LiquidityEscrow { hash: swap_hash }
+                &QueryMsg::AssetEscrow { hash: swap_hash }
             ).unwrap();
 
         assert!(queried_escrow.fallback_account.is_none());
 
         // Verify total escrowed balance is updated
-        let queried_total_escrowed_balance = app
+        let queried_total_escrowed_balances = app
             .wrap()
-            .query_wasm_smart::<TotalEscrowedLiquidityResponse>(
+            .query_wasm_smart::<TotalEscrowedAssetResponse>(
                 env.vault.clone(),
-                &QueryMsg::TotalEscrowedLiquidity {}
+                &QueryMsg::TotalEscrowedAsset { asset: env.from_asset.to_string() }
             ).unwrap();
         
         assert_eq!(
-            queried_total_escrowed_balance.amount,
+            queried_total_escrowed_balances.amount,
             Uint128::zero()
         );
 
-        // Verify the vault token supply
-        let vault_supply = query_token_info(&mut app, env.vault.clone()).total_supply;
+        // Verify the swap assets have been returned to the swapper
+        let vault_from_asset_balance = query_token_balance(&mut app, env.from_asset.clone(), env.vault.to_string());
+        let factory_owner_from_asset_balance = query_token_balance(&mut app, env.from_asset.clone(), FACTORY_OWNER.to_string());
         assert_eq!(
-            vault_supply,
-            INITIAL_MINT_AMOUNT        // The vault balance returns to the initial vault balance
+            vault_from_asset_balance,
+            env.vault_initial_balances[env.from_asset_idx]        // The vault balance returns to the initial vault balance
+                + env.fee                                               // plus the pool fee
+                - factory_owner_from_asset_balance                      // except for the governance fee
         );
 
-        // Verify the vault tokens have been received by the swapper
-        let swapper_vault_token_balance = query_token_balance(&mut app, env.vault.clone(), SWAPPER_A.to_string());
+        // Verify the swap assets have been received by the swapper
+        let swapper_to_asset_balance = query_token_balance(&mut app, env.from_asset.clone(), SWAPPER_A.to_string());
         assert_eq!(
-            swapper_vault_token_balance,
-            env.from_amount
+            swapper_to_asset_balance,
+            env.from_amount - env.fee
         );
 
     }
 
 
     #[test]
-    fn test_send_liquidity_no_timeout_after_ack() {
+    fn test_send_asset_no_failure_after_success() {
 
         // Setup test
         let mut app = App::default();
         let env = TestEnv::initiate_mock_env(&mut app);
 
-        // Execute send liquidity ack
+        // Execute send asset ack
         app.execute_contract(
             env.interface.clone(),
             env.vault.clone(),
-            &VolatileExecuteMsg::SendLiquidityAck {
+            &VolatileExecuteMsg::OnSendAssetSuccess {
                 to_account: env.to_account.clone(),
                 u: env.u,
-                amount: env.from_amount,
+                amount: env.from_amount - env.fee,
+                asset: env.from_asset.to_string(),
                 block_number_mod: env.block_number,
             },
             &[]
@@ -257,14 +293,15 @@ mod test_volatile_send_liquidity_ack_timeout {
 
     
 
-        // Tested action: send liquidity timeout
+        // Tested action: send asset timeout
         let response_result = app.execute_contract(
             env.interface,
             env.vault.clone(),
-            &VolatileExecuteMsg::SendLiquidityTimeout {
+            &VolatileExecuteMsg::OnSendAssetFailure {
                 to_account: env.to_account.clone(),
                 u: env.u,
-                amount: env.from_amount,
+                amount: env.from_amount - env.fee,
+                asset: env.from_asset.to_string(),
                 block_number_mod: env.block_number,
             },
             &[]
@@ -283,20 +320,21 @@ mod test_volatile_send_liquidity_ack_timeout {
     
 
     #[test]
-    fn test_send_liquidity_no_ack_after_timeout() {
+    fn test_send_asset_no_success_after_failure() {
 
         // Setup test
         let mut app = App::default();
         let env = TestEnv::initiate_mock_env(&mut app);
 
-        // Execute send liquidity timeout
+        // Execute send asset timeout
         app.execute_contract(
             env.interface.clone(),
             env.vault.clone(),
-            &VolatileExecuteMsg::SendLiquidityTimeout {
+            &VolatileExecuteMsg::OnSendAssetFailure {
                 to_account: env.to_account.clone(),
                 u: env.u,
-                amount: env.from_amount,
+                amount: env.from_amount - env.fee,
+                asset: env.from_asset.to_string(),
                 block_number_mod: env.block_number,
             },
             &[]
@@ -304,14 +342,15 @@ mod test_volatile_send_liquidity_ack_timeout {
 
     
 
-        // Tested action: send liquidity ack
+        // Tested action: send asset ack
         let response_result = app.execute_contract(
             env.interface,
             env.vault.clone(),
-            &VolatileExecuteMsg::SendLiquidityAck {
+            &VolatileExecuteMsg::OnSendAssetSuccess {
                 to_account: env.to_account.clone(),
                 u: env.u,
-                amount: env.from_amount,
+                amount: env.from_amount - env.fee,
+                asset: env.from_asset.to_string(),
                 block_number_mod: env.block_number,
             },
             &[]
@@ -330,7 +369,7 @@ mod test_volatile_send_liquidity_ack_timeout {
 
 
     #[test]
-    fn test_send_liquidity_ack_invalid_caller() {
+    fn test_send_asset_success_invalid_caller() {
 
         // Setup test
         let mut app = App::default();
@@ -338,14 +377,15 @@ mod test_volatile_send_liquidity_ack_timeout {
 
     
 
-        // Tested action: send liquidity ack
+        // Tested action: send asset ack
         let response_result = app.execute_contract(
             Addr::unchecked("not_interface"),           // ! Not the interface contract
             env.vault.clone(),
-            &VolatileExecuteMsg::SendLiquidityAck {
+            &VolatileExecuteMsg::OnSendAssetSuccess {
                 to_account: env.to_account.clone(),
                 u: env.u,
-                amount: env.from_amount,
+                amount: env.from_amount - env.fee,
+                asset: env.from_asset.to_string(),
                 block_number_mod: env.block_number,
             },
             &[]
@@ -362,7 +402,7 @@ mod test_volatile_send_liquidity_ack_timeout {
 
 
     #[test]
-    fn test_send_liquidity_timeout_invalid_caller() {
+    fn test_send_asset_failure_invalid_caller() {
 
         // Setup test
         let mut app = App::default();
@@ -370,14 +410,15 @@ mod test_volatile_send_liquidity_ack_timeout {
 
     
 
-        // Tested action: send liquidity timeout
+        // Tested action: send asset timeout
         let response_result = app.execute_contract(
             Addr::unchecked("not_interface"),           // ! Not the interface contract
             env.vault.clone(),
-            &VolatileExecuteMsg::SendLiquidityTimeout {
+            &VolatileExecuteMsg::OnSendAssetFailure {
                 to_account: env.to_account.clone(),
                 u: env.u,
-                amount: env.from_amount,
+                amount: env.from_amount - env.fee,
+                asset: env.from_asset.to_string(),
                 block_number_mod: env.block_number,
             },
             &[]
@@ -394,7 +435,7 @@ mod test_volatile_send_liquidity_ack_timeout {
 
 
     #[test]
-    fn test_send_liquidity_ack_invalid_params() {
+    fn test_send_asset_success_invalid_params() {
         
 
         // Setup test
@@ -403,14 +444,15 @@ mod test_volatile_send_liquidity_ack_timeout {
 
     
 
-        // Tested action 1: send liquidity ack with invalid account
+        // Tested action 1: send asset ack with invalid account
         let response_result = app.execute_contract(
             env.interface.clone(),
             env.vault.clone(),
-            &VolatileExecuteMsg::SendLiquidityAck {
+            &VolatileExecuteMsg::OnSendAssetSuccess {
                 to_account: "not_to_account".as_bytes().to_vec(),   // ! Not the chain interface
                 u: env.u,
-                amount: env.from_amount,
+                amount: env.from_amount - env.fee,
+                asset: env.from_asset.to_string(),
                 block_number_mod: env.block_number 
             },
             &[]
@@ -419,14 +461,15 @@ mod test_volatile_send_liquidity_ack_timeout {
 
     
 
-        // Tested action 2: send liquidity ack with invalid units
+        // Tested action 2: send asset ack with invalid units
         let response_result = app.execute_contract(
             env.interface.clone(),
             env.vault.clone(),
-            &VolatileExecuteMsg::SendLiquidityAck {
+            &VolatileExecuteMsg::OnSendAssetSuccess {
                 to_account: env.to_account.clone(),
                 u: env.u + uint!("1"),                              // ! Increased units
-                amount: env.from_amount,
+                amount: env.from_amount - env.fee,
+                asset: env.from_asset.to_string(),
                 block_number_mod: env.block_number 
             },
             &[]
@@ -435,14 +478,15 @@ mod test_volatile_send_liquidity_ack_timeout {
 
     
 
-        // Tested action 3: send liquidity ack with invalid from amount
+        // Tested action 3: send asset ack with invalid from amount
         let response_result = app.execute_contract(
             env.interface.clone(),
             env.vault.clone(),
-            &VolatileExecuteMsg::SendLiquidityAck {
+            &VolatileExecuteMsg::OnSendAssetSuccess {
                 to_account: env.to_account.clone(),
                 u: env.u,
-                amount: env.from_amount + Uint128::from(1u64),      // ! Increased from amount
+                amount: (env.from_amount - env.fee) + Uint128::from(1u64),      // ! Increased from amount
+                asset: env.from_asset.to_string(),
                 block_number_mod: env.block_number 
             },
             &[]
@@ -451,14 +495,32 @@ mod test_volatile_send_liquidity_ack_timeout {
 
     
 
-        // Tested action 4: send liquidity ack with invalid block number
+        // Tested action 4: send asset ack with invalid from asset
         let response_result = app.execute_contract(
             env.interface.clone(),
             env.vault.clone(),
-            &VolatileExecuteMsg::SendLiquidityAck {
+            &VolatileExecuteMsg::OnSendAssetSuccess {
                 to_account: env.to_account.clone(),
                 u: env.u,
-                amount: env.from_amount,
+                amount: env.from_amount - env.fee,
+                asset: "not_from_asset".to_string(),                // ! Not the original asset
+                block_number_mod: env.block_number 
+            },
+            &[]
+        );
+        assert!(response_result.is_err());                          // Make sure the transaction fails
+
+    
+
+        // Tested action 5: send asset ack with invalid block number
+        let response_result = app.execute_contract(
+            env.interface.clone(),
+            env.vault.clone(),
+            &VolatileExecuteMsg::OnSendAssetSuccess {
+                to_account: env.to_account.clone(),
+                u: env.u,
+                amount: env.from_amount - env.fee,
+                asset: env.from_asset.to_string(),
                 block_number_mod: 101u32                            // ! Not the original block number
             },
             &[]
@@ -471,10 +533,11 @@ mod test_volatile_send_liquidity_ack_timeout {
         app.execute_contract(
             env.interface.clone(),
             env.vault.clone(),
-            &VolatileExecuteMsg::SendLiquidityAck {
+            &VolatileExecuteMsg::OnSendAssetSuccess {
                 to_account: env.to_account,
                 u: env.u,
-                amount: env.from_amount,
+                amount: env.from_amount - env.fee,
+                asset: env.from_asset.to_string(),
                 block_number_mod: env.block_number,
             },
             &[]
@@ -482,7 +545,7 @@ mod test_volatile_send_liquidity_ack_timeout {
     }
 
     #[test]
-    fn test_send_liquidity_timeout_invalid_params() {
+    fn test_send_asset_failure_invalid_params() {
         
 
         // Setup test
@@ -491,14 +554,15 @@ mod test_volatile_send_liquidity_ack_timeout {
 
     
 
-        // Tested action 1: send liquidity ack with invalid account
+        // Tested action 1: send asset ack with invalid account
         let response_result = app.execute_contract(
             env.interface.clone(),
             env.vault.clone(),
-            &VolatileExecuteMsg::SendLiquidityTimeout {
+            &VolatileExecuteMsg::OnSendAssetFailure {
                 to_account: "not_to_account".as_bytes().to_vec(),   // ! Not the chain interface
                 u: env.u,
-                amount: env.from_amount,
+                amount: env.from_amount - env.fee,
+                asset: env.from_asset.to_string(),
                 block_number_mod: env.block_number 
             },
             &[]
@@ -507,14 +571,15 @@ mod test_volatile_send_liquidity_ack_timeout {
 
     
 
-        // Tested action 2: send liquidity ack with invalid units
+        // Tested action 2: send asset ack with invalid units
         let response_result = app.execute_contract(
             env.interface.clone(),
             env.vault.clone(),
-            &VolatileExecuteMsg::SendLiquidityTimeout {
+            &VolatileExecuteMsg::OnSendAssetFailure {
                 to_account: env.to_account.clone(),
                 u: env.u + uint!("1"),                              // ! Increased units
-                amount: env.from_amount,
+                amount: env.from_amount - env.fee,
+                asset: env.from_asset.to_string(),
                 block_number_mod: env.block_number 
             },
             &[]
@@ -523,14 +588,15 @@ mod test_volatile_send_liquidity_ack_timeout {
 
     
 
-        // Tested action 3: send liquidity ack with invalid from amount
+        // Tested action 3: send asset ack with invalid from amount
         let response_result = app.execute_contract(
             env.interface.clone(),
             env.vault.clone(),
-            &VolatileExecuteMsg::SendLiquidityTimeout {
+            &VolatileExecuteMsg::OnSendAssetFailure {
                 to_account: env.to_account.clone(),
                 u: env.u,
-                amount: env.from_amount + Uint128::from(1u64),      // ! Increased from amount
+                amount: (env.from_amount - env.fee) * Uint128::from(2u64),      // ! Increased from amount
+                asset: env.from_asset.to_string(),
                 block_number_mod: env.block_number 
             },
             &[]
@@ -539,14 +605,32 @@ mod test_volatile_send_liquidity_ack_timeout {
 
     
 
-        // Tested action 4: send liquidity ack with invalid block number
+        // Tested action 4: send asset ack with invalid from asset
         let response_result = app.execute_contract(
             env.interface.clone(),
             env.vault.clone(),
-            &VolatileExecuteMsg::SendLiquidityTimeout {
+            &VolatileExecuteMsg::OnSendAssetFailure {
                 to_account: env.to_account.clone(),
                 u: env.u,
-                amount: env.from_amount,
+                amount: env.from_amount - env.fee,
+                asset: env.vault_assets[env.from_asset_idx+1].to_string(),   // ! Not the original asset
+                block_number_mod: env.block_number 
+            },
+            &[]
+        );
+        assert!(response_result.is_err());                          // Make sure the transaction fails
+
+    
+
+        // Tested action 5: send asset ack with invalid block number
+        let response_result = app.execute_contract(
+            env.interface.clone(),
+            env.vault.clone(),
+            &VolatileExecuteMsg::OnSendAssetFailure {
+                to_account: env.to_account.clone(),
+                u: env.u,
+                amount: env.from_amount - env.fee,
+                asset: env.from_asset.to_string(),
                 block_number_mod: 101u32                            // ! Not the original block number
             },
             &[]
@@ -559,10 +643,11 @@ mod test_volatile_send_liquidity_ack_timeout {
         app.execute_contract(
             env.interface.clone(),
             env.vault.clone(),
-            &VolatileExecuteMsg::SendLiquidityTimeout {
+            &VolatileExecuteMsg::OnSendAssetFailure {
                 to_account: env.to_account,
                 u: env.u,
-                amount: env.from_amount,
+                amount: env.from_amount - env.fee,
+                asset: env.from_asset.to_string(),
                 block_number_mod: env.block_number,
             },
             &[]

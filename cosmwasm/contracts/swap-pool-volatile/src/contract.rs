@@ -11,14 +11,14 @@ use cw20_base::contract::{
 };
 use swap_pool_common::ContractError;
 use swap_pool_common::state::{
-    setup, finish_setup, set_fee_administrator, set_pool_fee, set_governance_fee_share, set_connection, send_asset_ack,
-    send_asset_timeout, send_liquidity_ack, send_liquidity_timeout, query_chain_interface, query_setup_master, query_ready, query_only_local, query_assets, query_weights, query_pool_fee, query_governance_fee_share, query_fee_administrator, query_total_escrowed_liquidity, query_total_escrowed_asset, query_asset_escrow, query_liquidity_escrow, query_pool_connection_state, query_factory, query_factory_owner
+    setup, finish_setup, set_fee_administrator, set_pool_fee, set_governance_fee_share, set_connection,
+    on_send_asset_failure, on_send_liquidity_failure, query_chain_interface, query_setup_master, query_ready, query_only_local, query_assets, query_weights, query_pool_fee, query_governance_fee_share, query_fee_administrator, query_total_escrowed_liquidity, query_total_escrowed_asset, query_asset_escrow, query_liquidity_escrow, query_pool_connection_state, query_factory, query_factory_owner
 };
 
 use crate::msg::{VolatileExecuteMsg, InstantiateMsg, QueryMsg, VolatileExecuteExtension};
 use crate::state::{
     initialize_swap_curves, set_weights, deposit_mixed, withdraw_all, withdraw_mixed, local_swap, send_asset, receive_asset,
-    send_liquidity, receive_liquidity, query_calc_send_asset, query_calc_receive_asset, query_calc_local_swap, query_get_limit_capacity, query_target_weights, query_weights_update_finish_timestamp
+    send_liquidity, receive_liquidity, query_calc_send_asset, query_calc_receive_asset, query_calc_local_swap, query_get_limit_capacity, query_target_weights, query_weights_update_finish_timestamp, on_send_asset_success_volatile, on_send_liquidity_success_volatile
 };
 
 
@@ -114,13 +114,13 @@ pub fn execute(
             state
         ),
 
-        VolatileExecuteMsg::SendAssetAck {
+        VolatileExecuteMsg::OnSendAssetSuccess {
             to_account,
             u,
             amount,
             asset,
             block_number_mod
-        } => send_asset_ack(
+        } => on_send_asset_success_volatile(        // ! Use the volatile specific 'on_send_asset_success'
             &mut deps,
             info,
             to_account,
@@ -130,13 +130,13 @@ pub fn execute(
             block_number_mod
         ),
 
-        VolatileExecuteMsg::SendAssetTimeout {
+        VolatileExecuteMsg::OnSendAssetFailure {
             to_account,
             u,
             amount,
             asset,
             block_number_mod
-        } => send_asset_timeout(
+        } => on_send_asset_failure(
             &mut deps,
             env,
             info,
@@ -147,12 +147,12 @@ pub fn execute(
             block_number_mod
         ),
 
-        VolatileExecuteMsg::SendLiquidityAck {
+        VolatileExecuteMsg::OnSendLiquiditySuccess {
             to_account,
             u,
             amount,
             block_number_mod
-        } => send_liquidity_ack(
+        } => on_send_liquidity_success_volatile(    // ! Use the volatile specific 'on_send_asset_success'
             &mut deps,
             info,
             to_account,
@@ -161,12 +161,12 @@ pub fn execute(
             block_number_mod
         ),
 
-        VolatileExecuteMsg::SendLiquidityTimeout {
+        VolatileExecuteMsg::OnSendLiquidityFailure {
             to_account,
             u,
             amount,
             block_number_mod
-        } => send_liquidity_timeout(
+        } => on_send_liquidity_failure(
             &mut deps,
             env,
             info,

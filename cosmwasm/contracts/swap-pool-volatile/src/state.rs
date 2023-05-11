@@ -11,7 +11,7 @@ use swap_pool_common::{
         ASSETS, MAX_ASSETS, WEIGHTS, INITIAL_MINT_AMOUNT, POOL_FEE, MAX_LIMIT_CAPACITY, USED_LIMIT_CAPACITY, CHAIN_INTERFACE,
         TOTAL_ESCROWED_LIQUIDITY, TOTAL_ESCROWED_ASSETS, is_connected, get_asset_index, update_limit_capacity,
         collect_governance_fee_message, compute_send_asset_hash, compute_send_liquidity_hash, create_asset_escrow,
-        create_liquidity_escrow, on_send_asset_ack, on_send_liquidity_ack, total_supply, get_limit_capacity, USED_LIMIT_CAPACITY_TIMESTAMP, FACTORY,
+        create_liquidity_escrow, on_send_asset_success, on_send_liquidity_success, total_supply, get_limit_capacity, USED_LIMIT_CAPACITY_TIMESTAMP, FACTORY,
     },
     ContractError, msg::{CalcSendAssetResponse, CalcReceiveAssetResponse, CalcLocalSwapResponse, GetLimitCapacityResponse}
 };
@@ -1073,7 +1073,7 @@ pub fn calc_local_swap(
 }
 
 
-pub fn send_asset_ack(
+pub fn on_send_asset_success_volatile(
     deps: &mut DepsMut,
     info: MessageInfo,
     to_account: Vec<u8>,
@@ -1083,7 +1083,7 @@ pub fn send_asset_ack(
     block_number_mod: u32
 ) -> Result<Response, ContractError> {
 
-    let response = on_send_asset_ack(
+    let response = on_send_asset_success(
         deps,
         info,
         to_account,
@@ -1099,7 +1099,7 @@ pub fn send_asset_ack(
     Ok(response)
 }
 
-pub fn send_liquidity_ack(
+pub fn on_send_liquidity_success_volatile(
     deps: &mut DepsMut,
     info: MessageInfo,
     to_account: Vec<u8>,
@@ -1108,7 +1108,7 @@ pub fn send_liquidity_ack(
     block_number_mod: u32
 ) -> Result<Response, ContractError> {
 
-    let response = on_send_liquidity_ack(
+    let response = on_send_liquidity_success(
         deps,
         info,
         to_account,
