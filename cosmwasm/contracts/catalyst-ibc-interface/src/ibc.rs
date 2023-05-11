@@ -223,6 +223,9 @@ fn on_packet_receive(
                     to_account: payload.to_account(deps.as_ref())?.into_string(),   // Validate to_account
                     u: payload.u,
                     min_out: payload.variable_payload.min_out()?,                   // Convert min_out into Uint128
+                    from_amount: payload.variable_payload.from_amount,
+                    from_asset: payload.variable_payload.from_asset,
+                    from_block_number_mod: payload.variable_payload.block_number,
                     calldata_target: parsed_calldata.clone().map(|data| data.target),
                     calldata: parsed_calldata.map(|data| data.bytes)
                 })?,
@@ -243,6 +246,8 @@ fn on_packet_receive(
                     u: payload.u,
                     min_pool_tokens: payload.variable_payload.min_pool_tokens()?,                           // Convert min_pool_tokens into Uint128
                     min_reference_asset: payload.variable_payload.min_reference_asset()?,                   // Convert min_reference_asset into Uint128
+                    from_amount: payload.variable_payload.from_amount,
+                    from_block_number_mod: payload.variable_payload.block_number,
                     calldata_target: parsed_calldata.clone().map(|data| data.target),
                     calldata: parsed_calldata.map(|data| data.bytes)
                 })?,

@@ -258,6 +258,9 @@ pub fn execute(
             to_account,
             u,
             min_out,
+            from_amount,
+            from_asset,
+            from_block_number_mod,
             calldata_target,
             calldata
         } => receive_asset(
@@ -270,6 +273,9 @@ pub fn execute(
             to_account,
             u,
             min_out,
+            from_amount,
+            from_asset,
+            from_block_number_mod,
             calldata_target,
             calldata
         ),
@@ -305,6 +311,8 @@ pub fn execute(
             min_pool_tokens,
             min_reference_asset,
             calldata_target,
+            from_amount,
+            from_block_number_mod,
             calldata
         } => receive_liquidity(
             &mut deps,
@@ -316,6 +324,8 @@ pub fn execute(
             u,
             min_pool_tokens,
             min_reference_asset,
+            from_amount,
+            from_block_number_mod,
             calldata_target,
             calldata
         ),

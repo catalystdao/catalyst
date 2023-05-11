@@ -280,6 +280,9 @@ mod catalyst_ibc_interface_tests {
             to_account: "to_account".to_string(),
             u: uint!("78456988731590487483448276103933454935747871349630657124267302091643025406701"),          // Some large U256 number
             min_out: Uint128::from(323476719582585693194107115743132847255u128),                                // Some large Uint128 number
+            from_asset: "from_asset".as_bytes().to_vec(),
+            from_amount: U256::from(4920222095670429824873974121747892731u128),
+            from_block_number_mod: 1356u32,
             calldata_target: None,
             calldata: None
         }
@@ -344,6 +347,8 @@ mod catalyst_ibc_interface_tests {
             u: uint!("78456988731590487483448276103933454935747871349630657124267302091643025406701"),          // Some large U256 number
             min_pool_tokens: Uint128::from(323476719582585693194107115743132847255u128),                        // Some large Uint128 number
             min_reference_asset: Uint128::from(1385371954613879816514345798135479u128),                         // Some large Uint128 number
+            from_amount: U256::from(4920222095670429824873974121747892731u128),
+            from_block_number_mod: 1356u32,
             calldata_target: None,
             calldata: None
         }

@@ -53,6 +53,8 @@ mod test_volatile_receive_liquidity {
                 u: swap_units,
                 min_pool_tokens: Uint128::zero(),
                 min_reference_asset: Uint128::zero(),
+                from_amount: U256::ZERO,
+                from_block_number_mod: 0u32,
                 calldata_target: None,
                 calldata: None
             },
@@ -137,6 +139,8 @@ mod test_volatile_receive_liquidity {
                 u: swap_units,
                 min_pool_tokens: Uint128::zero(),
                 min_reference_asset: Uint128::zero(),
+                from_amount: U256::ZERO,
+                from_block_number_mod: 0u32,
                 calldata_target: None,
                 calldata: None
             },
@@ -225,6 +229,8 @@ mod test_volatile_receive_liquidity {
                 u: swap_units,
                 min_pool_tokens: min_out_invalid,
                 min_reference_asset: Uint128::zero(),
+                from_amount: U256::ZERO,
+                from_block_number_mod: 0u32,
                 calldata_target: None,
                 calldata: None
             },
@@ -253,6 +259,8 @@ mod test_volatile_receive_liquidity {
                 u: swap_units,
                 min_pool_tokens: min_out_valid,
                 min_reference_asset: Uint128::zero(),
+                from_amount: U256::ZERO,
+                from_block_number_mod: 0u32,
                 calldata_target: None,
                 calldata: None
             },
@@ -329,6 +337,8 @@ mod test_volatile_receive_liquidity {
                 u: swap_units,
                 min_pool_tokens: Uint128::zero(),
                 min_reference_asset: min_out_invalid,
+                from_amount: U256::ZERO,
+                from_block_number_mod: 0u32,
                 calldata_target: None,
                 calldata: None
             },
@@ -357,6 +367,8 @@ mod test_volatile_receive_liquidity {
                 u: swap_units,
                 min_pool_tokens: Uint128::zero(),
                 min_reference_asset: min_out_valid,
+                from_amount: U256::ZERO,
+                from_block_number_mod: 0u32,
                 calldata_target: None,
                 calldata: None
             },
@@ -404,6 +416,8 @@ mod test_volatile_receive_liquidity {
                 u: swap_units,
                 min_pool_tokens: Uint128::zero(),
                 min_reference_asset: Uint128::zero(),
+                from_amount: U256::ZERO,
+                from_block_number_mod: 0u32,
                 calldata_target: None,
                 calldata: None
             },
@@ -467,6 +481,8 @@ mod test_volatile_receive_liquidity {
                 u: swap_units,
                 min_pool_tokens: Uint128::zero(),
                 min_reference_asset: Uint128::zero(),
+                from_amount: U256::ZERO,
+                from_block_number_mod: 0u32,
                 calldata_target: None,
                 calldata: None
             },

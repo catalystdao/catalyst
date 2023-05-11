@@ -663,6 +663,9 @@ pub fn receive_asset(
     to_account: String,
     u: U256,
     min_out: Uint128,
+    from_amount: U256,
+    from_asset: Vec<u8>,
+    from_block_number_mod: u32,
     calldata_target: Option<Addr>,
     calldata: Option<Vec<u8>>
 ) -> Result<Response, ContractError> {
@@ -731,6 +734,9 @@ pub fn receive_asset(
         .add_attribute("to_asset", to_asset)
         .add_attribute("units", u.to_string())  //TODO format of .to_string()?
         .add_attribute("to_amount", out)
+        .add_attribute("from_amount", from_amount.to_string())
+        .add_attribute("from_asset", format!("{:x?}", from_asset))
+        .add_attribute("from_block_number_mod", from_block_number_mod.to_string())  //TODO format
     )
 }
 
@@ -838,6 +844,8 @@ pub fn receive_liquidity(
     u: U256,
     min_pool_tokens: Uint128,
     min_reference_asset: Uint128,       //TODO type
+    from_amount: U256,
+    from_block_number_mod: u32,
     calldata_target: Option<Addr>,
     calldata: Option<Vec<u8>>
 ) -> Result<Response, ContractError> {
@@ -959,6 +967,8 @@ pub fn receive_liquidity(
         .add_attribute("to_account", to_account)
         .add_attribute("units", u.to_string())  //TODO format of .to_string()?
         .add_attribute("to_amount", out)
+        .add_attribute("from_amount", from_amount.to_string())
+        .add_attribute("from_block_number_mod", from_block_number_mod.to_string())  //TODO format
         .add_events(mint_response.events)       //TODO overhaul
     )
 }

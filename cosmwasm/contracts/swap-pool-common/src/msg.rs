@@ -129,6 +129,10 @@ pub enum ExecuteMsg<T> {
         #[serde(with = "U256Def")]
         u: U256,
         min_out: Uint128,
+        #[serde(with = "U256Def")]
+        from_amount: U256,
+        from_asset: Vec<u8>,
+        from_block_number_mod: u32,
         calldata_target: Option<Addr>,
         calldata: Option<Vec<u8>>
     },
@@ -154,6 +158,9 @@ pub enum ExecuteMsg<T> {
         u: U256,
         min_pool_tokens: Uint128,
         min_reference_asset: Uint128,   // ! TODO type?
+        #[serde(with = "U256Def")]
+        from_amount: U256,
+        from_block_number_mod: u32,
         calldata_target: Option<Addr>,
         calldata: Option<Vec<u8>>
     },
