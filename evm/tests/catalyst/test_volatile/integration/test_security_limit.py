@@ -58,12 +58,12 @@ def test_security_limit_swap_loop(
 
     # 2. receiveAsset
     if pool_2.getUnitCapacity() < tx_units:
-        with reverts(revert_pattern=re.compile("typed error: 0x249c4e65.*")):
-            txe = ibc_emulator.execute(
-                tx.events["IncomingMetadata"]["metadata"][0],
-                tx.events["IncomingPacket"]["packet"],
-                {"from": berg}
-            )
+        txe = ibc_emulator.execute(
+            tx.events["IncomingMetadata"]["metadata"][0],
+            tx.events["IncomingPacket"]["packet"],
+            {"from": berg}
+        )
+        assert txe.events["Acknowledgement"]["acknowledgement"].hex() == "01"
         return
     else:
         txe = ibc_emulator.execute(

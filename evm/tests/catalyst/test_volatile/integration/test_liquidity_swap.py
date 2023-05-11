@@ -53,8 +53,10 @@ def test_liquidity_swap(
     assert pool_1.balanceOf(berg) == pool1_tokens - pool1_tokens_swapped
     
     if pool_2.getUnitCapacity() < tx.events["SendLiquidity"]["units"]:
-        with reverts(revert_pattern=re.compile("typed error: 0x249c4e65.*")):
-            txe = ibc_emulator.execute(tx.events["IncomingMetadata"]["metadata"][0], tx.events["IncomingPacket"]["packet"], {"from": berg})
+        txe = ibc_emulator.execute(tx.events["IncomingMetadata"]["metadata"][0], tx.events["IncomingPacket"]["packet"], {"from": berg})
+        
+        assert txe.events["Acknowledgement"]["acknowledgement"].hex() == "01"
+        
         return
     else:
         txe = ibc_emulator.execute(tx.events["IncomingMetadata"]["metadata"][0], tx.events["IncomingPacket"]["packet"], {"from": berg})
@@ -63,12 +65,9 @@ def test_liquidity_swap(
     
     assert purchased_tokens == pool_2.balanceOf(berg)
     
-    
     assert purchased_tokens <= int(estimatedPool2Tokens*1.000001), "Swap returns more than theoretical"
     
     if swap_percentage < 1e-05:
         return
     
-    assert (estimatedPool2Tokens * 9 /10) <= purchased_tokens, "Swap returns less than 9/10 theoretical"
-    
-
+    assert (estimatedPool2Tokens * 9 / 10) <= purchased_tokens, "Swap returns less than 9/10 theoretical"

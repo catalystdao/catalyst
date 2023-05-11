@@ -66,12 +66,10 @@ def test_liquidity_swap(
         
     securityLimit = pool_2.getUnitCapacity()
     if (securityLimit < expectedB0):
-        try:
-            with reverts(revert_pattern=re.compile("typed error: 0x249c4e65.*")):
-                txe = ibc_emulator.execute(tx.events["IncomingMetadata"]["metadata"][0], tx.events["IncomingPacket"]["packet"], {"from": berg})
-        except AssertionError as e:
-            if str(e) != "Transaction did not revert":
-                raise e
+        txe = ibc_emulator.execute(tx.events["IncomingMetadata"]["metadata"][0], tx.events["IncomingPacket"]["packet"], {"from": berg})
+        
+        # If the transaction still executed, it needs to have exhausted the vast majority of the security limit.
+        if txe.events["Acknowledgement"]["acknowledgement"].hex() == "00":
             assert pool_2.getUnitCapacity()/securityLimit <= 0.015, "Either test incorrect or security limit is not strict enough."
         
         return
@@ -82,12 +80,9 @@ def test_liquidity_swap(
     
     assert purchased_tokens == pool_2.balanceOf(berg)
     
-    
     assert purchased_tokens <= int(estimatedPool2Tokens*1.000001), "Swap returns more than theoretical"
     
     if swap_percentage < 1e-05:
         return
     
-    assert (estimatedPool2Tokens * 9 /10) <= purchased_tokens, "Swap returns less than 9/10 theoretical"
-    
-
+    assert (estimatedPool2Tokens * 9 / 10) <= purchased_tokens, "Swap returns less than 9/10 theoretical"
