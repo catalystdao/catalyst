@@ -19,6 +19,8 @@ ps = Catalyst(acct)
 
 MAX_UINT256: int = 2**256 - 1
 
+def convert_64_bytes_address(address):
+    return convert.to_bytes(20, "bytes1")+convert.to_bytes(0)+convert.to_bytes(address.replace("0x", ""))
 
 class Catalyst:
     def __init__(

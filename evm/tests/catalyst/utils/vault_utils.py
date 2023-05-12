@@ -299,46 +299,46 @@ def compute_liquidity_swap_hash(
 
 # Interface Utils ***************************************************************************************************************
 
-def evm_bytes_32_to_address(bytes32):
-    return convert.to_address(bytes32[12:])
 
-
-def decode_payload(data, decode_address=evm_bytes_32_to_address):
+def decode_payload(data):
 
     context = data[0]
 
     # Liquidity swap payload
     if context & 1:
+        # Asset swap payload
+        custom_data_length = convert.to_uint(data[328:330], type_str="uint16")
         return {
             "_context": data[0],
-            "_fromVault": decode_address(data[1:33]),
-            "_toVault": decode_address(data[33:65]),
-            "_toAccount": decode_address(data[65:97]),
-            "_LU": convert.to_uint(data[97:129]),
-            "_minVaultToken": convert.to_uint(data[129:161]),
-            "_minReferenceAsset": convert.to_uint(data[161:193]),
-            "_escrowAmount": convert.to_uint(data[193:225]),
-            "_blockNumber": convert.to_uint(data[225:229]),
-            "_swapHash": data[229:261],
+            "_fromVault": (data[1:66]).hex(),
+            "_toVault": (data[66:131]).hex(),
+            "_toAccount": (data[131:196]).hex(),
+            "_U": convert.to_uint(data[196:228]),
+            "_minVaultToken": convert.to_uint(data[228:260]),
+            "_minReferenceAsset": convert.to_uint(data[260:292]),
+            "_escrowAmount": convert.to_uint(data[292:324]),
+            "_blockNumber": convert.to_uint(data[324:328]),
+            "customDataLength": custom_data_length,
+            "_customDataTarget": (data[330:350]) if custom_data_length > 0 else None,
+            "_customData": data[350:350+custom_data_length - 20] if custom_data_length > 0 else None
         }
     
     # Asset swap payload
-    custom_data_length = convert.to_uint(data[262:264], type_str="uint16")
+    custom_data_length = convert.to_uint(data[362:364], type_str="uint16")
     return {
         "_context": data[0],
-        "_fromVault": decode_address(data[1:33]),
-        "_toVault": decode_address(data[33:65]),
-        "_toAccount": decode_address(data[65:97]),
-        "_U": convert.to_uint(data[97:129]),
-        "_assetIndex": convert.to_uint(data[129], type_str="uint8"),
-        "_minOut": convert.to_uint(data[130:162]),
-        "_escrowAmount": convert.to_uint(data[162:194]),
-        "_escrowToken": decode_address(data[194:226]),
-        "_blockNumber": convert.to_uint(data[226:230]),
-        "_swapHash": data[230:262],
+        "_fromVault": (data[1:66]).hex(),
+        "_toVault": (data[66:131]).hex(),
+        "_toAccount": (data[131:196]).hex(),
+        "_U": convert.to_uint(data[196:228]),
+        "_assetIndex": convert.to_uint(data[228], type_str="uint8"),
+        "_minOut": convert.to_uint(data[229:261]),
+        "_escrowAmount": convert.to_uint(data[261:293]),
+        "_escrowToken": (data[293:358]).hex(),
+        "_blockNumber": convert.to_uint(data[358:3662]),
         "customDataLength": custom_data_length,
-        "_customDataTarget": decode_address(data[264:296]) if custom_data_length > 0 else None,
-        "_customData": data[296:296+custom_data_length - 32] if custom_data_length > 0 else None
+        "_customDataTarget": (data[364:384]) if custom_data_length > 0 else None,
+        "_customData": data[384:384+custom_data_length - 20] if custom_data_length > 0 else None
     }
 
 

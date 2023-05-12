@@ -16,6 +16,7 @@ The EVM implementation is used as a reference implementation.
 # On Asset Pricing
 
 For an indepth description of how to price assets, read `Unit of Liquidity`. The below seciton contains notable equations.
+
 ## The Catalyst Equation
 
 Let $P_i(w)$ be a decreasing, non-negative marginal price function for a token $i$. The equation which describes a Catalyst swap is then defined as:
