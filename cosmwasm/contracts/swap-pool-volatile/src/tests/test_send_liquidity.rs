@@ -4,7 +4,7 @@ mod test_volatile_send_liquidity {
     use ethnum::U256;
     use swap_pool_common::{ContractError, msg::{TotalEscrowedLiquidityResponse, LiquidityEscrowResponse}, state::{INITIAL_MINT_AMOUNT, compute_send_liquidity_hash}};
 
-    use crate::{msg::VolatileExecuteMsg, tests::{helpers::{SETUP_MASTER, deploy_test_tokens, WAD, query_token_balance, transfer_tokens, get_response_attribute, mock_set_pool_connection, CHANNEL_ID, SWAPPER_B, SWAPPER_A, mock_instantiate_interface, compute_expected_send_liquidity, query_token_info, SWAPPER_C, mock_factory_deploy_vault}, math_helpers::{uint128_to_f64, f64_to_uint128, u256_to_f64}}};
+    use crate::{msg::VolatileExecuteMsg, tests::{helpers::{SETUP_MASTER, deploy_test_tokens, WAD, query_token_balance, transfer_tokens, get_response_attribute, mock_set_pool_connection, CHANNEL_ID, SWAPPER_B, SWAPPER_A, mock_instantiate_interface, compute_expected_send_liquidity, query_token_info, SWAPPER_C, mock_factory_deploy_vault, encode_payload_address}, math_helpers::{uint128_to_f64, f64_to_uint128, u256_to_f64}}};
 
     //TODO check event
 
@@ -29,18 +29,19 @@ mod test_volatile_send_liquidity {
         );
 
         // Set target mock pool
-        let target_pool = Addr::unchecked("target_pool");
+        let target_pool = encode_payload_address(b"target_pool");
         mock_set_pool_connection(
             &mut app,
             vault.clone(),
             CHANNEL_ID.to_string(),
-            target_pool.as_bytes().to_vec(),
+            target_pool.clone(),
             true
         );
 
         // Define send liquidity configuration
         let send_percentage = 0.15;
         let swap_amount = f64_to_uint128(uint128_to_f64(INITIAL_MINT_AMOUNT) * send_percentage).unwrap();
+        let to_account = encode_payload_address(SWAPPER_B.as_bytes());
 
         // Fund swapper with tokens
         transfer_tokens(
@@ -59,8 +60,8 @@ mod test_volatile_send_liquidity {
             vault.clone(),
             &VolatileExecuteMsg::SendLiquidity {
                 channel_id: CHANNEL_ID.to_string(),
-                to_pool: target_pool.as_bytes().to_vec(),
-                to_account: SWAPPER_B.as_bytes().to_vec(),
+                to_pool: target_pool,
+                to_account: to_account.clone(),
                 amount: swap_amount,
                 min_pool_tokens: U256::ZERO,
                 min_reference_asset: U256::ZERO,
@@ -110,7 +111,7 @@ mod test_volatile_send_liquidity {
     
         // Verify the fallback account/escrow is set
         let expected_liquidity_swap_hash = compute_send_liquidity_hash(
-            SWAPPER_B.as_bytes(),
+            to_account.as_ref(),
             observed_return,
             swap_amount,
             app.block_info().height as u32
@@ -161,12 +162,12 @@ mod test_volatile_send_liquidity {
         );
 
         // Set target mock pool
-        let target_pool = Addr::unchecked("target_pool");
+        let target_pool = encode_payload_address(b"target_pool");
         mock_set_pool_connection(
             &mut app,
             vault.clone(),
             CHANNEL_ID.to_string(),
-            target_pool.as_bytes().to_vec(),
+            target_pool.clone(),
             true
         );
 
@@ -190,8 +191,8 @@ mod test_volatile_send_liquidity {
             vault.clone(),
             &VolatileExecuteMsg::SendLiquidity {
                 channel_id: CHANNEL_ID.to_string(),
-                to_pool: target_pool.as_bytes().to_vec(),
-                to_account: SWAPPER_B.as_bytes().to_vec(),
+                to_pool: target_pool,
+                to_account: encode_payload_address(SWAPPER_B.as_bytes()),
                 amount: swap_amount,
                 min_pool_tokens: U256::ZERO,
                 min_reference_asset: U256::ZERO,
@@ -225,7 +226,7 @@ mod test_volatile_send_liquidity {
         );
 
         // Set target mock pool
-        let target_pool = Addr::unchecked("target_pool");
+        let target_pool = encode_payload_address(b"target_pool");
         // ! Do not set the connection with the target pool
 
         // Define send liquidity configuration
@@ -249,8 +250,8 @@ mod test_volatile_send_liquidity {
             vault.clone(),
             &VolatileExecuteMsg::SendLiquidity {
                 channel_id: CHANNEL_ID.to_string(),
-                to_pool: target_pool.as_bytes().to_vec(),
-                to_account: SWAPPER_B.as_bytes().to_vec(),
+                to_pool: target_pool.clone(),
+                to_account: encode_payload_address(SWAPPER_B.as_bytes()),
                 amount: swap_amount,
                 min_pool_tokens: U256::ZERO,
                 min_reference_asset: U256::ZERO,
@@ -266,7 +267,7 @@ mod test_volatile_send_liquidity {
         assert!(matches!(
             response_result.err().unwrap().downcast().unwrap(),
             ContractError::PoolNotConnected { channel_id: err_channel_id, pool: err_pool }
-                if err_channel_id == CHANNEL_ID && err_pool == target_pool.as_bytes().to_vec()
+                if err_channel_id == CHANNEL_ID && err_pool == target_pool
         ));
 
     }

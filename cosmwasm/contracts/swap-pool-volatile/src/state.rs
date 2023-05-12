@@ -554,7 +554,14 @@ pub fn send_asset(
         return Err(ContractError::PoolNotConnected { channel_id, pool: to_pool })
     }
 
-    //TODO verify to_pool and to_account are 65 bytes long
+    // Make sure 'to_pool' and 'to_account have the correct length
+    if to_pool.len() != 65 {                            //TODO use global const variable for address length
+        return Err(ContractError::GenericError {});     //TODO error
+    }
+
+    if to_account.len() != 65 {                         //TODO use global const variable for address length
+        return Err(ContractError::GenericError {});     //TODO error
+    }
 
     update_weights(deps, env.block.time.nanos())?;
 
@@ -757,6 +764,15 @@ pub fn send_liquidity(
     // Only allow connected pools
     if !is_connected(&deps.as_ref(), &channel_id, to_pool.clone()) {
         return Err(ContractError::PoolNotConnected { channel_id, pool: to_pool })
+    }
+
+    // Make sure 'to_pool' and 'to_account have the correct length
+    if to_pool.len() != 65 {                            //TODO use global const variable for address length
+        return Err(ContractError::GenericError {});     //TODO error
+    }
+
+    if to_account.len() != 65 {                         //TODO use global const variable for address length
+        return Err(ContractError::GenericError {});     //TODO error
     }
 
     // Update weights

@@ -3,7 +3,7 @@ mod test_volatile_pool_connections {
     use cw_multi_test::{Executor, App};
     use swap_pool_common::{ContractError, msg::PoolConnectionStateResponse};
 
-    use crate::{msg::VolatileExecuteMsg, tests::helpers::{SETUP_MASTER, mock_finish_pool_setup, FACTORY_OWNER, deploy_test_tokens, mock_factory_deploy_vault, WAD, mock_instantiate_interface}};
+    use crate::{msg::VolatileExecuteMsg, tests::helpers::{SETUP_MASTER, mock_finish_pool_setup, FACTORY_OWNER, deploy_test_tokens, mock_factory_deploy_vault, WAD, mock_instantiate_interface, encode_payload_address}};
 
     fn deploy_mock_vault(app: &mut App) -> Addr {
         let interface = mock_instantiate_interface(app);
@@ -28,7 +28,7 @@ mod test_volatile_pool_connections {
         let vault = deploy_mock_vault(&mut app);
 
         let channel_id = "channel_0";
-        let target_pool = b"target_pool".to_vec();
+        let target_pool = encode_payload_address(b"target_pool");
 
 
 
@@ -73,7 +73,7 @@ mod test_volatile_pool_connections {
         let vault = deploy_mock_vault(&mut app);
 
         let channel_id = "channel_0";
-        let target_pool = b"target_pool".to_vec();
+        let target_pool = encode_payload_address(b"target_pool");
 
         // Set the connection
         app.execute_contract::<VolatileExecuteMsg>(
@@ -128,7 +128,7 @@ mod test_volatile_pool_connections {
         let vault = deploy_mock_vault(&mut app);
 
         let channel_id = "channel_0";
-        let target_pool = b"target_pool".to_vec();
+        let target_pool = encode_payload_address(b"target_pool");
 
         // Finish pool setup
         mock_finish_pool_setup(&mut app, vault.clone());
@@ -164,7 +164,7 @@ mod test_volatile_pool_connections {
         let vault = deploy_mock_vault(&mut app);
 
         let channel_id = "channel_0";
-        let target_pool = b"target_pool".to_vec();
+        let target_pool = encode_payload_address(b"target_pool");
 
         // Finish pool setup
         mock_finish_pool_setup(&mut app, vault.clone());

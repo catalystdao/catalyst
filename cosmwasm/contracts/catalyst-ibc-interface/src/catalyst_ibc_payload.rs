@@ -170,9 +170,9 @@ impl CatalystV1Packet {
 
 
 pub struct CatalystV1Payload<T: CatalystV1VariablePayload> {
-    pub from_pool: Vec<u8>,
-    pub to_pool: Vec<u8>,
-    pub to_account: Vec<u8>,
+    pub from_pool: CatalystEncodedAddress,
+    pub to_pool: CatalystEncodedAddress,
+    pub to_account: CatalystEncodedAddress,
     pub u: U256,
     pub variable_payload: T
 }
@@ -200,19 +200,13 @@ impl<T: CatalystV1VariablePayload> CatalystV1Payload<T> {
         data.push(T::context());
     
         // From pool
-        data.extend_from_slice(
-            encode_address(self.from_pool.as_ref())?.as_ref()
-        );
+        data.extend_from_slice(self.from_pool.as_ref());
     
         // To pool
-        data.extend_from_slice(
-            encode_address(self.to_pool.as_ref())?.as_ref()
-        );
+        data.extend_from_slice(self.to_pool.as_ref());
     
         // To account
-        data.extend_from_slice(
-            encode_address(self.to_account.as_ref())?.as_ref()
-        );
+        data.extend_from_slice(self.to_account.as_ref());
     
         // Units
         data.extend_from_slice(&self.u.to_be_bytes());
@@ -235,19 +229,22 @@ impl<T: CatalystV1VariablePayload> CatalystV1Payload<T> {
         }
     
         // From pool
-        let from_pool = decode_address(
-            data.get(FROM_POOL_START .. FROM_POOL_END).ok_or(ContractError::PayloadDecodingError {})?
-        )?;
+        let from_pool = CatalystEncodedAddress::from_slice_unchecked(
+            data.get(FROM_POOL_START .. FROM_POOL_END)
+                .ok_or(ContractError::PayloadDecodingError {})?
+        );
     
         // To pool
-        let to_pool = decode_address(
-            data.get(TO_POOL_START .. TO_POOL_END).ok_or(ContractError::PayloadDecodingError {})?
-        )?;
-    
+        let to_pool = CatalystEncodedAddress::from_slice_unchecked(
+            data.get(TO_POOL_START .. TO_POOL_END)
+                .ok_or(ContractError::PayloadDecodingError {})?
+        );
+
         // To account
-        let to_account = decode_address(
-            data.get(TO_ACCOUNT_START .. TO_ACCOUNT_END).ok_or(ContractError::PayloadDecodingError {})?
-        )?;
+        let to_account = CatalystEncodedAddress::from_slice_unchecked(
+            data.get(TO_ACCOUNT_START .. TO_ACCOUNT_END)
+                .ok_or(ContractError::PayloadDecodingError {})?
+        );
     
         // Units
         let u = U256::from_be_bytes(
@@ -271,65 +268,65 @@ impl<T: CatalystV1VariablePayload> CatalystV1Payload<T> {
 
     }
 
-    pub fn from_pool_unsafe_string(
+    pub fn from_pool_as_string(
         &self
     ) -> Result<String, ContractError> {
 
         String::from_utf8(
-            self.from_pool.to_vec()
+            self.from_pool.try_decode()?
         ).map_err(|_| ContractError::PayloadDecodingError {})
 
     }
 
-    pub fn from_pool(
+    pub fn from_pool_validated(
         &self,
         deps: Deps
     ) -> Result<Addr, ContractError> {
 
         deps.api.addr_validate(
-            &self.from_pool_unsafe_string()?
+            &self.from_pool_as_string()?
         ).map_err(|err| err.into())
 
     }
 
-    pub fn to_pool_unsafe_string(
+    pub fn to_pool_as_string(
         &self
     ) -> Result<String, ContractError> {
 
         String::from_utf8(
-            self.to_pool.to_vec()
+            self.to_pool.try_decode()?
         ).map_err(|_| ContractError::PayloadDecodingError {})
 
     }
 
-    pub fn to_pool(
+    pub fn to_pool_validated(
         &self,
         deps: Deps
     ) -> Result<Addr, ContractError> {
 
         deps.api.addr_validate(
-            &self.to_pool_unsafe_string()?
+            &self.to_pool_as_string()?
         ).map_err(|err| err.into())
 
     }
 
-    pub fn to_account_unsafe_string(
+    pub fn to_account_as_string(
         &self
     ) -> Result<String, ContractError> {
 
         String::from_utf8(
-            self.to_account.to_vec()
+            self.to_account.try_decode()?
         ).map_err(|_| ContractError::PayloadDecodingError {})
 
     }
 
-    pub fn to_account(
+    pub fn to_account_validated(
         &self,
         deps: Deps
     ) -> Result<Addr, ContractError> {
 
         deps.api.addr_validate(
-            &self.to_account_unsafe_string()?
+            &self.to_account_as_string()?
         ).map_err(|err| err.into())
 
     }
@@ -363,19 +360,19 @@ pub struct SendAssetVariablePayload {
     pub to_asset_index: u8,
     pub min_out: U256,
     pub from_amount: U256,
-    pub from_asset: Vec<u8>,
+    pub from_asset: CatalystEncodedAddress,
     pub block_number: u32,
     pub calldata: Vec<u8>
 }
 
 impl SendAssetVariablePayload {
 
-    pub fn from_asset_unsafe_string(
+    pub fn from_asset_as_string(
         &self
     ) -> Result<String, ContractError> {
         
         String::from_utf8(
-            self.from_asset.to_vec()
+            self.from_asset.try_decode()?
         ).map_err(|_| ContractError::PayloadDecodingError {})
 
     }
@@ -424,9 +421,15 @@ impl CatalystV1VariablePayload for SendAssetVariablePayload {
     }
 
     fn size(&self) -> usize {
-        CTX0_DATA_START             // This defines the size of all the fixed-length elements of the payload
-        + self.from_asset.len()
-        + self.calldata.len()       // Addition is way below the overflow threshold, and even if it were to overflow the code would still function properly, as this is just a runtime optimization.
+        // Note: The following addition is way below the overflow threshold, and even if it were to overflow the code 
+        // would still function properly, as this is just a runtime optimization.
+        1                           // to asset index
+        + 32                        // min out
+        + 32                        // from amount
+        + 65                        // from asset
+        + 4                         // block number
+        + 2                         // calldata length
+        + self.calldata.len()       // calldata
     }
 
     fn try_encode(&self, buffer: &mut Vec<u8>) -> Result<(), ContractError> {
@@ -441,9 +444,7 @@ impl CatalystV1VariablePayload for SendAssetVariablePayload {
         buffer.extend_from_slice(&self.from_amount.to_be_bytes());
     
         // From asset
-        buffer.extend_from_slice(
-            encode_address(self.from_asset.as_ref())?.as_ref()
-        );
+        buffer.extend_from_slice(self.from_asset.as_ref());
     
         // Block number
         buffer.extend_from_slice(&self.block_number.to_be_bytes());
@@ -481,9 +482,10 @@ impl CatalystV1VariablePayload for SendAssetVariablePayload {
         );
 
         // From asset
-        let from_asset = decode_address(
-            buffer.get(CTX0_FROM_ASSET_START .. CTX0_FROM_ASSET_END).ok_or(ContractError::PayloadDecodingError {})?
-        )?;
+        let from_asset = CatalystEncodedAddress::from_slice_unchecked(
+            buffer.get(CTX0_FROM_ASSET_START .. CTX0_FROM_ASSET_END)
+                .ok_or(ContractError::PayloadDecodingError {})?
+        );
     
         // Block number
         let block_number = u32::from_be_bytes(
@@ -588,8 +590,14 @@ impl CatalystV1VariablePayload for SendLiquidityVariablePayload {
     }
 
     fn size(&self) -> usize {
-        CTX1_DATA_START             // This defines the size of all the fixed-length elements of the payload
-        + self.calldata.len()       // Addition is way below the overflow threshold, and even if it were to overflow the code would still function properly, as this is just a runtime optimization.
+        // Note: The following addition is way below the overflow threshold, and even if it were to overflow the code 
+        // would still function properly, as this is just a runtime optimization.
+        32                          // min pool tokens
+        + 32                        // min reference asset
+        + 32                        // from amount
+        + 4                         // block number
+        + 2                         // calldata length
+        + self.calldata.len()       // calldata
     }
 
     fn try_encode(&self, buffer: &mut Vec<u8>) -> Result<(), ContractError> {
@@ -680,40 +688,6 @@ impl CatalystV1VariablePayload for SendLiquidityVariablePayload {
 
 // Misc helpers *****************************************************************************************************************
 
-fn encode_address(address: &[u8]) -> Result<Vec<u8>, ContractError> {
-
-    let address_len = address.len();
-    if address_len > 64 {
-        return Err(ContractError::PayloadEncodingError {});
-    }
-
-    let mut encoded_address: Vec<u8> = Vec::with_capacity(65);
-    encoded_address.push(address_len as u8);             // Casting to u8 is safe, as address_len is <= 64
-
-    if address_len != 64 {
-        encoded_address.extend_from_slice(vec![0u8; 64-address_len].as_ref());
-    }
-
-    encoded_address.extend_from_slice(address.as_ref());
-
-    Ok(encoded_address)
-}
-
-fn decode_address(payload: &[u8]) -> Result<Vec<u8>, ContractError> {
-
-    if payload.len() != 65 {
-        return Err(ContractError::PayloadDecodingError {})
-    }
-
-    let address_length: usize = *payload.get(0)
-        .ok_or(ContractError::PayloadDecodingError {})? as usize;
-
-    payload.get(65-address_length..)
-        .ok_or(ContractError::PayloadDecodingError {})
-        .map(|slice| slice.to_vec())
-
-}
-
 fn parse_calldata(
     deps: Deps,
     calldata: Vec<u8>
@@ -723,9 +697,9 @@ fn parse_calldata(
         return Ok(None);
     }
 
-    let target_bytes = decode_address(
+    let target_bytes = CatalystEncodedAddress::from_slice_unchecked(
         calldata.get(CALLDATA_TARGET_START..CALLDATA_TARGET_END).ok_or(ContractError::PayloadDecodingError {})?
-    )?;
+    ).try_decode()?;
 
     let target = deps.api.addr_validate(
         String::from_utf8(target_bytes).map_err(|_| ContractError::PayloadDecodingError {})?.as_str()
@@ -739,4 +713,88 @@ fn parse_calldata(
             bytes
         })
     )
+}
+
+// Wrapper around a bytes vec for encoding/decoding of 65-byte Catalyst payload addresses
+pub struct CatalystEncodedAddress(Vec<u8>);
+
+impl AsRef<[u8]> for CatalystEncodedAddress {
+    fn as_ref(&self) -> &[u8] {
+        &self.0.as_ref()
+    }
+}
+
+impl Into<Vec<u8>> for CatalystEncodedAddress {
+    fn into(self) -> Vec<u8> {
+        self.0
+    }
+}
+
+impl TryFrom<Vec<u8>> for CatalystEncodedAddress {
+    type Error = ContractError;
+
+    fn try_from(value: Vec<u8>) -> Result<Self, Self::Error> {
+
+        if value.len() != 65 {
+            return Err(ContractError::PayloadDecodingError {})
+        }
+
+        Ok(Self(value))
+    }
+}
+
+impl TryFrom<&[u8]> for CatalystEncodedAddress {
+    type Error = ContractError;
+
+    fn try_from(value: &[u8]) -> Result<Self, Self::Error> {
+
+        if value.len() != 65 {
+            return Err(ContractError::PayloadDecodingError {})
+        }
+
+        Ok(Self(value.to_vec()))
+    }
+}
+
+
+impl CatalystEncodedAddress {
+
+    pub fn to_vec(self) -> Vec<u8> {
+        self.0
+    }
+
+    pub fn from_slice_unchecked(data: &[u8]) -> Self {
+        // This method must only be used when it is guaranteed that data.len() is 65 bytes long
+        Self(data.to_vec())
+    }
+
+    pub fn try_encode(address: &[u8]) -> Result<Self, ContractError> {
+
+        let address_len = address.len();
+        if address_len > 64 {
+            return Err(ContractError::PayloadEncodingError {});
+        }
+
+        let mut encoded_address: Vec<u8> = Vec::with_capacity(65);
+        encoded_address.push(address_len as u8);             // Casting to u8 is safe, as address_len is <= 64
+
+        if address_len != 64 {
+            encoded_address.extend_from_slice(vec![0u8; 64-address_len].as_ref());
+        }
+
+        encoded_address.extend_from_slice(address.as_ref());
+
+        Ok(Self(encoded_address))
+    }
+
+    pub fn try_decode(&self) -> Result<Vec<u8>, ContractError> {
+
+        let address_length: usize = *self.0.get(0)
+            .ok_or(ContractError::PayloadDecodingError {})? as usize;
+
+        self.0.get(65-address_length..)
+            .ok_or(ContractError::PayloadDecodingError {})
+            .map(|slice| slice.to_vec())
+
+    }
 }

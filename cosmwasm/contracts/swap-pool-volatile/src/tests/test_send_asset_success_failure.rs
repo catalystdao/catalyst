@@ -4,7 +4,7 @@ mod test_volatile_send_asset_success_failure {
     use ethnum::{U256, uint};
     use swap_pool_common::{ContractError, msg::{TotalEscrowedAssetResponse, AssetEscrowResponse}, state::compute_send_asset_hash};
 
-    use crate::{msg::{VolatileExecuteMsg, QueryMsg}, tests::{helpers::{SETUP_MASTER, deploy_test_tokens, WAD, set_token_allowance, query_token_balance, transfer_tokens, get_response_attribute, mock_set_pool_connection, CHANNEL_ID, SWAPPER_B, SWAPPER_A, mock_instantiate_interface, FACTORY_OWNER, mock_factory_deploy_vault}, math_helpers::{uint128_to_f64, f64_to_uint128}}};
+    use crate::{msg::{VolatileExecuteMsg, QueryMsg}, tests::{helpers::{SETUP_MASTER, deploy_test_tokens, WAD, set_token_allowance, query_token_balance, transfer_tokens, get_response_attribute, mock_set_pool_connection, CHANNEL_ID, SWAPPER_B, SWAPPER_A, mock_instantiate_interface, FACTORY_OWNER, mock_factory_deploy_vault, encode_payload_address}, math_helpers::{uint128_to_f64, f64_to_uint128}}};
 
     //TODO check events
 
@@ -41,12 +41,12 @@ mod test_volatile_send_asset_success_failure {
             );
     
             // Connect pool with a mock pool
-            let target_pool = Addr::unchecked("target_pool");
+            let target_pool = encode_payload_address(b"target_pool");
             mock_set_pool_connection(
                 app,
                 vault.clone(),
                 CHANNEL_ID.to_string(),
-                target_pool.as_bytes().to_vec(),
+                target_pool.clone(),
                 true
             );
     
@@ -58,6 +58,7 @@ mod test_volatile_send_asset_success_failure {
             let swap_amount = f64_to_uint128(uint128_to_f64(from_balance) * send_percentage).unwrap();
     
             let to_asset_idx = 1;
+            let to_account = encode_payload_address(SWAPPER_B.as_bytes());
     
             // Fund swapper with tokens and set vault allowance
             transfer_tokens(
@@ -82,8 +83,8 @@ mod test_volatile_send_asset_success_failure {
                 vault.clone(),
                 &VolatileExecuteMsg::SendAsset {
                     channel_id: CHANNEL_ID.to_string(),
-                    to_pool: target_pool.as_bytes().to_vec(),
-                    to_account: SWAPPER_B.as_bytes().to_vec(),
+                    to_pool: target_pool,
+                    to_account: to_account.clone(),
                     from_asset: from_asset.to_string(),
                     to_asset_index: to_asset_idx,
                     amount: swap_amount,
@@ -108,7 +109,7 @@ mod test_volatile_send_asset_success_failure {
                 from_amount: swap_amount,
                 fee,
                 u,
-                to_account: SWAPPER_B.as_bytes().to_vec(),
+                to_account,
                 block_number
             }
     

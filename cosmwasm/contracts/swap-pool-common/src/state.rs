@@ -199,7 +199,9 @@ pub fn set_connection(
         return Err(ContractError::Unauthorized {});
     }
 
-    //TODO check the 'to_pool' address is 65 bytes long
+    if to_pool.len() != 65 {                            //TODO use global const variable for address length
+        return Err(ContractError::GenericError {});     //TODO error
+    }
 
     POOL_CONNECTIONS.save(deps.storage, (channel_id.as_str(), to_pool.clone()), &state)?;
 

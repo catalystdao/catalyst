@@ -213,18 +213,19 @@ fn on_packet_receive(
         CatalystV1Packet::SendAsset(payload) => {
 
             // Build execute message
+            let to_account = payload.to_account_validated(deps.as_ref())?.into_string();     // Validate to_account  //TODO do we need to validate this?
             let parsed_calldata = payload.variable_payload.parse_calldata(deps.as_ref())?;
             Ok::<cosmwasm_std::WasmMsg, ContractError>(cosmwasm_std::WasmMsg::Execute {
-                contract_addr: payload.to_pool(deps.as_ref())?.into_string(),       // Validate to_pool
+                contract_addr: payload.to_pool_validated(deps.as_ref())?.into_string(),         // Validate to_pool     //TODO do we need to validated this?
                 msg: to_binary(&SwapPoolExecuteMsg::<()>::ReceiveAsset {
                     channel_id: packet.dest.channel_id,
-                    from_pool: payload.from_pool.to_vec(),                          // Do not validate from_pool as its format is unknown. It is only used for logging
+                    from_pool: payload.from_pool.to_vec(),                                      // Do not validate from_pool as its format is unknown. It is only used for logging
                     to_asset_index: payload.variable_payload.to_asset_index,
-                    to_account: payload.to_account(deps.as_ref())?.into_string(),   // Validate to_account
+                    to_account,
                     u: payload.u,
-                    min_out: payload.variable_payload.min_out()?,                   // Convert min_out into Uint128
+                    min_out: payload.variable_payload.min_out()?,                               // Convert min_out into Uint128
                     from_amount: payload.variable_payload.from_amount,
-                    from_asset: payload.variable_payload.from_asset,
+                    from_asset: payload.variable_payload.from_asset.to_vec(),
                     from_block_number_mod: payload.variable_payload.block_number,
                     calldata_target: parsed_calldata.clone().map(|data| data.target),
                     calldata: parsed_calldata.map(|data| data.bytes)
@@ -236,13 +237,14 @@ fn on_packet_receive(
         CatalystV1Packet::SendLiquidity(payload) => {
 
             // Build execute message
+            let to_account = payload.to_account_validated(deps.as_ref())?.into_string();     // Validate to_account  //TODO do we need to validate this?
             let parsed_calldata = payload.variable_payload.parse_calldata(deps.as_ref())?;
             Ok::<cosmwasm_std::WasmMsg, ContractError>(cosmwasm_std::WasmMsg::Execute {
-                contract_addr: payload.to_pool(deps.as_ref())?.into_string(),       // Validate to_pool
+                contract_addr: payload.to_pool_validated(deps.as_ref())?.into_string(),         // Validate to_pool     //TODO do we need to validate this?
                 msg: to_binary(&SwapPoolExecuteMsg::<()>::ReceiveLiquidity {
                     channel_id: packet.dest.channel_id,
-                    from_pool: payload.from_pool.to_vec(),                          // Do not validate from_pool as its format is unknown. It is only used for logging
-                    to_account: payload.to_account(deps.as_ref())?.into_string(),   // Validate to_account
+                    from_pool: payload.from_pool.to_vec(),                                      // Do not validate from_pool as its format is unknown. It is only used for logging
+                    to_account,
                     u: payload.u,
                     min_pool_tokens: payload.variable_payload.min_pool_tokens()?,                           // Convert min_pool_tokens into Uint128
                     min_reference_asset: payload.variable_payload.min_reference_asset()?,                   // Convert min_reference_asset into Uint128
@@ -285,26 +287,28 @@ fn on_packet_response(
     let receive_asset_execute_msg: cosmwasm_std::WasmMsg = match catalyst_packet {
         CatalystV1Packet::SendAsset(payload) => {
 
+            let from_pool = payload.from_pool_validated(deps.as_ref())?.into_string();  // Validate from_pool   //TODO do we need to validate this?
+
             // Build execute message
             let msg = match success {
                 true => SwapPoolExecuteMsg::<()>::OnSendAssetSuccess {
-                    to_account: payload.to_account.to_vec(),                            // Can be 'unsafe' as it must match the one with which the 'swap_hash' was derived
+                    to_account: payload.to_account.to_vec(),                            // No need to validate, as it must match the one with which the 'swap_hash' was derived
                     u: payload.u,
                     amount: payload.variable_payload.from_amount()?,
-                    asset: payload.variable_payload.from_asset_unsafe_string()?,        // Can be 'unsafe' as it must match the one with which the 'swap_hash' was derived
+                    asset: payload.variable_payload.from_asset_as_string()?,            // No need to validate, as it must match the one with which the 'swap_hash' was derived
                     block_number_mod: payload.variable_payload.block_number
                 },
                 false => SwapPoolExecuteMsg::<()>::OnSendAssetFailure {
-                    to_account: payload.to_account.to_vec(),                            // Can be 'unsafe' as it must match the one with which the 'swap_hash' was derived
+                    to_account: payload.to_account.to_vec(),                            // No need to validate, as it must match the one with which the 'swap_hash' was derived
                     u: payload.u,
                     amount: payload.variable_payload.from_amount()?,
-                    asset: payload.variable_payload.from_asset_unsafe_string()?,        // Can be 'unsafe' as it must match the one with which the 'swap_hash' was derived
+                    asset: payload.variable_payload.from_asset_as_string()?,            // No need to validate, as it must match the one with which the 'swap_hash' was derived
                     block_number_mod: payload.variable_payload.block_number
                 },
             };
 
             Ok::<cosmwasm_std::WasmMsg, ContractError>(cosmwasm_std::WasmMsg::Execute {
-                contract_addr: payload.from_pool(deps.as_ref())?.into_string(),         // Validate from_pool
+                contract_addr: from_pool,
                 msg: to_binary(&msg)?,
                 funds: vec![]
             })
@@ -312,24 +316,26 @@ fn on_packet_response(
         },
         CatalystV1Packet::SendLiquidity(payload) => {
 
+            let from_pool = payload.from_pool_validated(deps.as_ref())?.into_string();  // Validate from_pool   //TODO do we need to validate this?
+
             // Build execute message
             let msg = match success {
                 true => SwapPoolExecuteMsg::<()>::OnSendLiquiditySuccess {
-                    to_account: payload.to_account.to_vec(),                            // Can be 'unsafe' as it must match the one with which the 'swap_hash' was derived
+                    to_account: payload.to_account.to_vec(),                            // No need to validate, as it must match the one with which the 'swap_hash' was derived
                     u: payload.u,
-                    amount: payload.variable_payload.from_amount()?,                    // Can be 'unsafe' as it must match the one with which the 'swap_hash' was derived
+                    amount: payload.variable_payload.from_amount()?,                    // No need to validate, as it must match the one with which the 'swap_hash' was derived
                     block_number_mod: payload.variable_payload.block_number
                 },
                 false => SwapPoolExecuteMsg::<()>::OnSendLiquidityFailure {
-                    to_account: payload.to_account.to_vec(),                            // Can be 'unsafe' as it must match the one with which the 'swap_hash' was derived
+                    to_account: payload.to_account.to_vec(),                            // No need to validate, as it must match the one with which the 'swap_hash' was derived
                     u: payload.u,
-                    amount: payload.variable_payload.from_amount()?,                    // Can be 'unsafe' as it must match the one with which the 'swap_hash' was derived
+                    amount: payload.variable_payload.from_amount()?,                    // No need to validate, as it must match the one with which the 'swap_hash' was derived
                     block_number_mod: payload.variable_payload.block_number
                 },
             };
 
             Ok::<cosmwasm_std::WasmMsg, ContractError>(cosmwasm_std::WasmMsg::Execute {
-                contract_addr: payload.from_pool(deps.as_ref())?.into_string(),         // Validate from_pool
+                contract_addr: from_pool,
                 msg: to_binary(&msg)?,
                 funds: vec![]
             })

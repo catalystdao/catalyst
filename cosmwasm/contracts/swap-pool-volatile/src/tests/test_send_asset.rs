@@ -4,7 +4,7 @@ mod test_volatile_send_asset {
     use ethnum::U256;
     use swap_pool_common::{ContractError, msg::TotalEscrowedAssetResponse};
 
-    use crate::{msg::VolatileExecuteMsg, tests::{helpers::{SETUP_MASTER, deploy_test_tokens, WAD, set_token_allowance, DEFAULT_TEST_POOL_FEE, query_token_balance, transfer_tokens, get_response_attribute, mock_set_pool_connection, CHANNEL_ID, SWAPPER_B, SWAPPER_A, mock_instantiate_interface, FACTORY_OWNER, DEFAULT_TEST_GOV_FEE, compute_expected_send_asset, mock_test_token_definitions, mock_factory_deploy_vault}, math_helpers::{uint128_to_f64, f64_to_uint128, u256_to_f64}}};
+    use crate::{msg::VolatileExecuteMsg, tests::{helpers::{SETUP_MASTER, deploy_test_tokens, WAD, set_token_allowance, DEFAULT_TEST_POOL_FEE, query_token_balance, transfer_tokens, get_response_attribute, mock_set_pool_connection, CHANNEL_ID, SWAPPER_B, SWAPPER_A, mock_instantiate_interface, FACTORY_OWNER, DEFAULT_TEST_GOV_FEE, compute_expected_send_asset, mock_test_token_definitions, mock_factory_deploy_vault, encode_payload_address}, math_helpers::{uint128_to_f64, f64_to_uint128, u256_to_f64}}};
 
     //TODO check event
 
@@ -29,12 +29,12 @@ mod test_volatile_send_asset {
         );
 
         // Connect pool with a mock pool
-        let target_pool = Addr::unchecked("target_pool");
+        let target_pool = encode_payload_address(b"target_pool");
         mock_set_pool_connection(
             &mut app,
             vault.clone(),
             CHANNEL_ID.to_string(),
-            target_pool.as_bytes().to_vec(),
+            target_pool.clone(),
             true
         );
 
@@ -73,8 +73,8 @@ mod test_volatile_send_asset {
             vault.clone(),
             &VolatileExecuteMsg::SendAsset {
                 channel_id: CHANNEL_ID.to_string(),
-                to_pool: target_pool.as_bytes().to_vec(),
-                to_account: SWAPPER_B.as_bytes().to_vec(),
+                to_pool: target_pool,
+                to_account: encode_payload_address(SWAPPER_B.as_bytes()),
                 from_asset: from_asset.to_string(),
                 to_asset_index: to_asset_idx,
                 amount: swap_amount,
@@ -169,12 +169,12 @@ mod test_volatile_send_asset {
         );
 
         // Connect pool with a mock pool
-        let target_pool = Addr::unchecked("target_pool");
+        let target_pool = encode_payload_address(b"target_pool");
         mock_set_pool_connection(
             &mut app,
             vault.clone(),
             CHANNEL_ID.to_string(),
-            target_pool.as_bytes().to_vec(),
+            target_pool.clone(),
             true
         );
 
@@ -210,8 +210,8 @@ mod test_volatile_send_asset {
             vault.clone(),
             &VolatileExecuteMsg::SendAsset {
                 channel_id: CHANNEL_ID.to_string(),
-                to_pool: target_pool.as_bytes().to_vec(),
-                to_account: SWAPPER_B.as_bytes().to_vec(),
+                to_pool: target_pool,
+                to_account: encode_payload_address(SWAPPER_B.as_bytes()),
                 from_asset: from_asset.to_string(),
                 to_asset_index: to_asset_idx,
                 amount: swap_amount,
@@ -246,7 +246,7 @@ mod test_volatile_send_asset {
         );
 
         // Connect pool with a mock pool
-        let target_pool = Addr::unchecked("target_pool");
+        let target_pool = encode_payload_address(b"target_pool");
         // ! Do not set the connection with the target pool
 
         // Define send asset configuration
@@ -283,8 +283,8 @@ mod test_volatile_send_asset {
             vault.clone(),
             &VolatileExecuteMsg::SendAsset {
                 channel_id: CHANNEL_ID.to_string(),
-                to_pool: target_pool.as_bytes().to_vec(),
-                to_account: SWAPPER_B.as_bytes().to_vec(),
+                to_pool: target_pool.clone(),
+                to_account: encode_payload_address(SWAPPER_B.as_bytes()),
                 from_asset: from_asset.to_string(),
                 to_asset_index: to_asset_idx,
                 amount: swap_amount,
@@ -301,7 +301,7 @@ mod test_volatile_send_asset {
         assert!(matches!(
             response_result.err().unwrap().downcast().unwrap(),
             ContractError::PoolNotConnected { channel_id: err_channel_id, pool: err_pool }
-                if err_channel_id == CHANNEL_ID && err_pool == target_pool.as_bytes().to_vec()
+                if err_channel_id == CHANNEL_ID && err_pool == target_pool
         ));
 
     }
@@ -329,12 +329,12 @@ mod test_volatile_send_asset {
         );
 
         // Connect pool with a mock pool
-        let target_pool = Addr::unchecked("target_pool");
+        let target_pool = encode_payload_address(b"target_pool");
         mock_set_pool_connection(
             &mut app,
             vault.clone(),
             CHANNEL_ID.to_string(),
-            target_pool.as_bytes().to_vec(),
+            target_pool.clone(),
             true
         );
 
@@ -369,8 +369,8 @@ mod test_volatile_send_asset {
             vault.clone(),
             &VolatileExecuteMsg::SendAsset {
                 channel_id: CHANNEL_ID.to_string(),
-                to_pool: target_pool.as_bytes().to_vec(),
-                to_account: SWAPPER_B.as_bytes().to_vec(),
+                to_pool: target_pool,
+                to_account: encode_payload_address(SWAPPER_B.as_bytes()),
                 from_asset: from_asset.to_string(),
                 to_asset_index: to_asset_idx,
                 amount: swap_amount,
