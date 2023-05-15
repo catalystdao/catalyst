@@ -17,13 +17,19 @@ import "./interfaces/ICatalystV1VaultErrors.sol";
 /**
  * @title Catalyst: Common Swap Vault Logic
  * @author Catalyst Labs
- * @notice This abstract contract defines general logic of a Catalyst swap vault like:
- * - Vault Token
+ * @notice This abstract contract defines general logic of a Catalyst vault like:
+ * - Vault Token through Solmate's ERC20 implementation.
  * - Connection management
  * - Security limit
- * - Escrow
+ * - Swap Escrow
  *
- * By inheriting this contract, a Swap Vault automatically implements common swap vault logic.
+ * By inheriting this abstract contract, a Vault automatically implements common swap vault logic.
+ * @dev This contract uses the following special notation:
+ * CAPITAL_LETTER_VARIABLES are constants or immutable.
+ * _ prefixed varaibles are storage.
+ * _ prefixed functions are internal.
+ * Unless otherwise required, variables are exposed directly. Such that storage functions are
+ * prefixed with _.
  */
 abstract contract CatalystVaultCommon is
     Initializable,
@@ -58,7 +64,8 @@ abstract contract CatalystVaultCommon is
     address public immutable FACTORY;
     address public _chainInterface;
 
-    // @notice The vaults with which cross chain swaps are allowed, stored as _vaultConnection[connectionId][toVault]
+    /// @notice The approved connections for this vault, stored as _vaultConnection[connectionId][toVault]
+    /// @dev to vault is encoded as 64 + 1 bytes.
     mapping(bytes32 => mapping(bytes => bool)) public _vaultConnection;
 
     /// @notice To indicate which token is desired on the target vault,
@@ -80,12 +87,12 @@ abstract contract CatalystVaultCommon is
     /// @notice The governance's cut of _vaultFee. 
     /// @dev FixedPointMathLib.mulWadDown(FixedPointMathLib.mulWadDown(amount, _vaultFee), _governanceFeeShare);
     uint256 public _governanceFeeShare;
-    /// @notice The fee vault fee can be changed. _feeAdministrator is the address allowed to change it
+    /// @notice The vault fee can be changed. _feeAdministrator is the address allowed to change it
     address public _feeAdministrator; 
 
     /// @notice The setupMaster is the short-term owner of the vault.
     /// They can connect the vault to vaults on other chains.
-    /// @dev !Can extract all of the vault value!
+    /// @dev !Can extract all of the vault value! Should be set to address(0) once setup is complete.
     address public _setupMaster;
 
     //--- Messaging router limit ---//
@@ -94,6 +101,7 @@ abstract contract CatalystVaultCommon is
     // if the vault observes more than _maxUnitCapacity of incoming
     // units, then it will not accept further incoming units. This means the router
     // can only drain a prefigured percentage of the vault every DECAY_RATE
+    // For amplified vaults, the security limit is denominated in assets rather than Units.
 
     // Outgoing flow is subtracted from incoming flow until 0.
 
@@ -118,6 +126,8 @@ abstract contract CatalystVaultCommon is
     constructor(address factory_) ERC20("Catalyst Vault Template", "", DECIMALS) {
         FACTORY = factory_;
 
+        // Disable the contract from being initialized. This ensures the factory is
+        // used to deploy vaults.
         _disableInitializers();
     }
 
@@ -136,7 +146,7 @@ abstract contract CatalystVaultCommon is
     }
 
     /**
-     * @notice Checks that an incoming message is coming from a sender and that the context of the message is valid. (connection)
+     * @notice Checks that an incoming message is coming from the cross-chain interface and that the context of the message is valid. (connection)
      */ 
     modifier verifyIncomingMessage(bytes32 channelId, bytes calldata fromVault) {
         // The chainInterface is the only valid caller of this function.
@@ -147,6 +157,9 @@ abstract contract CatalystVaultCommon is
         _;
     }
 
+    /// @notice Does this vault define a pool without other vaults?
+    /// @dev Checked by comparing  _chainInterface to address(0). It is possible that 
+    /// no connections have been reacted and this returns false.
     function onlyLocal() public view override returns (bool) {
         return _chainInterface == address(0);
     }
@@ -162,7 +175,7 @@ abstract contract CatalystVaultCommon is
         address setupMaster
     ) initializer external override {
         // The vault is designed to be used by a proxy and not as a standalone vault.
-        // initializer lets this function only be called once.
+        // initializer ensures this function is only called once.
 
         _chainInterface = chainInterface;
         _setupMaster = setupMaster;
@@ -171,7 +184,7 @@ abstract contract CatalystVaultCommon is
         _setGovernanceFee(governanceFee);
         _setFeeAdministrator(feeAdministrator);
 
-        // Names the ERC20 vault token //
+        // Name the ERC20 vault token //
         name = name_;
         symbol = symbol_;
         // END ERC20 //
@@ -184,7 +197,7 @@ abstract contract CatalystVaultCommon is
         // The delta change to the limit is: timePassed · slope = timePassed · Max/decayrate
         uint256 unitCapacityReleased;
         unchecked {
-            // block.timestamp > _usedUnitCapacityTimestamp, always.
+            // block.timestamp >= _usedUnitCapacityTimestamp, always.
             // MUC is generally low.
             unitCapacityReleased = (block.timestamp - _usedUnitCapacityTimestamp);
         }
@@ -257,7 +270,8 @@ abstract contract CatalystVaultCommon is
     }
 
 
-    /// @notice Sets a new fee fee administrator who can configure vault fees.
+    /// @notice Sets a new fee administrator that can configure vault fees.
+    /// @dev The fee administrator is responsible for modifying vault fees.
     function _setFeeAdministrator(address administrator) internal {
         _feeAdministrator = administrator;
         emit SetFeeAdministrator(administrator);
@@ -277,10 +291,14 @@ abstract contract CatalystVaultCommon is
         emit SetGovernanceFee(fee);
     }
 
-
-    /// @notice Allows the factory owner to modify the fee administrator
+    /// @notice Allows the factory owner to set a new fee administrator
     function setFeeAdministrator(address administrator) public override onlyFactoryOwner {
         _setFeeAdministrator(administrator);
+    }
+
+    /// @notice Allows the factory owner to set a new the governance fee
+    function setGovernanceFee(uint256 fee) public override onlyFactoryOwner {
+        _setGovernanceFee(fee);
     }
 
     /// @notice Allows the factory owner to modify the vault fee
@@ -289,20 +307,12 @@ abstract contract CatalystVaultCommon is
         _setVaultFee(fee);
     }
 
-    /// @notice Allows the factory owner to modify the governance fee
-    function setGovernanceFee(uint256 fee) public override {
-        require(msg.sender == _feeAdministrator); // dev: Only feeAdministrator can set new fee
-        _setGovernanceFee(fee);
-    }
-
-
-    /**
-     * @dev Collect the governance fee share of the specified vault fee
-     */
+    /// @notice Collect the governance fee share of the specified vault fee
+    /// @dev The governance fee share is transfered to the factory owner.
     function _collectGovernanceFee(address asset, uint256 vaultFeeAmount) internal {
-
         uint256 governanceFeeShare = _governanceFeeShare;
 
+        // If governanceFeeShare == 0, then skip the rest of the logic.
         if (governanceFeeShare != 0) {
             uint256 governanceFeeAmount = FixedPointMathLib.mulWadDown(vaultFeeAmount, governanceFeeShare);
             ERC20(asset).safeTransfer(factoryOwner(), governanceFeeAmount);
@@ -311,12 +321,10 @@ abstract contract CatalystVaultCommon is
 
     /**
      * @notice Creates a connection to toVault on the channel_channelId.
-     * @dev Encoding addresses in bytes32 for EVM can be done be computed with:
-     * Vyper: convert(<vaultAddress>, bytes32)
-     * Solidity: abi.encode(<vaultAddress>)
-     * Brownie: brownie.convert.to_bytes(<vaultAddress>, type_str="bytes32")
+     * @dev Encoding addresses in 64 + 1 bytes for EVM.
+     * For Solidity, this can be done as abi.encodePacket(uint8(20), bytes32(0), abi.encode(toAddress))
      * @param channelId Target chain identifier.
-     * @param toVault Bytes32 representation of the target vault.
+     * @param toVault 64 + 1 bytes representation of the target vault.
      * @param state Boolean indicating if the connection should be open or closed.
      */
     function setConnection(
@@ -333,7 +341,9 @@ abstract contract CatalystVaultCommon is
     }
 
     /**
-     * @notice Gives up short-term ownership of the vault making the vault unstoppable.
+     * @notice Gives up short-term ownership of the vault. This makes the vault unstoppable.
+     * @dev This function should ALWAYS be called before other liquidity providers deposit liquidity.
+     * While it is not recommended, the escrow should ensure it is relativly safe trading through it (assuming a minimum output is set).
      */
     function finishSetup() external override {
         require(msg.sender == _setupMaster); // dev: No auth
@@ -349,12 +359,17 @@ abstract contract CatalystVaultCommon is
      * In other words, has finishSetup been called?
      */
     function ready() external view override returns (bool) {
+        // _setupMaster == address(0) ensures the pool is safe. The setup master can drain the pool!
+        // _tokenIndexing[0] != address(0) check if the pool has been initialized correctly.
+        // The additional check is there to ensure that the initial deployment returns false. 
         return _setupMaster == address(0) && _tokenIndexing[0] != address(0);
     }
 
 
     //-- Escrow Functions --//
 
+    /// @notice Returns the fallbackUser for the escrow and cleans up the escrow information.
+    /// @dev 'delete _escrowedTokensFor[sendAssetHash]' ensures this function can only be called once.
     function _releaseAssetEscrow(
         bytes32 sendAssetHash,
         uint256 escrowAmount,
@@ -373,6 +388,8 @@ abstract contract CatalystVaultCommon is
         return fallbackUser;
     }
 
+    /// @notice Returns the fallbackUser for the escrow and cleans up the escrow information.
+    /// @dev 'delete _escrowedTokensFor[sendAssetHash]' ensures this function can only be called once.
     function _releaseLiquidityEscrow(
         bytes32 sendLiquidityHash,
         uint256 escrowAmount
@@ -408,23 +425,26 @@ abstract contract CatalystVaultCommon is
     ) nonReentrant public override virtual {
         require(msg.sender == _chainInterface);  // dev: Only _chainInterface
 
-        bytes32 sendAssetHash = _computeSendAssetHash(
-            toAccount,  // Ensures no collisions between different users
-            U,          // Used to randomise the hash
-            escrowAmount,     // Required! to validate release escrow data
-            escrowToken,  // Required! to validate release escrow data
-            blockNumberMod
+        // We need to find the location of the escrow with using the below information.
+        // We need to do this twice: 1. Get the address. 2. Delete the escrow.
+        // To save a bit of gas, this hash is computed and saved and then used.
+        bytes32 sendAssetHash = _computeSendAssetHash( // Computing the hash doesn't revert.
+            toAccount,      // Ensures no collisions between different users
+            U,              // Used to randomise the hash
+            escrowAmount,   // Required! to validate release escrow data
+            escrowToken,    // Required! to validate release escrow data
+            blockNumberMod  // Used to randomize the hash.
         );
 
         _releaseAssetEscrow(sendAssetHash, escrowAmount, escrowToken); // Only reverts for missing escrow
 
-        emit OnSendAssetSuccess(
+        emit OnSendAssetSuccess( // Never reverts.
             toAccount,
             U,
             escrowAmount,
             escrowToken,
             blockNumberMod
-        );  // Never reverts.
+        );
     }
 
     /** 
@@ -445,25 +465,28 @@ abstract contract CatalystVaultCommon is
     ) nonReentrant public override virtual {
         require(msg.sender == _chainInterface);  // dev: Only _chainInterface
 
-        bytes32 sendAssetHash = _computeSendAssetHash(
-            toAccount,  // Ensures no collisions between different users
-            U,          // Used to randomise the hash
-            escrowAmount,     // Required! to validate release escrow data
-            escrowToken,  // Required! to validate release escrow data
-            blockNumberMod
+        // We need to find the location of the escrow with using the below information.
+        // We need to do this twice: 1. Get the address. 2. Delete the escrow.
+        // To save a bit of gas, this hash is computed and saved and then used.
+        bytes32 sendAssetHash = _computeSendAssetHash( // Computing the hash doesn't revert.
+            toAccount,      // Ensures no collisions between different users
+            U,              // Used to randomise the hash
+            escrowAmount,   // Required! to validate release escrow data
+            escrowToken,    // Required! to validate release escrow data
+            blockNumberMod  // Used to randomize the hash.
         );
 
         address fallbackAddress = _releaseAssetEscrow(sendAssetHash, escrowAmount, escrowToken); // Only reverts for missing escrow,
 
-        ERC20(escrowToken).safeTransfer(fallbackAddress, escrowAmount);  // Would fail if there is no balance. To protect against this, the escrow amount is removed from what can be claimed by users.
+        ERC20(escrowToken).safeTransfer(fallbackAddress, escrowAmount);  // Would fail if there is no balance. To protect against this, the escrow amount should be removed from what can be claimed by users.
 
-        emit SendAssetFailure(
+        emit SendAssetFailure( // Never reverts.
             toAccount,
             U,
             escrowAmount,
             escrowToken,
             blockNumberMod
-        );  // Never reverts.
+        );
     }
 
     /** 
@@ -482,21 +505,24 @@ abstract contract CatalystVaultCommon is
     ) nonReentrant public override virtual {
         require(msg.sender == _chainInterface);  // dev: Only _chainInterface
 
-        bytes32 sendLiquidityHash = _computeSendLiquidityHash(
-            toAccount,  // Ensures no collisions between different users
-            U,          // Used to randomise the hash
-            escrowAmount,     // Required! to validate release escrow data
-            blockNumberMod
+        // We need to find the location of the escrow with using the below information.
+        // We need to do this twice: 1. Get the address. 2. Delete the escrow.
+        // To save a bit of gas, this hash is computed and saved and then used.
+        bytes32 sendLiquidityHash = _computeSendLiquidityHash( // Computing the hash doesn't revert.
+            toAccount,      // Ensures no collisions between different users
+            U,              // Used to randomise the hash
+            escrowAmount,   // Required! to validate release escrow data
+            blockNumberMod  // Used to randomize the hash.
         );
 
         _releaseLiquidityEscrow(sendLiquidityHash, escrowAmount); // Only reverts for missing escrow
 
-        emit SendLiquiditySuccess(
+        emit SendLiquiditySuccess( // Never reverts.
             toAccount,
             U,
             escrowAmount,
             blockNumberMod
-        );  // Never reverts.
+        );
     }
 
     /** 
@@ -515,25 +541,27 @@ abstract contract CatalystVaultCommon is
     ) nonReentrant public override virtual {
         require(msg.sender == _chainInterface);  // dev: Only _chainInterface
 
-        bytes32 sendLiquidityHash = _computeSendLiquidityHash(
-            toAccount,  // Ensures no collisions between different users
-            U,          // Used to randomise the hash
-            escrowAmount,     // Required! to validate release escrow data
-            blockNumberMod
+        bytes32 sendLiquidityHash = _computeSendLiquidityHash( // Computing the hash doesn't revert.
+            toAccount,      // Ensures no collisions between different users
+            U,              // Used to randomise the hash
+            escrowAmount,   // Required! to validate release escrow data
+            blockNumberMod  // Used to randomize the hash.
         );
 
         address fallbackAddress = _releaseLiquidityEscrow(sendLiquidityHash, escrowAmount); // Only reverts for missing escrow
 
-        _mint(fallbackAddress, escrowAmount);  
+        _mint(fallbackAddress, escrowAmount); // Never reverts.
 
-        emit SendLiquidityFailure(
+        emit SendLiquidityFailure( // Never reverts.
             toAccount,
             U,
             escrowAmount,
             blockNumberMod
-        );  // Never reverts.
+        );
     }
 
+    /// @notice Computes a unique identifier for a swap. This unique identifier can be used to identify swaps cross-chain.
+    /// However, it is never exposed. This is done to let the hashing algorithm be flexible between implementations.
     function _computeSendAssetHash(
         bytes memory toAccount,
         uint256 U,
@@ -543,15 +571,17 @@ abstract contract CatalystVaultCommon is
     ) internal pure returns(bytes32) {
         return keccak256(
             abi.encodePacked(
-                toAccount,  // Ensures no collisions between different users
-                U,          // Used to randomise the hash
-                amount,     // Required! to validate release escrow data
-                fromAsset,  // Required! to validate release escrow data
-                blockNumberMod
+                toAccount,      // Ensures no collisions between different users
+                U,              // Used to randomise the hash
+                amount,         // Required! to validate release escrow data
+                fromAsset,      // Required! to validate release escrow data
+                blockNumberMod  // Used to randomize the hash.
             )
         );
     }
 
+    /// @notice Computes a unique identifier for a swap. This unique identifier can be used to identify swaps cross-chain.
+    /// However, it is never exposed. This is done to let the hashing algorithm be flexible between implementations.
     function _computeSendLiquidityHash(
         bytes calldata toAccount,
         uint256 U,
@@ -560,10 +590,10 @@ abstract contract CatalystVaultCommon is
     ) internal pure returns(bytes32) {
         return keccak256(
             abi.encodePacked(
-                toAccount,  // Ensures no collisions between different users
-                U,          // Used to randomise the hash
-                amount,     // Required! to validate release escrow data
-                blockNumberMod
+                toAccount,      // Ensures no collisions between different users
+                U,              // Used to randomise the hash
+                amount,         // Required! to validate release escrow data
+                blockNumberMod  // Used to randomize the hash.
             )
         );
     }
