@@ -214,7 +214,7 @@ mod catalyst_ibc_interface_tests {
     use crate::{ibc_test_helpers::{open_channel, mock_channel_info, TEST_LOCAL_PORT, close_channel, TEST_REMOTE_PORT}, catalyst_ibc_payload::CatalystV1Packet, ibc::{ibc_packet_receive, RECEIVE_REPLY_ID, ibc_packet_ack, ibc_packet_timeout, reply}};
 
     use super::*;
-    use cosmwasm_std::{testing::{mock_dependencies, mock_env, mock_info}, from_binary, Uint128, SubMsg, IbcTimeout, IbcPacket, IbcEndpoint, Timestamp, IbcPacketReceiveMsg, IbcPacketAckMsg, IbcAcknowledgement, IbcPacketTimeoutMsg, Reply, SubMsgResponse, SubMsgResult};
+    use cosmwasm_std::{testing::{mock_dependencies, mock_env, mock_info}, from_binary, Uint128, SubMsg, IbcTimeout, IbcPacket, IbcEndpoint, IbcPacketReceiveMsg, IbcPacketAckMsg, IbcAcknowledgement, IbcPacketTimeoutMsg, Reply, SubMsgResponse, SubMsgResult};
     use ethnum::uint;
 
     pub const DEPLOYER_ADDR: &str = "deployer_addr";
@@ -1521,7 +1521,7 @@ mod catalyst_ibc_interface_tests {
         assert_eq!(response.messages.len(), 0);
         assert_eq!(
             response.data,
-            Some(Binary((vec![1])))     // ! If the submessage call by 'ibc_packet_receive' returns error, overwrite the response 'data' field to a failed ack
+            Some(Binary(vec![1]))     // ! If the submessage call by 'ibc_packet_receive' returns error, overwrite the response 'data' field to a failed ack
         );
 
     }

@@ -277,7 +277,7 @@ fn query_default_governance_fee_share(deps: Deps) -> StdResult<DefaultGovernance
 mod catalyst_swap_pool_factory_tests {
     use std::str::FromStr;
 
-    use cosmwasm_std::{Addr, Uint128, Event, StdError, to_binary};
+    use cosmwasm_std::{Addr, Uint128, Event, StdError};
     use cw20::{TokenInfoResponse, BalanceResponse, Cw20QueryMsg};
     use cw_multi_test::{App, Executor, ContractWrapper};
     use token_helpers::helpers::{deploy_test_tokens, set_token_allowance};
@@ -289,7 +289,6 @@ mod catalyst_swap_pool_factory_tests {
 
     const GOVERNANCE: &str = "governance_addr";
     const SETUP_MASTER: &str = "setup_master_addr";
-    const DEPLOYER: &str = "deployer_addr";
 
     const TEST_POOL_FEE: u64 = 999999999u64;
     const TEST_GOVERNANCE_FEE: u64 = 111111111u64;

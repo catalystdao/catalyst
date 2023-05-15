@@ -1,4 +1,4 @@
-use std::ops::{Div, Sub};
+use std::ops::Div;
 
 use cosmwasm_schema::cw_serde;
 
@@ -322,7 +322,7 @@ pub fn set_governance_fee_share(
 
 pub fn collect_governance_fee_message(
     deps: &Deps,
-    env: Env,
+    _env: Env,      //TODO remove?
     asset: String,
     pool_fee_amount: Uint128
 ) -> Result<Option<CosmosMsg>, ContractError> {
@@ -547,7 +547,7 @@ pub fn on_send_asset_success(
 
 pub fn on_send_asset_failure(
     deps: &mut DepsMut,
-    env: Env,
+    _env: Env,              //TODO remove?
     info: MessageInfo,
     to_account: Vec<u8>,
     u: U256,
