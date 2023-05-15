@@ -35,9 +35,9 @@ thiserror = { version = "1.0.31" }
 swap-pool-common = { path = "../swap-pool-common" }
 ethnum = { version = "1.3.2", features = ["macros"] }
 fixed-point-math-lib = { path = "../../../rust-common/fixed-point-math-lib" }
-catalyst-ibc-interface = { path = "../catalyst-ibc-interface", feature = ["library"] }
+catalyst-ibc-interface = { path = "../catalyst-ibc-interface", features = ["library"] }
 
 [dev-dependencies]
 cw-multi-test = "0.16.4"
-mock-catalyst-ibc-interface = { path = "../mock-catalyst-ibc-interface", feature = ["library"] }
-swap-pool-factory = { path = "../swap-pool-factory", feature = ["library"] }
+mock-catalyst-ibc-interface = { path = "../mock-catalyst-ibc-interface", features = ["library"] }
+swap-pool-factory = { path = "../swap-pool-factory", features = ["library"] }

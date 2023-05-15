@@ -31,4 +31,4 @@ cw2 = "1.0.1"
 schemars = "0.8.10"
 serde = { version = "1.0.145", default-features = false, features = ["derive"] }
 thiserror = { version = "1.0.31" }
-catalyst-ibc-interface = { path = "../catalyst-ibc-interface", feature = ["library"] }
+catalyst-ibc-interface = { path = "../catalyst-ibc-interface", features = ["library"] }
