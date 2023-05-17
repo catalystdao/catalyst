@@ -152,8 +152,10 @@ pub fn save_deploy_vault_reply_args(
     ).map_err(|err| err.into())
 }
 
-pub fn load_deploy_vault_reply_args(
-    deps: Deps
+pub fn get_deploy_vault_reply_args(
+    deps: DepsMut
 ) -> Result<DeployVaultReplyArgs, ContractError> {
-    DEPLOY_VAULT_REPLY_ARGS.load(deps.storage).map_err(|err| err.into())
+    let args = DEPLOY_VAULT_REPLY_ARGS.load(deps.storage).map_err(|err| err.into());
+    DEPLOY_VAULT_REPLY_ARGS.remove(deps.storage);
+    args
 }

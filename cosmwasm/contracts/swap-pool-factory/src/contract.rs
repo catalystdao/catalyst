@@ -7,7 +7,7 @@ use cw20::Cw20ExecuteMsg;
 
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg, OwnerResponse, DefaultGovernanceFeeShareResponse};
-use crate::state::{set_default_governance_fee_share_unchecked, owner, default_governance_fee_share, save_deploy_vault_reply_args, DeployVaultReplyArgs, DEPLOY_VAULT_REPLY_ID, load_deploy_vault_reply_args, set_owner_unchecked, set_default_governance_fee_share, DEFAULT_GOVERNANCE_FEE_SHARE, set_owner};
+use crate::state::{set_default_governance_fee_share_unchecked, owner, default_governance_fee_share, save_deploy_vault_reply_args, DeployVaultReplyArgs, DEPLOY_VAULT_REPLY_ID, get_deploy_vault_reply_args, set_owner_unchecked, set_default_governance_fee_share, DEFAULT_GOVERNANCE_FEE_SHARE, set_owner};
 
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:catalyst-vault-factory";
@@ -199,7 +199,7 @@ fn handle_deploy_vault_reply(
     let vault_address = parse_reply_instantiate_data(reply).map_err(|_| StdError::generic_err("Error deploying vault contract"))?.contract_address;
 
     // Load the deploy vault args
-    let deploy_args = load_deploy_vault_reply_args(deps.as_ref())?;
+    let deploy_args = get_deploy_vault_reply_args(deps)?;
 
     // Build messages to order the transfer of tokens from setup_master to the vault
     let transfer_msgs: Vec<CosmosMsg> = deploy_args.assets.iter()
