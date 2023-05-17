@@ -4,7 +4,7 @@ if [[ $# -ne 1 ]]; then
     return
 fi
 
-WALLET_NAME=$1
+WALLET_NAME_LOCAL=$1
 
 if [[ -z "$PASSWORD" ]]; then
     echo -n wasmd keyring password:
@@ -15,7 +15,7 @@ else
     PASSWORD_LOCAL=$PASSWORD
 fi
 
-WALLET_ADDRESS=$(echo $PASSWORD_LOCAL | wasmd keys show $WALLET_NAME -a)
+WALLET_ADDRESS_LOCAL=$(echo $PASSWORD_LOCAL | wasmd keys show $WALLET_NAME_LOCAL -a)
 
 
 
@@ -38,7 +38,7 @@ instantiate_token(){
 
     echo "Instantiate Test Token '$TOKEN_NAME'"
 
-    local INSTANTIATE_MESSAGE='{"name":"'$TOKEN_NAME'","symbol":"'$TOKEN_SYMBOL'","decimals":6,"initial_balances":[{"address":"'$WALLET_ADDRESS'","amount":"100000000"}],"mint":{"minter":"'$WALLET_ADDRESS'"}}'
+    local INSTANTIATE_MESSAGE='{"name":"'$TOKEN_NAME'","symbol":"'$TOKEN_SYMBOL'","decimals":6,"initial_balances":[{"address":"'$WALLET_ADDRESS_LOCAL'","amount":"100000000"}],"mint":{"minter":"'$WALLET_ADDRESS_LOCAL'"}}'
 
     echo $PASSWORD_LOCAL | wasmd tx wasm instantiate $CW20_CODE_ID $INSTANTIATE_MESSAGE --from $WALLET_NAME $TX_FLAG --label $TOKEN_SYMBOL -b block --no-admin -y &> /dev/null
 
