@@ -15,7 +15,7 @@ import "./ICatalystV1Vault.sol";
  * @author Catalyst Labs
  * @notice Catalyst multi-chain swap vault using the asset specific
  * pricing curve: 1/w^\theta (1 - \theta) where \theta is 
- * the group amplification and w is the vault balance.
+ * the vault amplification and w is the vault balance.
  *
  * The following contract supports between 1 and 3 assets for
  * atomic swaps. To increase the number of tokens supported,
@@ -63,7 +63,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
     int256 public _oneMinusAmp;
     int256 public _targetAmplification;
 
-    // To keep track of group ownership, the vault needs to keep track of
+    // To keep track of pool ownership, the vault needs to keep track of
     // the local unit balance. That is, do other vaults own or owe assets to this vault?
     int256 public _unitTracker;
 
@@ -516,7 +516,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
         uint256 it;
         
         // Compute walpha_0 to find the reference balances. This lets us evaluate the
-        // number of tokens the vault should have If the price in the group is 1:1.
+        // number of tokens the vault should have If the price in the pool is 1:1.
         // walpha_0 is computed several times in this contract:
         // - DepositMixed
         // - WithdrawMixed
@@ -680,7 +680,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
 
         uint256 walpha_0_ampped;
         // Compute walpha_0 to find the reference balances. This lets us evaluate the
-        // number of tokens the vault should have If the price in the group is 1:1.
+        // number of tokens the vault should have If the price in the pool is 1:1.
 
         // This is a balance0 implementation. The for loop is used to cache tokenIndexed and effWeightAssetBalances.
         {
@@ -864,7 +864,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
 
         uint256 U = 0;
         // Compute walpha_0 to find the reference balances. This lets us evaluate the
-        // number of tokens the vault should have if the price in the group is 1:1.
+        // number of tokens the vault should have if the price in the pool is 1:1.
         // unlike in withdrawAll, this value is needed to compute U.
         {
             // As such, we don't need to remember the value beyond this section.
@@ -1297,7 +1297,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
      */
     function _computeBalance0(int256 oneMinusAmp) internal view returns(uint256 walpha_0_ampped, uint256 it) {
         // Compute walpha_0 to find the reference balances. This lets us evaluate the
-        // number of tokens the vault should have If the price in the group is 1:1.
+        // number of tokens the vault should have If the price in the pool is 1:1.
 
         // This is a balance0 implementation. The balance 0 implementation here is reference.
         int256 weightedAssetBalanceSum = 0;
@@ -1393,7 +1393,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
         int256 oneMinusAmp = _oneMinusAmp;
 
         // Compute walpha_0 to find the reference balances. This lets us evaluate the
-        // number of tokens the vault should have If the price in the group is 1:1.
+        // number of tokens the vault should have If the price in the pool is 1:1.
         (uint256 walpha_0_ampped, uint256 it) = _computeBalance0(oneMinusAmp);
 
         uint256 U = 0;
@@ -1506,7 +1506,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
         int256 oneMinusAmp = _oneMinusAmp;
 
         // Compute walpha_0 to find the reference balances. This lets us evaluate the
-        // number of tokens the vault should have If the price in the group is 1:1.
+        // number of tokens the vault should have If the price in the pool is 1:1.
         (uint256 walpha_0_ampped, uint256 it) = _computeBalance0(oneMinusAmp);
 
         int256 oneMinusAmpInverse = FixedPointMathLib.WADWAD / oneMinusAmp;
