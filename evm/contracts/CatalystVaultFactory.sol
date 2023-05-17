@@ -21,7 +21,10 @@ uint256 constant MAX_GOVERNANCE_FEE_SHARE = 75e16;   // 75%
 contract CatalystVaultFactory is Ownable, ICatalystV1FactoryEvents {
     using SafeTransferLib for ERC20;
 
+    /// @notice A mapping which describes if a vault has been created by this factory. Indexed by chainInterface then vault address.
     mapping(address => mapping(address => bool)) public IsCreatedByFactory;
+
+    /// @notice Default governance fee. When a vault is created, this is the governance fee applied to that vault.
     uint256 public _defaultGovernanceFee;
 
     constructor(uint256 defaultGovernanceFee) {
@@ -87,7 +90,7 @@ contract CatalystVaultFactory is Ownable, ICatalystV1FactoryEvents {
             chainInterface,
             vaultFee,
             _defaultGovernanceFee,
-            owner(),     // Fee administrator
+            owner(),        // Fee administrator
             msg.sender      // setup master
         );
 
