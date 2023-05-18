@@ -39,12 +39,13 @@ def test_self_swap(
     assert token.balanceOf(berg) == 0
 
     if vault.getUnitCapacity() < tx.events["SendAsset"]["units"]:
-        with reverts(revert_pattern=re.compile("typed error: 0x249c4e65.*")):
-            txe = ibc_emulator.execute(
+        txe = ibc_emulator.execute(
                 tx.events["IncomingMetadata"]["metadata"][0],
                 tx.events["IncomingPacket"]["packet"],
                 {"from": berg},
             )
+        assert txe.events["Acknowledgement"]["acknowledgement"].hex() == "01"
+        
         return
     else:
         txe = ibc_emulator.execute(

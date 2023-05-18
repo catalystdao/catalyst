@@ -8,6 +8,10 @@ pytestmark = pytest.mark.no_vault_param
 def set_molly_fee_administrator(vault, deployer, molly):
     vault.setFeeAdministrator(molly, {"from": deployer})
 
+@pytest.fixture(scope="module")
+def set_molly_factory_owner(swap_factory, deployer, molly):
+    swap_factory.transferOwnership(molly, {"from": deployer})
+
 
 # Default governance fee (set on vault factory) **********************************************************************************
 
@@ -134,7 +138,7 @@ def test_set_vault_fee_event(vault, molly):
 # Governance fee ****************************************************************************************************************
 
 
-@pytest.mark.usefixtures("set_molly_fee_administrator")
+@pytest.mark.usefixtures("set_molly_factory_owner")
 @pytest.mark.parametrize("fee", [0.15, 0.75])  # Max is 0.75
 def test_set_governance_fee(vault, molly, fee):
     fee = int(fee * 10**18)
@@ -145,7 +149,7 @@ def test_set_governance_fee(vault, molly, fee):
     assert vault._governanceFeeShare() == fee
 
 
-@pytest.mark.usefixtures("set_molly_fee_administrator")
+@pytest.mark.usefixtures("set_molly_factory_owner")
 def test_set_governance_fee_over_max(vault, molly):
     fee = int(0.76 * 10**18)  # Max is 0.75
     assert vault._governanceFeeShare() != fee
@@ -161,7 +165,7 @@ def test_set_governance_fee_no_auth(vault, molly):
         vault.setGovernanceFee(fee, {"from": molly})
 
 
-@pytest.mark.usefixtures("set_molly_fee_administrator")
+@pytest.mark.usefixtures("set_molly_factory_owner")
 def test_set_governance_fee_event(vault, molly):
     fee = int(0.15 * 10**18)
     assert vault._governanceFeeShare() != fee  # Make sure the event holds the new fee

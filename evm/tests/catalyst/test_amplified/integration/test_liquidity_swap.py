@@ -86,16 +86,14 @@ def test_liquidity_swap(
 
     securityLimit = vault_2.getUnitCapacity()
     if securityLimit < expectedB0:
-        try:
-            with reverts(revert_pattern=re.compile("typed error: 0x249c4e65.*")):
-                txe = ibc_emulator.execute(
+        txe = ibc_emulator.execute(
                     tx.events["IncomingMetadata"]["metadata"][0],
                     tx.events["IncomingPacket"]["packet"],
                     {"from": berg},
                 )
-        except AssertionError as e:
-            if str(e) != "Transaction did not revert":
-                raise e
+        
+        # If the transaction still executed, it needs to have exhausted the vast majority of the security limit.
+        if txe.events["Acknowledgement"]["acknowledgement"].hex() == "00":
             assert (
                 vault_2.getUnitCapacity() / securityLimit <= 0.015
             ), "Either test incorrect or security limit is not strict enough."

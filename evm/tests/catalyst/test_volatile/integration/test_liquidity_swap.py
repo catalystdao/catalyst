@@ -66,12 +66,14 @@ def test_liquidity_swap(
     assert vault_1.balanceOf(berg) == vault1_tokens - vault1_tokens_swapped
 
     if vault_2.getUnitCapacity() < tx.events["SendLiquidity"]["units"]:
-        with reverts(revert_pattern=re.compile("typed error: 0x249c4e65.*")):
-            txe = ibc_emulator.execute(
+        txe = ibc_emulator.execute(
                 tx.events["IncomingMetadata"]["metadata"][0],
                 tx.events["IncomingPacket"]["packet"],
                 {"from": berg},
             )
+        
+        assert txe.events["Acknowledgement"]["acknowledgement"].hex() == "01"
+        
         return
     else:
         txe = ibc_emulator.execute(
