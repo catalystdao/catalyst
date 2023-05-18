@@ -104,7 +104,7 @@ interface ICatalystV1VaultPermissionless {
 
     /// @notice Includes calldata_
     /// @param calldata_ Data field if a call should be made on the target chain.
-    /// Encoding depends on the target chain, with evm being: abi.encode(bytes20(<address>), <data>)
+    /// Encoding depends on the target chain, with evm being: abi.encodePacket(bytes20(<address>), <data>)
     function sendAsset(
         bytes32 channelId,
         bytes calldata toVault,
@@ -180,7 +180,7 @@ interface ICatalystV1VaultPermissionless {
 
     /// @notice Includes calldata_
     /// @param calldata_ Data field if a call should be made on the target chain.
-    /// Encoding depends on the target chain, with evm being: abi.encode(bytes20(<address>), <data>)
+    /// Encoding depends on the target chain, with evm being: abi.encodePacket(bytes20(<address>), <data>)
     function sendLiquidity(
         bytes32 channelId,
         bytes calldata toVault,

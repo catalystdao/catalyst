@@ -30,7 +30,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
     error SubcallOutOfGas();
 
     //--- Config ---//
-    uint256 constant MAXIMUM_TIME_FOR_TX = 2 hours;
+    uint256 constant MAXIMUM_TIME_FOR_TX = 2 hours; // Depends on the message router implementation. Some should be longer and others should be shorter.
     address public immutable IBC_DISPATCHER; // Set on deployment
 
     constructor(address IBCDispatcher_) {
@@ -56,15 +56,15 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
      * @dev Callable by anyone but this cannot be abused since the connection management ensures no
      * wrong messages enter a healthy vault.
      * @param channelId The target chain identifier.
-     * @param toVault The target vault on the target chain encoded in bytes32.
-     * @param toAccount recipient of the transaction on the target chain. Encoded in bytes32.
+     * @param toVault The target vault on the target chain. Encoded in 64 + 1 bytes.
+     * @param toAccount The recipient of the transaction on the target chain. Encoded in 64 + 1 bytes.
      * @param toAssetIndex The index of the asset the user wants to buy in the target vault.
      * @param U The calculated liquidity reference. (Units)
-     * @param minOut The minimum number of returned tokens to the toAccount on the target chain.
+     * @param minOut The minimum number output of tokens on the target chain.
      * @param fromAmount Escrow related value. The amount returned if the swap fails.
      * @param fromAsset Escrow related value. The asset that was sold.
-     * @param calldata_ Data field if a call should be made on the target chain. 
-     * Should be encoded abi.encode(<address>,<data>)
+     * @param calldata_ Data field if a call should be made on the target chain.
+     * Encoding depends on the target chain, with EVM: abi.encodePacket(bytes20(<address>), <data>).
      */
     function sendCrossChainAsset(
         bytes32 channelId,
@@ -77,33 +77,32 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
         address fromAsset,
         bytes calldata calldata_
     ) external {
-        require(toVault.length == 65);  // dev: External addresses needs to be of length 64
-        require(toAccount.length == 65);  // dev: External addresses needs to be of length 64
+        // We need to ensure that all information is in the correct places. This ensures that calls to this contract
+        // will always be decoded semi-correctly even if the input is very incorrect. This also checks that the user 
+        // inputs into the swap contracts are correct while making the cross-chain interface flexible for future implementations.
+        require(toVault.length == 65);      // dev: External addresses needs to be of length 64 + 1.
+        require(toAccount.length == 65);    // dev: External addresses needs to be of length 64 + 1.
         // Anyone can call this function, but unless someone can also manage to pass the security check on onRecvPacket
         // they cannot drain any value. As such, the very worst they can do is waste gas.
 
         // Encode payload. See CatalystIBCPayload.sol for the payload definition
-        bytes memory data = bytes.concat(  // Using bytes.concat to circumvent stack too deep error
-            abi.encodePacked(
+        bytes memory data = abi.encodePacked(
                 CTX0_ASSET_SWAP,
-                uint8(20),  // EVM addresses are 20 bytes.
-                bytes32(0),  // EVM only uses 20 bytes. abi.encode packs the 20 bytes into 32 then we need to add 32 more
+                uint8(20),      // EVM addresses are 20 bytes.
+                bytes32(0),     // EVM only uses 20 bytes. abi.encode packs the 20 bytes into 32 then we need to add 32 more
                 abi.encode(msg.sender),  // Use abi.encode to encode address into 32 bytes
-                toVault,  // Length is expected to be pre-encoded.
+                toVault,    // Length is expected to be pre-encoded.
                 toAccount,  // Length is expected to be pre-encoded.
                 U,
                 toAssetIndex,
-                minOut
-            ),
-            abi.encodePacked(
+                minOut,
                 fromAmount,
-                uint8(20),  // EVM addresses are 20 bytes.
-                bytes32(0),  // EVM only uses 20 bytes. abi.encode packs the 20 bytes into 32 then we need to add 32 more
-                abi.encode(fromAsset),
-                uint32(block.number),
-                uint16(calldata_.length),
+                uint8(20),      // EVM addresses are 20 bytes.
+                bytes32(0),     // EVM only uses 20 bytes. abi.encode packs the 20 bytes into 32 then we need to add 32 more
+                abi.encode(fromAsset),  // Use abi.encode to encode address into 32 bytes
+                uint32(block.number),   // This is the same as block.number mod 2**32-1
+                uint16(calldata_.length),   // max length of calldata is 2**16-1 = 65535 bytes which should be more than plenty.
                 calldata_
-            )
         );
 
         IbcDispatcher(IBC_DISPATCHER).sendIbcPacket(
@@ -124,8 +123,8 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
      * @param U The calculated liquidity reference. (Units)
      * @param minOut An array of minout describing: [the minimum number of vault tokens, the minimum number of reference assets]* 
      * @param fromAmount Escrow related value. The amount returned if the swap fails.
-     * @param calldata_ Data field if a call should be made on the target chain. 
-     * Should be encoded abi.encode(<address>,<data>)
+     * @param calldata_ Data field if a call should be made on the target chain.
+     * Encoding depends on the target chain, with EVM: abi.encodePacket(bytes20(<address>), <data>).
      */
     function sendCrossChainLiquidity(
         bytes32 channelId,

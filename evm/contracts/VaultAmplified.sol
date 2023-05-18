@@ -1062,7 +1062,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
      * @param minOut The minimum number output of tokens on the target chain.
      * @param fallbackUser If the transaction fails, send the escrowed funds to this address
      * @param calldata_ Data field if a call should be made on the target chain.
-     * Encoding depends on the target chain, with EVM: abi.encode(bytes20(<address>), <data>).
+     * Encoding depends on the target chain, with EVM: abi.encodePacket(bytes20(<address>), <data>).
      * @return uint256 The number of units bought.
      */
     function sendAsset(
@@ -1083,9 +1083,11 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
         // Fallback user cannot be address(0) since this is used as a check for the existance of an escrow.
         // It would also be a silly fallback address.
         require(fallbackUser != address(0));
+        // Correct address format is checked on the cross-chain interface. As a result, the below snippit is not needed.
+        /*
         require(toVault.length == 65);  // dev: Vault addresses are uint8 + 64 bytes.
         require(toAccount.length == 65);  // dev: Account addresses are uint8 + 64 bytes.
-        // The uint8 indicates the length of the address within the 64 bytes. For EVM it should always be uint8(20) = 0x14
+         */
 
         _updateAmplification();
         uint256 fee = FixedPointMathLib.mulWadDown(amount, _vaultFee);
@@ -1362,7 +1364,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
      * @param minOut An array of minout describing: [the minimum number of vault tokens, the minimum number of reference assets].
      * @param fallbackUser If the transaction fails, send the escrowed funds to this address.
      * @param calldata_ Data field if a call should be made on the target chain.
-     * Encoding depends on the target chain, with EVM: abi.encode(bytes20(<address>), <data>).
+     * Encoding depends on the target chain, with EVM: abi.encodePacket(bytes20(<address>), <data>).
      * @return uint256 The number of units bought.
      */
     function sendLiquidity(
@@ -1381,9 +1383,11 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
         // Fallback user cannot be address(0) since this is used as a check for the existance of an escrow.
         // It would also be a silly fallback address.
         require(fallbackUser != address(0));
+        // Correct address format is checked on the cross-chain interface. As a result, the below snippit is not needed.
+        /*
         require(toVault.length == 65);  // dev: Vault addresses are uint8 + 64 bytes.
         require(toAccount.length == 65);  // dev: Account addresses are uint8 + 64 bytes.
-        // The uint8 indicates the length of the address within the 64 bytes. For EVM it should always be uint8(20) = 0x14
+         */
 
         // Update amplification
         _updateAmplification();
