@@ -191,17 +191,17 @@ pub fn ibc_packet_timeout(
 
 
 
-fn ack_success() -> Binary {
+pub fn ack_success() -> Binary {
     Into::<Binary>::into(vec![ACK_SUCCESS])
 }
 
-fn ack_fail() -> Binary {
+pub fn ack_fail() -> Binary {
     Into::<Binary>::into(vec![ACK_FAIL])
 }
 
 
 
-fn on_packet_receive(
+pub fn on_packet_receive(
     deps: DepsMut,
     packet: IbcPacket
 ) -> Result<IbcReceiveResponse, ContractError> {
@@ -275,7 +275,7 @@ fn on_packet_receive(
 
 
 
-fn on_packet_response(
+pub fn on_packet_response(
     deps: DepsMut,
     packet: IbcPacket,
     success: bool
@@ -354,7 +354,7 @@ fn on_packet_response(
 }
 
 
-fn on_packet_success(
+pub fn on_packet_success(
     deps: DepsMut,
     packet: IbcPacket
 ) -> Result<IbcBasicResponse, Never> {
@@ -364,7 +364,7 @@ fn on_packet_success(
 }
 
 
-fn on_packet_failure(
+pub fn on_packet_failure(
     deps: DepsMut,
     packet: IbcPacket
 ) -> Result<IbcBasicResponse, Never> {
