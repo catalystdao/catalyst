@@ -132,7 +132,7 @@ interface ICatalystV1VaultEvents {
     event Withdraw(address indexed toAccount, uint256 burn, uint256[] assets);
 
     /** @notice Called upon successful asset swap. */
-    event OnSendAssetSuccess(
+    event SendAssetSuccess(
         bytes toAccount,
         uint256 U,
         uint256 escrowAmount,

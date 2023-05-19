@@ -438,7 +438,7 @@ abstract contract CatalystVaultCommon is
 
         _releaseAssetEscrow(sendAssetHash, escrowAmount, escrowToken); // Only reverts for missing escrow
 
-        emit OnSendAssetSuccess( // Never reverts.
+        emit SendAssetSuccess( // Never reverts.
             toAccount,
             U,
             escrowAmount,

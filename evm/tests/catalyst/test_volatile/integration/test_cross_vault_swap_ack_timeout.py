@@ -271,7 +271,7 @@ def test_ibc_timeout_and_ack(
 
 def test_ibc_ack_event(channel_id, vault, vault_tokens, ibc_emulator, berg, deployer):
     """
-    Test the OnSendAssetSuccess event gets fired.
+    Test the SendAssetSuccess event gets fired.
     """
 
     swap_amount = 10**8
@@ -300,7 +300,7 @@ def test_ibc_ack_event(channel_id, vault, vault_tokens, ibc_emulator, berg, depl
         {"from": deployer},
     )
 
-    ack_event = txe.events["OnSendAssetSuccess"]
+    ack_event = txe.events["SendAssetSuccess"]
 
     assert ack_event["toAccount"].hex() == convert_64_bytes_address(berg.address).hex()
     assert ack_event["U"] == tx.return_value
