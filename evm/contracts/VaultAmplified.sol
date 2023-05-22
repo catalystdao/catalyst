@@ -1617,6 +1617,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
      * @param blockNumberMod The block number at which the swap transaction was commited (mod 32)
      */
     function onSendAssetSuccess(
+        bytes32 channelId,
         bytes calldata toAccount,
         uint256 U,
         uint256 escrowAmount,
@@ -1624,7 +1625,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
         uint32 blockNumberMod
     ) public override {
         // Execute common escrow logic.
-        super.onSendAssetSuccess(toAccount, U, escrowAmount, escrowToken, blockNumberMod);
+        super.onSendAssetSuccess(channelId, toAccount, U, escrowAmount, escrowToken, blockNumberMod);
 
         // Incoming swaps should be subtracted from the unit flow.
         // It is assumed if the router was fraudulent no-one would execute a trade.
@@ -1669,6 +1670,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
      * @param blockNumberMod The block number at which the swap transaction was commited (mod 32)
      */
     function onSendAssetFailure(
+        bytes32 channelId,
         bytes calldata toAccount,
         uint256 U,
         uint256 escrowAmount,
@@ -1676,7 +1678,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
         uint32 blockNumberMod
     ) public override {
         // Execute common escrow logic.
-        super.onSendAssetFailure(toAccount, U, escrowAmount, escrowToken, blockNumberMod);
+        super.onSendAssetFailure(channelId, toAccount, U, escrowAmount, escrowToken, blockNumberMod);
 
         // Removed timed-out units from the unit tracker. This will keep the
         // balance0 in balance, since tokens also leave the vault
@@ -1699,12 +1701,13 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
      * @param blockNumberMod The block number at which the swap transaction was commited (mod 32)
      */
     function onSendLiquidityFailure(
+        bytes32 channelId,
         bytes calldata toAccount,
         uint256 U,
         uint256 escrowAmount,
         uint32 blockNumberMod
     ) public override {
-        super.onSendLiquidityFailure(toAccount, U, escrowAmount, blockNumberMod);
+        super.onSendLiquidityFailure(channelId, toAccount, U, escrowAmount, blockNumberMod);
 
         // Removed timed-out units from the unit tracker. This will keep the
         // balance0 in balance, since tokens also leave the vault

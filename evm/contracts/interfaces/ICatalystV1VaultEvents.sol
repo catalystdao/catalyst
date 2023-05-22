@@ -133,6 +133,7 @@ interface ICatalystV1VaultEvents {
 
     /** @notice Called upon successful asset swap. */
     event SendAssetSuccess(
+        bytes32 channelId,
         bytes toAccount,
         uint256 U,
         uint256 escrowAmount,
@@ -142,6 +143,7 @@ interface ICatalystV1VaultEvents {
 
     /** @notice Called upon failed asset swap. */
     event SendAssetFailure(
+        bytes32 channelId,
         bytes toAccount,
         uint256 U,
         uint256 escrowAmount,
@@ -151,6 +153,7 @@ interface ICatalystV1VaultEvents {
 
     /** @notice Called upon successful liquidity swap. */
     event SendLiquiditySuccess(
+        bytes32 channelId,
         bytes toAccount,
         uint256 U,
         uint256 escrowAmount,
@@ -159,6 +162,7 @@ interface ICatalystV1VaultEvents {
 
     /** @notice Called upon failed liquidity swap. */
     event SendLiquidityFailure(
+        bytes32 channelId,
         bytes toAccount,
         uint256 U,
         uint256 escrowAmount,

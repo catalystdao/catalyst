@@ -1156,6 +1156,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon {
      * @param blockNumberMod The block number at which the swap transaction was commited (mod 32)
      */
     function onSendAssetSuccess(
+        bytes32 channelId,
         bytes calldata toAccount,
         uint256 U,
         uint256 escrowAmount,
@@ -1163,7 +1164,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon {
         uint32 blockNumberMod
     ) public override {
         // Execute common escrow logic.
-        super.onSendAssetSuccess(toAccount, U, escrowAmount, escrowToken, blockNumberMod);
+        super.onSendAssetSuccess(channelId, toAccount, U, escrowAmount, escrowToken, blockNumberMod);
 
         // Incoming swaps should be subtracted from the unit flow.
         // It is assumed if the router was fraudulent no-one would execute a trade.
@@ -1194,13 +1195,14 @@ contract CatalystVaultVolatile is CatalystVaultCommon {
      * @param blockNumberMod The block number at which the swap transaction was commited (mod 32)
      */
     function onSendLiquiditySuccess(
+        bytes32 channelId,
         bytes calldata toAccount,
         uint256 U,
         uint256 escrowAmount,
         uint32 blockNumberMod
     ) public override {
         // Execute common escrow logic.
-        super.onSendLiquiditySuccess(toAccount, U, escrowAmount, blockNumberMod);
+        super.onSendLiquiditySuccess(channelId, toAccount, U, escrowAmount, blockNumberMod);
 
         // Incoming swaps should be subtracted from the unit flow.
         // It is assumed if the router was fraudulent, that no-one would execute a trade.

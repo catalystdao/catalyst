@@ -6,6 +6,7 @@ pragma solidity ^0.8.16;
 interface ICatalystV1VaultAckTimeout {
     /** @notice Release the escrowed tokens into the vault.  */
     function onSendAssetSuccess(
+        bytes32 channelId,
         bytes calldata toAccount,
         uint256 U,
         uint256 escrowAmount,
@@ -15,6 +16,7 @@ interface ICatalystV1VaultAckTimeout {
 
     /** @notice Returned the escrowed tokens to the user */
     function onSendAssetFailure(
+        bytes32 channelId,
         bytes calldata toAccount,
         uint256 U,
         uint256 escrowAmount,
@@ -24,6 +26,7 @@ interface ICatalystV1VaultAckTimeout {
 
     /** @notice Release the escrowed tokens into the vault.  */
     function onSendLiquiditySuccess(
+        bytes32 channelId,
         bytes calldata toAccount,
         uint256 U,
         uint256 escrowAmount,
@@ -32,6 +35,7 @@ interface ICatalystV1VaultAckTimeout {
 
     /** @notice Returned the escrowed tokens to the user */
     function onSendLiquidityFailure(
+        bytes32 channelId,
         bytes calldata toAccount,
         uint256 U,
         uint256 escrowAmount,

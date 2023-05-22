@@ -417,6 +417,7 @@ abstract contract CatalystVaultCommon is
      * @param blockNumberMod The block number at which the swap transaction was commited (mod 32)
      */
     function onSendAssetSuccess(
+        bytes32 channelId,
         bytes calldata toAccount,
         uint256 U,
         uint256 escrowAmount,
@@ -439,6 +440,7 @@ abstract contract CatalystVaultCommon is
         _releaseAssetEscrow(sendAssetHash, escrowAmount, escrowToken); // Only reverts for missing escrow
 
         emit SendAssetSuccess( // Never reverts.
+            channelId,
             toAccount,
             U,
             escrowAmount,
@@ -457,6 +459,7 @@ abstract contract CatalystVaultCommon is
      * @param blockNumberMod The block number at which the swap transaction was commited (mod 32)
      */
     function onSendAssetFailure(
+        bytes32 channelId,
         bytes calldata toAccount,
         uint256 U,
         uint256 escrowAmount,
@@ -481,6 +484,7 @@ abstract contract CatalystVaultCommon is
         ERC20(escrowToken).safeTransfer(fallbackAddress, escrowAmount);  // Would fail if there is no balance. To protect against this, the escrow amount should be removed from what can be claimed by users.
 
         emit SendAssetFailure( // Never reverts.
+            channelId,
             toAccount,
             U,
             escrowAmount,
@@ -498,6 +502,7 @@ abstract contract CatalystVaultCommon is
      * @param blockNumberMod The block number at which the swap transaction was commited (mod 32)
      */
     function onSendLiquiditySuccess(
+        bytes32 channelId,
         bytes calldata toAccount,
         uint256 U,
         uint256 escrowAmount,
@@ -518,6 +523,7 @@ abstract contract CatalystVaultCommon is
         _releaseLiquidityEscrow(sendLiquidityHash, escrowAmount); // Only reverts for missing escrow
 
         emit SendLiquiditySuccess( // Never reverts.
+            channelId,
             toAccount,
             U,
             escrowAmount,
@@ -534,6 +540,7 @@ abstract contract CatalystVaultCommon is
      * @param blockNumberMod The block number at which the swap transaction was commited (mod 32)
      */
     function onSendLiquidityFailure(
+        bytes32 channelId,
         bytes calldata toAccount,
         uint256 U,
         uint256 escrowAmount,
@@ -553,6 +560,7 @@ abstract contract CatalystVaultCommon is
         _mint(fallbackAddress, escrowAmount); // Never reverts.
 
         emit SendLiquidityFailure( // Never reverts.
+            channelId,
             toAccount,
             U,
             escrowAmount,

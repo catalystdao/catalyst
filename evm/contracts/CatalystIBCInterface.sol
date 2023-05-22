@@ -179,6 +179,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
 
         if (context == CTX0_ASSET_SWAP) {
             ICatalystV1Vault(fromVault).onSendAssetSuccess(
+                bytes32(packet.src.channelId),                                              // connectionId
                 data[ TO_ACCOUNT_LENGTH_POS : TO_ACCOUNT_END ],                             // toAccount
                 uint256(bytes32(data[ UNITS_START : UNITS_END ])),                          // units
                 uint256(bytes32(data[ CTX0_FROM_AMOUNT_START : CTX0_FROM_AMOUNT_END ])),    // fromAmount
@@ -188,6 +189,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
         }
         else if (context == CTX1_LIQUIDITY_SWAP) {
             ICatalystV1Vault(fromVault).onSendLiquiditySuccess(
+                bytes32(packet.src.channelId),                                              // connectionId
                 data[ TO_ACCOUNT_LENGTH_POS : TO_ACCOUNT_END ],                             // toAccount
                 uint256(bytes32(data[ UNITS_START : UNITS_END ])),                          // units
                 uint256(bytes32(data[ CTX1_FROM_AMOUNT_START : CTX1_FROM_AMOUNT_END ])),    // fromAmount
@@ -213,6 +215,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
 
         if (context == CTX0_ASSET_SWAP) {
             ICatalystV1Vault(fromVault).onSendAssetFailure(
+                bytes32(packet.src.channelId),                                              // connectionId
                 data[ TO_ACCOUNT_LENGTH_POS : TO_ACCOUNT_END ],                             // toAccount
                 uint256(bytes32(data[ UNITS_START : UNITS_END ])),                          // units
                 uint256(bytes32(data[ CTX0_FROM_AMOUNT_START : CTX0_FROM_AMOUNT_END ])),    // fromAmount
@@ -222,6 +225,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
         }
         else if (context == CTX1_LIQUIDITY_SWAP) {
             ICatalystV1Vault(fromVault).onSendLiquidityFailure(
+                bytes32(packet.src.channelId),                                              // connectionId
                 data[ TO_ACCOUNT_LENGTH_POS : TO_ACCOUNT_END ],                             // toAccount
                 uint256(bytes32(data[ UNITS_START : UNITS_END ])),                          // units
                 uint256(bytes32(data[ CTX1_FROM_AMOUNT_START : CTX1_FROM_AMOUNT_END ])),    // fromAmount
