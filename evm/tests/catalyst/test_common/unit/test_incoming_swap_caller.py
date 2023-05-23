@@ -78,6 +78,7 @@ def test_receiveLiquidity_must_be_called_by_cci(
 
 
 def test_release_escrow_must_be_called_cci(
+    channel_id,
     vault,
     berg,
 ):
@@ -85,6 +86,7 @@ def test_release_escrow_must_be_called_cci(
 
     with reverts():  # "dev: Only _chainInterface"
         vault.onSendAssetSuccess(
+            channel_id,
             convert_64_bytes_address(berg.address),
             0,
             0,
@@ -98,6 +100,7 @@ def test_release_escrow_must_be_called_cci(
     # a valid sender.
     with reverts():  # "dev: Invalid swapHash. Alt: Escrow doesn't exist."
         vault.onSendAssetSuccess(
+            channel_id,
             convert_64_bytes_address(berg.address),
             0,
             0,
@@ -108,6 +111,7 @@ def test_release_escrow_must_be_called_cci(
 
 
 def test_timeout_escrow_must_be_called_cci(
+    channel_id,
     vault,
     berg,
 ):
@@ -115,6 +119,7 @@ def test_timeout_escrow_must_be_called_cci(
 
     with reverts():  # "dev: Only _chainInterface"
         vault.onSendAssetFailure(
+            channel_id,
             convert_64_bytes_address(berg.address),
             0,
             0,
@@ -128,6 +133,7 @@ def test_timeout_escrow_must_be_called_cci(
     # a valid sender.
     with reverts():  # "dev: Invalid swapHash. Alt: Escrow doesn't exist."
         vault.onSendAssetFailure(
+            channel_id,
             convert_64_bytes_address(berg.address),
             0,
             0,
@@ -138,6 +144,7 @@ def test_timeout_escrow_must_be_called_cci(
 
 
 def test_release_liquidity_escrow_must_be_called_cci(
+    channel_id,
     vault,
     berg,
 ):
@@ -145,6 +152,7 @@ def test_release_liquidity_escrow_must_be_called_cci(
 
     with reverts():  # "dev: Only _chainInterface"
         vault.onSendLiquiditySuccess(
+            channel_id,
             convert_64_bytes_address(berg.address),
             0,
             0,
@@ -157,6 +165,7 @@ def test_release_liquidity_escrow_must_be_called_cci(
     # a valid sender.
     with reverts():  # "dev: Invalid swapHash. Alt: Escrow doesn't exist."
         vault.onSendLiquiditySuccess(
+            channel_id,
             convert_64_bytes_address(berg.address),
             0,
             0,
@@ -166,6 +175,7 @@ def test_release_liquidity_escrow_must_be_called_cci(
 
 
 def test_timeout_liquidity_escrow_must_be_called_cci(
+    channel_id,
     vault,
     berg,
 ):
@@ -173,6 +183,7 @@ def test_timeout_liquidity_escrow_must_be_called_cci(
 
     with reverts():  # "dev: Only _chainInterface"
         vault.onSendLiquidityFailure(
+            channel_id,
             convert_64_bytes_address(berg.address),
             0,
             0,
@@ -185,6 +196,7 @@ def test_timeout_liquidity_escrow_must_be_called_cci(
     # a valid sender.
     with reverts():  # "dev: Invalid swapHash. Alt: Escrow doesn't exist."
         vault.onSendLiquidityFailure(
+            channel_id,
             convert_64_bytes_address(berg.address),
             0,
             0,
