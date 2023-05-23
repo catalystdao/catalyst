@@ -730,10 +730,10 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
         // For later event logging, the amounts transferred from the vault are stored.
         uint256[] memory amounts = new uint256[](MAX_ASSETS);
         
-        // The following equation has already assumed that pt is negative. Thus it should be positive.
-        // wtk = wa ·(1 - ((wa^(1-k) - wa_0^(1-k) · (pt/PT)^(1-k))/wa^(1-k))^(1/(1-k))
-        // The inner diff is wa_0^(1-k) · (pt/PT)^(1-k).
-        // since it doesn't depend on the token, it should only be computed once
+        // The vault token to assets equation is:
+        // wtk = wa ·(1 - ((wa^(1-k) - wa_0^(1-k) · (1 - (PT-pt)/PT)^(1-k))/wa^(1-k))^(1/(1-k))
+        // The inner diff is wa_0^(1-k) · (1 - (PT-pt)/PT)^(1-k).
+        // since it doesn't depend on the token, it should only be computed once.
         uint256 innerdiff;
         {
             // Remember to add the number of vault tokens burned to totalSupply
@@ -771,12 +771,13 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
             //! The above happens if innerdiff >= ampWeightAssetBalance. So if that isn't
             //! the case, we should compute the true value.
             if (innerdiff < ampWeightAssetBalance) {
-                // wtk = wa ·(1 - ((wa^(1-k) - wa_0^(1-k) · (pt/PT)^(1-k))/wa^(1-k))^(1/(1-k))
+                // wtk = wa ·(1 - ((wa^(1-k) - wa_0^(1-k) · (1 - (PT-pt)/PT)^(1-k))/wa^(1-k))^(1/(1-k))
                 // wtk = wa ·(1 - ((wa^(1-k) - innerdiff)/wa^(1-k))^(1/(1-k))
                 // Since ampWeightAssetBalance ** (1/(1-amp)) == effWeightAssetBalances but the
                 // mathematical lib returns ampWeightAssetBalance ** (1/(1-amp)) < effWeightAssetBalances.
                 // the result is that if innerdiff isn't big enough to make up for the difference
-                // the transaction reverts. This is "okay", since it means fewer tokens are returned.
+                // the transaction reverts. If that is the case, use withdrawAll.
+                // This quirk is "okay", since it means fewer tokens are always returned.
 
                 // Since tokens are withdrawn, the change is negative. As such, multiply the
                 // equation by -1.
