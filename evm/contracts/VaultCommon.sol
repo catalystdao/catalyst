@@ -430,7 +430,7 @@ abstract contract CatalystVaultCommon is
         uint32 blockNumberMod
     ) nonReentrant onlyChainInterface public override virtual {
 
-        // We need to find the location of the escrow with using the below information.
+        // We need to find the location of the escrow using the information below.
         // We need to do this twice: 1. Get the address. 2. Delete the escrow.
         // To save a bit of gas, this hash is computed and saved and then used.
         bytes32 sendAssetHash = _computeSendAssetHash( // Computing the hash doesn't revert.
@@ -471,7 +471,7 @@ abstract contract CatalystVaultCommon is
         uint32 blockNumberMod
     ) nonReentrant onlyChainInterface public override virtual {
 
-        // We need to find the location of the escrow with using the below information.
+        // We need to find the location of the escrow using the information below.
         // We need to do this twice: 1. Get the address. 2. Delete the escrow.
         // To save a bit of gas, this hash is computed and saved and then used.
         bytes32 sendAssetHash = _computeSendAssetHash( // Computing the hash doesn't revert.
@@ -512,7 +512,7 @@ abstract contract CatalystVaultCommon is
         uint32 blockNumberMod
     ) nonReentrant onlyChainInterface public override virtual {
 
-        // We need to find the location of the escrow with using the below information.
+        // We need to find the location of the escrow using the information below.
         // We need to do this twice: 1. Get the address. 2. Delete the escrow.
         // To save a bit of gas, this hash is computed and saved and then used.
         bytes32 sendLiquidityHash = _computeSendLiquidityHash( // Computing the hash doesn't revert.

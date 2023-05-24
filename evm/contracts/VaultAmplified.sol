@@ -98,6 +98,11 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
         // to initialBalances[it] will fail) or will cause the vault to get initialized with an undesired state
         // (and the vault shouldn't be used by anyone until its configuration has been finalised). 
         // In any case, the factory does check for valid assets/weights arguments to prevent erroneous configurations.
+        // Note Since assets.len != 0 is not checked, the initial depositor may invoke this function many times, resulting
+        // on vault tokens being minted for the 'depositor' every time. This is not an issue, since 'INITIAL_MINT_AMOUNT' is
+        // an arbitrary number; the value of the vault tokens is determined by the ratio of the vault asset balances and vault
+        // tokens supply once setup has finalized. Furthermore, the vault should not be used until setup has finished and the
+        // vault configuration has been verified.
         
         unchecked {
             // Amplification is stored as 1 - amp since most equations uses amp this way.
@@ -1611,7 +1616,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
         // Execute common escrow logic.
         super.onSendAssetSuccess(channelId, toAccount, U, escrowAmount, escrowToken, blockNumberMod);
 
-        // Incoming swaps should be subtracted from the unit flow.
+        // Received assets should be subtracted from the used unit capacity.
         // It is assumed if the router was fraudulent no-one would execute a trade.
         // As a result, if people swap into the vault, we should expect that there is exactly
         // the inswapped amount of trust in the vault. If this wasn't implemented, there would be
