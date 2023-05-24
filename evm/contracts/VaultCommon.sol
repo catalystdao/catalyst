@@ -15,7 +15,7 @@ import "./ICatalystV1Vault.sol";
 import "./interfaces/ICatalystV1VaultErrors.sol";
 
 /**
- * @title Catalyst: Common Swap Vault Logic
+ * @title Catalyst: Common Vault Logic
  * @author Cata Labs
  * @notice This abstract contract defines general logic of a Catalyst vault like:
  * - Vault Token through Solmate's ERC20 implementation.
@@ -23,7 +23,7 @@ import "./interfaces/ICatalystV1VaultErrors.sol";
  * - Security limit
  * - Swap Escrow
  *
- * By inheriting this abstract contract, a Vault automatically implements common swap vault logic.
+ * By inheriting this abstract contract, a Vault automatically implements common vault logic.
  * @dev This contract uses the following special notation:
  * CAPITAL_LETTER_VARIABLES are constants or immutable.
  * _ prefixed varaibles are storage.

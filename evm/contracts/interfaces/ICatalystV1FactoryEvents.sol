@@ -9,7 +9,7 @@ interface ICatalystV1FactoryEvents {
      * @dev Should be used for vault discovery and pathing.
      * @param vaultTemplate The address of the template used by the transparent proxy.
      * @param chainInterface The address of the CCI used by the transparent proxy.
-     * @param vaultAddress The minimal transparent proxy address for the swap vault.
+     * @param vaultAddress The minimal transparent proxy address for the vault.
      * @param assets List of the assets the vault supports.
      * @param k Set to 10**18 if the vault is volatile, otherwise the vault is an amplified vault.
      */

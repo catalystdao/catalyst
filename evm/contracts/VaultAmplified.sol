@@ -11,9 +11,9 @@ import "./VaultCommon.sol";
 import "./ICatalystV1Vault.sol";
 
 /**
- * @title Catalyst: The Multi-Chain Swap vault
+ * @title Catalyst: The Multi-Chain Vault
  * @author Cata Labs
- * @notice Catalyst multi-chain swap vault using the asset specific
+ * @notice Catalyst multi-chain vault using the asset specific
  * pricing curve: 1/w^\theta (1 - \theta) where \theta is 
  * the vault amplification and w is the vault balance.
  *
@@ -25,7 +25,7 @@ import "./ICatalystV1Vault.sol";
  * This vault implements the ERC20 specification, such that the
  * contract will be its own vault token.
  * @dev This contract is deployed inactive: It cannot be used as a
- * swap vault as is. To use it, a proxy contract duplicating the
+ * vault as is. To use it, a proxy contract duplicating the
  * logic of this contract needs to be deployed. In Vyper, this
  * can be done through (vy >= 0.3.4) create_minimal_proxy_to.
  * In Solidity, this can be done through OZ clones: Clones.clone(...)
@@ -57,7 +57,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
     uint256 constant SMALL_SWAP_RATIO = 1e12;
     uint256 constant SMALL_SWAP_RETURN = 95e16;
 
-    // For other config options, see SwapVaultCommon.sol
+    // For other config options, see CatalystVaultCommon.sol
 
     //-- Variables --//
     int256 public _oneMinusAmp;

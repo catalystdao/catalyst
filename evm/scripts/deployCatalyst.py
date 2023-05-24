@@ -110,10 +110,10 @@ class Catalyst:
             {"from": self.deployer},
         )
         self.tokens = tokens
-        self.swapvault = CatalystVaultVolatile.at(
+        self.vault = CatalystVaultVolatile.at(
             self.deploytx.events["VaultDeployed"]["vault_address"]
         )
-        return self.swapvault
+        return self.vault
 
 
 """
@@ -123,7 +123,7 @@ acct = accounts[0]
 
 ie = IBCEmulator.deploy({'from': acct})
 ps = Catalyst(acct, ibcinterface=ie)
-vault = ps.swapvault
+vault = ps.vault
 tokens = ps.tokens
 tokens[0].approve(vault, 2**256-1, {'from': acct})
 # vault.localSwap(tokens[0], tokens[1], 50*10**18, 0, {'from': acct})
@@ -170,7 +170,7 @@ def main():
     acct = accounts[0]
     ie = IBCEmulator.deploy({"from": acct})
     ps = Catalyst(acct, ibcinterface=ie)
-    vault = ps.swapvault
+    vault = ps.vault
     tokens = ps.tokens
     tokens[0].approve(vault, 2**256 - 1, {"from": acct})
     vault.localSwap(tokens[0], tokens[1], 50 * 10**18, 0, {"from": acct})

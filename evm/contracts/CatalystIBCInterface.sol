@@ -15,9 +15,9 @@ import "./CatalystIBCPayload.sol";
  * @author Cata Labs
  * @notice This contract is a generalised proof of concept
  * IBC interface using an example ABI.
- * It acts as an intermediate between the swap vault and the router to
- * abstract router logic away from the swap vaults. This simplifies the
- * development of the swap vaults and allows Catalyst to adopt or change
+ * It acts as an intermediate between the vault and the router to
+ * abstract router logic away from the vaults. This simplifies the
+ * development of the vaults and allows Catalyst to adopt or change
  * message routers with more flexibility.
  */
 contract CatalystIBCInterface is Ownable, IbcReceiver {
