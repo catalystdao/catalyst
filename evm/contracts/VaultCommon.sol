@@ -73,7 +73,7 @@ abstract contract CatalystVaultCommon is
     /// asset address. This variable is the map.
     mapping(uint256 => address) public _tokenIndexing;
 
-    /// @notice The token weights. Used for maintaining a non-symmetric vault balance.
+    /// @notice The token weights. Used for maintaining a non-symmetric vault asset balance.
     mapping(address => uint256) public _weight;
 
     //-- Parameter change variables --//

@@ -15,7 +15,7 @@ import "./ICatalystV1Vault.sol";
  * @author Cata Labs
  * @notice Catalyst multi-chain vault using the asset specific
  * pricing curve: 1/w^\theta (1 - \theta) where \theta is 
- * the vault amplification and w is the vault balance.
+ * the vault amplification and w is the vault asset balance.
  *
  * The following contract supports between 1 and 3 assets for
  * atomic swaps. To increase the number of tokens supported,
