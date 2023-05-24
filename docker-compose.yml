@@ -1,0 +1,13 @@
+version: '3.9'
+
+services:
+  relayer:
+    build:
+      context: evm
+      dockerfile: scripts/testnet/Dockerfile
+    environment:
+      - MUMBAI_ALCHEMY=${MUMBAI_ALCHEMY}
+      - SEPOLIA_ALCHEMY=${SEPOLIA_ALCHEMY}
+      - PRIVATE_KEY_ROUTER=${PRIVATE_KEY_ROUTER}
+    container_name: catalyst_relayer
+    restart: unless-stopped
