@@ -71,7 +71,7 @@
             }
         }
     },
-    "pools": {
+    "vaults": {
         "Stables": {
             "amplification": 0.25,
             "sepolia": {

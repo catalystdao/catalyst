@@ -19,11 +19,13 @@ from brownie.network.gas.strategies import LinearScalingStrategy; from brownie.n
 
 MAX_UINT256: int = 2**256 - 1
 
+
 def get_channel_id(chain_name: str):
-        return convert.to_bytes(chain_name.encode(), "bytes32")
+    return convert.to_bytes(chain_name.encode(), "bytes32")
     
 def convert_64_bytes_address(address):
     return convert.to_bytes(20, "bytes1")+convert.to_bytes(0)+convert.to_bytes(address.replace("0x", ""))
+
 
 class Catalyst:
     def read_config(self):
@@ -54,14 +56,12 @@ class Catalyst:
             
             self.config['chain_config'][self.chain]["amplified_mathlib"] = amplified_mathlib.address
         
-        
         # Check if factory have been deployed
         factory = self.config['chain_config'][self.chain]["factory"]
         if factory == '':
-            factory = self.deployer.deploy(CatalystSwapPoolFactory, 0)
+            factory = self.deployer.deploy(CatalystVaultFactory, 0)
             
             self.config['chain_config'][self.chain]["factory"] = factory.address
-        
         
         # Deploy IBC contracts
         ibcinterface = self.config['chain_config'][self.chain]["ibcinterface"]
@@ -78,20 +78,18 @@ class Catalyst:
             
             self.config['chain_config'][self.chain]["crosschaininterface"] = crosschaininterface.address
         
-        
         # Templates
         volatile_template = self.config['chain_config'][self.chain]["volatile_template"]
         amplified_template = self.config['chain_config'][self.chain]["amplified_template"]
         if volatile_template == '':
-            volatile_template = self.deployer.deploy(CatalystSwapPoolVolatile, factory, volatile_mathlib)
+            volatile_template = self.deployer.deploy(CatalystVaultVolatile, factory, volatile_mathlib)
             
             self.config['chain_config'][self.chain]["volatile_template"] = volatile_template.address
             
         if amplified_template == '':
-            amplified_template = self.deployer.deploy(CatalystSwapPoolAmplified, factory, amplified_mathlib)
+            amplified_template = self.deployer.deploy(CatalystVaultAmplified, factory, amplified_mathlib)
             
             self.config['chain_config'][self.chain]["amplified_template"] = amplified_template.address
-        
         
         # Deploy regitries
         catalyst_describer = self.config['chain_config'][self.chain]["describer"]
@@ -162,18 +160,18 @@ class Catalyst:
             self.blank_setup(wTKN)
     
     def deploy_config(self):
-        factory = CatalystSwapPoolFactory.at(self.config['chain_config'][self.chain]["factory"])
+        factory = CatalystVaultFactory.at(self.config['chain_config'][self.chain]["factory"])
         volatile_template = self.config['chain_config'][self.chain]["volatile_template"]
         amplified_template = self.config['chain_config'][self.chain]["amplified_template"]
         
-        for pool in self.config["pools"].keys():
-            if self.config["pools"][pool].get(self.chain) is None:
+        for vault in self.config["vaults"].keys():
+            if self.config["vaults"][vault].get(self.chain) is None:
                 continue
-            if self.config["pools"][pool][self.chain]["address"] == "":
+            if self.config["vaults"][vault][self.chain]["address"] == "":
                 initial_balances = []
                 tokens = []
                 # Approve all tokens to the factory
-                for token in self.config["pools"][pool][self.chain]["tokens"].keys():
+                for token in self.config["vaults"][vault][self.chain]["tokens"].keys():
                     token_address = self.config["tokens"][self.chain][token] if type(self.config["tokens"][self.chain][token]) is str else self.config["tokens"][self.chain][token]["address"]
                     assert type(token_address) is str, f"{token}, {token_address} is not a string"
                     token_container = WETH9.at(
@@ -186,25 +184,25 @@ class Catalyst:
                     
                     token_container.approve(
                         factory,
-                        self.config["pools"][pool][self.chain]["tokens"][token] * 10**decimals,
+                        self.config["vaults"][vault][self.chain]["tokens"][token] * 10**decimals,
                         {'from': self.deployer}
                     )
-                    initial_balances.append(self.config["pools"][pool][self.chain]["tokens"][token] * 10**decimals)
+                    initial_balances.append(self.config["vaults"][vault][self.chain]["tokens"][token] * 10**decimals)
                     tokens.append(token_container)
                 
-                deploytx = factory.deploy_swappool(
-                    volatile_template if self.config["pools"][pool].get("amplification") is None else amplified_template,
+                deploytx = factory.deploy_swapvault(
+                    volatile_template if self.config["vaults"][vault].get("amplification") is None else amplified_template,
                     tokens,
                     initial_balances,
-                    self.config["pools"][pool][self.chain]["weights"],
-                    10**18 if self.config["pools"][pool].get("amplification") is None else self.config["pools"][pool].get("amplification"),
+                    self.config["vaults"][vault][self.chain]["weights"],
+                    10**18 if self.config["vaults"][vault].get("amplification") is None else self.config["vaults"][vault].get("amplification"),
                     0,
-                    pool,
-                    pool[0]+pool[3]+pool[-1],
+                    vault,
+                    vault[0]+vault[3]+vault[-1],
                     self.config['chain_config'][self.chain]["crosschaininterface"],
                     {"from": self.deployer},
                 )
-                self.config["pools"][pool][self.chain]["address"] = deploytx.events["PoolDeployed"]["pool_address"]
+                self.config["vaults"][vault][self.chain]["address"] = deploytx.events["VaultDeployed"]["vault_address"]
         
         self.write_config()
         self.config = self.read_config()
@@ -212,36 +210,35 @@ class Catalyst:
     def set_connections(self):
         volatile_template = self.config['chain_config'][self.chain]["volatile_template"]
         amplified_template = self.config['chain_config'][self.chain]["amplified_template"]
-        # Check that all pools have been setup.
-        for pool in self.config["pools"].keys():
-            if self.chain not in self.config["pools"][pool].keys():
+        # Check that all vaults have been setup.
+        for vault in self.config["vaults"].keys():
+            if self.chain not in self.config["vaults"][vault].keys():
                 continue
-            for chain in self.config["pools"][pool].keys():
+            for chain in self.config["vaults"][vault].keys():
                 if chain == "amplification":
                     continue
-                assert self.config["pools"][pool][chain]["address"] != ""
-            # Check that the pool hasn't been set as ready
-            swapPoolContainer = CatalystSwapPoolVolatile if self.config["pools"][pool].get("amplification") is None else CatalystSwapPoolAmplified
-            pool_container = swapPoolContainer.at(self.config["pools"][pool][self.chain]["address"])
-            assert pool_container.ready() is False, "Pool heas already been finalised"
-            
+                assert self.config["vaults"][vault][chain]["address"] != ""
+            # Check that the vault hasn't been set as ready
+            vaultContainer = CatalystVaultVolatile if self.config["vaults"][vault].get("amplification") is None else CatalystVaultAmplified
+            vault_container = vaultContainer.at(self.config["vaults"][vault][self.chain]["address"])
+            assert vault_container.ready() is False, "Vault heas already been finalised"
         
-        for pool in self.config["pools"].keys():
-            if self.chain not in self.config["pools"][pool].keys():
+        for vault in self.config["vaults"].keys():
+            if self.chain not in self.config["vaults"][vault].keys():
                 continue
-            swapPoolContainer = CatalystSwapPoolVolatile if self.config["pools"][pool].get("amplification") is None else CatalystSwapPoolAmplified
-            pool_container = swapPoolContainer.at(self.config["pools"][pool][self.chain]["address"])
-            assert pool_container.ready() is False, "Pool has already been finalised"
+            vaultContainer = CatalystVaultVolatile if self.config["vaults"][vault].get("amplification") is None else CatalystVaultAmplified
+            vault_container = vaultContainer.at(self.config["vaults"][vault][self.chain]["address"])
+            assert vault_container.ready() is False, "Vault has already been finalised"
             
-            for chain in self.config["pools"][pool].keys():
+            for chain in self.config["vaults"][vault].keys():
                 if (chain == "amplification") or (chain == self.chain):
                     continue
-                target_pool =  self.config["pools"][pool][chain]["address"]
-                pool_container.setConnection(
+                target_vault =  self.config["vaults"][vault][chain]["address"]
+                vault_container.setConnection(
                     get_channel_id(chain),
-                    convert_64_bytes_address(target_pool),
+                    convert_64_bytes_address(target_vault),
                     True,
                     {'from': self.deployer}
                 )
-            pool_container.finishSetup({'from': self.deployer})
+            vault_container.finishSetup({'from': self.deployer})
         
