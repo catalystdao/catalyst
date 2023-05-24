@@ -20,6 +20,7 @@ def test_liquidity_swap(
     vault_1,
     vault_2,
     vault_1_tokens,
+    vault_2_tokens,
     get_vault_2_weights,
     get_vault_2_balances,
     get_vault_2_unit_tracker,
@@ -70,7 +71,7 @@ def test_liquidity_swap(
     )
     assert vault_1.balanceOf(berg) == vault1_tokens - vault1_tokens_swapped
 
-    b0_times_n = len(vault_1_tokens) * vault_utils.compute_balance_0(
+    b0_times_n = len(vault_2_tokens) * vault_utils.compute_balance_0(
         get_vault_2_weights(),
         get_vault_2_balances(),
         get_vault_2_unit_tracker(),
