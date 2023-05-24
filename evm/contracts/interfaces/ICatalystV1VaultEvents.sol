@@ -135,7 +135,7 @@ interface ICatalystV1VaultEvents {
     event SendAssetSuccess(
         bytes32 channelId,
         bytes toAccount,
-        uint256 U,
+        uint256 Units,
         uint256 escrowAmount,
         address escrowToken,
         uint32 blockNumberMod
@@ -145,7 +145,7 @@ interface ICatalystV1VaultEvents {
     event SendAssetFailure(
         bytes32 channelId,
         bytes toAccount,
-        uint256 U,
+        uint256 Units,
         uint256 escrowAmount,
         address escrowToken,
         uint32 blockNumberMod
@@ -155,7 +155,7 @@ interface ICatalystV1VaultEvents {
     event SendLiquiditySuccess(
         bytes32 channelId,
         bytes toAccount,
-        uint256 U,
+        uint256 Units,
         uint256 escrowAmount,
         uint32 blockNumberMod
         );
@@ -164,7 +164,7 @@ interface ICatalystV1VaultEvents {
     event SendLiquidityFailure(
         bytes32 channelId,
         bytes toAccount,
-        uint256 U,
+        uint256 Units,
         uint256 escrowAmount,
         uint32 blockNumberMod
     );
