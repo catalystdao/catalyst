@@ -52,7 +52,7 @@ def test_liquidity_swap(
     vault1_tokens_swapped = int(vault1_tokens * swap_percentage)
 
     computation = compute_expected_liquidity_swap(vault1_tokens_swapped)
-    U, estimatedVault2Tokens = computation["U"], computation["to_amount"]
+    U, estimatedVault2Tokens = computation["Units"], computation["to_amount"]
 
     tx = vault_1.sendLiquidity(
         channel_id,

@@ -166,7 +166,7 @@ def test_ibc_ack_event(vault, channel_id, ibc_emulator, berg, deployer):
     ack_event = txe.events["SendLiquiditySuccess"]
 
     assert ack_event["toAccount"].hex() == convert_64_bytes_address(berg.address).hex()
-    assert ack_event["U"] == tx.return_value
+    assert ack_event["Units"] == tx.return_value
     assert ack_event["escrowAmount"] == swap_amount
     assert ack_event["blockNumberMod"] == tx.block_number
 
@@ -201,6 +201,6 @@ def test_ibc_timeout_event(vault, channel_id, ibc_emulator, berg, deployer):
     assert (
         timeout_event["toAccount"].hex() == convert_64_bytes_address(berg.address).hex()
     )
-    assert timeout_event["U"] == tx.return_value
+    assert timeout_event["Units"] == tx.return_value
     assert timeout_event["escrowAmount"] == swap_amount
     assert timeout_event["blockNumberMod"] == tx.block_number

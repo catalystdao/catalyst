@@ -303,7 +303,7 @@ def test_ibc_ack_event(channel_id, vault, vault_tokens, ibc_emulator, berg, depl
     ack_event = txe.events["SendAssetSuccess"]
 
     assert ack_event["toAccount"].hex() == convert_64_bytes_address(berg.address).hex()
-    assert ack_event["U"] == tx.return_value
+    assert ack_event["Units"] == tx.return_value
     assert ack_event["escrowAmount"] == swap_amount
     assert ack_event["escrowToken"] == source_token.address
     assert ack_event["blockNumberMod"] == tx.block_number
@@ -346,7 +346,7 @@ def test_ibc_timeout_event(
     assert (
         timeout_event["toAccount"].hex() == convert_64_bytes_address(berg.address).hex()
     )
-    assert timeout_event["U"] == tx.return_value
+    assert timeout_event["Units"] == tx.return_value
     assert timeout_event["escrowAmount"] == swap_amount
     assert timeout_event["escrowToken"] == source_token.address
     assert timeout_event["blockNumberMod"] == tx.block_number
