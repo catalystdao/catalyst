@@ -27,9 +27,9 @@ struct IbcPacket {
 }
 
 interface IbcReceiver {
-    function onRecvPacket(IbcPacket calldata packet) external;
+    function onRecvPacket(IbcPacket calldata packet) external returns (bytes memory);
 
-    function onAcknowledgementPacket(IbcPacket calldata packet) external;
+    function onAcknowledgementPacket(bytes calldata acknowledgement, IbcPacket calldata packet) external;
 
     function onTimeoutPacket(IbcPacket calldata packet) external;
 }

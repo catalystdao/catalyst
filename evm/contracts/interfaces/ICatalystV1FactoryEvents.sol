@@ -6,34 +6,34 @@ pragma solidity ^0.8.16;
 interface ICatalystV1FactoryEvents {
     /**
      * @notice  Describes an atomic swap between the 2 tokens: _fromAsset and _toAsset.
-     * @dev Should be used for pool discovery and pathing.
+     * @dev Should be used for vault discovery and pathing.
      * @param deployer msg.sender of the deploy function.
-     * @param pool_address The minimal transparent proxy address for the swap pool.
+     * @param vault_address The minimal transparent proxy address for the swap vault.
      * @param chainInterface The address of the CCI used by the transparent proxy.
-     * @param k Set to 10**18 if the pool is volatile, otherwise the pool is a stable pool.
-     * @param assets List of the assets the pool supports.
+     * @param k Set to 10**18 if the vault is volatile, otherwise the vault is a stable vault.
+     * @param assets List of the assets the vault supports.
      */
-    event PoolDeployed(
-        address indexed poolTemplate,
+    event VaultDeployed(
+        address indexed vaultTemplate,
         address indexed chainInterface, 
         address indexed deployer,
-        address pool_address,
+        address vault_address,
         address[] assets,
         uint256 k
     );
 
     /**
-     * @notice Describes pool fee changes.
-     * @dev Only applies to new pools, has no impact on existing pools.
-     * @param fee The new pool fee.
+     * @notice Describes vault fee changes.
+     * @dev Only applies to new vaults, has no impact on existing vaults.
+     * @param fee The new vault fee.
      */
-    event SetDefaultPoolFee(
+    event SetDefaultVaultFee(
         uint256 fee
     );
 
     /**
      * @notice Describes governance fee changes.
-     * @dev Only applies to new pools, has no impact on existing pools.
+     * @dev Only applies to new vaults, has no impact on existing vaults.
      * @param fee The new governance fee.
      */
     event SetDefaultGovernanceFee(
@@ -41,12 +41,12 @@ interface ICatalystV1FactoryEvents {
     );
 
     /**
-     * @notice Pool Template has been added.
-     * @param poolTemplateIndex The index of the pool template.
-     * @param templateAddress The address of the pool template.
+     * @notice Vault Template has been added.
+     * @param vaultTemplateIndex The index of the vault template.
+     * @param templateAddress The address of the vault template.
      */
-    event AddPoolTemplate(
-        uint256 poolTemplateIndex,
+    event AddVaultTemplate(
+        uint256 vaultTemplateIndex,
         address templateAddress
     );
 }

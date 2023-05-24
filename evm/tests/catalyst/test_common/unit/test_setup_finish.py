@@ -3,61 +3,62 @@ import brownie
 
 
 @pytest.fixture(scope="module")
-def sample_pool(deploy_pool, tokens, deployer, amplification, max_pool_assets):
-    yield deploy_pool(
-        tokens          = tokens[:max_pool_assets],
-        token_balances  = [10**8]*max_pool_assets,
-        weights         = [1]*max_pool_assets,
-        amp             = amplification,
-        name            = "",
-        symbol          = "",
-        deployer        = deployer,
+def sample_vault(deploy_swapvault, tokens, deployer, amplification, max_vault_assets):
+    yield deploy_swapvault(
+        tokens=tokens[:max_vault_assets],
+        token_balances=[10**8] * max_vault_assets,
+        weights=[1] * max_vault_assets,
+        amp=amplification,
+        name="",
+        symbol="",
+        deployer=deployer,
     )
 
 
-
 # Main setup parametrized test **************************************************************************************************
-# Test that all provided pool configs work correctly
-def test_finish_setup(pool, deployer):
+# Test that all provided vault configs work correctly
+def test_finish_setup(vault, deployer):
 
-    assert not pool.ready()
+    assert not vault.ready()
 
-    pool.finishSetup({"from": deployer})
+    vault.finishSetup({"from": deployer})
 
-    assert pool.ready()
+    assert vault.ready()
 
     # TODO verify that all parameters are saved correctly on-chain
 
 
-
 # Authority and state tests *****************************************************************************************************
 
-def test_finish_setup_unauthorized(sample_pool, molly):
+
+def test_finish_setup_unauthorized(sample_vault, molly):
 
     with brownie.reverts():
-        sample_pool.finishSetup({"from": molly})
+        sample_vault.finishSetup({"from": molly})
 
 
-def test_finish_setup_twice(sample_pool, deployer):
+def test_finish_setup_twice(sample_vault, deployer):
 
-    sample_pool.finishSetup({"from": deployer})
+    sample_vault.finishSetup({"from": deployer})
 
     with brownie.reverts():
-        sample_pool.finishSetup({"from": deployer})
+        sample_vault.finishSetup({"from": deployer})
 
 
 @pytest.mark.parametrize("onlyLocal", [True, False])
-def test_finish_setup_only_local(deploy_pool, tokens, deployer, amplification, max_pool_assets, onlyLocal):
+def test_finish_setup_only_local(
+    deploy_swapvault, tokens, deployer, amplification, max_vault_assets, onlyLocal
+):
 
-    sp = deploy_pool(
-        tokens          = tokens[:max_pool_assets],
-        token_balances  = [10**8]*max_pool_assets,
-        weights         = [1]*max_pool_assets,
-        amp             = amplification,
-        name            = "",
-        symbol          = "",
-        deployer        = deployer,
-        only_local      = onlyLocal
+    sp = deploy_swapvault(
+        tokens=tokens[:max_vault_assets],
+        token_balances=[10**8] * max_vault_assets,
+        weights=[1] * max_vault_assets,
+        amp=amplification,
+        name="",
+        symbol="",
+        deployer=deployer,
+        only_local=onlyLocal,
     )
 
     sp.finishSetup({"from": deployer})
@@ -65,8 +66,8 @@ def test_finish_setup_only_local(deploy_pool, tokens, deployer, amplification, m
     assert sp.onlyLocal() == onlyLocal
 
 
-def test_finish_setup_event(sample_pool, deployer):
+def test_finish_setup_event(sample_vault, deployer):
 
-    tx = sample_pool.finishSetup({"from": deployer})
+    tx = sample_vault.finishSetup({"from": deployer})
 
     assert "FinishSetup" in tx.events

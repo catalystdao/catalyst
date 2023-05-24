@@ -33,9 +33,9 @@ def compute_invariant(weights, balances, amp) -> Decimal:
 
 def compute_balance_0(weights, balances, unit_tracker, amp) -> Decimal:
 
-    # TODO! currently amplified pools CAN have amp = 10**18
+    # TODO! currently amplified vaults CAN have amp = 10**18
     if amp == 10**18:
-        pytest.fail("Unable to compute the balance0 of a volatile pool.")
+        pytest.fail("Unable to compute the balance0 of a volatile vault.")
     
     invariant = compute_invariant(balances, weights, amp)
 
@@ -55,8 +55,8 @@ def compute_expected_swap(
     to_weight,
     to_balance,
     amp,
-    to_amp = None,       # Allow to specify a different amplification value for the target pool
-    pool_fee = 0,
+    to_amp = None,       # Allow to specify a different amplification value for the target vault
+    vault_fee = 0,
     governance_fee = 0
 ):
     if to_amp is not None and amp != to_amp:
@@ -72,16 +72,16 @@ def compute_expected_swap(
     a = Decimal(from_balance)
     b = Decimal(to_balance)
 
-    pf = Decimal(pool_fee)
+    pf = Decimal(vault_fee)
     gf = Decimal(governance_fee)
 
     net_fee = pf * swap_amount
-    net_pool_fee = int(pf * (1 - gf) * swap_amount)
+    net_vault_fee = int(pf * (1 - gf) * swap_amount)
     net_governance_fee = int(pf * gf * swap_amount)
 
     x = swap_amount - net_fee
 
-    # Amplified pools
+    # Amplified vaults
     if amp != 10**18:
 
         amp /= WAD
@@ -98,17 +98,17 @@ def compute_expected_swap(
         return {
             'U': int(U * 10**18),
             'to_amount': int(b * (1 - ((b_amp - U)/(b_amp))**(1/one_minus_amp))),
-            'pool_fee': net_pool_fee,
+            'vault_fee': net_vault_fee,
             'governance_fee': net_governance_fee
         }
     
-    # Volatile pools
+    # Volatile vaults
     U = w_a * ((a + x)/a).ln()
 
     return {
         'U': int(U * 10**18),
         'to_amount': int(b * (1 - (-U/w_b).exp())),
-        'pool_fee': net_pool_fee,
+        'vault_fee': net_vault_fee,
         'governance_fee': net_governance_fee
     }
 
@@ -119,7 +119,7 @@ def compute_expected_swap_given_U(U, to_weight, to_balance, amp):
     w_b = Decimal(to_weight)
     b = Decimal(to_balance)
     
-    # Amplified pools
+    # Amplified vaults
     if amp != 10**18:
 
         amp /= WAD
@@ -128,7 +128,7 @@ def compute_expected_swap_given_U(U, to_weight, to_balance, amp):
         
         return int(b * (1 - ((b_amp - U)/(b_amp))**(1/(1-amp))))
     
-    # Volatile pools
+    # Volatile vaults
     return int(b * (1 - (-U/w_b).exp()))
 
 
@@ -147,7 +147,7 @@ def compute_expected_liquidity_swap(
     to_total_supply,
     to_unit_tracker,
     amp,
-    to_amp = None       # Allow to specify a different amplification value for the target pool
+    to_amp = None       # Allow to specify a different amplification value for the target vault
 ):
     if to_amp is not None and amp != to_amp:
         #TODO implement amp/to_amp distinction
@@ -200,7 +200,7 @@ def compute_equal_withdrawal(withdraw_amount, weights, balances, total_supply, a
     ts = Decimal(total_supply)
     balances = [Decimal(b) for b in balances]
 
-    # Amplified pools
+    # Amplified vaults
     if amp != 10**18:
         amp = Decimal(amp)/WAD
         one_minus_amp = Decimal(1) - amp
@@ -219,7 +219,7 @@ def compute_equal_withdrawal(withdraw_amount, weights, balances, total_supply, a
             ) for b, w in zip(balances, weights)
         ]
     
-    # Volatile pools
+    # Volatile vaults
     return [int(balance * pt / ts) for balance in balances]
 
 
@@ -229,13 +229,13 @@ def compute_equal_withdrawal(withdraw_amount, weights, balances, total_supply, a
 
 def compute_expected_max_unit_inflow(weights, balances, amp):
 
-    # Amplified pools
+    # Amplified vaults
     if amp != 10**18:
         weighted_sum = sum([Decimal(weight * balance) for weight, balance in zip(weights, balances)])
 
         return int(weighted_sum)
 
-    # Volatile pools
+    # Volatile vaults
     return int(Decimal(sum(weights)) * Decimal(2).ln() * WAD)
 
 
@@ -299,54 +299,54 @@ def compute_liquidity_swap_hash(
 
 # Interface Utils ***************************************************************************************************************
 
-def evm_bytes_32_to_address(bytes32):
-    return convert.to_address(bytes32[12:])
 
-
-def decode_payload(data, decode_address=evm_bytes_32_to_address):
+def decode_payload(data):
 
     context = data[0]
 
     # Liquidity swap payload
     if context & 1:
+        # Asset swap payload
+        custom_data_length = convert.to_uint(data[328:330], type_str="uint16")
         return {
             "_context": data[0],
-            "_fromPool": decode_address(data[1:33]),
-            "_toPool": decode_address(data[33:65]),
-            "_toAccount": decode_address(data[65:97]),
-            "_LU": convert.to_uint(data[97:129]),
-            "_minPoolToken": convert.to_uint(data[129:161]),
-            "_minReferenceAsset": convert.to_uint(data[161:193]),
-            "_escrowAmount": convert.to_uint(data[193:225]),
-            "_blockNumber": convert.to_uint(data[225:229]),
-            "_swapHash": data[229:261],
+            "_fromVault": (data[1:66]).hex(),
+            "_toVault": (data[66:131]).hex(),
+            "_toAccount": (data[131:196]).hex(),
+            "_U": convert.to_uint(data[196:228]),
+            "_minVaultToken": convert.to_uint(data[228:260]),
+            "_minReferenceAsset": convert.to_uint(data[260:292]),
+            "_escrowAmount": convert.to_uint(data[292:324]),
+            "_blockNumber": convert.to_uint(data[324:328]),
+            "customDataLength": custom_data_length,
+            "_customDataTarget": (data[330:350]) if custom_data_length > 0 else None,
+            "_customData": data[350:350+custom_data_length - 20] if custom_data_length > 0 else None
         }
     
     # Asset swap payload
-    custom_data_length = convert.to_uint(data[262:264], type_str="uint16")
+    custom_data_length = convert.to_uint(data[362:364], type_str="uint16")
     return {
         "_context": data[0],
-        "_fromPool": decode_address(data[1:33]),
-        "_toPool": decode_address(data[33:65]),
-        "_toAccount": decode_address(data[65:97]),
-        "_U": convert.to_uint(data[97:129]),
-        "_assetIndex": convert.to_uint(data[129], type_str="uint8"),
-        "_minOut": convert.to_uint(data[130:162]),
-        "_escrowAmount": convert.to_uint(data[162:194]),
-        "_escrowToken": decode_address(data[194:226]),
-        "_blockNumber": convert.to_uint(data[226:230]),
-        "_swapHash": data[230:262],
+        "_fromVault": (data[1:66]).hex(),
+        "_toVault": (data[66:131]).hex(),
+        "_toAccount": (data[131:196]).hex(),
+        "_U": convert.to_uint(data[196:228]),
+        "_assetIndex": convert.to_uint(data[228], type_str="uint8"),
+        "_minOut": convert.to_uint(data[229:261]),
+        "_escrowAmount": convert.to_uint(data[261:293]),
+        "_escrowToken": (data[293:358]).hex(),
+        "_blockNumber": convert.to_uint(data[358:3662]),
         "customDataLength": custom_data_length,
-        "_customDataTarget": decode_address(data[264:296]) if custom_data_length > 0 else None,
-        "_customData": data[296:296+custom_data_length - 32] if custom_data_length > 0 else None
+        "_customDataTarget": (data[364:384]) if custom_data_length > 0 else None,
+        "_customData": data[384:384+custom_data_length - 20] if custom_data_length > 0 else None
     }
 
 
 # Encode a Catalyst swap message
 #TODO allow for customData
 def encode_swap_payload(
-    from_pool,
-    to_pool,
+    from_vault,
+    to_vault,
     to_account,
     U,
     asset_index=0,
@@ -361,8 +361,8 @@ def encode_swap_payload(
 
     return (
         convert.to_bytes(0, "bytes1")
-        + convert_64_bytes_address(from_pool)
-        + convert_64_bytes_address(to_pool)
+        + convert_64_bytes_address(from_vault)
+        + convert_64_bytes_address(to_vault)
         + convert_64_bytes_address(to_account)
         + convert.to_bytes(U)
         + convert.to_bytes(asset_index, "bytes1")
@@ -376,8 +376,8 @@ def encode_swap_payload(
     
 # Encode a Catalyst liquidity swap message
 def encode_liquidity_swap_payload(
-    from_pool,
-    to_pool,
+    from_vault,
+    to_vault,
     to_account,
     U,
     min_out=[0,0],
@@ -386,8 +386,8 @@ def encode_liquidity_swap_payload(
 ):
     return (
         convert.to_bytes(1, "bytes1")
-        + convert_64_bytes_address(from_pool)
-        + convert_64_bytes_address(to_pool)
+        + convert_64_bytes_address(from_vault)
+        + convert_64_bytes_address(to_vault)
         + convert_64_bytes_address(to_account)
         + convert.to_bytes(U)
         + convert.to_bytes(min_out[0])
