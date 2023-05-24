@@ -3,7 +3,7 @@ pragma solidity ^0.8.16;
 
 /// @title Escrow related functions defined by Catalyst v1 Vaults
 /// @notice Contains the functions used to manage escrows by the cross-chain interface.
-interface ICatalystV1VaultAckTimeout {
+interface ICatalystV1VaultSuccessFailure {
     /** @notice Release the escrowed tokens into the vault.  */
     function onSendAssetSuccess(
         bytes32 channelId,
