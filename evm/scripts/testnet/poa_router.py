@@ -135,8 +135,9 @@ class PoARouter:
     def compute_sendAsset_identifier(self, log):
         args = log["args"]
         toAccount = args["toAccount"]
-        U = args["units"]
-        amount = args["fromAmount"]  # TODO: the fee.
+        U = args["Units"]
+        fee = args["fee"]
+        amount = args["fromAmount"] - fee
         fromAsset = args["fromAsset"]
         blockNumberMod = log["blockNumber"] % 2**32-1
         poolAddress = log["address"]
@@ -148,8 +149,9 @@ class PoARouter:
     def compute_sendLiquidity_identifier(self, log):
         args = log["args"]
         toAccount = args["toAccount"]
-        U = args["units"]
-        amount = args["fromAmount"]  # TODO: the fee.
+        U = args["Units"]
+        fee = 0
+        amount = args["fromAmount"] - fee
         blockNumberMod = log["blockNumber"] % 2**32-1
         poolAddress = log["address"]
         channelId = args["channelId"]
@@ -160,24 +162,24 @@ class PoARouter:
     def compute_sendAsset_callback(self, log):
         args = log["args"]
         toAccount = args["toAccount"]
-        U = args["U"]  # TODO: Standardize.
-        amount = args["escrowAmount"]  # TODO: the fee.
+        U = args["Units"]
+        amount = args["escrowAmount"]
         fromAsset = args["fromAsset"]
         blockNumberMod = log["blockNumberMod"]
         poolAddress = log["address"]
-        channelId = args["channelId"]  ## TODO: Unavailable.
+        channelId = args["channelId"]
         return sha256(
-            toAccount + str(U).encode() + str(amount).encode() + str(blockNumberMod).encode() + poolAddress.encode() + channelId
+            toAccount + str(U).encode() + str(amount).encode() + fromAsset.encode() + str(blockNumberMod).encode() + poolAddress.encode() + channelId
         ).hexdigest()
         
     def compute_sendLiquidity_callback(self, log):
         args = log["args"]
         toAccount = args["toAccount"]
-        U = args["U"]  # TODO: Standardize
-        amount = args["escrowAmount"]  # TODO: the fee. # TODO: Standardize
+        U = args["Units"]
+        amount = args["escrowAmount"]
         blockNumberMod = log["blockNumberMod"]
         poolAddress = log["address"]
-        channelId = args["channelId"] ## TODO: Unavailable.
+        channelId = args["channelId"]
         return sha256(
             toAccount + str(U).encode() + str(amount).encode() + str(blockNumberMod).encode() + poolAddress.encode() + channelId
         ).hexdigest()
@@ -187,8 +189,7 @@ class PoARouter:
             return self.compute_sendAsset_identifier(log)
         elif log["event"] == "sendLiquidity":
             return self.compute_sendLiquidity_identifier(log)
-        # TODO: rename OnSendAssetSuccess to SendAssetSuccess 
-        elif log["event"] in ["SendAssetFailure", "OnSendAssetSuccess"]:  # TODO: Standardize
+        elif log["event"] in ["SendAssetFailure", "SendAssetSuccess"]:
             return self.compute_sendAsset_callback(log)
         elif log["event"] in ["SendLiquidityFailure", "SendLiquiditySuccess"]: 
             return self.compute_sendLiquidity_callback(log)
