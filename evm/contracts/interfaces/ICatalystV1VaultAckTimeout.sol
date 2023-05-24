@@ -8,7 +8,7 @@ interface ICatalystV1VaultAckTimeout {
     function onSendAssetSuccess(
         bytes32 channelId,
         bytes calldata toAccount,
-        uint256 Units,
+        uint256 U,
         uint256 escrowAmount,
         address escrowToken,
         uint32 blockNumberMod
@@ -18,7 +18,7 @@ interface ICatalystV1VaultAckTimeout {
     function onSendAssetFailure(
         bytes32 channelId,
         bytes calldata toAccount,
-        uint256 Units,
+        uint256 U,
         uint256 escrowAmount,
         address escrowToken,
         uint32 blockNumberMod
@@ -28,7 +28,7 @@ interface ICatalystV1VaultAckTimeout {
     function onSendLiquiditySuccess(
         bytes32 channelId,
         bytes calldata toAccount,
-        uint256 Units,
+        uint256 U,
         uint256 escrowAmount,
         uint32 blockNumberMod
     ) external;
@@ -37,7 +37,7 @@ interface ICatalystV1VaultAckTimeout {
     function onSendLiquidityFailure(
         bytes32 channelId,
         bytes calldata toAccount,
-        uint256 Units,
+        uint256 U,
         uint256 escrowAmount,
         uint32 blockNumberMod
     ) external;

@@ -325,7 +325,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
      * @return uint25 Output tokens (not WAD).
      */
     function _calcPriceCurveLimit(
-        uint256 Units,
+        uint256 U,
         uint256 B,
         uint256 W,
         int256 oneMinusAmp
@@ -384,7 +384,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
      * @param oneMinusAmpInverse The vault amplification.
      * @return uint256 Vault tokens.
      */
-    function _calcPriceCurveLimitShare(uint256 Units, uint256 ts, uint256 it_times_walpha_amped, int256 oneMinusAmpInverse) internal pure returns (uint256) {
+    function _calcPriceCurveLimitShare(uint256 U, uint256 ts, uint256 it_times_walpha_amped, int256 oneMinusAmpInverse) internal pure returns (uint256) {
         uint256 vaultTokens = FixedPointMathLib.mulWadDown(
             ts,
             uint256(  // Always casts a positive value, as powWad >= 1, hence powWad - WAD >= 0
@@ -421,7 +421,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
         // If 'fromAsset' is not part of the vault (i.e. W is 0) or if 'amount' and 
         // the vault asset balance (i.e. 'A') are both 0 this will revert, since 0**p is 
         // implemented as exp(ln(0) * p) and ln(0) is undefined.
-        uint256 Units = _calcPriceCurveArea(amount, A, W, _oneMinusAmp);
+        uint256 U = _calcPriceCurveArea(amount, A, W, _oneMinusAmp);
 
         // If the swap is a very small portion of the vault
         // Add an additional fee. This covers mathematical errors.
@@ -442,7 +442,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
      */
     function calcReceiveAsset(
         address toAsset,
-        uint256 Units
+        uint256 U
     ) public view override returns (uint256) {
         // B low => fewer tokens returned. Subtract the escrow amount to decrease the balance.
         uint256 B = ERC20(toAsset).balanceOf(address(this)) - _escrowedTokens[toAsset];
@@ -864,7 +864,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
         uint256[MAX_ASSETS] memory effAssetBalances;  // The 'effective' balances (compensated with the escrowed balances)
         uint256[MAX_ASSETS] memory assetWeight;
 
-        uint256 Units = 0;
+        uint256 U = 0;
         // Compute walpha_0 to find the reference balances. This lets us evaluate the
         // number of tokens the vault should have if the price in the pool is 1:1.
         // unlike in withdrawAll, this value is needed to compute U.
@@ -1095,7 +1095,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
         uint256 fee = FixedPointMathLib.mulWadDown(amount, _vaultFee);
 
         // Calculate the units bought.
-        uint256 Units = calcSendAsset(fromAsset, amount - fee);
+        uint256 U = calcSendAsset(fromAsset, amount - fee);
 
         // onSendAssetSuccess requires casting U to int256 to update the _unitTracker and must never revert. Check for overflow here.
         require(U < uint256(type(int256).max));  // int256 max fits in uint256
@@ -1201,7 +1201,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
         bytes calldata fromVault,
         uint256 toAssetIndex,
         address toAccount,
-        uint256 Units,
+        uint256 U,
         uint256 minOut,
         uint256 fromAmount,
         bytes calldata fromAsset,
@@ -1250,7 +1250,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
         bytes calldata fromVault,
         uint256 toAssetIndex,
         address toAccount,
-        uint256 Units,
+        uint256 U,
         uint256 minOut,
         uint256 fromAmount,
         bytes calldata fromAsset,
@@ -1402,7 +1402,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
         // number of tokens the vault should have If the price in the pool is 1:1.
         (uint256 walpha_0_ampped, uint256 it) = _computeBalance0(oneMinusAmp);
 
-        uint256 Units = 0;
+        uint256 U = 0;
         {
             // Plus _escrowedVaultTokens since we want the withdrawal to return less. Adding vaultTokens as these have already been burnt.
             uint256 ts = totalSupply + _escrowedVaultTokens + vaultTokens;
@@ -1501,7 +1501,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
         bytes32 channelId,
         bytes calldata fromVault,
         address toAccount,
-        uint256 Units,
+        uint256 U,
         uint256 minVaultTokens,
         uint256 minReferenceAsset,
         uint256 fromAmount,
@@ -1576,7 +1576,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
         bytes32 channelId,
         bytes calldata fromVault,
         address who,
-        uint256 Units,
+        uint256 U,
         uint256 minVaultTokens,
         uint256 minReferenceAsset,
         uint256 fromAmount,
@@ -1621,7 +1621,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
     function onSendAssetSuccess(
         bytes32 channelId,
         bytes calldata toAccount,
-        uint256 Units,
+        uint256 U,
         uint256 escrowAmount,
         address escrowToken,
         uint32 blockNumberMod
@@ -1674,7 +1674,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
     function onSendAssetFailure(
         bytes32 channelId,
         bytes calldata toAccount,
-        uint256 Units,
+        uint256 U,
         uint256 escrowAmount,
         address escrowToken,
         uint32 blockNumberMod
@@ -1705,7 +1705,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
     function onSendLiquidityFailure(
         bytes32 channelId,
         bytes calldata toAccount,
-        uint256 Units,
+        uint256 U,
         uint256 escrowAmount,
         uint32 blockNumberMod
     ) public override {

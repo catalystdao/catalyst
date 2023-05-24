@@ -236,7 +236,7 @@ abstract contract CatalystVaultCommon is
      * @dev Implement a lot of similar logic to getUnitCapacity. 
      * @param units The number of units to check and set.
      */
-    function _updateUnitCapacity(uint256 Units) internal {
+    function _updateUnitCapacity(uint256 units) internal {
         uint256 MUC = _maxUnitCapacity;
 
         // The delta change to the limit is: timePassed · slope = timePassed · Max/decayrate
@@ -423,7 +423,7 @@ abstract contract CatalystVaultCommon is
     function onSendAssetSuccess(
         bytes32 channelId,
         bytes calldata toAccount,
-        uint256 Units,
+        uint256 U,
         uint256 escrowAmount,
         address escrowToken,
         uint32 blockNumberMod
@@ -465,7 +465,7 @@ abstract contract CatalystVaultCommon is
     function onSendAssetFailure(
         bytes32 channelId,
         bytes calldata toAccount,
-        uint256 Units,
+        uint256 U,
         uint256 escrowAmount,
         address escrowToken,
         uint32 blockNumberMod
@@ -508,7 +508,7 @@ abstract contract CatalystVaultCommon is
     function onSendLiquiditySuccess(
         bytes32 channelId,
         bytes calldata toAccount,
-        uint256 Units,
+        uint256 U,
         uint256 escrowAmount,
         uint32 blockNumberMod
     ) nonReentrant public override virtual {
@@ -546,7 +546,7 @@ abstract contract CatalystVaultCommon is
     function onSendLiquidityFailure(
         bytes32 channelId,
         bytes calldata toAccount,
-        uint256 Units,
+        uint256 U,
         uint256 escrowAmount,
         uint32 blockNumberMod
     ) nonReentrant public override virtual {
@@ -576,7 +576,7 @@ abstract contract CatalystVaultCommon is
     /// However, it is never exposed. This is done to let the hashing algorithm be flexible between implementations.
     function _computeSendAssetHash(
         bytes memory toAccount,
-        uint256 Units,
+        uint256 U,
         uint256 amount,
         address fromAsset,
         uint32 blockNumberMod
@@ -596,7 +596,7 @@ abstract contract CatalystVaultCommon is
     /// However, it is never exposed. This is done to let the hashing algorithm be flexible between implementations.
     function _computeSendLiquidityHash(
         bytes calldata toAccount,
-        uint256 Units,
+        uint256 U,
         uint256 amount,
         uint32 blockNumberMod
     ) internal pure returns(bytes32) {

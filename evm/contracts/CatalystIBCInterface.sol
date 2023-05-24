@@ -69,7 +69,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
         bytes calldata toVault,
         bytes calldata toAccount,
         uint8 toAssetIndex,
-        uint256 Units,
+        uint256 U,
         uint256 minOut,
         uint256 fromAmount,
         address fromAsset,
@@ -128,7 +128,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
         bytes32 channelId,
         bytes calldata toVault,
         bytes calldata toAccount,
-        uint256 Units,
+        uint256 U,
         uint256[2] calldata minOut,
         uint256 fromAmount,
         bytes memory calldata_
