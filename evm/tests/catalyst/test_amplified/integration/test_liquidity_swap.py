@@ -78,7 +78,7 @@ def test_liquidity_swap(
         get_vault_2_amp(),
     )
 
-    U = tx.events["SendLiquidity"]["units"]
+    U = tx.events["SendLiquidity"]["Units"]
     expectedB0 = 2**256
     if int(int(b0_times_n) ** (1 - get_vault_2_amp() / 10**18)) >= int(U / 10**18):
         expectedB0 = vault_utils.compute_expected_swap_given_U(
@@ -88,11 +88,11 @@ def test_liquidity_swap(
     securityLimit = vault_2.getUnitCapacity()
     if securityLimit < expectedB0:
         txe = ibc_emulator.execute(
-                    tx.events["IncomingMetadata"]["metadata"][0],
-                    tx.events["IncomingPacket"]["packet"],
-                    {"from": berg},
-                )
-        
+            tx.events["IncomingMetadata"]["metadata"][0],
+            tx.events["IncomingPacket"]["packet"],
+            {"from": berg},
+        )
+
         # If the transaction still executed, it needs to have exhausted the vast majority of the security limit.
         if txe.events["Acknowledgement"]["acknowledgement"].hex() == "00":
             assert (

@@ -42,7 +42,7 @@ def test_self_swap(
 
     # The security limit works a slightly different for amplified vaults.
     if vault.getUnitCapacity() < vault.calcReceiveAsset(
-        vault._tokenIndexing(0), tx.events["SendAsset"]["units"]
+        vault._tokenIndexing(0), tx.events["SendAsset"]["Units"]
     ) * vault._weight(vault._tokenIndexing(0)):
         with reverts(revert_pattern=re.compile("typed error: 0x249c4e65.*")):
             txe = ibc_emulator.execute(
