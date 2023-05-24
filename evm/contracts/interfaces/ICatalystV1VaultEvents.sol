@@ -44,7 +44,7 @@ interface ICatalystV1VaultEvents {
         uint8 toAssetIndex,
         uint256 fromAmount,
         uint256 minOut,
-        uint256 units,
+        uint256 Units,
         uint256 fee
     );
 
@@ -67,7 +67,7 @@ interface ICatalystV1VaultEvents {
         bytes fromVault,
         address toAccount,
         address toAsset,
-        uint256 units,
+        uint256 Units,
         uint256 toAmount,
         uint256 fromAmount,
         bytes fromAsset,
@@ -90,7 +90,7 @@ interface ICatalystV1VaultEvents {
         bytes toAccount,
         uint256 fromAmount,
         uint256[2] minOut,
-        uint256 units
+        uint256 Units
     );
 
     /**
@@ -107,7 +107,7 @@ interface ICatalystV1VaultEvents {
         bytes32 channelId,
         bytes fromVault,
         address toAccount,
-        uint256 units,
+        uint256 Units,
         uint256 toAmount,
         uint256 fromAmount,
         uint256 sourceBlockNumberMod
@@ -135,7 +135,7 @@ interface ICatalystV1VaultEvents {
     event SendAssetSuccess(
         bytes32 channelId,
         bytes toAccount,
-        uint256 U,
+        uint256 Units,
         uint256 escrowAmount,
         address escrowToken,
         uint32 blockNumberMod
@@ -145,7 +145,7 @@ interface ICatalystV1VaultEvents {
     event SendAssetFailure(
         bytes32 channelId,
         bytes toAccount,
-        uint256 U,
+        uint256 Units,
         uint256 escrowAmount,
         address escrowToken,
         uint32 blockNumberMod
@@ -155,7 +155,7 @@ interface ICatalystV1VaultEvents {
     event SendLiquiditySuccess(
         bytes32 channelId,
         bytes toAccount,
-        uint256 U,
+        uint256 Units,
         uint256 escrowAmount,
         uint32 blockNumberMod
         );
@@ -164,7 +164,7 @@ interface ICatalystV1VaultEvents {
     event SendLiquidityFailure(
         bytes32 channelId,
         bytes toAccount,
-        uint256 U,
+        uint256 Units,
         uint256 escrowAmount,
         uint32 blockNumberMod
     );
