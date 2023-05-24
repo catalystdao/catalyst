@@ -1,0 +1,173 @@
+{
+    "chain_config": {
+        "sepolia": {
+            "factory": "",
+            "ibcinterface": "",
+            "crosschaininterface": "",
+            "volatile_template": "",
+            "volatile_mathlib": "",
+            "amplified_template": "",
+            "amplified_mathlib": "",
+            "describer": "",
+            "describer_registry": "",
+            "router": "",
+            "permit2": ""
+        },
+        "mumbai": {
+            "factory": "",
+            "ibcinterface": "",
+            "crosschaininterface": "",
+            "volatile_template": "",
+            "volatile_mathlib": "",
+            "amplified_template": "",
+            "amplified_mathlib": "",
+            "describer": "",
+            "describer_registry": "",
+            "router": "",
+            "permit2": ""
+        }
+    },
+    "relayer_address": "0x0e479a0438d25B5b10C2186Bee1256d437b9C582",
+    "tokens": {
+        "sepolia": {
+            "wSEP": "0x3A773F4804eCC5208b58571DF4fB7005444cbCA7",
+            "sepUSDC": {
+                "address": "",
+                "decimals": 6,
+                "supply": 1000000.0
+            },
+            "sepUSDT": {
+                "address": "",
+                "decimals": 18,
+                "supply": 1000000.0
+            },
+            "SuperStable100": {
+                "address": "",
+                "decimals": 16,
+                "supply": 100000000.0
+            },
+            "seppoi": {
+                "address": "",
+                "decimals": 18,
+                "supply": 1000000.0
+            }
+        },
+        "mumbai": {
+            "wMUM": "0x3A773F4804eCC5208b58571DF4fB7005444cbCA7",
+            "mumUSDC": {
+                "address": "",
+                "decimals": 6,
+                "supply": 1000000.0
+            },
+            "mumUSDT": {
+                "address": "",
+                "decimals": 18,
+                "supply": 1000000.0
+            },
+            "mummi": {
+                "address": "",
+                "decimals": 18,
+                "supply": 1000000.0
+            }
+        }
+    },
+    "pools": {
+        "Stables": {
+            "amplification": 0.25,
+            "sepolia": {
+                "address": "",
+                "weights": [
+                    1000000000000.0,
+                    1,
+                    100.0
+                ],
+                "tokens": {
+                    "sepUSDC": 10000.0,
+                    "sepUSDT": 10000.0,
+                    "SuperStable100": 10000.0
+                }
+            },
+            "mumbai": {
+                "address": "",
+                "weights": [
+                    1000000000000.0,
+                    1
+                ],
+                "tokens": {
+                    "mumUSDC": 10000.0,
+                    "mumUSDT": 10000.0
+                }
+            }
+        },
+        "Gas Tokens": {
+            "sepolia": {
+                "address": "",
+                "weights": [
+                    100,
+                    200
+                ],
+                "tokens": {
+                    "wSEP": 0.5,
+                    "seppoi": 10000.0
+                }
+            },
+            "mumbai": {
+                "address": "",
+                "weights": [
+                    100,
+                    50
+                ],
+                "tokens": {
+                    "wMUM": 0.5,
+                    "mummi": 1000.0
+                }
+            }
+        },
+        "Pool 1": {
+            "sepolia": {
+                "address": "",
+                "weights": [
+                    1
+                ],
+                "tokens": {
+                    "seppoi": 10000.0
+                }
+            },
+            "mumbai": {
+                "address": "",
+                "weights": [
+                    1
+                ],
+                "tokens": {
+                    "mumUSDC": 1000.0
+                }
+            }
+        },
+        "SepStableGas": {
+            "sepolia": {
+                "address": "",
+                "weights": [
+                    1,
+                    1
+                ],
+                "tokens": {
+                    "wSEP": 0.25,
+                    "sepUSDC": 100
+                }
+            }
+        },
+        "MumStableGas": {
+            "mumbai": {
+                "address": "",
+                "weights": [
+                    1,
+                    1
+                ],
+                "tokens": {
+                    "wMUM": 0.5,
+                    "mumUSDC": 100
+                }
+            }
+        }
+    }
+}
