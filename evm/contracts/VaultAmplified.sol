@@ -1071,11 +1071,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
         uint256 minOut,
         address fallbackUser,
         bytes memory calldata_
-    ) nonReentrant public override returns (uint256) {
-        // Validate input and target
-        // While a connection could be onesided, it doesn't really make sense. So if this vault
-        // has no connection to the other vault, revert the transaction earlier rather than later.
-        if (!_vaultConnection[channelId][toVault]) revert VaultNotConnected(channelId, toVault);
+    ) nonReentrant onlyConnectedPool(channelId, toVault) public override returns (uint256) {
         // Fallback user cannot be address(0) since this is used as a check for the existance of an escrow.
         // It would also be a silly fallback address.
         require(fallbackUser != address(0));
@@ -1200,7 +1196,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
         uint256 fromAmount,
         bytes calldata fromAsset,
         uint32 blockNumberMod
-    ) nonReentrant verifyIncomingMessage(channelId, fromVault) public override returns (uint256) {
+    ) nonReentrant onlyChainInterface onlyConnectedPool(channelId, fromVault) public override returns (uint256) {
         _updateAmplification();
 
         // Convert the asset index (toAsset) into the asset to be purchased.
@@ -1371,11 +1367,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
         uint256[2] calldata minOut,
         address fallbackUser,
         bytes memory calldata_
-    ) nonReentrant public override returns (uint256) {
-        // Validate input and target
-        // While a connection could be onesided, it doesn't really make sense. So if this vault
-        // has no connection to the other vault, revert the transaction earlier rather than later.
-        if (!_vaultConnection[channelId][toVault]) revert VaultNotConnected(channelId, toVault);
+    ) nonReentrant onlyConnectedPool(channelId, toVault) public override returns (uint256) {
         // Fallback user cannot be address(0) since this is used as a check for the existance of an escrow.
         // It would also be a silly fallback address.
         require(fallbackUser != address(0));
@@ -1500,7 +1492,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
         uint256 minReferenceAsset,
         uint256 fromAmount,
         uint32 blockNumberMod
-    ) nonReentrant verifyIncomingMessage(channelId, fromVault) public override returns (uint256) {
+    ) nonReentrant onlyChainInterface onlyConnectedPool(channelId, fromVault) public override returns (uint256) {
         _updateAmplification();
 
         int256 oneMinusAmp = _oneMinusAmp;

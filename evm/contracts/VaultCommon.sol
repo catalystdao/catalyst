@@ -146,14 +146,19 @@ abstract contract CatalystVaultCommon is
     }
 
     /**
-     * @notice Checks that an incoming message is coming from the cross-chain interface and that the context of the message is valid. (connection)
-     */ 
-    modifier verifyIncomingMessage(bytes32 channelId, bytes calldata fromVault) {
-        // The chainInterface is the only valid caller of this function.
-        require(msg.sender == _chainInterface);
-        // Only allow connected vaults
-        if (!_vaultConnection[channelId][fromVault]) revert VaultNotConnected(channelId, fromVault);
+     * @notice Require the sender of the transaction to be the chain interface. 
+     */
+     modifier onlyChainInterface() {
+        require(msg.sender == _chainInterface); // dev: Only chain interface
+        _;
+    }
 
+    /**
+     * @notice Verify a connected pool.
+     */ 
+    modifier onlyConnectedPool(bytes32 channelId, bytes calldata vault) {
+        // Only allow connected vaults
+        if (!_vaultConnection[channelId][vault]) revert VaultNotConnected(channelId, vault);
         _;
     }
 
@@ -423,8 +428,7 @@ abstract contract CatalystVaultCommon is
         uint256 escrowAmount,
         address escrowToken,
         uint32 blockNumberMod
-    ) nonReentrant public override virtual {
-        require(msg.sender == _chainInterface);  // dev: Only _chainInterface
+    ) nonReentrant onlyChainInterface public override virtual {
 
         // We need to find the location of the escrow with using the below information.
         // We need to do this twice: 1. Get the address. 2. Delete the escrow.
@@ -465,8 +469,7 @@ abstract contract CatalystVaultCommon is
         uint256 escrowAmount,
         address escrowToken,
         uint32 blockNumberMod
-    ) nonReentrant public override virtual {
-        require(msg.sender == _chainInterface);  // dev: Only _chainInterface
+    ) nonReentrant onlyChainInterface public override virtual {
 
         // We need to find the location of the escrow with using the below information.
         // We need to do this twice: 1. Get the address. 2. Delete the escrow.
@@ -507,8 +510,7 @@ abstract contract CatalystVaultCommon is
         uint256 U,
         uint256 escrowAmount,
         uint32 blockNumberMod
-    ) nonReentrant public override virtual {
-        require(msg.sender == _chainInterface);  // dev: Only _chainInterface
+    ) nonReentrant onlyChainInterface public override virtual {
 
         // We need to find the location of the escrow with using the below information.
         // We need to do this twice: 1. Get the address. 2. Delete the escrow.
@@ -545,8 +547,7 @@ abstract contract CatalystVaultCommon is
         uint256 U,
         uint256 escrowAmount,
         uint32 blockNumberMod
-    ) nonReentrant public override virtual {
-        require(msg.sender == _chainInterface);  // dev: Only _chainInterface
+    ) nonReentrant onlyChainInterface public override virtual {
 
         bytes32 sendLiquidityHash = _computeSendLiquidityHash( // Computing the hash doesn't revert.
             toAccount,      // Ensures no collisions between different users
