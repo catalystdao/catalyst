@@ -18,7 +18,7 @@ uint256 constant MAX_GOVERNANCE_FEE_SHARE = 75e16;   // 75%
  * and defines governance address for vaults to read.
  * !The owner of the factory must be a timelock!
  */
-contract CatalystVaultFactory is Ownable, ICatalystV1FactoryEvents {
+contract CatalystFactory is Ownable, ICatalystV1FactoryEvents {
     using SafeTransferLib for ERC20;
 
     /// @notice A mapping which describes if a vault has been created by this factory. Indexed by chainInterface then vault address.

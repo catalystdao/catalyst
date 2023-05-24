@@ -15,7 +15,7 @@ More specifically, the code structure is as follows:
   - `VaultVolatile.sol` : Extends `VaultCommon.sol` with the price curve $P(w) = \frac{W}{w}$.
   - `VaultAmplified.sol` : Extends `VaultCommon.sol` with the price curve $P(w) = \left(1 - \theta\right) \frac{W}{(W w)^\theta}$.
   - `FixedPointMathLib.sol` : The mathematical library used by Catalyst (based on the [solmate](https://github.com/transmissions11/solmate/blob/ed67feda67b24fdeff8ad1032360f0ee6047ba0a/src/utils/FixedPointMathLib.sol)).
-- `CatalystVaultFactory.sol` : Simplifies the deployment of vaults via Open Zeppelin's *Clones*: vaults are deployed as minimal proxies which delegate call to the above vault contracts. This significantly reduces vault deployment cost.
+- `CatalystFactory.sol` : Simplifies the deployment of vaults via Open Zeppelin's *Clones*: vaults are deployed as minimal proxies which delegate call to the above vault contracts. This significantly reduces vault deployment cost.
 - `CatalystIBCInterface.sol` : Bridges the Catalyst protocol with the message router of choice.
 
 # Catalyst Contracts
@@ -38,9 +38,9 @@ Extends `VaultCommon.sol` with the price curve $P(w) = \frac{W}{w}$. This implem
 
 Extends `VaultCommon.sol` with the price curve $P(w) = \left(1 - \theta\right) \frac{W}{(W w)^\theta}$. This introduces an argument $\theta$ which gives control over the flatness of the swap curve, such that the marginal price between assets is closer to 1:1 for a greater amount of swaps. With $\theta = 0$ the pool always delivers 1:1 swaps. This resembles Stable Swap, but with the advantage of allowing for asynchronous swaps.
 
-## CatalystVaultFactory.sol
+## CatalystFactory.sol
 
-`CatalystVaultFactory.sol` handles the deployment and configuration of Catalyst vaults proxy contracts within a single call.
+`CatalystFactory.sol` handles the deployment and configuration of Catalyst vaults proxy contracts within a single call.
 
 ## CatalystIBCInterface.sol
 

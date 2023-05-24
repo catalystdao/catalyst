@@ -7,7 +7,7 @@ import {SafeTransferLib} from 'solmate/src/utils/SafeTransferLib.sol';
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/utils/Multicall.sol";
-import "./CatalystVaultFactory.sol";
+import "./CatalystFactory.sol";
 import "./FixedPointMathLib.sol";
 import "./CatalystIBCInterface.sol";
 import "./interfaces/IOnCatalyst.sol";
@@ -132,13 +132,13 @@ abstract contract CatalystVaultCommon is
     }
 
     function factoryOwner() public view override returns (address) {
-        return CatalystVaultFactory(FACTORY).owner();
+        return CatalystFactory(FACTORY).owner();
     }
 
     /**
      * @notice Only allow Governance to change vault parameters
      * @dev Because of dangerous permissions (setConnection, weight changes, amplification changes):
-     * !CatalystVaultFactory(_factory).owner() must be set to a timelock! 
+     * !CatalystFactory(_factory).owner() must be set to a timelock! 
      */ 
     modifier onlyFactoryOwner() {
         require(msg.sender == factoryOwner());   // dev: Only factory owner

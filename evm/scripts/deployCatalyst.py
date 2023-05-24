@@ -2,7 +2,7 @@ from mimetypes import init
 from brownie import (
     CatalystVaultVolatile,
     CatalystVaultAmplified,
-    CatalystVaultFactory,
+    CatalystFactory,
     Token,
     CatalystIBCInterface,
     IBCEmulator,
@@ -66,7 +66,7 @@ class Catalyst:
         )
 
     def _swapFactory(self):
-        self.swapFactory = CatalystVaultFactory.deploy(0, {"from": self.deployer})
+        self.swapFactory = CatalystFactory.deploy(0, {"from": self.deployer})
 
     def _crosschaininterface(self):
         self.crosschaininterface = CatalystIBCInterface.deploy(
