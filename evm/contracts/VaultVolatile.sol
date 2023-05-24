@@ -275,10 +275,8 @@ contract CatalystVaultVolatile is CatalystVaultCommon {
     /**
      * @notice Solves the equation U = \int_{B-y}^{B} W/w dw for y = B · (1 - exp(-U/W))
      * The value is returned as output token. (not WAD)
-     * @dev All input parameters should be the raw numbers and not WAD.
-     * Since units are always multiplied by WAD, the function
-     * should be treated as mathematically *native*.
-     * @param U Incoming Units.
+     * @dev Since units are always denominated in WAD, the function should be treated as mathematically *native*.
+     * @param U Incoming Units (in WAD).
      * @param B The balance of the vault.
      * @param W The weight associated with the traded token.
      * @return uint256 Output tokens (not WAD).

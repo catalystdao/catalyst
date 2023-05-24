@@ -268,12 +268,11 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
      * @notice Computes the integral \int_{wA}^{wA+wx} 1/w^k · (1-k) dw
      *     = (wA + wx)^(1-k) - wA^(1-k)
      * The value is returned as units, which is always WAD.
-     * @dev All input parameters should be the raw numbers and not WAD.
-     * Since units are always denominated in WAD, the function should be treated as mathematically *native*.
+     * @dev Since units are always denominated in WAD, the function should be treated as mathematically *native*.
      * @param input The input amount provided by the user.
      * @param A The balance of the vault.
      * @param W The weight associated with the traded token.
-     * @param oneMinusAmp The amplification of the vault.
+     * @param oneMinusAmp The amplification of the vault (in WAD).
      * @return uint256 Units (units are **always** WAD).
      */
     function _calcPriceCurveArea(
@@ -311,13 +310,11 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
      *         )^(1/(1-k))
      *     )
      * The value is returned as output token. (not WAD)
-     * @dev All input parameters should be the raw numbers and not WAD.
-     * Since units are always multiplied by WAD, the function
-     * should be treated as mathematically *native*.
-     * @param U Incoming Units.
+     * @dev Since units are always denominated in WAD, the function should be treated as mathematically *native*.
+     * @param U Incoming Units (in WAD).
      * @param B The balance of the vault.
      * @param W The weight associated with the traded token.
-     * @param oneMinusAmp The vault amplification.
+     * @param oneMinusAmp The vault amplification (in WAD).
      * @return uint25 Output tokens (not WAD).
      */
     function _calcPriceCurveLimit(
@@ -351,13 +348,12 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
      * cross-chain swaps and atomic swaps are implemented with the same equations.
      * As such, _calcPriceCurveArea and _calcPriceCurveLimit are used rather than the
      * true full equation.
-     * @dev All input parameters should be the raw numbers and not WAD.
      * @param input The input amount provided by the user.
      * @param A The vault balance for the input token.
      * @param B The vault balance for the output token.
      * @param W_A The weight associated with the input token 
      * @param W_B The weight associated with the output token 
-     * @param oneMinusAmp The vault amplification.
+     * @param oneMinusAmp The vault amplification (in WAD).
      * @return uint256 Output tokens (not WAD).
      */
     function _calcCombinedPriceCurves(
