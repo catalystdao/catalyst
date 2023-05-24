@@ -7,7 +7,7 @@ import {SafeTransferLib} from 'solmate/src/utils/SafeTransferLib.sol';
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "./FixedPointMathLib.sol";
 import "./CatalystIBCInterface.sol";
-import "./VaultCommon.sol";
+import "./CatalystVaultCommon.sol";
 import "./ICatalystV1Vault.sol";
 
 /**
@@ -20,7 +20,7 @@ import "./ICatalystV1Vault.sol";
  * The following contract supports between 1 and 3 assets for
  * atomic swaps. To increase the number of tokens supported,
  * change MAX_ASSETS to the desired maximum token amount.
- * This constant is set in "VaultCommon.sol"
+ * This constant is set in "CatalystVaultCommon.sol"
  *
  * This vault implements the ERC20 specification, such that the
  * contract will be its own vault token.
