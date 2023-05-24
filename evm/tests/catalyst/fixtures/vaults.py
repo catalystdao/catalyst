@@ -47,7 +47,7 @@ def deploy_vault(
             else:
                 raise Exception(f"Unknown swap_vault_type '{swap_vault_type}'.")
 
-        tx = swap_factory.deploy_swapvault(
+        tx = swap_factory.deployVault(
             template_address,
             tokens,
             token_balances,

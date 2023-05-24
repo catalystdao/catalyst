@@ -8,15 +8,14 @@ pragma solidity ^0.8.16;
 interface ICatalystV1VaultEvents {
     /**
      * @notice  Describes an atomic swap between the 2 tokens: _fromAsset and _toAsset.
-     * @dev Explain to a developer any extra details
-     * @param toAccount The user / exchange who facilitated the trade (msg.sender)
+     * @param account The user / exchange who facilitated the trade (msg.sender)
      * @param fromAsset The asset which was sold in exchange for _toAsset
      * @param toAsset The asset which was purchased with _fromAsset
      * @param fromAmount The number of _fromAsset sold
      * @param toAmount The number of tokens provided to toAccount
      */
     event LocalSwap(
-        address indexed toAccount,
+        address indexed account,
         address fromAsset,
         address toAsset,
         uint256 fromAmount,
@@ -25,14 +24,13 @@ interface ICatalystV1VaultEvents {
 
     /**
      * @notice Describes the creation of an external swap: Cross-chain swap.
-     * @dev If _fromAsset is the proxy contract or _toAsset is 2**8-1, the swap is a liquidity swap.
      * @param channelId The target chain identifier
      * @param toVault The target vault.
      * @param toAccount The recipient of the trade. The person who bought the trade is not present.
      * @param fromAsset The asset which was sold in exchange for _toAsset.
      * @param toAssetIndex The token index of the asset to purchase on _toChain.
      * @param fromAmount The number of _fromAsset sold.
-     * @param minOut The vault fee. Taken from fromAmount. Numerical losses/fees are for obvious reasons not included.
+     * @param minOut The minimum output to be accepted of fromAsset.
      * @param units The calculated number of units bought. Will be sold to buy _toAsset
      * @param fee The number of tokens paid to the vault in fees.
      */
@@ -50,7 +48,6 @@ interface ICatalystV1VaultEvents {
 
     /**
      * @notice Describes the arrival of an external swap: Cross-chain swap.
-     * @dev If _fromAsset is the proxy contract, the swap is a liquidity swap.
      * If toAccount is used to match trades, remember to convert it into 64 + 1 bytes.
      * @param channelId The target chain identifier
      * @param fromVault The source vault.
@@ -115,7 +112,6 @@ interface ICatalystV1VaultEvents {
 
     /**
      * @notice Emitted on liquidity deposits.
-     * @dev Explain to a developer any extra details
      * @param toAccount The depositor. Is credited with _mints vault tokens.
      * @param mint The number of minted vault tokens credited to toAccount
      * @param assets An array of the number of deposited assets.
@@ -124,7 +120,6 @@ interface ICatalystV1VaultEvents {
 
     /**
      * @notice Emitted on liquidity withdrawal.
-     * @dev Explain to a developer any extra details
      * @param toAccount The withdrawer. Is debited _burns vault tokens.
      * @param burn The number of burned vault tokens.
      * @param assets An array of the token amounts returned

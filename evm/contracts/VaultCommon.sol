@@ -16,7 +16,7 @@ import "./interfaces/ICatalystV1VaultErrors.sol";
 
 /**
  * @title Catalyst: Common Swap Vault Logic
- * @author Catalyst Labs
+ * @author Cata Labs
  * @notice This abstract contract defines general logic of a Catalyst vault like:
  * - Vault Token through Solmate's ERC20 implementation.
  * - Connection management
@@ -92,7 +92,7 @@ abstract contract CatalystVaultCommon is
 
     /// @notice The setupMaster is the short-term owner of the vault.
     /// They can connect the vault to vaults on other chains.
-    /// @dev !Can extract all of the vault value! Should be set to address(0) once setup is complete.
+    /// @dev !Can extract all of the vault value! Should be set to address(0) once setup is complete via 'finishSetup()'.
     address public _setupMaster;
 
     //--- Messaging router limit ---//
@@ -159,7 +159,7 @@ abstract contract CatalystVaultCommon is
 
     /// @notice Does this vault define a pool without other vaults?
     /// @dev Checked by comparing  _chainInterface to address(0). It is possible that 
-    /// no connections have been reacted and this returns false.
+    /// no connections have been created and this returns false.
     function onlyLocal() public view override returns (bool) {
         return _chainInterface == address(0);
     }

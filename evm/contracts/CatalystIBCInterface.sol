@@ -12,7 +12,7 @@ import "./CatalystIBCPayload.sol";
 
 /**
  * @title Catalyst: Generalised IBC Interface
- * @author Catalyst Labs
+ * @author Cata Labs
  * @notice This contract is a generalised proof of concept
  * IBC interface using an example ABI.
  * It acts as an intermediate between the swap vault and the router to

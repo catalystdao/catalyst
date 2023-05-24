@@ -53,7 +53,7 @@ class Catalyst:
         tokens.append(self.create_token("one", "I"))
         tokens.append(self.create_token("two", "II"))
         tokens.append(self.create_token("three", "III"))
-        self.deploy_swapvault(
+        self.deployVault(
             tokens, amp=self.amp, name=self.vaultname, symbol=self.vaultsymbol
         )
 
@@ -73,7 +73,7 @@ class Catalyst:
             self.ibcinterface, {"from": self.deployer}
         )
 
-    def deploy_swapvault(
+    def deployVault(
         self,
         tokens,
         init_balances=None,
@@ -97,7 +97,7 @@ class Catalyst:
             for token in tokens:
                 weights.append(1)
 
-        self.deploytx = self.swapFactory.deploy_swapvault(
+        self.deploytx = self.swapFactory.deployVault(
             self.swapTemplate,
             tokens,
             init_balances,

@@ -14,7 +14,7 @@ interface ICatalystV1VaultState {
 
     function _lastModificationTime() external view returns (uint256);
 
-    /// @notice The vault fee in X64. Implementation of fee: mulX64(_amount, _vaultFee)
+    /// @notice The vault fee in WAD. Implementation of fee: mulWadDown(_amount, _vaultFee)
     function _vaultFee() external view returns (uint256);
 
     function _governanceFeeShare() external view returns (uint256);

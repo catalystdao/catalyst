@@ -12,7 +12,7 @@ import "./ICatalystV1Vault.sol";
 
 /**
  * @title Catalyst: The Multi-Chain Swap vault
- * @author Catalyst Labs
+ * @author Cata Labs
  * @notice Catalyst multi-chain swap vault using the asset specific
  * pricing curve: W/w where W is an asset-specific weight and w
  * is the vault balance.
@@ -60,12 +60,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon {
 
     /**
      * @notice Configures an empty vault.
-     * @dev If less than MAX_ASSETS are used to initiate the vault
-     * let the remaining <assets> be ZERO_ADDRESS / address(0)
-     *
-     * Unused weights can be whatever. (0 is recommended.)
-     *
-     * The initial token amounts should have been sent to the vault before setup is called.
+     * @dev The initial token amounts should have been sent to the vault before setup is called.
      * Since someone can call setup can claim the initial tokens, this needs to be
      * done atomically!
      *
@@ -286,7 +281,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon {
      * @param U Incoming Units.
      * @param B The balance of the vault.
      * @param W The weight associated with the traded token.
-     * @return uint25 Output tokens (not WAD).
+     * @return uint256 Output tokens (not WAD).
      */
     function _calcPriceCurveLimit(
         uint256 U,
@@ -420,11 +415,11 @@ contract CatalystVaultVolatile is CatalystVaultCommon {
     /**
      * @notice Deposits a  user-configurable amount of tokens.
      * @dev The swap fee is imposed on deposits.
-     * Requires approvals for all tokens within the vault.
+     * Requires approvals for all tokens deposited within the vault.
      * It is advised that the deposit matches the vault's %token distribution.
      * Deposit is done by converting tokenAmounts into units and then using
      * the macro for units to vault tokens. (_calcPriceCurveLimitShare).
-     * The elements of tokenAmounts correspond to _tokenIndexing[0...2].
+     * The elements of tokenAmounts correspond to _tokenIndexing[0...N].
      * @param tokenAmounts An array of the tokens amounts to be deposited.
      * @param minOut The minimum number of vault tokens to be minted.
      * @return uint256 The number of minted vault tokens.
@@ -802,9 +797,9 @@ contract CatalystVaultVolatile is CatalystVaultCommon {
      * @param toAccount The recipient.
      * @param U Incoming units.
      * @param minOut Minimum number of token to buy. Reverts back to the sending side.
-     * @param fromAmount Used to connect swaps cross-chain. The input amount minus fees on the sending chain.
-     * @param fromAsset Used to connect swaps cross-chain. The input asset on the source chain.
-     * @param blockNumberMod Used to connect swaps cross-chain. The block number from the source chain.
+     * @param fromAmount Used to match cross-chain swap events. The input amount minus fees on the sending chain.
+     * @param fromAsset Used to match cross-chain swap events. The input asset on the source chain.
+     * @param blockNumberMod Used to match cross-chain swap events. The block number from the source chain.
      */
     function receiveAsset(
         bytes32 channelId,
@@ -887,7 +882,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon {
     //--- Liquidity swapping ---//
     // Because of the way vault tokens work in a pool, there
     // needs to be a way for users to easily get a distributed stake.
-    // Liquidity swaps is a macro implemented on the smart contract level to:
+    // Liquidity swaps is a macro implemented at the smart contract level equivalent to:
     // 1. Withdraw tokens.
     // 2. Convert tokens to units & transfer to target vault.
     // 3. Convert units to an even mix of tokens.
@@ -1020,8 +1015,8 @@ contract CatalystVaultVolatile is CatalystVaultCommon {
      * @param U Incoming units.
      * @param minVaultTokens The minimum number of vault tokens to mint on target vault. Otherwise: Reject
      * @param minReferenceAsset The minimum number of reference asset the vaults tokens are worth. Otherwise: Reject
-     * @param fromAmount Used to connect swaps cross-chain. The input amount on the source chain.
-     * @param blockNumberMod Used to connect swaps cross-chain. The block number from the source chain.
+     * @param fromAmount Used to match cross-chain swap events. The input amount on the source chain.
+     * @param blockNumberMod Used to match cross-chain swap events. The block number from the source chain.
      * @return uint256 Number of vault tokens minted to the recipient.
      */
     function receiveLiquidity(
@@ -1062,7 +1057,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon {
             // (\prod_i balance_i ** weight_i)**1 = \prod_i balance_i ** weight_i
             // Thus balance0 is a point on the invariant.
             // It is computed as: balance0 = exp((\sum (ln(balance_i) * weight_i)/(\sum_j weights_j)).
-            uint256 localInvariant= 0;
+            uint256 localInvariant = 0;
             // Computes \sum (ln(balance_i) * weight_i
             for (uint256 it; it < MAX_ASSETS;) {
                 address token = _tokenIndexing[it];

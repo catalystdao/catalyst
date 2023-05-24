@@ -13,7 +13,7 @@ uint256 constant MAX_GOVERNANCE_FEE_SHARE = 75e16;   // 75%
 
 /**
  * @title Catalyst Swap Factory
- * @author Catalyst Labs
+ * @author Cata Labs
  * @notice Allows permissionless deployment Catalyst Swap vaults
  * and defines governance address for swap vaults to read.
  * !The owner of the factory must be a timelock!
@@ -22,7 +22,7 @@ contract CatalystVaultFactory is Ownable, ICatalystV1FactoryEvents {
     using SafeTransferLib for ERC20;
 
     /// @notice A mapping which describes if a vault has been created by this factory. Indexed by chainInterface then vault address.
-    mapping(address => mapping(address => bool)) public IsCreatedByFactory;
+    mapping(address => mapping(address => bool)) public isCreatedByFactory;
 
     /// @notice Default governance fee. When a vault is created, this is the governance fee applied to that vault.
     uint256 public _defaultGovernanceFee;
@@ -40,8 +40,8 @@ contract CatalystVaultFactory is Ownable, ICatalystV1FactoryEvents {
     }
 
     /**
-     * @notice Deploys a Catalyst swap vaults, funds the swap vault with tokens, and calls setup.
-     * @dev The deployer needs to set approvals for this contract before calling deploy_swapvault
+     * @notice Deploys a Catalyst swap vault, funds the swap vault with tokens, and calls setup.
+     * @dev The deployer needs to set approvals for this contract before calling deployVault
      * @param vaultTemplate The template the transparent proxy should target.
      * @param assets The list of assets the vault should support.
      * @param init_balances The initial balances of the swap vault. (Should be approved)
@@ -53,7 +53,7 @@ contract CatalystVaultFactory is Ownable, ICatalystV1FactoryEvents {
      * @param chainInterface The cross chain interface used for cross-chain swaps. (Can be address(0) to disable cross-chain swaps.)
      * @return address The address of the created Catalyst Swap Vault. (minimal transparent proxy)
      */
-    function deploy_swapvault(
+    function deployVault(
         address vaultTemplate,
         address[] calldata assets,
         uint256[] calldata init_balances,
@@ -111,7 +111,7 @@ contract CatalystVaultFactory is Ownable, ICatalystV1FactoryEvents {
             assets,
             amp
         );
-        IsCreatedByFactory[chainInterface][swapVault] = true;
+        isCreatedByFactory[chainInterface][swapVault] = true;
 
         return swapVault;
     }
