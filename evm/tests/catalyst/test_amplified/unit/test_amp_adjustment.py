@@ -9,8 +9,8 @@ TWOWEEK = ONEWEEK * 2
 # Create a 'local_vault' fixture to replace the 'vault' fixture, as the vaults of the
 # latter are always 'cross chain' (i.e. they have a non-zero interface address)
 @pytest.fixture(scope="module")
-def local_vault(group_config, group_tokens, deploy_vault, vault_index, deployer):
-    yield deploy_vault(
+def local_vault(group_config, group_tokens, deploy_swapvault, vault_index, deployer):
+    yield deploy_swapvault(
         tokens=group_tokens[vault_index],
         token_balances=group_config[vault_index]["init_balances"],
         weights=group_config[vault_index]["weights"],

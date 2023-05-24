@@ -3,8 +3,8 @@ import brownie
 
 
 @pytest.fixture(scope="module")
-def sample_vault(deploy_vault, tokens, deployer, amplification, max_vault_assets):
-    yield deploy_vault(
+def sample_vault(deploy_swapvault, tokens, deployer, amplification, max_vault_assets):
+    yield deploy_swapvault(
         tokens=tokens[:max_vault_assets],
         token_balances=[10**8] * max_vault_assets,
         weights=[1] * max_vault_assets,
@@ -47,10 +47,10 @@ def test_finish_setup_twice(sample_vault, deployer):
 
 @pytest.mark.parametrize("onlyLocal", [True, False])
 def test_finish_setup_only_local(
-    deploy_vault, tokens, deployer, amplification, max_vault_assets, onlyLocal
+    deploy_swapvault, tokens, deployer, amplification, max_vault_assets, onlyLocal
 ):
 
-    sp = deploy_vault(
+    sp = deploy_swapvault(
         tokens=tokens[:max_vault_assets],
         token_balances=[10**8] * max_vault_assets,
         weights=[1] * max_vault_assets,

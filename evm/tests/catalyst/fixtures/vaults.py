@@ -15,7 +15,7 @@ MAX_VAULT_ASSETS = 3
 
 
 @pytest.fixture(scope="module")
-def deploy_vault(
+def deploy_swapvault(
     accounts,
     swap_factory,
     volatile_swap_vault_template,
@@ -24,7 +24,7 @@ def deploy_vault(
     swap_vault_type,
     deployer,
 ):
-    def _deploy_vault(
+    def _deploy_swapvault(
         tokens,
         token_balances,
         weights,
@@ -65,7 +65,7 @@ def deploy_vault(
         else:
             return CatalystVaultAmplified.at(tx.return_value)
 
-    yield _deploy_vault
+    yield _deploy_swapvault
 
 
 @pytest.fixture(scope="module")
@@ -131,10 +131,10 @@ def group_tokens(group_config, tokens):
 
 
 @pytest.fixture(scope="module")
-def group_vaults(group_config, group_tokens, deploy_vault, deployer):
+def group_vaults(group_config, group_tokens, deploy_swapvault, deployer):
 
     yield [
-        deploy_vault(
+        deploy_swapvault(
             tokens=tokens,
             token_balances=vault["init_balances"],
             weights=vault["weights"],
