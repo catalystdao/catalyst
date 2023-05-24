@@ -289,7 +289,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon {
      * @return uint25 Output tokens (not WAD).
      */
     function _calcPriceCurveLimit(
-        uint256 U,
+        uint256 Units,
         uint256 B,
         uint256 W
     ) internal pure returns (uint256) {
@@ -332,7 +332,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon {
      * @return uint256 Vault share scaled by WAD.
      */
     function _calcPriceCurveLimitShare(
-        uint256 U,
+        uint256 Units,
         uint256 W
     ) internal pure returns (uint256) {
         // Compute the non vault ownership share. (1 - vault ownership share)
@@ -372,7 +372,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon {
      */
     function calcReceiveAsset(
         address toAsset,
-        uint256 U
+        uint256 Units
     ) public view override returns (uint256) {
         // B low => fewer tokens returned. Subtract the escrow amount to decrease the balance.
         uint256 B = ERC20(toAsset).balanceOf(address(this)) - _escrowedTokens[toAsset];
@@ -437,7 +437,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon {
         // Smaller initialTotalSupply => fewer vault tokens minted: _escrowedVaultTokens is not added.
         uint256 initialTotalSupply = totalSupply; 
 
-        uint256 U = 0;
+        uint256 Units = 0;
         for (uint256 it; it < MAX_ASSETS;) {
             address token = _tokenIndexing[it];
             if (token == address(0)) break;
@@ -575,7 +575,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon {
 
         // Compute the unit worth of the vault tokens.
         // The following line implies that one cannot withdraw all liquidity using this function.
-        uint256 U = uint256(FixedPointMathLib.lnWad( // uint256: ln computed of a value which is greater than > 1 is always positive
+        uint256 Units = uint256(FixedPointMathLib.lnWad( // uint256: ln computed of a value which is greater than > 1 is always positive
             int256(FixedPointMathLib.divWadDown(initialTotalSupply, initialTotalSupply - vaultTokens)    // int265: if vaultTokens is almost equal to initialTotalSupply this can overflow the cast. The result is a negative input to lnWad which fails.
         ))) * wsum;
 
@@ -708,7 +708,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon {
         uint256 fee = FixedPointMathLib.mulWadDown(amount, _vaultFee);
 
         // Calculate the units bought.
-        uint256 U = calcSendAsset(fromAsset, amount - fee);
+        uint256 Units = calcSendAsset(fromAsset, amount - fee);
 
         // Send the purchased units to the target vault on the target chain.
         CatalystIBCInterface(_chainInterface).sendCrossChainAsset(
@@ -811,7 +811,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon {
         bytes calldata fromVault,
         uint256 toAssetIndex,
         address toAccount,
-        uint256 U,
+        uint256 Units,
         uint256 minOut,
         uint256 fromAmount,
         bytes calldata fromAsset,
@@ -854,7 +854,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon {
         bytes calldata fromVault,
         uint256 toAssetIndex,
         address toAccount,
-        uint256 U,
+        uint256 Units,
         uint256 minOut,
         uint256 fromAmount,
         bytes calldata fromAsset,
@@ -943,7 +943,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon {
 
         // Compute the unit value of the provided vaultTokens.
         // This step simplifies withdrawing and swapping into a single calculation.
-        uint256 U = uint256(FixedPointMathLib.lnWad(  // uint256: ln computed of a value greater than 1 is always positive
+        uint256 Units = uint256(FixedPointMathLib.lnWad(  // uint256: ln computed of a value greater than 1 is always positive
             int256(FixedPointMathLib.divWadDown(initialTotalSupply, initialTotalSupply - vaultTokens))   // int256: if casting overflows, the result is a negative input. lnWad reverts.
         )) * wsum;
 
@@ -1028,7 +1028,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon {
         bytes32 channelId,
         bytes calldata fromVault,
         address toAccount,
-        uint256 U,
+        uint256 Units,
         uint256 minVaultTokens,
         uint256 minReferenceAsset,
         uint256 fromAmount,
@@ -1113,7 +1113,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon {
         bytes32 channelId,
         bytes calldata fromVault,
         address who,
-        uint256 U,
+        uint256 Units,
         uint256 minVaultTokens,
         uint256 minReferenceAsset,
         uint256 fromAmount,
@@ -1158,7 +1158,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon {
     function onSendAssetSuccess(
         bytes32 channelId,
         bytes calldata toAccount,
-        uint256 U,
+        uint256 Units,
         uint256 escrowAmount,
         address escrowToken,
         uint32 blockNumberMod
@@ -1197,7 +1197,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon {
     function onSendLiquiditySuccess(
         bytes32 channelId,
         bytes calldata toAccount,
-        uint256 U,
+        uint256 Units,
         uint256 escrowAmount,
         uint32 blockNumberMod
     ) public override {

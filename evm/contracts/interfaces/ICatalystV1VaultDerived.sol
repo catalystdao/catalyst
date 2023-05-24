@@ -15,7 +15,7 @@ interface ICatalystV1VaultDerived {
      * @param U The number of units used to buy to.
      * @return uint256 Number of purchased tokens.
      */
-    function calcReceiveAsset(address to, uint256 U) external view returns (uint256);
+    function calcReceiveAsset(address to, uint256 Units) external view returns (uint256);
 
     /**
      * @notice Computes the output of localSwap, without executing one.
