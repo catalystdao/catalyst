@@ -236,7 +236,7 @@ abstract contract CatalystVaultCommon is
      * @dev Implement a lot of similar logic to getUnitCapacity. 
      * @param units The number of units to check and set.
      */
-    function _updateUnitCapacity(uint256 units) internal {
+    function _updateUnitCapacity(uint256 Units) internal {
         uint256 MUC = _maxUnitCapacity;
 
         // The delta change to the limit is: timePassed · slope = timePassed · Max/decayrate
