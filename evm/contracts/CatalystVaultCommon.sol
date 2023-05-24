@@ -156,7 +156,7 @@ abstract contract CatalystVaultCommon is
     /**
      * @notice Verify a connected pool.
      */ 
-    modifier onlyConnectedPool(bytes32 channelId, bytes calldata vault) {
+    modifier onlyConnectedPool(bytes32 channelId, bytes memory vault) {
         // Only allow connected vaults
         if (!_vaultConnection[channelId][vault]) revert VaultNotConnected(channelId, vault);
         _;
