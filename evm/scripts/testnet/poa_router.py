@@ -1,8 +1,6 @@
 import web3
 from web3 import Web3
 from web3.middleware import geth_poa_middleware
-from emulator_abi import abi as e_abi
-from cci_abi import abi as cci_abi
 from time import sleep
 import json
 import os
@@ -11,6 +9,12 @@ from hashlib import sha256
 
 with open("vault_abi.json", "r") as f:
     vault_abi = json.load(f)
+
+with open("cci_abi.json", "r") as f:
+    cci_abi = json.load(f)
+    
+with open("emulator_abi.json", "r") as f:
+    e_abi = json.load(f)
 
 
 class PoARouter:
