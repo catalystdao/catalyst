@@ -15,9 +15,9 @@ contract IntegralsVolatile {
      * @dev All input amounts should be the raw numbers and not WAD.
      * Since units are always denominated in WAD, the function should be treated as mathematically *native*.
      * @param input The input amount.
-     * @param A The current pool balance of the x token.
+     * @param A The current vault balance of the x token.
      * @param W The weight of the x token.
-     * @return uint256 Group-specific units (units are **always** WAD).
+     * @return uint256 Units (units are **always** WAD).
      */
     function _calcPriceCurveArea(
         uint256 input,
@@ -26,7 +26,7 @@ contract IntegralsVolatile {
     ) internal pure returns (uint256) {
         // Notice, A + in and A are not WAD but divWadDown is used anyway.
         // That is because lnWad requires a scaled number.
-        return W * uint256(FixedPointMathLib.lnWad(int256(FixedPointMathLib.divWadDown(A + input, A))));    // int256 casting is safe. If overflows, it returns negative. lnWad fails on negative numbers. If the pool balance is high, this is unlikely.
+        return W * uint256(FixedPointMathLib.lnWad(int256(FixedPointMathLib.divWadDown(A + input, A))));    // int256 casting is safe. If overflows, it returns negative. lnWad fails on negative numbers. If the vault balance is high, this is unlikely.
     }
 
     /**
@@ -35,8 +35,8 @@ contract IntegralsVolatile {
      * @dev All input amounts should be the raw numbers and not WAD.
      * Since units are always multiplied by WAD, the function
      * should be treated as mathematically *native*.
-     * @param U Incoming pool specific units.
-     * @param B The current pool balance of the y token.
+     * @param U Incoming vault specific units.
+     * @param B The current vault balance of the y token.
      * @param W The weight of the y token.
      * @return uint25 Output denominated in output token. (not WAD)
      */
@@ -59,8 +59,8 @@ contract IntegralsVolatile {
      * _calcPriceCurveLimit(_calcPriceCurveArea(input, A, W_A), B, W_B).
      * @dev All input amounts should be the raw numbers and not WAD.
      * @param input The input amount.
-     * @param A The current pool balance of the x token.
-     * @param B The current pool balance of the y token.
+     * @param A The current vault balance of the x token.
+     * @param B The current vault balance of the y token.
      * @param W_A The weight of the x token.
      * @param W_B The weight of the y token.
      * @return uint256 Output denominated in output token.
@@ -81,16 +81,16 @@ contract IntegralsVolatile {
      * specific token is never done.
      * @param U Input units.
      * @param W The generalised weights.
-     * @return uint256 Output denominated in pool share.
+     * @return uint256 Output denominated in vault share.
      */
     function _calcPriceCurveLimitShare(
         uint256 U,
         uint256 W
     ) internal pure returns (uint256) {
-        // Compute the non pool ownership share. (1 - pool ownership share)
+        // Compute the non vault ownership share. (1 - vault ownership share)
         uint256 npos = uint256(FixedPointMathLib.expWad(-int256(U / W)));   // int256 casting is initially not safe. If overflow, the equation becomes: exp(U/W). In this case, when subtracted from 1 (later), Solidity's built-in safe math protection catches the overflow since exp(U/W) > 1.
         
-        // Compute the pool owner share before liquidity has been added.
+        // Compute the vault owner share before liquidity has been added.
         // (solve share = pt/(PT+pt) for pt.)
         return FixedPointMathLib.divWadDown(FixedPointMathLib.WAD - npos, npos);
     }

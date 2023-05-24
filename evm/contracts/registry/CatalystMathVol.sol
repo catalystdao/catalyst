@@ -5,9 +5,9 @@ pragma solidity ^0.8.16;
 import {ERC20} from 'solmate/src/tokens/ERC20.sol';
 import {ICatalystMathLibVol} from "./interfaces/ICatalystMathLibVol.sol";
 import "../FixedPointMathLib.sol";
-import "../interfaces/ICatalystV1PoolDerived.sol";
-import "../interfaces/ICatalystV1PoolState.sol";
-import "../SwapPoolVolatile.sol";
+import "../interfaces/ICatalystV1VaultDerived.sol";
+import "../interfaces/ICatalystV1VaultState.sol";
+import "../VaultVolatile.sol";
 import "../IntegralsVolatile.sol";
 
 /**
@@ -19,7 +19,7 @@ contract CatalystMathVol is IntegralsVolatile, ICatalystMathLibVol {
     
     /**
      * @notice Helper function which returns the true weight. If weights are being adjusted, the pure vault weights might be inaccurate.
-     * @dev If weights are being changed, the weights read directly from the pools are only updated when they are needed. (swaps, balance changes, etc)
+     * @dev If weights are being changed, the weights read directly from the vaults are only updated when they are needed. (swaps, balance changes, etc)
      * This function implements the weight change logic (almost exactly), such that one can read the weight if one were to execute a balance change.
      * @param vault The address of the vault to fetch the weight for.
      * @param asset The asset to get the weight for.
@@ -27,16 +27,16 @@ contract CatalystMathVol is IntegralsVolatile, ICatalystMathLibVol {
      */
     function getTrueWeight(address vault, address asset) public view returns(uint256) {
         // First, lets check if we actually needs to do any adjustments:
-        uint256 adjTarget = CatalystSwapPoolVolatile(vault)._adjustmentTarget();
+        uint256 adjTarget = CatalystVaultVolatile(vault)._adjustmentTarget();
 
-        uint256 currentWeight = CatalystSwapPoolVolatile(vault)._weight(asset);
+        uint256 currentWeight = CatalystVaultVolatile(vault)._weight(asset);
         
         if (adjTarget == 0) 
             return currentWeight; // Great, we don't need to do any adjustments:
 
         // We need to do the adjustment. Fetch relevant variables.
-        uint256 targetWeight = CatalystSwapPoolVolatile(vault)._targetWeight(asset);
-        uint256 lastModification = CatalystSwapPoolVolatile(vault)._lastModificationTime();
+        uint256 targetWeight = CatalystVaultVolatile(vault)._targetWeight(asset);
+        uint256 lastModification = CatalystVaultVolatile(vault)._lastModificationTime();
 
         // If the current time is past the adjustment, we should return the final weights
         if (block.timestamp >= adjTarget) 
@@ -60,12 +60,12 @@ contract CatalystMathVol is IntegralsVolatile, ICatalystMathLibVol {
     /** 
      * @notice Helper function which returns the amount after fee.
      * @dev The fee is taken from the input amount
-     * @param vault Vault to read pool fee.
+     * @param vault Vault to read vault fee.
      * @param amount Input swap amount
-     * @return uint256 Input amount after pool fee.
+     * @return uint256 Input amount after vault fee.
      */
     function calcFee(address vault, uint256 amount) public view returns(uint256) {
-        uint256 fee = CatalystSwapPoolVolatile(vault)._poolFee();
+        uint256 fee = CatalystVaultVolatile(vault)._vaultFee();
 
         return FixedPointMathLib.mulWadDown(amount, FixedPointMathLib.WAD - fee);
     }
@@ -78,7 +78,7 @@ contract CatalystMathVol is IntegralsVolatile, ICatalystMathLibVol {
      * @param input The input amount.
      * @param A The current vault balance of the x token.
      * @param W The weight of the x token.
-     * @return uint256 Group-specific units (units are **always** WAD).
+     * @return uint256 Units (units are **always** WAD).
      */
     function calcPriceCurveArea(
         uint256 input,
@@ -94,7 +94,7 @@ contract CatalystMathVol is IntegralsVolatile, ICatalystMathLibVol {
      * @dev All input amounts should be the raw numbers and not WAD.
      * Since units are always multiplied by WAD, the function
      * should be treated as mathematically *native*.
-     * @param U Incoming pool specific units.
+     * @param U Incoming vault specific units.
      * @param B The current vault balance of the y token.
      * @param W The weight of the y token.
      * @return uint25 Output denominated in output token. (not WAD)
@@ -170,7 +170,7 @@ contract CatalystMathVol is IntegralsVolatile, ICatalystMathLibVol {
      * @param vault The vault address to examine.
      * @param fromAsset The address of the token to sell.
      * @param amount The amount of from token to sell.
-     * @return uint256 Group-specific units.
+     * @return uint256 Units.
      */
     function calcSendAsset(
         address vault,
@@ -201,7 +201,7 @@ contract CatalystMathVol is IntegralsVolatile, ICatalystMathLibVol {
         uint256 U
     ) external view override returns (uint256) {
         // B low => fewer tokens returned. Subtract the escrow amount to decrease the balance.
-        uint256 B = ERC20(toAsset).balanceOf(vault) - CatalystSwapPoolVolatile(vault)._escrowedTokens(toAsset);
+        uint256 B = ERC20(toAsset).balanceOf(vault) - CatalystVaultVolatile(vault)._escrowedTokens(toAsset);
         uint256 W = getTrueWeight(vault, toAsset);
 
         // If someone were to purchase a token which is not part of the vault on setup
@@ -231,7 +231,7 @@ contract CatalystMathVol is IntegralsVolatile, ICatalystMathLibVol {
         uint256 amount
     ) external view override returns (uint256) {
         uint256 A = calcFee(vault, ERC20(fromAsset).balanceOf(vault));
-        uint256 B = ERC20(toAsset).balanceOf(vault) - CatalystSwapPoolVolatile(vault)._escrowedTokens(toAsset);
+        uint256 B = ERC20(toAsset).balanceOf(vault) - CatalystVaultVolatile(vault)._escrowedTokens(toAsset);
         uint256 W_A = getTrueWeight(vault, fromAsset);
         uint256 W_B = getTrueWeight(vault, toAsset);
 
@@ -250,7 +250,7 @@ contract CatalystMathVol is IntegralsVolatile, ICatalystMathLibVol {
     }
 
     //* Mid prices and infinitesimal trades.
-    // The mid price is current price in the pool. It is a single point on the combined price curve
+    // The mid price is current price in the vault. It is a single point on the combined price curve
     // of a pair. As a result, it can never be traded on. Furthermore, fees result in a spread 
     // on both sides of the mid price.
     // The mid price, z, should be used to compute price impact. Given an input, x, and an output, y,
@@ -284,7 +284,7 @@ contract CatalystMathVol is IntegralsVolatile, ICatalystMathLibVol {
         address toAsset,
         uint256 calcAsyncPriceFromQuote
     ) public view returns (uint256) {
-        uint256 toBalance = ERC20(toAsset).balanceOf(vault) - CatalystSwapPoolVolatile(vault)._escrowedTokens(toAsset);
+        uint256 toBalance = ERC20(toAsset).balanceOf(vault) - CatalystVaultVolatile(vault)._escrowedTokens(toAsset);
         uint256 W_to = getTrueWeight(vault, toAsset);
         if ((calcAsyncPriceFromQuote == 0) || (W_to == 0)) return 0;
 

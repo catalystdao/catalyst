@@ -1,9 +1,11 @@
 //SPDX-License-Identifier: Unlicensed
 pragma solidity ^0.8.16;
 
-/// @title Events emitted by Catalyst v1 Pools
-/// @notice Contains all events emitted by the pool
-interface ICatalystV1PoolEvents {
+/// @title Events emitted by Catalyst v1 Vaults
+/// @notice Contains all events emitted by the vault
+/// @dev When using events to match transations, the combination of: channelId, fromVault, toAccount, toAsset, units, and block number is semi-guranteed to be unique.
+///     If more than 2**32 blocks exist, then all instances are guaranteed to be non-overlapping
+interface ICatalystV1VaultEvents {
     /**
      * @notice  Describes an atomic swap between the 2 tokens: _fromAsset and _toAsset.
      * @dev Explain to a developer any extra details
@@ -24,78 +26,98 @@ interface ICatalystV1PoolEvents {
     /**
      * @notice Describes the creation of an external swap: Cross-chain swap.
      * @dev If _fromAsset is the proxy contract or _toAsset is 2**8-1, the swap is a liquidity swap.
-     * @param toPool The target pool.
+     * @param channelId The target chain identifier
+     * @param toVault The target vault.
      * @param toAccount The recipient of the trade. The person who bought the trade is not present.
      * @param fromAsset The asset which was sold in exchange for _toAsset.
      * @param toAssetIndex The token index of the asset to purchase on _toChain.
-     * @param fromAmount The number of _fromAsset sold
+     * @param fromAmount The number of _fromAsset sold.
+     * @param minOut The vault fee. Taken from fromAmount. Numerical losses/fees are for obvious reasons not included.
      * @param units The calculated number of units bought. Will be sold to buy _toAsset
-     * @param minOut The pool fee. Taken from fromAmount. Numerical losses/fees are for obvious reasons not included.
+     * @param fee The number of tokens paid to the vault in fees.
      */
     event SendAsset(
-        bytes32 indexed toPool,
-        bytes32 indexed toAccount,
+        bytes32 channelId,
+        bytes toVault,
+        bytes toAccount,
         address fromAsset,
         uint8 toAssetIndex,
         uint256 fromAmount,
-        uint256 units,
         uint256 minOut,
-        bytes32 swapHash
+        uint256 units,
+        uint256 fee
     );
 
     /**
      * @notice Describes the arrival of an external swap: Cross-chain swap.
      * @dev If _fromAsset is the proxy contract, the swap is a liquidity swap.
-     * @param fromPool The source pool.
+     * If toAccount is used to match trades, remember to convert it into 64 + 1 bytes.
+     * @param channelId The target chain identifier
+     * @param fromVault The source vault.
      * @param toAccount The recipient of the trade.
      * @param toAsset The asset which was purchased with _fromAsset
      * @param units The number of units sent from the other chain.
      * @param toAmount The number of tokens provided to toAccount
+     * @param fromAmount The amount spent to get units on the source side.
+     * @param fromAsset The provided asset on the source side.
+     * @param sourceBlockNumberMod The block number of the sending transaction mod 2**32 - 1
      */
     event ReceiveAsset(
-        bytes32 fromPool,
-        address indexed toAccount,
+        bytes32 channelId,
+        bytes fromVault,
+        address toAccount,
         address toAsset,
         uint256 units,
         uint256 toAmount,
-        bytes32 swapHash
+        uint256 fromAmount,
+        bytes fromAsset,
+        uint32 sourceBlockNumberMod
+
     );
 
     /**
      * @notice Describes the creation of a liquidity swap
-     * @param toPool The target pool.
+     * @param channelId The target chain identifier
+     * @param toVault The target vault.
      * @param toAccount The recipient of the liquidity. The person who bought the trade is not present.
      * @param fromAmount The number of _fromAsset sold
+     * @param minOut An array containing a list of minimum outputs [minVaultTokens, minReferenceAssets]
      * @param units The calculated number of liquidity units bought.
      */
     event SendLiquidity(
-        bytes32 indexed toPool,
-        bytes32 indexed toAccount,
+        bytes32 channelId,
+        bytes toVault,
+        bytes toAccount,
         uint256 fromAmount,
-        uint256 units,
-        bytes32 swapHash
+        uint256[2] minOut,
+        uint256 units
     );
 
     /**
      * @notice Describes the arrival of a liquidity swap
-     * @param fromPool The source pool.
+     * @param channelId The target chain identifier
+     * @param fromVault The source vault.
      * @param toAccount The recipient of the liquidity.
      * @param units The number of liquidity units sent from the other chain.
-     * @param toAmount The number of pool tokens provided to toAccount
+     * @param toAmount The number of vault tokens provided to toAccount
+     * @param fromAmount The amount spent to get units on the source side.
+     * @param sourceBlockNumberMod The block number of the sending transaction mod 2**32 - 1
      */
     event ReceiveLiquidity(
-        bytes32 fromPool,
-        address indexed toAccount,
+        bytes32 channelId,
+        bytes fromVault,
+        address toAccount,
         uint256 units,
         uint256 toAmount,
-        bytes32 swapHash
+        uint256 fromAmount,
+        uint256 sourceBlockNumberMod
     );
 
     /**
      * @notice Emitted on liquidity deposits.
      * @dev Explain to a developer any extra details
-     * @param toAccount The depositor. Is credited with _mints pool tokens.
-     * @param mint The number of minted pool tokens credited to toAccount
+     * @param toAccount The depositor. Is credited with _mints vault tokens.
+     * @param mint The number of minted vault tokens credited to toAccount
      * @param assets An array of the number of deposited assets.
      */
     event Deposit(address indexed toAccount, uint256 mint, uint256[] assets);
@@ -103,40 +125,66 @@ interface ICatalystV1PoolEvents {
     /**
      * @notice Emitted on liquidity withdrawal.
      * @dev Explain to a developer any extra details
-     * @param toAccount The withdrawer. Is debited _burns pool tokens.
-     * @param burn The number of burned pool tokens.
+     * @param toAccount The withdrawer. Is debited _burns vault tokens.
+     * @param burn The number of burned vault tokens.
      * @param assets An array of the token amounts returned
      */
     event Withdraw(address indexed toAccount, uint256 burn, uint256[] assets);
 
     /** @notice Called upon successful asset swap. */
-    event SendAssetAck(bytes32 swapHash);
+    event SendAssetSuccess(
+        bytes32 channelId,
+        bytes toAccount,
+        uint256 U,
+        uint256 escrowAmount,
+        address escrowToken,
+        uint32 blockNumberMod
+    );
 
     /** @notice Called upon failed asset swap. */
-    event SendAssetTimeout(bytes32 swapHash);
+    event SendAssetFailure(
+        bytes32 channelId,
+        bytes toAccount,
+        uint256 U,
+        uint256 escrowAmount,
+        address escrowToken,
+        uint32 blockNumberMod
+    );
 
     /** @notice Called upon successful liquidity swap. */
-    event SendLiquidityAck(bytes32 swapHash);
+    event SendLiquiditySuccess(
+        bytes32 channelId,
+        bytes toAccount,
+        uint256 U,
+        uint256 escrowAmount,
+        uint32 blockNumberMod
+        );
 
     /** @notice Called upon failed liquidity swap. */
-    event SendLiquidityTimeout(bytes32 swapHash);
+    event SendLiquidityFailure(
+        bytes32 channelId,
+        bytes toAccount,
+        uint256 U,
+        uint256 escrowAmount,
+        uint32 blockNumberMod
+    );
 
-    /** @notice Pool setup has been finalised. */
+    /** @notice Vault setup has been finalised. */
     event FinishSetup();
 
     /**
      * @notice Emitted on fee administrator adjustment
-     * @param administrator The new pool fee administrator
+     * @param administrator The new vault fee administrator
      */
     event SetFeeAdministrator(
         address administrator
     );
 
     /**
-     * @notice Emitted on pool fee adjustment
-     * @param fee The new pool fee
+     * @notice Emitted on vault fee adjustment
+     * @param fee The new vault fee
      */
-    event SetPoolFee(
+    event SetVaultFee(
         uint256 fee
     );
 
@@ -171,12 +219,12 @@ interface ICatalystV1PoolEvents {
     /**
      * @notice A connection has been modified
      * @param channelId Target chain identifier.
-     * @param toPool Bytes32 representation of the target pool.
+     * @param toVault Bytes32 representation of the target vault.
      * @param newState Boolean indicating if the connection should be open or closed.
      */
     event SetConnection(
         bytes32 channelId,
-        bytes32 toPool,
+        bytes toVault,
         bool newState
     );
 }

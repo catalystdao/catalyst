@@ -6,14 +6,14 @@ import re
     
     
 def test_get_templates_filled(
-    catalyst_describer_filled, volatile_swap_pool_template, amplified_swap_pool_template
+    catalyst_describer_filled, volatile_swap_vault_template, amplified_swap_vault_template
 ):
     templates = catalyst_describer_filled.get_whitelisted_templates()
     
     assert len(templates) == 2
     
-    assert templates[0] == volatile_swap_pool_template.address
-    assert templates[1] == amplified_swap_pool_template.address
+    assert templates[0] == volatile_swap_vault_template.address
+    assert templates[1] == amplified_swap_vault_template.address
 
 
 def test_get_describer(

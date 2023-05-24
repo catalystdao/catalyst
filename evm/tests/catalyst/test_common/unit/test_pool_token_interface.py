@@ -1,57 +1,45 @@
 import pytest
 from brownie import reverts
 
-pytestmark = pytest.mark.no_pool_param
+pytestmark = pytest.mark.no_vault_param
+
 
 @pytest.fixture(scope="module")
-def berg_pool_token_balance(pool, pool_tokens, deployer, berg):
+def berg_vault_token_balance(vault, vault_tokens, deployer, berg):
 
     deposit_percentage = 0.15
-    deposit_amounts = [int(token.balanceOf(pool) * deposit_percentage) for token in pool_tokens]
-    for token, amount in zip(pool_tokens, deposit_amounts):
+    deposit_amounts = [
+        int(token.balanceOf(vault) * deposit_percentage) for token in vault_tokens
+    ]
+    for token, amount in zip(vault_tokens, deposit_amounts):
         token.transfer(berg, amount, {"from": deployer})
-        token.approve(pool, amount, {"from": berg})
-    
-    tx = pool.depositMixed(deposit_amounts, 0, {"from": berg})
+        token.approve(vault, amount, {"from": berg})
+
+    tx = vault.depositMixed(deposit_amounts, 0, {"from": berg})
 
     return tx.return_value
 
 
-
-def test_pool_token_total_supply_query(
-    pool,
-    berg_pool_token_balance
-):
-    assert pool.totalSupply() == berg_pool_token_balance + 10**18       # NOTE: 10**18 is the pool token supply given to the pool deployer
+def test_vault_token_total_supply_query(vault, berg_vault_token_balance):
+    assert (
+        vault.totalSupply() == berg_vault_token_balance + 10**18
+    )  # NOTE: 10**18 is the vault token supply given to the vault deployer
 
 
-
-def test_pool_token_balance_query(
-    pool,
-    berg,
-    berg_pool_token_balance
-):
-    assert pool.balanceOf(berg) == berg_pool_token_balance
+def test_vault_token_balance_query(vault, berg, berg_vault_token_balance):
+    assert vault.balanceOf(berg) == berg_vault_token_balance
 
 
+def test_vault_token_transfer(vault, berg, molly, berg_vault_token_balance):
+    assert vault.balanceOf(berg) == berg_vault_token_balance
+    assert vault.balanceOf(molly) == 0
 
-def test_pool_token_transfer(
-    pool,
-    berg,
-    molly,
-    berg_pool_token_balance
-):
-    assert pool.balanceOf(berg) == berg_pool_token_balance
-    assert pool.balanceOf(molly) == 0
+    transfer_amount = int(0.2 * berg_vault_token_balance)
 
-    transfer_amount = int(0.2 * berg_pool_token_balance)
+    tx = vault.transfer(molly, transfer_amount, {"from": berg})
 
-
-    tx = pool.transfer(molly, transfer_amount, {"from": berg})
-
-
-    assert pool.balanceOf(berg) == berg_pool_token_balance - transfer_amount
-    assert pool.balanceOf(molly) == transfer_amount
+    assert vault.balanceOf(berg) == berg_vault_token_balance - transfer_amount
+    assert vault.balanceOf(molly) == transfer_amount
 
     event = tx.events["Transfer"]
     assert event["from"] == berg
@@ -59,39 +47,26 @@ def test_pool_token_transfer(
     assert event["amount"] == transfer_amount
 
 
+def test_vault_token_transfer_no_balance(vault, berg, molly, berg_vault_token_balance):
+    assert vault.balanceOf(berg) == berg_vault_token_balance
+    assert vault.balanceOf(molly) == 0
 
-def test_pool_token_transfer_no_balance(
-    pool,
-    berg,
-    molly,
-    berg_pool_token_balance
-):
-    assert pool.balanceOf(berg) == berg_pool_token_balance
-    assert pool.balanceOf(molly) == 0
-
-    transfer_amount = int(1.1*berg_pool_token_balance)
-
+    transfer_amount = int(1.1 * berg_vault_token_balance)
 
     with reverts():
-        pool.transfer(molly, transfer_amount, {"from": berg})
+        vault.transfer(molly, transfer_amount, {"from": berg})
 
 
-
-def test_pool_token_set_and_query_allowance(
-    pool,
-    berg,
-    molly,
-    berg_pool_token_balance
+def test_vault_token_set_and_query_allowance(
+    vault, berg, molly, berg_vault_token_balance
 ):
-    assert pool.allowance(berg, molly) == 0
+    assert vault.allowance(berg, molly) == 0
 
-    allowance_amount = int(0.2 * berg_pool_token_balance)
+    allowance_amount = int(0.2 * berg_vault_token_balance)
 
+    tx = vault.approve(molly, allowance_amount, {"from": berg})
 
-    tx = pool.approve(molly, allowance_amount, {"from": berg})
-
-
-    assert pool.allowance(berg, molly) == allowance_amount
+    assert vault.allowance(berg, molly) == allowance_amount
 
     event = tx.events["Approval"]
     assert event["owner"] == berg
@@ -99,24 +74,16 @@ def test_pool_token_set_and_query_allowance(
     assert event["amount"] == allowance_amount
 
 
+def test_vault_token_remove_allowance(vault, berg, molly, berg_vault_token_balance):
 
-def test_pool_token_remove_allowance(
-    pool,
-    berg,
-    molly,
-    berg_pool_token_balance
-):
+    init_allowance_amount = int(0.2 * berg_vault_token_balance)
+    vault.approve(molly, init_allowance_amount, {"from": berg})
 
-    init_allowance_amount = int(0.2 * berg_pool_token_balance)
-    pool.approve(molly, init_allowance_amount, {"from": berg})
+    assert vault.allowance(berg, molly) == init_allowance_amount
 
-    assert pool.allowance(berg, molly) == init_allowance_amount
+    tx = vault.approve(molly, 0, {"from": berg})
 
-
-    tx = pool.approve(molly, 0, {"from": berg})
-
-
-    assert pool.allowance(berg, molly) == 0
+    assert vault.allowance(berg, molly) == 0
 
     event = tx.events["Approval"]
     assert event["owner"] == berg
@@ -124,28 +91,22 @@ def test_pool_token_remove_allowance(
     assert event["amount"] == 0
 
 
-def test_pool_token_transfer_from(
-    pool,
-    berg,
-    molly,
-    elwood,
-    berg_pool_token_balance
+def test_vault_token_transfer_from(
+    vault, berg, molly, elwood, berg_vault_token_balance
 ):
 
-    allowance_amount = int(0.2 * berg_pool_token_balance)
-    pool.approve(molly, allowance_amount, {"from": berg})
+    allowance_amount = int(0.2 * berg_vault_token_balance)
+    vault.approve(molly, allowance_amount, {"from": berg})
 
-    assert pool.balanceOf(elwood) == 0
+    assert vault.balanceOf(elwood) == 0
 
     transfer_amount = int(0.33 * allowance_amount)
 
+    tx = vault.transferFrom(berg, elwood, transfer_amount, {"from": molly})
 
-    tx = pool.transferFrom(berg, elwood, transfer_amount, {"from": molly})
-
-
-    assert pool.balanceOf(berg) == berg_pool_token_balance - transfer_amount
-    assert pool.balanceOf(elwood) == transfer_amount
-    assert pool.allowance(berg, molly) == allowance_amount - transfer_amount
+    assert vault.balanceOf(berg) == berg_vault_token_balance - transfer_amount
+    assert vault.balanceOf(elwood) == transfer_amount
+    assert vault.allowance(berg, molly) == allowance_amount - transfer_amount
 
     event = tx.events["Transfer"]
     assert event["from"] == berg
@@ -153,22 +114,16 @@ def test_pool_token_transfer_from(
     assert event["amount"] == transfer_amount
 
 
-
-def test_pool_token_transfer_from_no_allowance(
-    pool,
-    berg,
-    molly,
-    elwood,
-    berg_pool_token_balance
+def test_vault_token_transfer_from_no_allowance(
+    vault, berg, molly, elwood, berg_vault_token_balance
 ):
 
-    allowance_amount = int(0.2 * berg_pool_token_balance)
-    pool.approve(molly, allowance_amount, {"from": berg})
+    allowance_amount = int(0.2 * berg_vault_token_balance)
+    vault.approve(molly, allowance_amount, {"from": berg})
 
-    assert pool.balanceOf(elwood) == 0
+    assert vault.balanceOf(elwood) == 0
 
     transfer_amount = int(1.1 * allowance_amount)
 
-
     with reverts():
-        pool.transferFrom(berg, elwood, transfer_amount, {"from": molly})
+        vault.transferFrom(berg, elwood, transfer_amount, {"from": molly})

@@ -4,8 +4,8 @@ pragma solidity ^0.8.16;
 
 import {ERC20} from 'solmate/src/tokens/ERC20.sol';
 import "../../FixedPointMathLib.sol";
-import "../../interfaces/ICatalystV1PoolDerived.sol";
-import "../../interfaces/ICatalystV1PoolState.sol";
+import "../../interfaces/ICatalystV1VaultDerived.sol";
+import "../../interfaces/ICatalystV1VaultState.sol";
 
 /**
  * @title Catalyst: The Multi-Chain Swap vault

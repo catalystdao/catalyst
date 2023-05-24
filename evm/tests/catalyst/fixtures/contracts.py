@@ -1,9 +1,9 @@
 import pytest
 
 from brownie import (
-    CatalystSwapPoolFactory,
-    CatalystSwapPoolVolatile,
-    CatalystSwapPoolAmplified,
+    CatalystVaultFactory,
+    CatalystVaultVolatile,
+    CatalystVaultAmplified,
     CatalystIBCInterface,
     IBCEmulator,
     CatalystMathVol,
@@ -20,7 +20,7 @@ def ibc_emulator(deployer):
 
 @pytest.fixture(scope="module")
 def swap_factory(deployer):
-    yield deployer.deploy(CatalystSwapPoolFactory, 0)
+    yield deployer.deploy(CatalystVaultFactory, 0)
 
 
 @pytest.fixture(scope="module")
@@ -33,14 +33,14 @@ def math_lib_amp(deployer):
 
 
 @pytest.fixture(scope="module")
-def volatile_swap_pool_template(deployer, swap_factory, math_lib_vol):
-    yield deployer.deploy(CatalystSwapPoolVolatile, swap_factory, math_lib_vol)
+def volatile_swap_vault_template(deployer, swap_factory, math_lib_vol):
+    yield deployer.deploy(CatalystVaultVolatile, swap_factory, math_lib_vol)
 
 
 @pytest.fixture(scope="module")
-def amplified_swap_pool_template(deployer, swap_factory, math_lib_amp):
-    yield deployer.deploy(CatalystSwapPoolAmplified, swap_factory, math_lib_amp)
-    
+def amplified_swap_vault_template(deployer, swap_factory, math_lib_amp):
+    yield deployer.deploy(CatalystVaultAmplified, swap_factory, math_lib_amp)
+
 
 @pytest.fixture(scope="module")
 def cross_chain_interface(deployer, ibc_emulator):
@@ -57,9 +57,9 @@ def catalyst_describer_blank(deployer):
 
 
 @pytest.fixture(scope="module")
-def catalyst_describer_filled(deployer, catalyst_describer_blank, volatile_swap_pool_template, amplified_swap_pool_template, cross_chain_interface):
-    catalyst_describer_blank.add_whitelisted_template(volatile_swap_pool_template, 1, {'from': deployer})
-    catalyst_describer_blank.add_whitelisted_template(amplified_swap_pool_template, 1, {'from': deployer})
+def catalyst_describer_filled(deployer, catalyst_describer_blank, volatile_swap_vault_template, amplified_swap_vault_template, cross_chain_interface):
+    catalyst_describer_blank.add_whitelisted_template(volatile_swap_vault_template, 1, {'from': deployer})
+    catalyst_describer_blank.add_whitelisted_template(amplified_swap_vault_template, 1, {'from': deployer})
     
     catalyst_describer_blank.add_whitelisted_cii(cross_chain_interface, {'from': deployer})
     
@@ -77,8 +77,8 @@ def catalyst_describer_registry_filled(deployer, catalyst_describer_filled):
 
 # Parametrized fixtures
 @pytest.fixture(scope="module")
-def swap_pool_class(swap_pool_type):
-    if   swap_pool_type == "volatile"  : yield CatalystSwapPoolVolatile
-    elif swap_pool_type == "amplified" : yield CatalystSwapPoolAmplified
-
-
+def swap_vault_class(swap_vault_type):
+    if swap_vault_type == "volatile":
+        yield CatalystVaultVolatile
+    elif swap_vault_type == "amplified":
+        yield CatalystVaultAmplified

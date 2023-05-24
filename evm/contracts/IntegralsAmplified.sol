@@ -16,10 +16,10 @@ contract IntegralsAmplified {
      * @dev All input amounts should be the raw numbers and not WAD.
      * Since units are always denominated in WAD, the function should be treated as mathematically *native*.
      * @param input The input amount.
-     * @param A The current pool balance of the x token.
+     * @param A The current vault balance of the x token.
      * @param W The weight of the x token.
      * @param oneMinusAmp The amplification.
-     * @return uint256 Group-specific units (units are **always** WAD).
+     * @return uint256 Units (units are **always** WAD).
      */
     function _calcPriceCurveArea(
         uint256 input,
@@ -34,7 +34,7 @@ contract IntegralsAmplified {
             oneMinusAmp
         );
 
-        // If the pool contains 0 assets, the below computation will fail. This is bad.
+        // If the vault contains 0 assets, the below computation will fail. This is bad.
         // Instead, check if A is 0. If it is then skip because:: (W · A)^(1-k) = (W · 0)^(1-k) = 0
         if (A != 0) {
             unchecked {
@@ -59,8 +59,8 @@ contract IntegralsAmplified {
      * @dev All input amounts should be the raw numbers and not WAD.
      * Since units are always multiplied by WAD, the function
      * should be treated as mathematically *native*.
-     * @param U Incoming pool specific units.
-     * @param B The current pool balance of the y token.
+     * @param U Incoming vault specific units.
+     * @param B The current vault balance of the y token.
      * @param W The weight of the y token.
      * @return uint25 Output denominated in output token. (not WAD)
      */
@@ -102,8 +102,8 @@ contract IntegralsAmplified {
      * _calcPriceCurveLimit(_calcPriceCurveArea(input, A, W_A, amp), B, W_B, amp).
      * @dev All input amounts should be the raw numbers and not WAD.
      * @param input The input amount.
-     * @param A The current pool balance of the x token.
-     * @param B The current pool balance of the y token.
+     * @param A The current vault balance of the x token.
+     * @param B The current vault balance of the y token.
      * @param W_A The weight of the x token.
      * @param W_B The weight of the y token.
      * @param oneMinusAmp The amplification.
@@ -139,17 +139,17 @@ contract IntegralsAmplified {
 
 
     /**
-     * @notice Converts units into pool tokens with the below formula
+     * @notice Converts units into vault tokens with the below formula
      *      pt = PT · (((N · wa_0^(1-k) + U)/(N · wa_0^(1-k))^(1/(1-k)) - 1)
      * @dev The function leaves a lot of computation to the external implementation. This is done to avoid recomputing values several times.
-     * @param U Then number of units to convert into pool tokens.
-     * @param ts The current pool token supply. The escrowed pool tokens should not be added, since the function then returns more.
+     * @param U Then number of units to convert into vault tokens.
+     * @param ts The current vault token supply. The escrowed vault tokens should not be added, since the function then returns more.
      * @param it_times_walpha_amped wa_0^(1-k)
-     * @param oneMinusAmpInverse The pool amplification.
-     * @return uint256 Output denominated in pool tokens.
+     * @param oneMinusAmpInverse The vault amplification.
+     * @return uint256 Output denominated in vault tokens.
      */
     function _calcPriceCurveLimitShare(uint256 U, uint256 ts, uint256 it_times_walpha_amped, int256 oneMinusAmpInverse) internal pure returns (uint256) {
-        uint256 poolTokens = FixedPointMathLib.mulWadDown(
+        uint256 vaultTokens = FixedPointMathLib.mulWadDown(
             ts,
             uint256(  // Always casts a positive value, as powWad >= 1, hence powWad - WAD >= 0
                 FixedPointMathLib.powWad(  // poWad always >= 1, as the 'base' is always >= 1
@@ -162,6 +162,6 @@ contract IntegralsAmplified {
             )
         );
 
-        return poolTokens;
+        return vaultTokens;
     }
 }

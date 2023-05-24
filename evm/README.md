@@ -1,136 +1,142 @@
-# Catalyst Overview
-Catalyst is structured in the following manner:
-- Multiple Catalyst **pool** contracts that facilitate swaps between assets (either within or across pools).
-- A Catalyst **factory** that is in charge of deploying pools.
-- A Catalyst **interface** that facilitates communication between the pools and the message router of choice.
+# The EVM implementation
 
-This structure is implemented on EVM as follows:
-- `SwapPoolCommon.sol` : Defines the structure of a Catalyst pool and implements logic that is common to all pools.
-  - `SwapPoolVolatile.sol` : Extends `SwapPoolCommon.sol` with the price curve $P(w) = \frac{W}{w}$.
-  - `SwapPoolAmplified.sol` : Extends `SwapPoolCommon.sol` with the price curve $P(w) = \frac{1 - \theta}{w^\theta}$.
+The EVM implementation of Catalyst is in Solidity. It serves as a reference implementation while also implementing common optimisations to be efficient and performant. It also defines the message structure that other implementations should honor.
+
+The general structure of a Catalyst implementation is based around Vaults:
+
+- **Vaults** holds assets and the logic for converting tokens into Units.
+  - Vaults can be connected together to form a pool. Within a pool, all assets can be swapped for each other.
+- **Factory** simplifies the deployment of new vaults.
+- **Cross-chain interface** converts swap context into a message which can be sent cross-chain.
+
+More specifically, the code structure is as follows:
+
+- `VaultCommon.sol` : Defines the structure of a Catalyst vault and implements logic that is common to all vaults.
+  - `VaultVolatile.sol` : Extends `VaultCommon.sol` with the price curve $P(w) = \frac{W}{w}$.
+  - `VaultAmplified.sol` : Extends `VaultCommon.sol` with the price curve $P(w) = \left(1 - \theta\right) \frac{W}{(W w)^\theta}$.
   - `FixedPointMathLib.sol` : The mathematical library used by Catalyst (based on the [solmate](https://github.com/transmissions11/solmate/blob/ed67feda67b24fdeff8ad1032360f0ee6047ba0a/src/utils/FixedPointMathLib.sol)).
-- `SwapPoolFactory.sol` : Simplifies the deployment of swap pools via Open Zeppelin's *Clones*: pools are deployed as minimal proxies which employ delegate calls to core contracts. This significantly reduces pool deployment cost.
+- `CatalystVaultFactory.sol` : Simplifies the deployment of swap vaults via Open Zeppelin's *Clones*: vaults are deployed as minimal proxies which delegate call to the above vault contracts. This significantly reduces vault deployment cost.
 - `CatalystIBCInterface.sol` : Bridges the Catalyst protocol with the message router of choice.
 
-The EVM implementation is to be used as a reference implementation for further implementations.
-
 # Catalyst Contracts
-## SwapPoolCommon.sol
 
-An `abstract` contract (i.e. a contract that is made to be overriden), which enforces the core structure of a Catalyst pool and implements features which are generic to any pricing curve. Among these are:
+## VaultCommon.sol
 
-- Pool administration, including fees and pool connections management
+An `abstract` contract (i.e. a contract that is made to be overriden), which enforces the core structure of a Catalyst vault and implements features which are generic to any pricing curve. Among these are:
+
+- Vault administration, including fees and vault connections management
 - Cross chain swaps acknowledgement and timeout
 - Security limit
 
-Note that contracts derived from this one cannot be used directly but rather via proxy contracts. For this, `SwapPoolCommon.sol` implements [Initializable.sol](https://docs.openzeppelin.com/contracts/4.x/api/proxy#Initializable) to ensure that the pool proxies are correctly setup.
+Note that contracts derived from this one cannot be used directly but should be used via proxy contracts. For this, `VaultCommon.sol` implements [Initializable.sol](https://docs.openzeppelin.com/contracts/4.x/api/proxy#Initializable) to ensure that vault proxies are correctly setup.
 
-## SwapPoolVolatile.sol
+## VaultVolatile.sol
 
-Extends `SwapPoolCommon.sol` with the price curve $P(w) = \frac{W}{w}$. This approximates the constant product AMM (also called $x \cdot y = k$), mostly known from Uniswap v2 and Balancer.
+Extends `VaultCommon.sol` with the price curve $P(w) = \frac{W}{w}$. This implements the constant product AMM (also called $x \cdot y = k$), known from Uniswap v2 and Balancer.
 
-## SwapPoolAmplified.sol
+## VaultAmplified.sol
 
-Extends `SwapPoolCommon.sol` with the price curve $P(w) = \frac{1}{w^\theta} \cdot (1-\theta)$. This introduces an argument $\theta$ which gives control over the flattening of the swap curve, such that the marginal price between assets is closer to 1:1 for a greater amount of swaps. With $\theta = 0$ the pool always delivers 1:1 swaps. This resembles Stable Swap, but with the advantage of allowing for asynchronous swaps.
+Extends `VaultCommon.sol` with the price curve $P(w) = \left(1 - \theta\right) \frac{W}{(W w)^\theta}$. This introduces an argument $\theta$ which gives control over the flatness of the swap curve, such that the marginal price between assets is closer to 1:1 for a greater amount of swaps. With $\theta = 0$ the pool always delivers 1:1 swaps. This resembles Stable Swap, but with the advantage of allowing for asynchronous swaps.
 
-## SwapPoolFactory.sol
+## CatalystVaultFactory.sol
 
-`SwapPoolFactory.sol` handles the deployment and configuration of Catalyst pools proxy contracts within a single call.
+`CatalystVaultFactory.sol` handles the deployment and configuration of Catalyst vaults proxy contracts within a single call.
 
 ## CatalystIBCInterface.sol
 
-An intermediate contract designed to interface Catalyst swap pools with an IBC compliant messaging router. It wraps and unwraps the swaps calls to and from byte arrays so that they can be seamlessly sent and received by the router.
+An intermediate contract designed to interface Catalyst swap vaults with an IBC compliant messaging router. It wraps and unwraps the swaps calls to and from byte arrays so that they can be seamlessly sent and received by the router.
 
 Catalyst v1 implements 2 type of swaps, *Asset Swaps* and *Liquidity Swaps*. The byte array specification for these can be found in `/contracts/CatalystIBCPayload.sol`.
 
-- <u>`0x00`: Asset Swap</u><br/> Swaps with context `0x00` define asset swaps. Although primarily designed for cross-chain asset swaps, there is nothing from stopping a user of *Asset Swapping* between 2 pools on the same chain.
-- <u>`0x01`: Liquidity Swap</u><br/> Swaps with context `0x01` define liquidity swaps. These reduce the cost of rebalancing the liquidity distribution across pools by combining the following steps into a single transaction:
+- <u>`0x00`: Asset Swap</u><br/> Swaps with context `0x00` define asset swaps. Although primarily designed for cross-chain asset swaps, there is nothing from stopping a user of *Asset Swapping* between 2 vaults on the same chain.
+- <u>`0x01`: Liquidity Swap</u><br/> Swaps with context `0x01` define liquidity swaps. These reduce the cost of rebalancing the liquidity distribution across vaults by combining the following steps into a single transaction:
   1. Withdraw tokens
-  2. Convert tokens to units and transfer to target pool
+  2. Convert tokens to units and transfer to target vault
   3. Convert units to an even mix of tokens
-  4. Deposit the tokens into the pool.
+  4. Deposit the tokens into the vault.
 
-For both kind of swaps, a *swap hash* derived from parts of the message is included on the cross-chain message. This serves to identify the swap on both the source and destination pools, and for acknowledgment/timeout purposes on the source pool.
-
-Refer to the helpers `encode_swap_payload` and `decode_payload` on `tests/catalyst/utils/pool_utils.py` for examples on how to encode and decode a Catalyst message.
-
+Refer to the helpers `encode_swap_payload` and `decode_payload` on `tests/catalyst/utils/vault_utils.py` for examples on how to encode and decode a Catalyst message.
 
 # EVM Development
 
 This repository uses Brownie for the development, testing and deployment of the smart contracts. Brownie can handle multiple versions of Solidity and Vyper and will automatically combine contracts to be deploy-ready.
 
 ## Dev dependencies
-Not that the following dependencies have been tested to work with `python3.9`. The installation steps included here are for reference only, plese refer to the specific documentation of each of the mentioned packages for further information.
+
+Note that the following dependencies have been tested to work with `python3.9`. The installation steps included here are for reference only, please refer to the specific documentation of each of the mentioned packages for further information.
 
 - Install the `ganache-cli` globaly (required by `brownie`)
+  
   - `pnpm install -g ganache`
 
 - Install the contract templates [@openzeppelin/contracts](https://www.npmjs.com/package/@openzeppelin/contracts) and [Solmate](https://www.npmjs.com/package/solmate)
+  
   - `pnpm install` (run from the `evm` root directory)
 
 - Install `eth-brownie`
+  
   - via `pip`: `pip3 install eth-brownie` (check that `$PATH` is properly configured).
   - via [`poetry`](https://python-poetry.org):
     - If `poetry` is not installed on your system, use `brew install poetry`
     - Set the `poetry` python version with `poetry env use python3.9`.
     - `poetry install` (run from the `evm` root directory). This will install all the dependencies specified in `./pyproject.toml`.
 
-### Further dependencies
-- To deploy Catalyst on testnets:
-  
-  - Default: [alchemy](https://www.alchemy.com), export key to `$ALCHEMY_API_TOKEN`
-  
-  - Alt: [Infura](https://infura.io), edit *./.brownie/network-config.yaml* with Infura RPC.
+# Development with Brownie
 
-# Development with Brownie 
-
-This repository contains an example Catalyst deployment helper (found in `/scripts/deployCatalyst.py`). It handles the deployment of all the relevant Catalyst contracts, along with the tokens handling and pool creation. As an example, the steps to execute a local swap and a cross-pool swap (from and to the same pool) are further outlined:
+This repository contains a deployment helper. This helper can be used both for internal development but also for external deployment. (found in `/scripts/deployCatalyst.py`). It deploys all relevant Catalyst contracts, along with tokens handling and optional vault creation. As an example, the below step go over deploying Catalyst and executing a local swap and a cross-vault swap (from and to the same vault) are outlined. Because all computation is contained within the vaults, cross-chain swaps can be simulated fully on a single chain purely through cross-vault swaps. As such, to simulate a pool another has to be deployed and then connections has to be established.
 
 ## Catalyst Setup
-Start by opening the Brownie interactive console. For simplicity, use a local ganache instance:
+
+Start by opening the Brownie interactive console. For simplicity, use a local ganache instance. This allows us to undo a block if we made a mistake `chain.undo()`, execute transaction from arbitrary addresses or access transaction traces `.call_trace(True)` for debugging purposes.
 
 ```bash
 brownie console --network development
 ```
 
-Import the relevant classes needed for the example:
+Import the relevant classes needed for this example:
 
 ```python
-from scripts.deployCatalyst import Catalyst, decode_payload
+from scripts.deployCatalyst import Catalyst, decode_payload, convert_64_bytes_address
 from brownie import convert  # Used to convert between values and bytes.
 ```
 
-Next, define the account that will be used to sign the transactions, and deploy the provided message router emulator. The emulator contains no message routing logic but rather it only simulates the execution of cross-chain packages.
+The class `Catalyst` wraps logic in an easy to understand package, `decode_payload` can decode a package into a dictionary and  `convert_64_bytes_address` can convert EVM addresses into the proper format for cross-chain address.
+
+Next, define external accounts and addresses that will be used. In this case, we are purely interested in a deployer and a contract to emulate IBC packages. The emulator contains no message routing logic but simulates a simple delivery of an IBC package.
 
 ```python
 acct = accounts[0]  # Define the account used for testing
-
 ie = IBCEmulator.deploy({'from': acct})  # Deploy the IBC emulator.
 ```
 
-Deploy Catalyst by invoking the helper `Catalyst(...)` from the imported script. This deploys all Catalyst contracts and creates a Catalyst pool.
+Deploy Catalyst by invoking the helper `Catalyst(...)` from the imported script. This deploys all Catalyst contracts and creates a Catalyst vault. The account defined earlier is provided as the deployer and the emulator is provided as the package handler. The script also also deploys a vault (and tokens) by default, which can be turned off by `default=False`. The default vault can be access through `.swapvault` and the default tokens through `.tokens`.
 
 ```python
 ps = Catalyst(acct, ibcinterface=ie)  # Deploys Catalyst
-pool = ps.swappool
+vault = ps.swapvault
 tokens = ps.tokens
 ```
-
-Transactions which require tokens to be transferred to the pool require the user to always approve the required allowance to the pool first. For this example, the pool is allowed an unbounded amount of tokens on behalf of the user.
-
-```python
-tokens[0].approve(pool, 2**256-1, {'from': acct})
-```
-
 ## Execute a LocalSwap
-The following transaction swaps 50 token0 for token1. A minimum output of 45 tokens is specified (if not fulfilled, the transaction will revert).
+
+Lets execute a localswap. That is a swap which happens atomically on a single chain to and from the same vault. Before we can do that, we need to allow the vault to take tokens from us. This is done by calling the approve function. For our example, we will be using the token indexed 0 but you can use token index 0, 1 or 2 in this example.
 
 ```python
-localSwap_tx = pool.localSwap(tokens[0], tokens[1], 50 * 10**18, 45 * 10**18, {'from': acct})
+tokens[0].approve(vault, 2**256-1, {'from': acct})
 ```
 
-## Cross-Chain Pool Setup
-Before being able of executing a cross-chain swap, an IBC channel between pools must be established. The following establishes a channel to and from the `CatalystIBCInterface.sol` contract, allowing cross-chain swaps between pools which use this interface.
+We are now ready to execute a localswpa. Lets swap 50 token0 for token1. A minimum output of 45 tokens is specified (if not fulfilled, the transaction will revert).
+
+```python
+localSwap_tx = vault.localSwap(tokens[0], tokens[1], 50 * 10**18, 45 * 10**18, {'from': acct})
+```
+
+If you want to play around with the minimum output, you can undo the swap `chain.undo()` or continue to execute the same transaction. If you have sufficient allowance, it should happen the second time you execute the swap. Try reducing the minimum output to 40 and executing the swap again.
+
+If you executed more swaps to test the minimum output, please undo those with `chain.undo()`. If you want to test that a cross-chain swap returns exactly the same amount as a localswap, please undo the localswap by another `chain.undo()`.
+
+## Cross-Chain Vault Setup
+
+Before being able of executing a cross-chain swap, an IBC channel between vaults must be established. The following establishes a channel to and from the `CatalystIBCInterface.sol` contract, allowing cross-chain swaps between vaults which use this interface.
 
 ```python
 # Registor IBC ports.
@@ -138,33 +144,40 @@ ps.crosschaininterface.registerPort()
 ps.crosschaininterface.registerPort()
 ```
 
-Once the cross-chain interface is properly connected, swaps between the test pool and itself can be allowed. Note that this does not represent a real use case scenario, as pool connections are to be created between different pools and not within the same pool. However, this provides a simple manner in which to test the cross chain capabilities of Catalyst pools.
+Once the cross-chain interface is properly connected, swaps between the test vault and itself can be allowed. Note that this does not represent a real use case scenario, as vault connections should be created between different vaults and not within the same vault. However, this provides a simple manner in which to test the cross chain capabilities of Catalyst vaults. Lets specific the current channel as 1 and connect the vault to itself:
 
 ```python
 chid = convert.to_bytes(1, type_str="bytes32")  # Define the channel id to be 1. The emulator ignores this but it is important for the connection.
 
-# Create the connection between the pool and itself:
-pool.setConnection(
+# Create the connection between the vault and itself:
+vault.setConnection(
     chid,
-    convert.to_bytes(pool.address.replace("0x", "")),
+    convert_64_bytes_address(vault.address),
     True,
     {"from": acct}
 )
 ```
-
-## Execute a Cross Chain Swap
-The following code swaps 10% of the pool value from token0 to token1 via the cross chain channel defined above.
+Notice that the encoder `convert_64_bytes_address` is used. This encodes the address into 64 bytes (for evm this is quite wasteful but it has a purpose) and then prefixes the 64 bytes with a single byte to indicate the address length. For evm this is 20 bytes. If this is confusing, try the below example:
 
 ```python
-swap_amount = tokens[0].balanceOf(pool)//10
-sendAsset_tx = pool.sendAsset(
+convert_64_bytes_address(acct.address).hex(), int("14", 16), acct.address
+```
+The encoded address begins with `14` in hex. This corrosponds to 20 in decimal. Then the last 20 bytes are the same as acct.address.
+
+## Execute a Cross Chain Swap
+
+The following code swaps 50 token0s from token0 to token1 via the cross chain channel defined above. This is exactly the same as the localswap we executed earlier. If you skipped that part, you need to approve the vault to spend token0.
+
+```python
+swap_amount = 50 * 10**18
+sendAsset_tx = vault.sendAsset(
     chid,
-    convert.to_bytes(pool.address.replace("0x", "")),  # Set the target pool as itself. (encoded in bytes32)
-    convert.to_bytes(acct.address.replace("0x", "")),  # Set the target user as acct.   (encoded in bytes32)
+    convert_64_bytes_address(vault.address),  # Set the target vault as itself. (encoded in 64 + 1 bytes)
+    convert_64_bytes_address(acct.address),  # Set the target user as acct.   (encoded in 64 + 1 bytes)
     tokens[0],  # Swap out of token0.
     1,  # Swap into token1.
     swap_amount,  # Swap swap_amount of token0.
-    30 * 10**18,  # Return more than 30 tokens.
+    40 * 10**18,  # Return more than 40 tokens.
     acct,  # If the transaction reverts, send the tokens back to acct.
     {"from": acct},  # Acct pays for the transactions.
 )
@@ -177,13 +190,21 @@ sendAsset_tx.events["IncomingPacket"]["packet"][3]
 decode_payload(sendAsset_tx.events["IncomingPacket"]["packet"][3])
 ```
 
-Finally, the IBC package can be executed as follows, making the user receive their purchased tokens.
+Finally, the IBC package can be executed as follows, marking the finalisation of the swap:
 
 ```python
 swap_execution_tx = ie.execute(sendAsset_tx.events["IncomingMetadata"]["metadata"][0], sendAsset_tx.events["IncomingPacket"]["packet"], {"from": acct})
 
 swap_execution_tx.info()
 ```
+
+If you ran `chain.undo()` earlier, you can compare the output with the localswap. Notice that the swap outputs (as per the transfer event or the swap events) is almost exactly the same.
+If there is not transfer event AND you see the following event:
+```
+└── Acknowledgement
+        └── acknowledgement: 0x01
+```
+Then the transaction failed for some reason. If you instead see `acknowledgement: 0x00` the transaction executed correctly. Debugging such a transaction relies on using `.call_trace(True)`. Since this is an example and it isn't supposed to happen, we suggest quitting the interactive console and starting over.
 
 ## Contracts
 

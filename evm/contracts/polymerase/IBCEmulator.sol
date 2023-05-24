@@ -16,6 +16,8 @@ contract IBCEmulator is IbcDispatcher {
     event IncomingMetadata(PacketMetadata metadata);
     event IncomingPacket(IbcPacket packet);
 
+    event Acknowledgement(bytes acknowledgement);
+
     function registerPort() external {
         if (_ports[0] == address(0)) {
             _ports[0] = msg.sender;
@@ -55,10 +57,13 @@ contract IBCEmulator is IbcDispatcher {
         );
     }
 
+
     function execute(address targetContract, IbcPacket calldata packet)
         external
-    {
-        IbcReceiver(targetContract).onRecvPacket(packet);
+    {   
+        bytes memory acknowledgement = IbcReceiver(targetContract).onRecvPacket(packet);
+
+        emit Acknowledgement(acknowledgement);
     }
 
     function timeout(address targetContract, IbcPacket calldata packet)
@@ -67,7 +72,7 @@ contract IBCEmulator is IbcDispatcher {
         IbcReceiver(targetContract).onTimeoutPacket(packet);
     }
 
-    function ack(address targetContract, IbcPacket calldata packet) external {
-        IbcReceiver(targetContract).onAcknowledgementPacket(packet);
+    function ack(address targetContract, bytes calldata acknowledgement, IbcPacket calldata packet) external {
+        IbcReceiver(targetContract).onAcknowledgementPacket(acknowledgement, packet);
     }
 }

@@ -3,9 +3,9 @@
 pragma solidity ^0.8.16;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "../interfaces/ICatalystV1PoolImmutables.sol";
+import "../interfaces/ICatalystV1VaultImmutables.sol";
 import "./interfaces/ICatalystMathLibCommon.sol";
-import "../SwapPoolFactory.sol";
+import "../CatalystVaultFactory.sol";
 /**
  * @title Catalyst: Catalyst Describer
  * @author Catalyst Labs
@@ -16,6 +16,8 @@ contract CatalystDescriber is Ownable {
     error ZeroAddress();
     error InvalidIndex(address providedAddress, address readAddress);
     error IncorrectAbi();
+
+    uint256 constant MAX_MEMORY_LIMIT = 64;
 
     /// @notice Emitted when a vault template is whitelisted and unwhitelisted.
     event ModifyWhitelistedTemplate(
@@ -219,10 +221,10 @@ contract CatalystDescriber is Ownable {
      * @param vault The address of the vault
      */
     function get_factory_of_vault(address vault) external view returns (address factory) {
-        factory = ICatalystV1PoolImmutables(vault).FACTORY();
-        address cci = ICatalystV1PoolImmutables(vault)._chainInterface();
+        factory = ICatalystV1VaultImmutables(vault).FACTORY();
+        address cci = ICatalystV1VaultImmutables(vault)._chainInterface();
         // Check if the factory agree
-        if (!CatalystSwapPoolFactory(factory).IsCreatedByFactory(cci, vault)) factory = address(0);
+        if (!CatalystVaultFactory(factory).IsCreatedByFactory(cci, vault)) factory = address(0);
     }
 
 
@@ -275,10 +277,10 @@ contract CatalystDescriber is Ownable {
      * @param vault The vault to get tokens of.
      */
     function get_vault_tokens(address vault) public view returns (address[] memory vaultTokens) {
-        address[] memory tempVaultTokens = new address[](ICatalystV1PoolImmutables(vault).MAX_ASSETS());
+        address[] memory tempVaultTokens = new address[](MAX_MEMORY_LIMIT);
         uint256 it;
         for (it = 0; true; ++it) {
-            address token = ICatalystV1PoolImmutables(vault)._tokenIndexing(it);
+            address token = ICatalystV1VaultImmutables(vault)._tokenIndexing(it);
             if (token == address(0)) break;
             tempVaultTokens[it] = token;
         }
@@ -295,7 +297,7 @@ contract CatalystDescriber is Ownable {
      * @param vault The vault to get the mathematical lib of.
      */
     function get_vault_mathematical_lib(address vault) public view returns (address math_lib) {
-        math_lib = ICatalystV1PoolImmutables(vault).MATHLIB();
+        math_lib = ICatalystV1VaultImmutables(vault).MATHLIB();
     }
 
 
