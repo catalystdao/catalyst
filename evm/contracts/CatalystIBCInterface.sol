@@ -248,7 +248,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
         // * This contract should also verify the IBC port. (Or the sending contract of the IBC packet)
         // If the transaction executed but some logic failed, an ack is sent back with an acknowledgement of not 0x00.
         // This is known as "fail on ack". The package should be timed-out.
-        if (acknowledgement[0]  != 0x00) return _onPacketFailure(packet);
+        if (acknowledgement[0] != 0x00) return _onPacketFailure(packet);
         // Otherwise, it must be a success:
         _onPacketSuccess(packet);
     }
