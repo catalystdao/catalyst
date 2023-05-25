@@ -1,9 +1,9 @@
 //SPDX-License-Identifier: Unlicensed
 pragma solidity ^0.8.16;
 
-/// @title Derived Pool state
-/// @notice Contains all pool state which is derived from pool storage
-interface ICatalystV1PoolDerived {
+/// @title Derived Vault state
+/// @notice Contains all vault state which is derived from vault storage
+interface ICatalystV1VaultDerived {
     /** @notice  Returns the current cross-chain unit capacity. */
     function getUnitCapacity() external view returns (uint256);
 
