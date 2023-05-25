@@ -31,7 +31,7 @@ interface ICatalystV1VaultEvents {
      * @param toAssetIndex The token index of the asset to purchase on _toChain.
      * @param fromAmount The number of _fromAsset sold.
      * @param minOut The minimum output to be accepted of fromAsset.
-     * @param units The calculated number of units bought. Will be sold to buy _toAsset
+     * @param Units The calculated number of units bought. Will be sold to buy _toAsset
      * @param fee The number of tokens paid to the vault in fees.
      */
     event SendAsset(
@@ -42,7 +42,7 @@ interface ICatalystV1VaultEvents {
         uint8 toAssetIndex,
         uint256 fromAmount,
         uint256 minOut,
-        uint256 units,
+        uint256 Units,
         uint256 fee
     );
 
@@ -53,7 +53,7 @@ interface ICatalystV1VaultEvents {
      * @param fromVault The source vault.
      * @param toAccount The recipient of the trade.
      * @param toAsset The asset which was purchased with _fromAsset
-     * @param units The number of units sent from the other chain.
+     * @param Units The number of units sent from the other chain.
      * @param toAmount The number of tokens provided to toAccount
      * @param fromAmount The amount spent to get units on the source side.
      * @param fromAsset The provided asset on the source side.
@@ -64,7 +64,7 @@ interface ICatalystV1VaultEvents {
         bytes fromVault,
         address toAccount,
         address toAsset,
-        uint256 units,
+        uint256 Units,
         uint256 toAmount,
         uint256 fromAmount,
         bytes fromAsset,
@@ -79,7 +79,7 @@ interface ICatalystV1VaultEvents {
      * @param toAccount The recipient of the liquidity. The person who bought the trade is not present.
      * @param fromAmount The number of _fromAsset sold
      * @param minOut An array containing a list of minimum outputs [minVaultTokens, minReferenceAssets]
-     * @param units The calculated number of liquidity units bought.
+     * @param Units The calculated number of liquidity units bought.
      */
     event SendLiquidity(
         bytes32 channelId,
@@ -87,7 +87,7 @@ interface ICatalystV1VaultEvents {
         bytes toAccount,
         uint256 fromAmount,
         uint256[2] minOut,
-        uint256 units
+        uint256 Units
     );
 
     /**
@@ -95,7 +95,7 @@ interface ICatalystV1VaultEvents {
      * @param channelId The target chain identifier
      * @param fromVault The source vault.
      * @param toAccount The recipient of the liquidity.
-     * @param units The number of liquidity units sent from the other chain.
+     * @param Units The number of liquidity units sent from the other chain.
      * @param toAmount The number of vault tokens provided to toAccount
      * @param fromAmount The amount spent to get units on the source side.
      * @param sourceBlockNumberMod The block number of the sending transaction mod 2**32 - 1
@@ -104,7 +104,7 @@ interface ICatalystV1VaultEvents {
         bytes32 channelId,
         bytes fromVault,
         address toAccount,
-        uint256 units,
+        uint256 Units,
         uint256 toAmount,
         uint256 fromAmount,
         uint256 sourceBlockNumberMod
@@ -130,7 +130,7 @@ interface ICatalystV1VaultEvents {
     event SendAssetSuccess(
         bytes32 channelId,
         bytes toAccount,
-        uint256 U,
+        uint256 Units,
         uint256 escrowAmount,
         address escrowToken,
         uint32 blockNumberMod
@@ -140,7 +140,7 @@ interface ICatalystV1VaultEvents {
     event SendAssetFailure(
         bytes32 channelId,
         bytes toAccount,
-        uint256 U,
+        uint256 Units,
         uint256 escrowAmount,
         address escrowToken,
         uint32 blockNumberMod
@@ -150,7 +150,7 @@ interface ICatalystV1VaultEvents {
     event SendLiquiditySuccess(
         bytes32 channelId,
         bytes toAccount,
-        uint256 U,
+        uint256 Units,
         uint256 escrowAmount,
         uint32 blockNumberMod
         );
@@ -159,7 +159,7 @@ interface ICatalystV1VaultEvents {
     event SendLiquidityFailure(
         bytes32 channelId,
         bytes toAccount,
-        uint256 U,
+        uint256 Units,
         uint256 escrowAmount,
         uint32 blockNumberMod
     );

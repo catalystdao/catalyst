@@ -59,7 +59,7 @@ def test_cross_vault_swap(
 
     # The swap may revert because of the security limit     #TODO mark these cases as 'skip'?
     if vault_2.getUnitCapacity() < vault_2.calcReceiveAsset(
-        vault_2._tokenIndexing(0), tx.events["SendAsset"]["units"]
+        vault_2._tokenIndexing(0), tx.events["SendAsset"]["Units"]
     ) * vault_2._weight(vault_2._tokenIndexing(0)):
         txe = ibc_emulator.execute(
             tx.events["IncomingMetadata"]["metadata"][0],
@@ -210,7 +210,7 @@ def test_send_asset_event(
     assert send_asset_event["fromAsset"] == source_token
     assert send_asset_event["toAssetIndex"] == 1
     assert send_asset_event["fromAmount"] == swap_amount
-    assert send_asset_event["units"] == observed_units
+    assert send_asset_event["Units"] == observed_units
     assert send_asset_event["minOut"] == min_out
 
 
@@ -266,5 +266,5 @@ def test_receive_swap_event(
     )
     assert receive_swap_event["toAccount"] == elwood.address
     assert receive_swap_event["toAsset"] == target_token
-    assert receive_swap_event["units"] == observed_units
+    assert receive_swap_event["Units"] == observed_units
     assert receive_swap_event["toAmount"] == target_token.balanceOf(elwood)
