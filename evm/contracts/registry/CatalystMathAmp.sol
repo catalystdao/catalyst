@@ -7,7 +7,7 @@ import {ICatalystMathLibAmp} from "./interfaces/ICatalystMathLibAmp.sol";
 import "../FixedPointMathLib.sol";
 import "../interfaces/ICatalystV1VaultDerived.sol";
 import "../interfaces/ICatalystV1VaultState.sol";
-import "../VaultAmplified.sol";
+import "../CatalystVaultAmplified.sol";
 import "../IntegralsAmplified.sol";
 
 /**

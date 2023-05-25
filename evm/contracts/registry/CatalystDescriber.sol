@@ -5,7 +5,7 @@ pragma solidity ^0.8.16;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "../interfaces/ICatalystV1VaultImmutables.sol";
 import "./interfaces/ICatalystMathLibCommon.sol";
-import "../CatalystVaultFactory.sol";
+import "../CatalystFactory.sol";
 /**
  * @title Catalyst: Catalyst Describer
  * @author Catalyst Labs
@@ -224,7 +224,7 @@ contract CatalystDescriber is Ownable {
         factory = ICatalystV1VaultImmutables(vault).FACTORY();
         address cci = ICatalystV1VaultImmutables(vault)._chainInterface();
         // Check if the factory agree
-        if (!CatalystVaultFactory(factory).IsCreatedByFactory(cci, vault)) factory = address(0);
+        if (!CatalystFactory(factory).isCreatedByFactory(cci, vault)) factory = address(0);
     }
 
 

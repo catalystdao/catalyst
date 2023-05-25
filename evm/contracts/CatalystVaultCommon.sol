@@ -432,7 +432,7 @@ abstract contract CatalystVaultCommon is
         uint256 escrowAmount,
         address escrowToken,
         uint32 blockNumberMod
-    ) nonReentrant onlyChainInterface public override virtual {
+    ) onlyChainInterface public override virtual {
 
         // We need to find the location of the escrow using the information below.
         // We need to do this twice: 1. Get the address. 2. Delete the escrow.

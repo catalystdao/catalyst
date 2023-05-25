@@ -886,7 +886,10 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
 
                     // Later we need to use the asset balances. Since it is for a withdrawal, we should subtract the escrowed tokens
                     // such that less is returned.
-                    effAssetBalances[U] = ab - _escrowedTokens[token];
+                    unchecked {
+                        // Escrowed tokens must be part of the pool balance.
+                        effAssetBalances[U] = ab - _escrowedTokens[token];
+                    }
                     
                     uint256 weightAssetBalance = weight * ab;
                     

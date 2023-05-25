@@ -7,7 +7,7 @@ import {ICatalystMathLibVol} from "./interfaces/ICatalystMathLibVol.sol";
 import "../FixedPointMathLib.sol";
 import "../interfaces/ICatalystV1VaultDerived.sol";
 import "../interfaces/ICatalystV1VaultState.sol";
-import "../VaultVolatile.sol";
+import "../CatalystVaultVolatile.sol";
 import "../IntegralsVolatile.sol";
 
 /**

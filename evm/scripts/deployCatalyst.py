@@ -202,7 +202,7 @@ class Catalyst:
                     self.config['chain_config'][self.chain]["crosschaininterface"],
                     {"from": self.deployer},
                 )
-                self.config["vaults"][vault][self.chain]["address"] = deploytx.events["VaultDeployed"]["vault_address"]
+                self.config["vaults"][vault][self.chain]["address"] = deploytx.events["VaultDeployed"]["vaultAddress"]
         
         self.write_config()
         self.config = self.read_config()
