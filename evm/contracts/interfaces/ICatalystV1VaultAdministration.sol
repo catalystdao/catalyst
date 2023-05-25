@@ -25,7 +25,7 @@ interface ICatalystV1VaultAdministration {
     ) external;
 
     /**
-     * @notice Creates a connection to the vault _vaultReceiving on the channel _channelId.
+     * @notice Creates a connection to the vault toVault on the channel _channelId.
      * @dev if _vaultReceiving is an EVM vault, it can be computes as:
      *     Vyper: convert(_vaultAddress, bytes32)
      *     Solidity: abi.encode(_vaultAddress)

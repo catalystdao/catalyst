@@ -4,11 +4,11 @@ from brownie import reverts
 pytestmark = pytest.mark.no_vault_param
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="function")
 def set_molly_fee_administrator(vault, molly):
     yield vault.setFeeAdministrator(molly, {"from": vault.factoryOwner()})
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="function")
 def set_molly_factory_owner(swap_factory, molly):
     currentOwner = swap_factory.owner()
     yield swap_factory.transferOwnership(molly, {"from": currentOwner})

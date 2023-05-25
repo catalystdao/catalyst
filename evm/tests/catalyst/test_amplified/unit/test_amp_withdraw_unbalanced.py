@@ -90,7 +90,7 @@ def test_compare_withdrawall_and_withdrawmixed(
     tx_all = vault.withdrawAll(vaultTokens, [0 for _ in vault_tokens], {"from": berg})
 
     withdrawAllAmount = tx_all.return_value
-    all_swapvault_after_balances = [token.balanceOf(vault) for token in vault_tokens]
+    all_vault_after_balances = [token.balanceOf(vault) for token in vault_tokens]
     chain.undo()
 
     try:

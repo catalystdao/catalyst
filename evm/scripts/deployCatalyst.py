@@ -2,7 +2,7 @@ from mimetypes import init
 from brownie import (
     CatalystVaultVolatile,
     CatalystVaultAmplified,
-    CatalystVaultFactory,
+    CatalystFactory,
     Token,
     CatalystIBCInterface,
     IBCEmulator,
@@ -53,7 +53,7 @@ class Catalyst:
         tokens.append(self.create_token("one", "I"))
         tokens.append(self.create_token("two", "II"))
         tokens.append(self.create_token("three", "III"))
-        self.deploy_swapvault(
+        self.deployVault(
             tokens, amp=self.amp, name=self.vaultname, symbol=self.vaultsymbol
         )
 
@@ -66,14 +66,14 @@ class Catalyst:
         )
 
     def _swapFactory(self):
-        self.swapFactory = CatalystVaultFactory.deploy(0, {"from": self.deployer})
+        self.swapFactory = CatalystFactory.deploy(0, {"from": self.deployer})
 
     def _crosschaininterface(self):
         self.crosschaininterface = CatalystIBCInterface.deploy(
             self.ibcinterface, {"from": self.deployer}
         )
 
-    def deploy_swapvault(
+    def deployVault(
         self,
         tokens,
         init_balances=None,
@@ -97,7 +97,7 @@ class Catalyst:
             for token in tokens:
                 weights.append(1)
 
-        self.deploytx = self.swapFactory.deploy_swapvault(
+        self.deploytx = self.swapFactory.deployVault(
             self.swapTemplate,
             tokens,
             init_balances,
@@ -110,10 +110,10 @@ class Catalyst:
             {"from": self.deployer},
         )
         self.tokens = tokens
-        self.swapvault = CatalystVaultVolatile.at(
+        self.vault = CatalystVaultVolatile.at(
             self.deploytx.events["VaultDeployed"]["vault_address"]
         )
-        return self.swapvault
+        return self.vault
 
 
 """
@@ -123,7 +123,7 @@ acct = accounts[0]
 
 ie = IBCEmulator.deploy({'from': acct})
 ps = Catalyst(acct, ibcinterface=ie)
-vault = ps.swapvault
+vault = ps.vault
 tokens = ps.tokens
 tokens[0].approve(vault, 2**256-1, {'from': acct})
 # vault.localSwap(tokens[0], tokens[1], 50*10**18, 0, {'from': acct})
@@ -170,7 +170,7 @@ def main():
     acct = accounts[0]
     ie = IBCEmulator.deploy({"from": acct})
     ps = Catalyst(acct, ibcinterface=ie)
-    vault = ps.swapvault
+    vault = ps.vault
     tokens = ps.tokens
     tokens[0].approve(vault, 2**256 - 1, {"from": acct})
     vault.localSwap(tokens[0], tokens[1], 50 * 10**18, 0, {"from": acct})
