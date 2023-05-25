@@ -7,7 +7,7 @@ import {SafeTransferLib} from 'solmate/src/utils/SafeTransferLib.sol';
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/utils/Multicall.sol";
-import "./CatalystVaultFactory.sol";
+import "./CatalystFactory.sol";
 import "./FixedPointMathLib.sol";
 import "./CatalystIBCInterface.sol";
 import "./interfaces/IOnCatalyst.sol";
@@ -15,15 +15,15 @@ import "./ICatalystV1Vault.sol";
 import "./interfaces/ICatalystV1VaultErrors.sol";
 
 /**
- * @title Catalyst: Common Swap Vault Logic
- * @author Catalyst Labs
+ * @title Catalyst: Common Vault Logic
+ * @author Cata Labs
  * @notice This abstract contract defines general logic of a Catalyst vault like:
  * - Vault Token through Solmate's ERC20 implementation.
  * - Connection management
  * - Security limit
  * - Swap Escrow
  *
- * By inheriting this abstract contract, a Vault automatically implements common swap vault logic.
+ * By inheriting this abstract contract, a Vault automatically implements common vault logic.
  * @dev This contract uses the following special notation:
  * CAPITAL_LETTER_VARIABLES are constants or immutable.
  * _ prefixed varaibles are storage.
@@ -73,7 +73,7 @@ abstract contract CatalystVaultCommon is
     /// asset address. This variable is the map.
     mapping(uint256 => address) public _tokenIndexing;
 
-    /// @notice The token weights. Used for maintaining a non-symmetric vault balance.
+    /// @notice The token weights. Used for maintaining a non-symmetric vault asset balance.
     mapping(address => uint256) public _weight;
 
     //-- Parameter change variables --//
@@ -92,7 +92,7 @@ abstract contract CatalystVaultCommon is
 
     /// @notice The setupMaster is the short-term owner of the vault.
     /// They can connect the vault to vaults on other chains.
-    /// @dev !Can extract all of the vault value! Should be set to address(0) once setup is complete.
+    /// @dev !Can extract all of the vault value! Should be set to address(0) once setup is complete via 'finishSetup()'.
     address public _setupMaster;
 
     //--- Messaging router limit ---//
@@ -136,13 +136,13 @@ abstract contract CatalystVaultCommon is
     }
 
     function factoryOwner() public view override returns (address) {
-        return CatalystVaultFactory(FACTORY).owner();
+        return CatalystFactory(FACTORY).owner();
     }
 
     /**
      * @notice Only allow Governance to change vault parameters
      * @dev Because of dangerous permissions (setConnection, weight changes, amplification changes):
-     * !CatalystVaultFactory(_factory).owner() must be set to a timelock! 
+     * !CatalystFactory(_factory).owner() must be set to a timelock! 
      */ 
     modifier onlyFactoryOwner() {
         require(msg.sender == factoryOwner());   // dev: Only factory owner
@@ -150,20 +150,25 @@ abstract contract CatalystVaultCommon is
     }
 
     /**
-     * @notice Checks that an incoming message is coming from the cross-chain interface and that the context of the message is valid. (connection)
-     */ 
-    modifier verifyIncomingMessage(bytes32 channelId, bytes calldata fromVault) {
-        // The chainInterface is the only valid caller of this function.
-        require(msg.sender == _chainInterface);
-        // Only allow connected vaults
-        if (!_vaultConnection[channelId][fromVault]) revert VaultNotConnected(channelId, fromVault);
+     * @notice Require the sender of the transaction to be the chain interface. 
+     */
+     modifier onlyChainInterface() {
+        require(msg.sender == _chainInterface); // dev: Only chain interface
+        _;
+    }
 
+    /**
+     * @notice Verify a connected pool.
+     */ 
+    modifier onlyConnectedPool(bytes32 channelId, bytes memory vault) {
+        // Only allow connected vaults
+        if (!_vaultConnection[channelId][vault]) revert VaultNotConnected(channelId, vault);
         _;
     }
 
     /// @notice Does this vault define a pool without other vaults?
     /// @dev Checked by comparing  _chainInterface to address(0). It is possible that 
-    /// no connections have been reacted and this returns false.
+    /// no connections have been created and this returns false.
     function onlyLocal() public view override returns (bool) {
         return _chainInterface == address(0);
     }
@@ -427,10 +432,9 @@ abstract contract CatalystVaultCommon is
         uint256 escrowAmount,
         address escrowToken,
         uint32 blockNumberMod
-    ) nonReentrant public override virtual {
-        require(msg.sender == _chainInterface);  // dev: Only _chainInterface
+    ) nonReentrant onlyChainInterface public override virtual {
 
-        // We need to find the location of the escrow with using the below information.
+        // We need to find the location of the escrow using the information below.
         // We need to do this twice: 1. Get the address. 2. Delete the escrow.
         // To save a bit of gas, this hash is computed and saved and then used.
         bytes32 sendAssetHash = _computeSendAssetHash( // Computing the hash doesn't revert.
@@ -469,10 +473,9 @@ abstract contract CatalystVaultCommon is
         uint256 escrowAmount,
         address escrowToken,
         uint32 blockNumberMod
-    ) nonReentrant public override virtual {
-        require(msg.sender == _chainInterface);  // dev: Only _chainInterface
+    ) nonReentrant onlyChainInterface public override virtual {
 
-        // We need to find the location of the escrow with using the below information.
+        // We need to find the location of the escrow using the information below.
         // We need to do this twice: 1. Get the address. 2. Delete the escrow.
         // To save a bit of gas, this hash is computed and saved and then used.
         bytes32 sendAssetHash = _computeSendAssetHash( // Computing the hash doesn't revert.
@@ -511,10 +514,9 @@ abstract contract CatalystVaultCommon is
         uint256 U,
         uint256 escrowAmount,
         uint32 blockNumberMod
-    ) nonReentrant public override virtual {
-        require(msg.sender == _chainInterface);  // dev: Only _chainInterface
+    ) nonReentrant onlyChainInterface public override virtual {
 
-        // We need to find the location of the escrow with using the below information.
+        // We need to find the location of the escrow using the information below.
         // We need to do this twice: 1. Get the address. 2. Delete the escrow.
         // To save a bit of gas, this hash is computed and saved and then used.
         bytes32 sendLiquidityHash = _computeSendLiquidityHash( // Computing the hash doesn't revert.
@@ -549,8 +551,7 @@ abstract contract CatalystVaultCommon is
         uint256 U,
         uint256 escrowAmount,
         uint32 blockNumberMod
-    ) nonReentrant public override virtual {
-        require(msg.sender == _chainInterface);  // dev: Only _chainInterface
+    ) nonReentrant onlyChainInterface public override virtual {
 
         bytes32 sendLiquidityHash = _computeSendLiquidityHash( // Computing the hash doesn't revert.
             toAccount,      // Ensures no collisions between different users

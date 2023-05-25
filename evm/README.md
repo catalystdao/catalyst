@@ -11,16 +11,16 @@ The general structure of a Catalyst implementation is based around Vaults:
 
 More specifically, the code structure is as follows:
 
-- `VaultCommon.sol` : Defines the structure of a Catalyst vault and implements logic that is common to all vaults.
-  - `VaultVolatile.sol` : Extends `VaultCommon.sol` with the price curve $P(w) = \frac{W}{w}$.
-  - `VaultAmplified.sol` : Extends `VaultCommon.sol` with the price curve $P(w) = \left(1 - \theta\right) \frac{W}{(W w)^\theta}$.
+- `CatalystVaultCommon.sol` : Defines the structure of a Catalyst vault and implements logic that is common to all vaults.
+  - `CatalystVaultVolatile.sol` : Extends `CatalystVaultCommon.sol` with the price curve $P(w) = \frac{W}{w}$.
+  - `CatalystVaultAmplified.sol` : Extends `CatalystVaultCommon.sol` with the price curve $P(w) = \left(1 - \theta\right) \frac{W}{(W w)^\theta}$.
   - `FixedPointMathLib.sol` : The mathematical library used by Catalyst (based on the [solmate](https://github.com/transmissions11/solmate/blob/ed67feda67b24fdeff8ad1032360f0ee6047ba0a/src/utils/FixedPointMathLib.sol)).
-- `CatalystVaultFactory.sol` : Simplifies the deployment of swap vaults via Open Zeppelin's *Clones*: vaults are deployed as minimal proxies which delegate call to the above vault contracts. This significantly reduces vault deployment cost.
+- `CatalystFactory.sol` : Simplifies the deployment of vaults via Open Zeppelin's *Clones*: vaults are deployed as minimal proxies which delegate call to the above vault contracts. This significantly reduces vault deployment cost.
 - `CatalystIBCInterface.sol` : Bridges the Catalyst protocol with the message router of choice.
 
 # Catalyst Contracts
 
-## VaultCommon.sol
+## CatalystVaultCommon.sol
 
 An `abstract` contract (i.e. a contract that is made to be overriden), which enforces the core structure of a Catalyst vault and implements features which are generic to any pricing curve. Among these are:
 
@@ -28,23 +28,23 @@ An `abstract` contract (i.e. a contract that is made to be overriden), which enf
 - Cross chain swaps acknowledgement and timeout
 - Security limit
 
-Note that contracts derived from this one cannot be used directly but should be used via proxy contracts. For this, `VaultCommon.sol` implements [Initializable.sol](https://docs.openzeppelin.com/contracts/4.x/api/proxy#Initializable) to ensure that vault proxies are correctly setup.
+Note that contracts derived from this one cannot be used directly but should be used via proxy contracts. For this, `CatalystVaultCommon.sol` implements [Initializable.sol](https://docs.openzeppelin.com/contracts/4.x/api/proxy#Initializable) to ensure that vault proxies are correctly setup.
 
-## VaultVolatile.sol
+## CatalystVaultVolatile.sol
 
-Extends `VaultCommon.sol` with the price curve $P(w) = \frac{W}{w}$. This implements the constant product AMM (also called $x \cdot y = k$), known from Uniswap v2 and Balancer.
+Extends `CatalystVaultCommon.sol` with the price curve $P(w) = \frac{W}{w}$. This implements the constant product AMM (also called $x \cdot y = k$), known from Uniswap v2 and Balancer.
 
-## VaultAmplified.sol
+## CatalystVaultAmplified.sol
 
-Extends `VaultCommon.sol` with the price curve $P(w) = \left(1 - \theta\right) \frac{W}{(W w)^\theta}$. This introduces an argument $\theta$ which gives control over the flatness of the swap curve, such that the marginal price between assets is closer to 1:1 for a greater amount of swaps. With $\theta = 0$ the pool always delivers 1:1 swaps. This resembles Stable Swap, but with the advantage of allowing for asynchronous swaps.
+Extends `CatalystVaultCommon.sol` with the price curve $P(w) = \left(1 - \theta\right) \frac{W}{(W w)^\theta}$. This introduces an argument $\theta$ which gives control over the flatness of the swap curve, such that the marginal price between assets is closer to 1:1 for a greater amount of swaps. With $\theta = 0$ the pool always delivers 1:1 swaps. This resembles Stable Swap, but with the advantage of allowing for asynchronous swaps.
 
-## CatalystVaultFactory.sol
+## CatalystFactory.sol
 
-`CatalystVaultFactory.sol` handles the deployment and configuration of Catalyst vaults proxy contracts within a single call.
+`CatalystFactory.sol` handles the deployment and configuration of Catalyst vaults proxy contracts within a single call.
 
 ## CatalystIBCInterface.sol
 
-An intermediate contract designed to interface Catalyst swap vaults with an IBC compliant messaging router. It wraps and unwraps the swaps calls to and from byte arrays so that they can be seamlessly sent and received by the router.
+An intermediate contract designed to interface Catalyst vaults with an IBC compliant messaging router. It wraps and unwraps the swaps calls to and from byte arrays so that they can be seamlessly sent and received by the router.
 
 Catalyst v1 implements 2 type of swaps, *Asset Swaps* and *Liquidity Swaps*. The byte array specification for these can be found in `/contracts/CatalystIBCPayload.sol`.
 
@@ -109,11 +109,11 @@ acct = accounts[0]  # Define the account used for testing
 ie = IBCEmulator.deploy({'from': acct})  # Deploy the IBC emulator.
 ```
 
-Deploy Catalyst by invoking the helper `Catalyst(...)` from the imported script. This deploys all Catalyst contracts and creates a Catalyst vault. The account defined earlier is provided as the deployer and the emulator is provided as the package handler. The script also also deploys a vault (and tokens) by default, which can be turned off by `default=False`. The default vault can be access through `.swapvault` and the default tokens through `.tokens`.
+Deploy Catalyst by invoking the helper `Catalyst(...)` from the imported script. This deploys all Catalyst contracts and creates a Catalyst vault. The account defined earlier is provided as the deployer and the emulator is provided as the package handler. The script also also deploys a vault (and tokens) by default, which can be turned off by `default=False`. The default vault can be access through `.vault` and the default tokens through `.tokens`.
 
 ```python
 ps = Catalyst(acct, ibcinterface=ie)  # Deploys Catalyst
-vault = ps.swapvault
+vault = ps.vault
 tokens = ps.tokens
 ```
 ## Execute a LocalSwap

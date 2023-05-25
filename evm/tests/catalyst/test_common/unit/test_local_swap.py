@@ -146,7 +146,7 @@ def test_local_swap_event(vault, vault_tokens, berg, deployer):
 
     swap_event = tx.events["LocalSwap"]
 
-    assert swap_event["toAccount"] == berg
+    assert swap_event["account"] == berg
     assert swap_event["fromAsset"] == source_token
     assert swap_event["toAsset"] == target_token
     assert swap_event["fromAmount"] == swap_amount

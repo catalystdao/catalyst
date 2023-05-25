@@ -1,7 +1,7 @@
 import pytest
 
 from brownie import (
-    CatalystVaultFactory,
+    CatalystFactory,
     CatalystVaultVolatile,
     CatalystVaultAmplified,
     CatalystIBCInterface,
@@ -20,7 +20,7 @@ def ibc_emulator(deployer):
 
 @pytest.fixture(scope="module")
 def swap_factory(deployer):
-    yield deployer.deploy(CatalystVaultFactory, 0)
+    yield deployer.deploy(CatalystFactory, 0)
 
 
 @pytest.fixture(scope="module")

@@ -7,14 +7,14 @@ interface ICatalystV1VaultState {
     /// @notice If the vault has no cross chain connection, this is true. Should not be trusted if setupMaster != ZERO_ADDRESS
     function onlyLocal() external view returns (bool);
 
-    /// @notice The token weights. Used for maintaining a non symmetric vault balance.
+    /// @notice The token weights. Used for maintaining a non symmetric vault asset balance.
     function _weight(address token) external view returns (uint256);
 
     function _adjustmentTarget() external view returns (uint256);
 
     function _lastModificationTime() external view returns (uint256);
 
-    /// @notice The vault fee in X64. Implementation of fee: mulX64(_amount, _vaultFee)
+    /// @notice The vault fee in WAD. Implementation of fee: mulWadDown(_amount, _vaultFee)
     function _vaultFee() external view returns (uint256);
 
     function _governanceFeeShare() external view returns (uint256);

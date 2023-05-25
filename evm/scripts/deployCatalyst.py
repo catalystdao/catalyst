@@ -1,7 +1,7 @@
 import json
 
 from brownie import (WETH9, CatalystIBCInterface,
-                     CatalystVaultAmplified, CatalystVaultFactory,
+                     CatalystVaultAmplified, CatalystFactory,
                      CatalystVaultVolatile, IBCEmulator, Token,
                      convert, CatalystDescriber, CatalystDescriberRegistry, CatalystMathAmp, CatalystMathVol, CatalystRouter, p2, Contract)
 
@@ -59,7 +59,7 @@ class Catalyst:
         # Check if factory have been deployed
         factory = self.config['chain_config'][self.chain]["factory"]
         if factory == '':
-            factory = self.deployer.deploy(CatalystVaultFactory, 0)
+            factory = self.deployer.deploy(CatalystFactory, 0)
             
             self.config['chain_config'][self.chain]["factory"] = factory.address
         
@@ -160,7 +160,7 @@ class Catalyst:
             self.blank_setup(wTKN)
     
     def deploy_config(self):
-        factory = CatalystVaultFactory.at(self.config['chain_config'][self.chain]["factory"])
+        factory = CatalystFactory.at(self.config['chain_config'][self.chain]["factory"])
         volatile_template = self.config['chain_config'][self.chain]["volatile_template"]
         amplified_template = self.config['chain_config'][self.chain]["amplified_template"]
         
@@ -190,7 +190,7 @@ class Catalyst:
                     initial_balances.append(self.config["vaults"][vault][self.chain]["tokens"][token] * 10**decimals)
                     tokens.append(token_container)
                 
-                deploytx = factory.deploy_swapvault(
+                deploytx = factory.deployVault(
                     volatile_template if self.config["vaults"][vault].get("amplification") is None else amplified_template,
                     tokens,
                     initial_balances,

@@ -30,7 +30,7 @@ def test_setup(
     for i, token in enumerate(vault_tokens):
         token.approve(swap_factory, vault_config["init_balances"][i])
 
-    tx = swap_factory.deploy_swapvault(
+    tx = swap_factory.deployVault(
         swap_vault_template_idx,
         vault_tokens,
         vault_config["init_balances"],
@@ -56,7 +56,7 @@ def test_setup_no_tokens(
     deployer,
 ):
     with brownie.reverts():  # ! Should be filtered with dev_revert_msg="dev: invalid asset count"
-        swap_factory.deploy_swapvault(
+        swap_factory.deployVault(
             swap_vault_template_idx,
             [],
             [],
@@ -78,7 +78,7 @@ def test_setup_valid_token_count(
     for token in tokens[:asset_count]:
         token.approve(swap_factory, 10**8)
 
-    swap_factory.deploy_swapvault(
+    swap_factory.deployVault(
         swap_vault_template_idx,
         tokens[:asset_count],
         [10**8] * asset_count,
@@ -106,7 +106,7 @@ def test_setup_too_many_tokens(
         token.approve(swap_factory, 10**8)
 
     with brownie.reverts():  # ! Should be filtered with dev_revert_msg="dev: invalid asset count"
-        swap_factory.deploy_swapvault(
+        swap_factory.deployVault(
             swap_vault_template_idx,
             tokens[:asset_count],
             [10**8] * asset_count,
@@ -134,7 +134,7 @@ def test_setup_no_balance_set(
         token.approve(swap_factory, 10**8)
 
     with brownie.reverts():  # ! Should be filtered with dev_revert_msg="dev: 0 tokens provided in setup."
-        swap_factory.deploy_swapvault(
+        swap_factory.deployVault(
             swap_vault_template_idx,
             tokens[:asset_count],
             [10**8] * (asset_count - 1) + [0],  # ! Last balance argument set to 0
@@ -162,7 +162,7 @@ def test_setup_no_weight_set(
         token.approve(swap_factory, 10**8)
 
     with brownie.reverts():  # ! Should be filtered with dev_revert_msg="dev: invalid 0-valued weight provided"
-        swap_factory.deploy_swapvault(
+        swap_factory.deployVault(
             swap_vault_template_idx,
             tokens[:asset_count],
             [10**8] * asset_count,
@@ -189,7 +189,7 @@ def test_setup_without_funds(
     # ! Not approving tokens to the factory on purpose
 
     with brownie.reverts("TRANSFER_FROM_FAILED"):
-        swap_factory.deploy_swapvault(
+        swap_factory.deployVault(
             swap_vault_template_idx,
             tokens[:asset_count],
             [10**8] * asset_count,
@@ -222,7 +222,7 @@ def test_setup_invalid_template(
         token.approve(swap_factory, 10**8)
 
     with brownie.reverts():  # ! Should be filtered with dev_revert_msg="dev: amplification not set correctly."
-        swap_factory.deploy_swapvault(
+        swap_factory.deployVault(
             amplified_swap_vault_template
             if swap_vault_type == "volatile"
             else volatile_swap_vault_template,  # ! Invalid template selected on purpose
@@ -251,7 +251,7 @@ def test_setup_vault_token_mint(
     for token in tokens[:asset_count]:
         token.approve(swap_factory, 10**8)
 
-    tx = swap_factory.deploy_swapvault(
+    tx = swap_factory.deployVault(
         swap_vault_template_idx,
         tokens[:asset_count],
         [10**8] * asset_count,
@@ -283,7 +283,7 @@ def test_setup_call_setup_external(
     for token in tokens[:asset_count]:
         token.approve(swap_factory, 10**8)
 
-    tx = swap_factory.deploy_swapvault(
+    tx = swap_factory.deployVault(
         swap_vault_template_idx,
         tokens[:asset_count],
         [10**8] * asset_count,
@@ -316,7 +316,7 @@ def test_setup_call_initialize_swap_curves_external(
     for token in tokens[:asset_count]:
         token.approve(swap_factory, 10**8)
 
-    tx = swap_factory.deploy_swapvault(
+    tx = swap_factory.deployVault(
         swap_vault_template_idx,
         tokens[:asset_count],
         [10**8] * asset_count,
@@ -358,7 +358,7 @@ def test_setup_only_local(
     for token in tokens[:asset_count]:
         token.approve(swap_factory, 10**8)
 
-    tx = swap_factory.deploy_swapvault(
+    tx = swap_factory.deployVault(
         swap_vault_template_idx,
         tokens[:asset_count],
         [10**8] * asset_count,

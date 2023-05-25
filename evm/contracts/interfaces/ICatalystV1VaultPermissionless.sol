@@ -27,7 +27,7 @@ interface ICatalystV1VaultPermissionless {
 
     /**
      * @notice Deposits a user configurable amount of tokens.
-     * @dev Requires approvals for all tokens within the vault.
+     * @dev Requires approvals for all deposited tokens within the vault.
      * Volatile: It is advised that the deposit matches the vault's %token distribution.
      * Amplified: It is advised that the deposit is as close to 1,1,... as possible.
      *            Otherwise between 1,1,... and the vault's %token distribution.
@@ -52,7 +52,7 @@ interface ICatalystV1VaultPermissionless {
      * Amplified: It is advised that the deposit matches the vault's %token distribution.
      *            Otherwise it should be weighted towards the tokens the vault has more of.
      * @param vaultTokens The number of vault tokens to withdraw.
-     * @param withdrawRatio The percentage of units used to withdraw. In the following special scheme: U_a = U · withdrawRatio[0], U_b = (U - U_a) · withdrawRatio[1], U_c = (U - U_a - U_b) · withdrawRatio[2], .... Is X64
+     * @param withdrawRatio The percentage of units used to withdraw. In the following special scheme: U_0 = U · withdrawRatio[0], U_1 = (U - U_0) · withdrawRatio[1], U_2 = (U - U_0 - U_1) · withdrawRatio[2], .... Is WAD.
      * @param minOut The minimum number of tokens minted.
      */
     function withdrawMixed(
@@ -126,9 +126,9 @@ interface ICatalystV1VaultPermissionless {
      * @param toAccount The recipient.
      * @param U Number of units to convert into toAsset.
      * @param minOut Minimum number of tokens bought. Reverts if less.
-     * @param fromAmount Used to connect swaps cross-chain. The input amount on the sending chain.
-     * @param fromAsset Used to connect swaps cross-chain. The input asset on the sending chain.
-     * @param blockNumberMod Used to connect swaps cross-chain. The block number from the host side.
+     * @param fromAmount Used to match cross-chain swap events. The input amount on the sending chain.
+     * @param fromAsset Used to match cross-chain swap events. The input asset on the sending chain.
+     * @param blockNumberMod Used to match cross-chain swap events. The block number from the host side.
      */
     function receiveAsset(
         bytes32 channelId,
@@ -199,8 +199,8 @@ interface ICatalystV1VaultPermissionless {
      * @param U Number of units to convert into vault tokens.
      * @param minVaultTokens The minimum number of vault tokens to mint on target vault. Otherwise: Reject
      * @param minReferenceAsset The minimum number of reference asset the vaults tokens are worth. Otherwise: Reject
-     * @param fromAmount Used to connect swaps cross-chain. The input amount on the sending chain.
-     * @param blockNumberMod Used to connect swaps cross-chain. The block number from the host side.
+     * @param fromAmount Used to match cross-chain swap events. The input amount on the sending chain.
+     * @param blockNumberMod Used to match cross-chain swap events. The block number from the host side.
      * @return uint256 Number of vault tokens minted to the recipient.
      */
     function receiveLiquidity(

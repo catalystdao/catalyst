@@ -6,25 +6,25 @@ import {SafeTransferLib} from 'solmate/src/utils/SafeTransferLib.sol';
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "./FixedPointMathLib.sol";
 import "./CatalystIBCInterface.sol";
-import "./VaultCommon.sol";
+import "./CatalystVaultCommon.sol";
 import "./ICatalystV1Vault.sol";
 
 /**
- * @title Catalyst: The Multi-Chain Swap vault
- * @author Catalyst Labs
- * @notice Catalyst multi-chain swap vault using the asset specific
+ * @title Catalyst: The Multi-Chain Vault
+ * @author Cata Labs
+ * @notice Catalyst multi-chain vault using the asset specific
  * pricing curve: 1/w^\theta (1 - \theta) where \theta is 
- * the vault amplification and w is the vault balance.
+ * the vault amplification and w is the vault asset balance.
  *
  * The following contract supports between 1 and 3 assets for
  * atomic swaps. To increase the number of tokens supported,
  * change MAX_ASSETS to the desired maximum token amount.
- * This constant is set in "VaultCommon.sol"
+ * This constant is set in "CatalystVaultCommon.sol"
  *
  * This vault implements the ERC20 specification, such that the
  * contract will be its own vault token.
  * @dev This contract is deployed inactive: It cannot be used as a
- * swap vault as is. To use it, a proxy contract duplicating the
+ * vault as is. To use it, a proxy contract duplicating the
  * logic of this contract needs to be deployed. In Vyper, this
  * can be done through (vy >= 0.3.4) create_minimal_proxy_to.
  * In Solidity, this can be done through OZ clones: Clones.clone(...)
@@ -56,7 +56,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
     uint256 constant SMALL_SWAP_RATIO = 1e12;
     uint256 constant SMALL_SWAP_RETURN = 95e16;
 
-    // For other config options, see SwapVaultCommon.sol
+    // For other config options, see CatalystVaultCommon.sol
 
     //-- Variables --//
     int256 public _oneMinusAmp;
@@ -70,12 +70,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
 
     /**
      * @notice Configures an empty vault.
-     * @dev If less than MAX_ASSETS are used to initiate the vault
-     * let the remaining <assets> be ZERO_ADDRESS / address(0)
-     *
-     * Unused weights can be whatever. (0 is recommended.)
-     *
-     * The initial token amounts should have been sent to the vault before setup is called.
+     * @dev The initial token amounts should have been sent to the vault before setup is called.
      * Since someone can call setup can claim the initial tokens, this needs to be
      * done atomically!
      *
@@ -102,6 +97,11 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
         // to initialBalances[it] will fail) or will cause the vault to get initialized with an undesired state
         // (and the vault shouldn't be used by anyone until its configuration has been finalised). 
         // In any case, the factory does check for valid assets/weights arguments to prevent erroneous configurations.
+        // Note Since assets.len != 0 is not checked, the initial depositor may invoke this function many times, resulting
+        // on vault tokens being minted for the 'depositor' every time. This is not an issue, since 'INITIAL_MINT_AMOUNT' is
+        // an arbitrary number; the value of the vault tokens is determined by the ratio of the vault asset balances and vault
+        // tokens supply once setup has finalized. Furthermore, the vault should not be used until setup has finished and the
+        // vault configuration has been verified.
         
         unchecked {
             // Amplification is stored as 1 - amp since most equations uses amp this way.
@@ -272,12 +272,11 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
      * @notice Computes the integral \int_{wA}^{wA+wx} 1/w^k · (1-k) dw
      *     = (wA + wx)^(1-k) - wA^(1-k)
      * The value is returned as units, which is always WAD.
-     * @dev All input parameters should be the raw numbers and not WAD.
-     * Since units are always denominated in WAD, the function should be treated as mathematically *native*.
+     * @dev Since units are always denominated in WAD, the function should be treated as mathematically *native*.
      * @param input The input amount provided by the user.
      * @param A The balance of the vault.
      * @param W The weight associated with the traded token.
-     * @param oneMinusAmp The amplification of the vault.
+     * @param oneMinusAmp The amplification of the vault (in WAD).
      * @return uint256 Units (units are **always** WAD).
      */
     function _calcPriceCurveArea(
@@ -315,13 +314,11 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
      *         )^(1/(1-k))
      *     )
      * The value is returned as output token. (not WAD)
-     * @dev All input parameters should be the raw numbers and not WAD.
-     * Since units are always multiplied by WAD, the function
-     * should be treated as mathematically *native*.
-     * @param U Incoming Units.
+     * @dev Since units are always denominated in WAD, the function should be treated as mathematically *native*.
+     * @param U Incoming Units (in WAD).
      * @param B The balance of the vault.
      * @param W The weight associated with the traded token.
-     * @param oneMinusAmp The vault amplification.
+     * @param oneMinusAmp The vault amplification (in WAD).
      * @return uint25 Output tokens (not WAD).
      */
     function _calcPriceCurveLimit(
@@ -355,13 +352,12 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
      * cross-chain swaps and atomic swaps are implemented with the same equations.
      * As such, _calcPriceCurveArea and _calcPriceCurveLimit are used rather than the
      * true full equation.
-     * @dev All input parameters should be the raw numbers and not WAD.
      * @param input The input amount provided by the user.
      * @param A The vault balance for the input token.
      * @param B The vault balance for the output token.
      * @param W_A The weight associated with the input token 
      * @param W_B The weight associated with the output token 
-     * @param oneMinusAmp The vault amplification.
+     * @param oneMinusAmp The vault amplification (in WAD).
      * @return uint256 Output tokens (not WAD).
      */
     function _calcCombinedPriceCurves(
@@ -494,7 +490,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
      * It is advised that the deposit matches the vault's %token distribution.
      * Deposit is done by converting tokenAmounts into units and then using
      * the macro for units to vault tokens. (_calcPriceCurveLimitShare).
-     * The elements of tokenAmounts correspond to _tokenIndexing[0...2].
+     * The elements of tokenAmounts correspond to _tokenIndexing[0...N].
      * @param tokenAmounts An array of the tokens amounts to be deposited.
      * @param minOut The minimum number of vault tokens to be minted.
      * @return uint256 The number of minted vault tokens.
@@ -1077,11 +1073,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
         uint256 minOut,
         address fallbackUser,
         bytes memory calldata_
-    ) nonReentrant public override returns (uint256) {
-        // Validate input and target
-        // While a connection could be onesided, it doesn't really make sense. So if this vault
-        // has no connection to the other vault, revert the transaction earlier rather than later.
-        if (!_vaultConnection[channelId][toVault]) revert VaultNotConnected(channelId, toVault);
+    ) nonReentrant onlyConnectedPool(channelId, toVault) public override returns (uint256) {
         // Fallback user cannot be address(0) since this is used as a check for the existance of an escrow.
         // It would also be a silly fallback address.
         require(fallbackUser != address(0));
@@ -1192,9 +1184,9 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
      * @param toAccount The recipient.
      * @param U Incoming units.
      * @param minOut Minimum number of token to buy. Reverts back to the sending side.
-     * @param fromAmount Used to connect swaps cross-chain. The input amount minus fees on the sending chain.
-     * @param fromAsset Used to connect swaps cross-chain. The input asset on the source chain.
-     * @param blockNumberMod Used to connect swaps cross-chain. The block number from the source chain.
+     * @param fromAmount Used to match cross-chain swap events. The input amount minus fees on the sending chain.
+     * @param fromAsset Used to match cross-chain swap events. The input asset on the source chain.
+     * @param blockNumberMod Used to match cross-chain swap events. The block number from the source chain.
      */
     function receiveAsset(
         bytes32 channelId,
@@ -1206,7 +1198,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
         uint256 fromAmount,
         bytes calldata fromAsset,
         uint32 blockNumberMod
-    ) nonReentrant verifyIncomingMessage(channelId, fromVault) public override returns (uint256) {
+    ) nonReentrant onlyChainInterface onlyConnectedPool(channelId, fromVault) public override returns (uint256) {
         _updateAmplification();
 
         // Convert the asset index (toAsset) into the asset to be purchased.
@@ -1283,7 +1275,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
     //--- Liquidity swapping ---//
     // Because of the way vault tokens work in a pool, there
     // needs to be a way for users to easily get a distributed stake.
-    // Liquidity swaps is a macro implemented on the smart contract level to:
+    // Liquidity swaps is a macro implemented at the smart contract level equivalent to:
     // 1. Withdraw tokens.
     // 2. Convert tokens to units & transfer to target vault.
     // 3. Convert units to an even mix of tokens.
@@ -1377,11 +1369,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
         uint256[2] calldata minOut,
         address fallbackUser,
         bytes memory calldata_
-    ) nonReentrant public override returns (uint256) {
-        // Validate input and target
-        // While a connection could be onesided, it doesn't really make sense. So if this vault
-        // has no connection to the other vault, revert the transaction earlier rather than later.
-        if (!_vaultConnection[channelId][toVault]) revert VaultNotConnected(channelId, toVault);
+    ) nonReentrant onlyConnectedPool(channelId, toVault) public override returns (uint256) {
         // Fallback user cannot be address(0) since this is used as a check for the existance of an escrow.
         // It would also be a silly fallback address.
         require(fallbackUser != address(0));
@@ -1493,8 +1481,8 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
      * @param U Incoming units.
      * @param minVaultTokens The minimum number of vault tokens to mint on target vault. Otherwise: Reject
      * @param minReferenceAsset The minimum number of reference asset the vaults tokens are worth. Otherwise: Reject
-     * @param fromAmount Used to connect swaps cross-chain. The input amount on the source chain.
-     * @param blockNumberMod Used to connect swaps cross-chain. The block number from the source chain.
+     * @param fromAmount Used to match cross-chain swap events. The input amount on the source chain.
+     * @param blockNumberMod Used to match cross-chain swap events. The block number from the source chain.
      * @return uint256 Number of vault tokens minted to the recipient.
      */
     function receiveLiquidity(
@@ -1506,7 +1494,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
         uint256 minReferenceAsset,
         uint256 fromAmount,
         uint32 blockNumberMod
-    ) nonReentrant verifyIncomingMessage(channelId, fromVault) public override returns (uint256) {
+    ) nonReentrant onlyChainInterface onlyConnectedPool(channelId, fromVault) public override returns (uint256) {
         _updateAmplification();
 
         int256 oneMinusAmp = _oneMinusAmp;
@@ -1629,7 +1617,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
         // Execute common escrow logic.
         super.onSendAssetSuccess(channelId, toAccount, U, escrowAmount, escrowToken, blockNumberMod);
 
-        // Incoming swaps should be subtracted from the unit flow.
+        // Received assets should be subtracted from the used unit capacity.
         // It is assumed if the router was fraudulent no-one would execute a trade.
         // As a result, if people swap into the vault, we should expect that there is exactly
         // the inswapped amount of trust in the vault. If this wasn't implemented, there would be

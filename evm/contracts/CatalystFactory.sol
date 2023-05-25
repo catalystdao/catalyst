@@ -13,16 +13,16 @@ uint256 constant MAX_GOVERNANCE_FEE_SHARE = 75e16;   // 75%
 
 /**
  * @title Catalyst Swap Factory
- * @author Catalyst Labs
- * @notice Allows permissionless deployment Catalyst Swap vaults
- * and defines governance address for swap vaults to read.
+ * @author Cata Labs
+ * @notice Allows permissionless deployment Catalyst vaults
+ * and defines governance address for vaults to read.
  * !The owner of the factory must be a timelock!
  */
-contract CatalystVaultFactory is Ownable, ICatalystV1FactoryEvents {
+contract CatalystFactory is Ownable, ICatalystV1FactoryEvents {
     using SafeTransferLib for ERC20;
 
     /// @notice A mapping which describes if a vault has been created by this factory. Indexed by chainInterface then vault address.
-    mapping(address => mapping(address => bool)) public IsCreatedByFactory;
+    mapping(address => mapping(address => bool)) public isCreatedByFactory;
 
     /// @notice Default governance fee. When a vault is created, this is the governance fee applied to that vault.
     uint256 public _defaultGovernanceFee;
@@ -40,20 +40,20 @@ contract CatalystVaultFactory is Ownable, ICatalystV1FactoryEvents {
     }
 
     /**
-     * @notice Deploys a Catalyst swap vaults, funds the swap vault with tokens, and calls setup.
-     * @dev The deployer needs to set approvals for this contract before calling deploy_swapvault
+     * @notice Deploys a Catalyst vault, funds the vault with tokens, and calls setup.
+     * @dev The deployer needs to set approvals for this contract before calling deployVault
      * @param vaultTemplate The template the transparent proxy should target.
      * @param assets The list of assets the vault should support.
-     * @param init_balances The initial balances of the swap vault. (Should be approved)
+     * @param init_balances The initial balances of the vault. (Should be approved)
      * @param weights The weights of the tokens.
      * @param amp Token parameter 1. (Amplification)
      * @param vaultFee The vault fee.
      * @param name Name of the Vault token.
      * @param symbol Symbol for the Vault token.
      * @param chainInterface The cross chain interface used for cross-chain swaps. (Can be address(0) to disable cross-chain swaps.)
-     * @return address The address of the created Catalyst Swap Vault. (minimal transparent proxy)
+     * @return address The address of the created Catalyst Vault. (minimal transparent proxy)
      */
-    function deploy_swapvault(
+    function deployVault(
         address vaultTemplate,
         address[] calldata assets,
         uint256[] calldata init_balances,
@@ -72,19 +72,19 @@ contract CatalystVaultFactory is Ownable, ICatalystV1FactoryEvents {
         // will fail. If longer, values will just be ignored.
 
         // Create a minimal transparent proxy:
-        address swapVault = Clones.clone(vaultTemplate);
+        address vault = Clones.clone(vaultTemplate);
 
         // The vault expects the balances to exist in the vault when setup is called.
         for (uint256 it; it < assets.length; it++) {
             ERC20(assets[it]).safeTransferFrom(
                 msg.sender,
-                swapVault,
+                vault,
                 init_balances[it]
             );
         }
 
         // Call setup
-        ICatalystV1Vault(swapVault).setup(
+        ICatalystV1Vault(vault).setup(
             name,
             symbol,
             chainInterface,
@@ -95,7 +95,7 @@ contract CatalystVaultFactory is Ownable, ICatalystV1FactoryEvents {
         );
 
         // Initialize swap curves
-        ICatalystV1Vault(swapVault).initializeSwapCurves(
+        ICatalystV1Vault(vault).initializeSwapCurves(
             assets,
             weights,
             amp,
@@ -107,12 +107,12 @@ contract CatalystVaultFactory is Ownable, ICatalystV1FactoryEvents {
             vaultTemplate,
             chainInterface,
             msg.sender,
-            swapVault,
+            vault,
             assets,
             amp
         );
-        IsCreatedByFactory[chainInterface][swapVault] = true;
+        isCreatedByFactory[chainInterface][vault] = true;
 
-        return swapVault;
+        return vault;
     }
 }
