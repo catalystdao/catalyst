@@ -847,7 +847,7 @@ pub fn query_liquidity_escrow(deps: Deps, hash: Vec<u8>) -> StdResult<LiquidityE
 pub fn query_pool_connection_state(deps: Deps, channel_id: &str, pool: Vec<u8>) -> StdResult<PoolConnectionStateResponse> {
     Ok(
         PoolConnectionStateResponse {
-            state: POOL_CONNECTIONS.load(deps.storage, (channel_id, pool))?
+            state: POOL_CONNECTIONS.may_load(deps.storage, (channel_id, pool))?.unwrap_or(false)
         }
     )
 }
