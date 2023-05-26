@@ -111,7 +111,6 @@ pub fn execute_ibc_packet_ack(
 }
 
 
-#[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute_ibc_packet_timeout(
     deps: DepsMut,
     info: MessageInfo,
