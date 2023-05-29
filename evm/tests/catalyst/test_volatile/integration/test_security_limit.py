@@ -57,7 +57,7 @@ def test_security_limit_swap_loop(
         berg,
         {"from": berg},
     )
-    tx_units = tx.events["SendAsset"]["Units"]
+    tx_units = tx.events["SendAsset"]["units"]
 
     # 2. receiveAsset
     if vault_2.getUnitCapacity() < tx_units:
@@ -131,7 +131,7 @@ def test_security_limit_swap_loop(
         berg,
         {"from": berg},
     )
-    tx2_units = tx2.events["SendAsset"]["Units"]
+    tx2_units = tx2.events["SendAsset"]["units"]
 
     # Make sure the security limit of vault-2 does not change before the ack. NOTE: the unit capacity may have increased
     # slightly because of the time elapsed since the last capacity snapshot.

@@ -38,7 +38,7 @@ def test_self_swap(
     )
     assert token.balanceOf(berg) == 0
 
-    if vault.getUnitCapacity() < tx.events["SendAsset"]["Units"]:
+    if vault.getUnitCapacity() < tx.events["SendAsset"]["units"]:
         txe = ibc_emulator.execute(
             tx.events["IncomingMetadata"]["metadata"][0],
             tx.events["IncomingPacket"]["packet"],

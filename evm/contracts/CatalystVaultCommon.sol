@@ -235,9 +235,9 @@ abstract contract CatalystVaultCommon is
      * @notice Checks if the vault supports an inflow of units and decreases
      * unit capacity by the inflow.
      * @dev Implement a lot of similar logic to getUnitCapacity. 
-     * @param Units The number of units to check and set.
+     * @param units The number of units to check and set.
      */
-    function _updateUnitCapacity(uint256 Units) internal {
+    function _updateUnitCapacity(uint256 units) internal {
         uint256 MUC = _maxUnitCapacity;
 
         // The delta change to the limit is: timePassed · slope = timePassed · Max/decayrate
@@ -260,12 +260,12 @@ abstract contract CatalystVaultCommon is
         uint256 UC = _usedUnitCapacity; 
         // If the change is greater than the units which have passed through the limit is max
         if (UC <= unitCapacityReleased) {
-            if (Units > MUC) revert ExceedsSecurityLimit(Units - MUC);
-            _usedUnitCapacity = Units;
+            if (units > MUC) revert ExceedsSecurityLimit(units - MUC);
+            _usedUnitCapacity = units;
             return;
         }
         
-        uint256 newUnitFlow = UC + Units;  // (UC + units) - unitCapacityReleased
+        uint256 newUnitFlow = UC + units;  // (UC + units) - unitCapacityReleased
         unchecked {
             // We know that UC > unitCapacityReleased
             newUnitFlow -= unitCapacityReleased;
