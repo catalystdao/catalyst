@@ -1,11 +1,13 @@
+import argparse
+import json
+import os
+from hashlib import sha256
+from time import sleep
+from brownie import convert
+
 import web3
 from web3 import Web3
 from web3.middleware import geth_poa_middleware
-from time import sleep
-import json
-import os
-import argparse
-from hashlib import sha256
 
 with open("vault_abi.json", "r") as f:
     vault_abi = json.load(f)
@@ -16,6 +18,8 @@ with open("cci_abi.json", "r") as f:
 with open("emulator_abi.json", "r") as f:
     e_abi = json.load(f)
 
+def convert_64_bytes_address(address):
+    return convert.to_bytes(20, "bytes1")+convert.to_bytes(0)+convert.to_bytes(address.replace("0x", ""))
 
 class PoARouter:
     def read_config(self):
@@ -132,76 +136,102 @@ class PoARouter:
             tx_hash = sending_w3.eth.send_raw_transaction(signed_txn.rawTransaction)
             print("error -> Timeout:", from_chain, Web3.toHex(tx_hash))
 
-    def compute_sendAsset_identifier(self, log):
+    def compute_sendAsset_identifier(self, log, chain_identifier):
         args = log["args"]
         toAccount = args["toAccount"]
-        U = args["Units"]
+        U = args["units"]
         fee = args["fee"]
         amount = args["fromAmount"] - fee
         fromAsset = args["fromAsset"]
-        blockNumberMod = log["blockNumber"] % 2**32-1
+        blockNumberMod = log["blockNumber"] % 2**32
+        poolAddress = log["address"]
+        return sha256(
+            toAccount + str(U).encode() + str(amount).encode() + convert_64_bytes_address(fromAsset) + str(blockNumberMod).encode() + poolAddress.encode() + chain_identifier
+        ).hexdigest()
+    
+    def compute_receiveAsset_identifier(self, log):
+        args = log["args"]
+        toAccount = args["toAccount"]
+        U = args["units"]
+        amount = args["fromAmount"]
+        fromAsset = args["fromAsset"]
+        blockNumberMod = args["sourceBlockNumberMod"]
         poolAddress = log["address"]
         channelId = args["channelId"]
         return sha256(
-            toAccount + str(U).encode() + str(amount).encode() + fromAsset.encode() + str(blockNumberMod).encode() + poolAddress.encode() + channelId
+            convert_64_bytes_address(toAccount) + str(U).encode() + str(amount).encode() + fromAsset + str(blockNumberMod).encode() + poolAddress.encode() + channelId
         ).hexdigest()
     
-    def compute_sendLiquidity_identifier(self, log):
+    def compute_sendLiquidity_identifier(self, log, chain_identifier):
         args = log["args"]
         toAccount = args["toAccount"]
-        U = args["Units"]
+        U = args["units"]
         fee = 0
         amount = args["fromAmount"] - fee
-        blockNumberMod = log["blockNumber"] % 2**32-1
+        blockNumberMod = log["blockNumber"] % 2**32
+        poolAddress = log["address"]
+        return sha256(
+            toAccount + str(U).encode() + str(amount).encode() + str(blockNumberMod).encode() + poolAddress.encode() + chain_identifier
+        ).hexdigest()
+    
+    def compute_receiveLiquidity_identifier(self, log):
+        args = log["args"]
+        toAccount = args["toAccount"]
+        U = args["units"]
+        amount = args["fromAmount"]
+        blockNumberMod = args["sourceBlockNumberMod"]
         poolAddress = log["address"]
         channelId = args["channelId"]
         return sha256(
             toAccount + str(U).encode() + str(amount).encode() + str(blockNumberMod).encode() + poolAddress.encode() + channelId
         ).hexdigest()
     
-    def compute_sendAsset_callback(self, log):
+    def compute_sendAsset_callback(self, log, chain_identifier):
         args = log["args"]
         toAccount = args["toAccount"]
-        U = args["Units"]
+        U = args["U"]
         amount = args["escrowAmount"]
-        fromAsset = args["fromAsset"]
-        blockNumberMod = log["blockNumberMod"]
+        fromAsset = args["escrowToken"]
+        blockNumberMod = args["blockNumberMod"]
         poolAddress = log["address"]
-        channelId = args["channelId"]
         return sha256(
-            toAccount + str(U).encode() + str(amount).encode() + fromAsset.encode() + str(blockNumberMod).encode() + poolAddress.encode() + channelId
+            toAccount + str(U).encode() + str(amount).encode() + convert_64_bytes_address(fromAsset) + str(blockNumberMod).encode() + poolAddress.encode() + chain_identifier
         ).hexdigest()
         
-    def compute_sendLiquidity_callback(self, log):
+    def compute_sendLiquidity_callback(self, log, chain_identifier):
         args = log["args"]
         toAccount = args["toAccount"]
-        U = args["Units"]
+        U = args["U"]
         amount = args["escrowAmount"]
-        blockNumberMod = log["blockNumberMod"]
+        blockNumberMod = args["blockNumberMod"]
         poolAddress = log["address"]
-        channelId = args["channelId"]
         return sha256(
-            toAccount + str(U).encode() + str(amount).encode() + str(blockNumberMod).encode() + poolAddress.encode() + channelId
+            toAccount + str(U).encode() + str(amount).encode() + str(blockNumberMod).encode() + poolAddress.encode() + chain_identifier
         ).hexdigest()
 
-    def compute_swap_identifier(self, log):
-        if log["event"] == "sendLiquidity":
-            return self.compute_sendAsset_identifier(log)
-        elif log["event"] == "sendLiquidity":
-            return self.compute_sendLiquidity_identifier(log)
+    def compute_swap_identifier(self, log, chain_identifier):
+        if log["event"] == "SendAsset":
+            return self.compute_sendAsset_identifier(log, chain_identifier)
+        elif log["event"] == "ReceiveAsset":
+            return self.compute_receiveAsset_identifier(log)
+        elif log["event"] == "SendLiquidity":
+            return self.compute_sendLiquidity_identifier(log, chain_identifier)
+        elif log["event"] == "ReceiveLiquidity":
+            return self.compute_receiveLiquidity_identifier(log)
         elif log["event"] in ["SendAssetFailure", "SendAssetSuccess"]:
-            return self.compute_sendAsset_callback(log)
+            return self.compute_sendAsset_callback(log, chain_identifier)
         elif log["event"] in ["SendLiquidityFailure", "SendLiquiditySuccess"]: 
-            return self.compute_sendLiquidity_callback(log)
+            return self.compute_sendLiquidity_callback(log, chain_identifier)
         else:
             raise NotImplementedError()
         
-    def get_sendAssets(self, w3, fromBlock, ibc_endpoint):
+    def get_sendAssets(self, w3, fromBlock, ibc_endpoint, chain_identifier):
         # get a log of all 
-        filter = w3.eth.filter({'topics': ["0xde2589d56dbe5139a2f5676038c033a041a897fa65ef9fbd50a5363758e25334"], "fromBlock": fromBlock})
+        filter = w3.eth.filter({'topics': ["0xe1c4c822c15df23f17ad636820a990981caf1d4e40f2f46cf3bb7ad003deaec8"], "fromBlock": fromBlock})
         entries = filter.get_all_entries()
-        swap_vault = web3.eth.contract(abi=vault_abi)
-        processed_logs = [swap_vault.events.sendAsset().processLog(entry) for entry in entries]
+        print(len(entries))
+        swap_vault = w3.eth.contract(abi=vault_abi)
+        processed_logs = [swap_vault.events.SendAsset().processLog(entry) for entry in entries]
         # For each log, check that our emulator also emitted a message.
         validated_logs = []
         for log in processed_logs:
@@ -210,17 +240,18 @@ class PoARouter:
                 if r_log.topics[0].hex() == "0x2f7e9b1a1fac10099a9988fcda077b67b3809ede82c92a7662b82f0f96861604":
                     if r_log.address == ibc_endpoint:
                         validated_logs.append(log)
+                    
         
         # We now have an array of Catalyst swaps.
-        swap_hashes = [self.compute_swap_indentifier(log) for log in validated_logs]
+        swap_hashes = [self.compute_swap_identifier(log, chain_identifier) for log in validated_logs]
         
         return swap_hashes
     
-    def get_sendLiquidity(self, w3, fromBlock, ibc_endpoint):
+    def get_sendLiquidity(self, w3, fromBlock, ibc_endpoint, chain_identifier):
         # get a log of all 
-        filter = w3.eth.filter({'topics': ["0x42990289d0d5107d040ab63a6b3021825797e28c667b8046161711da1ba20027"], "fromBlock": fromBlock})
+        filter = w3.eth.filter({'topics': ["0x8c9503be4db35b4e3d31565a9616d1dc3f1b3024e5e9e9d65052de46a5149f1c"], "fromBlock": fromBlock})
         entries = filter.get_all_entries()
-        swap_vault = web3.eth.contract(abi=vault_abi)
+        swap_vault = w3.eth.contract(abi=vault_abi)
         processed_logs = [swap_vault.events.SendLiquidity().processLog(entry) for entry in entries]
         # For each log, check that our emulator also emitted a message.
         validated_logs = []
@@ -232,30 +263,31 @@ class PoARouter:
                         validated_logs.append(log)
         
         # We now have an array of Catalyst swaps.
-        swap_hashes = [self.compute_swap_indentifier(log) for log in validated_logs]
+        swap_hashes = [self.compute_swap_identifier(log, chain_identifier) for log in validated_logs]
         
         return swap_hashes
 
-    def get_receiveAsset(self, w3, fromBlock, ibc_endpoint):
-        filter = w3.eth.filter({'topics': ["0x153d4669de60199f12c52620612b5b1cee036cefe97aec297f2695f37848432b"], "fromBlock": fromBlock})
+    def get_receiveAsset(self, w3, fromBlock, ibc_endpoint, chain_identifier):
+        filter = w3.eth.filter({'topics': ["0x6b7977bd09a2e845fb431e372aac95edfb358014e167149b4f4d09021c87a79d"], "fromBlock": fromBlock})
         entries = filter.get_all_entries()
-        swap_vault = web3.eth.contract(abi=vault_abi)
+        swap_vault = w3.eth.contract(abi=vault_abi)
         processed_logs = [swap_vault.events.ReceiveAsset().processLog(entry) for entry in entries]
-        # For each log, check that our emulator also emitted a message.
+        # For each log, check that the emulator was called.
         validated_logs = []
         for log in processed_logs:
             receipt = w3.eth.getTransactionReceipt(log["transactionHash"])
-            # TODO: Check that the call was on ibc_endpoint
+            if receipt["to"] == ibc_endpoint:
+                validated_logs.append(log)
         
         # We now have an array of Catalyst swaps.
-        swap_hashes = [self.compute_swap_indentifier(log) for log in validated_logs]
+        swap_hashes = [self.compute_swap_identifier(log, chain_identifier) for log in validated_logs]
         
         return swap_hashes
 
-    def get_receiveLiquidity(self, w3, fromBlock, ibc_endpoint):
-        filter = w3.eth.filter({'topics': ["0x9c74cf5512671bd46de8b6b37af7a7a33cc7d367e87bf953dbf0b653e5fab804"], "fromBlock": fromBlock})
+    def get_receiveLiquidity(self, w3, fromBlock, ibc_endpoint, chain_identifier):
+        filter = w3.eth.filter({'topics': ["0x7af4b988c9949d39dbe6398b8332fa201574208c2656602a23f1624c428bfe91"], "fromBlock": fromBlock})
         entries = filter.get_all_entries()
-        swap_vault = web3.eth.contract(abi=vault_abi)
+        swap_vault = w3.eth.contract(abi=vault_abi)
         processed_logs = [swap_vault.events.ReceiveAsset().processLog(entry) for entry in entries]
         # For each log, check that our emulator also emitted a message.
         validated_logs = []
@@ -269,31 +301,64 @@ class PoARouter:
         
         return swap_hashes
     
-    def get_sendAsset_callback(self, w3, fromBlock, ibc_endpoint):
-        filter_ack = w3.eth.filter({'topics': ["0xd286b8170ee44400102a0d9468d077acfdde788720f5426f65e36f5732450f82"], "fromBlock": fromBlock})
+    def get_sendAsset_callback(self, w3, fromBlock, ibc_endpoint, chain_identifier):
+        filter_ack = w3.eth.filter({'topics': ["0xe6db00361b6a35af0ded81ba5696c1633e945a81008cd7da44fb8a78422a7d42"], "fromBlock": fromBlock})
         entries_ack = filter_ack.get_all_entries()
-        filter_timeout = w3.eth.filter({'topics': ["0xf0f7f3715617e78ca6629fbd1817eb745096aade249ebe327ae981a27a71df14"], "fromBlock": fromBlock})
+        filter_timeout = w3.eth.filter({'topics': ["0xcab6c1a18a9c89efaab5ea5a8c665ffe2c5aac9ddd9301ccad01fd4fed7c7e3d"], "fromBlock": fromBlock})
         entries_timeout = filter_timeout.get_all_entries()
         
-        entries = entries_ack + entries_timeout
-        swap_vault = web3.eth.contract(abi=vault_abi)
-        processed_logs = [swap_vault.events.ReceiveAsset().processLog(entry) for entry in entries]
+        swap_vault = w3.eth.contract(abi=vault_abi)
+        processed_acks = [swap_vault.events.SendAssetSuccess().processLog(entry) for entry in entries_ack]
+        processed_timeouts = [swap_vault.events.SendAssetFailure().processLog(entry) for entry in entries_timeout]
+        processed_logs = processed_acks + processed_timeouts
+        
+        # For each log, check that the emulator was called.
+        validated_logs = []
+        for log in processed_logs:
+            receipt = w3.eth.getTransactionReceipt(log["transactionHash"])
+            if receipt["to"] == ibc_endpoint:
+                validated_logs.append(log)
+                
+        # We now have an array of Catalyst swaps.
+        swap_hashes = [self.compute_swap_identifier(log, chain_identifier) for log in validated_logs]
+        
+        return swap_hashes
     
-    def get_sendLiquidity_callback(self, w3, fromBlock, ibc_endpoint):
-        filter_ack = w3.eth.filter({'topics': ["0x95f3aaf194597b0083a807eb7d3c5a4c41b4e87728b90ff06b078117987ecb57"], "fromBlock": fromBlock})
+    def get_sendLiquidity_callback(self, w3, fromBlock, ibc_endpoint, chain_identifier):
+        filter_ack = w3.eth.filter({'topics': ["0x8a49f1dbb0b988d0421183f74b9866ce7c88256f1b88cf865bf7f3a74706fe68"], "fromBlock": fromBlock})
         entries_ack = filter_ack.get_all_entries()
-        filter_timeout = w3.eth.filter({'topics': ["0xf68c6a88fa1f6c067c8d250a1bdc5c389b069c77ddf8abd19bdc269c555eb6d2"], "fromBlock": fromBlock})
+        filter_timeout = w3.eth.filter({'topics': ["0x97cc161fb90f5cdec9c65ba7aac2279e32df11368946590b82fd6fe8e76b39e0"], "fromBlock": fromBlock})
         entries_timeout = filter_timeout.get_all_entries()
         
         entries = entries_ack + entries_timeout
-        swap_vault = web3.eth.contract(abi=vault_abi)
+        swap_vault = w3.eth.contract(abi=vault_abi)
         processed_logs = [swap_vault.events.ReceiveAsset().processLog(entry) for entry in entries]
         
-    def get_callbacks(self, w3, ibc_endpoint):
+    def get_callbacks(self, w3, ibc_endpoint, chain_identifier):
         # We need to get all callbacks.
         # We need to check that the calls were original executed on the ibc_emulator
         # We need to compute the hash.
         pass
+
+    def backcheck(self):
+        chain = "sepolia"
+        w3 = self.chains[chain]['w3']
+        fromBlock = 0
+        ibc_emulator = self.chains[chain]["ibcinterface"]
+        a = self.get_sendAssets(w3, fromBlock, ibc_emulator.address, chain_identifier=convert.to_bytes(chain.encode()))
+        chain = "mumbai"
+        w3 = self.chains[chain]['w3']
+        fromBlock = 0
+        ibc_emulator = self.chains[chain]["ibcinterface"]
+        b = self.get_receiveAsset(w3, fromBlock, ibc_emulator.address, chain_identifier=convert.to_bytes(chain.encode()))
+        
+        chain = "sepolia"
+        w3 = self.chains[chain]['w3']
+        fromBlock = 0
+        ibc_emulator = self.chains[chain]["ibcinterface"]
+        c = self.get_sendAsset_callback(w3, fromBlock, ibc_emulator.address, chain_identifier=convert.to_bytes(chain.encode()))
+        
+        return (a, b, c)
     
     def run(self, wait=5):
         chains = self.chains.keys()
@@ -336,3 +401,9 @@ def main():
 
 if __name__ == "__main__":
     main()
+    
+    
+    
+    
+    
+    
