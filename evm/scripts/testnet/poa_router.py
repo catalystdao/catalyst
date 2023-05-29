@@ -374,7 +374,7 @@ class PoARouter:
         while True:
             for chain in chains:
                 w3 = self.chains[chain]['w3']
-                fromBlock = 3583227 #blocknumbers[chain]
+                fromBlock = blocknumbers[chain]
                 toBlock = w3.eth.blockNumber
             
                 if fromBlock <= toBlock:

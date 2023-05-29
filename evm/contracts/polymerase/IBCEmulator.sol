@@ -24,7 +24,7 @@ contract IBCEmulator is IbcDispatcher, Ownable {
         bytes calldata payload,
         uint64 timeoutBlockHeight
     ) external {
-        bytes32 fromChannel = (LOCALCHANNELID << 128) ^ channelId;
+        bytes32 fromChannel = (channelId << 128) ^ (channelId >> 128);
         bytes32 toChannel = channelId;
         emit Packet(
             IbcPacket(
