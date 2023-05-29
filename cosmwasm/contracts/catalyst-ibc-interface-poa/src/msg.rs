@@ -56,11 +56,14 @@ pub enum ExecuteMsg {
     },
 
     IBCPacketAck {
-        data: Binary
+        data: Binary,
+        response: Binary,
+        channel_id: String
     },
 
     IBCPacketTimeout {
-        data: Binary
+        data: Binary,
+        channel_id: String
     },
 
 

@@ -108,19 +108,25 @@ pub fn execute(
         ),
     
         ExecuteMsg::IBCPacketAck {
-            data
+            data,
+            response,
+            channel_id
         } => execute_ibc_packet_ack(
             deps,
             info,
-            data
+            data,
+            response,
+            channel_id
         ),
     
         ExecuteMsg::IBCPacketTimeout {
-            data
+            data,
+            channel_id
         } => execute_ibc_packet_timeout(
             deps,
             info,
-            data
+            data,
+            channel_id
         ),
 
         // Ownership msgs

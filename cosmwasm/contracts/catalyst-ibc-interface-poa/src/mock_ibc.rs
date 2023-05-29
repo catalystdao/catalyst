@@ -81,17 +81,19 @@ pub fn reply(
 pub fn execute_ibc_packet_ack(
     deps: DepsMut,
     info: MessageInfo,
-    data: Binary
+    data: Binary,
+    response: Binary,
+    channel_id: String
 ) -> Result<Response, ContractError> {
 
     if !is_owner(deps.as_ref(), info.sender)? {
         return Err(ContractError::Unauthorized {});
     }
 
-    let mock_ibc_packet = build_mock_ibc_packet(data, "".to_string());
+    let mock_ibc_packet = build_mock_ibc_packet(data, channel_id);
 
     //TODO only the first byte of the response is checked, the rest is ignored. Do we want this?
-    let ack = mock_ibc_packet.data.0.get(0);
+    let ack = response.0.get(0);
     let response = match ack {
         Some(ack_id) => {
             match ack_id {
@@ -114,14 +116,18 @@ pub fn execute_ibc_packet_ack(
 pub fn execute_ibc_packet_timeout(
     deps: DepsMut,
     info: MessageInfo,
-    data: Binary
+    data: Binary,
+    channel_id: String
 ) -> Result<Response, ContractError> {
 
     if !is_owner(deps.as_ref(), info.sender)? {
         return Err(ContractError::Unauthorized {});
     }
 
-    let response = on_packet_failure(deps, build_mock_ibc_packet(data, "".to_string())).map_err(|_| ContractError::Std(StdError::generic_err("IBC timeout packet execution failed.")))?;
+    let response = on_packet_failure(
+        deps,
+        build_mock_ibc_packet(data, channel_id)
+    ).map_err(|_| ContractError::Std(StdError::generic_err("IBC timeout packet execution failed.")))?;
 
     Ok(
         Response::new()
