@@ -18,6 +18,9 @@ with open("cci_abi.json", "r") as f:
 with open("emulator_abi.json", "r") as f:
     e_abi = json.load(f)
 
+def decode_chain_from_channel(channelid):
+    return channelid[0:16].decode().replace("\x00", "")
+
 def convert_64_bytes_address(address):
     return convert.to_bytes(20, "bytes1")+convert.to_bytes(0)+convert.to_bytes(address.replace("0x", ""))
 
@@ -66,8 +69,7 @@ class PoARouter:
 
     def relay(self, from_chain, event):
         packet = event["args"]["packet"]
-        target_chain = packet[1][1]
-        target_chain = target_chain.decode().replace("\x00", "")
+        target_chain = decode_chain_from_channel(packet[1][1])
         relayer_address = self.chains[target_chain]["acct"].address
         
         try:
@@ -372,7 +374,7 @@ class PoARouter:
         while True:
             for chain in chains:
                 w3 = self.chains[chain]['w3']
-                fromBlock = blocknumbers[chain]
+                fromBlock = 3583227 #blocknumbers[chain]
                 toBlock = w3.eth.blockNumber
             
                 if fromBlock <= toBlock:
