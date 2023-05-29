@@ -1,28 +1,28 @@
 {
     "chain_config": {
         "sepolia": {
-            "factory": "0xd27Ced1dBf2c6e6D056A25Ae6F40bE6D98cc4b09",
-            "ibcinterface": "0xc7895e94D4909709B5f0209AA91b6536f889e86f",
-            "crosschaininterface": "0x18E31f0dAeBbD2a3fD7999799edcdDFfdb1aF53F",
-            "volatile_template": "0x3deE40c467b0f1AEd6554F8ACd21113E19989fcF",
-            "volatile_mathlib": "0x15b722ddA31A6a0d8FfdCd8cd9B464FDcdB20A61",
-            "amplified_template": "0x612D172287e429B8f810A661ED417F31eD21F59a",
-            "amplified_mathlib": "0xA73ee2ba2F2B8DcD3b734dac6e93f4a9EDc70539",
-            "describer": "0xC090f428A26508047340E26f291c7EC98672598c",
-            "describer_registry": "0xC090f428A26508047340E26f291c7EC98672598c",
+            "factory": "0x0B7255b083aa9A2d2a5F08b6eD796742e500a8a1",
+            "ibcinterface": "0x2eB4fB0eF0ACa8f18C861070178F42397Ba60BBf",
+            "crosschaininterface": "0x1d51fed1FDA7dd9d81e51AD5c7AE610A6fd53eA8",
+            "volatile_template": "0xAe231CC251801bb7cAe3D0Ad042CC5B96F96680F",
+            "volatile_mathlib": "0xc7B5DE021BA9A9d696DE8c186A939E52A85Bb53E",
+            "amplified_template": "0x97F456dd3d69960cEb2b498cf9398592d7255B15",
+            "amplified_mathlib": "0x8E3CCFB4a5E8Eaa3c82d182744ad73dD5F83a1a1",
+            "describer": "0x5bCfeCEF823Ad97dcEB802A0088cfDc39c0c1C0f",
+            "describer_registry": "0x5bCfeCEF823Ad97dcEB802A0088cfDc39c0c1C0f",
             "router": "0x88f2d1c92E6B0c66f309695b9CdE964b73BF3c6F",
             "permit2": "0x88Cd393da95214A31081293387987e5B7Dff6f85"
         },
         "mumbai": {
-            "factory": "0xd27Ced1dBf2c6e6D056A25Ae6F40bE6D98cc4b09",
-            "ibcinterface": "0xc7895e94D4909709B5f0209AA91b6536f889e86f",
-            "crosschaininterface": "0x18E31f0dAeBbD2a3fD7999799edcdDFfdb1aF53F",
-            "volatile_template": "0x3deE40c467b0f1AEd6554F8ACd21113E19989fcF",
-            "volatile_mathlib": "0x15b722ddA31A6a0d8FfdCd8cd9B464FDcdB20A61",
-            "amplified_template": "0x612D172287e429B8f810A661ED417F31eD21F59a",
-            "amplified_mathlib": "0xA73ee2ba2F2B8DcD3b734dac6e93f4a9EDc70539",
-            "describer": "0xC090f428A26508047340E26f291c7EC98672598c",
-            "describer_registry": "0xC090f428A26508047340E26f291c7EC98672598c",
+            "factory": "0x0B7255b083aa9A2d2a5F08b6eD796742e500a8a1",
+            "ibcinterface": "0x2eB4fB0eF0ACa8f18C861070178F42397Ba60BBf",
+            "crosschaininterface": "0x1d51fed1FDA7dd9d81e51AD5c7AE610A6fd53eA8",
+            "volatile_template": "0xAe231CC251801bb7cAe3D0Ad042CC5B96F96680F",
+            "volatile_mathlib": "0xc7B5DE021BA9A9d696DE8c186A939E52A85Bb53E",
+            "amplified_template": "0x97F456dd3d69960cEb2b498cf9398592d7255B15",
+            "amplified_mathlib": "0x8E3CCFB4a5E8Eaa3c82d182744ad73dD5F83a1a1",
+            "describer": "0x5bCfeCEF823Ad97dcEB802A0088cfDc39c0c1C0f",
+            "describer_registry": "0x5bCfeCEF823Ad97dcEB802A0088cfDc39c0c1C0f",
             "router": "0x88f2d1c92E6B0c66f309695b9CdE964b73BF3c6F",
             "permit2": "0x88Cd393da95214A31081293387987e5B7Dff6f85"
         }
@@ -32,22 +32,22 @@
         "sepolia": {
             "wSEP": "0x3A773F4804eCC5208b58571DF4fB7005444cbCA7",
             "sepUSDC": {
-                "address": "0x44a35246ba2B355998F1CeCB4e370598D9a66113",
+                "address": "0xf86ad93BB6e27e8cE6bF7D444c637b4690508219",
                 "decimals": 6,
                 "supply": 1000000.0
             },
             "sepUSDT": {
-                "address": "0x02d87b55A6c35C59a586C9515De088d1E19b57fB",
+                "address": "0x1483D33524F3eE26732E9679bf4c5947f74b84ED",
                 "decimals": 18,
                 "supply": 1000000.0
             },
             "SuperStable100": {
-                "address": "0xEcCDBA315D835bFDC0B1F55d70C171978BE5d8aA",
+                "address": "0x8E8768d6C13b0BCE37F7D4ec06bC4f6cd7b309d4",
                 "decimals": 16,
                 "supply": 100000000.0
             },
             "seppoi": {
-                "address": "0x7D0c9B1e540cE3c2BD71bF9dFEa13d8Bf18BfE16",
+                "address": "0x2ed0260840147E59062d0F24003919F05C635037",
                 "decimals": 18,
                 "supply": 1000000.0
             }
@@ -55,17 +55,17 @@
         "mumbai": {
             "wMUM": "0x3A773F4804eCC5208b58571DF4fB7005444cbCA7",
             "mumUSDC": {
-                "address": "0x44a35246ba2B355998F1CeCB4e370598D9a66113",
+                "address": "0xf86ad93BB6e27e8cE6bF7D444c637b4690508219",
                 "decimals": 6,
                 "supply": 1000000.0
             },
             "mumUSDT": {
-                "address": "0x02d87b55A6c35C59a586C9515De088d1E19b57fB",
+                "address": "0x1483D33524F3eE26732E9679bf4c5947f74b84ED",
                 "decimals": 18,
                 "supply": 1000000.0
             },
             "mummi": {
-                "address": "0xEcCDBA315D835bFDC0B1F55d70C171978BE5d8aA",
+                "address": "0x8E8768d6C13b0BCE37F7D4ec06bC4f6cd7b309d4",
                 "decimals": 18,
                 "supply": 1000000.0
             }
@@ -75,7 +75,7 @@
         "Stables": {
             "amplification": 0.25,
             "sepolia": {
-                "address": "0xd3178468981B123849C83cC2D0a7BA5077a7F0ab",
+                "address": "0xc49d2A0Dd31F86730Ee2E786b39c6560CcB11f11",
                 "weights": [
                     1000000000000.0,
                     1,
@@ -88,7 +88,7 @@
                 }
             },
             "mumbai": {
-                "address": "0xd3178468981B123849C83cC2D0a7BA5077a7F0ab",
+                "address": "0xc49d2A0Dd31F86730Ee2E786b39c6560CcB11f11",
                 "weights": [
                     1000000000000.0,
                     1
@@ -101,7 +101,7 @@
         },
         "Gas Tokens": {
             "sepolia": {
-                "address": "0x5eF7D6FaDdc008FFCB92FC2A6646A2297366370c",
+                "address": "0x24A5BcDE5f6AC9c5406F9137c4BFD0CaE5190588",
                 "weights": [
                     100,
                     200
@@ -112,7 +112,7 @@
                 }
             },
             "mumbai": {
-                "address": "0x5eF7D6FaDdc008FFCB92FC2A6646A2297366370c",
+                "address": "0x24A5BcDE5f6AC9c5406F9137c4BFD0CaE5190588",
                 "weights": [
                     100,
                     50
@@ -125,7 +125,7 @@
         },
         "Pool 1": {
             "sepolia": {
-                "address": "0xd8FC213445b453cE7428F96e78f947A1a5a5eEfa",
+                "address": "0x3678CB21210D4fF032Be9c682f40D69a111EC273",
                 "weights": [
                     1
                 ],
@@ -134,7 +134,7 @@
                 }
             },
             "mumbai": {
-                "address": "0xd8FC213445b453cE7428F96e78f947A1a5a5eEfa",
+                "address": "0x3678CB21210D4fF032Be9c682f40D69a111EC273",
                 "weights": [
                     1
                 ],
@@ -145,7 +145,7 @@
         },
         "SepStableGas": {
             "sepolia": {
-                "address": "0x7Db241e7172E42bb04AD4Ee26Fee2d699dB58464",
+                "address": "0x5E0F06AfC2263810962Db1E8CF07C5A7e30C5dCA",
                 "weights": [
                     1,
                     1
@@ -158,7 +158,7 @@
         },
         "MumStableGas": {
             "mumbai": {
-                "address": "0x7Db241e7172E42bb04AD4Ee26Fee2d699dB58464",
+                "address": "0x5E0F06AfC2263810962Db1E8CF07C5A7e30C5dCA",
                 "weights": [
                     1,
                     1

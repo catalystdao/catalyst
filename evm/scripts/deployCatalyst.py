@@ -300,5 +300,11 @@ class Catalyst:
                     True,
                     {'from': self.deployer}
                 )
+                vault_container.setConnection(
+                    get_channel_id(self.chain, chain),
+                    convert_64_bytes_address(target_vault),
+                    True,
+                    {'from': self.deployer}
+                )
             vault_container.finishSetup({'from': self.deployer})
         
