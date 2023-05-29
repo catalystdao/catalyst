@@ -1,4 +1,6 @@
 import json
+from time import sleep
+import os
 
 from brownie import (WETH9, CatalystIBCInterface,
                      CatalystVaultAmplified, CatalystFactory,
@@ -11,7 +13,10 @@ from brownie import (WETH9, CatalystIBCInterface,
 from scripts.deployCatalyst import Catalyst; cat = Catalyst(acct, "sepolia", "scripts/deploy_config.json", True, "wSEP"); WETH9.at(cat.config["tokens"]["sepolia"]["wSEP"]).deposit({'from': cat.deployer, 'value': 1*10**18}); cat.deploy_config()
 
 # Then run
-from scripts.deployCatalyst import Catalyst; cat = Catalyst(acct, "mumbai", "scripts/deploy_config.json", True, "wMUM"); WETH9.at(cat.config["tokens"]["mumbai"]["wMUM"]).deposit({'from': cat.deployer, 'value': 1*10**18}); cat.deploy_config(); cat.set_connections()
+from scripts.deployCatalyst import Catalyst; cat = Catalyst(acct, "mumbai", "scripts/deploy_config.json", True, "wMUM"); WETH9.at(cat.config["tokens"]["mumbai"]["wMUM"]).deposit({'from': cat.deployer, 'value': 1*10**18}); cat.deploy_config(); 
+
+# On both chains, run:
+cat.set_connections()
 
 # Potentially use:
 from brownie.network.gas.strategies import LinearScalingStrategy; from brownie.network import gas_price; gas_strategy = LinearScalingStrategy("1.6 gwei", "10 gwei", 2); gas_price(gas_strategy)
@@ -19,9 +24,12 @@ from brownie.network.gas.strategies import LinearScalingStrategy; from brownie.n
 
 MAX_UINT256: int = 2**256 - 1
 
+LOCK = os.path.join(os.path.dirname(__file__), "lock")
 
-def get_channel_id(chain_name: str):
-    return convert.to_bytes(chain_name.encode(), "bytes32")
+def get_channel_id(from_chain: str, to_chain: str):
+    a = convert.to_bytes(from_chain.encode(), "bytes32")
+    b = (int.from_bytes(to_chain.encode(), "big") << 128).to_bytes(32, "big")
+    return bytes(x ^ y for x, y in zip(b, a))
     
 def convert_64_bytes_address(address):
     return convert.to_bytes(20, "bytes1")+convert.to_bytes(0)+convert.to_bytes(address.replace("0x", ""))
@@ -31,10 +39,27 @@ class Catalyst:
     def read_config(self):
         with open(self.config_name) as f:
             return json.load(f)
+    
+    def load_config(self):
+        self.config = self.read_config()
+        
+    def prepare_write_config(self):
+        while True:
+            with open(LOCK, "r") as f:
+                status = f.read()
+                print("status", status)
+            if status == "":
+                with open(LOCK, "w") as f:
+                    f.write(self.chain)
+                sleep(0.05)
+            elif status == self.chain:
+                break
         
     def write_config(self):
         with open(self.config_name, 'w') as f:
             json.dump(self.config, f, indent=4)
+        with open(LOCK, "w") as f:
+            f = ""
     
     def blank_setup(self, wTKN):
         # Check if a wrapped gas token is provided.
@@ -49,19 +74,28 @@ class Catalyst:
         if volatile_mathlib == '':
             volatile_mathlib = self.deployer.deploy(CatalystMathVol)
             
+            self.prepare_write_config()
+            self.load_config()
             self.config['chain_config'][self.chain]["volatile_mathlib"] = volatile_mathlib.address
+            self.write_config()
             
         if amplified_mathlib == '':
             amplified_mathlib = self.deployer.deploy(CatalystMathAmp)
             
+            self.prepare_write_config()
+            self.load_config()
             self.config['chain_config'][self.chain]["amplified_mathlib"] = amplified_mathlib.address
+            self.write_config()
         
         # Check if factory have been deployed
         factory = self.config['chain_config'][self.chain]["factory"]
         if factory == '':
             factory = self.deployer.deploy(CatalystFactory, 0)
             
+            self.prepare_write_config()
+            self.load_config()
             self.config['chain_config'][self.chain]["factory"] = factory.address
+            self.write_config()
         
         # Deploy IBC contracts
         ibcinterface = self.config['chain_config'][self.chain]["ibcinterface"]
@@ -71,12 +105,17 @@ class Catalyst:
             relayer = self.config["relayer_address"]
             ibcinterface.transferOwnership(relayer, {'from': self.deployer})
             
+            self.prepare_write_config()
+            self.load_config()
             self.config['chain_config'][self.chain]["ibcinterface"] = ibcinterface.address
+            self.write_config()
             
         if crosschaininterface == '':
             crosschaininterface = self.deployer.deploy(CatalystIBCInterface, ibcinterface)
             
+            self.load_config()
             self.config['chain_config'][self.chain]["crosschaininterface"] = crosschaininterface.address
+            self.write_config()
         
         # Templates
         volatile_template = self.config['chain_config'][self.chain]["volatile_template"]
@@ -84,12 +123,18 @@ class Catalyst:
         if volatile_template == '':
             volatile_template = self.deployer.deploy(CatalystVaultVolatile, factory, volatile_mathlib)
             
+            self.prepare_write_config()
+            self.load_config()
             self.config['chain_config'][self.chain]["volatile_template"] = volatile_template.address
+            self.write_config()
             
         if amplified_template == '':
             amplified_template = self.deployer.deploy(CatalystVaultAmplified, factory, amplified_mathlib)
             
+            self.prepare_write_config()
+            self.load_config()
             self.config['chain_config'][self.chain]["amplified_template"] = amplified_template.address
+            self.write_config()
         
         # Deploy regitries
         catalyst_describer = self.config['chain_config'][self.chain]["describer"]
@@ -100,27 +145,39 @@ class Catalyst:
             catalyst_describer.add_whitelisted_template(amplified_template, 1, {'from': self.deployer})
             catalyst_describer.add_whitelisted_cii(crosschaininterface, {'from': self.deployer})
             
+            self.prepare_write_config()
+            self.load_config()
             self.config['chain_config'][self.chain]["describer"] = catalyst_describer.address
+            self.write_config()
             
         if describer_registry == '':
             describer_registry = self.deployer.deploy(CatalystDescriberRegistry)
             describer_registry.add_describer(catalyst_describer, {'from': self.deployer})
             
+            self.prepare_write_config()
+            self.load_config()
             self.config['chain_config'][self.chain]["describer_registry"] = catalyst_describer.address
+            self.write_config()
             
         # permit2
         permit2 = self.config['chain_config'][self.chain]["permit2"]
         if permit2 == '':
             permit2 = self.deployer.deploy(p2)
             
+            self.prepare_write_config()
+            self.load_config()
             self.config['chain_config'][self.chain]["permit2"] = permit2.address
+            self.write_config()
         
         # Router
         router = self.config['chain_config'][self.chain]["router"]
         if router == '':
             router = self.deployer.deploy(CatalystRouter, [permit2, tkn])
             
+            self.prepare_write_config()
+            self.load_config()
             self.config['chain_config'][self.chain]["router"] = router.address
+            self.write_config()
         
         # deploy the other tokens
         for token in self.config['tokens'][self.chain].keys():
@@ -135,10 +192,11 @@ class Catalyst:
                     {"from": self.deployer}
                 )
                 
+                self.prepare_write_config()
+                self.load_config()
                 self.config['tokens'][self.chain][token]["address"] = deployed_tkn.address
+                self.write_config()
         
-        self.write_config()
-        self.config = self.read_config()
     
     def __init__(
         self,
@@ -202,12 +260,14 @@ class Catalyst:
                     self.config['chain_config'][self.chain]["crosschaininterface"],
                     {"from": self.deployer},
                 )
+                
+                self.prepare_write_config()
+                self.load_config()
                 self.config["vaults"][vault][self.chain]["address"] = deploytx.events["VaultDeployed"]["vaultAddress"]
-        
-        self.write_config()
-        self.config = self.read_config()
+                self.write_config()
                     
     def set_connections(self):
+        self.load_config()
         volatile_template = self.config['chain_config'][self.chain]["volatile_template"]
         amplified_template = self.config['chain_config'][self.chain]["amplified_template"]
         # Check that all vaults have been setup.
@@ -235,7 +295,7 @@ class Catalyst:
                     continue
                 target_vault =  self.config["vaults"][vault][chain]["address"]
                 vault_container.setConnection(
-                    get_channel_id(chain),
+                    get_channel_id(chain, self.chain),
                     convert_64_bytes_address(target_vault),
                     True,
                     {'from': self.deployer}
