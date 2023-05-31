@@ -141,6 +141,7 @@ class Catalyst:
         describer_registry = self.config['chain_config'][self.chain]["describer_registry"]
         if catalyst_describer == '':
             catalyst_describer = self.deployer.deploy(CatalystDescriber)
+            catalyst_describer.add_vault_factory(factory, {'from': self.deployer})
             catalyst_describer.add_whitelisted_template(volatile_template, 1, {'from': self.deployer})
             catalyst_describer.add_whitelisted_template(amplified_template, 1, {'from': self.deployer})
             catalyst_describer.add_whitelisted_cii(crosschaininterface, {'from': self.deployer})
