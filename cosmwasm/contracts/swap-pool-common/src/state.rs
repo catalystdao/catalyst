@@ -2,7 +2,7 @@ use std::ops::Div;
 
 use cosmwasm_schema::cw_serde;
 
-use cosmwasm_std::{Addr, Uint128, DepsMut, Env, Response, Event, MessageInfo, Deps, StdResult, CosmosMsg, to_binary, Timestamp, StdError};
+use cosmwasm_std::{Addr, Uint128, DepsMut, Env, Response, Event, MessageInfo, Deps, StdResult, CosmosMsg, to_binary, Timestamp, StdError, Binary};
 use cw20::Cw20ExecuteMsg;
 use cw_storage_plus::{Map, Item};
 use cw20_base::{state::{MinterData, TokenInfo, TOKEN_INFO}, contract::execute_mint};
@@ -539,8 +539,12 @@ pub fn on_send_asset_success(
 
     Ok(
         Response::new()
-            .add_attribute("swap_hash", format!("{:?}", send_asset_hash))
             .add_attribute("channel_id", channel_id)
+            .add_attribute("to_account", Binary(to_account).to_base64())
+            .add_attribute("units", u.to_string())
+            .add_attribute("amount", amount)
+            .add_attribute("asset", asset)
+            .add_attribute("block_number_mod", block_number_mod.to_string())
     )
 }
 
@@ -586,8 +590,12 @@ pub fn on_send_asset_failure(
     Ok(
         Response::new()
             .add_message(transfer_msg)
-            .add_attribute("swap_hash", format!("{:?}", send_asset_hash))
             .add_attribute("channel_id", channel_id)
+            .add_attribute("to_account", Binary(to_account).to_base64())
+            .add_attribute("units", u.to_string())
+            .add_attribute("amount", amount)
+            .add_attribute("asset", asset)
+            .add_attribute("block_number_mod", block_number_mod.to_string())
     )
 }
 
@@ -617,8 +625,11 @@ pub fn on_send_liquidity_success(
 
     Ok(
         Response::new()
-            .add_attribute("swap_hash",  format!("{:?}", send_liquidity_hash))
             .add_attribute("channel_id", channel_id)
+            .add_attribute("to_account", Binary(to_account).to_base64())
+            .add_attribute("units", u.to_string())
+            .add_attribute("amount", amount)
+            .add_attribute("block_number_mod", block_number_mod.to_string())
     )
 }
 
@@ -662,9 +673,12 @@ pub fn on_send_liquidity_failure(
 
     Ok(
         Response::new()
-            .add_attribute("swap_hash", format!("{:?}", send_liquidity_hash))
             .add_attributes(mint_response.attributes)   //TODO better way to do this?
             .add_attribute("channel_id", channel_id)
+            .add_attribute("to_account", Binary(to_account).to_base64())
+            .add_attribute("units", u.to_string())
+            .add_attribute("amount", amount)
+            .add_attribute("block_number_mod", block_number_mod.to_string())
     )
 }
 
