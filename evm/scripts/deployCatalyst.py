@@ -111,7 +111,7 @@ class Catalyst:
         )
         self.tokens = tokens
         self.vault = CatalystVaultVolatile.at(
-            self.deploytx.events["VaultDeployed"]["vault_address"]
+            self.deploytx.events["VaultDeployed"]["vaultAddress"]
         )
         return self.vault
 
