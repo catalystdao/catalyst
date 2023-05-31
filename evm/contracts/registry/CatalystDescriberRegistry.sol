@@ -26,7 +26,7 @@ contract CatalystDescriberRegistry is Ownable {
     /** 
     * @notice Given a Catalyst version, returns the current vault describer.
     * @dev Returns address(0) if no describer exists.
-    * @param catalystVersion The Catalyst version. Is 1 indexed.
+    * @param catalystVersion The Catalyst version.
     */
     function get_vault_describer(uint256 catalystVersion) public view returns(address) {
         if (_vault_describers.length <= catalystVersion) return address(0);
