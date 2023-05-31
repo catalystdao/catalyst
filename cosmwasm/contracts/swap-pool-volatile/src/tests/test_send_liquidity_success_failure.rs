@@ -1,5 +1,5 @@
 mod test_volatile_send_liquidity_success_failure {
-    use cosmwasm_std::{Uint128, Addr};
+    use cosmwasm_std::{Uint128, Addr, Binary};
     use cw_multi_test::{App, Executor};
     use ethnum::{U256, uint};
     use swap_pool_common::{ContractError, msg::{TotalEscrowedLiquidityResponse, LiquidityEscrowResponse}, state::{compute_send_liquidity_hash, INITIAL_MINT_AMOUNT}};
@@ -13,7 +13,7 @@ mod test_volatile_send_liquidity_success_failure {
         pub vault: Addr,
         pub from_amount: Uint128,
         pub u: U256,
-        pub to_account: Vec<u8> ,
+        pub to_account: Binary,
         pub block_number: u32
     }
 
@@ -71,7 +71,7 @@ mod test_volatile_send_liquidity_success_failure {
                     min_pool_tokens: U256::ZERO,
                     min_reference_asset: U256::ZERO,
                     fallback_account: SWAPPER_A.to_string(),
-                    calldata: vec![]
+                    calldata: Binary(vec![])
                 },
                 &[]
             ).unwrap();
@@ -130,7 +130,7 @@ mod test_volatile_send_liquidity_success_failure {
             .wrap()
             .query_wasm_smart::<LiquidityEscrowResponse>(
                 env.vault.clone(),
-                &QueryMsg::LiquidityEscrow { hash: swap_hash }
+                &QueryMsg::LiquidityEscrow { hash: Binary(swap_hash) }
             ).unwrap();
 
         assert!(queried_escrow.fallback_account.is_none());
@@ -203,7 +203,7 @@ mod test_volatile_send_liquidity_success_failure {
             .wrap()
             .query_wasm_smart::<LiquidityEscrowResponse>(
                 env.vault.clone(),
-                &QueryMsg::LiquidityEscrow { hash: swap_hash }
+                &QueryMsg::LiquidityEscrow { hash: Binary(swap_hash) }
             ).unwrap();
 
         assert!(queried_escrow.fallback_account.is_none());
@@ -418,7 +418,7 @@ mod test_volatile_send_liquidity_success_failure {
             env.vault.clone(),
             &VolatileExecuteMsg::OnSendLiquiditySuccess {
                 channel_id: CHANNEL_ID.to_string(),
-                to_account: "not_to_account".as_bytes().to_vec(),   // ! Not the chain interface
+                to_account: Binary("not_to_account".as_bytes().to_vec()),   // ! Not the chain interface
                 u: env.u,
                 amount: env.from_amount,
                 block_number_mod: env.block_number 
@@ -511,7 +511,7 @@ mod test_volatile_send_liquidity_success_failure {
             env.vault.clone(),
             &VolatileExecuteMsg::OnSendLiquidityFailure {
                 channel_id: CHANNEL_ID.to_string(),
-                to_account: "not_to_account".as_bytes().to_vec(),   // ! Not the chain interface
+                to_account: Binary("not_to_account".as_bytes().to_vec()),   // ! Not the chain interface
                 u: env.u,
                 amount: env.from_amount,
                 block_number_mod: env.block_number 

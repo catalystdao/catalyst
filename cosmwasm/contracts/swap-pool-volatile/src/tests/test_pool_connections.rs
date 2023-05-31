@@ -1,5 +1,5 @@
 mod test_volatile_pool_connections {
-    use cosmwasm_std::{Addr, Uint128};
+    use cosmwasm_std::{Addr, Uint128, Binary};
     use cw_multi_test::{Executor, App};
     use swap_pool_common::{ContractError, msg::PoolConnectionStateResponse};
 
@@ -208,7 +208,7 @@ mod test_volatile_pool_connections {
         let vault = deploy_mock_vault(&mut app);
 
         let channel_id = "channel_0";
-        let target_pool = b"target_pool".to_vec();
+        let target_pool = Binary(b"target_pool".to_vec());
 
 
         // Tested action: set connection invoked by factory owner

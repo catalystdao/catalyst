@@ -1,4 +1,4 @@
-use cosmwasm_std::{StdError, OverflowError, Uint128};
+use cosmwasm_std::{StdError, OverflowError, Uint128, Binary};
 use ethnum::U256;
 use thiserror::Error;
 
@@ -36,7 +36,7 @@ pub enum ContractError {
     ReturnInsufficient { out: Uint128, min_out: Uint128 },
 
     #[error("Pool not connected")]
-    PoolNotConnected { channel_id: String, pool: Vec<u8> },
+    PoolNotConnected { channel_id: String, pool: Binary },
 
     #[error("The pool only allows for local swaps, as it has no cross chain interface.")]
     PoolHasNoInterface {},

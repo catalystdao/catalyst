@@ -1,5 +1,5 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::Uint128;
+use cosmwasm_std::{Uint128, Binary};
 use ethnum::U256;
 use schemars::JsonSchema;
 use serde::{Serialize, Deserialize};
@@ -24,8 +24,8 @@ pub enum ExecuteMsg {
 
     SendCrossChainAsset {
         channel_id: String,
-        to_pool: Vec<u8>,
-        to_account: Vec<u8>,
+        to_pool: Binary,
+        to_account: Binary,
         to_asset_index: u8,
         #[serde(with = "U256Def")]
         u: U256,
@@ -34,13 +34,13 @@ pub enum ExecuteMsg {
         from_amount: Uint128,
         from_asset: String,
         block_number: u32,
-        calldata: Vec<u8>
+        calldata: Binary
     },
 
     SendCrossChainLiquidity {
         channel_id: String,
-        to_pool: Vec<u8>,
-        to_account: Vec<u8>,
+        to_pool: Binary,
+        to_account: Binary,
         #[serde(with = "U256Def")]
         u: U256,
         #[serde(with = "U256Def")]
@@ -49,7 +49,7 @@ pub enum ExecuteMsg {
         min_reference_asset: U256,  //TODO EVM mismatch
         from_amount: Uint128,
         block_number: u32,
-        calldata: Vec<u8>
+        calldata: Binary
     }
 
 }

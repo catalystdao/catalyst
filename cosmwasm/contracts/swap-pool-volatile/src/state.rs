@@ -539,14 +539,14 @@ pub fn send_asset(
     env: Env,
     info: MessageInfo,
     channel_id: String,
-    to_pool: Vec<u8>,
-    to_account: Vec<u8>,
+    to_pool: Binary,
+    to_account: Binary,
     from_asset: String,
     to_asset_index: u8,
     amount: Uint128,
     min_out: U256,
     fallback_account: String,   //TODO EVM mismatch
-    calldata: Vec<u8>
+    calldata: Binary
 ) -> Result<Response, ContractError> {
 
     // Only allow connected pools
@@ -665,16 +665,16 @@ pub fn receive_asset(
     env: Env,
     info: MessageInfo,
     channel_id: String,
-    from_pool: Vec<u8>,
+    from_pool: Binary,
     to_asset_index: u8,
     to_account: String,
     u: U256,
     min_out: Uint128,
     from_amount: U256,
-    from_asset: Vec<u8>,
+    from_asset: Binary,
     from_block_number_mod: u32,
     calldata_target: Option<Addr>,
-    calldata: Option<Vec<u8>>
+    calldata: Option<Binary>
 ) -> Result<Response, ContractError> {
 
     // Only allow the 'chain_interface' to invoke this function
@@ -721,7 +721,7 @@ pub fn receive_asset(
         CosmosMsg::Wasm(
             cosmwasm_std::WasmMsg::Execute {
                 contract_addr: target.to_string(),
-                msg: Binary::from(calldata.unwrap_or(vec![])),
+                msg: Binary::from(calldata.unwrap_or(Binary(vec![]))),
                 funds: vec![]
             }
         )
@@ -752,13 +752,13 @@ pub fn send_liquidity(
     env: Env,
     info: MessageInfo,
     channel_id: String,
-    to_pool: Vec<u8>,
-    to_account: Vec<u8>,
+    to_pool: Binary,
+    to_account: Binary,
     amount: Uint128,            //TODO EVM mismatch
     min_pool_tokens: U256,
     min_reference_asset: U256,
     fallback_account: String,   //TODO EVM mismatch
-    calldata: Vec<u8>
+    calldata: Binary
 ) -> Result<Response, ContractError> {
 
     // Only allow connected pools
@@ -855,7 +855,7 @@ pub fn receive_liquidity(
     env: Env,
     info: MessageInfo,
     channel_id: String,
-    from_pool: Vec<u8>,
+    from_pool: Binary,
     to_account: String,
     u: U256,
     min_pool_tokens: Uint128,
@@ -863,7 +863,7 @@ pub fn receive_liquidity(
     from_amount: U256,
     from_block_number_mod: u32,
     calldata_target: Option<Addr>,
-    calldata: Option<Vec<u8>>
+    calldata: Option<Binary>
 ) -> Result<Response, ContractError> {
 
     // Only allow the 'chain_interface' to invoke this function
@@ -965,7 +965,7 @@ pub fn receive_liquidity(
         CosmosMsg::Wasm(
             cosmwasm_std::WasmMsg::Execute {
                 contract_addr: target.to_string(),
-                msg: Binary::from(calldata.unwrap_or(vec![])),
+                msg: Binary::from(calldata.unwrap_or(Binary(vec![]))),
                 funds: vec![]
             }
         )
@@ -1105,7 +1105,7 @@ pub fn on_send_asset_success_volatile(
     deps: &mut DepsMut,
     info: MessageInfo,
     channel_id: String,
-    to_account: Vec<u8>,
+    to_account: Binary,
     u: U256,
     amount: Uint128,
     asset: String,
@@ -1137,7 +1137,7 @@ pub fn on_send_liquidity_success_volatile(
     deps: &mut DepsMut,
     info: MessageInfo,
     channel_id: String,
-    to_account: Vec<u8>,
+    to_account: Binary,
     u: U256,
     amount: Uint128,
     block_number_mod: u32

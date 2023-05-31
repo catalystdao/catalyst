@@ -100,15 +100,15 @@ fn execute_send_cross_chain_asset(
     env: Env,
     info: MessageInfo,
     channel_id: String,
-    to_pool: Vec<u8>,
-    to_account: Vec<u8>,
+    to_pool: Binary,
+    to_account: Binary,
     to_asset_index: u8,
     u: U256,
     min_out: U256,
     from_amount: Uint128,
     from_asset: String,
     block_number: u32,
-    calldata: Vec<u8>
+    calldata: Binary
 ) -> Result<Response, ContractError> {
 
     // Build payload
@@ -144,14 +144,14 @@ fn execute_send_cross_chain_liquidity(
     env: Env,
     info: MessageInfo,
     channel_id: String,
-    to_pool: Vec<u8>,
-    to_account: Vec<u8>,
+    to_pool: Binary,
+    to_account: Binary,
     u: U256,
     min_pool_tokens: U256,
     min_reference_asset: U256,
     from_amount: Uint128,
     block_number: u32,
-    calldata: Vec<u8>
+    calldata: Binary
 ) -> Result<Response, ContractError> {
 
     // Build payload
@@ -255,8 +255,8 @@ mod catalyst_ibc_interface_tests {
     ) -> ExecuteMsg {
         ExecuteMsg::SendCrossChainAsset {
             channel_id: channel_id.into(),
-            to_pool: CatalystEncodedAddress::try_encode(to_pool.as_ref()).unwrap().to_vec(),
-            to_account: CatalystEncodedAddress::try_encode(b"to_account").unwrap().to_vec(),
+            to_pool: CatalystEncodedAddress::try_encode(to_pool.as_ref()).unwrap().to_binary(),
+            to_account: CatalystEncodedAddress::try_encode(b"to_account").unwrap().to_binary(),
             to_asset_index: 1u8,
             u: uint!("78456988731590487483448276103933454935747871349630657124267302091643025406701"),          // Some large U256 number
             min_out: min_out.unwrap_or(
@@ -265,7 +265,7 @@ mod catalyst_ibc_interface_tests {
             from_amount: Uint128::from(4920222095670429824873974121747892731u128),                          // Some large Uint128 number
             from_asset: "from_asset".to_string(),
             block_number: 1356u32,
-            calldata: vec![]
+            calldata: Binary(vec![])
         }
     }
 
@@ -275,12 +275,12 @@ mod catalyst_ibc_interface_tests {
     ) -> swap_pool_common::msg::ExecuteMsg<()> {
         swap_pool_common::msg::ExecuteMsg::ReceiveAsset {
             channel_id: channel_id.into(),
-            from_pool: CatalystEncodedAddress::try_encode(from_pool.as_ref()).unwrap().to_vec(),
+            from_pool: CatalystEncodedAddress::try_encode(from_pool.as_ref()).unwrap().to_binary(),
             to_asset_index: 1u8,
             to_account: "to_account".to_string(),
             u: uint!("78456988731590487483448276103933454935747871349630657124267302091643025406701"),          // Some large U256 number
             min_out: Uint128::from(323476719582585693194107115743132847255u128),                                // Some large Uint128 number
-            from_asset: CatalystEncodedAddress::try_encode("from_asset".as_bytes()).unwrap().to_vec(),
+            from_asset: CatalystEncodedAddress::try_encode("from_asset".as_bytes()).unwrap().to_binary(),
             from_amount: U256::from(4920222095670429824873974121747892731u128),
             from_block_number_mod: 1356u32,
             calldata_target: None,
@@ -293,7 +293,7 @@ mod catalyst_ibc_interface_tests {
     ) -> swap_pool_common::msg::ExecuteMsg<()> {
         swap_pool_common::msg::ExecuteMsg::OnSendAssetSuccess {
             channel_id: channel_id.into(),
-            to_account: CatalystEncodedAddress::try_encode(b"to_account").unwrap().to_vec(),
+            to_account: CatalystEncodedAddress::try_encode(b"to_account").unwrap().to_binary(),
             u: uint!("78456988731590487483448276103933454935747871349630657124267302091643025406701"),          // Some large U256 number
             amount: Uint128::from(4920222095670429824873974121747892731u128),                                   // Some large Uint128 number
             asset: "from_asset".to_string(),
@@ -306,7 +306,7 @@ mod catalyst_ibc_interface_tests {
     ) -> swap_pool_common::msg::ExecuteMsg<()> {
         swap_pool_common::msg::ExecuteMsg::OnSendAssetFailure {
             channel_id: channel_id.into(),
-            to_account: CatalystEncodedAddress::try_encode(b"to_account").unwrap().to_vec(),
+            to_account: CatalystEncodedAddress::try_encode(b"to_account").unwrap().to_binary(),
             u: uint!("78456988731590487483448276103933454935747871349630657124267302091643025406701"),          // Some large U256 number
             amount: Uint128::from(4920222095670429824873974121747892731u128),                                   // Some large Uint128 number
             asset: "from_asset".to_string(),
@@ -325,8 +325,8 @@ mod catalyst_ibc_interface_tests {
     ) -> ExecuteMsg {
         ExecuteMsg::SendCrossChainLiquidity {
             channel_id: channel_id.into(),
-            to_pool: CatalystEncodedAddress::try_encode(to_pool.as_ref()).unwrap().to_vec(),
-            to_account: CatalystEncodedAddress::try_encode(b"to_account").unwrap().to_vec(),
+            to_pool: CatalystEncodedAddress::try_encode(to_pool.as_ref()).unwrap().to_binary(),
+            to_account: CatalystEncodedAddress::try_encode(b"to_account").unwrap().to_binary(),
             u: uint!("78456988731590487483448276103933454935747871349630657124267302091643025406701"),          // Some large U256 number
             min_pool_tokens: min_pool_tokens.unwrap_or(
                 uint!("323476719582585693194107115743132847255")                                                // Some large Uint128 number (as U256)
@@ -336,7 +336,7 @@ mod catalyst_ibc_interface_tests {
             ),
             from_amount: Uint128::from(4920222095670429824873974121747892731u128),                              // Some large Uint128 number
             block_number: 1356u32,
-            calldata: vec![]
+            calldata: Binary(vec![])
         }
     }
 
@@ -346,7 +346,7 @@ mod catalyst_ibc_interface_tests {
     ) -> swap_pool_common::msg::ExecuteMsg<()> {
         swap_pool_common::msg::ExecuteMsg::ReceiveLiquidity {
             channel_id: channel_id.into(),
-            from_pool: CatalystEncodedAddress::try_encode(from_pool.as_ref()).unwrap().to_vec(),
+            from_pool: CatalystEncodedAddress::try_encode(from_pool.as_ref()).unwrap().to_binary(),
             to_account: "to_account".to_string(),
             u: uint!("78456988731590487483448276103933454935747871349630657124267302091643025406701"),          // Some large U256 number
             min_pool_tokens: Uint128::from(323476719582585693194107115743132847255u128),                        // Some large Uint128 number
@@ -363,7 +363,7 @@ mod catalyst_ibc_interface_tests {
     ) -> swap_pool_common::msg::ExecuteMsg<()> {
         swap_pool_common::msg::ExecuteMsg::OnSendLiquiditySuccess {
             channel_id: channel_id.into(),
-            to_account: CatalystEncodedAddress::try_encode(b"to_account").unwrap().to_vec(),
+            to_account: CatalystEncodedAddress::try_encode(b"to_account").unwrap().to_binary(),
             u: uint!("78456988731590487483448276103933454935747871349630657124267302091643025406701"),          // Some large U256 number
             amount: Uint128::from(4920222095670429824873974121747892731u128),                                   // Some large Uint128 number
             block_number_mod: 1356u32
@@ -375,7 +375,7 @@ mod catalyst_ibc_interface_tests {
     ) -> swap_pool_common::msg::ExecuteMsg<()> {
         swap_pool_common::msg::ExecuteMsg::OnSendLiquidityFailure {
             channel_id: channel_id.into(),
-            to_account: CatalystEncodedAddress::try_encode(b"to_account").unwrap().to_vec(),
+            to_account: CatalystEncodedAddress::try_encode(b"to_account").unwrap().to_binary(),
             u: uint!("78456988731590487483448276103933454935747871349630657124267302091643025406701"),          // Some large U256 number
             amount: Uint128::from(4920222095670429824873974121747892731u128),                                   // Some large Uint128 number
             block_number_mod: 1356u32
@@ -388,7 +388,7 @@ mod catalyst_ibc_interface_tests {
         from_pool: &[u8],
         msg: ExecuteMsg,
         override_from_amount: Option<U256>    // Allow to override the msg 'from_amount' to provide invalid configs
-    ) -> Result<Vec<u8>, ContractError> {
+    ) -> Result<Binary, ContractError> {
         let packet = match msg {
             ExecuteMsg::SendCrossChainAsset {
                 channel_id: _,

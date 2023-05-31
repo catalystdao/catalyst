@@ -47,13 +47,13 @@ pub enum ExecuteMsg<T> {
 
     SetConnection {
         channel_id: String,
-        to_pool: Vec<u8>,
+        to_pool: Binary,
         state: bool
     },
 
     OnSendAssetSuccess {
         channel_id: String,
-        to_account: Vec<u8>,
+        to_account: Binary,
         #[serde(with = "U256Def")]
         u: U256,
         amount: Uint128,
@@ -63,7 +63,7 @@ pub enum ExecuteMsg<T> {
 
     OnSendAssetFailure {
         channel_id: String,
-        to_account: Vec<u8>,
+        to_account: Binary,
         #[serde(with = "U256Def")]
         u: U256,
         amount: Uint128,
@@ -73,7 +73,7 @@ pub enum ExecuteMsg<T> {
 
     OnSendLiquiditySuccess {
         channel_id: String,
-        to_account: Vec<u8>,
+        to_account: Binary,
         #[serde(with = "U256Def")]
         u: U256,
         amount: Uint128,
@@ -82,7 +82,7 @@ pub enum ExecuteMsg<T> {
 
     OnSendLiquidityFailure {
         channel_id: String,
-        to_account: Vec<u8>,
+        to_account: Binary,
         #[serde(with = "U256Def")]
         u: U256,
         amount: Uint128,
@@ -114,20 +114,20 @@ pub enum ExecuteMsg<T> {
 
     SendAsset {
         channel_id: String,
-        to_pool: Vec<u8>,
-        to_account: Vec<u8>,
+        to_pool: Binary,
+        to_account: Binary,
         from_asset: String,
         to_asset_index: u8,
         amount: Uint128,
         #[serde(with = "U256Def")]
         min_out: U256,
         fallback_account: String,   //TODO EVM mismatch
-        calldata: Vec<u8>
+        calldata: Binary
     },
 
     ReceiveAsset {
         channel_id: String,
-        from_pool: Vec<u8>,
+        from_pool: Binary,
         to_asset_index: u8,
         to_account: String,
         #[serde(with = "U256Def")]
@@ -135,28 +135,28 @@ pub enum ExecuteMsg<T> {
         min_out: Uint128,
         #[serde(with = "U256Def")]
         from_amount: U256,
-        from_asset: Vec<u8>,
+        from_asset: Binary,
         from_block_number_mod: u32,
         calldata_target: Option<Addr>,
-        calldata: Option<Vec<u8>>
+        calldata: Option<Binary>
     },
 
     SendLiquidity {
         channel_id: String,
-        to_pool: Vec<u8>,
-        to_account: Vec<u8>,
+        to_pool: Binary,
+        to_account: Binary,
         amount: Uint128,            //TODO EVM mismatch
         #[serde(with = "U256Def")]
         min_pool_tokens: U256,      //TODO EVM mismatch
         #[serde(with = "U256Def")]
         min_reference_asset: U256,  //TODO EVM mismatch
         fallback_account: String,   //TODO EVM mismatch
-        calldata: Vec<u8>
+        calldata: Binary
     },
 
     ReceiveLiquidity {
         channel_id: String,
-        from_pool: Vec<u8>,
+        from_pool: Binary,
         to_account: String,
         #[serde(with = "U256Def")]
         u: U256,
@@ -166,7 +166,7 @@ pub enum ExecuteMsg<T> {
         from_amount: U256,
         from_block_number_mod: u32,
         calldata_target: Option<Addr>,
-        calldata: Option<Vec<u8>>
+        calldata: Option<Binary>
     },
 
     Custom (T),

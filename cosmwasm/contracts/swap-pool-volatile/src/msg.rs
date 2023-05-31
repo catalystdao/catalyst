@@ -1,6 +1,7 @@
 
 use cosmwasm_schema::QueryResponses;
 use cosmwasm_schema::cw_serde;
+use cosmwasm_std::Binary;
 use cosmwasm_std::Uint128;
 use ethnum::U256;
 pub use swap_pool_common::msg::{InstantiateMsg, ExecuteMsg};
@@ -55,7 +56,7 @@ pub enum QueryMsg {
     #[returns(PoolConnectionStateResponse)]
     PoolConnectionState {
         channel_id: String,
-        pool: Vec<u8>
+        pool: Binary
     },
 
     #[returns(ReadyResponse)]
@@ -103,11 +104,11 @@ pub enum QueryMsg {
     TotalEscrowedLiquidity {},
     #[returns(AssetEscrowResponse)]
     AssetEscrow {
-        hash: Vec<u8>
+        hash: Binary
     },
     #[returns(LiquidityEscrowResponse)]
     LiquidityEscrow {
-        hash: Vec<u8>
+        hash: Binary
     },
 
 

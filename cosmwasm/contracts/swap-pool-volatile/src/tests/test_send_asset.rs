@@ -1,5 +1,5 @@
 mod test_volatile_send_asset {
-    use cosmwasm_std::{Uint128, Addr};
+    use cosmwasm_std::{Uint128, Addr, Binary};
     use cw_multi_test::{App, Executor};
     use ethnum::U256;
     use swap_pool_common::{ContractError, msg::TotalEscrowedAssetResponse};
@@ -80,7 +80,7 @@ mod test_volatile_send_asset {
                 amount: swap_amount,
                 min_out: U256::ZERO,
                 fallback_account: SWAPPER_A.to_string(),
-                calldata: vec![]
+                calldata: Binary(vec![])
             },
             &[]
         ).unwrap();
@@ -217,7 +217,7 @@ mod test_volatile_send_asset {
                 amount: swap_amount,
                 min_out: U256::ZERO,
                 fallback_account: SWAPPER_A.to_string(),
-                calldata: vec![]
+                calldata: Binary(vec![])
             },
             &[]
         ).unwrap();
@@ -290,7 +290,7 @@ mod test_volatile_send_asset {
                 amount: swap_amount,
                 min_out: U256::ZERO,
                 fallback_account: SWAPPER_A.to_string(),
-                calldata: vec![]
+                calldata: Binary(vec![])
             },
             &[]
         );
@@ -376,7 +376,7 @@ mod test_volatile_send_asset {
                 amount: swap_amount,
                 min_out: U256::ZERO,
                 fallback_account: SWAPPER_A.to_string(),
-                calldata: vec![]
+                calldata: Binary(vec![])
             },
             &[]
         );

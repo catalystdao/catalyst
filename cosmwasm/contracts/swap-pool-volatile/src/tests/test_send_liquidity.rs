@@ -1,5 +1,5 @@
 mod test_volatile_send_liquidity {
-    use cosmwasm_std::{Uint128, Addr};
+    use cosmwasm_std::{Uint128, Addr, Binary};
     use cw_multi_test::{App, Executor};
     use ethnum::U256;
     use swap_pool_common::{ContractError, msg::{TotalEscrowedLiquidityResponse, LiquidityEscrowResponse}, state::{INITIAL_MINT_AMOUNT, compute_send_liquidity_hash}};
@@ -66,7 +66,7 @@ mod test_volatile_send_liquidity {
                 min_pool_tokens: U256::ZERO,
                 min_reference_asset: U256::ZERO,
                 fallback_account: SWAPPER_C.to_string(),
-                calldata: vec![]
+                calldata: Binary(vec![])
             },
             &[]
         ).unwrap();
@@ -119,7 +119,7 @@ mod test_volatile_send_liquidity {
 
         let queried_fallback_account = app
             .wrap()
-            .query_wasm_smart::<LiquidityEscrowResponse>(vault.clone(), &crate::msg::QueryMsg::LiquidityEscrow { hash: expected_liquidity_swap_hash })
+            .query_wasm_smart::<LiquidityEscrowResponse>(vault.clone(), &crate::msg::QueryMsg::LiquidityEscrow { hash: Binary(expected_liquidity_swap_hash) })
             .unwrap()
             .fallback_account;
 
@@ -197,7 +197,7 @@ mod test_volatile_send_liquidity {
                 min_pool_tokens: U256::ZERO,
                 min_reference_asset: U256::ZERO,
                 fallback_account: SWAPPER_C.to_string(),
-                calldata: vec![]
+                calldata: Binary(vec![])
             },
             &[]
         ).unwrap();
@@ -256,7 +256,7 @@ mod test_volatile_send_liquidity {
                 min_pool_tokens: U256::ZERO,
                 min_reference_asset: U256::ZERO,
                 fallback_account: SWAPPER_C.to_string(),
-                calldata: vec![]
+                calldata: Binary(vec![])
             },
             &[]
         );

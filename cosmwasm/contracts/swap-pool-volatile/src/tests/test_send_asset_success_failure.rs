@@ -1,5 +1,5 @@
 mod test_volatile_send_asset_success_failure {
-    use cosmwasm_std::{Uint128, Addr};
+    use cosmwasm_std::{Uint128, Addr, Binary};
     use cw_multi_test::{App, Executor};
     use ethnum::{U256, uint};
     use swap_pool_common::{ContractError, msg::{TotalEscrowedAssetResponse, AssetEscrowResponse}, state::compute_send_asset_hash};
@@ -18,7 +18,7 @@ mod test_volatile_send_asset_success_failure {
         pub from_amount: Uint128,
         pub fee: Uint128,
         pub u: U256,
-        pub to_account: Vec<u8> ,
+        pub to_account: Binary,
         pub block_number: u32
     }
 
@@ -90,7 +90,7 @@ mod test_volatile_send_asset_success_failure {
                     amount: swap_amount,
                     min_out: U256::ZERO,
                     fallback_account: SWAPPER_A.to_string(),
-                    calldata: vec![]
+                    calldata: Binary(vec![])
                 },
                 &[]
             ).unwrap();
@@ -157,7 +157,7 @@ mod test_volatile_send_asset_success_failure {
             .wrap()
             .query_wasm_smart::<AssetEscrowResponse>(
                 env.vault.clone(),
-                &QueryMsg::AssetEscrow { hash: swap_hash }
+                &QueryMsg::AssetEscrow { hash: Binary(swap_hash) }
             ).unwrap();
 
         assert!(queried_escrow.fallback_account.is_none());
@@ -235,7 +235,7 @@ mod test_volatile_send_asset_success_failure {
             .wrap()
             .query_wasm_smart::<AssetEscrowResponse>(
                 env.vault.clone(),
-                &QueryMsg::AssetEscrow { hash: swap_hash }
+                &QueryMsg::AssetEscrow { hash: Binary(swap_hash) }
             ).unwrap();
 
         assert!(queried_escrow.fallback_account.is_none());
@@ -459,7 +459,7 @@ mod test_volatile_send_asset_success_failure {
             env.vault.clone(),
             &VolatileExecuteMsg::OnSendAssetSuccess {
                 channel_id: CHANNEL_ID.to_string(),
-                to_account: "not_to_account".as_bytes().to_vec(),   // ! Not the chain interface
+                to_account: Binary("not_to_account".as_bytes().to_vec()),   // ! Not the chain interface
                 u: env.u,
                 amount: env.from_amount - env.fee,
                 asset: env.from_asset.to_string(),
@@ -575,7 +575,7 @@ mod test_volatile_send_asset_success_failure {
             env.vault.clone(),
             &VolatileExecuteMsg::OnSendAssetFailure {
                 channel_id: CHANNEL_ID.to_string(),
-                to_account: "not_to_account".as_bytes().to_vec(),   // ! Not the chain interface
+                to_account: Binary("not_to_account".as_bytes().to_vec()),   // ! Not the chain interface
                 u: env.u,
                 amount: env.from_amount - env.fee,
                 asset: env.from_asset.to_string(),

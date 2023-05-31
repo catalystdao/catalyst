@@ -1,5 +1,5 @@
 mod test_volatile_receive_asset {
-    use cosmwasm_std::{Uint128, Addr};
+    use cosmwasm_std::{Uint128, Addr, Binary};
     use cw_multi_test::{App, Executor};
     use ethnum::{U256, uint};
     use swap_pool_common::ContractError;
@@ -59,7 +59,7 @@ mod test_volatile_receive_asset {
                 u: swap_units,
                 min_out: Uint128::zero(),
                 from_amount: U256::ZERO,
-                from_asset: "from_asset".as_bytes().to_vec(),
+                from_asset: Binary("from_asset".as_bytes().to_vec()),
                 from_block_number_mod: 0u32,
                 calldata_target: None,
                 calldata: None
@@ -149,7 +149,7 @@ mod test_volatile_receive_asset {
                 u: swap_units,
                 min_out: Uint128::zero(),
                 from_amount: U256::ZERO,
-                from_asset: "from_asset".as_bytes().to_vec(),
+                from_asset: Binary("from_asset".as_bytes().to_vec()),
                 from_block_number_mod: 0u32,
                 calldata_target: None,
                 calldata: None
@@ -244,7 +244,7 @@ mod test_volatile_receive_asset {
                 u: swap_units,
                 min_out: min_out_invalid,
                 from_amount: U256::ZERO,
-                from_asset: "from_asset".as_bytes().to_vec(),
+                from_asset: Binary("from_asset".as_bytes().to_vec()),
                 from_block_number_mod: 0u32,
                 calldata_target: None,
                 calldata: None
@@ -275,7 +275,7 @@ mod test_volatile_receive_asset {
                 u: swap_units,
                 min_out: min_out_valid,
                 from_amount: U256::ZERO,
-                from_asset: "from_asset".as_bytes().to_vec(),
+                from_asset: Binary("from_asset".as_bytes().to_vec()),
                 from_block_number_mod: 0u32,
                 calldata_target: None,
                 calldata: None
@@ -326,7 +326,7 @@ mod test_volatile_receive_asset {
                 u: swap_units,
                 min_out: Uint128::zero(),
                 from_amount: U256::ZERO,
-                from_asset: "from_asset".as_bytes().to_vec(),
+                from_asset: Binary("from_asset".as_bytes().to_vec()),
                 from_block_number_mod: 0u32,
                 calldata_target: None,
                 calldata: None
@@ -393,7 +393,7 @@ mod test_volatile_receive_asset {
                 u: swap_units,
                 min_out: Uint128::zero(),
                 from_amount: U256::ZERO,
-                from_asset: "from_asset".as_bytes().to_vec(),
+                from_asset: Binary("from_asset".as_bytes().to_vec()),
                 from_block_number_mod: 0u32,
                 calldata_target: None,
                 calldata: None
@@ -459,7 +459,7 @@ mod test_volatile_receive_asset {
                 u: swap_units,
                 min_out: Uint128::zero(),
                 from_amount: U256::ZERO,
-                from_asset: "from_asset".as_bytes().to_vec(),
+                from_asset: Binary("from_asset".as_bytes().to_vec()),
                 from_block_number_mod: 0u32,
                 calldata_target: None,
                 calldata: None

@@ -145,15 +145,15 @@ fn execute_send_cross_chain_asset(
     env: Env,
     info: MessageInfo,
     channel_id: String,
-    to_pool: Vec<u8>,
-    to_account: Vec<u8>,
+    to_pool: Binary,
+    to_account: Binary,
     to_asset_index: u8,
     u: U256,
     min_out: U256,
     from_amount: Uint128,
     from_asset: String,
     block_number: u32,
-    calldata: Vec<u8>
+    calldata: Binary
 ) -> Result<Response, ContractError> {
 
     // Build payload
@@ -184,14 +184,14 @@ fn execute_send_cross_chain_liquidity(
     env: Env,
     info: MessageInfo,
     channel_id: String,
-    to_pool: Vec<u8>,
-    to_account: Vec<u8>,
+    to_pool: Binary,
+    to_account: Binary,
     u: U256,
     min_pool_tokens: U256,
     min_reference_asset: U256,
     from_amount: Uint128,
     block_number: u32,
-    calldata: Vec<u8>
+    calldata: Binary
 ) -> Result<Response, ContractError> {
 
     // Build payload

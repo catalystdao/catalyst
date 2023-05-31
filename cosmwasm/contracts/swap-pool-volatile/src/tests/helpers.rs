@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use cosmwasm_std::{Uint128, Addr, Event};
+use cosmwasm_std::{Uint128, Addr, Event, Binary};
 use cw20::{Cw20Coin, MinterResponse, Cw20ExecuteMsg, BalanceResponse, Cw20QueryMsg, TokenInfoResponse};
 use cw_multi_test::{ContractWrapper, App, Executor, AppResponse};
 use ethnum::U256;
@@ -480,7 +480,7 @@ pub fn mock_set_pool_connection(
     app: &mut App,
     vault_contract: Addr,
     channel_id: String,
-    to_pool: Vec<u8>,
+    to_pool: Binary,
     state: bool
 ) -> AppResponse {
     app.execute_contract::<VolatileExecuteMsg>(
@@ -806,7 +806,7 @@ pub fn get_response_attribute<T: FromStr>(event: Event, attribute: &str) -> Resu
         .parse::<T>().map_err(|_| "Parse error".to_string())
 }
 
-pub fn encode_payload_address(address: &[u8]) -> Vec<u8> {
+pub fn encode_payload_address(address: &[u8]) -> Binary {
 
     let address_len = address.len();
     if address_len > 64 {
@@ -822,5 +822,5 @@ pub fn encode_payload_address(address: &[u8]) -> Vec<u8> {
 
     encoded_address.extend_from_slice(address.as_ref());
 
-    encoded_address
+    Binary(encoded_address)
 }

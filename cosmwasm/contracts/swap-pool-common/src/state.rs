@@ -185,7 +185,7 @@ pub fn set_connection(
     deps: &mut DepsMut,
     info: MessageInfo,
     channel_id: String,
-    to_pool: Vec<u8>,
+    to_pool: Binary,
     state: bool
 ) -> Result<Response, ContractError> {
 
@@ -203,12 +203,12 @@ pub fn set_connection(
         return Err(ContractError::GenericError {});     //TODO error
     }
 
-    POOL_CONNECTIONS.save(deps.storage, (channel_id.as_str(), to_pool.clone()), &state)?;
+    POOL_CONNECTIONS.save(deps.storage, (channel_id.as_str(), to_pool.0.clone()), &state)?;
 
     Ok(
         Response::new()
             .add_attribute("channel_id", channel_id)
-            .add_attribute("to_pool",  format!("{:x?}", to_pool))
+            .add_attribute("to_pool", to_pool.to_base64())
             .add_attribute("state", state.to_string())
     )
 }
@@ -217,11 +217,11 @@ pub fn set_connection(
 pub fn is_connected(
     deps: &Deps,
     channel_id: &str,
-    to_pool: Vec<u8>
+    to_pool: Binary
 ) -> bool {
 
     POOL_CONNECTIONS
-        .load(deps.storage, (channel_id, to_pool))
+        .load(deps.storage, (channel_id, to_pool.0))
         .unwrap_or(false)
 
 }
@@ -516,7 +516,7 @@ pub fn on_send_asset_success(
     deps: &mut DepsMut,
     info: MessageInfo,
     channel_id: String,
-    to_account: Vec<u8>,
+    to_account: Binary,
     u: U256,
     amount: Uint128,
     asset: String,
@@ -540,7 +540,7 @@ pub fn on_send_asset_success(
     Ok(
         Response::new()
             .add_attribute("channel_id", channel_id)
-            .add_attribute("to_account", Binary(to_account).to_base64())
+            .add_attribute("to_account", to_account.to_base64())
             .add_attribute("units", u.to_string())
             .add_attribute("amount", amount)
             .add_attribute("asset", asset)
@@ -554,7 +554,7 @@ pub fn on_send_asset_failure(
     _env: Env,              //TODO remove?
     info: MessageInfo,
     channel_id: String,
-    to_account: Vec<u8>,
+    to_account: Binary,
     u: U256,
     amount: Uint128,
     asset: String,
@@ -591,7 +591,7 @@ pub fn on_send_asset_failure(
         Response::new()
             .add_message(transfer_msg)
             .add_attribute("channel_id", channel_id)
-            .add_attribute("to_account", Binary(to_account).to_base64())
+            .add_attribute("to_account", to_account.to_base64())
             .add_attribute("units", u.to_string())
             .add_attribute("amount", amount)
             .add_attribute("asset", asset)
@@ -604,7 +604,7 @@ pub fn on_send_liquidity_success(
     deps: &mut DepsMut,
     info: MessageInfo,
     channel_id: String,
-    to_account: Vec<u8>,
+    to_account: Binary,
     u: U256,
     amount: Uint128,
     block_number_mod: u32
@@ -626,7 +626,7 @@ pub fn on_send_liquidity_success(
     Ok(
         Response::new()
             .add_attribute("channel_id", channel_id)
-            .add_attribute("to_account", Binary(to_account).to_base64())
+            .add_attribute("to_account", to_account.to_base64())
             .add_attribute("units", u.to_string())
             .add_attribute("amount", amount)
             .add_attribute("block_number_mod", block_number_mod.to_string())
@@ -639,7 +639,7 @@ pub fn on_send_liquidity_failure(
     env: Env,
     info: MessageInfo,
     channel_id: String,
-    to_account: Vec<u8>,
+    to_account: Binary,
     u: U256,
     amount: Uint128,
     block_number_mod: u32
@@ -675,7 +675,7 @@ pub fn on_send_liquidity_failure(
         Response::new()
             .add_attributes(mint_response.attributes)   //TODO better way to do this?
             .add_attribute("channel_id", channel_id)
-            .add_attribute("to_account", Binary(to_account).to_base64())
+            .add_attribute("to_account", to_account.to_base64())
             .add_attribute("units", u.to_string())
             .add_attribute("amount", amount)
             .add_attribute("block_number_mod", block_number_mod.to_string())
@@ -848,26 +848,26 @@ pub fn query_total_escrowed_liquidity(deps: Deps) -> StdResult<TotalEscrowedLiqu
     )
 }
 
-pub fn query_asset_escrow(deps: Deps, hash: Vec<u8>) -> StdResult<AssetEscrowResponse> {
+pub fn query_asset_escrow(deps: Deps, hash: Binary) -> StdResult<AssetEscrowResponse> {
     Ok(
         AssetEscrowResponse {
-            fallback_account: ASSET_ESCROWS.may_load(deps.storage, hash)?
+            fallback_account: ASSET_ESCROWS.may_load(deps.storage, hash.0)?
         }
     )
 }
 
-pub fn query_liquidity_escrow(deps: Deps, hash: Vec<u8>) -> StdResult<LiquidityEscrowResponse> {
+pub fn query_liquidity_escrow(deps: Deps, hash: Binary) -> StdResult<LiquidityEscrowResponse> {
     Ok(
         LiquidityEscrowResponse {
-            fallback_account: LIQUIDITY_ESCROWS.may_load(deps.storage, hash)?
+            fallback_account: LIQUIDITY_ESCROWS.may_load(deps.storage, hash.0)?
         }
     )
 }
 
-pub fn query_pool_connection_state(deps: Deps, channel_id: &str, pool: Vec<u8>) -> StdResult<PoolConnectionStateResponse> {
+pub fn query_pool_connection_state(deps: Deps, channel_id: &str, pool: Binary) -> StdResult<PoolConnectionStateResponse> {
     Ok(
         PoolConnectionStateResponse {
-            state: POOL_CONNECTIONS.may_load(deps.storage, (channel_id, pool))?.unwrap_or(false)
+            state: POOL_CONNECTIONS.may_load(deps.storage, (channel_id, pool.0))?.unwrap_or(false)
         }
     )
 }

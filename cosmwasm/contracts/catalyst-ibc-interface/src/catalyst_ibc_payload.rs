@@ -111,7 +111,7 @@ pub const CALLDATA_BYTES_START       : usize = 65;
 // ******************************************************************************************************************************
 // Payload Helpers
 // ******************************************************************************************************************************
-use cosmwasm_std::{Deps, Addr, Uint128};
+use cosmwasm_std::{Deps, Addr, Uint128, Binary};
 use ethnum::U256;
 use crate::ContractError;
 
@@ -131,7 +131,7 @@ impl CatalystV1Packet {
     #[cfg(test)]
     pub fn try_encode(
         &self
-    ) -> Result<Vec<u8>, ContractError> {
+    ) -> Result<Binary, ContractError> {
         
         match self {
             CatalystV1Packet::SendAsset(payload) => payload.try_encode(),
@@ -143,7 +143,7 @@ impl CatalystV1Packet {
     //TODO pass the 'IbcPacket' to try_decode and return a copy of the data and not references to it?
     //TODO Or make CatalystV1SendAssetPayload/CatalystV1SendLiquidityPayload accept the IBC packet directly (rename them to CatalystV1SendAssetPACKET)
     pub fn try_decode(
-        data: Vec<u8>
+        data: Binary
     ) -> Result<CatalystV1Packet, ContractError> {
 
         let context = data.get(CONTEXT_POS).ok_or(ContractError::PayloadDecodingError {})?;
@@ -191,7 +191,7 @@ impl<T: CatalystV1VariablePayload> CatalystV1Payload<T> {
 
     pub fn try_encode(
         &self
-    ) -> Result<Vec<u8>, ContractError> {
+    ) -> Result<Binary, ContractError> {
 
         // Preallocate the required size for the IBC payload to avoid runtime reallocations.
         let mut data: Vec<u8> = Vec::with_capacity(self.size());   
@@ -214,12 +214,12 @@ impl<T: CatalystV1VariablePayload> CatalystV1Payload<T> {
         // Variable payload
         self.variable_payload.try_encode(&mut data)?;
     
-        Ok(data)
+        Ok(Binary(data))
 
     }
 
     pub fn try_decode(
-        data: Vec<u8>
+        data: Binary
     ) -> Result<CatalystV1Payload<T>, ContractError> {
 
         //TODO skip this check?
@@ -253,7 +253,7 @@ impl<T: CatalystV1VariablePayload> CatalystV1Payload<T> {
                 .try_into().unwrap()                            // If 'UNITS_START' and 'UNITS_END' are 32 bytes apart, this should never panic //TODO overhaul
         );
 
-        let variable_payload = T::try_decode(data)?;
+        let variable_payload = T::try_decode(data.0)?;
 
         return Ok(
             Self {
@@ -351,7 +351,7 @@ pub trait CatalystV1VariablePayload: Sized {
 #[derive(Clone)]
 pub struct CatalystCalldata {
     pub target: Addr,
-    pub bytes: Vec<u8>
+    pub bytes: Binary
 }
 
 
@@ -362,7 +362,7 @@ pub struct SendAssetVariablePayload {
     pub from_amount: U256,
     pub from_asset: CatalystEncodedAddress,
     pub block_number: u32,
-    pub calldata: Vec<u8>
+    pub calldata: Binary
 }
 
 impl SendAssetVariablePayload {
@@ -408,7 +408,7 @@ impl SendAssetVariablePayload {
         deps: Deps
     ) -> Result<Option<CatalystCalldata>, ContractError> {
         
-        parse_calldata(deps, self.calldata.clone())
+        parse_calldata(deps, self.calldata.0.clone())
 
     }
 
@@ -505,9 +505,11 @@ impl CatalystV1VariablePayload for SendAssetVariablePayload {
             )?.try_into().unwrap()                          // If 'CTX0_DATA_LENGTH_START' and 'CTX0_DATA_LENGTH_END' are 2 bytes apart, this should never panic //TODO overhaul
         ) as usize;
 
-        let calldata = buffer.get(
-            CTX0_DATA_START .. CTX0_DATA_START + calldata_length
-        ).ok_or(ContractError::PayloadDecodingError {})?.to_vec();
+        let calldata = Binary(
+            buffer.get(
+                CTX0_DATA_START .. CTX0_DATA_START + calldata_length
+            ).ok_or(ContractError::PayloadDecodingError {})?.to_vec()
+        );
 
         Ok(SendAssetVariablePayload {
             to_asset_index,
@@ -529,7 +531,7 @@ pub struct SendLiquidityVariablePayload {
     pub min_reference_asset: U256,
     pub from_amount: U256,
     pub block_number: u32,
-    pub calldata: Vec<u8>
+    pub calldata: Binary
 }
 
 impl SendLiquidityVariablePayload {
@@ -577,7 +579,7 @@ impl SendLiquidityVariablePayload {
         deps: Deps
     ) -> Result<Option<CatalystCalldata>, ContractError> {
         
-        parse_calldata(deps, self.calldata.clone())
+        parse_calldata(deps, self.calldata.0.clone())
 
     }
 
@@ -667,10 +669,12 @@ impl CatalystV1VariablePayload for SendLiquidityVariablePayload {
             )?.try_into().unwrap()                          // If 'CTX1_DATA_LENGTH_START' and 'CTX1_DATA_LENGTH_END' are 2 bytes apart, this should never panic //TODO overhaul
         ) as usize;
 
-        let calldata = buffer.get(
-            CTX1_DATA_START ..
-            CTX1_DATA_START + calldata_length
-        ).ok_or(ContractError::PayloadDecodingError {})?.to_vec();
+        let calldata = Binary(
+            buffer.get(
+                CTX1_DATA_START ..
+                CTX1_DATA_START + calldata_length
+            ).ok_or(ContractError::PayloadDecodingError {})?.to_vec()
+        );
 
         Ok(SendLiquidityVariablePayload {
             min_pool_tokens,
@@ -705,7 +709,9 @@ fn parse_calldata(
         String::from_utf8(target_bytes).map_err(|_| ContractError::PayloadDecodingError {})?.as_str()
     )?;
 
-    let bytes = calldata.get(CALLDATA_BYTES_START..).ok_or(ContractError::PayloadDecodingError {})?.to_vec();
+    let bytes = Binary(
+        calldata.get(CALLDATA_BYTES_START..).ok_or(ContractError::PayloadDecodingError {})?.to_vec()
+    );
 
     Ok(
         Some(CatalystCalldata {
@@ -730,6 +736,12 @@ impl Into<Vec<u8>> for CatalystEncodedAddress {
     }
 }
 
+impl Into<Binary> for CatalystEncodedAddress {
+    fn into(self) -> Binary {
+        Binary(self.0)
+    }
+}
+
 impl TryFrom<Vec<u8>> for CatalystEncodedAddress {
     type Error = ContractError;
 
@@ -740,6 +752,19 @@ impl TryFrom<Vec<u8>> for CatalystEncodedAddress {
         }
 
         Ok(Self(value))
+    }
+}
+
+impl TryFrom<Binary> for CatalystEncodedAddress {
+    type Error = ContractError;
+
+    fn try_from(value: Binary) -> Result<Self, Self::Error> {
+
+        if value.len() != 65 {
+            return Err(ContractError::PayloadDecodingError {})
+        }
+
+        Ok(Self(value.0))
     }
 }
 
@@ -761,6 +786,10 @@ impl CatalystEncodedAddress {
 
     pub fn to_vec(self) -> Vec<u8> {
         self.0
+    }
+
+    pub fn to_binary(self) -> Binary {
+        Binary(self.0)
     }
 
     pub fn from_slice_unchecked(data: &[u8]) -> Self {
