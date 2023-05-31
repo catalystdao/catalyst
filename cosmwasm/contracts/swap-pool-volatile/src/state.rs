@@ -649,8 +649,8 @@ pub fn send_asset(
     response = response.add_message(send_asset_execute_msg);
 
     Ok(response
-        .add_attribute("to_pool", format!("{:x?}", to_pool))
-        .add_attribute("to_account", format!("{:x?}", to_account))
+        .add_attribute("to_pool", to_pool.to_base64())
+        .add_attribute("to_account", to_account.to_base64())
         .add_attribute("from_asset", from_asset)
         .add_attribute("to_asset_index", to_asset_index.to_string())
         .add_attribute("from_amount", amount)
@@ -736,13 +736,13 @@ pub fn receive_asset(
 
     Ok(response
         .add_message(transfer_to_asset_msg)
-        .add_attribute("from_pool", format!("{:x?}", from_pool))
+        .add_attribute("from_pool", from_pool.to_base64())
         .add_attribute("to_account", to_account)
         .add_attribute("to_asset", to_asset)
         .add_attribute("units", u.to_string())  //TODO format of .to_string()?
         .add_attribute("to_amount", out)
         .add_attribute("from_amount", from_amount.to_string())
-        .add_attribute("from_asset", format!("{:x?}", from_asset))
+        .add_attribute("from_asset", from_asset.to_base64())
         .add_attribute("from_block_number_mod", from_block_number_mod.to_string())  //TODO format
     )
 }
@@ -841,8 +841,8 @@ pub fn send_liquidity(
     //TODO add min_out? (it is present on send_asset)
     Ok(Response::new()
         .add_message(send_liquidity_execute_msg)
-        .add_attribute("to_pool", format!("{:x?}", to_pool))
-        .add_attribute("to_account", format!("{:x?}", to_account))
+        .add_attribute("to_pool", to_pool.to_base64())
+        .add_attribute("to_account", to_account.to_base64())
         .add_attribute("from_amount", amount)
         .add_attribute("units", u.to_string())
         .add_attribute("min_pool_tokens", min_pool_tokens.to_string())
@@ -979,7 +979,7 @@ pub fn receive_liquidity(
     }
 
     Ok(response
-        .add_attribute("from_pool", format!("{:x?}", from_pool))
+        .add_attribute("from_pool", from_pool.to_base64())
         .add_attribute("to_account", to_account)
         .add_attribute("units", u.to_string())  //TODO format of .to_string()?
         .add_attribute("to_amount", out)

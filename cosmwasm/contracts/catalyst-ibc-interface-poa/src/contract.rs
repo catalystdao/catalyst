@@ -175,7 +175,7 @@ fn execute_send_cross_chain_asset(
     Ok(Response::new()
         .add_attribute("action", "ibc_send")
         .add_attribute("channel_id", channel_id)
-        .add_attribute("data", format!("{:x?}", payload.try_encode()?))
+        .add_attribute("data", payload.try_encode()?.to_base64())
         .add_attribute("timeout", env.block.time.plus_seconds(TRANSACTION_TIMEOUT).seconds().to_string())
     )
 }
@@ -212,7 +212,7 @@ fn execute_send_cross_chain_liquidity(
     Ok(Response::new()
         .add_attribute("action", "ibc_send")
         .add_attribute("channel_id", channel_id)
-        .add_attribute("data", format!("{:x?}", payload.try_encode()?))
+        .add_attribute("data", payload.try_encode()?.to_base64())
         .add_attribute("timeout", env.block.time.plus_seconds(TRANSACTION_TIMEOUT).seconds().to_string())
     )
 }
