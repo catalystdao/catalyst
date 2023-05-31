@@ -156,7 +156,7 @@ class Catalyst:
             
             self.prepare_write_config()
             self.load_config()
-            self.config['chain_config'][self.chain]["describer_registry"] = catalyst_describer.address
+            self.config['chain_config'][self.chain]["describer_registry"] = describer_registry.address
             self.write_config()
             
         # permit2
