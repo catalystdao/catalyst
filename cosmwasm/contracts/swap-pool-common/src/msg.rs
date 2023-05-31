@@ -52,6 +52,7 @@ pub enum ExecuteMsg<T> {
     },
 
     OnSendAssetSuccess {
+        channel_id: String,
         to_account: Vec<u8>,
         #[serde(with = "U256Def")]
         u: U256,
@@ -61,6 +62,7 @@ pub enum ExecuteMsg<T> {
     },
 
     OnSendAssetFailure {
+        channel_id: String,
         to_account: Vec<u8>,
         #[serde(with = "U256Def")]
         u: U256,
@@ -70,6 +72,7 @@ pub enum ExecuteMsg<T> {
     },
 
     OnSendLiquiditySuccess {
+        channel_id: String,
         to_account: Vec<u8>,
         #[serde(with = "U256Def")]
         u: U256,
@@ -78,6 +81,7 @@ pub enum ExecuteMsg<T> {
     },
 
     OnSendLiquidityFailure {
+        channel_id: String,
         to_account: Vec<u8>,
         #[serde(with = "U256Def")]
         u: U256,

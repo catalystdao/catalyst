@@ -1104,6 +1104,7 @@ pub fn calc_local_swap(
 pub fn on_send_asset_success_volatile(
     deps: &mut DepsMut,
     info: MessageInfo,
+    channel_id: String,
     to_account: Vec<u8>,
     u: U256,
     amount: Uint128,
@@ -1114,6 +1115,7 @@ pub fn on_send_asset_success_volatile(
     let response = on_send_asset_success(
         deps,
         info,
+        channel_id,
         to_account,
         u,
         amount,
@@ -1134,6 +1136,7 @@ pub fn on_send_asset_success_volatile(
 pub fn on_send_liquidity_success_volatile(
     deps: &mut DepsMut,
     info: MessageInfo,
+    channel_id: String,
     to_account: Vec<u8>,
     u: U256,
     amount: Uint128,
@@ -1143,6 +1146,7 @@ pub fn on_send_liquidity_success_volatile(
     let response = on_send_liquidity_success(
         deps,
         info,
+        channel_id,
         to_account,
         u,
         amount,

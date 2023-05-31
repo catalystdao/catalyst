@@ -294,6 +294,7 @@ pub fn on_packet_response(
             // Build execute message
             let msg = match success {
                 true => SwapPoolExecuteMsg::<()>::OnSendAssetSuccess {
+                    channel_id: packet.dest.channel_id,
                     to_account: payload.to_account.to_vec(),                            // No need to validate, as it must match the one with which the 'swap_hash' was derived
                     u: payload.u,
                     amount: payload.variable_payload.from_amount()?,
@@ -301,6 +302,7 @@ pub fn on_packet_response(
                     block_number_mod: payload.variable_payload.block_number
                 },
                 false => SwapPoolExecuteMsg::<()>::OnSendAssetFailure {
+                    channel_id: packet.dest.channel_id,
                     to_account: payload.to_account.to_vec(),                            // No need to validate, as it must match the one with which the 'swap_hash' was derived
                     u: payload.u,
                     amount: payload.variable_payload.from_amount()?,
@@ -323,12 +325,14 @@ pub fn on_packet_response(
             // Build execute message
             let msg = match success {
                 true => SwapPoolExecuteMsg::<()>::OnSendLiquiditySuccess {
+                    channel_id: packet.dest.channel_id,
                     to_account: payload.to_account.to_vec(),                            // No need to validate, as it must match the one with which the 'swap_hash' was derived
                     u: payload.u,
                     amount: payload.variable_payload.from_amount()?,                    // No need to validate, as it must match the one with which the 'swap_hash' was derived
                     block_number_mod: payload.variable_payload.block_number
                 },
                 false => SwapPoolExecuteMsg::<()>::OnSendLiquidityFailure {
+                    channel_id: packet.dest.channel_id,
                     to_account: payload.to_account.to_vec(),                            // No need to validate, as it must match the one with which the 'swap_hash' was derived
                     u: payload.u,
                     amount: payload.variable_payload.from_amount()?,                    // No need to validate, as it must match the one with which the 'swap_hash' was derived

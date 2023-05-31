@@ -107,6 +107,7 @@ mod test_volatile_send_liquidity_success_failure {
             env.interface,
             env.vault.clone(),
             &VolatileExecuteMsg::OnSendLiquiditySuccess {
+                channel_id: CHANNEL_ID.to_string(),
                 to_account: env.to_account.clone(),
                 u: env.u,
                 amount: env.from_amount,
@@ -179,6 +180,7 @@ mod test_volatile_send_liquidity_success_failure {
             env.interface,
             env.vault.clone(),
             &VolatileExecuteMsg::OnSendLiquidityFailure {
+                channel_id: CHANNEL_ID.to_string(),
                 to_account: env.to_account.clone(),
                 u: env.u,
                 amount: env.from_amount,
@@ -248,6 +250,7 @@ mod test_volatile_send_liquidity_success_failure {
             env.interface.clone(),
             env.vault.clone(),
             &VolatileExecuteMsg::OnSendLiquiditySuccess {
+                channel_id: CHANNEL_ID.to_string(),
                 to_account: env.to_account.clone(),
                 u: env.u,
                 amount: env.from_amount,
@@ -263,6 +266,7 @@ mod test_volatile_send_liquidity_success_failure {
             env.interface,
             env.vault.clone(),
             &VolatileExecuteMsg::OnSendLiquidityFailure {
+                channel_id: CHANNEL_ID.to_string(),
                 to_account: env.to_account.clone(),
                 u: env.u,
                 amount: env.from_amount,
@@ -295,6 +299,7 @@ mod test_volatile_send_liquidity_success_failure {
             env.interface.clone(),
             env.vault.clone(),
             &VolatileExecuteMsg::OnSendLiquidityFailure {
+                channel_id: CHANNEL_ID.to_string(),
                 to_account: env.to_account.clone(),
                 u: env.u,
                 amount: env.from_amount,
@@ -310,6 +315,7 @@ mod test_volatile_send_liquidity_success_failure {
             env.interface,
             env.vault.clone(),
             &VolatileExecuteMsg::OnSendLiquiditySuccess {
+                channel_id: CHANNEL_ID.to_string(),
                 to_account: env.to_account.clone(),
                 u: env.u,
                 amount: env.from_amount,
@@ -344,6 +350,7 @@ mod test_volatile_send_liquidity_success_failure {
             Addr::unchecked("not_interface"),           // ! Not the interface contract
             env.vault.clone(),
             &VolatileExecuteMsg::OnSendLiquiditySuccess {
+                channel_id: CHANNEL_ID.to_string(),
                 to_account: env.to_account.clone(),
                 u: env.u,
                 amount: env.from_amount,
@@ -376,6 +383,7 @@ mod test_volatile_send_liquidity_success_failure {
             Addr::unchecked("not_interface"),           // ! Not the interface contract
             env.vault.clone(),
             &VolatileExecuteMsg::OnSendLiquidityFailure {
+                channel_id: CHANNEL_ID.to_string(),
                 to_account: env.to_account.clone(),
                 u: env.u,
                 amount: env.from_amount,
@@ -409,6 +417,7 @@ mod test_volatile_send_liquidity_success_failure {
             env.interface.clone(),
             env.vault.clone(),
             &VolatileExecuteMsg::OnSendLiquiditySuccess {
+                channel_id: CHANNEL_ID.to_string(),
                 to_account: "not_to_account".as_bytes().to_vec(),   // ! Not the chain interface
                 u: env.u,
                 amount: env.from_amount,
@@ -425,6 +434,7 @@ mod test_volatile_send_liquidity_success_failure {
             env.interface.clone(),
             env.vault.clone(),
             &VolatileExecuteMsg::OnSendLiquiditySuccess {
+                channel_id: CHANNEL_ID.to_string(),
                 to_account: env.to_account.clone(),
                 u: env.u + uint!("1"),                              // ! Increased units
                 amount: env.from_amount,
@@ -441,6 +451,7 @@ mod test_volatile_send_liquidity_success_failure {
             env.interface.clone(),
             env.vault.clone(),
             &VolatileExecuteMsg::OnSendLiquiditySuccess {
+                channel_id: CHANNEL_ID.to_string(),
                 to_account: env.to_account.clone(),
                 u: env.u,
                 amount: env.from_amount + Uint128::from(1u64),      // ! Increased from amount
@@ -457,6 +468,7 @@ mod test_volatile_send_liquidity_success_failure {
             env.interface.clone(),
             env.vault.clone(),
             &VolatileExecuteMsg::OnSendLiquiditySuccess {
+                channel_id: CHANNEL_ID.to_string(),
                 to_account: env.to_account.clone(),
                 u: env.u,
                 amount: env.from_amount,
@@ -473,6 +485,7 @@ mod test_volatile_send_liquidity_success_failure {
             env.interface.clone(),
             env.vault.clone(),
             &VolatileExecuteMsg::OnSendLiquiditySuccess {
+                channel_id: CHANNEL_ID.to_string(),
                 to_account: env.to_account,
                 u: env.u,
                 amount: env.from_amount,
@@ -497,6 +510,7 @@ mod test_volatile_send_liquidity_success_failure {
             env.interface.clone(),
             env.vault.clone(),
             &VolatileExecuteMsg::OnSendLiquidityFailure {
+                channel_id: CHANNEL_ID.to_string(),
                 to_account: "not_to_account".as_bytes().to_vec(),   // ! Not the chain interface
                 u: env.u,
                 amount: env.from_amount,
@@ -513,6 +527,7 @@ mod test_volatile_send_liquidity_success_failure {
             env.interface.clone(),
             env.vault.clone(),
             &VolatileExecuteMsg::OnSendLiquidityFailure {
+                channel_id: CHANNEL_ID.to_string(),
                 to_account: env.to_account.clone(),
                 u: env.u + uint!("1"),                              // ! Increased units
                 amount: env.from_amount,
@@ -529,6 +544,7 @@ mod test_volatile_send_liquidity_success_failure {
             env.interface.clone(),
             env.vault.clone(),
             &VolatileExecuteMsg::OnSendLiquidityFailure {
+                channel_id: CHANNEL_ID.to_string(),
                 to_account: env.to_account.clone(),
                 u: env.u,
                 amount: env.from_amount + Uint128::from(1u64),      // ! Increased from amount
@@ -545,6 +561,7 @@ mod test_volatile_send_liquidity_success_failure {
             env.interface.clone(),
             env.vault.clone(),
             &VolatileExecuteMsg::OnSendLiquidityFailure {
+                channel_id: CHANNEL_ID.to_string(),
                 to_account: env.to_account.clone(),
                 u: env.u,
                 amount: env.from_amount,
@@ -561,6 +578,7 @@ mod test_volatile_send_liquidity_success_failure {
             env.interface.clone(),
             env.vault.clone(),
             &VolatileExecuteMsg::OnSendLiquidityFailure {
+                channel_id: CHANNEL_ID.to_string(),
                 to_account: env.to_account,
                 u: env.u,
                 amount: env.from_amount,

@@ -289,8 +289,10 @@ mod catalyst_ibc_interface_tests {
     }
 
     fn mock_pool_send_asset_success_msg(
+        channel_id: &str,
     ) -> swap_pool_common::msg::ExecuteMsg<()> {
         swap_pool_common::msg::ExecuteMsg::OnSendAssetSuccess {
+            channel_id: channel_id.into(),
             to_account: CatalystEncodedAddress::try_encode(b"to_account").unwrap().to_vec(),
             u: uint!("78456988731590487483448276103933454935747871349630657124267302091643025406701"),          // Some large U256 number
             amount: Uint128::from(4920222095670429824873974121747892731u128),                                   // Some large Uint128 number
@@ -300,8 +302,10 @@ mod catalyst_ibc_interface_tests {
     }
 
     fn mock_pool_send_asset_failure_msg(
+        channel_id: &str,
     ) -> swap_pool_common::msg::ExecuteMsg<()> {
         swap_pool_common::msg::ExecuteMsg::OnSendAssetFailure {
+            channel_id: channel_id.into(),
             to_account: CatalystEncodedAddress::try_encode(b"to_account").unwrap().to_vec(),
             u: uint!("78456988731590487483448276103933454935747871349630657124267302091643025406701"),          // Some large U256 number
             amount: Uint128::from(4920222095670429824873974121747892731u128),                                   // Some large Uint128 number
@@ -355,8 +359,10 @@ mod catalyst_ibc_interface_tests {
     }
 
     fn mock_pool_send_liquidity_success_msg(
+        channel_id: &str,
     ) -> swap_pool_common::msg::ExecuteMsg<()> {
         swap_pool_common::msg::ExecuteMsg::OnSendLiquiditySuccess {
+            channel_id: channel_id.into(),
             to_account: CatalystEncodedAddress::try_encode(b"to_account").unwrap().to_vec(),
             u: uint!("78456988731590487483448276103933454935747871349630657124267302091643025406701"),          // Some large U256 number
             amount: Uint128::from(4920222095670429824873974121747892731u128),                                   // Some large Uint128 number
@@ -365,8 +371,10 @@ mod catalyst_ibc_interface_tests {
     }
 
     fn mock_pool_send_liquidity_failure_msg(
+        channel_id: &str,
     ) -> swap_pool_common::msg::ExecuteMsg<()> {
         swap_pool_common::msg::ExecuteMsg::OnSendLiquidityFailure {
+            channel_id: channel_id.into(),
             to_account: CatalystEncodedAddress::try_encode(b"to_account").unwrap().to_vec(),
             u: uint!("78456988731590487483448276103933454935747871349630657124267302091643025406701"),          // Some large U256 number
             amount: Uint128::from(4920222095670429824873974121747892731u128),                                   // Some large Uint128 number
@@ -835,7 +843,7 @@ mod catalyst_ibc_interface_tests {
             SubMsg::new(
                 cosmwasm_std::WasmMsg::Execute {
                     contract_addr: from_pool.to_string(),
-                    msg: to_binary(&mock_pool_send_asset_success_msg()).unwrap(),
+                    msg: to_binary(&mock_pool_send_asset_success_msg(channel_id)).unwrap(),
                     funds: vec![]
                 }
             )
@@ -863,7 +871,7 @@ mod catalyst_ibc_interface_tests {
             SubMsg::new(
                 cosmwasm_std::WasmMsg::Execute {
                     contract_addr: from_pool.to_string(),
-                    msg: to_binary(&mock_pool_send_asset_failure_msg()).unwrap(),
+                    msg: to_binary(&mock_pool_send_asset_failure_msg(channel_id)).unwrap(),
                     funds: vec![]
                 }
             )
@@ -931,7 +939,7 @@ mod catalyst_ibc_interface_tests {
             SubMsg::new(
                 cosmwasm_std::WasmMsg::Execute {
                     contract_addr: from_pool.to_string(),
-                    msg: to_binary(&mock_pool_send_asset_failure_msg()).unwrap(),
+                    msg: to_binary(&mock_pool_send_asset_failure_msg(channel_id)).unwrap(),
                     funds: vec![]
                 }
             )
@@ -1278,7 +1286,7 @@ mod catalyst_ibc_interface_tests {
             SubMsg::new(
                 cosmwasm_std::WasmMsg::Execute {
                     contract_addr: from_pool.to_string(),
-                    msg: to_binary(&mock_pool_send_liquidity_success_msg()).unwrap(),
+                    msg: to_binary(&mock_pool_send_liquidity_success_msg(channel_id)).unwrap(),
                     funds: vec![]
                 }
             )
@@ -1306,7 +1314,7 @@ mod catalyst_ibc_interface_tests {
             SubMsg::new(
                 cosmwasm_std::WasmMsg::Execute {
                     contract_addr: from_pool.to_string(),
-                    msg: to_binary(&mock_pool_send_liquidity_failure_msg()).unwrap(),
+                    msg: to_binary(&mock_pool_send_liquidity_failure_msg(channel_id)).unwrap(),
                     funds: vec![]
                 }
             )
@@ -1374,7 +1382,7 @@ mod catalyst_ibc_interface_tests {
             SubMsg::new(
                 cosmwasm_std::WasmMsg::Execute {
                     contract_addr: from_pool.to_string(),
-                    msg: to_binary(&mock_pool_send_liquidity_failure_msg()).unwrap(),
+                    msg: to_binary(&mock_pool_send_liquidity_failure_msg(channel_id)).unwrap(),
                     funds: vec![]
                 }
             )

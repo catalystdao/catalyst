@@ -115,6 +115,7 @@ pub fn execute(
         ),
 
         VolatileExecuteMsg::OnSendAssetSuccess {
+            channel_id,
             to_account,
             u,
             amount,
@@ -123,6 +124,7 @@ pub fn execute(
         } => on_send_asset_success_volatile(        // ! Use the volatile specific 'on_send_asset_success'
             &mut deps,
             info,
+            channel_id,
             to_account,
             u,
             amount,
@@ -131,6 +133,7 @@ pub fn execute(
         ),
 
         VolatileExecuteMsg::OnSendAssetFailure {
+            channel_id,
             to_account,
             u,
             amount,
@@ -140,6 +143,7 @@ pub fn execute(
             &mut deps,
             env,
             info,
+            channel_id,
             to_account,
             u,
             amount,
@@ -148,6 +152,7 @@ pub fn execute(
         ),
 
         VolatileExecuteMsg::OnSendLiquiditySuccess {
+            channel_id,
             to_account,
             u,
             amount,
@@ -155,6 +160,7 @@ pub fn execute(
         } => on_send_liquidity_success_volatile(    // ! Use the volatile specific 'on_send_asset_success'
             &mut deps,
             info,
+            channel_id,
             to_account,
             u,
             amount,
@@ -162,6 +168,7 @@ pub fn execute(
         ),
 
         VolatileExecuteMsg::OnSendLiquidityFailure {
+            channel_id,
             to_account,
             u,
             amount,
@@ -170,6 +177,7 @@ pub fn execute(
             &mut deps,
             env,
             info,
+            channel_id,
             to_account,
             u,
             amount,

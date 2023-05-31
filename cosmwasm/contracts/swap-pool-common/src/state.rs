@@ -515,6 +515,7 @@ pub fn release_liquidity_escrow(
 pub fn on_send_asset_success(
     deps: &mut DepsMut,
     info: MessageInfo,
+    channel_id: String,
     to_account: Vec<u8>,
     u: U256,
     amount: Uint128,
@@ -539,6 +540,7 @@ pub fn on_send_asset_success(
     Ok(
         Response::new()
             .add_attribute("swap_hash", format!("{:?}", send_asset_hash))
+            .add_attribute("channel_id", channel_id)
     )
 }
 
@@ -547,6 +549,7 @@ pub fn on_send_asset_failure(
     deps: &mut DepsMut,
     _env: Env,              //TODO remove?
     info: MessageInfo,
+    channel_id: String,
     to_account: Vec<u8>,
     u: U256,
     amount: Uint128,
@@ -584,6 +587,7 @@ pub fn on_send_asset_failure(
         Response::new()
             .add_message(transfer_msg)
             .add_attribute("swap_hash", format!("{:?}", send_asset_hash))
+            .add_attribute("channel_id", channel_id)
     )
 }
 
@@ -591,6 +595,7 @@ pub fn on_send_asset_failure(
 pub fn on_send_liquidity_success(
     deps: &mut DepsMut,
     info: MessageInfo,
+    channel_id: String,
     to_account: Vec<u8>,
     u: U256,
     amount: Uint128,
@@ -613,6 +618,7 @@ pub fn on_send_liquidity_success(
     Ok(
         Response::new()
             .add_attribute("swap_hash",  format!("{:?}", send_liquidity_hash))
+            .add_attribute("channel_id", channel_id)
     )
 }
 
@@ -621,6 +627,7 @@ pub fn on_send_liquidity_failure(
     deps: &mut DepsMut,
     env: Env,
     info: MessageInfo,
+    channel_id: String,
     to_account: Vec<u8>,
     u: U256,
     amount: Uint128,
@@ -657,6 +664,7 @@ pub fn on_send_liquidity_failure(
         Response::new()
             .add_attribute("swap_hash", format!("{:?}", send_liquidity_hash))
             .add_attributes(mint_response.attributes)   //TODO better way to do this?
+            .add_attribute("channel_id", channel_id)
     )
 }
 
