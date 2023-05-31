@@ -37,9 +37,10 @@ contract CatalystDescriberRegistry is Ownable {
     * @notice Returns the current catalyst version.
     * @dev Returns the length of _vault_describers. 
     * To get the latest describer: get_vault_describer(catalyst_version())
+    * Reverts if no Catalyst version is described.
     */
     function catalyst_version() public view returns(uint256) {
-        return _vault_describers.length;
+        return _vault_describers.length - 1;
     }
 
     /**
