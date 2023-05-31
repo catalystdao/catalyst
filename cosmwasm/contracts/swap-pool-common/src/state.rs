@@ -308,9 +308,7 @@ pub fn set_governance_fee_share(
     fee: u64
 ) -> Result<Response, ContractError> {
 
-    let fee_administrator = FEE_ADMINISTRATOR.load(deps.storage)?;
-
-    if info.sender != fee_administrator {
+    if info.sender != factory_owner(&deps.as_ref())? {
         return Err(ContractError::Unauthorized {})
     }
 
