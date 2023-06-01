@@ -337,7 +337,7 @@ pub fn mock_factory_deploy_vault(
         &[]
     ).unwrap();
 
-    let vault = get_response_attribute::<String>(response.events[7].clone(), "vault").unwrap();
+    let vault = get_response_attribute::<String>(response.events[6].clone(), "vault_address").unwrap();
 
     Addr::unchecked(vault)
 }

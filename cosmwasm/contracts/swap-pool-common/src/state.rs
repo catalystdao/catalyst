@@ -2,7 +2,7 @@ use std::ops::Div;
 
 use cosmwasm_schema::cw_serde;
 
-use cosmwasm_std::{Addr, Uint128, DepsMut, Env, Response, Event, MessageInfo, Deps, StdResult, CosmosMsg, to_binary, Timestamp, StdError, Binary};
+use cosmwasm_std::{Addr, Uint128, DepsMut, Env, Response, Event, MessageInfo, Deps, StdResult, CosmosMsg, to_binary, Timestamp, StdError, Binary, Uint64};
 use cw20::Cw20ExecuteMsg;
 use cw_storage_plus::{Map, Item};
 use cw20_base::{state::{MinterData, TokenInfo, TOKEN_INFO}, contract::execute_mint};
@@ -10,7 +10,7 @@ use ethnum::{U256, uint};
 use fixed_point_math_lib::fixed_point_math::mul_wad_down;
 use sha3::{Digest, Keccak256};
 
-use crate::{ContractError, msg::{ChainInterfaceResponse, SetupMasterResponse, ReadyResponse, OnlyLocalResponse, AssetsResponse, WeightsResponse, PoolFeeResponse, GovernanceFeeShareResponse, FeeAdministratorResponse, TotalEscrowedAssetResponse, TotalEscrowedLiquidityResponse, AssetEscrowResponse, LiquidityEscrowResponse, PoolConnectionStateResponse, FactoryResponse, FactoryOwnerResponse}};
+use crate::{ContractError, msg::{ChainInterfaceResponse, SetupMasterResponse, ReadyResponse, OnlyLocalResponse, AssetsResponse, WeightsResponse, PoolFeeResponse, GovernanceFeeShareResponse, FeeAdministratorResponse, TotalEscrowedAssetResponse, TotalEscrowedLiquidityResponse, AssetEscrowResponse, LiquidityEscrowResponse, PoolConnectionStateResponse, FactoryResponse, FactoryOwnerResponse}, event::{send_asset_success_event, send_asset_failure_event, send_liquidity_success_event, send_liquidity_failure_event, finish_setup_event, set_fee_administrator_event, set_vault_fee_event, set_governance_fee_share_event, set_connection_event}};
 
 
 // Pool Constants
@@ -177,7 +177,10 @@ pub fn finish_setup(
 
     SETUP_MASTER.save(deps.storage, &None)?;
 
-    Ok(Response::new())
+    Ok(
+        Response::new()
+            .add_event(finish_setup_event())
+    )
 }
 
     
@@ -207,9 +210,13 @@ pub fn set_connection(
 
     Ok(
         Response::new()
-            .add_attribute("channel_id", channel_id)
-            .add_attribute("to_pool", to_pool.to_base64())
-            .add_attribute("state", state.to_string())
+            .add_event(
+                set_connection_event(
+                    channel_id,
+                    to_pool,
+                    state
+                )
+            )
     )
 }
 
@@ -238,15 +245,14 @@ pub fn set_fee_administrator_unchecked(
     )?;
 
     return Ok(
-        Event::new(String::from("SetFeeAdministrator"))
-            .add_attribute("administrator", administrator)
+        set_fee_administrator_event(administrator.to_string())
     )
 }
 
 
 pub fn set_pool_fee_unchecked(
     deps: &mut DepsMut,
-    fee: u64
+    fee: u64                            //TODO use Uint64?
 ) -> Result<Event, ContractError> {
 
     if fee > MAX_POOL_FEE_SHARE {
@@ -258,8 +264,7 @@ pub fn set_pool_fee_unchecked(
     POOL_FEE.save(deps.storage, &fee)?;
 
     return Ok(
-        Event::new(String::from("SetPoolFee"))
-            .add_attribute("fee", fee.to_string())
+        set_vault_fee_event(Uint64::new(fee))
     )
 }
 
@@ -284,7 +289,7 @@ pub fn set_pool_fee(
 
 pub fn set_governance_fee_share_unchecked(
     deps: &mut DepsMut,
-    fee: u64
+    fee: u64                            //TODO use Uint64?
 ) -> Result<Event, ContractError> {
 
     if fee > MAX_GOVERNANCE_FEE_SHARE {
@@ -296,8 +301,7 @@ pub fn set_governance_fee_share_unchecked(
     GOVERNANCE_FEE_SHARE.save(deps.storage, &fee)?;
 
     return Ok(
-        Event::new(String::from("SetGovernanceFeeShare"))
-            .add_attribute("fee", fee.to_string())
+        set_governance_fee_share_event(Uint64::new(fee))
     )
 }
 
@@ -539,12 +543,16 @@ pub fn on_send_asset_success(
 
     Ok(
         Response::new()
-            .add_attribute("channel_id", channel_id)
-            .add_attribute("to_account", to_account.to_base64())
-            .add_attribute("units", u.to_string())
-            .add_attribute("amount", amount)
-            .add_attribute("asset", asset)
-            .add_attribute("block_number_mod", block_number_mod.to_string())
+            .add_event(
+                send_asset_success_event(
+                    channel_id,
+                    to_account,
+                    u,
+                    amount,
+                    asset,
+                    block_number_mod
+                )
+            )
     )
 }
 
@@ -590,12 +598,16 @@ pub fn on_send_asset_failure(
     Ok(
         Response::new()
             .add_message(transfer_msg)
-            .add_attribute("channel_id", channel_id)
-            .add_attribute("to_account", to_account.to_base64())
-            .add_attribute("units", u.to_string())
-            .add_attribute("amount", amount)
-            .add_attribute("asset", asset)
-            .add_attribute("block_number_mod", block_number_mod.to_string())
+            .add_event(
+                send_asset_failure_event(
+                    channel_id,
+                    to_account,
+                    u,
+                    amount,
+                    asset,
+                    block_number_mod
+                )
+            )
     )
 }
 
@@ -625,11 +637,15 @@ pub fn on_send_liquidity_success(
 
     Ok(
         Response::new()
-            .add_attribute("channel_id", channel_id)
-            .add_attribute("to_account", to_account.to_base64())
-            .add_attribute("units", u.to_string())
-            .add_attribute("amount", amount)
-            .add_attribute("block_number_mod", block_number_mod.to_string())
+            .add_event(
+                send_liquidity_success_event(
+                    channel_id,
+                    to_account,
+                    u,
+                    amount,
+                    block_number_mod
+                )
+            )
     )
 }
 
@@ -674,11 +690,15 @@ pub fn on_send_liquidity_failure(
     Ok(
         Response::new()
             .add_attributes(mint_response.attributes)   //TODO better way to do this?
-            .add_attribute("channel_id", channel_id)
-            .add_attribute("to_account", to_account.to_base64())
-            .add_attribute("units", u.to_string())
-            .add_attribute("amount", amount)
-            .add_attribute("block_number_mod", block_number_mod.to_string())
+            .add_event(
+                send_liquidity_failure_event(
+                    channel_id,
+                    to_account,
+                    u,
+                    amount,
+                    block_number_mod
+                )
+            )
     )
 }
 

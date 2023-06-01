@@ -6,6 +6,7 @@ use cw2::set_contract_version;
 use cw20::Cw20ExecuteMsg;
 
 use crate::error::ContractError;
+use crate::event::deploy_vault_event;
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg, OwnerResponse, DefaultGovernanceFeeShareResponse};
 use crate::state::{set_default_governance_fee_share_unchecked, owner, default_governance_fee_share, save_deploy_vault_reply_args, DeployVaultReplyArgs, DEPLOY_VAULT_REPLY_ID, get_deploy_vault_reply_args, set_owner_unchecked, set_default_governance_fee_share, DEFAULT_GOVERNANCE_FEE_SHARE, set_owner};
 
@@ -93,7 +94,7 @@ pub fn execute(
 fn execute_deploy_vault(
     mut deps: DepsMut,
     info: MessageInfo,
-    vault_contract_id: u64,
+    vault_code_id: u64,
     assets: Vec<String>,
     assets_balances: Vec<Uint128>,
     weights: Vec<u64>,
@@ -118,10 +119,12 @@ fn execute_deploy_vault(
     save_deploy_vault_reply_args(
         deps.branch(),
         DeployVaultReplyArgs {
+            vault_code_id: vault_code_id.clone(),
             assets,
             assets_balances,
             weights,
             amplification,
+            chain_interface: chain_interface.clone(),
             depositor: info.sender.clone()
         }
     )?;
@@ -130,7 +133,7 @@ fn execute_deploy_vault(
     let instantiate_vault_submsg = SubMsg::reply_on_success(
         cosmwasm_std::WasmMsg::Instantiate {
             admin: None,        //TODO set factory as admin?
-            code_id: vault_contract_id,
+            code_id: vault_code_id,
             msg: to_binary(&swap_pool_common::msg::InstantiateMsg {
                 name,
                 symbol: symbol.clone(),
@@ -151,10 +154,6 @@ fn execute_deploy_vault(
     Ok(
         Response::new()
             .add_submessage(instantiate_vault_submsg)
-            .add_attribute("vault_contract_id", Uint64::from(vault_contract_id))                //TODO EVM mismatch event name
-            .add_attribute("chain_interface", chain_interface.unwrap_or("None".to_string()))    //TODO review 'chain_interface' format
-            .add_attribute("deployer", info.sender)
-            .add_attribute("k", Uint64::new(amplification))
     )
 }
 
@@ -238,9 +237,16 @@ fn handle_deploy_vault_reply(
         Response::new()
             .add_messages(transfer_msgs)
             .add_message(initialize_swap_curves_msg)
-            .add_attribute("vault", vault_address)                                      //TODO EVM mismatch: key name (pool_address)
-            .add_attribute("assets", deploy_args.assets.join(", "))
-            .add_attribute("amplification", Uint64::from(deploy_args.amplification))    //TODO EVM mismatch: key name (k)
+            .add_event(
+                deploy_vault_event(
+                    deploy_args.vault_code_id,
+                    deploy_args.chain_interface,
+                    deploy_args.depositor.to_string(),
+                    vault_address,
+                    deploy_args.assets,
+                    deploy_args.amplification
+                )
+            )
     )
 
 }
@@ -490,8 +496,7 @@ mod catalyst_swap_pool_factory_tests {
 
 
         // TODO check events (instantiate + reply) to make sure pool deployment is successful
-
-        let vault = get_response_attribute::<String>(response.events[7].clone(), "vault").unwrap();
+        let vault = get_response_attribute::<String>(response.events[6].clone(), "vault_address").unwrap();
 
         // Verify the assets have been transferred to the vault
         vault_assets

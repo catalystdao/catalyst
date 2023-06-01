@@ -1,9 +1,9 @@
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr,
-    DepsMut, Response, Event, MessageInfo, Deps, Uint128};
+    DepsMut, Response, Event, MessageInfo, Deps, Uint128, Uint64};
 use cw_storage_plus::Item;
 
-use crate::error::ContractError;
+use crate::{error::ContractError, event::{set_default_governance_fee_share_event, set_owner_event}};
 
 
 // Factory Constants
@@ -45,8 +45,7 @@ pub fn set_owner_unchecked(
     OWNER.save(deps.storage, &account)?;
     
     Ok(
-        Event::new(String::from("SetOwner"))
-            .add_attribute("owner", account)
+        set_owner_event(account.to_string())
     )
 }
 
@@ -99,8 +98,7 @@ pub fn set_default_governance_fee_share_unchecked(
     DEFAULT_GOVERNANCE_FEE_SHARE.save(deps.storage, &fee)?;
 
     return Ok(
-        Event::new(String::from("SetDefaultGovernanceFeeShare"))
-            .add_attribute("fee", fee.to_string())
+        set_default_governance_fee_share_event(Uint64::new(fee))
     )
 }
 
@@ -129,10 +127,12 @@ pub const DEPLOY_VAULT_REPLY_ID: u64 = 0x100;
 
 #[cw_serde]
 pub struct DeployVaultReplyArgs {
+    pub vault_code_id: u64,
     pub assets: Vec<String>,
     pub assets_balances: Vec<Uint128>,
     pub weights: Vec<u64>,
     pub amplification: u64,
+    pub chain_interface: Option<String>,
     pub depositor: Addr
 }
 

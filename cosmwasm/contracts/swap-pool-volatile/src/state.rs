@@ -13,12 +13,12 @@ use swap_pool_common::{
         collect_governance_fee_message, compute_send_asset_hash, compute_send_liquidity_hash, create_asset_escrow,
         create_liquidity_escrow, on_send_asset_success, on_send_liquidity_success, total_supply, get_limit_capacity, USED_LIMIT_CAPACITY_TIMESTAMP, FACTORY,
     },
-    ContractError, msg::{CalcSendAssetResponse, CalcReceiveAssetResponse, CalcLocalSwapResponse, GetLimitCapacityResponse}
+    ContractError, msg::{CalcSendAssetResponse, CalcReceiveAssetResponse, CalcLocalSwapResponse, GetLimitCapacityResponse}, event::{local_swap_event, send_asset_event, receive_asset_event, send_liquidity_event, receive_liquidity_event, deposit_event, withdraw_event}
 };
 
 use catalyst_ibc_interface::msg::ExecuteMsg as InterfaceExecuteMsg;
 
-use crate::{calculation_helpers::{calc_price_curve_area, calc_price_curve_limit, calc_combined_price_curves, calc_price_curve_limit_share}, msg::{TargetWeightsResponse, WeightsUpdateFinishTimestampResponse}};
+use crate::{calculation_helpers::{calc_price_curve_area, calc_price_curve_limit, calc_combined_price_curves, calc_price_curve_limit_share}, msg::{TargetWeightsResponse, WeightsUpdateFinishTimestampResponse}, event::set_weights_event};
 
 pub const TARGET_WEIGHTS: Item<Vec<u64>> = Item::new("catalyst-pool-target-weights");       //TODO use mapping instead? (see also WEIGHTS definition)
 pub const WEIGHT_UPDATE_TIMESTAMP: Item<u64> = Item::new("catalyst-pool-weight-update-timestamp");
@@ -143,9 +143,13 @@ pub fn initialize_swap_curves(
     //TODO include attributes of the execute_mint response in this response?
     Ok(
         Response::new()
-            .add_attribute("to_account", depositor)
-            .add_attribute("mint", minted_amount)
-            .add_attribute("assets", format_vec_for_event(assets_balances))
+            .add_event(
+                deposit_event(
+                    depositor,
+                    minted_amount,
+                    assets_balances
+                )
+            )
     )
 }
 
@@ -250,9 +254,13 @@ pub fn deposit_mixed(
     Ok(Response::new()
         .add_messages(transfer_msgs)
         .add_events(mint_response.events)                           // Add mint events //TODO overhaul
-        .add_attribute("to_account", info.sender.to_string())
-        .add_attribute("mint", out)
-        .add_attribute("assets", format_vec_for_event(deposit_amounts))  //TODO deposit_amounts event format
+        .add_event(
+            deposit_event(
+                info.sender.to_string(),
+                out,
+                deposit_amounts
+            )
+        )
     )
 }
 
@@ -321,9 +329,13 @@ pub fn withdraw_all(
     Ok(Response::new()
         .add_messages(transfer_msgs)
         .add_events(burn_response.events)                           // Add burn events //TODO overhaul
-        .add_attribute("to_account", info.sender.to_string())
-        .add_attribute("burn", pool_tokens)
-        .add_attribute("assets", format_vec_for_event(withdraw_amounts))  //TODO withdraw_amounts format
+        .add_event(
+            withdraw_event(
+                info.sender.to_string(),
+                pool_tokens,
+                withdraw_amounts
+            )
+        )
     )
     
 }
@@ -445,9 +457,13 @@ pub fn withdraw_mixed(
     Ok(Response::new()
         .add_messages(transfer_msgs)
         .add_events(burn_response.events)                           // Add burn events //TODO overhaul
-        .add_attribute("to_account", info.sender.to_string())
-        .add_attribute("burn", pool_tokens)
-        .add_attribute("assets", format_vec_for_event(withdraw_amounts))  //TODO withdraw_amounts format
+        .add_event(
+            withdraw_event(
+                info.sender.to_string(),
+                pool_tokens,
+                withdraw_amounts
+            )
+        )
     )
     
 }
@@ -525,11 +541,15 @@ pub fn local_swap(
     }
 
     Ok(response
-        .add_attribute("to_account", info.sender.to_string())
-        .add_attribute("from_asset", from_asset)
-        .add_attribute("to_asset", to_asset)
-        .add_attribute("from_amount", amount)
-        .add_attribute("to_amount", out)
+        .add_event(
+            local_swap_event(
+                info.sender.to_string(),
+                from_asset,
+                to_asset,
+                amount,
+                out
+            )
+        )
     )
 }
 
@@ -618,7 +638,7 @@ pub fn send_asset(
 
     // Build message to 'send' the asset via the IBC interface
     let send_cross_chain_asset_msg = InterfaceExecuteMsg::SendCrossChainAsset {
-        channel_id,
+        channel_id: channel_id.clone(),
         to_pool: to_pool.clone(),
         to_account: to_account.clone(),
         to_asset_index,
@@ -649,14 +669,19 @@ pub fn send_asset(
     response = response.add_message(send_asset_execute_msg);
 
     Ok(response
-        .add_attribute("to_pool", to_pool.to_base64())
-        .add_attribute("to_account", to_account.to_base64())
-        .add_attribute("from_asset", from_asset)
-        .add_attribute("to_asset_index", to_asset_index.to_string())
-        .add_attribute("from_amount", amount)
-        .add_attribute("fee", pool_fee)                     //TODO review once implemented on EVM
-        .add_attribute("units", u.to_string())
-        .add_attribute("min_out", min_out.to_string())      //TODO review string format
+        .add_event(
+            send_asset_event(
+                channel_id,
+                to_pool,
+                to_account,
+                from_asset,
+                to_asset_index,
+                amount,
+                min_out,
+                u,
+                pool_fee
+            )
+        )
     )
 }
 
@@ -736,14 +761,19 @@ pub fn receive_asset(
 
     Ok(response
         .add_message(transfer_to_asset_msg)
-        .add_attribute("from_pool", from_pool.to_base64())
-        .add_attribute("to_account", to_account)
-        .add_attribute("to_asset", to_asset)
-        .add_attribute("units", u.to_string())  //TODO format of .to_string()?
-        .add_attribute("to_amount", out)
-        .add_attribute("from_amount", from_amount.to_string())
-        .add_attribute("from_asset", from_asset.to_base64())
-        .add_attribute("from_block_number_mod", from_block_number_mod.to_string())  //TODO format
+        .add_event(
+            receive_asset_event(
+                channel_id,
+                from_pool,
+                to_account,
+                to_asset.to_string(),
+                u,
+                out,
+                from_amount,
+                from_asset,
+                from_block_number_mod
+            )
+        )
     )
 }
 
@@ -819,7 +849,7 @@ pub fn send_liquidity(
 
     // Build message to 'send' the liquidity via the IBC interface
     let send_cross_chain_asset_msg = InterfaceExecuteMsg::SendCrossChainLiquidity {
-        channel_id,
+        channel_id: channel_id.clone(),
         to_pool: to_pool.clone(),
         to_account: to_account.clone(),
         u,
@@ -841,12 +871,17 @@ pub fn send_liquidity(
     //TODO add min_out? (it is present on send_asset)
     Ok(Response::new()
         .add_message(send_liquidity_execute_msg)
-        .add_attribute("to_pool", to_pool.to_base64())
-        .add_attribute("to_account", to_account.to_base64())
-        .add_attribute("from_amount", amount)
-        .add_attribute("units", u.to_string())
-        .add_attribute("min_pool_tokens", min_pool_tokens.to_string())
-        .add_attribute("min_reference_asset", min_reference_asset.to_string())
+        .add_event(
+            send_liquidity_event(
+                channel_id,
+                to_pool,
+                to_account,
+                amount,
+                min_pool_tokens,
+                min_reference_asset,
+                u
+            )
+        )
     )
 }
 
@@ -979,12 +1014,17 @@ pub fn receive_liquidity(
     }
 
     Ok(response
-        .add_attribute("from_pool", from_pool.to_base64())
-        .add_attribute("to_account", to_account)
-        .add_attribute("units", u.to_string())  //TODO format of .to_string()?
-        .add_attribute("to_amount", out)
-        .add_attribute("from_amount", from_amount.to_string())
-        .add_attribute("from_block_number_mod", from_block_number_mod.to_string())  //TODO format
+        .add_event(
+            receive_liquidity_event(
+                channel_id,
+                from_pool,
+                to_account,
+                u,
+                out,
+                from_amount,
+                from_block_number_mod
+            )
+        )
         .add_events(mint_response.events)       //TODO overhaul
     )
 }
@@ -1211,9 +1251,14 @@ pub fn set_weights(         //TODO EVM mismatch arguments order
     WEIGHT_UPDATE_FINISH_TIMESTAMP.save(deps.storage, &target_timestamp)?;
     WEIGHT_UPDATE_TIMESTAMP.save(deps.storage, &current_time)?;
 
-    Ok(Response::new()
-        .add_attribute("weights", format!("{:?}", weights))
-        .add_attribute("target_timestamp", target_timestamp.to_string())
+    Ok(
+        Response::new()
+            .add_event(
+                set_weights_event(
+                    target_timestamp,
+                    target_weights
+                )
+            )
     )
 }
 
