@@ -485,7 +485,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "fixed-point-math-lib"
+name = "fixed-point-math"
 version = "0.1.0"
 dependencies = [
  "ethnum",
@@ -625,7 +625,7 @@ dependencies = [
  "cw20",
  "cw20-base",
  "ethnum",
- "fixed-point-math-lib",
+ "fixed-point-math",
  "mock-catalyst-ibc-interface",
  "schemars",
  "serde",
@@ -918,7 +918,7 @@ dependencies = [
  "cw20",
  "cw20-base",
  "ethnum",
- "fixed-point-math-lib",
+ "fixed-point-math",
  "schemars",
  "serde",
  "sha3",
@@ -960,7 +960,7 @@ dependencies = [
  "cw20",
  "cw20-base",
  "ethnum",
- "fixed-point-math-lib",
+ "fixed-point-math",
  "mock-catalyst-ibc-interface",
  "schemars",
  "serde",

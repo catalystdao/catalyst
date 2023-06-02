@@ -4,7 +4,7 @@ mod test_volatile_initialize_swap_curves {
     use cw20::{ TokenInfoResponse, BalanceResponse, Cw20QueryMsg};
     use cw_multi_test::{App, Executor};
     use ethnum::U256;
-    use fixed_point_math_lib::fixed_point_math::LN2;
+    use fixed_point_math::LN2;
     use swap_pool_common::{ContractError, msg::{AssetsResponse, WeightsResponse, GetLimitCapacityResponse, TotalEscrowedAssetResponse, TotalEscrowedLiquidityResponse}};
 
     use crate::{tests::helpers::{mock_instantiate_vault, DEPOSITOR, DEPLOYER, InitializeSwapCurvesMockConfig, deploy_test_tokens, mock_test_token_definitions, WAD, SETUP_MASTER}, msg::VolatileExecuteMsg};

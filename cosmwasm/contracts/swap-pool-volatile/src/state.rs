@@ -3,7 +3,7 @@ use cw20::{Cw20ExecuteMsg, Cw20QueryMsg, BalanceResponse};
 use cw20_base::{contract::{execute_mint, execute_burn}};
 use cw_storage_plus::Item;
 use ethnum::{U256, AsI256};
-use fixed_point_math_lib::fixed_point_math::{LN2, mul_wad_down, self, ln_wad, WAD, exp_wad};
+use fixed_point_math::{LN2, mul_wad_down, self, ln_wad, WAD, exp_wad};
 use schemars::JsonSchema;
 use serde::{Serialize, Deserialize};
 use swap_pool_common::{

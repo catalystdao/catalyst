@@ -34,7 +34,7 @@ serde = { version = "1.0.145", default-features = false, features = ["derive"] }
 thiserror = { version = "1.0.31" }
 swap-pool-common = { path = "../swap-pool-common" }
 ethnum = { version = "1.3.2", features = ["macros"] }
-fixed-point-math-lib = { path = "../../../rust-common/fixed-point-math-lib" }
+fixed-point-math = { path = "../../lib/fixed-point-math" }
 catalyst-ibc-interface = { path = "../catalyst-ibc-interface", features = ["library"] }
 
 [dev-dependencies]

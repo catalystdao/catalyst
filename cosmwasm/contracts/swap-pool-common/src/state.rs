@@ -7,7 +7,7 @@ use cw20::Cw20ExecuteMsg;
 use cw_storage_plus::{Map, Item};
 use cw20_base::{state::{MinterData, TokenInfo, TOKEN_INFO}, contract::execute_mint};
 use ethnum::{U256, uint};
-use fixed_point_math_lib::fixed_point_math::mul_wad_down;
+use fixed_point_math::mul_wad_down;
 use sha3::{Digest, Keccak256};
 
 use crate::{ContractError, msg::{ChainInterfaceResponse, SetupMasterResponse, ReadyResponse, OnlyLocalResponse, AssetsResponse, WeightsResponse, PoolFeeResponse, GovernanceFeeShareResponse, FeeAdministratorResponse, TotalEscrowedAssetResponse, TotalEscrowedLiquidityResponse, AssetEscrowResponse, LiquidityEscrowResponse, PoolConnectionStateResponse, FactoryResponse, FactoryOwnerResponse}, event::{send_asset_success_event, send_asset_failure_event, send_liquidity_success_event, send_liquidity_failure_event, finish_setup_event, set_fee_administrator_event, set_vault_fee_event, set_governance_fee_share_event, set_connection_event}};
