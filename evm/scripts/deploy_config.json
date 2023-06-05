@@ -10,7 +10,7 @@
             "amplified_mathlib": "0x828a1Cb35f7F935b33F141b32720e383C218de49",
             "describer": "0x74Db5b6220F515F824b8b2182729d0857cC81044",
             "describer_registry": "0xF2F16b53301Eb0EDB0FB6fEfFE13cC0bA50c2348",
-            "router": "0x88f2d1c92E6B0c66f309695b9CdE964b73BF3c6F",
+            "router": "0x8818ABB05De0493BcE3CC43C48C7Fab1ba044F27",
             "permit2": "0x88Cd393da95214A31081293387987e5B7Dff6f85"
         },
         "mumbai": {
@@ -23,7 +23,7 @@
             "amplified_mathlib": "0x828a1Cb35f7F935b33F141b32720e383C218de49",
             "describer": "0x74Db5b6220F515F824b8b2182729d0857cC81044",
             "describer_registry": "0xF2F16b53301Eb0EDB0FB6fEfFE13cC0bA50c2348",
-            "router": "0x88f2d1c92E6B0c66f309695b9CdE964b73BF3c6F",
+            "router": "0x8818ABB05De0493BcE3CC43C48C7Fab1ba044F27",
             "permit2": "0x88Cd393da95214A31081293387987e5B7Dff6f85"
         }
     },

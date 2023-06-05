@@ -86,7 +86,7 @@ abstract contract Dispatcher is Permit2Payments, CatalystExchange, CancelSwap, L
                     // Calldata must be everything after: 0x120 + 65 * 2 + (32*3-65) * 2 + 2 * 32 = 544 = 0x220.
                     bytes calldata calldata_ = inputs[0x220:];
                     
-                    CatalystExchange.sendAsset(vault, channelId, toVault, toUser, fromAsset, toAssetIndex8, amount, minOut, fallbackUser, calldata_);
+                    CatalystExchange.sendAsset(vault, channelId, toVault, toUser, fromAsset, toAssetIndex8, amount, minOut, map(fallbackUser), calldata_);
                 } else if (command == Commands.PERMIT2_TRANSFER_FROM) {
                     // equivalent: abi.decode(inputs, (address, address, uint160))
                     address token;
@@ -242,7 +242,18 @@ abstract contract Dispatcher is Permit2Payments, CatalystExchange, CancelSwap, L
                 }
             }
         } else {
-            if (command == Commands.EXECUTE_SUB_PLAN) {
+             if (command == Commands.TRANSFER_FROM) {
+                    // equivalent: abi.decode(inputs, (address, address, uint160))
+                    address token;
+                    address recipient;
+                    uint160 amount;
+                    assembly {
+                        token := calldataload(inputs.offset)
+                        recipient := calldataload(add(inputs.offset, 0x20))
+                        amount := calldataload(add(inputs.offset, 0x40))
+                    }
+                    Payments.transferFrom(token, lockedBy, map(recipient), amount);
+            } else if (command == Commands.EXECUTE_SUB_PLAN) {
                 (bytes memory _commands, bytes[] memory _inputs) = abi.decode(inputs, (bytes, bytes[]));
                 (success, output) =
                     (address(this)).call(abi.encodeWithSelector(Dispatcher.execute.selector, _commands, _inputs));

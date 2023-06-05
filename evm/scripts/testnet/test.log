@@ -1,0 +1,5 @@
+INFO:root:Loaded mumbai at block: 36265924 with relayer 0x0e479a0438d25B5b10C2186Bee1256d437b9C582
+INFO:root:Loaded sepolia at block: 3595051 with relayer 0x0e479a0438d25B5b10C2186Bee1256d437b9C582
+INFO:root:mumbai: 0 logs between block 36265924-36265924
+INFO:root:sepolia: 0 logs between block 3595051-3595051
+INFO:root:mumbai: 0 logs between block 36265925-36265927
