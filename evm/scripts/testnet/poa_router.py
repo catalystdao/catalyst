@@ -28,10 +28,9 @@ class PoARouter:
     def read_config(self):
         with open(self.config_name) as f:
             return json.load(f)
-        
-    def write_config(self):
-        with open(self.config_name, 'w') as f:
-            json.dump(self.config, f, indent=4)
+    
+    def get_channel_pair(self, channelId):
+        return bytes.fromhex(self.config["channel_pairs"][channelId.hex()])
     
     def __init__(
         self,
@@ -138,7 +137,7 @@ class PoARouter:
             tx_hash = sending_w3.eth.send_raw_transaction(signed_txn.rawTransaction)
             print("error -> Timeout:", from_chain, Web3.toHex(tx_hash))
 
-    def compute_sendAsset_identifier(self, log, chain_identifier):
+    def compute_sendAsset_identifier(self, log):
         args = log["args"]
         toAccount = args["toAccount"]
         U = args["units"]
@@ -147,8 +146,9 @@ class PoARouter:
         fromAsset = args["fromAsset"]
         blockNumberMod = log["blockNumber"] % 2**32
         poolAddress = log["address"]
+        channelId = self.get_channel_pair(args["channelId"])
         return sha256(
-            toAccount + str(U).encode() + str(amount).encode() + convert_64_bytes_address(fromAsset) + str(blockNumberMod).encode() + poolAddress.encode() + chain_identifier
+            toAccount + str(U).encode() + str(amount).encode() + convert_64_bytes_address(fromAsset) + str(blockNumberMod).encode() + poolAddress.encode() + channelId
         ).hexdigest()
     
     def compute_receiveAsset_identifier(self, log):
@@ -164,7 +164,7 @@ class PoARouter:
             convert_64_bytes_address(toAccount) + str(U).encode() + str(amount).encode() + fromAsset + str(blockNumberMod).encode() + poolAddress.encode() + channelId
         ).hexdigest()
     
-    def compute_sendLiquidity_identifier(self, log, chain_identifier):
+    def compute_sendLiquidity_identifier(self, log):
         args = log["args"]
         toAccount = args["toAccount"]
         U = args["units"]
@@ -172,8 +172,9 @@ class PoARouter:
         amount = args["fromAmount"] - fee
         blockNumberMod = log["blockNumber"] % 2**32
         poolAddress = log["address"]
+        channelId = ""
         return sha256(
-            toAccount + str(U).encode() + str(amount).encode() + str(blockNumberMod).encode() + poolAddress.encode() + chain_identifier
+            toAccount + str(U).encode() + str(amount).encode() + str(blockNumberMod).encode() + poolAddress.encode() + channelId
         ).hexdigest()
     
     def compute_receiveLiquidity_identifier(self, log):
@@ -188,7 +189,7 @@ class PoARouter:
             toAccount + str(U).encode() + str(amount).encode() + str(blockNumberMod).encode() + poolAddress.encode() + channelId
         ).hexdigest()
     
-    def compute_sendAsset_callback(self, log, chain_identifier):
+    def compute_sendAsset_callback(self, log):
         args = log["args"]
         toAccount = args["toAccount"]
         U = args["U"]
@@ -196,38 +197,40 @@ class PoARouter:
         fromAsset = args["escrowToken"]
         blockNumberMod = args["blockNumberMod"]
         poolAddress = log["address"]
+        channelId = self.get_channel_pair(args["channelId"])
         return sha256(
-            toAccount + str(U).encode() + str(amount).encode() + convert_64_bytes_address(fromAsset) + str(blockNumberMod).encode() + poolAddress.encode() + chain_identifier
+            toAccount + str(U).encode() + str(amount).encode() + convert_64_bytes_address(fromAsset) + str(blockNumberMod).encode() + poolAddress.encode() + channelId
         ).hexdigest()
         
-    def compute_sendLiquidity_callback(self, log, chain_identifier):
+    def compute_sendLiquidity_callback(self, log):
         args = log["args"]
         toAccount = args["toAccount"]
         U = args["U"]
         amount = args["escrowAmount"]
         blockNumberMod = args["blockNumberMod"]
         poolAddress = log["address"]
+        channelId = self.get_channel_pair(args["channelId"])
         return sha256(
-            toAccount + str(U).encode() + str(amount).encode() + str(blockNumberMod).encode() + poolAddress.encode() + chain_identifier
+            toAccount + str(U).encode() + str(amount).encode() + str(blockNumberMod).encode() + poolAddress.encode() + channelId
         ).hexdigest()
 
-    def compute_swap_identifier(self, log, chain_identifier):
+    def compute_swap_identifier(self, log):
         if log["event"] == "SendAsset":
-            return self.compute_sendAsset_identifier(log, chain_identifier)
+            return self.compute_sendAsset_identifier(log)
         elif log["event"] == "ReceiveAsset":
             return self.compute_receiveAsset_identifier(log)
         elif log["event"] == "SendLiquidity":
-            return self.compute_sendLiquidity_identifier(log, chain_identifier)
+            return self.compute_sendLiquidity_identifier(log)
         elif log["event"] == "ReceiveLiquidity":
             return self.compute_receiveLiquidity_identifier(log)
         elif log["event"] in ["SendAssetFailure", "SendAssetSuccess"]:
-            return self.compute_sendAsset_callback(log, chain_identifier)
+            return self.compute_sendAsset_callback(log)
         elif log["event"] in ["SendLiquidityFailure", "SendLiquiditySuccess"]: 
-            return self.compute_sendLiquidity_callback(log, chain_identifier)
+            return self.compute_sendLiquidity_callback(log)
         else:
             raise NotImplementedError()
         
-    def get_sendAssets(self, w3, fromBlock, ibc_endpoint, chain_identifier):
+    def get_sendAssets(self, w3, fromBlock, ibc_endpoint):
         # get a log of all 
         filter = w3.eth.filter({'topics': ["0xe1c4c822c15df23f17ad636820a990981caf1d4e40f2f46cf3bb7ad003deaec8"], "fromBlock": fromBlock})
         entries = filter.get_all_entries()
@@ -245,11 +248,11 @@ class PoARouter:
                     
         
         # We now have an array of Catalyst swaps.
-        swap_hashes = [self.compute_swap_identifier(log, chain_identifier) for log in validated_logs]
+        swap_hashes = [(log["transactionHash"].hex(), self.compute_swap_identifier(log)) for log in validated_logs]
         
         return swap_hashes
     
-    def get_sendLiquidity(self, w3, fromBlock, ibc_endpoint, chain_identifier):
+    def get_sendLiquidity(self, w3, fromBlock, ibc_endpoint):
         # get a log of all 
         filter = w3.eth.filter({'topics': ["0x8c9503be4db35b4e3d31565a9616d1dc3f1b3024e5e9e9d65052de46a5149f1c"], "fromBlock": fromBlock})
         entries = filter.get_all_entries()
@@ -265,11 +268,11 @@ class PoARouter:
                         validated_logs.append(log)
         
         # We now have an array of Catalyst swaps.
-        swap_hashes = [self.compute_swap_identifier(log, chain_identifier) for log in validated_logs]
+        swap_hashes = [(log["transactionHash"].hex(), self.compute_swap_identifier(log)) for log in validated_logs]
         
         return swap_hashes
 
-    def get_receiveAsset(self, w3, fromBlock, ibc_endpoint, chain_identifier):
+    def get_receiveAsset(self, w3, fromBlock, ibc_endpoint):
         filter = w3.eth.filter({'topics': ["0x6b7977bd09a2e845fb431e372aac95edfb358014e167149b4f4d09021c87a79d"], "fromBlock": fromBlock})
         entries = filter.get_all_entries()
         swap_vault = w3.eth.contract(abi=vault_abi)
@@ -282,11 +285,11 @@ class PoARouter:
                 validated_logs.append(log)
         
         # We now have an array of Catalyst swaps.
-        swap_hashes = [self.compute_swap_identifier(log, chain_identifier) for log in validated_logs]
+        swap_hashes = [(log["transactionHash"].hex(), self.compute_swap_identifier(log)) for log in validated_logs]
         
         return swap_hashes
 
-    def get_receiveLiquidity(self, w3, fromBlock, ibc_endpoint, chain_identifier):
+    def get_receiveLiquidity(self, w3, fromBlock, ibc_endpoint):
         filter = w3.eth.filter({'topics': ["0x7af4b988c9949d39dbe6398b8332fa201574208c2656602a23f1624c428bfe91"], "fromBlock": fromBlock})
         entries = filter.get_all_entries()
         swap_vault = w3.eth.contract(abi=vault_abi)
@@ -299,11 +302,11 @@ class PoARouter:
                 validated_logs.append(log)
         
         # We now have an array of Catalyst swaps.
-        swap_hashes = [self.compute_swap_indentifier(log) for log in validated_logs]
+        swap_hashes = [(log["transactionHash"].hex(), self.compute_swap_identifier(log)) for log in validated_logs]
         
         return swap_hashes
     
-    def get_sendAsset_callback(self, w3, fromBlock, ibc_endpoint, chain_identifier):
+    def get_sendAsset_callback(self, w3, fromBlock, ibc_endpoint):
         filter_ack = w3.eth.filter({'topics': ["0xe6db00361b6a35af0ded81ba5696c1633e945a81008cd7da44fb8a78422a7d42"], "fromBlock": fromBlock})
         entries_ack = filter_ack.get_all_entries()
         filter_timeout = w3.eth.filter({'topics': ["0xcab6c1a18a9c89efaab5ea5a8c665ffe2c5aac9ddd9301ccad01fd4fed7c7e3d"], "fromBlock": fromBlock})
@@ -322,11 +325,11 @@ class PoARouter:
                 validated_logs.append(log)
                 
         # We now have an array of Catalyst swaps.
-        swap_hashes = [self.compute_swap_identifier(log, chain_identifier) for log in validated_logs]
+        swap_hashes = [(log["transactionHash"].hex(), self.compute_swap_identifier(log)) for log in validated_logs]
         
         return swap_hashes
     
-    def get_sendLiquidity_callback(self, w3, fromBlock, ibc_endpoint, chain_identifier):
+    def get_sendLiquidity_callback(self, w3, fromBlock, ibc_endpoint,):
         filter_ack = w3.eth.filter({'topics': ["0x8a49f1dbb0b988d0421183f74b9866ce7c88256f1b88cf865bf7f3a74706fe68"], "fromBlock": fromBlock})
         entries_ack = filter_ack.get_all_entries()
         filter_timeout = w3.eth.filter({'topics': ["0x97cc161fb90f5cdec9c65ba7aac2279e32df11368946590b82fd6fe8e76b39e0"], "fromBlock": fromBlock})
@@ -336,7 +339,7 @@ class PoARouter:
         swap_vault = w3.eth.contract(abi=vault_abi)
         processed_logs = [swap_vault.events.ReceiveAsset().processLog(entry) for entry in entries]
         
-    def get_callbacks(self, w3, ibc_endpoint, chain_identifier):
+    def get_callbacks(self, w3, ibc_endpoint):
         # We need to get all callbacks.
         # We need to check that the calls were original executed on the ibc_emulator
         # We need to compute the hash.
@@ -347,20 +350,32 @@ class PoARouter:
         w3 = self.chains[chain]['w3']
         fromBlock = 0
         ibc_emulator = self.chains[chain]["ibcinterface"]
-        a = self.get_sendAssets(w3, fromBlock, ibc_emulator.address, chain_identifier=convert.to_bytes(chain.encode()))
+        a = self.get_sendAssets(w3, fromBlock, ibc_emulator.address)
         chain = "mumbai"
         w3 = self.chains[chain]['w3']
         fromBlock = 0
         ibc_emulator = self.chains[chain]["ibcinterface"]
-        b = self.get_receiveAsset(w3, fromBlock, ibc_emulator.address, chain_identifier=convert.to_bytes(chain.encode()))
+        b = self.get_receiveAsset(w3, fromBlock, ibc_emulator.address)
         
         chain = "sepolia"
         w3 = self.chains[chain]['w3']
         fromBlock = 0
         ibc_emulator = self.chains[chain]["ibcinterface"]
-        c = self.get_sendAsset_callback(w3, fromBlock, ibc_emulator.address, chain_identifier=convert.to_bytes(chain.encode()))
+        c = self.get_sendAsset_callback(w3, fromBlock, ibc_emulator.address)
         
-        return (a, b, c)
+        # Get all swap hashes from sendAssets
+        uniqueSwapHashes = {}
+        for hashes in a:
+            assert uniqueSwapHashes.get(hashes[1]) is None, "Non unqiue swaphash found!"
+            uniqueSwapHashes[hashes[1]] = {"sendAssetTx": hashes[0]}
+                
+        for hashes in b:
+            uniqueSwapHashes[hashes[1]]["receiveAssetTx"] =  hashes[0]
+        
+        for hashes in c:
+            uniqueSwapHashes[hashes[1]]["ackSendAssetTx"] = hashes[0]
+        
+        return uniqueSwapHashes
     
     def run(self, wait=5):
         chains = self.chains.keys()

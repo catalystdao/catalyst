@@ -1,4 +1,5 @@
 import argparse
+import json
 
 from poa_router import PoARouter
 
@@ -12,7 +13,7 @@ def main():
         config_location = args.config_location
         
     relayer = PoARouter(config_name=config_location)
-    print(relayer.backcheck())
+    print(json.dumps(relayer.backcheck(), indent=4))
     
 
 if __name__ == "__main__":
