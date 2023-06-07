@@ -172,7 +172,7 @@ class PoARouter:
         amount = args["fromAmount"] - fee
         blockNumberMod = log["blockNumber"] % 2**32
         poolAddress = log["address"]
-        channelId = ""
+        channelId = self.get_channel_pair(args["channelId"])
         return sha256(
             toAccount + str(U).encode() + str(amount).encode() + str(blockNumberMod).encode() + poolAddress.encode() + channelId
         ).hexdigest()
@@ -186,13 +186,13 @@ class PoARouter:
         poolAddress = log["address"]
         channelId = args["channelId"]
         return sha256(
-            toAccount + str(U).encode() + str(amount).encode() + str(blockNumberMod).encode() + poolAddress.encode() + channelId
+            convert_64_bytes_address(toAccount) + str(U).encode() + str(amount).encode() + str(blockNumberMod).encode() + poolAddress.encode() + channelId
         ).hexdigest()
     
     def compute_sendAsset_callback(self, log):
         args = log["args"]
         toAccount = args["toAccount"]
-        U = args["U"]
+        U = args["units"]
         amount = args["escrowAmount"]
         fromAsset = args["escrowToken"]
         blockNumberMod = args["blockNumberMod"]
@@ -205,7 +205,7 @@ class PoARouter:
     def compute_sendLiquidity_callback(self, log):
         args = log["args"]
         toAccount = args["toAccount"]
-        U = args["U"]
+        U = args["units"]
         amount = args["escrowAmount"]
         blockNumberMod = args["blockNumberMod"]
         poolAddress = log["address"]
@@ -234,9 +234,9 @@ class PoARouter:
         # get a log of all 
         filter = w3.eth.filter({'topics': ["0xe1c4c822c15df23f17ad636820a990981caf1d4e40f2f46cf3bb7ad003deaec8"], "fromBlock": fromBlock})
         entries = filter.get_all_entries()
-        print(len(entries))
         swap_vault = w3.eth.contract(abi=vault_abi)
         processed_logs = [swap_vault.events.SendAsset().processLog(entry) for entry in entries]
+        
         # For each log, check that our emulator also emitted a message.
         validated_logs = []
         for log in processed_logs:
@@ -258,6 +258,7 @@ class PoARouter:
         entries = filter.get_all_entries()
         swap_vault = w3.eth.contract(abi=vault_abi)
         processed_logs = [swap_vault.events.SendLiquidity().processLog(entry) for entry in entries]
+        
         # For each log, check that our emulator also emitted a message.
         validated_logs = []
         for log in processed_logs:
@@ -277,6 +278,7 @@ class PoARouter:
         entries = filter.get_all_entries()
         swap_vault = w3.eth.contract(abi=vault_abi)
         processed_logs = [swap_vault.events.ReceiveAsset().processLog(entry) for entry in entries]
+        
         # For each log, check that the emulator was called.
         validated_logs = []
         for log in processed_logs:
@@ -293,7 +295,8 @@ class PoARouter:
         filter = w3.eth.filter({'topics': ["0x7af4b988c9949d39dbe6398b8332fa201574208c2656602a23f1624c428bfe91"], "fromBlock": fromBlock})
         entries = filter.get_all_entries()
         swap_vault = w3.eth.contract(abi=vault_abi)
-        processed_logs = [swap_vault.events.ReceiveAsset().processLog(entry) for entry in entries]
+        processed_logs = [swap_vault.events.ReceiveLiquidity().processLog(entry) for entry in entries]
+        
         # For each log, check that our emulator also emitted a message.
         validated_logs = []
         for log in processed_logs:
@@ -315,66 +318,110 @@ class PoARouter:
         swap_vault = w3.eth.contract(abi=vault_abi)
         processed_acks = [swap_vault.events.SendAssetSuccess().processLog(entry) for entry in entries_ack]
         processed_timeouts = [swap_vault.events.SendAssetFailure().processLog(entry) for entry in entries_timeout]
-        processed_logs = processed_acks + processed_timeouts
         
         # For each log, check that the emulator was called.
-        validated_logs = []
-        for log in processed_logs:
+        validated_acks = []
+        for log in processed_acks:
             receipt = w3.eth.getTransactionReceipt(log["transactionHash"])
             if receipt["to"] == ibc_endpoint:
-                validated_logs.append(log)
+                validated_acks.append(log)
+        
+        validated_timeouts = []
+        for log in processed_timeouts:
+            receipt = w3.eth.getTransactionReceipt(log["transactionHash"])
+            if receipt["to"] == ibc_endpoint:
+                validated_timeouts.append(log)
                 
         # We now have an array of Catalyst swaps.
-        swap_hashes = [(log["transactionHash"].hex(), self.compute_swap_identifier(log)) for log in validated_logs]
+        ack_hashes = [(log["transactionHash"].hex(), self.compute_swap_identifier(log), "ack") for log in validated_acks]
+        timeout_hashes = [(log["transactionHash"].hex(), self.compute_swap_identifier(log), "timeout") for log in validated_timeouts]
         
-        return swap_hashes
+        return ack_hashes + timeout_hashes
     
-    def get_sendLiquidity_callback(self, w3, fromBlock, ibc_endpoint,):
+    def get_sendLiquidity_callback(self, w3, fromBlock, ibc_endpoint):
         filter_ack = w3.eth.filter({'topics': ["0x8a49f1dbb0b988d0421183f74b9866ce7c88256f1b88cf865bf7f3a74706fe68"], "fromBlock": fromBlock})
         entries_ack = filter_ack.get_all_entries()
         filter_timeout = w3.eth.filter({'topics': ["0x97cc161fb90f5cdec9c65ba7aac2279e32df11368946590b82fd6fe8e76b39e0"], "fromBlock": fromBlock})
         entries_timeout = filter_timeout.get_all_entries()
         
-        entries = entries_ack + entries_timeout
         swap_vault = w3.eth.contract(abi=vault_abi)
-        processed_logs = [swap_vault.events.ReceiveAsset().processLog(entry) for entry in entries]
+        processed_acks = [swap_vault.events.SendLiquiditySuccess().processLog(entry) for entry in entries_ack]
+        processed_timeouts = [swap_vault.events.SendLiquidityFailure().processLog(entry) for entry in entries_timeout]
         
-    def get_callbacks(self, w3, ibc_endpoint):
-        # We need to get all callbacks.
-        # We need to check that the calls were original executed on the ibc_emulator
-        # We need to compute the hash.
-        pass
-
-    def backcheck(self):
-        chain = "sepolia"
-        w3 = self.chains[chain]['w3']
-        fromBlock = 0
-        ibc_emulator = self.chains[chain]["ibcinterface"]
-        a = self.get_sendAssets(w3, fromBlock, ibc_emulator.address)
-        chain = "mumbai"
-        w3 = self.chains[chain]['w3']
-        fromBlock = 0
-        ibc_emulator = self.chains[chain]["ibcinterface"]
-        b = self.get_receiveAsset(w3, fromBlock, ibc_emulator.address)
+        # For each log, check that the emulator was called.
+        validated_acks = []
+        for log in processed_acks:
+            receipt = w3.eth.getTransactionReceipt(log["transactionHash"])
+            if receipt["to"] == ibc_endpoint:
+                validated_acks.append(log)
         
-        chain = "sepolia"
-        w3 = self.chains[chain]['w3']
-        fromBlock = 0
-        ibc_emulator = self.chains[chain]["ibcinterface"]
-        c = self.get_sendAsset_callback(w3, fromBlock, ibc_emulator.address)
-        
-        # Get all swap hashes from sendAssets
-        uniqueSwapHashes = {}
-        for hashes in a:
-            assert uniqueSwapHashes.get(hashes[1]) is None, "Non unqiue swaphash found!"
-            uniqueSwapHashes[hashes[1]] = {"sendAssetTx": hashes[0]}
+        validated_timeouts = []
+        for log in processed_timeouts:
+            receipt = w3.eth.getTransactionReceipt(log["transactionHash"])
+            if receipt["to"] == ibc_endpoint:
+                validated_timeouts.append(log)
                 
-        for hashes in b:
-            uniqueSwapHashes[hashes[1]]["receiveAssetTx"] =  hashes[0]
+        # We now have an array of Catalyst swaps.
+        ack_hashes = [(log["transactionHash"].hex(), self.compute_swap_identifier(log), "ack") for log in validated_acks]
+        timeout_hashes = [(log["transactionHash"].hex(), self.compute_swap_identifier(log), "timeout") for log in validated_timeouts]
         
-        for hashes in c:
-            uniqueSwapHashes[hashes[1]]["ackSendAssetTx"] = hashes[0]
+        return ack_hashes + timeout_hashes
         
+    def backcheck(self):
+        chains = self.chains.keys()
+        
+        uniqueSwapHashes = {}
+        for chain in chains:
+            fromBlock = 0
+            print(f"Checking: {chain} from {fromBlock}")
+            w3 = self.chains[chain]['w3']
+            ibc_emulator = self.chains[chain]["ibcinterface"]
+            sendAsssets = self.get_sendAssets(w3, fromBlock, ibc_emulator.address)
+            sendLiquidity = self.get_sendLiquidity(w3, fromBlock, ibc_emulator.address)
+            receiveAssets = self.get_receiveAsset(w3, fromBlock, ibc_emulator.address)
+            receiveLiquidity = self.get_receiveLiquidity(w3, fromBlock, ibc_emulator.address)
+            sendAssetCallbacks = self.get_sendAsset_callback(w3, fromBlock, ibc_emulator.address)
+            sendLiquidityCallbacks = self.get_sendLiquidity_callback(w3, fromBlock, ibc_emulator.address)
+            print(f"Found {len(sendAsssets) + len(receiveAssets) + len(sendAssetCallbacks)} events on {chain}")
+            
+            # Get all swap hashes from sendAssets
+            for hashes in sendAsssets:
+                if uniqueSwapHashes.get(hashes[1]) is None:
+                    uniqueSwapHashes[hashes[1]] = {"sendAssetTx": [chain, hashes[0]]}
+                else:
+                    uniqueSwapHashes[hashes[1]]["sendAssetTx"] = [chain, hashes[0]]
+            
+            for hashes in sendLiquidity:
+                if uniqueSwapHashes.get(hashes[1]) is None:
+                    uniqueSwapHashes[hashes[1]] = {"sendLiquidityTx": [chain, hashes[0]]}
+                else:
+                    uniqueSwapHashes[hashes[1]]["sendLiquidityTx"] = [chain, hashes[0]]
+            
+            for hashes in receiveAssets:
+                if uniqueSwapHashes.get(hashes[1]) is None:
+                    uniqueSwapHashes[hashes[1]] = {"receiveAssetTx": [chain, hashes[0]]}
+                else:
+                    uniqueSwapHashes[hashes[1]]["receiveAssetTx"] = [chain, hashes[0]]
+            
+            # Get all swap hashes from sendLiquidity
+            for hashes in receiveLiquidity:
+                if uniqueSwapHashes.get(hashes[1]) is None:
+                    uniqueSwapHashes[hashes[1]] = {"receiveLiqudityTx": [chain, hashes[0]]}
+                else:
+                    uniqueSwapHashes[hashes[1]]["receiveLiqudityTx"] = [chain, hashes[0]]
+            
+            for hashes in sendAssetCallbacks:
+                if uniqueSwapHashes.get(hashes[1]) is None:
+                    uniqueSwapHashes[hashes[1]] = {f"{hashes[2]}SendAssetTx": [chain, hashes[0]]}
+                else:
+                    uniqueSwapHashes[hashes[1]][f"{hashes[2]}SendAssetTx"] = [chain, hashes[0]]
+            
+            for hashes in sendLiquidityCallbacks:
+                if uniqueSwapHashes.get(hashes[1]) is None:
+                    uniqueSwapHashes[hashes[1]] = {f"{hashes[2]}SendLiquidityTx": [chain, hashes[0]]}
+                else:
+                    uniqueSwapHashes[hashes[1]][f"{hashes[2]}SendLiquidityTx"] = [chain, hashes[0]]
+            
         return uniqueSwapHashes
     
     def run(self, wait=5):
