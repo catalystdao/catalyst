@@ -15,7 +15,7 @@ def main():
         config_location = args.config_location
 
     relayer = PoARelayer(config_name=config_location)
-    print(json.dumps(relayer.get_all_hashes(), indent=4))
+    relayer.backcheck()
 
 
 if __name__ == "__main__":

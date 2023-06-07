@@ -32,6 +32,8 @@ def convert_64_bytes_address(address):
     )
 
 
+logging.basicConfig(level=logging.INFO)
+
 class PoARelayer:
     def read_config(self):
         with open(self.config_name) as f:
@@ -334,13 +336,15 @@ class PoARelayer:
         validated_logs = []
         for log in processed_logs:
             receipt = w3.eth.getTransactionReceipt(log["transactionHash"])
+            log_index = log.logIndex
             for r_log in receipt.logs:
-                if (
-                    r_log.topics[0].hex()
-                    == "0x2f7e9b1a1fac10099a9988fcda077b67b3809ede82c92a7662b82f0f96861604"
-                ):
-                    if r_log.address == ibc_endpoint:
-                        validated_logs.append(log)
+                if r_log.logIndex == log_index - 2:
+                    if (
+                        r_log.topics[0].hex()
+                        == "0x2f7e9b1a1fac10099a9988fcda077b67b3809ede82c92a7662b82f0f96861604"
+                    ):
+                        if r_log.address == ibc_endpoint:
+                            validated_logs.append(log)
 
         # We now have an array of Catalyst swaps.
         swap_hashes = [
@@ -370,13 +374,15 @@ class PoARelayer:
         validated_logs = []
         for log in processed_logs:
             receipt = w3.eth.getTransactionReceipt(log["transactionHash"])
+            log_index = log.logIndex
             for r_log in receipt.logs:
-                if (
-                    r_log.topics[0].hex()
-                    == "0x2f7e9b1a1fac10099a9988fcda077b67b3809ede82c92a7662b82f0f96861604"
-                ):
-                    if r_log.address == ibc_endpoint:
-                        validated_logs.append(log)
+                if r_log.logIndex == log_index - 2:
+                    if (
+                        r_log.topics[0].hex()
+                        == "0x2f7e9b1a1fac10099a9988fcda077b67b3809ede82c92a7662b82f0f96861604"
+                    ):
+                        if r_log.address == ibc_endpoint:
+                            validated_logs.append(log)
 
         # We now have an array of Catalyst swaps.
         swap_hashes = [
@@ -556,7 +562,46 @@ class PoARelayer:
 
         return ack_hashes + timeout_hashes
 
-    def backcheck(self):
+    def get_expected_log(self, w3, tx_hash, swap_hash):
+        receipt = w3.eth.get_transaction_receipt(tx_hash)
+        logs = receipt.logs
+        
+        swap_vault = w3.eth.contract(abi=vault_abi)
+        ibc_emulator = w3.eth.contract(abi=e_abi)
+        swaps = []
+        packets = []
+        for log in logs:
+            if log.topics[0].hex() == "0xe1c4c822c15df23f17ad636820a990981caf1d4e40f2f46cf3bb7ad003deaec8":
+                log_index = log.logIndex
+                for r_log in logs:
+                    if r_log.logIndex == log_index - 2:
+                        if (
+                            r_log.topics[0].hex()
+                            == "0x2f7e9b1a1fac10099a9988fcda077b67b3809ede82c92a7662b82f0f96861604"
+                        ):  
+                            swaps.append(swap_vault.events.SendAsset().processLog(log))
+                            packets.append(ibc_emulator.events.Packet().processLog(r_log))
+            elif log.topics[0].hex() == "0x8c9503be4db35b4e3d31565a9616d1dc3f1b3024e5e9e9d65052de46a5149f1c":
+                log_index = log.logIndex
+                for r_log in logs:
+                    if r_log.logIndex == log_index - 2:
+                        if (
+                            r_log.topics[0].hex()
+                            == "0x2f7e9b1a1fac10099a9988fcda077b67b3809ede82c92a7662b82f0f96861604"
+                        ):
+                            swaps.append(swap_vault.events.SendLiquidity().processLog(log))
+                            packets.append(ibc_emulator.events.Packet().processLog(r_log))
+        
+        swap_hashes = [
+            (packet, self.compute_swap_identifier(swap_log))
+            for packet, swap_log in zip(packets, swaps)
+        ]
+        
+        for packet, hash in swap_hashes:
+            if hash == swap_hash:
+                return packet
+        
+    def get_all_hashes(self):
         chains = self.chains.keys()
 
         uniqueSwapHashes = {}
@@ -638,6 +683,45 @@ class PoARelayer:
 
         return uniqueSwapHashes
 
+    def backcheck(self):
+        uniqueSwapHashes = self.get_all_hashes()
+        
+        for hash in uniqueSwapHashes.keys():
+            swap_set = uniqueSwapHashes[hash]
+            
+            # Check if the swap contains an ack or timeout. If it does, we can skip
+            if swap_set.get("ackSendAssetTx") or swap_set.get("ackSendLiquidityTx"):
+                continue
+            if swap_set.get("timeoutSendAssetTx") or swap_set.get("timeoutSendLiquidityTx"):
+                continue
+            
+            # Then lets check if the swap contains a receive
+            receive = False
+            if swap_set.get("receiveAssetTx") or swap_set.get("receiveLiqudityTx"):
+                receive = True
+            
+            # Finally, check if the swaphash has a sendAsset or send liquidity.
+            send = False
+            if swap_set.get("sendAssetTx") or swap_set.get("sendLiquidityTx"):
+                send = True
+            
+            inital_swap = swap_set.get("sendAssetTx") if swap_set.get("sendAssetTx") is not None else swap_set.get("sendLiquidityTx")
+            chain = inital_swap[0]
+            w3 = self.chains[chain]["w3"]
+            packet_log = self.get_expected_log(w3, inital_swap[1], hash)
+            # We now have 2 different cases:
+            if receive is True:
+                # Then we need to submit an ack.
+                tx_hash = swap_set.get("receiveAssetTx")[1] if swap_set.get("receiveAssetTx") is not None else swap_set.get("receiveLiquidityTx")[1]
+                callback = self.callback(chain, packet_log, tx_hash)
+            elif receive is False and send is True:
+                # Then we need to execute the swap then ack, or timeout.
+                tx_hash = self.execute(chain, packet_log)
+                if tx_hash is not None:
+                    self.callback(chain, packet_log, tx_hash)
+            else:
+                raise NotImplementedError
+                    
     def run(self, wait=5):
         chains = self.chains.keys()
         blocknumbers = {}
