@@ -1,11 +1,12 @@
 import argparse
 import json
+import logging
 import os
 from hashlib import sha256
 from time import sleep
-from brownie import convert
 
 import web3
+from brownie import convert
 from web3 import Web3
 from web3.middleware import geth_poa_middleware
 
@@ -23,6 +24,10 @@ def decode_chain_from_channel(channelid):
 
 def convert_64_bytes_address(address):
     return convert.to_bytes(20, "bytes1")+convert.to_bytes(0)+convert.to_bytes(address.replace("0x", ""))
+
+# setup log
+logging.basicConfig(level=logging.INFO, filename='test.log', filemode='a')
+
 
 class PoARouter:
     def read_config(self):
@@ -61,12 +66,13 @@ class PoARouter:
             
             # Router
             self.chains[chain]["acct"] = w3.eth.account.from_key(self.chains[chain]["key"])
+            self.chains[chain]["nonce"] = w3.eth.get_transaction_count(self.chains[chain]["acct"].address)
             
     def fetch_logs(self, chain, fromBlock, toBlock):
         logs = self.chains[chain]["ibcinterface"].events.Packet.getLogs(fromBlock=fromBlock, toBlock=toBlock)
         return logs
 
-    def relay(self, from_chain, event):
+    def execute(self, from_chain, event):
         packet = event["args"]["packet"]
         target_chain = decode_chain_from_channel(packet[1][1])
         relayer_address = self.chains[target_chain]["acct"].address
@@ -81,48 +87,20 @@ class PoARouter:
                 packet
             ).build_transaction({
                 'from': relayer_address,
-                'nonce': target_w3.eth.get_transaction_count(relayer_address),
+                'nonce':  self.chains[target_chain]["nonce"],
                 "gas": 300000
             })
+            self.chains[target_chain]["nonce"] =  self.chains[target_chain]["nonce"] + 1
             
             signed_txn = target_w3.eth.account.sign_transaction(tx, private_key=self.chains[target_chain]["key"])
             
             tx_hash = target_w3.eth.send_raw_transaction(signed_txn.rawTransaction)
             
-            print("Execute", target_chain, Web3.toHex(tx_hash))
+            logging.info(f"Execute: {target_chain, Web3.toHex(tx_hash)}")
             
-            # Check if transaction has been mined.
-            receipt = target_w3.eth.wait_for_transaction_receipt(tx_hash)
-        
-            sending_ibcinterface = self.chains[from_chain]["ibcinterface"]
-            sending_cci = self.chains[from_chain]["crosschaininterface"]
-            sending_w3 = self.chains[from_chain]["w3"]
-            if receipt.status != 1:
-                tx_timeout = sending_ibcinterface.functions.timeout(
-                    sending_cci.address,
-                    packet
-                ).build_transaction({
-                    'from': relayer_address,
-                    'nonce': sending_w3.eth.get_transaction_count(relayer_address),
-                })
-                signed_txn = sending_w3.eth.account.sign_transaction(tx_timeout, private_key=self.chains[from_chain]["key"])
-                tx_hash = sending_w3.eth.send_raw_transaction(signed_txn.rawTransaction)
-                print("Timeout:", from_chain, Web3.toHex(tx_hash))
-            else:
-                ack = sending_ibcinterface.events.Acknowledgement().processReceipt(receipt)[0]["args"]["acknowledgement"]
-                tx_ack = sending_ibcinterface.functions.ack(
-                    sending_cci.address,
-                    ack,
-                    packet
-                ).build_transaction({
-                    'from': relayer_address,
-                    'nonce': sending_w3.eth.get_transaction_count(relayer_address),
-                })
-                signed_txn = sending_w3.eth.account.sign_transaction(tx_ack, private_key=self.chains[from_chain]["key"])
-                tx_hash = sending_w3.eth.send_raw_transaction(signed_txn.rawTransaction)
-                print("Ack:", from_chain, Web3.toHex(tx_hash))
+            return tx_hash
         except Exception as e:
-            print(e)
+            logging.error(e)
             sending_ibcinterface = self.chains[from_chain]["ibcinterface"]
             sending_cci = self.chains[from_chain]["crosschaininterface"]
             sending_w3 = self.chains[from_chain]["w3"]
@@ -131,11 +109,51 @@ class PoARouter:
                 packet
             ).build_transaction({
                 'from': relayer_address,
-                'nonce': sending_w3.eth.get_transaction_count(relayer_address),
+                'nonce': self.chains[from_chain]["nonce"],
             })
+            self.chains[from_chain]["nonce"] =  self.chains[from_chain]["nonce"] + 1
             signed_txn = sending_w3.eth.account.sign_transaction(tx_timeout, private_key=self.chains[from_chain]["key"])
             tx_hash = sending_w3.eth.send_raw_transaction(signed_txn.rawTransaction)
-            print("error -> Timeout:", from_chain, Web3.toHex(tx_hash))
+            logging.error("error -> Timeout:", from_chain, Web3.toHex(tx_hash))
+
+    def callback(self, from_chain, event, tx_hash):
+        packet = event["args"]["packet"]
+        target_chain = decode_chain_from_channel(packet[1][1])
+        relayer_address = self.chains[target_chain]["acct"].address
+        
+        target_w3 = self.chains[target_chain]["w3"]
+        receipt = target_w3.eth.wait_for_transaction_receipt(tx_hash)
+        
+        sending_ibcinterface = self.chains[from_chain]["ibcinterface"]
+        sending_cci = self.chains[from_chain]["crosschaininterface"]
+        sending_w3 = self.chains[from_chain]["w3"]
+        if receipt.status != 1:
+            tx_timeout = sending_ibcinterface.functions.timeout(
+                sending_cci.address,
+                packet
+            ).build_transaction({
+                'from': relayer_address,
+                'nonce': self.chains[from_chain]["nonce"],
+            })
+            self.chains[from_chain]["nonce"] =  self.chains[from_chain]["nonce"] + 1
+            signed_txn = sending_w3.eth.account.sign_transaction(tx_timeout, private_key=self.chains[from_chain]["key"])
+            tx_hash = sending_w3.eth.send_raw_transaction(signed_txn.rawTransaction)
+            logging.info(f"Timeout: {from_chain, Web3.toHex(tx_hash)}")
+        else:
+            ack = sending_ibcinterface.events.Acknowledgement().processReceipt(receipt)[0]["args"]["acknowledgement"]
+            tx_ack = sending_ibcinterface.functions.ack(
+                sending_cci.address,
+                ack,
+                packet
+            ).build_transaction({
+                'from': relayer_address,
+                'nonce':self.chains[from_chain]["nonce"],
+            })
+            self.chains[from_chain]["nonce"] =  self.chains[from_chain]["nonce"] + 1
+            signed_txn = sending_w3.eth.account.sign_transaction(tx_ack, private_key=self.chains[from_chain]["key"])
+            tx_hash = sending_w3.eth.send_raw_transaction(signed_txn.rawTransaction)
+            logging.info(f"Ack:{from_chain, Web3.toHex(tx_hash)}")
+        
 
     def compute_sendAsset_identifier(self, log):
         args = log["args"]
@@ -373,7 +391,7 @@ class PoARouter:
         uniqueSwapHashes = {}
         for chain in chains:
             fromBlock = 0
-            print(f"Checking: {chain} from {fromBlock}")
+            logging.info(f"Checking: {chain} from {fromBlock}")
             w3 = self.chains[chain]['w3']
             ibc_emulator = self.chains[chain]["ibcinterface"]
             sendAsssets = self.get_sendAssets(w3, fromBlock, ibc_emulator.address)
@@ -382,7 +400,7 @@ class PoARouter:
             receiveLiquidity = self.get_receiveLiquidity(w3, fromBlock, ibc_emulator.address)
             sendAssetCallbacks = self.get_sendAsset_callback(w3, fromBlock, ibc_emulator.address)
             sendLiquidityCallbacks = self.get_sendLiquidity_callback(w3, fromBlock, ibc_emulator.address)
-            print(f"Found {len(sendAsssets) + len(receiveAssets) + len(sendAssetCallbacks)} events on {chain}")
+            logging.info(f"Found {len(sendAsssets) + len(receiveAssets) + len(sendAssetCallbacks)} events on {chain}")
             
             # Get all swap hashes from sendAssets
             for hashes in sendAsssets:
@@ -430,9 +448,9 @@ class PoARouter:
         
         for chain in chains:
             blocknumber = self.chains[chain]['w3'].eth.blockNumber
-            print(f"Loaded {chain} at block: {blocknumber} with relayer {self.chains[chain]['acct'].address}")
+            logging.info(f"Loaded {chain} at block: {blocknumber} with relayer {self.chains[chain]['acct'].address}")
             blocknumbers[chain] = blocknumber
-    
+
         while True:
             for chain in chains:
                 w3 = self.chains[chain]['w3']
@@ -442,11 +460,19 @@ class PoARouter:
                 if fromBlock <= toBlock:
                     blocknumbers[chain] = toBlock + 1
                     logs = self.fetch_logs(chain, fromBlock, toBlock)
-                    print(
+                    logging.info(
                         f"{chain}: {len(logs)} logs between block {fromBlock}-{toBlock}"
                     )
+                    
+                    executes = []
                     for log in logs:
-                        self.relay(chain, log)
+                        executes.append((log, self.execute(chain, log)))
+                    
+                    for exec in executes:
+                        log = exec[0]
+                        tx_hash = exec[1]
+                        if tx_hash is not None:
+                            self.callback(chain, log, tx_hash)
             
             sleep(wait)
 
@@ -461,6 +487,7 @@ def main():
         
     relayer = PoARouter(config_name=config_location)
     relayer.run()
+    
     
 
 if __name__ == "__main__":

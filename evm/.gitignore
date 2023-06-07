@@ -7,5 +7,6 @@ build/*
 reports/
 .pytest_cache
 *.cpython*
+*.log
 
 snapshots/0x*
