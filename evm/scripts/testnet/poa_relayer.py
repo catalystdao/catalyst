@@ -110,8 +110,7 @@ class PoARelayer:
             ).build_transaction(
                 {
                     "from": relayer_address,
-                    "nonce": self.chains[target_chain]["nonce"],
-                    "gas": 300000,
+                    "nonce": self.chains[target_chain]["nonce"]
                 }
             )
             self.chains[target_chain]["nonce"] = self.chains[target_chain]["nonce"] + 1
@@ -338,13 +337,14 @@ class PoARelayer:
             receipt = w3.eth.getTransactionReceipt(log["transactionHash"])
             log_index = log.logIndex
             for r_log in receipt.logs:
-                if r_log.logIndex == log_index - 2:
+                if (r_log.logIndex in [log_index - 2, log_index - 3, log_index - 4]):
                     if (
                         r_log.topics[0].hex()
                         == "0x2f7e9b1a1fac10099a9988fcda077b67b3809ede82c92a7662b82f0f96861604"
                     ):
                         if r_log.address == ibc_endpoint:
                             validated_logs.append(log)
+                            break
 
         # We now have an array of Catalyst swaps.
         swap_hashes = [
@@ -376,13 +376,14 @@ class PoARelayer:
             receipt = w3.eth.getTransactionReceipt(log["transactionHash"])
             log_index = log.logIndex
             for r_log in receipt.logs:
-                if r_log.logIndex == log_index - 2:
+                if (r_log.logIndex in [log_index - 2, log_index - 3, log_index - 4]):
                     if (
                         r_log.topics[0].hex()
                         == "0x2f7e9b1a1fac10099a9988fcda077b67b3809ede82c92a7662b82f0f96861604"
                     ):
                         if r_log.address == ibc_endpoint:
                             validated_logs.append(log)
+                            break
 
         # We now have an array of Catalyst swaps.
         swap_hashes = [
@@ -574,23 +575,25 @@ class PoARelayer:
             if log.topics[0].hex() == "0xe1c4c822c15df23f17ad636820a990981caf1d4e40f2f46cf3bb7ad003deaec8":
                 log_index = log.logIndex
                 for r_log in logs:
-                    if r_log.logIndex == log_index - 2:
+                    if (r_log.logIndex in [log_index - 2, log_index - 3, log_index - 4]):
                         if (
                             r_log.topics[0].hex()
                             == "0x2f7e9b1a1fac10099a9988fcda077b67b3809ede82c92a7662b82f0f96861604"
                         ):  
                             swaps.append(swap_vault.events.SendAsset().processLog(log))
                             packets.append(ibc_emulator.events.Packet().processLog(r_log))
+                            break
             elif log.topics[0].hex() == "0x8c9503be4db35b4e3d31565a9616d1dc3f1b3024e5e9e9d65052de46a5149f1c":
                 log_index = log.logIndex
                 for r_log in logs:
-                    if r_log.logIndex == log_index - 2:
+                    if (r_log.logIndex in [log_index - 2, log_index - 3, log_index - 4]):
                         if (
                             r_log.topics[0].hex()
                             == "0x2f7e9b1a1fac10099a9988fcda077b67b3809ede82c92a7662b82f0f96861604"
                         ):
                             swaps.append(swap_vault.events.SendLiquidity().processLog(log))
                             packets.append(ibc_emulator.events.Packet().processLog(r_log))
+                            break
         
         swap_hashes = [
             (packet, self.compute_swap_identifier(swap_log))
@@ -600,7 +603,7 @@ class PoARelayer:
         for packet, hash in swap_hashes:
             if hash == swap_hash:
                 return packet
-        
+    
     def get_all_hashes(self):
         chains = self.chains.keys()
 
@@ -737,7 +740,7 @@ class PoARelayer:
             for chain in chains:
                 w3 = self.chains[chain]["w3"]
                 fromBlock = blocknumbers[chain]
-                toBlock = w3.eth.blockNumber
+                toBlock = w3.eth.blockNumber - 100  # Don't look at the last 100 blocks. Roughtly equal to 20 minutes if block times are 12 seconds.
 
                 if fromBlock <= toBlock:
                     blocknumbers[chain] = toBlock + 1
