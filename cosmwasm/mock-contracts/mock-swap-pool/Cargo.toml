@@ -32,7 +32,6 @@ cw20-base = { version = "1.0.1", features = ["library"] }
 schemars = "0.8.10"
 serde = { version = "1.0.145", default-features = false, features = ["derive"] }
 thiserror = { version = "1.0.31" }
-ethnum = { version = "1.3.2", features = ["macros"] }
 fixed-point-math = { path = "../../lib/fixed-point-math" }
 swap-pool-common = { path = "../../contracts/swap-pool-common" }
 catalyst-ibc-interface = { path = "../../contracts/catalyst-ibc-interface", features = ["library"] }
