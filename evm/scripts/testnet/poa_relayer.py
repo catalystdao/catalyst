@@ -315,7 +315,7 @@ class PoARelayer:
         else:
             raise NotImplementedError()
 
-    def get_sendAssets(self, w3, fromBlock, ibc_endpoint):
+    def get_sendAssets(self, w3, fromBlock, toBlock, ibc_endpoint):
         # get a log of all
         filter = w3.eth.filter(
             {
@@ -323,6 +323,7 @@ class PoARelayer:
                     "0xe1c4c822c15df23f17ad636820a990981caf1d4e40f2f46cf3bb7ad003deaec8"
                 ],
                 "fromBlock": fromBlock,
+                "toBlock": toBlock
             }
         )
         entries = filter.get_all_entries()
@@ -354,7 +355,7 @@ class PoARelayer:
 
         return swap_hashes
 
-    def get_sendLiquidity(self, w3, fromBlock, ibc_endpoint):
+    def get_sendLiquidity(self, w3, fromBlock, toBlock, ibc_endpoint):
         # get a log of all
         filter = w3.eth.filter(
             {
@@ -362,6 +363,7 @@ class PoARelayer:
                     "0x8c9503be4db35b4e3d31565a9616d1dc3f1b3024e5e9e9d65052de46a5149f1c"
                 ],
                 "fromBlock": fromBlock,
+                "toBlock": toBlock
             }
         )
         entries = filter.get_all_entries()
@@ -393,13 +395,14 @@ class PoARelayer:
 
         return swap_hashes
 
-    def get_receiveAsset(self, w3, fromBlock, ibc_endpoint):
+    def get_receiveAsset(self, w3, fromBlock, toBlock, ibc_endpoint):
         filter = w3.eth.filter(
             {
                 "topics": [
                     "0x6b7977bd09a2e845fb431e372aac95edfb358014e167149b4f4d09021c87a79d"
                 ],
                 "fromBlock": fromBlock,
+                "toBlock": toBlock
             }
         )
         entries = filter.get_all_entries()
@@ -430,6 +433,7 @@ class PoARelayer:
                     "0x7af4b988c9949d39dbe6398b8332fa201574208c2656602a23f1624c428bfe91"
                 ],
                 "fromBlock": fromBlock,
+                "toBlock": toBlock
             }
         )
         entries = filter.get_all_entries()
@@ -453,13 +457,14 @@ class PoARelayer:
 
         return swap_hashes
 
-    def get_sendAsset_callback(self, w3, fromBlock, ibc_endpoint):
+    def get_sendAsset_callback(self, w3, fromBlock, toBlock, ibc_endpoint):
         filter_ack = w3.eth.filter(
             {
                 "topics": [
                     "0xe6db00361b6a35af0ded81ba5696c1633e945a81008cd7da44fb8a78422a7d42"
                 ],
                 "fromBlock": fromBlock,
+                "toBlock": toBlock
             }
         )
         entries_ack = filter_ack.get_all_entries()
@@ -508,13 +513,14 @@ class PoARelayer:
 
         return ack_hashes + timeout_hashes
 
-    def get_sendLiquidity_callback(self, w3, fromBlock, ibc_endpoint):
+    def get_sendLiquidity_callback(self, w3, fromBlock, toBlock, ibc_endpoint):
         filter_ack = w3.eth.filter(
             {
                 "topics": [
                     "0x8a49f1dbb0b988d0421183f74b9866ce7c88256f1b88cf865bf7f3a74706fe68"
                 ],
                 "fromBlock": fromBlock,
+                "toBlock": toBlock
             }
         )
         entries_ack = filter_ack.get_all_entries()
@@ -524,6 +530,7 @@ class PoARelayer:
                     "0x97cc161fb90f5cdec9c65ba7aac2279e32df11368946590b82fd6fe8e76b39e0"
                 ],
                 "fromBlock": fromBlock,
+                "toBlock": toBlock
             }
         )
         entries_timeout = filter_timeout.get_all_entries()
@@ -612,18 +619,19 @@ class PoARelayer:
             fromBlock = 0
             logging.info(f"Checking: {chain} from {fromBlock}")
             w3 = self.chains[chain]["w3"]
+            toBlock = w3.eth.blockNumber - 100  # Don't look at the last 100 blocks. Roughtly equal to 20 minutes if block times are 12 seconds.
             ibc_emulator = self.chains[chain]["ibcinterface"]
-            sendAsssets = self.get_sendAssets(w3, fromBlock, ibc_emulator.address)
-            sendLiquidity = self.get_sendLiquidity(w3, fromBlock, ibc_emulator.address)
-            receiveAssets = self.get_receiveAsset(w3, fromBlock, ibc_emulator.address)
+            sendAsssets = self.get_sendAssets(w3, fromBlock, toBlock, ibc_emulator.address)
+            sendLiquidity = self.get_sendLiquidity(w3, fromBlock, toBlock, ibc_emulator.address)
+            receiveAssets = self.get_receiveAsset(w3, fromBlock, toBlock, ibc_emulator.address)
             receiveLiquidity = self.get_receiveLiquidity(
-                w3, fromBlock, ibc_emulator.address
+                w3, fromBlock, toBlock, ibc_emulator.address
             )
             sendAssetCallbacks = self.get_sendAsset_callback(
-                w3, fromBlock, ibc_emulator.address
+                w3, fromBlock, toBlock, ibc_emulator.address
             )
             sendLiquidityCallbacks = self.get_sendLiquidity_callback(
-                w3, fromBlock, ibc_emulator.address
+                w3, fromBlock, toBlock, ibc_emulator.address
             )
             logging.info(
                 f"Found {len(sendAsssets) + len(receiveAssets) + len(sendAssetCallbacks)} events on {chain}"
@@ -740,7 +748,7 @@ class PoARelayer:
             for chain in chains:
                 w3 = self.chains[chain]["w3"]
                 fromBlock = blocknumbers[chain]
-                toBlock = w3.eth.blockNumber - 100  # Don't look at the last 100 blocks. Roughtly equal to 20 minutes if block times are 12 seconds.
+                toBlock = w3.eth.blockNumber
 
                 if fromBlock <= toBlock:
                     blocknumbers[chain] = toBlock + 1
