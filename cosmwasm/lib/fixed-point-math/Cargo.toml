@@ -5,4 +5,4 @@ authors = ["Catalyst"]
 edition = "2021"
 
 [dependencies]
-ethnum = { version = "=1.3.2", features = ["macros"] }
+catalyst-types = { path = "../catalyst-types" }
