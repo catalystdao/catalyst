@@ -1,7 +1,7 @@
 mod test_volatile_send_liquidity_success_failure {
     use cosmwasm_std::{Uint128, Addr, Binary};
     use cw_multi_test::{App, Executor};
-    use ethnum::{U256, uint};
+    use catalyst_types::{U256, u256};
     use swap_pool_common::{ContractError, msg::{TotalEscrowedLiquidityResponse, LiquidityEscrowResponse}, state::{compute_send_liquidity_hash, INITIAL_MINT_AMOUNT}};
 
     use crate::{msg::{VolatileExecuteMsg, QueryMsg}, tests::{helpers::{SETUP_MASTER, deploy_test_tokens, WAD, query_token_balance, transfer_tokens, get_response_attribute, mock_set_pool_connection, CHANNEL_ID, SWAPPER_B, SWAPPER_A, mock_instantiate_interface, query_token_info, mock_factory_deploy_vault, encode_payload_address}, math_helpers::{uint128_to_f64, f64_to_uint128}}};
@@ -68,8 +68,8 @@ mod test_volatile_send_liquidity_success_failure {
                     to_pool: target_pool,
                     to_account: to_account.clone(),
                     amount: swap_amount,
-                    min_pool_tokens: U256::ZERO,
-                    min_reference_asset: U256::ZERO,
+                    min_pool_tokens: U256::zero(),
+                    min_reference_asset: U256::zero(),
                     fallback_account: SWAPPER_A.to_string(),
                     calldata: Binary(vec![])
                 },
@@ -436,7 +436,7 @@ mod test_volatile_send_liquidity_success_failure {
             &VolatileExecuteMsg::OnSendLiquiditySuccess {
                 channel_id: CHANNEL_ID.to_string(),
                 to_account: env.to_account.clone(),
-                u: env.u + uint!("1"),                              // ! Increased units
+                u: env.u + u256!("1"),                              // ! Increased units
                 amount: env.from_amount,
                 block_number_mod: env.block_number 
             },
@@ -529,7 +529,7 @@ mod test_volatile_send_liquidity_success_failure {
             &VolatileExecuteMsg::OnSendLiquidityFailure {
                 channel_id: CHANNEL_ID.to_string(),
                 to_account: env.to_account.clone(),
-                u: env.u + uint!("1"),                              // ! Increased units
+                u: env.u + u256!("1"),                              // ! Increased units
                 amount: env.from_amount,
                 block_number_mod: env.block_number 
             },

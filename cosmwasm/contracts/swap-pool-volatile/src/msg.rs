@@ -1,9 +1,8 @@
-
 use cosmwasm_schema::QueryResponses;
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::Binary;
 use cosmwasm_std::Uint128;
-use ethnum::U256;
+use catalyst_types::U256;
 pub use swap_pool_common::msg::{InstantiateMsg, ExecuteMsg};
 use swap_pool_common::msg::{
     AssetEscrowResponse, AssetsResponse, CalcLocalSwapResponse, CalcReceiveAssetResponse, CalcSendAssetResponse,
@@ -12,16 +11,6 @@ use swap_pool_common::msg::{
     SetupMasterResponse, TotalEscrowedAssetResponse, TotalEscrowedLiquidityResponse, WeightsResponse, FactoryResponse, FactoryOwnerResponse
 };
 use cw20::{AllowanceResponse, BalanceResponse, TokenInfoResponse};
-use schemars::JsonSchema;
-use serde::{Serialize, Deserialize};
-
-
-// Implement JsonSchema for U256, see https://graham.cool/schemars/examples/5-remote_derive/
-//TODO VERIFY THIS IS CORRECT AND SAFE!
-//TODO move to common place
-#[derive(Serialize, Deserialize, JsonSchema)]
-#[serde(remote = "U256")]
-pub struct U256Def([u128; 2]);
 
 
 #[cw_serde]
@@ -83,7 +72,6 @@ pub enum QueryMsg {
     #[returns(CalcReceiveAssetResponse)]
     CalcReceiveAsset {
         to_asset: String,
-        #[serde(with = "U256Def")]
         u: U256
     },
     #[returns(CalcLocalSwapResponse)]

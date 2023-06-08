@@ -1,14 +1,14 @@
 use std::ops::{Shr, Shl};
 
 use cosmwasm_std::Uint128;
-use ethnum::U256;
+use catalyst_types::U256;
 
 
 pub fn u256_to_f64(val: U256) -> f64 {
-    let val_arr = val.0;
+    let (hi, lo) = val.into_words();
 
-    let mut out: f64 = val_arr[0] as f64;
-    out += (val_arr[1] as f64) * 2_f64.powf(128_f64);
+    let mut out: f64 = lo as f64;
+    out += (hi as f64) * 2_f64.powf(128_f64);
 
     out
 }
@@ -56,7 +56,7 @@ pub fn f64_to_u256(val: f64) -> Result<U256, String> {
 
 
     if exponent <= -64 {
-        return Ok(U256::ZERO);
+        return Ok(U256::zero());
     }
     
     if exponent >= 256 || (exponent >= 193 && significant_figure.shr(256-(exponent as u32)) != 0) {
@@ -64,7 +64,13 @@ pub fn f64_to_u256(val: f64) -> Result<U256, String> {
     }
 
     // Create a U256 from the mantissa_arr given the computed exponent
-    Ok(U256([
+    Ok(U256::from_words(
+
+        if exponent > 0 && exponent < 256 {
+            if      exponent == 128 { significant_figure                   }
+            else if exponent < 128  { significant_figure.shr(128-exponent) }
+            else                    { significant_figure.shl(exponent-128) }
+        } else {0_u128},
 
         if exponent < 128 {
             if      exponent == 0   { significant_figure                  }
@@ -72,22 +78,11 @@ pub fn f64_to_u256(val: f64) -> Result<U256, String> {
             else                    { significant_figure.shl(exponent) }
         } else {0_u128},
 
-        if exponent > 0 && exponent < 256 {
-            if      exponent == 128 { significant_figure                   }
-            else if exponent < 128  { significant_figure.shr(128-exponent) }
-            else                    { significant_figure.shl(exponent-128) }
-        } else {0_u128},
-    ]))
+    ))
 }
 
 pub fn f64_to_uint128(val: f64) -> Result<Uint128, String> {
-    let u256_val = f64_to_u256(val)?;
-
-    let (hi, lo) = u256_val.into_words();
-
-    if hi != 0u128 {
-        return Err("Overflow".to_string());
-    }
-
-    Ok(Uint128::from(lo))
+    f64_to_u256(val)?
+        .try_into()
+        .map_err(|_| "Overflow when casting from U256 to Uint128".to_string())
 }

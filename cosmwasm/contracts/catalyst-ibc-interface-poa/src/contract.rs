@@ -2,7 +2,7 @@
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, Uint128};
 use cw2::set_contract_version;
-use ethnum::U256;
+use catalyst_types::U256;
 
 use catalyst_ibc_interface::ContractError;
 use catalyst_ibc_interface::catalyst_ibc_payload::{CatalystV1SendAssetPayload, SendAssetVariablePayload, CatalystV1SendLiquidityPayload, SendLiquidityVariablePayload, CatalystEncodedAddress};
@@ -165,7 +165,7 @@ fn execute_send_cross_chain_asset(
         variable_payload: SendAssetVariablePayload {
             to_asset_index,
             min_out,
-            from_amount: U256::from(from_amount.u128()),
+            from_amount: from_amount.into(),
             from_asset: CatalystEncodedAddress::try_encode(from_asset.as_bytes())?,
             block_number,
             calldata,

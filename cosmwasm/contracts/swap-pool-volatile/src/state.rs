@@ -2,10 +2,8 @@ use cosmwasm_std::{Addr, Uint128, DepsMut, Env, MessageInfo, Response, StdResult
 use cw20::{Cw20ExecuteMsg, Cw20QueryMsg, BalanceResponse};
 use cw20_base::{contract::{execute_mint, execute_burn}};
 use cw_storage_plus::Item;
-use ethnum::{U256, AsI256};
+use catalyst_types::{U256, AsI256, I256, AsU256};
 use fixed_point_math::{LN2, mul_wad_down, self, ln_wad, WAD, exp_wad};
-use schemars::JsonSchema;
-use serde::{Serialize, Deserialize};
 use swap_pool_common::{
     state::{
         ASSETS, MAX_ASSETS, WEIGHTS, INITIAL_MINT_AMOUNT, POOL_FEE, MAX_LIMIT_CAPACITY, USED_LIMIT_CAPACITY, CHAIN_INTERFACE,
@@ -27,13 +25,6 @@ pub const WEIGHT_UPDATE_FINISH_TIMESTAMP: Item<u64> = Item::new("catalyst-pool-w
 const MIN_ADJUSTMENT_TIME_NANOS    : u64 = 7 * 24 * 60 * 60 * 1000000000;     // 7 days
 const MAX_ADJUSTMENT_TIME_NANOS    : u64 = 365 * 24 * 60 * 60 * 1000000000;   // 1 year
 const MAX_WEIGHT_ADJUSTMENT_FACTOR : u64 = 10;
-
-// Implement JsonSchema for U256, see https://graham.cool/schemars/examples/5-remote_derive/
-//TODO VERIFY THIS IS CORRECT AND SAFE!
-//TODO move to common place
-#[derive(Serialize, Deserialize, JsonSchema)]
-#[serde(remote = "U256")]
-pub struct U256Def([u128; 2]);
 
 
 pub fn initialize_swap_curves(
@@ -110,10 +101,10 @@ pub fn initialize_swap_curves(
     MAX_LIMIT_CAPACITY.save(
         deps.storage,
         &(LN2 * weights.iter().fold(
-            U256::ZERO, |acc, next| acc + U256::from(*next)     // Overflow safe, as U256 >> u64    //TODO maths
+            U256::zero(), |acc, next| acc + U256::from(*next)     // Overflow safe, as U256 >> u64    //TODO maths
         ))
     )?;
-    USED_LIMIT_CAPACITY.save(deps.storage, &U256::ZERO)?;       //TODO move intialization to 'setup'?
+    USED_LIMIT_CAPACITY.save(deps.storage, &U256::zero())?;       //TODO move intialization to 'setup'?
     USED_LIMIT_CAPACITY_TIMESTAMP.save(deps.storage, &0u64)?;   //TODO move intialization to 'setup'?
 
     // Initialize escrow totals
@@ -176,7 +167,7 @@ pub fn deposit_mixed(
     let u = assets.iter()
         .zip(weights)                           // zip: weights.len() == assets.len()
         .zip(&deposit_amounts)                  // zip: deposit_amounts.len() == assets.len()
-        .try_fold(U256::ZERO, |acc, ((asset, weight), deposit_amount)| {
+        .try_fold(U256::zero(), |acc, ((asset, weight), deposit_amount)| {
 
             // Save gas if the user provides no tokens for the specific asset
             if deposit_amount.is_zero() {
@@ -194,7 +185,7 @@ pub fn deposit_mixed(
                     U256::from(pool_asset_balance.u128()),
                     U256::from(weight.clone())
                 )?
-            ).ok_or(ContractError::ArithmeticError {})
+            ).map_err(|_| ContractError::ArithmeticError {})
         })?;
 
     // Subtract the pool fee from U to prevent deposit and withdrawals being employed as a method of swapping.
@@ -210,10 +201,10 @@ pub fn deposit_mixed(
     let w_sum = MAX_LIMIT_CAPACITY.load(deps.storage)? / fixed_point_math::LN2;
 
     // Compute the pool tokens to be minted.
-    let out = Uint128::from(fixed_point_math::mul_wad_down(
+    let out = fixed_point_math::mul_wad_down(
         effective_supply,                                                       // Note 'effective_supply' is not WAD, hence result will not be either
         calc_price_curve_limit_share(u, w_sum)?
-    )?.as_u128());      //TODO OVERFLOW
+    )?.try_into().map_err(|_| ContractError::GenericError {})?;      //TODO error
 
     // Check that the minimum output is honoured.
     if min_out > out {
@@ -370,7 +361,7 @@ pub fn withdraw_mixed(
             effective_supply - U256::from(pool_tokens.u128())  // Subtraction is underflow safe, as the above 'execute_burn' guarantees that 'pool_tokens' is contained in 'effective_supply'
         )?.as_i256()                                           // Casting my overflow to a negative value. In that case, 'ln_wad' will fail.
     )?.as_u256()                                               // Casting is safe, as ln is computed of values >= 1, hence output is always positive
-        .checked_mul(w_sum).ok_or(ContractError::ArithmeticError {})?;
+        .checked_mul(w_sum).map_err(|_| ContractError::ArithmeticError {})?;
 
     // Compute the withdraw amounts
     let assets = ASSETS.load(deps.storage)?;
@@ -391,7 +382,7 @@ pub fn withdraw_mixed(
 
             // Calculate the units allocated for the specific asset
             let units_for_asset = fixed_point_math::mul_wad_down(u, U256::from(*asset_withdraw_ratio))?;
-            if units_for_asset == U256::ZERO {
+            if units_for_asset == U256::zero() {
 
                 // There should not be a non-zero withdraw ratio after a withdraw ratio of 1 (protect against user error)
                 if *asset_withdraw_ratio != 0 {
@@ -407,7 +398,7 @@ pub fn withdraw_mixed(
             }
 
             // Subtract the units used from the total units amount. This will underflow for malicious withdraw ratios (i.e. ratios > 1).
-            u = u.checked_sub(units_for_asset).ok_or(ContractError::ArithmeticError {})?;
+            u = u.checked_sub(units_for_asset).map_err(|_| ContractError::ArithmeticError {})?;
         
             // Get the pool asset balance (subtract the escrowed assets to return less)
             let pool_asset_balance = deps.querier.query_wasm_smart::<BalanceResponse>(
@@ -416,13 +407,11 @@ pub fn withdraw_mixed(
             )?.balance - escrowed_balance;
 
             // Calculate the asset amount corresponding to the asset units
-            let withdraw_amount = Uint128::from(
-                calc_price_curve_limit(
-                    units_for_asset,
-                    U256::from(pool_asset_balance.u128()),
-                    U256::from(weight)
-                )?.as_u128()        // TODO unsafe overflow
-            );
+            let withdraw_amount = calc_price_curve_limit(
+                units_for_asset,
+                U256::from(pool_asset_balance.u128()),
+                U256::from(weight)
+            )?.try_into().map_err(|_| ContractError::GenericError {})?;  //TODO error
 
             // Check that the minimum output is honoured.
             if *asset_min_out > withdraw_amount {
@@ -433,7 +422,7 @@ pub fn withdraw_mixed(
         }).collect::<Result<Vec<Uint128>, ContractError>>()?;
 
     // Make sure all units have been consumed
-    if u != U256::ZERO { return Err(ContractError::UnusedUnitsAfterWithdrawal { units: u }) };       //TODO error
+    if u != U256::zero() { return Err(ContractError::UnusedUnitsAfterWithdrawal { units: u }) };       //TODO error
 
     // Build messages to order the transfer of tokens from the swap pool to the depositor
     let transfer_msgs: Vec<CosmosMsg> = assets.iter()
@@ -483,7 +472,7 @@ pub fn local_swap(
     let pool_fee: Uint128 = mul_wad_down(            //TODO alternative to not have to use U256 conversion? (or wrapper?)
         U256::from(amount.u128()),
         U256::from(POOL_FEE.load(deps.storage)?)
-    )?.as_u128().into();    // Casting safe, as fee < amount, and amount is Uint128
+    )?.as_uint128();    // Casting safe, as fee < amount, and amount is Uint128
 
     // Calculate the return value
     let out: Uint128 = calc_local_swap(
@@ -588,7 +577,7 @@ pub fn send_asset(
     let pool_fee: Uint128 = mul_wad_down(            //TODO alternative to not have to use U256 conversion? (or wrapper?)
         U256::from(amount.u128()),
         U256::from(POOL_FEE.load(deps.storage)?)
-    )?.as_u128().into();    // Casting safe, as fee < amount, and amount is Uint128
+    )?.as_uint128();    // Casting safe, as fee < amount, and amount is Uint128
 
     // Calculate the group-specific units bought
     let u = calc_send_asset(
@@ -828,7 +817,7 @@ pub fn send_liquidity(
         )?.as_i256()                                         // if casting overflows into a negative value, posterior 'ln' calc will fail
     )?.as_u256()                                         // casting safe as 'ln' is computed of a value >= 1 (hence result always positive)
         .checked_mul(w_sum)
-        .ok_or(ContractError::ArithmeticError {})?;
+        .map_err(|_| ContractError::ArithmeticError {})?;
 
     // Compute the hash of the 'send_liquidity' transaction
     let block_number = env.block.height as u32;
@@ -924,10 +913,10 @@ pub fn receive_liquidity(
     // Use 'calc_price_curve_limit_share' to get the % of pool tokens that should be minted (in WAD terms)
     // Multiply by 'effective_supply' to get the absolute amount (not in WAD terms) using 'mul_wad_down' so
     // that the result is also NOT in WAD terms.
-    let out = fixed_point_math::mul_wad_down(
+    let out: Uint128 = fixed_point_math::mul_wad_down(
         calc_price_curve_limit_share(u, w_sum)?,
         effective_supply
-    ).map(|val| Uint128::from(val.as_u128()))?;     //TODO OVERFLOW when casting U256 to Uint128. Theoretically calc_price_curve_limit_share < 1, hence casting is safe
+    )?.try_into().map_err(|_| ContractError::GenericError {})?;     //TODO error //TODO is 'try' required when casting U256 to Uint128? Theoretically calc_price_curve_limit_share < 1, hence casting is safe
 
     if min_pool_tokens > out {
         return Err(ContractError::ReturnInsufficient { out, min_out: min_pool_tokens });
@@ -945,7 +934,7 @@ pub fn receive_liquidity(
         // Compute first: sum( ln(balance(i)) * weight(i) )
         let weighted_balance_sum = assets.iter()
             .zip(weights)       // zip: weights.len() == assets.len()
-            .try_fold(U256::ZERO, |acc, (asset, weight)| {
+            .try_fold(U256::zero(), |acc, (asset, weight)| {
 
                 let pool_asset_balance = deps.querier.query_wasm_smart::<BalanceResponse>(
                     asset,
@@ -954,10 +943,10 @@ pub fn receive_liquidity(
 
                 acc.checked_add(
                     ln_wad(     // TODO what if the pool gets depleted ==> ln(0)
-                        pool_asset_balance.u128().as_i256() * WAD.as_i256()     // i256 casting: 'pool_asset_balance * WAD' always fits in an I256 (~2^128 * ~2^64)
+                        Into::<I256>::into(pool_asset_balance) * WAD.as_i256()     // i256 casting: 'pool_asset_balance * WAD' always fits in an I256 (~2^128 * ~2^64)
                     )?.as_u256()                                                // u256 casting: 'pool_asset_balance * WAD' >= WAD (for balance != 0), hence 'ln_wad' return is always positive //TODO review 0 condition
-                    .checked_mul(U256::from(weight)).ok_or(ContractError::ArithmeticError {})?
-                ).ok_or(ContractError::ArithmeticError {})
+                    .checked_mul(U256::from(weight)).map_err(|_| ContractError::ArithmeticError {})?
+                ).map_err(|_| ContractError::ArithmeticError {})
             })?;
 
         // Finish the calculation: exp( 'weighted_balance_sum' / weights_sum )
@@ -970,9 +959,9 @@ pub fn receive_liquidity(
         // Include the escrowed pool tokens in the total supply to ensure that even if all the ongoing transactions revert, the specified min_reference_asset is fulfilled.
         // Include the pool tokens as they are going to be minted.
         let escrowed_pool_tokens = TOTAL_ESCROWED_LIQUIDITY.load(deps.storage)?;
-        let user_reference_amount = Uint128::from((     //TODO is the use of Uint128/U256 correct in this calculation?
+        let user_reference_amount: Uint128 = (     //TODO is the use of Uint128/U256 correct in this calculation?
             (vault_reference_amount * U256::from(out.u128()))/(effective_supply + U256::from(escrowed_pool_tokens.u128()) + U256::from(out.u128()))
-        ).as_u128());        //TODO casting overflow
+        ).try_into().map_err(|_| ContractError::ArithmeticError {})?;        //TODO casting overflow
 
         if min_reference_asset > user_reference_amount {
             return Err(ContractError::ReturnInsufficient { out: user_reference_amount, min_out: min_reference_asset });
@@ -1080,11 +1069,10 @@ pub fn calc_receive_asset(
         u,
         to_asset_balance.u128().into(),
         U256::from(to_asset_weight),
-    ).map(
-        |val| Uint128::from(val.as_u128())      //TODO! .as_u128 may overflow silently
-    ).map_err(
-        |_| ContractError::GenericError {}
-    )
+    ).and_then(
+        |val| TryInto::<Uint128>::try_into(val).map_err(|_| ())
+    ).map_err(|_| ContractError::GenericError {})   //TODO error
+
 }
 
 pub fn calc_local_swap(
@@ -1133,11 +1121,9 @@ pub fn calc_local_swap(
         to_asset_balance.u128().into(),
         U256::from(from_asset_weight),
         U256::from(to_asset_weight)
-    ).map(
-        |val| Uint128::from(val.as_u128())  //TODO! silent overflow possible!
-    ).map_err(
-        |_| ContractError::GenericError {}
-    ) 
+    ).and_then(
+        |val| TryInto::<Uint128>::try_into(val).map_err(|_| ())
+    ).map_err(|_| ContractError::GenericError {})   //TODO error
 }
 
 
@@ -1166,7 +1152,7 @@ pub fn on_send_asset_success_volatile(
     let used_capacity = USED_LIMIT_CAPACITY.load(deps.storage)?;
 
     // Minor optimization: avoid storage write if the used capacity is already at zero
-    if used_capacity != U256::ZERO {
+    if used_capacity != U256::zero() {
         USED_LIMIT_CAPACITY.save(deps.storage, &used_capacity.saturating_sub(u))?;
     }
 
@@ -1196,7 +1182,7 @@ pub fn on_send_liquidity_success_volatile(
     let used_capacity = USED_LIMIT_CAPACITY.load(deps.storage)?;
 
     // Minor optimization: avoid storage write if the used capacity is already at zero
-    if used_capacity != U256::ZERO {
+    if used_capacity != U256::zero() {
         USED_LIMIT_CAPACITY.save(deps.storage, &used_capacity.saturating_sub(u))?;
     }
 
@@ -1282,7 +1268,7 @@ pub fn update_weights(
     let target_weights = TARGET_WEIGHTS.load(deps.storage)?;
 
     let new_weights: Vec<u64>;
-    let mut new_weight_sum = U256::ZERO;
+    let mut new_weight_sum = U256::zero();
 
     // If the 'param_update_finish_timestamp' has been reached, finish the weights update
     if current_timestamp >= param_update_finish_timestamp {
@@ -1295,7 +1281,7 @@ pub fn update_weights(
 
                 new_weight_sum = new_weight_sum
                     .checked_add(U256::from(*target_weight))
-                    .ok_or(ContractError::ArithmeticError {})?;
+                    .map_err(|_| ContractError::ArithmeticError {})?;
 
                 Ok(*target_weight)
 
@@ -1322,7 +1308,7 @@ pub fn update_weights(
 
                     new_weight_sum = new_weight_sum
                         .checked_add(U256::from(*target_weight))
-                        .ok_or(ContractError::ArithmeticError {})?;
+                        .map_err(|_| ContractError::ArithmeticError {})?;
 
                     return Ok(*target_weight);
 
@@ -1352,7 +1338,7 @@ pub fn update_weights(
 
                 new_weight_sum = new_weight_sum
                     .checked_add(U256::from(new_weight))
-                    .ok_or(ContractError::ArithmeticError {})?;
+                    .map_err(|_| ContractError::ArithmeticError {})?;
 
                 Ok(*target_weight)
 
@@ -1369,7 +1355,7 @@ pub fn update_weights(
     // Update the maximum limit capacity
     MAX_LIMIT_CAPACITY.save(
         deps.storage,
-        &new_weight_sum.checked_mul(fixed_point_math::LN2).ok_or(ContractError::ArithmeticError {})?
+        &new_weight_sum.checked_mul(fixed_point_math::LN2).map_err(|_| ContractError::ArithmeticError {})?
     )?;
 
     // Update the update timestamp

@@ -1,5 +1,5 @@
 use cosmwasm_std::{Uint128, Event, Binary, Uint64};
-use ethnum::U256;
+use catalyst_types::U256;
 
 pub fn local_swap_event(
     account: String,

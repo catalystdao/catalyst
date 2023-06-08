@@ -1,7 +1,7 @@
 mod test_volatile_receive_asset {
     use cosmwasm_std::{Uint128, Addr, Binary};
     use cw_multi_test::{App, Executor};
-    use ethnum::{U256, uint};
+    use catalyst_types::{U256, u256};
     use swap_pool_common::ContractError;
 
     use crate::{msg::VolatileExecuteMsg, tests::{helpers::{deploy_test_tokens, WAD, query_token_balance, get_response_attribute, mock_set_pool_connection, CHANNEL_ID, SWAPPER_B, compute_expected_receive_asset, CHAIN_INTERFACE, mock_factory_deploy_vault, encode_payload_address}, math_helpers::{uint128_to_f64, f64_to_uint128}}};
@@ -43,7 +43,7 @@ mod test_volatile_receive_asset {
         let to_weight = vault_weights[to_asset_idx];
         let to_balance = vault_initial_balances[to_asset_idx];
         
-        let swap_units = uint!("500000000000000000");
+        let swap_units = u256!("500000000000000000");
 
 
 
@@ -58,7 +58,7 @@ mod test_volatile_receive_asset {
                 to_account: SWAPPER_B.to_string(),
                 u: swap_units,
                 min_out: Uint128::zero(),
-                from_amount: U256::ZERO,
+                from_amount: U256::zero(),
                 from_asset: Binary("from_asset".as_bytes().to_vec()),
                 from_block_number_mod: 0u32,
                 calldata_target: None,
@@ -133,7 +133,7 @@ mod test_volatile_receive_asset {
         let to_asset_idx = 0;
         let to_asset = vault_tokens[to_asset_idx].clone();
         
-        let swap_units = U256::ZERO;
+        let swap_units = U256::zero();
 
 
 
@@ -148,7 +148,7 @@ mod test_volatile_receive_asset {
                 to_account: SWAPPER_B.to_string(),
                 u: swap_units,
                 min_out: Uint128::zero(),
-                from_amount: U256::ZERO,
+                from_amount: U256::zero(),
                 from_asset: Binary("from_asset".as_bytes().to_vec()),
                 from_block_number_mod: 0u32,
                 calldata_target: None,
@@ -215,7 +215,7 @@ mod test_volatile_receive_asset {
         let to_weight = vault_weights[to_asset_idx];
         let to_balance = vault_initial_balances[to_asset_idx];
         
-        let swap_units = uint!("500000000000000000");
+        let swap_units = u256!("500000000000000000");
         
         // Compute the expected return
         let expected_return = compute_expected_receive_asset(
@@ -243,7 +243,7 @@ mod test_volatile_receive_asset {
                 to_account: SWAPPER_B.to_string(),
                 u: swap_units,
                 min_out: min_out_invalid,
-                from_amount: U256::ZERO,
+                from_amount: U256::zero(),
                 from_asset: Binary("from_asset".as_bytes().to_vec()),
                 from_block_number_mod: 0u32,
                 calldata_target: None,
@@ -274,7 +274,7 @@ mod test_volatile_receive_asset {
                 to_account: SWAPPER_B.to_string(),
                 u: swap_units,
                 min_out: min_out_valid,
-                from_amount: U256::ZERO,
+                from_amount: U256::zero(),
                 from_asset: Binary("from_asset".as_bytes().to_vec()),
                 from_block_number_mod: 0u32,
                 calldata_target: None,
@@ -310,7 +310,7 @@ mod test_volatile_receive_asset {
 
         // Define the receive asset configuration
         let to_asset_idx = 0;
-        let swap_units = uint!("500000000000000000");
+        let swap_units = u256!("500000000000000000");
 
 
 
@@ -325,7 +325,7 @@ mod test_volatile_receive_asset {
                 to_account: SWAPPER_B.to_string(),
                 u: swap_units,
                 min_out: Uint128::zero(),
-                from_amount: U256::ZERO,
+                from_amount: U256::zero(),
                 from_asset: Binary("from_asset".as_bytes().to_vec()),
                 from_block_number_mod: 0u32,
                 calldata_target: None,
@@ -377,7 +377,7 @@ mod test_volatile_receive_asset {
 
         // Define the receive asset configuration
         let to_asset_idx = 3;   // ! Invalid index (index 3 = 4th asset)
-        let swap_units = uint!("500000000000000000");
+        let swap_units = u256!("500000000000000000");
 
 
 
@@ -392,7 +392,7 @@ mod test_volatile_receive_asset {
                 to_account: SWAPPER_B.to_string(),
                 u: swap_units,
                 min_out: Uint128::zero(),
-                from_amount: U256::ZERO,
+                from_amount: U256::zero(),
                 from_asset: Binary("from_asset".as_bytes().to_vec()),
                 from_block_number_mod: 0u32,
                 calldata_target: None,
@@ -443,7 +443,7 @@ mod test_volatile_receive_asset {
 
         // Define the receive asset configuration
         let to_asset_idx = 0;
-        let swap_units = uint!("500000000000000000");
+        let swap_units = u256!("500000000000000000");
 
 
 
@@ -458,7 +458,7 @@ mod test_volatile_receive_asset {
                 to_account: SWAPPER_B.to_string(),
                 u: swap_units,
                 min_out: Uint128::zero(),
-                from_amount: U256::ZERO,
+                from_amount: U256::zero(),
                 from_asset: Binary("from_asset".as_bytes().to_vec()),
                 from_block_number_mod: 0u32,
                 calldata_target: None,

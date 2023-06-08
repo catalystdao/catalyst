@@ -3,7 +3,7 @@ mod test_volatile_initialize_swap_curves {
     use cosmwasm_std::{Uint128, Addr};
     use cw20::{ TokenInfoResponse, BalanceResponse, Cw20QueryMsg};
     use cw_multi_test::{App, Executor};
-    use ethnum::U256;
+    use catalyst_types::U256;
     use fixed_point_math::LN2;
     use swap_pool_common::{ContractError, msg::{AssetsResponse, WeightsResponse, GetLimitCapacityResponse, TotalEscrowedAssetResponse, TotalEscrowedLiquidityResponse}};
 

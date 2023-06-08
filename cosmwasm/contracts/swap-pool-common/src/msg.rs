@@ -2,17 +2,8 @@ use cosmwasm_schema::cw_serde;
 
 use cosmwasm_std::{Binary, Uint128, Addr};
 use cw20::Expiration;
-use ethnum::U256;
-use schemars::JsonSchema;
-use serde::{Serialize, Deserialize};
+use catalyst_types::U256;
 
-
-// Implement JsonSchema for U256, see https://graham.cool/schemars/examples/5-remote_derive/
-//TODO VERIFY THIS IS CORRECT AND SAFE!
-//TODO move to common place
-#[derive(Serialize, Deserialize, JsonSchema)]
-#[serde(remote = "U256")]
-pub struct U256Def([u128; 2]);
 
 
 #[cw_serde]
@@ -54,7 +45,6 @@ pub enum ExecuteMsg<T> {
     OnSendAssetSuccess {
         channel_id: String,
         to_account: Binary,
-        #[serde(with = "U256Def")]
         u: U256,
         amount: Uint128,
         asset: String,
@@ -64,7 +54,6 @@ pub enum ExecuteMsg<T> {
     OnSendAssetFailure {
         channel_id: String,
         to_account: Binary,
-        #[serde(with = "U256Def")]
         u: U256,
         amount: Uint128,
         asset: String,
@@ -74,7 +63,6 @@ pub enum ExecuteMsg<T> {
     OnSendLiquiditySuccess {
         channel_id: String,
         to_account: Binary,
-        #[serde(with = "U256Def")]
         u: U256,
         amount: Uint128,
         block_number_mod: u32
@@ -83,7 +71,6 @@ pub enum ExecuteMsg<T> {
     OnSendLiquidityFailure {
         channel_id: String,
         to_account: Binary,
-        #[serde(with = "U256Def")]
         u: U256,
         amount: Uint128,
         block_number_mod: u32
@@ -119,7 +106,6 @@ pub enum ExecuteMsg<T> {
         from_asset: String,
         to_asset_index: u8,
         amount: Uint128,
-        #[serde(with = "U256Def")]
         min_out: U256,
         fallback_account: String,   //TODO EVM mismatch
         calldata: Binary
@@ -130,10 +116,8 @@ pub enum ExecuteMsg<T> {
         from_pool: Binary,
         to_asset_index: u8,
         to_account: String,
-        #[serde(with = "U256Def")]
         u: U256,
         min_out: Uint128,
-        #[serde(with = "U256Def")]
         from_amount: U256,
         from_asset: Binary,
         from_block_number_mod: u32,
@@ -146,9 +130,7 @@ pub enum ExecuteMsg<T> {
         to_pool: Binary,
         to_account: Binary,
         amount: Uint128,            //TODO EVM mismatch
-        #[serde(with = "U256Def")]
         min_pool_tokens: U256,      //TODO EVM mismatch
-        #[serde(with = "U256Def")]
         min_reference_asset: U256,  //TODO EVM mismatch
         fallback_account: String,   //TODO EVM mismatch
         calldata: Binary
@@ -158,11 +140,9 @@ pub enum ExecuteMsg<T> {
         channel_id: String,
         from_pool: Binary,
         to_account: String,
-        #[serde(with = "U256Def")]
         u: U256,
         min_pool_tokens: Uint128,
         min_reference_asset: Uint128,   // ! TODO type?
-        #[serde(with = "U256Def")]
         from_amount: U256,
         from_block_number_mod: u32,
         calldata_target: Option<Addr>,
@@ -262,7 +242,6 @@ pub struct FeeAdministratorResponse {
 
 #[cw_serde]
 pub struct CalcSendAssetResponse {
-    #[serde(with = "U256Def")]
     pub u: U256
 }
 
@@ -278,7 +257,6 @@ pub struct CalcLocalSwapResponse {
 
 #[cw_serde]
 pub struct GetLimitCapacityResponse {
-    #[serde(with = "U256Def")]
     pub capacity: U256
 }
 

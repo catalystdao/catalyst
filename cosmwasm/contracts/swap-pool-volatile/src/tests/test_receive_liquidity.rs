@@ -1,7 +1,7 @@
 mod test_volatile_receive_liquidity {
     use cosmwasm_std::{Uint128, Addr};
     use cw_multi_test::{App, Executor};
-    use ethnum::{U256, uint};
+    use catalyst_types::{U256, u256};
     use swap_pool_common::{ContractError, state::INITIAL_MINT_AMOUNT};
 
     use crate::{msg::VolatileExecuteMsg, tests::{helpers::{deploy_test_tokens, WAD, query_token_balance, get_response_attribute, mock_set_pool_connection, CHANNEL_ID, SWAPPER_B, CHAIN_INTERFACE, compute_expected_receive_liquidity, query_token_info, mock_factory_deploy_vault, compute_expected_reference_asset, encode_payload_address}, math_helpers::{uint128_to_f64, f64_to_uint128}}};
@@ -38,7 +38,7 @@ mod test_volatile_receive_liquidity {
         );
 
         // Define the receive liquidity configuration        
-        let swap_units = uint!("500000000000000000");
+        let swap_units = u256!("500000000000000000");
 
 
 
@@ -53,7 +53,7 @@ mod test_volatile_receive_liquidity {
                 u: swap_units,
                 min_pool_tokens: Uint128::zero(),
                 min_reference_asset: Uint128::zero(),
-                from_amount: U256::ZERO,
+                from_amount: U256::zero(),
                 from_block_number_mod: 0u32,
                 calldata_target: None,
                 calldata: None
@@ -124,7 +124,7 @@ mod test_volatile_receive_liquidity {
         );
 
         // Define the receive liquidity configuration        
-        let swap_units = U256::ZERO;
+        let swap_units = U256::zero();
 
 
 
@@ -139,7 +139,7 @@ mod test_volatile_receive_liquidity {
                 u: swap_units,
                 min_pool_tokens: Uint128::zero(),
                 min_reference_asset: Uint128::zero(),
-                from_amount: U256::ZERO,
+                from_amount: U256::zero(),
                 from_block_number_mod: 0u32,
                 calldata_target: None,
                 calldata: None
@@ -201,7 +201,7 @@ mod test_volatile_receive_liquidity {
         );
 
         // Define the receive liquidity configuration
-        let swap_units = uint!("500000000000000000");
+        let swap_units = u256!("500000000000000000");
         
         // Compute the expected return
         let expected_return = compute_expected_receive_liquidity(
@@ -229,7 +229,7 @@ mod test_volatile_receive_liquidity {
                 u: swap_units,
                 min_pool_tokens: min_out_invalid,
                 min_reference_asset: Uint128::zero(),
-                from_amount: U256::ZERO,
+                from_amount: U256::zero(),
                 from_block_number_mod: 0u32,
                 calldata_target: None,
                 calldata: None
@@ -259,7 +259,7 @@ mod test_volatile_receive_liquidity {
                 u: swap_units,
                 min_pool_tokens: min_out_valid,
                 min_reference_asset: Uint128::zero(),
-                from_amount: U256::ZERO,
+                from_amount: U256::zero(),
                 from_block_number_mod: 0u32,
                 calldata_target: None,
                 calldata: None
@@ -301,7 +301,7 @@ mod test_volatile_receive_liquidity {
         );
 
         // Define the receive liquidity configuration
-        let swap_units = uint!("500000000000000000");
+        let swap_units = u256!("500000000000000000");
         
         // Compute the expected return and the expected reference asset value
         let expected_return = compute_expected_receive_liquidity(
@@ -337,7 +337,7 @@ mod test_volatile_receive_liquidity {
                 u: swap_units,
                 min_pool_tokens: Uint128::zero(),
                 min_reference_asset: min_out_invalid,
-                from_amount: U256::ZERO,
+                from_amount: U256::zero(),
                 from_block_number_mod: 0u32,
                 calldata_target: None,
                 calldata: None
@@ -367,7 +367,7 @@ mod test_volatile_receive_liquidity {
                 u: swap_units,
                 min_pool_tokens: Uint128::zero(),
                 min_reference_asset: min_out_valid,
-                from_amount: U256::ZERO,
+                from_amount: U256::zero(),
                 from_block_number_mod: 0u32,
                 calldata_target: None,
                 calldata: None
@@ -401,7 +401,7 @@ mod test_volatile_receive_liquidity {
         let from_pool = encode_payload_address(b"from_pool");
 
         // Define the receive liquidity configuration
-        let swap_units = uint!("500000000000000000");
+        let swap_units = u256!("500000000000000000");
 
 
 
@@ -416,7 +416,7 @@ mod test_volatile_receive_liquidity {
                 u: swap_units,
                 min_pool_tokens: Uint128::zero(),
                 min_reference_asset: Uint128::zero(),
-                from_amount: U256::ZERO,
+                from_amount: U256::zero(),
                 from_block_number_mod: 0u32,
                 calldata_target: None,
                 calldata: None
@@ -466,7 +466,7 @@ mod test_volatile_receive_liquidity {
         );
 
         // Define the receive liquidity configuration
-        let swap_units = uint!("500000000000000000");
+        let swap_units = u256!("500000000000000000");
 
 
 
@@ -481,7 +481,7 @@ mod test_volatile_receive_liquidity {
                 u: swap_units,
                 min_pool_tokens: Uint128::zero(),
                 min_reference_asset: Uint128::zero(),
-                from_amount: U256::ZERO,
+                from_amount: U256::zero(),
                 from_block_number_mod: 0u32,
                 calldata_target: None,
                 calldata: None

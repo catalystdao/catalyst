@@ -3,7 +3,7 @@ use std::str::FromStr;
 use cosmwasm_std::{Uint128, Addr, Event, Binary};
 use cw20::{Cw20Coin, MinterResponse, Cw20ExecuteMsg, BalanceResponse, Cw20QueryMsg, TokenInfoResponse};
 use cw_multi_test::{ContractWrapper, App, Executor, AppResponse};
-use ethnum::U256;
+use catalyst_types::U256;
 use swap_pool_common::msg::InstantiateMsg;
 
 use crate::{msg::VolatileExecuteMsg, tests::math_helpers::{u256_to_f64, uint128_to_f64}};

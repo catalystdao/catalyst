@@ -1,7 +1,7 @@
 mod test_volatile_send_asset_success_failure {
     use cosmwasm_std::{Uint128, Addr, Binary};
     use cw_multi_test::{App, Executor};
-    use ethnum::{U256, uint};
+    use catalyst_types::{U256, u256};
     use swap_pool_common::{ContractError, msg::{TotalEscrowedAssetResponse, AssetEscrowResponse}, state::compute_send_asset_hash};
 
     use crate::{msg::{VolatileExecuteMsg, QueryMsg}, tests::{helpers::{SETUP_MASTER, deploy_test_tokens, WAD, set_token_allowance, query_token_balance, transfer_tokens, get_response_attribute, mock_set_pool_connection, CHANNEL_ID, SWAPPER_B, SWAPPER_A, mock_instantiate_interface, FACTORY_OWNER, mock_factory_deploy_vault, encode_payload_address}, math_helpers::{uint128_to_f64, f64_to_uint128}}};
@@ -88,7 +88,7 @@ mod test_volatile_send_asset_success_failure {
                     from_asset: from_asset.to_string(),
                     to_asset_index: to_asset_idx,
                     amount: swap_amount,
-                    min_out: U256::ZERO,
+                    min_out: U256::zero(),
                     fallback_account: SWAPPER_A.to_string(),
                     calldata: Binary(vec![])
                 },
@@ -478,7 +478,7 @@ mod test_volatile_send_asset_success_failure {
             &VolatileExecuteMsg::OnSendAssetSuccess {
                 channel_id: CHANNEL_ID.to_string(),
                 to_account: env.to_account.clone(),
-                u: env.u + uint!("1"),                              // ! Increased units
+                u: env.u + u256!("1"),                              // ! Increased units
                 amount: env.from_amount - env.fee,
                 asset: env.from_asset.to_string(),
                 block_number_mod: env.block_number 
@@ -594,7 +594,7 @@ mod test_volatile_send_asset_success_failure {
             &VolatileExecuteMsg::OnSendAssetFailure {
                 channel_id: CHANNEL_ID.to_string(),
                 to_account: env.to_account.clone(),
-                u: env.u + uint!("1"),                              // ! Increased units
+                u: env.u + u256!("1"),                              // ! Increased units
                 amount: env.from_amount - env.fee,
                 asset: env.from_asset.to_string(),
                 block_number_mod: env.block_number 

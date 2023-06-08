@@ -1,4 +1,4 @@
-use ethnum::U256;
+use catalyst_types::{U256, AsI256, AsU256};
 use fixed_point_math::{ln_wad, div_wad_down, mul_wad_down, WAD, exp_wad};
 
 
@@ -14,11 +14,11 @@ pub fn calc_price_curve_area(
     w.checked_mul(
         ln_wad(
             div_wad_down(
-                a.checked_add(input).ok_or(())?,
+                a.checked_add(input).map_err(|_| ())?,
                 a
             )?.as_i256()
         )?.as_u256()
-    ).ok_or(())
+    ).map_err(|_| ())
 }
 
 
@@ -31,7 +31,7 @@ pub fn calc_price_curve_limit(
         b,
         WAD.checked_sub(
             exp_wad(-(u / w).as_i256())?.as_u256()
-        ).ok_or(())?
+        ).map_err(|_| ())?
     )
 }
 
@@ -67,7 +67,7 @@ pub fn calc_price_curve_limit_share(
     ).as_u256();
 
     div_wad_down(
-        WAD.checked_sub(npos).ok_or(())?,
+        WAD.checked_sub(npos).map_err(|_| ())?,
         npos
     )
 }

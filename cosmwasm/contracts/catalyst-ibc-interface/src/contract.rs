@@ -2,7 +2,7 @@
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, IbcMsg, to_binary, IbcQuery, PortIdResponse, Order, Uint128};
 use cw2::set_contract_version;
-use ethnum::U256;
+use catalyst_types::U256;
 
 use crate::catalyst_ibc_payload::{CatalystV1SendAssetPayload, SendAssetVariablePayload, CatalystV1SendLiquidityPayload, SendLiquidityVariablePayload, CatalystEncodedAddress};
 use crate::error::ContractError;
@@ -215,7 +215,7 @@ mod catalyst_ibc_interface_tests {
 
     use super::*;
     use cosmwasm_std::{testing::{mock_dependencies, mock_env, mock_info}, from_binary, Uint128, SubMsg, IbcTimeout, IbcPacket, IbcEndpoint, IbcPacketReceiveMsg, IbcPacketAckMsg, IbcAcknowledgement, IbcPacketTimeoutMsg, Reply, SubMsgResponse, SubMsgResult};
-    use ethnum::uint;
+    use catalyst_types::u256;
 
     pub const DEPLOYER_ADDR: &str = "deployer_addr";
 
@@ -258,9 +258,9 @@ mod catalyst_ibc_interface_tests {
             to_pool: CatalystEncodedAddress::try_encode(to_pool.as_ref()).unwrap().to_binary(),
             to_account: CatalystEncodedAddress::try_encode(b"to_account").unwrap().to_binary(),
             to_asset_index: 1u8,
-            u: uint!("78456988731590487483448276103933454935747871349630657124267302091643025406701"),          // Some large U256 number
+            u: u256!("78456988731590487483448276103933454935747871349630657124267302091643025406701"),          // Some large U256 number
             min_out: min_out.unwrap_or(
-                uint!("323476719582585693194107115743132847255")                                                // Some large Uint128 number (as U256)
+                u256!("323476719582585693194107115743132847255")                                                // Some large Uint128 number (as U256)
             ),
             from_amount: Uint128::from(4920222095670429824873974121747892731u128),                          // Some large Uint128 number
             from_asset: "from_asset".to_string(),
@@ -278,7 +278,7 @@ mod catalyst_ibc_interface_tests {
             from_pool: CatalystEncodedAddress::try_encode(from_pool.as_ref()).unwrap().to_binary(),
             to_asset_index: 1u8,
             to_account: "to_account".to_string(),
-            u: uint!("78456988731590487483448276103933454935747871349630657124267302091643025406701"),          // Some large U256 number
+            u: u256!("78456988731590487483448276103933454935747871349630657124267302091643025406701"),          // Some large U256 number
             min_out: Uint128::from(323476719582585693194107115743132847255u128),                                // Some large Uint128 number
             from_asset: CatalystEncodedAddress::try_encode("from_asset".as_bytes()).unwrap().to_binary(),
             from_amount: U256::from(4920222095670429824873974121747892731u128),
@@ -294,7 +294,7 @@ mod catalyst_ibc_interface_tests {
         swap_pool_common::msg::ExecuteMsg::OnSendAssetSuccess {
             channel_id: channel_id.into(),
             to_account: CatalystEncodedAddress::try_encode(b"to_account").unwrap().to_binary(),
-            u: uint!("78456988731590487483448276103933454935747871349630657124267302091643025406701"),          // Some large U256 number
+            u: u256!("78456988731590487483448276103933454935747871349630657124267302091643025406701"),          // Some large U256 number
             amount: Uint128::from(4920222095670429824873974121747892731u128),                                   // Some large Uint128 number
             asset: "from_asset".to_string(),
             block_number_mod: 1356u32
@@ -307,7 +307,7 @@ mod catalyst_ibc_interface_tests {
         swap_pool_common::msg::ExecuteMsg::OnSendAssetFailure {
             channel_id: channel_id.into(),
             to_account: CatalystEncodedAddress::try_encode(b"to_account").unwrap().to_binary(),
-            u: uint!("78456988731590487483448276103933454935747871349630657124267302091643025406701"),          // Some large U256 number
+            u: u256!("78456988731590487483448276103933454935747871349630657124267302091643025406701"),          // Some large U256 number
             amount: Uint128::from(4920222095670429824873974121747892731u128),                                   // Some large Uint128 number
             asset: "from_asset".to_string(),
             block_number_mod: 1356u32
@@ -327,12 +327,12 @@ mod catalyst_ibc_interface_tests {
             channel_id: channel_id.into(),
             to_pool: CatalystEncodedAddress::try_encode(to_pool.as_ref()).unwrap().to_binary(),
             to_account: CatalystEncodedAddress::try_encode(b"to_account").unwrap().to_binary(),
-            u: uint!("78456988731590487483448276103933454935747871349630657124267302091643025406701"),          // Some large U256 number
+            u: u256!("78456988731590487483448276103933454935747871349630657124267302091643025406701"),          // Some large U256 number
             min_pool_tokens: min_pool_tokens.unwrap_or(
-                uint!("323476719582585693194107115743132847255")                                                // Some large Uint128 number (as U256)
+                u256!("323476719582585693194107115743132847255")                                                // Some large Uint128 number (as U256)
             ),
             min_reference_asset: min_reference_asset.unwrap_or(
-                uint!("1385371954613879816514345798135479")                                                     // Some large Uint128 number (as U256)
+                u256!("1385371954613879816514345798135479")                                                     // Some large Uint128 number (as U256)
             ),
             from_amount: Uint128::from(4920222095670429824873974121747892731u128),                              // Some large Uint128 number
             block_number: 1356u32,
@@ -348,7 +348,7 @@ mod catalyst_ibc_interface_tests {
             channel_id: channel_id.into(),
             from_pool: CatalystEncodedAddress::try_encode(from_pool.as_ref()).unwrap().to_binary(),
             to_account: "to_account".to_string(),
-            u: uint!("78456988731590487483448276103933454935747871349630657124267302091643025406701"),          // Some large U256 number
+            u: u256!("78456988731590487483448276103933454935747871349630657124267302091643025406701"),          // Some large U256 number
             min_pool_tokens: Uint128::from(323476719582585693194107115743132847255u128),                        // Some large Uint128 number
             min_reference_asset: Uint128::from(1385371954613879816514345798135479u128),                         // Some large Uint128 number
             from_amount: U256::from(4920222095670429824873974121747892731u128),
@@ -364,7 +364,7 @@ mod catalyst_ibc_interface_tests {
         swap_pool_common::msg::ExecuteMsg::OnSendLiquiditySuccess {
             channel_id: channel_id.into(),
             to_account: CatalystEncodedAddress::try_encode(b"to_account").unwrap().to_binary(),
-            u: uint!("78456988731590487483448276103933454935747871349630657124267302091643025406701"),          // Some large U256 number
+            u: u256!("78456988731590487483448276103933454935747871349630657124267302091643025406701"),          // Some large U256 number
             amount: Uint128::from(4920222095670429824873974121747892731u128),                                   // Some large Uint128 number
             block_number_mod: 1356u32
         }
@@ -376,7 +376,7 @@ mod catalyst_ibc_interface_tests {
         swap_pool_common::msg::ExecuteMsg::OnSendLiquidityFailure {
             channel_id: channel_id.into(),
             to_account: CatalystEncodedAddress::try_encode(b"to_account").unwrap().to_binary(),
-            u: uint!("78456988731590487483448276103933454935747871349630657124267302091643025406701"),          // Some large U256 number
+            u: u256!("78456988731590487483448276103933454935747871349630657124267302091643025406701"),          // Some large U256 number
             amount: Uint128::from(4920222095670429824873974121747892731u128),                                   // Some large Uint128 number
             block_number_mod: 1356u32
         }

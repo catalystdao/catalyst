@@ -112,7 +112,7 @@ pub const CALLDATA_BYTES_START       : usize = 65;
 // Payload Helpers
 // ******************************************************************************************************************************
 use cosmwasm_std::{Deps, Addr, Uint128, Binary};
-use ethnum::U256;
+use catalyst_types::U256;
 use crate::ContractError;
 
 
@@ -381,12 +381,11 @@ impl SendAssetVariablePayload {
         &self
     ) -> Result<Uint128, ContractError> {
 
-        let min_out = self.min_out;
-        // For CosmWasm pools, min_out should be Uint128
-        if min_out > U256::from(Uint128::MAX.u128()) {             //TODO overhaul - more efficient way to do this?
-            return Err(ContractError::PayloadDecodingError {});
-        }
-        Ok(Uint128::from(min_out.as_u128()))
+        Ok(
+            self.min_out
+                .try_into()
+                .map_err(|_| ContractError::PayloadDecodingError {})?
+        )
 
     }
 
@@ -394,12 +393,11 @@ impl SendAssetVariablePayload {
         &self
     ) -> Result<Uint128, ContractError> {
 
-        let from_amount = self.from_amount;
-        // For CosmWasm pools, from_amount should be Uint128
-        if from_amount > U256::from(Uint128::MAX.u128()) {             //TODO overhaul - more efficient way to do this?
-            return Err(ContractError::PayloadDecodingError {});
-        }
-        Ok(Uint128::from(from_amount.as_u128()))
+        Ok(
+            self.from_amount
+                .try_into()
+                .map_err(|_| ContractError::PayloadDecodingError {})?
+        )
 
     }
 
@@ -540,11 +538,11 @@ impl SendLiquidityVariablePayload {
         &self
     ) -> Result<Uint128, ContractError> {
 
-        // For CosmWasm pools, min_out should be Uint128
-        if self.min_pool_tokens > U256::from(Uint128::MAX.u128()) {             //TODO overhaul - more efficient way to do this?
-            return Err(ContractError::PayloadDecodingError {});
-        }
-        Ok(Uint128::from(self.min_pool_tokens.as_u128()))
+        Ok(
+            self.min_pool_tokens
+                .try_into()
+                .map_err(|_| ContractError::PayloadDecodingError {})?
+        )
 
     }
 
@@ -553,11 +551,11 @@ impl SendLiquidityVariablePayload {
         &self
     ) -> Result<Uint128, ContractError> {
 
-        // For CosmWasm pools, min_out should be Uint128
-        if self.min_reference_asset > U256::from(Uint128::MAX.u128()) {             //TODO overhaul - more efficient way to do this?
-            return Err(ContractError::PayloadDecodingError {});
-        }
-        Ok(Uint128::from(self.min_reference_asset.as_u128()))
+        Ok(
+            self.min_reference_asset
+                .try_into()
+                .map_err(|_| ContractError::PayloadDecodingError {})?
+        )
 
     }
 
@@ -565,12 +563,11 @@ impl SendLiquidityVariablePayload {
         &self
     ) -> Result<Uint128, ContractError> {
 
-        let from_amount = self.from_amount;
-        // For CosmWasm pools, from_amount should be Uint128
-        if from_amount > U256::from(Uint128::MAX.u128()) {             //TODO overhaul - more efficient way to do this?
-            return Err(ContractError::PayloadDecodingError {});
-        }
-        Ok(Uint128::from(from_amount.as_u128()))
+        Ok(
+            self.from_amount
+                .try_into()
+                .map_err(|_| ContractError::PayloadDecodingError {})?
+        )
 
     }
 

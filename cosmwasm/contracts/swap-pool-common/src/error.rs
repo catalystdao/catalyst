@@ -1,5 +1,5 @@
 use cosmwasm_std::{StdError, OverflowError, Uint128, Binary};
-use ethnum::U256;
+use catalyst_types::U256;
 use thiserror::Error;
 
 #[derive(Error, Debug)]

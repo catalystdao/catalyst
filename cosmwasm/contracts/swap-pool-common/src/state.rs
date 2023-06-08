@@ -6,7 +6,7 @@ use cosmwasm_std::{Addr, Uint128, DepsMut, Env, Response, Event, MessageInfo, De
 use cw20::Cw20ExecuteMsg;
 use cw_storage_plus::{Map, Item};
 use cw20_base::{state::{MinterData, TokenInfo, TOKEN_INFO}, contract::execute_mint};
-use ethnum::{U256, uint};
+use catalyst_types::{U256, u256};
 use fixed_point_math::mul_wad_down;
 use sha3::{Digest, Keccak256};
 
@@ -22,7 +22,7 @@ pub const INITIAL_MINT_AMOUNT: Uint128 = Uint128::new(1000000000000000000u128); 
 pub const MAX_POOL_FEE_SHARE       : u64 = 1000000000000000000u64;              // 100%   //TODO rename MAX_POOL_FEE
 pub const MAX_GOVERNANCE_FEE_SHARE : u64 = 75u64 * 10000000000000000u64;        // 75%    //TODO EVM mismatch (move to factory)
 
-pub const DECAY_RATE: U256 = uint!("86400");    // 60*60*24
+pub const DECAY_RATE: U256 = u256!("86400");    // 60*60*24
 
 
 // Pool Storage
@@ -117,7 +117,7 @@ pub fn calc_limit_capacity(
     let released_limit_capacity = max_limit_capacity
         .checked_mul(
             U256::from(time.minus_nanos(used_limit_capacity_timestamp).seconds())  //TODO use seconds instead of nanos (overflow wise)  //TODO if the provided 'time' is correct, the time difference is always positive. But what if it is not correct? 
-        ).ok_or(ContractError::ArithmeticError {})?   //TODO error
+        ).map_err(|_| ContractError::ArithmeticError {})?   //TODO error
         .div(DECAY_RATE);
 
         if used_limit_capacity <= released_limit_capacity {
@@ -125,7 +125,7 @@ pub fn calc_limit_capacity(
         }
 
         if max_limit_capacity <= used_limit_capacity - released_limit_capacity {    // subtraction is safe because of the previous 'if' statement
-            return Ok(U256::ZERO);
+            return Ok(U256::zero());
         }
 
         Ok(
@@ -332,7 +332,7 @@ pub fn collect_governance_fee_message(
     let gov_fee_amount: Uint128 = mul_wad_down(
         U256::from(pool_fee_amount.u128()),
         U256::from(GOVERNANCE_FEE_SHARE.load(deps.storage)?)
-    )?.as_u128().into();     //TODO unsafe as_u128 casting
+    )?.try_into().map_err(|_| ContractError::GenericError {})?;     //TODO error
 
     if gov_fee_amount.is_zero() {
         return Ok(None)
