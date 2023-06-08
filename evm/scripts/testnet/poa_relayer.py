@@ -337,7 +337,7 @@ class PoARelayer:
             receipt = w3.eth.getTransactionReceipt(log["transactionHash"])
             log_index = log.logIndex
             for r_log in receipt.logs:
-                if (r_log.logIndex in [log_index - 2, log_index - 3, log_index - 4]):
+                if (r_log.logIndex in [log_index - 1, log_index - 2, log_index - 3, log_index - 4]):
                     if (
                         r_log.topics[0].hex()
                         == "0x2f7e9b1a1fac10099a9988fcda077b67b3809ede82c92a7662b82f0f96861604"
@@ -376,7 +376,7 @@ class PoARelayer:
             receipt = w3.eth.getTransactionReceipt(log["transactionHash"])
             log_index = log.logIndex
             for r_log in receipt.logs:
-                if (r_log.logIndex in [log_index - 2, log_index - 3, log_index - 4]):
+                if (r_log.logIndex in [log_index - 1, log_index - 2, log_index - 3, log_index - 4]):
                     if (
                         r_log.topics[0].hex()
                         == "0x2f7e9b1a1fac10099a9988fcda077b67b3809ede82c92a7662b82f0f96861604"
@@ -575,7 +575,7 @@ class PoARelayer:
             if log.topics[0].hex() == "0xe1c4c822c15df23f17ad636820a990981caf1d4e40f2f46cf3bb7ad003deaec8":
                 log_index = log.logIndex
                 for r_log in logs:
-                    if (r_log.logIndex in [log_index - 2, log_index - 3, log_index - 4]):
+                    if (r_log.logIndex in [log_index - 1, log_index - 2, log_index - 3, log_index - 4]):
                         if (
                             r_log.topics[0].hex()
                             == "0x2f7e9b1a1fac10099a9988fcda077b67b3809ede82c92a7662b82f0f96861604"
@@ -586,7 +586,7 @@ class PoARelayer:
             elif log.topics[0].hex() == "0x8c9503be4db35b4e3d31565a9616d1dc3f1b3024e5e9e9d65052de46a5149f1c":
                 log_index = log.logIndex
                 for r_log in logs:
-                    if (r_log.logIndex in [log_index - 2, log_index - 3, log_index - 4]):
+                    if (r_log.logIndex in [log_index - 1, log_index - 2, log_index - 3, log_index - 4]):
                         if (
                             r_log.topics[0].hex()
                             == "0x2f7e9b1a1fac10099a9988fcda077b67b3809ede82c92a7662b82f0f96861604"
