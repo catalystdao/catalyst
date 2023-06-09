@@ -3,7 +3,8 @@ use catalyst_types::{U256, I256, AsI256, AsU256, u256, i256};
 /// @notice Arithmetic library with operations for fixed-point numbers.
 /// @author Solmate (https://github.com/transmissions11/solmate/blob/ed67feda67b24fdeff8ad1032360f0ee6047ba0a/src/utils/FixedPointMathLib.sol)
 
-//TODO is using 'wrapping' operations more efficient than using 'checked' ones? (as intrinsic types (i.e. +, -, ...) of the U256 library are checked)
+// NOTE the following code uses 'wrapping' functions (e.g. 'wrapping_add') instead of the intrinsic types (e.g. '+') as they are more gas efficient.
+// (The intrinsic types *always* check for overflows. This is specific to the U256 library and to CosmWasm's Uint classes, NOT to Rust native types)
 
 /***************************************************************
                 SIMPLIFIED FIXED POINT OPERATIONS
