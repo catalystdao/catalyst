@@ -157,6 +157,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "catalyst-vault-volatile"
+version = "0.1.0"
+dependencies = [
+ "catalyst-factory",
+ "catalyst-ibc-interface",
+ "catalyst-types",
+ "catalyst-vault-common",
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cosmwasm-storage",
+ "cw-multi-test",
+ "cw-storage-plus",
+ "cw2",
+ "cw20",
+ "cw20-base",
+ "fixed-point-math",
+ "mock-catalyst-ibc-interface",
+ "schemars",
+ "serde",
+ "thiserror",
+]
+
+[[package]]
 name = "cfg-if"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -950,29 +973,6 @@ dependencies = [
  "cw-multi-test",
  "cw-storage-plus",
  "cw2",
- "schemars",
- "serde",
- "thiserror",
-]
-
-[[package]]
-name = "swap-pool-volatile"
-version = "0.1.0"
-dependencies = [
- "catalyst-factory",
- "catalyst-ibc-interface",
- "catalyst-types",
- "catalyst-vault-common",
- "cosmwasm-schema",
- "cosmwasm-std",
- "cosmwasm-storage",
- "cw-multi-test",
- "cw-storage-plus",
- "cw2",
- "cw20",
- "cw20-base",
- "fixed-point-math",
- "mock-catalyst-ibc-interface",
  "schemars",
  "serde",
  "thiserror",

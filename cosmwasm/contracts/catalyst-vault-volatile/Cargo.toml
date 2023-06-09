@@ -1,5 +1,5 @@
 [package]
-name = "swap-pool-volatile"
+name = "catalyst-vault-volatile"
 version = "0.1.0"
 authors = ["Catalyst"]
 edition = "2021"
