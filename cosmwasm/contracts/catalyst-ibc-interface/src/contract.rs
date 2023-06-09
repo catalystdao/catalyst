@@ -272,8 +272,8 @@ mod catalyst_ibc_interface_tests {
     fn mock_pool_receive_asset_msg(
         channel_id: &str,
         from_pool: Vec<u8>,
-    ) -> swap_pool_common::msg::ExecuteMsg<()> {
-        swap_pool_common::msg::ExecuteMsg::ReceiveAsset {
+    ) -> catalyst_vault_common::msg::ExecuteMsg<()> {
+        catalyst_vault_common::msg::ExecuteMsg::ReceiveAsset {
             channel_id: channel_id.into(),
             from_pool: CatalystEncodedAddress::try_encode(from_pool.as_ref()).unwrap().to_binary(),
             to_asset_index: 1u8,
@@ -290,8 +290,8 @@ mod catalyst_ibc_interface_tests {
 
     fn mock_pool_send_asset_success_msg(
         channel_id: &str,
-    ) -> swap_pool_common::msg::ExecuteMsg<()> {
-        swap_pool_common::msg::ExecuteMsg::OnSendAssetSuccess {
+    ) -> catalyst_vault_common::msg::ExecuteMsg<()> {
+        catalyst_vault_common::msg::ExecuteMsg::OnSendAssetSuccess {
             channel_id: channel_id.into(),
             to_account: CatalystEncodedAddress::try_encode(b"to_account").unwrap().to_binary(),
             u: u256!("78456988731590487483448276103933454935747871349630657124267302091643025406701"),          // Some large U256 number
@@ -303,8 +303,8 @@ mod catalyst_ibc_interface_tests {
 
     fn mock_pool_send_asset_failure_msg(
         channel_id: &str,
-    ) -> swap_pool_common::msg::ExecuteMsg<()> {
-        swap_pool_common::msg::ExecuteMsg::OnSendAssetFailure {
+    ) -> catalyst_vault_common::msg::ExecuteMsg<()> {
+        catalyst_vault_common::msg::ExecuteMsg::OnSendAssetFailure {
             channel_id: channel_id.into(),
             to_account: CatalystEncodedAddress::try_encode(b"to_account").unwrap().to_binary(),
             u: u256!("78456988731590487483448276103933454935747871349630657124267302091643025406701"),          // Some large U256 number
@@ -343,8 +343,8 @@ mod catalyst_ibc_interface_tests {
     fn mock_pool_receive_liquidity_msg(
         channel_id: &str,
         from_pool: Vec<u8>,
-    ) -> swap_pool_common::msg::ExecuteMsg<()> {
-        swap_pool_common::msg::ExecuteMsg::ReceiveLiquidity {
+    ) -> catalyst_vault_common::msg::ExecuteMsg<()> {
+        catalyst_vault_common::msg::ExecuteMsg::ReceiveLiquidity {
             channel_id: channel_id.into(),
             from_pool: CatalystEncodedAddress::try_encode(from_pool.as_ref()).unwrap().to_binary(),
             to_account: "to_account".to_string(),
@@ -360,8 +360,8 @@ mod catalyst_ibc_interface_tests {
 
     fn mock_pool_send_liquidity_success_msg(
         channel_id: &str,
-    ) -> swap_pool_common::msg::ExecuteMsg<()> {
-        swap_pool_common::msg::ExecuteMsg::OnSendLiquiditySuccess {
+    ) -> catalyst_vault_common::msg::ExecuteMsg<()> {
+        catalyst_vault_common::msg::ExecuteMsg::OnSendLiquiditySuccess {
             channel_id: channel_id.into(),
             to_account: CatalystEncodedAddress::try_encode(b"to_account").unwrap().to_binary(),
             u: u256!("78456988731590487483448276103933454935747871349630657124267302091643025406701"),          // Some large U256 number
@@ -372,8 +372,8 @@ mod catalyst_ibc_interface_tests {
 
     fn mock_pool_send_liquidity_failure_msg(
         channel_id: &str,
-    ) -> swap_pool_common::msg::ExecuteMsg<()> {
-        swap_pool_common::msg::ExecuteMsg::OnSendLiquidityFailure {
+    ) -> catalyst_vault_common::msg::ExecuteMsg<()> {
+        catalyst_vault_common::msg::ExecuteMsg::OnSendLiquidityFailure {
             channel_id: channel_id.into(),
             to_account: CatalystEncodedAddress::try_encode(b"to_account").unwrap().to_binary(),
             u: u256!("78456988731590487483448276103933454935747871349630657124267302091643025406701"),          // Some large U256 number

@@ -2,7 +2,7 @@ mod test_volatile_receive_liquidity {
     use cosmwasm_std::{Uint128, Addr, Uint64};
     use cw_multi_test::{App, Executor};
     use catalyst_types::{U256, u256};
-    use swap_pool_common::{ContractError, state::INITIAL_MINT_AMOUNT};
+    use catalyst_vault_common::{ContractError, state::INITIAL_MINT_AMOUNT};
 
     use crate::{msg::VolatileExecuteMsg, tests::{helpers::{deploy_test_tokens, WAD, query_token_balance, get_response_attribute, mock_set_pool_connection, CHANNEL_ID, SWAPPER_B, CHAIN_INTERFACE, compute_expected_receive_liquidity, query_token_info, mock_factory_deploy_vault, compute_expected_reference_asset, encode_payload_address}, math_helpers::{uint128_to_f64, f64_to_uint128}}};
 

@@ -3,7 +3,7 @@ mod test_volatile_instantiate {
     use cosmwasm_std::{Uint128, Addr, Uint64};
     use cw20_base::state::TokenInfo;
     use cw_multi_test::{App, Executor};
-    use swap_pool_common::msg::{SetupMasterResponse, ChainInterfaceResponse, OnlyLocalResponse, PoolFeeResponse, GovernanceFeeShareResponse};
+    use catalyst_vault_common::msg::{SetupMasterResponse, ChainInterfaceResponse, OnlyLocalResponse, PoolFeeResponse, GovernanceFeeShareResponse};
 
     use crate::{msg::QueryMsg, tests::helpers::{mock_instantiate_vault_msg, DEPLOYER, volatile_vault_contract_storage}};
 

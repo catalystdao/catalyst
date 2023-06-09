@@ -1,7 +1,7 @@
 mod test_volatile_pool_connections {
     use cosmwasm_std::{Addr, Uint128, Binary, Uint64};
     use cw_multi_test::{Executor, App};
-    use swap_pool_common::{ContractError, msg::PoolConnectionStateResponse};
+    use catalyst_vault_common::{ContractError, msg::PoolConnectionStateResponse};
 
     use crate::{msg::VolatileExecuteMsg, tests::helpers::{SETUP_MASTER, mock_finish_pool_setup, FACTORY_OWNER, deploy_test_tokens, mock_factory_deploy_vault, WAD, mock_instantiate_interface, encode_payload_address}};
 

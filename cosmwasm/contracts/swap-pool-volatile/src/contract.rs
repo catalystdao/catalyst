@@ -9,8 +9,8 @@ use cw20_base::allowances::{
 use cw20_base::contract::{
     execute_send, execute_transfer, query_balance, query_token_info,
 };
-use swap_pool_common::ContractError;
-use swap_pool_common::state::{
+use catalyst_vault_common::ContractError;
+use catalyst_vault_common::state::{
     setup, finish_setup, set_fee_administrator, set_pool_fee, set_governance_fee_share, set_connection,
     on_send_asset_failure, on_send_liquidity_failure, query_chain_interface, query_setup_master, query_ready, query_only_local, query_assets, query_weights, query_pool_fee, query_governance_fee_share, query_fee_administrator, query_total_escrowed_liquidity, query_total_escrowed_asset, query_asset_escrow, query_liquidity_escrow, query_pool_connection_state, query_factory, query_factory_owner
 };

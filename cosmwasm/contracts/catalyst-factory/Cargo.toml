@@ -33,7 +33,7 @@ cw20 = "1.0.1"
 schemars = "0.8.10"
 serde = { version = "1.0.145", default-features = false, features = ["derive"] }
 thiserror = { version = "1.0.31" }
-swap-pool-common = { path = "../swap-pool-common" }
+catalyst-vault-common = { path = "../catalyst-vault-common" }
 
 [dev-dependencies]
 cw-multi-test = "0.16.2"

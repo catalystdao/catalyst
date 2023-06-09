@@ -1,7 +1,7 @@
 use cosmwasm_std::{Addr, Uint128, DepsMut, Env, MessageInfo, Response, StdResult, Deps, StdError, Uint64};
 use cw20::{Cw20QueryMsg, BalanceResponse};
 use cw20_base::contract::execute_mint;
-use swap_pool_common::{
+use catalyst_vault_common::{
     state::{ASSETS, MAX_ASSETS, WEIGHTS, INITIAL_MINT_AMOUNT, FACTORY, factory_owner, CHAIN_INTERFACE, SETUP_MASTER}, ContractError, msg::{ChainInterfaceResponse, SetupMasterResponse, FactoryResponse, FactoryOwnerResponse},
 };
 

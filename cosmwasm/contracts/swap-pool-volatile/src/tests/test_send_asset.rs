@@ -2,7 +2,7 @@ mod test_volatile_send_asset {
     use cosmwasm_std::{Uint128, Addr, Binary, Uint64};
     use cw_multi_test::{App, Executor};
     use catalyst_types::U256;
-    use swap_pool_common::{ContractError, msg::TotalEscrowedAssetResponse};
+    use catalyst_vault_common::{ContractError, msg::TotalEscrowedAssetResponse};
 
     use crate::{msg::VolatileExecuteMsg, tests::{helpers::{SETUP_MASTER, deploy_test_tokens, WAD, set_token_allowance, DEFAULT_TEST_POOL_FEE, query_token_balance, transfer_tokens, get_response_attribute, mock_set_pool_connection, CHANNEL_ID, SWAPPER_B, SWAPPER_A, mock_instantiate_interface, FACTORY_OWNER, DEFAULT_TEST_GOV_FEE, compute_expected_send_asset, mock_test_token_definitions, mock_factory_deploy_vault, encode_payload_address}, math_helpers::{uint128_to_f64, f64_to_uint128, u256_to_f64}}};
 

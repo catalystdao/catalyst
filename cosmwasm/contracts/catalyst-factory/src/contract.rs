@@ -134,7 +134,7 @@ fn execute_deploy_vault(
         cosmwasm_std::WasmMsg::Instantiate {
             admin: None,        //TODO set factory as admin?
             code_id: vault_code_id,
-            msg: to_binary(&swap_pool_common::msg::InstantiateMsg {
+            msg: to_binary(&catalyst_vault_common::msg::InstantiateMsg {
                 name,
                 symbol: symbol.clone(),
                 chain_interface: chain_interface.clone(),
@@ -221,7 +221,7 @@ fn handle_deploy_vault_reply(
     let initialize_swap_curves_msg = CosmosMsg::Wasm(
         cosmwasm_std::WasmMsg::Execute {
             contract_addr: vault_address.clone(),
-            msg: to_binary(&swap_pool_common::msg::ExecuteMsg::<()>::InitializeSwapCurves {
+            msg: to_binary(&catalyst_vault_common::msg::ExecuteMsg::<()>::InitializeSwapCurves {
                 assets: deploy_args.assets.clone(),
                 weights: deploy_args.weights,
                 amp: deploy_args.amplification,
@@ -290,7 +290,7 @@ mod catalyst_swap_pool_factory_tests {
 
     use crate::{msg::{InstantiateMsg, QueryMsg, OwnerResponse, ExecuteMsg, DefaultGovernanceFeeShareResponse}, state::MAX_GOVERNANCE_FEE_SHARE, error::ContractError};
 
-    use swap_pool_common::msg::{ChainInterfaceResponse, FactoryResponse, SetupMasterResponse, AssetsResponse, WeightsResponse, PoolFeeResponse, GovernanceFeeShareResponse, FeeAdministratorResponse};
+    use catalyst_vault_common::msg::{ChainInterfaceResponse, FactoryResponse, SetupMasterResponse, AssetsResponse, WeightsResponse, PoolFeeResponse, GovernanceFeeShareResponse, FeeAdministratorResponse};
     use mock_swap_pool::msg::QueryMsg as MockPoolQueryMsg;
 
     const GOVERNANCE: &str = "governance_addr";

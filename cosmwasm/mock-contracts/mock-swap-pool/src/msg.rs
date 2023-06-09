@@ -1,7 +1,7 @@
 use cosmwasm_schema::QueryResponses;
 use cosmwasm_schema::cw_serde;
-pub use swap_pool_common::msg::{InstantiateMsg, ExecuteMsg};
-use swap_pool_common::msg::{
+pub use catalyst_vault_common::msg::{InstantiateMsg, ExecuteMsg};
+use catalyst_vault_common::msg::{
     AssetsResponse, CalcSendAssetResponse,
     ChainInterfaceResponse, FeeAdministratorResponse, GovernanceFeeShareResponse,
     OnlyLocalResponse, PoolFeeResponse, ReadyResponse,

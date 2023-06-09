@@ -1,7 +1,7 @@
 mod test_volatile_finish_setup {
     use cosmwasm_std::Addr;
     use cw_multi_test::{App, Executor};
-    use swap_pool_common::{ContractError, msg::SetupMasterResponse};
+    use catalyst_vault_common::{ContractError, msg::SetupMasterResponse};
 
     use crate::{msg::{VolatileExecuteMsg, QueryMsg}, tests::helpers::{mock_instantiate_vault, SETUP_MASTER}};
 

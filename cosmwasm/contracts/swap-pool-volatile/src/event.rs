@@ -1,5 +1,5 @@
 use cosmwasm_std::{Event, Uint64};
-use swap_pool_common::event::format_vec_for_event;
+use catalyst_vault_common::event::format_vec_for_event;
 
 
 pub fn set_weights_event(

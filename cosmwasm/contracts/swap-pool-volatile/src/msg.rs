@@ -2,8 +2,8 @@ use cosmwasm_schema::QueryResponses;
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Uint64, Uint128, Binary};
 use catalyst_types::U256;
-pub use swap_pool_common::msg::{InstantiateMsg, ExecuteMsg};
-use swap_pool_common::msg::{
+pub use catalyst_vault_common::msg::{InstantiateMsg, ExecuteMsg};
+use catalyst_vault_common::msg::{
     AssetEscrowResponse, AssetsResponse, CalcLocalSwapResponse, CalcReceiveAssetResponse, CalcSendAssetResponse,
     ChainInterfaceResponse, FeeAdministratorResponse, GetLimitCapacityResponse, GovernanceFeeShareResponse,
     LiquidityEscrowResponse, OnlyLocalResponse, PoolConnectionStateResponse, PoolFeeResponse, ReadyResponse,

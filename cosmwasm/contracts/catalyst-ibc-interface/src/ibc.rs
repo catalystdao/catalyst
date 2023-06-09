@@ -5,7 +5,7 @@ use cosmwasm_std::{
     IbcPacketReceiveMsg, IbcReceiveResponse, IbcPacketAckMsg, IbcPacketTimeoutMsg, IbcChannel, IbcPacket, Binary, CosmosMsg, to_binary, SubMsg, Reply, Response, SubMsgResult
 };
 
-use swap_pool_common::msg::ExecuteMsg as SwapPoolExecuteMsg;
+use catalyst_vault_common::msg::ExecuteMsg as SwapPoolExecuteMsg;
 
 use crate::{ContractError, state::{IbcChannelInfo, OPEN_CHANNELS}, catalyst_ibc_payload::CatalystV1Packet, error::Never};
 

@@ -71,6 +71,7 @@ checksum = "89b2fd2a0dcf38d7971e2194b6b6eebab45ae01067456a7fd93d5547a61b70be"
 name = "catalyst-factory"
 version = "0.1.0"
 dependencies = [
+ "catalyst-vault-common",
  "cosmwasm-schema",
  "cosmwasm-std",
  "cosmwasm-storage",
@@ -83,7 +84,6 @@ dependencies = [
  "mock-swap-pool",
  "schemars",
  "serde",
- "swap-pool-common",
  "thiserror",
  "token-helpers",
 ]
@@ -93,6 +93,7 @@ name = "catalyst-ibc-interface"
 version = "0.1.0"
 dependencies = [
  "catalyst-types",
+ "catalyst-vault-common",
  "cosmwasm-schema",
  "cosmwasm-std",
  "cosmwasm-storage",
@@ -102,7 +103,6 @@ dependencies = [
  "cw2",
  "schemars",
  "serde",
- "swap-pool-common",
  "thiserror",
 ]
 
@@ -112,6 +112,7 @@ version = "0.1.0"
 dependencies = [
  "catalyst-ibc-interface",
  "catalyst-types",
+ "catalyst-vault-common",
  "cosmwasm-schema",
  "cosmwasm-std",
  "cosmwasm-storage",
@@ -121,7 +122,6 @@ dependencies = [
  "cw2",
  "schemars",
  "serde",
- "swap-pool-common",
  "thiserror",
 ]
 
@@ -134,6 +134,26 @@ dependencies = [
  "forward_ref",
  "schemars",
  "serde",
+]
+
+[[package]]
+name = "catalyst-vault-common"
+version = "0.1.0"
+dependencies = [
+ "catalyst-types",
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cosmwasm-storage",
+ "cw-multi-test",
+ "cw-storage-plus",
+ "cw2",
+ "cw20",
+ "cw20-base",
+ "fixed-point-math",
+ "schemars",
+ "serde",
+ "sha3",
+ "thiserror",
 ]
 
 [[package]]
@@ -648,6 +668,7 @@ version = "0.1.0"
 dependencies = [
  "catalyst-factory",
  "catalyst-ibc-interface",
+ "catalyst-vault-common",
  "cosmwasm-schema",
  "cosmwasm-std",
  "cosmwasm-storage",
@@ -660,7 +681,6 @@ dependencies = [
  "mock-catalyst-ibc-interface",
  "schemars",
  "serde",
- "swap-pool-common",
  "thiserror",
 ]
 
@@ -936,32 +956,13 @@ dependencies = [
 ]
 
 [[package]]
-name = "swap-pool-common"
-version = "0.1.0"
-dependencies = [
- "catalyst-types",
- "cosmwasm-schema",
- "cosmwasm-std",
- "cosmwasm-storage",
- "cw-multi-test",
- "cw-storage-plus",
- "cw2",
- "cw20",
- "cw20-base",
- "fixed-point-math",
- "schemars",
- "serde",
- "sha3",
- "thiserror",
-]
-
-[[package]]
 name = "swap-pool-volatile"
 version = "0.1.0"
 dependencies = [
  "catalyst-factory",
  "catalyst-ibc-interface",
  "catalyst-types",
+ "catalyst-vault-common",
  "cosmwasm-schema",
  "cosmwasm-std",
  "cosmwasm-storage",
@@ -974,7 +975,6 @@ dependencies = [
  "mock-catalyst-ibc-interface",
  "schemars",
  "serde",
- "swap-pool-common",
  "thiserror",
 ]
 

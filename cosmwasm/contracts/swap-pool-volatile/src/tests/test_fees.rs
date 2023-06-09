@@ -1,7 +1,7 @@
 mod test_volatile_fees {
     use cosmwasm_std::{Addr, Uint128, Uint64};
     use cw_multi_test::{App, Executor};
-    use swap_pool_common::{ContractError, msg::{FeeAdministratorResponse, PoolFeeResponse, GovernanceFeeShareResponse}};
+    use catalyst_vault_common::{ContractError, msg::{FeeAdministratorResponse, PoolFeeResponse, GovernanceFeeShareResponse}};
 
     use crate::{msg::{VolatileExecuteMsg, QueryMsg}, tests::helpers::{FACTORY_OWNER, mock_factory_deploy_vault, WAD, deploy_test_tokens}};
 

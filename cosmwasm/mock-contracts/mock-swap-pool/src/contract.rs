@@ -3,9 +3,9 @@ use cosmwasm_std::entry_point;
 use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, to_binary};
 use cw2::set_contract_version;
 use cw20_base::contract::query_token_info;
-use swap_pool_common::ContractError;
-use swap_pool_common::msg::ExecuteMsg;
-use swap_pool_common::state::{setup, query_assets, query_weights, query_pool_fee, query_governance_fee_share, query_fee_administrator};
+use catalyst_vault_common::ContractError;
+use catalyst_vault_common::msg::ExecuteMsg;
+use catalyst_vault_common::state::{setup, query_assets, query_weights, query_pool_fee, query_governance_fee_share, query_fee_administrator};
 
 use crate::msg::{InstantiateMsg, QueryMsg};
 use crate::state::{initialize_swap_curves, query_chain_interface, query_setup_master, query_factory, query_factory_owner};
