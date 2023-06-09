@@ -6,7 +6,7 @@
 // Common Payload (beginning)
 //    CONTEXT                   0   (1 byte)
 //    + FROM_VAULT              1   (65 bytes)
-//    + TO_POOL                 66  (65 bytes)
+//    + TO_VAULT                66  (65 bytes)
 //    + TO_ACCOUNT              131 (65 bytes)
 //    + UNITS                   196 (32 bytes)
 // 
@@ -42,8 +42,8 @@ pub const CONTEXT_POS                : usize = 0;
 pub const FROM_VAULT_START           : usize = 1;
 pub const FROM_VAULT_END             : usize = 66;
 
-pub const TO_POOL_START              : usize = 66;
-pub const TO_POOL_END                : usize = 131;
+pub const TO_VAULT_START             : usize = 66;
+pub const TO_VAULT_END               : usize = 131;
 
 pub const TO_ACCOUNT_START           : usize = 131;
 pub const TO_ACCOUNT_END             : usize = 196;
@@ -171,7 +171,7 @@ impl CatalystV1Packet {
 
 pub struct CatalystV1Payload<T: CatalystV1VariablePayload> {
     pub from_vault: CatalystEncodedAddress,
-    pub to_pool: CatalystEncodedAddress,
+    pub to_vault: CatalystEncodedAddress,
     pub to_account: CatalystEncodedAddress,
     pub u: U256,
     pub variable_payload: T
@@ -183,7 +183,7 @@ impl<T: CatalystV1VariablePayload> CatalystV1Payload<T> {
         // Addition is way below the overflow threshold
         1                                   // Context
         + 65                                // From vault
-        + 65                                // To pool
+        + 65                                // To vault
         + 65                                // To account
         + 32                                // Units
         + self.variable_payload.size()
@@ -202,8 +202,8 @@ impl<T: CatalystV1VariablePayload> CatalystV1Payload<T> {
         // From vault
         data.extend_from_slice(self.from_vault.as_ref());
     
-        // To pool
-        data.extend_from_slice(self.to_pool.as_ref());
+        // To vault
+        data.extend_from_slice(self.to_vault.as_ref());
     
         // To account
         data.extend_from_slice(self.to_account.as_ref());
@@ -234,9 +234,9 @@ impl<T: CatalystV1VariablePayload> CatalystV1Payload<T> {
                 .ok_or(ContractError::PayloadDecodingError {})?
         );
     
-        // To pool
-        let to_pool = CatalystEncodedAddress::from_slice_unchecked(
-            data.get(TO_POOL_START .. TO_POOL_END)
+        // To vault
+        let to_vault = CatalystEncodedAddress::from_slice_unchecked(
+            data.get(TO_VAULT_START .. TO_VAULT_END)
                 .ok_or(ContractError::PayloadDecodingError {})?
         );
 
@@ -258,7 +258,7 @@ impl<T: CatalystV1VariablePayload> CatalystV1Payload<T> {
         return Ok(
             Self {
                 from_vault,
-                to_pool,
+                to_vault,
                 to_account,
                 u,
                 variable_payload
@@ -289,23 +289,23 @@ impl<T: CatalystV1VariablePayload> CatalystV1Payload<T> {
 
     }
 
-    pub fn to_pool_as_string(
+    pub fn to_vault_as_string(
         &self
     ) -> Result<String, ContractError> {
 
         String::from_utf8(
-            self.to_pool.try_decode()?
+            self.to_vault.try_decode()?
         ).map_err(|_| ContractError::PayloadDecodingError {})
 
     }
 
-    pub fn to_pool_validated(
+    pub fn to_vault_validated(
         &self,
         deps: Deps
     ) -> Result<Addr, ContractError> {
 
         deps.api.addr_validate(
-            &self.to_pool_as_string()?
+            &self.to_vault_as_string()?
         ).map_err(|err| err.into())
 
     }

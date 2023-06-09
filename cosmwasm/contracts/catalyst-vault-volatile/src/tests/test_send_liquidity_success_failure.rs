@@ -65,7 +65,7 @@ mod test_volatile_send_liquidity_success_failure {
                 vault.clone(),
                 &VolatileExecuteMsg::SendLiquidity {
                     channel_id: CHANNEL_ID.to_string(),
-                    to_pool: target_pool,
+                    to_vault: target_pool,
                     to_account: to_account.clone(),
                     amount: swap_amount,
                     min_pool_tokens: U256::zero(),

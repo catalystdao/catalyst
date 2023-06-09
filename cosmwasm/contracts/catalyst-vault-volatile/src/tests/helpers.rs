@@ -480,7 +480,7 @@ pub fn mock_set_pool_connection(
     app: &mut App,
     vault_contract: Addr,
     channel_id: String,
-    to_pool: Binary,
+    to_vault: Binary,
     state: bool
 ) -> AppResponse {
     app.execute_contract::<VolatileExecuteMsg>(
@@ -488,7 +488,7 @@ pub fn mock_set_pool_connection(
         vault_contract,
         &VolatileExecuteMsg::SetConnection {
             channel_id,
-            to_pool,
+            to_vault,
             state
         },
         &[]

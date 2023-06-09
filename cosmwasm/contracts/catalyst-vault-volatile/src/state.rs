@@ -549,7 +549,7 @@ pub fn send_asset(
     env: Env,
     info: MessageInfo,
     channel_id: String,
-    to_pool: Binary,
+    to_vault: Binary,
     to_account: Binary,
     from_asset: String,
     to_asset_index: u8,
@@ -560,12 +560,12 @@ pub fn send_asset(
 ) -> Result<Response, ContractError> {
 
     // Only allow connected pools
-    if !is_connected(&deps.as_ref(), &channel_id, to_pool.clone()) {
-        return Err(ContractError::PoolNotConnected { channel_id, pool: to_pool })
+    if !is_connected(&deps.as_ref(), &channel_id, to_vault.clone()) {
+        return Err(ContractError::PoolNotConnected { channel_id, pool: to_vault })
     }
 
-    // Make sure 'to_pool' and 'to_account have the correct length
-    if to_pool.len() != 65 {                            //TODO use global const variable for address length
+    // Make sure 'to_vault' and 'to_account have the correct length
+    if to_vault.len() != 65 {                            //TODO use global const variable for address length
         return Err(ContractError::GenericError {});     //TODO error
     }
 
@@ -629,7 +629,7 @@ pub fn send_asset(
     // Build message to 'send' the asset via the IBC interface
     let send_cross_chain_asset_msg = InterfaceExecuteMsg::SendCrossChainAsset {
         channel_id: channel_id.clone(),
-        to_pool: to_pool.clone(),
+        to_vault: to_vault.clone(),
         to_account: to_account.clone(),
         to_asset_index,
         u,
@@ -662,7 +662,7 @@ pub fn send_asset(
         .add_event(
             send_asset_event(
                 channel_id,
-                to_pool,
+                to_vault,
                 to_account,
                 from_asset,
                 to_asset_index,
@@ -772,7 +772,7 @@ pub fn send_liquidity(
     env: Env,
     info: MessageInfo,
     channel_id: String,
-    to_pool: Binary,
+    to_vault: Binary,
     to_account: Binary,
     amount: Uint128,            //TODO EVM mismatch
     min_pool_tokens: U256,
@@ -782,12 +782,12 @@ pub fn send_liquidity(
 ) -> Result<Response, ContractError> {
 
     // Only allow connected pools
-    if !is_connected(&deps.as_ref(), &channel_id, to_pool.clone()) {
-        return Err(ContractError::PoolNotConnected { channel_id, pool: to_pool })
+    if !is_connected(&deps.as_ref(), &channel_id, to_vault.clone()) {
+        return Err(ContractError::PoolNotConnected { channel_id, pool: to_vault })
     }
 
-    // Make sure 'to_pool' and 'to_account have the correct length
-    if to_pool.len() != 65 {                            //TODO use global const variable for address length
+    // Make sure 'to_vault' and 'to_account have the correct length
+    if to_vault.len() != 65 {                            //TODO use global const variable for address length
         return Err(ContractError::GenericError {});     //TODO error
     }
 
@@ -840,7 +840,7 @@ pub fn send_liquidity(
     // Build message to 'send' the liquidity via the IBC interface
     let send_cross_chain_asset_msg = InterfaceExecuteMsg::SendCrossChainLiquidity {
         channel_id: channel_id.clone(),
-        to_pool: to_pool.clone(),
+        to_vault: to_vault.clone(),
         to_account: to_account.clone(),
         u,
         min_pool_tokens,
@@ -864,7 +864,7 @@ pub fn send_liquidity(
         .add_event(
             send_liquidity_event(
                 channel_id,
-                to_pool,
+                to_vault,
                 to_account,
                 amount,
                 min_pool_tokens,

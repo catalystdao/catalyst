@@ -60,7 +60,7 @@ mod test_volatile_send_liquidity {
             vault.clone(),
             &VolatileExecuteMsg::SendLiquidity {
                 channel_id: CHANNEL_ID.to_string(),
-                to_pool: target_pool,
+                to_vault: target_pool,
                 to_account: to_account.clone(),
                 amount: swap_amount,
                 min_pool_tokens: U256::zero(),
@@ -191,7 +191,7 @@ mod test_volatile_send_liquidity {
             vault.clone(),
             &VolatileExecuteMsg::SendLiquidity {
                 channel_id: CHANNEL_ID.to_string(),
-                to_pool: target_pool,
+                to_vault: target_pool,
                 to_account: encode_payload_address(SWAPPER_B.as_bytes()),
                 amount: swap_amount,
                 min_pool_tokens: U256::zero(),
@@ -250,7 +250,7 @@ mod test_volatile_send_liquidity {
             vault.clone(),
             &VolatileExecuteMsg::SendLiquidity {
                 channel_id: CHANNEL_ID.to_string(),
-                to_pool: target_pool.clone(),
+                to_vault: target_pool.clone(),
                 to_account: encode_payload_address(SWAPPER_B.as_bytes()),
                 amount: swap_amount,
                 min_pool_tokens: U256::zero(),

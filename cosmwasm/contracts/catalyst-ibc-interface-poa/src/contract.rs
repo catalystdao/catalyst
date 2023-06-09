@@ -49,7 +49,7 @@ pub fn execute(
 
         ExecuteMsg::SendCrossChainAsset {
             channel_id,
-            to_pool,
+            to_vault,
             to_account,
             to_asset_index,
             u,
@@ -62,7 +62,7 @@ pub fn execute(
             env,
             info,
             channel_id,
-            to_pool,
+            to_vault,
             to_account,
             to_asset_index,
             u,
@@ -75,7 +75,7 @@ pub fn execute(
 
         ExecuteMsg::SendCrossChainLiquidity {
             channel_id,
-            to_pool,
+            to_vault,
             to_account,
             u,
             min_pool_tokens,
@@ -87,7 +87,7 @@ pub fn execute(
             env,
             info,
             channel_id,
-            to_pool,
+            to_vault,
             to_account,
             u,
             min_pool_tokens,
@@ -145,7 +145,7 @@ fn execute_send_cross_chain_asset(
     env: Env,
     info: MessageInfo,
     channel_id: String,
-    to_pool: Binary,
+    to_vault: Binary,
     to_account: Binary,
     to_asset_index: u8,
     u: U256,
@@ -159,7 +159,7 @@ fn execute_send_cross_chain_asset(
     // Build payload
     let payload = CatalystV1SendAssetPayload {
         from_vault: CatalystEncodedAddress::try_encode(info.sender.as_bytes())?,
-        to_pool: CatalystEncodedAddress::try_from(to_pool)?,                        // to_pool should already be encoded
+        to_vault: CatalystEncodedAddress::try_from(to_vault)?,                        // to_vault should already be encoded
         to_account: CatalystEncodedAddress::try_from(to_account)?,                  // to_account should already be encoded
         u,
         variable_payload: SendAssetVariablePayload {
@@ -184,7 +184,7 @@ fn execute_send_cross_chain_liquidity(
     env: Env,
     info: MessageInfo,
     channel_id: String,
-    to_pool: Binary,
+    to_vault: Binary,
     to_account: Binary,
     u: U256,
     min_pool_tokens: U256,
@@ -197,7 +197,7 @@ fn execute_send_cross_chain_liquidity(
     // Build payload
     let payload = CatalystV1SendLiquidityPayload {
         from_vault: CatalystEncodedAddress::try_encode(info.sender.as_bytes())?,
-        to_pool: CatalystEncodedAddress::try_from(to_pool)?,                        // to_pool should already be encoded
+        to_vault: CatalystEncodedAddress::try_from(to_vault)?,                        // to_vault should already be encoded
         to_account: CatalystEncodedAddress::try_from(to_account)?,                  // to_account should already be encoded
         u,
         variable_payload: SendLiquidityVariablePayload {

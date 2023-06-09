@@ -14,7 +14,7 @@ pub enum ExecuteMsg {
 
     SendCrossChainAsset {
         channel_id: String,
-        to_pool: Binary,
+        to_vault: Binary,
         to_account: Binary,
         to_asset_index: u8,
         u: U256,
@@ -27,7 +27,7 @@ pub enum ExecuteMsg {
 
     SendCrossChainLiquidity {
         channel_id: String,
-        to_pool: Binary,
+        to_vault: Binary,
         to_account: Binary,
         u: U256,
         min_pool_tokens: U256,      //TODO EVM mismatch

@@ -188,7 +188,7 @@ pub fn set_connection(
     deps: &mut DepsMut,
     info: MessageInfo,
     channel_id: String,
-    to_pool: Binary,
+    to_vault: Binary,
     state: bool
 ) -> Result<Response, ContractError> {
 
@@ -202,18 +202,18 @@ pub fn set_connection(
         return Err(ContractError::Unauthorized {});
     }
 
-    if to_pool.len() != 65 {                            //TODO use global const variable for address length
+    if to_vault.len() != 65 {                            //TODO use global const variable for address length
         return Err(ContractError::GenericError {});     //TODO error
     }
 
-    POOL_CONNECTIONS.save(deps.storage, (channel_id.as_str(), to_pool.0.clone()), &state)?;
+    POOL_CONNECTIONS.save(deps.storage, (channel_id.as_str(), to_vault.0.clone()), &state)?;
 
     Ok(
         Response::new()
             .add_event(
                 set_connection_event(
                     channel_id,
-                    to_pool,
+                    to_vault,
                     state
                 )
             )
@@ -224,11 +224,11 @@ pub fn set_connection(
 pub fn is_connected(
     deps: &Deps,
     channel_id: &str,
-    to_pool: Binary
+    to_vault: Binary
 ) -> bool {
 
     POOL_CONNECTIONS
-        .load(deps.storage, (channel_id, to_pool.0))
+        .load(deps.storage, (channel_id, to_vault.0))
         .unwrap_or(false)
 
 }

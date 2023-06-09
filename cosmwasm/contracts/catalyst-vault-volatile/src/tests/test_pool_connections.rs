@@ -38,7 +38,7 @@ mod test_volatile_pool_connections {
             vault.clone(),
             &VolatileExecuteMsg::SetConnection {
                 channel_id: channel_id.to_string(),
-                to_pool: target_pool.clone(),
+                to_vault: target_pool.clone(),
                 state: true
             },
             &[]
@@ -81,7 +81,7 @@ mod test_volatile_pool_connections {
             vault.clone(),
             &VolatileExecuteMsg::SetConnection {
                 channel_id: channel_id.to_string(),
-                to_pool: target_pool.clone(),
+                to_vault: target_pool.clone(),
                 state: true
             },
             &[]
@@ -95,7 +95,7 @@ mod test_volatile_pool_connections {
             vault.clone(),
             &VolatileExecuteMsg::SetConnection {
                 channel_id: channel_id.to_string(),
-                to_pool: target_pool.clone(),
+                to_vault: target_pool.clone(),
                 state: false
             },
             &[]
@@ -140,7 +140,7 @@ mod test_volatile_pool_connections {
             vault.clone(),
             &VolatileExecuteMsg::SetConnection {
                 channel_id: channel_id.to_string(),
-                to_pool: target_pool.clone(),
+                to_vault: target_pool.clone(),
                 state: true
             },
             &[]
@@ -176,7 +176,7 @@ mod test_volatile_pool_connections {
             vault.clone(),
             &VolatileExecuteMsg::SetConnection {
                 channel_id: channel_id.to_string(),
-                to_pool: target_pool.clone(),
+                to_vault: target_pool.clone(),
                 state: true
             },
             &[]
@@ -217,7 +217,7 @@ mod test_volatile_pool_connections {
             vault.clone(),
             &VolatileExecuteMsg::SetConnection {
                 channel_id: channel_id.to_string(),
-                to_pool: target_pool.clone(),
+                to_vault: target_pool.clone(),
                 state: true
             },
             &[]

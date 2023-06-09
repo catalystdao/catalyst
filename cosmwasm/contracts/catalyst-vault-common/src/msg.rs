@@ -38,7 +38,7 @@ pub enum ExecuteMsg<T> {
 
     SetConnection {
         channel_id: String,
-        to_pool: Binary,
+        to_vault: Binary,
         state: bool
     },
 
@@ -101,7 +101,7 @@ pub enum ExecuteMsg<T> {
 
     SendAsset {
         channel_id: String,
-        to_pool: Binary,
+        to_vault: Binary,
         to_account: Binary,
         from_asset: String,
         to_asset_index: u8,
@@ -127,7 +127,7 @@ pub enum ExecuteMsg<T> {
 
     SendLiquidity {
         channel_id: String,
-        to_pool: Binary,
+        to_vault: Binary,
         to_account: Binary,
         amount: Uint128,            //TODO EVM mismatch
         min_pool_tokens: U256,      //TODO EVM mismatch

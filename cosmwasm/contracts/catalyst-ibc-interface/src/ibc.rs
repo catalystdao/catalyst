@@ -216,7 +216,7 @@ pub fn on_packet_receive(
             let to_account = payload.to_account_validated(deps.as_ref())?.into_string();     // Validate to_account  //TODO do we need to validate this?
             let parsed_calldata = payload.variable_payload.parse_calldata(deps.as_ref())?;
             Ok::<cosmwasm_std::WasmMsg, ContractError>(cosmwasm_std::WasmMsg::Execute {
-                contract_addr: payload.to_pool_validated(deps.as_ref())?.into_string(),         // Validate to_pool     //TODO do we need to validated this?
+                contract_addr: payload.to_vault_validated(deps.as_ref())?.into_string(),         // Validate to_vault     //TODO do we need to validated this?
                 msg: to_binary(&SwapPoolExecuteMsg::<()>::ReceiveAsset {
                     channel_id: packet.dest.channel_id,
                     from_vault: payload.from_vault.to_binary(),                                      // Do not validate from_vault as its format is unknown. It is only used for logging
@@ -240,7 +240,7 @@ pub fn on_packet_receive(
             let to_account = payload.to_account_validated(deps.as_ref())?.into_string();     // Validate to_account  //TODO do we need to validate this?
             let parsed_calldata = payload.variable_payload.parse_calldata(deps.as_ref())?;
             Ok::<cosmwasm_std::WasmMsg, ContractError>(cosmwasm_std::WasmMsg::Execute {
-                contract_addr: payload.to_pool_validated(deps.as_ref())?.into_string(),         // Validate to_pool     //TODO do we need to validate this?
+                contract_addr: payload.to_vault_validated(deps.as_ref())?.into_string(),         // Validate to_vault     //TODO do we need to validate this?
                 msg: to_binary(&SwapPoolExecuteMsg::<()>::ReceiveLiquidity {
                     channel_id: packet.dest.channel_id,
                     from_vault: payload.from_vault.to_binary(),                                      // Do not validate from_vault as its format is unknown. It is only used for logging

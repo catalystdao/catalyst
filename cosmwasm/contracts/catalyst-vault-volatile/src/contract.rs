@@ -104,13 +104,13 @@ pub fn execute(
 
         VolatileExecuteMsg::SetConnection {
             channel_id,
-            to_pool,
+            to_vault,
             state
         } => set_connection(
             &mut deps,
             info,
             channel_id,
-            to_pool,
+            to_vault,
             state
         ),
 
@@ -236,7 +236,7 @@ pub fn execute(
 
         VolatileExecuteMsg::SendAsset {
             channel_id,
-            to_pool,
+            to_vault,
             to_account,
             from_asset,
             to_asset_index,
@@ -249,7 +249,7 @@ pub fn execute(
             env,
             info,
             channel_id,
-            to_pool,
+            to_vault,
             to_account,
             from_asset,
             to_asset_index,
@@ -290,7 +290,7 @@ pub fn execute(
 
         VolatileExecuteMsg::SendLiquidity {
             channel_id,
-            to_pool,
+            to_vault,
             to_account,
             amount,
             min_pool_tokens,
@@ -302,7 +302,7 @@ pub fn execute(
             env,
             info,
             channel_id,
-            to_pool,
+            to_vault,
             to_account,
             amount,
             min_pool_tokens,

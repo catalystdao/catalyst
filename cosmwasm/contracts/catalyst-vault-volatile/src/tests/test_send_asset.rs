@@ -73,7 +73,7 @@ mod test_volatile_send_asset {
             vault.clone(),
             &VolatileExecuteMsg::SendAsset {
                 channel_id: CHANNEL_ID.to_string(),
-                to_pool: target_pool,
+                to_vault: target_pool,
                 to_account: encode_payload_address(SWAPPER_B.as_bytes()),
                 from_asset: from_asset.to_string(),
                 to_asset_index: to_asset_idx,
@@ -210,7 +210,7 @@ mod test_volatile_send_asset {
             vault.clone(),
             &VolatileExecuteMsg::SendAsset {
                 channel_id: CHANNEL_ID.to_string(),
-                to_pool: target_pool,
+                to_vault: target_pool,
                 to_account: encode_payload_address(SWAPPER_B.as_bytes()),
                 from_asset: from_asset.to_string(),
                 to_asset_index: to_asset_idx,
@@ -283,7 +283,7 @@ mod test_volatile_send_asset {
             vault.clone(),
             &VolatileExecuteMsg::SendAsset {
                 channel_id: CHANNEL_ID.to_string(),
-                to_pool: target_pool.clone(),
+                to_vault: target_pool.clone(),
                 to_account: encode_payload_address(SWAPPER_B.as_bytes()),
                 from_asset: from_asset.to_string(),
                 to_asset_index: to_asset_idx,
@@ -369,7 +369,7 @@ mod test_volatile_send_asset {
             vault.clone(),
             &VolatileExecuteMsg::SendAsset {
                 channel_id: CHANNEL_ID.to_string(),
-                to_pool: target_pool,
+                to_vault: target_pool,
                 to_account: encode_payload_address(SWAPPER_B.as_bytes()),
                 from_asset: from_asset.to_string(),
                 to_asset_index: to_asset_idx,
