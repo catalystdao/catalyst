@@ -34,10 +34,10 @@ pub fn vault_factory_contract_storage(
 
     // Create contract wrapper
     let contract = ContractWrapper::new(
-        swap_pool_factory::contract::execute,
-        swap_pool_factory::contract::instantiate,
-        swap_pool_factory::contract::query,
-    ).with_reply(swap_pool_factory::contract::reply);
+        catalyst_factory::contract::execute,
+        catalyst_factory::contract::instantiate,
+        catalyst_factory::contract::query,
+    ).with_reply(catalyst_factory::contract::reply);
     
     // 'Deploy' the contract
     app.store_code(Box::new(contract))
@@ -272,7 +272,7 @@ pub fn mock_instantiate_factory(
     app.instantiate_contract(
         factory_contract_code,
         Addr::unchecked(FACTORY_OWNER),
-        &swap_pool_factory::msg::InstantiateMsg {
+        &catalyst_factory::msg::InstantiateMsg {
             default_governance_fee_share: default_governance_fee_share.unwrap_or(DEFAULT_TEST_GOV_FEE)
         },
         &[],
@@ -323,7 +323,7 @@ pub fn mock_factory_deploy_vault(
     let response = app.execute_contract(
         Addr::unchecked(SETUP_MASTER),
         factory,
-        &swap_pool_factory::msg::ExecuteMsg::DeployVault {
+        &catalyst_factory::msg::ExecuteMsg::DeployVault {
             vault_code_id,
             assets,
             assets_balances,
