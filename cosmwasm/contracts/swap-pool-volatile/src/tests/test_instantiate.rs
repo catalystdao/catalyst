@@ -1,6 +1,6 @@
 
 mod test_volatile_instantiate {
-    use cosmwasm_std::{Uint128, Addr};
+    use cosmwasm_std::{Uint128, Addr, Uint64};
     use cw20_base::state::TokenInfo;
     use cw_multi_test::{App, Executor};
     use swap_pool_common::msg::{SetupMasterResponse, ChainInterfaceResponse, OnlyLocalResponse, PoolFeeResponse, GovernanceFeeShareResponse};
@@ -68,7 +68,7 @@ mod test_volatile_instantiate {
         );
 
         // Query and verify pool fee
-        let pool_fee: u64 = app
+        let pool_fee: Uint64 = app
             .wrap()
             .query_wasm_smart::<PoolFeeResponse>(vault_contract.clone(), &QueryMsg::PoolFee {})
             .unwrap()
@@ -80,7 +80,7 @@ mod test_volatile_instantiate {
         );
 
         // Query and verify governance fee
-        let gov_fee_share: u64 = app
+        let gov_fee_share: Uint64 = app
             .wrap()
             .query_wasm_smart::<GovernanceFeeShareResponse>(vault_contract.clone(), &QueryMsg::GovernanceFeeShare {})
             .unwrap()

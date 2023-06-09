@@ -7,11 +7,11 @@ use crate::{error::ContractError, event::{set_default_governance_fee_share_event
 
 
 // Factory Constants
-pub const MAX_GOVERNANCE_FEE_SHARE : u64 = 75u64 * 10000000000000000u64;        // 75% 
+pub const MAX_GOVERNANCE_FEE_SHARE : Uint64 = Uint64::new(75u64 * 10000000000000000u64);        // 75% 
 
 // Factory storage
 pub const OWNER: Item<Addr> = Item::new("catalyst-factory-owner");
-pub const DEFAULT_GOVERNANCE_FEE_SHARE: Item<u64> = Item::new("catalyst-factory-default-governance-fee");
+pub const DEFAULT_GOVERNANCE_FEE_SHARE: Item<Uint64> = Item::new("catalyst-factory-default-governance-fee");
 pub const DEPLOY_VAULT_REPLY_ARGS: Item<DeployVaultReplyArgs> = Item::new("catalyst-vault-factory-deploy-reply-args");
 
 
@@ -77,7 +77,7 @@ pub fn set_owner(
 // Default governance fee share helpers
 pub fn default_governance_fee_share(
     deps: Deps
-) -> Result<u64, ContractError> {
+) -> Result<Uint64, ContractError> {
 
     DEFAULT_GOVERNANCE_FEE_SHARE.load(deps.storage).map_err(|err| err.into())
 
@@ -86,7 +86,7 @@ pub fn default_governance_fee_share(
 
 pub fn set_default_governance_fee_share_unchecked(
     deps: &mut DepsMut,
-    fee: u64
+    fee: Uint64
 ) -> Result<Event, ContractError> {
 
     if fee > MAX_GOVERNANCE_FEE_SHARE {
@@ -98,7 +98,7 @@ pub fn set_default_governance_fee_share_unchecked(
     DEFAULT_GOVERNANCE_FEE_SHARE.save(deps.storage, &fee)?;
 
     return Ok(
-        set_default_governance_fee_share_event(Uint64::new(fee))
+        set_default_governance_fee_share_event(fee)
     )
 }
 
@@ -106,7 +106,7 @@ pub fn set_default_governance_fee_share_unchecked(
 pub fn set_default_governance_fee_share(
     deps: &mut DepsMut,
     info: MessageInfo,
-    fee: u64
+    fee: Uint64
 ) -> Result<Response, ContractError> {
 
     // Verify the caller of the transaction is the factory owner
@@ -130,8 +130,8 @@ pub struct DeployVaultReplyArgs {
     pub vault_code_id: u64,
     pub assets: Vec<String>,
     pub assets_balances: Vec<Uint128>,
-    pub weights: Vec<u64>,
-    pub amplification: u64,
+    pub weights: Vec<Uint64>,
+    pub amplification: Uint64,
     pub chain_interface: Option<String>,
     pub depositor: Addr
 }

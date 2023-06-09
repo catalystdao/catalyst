@@ -1,4 +1,4 @@
-use cosmwasm_std::StdError;
+use cosmwasm_std::{StdError, Uint64};
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -10,7 +10,7 @@ pub enum ContractError {
     Unauthorized {},
 
     #[error("Invalid default governance fee")]
-    InvalidDefaultGovernanceFeeShare { requested_fee: u64, max_fee: u64 },
+    InvalidDefaultGovernanceFeeShare { requested_fee: Uint64, max_fee: Uint64 },
 
     #[error("Submessage reply id unknown: {id}")]
     UnknownReplyId { id: u64 }

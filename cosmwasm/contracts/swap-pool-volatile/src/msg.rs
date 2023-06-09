@@ -1,7 +1,6 @@
 use cosmwasm_schema::QueryResponses;
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::Binary;
-use cosmwasm_std::Uint128;
+use cosmwasm_std::{Uint64, Uint128, Binary};
 use catalyst_types::U256;
 pub use swap_pool_common::msg::{InstantiateMsg, ExecuteMsg};
 use swap_pool_common::msg::{
@@ -17,8 +16,8 @@ use cw20::{AllowanceResponse, BalanceResponse, TokenInfoResponse};
 pub enum VolatileExecuteExtension {
 
     SetWeights {
-        weights: Vec<u64>,      //TODO EVM mismatch (name newWeights)
-        target_timestamp: u64   //TODO EVM mismatch (targetTime)
+        weights: Vec<Uint64>,      //TODO EVM mismatch (name newWeights)
+        target_timestamp: Uint64   //TODO EVM mismatch (targetTime)
     },
 
 }
@@ -120,10 +119,10 @@ pub enum QueryMsg {
 
 #[cw_serde]
 pub struct TargetWeightsResponse {
-    pub target_weights: Vec<u64>
+    pub target_weights: Vec<Uint64>
 }
 
 #[cw_serde]
 pub struct WeightsUpdateFinishTimestampResponse {
-    pub timestamp: u64
+    pub timestamp: Uint64
 }

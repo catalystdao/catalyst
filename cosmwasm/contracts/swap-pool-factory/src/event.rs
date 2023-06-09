@@ -8,7 +8,7 @@ pub fn deploy_vault_event(
     deployer: String,
     vault_address: String,
     assets: Vec<String>,
-    k: u64
+    k: Uint64
 ) -> Event {
     Event::new("deploy-vault")
         .add_attribute("vault_code_id", Uint64::new(vault_code_id))
@@ -16,7 +16,7 @@ pub fn deploy_vault_event(
         .add_attribute("deployer", deployer)
         .add_attribute("vault_address", vault_address)
         .add_attribute("assets", format_vec_for_event(assets))
-        .add_attribute("k", Uint64::new(k))
+        .add_attribute("k", k)
 }
 
 pub fn set_default_governance_fee_share_event(

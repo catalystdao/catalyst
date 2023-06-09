@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use cosmwasm_std::{Uint128, Addr, Event, Binary};
+use cosmwasm_std::{Uint128, Addr, Event, Binary, Uint64};
 use cw20::{Cw20Coin, MinterResponse, Cw20ExecuteMsg, BalanceResponse, Cw20QueryMsg, TokenInfoResponse};
 use cw_multi_test::{ContractWrapper, App, Executor, AppResponse};
 use catalyst_types::U256;
@@ -22,8 +22,8 @@ pub const CHANNEL_ID            : &str = "channel_id";
 
 pub const WAD: Uint128 = Uint128::new(1000000000000000000u128);
 
-pub const DEFAULT_TEST_POOL_FEE : u64 = 70000000000000000u64;   // 7%
-pub const DEFAULT_TEST_GOV_FEE  : u64 = 50000000000000000u64;   // 5%
+pub const DEFAULT_TEST_POOL_FEE : Uint64 = Uint64::new(70000000000000000u64);   // 7%
+pub const DEFAULT_TEST_GOV_FEE  : Uint64 = Uint64::new(50000000000000000u64);   // 5%
 
 //TODO move common helpers somewhere else
 
@@ -264,7 +264,7 @@ pub fn mock_instantiate_interface(
 // Factory management helpers
 pub fn mock_instantiate_factory(
     app: &mut App,
-    default_governance_fee_share: Option<u64>
+    default_governance_fee_share: Option<Uint64>
 ) -> Addr {
 
     let factory_contract_code = vault_factory_contract_storage(app);
@@ -285,7 +285,7 @@ pub fn mock_factory_deploy_vault(
     app: &mut App,
     assets: Vec<String>,
     assets_balances: Vec<Uint128>,
-    weights: Vec<u64>,
+    weights: Vec<Uint64>,
     vault_code_id: Option<u64>,
     chain_interface: Option<Addr>,
     factory: Option<Addr>
@@ -328,7 +328,7 @@ pub fn mock_factory_deploy_vault(
             assets,
             assets_balances,
             weights,
-            amplification: 1000000000000000000u64,
+            amplification: Uint64::new(1000000000000000000u64),
             pool_fee: DEFAULT_TEST_POOL_FEE,
             name: "TestPool".to_string(),
             symbol: "TP".to_string(),
@@ -384,8 +384,8 @@ pub fn mock_instantiate_vault(
 pub struct InitializeSwapCurvesMockConfig {
     pub assets: Vec<String>,
     pub assets_balances: Vec<Uint128>,
-    pub weights: Vec<u64>,
-    pub amp: u64,
+    pub weights: Vec<Uint64>,
+    pub amp: Uint64,
     pub depositor: String
 }
 
@@ -431,7 +431,7 @@ pub fn mock_initialize_pool(
     vault: Addr,
     assets: Vec<String>,
     assets_balances: Vec<Uint128>,
-    weights: Vec<u64>
+    weights: Vec<Uint64>
 ) -> InitializeSwapCurvesMockConfig {
 
     // Define InitializeSwapCurves parameters
@@ -439,7 +439,7 @@ pub fn mock_initialize_pool(
         assets,
         assets_balances,
         weights,
-        amp: 1000000000000000000u64,
+        amp: Uint64::new(1000000000000000000u64),
         depositor: SETUP_MASTER.to_string()
     };
 
@@ -499,7 +499,7 @@ pub fn mock_set_pool_connection(
 pub fn mock_set_pool_fee(
     app: &mut App,
     vault_contract: Addr,
-    fee: u64
+    fee: Uint64
 ) -> AppResponse {
     app.execute_contract(
         Addr::unchecked(FACTORY_OWNER),
@@ -513,7 +513,7 @@ pub fn mock_set_pool_fee(
 pub fn mock_set_governance_fee_share(
     app: &mut App,
     vault_contract: Addr,
-    fee: u64
+    fee: Uint64
 ) -> AppResponse {
     app.execute_contract(
         Addr::unchecked(FACTORY_OWNER),
@@ -546,24 +546,24 @@ pub struct ExpectedReceiveAssetResult {
 
 pub fn compute_expected_local_swap(
     swap_amount: Uint128,
-    from_weight: u64,
+    from_weight: Uint64,
     from_balance: Uint128,
-    to_weight: u64,
+    to_weight: Uint64,
     to_balance: Uint128,
-    pool_fee: Option<u64>,
-    governance_fee_share: Option<u64>
+    pool_fee: Option<Uint64>,
+    governance_fee_share: Option<Uint64>
 ) -> ExpectedLocalSwapResult {
 
     // Convert arguments to float
     let swap_amount = swap_amount.u128() as f64;
-    let from_weight = from_weight as f64;
+    let from_weight = from_weight.u64() as f64;
     let from_balance = from_balance.u128() as f64;
-    let to_weight = to_weight as f64;
+    let to_weight = to_weight.u64() as f64;
     let to_balance = to_balance.u128() as f64;
 
     // Compute fees
-    let pool_fee = (pool_fee.unwrap_or(0u64) as f64) / 1e18;
-    let governance_fee_share = (governance_fee_share.unwrap_or(0u64) as f64) / 1e18;
+    let pool_fee = (pool_fee.unwrap_or(Uint64::zero()).u64() as f64) / 1e18;
+    let governance_fee_share = (governance_fee_share.unwrap_or(Uint64::zero()).u64() as f64) / 1e18;
 
     let net_fee = pool_fee * swap_amount;
     let net_pool_fee = pool_fee * (1. - governance_fee_share) * swap_amount;
@@ -584,20 +584,20 @@ pub fn compute_expected_local_swap(
 
 pub fn compute_expected_send_asset(
     swap_amount: Uint128,
-    from_weight: u64,
+    from_weight: Uint64,
     from_balance: Uint128,
-    pool_fee: Option<u64>,
-    governance_fee_share: Option<u64>
+    pool_fee: Option<Uint64>,
+    governance_fee_share: Option<Uint64>
 ) -> ExpectedSendAssetResult {
 
     // Convert arguments to float
     let swap_amount = swap_amount.u128() as f64;
-    let from_weight = from_weight as f64;
+    let from_weight = from_weight.u64() as f64;
     let from_balance = from_balance.u128() as f64;
 
     // Compute fees
-    let pool_fee = (pool_fee.unwrap_or(0u64) as f64) / 1e18;
-    let governance_fee_share = (governance_fee_share.unwrap_or(0u64) as f64) / 1e18;
+    let pool_fee = (pool_fee.unwrap_or(Uint64::zero()).u64() as f64) / 1e18;
+    let governance_fee_share = (governance_fee_share.unwrap_or(Uint64::zero()).u64() as f64) / 1e18;
 
     let net_fee = pool_fee * swap_amount;
     let net_pool_fee = pool_fee * (1. - governance_fee_share) * swap_amount;
@@ -616,13 +616,13 @@ pub fn compute_expected_send_asset(
 
 pub fn compute_expected_receive_asset(
     u: U256,
-    to_weight: u64,
+    to_weight: Uint64,
     to_balance: Uint128
 ) -> ExpectedReceiveAssetResult {
 
     // Convert arguments into float
     let u = u256_to_f64(u) / 1e18;
-    let to_weight = to_weight as f64;
+    let to_weight = to_weight.u64() as f64;
     let to_balance = to_balance.u128() as f64;
 
     // Compute swap
@@ -646,7 +646,7 @@ pub struct ExpectedReferenceAsset {
 
 pub fn compute_expected_send_liquidity(
     swap_amount: Uint128,
-    from_weights: Vec<u64>,
+    from_weights: Vec<Uint64>,
     from_total_supply: Uint128
 ) -> ExpectedSendLiquidityResult {
 
@@ -655,7 +655,7 @@ pub fn compute_expected_send_liquidity(
     let from_total_supply = from_total_supply.u128() as f64;
 
     // Compute swap
-    let from_weights_sum: f64 = from_weights.iter().sum::<u64>() as f64;
+    let from_weights_sum: f64 = from_weights.iter().sum::<Uint64>().u64() as f64;
     let u = (from_total_supply/(from_total_supply - swap_amount)).ln() * from_weights_sum;
 
     ExpectedSendLiquidityResult {
@@ -666,7 +666,7 @@ pub fn compute_expected_send_liquidity(
 
 pub fn compute_expected_receive_liquidity(
     u: U256,
-    to_weights: Vec<u64>,
+    to_weights: Vec<Uint64>,
     to_total_supply: Uint128
 ) -> ExpectedReceiveLiquidityResult {
 
@@ -675,7 +675,7 @@ pub fn compute_expected_receive_liquidity(
     let to_total_supply = to_total_supply.u128() as f64;
 
     // Compute swap
-    let to_weights_sum: f64 = to_weights.iter().sum::<u64>() as f64;
+    let to_weights_sum: f64 = to_weights.iter().sum::<Uint64>().u64() as f64;
     let share = 1. - (-u/to_weights_sum).exp();
     let to_amount = to_total_supply * (share/(1.-share));
 
@@ -688,19 +688,19 @@ pub fn compute_expected_receive_liquidity(
 pub fn compute_expected_reference_asset(
     pool_tokens: Uint128,
     vault_balances: Vec<Uint128>,
-    vault_weights: Vec<u64>,
+    vault_weights: Vec<Uint64>,
     vault_total_supply: Uint128,
     vault_escrowed_pool_tokens: Uint128
 ) -> ExpectedReferenceAsset {
 
-    let weights_sum = vault_weights.iter().sum::<u64>() as f64;
+    let weights_sum = vault_weights.iter().sum::<Uint64>().u64() as f64;
 
     let vault_reference_amount: f64 = vault_balances.iter()
         .zip(vault_weights)
         .map(|(balance, weight)| {
 
             let balance = uint128_to_f64(*balance);
-            let weight = weight as f64;
+            let weight = weight.u64() as f64;
 
             balance.powf(weight/weights_sum)
         })
@@ -720,10 +720,10 @@ pub fn compute_expected_reference_asset(
 
 pub fn compute_expected_deposit_mixed(
     deposit_amounts: Vec<Uint128>,
-    from_weights: Vec<u64>,
+    from_weights: Vec<Uint64>,
     from_balances: Vec<Uint128>,
     from_total_supply: Uint128,
-    pool_fee: Option<u64>,
+    pool_fee: Option<Uint64>,
 ) -> f64 {
     
     // Compute units
@@ -732,7 +732,7 @@ pub fn compute_expected_deposit_mixed(
         .zip(&from_balances)
         .map(|((deposit_amount, from_weight), from_balance)| {
             let deposit_amount = uint128_to_f64(*deposit_amount);
-            let from_weight = *from_weight as f64;
+            let from_weight = from_weight.u64() as f64;
             let from_balance = uint128_to_f64(*from_balance);
 
             from_weight * (1. + deposit_amount/from_balance).ln()
@@ -740,10 +740,10 @@ pub fn compute_expected_deposit_mixed(
         .sum();
 
     // Take pool fee
-    let units = units * (1. - (pool_fee.unwrap_or(0u64) as f64)/1e18);
+    let units = units * (1. - (pool_fee.unwrap_or(Uint64::zero()).u64() as f64)/1e18);
 
     // Compute the deposit share
-    let weights_sum = from_weights.iter().sum::<u64>() as f64;
+    let weights_sum = from_weights.iter().sum::<Uint64>().u64() as f64;
     let from_total_supply = uint128_to_f64(from_total_supply);
 
     let deposit_share = (units / weights_sum).exp() - 1.;
@@ -755,8 +755,8 @@ pub fn compute_expected_deposit_mixed(
 
 pub fn compute_expected_withdraw_mixed(
     withdraw_amount: Uint128,
-    withdraw_ratio: Vec<u64>,
-    vault_weights: Vec<u64>,
+    withdraw_ratio: Vec<Uint64>,
+    vault_weights: Vec<Uint64>,
     vault_balances: Vec<Uint128>,
     vault_supply: Uint128
 ) -> Vec<f64> {
@@ -765,7 +765,7 @@ pub fn compute_expected_withdraw_mixed(
     let withdraw_amount = uint128_to_f64(withdraw_amount);
     let vault_supply = uint128_to_f64(vault_supply);
 
-    let vault_weights_sum = vault_weights.iter().sum::<u64>() as f64;
+    let vault_weights_sum = vault_weights.iter().sum::<Uint64>().u64() as f64;
 
     let mut units: f64 = (
         vault_supply/(vault_supply - withdraw_amount)
@@ -777,8 +777,8 @@ pub fn compute_expected_withdraw_mixed(
         .map(|((balance, weight), ratio)| {
 
             let balance = uint128_to_f64(*balance);
-            let weight = weight as f64;
-            let ratio = (ratio as f64) / 1e18;
+            let weight = weight.u64() as f64;
+            let ratio = (ratio.u64() as f64) / 1e18;
 
             let units_for_asset = units * ratio;
             if units_for_asset > units {

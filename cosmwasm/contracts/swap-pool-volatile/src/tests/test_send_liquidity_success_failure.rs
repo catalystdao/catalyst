@@ -1,5 +1,5 @@
 mod test_volatile_send_liquidity_success_failure {
-    use cosmwasm_std::{Uint128, Addr, Binary};
+    use cosmwasm_std::{Uint128, Addr, Binary, Uint64};
     use cw_multi_test::{App, Executor};
     use catalyst_types::{U256, u256};
     use swap_pool_common::{ContractError, msg::{TotalEscrowedLiquidityResponse, LiquidityEscrowResponse}, state::{compute_send_liquidity_hash, INITIAL_MINT_AMOUNT}};
@@ -24,7 +24,7 @@ mod test_volatile_send_liquidity_success_failure {
             let interface = mock_instantiate_interface(app);
             let vault_assets = deploy_test_tokens(app, None, None);
             let vault_initial_balances = vec![Uint128::from(1u64) * WAD, Uint128::from(2u64) * WAD, Uint128::from(3u64) * WAD];
-            let vault_weights = vec![1u64, 1u64, 1u64];
+            let vault_weights = vec![Uint64::one(), Uint64::one(), Uint64::one()];
             let vault = mock_factory_deploy_vault(
                 app,
                 vault_assets.iter().map(|token_addr| token_addr.to_string()).collect(),

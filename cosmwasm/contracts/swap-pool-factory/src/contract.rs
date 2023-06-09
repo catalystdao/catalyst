@@ -97,9 +97,9 @@ fn execute_deploy_vault(
     vault_code_id: u64,
     assets: Vec<String>,
     assets_balances: Vec<Uint128>,
-    weights: Vec<u64>,
-    amplification: u64,
-    pool_fee: u64,
+    weights: Vec<Uint64>,
+    amplification: Uint64,
+    pool_fee: Uint64,
     name: String,
     symbol: String,
     chain_interface: Option<String>
@@ -160,7 +160,7 @@ fn execute_deploy_vault(
 fn execute_set_default_governance_fee_share(
     mut deps: DepsMut,
     info: MessageInfo,
-    fee: u64
+    fee: Uint64
 ) -> Result<Response, ContractError> {
     set_default_governance_fee_share(&mut deps, info, fee)
 }
@@ -283,7 +283,7 @@ fn query_default_governance_fee_share(deps: Deps) -> StdResult<DefaultGovernance
 mod catalyst_swap_pool_factory_tests {
     use std::str::FromStr;
 
-    use cosmwasm_std::{Addr, Uint128, Event, StdError};
+    use cosmwasm_std::{Addr, Uint64, Uint128, Event, StdError};
     use cw20::{TokenInfoResponse, BalanceResponse, Cw20QueryMsg};
     use cw_multi_test::{App, Executor, ContractWrapper};
     use token_helpers::helpers::{deploy_test_tokens, set_token_allowance};
@@ -296,8 +296,8 @@ mod catalyst_swap_pool_factory_tests {
     const GOVERNANCE: &str = "governance_addr";
     const SETUP_MASTER: &str = "setup_master_addr";
 
-    const TEST_POOL_FEE: u64 = 999999999u64;
-    const TEST_GOVERNANCE_FEE: u64 = 111111111u64;
+    const TEST_POOL_FEE: Uint64 = Uint64::new(999999999u64);
+    const TEST_GOVERNANCE_FEE: Uint64 = Uint64::new(111111111u64);
 
 
     fn mock_factory_contract(app: &mut App) -> u64 {
@@ -352,7 +352,7 @@ mod catalyst_swap_pool_factory_tests {
         // 'Deploy' the contract
         let code_id = mock_factory_contract(&mut app);
 
-        let default_governance_fee_share = 10101u64;
+        let default_governance_fee_share = Uint64::new(10101u64);
 
 
 
@@ -387,7 +387,7 @@ mod catalyst_swap_pool_factory_tests {
     #[test]
     fn test_max_governance_fee_share_constant() {
 
-        let max_fee = (MAX_GOVERNANCE_FEE_SHARE as f64) / 1e18;
+        let max_fee = (MAX_GOVERNANCE_FEE_SHARE.u64() as f64) / 1e18;
 
         assert!( max_fee <= 1.);
     }
@@ -418,7 +418,7 @@ mod catalyst_swap_pool_factory_tests {
 
 
         // Tested action 2: Set fee too large
-        let default_governance_fee_share = MAX_GOVERNANCE_FEE_SHARE + 1u64;  // ! Governance fee too large
+        let default_governance_fee_share = MAX_GOVERNANCE_FEE_SHARE + Uint64::one();  // ! Governance fee too large
         let response_result = app.instantiate_contract(
             code_id,
             Addr::unchecked(GOVERNANCE),
@@ -457,7 +457,7 @@ mod catalyst_swap_pool_factory_tests {
             None
         );
         let vault_initial_balances = vec![Uint128::from(1u64), Uint128::from(2u64), Uint128::from(3u64)];
-        let vault_weights = vec![1u64, 1u64, 1u64];
+        let vault_weights = vec![Uint64::one(), Uint64::one(), Uint64::one()];
 
         // Set asset allowances for the factory
         vault_assets
@@ -484,7 +484,7 @@ mod catalyst_swap_pool_factory_tests {
                 assets: vault_assets.iter().map(|asset| asset.to_string()).collect(),
                 assets_balances: vault_initial_balances.clone(),
                 weights: vault_weights.clone(),
-                amplification: 1000000000000000000u64,
+                amplification: Uint64::new(1000000000000000000u64),
                 pool_fee: TEST_POOL_FEE,
                 name: "TestPool".to_string(),
                 symbol: "TP".to_string(),
@@ -658,8 +658,8 @@ mod catalyst_swap_pool_factory_tests {
                 assets: vault_assets,
                 assets_balances: vault_initial_balances,
                 weights: vault_weights,
-                amplification: 1000000000000000000u64,
-                pool_fee: 0u64,
+                amplification: Uint64::new(1000000000000000000u64),
+                pool_fee: Uint64::zero(),
                 name: "TestPool".to_string(),
                 symbol: "TP".to_string(),
                 chain_interface: None
@@ -698,7 +698,7 @@ mod catalyst_swap_pool_factory_tests {
             None
         );
         let vault_initial_balances = vec![Uint128::from(1u64), Uint128::from(2u64), Uint128::from(3u64)];
-        let vault_weights = vec![1u64, 1u64, 1u64];
+        let vault_weights = vec![Uint64::one(), Uint64::one(), Uint64::one()];
 
         // Set asset allowances for the factory
         vault_assets
@@ -725,8 +725,8 @@ mod catalyst_swap_pool_factory_tests {
                 assets: vault_assets.iter().map(|asset| asset.to_string()).collect(),
                 assets_balances: vault_initial_balances[..2].to_vec(),   // ! Only 2 balances are provided 
                 weights: vault_weights.clone(),
-                amplification: 1000000000000000000u64,
-                pool_fee: 0u64,
+                amplification: Uint64::new(1000000000000000000u64),
+                pool_fee: Uint64::zero(),
                 name: "TestPool".to_string(),
                 symbol: "TP".to_string(),
                 chain_interface: None
@@ -752,8 +752,8 @@ mod catalyst_swap_pool_factory_tests {
                 assets: vault_assets.iter().map(|asset| asset.to_string()).collect(),
                 assets_balances: vault_initial_balances.clone(),
                 weights: vault_weights[..2].to_vec(),   // ! Only 2 weights are provided 
-                amplification: 1000000000000000000u64,
-                pool_fee: 0u64,
+                amplification: Uint64::new(1000000000000000000u64),
+                pool_fee: Uint64::zero(),
                 name: "TestPool".to_string(),
                 symbol: "TP".to_string(),
                 chain_interface: None
@@ -779,8 +779,8 @@ mod catalyst_swap_pool_factory_tests {
                 assets: vault_assets.iter().map(|asset| asset.to_string()).collect(),
                 assets_balances: vault_initial_balances,
                 weights: vault_weights,
-                amplification: 1000000000000000000u64,
-                pool_fee: 0u64,
+                amplification: Uint64::new(1000000000000000000u64),
+                pool_fee: Uint64::zero(),
                 name: "TestPool".to_string(),
                 symbol: "TP".to_string(),
                 chain_interface: None
@@ -801,8 +801,8 @@ mod catalyst_swap_pool_factory_tests {
         // 'Deploy' the contract
         let code_id = mock_factory_contract(&mut app);
 
-        let initial_default_governance_fee_share = 10101u64;
-        let new_default_governance_fee_share = 20202u64;
+        let initial_default_governance_fee_share = Uint64::new(10101u64);
+        let new_default_governance_fee_share = Uint64::new(20202u64);
 
         // Instantiate factory
         let factory = app.instantiate_contract(
@@ -849,8 +849,8 @@ mod catalyst_swap_pool_factory_tests {
         // 'Deploy' the contract
         let code_id = mock_factory_contract(&mut app);
 
-        let initial_default_governance_fee_share = 10101u64;
-        let new_default_governance_fee_share = 20202u64;
+        let initial_default_governance_fee_share = Uint64::new(10101u64);
+        let new_default_governance_fee_share = Uint64::new(20202u64);
 
         // Instantiate factory
         let factory = app.instantiate_contract(
@@ -900,7 +900,7 @@ mod catalyst_swap_pool_factory_tests {
         let factory = app.instantiate_contract(
             code_id,
             Addr::unchecked(GOVERNANCE),
-            &InstantiateMsg { default_governance_fee_share: 0u64 },
+            &InstantiateMsg { default_governance_fee_share: Uint64::zero() },
             &[],
             "catalyst-factory",
             None
@@ -931,7 +931,7 @@ mod catalyst_swap_pool_factory_tests {
         let factory = app.instantiate_contract(
             code_id,
             Addr::unchecked(GOVERNANCE),
-            &InstantiateMsg { default_governance_fee_share: 0u64 },
+            &InstantiateMsg { default_governance_fee_share: Uint64::zero() },
             &[],
             "catalyst-factory",
             None
@@ -976,7 +976,7 @@ mod catalyst_swap_pool_factory_tests {
         let factory = app.instantiate_contract(
             code_id,
             Addr::unchecked(GOVERNANCE),
-            &InstantiateMsg { default_governance_fee_share: 0u64 },
+            &InstantiateMsg { default_governance_fee_share: Uint64::zero() },
             &[],
             "catalyst-factory",
             None

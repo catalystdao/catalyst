@@ -1,5 +1,5 @@
 mod test_volatile_fees {
-    use cosmwasm_std::{Addr, Uint128};
+    use cosmwasm_std::{Addr, Uint128, Uint64};
     use cw_multi_test::{App, Executor};
     use swap_pool_common::{ContractError, msg::{FeeAdministratorResponse, PoolFeeResponse, GovernanceFeeShareResponse}};
 
@@ -14,7 +14,7 @@ mod test_volatile_fees {
             app,
             vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
             vec![Uint128::from(1u64) * WAD, Uint128::from(2u64) * WAD, Uint128::from(3u64) * WAD],
-            vec![1u64, 1u64, 1u64],
+            vec![Uint64::one(), Uint64::one(), Uint64::one()],
             None,
             None,
             None
@@ -98,7 +98,7 @@ mod test_volatile_fees {
         // Deploy vault
         let vault = deploy_mock_vault(&mut app);
 
-        let new_pool_fee: u64 = 500;
+        let new_pool_fee = Uint64::new(500);
 
 
         // Tested action: set pool fee
@@ -113,7 +113,7 @@ mod test_volatile_fees {
         // TODO verify response attributes (event)
 
         // Verify the new pool fee is set
-        let queried_pool_fee: u64 = app
+        let queried_pool_fee: Uint64 = app
             .wrap()
             .query_wasm_smart::<PoolFeeResponse>(vault, &QueryMsg::PoolFee {})
             .unwrap()
@@ -135,7 +135,7 @@ mod test_volatile_fees {
         // Deploy vault
         let vault = deploy_mock_vault(&mut app);
 
-        let new_pool_fee: u64 = 1000000000000000000u64;
+        let new_pool_fee = Uint64::new(1000000000000000000u64);
 
 
         // Tested action: set max pool fee
@@ -148,7 +148,7 @@ mod test_volatile_fees {
 
 
         // Verify the max pool fee is set
-        let queried_pool_fee: u64 = app
+        let queried_pool_fee: Uint64 = app
             .wrap()
             .query_wasm_smart::<PoolFeeResponse>(vault, &QueryMsg::PoolFee {})
             .unwrap()
@@ -170,7 +170,7 @@ mod test_volatile_fees {
         // Deploy vault
         let vault = deploy_mock_vault(&mut app);
 
-        let new_pool_fee: u64 = 1000000000000000000u64 + 1u64;
+        let new_pool_fee = Uint64::new(1000000000000000000u64 + 1u64);
 
 
         // Tested action: set pool fee larger than maximum allowed
@@ -186,7 +186,7 @@ mod test_volatile_fees {
         assert!(matches!(
             response_result.err().unwrap().downcast().unwrap(),
             ContractError::InvalidPoolFee { requested_fee, max_fee }
-                if requested_fee == new_pool_fee && max_fee == 1000000000000000000u64
+                if requested_fee == new_pool_fee && max_fee == Uint64::new(1000000000000000000u64)
         ));
 
     }
@@ -200,7 +200,7 @@ mod test_volatile_fees {
         // Deploy vault
         let vault = deploy_mock_vault(&mut app);
 
-        let new_pool_fee: u64 = 500;
+        let new_pool_fee = Uint64::new(500);
 
 
         // Tested action: set pool fee
@@ -232,7 +232,7 @@ mod test_volatile_fees {
         // Deploy vault
         let vault = deploy_mock_vault(&mut app);
 
-        let new_gov_fee_share: u64 = 700;
+        let new_gov_fee_share = Uint64::new(700);
 
 
         // Tested action: set governance fee share
@@ -247,7 +247,7 @@ mod test_volatile_fees {
         // TODO verify response attributes (event)
 
         // Verify the new governance fee share is set
-        let queried_gov_fee_share: u64 = app
+        let queried_gov_fee_share: Uint64 = app
             .wrap()
             .query_wasm_smart::<GovernanceFeeShareResponse>(vault, &QueryMsg::GovernanceFeeShare {})
             .unwrap()
@@ -269,7 +269,7 @@ mod test_volatile_fees {
         // Deploy vault
         let vault = deploy_mock_vault(&mut app);
 
-        let new_gov_fee_share: u64 = 750000000000000000u64;
+        let new_gov_fee_share = Uint64::new(750000000000000000u64);
 
 
         // Tested action: set max governance fee share
@@ -282,7 +282,7 @@ mod test_volatile_fees {
 
 
         // Verify the max governance fee share is set
-        let queried_gov_fee_share: u64 = app
+        let queried_gov_fee_share: Uint64 = app
             .wrap()
             .query_wasm_smart::<GovernanceFeeShareResponse>(vault, &QueryMsg::GovernanceFeeShare {})
             .unwrap()
@@ -304,7 +304,7 @@ mod test_volatile_fees {
         // Deploy vault
         let vault = deploy_mock_vault(&mut app);
 
-        let new_gov_fee_share: u64 = 750000000000000000u64 + 1u64;
+        let new_gov_fee_share = Uint64::new(750000000000000000u64 + 1u64);
 
 
         // Tested action: set governance fee share larger than maximum allowed
@@ -320,7 +320,7 @@ mod test_volatile_fees {
         assert!(matches!(
             response_result.err().unwrap().downcast().unwrap(),
             ContractError::InvalidGovernanceFee { requested_fee, max_fee }
-                if requested_fee == new_gov_fee_share && max_fee == 750000000000000000u64
+                if requested_fee == new_gov_fee_share && max_fee == Uint64::new(750000000000000000u64)
         ));
 
     }
@@ -334,7 +334,7 @@ mod test_volatile_fees {
         // Deploy vault
         let vault = deploy_mock_vault(&mut app);
 
-        let new_gov_fee_share: u64 = 700;
+        let new_gov_fee_share = Uint64::new(700);
 
 
         // Tested action: set governance fee share with invalid caller

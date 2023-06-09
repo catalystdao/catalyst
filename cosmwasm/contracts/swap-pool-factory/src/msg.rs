@@ -1,10 +1,10 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{Uint128, Addr};
+use cosmwasm_std::{Uint64, Uint128, Addr};
 
 
 #[cw_serde]
 pub struct InstantiateMsg {
-    pub default_governance_fee_share: u64
+    pub default_governance_fee_share: Uint64
 }
 
 
@@ -14,16 +14,16 @@ pub enum ExecuteMsg {
         vault_code_id: u64,
         assets: Vec<String>,
         assets_balances: Vec<Uint128>,
-        weights: Vec<u64>,
-        amplification: u64,
-        pool_fee: u64,
+        weights: Vec<Uint64>,
+        amplification: Uint64,
+        pool_fee: Uint64,
         name: String,
         symbol: String,
         chain_interface: Option<String>
     },
 
     SetDefaultGovernanceFeeShare {
-        fee: u64
+        fee: Uint64
     },
 
 
@@ -53,5 +53,5 @@ pub struct OwnerResponse {
 
 #[cw_serde]
 pub struct DefaultGovernanceFeeShareResponse {
-    pub fee: u64
+    pub fee: Uint64
 }

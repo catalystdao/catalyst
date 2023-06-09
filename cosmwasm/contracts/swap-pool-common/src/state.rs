@@ -19,8 +19,8 @@ pub const MAX_ASSETS: usize = 3;
 pub const DECIMALS: u8 = 18;
 pub const INITIAL_MINT_AMOUNT: Uint128 = Uint128::new(1000000000000000000u128); // 1e18
 
-pub const MAX_POOL_FEE_SHARE       : u64 = 1000000000000000000u64;              // 100%   //TODO rename MAX_POOL_FEE
-pub const MAX_GOVERNANCE_FEE_SHARE : u64 = 75u64 * 10000000000000000u64;        // 75%    //TODO EVM mismatch (move to factory)
+pub const MAX_POOL_FEE_SHARE       : Uint64 = Uint64::new(1000000000000000000u64);              // 100%   //TODO rename MAX_POOL_FEE
+pub const MAX_GOVERNANCE_FEE_SHARE : Uint64 = Uint64::new(75u64 * 10000000000000000u64);        // 75%    //TODO EVM mismatch (move to factory)
 
 pub const DECAY_RATE: U256 = u256!("86400");    // 60*60*24
 
@@ -31,11 +31,11 @@ pub const SETUP_MASTER: Item<Option<Addr>> = Item::new("catalyst-pool-setup-mast
 pub const CHAIN_INTERFACE: Item<Option<Addr>> = Item::new("catalyst-pool-chain-interface");
 
 pub const ASSETS: Item<Vec<Addr>> = Item::new("catalyst-pool-assets");
-pub const WEIGHTS: Item<Vec<u64>> = Item::new("catalyst-pool-weights");                                 //TODO use mapping instead?
+pub const WEIGHTS: Item<Vec<Uint64>> = Item::new("catalyst-pool-weights");                                 //TODO use mapping instead?
 
 pub const FEE_ADMINISTRATOR: Item<Addr> = Item::new("catalyst-pool-fee-administrator");
-pub const POOL_FEE: Item<u64> = Item::new("catalyst-pool-pool-fee");
-pub const GOVERNANCE_FEE_SHARE: Item<u64> = Item::new("catalyst-pool-governance-fee");
+pub const POOL_FEE: Item<Uint64> = Item::new("catalyst-pool-pool-fee");
+pub const GOVERNANCE_FEE_SHARE: Item<Uint64> = Item::new("catalyst-pool-governance-fee");
 
 pub const POOL_CONNECTIONS: Map<(&str, Vec<u8>), bool> = Map::new("catalyst-pool-connections");         //TODO channelId and toPool types
 
@@ -46,7 +46,7 @@ pub const LIQUIDITY_ESCROWS: Map<Vec<u8>, Addr> = Map::new("catalyst-pool-liquid
 
 pub const MAX_LIMIT_CAPACITY: Item<U256> = Item::new("catalyst-pool-max-limit-capacity");
 pub const USED_LIMIT_CAPACITY: Item<U256> = Item::new("catalyst-pool-used-limit-capacity");
-pub const USED_LIMIT_CAPACITY_TIMESTAMP: Item<u64> = Item::new("catalyst-pool-used-limit-capacity-timestamp");
+pub const USED_LIMIT_CAPACITY_TIMESTAMP: Item<Uint64> = Item::new("catalyst-pool-used-limit-capacity-timestamp");
 
 
 // TODO move to utils/similar?
@@ -116,7 +116,7 @@ pub fn calc_limit_capacity(
 
     let released_limit_capacity = max_limit_capacity
         .checked_mul(
-            U256::from(time.minus_nanos(used_limit_capacity_timestamp).seconds())  //TODO use seconds instead of nanos (overflow wise)  //TODO if the provided 'time' is correct, the time difference is always positive. But what if it is not correct? 
+            U256::from(time.minus_nanos(used_limit_capacity_timestamp.into()).seconds())  //TODO use seconds instead of nanos (overflow wise)  //TODO if the provided 'time' is correct, the time difference is always positive. But what if it is not correct? 
         ).map_err(|_| ContractError::ArithmeticError {})?   //TODO error
         .div(DECAY_RATE);
 
@@ -152,7 +152,7 @@ pub fn update_limit_capacity(
     let timestamp = current_time.nanos();
 
     USED_LIMIT_CAPACITY.save(deps.storage, &new_capacity)?;
-    USED_LIMIT_CAPACITY_TIMESTAMP.save(deps.storage, &timestamp)?;
+    USED_LIMIT_CAPACITY_TIMESTAMP.save(deps.storage, &timestamp.into())?;
 
     Ok(())
 }
@@ -252,7 +252,7 @@ pub fn set_fee_administrator_unchecked(
 
 pub fn set_pool_fee_unchecked(
     deps: &mut DepsMut,
-    fee: u64                            //TODO use Uint64?
+    fee: Uint64
 ) -> Result<Event, ContractError> {
 
     if fee > MAX_POOL_FEE_SHARE {
@@ -264,7 +264,7 @@ pub fn set_pool_fee_unchecked(
     POOL_FEE.save(deps.storage, &fee)?;
 
     return Ok(
-        set_vault_fee_event(Uint64::new(fee))
+        set_vault_fee_event(fee)
     )
 }
 
@@ -272,7 +272,7 @@ pub fn set_pool_fee_unchecked(
 pub fn set_pool_fee(
     deps: &mut DepsMut,
     info: MessageInfo,
-    fee: u64
+    fee: Uint64
 ) -> Result<Response, ContractError> {
 
     let fee_administrator = FEE_ADMINISTRATOR.load(deps.storage)?;
@@ -289,7 +289,7 @@ pub fn set_pool_fee(
 
 pub fn set_governance_fee_share_unchecked(
     deps: &mut DepsMut,
-    fee: u64                            //TODO use Uint64?
+    fee: Uint64
 ) -> Result<Event, ContractError> {
 
     if fee > MAX_GOVERNANCE_FEE_SHARE {
@@ -301,7 +301,7 @@ pub fn set_governance_fee_share_unchecked(
     GOVERNANCE_FEE_SHARE.save(deps.storage, &fee)?;
 
     return Ok(
-        set_governance_fee_share_event(Uint64::new(fee))
+        set_governance_fee_share_event(fee)
     )
 }
 
@@ -309,7 +309,7 @@ pub fn set_governance_fee_share_unchecked(
 pub fn set_governance_fee_share(
     deps: &mut DepsMut,
     info: MessageInfo,
-    fee: u64
+    fee: Uint64
 ) -> Result<Response, ContractError> {
 
     if info.sender != factory_owner(&deps.as_ref())? {
@@ -376,8 +376,8 @@ pub fn setup(
     name: String,
     symbol: String,
     chain_interface: Option<String>,
-    pool_fee: u64,
-    governance_fee: u64,
+    pool_fee: Uint64,
+    governance_fee: Uint64,
     fee_administrator: String,
     setup_master: String,
     factory: Addr             //TODO EVM mismatch   //TODO pass 'info: MessageInfo' instead (do not leave it up to the vault implementation)

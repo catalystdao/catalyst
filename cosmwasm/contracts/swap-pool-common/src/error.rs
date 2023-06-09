@@ -1,4 +1,4 @@
-use cosmwasm_std::{StdError, OverflowError, Uint128, Binary};
+use cosmwasm_std::{StdError, OverflowError, Uint64, Uint128, Binary};
 use catalyst_types::U256;
 use thiserror::Error;
 
@@ -23,10 +23,10 @@ pub enum ContractError {
     InvalidAmplification {},
 
     #[error("Invalid pool fee")]
-    InvalidPoolFee { requested_fee: u64, max_fee: u64 },
+    InvalidPoolFee { requested_fee: Uint64, max_fee: Uint64 },
 
     #[error("Invalid governance fee")]
-    InvalidGovernanceFee { requested_fee: u64, max_fee: u64 },
+    InvalidGovernanceFee { requested_fee: Uint64, max_fee: Uint64 },
 
     #[error("Security limit exceeded")]
     SecurityLimitExceeded { amount: U256, capacity: U256 },
@@ -42,7 +42,7 @@ pub enum ContractError {
     PoolHasNoInterface {},
 
     #[error("A non zero withdraw ratio is specified after all units have been consumed.")]
-    WithdrawRatioNotZero { ratio: u64 },    //TODO EVM mismatch
+    WithdrawRatioNotZero { ratio: Uint64 },    //TODO EVM mismatch
 
     #[error("Not all withdrawal units have been consumed after all assets have been processed.")]
     UnusedUnitsAfterWithdrawal { units: U256 },

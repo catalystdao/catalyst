@@ -1,5 +1,5 @@
 mod test_volatile_deposit{
-    use cosmwasm_std::{Uint128, Addr};
+    use cosmwasm_std::{Uint128, Addr, Uint64};
     use cw_multi_test::{App, Executor};
     use swap_pool_common::{ContractError, state::INITIAL_MINT_AMOUNT};
 
@@ -17,7 +17,7 @@ mod test_volatile_deposit{
         // Instantiate and initialize vault
         let vault_tokens = deploy_test_tokens(&mut app, None, None);
         let vault_initial_balances = vec![Uint128::from(1u64) * WAD, Uint128::from(2u64) * WAD, Uint128::from(3u64) * WAD];
-        let vault_weights = vec![1u64, 1u64, 1u64];
+        let vault_weights = vec![Uint64::one(), Uint64::one(), Uint64::one()];
         let vault = mock_factory_deploy_vault(
             &mut app,
             vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
@@ -82,7 +82,7 @@ mod test_volatile_deposit{
             "mint"
         ).unwrap();
 
-        let expected_return = uint128_to_f64(INITIAL_MINT_AMOUNT) * deposit_percentage * (1. - (DEFAULT_TEST_POOL_FEE as f64)/1e18);
+        let expected_return = uint128_to_f64(INITIAL_MINT_AMOUNT) * deposit_percentage * (1. - (DEFAULT_TEST_POOL_FEE.u64() as f64)/1e18);
 
         assert!(uint128_to_f64(observed_return) <= expected_return * 1.000001);
         assert!(uint128_to_f64(observed_return) >= expected_return * 0.98);      // Allow some margin because of the `pool_fee`
@@ -139,7 +139,7 @@ mod test_volatile_deposit{
         // Instantiate and initialize vault
         let vault_tokens = deploy_test_tokens(&mut app, None, None);
         let vault_initial_balances = vec![Uint128::from(1u64) * WAD, Uint128::from(2u64) * WAD, Uint128::from(3u64) * WAD];
-        let vault_weights = vec![1u64, 1u64, 1u64];
+        let vault_weights = vec![Uint64::one(), Uint64::one(), Uint64::one()];
         let vault = mock_factory_deploy_vault(
             &mut app,
             vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
@@ -228,7 +228,7 @@ mod test_volatile_deposit{
         // Instantiate and initialize vault
         let vault_tokens = deploy_test_tokens(&mut app, None, None);
         let vault_initial_balances = vec![Uint128::from(1u64) * WAD, Uint128::from(2u64) * WAD, Uint128::from(3u64) * WAD];
-        let vault_weights = vec![1u64, 1u64, 1u64];
+        let vault_weights = vec![Uint64::one(), Uint64::one(), Uint64::one()];
         let vault = mock_factory_deploy_vault(
             &mut app,
             vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
@@ -281,7 +281,7 @@ mod test_volatile_deposit{
         // Instantiate and initialize vault
         let vault_tokens = deploy_test_tokens(&mut app, None, None);
         let vault_initial_balances = vec![Uint128::from(1u64) * WAD, Uint128::from(2u64) * WAD, Uint128::from(3u64) * WAD];
-        let vault_weights = vec![1u64, 1u64, 1u64];
+        let vault_weights = vec![Uint64::one(), Uint64::one(), Uint64::one()];
         let vault = mock_factory_deploy_vault(
             &mut app,
             vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
@@ -324,7 +324,7 @@ mod test_volatile_deposit{
             });
 
         // Compute the expected return
-        let expected_return = uint128_to_f64(INITIAL_MINT_AMOUNT) * deposit_percentage * (1. - (DEFAULT_TEST_POOL_FEE as f64)/1e18);
+        let expected_return = uint128_to_f64(INITIAL_MINT_AMOUNT) * deposit_percentage * (1. - (DEFAULT_TEST_POOL_FEE.u64() as f64)/1e18);
 
         // Set min_out_valid to be slightly smaller than the expected return
         let min_out_valid = f64_to_uint128(expected_return * 0.99).unwrap();
@@ -378,7 +378,7 @@ mod test_volatile_deposit{
         // Instantiate and initialize vault
         let vault_tokens = deploy_test_tokens(&mut app, None, None);
         let vault_initial_balances = vec![Uint128::from(1u64) * WAD, Uint128::from(2u64) * WAD, Uint128::from(3u64) * WAD];
-        let vault_weights = vec![1u64, 1u64, 1u64];
+        let vault_weights = vec![Uint64::one(), Uint64::one(), Uint64::one()];
         let vault = mock_factory_deploy_vault(
             &mut app,
             vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),

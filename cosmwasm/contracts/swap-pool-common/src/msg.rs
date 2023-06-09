@@ -1,6 +1,6 @@
 use cosmwasm_schema::cw_serde;
 
-use cosmwasm_std::{Binary, Uint128, Addr};
+use cosmwasm_std::{Binary, Uint64, Uint128, Addr};
 use cw20::Expiration;
 use catalyst_types::U256;
 
@@ -11,8 +11,8 @@ pub struct InstantiateMsg {
     pub name: String,       // Name for the pool token
     pub symbol: String,     // Symbol for the pool token
     pub chain_interface: Option<String>,
-    pub pool_fee: u64,
-    pub governance_fee: u64,        // TODO rename gov_fee_share
+    pub pool_fee: Uint64,
+    pub governance_fee: Uint64,        // TODO rename gov_fee_share
     pub fee_administrator: String,
     pub setup_master: String,
 }
@@ -23,16 +23,16 @@ pub enum ExecuteMsg<T> {
 
     InitializeSwapCurves {
         assets: Vec<String>,
-        weights: Vec<u64>,
-        amp: u64,
+        weights: Vec<Uint64>,
+        amp: Uint64,
         depositor: String
     },
 
     FinishSetup {},
 
-    SetPoolFee { fee: u64 },
+    SetPoolFee { fee: Uint64 },
 
-    SetGovernanceFeeShare { fee: u64 },
+    SetGovernanceFeeShare { fee: Uint64 },
 
     SetFeeAdministrator { administrator: String },
 
@@ -88,7 +88,7 @@ pub enum ExecuteMsg<T> {
 
     WithdrawMixed {
         pool_tokens: Uint128,
-        withdraw_ratio: Vec<u64>,   //TODO type
+        withdraw_ratio: Vec<Uint64>,   //TODO type
         min_out: Vec<Uint128>,
     },
 
@@ -222,17 +222,17 @@ pub struct AssetsResponse {
 
 #[cw_serde]
 pub struct WeightsResponse {
-    pub weights: Vec<u64>
+    pub weights: Vec<Uint64>
 }
 
 #[cw_serde]
 pub struct PoolFeeResponse {
-    pub fee: u64
+    pub fee: Uint64
 }
 
 #[cw_serde]
 pub struct GovernanceFeeShareResponse {
-    pub fee: u64
+    pub fee: Uint64
 }
 
 #[cw_serde]

@@ -1,6 +1,6 @@
 mod test_volatile_initialize_swap_curves {
 
-    use cosmwasm_std::{Uint128, Addr};
+    use cosmwasm_std::{Uint128, Addr, Uint64};
     use cw20::{ TokenInfoResponse, BalanceResponse, Cw20QueryMsg};
     use cw_multi_test::{App, Executor};
     use catalyst_types::U256;
@@ -34,8 +34,8 @@ mod test_volatile_initialize_swap_curves {
                 Uint128::from(2u64) * WAD,
                 Uint128::from(3u64) * WAD
             ],
-            weights: vec![1u64, 1u64, 1u64],
-            amp: 1000000000000000000u64,
+            weights: vec![Uint64::one(), Uint64::one(), Uint64::one()],
+            amp: Uint64::new(1000000000000000000u64),
             depositor: DEPOSITOR.to_string()
         };
 
@@ -94,7 +94,7 @@ mod test_volatile_initialize_swap_curves {
         );
 
         // Query and verify the weights
-        let weights: Vec<u64> = app
+        let weights: Vec<Uint64> = app
             .wrap()
             .query_wasm_smart::<WeightsResponse>(vault.clone(), &crate::msg::QueryMsg::Weights {})
             .unwrap()
@@ -114,7 +114,7 @@ mod test_volatile_initialize_swap_curves {
 
         assert_eq!(
             max_limit_capacity,
-            U256::from(weights.iter().sum::<u64>()) * LN2
+            U256::from(weights.iter().sum::<Uint64>()) * LN2
         );
 
         // Query and verify the pool token supply
@@ -196,8 +196,8 @@ mod test_volatile_initialize_swap_curves {
                 Uint128::from(2u64) * WAD,
                 Uint128::from(3u64) * WAD
             ],
-            weights: vec![1u64, 1u64, 1u64],
-            amp: 1000000000000000000u64,
+            weights: vec![Uint64::one(), Uint64::one(), Uint64::one()],
+            amp: Uint64::new(1000000000000000000u64),
             depositor: DEPOSITOR.to_string()
         };
 
@@ -249,7 +249,7 @@ mod test_volatile_initialize_swap_curves {
             assets: vec![],
             assets_balances: vec![],
             weights: vec![],
-            amp: 1000000000000000000u64,
+            amp: Uint64::new(1000000000000000000u64),
             depositor: DEPLOYER.to_string()
         };
 
@@ -297,8 +297,8 @@ mod test_volatile_initialize_swap_curves {
                 Uint128::from(3u64) * WAD,
                 Uint128::from(4u64) * WAD
             ],
-            weights: vec![1u64, 1u64, 1u64, 1u64],
-            amp: 1000000000000000000u64,
+            weights: vec![Uint64::one(), Uint64::one(), Uint64::one(), Uint64::one()],
+            amp: Uint64::new(1000000000000000000u64),
             depositor: DEPOSITOR.to_string()
         };
 
@@ -352,8 +352,8 @@ mod test_volatile_initialize_swap_curves {
                 Uint128::from(1u64) * WAD,
                 Uint128::from(2u64) * WAD       // ! Only 2 asset balances are specified
             ],
-            weights: vec![1u64, 1u64, 1u64],
-            amp: 1000000000000000000u64,
+            weights: vec![Uint64::one(), Uint64::one(), Uint64::one()],
+            amp: Uint64::new(1000000000000000000u64),
             depositor: DEPOSITOR.to_string()
         };
 
@@ -408,8 +408,8 @@ mod test_volatile_initialize_swap_curves {
                 Uint128::from(2u64) * WAD,
                 Uint128::zero()                 // ! Asset balance is set to 0
             ],
-            weights: vec![1u64, 1u64, 1u64],
-            amp: 1000000000000000000u64,
+            weights: vec![Uint64::one(), Uint64::one(), Uint64::one()],
+            amp: Uint64::new(1000000000000000000u64),
             depositor: DEPOSITOR.to_string()
         };
 
@@ -464,8 +464,8 @@ mod test_volatile_initialize_swap_curves {
                 Uint128::from(2u64) * WAD,
                 Uint128::from(3u64) * WAD
             ],
-            weights: vec![1u64, 1u64],    // ! Only 2 weights are specified
-            amp: 1000000000000000000u64,
+            weights: vec![Uint64::one(), Uint64::one()],    // ! Only 2 weights are specified
+            amp: Uint64::new(1000000000000000000u64),
             depositor: DEPOSITOR.to_string()
         };
 
@@ -520,8 +520,8 @@ mod test_volatile_initialize_swap_curves {
                 Uint128::from(2u64) * WAD,
                 Uint128::from(3u64) * WAD
             ],
-            weights: vec![1u64, 1u64, 0u64],    // ! Weight set to 0
-            amp: 1000000000000000000u64,
+            weights: vec![Uint64::one(), Uint64::one(), Uint64::zero()],    // ! Weight set to 0
+            amp: Uint64::new(1000000000000000000u64),
             depositor: DEPOSITOR.to_string()
         };
 
@@ -576,8 +576,8 @@ mod test_volatile_initialize_swap_curves {
                 Uint128::from(2u64) * WAD,
                 Uint128::from(3u64) * WAD
             ],
-            weights: vec![1u64, 1u64, 1u64],
-            amp: 900000000000000000u64,                 // ! Invalid amplification is specified
+            weights: vec![Uint64::one(), Uint64::one(), Uint64::one()],
+            amp: Uint64::new(900000000000000000u64),                 // ! Invalid amplification is specified
             depositor: DEPOSITOR.to_string()
         };
 

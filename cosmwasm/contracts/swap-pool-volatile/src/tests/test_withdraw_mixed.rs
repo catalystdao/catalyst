@@ -1,7 +1,7 @@
 mod test_volatile_withdraw_mixed {
     use std::str::FromStr;
 
-    use cosmwasm_std::{Uint128, Addr};
+    use cosmwasm_std::{Uint128, Addr, Uint64};
     use cw_multi_test::{App, Executor};
     use swap_pool_common::{ContractError, state::INITIAL_MINT_AMOUNT};
 
@@ -18,7 +18,7 @@ mod test_volatile_withdraw_mixed {
         // Instantiate and initialize vault
         let vault_tokens = deploy_test_tokens(&mut app, None, None);
         let vault_initial_balances = vec![Uint128::from(1u64) * WAD, Uint128::from(2u64) * WAD, Uint128::from(3u64) * WAD];
-        let vault_weights = vec![1u64, 1u64, 1u64];
+        let vault_weights = vec![Uint64::one(), Uint64::one(), Uint64::one()];
         let vault = mock_factory_deploy_vault(
             &mut app,
             vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
@@ -34,7 +34,7 @@ mod test_volatile_withdraw_mixed {
         let withdraw_amount = f64_to_uint128(uint128_to_f64(INITIAL_MINT_AMOUNT) * withdraw_percentage).unwrap();
         let withdraw_ratio_f64 = vec![0.5, 0.2, 1.];
         let withdraw_ratio = withdraw_ratio_f64.iter()
-            .map(|val| (val * 1e18) as u64).collect::<Vec<u64>>();
+            .map(|val| ((val * 1e18) as u64).into()).collect::<Vec<Uint64>>();
 
         // Fund withdrawer with pool tokens
         transfer_tokens(
@@ -136,7 +136,7 @@ mod test_volatile_withdraw_mixed {
         // Instantiate and initialize vault
         let vault_tokens = deploy_test_tokens(&mut app, None, None);
         let vault_initial_balances = vec![Uint128::from(1u64) * WAD, Uint128::from(2u64) * WAD, Uint128::from(3u64) * WAD];
-        let vault_weights = vec![1u64, 1u64, 1u64];
+        let vault_weights = vec![Uint64::one(), Uint64::one(), Uint64::one()];
         let vault = mock_factory_deploy_vault(
             &mut app,
             vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
@@ -151,7 +151,7 @@ mod test_volatile_withdraw_mixed {
         let withdraw_amount = Uint128::zero();
         let withdraw_ratio_f64 = vec![1./3., 1./2., 1.];
         let withdraw_ratio = withdraw_ratio_f64.iter()
-            .map(|val| (val * 1e18) as u64).collect::<Vec<u64>>();
+            .map(|val| ((val * 1e18) as u64).into()).collect::<Vec<Uint64>>();
     
 
     
@@ -197,7 +197,7 @@ mod test_volatile_withdraw_mixed {
         // Instantiate and initialize vault
         let vault_tokens = deploy_test_tokens(&mut app, None, None);
         let vault_initial_balances = vec![Uint128::from(1u64) * WAD, Uint128::from(2u64) * WAD, Uint128::from(3u64) * WAD];
-        let vault_weights = vec![1u64, 1u64, 1u64];
+        let vault_weights = vec![Uint64::one(), Uint64::one(), Uint64::one()];
         let vault = mock_factory_deploy_vault(
             &mut app,
             vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
@@ -213,7 +213,7 @@ mod test_volatile_withdraw_mixed {
         let withdraw_amount = f64_to_uint128(uint128_to_f64(INITIAL_MINT_AMOUNT) * withdraw_percentage).unwrap();
         let withdraw_ratio_f64 = vec![0.5, 0.2, 1.];
         let withdraw_ratio = withdraw_ratio_f64.iter()
-            .map(|val| (val * 1e18) as u64).collect::<Vec<u64>>();
+            .map(|val| ((val * 1e18) as u64).into()).collect::<Vec<Uint64>>();
 
         // Fund withdrawer with pool tokens
         transfer_tokens(
@@ -298,7 +298,7 @@ mod test_volatile_withdraw_mixed {
         // Instantiate and initialize vault
         let vault_tokens = deploy_test_tokens(&mut app, None, None);
         let vault_initial_balances = vec![Uint128::from(1u64) * WAD, Uint128::from(2u64) * WAD, Uint128::from(3u64) * WAD];
-        let vault_weights = vec![1u64, 1u64, 1u64];
+        let vault_weights = vec![Uint64::one(), Uint64::one(), Uint64::one()];
         let vault = mock_factory_deploy_vault(
             &mut app,
             vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
@@ -314,7 +314,7 @@ mod test_volatile_withdraw_mixed {
         let withdraw_amount = f64_to_uint128(uint128_to_f64(INITIAL_MINT_AMOUNT) * withdraw_percentage).unwrap();
         let withdraw_ratio_f64 = vec![0., 0.2, 1.];        // ! The ratio for the first asset is set to 0
         let withdraw_ratio = withdraw_ratio_f64.iter()
-            .map(|val| (val * 1e18) as u64).collect::<Vec<u64>>();
+            .map(|val| ((val * 1e18) as u64).into()).collect::<Vec<Uint64>>();
 
         // Fund withdrawer with pool tokens
         transfer_tokens(
@@ -374,7 +374,7 @@ mod test_volatile_withdraw_mixed {
         // Instantiate and initialize vault
         let vault_tokens = deploy_test_tokens(&mut app, None, None);
         let vault_initial_balances = vec![Uint128::from(1u64) * WAD, Uint128::from(2u64) * WAD, Uint128::from(3u64) * WAD];
-        let vault_weights = vec![1u64, 1u64, 1u64];
+        let vault_weights = vec![Uint64::one(), Uint64::one(), Uint64::one()];
         let vault = mock_factory_deploy_vault(
             &mut app,
             vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
@@ -390,7 +390,7 @@ mod test_volatile_withdraw_mixed {
         let withdraw_amount = f64_to_uint128(uint128_to_f64(INITIAL_MINT_AMOUNT) * withdraw_percentage).unwrap();
         let withdraw_ratio_f64 = vec![0.5, 0.2, 1.];
         let withdraw_ratio = withdraw_ratio_f64.iter()
-            .map(|val| (val * 1e18) as u64).collect::<Vec<u64>>();
+            .map(|val| ((val * 1e18) as u64).into()).collect::<Vec<Uint64>>();
 
         // ! Do not fund the withdrawer with pool tokens
     
@@ -427,7 +427,7 @@ mod test_volatile_withdraw_mixed {
         // Instantiate and initialize vault
         let vault_tokens = deploy_test_tokens(&mut app, None, None);
         let vault_initial_balances = vec![Uint128::from(1u64) * WAD, Uint128::from(2u64) * WAD, Uint128::from(3u64) * WAD];
-        let vault_weights = vec![1u64, 1u64, 1u64];
+        let vault_weights = vec![Uint64::one(), Uint64::one(), Uint64::one()];
         let vault = mock_factory_deploy_vault(
             &mut app,
             vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
@@ -450,7 +450,7 @@ mod test_volatile_withdraw_mixed {
             vault.clone(),
             &VolatileExecuteMsg::WithdrawMixed {
                 pool_tokens: withdraw_amount,
-                withdraw_ratio: vec![0.5, 1.].iter().map(|ratio| (ratio * 1e18) as u64).collect::<Vec<u64>>(),
+                withdraw_ratio: vec![0.5, 1.].iter().map(|ratio| ((ratio * 1e18) as u64).into()).collect::<Vec<Uint64>>(),
                 min_out: vec![Uint128::zero(), Uint128::zero(), Uint128::one()]
             },
             &[]
@@ -470,7 +470,7 @@ mod test_volatile_withdraw_mixed {
             vault.clone(),
             &VolatileExecuteMsg::WithdrawMixed {
                 pool_tokens: withdraw_amount,
-                withdraw_ratio: vec![0.5, 0., 0., 1.].iter().map(|ratio| (ratio * 1e18) as u64).collect::<Vec<u64>>(),
+                withdraw_ratio: vec![0.5, 0., 0., 1.].iter().map(|ratio| ((ratio * 1e18) as u64).into()).collect::<Vec<Uint64>>(),
                 min_out: vec![Uint128::zero(), Uint128::zero(), Uint128::one()]
             },
             &[]
@@ -489,7 +489,7 @@ mod test_volatile_withdraw_mixed {
             vault.clone(),
             &VolatileExecuteMsg::WithdrawMixed {
                 pool_tokens: withdraw_amount,
-                withdraw_ratio: vec![0u64, 0u64, 0u64],
+                withdraw_ratio: vec![Uint64::zero(), Uint64::zero(), Uint64::zero()],
                 min_out: vec![Uint128::zero(), Uint128::zero(), Uint128::zero()]
             },
             &[]
@@ -508,7 +508,7 @@ mod test_volatile_withdraw_mixed {
             vault.clone(),
             &VolatileExecuteMsg::WithdrawMixed {
                 pool_tokens: withdraw_amount,
-                withdraw_ratio: vec![0.5, 0.5, 1.2].iter().map(|ratio| (ratio * 1e18) as u64).collect::<Vec<u64>>(),
+                withdraw_ratio: vec![0.5, 0.5, 1.2].iter().map(|ratio| ((ratio * 1e18) as u64).into()).collect::<Vec<Uint64>>(),
                 min_out: vec![Uint128::zero(), Uint128::zero(), Uint128::zero()]
             },
             &[]
@@ -527,7 +527,7 @@ mod test_volatile_withdraw_mixed {
             vault.clone(),
             &VolatileExecuteMsg::WithdrawMixed {
                 pool_tokens: withdraw_amount,
-                withdraw_ratio: vec![0.5, 0.5, 0.].iter().map(|ratio| (ratio * 1e18) as u64).collect::<Vec<u64>>(),
+                withdraw_ratio: vec![0.5, 0.5, 0.].iter().map(|ratio| ((ratio * 1e18) as u64).into()).collect::<Vec<Uint64>>(),
                 min_out: vec![Uint128::zero(), Uint128::zero(), Uint128::zero()]
             },
             &[]
@@ -546,7 +546,7 @@ mod test_volatile_withdraw_mixed {
             vault.clone(),
             &VolatileExecuteMsg::WithdrawMixed {
                 pool_tokens: withdraw_amount,
-                withdraw_ratio: vec![0.5, 1., 0.5].iter().map(|ratio| (ratio * 1e18) as u64).collect::<Vec<u64>>(),
+                withdraw_ratio: vec![0.5, 1., 0.5].iter().map(|ratio| ((ratio * 1e18) as u64).into()).collect::<Vec<Uint64>>(),
                 min_out: vec![Uint128::zero(), Uint128::zero(), Uint128::zero()]
             },
             &[]
@@ -556,7 +556,7 @@ mod test_volatile_withdraw_mixed {
         assert!(matches!(
             response_result.err().unwrap().downcast().unwrap(),
             ContractError::WithdrawRatioNotZero { ratio: err_ratio }
-                if err_ratio == (0.5 * 1e18) as u64
+                if err_ratio == Uint64::new((0.5 * 1e18) as u64)
         ));
 
 
@@ -566,7 +566,7 @@ mod test_volatile_withdraw_mixed {
             vault.clone(),
             &VolatileExecuteMsg::WithdrawMixed {
                 pool_tokens: withdraw_amount,
-                withdraw_ratio: vec![1./3., 1./2., 1.].iter().map(|ratio| (ratio * 1e18) as u64).collect::<Vec<u64>>(),
+                withdraw_ratio: vec![1./3., 1./2., 1.].iter().map(|ratio| ((ratio * 1e18) as u64).into()).collect::<Vec<Uint64>>(),
                 min_out: vec![Uint128::zero(), Uint128::zero(), Uint128::zero()]
             },
             &[]

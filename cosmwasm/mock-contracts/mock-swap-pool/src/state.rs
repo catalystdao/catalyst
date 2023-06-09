@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, Uint128, DepsMut, Env, MessageInfo, Response, StdResult, Deps, StdError};
+use cosmwasm_std::{Addr, Uint128, DepsMut, Env, MessageInfo, Response, StdResult, Deps, StdError, Uint64};
 use cw20::{Cw20QueryMsg, BalanceResponse};
 use cw20_base::contract::execute_mint;
 use swap_pool_common::{
@@ -11,8 +11,8 @@ pub fn initialize_swap_curves(
     env: Env,
     info: MessageInfo,
     assets: Vec<String>,
-    weights: Vec<u64>,
-    _amp: u64,
+    weights: Vec<Uint64>,
+    _amp: Uint64,
     depositor: String
 ) -> Result<Response, ContractError> {
 
@@ -62,7 +62,7 @@ pub fn initialize_swap_curves(
     }
 
     // Validate and save weights
-    if weights.iter().any(|weight| *weight == 0) {
+    if weights.iter().any(|weight| *weight == Uint64::zero()) {
         return Err(ContractError::GenericError {}); //TODO error
     }
     WEIGHTS.save(deps.storage, &weights)?;

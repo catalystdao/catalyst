@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, Uint128, DepsMut, Env, MessageInfo, Response, StdResult, CosmosMsg, to_binary, Deps, Binary};
+use cosmwasm_std::{Addr, Uint128, DepsMut, Env, MessageInfo, Response, StdResult, CosmosMsg, to_binary, Deps, Binary, Uint64};
 use cw20::{Cw20ExecuteMsg, Cw20QueryMsg, BalanceResponse};
 use cw20_base::{contract::{execute_mint, execute_burn}};
 use cw_storage_plus::Item;
@@ -13,18 +13,19 @@ use swap_pool_common::{
     },
     ContractError, msg::{CalcSendAssetResponse, CalcReceiveAssetResponse, CalcLocalSwapResponse, GetLimitCapacityResponse}, event::{local_swap_event, send_asset_event, receive_asset_event, send_liquidity_event, receive_liquidity_event, deposit_event, withdraw_event}
 };
+use std::ops::Div;
 
 use catalyst_ibc_interface::msg::ExecuteMsg as InterfaceExecuteMsg;
 
 use crate::{calculation_helpers::{calc_price_curve_area, calc_price_curve_limit, calc_combined_price_curves, calc_price_curve_limit_share}, msg::{TargetWeightsResponse, WeightsUpdateFinishTimestampResponse}, event::set_weights_event};
 
-pub const TARGET_WEIGHTS: Item<Vec<u64>> = Item::new("catalyst-pool-target-weights");       //TODO use mapping instead? (see also WEIGHTS definition)
-pub const WEIGHT_UPDATE_TIMESTAMP: Item<u64> = Item::new("catalyst-pool-weight-update-timestamp");
-pub const WEIGHT_UPDATE_FINISH_TIMESTAMP: Item<u64> = Item::new("catalyst-pool-weight-update-finish-timestamp");
+pub const TARGET_WEIGHTS: Item<Vec<Uint64>> = Item::new("catalyst-pool-target-weights");       //TODO use mapping instead? (see also WEIGHTS definition)
+pub const WEIGHT_UPDATE_TIMESTAMP: Item<Uint64> = Item::new("catalyst-pool-weight-update-timestamp");
+pub const WEIGHT_UPDATE_FINISH_TIMESTAMP: Item<Uint64> = Item::new("catalyst-pool-weight-update-finish-timestamp");
 
-const MIN_ADJUSTMENT_TIME_NANOS    : u64 = 7 * 24 * 60 * 60 * 1000000000;     // 7 days
-const MAX_ADJUSTMENT_TIME_NANOS    : u64 = 365 * 24 * 60 * 60 * 1000000000;   // 1 year
-const MAX_WEIGHT_ADJUSTMENT_FACTOR : u64 = 10;
+const MIN_ADJUSTMENT_TIME_NANOS    : Uint64 = Uint64::new(7 * 24 * 60 * 60 * 1000000000);     // 7 days
+const MAX_ADJUSTMENT_TIME_NANOS    : Uint64 = Uint64::new(365 * 24 * 60 * 60 * 1000000000);   // 1 year
+const MAX_WEIGHT_ADJUSTMENT_FACTOR : Uint64 = Uint64::new(10);
 
 
 pub fn initialize_swap_curves(
@@ -32,8 +33,8 @@ pub fn initialize_swap_curves(
     env: Env,
     info: MessageInfo,
     assets: Vec<String>,
-    weights: Vec<u64>,
-    amp: u64,
+    weights: Vec<Uint64>,
+    amp: Uint64,
     depositor: String
 ) -> Result<Response, ContractError> {
 
@@ -48,7 +49,7 @@ pub fn initialize_swap_curves(
     }
 
     // Check that the amplification is correct (set to 1)
-    if amp != 10u64.pow(18) {     //TODO maths WAD
+    if amp != Uint64::new(10u64.pow(18)) {     //TODO maths WAD
         return Err(ContractError::InvalidAmplification {})
     }
 
@@ -89,13 +90,13 @@ pub fn initialize_swap_curves(
     }
 
     // Validate and save weights
-    if weights.iter().any(|weight| *weight == 0) {
+    if weights.iter().any(|weight| *weight == Uint64::zero()) {
         return Err(ContractError::GenericError {}); //TODO error
     }
     WEIGHTS.save(deps.storage, &weights)?;
     TARGET_WEIGHTS.save(deps.storage, &weights)?;               // Initialize the target_weights storage (values do not matter)
-    WEIGHT_UPDATE_TIMESTAMP.save(deps.storage, &0u64)?;         //TODO move intialization to 'setup'?
-    WEIGHT_UPDATE_FINISH_TIMESTAMP.save(deps.storage, &0u64)?;  //TODO move intialization to 'setup'?
+    WEIGHT_UPDATE_TIMESTAMP.save(deps.storage, &Uint64::zero())?;         //TODO move intialization to 'setup'?
+    WEIGHT_UPDATE_FINISH_TIMESTAMP.save(deps.storage, &Uint64::zero())?;  //TODO move intialization to 'setup'?
 
     // Compute the security limit
     MAX_LIMIT_CAPACITY.save(
@@ -105,7 +106,7 @@ pub fn initialize_swap_curves(
         ))
     )?;
     USED_LIMIT_CAPACITY.save(deps.storage, &U256::zero())?;       //TODO move intialization to 'setup'?
-    USED_LIMIT_CAPACITY_TIMESTAMP.save(deps.storage, &0u64)?;   //TODO move intialization to 'setup'?
+    USED_LIMIT_CAPACITY_TIMESTAMP.save(deps.storage, &Uint64::zero())?;   //TODO move intialization to 'setup'?
 
     // Initialize escrow totals
     assets
@@ -337,7 +338,7 @@ pub fn withdraw_mixed(
     env: Env,
     info: MessageInfo,
     pool_tokens: Uint128,
-    withdraw_ratio: Vec<u64>,
+    withdraw_ratio: Vec<Uint64>,
     min_out: Vec<Uint128>,
 ) -> Result<Response, ContractError> {
 
@@ -385,7 +386,7 @@ pub fn withdraw_mixed(
             if units_for_asset == U256::zero() {
 
                 // There should not be a non-zero withdraw ratio after a withdraw ratio of 1 (protect against user error)
-                if *asset_withdraw_ratio != 0 {
+                if *asset_withdraw_ratio != Uint64::zero() {
                     return Err(ContractError::WithdrawRatioNotZero { ratio: *asset_withdraw_ratio }) 
                 };
 
@@ -467,7 +468,7 @@ pub fn local_swap(
     min_out: Uint128
 ) -> Result<Response, ContractError> {
 
-    update_weights(deps, env.block.time.nanos())?;
+    update_weights(deps, env.block.time.nanos().into())?;
 
     let pool_fee: Uint128 = mul_wad_down(            //TODO alternative to not have to use U256 conversion? (or wrapper?)
         U256::from(amount.u128()),
@@ -572,7 +573,7 @@ pub fn send_asset(
         return Err(ContractError::GenericError {});     //TODO error
     }
 
-    update_weights(deps, env.block.time.nanos())?;
+    update_weights(deps, env.block.time.nanos().into())?;
 
     let pool_fee: Uint128 = mul_wad_down(            //TODO alternative to not have to use U256 conversion? (or wrapper?)
         U256::from(amount.u128()),
@@ -701,7 +702,7 @@ pub fn receive_asset(
         return Err(ContractError::PoolNotConnected { channel_id, pool: from_pool })
     }
 
-    update_weights(deps, env.block.time.nanos())?;
+    update_weights(deps, env.block.time.nanos().into())?;
 
     let assets = ASSETS.load(deps.storage)?;
     let to_asset = assets
@@ -795,7 +796,7 @@ pub fn send_liquidity(
     }
 
     // Update weights
-    update_weights(deps, env.block.time.nanos())?;
+    update_weights(deps, env.block.time.nanos().into())?;
 
     // Include the 'escrowed' pool tokens in the total supply of pool tokens of the pool
     let escrowed_pool_tokens = TOTAL_ESCROWED_LIQUIDITY.load(deps.storage)?;
@@ -900,7 +901,7 @@ pub fn receive_liquidity(
         return Err(ContractError::PoolNotConnected { channel_id, pool: from_pool })
     }
 
-    update_weights(deps, env.block.time.nanos())?;
+    update_weights(deps, env.block.time.nanos().into())?;
 
     update_limit_capacity(deps, env.block.time, u)?;
 
@@ -1193,14 +1194,14 @@ pub fn on_send_liquidity_success_volatile(
 pub fn set_weights(         //TODO EVM mismatch arguments order
     deps: &mut DepsMut,
     env: &Env,
-    weights: Vec<u64>,      //TODO rename new_weights
-    target_timestamp: u64   //TODO EVM mismatch (targetTime)
+    weights: Vec<Uint64>,      //TODO rename new_weights
+    target_timestamp: Uint64   //TODO EVM mismatch (targetTime)
 ) -> Result<Response, ContractError> {
 
     let current_weights = WEIGHTS.load(deps.storage)?;
 
     // Check 'target_timestamp' is within the defined acceptable bounds
-    let current_time = env.block.time.nanos();
+    let current_time = Uint64::new(env.block.time.nanos());
     if
         target_timestamp < current_time + MIN_ADJUSTMENT_TIME_NANOS ||
         target_timestamp > current_time + MAX_ADJUSTMENT_TIME_NANOS
@@ -1220,17 +1221,17 @@ pub fn set_weights(         //TODO EVM mismatch arguments order
 
             // Check that the new weight is neither 0 nor larger than the maximum allowed relative change
             if 
-                *new_weight == 0 ||
+                *new_weight == Uint64::zero() ||
                 *new_weight > current_weight
-                    .checked_mul(MAX_WEIGHT_ADJUSTMENT_FACTOR).ok_or(ContractError::ArithmeticError {})? ||
-                *new_weight < current_weight / MAX_WEIGHT_ADJUSTMENT_FACTOR     //TODO fix: replace MAX_WEIGHT_ADJUSTMENT_FACTOR with MIN_WEIGHT_ADJUSTMENT_FACTOR
+                    .checked_mul(MAX_WEIGHT_ADJUSTMENT_FACTOR).map_err(|_| ContractError::ArithmeticError {})? ||
+                *new_weight < *current_weight / MAX_WEIGHT_ADJUSTMENT_FACTOR     //TODO fix: replace MAX_WEIGHT_ADJUSTMENT_FACTOR with MIN_WEIGHT_ADJUSTMENT_FACTOR
             {
                 return Err(ContractError::GenericError {});     //TODO error
             }
 
             Ok(*new_weight)
 
-        }).collect::<Result<Vec<u64>, ContractError>>()?;
+        }).collect::<Result<Vec<Uint64>, ContractError>>()?;
     TARGET_WEIGHTS.save(deps.storage, &target_weights)?;
     
     // Set the weight update time parameters
@@ -1250,12 +1251,12 @@ pub fn set_weights(         //TODO EVM mismatch arguments order
 
 pub fn update_weights(
     deps: &mut DepsMut,
-    current_timestamp: u64
+    current_timestamp: Uint64
 ) -> Result<(), ContractError> {
     
     // Only run update logic if 'param_update_finish_timestamp' is set
     let param_update_finish_timestamp = WEIGHT_UPDATE_FINISH_TIMESTAMP.load(deps.storage)?;
-    if param_update_finish_timestamp == 0 {
+    if param_update_finish_timestamp == Uint64::zero() {
         return Ok(());
     }
 
@@ -1267,7 +1268,7 @@ pub fn update_weights(
 
     let target_weights = TARGET_WEIGHTS.load(deps.storage)?;
 
-    let new_weights: Vec<u64>;
+    let new_weights: Vec<Uint64>;
     let mut new_weight_sum = U256::zero();
 
     // If the 'param_update_finish_timestamp' has been reached, finish the weights update
@@ -1285,12 +1286,12 @@ pub fn update_weights(
 
                 Ok(*target_weight)
 
-            }).collect::<Result<Vec<u64>, ContractError>>()?;
+            }).collect::<Result<Vec<Uint64>, ContractError>>()?;
 
         // Clear the 'param_update_finish_timestamp' to disable the update logic
         WEIGHT_UPDATE_FINISH_TIMESTAMP.save(
             deps.storage,
-            &0
+            &Uint64::zero()
         )?;
 
     }
@@ -1318,21 +1319,21 @@ pub fn update_weights(
                 //     current_weight +/- [
                 //        (distance to the target weight) x (time since last update) / (time from last update until update finish)
                 //     ]
-                let new_weight: u64;
+                let new_weight: Uint64;
                 if target_weight > current_weight {
-                    new_weight = current_weight + (
+                    new_weight = *current_weight + (
                         (target_weight - current_weight)
                             .checked_mul(current_timestamp - param_update_timestamp)
-                            .ok_or(ContractError::ArithmeticError {})?
-                            .div_euclid(param_update_finish_timestamp - param_update_timestamp)
+                            .map_err(|_| ContractError::ArithmeticError {})?
+                            .div(param_update_finish_timestamp - param_update_timestamp)
                     );
                 }
                 else {
-                    new_weight = current_weight - (
+                    new_weight = *current_weight - (
                         (current_weight - target_weight)
                         .checked_mul(current_timestamp - param_update_timestamp)
-                        .ok_or(ContractError::ArithmeticError {})?
-                        .div_euclid(param_update_finish_timestamp - param_update_timestamp)
+                        .map_err(|_| ContractError::ArithmeticError {})?
+                        .div(param_update_finish_timestamp - param_update_timestamp)
                     );
                 }
 
@@ -1342,7 +1343,7 @@ pub fn update_weights(
 
                 Ok(*target_weight)
 
-            }).collect::<Result<Vec<u64>, ContractError>>()?;
+            }).collect::<Result<Vec<Uint64>, ContractError>>()?;
 
     }
 
