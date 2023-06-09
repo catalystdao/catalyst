@@ -81,7 +81,7 @@ dependencies = [
  "cw0",
  "cw2",
  "cw20",
- "mock-swap-pool",
+ "mock-vault",
  "schemars",
  "serde",
  "thiserror",
@@ -701,7 +701,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "mock-swap-pool"
+name = "mock-vault"
 version = "0.1.0"
 dependencies = [
  "catalyst-factory",

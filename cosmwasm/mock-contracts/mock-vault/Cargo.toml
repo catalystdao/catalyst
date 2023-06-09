@@ -1,5 +1,5 @@
 [package]
-name = "mock-swap-pool"
+name = "mock-vault"
 version = "0.1.0"
 authors = ["Catalyst"]
 edition = "2021"

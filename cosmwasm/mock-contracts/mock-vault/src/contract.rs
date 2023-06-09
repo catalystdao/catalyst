@@ -11,7 +11,7 @@ use crate::msg::{InstantiateMsg, QueryMsg};
 use crate::state::{initialize_swap_curves, query_chain_interface, query_setup_master, query_factory, query_factory_owner};
 
 // version info for migration info
-const CONTRACT_NAME: &str = "crates.io:catalyst-mock-swap-pool";
+const CONTRACT_NAME: &str = "crates.io:catalyst-mock-vault";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 

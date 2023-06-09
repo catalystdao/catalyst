@@ -291,7 +291,7 @@ mod catalyst_swap_pool_factory_tests {
     use crate::{msg::{InstantiateMsg, QueryMsg, OwnerResponse, ExecuteMsg, DefaultGovernanceFeeShareResponse}, state::MAX_GOVERNANCE_FEE_SHARE, error::ContractError};
 
     use catalyst_vault_common::msg::{ChainInterfaceResponse, FactoryResponse, SetupMasterResponse, AssetsResponse, WeightsResponse, PoolFeeResponse, GovernanceFeeShareResponse, FeeAdministratorResponse};
-    use mock_swap_pool::msg::QueryMsg as MockPoolQueryMsg;
+    use mock_vault::msg::QueryMsg as MockPoolQueryMsg;
 
     const GOVERNANCE: &str = "governance_addr";
     const SETUP_MASTER: &str = "setup_master_addr";
@@ -317,9 +317,9 @@ mod catalyst_swap_pool_factory_tests {
         app.store_code(
             Box::new(
                 ContractWrapper::new(
-                    mock_swap_pool::contract::execute,
-                    mock_swap_pool::contract::instantiate,
-                    mock_swap_pool::contract::query,
+                    mock_vault::contract::execute,
+                    mock_vault::contract::instantiate,
+                    mock_vault::contract::query,
                 )
             )
         )
