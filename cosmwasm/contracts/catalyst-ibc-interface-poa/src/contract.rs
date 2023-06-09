@@ -158,7 +158,7 @@ fn execute_send_cross_chain_asset(
 
     // Build payload
     let payload = CatalystV1SendAssetPayload {
-        from_pool: CatalystEncodedAddress::try_encode(info.sender.as_bytes())?,
+        from_vault: CatalystEncodedAddress::try_encode(info.sender.as_bytes())?,
         to_pool: CatalystEncodedAddress::try_from(to_pool)?,                        // to_pool should already be encoded
         to_account: CatalystEncodedAddress::try_from(to_account)?,                  // to_account should already be encoded
         u,
@@ -196,7 +196,7 @@ fn execute_send_cross_chain_liquidity(
 
     // Build payload
     let payload = CatalystV1SendLiquidityPayload {
-        from_pool: CatalystEncodedAddress::try_encode(info.sender.as_bytes())?,
+        from_vault: CatalystEncodedAddress::try_encode(info.sender.as_bytes())?,
         to_pool: CatalystEncodedAddress::try_from(to_pool)?,                        // to_pool should already be encoded
         to_account: CatalystEncodedAddress::try_from(to_account)?,                  // to_account should already be encoded
         u,

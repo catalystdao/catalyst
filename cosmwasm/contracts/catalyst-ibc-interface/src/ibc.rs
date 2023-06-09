@@ -219,7 +219,7 @@ pub fn on_packet_receive(
                 contract_addr: payload.to_pool_validated(deps.as_ref())?.into_string(),         // Validate to_pool     //TODO do we need to validated this?
                 msg: to_binary(&SwapPoolExecuteMsg::<()>::ReceiveAsset {
                     channel_id: packet.dest.channel_id,
-                    from_pool: payload.from_pool.to_binary(),                                      // Do not validate from_pool as its format is unknown. It is only used for logging
+                    from_vault: payload.from_vault.to_binary(),                                      // Do not validate from_vault as its format is unknown. It is only used for logging
                     to_asset_index: payload.variable_payload.to_asset_index,
                     to_account,
                     u: payload.u,
@@ -243,7 +243,7 @@ pub fn on_packet_receive(
                 contract_addr: payload.to_pool_validated(deps.as_ref())?.into_string(),         // Validate to_pool     //TODO do we need to validate this?
                 msg: to_binary(&SwapPoolExecuteMsg::<()>::ReceiveLiquidity {
                     channel_id: packet.dest.channel_id,
-                    from_pool: payload.from_pool.to_binary(),                                      // Do not validate from_pool as its format is unknown. It is only used for logging
+                    from_vault: payload.from_vault.to_binary(),                                      // Do not validate from_vault as its format is unknown. It is only used for logging
                     to_account,
                     u: payload.u,
                     min_pool_tokens: payload.variable_payload.min_pool_tokens()?,                           // Convert min_pool_tokens into Uint128
@@ -285,7 +285,7 @@ pub fn on_packet_response(
     let receive_asset_execute_msg: cosmwasm_std::WasmMsg = match catalyst_packet {
         CatalystV1Packet::SendAsset(payload) => {
 
-            let from_pool = payload.from_pool_validated(deps.as_ref())?.into_string();  // Validate from_pool   //TODO do we need to validate this?
+            let from_vault = payload.from_vault_validated(deps.as_ref())?.into_string();  // Validate from_vault   //TODO do we need to validate this?
 
             // Build execute message
             let msg = match success {
@@ -308,7 +308,7 @@ pub fn on_packet_response(
             };
 
             Ok::<cosmwasm_std::WasmMsg, ContractError>(cosmwasm_std::WasmMsg::Execute {
-                contract_addr: from_pool,
+                contract_addr: from_vault,
                 msg: to_binary(&msg)?,
                 funds: vec![]
             })
@@ -316,7 +316,7 @@ pub fn on_packet_response(
         },
         CatalystV1Packet::SendLiquidity(payload) => {
 
-            let from_pool = payload.from_pool_validated(deps.as_ref())?.into_string();  // Validate from_pool   //TODO do we need to validate this?
+            let from_vault = payload.from_vault_validated(deps.as_ref())?.into_string();  // Validate from_vault   //TODO do we need to validate this?
 
             // Build execute message
             let msg = match success {
@@ -337,7 +337,7 @@ pub fn on_packet_response(
             };
 
             Ok::<cosmwasm_std::WasmMsg, ContractError>(cosmwasm_std::WasmMsg::Execute {
-                contract_addr: from_pool,
+                contract_addr: from_vault,
                 msg: to_binary(&msg)?,
                 funds: vec![]
             })

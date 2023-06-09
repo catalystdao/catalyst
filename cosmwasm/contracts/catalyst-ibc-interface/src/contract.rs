@@ -113,7 +113,7 @@ fn execute_send_cross_chain_asset(
 
     // Build payload
     let payload = CatalystV1SendAssetPayload {
-        from_pool: CatalystEncodedAddress::try_encode(info.sender.as_bytes())?,
+        from_vault: CatalystEncodedAddress::try_encode(info.sender.as_bytes())?,
         to_pool: CatalystEncodedAddress::try_from(to_pool)?,                        // to_pool should already be encoded
         to_account: CatalystEncodedAddress::try_from(to_account)?,                  // to_account should already be encoded
         u,
@@ -156,7 +156,7 @@ fn execute_send_cross_chain_liquidity(
 
     // Build payload
     let payload = CatalystV1SendLiquidityPayload {
-        from_pool: CatalystEncodedAddress::try_encode(info.sender.as_bytes())?,
+        from_vault: CatalystEncodedAddress::try_encode(info.sender.as_bytes())?,
         to_pool: CatalystEncodedAddress::try_from(to_pool)?,                        // to_pool should already be encoded
         to_account: CatalystEncodedAddress::try_from(to_account)?,                  // to_account should already be encoded
         u,
@@ -226,12 +226,12 @@ mod catalyst_ibc_interface_tests {
 
     fn mock_ibc_packet(
         channel_id: &str,
-        from_pool: &str,
+        from_vault: &str,
         send_msg: ExecuteMsg,
         from_amount: Option<U256>    // Allow to override the send_msg from_amount to provide invalid configs
     ) -> IbcPacket {
         IbcPacket::new(
-            Binary::from(build_payload(from_pool.as_bytes(), send_msg, from_amount).unwrap()),
+            Binary::from(build_payload(from_vault.as_bytes(), send_msg, from_amount).unwrap()),
             IbcEndpoint {
                 port_id: TEST_REMOTE_PORT.to_string(),
                 channel_id: format!("{}-remote", channel_id),
@@ -271,11 +271,11 @@ mod catalyst_ibc_interface_tests {
 
     fn mock_pool_receive_asset_msg(
         channel_id: &str,
-        from_pool: Vec<u8>,
+        from_vault: Vec<u8>,
     ) -> catalyst_vault_common::msg::ExecuteMsg<()> {
         catalyst_vault_common::msg::ExecuteMsg::ReceiveAsset {
             channel_id: channel_id.into(),
-            from_pool: CatalystEncodedAddress::try_encode(from_pool.as_ref()).unwrap().to_binary(),
+            from_vault: CatalystEncodedAddress::try_encode(from_vault.as_ref()).unwrap().to_binary(),
             to_asset_index: 1u8,
             to_account: "to_account".to_string(),
             u: u256!("78456988731590487483448276103933454935747871349630657124267302091643025406701"),          // Some large U256 number
@@ -342,11 +342,11 @@ mod catalyst_ibc_interface_tests {
 
     fn mock_pool_receive_liquidity_msg(
         channel_id: &str,
-        from_pool: Vec<u8>,
+        from_vault: Vec<u8>,
     ) -> catalyst_vault_common::msg::ExecuteMsg<()> {
         catalyst_vault_common::msg::ExecuteMsg::ReceiveLiquidity {
             channel_id: channel_id.into(),
-            from_pool: CatalystEncodedAddress::try_encode(from_pool.as_ref()).unwrap().to_binary(),
+            from_vault: CatalystEncodedAddress::try_encode(from_vault.as_ref()).unwrap().to_binary(),
             to_account: "to_account".to_string(),
             u: u256!("78456988731590487483448276103933454935747871349630657124267302091643025406701"),          // Some large U256 number
             min_pool_tokens: Uint128::from(323476719582585693194107115743132847255u128),                        // Some large Uint128 number
@@ -385,7 +385,7 @@ mod catalyst_ibc_interface_tests {
 
     // TODO move into struct implementation?
     fn build_payload(
-        from_pool: &[u8],
+        from_vault: &[u8],
         msg: ExecuteMsg,
         override_from_amount: Option<U256>    // Allow to override the msg 'from_amount' to provide invalid configs
     ) -> Result<Binary, ContractError> {
@@ -403,7 +403,7 @@ mod catalyst_ibc_interface_tests {
                 calldata
             } => CatalystV1Packet::SendAsset(
                 CatalystV1SendAssetPayload {
-                    from_pool: CatalystEncodedAddress::try_encode(from_pool.as_ref()).unwrap(),
+                    from_vault: CatalystEncodedAddress::try_encode(from_vault.as_ref()).unwrap(),
                     to_pool: CatalystEncodedAddress::from_slice_unchecked(to_pool.as_ref()),
                     to_account: CatalystEncodedAddress::from_slice_unchecked(to_account.as_ref()),
                     u,
@@ -429,7 +429,7 @@ mod catalyst_ibc_interface_tests {
                 calldata
             } => CatalystV1Packet::SendLiquidity(
                 CatalystV1SendLiquidityPayload {
-                    from_pool: CatalystEncodedAddress::try_encode(from_pool.as_ref()).unwrap(),
+                    from_vault: CatalystEncodedAddress::try_encode(from_vault.as_ref()).unwrap(),
                     to_pool: CatalystEncodedAddress::from_slice_unchecked(to_pool.as_ref()),
                     to_account: CatalystEncodedAddress::from_slice_unchecked(to_account.as_ref()),
                     u,
@@ -655,7 +655,7 @@ mod catalyst_ibc_interface_tests {
         open_channel(deps.as_mut(), channel_id, None, None);
 
         // Get mock params
-        let from_pool = "sender";
+        let from_vault = "sender";
         let to_pool = b"to_pool";
         let execute_msg = mock_send_asset_msg(channel_id, to_pool.to_vec(), None);
 
@@ -664,7 +664,7 @@ mod catalyst_ibc_interface_tests {
         let response_result = execute(
             deps.as_mut(),
             mock_env(),
-            mock_info(from_pool, &[]),
+            mock_info(from_vault, &[]),
             execute_msg.clone()
         );
 
@@ -680,7 +680,7 @@ mod catalyst_ibc_interface_tests {
             &response.messages[0],
             &SubMsg::new(IbcMsg::SendPacket {
                 channel_id: channel_id.to_string(),
-                data: build_payload(from_pool.as_bytes(), execute_msg, None).unwrap().into(),
+                data: build_payload(from_vault.as_bytes(), execute_msg, None).unwrap().into(),
                 timeout: IbcTimeout::with_timestamp(mock_env().block.time.plus_seconds(TRANSACTION_TIMEOUT))
             })
         );
@@ -705,10 +705,10 @@ mod catalyst_ibc_interface_tests {
         open_channel(deps.as_mut(), channel_id, None, None);
 
         // Get mock params
-        let from_pool = "sender";
+        let from_vault = "sender";
         let to_pool = "to_pool";
         let send_msg = mock_send_asset_msg(channel_id, to_pool.as_bytes().to_vec(), None);
-        let receive_packet = mock_ibc_packet(channel_id, from_pool, send_msg, None);
+        let receive_packet = mock_ibc_packet(channel_id, from_vault, send_msg, None);
 
 
         // Tested action: receive asset
@@ -737,7 +737,7 @@ mod catalyst_ibc_interface_tests {
                 id: RECEIVE_REPLY_ID,
                 msg: cosmwasm_std::WasmMsg::Execute {
                     contract_addr: to_pool.to_string(),
-                    msg: to_binary(&mock_pool_receive_asset_msg(channel_id, from_pool.as_bytes().to_vec())).unwrap(),
+                    msg: to_binary(&mock_pool_receive_asset_msg(channel_id, from_vault.as_bytes().to_vec())).unwrap(),
                     funds: vec![]
                 }.into(),
                 reply_on: cosmwasm_std::ReplyOn::Always,
@@ -766,14 +766,14 @@ mod catalyst_ibc_interface_tests {
         open_channel(deps.as_mut(), channel_id, None, None);
 
         // Get mock params
-        let from_pool = "sender";
+        let from_vault = "sender";
         let to_pool = b"to_pool";
         let send_msg = mock_send_asset_msg(
             channel_id,
             to_pool.to_vec(),
             Some(U256::MAX)                                // ! Specify a min_out larger than Uint128
         );
-        let receive_packet = mock_ibc_packet(channel_id, from_pool, send_msg, None);
+        let receive_packet = mock_ibc_packet(channel_id, from_vault, send_msg, None);
 
 
         // Tested action: receive asset
@@ -816,10 +816,10 @@ mod catalyst_ibc_interface_tests {
         open_channel(deps.as_mut(), channel_id, None, None);
 
         // Get mock params
-        let from_pool = "sender";
+        let from_vault = "sender";
         let to_pool = "to_pool";
         let send_msg = mock_send_asset_msg(channel_id, to_pool.as_bytes().to_vec(), None);
-        let ibc_packet = mock_ibc_packet(channel_id, from_pool, send_msg, None);
+        let ibc_packet = mock_ibc_packet(channel_id, from_vault, send_msg, None);
 
 
 
@@ -842,7 +842,7 @@ mod catalyst_ibc_interface_tests {
             response.messages[0],
             SubMsg::new(
                 cosmwasm_std::WasmMsg::Execute {
-                    contract_addr: from_pool.to_string(),
+                    contract_addr: from_vault.to_string(),
                     msg: to_binary(&mock_pool_send_asset_success_msg(channel_id)).unwrap(),
                     funds: vec![]
                 }
@@ -870,7 +870,7 @@ mod catalyst_ibc_interface_tests {
             response.messages[0],
             SubMsg::new(
                 cosmwasm_std::WasmMsg::Execute {
-                    contract_addr: from_pool.to_string(),
+                    contract_addr: from_vault.to_string(),
                     msg: to_binary(&mock_pool_send_asset_failure_msg(channel_id)).unwrap(),
                     funds: vec![]
                 }
@@ -915,10 +915,10 @@ mod catalyst_ibc_interface_tests {
         open_channel(deps.as_mut(), channel_id, None, None);
 
         // Get mock params
-        let from_pool = "sender";
+        let from_vault = "sender";
         let to_pool = "to_pool";
         let send_msg = mock_send_asset_msg(channel_id, to_pool.as_bytes().to_vec(), None);
-        let ibc_packet = mock_ibc_packet(channel_id, from_pool, send_msg, None);
+        let ibc_packet = mock_ibc_packet(channel_id, from_vault, send_msg, None);
 
 
         // Tested action: send asset timeout
@@ -938,7 +938,7 @@ mod catalyst_ibc_interface_tests {
             response.messages[0],
             SubMsg::new(
                 cosmwasm_std::WasmMsg::Execute {
-                    contract_addr: from_pool.to_string(),
+                    contract_addr: from_vault.to_string(),
                     msg: to_binary(&mock_pool_send_asset_failure_msg(channel_id)).unwrap(),
                     funds: vec![]
                 }
@@ -965,10 +965,10 @@ mod catalyst_ibc_interface_tests {
         open_channel(deps.as_mut(), channel_id, None, None);
 
         // Get mock params
-        let from_pool = "sender";
+        let from_vault = "sender";
         let to_pool = "to_pool";
         let send_msg = mock_send_asset_msg(channel_id, to_pool.as_bytes().to_vec(), None);
-        let ibc_packet = mock_ibc_packet(channel_id, from_pool, send_msg, Some(U256::from(Uint128::MAX.u128()) + U256::from(1u64)));   // ! Inject an invalid from_amount into the ibc_packet
+        let ibc_packet = mock_ibc_packet(channel_id, from_vault, send_msg, Some(U256::from(Uint128::MAX.u128()) + U256::from(1u64)));   // ! Inject an invalid from_amount into the ibc_packet
 
 
 
@@ -1046,7 +1046,7 @@ mod catalyst_ibc_interface_tests {
         open_channel(deps.as_mut(), channel_id, None, None);
 
         // Get mock params
-        let from_pool = "sender";
+        let from_vault = "sender";
         let to_pool = b"to_pool";
         let execute_msg = mock_send_liquidity_msg(channel_id, to_pool.to_vec(), None, None);
 
@@ -1055,7 +1055,7 @@ mod catalyst_ibc_interface_tests {
         let response_result = execute(
             deps.as_mut(),
             mock_env(),
-            mock_info(from_pool, &[]),
+            mock_info(from_vault, &[]),
             execute_msg.clone()
         );
 
@@ -1071,7 +1071,7 @@ mod catalyst_ibc_interface_tests {
             &response.messages[0],
             &SubMsg::new(IbcMsg::SendPacket {
                 channel_id: channel_id.to_string(),
-                data: build_payload(from_pool.as_bytes(), execute_msg, None).unwrap().into(),
+                data: build_payload(from_vault.as_bytes(), execute_msg, None).unwrap().into(),
                 timeout: IbcTimeout::with_timestamp(mock_env().block.time.plus_seconds(TRANSACTION_TIMEOUT))
             })
         );
@@ -1096,10 +1096,10 @@ mod catalyst_ibc_interface_tests {
         open_channel(deps.as_mut(), channel_id, None, None);
 
         // Get mock params
-        let from_pool = "sender";
+        let from_vault = "sender";
         let to_pool = "to_pool";
         let send_msg = mock_send_liquidity_msg(channel_id, to_pool.as_bytes().to_vec(), None, None);
-        let receive_packet = mock_ibc_packet(channel_id, from_pool, send_msg, None);
+        let receive_packet = mock_ibc_packet(channel_id, from_vault, send_msg, None);
 
 
         // Tested action: receive liquidity
@@ -1128,7 +1128,7 @@ mod catalyst_ibc_interface_tests {
                 id: RECEIVE_REPLY_ID,
                 msg: cosmwasm_std::WasmMsg::Execute {
                     contract_addr: to_pool.to_string(),
-                    msg: to_binary(&mock_pool_receive_liquidity_msg(channel_id, from_pool.as_bytes().to_vec())).unwrap(),
+                    msg: to_binary(&mock_pool_receive_liquidity_msg(channel_id, from_vault.as_bytes().to_vec())).unwrap(),
                     funds: vec![]
                 }.into(),
                 reply_on: cosmwasm_std::ReplyOn::Always,
@@ -1157,7 +1157,7 @@ mod catalyst_ibc_interface_tests {
         open_channel(deps.as_mut(), channel_id, None, None);
 
         // Get mock params
-        let from_pool = "sender";
+        let from_vault = "sender";
         let to_pool = b"to_pool";
         let send_msg = mock_send_liquidity_msg(
             channel_id,
@@ -1165,7 +1165,7 @@ mod catalyst_ibc_interface_tests {
             Some(U256::MAX),                                // ! Specify a min_pool_token that is larger than Uint128
             None,
         );
-        let receive_packet = mock_ibc_packet(channel_id, from_pool, send_msg, None);
+        let receive_packet = mock_ibc_packet(channel_id, from_vault, send_msg, None);
 
 
         // Tested action: receive liquidity
@@ -1208,7 +1208,7 @@ mod catalyst_ibc_interface_tests {
         open_channel(deps.as_mut(), channel_id, None, None);
 
         // Get mock params
-        let from_pool = "sender";
+        let from_vault = "sender";
         let to_pool = b"to_pool";
         let send_msg = mock_send_liquidity_msg(
             channel_id,
@@ -1216,7 +1216,7 @@ mod catalyst_ibc_interface_tests {
             None,
             Some(U256::MAX)                                // ! Specify a min_reference_asset that is larger than Uint128
         );
-        let receive_packet = mock_ibc_packet(channel_id, from_pool, send_msg, None);
+        let receive_packet = mock_ibc_packet(channel_id, from_vault, send_msg, None);
 
 
         // Tested action: receive liquidity
@@ -1259,10 +1259,10 @@ mod catalyst_ibc_interface_tests {
         open_channel(deps.as_mut(), channel_id, None, None);
 
         // Get mock params
-        let from_pool = "sender";
+        let from_vault = "sender";
         let to_pool = "to_pool";
         let send_msg = mock_send_liquidity_msg(channel_id, to_pool.as_bytes().to_vec(), None, None);
-        let ibc_packet = mock_ibc_packet(channel_id, from_pool, send_msg, None);
+        let ibc_packet = mock_ibc_packet(channel_id, from_vault, send_msg, None);
 
 
 
@@ -1285,7 +1285,7 @@ mod catalyst_ibc_interface_tests {
             response.messages[0],
             SubMsg::new(
                 cosmwasm_std::WasmMsg::Execute {
-                    contract_addr: from_pool.to_string(),
+                    contract_addr: from_vault.to_string(),
                     msg: to_binary(&mock_pool_send_liquidity_success_msg(channel_id)).unwrap(),
                     funds: vec![]
                 }
@@ -1313,7 +1313,7 @@ mod catalyst_ibc_interface_tests {
             response.messages[0],
             SubMsg::new(
                 cosmwasm_std::WasmMsg::Execute {
-                    contract_addr: from_pool.to_string(),
+                    contract_addr: from_vault.to_string(),
                     msg: to_binary(&mock_pool_send_liquidity_failure_msg(channel_id)).unwrap(),
                     funds: vec![]
                 }
@@ -1358,10 +1358,10 @@ mod catalyst_ibc_interface_tests {
         open_channel(deps.as_mut(), channel_id, None, None);
 
         // Get mock params
-        let from_pool = "sender";
+        let from_vault = "sender";
         let to_pool = "to_pool";
         let send_msg = mock_send_liquidity_msg(channel_id, to_pool.as_bytes().to_vec(), None, None);
-        let ibc_packet = mock_ibc_packet(channel_id, from_pool, send_msg, None);
+        let ibc_packet = mock_ibc_packet(channel_id, from_vault, send_msg, None);
 
 
         // Tested action: send liquidity timeout
@@ -1381,7 +1381,7 @@ mod catalyst_ibc_interface_tests {
             response.messages[0],
             SubMsg::new(
                 cosmwasm_std::WasmMsg::Execute {
-                    contract_addr: from_pool.to_string(),
+                    contract_addr: from_vault.to_string(),
                     msg: to_binary(&mock_pool_send_liquidity_failure_msg(channel_id)).unwrap(),
                     funds: vec![]
                 }
@@ -1408,10 +1408,10 @@ mod catalyst_ibc_interface_tests {
         open_channel(deps.as_mut(), channel_id, None, None);
 
         // Get mock params
-        let from_pool = "sender";
+        let from_vault = "sender";
         let to_pool = "to_pool";
         let send_msg = mock_send_liquidity_msg(channel_id, to_pool.as_bytes().to_vec(), None, None);
-        let ibc_packet = mock_ibc_packet(channel_id, from_pool, send_msg, Some(U256::from(Uint128::MAX.u128()) + U256::from(1u64)));   // ! Inject an invalid from_amount into the ibc_packet
+        let ibc_packet = mock_ibc_packet(channel_id, from_vault, send_msg, Some(U256::from(Uint128::MAX.u128()) + U256::from(1u64)));   // ! Inject an invalid from_amount into the ibc_packet
 
 
 

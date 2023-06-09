@@ -680,7 +680,7 @@ pub fn receive_asset(
     env: Env,
     info: MessageInfo,
     channel_id: String,
-    from_pool: Binary,
+    from_vault: Binary,
     to_asset_index: u8,
     to_account: String,
     u: U256,
@@ -698,8 +698,8 @@ pub fn receive_asset(
     }
 
     // Only allow connected pools
-    if !is_connected(&deps.as_ref(), &channel_id, from_pool.clone()) {
-        return Err(ContractError::PoolNotConnected { channel_id, pool: from_pool })
+    if !is_connected(&deps.as_ref(), &channel_id, from_vault.clone()) {
+        return Err(ContractError::PoolNotConnected { channel_id, pool: from_vault })
     }
 
     update_weights(deps, env.block.time.nanos().into())?;
@@ -754,7 +754,7 @@ pub fn receive_asset(
         .add_event(
             receive_asset_event(
                 channel_id,
-                from_pool,
+                from_vault,
                 to_account,
                 to_asset.to_string(),
                 u,
@@ -880,7 +880,7 @@ pub fn receive_liquidity(
     env: Env,
     info: MessageInfo,
     channel_id: String,
-    from_pool: Binary,
+    from_vault: Binary,
     to_account: String,
     u: U256,
     min_pool_tokens: Uint128,
@@ -897,8 +897,8 @@ pub fn receive_liquidity(
     }
 
     // Only allow connected pools
-    if !is_connected(&deps.as_ref(), &channel_id, from_pool.clone()) {
-        return Err(ContractError::PoolNotConnected { channel_id, pool: from_pool })
+    if !is_connected(&deps.as_ref(), &channel_id, from_vault.clone()) {
+        return Err(ContractError::PoolNotConnected { channel_id, pool: from_vault })
     }
 
     update_weights(deps, env.block.time.nanos().into())?;
@@ -1007,7 +1007,7 @@ pub fn receive_liquidity(
         .add_event(
             receive_liquidity_event(
                 channel_id,
-                from_pool,
+                from_vault,
                 to_account,
                 u,
                 out,

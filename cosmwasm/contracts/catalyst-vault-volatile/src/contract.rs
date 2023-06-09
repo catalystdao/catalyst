@@ -261,7 +261,7 @@ pub fn execute(
 
         VolatileExecuteMsg::ReceiveAsset {
             channel_id,
-            from_pool,
+            from_vault,
             to_asset_index,
             to_account,
             u,
@@ -276,7 +276,7 @@ pub fn execute(
             env,
             info,
             channel_id,
-            from_pool,
+            from_vault,
             to_asset_index,
             to_account,
             u,
@@ -313,7 +313,7 @@ pub fn execute(
 
         VolatileExecuteMsg::ReceiveLiquidity {
             channel_id,
-            from_pool,
+            from_vault,
             to_account,
             u,
             min_pool_tokens,
@@ -327,7 +327,7 @@ pub fn execute(
             env,
             info,
             channel_id,
-            from_pool,
+            from_vault,
             to_account,
             u,
             min_pool_tokens,

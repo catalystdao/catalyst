@@ -28,12 +28,12 @@ mod test_volatile_receive_liquidity {
         );
 
         // Connect pool with a mock pool
-        let from_pool = encode_payload_address(b"from_pool");
+        let from_vault = encode_payload_address(b"from_vault");
         mock_set_pool_connection(
             &mut app,
             vault.clone(),
             CHANNEL_ID.to_string(),
-            from_pool.clone(),
+            from_vault.clone(),
             true
         );
 
@@ -48,7 +48,7 @@ mod test_volatile_receive_liquidity {
             vault.clone(),
             &VolatileExecuteMsg::ReceiveLiquidity {
                 channel_id: CHANNEL_ID.to_string(),
-                from_pool,
+                from_vault,
                 to_account: SWAPPER_B.to_string(),
                 u: swap_units,
                 min_pool_tokens: Uint128::zero(),
@@ -114,12 +114,12 @@ mod test_volatile_receive_liquidity {
         );
 
         // Connect pool with a mock pool
-        let from_pool = encode_payload_address(b"from_pool");
+        let from_vault = encode_payload_address(b"from_vault");
         mock_set_pool_connection(
             &mut app,
             vault.clone(),
             CHANNEL_ID.to_string(),
-            from_pool.clone(),
+            from_vault.clone(),
             true
         );
 
@@ -134,7 +134,7 @@ mod test_volatile_receive_liquidity {
             vault.clone(),
             &VolatileExecuteMsg::ReceiveLiquidity {
                 channel_id: CHANNEL_ID.to_string(),
-                from_pool,
+                from_vault,
                 to_account: SWAPPER_B.to_string(),
                 u: swap_units,
                 min_pool_tokens: Uint128::zero(),
@@ -191,12 +191,12 @@ mod test_volatile_receive_liquidity {
         );
 
         // Connect pool with a mock pool
-        let from_pool = encode_payload_address(b"from_pool");
+        let from_vault = encode_payload_address(b"from_vault");
         mock_set_pool_connection(
             &mut app,
             vault.clone(),
             CHANNEL_ID.to_string(),
-            from_pool.clone(),
+            from_vault.clone(),
             true
         );
 
@@ -224,7 +224,7 @@ mod test_volatile_receive_liquidity {
             vault.clone(),
             &VolatileExecuteMsg::ReceiveLiquidity {
                 channel_id: CHANNEL_ID.to_string(),
-                from_pool: from_pool.clone(),
+                from_vault: from_vault.clone(),
                 to_account: SWAPPER_B.to_string(),
                 u: swap_units,
                 min_pool_tokens: min_out_invalid,
@@ -254,7 +254,7 @@ mod test_volatile_receive_liquidity {
             vault.clone(),
             &VolatileExecuteMsg::ReceiveLiquidity {
                 channel_id: CHANNEL_ID.to_string(),
-                from_pool,
+                from_vault,
                 to_account: SWAPPER_B.to_string(),
                 u: swap_units,
                 min_pool_tokens: min_out_valid,
@@ -291,12 +291,12 @@ mod test_volatile_receive_liquidity {
         );
 
         // Connect pool with a mock pool
-        let from_pool = encode_payload_address(b"from_pool");
+        let from_vault = encode_payload_address(b"from_vault");
         mock_set_pool_connection(
             &mut app,
             vault.clone(),
             CHANNEL_ID.to_string(),
-            from_pool.clone(),
+            from_vault.clone(),
             true
         );
 
@@ -332,7 +332,7 @@ mod test_volatile_receive_liquidity {
             vault.clone(),
             &VolatileExecuteMsg::ReceiveLiquidity {
                 channel_id: CHANNEL_ID.to_string(),
-                from_pool: from_pool.clone(),
+                from_vault: from_vault.clone(),
                 to_account: SWAPPER_B.to_string(),
                 u: swap_units,
                 min_pool_tokens: Uint128::zero(),
@@ -362,7 +362,7 @@ mod test_volatile_receive_liquidity {
             vault.clone(),
             &VolatileExecuteMsg::ReceiveLiquidity {
                 channel_id: CHANNEL_ID.to_string(),
-                from_pool,
+                from_vault,
                 to_account: SWAPPER_B.to_string(),
                 u: swap_units,
                 min_pool_tokens: Uint128::zero(),
@@ -398,7 +398,7 @@ mod test_volatile_receive_liquidity {
         );
 
         // ! Do not connect the pool with the mock source pool
-        let from_pool = encode_payload_address(b"from_pool");
+        let from_vault = encode_payload_address(b"from_vault");
 
         // Define the receive liquidity configuration
         let swap_units = u256!("500000000000000000");
@@ -411,7 +411,7 @@ mod test_volatile_receive_liquidity {
             vault.clone(),
             &VolatileExecuteMsg::ReceiveLiquidity {
                 channel_id: CHANNEL_ID.to_string(),
-                from_pool: from_pool.clone(),
+                from_vault: from_vault.clone(),
                 to_account: SWAPPER_B.to_string(),
                 u: swap_units,
                 min_pool_tokens: Uint128::zero(),
@@ -430,7 +430,7 @@ mod test_volatile_receive_liquidity {
         assert!(matches!(
             response_result.err().unwrap().downcast().unwrap(),
             ContractError::PoolNotConnected { channel_id: err_channel_id, pool: err_pool }
-                if err_channel_id == CHANNEL_ID && err_pool == from_pool
+                if err_channel_id == CHANNEL_ID && err_pool == from_vault
         ));
 
     }
@@ -456,12 +456,12 @@ mod test_volatile_receive_liquidity {
         );
 
         // Connect pool with a mock pool
-        let from_pool = encode_payload_address(b"from_pool");
+        let from_vault = encode_payload_address(b"from_vault");
         mock_set_pool_connection(
             &mut app,
             vault.clone(),
             CHANNEL_ID.to_string(),
-            from_pool.clone(),
+            from_vault.clone(),
             true
         );
 
@@ -476,7 +476,7 @@ mod test_volatile_receive_liquidity {
             vault.clone(),
             &VolatileExecuteMsg::ReceiveLiquidity {
                 channel_id: CHANNEL_ID.to_string(),
-                from_pool,
+                from_vault,
                 to_account: SWAPPER_B.to_string(),
                 u: swap_units,
                 min_pool_tokens: Uint128::zero(),

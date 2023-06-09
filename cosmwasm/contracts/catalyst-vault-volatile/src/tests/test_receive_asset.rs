@@ -28,12 +28,12 @@ mod test_volatile_receive_asset {
         );
 
         // Connect pool with a mock pool
-        let from_pool = encode_payload_address(b"from_pool");
+        let from_vault = encode_payload_address(b"from_vault");
         mock_set_pool_connection(
             &mut app,
             vault.clone(),
             CHANNEL_ID.to_string(),
-            from_pool.clone(),
+            from_vault.clone(),
             true
         );
 
@@ -53,7 +53,7 @@ mod test_volatile_receive_asset {
             vault.clone(),
             &VolatileExecuteMsg::ReceiveAsset {
                 channel_id: CHANNEL_ID.to_string(),
-                from_pool,
+                from_vault,
                 to_asset_index: to_asset_idx as u8,
                 to_account: SWAPPER_B.to_string(),
                 u: swap_units,
@@ -120,12 +120,12 @@ mod test_volatile_receive_asset {
         );
 
         // Connect pool with a mock pool
-        let from_pool = encode_payload_address(b"from_pool");
+        let from_vault = encode_payload_address(b"from_vault");
         mock_set_pool_connection(
             &mut app,
             vault.clone(),
             CHANNEL_ID.to_string(),
-            from_pool.clone(),
+            from_vault.clone(),
             true
         );
 
@@ -143,7 +143,7 @@ mod test_volatile_receive_asset {
             vault.clone(),
             &VolatileExecuteMsg::ReceiveAsset {
                 channel_id: CHANNEL_ID.to_string(),
-                from_pool,
+                from_vault,
                 to_asset_index: to_asset_idx as u8,
                 to_account: SWAPPER_B.to_string(),
                 u: swap_units,
@@ -201,12 +201,12 @@ mod test_volatile_receive_asset {
         );
 
         // Connect pool with a mock pool
-        let from_pool = encode_payload_address(b"from_pool");
+        let from_vault = encode_payload_address(b"from_vault");
         mock_set_pool_connection(
             &mut app,
             vault.clone(),
             CHANNEL_ID.to_string(),
-            from_pool.clone(),
+            from_vault.clone(),
             true
         );
 
@@ -238,7 +238,7 @@ mod test_volatile_receive_asset {
             vault.clone(),
             &VolatileExecuteMsg::ReceiveAsset {
                 channel_id: CHANNEL_ID.to_string(),
-                from_pool: from_pool.clone(),
+                from_vault: from_vault.clone(),
                 to_asset_index: to_asset_idx as u8,
                 to_account: SWAPPER_B.to_string(),
                 u: swap_units,
@@ -269,7 +269,7 @@ mod test_volatile_receive_asset {
             vault.clone(),
             &VolatileExecuteMsg::ReceiveAsset {
                 channel_id: CHANNEL_ID.to_string(),
-                from_pool,
+                from_vault,
                 to_asset_index: to_asset_idx as u8,
                 to_account: SWAPPER_B.to_string(),
                 u: swap_units,
@@ -306,7 +306,7 @@ mod test_volatile_receive_asset {
         );
 
         // ! Do not connect the pool with the mock source pool
-        let from_pool = encode_payload_address(b"from_pool");
+        let from_vault = encode_payload_address(b"from_vault");
 
         // Define the receive asset configuration
         let to_asset_idx = 0;
@@ -320,7 +320,7 @@ mod test_volatile_receive_asset {
             vault.clone(),
             &VolatileExecuteMsg::ReceiveAsset {
                 channel_id: CHANNEL_ID.to_string(),
-                from_pool: from_pool.clone(),
+                from_vault: from_vault.clone(),
                 to_asset_index: to_asset_idx as u8,
                 to_account: SWAPPER_B.to_string(),
                 u: swap_units,
@@ -340,7 +340,7 @@ mod test_volatile_receive_asset {
         assert!(matches!(
             response_result.err().unwrap().downcast().unwrap(),
             ContractError::PoolNotConnected { channel_id: err_channel_id, pool: err_pool }
-                if err_channel_id == CHANNEL_ID && err_pool == from_pool
+                if err_channel_id == CHANNEL_ID && err_pool == from_vault
         ));
 
     }
@@ -366,12 +366,12 @@ mod test_volatile_receive_asset {
         );
 
         // Connect pool with a mock pool
-        let from_pool = encode_payload_address(b"from_pool");
+        let from_vault = encode_payload_address(b"from_vault");
         mock_set_pool_connection(
             &mut app,
             vault.clone(),
             CHANNEL_ID.to_string(),
-            from_pool.clone(),
+            from_vault.clone(),
             true
         );
 
@@ -387,7 +387,7 @@ mod test_volatile_receive_asset {
             vault.clone(),
             &VolatileExecuteMsg::ReceiveAsset {
                 channel_id: CHANNEL_ID.to_string(),
-                from_pool,
+                from_vault,
                 to_asset_index: to_asset_idx as u8,
                 to_account: SWAPPER_B.to_string(),
                 u: swap_units,
@@ -432,12 +432,12 @@ mod test_volatile_receive_asset {
         );
 
         // Connect pool with a mock pool
-        let from_pool = encode_payload_address(b"from_pool");
+        let from_vault = encode_payload_address(b"from_vault");
         mock_set_pool_connection(
             &mut app,
             vault.clone(),
             CHANNEL_ID.to_string(),
-            from_pool.clone(),
+            from_vault.clone(),
             true
         );
 
@@ -453,7 +453,7 @@ mod test_volatile_receive_asset {
             vault.clone(),
             &VolatileExecuteMsg::ReceiveAsset {
                 channel_id: CHANNEL_ID.to_string(),
-                from_pool,
+                from_vault,
                 to_asset_index: to_asset_idx as u8,
                 to_account: SWAPPER_B.to_string(),
                 u: swap_units,

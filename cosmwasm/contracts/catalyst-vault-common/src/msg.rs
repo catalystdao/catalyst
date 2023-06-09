@@ -113,7 +113,7 @@ pub enum ExecuteMsg<T> {
 
     ReceiveAsset {
         channel_id: String,
-        from_pool: Binary,
+        from_vault: Binary,
         to_asset_index: u8,
         to_account: String,
         u: U256,
@@ -138,7 +138,7 @@ pub enum ExecuteMsg<T> {
 
     ReceiveLiquidity {
         channel_id: String,
-        from_pool: Binary,
+        from_vault: Binary,
         to_account: String,
         u: U256,
         min_pool_tokens: Uint128,
