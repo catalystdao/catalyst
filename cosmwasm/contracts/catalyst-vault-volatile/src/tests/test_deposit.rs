@@ -75,7 +75,7 @@ mod test_volatile_deposit{
 
 
         // Verify the pool tokens return
-        // NOTE: the way in which the `pool_fee` is applied when depositing results in a slightly fewer return than the 
+        // NOTE: the way in which the `vault_fee` is applied when depositing results in a slightly fewer return than the 
         // one computed by `expected_return` (i.e. the fee is not applied directly to the input assets in the pool implementation)
         let observed_return = get_response_attribute::<Uint128>(
             result.events[1].clone(),
@@ -85,7 +85,7 @@ mod test_volatile_deposit{
         let expected_return = uint128_to_f64(INITIAL_MINT_AMOUNT) * deposit_percentage * (1. - (DEFAULT_TEST_POOL_FEE.u64() as f64)/1e18);
 
         assert!(uint128_to_f64(observed_return) <= expected_return * 1.000001);
-        assert!(uint128_to_f64(observed_return) >= expected_return * 0.98);      // Allow some margin because of the `pool_fee`
+        assert!(uint128_to_f64(observed_return) >= expected_return * 0.98);      // Allow some margin because of the `vault_fee`
 
 
         // Verify the deposited assets have been transferred from the swapper to the pool
@@ -213,7 +213,7 @@ mod test_volatile_deposit{
         );
 
         assert!(uint128_to_f64(observed_return) <= expected_return * 1.000001);
-        assert!(uint128_to_f64(observed_return) >= expected_return * 0.999999);      // Allow some margin because of the `pool_fee`
+        assert!(uint128_to_f64(observed_return) >= expected_return * 0.999999);      // Allow some margin because of the `vault_fee`
 
     }
 

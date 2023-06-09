@@ -68,15 +68,15 @@ mod test_volatile_instantiate {
         );
 
         // Query and verify pool fee
-        let pool_fee: Uint64 = app
+        let vault_fee: Uint64 = app
             .wrap()
             .query_wasm_smart::<PoolFeeResponse>(vault_contract.clone(), &QueryMsg::PoolFee {})
             .unwrap()
             .fee;
 
         assert_eq!(
-            pool_fee,
-            instantiate_msg.pool_fee
+            vault_fee,
+            instantiate_msg.vault_fee
         );
 
         // Query and verify governance fee

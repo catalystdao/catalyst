@@ -54,7 +54,7 @@ pub fn execute(
             assets_balances,
             weights,
             amplification,
-            pool_fee,
+            vault_fee,
             name,
             symbol,
             chain_interface
@@ -66,7 +66,7 @@ pub fn execute(
             assets_balances,
             weights,
             amplification,
-            pool_fee,
+            vault_fee,
             name,
             symbol,
             chain_interface               
@@ -99,7 +99,7 @@ fn execute_deploy_vault(
     assets_balances: Vec<Uint128>,
     weights: Vec<Uint64>,
     amplification: Uint64,
-    pool_fee: Uint64,
+    vault_fee: Uint64,
     name: String,
     symbol: String,
     chain_interface: Option<String>
@@ -138,7 +138,7 @@ fn execute_deploy_vault(
                 name,
                 symbol: symbol.clone(),
                 chain_interface: chain_interface.clone(),
-                pool_fee,
+                vault_fee,
                 governance_fee: default_governance_fee_share(deps.as_ref())?,
                 fee_administrator: owner(deps.as_ref())?.ok_or(ContractError::Unauthorized {})?.to_string(),      //TODO error
                 setup_master: info.sender.to_string()
@@ -485,7 +485,7 @@ mod catalyst_swap_pool_factory_tests {
                 assets_balances: vault_initial_balances.clone(),
                 weights: vault_weights.clone(),
                 amplification: Uint64::new(1000000000000000000u64),
-                pool_fee: TEST_POOL_FEE,
+                vault_fee: TEST_POOL_FEE,
                 name: "TestPool".to_string(),
                 symbol: "TP".to_string(),
                 chain_interface: Some("chain_interface".to_string())
@@ -575,14 +575,14 @@ mod catalyst_swap_pool_factory_tests {
         );
 
 
-        // Verify the deployed vault has the 'pool_fee' set
-        let queried_pool_fee = app.wrap().query_wasm_smart::<PoolFeeResponse>(
+        // Verify the deployed vault has the 'vault_fee' set
+        let queried_vault_fee = app.wrap().query_wasm_smart::<PoolFeeResponse>(
             vault.clone(),
             &MockPoolQueryMsg::PoolFee {}
         ).unwrap().fee;
 
         assert_eq!(
-            queried_pool_fee,
+            queried_vault_fee,
             TEST_POOL_FEE
         );
 
@@ -659,7 +659,7 @@ mod catalyst_swap_pool_factory_tests {
                 assets_balances: vault_initial_balances,
                 weights: vault_weights,
                 amplification: Uint64::new(1000000000000000000u64),
-                pool_fee: Uint64::zero(),
+                vault_fee: Uint64::zero(),
                 name: "TestPool".to_string(),
                 symbol: "TP".to_string(),
                 chain_interface: None
@@ -726,7 +726,7 @@ mod catalyst_swap_pool_factory_tests {
                 assets_balances: vault_initial_balances[..2].to_vec(),   // ! Only 2 balances are provided 
                 weights: vault_weights.clone(),
                 amplification: Uint64::new(1000000000000000000u64),
-                pool_fee: Uint64::zero(),
+                vault_fee: Uint64::zero(),
                 name: "TestPool".to_string(),
                 symbol: "TP".to_string(),
                 chain_interface: None
@@ -753,7 +753,7 @@ mod catalyst_swap_pool_factory_tests {
                 assets_balances: vault_initial_balances.clone(),
                 weights: vault_weights[..2].to_vec(),   // ! Only 2 weights are provided 
                 amplification: Uint64::new(1000000000000000000u64),
-                pool_fee: Uint64::zero(),
+                vault_fee: Uint64::zero(),
                 name: "TestPool".to_string(),
                 symbol: "TP".to_string(),
                 chain_interface: None
@@ -780,7 +780,7 @@ mod catalyst_swap_pool_factory_tests {
                 assets_balances: vault_initial_balances,
                 weights: vault_weights,
                 amplification: Uint64::new(1000000000000000000u64),
-                pool_fee: Uint64::zero(),
+                vault_fee: Uint64::zero(),
                 name: "TestPool".to_string(),
                 symbol: "TP".to_string(),
                 chain_interface: None

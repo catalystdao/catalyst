@@ -250,7 +250,7 @@ pub fn set_fee_administrator_unchecked(
 }
 
 
-pub fn set_pool_fee_unchecked(
+pub fn set_vault_fee_unchecked(
     deps: &mut DepsMut,
     fee: Uint64
 ) -> Result<Event, ContractError> {
@@ -269,7 +269,7 @@ pub fn set_pool_fee_unchecked(
 }
 
 
-pub fn set_pool_fee(
+pub fn set_vault_fee(
     deps: &mut DepsMut,
     info: MessageInfo,
     fee: Uint64
@@ -281,7 +281,7 @@ pub fn set_pool_fee(
         return Err(ContractError::Unauthorized {})
     }
 
-    let event = set_pool_fee_unchecked(deps, fee)?;
+    let event = set_vault_fee_unchecked(deps, fee)?;
 
     Ok(Response::new().add_event(event))
 }
@@ -326,11 +326,11 @@ pub fn collect_governance_fee_message(
     deps: &Deps,
     _env: Env,      //TODO remove?
     asset: String,
-    pool_fee_amount: Uint128
+    vault_fee_amount: Uint128
 ) -> Result<Option<CosmosMsg>, ContractError> {
 
     let gov_fee_amount: Uint128 = mul_wad_down(
-        U256::from(pool_fee_amount.u128()),
+        U256::from(vault_fee_amount.u128()),
         U256::from(GOVERNANCE_FEE_SHARE.load(deps.storage)?)
     )?.try_into().map_err(|_| ContractError::GenericError {})?;     //TODO error
 
@@ -376,7 +376,7 @@ pub fn setup(
     name: String,
     symbol: String,
     chain_interface: Option<String>,
-    pool_fee: Uint64,
+    vault_fee: Uint64,
     governance_fee: Uint64,
     fee_administrator: String,
     setup_master: String,
@@ -403,7 +403,7 @@ pub fn setup(
 
 
     let admin_fee_event = set_fee_administrator_unchecked(deps, fee_administrator.as_str())?;
-    let pool_fee_event = set_pool_fee_unchecked(deps, pool_fee)?;
+    let vault_fee_event = set_vault_fee_unchecked(deps, vault_fee)?;
     let gov_fee_event = set_governance_fee_share_unchecked(deps, governance_fee)?;
 
     // Setup the Pool Token (store token info using cw20-base format)
@@ -422,7 +422,7 @@ pub fn setup(
     Ok(
         Response::new()
             .add_event(admin_fee_event)
-            .add_event(pool_fee_event)
+            .add_event(vault_fee_event)
             .add_event(gov_fee_event)
     )
 }
@@ -828,7 +828,7 @@ pub fn query_weights(deps: Deps) -> StdResult<WeightsResponse> {
     )
 }
 
-pub fn query_pool_fee(deps: Deps) -> StdResult<PoolFeeResponse> {
+pub fn query_vault_fee(deps: Deps) -> StdResult<PoolFeeResponse> {
     Ok(
         PoolFeeResponse {
             fee: POOL_FEE.load(deps.storage)?

@@ -329,7 +329,7 @@ pub fn mock_factory_deploy_vault(
             assets_balances,
             weights,
             amplification: Uint64::new(1000000000000000000u64),
-            pool_fee: DEFAULT_TEST_POOL_FEE,
+            vault_fee: DEFAULT_TEST_POOL_FEE,
             name: "TestPool".to_string(),
             symbol: "TP".to_string(),
             chain_interface: chain_interface.map(|value| value.to_string())
@@ -352,7 +352,7 @@ pub fn mock_instantiate_vault_msg(
         name: "TestPool".to_string(),
         symbol: "TP".to_string(),
         chain_interface,
-        pool_fee: DEFAULT_TEST_POOL_FEE,
+        vault_fee: DEFAULT_TEST_POOL_FEE,
         governance_fee: DEFAULT_TEST_GOV_FEE,
         fee_administrator: FACTORY_OWNER.to_string(),   // The 'fee_administrator' is set to the 'factory_owner' as this is the default when vaults are deployed via the factory
         setup_master: SETUP_MASTER.to_string()
@@ -496,7 +496,7 @@ pub fn mock_set_pool_connection(
 }
 
 
-pub fn mock_set_pool_fee(
+pub fn mock_set_vault_fee(
     app: &mut App,
     vault_contract: Addr,
     fee: Uint64
@@ -530,13 +530,13 @@ pub fn mock_set_governance_fee_share(
 pub struct ExpectedLocalSwapResult {
     pub u: f64,
     pub to_amount: f64,
-    pub pool_fee: f64,
+    pub vault_fee: f64,
     pub governance_fee: f64
 }
 
 pub struct ExpectedSendAssetResult {
     pub u: f64,
-    pub pool_fee: f64,
+    pub vault_fee: f64,
     pub governance_fee: f64
 }
 
@@ -550,7 +550,7 @@ pub fn compute_expected_local_swap(
     from_balance: Uint128,
     to_weight: Uint64,
     to_balance: Uint128,
-    pool_fee: Option<Uint64>,
+    vault_fee: Option<Uint64>,
     governance_fee_share: Option<Uint64>
 ) -> ExpectedLocalSwapResult {
 
@@ -562,12 +562,12 @@ pub fn compute_expected_local_swap(
     let to_balance = to_balance.u128() as f64;
 
     // Compute fees
-    let pool_fee = (pool_fee.unwrap_or(Uint64::zero()).u64() as f64) / 1e18;
+    let vault_fee = (vault_fee.unwrap_or(Uint64::zero()).u64() as f64) / 1e18;
     let governance_fee_share = (governance_fee_share.unwrap_or(Uint64::zero()).u64() as f64) / 1e18;
 
-    let net_fee = pool_fee * swap_amount;
-    let net_pool_fee = pool_fee * (1. - governance_fee_share) * swap_amount;
-    let net_governance_fee = pool_fee * governance_fee_share * swap_amount;
+    let net_fee = vault_fee * swap_amount;
+    let net_vault_fee = vault_fee * (1. - governance_fee_share) * swap_amount;
+    let net_governance_fee = vault_fee * governance_fee_share * swap_amount;
 
     // Compute swap
     let x = swap_amount - net_fee;
@@ -577,7 +577,7 @@ pub fn compute_expected_local_swap(
     ExpectedLocalSwapResult {
         u,
         to_amount,
-        pool_fee: net_pool_fee,
+        vault_fee: net_vault_fee,
         governance_fee: net_governance_fee
     }
 }
@@ -586,7 +586,7 @@ pub fn compute_expected_send_asset(
     swap_amount: Uint128,
     from_weight: Uint64,
     from_balance: Uint128,
-    pool_fee: Option<Uint64>,
+    vault_fee: Option<Uint64>,
     governance_fee_share: Option<Uint64>
 ) -> ExpectedSendAssetResult {
 
@@ -596,12 +596,12 @@ pub fn compute_expected_send_asset(
     let from_balance = from_balance.u128() as f64;
 
     // Compute fees
-    let pool_fee = (pool_fee.unwrap_or(Uint64::zero()).u64() as f64) / 1e18;
+    let vault_fee = (vault_fee.unwrap_or(Uint64::zero()).u64() as f64) / 1e18;
     let governance_fee_share = (governance_fee_share.unwrap_or(Uint64::zero()).u64() as f64) / 1e18;
 
-    let net_fee = pool_fee * swap_amount;
-    let net_pool_fee = pool_fee * (1. - governance_fee_share) * swap_amount;
-    let net_governance_fee = pool_fee * governance_fee_share * swap_amount;
+    let net_fee = vault_fee * swap_amount;
+    let net_vault_fee = vault_fee * (1. - governance_fee_share) * swap_amount;
+    let net_governance_fee = vault_fee * governance_fee_share * swap_amount;
 
     // Compute swap
     let x = swap_amount - net_fee;
@@ -609,7 +609,7 @@ pub fn compute_expected_send_asset(
 
     ExpectedSendAssetResult {
         u,
-        pool_fee: net_pool_fee,
+        vault_fee: net_vault_fee,
         governance_fee: net_governance_fee
     }
 }
@@ -723,7 +723,7 @@ pub fn compute_expected_deposit_mixed(
     from_weights: Vec<Uint64>,
     from_balances: Vec<Uint128>,
     from_total_supply: Uint128,
-    pool_fee: Option<Uint64>,
+    vault_fee: Option<Uint64>,
 ) -> f64 {
     
     // Compute units
@@ -740,7 +740,7 @@ pub fn compute_expected_deposit_mixed(
         .sum();
 
     // Take pool fee
-    let units = units * (1. - (pool_fee.unwrap_or(Uint64::zero()).u64() as f64)/1e18);
+    let units = units * (1. - (vault_fee.unwrap_or(Uint64::zero()).u64() as f64)/1e18);
 
     // Compute the deposit share
     let weights_sum = from_weights.iter().sum::<Uint64>().u64() as f64;

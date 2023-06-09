@@ -128,7 +128,7 @@ mod test_volatile_send_asset {
             .unwrap()
             .amount
         );
-        let expected_escrowed_total = uint128_to_f64(swap_amount) - expected_return.pool_fee - expected_return.governance_fee;
+        let expected_escrowed_total = uint128_to_f64(swap_amount) - expected_return.vault_fee - expected_return.governance_fee;
 
         assert!(queried_escrowed_total <= expected_escrowed_total * 1.000001);
         assert!(queried_escrowed_total >= expected_escrowed_total * 0.999999);

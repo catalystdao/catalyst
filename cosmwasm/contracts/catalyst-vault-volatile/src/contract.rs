@@ -11,8 +11,8 @@ use cw20_base::contract::{
 };
 use catalyst_vault_common::ContractError;
 use catalyst_vault_common::state::{
-    setup, finish_setup, set_fee_administrator, set_pool_fee, set_governance_fee_share, set_connection,
-    on_send_asset_failure, on_send_liquidity_failure, query_chain_interface, query_setup_master, query_ready, query_only_local, query_assets, query_weights, query_pool_fee, query_governance_fee_share, query_fee_administrator, query_total_escrowed_liquidity, query_total_escrowed_asset, query_asset_escrow, query_liquidity_escrow, query_pool_connection_state, query_factory, query_factory_owner
+    setup, finish_setup, set_fee_administrator, set_vault_fee, set_governance_fee_share, set_connection,
+    on_send_asset_failure, on_send_liquidity_failure, query_chain_interface, query_setup_master, query_ready, query_only_local, query_assets, query_weights, query_vault_fee, query_governance_fee_share, query_fee_administrator, query_total_escrowed_liquidity, query_total_escrowed_asset, query_asset_escrow, query_liquidity_escrow, query_pool_connection_state, query_factory, query_factory_owner
 };
 
 use crate::msg::{VolatileExecuteMsg, InstantiateMsg, QueryMsg, VolatileExecuteExtension};
@@ -44,7 +44,7 @@ pub fn instantiate(
         msg.name,
         msg.symbol,
         msg.chain_interface,
-        msg.pool_fee,
+        msg.vault_fee,
         msg.governance_fee,
         msg.fee_administrator,
         msg.setup_master,
@@ -90,7 +90,7 @@ pub fn execute(
             administrator
         ),
 
-        VolatileExecuteMsg::SetPoolFee { fee } => set_pool_fee(
+        VolatileExecuteMsg::SetPoolFee { fee } => set_vault_fee(
             &mut deps,
             info,
             fee
@@ -435,7 +435,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::Assets {} => to_binary(&query_assets(deps)?),
         QueryMsg::Weights {} => to_binary(&query_weights(deps)?),
 
-        QueryMsg::PoolFee {} => to_binary(&query_pool_fee(deps)?),
+        QueryMsg::PoolFee {} => to_binary(&query_vault_fee(deps)?),
         QueryMsg::GovernanceFeeShare {} => to_binary(&query_governance_fee_share(deps)?),
         QueryMsg::FeeAdministrator {} => to_binary(&query_fee_administrator(deps)?),
 

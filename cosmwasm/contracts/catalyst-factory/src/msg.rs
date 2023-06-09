@@ -16,7 +16,7 @@ pub enum ExecuteMsg {
         assets_balances: Vec<Uint128>,
         weights: Vec<Uint64>,
         amplification: Uint64,
-        pool_fee: Uint64,
+        vault_fee: Uint64,
         name: String,
         symbol: String,
         chain_interface: Option<String>

@@ -192,8 +192,8 @@ pub fn deposit_mixed(
     // Subtract the pool fee from U to prevent deposit and withdrawals being employed as a method of swapping.
     // To recude costs, the governance fee is not taken. This is not an issue as swapping via this method is 
     // disincentivized by its higher gas costs.
-    let pool_fee = POOL_FEE.load(deps.storage)?;
-    let u = fixed_point_math::mul_wad_down(u, fixed_point_math::WAD - U256::from(pool_fee))?;
+    let vault_fee = POOL_FEE.load(deps.storage)?;
+    let u = fixed_point_math::mul_wad_down(u, fixed_point_math::WAD - U256::from(vault_fee))?;
 
     // Do not include the 'escrowed' pool tokens in the total supply of pool tokens (return less)
     let effective_supply = U256::from(total_supply(deps.as_ref())?.u128());
@@ -470,7 +470,7 @@ pub fn local_swap(
 
     update_weights(deps, env.block.time.nanos().into())?;
 
-    let pool_fee: Uint128 = mul_wad_down(            //TODO alternative to not have to use U256 conversion? (or wrapper?)
+    let vault_fee: Uint128 = mul_wad_down(            //TODO alternative to not have to use U256 conversion? (or wrapper?)
         U256::from(amount.u128()),
         U256::from(POOL_FEE.load(deps.storage)?)
     )?.as_uint128();    // Casting safe, as fee < amount, and amount is Uint128
@@ -481,7 +481,7 @@ pub fn local_swap(
         env.clone(),
         &from_asset,
         &to_asset,
-        amount - pool_fee
+        amount - vault_fee
     )?;
 
     if min_out > out {
@@ -518,7 +518,7 @@ pub fn local_swap(
         &deps.as_ref(),
         env,
         from_asset.clone(),
-        pool_fee
+        vault_fee
     )?;
 
     // Build response
@@ -575,7 +575,7 @@ pub fn send_asset(
 
     update_weights(deps, env.block.time.nanos().into())?;
 
-    let pool_fee: Uint128 = mul_wad_down(            //TODO alternative to not have to use U256 conversion? (or wrapper?)
+    let vault_fee: Uint128 = mul_wad_down(            //TODO alternative to not have to use U256 conversion? (or wrapper?)
         U256::from(amount.u128()),
         U256::from(POOL_FEE.load(deps.storage)?)
     )?.as_uint128();    // Casting safe, as fee < amount, and amount is Uint128
@@ -585,14 +585,14 @@ pub fn send_asset(
         &deps.as_ref(),
         env.clone(),
         &from_asset,
-        amount - pool_fee
+        amount - vault_fee
     )?;
 
     let block_number = env.block.height as u32;
     let send_asset_hash = compute_send_asset_hash(
         to_account.as_slice(),
         u,
-        amount - pool_fee,
+        amount - vault_fee,
         &from_asset,
         block_number
     );
@@ -600,7 +600,7 @@ pub fn send_asset(
     create_asset_escrow(
         deps,
         send_asset_hash.clone(),
-        amount - pool_fee,
+        amount - vault_fee,
         &from_asset,
         fallback_account
     )?;
@@ -623,7 +623,7 @@ pub fn send_asset(
         &deps.as_ref(),
         env,
         from_asset.clone(),
-        pool_fee
+        vault_fee
     )?;
 
     // Build message to 'send' the asset via the IBC interface
@@ -669,7 +669,7 @@ pub fn send_asset(
                 amount,
                 min_out,
                 u,
-                pool_fee
+                vault_fee
             )
         )
     )
