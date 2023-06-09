@@ -280,7 +280,7 @@ fn query_default_governance_fee_share(deps: Deps) -> StdResult<DefaultGovernance
 
 
 #[cfg(test)]
-mod catalyst_swap_pool_factory_tests {
+mod catalyst_vault_factory_tests {
     use std::str::FromStr;
 
     use cosmwasm_std::{Addr, Uint64, Uint128, Event, StdError};
@@ -290,13 +290,13 @@ mod catalyst_swap_pool_factory_tests {
 
     use crate::{msg::{InstantiateMsg, QueryMsg, OwnerResponse, ExecuteMsg, DefaultGovernanceFeeShareResponse}, state::MAX_GOVERNANCE_FEE_SHARE, error::ContractError};
 
-    use catalyst_vault_common::msg::{ChainInterfaceResponse, FactoryResponse, SetupMasterResponse, AssetsResponse, WeightsResponse, PoolFeeResponse, GovernanceFeeShareResponse, FeeAdministratorResponse};
-    use mock_vault::msg::QueryMsg as MockPoolQueryMsg;
+    use catalyst_vault_common::msg::{ChainInterfaceResponse, FactoryResponse, SetupMasterResponse, AssetsResponse, WeightsResponse, VaultFeeResponse, GovernanceFeeShareResponse, FeeAdministratorResponse};
+    use mock_vault::msg::QueryMsg as MockVaultQueryMsg;
 
     const GOVERNANCE: &str = "governance_addr";
     const SETUP_MASTER: &str = "setup_master_addr";
 
-    const TEST_POOL_FEE: Uint64 = Uint64::new(999999999u64);
+    const TEST_VAULT_FEE: Uint64 = Uint64::new(999999999u64);
     const TEST_GOVERNANCE_FEE: Uint64 = Uint64::new(111111111u64);
 
 
@@ -485,8 +485,8 @@ mod catalyst_swap_pool_factory_tests {
                 assets_balances: vault_initial_balances.clone(),
                 weights: vault_weights.clone(),
                 amplification: Uint64::new(1000000000000000000u64),
-                vault_fee: TEST_POOL_FEE,
-                name: "TestPool".to_string(),
+                vault_fee: TEST_VAULT_FEE,
+                name: "TestVault".to_string(),
                 symbol: "TP".to_string(),
                 chain_interface: Some("chain_interface".to_string())
             },
@@ -495,7 +495,7 @@ mod catalyst_swap_pool_factory_tests {
 
 
 
-        // TODO check events (instantiate + reply) to make sure pool deployment is successful
+        // TODO check events (instantiate + reply) to make sure vault deployment is successful
         let vault = get_response_attribute::<String>(response.events[6].clone(), "vault_address").unwrap();
 
         // Verify the assets have been transferred to the vault
@@ -518,7 +518,7 @@ mod catalyst_swap_pool_factory_tests {
         // Verify the deployed vault has the 'factory' set
         let queried_factory = app.wrap().query_wasm_smart::<FactoryResponse>(
             vault.clone(),
-            &MockPoolQueryMsg::Factory {}
+            &MockVaultQueryMsg::Factory {}
         ).unwrap().factory;
 
         assert_eq!(
@@ -530,7 +530,7 @@ mod catalyst_swap_pool_factory_tests {
         // Verify the deployed vault has the 'setup master' set
         let queried_setup_master = app.wrap().query_wasm_smart::<SetupMasterResponse>(
             vault.clone(),
-            &MockPoolQueryMsg::SetupMaster {}
+            &MockVaultQueryMsg::SetupMaster {}
         ).unwrap().setup_master;
 
         assert_eq!(
@@ -542,7 +542,7 @@ mod catalyst_swap_pool_factory_tests {
         // Verify the deployed vault has the 'chain interface' set
         let queried_interface = app.wrap().query_wasm_smart::<ChainInterfaceResponse>(
             vault.clone(),
-            &MockPoolQueryMsg::ChainInterface {}
+            &MockVaultQueryMsg::ChainInterface {}
         ).unwrap().chain_interface;
 
         assert_eq!(
@@ -554,7 +554,7 @@ mod catalyst_swap_pool_factory_tests {
         // Verify the deployed vault has the 'assets' set
         let queried_assets = app.wrap().query_wasm_smart::<AssetsResponse>(
             vault.clone(),
-            &MockPoolQueryMsg::Assets {}
+            &MockVaultQueryMsg::Assets {}
         ).unwrap().assets;
 
         assert_eq!(
@@ -566,7 +566,7 @@ mod catalyst_swap_pool_factory_tests {
         // Verify the deployed vault has the 'weights' set
         let queried_weights = app.wrap().query_wasm_smart::<WeightsResponse>(
             vault.clone(),
-            &MockPoolQueryMsg::Weights {}
+            &MockVaultQueryMsg::Weights {}
         ).unwrap().weights;
 
         assert_eq!(
@@ -576,21 +576,21 @@ mod catalyst_swap_pool_factory_tests {
 
 
         // Verify the deployed vault has the 'vault_fee' set
-        let queried_vault_fee = app.wrap().query_wasm_smart::<PoolFeeResponse>(
+        let queried_vault_fee = app.wrap().query_wasm_smart::<VaultFeeResponse>(
             vault.clone(),
-            &MockPoolQueryMsg::PoolFee {}
+            &MockVaultQueryMsg::VaultFee {}
         ).unwrap().fee;
 
         assert_eq!(
             queried_vault_fee,
-            TEST_POOL_FEE
+            TEST_VAULT_FEE
         );
 
 
         // Verify the deployed vault has the 'governance_fee_share' set
         let queried_governance_fee_share = app.wrap().query_wasm_smart::<GovernanceFeeShareResponse>(
             vault.clone(),
-            &MockPoolQueryMsg::GovernanceFeeShare {}
+            &MockVaultQueryMsg::GovernanceFeeShare {}
         ).unwrap().fee;
 
         assert_eq!(
@@ -602,7 +602,7 @@ mod catalyst_swap_pool_factory_tests {
         // Verify the deployed vault has the 'fee_administrator' set
         let queried_fee_administrator = app.wrap().query_wasm_smart::<FeeAdministratorResponse>(
             vault.clone(),
-            &MockPoolQueryMsg::FeeAdministrator {}
+            &MockVaultQueryMsg::FeeAdministrator {}
         ).unwrap().administrator;
 
         assert_eq!(
@@ -615,12 +615,12 @@ mod catalyst_swap_pool_factory_tests {
         // Verify the deployed vault has the 'name' and 'symbol' set
         let queried_token_info = app.wrap().query_wasm_smart::<TokenInfoResponse>(
             vault.clone(),
-            &MockPoolQueryMsg::TokenInfo {}
+            &MockVaultQueryMsg::TokenInfo {}
         ).unwrap();
 
         assert_eq!(
             queried_token_info.name,
-            "TestPool"
+            "TestVault"
         );
 
         assert_eq!(
@@ -660,7 +660,7 @@ mod catalyst_swap_pool_factory_tests {
                 weights: vault_weights,
                 amplification: Uint64::new(1000000000000000000u64),
                 vault_fee: Uint64::zero(),
-                name: "TestPool".to_string(),
+                name: "TestVault".to_string(),
                 symbol: "TP".to_string(),
                 chain_interface: None
             },
@@ -727,7 +727,7 @@ mod catalyst_swap_pool_factory_tests {
                 weights: vault_weights.clone(),
                 amplification: Uint64::new(1000000000000000000u64),
                 vault_fee: Uint64::zero(),
-                name: "TestPool".to_string(),
+                name: "TestVault".to_string(),
                 symbol: "TP".to_string(),
                 chain_interface: None
             },
@@ -754,7 +754,7 @@ mod catalyst_swap_pool_factory_tests {
                 weights: vault_weights[..2].to_vec(),   // ! Only 2 weights are provided 
                 amplification: Uint64::new(1000000000000000000u64),
                 vault_fee: Uint64::zero(),
-                name: "TestPool".to_string(),
+                name: "TestVault".to_string(),
                 symbol: "TP".to_string(),
                 chain_interface: None
             },
@@ -781,7 +781,7 @@ mod catalyst_swap_pool_factory_tests {
                 weights: vault_weights,
                 amplification: Uint64::new(1000000000000000000u64),
                 vault_fee: Uint64::zero(),
-                name: "TestPool".to_string(),
+                name: "TestVault".to_string(),
                 symbol: "TP".to_string(),
                 chain_interface: None
             },

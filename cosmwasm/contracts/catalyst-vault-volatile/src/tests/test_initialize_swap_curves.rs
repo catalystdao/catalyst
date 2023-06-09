@@ -117,27 +117,27 @@ mod test_volatile_initialize_swap_curves {
             U256::from(weights.iter().sum::<Uint64>()) * LN2
         );
 
-        // Query and verify the pool token supply
-        let pool_token_supply: Uint128 = app
+        // Query and verify the vault token supply
+        let vault_token_supply: Uint128 = app
             .wrap()
             .query_wasm_smart::<TokenInfoResponse>(vault.clone(), &crate::msg::QueryMsg::TokenInfo {})
             .unwrap()
             .total_supply;
 
         assert_eq!(
-            pool_token_supply,
+            vault_token_supply,
             Uint128::from(1000000000000000000u64)
         );
 
-        // Query and verify the pool tokens of the depositor
-        let depositor_pool_tokens: Uint128 = app
+        // Query and verify the vault tokens of the depositor
+        let depositor_vault_tokens: Uint128 = app
             .wrap()
             .query_wasm_smart::<BalanceResponse>(vault.clone(), &crate::msg::QueryMsg::Balance { address: DEPOSITOR.to_string() })
             .unwrap()
             .balance;
 
         assert_eq!(
-            depositor_pool_tokens,
+            depositor_vault_tokens,
             Uint128::from(1000000000000000000u64)
         );
 

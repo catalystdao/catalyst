@@ -4,7 +4,7 @@ mod test_volatile_receive_asset {
     use catalyst_types::{U256, u256};
     use catalyst_vault_common::ContractError;
 
-    use crate::{msg::VolatileExecuteMsg, tests::{helpers::{deploy_test_tokens, WAD, query_token_balance, get_response_attribute, mock_set_pool_connection, CHANNEL_ID, SWAPPER_B, compute_expected_receive_asset, CHAIN_INTERFACE, mock_factory_deploy_vault, encode_payload_address}, math_helpers::{uint128_to_f64, f64_to_uint128}}};
+    use crate::{msg::VolatileExecuteMsg, tests::{helpers::{deploy_test_tokens, WAD, query_token_balance, get_response_attribute, mock_set_vault_connection, CHANNEL_ID, SWAPPER_B, compute_expected_receive_asset, CHAIN_INTERFACE, mock_factory_deploy_vault, encode_payload_address}, math_helpers::{uint128_to_f64, f64_to_uint128}}};
 
     //TODO check event
 
@@ -27,9 +27,9 @@ mod test_volatile_receive_asset {
             None
         );
 
-        // Connect pool with a mock pool
+        // Connect vault with a mock vault
         let from_vault = encode_payload_address(b"from_vault");
-        mock_set_pool_connection(
+        mock_set_vault_connection(
             &mut app,
             vault.clone(),
             CHANNEL_ID.to_string(),
@@ -119,9 +119,9 @@ mod test_volatile_receive_asset {
             None
         );
 
-        // Connect pool with a mock pool
+        // Connect vault with a mock vault
         let from_vault = encode_payload_address(b"from_vault");
-        mock_set_pool_connection(
+        mock_set_vault_connection(
             &mut app,
             vault.clone(),
             CHANNEL_ID.to_string(),
@@ -200,9 +200,9 @@ mod test_volatile_receive_asset {
             None
         );
 
-        // Connect pool with a mock pool
+        // Connect vault with a mock vault
         let from_vault = encode_payload_address(b"from_vault");
-        mock_set_pool_connection(
+        mock_set_vault_connection(
             &mut app,
             vault.clone(),
             CHANNEL_ID.to_string(),
@@ -287,7 +287,7 @@ mod test_volatile_receive_asset {
 
 
     #[test]
-    fn test_receive_asset_not_connected_pool() {
+    fn test_receive_asset_not_connected_vault() {
 
         let mut app = App::default();
 
@@ -305,7 +305,7 @@ mod test_volatile_receive_asset {
             None
         );
 
-        // ! Do not connect the pool with the mock source pool
+        // ! Do not connect the vault with the mock source vault
         let from_vault = encode_payload_address(b"from_vault");
 
         // Define the receive asset configuration
@@ -339,8 +339,8 @@ mod test_volatile_receive_asset {
         // Make sure the transaction fails
         assert!(matches!(
             response_result.err().unwrap().downcast().unwrap(),
-            ContractError::PoolNotConnected { channel_id: err_channel_id, pool: err_pool }
-                if err_channel_id == CHANNEL_ID && err_pool == from_vault
+            ContractError::VaultNotConnected { channel_id: err_channel_id, vault: err_vault }
+                if err_channel_id == CHANNEL_ID && err_vault == from_vault
         ));
 
     }
@@ -365,9 +365,9 @@ mod test_volatile_receive_asset {
             None
         );
 
-        // Connect pool with a mock pool
+        // Connect vault with a mock vault
         let from_vault = encode_payload_address(b"from_vault");
-        mock_set_pool_connection(
+        mock_set_vault_connection(
             &mut app,
             vault.clone(),
             CHANNEL_ID.to_string(),
@@ -431,9 +431,9 @@ mod test_volatile_receive_asset {
             None
         );
 
-        // Connect pool with a mock pool
+        // Connect vault with a mock vault
         let from_vault = encode_payload_address(b"from_vault");
-        mock_set_pool_connection(
+        mock_set_vault_connection(
             &mut app,
             vault.clone(),
             CHANNEL_ID.to_string(),

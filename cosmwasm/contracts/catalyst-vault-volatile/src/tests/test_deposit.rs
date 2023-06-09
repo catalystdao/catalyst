@@ -3,7 +3,7 @@ mod test_volatile_deposit{
     use cw_multi_test::{App, Executor};
     use catalyst_vault_common::{ContractError, state::INITIAL_MINT_AMOUNT};
 
-    use crate::{msg::VolatileExecuteMsg, tests::{helpers::{SETUP_MASTER, deploy_test_tokens, WAD, set_token_allowance, DEFAULT_TEST_POOL_FEE, query_token_balance, transfer_tokens, DEPOSITOR, get_response_attribute, query_token_info, compute_expected_deposit_mixed, mock_factory_deploy_vault}, math_helpers::{uint128_to_f64, f64_to_uint128}}};
+    use crate::{msg::VolatileExecuteMsg, tests::{helpers::{SETUP_MASTER, deploy_test_tokens, WAD, set_token_allowance, DEFAULT_TEST_VAULT_FEE, query_token_balance, transfer_tokens, DEPOSITOR, get_response_attribute, query_token_info, compute_expected_deposit_mixed, mock_factory_deploy_vault}, math_helpers::{uint128_to_f64, f64_to_uint128}}};
 
 
     //TODO add test for the deposit event
@@ -31,9 +31,9 @@ mod test_volatile_deposit{
         // Define deposit config
         let deposit_percentage = 0.15;
         let deposit_amounts: Vec<Uint128> = vault_initial_balances.iter()
-            .map(|pool_balance| {
+            .map(|vault_balance| {
                 f64_to_uint128(
-                    uint128_to_f64(*pool_balance) * deposit_percentage
+                    uint128_to_f64(*vault_balance) * deposit_percentage
                 ).unwrap()
             }).collect();
 
@@ -74,21 +74,21 @@ mod test_volatile_deposit{
 
 
 
-        // Verify the pool tokens return
+        // Verify the vault tokens return
         // NOTE: the way in which the `vault_fee` is applied when depositing results in a slightly fewer return than the 
-        // one computed by `expected_return` (i.e. the fee is not applied directly to the input assets in the pool implementation)
+        // one computed by `expected_return` (i.e. the fee is not applied directly to the input assets in the vault implementation)
         let observed_return = get_response_attribute::<Uint128>(
             result.events[1].clone(),
             "mint"
         ).unwrap();
 
-        let expected_return = uint128_to_f64(INITIAL_MINT_AMOUNT) * deposit_percentage * (1. - (DEFAULT_TEST_POOL_FEE.u64() as f64)/1e18);
+        let expected_return = uint128_to_f64(INITIAL_MINT_AMOUNT) * deposit_percentage * (1. - (DEFAULT_TEST_VAULT_FEE.u64() as f64)/1e18);
 
         assert!(uint128_to_f64(observed_return) <= expected_return * 1.000001);
         assert!(uint128_to_f64(observed_return) >= expected_return * 0.98);      // Allow some margin because of the `vault_fee`
 
 
-        // Verify the deposited assets have been transferred from the swapper to the pool
+        // Verify the deposited assets have been transferred from the swapper to the vault
         vault_tokens.iter()
             .for_each(|asset| {
                 let swapper_asset_balance = query_token_balance(&mut app, Addr::unchecked(asset), DEPOSITOR.to_string());
@@ -99,7 +99,7 @@ mod test_volatile_deposit{
 
             });
 
-        // Verify the deposited assets have been received by the pool
+        // Verify the deposited assets have been received by the vault
         vault_tokens.iter()
             .zip(&vault_initial_balances)
             .zip(&deposit_amounts)
@@ -112,17 +112,17 @@ mod test_volatile_deposit{
 
             });
         
-        // Verify the pool tokens have been minted to the depositor
-        let depositor_pool_tokens_balance = query_token_balance(&mut app, vault.clone(), DEPOSITOR.to_string());
+        // Verify the vault tokens have been minted to the depositor
+        let depositor_vault_tokens_balance = query_token_balance(&mut app, vault.clone(), DEPOSITOR.to_string());
         assert_eq!(
-            depositor_pool_tokens_balance,
+            depositor_vault_tokens_balance,
             observed_return
         );
     
-        // Verify the vault total pool tokens supply
-        let pool_token_info = query_token_info(&mut app, vault.clone());
+        // Verify the vault total vault tokens supply
+        let vault_token_info = query_token_info(&mut app, vault.clone());
         assert_eq!(
-            pool_token_info.total_supply,
+            vault_token_info.total_supply,
             INITIAL_MINT_AMOUNT + observed_return
         );
 
@@ -154,9 +154,9 @@ mod test_volatile_deposit{
         let deposit_percentages = vec![0.1, 0., 0.3];
         let deposit_amounts: Vec<Uint128> = vault_initial_balances.iter()
             .zip(&deposit_percentages)
-            .map(|(pool_balance, deposit_percentage)| {
+            .map(|(vault_balance, deposit_percentage)| {
                 f64_to_uint128(
-                    uint128_to_f64(*pool_balance) * deposit_percentage
+                    uint128_to_f64(*vault_balance) * deposit_percentage
                 ).unwrap()
             }).collect();
 
@@ -198,7 +198,7 @@ mod test_volatile_deposit{
 
 
 
-        // Verify the pool tokens return
+        // Verify the vault tokens return
         let observed_return = get_response_attribute::<Uint128>(
             result.events[1].clone(),
             "mint"
@@ -209,7 +209,7 @@ mod test_volatile_deposit{
             vault_weights,
             vault_initial_balances,
             INITIAL_MINT_AMOUNT,
-            Some(DEFAULT_TEST_POOL_FEE)
+            Some(DEFAULT_TEST_VAULT_FEE)
         );
 
         assert!(uint128_to_f64(observed_return) <= expected_return * 1.000001);
@@ -257,7 +257,7 @@ mod test_volatile_deposit{
 
 
 
-        // Verify the pool tokens return
+        // Verify the vault tokens return
         let observed_return = get_response_attribute::<Uint128>(
             result.events[1].clone(),
             "mint"
@@ -295,9 +295,9 @@ mod test_volatile_deposit{
         // Define deposit config
         let deposit_percentage = 0.05;
         let deposit_amounts: Vec<Uint128> = vault_initial_balances.iter()
-            .map(|pool_balance| {
+            .map(|vault_balance| {
                 f64_to_uint128(
-                    uint128_to_f64(*pool_balance) * deposit_percentage
+                    uint128_to_f64(*vault_balance) * deposit_percentage
                 ).unwrap()
             }).collect();
 
@@ -324,7 +324,7 @@ mod test_volatile_deposit{
             });
 
         // Compute the expected return
-        let expected_return = uint128_to_f64(INITIAL_MINT_AMOUNT) * deposit_percentage * (1. - (DEFAULT_TEST_POOL_FEE.u64() as f64)/1e18);
+        let expected_return = uint128_to_f64(INITIAL_MINT_AMOUNT) * deposit_percentage * (1. - (DEFAULT_TEST_VAULT_FEE.u64() as f64)/1e18);
 
         // Set min_out_valid to be slightly smaller than the expected return
         let min_out_valid = f64_to_uint128(expected_return * 0.99).unwrap();
@@ -392,9 +392,9 @@ mod test_volatile_deposit{
         // Define deposit config
         let deposit_percentage = 0.25;
         let deposit_amounts: Vec<Uint128> = vault_initial_balances.iter()
-            .map(|pool_balance| {
+            .map(|vault_balance| {
                 f64_to_uint128(
-                    uint128_to_f64(*pool_balance) * deposit_percentage
+                    uint128_to_f64(*vault_balance) * deposit_percentage
                 ).unwrap()
             }).collect();
 

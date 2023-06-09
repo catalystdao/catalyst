@@ -4,7 +4,7 @@ pub use catalyst_vault_common::msg::{InstantiateMsg, ExecuteMsg};
 use catalyst_vault_common::msg::{
     AssetsResponse, CalcSendAssetResponse,
     ChainInterfaceResponse, FeeAdministratorResponse, GovernanceFeeShareResponse,
-    OnlyLocalResponse, PoolFeeResponse, ReadyResponse,
+    OnlyLocalResponse, VaultFeeResponse, ReadyResponse,
     SetupMasterResponse, WeightsResponse, FactoryResponse, FactoryOwnerResponse
 };
 use cw20::{AllowanceResponse, TokenInfoResponse};
@@ -35,8 +35,8 @@ pub enum QueryMsg {
     #[returns(WeightsResponse)]
     Weights {},
 
-    #[returns(PoolFeeResponse)]
-    PoolFee {},
+    #[returns(VaultFeeResponse)]
+    VaultFee {},
     #[returns(GovernanceFeeShareResponse)]
     GovernanceFeeShare {},
     #[returns(FeeAdministratorResponse)]

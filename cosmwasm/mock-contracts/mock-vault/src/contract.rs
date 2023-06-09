@@ -77,14 +77,14 @@ pub fn execute(
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
 
-        // Only define the queries needed to verify that initialization of the pool has been successful
+        // Only define the queries needed to verify that initialization of the vault has been successful
         QueryMsg::ChainInterface {} => to_binary(&query_chain_interface(deps)?),
         QueryMsg::SetupMaster {} => to_binary(&query_setup_master(deps)?),
         QueryMsg::Factory {} => to_binary(&query_factory(deps)?),
         QueryMsg::FactoryOwner {} => to_binary(&query_factory_owner(deps)?),
         QueryMsg::Assets {} => to_binary(&query_assets(deps)?),
         QueryMsg::Weights {} => to_binary(&query_weights(deps)?),
-        QueryMsg::PoolFee {} => to_binary(&query_vault_fee(deps)?),
+        QueryMsg::VaultFee {} => to_binary(&query_vault_fee(deps)?),
         QueryMsg::GovernanceFeeShare {} => to_binary(&query_governance_fee_share(deps)?),
         QueryMsg::FeeAdministrator {} => to_binary(&query_fee_administrator(deps)?),
         QueryMsg::TokenInfo {} => to_binary(&query_token_info(deps)?),

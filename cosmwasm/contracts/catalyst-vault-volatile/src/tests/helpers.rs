@@ -22,7 +22,7 @@ pub const CHANNEL_ID            : &str = "channel_id";
 
 pub const WAD: Uint128 = Uint128::new(1000000000000000000u128);
 
-pub const DEFAULT_TEST_POOL_FEE : Uint64 = Uint64::new(70000000000000000u64);   // 7%
+pub const DEFAULT_TEST_VAULT_FEE : Uint64 = Uint64::new(70000000000000000u64);   // 7%
 pub const DEFAULT_TEST_GOV_FEE  : Uint64 = Uint64::new(50000000000000000u64);   // 5%
 
 //TODO move common helpers somewhere else
@@ -329,8 +329,8 @@ pub fn mock_factory_deploy_vault(
             assets_balances,
             weights,
             amplification: Uint64::new(1000000000000000000u64),
-            vault_fee: DEFAULT_TEST_POOL_FEE,
-            name: "TestPool".to_string(),
+            vault_fee: DEFAULT_TEST_VAULT_FEE,
+            name: "TestVault".to_string(),
             symbol: "TP".to_string(),
             chain_interface: chain_interface.map(|value| value.to_string())
         },
@@ -349,10 +349,10 @@ pub fn mock_instantiate_vault_msg(
     chain_interface: Option<String>
 ) -> InstantiateMsg {
     InstantiateMsg {
-        name: "TestPool".to_string(),
+        name: "TestVault".to_string(),
         symbol: "TP".to_string(),
         chain_interface,
-        vault_fee: DEFAULT_TEST_POOL_FEE,
+        vault_fee: DEFAULT_TEST_VAULT_FEE,
         governance_fee: DEFAULT_TEST_GOV_FEE,
         fee_administrator: FACTORY_OWNER.to_string(),   // The 'fee_administrator' is set to the 'factory_owner' as this is the default when vaults are deployed via the factory
         setup_master: SETUP_MASTER.to_string()
@@ -426,7 +426,7 @@ impl Into<VolatileExecuteMsg> for InitializeSwapCurvesMockConfig {
 }
 
 
-pub fn mock_initialize_pool(
+pub fn mock_initialize_vault(
     app: &mut App,
     vault: Addr,
     assets: Vec<String>,
@@ -463,7 +463,7 @@ pub fn mock_initialize_pool(
 }
 
 
-pub fn mock_finish_pool_setup(
+pub fn mock_finish_vault_setup(
     app: &mut App,
     vault_contract: Addr
 ) -> AppResponse {
@@ -476,7 +476,7 @@ pub fn mock_finish_pool_setup(
 }
 
 
-pub fn mock_set_pool_connection(
+pub fn mock_set_vault_connection(
     app: &mut App,
     vault_contract: Addr,
     channel_id: String,
@@ -504,7 +504,7 @@ pub fn mock_set_vault_fee(
     app.execute_contract(
         Addr::unchecked(FACTORY_OWNER),
         vault_contract,
-        &VolatileExecuteMsg::SetPoolFee { fee },
+        &VolatileExecuteMsg::SetVaultFee { fee },
         &[]
     ).unwrap()
 }
@@ -686,11 +686,11 @@ pub fn compute_expected_receive_liquidity(
 }
 
 pub fn compute_expected_reference_asset(
-    pool_tokens: Uint128,
+    vault_tokens: Uint128,
     vault_balances: Vec<Uint128>,
     vault_weights: Vec<Uint64>,
     vault_total_supply: Uint128,
-    vault_escrowed_pool_tokens: Uint128
+    vault_escrowed_vault_tokens: Uint128
 ) -> ExpectedReferenceAsset {
 
     let weights_sum = vault_weights.iter().sum::<Uint64>().u64() as f64;
@@ -706,11 +706,11 @@ pub fn compute_expected_reference_asset(
         })
         .product::<f64>();
 
-    let pool_tokens = uint128_to_f64(pool_tokens);
+    let vault_tokens = uint128_to_f64(vault_tokens);
     let vault_total_supply = uint128_to_f64(vault_total_supply);
-    let vault_escrowed_pool_tokens = uint128_to_f64(vault_escrowed_pool_tokens);
+    let vault_escrowed_vault_tokens = uint128_to_f64(vault_escrowed_vault_tokens);
 
-    let user_reference_amount = (vault_reference_amount * pool_tokens) / (vault_total_supply + vault_escrowed_pool_tokens + pool_tokens);
+    let user_reference_amount = (vault_reference_amount * vault_tokens) / (vault_total_supply + vault_escrowed_vault_tokens + vault_tokens);
 
     ExpectedReferenceAsset {
         amount: user_reference_amount
@@ -739,7 +739,7 @@ pub fn compute_expected_deposit_mixed(
         })
         .sum();
 
-    // Take pool fee
+    // Take vault fee
     let units = units * (1. - (vault_fee.unwrap_or(Uint64::zero()).u64() as f64)/1e18);
 
     // Compute the deposit share
@@ -761,7 +761,7 @@ pub fn compute_expected_withdraw_mixed(
     vault_supply: Uint128
 ) -> Vec<f64> {
 
-    // Compute the units corresponding to the pool tokens
+    // Compute the units corresponding to the vault tokens
     let withdraw_amount = uint128_to_f64(withdraw_amount);
     let vault_supply = uint128_to_f64(vault_supply);
 

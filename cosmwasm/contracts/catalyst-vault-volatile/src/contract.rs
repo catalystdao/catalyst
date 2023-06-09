@@ -12,7 +12,7 @@ use cw20_base::contract::{
 use catalyst_vault_common::ContractError;
 use catalyst_vault_common::state::{
     setup, finish_setup, set_fee_administrator, set_vault_fee, set_governance_fee_share, set_connection,
-    on_send_asset_failure, on_send_liquidity_failure, query_chain_interface, query_setup_master, query_ready, query_only_local, query_assets, query_weights, query_vault_fee, query_governance_fee_share, query_fee_administrator, query_total_escrowed_liquidity, query_total_escrowed_asset, query_asset_escrow, query_liquidity_escrow, query_pool_connection_state, query_factory, query_factory_owner
+    on_send_asset_failure, on_send_liquidity_failure, query_chain_interface, query_setup_master, query_ready, query_only_local, query_assets, query_weights, query_vault_fee, query_governance_fee_share, query_fee_administrator, query_total_escrowed_liquidity, query_total_escrowed_asset, query_asset_escrow, query_liquidity_escrow, query_vault_connection_state, query_factory, query_factory_owner
 };
 
 use crate::msg::{VolatileExecuteMsg, InstantiateMsg, QueryMsg, VolatileExecuteExtension};
@@ -90,7 +90,7 @@ pub fn execute(
             administrator
         ),
 
-        VolatileExecuteMsg::SetPoolFee { fee } => set_vault_fee(
+        VolatileExecuteMsg::SetVaultFee { fee } => set_vault_fee(
             &mut deps,
             info,
             fee
@@ -196,25 +196,25 @@ pub fn execute(
         ),
 
         VolatileExecuteMsg::WithdrawAll {
-            pool_tokens,
+            vault_tokens,
             min_out
         } => withdraw_all(
             &mut deps,
             env,
             info,
-            pool_tokens,
+            vault_tokens,
             min_out
         ),
 
         VolatileExecuteMsg::WithdrawMixed {
-            pool_tokens,
+            vault_tokens,
             withdraw_ratio,
             min_out
         } => withdraw_mixed(
             &mut deps,
             env,
             info,
-            pool_tokens,
+            vault_tokens,
             withdraw_ratio,
             min_out
         ),
@@ -293,7 +293,7 @@ pub fn execute(
             to_vault,
             to_account,
             amount,
-            min_pool_tokens,
+            min_vault_tokens,
             min_reference_asset,
             fallback_account,
             calldata
@@ -305,7 +305,7 @@ pub fn execute(
             to_vault,
             to_account,
             amount,
-            min_pool_tokens,
+            min_vault_tokens,
             min_reference_asset,
             fallback_account,
             calldata
@@ -316,7 +316,7 @@ pub fn execute(
             from_vault,
             to_account,
             u,
-            min_pool_tokens,
+            min_vault_tokens,
             min_reference_asset,
             calldata_target,
             from_amount,
@@ -330,7 +330,7 @@ pub fn execute(
             from_vault,
             to_account,
             u,
-            min_pool_tokens,
+            min_vault_tokens,
             min_reference_asset,
             from_amount,
             from_block_number_mod,
@@ -360,7 +360,7 @@ pub fn execute(
         VolatileExecuteMsg::Burn {
             amount: _
          } => Err(
-            ContractError::Unauthorized {}     // Pool token burn handled by withdraw function
+            ContractError::Unauthorized {}     // Vault token burn handled by withdraw function
         ),
 
         VolatileExecuteMsg::Send {
@@ -399,7 +399,7 @@ pub fn execute(
             owner: _,
             amount: _
         } => Err(
-            ContractError::Unauthorized {}      // Pool token burn handled by withdraw function
+            ContractError::Unauthorized {}      // Vault token burn handled by withdraw function
         ),
 
         VolatileExecuteMsg::SendFrom {
@@ -425,17 +425,17 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::Factory {} => to_binary(&query_factory(deps)?),
         QueryMsg::FactoryOwner {} => to_binary(&query_factory_owner(deps)?),
 
-        QueryMsg::PoolConnectionState {
+        QueryMsg::VaultConnectionState {
             channel_id,
-            pool 
-        } => to_binary(&query_pool_connection_state(deps, channel_id.as_ref(), pool)?),
+            vault 
+        } => to_binary(&query_vault_connection_state(deps, channel_id.as_ref(), vault)?),
 
         QueryMsg::Ready{} => to_binary(&query_ready(deps)?),
         QueryMsg::OnlyLocal{} => to_binary(&query_only_local(deps)?),
         QueryMsg::Assets {} => to_binary(&query_assets(deps)?),
         QueryMsg::Weights {} => to_binary(&query_weights(deps)?),
 
-        QueryMsg::PoolFee {} => to_binary(&query_vault_fee(deps)?),
+        QueryMsg::VaultFee {} => to_binary(&query_vault_fee(deps)?),
         QueryMsg::GovernanceFeeShare {} => to_binary(&query_governance_fee_share(deps)?),
         QueryMsg::FeeAdministrator {} => to_binary(&query_fee_administrator(deps)?),
 

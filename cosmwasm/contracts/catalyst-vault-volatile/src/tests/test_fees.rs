@@ -1,7 +1,7 @@
 mod test_volatile_fees {
     use cosmwasm_std::{Addr, Uint128, Uint64};
     use cw_multi_test::{App, Executor};
-    use catalyst_vault_common::{ContractError, msg::{FeeAdministratorResponse, PoolFeeResponse, GovernanceFeeShareResponse}};
+    use catalyst_vault_common::{ContractError, msg::{FeeAdministratorResponse, VaultFeeResponse, GovernanceFeeShareResponse}};
 
     use crate::{msg::{VolatileExecuteMsg, QueryMsg}, tests::helpers::{FACTORY_OWNER, mock_factory_deploy_vault, WAD, deploy_test_tokens}};
 
@@ -88,7 +88,7 @@ mod test_volatile_fees {
 
 
 
-    // Set Pool Fee Tests *******************************************************************************************************
+    // Set Vault Fee Tests *******************************************************************************************************
     
     #[test]
     fn test_set_vault_fee() {
@@ -101,21 +101,21 @@ mod test_volatile_fees {
         let new_vault_fee = Uint64::new(500);
 
 
-        // Tested action: set pool fee
+        // Tested action: set vault fee
         let _response = app.execute_contract::<VolatileExecuteMsg>(
             Addr::unchecked(FACTORY_OWNER),
             vault.clone(),
-            &VolatileExecuteMsg::SetPoolFee { fee: new_vault_fee },
+            &VolatileExecuteMsg::SetVaultFee { fee: new_vault_fee },
             &[]
         ).unwrap();
 
         
         // TODO verify response attributes (event)
 
-        // Verify the new pool fee is set
+        // Verify the new vault fee is set
         let queried_vault_fee: Uint64 = app
             .wrap()
-            .query_wasm_smart::<PoolFeeResponse>(vault, &QueryMsg::PoolFee {})
+            .query_wasm_smart::<VaultFeeResponse>(vault, &QueryMsg::VaultFee {})
             .unwrap()
             .fee;
 
@@ -138,19 +138,19 @@ mod test_volatile_fees {
         let new_vault_fee = Uint64::new(1000000000000000000u64);
 
 
-        // Tested action: set max pool fee
+        // Tested action: set max vault fee
         let _response = app.execute_contract::<VolatileExecuteMsg>(
             Addr::unchecked(FACTORY_OWNER),
             vault.clone(),
-            &VolatileExecuteMsg::SetPoolFee { fee: new_vault_fee },
+            &VolatileExecuteMsg::SetVaultFee { fee: new_vault_fee },
             &[]
         ).unwrap();
 
 
-        // Verify the max pool fee is set
+        // Verify the max vault fee is set
         let queried_vault_fee: Uint64 = app
             .wrap()
-            .query_wasm_smart::<PoolFeeResponse>(vault, &QueryMsg::PoolFee {})
+            .query_wasm_smart::<VaultFeeResponse>(vault, &QueryMsg::VaultFee {})
             .unwrap()
             .fee;
 
@@ -173,19 +173,19 @@ mod test_volatile_fees {
         let new_vault_fee = Uint64::new(1000000000000000000u64 + 1u64);
 
 
-        // Tested action: set pool fee larger than maximum allowed
+        // Tested action: set vault fee larger than maximum allowed
         let response_result = app.execute_contract::<VolatileExecuteMsg>(
             Addr::unchecked(FACTORY_OWNER),
             vault.clone(),
-            &VolatileExecuteMsg::SetPoolFee { fee: new_vault_fee },
+            &VolatileExecuteMsg::SetVaultFee { fee: new_vault_fee },
             &[]
         );
 
 
-        // Make sure SetPoolFee fails
+        // Make sure SetVaultFee fails
         assert!(matches!(
             response_result.err().unwrap().downcast().unwrap(),
-            ContractError::InvalidPoolFee { requested_fee, max_fee }
+            ContractError::InvalidVaultFee { requested_fee, max_fee }
                 if requested_fee == new_vault_fee && max_fee == Uint64::new(1000000000000000000u64)
         ));
 
@@ -203,16 +203,16 @@ mod test_volatile_fees {
         let new_vault_fee = Uint64::new(500);
 
 
-        // Tested action: set pool fee
+        // Tested action: set vaultt fee
         let response_result = app.execute_contract::<VolatileExecuteMsg>(
             Addr::unchecked("not_fee_administrator"),       // ! Not FACTORY_OWNER
             vault.clone(),
-            &VolatileExecuteMsg::SetPoolFee { fee: new_vault_fee },
+            &VolatileExecuteMsg::SetVaultFee { fee: new_vault_fee },
             &[]
         );
 
 
-        // Make sure SetPoolFee fails
+        // Make sure SetVaulttFee fails
         assert!(matches!(
             response_result.err().unwrap().downcast().unwrap(),
             ContractError::Unauthorized {}

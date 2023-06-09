@@ -6,7 +6,7 @@ pub use catalyst_vault_common::msg::{InstantiateMsg, ExecuteMsg};
 use catalyst_vault_common::msg::{
     AssetEscrowResponse, AssetsResponse, CalcLocalSwapResponse, CalcReceiveAssetResponse, CalcSendAssetResponse,
     ChainInterfaceResponse, FeeAdministratorResponse, GetLimitCapacityResponse, GovernanceFeeShareResponse,
-    LiquidityEscrowResponse, OnlyLocalResponse, PoolConnectionStateResponse, PoolFeeResponse, ReadyResponse,
+    LiquidityEscrowResponse, OnlyLocalResponse, VaultConnectionStateResponse, VaultFeeResponse, ReadyResponse,
     SetupMasterResponse, TotalEscrowedAssetResponse, TotalEscrowedLiquidityResponse, WeightsResponse, FactoryResponse, FactoryOwnerResponse
 };
 use cw20::{AllowanceResponse, BalanceResponse, TokenInfoResponse};
@@ -41,10 +41,10 @@ pub enum QueryMsg {
     #[returns(FactoryOwnerResponse)]
     FactoryOwner {},
 
-    #[returns(PoolConnectionStateResponse)]
-    PoolConnectionState {
+    #[returns(VaultConnectionStateResponse)]
+    VaultConnectionState {
         channel_id: String,
-        pool: Binary
+        vault: Binary
     },
 
     #[returns(ReadyResponse)]
@@ -56,8 +56,8 @@ pub enum QueryMsg {
     #[returns(WeightsResponse)]
     Weights {},
 
-    #[returns(PoolFeeResponse)]
-    PoolFee {},
+    #[returns(VaultFeeResponse)]
+    VaultFee {},
     #[returns(GovernanceFeeShareResponse)]
     GovernanceFeeShare {},
     #[returns(FeeAdministratorResponse)]
@@ -99,7 +99,7 @@ pub enum QueryMsg {
     },
 
 
-    // Volatile pool specific queries
+    // Volatile vault specific queries
     #[returns(TargetWeightsResponse)]
     TargetWeights {},
     #[returns(WeightsUpdateFinishTimestampResponse)]

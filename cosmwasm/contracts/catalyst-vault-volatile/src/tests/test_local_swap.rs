@@ -3,7 +3,7 @@ mod test_volatile_local_swap {
     use cw_multi_test::{App, Executor};
     use catalyst_vault_common::ContractError;
 
-    use crate::{msg::VolatileExecuteMsg, tests::{helpers::{SETUP_MASTER, deploy_test_tokens, WAD, set_token_allowance, compute_expected_local_swap, DEFAULT_TEST_POOL_FEE, DEFAULT_TEST_GOV_FEE, query_token_balance, transfer_tokens, LOCAL_SWAPPER, FACTORY_OWNER, mock_test_token_definitions, mock_set_governance_fee_share, mock_factory_deploy_vault}, math_helpers::{uint128_to_f64, f64_to_uint128}}};
+    use crate::{msg::VolatileExecuteMsg, tests::{helpers::{SETUP_MASTER, deploy_test_tokens, WAD, set_token_allowance, compute_expected_local_swap, DEFAULT_TEST_VAULT_FEE, DEFAULT_TEST_GOV_FEE, query_token_balance, transfer_tokens, LOCAL_SWAPPER, FACTORY_OWNER, mock_test_token_definitions, mock_set_governance_fee_share, mock_factory_deploy_vault}, math_helpers::{uint128_to_f64, f64_to_uint128}}};
 
 
     //TODO add test for the local swap event
@@ -39,7 +39,7 @@ mod test_volatile_local_swap {
         let to_weight = vault_weights[to_asset_idx];
         let to_balance = vault_initial_balances[to_asset_idx];
 
-        // Swap 25% of the pool
+        // Swap 25% of the vault
         let swap_amount = from_balance * Uint128::from(25u64)/ Uint128::from(100u64);
 
         // Fund swapper with tokens
@@ -84,7 +84,7 @@ mod test_volatile_local_swap {
             from_balance,
             to_weight,
             to_balance,
-            Some(DEFAULT_TEST_POOL_FEE),
+            Some(DEFAULT_TEST_VAULT_FEE),
             Some(DEFAULT_TEST_GOV_FEE)
         );
 
@@ -96,15 +96,15 @@ mod test_volatile_local_swap {
         assert!(uint128_to_f64(observed_return) >= expected_swap.to_amount * 0.999999);
 
 
-        // Verify the input assets have been transferred from the swapper to the pool
+        // Verify the input assets have been transferred from the swapper to the vault
         let swapper_from_asset_balance = query_token_balance(&mut app, from_asset.clone(), LOCAL_SWAPPER.to_string());
         assert_eq!(
             swapper_from_asset_balance,
             Uint128::zero()
         );
 
-        // Verify the input assets have been received by the pool and the governance fee has been collected
-        // Note: the pool fee calculation is indirectly tested via the governance fee calculation
+        // Verify the input assets have been received by the vault and the governance fee has been collected
+        // Note: the vault fee calculation is indirectly tested via the governance fee calculation
         let vault_from_asset_balance = query_token_balance(&mut app, from_asset.clone(), vault.to_string());
         let factory_owner_from_asset_balance = query_token_balance(&mut app, from_asset.clone(), FACTORY_OWNER.to_string());
         assert_eq!(
@@ -162,7 +162,7 @@ mod test_volatile_local_swap {
         let to_weight = vault_weights[to_asset_idx];
         let to_balance = vault_initial_balances[to_asset_idx];
 
-        // Swap 25% of the pool
+        // Swap 25% of the vault
         let swap_amount = vault_initial_balances[from_asset_idx] * Uint128::from(25u64)/ Uint128::from(100u64);
 
         // Fund swapper with tokens
@@ -190,7 +190,7 @@ mod test_volatile_local_swap {
             from_balance,
             to_weight,
             to_balance,
-            Some(DEFAULT_TEST_POOL_FEE),
+            Some(DEFAULT_TEST_VAULT_FEE),
             Some(DEFAULT_TEST_GOV_FEE)
         );
 
@@ -240,7 +240,7 @@ mod test_volatile_local_swap {
     
 
     #[test]
-    fn test_local_swap_from_asset_not_in_pool() {
+    fn test_local_swap_from_asset_not_in_vault() {
 
         let mut app = App::default();
 
@@ -312,7 +312,7 @@ mod test_volatile_local_swap {
     
 
     #[test]
-    fn test_local_swap_to_asset_not_in_pool() {
+    fn test_local_swap_to_asset_not_in_vault() {
 
         let mut app = App::default();
 
@@ -481,7 +481,7 @@ mod test_volatile_local_swap {
         let to_weight = vault_weights[to_asset_idx];
         let to_balance = vault_initial_balances[to_asset_idx];
 
-        // Swap 10% of the pool
+        // Swap 10% of the vault
         let swap_amount = vault_initial_balances[from_asset_idx] * Uint128::from(10u64)/ Uint128::from(100u64);
 
         // Fund swapper with tokens
@@ -509,7 +509,7 @@ mod test_volatile_local_swap {
             from_balance,
             to_weight,
             to_balance,
-            Some(DEFAULT_TEST_POOL_FEE),
+            Some(DEFAULT_TEST_VAULT_FEE),
             Some(DEFAULT_TEST_GOV_FEE)
         );
         assert_eq!(
@@ -572,7 +572,7 @@ mod test_volatile_local_swap {
         let to_asset_idx = 1;
         let to_asset = vault_tokens[to_asset_idx].clone();
 
-        // Swap 25% of the pool
+        // Swap 25% of the vaultt
         let swap_amount = vault_initial_balances[from_asset_idx] * Uint128::from(25u64)/ Uint128::from(100u64);
 
         // Fund swapper with tokens

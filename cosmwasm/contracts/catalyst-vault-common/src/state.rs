@@ -10,43 +10,43 @@ use catalyst_types::{U256, u256};
 use fixed_point_math::mul_wad_down;
 use sha3::{Digest, Keccak256};
 
-use crate::{ContractError, msg::{ChainInterfaceResponse, SetupMasterResponse, ReadyResponse, OnlyLocalResponse, AssetsResponse, WeightsResponse, PoolFeeResponse, GovernanceFeeShareResponse, FeeAdministratorResponse, TotalEscrowedAssetResponse, TotalEscrowedLiquidityResponse, AssetEscrowResponse, LiquidityEscrowResponse, PoolConnectionStateResponse, FactoryResponse, FactoryOwnerResponse}, event::{send_asset_success_event, send_asset_failure_event, send_liquidity_success_event, send_liquidity_failure_event, finish_setup_event, set_fee_administrator_event, set_vault_fee_event, set_governance_fee_share_event, set_connection_event}};
+use crate::{ContractError, msg::{ChainInterfaceResponse, SetupMasterResponse, ReadyResponse, OnlyLocalResponse, AssetsResponse, WeightsResponse, VaultFeeResponse, GovernanceFeeShareResponse, FeeAdministratorResponse, TotalEscrowedAssetResponse, TotalEscrowedLiquidityResponse, AssetEscrowResponse, LiquidityEscrowResponse, VaultConnectionStateResponse, FactoryResponse, FactoryOwnerResponse}, event::{send_asset_success_event, send_asset_failure_event, send_liquidity_success_event, send_liquidity_failure_event, finish_setup_event, set_fee_administrator_event, set_vault_fee_event, set_governance_fee_share_event, set_connection_event}};
 
 
-// Pool Constants
+// Vault Constants
 pub const MAX_ASSETS: usize = 3;
 
 pub const DECIMALS: u8 = 18;
 pub const INITIAL_MINT_AMOUNT: Uint128 = Uint128::new(1000000000000000000u128); // 1e18
 
-pub const MAX_POOL_FEE_SHARE       : Uint64 = Uint64::new(1000000000000000000u64);              // 100%   //TODO rename MAX_POOL_FEE
-pub const MAX_GOVERNANCE_FEE_SHARE : Uint64 = Uint64::new(75u64 * 10000000000000000u64);        // 75%    //TODO EVM mismatch (move to factory)
+pub const MAX_VAULT_FEE_SHARE       : Uint64 = Uint64::new(1000000000000000000u64);              // 100%   //TODO rename MAX_VAULT_FEE
+pub const MAX_GOVERNANCE_FEE_SHARE  : Uint64 = Uint64::new(75u64 * 10000000000000000u64);        // 75%    //TODO EVM mismatch (move to factory)
 
 pub const DECAY_RATE: U256 = u256!("86400");    // 60*60*24
 
 
-// Pool Storage
-pub const FACTORY: Item<Addr> = Item::new("catalyst-pool-factory");                                     //TODO can this be implemented as an 'immutable' like in EVM?
-pub const SETUP_MASTER: Item<Option<Addr>> = Item::new("catalyst-pool-setup-master");
-pub const CHAIN_INTERFACE: Item<Option<Addr>> = Item::new("catalyst-pool-chain-interface");
+// Vault Storage
+pub const FACTORY: Item<Addr> = Item::new("catalyst-vault-factory");                                     //TODO can this be implemented as an 'immutable' like in EVM?
+pub const SETUP_MASTER: Item<Option<Addr>> = Item::new("catalyst-vault-setup-master");
+pub const CHAIN_INTERFACE: Item<Option<Addr>> = Item::new("catalyst-vault-chain-interface");
 
-pub const ASSETS: Item<Vec<Addr>> = Item::new("catalyst-pool-assets");
-pub const WEIGHTS: Item<Vec<Uint64>> = Item::new("catalyst-pool-weights");                                 //TODO use mapping instead?
+pub const ASSETS: Item<Vec<Addr>> = Item::new("catalyst-vault-assets");
+pub const WEIGHTS: Item<Vec<Uint64>> = Item::new("catalyst-vault-weights");                                 //TODO use mapping instead?
 
-pub const FEE_ADMINISTRATOR: Item<Addr> = Item::new("catalyst-pool-fee-administrator");
-pub const POOL_FEE: Item<Uint64> = Item::new("catalyst-pool-pool-fee");
-pub const GOVERNANCE_FEE_SHARE: Item<Uint64> = Item::new("catalyst-pool-governance-fee");
+pub const FEE_ADMINISTRATOR: Item<Addr> = Item::new("catalyst-vault-fee-administrator");
+pub const VAULT_FEE: Item<Uint64> = Item::new("catalyst-vault-vault-fee");
+pub const GOVERNANCE_FEE_SHARE: Item<Uint64> = Item::new("catalyst-vault-governance-fee");
 
-pub const POOL_CONNECTIONS: Map<(&str, Vec<u8>), bool> = Map::new("catalyst-pool-connections");         //TODO channelId and toPool types
+pub const VAULT_CONNECTIONS: Map<(&str, Vec<u8>), bool> = Map::new("catalyst-vault-connections");         //TODO channelId and toVault types
 
-pub const TOTAL_ESCROWED_ASSETS: Map<&str, Uint128> = Map::new("catalyst-pool-escrowed-assets");        //TODO use mapping instead?
-pub const TOTAL_ESCROWED_LIQUIDITY: Item<Uint128> = Item::new("catalyst-pool-escrowed-pool-tokens");
-pub const ASSET_ESCROWS: Map<Vec<u8>, Addr> = Map::new("catalyst-pool-asset-escrows");
-pub const LIQUIDITY_ESCROWS: Map<Vec<u8>, Addr> = Map::new("catalyst-pool-liquidity-escrows");
+pub const TOTAL_ESCROWED_ASSETS: Map<&str, Uint128> = Map::new("catalyst-vault-escrowed-assets");        //TODO use mapping instead?
+pub const TOTAL_ESCROWED_LIQUIDITY: Item<Uint128> = Item::new("catalyst-vault-escrowed-vault-tokens");
+pub const ASSET_ESCROWS: Map<Vec<u8>, Addr> = Map::new("catalyst-vault-asset-escrows");
+pub const LIQUIDITY_ESCROWS: Map<Vec<u8>, Addr> = Map::new("catalyst-vault-liquidity-escrows");
 
-pub const MAX_LIMIT_CAPACITY: Item<U256> = Item::new("catalyst-pool-max-limit-capacity");
-pub const USED_LIMIT_CAPACITY: Item<U256> = Item::new("catalyst-pool-used-limit-capacity");
-pub const USED_LIMIT_CAPACITY_TIMESTAMP: Item<Uint64> = Item::new("catalyst-pool-used-limit-capacity-timestamp");
+pub const MAX_LIMIT_CAPACITY: Item<U256> = Item::new("catalyst-vault-max-limit-capacity");
+pub const USED_LIMIT_CAPACITY: Item<U256> = Item::new("catalyst-vault-used-limit-capacity");
+pub const USED_LIMIT_CAPACITY_TIMESTAMP: Item<Uint64> = Item::new("catalyst-vault-used-limit-capacity-timestamp");
 
 
 // TODO move to utils/similar?
@@ -206,7 +206,7 @@ pub fn set_connection(
         return Err(ContractError::GenericError {});     //TODO error
     }
 
-    POOL_CONNECTIONS.save(deps.storage, (channel_id.as_str(), to_vault.0.clone()), &state)?;
+    VAULT_CONNECTIONS.save(deps.storage, (channel_id.as_str(), to_vault.0.clone()), &state)?;
 
     Ok(
         Response::new()
@@ -227,7 +227,7 @@ pub fn is_connected(
     to_vault: Binary
 ) -> bool {
 
-    POOL_CONNECTIONS
+    VAULT_CONNECTIONS
         .load(deps.storage, (channel_id, to_vault.0))
         .unwrap_or(false)
 
@@ -255,13 +255,13 @@ pub fn set_vault_fee_unchecked(
     fee: Uint64
 ) -> Result<Event, ContractError> {
 
-    if fee > MAX_POOL_FEE_SHARE {
+    if fee > MAX_VAULT_FEE_SHARE {
         return Err(
-            ContractError::InvalidPoolFee { requested_fee: fee, max_fee: MAX_POOL_FEE_SHARE }
+            ContractError::InvalidVaultFee { requested_fee: fee, max_fee: MAX_VAULT_FEE_SHARE }
         )
     }
 
-    POOL_FEE.save(deps.storage, &fee)?;
+    VAULT_FEE.save(deps.storage, &fee)?;
 
     return Ok(
         set_vault_fee_event(fee)
@@ -406,7 +406,7 @@ pub fn setup(
     let vault_fee_event = set_vault_fee_unchecked(deps, vault_fee)?;
     let gov_fee_event = set_governance_fee_share_unchecked(deps, governance_fee)?;
 
-    // Setup the Pool Token (store token info using cw20-base format)
+    // Setup the Vault Token (store token info using cw20-base format)
     let data = TokenInfo {
         name,
         symbol,
@@ -476,8 +476,8 @@ pub fn create_liquidity_escrow(
     let fallback_account = deps.api.addr_validate(&fallback_account)?;
     LIQUIDITY_ESCROWS.save(deps.storage, send_liquidity_hash, &fallback_account)?;
 
-    let escrowed_pool_tokens = TOTAL_ESCROWED_LIQUIDITY.load(deps.storage)?;
-    TOTAL_ESCROWED_LIQUIDITY.save(deps.storage, &escrowed_pool_tokens.checked_add(amount)?)?;
+    let escrowed_vault_tokens = TOTAL_ESCROWED_LIQUIDITY.load(deps.storage)?;
+    TOTAL_ESCROWED_LIQUIDITY.save(deps.storage, &escrowed_vault_tokens.checked_add(amount)?)?;
 
     Ok(())
 }
@@ -509,8 +509,8 @@ pub fn release_liquidity_escrow(
     let fallback_account = LIQUIDITY_ESCROWS.load(deps.storage, send_liquidity_hash.clone())?;
     LIQUIDITY_ESCROWS.remove(deps.storage, send_liquidity_hash);
 
-    let escrowed_pool_tokens = TOTAL_ESCROWED_LIQUIDITY.load(deps.storage)?;
-    TOTAL_ESCROWED_LIQUIDITY.save(deps.storage, &(escrowed_pool_tokens - amount))?;     // Safe, as 'amount' is always contained in 'escrowed_assets'
+    let escrowed_vault_tokens = TOTAL_ESCROWED_LIQUIDITY.load(deps.storage)?;
+    TOTAL_ESCROWED_LIQUIDITY.save(deps.storage, &(escrowed_vault_tokens - amount))?;     // Safe, as 'amount' is always contained in 'escrowed_assets'
 
     Ok(fallback_account)
 }
@@ -674,7 +674,7 @@ pub fn on_send_liquidity_failure(
 
     let fallback_address = release_liquidity_escrow(deps, send_liquidity_hash.clone(), amount)?;
 
-    // Mint pool tokens for the fallbackAccount
+    // Mint vault tokens for the fallbackAccount
     let execute_mint_info = MessageInfo {
         sender: env.contract.address.clone(),
         funds: vec![],
@@ -828,10 +828,10 @@ pub fn query_weights(deps: Deps) -> StdResult<WeightsResponse> {
     )
 }
 
-pub fn query_vault_fee(deps: Deps) -> StdResult<PoolFeeResponse> {
+pub fn query_vault_fee(deps: Deps) -> StdResult<VaultFeeResponse> {
     Ok(
-        PoolFeeResponse {
-            fee: POOL_FEE.load(deps.storage)?
+        VaultFeeResponse {
+            fee: VAULT_FEE.load(deps.storage)?
         }
     )
 }
@@ -884,10 +884,10 @@ pub fn query_liquidity_escrow(deps: Deps, hash: Binary) -> StdResult<LiquidityEs
     )
 }
 
-pub fn query_pool_connection_state(deps: Deps, channel_id: &str, pool: Binary) -> StdResult<PoolConnectionStateResponse> {
+pub fn query_vault_connection_state(deps: Deps, channel_id: &str, vault: Binary) -> StdResult<VaultConnectionStateResponse> {
     Ok(
-        PoolConnectionStateResponse {
-            state: POOL_CONNECTIONS.may_load(deps.storage, (channel_id, pool.0))?.unwrap_or(false)
+        VaultConnectionStateResponse {
+            state: VAULT_CONNECTIONS.may_load(deps.storage, (channel_id, vault.0))?.unwrap_or(false)
         }
     )
 }

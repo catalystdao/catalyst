@@ -30,13 +30,13 @@ mod test_volatile_withdraw_mixed {
         );
 
         // Define withdraw config
-        let withdraw_percentage = 0.15;     // Percentage of pool tokens supply
+        let withdraw_percentage = 0.15;     // Percentage of vault tokens supply
         let withdraw_amount = f64_to_uint128(uint128_to_f64(INITIAL_MINT_AMOUNT) * withdraw_percentage).unwrap();
         let withdraw_ratio_f64 = vec![0.5, 0.2, 1.];
         let withdraw_ratio = withdraw_ratio_f64.iter()
             .map(|val| ((val * 1e18) as u64).into()).collect::<Vec<Uint64>>();
 
-        // Fund withdrawer with pool tokens
+        // Fund withdrawer with vault tokens
         transfer_tokens(
             &mut app,
             withdraw_amount,
@@ -52,7 +52,7 @@ mod test_volatile_withdraw_mixed {
             Addr::unchecked(WITHDRAWER),
             vault.clone(),
             &VolatileExecuteMsg::WithdrawMixed {
-                pool_tokens: withdraw_amount,
+                vault_tokens: withdraw_amount,
                 withdraw_ratio: withdraw_ratio.clone(),
                 min_out: vec![Uint128::zero(), Uint128::zero(), Uint128::zero()]
             },
@@ -86,7 +86,7 @@ mod test_volatile_withdraw_mixed {
             });
 
 
-        // Verify the withdrawn assets have been sent by the pool and received by the withdrawer
+        // Verify the withdrawn assets have been sent by the vault and received by the withdrawer
         vault_tokens.iter()
             .zip(&vault_initial_balances)
             .zip(&observed_returns)
@@ -109,17 +109,17 @@ mod test_volatile_withdraw_mixed {
             });
 
 
-        // Verify the pool tokens have been burnt
-        let withdrawer_pool_tokens_balance = query_token_balance(&mut app, vault.clone(), WITHDRAWER.to_string());
+        // Verify the vault tokens have been burnt
+        let withdrawer_vault_tokens_balance = query_token_balance(&mut app, vault.clone(), WITHDRAWER.to_string());
         assert_eq!(
-            withdrawer_pool_tokens_balance,
+            withdrawer_vault_tokens_balance,
             Uint128::zero()
         );
     
-        // Verify the vault total pool tokens supply
-        let pool_token_info = query_token_info(&mut app, vault.clone());
+        // Verify the vault total vault tokens supply
+        let vault_token_info = query_token_info(&mut app, vault.clone());
         assert_eq!(
-            pool_token_info.total_supply,
+            vault_token_info.total_supply,
             INITIAL_MINT_AMOUNT - withdraw_amount
         );
 
@@ -160,7 +160,7 @@ mod test_volatile_withdraw_mixed {
             Addr::unchecked(WITHDRAWER),
             vault.clone(),
             &VolatileExecuteMsg::WithdrawMixed {
-                pool_tokens: withdraw_amount,
+                vault_tokens: withdraw_amount,
                 withdraw_ratio,
                 min_out: vec![Uint128::zero(), Uint128::zero(), Uint128::zero()]
             },
@@ -209,13 +209,13 @@ mod test_volatile_withdraw_mixed {
         );
 
         // Define withdraw config
-        let withdraw_percentage = 0.15;     // Percentage of pool tokens supply
+        let withdraw_percentage = 0.15;     // Percentage of vault tokens supply
         let withdraw_amount = f64_to_uint128(uint128_to_f64(INITIAL_MINT_AMOUNT) * withdraw_percentage).unwrap();
         let withdraw_ratio_f64 = vec![0.5, 0.2, 1.];
         let withdraw_ratio = withdraw_ratio_f64.iter()
             .map(|val| ((val * 1e18) as u64).into()).collect::<Vec<Uint64>>();
 
-        // Fund withdrawer with pool tokens
+        // Fund withdrawer with vault tokens
         transfer_tokens(
             &mut app,
             withdraw_amount,
@@ -250,7 +250,7 @@ mod test_volatile_withdraw_mixed {
             Addr::unchecked(WITHDRAWER),
             vault.clone(),
             &VolatileExecuteMsg::WithdrawMixed {
-                pool_tokens: withdraw_amount,
+                vault_tokens: withdraw_amount,
                 withdraw_ratio: withdraw_ratio.clone(),
                 min_out: min_out_invalid.clone()
             },
@@ -278,7 +278,7 @@ mod test_volatile_withdraw_mixed {
             Addr::unchecked(WITHDRAWER),
             vault.clone(),
             &VolatileExecuteMsg::WithdrawMixed {
-                pool_tokens: withdraw_amount,
+                vault_tokens: withdraw_amount,
                 withdraw_ratio,
                 min_out: min_out_valid
             },
@@ -310,13 +310,13 @@ mod test_volatile_withdraw_mixed {
         );
 
         // Define withdraw config
-        let withdraw_percentage = 0.15;     // Percentage of pool tokens supply
+        let withdraw_percentage = 0.15;     // Percentage of vault tokens supply
         let withdraw_amount = f64_to_uint128(uint128_to_f64(INITIAL_MINT_AMOUNT) * withdraw_percentage).unwrap();
         let withdraw_ratio_f64 = vec![0., 0.2, 1.];        // ! The ratio for the first asset is set to 0
         let withdraw_ratio = withdraw_ratio_f64.iter()
             .map(|val| ((val * 1e18) as u64).into()).collect::<Vec<Uint64>>();
 
-        // Fund withdrawer with pool tokens
+        // Fund withdrawer with vault tokens
         transfer_tokens(
             &mut app,
             withdraw_amount,
@@ -332,7 +332,7 @@ mod test_volatile_withdraw_mixed {
             Addr::unchecked(WITHDRAWER),
             vault.clone(),
             &VolatileExecuteMsg::WithdrawMixed {
-                pool_tokens: withdraw_amount,
+                vault_tokens: withdraw_amount,
                 withdraw_ratio: withdraw_ratio.clone(),
                 min_out: vec![Uint128::MAX, Uint128::zero(), Uint128::zero()]   // ! Non-zero min_out specified for the first asset
             },
@@ -356,7 +356,7 @@ mod test_volatile_withdraw_mixed {
             Addr::unchecked(WITHDRAWER),
             vault.clone(),
             &VolatileExecuteMsg::WithdrawMixed {
-                pool_tokens: withdraw_amount,
+                vault_tokens: withdraw_amount,
                 withdraw_ratio: withdraw_ratio.clone(),
                 min_out: vec![Uint128::zero(), Uint128::zero(), Uint128::zero()]
             },
@@ -386,13 +386,13 @@ mod test_volatile_withdraw_mixed {
         );
 
         // Define withdraw config
-        let withdraw_percentage = 0.15;     // Percentage of pool tokens supply
+        let withdraw_percentage = 0.15;     // Percentage of vault tokens supply
         let withdraw_amount = f64_to_uint128(uint128_to_f64(INITIAL_MINT_AMOUNT) * withdraw_percentage).unwrap();
         let withdraw_ratio_f64 = vec![0.5, 0.2, 1.];
         let withdraw_ratio = withdraw_ratio_f64.iter()
             .map(|val| ((val * 1e18) as u64).into()).collect::<Vec<Uint64>>();
 
-        // ! Do not fund the withdrawer with pool tokens
+        // ! Do not fund the withdrawer with vault tokens
     
 
     
@@ -401,7 +401,7 @@ mod test_volatile_withdraw_mixed {
             Addr::unchecked(WITHDRAWER),
             vault.clone(),
             &VolatileExecuteMsg::WithdrawMixed {
-                pool_tokens: withdraw_amount,
+                vault_tokens: withdraw_amount,
                 withdraw_ratio,
                 min_out: vec![Uint128::zero(), Uint128::zero(), Uint128::zero()]
             },
@@ -439,7 +439,7 @@ mod test_volatile_withdraw_mixed {
         );
 
         // Define withdraw config
-        let withdraw_percentage = 0.15;     // Percentage of pool tokens supply
+        let withdraw_percentage = 0.15;     // Percentage of vault tokens supply
         let withdraw_amount = f64_to_uint128(uint128_to_f64(INITIAL_MINT_AMOUNT) * withdraw_percentage).unwrap();
 
 
@@ -449,7 +449,7 @@ mod test_volatile_withdraw_mixed {
             Addr::unchecked(SETUP_MASTER),
             vault.clone(),
             &VolatileExecuteMsg::WithdrawMixed {
-                pool_tokens: withdraw_amount,
+                vault_tokens: withdraw_amount,
                 withdraw_ratio: vec![0.5, 1.].iter().map(|ratio| ((ratio * 1e18) as u64).into()).collect::<Vec<Uint64>>(),
                 min_out: vec![Uint128::zero(), Uint128::zero(), Uint128::one()]
             },
@@ -469,7 +469,7 @@ mod test_volatile_withdraw_mixed {
             Addr::unchecked(SETUP_MASTER),
             vault.clone(),
             &VolatileExecuteMsg::WithdrawMixed {
-                pool_tokens: withdraw_amount,
+                vault_tokens: withdraw_amount,
                 withdraw_ratio: vec![0.5, 0., 0., 1.].iter().map(|ratio| ((ratio * 1e18) as u64).into()).collect::<Vec<Uint64>>(),
                 min_out: vec![Uint128::zero(), Uint128::zero(), Uint128::one()]
             },
@@ -488,7 +488,7 @@ mod test_volatile_withdraw_mixed {
             Addr::unchecked(SETUP_MASTER),
             vault.clone(),
             &VolatileExecuteMsg::WithdrawMixed {
-                pool_tokens: withdraw_amount,
+                vault_tokens: withdraw_amount,
                 withdraw_ratio: vec![Uint64::zero(), Uint64::zero(), Uint64::zero()],
                 min_out: vec![Uint128::zero(), Uint128::zero(), Uint128::zero()]
             },
@@ -507,7 +507,7 @@ mod test_volatile_withdraw_mixed {
             Addr::unchecked(SETUP_MASTER),
             vault.clone(),
             &VolatileExecuteMsg::WithdrawMixed {
-                pool_tokens: withdraw_amount,
+                vault_tokens: withdraw_amount,
                 withdraw_ratio: vec![0.5, 0.5, 1.2].iter().map(|ratio| ((ratio * 1e18) as u64).into()).collect::<Vec<Uint64>>(),
                 min_out: vec![Uint128::zero(), Uint128::zero(), Uint128::zero()]
             },
@@ -526,7 +526,7 @@ mod test_volatile_withdraw_mixed {
             Addr::unchecked(SETUP_MASTER),
             vault.clone(),
             &VolatileExecuteMsg::WithdrawMixed {
-                pool_tokens: withdraw_amount,
+                vault_tokens: withdraw_amount,
                 withdraw_ratio: vec![0.5, 0.5, 0.].iter().map(|ratio| ((ratio * 1e18) as u64).into()).collect::<Vec<Uint64>>(),
                 min_out: vec![Uint128::zero(), Uint128::zero(), Uint128::zero()]
             },
@@ -545,7 +545,7 @@ mod test_volatile_withdraw_mixed {
             Addr::unchecked(SETUP_MASTER),
             vault.clone(),
             &VolatileExecuteMsg::WithdrawMixed {
-                pool_tokens: withdraw_amount,
+                vault_tokens: withdraw_amount,
                 withdraw_ratio: vec![0.5, 1., 0.5].iter().map(|ratio| ((ratio * 1e18) as u64).into()).collect::<Vec<Uint64>>(),
                 min_out: vec![Uint128::zero(), Uint128::zero(), Uint128::zero()]
             },
@@ -565,7 +565,7 @@ mod test_volatile_withdraw_mixed {
             Addr::unchecked(SETUP_MASTER),
             vault.clone(),
             &VolatileExecuteMsg::WithdrawMixed {
-                pool_tokens: withdraw_amount,
+                vault_tokens: withdraw_amount,
                 withdraw_ratio: vec![1./3., 1./2., 1.].iter().map(|ratio| ((ratio * 1e18) as u64).into()).collect::<Vec<Uint64>>(),
                 min_out: vec![Uint128::zero(), Uint128::zero(), Uint128::zero()]
             },

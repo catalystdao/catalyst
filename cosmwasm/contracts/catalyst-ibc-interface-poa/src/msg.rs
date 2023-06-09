@@ -29,7 +29,7 @@ pub enum ExecuteMsg {
         to_vault: Binary,
         to_account: Binary,
         u: U256,
-        min_pool_tokens: U256,      //TODO EVM mismatch
+        min_vault_tokens: U256,      //TODO EVM mismatch
         min_reference_asset: U256,  //TODO EVM mismatch
         from_amount: Uint128,
         block_number: u32,

@@ -67,7 +67,7 @@ pub fn send_liquidity_event(
     to_vault: Binary,
     to_account: Binary,
     from_amount: Uint128,
-    min_pool_tokens: U256,
+    min_vault_tokens: U256,
     min_reference_asset: U256,
     units: U256
 ) -> Event {
@@ -76,7 +76,7 @@ pub fn send_liquidity_event(
         .add_attribute("to_vault", to_vault.to_base64())
         .add_attribute("to_account", to_account.to_base64())
         .add_attribute("from_amount", from_amount)
-        .add_attribute("min_pool_tokens", min_pool_tokens.to_string())          //TODO U256 format
+        .add_attribute("min_vault_tokens", min_vault_tokens.to_string())          //TODO U256 format
         .add_attribute("min_reference_asset", min_reference_asset.to_string())  //TODO U256 format
         .add_attribute("units", units.to_string())                              //TODO U256 format
 }

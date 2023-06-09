@@ -67,7 +67,7 @@ pub fn initialize_swap_curves(
     }
     WEIGHTS.save(deps.storage, &weights)?;
 
-    // Mint pool tokens for the depositor
+    // Mint vault tokens for the depositor
     // Make up a 'MessageInfo' with the sender set to this contract itself => this is to allow the use of the 'execute_mint'
     // function as provided by cw20-base, which will match the 'sender' of 'MessageInfo' with the allowed minter that
     // was set when initializing the cw20 token (this contract itself).

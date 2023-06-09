@@ -74,7 +74,7 @@ pub fn execute(
             to_vault,
             to_account,
             u,
-            min_pool_tokens,
+            min_vault_tokens,
             min_reference_asset,
             from_amount,
             block_number,
@@ -86,7 +86,7 @@ pub fn execute(
             to_vault,
             to_account,
             u,
-            min_pool_tokens,
+            min_vault_tokens,
             min_reference_asset,
             from_amount,
             block_number,
@@ -134,7 +134,7 @@ fn execute_send_cross_chain_asset(
         timeout: env.block.time.plus_seconds(TRANSACTION_TIMEOUT).into()
     };
 
-    //TODO since this is permissionless, do we want to add a log here (e.g. sender and target pool)?
+    //TODO since this is permissionless, do we want to add a log here (e.g. sender and target vault)?
     Ok(Response::new()
         .add_message(ibc_msg)
     )
@@ -147,7 +147,7 @@ fn execute_send_cross_chain_liquidity(
     to_vault: Binary,
     to_account: Binary,
     u: U256,
-    min_pool_tokens: U256,
+    min_vault_tokens: U256,
     min_reference_asset: U256,
     from_amount: Uint128,
     block_number: u32,
@@ -161,7 +161,7 @@ fn execute_send_cross_chain_liquidity(
         to_account: CatalystEncodedAddress::try_from(to_account)?,                  // to_account should already be encoded
         u,
         variable_payload: SendLiquidityVariablePayload {
-            min_pool_tokens,
+            min_vault_tokens,
             min_reference_asset,
             from_amount: U256::from(from_amount.u128()),
             block_number,
@@ -176,7 +176,7 @@ fn execute_send_cross_chain_liquidity(
         timeout: env.block.time.plus_seconds(TRANSACTION_TIMEOUT).into()
     };
 
-    //TODO since this is permissionless, do we want to add a log here (e.g. sender and target pool)?
+    //TODO since this is permissionless, do we want to add a log here (e.g. sender and target vault)?
     Ok(Response::new()
         .add_message(ibc_msg)
     )
@@ -269,7 +269,7 @@ mod catalyst_ibc_interface_tests {
         }
     }
 
-    fn mock_pool_receive_asset_msg(
+    fn mock_vault_receive_asset_msg(
         channel_id: &str,
         from_vault: Vec<u8>,
     ) -> catalyst_vault_common::msg::ExecuteMsg<()> {
@@ -288,7 +288,7 @@ mod catalyst_ibc_interface_tests {
         }
     }
 
-    fn mock_pool_send_asset_success_msg(
+    fn mock_vault_send_asset_success_msg(
         channel_id: &str,
     ) -> catalyst_vault_common::msg::ExecuteMsg<()> {
         catalyst_vault_common::msg::ExecuteMsg::OnSendAssetSuccess {
@@ -301,7 +301,7 @@ mod catalyst_ibc_interface_tests {
         }
     }
 
-    fn mock_pool_send_asset_failure_msg(
+    fn mock_vault_send_asset_failure_msg(
         channel_id: &str,
     ) -> catalyst_vault_common::msg::ExecuteMsg<()> {
         catalyst_vault_common::msg::ExecuteMsg::OnSendAssetFailure {
@@ -320,7 +320,7 @@ mod catalyst_ibc_interface_tests {
     fn mock_send_liquidity_msg(
         channel_id: &str,
         to_vault: Vec<u8>,
-        min_pool_tokens: Option<U256>,          // Allow to override the default value to provide invalid configs
+        min_vault_tokens: Option<U256>,          // Allow to override the default value to provide invalid configs
         min_reference_asset: Option<U256>       // Allow to override the default value to provide invalid configs
     ) -> ExecuteMsg {
         ExecuteMsg::SendCrossChainLiquidity {
@@ -328,7 +328,7 @@ mod catalyst_ibc_interface_tests {
             to_vault: CatalystEncodedAddress::try_encode(to_vault.as_ref()).unwrap().to_binary(),
             to_account: CatalystEncodedAddress::try_encode(b"to_account").unwrap().to_binary(),
             u: u256!("78456988731590487483448276103933454935747871349630657124267302091643025406701"),          // Some large U256 number
-            min_pool_tokens: min_pool_tokens.unwrap_or(
+            min_vault_tokens: min_vault_tokens.unwrap_or(
                 u256!("323476719582585693194107115743132847255")                                                // Some large Uint128 number (as U256)
             ),
             min_reference_asset: min_reference_asset.unwrap_or(
@@ -340,7 +340,7 @@ mod catalyst_ibc_interface_tests {
         }
     }
 
-    fn mock_pool_receive_liquidity_msg(
+    fn mock_vault_receive_liquidity_msg(
         channel_id: &str,
         from_vault: Vec<u8>,
     ) -> catalyst_vault_common::msg::ExecuteMsg<()> {
@@ -349,7 +349,7 @@ mod catalyst_ibc_interface_tests {
             from_vault: CatalystEncodedAddress::try_encode(from_vault.as_ref()).unwrap().to_binary(),
             to_account: "to_account".to_string(),
             u: u256!("78456988731590487483448276103933454935747871349630657124267302091643025406701"),          // Some large U256 number
-            min_pool_tokens: Uint128::from(323476719582585693194107115743132847255u128),                        // Some large Uint128 number
+            min_vault_tokens: Uint128::from(323476719582585693194107115743132847255u128),                        // Some large Uint128 number
             min_reference_asset: Uint128::from(1385371954613879816514345798135479u128),                         // Some large Uint128 number
             from_amount: U256::from(4920222095670429824873974121747892731u128),
             from_block_number_mod: 1356u32,
@@ -358,7 +358,7 @@ mod catalyst_ibc_interface_tests {
         }
     }
 
-    fn mock_pool_send_liquidity_success_msg(
+    fn mock_vault_send_liquidity_success_msg(
         channel_id: &str,
     ) -> catalyst_vault_common::msg::ExecuteMsg<()> {
         catalyst_vault_common::msg::ExecuteMsg::OnSendLiquiditySuccess {
@@ -370,7 +370,7 @@ mod catalyst_ibc_interface_tests {
         }
     }
 
-    fn mock_pool_send_liquidity_failure_msg(
+    fn mock_vault_send_liquidity_failure_msg(
         channel_id: &str,
     ) -> catalyst_vault_common::msg::ExecuteMsg<()> {
         catalyst_vault_common::msg::ExecuteMsg::OnSendLiquidityFailure {
@@ -422,7 +422,7 @@ mod catalyst_ibc_interface_tests {
                 to_vault,
                 to_account,
                 u,
-                min_pool_tokens,
+                min_vault_tokens,
                 min_reference_asset,
                 from_amount,
                 block_number,
@@ -434,7 +434,7 @@ mod catalyst_ibc_interface_tests {
                     to_account: CatalystEncodedAddress::from_slice_unchecked(to_account.as_ref()),
                     u,
                     variable_payload: SendLiquidityVariablePayload {
-                        min_pool_tokens,
+                        min_vault_tokens,
                         min_reference_asset,
                         from_amount: override_from_amount.unwrap_or(U256::from(from_amount.u128())),
                         block_number,
@@ -728,7 +728,7 @@ mod catalyst_ibc_interface_tests {
             Binary(vec![0u8])                   // ! Check ack returned has value of 0 (i.e. no error)
         );
     
-        // Check pool is invoked
+        // Check vault is invoked
         assert_eq!(response.messages.len(), 1);
 
         assert_eq!(
@@ -737,7 +737,7 @@ mod catalyst_ibc_interface_tests {
                 id: RECEIVE_REPLY_ID,
                 msg: cosmwasm_std::WasmMsg::Execute {
                     contract_addr: to_vault.to_string(),
-                    msg: to_binary(&mock_pool_receive_asset_msg(channel_id, from_vault.as_bytes().to_vec())).unwrap(),
+                    msg: to_binary(&mock_vault_receive_asset_msg(channel_id, from_vault.as_bytes().to_vec())).unwrap(),
                     funds: vec![]
                 }.into(),
                 reply_on: cosmwasm_std::ReplyOn::Always,
@@ -793,7 +793,7 @@ mod catalyst_ibc_interface_tests {
             Binary(vec![1u8])                   // ! Check ack returned has value of 1 (i.e. error)
         );
     
-        // Check pool is not invoked
+        // Check vault is not invoked
         assert_eq!(response.messages.len(), 0);
 
     }
@@ -836,14 +836,14 @@ mod catalyst_ibc_interface_tests {
         // Check the transaction passes
         let response = response_result.unwrap();
     
-        // Check pool ack is invoked
+        // Check vault ack is invoked
         assert_eq!(response.messages.len(), 1);
         assert_eq!(
             response.messages[0],
             SubMsg::new(
                 cosmwasm_std::WasmMsg::Execute {
                     contract_addr: from_vault.to_string(),
-                    msg: to_binary(&mock_pool_send_asset_success_msg(channel_id)).unwrap(),
+                    msg: to_binary(&mock_vault_send_asset_success_msg(channel_id)).unwrap(),
                     funds: vec![]
                 }
             )
@@ -864,14 +864,14 @@ mod catalyst_ibc_interface_tests {
         // Check the transaction passes
         let response = response_result.unwrap();
     
-        // Check pool ack is invoked
+        // Check vault ack is invoked
         assert_eq!(response.messages.len(), 1);
         assert_eq!(
             response.messages[0],
             SubMsg::new(
                 cosmwasm_std::WasmMsg::Execute {
                     contract_addr: from_vault.to_string(),
-                    msg: to_binary(&mock_pool_send_asset_failure_msg(channel_id)).unwrap(),
+                    msg: to_binary(&mock_vault_send_asset_failure_msg(channel_id)).unwrap(),
                     funds: vec![]
                 }
             )
@@ -892,7 +892,7 @@ mod catalyst_ibc_interface_tests {
         // Check the transaction passes
         let response = response_result.unwrap();    // ! Make sure the transaction does not return error even for the invalid response
 
-        // Check pool is not invoked
+        // Check vault is not invoked
         assert_eq!(response.messages.len(), 0);
 
     }
@@ -932,14 +932,14 @@ mod catalyst_ibc_interface_tests {
         // Check the transaction passes
         let response = response_result.unwrap();
     
-        // Check pool timeout is invoked
+        // Check vault timeout is invoked
         assert_eq!(response.messages.len(), 1);
         assert_eq!(
             response.messages[0],
             SubMsg::new(
                 cosmwasm_std::WasmMsg::Execute {
                     contract_addr: from_vault.to_string(),
-                    msg: to_binary(&mock_pool_send_asset_failure_msg(channel_id)).unwrap(),
+                    msg: to_binary(&mock_vault_send_asset_failure_msg(channel_id)).unwrap(),
                     funds: vec![]
                 }
             )
@@ -985,7 +985,7 @@ mod catalyst_ibc_interface_tests {
         // Check the transaction passes
         let response = response_result.unwrap();
     
-        // Check pool ack is not invoked
+        // Check vault ack is not invoked
         assert_eq!(response.messages.len(), 0);
 
 
@@ -1003,7 +1003,7 @@ mod catalyst_ibc_interface_tests {
         // Check the transaction passes
         let response = response_result.unwrap();
     
-        // Check pool ack is not invoked
+        // Check vault ack is not invoked
         assert_eq!(response.messages.len(), 0);
 
 
@@ -1020,7 +1020,7 @@ mod catalyst_ibc_interface_tests {
         // Check the transaction passes
         let response = response_result.unwrap();
     
-        // Check pool ack is not invoked
+        // Check vault ack is not invoked
         assert_eq!(response.messages.len(), 0);
 
     }
@@ -1119,7 +1119,7 @@ mod catalyst_ibc_interface_tests {
             Binary(vec![0u8])                   // ! Check ack returned has value of 0 (i.e. no error)
         );
     
-        // Check pool is invoked
+        // Check vault is invoked
         assert_eq!(response.messages.len(), 1);
 
         assert_eq!(
@@ -1128,7 +1128,7 @@ mod catalyst_ibc_interface_tests {
                 id: RECEIVE_REPLY_ID,
                 msg: cosmwasm_std::WasmMsg::Execute {
                     contract_addr: to_vault.to_string(),
-                    msg: to_binary(&mock_pool_receive_liquidity_msg(channel_id, from_vault.as_bytes().to_vec())).unwrap(),
+                    msg: to_binary(&mock_vault_receive_liquidity_msg(channel_id, from_vault.as_bytes().to_vec())).unwrap(),
                     funds: vec![]
                 }.into(),
                 reply_on: cosmwasm_std::ReplyOn::Always,
@@ -1141,7 +1141,7 @@ mod catalyst_ibc_interface_tests {
 
 
     #[test]
-    fn test_receive_liquidity_invalid_min_pool_tokens() {
+    fn test_receive_liquidity_invalid_min_vault_tokens() {
 
         let mut deps = mock_dependencies();
       
@@ -1162,7 +1162,7 @@ mod catalyst_ibc_interface_tests {
         let send_msg = mock_send_liquidity_msg(
             channel_id,
             to_vault.to_vec(),
-            Some(U256::MAX),                                // ! Specify a min_pool_token that is larger than Uint128
+            Some(U256::MAX),                                // ! Specify a min_vault_token that is larger than Uint128
             None,
         );
         let receive_packet = mock_ibc_packet(channel_id, from_vault, send_msg, None);
@@ -1185,7 +1185,7 @@ mod catalyst_ibc_interface_tests {
             Binary(vec![1u8])                   // ! Check ack returned has value of 1 (i.e. error)
         );
     
-        // Check pool is not invoked
+        // Check vault is not invoked
         assert_eq!(response.messages.len(), 0);
 
     }
@@ -1236,7 +1236,7 @@ mod catalyst_ibc_interface_tests {
             Binary(vec![1u8])                   // ! Check ack returned has value of 1 (i.e. error)
         );
     
-        // Check pool is not invoked
+        // Check vault is not invoked
         assert_eq!(response.messages.len(), 0);
 
     }
@@ -1279,14 +1279,14 @@ mod catalyst_ibc_interface_tests {
         // Check the transaction passes
         let response = response_result.unwrap();
     
-        // Check pool ack is invoked
+        // Check vault ack is invoked
         assert_eq!(response.messages.len(), 1);
         assert_eq!(
             response.messages[0],
             SubMsg::new(
                 cosmwasm_std::WasmMsg::Execute {
                     contract_addr: from_vault.to_string(),
-                    msg: to_binary(&mock_pool_send_liquidity_success_msg(channel_id)).unwrap(),
+                    msg: to_binary(&mock_vault_send_liquidity_success_msg(channel_id)).unwrap(),
                     funds: vec![]
                 }
             )
@@ -1307,14 +1307,14 @@ mod catalyst_ibc_interface_tests {
         // Check the transaction passes
         let response = response_result.unwrap();
     
-        // Check pool ack is invoked
+        // Check vault ack is invoked
         assert_eq!(response.messages.len(), 1);
         assert_eq!(
             response.messages[0],
             SubMsg::new(
                 cosmwasm_std::WasmMsg::Execute {
                     contract_addr: from_vault.to_string(),
-                    msg: to_binary(&mock_pool_send_liquidity_failure_msg(channel_id)).unwrap(),
+                    msg: to_binary(&mock_vault_send_liquidity_failure_msg(channel_id)).unwrap(),
                     funds: vec![]
                 }
             )
@@ -1335,7 +1335,7 @@ mod catalyst_ibc_interface_tests {
         // Check the transaction passes
         let response = response_result.unwrap();    // ! Make sure the transaction does not return error even for the invalid response
 
-        // Check pool is not invoked
+        // Check vault is not invoked
         assert_eq!(response.messages.len(), 0);
 
     }
@@ -1375,14 +1375,14 @@ mod catalyst_ibc_interface_tests {
         // Check the transaction passes
         let response = response_result.unwrap();
     
-        // Check pool timeout is invoked
+        // Check vault timeout is invoked
         assert_eq!(response.messages.len(), 1);
         assert_eq!(
             response.messages[0],
             SubMsg::new(
                 cosmwasm_std::WasmMsg::Execute {
                     contract_addr: from_vault.to_string(),
-                    msg: to_binary(&mock_pool_send_liquidity_failure_msg(channel_id)).unwrap(),
+                    msg: to_binary(&mock_vault_send_liquidity_failure_msg(channel_id)).unwrap(),
                     funds: vec![]
                 }
             )
@@ -1428,7 +1428,7 @@ mod catalyst_ibc_interface_tests {
         // Check the transaction passes
         let response = response_result.unwrap();
     
-        // Check pool ack is not invoked
+        // Check vault ack is not invoked
         assert_eq!(response.messages.len(), 0);
 
 
@@ -1446,7 +1446,7 @@ mod catalyst_ibc_interface_tests {
         // Check the transaction passes
         let response = response_result.unwrap();
     
-        // Check pool ack is not invoked
+        // Check vault ack is not invoked
         assert_eq!(response.messages.len(), 0);
 
 
@@ -1463,7 +1463,7 @@ mod catalyst_ibc_interface_tests {
         // Check the transaction passes
         let response = response_result.unwrap();
     
-        // Check pool ack is not invoked
+        // Check vault ack is not invoked
         assert_eq!(response.messages.len(), 0);
 
     }

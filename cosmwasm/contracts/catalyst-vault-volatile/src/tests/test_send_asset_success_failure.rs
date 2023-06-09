@@ -4,7 +4,7 @@ mod test_volatile_send_asset_success_failure {
     use catalyst_types::{U256, u256};
     use catalyst_vault_common::{ContractError, msg::{TotalEscrowedAssetResponse, AssetEscrowResponse}, state::compute_send_asset_hash};
 
-    use crate::{msg::{VolatileExecuteMsg, QueryMsg}, tests::{helpers::{SETUP_MASTER, deploy_test_tokens, WAD, set_token_allowance, query_token_balance, transfer_tokens, get_response_attribute, mock_set_pool_connection, CHANNEL_ID, SWAPPER_B, SWAPPER_A, mock_instantiate_interface, FACTORY_OWNER, mock_factory_deploy_vault, encode_payload_address}, math_helpers::{uint128_to_f64, f64_to_uint128}}};
+    use crate::{msg::{VolatileExecuteMsg, QueryMsg}, tests::{helpers::{SETUP_MASTER, deploy_test_tokens, WAD, set_token_allowance, query_token_balance, transfer_tokens, get_response_attribute, mock_set_vault_connection, CHANNEL_ID, SWAPPER_B, SWAPPER_A, mock_instantiate_interface, FACTORY_OWNER, mock_factory_deploy_vault, encode_payload_address}, math_helpers::{uint128_to_f64, f64_to_uint128}}};
 
     //TODO check events
 
@@ -40,13 +40,13 @@ mod test_volatile_send_asset_success_failure {
                 None
             );
     
-            // Connect pool with a mock pool
-            let target_pool = encode_payload_address(b"target_pool");
-            mock_set_pool_connection(
+            // Connect vault with a mock vault
+            let target_vault = encode_payload_address(b"target_vault");
+            mock_set_vault_connection(
                 app,
                 vault.clone(),
                 CHANNEL_ID.to_string(),
-                target_pool.clone(),
+                target_vault.clone(),
                 true
             );
     
@@ -83,7 +83,7 @@ mod test_volatile_send_asset_success_failure {
                 vault.clone(),
                 &VolatileExecuteMsg::SendAsset {
                     channel_id: CHANNEL_ID.to_string(),
-                    to_vault: target_pool,
+                    to_vault: target_vault,
                     to_account: to_account.clone(),
                     from_asset: from_asset.to_string(),
                     to_asset_index: to_asset_idx,
@@ -259,7 +259,7 @@ mod test_volatile_send_asset_success_failure {
         assert_eq!(
             vault_from_asset_balance,
             env.vault_initial_balances[env.from_asset_idx]        // The vault balance returns to the initial vault balance
-                + env.fee                                               // plus the pool fee
+                + env.fee                                               // plus the vault fee
                 - factory_owner_from_asset_balance                      // except for the governance fee
         );
 

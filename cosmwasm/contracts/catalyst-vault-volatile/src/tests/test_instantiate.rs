@@ -3,7 +3,7 @@ mod test_volatile_instantiate {
     use cosmwasm_std::{Uint128, Addr, Uint64};
     use cw20_base::state::TokenInfo;
     use cw_multi_test::{App, Executor};
-    use catalyst_vault_common::msg::{SetupMasterResponse, ChainInterfaceResponse, OnlyLocalResponse, PoolFeeResponse, GovernanceFeeShareResponse};
+    use catalyst_vault_common::msg::{SetupMasterResponse, ChainInterfaceResponse, OnlyLocalResponse, VaultFeeResponse, GovernanceFeeShareResponse};
 
     use crate::{msg::QueryMsg, tests::helpers::{mock_instantiate_vault_msg, DEPLOYER, volatile_vault_contract_storage}};
 
@@ -67,10 +67,10 @@ mod test_volatile_instantiate {
             false
         );
 
-        // Query and verify pool fee
+        // Query and verify vault fee
         let vault_fee: Uint64 = app
             .wrap()
-            .query_wasm_smart::<PoolFeeResponse>(vault_contract.clone(), &QueryMsg::PoolFee {})
+            .query_wasm_smart::<VaultFeeResponse>(vault_contract.clone(), &QueryMsg::VaultFee {})
             .unwrap()
             .fee;
 

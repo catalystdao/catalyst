@@ -1,9 +1,9 @@
-mod test_volatile_pool_connections {
+mod test_volatile_vault_connections {
     use cosmwasm_std::{Addr, Uint128, Binary, Uint64};
     use cw_multi_test::{Executor, App};
-    use catalyst_vault_common::{ContractError, msg::PoolConnectionStateResponse};
+    use catalyst_vault_common::{ContractError, msg::VaultConnectionStateResponse};
 
-    use crate::{msg::VolatileExecuteMsg, tests::helpers::{SETUP_MASTER, mock_finish_pool_setup, FACTORY_OWNER, deploy_test_tokens, mock_factory_deploy_vault, WAD, mock_instantiate_interface, encode_payload_address}};
+    use crate::{msg::VolatileExecuteMsg, tests::helpers::{SETUP_MASTER, mock_finish_vault_setup, FACTORY_OWNER, deploy_test_tokens, mock_factory_deploy_vault, WAD, mock_instantiate_interface, encode_payload_address}};
 
     fn deploy_mock_vault(app: &mut App) -> Addr {
         let interface = mock_instantiate_interface(app);
@@ -28,7 +28,7 @@ mod test_volatile_pool_connections {
         let vault = deploy_mock_vault(&mut app);
 
         let channel_id = "channel_0";
-        let target_pool = encode_payload_address(b"target_pool");
+        let target_vault = encode_payload_address(b"target_vault");
 
 
 
@@ -38,7 +38,7 @@ mod test_volatile_pool_connections {
             vault.clone(),
             &VolatileExecuteMsg::SetConnection {
                 channel_id: channel_id.to_string(),
-                to_vault: target_pool.clone(),
+                to_vault: target_vault.clone(),
                 state: true
             },
             &[]
@@ -49,11 +49,11 @@ mod test_volatile_pool_connections {
         // TODO verify response attributes (event)
 
         // Verify the connection is set
-        let queried_connection_state: bool = app.wrap().query_wasm_smart::<PoolConnectionStateResponse>(
+        let queried_connection_state: bool = app.wrap().query_wasm_smart::<VaultConnectionStateResponse>(
             vault.clone(),
-            &crate::msg::QueryMsg::PoolConnectionState {
+            &crate::msg::QueryMsg::VaultConnectionState {
                 channel_id: channel_id.to_string(),
-                pool: target_pool
+                vault: target_vault
             }
         ).unwrap().state;
 
@@ -73,7 +73,7 @@ mod test_volatile_pool_connections {
         let vault = deploy_mock_vault(&mut app);
 
         let channel_id = "channel_0";
-        let target_pool = encode_payload_address(b"target_pool");
+        let target_vault = encode_payload_address(b"target_vault");
 
         // Set the connection
         app.execute_contract::<VolatileExecuteMsg>(
@@ -81,7 +81,7 @@ mod test_volatile_pool_connections {
             vault.clone(),
             &VolatileExecuteMsg::SetConnection {
                 channel_id: channel_id.to_string(),
-                to_vault: target_pool.clone(),
+                to_vault: target_vault.clone(),
                 state: true
             },
             &[]
@@ -95,7 +95,7 @@ mod test_volatile_pool_connections {
             vault.clone(),
             &VolatileExecuteMsg::SetConnection {
                 channel_id: channel_id.to_string(),
-                to_vault: target_pool.clone(),
+                to_vault: target_vault.clone(),
                 state: false
             },
             &[]
@@ -104,11 +104,11 @@ mod test_volatile_pool_connections {
 
 
         // Verify the connection is not set
-        let queried_connection_state: bool = app.wrap().query_wasm_smart::<PoolConnectionStateResponse>(
+        let queried_connection_state: bool = app.wrap().query_wasm_smart::<VaultConnectionStateResponse>(
             vault.clone(),
-            &crate::msg::QueryMsg::PoolConnectionState {
+            &crate::msg::QueryMsg::VaultConnectionState {
                 channel_id: channel_id.to_string(),
-                pool: target_pool
+                vault: target_vault
             }
         ).unwrap().state;
 
@@ -128,10 +128,10 @@ mod test_volatile_pool_connections {
         let vault = deploy_mock_vault(&mut app);
 
         let channel_id = "channel_0";
-        let target_pool = encode_payload_address(b"target_pool");
+        let target_vault = encode_payload_address(b"target_vault");
 
-        // Finish pool setup
-        mock_finish_pool_setup(&mut app, vault.clone());
+        // Finish vault setup
+        mock_finish_vault_setup(&mut app, vault.clone());
 
 
         // Tested action: set connection
@@ -140,7 +140,7 @@ mod test_volatile_pool_connections {
             vault.clone(),
             &VolatileExecuteMsg::SetConnection {
                 channel_id: channel_id.to_string(),
-                to_vault: target_pool.clone(),
+                to_vault: target_vault.clone(),
                 state: true
             },
             &[]
@@ -164,10 +164,10 @@ mod test_volatile_pool_connections {
         let vault = deploy_mock_vault(&mut app);
 
         let channel_id = "channel_0";
-        let target_pool = encode_payload_address(b"target_pool");
+        let target_vault = encode_payload_address(b"target_vault");
 
-        // Finish pool setup
-        mock_finish_pool_setup(&mut app, vault.clone());
+        // Finish vault setup
+        mock_finish_vault_setup(&mut app, vault.clone());
 
 
         // Tested action: set connection invoked by factory owner
@@ -176,7 +176,7 @@ mod test_volatile_pool_connections {
             vault.clone(),
             &VolatileExecuteMsg::SetConnection {
                 channel_id: channel_id.to_string(),
-                to_vault: target_pool.clone(),
+                to_vault: target_vault.clone(),
                 state: true
             },
             &[]
@@ -184,11 +184,11 @@ mod test_volatile_pool_connections {
 
 
         // Verify the connection is set
-        let queried_connection_state: bool = app.wrap().query_wasm_smart::<PoolConnectionStateResponse>(
+        let queried_connection_state: bool = app.wrap().query_wasm_smart::<VaultConnectionStateResponse>(
             vault.clone(),
-            &crate::msg::QueryMsg::PoolConnectionState {
+            &crate::msg::QueryMsg::VaultConnectionState {
                 channel_id: channel_id.to_string(),
-                pool: target_pool
+                vault: target_vault
             }
         ).unwrap().state;
 
@@ -208,7 +208,7 @@ mod test_volatile_pool_connections {
         let vault = deploy_mock_vault(&mut app);
 
         let channel_id = "channel_0";
-        let target_pool = Binary(b"target_pool".to_vec());
+        let target_vault = Binary(b"target_vault".to_vec());
 
 
         // Tested action: set connection invoked by factory owner
@@ -217,7 +217,7 @@ mod test_volatile_pool_connections {
             vault.clone(),
             &VolatileExecuteMsg::SetConnection {
                 channel_id: channel_id.to_string(),
-                to_vault: target_pool.clone(),
+                to_vault: target_vault.clone(),
                 state: true
             },
             &[]

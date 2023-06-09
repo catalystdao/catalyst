@@ -8,8 +8,8 @@ use catalyst_types::U256;
 
 #[cw_serde]
 pub struct InstantiateMsg {
-    pub name: String,       // Name for the pool token
-    pub symbol: String,     // Symbol for the pool token
+    pub name: String,       // Name for the vault token
+    pub symbol: String,     // Symbol for the vault token
     pub chain_interface: Option<String>,
     pub vault_fee: Uint64,
     pub governance_fee: Uint64,        // TODO rename gov_fee_share
@@ -30,7 +30,7 @@ pub enum ExecuteMsg<T> {
 
     FinishSetup {},
 
-    SetPoolFee { fee: Uint64 },
+    SetVaultFee { fee: Uint64 },
 
     SetGovernanceFeeShare { fee: Uint64 },
 
@@ -82,12 +82,12 @@ pub enum ExecuteMsg<T> {
     },
 
     WithdrawAll {
-        pool_tokens: Uint128,
+        vault_tokens: Uint128,
         min_out: Vec<Uint128>
     },
 
     WithdrawMixed {
-        pool_tokens: Uint128,
+        vault_tokens: Uint128,
         withdraw_ratio: Vec<Uint64>,   //TODO type
         min_out: Vec<Uint128>,
     },
@@ -130,7 +130,7 @@ pub enum ExecuteMsg<T> {
         to_vault: Binary,
         to_account: Binary,
         amount: Uint128,            //TODO EVM mismatch
-        min_pool_tokens: U256,      //TODO EVM mismatch
+        min_vault_tokens: U256,      //TODO EVM mismatch
         min_reference_asset: U256,  //TODO EVM mismatch
         fallback_account: String,   //TODO EVM mismatch
         calldata: Binary
@@ -141,7 +141,7 @@ pub enum ExecuteMsg<T> {
         from_vault: Binary,
         to_account: String,
         u: U256,
-        min_pool_tokens: Uint128,
+        min_vault_tokens: Uint128,
         min_reference_asset: Uint128,   // ! TODO type?
         from_amount: U256,
         from_block_number_mod: u32,
@@ -226,7 +226,7 @@ pub struct WeightsResponse {
 }
 
 #[cw_serde]
-pub struct PoolFeeResponse {
+pub struct VaultFeeResponse {
     pub fee: Uint64
 }
 
@@ -281,6 +281,6 @@ pub struct LiquidityEscrowResponse {
 }
 
 #[cw_serde]
-pub struct PoolConnectionStateResponse {
+pub struct VaultConnectionStateResponse {
     pub state: bool
 }

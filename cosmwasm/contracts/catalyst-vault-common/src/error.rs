@@ -19,11 +19,11 @@ pub enum ContractError {
     #[error("Invalid assets (invalid number of assets or invalid asset address)")]
     InvalidAssets {},
 
-    #[error("Amplification must be set to 1_x64 for non-amplified pools.")]
+    #[error("Amplification must be set to 1_x64 for non-amplified vaults.")]
     InvalidAmplification {},
 
-    #[error("Invalid pool fee")]
-    InvalidPoolFee { requested_fee: Uint64, max_fee: Uint64 },
+    #[error("Invalid vault fee")]
+    InvalidVaultFee { requested_fee: Uint64, max_fee: Uint64 },
 
     #[error("Invalid governance fee")]
     InvalidGovernanceFee { requested_fee: Uint64, max_fee: Uint64 },
@@ -35,11 +35,11 @@ pub enum ContractError {
     #[error("Return insufficient")]
     ReturnInsufficient { out: Uint128, min_out: Uint128 },
 
-    #[error("Pool not connected")]
-    PoolNotConnected { channel_id: String, pool: Binary },
+    #[error("Vault not connected")]
+    VaultNotConnected { channel_id: String, vault: Binary },
 
-    #[error("The pool only allows for local swaps, as it has no cross chain interface.")]
-    PoolHasNoInterface {},
+    #[error("The vault only allows for local swaps, as it has no cross chain interface.")]
+    VaultHasNoInterface {},
 
     #[error("A non zero withdraw ratio is specified after all units have been consumed.")]
     WithdrawRatioNotZero { ratio: Uint64 },    //TODO EVM mismatch

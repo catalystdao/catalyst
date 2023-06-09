@@ -4,7 +4,7 @@ mod test_volatile_send_liquidity {
     use catalyst_types::U256;
     use catalyst_vault_common::{ContractError, msg::{TotalEscrowedLiquidityResponse, LiquidityEscrowResponse}, state::{INITIAL_MINT_AMOUNT, compute_send_liquidity_hash}};
 
-    use crate::{msg::VolatileExecuteMsg, tests::{helpers::{SETUP_MASTER, deploy_test_tokens, WAD, query_token_balance, transfer_tokens, get_response_attribute, mock_set_pool_connection, CHANNEL_ID, SWAPPER_B, SWAPPER_A, mock_instantiate_interface, compute_expected_send_liquidity, query_token_info, SWAPPER_C, mock_factory_deploy_vault, encode_payload_address}, math_helpers::{uint128_to_f64, f64_to_uint128, u256_to_f64}}};
+    use crate::{msg::VolatileExecuteMsg, tests::{helpers::{SETUP_MASTER, deploy_test_tokens, WAD, query_token_balance, transfer_tokens, get_response_attribute, mock_set_vault_connection, CHANNEL_ID, SWAPPER_B, SWAPPER_A, mock_instantiate_interface, compute_expected_send_liquidity, query_token_info, SWAPPER_C, mock_factory_deploy_vault, encode_payload_address}, math_helpers::{uint128_to_f64, f64_to_uint128, u256_to_f64}}};
 
     //TODO check event
 
@@ -28,13 +28,13 @@ mod test_volatile_send_liquidity {
             None
         );
 
-        // Set target mock pool
-        let target_pool = encode_payload_address(b"target_pool");
-        mock_set_pool_connection(
+        // Set target mock vault
+        let target_vault = encode_payload_address(b"target_vault");
+        mock_set_vault_connection(
             &mut app,
             vault.clone(),
             CHANNEL_ID.to_string(),
-            target_pool.clone(),
+            target_vault.clone(),
             true
         );
 
@@ -60,10 +60,10 @@ mod test_volatile_send_liquidity {
             vault.clone(),
             &VolatileExecuteMsg::SendLiquidity {
                 channel_id: CHANNEL_ID.to_string(),
-                to_vault: target_pool,
+                to_vault: target_vault,
                 to_account: to_account.clone(),
                 amount: swap_amount,
-                min_pool_tokens: U256::zero(),
+                min_vault_tokens: U256::zero(),
                 min_reference_asset: U256::zero(),
                 fallback_account: SWAPPER_C.to_string(),
                 calldata: Binary(vec![])
@@ -86,21 +86,21 @@ mod test_volatile_send_liquidity {
         assert!(u256_to_f64(observed_return) / 1e18 >= expected_return.u * 0.999999);
 
 
-        // Verify the pool tokens have been burnt
-        let swapper_pool_tokens_balance = query_token_balance(&mut app, vault.clone(), SWAPPER_A.to_string());
+        // Verify the vault tokens have been burnt
+        let swapper_vault_tokens_balance = query_token_balance(&mut app, vault.clone(), SWAPPER_A.to_string());
         assert_eq!(
-            swapper_pool_tokens_balance,
+            swapper_vault_tokens_balance,
             Uint128::zero()
         );
     
-        // Verify the vault total pool tokens supply
-        let pool_token_info = query_token_info(&mut app, vault.clone());
+        // Verify the vault total vault tokens supply
+        let vault_token_info = query_token_info(&mut app, vault.clone());
         assert_eq!(
-            pool_token_info.total_supply,
+            vault_token_info.total_supply,
             INITIAL_MINT_AMOUNT - swap_amount
         );
 
-        // Verify the pool tokens are escrowed
+        // Verify the vault tokens are escrowed
         let queried_escrowed_total = app
             .wrap()
             .query_wasm_smart::<TotalEscrowedLiquidityResponse>(vault.clone(), &crate::msg::QueryMsg::TotalEscrowedLiquidity {  })
@@ -161,13 +161,13 @@ mod test_volatile_send_liquidity {
             None
         );
 
-        // Set target mock pool
-        let target_pool = encode_payload_address(b"target_pool");
-        mock_set_pool_connection(
+        // Set target mock vault
+        let target_vault = encode_payload_address(b"target_vault");
+        mock_set_vault_connection(
             &mut app,
             vault.clone(),
             CHANNEL_ID.to_string(),
-            target_pool.clone(),
+            target_vault.clone(),
             true
         );
 
@@ -191,10 +191,10 @@ mod test_volatile_send_liquidity {
             vault.clone(),
             &VolatileExecuteMsg::SendLiquidity {
                 channel_id: CHANNEL_ID.to_string(),
-                to_vault: target_pool,
+                to_vault: target_vault,
                 to_account: encode_payload_address(SWAPPER_B.as_bytes()),
                 amount: swap_amount,
-                min_pool_tokens: U256::zero(),
+                min_vault_tokens: U256::zero(),
                 min_reference_asset: U256::zero(),
                 fallback_account: SWAPPER_C.to_string(),
                 calldata: Binary(vec![])
@@ -206,7 +206,7 @@ mod test_volatile_send_liquidity {
 
 
     #[test]
-    fn test_send_liquidity_not_connected_pool() {
+    fn test_send_liquidity_not_connected_vault() {
 
         let mut app = App::default();
 
@@ -225,9 +225,9 @@ mod test_volatile_send_liquidity {
             None
         );
 
-        // Set target mock pool
-        let target_pool = encode_payload_address(b"target_pool");
-        // ! Do not set the connection with the target pool
+        // Set target mock vault
+        let target_vault = encode_payload_address(b"target_vault");
+        // ! Do not set the connection with the target vault
 
         // Define send liquidity configuration
         let send_percentage = 0.15;
@@ -250,10 +250,10 @@ mod test_volatile_send_liquidity {
             vault.clone(),
             &VolatileExecuteMsg::SendLiquidity {
                 channel_id: CHANNEL_ID.to_string(),
-                to_vault: target_pool.clone(),
+                to_vault: target_vault.clone(),
                 to_account: encode_payload_address(SWAPPER_B.as_bytes()),
                 amount: swap_amount,
-                min_pool_tokens: U256::zero(),
+                min_vault_tokens: U256::zero(),
                 min_reference_asset: U256::zero(),
                 fallback_account: SWAPPER_C.to_string(),
                 calldata: Binary(vec![])
@@ -266,8 +266,8 @@ mod test_volatile_send_liquidity {
         // Make sure the transaction fails
         assert!(matches!(
             response_result.err().unwrap().downcast().unwrap(),
-            ContractError::PoolNotConnected { channel_id: err_channel_id, pool: err_pool }
-                if err_channel_id == CHANNEL_ID && err_pool == target_pool
+            ContractError::VaultNotConnected { channel_id: err_channel_id, vault: err_vault }
+                if err_channel_id == CHANNEL_ID && err_vault == target_vault
         ));
 
     }
