@@ -34,8 +34,8 @@ pub fn send_asset_event(
         .add_attribute("from_asset", from_asset)
         .add_attribute("to_asset_index", to_asset_index.to_string())    //TODO format
         .add_attribute("from_amount", from_amount)
-        .add_attribute("min_out", min_out.to_string())  //TODO U256 format
-        .add_attribute("units", units.to_string())      //TODO U256 format
+        .add_attribute("min_out", min_out)
+        .add_attribute("units", units)
         .add_attribute("fee", fee)
 }
 
@@ -55,9 +55,9 @@ pub fn receive_asset_event(
         .add_attribute("from_vault", from_vault.to_base64())
         .add_attribute("to_account", to_account)
         .add_attribute("to_asset", to_asset)
-        .add_attribute("units", units.to_string())              //TODO U256 format
+        .add_attribute("units", units)
         .add_attribute("to_amount", to_amount)
-        .add_attribute("from_amount", from_amount.to_string())  //TODO U256 format
+        .add_attribute("from_amount", from_amount)
         .add_attribute("from_asset", from_asset.to_base64())
         .add_attribute("source_block_number_mod", source_block_number_mod.to_string())  //TODO format   //TODO should be 'from' and not 'source'
 }
@@ -76,9 +76,9 @@ pub fn send_liquidity_event(
         .add_attribute("to_vault", to_vault.to_base64())
         .add_attribute("to_account", to_account.to_base64())
         .add_attribute("from_amount", from_amount)
-        .add_attribute("min_vault_tokens", min_vault_tokens.to_string())          //TODO U256 format
-        .add_attribute("min_reference_asset", min_reference_asset.to_string())  //TODO U256 format
-        .add_attribute("units", units.to_string())                              //TODO U256 format
+        .add_attribute("min_vault_tokens", min_vault_tokens)
+        .add_attribute("min_reference_asset", min_reference_asset)
+        .add_attribute("units", units)
 }
 
 pub fn receive_liquidity_event(
@@ -94,9 +94,9 @@ pub fn receive_liquidity_event(
         .add_attribute("channel_id", channel_id)
         .add_attribute("from_vault", from_vault.to_base64())
         .add_attribute("to_account", to_account)
-        .add_attribute("units", units.to_string())              //TODO U256 format
+        .add_attribute("units", units)
         .add_attribute("to_amount", to_amount)
-        .add_attribute("from_amount", from_amount.to_string())  //TODO U256 format
+        .add_attribute("from_amount", from_amount)
         .add_attribute("source_block_number_mod", source_block_number_mod.to_string())  //TODO format   //TODO should be 'from' and not 'source'
 }
 
@@ -133,7 +133,7 @@ pub fn send_asset_success_event(
     Event::new("send-asset-success")
         .add_attribute("channel_id", channel_id)
         .add_attribute("to_account", to_account.to_base64())
-        .add_attribute("units", units.to_string())                          //TODO U256 format
+        .add_attribute("units", units)
         .add_attribute("escrow_amount", escrow_amount)
         .add_attribute("asset", asset)
         .add_attribute("block_number_mod", block_number_mod.to_string())    //TODO format
@@ -150,7 +150,7 @@ pub fn send_asset_failure_event(
     Event::new("send-asset-failure")
         .add_attribute("channel_id", channel_id)
         .add_attribute("to_account", to_account.to_base64())
-        .add_attribute("units", units.to_string())                          //TODO U256 format
+        .add_attribute("units", units)
         .add_attribute("escrow_amount", escrow_amount)
         .add_attribute("asset", asset)
         .add_attribute("block_number_mod", block_number_mod.to_string())    //TODO format
@@ -166,7 +166,7 @@ pub fn send_liquidity_success_event(
     Event::new("send-liquidity-success")
         .add_attribute("channel_id", channel_id)
         .add_attribute("to_account", to_account.to_base64())
-        .add_attribute("units", units.to_string())                          //TODO U256 format
+        .add_attribute("units", units)
         .add_attribute("escrow_amount", escrow_amount)
         .add_attribute("block_number_mod", block_number_mod.to_string())    //TODO format
 }
@@ -181,7 +181,7 @@ pub fn send_liquidity_failure_event(
     Event::new("send-liquidity-failure")
         .add_attribute("channel_id", channel_id)
         .add_attribute("to_account", to_account.to_base64())
-        .add_attribute("units", units.to_string())                          //TODO U256 format
+        .add_attribute("units", units)
         .add_attribute("escrow_amount", escrow_amount)
         .add_attribute("block_number_mod", block_number_mod.to_string())    //TODO format
 }
