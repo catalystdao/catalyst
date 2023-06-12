@@ -19,7 +19,7 @@ pub const MAX_ASSETS: usize = 3;
 pub const DECIMALS: u8 = 18;
 pub const INITIAL_MINT_AMOUNT: Uint128 = Uint128::new(1000000000000000000u128); // 1e18
 
-pub const MAX_VAULT_FEE_SHARE       : Uint64 = Uint64::new(1000000000000000000u64);              // 100%   //TODO rename MAX_VAULT_FEE
+pub const MAX_VAULT_FEE             : Uint64 = Uint64::new(1000000000000000000u64);              // 100%
 pub const MAX_GOVERNANCE_FEE_SHARE  : Uint64 = Uint64::new(75u64 * 10000000000000000u64);        // 75%    //TODO EVM mismatch (move to factory)
 
 pub const DECAY_RATE: U256 = u256!("86400");    // 60*60*24
@@ -254,9 +254,9 @@ pub fn set_vault_fee_unchecked(
     fee: Uint64
 ) -> Result<Event, ContractError> {
 
-    if fee > MAX_VAULT_FEE_SHARE {
+    if fee > MAX_VAULT_FEE {
         return Err(
-            ContractError::InvalidVaultFee { requested_fee: fee, max_fee: MAX_VAULT_FEE_SHARE }
+            ContractError::InvalidVaultFee { requested_fee: fee, max_fee: MAX_VAULT_FEE }
         )
     }
 
