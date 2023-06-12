@@ -339,12 +339,12 @@ pub fn execute(
         ),
 
         VolatileExecuteMsg::Custom(VolatileExecuteExtension::SetWeights {
-            weights,
+            new_weights,
             target_timestamp
         }) => set_weights(
             &mut deps,
             &env,
-            weights,
+            new_weights,
             target_timestamp
         ),
 

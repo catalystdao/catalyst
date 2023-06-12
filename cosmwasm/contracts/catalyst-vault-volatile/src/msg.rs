@@ -16,7 +16,7 @@ use cw20::{AllowanceResponse, BalanceResponse, TokenInfoResponse};
 pub enum VolatileExecuteExtension {
 
     SetWeights {
-        weights: Vec<Uint64>,      //TODO EVM mismatch (name newWeights)
+        new_weights: Vec<Uint64>,
         target_timestamp: Uint64   //TODO EVM mismatch (targetTime)
     },
 

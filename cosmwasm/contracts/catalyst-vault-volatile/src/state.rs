@@ -1190,7 +1190,7 @@ pub fn on_send_liquidity_success_volatile(
 pub fn set_weights(         //TODO EVM mismatch arguments order
     deps: &mut DepsMut,
     env: &Env,
-    weights: Vec<Uint64>,      //TODO rename new_weights
+    new_weights: Vec<Uint64>,
     target_timestamp: Uint64   //TODO EVM mismatch (targetTime)
 ) -> Result<Response, ContractError> {
 
@@ -1206,13 +1206,13 @@ pub fn set_weights(         //TODO EVM mismatch arguments order
     }
 
     // Check the new requested weights and store them
-    if weights.len() != current_weights.len() {
+    if new_weights.len() != current_weights.len() {
         return Err(ContractError::InvalidParameters { reason: "Invalid weights count.".to_string() });
     }
 
     let target_weights = current_weights
         .iter()
-        .zip(&weights)                                      // zip: weights.len() == current_weights.len()
+        .zip(&new_weights)                                      // zip: weights.len() == current_weights.len()
         .map(|(current_weight, new_weight)| {
 
             // Check that the new weight is neither 0 nor larger than the maximum allowed relative change
