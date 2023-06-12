@@ -1,5 +1,6 @@
-use cosmwasm_std::{StdError, OverflowError, Uint64, Uint128, Binary};
+use cosmwasm_std::{StdError, OverflowError, Uint64, Uint128, Binary, ConversionOverflowError};
 use catalyst_types::U256;
+use fixed_point_math::FixedPointMathError;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -10,14 +11,20 @@ pub enum ContractError {
     #[error("Unauthorized")]
     Unauthorized {},
 
-    #[error("GenericError")]    //TODO replace this error with a custom one
-    GenericError {},
+    #[error("Error: {0}")]
+    Error (String),         // Error type for all the miscellaneous errors that do not have their own type.
 
     #[error("Arithmetic error")]
     ArithmeticError {},
 
     #[error("Invalid assets (invalid number of assets or invalid asset address)")]
     InvalidAssets {},
+
+    #[error("Invalid parameters {reason}")]
+    InvalidParameters { reason: String },
+
+    #[error("The requested asset does not form part of the vault.")]
+    AssetNotFound {},
 
     #[error("Amplification must be set to 1_x64 for non-amplified vaults.")]
     InvalidAmplification {},
@@ -28,9 +35,14 @@ pub enum ContractError {
     #[error("Invalid governance fee")]
     InvalidGovernanceFee { requested_fee: Uint64, max_fee: Uint64 },
 
+    #[error("Zero balance")]
+    InvalidZeroBalance {},
+
+    #[error("Weight")]
+    InvalidWeight {},
+
     #[error("Security limit exceeded")]
     SecurityLimitExceeded { amount: U256, capacity: U256 },
-
 
     #[error("Return insufficient")]
     ReturnInsufficient { out: Uint128, min_out: Uint128 },
@@ -47,6 +59,8 @@ pub enum ContractError {
     #[error("Not all withdrawal units have been consumed after all assets have been processed.")]
     UnusedUnitsAfterWithdrawal { units: U256 },
 
+    #[error("Target time too short/long")]
+    InvalidTargetTime,
 
 
 
@@ -70,9 +84,7 @@ pub enum ContractError {
     CannotExceedCap {},
 
     #[error("Duplicate initial balance addresses")]
-    DuplicateInitialBalanceAddresses {},
-    // Add any other custom errors you like here.
-    // Look at https://docs.rs/thiserror/1.0.21/thiserror/ for details.
+    DuplicateInitialBalanceAddresses {}
 }
 
 
@@ -106,16 +118,21 @@ impl From<OverflowError> for ContractError {
     }
 }
 
-//TODO replace these (i.e. ()) errors with other ones?
-impl From<()> for ContractError {
-    fn from(_err: ()) -> Self {
-        ContractError::GenericError {}
+impl From<ConversionOverflowError> for ContractError {
+    fn from(_err: ConversionOverflowError) -> Self {
+        ContractError::ArithmeticError {}
     }
 }
 
-//TODO overhaul
 impl From<ContractError> for StdError {
-    fn from(_err: ContractError) -> StdError {
-        StdError::GenericErr { msg: "".to_owned() } //TODO error (use _err)
+    fn from(err: ContractError) -> StdError {
+        StdError::GenericErr { msg: err.to_string() }
     }
 }
+
+impl From<FixedPointMathError> for ContractError {
+    fn from(_err: FixedPointMathError) -> Self {
+        ContractError::ArithmeticError {}
+    }
+}
+

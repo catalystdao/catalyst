@@ -84,7 +84,7 @@ pub fn get_asset_index(assets: &Vec<Addr>, asset: &str) -> Result<usize, Contrac
         .iter()
         .enumerate()
         .find_map(|(index, a): (usize, &Addr)| if *a == asset { Some(index) } else { None })
-        .ok_or(ContractError::InvalidAssets {})
+        .ok_or(ContractError::AssetNotFound {})
 }
 
 
@@ -117,8 +117,7 @@ pub fn calc_limit_capacity(
     let released_limit_capacity = max_limit_capacity
         .checked_mul(
             U256::from(time.minus_nanos(used_limit_capacity_timestamp.into()).seconds())  //TODO use seconds instead of nanos (overflow wise)  //TODO if the provided 'time' is correct, the time difference is always positive. But what if it is not correct? 
-        ).map_err(|_| ContractError::ArithmeticError {})?   //TODO error
-        .div(DECAY_RATE);
+        )?.div(DECAY_RATE);
 
         if used_limit_capacity <= released_limit_capacity {
             return Ok(max_limit_capacity);
@@ -203,7 +202,7 @@ pub fn set_connection(
     }
 
     if to_vault.len() != 65 {                            //TODO use global const variable for address length
-        return Err(ContractError::GenericError {});     //TODO error
+        return Err(ContractError::Error("'to_vault' address is of invalid length (65-byte Catalyst specific address encoding expected).".to_string()));
     }
 
     VAULT_CONNECTIONS.save(deps.storage, (channel_id.as_str(), to_vault.0.clone()), &state)?;
@@ -332,7 +331,7 @@ pub fn collect_governance_fee_message(
     let gov_fee_amount: Uint128 = mul_wad_down(
         U256::from(vault_fee_amount.u128()),
         U256::from(GOVERNANCE_FEE_SHARE.load(deps.storage)?)
-    )?.try_into().map_err(|_| ContractError::GenericError {})?;     //TODO error
+    )?.try_into()?;
 
     if gov_fee_amount.is_zero() {
         return Ok(None)

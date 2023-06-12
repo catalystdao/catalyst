@@ -54,11 +54,14 @@ pub fn initialize_swap_curves(
     }
 
     // Check the provided assets, assets balances and weights count
-    if
-        assets.len() == 0 || assets.len() > MAX_ASSETS ||
-        weights.len() != assets.len()
-    {
-        return Err(ContractError::GenericError {}); //TODO error
+    if assets.len() == 0 || assets.len() > MAX_ASSETS {
+        return Err(ContractError::InvalidAssets {});
+    }
+
+    if weights.len() != assets.len() {
+        return Err(ContractError::InvalidParameters {
+            reason: "Invalid weights count.".to_string()
+        });
     }
 
     // Validate the depositor address
@@ -86,12 +89,12 @@ pub fn initialize_swap_curves(
     
     //TODO merge this check within the above balance-query code
     if assets_balances.iter().any(|balance| balance.is_zero()) {
-        return Err(ContractError::GenericError {}); //TODO error
+        return Err(ContractError::InvalidZeroBalance {});
     }
 
     // Validate and save weights
     if weights.iter().any(|weight| *weight == Uint64::zero()) {
-        return Err(ContractError::GenericError {}); //TODO error
+        return Err(ContractError::InvalidWeight {});
     }
     WEIGHTS.save(deps.storage, &weights)?;
     TARGET_WEIGHTS.save(deps.storage, &weights)?;               // Initialize the target_weights storage (values do not matter)
@@ -160,7 +163,11 @@ pub fn deposit_mixed(
     let weights = WEIGHTS.load(deps.storage)?;
 
     if deposit_amounts.len() != assets.len() {
-        return Err(ContractError::GenericError {});     //TODO error
+        return Err(
+            ContractError::InvalidParameters{
+                reason: "Invalid deposit_amounts count.".to_string()
+            }
+        );
     }
 
     // Compute how much 'units' the assets are worth.
@@ -205,7 +212,7 @@ pub fn deposit_mixed(
     let out = fixed_point_math::mul_wad_down(
         effective_supply,                                                       // Note 'effective_supply' is not WAD, hence result will not be either
         calc_price_curve_limit_share(u, w_sum)?
-    )?.try_into().map_err(|_| ContractError::GenericError {})?;      //TODO error
+    )?.try_into()?;
 
     // Check that the minimum output is honoured.
     if min_out > out {
@@ -276,7 +283,11 @@ pub fn withdraw_all(
     let assets = ASSETS.load(deps.storage)?;
 
     if min_out.len() != assets.len() {
-        return Err(ContractError::GenericError {});     //TODO error
+        return Err(
+            ContractError::InvalidParameters {
+                reason: "Invalid min_out count.".to_string()
+            }
+        );
     }
 
     let withdraw_amounts: Vec<Uint128> = assets
@@ -362,14 +373,18 @@ pub fn withdraw_mixed(
             effective_supply - U256::from(vault_tokens.u128())  // Subtraction is underflow safe, as the above 'execute_burn' guarantees that 'vault_tokens' is contained in 'effective_supply'
         )?.as_i256()                                           // Casting my overflow to a negative value. In that case, 'ln_wad' will fail.
     )?.as_u256()                                               // Casting is safe, as ln is computed of values >= 1, hence output is always positive
-        .checked_mul(w_sum).map_err(|_| ContractError::ArithmeticError {})?;
+        .checked_mul(w_sum)?;
 
     // Compute the withdraw amounts
     let assets = ASSETS.load(deps.storage)?;
     let weights = WEIGHTS.load(deps.storage)?;
 
     if withdraw_ratio.len() != assets.len() || min_out.len() != assets.len() {
-        return Err(ContractError::GenericError {})
+        return Err(
+            ContractError::InvalidParameters {
+                reason: "Invalid withdraw_ratio/min_out count.".to_string()
+            }
+        );
     }
 
     let withdraw_amounts: Vec<Uint128> = assets
@@ -399,7 +414,7 @@ pub fn withdraw_mixed(
             }
 
             // Subtract the units used from the total units amount. This will underflow for malicious withdraw ratios (i.e. ratios > 1).
-            u = u.checked_sub(units_for_asset).map_err(|_| ContractError::ArithmeticError {})?;
+            u = u.checked_sub(units_for_asset)?;
         
             // Get the vault asset balance (subtract the escrowed assets to return less)
             let vault_asset_balance = deps.querier.query_wasm_smart::<BalanceResponse>(
@@ -412,7 +427,7 @@ pub fn withdraw_mixed(
                 units_for_asset,
                 U256::from(vault_asset_balance.u128()),
                 U256::from(weight)
-            )?.try_into().map_err(|_| ContractError::GenericError {})?;  //TODO error
+            )?.try_into()?;
 
             // Check that the minimum output is honoured.
             if *asset_min_out > withdraw_amount {
@@ -423,7 +438,7 @@ pub fn withdraw_mixed(
         }).collect::<Result<Vec<Uint128>, ContractError>>()?;
 
     // Make sure all units have been consumed
-    if u != U256::zero() { return Err(ContractError::UnusedUnitsAfterWithdrawal { units: u }) };       //TODO error
+    if u != U256::zero() { return Err(ContractError::UnusedUnitsAfterWithdrawal { units: u }) };
 
     // Build messages to order the transfer of tokens from the vault to the depositor
     let transfer_msgs: Vec<CosmosMsg> = assets.iter()
@@ -698,8 +713,8 @@ pub fn receive_asset(
     let assets = ASSETS.load(deps.storage)?;
     let to_asset = assets
         .get(to_asset_index as usize)
-        .ok_or(ContractError::GenericError {})?
-        .clone(); //TODO error
+        .ok_or(ContractError::AssetNotFound {})?
+        .clone();
 
     update_limit_capacity(deps, env.block.time, u)?;
 
@@ -799,8 +814,7 @@ pub fn send_liquidity(
             effective_supply - U256::from(amount.u128())   // subtraction is safe, as 'amount' is always contained in 'effective_supply'
         )?.as_i256()                                         // if casting overflows into a negative value, posterior 'ln' calc will fail
     )?.as_u256()                                         // casting safe as 'ln' is computed of a value >= 1 (hence result always positive)
-        .checked_mul(w_sum)
-        .map_err(|_| ContractError::ArithmeticError {})?;
+        .checked_mul(w_sum)?;
 
     // Compute the hash of the 'send_liquidity' transaction
     let block_number = env.block.height as u32;
@@ -899,7 +913,7 @@ pub fn receive_liquidity(
     let out: Uint128 = fixed_point_math::mul_wad_down(
         calc_price_curve_limit_share(u, w_sum)?,
         effective_supply
-    )?.try_into().map_err(|_| ContractError::GenericError {})?;     //TODO error //TODO is 'try' required when casting U256 to Uint128? Theoretically calc_price_curve_limit_share < 1, hence casting is safe
+    )?.try_into()?;     //TODO is 'try' required when casting U256 to Uint128? Theoretically calc_price_curve_limit_share < 1, hence casting is safe
 
     if min_vault_tokens > out {
         return Err(ContractError::ReturnInsufficient { out, min_out: min_vault_tokens });
@@ -928,7 +942,7 @@ pub fn receive_liquidity(
                     ln_wad(     // TODO what if the vault gets depleted ==> ln(0)
                         Into::<I256>::into(vault_asset_balance) * WAD.as_i256()     // i256 casting: 'vault_asset_balance * WAD' always fits in an I256 (~2^128 * ~2^64)
                     )?.as_u256()                                                // u256 casting: 'vault_asset_balance * WAD' >= WAD (for balance != 0), hence 'ln_wad' return is always positive //TODO review 0 condition
-                    .checked_mul(U256::from(weight)).map_err(|_| ContractError::ArithmeticError {})?
+                    .checked_mul(U256::from(weight))?
                 ).map_err(|_| ContractError::ArithmeticError {})
             })?;
 
@@ -944,7 +958,7 @@ pub fn receive_liquidity(
         let escrowed_vault_tokens = TOTAL_ESCROWED_LIQUIDITY.load(deps.storage)?;
         let user_reference_amount: Uint128 = (     //TODO is the use of Uint128/U256 correct in this calculation?
             (vault_reference_amount * U256::from(out.u128()))/(effective_supply + U256::from(escrowed_vault_tokens.u128()) + U256::from(out.u128()))
-        ).try_into().map_err(|_| ContractError::ArithmeticError {})?;        //TODO casting overflow
+        ).try_into()?;
 
         if min_reference_asset > user_reference_amount {
             return Err(ContractError::ReturnInsufficient { out: user_reference_amount, min_out: min_reference_asset });
@@ -1024,7 +1038,7 @@ pub fn calc_send_asset(
         amount.u128().into(),
         from_asset_balance.u128().into(),
         U256::from(from_asset_weight),
-    ).map_err(|_| ContractError::GenericError {})
+    )
 }
 
 pub fn calc_receive_asset(
@@ -1053,8 +1067,8 @@ pub fn calc_receive_asset(
         to_asset_balance.u128().into(),
         U256::from(to_asset_weight),
     ).and_then(
-        |val| TryInto::<Uint128>::try_into(val).map_err(|_| ())
-    ).map_err(|_| ContractError::GenericError {})   //TODO error
+        |val| TryInto::<Uint128>::try_into(val).map_err(|err| err.into())
+    )
 
 }
 
@@ -1105,8 +1119,8 @@ pub fn calc_local_swap(
         U256::from(from_asset_weight),
         U256::from(to_asset_weight)
     ).and_then(
-        |val| TryInto::<Uint128>::try_into(val).map_err(|_| ())
-    ).map_err(|_| ContractError::GenericError {})   //TODO error
+        |val| TryInto::<Uint128>::try_into(val).map_err(|err| err.into())
+    )
 }
 
 
@@ -1188,12 +1202,12 @@ pub fn set_weights(         //TODO EVM mismatch arguments order
         target_timestamp < current_time + MIN_ADJUSTMENT_TIME_NANOS ||
         target_timestamp > current_time + MAX_ADJUSTMENT_TIME_NANOS
     {
-        return Err(ContractError::GenericError {});  //TODO error
+        return Err(ContractError::InvalidTargetTime {});
     }
 
     // Check the new requested weights and store them
     if weights.len() != current_weights.len() {
-        return Err(ContractError::GenericError {});     //TODO error
+        return Err(ContractError::InvalidParameters { reason: "Invalid weights count.".to_string() });
     }
 
     let target_weights = current_weights
@@ -1204,11 +1218,10 @@ pub fn set_weights(         //TODO EVM mismatch arguments order
             // Check that the new weight is neither 0 nor larger than the maximum allowed relative change
             if 
                 *new_weight == Uint64::zero() ||
-                *new_weight > current_weight
-                    .checked_mul(MAX_WEIGHT_ADJUSTMENT_FACTOR).map_err(|_| ContractError::ArithmeticError {})? ||
+                *new_weight > current_weight.checked_mul(MAX_WEIGHT_ADJUSTMENT_FACTOR)? ||
                 *new_weight < *current_weight / MAX_WEIGHT_ADJUSTMENT_FACTOR     //TODO fix: replace MAX_WEIGHT_ADJUSTMENT_FACTOR with MIN_WEIGHT_ADJUSTMENT_FACTOR
             {
-                return Err(ContractError::GenericError {});     //TODO error
+                return Err(ContractError::InvalidWeight {});
             }
 
             Ok(*new_weight)
@@ -1262,9 +1275,7 @@ pub fn update_weights(
             .iter()
             .map(|target_weight| {
 
-                new_weight_sum = new_weight_sum
-                    .checked_add(U256::from(*target_weight))
-                    .map_err(|_| ContractError::ArithmeticError {})?;
+                new_weight_sum = new_weight_sum.checked_add(U256::from(*target_weight))?;
 
                 Ok(*target_weight)
 
@@ -1290,8 +1301,7 @@ pub fn update_weights(
                 if current_weight == target_weight {
 
                     new_weight_sum = new_weight_sum
-                        .checked_add(U256::from(*target_weight))
-                        .map_err(|_| ContractError::ArithmeticError {})?;
+                        .checked_add(U256::from(*target_weight))?;
 
                     return Ok(*target_weight);
 
@@ -1305,23 +1315,20 @@ pub fn update_weights(
                 if target_weight > current_weight {
                     new_weight = *current_weight + (
                         (target_weight - current_weight)
-                            .checked_mul(current_timestamp - param_update_timestamp)
-                            .map_err(|_| ContractError::ArithmeticError {})?
+                            .checked_mul(current_timestamp - param_update_timestamp)?
                             .div(param_update_finish_timestamp - param_update_timestamp)
                     );
                 }
                 else {
                     new_weight = *current_weight - (
                         (current_weight - target_weight)
-                        .checked_mul(current_timestamp - param_update_timestamp)
-                        .map_err(|_| ContractError::ArithmeticError {})?
+                        .checked_mul(current_timestamp - param_update_timestamp)?
                         .div(param_update_finish_timestamp - param_update_timestamp)
                     );
                 }
 
                 new_weight_sum = new_weight_sum
-                    .checked_add(U256::from(new_weight))
-                    .map_err(|_| ContractError::ArithmeticError {})?;
+                    .checked_add(U256::from(new_weight))?;
 
                 Ok(*target_weight)
 
@@ -1338,7 +1345,7 @@ pub fn update_weights(
     // Update the maximum limit capacity
     MAX_LIMIT_CAPACITY.save(
         deps.storage,
-        &new_weight_sum.checked_mul(fixed_point_math::LN2).map_err(|_| ContractError::ArithmeticError {})?
+        &new_weight_sum.checked_mul(fixed_point_math::LN2)?
     )?;
 
     // Update the update timestamp

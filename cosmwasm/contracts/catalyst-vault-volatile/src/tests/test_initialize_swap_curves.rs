@@ -266,7 +266,7 @@ mod test_volatile_initialize_swap_curves {
         // Make sure initialization fails
         assert!(matches!(
             response_result.err().unwrap().downcast().unwrap(),
-            ContractError::GenericError {}
+            ContractError::InvalidAssets {}
         ));
 
     }
@@ -324,7 +324,7 @@ mod test_volatile_initialize_swap_curves {
         // Make sure initialization fails
         assert!(matches!(
             response_result.err().unwrap().downcast().unwrap(),
-            ContractError::GenericError {}
+            ContractError::InvalidAssets {}
         ));
 
     }
@@ -380,7 +380,7 @@ mod test_volatile_initialize_swap_curves {
         // Make sure initialization fails
         assert!(matches!(
             response_result.err().unwrap().downcast().unwrap(),
-            ContractError::GenericError {}
+            ContractError::InvalidZeroBalance {}
         ));
         
     }
@@ -436,7 +436,8 @@ mod test_volatile_initialize_swap_curves {
         // Make sure initialization fails
         assert!(matches!(
             response_result.err().unwrap().downcast().unwrap(),
-            ContractError::GenericError {}
+            ContractError::InvalidParameters { reason: err_reason }
+                if err_reason == "Invalid weights count.".to_string()
         ));
         
     }
@@ -492,7 +493,7 @@ mod test_volatile_initialize_swap_curves {
         // Make sure initialization fails
         assert!(matches!(
             response_result.err().unwrap().downcast().unwrap(),
-            ContractError::GenericError {}
+            ContractError::InvalidWeight {}
         ));
         
     }

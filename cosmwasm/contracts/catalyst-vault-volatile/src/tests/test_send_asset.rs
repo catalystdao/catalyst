@@ -386,7 +386,7 @@ mod test_volatile_send_asset {
         // Make sure the transaction fails
         assert!(matches!(
             response_result.err().unwrap().downcast::<ContractError>().unwrap(),
-            ContractError::InvalidAssets {}
+            ContractError::AssetNotFound {}
         ));
 
     }

@@ -1,4 +1,5 @@
-use catalyst_types::{U256, I256, AsI256, AsU256, u256, i256};
+use catalyst_types::{U256, I256, AsI256, AsU256, u256, i256, errors::OverflowError};
+use thiserror::Error;
 
 /// @notice Arithmetic library with operations for fixed-point numbers.
 /// @author Solmate (https://github.com/transmissions11/solmate/blob/ed67feda67b24fdeff8ad1032360f0ee6047ba0a/src/utils/FixedPointMathLib.sol)
@@ -14,30 +15,30 @@ pub const WAD    : U256 = u256!("1000000000000000000");                      // 
 pub const WADWAD : U256 = u256!("1000000000000000000000000000000000000");    // The scalar of ETH and most ERC20s squared.
 pub const LN2    : U256 = u256!("693147180559945344");                       // from numpy import np; int(np.log(2)*10**18).
 
-pub fn mul_wad_down(x: U256, y: U256) -> Result<U256, ()> {
+pub fn mul_wad_down(x: U256, y: U256) -> Result<U256, FixedPointMathError> {
     mul_div_down(x, y, WAD)     // Equivalent to (x * y) / WAD rounded down.
 }
 
-pub fn mul_wad_up(x: U256, y: U256) -> Result<U256, ()> {
+pub fn mul_wad_up(x: U256, y: U256) -> Result<U256, FixedPointMathError> {
     mul_div_up(x, y, WAD)       // Equivalent to (x * y) / WAD rounded up.
 }
 
-pub fn div_wad_down(x: U256, y: U256) -> Result<U256, ()> {
+pub fn div_wad_down(x: U256, y: U256) -> Result<U256, FixedPointMathError> {
     mul_div_down(x, WAD, y)  // Equivalent to (x * WAD) / y rounded down.
 }
 
-pub fn div_wad_up(x: U256, y: U256) -> Result<U256, ()> {
+pub fn div_wad_up(x: U256, y: U256) -> Result<U256, FixedPointMathError> {
     mul_div_up(x, WAD, y)    // Equivalent to (x * WAD) / y rounded up.
 }
 
-pub fn pow_wad(x: I256, y: I256) -> Result<I256, ()> {
+pub fn pow_wad(x: I256, y: I256) -> Result<I256, FixedPointMathError> {
     // Equivalent to x to the power of y because x ** y = (e ** ln(x)) ** y = e ** (ln(x) * y)
     exp_wad(
-        ln_wad(x)?.checked_mul(y).map_err(|_| ())? / WAD.as_i256()     // Using ln(x) means x must be greater than 0.
+        ln_wad(x)?.checked_mul(y)? / WAD.as_i256()     // Using ln(x) means x must be greater than 0.
     )
 }
 
-pub fn exp_wad(x: I256) -> Result<I256, ()> {   //TODO make output be U256? (result will always be positive)
+pub fn exp_wad(x: I256) -> Result<I256, FixedPointMathError> {   //TODO make output be U256? (result will always be positive)
 
     // When the result is < 0.5 we return zero. This happens when
     // x <= floor(log(0.5e18) * 1e18) ~ -42e18
@@ -45,7 +46,7 @@ pub fn exp_wad(x: I256) -> Result<I256, ()> {   //TODO make output be U256? (res
 
     // When the result is > (2**255 - 1) / 1e18 we can not represent it as an
     // int. This happens when x >= floor(log((2**255 - 1) / 1e18) * 1e18) ~ 135.
-    if x >= i256!("135305999368893231589") { return Err(()) }    //TODO ERROR overflow
+    if x >= i256!("135305999368893231589") { return Err(FixedPointMathError::OverflowError {}) }
 
     // x is now in the range (-42, 136) * 1e18. Convert to (-42, 136) * 2**96
     // for more intermediate precision and a binary basis. This base conversion
@@ -100,9 +101,9 @@ pub fn exp_wad(x: I256) -> Result<I256, ()> {   //TODO make output be U256? (res
     )
 }
 
-pub fn ln_wad(x: I256) -> Result<I256, ()> {   //TODO make input U256?
+pub fn ln_wad(x: I256) -> Result<I256, FixedPointMathError> {   //TODO make input U256?
 
-    if x <= I256::zero() { return Err(()) }   //TODO ERROR undefined
+    if x <= I256::zero() { return Err(FixedPointMathError::UndefinedError {}) }
 
     // We want to convert x from 10**18 fixed point to 2**96 fixed point.
     // We do this by multiplying by 2**96 / 10**18. But since
@@ -164,26 +165,26 @@ pub fn ln_wad(x: I256) -> Result<I256, ()> {   //TODO make input U256?
                 LOW LEVEL FIXED POINT OPERATIONS
 ***************************************************************/
 
-pub fn mul_div_down(x: U256, y: U256, denominator: U256) -> Result<U256, ()> {
+pub fn mul_div_down(x: U256, y: U256, denominator: U256) -> Result<U256, FixedPointMathError> {
     // Store x * y in z for now.
     let z = x.wrapping_mul(y);
 
     // Equivalent to require(denominator != 0 && (x == 0 || (x * y) / x == y))
     if !(denominator != U256::zero() && (x == U256::zero() || (z/x == y))) {
-        return Err(());     //TODO error
+        return Err(FixedPointMathError::ArithemticError {})     //NOTE: Using 'ArithmeticError' as the error could be 'undefined' or 'overflow'.
     }
 
     // Divide z by the denominator.
     Ok(z / denominator)
 }
 
-pub fn mul_div_up(x: U256, y: U256, denominator: U256) -> Result<U256, ()> {
+pub fn mul_div_up(x: U256, y: U256, denominator: U256) -> Result<U256, FixedPointMathError> {
     // Store x * y in z for now.
     let z = x.wrapping_mul(y);
 
     // Equivalent to require(denominator != 0 && (x == 0 || (x * y) / x == y))
     if !(denominator != U256::zero() && (x == U256::zero() || (z/x == y))) {
-        return Err(());     //TODO error
+        return Err(FixedPointMathError::ArithemticError {})     //NOTE: Using 'ArithmeticError' as the error could be 'undefined' or 'overflow'.
     }
 
     // First, divide z - 1 by the denominator and add 1.
@@ -201,8 +202,8 @@ pub fn mul_div_up(x: U256, y: U256, denominator: U256) -> Result<U256, ()> {
                     GENERAL NUMBER UTILITIES
 ***************************************************************/
 
-pub fn log2(x: U256) -> Result<U256, ()> {
-    if x == U256::zero() { return Err(()) }
+pub fn log2(x: U256) -> Result<U256, FixedPointMathError> {
+    if x == U256::zero() { return Err(FixedPointMathError::UndefinedError {}) }
 
     let mut r = (u256!("0xffffffffffffffffffffffffffffffff") < x).as_u256().wrapping_shl(7);
     r |= (u256!("0xffffffffffffffff") < (x.wrapping_shr(r.as_u32()))).as_u256().wrapping_shl(6);
@@ -215,3 +216,26 @@ pub fn log2(x: U256) -> Result<U256, ()> {
 
     Ok(r)
 }
+
+/***************************************************************
+                        LIBRARY ERRORS
+***************************************************************/
+
+#[derive(Error, Debug)]
+pub enum FixedPointMathError {
+    #[error("Overflow")]
+    OverflowError {},
+
+    #[error("Undefined")]
+    UndefinedError {},
+
+    #[error("ArithmeticError")]
+    ArithemticError {}
+}
+
+impl From<OverflowError> for FixedPointMathError {
+    fn from(_value: OverflowError) -> Self {
+        FixedPointMathError::OverflowError {}
+    }
+}
+

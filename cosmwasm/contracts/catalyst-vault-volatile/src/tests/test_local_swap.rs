@@ -305,7 +305,7 @@ mod test_volatile_local_swap {
         // Make sure the swap fails
         assert!(matches!(
             response_result.err().unwrap().downcast::<ContractError>().unwrap(),
-            ContractError::InvalidAssets {}
+            ContractError::AssetNotFound {}
         ));
 
     }
@@ -377,7 +377,7 @@ mod test_volatile_local_swap {
         // Make sure the swap fails
         assert!(matches!(
             response_result.err().unwrap().downcast::<ContractError>().unwrap(),
-            ContractError::InvalidAssets {}
+            ContractError::AssetNotFound {}
         ));
 
     }

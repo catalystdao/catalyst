@@ -578,6 +578,7 @@ name = "fixed-point-math"
 version = "0.1.0"
 dependencies = [
  "catalyst-types",
+ "thiserror",
 ]
 
 [[package]]

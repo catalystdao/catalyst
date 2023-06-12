@@ -140,7 +140,7 @@ fn execute_deploy_vault(
                 chain_interface: chain_interface.clone(),
                 vault_fee,
                 governance_fee: default_governance_fee_share(deps.as_ref())?,
-                fee_administrator: owner(deps.as_ref())?.ok_or(ContractError::Unauthorized {})?.to_string(),      //TODO error
+                fee_administrator: owner(deps.as_ref())?.ok_or(ContractError::NoOwner {})?.to_string(),
                 setup_master: info.sender.to_string()
             })?,
             funds: vec![],
@@ -264,7 +264,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
 fn query_owner(deps: Deps) -> StdResult<OwnerResponse> {
     Ok(
         OwnerResponse {
-            owner: owner(deps).map_err(|_| StdError::generic_err("Query owner error."))?    //TODO error
+            owner: owner(deps)?
         }
     )
 }

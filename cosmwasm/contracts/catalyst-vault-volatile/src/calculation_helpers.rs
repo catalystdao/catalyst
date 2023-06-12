@@ -1,4 +1,5 @@
 use catalyst_types::{U256, AsI256, AsU256};
+use catalyst_vault_common::ContractError;
 use fixed_point_math::{ln_wad, div_wad_down, mul_wad_down, WAD, exp_wad};
 
 
@@ -10,15 +11,15 @@ pub fn calc_price_curve_area(
     input: U256,
     a: U256,
     w: U256
-) -> Result<U256, ()> {
+) -> Result<U256, ContractError> {
     w.checked_mul(
         ln_wad(
             div_wad_down(
-                a.checked_add(input).map_err(|_| ())?,
+                a.checked_add(input)?,
                 a
             )?.as_i256()
         )?.as_u256()
-    ).map_err(|_| ())
+    ).map_err(|err| err.into())
 }
 
 
@@ -26,13 +27,13 @@ pub fn calc_price_curve_limit(
     u: U256,
     b: U256,
     w: U256
-) -> Result<U256, ()> {
+) -> Result<U256, ContractError> {
     mul_wad_down(
         b,
         WAD.checked_sub(
             exp_wad(-(u / w).as_i256())?.as_u256()
-        ).map_err(|_| ())?
-    )
+        )?
+    ).map_err(|err| err.into())
 }
 
 
@@ -42,7 +43,7 @@ pub fn calc_combined_price_curves(
     b: U256,
     w_a: U256,
     w_b: U256
-) -> Result<U256, ()> {
+) -> Result<U256, ContractError> {
     calc_price_curve_limit(
         calc_price_curve_area(input, a, w_a)?,
         b,
@@ -54,7 +55,7 @@ pub fn calc_combined_price_curves(
 pub fn calc_price_curve_limit_share(
     u: U256,
     w_sum: U256
-) -> Result<U256, ()> {
+) -> Result<U256, ContractError> {
     let npos = (
         // If the casting to i256 overflows to a negative value:
         //   - If the result is exactly i256::MIN (i.e. overflows exactly by 1), when the value is
@@ -67,7 +68,7 @@ pub fn calc_price_curve_limit_share(
     ).as_u256();
 
     div_wad_down(
-        WAD.checked_sub(npos).map_err(|_| ())?,
+        WAD.checked_sub(npos)?,
         npos
-    )
+    ).map_err(|err| err.into())
 }

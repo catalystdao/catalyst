@@ -406,7 +406,7 @@ mod test_volatile_receive_asset {
         // Make sure the transaction fails
         assert!(matches!(
             response_result.err().unwrap().downcast().unwrap(),
-            ContractError::GenericError {}      //TODO error
+            ContractError::AssetNotFound {}
         ));
 
     }

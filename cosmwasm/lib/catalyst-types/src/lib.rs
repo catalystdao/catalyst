@@ -11,3 +11,8 @@ pub use crate::{
     traits::AsU256,
     traits::AsI256
 };
+
+/// Re-export cosmwasm_std errors
+pub mod errors {
+    pub use cosmwasm_std::{OverflowError, DivideByZeroError, ConversionOverflowError};
+}

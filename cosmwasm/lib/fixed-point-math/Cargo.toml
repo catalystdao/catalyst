@@ -6,3 +6,4 @@ edition = "2021"
 
 [dependencies]
 catalyst-types = { path = "../catalyst-types" }
+thiserror = { version = "1.0.31" }

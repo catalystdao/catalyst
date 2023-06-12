@@ -27,11 +27,14 @@ pub fn initialize_swap_curves(
     }
 
     // Check the provided assets, assets balances and weights count
-    if
-        assets.len() == 0 || assets.len() > MAX_ASSETS ||
-        weights.len() != assets.len()
-    {
-        return Err(ContractError::GenericError {}); //TODO error
+    if assets.len() == 0 || assets.len() > MAX_ASSETS {
+        return Err(ContractError::InvalidAssets {});
+    }
+
+    if weights.len() != assets.len() {
+        return Err(ContractError::InvalidParameters {
+            reason: "Invalid weights count.".to_string()
+        });
     }
 
     // Validate the depositor address
@@ -58,12 +61,12 @@ pub fn initialize_swap_curves(
         .collect::<StdResult<Vec<Uint128>>>()?;
     
     if assets_balances.iter().any(|balance| balance.is_zero()) {
-        return Err(ContractError::GenericError {}); //TODO error
+        return Err(ContractError::InvalidZeroBalance {});
     }
 
     // Validate and save weights
     if weights.iter().any(|weight| *weight == Uint64::zero()) {
-        return Err(ContractError::GenericError {}); //TODO error
+        return Err(ContractError::InvalidWeight {});
     }
     WEIGHTS.save(deps.storage, &weights)?;
 
