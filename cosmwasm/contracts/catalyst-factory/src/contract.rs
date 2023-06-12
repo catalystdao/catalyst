@@ -139,7 +139,7 @@ fn execute_deploy_vault(
                 symbol: symbol.clone(),
                 chain_interface: chain_interface.clone(),
                 vault_fee,
-                governance_fee: default_governance_fee_share(deps.as_ref())?,
+                governance_fee_share: default_governance_fee_share(deps.as_ref())?,
                 fee_administrator: owner(deps.as_ref())?.ok_or(ContractError::NoOwner {})?.to_string(),
                 setup_master: info.sender.to_string()
             })?,

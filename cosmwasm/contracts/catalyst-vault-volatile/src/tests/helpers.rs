@@ -353,7 +353,7 @@ pub fn mock_instantiate_vault_msg(
         symbol: "TP".to_string(),
         chain_interface,
         vault_fee: DEFAULT_TEST_VAULT_FEE,
-        governance_fee: DEFAULT_TEST_GOV_FEE,
+        governance_fee_share: DEFAULT_TEST_GOV_FEE,
         fee_administrator: FACTORY_OWNER.to_string(),   // The 'fee_administrator' is set to the 'factory_owner' as this is the default when vaults are deployed via the factory
         setup_master: SETUP_MASTER.to_string()
     }

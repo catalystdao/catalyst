@@ -45,7 +45,7 @@ pub fn instantiate(
         msg.symbol,
         msg.chain_interface,
         msg.vault_fee,
-        msg.governance_fee,
+        msg.governance_fee_share,
         msg.fee_administrator,
         msg.setup_master,
         info.sender                 //TODO EVM mismatch/review: setting the 'info.sender' as the 'factory'

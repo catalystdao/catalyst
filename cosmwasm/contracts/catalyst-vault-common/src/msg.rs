@@ -12,7 +12,7 @@ pub struct InstantiateMsg {
     pub symbol: String,     // Symbol for the vault token
     pub chain_interface: Option<String>,
     pub vault_fee: Uint64,
-    pub governance_fee: Uint64,        // TODO rename gov_fee_share
+    pub governance_fee_share: Uint64,
     pub fee_administrator: String,
     pub setup_master: String,
 }

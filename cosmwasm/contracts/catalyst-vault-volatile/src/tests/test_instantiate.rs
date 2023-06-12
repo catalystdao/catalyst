@@ -88,7 +88,7 @@ mod test_volatile_instantiate {
 
         assert_eq!(
             gov_fee_share,
-            instantiate_msg.governance_fee
+            instantiate_msg.governance_fee_share
         );
 
         // Query and verify token info

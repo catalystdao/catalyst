@@ -376,7 +376,7 @@ pub fn setup(
     symbol: String,
     chain_interface: Option<String>,
     vault_fee: Uint64,
-    governance_fee: Uint64,
+    governance_fee_share: Uint64,
     fee_administrator: String,
     setup_master: String,
     factory: Addr             //TODO EVM mismatch   //TODO pass 'info: MessageInfo' instead (do not leave it up to the vault implementation)
@@ -403,7 +403,7 @@ pub fn setup(
 
     let admin_fee_event = set_fee_administrator_unchecked(deps, fee_administrator.as_str())?;
     let vault_fee_event = set_vault_fee_unchecked(deps, vault_fee)?;
-    let gov_fee_event = set_governance_fee_share_unchecked(deps, governance_fee)?;
+    let gov_fee_event = set_governance_fee_share_unchecked(deps, governance_fee_share)?;
 
     // Setup the Vault Token (store token info using cw20-base format)
     let data = TokenInfo {
