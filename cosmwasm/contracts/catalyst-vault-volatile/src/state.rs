@@ -564,15 +564,6 @@ pub fn send_asset(
         return Err(ContractError::VaultNotConnected { channel_id, vault: to_vault })
     }
 
-    // Make sure 'to_vault' and 'to_account have the correct length
-    if to_vault.len() != 65 {                            //TODO use global const variable for address length
-        return Err(ContractError::GenericError {});     //TODO error
-    }
-
-    if to_account.len() != 65 {                         //TODO use global const variable for address length
-        return Err(ContractError::GenericError {});     //TODO error
-    }
-
     update_weights(deps, env.block.time.nanos().into())?;
 
     let vault_fee: Uint128 = mul_wad_down(            //TODO alternative to not have to use U256 conversion? (or wrapper?)
@@ -784,15 +775,6 @@ pub fn send_liquidity(
     // Only allow connected vaults
     if !is_connected(&deps.as_ref(), &channel_id, to_vault.clone()) {
         return Err(ContractError::VaultNotConnected { channel_id, vault: to_vault })
-    }
-
-    // Make sure 'to_vault' and 'to_account have the correct length
-    if to_vault.len() != 65 {                            //TODO use global const variable for address length
-        return Err(ContractError::GenericError {});     //TODO error
-    }
-
-    if to_account.len() != 65 {                         //TODO use global const variable for address length
-        return Err(ContractError::GenericError {});     //TODO error
     }
 
     // Update weights
