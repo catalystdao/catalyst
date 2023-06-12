@@ -134,7 +134,6 @@ fn execute_send_cross_chain_asset(
         timeout: env.block.time.plus_seconds(TRANSACTION_TIMEOUT).into()
     };
 
-    //TODO since this is permissionless, do we want to add a log here (e.g. sender and target vault)?
     Ok(Response::new()
         .add_message(ibc_msg)
     )
@@ -176,7 +175,6 @@ fn execute_send_cross_chain_liquidity(
         timeout: env.block.time.plus_seconds(TRANSACTION_TIMEOUT).into()
     };
 
-    //TODO since this is permissionless, do we want to add a log here (e.g. sender and target vault)?
     Ok(Response::new()
         .add_message(ibc_msg)
     )

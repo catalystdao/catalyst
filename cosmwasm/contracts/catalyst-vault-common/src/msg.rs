@@ -88,7 +88,7 @@ pub enum ExecuteMsg<T> {
 
     WithdrawMixed {
         vault_tokens: Uint128,
-        withdraw_ratio: Vec<Uint64>,   //TODO type
+        withdraw_ratio: Vec<Uint64>,
         min_out: Vec<Uint128>,
     },
 

@@ -367,7 +367,6 @@ pub fn set_fee_administrator(
 }
 
 
-//TODO merge setup and initializeSwapCurves?
 pub fn setup(
     deps: &mut DepsMut,
     env: &Env,
