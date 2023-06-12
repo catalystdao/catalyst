@@ -323,7 +323,6 @@ pub fn set_governance_fee_share(
 
 pub fn collect_governance_fee_message(
     deps: &Deps,
-    _env: Env,      //TODO remove?
     asset: String,
     vault_fee_amount: Uint128
 ) -> Result<Option<CosmosMsg>, ContractError> {
@@ -558,7 +557,6 @@ pub fn on_send_asset_success(
 
 pub fn on_send_asset_failure(
     deps: &mut DepsMut,
-    _env: Env,              //TODO remove?
     info: MessageInfo,
     channel_id: String,
     to_account: Binary,

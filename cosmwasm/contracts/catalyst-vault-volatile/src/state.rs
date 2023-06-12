@@ -531,7 +531,6 @@ pub fn local_swap(
     // Build collect governance fee message
     let collect_governance_fee_message = collect_governance_fee_message(
         &deps.as_ref(),
-        env,
         from_asset.clone(),
         vault_fee
     )?;
@@ -627,7 +626,6 @@ pub fn send_asset(
     // Build collect governance fee message
     let collect_governance_fee_message = collect_governance_fee_message(
         &deps.as_ref(),
-        env,
         from_asset.clone(),
         vault_fee
     )?;

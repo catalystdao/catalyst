@@ -141,7 +141,6 @@ pub fn execute(
             block_number_mod
         } => on_send_asset_failure(
             &mut deps,
-            env,
             info,
             channel_id,
             to_account,
