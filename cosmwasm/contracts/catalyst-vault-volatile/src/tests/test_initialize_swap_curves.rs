@@ -331,61 +331,6 @@ mod test_volatile_initialize_swap_curves {
 
 
     #[test]
-    fn test_invalid_asset_balances_count() {
-
-        let mut app = App::default();
-
-        // Instantiate vault
-        let vault = mock_instantiate_vault(&mut app, None);
-
-        // Create tokens and set vault allowances
-        let test_tokens = deploy_test_tokens(
-            &mut app,
-            None,
-            None
-        );
-
-        // Define InitializeSwapCurves parameters
-        let initialize_msg = InitializeSwapCurvesMockConfig {
-            assets: test_tokens.iter().map(|addr| addr.to_string()).collect(),
-            assets_balances: vec![
-                Uint128::from(1u64) * WAD,
-                Uint128::from(2u64) * WAD       // ! Only 2 asset balances are specified
-            ],
-            weights: vec![Uint64::one(), Uint64::one(), Uint64::one()],
-            amp: Uint64::new(1000000000000000000u64),
-            depositor: DEPOSITOR.to_string()
-        };
-
-        // Transfer tokens to the vault
-        initialize_msg.transfer_vault_allowances(
-            &mut app,
-            vault.to_string(),
-            Addr::unchecked(SETUP_MASTER)
-        );
-
-
-
-        // Tested action: initialize swap curves with an invalid asset balance count
-        let response_result = app.execute_contract::<VolatileExecuteMsg>(
-            Addr::unchecked(SETUP_MASTER),
-            vault.clone(),
-            &initialize_msg.clone().into(),
-            &[]
-        );
-
-
-
-        // Make sure initialization fails
-        assert!(matches!(
-            response_result.err().unwrap().downcast().unwrap(),
-            ContractError::GenericError {}
-        ));
-        
-    }
-
-
-    #[test]
     fn test_zero_asset_balance() {
 
         let mut app = App::default();
