@@ -23,8 +23,5 @@ pub enum ContractError {
     PayloadDecodingError {},
 
     #[error("Submessage reply id unknown: {id}")]
-    UnknownReplyId { id: u64 },
-
-    // Add any other custom errors you like here.
-    // Look at https://docs.rs/thiserror/1.0.21/thiserror/ for details.
+    UnknownReplyId { id: u64 }
 }

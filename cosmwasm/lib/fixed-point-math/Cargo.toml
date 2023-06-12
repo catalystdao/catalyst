@@ -1,0 +1,9 @@
+[package]
+name = "fixed-point-math"
+version = "0.1.0"
+authors = ["Catalyst"]
+edition = "2021"
+
+[dependencies]
+catalyst-types = { path = "../catalyst-types" }
+thiserror = { version = "1.0.31" }

@@ -5,8 +5,8 @@
 
 // Common Payload (beginning)
 //    CONTEXT                   0   (1 byte)
-//    + FROM_POOL               1   (65 bytes)
-//    + TO_POOL                 66  (65 bytes)
+//    + FROM_VAULT              1   (65 bytes)
+//    + TO_VAULT                66  (65 bytes)
 //    + TO_ACCOUNT              131 (65 bytes)
 //    + UNITS                   196 (32 bytes)
 // 
@@ -39,11 +39,11 @@ pub const CTX1_LIQUIDITY_SWAP        : u8 = 0x01;
 
 pub const CONTEXT_POS                : usize = 0;
 
-pub const FROM_POOL_START            : usize = 1;
-pub const FROM_POOL_END              : usize = 66;
+pub const FROM_VAULT_START           : usize = 1;
+pub const FROM_VAULT_END             : usize = 66;
 
-pub const TO_POOL_START              : usize = 66;
-pub const TO_POOL_END                : usize = 131;
+pub const TO_VAULT_START             : usize = 66;
+pub const TO_VAULT_END               : usize = 131;
 
 pub const TO_ACCOUNT_START           : usize = 131;
 pub const TO_ACCOUNT_END             : usize = 196;
@@ -78,8 +78,8 @@ pub const CTX0_DATA_START            : usize = 364;
 
 // CTX1 Liquidity Swap Payload **************************************************************************************************
 
-pub const CTX1_MIN_POOL_TOKEN_START  : usize = 228;
-pub const CTX1_MIN_POOL_TOKEN_END    : usize = 260;
+pub const CTX1_MIN_VAULT_TOKEN_START : usize = 228;
+pub const CTX1_MIN_VAULT_TOKEN_END   : usize = 260;
 
 pub const CTX1_MIN_REFERENCE_START   : usize = 260;
 pub const CTX1_MIN_REFERENCE_END     : usize = 292;
@@ -112,7 +112,7 @@ pub const CALLDATA_BYTES_START       : usize = 65;
 // Payload Helpers
 // ******************************************************************************************************************************
 use cosmwasm_std::{Deps, Addr, Uint128, Binary};
-use ethnum::U256;
+use catalyst_types::U256;
 use crate::ContractError;
 
 
@@ -170,8 +170,8 @@ impl CatalystV1Packet {
 
 
 pub struct CatalystV1Payload<T: CatalystV1VariablePayload> {
-    pub from_pool: CatalystEncodedAddress,
-    pub to_pool: CatalystEncodedAddress,
+    pub from_vault: CatalystEncodedAddress,
+    pub to_vault: CatalystEncodedAddress,
     pub to_account: CatalystEncodedAddress,
     pub u: U256,
     pub variable_payload: T
@@ -182,8 +182,8 @@ impl<T: CatalystV1VariablePayload> CatalystV1Payload<T> {
     pub fn size(&self) -> usize {
         // Addition is way below the overflow threshold
         1                                   // Context
-        + 65                                // From pool
-        + 65                                // To pool
+        + 65                                // From vault
+        + 65                                // To vault
         + 65                                // To account
         + 32                                // Units
         + self.variable_payload.size()
@@ -199,11 +199,11 @@ impl<T: CatalystV1VariablePayload> CatalystV1Payload<T> {
         // Context
         data.push(T::context());
     
-        // From pool
-        data.extend_from_slice(self.from_pool.as_ref());
+        // From vault
+        data.extend_from_slice(self.from_vault.as_ref());
     
-        // To pool
-        data.extend_from_slice(self.to_pool.as_ref());
+        // To vault
+        data.extend_from_slice(self.to_vault.as_ref());
     
         // To account
         data.extend_from_slice(self.to_account.as_ref());
@@ -228,15 +228,15 @@ impl<T: CatalystV1VariablePayload> CatalystV1Payload<T> {
             return Err(ContractError::PayloadDecodingError {});
         }
     
-        // From pool
-        let from_pool = CatalystEncodedAddress::from_slice_unchecked(
-            data.get(FROM_POOL_START .. FROM_POOL_END)
+        // From vault
+        let from_vault = CatalystEncodedAddress::from_slice_unchecked(
+            data.get(FROM_VAULT_START .. FROM_VAULT_END)
                 .ok_or(ContractError::PayloadDecodingError {})?
         );
     
-        // To pool
-        let to_pool = CatalystEncodedAddress::from_slice_unchecked(
-            data.get(TO_POOL_START .. TO_POOL_END)
+        // To vault
+        let to_vault = CatalystEncodedAddress::from_slice_unchecked(
+            data.get(TO_VAULT_START .. TO_VAULT_END)
                 .ok_or(ContractError::PayloadDecodingError {})?
         );
 
@@ -257,8 +257,8 @@ impl<T: CatalystV1VariablePayload> CatalystV1Payload<T> {
 
         return Ok(
             Self {
-                from_pool,
-                to_pool,
+                from_vault,
+                to_vault,
                 to_account,
                 u,
                 variable_payload
@@ -268,44 +268,44 @@ impl<T: CatalystV1VariablePayload> CatalystV1Payload<T> {
 
     }
 
-    pub fn from_pool_as_string(
+    pub fn from_vault_as_string(
         &self
     ) -> Result<String, ContractError> {
 
         String::from_utf8(
-            self.from_pool.try_decode()?
+            self.from_vault.try_decode()?
         ).map_err(|_| ContractError::PayloadDecodingError {})
 
     }
 
-    pub fn from_pool_validated(
+    pub fn from_vault_validated(
         &self,
         deps: Deps
     ) -> Result<Addr, ContractError> {
 
         deps.api.addr_validate(
-            &self.from_pool_as_string()?
+            &self.from_vault_as_string()?
         ).map_err(|err| err.into())
 
     }
 
-    pub fn to_pool_as_string(
+    pub fn to_vault_as_string(
         &self
     ) -> Result<String, ContractError> {
 
         String::from_utf8(
-            self.to_pool.try_decode()?
+            self.to_vault.try_decode()?
         ).map_err(|_| ContractError::PayloadDecodingError {})
 
     }
 
-    pub fn to_pool_validated(
+    pub fn to_vault_validated(
         &self,
         deps: Deps
     ) -> Result<Addr, ContractError> {
 
         deps.api.addr_validate(
-            &self.to_pool_as_string()?
+            &self.to_vault_as_string()?
         ).map_err(|err| err.into())
 
     }
@@ -381,12 +381,11 @@ impl SendAssetVariablePayload {
         &self
     ) -> Result<Uint128, ContractError> {
 
-        let min_out = self.min_out;
-        // For CosmWasm pools, min_out should be Uint128
-        if min_out > U256::from(Uint128::MAX.u128()) {             //TODO overhaul - more efficient way to do this?
-            return Err(ContractError::PayloadDecodingError {});
-        }
-        Ok(Uint128::from(min_out.as_u128()))
+        Ok(
+            self.min_out
+                .try_into()
+                .map_err(|_| ContractError::PayloadDecodingError {})?
+        )
 
     }
 
@@ -394,12 +393,11 @@ impl SendAssetVariablePayload {
         &self
     ) -> Result<Uint128, ContractError> {
 
-        let from_amount = self.from_amount;
-        // For CosmWasm pools, from_amount should be Uint128
-        if from_amount > U256::from(Uint128::MAX.u128()) {             //TODO overhaul - more efficient way to do this?
-            return Err(ContractError::PayloadDecodingError {});
-        }
-        Ok(Uint128::from(from_amount.as_u128()))
+        Ok(
+            self.from_amount
+                .try_into()
+                .map_err(|_| ContractError::PayloadDecodingError {})?
+        )
 
     }
 
@@ -527,7 +525,7 @@ impl CatalystV1VariablePayload for SendAssetVariablePayload {
 
 // Send liquidity payload
 pub struct SendLiquidityVariablePayload {
-    pub min_pool_tokens: U256,
+    pub min_vault_tokens: U256,
     pub min_reference_asset: U256,
     pub from_amount: U256,
     pub block_number: u32,
@@ -536,15 +534,15 @@ pub struct SendLiquidityVariablePayload {
 
 impl SendLiquidityVariablePayload {
 
-    pub fn min_pool_tokens(
+    pub fn min_vault_tokens(
         &self
     ) -> Result<Uint128, ContractError> {
 
-        // For CosmWasm pools, min_out should be Uint128
-        if self.min_pool_tokens > U256::from(Uint128::MAX.u128()) {             //TODO overhaul - more efficient way to do this?
-            return Err(ContractError::PayloadDecodingError {});
-        }
-        Ok(Uint128::from(self.min_pool_tokens.as_u128()))
+        Ok(
+            self.min_vault_tokens
+                .try_into()
+                .map_err(|_| ContractError::PayloadDecodingError {})?
+        )
 
     }
 
@@ -553,11 +551,11 @@ impl SendLiquidityVariablePayload {
         &self
     ) -> Result<Uint128, ContractError> {
 
-        // For CosmWasm pools, min_out should be Uint128
-        if self.min_reference_asset > U256::from(Uint128::MAX.u128()) {             //TODO overhaul - more efficient way to do this?
-            return Err(ContractError::PayloadDecodingError {});
-        }
-        Ok(Uint128::from(self.min_reference_asset.as_u128()))
+        Ok(
+            self.min_reference_asset
+                .try_into()
+                .map_err(|_| ContractError::PayloadDecodingError {})?
+        )
 
     }
 
@@ -565,12 +563,11 @@ impl SendLiquidityVariablePayload {
         &self
     ) -> Result<Uint128, ContractError> {
 
-        let from_amount = self.from_amount;
-        // For CosmWasm pools, from_amount should be Uint128
-        if from_amount > U256::from(Uint128::MAX.u128()) {             //TODO overhaul - more efficient way to do this?
-            return Err(ContractError::PayloadDecodingError {});
-        }
-        Ok(Uint128::from(from_amount.as_u128()))
+        Ok(
+            self.from_amount
+                .try_into()
+                .map_err(|_| ContractError::PayloadDecodingError {})?
+        )
 
     }
 
@@ -594,7 +591,7 @@ impl CatalystV1VariablePayload for SendLiquidityVariablePayload {
     fn size(&self) -> usize {
         // Note: The following addition is way below the overflow threshold, and even if it were to overflow the code 
         // would still function properly, as this is just a runtime optimization.
-        32                          // min pool tokens
+        32                          // min vault tokens
         + 32                        // min reference asset
         + 32                        // from amount
         + 4                         // block number
@@ -604,8 +601,8 @@ impl CatalystV1VariablePayload for SendLiquidityVariablePayload {
 
     fn try_encode(&self, buffer: &mut Vec<u8>) -> Result<(), ContractError> {
     
-        // Min out (pool tokens and reference amount)
-        buffer.extend_from_slice(&self.min_pool_tokens.to_be_bytes());
+        // Min out (vault tokens and reference amount)
+        buffer.extend_from_slice(&self.min_vault_tokens.to_be_bytes());
         buffer.extend_from_slice(&self.min_reference_asset.to_be_bytes());
     
         // From amount
@@ -624,13 +621,13 @@ impl CatalystV1VariablePayload for SendLiquidityVariablePayload {
 
     fn try_decode(buffer: Vec<u8>) -> Result<Self, ContractError> {
 
-        // Min pool tokens
-        let min_pool_tokens = U256::from_be_bytes(
+        // Min vault tokens
+        let min_vault_tokens = U256::from_be_bytes(
             buffer.get(
-                CTX1_MIN_POOL_TOKEN_START .. CTX1_MIN_POOL_TOKEN_END
+                CTX1_MIN_VAULT_TOKEN_START .. CTX1_MIN_VAULT_TOKEN_END
             ).ok_or(
                 ContractError::PayloadDecodingError {}
-            )?.try_into().unwrap()                          // If 'CTX1_MIN_POOL_TOKEN_START' and 'CTX1_MIN_POOL_TOKEN_END' are 32 bytes apart, this should never panic //TODO overhaul
+            )?.try_into().unwrap()                          // If 'CTX1_MIN_VAULT_TOKEN_START' and 'CTX1_MIN_VAULT_TOKEN_END' are 32 bytes apart, this should never panic //TODO overhaul
         );
 
         // Min reference asset
@@ -677,7 +674,7 @@ impl CatalystV1VariablePayload for SendLiquidityVariablePayload {
         );
 
         Ok(SendLiquidityVariablePayload {
-            min_pool_tokens,
+            min_vault_tokens,
             min_reference_asset,
             from_amount,
             block_number,

@@ -2,7 +2,7 @@
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, Uint128};
 use cw2::set_contract_version;
-use ethnum::U256;
+use catalyst_types::U256;
 
 use catalyst_ibc_interface::ContractError;
 use catalyst_ibc_interface::catalyst_ibc_payload::{CatalystV1SendAssetPayload, SendAssetVariablePayload, CatalystV1SendLiquidityPayload, SendLiquidityVariablePayload, CatalystEncodedAddress};
@@ -49,7 +49,7 @@ pub fn execute(
 
         ExecuteMsg::SendCrossChainAsset {
             channel_id,
-            to_pool,
+            to_vault,
             to_account,
             to_asset_index,
             u,
@@ -62,7 +62,7 @@ pub fn execute(
             env,
             info,
             channel_id,
-            to_pool,
+            to_vault,
             to_account,
             to_asset_index,
             u,
@@ -75,10 +75,10 @@ pub fn execute(
 
         ExecuteMsg::SendCrossChainLiquidity {
             channel_id,
-            to_pool,
+            to_vault,
             to_account,
             u,
-            min_pool_tokens,
+            min_vault_tokens,
             min_reference_asset,
             from_amount,
             block_number,
@@ -87,10 +87,10 @@ pub fn execute(
             env,
             info,
             channel_id,
-            to_pool,
+            to_vault,
             to_account,
             u,
-            min_pool_tokens,
+            min_vault_tokens,
             min_reference_asset,
             from_amount,
             block_number,
@@ -145,7 +145,7 @@ fn execute_send_cross_chain_asset(
     env: Env,
     info: MessageInfo,
     channel_id: String,
-    to_pool: Binary,
+    to_vault: Binary,
     to_account: Binary,
     to_asset_index: u8,
     u: U256,
@@ -158,14 +158,14 @@ fn execute_send_cross_chain_asset(
 
     // Build payload
     let payload = CatalystV1SendAssetPayload {
-        from_pool: CatalystEncodedAddress::try_encode(info.sender.as_bytes())?,
-        to_pool: CatalystEncodedAddress::try_from(to_pool)?,                        // to_pool should already be encoded
+        from_vault: CatalystEncodedAddress::try_encode(info.sender.as_bytes())?,
+        to_vault: CatalystEncodedAddress::try_from(to_vault)?,                        // to_vault should already be encoded
         to_account: CatalystEncodedAddress::try_from(to_account)?,                  // to_account should already be encoded
         u,
         variable_payload: SendAssetVariablePayload {
             to_asset_index,
             min_out,
-            from_amount: U256::from(from_amount.u128()),
+            from_amount: from_amount.into(),
             from_asset: CatalystEncodedAddress::try_encode(from_asset.as_bytes())?,
             block_number,
             calldata,
@@ -184,10 +184,10 @@ fn execute_send_cross_chain_liquidity(
     env: Env,
     info: MessageInfo,
     channel_id: String,
-    to_pool: Binary,
+    to_vault: Binary,
     to_account: Binary,
     u: U256,
-    min_pool_tokens: U256,
+    min_vault_tokens: U256,
     min_reference_asset: U256,
     from_amount: Uint128,
     block_number: u32,
@@ -196,12 +196,12 @@ fn execute_send_cross_chain_liquidity(
 
     // Build payload
     let payload = CatalystV1SendLiquidityPayload {
-        from_pool: CatalystEncodedAddress::try_encode(info.sender.as_bytes())?,
-        to_pool: CatalystEncodedAddress::try_from(to_pool)?,                        // to_pool should already be encoded
+        from_vault: CatalystEncodedAddress::try_encode(info.sender.as_bytes())?,
+        to_vault: CatalystEncodedAddress::try_from(to_vault)?,                        // to_vault should already be encoded
         to_account: CatalystEncodedAddress::try_from(to_account)?,                  // to_account should already be encoded
         u,
         variable_payload: SendLiquidityVariablePayload {
-            min_pool_tokens,
+            min_vault_tokens,
             min_reference_asset,
             from_amount: U256::from(from_amount.u128()),
             block_number,

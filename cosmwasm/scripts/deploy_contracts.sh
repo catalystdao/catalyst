@@ -17,7 +17,7 @@ else
 fi
 
 echo Deploy factory
-deploy_output=$(echo $PASSWORD_LOCAL | wasmd tx wasm store ./target/wasm32-unknown-unknown/release/swap_pool_factory.wasm --from $WALLET_NAME_LOCAL $TX_FLAG -y -b block --output json)
+deploy_output=$(echo $PASSWORD_LOCAL | wasmd tx wasm store ./target/wasm32-unknown-unknown/release/catalyst_factory.wasm --from $WALLET_NAME_LOCAL $TX_FLAG -y -b block --output json)
 export FACTORY_CODE_ID=$(echo $deploy_output | jq -r '.logs[0].events[-1].attributes[-1].value')
 echo "Code id: $FACTORY_CODE_ID"
 echo
@@ -29,7 +29,7 @@ echo "Code id: $INTERFACE_CODE_ID"
 echo
 
 echo Deploy volatile vault
-deploy_output=$(echo $PASSWORD_LOCAL | wasmd tx wasm store ./target/wasm32-unknown-unknown/release/swap_pool_volatile.wasm --from $WALLET_NAME_LOCAL $TX_FLAG -y -b block --output json)
+deploy_output=$(echo $PASSWORD_LOCAL | wasmd tx wasm store ./target/wasm32-unknown-unknown/release/catalyst_vault_volatile.wasm --from $WALLET_NAME_LOCAL $TX_FLAG -y -b block --output json)
 export VOLATILE_CODE_ID=$(echo $deploy_output | jq -r '.logs[0].events[-1].attributes[-1].value')
 echo "Code id: $VOLATILE_CODE_ID"
 echo
