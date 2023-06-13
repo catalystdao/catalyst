@@ -14,4 +14,6 @@ RUN pipx install poetry
 RUN poetry install
 ENV PATH="${PATH}:/root/.local/bin"
 
-CMD ["poetry", "run", "python", "-u", "poa_relayer.py", "deploy_config.json"]
+CMD ["poetry", "run", "python", "-u", "poa_relayer.py", "deploy_config.json", "relayer.log"]
+
+# docker compose exec relayer tail -f relayer.log
