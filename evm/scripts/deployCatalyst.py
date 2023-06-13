@@ -254,7 +254,7 @@ class Catalyst:
                     tokens,
                     initial_balances,
                     self.config["vaults"][vault][self.chain]["weights"],
-                    10**18 if self.config["vaults"][vault].get("amplification") is None else self.config["vaults"][vault].get("amplification"),
+                    10**18 if self.config["vaults"][vault].get("amplification") is None else self.config["vaults"][vault].get("amplification")*10**18,
                     0,
                     vault,
                     vault[0]+vault[3]+vault[-1],

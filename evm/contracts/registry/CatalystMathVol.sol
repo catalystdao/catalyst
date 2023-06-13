@@ -178,12 +178,12 @@ contract CatalystMathVol is IntegralsVolatile, ICatalystMathLibVol {
         uint256 amount
     ) external view override returns (uint256) {
         // A high => fewer units returned. Do not subtract the escrow amount
-        uint256 A = calcFee(vault, ERC20(fromAsset).balanceOf(vault));
+        uint256 A = ERC20(fromAsset).balanceOf(vault);
         uint256 W = getTrueWeight(vault, fromAsset);
 
         // If a token is not part of the vault, W is 0. This returns 0 by
         // multiplication with 0.
-        return _calcPriceCurveArea(amount, A, W);
+        return _calcPriceCurveArea(calcFee(vault, amount), A, W);
     }
 
     /**
@@ -230,7 +230,7 @@ contract CatalystMathVol is IntegralsVolatile, ICatalystMathLibVol {
         address toAsset,
         uint256 amount
     ) external view override returns (uint256) {
-        uint256 A = calcFee(vault, ERC20(fromAsset).balanceOf(vault));
+        uint256 A = ERC20(fromAsset).balanceOf(vault);
         uint256 B = ERC20(toAsset).balanceOf(vault) - CatalystVaultVolatile(vault)._escrowedTokens(toAsset);
         uint256 W_A = getTrueWeight(vault, fromAsset);
         uint256 W_B = getTrueWeight(vault, toAsset);
@@ -242,11 +242,11 @@ contract CatalystMathVol is IntegralsVolatile, ICatalystMathLibVol {
             // NOTE: If W_A == 0 and W_B == 0 => W_A == W_B => The calculation will not fail.
             // This is not a problem, since W_B != 0 for assets contained in the vault, and hence a 0-weighted asset 
             // (i.e. not contained in the vault) cannot be used to extract an asset contained in the vault.
-            return (B * amount) / (A + amount);
+            return (B * calcFee(vault, amount)) / (A + calcFee(vault, amount));
 
         // If either token doesn't exist, their weight is 0.
         // Then powWad returns 1 which is subtracted from 1 => returns 0.
-        return _calcCombinedPriceCurves(amount, A, B, W_A, W_B);
+        return _calcCombinedPriceCurves(calcFee(vault, amount), A, B, W_A, W_B);
     }
 
     //* Mid prices and infinitesimal trades.
