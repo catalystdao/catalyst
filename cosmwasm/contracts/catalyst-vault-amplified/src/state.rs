@@ -20,6 +20,14 @@ use catalyst_ibc_interface::msg::ExecuteMsg as InterfaceExecuteMsg;
 use crate::{calculation_helpers::{calc_price_curve_area, calc_price_curve_limit, calc_combined_price_curves, calc_price_curve_limit_share}};
 
 // TODO amplification specific storage
+pub const ONE_MINUS_AMP: Item<I256> = Item::new("catalyst-vault-amplified-one-minus-amp");
+pub const TARGET_ONE_MINUS_AMP: Item<I256> = Item::new("catalyst-vault-amplified-target-one-minus-amp");
+pub const AMP_UPDATE_TIMESTAMP: Item<Uint64> = Item::new("catalyst-vault-amplified-amp-update-timestamp");
+pub const AMP_UPDATE_FINISH_TIMESTAMP: Item<Uint64> = Item::new("catalyst-vault-amplified-amp-update-finish-timestamp");
+
+const MIN_ADJUSTMENT_TIME_NANOS : Uint64 = Uint64::new(7 * 24 * 60 * 60 * 1000000000);     // 7 days
+const MAX_ADJUSTMENT_TIME_NANOS : Uint64 = Uint64::new(365 * 24 * 60 * 60 * 1000000000);   // 1 year
+const MAX_AMP_ADJUSTMENT_FACTOR : Uint64 = Uint64::new(10);
 
 pub fn initialize_swap_curves(
     deps: &mut DepsMut,
@@ -31,8 +39,6 @@ pub fn initialize_swap_curves(
     depositor: String
 ) -> Result<Response, ContractError> {
 
-    todo!();
-
     // Check the caller is the Factory    //TODO does this make sense? Unlike on EVM, the 'factory' is not set as 'immutable', but rather it is set as the caller of 'instantiate'
     if info.sender != FACTORY.load(deps.storage)? {
         return Err(ContractError::Unauthorized {});
@@ -43,8 +49,8 @@ pub fn initialize_swap_curves(
         return Err(ContractError::Unauthorized {});
     }
 
-    // Check that the amplification is correct (set to 1)
-    if amp != Uint64::new(10u64.pow(18)) {     //TODO maths WAD
+    // Check that the amplification is correct (set to < 1)
+    if amp >= Uint64::new(10u64.pow(18)) {
         return Err(ContractError::InvalidAmplification {})
     }
 
@@ -58,6 +64,11 @@ pub fn initialize_swap_curves(
             reason: "Invalid weights count.".to_string()
         });
     }
+
+    // Save the amplification value. It is stored as 1 - amp since most equations uses amp this way.
+    let one_minus_amp = I256::from(amp).wrapping_sub(WAD.as_i256());
+    ONE_MINUS_AMP.save(deps.storage, &one_minus_amp)?;
+    TARGET_ONE_MINUS_AMP.save(deps.storage, &one_minus_amp)?;
 
     // Validate the depositor address
     deps.api.addr_validate(&depositor)?;    //TODO is this needed? Won't the address be validated by 'execute_mint` below?
@@ -92,16 +103,21 @@ pub fn initialize_swap_curves(
         return Err(ContractError::InvalidWeight {});
     }
     WEIGHTS.save(deps.storage, &weights)?;
-    // TARGET_WEIGHTS.save(deps.storage, &weights)?;               // Initialize the target_weights storage (values do not matter)
-    // WEIGHT_UPDATE_TIMESTAMP.save(deps.storage, &Uint64::zero())?;         //TODO move intialization to 'setup'?
-    // WEIGHT_UPDATE_FINISH_TIMESTAMP.save(deps.storage, &Uint64::zero())?;  //TODO move intialization to 'setup'?
+    AMP_UPDATE_TIMESTAMP.save(deps.storage, &Uint64::zero())?;         //TODO move intialization to 'setup'?
+    AMP_UPDATE_FINISH_TIMESTAMP.save(deps.storage, &Uint64::zero())?;  //TODO move intialization to 'setup'?
 
     // Compute the security limit
     MAX_LIMIT_CAPACITY.save(
         deps.storage,
-        &(LN2 * weights.iter().fold(
-            U256::zero(), |acc, next| acc + U256::from(*next)     // Overflow safe, as U256 >> u64    //TODO maths
-        ))
+        &(weights
+            .iter()
+            .zip(&assets_balances)
+            .fold(
+                U256::zero(),
+                |acc, (next_weight, next_balance)| {
+                    acc + U256::from(*next_weight).wrapping_mul(U256::from(*next_balance))     // Overflow safe, as U256 >> u64*Uint128
+                }
+            ))
     )?;
     USED_LIMIT_CAPACITY.save(deps.storage, &U256::zero())?;       //TODO move intialization to 'setup'?
     USED_LIMIT_CAPACITY_TIMESTAMP.save(deps.storage, &Uint64::zero())?;   //TODO move intialization to 'setup'?
