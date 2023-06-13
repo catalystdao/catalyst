@@ -45,13 +45,16 @@ class PoARelayer:
     def __init__(
         self,
         chains={
-            "mumbai": {
-                "url": os.environ["MUMBAI_ALCHEMY"],
-                "middleware": geth_poa_middleware,
+            "evmos": {
+                "url": os.environ["EVMOS_RPC"],
                 "key": os.environ["PRIVATE_KEY_ROUTER"],
             },
-            "sepolia": {
-                "url": os.environ["SEPOLIA_ALCHEMY"],
+            "cronos": {
+                "url": os.environ["CRONOS_RPC"],
+                "key": os.environ["PRIVATE_KEY_ROUTER"],
+            },
+            "canto": {
+                "url": os.environ["CANTO_RPC"],
                 "key": os.environ["PRIVATE_KEY_ROUTER"],
             },
         },

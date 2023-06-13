@@ -6,8 +6,9 @@ services:
       context: evm
       dockerfile: scripts/testnet/Dockerfile
     environment:
-      - MUMBAI_ALCHEMY=${MUMBAI_ALCHEMY}
-      - SEPOLIA_ALCHEMY=${SEPOLIA_ALCHEMY}
+      - EVMOS_RPC=${EVMOS_RPC}
+      - CRONOS_RPC=${CRONOS_RPC}
+      - CANTO_RPC=${CANTO_RPC}
       - PRIVATE_KEY_ROUTER=${PRIVATE_KEY_ROUTER}
     container_name: catalyst_relayer
     restart: unless-stopped
