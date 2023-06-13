@@ -12,7 +12,7 @@ use thiserror::Error;
 ***************************************************************/
 
 pub const WAD    : U256 = u256!("1000000000000000000");                      // The scalar of ETH and most ERC20s.
-pub const WADWAD : U256 = u256!("1000000000000000000000000000000000000");    // The scalar of ETH and most ERC20s squared.
+pub const WADWAD : I256 = i256!("1000000000000000000000000000000000000");    // The scalar of ETH and most ERC20s squared.
 pub const LN2    : U256 = u256!("693147180559945344");                       // from numpy import np; int(np.log(2)*10**18).
 
 pub fn mul_wad_down(x: U256, y: U256) -> Result<U256, FixedPointMathError> {
