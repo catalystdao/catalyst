@@ -70,7 +70,10 @@ class Catalyst:
         tkn = self.config['tokens'][self.chain][wTKN]
         if tkn == '':
             tkn = self.deployer.deploy(WTKN_CONTRACT)
+            self.prepare_write_config()
+            self.load_config()
             self.config['tokens'][self.chain][wTKN] = tkn.address
+            self.write_config()
         
         # Deploy mathematical libs
         volatile_mathlib = self.config['chain_config'][self.chain]["volatile_mathlib"]
@@ -201,7 +204,6 @@ class Catalyst:
                 self.load_config()
                 self.config['tokens'][self.chain][token]["address"] = deployed_tkn.address
                 self.write_config()
-        
     
     def __init__(
         self,
@@ -313,4 +315,3 @@ class Catalyst:
                     {'from': self.deployer}
                 )
             vault_container.finishSetup({'from': self.deployer})
-        

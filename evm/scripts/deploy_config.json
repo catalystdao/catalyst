@@ -13,7 +13,7 @@
             "ibcinterface": "",
             "crosschaininterface": "",
             "volatile_template": "",
-            "volatile_mathlib": "",
+            "volatile_mathlib": "0x8BAC57Ec79Bc6Ac4a5530cB167124381d13aFf91",
             "amplified_template": "",
             "amplified_mathlib": "",
             "describer": "",
@@ -35,17 +35,17 @@
             "permit2": ""
         },
         "evmos": {
-            "factory": "",
-            "ibcinterface": "",
-            "crosschaininterface": "",
-            "volatile_template": "",
-            "volatile_mathlib": "",
-            "amplified_template": "",
-            "amplified_mathlib": "",
-            "describer": "",
-            "describer_registry": "",
+            "factory": "0xA1B715d2A08C9405B9998C1eBB450855B04107Ae",
+            "ibcinterface": "0x32165844913dDCfb3e6fb74523B81205f48e78e0",
+            "crosschaininterface": "0xAc914e2A9e68C75DB2076ECD4733B7F2ff8d4e33",
+            "volatile_template": "0x36aB452fA06E30bC0F43f694d4283C02d1d011e3",
+            "volatile_mathlib": "0x8BAC57Ec79Bc6Ac4a5530cB167124381d13aFf91",
+            "amplified_template": "0xB7Ea2B0ccEB094D9d713401A779d47367Df500E3",
+            "amplified_mathlib": "0x1dd35bc05C6DAd99e3456e957B78908f9f4ec638",
+            "describer": "0x16C062c4320b7F1f05c3bF97E1bC2C74BB8a6a12",
+            "describer_registry": "0x855eaEfb6609E43613404cF0e26E869840A707cE",
             "router": "",
-            "permit2": ""
+            "permit2": "0xd0D9A23C01590fB12B04eEDd6244c6760F747559"
         }
     },
     "relayer_address": "0x0e479a0438d25B5b10C2186Bee1256d437b9C582",
