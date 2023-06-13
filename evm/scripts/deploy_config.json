@@ -1,171 +1,84 @@
 {
     "chain_config": {
-        "sepolia": {
-            "factory": "0xa9d48bf1a9200F12B65a6d61DC32c035406EC24d",
-            "ibcinterface": "0x86B52c8D9989D27e1E1DeaA38D69DD2608e4acA0",
-            "crosschaininterface": "0x1c54A20045FAE4C40CE54b08fEc770B2005091b5",
-            "volatile_template": "0xE0f521AE39CCc217a3204bA163Cd8aA78aCEc817",
-            "volatile_mathlib": "0x2245A88fe9368fCd864d70259677dCeDBc55b4d1",
-            "amplified_template": "0x05a9432603d2A3Be52e1e4E31D7B59e651A729E9",
-            "amplified_mathlib": "0x828a1Cb35f7F935b33F141b32720e383C218de49",
-            "describer": "0x74Db5b6220F515F824b8b2182729d0857cC81044",
-            "describer_registry": "0xF2F16b53301Eb0EDB0FB6fEfFE13cC0bA50c2348",
-            "router": "0x8818ABB05De0493BcE3CC43C48C7Fab1ba044F27",
-            "permit2": "0x88Cd393da95214A31081293387987e5B7Dff6f85"
+        "canto": {
+            "factory": "",
+            "ibcinterface": "",
+            "crosschaininterface": "",
+            "volatile_template": "",
+            "volatile_mathlib": "",
+            "amplified_template": "",
+            "amplified_mathlib": "",
+            "describer": "",
+            "describer_registry": "",
+            "router": "",
+            "permit2": ""
         },
-        "mumbai": {
-            "factory": "0xa9d48bf1a9200F12B65a6d61DC32c035406EC24d",
-            "ibcinterface": "0x86B52c8D9989D27e1E1DeaA38D69DD2608e4acA0",
-            "crosschaininterface": "0x1c54A20045FAE4C40CE54b08fEc770B2005091b5",
-            "volatile_template": "0xE0f521AE39CCc217a3204bA163Cd8aA78aCEc817",
-            "volatile_mathlib": "0x2245A88fe9368fCd864d70259677dCeDBc55b4d1",
-            "amplified_template": "0x05a9432603d2A3Be52e1e4E31D7B59e651A729E9",
-            "amplified_mathlib": "0x828a1Cb35f7F935b33F141b32720e383C218de49",
-            "describer": "0x74Db5b6220F515F824b8b2182729d0857cC81044",
-            "describer_registry": "0xF2F16b53301Eb0EDB0FB6fEfFE13cC0bA50c2348",
-            "router": "0x8818ABB05De0493BcE3CC43C48C7Fab1ba044F27",
-            "permit2": "0x88Cd393da95214A31081293387987e5B7Dff6f85"
+        "cronos": {
+            "factory": "",
+            "ibcinterface": "",
+            "crosschaininterface": "",
+            "volatile_template": "",
+            "volatile_mathlib": "",
+            "amplified_template": "",
+            "amplified_mathlib": "",
+            "describer": "",
+            "describer_registry": "",
+            "router": "",
+            "permit2": ""
+        },
+        "evmos": {
+            "factory": "",
+            "ibcinterface": "",
+            "crosschaininterface": "",
+            "volatile_template": "",
+            "volatile_mathlib": "",
+            "amplified_template": "",
+            "amplified_mathlib": "",
+            "describer": "",
+            "describer_registry": "",
+            "router": "",
+            "permit2": ""
         }
     },
     "relayer_address": "0x0e479a0438d25B5b10C2186Bee1256d437b9C582",
     "tokens": {
-        "sepolia": {
-            "wSEP": "0x3A773F4804eCC5208b58571DF4fB7005444cbCA7",
-            "sepUSDC": {
-                "address": "0xD9943EE19BDCc15C24Ec29F09F8e7FF6a7282e35",
-                "decimals": 6,
-                "supply": 1000000.0
-            },
-            "sepUSDT": {
-                "address": "0xFE5f17C0d04705035352BE285a3f1C0e2A08A11A",
-                "decimals": 18,
-                "supply": 1000000.0
-            },
-            "SuperStable100": {
-                "address": "0x6fE9ae6a141d98d0095c48Ab93D0Cd36a909b34b",
-                "decimals": 16,
-                "supply": 100000000.0
-            },
-            "seppoi": {
-                "address": "0x08E2706B13f0bE4c14Dd0E51edA94D0ee487ab26",
-                "decimals": 18,
-                "supply": 1000000.0
-            }
+        "canto": {
+            "WCANTO": ""
         },
-        "mumbai": {
-            "wMUM": "0x3A773F4804eCC5208b58571DF4fB7005444cbCA7",
-            "mumUSDC": {
-                "address": "0xD9943EE19BDCc15C24Ec29F09F8e7FF6a7282e35",
-                "decimals": 6,
-                "supply": 1000000.0
-            },
-            "mumUSDT": {
-                "address": "0xFE5f17C0d04705035352BE285a3f1C0e2A08A11A",
-                "decimals": 18,
-                "supply": 1000000.0
-            },
-            "mummi": {
-                "address": "0x6fE9ae6a141d98d0095c48Ab93D0Cd36a909b34b",
-                "decimals": 18,
-                "supply": 1000000.0
-            }
+        "cronos": {
+            "WCRO": ""
+        },
+        "evmos": {
+            "WEVMOS": ""
         }
     },
     "vaults": {
-        "Stables": {
-            "amplification": 0.25,
-            "sepolia": {
-                "address": "0xed647707c123d8653feb50017cc45C2F3adcDec5",
-                "weights": [
-                    1000000000000.0,
-                    1,
-                    100.0
-                ],
-                "tokens": {
-                    "sepUSDC": 10000.0,
-                    "sepUSDT": 10000.0,
-                    "SuperStable100": 10000.0
-                }
-            },
-            "mumbai": {
-                "address": "0xed647707c123d8653feb50017cc45C2F3adcDec5",
-                "weights": [
-                    1000000000000.0,
-                    1
-                ],
-                "tokens": {
-                    "mumUSDC": 10000.0,
-                    "mumUSDT": 10000.0
-                }
-            }
-        },
         "Gas Tokens": {
-            "sepolia": {
-                "address": "0xEeEBFF0e43a1b92De82F3AC46E5cBe521f007eA2",
+            "canto": {
+                "address": "",
                 "weights": [
-                    100,
-                    200
+                    100
                 ],
                 "tokens": {
-                    "wSEP": 0.5,
-                    "seppoi": 10000.0
+                    "WCANTO": 0.01
                 }
             },
-            "mumbai": {
-                "address": "0xEeEBFF0e43a1b92De82F3AC46E5cBe521f007eA2",
+            "cronos": {
+                "address": "",
                 "weights": [
-                    100,
-                    50
+                    100
                 ],
                 "tokens": {
-                    "wMUM": 0.5,
-                    "mummi": 1000.0
-                }
-            }
-        },
-        "Pool 1": {
-            "sepolia": {
-                "address": "0xaBDEcd0Fc86Ee8416aff8381624C1f71bBB61a11",
-                "weights": [
-                    1
-                ],
-                "tokens": {
-                    "seppoi": 10000.0
+                    "WCRO": 0.01
                 }
             },
-            "mumbai": {
-                "address": "0xaBDEcd0Fc86Ee8416aff8381624C1f71bBB61a11",
+            "evmos": {
+                "address": "",
                 "weights": [
-                    1
+                    100
                 ],
                 "tokens": {
-                    "mumUSDC": 1000.0
-                }
-            }
-        },
-        "SepStableGas": {
-            "sepolia": {
-                "address": "0xcaaC0091C9E132d9e4B9D089D1C9FC44520CF102",
-                "weights": [
-                    1,
-                    1
-                ],
-                "tokens": {
-                    "wSEP": 0.25,
-                    "sepUSDC": 100
-                }
-            }
-        },
-        "MumStableGas": {
-            "mumbai": {
-                "address": "0xcaaC0091C9E132d9e4B9D089D1C9FC44520CF102",
-                "weights": [
-                    1,
-                    1
-                ],
-                "tokens": {
-                    "wMUM": 0.5,
-                    "mumUSDC": 100
+                    "WEVMOS": 0.01
                 }
             }
         }
