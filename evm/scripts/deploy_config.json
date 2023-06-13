@@ -63,6 +63,7 @@
                 "weights": [
                     100
                 ],
+                "fee": 0.005,
                 "tokens": {
                     "WCANTO": 0.01
                 }
@@ -72,6 +73,7 @@
                 "weights": [
                     100
                 ],
+                "fee": 0.005,
                 "tokens": {
                     "WCRO": 0.01
                 }
@@ -81,6 +83,7 @@
                 "weights": [
                     100
                 ],
+                "fee": 0.005,
                 "tokens": {
                     "WEVMOS": 0.01
                 }

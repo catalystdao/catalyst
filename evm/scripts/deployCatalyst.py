@@ -2,7 +2,7 @@ import json
 from time import sleep
 import os
 
-from brownie import (WETH9, CatalystIBCInterface,
+from brownie import (WETH9, WCANTO, WCRO, WEVMOS, CatalystIBCInterface,
                      CatalystVaultAmplified, CatalystFactory,
                      CatalystVaultVolatile, IBCEmulator, Token,
                      convert, CatalystDescriber, CatalystDescriberRegistry, CatalystMathAmp, CatalystMathVol, CatalystRouter, p2, Contract)
@@ -10,16 +10,20 @@ from brownie import (WETH9, CatalystIBCInterface,
 
 """
 # one liner deployment
-from scripts.deployCatalyst import Catalyst; cat = Catalyst(acct, "sepolia", "scripts/deploy_config.json", True, "wSEP"); WETH9.at(cat.config["tokens"]["sepolia"]["wSEP"]).deposit({'from': cat.deployer, 'value': 1*10**18}); cat.deploy_config()
+from scripts.deployCatalyst import Catalyst; cat = Catalyst(acct, "evmos", "scripts/deploy_config.json", True, "WEVMOS",
+WEVMOS); WETH9.at(cat.config["tokens"]["evmos"]["WEVMOS"]).deposit({'from': cat.deployer, 'value': 0.02*10**18}); cat.deploy_config()
 
-# Then run
-from scripts.deployCatalyst import Catalyst; cat = Catalyst(acct, "mumbai", "scripts/deploy_config.json", True, "wMUM"); WETH9.at(cat.config["tokens"]["mumbai"]["wMUM"]).deposit({'from': cat.deployer, 'value': 1*10**18}); cat.deploy_config(); 
+# And run
+from scripts.deployCatalyst import Catalyst; cat = Catalyst(acct, "canto", "scripts/deploy_config.json", True, "WCANTO", WCANTO); WETH9.at(cat.config["tokens"]["canto"]["WCANTO"]).deposit({'from': cat.deployer, 'value': 0.02*10**18}); cat.deploy_config();
 
-# On both chains, run:
+# And run
+from scripts.deployCatalyst import Catalyst; cat = Catalyst(acct, "cronos", "scripts/deploy_config.json", True, "WCRO", WCRO); WETH9.at(cat.config["tokens"]["cronos"]["WCRO"]).deposit({'from': cat.deployer, 'value': 0.02*10**18}); cat.deploy_config()
+
+# On all chains, run:
 cat.set_connections()
 
 # Potentially use:
-from brownie.network.gas.strategies import LinearScalingStrategy; from brownie.network import gas_price; gas_strategy = LinearScalingStrategy("1.6 gwei", "10 gwei", 2); gas_price(gas_strategy)
+from brownie.network.gas.strategies import LinearScalingStrategy; from brownie.network import gas_price; gas_strategy = LinearScalingStrategy("1.6 gwei", "20 gwei", 2); gas_price(gas_strategy)
 """
 
 MAX_UINT256: int = 2**256 - 1
@@ -61,11 +65,11 @@ class Catalyst:
         with open(LOCK, "w") as f:
             f = ""
     
-    def blank_setup(self, wTKN):
+    def blank_setup(self, wTKN, WTKN_CONTRACT):
         # Check if a wrapped gas token is provided.
         tkn = self.config['tokens'][self.chain][wTKN]
         if tkn == '':
-            tkn = self.deployer.deploy(WETH9)
+            tkn = self.deployer.deploy(WTKN_CONTRACT)
             self.config['tokens'][self.chain][wTKN] = tkn.address
         
         # Deploy mathematical libs
@@ -205,7 +209,8 @@ class Catalyst:
         chain,
         config_name="deploy_config.json",
         run_blank_setup=False,
-        wTKN=""
+        wTKN="",
+        WTKN_CONTRACT=WETH9
     ):
         self.deployer = deployer
         self.config_name = config_name
@@ -216,7 +221,7 @@ class Catalyst:
         if run_blank_setup is True:
             assert self.config['tokens'][self.chain].get(wTKN) is not None, "Please provide a corrent wTKN name"
             assert type(self.config['tokens'][self.chain].get(wTKN)) is str, "Please provide a wTKN name which represents a wrapped token"
-            self.blank_setup(wTKN)
+            self.blank_setup(wTKN, WTKN_CONTRACT)
     
     def deploy_config(self):
         factory = CatalystFactory.at(self.config['chain_config'][self.chain]["factory"])
@@ -255,7 +260,7 @@ class Catalyst:
                     initial_balances,
                     self.config["vaults"][vault][self.chain]["weights"],
                     10**18 if self.config["vaults"][vault].get("amplification") is None else self.config["vaults"][vault].get("amplification")*10**18,
-                    0,
+                    self.config["vaults"][vault][self.chain]["fee"]*10**18,
                     vault,
                     vault[0]+vault[3]+vault[-1],
                     self.config['chain_config'][self.chain]["crosschaininterface"],
