@@ -9,87 +9,87 @@
     },
     "chain_config": {
         "canto": {
-            "factory": "",
-            "ibcinterface": "",
-            "crosschaininterface": "",
-            "volatile_template": "",
-            "volatile_mathlib": "0x8BAC57Ec79Bc6Ac4a5530cB167124381d13aFf91",
-            "amplified_template": "",
-            "amplified_mathlib": "",
-            "describer": "",
-            "describer_registry": "",
-            "router": "",
-            "permit2": ""
+            "factory": "0xB6F92935e492Ad705f7Bc29893f36EF2680bDF42",
+            "ibcinterface": "0xeCd1DD2e1b74518dec1066973392012C6d32EfEA",
+            "crosschaininterface": "0x6B89CdCB1b85610D9a51f34314Aa24152BDF3d5a",
+            "volatile_template": "0x51576513D2CD20e4920ef68379019e39a2D1eD4e",
+            "volatile_mathlib": "0x956Bb9FeD6debce359710a0F5c9eb74F3a01dBDD",
+            "amplified_template": "0x4E03620Ad0872Ed6F7fAc592693389D37d6b8b10",
+            "amplified_mathlib": "0xB8126d8270D524C3DB24CA04F07Bc2C33c082842",
+            "describer": "0x1f38f45f7c3031b5e1a793f8af91323cfD335CeA",
+            "describer_registry": "0x272574A9B6a8dD14EB12C67eb2C19b4D1EF60cEA",
+            "router": "0xf59Ec4375C7b9c1D993a2d715e32b64aec7CF5dd",
+            "permit2": "0xA9e04cAAae42a105FA04B6eFE235932caB74f081"
         },
         "cronos": {
-            "factory": "",
-            "ibcinterface": "",
-            "crosschaininterface": "",
-            "volatile_template": "",
-            "volatile_mathlib": "",
-            "amplified_template": "",
-            "amplified_mathlib": "",
-            "describer": "",
-            "describer_registry": "",
-            "router": "",
-            "permit2": ""
+            "factory": "0xB6F92935e492Ad705f7Bc29893f36EF2680bDF42",
+            "ibcinterface": "0xeCd1DD2e1b74518dec1066973392012C6d32EfEA",
+            "crosschaininterface": "0x6B89CdCB1b85610D9a51f34314Aa24152BDF3d5a",
+            "volatile_template": "0x51576513D2CD20e4920ef68379019e39a2D1eD4e",
+            "volatile_mathlib": "0x956Bb9FeD6debce359710a0F5c9eb74F3a01dBDD",
+            "amplified_template": "0x4E03620Ad0872Ed6F7fAc592693389D37d6b8b10",
+            "amplified_mathlib": "0xB8126d8270D524C3DB24CA04F07Bc2C33c082842",
+            "describer": "0x1f38f45f7c3031b5e1a793f8af91323cfD335CeA",
+            "describer_registry": "0x272574A9B6a8dD14EB12C67eb2C19b4D1EF60cEA",
+            "router": "0xf59Ec4375C7b9c1D993a2d715e32b64aec7CF5dd",
+            "permit2": "0xA9e04cAAae42a105FA04B6eFE235932caB74f081"
         },
         "evmos": {
-            "factory": "0xA1B715d2A08C9405B9998C1eBB450855B04107Ae",
-            "ibcinterface": "0x32165844913dDCfb3e6fb74523B81205f48e78e0",
-            "crosschaininterface": "0xAc914e2A9e68C75DB2076ECD4733B7F2ff8d4e33",
-            "volatile_template": "0x36aB452fA06E30bC0F43f694d4283C02d1d011e3",
-            "volatile_mathlib": "0x8BAC57Ec79Bc6Ac4a5530cB167124381d13aFf91",
-            "amplified_template": "0xB7Ea2B0ccEB094D9d713401A779d47367Df500E3",
-            "amplified_mathlib": "0x1dd35bc05C6DAd99e3456e957B78908f9f4ec638",
-            "describer": "0x16C062c4320b7F1f05c3bF97E1bC2C74BB8a6a12",
-            "describer_registry": "0x855eaEfb6609E43613404cF0e26E869840A707cE",
-            "router": "",
-            "permit2": "0xd0D9A23C01590fB12B04eEDd6244c6760F747559"
+            "factory": "0xB6F92935e492Ad705f7Bc29893f36EF2680bDF42",
+            "ibcinterface": "0xeCd1DD2e1b74518dec1066973392012C6d32EfEA",
+            "crosschaininterface": "0x6B89CdCB1b85610D9a51f34314Aa24152BDF3d5a",
+            "volatile_template": "0x51576513D2CD20e4920ef68379019e39a2D1eD4e",
+            "volatile_mathlib": "0x956Bb9FeD6debce359710a0F5c9eb74F3a01dBDD",
+            "amplified_template": "0x4E03620Ad0872Ed6F7fAc592693389D37d6b8b10",
+            "amplified_mathlib": "0xB8126d8270D524C3DB24CA04F07Bc2C33c082842",
+            "describer": "0x1f38f45f7c3031b5e1a793f8af91323cfD335CeA",
+            "describer_registry": "0x272574A9B6a8dD14EB12C67eb2C19b4D1EF60cEA",
+            "router": "0xf59Ec4375C7b9c1D993a2d715e32b64aec7CF5dd",
+            "permit2": "0xA9e04cAAae42a105FA04B6eFE235932caB74f081"
         }
     },
     "relayer_address": "0x0e479a0438d25B5b10C2186Bee1256d437b9C582",
     "tokens": {
         "canto": {
-            "WCANTO": ""
+            "WCANTO": "0x0728B93B969f84A248Df7e499358A6733834FD7b"
         },
         "cronos": {
-            "WCRO": ""
+            "WCRO": "0x0728B93B969f84A248Df7e499358A6733834FD7b"
         },
         "evmos": {
-            "WEVMOS": ""
+            "WEVMOS": "0x0728B93B969f84A248Df7e499358A6733834FD7b"
         }
     },
     "vaults": {
         "Gas Tokens": {
             "canto": {
-                "address": "",
+                "address": "0xf9d50Fe787Ab4964A527704B5DAB1083B2789601",
                 "weights": [
                     100
                 ],
                 "fee": 0.005,
                 "tokens": {
-                    "WCANTO": 0.01
+                    "WCANTO": 0.5
                 }
             },
             "cronos": {
-                "address": "",
+                "address": "0xf9d50Fe787Ab4964A527704B5DAB1083B2789601",
                 "weights": [
                     100
                 ],
                 "fee": 0.005,
                 "tokens": {
-                    "WCRO": 0.01
+                    "WCRO": 0.5
                 }
             },
             "evmos": {
-                "address": "",
+                "address": "0xf9d50Fe787Ab4964A527704B5DAB1083B2789601",
                 "weights": [
                     100
                 ],
                 "fee": 0.005,
                 "tokens": {
-                    "WEVMOS": 0.01
+                    "WEVMOS": 0.5
                 }
             }
         }

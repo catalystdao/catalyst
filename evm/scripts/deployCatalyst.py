@@ -11,13 +11,13 @@ from brownie import (WETH9, WCANTO, WCRO, WEVMOS, CatalystIBCInterface,
 """
 # one liner deployment
 from scripts.deployCatalyst import Catalyst; cat = Catalyst(acct, "evmos", "scripts/deploy_config.json", True, "WEVMOS",
-WEVMOS); WETH9.at(cat.config["tokens"]["evmos"]["WEVMOS"]).deposit({'from': cat.deployer, 'value': 0.02*10**18}); cat.deploy_config()
+WEVMOS); WEVMOS.at(cat.config["tokens"]["evmos"]["WEVMOS"]).deposit({'from': cat.deployer, 'value': 0.8*10**18}); cat.deploy_config()
 
 # And run
-from scripts.deployCatalyst import Catalyst; cat = Catalyst(acct, "canto", "scripts/deploy_config.json", True, "WCANTO", WCANTO); WETH9.at(cat.config["tokens"]["canto"]["WCANTO"]).deposit({'from': cat.deployer, 'value': 0.02*10**18}); cat.deploy_config();
+from scripts.deployCatalyst import Catalyst; cat = Catalyst(acct, "canto", "scripts/deploy_config.json", True, "WCANTO", WCANTO); WCANTO.at(cat.config["tokens"]["canto"]["WCANTO"]).deposit({'from': cat.deployer, 'value': 0.8*10**18}); cat.deploy_config();
 
 # And run
-from scripts.deployCatalyst import Catalyst; cat = Catalyst(acct, "cronos", "scripts/deploy_config.json", True, "WCRO", WCRO); WETH9.at(cat.config["tokens"]["cronos"]["WCRO"]).deposit({'from': cat.deployer, 'value': 0.02*10**18}); cat.deploy_config()
+from scripts.deployCatalyst import Catalyst; cat = Catalyst(acct, "cronos", "scripts/deploy_config.json", True, "WCRO", WCRO); WCRO.at(cat.config["tokens"]["cronos"]["WCRO"]).deposit({'from': cat.deployer, 'value': 0.8*10**18}); cat.deploy_config()
 
 # On all chains, run:
 cat.set_connections()
@@ -55,7 +55,7 @@ class Catalyst:
             if status == "":
                 with open(LOCK, "w") as f:
                     f.write(self.chain)
-                sleep(0.05)
+                sleep(0.5)
             elif status == self.chain:
                 break
         
@@ -219,6 +219,7 @@ class Catalyst:
         self.config = self.read_config()
         assert self.config['chain_config'].get(chain) is not None, "Chain name not found in config"
         self.chain = chain
+        self.WETH = WTKN_CONTRACT
         
         if run_blank_setup is True:
             assert self.config['tokens'][self.chain].get(wTKN) is not None, "Please provide a corrent wTKN name"
@@ -240,7 +241,7 @@ class Catalyst:
                 for token in self.config["vaults"][vault][self.chain]["tokens"].keys():
                     token_address = self.config["tokens"][self.chain][token] if type(self.config["tokens"][self.chain][token]) is str else self.config["tokens"][self.chain][token]["address"]
                     assert type(token_address) is str, f"{token}, {token_address} is not a string"
-                    token_container = WETH9.at(
+                    token_container = self.WETH.at(
                         token_address
                     ) if type(self.config["tokens"][self.chain][token]) is str else Token.at(
                         token_address
