@@ -1,11 +1,12 @@
 //SPDX-License-Identifier: Unlicensed
 pragma solidity ^0.8.16;
 
-/// @title Escrow related functions defined by Catalyst v1 Pools
+/// @title Escrow related functions defined by Catalyst v1 Vaults
 /// @notice Contains the functions used to manage escrows by the cross-chain interface.
-interface ICatalystV1PoolAckTimeout {
-    /** @notice Release the escrowed tokens into the pool.  */
+interface ICatalystV1VaultSuccessFailure {
+    /** @notice Release the escrowed tokens into the vault.  */
     function onSendAssetSuccess(
+        bytes32 channelId,
         bytes calldata toAccount,
         uint256 U,
         uint256 escrowAmount,
@@ -15,6 +16,7 @@ interface ICatalystV1PoolAckTimeout {
 
     /** @notice Returned the escrowed tokens to the user */
     function onSendAssetFailure(
+        bytes32 channelId,
         bytes calldata toAccount,
         uint256 U,
         uint256 escrowAmount,
@@ -22,8 +24,9 @@ interface ICatalystV1PoolAckTimeout {
         uint32 blockNumberMod
     ) external;
 
-    /** @notice Release the escrowed tokens into the pool.  */
+    /** @notice Release the escrowed tokens into the vault.  */
     function onSendLiquiditySuccess(
+        bytes32 channelId,
         bytes calldata toAccount,
         uint256 U,
         uint256 escrowAmount,
@@ -32,6 +35,7 @@ interface ICatalystV1PoolAckTimeout {
 
     /** @notice Returned the escrowed tokens to the user */
     function onSendLiquidityFailure(
+        bytes32 channelId,
         bytes calldata toAccount,
         uint256 U,
         uint256 escrowAmount,
