@@ -29,6 +29,10 @@ const MIN_ADJUSTMENT_TIME_NANOS : Uint64 = Uint64::new(7 * 24 * 60 * 60 * 100000
 const MAX_ADJUSTMENT_TIME_NANOS : Uint64 = Uint64::new(365 * 24 * 60 * 60 * 1000000000);   // 1 year
 const MAX_AMP_ADJUSTMENT_FACTOR : Uint64 = Uint64::new(10);
 
+const SMALL_SWAP_RATIO  : Uint128 = Uint128::from(1000000000000u128);   // 1e12
+const SMALL_SWAP_RETURN : U256 = u256!("950000000000000000");           // 0.95 * WAD
+
+
 pub fn initialize_swap_curves(
     deps: &mut DepsMut,
     env: Env,
@@ -1049,10 +1053,9 @@ pub fn calc_send_asset(
     amount: Uint128
 ) -> Result<U256, ContractError> {
 
-    todo!();
-
     let assets = ASSETS.load(deps.storage)?;
     let weights = WEIGHTS.load(deps.storage)?;
+    let one_minus_amp = ONE_MINUS_AMP.load(deps.storage)?;
 
     let from_asset_index: usize = get_asset_index(&assets, from_asset.as_ref())?;
     let from_asset_balance: Uint128 = deps.querier.query_wasm_smart::<BalanceResponse>(
@@ -1061,11 +1064,20 @@ pub fn calc_send_asset(
     )?.balance;
     let from_asset_weight = weights[from_asset_index];
 
-    calc_price_curve_area(
+    let units = calc_price_curve_area(
         amount.u128().into(),
         from_asset_balance.u128().into(),
         U256::from(from_asset_weight),
-    )
+        one_minus_amp
+    )?;
+
+    if from_asset_balance / SMALL_SWAP_RATIO >= amount {
+        return Ok(
+            units.wrapping_mul(SMALL_SWAP_RETURN) / WAD
+        )
+    }
+
+    Ok(units)
 }
 
 pub fn calc_receive_asset(
@@ -1075,10 +1087,9 @@ pub fn calc_receive_asset(
     u: U256
 ) -> Result<Uint128, ContractError> {
 
-    todo!();
-
     let assets = ASSETS.load(deps.storage)?;
     let weights = WEIGHTS.load(deps.storage)?;
+    let one_minus_amp = ONE_MINUS_AMP.load(deps.storage)?;
 
     let to_asset_index: usize = get_asset_index(&assets, to_asset.as_ref())?;
     let to_asset_escrowed_balance: Uint128 = TOTAL_ESCROWED_ASSETS.load(
@@ -1095,6 +1106,7 @@ pub fn calc_receive_asset(
         u,
         to_asset_balance.u128().into(),
         U256::from(to_asset_weight),
+        one_minus_amp
     ).and_then(
         |val| TryInto::<Uint128>::try_into(val).map_err(|err| err.into())
     )
@@ -1109,10 +1121,9 @@ pub fn calc_local_swap(
     amount: Uint128
 ) -> Result<Uint128, ContractError> {
 
-    todo!();
-
     let assets = ASSETS.load(deps.storage)?;
     let weights = WEIGHTS.load(deps.storage)?;
+    let one_minus_amp = ONE_MINUS_AMP.load(deps.storage)?;
 
     let from_asset_index: usize = get_asset_index(&assets, from_asset.as_ref())?;
     let from_asset_balance: Uint128 = deps.querier.query_wasm_smart::<BalanceResponse>(
@@ -1132,26 +1143,22 @@ pub fn calc_local_swap(
     )?.balance.checked_sub(to_asset_escrowed_balance)?;      // vault balance minus escrowed balance
     let to_asset_weight = weights[to_asset_index];
 
-    //TODO move condition into 'calc_combined_price_curves'?
-    if from_asset_weight == to_asset_weight {
-        // Saves gas and is exact
-        // NOTE: If W_A == 0 and W_B == 0 then W_A == W_B and the calculation will not fail (unlike with the full calculation).
-        // This cannot be used to extract an asset from the vault using an asset that is not in the vault, as all assets in 
-        // the vault have a non-zero weight.
-        return Ok(
-            to_asset_balance.checked_mul(amount)? / from_asset_balance.checked_add(amount)?
-        )
-    }
-
-    calc_combined_price_curves(
+    let output: Uint128 = calc_combined_price_curves(
         amount.u128().into(),
         from_asset_balance.u128().into(),
         to_asset_balance.u128().into(),
         U256::from(from_asset_weight),
-        U256::from(to_asset_weight)
-    ).and_then(
-        |val| TryInto::<Uint128>::try_into(val).map_err(|err| err.into())
-    )
+        U256::from(to_asset_weight),
+        one_minus_amp
+    )?.try_into()?;
+
+    if output / SMALL_SWAP_RATIO >= amount {
+        return Ok(
+            (U256::from(output).wrapping_mul(SMALL_SWAP_RETURN) / WAD).as_uint128()     // Casting is safe, as the result is always <= output, and output is <= Uint128::max
+        )
+    }
+
+    Ok(output)
 }
 
 
