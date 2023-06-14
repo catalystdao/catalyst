@@ -2,14 +2,14 @@ use cosmwasm_std::{Addr, Uint128, DepsMut, Env, MessageInfo, Response, StdResult
 use cw20::{Cw20ExecuteMsg, Cw20QueryMsg, BalanceResponse};
 use cw20_base::{contract::{execute_mint, execute_burn}};
 use cw_storage_plus::Item;
-use catalyst_types::{U256, AsI256, I256, AsU256};
+use catalyst_types::{U256, AsI256, I256, AsU256, u256};
 use fixed_point_math::{LN2, mul_wad_down, self, ln_wad, WAD, exp_wad};
 use catalyst_vault_common::{
     state::{
         ASSETS, MAX_ASSETS, WEIGHTS, INITIAL_MINT_AMOUNT, VAULT_FEE, MAX_LIMIT_CAPACITY, USED_LIMIT_CAPACITY, CHAIN_INTERFACE,
         TOTAL_ESCROWED_LIQUIDITY, TOTAL_ESCROWED_ASSETS, is_connected, get_asset_index, update_limit_capacity,
         collect_governance_fee_message, compute_send_asset_hash, compute_send_liquidity_hash, create_asset_escrow,
-        create_liquidity_escrow, on_send_asset_success, on_send_liquidity_success, total_supply, get_limit_capacity, USED_LIMIT_CAPACITY_TIMESTAMP, FACTORY,
+        create_liquidity_escrow, on_send_asset_success, total_supply, get_limit_capacity, USED_LIMIT_CAPACITY_TIMESTAMP, FACTORY, on_send_asset_failure, on_send_liquidity_failure,
     },
     ContractError, msg::{CalcSendAssetResponse, CalcReceiveAssetResponse, CalcLocalSwapResponse, GetLimitCapacityResponse}, event::{local_swap_event, send_asset_event, receive_asset_event, send_liquidity_event, receive_liquidity_event, deposit_event, withdraw_event}
 };
@@ -24,6 +24,7 @@ pub const ONE_MINUS_AMP: Item<I256> = Item::new("catalyst-vault-amplified-one-mi
 pub const TARGET_ONE_MINUS_AMP: Item<I256> = Item::new("catalyst-vault-amplified-target-one-minus-amp");
 pub const AMP_UPDATE_TIMESTAMP: Item<Uint64> = Item::new("catalyst-vault-amplified-amp-update-timestamp");
 pub const AMP_UPDATE_FINISH_TIMESTAMP: Item<Uint64> = Item::new("catalyst-vault-amplified-amp-update-finish-timestamp");
+pub const UNIT_TRACKER: Item<I256> = Item::new("catalyst-vault-amplified-unit-tracker");
 
 const MIN_ADJUSTMENT_TIME_NANOS : Uint64 = Uint64::new(7 * 24 * 60 * 60 * 1000000000);     // 7 days
 const MAX_ADJUSTMENT_TIME_NANOS : Uint64 = Uint64::new(365 * 24 * 60 * 60 * 1000000000);   // 1 year
@@ -132,6 +133,9 @@ pub fn initialize_swap_curves(
         .map(|asset| TOTAL_ESCROWED_ASSETS.save(deps.storage, asset, &Uint128::zero()))
         .collect::<StdResult<Vec<_>>>()?;
     TOTAL_ESCROWED_LIQUIDITY.save(deps.storage, &Uint128::zero())?;
+
+    // Initialize the unit tracker
+    UNIT_TRACKER.save(deps.storage, &I256::zero())?;
 
     // Mint vault tokens for the depositor
     // Make up a 'MessageInfo' with the sender set to this contract itself => this is to allow the use of the 'execute_mint'
@@ -1171,9 +1175,7 @@ pub fn on_send_asset_success_amplified(
     amount: Uint128,
     asset: String,
     block_number_mod: u32
-) -> Result<Response, ContractError> {
-
-    todo!();
+) -> Result<Response, ContractError> {  //TODO replace ContractError with NEVER (i.e. it never errors)?
 
     let response = on_send_asset_success(
         deps,
@@ -1193,23 +1195,78 @@ pub fn on_send_asset_success_amplified(
         USED_LIMIT_CAPACITY.save(deps.storage, &used_capacity.saturating_sub(u))?;
     }
 
+    // ! TODO getting the asset weight is quite complex, as it requires loading all the assets and all the weights.
+    // ! Update the way the 'assets' and 'weights' are saved to mappings? (as with the EVM code)
+    let assets = ASSETS.load(deps.storage)?;
+    let weights = WEIGHTS.load(deps.storage)?;
+    let asset_index: usize = get_asset_index(&assets, asset.as_ref())?;
+    let weight = weights.get(asset_index).unwrap();
+
+    MAX_LIMIT_CAPACITY.update(
+        deps.storage,
+        |max_limit_capacity| -> StdResult<_> {
+            // The max capacity update calculation might overflow, yet it should never make the callback revert.
+            // Hence the capacity is set to the maximum allowed value without allowing it to overflow (saturating_mul and saturating_add).
+            Ok(
+                max_limit_capacity.saturating_add(
+                    U256::from(amount).wrapping_mul(U256::from(*weight))     // Multiplication is overflow safe, as U256.max >= Uint128.max * u64.max
+                )
+            )
+        }
+    )?;
+
     Ok(response)
 }
 
-pub fn on_send_liquidity_success_amplified(
+pub fn on_send_asset_failure_amplified(
     deps: &mut DepsMut,
     info: MessageInfo,
     channel_id: String,
     to_account: Binary,
     u: U256,
     amount: Uint128,
+    asset: String,
     block_number_mod: u32
-) -> Result<Response, ContractError> {
+) -> Result<Response, ContractError> {  //TODO replace ContractError with NEVER (i.e. it never errors)?
 
-    todo!();
-
-    let response = on_send_liquidity_success(
+    let response = on_send_asset_failure(
         deps,
+        info,
+        channel_id,
+        to_account,
+        u,
+        amount,
+        asset,
+        block_number_mod
+    )?;
+
+    // Remove the timed-out units from the unit tracker.
+    UNIT_TRACKER.update(deps.storage, |unit_tracker| -> StdResult<_> {
+        Ok(unit_tracker.wrapping_sub(u.as_i256()))      //TODO can wrapping_sub underflow? // 'u' casting to i256 is safe, this has been checked on 'send_asset'
+    })?;
+
+    Ok(response)
+}
+
+// on_send_liquidity_success is not overwritten since we are unable to increase
+// the security limit. This is because it is very expensive to compute the update
+// to the security limit. If someone liquidity swapped a significant amount of assets
+// it is assumed the vault has low liquidity. In these cases, liquidity swaps shouldn't be used.
+
+pub fn on_send_liquidity_failure_amplified(
+    deps: &mut DepsMut,
+    env: Env,
+    info: MessageInfo,
+    channel_id: String,
+    to_account: Binary,
+    u: U256,
+    amount: Uint128,
+    block_number_mod: u32
+) -> Result<Response, ContractError> {  //TODO replace ContractError with NEVER (i.e. it never errors)?
+
+    let response = on_send_liquidity_failure(
+        deps,
+        env,
         info,
         channel_id,
         to_account,
@@ -1218,12 +1275,10 @@ pub fn on_send_liquidity_success_amplified(
         block_number_mod
     )?;
 
-    let used_capacity = USED_LIMIT_CAPACITY.load(deps.storage)?;
-
-    // Minor optimization: avoid storage write if the used capacity is already at zero
-    if used_capacity != U256::zero() {
-        USED_LIMIT_CAPACITY.save(deps.storage, &used_capacity.saturating_sub(u))?;
-    }
+    // Remove the timed-out units from the unit tracker.
+    UNIT_TRACKER.update(deps.storage, |unit_tracker| -> StdResult<_> {
+        Ok(unit_tracker.wrapping_sub(u.as_i256()))      //TODO can wrapping_sub underflow? // 'u' casting to i256 is safe, this has been checked on 'send_liquidity'
+    })?;
 
     Ok(response)
 }

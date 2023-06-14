@@ -12,13 +12,13 @@ use cw20_base::contract::{
 use catalyst_vault_common::ContractError;
 use catalyst_vault_common::state::{
     setup, finish_setup, set_fee_administrator, set_vault_fee, set_governance_fee_share, set_connection,
-    on_send_asset_failure, on_send_liquidity_failure, query_chain_interface, query_setup_master, query_ready, query_only_local, query_assets, query_weights, query_vault_fee, query_governance_fee_share, query_fee_administrator, query_total_escrowed_liquidity, query_total_escrowed_asset, query_asset_escrow, query_liquidity_escrow, query_vault_connection_state, query_factory, query_factory_owner
+    query_chain_interface, query_setup_master, query_ready, query_only_local, query_assets, query_weights, query_vault_fee, query_governance_fee_share, query_fee_administrator, query_total_escrowed_liquidity, query_total_escrowed_asset, query_asset_escrow, query_liquidity_escrow, query_vault_connection_state, query_factory, query_factory_owner, on_send_liquidity_success
 };
 
 use crate::msg::{AmplifiedExecuteMsg, InstantiateMsg, QueryMsg, AmplifiedExecuteExtension};
 use crate::state::{
     initialize_swap_curves, deposit_mixed, withdraw_all, withdraw_mixed, local_swap, send_asset, receive_asset,
-    send_liquidity, receive_liquidity, query_calc_send_asset, query_calc_receive_asset, query_calc_local_swap, query_get_limit_capacity, on_send_asset_success_amplified, on_send_liquidity_success_amplified
+    send_liquidity, receive_liquidity, query_calc_send_asset, query_calc_receive_asset, query_calc_local_swap, query_get_limit_capacity, on_send_asset_success_amplified, on_send_asset_failure_amplified, on_send_liquidity_failure_amplified
 };
 
 
@@ -139,7 +139,7 @@ pub fn execute(
             amount,
             asset,
             block_number_mod
-        } => on_send_asset_failure(
+        } => on_send_asset_failure_amplified(       // ! Use the amplified specific 'on_send_asset_failure'
             &mut deps,
             info,
             channel_id,
@@ -156,7 +156,7 @@ pub fn execute(
             u,
             amount,
             block_number_mod
-        } => on_send_liquidity_success_amplified(    // ! Use the amplified specific 'on_send_asset_success'
+        } => on_send_liquidity_success(
             &mut deps,
             info,
             channel_id,
@@ -172,7 +172,7 @@ pub fn execute(
             u,
             amount,
             block_number_mod
-        } => on_send_liquidity_failure(
+        } => on_send_liquidity_failure_amplified(   // ! Use the amplified specific 'on_send_liquidity_failure'
             &mut deps,
             env,
             info,
