@@ -45,8 +45,8 @@ class PoARelayer:
     def __init__(
         self,
         chains={
-            "evmos": {
-                "url": os.environ["EVMOS_RPC"],
+            "scroll": {
+                "url": os.environ["SCROLL_RPC"],
                 "key": os.environ["PRIVATE_KEY_ROUTER"],
             },
             "cronos": {

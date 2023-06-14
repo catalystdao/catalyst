@@ -10,14 +10,17 @@ from brownie import (WETH9, WCANTO, WCRO, WEVMOS, CatalystIBCInterface,
 
 """
 # one liner deployment
-from scripts.deployCatalyst import Catalyst; cat = Catalyst(acct, "evmos", "scripts/deploy_config.json", True, "WEVMOS",
-WEVMOS); WEVMOS.at(cat.config["tokens"]["evmos"]["WEVMOS"]).deposit({'from': cat.deployer, 'value': 0.8*10**18}); cat.deploy_config()
+from scripts.deployCatalyst import Catalyst; cat = Catalyst(acct, "scroll", "scripts/deploy_config.json", True, "WETH",
+WETH); WETH.at(cat.config["tokens"]["scroll"]["WETH"]).deposit({'from': cat.deployer, 'value': 0.1*10**18}); cat.deploy_config()
 
 # And run
 from scripts.deployCatalyst import Catalyst; cat = Catalyst(acct, "canto", "scripts/deploy_config.json", True, "WCANTO", WCANTO); WCANTO.at(cat.config["tokens"]["canto"]["WCANTO"]).deposit({'from': cat.deployer, 'value': 0.8*10**18}); cat.deploy_config();
 
 # And run
 from scripts.deployCatalyst import Catalyst; cat = Catalyst(acct, "cronos", "scripts/deploy_config.json", True, "WCRO", WCRO); WCRO.at(cat.config["tokens"]["cronos"]["WCRO"]).deposit({'from': cat.deployer, 'value': 0.8*10**18}); cat.deploy_config()
+
+# And run
+from scripts.deployCatalyst import Catalyst; cat = Catalyst(acct, "evmos", "scripts/deploy_config.json", True, "WEVMOS", WEVMOS); WEVMOS.at(cat.config["tokens"]["evmos"]["WEVMOS"]).deposit({'from': cat.deployer, 'value': 0.8*10**18}); cat.deploy_config()
 
 # On all chains, run:
 cat.set_connections()
@@ -248,6 +251,7 @@ class Catalyst:
                     )
                     
                     decimals = 18 if type(self.config["tokens"][self.chain][token]) is str else self.config["tokens"][self.chain][token]["decimals"]
+                    
                     
                     token_container.approve(
                         factory,

@@ -1,51 +1,70 @@
 {
     "channel_pairs": {
-        "000000000000000000000065766d6f73000000000000000000000063616e746f": "000000000000000000000063616e746f000000000000000000000065766d6f73",
-        "0000000000000000000063726f6e6f73000000000000000000000063616e746f": "000000000000000000000063616e746f0000000000000000000063726f6e6f73",
+        "000000000000000000007363726f6c6c000000000000000000000063616e746f": "000000000000000000000063616e746f000000000000000000007363726f6c6c",
+        "000000000000000000000063616e746f000000000000000000007363726f6c6c": "000000000000000000007363726f6c6c000000000000000000000063616e746f",
+        "0000000000000000000063726f6e6f73000000000000000000007363726f6c6c": "000000000000000000007363726f6c6c0000000000000000000063726f6e6f73",
+        "000000000000000000007363726f6c6c0000000000000000000063726f6e6f73": "0000000000000000000063726f6e6f73000000000000000000007363726f6c6c",
         "000000000000000000000063616e746f0000000000000000000063726f6e6f73": "0000000000000000000063726f6e6f73000000000000000000000063616e746f",
+        "0000000000000000000063726f6e6f73000000000000000000000063616e746f": "000000000000000000000063616e746f0000000000000000000063726f6e6f73",
+        "0000000000000000000063726f6e6f73000000000000000000000065766d6f73": "000000000000000000000065766d6f730000000000000000000063726f6e6f73",
         "000000000000000000000065766d6f730000000000000000000063726f6e6f73": "0000000000000000000063726f6e6f73000000000000000000000065766d6f73",
+        "000000000000000000000065766d6f73000000000000000000000063616e746f": "000000000000000000000063616e746f000000000000000000000065766d6f73",
         "000000000000000000000063616e746f000000000000000000000065766d6f73": "000000000000000000000065766d6f73000000000000000000000063616e746f",
-        "0000000000000000000063726f6e6f73000000000000000000000065766d6f73": "000000000000000000000065766d6f730000000000000000000063726f6e6f73"
+        "000000000000000000007363726f6c6c000000000000000000000065766d6f73": "000000000000000000000065766d6f73000000000000000000007363726f6c6c",
+        "000000000000000000000065766d6f73000000000000000000007363726f6c6c": "000000000000000000007363726f6c6c000000000000000000000065766d6f73"
     },
     "chain_config": {
         "canto": {
-            "factory": "0xB6F92935e492Ad705f7Bc29893f36EF2680bDF42",
-            "ibcinterface": "0xeCd1DD2e1b74518dec1066973392012C6d32EfEA",
-            "crosschaininterface": "0x6B89CdCB1b85610D9a51f34314Aa24152BDF3d5a",
-            "volatile_template": "0x51576513D2CD20e4920ef68379019e39a2D1eD4e",
-            "volatile_mathlib": "0x956Bb9FeD6debce359710a0F5c9eb74F3a01dBDD",
-            "amplified_template": "0x4E03620Ad0872Ed6F7fAc592693389D37d6b8b10",
-            "amplified_mathlib": "0xB8126d8270D524C3DB24CA04F07Bc2C33c082842",
-            "describer": "0x1f38f45f7c3031b5e1a793f8af91323cfD335CeA",
-            "describer_registry": "0x272574A9B6a8dD14EB12C67eb2C19b4D1EF60cEA",
-            "router": "0xf59Ec4375C7b9c1D993a2d715e32b64aec7CF5dd",
-            "permit2": "0xA9e04cAAae42a105FA04B6eFE235932caB74f081"
+            "factory": "0xa472DC6D0607d4731386Cb3636dB28686F174C25",
+            "ibcinterface": "0x5351d04bfe7424ad683F0b18dfA417eFdB0de4F7",
+            "crosschaininterface": "0x913ACB7575c6786F55957b91aa1A07aF1d2891cb",
+            "volatile_template": "0xe90fA38D4872F066B6309a3054679e99613BEBf9",
+            "volatile_mathlib": "0x943eF2Beba89DBA28A255211852eaF58e93d75A9",
+            "amplified_template": "0x0D619297847e8466e06a364d0c092A02415AaF26",
+            "amplified_mathlib": "0x18370eaf6bee5b8428a0153EE078A3604BC298F5",
+            "describer": "0x2AcB10a19c5067b83cE40e9ecB3775af0FE8D2f7",
+            "describer_registry": "0x181893d37047B99FCd2e7019CcE9ea87db79Fda8",
+            "router": "0x024d061E6F6F62A744Ca816D5556cCEF8855d517",
+            "permit2": "0x43a222b8687bbB48480F498Fd037CcCF84EC8d25"
         },
         "cronos": {
-            "factory": "0xB6F92935e492Ad705f7Bc29893f36EF2680bDF42",
-            "ibcinterface": "0xeCd1DD2e1b74518dec1066973392012C6d32EfEA",
-            "crosschaininterface": "0x6B89CdCB1b85610D9a51f34314Aa24152BDF3d5a",
-            "volatile_template": "0x51576513D2CD20e4920ef68379019e39a2D1eD4e",
-            "volatile_mathlib": "0x956Bb9FeD6debce359710a0F5c9eb74F3a01dBDD",
-            "amplified_template": "0x4E03620Ad0872Ed6F7fAc592693389D37d6b8b10",
-            "amplified_mathlib": "0xB8126d8270D524C3DB24CA04F07Bc2C33c082842",
-            "describer": "0x1f38f45f7c3031b5e1a793f8af91323cfD335CeA",
-            "describer_registry": "0x272574A9B6a8dD14EB12C67eb2C19b4D1EF60cEA",
-            "router": "0xf59Ec4375C7b9c1D993a2d715e32b64aec7CF5dd",
-            "permit2": "0xA9e04cAAae42a105FA04B6eFE235932caB74f081"
+            "factory": "0xa472DC6D0607d4731386Cb3636dB28686F174C25",
+            "ibcinterface": "0x5351d04bfe7424ad683F0b18dfA417eFdB0de4F7",
+            "crosschaininterface": "0x913ACB7575c6786F55957b91aa1A07aF1d2891cb",
+            "volatile_template": "0xe90fA38D4872F066B6309a3054679e99613BEBf9",
+            "volatile_mathlib": "0x943eF2Beba89DBA28A255211852eaF58e93d75A9",
+            "amplified_template": "0x0D619297847e8466e06a364d0c092A02415AaF26",
+            "amplified_mathlib": "0x18370eaf6bee5b8428a0153EE078A3604BC298F5",
+            "describer": "0x2AcB10a19c5067b83cE40e9ecB3775af0FE8D2f7",
+            "describer_registry": "0x181893d37047B99FCd2e7019CcE9ea87db79Fda8",
+            "router": "0x024d061E6F6F62A744Ca816D5556cCEF8855d517",
+            "permit2": "0x43a222b8687bbB48480F498Fd037CcCF84EC8d25"
         },
         "evmos": {
-            "factory": "0xB6F92935e492Ad705f7Bc29893f36EF2680bDF42",
-            "ibcinterface": "0xeCd1DD2e1b74518dec1066973392012C6d32EfEA",
-            "crosschaininterface": "0x6B89CdCB1b85610D9a51f34314Aa24152BDF3d5a",
-            "volatile_template": "0x51576513D2CD20e4920ef68379019e39a2D1eD4e",
-            "volatile_mathlib": "0x956Bb9FeD6debce359710a0F5c9eb74F3a01dBDD",
-            "amplified_template": "0x4E03620Ad0872Ed6F7fAc592693389D37d6b8b10",
-            "amplified_mathlib": "0xB8126d8270D524C3DB24CA04F07Bc2C33c082842",
-            "describer": "0x1f38f45f7c3031b5e1a793f8af91323cfD335CeA",
-            "describer_registry": "0x272574A9B6a8dD14EB12C67eb2C19b4D1EF60cEA",
-            "router": "0xf59Ec4375C7b9c1D993a2d715e32b64aec7CF5dd",
-            "permit2": "0xA9e04cAAae42a105FA04B6eFE235932caB74f081"
+            "factory": "0xa472DC6D0607d4731386Cb3636dB28686F174C25",
+            "ibcinterface": "0x5351d04bfe7424ad683F0b18dfA417eFdB0de4F7",
+            "crosschaininterface": "0x913ACB7575c6786F55957b91aa1A07aF1d2891cb",
+            "volatile_template": "0xe90fA38D4872F066B6309a3054679e99613BEBf9",
+            "volatile_mathlib": "0x943eF2Beba89DBA28A255211852eaF58e93d75A9",
+            "amplified_template": "0x0D619297847e8466e06a364d0c092A02415AaF26",
+            "amplified_mathlib": "0x18370eaf6bee5b8428a0153EE078A3604BC298F5",
+            "describer": "0x2AcB10a19c5067b83cE40e9ecB3775af0FE8D2f7",
+            "describer_registry": "0x181893d37047B99FCd2e7019CcE9ea87db79Fda8",
+            "router": "0x024d061E6F6F62A744Ca816D5556cCEF8855d517",
+            "permit2": "0x43a222b8687bbB48480F498Fd037CcCF84EC8d25"
+        },
+        "scroll": {
+            "factory": "0xa472DC6D0607d4731386Cb3636dB28686F174C25",
+            "ibcinterface": "0x5351d04bfe7424ad683F0b18dfA417eFdB0de4F7",
+            "crosschaininterface": "0x913ACB7575c6786F55957b91aa1A07aF1d2891cb",
+            "volatile_template": "0xe90fA38D4872F066B6309a3054679e99613BEBf9",
+            "volatile_mathlib": "0x943eF2Beba89DBA28A255211852eaF58e93d75A9",
+            "amplified_template": "0x0D619297847e8466e06a364d0c092A02415AaF26",
+            "amplified_mathlib": "0x18370eaf6bee5b8428a0153EE078A3604BC298F5",
+            "describer": "0x2AcB10a19c5067b83cE40e9ecB3775af0FE8D2f7",
+            "describer_registry": "0x181893d37047B99FCd2e7019CcE9ea87db79Fda8",
+            "router": "0x024d061E6F6F62A744Ca816D5556cCEF8855d517",
+            "permit2": "0x43a222b8687bbB48480F498Fd037CcCF84EC8d25"
         }
     },
     "relayer_address": "0x0e479a0438d25B5b10C2186Bee1256d437b9C582",
@@ -58,12 +77,15 @@
         },
         "evmos": {
             "WEVMOS": "0x0728B93B969f84A248Df7e499358A6733834FD7b"
+        },
+        "scroll": {
+            "WETH": "0xa1ea0b2354f5a344110af2b6ad68e75545009a03"
         }
     },
     "vaults": {
         "Gas Tokens": {
             "canto": {
-                "address": "0xf9d50Fe787Ab4964A527704B5DAB1083B2789601",
+                "address": "0x907461292D40FeF384C02f79dB3B498834fB54B8",
                 "weights": [
                     100
                 ],
@@ -73,7 +95,7 @@
                 }
             },
             "cronos": {
-                "address": "0xf9d50Fe787Ab4964A527704B5DAB1083B2789601",
+                "address": "0x907461292D40FeF384C02f79dB3B498834fB54B8",
                 "weights": [
                     100
                 ],
@@ -82,8 +104,18 @@
                     "WCRO": 0.5
                 }
             },
+            "scroll": {
+                "address": "0x907461292D40FeF384C02f79dB3B498834fB54B8",
+                "weights": [
+                    100
+                ],
+                "fee": 0.005,
+                "tokens": {
+                    "WETH": 0.01
+                }
+            },
             "evmos": {
-                "address": "0xf9d50Fe787Ab4964A527704B5DAB1083B2789601",
+                "address": "0x907461292D40FeF384C02f79dB3B498834fB54B8",
                 "weights": [
                     100
                 ],
