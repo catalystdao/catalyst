@@ -140,12 +140,18 @@ dependencies = [
 name = "catalyst-vault-amplified"
 version = "0.1.0"
 dependencies = [
+ "catalyst-ibc-interface",
+ "catalyst-types",
+ "catalyst-vault-common",
  "cosmwasm-schema",
  "cosmwasm-std",
  "cosmwasm-storage",
  "cw-multi-test",
  "cw-storage-plus",
  "cw2",
+ "cw20",
+ "cw20-base",
+ "fixed-point-math",
  "schemars",
  "serde",
  "thiserror",

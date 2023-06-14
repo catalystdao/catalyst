@@ -5,32 +5,35 @@ from hypothesis.strategies import floats
 from hypothesis import example
 from utils.common_utils import convert_64_bytes_address
 
-from utils.pool_utils import compute_asset_swap_hash
+from utils.vault_utils import compute_asset_swap_hash
 
 
-pytestmark = [pytest.mark.usefixtures("pool_connect_itself"), pytest.mark.no_pool_param]
+pytestmark = [
+    pytest.mark.usefixtures("vault_connect_itself"),
+    pytest.mark.no_vault_param,
+]
 
 # TODO do we want to parametrize the swap_amount? (as it is right now)
 @pytest.mark.no_call_coverage
-@example(swap_amount=0.12)
+@example(swap_amount=0.46)
 @given(
-    swap_amount=floats(min_value=0, max_value=0.5)
-)  # From 0 to 2x the tokens hold by the pool
+    swap_amount=floats(min_value=0, max_value=2)
+)  # From 0 to 2x the tokens hold by the vault
 def test_ibc_ack(
-    channel_id, pool, pool_tokens, ibc_emulator, berg, deployer, swap_amount
+    channel_id, vault, vault_tokens, ibc_emulator, berg, deployer, swap_amount
 ):
 
-    source_token = pool_tokens[0]
-    swap_amount = int(swap_amount * source_token.balanceOf(pool))
+    source_token = vault_tokens[0]
+    swap_amount = int(swap_amount * source_token.balanceOf(vault))
 
     assert source_token.balanceOf(berg) == 0
 
     source_token.transfer(berg, swap_amount, {"from": deployer})
-    source_token.approve(pool, swap_amount, {"from": berg})
+    source_token.approve(vault, swap_amount, {"from": berg})
 
-    tx = pool.sendAsset(
+    tx = vault.sendAsset(
         channel_id,
-        convert_64_bytes_address(pool.address),
+        convert_64_bytes_address(vault.address),
         convert_64_bytes_address(berg.address),
         source_token,
         1,
@@ -52,25 +55,25 @@ def test_ibc_ack(
 
 # TODO do we want to parametrize the swap_amount? (as it is right now)
 @pytest.mark.no_call_coverage
-@example(swap_amount=0.12)
+@example(swap_amount=0.46)
 @given(
-    swap_amount=floats(min_value=0, max_value=0.5)
-)  # From 0 to 2x the tokens hold by the pool
+    swap_amount=floats(min_value=0, max_value=2)
+)  # From 0 to 2x the tokens hold by the vault
 def test_ibc_timeout(
-    channel_id, pool, pool_tokens, ibc_emulator, berg, deployer, swap_amount
+    channel_id, vault, vault_tokens, ibc_emulator, berg, deployer, swap_amount
 ):
 
-    source_token = pool_tokens[0]
-    swap_amount = int(swap_amount * source_token.balanceOf(pool))
+    source_token = vault_tokens[0]
+    swap_amount = int(swap_amount * source_token.balanceOf(vault))
 
     assert source_token.balanceOf(berg) == 0
 
     source_token.transfer(berg, swap_amount, {"from": deployer})
-    source_token.approve(pool, swap_amount, {"from": berg})
+    source_token.approve(vault, swap_amount, {"from": berg})
 
-    tx = pool.sendAsset(
+    tx = vault.sendAsset(
         channel_id,
-        convert_64_bytes_address(pool.address),
+        convert_64_bytes_address(vault.address),
         convert_64_bytes_address(berg.address),
         source_token,
         1,
@@ -89,19 +92,21 @@ def test_ibc_timeout(
     assert source_token.balanceOf(berg) == swap_amount  # Swapper gets fully refunded
 
 
-def test_only_one_response(channel_id, pool, pool_tokens, ibc_emulator, berg, deployer):
+def test_only_one_response(
+    channel_id, vault, vault_tokens, ibc_emulator, berg, deployer
+):
 
-    source_token = pool_tokens[0]
-    swap_amount = int(0.25 * source_token.balanceOf(pool))
+    source_token = vault_tokens[0]
+    swap_amount = int(0.25 * source_token.balanceOf(vault))
 
     assert source_token.balanceOf(berg) == 0
 
     source_token.transfer(berg, swap_amount, {"from": deployer})
-    source_token.approve(pool, swap_amount, {"from": berg})
+    source_token.approve(vault, swap_amount, {"from": berg})
 
-    tx = pool.sendAsset(
+    tx = vault.sendAsset(
         channel_id,
-        convert_64_bytes_address(pool.address),
+        convert_64_bytes_address(vault.address),
         convert_64_bytes_address(berg.address),
         source_token,
         1,
@@ -125,14 +130,6 @@ def test_only_one_response(channel_id, pool, pool_tokens, ibc_emulator, berg, de
         )
 
     with reverts():
-        ibc_emulator.ack(  # Same as timeout
-            tx.events["IncomingMetadata"]["metadata"][0],
-            convert.to_bytes(1, "bytes"),
-            tx.events["IncomingPacket"]["packet"],
-            {"from": deployer},
-        )
-
-    with reverts():
         ibc_emulator.ack(
             tx.events["IncomingMetadata"]["metadata"][0],
             convert.to_bytes(0, "bytes"),
@@ -140,7 +137,7 @@ def test_only_one_response(channel_id, pool, pool_tokens, ibc_emulator, berg, de
             {"from": deployer},
         )
 
-    chain.undo(4)
+    chain.undo(3)
 
     ibc_emulator.ack(
         tx.events["IncomingMetadata"]["metadata"][0],
@@ -157,14 +154,6 @@ def test_only_one_response(channel_id, pool, pool_tokens, ibc_emulator, berg, de
         )
 
     with reverts():
-        ibc_emulator.ack(  # Same as timeout
-            tx.events["IncomingMetadata"]["metadata"][0],
-            convert.to_bytes(1, "bytes"),
-            tx.events["IncomingPacket"]["packet"],
-            {"from": deployer},
-        )
-
-    with reverts():
         ibc_emulator.ack(
             tx.events["IncomingMetadata"]["metadata"][0],
             convert.to_bytes(0, "bytes"),
@@ -176,38 +165,36 @@ def test_only_one_response(channel_id, pool, pool_tokens, ibc_emulator, berg, de
 @example(swap_amount=2)
 @given(
     swap_amount=floats(min_value=0.00001, max_value=5)
-)  # From 0 to 5x the tokens hold by the pool
+)  # From 0 to 10x the tokens hold by the vault
 def test_ibc_timeout_and_ack(
-    channel_id, pool, pool_tokens, ibc_emulator, berg, deployer, swap_amount
+    channel_id, vault, vault_tokens, ibc_emulator, berg, deployer, swap_amount
 ):
 
-    if len(pool_tokens) < 2:
-        pytest.skip("Need at least 2 tokens within a pool to run a local swap.")
+    if len(vault_tokens) < 2:
+        pytest.skip("Need at least 2 tokens within a vault to run a local swap.")
 
-    source_token = pool_tokens[0]
-    target_token = pool_tokens[1]
+    source_token = vault_tokens[0]
+    target_token = vault_tokens[1]
 
-    swap_amount = int(swap_amount * source_token.balanceOf(pool))
+    swap_amount = int(swap_amount * source_token.balanceOf(vault))
 
     assert source_token.balanceOf(berg) == 0
 
     source_token.transfer(berg, swap_amount, {"from": deployer})
-    source_token.approve(pool, swap_amount, {"from": berg})
+    source_token.approve(vault, swap_amount, {"from": berg})
 
-    U = 0
-    for token in pool_tokens:
-        U += (pool._weight(token) * token.balanceOf(pool)) ** (
-            (10**18 - (10**18 - pool._oneMinusAmp())) / 10**18
-        ) * 1000000
+    U = int(
+        693147180559945344 / 2
+    )  # Example value used to test if the swap is corrected.
 
-    both1_12 = pool.calcLocalSwap(source_token, target_token, 10**18)
-    both1_21 = pool.calcLocalSwap(target_token, source_token, 10**18)
-    to1 = pool.calcSendAsset(source_token, 10**18)
-    from1 = pool.calcReceiveAsset(source_token, U)
+    both1_12 = vault.calcLocalSwap(source_token, target_token, 10**18)
+    both1_21 = vault.calcLocalSwap(target_token, source_token, 10**18)
+    to1 = vault.calcSendAsset(source_token, 10**18)
+    from1 = vault.calcReceiveAsset(source_token, U)
 
-    tx1 = pool.sendAsset(
+    tx1 = vault.sendAsset(
         channel_id,
-        convert_64_bytes_address(pool.address),
+        convert_64_bytes_address(vault.address),
         convert_64_bytes_address(berg.address),
         source_token,
         1,
@@ -217,10 +204,10 @@ def test_ibc_timeout_and_ack(
         {"from": berg},
     )
 
-    both2_12 = pool.calcLocalSwap(source_token, target_token, 10**18)
-    both2_21 = pool.calcLocalSwap(target_token, source_token, 10**18)
-    to2 = pool.calcSendAsset(source_token, 10**18)
-    from2 = pool.calcReceiveAsset(source_token, U)
+    both2_12 = vault.calcLocalSwap(source_token, target_token, 10**18)
+    both2_21 = vault.calcLocalSwap(target_token, source_token, 10**18)
+    to2 = vault.calcSendAsset(source_token, 10**18)
+    from2 = vault.calcReceiveAsset(source_token, U)
 
     assert both1_12 > both2_12
     assert both1_21 == both2_21
@@ -233,10 +220,10 @@ def test_ibc_timeout_and_ack(
         {"from": berg},
     )
 
-    both3_12 = pool.calcLocalSwap(source_token, target_token, 10**18)
-    both3_21 = pool.calcLocalSwap(target_token, source_token, 10**18)
-    to3 = pool.calcSendAsset(source_token, 10**18)
-    from3 = pool.calcReceiveAsset(source_token, U)
+    both3_12 = vault.calcLocalSwap(source_token, target_token, 10**18)
+    both3_21 = vault.calcLocalSwap(target_token, source_token, 10**18)
+    to3 = vault.calcSendAsset(source_token, 10**18)
+    from3 = vault.calcReceiveAsset(source_token, U)
 
     assert both1_12 == both3_12
     assert both1_21 == both3_21
@@ -245,17 +232,17 @@ def test_ibc_timeout_and_ack(
 
     chain.undo()
 
-    txe = ibc_emulator.ack(  # Same as timeout
+    txe = ibc_emulator.ack(
         tx1.events["IncomingMetadata"]["metadata"][0],
         convert.to_bytes(1, "bytes"),
         tx1.events["IncomingPacket"]["packet"],
         {"from": berg},
     )
 
-    both3_12 = pool.calcLocalSwap(source_token, target_token, 10**18)
-    both3_21 = pool.calcLocalSwap(target_token, source_token, 10**18)
-    to3 = pool.calcSendAsset(source_token, 10**18)
-    from3 = pool.calcReceiveAsset(source_token, U)
+    both3_12 = vault.calcLocalSwap(source_token, target_token, 10**18)
+    both3_21 = vault.calcLocalSwap(target_token, source_token, 10**18)
+    to3 = vault.calcSendAsset(source_token, 10**18)
+    from3 = vault.calcReceiveAsset(source_token, U)
 
     assert both1_12 == both3_12
     assert both1_21 == both3_21
@@ -271,10 +258,10 @@ def test_ibc_timeout_and_ack(
         {"from": berg},
     )
 
-    both3_12 = pool.calcLocalSwap(source_token, target_token, 10**18)
-    both3_21 = pool.calcLocalSwap(target_token, source_token, 10**18)
-    to3 = pool.calcSendAsset(source_token, 10**18)
-    from3 = pool.calcReceiveAsset(source_token, U)
+    both3_12 = vault.calcLocalSwap(source_token, target_token, 10**18)
+    both3_21 = vault.calcLocalSwap(target_token, source_token, 10**18)
+    to3 = vault.calcSendAsset(source_token, 10**18)
+    from3 = vault.calcReceiveAsset(source_token, U)
 
     assert both1_12 > both3_12
     assert both1_21 < both3_21
@@ -282,21 +269,21 @@ def test_ibc_timeout_and_ack(
     assert from1 < from3
 
 
-def test_ibc_ack_event(channel_id, pool, pool_tokens, ibc_emulator, berg, deployer):
+def test_ibc_ack_event(channel_id, vault, vault_tokens, ibc_emulator, berg, deployer):
     """
-    Test the OnSendAssetSuccess event gets fired.
+    Test the SendAssetSuccess event gets fired.
     """
 
     swap_amount = 10**8
 
-    source_token = pool_tokens[0]
+    source_token = vault_tokens[0]
 
     source_token.transfer(berg, swap_amount, {"from": deployer})
-    source_token.approve(pool, swap_amount, {"from": berg})
+    source_token.approve(vault, swap_amount, {"from": berg})
 
-    tx = pool.sendAsset(
+    tx = vault.sendAsset(
         channel_id,
-        convert_64_bytes_address(pool.address),
+        convert_64_bytes_address(vault.address),
         convert_64_bytes_address(berg.address),
         source_token,
         1,
@@ -313,30 +300,32 @@ def test_ibc_ack_event(channel_id, pool, pool_tokens, ibc_emulator, berg, deploy
         {"from": deployer},
     )
 
-    ack_event = txe.events["OnSendAssetSuccess"]
+    ack_event = txe.events["SendAssetSuccess"]
 
     assert ack_event["toAccount"].hex() == convert_64_bytes_address(berg.address).hex()
-    assert ack_event["U"] == tx.return_value
+    assert ack_event["Units"] == tx.return_value
     assert ack_event["escrowAmount"] == swap_amount
     assert ack_event["escrowToken"] == source_token.address
     assert ack_event["blockNumberMod"] == tx.block_number
 
 
-def test_ibc_timeout_event(channel_id, pool, pool_tokens, ibc_emulator, berg, deployer):
+def test_ibc_timeout_event(
+    channel_id, vault, vault_tokens, ibc_emulator, berg, deployer
+):
     """
     Test the SendAssetFailure event gets fired.
     """
 
     swap_amount = 10**8
 
-    source_token = pool_tokens[0]
+    source_token = vault_tokens[0]
 
     source_token.transfer(berg, swap_amount, {"from": deployer})
-    source_token.approve(pool, swap_amount, {"from": berg})
+    source_token.approve(vault, swap_amount, {"from": berg})
 
-    tx = pool.sendAsset(
+    tx = vault.sendAsset(
         channel_id,
-        convert_64_bytes_address(pool.address),
+        convert_64_bytes_address(vault.address),
         convert_64_bytes_address(berg.address),
         source_token,
         1,
@@ -357,7 +346,7 @@ def test_ibc_timeout_event(channel_id, pool, pool_tokens, ibc_emulator, berg, de
     assert (
         timeout_event["toAccount"].hex() == convert_64_bytes_address(berg.address).hex()
     )
-    assert timeout_event["U"] == tx.return_value
+    assert timeout_event["Units"] == tx.return_value
     assert timeout_event["escrowAmount"] == swap_amount
     assert timeout_event["escrowToken"] == source_token.address
     assert timeout_event["blockNumberMod"] == tx.block_number

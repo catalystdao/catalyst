@@ -19,9 +19,9 @@ use catalyst_ibc_interface::msg::ExecuteMsg as InterfaceExecuteMsg;
 
 use crate::{calculation_helpers::{calc_price_curve_area, calc_price_curve_limit, calc_combined_price_curves, calc_price_curve_limit_share}, msg::{TargetWeightsResponse, WeightsUpdateFinishTimestampResponse}, event::set_weights_event};
 
-pub const TARGET_WEIGHTS: Item<Vec<Uint64>> = Item::new("catalyst-vault-target-weights");       //TODO use mapping instead? (see also WEIGHTS definition)
-pub const WEIGHT_UPDATE_TIMESTAMP: Item<Uint64> = Item::new("catalyst-vault-weight-update-timestamp");
-pub const WEIGHT_UPDATE_FINISH_TIMESTAMP: Item<Uint64> = Item::new("catalyst-vault-weight-update-finish-timestamp");
+pub const TARGET_WEIGHTS: Item<Vec<Uint64>> = Item::new("catalyst-vault-volatile-target-weights");       //TODO use mapping instead? (see also WEIGHTS definition)
+pub const WEIGHT_UPDATE_TIMESTAMP: Item<Uint64> = Item::new("catalyst-vault-volatile-weight-update-timestamp");
+pub const WEIGHT_UPDATE_FINISH_TIMESTAMP: Item<Uint64> = Item::new("catalyst-vault-volatile-weight-update-finish-timestamp");
 
 const MIN_ADJUSTMENT_TIME_NANOS    : Uint64 = Uint64::new(7 * 24 * 60 * 60 * 1000000000);     // 7 days
 const MAX_ADJUSTMENT_TIME_NANOS    : Uint64 = Uint64::new(365 * 24 * 60 * 60 * 1000000000);   // 1 year

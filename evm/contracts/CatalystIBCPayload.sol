@@ -7,10 +7,10 @@ pragma solidity ^0.8.16;
 //
 // Common Payload (beginning)
 //    CONTEXT               0   (1 byte)
-//    + FROM_POOL_LENGTH    1   (1 byte)
-//    + FROM_POOL           2   (64 bytes)
-//    + TO_POOL_LENGTH      66  (1 byte)
-//    + TO_POOL             67  (64 bytes)
+//    + FROM_VAULT_LENGTH   1   (1 byte)
+//    + FROM_VAULT          2   (64 bytes)
+//    + TO_VAULT_LENGTH     66  (1 byte)
+//    + TO_VAULT            67  (64 bytes)
 //    + TO_ACCOUNT_LENGTH   131 (1 byte)
 //    + TO_ACCOUNT          132 (64 bytes)
 //    + UNITS               196 (32 bytes)
@@ -47,15 +47,15 @@ bytes1 constant CTX1_LIQUIDITY_SWAP = 0x01;
 
 uint constant CONTEXT_POS           = 0;
 
-uint constant FROM_POOL_LENGTH_POS  = 1;
-uint constant FROM_POOL_START       = 2;
-uint constant FROM_POOL_START_EVM   = 46;  // If the address is an EVM address, this is the start
-uint constant FROM_POOL_END         = 66;
+uint constant FROM_VAULT_LENGTH_POS = 1;
+uint constant FROM_VAULT_START      = 2;
+uint constant FROM_VAULT_START_EVM  = 46;  // If the address is an EVM address, this is the start
+uint constant FROM_VAULT_END        = 66;
 
-uint constant TO_POOL_LENGTH_POS    = 66;
-uint constant TO_POOL_START         = 67;
-uint constant TO_POOL_START_EVM     = 111;  // If the address is an EVM address, this is the start
-uint constant TO_POOL_END           = 131;
+uint constant TO_VAULT_LENGTH_POS   = 66;
+uint constant TO_VAULT_START        = 67;
+uint constant TO_VAULT_START_EVM    = 111;  // If the address is an EVM address, this is the start
+uint constant TO_VAULT_END          = 131;
 
 uint constant TO_ACCOUNT_LENGTH_POS = 131;
 uint constant TO_ACCOUNT_START      = 132;
@@ -94,8 +94,8 @@ uint constant CTX0_DATA_START            = 364;
 
 // CTX1 Liquidity Swap Payload **************************************************************************************************
 
-uint constant CTX1_MIN_POOL_TOKEN_START  = 228;
-uint constant CTX1_MIN_POOL_TOKEN_END    = 260;
+uint constant CTX1_MIN_VAULT_TOKEN_START = 228;
+uint constant CTX1_MIN_VAULT_TOKEN_END   = 260;
 
 uint constant CTX1_MIN_REFERENCE_START   = 260;
 uint constant CTX1_MIN_REFERENCE_END     = 292;

@@ -18,7 +18,7 @@ else
 fi
 
 echo Instantiate factory
-echo $PASSWORD_LOCAL | wasmd tx wasm instantiate $FACTORY_CODE_ID '{"default_governance_fee_share":0}' --from $WALLET_NAME $TX_FLAG --label factory -b block --no-admin -y &> /dev/null
+echo $PASSWORD_LOCAL | wasmd tx wasm instantiate $FACTORY_CODE_ID '{"default_governance_fee_share":"0"}' --from $WALLET_NAME $TX_FLAG --label factory -b block --no-admin -y &> /dev/null
 export FACTORY_ADDRESS=$(wasmd query wasm list-contract-by-code $FACTORY_CODE_ID --output json | jq -r '.contracts[-1]')
 echo -n "Factory address: "
 echo $FACTORY_ADDRESS
