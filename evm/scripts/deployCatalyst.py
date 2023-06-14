@@ -11,7 +11,7 @@ from brownie import (WETH9, WCANTO, WCRO, WEVMOS, CatalystIBCInterface,
 """
 # one liner deployment
 from scripts.deployCatalyst import Catalyst; cat = Catalyst(acct, "scroll", "scripts/deploy_config.json", True, "WETH",
-WETH); WETH.at(cat.config["tokens"]["scroll"]["WETH"]).deposit({'from': cat.deployer, 'value': 0.1*10**18}); cat.deploy_config()
+WETH9); WETH9.at(cat.config["tokens"]["scroll"]["WETH"]).deposit({'from': cat.deployer, 'value': 0.1*10**18}); cat.deploy_config()
 
 # And run
 from scripts.deployCatalyst import Catalyst; cat = Catalyst(acct, "canto", "scripts/deploy_config.json", True, "WCANTO", WCANTO); WCANTO.at(cat.config["tokens"]["canto"]["WCANTO"]).deposit({'from': cat.deployer, 'value': 0.8*10**18}); cat.deploy_config();
@@ -294,13 +294,14 @@ class Catalyst:
             # Check that the vault hasn't been set as ready
             vaultContainer = CatalystVaultVolatile if self.config["vaults"][vault].get("amplification") is None else CatalystVaultAmplified
             vault_container = vaultContainer.at(self.config["vaults"][vault][self.chain]["address"])
-            assert vault_container.ready() is False, "Vault heas already been finalised"
+            if (vault_container.ready() is True): continue
         
         for vault in self.config["vaults"].keys():
             if self.chain not in self.config["vaults"][vault].keys():
                 continue
             vaultContainer = CatalystVaultVolatile if self.config["vaults"][vault].get("amplification") is None else CatalystVaultAmplified
             vault_container = vaultContainer.at(self.config["vaults"][vault][self.chain]["address"])
+            if (vault_container.ready() is True): continue
             assert vault_container.ready() is False, "Vault has already been finalised"
             
             for chain in self.config["vaults"][vault].keys():

@@ -124,6 +124,50 @@
                     "WEVMOS": 0.5
                 }
             }
+        },
+        "Gas CCS": {
+            "canto": {
+                "address": "0xF46ef4AF0E96a804171f2bDc977797987196f4Ab",
+                "weights": [
+                    100
+                ],
+                "fee": 0.005,
+                "tokens": {
+                    "WCANTO": 0.5
+                }
+            },
+            "cronos": {
+                "address": "0xF46ef4AF0E96a804171f2bDc977797987196f4Ab",
+                "weights": [
+                    100
+                ],
+                "fee": 0.005,
+                "tokens": {
+                    "WCRO": 0.5
+                }
+            },
+            "scroll": {
+                "address": "0xF46ef4AF0E96a804171f2bDc977797987196f4Ab",
+                "weights": [
+                    100
+                ],
+                "fee": 0.005,
+                "tokens": {
+                    "WETH": 0.01
+                }
+            }
+        },
+        "EVMOS single": {
+            "evmos": {
+                "address": "",
+                "weights": [
+                    100
+                ],
+                "fee": 0.005,
+                "tokens": {
+                    "WEVMOS": 0
+                }
+            }
         }
     }
 }
