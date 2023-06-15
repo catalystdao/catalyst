@@ -508,9 +508,7 @@ pub fn local_swap(
     min_out: Uint128
 ) -> Result<Response, ContractError> {
 
-    todo!();
-
-    // update_weights(deps, env.block.time.nanos().into())?;
+    //TODO _updateAmplification
 
     let vault_fee: Uint128 = mul_wad_down(            //TODO alternative to not have to use U256 conversion? (or wrapper?)
         U256::from(amount.u128()),
