@@ -600,14 +600,12 @@ pub fn send_asset(
     calldata: Binary
 ) -> Result<Response, ContractError> {
 
-    todo!();
-
     // Only allow connected vaults
     if !is_connected(&deps.as_ref(), &channel_id, to_vault.clone()) {
         return Err(ContractError::VaultNotConnected { channel_id, vault: to_vault })
     }
 
-    // update_weights(deps, env.block.time.nanos().into())?;
+    //TODO _updateAmplification
 
     let vault_fee: Uint128 = mul_wad_down(            //TODO alternative to not have to use U256 conversion? (or wrapper?)
         U256::from(amount.u128()),
@@ -620,6 +618,18 @@ pub fn send_asset(
         env.clone(),
         &from_asset,
         amount - vault_fee
+    )?;
+
+    //TODO create helper function to update the unit tracker?
+    UNIT_TRACKER.update(
+        deps.storage,
+        |unit_tracker| -> StdResult<_> {
+            unit_tracker
+            .checked_add(u.try_into()?)  // Safely casting into I256 is also very important for 
+                                        // 'on_send_asset_success', as it requires this same casting 
+                                        // and must never revert.
+            .map_err(|err| err.into())
+        }
     )?;
 
     let block_number = env.block.height as u32;
