@@ -530,6 +530,35 @@ pub fn local_swap(
         return Err(ContractError::ReturnInsufficient { out, min_out });
     }
 
+    // Update the max limit capacity, as for amplified vaults it is based on the vault asset balances
+    let assets = ASSETS.load(deps.storage)?;
+    let weights = WEIGHTS.load(deps.storage)?;
+    let from_asset_index: usize = get_asset_index(&assets, from_asset.as_ref())?;
+    let from_weight = weights.get(from_asset_index).unwrap();
+    let to_asset_index: usize = get_asset_index(&assets, to_asset.as_ref())?;
+    let to_weight = weights.get(to_asset_index).unwrap();
+    let limit_capacity_increase = U256::from(amount).wrapping_mul(U256::from(*from_weight));    // wrapping_mul is overflow safe as U256.max >= Uint128.max * u64.max
+    let limit_capacity_decrease = U256::from(out).wrapping_mul(U256::from(*from_weight));    // wrapping_mul is overflow safe as U256.max >= Uint128.max * u64.max
+    MAX_LIMIT_CAPACITY.update(
+        deps.storage,
+        |max_limit_capacity| -> StdResult<_> {
+            if limit_capacity_decrease > limit_capacity_increase {
+                max_limit_capacity
+                    .checked_sub(
+                        limit_capacity_decrease.wrapping_sub(limit_capacity_increase)
+                    )
+                    .map_err(|err| err.into())
+            }
+            else {
+                max_limit_capacity
+                    .checked_add(
+                        limit_capacity_increase.wrapping_sub(limit_capacity_decrease)
+                    )
+                    .map_err(|err| err.into())
+            }
+        }
+    )?;
+
     // Build message to transfer input assets to the vault
     let transfer_from_asset_msg = CosmosMsg::Wasm(
         cosmwasm_std::WasmMsg::Execute {
