@@ -47,6 +47,7 @@ class PoARelayer:
         chains={
             "scroll": {
                 "url": os.environ["SCROLL_RPC"],
+                "middleware": geth_poa_middleware,
                 "key": os.environ["PRIVATE_KEY_ROUTER"],
             },
             "cronos": {
@@ -114,15 +115,19 @@ class PoARelayer:
                 {
                     "from": relayer_address,
                     "nonce": self.chains[target_chain]["nonce"]
+                } if target_chain != "scroll" else {
+                    "from": relayer_address,
+                    "nonce": self.chains[target_chain]["nonce"],
+                    "gasPrice": 1000000
                 }
             )
-            self.chains[target_chain]["nonce"] = self.chains[target_chain]["nonce"] + 1
 
             signed_txn = target_w3.eth.account.sign_transaction(
                 tx, private_key=self.chains[target_chain]["key"]
             )
 
             tx_hash = target_w3.eth.send_raw_transaction(signed_txn.rawTransaction)
+            self.chains[target_chain]["nonce"] = self.chains[target_chain]["nonce"] + 1
 
             logging.info(f"Execute: {target_chain, Web3.toHex(tx_hash)}")
 
@@ -138,13 +143,17 @@ class PoARelayer:
                 {
                     "from": relayer_address,
                     "nonce": self.chains[from_chain]["nonce"],
+                } if from_chain != "scroll" else {
+                    "from": relayer_address,
+                    "nonce": self.chains[from_chain]["nonce"],
+                    "gasPrice": 1000000
                 }
             )
-            self.chains[from_chain]["nonce"] = self.chains[from_chain]["nonce"] + 1
             signed_txn = sending_w3.eth.account.sign_transaction(
                 tx_timeout, private_key=self.chains[from_chain]["key"]
             )
             tx_hash = sending_w3.eth.send_raw_transaction(signed_txn.rawTransaction)
+            self.chains[from_chain]["nonce"] = self.chains[from_chain]["nonce"] + 1
             logging.error("error -> Timeout:", from_chain, Web3.toHex(tx_hash))
 
     def callback(self, from_chain, event, tx_hash):
@@ -165,13 +174,17 @@ class PoARelayer:
                 {
                     "from": relayer_address,
                     "nonce": self.chains[from_chain]["nonce"],
+                } if from_chain != "scroll" else {
+                    "from": relayer_address,
+                    "nonce": self.chains[from_chain]["nonce"],
+                    "gasPrice": 1000000
                 }
             )
-            self.chains[from_chain]["nonce"] = self.chains[from_chain]["nonce"] + 1
             signed_txn = sending_w3.eth.account.sign_transaction(
                 tx_timeout, private_key=self.chains[from_chain]["key"]
             )
             tx_hash = sending_w3.eth.send_raw_transaction(signed_txn.rawTransaction)
+            self.chains[from_chain]["nonce"] = self.chains[from_chain]["nonce"] + 1
             logging.info(f"Timeout: {from_chain, Web3.toHex(tx_hash)}")
         else:
             ack = sending_ibcinterface.events.Acknowledgement().processReceipt(receipt)[
@@ -183,13 +196,17 @@ class PoARelayer:
                 {
                     "from": relayer_address,
                     "nonce": self.chains[from_chain]["nonce"],
+                } if from_chain != "scroll" else {
+                    "from": relayer_address,
+                    "nonce": self.chains[from_chain]["nonce"],
+                    "gasPrice": 1000000
                 }
             )
-            self.chains[from_chain]["nonce"] = self.chains[from_chain]["nonce"] + 1
             signed_txn = sending_w3.eth.account.sign_transaction(
                 tx_ack, private_key=self.chains[from_chain]["key"]
             )
             tx_hash = sending_w3.eth.send_raw_transaction(signed_txn.rawTransaction)
+            self.chains[from_chain]["nonce"] = self.chains[from_chain]["nonce"] + 1
             logging.info(f"Ack:{from_chain, Web3.toHex(tx_hash)}")
 
     def compute_sendAsset_identifier(self, log):
