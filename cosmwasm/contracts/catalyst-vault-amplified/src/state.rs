@@ -3,7 +3,7 @@ use cw20::{Cw20ExecuteMsg, Cw20QueryMsg, BalanceResponse};
 use cw20_base::{contract::{execute_mint, execute_burn}};
 use cw_storage_plus::Item;
 use catalyst_types::{U256, AsI256, I256, AsU256, u256};
-use fixed_point_math::{LN2, mul_wad_down, self, ln_wad, WAD, exp_wad};
+use fixed_point_math::{LN2, mul_wad_down, self, ln_wad, WAD, exp_wad, pow_wad, WADWAD};
 use catalyst_vault_common::{
     state::{
         ASSETS, MAX_ASSETS, WEIGHTS, INITIAL_MINT_AMOUNT, VAULT_FEE, MAX_LIMIT_CAPACITY, USED_LIMIT_CAPACITY, CHAIN_INTERFACE,
@@ -178,7 +178,9 @@ pub fn deposit_mixed(
     min_out: Uint128
 ) -> Result<Response, ContractError> {
 
-    todo!();
+    //TODO update_amplification
+
+    let one_minus_amp = ONE_MINUS_AMP.load(deps.storage)?;
 
     let assets = ASSETS.load(deps.storage)?;
     let weights = WEIGHTS.load(deps.storage)?;
@@ -192,47 +194,108 @@ pub fn deposit_mixed(
     }
 
     // Compute how much 'units' the assets are worth.
-    // Iterate over the assets, weights and deposit_amounts)
-    let u = assets.iter()
-        .zip(weights)                           // zip: weights.len() == assets.len()
-        .zip(&deposit_amounts)                  // zip: deposit_amounts.len() == assets.len()
-        .try_fold(U256::zero(), |acc, ((asset, weight), deposit_amount)| {
+    // Iterate over the assets, weights and deposit_amounts
+    let mut weighted_asset_balance_ampped_sum: U256 = U256::zero();
+    let mut weighted_deposit_sum: U256 = U256::zero();          // NOTE: named 'assetDepositSum' on EVM
 
-            // Save gas if the user provides no tokens for the specific asset
-            if deposit_amount.is_zero() {
-                return Ok(acc);
-            }
+    let u = assets.iter()                                 // EVM mismatch: variable is *signed* on EVM (because of stack issues)
+        .zip(weights)                                           // zip: weights.len() == assets.len()
+        .zip(&deposit_amounts)                                  // zip: deposit_amounts.len() == assets.len()
+        .try_fold(U256::zero(), |units_acc, ((asset, weight), deposit_amount)| {
 
             let vault_asset_balance = deps.querier.query_wasm_smart::<BalanceResponse>(
                 asset,
                 &Cw20QueryMsg::Balance { address: env.contract.address.to_string() }
             )?.balance;
 
-            acc.checked_add(
-                calc_price_curve_area(
-                    U256::from(deposit_amount.u128()),
-                    U256::from(vault_asset_balance.u128()),
-                    U256::from(weight.clone())
-                )?
-            ).map_err(|_| ContractError::ArithmeticError {})
-        })?;
+            let weighted_asset_balance = U256::from(vault_asset_balance)
+                .wrapping_mul(weight.into());           // 'wrapping_mul' is safe as U256.max >= Uint128.max * u64.max
+
+            let weighted_deposit = U256::from(*deposit_amount)
+                .wrapping_mul(weight.into());           // 'wrapping_mul' is safe as U256.max >= Uint128.max * u64.max
+
+
+            // Compute wa^(1-k) (WAD). Handle the case a=0 separatelly, as the implemented numerical calculation
+            // will fail for that case.
+            let weighted_asset_balance_ampped;    // EVM mismatch: variable is *signed* on EVM (because of stack issues)
+                                                        // NOTE: named 'wab' on EVM
+            if weighted_asset_balance.is_zero() {
+                weighted_asset_balance_ampped = U256::zero();
+            }
+            else {
+                weighted_asset_balance_ampped = pow_wad(
+                    weighted_asset_balance.wrapping_mul(WAD).as_i256(), // 'wrapping_mul' is safe as U256.max >= Uint128.max * u64.max * WAD
+                    one_minus_amp
+                )?.as_u256();
+                weighted_asset_balance_ampped_sum = weighted_asset_balance_ampped_sum.checked_add(weighted_asset_balance_ampped)?;
+            }
+
+            // Stop if the user provides no tokens for the specific asset (save gas)
+            if deposit_amount.is_zero() {
+                return Ok(units_acc);
+            }
+
+            // Cache the weighted deposit sum to later update the security limit
+            weighted_deposit_sum = weighted_deposit_sum.checked_add(weighted_deposit)?;
+
+            // Compute the units corresponding to the asset in question: F(a+input) - F(a)
+            // where F(x) = x^(1-k)
+            let units = pow_wad(
+                weighted_asset_balance
+                    .checked_add(weighted_deposit)?
+                    .checked_mul(WAD)?
+                    .as_i256(),
+                one_minus_amp
+            )?.as_u256().wrapping_sub(weighted_asset_balance_ampped);
+
+            units_acc
+                .checked_add(units)
+                .map_err(|_| ContractError::ArithmeticError {})
+        }
+    )?;
+
+    // Update the security limit variables  //TODO create helper functions for these?
+    MAX_LIMIT_CAPACITY.update(
+        deps.storage,
+        |max_limit_capacity| -> StdResult<_> {
+            max_limit_capacity
+                .checked_add(weighted_deposit_sum)
+                .map_err(|err| err.into())
+        }
+    )?;
+
+    USED_LIMIT_CAPACITY.update(
+        deps.storage,
+        |used_limit_capacity| -> StdResult<_> {
+            used_limit_capacity
+                .checked_add(weighted_deposit_sum)          // ! Addition must be checked as 'used_limit_capacity' may be larger than 'max_limit_capacity'
+                .map_err(|err| err.into())
+        }
+    )?;
+
+    // Compute the reference liquidity
+    let weighted_alpha_0_ampped: U256 = weighted_asset_balance_ampped_sum.as_i256()
+        .wrapping_sub(UNIT_TRACKER.load(deps.storage)?)
+        .as_u256()
+        .div(U256::from(assets.len() as u64));
+
+    //TODO check for intU >= 0 as in EVM?
 
     // Subtract the vault fee from U to prevent deposit and withdrawals being employed as a method of swapping.
     // To recude costs, the governance fee is not taken. This is not an issue as swapping via this method is 
     // disincentivized by its higher gas costs.
     let vault_fee = VAULT_FEE.load(deps.storage)?;
-    let u = fixed_point_math::mul_wad_down(u, fixed_point_math::WAD - U256::from(vault_fee))?;
+    let u = fixed_point_math::mul_wad_down(u, fixed_point_math::WAD.wrapping_sub(vault_fee.into()))?;   //TODO EVM mismatch
 
     // Do not include the 'escrowed' vault tokens in the total supply of vault tokens (return less)
-    let effective_supply = U256::from(total_supply(deps.as_ref())?.u128());
-
-    // Derive the weight sum (w_sum) from the security limit capacity
-    let w_sum = MAX_LIMIT_CAPACITY.load(deps.storage)? / fixed_point_math::LN2;
+    let effective_supply = U256::from(total_supply(deps.as_ref())?);
 
     // Compute the vault tokens to be minted.
-    let out = fixed_point_math::mul_wad_down(
-        effective_supply,                                                       // Note 'effective_supply' is not WAD, hence result will not be either
-        calc_price_curve_limit_share(u, w_sum)?
+    let out: Uint128 = calc_price_curve_limit_share(
+        u,
+        effective_supply,
+        weighted_alpha_0_ampped.checked_mul((assets.len() as u64).into())?,
+        WADWAD / one_minus_amp
     )?.try_into()?;
 
     // Check that the minimum output is honoured.
