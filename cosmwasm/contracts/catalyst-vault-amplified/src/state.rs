@@ -725,8 +725,6 @@ pub fn receive_asset(
     calldata: Option<Binary>
 ) -> Result<Response, ContractError> {
 
-    todo!();
-
     // Only allow the 'chain_interface' to invoke this function
     if Some(info.sender) != CHAIN_INTERFACE.load(deps.storage)? {
         return Err(ContractError::Unauthorized {});
@@ -737,22 +735,47 @@ pub fn receive_asset(
         return Err(ContractError::VaultNotConnected { channel_id, vault: from_vault })
     }
 
-    // update_weights(deps, env.block.time.nanos().into())?;
+    //TODO _updateAmplification
 
     let assets = ASSETS.load(deps.storage)?;
     let to_asset = assets
         .get(to_asset_index as usize)
         .ok_or(ContractError::AssetNotFound {})?
         .clone();
+    let weights = WEIGHTS.load(deps.storage)?;
+    let to_weight = weights
+        .get(to_asset_index as usize)
+        .unwrap()                       // The weight should always exist for a given vault asset
+        .clone();
 
-    update_limit_capacity(deps, env.block.time, u)?;
 
     let out = calc_receive_asset(&deps.as_ref(), env.clone(), to_asset.as_str(), u)?;
+
+    // Update the max limit capacity and the used limit capacity
+    let max_limit_capacity_delta = U256::from(out).checked_mul(U256::from(to_weight))?;
+    MAX_LIMIT_CAPACITY.update(
+        deps.storage,
+        |max_limit_capacity| -> StdResult<_> {
+            max_limit_capacity
+                .checked_sub(max_limit_capacity_delta)
+                .map_err(|err| err.into())
+        }
+    )?;
+    update_limit_capacity(deps, env.block.time, max_limit_capacity_delta)?;
     
 
     if min_out > out {
         return Err(ContractError::ReturnInsufficient { out, min_out });
     }
+
+    UNIT_TRACKER.update(
+        deps.storage,
+        |unit_tracker| -> StdResult<_> {
+            unit_tracker
+                .checked_sub(u.try_into()?)
+                .map_err(|err| err.into())
+        }
+    )?;
 
     // Build message to transfer output assets to to_account
     let transfer_to_asset_msg = CosmosMsg::Wasm(
