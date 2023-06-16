@@ -195,13 +195,14 @@ pub fn deposit_mixed(
 
     // Compute how much 'units' the assets are worth.
     // Iterate over the assets, weights and deposit_amounts
+    let mut units: U256 = U256::zero();                             // EVM mismatch: variable is *signed* on EVM (because of stack issues)
     let mut weighted_asset_balance_ampped_sum: U256 = U256::zero();
-    let mut weighted_deposit_sum: U256 = U256::zero();          // NOTE: named 'assetDepositSum' on EVM
+    let mut weighted_deposit_sum: U256 = U256::zero();              // NOTE: named 'assetDepositSum' on EVM
 
-    let u = assets.iter()                                 // EVM mismatch: variable is *signed* on EVM (because of stack issues)
-        .zip(weights)                                           // zip: weights.len() == assets.len()
-        .zip(&deposit_amounts)                                  // zip: deposit_amounts.len() == assets.len()
-        .try_fold(U256::zero(), |units_acc, ((asset, weight), deposit_amount)| {
+    assets.iter()
+        .zip(weights)                   // zip: weights.len() == assets.len()
+        .zip(&deposit_amounts)          // zip: deposit_amounts.len() == assets.len()
+        .try_for_each(|((asset, weight), deposit_amount)| {
 
             let vault_asset_balance = deps.querier.query_wasm_smart::<BalanceResponse>(
                 asset,
@@ -232,7 +233,7 @@ pub fn deposit_mixed(
 
             // Stop if the user provides no tokens for the specific asset (save gas)
             if deposit_amount.is_zero() {
-                return Ok(units_acc);
+                return Ok(());
             }
 
             // Cache the weighted deposit sum to later update the security limit
@@ -240,7 +241,7 @@ pub fn deposit_mixed(
 
             // Compute the units corresponding to the asset in question: F(a+input) - F(a)
             // where F(x) = x^(1-k)
-            let units = pow_wad(
+            let units_for_asset = pow_wad(
                 weighted_asset_balance
                     .checked_add(weighted_deposit)?
                     .checked_mul(WAD)?
@@ -248,9 +249,9 @@ pub fn deposit_mixed(
                 one_minus_amp
             )?.as_u256().wrapping_sub(weighted_asset_balance_ampped);
 
-            units_acc
-                .checked_add(units)
-                .map_err(|_| ContractError::ArithmeticError {})
+            units.checked_add(units_for_asset)?;
+
+            Ok(())
         }
     )?;
 
