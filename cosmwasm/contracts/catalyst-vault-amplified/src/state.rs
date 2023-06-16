@@ -202,7 +202,7 @@ pub fn deposit_mixed(
     assets.iter()
         .zip(weights)                   // zip: weights.len() == assets.len()
         .zip(&deposit_amounts)          // zip: deposit_amounts.len() == assets.len()
-        .try_for_each(|((asset, weight), deposit_amount)| {
+        .try_for_each(|((asset, weight), deposit_amount)| -> Result<_, ContractError> {
 
             let vault_asset_balance = deps.querier.query_wasm_smart::<BalanceResponse>(
                 asset,
@@ -286,14 +286,14 @@ pub fn deposit_mixed(
     // To recude costs, the governance fee is not taken. This is not an issue as swapping via this method is 
     // disincentivized by its higher gas costs.
     let vault_fee = VAULT_FEE.load(deps.storage)?;
-    let u = fixed_point_math::mul_wad_down(u, fixed_point_math::WAD.wrapping_sub(vault_fee.into()))?;   //TODO EVM mismatch
+    let units = fixed_point_math::mul_wad_down(units, fixed_point_math::WAD.wrapping_sub(vault_fee.into()))?;   //TODO EVM mismatch
 
     // Do not include the 'escrowed' vault tokens in the total supply of vault tokens (return less)
     let effective_supply = U256::from(total_supply(deps.as_ref())?);
 
     // Compute the vault tokens to be minted.
     let out: Uint128 = calc_price_curve_limit_share(
-        u,
+        units,
         effective_supply,
         weighted_alpha_0_ampped.checked_mul((assets.len() as u64).into())?,
         WADWAD / one_minus_amp
