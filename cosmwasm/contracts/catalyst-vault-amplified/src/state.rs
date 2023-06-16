@@ -3,7 +3,7 @@ use cw20::{Cw20ExecuteMsg, Cw20QueryMsg, BalanceResponse};
 use cw20_base::{contract::{execute_mint, execute_burn}};
 use cw_storage_plus::Item;
 use catalyst_types::{U256, AsI256, I256, AsU256, u256};
-use fixed_point_math::{LN2, mul_wad_down, self, ln_wad, WAD, exp_wad, pow_wad, WADWAD};
+use fixed_point_math::{LN2, mul_wad_down, self, ln_wad, WAD, exp_wad, pow_wad, WADWAD, div_wad_up};
 use catalyst_vault_common::{
     state::{
         ASSETS, MAX_ASSETS, WEIGHTS, INITIAL_MINT_AMOUNT, VAULT_FEE, MAX_LIMIT_CAPACITY, USED_LIMIT_CAPACITY, CHAIN_INTERFACE,
@@ -356,11 +356,7 @@ pub fn withdraw_all(
     min_out: Vec<Uint128>,
 ) -> Result<Response, ContractError> {
 
-    todo!();
-
-    // Include the 'escrowed' vault tokens in the total supply of vault tokens of the vault
-    let escrowed_vault_tokens = TOTAL_ESCROWED_LIQUIDITY.load(deps.storage)?;
-    let effective_supply = total_supply(deps.as_ref())?.checked_add(escrowed_vault_tokens)?;
+    //TODO update_amplification
 
     // Burn the vault tokens of the withdrawer
     let sender = info.sender.to_string();
@@ -368,6 +364,8 @@ pub fn withdraw_all(
 
     // Compute the withdraw amounts
     let assets = ASSETS.load(deps.storage)?;
+    let weights = WEIGHTS.load(deps.storage)?;
+    let one_minus_amp = ONE_MINUS_AMP.load(deps.storage)?;
 
     if min_out.len() != assets.len() {
         return Err(
@@ -377,29 +375,136 @@ pub fn withdraw_all(
         );
     }
 
-    let withdraw_amounts: Vec<Uint128> = assets
-        .iter()
-        .zip(&min_out)                                      // zip: assets.len() == min_out.len()
-        .map(|(asset, asset_min_out)| {
+    let mut weighted_asset_balance_ampped_sum: U256 = U256::zero();
 
-            let escrowed_balance = TOTAL_ESCROWED_ASSETS.load(deps.storage, asset.as_str())?;
-            
+    let effective_weighted_asset_balances = assets.iter()
+        .zip(weights)
+        .map(|(asset, weight)| -> Result<U256, ContractError> {
+
             let vault_asset_balance = deps.querier.query_wasm_smart::<BalanceResponse>(
                 asset,
                 &Cw20QueryMsg::Balance { address: env.contract.address.to_string() }
-            )?.balance - escrowed_balance;
+            )?.balance;
 
-            //TODO use U256 for the calculation?
-            let withdraw_amount = (vault_asset_balance * vault_tokens) / effective_supply;
+            if !vault_asset_balance.is_zero() {
+
+                let escrowed_asset_balance = TOTAL_ESCROWED_ASSETS.load(deps.storage, &asset.to_string())?;
+
+                let weighted_asset_balance = U256::from(vault_asset_balance)
+                    .wrapping_mul(weight.into());           // 'wrapping_mul' is safe as U256.max >= Uint128.max * u64.max
+    
+                let weighted_asset_balance_ampped = pow_wad(
+                    weighted_asset_balance.wrapping_mul(WAD).as_i256(), // 'wrapping_mul' is safe as U256.max >= Uint128.max * u64.max * WAD
+                    one_minus_amp
+                )?.as_u256();
+
+                weighted_asset_balance_ampped_sum = weighted_asset_balance_ampped_sum.checked_add(weighted_asset_balance_ampped)?;
+
+                Ok(
+                    weighted_asset_balance.wrapping_sub(
+                        U256::from(escrowed_asset_balance).wrapping_mul(weight.into())
+                    )
+                )
+            }
+            else {
+                Ok(U256::zero())
+            }
+
+        })
+        .collect::<Result<Vec<U256>, ContractError>>()?;
+
+    // Compute the reference liquidity
+    let weighted_alpha_0_ampped: U256 = weighted_asset_balance_ampped_sum.as_i256()
+        .wrapping_sub(UNIT_TRACKER.load(deps.storage)?)
+        .as_u256()
+        .div(U256::from(assets.len() as u64));
+
+    // Compute the effective supply. Include 'vault_tokens' to the queried supply as these have already been burnt
+    // and also include the escrowed tokens to yield a smaller return
+    let effective_supply = U256::from(total_supply(deps.as_ref())?)
+        .wrapping_add(vault_tokens.into())                                      // 'wrapping_add' is safe as U256.max >> Uint128.max
+        .wrapping_add(TOTAL_ESCROWED_LIQUIDITY.load(deps.storage)?.into());     // 'wrapping_add' is safe as U256.max >> Uint128.max
+
+    // Compute 'supply after withdrawaw'/'supply before withdrawal' (in WAD terms)
+    let vault_tokens_share = effective_supply
+        .wrapping_sub(vault_tokens.into())          // 'wrapping_sub' is safe as the 'vault_tokens' have been successfully burnt at the beginning of this function
+        .wrapping_mul(WAD)                          // 'wrapping_mul' is safe as U256.max > Uint128.max * WAD
+        .div(effective_supply);
+
+    let inner_diff = mul_wad_down(
+        weighted_alpha_0_ampped,
+        WAD.wrapping_sub(
+            pow_wad(
+                vault_tokens_share.as_i256(),       // Casting is safe as 'vault_tokens_share' <= 1
+                one_minus_amp
+            )?.as_u256()                            // Casting is safe as 'pow_wad' result is >= 0
+        )
+    )?;
+
+    let one_minus_amp_inverse = WADWAD / one_minus_amp;
+
+    let mut weighted_withdraw_sum = U256::zero();
+    let withdraw_amounts: Vec<Uint128> = assets
+        .iter()
+        .zip(&weights)
+        .zip(&min_out)                                      // zip: assets.len() == min_out.len()
+        .zip(effective_weighted_asset_balances)
+        .map(|(((asset, weight), asset_min_out), effective_weighted_asset_balance)| {
+
+            let effective_weighted_asset_balance_ampped = pow_wad(
+                effective_weighted_asset_balance.wrapping_mul(WAD).as_i256(), // 'wrapping_mul' is safe as U256.max >= Uint128.max * u64.max * WAD
+                one_minus_amp
+            )?.as_u256();
+
+            let weighted_withdraw_amount;
+            if inner_diff < effective_weighted_asset_balance_ampped {
+                weighted_withdraw_amount = mul_wad_down(
+                    effective_weighted_asset_balance,
+                    WAD.wrapping_sub(
+                        pow_wad(
+                            div_wad_up(
+                                effective_weighted_asset_balance_ampped.wrapping_sub(inner_diff),
+                                effective_weighted_asset_balance_ampped
+                            )?.as_i256(),
+                            one_minus_amp_inverse
+                        )?.as_u256()
+                    )
+                )?
+            }
+            else {
+                weighted_withdraw_amount = effective_weighted_asset_balance_ampped;
+            }
+
+            weighted_withdraw_sum = weighted_withdraw_sum.checked_add(weighted_withdraw_amount)?;
+            let withdraw_amount: Uint128 = (weighted_withdraw_amount / U256::from(*weight)).try_into()?;
 
             // Check that the minimum output is honoured.
             if *asset_min_out > withdraw_amount {
-                //TODO include in error the asset?
                 return Err(ContractError::ReturnInsufficient { out: withdraw_amount.clone(), min_out: *asset_min_out });
             };
 
             Ok(withdraw_amount)
         }).collect::<Result<Vec<Uint128>, ContractError>>()?;
+
+    //TODO use helper methods for the following updates?
+    // Update the security limit variables
+    MAX_LIMIT_CAPACITY.update(
+        deps.storage,
+        |max_limit_capacity| -> StdResult<_> {
+            max_limit_capacity
+                .checked_sub(weighted_withdraw_sum)         //TODO use wrapping_sub?
+                .map_err(|err| err.into())
+        }
+    )?;
+
+    USED_LIMIT_CAPACITY.update(
+        deps.storage,
+        |used_limit_capacity| -> StdResult<_> {
+            Ok(
+                used_limit_capacity.saturating_sub(weighted_withdraw_sum)
+            )
+        }
+    )?;
 
     // Build messages to order the transfer of tokens from the vault to the depositor
     let transfer_msgs: Vec<CosmosMsg> = assets.iter().zip(&withdraw_amounts).map(|(asset, amount)| {    // zip: withdraw_amounts.len() == assets.len()
