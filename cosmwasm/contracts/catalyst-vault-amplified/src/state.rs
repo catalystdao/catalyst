@@ -425,7 +425,7 @@ pub fn withdraw_all(
         .wrapping_add(vault_tokens.into())                                      // 'wrapping_add' is safe as U256.max >> Uint128.max
         .wrapping_add(TOTAL_ESCROWED_LIQUIDITY.load(deps.storage)?.into());     // 'wrapping_add' is safe as U256.max >> Uint128.max
 
-    // Compute 'supply after withdrawaw'/'supply before withdrawal' (in WAD terms)
+    // Compute 'supply after withdrawal'/'supply before withdrawal' (in WAD terms)
     let vault_tokens_share = effective_supply
         .wrapping_sub(vault_tokens.into())          // 'wrapping_sub' is safe as the 'vault_tokens' have been successfully burnt at the beginning of this function
         .wrapping_mul(WAD)                          // 'wrapping_mul' is safe as U256.max > Uint128.max * WAD
@@ -605,7 +605,7 @@ pub fn withdraw_mixed(
         .wrapping_add(vault_tokens.into())                                      // 'wrapping_add' is safe as U256.max >> Uint128.max
         .wrapping_add(TOTAL_ESCROWED_LIQUIDITY.load(deps.storage)?.into());     // 'wrapping_add' is safe as U256.max >> Uint128.max
 
-    // Compute 'supply after withdrawaw'/'supply before withdrawal' (in WAD terms)
+    // Compute 'supply after withdrawal'/'supply before withdrawal' (in WAD terms)
     let vault_tokens_share = div_wad_down(
         effective_supply.wrapping_sub(vault_tokens.into()),  // 'wrapping_sub' is safe as the 'vault_tokens' have been successfully burnt at the beginning of this function
         effective_supply
