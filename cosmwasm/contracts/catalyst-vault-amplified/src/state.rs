@@ -17,7 +17,7 @@ use std::ops::Div;
 
 use catalyst_ibc_interface::msg::ExecuteMsg as InterfaceExecuteMsg;
 
-use crate::{calculation_helpers::{calc_price_curve_area, calc_price_curve_limit, calc_combined_price_curves, calc_price_curve_limit_share}};
+use crate::{calculation_helpers::{calc_price_curve_area, calc_price_curve_limit, calc_combined_price_curves, calc_price_curve_limit_share, calc_weighted_alpha_0_ampped}};
 
 // TODO amplification specific storage
 pub const ONE_MINUS_AMP: Item<I256> = Item::new("catalyst-vault-amplified-one-minus-amp");
@@ -1102,6 +1102,8 @@ pub fn receive_asset(
     )
 }
 
+
+
 pub fn send_liquidity(
     deps: &mut DepsMut,
     env: Env,
@@ -1116,42 +1118,69 @@ pub fn send_liquidity(
     calldata: Binary
 ) -> Result<Response, ContractError> {
 
-    todo!();
-
     // Only allow connected vaults
     if !is_connected(&deps.as_ref(), &channel_id, to_vault.clone()) {
         return Err(ContractError::VaultNotConnected { channel_id, vault: to_vault })
     }
 
-    // Update weights
-    // update_weights(deps, env.block.time.nanos().into())?;
-
-    // Include the 'escrowed' vault tokens in the total supply of vault tokens of the vault
-    let escrowed_vault_tokens = TOTAL_ESCROWED_LIQUIDITY.load(deps.storage)?;
-    let effective_supply = U256::from(total_supply(deps.as_ref())?.u128()) 
-        + U256::from(escrowed_vault_tokens.u128());        // Addition is overflow safe because of casting into U256
+    //TODO update_amplification
 
     // Burn the vault tokens of the sender
     execute_burn(deps.branch(), env.clone(), info, amount)?;
+
+    let one_minus_amp = ONE_MINUS_AMP.load(deps.storage)?;
+
+    let (balance_0_ampped, asset_count) = calc_balance_0_ampped(
+        deps.as_ref(),
+        env,
+        one_minus_amp
+    )?;
+
+    // Compute the effective supply. Include 'vault_tokens' to the queried supply as these have already been burnt
+    // and also include the escrowed tokens to yield a smaller return
+    let effective_supply = U256::from(total_supply(deps.as_ref())?)
+        .wrapping_add(amount.into())                                      // 'wrapping_add' is safe as U256.max >> Uint128.max
+        .wrapping_add(TOTAL_ESCROWED_LIQUIDITY.load(deps.storage)?.into());     // 'wrapping_add' is safe as U256.max >> Uint128.max
+
+    // Compute 'supply after withdrawal'/'supply before withdrawal' (in WAD terms)
+    let vault_tokens_share = div_wad_down(
+        effective_supply.checked_add(amount.into())?,
+        effective_supply
+    )?;
 
     // Derive the weight sum (w_sum) from the security limit capacity
     let w_sum = MAX_LIMIT_CAPACITY.load(deps.storage)? / fixed_point_math::LN2;
 
     // Compute the unit value of the provided vaultTokens
     // This step simplifies withdrawing and swapping into a single step
-    let u = fixed_point_math::ln_wad(
-        fixed_point_math::div_wad_down(
-            effective_supply,
-            effective_supply - U256::from(amount.u128())   // subtraction is safe, as 'amount' is always contained in 'effective_supply'
-        )?.as_i256()                                         // if casting overflows into a negative value, posterior 'ln' calc will fail
-    )?.as_u256()                                         // casting safe as 'ln' is computed of a value >= 1 (hence result always positive)
-        .checked_mul(w_sum)?;
+    let units = U256::from(asset_count as u64).checked_mul(
+        mul_wad_down(
+            balance_0_ampped,
+            pow_wad(
+                vault_tokens_share.as_i256(),   // If casting overflows to a negative number 'pow_wad' will fail
+                one_minus_amp
+            )?.as_u256()                        // Casting is safe, as pow_wad result is always positive
+                .wrapping_sub(U256::one())      // 'wrapping_sub' is safe as 'pow_wad' result is always >= 1
+        )?
+    )?;
+
+    //TODO create helper function to update the unit tracker?
+    UNIT_TRACKER.update(
+        deps.storage,
+        |unit_tracker| -> StdResult<_> {
+            unit_tracker
+            .checked_add(units.try_into()?)  // Safely casting into I256 is also very important for 
+                                             // 'on_send_liquidity_success', as it requires this same casting 
+                                             // and must never revert.
+            .map_err(|err| err.into())
+        }
+    )?;
 
     // Compute the hash of the 'send_liquidity' transaction
     let block_number = env.block.height as u32;
     let send_liquidity_hash = compute_send_liquidity_hash(
         to_account.as_slice(),
-        u,
+        units,
         amount,
         block_number
     );
@@ -1169,7 +1198,7 @@ pub fn send_liquidity(
         channel_id: channel_id.clone(),
         to_vault: to_vault.clone(),
         to_account: to_account.clone(),
-        u,
+        u: units,
         min_vault_tokens,
         min_reference_asset,
         from_amount: amount,
@@ -1196,7 +1225,7 @@ pub fn send_liquidity(
                 amount,
                 min_vault_tokens,
                 min_reference_asset,
-                u
+                units
             )
         )
     )
@@ -1463,6 +1492,67 @@ pub fn calc_local_swap(
     }
 
     Ok(output)
+}
+
+
+
+// ! compute_balance_0 query
+pub fn calc_balance_0(
+    deps: Deps,
+    env: Env,
+    one_minus_amp: I256
+) -> Result<(U256, usize), ContractError> {
+
+    let (balance_0_ampped, asset_count) = calc_balance_0_ampped(
+        deps,
+        env,
+        one_minus_amp
+    )?;
+
+    let balance_0 = pow_wad(
+        balance_0_ampped.as_i256(),
+        WADWAD / one_minus_amp
+    )?.as_u256();
+
+    Ok((balance_0, asset_count))
+}
+
+pub fn calc_balance_0_ampped(
+    deps: Deps,
+    env: Env,
+    one_minus_amp: I256
+) -> Result<(U256, usize), ContractError> {
+    
+    let assets = ASSETS.load(deps.storage)?;
+    let weights = WEIGHTS.load(deps.storage)?;
+    let unit_tracker = UNIT_TRACKER.load(deps.storage)?;
+
+    let asset_balances = assets
+        .iter()
+        .map(|asset| -> Result<Uint128, ContractError> {
+            Ok(
+                deps.querier.query_wasm_smart::<BalanceResponse>(
+                    asset,
+                    &Cw20QueryMsg::Balance { address: env.contract.address.to_string() }
+                )?.balance
+            )
+        })
+        .collect::<Result<Vec<Uint128>, ContractError>>()?;
+
+    let weighted_alpha_0_ampped = calc_weighted_alpha_0_ampped(
+        assets,
+        weights,
+        asset_balances,
+        one_minus_amp,
+        unit_tracker
+    )?;
+
+    let balance_0_ampped = pow_wad(
+        weighted_alpha_0_ampped.as_i256(),
+        WADWAD / one_minus_amp
+    )?.as_u256();
+
+    Ok((balance_0_ampped, assets.len()))
 }
 
 
