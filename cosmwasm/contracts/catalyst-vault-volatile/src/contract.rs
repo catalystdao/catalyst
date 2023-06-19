@@ -343,6 +343,7 @@ pub fn execute(
         }) => set_weights(
             &mut deps,
             &env,
+            info,
             new_weights,
             target_timestamp
         ),

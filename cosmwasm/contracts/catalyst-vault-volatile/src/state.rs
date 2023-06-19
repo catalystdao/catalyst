@@ -9,7 +9,7 @@ use catalyst_vault_common::{
         ASSETS, MAX_ASSETS, WEIGHTS, INITIAL_MINT_AMOUNT, VAULT_FEE, MAX_LIMIT_CAPACITY, USED_LIMIT_CAPACITY, CHAIN_INTERFACE,
         TOTAL_ESCROWED_LIQUIDITY, TOTAL_ESCROWED_ASSETS, is_connected, get_asset_index, update_limit_capacity,
         collect_governance_fee_message, compute_send_asset_hash, compute_send_liquidity_hash, create_asset_escrow,
-        create_liquidity_escrow, on_send_asset_success, on_send_liquidity_success, total_supply, get_limit_capacity, USED_LIMIT_CAPACITY_TIMESTAMP, FACTORY,
+        create_liquidity_escrow, on_send_asset_success, on_send_liquidity_success, total_supply, get_limit_capacity, USED_LIMIT_CAPACITY_TIMESTAMP, FACTORY, factory_owner,
     },
     ContractError, msg::{CalcSendAssetResponse, CalcReceiveAssetResponse, CalcLocalSwapResponse, GetLimitCapacityResponse}, event::{local_swap_event, send_asset_event, receive_asset_event, send_liquidity_event, receive_liquidity_event, deposit_event, withdraw_event}
 };
@@ -1188,9 +1188,15 @@ pub fn on_send_liquidity_success_volatile(
 pub fn set_weights(         //TODO EVM mismatch arguments order
     deps: &mut DepsMut,
     env: &Env,
+    info: MessageInfo,
     new_weights: Vec<Uint64>,
     target_timestamp: Uint64   //TODO EVM mismatch (targetTime)
 ) -> Result<Response, ContractError> {
+
+    // Only allow weight changes by the factory owner
+    if info.sender != factory_owner(&deps.as_ref())? {
+        return Err(ContractError::Unauthorized {});
+    }
 
     let current_weights = WEIGHTS.load(deps.storage)?;
 
