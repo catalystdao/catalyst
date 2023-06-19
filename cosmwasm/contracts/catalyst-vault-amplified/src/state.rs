@@ -178,7 +178,7 @@ pub fn deposit_mixed(
     min_out: Uint128
 ) -> Result<Response, ContractError> {
 
-    //TODO update_amplification
+    update_amplification(deps, env.block.time.nanos().into())?;
 
     let one_minus_amp = ONE_MINUS_AMP.load(deps.storage)?;
 
@@ -356,7 +356,7 @@ pub fn withdraw_all(
     min_out: Vec<Uint128>,
 ) -> Result<Response, ContractError> {
 
-    //TODO update_amplification
+    update_amplification(deps, env.block.time.nanos().into())?;
 
     // Burn the vault tokens of the withdrawer
     let sender = info.sender.to_string();
@@ -545,7 +545,7 @@ pub fn withdraw_mixed(
     min_out: Vec<Uint128>,
 ) -> Result<Response, ContractError> {
 
-    //TODO update_amplification
+    update_amplification(deps, env.block.time.nanos().into())?;
 
     // Burn the vault tokens of the withdrawer
     let sender = info.sender.to_string();
@@ -748,7 +748,7 @@ pub fn local_swap(
     min_out: Uint128
 ) -> Result<Response, ContractError> {
 
-    //TODO _updateAmplification
+    update_amplification(deps, env.block.time.nanos().into())?;
 
     let vault_fee: Uint128 = mul_wad_down(            //TODO alternative to not have to use U256 conversion? (or wrapper?)
         U256::from(amount.u128()),
@@ -872,7 +872,7 @@ pub fn send_asset(
         return Err(ContractError::VaultNotConnected { channel_id, vault: to_vault })
     }
 
-    //TODO _updateAmplification
+    update_amplification(deps, env.block.time.nanos().into())?;
 
     let vault_fee: Uint128 = mul_wad_down(            //TODO alternative to not have to use U256 conversion? (or wrapper?)
         U256::from(amount.u128()),
@@ -1012,7 +1012,7 @@ pub fn receive_asset(
         return Err(ContractError::VaultNotConnected { channel_id, vault: from_vault })
     }
 
-    //TODO _updateAmplification
+    update_amplification(deps, env.block.time.nanos().into())?;
 
     let assets = ASSETS.load(deps.storage)?;
     let to_asset = assets
@@ -1123,7 +1123,7 @@ pub fn send_liquidity(
         return Err(ContractError::VaultNotConnected { channel_id, vault: to_vault })
     }
 
-    //TODO update_amplification
+    update_amplification(deps, env.block.time.nanos().into())?;
 
     // Burn the vault tokens of the sender
     execute_burn(deps.branch(), env.clone(), info, amount)?;
@@ -1746,6 +1746,92 @@ pub fn set_amplification(
 
 }
 
+pub fn update_amplification(
+    deps: &mut DepsMut,
+    current_timestamp: Uint64
+) -> Result<(), ContractError> {
+    
+    // TODO check instead if the variable *exists* rather than it being set to 0?
+    // Only run update logic if 'amp_update_finish_timestamp' is set
+    let amp_update_finish_timestamp = AMP_UPDATE_FINISH_TIMESTAMP.load(deps.storage)?;
+    if amp_update_finish_timestamp == Uint64::zero() {
+        return Ok(());
+    }
+
+    // Skip the update if the amplification has already been updated on the same block
+    let amp_update_timestamp = AMP_UPDATE_TIMESTAMP.load(deps.storage)?;
+    if current_timestamp == amp_update_timestamp {
+        return Ok(());
+    }
+
+    let target_one_minus_amp = TARGET_ONE_MINUS_AMP.load(deps.storage)?;
+
+    // If the 'amp_update_finish_timestamp' has been reached, finish the amplification update
+    if current_timestamp >= amp_update_finish_timestamp {
+
+        ONE_MINUS_AMP.update(
+            deps.storage,
+            |_| -> StdResult<_> {
+                Ok(target_one_minus_amp)
+            }
+        )?;
+
+        // Clear the 'amp_update_finish_timestamp' to disable the update logic
+        AMP_UPDATE_FINISH_TIMESTAMP.save(
+            deps.storage,
+            &Uint64::zero()
+        )?;
+
+    }
+    else {
+
+        // Update the amplification value linearly according to the ellapsed time *since the last update*.
+        //      new_value = current_value + remaning_value_change * percentage_of_ellapsed_time (where percentage_of_ellapsed_time < 1)
+
+        // The following algorithm uses 'wrapping' functions to save gas. This is safe as:
+        //      remaining_value_change = target_one_minus_amp - current_one_minus_amp
+        //          => |remaining_value_change| <= WAD = 10**18 < 2**64
+        //      time_since_last_update = current_timestamp - amp_update_timestamp
+        //          => time_since_last_update <= current_timestamp < 2**64
+        //      remaining_update_time = amp_update_finish_timestamp - amp_update_timestamp
+        //          => remaining_update_time > time_since_last_update since amp_update_finish_timestamp > current_timestamp
+        //
+        //      X = remaining_value_change*time_since_last_update
+        //          => |X| < 2**128, which means I256.min < X < I256.max
+        //      value_change = X / remaining_update_time
+        //          => |value_change| < |remaining_value_change| since time_since_last_update < remaining_update_time
+        //      new_value = current_value + value_change
+        //          => new_value >= 0 and new_value <= WAD, since by definition of the algorithm 'new_value' lies
+        //             somewhere between 'current_value' and 'new_value'
+    
+        ONE_MINUS_AMP.update(
+            deps.storage,
+            |current_one_minus_amp| -> StdResult<_> {
+                let remaining_value_change : I256 = target_one_minus_amp.wrapping_sub(current_one_minus_amp);
+                let time_since_last_update : I256 = current_timestamp.wrapping_sub(amp_update_timestamp).into();
+                let remaining_update_time  : I256 = amp_update_finish_timestamp.wrapping_sub(amp_update_timestamp).into();
+
+                Ok(
+                    current_one_minus_amp.wrapping_add(
+                        remaining_value_change
+                            .wrapping_mul(time_since_last_update)
+                            .div(remaining_update_time)
+                    )
+                )
+            }
+        )?;
+
+    }
+
+    // Update the update timestamp
+    AMP_UPDATE_TIMESTAMP.save(
+        deps.storage,
+        &current_timestamp
+    )?;
+
+    Ok(())
+
+}
 
 
 // Query helpers ****************************************************************************************************************
