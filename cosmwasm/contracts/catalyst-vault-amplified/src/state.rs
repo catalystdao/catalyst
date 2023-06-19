@@ -30,7 +30,7 @@ const MIN_ADJUSTMENT_TIME_NANOS : Uint64 = Uint64::new(7 * 24 * 60 * 60 * 100000
 const MAX_ADJUSTMENT_TIME_NANOS : Uint64 = Uint64::new(365 * 24 * 60 * 60 * 1000000000);   // 1 year
 const MAX_AMP_ADJUSTMENT_FACTOR : Uint64 = Uint64::new(2);
 
-const SMALL_SWAP_RATIO  : Uint128 = Uint128::from(1000000000000u128);   // 1e12
+const SMALL_SWAP_RATIO  : Uint128 = Uint128::new(1000000000000u128);   // 1e12
 const SMALL_SWAP_RETURN : U256 = u256!("950000000000000000");           // 0.95 * WAD
 
 
