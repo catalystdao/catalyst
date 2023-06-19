@@ -1029,16 +1029,16 @@ pub fn receive_asset(
     let out = calc_receive_asset(&deps.as_ref(), env.clone(), to_asset.as_str(), u)?;
 
     // Update the max limit capacity and the used limit capacity
-    let max_limit_capacity_delta = U256::from(out).checked_mul(U256::from(to_weight))?;
+    let limit_capacity_delta = U256::from(out).checked_mul(U256::from(to_weight))?;
     MAX_LIMIT_CAPACITY.update(
         deps.storage,
         |max_limit_capacity| -> StdResult<_> {
             max_limit_capacity
-                .checked_sub(max_limit_capacity_delta)
+                .checked_sub(limit_capacity_delta)
                 .map_err(|err| err.into())
         }
     )?;
-    update_limit_capacity(deps, env.block.time, max_limit_capacity_delta)?;
+    update_limit_capacity(deps, env.block.time, limit_capacity_delta)?;
     
 
     if min_out > out {
