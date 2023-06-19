@@ -9,7 +9,7 @@ use catalyst_vault_common::{
         ASSETS, MAX_ASSETS, WEIGHTS, INITIAL_MINT_AMOUNT, VAULT_FEE, MAX_LIMIT_CAPACITY, USED_LIMIT_CAPACITY, CHAIN_INTERFACE,
         TOTAL_ESCROWED_LIQUIDITY, TOTAL_ESCROWED_ASSETS, is_connected, get_asset_index, update_limit_capacity,
         collect_governance_fee_message, compute_send_asset_hash, compute_send_liquidity_hash, create_asset_escrow,
-        create_liquidity_escrow, on_send_asset_success, total_supply, get_limit_capacity, USED_LIMIT_CAPACITY_TIMESTAMP, FACTORY, on_send_asset_failure, on_send_liquidity_failure,
+        create_liquidity_escrow, on_send_asset_success, total_supply, get_limit_capacity, USED_LIMIT_CAPACITY_TIMESTAMP, FACTORY, on_send_asset_failure, on_send_liquidity_failure, factory_owner,
     },
     ContractError, msg::{CalcSendAssetResponse, CalcReceiveAssetResponse, CalcLocalSwapResponse, GetLimitCapacityResponse}, event::{local_swap_event, send_asset_event, receive_asset_event, send_liquidity_event, receive_liquidity_event, deposit_event, withdraw_event}
 };
@@ -17,7 +17,7 @@ use std::ops::Div;
 
 use catalyst_ibc_interface::msg::ExecuteMsg as InterfaceExecuteMsg;
 
-use crate::{calculation_helpers::{calc_price_curve_area, calc_price_curve_limit, calc_combined_price_curves, calc_price_curve_limit_share, calc_weighted_alpha_0_ampped}};
+use crate::{calculation_helpers::{calc_price_curve_area, calc_price_curve_limit, calc_combined_price_curves, calc_price_curve_limit_share, calc_weighted_alpha_0_ampped}, event::set_amplification_event, msg::{TargetAmplificationResponse, AmplificationUpdateFinishTimestampResponse}};
 
 // TODO amplification specific storage
 pub const ONE_MINUS_AMP: Item<I256> = Item::new("catalyst-vault-amplified-one-minus-amp");
@@ -28,7 +28,7 @@ pub const UNIT_TRACKER: Item<I256> = Item::new("catalyst-vault-amplified-unit-tr
 
 const MIN_ADJUSTMENT_TIME_NANOS : Uint64 = Uint64::new(7 * 24 * 60 * 60 * 1000000000);     // 7 days
 const MAX_ADJUSTMENT_TIME_NANOS : Uint64 = Uint64::new(365 * 24 * 60 * 60 * 1000000000);   // 1 year
-const MAX_AMP_ADJUSTMENT_FACTOR : Uint64 = Uint64::new(10);
+const MAX_AMP_ADJUSTMENT_FACTOR : Uint64 = Uint64::new(2);
 
 const SMALL_SWAP_RATIO  : Uint128 = Uint128::from(1000000000000u128);   // 1e12
 const SMALL_SWAP_RETURN : U256 = u256!("950000000000000000");           // 0.95 * WAD
@@ -1674,7 +1674,78 @@ pub fn on_send_liquidity_failure_amplified(
 }
 
 
-// TODO amplification specific functions
+pub fn set_amplification(
+    deps: &mut DepsMut,
+    env: &Env,
+    info: MessageInfo,
+    target_timestamp: Uint64,
+    target_amplification: Uint64
+) -> Result<Response, ContractError> {
+
+    // Only allow amplification changes by the factory owner
+    if info.sender != factory_owner(&deps.as_ref())? {
+        return Err(ContractError::Unauthorized {});
+    }
+    
+    // Check 'target_timestamp' is within the defined acceptable bounds
+    let current_time = Uint64::new(env.block.time.nanos());
+    if
+        target_timestamp < current_time + MIN_ADJUSTMENT_TIME_NANOS ||
+        target_timestamp > current_time + MAX_ADJUSTMENT_TIME_NANOS
+    {
+        return Err(ContractError::InvalidTargetTime {});
+    }
+
+    let current_amplification: Uint64 = WAD
+        .as_i256()                                          // Casting is safe as 'WAD' < I256.max
+        .wrapping_sub(ONE_MINUS_AMP.load(deps.storage)?)    // 'wrapping_sub' is safe as 'ONE_MINUS_AMP' <= 'WAD'
+        .as_u64().into();                                   // Casting is safe as 'AMP' <= u64.max
+
+    // Check that the target_amplification is correct (set to < 1)
+    if target_amplification >= WAD.as_u64().into() {        // Casting is safe as 'WAD' < u64.max
+        return Err(ContractError::InvalidAmplification {})
+    }
+    
+    // Limit the maximum allowed relative amplification change to a factor of 'MAX_AMP_ADJUSTMENT_FACTOR'.
+    // Note that this effectively 'locks' the amplification if it gets intialized to 0. Similarly, the 
+    // amplification will never be allowed to be set to 0 if it is initialized to any other value 
+    // (note how 'target_amplification*MAX_AMP_ADJUSTMENT_FACTOR < current_amplification' is used
+    // instead of 'target_amplification < current_amplification/MAX_AMP_ADJUSTMENT_FACTOR').
+    if
+        target_amplification > current_amplification.checked_mul(MAX_AMP_ADJUSTMENT_FACTOR)? ||
+        target_amplification.checked_mul(MAX_AMP_ADJUSTMENT_FACTOR)? < current_amplification
+    {
+        return Err(ContractError::InvalidAmplification {});
+    }
+
+    if CHAIN_INTERFACE.load(deps.storage)?.is_some() {
+        return Err(ContractError::Error("Amplification adjustment is disabled for cross-chain vaults.".to_string()));
+    }
+
+    // Save the target amplification
+    ONE_MINUS_AMP.save(
+        deps.storage,
+        &WAD
+            .as_i256()                                         // Casting is safe, as WAD < I256.max
+            .wrapping_sub(I256::from(target_amplification))    // 'wrapping_sub' is safe, as 'target_amplification' is always < WAD (checked shortly above)
+    )?;
+
+    // Set the amplification update time parameters
+    AMP_UPDATE_FINISH_TIMESTAMP.save(deps.storage, &target_timestamp)?;
+    AMP_UPDATE_TIMESTAMP.save(deps.storage, &current_time)?;
+
+    Ok(
+        Response::new()
+            .add_event(
+                set_amplification_event(
+                    target_timestamp,
+                    target_amplification
+                )
+            )
+    )
+
+}
+
 
 
 // Query helpers ****************************************************************************************************************
@@ -1742,7 +1813,35 @@ pub fn query_get_limit_capacity(
 }
 
 
-//TODO amplification specific queries
+pub fn query_target_amplification(
+    deps: Deps
+) -> StdResult<TargetAmplificationResponse> {
+    
+    Ok(
+        TargetAmplificationResponse {
+            target_amplification: WAD
+                .as_i256()              // Casting is safe as WAD < I256.max
+                .wrapping_sub(          // 'wrapping_sub' is safe as WAD >= 'one_minus_amp'
+                    TARGET_ONE_MINUS_AMP.load(deps.storage)?
+                )
+                .as_u64()               // Casting is safe as 'amplification' < u64.max
+                .into()
+        }
+    )
+
+}
+
+pub fn query_amplification_update_finish_timestamp(
+    deps: Deps
+) -> StdResult<AmplificationUpdateFinishTimestampResponse> {
+
+    Ok(
+        AmplificationUpdateFinishTimestampResponse {
+            timestamp: AMP_UPDATE_FINISH_TIMESTAMP.load(deps.storage)?
+        }
+    )
+
+}
 
 
 

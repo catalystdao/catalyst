@@ -1,5 +1,5 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{Uint128, Binary};
+use cosmwasm_std::{Uint128, Binary, Uint64};
 use catalyst_types::U256;
 pub use catalyst_vault_common::msg::{InstantiateMsg, ExecuteMsg};
 use catalyst_vault_common::msg::{
@@ -13,6 +13,12 @@ use cw20::{AllowanceResponse, BalanceResponse, TokenInfoResponse};
 
 #[cw_serde]
 pub enum AmplifiedExecuteExtension {
+
+    SetAmplification {
+        target_timestamp: Uint64,
+        target_amplification: Uint64
+    },
+
 }
 
 pub type AmplifiedExecuteMsg = ExecuteMsg<AmplifiedExecuteExtension>;
@@ -92,7 +98,10 @@ pub enum QueryMsg {
 
 
     // Amplified vault specific queries
-    // TODO
+    #[returns(TargetAmplificationResponse)]
+    TargetAmplification {},
+    #[returns(AmplificationUpdateFinishTimestampResponse)]
+    AmplificationUpdateFinishTimestamp {},
 
 
     // CW20 Implementation
@@ -103,4 +112,15 @@ pub enum QueryMsg {
     #[returns(AllowanceResponse)]
     Allowance { owner: String, spender: String },
 
+}
+
+
+#[cw_serde]
+pub struct TargetAmplificationResponse {
+    pub target_amplification: Uint64
+}
+
+#[cw_serde]
+pub struct AmplificationUpdateFinishTimestampResponse {
+    pub timestamp: Uint64
 }
