@@ -143,7 +143,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
         // Mint vault tokens for vault creator.
         _mint(depositor, INITIAL_MINT_AMOUNT);
 
-        emit Deposit(depositor, INITIAL_MINT_AMOUNT, initialBalances);
+        emit VaultDeposit(depositor, INITIAL_MINT_AMOUNT, initialBalances);
     }
 
     /** 
@@ -642,7 +642,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
         _mint(msg.sender, vaultTokens);
 
         // Emit the deposit event
-        emit Deposit(msg.sender, vaultTokens, tokenAmounts);
+        emit VaultDeposit(msg.sender, vaultTokens, tokenAmounts);
 
         return vaultTokens;
     }
@@ -825,7 +825,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
     
 
         // Emit the event
-        emit Withdraw(msg.sender, vaultTokens, amounts);
+        emit VaultWithdraw(msg.sender, vaultTokens, amounts);
 
         return amounts;
     }
@@ -999,7 +999,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
         }
 
         // Emit the event
-        emit Withdraw(msg.sender, vaultTokens, amounts);
+        emit VaultWithdraw(msg.sender, vaultTokens, amounts);
 
         return amounts;
     }

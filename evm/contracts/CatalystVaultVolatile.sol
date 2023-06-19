@@ -125,7 +125,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon {
         // Mint vault tokens for vault creator.
         _mint(depositor, INITIAL_MINT_AMOUNT);
 
-        emit Deposit(depositor, INITIAL_MINT_AMOUNT, initialBalances);
+        emit VaultDeposit(depositor, INITIAL_MINT_AMOUNT, initialBalances);
     }
 
     /**
@@ -488,7 +488,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon {
         _mint(msg.sender, vaultTokens);
 
         // Emit the deposit event
-        emit Deposit(msg.sender, vaultTokens, tokenAmounts);
+        emit VaultDeposit(msg.sender, vaultTokens, tokenAmounts);
 
         return vaultTokens;
     }
@@ -540,7 +540,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon {
         }
 
         // Emit the event
-        emit Withdraw(msg.sender, vaultTokens, amounts);
+        emit VaultWithdraw(msg.sender, vaultTokens, amounts);
 
         return amounts;
     }
@@ -621,7 +621,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon {
         if (U != 0) revert UnusedUnitsAfterWithdrawal(U);
 
         // Emit the event
-        emit Withdraw(msg.sender, vaultTokens, amounts);
+        emit VaultWithdraw(msg.sender, vaultTokens, amounts);
 
         return amounts;
     }

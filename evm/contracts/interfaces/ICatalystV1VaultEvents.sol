@@ -116,7 +116,7 @@ interface ICatalystV1VaultEvents {
      * @param mint The number of minted vault tokens credited to toAccount
      * @param assets An array of the number of deposited assets.
      */
-    event Deposit(address indexed toAccount, uint256 mint, uint256[] assets);
+    event VaultDeposit(address indexed toAccount, uint256 mint, uint256[] assets);
 
     /**
      * @notice Emitted on liquidity withdrawal.
@@ -124,7 +124,7 @@ interface ICatalystV1VaultEvents {
      * @param burn The number of burned vault tokens.
      * @param assets An array of the token amounts returned
      */
-    event Withdraw(address indexed toAccount, uint256 burn, uint256[] assets);
+    event VaultWithdraw(address indexed toAccount, uint256 burn, uint256[] assets);
 
     /** @notice Called upon successful asset swap. */
     event SendAssetSuccess(
