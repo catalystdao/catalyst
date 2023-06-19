@@ -378,7 +378,7 @@ pub fn withdraw_all(
     let mut weighted_asset_balance_ampped_sum: U256 = U256::zero();
 
     let effective_weighted_asset_balances = assets.iter()
-        .zip(weights)
+        .zip(&weights)
         .map(|(asset, weight)| -> Result<U256, ContractError> {
 
             let vault_asset_balance = deps.querier.query_wasm_smart::<BalanceResponse>(
@@ -391,7 +391,7 @@ pub fn withdraw_all(
                 let escrowed_asset_balance = TOTAL_ESCROWED_ASSETS.load(deps.storage, &asset.to_string())?;
 
                 let weighted_asset_balance = U256::from(vault_asset_balance)
-                    .wrapping_mul(weight.into());           // 'wrapping_mul' is safe as U256.max >= Uint128.max * u64.max
+                    .wrapping_mul((*weight).into());           // 'wrapping_mul' is safe as U256.max >= Uint128.max * u64.max
     
                 let weighted_asset_balance_ampped = pow_wad(
                     weighted_asset_balance.wrapping_mul(WAD).as_i256(), // 'wrapping_mul' is safe as U256.max >= Uint128.max * u64.max * WAD
@@ -402,7 +402,7 @@ pub fn withdraw_all(
 
                 Ok(
                     weighted_asset_balance.wrapping_sub(
-                        U256::from(escrowed_asset_balance).wrapping_mul(weight.into())
+                        U256::from(escrowed_asset_balance).wrapping_mul((*weight).into())
                     )
                 )
             }
@@ -559,7 +559,7 @@ pub fn withdraw_mixed(
     // Compute the unit worth of the vault tokens.
     let mut weighted_asset_balance_ampped_sum: U256 = U256::zero();
     let effective_asset_balances = assets.iter()
-        .zip(weights)
+        .zip(&weights)
         .map(|(asset, weight)| -> Result<Uint128, ContractError> {
             
             let vault_asset_balance = deps.querier.query_wasm_smart::<BalanceResponse>(
@@ -572,7 +572,7 @@ pub fn withdraw_mixed(
                 let escrowed_asset_balance = TOTAL_ESCROWED_ASSETS.load(deps.storage, &asset.to_string())?;
 
                 let weighted_asset_balance = U256::from(vault_asset_balance)
-                    .wrapping_mul(weight.into());           // 'wrapping_mul' is safe as U256.max >= Uint128.max * u64.max
+                    .wrapping_mul((*weight).into());           // 'wrapping_mul' is safe as U256.max >= Uint128.max * u64.max
     
                 let weighted_asset_balance_ampped = pow_wad(
                     weighted_asset_balance.wrapping_mul(WAD).as_i256(), // 'wrapping_mul' is safe as U256.max >= Uint128.max * u64.max * WAD
@@ -1132,7 +1132,7 @@ pub fn send_liquidity(
 
     let (balance_0_ampped, asset_count) = calc_balance_0_ampped(
         deps.as_ref(),
-        env,
+        env.clone(),
         one_minus_amp
     )?;
 
@@ -1539,6 +1539,8 @@ pub fn calc_balance_0_ampped(
         })
         .collect::<Result<Vec<Uint128>, ContractError>>()?;
 
+    let assets_count = assets.len();
+
     let weighted_alpha_0_ampped = calc_weighted_alpha_0_ampped(
         assets,
         weights,
@@ -1552,7 +1554,7 @@ pub fn calc_balance_0_ampped(
         WADWAD / one_minus_amp
     )?.as_u256();
 
-    Ok((balance_0_ampped, assets.len()))
+    Ok((balance_0_ampped, assets_count))
 }
 
 
@@ -1574,7 +1576,7 @@ pub fn on_send_asset_success_amplified(
         to_account,
         u,
         amount,
-        asset,
+        asset.clone(),
         block_number_mod
     )?;
 
