@@ -3,7 +3,7 @@ use cw20::{Cw20ExecuteMsg, Cw20QueryMsg, BalanceResponse};
 use cw20_base::{contract::{execute_mint, execute_burn}};
 use cw_storage_plus::Item;
 use catalyst_types::{U256, AsI256, I256, AsU256, u256};
-use fixed_point_math::{LN2, mul_wad_down, self, ln_wad, WAD, exp_wad, pow_wad, WADWAD, div_wad_up, div_wad_down};
+use fixed_point_math::{LN2, mul_wad_down, self, ln_wad, WAD, exp_wad, pow_wad, WADWAD, div_wad_up, div_wad_down, mul_wad_up};
 use catalyst_vault_common::{
     state::{
         ASSETS, MAX_ASSETS, WEIGHTS, INITIAL_MINT_AMOUNT, VAULT_FEE, MAX_LIMIT_CAPACITY, USED_LIMIT_CAPACITY, CHAIN_INTERFACE,
@@ -1238,16 +1238,14 @@ pub fn receive_liquidity(
     channel_id: String,
     from_vault: Binary,
     to_account: String,
-    u: U256,
+    units: U256,
     min_vault_tokens: Uint128,
-    min_reference_asset: Uint128,       //TODO type
+    min_reference_asset: Uint128,
     from_amount: U256,
     from_block_number_mod: u32,
     calldata_target: Option<Addr>,
     calldata: Option<Binary>
 ) -> Result<Response, ContractError> {
-
-    todo!();
 
     // Only allow the 'chain_interface' to invoke this function
     if Some(info.sender) != CHAIN_INTERFACE.load(deps.storage)? {
@@ -1259,74 +1257,102 @@ pub fn receive_liquidity(
         return Err(ContractError::VaultNotConnected { channel_id, vault: from_vault })
     }
 
-    // update_weights(deps, env.block.time.nanos().into())?;
+    update_amplification(deps, env.block.time.nanos().into())?;
 
-    update_limit_capacity(deps, env.block.time, u)?;
+    let one_minus_amp = ONE_MINUS_AMP.load(deps.storage)?;
 
-    // Derive the weight sum (w_sum) from the security limit capacity
-    let w_sum = MAX_LIMIT_CAPACITY.load(deps.storage)? / fixed_point_math::LN2;
+    let (balance_0_ampped, asset_count) = calc_balance_0_ampped(
+        deps.as_ref(),
+        env.clone(),
+        one_minus_amp
+    )?;
+
+    let one_minus_amp_inverse = WADWAD / one_minus_amp;
+
+    let n_weighted_balance_ampped = U256::from(asset_count as u64).checked_mul(
+        balance_0_ampped
+    )?;
 
     // Do not include the 'escrowed' vault tokens in the total supply of vault tokens of the vault (return less)
-    let effective_supply = U256::from(total_supply(deps.as_ref())?.u128());
+    let total_supply = U256::from(total_supply(deps.as_ref())?);
 
-    // Use 'calc_price_curve_limit_share' to get the % of vault tokens that should be minted (in WAD terms)
-    // Multiply by 'effective_supply' to get the absolute amount (not in WAD terms) using 'mul_wad_down' so
-    // that the result is also NOT in WAD terms.
-    let out: Uint128 = fixed_point_math::mul_wad_down(
-        calc_price_curve_limit_share(u, w_sum)?,
-        effective_supply
-    )?.try_into()?;     //TODO is 'try' required when casting U256 to Uint128? Theoretically calc_price_curve_limit_share < 1, hence casting is safe
+    let vault_tokens: Uint128 = calc_price_curve_limit_share(
+        units,
+        total_supply,
+        n_weighted_balance_ampped,
+        one_minus_amp_inverse
+    )?.try_into()?;
 
-    if min_vault_tokens > out {
-        return Err(ContractError::ReturnInsufficient { out, min_out: min_vault_tokens });
+    if min_vault_tokens > vault_tokens {
+        return Err(ContractError::ReturnInsufficient { out: vault_tokens, min_out: min_vault_tokens });
     }
 
     if !min_reference_asset.is_zero() {
 
-        let assets = ASSETS.load(deps.storage)?;
-        let weights = WEIGHTS.load(deps.storage)?;
+        let balance_0 = pow_wad(
+            balance_0_ampped.as_i256(),     // If casting overflows to a negative number 'pow_wad' will fail
+            one_minus_amp_inverse
+        )?.as_u256();                       // Casting is safe, as pow_wad result is always positive
 
-        // Compute the vault reference amount: product(balance(i)**weight(i))**(1/weights_sum)
-        // The direct calculation of this value would overflow, hence it is calculated as:
-        //      exp( sum( ln(balance(i)) * weight(i) ) / weights_sum )
+        let escrowed_balance = TOTAL_ESCROWED_LIQUIDITY.load(deps.storage)?;
 
-        // Compute first: sum( ln(balance(i)) * weight(i) )
-        let weighted_balance_sum = assets.iter()
-            .zip(weights)       // zip: weights.len() == assets.len()
-            .try_fold(U256::zero(), |acc, (asset, weight)| {
-
-                let vault_asset_balance = deps.querier.query_wasm_smart::<BalanceResponse>(
-                    asset,
-                    &Cw20QueryMsg::Balance { address: env.contract.address.to_string() }
-                )?.balance;
-
-                acc.checked_add(
-                    ln_wad(     // TODO what if the vault gets depleted ==> ln(0)
-                        Into::<I256>::into(vault_asset_balance) * WAD.as_i256()     // i256 casting: 'vault_asset_balance * WAD' always fits in an I256 (~2^128 * ~2^64)
-                    )?.as_u256()                                                // u256 casting: 'vault_asset_balance * WAD' >= WAD (for balance != 0), hence 'ln_wad' return is always positive //TODO review 0 condition
-                    .checked_mul(U256::from(weight))?
-                ).map_err(|_| ContractError::ArithmeticError {})
-            })?;
-
-        // Finish the calculation: exp( 'weighted_balance_sum' / weights_sum )
-        let vault_reference_amount = exp_wad(
-            (weighted_balance_sum / w_sum)          // Division is safe, as w_sum is never 0
-                .as_i256()                          // If casting overflows to a negative number, the result of the exponent will be 0, which will cause the min_reference_asset check to fail //TODO denial of service attack?
-        )?.as_u256() / WAD;                         // Division is safe, as WAD != 0
-
-        // Compute the fraction of the 'vault_reference_amount' that the swapper owns.
+        // Compute the fraction of the 'balance0' that the swapper owns.
         // Include the escrowed vault tokens in the total supply to ensure that even if all the ongoing transactions revert, the specified min_reference_asset is fulfilled.
         // Include the vault tokens as they are going to be minted.
-        let escrowed_vault_tokens = TOTAL_ESCROWED_LIQUIDITY.load(deps.storage)?;
-        let user_reference_amount: Uint128 = (     //TODO is the use of Uint128/U256 correct in this calculation?
-            (vault_reference_amount * U256::from(out.u128()))/(effective_supply + U256::from(escrowed_vault_tokens.u128()) + U256::from(out.u128()))
-        ).try_into()?;
+        let balance_0_share: Uint128 = balance_0
+            .checked_mul(vault_tokens.into())?
+            .div(
+                total_supply
+                    .wrapping_add(escrowed_balance.into())      // 'wrapping_add' is safe, as U256.max >> Uint128.max
+                    .wrapping_add(vault_tokens.into())          // 'wrapping_add' is safe, as U256.max >> Uint128.max
+            )
+            .div(WAD)
+            .try_into()?;
 
-        if min_reference_asset > user_reference_amount {
-            return Err(ContractError::ReturnInsufficient { out: user_reference_amount, min_out: min_reference_asset });
+        if min_reference_asset > balance_0_share {
+            return Err(ContractError::ReturnInsufficient { out: balance_0_share, min_out: min_reference_asset });
         }
 
     }
+
+    UNIT_TRACKER.update(
+        deps.storage, 
+        |unit_tracker| -> StdResult<_> {
+            unit_tracker.checked_sub(
+                units.try_into()?
+            ).map_err(|err| err.into())
+        }
+    )?;
+
+    // Check and update the security limit
+    // If units >= n_weighted_balance_ampped, then they can purchase more than 50% of the vault.
+    if n_weighted_balance_ampped <= units {
+        return Err(ContractError::SecurityLimitExceeded { amount: units, capacity: n_weighted_balance_ampped }) //TODO review error
+    }
+
+    // Otherwise calculate the vault_token_equivalent of the provided units to check if the limit is
+    // being honoured.
+    let vault_token_equivalent = mul_wad_up(
+        pow_wad(
+            n_weighted_balance_ampped.as_i256(),    // If casting overflows to a negative number 'pow_wad' will fail
+            one_minus_amp_inverse
+        )?.as_u256(),                               // Casting is safe, as 'pow_wad' result is always positive
+        WAD.wrapping_sub(                           // 'wrapping_sub' is safe as 'pow_wad' result is always <= 1
+            pow_wad(
+                div_wad_down(
+                    n_weighted_balance_ampped.wrapping_sub(units),  // 'wrapping_sub' is safe as 'n_weighted_balance_ampped is always <= units (check is shortly above)
+                    n_weighted_balance_ampped
+                )?.as_i256(),                       // If casting overflows to a negative number 'pow_wad' will fail
+                one_minus_amp_inverse
+            )?.as_u256()                            // Casting is safe, as 'pow_wad' result is always positive
+        )
+    )?;
+
+    update_limit_capacity(
+        deps,
+        env.block.time,
+        mul_wad_down(U256::from(2u64), vault_token_equivalent)?
+    )?;
 
     // Validate the to_account
     deps.api.addr_validate(&to_account)?;   //TODO is this necessary? Isn't the account validated by `execute_mint`?
@@ -1340,7 +1366,7 @@ pub fn receive_liquidity(
             funds: vec![],
         },
         to_account.clone(),
-        out
+        vault_tokens
     )?;
 
     // Build data message
@@ -1367,8 +1393,8 @@ pub fn receive_liquidity(
                 channel_id,
                 from_vault,
                 to_account,
-                u,
-                out,
+                units,
+                vault_tokens,
                 from_amount,
                 from_block_number_mod
             )

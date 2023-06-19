@@ -878,7 +878,7 @@ pub fn receive_liquidity(
     to_account: String,
     u: U256,
     min_vault_tokens: Uint128,
-    min_reference_asset: Uint128,       //TODO type
+    min_reference_asset: Uint128,
     from_amount: U256,
     from_block_number_mod: u32,
     calldata_target: Option<Addr>,
