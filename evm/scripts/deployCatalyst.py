@@ -58,7 +58,7 @@ class Catalyst:
             if status == "":
                 with open(LOCK, "w") as f:
                     f.write(self.chain)
-                sleep(0.5)
+                sleep(0.3)
             elif status == self.chain:
                 break
         

@@ -15,54 +15,41 @@
     },
     "chain_config": {
         "canto": {
-            "factory": "0xa472DC6D0607d4731386Cb3636dB28686F174C25",
-            "ibcinterface": "0x5351d04bfe7424ad683F0b18dfA417eFdB0de4F7",
-            "crosschaininterface": "0x913ACB7575c6786F55957b91aa1A07aF1d2891cb",
-            "volatile_template": "0xe90fA38D4872F066B6309a3054679e99613BEBf9",
-            "volatile_mathlib": "0x943eF2Beba89DBA28A255211852eaF58e93d75A9",
-            "amplified_template": "0x0D619297847e8466e06a364d0c092A02415AaF26",
-            "amplified_mathlib": "0x18370eaf6bee5b8428a0153EE078A3604BC298F5",
-            "describer": "0x2AcB10a19c5067b83cE40e9ecB3775af0FE8D2f7",
-            "describer_registry": "0x181893d37047B99FCd2e7019CcE9ea87db79Fda8",
+            "factory": "0x41123b0824a315cE2167B20720A01a45c0A12FA8",
+            "ibcinterface": "0xF7B54Eca437D5DC37bB7D2332D7E0048EB524381",
+            "crosschaininterface": "0xB593660A251a2d0199234dc68EbC6dA7e02Cb490",
+            "volatile_template": "0xB246B6AB5Cd787eb550DB3A2741E926920CA7d17",
+            "volatile_mathlib": "0x118d08fFdf90379edb1be981e36c07Be055D50a2",
+            "amplified_template": "0xC719A6d315C391086201427b443366a6D01930A4",
+            "amplified_mathlib": "0x374d80104B3C1ed4c501455EAa9eCA8142A181Bd",
+            "describer": "0x0Ab9D3C894F9C1F8172EccD0B7ca906be7658dDb",
+            "describer_registry": "0x6f888C762acC899A7618D279bAA77272973C7606",
             "router": "0x024d061E6F6F62A744Ca816D5556cCEF8855d517",
             "permit2": "0x43a222b8687bbB48480F498Fd037CcCF84EC8d25"
         },
         "cronos": {
-            "factory": "0xa472DC6D0607d4731386Cb3636dB28686F174C25",
-            "ibcinterface": "0x5351d04bfe7424ad683F0b18dfA417eFdB0de4F7",
-            "crosschaininterface": "0x913ACB7575c6786F55957b91aa1A07aF1d2891cb",
-            "volatile_template": "0xe90fA38D4872F066B6309a3054679e99613BEBf9",
-            "volatile_mathlib": "0x943eF2Beba89DBA28A255211852eaF58e93d75A9",
-            "amplified_template": "0x0D619297847e8466e06a364d0c092A02415AaF26",
-            "amplified_mathlib": "0x18370eaf6bee5b8428a0153EE078A3604BC298F5",
-            "describer": "0x2AcB10a19c5067b83cE40e9ecB3775af0FE8D2f7",
-            "describer_registry": "0x181893d37047B99FCd2e7019CcE9ea87db79Fda8",
-            "router": "0x024d061E6F6F62A744Ca816D5556cCEF8855d517",
-            "permit2": "0x43a222b8687bbB48480F498Fd037CcCF84EC8d25"
-        },
-        "evmos": {
-            "factory": "0xa472DC6D0607d4731386Cb3636dB28686F174C25",
-            "ibcinterface": "0x5351d04bfe7424ad683F0b18dfA417eFdB0de4F7",
-            "crosschaininterface": "0x913ACB7575c6786F55957b91aa1A07aF1d2891cb",
-            "volatile_template": "0xe90fA38D4872F066B6309a3054679e99613BEBf9",
-            "volatile_mathlib": "0x943eF2Beba89DBA28A255211852eaF58e93d75A9",
-            "amplified_template": "0x0D619297847e8466e06a364d0c092A02415AaF26",
-            "amplified_mathlib": "0x18370eaf6bee5b8428a0153EE078A3604BC298F5",
-            "describer": "0x2AcB10a19c5067b83cE40e9ecB3775af0FE8D2f7",
-            "describer_registry": "0x181893d37047B99FCd2e7019CcE9ea87db79Fda8",
+            "factory": "0x41123b0824a315cE2167B20720A01a45c0A12FA8",
+            "ibcinterface": "0xF7B54Eca437D5DC37bB7D2332D7E0048EB524381",
+            "crosschaininterface": "0xB593660A251a2d0199234dc68EbC6dA7e02Cb490",
+            "volatile_template": "0xB246B6AB5Cd787eb550DB3A2741E926920CA7d17",
+            "volatile_mathlib": "0x118d08fFdf90379edb1be981e36c07Be055D50a2",
+            "amplified_template": "0xC719A6d315C391086201427b443366a6D01930A4",
+            "amplified_mathlib": "0x374d80104B3C1ed4c501455EAa9eCA8142A181Bd",
+            "describer": "0x0Ab9D3C894F9C1F8172EccD0B7ca906be7658dDb",
+            "describer_registry": "0x6f888C762acC899A7618D279bAA77272973C7606",
             "router": "0x024d061E6F6F62A744Ca816D5556cCEF8855d517",
             "permit2": "0x43a222b8687bbB48480F498Fd037CcCF84EC8d25"
         },
         "scroll": {
-            "factory": "0xa472DC6D0607d4731386Cb3636dB28686F174C25",
-            "ibcinterface": "0x5351d04bfe7424ad683F0b18dfA417eFdB0de4F7",
-            "crosschaininterface": "0x913ACB7575c6786F55957b91aa1A07aF1d2891cb",
-            "volatile_template": "0xe90fA38D4872F066B6309a3054679e99613BEBf9",
-            "volatile_mathlib": "0x943eF2Beba89DBA28A255211852eaF58e93d75A9",
-            "amplified_template": "0x0D619297847e8466e06a364d0c092A02415AaF26",
-            "amplified_mathlib": "0x18370eaf6bee5b8428a0153EE078A3604BC298F5",
-            "describer": "0x2AcB10a19c5067b83cE40e9ecB3775af0FE8D2f7",
-            "describer_registry": "0x181893d37047B99FCd2e7019CcE9ea87db79Fda8",
+            "factory": "0x41123b0824a315cE2167B20720A01a45c0A12FA8",
+            "ibcinterface": "0xF7B54Eca437D5DC37bB7D2332D7E0048EB524381",
+            "crosschaininterface": "0xB593660A251a2d0199234dc68EbC6dA7e02Cb490",
+            "volatile_template": "0xB246B6AB5Cd787eb550DB3A2741E926920CA7d17",
+            "volatile_mathlib": "0x118d08fFdf90379edb1be981e36c07Be055D50a2",
+            "amplified_template": "0xC719A6d315C391086201427b443366a6D01930A4",
+            "amplified_mathlib": "0x374d80104B3C1ed4c501455EAa9eCA8142A181Bd",
+            "describer": "0x0Ab9D3C894F9C1F8172EccD0B7ca906be7658dDb",
+            "describer_registry": "0x6f888C762acC899A7618D279bAA77272973C7606",
             "router": "0x024d061E6F6F62A744Ca816D5556cCEF8855d517",
             "permit2": "0x43a222b8687bbB48480F498Fd037CcCF84EC8d25"
         }
@@ -83,51 +70,9 @@
         }
     },
     "vaults": {
-        "Gas Tokens": {
-            "canto": {
-                "address": "0x907461292D40FeF384C02f79dB3B498834fB54B8",
-                "weights": [
-                    100
-                ],
-                "fee": 0.005,
-                "tokens": {
-                    "WCANTO": 0.5
-                }
-            },
-            "cronos": {
-                "address": "0x907461292D40FeF384C02f79dB3B498834fB54B8",
-                "weights": [
-                    100
-                ],
-                "fee": 0.005,
-                "tokens": {
-                    "WCRO": 0.5
-                }
-            },
-            "scroll": {
-                "address": "0x907461292D40FeF384C02f79dB3B498834fB54B8",
-                "weights": [
-                    100
-                ],
-                "fee": 0.005,
-                "tokens": {
-                    "WETH": 0.01
-                }
-            },
-            "evmos": {
-                "address": "0x907461292D40FeF384C02f79dB3B498834fB54B8",
-                "weights": [
-                    100
-                ],
-                "fee": 0.005,
-                "tokens": {
-                    "WEVMOS": 0.5
-                }
-            }
-        },
         "Gas CCS": {
             "canto": {
-                "address": "0xF46ef4AF0E96a804171f2bDc977797987196f4Ab",
+                "address": "0x1A1b856B75c6242d20B2a1a7223809E240a6975a",
                 "weights": [
                     100
                 ],
@@ -137,7 +82,7 @@
                 }
             },
             "cronos": {
-                "address": "0xF46ef4AF0E96a804171f2bDc977797987196f4Ab",
+                "address": "0x1A1b856B75c6242d20B2a1a7223809E240a6975a",
                 "weights": [
                     100
                 ],
@@ -147,25 +92,13 @@
                 }
             },
             "scroll": {
-                "address": "0xF46ef4AF0E96a804171f2bDc977797987196f4Ab",
+                "address": "0x1A1b856B75c6242d20B2a1a7223809E240a6975a",
                 "weights": [
                     100
                 ],
                 "fee": 0.005,
                 "tokens": {
                     "WETH": 0.01
-                }
-            }
-        },
-        "EVMOS single": {
-            "evmos": {
-                "address": "",
-                "weights": [
-                    100
-                ],
-                "fee": 0.005,
-                "tokens": {
-                    "WEVMOS": 0
                 }
             }
         }
