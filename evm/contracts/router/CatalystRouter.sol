@@ -18,6 +18,11 @@ import {ICatalystReceiver} from '../interfaces/IOnCatalyst.sol';
 contract CatalystRouter is RouterImmutables, ICatalystRouter, Dispatcher, ICatalystReceiver {
     using BytesLib for bytes;
 
+    event ExecutionInstruction(
+        bytes1 command,
+        bytes input
+    );
+
     modifier checkDeadline(uint256 deadline) {
         if (block.timestamp > deadline) revert TransactionDeadlinePassed();
         _;
@@ -61,6 +66,8 @@ contract CatalystRouter is RouterImmutables, ICatalystRouter, Dispatcher, ICatal
                 });
             }
 
+            if (successRequired(command)) emit ExecutionInstruction(command, input);
+
             unchecked {
                 commandIndex++;
             }
@@ -69,6 +76,10 @@ contract CatalystRouter is RouterImmutables, ICatalystRouter, Dispatcher, ICatal
 
     function successRequired(bytes1 command) internal pure returns (bool) {
         return command & Commands.FLAG_ALLOW_REVERT == 0;
+    }
+
+    function emitInstructions(bytes1 command) internal pure returns (bool) {
+        return command & Commands.FLAG_EMIT_INSTRUCTIONS == 0;
     }
 
     function onCatalystCall(uint256 purchasedTokens, bytes calldata data) external {

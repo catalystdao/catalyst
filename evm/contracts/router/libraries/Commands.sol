@@ -6,6 +6,7 @@ pragma solidity ^0.8.17;
 library Commands {
     // Masks to extract certain bits of commands
     bytes1 internal constant FLAG_ALLOW_REVERT = 0x80;
+    bytes1 internal constant FLAG_EMIT_INSTRUCTIONS = 0x60;
     bytes1 internal constant COMMAND_TYPE_MASK = 0x3f;
 
     // Block 1
