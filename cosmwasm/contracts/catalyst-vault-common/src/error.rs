@@ -26,7 +26,7 @@ pub enum ContractError {
     #[error("The requested asset does not form part of the vault.")]
     AssetNotFound {},
 
-    #[error("Amplification must be set to 1_x64 for non-amplified vaults.")]
+    #[error("Amplification must be set to 1e18 for non-amplified vaults.")]
     InvalidAmplification {},
 
     #[error("Invalid vault fee")]
