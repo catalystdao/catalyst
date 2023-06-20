@@ -10,7 +10,7 @@ use catalyst_types::{U256, u256};
 use fixed_point_math::mul_wad_down;
 use sha3::{Digest, Keccak256};
 
-use crate::{ContractError, msg::{ChainInterfaceResponse, SetupMasterResponse, ReadyResponse, OnlyLocalResponse, AssetsResponse, WeightsResponse, VaultFeeResponse, GovernanceFeeShareResponse, FeeAdministratorResponse, TotalEscrowedAssetResponse, TotalEscrowedLiquidityResponse, AssetEscrowResponse, LiquidityEscrowResponse, VaultConnectionStateResponse, FactoryResponse, FactoryOwnerResponse}, event::{send_asset_success_event, send_asset_failure_event, send_liquidity_success_event, send_liquidity_failure_event, finish_setup_event, set_fee_administrator_event, set_vault_fee_event, set_governance_fee_share_event, set_connection_event}};
+use crate::{ContractError, msg::{ChainInterfaceResponse, SetupMasterResponse, ReadyResponse, OnlyLocalResponse, AssetsResponse, WeightResponse, VaultFeeResponse, GovernanceFeeShareResponse, FeeAdministratorResponse, TotalEscrowedAssetResponse, TotalEscrowedLiquidityResponse, AssetEscrowResponse, LiquidityEscrowResponse, VaultConnectionStateResponse, FactoryResponse, FactoryOwnerResponse}, event::{send_asset_success_event, send_asset_failure_event, send_liquidity_success_event, send_liquidity_failure_event, finish_setup_event, set_fee_administrator_event, set_vault_fee_event, set_governance_fee_share_event, set_connection_event}};
 
 
 // Vault Constants
@@ -31,7 +31,7 @@ pub const SETUP_MASTER: Item<Option<Addr>> = Item::new("catalyst-vault-setup-mas
 pub const CHAIN_INTERFACE: Item<Option<Addr>> = Item::new("catalyst-vault-chain-interface");
 
 pub const ASSETS: Item<Vec<Addr>> = Item::new("catalyst-vault-assets");
-pub const WEIGHTS: Item<Vec<Uint64>> = Item::new("catalyst-vault-weights");                                 //TODO use mapping instead?
+pub const WEIGHTS: Map<&str, Uint64> = Map::new("catalyst-vault-weights");
 
 pub const FEE_ADMINISTRATOR: Item<Addr> = Item::new("catalyst-vault-fee-administrator");
 pub const VAULT_FEE: Item<Uint64> = Item::new("catalyst-vault-vault-fee");
@@ -816,10 +816,10 @@ pub fn query_assets(deps: Deps) -> StdResult<AssetsResponse> {
     )
 }
 
-pub fn query_weights(deps: Deps) -> StdResult<WeightsResponse> {
+pub fn query_weight(deps: Deps, asset: String) -> StdResult<WeightResponse> {
     Ok(
-        WeightsResponse {
-            weights: WEIGHTS.load(deps.storage)?
+        WeightResponse {
+            weight: WEIGHTS.load(deps.storage, &asset)?
         }
     )
 }

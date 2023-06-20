@@ -26,7 +26,7 @@ pub enum ContractError {
     #[error("The requested asset does not form part of the vault.")]
     AssetNotFound {},
 
-    #[error("Amplification must be set to 1_x64 for non-amplified vaults.")]
+    #[error("Amplification must be set to 1e18 for non-amplified vaults.")]
     InvalidAmplification {},
 
     #[error("Invalid vault fee")]
@@ -42,7 +42,7 @@ pub enum ContractError {
     InvalidWeight {},
 
     #[error("Security limit exceeded")]
-    SecurityLimitExceeded { amount: U256, capacity: U256 },
+    SecurityLimitExceeded { amount: U256, capacity: U256 }, //TODO EVM mismatch - replace with 'overflow'
 
     #[error("Return insufficient")]
     ReturnInsufficient { out: Uint128, min_out: Uint128 },

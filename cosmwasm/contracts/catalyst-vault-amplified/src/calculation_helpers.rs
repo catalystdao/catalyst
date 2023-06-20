@@ -1,6 +1,7 @@
 use std::ops::Div;
 use catalyst_types::{U256, AsI256, AsU256, I256};
 use catalyst_vault_common::ContractError;
+use cosmwasm_std::{Uint128, Uint64};
 use fixed_point_math::{div_wad_down, mul_wad_down, WAD, pow_wad, div_wad_up, WADWAD};
 
 
@@ -118,4 +119,48 @@ pub fn calc_price_curve_limit_share(
                                                 // always >= 1 (since the 'base' of the power is also >= 1)
         ).as_u256()                             // Casting always casts a positive number
     ).map_err(|err| err.into())
+}
+
+
+
+// Invariant Helpers **************************************************************************************************
+
+/// Computes balance0^(1-amp)
+/// ! All the vectors passed to this function must be of equal length!
+pub fn calc_weighted_alpha_0_ampped(
+    weights: Vec<Uint64>,
+    vault_balances: Vec<Uint128>,
+    one_minus_amp: I256,
+    unit_tracker: I256
+) -> Result<U256, ContractError> {
+
+    let weighted_asset_balance_ampped_sum: I256 = weights.iter()
+        .zip(vault_balances)
+        .try_fold(I256::zero(), |acc, (weight, vault_asset_balance)| -> Result<I256, ContractError> {
+            
+            if !vault_asset_balance.is_zero() {
+
+                let weighted_asset_balance = U256::from(vault_asset_balance)
+                    .wrapping_mul((*weight).into());           // 'wrapping_mul' is safe as U256.max >= Uint128.max * Uint64.max
+    
+                let weighted_asset_balance_ampped = pow_wad(
+                    weighted_asset_balance.wrapping_mul(WAD).as_i256(), // 'wrapping_mul' is safe as U256.max >= Uint128.max * Uint64.max * WAD
+                    one_minus_amp
+                )?;
+
+                acc.checked_add(weighted_asset_balance_ampped)
+                    .map_err(|err| err.into())
+            }
+            else {
+                Ok(acc)
+            }
+        })?;
+
+    Ok(
+        weighted_asset_balance_ampped_sum
+            .wrapping_sub(unit_tracker)
+            .as_u256()
+            .div(U256::from(weights.len() as u64))
+    )
+
 }

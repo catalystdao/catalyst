@@ -1,18 +1,24 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{Uint128, Binary};
+use cosmwasm_std::{Uint128, Binary, Uint64};
 use catalyst_types::U256;
 pub use catalyst_vault_common::msg::{InstantiateMsg, ExecuteMsg};
 use catalyst_vault_common::msg::{
     AssetEscrowResponse, AssetsResponse, CalcLocalSwapResponse, CalcReceiveAssetResponse, CalcSendAssetResponse,
     ChainInterfaceResponse, FeeAdministratorResponse, GetLimitCapacityResponse, GovernanceFeeShareResponse,
     LiquidityEscrowResponse, OnlyLocalResponse, VaultConnectionStateResponse, VaultFeeResponse, ReadyResponse,
-    SetupMasterResponse, TotalEscrowedAssetResponse, TotalEscrowedLiquidityResponse, WeightsResponse, FactoryResponse, FactoryOwnerResponse
+    SetupMasterResponse, TotalEscrowedAssetResponse, TotalEscrowedLiquidityResponse, WeightResponse, FactoryResponse, FactoryOwnerResponse
 };
 use cw20::{AllowanceResponse, BalanceResponse, TokenInfoResponse};
 
 
 #[cw_serde]
 pub enum AmplifiedExecuteExtension {
+
+    SetAmplification {
+        target_timestamp: Uint64,
+        target_amplification: Uint64
+    },
+
 }
 
 pub type AmplifiedExecuteMsg = ExecuteMsg<AmplifiedExecuteExtension>;
@@ -45,8 +51,10 @@ pub enum QueryMsg {
     OnlyLocal {},
     #[returns(AssetsResponse)]
     Assets {},
-    #[returns(WeightsResponse)]
-    Weights {},
+    #[returns(WeightResponse)]
+    Weight {
+        asset: String
+    },
 
     #[returns(VaultFeeResponse)]
     VaultFee {},
@@ -92,7 +100,12 @@ pub enum QueryMsg {
 
 
     // Amplified vault specific queries
-    // TODO
+    #[returns(TargetAmplificationResponse)]
+    TargetAmplification {},
+    #[returns(AmplificationUpdateFinishTimestampResponse)]
+    AmplificationUpdateFinishTimestamp {},
+    #[returns(Balance0Response)]
+    Balance0 {},
 
 
     // CW20 Implementation
@@ -103,4 +116,20 @@ pub enum QueryMsg {
     #[returns(AllowanceResponse)]
     Allowance { owner: String, spender: String },
 
+}
+
+
+#[cw_serde]
+pub struct TargetAmplificationResponse {
+    pub target_amplification: Uint64
+}
+
+#[cw_serde]
+pub struct AmplificationUpdateFinishTimestampResponse {
+    pub timestamp: Uint64
+}
+
+#[cw_serde]
+pub struct Balance0Response {
+    pub balance_0: U256
 }

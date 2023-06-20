@@ -65,10 +65,19 @@ pub fn initialize_swap_curves(
     }
 
     // Validate and save weights
-    if weights.iter().any(|weight| *weight == Uint64::zero()) {
-        return Err(ContractError::InvalidWeight {});
-    }
-    WEIGHTS.save(deps.storage, &weights)?;
+    weights
+        .iter()
+        .zip(&assets)
+        .try_for_each(|(weight, asset)| -> Result<(), ContractError> {
+
+            if weight.is_zero() {
+                return Err(ContractError::InvalidWeight {});
+            }
+
+            WEIGHTS.save(deps.storage, asset, weight)?;
+            
+            Ok(())
+        })?;
 
     // Mint vault tokens for the depositor
     // Make up a 'MessageInfo' with the sender set to this contract itself => this is to allow the use of the 'execute_mint'

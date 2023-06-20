@@ -290,7 +290,7 @@ mod catalyst_vault_factory_tests {
 
     use crate::{msg::{InstantiateMsg, QueryMsg, OwnerResponse, ExecuteMsg, DefaultGovernanceFeeShareResponse}, state::MAX_GOVERNANCE_FEE_SHARE, error::ContractError};
 
-    use catalyst_vault_common::msg::{ChainInterfaceResponse, FactoryResponse, SetupMasterResponse, AssetsResponse, WeightsResponse, VaultFeeResponse, GovernanceFeeShareResponse, FeeAdministratorResponse};
+    use catalyst_vault_common::msg::{ChainInterfaceResponse, FactoryResponse, SetupMasterResponse, AssetsResponse, WeightResponse, VaultFeeResponse, GovernanceFeeShareResponse, FeeAdministratorResponse};
     use mock_vault::msg::QueryMsg as MockVaultQueryMsg;
 
     const GOVERNANCE: &str = "governance_addr";
@@ -564,15 +564,20 @@ mod catalyst_vault_factory_tests {
 
 
         // Verify the deployed vault has the 'weights' set
-        let queried_weights = app.wrap().query_wasm_smart::<WeightsResponse>(
-            vault.clone(),
-            &MockVaultQueryMsg::Weights {}
-        ).unwrap().weights;
-
-        assert_eq!(
-            queried_weights,
-            vault_weights
-        );
+        vault_assets
+            .iter()
+            .zip(&vault_weights)
+            .for_each(|(asset, weight)| {
+                let queried_weight = app.wrap().query_wasm_smart::<WeightResponse>(
+                    vault.clone(),
+                    &MockVaultQueryMsg::Weight { asset: asset.to_string() }
+                ).unwrap().weight;
+        
+                assert_eq!(
+                    queried_weight,
+                    weight
+                );
+            });
 
 
         // Verify the deployed vault has the 'vault_fee' set

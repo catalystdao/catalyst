@@ -12,13 +12,13 @@ use cw20_base::contract::{
 use catalyst_vault_common::ContractError;
 use catalyst_vault_common::state::{
     setup, finish_setup, set_fee_administrator, set_vault_fee, set_governance_fee_share, set_connection,
-    on_send_asset_failure, on_send_liquidity_failure, query_chain_interface, query_setup_master, query_ready, query_only_local, query_assets, query_weights, query_vault_fee, query_governance_fee_share, query_fee_administrator, query_total_escrowed_liquidity, query_total_escrowed_asset, query_asset_escrow, query_liquidity_escrow, query_vault_connection_state, query_factory, query_factory_owner
+    on_send_asset_failure, on_send_liquidity_failure, query_chain_interface, query_setup_master, query_ready, query_only_local, query_assets, query_weight, query_vault_fee, query_governance_fee_share, query_fee_administrator, query_total_escrowed_liquidity, query_total_escrowed_asset, query_asset_escrow, query_liquidity_escrow, query_vault_connection_state, query_factory, query_factory_owner
 };
 
 use crate::msg::{VolatileExecuteMsg, InstantiateMsg, QueryMsg, VolatileExecuteExtension};
 use crate::state::{
     initialize_swap_curves, set_weights, deposit_mixed, withdraw_all, withdraw_mixed, local_swap, send_asset, receive_asset,
-    send_liquidity, receive_liquidity, query_calc_send_asset, query_calc_receive_asset, query_calc_local_swap, query_get_limit_capacity, query_target_weights, query_weights_update_finish_timestamp, on_send_asset_success_volatile, on_send_liquidity_success_volatile
+    send_liquidity, receive_liquidity, query_calc_send_asset, query_calc_receive_asset, query_calc_local_swap, query_get_limit_capacity, query_target_weight, query_weights_update_finish_timestamp, on_send_asset_success_volatile, on_send_liquidity_success_volatile
 };
 
 
@@ -343,6 +343,7 @@ pub fn execute(
         }) => set_weights(
             &mut deps,
             &env,
+            info,
             new_weights,
             target_timestamp
         ),
@@ -432,7 +433,9 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::Ready{} => to_binary(&query_ready(deps)?),
         QueryMsg::OnlyLocal{} => to_binary(&query_only_local(deps)?),
         QueryMsg::Assets {} => to_binary(&query_assets(deps)?),
-        QueryMsg::Weights {} => to_binary(&query_weights(deps)?),
+        QueryMsg::Weight {
+            asset
+        } => to_binary(&query_weight(deps, asset)?),
 
         QueryMsg::VaultFee {} => to_binary(&query_vault_fee(deps)?),
         QueryMsg::GovernanceFeeShare {} => to_binary(&query_governance_fee_share(deps)?),
@@ -462,7 +465,9 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::LiquidityEscrow { hash } => to_binary(&query_liquidity_escrow(deps, hash)?),
 
         // Volatile-Specific Queries
-        QueryMsg::TargetWeights {} => to_binary(&query_target_weights(deps)?),
+        QueryMsg::TargetWeight {
+            asset
+        } => to_binary(&query_target_weight(deps, asset)?),
         QueryMsg::WeightsUpdateFinishTimestamp {} => to_binary(&query_weights_update_finish_timestamp(deps)?),
 
         // CW20 query msgs - Use cw20-base for the implementation
