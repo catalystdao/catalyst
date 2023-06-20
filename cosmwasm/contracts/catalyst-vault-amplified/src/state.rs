@@ -3,11 +3,11 @@ use cw20::{Cw20ExecuteMsg, Cw20QueryMsg, BalanceResponse};
 use cw20_base::{contract::{execute_mint, execute_burn}};
 use cw_storage_plus::Item;
 use catalyst_types::{U256, AsI256, I256, AsU256, u256};
-use fixed_point_math::{LN2, mul_wad_down, self, ln_wad, WAD, exp_wad, pow_wad, WADWAD, div_wad_up, div_wad_down, mul_wad_up};
+use fixed_point_math::{mul_wad_down, self, WAD, pow_wad, WADWAD, div_wad_up, div_wad_down, mul_wad_up};
 use catalyst_vault_common::{
     state::{
         ASSETS, MAX_ASSETS, WEIGHTS, INITIAL_MINT_AMOUNT, VAULT_FEE, MAX_LIMIT_CAPACITY, USED_LIMIT_CAPACITY, CHAIN_INTERFACE,
-        TOTAL_ESCROWED_LIQUIDITY, TOTAL_ESCROWED_ASSETS, is_connected, get_asset_index, update_limit_capacity,
+        TOTAL_ESCROWED_LIQUIDITY, TOTAL_ESCROWED_ASSETS, is_connected, update_limit_capacity,
         collect_governance_fee_message, compute_send_asset_hash, compute_send_liquidity_hash, create_asset_escrow,
         create_liquidity_escrow, on_send_asset_success, total_supply, get_limit_capacity, USED_LIMIT_CAPACITY_TIMESTAMP, FACTORY, on_send_asset_failure, on_send_liquidity_failure, factory_owner,
     },
@@ -458,12 +458,11 @@ pub fn withdraw_all(
     let one_minus_amp_inverse = WADWAD / one_minus_amp;
 
     let mut weighted_withdraw_sum = U256::zero();
-    let withdraw_amounts: Vec<Uint128> = assets
+    let withdraw_amounts: Vec<Uint128> = weights
         .iter()
-        .zip(&weights)
-        .zip(&min_out)                                      // zip: assets.len() == min_out.len()
-        .zip(effective_weighted_asset_balances)
-        .map(|(((asset, weight), asset_min_out), effective_weighted_asset_balance)| {
+        .zip(&min_out)                                      // zip: min_out.len() == weights.len()
+        .zip(effective_weighted_asset_balances)             // zip: effective_weighted_asset_balances.len() == weights.len()
+        .map(|((weight, asset_min_out), effective_weighted_asset_balance)| {
 
             let effective_weighted_asset_balance_ampped = pow_wad(
                 effective_weighted_asset_balance.wrapping_mul(WAD).as_i256(), // 'wrapping_mul' is safe as U256.max >= Uint128.max * u64.max * WAD
@@ -587,8 +586,6 @@ pub fn withdraw_mixed(
 
             if !vault_asset_balance.is_zero() {
 
-                let escrowed_asset_balance = TOTAL_ESCROWED_ASSETS.load(deps.storage, &asset.to_string())?;
-
                 let weighted_asset_balance = U256::from(vault_asset_balance)
                     .wrapping_mul((*weight).into());           // 'wrapping_mul' is safe as U256.max >= Uint128.max * u64.max
     
@@ -641,8 +638,6 @@ pub fn withdraw_mixed(
         )?
     )?;
 
-    let one_minus_amp_inverse = WADWAD / one_minus_amp;
-
     if withdraw_ratio.len() != assets.len() || min_out.len() != assets.len() {
         return Err(
             ContractError::InvalidParameters {
@@ -652,13 +647,12 @@ pub fn withdraw_mixed(
     }
 
     let mut weighted_withdraw_sum = U256::zero();
-    let withdraw_amounts: Vec<Uint128> = assets
+    let withdraw_amounts: Vec<Uint128> = weights
         .iter()
-        .zip(weights)                       // zip: weights.len() == assets.len()    
-        .zip(&withdraw_ratio)               // zip: withdraw_ratio.len() == assets.len()
-        .zip(&min_out)                      // zip: min_out.len() == assets.len()
-        .zip(effective_asset_balances)      // zip: effective_asset_balances.len() == assets.len()
-        .map(|((((asset, weight), asset_withdraw_ratio), asset_min_out), effective_asset_balance)| {
+        .zip(&withdraw_ratio)               // zip: withdraw_ratio.len() == weights.len()
+        .zip(&min_out)                      // zip: min_out.len() == weights.len()
+        .zip(effective_asset_balances)      // zip: effective_asset_balances.len() == weights.len()
+        .map(|(((weight, asset_withdraw_ratio), asset_min_out), effective_asset_balance)| {
 
             // Calculate the units allocated for the specific asset
             let units_for_asset = fixed_point_math::mul_wad_down(units, U256::from(*asset_withdraw_ratio))?;
@@ -684,7 +678,7 @@ pub fn withdraw_mixed(
             let withdraw_amount = calc_price_curve_limit(
                 units_for_asset,
                 U256::from(effective_asset_balance),
-                U256::from(weight),
+                U256::from(*weight),
                 one_minus_amp
             )?.try_into()?;
 
@@ -694,7 +688,7 @@ pub fn withdraw_mixed(
             };
 
             weighted_withdraw_sum = weighted_withdraw_sum.checked_add(
-                U256::from(withdraw_amount).checked_mul(weight.into())?
+                U256::from(withdraw_amount).checked_mul((*weight).into())?
             )?;
 
             Ok(withdraw_amount)
@@ -1158,9 +1152,6 @@ pub fn send_liquidity(
         effective_supply
     )?;
 
-    // Derive the weight sum (w_sum) from the security limit capacity
-    let w_sum = MAX_LIMIT_CAPACITY.load(deps.storage)? / fixed_point_math::LN2;
-
     // Compute the unit value of the provided vaultTokens
     // This step simplifies withdrawing and swapping into a single step
     let units = U256::from(asset_count as u64).checked_mul(
@@ -1580,7 +1571,6 @@ pub fn calc_balance_0_ampped(
     let assets_count = assets.len();
 
     let weighted_alpha_0_ampped = calc_weighted_alpha_0_ampped(
-        assets,
         weights,
         asset_balances,
         one_minus_amp,
