@@ -104,6 +104,8 @@ pub enum QueryMsg {
     TargetAmplification {},
     #[returns(AmplificationUpdateFinishTimestampResponse)]
     AmplificationUpdateFinishTimestamp {},
+    #[returns(Balance0Response)]
+    Balance0 {},
 
 
     // CW20 Implementation
@@ -125,4 +127,9 @@ pub struct TargetAmplificationResponse {
 #[cw_serde]
 pub struct AmplificationUpdateFinishTimestampResponse {
     pub timestamp: Uint64
+}
+
+#[cw_serde]
+pub struct Balance0Response {
+    pub balance_0: U256
 }
