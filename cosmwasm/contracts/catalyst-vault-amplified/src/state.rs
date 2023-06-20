@@ -104,10 +104,20 @@ pub fn initialize_swap_curves(
     }
 
     // Validate and save weights
-    if weights.iter().any(|weight| *weight == Uint64::zero()) {
-        return Err(ContractError::InvalidWeight {});
-    }
-    WEIGHTS.save(deps.storage, &weights)?;
+    weights
+        .iter()
+        .zip(&assets)
+        .try_for_each(|(weight, asset)| -> Result<(), ContractError> {
+
+            if weight.is_zero() {
+                return Err(ContractError::InvalidWeight {});
+            }
+
+            WEIGHTS.save(deps.storage, asset, weight)?;
+
+            Ok(())
+        })?;
+        
     AMP_UPDATE_TIMESTAMP.save(deps.storage, &Uint64::zero())?;         //TODO move intialization to 'setup'?
     AMP_UPDATE_FINISH_TIMESTAMP.save(deps.storage, &Uint64::zero())?;  //TODO move intialization to 'setup'?
 
@@ -183,7 +193,6 @@ pub fn deposit_mixed(
     let one_minus_amp = ONE_MINUS_AMP.load(deps.storage)?;
 
     let assets = ASSETS.load(deps.storage)?;
-    let weights = WEIGHTS.load(deps.storage)?;
 
     if deposit_amounts.len() != assets.len() {
         return Err(
@@ -200,9 +209,10 @@ pub fn deposit_mixed(
     let mut weighted_deposit_sum: U256 = U256::zero();              // NOTE: named 'assetDepositSum' on EVM
 
     assets.iter()
-        .zip(weights)                   // zip: weights.len() == assets.len()
         .zip(&deposit_amounts)          // zip: deposit_amounts.len() == assets.len()
-        .try_for_each(|((asset, weight), deposit_amount)| -> Result<_, ContractError> {
+        .try_for_each(|(asset, deposit_amount)| -> Result<_, ContractError> {
+
+            let weight = WEIGHTS.load(deps.storage, asset.as_ref())?;
 
             let vault_asset_balance = deps.querier.query_wasm_smart::<BalanceResponse>(
                 asset,
@@ -364,8 +374,12 @@ pub fn withdraw_all(
 
     // Compute the withdraw amounts
     let assets = ASSETS.load(deps.storage)?;
-    let weights = WEIGHTS.load(deps.storage)?;
     let one_minus_amp = ONE_MINUS_AMP.load(deps.storage)?;
+    
+    let weights = assets
+        .iter()
+        .map(|asset| WEIGHTS.load(deps.storage, asset.as_ref()))
+        .collect::<StdResult<Vec<Uint64>>>()?;
 
     if min_out.len() != assets.len() {
         return Err(
@@ -553,8 +567,12 @@ pub fn withdraw_mixed(
 
     // Compute the withdraw amounts
     let assets = ASSETS.load(deps.storage)?;
-    let weights = WEIGHTS.load(deps.storage)?;
     let one_minus_amp = ONE_MINUS_AMP.load(deps.storage)?;
+    
+    let weights = assets
+        .iter()
+        .map(|asset| WEIGHTS.load(deps.storage, asset.as_ref()))
+        .collect::<StdResult<Vec<Uint64>>>()?;
 
     // Compute the unit worth of the vault tokens.
     let mut weighted_asset_balance_ampped_sum: U256 = U256::zero();
@@ -769,14 +787,10 @@ pub fn local_swap(
     }
 
     // Update the max limit capacity, as for amplified vaults it is based on the vault asset balances
-    let assets = ASSETS.load(deps.storage)?;
-    let weights = WEIGHTS.load(deps.storage)?;
-    let from_asset_index: usize = get_asset_index(&assets, from_asset.as_ref())?;
-    let from_weight = weights.get(from_asset_index).unwrap();
-    let to_asset_index: usize = get_asset_index(&assets, to_asset.as_ref())?;
-    let to_weight = weights.get(to_asset_index).unwrap();
-    let limit_capacity_increase = U256::from(amount).wrapping_mul(U256::from(*from_weight));    // wrapping_mul is overflow safe as U256.max >= Uint128.max * u64.max
-    let limit_capacity_decrease = U256::from(out).wrapping_mul(U256::from(*from_weight));    // wrapping_mul is overflow safe as U256.max >= Uint128.max * u64.max
+    let from_weight = WEIGHTS.load(deps.storage, from_asset.as_ref())?;
+    let to_weight = WEIGHTS.load(deps.storage, to_asset.as_ref())?;
+    let limit_capacity_increase = U256::from(amount).wrapping_mul(U256::from(from_weight));    // wrapping_mul is overflow safe as U256.max >= Uint128.max * u64.max
+    let limit_capacity_decrease = U256::from(out).wrapping_mul(U256::from(to_weight));    // wrapping_mul is overflow safe as U256.max >= Uint128.max * u64.max
     MAX_LIMIT_CAPACITY.update(
         deps.storage,
         |max_limit_capacity| -> StdResult<_> {
@@ -1019,11 +1033,7 @@ pub fn receive_asset(
         .get(to_asset_index as usize)
         .ok_or(ContractError::AssetNotFound {})?
         .clone();
-    let weights = WEIGHTS.load(deps.storage)?;
-    let to_weight = weights
-        .get(to_asset_index as usize)
-        .unwrap()                       // The weight should always exist for a given vault asset
-        .clone();
+    let to_weight = WEIGHTS.load(deps.storage, to_asset.as_ref())?;
 
 
     let out = calc_receive_asset(&deps.as_ref(), env.clone(), to_asset.as_str(), u)?;
@@ -1412,16 +1422,15 @@ pub fn calc_send_asset(
     amount: Uint128
 ) -> Result<U256, ContractError> {
 
-    let assets = ASSETS.load(deps.storage)?;
-    let weights = WEIGHTS.load(deps.storage)?;
     let one_minus_amp = ONE_MINUS_AMP.load(deps.storage)?;
 
-    let from_asset_index: usize = get_asset_index(&assets, from_asset.as_ref())?;
     let from_asset_balance: Uint128 = deps.querier.query_wasm_smart::<BalanceResponse>(
         from_asset,
         &Cw20QueryMsg::Balance { address: env.contract.address.to_string() }
     )?.balance;
-    let from_asset_weight = weights[from_asset_index];
+
+    let from_asset_weight = WEIGHTS.load(deps.storage, from_asset)
+        .map_err(|_| ContractError::AssetNotFound {})?;
 
     let units = calc_price_curve_area(
         amount.u128().into(),
@@ -1446,11 +1455,8 @@ pub fn calc_receive_asset(
     u: U256
 ) -> Result<Uint128, ContractError> {
 
-    let assets = ASSETS.load(deps.storage)?;
-    let weights = WEIGHTS.load(deps.storage)?;
     let one_minus_amp = ONE_MINUS_AMP.load(deps.storage)?;
 
-    let to_asset_index: usize = get_asset_index(&assets, to_asset.as_ref())?;
     let to_asset_escrowed_balance: Uint128 = TOTAL_ESCROWED_ASSETS.load(
         deps.storage,
         to_asset
@@ -1459,7 +1465,7 @@ pub fn calc_receive_asset(
         to_asset,
         &Cw20QueryMsg::Balance { address: env.contract.address.to_string() }
     )?.balance.checked_sub(to_asset_escrowed_balance)?;      // vault balance minus escrowed balance
-    let to_asset_weight = weights[to_asset_index];
+    let to_asset_weight = WEIGHTS.load(deps.storage, to_asset)?;
     
     calc_price_curve_limit(
         u,
@@ -1480,18 +1486,19 @@ pub fn calc_local_swap(
     amount: Uint128
 ) -> Result<Uint128, ContractError> {
 
-    let assets = ASSETS.load(deps.storage)?;
-    let weights = WEIGHTS.load(deps.storage)?;
     let one_minus_amp = ONE_MINUS_AMP.load(deps.storage)?;
 
-    let from_asset_index: usize = get_asset_index(&assets, from_asset.as_ref())?;
+    let from_asset_weight = WEIGHTS.load(deps.storage, from_asset)
+        .map_err(|_| ContractError::AssetNotFound {})?;
+
+    let to_asset_weight = WEIGHTS.load(deps.storage, to_asset)
+        .map_err(|_| ContractError::AssetNotFound {})?;
+
     let from_asset_balance: Uint128 = deps.querier.query_wasm_smart::<BalanceResponse>(
         from_asset,
         &Cw20QueryMsg::Balance { address: env.contract.address.to_string() }
     )?.balance;
-    let from_asset_weight = weights[from_asset_index];
 
-    let to_asset_index: usize = get_asset_index(&assets, to_asset.as_ref())?;
     let to_asset_escrowed_balance: Uint128 = TOTAL_ESCROWED_ASSETS.load(
         deps.storage,
         to_asset
@@ -1500,7 +1507,6 @@ pub fn calc_local_swap(
         to_asset,
         &Cw20QueryMsg::Balance { address: env.contract.address.to_string() }
     )?.balance.checked_sub(to_asset_escrowed_balance)?;      // vault balance minus escrowed balance
-    let to_asset_weight = weights[to_asset_index];
 
     let output: Uint128 = calc_combined_price_curves(
         amount.u128().into(),
@@ -1550,8 +1556,14 @@ pub fn calc_balance_0_ampped(
 ) -> Result<(U256, usize), ContractError> {
     
     let assets = ASSETS.load(deps.storage)?;
-    let weights = WEIGHTS.load(deps.storage)?;
     let unit_tracker = UNIT_TRACKER.load(deps.storage)?;
+
+    let weights = assets
+        .iter()
+        .map(|asset| {
+            WEIGHTS.load(deps.storage, asset.as_ref())
+        })
+        .collect::<StdResult<Vec<Uint64>>>()?;
 
     let asset_balances = assets
         .iter()
@@ -1613,12 +1625,7 @@ pub fn on_send_asset_success_amplified(
         USED_LIMIT_CAPACITY.save(deps.storage, &used_capacity.saturating_sub(u))?;
     }
 
-    // ! TODO getting the asset weight is quite complex, as it requires loading all the assets and all the weights.
-    // ! Update the way the 'assets' and 'weights' are saved to mappings? (as with the EVM code)
-    let assets = ASSETS.load(deps.storage)?;
-    let weights = WEIGHTS.load(deps.storage)?;
-    let asset_index: usize = get_asset_index(&assets, asset.as_ref())?;
-    let weight = weights.get(asset_index).unwrap();
+    let weight = WEIGHTS.load(deps.storage, asset.as_ref())?;
 
     MAX_LIMIT_CAPACITY.update(
         deps.storage,
@@ -1627,7 +1634,7 @@ pub fn on_send_asset_success_amplified(
             // Hence the capacity is set to the maximum allowed value without allowing it to overflow (saturating_mul and saturating_add).
             Ok(
                 max_limit_capacity.saturating_add(
-                    U256::from(amount).wrapping_mul(U256::from(*weight))     // Multiplication is overflow safe, as U256.max >= Uint128.max * u64.max
+                    U256::from(amount).wrapping_mul(U256::from(weight))     // Multiplication is overflow safe, as U256.max >= Uint128.max * u64.max
                 )
             )
         }

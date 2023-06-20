@@ -7,7 +7,7 @@ use catalyst_vault_common::msg::{
     AssetEscrowResponse, AssetsResponse, CalcLocalSwapResponse, CalcReceiveAssetResponse, CalcSendAssetResponse,
     ChainInterfaceResponse, FeeAdministratorResponse, GetLimitCapacityResponse, GovernanceFeeShareResponse,
     LiquidityEscrowResponse, OnlyLocalResponse, VaultConnectionStateResponse, VaultFeeResponse, ReadyResponse,
-    SetupMasterResponse, TotalEscrowedAssetResponse, TotalEscrowedLiquidityResponse, WeightsResponse, FactoryResponse, FactoryOwnerResponse
+    SetupMasterResponse, TotalEscrowedAssetResponse, TotalEscrowedLiquidityResponse, WeightResponse, FactoryResponse, FactoryOwnerResponse
 };
 use cw20::{AllowanceResponse, BalanceResponse, TokenInfoResponse};
 
@@ -53,8 +53,10 @@ pub enum QueryMsg {
     OnlyLocal {},
     #[returns(AssetsResponse)]
     Assets {},
-    #[returns(WeightsResponse)]
-    Weights {},
+    #[returns(WeightResponse)]
+    Weight {
+        asset: String
+    },
 
     #[returns(VaultFeeResponse)]
     VaultFee {},
@@ -100,8 +102,10 @@ pub enum QueryMsg {
 
 
     // Volatile vault specific queries
-    #[returns(TargetWeightsResponse)]
-    TargetWeights {},
+    #[returns(TargetWeightResponse)]
+    TargetWeight {
+        asset: String
+    },
     #[returns(WeightsUpdateFinishTimestampResponse)]
     WeightsUpdateFinishTimestamp {},
 
@@ -118,8 +122,8 @@ pub enum QueryMsg {
 
 
 #[cw_serde]
-pub struct TargetWeightsResponse {
-    pub target_weights: Vec<Uint64>
+pub struct TargetWeightResponse {
+    pub target_weight: Uint64
 }
 
 #[cw_serde]

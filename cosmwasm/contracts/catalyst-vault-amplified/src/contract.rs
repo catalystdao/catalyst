@@ -12,7 +12,7 @@ use cw20_base::contract::{
 use catalyst_vault_common::ContractError;
 use catalyst_vault_common::state::{
     setup, finish_setup, set_fee_administrator, set_vault_fee, set_governance_fee_share, set_connection,
-    query_chain_interface, query_setup_master, query_ready, query_only_local, query_assets, query_weights, query_vault_fee, query_governance_fee_share, query_fee_administrator, query_total_escrowed_liquidity, query_total_escrowed_asset, query_asset_escrow, query_liquidity_escrow, query_vault_connection_state, query_factory, query_factory_owner, on_send_liquidity_success
+    query_chain_interface, query_setup_master, query_ready, query_only_local, query_assets, query_weight, query_vault_fee, query_governance_fee_share, query_fee_administrator, query_total_escrowed_liquidity, query_total_escrowed_asset, query_asset_escrow, query_liquidity_escrow, query_vault_connection_state, query_factory, query_factory_owner, on_send_liquidity_success
 };
 
 use crate::msg::{AmplifiedExecuteMsg, InstantiateMsg, QueryMsg, AmplifiedExecuteExtension};
@@ -439,7 +439,9 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::Ready{} => to_binary(&query_ready(deps)?),
         QueryMsg::OnlyLocal{} => to_binary(&query_only_local(deps)?),
         QueryMsg::Assets {} => to_binary(&query_assets(deps)?),
-        QueryMsg::Weights {} => to_binary(&query_weights(deps)?),
+        QueryMsg::Weight {
+            asset
+        } => to_binary(&query_weight(deps, asset)?),
 
         QueryMsg::VaultFee {} => to_binary(&query_vault_fee(deps)?),
         QueryMsg::GovernanceFeeShare {} => to_binary(&query_governance_fee_share(deps)?),

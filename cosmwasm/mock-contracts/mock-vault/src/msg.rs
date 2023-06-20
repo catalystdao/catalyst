@@ -5,7 +5,7 @@ use catalyst_vault_common::msg::{
     AssetsResponse, CalcSendAssetResponse,
     ChainInterfaceResponse, FeeAdministratorResponse, GovernanceFeeShareResponse,
     OnlyLocalResponse, VaultFeeResponse, ReadyResponse,
-    SetupMasterResponse, WeightsResponse, FactoryResponse, FactoryOwnerResponse
+    SetupMasterResponse, WeightResponse, FactoryResponse, FactoryOwnerResponse
 };
 use cw20::{AllowanceResponse, TokenInfoResponse};
 
@@ -32,8 +32,10 @@ pub enum QueryMsg {
     OnlyLocal {},
     #[returns(AssetsResponse)]
     Assets {},
-    #[returns(WeightsResponse)]
-    Weights {},
+    #[returns(WeightResponse)]
+    Weight {
+        asset: String
+    },
 
     #[returns(VaultFeeResponse)]
     VaultFee {},

@@ -5,7 +5,7 @@ mod test_volatile_initialize_swap_curves {
     use cw_multi_test::{App, Executor};
     use catalyst_types::U256;
     use fixed_point_math::LN2;
-    use catalyst_vault_common::{ContractError, msg::{AssetsResponse, WeightsResponse, GetLimitCapacityResponse, TotalEscrowedAssetResponse, TotalEscrowedLiquidityResponse}};
+    use catalyst_vault_common::{ContractError, msg::{AssetsResponse, WeightResponse, GetLimitCapacityResponse, TotalEscrowedAssetResponse, TotalEscrowedLiquidityResponse}};
 
     use crate::{tests::helpers::{mock_instantiate_vault, DEPOSITOR, DEPLOYER, InitializeSwapCurvesMockConfig, deploy_test_tokens, mock_test_token_definitions, WAD, SETUP_MASTER}, msg::VolatileExecuteMsg};
 
@@ -94,16 +94,27 @@ mod test_volatile_initialize_swap_curves {
         );
 
         // Query and verify the weights
-        let weights: Vec<Uint64> = app
-            .wrap()
-            .query_wasm_smart::<WeightsResponse>(vault.clone(), &crate::msg::QueryMsg::Weights {})
-            .unwrap()
-            .weights;
+        assets
+            .iter()
+            .zip(&initialize_msg.weights)
+            .for_each(|(asset, weight)| {
 
-        assert_eq!(
-            weights,
-            initialize_msg.weights
-        );
+                let queried_weight: Uint64 = app
+                    .wrap()
+                    .query_wasm_smart::<WeightResponse>(
+                        vault.clone(),
+                        &crate::msg::QueryMsg::Weight { asset: asset.to_string() }
+                    )
+                    .unwrap()
+                    .weight;
+
+                assert_eq!(
+                    weight,
+                    queried_weight
+                );
+            });
+
+
 
         // Query and verify the security limit
         let max_limit_capacity: U256 = app
@@ -114,7 +125,7 @@ mod test_volatile_initialize_swap_curves {
 
         assert_eq!(
             max_limit_capacity,
-            U256::from(weights.iter().sum::<Uint64>()) * LN2
+            U256::from(initialize_msg.weights.iter().sum::<Uint64>()) * LN2
         );
 
         // Query and verify the vault token supply

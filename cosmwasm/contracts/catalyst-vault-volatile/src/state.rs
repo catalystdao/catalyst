@@ -1,7 +1,7 @@
 use cosmwasm_std::{Addr, Uint128, DepsMut, Env, MessageInfo, Response, StdResult, CosmosMsg, to_binary, Deps, Binary, Uint64};
 use cw20::{Cw20ExecuteMsg, Cw20QueryMsg, BalanceResponse};
 use cw20_base::{contract::{execute_mint, execute_burn}};
-use cw_storage_plus::Item;
+use cw_storage_plus::{Item, Map};
 use catalyst_types::{U256, AsI256, I256, AsU256};
 use fixed_point_math::{LN2, mul_wad_down, self, ln_wad, WAD, exp_wad};
 use catalyst_vault_common::{
@@ -17,9 +17,9 @@ use std::ops::Div;
 
 use catalyst_ibc_interface::msg::ExecuteMsg as InterfaceExecuteMsg;
 
-use crate::{calculation_helpers::{calc_price_curve_area, calc_price_curve_limit, calc_combined_price_curves, calc_price_curve_limit_share}, msg::{TargetWeightsResponse, WeightsUpdateFinishTimestampResponse}, event::set_weights_event};
+use crate::{calculation_helpers::{calc_price_curve_area, calc_price_curve_limit, calc_combined_price_curves, calc_price_curve_limit_share}, msg::{TargetWeightResponse, WeightsUpdateFinishTimestampResponse}, event::set_weights_event};
 
-pub const TARGET_WEIGHTS: Item<Vec<Uint64>> = Item::new("catalyst-vault-volatile-target-weights");       //TODO use mapping instead? (see also WEIGHTS definition)
+pub const TARGET_WEIGHTS: Map<&str, Uint64> = Map::new("catalyst-vault-volatile-target-weights");
 pub const WEIGHT_UPDATE_TIMESTAMP: Item<Uint64> = Item::new("catalyst-vault-volatile-weight-update-timestamp");
 pub const WEIGHT_UPDATE_FINISH_TIMESTAMP: Item<Uint64> = Item::new("catalyst-vault-volatile-weight-update-finish-timestamp");
 
@@ -93,11 +93,21 @@ pub fn initialize_swap_curves(
     }
 
     // Validate and save weights
-    if weights.iter().any(|weight| *weight == Uint64::zero()) {
-        return Err(ContractError::InvalidWeight {});
-    }
-    WEIGHTS.save(deps.storage, &weights)?;
-    TARGET_WEIGHTS.save(deps.storage, &weights)?;               // Initialize the target_weights storage (values do not matter)
+    weights
+        .iter()
+        .zip(&assets)
+        .try_for_each(|(weight, asset)| -> Result<(), ContractError> {
+
+            if weight.is_zero() {
+                return Err(ContractError::InvalidWeight {});
+            }
+
+            WEIGHTS.save(deps.storage, asset, weight)?;
+            TARGET_WEIGHTS.save(deps.storage, asset, weight)?;     // Initialize the target_weights storage (values do not matter)
+            
+            Ok(())
+        })?;
+    
     WEIGHT_UPDATE_TIMESTAMP.save(deps.storage, &Uint64::zero())?;         //TODO move intialization to 'setup'?
     WEIGHT_UPDATE_FINISH_TIMESTAMP.save(deps.storage, &Uint64::zero())?;  //TODO move intialization to 'setup'?
 
@@ -160,7 +170,6 @@ pub fn deposit_mixed(
 ) -> Result<Response, ContractError> {
 
     let assets = ASSETS.load(deps.storage)?;
-    let weights = WEIGHTS.load(deps.storage)?;
 
     if deposit_amounts.len() != assets.len() {
         return Err(
@@ -173,9 +182,10 @@ pub fn deposit_mixed(
     // Compute how much 'units' the assets are worth.
     // Iterate over the assets, weights and deposit_amounts)
     let u = assets.iter()
-        .zip(weights)                           // zip: weights.len() == assets.len()
         .zip(&deposit_amounts)                  // zip: deposit_amounts.len() == assets.len()
-        .try_fold(U256::zero(), |acc, ((asset, weight), deposit_amount)| {
+        .try_fold(U256::zero(), |acc, (asset, deposit_amount)| {
+
+            let weight = WEIGHTS.load(deps.storage, asset.as_ref())?;
 
             // Save gas if the user provides no tokens for the specific asset
             if deposit_amount.is_zero() {
@@ -377,7 +387,6 @@ pub fn withdraw_mixed(
 
     // Compute the withdraw amounts
     let assets = ASSETS.load(deps.storage)?;
-    let weights = WEIGHTS.load(deps.storage)?;
 
     if withdraw_ratio.len() != assets.len() || min_out.len() != assets.len() {
         return Err(
@@ -389,10 +398,11 @@ pub fn withdraw_mixed(
 
     let withdraw_amounts: Vec<Uint128> = assets
         .iter()
-        .zip(weights)                       // zip: weights.len() == assets.len()    
         .zip(&withdraw_ratio)               // zip: withdraw_ratio.len() == assets.len()
         .zip(&min_out)                      // zip: min_out.len() == assets.len()
-        .map(|(((asset, weight), asset_withdraw_ratio), asset_min_out)| {
+        .map(|((asset, asset_withdraw_ratio), asset_min_out)| {
+
+            let weight = WEIGHTS.load(deps.storage, asset.as_ref())?;
 
             let escrowed_balance = TOTAL_ESCROWED_ASSETS.load(deps.storage, asset.as_ref())?;
 
@@ -920,7 +930,6 @@ pub fn receive_liquidity(
     if !min_reference_asset.is_zero() {
 
         let assets = ASSETS.load(deps.storage)?;
-        let weights = WEIGHTS.load(deps.storage)?;
 
         // Compute the vault reference amount: product(balance(i)**weight(i))**(1/weights_sum)
         // The direct calculation of this value would overflow, hence it is calculated as:
@@ -928,8 +937,9 @@ pub fn receive_liquidity(
 
         // Compute first: sum( ln(balance(i)) * weight(i) )
         let weighted_balance_sum = assets.iter()
-            .zip(weights)       // zip: weights.len() == assets.len()
-            .try_fold(U256::zero(), |acc, (asset, weight)| {
+            .try_fold(U256::zero(), |acc, asset| {
+
+                let weight = WEIGHTS.load(deps.storage, asset.as_ref())?;
 
                 let vault_asset_balance = deps.querier.query_wasm_smart::<BalanceResponse>(
                     asset,
@@ -1022,15 +1032,13 @@ pub fn calc_send_asset(
     amount: Uint128
 ) -> Result<U256, ContractError> {
 
-    let assets = ASSETS.load(deps.storage)?;
-    let weights = WEIGHTS.load(deps.storage)?;
-
-    let from_asset_index: usize = get_asset_index(&assets, from_asset.as_ref())?;
     let from_asset_balance: Uint128 = deps.querier.query_wasm_smart::<BalanceResponse>(
         from_asset,
         &Cw20QueryMsg::Balance { address: env.contract.address.to_string() }
     )?.balance;
-    let from_asset_weight = weights[from_asset_index];
+
+    let from_asset_weight = WEIGHTS.load(deps.storage, from_asset.as_ref())
+        .map_err(|_| ContractError::AssetNotFound {})?;
 
     calc_price_curve_area(
         amount.u128().into(),
@@ -1046,10 +1054,6 @@ pub fn calc_receive_asset(
     u: U256
 ) -> Result<Uint128, ContractError> {
 
-    let assets = ASSETS.load(deps.storage)?;
-    let weights = WEIGHTS.load(deps.storage)?;
-
-    let to_asset_index: usize = get_asset_index(&assets, to_asset.as_ref())?;
     let to_asset_escrowed_balance: Uint128 = TOTAL_ESCROWED_ASSETS.load(
         deps.storage,
         to_asset
@@ -1058,7 +1062,8 @@ pub fn calc_receive_asset(
         to_asset,
         &Cw20QueryMsg::Balance { address: env.contract.address.to_string() }
     )?.balance.checked_sub(to_asset_escrowed_balance)?;      // vault balance minus escrowed balance
-    let to_asset_weight = weights[to_asset_index];
+
+    let to_asset_weight = WEIGHTS.load(deps.storage, to_asset.as_ref())?;
     
     calc_price_curve_limit(
         u,
@@ -1078,17 +1083,17 @@ pub fn calc_local_swap(
     amount: Uint128
 ) -> Result<Uint128, ContractError> {
 
-    let assets = ASSETS.load(deps.storage)?;
-    let weights = WEIGHTS.load(deps.storage)?;
+    let from_asset_weight = WEIGHTS.load(deps.storage, from_asset)
+        .map_err(|_| ContractError::AssetNotFound {})?;
 
-    let from_asset_index: usize = get_asset_index(&assets, from_asset.as_ref())?;
+    let to_asset_weight = WEIGHTS.load(deps.storage, to_asset)
+        .map_err(|_| ContractError::AssetNotFound {})?;
+
     let from_asset_balance: Uint128 = deps.querier.query_wasm_smart::<BalanceResponse>(
         from_asset,
         &Cw20QueryMsg::Balance { address: env.contract.address.to_string() }
     )?.balance;
-    let from_asset_weight = weights[from_asset_index];
 
-    let to_asset_index: usize = get_asset_index(&assets, to_asset.as_ref())?;
     let to_asset_escrowed_balance: Uint128 = TOTAL_ESCROWED_ASSETS.load(
         deps.storage,
         to_asset
@@ -1097,7 +1102,6 @@ pub fn calc_local_swap(
         to_asset,
         &Cw20QueryMsg::Balance { address: env.contract.address.to_string() }
     )?.balance.checked_sub(to_asset_escrowed_balance)?;      // vault balance minus escrowed balance
-    let to_asset_weight = weights[to_asset_index];
 
     //TODO move condition into 'calc_combined_price_curves'?
     if from_asset_weight == to_asset_weight {
@@ -1198,7 +1202,7 @@ pub fn set_weights(         //TODO EVM mismatch arguments order
         return Err(ContractError::Unauthorized {});
     }
 
-    let current_weights = WEIGHTS.load(deps.storage)?;
+    let assets = ASSETS.load(deps.storage)?;
 
     // Check 'target_timestamp' is within the defined acceptable bounds
     let current_time = Uint64::new(env.block.time.nanos());
@@ -1210,20 +1214,22 @@ pub fn set_weights(         //TODO EVM mismatch arguments order
     }
 
     // Check the new requested weights and store them
-    if new_weights.len() != current_weights.len() {
+    if new_weights.len() != assets.len() {
         return Err(ContractError::InvalidParameters { reason: "Invalid weights count.".to_string() });
     }
 
-    let target_weights = current_weights
+    assets
         .iter()
         .zip(&new_weights)                                      // zip: weights.len() == current_weights.len()
-        .map(|(current_weight, new_weight)| {
+        .map(|(asset, new_weight)| {
+
+            let current_weight = WEIGHTS.load(deps.storage, asset.as_ref())?;
 
             // Check that the new weight is neither 0 nor larger than the maximum allowed relative change
             if 
                 *new_weight == Uint64::zero() ||
                 *new_weight > current_weight.checked_mul(MAX_WEIGHT_ADJUSTMENT_FACTOR)? ||
-                *new_weight < *current_weight / MAX_WEIGHT_ADJUSTMENT_FACTOR     //TODO fix: replace MAX_WEIGHT_ADJUSTMENT_FACTOR with MIN_WEIGHT_ADJUSTMENT_FACTOR
+                *new_weight < current_weight / MAX_WEIGHT_ADJUSTMENT_FACTOR
             {
                 return Err(ContractError::InvalidWeight {});
             }
@@ -1231,7 +1237,6 @@ pub fn set_weights(         //TODO EVM mismatch arguments order
             Ok(*new_weight)
 
         }).collect::<Result<Vec<Uint64>, ContractError>>()?;
-    TARGET_WEIGHTS.save(deps.storage, &target_weights)?;
     
     // Set the weight update time parameters
     WEIGHT_UPDATE_FINISH_TIMESTAMP.save(deps.storage, &target_timestamp)?;
@@ -1242,7 +1247,7 @@ pub fn set_weights(         //TODO EVM mismatch arguments order
             .add_event(
                 set_weights_event(
                     target_timestamp,
-                    target_weights
+                    new_weights
                 )
             )
     )
@@ -1265,25 +1270,26 @@ pub fn update_weights(
         return Ok(());
     }
 
-    let target_weights = TARGET_WEIGHTS.load(deps.storage)?;
-
-    let new_weights: Vec<Uint64>;
+    let assets = ASSETS.load(deps.storage)?;
     let mut new_weight_sum = U256::zero();
 
     // If the 'param_update_finish_timestamp' has been reached, finish the weights update
     if current_timestamp >= param_update_finish_timestamp {
 
-        //TODO: why using 'map' here? use 'fold' or 'forEach'
         // Set the weights equal to the target_weights
-        new_weights = target_weights
+        assets
             .iter()
-            .map(|target_weight| {
+            .try_for_each(|asset| -> StdResult<()> {
 
-                new_weight_sum = new_weight_sum.checked_add(U256::from(*target_weight))?;
+                let new_weight = TARGET_WEIGHTS.load(deps.storage, asset.as_ref())?;
 
-                Ok(*target_weight)
+                new_weight_sum = new_weight_sum.checked_add(U256::from(new_weight))?;
 
-            }).collect::<Result<Vec<Uint64>, ContractError>>()?;
+                WEIGHTS.save(deps.storage, asset.as_ref(), &new_weight)?;
+
+                Ok(())
+
+            })?;
 
         // Clear the 'param_update_finish_timestamp' to disable the update logic
         WEIGHT_UPDATE_FINISH_TIMESTAMP.save(
@@ -1295,19 +1301,20 @@ pub fn update_weights(
     else {
 
         // Calculate and set the partial weight change
-        let weights = WEIGHTS.load(deps.storage)?;
-        new_weights = weights
+        assets
             .iter()
-            .zip(&target_weights)                                       // zip: target_weights.len() == weights.len()
-            .map(|(current_weight, target_weight)| {
+            .try_for_each(|asset| -> StdResult<()> {
+
+                let current_weight = WEIGHTS.load(deps.storage, asset.as_ref())?;
+                let target_weight = TARGET_WEIGHTS.load(deps.storage, asset.as_ref())?;
 
                 // Skip the partial update if the weight has already reached the target
                 if current_weight == target_weight {
 
                     new_weight_sum = new_weight_sum
-                        .checked_add(U256::from(*target_weight))?;
+                        .checked_add(U256::from(target_weight))?;
 
-                    return Ok(*target_weight);
+                    return Ok(());
 
                 }
 
@@ -1317,14 +1324,14 @@ pub fn update_weights(
                 //     ]
                 let new_weight: Uint64;
                 if target_weight > current_weight {
-                    new_weight = *current_weight + (
+                    new_weight = current_weight + (
                         (target_weight - current_weight)
                             .checked_mul(current_timestamp - param_update_timestamp)?
                             .div(param_update_finish_timestamp - param_update_timestamp)
                     );
                 }
                 else {
-                    new_weight = *current_weight - (
+                    new_weight = current_weight - (
                         (current_weight - target_weight)
                         .checked_mul(current_timestamp - param_update_timestamp)?
                         .div(param_update_finish_timestamp - param_update_timestamp)
@@ -1334,17 +1341,14 @@ pub fn update_weights(
                 new_weight_sum = new_weight_sum
                     .checked_add(U256::from(new_weight))?;
 
-                Ok(*target_weight)
+                // Update the weight
+                WEIGHTS.save(deps.storage, asset.as_ref(), &new_weight)?;
 
-            }).collect::<Result<Vec<Uint64>, ContractError>>()?;
+                Ok(())
+
+            })?;
 
     }
-
-    // Update weights
-    WEIGHTS.save(
-        deps.storage,
-        &new_weights
-    )?;
         
     // Update the maximum limit capacity
     MAX_LIMIT_CAPACITY.save(
@@ -1429,13 +1433,14 @@ pub fn query_get_limit_capacity(
 }
 
 
-pub fn query_target_weights(
-    deps: Deps
-) -> StdResult<TargetWeightsResponse> {
+pub fn query_target_weight(
+    deps: Deps,
+    asset: String
+) -> StdResult<TargetWeightResponse> {
     
     Ok(
-        TargetWeightsResponse {
-            target_weights: TARGET_WEIGHTS.load(deps.storage)?
+        TargetWeightResponse {
+            target_weight: TARGET_WEIGHTS.load(deps.storage, &asset)?
         }
     )
 

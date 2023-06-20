@@ -5,7 +5,7 @@ use cw2::set_contract_version;
 use cw20_base::contract::query_token_info;
 use catalyst_vault_common::ContractError;
 use catalyst_vault_common::msg::ExecuteMsg;
-use catalyst_vault_common::state::{setup, query_assets, query_weights, query_vault_fee, query_governance_fee_share, query_fee_administrator};
+use catalyst_vault_common::state::{setup, query_assets, query_weight, query_vault_fee, query_governance_fee_share, query_fee_administrator};
 
 use crate::msg::{InstantiateMsg, QueryMsg};
 use crate::state::{initialize_swap_curves, query_chain_interface, query_setup_master, query_factory, query_factory_owner};
@@ -83,7 +83,9 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::Factory {} => to_binary(&query_factory(deps)?),
         QueryMsg::FactoryOwner {} => to_binary(&query_factory_owner(deps)?),
         QueryMsg::Assets {} => to_binary(&query_assets(deps)?),
-        QueryMsg::Weights {} => to_binary(&query_weights(deps)?),
+        QueryMsg::Weight {
+            asset
+        } => to_binary(&query_weight(deps, asset)?),
         QueryMsg::VaultFee {} => to_binary(&query_vault_fee(deps)?),
         QueryMsg::GovernanceFeeShare {} => to_binary(&query_governance_fee_share(deps)?),
         QueryMsg::FeeAdministrator {} => to_binary(&query_fee_administrator(deps)?),

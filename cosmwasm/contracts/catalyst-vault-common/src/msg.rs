@@ -221,8 +221,8 @@ pub struct AssetsResponse {
 }
 
 #[cw_serde]
-pub struct WeightsResponse {
-    pub weights: Vec<Uint64>
+pub struct WeightResponse {
+    pub weight: Uint64
 }
 
 #[cw_serde]
