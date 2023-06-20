@@ -259,7 +259,7 @@ pub fn deposit_mixed(
                 one_minus_amp
             )?.as_u256().wrapping_sub(weighted_asset_balance_ampped);
 
-            units.checked_add(units_for_asset)?;
+            units = units.checked_add(units_for_asset)?;
 
             Ok(())
         }
