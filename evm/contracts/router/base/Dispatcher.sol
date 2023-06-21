@@ -23,6 +23,10 @@ abstract contract Dispatcher is Permit2Payments, CatalystExchange, CancelSwap, L
     error InvalidOwnerERC721();
     error InvalidOwnerERC1155();
     error BalanceTooLow();
+    
+    event ReferalCode(
+        string code
+    );
 
     /// @notice Decodes and executes the given command with the given inputs
     /// @param commandType The command type to execute
@@ -253,6 +257,9 @@ abstract contract Dispatcher is Permit2Payments, CatalystExchange, CancelSwap, L
                         amount := calldataload(add(inputs.offset, 0x40))
                     }
                     Payments.transferFrom(token, lockedBy, map(recipient), amount);
+            } else if (command == Commands.EMIT_REFERAL_MESSAGE) {
+                string memory code = abi.decode(inputs, (string));
+                emit ReferalCode(code);
             } else if (command == Commands.EXECUTE_SUB_PLAN) {
                 (bytes memory _commands, bytes[] memory _inputs) = abi.decode(inputs, (bytes, bytes[]));
                 (success, output) =

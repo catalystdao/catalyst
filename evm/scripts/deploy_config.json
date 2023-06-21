@@ -24,7 +24,7 @@
             "amplified_mathlib": "0x374d80104B3C1ed4c501455EAa9eCA8142A181Bd",
             "describer": "0x0Ab9D3C894F9C1F8172EccD0B7ca906be7658dDb",
             "describer_registry": "0x6f888C762acC899A7618D279bAA77272973C7606",
-            "router": "0x024d061E6F6F62A744Ca816D5556cCEF8855d517",
+            "router": "0xE92ac3d22168e1C1f9057DD25D0D4029cfee6aff",
             "permit2": "0x43a222b8687bbB48480F498Fd037CcCF84EC8d25"
         },
         "cronos": {
@@ -37,7 +37,7 @@
             "amplified_mathlib": "0x374d80104B3C1ed4c501455EAa9eCA8142A181Bd",
             "describer": "0x0Ab9D3C894F9C1F8172EccD0B7ca906be7658dDb",
             "describer_registry": "0x6f888C762acC899A7618D279bAA77272973C7606",
-            "router": "0x024d061E6F6F62A744Ca816D5556cCEF8855d517",
+            "router": "0xE92ac3d22168e1C1f9057DD25D0D4029cfee6aff",
             "permit2": "0x43a222b8687bbB48480F498Fd037CcCF84EC8d25"
         },
         "scroll": {
@@ -50,8 +50,8 @@
             "amplified_mathlib": "0x374d80104B3C1ed4c501455EAa9eCA8142A181Bd",
             "describer": "0x0Ab9D3C894F9C1F8172EccD0B7ca906be7658dDb",
             "describer_registry": "0x6f888C762acC899A7618D279bAA77272973C7606",
-            "router": "0x024d061E6F6F62A744Ca816D5556cCEF8855d517",
-            "permit2": "0x43a222b8687bbB48480F498Fd037CcCF84EC8d25"
+            "router": "0xE92ac3d22168e1C1f9057DD25D0D4029cfee6aff",
+            "permit2": "0x43a222b8687bbB48480F498Fd037CcCF84EC8d25",
         }
     },
     "relayer_address": "0x0e479a0438d25B5b10C2186Bee1256d437b9C582",
