@@ -2,10 +2,12 @@ package cosmwasmtesting
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"testing"
 	"time"
 
+	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/strangelove-ventures/interchaintest/v4"
 	"github.com/strangelove-ventures/interchaintest/v4/chain/cosmos"
 	"github.com/strangelove-ventures/interchaintest/v4/ibc"
@@ -28,38 +30,50 @@ func SetupContract(t *testing.T, ctx context.Context, chain *cosmos.CosmosChain,
 	return codeId, contractAddr
 }
 
-// func getTransaction(chain *cosmos.CosmosChain, txHash string) (*types.TxResponse, error) {
-// 	// Retry because sometimes the tx is not committed to state yet.
-// 	var txResp *types.TxResponse
-// 	err := retry.Do(func() error {
-// 		var err error
-// 		txResp, err = authTx.QueryTx(chain.getFullNode().CliContext(), txHash)
-// 		return err
-// 	},
-// 		// retry for total of 3 seconds
-// 		retry.Attempts(15),
-// 		retry.Delay(200*time.Millisecond),
-// 		retry.DelayType(retry.FixedDelay),
-// 		retry.LastErrorOnly(true),
-// 	)
-// 	return txResp, err
-// }
+type TestChainConfig struct {
+	Chain *cosmos.CosmosChain
+	ChannelID string
+	Users []*ibc.Wallet
+	UsersAddresses []string
+}
 
-func TestLearn(t *testing.T) {
+type ResponseAttribute struct {
+	Key string
+	Value string
+}
 
-	t.Parallel()
+type ResponseEvent struct {
+	Type string
+	Attributes []ResponseAttribute
+}
 
-	ctx := context.Background()
+type ResponseLog struct {
+	Msg_index int
+	Log string
+	Events []ResponseEvent
+}
 
-	// Chain Factory
+type Response struct {
+	Height string
+	Txhash string
+	Codespace string
+	Code int
+	Data string
+	Logs []ResponseLog
+}
 
+func InitializeTestEnv(t *testing.T, ctx context.Context) []TestChainConfig {
+
+	// Initialize the chain factory
+	validatorsCount := 1
+	fullNodesCount := 1
 	cf := interchaintest.NewBuiltinChainFactory(zaptest.NewLogger(t), []*interchaintest.ChainSpec{
 		{Name: "juno", Version: "v15.0.0", ChainConfig: ibc.ChainConfig{
 			GasPrices: "0.0uatom",
-		}},
+		}, NumValidators: &validatorsCount, NumFullNodes: &fullNodesCount,},
 		{Name: "juno", Version: "v15.0.0", ChainConfig: ibc.ChainConfig{
 			GasPrices: "0.0uatom",
-		}},
+		}, NumValidators: &validatorsCount,NumFullNodes: &fullNodesCount,},
 	})
 
 	chains, err := cf.Chains(t.Name())
@@ -127,132 +141,182 @@ func TestLearn(t *testing.T) {
 	require.NoError(t, err)
 	junoBChannelID := junoBChannelInfo[0].ChannelID
 
-	_ = junoBUser
-	_ = junoAChannelID
-	_ = junoBChannelID
+	junoAConfig := TestChainConfig{
+		Chain: junoA.(*cosmos.CosmosChain),
+		ChannelID: junoAChannelID,
+		Users: []*ibc.Wallet{junoAUser},
+		UsersAddresses: []string{junoAUserAddr},
+	}
 
-	junoAChain := junoA.(*cosmos.CosmosChain)
-	// junoBChain := junoB.(*cosmos.CosmosChain)
+	junoBConfig := TestChainConfig{
+		Chain: junoB.(*cosmos.CosmosChain),
+		ChannelID: junoBChannelID,
+		Users: []*ibc.Wallet{junoBUser},
+		UsersAddresses: []string{junoBUserAddr},
+	}
 
-	// Deploy and instantiate factory
+	return []TestChainConfig{junoAConfig, junoBConfig}
+
+}
+
+func DeployAndInstantiateFactory(
+	t *testing.T,
+	ctx context.Context,
+	chain *cosmos.CosmosChain,
+	account string,
+) string {
+
 	msg := `{"default_governance_fee_share":"0"}`
-	_, factoryContractAddr := SetupContract(t, ctx, junoAChain, junoAUserAddr, "contracts/catalyst_factory.wasm", msg)
+	_, factoryContractAddr := SetupContract(t, ctx, chain, account, "contracts/catalyst_factory.wasm", msg)
+
 	t.Log("Factory address: ", factoryContractAddr)
 
-	// Deploy and instantiate interface
-	msg = `{}`
-	_, interfaceContractAddr := SetupContract(t, ctx, junoAChain, junoAUserAddr, "contracts/catalyst_ibc_interface.wasm", msg)
-	t.Log("Interface Address: ", interfaceContractAddr)
+	return factoryContractAddr
+}
 
+func DeployAndInstantiateInterfacePoA(
+	t *testing.T,
+	ctx context.Context,
+	chain *cosmos.CosmosChain,
+	account string,
+) string {
 
+	msg := `{}`
+	_, interfaceContractAddr := SetupContract(t, ctx, chain, account, "contracts/catalyst_ibc_interface_poa.wasm", msg)
+
+	t.Log("Interface address: ", interfaceContractAddr)
+
+	return interfaceContractAddr
+}
+
+func DeployAndInstantiateTestTokens(
+	t *testing.T,
+	ctx context.Context,
+	chain *cosmos.CosmosChain,
+	account string,
+) []string {
+	
 	// Deploy test tokens
-	tokenNames := [3]string{"TokenA", "TokenB", "TokenC"};
-	tokenSymbols := [3]string{"TTA", "TTB", "TTC"};
-	var tokenAddresses [3]string;
+	tokenNames := [2]string{"TokenA", "TokenB"};
+	tokenSymbols := [2]string{"TTA", "TTB"};
+	var tokenAddresses []string;
 
 	for i := 0; i < len(tokenNames); i++ {
 
 		// Deploy test tokens
-		msg := fmt.Sprintf(`{"name":"%s","symbol":"%s","decimals":6,"initial_balances":[{"address":"%s","amount":"100000000"}],"mint":{"minter":"%s"}}`,tokenNames[i], tokenSymbols[i], junoAUserAddr, junoAUserAddr)
-		_, tokenAddresses[i] = SetupContract(t, ctx, junoAChain, junoAUserAddr, "contracts/cw20_base.wasm", msg)
+		msg := fmt.Sprintf(`{"name":"%s","symbol":"%s","decimals":6,"initial_balances":[{"address":"%s","amount":"100000000"}],"mint":{"minter":"%s"}}`,tokenNames[i], tokenSymbols[i], account, account)
+		_, tokenAddress := SetupContract(t, ctx, chain, account, "contracts/cw20_base.wasm", msg)
+
+		tokenAddresses = append(tokenAddresses, tokenAddress)
+
 		t.Log("Token Address: ", tokenNames[i], tokenAddresses[i])
 
 	}
 
+	return tokenAddresses
+}
 
-	// Deploy vault
-	vaultCodeId, err := junoAChain.StoreContract(ctx, junoAUserAddr, "contracts/catalyst_vault_volatile.wasm")
+func StoreVolatileVault(
+	t *testing.T,
+	ctx context.Context,
+	chain *cosmos.CosmosChain,
+	account string,
+) string {
+	vaultCodeId, err := chain.StoreContract(ctx, account, "contracts/catalyst_vault_volatile.wasm")
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Log(vaultCodeId)
+	t.Log("Volatile vault code id: ", vaultCodeId)
 
-	
+	return vaultCodeId
+}
+
+func DeployVault(
+	t *testing.T,
+	ctx context.Context,
+	chain *cosmos.CosmosChain,
+	account string,
+	tokens []string,
+	factoryContractAddr string,
+	interfaceContractAddr string,
+	vaultCodeId string,
+) string {
 
 	// Instantiate vault via factory
 
 	// Set token allowance
-	msg = fmt.Sprintf(`{"increase_allowance":{"spender":"%s","amount":"10000"}}`, factoryContractAddr)
-	_, err = junoAChain.ExecuteContract(ctx, junoAUserAddr, tokenAddresses[0], msg)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	msg = fmt.Sprintf(`{"increase_allowance":{"spender":"%s","amount":"10000"}}`, factoryContractAddr)
-	_, err = junoAChain.ExecuteContract(ctx, junoAUserAddr, tokenAddresses[1], msg)
-	if err != nil {
-		t.Fatal(err)
+	msg := fmt.Sprintf(`{"increase_allowance":{"spender":"%s","amount":"10000"}}`, factoryContractAddr)
+	for i := 0; i < len(tokens); i++ {
+		_, err := chain.ExecuteContract(ctx, account, tokens[i], msg)
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
 
 	// Instantiate vault
-	msg = fmt.Sprintf(`{"deploy_vault":{"vault_code_id":%s,"assets":["%s","%s"],"assets_balances":["10000","10000"],"weights":["1","1"],"amplification":"1000000000000000000","vault_fee":"0","name":"POOL","symbol":"POOL","chain_interface":"%s"}}`, vaultCodeId, tokenAddresses[0], tokenAddresses[1], interfaceContractAddr)
-	t.Log("Deploy vault msg", msg)
-	hash, err := junoAChain.ExecuteContract(ctx, junoAUserAddr, factoryContractAddr, msg)
-
-	t.Log(hash)
-	if err != nil {
-		t.Fatal(err)
+	msg = fmt.Sprintf(`{"deploy_vault":{"vault_code_id":%s,"assets":["%s","%s"],"assets_balances":["10000","10000"],"weights":["1","1"],"amplification":"1000000000000000000","vault_fee":"0","name":"POOL","symbol":"POOL","chain_interface":"%s"}}`, vaultCodeId, tokens[0], tokens[1], interfaceContractAddr)
+	
+	cmd := []string{chain.Config().Bin, "tx", "wasm", "execute", factoryContractAddr, msg,
+		"--keyring-backend", keyring.BackendTest,
+		"--node", chain.GetRPCAddress(),
+		"--from", account,
+		"--gas", "50000000",
+		"--gas-prices", chain.Config().GasPrices,
+		"--home", chain.HomeDir(),
+		"--chain-id", chain.Config().ChainID,
+		"--output", "json",
+		"-b", "block",
+		"-y",
 	}
 
+	stdout, _, err := chain.Exec(ctx, cmd, nil)
+	require.NoError(t, err)
 
+	var response Response
 
+	json.Unmarshal([]byte(stdout), &response)
 
-	// codeId, err := junoBChain.StoreContract(ctx, junoBUser.Bech32Address(junoB.Config().Bech32Prefix), "contracts/catalyst_factory.wasm")
-	// if err != nil {
-	// 	t.Fatal(err)
-	// }
+	vault_address := response.Logs[0].Events[5].Attributes[4].Value
 
-	// _ = codeId;
+	t.Log("Vault address: ", vault_address)
 
-	// contractAddr, err := junoAChain.InstantiateContract(ctx, keyname, codeId, message, true)
-	// if err != nil {
-	// 	t.Fatal(err)
-	// }
+	return vault_address
 
+}
 
-	// // // // Send Transaction
-	// // // amountToSend := int64(1_000_000)
-	// // // dstAddress := junoBUser.FormattedAddress()
-	// // // transfer := ibc.WalletAmount{
-	// // // 	Address: dstAddress,
-	// // // 	Denom:   junoA.Config().Denom,
-	// // // 	Amount:  amountToSend,
-	// // // }
-	// // // tx, err := junoA.SendIBCTransfer(ctx, junoAChannelID, junoAUser.KeyName(), transfer, ibc.TransferOptions{})
-	// // // require.NoError(t, err)
-	// // // require.NoError(t, tx.Validate())
+func TestLearn(t *testing.T) {
 
-	// // // // relay MsgRecvPacket to junoB, then MsgAcknowledgement back to junoA
-	// // // require.NoError(t, r.Flush(ctx, eRep, ibcPath, junoAChannelID))
+	t.Parallel()
 
-	// // // // test source wallet has decreased funds
-	// // // expectedBal := junoAUserBalInitial - amountToSend
-	// // // junoAUserBalNew, err := junoA.GetBalance(ctx, junoAUser.FormattedAddress(), junoA.Config().Denom)
-	// // // require.NoError(t, err)
-	// // // require.Equal(t, expectedBal, junoAUserBalNew)
+	ctx := context.Background()
 
-	// // // // Trace IBC Denom
-	// // // srcDenomTrace := transfertypes.ParseDenomTrace(transfertypes.GetPrefixedDenom("transfer", osmoChannelID, junoA.Config().Denom))
-	// // // dstIbcDenom := srcDenomTrace.IBCDenom()
+	// Initialize the chains
+	env := InitializeTestEnv(t, ctx)
 
-	// // // // Test destination wallet has increased funds
-	// // // osmosUserBalNew, err := junoB.GetBalance(ctx, junoBUser.FormattedAddress(), dstIbcDenom)
-	// // // require.NoError(t, err)
-	// // // require.Equal(t, amountToSend, osmosUserBalNew)
+	junoAEnv := env[0]
+	junoAChain := junoAEnv.Chain
+	junoAGovernanceAddr := junoAEnv.UsersAddresses[0]
 
+	junoBEnv := env[1]
 
-	// // Deploy contracts
-	// junoBChain := junoB.(*cosmos.CosmosChain)
-	// junoBFactoryCodeId, err := junoBChain.StoreContract(ctx, junoBUser.Address, "../target/wasm32-unknown-unknown/release/catalyst_factory.wasm")
+	_ = junoBEnv
 
-	// _ = junoBFactoryCodeId
-	// // _ = err
-	// if err != nil {
-	// 	t.Fatal(err)
-	// }
-	// // require.NoError(t, err);
+	factoryContractAddr := DeployAndInstantiateFactory(t, ctx, junoAChain, junoAGovernanceAddr)
+	interfaceContractAddr := DeployAndInstantiateInterfacePoA(t, ctx, junoAChain, junoAGovernanceAddr)
+	testTokens := DeployAndInstantiateTestTokens(t, ctx, junoAChain, junoAGovernanceAddr)
+	vaultCodeId := StoreVolatileVault(t, ctx, junoAChain, junoAGovernanceAddr)
 
-	// // t.Logf("junoA Catalyst factory code id %s", junoAFactoryCodeId)
+	vaultAddress := DeployVault(
+		t,
+		ctx,
+		junoAChain,
+		junoAGovernanceAddr,
+		testTokens,
+		factoryContractAddr,
+		interfaceContractAddr,
+		vaultCodeId,
+	)
 
+	_ = vaultAddress
 	
 }
