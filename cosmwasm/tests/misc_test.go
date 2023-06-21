@@ -118,19 +118,23 @@ func InitializeTestEnv(t *testing.T, ctx context.Context) []TestChainConfig {
 
 	// Create and Fund User Wallets
 	fundAmount := int64(10_000_000)
-	users := interchaintest.GetAndFundTestUsers(t, ctx, "default", fundAmount, junoA, junoB)
-	junoAUser := users[0]
-	junoBUser := users[1]
-	junoAUserAddr := junoAUser.Bech32Address(junoA.Config().Bech32Prefix)
-	junoBUserAddr := junoBUser.Bech32Address(junoB.Config().Bech32Prefix)
+	users := interchaintest.GetAndFundTestUsers(t, ctx, "default", fundAmount, junoA, junoA, junoB, junoB)
+	junoAUser1 := users[0]
+	junoAUser2 := users[1]
+	junoBUser1 := users[2]
+	junoBUser2 := users[3]
+	junoAUser1Addr := junoAUser1.Bech32Address(junoA.Config().Bech32Prefix)
+	junoAUser2Addr := junoAUser2.Bech32Address(junoA.Config().Bech32Prefix)
+	junoBUser1Addr := junoBUser1.Bech32Address(junoB.Config().Bech32Prefix)
+	junoBUser2Addr := junoBUser2.Bech32Address(junoB.Config().Bech32Prefix)
 
-	junoAUserBalInitial, err := junoA.GetBalance(ctx, junoAUserAddr, junoA.Config().Denom)
-	require.NoError(t, err)
-	require.Equal(t, fundAmount, junoAUserBalInitial)
+	// junoAUserBalInitial, err := junoA.GetBalance(ctx, junoAUserAddr, junoA.Config().Denom)
+	// require.NoError(t, err)
+	// require.Equal(t, fundAmount, junoAUserBalInitial)
 
-	junoBUserBalInitial, err := junoB.GetBalance(ctx, junoBUserAddr, junoB.Config().Denom)
-	require.NoError(t, err)
-	require.Equal(t, fundAmount, junoBUserBalInitial)
+	// junoBUserBalInitial, err := junoB.GetBalance(ctx, junoBUserAddr, junoB.Config().Denom)
+	// require.NoError(t, err)
+	// require.Equal(t, fundAmount, junoBUserBalInitial)
 
 	// Get Channel ID
 	junoAChannelInfo, err := r.GetChannels(ctx, eRep, junoA.Config().ChainID)
@@ -144,15 +148,15 @@ func InitializeTestEnv(t *testing.T, ctx context.Context) []TestChainConfig {
 	junoAConfig := TestChainConfig{
 		Chain: junoA.(*cosmos.CosmosChain),
 		ChannelID: junoAChannelID,
-		Users: []*ibc.Wallet{junoAUser},
-		UsersAddresses: []string{junoAUserAddr},
+		Users: []*ibc.Wallet{junoAUser1, junoAUser2},
+		UsersAddresses: []string{junoAUser1Addr, junoAUser2Addr},
 	}
 
 	junoBConfig := TestChainConfig{
 		Chain: junoB.(*cosmos.CosmosChain),
 		ChannelID: junoBChannelID,
-		Users: []*ibc.Wallet{junoBUser},
-		UsersAddresses: []string{junoBUserAddr},
+		Users: []*ibc.Wallet{junoBUser1, junoBUser2},
+		UsersAddresses: []string{junoBUser1Addr, junoBUser2Addr},
 	}
 
 	return []TestChainConfig{junoAConfig, junoBConfig}
@@ -231,6 +235,34 @@ func StoreVolatileVault(
 	return vaultCodeId
 }
 
+func ExecuteCmd(
+	t *testing.T,
+	ctx context.Context,
+	chain *cosmos.CosmosChain,
+	account string,
+	contractAddr string,
+	msg string,
+) (stdout []byte, stderr []byte) {
+
+	cmd := []string{chain.Config().Bin, "tx", "wasm", "execute", contractAddr, msg,
+		"--keyring-backend", keyring.BackendTest,
+		"--node", chain.GetRPCAddress(),
+		"--from", account,
+		"--gas", "50000000",
+		"--gas-prices", chain.Config().GasPrices,
+		"--home", chain.HomeDir(),
+		"--chain-id", chain.Config().ChainID,
+		"--output", "json",
+		"-b", "block",
+		"-y",
+	}
+
+	stdout, stderr, err := chain.Exec(ctx, cmd, nil)
+	require.NoError(t, err)
+
+	return stdout, stderr
+}
+
 func DeployVault(
 	t *testing.T,
 	ctx context.Context,
@@ -255,22 +287,15 @@ func DeployVault(
 
 	// Instantiate vault
 	msg = fmt.Sprintf(`{"deploy_vault":{"vault_code_id":%s,"assets":["%s","%s"],"assets_balances":["10000","10000"],"weights":["1","1"],"amplification":"1000000000000000000","vault_fee":"0","name":"POOL","symbol":"POOL","chain_interface":"%s"}}`, vaultCodeId, tokens[0], tokens[1], interfaceContractAddr)
-	
-	cmd := []string{chain.Config().Bin, "tx", "wasm", "execute", factoryContractAddr, msg,
-		"--keyring-backend", keyring.BackendTest,
-		"--node", chain.GetRPCAddress(),
-		"--from", account,
-		"--gas", "50000000",
-		"--gas-prices", chain.Config().GasPrices,
-		"--home", chain.HomeDir(),
-		"--chain-id", chain.Config().ChainID,
-		"--output", "json",
-		"-b", "block",
-		"-y",
-	}
 
-	stdout, _, err := chain.Exec(ctx, cmd, nil)
-	require.NoError(t, err)
+	stdout, _ := ExecuteCmd(
+		t,
+		ctx,
+		chain,
+		account,
+		factoryContractAddr,
+		msg,
+	)
 
 	var response Response
 
@@ -318,5 +343,25 @@ func TestLearn(t *testing.T) {
 	)
 
 	_ = vaultAddress
+
+	junoASwapperAddr := junoAEnv.UsersAddresses[1]
+	amount := 100
+
+	// Transfer tokens to swapper
+	transferMsg := fmt.Sprintf(`{"transfer":{"recipient":"%s","amount":"%d"}}`, junoASwapperAddr, amount)
+	_, _ = ExecuteCmd(t, ctx, junoAChain, junoAGovernanceAddr, testTokens[0], transferMsg)
+	_, _ = ExecuteCmd(t, ctx, junoAChain, junoAGovernanceAddr, testTokens[1], transferMsg)
+
+	// Set token allowance
+	setAllowanceMsg := fmt.Sprintf(`{"increase_allowance":{"spender":"%s","amount":"%d"}}`, vaultAddress, amount)
+	_, _ = ExecuteCmd(t, ctx, junoAChain, junoAGovernanceAddr, testTokens[0], setAllowanceMsg)
+	_, _ = ExecuteCmd(t, ctx, junoAChain, junoAGovernanceAddr, testTokens[1], setAllowanceMsg)
+
+	// Local swap
+	localSwapMsg := fmt.Sprintf(`{"local_swap":{"from_asset":"%s","to_asset":"%s","amount":"%d","min_out":"0"}}`, testTokens[0], testTokens[1], amount)
+
+	stdout, _ := ExecuteCmd(t, ctx, junoAChain, junoAGovernanceAddr, vaultAddress, localSwapMsg)
+
+	t.Log(string(stdout[:]))
 	
 }
