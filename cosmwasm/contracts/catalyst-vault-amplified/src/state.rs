@@ -1747,7 +1747,7 @@ pub fn set_amplification(
     }
 
     // Save the target amplification
-    ONE_MINUS_AMP.save(
+    TARGET_ONE_MINUS_AMP.save(
         deps.storage,
         &WAD
             .as_i256()                                         // Casting is safe, as WAD < I256.max
