@@ -71,7 +71,7 @@ pub fn initialize_swap_curves(
     }
 
     // Save the amplification value. It is stored as 1 - amp since most equations uses amp this way.
-    let one_minus_amp = I256::from(amp).wrapping_sub(WAD.as_i256());
+    let one_minus_amp = WAD.as_i256().wrapping_sub(I256::from(amp));
     ONE_MINUS_AMP.save(deps.storage, &one_minus_amp)?;
     TARGET_ONE_MINUS_AMP.save(deps.storage, &one_minus_amp)?;
 
