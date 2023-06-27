@@ -1576,12 +1576,7 @@ pub fn calc_balance_0_ampped(
         unit_tracker
     )?;
 
-    let balance_0_ampped = pow_wad(
-        weighted_alpha_0_ampped.as_i256(),
-        WADWAD / one_minus_amp
-    )?.as_u256();
-
-    Ok((balance_0_ampped, assets_count))
+    Ok((weighted_alpha_0_ampped, assets_count))
 }
 
 
