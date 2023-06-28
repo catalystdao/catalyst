@@ -1161,7 +1161,7 @@ pub fn send_liquidity(
                 vault_tokens_share.as_i256(),   // If casting overflows to a negative number 'pow_wad' will fail
                 one_minus_amp
             )?.as_u256()                        // Casting is safe, as pow_wad result is always positive
-                .wrapping_sub(U256::one())      // 'wrapping_sub' is safe as 'pow_wad' result is always >= 1
+                .wrapping_sub(WAD)      // 'wrapping_sub' is safe as 'pow_wad' result is always >= 1
         )?
     )?;
 
