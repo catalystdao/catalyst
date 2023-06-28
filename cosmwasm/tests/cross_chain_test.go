@@ -114,8 +114,7 @@ func TestCrossChain(t *testing.T) {
 
 	stdout, _ = ExecuteCmd(t, ctx, junoAChain, junoASwapperAddr, junoAVaultAddress, sendAssetMsg)
 
-	
-	// ! fails at this point
+
 	var response Response
 	json.Unmarshal([]byte(stdout), &response)
 	ibcData := response.Logs[0].Events[2].Attributes[9].Value
@@ -134,11 +133,12 @@ func TestCrossChain(t *testing.T) {
 
 	t.Log("ACK: ", ack)
 
-	// // Local swap
-	// localSwapMsg := fmt.Sprintf(`{"local_swap":{"from_asset":"%s","to_asset":"%s","amount":"%d","min_out":"0"}}`, testTokens[0], testTokens[1], amount)
 
-	// stdout, _ := ExecuteCmd(t, ctx, junoAChain, junoAGovernanceAddr, vaultAddress, localSwapMsg)
+	// Execute Ack
+	ackMsg := fmt.Sprintf(`{"i_b_c_packet_ack":{"data":"%s","response":"%s","channel_id":"%s"}}`, ibcData, ack, channel_id)
+	stdout, _ = ExecuteCmd(t, ctx, junoAChain, junoAGovernanceAddr, junoAInterfaceContractAddr, ackMsg)
 
-	// t.Log(string(stdout[:]))
+	json.Unmarshal([]byte(stdout), &response)
+	t.Log("Ack response: ", response)
 	
 }
