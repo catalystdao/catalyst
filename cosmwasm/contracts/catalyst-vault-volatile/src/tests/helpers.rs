@@ -1,9 +1,8 @@
 use cosmwasm_std::{Uint128, Addr, Binary, Uint64};
-use cw20::{Cw20Coin, MinterResponse, Cw20ExecuteMsg, BalanceResponse, Cw20QueryMsg, TokenInfoResponse};
+use cw20::{Cw20ExecuteMsg};
 use cw_multi_test::{ContractWrapper, App, Executor, AppResponse};
 use catalyst_types::U256;
 use catalyst_vault_common::msg::InstantiateMsg;
-use fixed_point_math::WAD;
 use test_helpers::{math::{u256_to_f64, uint128_to_f64}, misc::get_response_attribute, definitions::{SETUP_MASTER, FACTORY_OWNER}};
 
 use crate::msg::VolatileExecuteMsg;
