@@ -197,6 +197,7 @@ dependencies = [
  "mock-catalyst-ibc-interface",
  "schemars",
  "serde",
+ "test-helpers",
  "thiserror",
 ]
 
@@ -1011,6 +1012,7 @@ dependencies = [
 name = "test-helpers"
 version = "0.1.0"
 dependencies = [
+ "catalyst-types",
  "cosmwasm-schema",
  "cosmwasm-std",
  "cosmwasm-storage",

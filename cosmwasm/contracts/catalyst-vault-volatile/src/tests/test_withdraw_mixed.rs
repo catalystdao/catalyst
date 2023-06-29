@@ -4,8 +4,9 @@ mod test_volatile_withdraw_mixed {
     use cosmwasm_std::{Uint128, Addr, Uint64};
     use cw_multi_test::{App, Executor};
     use catalyst_vault_common::{ContractError, state::INITIAL_MINT_AMOUNT};
+    use test_helpers::math::{uint128_to_f64, f64_to_uint128};
 
-    use crate::{msg::VolatileExecuteMsg, tests::{helpers::{ SETUP_MASTER, deploy_test_tokens, WAD, query_token_balance, transfer_tokens, get_response_attribute, query_token_info, WITHDRAWER, compute_expected_withdraw_mixed, mock_factory_deploy_vault}, math_helpers::{uint128_to_f64, f64_to_uint128}}};
+    use crate::{msg::VolatileExecuteMsg, tests::{helpers::{ SETUP_MASTER, deploy_test_tokens, WAD, query_token_balance, transfer_tokens, get_response_attribute, query_token_info, WITHDRAWER, compute_expected_withdraw_mixed, mock_factory_deploy_vault}}};
 
 
     //TODO add test for the withdraw event

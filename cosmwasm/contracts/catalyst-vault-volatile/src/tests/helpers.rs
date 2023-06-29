@@ -5,8 +5,9 @@ use cw20::{Cw20Coin, MinterResponse, Cw20ExecuteMsg, BalanceResponse, Cw20QueryM
 use cw_multi_test::{ContractWrapper, App, Executor, AppResponse};
 use catalyst_types::U256;
 use catalyst_vault_common::msg::InstantiateMsg;
+use test_helpers::math::{u256_to_f64, uint128_to_f64};
 
-use crate::{msg::VolatileExecuteMsg, tests::math_helpers::{u256_to_f64, uint128_to_f64}};
+use crate::msg::VolatileExecuteMsg;
 
 pub const CHAIN_INTERFACE       : &str = "chain_interface_addr";
 pub const DEPLOYER              : &str = "deployer_addr";
