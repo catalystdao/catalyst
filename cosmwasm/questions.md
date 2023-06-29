@@ -1,0 +1,3 @@
+- Test setup is very slow, is there a way to keep containers running across tests?
+- To interact with the contracts I've end up using `chain.Exec`
+- Best way to get the tx on the target chain?

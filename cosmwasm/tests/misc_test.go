@@ -15,11 +15,11 @@ func TestLearn(t *testing.T) {
 	// Initialize the chains
 	env := InitializeTestEnv(t, ctx)
 
-	junoAEnv := env[0]
+	junoAEnv := env.Chains[0]
 	junoAChain := junoAEnv.Chain
 	junoAGovernanceAddr := junoAEnv.UsersAddresses[0]
 
-	junoBEnv := env[1]
+	junoBEnv := env.Chains[1]
 
 	_ = junoBEnv
 

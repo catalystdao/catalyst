@@ -18,7 +18,7 @@ func TestCrossChain(t *testing.T) {
 
 
 	// Juno A
-	junoAEnv := env[0]
+	junoAEnv := env.Chains[0]
 	junoAChain := junoAEnv.Chain
 	junoAGovernanceAddr := junoAEnv.UsersAddresses[0]
 
@@ -43,7 +43,7 @@ func TestCrossChain(t *testing.T) {
 	junoAVaultAddressEncoded := EncodeAddress(t, junoAVaultAddress)
 
 	// Juno B
-	junoBEnv := env[0]
+	junoBEnv := env.Chains[0]
 	junoBChain := junoBEnv.Chain
 	junoBGovernanceAddr := junoBEnv.UsersAddresses[0]
 

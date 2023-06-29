@@ -31,11 +31,13 @@ func SetupContract(t *testing.T, ctx context.Context, chain *cosmos.CosmosChain,
 	return codeId, contractAddr
 }
 
+
 type TestChainConfig struct {
 	Chain *cosmos.CosmosChain
-	ChannelID string
+	// ChannelID string
 	Users []*ibc.Wallet
 	UsersAddresses []string
+	Relayer *ibc.Relayer
 }
 
 type ResponseAttribute struct {
@@ -63,7 +65,14 @@ type Response struct {
 	Logs []ResponseLog
 }
 
-func InitializeTestEnv(t *testing.T, ctx context.Context) []TestChainConfig {
+type TestEnv struct {
+	Chains []TestChainConfig
+	Relayer ibc.Relayer
+	IBCPath string
+	RelayerReporter testreporter.RelayerExecReporter
+}
+
+func InitializeTestEnv(t *testing.T, ctx context.Context) TestEnv {
 
 	// Initialize the chain factory
 	validatorsCount := 1
@@ -111,7 +120,7 @@ func InitializeTestEnv(t *testing.T, ctx context.Context) []TestChainConfig {
 		TestName:          t.Name(),
 		Client:            client,
 		NetworkID:         network,
-		BlockDatabaseFile: interchaintest.DefaultBlockDatabaseFilepath(),
+		// BlockDatabaseFile: interchaintest.DefaultBlockDatabaseFilepath(),
 
 		SkipPathCreation: false},
 	),
@@ -146,21 +155,31 @@ func InitializeTestEnv(t *testing.T, ctx context.Context) []TestChainConfig {
 	require.NoError(t, err)
 	junoBChannelID := junoBChannelInfo[0].ChannelID
 
+	_ = junoAChannelID
+	_ = junoBChannelID
+
 	junoAConfig := TestChainConfig{
 		Chain: junoA.(*cosmos.CosmosChain),
-		ChannelID: junoAChannelID,
+		// ChannelID: junoAChannelID,
 		Users: []*ibc.Wallet{junoAUser1, junoAUser2},
 		UsersAddresses: []string{junoAUser1Addr, junoAUser2Addr},
 	}
 
 	junoBConfig := TestChainConfig{
 		Chain: junoB.(*cosmos.CosmosChain),
-		ChannelID: junoBChannelID,
+		// ChannelID: junoBChannelID,
 		Users: []*ibc.Wallet{junoBUser1, junoBUser2},
 		UsersAddresses: []string{junoBUser1Addr, junoBUser2Addr},
 	}
 
-	return []TestChainConfig{junoAConfig, junoBConfig}
+	require.NoError(t, r.StartRelayer(ctx, eRep, ibcPath))
+
+	return TestEnv{
+		Chains: []TestChainConfig{junoAConfig, junoBConfig},
+		Relayer: r,
+		IBCPath: ibcPath,
+		RelayerReporter: *eRep,
+	}
 
 }
 
@@ -188,6 +207,21 @@ func DeployAndInstantiateInterfacePoA(
 
 	msg := `{}`
 	_, interfaceContractAddr := SetupContract(t, ctx, chain, account, "contracts/catalyst_ibc_interface_poa.wasm", msg)
+
+	t.Log("Interface address: ", interfaceContractAddr)
+
+	return interfaceContractAddr
+}
+
+func DeployAndInstantiateInterface(
+	t *testing.T,
+	ctx context.Context,
+	chain *cosmos.CosmosChain,
+	account string,
+) string {
+
+	msg := `{}`
+	_, interfaceContractAddr := SetupContract(t, ctx, chain, account, "contracts/catalyst_ibc_interface.wasm", msg)
 
 	t.Log("Interface address: ", interfaceContractAddr)
 
