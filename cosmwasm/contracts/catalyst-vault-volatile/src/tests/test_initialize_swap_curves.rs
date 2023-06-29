@@ -6,8 +6,9 @@ mod test_volatile_initialize_swap_curves {
     use catalyst_types::U256;
     use fixed_point_math::{LN2, WAD};
     use catalyst_vault_common::{ContractError, msg::{AssetsResponse, WeightResponse, GetLimitCapacityResponse, TotalEscrowedAssetResponse, TotalEscrowedLiquidityResponse}};
+    use test_helpers::token::{deploy_test_tokens, mock_test_token_definitions};
 
-    use crate::{tests::helpers::{mock_instantiate_vault, DEPOSITOR, DEPLOYER, InitializeSwapCurvesMockConfig, deploy_test_tokens, mock_test_token_definitions, SETUP_MASTER}, msg::VolatileExecuteMsg};
+    use crate::{tests::helpers::{mock_instantiate_vault, DEPOSITOR, DEPLOYER, InitializeSwapCurvesMockConfig, SETUP_MASTER}, msg::VolatileExecuteMsg};
 
 
 
@@ -22,6 +23,7 @@ mod test_volatile_initialize_swap_curves {
         // Create tokens and set vault allowances
         let test_tokens = deploy_test_tokens(
             &mut app,
+            SETUP_MASTER.to_string(),
             None,
             None
         );
@@ -195,6 +197,7 @@ mod test_volatile_initialize_swap_curves {
         // Create tokens and set vault allowances
         let test_tokens = deploy_test_tokens(
             &mut app,
+            SETUP_MASTER.to_string(),
             None,
             None
         );
@@ -292,9 +295,10 @@ mod test_volatile_initialize_swap_curves {
         let vault = mock_instantiate_vault(&mut app, None);
 
         // Create tokens and set vault allowances
-        let test_tokens_definitions = mock_test_token_definitions(4);    // ! Generate 4 tokens definitions
+        let test_tokens_definitions = mock_test_token_definitions(SETUP_MASTER.to_string(), 4);    // ! Generate 4 tokens definitions
         let test_tokens = deploy_test_tokens(
             &mut app,
+            SETUP_MASTER.to_string(),
             None,
             Some(test_tokens_definitions)
         );
@@ -352,6 +356,7 @@ mod test_volatile_initialize_swap_curves {
         // Create tokens and set vault allowances
         let test_tokens = deploy_test_tokens(
             &mut app,
+            SETUP_MASTER.to_string(),
             None,
             None
         );
@@ -408,6 +413,7 @@ mod test_volatile_initialize_swap_curves {
         // Create tokens and set vault allowances
         let test_tokens = deploy_test_tokens(
             &mut app,
+            SETUP_MASTER.to_string(),
             None,
             None
         );
@@ -465,6 +471,7 @@ mod test_volatile_initialize_swap_curves {
         // Create tokens and set vault allowances
         let test_tokens = deploy_test_tokens(
             &mut app,
+            SETUP_MASTER.to_string(),
             None,
             None
         );
@@ -521,6 +528,7 @@ mod test_volatile_initialize_swap_curves {
         // Create tokens and set vault allowances
         let test_tokens = deploy_test_tokens(
             &mut app,
+            SETUP_MASTER.to_string(),
             None,
             None
         );

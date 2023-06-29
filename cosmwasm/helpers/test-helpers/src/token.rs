@@ -9,12 +9,13 @@ pub struct TestTokenDefinition {
     pub name: String,
     pub symbol: String,
     pub decimals: u8,
-    pub initial_mint: Uint128
+    pub initial_mint: Uint128,
+    pub minter: String
 }
 
 impl TestTokenDefinition {
 
-    fn deploy_token(
+    pub fn deploy_token(
         &self,
         app: &mut App,
         cw20_contract: u64,
@@ -45,38 +46,65 @@ impl TestTokenDefinition {
 
 }
 
+impl Into<cw20_base::msg::InstantiateMsg> for TestTokenDefinition {
+    fn into(self) -> cw20_base::msg::InstantiateMsg {
+        cw20_base::msg::InstantiateMsg {
+            name: self.name,
+            symbol: self.symbol.clone(),
+            decimals: self.decimals,
+            initial_balances: vec![Cw20Coin {
+                address: self.minter.clone(),
+                amount: self.initial_mint
+            }],
+            mint: Some(MinterResponse {
+                minter: self.minter,
+                cap: None
+            }),
+            marketing: None
+        }
+    }
+}
 
-pub fn mock_test_token_definitions(count: usize) -> Vec<TestTokenDefinition> {
+
+pub fn mock_test_token_definitions(
+    minter: String,
+    count: usize
+) -> Vec<TestTokenDefinition> {
     vec![
         TestTokenDefinition {
             name: "Test Token A".to_string(),
             symbol: "TTA".to_string(),
             decimals: 18,
-            initial_mint: Uint128::from(100000000u64) * WAD
+            initial_mint: Uint128::from(100000000u64) * WAD,
+            minter: minter.clone()
         },
         TestTokenDefinition {
             name: "Test Token B".to_string(),
             symbol: "TTB".to_string(),
             decimals: 18,
-            initial_mint: Uint128::from(100000000u64) * WAD
+            initial_mint: Uint128::from(100000000u64) * WAD,
+            minter: minter.clone()
         },
         TestTokenDefinition {
             name: "Test Token C".to_string(),
             symbol: "TTC".to_string(),
             decimals: 18,
-            initial_mint: Uint128::from(100000000u64) * WAD
+            initial_mint: Uint128::from(100000000u64) * WAD,
+            minter: minter.clone()
         },
         TestTokenDefinition {
             name: "Test Token D".to_string(),
             symbol: "TTD".to_string(),
             decimals: 18,
-            initial_mint: Uint128::from(100000000u64) * WAD
+            initial_mint: Uint128::from(100000000u64) * WAD,
+            minter: minter.clone()
         },
         TestTokenDefinition {
             name: "Test Token E".to_string(),
             symbol: "TTE".to_string(),
             decimals: 18,
-            initial_mint: Uint128::from(100000000u64) * WAD
+            initial_mint: Uint128::from(100000000u64) * WAD,
+            minter
         }
     ][0..count].to_vec()
 }
@@ -100,7 +128,7 @@ pub fn cw20_contract_storage(
 
 pub fn deploy_test_tokens(
     app: &mut App,
-    minter: Addr,
+    minter: String,
     cw20_contract: Option<u64>,
     token_definitions: Option<Vec<TestTokenDefinition>>
 ) -> Vec<Addr> {
@@ -108,10 +136,17 @@ pub fn deploy_test_tokens(
     let cw20_contract = cw20_contract.unwrap_or(cw20_contract_storage(app));
 
     token_definitions
-        .unwrap_or(mock_test_token_definitions(3))
+        .unwrap_or(mock_test_token_definitions(minter.clone(), 3))
         .iter()
         .map(|definition| {
-            definition.deploy_token(app, cw20_contract, minter.clone())
+            app.instantiate_contract::<cw20_base::msg::InstantiateMsg, _>(
+                cw20_contract,
+                Addr::unchecked(minter.clone()),
+                &(definition.clone()).into(),
+                &[],
+                definition.symbol.clone(),
+                None
+            ).unwrap()
         })
         .collect()
 }

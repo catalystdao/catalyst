@@ -4,9 +4,9 @@ mod test_volatile_send_liquidity_success_failure {
     use catalyst_types::{U256, u256};
     use catalyst_vault_common::{ContractError, msg::{TotalEscrowedLiquidityResponse, LiquidityEscrowResponse}, state::{compute_send_liquidity_hash, INITIAL_MINT_AMOUNT}};
     use fixed_point_math::WAD;
-    use test_helpers::{math::{uint128_to_f64, f64_to_uint128}, misc::{encode_payload_address, get_response_attribute}};
+    use test_helpers::{math::{uint128_to_f64, f64_to_uint128}, misc::{encode_payload_address, get_response_attribute}, token::{deploy_test_tokens, transfer_tokens, query_token_info, query_token_balance}};
 
-    use crate::{msg::{VolatileExecuteMsg, QueryMsg}, tests::{helpers::{SETUP_MASTER, deploy_test_tokens, query_token_balance, transfer_tokens, mock_set_vault_connection, CHANNEL_ID, SWAPPER_B, SWAPPER_A, mock_instantiate_interface, query_token_info, mock_factory_deploy_vault}}};
+    use crate::{msg::{VolatileExecuteMsg, QueryMsg}, tests::{helpers::{SETUP_MASTER, mock_set_vault_connection, CHANNEL_ID, SWAPPER_B, SWAPPER_A, mock_instantiate_interface, mock_factory_deploy_vault}}};
 
     //TODO check events
 
@@ -24,7 +24,7 @@ mod test_volatile_send_liquidity_success_failure {
         pub fn initiate_mock_env(app: &mut App) -> Self {
             // Instantiate and initialize vault
             let interface = mock_instantiate_interface(app);
-            let vault_assets = deploy_test_tokens(app, None, None);
+            let vault_assets = deploy_test_tokens(app, SETUP_MASTER.to_string(), None, None);
             let vault_initial_balances = vec![Uint128::from(1u64) * WAD.as_uint128(), Uint128::from(2u64) * WAD.as_uint128(), Uint128::from(3u64) * WAD.as_uint128()];
             let vault_weights = vec![Uint64::one(), Uint64::one(), Uint64::one()];
             let vault = mock_factory_deploy_vault(

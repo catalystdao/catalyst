@@ -452,7 +452,7 @@ mod catalyst_vault_factory_tests {
         // Define vault config
         let vault_assets = deploy_test_tokens(
             &mut app,
-            Addr::unchecked(SETUP_MASTER),
+            SETUP_MASTER.to_string(),
             None,
             None
         );
@@ -698,7 +698,7 @@ mod catalyst_vault_factory_tests {
         // Define vault config
         let vault_assets = deploy_test_tokens(
             &mut app,
-            Addr::unchecked(SETUP_MASTER),
+            SETUP_MASTER.to_string(),
             None,
             None
         );

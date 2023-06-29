@@ -4,9 +4,9 @@ mod test_volatile_receive_asset {
     use catalyst_types::{U256, u256};
     use catalyst_vault_common::ContractError;
     use fixed_point_math::WAD;
-    use test_helpers::{math::{uint128_to_f64, f64_to_uint128}, misc::{encode_payload_address, get_response_attribute}};
+    use test_helpers::{math::{uint128_to_f64, f64_to_uint128}, misc::{encode_payload_address, get_response_attribute}, token::{deploy_test_tokens, query_token_balance}};
 
-    use crate::{msg::VolatileExecuteMsg, tests::{helpers::{deploy_test_tokens, query_token_balance, mock_set_vault_connection, CHANNEL_ID, SWAPPER_B, compute_expected_receive_asset, CHAIN_INTERFACE, mock_factory_deploy_vault}}};
+    use crate::{msg::VolatileExecuteMsg, tests::{helpers::{mock_set_vault_connection, CHANNEL_ID, SWAPPER_B, compute_expected_receive_asset, CHAIN_INTERFACE, mock_factory_deploy_vault, SETUP_MASTER}}};
 
     //TODO check event
 
@@ -16,7 +16,7 @@ mod test_volatile_receive_asset {
         let mut app = App::default();
 
         // Instantiate and initialize vault
-        let vault_tokens = deploy_test_tokens(&mut app, None, None);
+        let vault_tokens = deploy_test_tokens(&mut app, SETUP_MASTER.to_string(), None, None);
         let vault_initial_balances = vec![Uint128::from(1u64) * WAD.as_uint128(), Uint128::from(2u64) * WAD.as_uint128(), Uint128::from(3u64) * WAD.as_uint128()];
         let vault_weights = vec![Uint64::one(), Uint64::one(), Uint64::one()];
         let vault = mock_factory_deploy_vault(
@@ -108,7 +108,7 @@ mod test_volatile_receive_asset {
         let mut app = App::default();
 
         // Instantiate and initialize vault
-        let vault_tokens = deploy_test_tokens(&mut app, None, None);
+        let vault_tokens = deploy_test_tokens(&mut app, SETUP_MASTER.to_string(), None, None);
         let vault_initial_balances = vec![Uint128::from(1u64) * WAD.as_uint128(), Uint128::from(2u64) * WAD.as_uint128(), Uint128::from(3u64) * WAD.as_uint128()];
         let vault_weights = vec![Uint64::one(), Uint64::one(), Uint64::one()];
         let vault = mock_factory_deploy_vault(
@@ -189,7 +189,7 @@ mod test_volatile_receive_asset {
         let mut app = App::default();
 
         // Instantiate and initialize vault
-        let vault_tokens = deploy_test_tokens(&mut app, None, None);
+        let vault_tokens = deploy_test_tokens(&mut app, SETUP_MASTER.to_string(), None, None);
         let vault_initial_balances = vec![Uint128::from(1u64) * WAD.as_uint128(), Uint128::from(2u64) * WAD.as_uint128(), Uint128::from(3u64) * WAD.as_uint128()];
         let vault_weights = vec![Uint64::one(), Uint64::one(), Uint64::one()];
         let vault = mock_factory_deploy_vault(
@@ -294,7 +294,7 @@ mod test_volatile_receive_asset {
         let mut app = App::default();
 
         // Instantiate and initialize vault
-        let vault_tokens = deploy_test_tokens(&mut app, None, None);
+        let vault_tokens = deploy_test_tokens(&mut app, SETUP_MASTER.to_string(), None, None);
         let vault_initial_balances = vec![Uint128::from(1u64) * WAD.as_uint128(), Uint128::from(2u64) * WAD.as_uint128(), Uint128::from(3u64) * WAD.as_uint128()];
         let vault_weights = vec![Uint64::one(), Uint64::one(), Uint64::one()];
         let vault = mock_factory_deploy_vault(
@@ -354,7 +354,7 @@ mod test_volatile_receive_asset {
         let mut app = App::default();
 
         // Instantiate and initialize vault
-        let vault_tokens = deploy_test_tokens(&mut app, None, None);
+        let vault_tokens = deploy_test_tokens(&mut app, SETUP_MASTER.to_string(), None, None);
         let vault_initial_balances = vec![Uint128::from(1u64) * WAD.as_uint128(), Uint128::from(2u64) * WAD.as_uint128(), Uint128::from(3u64) * WAD.as_uint128()];
         let vault_weights = vec![Uint64::one(), Uint64::one(), Uint64::one()];
         let vault = mock_factory_deploy_vault(
@@ -420,7 +420,7 @@ mod test_volatile_receive_asset {
         let mut app = App::default();
 
         // Instantiate and initialize vault
-        let vault_tokens = deploy_test_tokens(&mut app, None, None);
+        let vault_tokens = deploy_test_tokens(&mut app, SETUP_MASTER.to_string(), None, None);
         let vault_initial_balances = vec![Uint128::from(1u64) * WAD.as_uint128(), Uint128::from(2u64) * WAD.as_uint128(), Uint128::from(3u64) * WAD.as_uint128()];
         let vault_weights = vec![Uint64::one(), Uint64::one(), Uint64::one()];
         let vault = mock_factory_deploy_vault(

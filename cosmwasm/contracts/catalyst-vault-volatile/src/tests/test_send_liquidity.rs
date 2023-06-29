@@ -4,9 +4,9 @@ mod test_volatile_send_liquidity {
     use catalyst_types::U256;
     use catalyst_vault_common::{ContractError, msg::{TotalEscrowedLiquidityResponse, LiquidityEscrowResponse}, state::{INITIAL_MINT_AMOUNT, compute_send_liquidity_hash}};
     use fixed_point_math::WAD;
-    use test_helpers::{math::{uint128_to_f64, f64_to_uint128, u256_to_f64}, misc::{encode_payload_address, get_response_attribute}};
+    use test_helpers::{math::{uint128_to_f64, f64_to_uint128, u256_to_f64}, misc::{encode_payload_address, get_response_attribute}, token::{deploy_test_tokens, transfer_tokens, query_token_balance, query_token_info}};
 
-    use crate::{msg::VolatileExecuteMsg, tests::{helpers::{SETUP_MASTER, deploy_test_tokens, query_token_balance, transfer_tokens, mock_set_vault_connection, CHANNEL_ID, SWAPPER_B, SWAPPER_A, mock_instantiate_interface, compute_expected_send_liquidity, query_token_info, SWAPPER_C, mock_factory_deploy_vault}}};
+    use crate::{msg::VolatileExecuteMsg, tests::{helpers::{SETUP_MASTER, mock_set_vault_connection, CHANNEL_ID, SWAPPER_B, SWAPPER_A, mock_instantiate_interface, compute_expected_send_liquidity, SWAPPER_C, mock_factory_deploy_vault}}};
 
     //TODO check event
 
@@ -17,7 +17,7 @@ mod test_volatile_send_liquidity {
 
         // Instantiate and initialize vault
         let interface = mock_instantiate_interface(&mut app);
-        let vault_tokens = deploy_test_tokens(&mut app, None, None);
+        let vault_tokens = deploy_test_tokens(&mut app, SETUP_MASTER.to_string(), None, None);
         let vault_initial_balances = vec![Uint128::from(1u64) * WAD.as_uint128(), Uint128::from(2u64) * WAD.as_uint128(), Uint128::from(3u64) * WAD.as_uint128()];
         let vault_weights = vec![Uint64::one(), Uint64::one(), Uint64::one()];
         let vault = mock_factory_deploy_vault(
@@ -150,7 +150,7 @@ mod test_volatile_send_liquidity {
 
         // Instantiate and initialize vault
         let interface = mock_instantiate_interface(&mut app);
-        let vault_tokens = deploy_test_tokens(&mut app, None, None);
+        let vault_tokens = deploy_test_tokens(&mut app, SETUP_MASTER.to_string(), None, None);
         let vault_initial_balances = vec![Uint128::from(1u64) * WAD.as_uint128(), Uint128::from(2u64) * WAD.as_uint128(), Uint128::from(3u64) * WAD.as_uint128()];
         let vault_weights = vec![Uint64::one(), Uint64::one(), Uint64::one()];
         let vault = mock_factory_deploy_vault(
@@ -214,7 +214,7 @@ mod test_volatile_send_liquidity {
 
         // Instantiate and initialize vault
         let interface = mock_instantiate_interface(&mut app);
-        let vault_tokens = deploy_test_tokens(&mut app, None, None);
+        let vault_tokens = deploy_test_tokens(&mut app, SETUP_MASTER.to_string(), None, None);
         let vault_initial_balances = vec![Uint128::from(1u64) * WAD.as_uint128(), Uint128::from(2u64) * WAD.as_uint128(), Uint128::from(3u64) * WAD.as_uint128()];
         let vault_weights = vec![Uint64::one(), Uint64::one(), Uint64::one()];
         let vault = mock_factory_deploy_vault(

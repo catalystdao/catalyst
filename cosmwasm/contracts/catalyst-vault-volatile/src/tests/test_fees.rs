@@ -3,14 +3,15 @@ mod test_volatile_fees {
     use cw_multi_test::{App, Executor};
     use catalyst_vault_common::{ContractError, msg::{FeeAdministratorResponse, VaultFeeResponse, GovernanceFeeShareResponse}};
     use fixed_point_math::WAD;
+    use test_helpers::token::deploy_test_tokens;
 
-    use crate::{msg::{VolatileExecuteMsg, QueryMsg}, tests::helpers::{FACTORY_OWNER, mock_factory_deploy_vault, deploy_test_tokens}};
+    use crate::{msg::{VolatileExecuteMsg, QueryMsg}, tests::helpers::{FACTORY_OWNER, mock_factory_deploy_vault, SETUP_MASTER}};
 
 
 
     // Set Fee Administrator Tests **********************************************************************************************
     fn deploy_mock_vault(app: &mut App) -> Addr {
-        let vault_tokens = deploy_test_tokens(app, None, None);
+        let vault_tokens = deploy_test_tokens(app, SETUP_MASTER.to_string(), None, None);
         mock_factory_deploy_vault(
             app,
             vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
