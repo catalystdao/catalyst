@@ -286,7 +286,7 @@ mod catalyst_vault_factory_tests {
     use cosmwasm_std::{Addr, Uint64, Uint128, Event, StdError};
     use cw20::{TokenInfoResponse, BalanceResponse, Cw20QueryMsg};
     use cw_multi_test::{App, Executor, ContractWrapper};
-    use token_helpers::helpers::{deploy_test_tokens, set_token_allowance};
+    use test_helpers::token::{deploy_test_tokens, set_token_allowance};
 
     use crate::{msg::{InstantiateMsg, QueryMsg, OwnerResponse, ExecuteMsg, DefaultGovernanceFeeShareResponse}, state::MAX_GOVERNANCE_FEE_SHARE, error::ContractError};
 

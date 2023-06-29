@@ -37,5 +37,5 @@ catalyst-vault-common = { path = "../catalyst-vault-common" }
 
 [dev-dependencies]
 cw-multi-test = "0.16.2"
-token-helpers = { path = "../../helpers/token-helpers" }
+test-helpers = { path = "../../helpers/test-helpers" }
 mock-vault = { path = "../../mock-contracts/mock-vault" }

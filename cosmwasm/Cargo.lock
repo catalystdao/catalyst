@@ -84,8 +84,8 @@ dependencies = [
  "mock-vault",
  "schemars",
  "serde",
+ "test-helpers",
  "thiserror",
- "token-helpers",
 ]
 
 [[package]]
@@ -1008,6 +1008,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "test-helpers"
+version = "0.1.0"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cosmwasm-storage",
+ "cw-multi-test",
+ "cw-storage-plus",
+ "cw2",
+ "cw20",
+ "cw20-base",
+]
+
+[[package]]
 name = "thiserror"
 version = "1.0.40"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1025,20 +1039,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.18",
-]
-
-[[package]]
-name = "token-helpers"
-version = "0.1.0"
-dependencies = [
- "cosmwasm-schema",
- "cosmwasm-std",
- "cosmwasm-storage",
- "cw-multi-test",
- "cw-storage-plus",
- "cw2",
- "cw20",
- "cw20-base",
 ]
 
 [[package]]
