@@ -27,6 +27,7 @@ mod test_volatile_withdraw_mixed {
             vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
             vault_initial_balances.clone(),
             vault_weights.clone(),
+            Uint64::new(1000000000000000000u64),
             vault_code_id,
             None,
             None
@@ -146,6 +147,7 @@ mod test_volatile_withdraw_mixed {
             vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
             vault_initial_balances.clone(),
             vault_weights.clone(),
+            Uint64::new(1000000000000000000u64),
             vault_code_id,
             None,
             None
@@ -208,6 +210,7 @@ mod test_volatile_withdraw_mixed {
             vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
             vault_initial_balances.clone(),
             vault_weights.clone(),
+            Uint64::new(1000000000000000000u64),
             vault_code_id,
             None,
             None
@@ -310,6 +313,7 @@ mod test_volatile_withdraw_mixed {
             vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
             vault_initial_balances.clone(),
             vault_weights.clone(),
+            Uint64::new(1000000000000000000u64),
             vault_code_id,
             None,
             None
@@ -387,6 +391,7 @@ mod test_volatile_withdraw_mixed {
             vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
             vault_initial_balances.clone(),
             vault_weights.clone(),
+            Uint64::new(1000000000000000000u64),
             vault_code_id,
             None,
             None
@@ -441,6 +446,7 @@ mod test_volatile_withdraw_mixed {
             vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
             vault_initial_balances.clone(),
             vault_weights.clone(),
+            Uint64::new(1000000000000000000u64),
             vault_code_id,
             None,
             None

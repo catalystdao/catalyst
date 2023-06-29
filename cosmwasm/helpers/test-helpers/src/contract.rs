@@ -88,6 +88,7 @@ pub fn mock_factory_deploy_vault(
     assets: Vec<String>,
     assets_balances: Vec<Uint128>,
     weights: Vec<Uint64>,
+    amplification: Uint64,
     vault_code_id: u64,
     chain_interface: Option<Addr>,
     factory: Option<Addr>
@@ -125,7 +126,7 @@ pub fn mock_factory_deploy_vault(
             assets,
             assets_balances,
             weights,
-            amplification: Uint64::new(1000000000000000000u64),
+            amplification,
             vault_fee: DEFAULT_TEST_VAULT_FEE,
             name: "TestVault".to_string(),
             symbol: "TP".to_string(),

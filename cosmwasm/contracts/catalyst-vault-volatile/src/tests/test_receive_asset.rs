@@ -25,6 +25,7 @@ mod test_volatile_receive_asset {
             vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
             vault_initial_balances.clone(),
             vault_weights.clone(),
+            Uint64::new(1000000000000000000u64),
             vault_code_id,
             Some(Addr::unchecked(CHAIN_INTERFACE)),         // Using a mock address, no need for an interface to be deployed
             None
@@ -118,6 +119,7 @@ mod test_volatile_receive_asset {
             vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
             vault_initial_balances.clone(),
             vault_weights.clone(),
+            Uint64::new(1000000000000000000u64),
             vault_code_id,
             Some(Addr::unchecked(CHAIN_INTERFACE)),         // Using a mock address, no need for an interface to be deployed
             None
@@ -200,6 +202,7 @@ mod test_volatile_receive_asset {
             vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
             vault_initial_balances.clone(),
             vault_weights.clone(),
+            Uint64::new(1000000000000000000u64),
             vault_code_id,
             Some(Addr::unchecked(CHAIN_INTERFACE)),         // Using a mock address, no need for an interface to be deployed
             None
@@ -306,6 +309,7 @@ mod test_volatile_receive_asset {
             vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
             vault_initial_balances.clone(),
             vault_weights.clone(),
+            Uint64::new(1000000000000000000u64),
             vault_code_id,
             Some(Addr::unchecked(CHAIN_INTERFACE)),         // Using a mock address, no need for an interface to be deployed
             None
@@ -367,6 +371,7 @@ mod test_volatile_receive_asset {
             vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
             vault_initial_balances.clone(),
             vault_weights.clone(),
+            Uint64::new(1000000000000000000u64),
             vault_code_id,
             Some(Addr::unchecked(CHAIN_INTERFACE)),         // Using a mock address, no need for an interface to be deployed
             None
@@ -434,6 +439,7 @@ mod test_volatile_receive_asset {
             vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
             vault_initial_balances.clone(),
             vault_weights.clone(),
+            Uint64::new(1000000000000000000u64),
             vault_code_id,
             Some(Addr::unchecked(CHAIN_INTERFACE)),         // Using a mock address, no need for an interface to be deployed
             None
