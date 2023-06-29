@@ -4,9 +4,9 @@ mod test_volatile_receive_asset {
     use catalyst_types::{U256, u256};
     use catalyst_vault_common::ContractError;
     use fixed_point_math::WAD;
-    use test_helpers::{math::{uint128_to_f64, f64_to_uint128}, misc::{encode_payload_address, get_response_attribute}, token::{deploy_test_tokens, query_token_balance}};
+    use test_helpers::{math::{uint128_to_f64, f64_to_uint128}, misc::{encode_payload_address, get_response_attribute}, token::{deploy_test_tokens, query_token_balance}, definitions::{SETUP_MASTER, CHAIN_INTERFACE, CHANNEL_ID, SWAPPER_B}};
 
-    use crate::{msg::VolatileExecuteMsg, tests::{helpers::{mock_set_vault_connection, CHANNEL_ID, SWAPPER_B, compute_expected_receive_asset, CHAIN_INTERFACE, mock_factory_deploy_vault, SETUP_MASTER}}};
+    use crate::{msg::VolatileExecuteMsg, tests::{helpers::{mock_set_vault_connection, compute_expected_receive_asset, mock_factory_deploy_vault}}};
 
     //TODO check event
 

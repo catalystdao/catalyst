@@ -3,9 +3,9 @@ mod test_volatile_local_swap {
     use cw_multi_test::{App, Executor};
     use catalyst_vault_common::ContractError;
     use fixed_point_math::WAD;
-    use test_helpers::{math::{uint128_to_f64, f64_to_uint128}, token::{deploy_test_tokens, transfer_tokens, set_token_allowance, query_token_balance, mock_test_token_definitions}};
+    use test_helpers::{math::{uint128_to_f64, f64_to_uint128}, token::{deploy_test_tokens, transfer_tokens, set_token_allowance, query_token_balance, mock_test_token_definitions}, definitions::{SETUP_MASTER, LOCAL_SWAPPER, FACTORY_OWNER}};
 
-    use crate::{msg::VolatileExecuteMsg, tests::{helpers::{SETUP_MASTER, compute_expected_local_swap, DEFAULT_TEST_VAULT_FEE, DEFAULT_TEST_GOV_FEE, LOCAL_SWAPPER, FACTORY_OWNER, mock_set_governance_fee_share, mock_factory_deploy_vault}}};
+    use crate::{msg::VolatileExecuteMsg, tests::{helpers::{compute_expected_local_swap, DEFAULT_TEST_VAULT_FEE, DEFAULT_TEST_GOV_FEE, mock_set_governance_fee_share, mock_factory_deploy_vault}}};
 
 
     //TODO add test for the local swap event

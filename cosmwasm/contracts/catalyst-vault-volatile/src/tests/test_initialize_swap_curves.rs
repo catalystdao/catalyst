@@ -6,9 +6,9 @@ mod test_volatile_initialize_swap_curves {
     use catalyst_types::U256;
     use fixed_point_math::{LN2, WAD};
     use catalyst_vault_common::{ContractError, msg::{AssetsResponse, WeightResponse, GetLimitCapacityResponse, TotalEscrowedAssetResponse, TotalEscrowedLiquidityResponse}};
-    use test_helpers::token::{deploy_test_tokens, mock_test_token_definitions};
+    use test_helpers::{token::{deploy_test_tokens, mock_test_token_definitions}, definitions::{SETUP_MASTER, DEPOSITOR, DEPLOYER}};
 
-    use crate::{tests::helpers::{mock_instantiate_vault, DEPOSITOR, DEPLOYER, InitializeSwapCurvesMockConfig, SETUP_MASTER}, msg::VolatileExecuteMsg};
+    use crate::{tests::helpers::{mock_instantiate_vault, InitializeSwapCurvesMockConfig}, msg::VolatileExecuteMsg};
 
 
 

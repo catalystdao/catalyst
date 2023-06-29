@@ -4,21 +4,10 @@ use cw_multi_test::{ContractWrapper, App, Executor, AppResponse};
 use catalyst_types::U256;
 use catalyst_vault_common::msg::InstantiateMsg;
 use fixed_point_math::WAD;
-use test_helpers::{math::{u256_to_f64, uint128_to_f64}, misc::get_response_attribute};
+use test_helpers::{math::{u256_to_f64, uint128_to_f64}, misc::get_response_attribute, definitions::{SETUP_MASTER, FACTORY_OWNER}};
 
 use crate::msg::VolatileExecuteMsg;
 
-pub const CHAIN_INTERFACE       : &str = "chain_interface_addr";
-pub const DEPLOYER              : &str = "deployer_addr";
-pub const FACTORY_OWNER         : &str = "factory_owner_addr";
-pub const SETUP_MASTER          : &str = "setup_master_addr";
-pub const DEPOSITOR             : &str = "depositor_addr";
-pub const WITHDRAWER            : &str = "withdrawer_addr";
-pub const LOCAL_SWAPPER         : &str = "local_swapper_addr";
-pub const SWAPPER_A             : &str = "swapper_a_addr";
-pub const SWAPPER_B             : &str = "swapper_b_addr";
-pub const SWAPPER_C             : &str = "swapper_c_addr";
-pub const CHANNEL_ID            : &str = "channel_id";
 
 pub const DEFAULT_TEST_VAULT_FEE : Uint64 = Uint64::new(70000000000000000u64);   // 7%
 pub const DEFAULT_TEST_GOV_FEE  : Uint64 = Uint64::new(50000000000000000u64);   // 5%

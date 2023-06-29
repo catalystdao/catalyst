@@ -3,9 +3,9 @@ mod test_volatile_vault_connections {
     use cw_multi_test::{Executor, App};
     use catalyst_vault_common::{ContractError, msg::VaultConnectionStateResponse};
     use fixed_point_math::WAD;
-    use test_helpers::{misc::encode_payload_address, token::deploy_test_tokens};
+    use test_helpers::{misc::encode_payload_address, token::deploy_test_tokens, definitions::{SETUP_MASTER, FACTORY_OWNER}};
 
-    use crate::{msg::VolatileExecuteMsg, tests::helpers::{SETUP_MASTER, mock_finish_vault_setup, FACTORY_OWNER, mock_factory_deploy_vault, mock_instantiate_interface}};
+    use crate::{msg::VolatileExecuteMsg, tests::helpers::{mock_finish_vault_setup, mock_factory_deploy_vault, mock_instantiate_interface}};
 
     fn deploy_mock_vault(app: &mut App) -> Addr {
         let interface = mock_instantiate_interface(app);

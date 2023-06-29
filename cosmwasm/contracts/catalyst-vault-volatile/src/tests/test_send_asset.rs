@@ -4,9 +4,9 @@ mod test_volatile_send_asset {
     use catalyst_types::U256;
     use catalyst_vault_common::{ContractError, msg::TotalEscrowedAssetResponse};
     use fixed_point_math::WAD;
-    use test_helpers::{math::{uint128_to_f64, f64_to_uint128, u256_to_f64}, misc::{encode_payload_address, get_response_attribute}, token::{deploy_test_tokens, transfer_tokens, set_token_allowance, query_token_balance, mock_test_token_definitions}};
+    use test_helpers::{math::{uint128_to_f64, f64_to_uint128, u256_to_f64}, misc::{encode_payload_address, get_response_attribute}, token::{deploy_test_tokens, transfer_tokens, set_token_allowance, query_token_balance, mock_test_token_definitions}, definitions::{SETUP_MASTER, CHANNEL_ID, SWAPPER_B, SWAPPER_A, FACTORY_OWNER}};
 
-    use crate::{msg::VolatileExecuteMsg, tests::{helpers::{SETUP_MASTER, DEFAULT_TEST_VAULT_FEE, mock_set_vault_connection, CHANNEL_ID, SWAPPER_B, SWAPPER_A, mock_instantiate_interface, FACTORY_OWNER, DEFAULT_TEST_GOV_FEE, compute_expected_send_asset, mock_factory_deploy_vault}}};
+    use crate::{msg::VolatileExecuteMsg, tests::{helpers::{DEFAULT_TEST_VAULT_FEE, mock_set_vault_connection, mock_instantiate_interface, DEFAULT_TEST_GOV_FEE, compute_expected_send_asset, mock_factory_deploy_vault}}};
 
     //TODO check event
 

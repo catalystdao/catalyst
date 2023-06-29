@@ -5,9 +5,9 @@ mod test_volatile_withdraw_even {
     use cw_multi_test::{App, Executor};
     use catalyst_vault_common::{ContractError, state::INITIAL_MINT_AMOUNT};
     use fixed_point_math::WAD;
-    use test_helpers::{math::{uint128_to_f64, f64_to_uint128}, misc::get_response_attribute, token::{deploy_test_tokens, query_token_balance, query_token_info, transfer_tokens}};
+    use test_helpers::{math::{uint128_to_f64, f64_to_uint128}, misc::get_response_attribute, token::{deploy_test_tokens, query_token_balance, query_token_info, transfer_tokens}, definitions::{SETUP_MASTER, WITHDRAWER}};
 
-    use crate::{msg::VolatileExecuteMsg, tests::{helpers::{SETUP_MASTER, WITHDRAWER, mock_factory_deploy_vault}}};
+    use crate::{msg::VolatileExecuteMsg, tests::{helpers::mock_factory_deploy_vault}};
 
 
     //TODO add test for the withdraw event
