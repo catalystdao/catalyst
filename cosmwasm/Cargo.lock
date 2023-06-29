@@ -1012,7 +1012,10 @@ dependencies = [
 name = "test-helpers"
 version = "0.1.0"
 dependencies = [
+ "catalyst-factory",
+ "catalyst-ibc-interface",
  "catalyst-types",
+ "catalyst-vault-common",
  "cosmwasm-schema",
  "cosmwasm-std",
  "cosmwasm-storage",
@@ -1021,6 +1024,7 @@ dependencies = [
  "cw2",
  "cw20",
  "cw20-base",
+ "mock-catalyst-ibc-interface",
 ]
 
 [[package]]

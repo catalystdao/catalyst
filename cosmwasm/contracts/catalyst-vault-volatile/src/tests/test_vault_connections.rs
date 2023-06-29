@@ -3,19 +3,20 @@ mod test_volatile_vault_connections {
     use cw_multi_test::{Executor, App};
     use catalyst_vault_common::{ContractError, msg::VaultConnectionStateResponse};
     use fixed_point_math::WAD;
-    use test_helpers::{misc::encode_payload_address, token::deploy_test_tokens, definitions::{SETUP_MASTER, FACTORY_OWNER}};
+    use test_helpers::{misc::encode_payload_address, token::deploy_test_tokens, definitions::{SETUP_MASTER, FACTORY_OWNER}, contract::{mock_instantiate_interface, mock_factory_deploy_vault, mock_finish_vault_setup}};
 
-    use crate::{msg::VolatileExecuteMsg, tests::helpers::{mock_finish_vault_setup, mock_factory_deploy_vault, mock_instantiate_interface}};
+    use crate::{msg::VolatileExecuteMsg, tests::helpers::volatile_vault_contract_storage};
 
     fn deploy_mock_vault(app: &mut App) -> Addr {
         let interface = mock_instantiate_interface(app);
         let vault_tokens = deploy_test_tokens(app, SETUP_MASTER.to_string(), None, None);
+        let vault_code_id = volatile_vault_contract_storage(app);
         mock_factory_deploy_vault(
             app,
             vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
             vec![Uint128::from(1u64) * WAD.as_uint128(), Uint128::from(2u64) * WAD.as_uint128(), Uint128::from(3u64) * WAD.as_uint128()],
             vec![Uint64::one(), Uint64::one(), Uint64::one()],
-            None,
+            vault_code_id,
             Some(interface.clone()),
             None
         )

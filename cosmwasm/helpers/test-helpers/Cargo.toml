@@ -8,7 +8,10 @@ edition = "2021"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
+catalyst-ibc-interface = { path = "../../contracts/catalyst-ibc-interface", features = ["library"] }
+catalyst-factory = { path = "../../contracts/catalyst-factory", features = ["library"] }
 catalyst-types = { path = "../../lib/catalyst-types" }
+catalyst-vault-common = { path = "../../contracts/catalyst-vault-common" }
 cosmwasm-schema = "1.2.5"
 cosmwasm-std = "1.2.5"
 cosmwasm-storage = "1.2.5"
@@ -17,3 +20,4 @@ cw2 = "1.0.1"
 cw20 = "1.0.1"
 cw20-base = { version = "1.0.1", features = ["library"] }
 cw-multi-test = "0.16.4"
+mock-catalyst-ibc-interface = { path = "../../mock-contracts/mock-catalyst-ibc-interface", features = ["library"] }

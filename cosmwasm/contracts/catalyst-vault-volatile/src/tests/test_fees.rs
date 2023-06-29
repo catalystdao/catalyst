@@ -3,21 +3,22 @@ mod test_volatile_fees {
     use cw_multi_test::{App, Executor};
     use catalyst_vault_common::{ContractError, msg::{FeeAdministratorResponse, VaultFeeResponse, GovernanceFeeShareResponse}};
     use fixed_point_math::WAD;
-    use test_helpers::{token::deploy_test_tokens, definitions::{SETUP_MASTER, FACTORY_OWNER}};
+    use test_helpers::{token::deploy_test_tokens, definitions::{SETUP_MASTER, FACTORY_OWNER}, contract::mock_factory_deploy_vault};
 
-    use crate::{msg::{VolatileExecuteMsg, QueryMsg}, tests::helpers::mock_factory_deploy_vault};
+    use crate::{msg::{VolatileExecuteMsg, QueryMsg}, tests::helpers::volatile_vault_contract_storage};
 
 
 
     // Set Fee Administrator Tests **********************************************************************************************
     fn deploy_mock_vault(app: &mut App) -> Addr {
         let vault_tokens = deploy_test_tokens(app, SETUP_MASTER.to_string(), None, None);
+        let vault_code_id = volatile_vault_contract_storage(app);
         mock_factory_deploy_vault(
             app,
             vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
             vec![Uint128::from(1u64) * WAD.as_uint128(), Uint128::from(2u64) * WAD.as_uint128(), Uint128::from(3u64) * WAD.as_uint128()],
             vec![Uint64::one(), Uint64::one(), Uint64::one()],
-            None,
+            vault_code_id,
             None,
             None
         )

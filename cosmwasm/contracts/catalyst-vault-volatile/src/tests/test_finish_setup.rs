@@ -2,9 +2,9 @@ mod test_volatile_finish_setup {
     use cosmwasm_std::Addr;
     use cw_multi_test::{App, Executor};
     use catalyst_vault_common::{ContractError, msg::SetupMasterResponse};
-    use test_helpers::definitions::SETUP_MASTER;
+    use test_helpers::{definitions::SETUP_MASTER, contract::mock_instantiate_vault};
 
-    use crate::{msg::{VolatileExecuteMsg, QueryMsg}, tests::helpers::mock_instantiate_vault};
+    use crate::{msg::{VolatileExecuteMsg, QueryMsg}, tests::helpers::volatile_vault_contract_storage};
 
 
     #[test]
@@ -13,7 +13,8 @@ mod test_volatile_finish_setup {
         let mut app = App::default();
 
         // Instantiate vault
-        let vault = mock_instantiate_vault(&mut app, None);
+        let vault_code_id = volatile_vault_contract_storage(&mut app);
+        let vault = mock_instantiate_vault(&mut app, vault_code_id, None);
 
 
         // Tested action: finish setup
@@ -45,7 +46,8 @@ mod test_volatile_finish_setup {
         let mut app = App::default();
 
         // Instantiate vault
-        let vault = mock_instantiate_vault(&mut app, None);
+        let vault_code_id = volatile_vault_contract_storage(&mut app);
+        let vault = mock_instantiate_vault(&mut app, vault_code_id, None);
 
 
         // Tested action: finish setup

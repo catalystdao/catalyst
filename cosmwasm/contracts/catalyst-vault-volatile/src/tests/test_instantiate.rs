@@ -4,9 +4,9 @@ mod test_volatile_instantiate {
     use cw20_base::state::TokenInfo;
     use cw_multi_test::{App, Executor};
     use catalyst_vault_common::msg::{SetupMasterResponse, ChainInterfaceResponse, OnlyLocalResponse, VaultFeeResponse, GovernanceFeeShareResponse};
-    use test_helpers::definitions::DEPLOYER;
+    use test_helpers::{definitions::DEPLOYER, contract::mock_instantiate_vault_msg};
 
-    use crate::{msg::QueryMsg, tests::helpers::{mock_instantiate_vault_msg, volatile_vault_contract_storage}};
+    use crate::{msg::QueryMsg, tests::helpers::volatile_vault_contract_storage};
 
 
     #[test]

@@ -3,9 +3,9 @@ mod test_volatile_deposit{
     use cw_multi_test::{App, Executor};
     use catalyst_vault_common::{ContractError, state::INITIAL_MINT_AMOUNT};
     use fixed_point_math::WAD;
-    use test_helpers::{math::{uint128_to_f64, f64_to_uint128}, misc::get_response_attribute, token::{deploy_test_tokens, transfer_tokens, set_token_allowance, query_token_balance, query_token_info}, definitions::{SETUP_MASTER, DEPOSITOR}};
+    use test_helpers::{math::{uint128_to_f64, f64_to_uint128}, misc::get_response_attribute, token::{deploy_test_tokens, transfer_tokens, set_token_allowance, query_token_balance, query_token_info}, definitions::{SETUP_MASTER, DEPOSITOR}, contract::{mock_factory_deploy_vault, DEFAULT_TEST_VAULT_FEE}};
 
-    use crate::{msg::VolatileExecuteMsg, tests::helpers::{DEFAULT_TEST_VAULT_FEE, compute_expected_deposit_mixed, mock_factory_deploy_vault}};
+    use crate::{msg::VolatileExecuteMsg, tests::helpers::{compute_expected_deposit_mixed, volatile_vault_contract_storage}};
 
 
     //TODO add test for the deposit event
@@ -20,12 +20,13 @@ mod test_volatile_deposit{
         let vault_tokens = deploy_test_tokens(&mut app, SETUP_MASTER.to_string(), None, None);
         let vault_initial_balances = vec![Uint128::from(1u64) * WAD.as_uint128(), Uint128::from(2u64) * WAD.as_uint128(), Uint128::from(3u64) * WAD.as_uint128()];
         let vault_weights = vec![Uint64::one(), Uint64::one(), Uint64::one()];
-        let vault = mock_factory_deploy_vault(
+        let vault_code_id = volatile_vault_contract_storage(&mut app);let 
+        vault = mock_factory_deploy_vault(
             &mut app,
             vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
             vault_initial_balances.clone(),
             vault_weights.clone(),
-            None,
+            vault_code_id,
             None,
             None
         );
@@ -142,12 +143,13 @@ mod test_volatile_deposit{
         let vault_tokens = deploy_test_tokens(&mut app, SETUP_MASTER.to_string(), None, None);
         let vault_initial_balances = vec![Uint128::from(1u64) * WAD.as_uint128(), Uint128::from(2u64) * WAD.as_uint128(), Uint128::from(3u64) * WAD.as_uint128()];
         let vault_weights = vec![Uint64::one(), Uint64::one(), Uint64::one()];
+        let vault_code_id = volatile_vault_contract_storage(&mut app);
         let vault = mock_factory_deploy_vault(
             &mut app,
             vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
             vault_initial_balances.clone(),
             vault_weights.clone(),
-            None,
+            vault_code_id,
             None,
             None
         );
@@ -231,12 +233,13 @@ mod test_volatile_deposit{
         let vault_tokens = deploy_test_tokens(&mut app, SETUP_MASTER.to_string(), None, None);
         let vault_initial_balances = vec![Uint128::from(1u64) * WAD.as_uint128(), Uint128::from(2u64) * WAD.as_uint128(), Uint128::from(3u64) * WAD.as_uint128()];
         let vault_weights = vec![Uint64::one(), Uint64::one(), Uint64::one()];
+        let vault_code_id = volatile_vault_contract_storage(&mut app);
         let vault = mock_factory_deploy_vault(
             &mut app,
             vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
             vault_initial_balances.clone(),
             vault_weights.clone(),
-            None,
+            vault_code_id,
             None,
             None
         );
@@ -284,12 +287,13 @@ mod test_volatile_deposit{
         let vault_tokens = deploy_test_tokens(&mut app, SETUP_MASTER.to_string(), None, None);
         let vault_initial_balances = vec![Uint128::from(1u64) * WAD.as_uint128(), Uint128::from(2u64) * WAD.as_uint128(), Uint128::from(3u64) * WAD.as_uint128()];
         let vault_weights = vec![Uint64::one(), Uint64::one(), Uint64::one()];
+        let vault_code_id = volatile_vault_contract_storage(&mut app);
         let vault = mock_factory_deploy_vault(
             &mut app,
             vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
             vault_initial_balances.clone(),
             vault_weights.clone(),
-            None,
+            vault_code_id,
             None,
             None
         );
@@ -381,12 +385,13 @@ mod test_volatile_deposit{
         let vault_tokens = deploy_test_tokens(&mut app, SETUP_MASTER.to_string(), None, None);
         let vault_initial_balances = vec![Uint128::from(1u64) * WAD.as_uint128(), Uint128::from(2u64) * WAD.as_uint128(), Uint128::from(3u64) * WAD.as_uint128()];
         let vault_weights = vec![Uint64::one(), Uint64::one(), Uint64::one()];
-        let vault = mock_factory_deploy_vault(
+        let vault_code_id = volatile_vault_contract_storage(&mut app);let 
+        vault = mock_factory_deploy_vault(
             &mut app,
             vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
             vault_initial_balances.clone(),
             vault_weights.clone(),
-            None,
+            vault_code_id,
             None,
             None
         );

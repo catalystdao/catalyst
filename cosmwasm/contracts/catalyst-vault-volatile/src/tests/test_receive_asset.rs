@@ -4,9 +4,9 @@ mod test_volatile_receive_asset {
     use catalyst_types::{U256, u256};
     use catalyst_vault_common::ContractError;
     use fixed_point_math::WAD;
-    use test_helpers::{math::{uint128_to_f64, f64_to_uint128}, misc::{encode_payload_address, get_response_attribute}, token::{deploy_test_tokens, query_token_balance}, definitions::{SETUP_MASTER, CHAIN_INTERFACE, CHANNEL_ID, SWAPPER_B}};
+    use test_helpers::{math::{uint128_to_f64, f64_to_uint128}, misc::{encode_payload_address, get_response_attribute}, token::{deploy_test_tokens, query_token_balance}, definitions::{SETUP_MASTER, CHAIN_INTERFACE, CHANNEL_ID, SWAPPER_B}, contract::{mock_factory_deploy_vault, mock_set_vault_connection}};
 
-    use crate::{msg::VolatileExecuteMsg, tests::{helpers::{mock_set_vault_connection, compute_expected_receive_asset, mock_factory_deploy_vault}}};
+    use crate::{msg::VolatileExecuteMsg, tests::{helpers::{compute_expected_receive_asset, volatile_vault_contract_storage}}};
 
     //TODO check event
 
@@ -19,12 +19,13 @@ mod test_volatile_receive_asset {
         let vault_tokens = deploy_test_tokens(&mut app, SETUP_MASTER.to_string(), None, None);
         let vault_initial_balances = vec![Uint128::from(1u64) * WAD.as_uint128(), Uint128::from(2u64) * WAD.as_uint128(), Uint128::from(3u64) * WAD.as_uint128()];
         let vault_weights = vec![Uint64::one(), Uint64::one(), Uint64::one()];
+        let vault_code_id = volatile_vault_contract_storage(&mut app);
         let vault = mock_factory_deploy_vault(
             &mut app,
             vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
             vault_initial_balances.clone(),
             vault_weights.clone(),
-            None,
+            vault_code_id,
             Some(Addr::unchecked(CHAIN_INTERFACE)),         // Using a mock address, no need for an interface to be deployed
             None
         );
@@ -111,12 +112,13 @@ mod test_volatile_receive_asset {
         let vault_tokens = deploy_test_tokens(&mut app, SETUP_MASTER.to_string(), None, None);
         let vault_initial_balances = vec![Uint128::from(1u64) * WAD.as_uint128(), Uint128::from(2u64) * WAD.as_uint128(), Uint128::from(3u64) * WAD.as_uint128()];
         let vault_weights = vec![Uint64::one(), Uint64::one(), Uint64::one()];
+        let vault_code_id = volatile_vault_contract_storage(&mut app);
         let vault = mock_factory_deploy_vault(
             &mut app,
             vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
             vault_initial_balances.clone(),
             vault_weights.clone(),
-            None,
+            vault_code_id,
             Some(Addr::unchecked(CHAIN_INTERFACE)),         // Using a mock address, no need for an interface to be deployed
             None
         );
@@ -192,12 +194,13 @@ mod test_volatile_receive_asset {
         let vault_tokens = deploy_test_tokens(&mut app, SETUP_MASTER.to_string(), None, None);
         let vault_initial_balances = vec![Uint128::from(1u64) * WAD.as_uint128(), Uint128::from(2u64) * WAD.as_uint128(), Uint128::from(3u64) * WAD.as_uint128()];
         let vault_weights = vec![Uint64::one(), Uint64::one(), Uint64::one()];
+        let vault_code_id = volatile_vault_contract_storage(&mut app);
         let vault = mock_factory_deploy_vault(
             &mut app,
             vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
             vault_initial_balances.clone(),
             vault_weights.clone(),
-            None,
+            vault_code_id,
             Some(Addr::unchecked(CHAIN_INTERFACE)),         // Using a mock address, no need for an interface to be deployed
             None
         );
@@ -297,12 +300,13 @@ mod test_volatile_receive_asset {
         let vault_tokens = deploy_test_tokens(&mut app, SETUP_MASTER.to_string(), None, None);
         let vault_initial_balances = vec![Uint128::from(1u64) * WAD.as_uint128(), Uint128::from(2u64) * WAD.as_uint128(), Uint128::from(3u64) * WAD.as_uint128()];
         let vault_weights = vec![Uint64::one(), Uint64::one(), Uint64::one()];
+        let vault_code_id = volatile_vault_contract_storage(&mut app);
         let vault = mock_factory_deploy_vault(
             &mut app,
             vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
             vault_initial_balances.clone(),
             vault_weights.clone(),
-            None,
+            vault_code_id,
             Some(Addr::unchecked(CHAIN_INTERFACE)),         // Using a mock address, no need for an interface to be deployed
             None
         );
@@ -357,12 +361,13 @@ mod test_volatile_receive_asset {
         let vault_tokens = deploy_test_tokens(&mut app, SETUP_MASTER.to_string(), None, None);
         let vault_initial_balances = vec![Uint128::from(1u64) * WAD.as_uint128(), Uint128::from(2u64) * WAD.as_uint128(), Uint128::from(3u64) * WAD.as_uint128()];
         let vault_weights = vec![Uint64::one(), Uint64::one(), Uint64::one()];
+        let vault_code_id = volatile_vault_contract_storage(&mut app);
         let vault = mock_factory_deploy_vault(
             &mut app,
             vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
             vault_initial_balances.clone(),
             vault_weights.clone(),
-            None,
+            vault_code_id,
             Some(Addr::unchecked(CHAIN_INTERFACE)),         // Using a mock address, no need for an interface to be deployed
             None
         );
@@ -423,12 +428,13 @@ mod test_volatile_receive_asset {
         let vault_tokens = deploy_test_tokens(&mut app, SETUP_MASTER.to_string(), None, None);
         let vault_initial_balances = vec![Uint128::from(1u64) * WAD.as_uint128(), Uint128::from(2u64) * WAD.as_uint128(), Uint128::from(3u64) * WAD.as_uint128()];
         let vault_weights = vec![Uint64::one(), Uint64::one(), Uint64::one()];
+        let vault_code_id = volatile_vault_contract_storage(&mut app);
         let vault = mock_factory_deploy_vault(
             &mut app,
             vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
             vault_initial_balances.clone(),
             vault_weights.clone(),
-            None,
+            vault_code_id,
             Some(Addr::unchecked(CHAIN_INTERFACE)),         // Using a mock address, no need for an interface to be deployed
             None
         );

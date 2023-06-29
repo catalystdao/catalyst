@@ -6,9 +6,9 @@ mod test_volatile_initialize_swap_curves {
     use catalyst_types::U256;
     use fixed_point_math::{LN2, WAD};
     use catalyst_vault_common::{ContractError, msg::{AssetsResponse, WeightResponse, GetLimitCapacityResponse, TotalEscrowedAssetResponse, TotalEscrowedLiquidityResponse}};
-    use test_helpers::{token::{deploy_test_tokens, mock_test_token_definitions}, definitions::{SETUP_MASTER, DEPOSITOR, DEPLOYER}};
+    use test_helpers::{token::{deploy_test_tokens, mock_test_token_definitions}, definitions::{SETUP_MASTER, DEPOSITOR, DEPLOYER}, contract::{mock_instantiate_vault, InitializeSwapCurvesMockConfig}};
 
-    use crate::{tests::helpers::{mock_instantiate_vault, InitializeSwapCurvesMockConfig}, msg::VolatileExecuteMsg};
+    use crate::{tests::helpers::volatile_vault_contract_storage};
 
 
 
@@ -18,7 +18,8 @@ mod test_volatile_initialize_swap_curves {
         let mut app = App::default();
 
         // Instantiate vault
-        let vault = mock_instantiate_vault(&mut app, None);
+        let vault_code_id = volatile_vault_contract_storage(&mut app);
+        let vault = mock_instantiate_vault(&mut app, vault_code_id, None);
 
         // Create tokens and set vault allowances
         let test_tokens = deploy_test_tokens(
@@ -51,10 +52,10 @@ mod test_volatile_initialize_swap_curves {
 
 
         // Tested action: initialize swap curves
-        let _response = app.execute_contract::<VolatileExecuteMsg>(
+        let _response = app.execute_contract(
             Addr::unchecked(SETUP_MASTER),
             vault.clone(),
-            &initialize_msg.clone().into(),
+            &initialize_msg.clone().into_execute_msg(),
             &[]
         ).unwrap();
 
@@ -192,7 +193,8 @@ mod test_volatile_initialize_swap_curves {
         let mut app = App::default();
 
         // Instantiate vault
-        let vault = mock_instantiate_vault(&mut app, None);
+        let vault_code_id = volatile_vault_contract_storage(&mut app);
+        let vault = mock_instantiate_vault(&mut app, vault_code_id, None);
 
         // Create tokens and set vault allowances
         let test_tokens = deploy_test_tokens(
@@ -223,20 +225,20 @@ mod test_volatile_initialize_swap_curves {
         );
 
         // Initialize swap curves
-        let _response = app.execute_contract::<VolatileExecuteMsg>(
+        let _response = app.execute_contract(
             Addr::unchecked(SETUP_MASTER),
             vault.clone(),
-            &initialize_msg.clone().into(),
+            &initialize_msg.clone().into_execute_msg(),
             &[]
         ).unwrap();
 
 
 
         // Tested action: initialize swap curves twice
-        let response_result = app.execute_contract::<VolatileExecuteMsg>(
+        let response_result = app.execute_contract(
             Addr::unchecked(SETUP_MASTER),
             vault.clone(),
-            &initialize_msg.clone().into(),
+            &initialize_msg.clone().into_execute_msg(),
             &[]
         );
 
@@ -257,7 +259,8 @@ mod test_volatile_initialize_swap_curves {
         let mut app = App::default();
 
         // Instantiate vault
-        let vault = mock_instantiate_vault(&mut app, None);
+        let vault_code_id = volatile_vault_contract_storage(&mut app);
+        let vault = mock_instantiate_vault(&mut app, vault_code_id, None);
 
         let initialize_msg = InitializeSwapCurvesMockConfig {
             assets: vec![],
@@ -269,10 +272,10 @@ mod test_volatile_initialize_swap_curves {
 
 
         // Tested action: initialize swap curves without assets
-        let response_result = app.execute_contract::<VolatileExecuteMsg>(
+        let response_result = app.execute_contract(
             Addr::unchecked(SETUP_MASTER),
             vault.clone(),
-            &initialize_msg.clone().into(),
+            &initialize_msg.clone().into_execute_msg(),
             &[]
         );
 
@@ -292,7 +295,8 @@ mod test_volatile_initialize_swap_curves {
         let mut app = App::default();
 
         // Instantiate vault
-        let vault = mock_instantiate_vault(&mut app, None);
+        let vault_code_id = volatile_vault_contract_storage(&mut app);
+        let vault = mock_instantiate_vault(&mut app, vault_code_id, None);
 
         // Create tokens and set vault allowances
         let test_tokens_definitions = mock_test_token_definitions(SETUP_MASTER.to_string(), 4);    // ! Generate 4 tokens definitions
@@ -327,10 +331,10 @@ mod test_volatile_initialize_swap_curves {
 
 
         // Tested action: initialize swap curves with too many assets
-        let response_result = app.execute_contract::<VolatileExecuteMsg>(
+        let response_result = app.execute_contract(
             Addr::unchecked(SETUP_MASTER),
             vault.clone(),
-            &initialize_msg.clone().into(),
+            &initialize_msg.clone().into_execute_msg(),
             &[]
         );
 
@@ -351,7 +355,8 @@ mod test_volatile_initialize_swap_curves {
         let mut app = App::default();
 
         // Instantiate vault
-        let vault = mock_instantiate_vault(&mut app, None);
+        let vault_code_id = volatile_vault_contract_storage(&mut app);
+        let vault = mock_instantiate_vault(&mut app, vault_code_id, None);
 
         // Create tokens and set vault allowances
         let test_tokens = deploy_test_tokens(
@@ -384,10 +389,10 @@ mod test_volatile_initialize_swap_curves {
 
 
         // Tested action: initialize swap curves with an asset balance set to 0
-        let response_result = app.execute_contract::<VolatileExecuteMsg>(
+        let response_result = app.execute_contract(
             Addr::unchecked(SETUP_MASTER),
             vault.clone(),
-            &initialize_msg.clone().into(),
+            &initialize_msg.clone().into_execute_msg(),
             &[]
         );
 
@@ -408,7 +413,8 @@ mod test_volatile_initialize_swap_curves {
         let mut app = App::default();
 
         // Instantiate vault
-        let vault = mock_instantiate_vault(&mut app, None);
+        let vault_code_id = volatile_vault_contract_storage(&mut app);
+        let vault = mock_instantiate_vault(&mut app, vault_code_id, None);
 
         // Create tokens and set vault allowances
         let test_tokens = deploy_test_tokens(
@@ -441,10 +447,10 @@ mod test_volatile_initialize_swap_curves {
 
 
         // Tested action: initialize swap curves with an invalid weights count
-        let response_result = app.execute_contract::<VolatileExecuteMsg>(
+        let response_result = app.execute_contract(
             Addr::unchecked(SETUP_MASTER),
             vault.clone(),
-            &initialize_msg.clone().into(),
+            &initialize_msg.clone().into_execute_msg(),
             &[]
         );
 
@@ -466,7 +472,8 @@ mod test_volatile_initialize_swap_curves {
         let mut app = App::default();
 
         // Instantiate vault
-        let vault = mock_instantiate_vault(&mut app, None);
+        let vault_code_id = volatile_vault_contract_storage(&mut app);
+        let vault = mock_instantiate_vault(&mut app, vault_code_id, None);
 
         // Create tokens and set vault allowances
         let test_tokens = deploy_test_tokens(
@@ -499,10 +506,10 @@ mod test_volatile_initialize_swap_curves {
 
 
         // Tested action: initialize swap curves with a weight set to 0
-        let response_result = app.execute_contract::<VolatileExecuteMsg>(
+        let response_result = app.execute_contract(
             Addr::unchecked(SETUP_MASTER),
             vault.clone(),
-            &initialize_msg.clone().into(),
+            &initialize_msg.clone().into_execute_msg(),
             &[]
         );
 
@@ -523,7 +530,8 @@ mod test_volatile_initialize_swap_curves {
         let mut app = App::default();
 
         // Instantiate vault
-        let vault = mock_instantiate_vault(&mut app, None);
+        let vault_code_id = volatile_vault_contract_storage(&mut app);
+        let vault = mock_instantiate_vault(&mut app, vault_code_id, None);
 
         // Create tokens and set vault allowances
         let test_tokens = deploy_test_tokens(
@@ -556,10 +564,10 @@ mod test_volatile_initialize_swap_curves {
 
 
         // Tested action: initialize swap curves with an invalid amplification value
-        let response_result = app.execute_contract::<VolatileExecuteMsg>(
+        let response_result = app.execute_contract(
             Addr::unchecked(SETUP_MASTER),
             vault.clone(),
-            &initialize_msg.clone().into(),
+            &initialize_msg.clone().into_execute_msg(),
             &[]
         );
 
