@@ -140,6 +140,7 @@ dependencies = [
 name = "catalyst-vault-amplified"
 version = "0.1.0"
 dependencies = [
+ "catalyst-factory",
  "catalyst-ibc-interface",
  "catalyst-types",
  "catalyst-vault-common",
@@ -152,8 +153,10 @@ dependencies = [
  "cw20",
  "cw20-base",
  "fixed-point-math",
+ "mock-catalyst-ibc-interface",
  "schemars",
  "serde",
+ "test-helpers",
  "thiserror",
 ]
 
