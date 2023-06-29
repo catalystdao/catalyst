@@ -1,11 +1,10 @@
-use std::str::FromStr;
-
-use cosmwasm_std::{Uint128, Addr, Event, Binary, Uint64};
+use cosmwasm_std::{Uint128, Addr, Binary, Uint64};
 use cw20::{Cw20Coin, MinterResponse, Cw20ExecuteMsg, BalanceResponse, Cw20QueryMsg, TokenInfoResponse};
 use cw_multi_test::{ContractWrapper, App, Executor, AppResponse};
 use catalyst_types::U256;
 use catalyst_vault_common::msg::InstantiateMsg;
-use test_helpers::math::{u256_to_f64, uint128_to_f64};
+use fixed_point_math::WAD;
+use test_helpers::{math::{u256_to_f64, uint128_to_f64}, misc::get_response_attribute};
 
 use crate::msg::VolatileExecuteMsg;
 
@@ -20,8 +19,6 @@ pub const SWAPPER_A             : &str = "swapper_a_addr";
 pub const SWAPPER_B             : &str = "swapper_b_addr";
 pub const SWAPPER_C             : &str = "swapper_c_addr";
 pub const CHANNEL_ID            : &str = "channel_id";
-
-pub const WAD: Uint128 = Uint128::new(1000000000000000000u128);
 
 pub const DEFAULT_TEST_VAULT_FEE : Uint64 = Uint64::new(70000000000000000u64);   // 7%
 pub const DEFAULT_TEST_GOV_FEE  : Uint64 = Uint64::new(50000000000000000u64);   // 5%
@@ -126,31 +123,31 @@ pub fn mock_test_token_definitions(count: usize) -> Vec<TestTokenDefinition> {
             name: "Test Token A".to_string(),
             symbol: "TTA".to_string(),
             decimals: 18,
-            initial_mint: Uint128::from(100000000u64) * WAD
+            initial_mint: Uint128::from(100000000u64) * WAD.as_uint128()
         },
         TestTokenDefinition {
             name: "Test Token B".to_string(),
             symbol: "TTB".to_string(),
             decimals: 18,
-            initial_mint: Uint128::from(100000000u64) * WAD
+            initial_mint: Uint128::from(100000000u64) * WAD.as_uint128()
         },
         TestTokenDefinition {
             name: "Test Token C".to_string(),
             symbol: "TTC".to_string(),
             decimals: 18,
-            initial_mint: Uint128::from(100000000u64) * WAD
+            initial_mint: Uint128::from(100000000u64) * WAD.as_uint128()
         },
         TestTokenDefinition {
             name: "Test Token D".to_string(),
             symbol: "TTD".to_string(),
             decimals: 18,
-            initial_mint: Uint128::from(100000000u64) * WAD
+            initial_mint: Uint128::from(100000000u64) * WAD.as_uint128()
         },
         TestTokenDefinition {
             name: "Test Token E".to_string(),
             symbol: "TTE".to_string(),
             decimals: 18,
-            initial_mint: Uint128::from(100000000u64) * WAD
+            initial_mint: Uint128::from(100000000u64) * WAD.as_uint128()
         }
     ][0..count].to_vec()
 }
@@ -795,33 +792,3 @@ pub fn compute_expected_withdraw_mixed(
 
 }
 
-
-
-// Misc helpers
-
-pub fn get_response_attribute<T: FromStr>(event: Event, attribute: &str) -> Result<T, String> {
-    event.attributes
-        .iter()
-        .find(|attr| attr.key == attribute).ok_or("Attribute not found")?
-        .value
-        .parse::<T>().map_err(|_| "Parse error".to_string())
-}
-
-pub fn encode_payload_address(address: &[u8]) -> Binary {
-
-    let address_len = address.len();
-    if address_len > 64 {
-        panic!()
-    }
-
-    let mut encoded_address: Vec<u8> = Vec::with_capacity(65);
-    encoded_address.push(address_len as u8);             // Casting to u8 is safe, as address_len is <= 64
-
-    if address_len != 64 {
-        encoded_address.extend_from_slice(vec![0u8; 64-address_len].as_ref());
-    }
-
-    encoded_address.extend_from_slice(address.as_ref());
-
-    Binary(encoded_address)
-}

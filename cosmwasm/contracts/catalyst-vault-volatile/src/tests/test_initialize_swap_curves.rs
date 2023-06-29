@@ -4,10 +4,10 @@ mod test_volatile_initialize_swap_curves {
     use cw20::{ TokenInfoResponse, BalanceResponse, Cw20QueryMsg};
     use cw_multi_test::{App, Executor};
     use catalyst_types::U256;
-    use fixed_point_math::LN2;
+    use fixed_point_math::{LN2, WAD};
     use catalyst_vault_common::{ContractError, msg::{AssetsResponse, WeightResponse, GetLimitCapacityResponse, TotalEscrowedAssetResponse, TotalEscrowedLiquidityResponse}};
 
-    use crate::{tests::helpers::{mock_instantiate_vault, DEPOSITOR, DEPLOYER, InitializeSwapCurvesMockConfig, deploy_test_tokens, mock_test_token_definitions, WAD, SETUP_MASTER}, msg::VolatileExecuteMsg};
+    use crate::{tests::helpers::{mock_instantiate_vault, DEPOSITOR, DEPLOYER, InitializeSwapCurvesMockConfig, deploy_test_tokens, mock_test_token_definitions, SETUP_MASTER}, msg::VolatileExecuteMsg};
 
 
 
@@ -30,9 +30,9 @@ mod test_volatile_initialize_swap_curves {
         let initialize_msg = InitializeSwapCurvesMockConfig {
             assets: test_tokens.iter().map(|addr| addr.to_string()).collect(),
             assets_balances: vec![
-                Uint128::from(1u64) * WAD,
-                Uint128::from(2u64) * WAD,
-                Uint128::from(3u64) * WAD
+                Uint128::from(1u64) * WAD.as_uint128(),
+                Uint128::from(2u64) * WAD.as_uint128(),
+                Uint128::from(3u64) * WAD.as_uint128()
             ],
             weights: vec![Uint64::one(), Uint64::one(), Uint64::one()],
             amp: Uint64::new(1000000000000000000u64),
@@ -203,9 +203,9 @@ mod test_volatile_initialize_swap_curves {
         let initialize_msg = InitializeSwapCurvesMockConfig {
             assets: test_tokens.iter().map(|addr| addr.to_string()).collect(),
             assets_balances: vec![
-                Uint128::from(1u64) * WAD,
-                Uint128::from(2u64) * WAD,
-                Uint128::from(3u64) * WAD
+                Uint128::from(1u64) * WAD.as_uint128(),
+                Uint128::from(2u64) * WAD.as_uint128(),
+                Uint128::from(3u64) * WAD.as_uint128()
             ],
             weights: vec![Uint64::one(), Uint64::one(), Uint64::one()],
             amp: Uint64::new(1000000000000000000u64),
@@ -303,10 +303,10 @@ mod test_volatile_initialize_swap_curves {
         let initialize_msg = InitializeSwapCurvesMockConfig {
             assets: test_tokens.iter().map(|addr| addr.to_string()).collect(),
             assets_balances: vec![
-                Uint128::from(1u64) * WAD,
-                Uint128::from(2u64) * WAD,
-                Uint128::from(3u64) * WAD,
-                Uint128::from(4u64) * WAD
+                Uint128::from(1u64) * WAD.as_uint128(),
+                Uint128::from(2u64) * WAD.as_uint128(),
+                Uint128::from(3u64) * WAD.as_uint128(),
+                Uint128::from(4u64) * WAD.as_uint128()
             ],
             weights: vec![Uint64::one(), Uint64::one(), Uint64::one(), Uint64::one()],
             amp: Uint64::new(1000000000000000000u64),
@@ -360,8 +360,8 @@ mod test_volatile_initialize_swap_curves {
         let initialize_msg = InitializeSwapCurvesMockConfig {
             assets: test_tokens.iter().map(|addr| addr.to_string()).collect(),
             assets_balances: vec![
-                Uint128::from(1u64) * WAD,
-                Uint128::from(2u64) * WAD,
+                Uint128::from(1u64) * WAD.as_uint128(),
+                Uint128::from(2u64) * WAD.as_uint128(),
                 Uint128::zero()                 // ! Asset balance is set to 0
             ],
             weights: vec![Uint64::one(), Uint64::one(), Uint64::one()],
@@ -416,9 +416,9 @@ mod test_volatile_initialize_swap_curves {
         let initialize_msg = InitializeSwapCurvesMockConfig {
             assets: test_tokens.iter().map(|addr| addr.to_string()).collect(),
             assets_balances: vec![
-                Uint128::from(1u64) * WAD,
-                Uint128::from(2u64) * WAD,
-                Uint128::from(3u64) * WAD
+                Uint128::from(1u64) * WAD.as_uint128(),
+                Uint128::from(2u64) * WAD.as_uint128(),
+                Uint128::from(3u64) * WAD.as_uint128()
             ],
             weights: vec![Uint64::one(), Uint64::one()],    // ! Only 2 weights are specified
             amp: Uint64::new(1000000000000000000u64),
@@ -473,9 +473,9 @@ mod test_volatile_initialize_swap_curves {
         let initialize_msg = InitializeSwapCurvesMockConfig {
             assets: test_tokens.iter().map(|addr| addr.to_string()).collect(),
             assets_balances: vec![
-                Uint128::from(1u64) * WAD,
-                Uint128::from(2u64) * WAD,
-                Uint128::from(3u64) * WAD
+                Uint128::from(1u64) * WAD.as_uint128(),
+                Uint128::from(2u64) * WAD.as_uint128(),
+                Uint128::from(3u64) * WAD.as_uint128()
             ],
             weights: vec![Uint64::one(), Uint64::one(), Uint64::zero()],    // ! Weight set to 0
             amp: Uint64::new(1000000000000000000u64),
@@ -529,9 +529,9 @@ mod test_volatile_initialize_swap_curves {
         let initialize_msg = InitializeSwapCurvesMockConfig {
             assets: test_tokens.iter().map(|addr| addr.to_string()).collect(),
             assets_balances: vec![
-                Uint128::from(1u64) * WAD,
-                Uint128::from(2u64) * WAD,
-                Uint128::from(3u64) * WAD
+                Uint128::from(1u64) * WAD.as_uint128(),
+                Uint128::from(2u64) * WAD.as_uint128(),
+                Uint128::from(3u64) * WAD.as_uint128()
             ],
             weights: vec![Uint64::one(), Uint64::one(), Uint64::one()],
             amp: Uint64::new(900000000000000000u64),                 // ! Invalid amplification is specified
