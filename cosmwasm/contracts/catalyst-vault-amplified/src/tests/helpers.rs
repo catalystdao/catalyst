@@ -120,10 +120,28 @@ pub fn compute_expected_send_asset(
 pub fn compute_expected_receive_asset(
     u: U256,
     to_weight: Uint64,
-    to_balance: Uint128
+    to_balance: Uint128,
+    amplification: Uint64
 ) -> ExpectedReceiveAssetResult {
 
-    todo!();
+    // Convert arguments into float
+    let u = u256_to_f64(u) / 1e18;
+    let to_weight = to_weight.u64() as f64;
+    let to_balance = to_balance.u128() as f64;
+    let amplification = (amplification.u64() as f64) / 1e18;
+
+    // Compute swap
+    let one_minus_amplification = 1. - amplification;
+    let weighted_to_balance = to_weight * to_balance;
+    let weighted_to_balance_ampped = weighted_to_balance.powf(one_minus_amplification);
+
+    let to_amount = to_balance * (
+        1. - ((weighted_to_balance_ampped - u)/weighted_to_balance_ampped).powf(1./one_minus_amplification)
+    );
+
+    ExpectedReceiveAssetResult {
+        to_amount
+    }
     
 }
 
