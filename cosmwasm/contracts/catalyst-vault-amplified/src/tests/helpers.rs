@@ -31,11 +31,49 @@ pub fn compute_expected_local_swap(
     from_balance: Uint128,
     to_weight: Uint64,
     to_balance: Uint128,
+    amplification: Uint64,
     vault_fee: Option<Uint64>,
     governance_fee_share: Option<Uint64>
 ) -> ExpectedLocalSwapResult {
 
-    todo!();
+    // Convert arguments to float
+    let swap_amount = swap_amount.u128() as f64;
+    let from_weight = from_weight.u64() as f64;
+    let from_balance = from_balance.u128() as f64;
+    let to_weight = to_weight.u64() as f64;
+    let to_balance = to_balance.u128() as f64;
+    let amplification = (amplification.u64() as f64) / 1e18;
+
+    // Compute fees
+    let vault_fee = (vault_fee.unwrap_or(Uint64::zero()).u64() as f64) / 1e18;
+    let governance_fee_share = (governance_fee_share.unwrap_or(Uint64::zero()).u64() as f64) / 1e18;
+
+    let net_fee = vault_fee * swap_amount;
+    let net_vault_fee = vault_fee * (1. - governance_fee_share) * swap_amount;
+    let net_governance_fee = vault_fee * governance_fee_share * swap_amount;
+
+    // Compute swap
+    let x = swap_amount - net_fee;
+    let one_minus_amplification = 1. - amplification;
+
+    let weighted_from_balance = from_weight * from_balance;
+    let weighted_to_balance = to_weight * to_balance;
+    let weighted_swap_amount = from_weight * x;
+
+    let weighted_to_balance_ampped = weighted_to_balance.powf(one_minus_amplification);
+
+    let u = (weighted_from_balance + weighted_swap_amount).powf(one_minus_amplification) - weighted_from_balance.powf(one_minus_amplification);
+
+    let to_amount = to_balance * (
+        1. - ((weighted_to_balance_ampped - u)/weighted_to_balance_ampped).powf(1./one_minus_amplification)
+    );
+
+    ExpectedLocalSwapResult {
+        u,
+        to_amount,
+        vault_fee: net_vault_fee,
+        governance_fee: net_governance_fee
+    }
 
 }
 
