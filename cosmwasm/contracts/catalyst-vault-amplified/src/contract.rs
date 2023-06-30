@@ -18,7 +18,7 @@ use catalyst_vault_common::state::{
 use crate::msg::{AmplifiedExecuteMsg, InstantiateMsg, QueryMsg, AmplifiedExecuteExtension};
 use crate::state::{
     initialize_swap_curves, deposit_mixed, withdraw_all, withdraw_mixed, local_swap, send_asset, receive_asset,
-    send_liquidity, receive_liquidity, query_calc_send_asset, query_calc_receive_asset, query_calc_local_swap, query_get_limit_capacity, on_send_asset_success_amplified, on_send_asset_failure_amplified, on_send_liquidity_failure_amplified, set_amplification, query_target_amplification, query_amplification_update_finish_timestamp, query_balance_0
+    send_liquidity, receive_liquidity, query_calc_send_asset, query_calc_receive_asset, query_calc_local_swap, query_get_limit_capacity, on_send_asset_success_amplified, on_send_asset_failure_amplified, on_send_liquidity_failure_amplified, set_amplification, query_target_amplification, query_amplification_update_finish_timestamp, query_balance_0, query_amplification
 };
 
 
@@ -471,6 +471,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::LiquidityEscrow { hash } => to_binary(&query_liquidity_escrow(deps, hash)?),
 
         // Amplified-Specific Queries
+        QueryMsg::Amplification {} => to_binary(&query_amplification(deps)?),
         QueryMsg::TargetAmplification {} => to_binary(&query_target_amplification(deps)?),
         QueryMsg::AmplificationUpdateFinishTimestamp {} => to_binary(&query_amplification_update_finish_timestamp(deps)?),
         QueryMsg::Balance0 {} => to_binary(&query_balance_0(deps, env)?),

@@ -17,7 +17,7 @@ use std::ops::Div;
 
 use catalyst_ibc_interface::msg::ExecuteMsg as InterfaceExecuteMsg;
 
-use crate::{calculation_helpers::{calc_price_curve_area, calc_price_curve_limit, calc_combined_price_curves, calc_price_curve_limit_share, calc_weighted_alpha_0_ampped}, event::set_amplification_event, msg::{TargetAmplificationResponse, AmplificationUpdateFinishTimestampResponse, Balance0Response}};
+use crate::{calculation_helpers::{calc_price_curve_area, calc_price_curve_limit, calc_combined_price_curves, calc_price_curve_limit_share, calc_weighted_alpha_0_ampped}, event::set_amplification_event, msg::{TargetAmplificationResponse, AmplificationUpdateFinishTimestampResponse, Balance0Response, AmplificationResponse}};
 
 // TODO amplification specific storage
 pub const ONE_MINUS_AMP: Item<I256> = Item::new("catalyst-vault-amplified-one-minus-amp");
@@ -1912,6 +1912,25 @@ pub fn query_get_limit_capacity(
     Ok(
         GetLimitCapacityResponse {
             capacity: get_limit_capacity(&deps, env)?
+        }
+    )
+
+}
+
+
+pub fn query_amplification(
+    deps: Deps
+) -> StdResult<AmplificationResponse> {
+    
+    Ok(
+        AmplificationResponse {
+            amplification: WAD
+                .as_i256()              // Casting is safe as WAD < I256.max
+                .wrapping_sub(          // 'wrapping_sub' is safe as WAD >= 'one_minus_amp'
+                    ONE_MINUS_AMP.load(deps.storage)?
+                )
+                .as_u64()               // Casting is safe as 'amplification' < u64.max
+                .into()
         }
     )
 

@@ -100,6 +100,8 @@ pub enum QueryMsg {
 
 
     // Amplified vault specific queries
+    #[returns(AmplificationResponse)]
+    Amplification {},
     #[returns(TargetAmplificationResponse)]
     TargetAmplification {},
     #[returns(AmplificationUpdateFinishTimestampResponse)]
@@ -118,6 +120,11 @@ pub enum QueryMsg {
 
 }
 
+
+#[cw_serde]
+pub struct AmplificationResponse {
+    pub amplification: Uint64
+}
 
 #[cw_serde]
 pub struct TargetAmplificationResponse {
