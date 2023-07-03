@@ -485,7 +485,7 @@ pub fn withdraw_all(
                 )?
             }
             else {
-                weighted_withdraw_amount = effective_weighted_asset_balance_ampped;
+                weighted_withdraw_amount = effective_weighted_asset_balance;
             }
 
             weighted_withdraw_sum = weighted_withdraw_sum.checked_add(weighted_withdraw_amount)?;
