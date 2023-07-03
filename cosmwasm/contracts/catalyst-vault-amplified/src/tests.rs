@@ -8,3 +8,4 @@ mod test_local_swap;
 mod test_send_asset;
 mod test_receive_asset;
 mod test_send_liquidity;
+mod test_receive_liquidity;

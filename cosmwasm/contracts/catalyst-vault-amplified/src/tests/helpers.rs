@@ -186,10 +186,33 @@ pub fn compute_expected_send_liquidity(
 pub fn compute_expected_receive_liquidity(
     u: U256,
     to_weights: Vec<Uint64>,
-    to_total_supply: Uint128
+    to_balances: Vec<Uint128>,
+    to_total_supply: Uint128,
+    to_unit_tracker: I256,
+    amplification: Uint64
 ) -> ExpectedReceiveLiquidityResult {
 
-    todo!();
+    let asset_count = to_balances.len() as f64;
+
+    // Compute from vault balance0
+    let to_balance_0 = compute_balance_0(to_weights, to_balances, to_unit_tracker, amplification);
+
+    // Convert arguments to float
+    let u = u256_to_f64(u) / 1e18;
+    let to_total_supply = to_total_supply.u128() as f64;
+    let amplification = (amplification.u64() as f64) / 1e18;
+    let one_minus_amplification = 1. - amplification;
+    
+    // Compute swap
+    let weighted_vault_tokens = (
+        to_balance_0.powf(one_minus_amplification) + u/asset_count
+    ).powf(1./one_minus_amplification) - to_balance_0;
+
+    let to_amount = weighted_vault_tokens * to_total_supply / to_balance_0;
+
+    return ExpectedReceiveLiquidityResult {
+        to_amount
+    }
 
 }
 
@@ -198,11 +221,29 @@ pub fn compute_expected_reference_asset(
     vault_balances: Vec<Uint128>,
     vault_weights: Vec<Uint64>,
     vault_total_supply: Uint128,
-    vault_escrowed_vault_tokens: Uint128
+    vault_unit_tracker: I256,
+    vault_escrowed_vault_tokens: Uint128,
+    amplification: Uint64
 ) -> ExpectedReferenceAsset {
 
-    todo!();
+    // Compute vault balance0
+    let balance_0 = compute_balance_0(
+        vault_weights,
+        vault_balances,
+        vault_unit_tracker,
+        amplification
+    );
 
+    // Convert arguments to float
+    let vault_tokens = uint128_to_f64(vault_tokens);
+    let vault_total_supply = uint128_to_f64(vault_total_supply);
+    let vault_escrowed_vault_tokens = uint128_to_f64(vault_escrowed_vault_tokens);
+
+    let user_reference_amount = (balance_0 * vault_tokens) / (vault_total_supply + vault_escrowed_vault_tokens + vault_tokens);
+
+    ExpectedReferenceAsset {
+        amount: user_reference_amount
+    }
 }
 
 
