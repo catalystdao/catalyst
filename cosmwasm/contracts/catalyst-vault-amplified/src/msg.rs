@@ -1,6 +1,6 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Uint128, Binary, Uint64};
-use catalyst_types::U256;
+use catalyst_types::{U256, I256};
 pub use catalyst_vault_common::msg::{InstantiateMsg, ExecuteMsg};
 use catalyst_vault_common::msg::{
     AssetEscrowResponse, AssetsResponse, CalcLocalSwapResponse, CalcReceiveAssetResponse, CalcSendAssetResponse,
@@ -108,6 +108,8 @@ pub enum QueryMsg {
     AmplificationUpdateFinishTimestamp {},
     #[returns(Balance0Response)]
     Balance0 {},
+    #[returns(UnitTrackerResponse)]
+    UnitTracker {},
 
 
     // CW20 Implementation
@@ -139,4 +141,9 @@ pub struct AmplificationUpdateFinishTimestampResponse {
 #[cw_serde]
 pub struct Balance0Response {
     pub balance_0: U256
+}
+
+#[cw_serde]
+pub struct UnitTrackerResponse {
+    pub amount: I256
 }

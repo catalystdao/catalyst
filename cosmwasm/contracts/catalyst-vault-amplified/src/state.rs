@@ -17,7 +17,7 @@ use std::ops::Div;
 
 use catalyst_ibc_interface::msg::ExecuteMsg as InterfaceExecuteMsg;
 
-use crate::{calculation_helpers::{calc_price_curve_area, calc_price_curve_limit, calc_combined_price_curves, calc_price_curve_limit_share, calc_weighted_alpha_0_ampped}, event::set_amplification_event, msg::{TargetAmplificationResponse, AmplificationUpdateFinishTimestampResponse, Balance0Response, AmplificationResponse}};
+use crate::{calculation_helpers::{calc_price_curve_area, calc_price_curve_limit, calc_combined_price_curves, calc_price_curve_limit_share, calc_weighted_alpha_0_ampped}, event::set_amplification_event, msg::{TargetAmplificationResponse, AmplificationUpdateFinishTimestampResponse, Balance0Response, AmplificationResponse, UnitTrackerResponse}};
 
 // TODO amplification specific storage
 pub const ONE_MINUS_AMP: Item<I256> = Item::new("catalyst-vault-amplified-one-minus-amp");
@@ -1981,6 +1981,18 @@ pub fn query_balance_0(
             )?.0
         }
     )
+}
+
+pub fn query_unit_tracker(
+    deps: Deps
+) -> StdResult<UnitTrackerResponse> {
+
+    Ok(
+        UnitTrackerResponse {
+            amount: UNIT_TRACKER.load(deps.storage)?
+        }
+    )
+
 }
 
 
