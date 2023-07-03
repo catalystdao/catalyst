@@ -10,8 +10,7 @@ from brownie import (WETH9, WCANTO, WCRO, WEVMOS, CatalystIBCInterface,
 
 """
 # one liner deployment
-from scripts.deployCatalyst import Catalyst; cat = Catalyst(acct, "scroll", "scripts/deploy_config.json", True, "WETH",
-WETH9); WETH9.at(cat.config["tokens"]["scroll"]["WETH"]).deposit({'from': cat.deployer, 'value': 0.1*10**18}); cat.deploy_config()
+from scripts.deployCatalyst import Catalyst; cat = Catalyst(acct, "scroll", "scripts/deploy_config.json", True, "WETH", WETH9); WETH9.at(cat.config["tokens"]["scroll"]["WETH"]).deposit({'from': cat.deployer, 'value': 0.1*10**18}); cat.deploy_config()
 
 # And run
 from scripts.deployCatalyst import Catalyst; cat = Catalyst(acct, "canto", "scripts/deploy_config.json", True, "WCANTO", WCANTO); WCANTO.at(cat.config["tokens"]["canto"]["WCANTO"]).deposit({'from': cat.deployer, 'value': 0.8*10**18}); cat.deploy_config();
@@ -281,8 +280,7 @@ class Catalyst:
                     
     def set_connections(self):
         self.load_config()
-        volatile_template = self.config['chain_config'][self.chain]["volatile_template"]
-        amplified_template = self.config['chain_config'][self.chain]["amplified_template"]
+        
         # Check that all vaults have been setup.
         for vault in self.config["vaults"].keys():
             if self.chain not in self.config["vaults"][vault].keys():
