@@ -11,3 +11,4 @@ mod test_send_liquidity;
 mod test_receive_liquidity;
 mod test_send_asset_success_failure;
 mod test_send_liquidity_success_failure;
+mod test_deposit;

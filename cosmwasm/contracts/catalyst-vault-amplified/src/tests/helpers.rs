@@ -249,13 +249,59 @@ pub fn compute_expected_reference_asset(
 
 pub fn compute_expected_deposit_mixed(
     deposit_amounts: Vec<Uint128>,
-    from_weights: Vec<Uint64>,
-    from_balances: Vec<Uint128>,
-    from_total_supply: Uint128,
+    vault_weights: Vec<Uint64>,
+    vault_balances: Vec<Uint128>,
+    vault_total_supply: Uint128,
+    vault_unit_tracker: I256,
     vault_fee: Option<Uint64>,
+    amplification: Uint64
 ) -> f64 {
 
-    todo!();
+    let asset_count = vault_balances.len() as f64;
+
+    // Compute vault balance0
+    let balance_0 = compute_balance_0(
+        vault_weights.clone(),
+        vault_balances.clone(),
+        vault_unit_tracker,
+        amplification
+    );
+
+    // Convert arguments to float
+    let vault_total_supply = vault_total_supply.u128() as f64;
+    let amplification = (amplification.u64() as f64) / 1e18;
+    let one_minus_amplification = 1. - amplification;
+    
+    // Compute units
+    let units: f64 = deposit_amounts.iter()
+        .zip(&vault_weights)
+        .zip(&vault_balances)
+        .map(|((deposit_amount, vault_weight), vault_balance)| {
+
+            let deposit_amount = uint128_to_f64(*deposit_amount);
+            let vault_weight = vault_weight.u64() as f64;
+            let vault_balance = uint128_to_f64(*vault_balance);
+
+            let weighted_balance = vault_weight * vault_balance;
+            let weighted_deposit = vault_weight * deposit_amount;
+
+            (weighted_balance + weighted_deposit).powf(one_minus_amplification)
+                - weighted_balance.powf(one_minus_amplification)
+
+        })
+        .sum();
+
+    // Take the vault fee
+    let units = units * (1. - (vault_fee.unwrap_or(Uint64::zero()).u64() as f64)/1e18);
+
+    // Compute the deposit share
+    let balance_0_ampped = balance_0.powf(one_minus_amplification);
+
+    vault_total_supply * (
+        (
+            1. + units/(asset_count * balance_0_ampped)
+        ).powf(1./one_minus_amplification) - 1.
+    )
 
 }
 
