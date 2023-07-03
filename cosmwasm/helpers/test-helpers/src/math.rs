@@ -1,10 +1,19 @@
 use std::ops::{Shr, Shl};
 
 use cosmwasm_std::Uint128;
-use catalyst_types::U256;
+use catalyst_types::{U256, I256};
 
 
 pub fn u256_to_f64(val: U256) -> f64 {
+    let (hi, lo) = val.into_words();
+
+    let mut out: f64 = lo as f64;
+    out += (hi as f64) * 2_f64.powf(128_f64);
+
+    out
+}
+
+pub fn i256_to_f64(val: I256) -> f64 {
     let (hi, lo) = val.into_words();
 
     let mut out: f64 = lo as f64;
