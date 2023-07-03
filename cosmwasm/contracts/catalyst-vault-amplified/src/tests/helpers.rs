@@ -311,10 +311,54 @@ pub fn compute_expected_withdraw_mixed(
     withdraw_ratio: Vec<Uint64>,
     vault_weights: Vec<Uint64>,
     vault_balances: Vec<Uint128>,
-    vault_supply: Uint128
+    vault_total_supply: Uint128,
+    vault_unit_tracker: I256,
+    amplification: Uint64
 ) -> Vec<f64> {
 
-    todo!();
+    let asset_count = vault_balances.len() as f64;
+
+    // Compute vault balance0
+    let balance_0 = compute_balance_0(
+        vault_weights.clone(),
+        vault_balances.clone(),
+        vault_unit_tracker,
+        amplification
+    );
+
+    // Convert arguments to float
+    let withdraw_amount = withdraw_amount.u128() as f64;
+    let vault_total_supply = vault_total_supply.u128() as f64;
+    let amplification = (amplification.u64() as f64) / 1e18;
+    let one_minus_amplification = 1. - amplification;
+
+    // Compute the withdraw share
+    let vault_tokens_share = 1. - withdraw_amount/vault_total_supply;
+    let balance_0_ampped = balance_0.powf(one_minus_amplification);
+
+    let mut units = asset_count * balance_0_ampped * (1. - vault_tokens_share.powf(one_minus_amplification));
+
+    vault_balances
+        .iter()
+        .zip(vault_weights)
+        .zip(withdraw_ratio)
+        .map(|((balance, weight), ratio)| {
+
+            let balance = balance.u128() as f64;
+            let weight = weight.u64() as f64;
+            let ratio = ratio.u64() as f64 / 1e18;
+
+            let units_for_asset = units * ratio;
+            units -= units_for_asset;
+
+            let weighted_balance_ampped = (weight * balance).powf(one_minus_amplification);
+
+            balance * (
+                1. - (1. - units_for_asset/weighted_balance_ampped).powf(1./one_minus_amplification)
+            )
+
+        })
+        .collect::<Vec<f64>>()
 
 }
 
