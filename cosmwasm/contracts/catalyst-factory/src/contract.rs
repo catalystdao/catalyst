@@ -454,7 +454,7 @@ mod catalyst_vault_factory_tests {
             &mut app,
             SETUP_MASTER.to_string(),
             None,
-            None
+            3
         );
         let vault_initial_balances = vec![Uint128::from(1u64), Uint128::from(2u64), Uint128::from(3u64)];
         let vault_weights = vec![Uint128::one(), Uint128::one(), Uint128::one()];
@@ -700,7 +700,7 @@ mod catalyst_vault_factory_tests {
             &mut app,
             SETUP_MASTER.to_string(),
             None,
-            None
+            3
         );
         let vault_initial_balances = vec![Uint128::from(1u64), Uint128::from(2u64), Uint128::from(3u64)];
         let vault_weights = vec![Uint128::one(), Uint128::one(), Uint128::one()];

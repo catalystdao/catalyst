@@ -4,9 +4,10 @@ mod test_volatile_withdraw_mixed {
     use cosmwasm_std::{Uint128, Addr, Uint64};
     use cw_multi_test::{App, Executor};
     use catalyst_vault_common::{ContractError, state::INITIAL_MINT_AMOUNT};
+    use fixed_point_math::WAD;
     use test_helpers::{math::{uint128_to_f64, f64_to_uint128}, misc::get_response_attribute, token::{deploy_test_tokens, transfer_tokens, query_token_balance, query_token_info}, definitions::{SETUP_MASTER, WITHDRAWER}, contract::mock_factory_deploy_vault};
 
-    use crate::{msg::VolatileExecuteMsg, tests::{helpers::{compute_expected_withdraw_mixed, volatile_vault_contract_storage}, parameters::{TEST_VAULT_BALANCES, TEST_VAULT_WEIGHTS, AMPLIFICATION}}};
+    use crate::{msg::VolatileExecuteMsg, tests::{helpers::{compute_expected_withdraw_mixed, volatile_vault_contract_storage}, parameters::{TEST_VAULT_BALANCES, TEST_VAULT_WEIGHTS, AMPLIFICATION, TEST_VAULT_ASSET_COUNT}}};
 
 
     //TODO add test for the withdraw event
@@ -17,7 +18,7 @@ mod test_volatile_withdraw_mixed {
         let mut app = App::default();
 
         // Instantiate and initialize vault
-        let vault_tokens = deploy_test_tokens(&mut app, SETUP_MASTER.to_string(), None, None);
+        let vault_tokens = deploy_test_tokens(&mut app, SETUP_MASTER.to_string(), None, TEST_VAULT_ASSET_COUNT);
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
         let vault_code_id = volatile_vault_contract_storage(&mut app);
@@ -35,7 +36,7 @@ mod test_volatile_withdraw_mixed {
         // Define withdraw config
         let withdraw_percentage = 0.15;     // Percentage of vault tokens supply
         let withdraw_amount = f64_to_uint128(uint128_to_f64(INITIAL_MINT_AMOUNT) * withdraw_percentage).unwrap();
-        let withdraw_ratio_f64 = vec![0.5, 0.2, 1.];
+        let withdraw_ratio_f64 = vec![0.5, 0.2, 1.][3-TEST_VAULT_ASSET_COUNT..].to_vec();
         let withdraw_ratio = withdraw_ratio_f64.iter()
             .map(|val| ((val * 1e18) as u64).into()).collect::<Vec<Uint64>>();
 
@@ -57,7 +58,7 @@ mod test_volatile_withdraw_mixed {
             &VolatileExecuteMsg::WithdrawMixed {
                 vault_tokens: withdraw_amount,
                 withdraw_ratio: withdraw_ratio.clone(),
-                min_out: vec![Uint128::zero(), Uint128::zero(), Uint128::zero()]
+                min_out: vec![Uint128::zero(); TEST_VAULT_ASSET_COUNT]
             },
             &[]
         ).unwrap();
@@ -137,7 +138,7 @@ mod test_volatile_withdraw_mixed {
         let mut app = App::default();
 
         // Instantiate and initialize vault
-        let vault_tokens = deploy_test_tokens(&mut app, SETUP_MASTER.to_string(), None, None);
+        let vault_tokens = deploy_test_tokens(&mut app, SETUP_MASTER.to_string(), None, TEST_VAULT_ASSET_COUNT);
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
         let vault_code_id = volatile_vault_contract_storage(&mut app);
@@ -154,7 +155,7 @@ mod test_volatile_withdraw_mixed {
 
         // Define withdraw config
         let withdraw_amount = Uint128::zero();
-        let withdraw_ratio_f64 = vec![1./3., 1./2., 1.];
+        let withdraw_ratio_f64 = vec![1./3., 1./2., 1.][3-TEST_VAULT_ASSET_COUNT..].to_vec();
         let withdraw_ratio = withdraw_ratio_f64.iter()
             .map(|val| ((val * 1e18) as u64).into()).collect::<Vec<Uint64>>();
     
@@ -167,7 +168,7 @@ mod test_volatile_withdraw_mixed {
             &VolatileExecuteMsg::WithdrawMixed {
                 vault_tokens: withdraw_amount,
                 withdraw_ratio,
-                min_out: vec![Uint128::zero(), Uint128::zero(), Uint128::zero()]
+                min_out: vec![Uint128::zero(); TEST_VAULT_ASSET_COUNT]
             },
             &[]
         ).unwrap();
@@ -184,7 +185,7 @@ mod test_volatile_withdraw_mixed {
             .collect::<Result<Vec<Uint128>, _>>()
             .unwrap();
 
-        let expected_returns = vec![Uint128::zero(), Uint128::zero(), Uint128::zero()];
+        let expected_returns = vec![Uint128::zero(); TEST_VAULT_ASSET_COUNT];
 
         assert_eq!(
             observed_returns,
@@ -200,7 +201,7 @@ mod test_volatile_withdraw_mixed {
         let mut app = App::default();
 
         // Instantiate and initialize vault
-        let vault_tokens = deploy_test_tokens(&mut app, SETUP_MASTER.to_string(), None, None);
+        let vault_tokens = deploy_test_tokens(&mut app, SETUP_MASTER.to_string(), None, TEST_VAULT_ASSET_COUNT);
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
         let vault_code_id = volatile_vault_contract_storage(&mut app);
@@ -218,7 +219,7 @@ mod test_volatile_withdraw_mixed {
         // Define withdraw config
         let withdraw_percentage = 0.15;     // Percentage of vault tokens supply
         let withdraw_amount = f64_to_uint128(uint128_to_f64(INITIAL_MINT_AMOUNT) * withdraw_percentage).unwrap();
-        let withdraw_ratio_f64 = vec![0.5, 0.2, 1.];
+        let withdraw_ratio_f64 = vec![0.5, 0.2, 1.][3-TEST_VAULT_ASSET_COUNT..].to_vec();
         let withdraw_ratio = withdraw_ratio_f64.iter()
             .map(|val| ((val * 1e18) as u64).into()).collect::<Vec<Uint64>>();
 
@@ -303,9 +304,9 @@ mod test_volatile_withdraw_mixed {
         let mut app = App::default();
 
         // Instantiate and initialize vault
-        let vault_tokens = deploy_test_tokens(&mut app, SETUP_MASTER.to_string(), None, None);
-        let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
-        let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
+        let vault_tokens = deploy_test_tokens(&mut app, SETUP_MASTER.to_string(), None, 3);
+        let vault_initial_balances = vec![Uint128::from(1u64) * WAD.as_uint128(), Uint128::from(2u64) * WAD.as_uint128(), Uint128::from(3u64) * WAD.as_uint128()];
+        let vault_weights = vec![Uint128::one(), Uint128::one(), Uint128::one()];
         let vault_code_id = volatile_vault_contract_storage(&mut app);
         let vault = mock_factory_deploy_vault(
             &mut app,
@@ -381,7 +382,7 @@ mod test_volatile_withdraw_mixed {
         let mut app = App::default();
 
         // Instantiate and initialize vault
-        let vault_tokens = deploy_test_tokens(&mut app, SETUP_MASTER.to_string(), None, None);
+        let vault_tokens = deploy_test_tokens(&mut app, SETUP_MASTER.to_string(), None, TEST_VAULT_ASSET_COUNT);
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
         let vault_code_id = volatile_vault_contract_storage(&mut app);
@@ -399,7 +400,7 @@ mod test_volatile_withdraw_mixed {
         // Define withdraw config
         let withdraw_percentage = 0.15;     // Percentage of vault tokens supply
         let withdraw_amount = f64_to_uint128(uint128_to_f64(INITIAL_MINT_AMOUNT) * withdraw_percentage).unwrap();
-        let withdraw_ratio_f64 = vec![0.5, 0.2, 1.];
+        let withdraw_ratio_f64 = vec![0.5, 0.2, 1.][3-TEST_VAULT_ASSET_COUNT..].to_vec();
         let withdraw_ratio = withdraw_ratio_f64.iter()
             .map(|val| ((val * 1e18) as u64).into()).collect::<Vec<Uint64>>();
 
@@ -414,7 +415,7 @@ mod test_volatile_withdraw_mixed {
             &VolatileExecuteMsg::WithdrawMixed {
                 vault_tokens: withdraw_amount,
                 withdraw_ratio,
-                min_out: vec![Uint128::zero(), Uint128::zero(), Uint128::zero()]
+                min_out: vec![Uint128::zero(); TEST_VAULT_ASSET_COUNT]
             },
             &[]
         );
@@ -436,9 +437,9 @@ mod test_volatile_withdraw_mixed {
         let mut app = App::default();
 
         // Instantiate and initialize vault
-        let vault_tokens = deploy_test_tokens(&mut app, SETUP_MASTER.to_string(), None, None);
-        let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
-        let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
+        let vault_tokens = deploy_test_tokens(&mut app, SETUP_MASTER.to_string(), None, 3);
+        let vault_initial_balances = vec![Uint128::from(1u64) * WAD.as_uint128(), Uint128::from(2u64) * WAD.as_uint128(), Uint128::from(3u64) * WAD.as_uint128()];
+        let vault_weights = vec![Uint128::one(), Uint128::one(), Uint128::one()];
         let vault_code_id = volatile_vault_contract_storage(&mut app);
         let vault = mock_factory_deploy_vault(
             &mut app,

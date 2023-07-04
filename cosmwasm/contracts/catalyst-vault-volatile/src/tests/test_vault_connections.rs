@@ -4,11 +4,11 @@ mod test_volatile_vault_connections {
     use catalyst_vault_common::{ContractError, msg::VaultConnectionStateResponse};
     use test_helpers::{misc::encode_payload_address, token::deploy_test_tokens, definitions::{SETUP_MASTER, FACTORY_OWNER}, contract::{mock_instantiate_interface, mock_factory_deploy_vault, mock_finish_vault_setup}};
 
-    use crate::{msg::VolatileExecuteMsg, tests::{helpers::volatile_vault_contract_storage, parameters::{TEST_VAULT_BALANCES, TEST_VAULT_WEIGHTS, AMPLIFICATION}}};
+    use crate::{msg::VolatileExecuteMsg, tests::{helpers::volatile_vault_contract_storage, parameters::{TEST_VAULT_BALANCES, TEST_VAULT_WEIGHTS, AMPLIFICATION, TEST_VAULT_ASSET_COUNT}}};
 
     fn deploy_mock_vault(app: &mut App) -> Addr {
         let interface = mock_instantiate_interface(app);
-        let vault_tokens = deploy_test_tokens(app, SETUP_MASTER.to_string(), None, None);
+        let vault_tokens = deploy_test_tokens(app, SETUP_MASTER.to_string(), None, TEST_VAULT_ASSET_COUNT);
         let vault_code_id = volatile_vault_contract_storage(app);
         mock_factory_deploy_vault(
             app,

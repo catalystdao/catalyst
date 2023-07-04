@@ -6,9 +6,9 @@ mod test_volatile_initialize_swap_curves {
     use catalyst_types::U256;
     use fixed_point_math::{LN2, WAD};
     use catalyst_vault_common::{ContractError, msg::{AssetsResponse, WeightResponse, GetLimitCapacityResponse, TotalEscrowedAssetResponse, TotalEscrowedLiquidityResponse}};
-    use test_helpers::{token::{deploy_test_tokens, mock_test_token_definitions}, definitions::{SETUP_MASTER, DEPOSITOR, DEPLOYER}, contract::{mock_instantiate_vault, InitializeSwapCurvesMockConfig}};
+    use test_helpers::{token::deploy_test_tokens, definitions::{SETUP_MASTER, DEPOSITOR, DEPLOYER}, contract::{mock_instantiate_vault, InitializeSwapCurvesMockConfig}};
 
-    use crate::{tests::{helpers::volatile_vault_contract_storage, parameters::{TEST_VAULT_BALANCES, TEST_VAULT_WEIGHTS, AMPLIFICATION}}};
+    use crate::{tests::{helpers::volatile_vault_contract_storage, parameters::{TEST_VAULT_BALANCES, TEST_VAULT_WEIGHTS, AMPLIFICATION, TEST_VAULT_ASSET_COUNT}}};
 
 
 
@@ -26,7 +26,7 @@ mod test_volatile_initialize_swap_curves {
             &mut app,
             SETUP_MASTER.to_string(),
             None,
-            None
+            TEST_VAULT_ASSET_COUNT
         );
 
         // Define InitializeSwapCurves parameters
@@ -197,7 +197,7 @@ mod test_volatile_initialize_swap_curves {
             &mut app,
             SETUP_MASTER.to_string(),
             None,
-            None
+            TEST_VAULT_ASSET_COUNT
         );
 
         // Define InitializeSwapCurves parameters
@@ -291,12 +291,11 @@ mod test_volatile_initialize_swap_curves {
         let vault = mock_instantiate_vault(&mut app, vault_code_id, None);
 
         // Create tokens and set vault allowances
-        let test_tokens_definitions = mock_test_token_definitions(SETUP_MASTER.to_string(), 4);    // ! Generate 4 tokens definitions
         let test_tokens = deploy_test_tokens(
             &mut app,
             SETUP_MASTER.to_string(),
             None,
-            Some(test_tokens_definitions)
+            4    // ! Generate 4 tokens definitions
         );
 
         // Define InitializeSwapCurves parameters
@@ -355,7 +354,7 @@ mod test_volatile_initialize_swap_curves {
             &mut app,
             SETUP_MASTER.to_string(),
             None,
-            None
+            3
         );
 
         // Define InitializeSwapCurves parameters
@@ -413,7 +412,7 @@ mod test_volatile_initialize_swap_curves {
             &mut app,
             SETUP_MASTER.to_string(),
             None,
-            None
+            3
         );
 
         // Define InitializeSwapCurves parameters
@@ -472,7 +471,7 @@ mod test_volatile_initialize_swap_curves {
             &mut app,
             SETUP_MASTER.to_string(),
             None,
-            None
+            3
         );
 
         // Define InitializeSwapCurves parameters
@@ -530,7 +529,7 @@ mod test_volatile_initialize_swap_curves {
             &mut app,
             SETUP_MASTER.to_string(),
             None,
-            None
+            TEST_VAULT_ASSET_COUNT
         );
 
         // Define InitializeSwapCurves parameters

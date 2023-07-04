@@ -130,13 +130,29 @@ pub fn deploy_test_tokens(
     app: &mut App,
     minter: String,
     cw20_contract: Option<u64>,
-    token_definitions: Option<Vec<TestTokenDefinition>>
+    count: usize
+) -> Vec<Addr> {
+
+    deploy_test_token_definitions(
+        app,
+        minter.clone(),
+        cw20_contract,
+        mock_test_token_definitions(minter, count)
+    )
+
+}
+
+
+pub fn deploy_test_token_definitions(
+    app: &mut App,
+    minter: String,
+    cw20_contract: Option<u64>,
+    token_definitions: Vec<TestTokenDefinition>
 ) -> Vec<Addr> {
 
     let cw20_contract = cw20_contract.unwrap_or(cw20_contract_storage(app));
 
     token_definitions
-        .unwrap_or(mock_test_token_definitions(minter.clone(), 3))
         .iter()
         .map(|definition| {
             app.instantiate_contract::<cw20_base::msg::InstantiateMsg, _>(

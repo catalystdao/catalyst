@@ -5,7 +5,7 @@ mod test_amplified_deposit{
     use catalyst_vault_common::{ContractError, state::INITIAL_MINT_AMOUNT};
     use test_helpers::{math::{uint128_to_f64, f64_to_uint128}, misc::get_response_attribute, token::{deploy_test_tokens, transfer_tokens, set_token_allowance, query_token_balance, query_token_info}, definitions::{SETUP_MASTER, DEPOSITOR}, contract::{mock_factory_deploy_vault, DEFAULT_TEST_VAULT_FEE}};
 
-    use crate::{msg::AmplifiedExecuteMsg, tests::{helpers::{compute_expected_deposit_mixed, amplified_vault_contract_storage}, parameters::{AMPLIFICATION, TEST_VAULT_BALANCES, TEST_VAULT_WEIGHTS}}};
+    use crate::{msg::AmplifiedExecuteMsg, tests::{helpers::{compute_expected_deposit_mixed, amplified_vault_contract_storage}, parameters::{AMPLIFICATION, TEST_VAULT_BALANCES, TEST_VAULT_WEIGHTS, TEST_VAULT_ASSET_COUNT}}};
 
 
     //TODO add test for the deposit event
@@ -17,7 +17,7 @@ mod test_amplified_deposit{
         let mut app = App::default();
 
         // Instantiate and initialize vault
-        let vault_tokens = deploy_test_tokens(&mut app, SETUP_MASTER.to_string(), None, None);
+        let vault_tokens = deploy_test_tokens(&mut app, SETUP_MASTER.to_string(), None, TEST_VAULT_ASSET_COUNT);
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
         let vault_code_id = amplified_vault_contract_storage(&mut app);let 
@@ -141,7 +141,7 @@ mod test_amplified_deposit{
         let mut app = App::default();
 
         // Instantiate and initialize vault
-        let vault_tokens = deploy_test_tokens(&mut app, SETUP_MASTER.to_string(), None, None);
+        let vault_tokens = deploy_test_tokens(&mut app, SETUP_MASTER.to_string(), None, TEST_VAULT_ASSET_COUNT);
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
         let vault_code_id = amplified_vault_contract_storage(&mut app);
@@ -157,7 +157,7 @@ mod test_amplified_deposit{
         );
 
         // Define deposit config
-        let deposit_percentages = vec![0.1, 0., 0.3];
+        let deposit_percentages = vec![0., 0.1, 0.3][..TEST_VAULT_ASSET_COUNT].to_vec();
         let deposit_amounts: Vec<Uint128> = vault_initial_balances.iter()
             .zip(&deposit_percentages)
             .map(|(vault_balance, deposit_percentage)| {
@@ -234,7 +234,7 @@ mod test_amplified_deposit{
         let mut app = App::default();
 
         // Instantiate and initialize vault
-        let vault_tokens = deploy_test_tokens(&mut app, SETUP_MASTER.to_string(), None, None);
+        let vault_tokens = deploy_test_tokens(&mut app, SETUP_MASTER.to_string(), None, TEST_VAULT_ASSET_COUNT);
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
         let vault_code_id = amplified_vault_contract_storage(&mut app);
@@ -250,7 +250,7 @@ mod test_amplified_deposit{
         );
 
         // Define deposit config
-        let deposit_amounts: Vec<Uint128> = vec![Uint128::zero(), Uint128::zero(), Uint128::zero()];
+        let deposit_amounts: Vec<Uint128> = vec![Uint128::zero(); TEST_VAULT_ASSET_COUNT];
 
 
 
@@ -289,7 +289,7 @@ mod test_amplified_deposit{
         let mut app = App::default();
 
         // Instantiate and initialize vault
-        let vault_tokens = deploy_test_tokens(&mut app, SETUP_MASTER.to_string(), None, None);
+        let vault_tokens = deploy_test_tokens(&mut app, SETUP_MASTER.to_string(), None, TEST_VAULT_ASSET_COUNT);
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
         let vault_code_id = amplified_vault_contract_storage(&mut app);
@@ -388,7 +388,7 @@ mod test_amplified_deposit{
         let mut app = App::default();
 
         // Instantiate and initialize vault
-        let vault_tokens = deploy_test_tokens(&mut app, SETUP_MASTER.to_string(), None, None);
+        let vault_tokens = deploy_test_tokens(&mut app, SETUP_MASTER.to_string(), None, TEST_VAULT_ASSET_COUNT);
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
         let vault_code_id = amplified_vault_contract_storage(&mut app);let 

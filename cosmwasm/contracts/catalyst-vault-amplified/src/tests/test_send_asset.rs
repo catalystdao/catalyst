@@ -3,9 +3,9 @@ mod test_amplified_send_asset {
     use cw_multi_test::{App, Executor};
     use catalyst_types::U256;
     use catalyst_vault_common::{ContractError, msg::TotalEscrowedAssetResponse};
-    use test_helpers::{math::{uint128_to_f64, f64_to_uint128, u256_to_f64}, misc::{encode_payload_address, get_response_attribute}, token::{deploy_test_tokens, transfer_tokens, set_token_allowance, query_token_balance, mock_test_token_definitions}, definitions::{SETUP_MASTER, CHANNEL_ID, SWAPPER_B, SWAPPER_A, FACTORY_OWNER}, contract::{mock_instantiate_interface, mock_factory_deploy_vault, DEFAULT_TEST_VAULT_FEE, DEFAULT_TEST_GOV_FEE, mock_set_vault_connection}};
+    use test_helpers::{math::{uint128_to_f64, f64_to_uint128, u256_to_f64}, misc::{encode_payload_address, get_response_attribute}, token::{deploy_test_tokens, transfer_tokens, set_token_allowance, query_token_balance}, definitions::{SETUP_MASTER, CHANNEL_ID, SWAPPER_B, SWAPPER_A, FACTORY_OWNER}, contract::{mock_instantiate_interface, mock_factory_deploy_vault, DEFAULT_TEST_VAULT_FEE, DEFAULT_TEST_GOV_FEE, mock_set_vault_connection}};
 
-    use crate::{msg::AmplifiedExecuteMsg, tests::{helpers::{compute_expected_send_asset, amplified_vault_contract_storage}, parameters::{AMPLIFICATION, TEST_VAULT_BALANCES, TEST_VAULT_WEIGHTS}}};
+    use crate::{msg::AmplifiedExecuteMsg, tests::{helpers::{compute_expected_send_asset, amplified_vault_contract_storage}, parameters::{AMPLIFICATION, TEST_VAULT_BALANCES, TEST_VAULT_WEIGHTS, TEST_VAULT_ASSET_COUNT}}};
 
 
     //TODO check event
@@ -17,7 +17,7 @@ mod test_amplified_send_asset {
 
         // Instantiate and initialize vault
         let interface = mock_instantiate_interface(&mut app);
-        let vault_tokens = deploy_test_tokens(&mut app, SETUP_MASTER.to_string(), None, None);
+        let vault_tokens = deploy_test_tokens(&mut app, SETUP_MASTER.to_string(), None, TEST_VAULT_ASSET_COUNT);
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
         let vault_code_id = amplified_vault_contract_storage(&mut app);
@@ -160,7 +160,7 @@ mod test_amplified_send_asset {
 
         // Instantiate and initialize vault
         let interface = mock_instantiate_interface(&mut app);
-        let vault_tokens = deploy_test_tokens(&mut app, SETUP_MASTER.to_string(), None, None);
+        let vault_tokens = deploy_test_tokens(&mut app, SETUP_MASTER.to_string(), None, TEST_VAULT_ASSET_COUNT);
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
         let vault_code_id = amplified_vault_contract_storage(&mut app);
@@ -239,7 +239,7 @@ mod test_amplified_send_asset {
 
         // Instantiate and initialize vault
         let interface = mock_instantiate_interface(&mut app);
-        let vault_tokens = deploy_test_tokens(&mut app, SETUP_MASTER.to_string(), None, None);
+        let vault_tokens = deploy_test_tokens(&mut app, SETUP_MASTER.to_string(), None, TEST_VAULT_ASSET_COUNT);
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
         let vault_code_id = amplified_vault_contract_storage(&mut app);
@@ -323,8 +323,7 @@ mod test_amplified_send_asset {
 
         // Instantiate and initialize vault
         let interface = mock_instantiate_interface(&mut app);
-        let tokens = deploy_test_tokens(&mut app, SETUP_MASTER.to_string(), None, Some(mock_test_token_definitions(SETUP_MASTER.to_string(), 4)));
-        let vault_tokens = tokens[0..3].to_vec();
+        let vault_tokens = deploy_test_tokens(&mut app, SETUP_MASTER.to_string(), None, TEST_VAULT_ASSET_COUNT);
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
         let vault_code_id = amplified_vault_contract_storage(&mut app);
@@ -350,7 +349,7 @@ mod test_amplified_send_asset {
         );
 
         // Define send asset configuration
-        let from_asset = tokens[3].clone();
+        let from_asset = deploy_test_tokens(&mut app, SETUP_MASTER.to_string(), None, 1)[0].clone();
         let swap_amount = Uint128::from(10000000u64);
 
         let to_asset_idx = 1;

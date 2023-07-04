@@ -4,13 +4,13 @@ mod test_amplified_fees {
     use catalyst_vault_common::{ContractError, msg::{FeeAdministratorResponse, VaultFeeResponse, GovernanceFeeShareResponse}};
     use test_helpers::{token::deploy_test_tokens, definitions::{SETUP_MASTER, FACTORY_OWNER}, contract::mock_factory_deploy_vault};
 
-    use crate::{msg::{AmplifiedExecuteMsg, QueryMsg}, tests::{helpers::amplified_vault_contract_storage, parameters::{TEST_VAULT_BALANCES, TEST_VAULT_WEIGHTS, AMPLIFICATION}}};
+    use crate::{msg::{AmplifiedExecuteMsg, QueryMsg}, tests::{helpers::amplified_vault_contract_storage, parameters::{TEST_VAULT_BALANCES, TEST_VAULT_WEIGHTS, AMPLIFICATION, TEST_VAULT_ASSET_COUNT}}};
 
 
 
     // Set Fee Administrator Tests **********************************************************************************************
     fn deploy_mock_vault(app: &mut App) -> Addr {
-        let vault_tokens = deploy_test_tokens(app, SETUP_MASTER.to_string(), None, None);
+        let vault_tokens = deploy_test_tokens(app, SETUP_MASTER.to_string(), None, TEST_VAULT_ASSET_COUNT);
         let vault_code_id = amplified_vault_contract_storage(app);
         mock_factory_deploy_vault(
             app,
