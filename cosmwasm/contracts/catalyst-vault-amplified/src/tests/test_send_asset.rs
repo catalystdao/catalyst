@@ -6,10 +6,7 @@ mod test_amplified_send_asset {
     use fixed_point_math::WAD;
     use test_helpers::{math::{uint128_to_f64, f64_to_uint128, u256_to_f64}, misc::{encode_payload_address, get_response_attribute}, token::{deploy_test_tokens, transfer_tokens, set_token_allowance, query_token_balance, mock_test_token_definitions}, definitions::{SETUP_MASTER, CHANNEL_ID, SWAPPER_B, SWAPPER_A, FACTORY_OWNER}, contract::{mock_instantiate_interface, mock_factory_deploy_vault, DEFAULT_TEST_VAULT_FEE, DEFAULT_TEST_GOV_FEE, mock_set_vault_connection}};
 
-    use crate::{msg::AmplifiedExecuteMsg, tests::helpers::{compute_expected_send_asset, amplified_vault_contract_storage}};
-
-
-    const AMPLIFICATION: Uint64 = Uint64::new(900000000000000000u64);
+    use crate::{msg::AmplifiedExecuteMsg, tests::{helpers::{compute_expected_send_asset, amplified_vault_contract_storage}, parameters::AMPLIFICATION}};
 
 
     //TODO check event

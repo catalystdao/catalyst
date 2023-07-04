@@ -6,10 +6,7 @@ mod test_amplified_send_asset_success_failure {
     use fixed_point_math::WAD;
     use test_helpers::{math::{uint128_to_f64, f64_to_uint128}, misc::{encode_payload_address, get_response_attribute}, token::{deploy_test_tokens, transfer_tokens, set_token_allowance, query_token_balance}, definitions::{SETUP_MASTER, CHANNEL_ID, SWAPPER_B, SWAPPER_A, FACTORY_OWNER}, contract::{mock_instantiate_interface, mock_factory_deploy_vault, mock_set_vault_connection}};
 
-    use crate::{msg::{AmplifiedExecuteMsg, QueryMsg}, tests::helpers::amplified_vault_contract_storage};
-
-
-    const AMPLIFICATION: Uint64 = Uint64::new(900000000000000000u64);
+    use crate::{msg::{AmplifiedExecuteMsg, QueryMsg}, tests::{helpers::amplified_vault_contract_storage, parameters::AMPLIFICATION}};
 
 
     //TODO check events

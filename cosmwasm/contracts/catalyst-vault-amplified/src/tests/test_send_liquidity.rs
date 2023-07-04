@@ -6,10 +6,7 @@ mod test_amplified_send_liquidity {
     use fixed_point_math::WAD;
     use test_helpers::{math::{uint128_to_f64, f64_to_uint128, u256_to_f64}, misc::{encode_payload_address, get_response_attribute}, token::{deploy_test_tokens, transfer_tokens, query_token_balance, query_token_info}, definitions::{SETUP_MASTER, CHANNEL_ID, SWAPPER_A, SWAPPER_B, SWAPPER_C}, contract::{mock_instantiate_interface, mock_factory_deploy_vault, mock_set_vault_connection}};
 
-    use crate::{msg::AmplifiedExecuteMsg, tests::{helpers::{compute_expected_send_liquidity, amplified_vault_contract_storage}}};
-
-
-    const AMPLIFICATION: Uint64 = Uint64::new(900000000000000000u64);
+    use crate::{msg::AmplifiedExecuteMsg, tests::{helpers::{compute_expected_send_liquidity, amplified_vault_contract_storage}, parameters::AMPLIFICATION}};
 
 
     //TODO check event

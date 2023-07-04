@@ -6,10 +6,8 @@ mod test_amplified_receive_asset {
     use fixed_point_math::WAD;
     use test_helpers::{math::{uint128_to_f64, f64_to_uint128}, misc::{encode_payload_address, get_response_attribute}, token::{deploy_test_tokens, query_token_balance}, definitions::{SETUP_MASTER, CHAIN_INTERFACE, CHANNEL_ID, SWAPPER_B}, contract::{mock_factory_deploy_vault, mock_set_vault_connection}};
 
-    use crate::{msg::AmplifiedExecuteMsg, tests::{helpers::{compute_expected_receive_asset, amplified_vault_contract_storage}}};
+    use crate::{msg::AmplifiedExecuteMsg, tests::{helpers::{compute_expected_receive_asset, amplified_vault_contract_storage}, parameters::AMPLIFICATION}};
 
-
-    const AMPLIFICATION: Uint64 = Uint64::new(900000000000000000u64);
 
     //TODO check event
 

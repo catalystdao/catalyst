@@ -5,10 +5,7 @@ mod test_amplified_local_swap {
     use fixed_point_math::WAD;
     use test_helpers::{math::{uint128_to_f64, f64_to_uint128}, token::{deploy_test_tokens, transfer_tokens, set_token_allowance, query_token_balance, mock_test_token_definitions}, definitions::{SETUP_MASTER, LOCAL_SWAPPER, FACTORY_OWNER}, contract::{mock_factory_deploy_vault, DEFAULT_TEST_VAULT_FEE, DEFAULT_TEST_GOV_FEE, mock_set_governance_fee_share}};
 
-    use crate::{msg::AmplifiedExecuteMsg, tests::{helpers::{compute_expected_local_swap, amplified_vault_contract_storage}}};
-
-
-    const AMPLIFICATION: Uint64 = Uint64::new(900000000000000000u64);
+    use crate::{msg::AmplifiedExecuteMsg, tests::{helpers::{compute_expected_local_swap, amplified_vault_contract_storage}, parameters::AMPLIFICATION}};
 
 
     //TODO add test for the local swap event

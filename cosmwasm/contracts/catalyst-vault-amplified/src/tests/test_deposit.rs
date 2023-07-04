@@ -6,10 +6,7 @@ mod test_amplified_deposit{
     use fixed_point_math::WAD;
     use test_helpers::{math::{uint128_to_f64, f64_to_uint128}, misc::get_response_attribute, token::{deploy_test_tokens, transfer_tokens, set_token_allowance, query_token_balance, query_token_info}, definitions::{SETUP_MASTER, DEPOSITOR}, contract::{mock_factory_deploy_vault, DEFAULT_TEST_VAULT_FEE}};
 
-    use crate::{msg::AmplifiedExecuteMsg, tests::helpers::{compute_expected_deposit_mixed, amplified_vault_contract_storage}};
-
-
-    const AMPLIFICATION: Uint64 = Uint64::new(900000000000000000u64);
+    use crate::{msg::AmplifiedExecuteMsg, tests::{helpers::{compute_expected_deposit_mixed, amplified_vault_contract_storage}, parameters::AMPLIFICATION}};
 
 
     //TODO add test for the deposit event

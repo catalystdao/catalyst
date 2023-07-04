@@ -8,10 +8,7 @@ mod test_amplified_initialize_swap_curves {
     use catalyst_vault_common::{ContractError, msg::{AssetsResponse, WeightResponse, GetLimitCapacityResponse, TotalEscrowedAssetResponse, TotalEscrowedLiquidityResponse}};
     use test_helpers::{token::{deploy_test_tokens, mock_test_token_definitions}, definitions::{SETUP_MASTER, DEPOSITOR, DEPLOYER}, contract::{mock_instantiate_vault, InitializeSwapCurvesMockConfig}};
 
-    use crate::{tests::helpers::amplified_vault_contract_storage, msg::AmplificationResponse};
-
-
-    const AMPLIFICATION: Uint64 = Uint64::new(900000000000000000u64);
+    use crate::{tests::{helpers::amplified_vault_contract_storage, parameters::AMPLIFICATION}, msg::AmplificationResponse};
 
 
     #[test]
