@@ -27,9 +27,9 @@ pub fn amplified_vault_contract_storage(
 
 pub fn compute_expected_local_swap(
     swap_amount: Uint128,
-    from_weight: Uint64,
+    from_weight: Uint128,
     from_balance: Uint128,
-    to_weight: Uint64,
+    to_weight: Uint128,
     to_balance: Uint128,
     amplification: Uint64,
     vault_fee: Option<Uint64>,
@@ -38,9 +38,9 @@ pub fn compute_expected_local_swap(
 
     // Convert arguments to float
     let swap_amount = swap_amount.u128() as f64;
-    let from_weight = from_weight.u64() as f64;
+    let from_weight = from_weight.u128() as f64;
     let from_balance = from_balance.u128() as f64;
-    let to_weight = to_weight.u64() as f64;
+    let to_weight = to_weight.u128() as f64;
     let to_balance = to_balance.u128() as f64;
     let amplification = (amplification.u64() as f64) / 1e18;
 
@@ -79,7 +79,7 @@ pub fn compute_expected_local_swap(
 
 pub fn compute_expected_send_asset(
     swap_amount: Uint128,
-    from_weight: Uint64,
+    from_weight: Uint128,
     from_balance: Uint128,
     amplification: Uint64,
     vault_fee: Option<Uint64>,
@@ -88,7 +88,7 @@ pub fn compute_expected_send_asset(
 
     // Convert arguments to float
     let swap_amount = swap_amount.u128() as f64;
-    let from_weight = from_weight.u64() as f64;
+    let from_weight = from_weight.u128() as f64;
     let from_balance = from_balance.u128() as f64;
     let amplification = (amplification.u64() as f64) / 1e18;
 
@@ -119,14 +119,14 @@ pub fn compute_expected_send_asset(
 
 pub fn compute_expected_receive_asset(
     u: U256,
-    to_weight: Uint64,
+    to_weight: Uint128,
     to_balance: Uint128,
     amplification: Uint64
 ) -> ExpectedReceiveAssetResult {
 
     // Convert arguments into float
     let u = u256_to_f64(u) / 1e18;
-    let to_weight = to_weight.u64() as f64;
+    let to_weight = to_weight.u128() as f64;
     let to_balance = to_balance.u128() as f64;
     let amplification = (amplification.u64() as f64) / 1e18;
 
@@ -148,7 +148,7 @@ pub fn compute_expected_receive_asset(
 
 pub fn compute_expected_send_liquidity(
     swap_amount: Uint128,
-    from_weights: Vec<Uint64>,
+    from_weights: Vec<Uint128>,
     from_balances: Vec<Uint128>,
     from_total_supply: Uint128,
     from_unit_tracker: I256,
@@ -185,7 +185,7 @@ pub fn compute_expected_send_liquidity(
 
 pub fn compute_expected_receive_liquidity(
     u: U256,
-    to_weights: Vec<Uint64>,
+    to_weights: Vec<Uint128>,
     to_balances: Vec<Uint128>,
     to_total_supply: Uint128,
     to_unit_tracker: I256,
@@ -219,7 +219,7 @@ pub fn compute_expected_receive_liquidity(
 pub fn compute_expected_reference_asset(
     vault_tokens: Uint128,
     vault_balances: Vec<Uint128>,
-    vault_weights: Vec<Uint64>,
+    vault_weights: Vec<Uint128>,
     vault_total_supply: Uint128,
     vault_unit_tracker: I256,
     vault_escrowed_vault_tokens: Uint128,
@@ -249,7 +249,7 @@ pub fn compute_expected_reference_asset(
 
 pub fn compute_expected_deposit_mixed(
     deposit_amounts: Vec<Uint128>,
-    vault_weights: Vec<Uint64>,
+    vault_weights: Vec<Uint128>,
     vault_balances: Vec<Uint128>,
     vault_total_supply: Uint128,
     vault_unit_tracker: I256,
@@ -279,7 +279,7 @@ pub fn compute_expected_deposit_mixed(
         .map(|((deposit_amount, vault_weight), vault_balance)| {
 
             let deposit_amount = uint128_to_f64(*deposit_amount);
-            let vault_weight = vault_weight.u64() as f64;
+            let vault_weight = vault_weight.u128() as f64;
             let vault_balance = uint128_to_f64(*vault_balance);
 
             let weighted_balance = vault_weight * vault_balance;
@@ -309,7 +309,7 @@ pub fn compute_expected_deposit_mixed(
 pub fn compute_expected_withdraw_mixed(
     withdraw_amount: Uint128,
     withdraw_ratio: Vec<Uint64>,
-    vault_weights: Vec<Uint64>,
+    vault_weights: Vec<Uint128>,
     vault_balances: Vec<Uint128>,
     vault_total_supply: Uint128,
     vault_unit_tracker: I256,
@@ -345,7 +345,7 @@ pub fn compute_expected_withdraw_mixed(
         .map(|((balance, weight), ratio)| {
 
             let balance = balance.u128() as f64;
-            let weight = weight.u64() as f64;
+            let weight = weight.u128() as f64;
             let ratio = ratio.u64() as f64 / 1e18;
 
             let units_for_asset = units * ratio;
@@ -364,7 +364,7 @@ pub fn compute_expected_withdraw_mixed(
 
 
 pub fn compute_invariant(
-    vault_weights: Vec<Uint64>,
+    vault_weights: Vec<Uint128>,
     vault_balances: Vec<Uint128>,
     amplification: Uint64
 ) -> f64 {
@@ -377,13 +377,13 @@ pub fn compute_invariant(
         .iter()
         .zip(vault_balances)
         .fold(0., |acc, (weight, balance)| -> f64 {
-            acc + ((weight.u64() as f64) * uint128_to_f64(balance)).powf(one_minus_amplification)
+            acc + ((weight.u128() as f64) * uint128_to_f64(balance)).powf(one_minus_amplification)
         })
 }
 
 
 pub fn compute_balance_0(
-    vault_weights: Vec<Uint64>,
+    vault_weights: Vec<Uint128>,
     vault_balances: Vec<Uint128>,
     unit_tracker: I256,
     amplification: Uint64

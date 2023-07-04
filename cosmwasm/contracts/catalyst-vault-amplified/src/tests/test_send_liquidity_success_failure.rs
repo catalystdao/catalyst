@@ -1,5 +1,5 @@
 mod test_amplified_send_liquidity_success_failure {
-    use cosmwasm_std::{Uint128, Addr, Binary, Uint64};
+    use cosmwasm_std::{Uint128, Addr, Binary};
     use cw_multi_test::{App, Executor};
     use catalyst_types::{U256, u256};
     use catalyst_vault_common::{ContractError, msg::{TotalEscrowedLiquidityResponse, LiquidityEscrowResponse}, state::{compute_send_liquidity_hash, INITIAL_MINT_AMOUNT}};
@@ -27,7 +27,7 @@ mod test_amplified_send_liquidity_success_failure {
             let interface = mock_instantiate_interface(app);
             let vault_assets = deploy_test_tokens(app, SETUP_MASTER.to_string(), None, None);
             let vault_initial_balances = vec![Uint128::from(1u64) * WAD.as_uint128(), Uint128::from(2u64) * WAD.as_uint128(), Uint128::from(3u64) * WAD.as_uint128()];
-            let vault_weights = vec![Uint64::one(), Uint64::one(), Uint64::one()];
+            let vault_weights = vec![Uint128::one(), Uint128::one(), Uint128::one()];
             let vault_code_id = amplified_vault_contract_storage(app);
             let vault = mock_factory_deploy_vault(
                 app,

@@ -23,7 +23,7 @@ pub enum ExecuteMsg<T> {
 
     InitializeSwapCurves {
         assets: Vec<String>,
-        weights: Vec<Uint64>,
+        weights: Vec<Uint128>,
         amp: Uint64,
         depositor: String
     },
@@ -222,7 +222,7 @@ pub struct AssetsResponse {
 
 #[cw_serde]
 pub struct WeightResponse {
-    pub weight: Uint64
+    pub weight: Uint128
 }
 
 #[cw_serde]

@@ -130,7 +130,7 @@ pub struct DeployVaultReplyArgs {
     pub vault_code_id: u64,
     pub assets: Vec<String>,
     pub assets_balances: Vec<Uint128>,
-    pub weights: Vec<Uint64>,
+    pub weights: Vec<Uint128>,
     pub amplification: Uint64,
     pub chain_interface: Option<String>,
     pub depositor: Addr

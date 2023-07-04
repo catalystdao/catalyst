@@ -37,7 +37,7 @@ mod test_volatile_initialize_swap_curves {
                 Uint128::from(2u64) * WAD.as_uint128(),
                 Uint128::from(3u64) * WAD.as_uint128()
             ],
-            weights: vec![Uint64::one(), Uint64::one(), Uint64::one()],
+            weights: vec![Uint128::one(), Uint128::one(), Uint128::one()],
             amp: Uint64::new(1000000000000000000u64),
             depositor: DEPOSITOR.to_string()
         };
@@ -102,7 +102,7 @@ mod test_volatile_initialize_swap_curves {
             .zip(&initialize_msg.weights)
             .for_each(|(asset, weight)| {
 
-                let queried_weight: Uint64 = app
+                let queried_weight: Uint128 = app
                     .wrap()
                     .query_wasm_smart::<WeightResponse>(
                         vault.clone(),
@@ -128,7 +128,7 @@ mod test_volatile_initialize_swap_curves {
 
         assert_eq!(
             max_limit_capacity,
-            U256::from(initialize_msg.weights.iter().sum::<Uint64>()) * LN2
+            U256::from(initialize_msg.weights.iter().sum::<Uint128>()) * LN2
         );
 
         // Query and verify the vault token supply
@@ -212,7 +212,7 @@ mod test_volatile_initialize_swap_curves {
                 Uint128::from(2u64) * WAD.as_uint128(),
                 Uint128::from(3u64) * WAD.as_uint128()
             ],
-            weights: vec![Uint64::one(), Uint64::one(), Uint64::one()],
+            weights: vec![Uint128::one(), Uint128::one(), Uint128::one()],
             amp: Uint64::new(1000000000000000000u64),
             depositor: DEPOSITOR.to_string()
         };
@@ -316,7 +316,7 @@ mod test_volatile_initialize_swap_curves {
                 Uint128::from(3u64) * WAD.as_uint128(),
                 Uint128::from(4u64) * WAD.as_uint128()
             ],
-            weights: vec![Uint64::one(), Uint64::one(), Uint64::one(), Uint64::one()],
+            weights: vec![Uint128::one(), Uint128::one(), Uint128::one(), Uint128::one()],
             amp: Uint64::new(1000000000000000000u64),
             depositor: DEPOSITOR.to_string()
         };
@@ -374,7 +374,7 @@ mod test_volatile_initialize_swap_curves {
                 Uint128::from(2u64) * WAD.as_uint128(),
                 Uint128::zero()                 // ! Asset balance is set to 0
             ],
-            weights: vec![Uint64::one(), Uint64::one(), Uint64::one()],
+            weights: vec![Uint128::one(), Uint128::one(), Uint128::one()],
             amp: Uint64::new(1000000000000000000u64),
             depositor: DEPOSITOR.to_string()
         };
@@ -432,7 +432,7 @@ mod test_volatile_initialize_swap_curves {
                 Uint128::from(2u64) * WAD.as_uint128(),
                 Uint128::from(3u64) * WAD.as_uint128()
             ],
-            weights: vec![Uint64::one(), Uint64::one()],    // ! Only 2 weights are specified
+            weights: vec![Uint128::one(), Uint128::one()],    // ! Only 2 weights are specified
             amp: Uint64::new(1000000000000000000u64),
             depositor: DEPOSITOR.to_string()
         };
@@ -491,7 +491,7 @@ mod test_volatile_initialize_swap_curves {
                 Uint128::from(2u64) * WAD.as_uint128(),
                 Uint128::from(3u64) * WAD.as_uint128()
             ],
-            weights: vec![Uint64::one(), Uint64::one(), Uint64::zero()],    // ! Weight set to 0
+            weights: vec![Uint128::one(), Uint128::one(), Uint128::zero()],    // ! Weight set to 0
             amp: Uint64::new(1000000000000000000u64),
             depositor: DEPOSITOR.to_string()
         };
@@ -549,7 +549,7 @@ mod test_volatile_initialize_swap_curves {
                 Uint128::from(2u64) * WAD.as_uint128(),
                 Uint128::from(3u64) * WAD.as_uint128()
             ],
-            weights: vec![Uint64::one(), Uint64::one(), Uint64::one()],
+            weights: vec![Uint128::one(), Uint128::one(), Uint128::one()],
             amp: Uint64::new(900000000000000000u64),                 // ! Invalid amplification is specified
             depositor: DEPOSITOR.to_string()
         };

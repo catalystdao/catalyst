@@ -19,13 +19,13 @@ use catalyst_ibc_interface::msg::ExecuteMsg as InterfaceExecuteMsg;
 
 use crate::{calculation_helpers::{calc_price_curve_area, calc_price_curve_limit, calc_combined_price_curves, calc_price_curve_limit_share}, msg::{TargetWeightResponse, WeightsUpdateFinishTimestampResponse}, event::set_weights_event};
 
-pub const TARGET_WEIGHTS: Map<&str, Uint64> = Map::new("catalyst-vault-volatile-target-weights");
+pub const TARGET_WEIGHTS: Map<&str, Uint128> = Map::new("catalyst-vault-volatile-target-weights");
 pub const WEIGHT_UPDATE_TIMESTAMP: Item<Uint64> = Item::new("catalyst-vault-volatile-weight-update-timestamp");
 pub const WEIGHT_UPDATE_FINISH_TIMESTAMP: Item<Uint64> = Item::new("catalyst-vault-volatile-weight-update-finish-timestamp");
 
 const MIN_ADJUSTMENT_TIME_NANOS    : Uint64 = Uint64::new(7 * 24 * 60 * 60 * 1000000000);     // 7 days
 const MAX_ADJUSTMENT_TIME_NANOS    : Uint64 = Uint64::new(365 * 24 * 60 * 60 * 1000000000);   // 1 year
-const MAX_WEIGHT_ADJUSTMENT_FACTOR : Uint64 = Uint64::new(10);
+const MAX_WEIGHT_ADJUSTMENT_FACTOR : Uint128 = Uint128::new(10);
 
 
 pub fn initialize_swap_curves(
@@ -33,7 +33,7 @@ pub fn initialize_swap_curves(
     env: Env,
     info: MessageInfo,
     assets: Vec<String>,
-    weights: Vec<Uint64>,
+    weights: Vec<Uint128>,
     amp: Uint64,
     depositor: String
 ) -> Result<Response, ContractError> {
@@ -1193,7 +1193,7 @@ pub fn set_weights(         //TODO EVM mismatch arguments order
     deps: &mut DepsMut,
     env: &Env,
     info: MessageInfo,
-    new_weights: Vec<Uint64>,
+    new_weights: Vec<Uint128>,
     target_timestamp: Uint64   //TODO EVM mismatch (targetTime)
 ) -> Result<Response, ContractError> {
 
@@ -1227,7 +1227,7 @@ pub fn set_weights(         //TODO EVM mismatch arguments order
 
             // Check that the new weight is neither 0 nor larger than the maximum allowed relative change
             if 
-                *new_weight == Uint64::zero() ||
+                *new_weight == Uint128::zero() ||
                 *new_weight > current_weight.checked_mul(MAX_WEIGHT_ADJUSTMENT_FACTOR)? ||
                 *new_weight < current_weight / MAX_WEIGHT_ADJUSTMENT_FACTOR
             {
@@ -1236,7 +1236,7 @@ pub fn set_weights(         //TODO EVM mismatch arguments order
 
             Ok(*new_weight)
 
-        }).collect::<Result<Vec<Uint64>, ContractError>>()?;
+        }).collect::<Result<Vec<Uint128>, ContractError>>()?;
     
     // Set the weight update time parameters
     WEIGHT_UPDATE_FINISH_TIMESTAMP.save(deps.storage, &target_timestamp)?;
@@ -1322,19 +1322,19 @@ pub fn update_weights(
                 //     current_weight +/- [
                 //        (distance to the target weight) x (time since last update) / (time from last update until update finish)
                 //     ]
-                let new_weight: Uint64;
+                let new_weight: Uint128;
                 if target_weight > current_weight {
                     new_weight = current_weight + (
                         (target_weight - current_weight)
-                            .checked_mul(current_timestamp - param_update_timestamp)?
-                            .div(param_update_finish_timestamp - param_update_timestamp)
+                            .checked_mul(Uint128::from(current_timestamp - param_update_timestamp))?
+                            .div(Uint128::from(param_update_finish_timestamp - param_update_timestamp))
                     );
                 }
                 else {
                     new_weight = current_weight - (
                         (current_weight - target_weight)
-                        .checked_mul(current_timestamp - param_update_timestamp)?
-                        .div(param_update_finish_timestamp - param_update_timestamp)
+                        .checked_mul(Uint128::from(current_timestamp - param_update_timestamp))?
+                        .div(Uint128::from(param_update_finish_timestamp - param_update_timestamp))
                     );
                 }
 

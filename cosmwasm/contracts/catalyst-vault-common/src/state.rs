@@ -31,7 +31,7 @@ pub const SETUP_MASTER: Item<Option<Addr>> = Item::new("catalyst-vault-setup-mas
 pub const CHAIN_INTERFACE: Item<Option<Addr>> = Item::new("catalyst-vault-chain-interface");
 
 pub const ASSETS: Item<Vec<Addr>> = Item::new("catalyst-vault-assets");
-pub const WEIGHTS: Map<&str, Uint64> = Map::new("catalyst-vault-weights");
+pub const WEIGHTS: Map<&str, Uint128> = Map::new("catalyst-vault-weights");
 
 pub const FEE_ADMINISTRATOR: Item<Addr> = Item::new("catalyst-vault-fee-administrator");
 pub const VAULT_FEE: Item<Uint64> = Item::new("catalyst-vault-vault-fee");

@@ -87,7 +87,7 @@ pub fn mock_factory_deploy_vault(
     app: &mut App,
     assets: Vec<String>,
     assets_balances: Vec<Uint128>,
-    weights: Vec<Uint64>,
+    weights: Vec<Uint128>,
     amplification: Uint64,
     vault_code_id: u64,
     chain_interface: Option<Addr>,
@@ -146,7 +146,7 @@ pub fn mock_factory_deploy_vault(
 pub struct InitializeSwapCurvesMockConfig {
     pub assets: Vec<String>,
     pub assets_balances: Vec<Uint128>,
-    pub weights: Vec<Uint64>,
+    pub weights: Vec<Uint128>,
     pub amp: Uint64,
     pub depositor: String
 }

@@ -1,7 +1,7 @@
 use std::ops::Div;
 use catalyst_types::{U256, AsI256, AsU256, I256};
 use catalyst_vault_common::ContractError;
-use cosmwasm_std::{Uint128, Uint64};
+use cosmwasm_std::Uint128;
 use fixed_point_math::{div_wad_down, mul_wad_down, WAD, pow_wad, div_wad_up, WADWAD};
 
 
@@ -128,7 +128,7 @@ pub fn calc_price_curve_limit_share(
 /// Computes balance0^(1-amp)
 /// ! All the vectors passed to this function must be of equal length!
 pub fn calc_weighted_alpha_0_ampped(
-    weights: Vec<Uint64>,
+    weights: Vec<Uint128>,
     vault_balances: Vec<Uint128>,
     one_minus_amp: I256,
     unit_tracker: I256

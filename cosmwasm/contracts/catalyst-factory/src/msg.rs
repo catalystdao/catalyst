@@ -14,7 +14,7 @@ pub enum ExecuteMsg {
         vault_code_id: u64,
         assets: Vec<String>,
         assets_balances: Vec<Uint128>,
-        weights: Vec<Uint64>,
+        weights: Vec<Uint128>,
         amplification: Uint64,
         vault_fee: Uint64,
         name: String,

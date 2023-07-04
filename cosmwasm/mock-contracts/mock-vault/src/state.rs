@@ -11,7 +11,7 @@ pub fn initialize_swap_curves(
     env: Env,
     info: MessageInfo,
     assets: Vec<String>,
-    weights: Vec<Uint64>,
+    weights: Vec<Uint128>,
     _amp: Uint64,
     depositor: String
 ) -> Result<Response, ContractError> {

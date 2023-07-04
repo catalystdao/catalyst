@@ -17,7 +17,7 @@ mod test_amplified_fees {
             app,
             vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
             vec![Uint128::from(1u64) * WAD.as_uint128(), Uint128::from(2u64) * WAD.as_uint128(), Uint128::from(3u64) * WAD.as_uint128()],
-            vec![Uint64::one(), Uint64::one(), Uint64::one()],
+            vec![Uint128::one(), Uint128::one(), Uint128::one()],
             Uint64::new(900000000000000000u64),
             vault_code_id,
             None,

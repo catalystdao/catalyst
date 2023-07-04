@@ -16,7 +16,7 @@ use cw20::{AllowanceResponse, BalanceResponse, TokenInfoResponse};
 pub enum VolatileExecuteExtension {
 
     SetWeights {
-        new_weights: Vec<Uint64>,
+        new_weights: Vec<Uint128>,
         target_timestamp: Uint64   //TODO EVM mismatch (targetTime)
     },
 
@@ -123,7 +123,7 @@ pub enum QueryMsg {
 
 #[cw_serde]
 pub struct TargetWeightResponse {
-    pub target_weight: Uint64
+    pub target_weight: Uint128
 }
 
 #[cw_serde]

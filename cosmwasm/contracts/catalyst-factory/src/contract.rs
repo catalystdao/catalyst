@@ -97,7 +97,7 @@ fn execute_deploy_vault(
     vault_code_id: u64,
     assets: Vec<String>,
     assets_balances: Vec<Uint128>,
-    weights: Vec<Uint64>,
+    weights: Vec<Uint128>,
     amplification: Uint64,
     vault_fee: Uint64,
     name: String,
@@ -457,7 +457,7 @@ mod catalyst_vault_factory_tests {
             None
         );
         let vault_initial_balances = vec![Uint128::from(1u64), Uint128::from(2u64), Uint128::from(3u64)];
-        let vault_weights = vec![Uint64::one(), Uint64::one(), Uint64::one()];
+        let vault_weights = vec![Uint128::one(), Uint128::one(), Uint128::one()];
 
         // Set asset allowances for the factory
         vault_assets
@@ -703,7 +703,7 @@ mod catalyst_vault_factory_tests {
             None
         );
         let vault_initial_balances = vec![Uint128::from(1u64), Uint128::from(2u64), Uint128::from(3u64)];
-        let vault_weights = vec![Uint64::one(), Uint64::one(), Uint64::one()];
+        let vault_weights = vec![Uint128::one(), Uint128::one(), Uint128::one()];
 
         // Set asset allowances for the factory
         vault_assets

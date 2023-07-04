@@ -39,7 +39,7 @@ pub fn initialize_swap_curves(
     env: Env,
     info: MessageInfo,
     assets: Vec<String>,
-    weights: Vec<Uint64>,
+    weights: Vec<Uint128>,
     amp: Uint64,
     depositor: String
 ) -> Result<Response, ContractError> {
@@ -379,7 +379,7 @@ pub fn withdraw_all(
     let weights = assets
         .iter()
         .map(|asset| WEIGHTS.load(deps.storage, asset.as_ref()))
-        .collect::<StdResult<Vec<Uint64>>>()?;
+        .collect::<StdResult<Vec<Uint128>>>()?;
 
     if min_out.len() != assets.len() {
         return Err(
@@ -571,7 +571,7 @@ pub fn withdraw_mixed(
     let weights = assets
         .iter()
         .map(|asset| WEIGHTS.load(deps.storage, asset.as_ref()))
-        .collect::<StdResult<Vec<Uint64>>>()?;
+        .collect::<StdResult<Vec<Uint128>>>()?;
 
     // Compute the unit worth of the vault tokens.
     let mut weighted_asset_balance_ampped_sum: U256 = U256::zero();
@@ -1553,7 +1553,7 @@ pub fn calc_balance_0_ampped(
         .map(|asset| {
             WEIGHTS.load(deps.storage, asset.as_ref())
         })
-        .collect::<StdResult<Vec<Uint64>>>()?;
+        .collect::<StdResult<Vec<Uint128>>>()?;
 
     let asset_balances = assets
         .iter()
