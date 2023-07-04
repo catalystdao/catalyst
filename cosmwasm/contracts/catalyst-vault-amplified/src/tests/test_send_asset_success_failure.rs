@@ -3,10 +3,9 @@ mod test_amplified_send_asset_success_failure {
     use cw_multi_test::{App, Executor};
     use catalyst_types::{U256, u256};
     use catalyst_vault_common::{ContractError, msg::{TotalEscrowedAssetResponse, AssetEscrowResponse}, state::compute_send_asset_hash};
-    use fixed_point_math::WAD;
     use test_helpers::{math::{uint128_to_f64, f64_to_uint128}, misc::{encode_payload_address, get_response_attribute}, token::{deploy_test_tokens, transfer_tokens, set_token_allowance, query_token_balance}, definitions::{SETUP_MASTER, CHANNEL_ID, SWAPPER_B, SWAPPER_A, FACTORY_OWNER}, contract::{mock_instantiate_interface, mock_factory_deploy_vault, mock_set_vault_connection}};
 
-    use crate::{msg::{AmplifiedExecuteMsg, QueryMsg}, tests::{helpers::amplified_vault_contract_storage, parameters::AMPLIFICATION}};
+    use crate::{msg::{AmplifiedExecuteMsg, QueryMsg}, tests::{helpers::amplified_vault_contract_storage, parameters::{AMPLIFICATION, TEST_VAULT_BALANCES, TEST_VAULT_WEIGHTS}}};
 
 
     //TODO check events
@@ -31,8 +30,8 @@ mod test_amplified_send_asset_success_failure {
             // Instantiate and initialize vault
             let interface = mock_instantiate_interface(app);
             let vault_assets = deploy_test_tokens(app, SETUP_MASTER.to_string(), None, None);
-            let vault_initial_balances = vec![Uint128::from(1u64) * WAD.as_uint128(), Uint128::from(2u64) * WAD.as_uint128(), Uint128::from(3u64) * WAD.as_uint128()];
-            let vault_weights = vec![Uint128::one(), Uint128::one(), Uint128::one()];
+            let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
+            let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
             let vault_code_id = amplified_vault_contract_storage(app);
             let vault = mock_factory_deploy_vault(
                 app,

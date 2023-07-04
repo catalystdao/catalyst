@@ -1,12 +1,11 @@
 mod test_volatile_send_liquidity_success_failure {
-    use cosmwasm_std::{Uint128, Addr, Binary, Uint64};
+    use cosmwasm_std::{Uint128, Addr, Binary};
     use cw_multi_test::{App, Executor};
     use catalyst_types::{U256, u256};
     use catalyst_vault_common::{ContractError, msg::{TotalEscrowedLiquidityResponse, LiquidityEscrowResponse}, state::{compute_send_liquidity_hash, INITIAL_MINT_AMOUNT}};
-    use fixed_point_math::WAD;
     use test_helpers::{math::{uint128_to_f64, f64_to_uint128}, misc::{encode_payload_address, get_response_attribute}, token::{deploy_test_tokens, transfer_tokens, query_token_info, query_token_balance}, definitions::{SETUP_MASTER, CHANNEL_ID, SWAPPER_B, SWAPPER_A}, contract::{mock_instantiate_interface, mock_factory_deploy_vault, mock_set_vault_connection}};
 
-    use crate::{msg::{VolatileExecuteMsg, QueryMsg}, tests::helpers::{volatile_vault_contract_storage}};
+    use crate::{msg::{VolatileExecuteMsg, QueryMsg}, tests::{helpers::{volatile_vault_contract_storage}, parameters::{TEST_VAULT_BALANCES, TEST_VAULT_WEIGHTS, AMPLIFICATION}}};
 
     //TODO check events
 
@@ -25,15 +24,15 @@ mod test_volatile_send_liquidity_success_failure {
             // Instantiate and initialize vault
             let interface = mock_instantiate_interface(app);
             let vault_assets = deploy_test_tokens(app, SETUP_MASTER.to_string(), None, None);
-            let vault_initial_balances = vec![Uint128::from(1u64) * WAD.as_uint128(), Uint128::from(2u64) * WAD.as_uint128(), Uint128::from(3u64) * WAD.as_uint128()];
-            let vault_weights = vec![Uint128::one(), Uint128::one(), Uint128::one()];
+            let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
+            let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
             let vault_code_id = volatile_vault_contract_storage(app);
             let vault = mock_factory_deploy_vault(
                 app,
                 vault_assets.iter().map(|token_addr| token_addr.to_string()).collect(),
                 vault_initial_balances.clone(),
                 vault_weights.clone(),
-                Uint64::new(1000000000000000000u64),
+                AMPLIFICATION,
                 vault_code_id,
                 Some(interface.clone()),
                 None
