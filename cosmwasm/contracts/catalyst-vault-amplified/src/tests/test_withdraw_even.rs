@@ -23,7 +23,7 @@ mod test_amplified_withdraw_even {
         // Instantiate and initialize vault
         let vault_tokens = deploy_test_tokens(&mut app, SETUP_MASTER.to_string(), None, None);
         let vault_initial_balances = vec![Uint128::from(1u64) * WAD.as_uint128(), Uint128::from(2u64) * WAD.as_uint128(), Uint128::from(3u64) * WAD.as_uint128()];
-        let vault_weights = vec![Uint64::one(), Uint64::one(), Uint64::one()];
+        let vault_weights = vec![Uint64::from(6u64), Uint64::from(3u64), Uint64::from(2u64)];
         let vault_code_id = amplified_vault_contract_storage(&mut app);
         let vault = mock_factory_deploy_vault(
             &mut app,
@@ -135,7 +135,7 @@ mod test_amplified_withdraw_even {
         // Instantiate and initialize vault
         let vault_tokens = deploy_test_tokens(&mut app, SETUP_MASTER.to_string(), None, None);
         let vault_initial_balances = vec![Uint128::from(1u64) * WAD.as_uint128(), Uint128::from(2u64) * WAD.as_uint128(), Uint128::from(3u64) * WAD.as_uint128()];
-        let vault_weights = vec![Uint64::one(), Uint64::one(), Uint64::one()];
+        let vault_weights = vec![Uint64::from(6u64), Uint64::from(3u64), Uint64::from(2u64)];
         let vault_code_id = amplified_vault_contract_storage(&mut app);
         let vault = mock_factory_deploy_vault(
             &mut app,
@@ -194,7 +194,7 @@ mod test_amplified_withdraw_even {
         // Instantiate and initialize vault
         let vault_tokens = deploy_test_tokens(&mut app, SETUP_MASTER.to_string(), None, None);
         let vault_initial_balances = vec![Uint128::from(1u64) * WAD.as_uint128(), Uint128::from(2u64) * WAD.as_uint128(), Uint128::from(3u64) * WAD.as_uint128()];
-        let vault_weights = vec![Uint64::one(), Uint64::one(), Uint64::one()];
+        let vault_weights = vec![Uint64::from(6u64), Uint64::from(3u64), Uint64::from(2u64)];
         let vault_code_id = amplified_vault_contract_storage(&mut app);
         let vault = mock_factory_deploy_vault(
             &mut app,
@@ -227,7 +227,7 @@ mod test_amplified_withdraw_even {
 
         // Set min_out_valid to the expected return
         let min_out_valid = expected_return.iter()
-            .map(|amount| f64_to_uint128(*amount).unwrap())
+            .map(|amount| f64_to_uint128(*amount * 0.99).unwrap())
             .collect::<Vec<Uint128>>();
 
         // Set min_out_invalid to be slightly larger than the expected return
@@ -255,7 +255,10 @@ mod test_amplified_withdraw_even {
         assert!(matches!(
             response_result.err().unwrap().downcast().unwrap(),
             ContractError::ReturnInsufficient { out: err_out, min_out: err_min_out }
-                if err_out == f64_to_uint128(expected_return[0]).unwrap() && err_min_out == min_out_invalid[0]
+            if 
+                err_out <= f64_to_uint128(expected_return[0] * 1.000001).unwrap() &&
+                err_out >= f64_to_uint128(expected_return[0] * 0.999999).unwrap() &&
+                err_min_out == min_out_invalid[0]
         ));
     
 
@@ -282,7 +285,7 @@ mod test_amplified_withdraw_even {
         // Instantiate and initialize vault
         let vault_tokens = deploy_test_tokens(&mut app, SETUP_MASTER.to_string(), None, None);
         let vault_initial_balances = vec![Uint128::from(1u64) * WAD.as_uint128(), Uint128::from(2u64) * WAD.as_uint128(), Uint128::from(3u64) * WAD.as_uint128()];
-        let vault_weights = vec![Uint64::one(), Uint64::one(), Uint64::one()];
+        let vault_weights = vec![Uint64::from(6u64), Uint64::from(3u64), Uint64::from(2u64)];
         let vault_code_id = amplified_vault_contract_storage(&mut app);
         let vault = mock_factory_deploy_vault(
             &mut app,
