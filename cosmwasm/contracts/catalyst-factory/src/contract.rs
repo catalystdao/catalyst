@@ -8,7 +8,7 @@ use cw20::Cw20ExecuteMsg;
 use crate::error::ContractError;
 use crate::event::deploy_vault_event;
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg, OwnerResponse, DefaultGovernanceFeeShareResponse};
-use crate::state::{set_default_governance_fee_share_unchecked, owner, default_governance_fee_share, save_deploy_vault_reply_args, DeployVaultReplyArgs, DEPLOY_VAULT_REPLY_ID, get_deploy_vault_reply_args, set_owner_unchecked, set_default_governance_fee_share, DEFAULT_GOVERNANCE_FEE_SHARE, set_owner};
+use crate::state::{set_default_governance_fee_share_unchecked, owner, default_governance_fee_share, save_deploy_vault_reply_args, DeployVaultReplyArgs, DEPLOY_VAULT_REPLY_ID, get_deploy_vault_reply_args, set_owner_unchecked, set_default_governance_fee_share, DEFAULT_GOVERNANCE_FEE_SHARE, update_owner};
 
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:catalyst-vault-factory";
@@ -25,7 +25,7 @@ pub fn instantiate(
 
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
-    set_owner_unchecked(&mut deps, info.sender)?;
+    set_owner_unchecked(deps.branch(), info.sender)?;
 
     let set_default_fee_event = set_default_governance_fee_share_unchecked(
         &mut deps,
@@ -166,11 +166,11 @@ fn execute_set_default_governance_fee_share(
 }
 
 fn execute_transfer_ownership(
-    mut deps: DepsMut,
+    deps: DepsMut,
     info: MessageInfo,
     new_owner: String
 ) -> Result<Response, ContractError> {
-    set_owner(&mut deps, info, new_owner)
+    update_owner(deps, info, new_owner)
 }
 
 

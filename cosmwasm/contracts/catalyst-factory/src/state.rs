@@ -1,6 +1,6 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr,
-    DepsMut, Response, Event, MessageInfo, Deps, Uint128, Uint64};
+use cosmwasm_std::{Addr, DepsMut, Response, Event, MessageInfo, Deps, Uint128, Uint64, Empty};
+use cw_controllers::Admin;
 use cw_storage_plus::Item;
 
 use crate::{error::ContractError, event::{set_default_governance_fee_share_event, set_owner_event}};
@@ -10,18 +10,20 @@ use crate::{error::ContractError, event::{set_default_governance_fee_share_event
 pub const MAX_GOVERNANCE_FEE_SHARE : Uint64 = Uint64::new(75u64 * 10000000000000000u64);        // 75% 
 
 // Factory storage
-pub const OWNER: Item<Addr> = Item::new("catalyst-factory-owner");
+const ADMIN: Admin = Admin::new("catalyst-factory-admin");
 pub const DEFAULT_GOVERNANCE_FEE_SHARE: Item<Uint64> = Item::new("catalyst-factory-default-governance-fee");
 pub const DEPLOY_VAULT_REPLY_ARGS: Item<DeployVaultReplyArgs> = Item::new("catalyst-vault-factory-deploy-reply-args");
 
 
 // Contract owner helpers
 
-//TODO return 'Addr' instead of 'Option<Addr>'? Or keep the 'option' in case 'renounce_ownership' is implemented in the future?
 pub fn owner(
     deps: Deps
 ) -> Result<Option<Addr>, ContractError> {
-    OWNER.may_load(deps.storage).map_err(|err| err.into())
+
+    ADMIN.get(deps)
+        .map_err(|err| err.into())
+
 }
 
 pub fn is_owner(
@@ -29,46 +31,44 @@ pub fn is_owner(
     account: Addr,
 ) -> Result<bool, ContractError> {
 
-    let owner = OWNER.may_load(deps.storage)?;
-
-    match owner {
-        Some(saved_value) => Ok(saved_value == account),
-        None => Ok(false)
-    }
+    ADMIN.is_admin(deps, &account)
+        .map_err(|err| err.into())
 
 }
 
 pub fn set_owner_unchecked(
-    deps: &mut DepsMut,
+    deps: DepsMut,
     account: Addr
 ) -> Result<Event, ContractError> {
-    OWNER.save(deps.storage, &account)?;
+    
+    ADMIN.set(deps, Some(account.clone()))?;
     
     Ok(
         set_owner_event(account.to_string())
     )
 }
 
-pub fn set_owner(
-    deps: &mut DepsMut,
+pub fn update_owner(
+    deps: DepsMut,
     info: MessageInfo,
     account: String
 ) -> Result<Response, ContractError> {
 
-    // Verify the caller of the transaction is the current factory owner
-    if !is_owner(deps.as_ref(), info.sender)? {
-        return Err(ContractError::Unauthorized {});
-    }
-
     // Validate the new owner account
     let account = deps.api.addr_validate(account.as_str())?;
 
-    // Set the new owner
-    let set_owner_event = set_owner_unchecked(deps, account)?;     //TODO overhaul event
+    // ! The 'update' call also verifies whether the caller of the transaction is the current factory owner
+    ADMIN.execute_update_admin::<Empty, Empty>(deps, info, Some(account.clone()))
+        .map_err(|err| {
+            match err {
+                cw_controllers::AdminError::Std(err) => err.into(),
+                cw_controllers::AdminError::NotAdmin {} => ContractError::Unauthorized {},
+            }
+        })?;
 
     Ok(
         Response::new()
-            .add_event(set_owner_event)
+            .add_event(set_owner_event(account.to_string()))
     )
 
 }
