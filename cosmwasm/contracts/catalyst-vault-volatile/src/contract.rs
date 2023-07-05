@@ -23,7 +23,7 @@ use crate::state::{
 
 
 // version info for migration info
-const CONTRACT_NAME: &str = "crates.io:catalyst-vault-volatile";
+const CONTRACT_NAME: &str = "catalyst-vault-volatile";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 

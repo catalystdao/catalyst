@@ -11,7 +11,7 @@ use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg, OwnerResponse, DefaultGov
 use crate::state::{set_default_governance_fee_share_unchecked, owner, default_governance_fee_share, save_deploy_vault_reply_args, DeployVaultReplyArgs, DEPLOY_VAULT_REPLY_ID, get_deploy_vault_reply_args, set_owner_unchecked, set_default_governance_fee_share, DEFAULT_GOVERNANCE_FEE_SHARE, update_owner};
 
 // version info for migration info
-const CONTRACT_NAME: &str = "crates.io:catalyst-vault-factory";
+const CONTRACT_NAME: &str = "catalyst-vault-factory";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 

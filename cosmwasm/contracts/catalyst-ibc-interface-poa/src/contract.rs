@@ -12,7 +12,7 @@ use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
 use crate::state::{set_owner_unchecked, set_owner};
 
 // version info for migration info
-const CONTRACT_NAME: &str = "crates.io:catalyst-ibc-interface-poa";
+const CONTRACT_NAME: &str = "catalyst-ibc-interface-poa";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 const TRANSACTION_TIMEOUT: u64 = 2 * 60 * 60;   // 2 hours      //TODO allow this to be set on interface instantiation?
