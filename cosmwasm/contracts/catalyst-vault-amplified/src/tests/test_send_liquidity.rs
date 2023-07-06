@@ -146,9 +146,7 @@ mod test_amplified_send_liquidity {
     }
 
 
-    //TODO this test currently fails as burning a zero-valued amount of a token is not allowed. Do we want this?
     #[test]
-    #[ignore]
     fn test_send_liquidity_zero_amount() {
 
         let mut app = App::default();
@@ -195,7 +193,7 @@ mod test_amplified_send_liquidity {
 
 
         // Tested action: send liquidity
-        app.execute_contract(
+        let response = app.execute_contract(
             Addr::unchecked(SWAPPER_A),
             vault.clone(),
             &AmplifiedExecuteMsg::SendLiquidity {
@@ -210,6 +208,15 @@ mod test_amplified_send_liquidity {
             },
             &[]
         ).unwrap();
+
+
+
+        // Verify that 0 units are sent
+        let observed_return = get_response_attribute::<U256>(response.events[1].clone(), "units").unwrap();
+        assert_eq!(
+            observed_return,
+            U256::zero()
+        )
 
     }
 

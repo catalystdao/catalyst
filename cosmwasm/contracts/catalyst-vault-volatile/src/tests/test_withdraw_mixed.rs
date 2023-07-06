@@ -130,9 +130,10 @@ mod test_volatile_withdraw_mixed {
     }
 
 
-    //TODO this test currently fails as burning a zero-valued amount is not allowed. Do we want this?
+    /// This test case is here to acknowledge that withdraw mixed will fail for a zero valued withdraw 
+    /// amount (and a non-zero withdraw_ratio). This behavior is the same with the EVM implementation.
+    /// Note that the withdrawal will go through for an all-zero withdraw ratio.
     #[test]
-    #[ignore]
     fn test_withdraw_mixed_zero_balance() {
 
         let mut app = App::default();
@@ -161,13 +162,33 @@ mod test_volatile_withdraw_mixed {
     
 
     
-        // Tested action: withdraw mixed
-        let result = app.execute_contract(
+        // Tested action 1: withdraw mixed with zero amount and non-zero withdraw ratio
+        let response_result = app.execute_contract(
             Addr::unchecked(WITHDRAWER),
             vault.clone(),
             &VolatileExecuteMsg::WithdrawMixed {
                 vault_tokens: withdraw_amount,
                 withdraw_ratio,
+                min_out: vec![Uint128::zero(); TEST_VAULT_ASSET_COUNT]
+            },
+            &[]
+        );
+
+        // Verify the action fails
+        assert!(matches!(
+            response_result.err().unwrap().downcast().unwrap(),
+            ContractError::WithdrawRatioNotZero { ratio: _ }
+        ));
+    
+
+    
+        // Tested action 2: withdraw mixed with zero amount and zero withdraw ratio
+        let result = app.execute_contract(
+            Addr::unchecked(WITHDRAWER),
+            vault.clone(),
+            &VolatileExecuteMsg::WithdrawMixed {
+                vault_tokens: withdraw_amount,
+                withdraw_ratio: vec![Uint64::zero(); TEST_VAULT_ASSET_COUNT],
                 min_out: vec![Uint128::zero(); TEST_VAULT_ASSET_COUNT]
             },
             &[]
@@ -191,6 +212,14 @@ mod test_volatile_withdraw_mixed {
             observed_returns,
             expected_returns
         );
+
+        // Verify no assets have been received by the withdrawer
+        vault_tokens.iter().for_each(|token| {
+            assert_eq!(
+                query_token_balance(&mut app, token.clone(), WITHDRAWER.to_string()),
+                Uint128::zero()
+            );
+        });
 
     }
 

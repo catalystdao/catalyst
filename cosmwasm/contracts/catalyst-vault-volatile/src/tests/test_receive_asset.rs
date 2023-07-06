@@ -101,9 +101,7 @@ mod test_volatile_receive_asset {
     }
 
 
-    //TODO this test currently fails as transferring a zero-valued amount of a token is not allowed. Do we want this?
     #[test]
-    #[ignore]
     fn test_receive_asset_zero_amount() {
 
         let mut app = App::default();

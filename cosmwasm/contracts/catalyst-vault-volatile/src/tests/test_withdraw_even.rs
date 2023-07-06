@@ -121,9 +121,7 @@ mod test_volatile_withdraw_even {
     }
 
 
-    //TODO this test currently fails as burning a zero-valued amount is not allowed. Do we want this?
     #[test]
-    #[ignore]
     fn test_withdraw_even_zero_balance() {
 
         let mut app = App::default();
@@ -178,6 +176,14 @@ mod test_volatile_withdraw_even {
             observed_returns,
             expected_returns
         );
+
+        // Verify no assets have been received by the withdrawer
+        vault_tokens.iter().for_each(|token| {
+            assert_eq!(
+                query_token_balance(&mut app, token.clone(), WITHDRAWER.to_string()),
+                Uint128::zero()
+            );
+        });
 
     }
 

@@ -226,9 +226,7 @@ mod test_amplified_deposit{
     }
 
 
-    //TODO this test currently fails as minting a zero-valued amount is not allowed. Do we want this?
     #[test]
-    #[ignore]
     fn test_deposit_zero_balance() {
 
         let mut app = App::default();
@@ -278,6 +276,12 @@ mod test_amplified_deposit{
         assert_eq!(
             observed_return,
             expected_return
+        );
+
+        // Verify no vault tokens have been received by the depositor
+        assert_eq!(
+            query_token_balance(&mut app, vault, DEPOSITOR.to_string()),
+            Uint128::zero()
         );
 
     }

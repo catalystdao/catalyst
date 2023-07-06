@@ -99,9 +99,7 @@ mod test_amplified_receive_liquidity {
     }
 
 
-    //TODO this test currently fails as minting a zero-valued amount of a token is not allowed. Do we want this?
     #[test]
-    #[ignore]
     fn test_receive_liquidity_zero_amount() {
 
         let mut app = App::default();

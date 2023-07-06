@@ -392,7 +392,6 @@ mod test_volatile_local_swap {
 
 
     #[test]
-    #[ignore]   // TODO ! This test currently fails, as the return of the local swap is 0 (and cw20 does not allow 0-valued transferred). Is this desired?
     fn test_local_swap_zero_from_amount() {
 
         let mut app = App::default();
@@ -423,16 +422,8 @@ mod test_volatile_local_swap {
         // Swap amount set to 0
         let swap_amount = Uint128::zero();
 
-        // Fund swapper with tokens
-        transfer_tokens(
-            &mut app,
-            swap_amount,
-            from_asset.clone(),
-            Addr::unchecked(SETUP_MASTER),
-            LOCAL_SWAPPER.to_string(),
-        );
-
         // Set vault allowance
+        // NOTE: if an allowance is not set, the swap tx will fail with a 'no allowance for this account' error.
         set_token_allowance(
             &mut app,
             swap_amount,
@@ -443,7 +434,6 @@ mod test_volatile_local_swap {
 
 
 
-        //TODO currently the following fails, as a zero-valued token transfer is not allowed. Do we want this? In that case, make this test pass.
         // Tested action: local swap
         app.execute_contract(
             Addr::unchecked(LOCAL_SWAPPER),
@@ -457,11 +447,26 @@ mod test_volatile_local_swap {
             &[]
         ).unwrap();
 
+
+
+        // Verify no output assets have been transferred to the swapper
+        let vault_to_asset_balance = query_token_balance(&mut app, to_asset.clone(), vault.to_string());
+        assert_eq!(
+            vault_to_asset_balance,
+            vault_initial_balances[to_asset_idx]
+        );
+
+        // Verify no output assets have been received by the swapper
+        let swapper_to_asset_balance = query_token_balance(&mut app, to_asset.clone(), LOCAL_SWAPPER.to_string());
+        assert_eq!(
+            swapper_to_asset_balance,
+            Uint128::zero()
+        );
+
     }
 
 
     #[test]
-    #[ignore]   // TODO ! This test currently fails, as the return of the local swap is 0 (and cw20 does not allow 0-valued transferred). Is this desired?
     fn test_local_swap_zero_to_amount() {
 
         let mut app = App::default();
@@ -493,8 +498,8 @@ mod test_volatile_local_swap {
         let to_weight = vault_weights[to_asset_idx];
         let to_balance = vault_initial_balances[to_asset_idx];
 
-        // Swap 10% of the vault
-        let swap_amount = vault_initial_balances[from_asset_idx] * Uint128::from(10u64)/ Uint128::from(100u64);
+        // Swap 1% of the vault
+        let swap_amount = vault_initial_balances[from_asset_idx] * Uint128::from(1u64)/ Uint128::from(100u64);
 
         // Fund swapper with tokens
         transfer_tokens(
@@ -531,7 +536,6 @@ mod test_volatile_local_swap {
 
 
 
-        //TODO currently the following fails, as a zero-valued token transfer is not allowed. Do we want this? In that case, make this test pass.
         // Tested action: local swap
         app.execute_contract(
             Addr::unchecked(LOCAL_SWAPPER),
@@ -544,6 +548,22 @@ mod test_volatile_local_swap {
             },
             &[]
         ).unwrap();
+
+
+
+        // Verify no output assets have been transferred to the swapper
+        let vault_to_asset_balance = query_token_balance(&mut app, to_asset.clone(), vault.to_string());
+        assert_eq!(
+            vault_to_asset_balance,
+            vault_initial_balances[to_asset_idx]
+        );
+
+        // Verify no output assets have been received by the swapper
+        let swapper_to_asset_balance = query_token_balance(&mut app, to_asset.clone(), LOCAL_SWAPPER.to_string());
+        assert_eq!(
+            swapper_to_asset_balance,
+            Uint128::zero()
+        );
 
     }
 

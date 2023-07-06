@@ -149,9 +149,7 @@ mod test_volatile_send_asset {
     }
 
 
-    //TODO this test currently fails as transferring a zero-valued amount of a token is not allowed. Do we want this?
     #[test]
-    #[ignore]
     fn test_send_asset_zero_amount() {
 
         let mut app = App::default();
@@ -190,15 +188,9 @@ mod test_volatile_send_asset {
 
         let to_asset_idx = 1;
 
-        // Fund swapper with tokens and set vault allowance
-        transfer_tokens(
-            &mut app,
-            swap_amount,
-            from_asset.clone(),
-            Addr::unchecked(SETUP_MASTER),
-            SWAPPER_A.to_string()
-        );
-
+        
+        // Set vault allowance
+        // NOTE: if an allowance is not set, the swap tx will fail with a 'no allowance for this account' error.
         set_token_allowance(
             &mut app,
             swap_amount,
@@ -210,7 +202,7 @@ mod test_volatile_send_asset {
 
 
         // Tested action: send asset
-        app.execute_contract(
+        let response = app.execute_contract(
             Addr::unchecked(SWAPPER_A),
             vault.clone(),
             &VolatileExecuteMsg::SendAsset {
@@ -226,6 +218,15 @@ mod test_volatile_send_asset {
             },
             &[]
         ).unwrap();
+
+
+
+        // Verify that 0 units are sent
+        let observed_return = get_response_attribute::<U256>(response.events[1].clone(), "units").unwrap();
+        assert_eq!(
+            observed_return,
+            U256::zero()
+        )
 
     }
 
