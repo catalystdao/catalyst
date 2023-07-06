@@ -189,7 +189,7 @@ contract CatalystVaultLBP is CatalystVaultVolatile {
     function _preSwapHook() internal override {
         // During the setup phase, only allow the setup master to interact with the pool.
         if (_setupMaster != address(0)) {
-            if(msg.sender == _setupMaster) revert OnlySetupMasterDuringPreparation();
+            if(msg.sender != _setupMaster) revert OnlySetupMasterDuringPreparation();
         }
         _updateWeights();
     }
