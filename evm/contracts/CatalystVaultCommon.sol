@@ -58,6 +58,9 @@ abstract contract CatalystVaultCommon is
     /// @dev Impacts the cost of some for loops. Can be changed without breaking compatibility.
     uint8 constant MAX_ASSETS = 3;
 
+    // Called before balance changes or swap computations.
+    function _preSwapHook() virtual internal {}
+
     //-- Variables --//
 
     // immutable variables can be read by proxies, thus it is safe to set this on the constructor.
@@ -350,7 +353,7 @@ abstract contract CatalystVaultCommon is
      * @dev This function should ALWAYS be called before other liquidity providers deposit liquidity.
      * While it is not recommended, the escrow should ensure it is relativly safe trading through it (assuming a minimum output is set).
      */
-    function finishSetup() external override {
+    function finishSetup() public override {
         require(msg.sender == _setupMaster); // dev: No auth
 
         _setupMaster = address(0);

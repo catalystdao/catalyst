@@ -48,8 +48,6 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
 
 
     //--- Config ---//
-    // Minimum time parameter adjustments can be made over.
-    uint256 constant MIN_ADJUSTMENT_TIME = 7 days;
     // When the swap is a very small size of the vault, the swaps
     // returns slightly more. To counteract this, an additional fee
     // slightly larger than the error is added. The below constants
@@ -61,7 +59,6 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
 
     //-- Variables --//
     int256 public _oneMinusAmp;
-    int256 public _targetAmplification;
 
     // To keep track of pool ownership, the vault needs to keep track of
     // the local unit balance. That is, do other vaults own or owe assets to this vault?
@@ -107,7 +104,6 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
         unchecked {
             // Amplification is stored as 1 - amp since most equations uses amp this way.
             _oneMinusAmp = int256(FixedPointMathLib.WAD - amp);
-            _targetAmplification = int256(FixedPointMathLib.WAD - amp);
         }   
 
         // Compute the security limit.
@@ -173,98 +169,6 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
             }
         }
         _maxUnitCapacity = maxUnitCapacity;
-    }
-
-    /**
-     * @notice Allows Governance to modify the vault weights to optimise liquidity.
-     * @dev targetTime needs to be more than MIN_ADJUSTMENT_TIME in the future.
-     * @param targetTime Once reached, _weight[...] = newWeights[...]
-     * @param targetAmplification The new weights to apply
-     */
-    function setAmplification(uint256 targetTime, uint256 targetAmplification) external onlyFactoryOwner {
-        unchecked {
-            require(targetTime >= block.timestamp + MIN_ADJUSTMENT_TIME); // dev: targetTime must be more than MIN_ADJUSTMENT_TIME in the future.
-            require(targetTime <= block.timestamp + 365 days); // dev: Target time cannot be too far into the future.
-        }
-
-        uint256 currentAmplification = FixedPointMathLib.WAD - uint256(_oneMinusAmp);
-        require(targetAmplification < FixedPointMathLib.WAD);  // dev: amplification not set correctly.
-        // Limit the maximum allowed relative amplification change to a factor of 2. Note that this effectively 'locks'
-        // the amplification if it gets intialized to 0. Similarly, the amplification will never be allowed to be set to
-        // 0 if it is initialized to any other value (note how 'targetAmplification*2 >= currentAmplification' is used
-        // instead of 'targetAmplification >= currentAmplification/2').
-        require(targetAmplification <= currentAmplification*2 && targetAmplification*2 >= currentAmplification); // dev: targetAmplification must be maximum a factor of 2 larger/smaller than the current amplification to protect liquidity providers.
-        // Because of the balance0 (_unitTracker) implementation, amplification adjustment has to be disabled for cross-chain vaults.
-        require(_chainInterface == address(0));  // dev: Amplification adjustment is disabled for cross-chain vaults.
-
-        // Save adjustment information
-        _adjustmentTarget = targetTime;
-        _lastModificationTime = block.timestamp;
-        unchecked {
-            _targetAmplification = int256(FixedPointMathLib.WAD - targetAmplification);
-        }
-
-        emit SetAmplification(targetTime, targetAmplification);
-    }
-
-    /**
-     * @notice If the governance requests an amplification change, this function will adjust the vault amplificaiton.
-     * @dev Called first thing on every function depending on amplification.
-     */
-    function _updateAmplification() internal {
-        // We might use adjustment target more than once. Since we don't change it, store it.
-        uint256 adjTarget = _adjustmentTarget;
-
-        if (adjTarget != 0) {
-            // We need to use lastModification multiple times. Store it.
-            uint256 lastModification = _lastModificationTime;
-
-            // If no time has passed since the last update, then we don't need to update anything.
-            if (block.timestamp == lastModification) return;
-
-            // Since we are storing lastModification, update the variable now. This avoid repetitions.
-            _lastModificationTime = block.timestamp;
-
-            // If the current time is past the adjustment, the amplification needs to be finalized.
-            if (block.timestamp >= adjTarget) {
-                _oneMinusAmp = _targetAmplification;
-
-                // Set adjustmentTime to 0. This ensures the if statement is never entered.
-                _adjustmentTarget = 0;
-
-                return;
-            }
-
-            // Calculate partial amp change
-            int256 targetAmplification = _targetAmplification;  // uint256 0 < _targetAmplification < WAD
-            int256 currentAmplification = _oneMinusAmp;  // uint256 0 < _oneMinusAmp < WAD
-
-            unchecked {
-                // Lets check each mathematical computation one by one.
-                // First part is (targetAmplification - currentAmplification). We know that targetAmplification + currentAmplification < 2e18
-                // => |targetAmplification - currentAmplification| < 2e18.
-
-                // int256(block.timestamp - lastModification), it is fair to assume that block.timestamp < 2**64. Thus
-                // block.timestamp - lastModification < block.timestamp < 2**64
-
-                // |targetAmplification - currentAmplification| * (block.timestamp - lastModification) < 2*10**18 * 2**64  < 2**87 (no overflow)
-
-                // dividing by int256(adjTarget - lastModification) reduces the number. If adjTarget = lastModification (division by 0)
-                // => This function has been called before. Thus it must be that lastModification = block.timestamp. But that cannot be the case
-                // since block.timestamp >= adjTarget => adjTarget = 0.
-
-                // We know that int256(block.timestamp - lastModification) / int256(adjTarget - lastModification) < 1, since
-                // adjTarget > block.timestamp. So int256(block.timestamp - lastModification) / int256(adjTarget - lastModification) *
-                // |targetAmplification - currentAmplification| < 1 * 2**64.
-                // Sorry for having you go through all that to make the calculation unchecked. We need the gas savings.
-
-                // Add the change to the current amp.
-                _oneMinusAmp = currentAmplification + (
-                    (targetAmplification - currentAmplification) * int256(block.timestamp - lastModification)  // timestamp is largest but small relative to int256.
-                ) / int256(adjTarget - lastModification);   // adjTarget is bounded by block.timestap + 1 year
-            }
-            
-        }
     }
 
     //--- Swap integrals ---//
@@ -500,7 +404,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
         uint256[] calldata tokenAmounts,
         uint256 minOut
     ) nonReentrant external override returns(uint256) {
-        _updateAmplification();
+        _preSwapHook();
         int256 oneMinusAmp = _oneMinusAmp;
 
         uint256 walpha_0_ampped;
@@ -660,7 +564,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
         uint256 vaultTokens,
         uint256[] calldata minOut
     ) nonReentrant external override returns(uint256[] memory) {
-        _updateAmplification();
+        _preSwapHook();
         // Burn the desired number of vault tokens to the user.
         // If they don't have it, it saves gas.
         // * Remember to add vaultTokens when accessing totalSupply
@@ -844,7 +748,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
         uint256[] calldata withdrawRatio,
         uint256[] calldata minOut
     ) nonReentrant external override returns(uint256[] memory) {
-        _updateAmplification();
+        _preSwapHook();
         // Burn the desired number of vault tokens to the user.
         // If they don't have it, it saves gas.
         // * Remember to add vaultTokens when accessing totalSupply
@@ -1014,7 +918,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
         uint256 amount,
         uint256 minOut
     ) nonReentrant external override returns (uint256) {
-        _updateAmplification();
+        _preSwapHook();
         uint256 fee = FixedPointMathLib.mulWadDown(amount, _vaultFee);
 
         // Calculate the return value.
@@ -1082,7 +986,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
         require(toAccount.length == 65);  // dev: Account addresses are uint8 + 64 bytes.
          */
 
-        _updateAmplification();
+        _preSwapHook();
         uint256 fee = FixedPointMathLib.mulWadDown(amount, _vaultFee);
 
         // Calculate the units bought.
@@ -1198,7 +1102,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
         bytes calldata fromAsset,
         uint32 blockNumberMod
     ) nonReentrant onlyChainInterface onlyConnectedPool(channelId, fromVault) public override returns (uint256) {
-        _updateAmplification();
+        _preSwapHook();
 
         // Convert the asset index (toAsset) into the asset to be purchased.
         address toAsset = _tokenIndexing[toAssetIndex];
@@ -1379,7 +1283,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
          */
 
         // Update amplification
-        _updateAmplification();
+        _preSwapHook();
 
         _burn(msg.sender, vaultTokens);
 
@@ -1494,7 +1398,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
         uint256 fromAmount,
         uint32 blockNumberMod
     ) nonReentrant onlyChainInterface onlyConnectedPool(channelId, fromVault) public override returns (uint256) {
-        _updateAmplification();
+        _preSwapHook();
 
         int256 oneMinusAmp = _oneMinusAmp;
 

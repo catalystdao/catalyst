@@ -46,15 +46,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon {
     //--- ERRORS ---//
     // Errors are defined in interfaces/ICatalystV1VaultErrors.sol
 
-
-    //--- Config ---//
-    // Minimum time parameter adjustments can be made over.
-    uint256 constant MIN_ADJUSTMENT_TIME = 7 days;
-
     // For other config options, see CatalystVaultCommon.sol
-
-    //-- Variables --//
-    mapping(address => uint256) public _targetWeight;
 
     constructor(address factory_) CatalystVaultCommon(factory_) {}
 
@@ -126,133 +118,6 @@ contract CatalystVaultVolatile is CatalystVaultCommon {
         _mint(depositor, INITIAL_MINT_AMOUNT);
 
         emit Deposit(depositor, INITIAL_MINT_AMOUNT, initialBalances);
-    }
-
-    /**
-     * @notice Allows Governance to modify the vault weights to optimise liquidity.
-     * @dev targetTime needs to be more than MIN_ADJUSTMENT_TIME in the future.
-     * It is implied that if the existing weights are low <≈100, then 
-     * the governance is not allowed to change vault weights. This is because
-     * the update function is not made for large step sizes (which the steps would be if
-     * trades are infrequent or weights are small).
-     * Weights must not be set to 0. This allows someone to exploit the localSwap simplification
-     * with a token not belonging to the vault. (Set weight to 0, localSwap from token not part of
-     * the vault. Since 0 == 0 => use simplified swap curve. Swap goes through.)
-     * @param targetTime Once reached, _weight[...] = newWeights[...]
-     * @param newWeights The new weights to apply
-     */
-    function setWeights(uint256 targetTime, uint256[] calldata newWeights) external onlyFactoryOwner {
-        unchecked {
-            require(targetTime >= block.timestamp + MIN_ADJUSTMENT_TIME); // dev: targetTime must be more than MIN_ADJUSTMENT_TIME in the future.
-            require(targetTime <= block.timestamp + 365 days); // dev: Target time cannot be too far into the future.
-        }
-
-        // Save adjustment information
-        _adjustmentTarget = targetTime;
-        _lastModificationTime = block.timestamp;
-
-        // Save the target weights
-        for (uint256 it; it < MAX_ASSETS;) {
-            address token = _tokenIndexing[it];
-            if (token == address(0)) break;
-
-            // Load new weights and current weights into memory to save gas
-            uint256 newWeight = newWeights[it];
-            uint256 currentWeight = _weight[token];
-            require(newWeight != 0); // dev: newWeights must be greater than 0 to protect liquidity providers.
-            require(newWeight <= currentWeight*10 && newWeight >= currentWeight/10); // dev: newWeights must be maximum a factor of 10 larger/smaller than the current weights to protect liquidity providers.
-            _targetWeight[token] = newWeight;
-
-            unchecked {
-                it++;
-            }
-        }
-
-        emit SetWeights(targetTime, newWeights);
-    }
-
-    /**
-     * @notice If the governance requests a weight change, this function will adjust the vault weights.
-     * @dev Called first thing on every function depending on weights.
-     * The partial weight change algorithm is not made for large step increases. As a result, 
-     * it is important that the original weights are large to increase the mathematical resolution.
-     */
-    function _updateWeights() internal {
-        // We might use adjustment target more than once. Since we don't change it, store it.
-        uint256 adjTarget = _adjustmentTarget;
-
-        if (adjTarget != 0) {
-            // We need to use lastModification multiple times. Store it.
-            uint256 lastModification = _lastModificationTime;
-
-            // If no time has passed since the last update, then we don't need to update anything.
-            if (block.timestamp == lastModification) return;
-
-            // Since we are storing lastModification, update the variable now. This avoid repetitions.
-            _lastModificationTime = block.timestamp;
-
-            uint256 wsum = 0;
-            // If the current time is past the adjustment, the weights need to be finalized.
-            if (block.timestamp >= adjTarget) {
-                for (uint256 it; it < MAX_ASSETS;) {
-                    address token = _tokenIndexing[it];
-                    if (token == address(0)) break;
-
-                    uint256 targetWeight = _targetWeight[token];
-
-                    // Add new weight to the weight sum.
-                    wsum += targetWeight;
-
-                    // Save the new weight.
-                    _weight[token] = targetWeight;
-
-                    unchecked {
-                        it++;
-                    }
-                }
-                // Save weight sum.
-                _maxUnitCapacity = wsum * FixedPointMathLib.LN2;
-
-                // Set adjustmentTime to 0. This ensures the if statement is never entered.
-                _adjustmentTarget = 0;
-
-                return;
-            }
-
-            // Calculate partial weight change
-            for (uint256 it; it < MAX_ASSETS; ++it) {
-                address token = _tokenIndexing[it];
-                if (token == address(0)) break;
-
-                uint256 targetWeight = _targetWeight[token];
-                uint256 currentWeight = _weight[token];
-                // If the weight has already been reached, skip the mathematics.
-                if (currentWeight == targetWeight) {
-                    wsum += targetWeight;
-                    continue;
-                }
-
-                if (targetWeight > currentWeight) {
-                    // if the weights are increased then targetWeight - currentWeight > 0.
-                    // Add the change to the current weight.
-                    uint256 newWeight = currentWeight + (
-                        (targetWeight - currentWeight) * (block.timestamp - lastModification)
-                    ) / (adjTarget - lastModification);
-                    _weight[token] = newWeight;
-                    wsum += newWeight;
-                } else {
-                    // if the weights are decreased then targetWeight - currentWeight < 0.
-                    // Subtract the change from the current weights.
-                    uint256 newWeight = currentWeight - (
-                        (currentWeight - targetWeight) * (block.timestamp - lastModification)
-                    ) / (adjTarget - lastModification);
-                    _weight[token] = newWeight;
-                    wsum += newWeight;
-                }
-            }
-            // Update security limit
-            _maxUnitCapacity = wsum * FixedPointMathLib.LN2;
-        }
     }
 
     //--- Swap integrals ---//
@@ -431,7 +296,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon {
         uint256[] calldata tokenAmounts,
         uint256 minOut
     ) nonReentrant external override returns(uint256) {
-        _updateWeights();
+        _preSwapHook();
         // Smaller initialTotalSupply => fewer vault tokens minted: _escrowedVaultTokens is not added.
         uint256 initialTotalSupply = totalSupply; 
 
@@ -505,7 +370,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon {
         uint256 vaultTokens,
         uint256[] calldata minOut
     ) nonReentrant external override returns(uint256[] memory) {
-        _updateWeights();
+        _preSwapHook();
         // Cache totalSupply. This saves some gas.
         uint256 initialTotalSupply = totalSupply + _escrowedVaultTokens;
 
@@ -560,7 +425,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon {
         uint256[] calldata withdrawRatio,
         uint256[] calldata minOut
     ) nonReentrant external override returns(uint256[] memory) {
-        _updateWeights();
+        _preSwapHook();
         // cache totalSupply. This saves a bit of gas.
         uint256 initialTotalSupply = totalSupply + _escrowedVaultTokens;
 
@@ -640,7 +505,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon {
         uint256 amount,
         uint256 minOut
     ) nonReentrant external override returns (uint256) {
-        _updateWeights();
+        _preSwapHook();
         uint256 fee = FixedPointMathLib.mulWadDown(amount, _vaultFee);
 
         // Calculate the return value.
@@ -695,9 +560,8 @@ contract CatalystVaultVolatile is CatalystVaultCommon {
         /*
         require(toVault.length == 65);  // dev: Vault addresses are uint8 + 64 bytes.
         require(toAccount.length == 65);  // dev: Account addresses are uint8 + 64 bytes.
-         */
-
-        _updateWeights();
+        */
+        _preSwapHook();
 
         uint256 fee = FixedPointMathLib.mulWadDown(amount, _vaultFee);
 
@@ -811,8 +675,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon {
         bytes calldata fromAsset,
         uint32 blockNumberMod
     ) nonReentrant onlyChainInterface onlyConnectedPool(channelId, fromVault) public override returns (uint256) {
-        _updateWeights();
-
+        _preSwapHook();
         // Convert the asset index (toAsset) into the asset to be purchased.
         address toAsset = _tokenIndexing[toAssetIndex];
 
@@ -918,10 +781,8 @@ contract CatalystVaultVolatile is CatalystVaultCommon {
         /*
         require(toVault.length == 65);  // dev: Vault addresses are uint8 + 64 bytes.
         require(toAccount.length == 65);  // dev: Account addresses are uint8 + 64 bytes.
-         */
-
-        // Update weights
-        _updateWeights();
+        */
+        _preSwapHook();
 
         uint256 initialTotalSupply = totalSupply + _escrowedVaultTokens;
         // Since we have already cached totalSupply, we might as well burn the tokens
@@ -1024,8 +885,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon {
         uint256 fromAmount,
         uint32 blockNumberMod
     ) nonReentrant onlyChainInterface onlyConnectedPool(channelId, fromVault) public override returns (uint256) {
-        _updateWeights();
-
+        _preSwapHook();
         // Check if the swap is according to the swap limits
         _updateUnitCapacity(U);
 
