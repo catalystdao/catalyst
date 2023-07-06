@@ -7,7 +7,7 @@ use crate::{error::ContractError, event::{set_default_governance_fee_share_event
 
 
 // Factory Constants
-pub const MAX_GOVERNANCE_FEE_SHARE : Uint64 = Uint64::new(75u64 * 10000000000000000u64);        // 75% 
+pub const MAX_DEFAULT_GOVERNANCE_FEE_SHARE : Uint64 = Uint64::new(75u64 * 10000000000000000u64);        // 75% 
 
 // Factory storage
 const ADMIN: Admin = Admin::new("catalyst-factory-admin");
@@ -17,6 +17,7 @@ pub const DEPLOY_VAULT_REPLY_ARGS: Item<DeployVaultReplyArgs> = Item::new("catal
 
 // Contract owner helpers
 
+/// Get the current factory owner.
 pub fn owner(
     deps: Deps
 ) -> Result<Option<Addr>, ContractError> {
@@ -26,6 +27,12 @@ pub fn owner(
 
 }
 
+/// Check if an address is the factory owner.
+/// 
+/// Arguments:
+/// 
+/// * `account` - The address of the account to check whether it is the factory owner.
+/// 
 pub fn is_owner(
     deps: Deps,
     account: Addr,
@@ -36,6 +43,14 @@ pub fn is_owner(
 
 }
 
+/// Set the factory owner.
+/// 
+/// !IMPORTANT: This function DOES NOT check the sender of the transaction.
+/// 
+/// # Arguments
+/// 
+/// * `account` - The new factory owner.
+/// 
 pub fn set_owner_unchecked(
     deps: DepsMut,
     account: Addr
@@ -48,6 +63,14 @@ pub fn set_owner_unchecked(
     )
 }
 
+/// Update the factory owner.
+/// 
+/// NOTE: This function checks that the sender of the transaction is the current factory owner.
+/// 
+/// # Arguments
+/// 
+/// * `account` - The new factory owner.
+/// 
 pub fn update_owner(
     deps: DepsMut,
     info: MessageInfo,
@@ -75,6 +98,8 @@ pub fn update_owner(
 
 
 // Default governance fee share helpers
+
+/// Get the current default governance fee share.
 pub fn default_governance_fee_share(
     deps: Deps
 ) -> Result<Uint64, ContractError> {
@@ -84,14 +109,22 @@ pub fn default_governance_fee_share(
 }
 
 
+/// Set a new default governance fee share.
+/// 
+/// !IMPORTANT: This function DOES NOT check the sender of the transaction.
+/// 
+/// # Arguments
+/// 
+/// * `fee` - The new default governance fee share (18 decimals).
+/// 
 pub fn set_default_governance_fee_share_unchecked(
     deps: &mut DepsMut,
     fee: Uint64
 ) -> Result<Event, ContractError> {
 
-    if fee > MAX_GOVERNANCE_FEE_SHARE {
+    if fee > MAX_DEFAULT_GOVERNANCE_FEE_SHARE {
         return Err(
-            ContractError::InvalidDefaultGovernanceFeeShare { requested_fee: fee, max_fee: MAX_GOVERNANCE_FEE_SHARE }
+            ContractError::InvalidDefaultGovernanceFeeShare { requested_fee: fee, max_fee: MAX_DEFAULT_GOVERNANCE_FEE_SHARE }
         )
     }
 
@@ -103,6 +136,14 @@ pub fn set_default_governance_fee_share_unchecked(
 }
 
 
+/// Set a new default governance fee share.
+/// 
+/// NOTE: This function checks that the sender of the transaction is the current factory owner.
+/// 
+/// # Arguments
+/// 
+/// * `fee` - The new default governance fee share (18 decimals).
+/// 
 pub fn set_default_governance_fee_share(
     deps: &mut DepsMut,
     info: MessageInfo,
@@ -115,13 +156,13 @@ pub fn set_default_governance_fee_share(
     }
 
     // Set the new default governance fee
-    let event = set_default_governance_fee_share_unchecked(deps, fee)?;     //TODO overhaul event
+    let event = set_default_governance_fee_share_unchecked(deps, fee)?;
 
     Ok(Response::new().add_event(event))
 }
 
 
-// Deply vault reply helpers
+// Deploy vault reply helpers
 
 pub const DEPLOY_VAULT_REPLY_ID: u64 = 0x100;
 
@@ -136,6 +177,12 @@ pub struct DeployVaultReplyArgs {
     pub depositor: Addr
 }
 
+/// Save the vault deployment configuration for it to be accessible by the 'reply' handler after instantiation.
+/// 
+/// # Arguments
+/// 
+/// * `args` - The vault deployment arguments.
+/// 
 pub fn save_deploy_vault_reply_args(
     deps: DepsMut,
     args: DeployVaultReplyArgs
@@ -152,6 +199,7 @@ pub fn save_deploy_vault_reply_args(
     ).map_err(|err| err.into())
 }
 
+/// Get the vault deployment configuration.
 pub fn get_deploy_vault_reply_args(
     deps: DepsMut
 ) -> Result<DeployVaultReplyArgs, ContractError> {

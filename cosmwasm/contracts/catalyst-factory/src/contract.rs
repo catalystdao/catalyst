@@ -10,10 +10,13 @@ use crate::event::deploy_vault_event;
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg, OwnerResponse, DefaultGovernanceFeeShareResponse};
 use crate::state::{set_default_governance_fee_share_unchecked, owner, default_governance_fee_share, save_deploy_vault_reply_args, DeployVaultReplyArgs, DEPLOY_VAULT_REPLY_ID, get_deploy_vault_reply_args, set_owner_unchecked, set_default_governance_fee_share, DEFAULT_GOVERNANCE_FEE_SHARE, update_owner};
 
-// version info for migration info
+// Version information
 const CONTRACT_NAME: &str = "catalyst-vault-factory";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
+
+
+// Instantiation **********************************************************************************
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
@@ -38,6 +41,9 @@ pub fn instantiate(
     )
 }
 
+
+
+// Execution **************************************************************************************
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(
@@ -91,6 +97,23 @@ pub fn execute(
     }
 }
 
+
+/// Deploy a new vault (permissionless).
+/// 
+/// NOTE: The deployer must set approvals for this contract of the assets to be deposited on the newly created vault.
+/// 
+/// # Arguments
+/// 
+/// * `vault_code_id` - The code id of the *stored* contract with which to deploy the new vault.
+/// * `assets` - A list of the assets that are to be supported by the vault.
+/// * `assets_balances` - The asset balances that are going to be deposited on the vault.
+/// * `weights` - The weights applied to the assets.
+/// * `amplification` - The amplification value applied to the vault.
+/// * `vault_fee` - The vault fee (18 decimals).
+/// * `name` - The name of the vault token.
+/// * `symbol` - The symbol of the vault token.
+/// * `chain_interface` - The interface used for cross-chain swaps. It can be set to None to disable cross-chain swaps.
+/// 
 fn execute_deploy_vault(
     mut deps: DepsMut,
     info: MessageInfo,
@@ -114,8 +137,15 @@ fn execute_deploy_vault(
         return Err(StdError::generic_err("Invalid asset/balances/weights count.").into());
     }
 
-    // Store the required args to initalize the vault curves for after the vault instantiation (used on 'reply')
-    // TODO! verify the safety of passing information to the reply handler in the following way (reentrancy attacks?)
+    // Save the required args to initalize the vault curves after the vault instantiation (used on 'reply').
+    // ! This is set to only work if data is NOT present on the store (prevent a reentrancy attack).
+    // This cannot be abused to 'lock' the contract from deploying vaults (i.e. somehow make it so that
+    // data is left on the store), as:
+    // - If the `instantiation` msg fails, the whole transaction is reverted (as the submessage `reply`
+    //   field is set to `ReplyOn::Success`), and thus no data will be left on the store.
+    // - The `reply` handler *always* clears out the store.
+    // - If the `reply` handler fails, the whole transaction is reverted, and thus no data will be left
+    //   on the store.
     save_deploy_vault_reply_args(
         deps.branch(),
         DeployVaultReplyArgs {
@@ -129,10 +159,10 @@ fn execute_deploy_vault(
         }
     )?;
 
-    // Create msg to instantiate a new vault
+    // Create the msg to instantiate the new vault
     let instantiate_vault_submsg = SubMsg::reply_on_success(
         cosmwasm_std::WasmMsg::Instantiate {
-            admin: None,        //TODO set factory as admin?
+            admin: None,            // ! The vault should NOT be upgradable.
             code_id: vault_code_id,
             msg: to_binary(&catalyst_vault_common::msg::InstantiateMsg {
                 name,
@@ -140,16 +170,17 @@ fn execute_deploy_vault(
                 chain_interface: chain_interface.clone(),
                 vault_fee,
                 governance_fee_share: default_governance_fee_share(deps.as_ref())?,
-                fee_administrator: owner(deps.as_ref())?.ok_or(ContractError::NoOwner {})?.to_string(),
+                fee_administrator: owner(deps.as_ref())?
+                    .ok_or(ContractError::NoOwner {})?.to_string(), // NOTE: with the current implementation there will *always* 
+                                                                    // be an owner, as it is not possible to renounce the ownership
+                                                                    // of the contract (or to set it to an invalid address).
                 setup_master: info.sender.to_string()
             })?,
             funds: vec![],
-            label: symbol.to_string()   //TODO review: what to set as 'label'?
+            label: symbol.to_string()
         },
         DEPLOY_VAULT_REPLY_ID
     );
-
-    //TODO implement IsCreatedByFactory?
     
     Ok(
         Response::new()
@@ -157,6 +188,13 @@ fn execute_deploy_vault(
     )
 }
 
+
+/// Modify the default governance fee share
+/// 
+/// # Arguments
+/// 
+/// * `fee` - The new governance fee share (18 decimals).
+/// 
 fn execute_set_default_governance_fee_share(
     mut deps: DepsMut,
     info: MessageInfo,
@@ -165,6 +203,13 @@ fn execute_set_default_governance_fee_share(
     set_default_governance_fee_share(&mut deps, info, fee)
 }
 
+
+/// Transfer the ownership of the factory.
+/// 
+/// # Arguments
+/// 
+/// * `new_owner` - The new owner of the contract. Must be a valid address.
+/// 
 fn execute_transfer_ownership(
     deps: DepsMut,
     info: MessageInfo,
@@ -173,6 +218,9 @@ fn execute_transfer_ownership(
     update_owner(deps, info, new_owner)
 }
 
+
+
+// Reply ******************************************************************************************
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn reply(
@@ -183,27 +231,35 @@ pub fn reply(
     match reply.id {
         DEPLOY_VAULT_REPLY_ID => match reply.result {
             SubMsgResult::Ok(_) => handle_deploy_vault_reply(deps, reply),
-            SubMsgResult::Err(_) => Err(StdError::GenericErr { msg: "Vault deployment failed.".to_string() }.into())   // Reply is set to on_success, so the code should never reach this point
+            SubMsgResult::Err(_) => {       // Reply is set to 'on_success', so the code should never reach this point
+                Err(StdError::GenericErr { msg: "Vault deployment failed.".to_string() }.into())
+            }
         },
         _ => Err(ContractError::UnknownReplyId { id: reply.id }),
     }
 }
 
+
+/// Setup the newly deployed vault after instantiation.
 fn handle_deploy_vault_reply(
     deps: DepsMut,
     reply: Reply
 ) -> Result<Response, ContractError> {
 
-    // Get deployed vault contract address
-    let vault_address = parse_reply_instantiate_data(reply).map_err(|_| StdError::generic_err("Error deploying vault contract"))?.contract_address;
+    // Get the deployed vault contract address
+    let vault_address = parse_reply_instantiate_data(reply)
+        .map_err(|_| StdError::generic_err("Error deploying vault contract"))?
+        .contract_address;
 
     // Load the deploy vault args
+    // ! It is very important to clear out the 'args' store at this point, as otherwise the factory
+    // ! would become 'locked', and no further vault deployments would be possible.
     let deploy_args = get_deploy_vault_reply_args(deps)?;
 
-    // Build messages to order the transfer of tokens from setup_master to the vault
+    // Build messages to order the transfer of tokens from 'setup_master' to the vault
     let transfer_msgs: Vec<CosmosMsg> = deploy_args.assets.iter()
-        .zip(&deploy_args.assets_balances)
-        .map(|(asset, balance)| {    // zip: assets_balances.len() == assets.len()
+        .zip(&deploy_args.assets_balances)  // zip: assets_balances.len() == assets.len() (check performed on 'execute_deploy_vault')
+        .map(|(asset, balance)| {
             Ok(CosmosMsg::Wasm(
                 cosmwasm_std::WasmMsg::Execute {
                     contract_addr: asset.to_string(),
@@ -217,7 +273,7 @@ fn handle_deploy_vault_reply(
             ))
         }).collect::<StdResult<Vec<CosmosMsg>>>()?;
 
-    // Build message to invoke vault initialize swap curves
+    // Build a message to invoke the initialization of the vault swap curves
     let initialize_swap_curves_msg = CosmosMsg::Wasm(
         cosmwasm_std::WasmMsg::Execute {
             contract_addr: vault_address.clone(),
@@ -232,7 +288,6 @@ fn handle_deploy_vault_reply(
     );
 
 
-    //TODO event
     Ok(
         Response::new()
             .add_messages(transfer_msgs)
@@ -253,6 +308,8 @@ fn handle_deploy_vault_reply(
 
 
 
+// Query ******************************************************************************************
+
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
@@ -261,6 +318,8 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     }
 }
 
+
+/// Query the factory owner.
 fn query_owner(deps: Deps) -> StdResult<OwnerResponse> {
     Ok(
         OwnerResponse {
@@ -270,6 +329,7 @@ fn query_owner(deps: Deps) -> StdResult<OwnerResponse> {
 }
 
 
+/// Query the default governance fee share.
 fn query_default_governance_fee_share(deps: Deps) -> StdResult<DefaultGovernanceFeeShareResponse> {
     Ok(
         DefaultGovernanceFeeShareResponse {
@@ -277,6 +337,8 @@ fn query_default_governance_fee_share(deps: Deps) -> StdResult<DefaultGovernance
         }
     )
 }
+
+
 
 
 #[cfg(test)]
@@ -288,7 +350,7 @@ mod catalyst_vault_factory_tests {
     use cw_multi_test::{App, Executor, ContractWrapper};
     use test_helpers::token::{deploy_test_tokens, set_token_allowance};
 
-    use crate::{msg::{InstantiateMsg, QueryMsg, OwnerResponse, ExecuteMsg, DefaultGovernanceFeeShareResponse}, state::MAX_GOVERNANCE_FEE_SHARE, error::ContractError};
+    use crate::{msg::{InstantiateMsg, QueryMsg, OwnerResponse, ExecuteMsg, DefaultGovernanceFeeShareResponse}, state::MAX_DEFAULT_GOVERNANCE_FEE_SHARE, error::ContractError};
 
     use catalyst_vault_common::msg::{ChainInterfaceResponse, FactoryResponse, SetupMasterResponse, AssetsResponse, WeightResponse, VaultFeeResponse, GovernanceFeeShareResponse, FeeAdministratorResponse};
     use mock_vault::msg::QueryMsg as MockVaultQueryMsg;
@@ -385,9 +447,9 @@ mod catalyst_vault_factory_tests {
 
 
     #[test]
-    fn test_max_governance_fee_share_constant() {
+    fn test_max_default_governance_fee_share_constant() {
 
-        let max_fee = (MAX_GOVERNANCE_FEE_SHARE.u64() as f64) / 1e18;
+        let max_fee = (MAX_DEFAULT_GOVERNANCE_FEE_SHARE.u64() as f64) / 1e18;
 
         assert!( max_fee <= 1.);
     }
@@ -404,7 +466,7 @@ mod catalyst_vault_factory_tests {
 
 
         // Tested action 1: Set max fee
-        let default_governance_fee_share = MAX_GOVERNANCE_FEE_SHARE;
+        let default_governance_fee_share = MAX_DEFAULT_GOVERNANCE_FEE_SHARE;
         app.instantiate_contract(
             code_id,
             Addr::unchecked(GOVERNANCE),
@@ -418,7 +480,7 @@ mod catalyst_vault_factory_tests {
 
 
         // Tested action 2: Set fee too large
-        let default_governance_fee_share = MAX_GOVERNANCE_FEE_SHARE + Uint64::one();  // ! Governance fee too large
+        let default_governance_fee_share = MAX_DEFAULT_GOVERNANCE_FEE_SHARE + Uint64::one();  // ! Governance fee too large
         let response_result = app.instantiate_contract(
             code_id,
             Addr::unchecked(GOVERNANCE),
@@ -432,7 +494,7 @@ mod catalyst_vault_factory_tests {
         assert!(matches!(
             response_result.err().unwrap().downcast().unwrap(),
             ContractError::InvalidDefaultGovernanceFeeShare { requested_fee, max_fee }
-                if requested_fee == default_governance_fee_share && max_fee == MAX_GOVERNANCE_FEE_SHARE
+                if requested_fee == default_governance_fee_share && max_fee == MAX_DEFAULT_GOVERNANCE_FEE_SHARE
         ));
 
     }
