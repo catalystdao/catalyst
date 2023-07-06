@@ -249,6 +249,22 @@ pub fn set_fee_administrator_unchecked(
 }
 
 
+pub fn set_fee_administrator(
+    deps: &mut DepsMut,
+    info: MessageInfo,
+    administrator: String
+) -> Result<Response, ContractError> {
+
+    if info.sender != factory_owner(&deps.as_ref())? {
+        return Err(ContractError::Unauthorized {})
+    }
+
+    let event = set_fee_administrator_unchecked(deps, administrator.as_str())?;
+
+    Ok(Response::new().add_event(event))
+}
+
+
 pub fn set_vault_fee_unchecked(
     deps: &mut DepsMut,
     fee: Uint64
@@ -347,23 +363,6 @@ pub fn collect_governance_fee_message(
         }
     )))
     
-}
-
-
-//TODO move function definition below 'set_fee_administrator_unchecked'
-pub fn set_fee_administrator(
-    deps: &mut DepsMut,
-    info: MessageInfo,
-    administrator: String
-) -> Result<Response, ContractError> {
-
-    if info.sender != factory_owner(&deps.as_ref())? {
-        return Err(ContractError::Unauthorized {})
-    }
-
-    let event = set_fee_administrator_unchecked(deps, administrator.as_str())?;
-
-    Ok(Response::new().add_event(event))
 }
 
 
