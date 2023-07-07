@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, Uint128, DepsMut, Env, MessageInfo, Response, StdResult, CosmosMsg, to_binary, Deps, Binary, Uint64};
+use cosmwasm_std::{Addr, Uint128, DepsMut, Env, MessageInfo, Response, StdResult, CosmosMsg, to_binary, Deps, Binary, Uint64, Timestamp};
 use cw20::{Cw20ExecuteMsg, Cw20QueryMsg, BalanceResponse};
 use cw20_base::contract::{execute_mint, execute_burn};
 use cw_storage_plus::{Item, Map};
@@ -9,7 +9,7 @@ use catalyst_vault_common::{
         ASSETS, MAX_ASSETS, WEIGHTS, INITIAL_MINT_AMOUNT, VAULT_FEE, MAX_LIMIT_CAPACITY, USED_LIMIT_CAPACITY, CHAIN_INTERFACE,
         TOTAL_ESCROWED_LIQUIDITY, TOTAL_ESCROWED_ASSETS, is_connected, update_limit_capacity,
         collect_governance_fee_message, compute_send_asset_hash, compute_send_liquidity_hash, create_asset_escrow,
-        create_liquidity_escrow, on_send_asset_success, on_send_liquidity_success, total_supply, get_limit_capacity, USED_LIMIT_CAPACITY_TIMESTAMP, FACTORY, factory_owner,
+        create_liquidity_escrow, on_send_asset_success, on_send_liquidity_success, total_supply, get_limit_capacity, USED_LIMIT_CAPACITY_TIMESTAMP_SECONDS, FACTORY, factory_owner,
     },
     ContractError, msg::{CalcSendAssetResponse, CalcReceiveAssetResponse, CalcLocalSwapResponse, GetLimitCapacityResponse}, event::{local_swap_event, send_asset_event, receive_asset_event, send_liquidity_event, receive_liquidity_event, deposit_event, withdraw_event, cw20_response_to_standard_event}
 };
@@ -20,11 +20,11 @@ use catalyst_ibc_interface::msg::ExecuteMsg as InterfaceExecuteMsg;
 use crate::{calculation_helpers::{calc_price_curve_area, calc_price_curve_limit, calc_combined_price_curves, calc_price_curve_limit_share}, msg::{TargetWeightResponse, WeightsUpdateFinishTimestampResponse}, event::set_weights_event};
 
 pub const TARGET_WEIGHTS: Map<&str, Uint128> = Map::new("catalyst-vault-volatile-target-weights");
-pub const WEIGHT_UPDATE_TIMESTAMP: Item<Uint64> = Item::new("catalyst-vault-volatile-weight-update-timestamp");
-pub const WEIGHT_UPDATE_FINISH_TIMESTAMP: Item<Uint64> = Item::new("catalyst-vault-volatile-weight-update-finish-timestamp");
+pub const WEIGHT_UPDATE_TIMESTAMP_SECONDS: Item<Uint64> = Item::new("catalyst-vault-volatile-weight-update-timestamp");
+pub const WEIGHT_UPDATE_FINISH_TIMESTAMP_SECONDS: Item<Uint64> = Item::new("catalyst-vault-volatile-weight-update-finish-timestamp");
 
-const MIN_ADJUSTMENT_TIME_NANOS    : Uint64 = Uint64::new(7 * 24 * 60 * 60 * 1000000000);     // 7 days
-const MAX_ADJUSTMENT_TIME_NANOS    : Uint64 = Uint64::new(365 * 24 * 60 * 60 * 1000000000);   // 1 year
+const MIN_ADJUSTMENT_TIME_SECONDS  : Uint64 = Uint64::new(7 * 24 * 60 * 60);     // 7 days
+const MAX_ADJUSTMENT_TIME_SECONDS  : Uint64 = Uint64::new(365 * 24 * 60 * 60);   // 1 year
 const MAX_WEIGHT_ADJUSTMENT_FACTOR : Uint128 = Uint128::new(10);
 
 
@@ -108,8 +108,8 @@ pub fn initialize_swap_curves(
             Ok(())
         })?;
     
-    WEIGHT_UPDATE_TIMESTAMP.save(deps.storage, &Uint64::zero())?;         //TODO move intialization to 'setup'?
-    WEIGHT_UPDATE_FINISH_TIMESTAMP.save(deps.storage, &Uint64::zero())?;  //TODO move intialization to 'setup'?
+    WEIGHT_UPDATE_TIMESTAMP_SECONDS.save(deps.storage, &Uint64::zero())?;         //TODO move intialization to 'setup'?
+    WEIGHT_UPDATE_FINISH_TIMESTAMP_SECONDS.save(deps.storage, &Uint64::zero())?;  //TODO move intialization to 'setup'?
 
     // Compute the security limit
     MAX_LIMIT_CAPACITY.save(
@@ -119,7 +119,7 @@ pub fn initialize_swap_curves(
         ))
     )?;
     USED_LIMIT_CAPACITY.save(deps.storage, &U256::zero())?;       //TODO move intialization to 'setup'?
-    USED_LIMIT_CAPACITY_TIMESTAMP.save(deps.storage, &Uint64::zero())?;   //TODO move intialization to 'setup'?
+    USED_LIMIT_CAPACITY_TIMESTAMP_SECONDS.save(deps.storage, &Uint64::zero())?;   //TODO move intialization to 'setup'?
 
     // Initialize escrow totals
     assets
@@ -509,7 +509,7 @@ pub fn local_swap(
     min_out: Uint128
 ) -> Result<Response, ContractError> {
 
-    update_weights(deps, env.block.time.nanos().into())?;
+    update_weights(deps, env.block.time)?;
 
     let vault_fee: Uint128 = mul_wad_down(            //TODO alternative to not have to use U256 conversion? (or wrapper?)
         U256::from(amount.u128()),
@@ -604,7 +604,7 @@ pub fn send_asset(
         return Err(ContractError::VaultNotConnected { channel_id, vault: to_vault })
     }
 
-    update_weights(deps, env.block.time.nanos().into())?;
+    update_weights(deps, env.block.time)?;
 
     let vault_fee: Uint128 = mul_wad_down(            //TODO alternative to not have to use U256 conversion? (or wrapper?)
         U256::from(amount.u128()),
@@ -732,7 +732,7 @@ pub fn receive_asset(
         return Err(ContractError::VaultNotConnected { channel_id, vault: from_vault })
     }
 
-    update_weights(deps, env.block.time.nanos().into())?;
+    update_weights(deps, env.block.time)?;
 
     let assets = ASSETS.load(deps.storage)?;
     let to_asset = assets
@@ -817,7 +817,7 @@ pub fn send_liquidity(
     }
 
     // Update weights
-    update_weights(deps, env.block.time.nanos().into())?;
+    update_weights(deps, env.block.time)?;
 
     // Include the 'escrowed' vault tokens in the total supply of vault tokens of the vault
     let escrowed_vault_tokens = TOTAL_ESCROWED_LIQUIDITY.load(deps.storage)?;
@@ -926,7 +926,7 @@ pub fn receive_liquidity(
         return Err(ContractError::VaultNotConnected { channel_id, vault: from_vault })
     }
 
-    update_weights(deps, env.block.time.nanos().into())?;
+    update_weights(deps, env.block.time)?;
 
     update_limit_capacity(deps, env.block.time, u)?;
 
@@ -1230,10 +1230,10 @@ pub fn set_weights(         //TODO EVM mismatch arguments order
     let assets = ASSETS.load(deps.storage)?;
 
     // Check 'target_timestamp' is within the defined acceptable bounds
-    let current_time = Uint64::new(env.block.time.nanos());
+    let current_time = Uint64::new(env.block.time.seconds());
     if
-        target_timestamp < current_time + MIN_ADJUSTMENT_TIME_NANOS ||
-        target_timestamp > current_time + MAX_ADJUSTMENT_TIME_NANOS
+        target_timestamp < current_time + MIN_ADJUSTMENT_TIME_SECONDS ||
+        target_timestamp > current_time + MAX_ADJUSTMENT_TIME_SECONDS
     {
         return Err(ContractError::InvalidTargetTime {});
     }
@@ -1264,8 +1264,8 @@ pub fn set_weights(         //TODO EVM mismatch arguments order
         }).collect::<Result<Vec<Uint128>, ContractError>>()?;
     
     // Set the weight update time parameters
-    WEIGHT_UPDATE_FINISH_TIMESTAMP.save(deps.storage, &target_timestamp)?;
-    WEIGHT_UPDATE_TIMESTAMP.save(deps.storage, &current_time)?;
+    WEIGHT_UPDATE_FINISH_TIMESTAMP_SECONDS.save(deps.storage, &target_timestamp)?;
+    WEIGHT_UPDATE_TIMESTAMP_SECONDS.save(deps.storage, &current_time)?;
 
     Ok(
         Response::new()
@@ -1280,17 +1280,19 @@ pub fn set_weights(         //TODO EVM mismatch arguments order
 
 pub fn update_weights(
     deps: &mut DepsMut,
-    current_timestamp: Uint64
+    current_timestamp: Timestamp
 ) -> Result<(), ContractError> {
+
+    let current_timestamp = Uint64::new(current_timestamp.seconds());
     
     // Only run update logic if 'param_update_finish_timestamp' is set
-    let param_update_finish_timestamp = WEIGHT_UPDATE_FINISH_TIMESTAMP.load(deps.storage)?;
+    let param_update_finish_timestamp = WEIGHT_UPDATE_FINISH_TIMESTAMP_SECONDS.load(deps.storage)?;
     if param_update_finish_timestamp == Uint64::zero() {
         return Ok(());
     }
 
     // Skip the update if the weights have already been updated on the same block
-    let param_update_timestamp = WEIGHT_UPDATE_TIMESTAMP.load(deps.storage)?;
+    let param_update_timestamp = WEIGHT_UPDATE_TIMESTAMP_SECONDS.load(deps.storage)?;
     if current_timestamp == param_update_timestamp {
         return Ok(());
     }
@@ -1317,7 +1319,7 @@ pub fn update_weights(
             })?;
 
         // Clear the 'param_update_finish_timestamp' to disable the update logic
-        WEIGHT_UPDATE_FINISH_TIMESTAMP.save(
+        WEIGHT_UPDATE_FINISH_TIMESTAMP_SECONDS.save(
             deps.storage,
             &Uint64::zero()
         )?;
@@ -1382,7 +1384,7 @@ pub fn update_weights(
     )?;
 
     // Update the update timestamp
-    WEIGHT_UPDATE_TIMESTAMP.save(
+    WEIGHT_UPDATE_TIMESTAMP_SECONDS.save(
         deps.storage,
         &current_timestamp
     )?;
@@ -1477,7 +1479,7 @@ pub fn query_weights_update_finish_timestamp(
 
     Ok(
         WeightsUpdateFinishTimestampResponse {
-            timestamp: WEIGHT_UPDATE_FINISH_TIMESTAMP.load(deps.storage)?
+            timestamp: WEIGHT_UPDATE_FINISH_TIMESTAMP_SECONDS.load(deps.storage)?
         }
     )
 

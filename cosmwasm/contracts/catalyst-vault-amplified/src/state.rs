@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, Uint128, DepsMut, Env, MessageInfo, Response, StdResult, CosmosMsg, to_binary, Deps, Binary, Uint64};
+use cosmwasm_std::{Addr, Uint128, DepsMut, Env, MessageInfo, Response, StdResult, CosmosMsg, to_binary, Deps, Binary, Uint64, Timestamp};
 use cw20::{Cw20ExecuteMsg, Cw20QueryMsg, BalanceResponse};
 use cw20_base::contract::{execute_mint, execute_burn};
 use cw_storage_plus::Item;
@@ -9,7 +9,7 @@ use catalyst_vault_common::{
         ASSETS, MAX_ASSETS, WEIGHTS, INITIAL_MINT_AMOUNT, VAULT_FEE, MAX_LIMIT_CAPACITY, USED_LIMIT_CAPACITY, CHAIN_INTERFACE,
         TOTAL_ESCROWED_LIQUIDITY, TOTAL_ESCROWED_ASSETS, is_connected, update_limit_capacity,
         collect_governance_fee_message, compute_send_asset_hash, compute_send_liquidity_hash, create_asset_escrow,
-        create_liquidity_escrow, on_send_asset_success, total_supply, get_limit_capacity, USED_LIMIT_CAPACITY_TIMESTAMP, FACTORY, on_send_asset_failure, on_send_liquidity_failure, factory_owner,
+        create_liquidity_escrow, on_send_asset_success, total_supply, get_limit_capacity, USED_LIMIT_CAPACITY_TIMESTAMP_SECONDS, FACTORY, on_send_asset_failure, on_send_liquidity_failure, factory_owner,
     },
     ContractError, msg::{CalcSendAssetResponse, CalcReceiveAssetResponse, CalcLocalSwapResponse, GetLimitCapacityResponse}, event::{local_swap_event, send_asset_event, receive_asset_event, send_liquidity_event, receive_liquidity_event, deposit_event, withdraw_event, cw20_response_to_standard_event}
 };
@@ -22,12 +22,12 @@ use crate::{calculation_helpers::{calc_price_curve_area, calc_price_curve_limit,
 // TODO amplification specific storage
 pub const ONE_MINUS_AMP: Item<I256> = Item::new("catalyst-vault-amplified-one-minus-amp");
 pub const TARGET_ONE_MINUS_AMP: Item<I256> = Item::new("catalyst-vault-amplified-target-one-minus-amp");
-pub const AMP_UPDATE_TIMESTAMP: Item<Uint64> = Item::new("catalyst-vault-amplified-amp-update-timestamp");
-pub const AMP_UPDATE_FINISH_TIMESTAMP: Item<Uint64> = Item::new("catalyst-vault-amplified-amp-update-finish-timestamp");
+pub const AMP_UPDATE_TIMESTAMP_SECONDS: Item<Uint64> = Item::new("catalyst-vault-amplified-amp-update-timestamp");
+pub const AMP_UPDATE_FINISH_TIMESTAMP_SECONDS: Item<Uint64> = Item::new("catalyst-vault-amplified-amp-update-finish-timestamp");
 pub const UNIT_TRACKER: Item<I256> = Item::new("catalyst-vault-amplified-unit-tracker");
 
-const MIN_ADJUSTMENT_TIME_NANOS : Uint64 = Uint64::new(7 * 24 * 60 * 60 * 1000000000);     // 7 days
-const MAX_ADJUSTMENT_TIME_NANOS : Uint64 = Uint64::new(365 * 24 * 60 * 60 * 1000000000);   // 1 year
+const MIN_ADJUSTMENT_TIME_SECONDS : Uint64 = Uint64::new(7 * 24 * 60 * 60);     // 7 days
+const MAX_ADJUSTMENT_TIME_SECONDS : Uint64 = Uint64::new(365 * 24 * 60 * 60);   // 1 year
 const MAX_AMP_ADJUSTMENT_FACTOR : Uint64 = Uint64::new(2);
 
 const SMALL_SWAP_RATIO  : Uint128 = Uint128::new(1000000000000u128);   // 1e12
@@ -118,8 +118,8 @@ pub fn initialize_swap_curves(
             Ok(())
         })?;
         
-    AMP_UPDATE_TIMESTAMP.save(deps.storage, &Uint64::zero())?;         //TODO move intialization to 'setup'?
-    AMP_UPDATE_FINISH_TIMESTAMP.save(deps.storage, &Uint64::zero())?;  //TODO move intialization to 'setup'?
+    AMP_UPDATE_TIMESTAMP_SECONDS.save(deps.storage, &Uint64::zero())?;         //TODO move intialization to 'setup'?
+    AMP_UPDATE_FINISH_TIMESTAMP_SECONDS.save(deps.storage, &Uint64::zero())?;  //TODO move intialization to 'setup'?
 
     // Compute the security limit
     MAX_LIMIT_CAPACITY.save(
@@ -135,7 +135,7 @@ pub fn initialize_swap_curves(
             ))
     )?;
     USED_LIMIT_CAPACITY.save(deps.storage, &U256::zero())?;       //TODO move intialization to 'setup'?
-    USED_LIMIT_CAPACITY_TIMESTAMP.save(deps.storage, &Uint64::zero())?;   //TODO move intialization to 'setup'?
+    USED_LIMIT_CAPACITY_TIMESTAMP_SECONDS.save(deps.storage, &Uint64::zero())?;   //TODO move intialization to 'setup'?
 
     // Initialize escrow totals
     assets
@@ -192,7 +192,7 @@ pub fn deposit_mixed(
     min_out: Uint128
 ) -> Result<Response, ContractError> {
 
-    update_amplification(deps, env.block.time.nanos().into())?;
+    update_amplification(deps, env.block.time)?;
 
     let one_minus_amp = ONE_MINUS_AMP.load(deps.storage)?;
 
@@ -374,7 +374,7 @@ pub fn withdraw_all(
     min_out: Vec<Uint128>,
 ) -> Result<Response, ContractError> {
 
-    update_amplification(deps, env.block.time.nanos().into())?;
+    update_amplification(deps, env.block.time)?;
 
     // Burn the vault tokens of the withdrawer
     let sender = info.sender.to_string();
@@ -570,7 +570,7 @@ pub fn withdraw_mixed(
     min_out: Vec<Uint128>,
 ) -> Result<Response, ContractError> {
 
-    update_amplification(deps, env.block.time.nanos().into())?;
+    update_amplification(deps, env.block.time)?;
 
     // Burn the vault tokens of the withdrawer
     let sender = info.sender.to_string();
@@ -776,7 +776,7 @@ pub fn local_swap(
     min_out: Uint128
 ) -> Result<Response, ContractError> {
 
-    update_amplification(deps, env.block.time.nanos().into())?;
+    update_amplification(deps, env.block.time)?;
 
     let vault_fee: Uint128 = mul_wad_down(            //TODO alternative to not have to use U256 conversion? (or wrapper?)
         U256::from(amount.u128()),
@@ -896,7 +896,7 @@ pub fn send_asset(
         return Err(ContractError::VaultNotConnected { channel_id, vault: to_vault })
     }
 
-    update_amplification(deps, env.block.time.nanos().into())?;
+    update_amplification(deps, env.block.time)?;
 
     let vault_fee: Uint128 = mul_wad_down(            //TODO alternative to not have to use U256 conversion? (or wrapper?)
         U256::from(amount.u128()),
@@ -1036,7 +1036,7 @@ pub fn receive_asset(
         return Err(ContractError::VaultNotConnected { channel_id, vault: from_vault })
     }
 
-    update_amplification(deps, env.block.time.nanos().into())?;
+    update_amplification(deps, env.block.time)?;
 
     let assets = ASSETS.load(deps.storage)?;
     let to_asset = assets
@@ -1143,7 +1143,7 @@ pub fn send_liquidity(
         return Err(ContractError::VaultNotConnected { channel_id, vault: to_vault })
     }
 
-    update_amplification(deps, env.block.time.nanos().into())?;
+    update_amplification(deps, env.block.time)?;
 
     // Burn the vault tokens of the sender
     let burn_response = execute_burn(deps.branch(), env.clone(), info, amount)?;
@@ -1279,7 +1279,7 @@ pub fn receive_liquidity(
         return Err(ContractError::VaultNotConnected { channel_id, vault: from_vault })
     }
 
-    update_amplification(deps, env.block.time.nanos().into())?;
+    update_amplification(deps, env.block.time)?;
 
     let one_minus_amp = ONE_MINUS_AMP.load(deps.storage)?;
 
@@ -1732,10 +1732,10 @@ pub fn set_amplification(
     }
     
     // Check 'target_timestamp' is within the defined acceptable bounds
-    let current_time = Uint64::new(env.block.time.nanos());
+    let current_time = Uint64::new(env.block.time.seconds());
     if
-        target_timestamp < current_time + MIN_ADJUSTMENT_TIME_NANOS ||
-        target_timestamp > current_time + MAX_ADJUSTMENT_TIME_NANOS
+        target_timestamp < current_time + MIN_ADJUSTMENT_TIME_SECONDS ||
+        target_timestamp > current_time + MAX_ADJUSTMENT_TIME_SECONDS
     {
         return Err(ContractError::InvalidTargetTime {});
     }
@@ -1775,8 +1775,8 @@ pub fn set_amplification(
     )?;
 
     // Set the amplification update time parameters
-    AMP_UPDATE_FINISH_TIMESTAMP.save(deps.storage, &target_timestamp)?;
-    AMP_UPDATE_TIMESTAMP.save(deps.storage, &current_time)?;
+    AMP_UPDATE_FINISH_TIMESTAMP_SECONDS.save(deps.storage, &target_timestamp)?;
+    AMP_UPDATE_TIMESTAMP_SECONDS.save(deps.storage, &current_time)?;
 
     Ok(
         Response::new()
@@ -1792,18 +1792,20 @@ pub fn set_amplification(
 
 pub fn update_amplification(
     deps: &mut DepsMut,
-    current_timestamp: Uint64
+    current_timestamp: Timestamp
 ) -> Result<(), ContractError> {
+
+    let current_timestamp = Uint64::new(current_timestamp.seconds());
     
     // TODO check instead if the variable *exists* rather than it being set to 0?
     // Only run update logic if 'amp_update_finish_timestamp' is set
-    let amp_update_finish_timestamp = AMP_UPDATE_FINISH_TIMESTAMP.load(deps.storage)?;
+    let amp_update_finish_timestamp = AMP_UPDATE_FINISH_TIMESTAMP_SECONDS.load(deps.storage)?;
     if amp_update_finish_timestamp == Uint64::zero() {
         return Ok(());
     }
 
     // Skip the update if the amplification has already been updated on the same block
-    let amp_update_timestamp = AMP_UPDATE_TIMESTAMP.load(deps.storage)?;
+    let amp_update_timestamp = AMP_UPDATE_TIMESTAMP_SECONDS.load(deps.storage)?;
     if current_timestamp == amp_update_timestamp {
         return Ok(());
     }
@@ -1821,7 +1823,7 @@ pub fn update_amplification(
         )?;
 
         // Clear the 'amp_update_finish_timestamp' to disable the update logic
-        AMP_UPDATE_FINISH_TIMESTAMP.save(
+        AMP_UPDATE_FINISH_TIMESTAMP_SECONDS.save(
             deps.storage,
             &Uint64::zero()
         )?;
@@ -1868,7 +1870,7 @@ pub fn update_amplification(
     }
 
     // Update the update timestamp
-    AMP_UPDATE_TIMESTAMP.save(
+    AMP_UPDATE_TIMESTAMP_SECONDS.save(
         deps.storage,
         &current_timestamp
     )?;
@@ -1986,7 +1988,7 @@ pub fn query_amplification_update_finish_timestamp(
 
     Ok(
         AmplificationUpdateFinishTimestampResponse {
-            timestamp: AMP_UPDATE_FINISH_TIMESTAMP.load(deps.storage)?
+            timestamp: AMP_UPDATE_FINISH_TIMESTAMP_SECONDS.load(deps.storage)?
         }
     )
 

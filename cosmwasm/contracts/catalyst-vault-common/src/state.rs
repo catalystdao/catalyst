@@ -46,15 +46,9 @@ pub const LIQUIDITY_ESCROWS: Map<Vec<u8>, Addr> = Map::new("catalyst-vault-liqui
 
 pub const MAX_LIMIT_CAPACITY: Item<U256> = Item::new("catalyst-vault-max-limit-capacity");
 pub const USED_LIMIT_CAPACITY: Item<U256> = Item::new("catalyst-vault-used-limit-capacity");
-pub const USED_LIMIT_CAPACITY_TIMESTAMP: Item<Uint64> = Item::new("catalyst-vault-used-limit-capacity-timestamp");
+pub const USED_LIMIT_CAPACITY_TIMESTAMP_SECONDS: Item<Uint64> = Item::new("catalyst-vault-used-limit-capacity-timestamp");
 
 
-// TODO move to utils/similar?
-fn calc_keccak256(message: Vec<u8>) -> Vec<u8> {
-    let mut hasher = Keccak256::new();
-    hasher.update(message);
-    hasher.finalize().to_vec()
-}
 
 // Redefine the types used by the 'factory' for queries (the factory contract cannot be imported by this contract, 
 // as it would create a cyclic dependency)
@@ -112,11 +106,15 @@ pub fn calc_limit_capacity(
 
     let max_limit_capacity = MAX_LIMIT_CAPACITY.load(deps.storage)?;
     let used_limit_capacity = USED_LIMIT_CAPACITY.load(deps.storage)?;
-    let used_limit_capacity_timestamp = USED_LIMIT_CAPACITY_TIMESTAMP.load(deps.storage)?;
+    let used_limit_capacity_timestamp = USED_LIMIT_CAPACITY_TIMESTAMP_SECONDS.load(deps.storage)?;
 
     let released_limit_capacity = max_limit_capacity
         .checked_mul(
-            U256::from(time.minus_nanos(used_limit_capacity_timestamp.into()).seconds())  //TODO use seconds instead of nanos (overflow wise)  //TODO if the provided 'time' is correct, the time difference is always positive. But what if it is not correct? 
+            U256::from(
+                time.seconds()
+                    .checked_sub(used_limit_capacity_timestamp.into())              // Using 'checked_sub' in case the provided 'time' is less than the saved timestamp (implementation errors) 
+                    .ok_or(ContractError::ArithmeticError {})?
+                ) 
         )?.div(DECAY_RATE);
 
         if used_limit_capacity <= released_limit_capacity {
@@ -148,10 +146,10 @@ pub fn update_limit_capacity(
     }
 
     let new_capacity = capacity - amount;
-    let timestamp = current_time.nanos();
+    let timestamp = current_time.seconds();
 
     USED_LIMIT_CAPACITY.save(deps.storage, &new_capacity)?;
-    USED_LIMIT_CAPACITY_TIMESTAMP.save(deps.storage, &timestamp.into())?;
+    USED_LIMIT_CAPACITY_TIMESTAMP_SECONDS.save(deps.storage, &timestamp.into())?;
 
     Ok(())
 }
