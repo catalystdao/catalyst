@@ -71,9 +71,6 @@ pub enum ContractError {
     #[error("Invalid expiration")]
     InvalidExpiration {},
 
-    #[error("Invalid zero amount")]
-    InvalidZeroAmount {},
-
     #[error("Allowance is expired")]
     Expired {},
 
@@ -95,19 +92,11 @@ impl From<cw20_base::ContractError> for ContractError {
             cw20_base::ContractError::Unauthorized {} => ContractError::Unauthorized {},
             cw20_base::ContractError::CannotSetOwnAccount {} => ContractError::CannotSetOwnAccount {},
             cw20_base::ContractError::InvalidExpiration {} => ContractError::InvalidExpiration {},
-            cw20_base::ContractError::InvalidZeroAmount {} => ContractError::InvalidZeroAmount {},
-            cw20_base::ContractError::Expired {} => ContractError::Expired {},
             cw20_base::ContractError::NoAllowance {} => ContractError::NoAllowance {},
             cw20_base::ContractError::CannotExceedCap {} => ContractError::CannotExceedCap {},
-            // This should never happen, as this contract doesn't use logo
-            cw20_base::ContractError::LogoTooBig {}
-            | cw20_base::ContractError::InvalidPngHeader {}
-            | cw20_base::ContractError::InvalidXmlPreamble {} => {
-                ContractError::Std(StdError::generic_err(err.to_string()))
-            }
-            cw20_base::ContractError::DuplicateInitialBalanceAddresses {} => {
-                ContractError::DuplicateInitialBalanceAddresses {}
-            }
+            _ => ContractError::Error("cw20 error.".to_string())    // Match all other cw20_base errors for completeness. None of these
+                                                                    // are expected to be encountered by the vaults (including the deprecated 
+                                                                    // InvalidZeroAmount variant)
         }
     }
 }
