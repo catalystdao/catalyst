@@ -1453,7 +1453,7 @@ pub fn query_get_limit_capacity(
 
     Ok(
         GetLimitCapacityResponse {
-            capacity: get_limit_capacity(&deps, env)?
+            capacity: get_limit_capacity(&deps, env.block.time)?
         }
     )
 

@@ -99,7 +99,7 @@ pub fn ready(deps: &Deps) -> StdResult<bool> {
 }
 
 
-pub fn calc_limit_capacity(
+pub fn get_limit_capacity(
     deps: &Deps,
     time: Timestamp
 ) -> Result<U256, ContractError> {
@@ -138,8 +138,7 @@ pub fn update_limit_capacity(
     amount: U256
 ) -> Result<(), ContractError> {
 
-    //TODO EVM mismatch
-    let capacity = calc_limit_capacity(&deps.as_ref(), current_time)?;
+    let capacity = get_limit_capacity(&deps.as_ref(), current_timestamp)?;
 
     if amount > capacity {
         return Err(
@@ -426,14 +425,6 @@ pub fn setup(
 }
 
 
-pub fn get_limit_capacity(
-    deps: &Deps,
-    env: Env
-) -> Result<U256, ContractError> {
-
-    calc_limit_capacity(deps, env.block.time)
-
-}
 
 
 pub fn create_asset_escrow(
