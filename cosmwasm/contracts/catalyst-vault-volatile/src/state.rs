@@ -1,6 +1,6 @@
 use cosmwasm_std::{Addr, Uint128, DepsMut, Env, MessageInfo, Response, StdResult, CosmosMsg, to_binary, Deps, Binary, Uint64};
 use cw20::{Cw20ExecuteMsg, Cw20QueryMsg, BalanceResponse};
-use cw20_base::{contract::{execute_mint, execute_burn}};
+use cw20_base::contract::{execute_mint, execute_burn};
 use cw_storage_plus::{Item, Map};
 use catalyst_types::{U256, AsI256, I256, AsU256};
 use fixed_point_math::{LN2, mul_wad_down, self, ln_wad, WAD, exp_wad};
@@ -11,7 +11,7 @@ use catalyst_vault_common::{
         collect_governance_fee_message, compute_send_asset_hash, compute_send_liquidity_hash, create_asset_escrow,
         create_liquidity_escrow, on_send_asset_success, on_send_liquidity_success, total_supply, get_limit_capacity, USED_LIMIT_CAPACITY_TIMESTAMP, FACTORY, factory_owner,
     },
-    ContractError, msg::{CalcSendAssetResponse, CalcReceiveAssetResponse, CalcLocalSwapResponse, GetLimitCapacityResponse}, event::{local_swap_event, send_asset_event, receive_asset_event, send_liquidity_event, receive_liquidity_event, deposit_event, withdraw_event}
+    ContractError, msg::{CalcSendAssetResponse, CalcReceiveAssetResponse, CalcLocalSwapResponse, GetLimitCapacityResponse}, event::{local_swap_event, send_asset_event, receive_asset_event, send_liquidity_event, receive_liquidity_event, deposit_event, withdraw_event, cw20_response_to_standard_event}
 };
 use std::ops::Div;
 
@@ -137,7 +137,7 @@ pub fn initialize_swap_curves(
         funds: vec![],
     };
     let minted_amount = INITIAL_MINT_AMOUNT;
-    execute_mint(
+    let mint_response = execute_mint(
         deps.branch(),
         env.clone(),
         execute_mint_info,
@@ -145,7 +145,6 @@ pub fn initialize_swap_curves(
         minted_amount
     )?;
 
-    //TODO include attributes of the execute_mint response in this response?
     Ok(
         Response::new()
             .add_event(
@@ -153,6 +152,11 @@ pub fn initialize_swap_curves(
                     depositor,
                     minted_amount,
                     assets_balances
+                )
+            )
+            .add_event(
+                cw20_response_to_standard_event(
+                    mint_response
                 )
             )
     )
@@ -262,12 +266,16 @@ pub fn deposit_mixed(
 
     Ok(Response::new()
         .add_messages(transfer_msgs)
-        .add_events(mint_response.events)                           // Add mint events //TODO overhaul
         .add_event(
             deposit_event(
                 info.sender.to_string(),
                 out,
                 deposit_amounts
+            )
+        )
+        .add_event(
+            cw20_response_to_standard_event(
+                mint_response
             )
         )
     )
@@ -341,12 +349,16 @@ pub fn withdraw_all(
 
     Ok(Response::new()
         .add_messages(transfer_msgs)
-        .add_events(burn_response.events)                           // Add burn events //TODO overhaul
         .add_event(
             withdraw_event(
                 info.sender.to_string(),
                 vault_tokens,
                 withdraw_amounts
+            )
+        )
+        .add_event(
+            cw20_response_to_standard_event(
+                burn_response
             )
         )
     )
@@ -471,12 +483,16 @@ pub fn withdraw_mixed(
 
     Ok(Response::new()
         .add_messages(transfer_msgs)
-        .add_events(burn_response.events)                           // Add burn events //TODO overhaul
         .add_event(
             withdraw_event(
                 info.sender.to_string(),
                 vault_tokens,
                 withdraw_amounts
+            )
+        )
+        .add_event(
+            cw20_response_to_standard_event(
+                burn_response
             )
         )
     )
@@ -809,7 +825,7 @@ pub fn send_liquidity(
         + U256::from(escrowed_vault_tokens.u128());        // Addition is overflow safe because of casting into U256
 
     // Burn the vault tokens of the sender
-    execute_burn(deps.branch(), env.clone(), info, amount)?;
+    let burn_response = execute_burn(deps.branch(), env.clone(), info, amount)?;
 
     // Derive the weight sum (w_sum) from the security limit capacity
     let w_sum = MAX_LIMIT_CAPACITY.load(deps.storage)? / fixed_point_math::LN2;
@@ -874,6 +890,11 @@ pub fn send_liquidity(
                 min_vault_tokens,
                 min_reference_asset,
                 u
+            )
+        )
+        .add_event(
+            cw20_response_to_standard_event(
+                burn_response
             )
         )
     )
@@ -1019,7 +1040,11 @@ pub fn receive_liquidity(
                 from_block_number_mod
             )
         )
-        .add_events(mint_response.events)       //TODO overhaul
+        .add_event(
+            cw20_response_to_standard_event(
+                mint_response
+            )
+        )
     )
 }
 

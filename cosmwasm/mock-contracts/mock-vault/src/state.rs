@@ -96,7 +96,6 @@ pub fn initialize_swap_curves(
         minted_amount
     )?;
 
-    //TODO include attributes of the execute_mint response in this response?
     Ok(
         Response::new()
             .add_attribute("to_account", depositor)

@@ -10,7 +10,7 @@ use catalyst_types::{U256, u256};
 use fixed_point_math::mul_wad_down;
 use sha3::{Digest, Keccak256};
 
-use crate::{ContractError, msg::{ChainInterfaceResponse, SetupMasterResponse, ReadyResponse, OnlyLocalResponse, AssetsResponse, WeightResponse, VaultFeeResponse, GovernanceFeeShareResponse, FeeAdministratorResponse, TotalEscrowedAssetResponse, TotalEscrowedLiquidityResponse, AssetEscrowResponse, LiquidityEscrowResponse, VaultConnectionStateResponse, FactoryResponse, FactoryOwnerResponse}, event::{send_asset_success_event, send_asset_failure_event, send_liquidity_success_event, send_liquidity_failure_event, finish_setup_event, set_fee_administrator_event, set_vault_fee_event, set_governance_fee_share_event, set_connection_event}};
+use crate::{ContractError, msg::{ChainInterfaceResponse, SetupMasterResponse, ReadyResponse, OnlyLocalResponse, AssetsResponse, WeightResponse, VaultFeeResponse, GovernanceFeeShareResponse, FeeAdministratorResponse, TotalEscrowedAssetResponse, TotalEscrowedLiquidityResponse, AssetEscrowResponse, LiquidityEscrowResponse, VaultConnectionStateResponse, FactoryResponse, FactoryOwnerResponse}, event::{send_asset_success_event, send_asset_failure_event, send_liquidity_success_event, send_liquidity_failure_event, finish_setup_event, set_fee_administrator_event, set_vault_fee_event, set_governance_fee_share_event, set_connection_event, cw20_response_to_standard_event}};
 
 
 // Vault Constants
@@ -684,7 +684,6 @@ pub fn on_send_liquidity_failure(
 
     Ok(
         Response::new()
-            .add_attributes(mint_response.attributes)   //TODO better way to do this?
             .add_event(
                 send_liquidity_failure_event(
                     channel_id,
@@ -692,6 +691,11 @@ pub fn on_send_liquidity_failure(
                     u,
                     amount,
                     block_number_mod
+                )
+            )
+            .add_event(
+                cw20_response_to_standard_event(
+                    mint_response
                 )
             )
     )

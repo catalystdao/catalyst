@@ -1,4 +1,4 @@
-use cosmwasm_std::{Uint128, Event, Binary, Uint64};
+use cosmwasm_std::{Uint128, Event, Binary, Uint64, Response};
 use catalyst_types::U256;
 
 pub fn local_swap_event(
@@ -231,4 +231,9 @@ pub fn format_vec_for_event<T: ToString>(vec: Vec<T>) -> String {
         .iter()
         .map(T::to_string)
         .collect::<Vec<String>>().join(", ")
+}
+
+pub fn cw20_response_to_standard_event(response: Response) -> Event {
+    Event::new("vault-token")
+        .add_attributes(response.attributes)
 }
