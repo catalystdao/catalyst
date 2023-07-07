@@ -1349,7 +1349,11 @@ pub fn receive_liquidity(
     // Check and update the security limit
     // If units >= n_weighted_balance_ampped, then they can purchase more than 50% of the vault.
     if n_weighted_balance_ampped <= units {
-        return Err(ContractError::SecurityLimitExceeded { amount: units, capacity: n_weighted_balance_ampped }) //TODO review error
+        return Err(
+            ContractError::SecurityLimitExceeded {
+                overflow: units.wrapping_sub(n_weighted_balance_ampped)     // 'wrapping_sub' is safe, as 'units' >= n_weighted_balance_ampped
+            }
+        )
     }
 
     // Otherwise calculate the vault_token_equivalent of the provided units to check if the limit is

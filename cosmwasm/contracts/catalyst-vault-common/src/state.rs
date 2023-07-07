@@ -142,7 +142,11 @@ pub fn update_limit_capacity(
     let capacity = calc_limit_capacity(&deps.as_ref(), current_time)?;
 
     if amount > capacity {
-        return Err(ContractError::SecurityLimitExceeded { amount, capacity });
+        return Err(
+            ContractError::SecurityLimitExceeded {
+                overflow: amount.wrapping_sub(capacity)     // 'wrapping_sub' safe, as 'amount' > 'capacity'
+            }
+        );
     }
 
     let new_capacity = capacity - amount;

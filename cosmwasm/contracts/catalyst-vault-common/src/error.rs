@@ -42,7 +42,7 @@ pub enum ContractError {
     InvalidWeight {},
 
     #[error("Security limit exceeded")]
-    SecurityLimitExceeded { amount: U256, capacity: U256 }, //TODO EVM mismatch - replace with 'overflow'
+    SecurityLimitExceeded { overflow: U256 },
 
     #[error("Return insufficient")]
     ReturnInsufficient { out: Uint128, min_out: Uint128 },
