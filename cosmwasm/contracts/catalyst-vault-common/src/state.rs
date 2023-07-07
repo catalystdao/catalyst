@@ -367,19 +367,19 @@ pub fn collect_governance_fee_message(
 pub fn setup(
     deps: &mut DepsMut,
     env: &Env,
+    info: MessageInfo,
     name: String,
     symbol: String,
     chain_interface: Option<String>,
     vault_fee: Uint64,
     governance_fee_share: Uint64,
     fee_administrator: String,
-    setup_master: String,
-    factory: Addr             //TODO EVM mismatch   //TODO pass 'info: MessageInfo' instead (do not leave it up to the vault implementation)
+    setup_master: String
 ) -> Result<Response, ContractError> {
 
     FACTORY.save(
         deps.storage,
-        &factory
+        &info.sender        // Set the 'factory' as the sender of the transaction
     )?;
 
     SETUP_MASTER.save(
