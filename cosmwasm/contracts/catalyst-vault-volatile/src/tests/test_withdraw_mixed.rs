@@ -177,7 +177,7 @@ mod test_volatile_withdraw_mixed {
         // Verify the action fails
         assert!(matches!(
             response_result.err().unwrap().downcast().unwrap(),
-            ContractError::WithdrawRatioNotZero { ratio: _ }
+            ContractError::WithdrawRatioNotZero {}
         ));
     
 
@@ -600,8 +600,7 @@ mod test_volatile_withdraw_mixed {
         // Make sure the transaction fails
         assert!(matches!(
             response_result.err().unwrap().downcast().unwrap(),
-            ContractError::WithdrawRatioNotZero { ratio: err_ratio }
-                if err_ratio == Uint64::new((0.5 * 1e18) as u64)
+            ContractError::WithdrawRatioNotZero {}
         ));
 
 

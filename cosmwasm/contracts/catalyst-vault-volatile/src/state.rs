@@ -424,7 +424,7 @@ pub fn withdraw_mixed(
 
                 // There should not be a non-zero withdraw ratio after a withdraw ratio of 1 (protect against user error)
                 if *asset_withdraw_ratio != Uint64::zero() {
-                    return Err(ContractError::WithdrawRatioNotZero { ratio: *asset_withdraw_ratio }) 
+                    return Err(ContractError::WithdrawRatioNotZero {}) 
                 };
 
                 // Check that the minimum output is honoured.

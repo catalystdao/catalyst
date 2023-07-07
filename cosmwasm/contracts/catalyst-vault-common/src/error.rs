@@ -54,7 +54,7 @@ pub enum ContractError {
     VaultHasNoInterface {},
 
     #[error("A non zero withdraw ratio is specified after all units have been consumed.")]
-    WithdrawRatioNotZero { ratio: Uint64 },    //TODO EVM mismatch
+    WithdrawRatioNotZero {},
 
     #[error("Not all withdrawal units have been consumed after all assets have been processed.")]
     UnusedUnitsAfterWithdrawal { units: U256 },
