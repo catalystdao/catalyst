@@ -32,7 +32,7 @@ pub fn send_asset_event(
         .add_attribute("to_vault", to_vault.to_base64())
         .add_attribute("to_account", to_account.to_base64())
         .add_attribute("from_asset", from_asset)
-        .add_attribute("to_asset_index", to_asset_index.to_string())    //TODO format
+        .add_attribute("to_asset_index", to_asset_index.to_string())
         .add_attribute("from_amount", from_amount)
         .add_attribute("min_out", min_out)
         .add_attribute("units", units)
@@ -59,7 +59,7 @@ pub fn receive_asset_event(
         .add_attribute("to_amount", to_amount)
         .add_attribute("from_amount", from_amount)
         .add_attribute("from_asset", from_asset.to_base64())
-        .add_attribute("source_block_number_mod", source_block_number_mod.to_string())  //TODO format   //TODO should be 'from' and not 'source'
+        .add_attribute("source_block_number_mod", source_block_number_mod.to_string())
 }
 
 pub fn send_liquidity_event(
@@ -97,7 +97,7 @@ pub fn receive_liquidity_event(
         .add_attribute("units", units)
         .add_attribute("to_amount", to_amount)
         .add_attribute("from_amount", from_amount)
-        .add_attribute("source_block_number_mod", source_block_number_mod.to_string())  //TODO format   //TODO should be 'from' and not 'source'
+        .add_attribute("source_block_number_mod", source_block_number_mod.to_string())
 }
 
 pub fn deposit_event(
@@ -136,7 +136,7 @@ pub fn send_asset_success_event(
         .add_attribute("units", units)
         .add_attribute("escrow_amount", escrow_amount)
         .add_attribute("asset", asset)
-        .add_attribute("block_number_mod", block_number_mod.to_string())    //TODO format
+        .add_attribute("block_number_mod", block_number_mod.to_string())
 }
 
 pub fn send_asset_failure_event(
@@ -153,7 +153,7 @@ pub fn send_asset_failure_event(
         .add_attribute("units", units)
         .add_attribute("escrow_amount", escrow_amount)
         .add_attribute("asset", asset)
-        .add_attribute("block_number_mod", block_number_mod.to_string())    //TODO format
+        .add_attribute("block_number_mod", block_number_mod.to_string())
 }
 
 pub fn send_liquidity_success_event(
@@ -168,7 +168,7 @@ pub fn send_liquidity_success_event(
         .add_attribute("to_account", to_account.to_base64())
         .add_attribute("units", units)
         .add_attribute("escrow_amount", escrow_amount)
-        .add_attribute("block_number_mod", block_number_mod.to_string())    //TODO format
+        .add_attribute("block_number_mod", block_number_mod.to_string())
 }
 
 pub fn send_liquidity_failure_event(
@@ -183,7 +183,7 @@ pub fn send_liquidity_failure_event(
         .add_attribute("to_account", to_account.to_base64())
         .add_attribute("units", units)
         .add_attribute("escrow_amount", escrow_amount)
-        .add_attribute("block_number_mod", block_number_mod.to_string())    //TODO format
+        .add_attribute("block_number_mod", block_number_mod.to_string())
 }
 
 pub fn finish_setup_event() -> Event {
@@ -213,20 +213,18 @@ pub fn set_governance_fee_share_event(
 
 pub fn set_connection_event(
     channel_id: String,
-    to_vault: Binary,
+    vault: Binary,
     state: bool
 ) -> Event {
     Event::new("set-connection")
         .add_attribute("channel_id", channel_id)
-        .add_attribute("to_vault", to_vault.to_base64())
+        .add_attribute("vault", vault.to_base64())
         .add_attribute("state", state.to_string())
 }
 
 
 // Misc helpers *****************************************************************************************************************
-//TODO move helper somewhere else? (To reuse across implementations)
 pub fn format_vec_for_event<T: ToString>(vec: Vec<T>) -> String {
-    //TODO review output format
     vec
         .iter()
         .map(T::to_string)

@@ -5,6 +5,7 @@ use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum ContractError {
+
     #[error("{0}")]
     Std(#[from] StdError),
 
@@ -20,34 +21,34 @@ pub enum ContractError {
     #[error("Invalid assets (invalid number of assets or invalid asset address)")]
     InvalidAssets {},
 
-    #[error("Invalid parameters {reason}")]
+    #[error("Invalid parameters: {reason}")]
     InvalidParameters { reason: String },
 
     #[error("The requested asset does not form part of the vault.")]
     AssetNotFound {},
 
-    #[error("Amplification must be set to 1e18 for non-amplified vaults.")]
+    #[error("Invalid amplification value.")]
     InvalidAmplification {},
 
-    #[error("Invalid vault fee")]
+    #[error("Invalid vault fee: requested fee is {requested_fee}, max allowed fee is {max_fee}.")]
     InvalidVaultFee { requested_fee: Uint64, max_fee: Uint64 },
 
-    #[error("Invalid governance fee")]
+    #[error("Invalid governance fee: requested fee is {requested_fee}, max allowed fee is {max_fee}.")]
     InvalidGovernanceFee { requested_fee: Uint64, max_fee: Uint64 },
 
-    #[error("Zero balance")]
+    #[error("Invalid provided zero balance.")]
     InvalidZeroBalance {},
 
-    #[error("Weight")]
+    #[error("Invalid weight.")]
     InvalidWeight {},
 
-    #[error("Security limit exceeded")]
+    #[error("Security limit exceeded by {overflow} amount.")]
     SecurityLimitExceeded { overflow: U256 },
 
-    #[error("Return insufficient")]
+    #[error("Return insufficient: output is {out}, minimum output is {min_out}.")]
     ReturnInsufficient { out: Uint128, min_out: Uint128 },
 
-    #[error("Vault not connected")]
+    #[error("Vault not connected (channel id: {channel_id}, vault: {vault}).")]
     VaultNotConnected { channel_id: String, vault: Binary },
 
     #[error("The vault only allows for local swaps, as it has no cross chain interface.")]
@@ -56,11 +57,11 @@ pub enum ContractError {
     #[error("A non zero withdraw ratio is specified after all units have been consumed.")]
     WithdrawRatioNotZero {},
 
-    #[error("Not all withdrawal units have been consumed after all assets have been processed.")]
+    #[error("Not all withdrawal units have been consumed after all assets have been processed ({units} units left).")]
     UnusedUnitsAfterWithdrawal { units: U256 },
 
     #[error("Target time too short/long")]
-    InvalidTargetTime,
+    InvalidTargetTime {},
 
 
 
@@ -96,7 +97,7 @@ impl From<cw20_base::ContractError> for ContractError {
             cw20_base::ContractError::CannotExceedCap {} => ContractError::CannotExceedCap {},
             _ => ContractError::Error("cw20 error.".to_string())    // Match all other cw20_base errors for completeness. None of these
                                                                     // are expected to be encountered by the vaults (including the deprecated 
-                                                                    // InvalidZeroAmount variant)
+                                                                    // InvalidZeroAmount variant).
         }
     }
 }
