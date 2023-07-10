@@ -69,7 +69,7 @@ mod test_amplified_withdraw_mixed {
         // Verify the returned assets
         let observed_returns = get_response_attribute::<String>(
             result.events[1].clone(),
-            "assets"
+            "withdraw_amounts"
         ).unwrap()
             .split(", ")
             .map(Uint128::from_str)
@@ -202,7 +202,7 @@ mod test_amplified_withdraw_mixed {
         // Verify the returned assets
         let observed_returns = get_response_attribute::<String>(
             result.events[1].clone(),
-            "assets"
+            "withdraw_amounts"
         ).unwrap()
             .split(", ")
             .map(Uint128::from_str)

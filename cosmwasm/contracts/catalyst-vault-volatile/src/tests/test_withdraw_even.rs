@@ -63,7 +63,7 @@ mod test_volatile_withdraw_even {
         // Verify the returned assets
         let observed_returns = get_response_attribute::<String>(
             result.events[1].clone(),
-            "assets"
+            "withdraw_amounts"
         ).unwrap()
             .split(", ")
             .map(Uint128::from_str)
@@ -163,7 +163,7 @@ mod test_volatile_withdraw_even {
         // Verify the returned assets
         let observed_returns = get_response_attribute::<String>(
             result.events[1].clone(),
-            "assets"
+            "withdraw_amounts"
         ).unwrap()
             .split(", ")
             .map(Uint128::from_str)

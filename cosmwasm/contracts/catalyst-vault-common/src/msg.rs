@@ -66,66 +66,6 @@ pub enum ExecuteMsg<T> {
         state: bool
     },
 
-    /// Handle the confirmation of a successful asset swap.
-    /// * `channel_id` - The swap's channel id.
-    /// * `to_account` - The recipient of the swap output.
-    /// * `u` - The units value of the swap.
-    /// * `escrow_amount` - The escrowed asset amount.
-    /// * `asset` - The swap source asset.
-    /// * `block_number_mod` - The block number at which the swap transaction was commited (modulo 2^32).
-    OnSendAssetSuccess {
-        channel_id: String,
-        to_account: Binary,
-        u: U256,
-        amount: Uint128,
-        asset: String,
-        block_number_mod: u32
-    },
-
-    /// Handle the confirmation of an unsuccessful asset swap.
-    /// * `channel_id` - The swap's channel id.
-    /// * `to_account` - The recipient of the swap output.
-    /// * `u` - The units value of the swap.
-    /// * `escrow_amount` - The escrowed asset amount.
-    /// * `asset` - The swap source asset.
-    /// * `block_number_mod` - The block number at which the swap transaction was commited (modulo 2^32).
-    OnSendAssetFailure {
-        channel_id: String,
-        to_account: Binary,
-        u: U256,
-        amount: Uint128,
-        asset: String,
-        block_number_mod: u32
-    },
-
-    /// Handle the confirmation of a successful liquidity swap.
-    /// * `channel_id` - The swap's channel id.
-    /// * `to_account` - The recipient of the swap output.
-    /// * `u` - The units value of the swap.
-    /// * `escrow_amount` - The escrowed liquidity amount.
-    /// * `block_number_mod` - The block number at which the swap transaction was commited (modulo 2^32).
-    OnSendLiquiditySuccess {
-        channel_id: String,
-        to_account: Binary,
-        u: U256,
-        amount: Uint128,
-        block_number_mod: u32
-    },
-
-    /// Handle the confirmation of an unsuccessful liquidity swap.
-    /// * `channel_id` - The swap's channel id.
-    /// * `to_account` - The recipient of the swap output.
-    /// * `u` - The units value of the swap.
-    /// * `escrow_amount` - The escrowed liquidity amount.
-    /// * `block_number_mod` - The block number at which the swap transaction was commited (modulo 2^32).
-    OnSendLiquidityFailure {
-        channel_id: String,
-        to_account: Binary,
-        u: U256,
-        amount: Uint128,
-        block_number_mod: u32
-    },
-
     /// Deposit assets on the vault.
     /// * `deposit_amounts` - The asset amounts to be deposited.
     /// * `min_out` - The minimum output of vault tokens to get in return.
@@ -255,6 +195,66 @@ pub enum ExecuteMsg<T> {
         from_block_number_mod: u32,
         calldata_target: Option<Addr>,
         calldata: Option<Binary>
+    },
+
+    /// Handle the confirmation of a successful asset swap.
+    /// * `channel_id` - The swap's channel id.
+    /// * `to_account` - The recipient of the swap output.
+    /// * `u` - The units value of the swap.
+    /// * `escrow_amount` - The escrowed asset amount.
+    /// * `asset` - The swap source asset.
+    /// * `block_number_mod` - The block number at which the swap transaction was commited (modulo 2^32).
+    OnSendAssetSuccess {
+        channel_id: String,
+        to_account: Binary,
+        u: U256,
+        amount: Uint128,
+        asset: String,
+        block_number_mod: u32
+    },
+
+    /// Handle the confirmation of an unsuccessful asset swap.
+    /// * `channel_id` - The swap's channel id.
+    /// * `to_account` - The recipient of the swap output.
+    /// * `u` - The units value of the swap.
+    /// * `escrow_amount` - The escrowed asset amount.
+    /// * `asset` - The swap source asset.
+    /// * `block_number_mod` - The block number at which the swap transaction was commited (modulo 2^32).
+    OnSendAssetFailure {
+        channel_id: String,
+        to_account: Binary,
+        u: U256,
+        amount: Uint128,
+        asset: String,
+        block_number_mod: u32
+    },
+
+    /// Handle the confirmation of a successful liquidity swap.
+    /// * `channel_id` - The swap's channel id.
+    /// * `to_account` - The recipient of the swap output.
+    /// * `u` - The units value of the swap.
+    /// * `escrow_amount` - The escrowed liquidity amount.
+    /// * `block_number_mod` - The block number at which the swap transaction was commited (modulo 2^32).
+    OnSendLiquiditySuccess {
+        channel_id: String,
+        to_account: Binary,
+        u: U256,
+        amount: Uint128,
+        block_number_mod: u32
+    },
+
+    /// Handle the confirmation of an unsuccessful liquidity swap.
+    /// * `channel_id` - The swap's channel id.
+    /// * `to_account` - The recipient of the swap output.
+    /// * `u` - The units value of the swap.
+    /// * `escrow_amount` - The escrowed liquidity amount.
+    /// * `block_number_mod` - The block number at which the swap transaction was commited (modulo 2^32).
+    OnSendLiquidityFailure {
+        channel_id: String,
+        to_account: Binary,
+        u: U256,
+        amount: Uint128,
+        block_number_mod: u32
     },
 
     /// Field to allow vault implementations to extend the ExecuteMsg with custom execute calls.
