@@ -9,7 +9,7 @@ use catalyst_vault_common::{
         ASSETS, MAX_ASSETS, WEIGHTS, INITIAL_MINT_AMOUNT, VAULT_FEE, MAX_LIMIT_CAPACITY, USED_LIMIT_CAPACITY, CHAIN_INTERFACE,
         TOTAL_ESCROWED_LIQUIDITY, TOTAL_ESCROWED_ASSETS, is_connected, update_limit_capacity,
         collect_governance_fee_message, compute_send_asset_hash, compute_send_liquidity_hash, create_asset_escrow,
-        create_liquidity_escrow, on_send_asset_success, total_supply, get_limit_capacity, USED_LIMIT_CAPACITY_TIMESTAMP_SECONDS, FACTORY, on_send_asset_failure, on_send_liquidity_failure, factory_owner,
+        create_liquidity_escrow, on_send_asset_success, total_supply, get_limit_capacity, FACTORY, on_send_asset_failure, on_send_liquidity_failure, factory_owner, initialize_escrow_totals, initialize_limit_capacity,
     },
     ContractError, msg::{CalcSendAssetResponse, CalcReceiveAssetResponse, CalcLocalSwapResponse, GetLimitCapacityResponse}, event::{local_swap_event, send_asset_event, receive_asset_event, send_liquidity_event, receive_liquidity_event, deposit_event, withdraw_event, cw20_response_to_standard_event}
 };
@@ -118,31 +118,23 @@ pub fn initialize_swap_curves(
             Ok(())
         })?;
         
-    AMP_UPDATE_TIMESTAMP_SECONDS.save(deps.storage, &Uint64::zero())?;         //TODO move intialization to 'setup'?
-    AMP_UPDATE_FINISH_TIMESTAMP_SECONDS.save(deps.storage, &Uint64::zero())?;  //TODO move intialization to 'setup'?
+    AMP_UPDATE_TIMESTAMP_SECONDS.save(deps.storage, &Uint64::zero())?;
+    AMP_UPDATE_FINISH_TIMESTAMP_SECONDS.save(deps.storage, &Uint64::zero())?;
 
-    // Compute the security limit
-    MAX_LIMIT_CAPACITY.save(
-        deps.storage,
-        &(weights
-            .iter()
-            .zip(&assets_balances)
-            .fold(
-                U256::zero(),
-                |acc, (next_weight, next_balance)| {
-                    acc + U256::from(*next_weight).wrapping_mul(U256::from(*next_balance))     // Overflow safe, as U256 >> u64*Uint128
-                }
-            ))
-    )?;
-    USED_LIMIT_CAPACITY.save(deps.storage, &U256::zero())?;       //TODO move intialization to 'setup'?
-    USED_LIMIT_CAPACITY_TIMESTAMP_SECONDS.save(deps.storage, &Uint64::zero())?;   //TODO move intialization to 'setup'?
+    // Initialize the escrows
+    initialize_escrow_totals(deps, assets)?;
 
-    // Initialize escrow totals
-    assets
+    // Initialize the security limit
+    let max_limit_capacity = weights
         .iter()
-        .map(|asset| TOTAL_ESCROWED_ASSETS.save(deps.storage, asset, &Uint128::zero()))
-        .collect::<StdResult<Vec<_>>>()?;
-    TOTAL_ESCROWED_LIQUIDITY.save(deps.storage, &Uint128::zero())?;
+        .zip(&assets_balances)
+        .fold(
+            U256::zero(),
+            |acc, (next_weight, next_balance)| {
+                acc + U256::from(*next_weight).wrapping_mul(U256::from(*next_balance))     // Overflow safe, as U256 >> u64*Uint128
+            }
+        );
+    initialize_limit_capacity(deps, max_limit_capacity)?;
 
     // Initialize the unit tracker
     UNIT_TRACKER.save(deps.storage, &I256::zero())?;

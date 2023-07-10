@@ -184,6 +184,47 @@ pub fn setup(
 }
 
 
+/// Initialize the escrow totals storage variables.
+/// 
+/// # Arguments:
+/// * `assets` - The vault assets.
+/// 
+pub fn initialize_escrow_totals(
+    deps: &mut DepsMut,
+    assets: Vec<String>
+) -> Result<(), ContractError> {
+
+    assets
+        .iter()
+        .map(|asset| {
+            TOTAL_ESCROWED_ASSETS.save(deps.storage, asset, &Uint128::zero())
+        })
+        .collect::<StdResult<Vec<_>>>()?;
+
+    TOTAL_ESCROWED_LIQUIDITY.save(deps.storage, &Uint128::zero())?;
+
+    Ok(())
+}
+
+
+/// Initialize the security limit capacity storage variables.
+/// 
+/// # Arguments:
+/// * `max_limit_capacity` - The maximum limit capacity.
+/// 
+pub fn initialize_limit_capacity(
+    deps: &mut DepsMut,
+    max_limit_capacity: U256
+) -> Result<(), ContractError> {
+
+    MAX_LIMIT_CAPACITY.save(deps.storage, &max_limit_capacity)?;
+    USED_LIMIT_CAPACITY.save(deps.storage, &U256::zero())?;
+    USED_LIMIT_CAPACITY_TIMESTAMP_SECONDS.save(deps.storage, &Uint64::zero())?;
+
+    Ok(())
+}
+
+
 /// Finish the vault setup. This revokes the 'setup_master' authority.
 /// 
 /// **NOTE**: This function checks whether the sender of the transaction is the setup master.

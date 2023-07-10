@@ -9,7 +9,7 @@ use catalyst_vault_common::{
         ASSETS, MAX_ASSETS, WEIGHTS, INITIAL_MINT_AMOUNT, VAULT_FEE, MAX_LIMIT_CAPACITY, USED_LIMIT_CAPACITY, CHAIN_INTERFACE,
         TOTAL_ESCROWED_LIQUIDITY, TOTAL_ESCROWED_ASSETS, is_connected, update_limit_capacity,
         collect_governance_fee_message, compute_send_asset_hash, compute_send_liquidity_hash, create_asset_escrow,
-        create_liquidity_escrow, on_send_asset_success, on_send_liquidity_success, total_supply, get_limit_capacity, USED_LIMIT_CAPACITY_TIMESTAMP_SECONDS, FACTORY, factory_owner,
+        create_liquidity_escrow, on_send_asset_success, on_send_liquidity_success, total_supply, get_limit_capacity, FACTORY, factory_owner, initialize_limit_capacity, initialize_escrow_totals,
     },
     ContractError, msg::{CalcSendAssetResponse, CalcReceiveAssetResponse, CalcLocalSwapResponse, GetLimitCapacityResponse}, event::{local_swap_event, send_asset_event, receive_asset_event, send_liquidity_event, receive_liquidity_event, deposit_event, withdraw_event, cw20_response_to_standard_event}
 };
@@ -108,25 +108,17 @@ pub fn initialize_swap_curves(
             Ok(())
         })?;
     
-    WEIGHT_UPDATE_TIMESTAMP_SECONDS.save(deps.storage, &Uint64::zero())?;         //TODO move intialization to 'setup'?
-    WEIGHT_UPDATE_FINISH_TIMESTAMP_SECONDS.save(deps.storage, &Uint64::zero())?;  //TODO move intialization to 'setup'?
+    WEIGHT_UPDATE_TIMESTAMP_SECONDS.save(deps.storage, &Uint64::zero())?;
+    WEIGHT_UPDATE_FINISH_TIMESTAMP_SECONDS.save(deps.storage, &Uint64::zero())?;
 
-    // Compute the security limit
-    MAX_LIMIT_CAPACITY.save(
-        deps.storage,
-        &(LN2 * weights.iter().fold(
-            U256::zero(), |acc, next| acc + U256::from(*next)     // Overflow safe, as U256 >> u64    //TODO maths
-        ))
-    )?;
-    USED_LIMIT_CAPACITY.save(deps.storage, &U256::zero())?;       //TODO move intialization to 'setup'?
-    USED_LIMIT_CAPACITY_TIMESTAMP_SECONDS.save(deps.storage, &Uint64::zero())?;   //TODO move intialization to 'setup'?
+    // Initialize the escrows
+    initialize_escrow_totals(deps, assets)?;
 
-    // Initialize escrow totals
-    assets
-        .iter()
-        .map(|asset| TOTAL_ESCROWED_ASSETS.save(deps.storage, asset, &Uint128::zero()))
-        .collect::<StdResult<Vec<_>>>()?;
-    TOTAL_ESCROWED_LIQUIDITY.save(deps.storage, &Uint128::zero())?;
+    // Initialize the security limit
+    let weights_sum = weights.iter().map(|weight| U256::from(*weight)).sum();
+    let max_limit_capacity = LN2.checked_mul(weights_sum)?;
+    initialize_limit_capacity(deps, max_limit_capacity)?;
+
 
     // Mint vault tokens for the depositor
     // Make up a 'MessageInfo' with the sender set to this contract itself => this is to allow the use of the 'execute_mint'
