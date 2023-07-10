@@ -261,7 +261,7 @@ pub enum ExecuteMsg<T> {
     Custom (T),
 
 
-    // CW20 Implementation
+    // CW20 Implementation (base messages + 'approval' extension)
     // Refer to the cw20 package for a description on the following message definitions.
     Transfer {
         recipient: String,
