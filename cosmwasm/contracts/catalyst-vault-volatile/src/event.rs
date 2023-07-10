@@ -8,7 +8,5 @@ pub fn set_weights_event(
 ) -> Event {
     Event::new("set-weights")
     .add_attribute("target_timestamp", target_timestamp)
-    .add_attribute("target_weights", format_vec_for_event(
-        target_weights.iter().map(|weight| *weight).collect()      //TODO better approach? (make format_vec_for_event accept an iterator?)
-    ))
+    .add_attribute("target_weights", format_vec_for_event(target_weights))
 }

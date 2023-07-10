@@ -1,4 +1,4 @@
-use cosmwasm_std::{StdError, OverflowError, Uint64, Uint128, Binary, ConversionOverflowError};
+use cosmwasm_std::{StdError, OverflowError, Uint64, Uint128, Binary, ConversionOverflowError, DivideByZeroError};
 use catalyst_types::U256;
 use fixed_point_math::FixedPointMathError;
 use thiserror::Error;
@@ -114,6 +114,12 @@ impl From<ConversionOverflowError> for ContractError {
     }
 }
 
+impl From<DivideByZeroError> for ContractError {
+    fn from(_err: DivideByZeroError) -> Self {
+        ContractError::ArithmeticError {}
+    }
+}
+
 impl From<ContractError> for StdError {
     fn from(err: ContractError) -> StdError {
         StdError::GenericErr { msg: err.to_string() }
@@ -125,4 +131,3 @@ impl From<FixedPointMathError> for ContractError {
         ContractError::ArithmeticError {}
     }
 }
-

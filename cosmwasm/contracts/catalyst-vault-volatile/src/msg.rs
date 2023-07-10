@@ -2,9 +2,9 @@ use cosmwasm_schema::QueryResponses;
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Uint64, Uint128, Binary};
 use catalyst_types::U256;
-pub use catalyst_vault_common::msg::{InstantiateMsg, ExecuteMsg};
+pub use catalyst_vault_common::msg::InstantiateMsg;
 use catalyst_vault_common::msg::{
-    AssetEscrowResponse, AssetsResponse, CalcLocalSwapResponse, CalcReceiveAssetResponse, CalcSendAssetResponse,
+    ExecuteMsg, AssetEscrowResponse, AssetsResponse, CalcLocalSwapResponse, CalcReceiveAssetResponse, CalcSendAssetResponse,
     ChainInterfaceResponse, FeeAdministratorResponse, GetLimitCapacityResponse, GovernanceFeeShareResponse,
     LiquidityEscrowResponse, OnlyLocalResponse, VaultConnectionStateResponse, VaultFeeResponse, ReadyResponse,
     SetupMasterResponse, TotalEscrowedAssetResponse, TotalEscrowedLiquidityResponse, WeightResponse, FactoryResponse, FactoryOwnerResponse
@@ -12,12 +12,13 @@ use catalyst_vault_common::msg::{
 use cw20::{AllowanceResponse, BalanceResponse, TokenInfoResponse};
 
 
+// Extend Catalyst's base ExecuteMsg enum with custom messages
 #[cw_serde]
 pub enum VolatileExecuteExtension {
 
     SetWeights {
-        new_weights: Vec<Uint128>,
-        target_timestamp: Uint64   //TODO EVM mismatch (targetTime)
+        target_timestamp: Uint64,
+        new_weights: Vec<Uint128>
     },
 
 }
@@ -31,7 +32,7 @@ pub type VolatileExecuteMsg = ExecuteMsg<VolatileExecuteExtension>;
 pub enum QueryMsg {
 
 
-    // Common Queries
+    // Catalyst Base Queries
     #[returns(ChainInterfaceResponse)]
     ChainInterface {},
     #[returns(SetupMasterResponse)]
@@ -64,8 +65,8 @@ pub enum QueryMsg {
     GovernanceFeeShare {},
     #[returns(FeeAdministratorResponse)]
     FeeAdministrator {},
-    #[returns(CalcSendAssetResponse)]
 
+    #[returns(CalcSendAssetResponse)]
     CalcSendAsset {
         from_asset: String,
         amount: Uint128

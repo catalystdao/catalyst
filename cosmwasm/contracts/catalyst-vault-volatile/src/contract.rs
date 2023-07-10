@@ -21,12 +21,13 @@ use crate::state::{
     send_liquidity, receive_liquidity, query_calc_send_asset, query_calc_receive_asset, query_calc_local_swap, query_get_limit_capacity, query_target_weight, query_weights_update_finish_timestamp, on_send_asset_success_volatile, on_send_liquidity_success_volatile
 };
 
-
-// version info for migration info
+// Version information
 const CONTRACT_NAME: &str = "catalyst-vault-volatile";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 
+
+// Instantiation **********************************************************************************
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
@@ -55,6 +56,8 @@ pub fn instantiate(
 
 
 
+// Execution **************************************************************************************
+
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(
     mut deps: DepsMut,
@@ -62,6 +65,7 @@ pub fn execute(
     info: MessageInfo,
     msg: VolatileExecuteMsg,
 ) -> Result<Response, ContractError> {
+
     match msg {
 
         VolatileExecuteMsg::InitializeSwapCurves {
@@ -79,24 +83,31 @@ pub fn execute(
             depositor
         ),
 
-        VolatileExecuteMsg::FinishSetup {} => finish_setup(
+        VolatileExecuteMsg::FinishSetup {
+        } => finish_setup(
             &mut deps,
             info
         ),
 
-        VolatileExecuteMsg::SetFeeAdministrator { administrator } => set_fee_administrator(
+        VolatileExecuteMsg::SetFeeAdministrator {
+            administrator
+        } => set_fee_administrator(
             &mut deps,
             info,
             administrator
         ),
 
-        VolatileExecuteMsg::SetVaultFee { fee } => set_vault_fee(
+        VolatileExecuteMsg::SetVaultFee {
+            fee
+        } => set_vault_fee(
             &mut deps,
             info,
             fee
         ),
 
-        VolatileExecuteMsg::SetGovernanceFeeShare { fee } => set_governance_fee_share(
+        VolatileExecuteMsg::SetGovernanceFeeShare {
+            fee
+        } => set_governance_fee_share(
             &mut deps,
             info,
             fee
@@ -112,75 +123,6 @@ pub fn execute(
             channel_id,
             to_vault,
             state
-        ),
-
-        VolatileExecuteMsg::OnSendAssetSuccess {
-            channel_id,
-            to_account,
-            u,
-            amount,
-            asset,
-            block_number_mod
-        } => on_send_asset_success_volatile(        // ! Use the volatile specific 'on_send_asset_success'
-            &mut deps,
-            info,
-            channel_id,
-            to_account,
-            u,
-            amount,
-            asset,
-            block_number_mod
-        ),
-
-        VolatileExecuteMsg::OnSendAssetFailure {
-            channel_id,
-            to_account,
-            u,
-            amount,
-            asset,
-            block_number_mod
-        } => on_send_asset_failure(
-            &mut deps,
-            info,
-            channel_id,
-            to_account,
-            u,
-            amount,
-            asset,
-            block_number_mod
-        ),
-
-        VolatileExecuteMsg::OnSendLiquiditySuccess {
-            channel_id,
-            to_account,
-            u,
-            amount,
-            block_number_mod
-        } => on_send_liquidity_success_volatile(    // ! Use the volatile specific 'on_send_asset_success'
-            &mut deps,
-            info,
-            channel_id,
-            to_account,
-            u,
-            amount,
-            block_number_mod
-        ),
-
-        VolatileExecuteMsg::OnSendLiquidityFailure {
-            channel_id,
-            to_account,
-            u,
-            amount,
-            block_number_mod
-        } => on_send_liquidity_failure(
-            &mut deps,
-            env,
-            info,
-            channel_id,
-            to_account,
-            u,
-            amount,
-            block_number_mod
         ),
 
         VolatileExecuteMsg::DepositMixed {
@@ -337,15 +279,84 @@ pub fn execute(
             calldata
         ),
 
+        VolatileExecuteMsg::OnSendAssetSuccess {
+            channel_id,
+            to_account,
+            u,
+            amount,
+            asset,
+            block_number_mod
+        } => on_send_asset_success_volatile(        // ! Use the volatile specific 'on_send_asset_success'
+            &mut deps,
+            info,
+            channel_id,
+            to_account,
+            u,
+            amount,
+            asset,
+            block_number_mod
+        ),
+
+        VolatileExecuteMsg::OnSendAssetFailure {
+            channel_id,
+            to_account,
+            u,
+            amount,
+            asset,
+            block_number_mod
+        } => on_send_asset_failure(
+            &mut deps,
+            info,
+            channel_id,
+            to_account,
+            u,
+            amount,
+            asset,
+            block_number_mod
+        ),
+
+        VolatileExecuteMsg::OnSendLiquiditySuccess {
+            channel_id,
+            to_account,
+            u,
+            amount,
+            block_number_mod
+        } => on_send_liquidity_success_volatile(    // ! Use the volatile specific 'on_send_liquidity_success'
+            &mut deps,
+            info,
+            channel_id,
+            to_account,
+            u,
+            amount,
+            block_number_mod
+        ),
+
+        VolatileExecuteMsg::OnSendLiquidityFailure {
+            channel_id,
+            to_account,
+            u,
+            amount,
+            block_number_mod
+        } => on_send_liquidity_failure(
+            &mut deps,
+            env,
+            info,
+            channel_id,
+            to_account,
+            u,
+            amount,
+            block_number_mod
+        ),
+
         VolatileExecuteMsg::Custom(VolatileExecuteExtension::SetWeights {
-            new_weights,
-            target_timestamp
+            target_timestamp,
+            new_weights
         }) => set_weights(
             &mut deps,
             &env,
             info,
-            new_weights,
-            target_timestamp
+            target_timestamp,
+            new_weights
         ),
 
 
@@ -414,6 +425,8 @@ pub fn execute(
 }
 
 
+
+// Query ******************************************************************************************
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {

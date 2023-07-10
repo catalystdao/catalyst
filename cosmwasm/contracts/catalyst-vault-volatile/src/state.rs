@@ -38,7 +38,7 @@ pub fn initialize_swap_curves(
     depositor: String
 ) -> Result<Response, ContractError> {
 
-    // Check the caller is the Factory    //TODO does this make sense? Unlike on EVM, the 'factory' is not set as 'immutable', but rather it is set as the caller of 'instantiate'
+    // Check the caller is the Factory
     if info.sender != FACTORY.load(deps.storage)? {
         return Err(ContractError::Unauthorized {});
     }
@@ -49,7 +49,7 @@ pub fn initialize_swap_curves(
     }
 
     // Check that the amplification is correct (set to 1)
-    if amp != Uint64::new(10u64.pow(18)) {     //TODO maths WAD
+    if amp != Uint64::new(WAD.as_u64()) {
         return Err(ContractError::InvalidAmplification {})
     }
 
@@ -64,9 +64,6 @@ pub fn initialize_swap_curves(
         });
     }
 
-    // Validate the depositor address
-    deps.api.addr_validate(&depositor)?;    //TODO is this needed? Won't the address be validated by 'execute_mint` below?
-
     // Validate and save assets
     ASSETS.save(
         deps.storage,
@@ -80,17 +77,19 @@ pub fn initialize_swap_curves(
     // Query and validate the vault asset balances
     let assets_balances = assets.iter()
         .map(|asset| {
-            deps.querier.query_wasm_smart::<BalanceResponse>(
+
+            let balance = deps.querier.query_wasm_smart::<BalanceResponse>(
                 asset,
                 &Cw20QueryMsg::Balance { address: env.contract.address.to_string() }
-            ).map(|response| response.balance)
+            ).map(|response| response.balance)?;
+
+            if balance.is_zero() {
+                return Err(ContractError::InvalidZeroBalance {});
+            }
+
+            Ok(balance)
         })
-        .collect::<StdResult<Vec<Uint128>>>()?;
-    
-    //TODO merge this check within the above balance-query code
-    if assets_balances.iter().any(|balance| balance.is_zero()) {
-        return Err(ContractError::InvalidZeroBalance {});
-    }
+        .collect::<Result<Vec<Uint128>, ContractError>>()?;
 
     // Validate and save weights
     weights
@@ -133,7 +132,7 @@ pub fn initialize_swap_curves(
         deps.branch(),
         env.clone(),
         execute_mint_info,
-        depositor.clone(),
+        depositor.clone(),  // NOTE: the address is validated by the 'execute_mint' call
         minted_amount
     )?;
 
@@ -312,12 +311,13 @@ pub fn withdraw_all(
                 &Cw20QueryMsg::Balance { address: env.contract.address.to_string() }
             )?.balance - escrowed_balance;
 
-            //TODO use U256 for the calculation?
-            let withdraw_amount = (vault_asset_balance * vault_tokens) / effective_supply;
+            let withdraw_amount = U256::from(vault_asset_balance)
+                .wrapping_mul(U256::from(vault_tokens))
+                .div(U256::from(effective_supply))
+                .as_uint128();                      // Casting is safe, as 'effective_supply' is always >= 'vault_tokens'
 
             // Check that the minimum output is honoured.
             if *asset_min_out > withdraw_amount {
-                //TODO include in error the asset?
                 return Err(ContractError::ReturnInsufficient { out: withdraw_amount.clone(), min_out: *asset_min_out });
             };
 
@@ -503,8 +503,8 @@ pub fn local_swap(
 
     update_weights(deps, env.block.time)?;
 
-    let vault_fee: Uint128 = mul_wad_down(            //TODO alternative to not have to use U256 conversion? (or wrapper?)
-        U256::from(amount.u128()),
+    let vault_fee: Uint128 = mul_wad_down(
+        U256::from(amount),
         U256::from(VAULT_FEE.load(deps.storage)?)
     )?.as_uint128();    // Casting safe, as fee < amount, and amount is Uint128
 
@@ -598,7 +598,7 @@ pub fn send_asset(
 
     update_weights(deps, env.block.time)?;
 
-    let vault_fee: Uint128 = mul_wad_down(            //TODO alternative to not have to use U256 conversion? (or wrapper?)
+    let vault_fee: Uint128 = mul_wad_down(
         U256::from(amount.u128()),
         U256::from(VAULT_FEE.load(deps.storage)?)
     )?.as_uint128();    // Casting safe, as fee < amount, and amount is Uint128
@@ -870,7 +870,6 @@ pub fn send_liquidity(
         }
     );
 
-    //TODO add min_out? (it is present on send_asset)
     Ok(Response::new()
         .add_message(send_liquidity_execute_msg)
         .add_event(
@@ -934,7 +933,7 @@ pub fn receive_liquidity(
     let out: Uint128 = fixed_point_math::mul_wad_down(
         calc_price_curve_limit_share(u, w_sum)?,
         effective_supply
-    )?.try_into()?;     //TODO is 'try' required when casting U256 to Uint128? Theoretically calc_price_curve_limit_share < 1, hence casting is safe
+    )?.try_into()?;
 
     if min_vault_tokens > out {
         return Err(ContractError::ReturnInsufficient { out, min_out: min_vault_tokens });
@@ -960,9 +959,9 @@ pub fn receive_liquidity(
                 )?.balance;
 
                 acc.checked_add(
-                    ln_wad(     // TODO what if the vault gets depleted ==> ln(0)
+                    ln_wad(
                         Into::<I256>::into(vault_asset_balance) * WAD.as_i256()     // i256 casting: 'vault_asset_balance * WAD' always fits in an I256 (~2^128 * ~2^64)
-                    )?.as_u256()                                                // u256 casting: 'vault_asset_balance * WAD' >= WAD (for balance != 0), hence 'ln_wad' return is always positive //TODO review 0 condition
+                    )?.as_u256()                                                // u256 casting: 'vault_asset_balance * WAD' >= WAD (for balance != 0), hence 'ln_wad' return is always positive (otherwise 'ln_wad' will fail)
                     .checked_mul(U256::from(weight))?
                 ).map_err(|_| ContractError::ArithmeticError {})
             })?;
@@ -970,14 +969,16 @@ pub fn receive_liquidity(
         // Finish the calculation: exp( 'weighted_balance_sum' / weights_sum )
         let vault_reference_amount = exp_wad(
             (weighted_balance_sum / w_sum)          // Division is safe, as w_sum is never 0
-                .as_i256()                          // If casting overflows to a negative number, the result of the exponent will be 0, which will cause the min_reference_asset check to fail //TODO denial of service attack?
+                .as_i256()                          // If casting overflows to a negative number, the result of the exponent will be 0, 
+                                                    // which will cause the 'min_reference_asset' check to fail (if set, otherwise the result 
+                                                    // of this calculation is not relevant).
         )?.as_u256() / WAD;                         // Division is safe, as WAD != 0
 
         // Compute the fraction of the 'vault_reference_amount' that the swapper owns.
         // Include the escrowed vault tokens in the total supply to ensure that even if all the ongoing transactions revert, the specified min_reference_asset is fulfilled.
         // Include the vault tokens as they are going to be minted.
         let escrowed_vault_tokens = TOTAL_ESCROWED_LIQUIDITY.load(deps.storage)?;
-        let user_reference_amount: Uint128 = (     //TODO is the use of Uint128/U256 correct in this calculation?
+        let user_reference_amount: Uint128 = (
             (vault_reference_amount * U256::from(out.u128()))/(effective_supply + U256::from(escrowed_vault_tokens.u128()) + U256::from(out.u128()))
         ).try_into()?;
 
@@ -987,9 +988,6 @@ pub fn receive_liquidity(
 
     }
 
-    // Validate the to_account
-    deps.api.addr_validate(&to_account)?;   //TODO is this necessary? Isn't the account validated by `execute_mint`?
-
     // Mint the vault tokens
     let mint_response = execute_mint(
         deps.branch(),
@@ -998,7 +996,7 @@ pub fn receive_liquidity(
             sender: env.contract.address.clone(),   // This contract itself is the one 'sending' the mint operation
             funds: vec![],
         },
-        to_account.clone(),
+        to_account.clone(),  // NOTE: the address is validated by the 'execute_mint' call
         out
     )?;
 
@@ -1120,7 +1118,6 @@ pub fn calc_local_swap(
         &Cw20QueryMsg::Balance { address: env.contract.address.to_string() }
     )?.balance.checked_sub(to_asset_escrowed_balance)?;      // vault balance minus escrowed balance
 
-    //TODO move condition into 'calc_combined_price_curves'?
     if from_asset_weight == to_asset_weight {
         // Saves gas and is exact
         // NOTE: If W_A == 0 and W_B == 0 then W_A == W_B and the calculation will not fail (unlike with the full calculation).
@@ -1206,12 +1203,12 @@ pub fn on_send_liquidity_success_volatile(
 }
 
 
-pub fn set_weights(         //TODO EVM mismatch arguments order
+pub fn set_weights(
     deps: &mut DepsMut,
     env: &Env,
     info: MessageInfo,
-    new_weights: Vec<Uint128>,
-    target_timestamp: Uint64   //TODO EVM mismatch (targetTime)
+    target_timestamp: Uint64,   //TODO EVM mismatch (targetTime),
+    new_weights: Vec<Uint128>
 ) -> Result<Response, ContractError> {
 
     // Only allow weight changes by the factory owner
@@ -1477,14 +1474,3 @@ pub fn query_weights_update_finish_timestamp(
 
 }
 
-
-
-// Misc helpers *****************************************************************************************************************
-//TODO move helper somewhere else? (To reuse across implementations)
-pub fn format_vec_for_event<T: ToString>(vec: Vec<T>) -> String {
-    //TODO review output format
-    vec
-        .iter()
-        .map(T::to_string)
-        .collect::<Vec<String>>().join(", ")
-}
