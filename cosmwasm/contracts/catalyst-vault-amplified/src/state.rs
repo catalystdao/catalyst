@@ -19,7 +19,6 @@ use catalyst_ibc_interface::msg::ExecuteMsg as InterfaceExecuteMsg;
 
 use crate::{calculation_helpers::{calc_price_curve_area, calc_price_curve_limit, calc_combined_price_curves, calc_price_curve_limit_share, calc_weighted_alpha_0_ampped}, event::set_amplification_event, msg::{TargetAmplificationResponse, AmplificationUpdateFinishTimestampResponse, Balance0Response, AmplificationResponse, UnitTrackerResponse}};
 
-// TODO amplification specific storage
 pub const ONE_MINUS_AMP: Item<I256> = Item::new("catalyst-vault-amplified-one-minus-amp");
 pub const TARGET_ONE_MINUS_AMP: Item<I256> = Item::new("catalyst-vault-amplified-target-one-minus-amp");
 pub const AMP_UPDATE_TIMESTAMP_SECONDS: Item<Uint64> = Item::new("catalyst-vault-amplified-amp-update-timestamp");
@@ -44,7 +43,7 @@ pub fn initialize_swap_curves(
     depositor: String
 ) -> Result<Response, ContractError> {
 
-    // Check the caller is the Factory    //TODO does this make sense? Unlike on EVM, the 'factory' is not set as 'immutable', but rather it is set as the caller of 'instantiate'
+    // Check the caller is the Factory
     if info.sender != FACTORY.load(deps.storage)? {
         return Err(ContractError::Unauthorized {});
     }
@@ -75,9 +74,6 @@ pub fn initialize_swap_curves(
     ONE_MINUS_AMP.save(deps.storage, &one_minus_amp)?;
     TARGET_ONE_MINUS_AMP.save(deps.storage, &one_minus_amp)?;
 
-    // Validate the depositor address
-    deps.api.addr_validate(&depositor)?;    //TODO is this needed? Won't the address be validated by 'execute_mint` below?
-
     // Validate and save assets
     ASSETS.save(
         deps.storage,
@@ -91,17 +87,19 @@ pub fn initialize_swap_curves(
     // Query and validate the vault asset balances
     let assets_balances = assets.iter()
         .map(|asset| {
-            deps.querier.query_wasm_smart::<BalanceResponse>(
+
+            let balance = deps.querier.query_wasm_smart::<BalanceResponse>(
                 asset,
                 &Cw20QueryMsg::Balance { address: env.contract.address.to_string() }
-            ).map(|response| response.balance)
+            ).map(|response| response.balance)?;
+
+            if balance.is_zero() {
+                return Err(ContractError::InvalidZeroBalance {});
+            }
+
+            Ok(balance)
         })
-        .collect::<StdResult<Vec<Uint128>>>()?;
-    
-    //TODO merge this check within the above balance-query code
-    if assets_balances.iter().any(|balance| balance.is_zero()) {
-        return Err(ContractError::InvalidZeroBalance {});
-    }
+        .collect::<Result<Vec<Uint128>, ContractError>>()?;
 
     // Validate and save weights
     weights
@@ -152,7 +150,7 @@ pub fn initialize_swap_curves(
         deps.branch(),
         env.clone(),
         execute_mint_info,
-        depositor.clone(),
+        depositor.clone(),  // NOTE: the address is validated by the 'execute_mint' call
         minted_amount
     )?;
 
@@ -770,7 +768,7 @@ pub fn local_swap(
 
     update_amplification(deps, env.block.time)?;
 
-    let vault_fee: Uint128 = mul_wad_down(            //TODO alternative to not have to use U256 conversion? (or wrapper?)
+    let vault_fee: Uint128 = mul_wad_down(
         U256::from(amount.u128()),
         U256::from(VAULT_FEE.load(deps.storage)?)
     )?.as_uint128();    // Casting safe, as fee < amount, and amount is Uint128
@@ -890,7 +888,7 @@ pub fn send_asset(
 
     update_amplification(deps, env.block.time)?;
 
-    let vault_fee: Uint128 = mul_wad_down(            //TODO alternative to not have to use U256 conversion? (or wrapper?)
+    let vault_fee: Uint128 = mul_wad_down(
         U256::from(amount.u128()),
         U256::from(VAULT_FEE.load(deps.storage)?)
     )?.as_uint128();    // Casting safe, as fee < amount, and amount is Uint128
@@ -1223,7 +1221,6 @@ pub fn send_liquidity(
         }
     );
 
-    //TODO add min_out? (it is present on send_asset)
     Ok(Response::new()
         .add_message(send_liquidity_execute_msg)
         .add_event(
@@ -1372,9 +1369,6 @@ pub fn receive_liquidity(
         mul_wad_down(U256::from(2u64), vault_token_equivalent)?
     )?;
 
-    // Validate the to_account
-    deps.api.addr_validate(&to_account)?;   //TODO is this necessary? Isn't the account validated by `execute_mint`?
-
     // Mint the vault tokens
     let mint_response = execute_mint(
         deps.branch(),
@@ -1383,7 +1377,7 @@ pub fn receive_liquidity(
             sender: env.contract.address.clone(),   // This contract itself is the one 'sending' the mint operation
             funds: vec![],
         },
-        to_account.clone(),
+        to_account.clone(),  // NOTE: the address is validated by the 'execute_mint' call
         vault_tokens
     )?;
 
@@ -2016,16 +2010,4 @@ pub fn query_unit_tracker(
         }
     )
 
-}
-
-
-
-// Misc helpers *****************************************************************************************************************
-//TODO move helper somewhere else? (To reuse across implementations)
-pub fn format_vec_for_event<T: ToString>(vec: Vec<T>) -> String {
-    //TODO review output format
-    vec
-        .iter()
-        .map(T::to_string)
-        .collect::<Vec<String>>().join(", ")
 }
