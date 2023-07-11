@@ -666,7 +666,7 @@ pub fn send_asset(
         to_asset_index,
         u,
         min_out,
-        from_amount: amount,
+        from_amount: effective_swap_amount,
         from_asset: from_asset.clone(),
         block_number,
         calldata

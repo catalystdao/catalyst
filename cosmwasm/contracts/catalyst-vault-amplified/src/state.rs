@@ -958,7 +958,7 @@ pub fn send_asset(
         to_asset_index,
         u,
         min_out,
-        from_amount: amount,
+        from_amount: amount - vault_fee,
         from_asset: from_asset.clone(),
         block_number,
         calldata
