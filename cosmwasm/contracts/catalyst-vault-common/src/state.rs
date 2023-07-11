@@ -998,11 +998,11 @@ fn calc_keccak256(bytes: Vec<u8>) -> Vec<u8> {
 /// Compute the hash of an asset swap.
 /// 
 /// # Arguments:
-/// * `to_account` - The recipient of the swap output.
-/// * `u` - The units value of the swap.
-/// * `escrow_amount` - The escrowed asset amount.
-/// * `asset` - The swap source asset.
-/// * `block_number_mod` - The block number at which the swap transaction was commited (modulo 2^32).
+/// * `to_account` - The recipient of the swap output. Ensures no collisions between different users.
+/// * `u` - The units value of the swap. Used to randomize the hash.
+/// * `escrow_amount` - The escrowed asset amount. ! Required to validate the release escrow data.
+/// * `asset` - The swap source asset. ! Required to validate the release escrow data.
+/// * `block_number_mod` - The block number at which the swap transaction was commited (modulo 2^32). Used to randomize the hash.
 /// 
 pub fn compute_send_asset_hash(
     to_account: &[u8],
@@ -1035,10 +1035,10 @@ pub fn compute_send_asset_hash(
 /// Compute the hash of a liquidity swap.
 /// 
 /// # Arguments:
-/// * `to_account` - The recipient of the swap output.
-/// * `u` - The units value of the swap.
-/// * `escrow_amount` - The escrowed asset amount.
-/// * `block_number_mod` - The block number at which the swap transaction was commited (modulo 2^32).
+/// * `to_account` - The recipient of the swap output. Ensures no collisions between different users.
+/// * `u` - The units value of the swap. Used to randomize the hash.
+/// * `escrow_amount` - The escrowed asset amount. ! Required to validate the release escrow data.
+/// * `block_number_mod` - The block number at which the swap transaction was commited (modulo 2^32). Used to randomize the hash.
 /// 
 pub fn compute_send_liquidity_hash(
     to_account: &[u8],
