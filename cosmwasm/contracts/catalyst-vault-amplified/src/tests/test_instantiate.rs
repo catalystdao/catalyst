@@ -102,7 +102,7 @@ mod test_amplified_instantiate {
             TokenInfo {
                 name: instantiate_msg.name,
                 symbol: instantiate_msg.symbol,
-                decimals: 18,
+                decimals: 6,
                 total_supply: Uint128::zero(),
                 mint: None
             }
