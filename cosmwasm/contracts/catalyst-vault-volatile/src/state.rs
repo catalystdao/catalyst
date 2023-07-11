@@ -164,6 +164,8 @@ pub fn deposit_mixed(
     min_out: Uint128
 ) -> Result<Response, ContractError> {
 
+    update_weights(deps, env.block.time)?;
+
     let assets = ASSETS.load(deps.storage)?;
 
     if deposit_amounts.len() != assets.len() {
@@ -279,6 +281,10 @@ pub fn withdraw_all(
     vault_tokens: Uint128,
     min_out: Vec<Uint128>,
 ) -> Result<Response, ContractError> {
+    
+
+    update_weights(deps, env.block.time)?;
+
 
     // Include the 'escrowed' vault tokens in the total supply of vault tokens of the vault
     let escrowed_vault_tokens = TOTAL_ESCROWED_LIQUIDITY.load(deps.storage)?;
@@ -366,6 +372,10 @@ pub fn withdraw_mixed(
     withdraw_ratio: Vec<Uint64>,
     min_out: Vec<Uint128>,
 ) -> Result<Response, ContractError> {
+    
+
+    update_weights(deps, env.block.time)?;
+
 
     // Include the 'escrowed' vault tokens in the total supply of vault tokens of the vault
     let escrowed_vault_tokens = TOTAL_ESCROWED_LIQUIDITY.load(deps.storage)?;
