@@ -66,7 +66,7 @@ pub enum ExecuteMsg<T> {
         state: bool
     },
 
-    /// Deposit assets on the vault.
+    /// Deposit a user-configurable balance of assets on the vault.
     /// * `deposit_amounts` - The asset amounts to be deposited.
     /// * `min_out` - The minimum output of vault tokens to get in return.
     DepositMixed {

@@ -2,23 +2,16 @@ use cosmwasm_std::{Addr, Uint128, DepsMut, Env, MessageInfo, Response, StdResult
 use cw20::{Cw20ExecuteMsg, Cw20QueryMsg, BalanceResponse};
 use cw20_base::contract::{execute_mint, execute_burn};
 use cw_storage_plus::{Item, Map};
-use catalyst_types::{U256, AsI256, I256, AsU256};
-use fixed_point_math::{LN2, mul_wad_down, self, ln_wad, WAD, exp_wad};
-use catalyst_vault_common::{
-    state::{
-        ASSETS, MAX_ASSETS, WEIGHTS, INITIAL_MINT_AMOUNT, VAULT_FEE, MAX_LIMIT_CAPACITY, USED_LIMIT_CAPACITY, CHAIN_INTERFACE,
-        TOTAL_ESCROWED_LIQUIDITY, TOTAL_ESCROWED_ASSETS, is_connected, update_limit_capacity,
-        collect_governance_fee_message, compute_send_asset_hash, compute_send_liquidity_hash, create_asset_escrow,
-        create_liquidity_escrow, on_send_asset_success, on_send_liquidity_success, total_supply, get_limit_capacity, FACTORY, factory_owner, initialize_limit_capacity, initialize_escrow_totals,
-    },
-    ContractError, msg::{CalcSendAssetResponse, CalcReceiveAssetResponse, CalcLocalSwapResponse, GetLimitCapacityResponse}, event::{local_swap_event, send_asset_event, receive_asset_event, send_liquidity_event, receive_liquidity_event, deposit_event, withdraw_event, cw20_response_to_standard_event}
-};
-use std::ops::Div;
-
 use catalyst_ibc_interface::msg::ExecuteMsg as InterfaceExecuteMsg;
+use catalyst_types::{U256, AsI256, I256, AsU256};
+use catalyst_vault_common::{state::{ASSETS, MAX_ASSETS, WEIGHTS, INITIAL_MINT_AMOUNT, VAULT_FEE, MAX_LIMIT_CAPACITY, USED_LIMIT_CAPACITY, CHAIN_INTERFACE, TOTAL_ESCROWED_LIQUIDITY, TOTAL_ESCROWED_ASSETS, is_connected, update_limit_capacity, collect_governance_fee_message, compute_send_asset_hash, compute_send_liquidity_hash, create_asset_escrow, create_liquidity_escrow, on_send_asset_success, on_send_liquidity_success, total_supply, get_limit_capacity, FACTORY, factory_owner, initialize_limit_capacity, initialize_escrow_totals}, ContractError, msg::{CalcSendAssetResponse, CalcReceiveAssetResponse, CalcLocalSwapResponse, GetLimitCapacityResponse}, event::{local_swap_event, send_asset_event, receive_asset_event, send_liquidity_event, receive_liquidity_event, deposit_event, withdraw_event, cw20_response_to_standard_event}};
+use fixed_point_math::{LN2, mul_wad_down, self, ln_wad, WAD, exp_wad};
+use std::ops::Div;
 
 use crate::{calculation_helpers::{calc_price_curve_area, calc_price_curve_limit, calc_combined_price_curves, calc_price_curve_limit_share}, msg::{TargetWeightResponse, WeightsUpdateFinishTimestampResponse}, event::set_weights_event};
 
+
+// Weight adjustment variables
 pub const TARGET_WEIGHTS: Map<&str, Uint128> = Map::new("catalyst-vault-volatile-target-weights");
 pub const WEIGHT_UPDATE_TIMESTAMP_SECONDS: Item<Uint64> = Item::new("catalyst-vault-volatile-weight-update-timestamp");
 pub const WEIGHT_UPDATE_FINISH_TIMESTAMP_SECONDS: Item<Uint64> = Item::new("catalyst-vault-volatile-weight-update-finish-timestamp");
@@ -28,6 +21,18 @@ const MAX_ADJUSTMENT_TIME_SECONDS  : Uint64 = Uint64::new(365 * 24 * 60 * 60);  
 const MAX_WEIGHT_ADJUSTMENT_FACTOR : Uint128 = Uint128::new(10);
 
 
+/// Initialize the vault swap curves.
+/// 
+/// The initial asset amounts must be sent to the vault before calling this function.
+/// Only the instantiator of the vault may invoke this function (i.e. the `FACTORY`).
+/// This should be handled by the Catalyst vault factory.
+/// 
+/// # Arguments:
+/// * `assets` - The list of the assets that are to be supported by the vault.
+/// * `weights` - The weights applied to the assets.
+/// * `amp` - The amplification value applied to the vault.
+/// * `depositor` - The account that will receive the initial vault tokens.
+/// 
 pub fn initialize_swap_curves(
     deps: &mut DepsMut,
     env: Env,
@@ -64,16 +69,6 @@ pub fn initialize_swap_curves(
         });
     }
 
-    // Validate and save assets
-    ASSETS.save(
-        deps.storage,
-        &assets
-            .iter()
-            .map(|asset_addr| deps.api.addr_validate(&asset_addr))
-            .collect::<StdResult<Vec<Addr>>>()
-            .map_err(|_| ContractError::InvalidAssets {})?
-    )?;
-
     // Query and validate the vault asset balances
     let assets_balances = assets.iter()
         .map(|asset| {
@@ -91,10 +86,21 @@ pub fn initialize_swap_curves(
         })
         .collect::<Result<Vec<Uint128>, ContractError>>()?;
 
+    // Save the assets
+    // NOTE: there is no need to validate the assets addresses, as invalid asset addresses
+    // would have caused the previous 'asset balance' check to fail.
+    ASSETS.save(
+        deps.storage,
+        &assets
+            .iter()
+            .map(|asset| Addr::unchecked(asset))
+            .collect::<Vec<Addr>>()
+    )?;
+
     // Validate and save weights
     weights
         .iter()
-        .zip(&assets)
+        .zip(&assets)   // zip: assets.len() == weights.len() (checked above)
         .try_for_each(|(weight, asset)| -> Result<(), ContractError> {
 
             if weight.is_zero() {
@@ -114,6 +120,7 @@ pub fn initialize_swap_curves(
     initialize_escrow_totals(deps, assets)?;
 
     // Initialize the security limit
+    // The maximum unit flow is \sum{weights}·ln(2)
     let weights_sum = weights.iter().map(|weight| U256::from(*weight)).sum();
     let max_limit_capacity = LN2.checked_mul(weights_sum)?;
     initialize_limit_capacity(deps, max_limit_capacity)?;
@@ -156,13 +163,26 @@ pub fn initialize_swap_curves(
 
 
 
+/// Deposit a user-configurable balance of assets on the vault.
+/// 
+/// **NOTE**: The vault's access to the deposited assets must be approved by the user. 
+/// 
+/// **NOTE**: The vault fee is imposed on deposits.
+/// 
+/// # Arguments:
+/// * `deposit_amounts` - The asset amounts to be deposited.
+/// * `min_out` - The minimum output of vault tokens to get in return.
+/// 
 pub fn deposit_mixed(
     deps: &mut DepsMut,
     env: Env,
     info: MessageInfo,
-    deposit_amounts: Vec<Uint128>,  //TODO EVM MISMATCH
+    deposit_amounts: Vec<Uint128>,
     min_out: Uint128
 ) -> Result<Response, ContractError> {
+
+    // This deposit function works by calculating how many units the deposited assets
+    // are worth, and translating those into vault tokens.
 
     update_weights(deps, env.block.time)?;
 
@@ -176,13 +196,10 @@ pub fn deposit_mixed(
         );
     }
 
-    // Compute how much 'units' the assets are worth.
-    // Iterate over the assets, weights and deposit_amounts)
+    // Compute how many 'units' the assets are worth.
     let u = assets.iter()
-        .zip(&deposit_amounts)                  // zip: deposit_amounts.len() == assets.len()
+        .zip(&deposit_amounts)      // zip: deposit_amounts.len() == assets.len() (checked above)
         .try_fold(U256::zero(), |acc, (asset, deposit_amount)| {
-
-            let weight = WEIGHTS.load(deps.storage, asset.as_ref())?;
 
             // Save gas if the user provides no tokens for the specific asset
             if deposit_amount.is_zero() {
@@ -194,31 +211,37 @@ pub fn deposit_mixed(
                 &Cw20QueryMsg::Balance { address: env.contract.address.to_string() }
             )?.balance;
 
+            let weight = WEIGHTS.load(deps.storage, asset.as_ref())?;
+
             acc.checked_add(
                 calc_price_curve_area(
-                    U256::from(deposit_amount.u128()),
-                    U256::from(vault_asset_balance.u128()),
-                    U256::from(weight.clone())
+                    U256::from(*deposit_amount),
+                    U256::from(vault_asset_balance),
+                    U256::from(weight)
                 )?
             ).map_err(|_| ContractError::ArithmeticError {})
         })?;
 
     // Subtract the vault fee from U to prevent deposit and withdrawals being employed as a method of swapping.
-    // To recude costs, the governance fee is not taken. This is not an issue as swapping via this method is 
+    // To reduce gas costs, the governance fee is not taken. This is not an issue as swapping via this method is 
     // disincentivized by its higher gas costs.
     let vault_fee = VAULT_FEE.load(deps.storage)?;
-    let u = fixed_point_math::mul_wad_down(u, fixed_point_math::WAD - U256::from(vault_fee))?;
+    let u = fixed_point_math::mul_wad_down(
+        u,
+        fixed_point_math::WAD.wrapping_sub(U256::from(vault_fee))   // 'wrapping_sub' is safe, as 'vault_fee' <= 'WAD'
+    )?;
 
     // Do not include the 'escrowed' vault tokens in the total supply of vault tokens (return less)
-    let effective_supply = U256::from(total_supply(deps.as_ref())?.u128());
+    let effective_supply = U256::from(total_supply(deps.as_ref())?);
 
-    // Derive the weight sum (w_sum) from the security limit capacity
-    let w_sum = MAX_LIMIT_CAPACITY.load(deps.storage)? / fixed_point_math::LN2;
+    // Derive the weight sum from the security limit capacity
+    let weights_sum = MAX_LIMIT_CAPACITY.load(deps.storage)? / fixed_point_math::LN2;
 
     // Compute the vault tokens to be minted.
     let out = fixed_point_math::mul_wad_down(
-        effective_supply,                                                       // Note 'effective_supply' is not WAD, hence result will not be either
-        calc_price_curve_limit_share(u, w_sum)?
+        effective_supply,                               // NOTE: 'effective_supply' is not in WAD terms,
+                                                        // hence the result of 'mul_wad_down' will not be either
+        calc_price_curve_limit_share(u, weights_sum)?
     )?.try_into()?;
 
     // Check that the minimum output is honoured.
@@ -238,7 +261,10 @@ pub fn deposit_mixed(
         out
     )?;
 
-    // Build messages to order the transfer of tokens from the depositor to the vault
+    // Build the messages to order the transfer of tokens from the depositor to the vault
+    // ! IMPORTANT: Some cw20 contracts disallow zero-valued token transfers. Do not generate
+    // ! transfer messages for zero-valued balance transfers to prevent these cases from 
+    // ! resulting in failed transactions.
     let transfer_msgs: Vec<CosmosMsg> = assets.iter()
         .zip(&deposit_amounts)                                              // zip: depsoit_amounts.len() == assets.len()
         .filter(|(_, balance)| **balance != Uint128::zero())     // Do not create transfer messages for zero-valued deposits
@@ -274,6 +300,15 @@ pub fn deposit_mixed(
     )
 }
 
+
+/// Withdraw an even amount of assets from the vault (i.e. according to the current balance ratios).
+/// 
+/// **NOTE**: This is the only way to withdraw 100% of the vault liquidity.
+/// 
+/// # Arguments:
+/// * `vault_tokens` - The amount of vault tokens to burn.
+/// * `min_out` - The minimum output of assets to get in return.
+/// 
 pub fn withdraw_all(
     deps: &mut DepsMut,
     env: Env,
@@ -281,10 +316,12 @@ pub fn withdraw_all(
     vault_tokens: Uint128,
     min_out: Vec<Uint128>,
 ) -> Result<Response, ContractError> {
+
+    // This withdraw function works by computing the share of the total vault tokens that 
+    // the provided ones account for. That share of the vault's assets balances is returned
+    // to the user.
     
-
     update_weights(deps, env.block.time)?;
-
 
     // Include the 'escrowed' vault tokens in the total supply of vault tokens of the vault
     let escrowed_vault_tokens = TOTAL_ESCROWED_LIQUIDITY.load(deps.storage)?;
@@ -307,7 +344,7 @@ pub fn withdraw_all(
 
     let withdraw_amounts: Vec<Uint128> = assets
         .iter()
-        .zip(&min_out)                                      // zip: assets.len() == min_out.len()
+        .zip(&min_out)          // zip: assets.len() == min_out.len()
         .map(|(asset, asset_min_out)| {
 
             let escrowed_balance = TOTAL_ESCROWED_ASSETS.load(deps.storage, asset.as_str())?;
@@ -315,12 +352,17 @@ pub fn withdraw_all(
             let vault_asset_balance = deps.querier.query_wasm_smart::<BalanceResponse>(
                 asset,
                 &Cw20QueryMsg::Balance { address: env.contract.address.to_string() }
-            )?.balance - escrowed_balance;
+            )?.balance;
 
-            let withdraw_amount = U256::from(vault_asset_balance)
-                .wrapping_mul(U256::from(vault_tokens))
+            let effective_vault_asset_balance = vault_asset_balance
+                .checked_sub(escrowed_balance)?;    // Theoretically 'escrowed_balance' is always included 
+                                                    // in 'vault_asset_balance'. However, it would be terrible
+                                                    // for this calculation to underflow, hence use 'checked'.
+
+            let withdraw_amount = U256::from(effective_vault_asset_balance)
+                .wrapping_mul(U256::from(vault_tokens))     // 'wrapping_mul' is safe, as U256::MAX > Uint128::MAX*Uint128::MAX
                 .div(U256::from(effective_supply))
-                .as_uint128();                      // Casting is safe, as 'effective_supply' is always >= 'vault_tokens'
+                .as_uint128();                              // Casting is safe, as 'effective_supply' is always >= 'vault_tokens'
 
             // Check that the minimum output is honoured.
             if *asset_min_out > withdraw_amount {
@@ -330,19 +372,22 @@ pub fn withdraw_all(
             Ok(withdraw_amount)
         }).collect::<Result<Vec<Uint128>, ContractError>>()?;
 
-    // Build messages to order the transfer of tokens from the vault to the depositor
-    let transfer_msgs: Vec<CosmosMsg> = assets.iter().zip(&withdraw_amounts).map(|(asset, amount)| {    // zip: withdraw_amounts.len() == assets.len()
-        Ok(CosmosMsg::Wasm(
-            cosmwasm_std::WasmMsg::Execute {
-                contract_addr: asset.to_string(),
-                msg: to_binary(&Cw20ExecuteMsg::Transfer {
-                    recipient: sender.clone(),
-                    amount: *amount
-                })?,
-                funds: vec![]
-            }
-        ))
-    }).collect::<StdResult<Vec<CosmosMsg>>>()?;
+    // Build the messages to order the transfer of tokens from the vault to the depositor
+    let transfer_msgs: Vec<CosmosMsg> = assets
+        .iter()    // zip: withdraw_amounts.len() == assets.len()
+        .zip(&withdraw_amounts)
+        .map(|(asset, amount)| {
+            Ok(CosmosMsg::Wasm(
+                cosmwasm_std::WasmMsg::Execute {
+                    contract_addr: asset.to_string(),
+                    msg: to_binary(&Cw20ExecuteMsg::Transfer {
+                        recipient: sender.clone(),
+                        amount: *amount
+                    })?,
+                    funds: vec![]
+                }
+            ))
+        }).collect::<StdResult<Vec<CosmosMsg>>>()?;
 
 
     Ok(Response::new()
@@ -364,6 +409,17 @@ pub fn withdraw_all(
 }
 
 
+/// Withdraw an uneven amount of assets from the vault (i.e. according to a user defined ratio).
+/// 
+/// **NOTE**: 
+/// 
+/// # Arguments:
+/// * `vault_tokens` - The amount of vault tokens to burn.
+/// * `withdraw_ratio` - The ratio at which to withdraw the assets. Each value is the percentage 
+/// of the remaining units to be used for the corresponding asset (i.e. given \[r0, r1, r2\],
+/// U0 = U · r0, U1 = (U - U0) · r1, U2 = (U - U0 - U1) · r2). In WAD terms.
+/// * `min_out` - The minimum output of assets to get in return.
+/// 
 pub fn withdraw_mixed(
     deps: &mut DepsMut,
     env: Env,
@@ -372,6 +428,9 @@ pub fn withdraw_mixed(
     withdraw_ratio: Vec<Uint64>,
     min_out: Vec<Uint128>,
 ) -> Result<Response, ContractError> {
+
+    // This withdraw function works by computing the 'units' value of the provided vault tokens,
+    // and then translating those into assets balances according to the provided 'withdraw_ratio'.
     
 
     update_weights(deps, env.block.time)?;
@@ -380,24 +439,25 @@ pub fn withdraw_mixed(
     // Include the 'escrowed' vault tokens in the total supply of vault tokens of the vault
     let escrowed_vault_tokens = TOTAL_ESCROWED_LIQUIDITY.load(deps.storage)?;
     let effective_supply = U256::from(
-        total_supply(deps.as_ref())?.checked_add(escrowed_vault_tokens)?.u128()
+        total_supply(deps.as_ref())?.checked_add(escrowed_vault_tokens)?
     );
 
     // Burn the vault tokens of the withdrawer
     let sender = info.sender.to_string();
     let burn_response = execute_burn(deps.branch(), env.clone(), info.clone(), vault_tokens)?;
 
-    // Derive the weight sum (w_sum) from the security limit capacity
-    let w_sum = MAX_LIMIT_CAPACITY.load(deps.storage)? / fixed_point_math::LN2;
+    // Derive the weights sum from the security limit capacity
+    let weights_sum = MAX_LIMIT_CAPACITY.load(deps.storage)? / fixed_point_math::LN2;
 
     // Compute the unit worth of the vault tokens.
+    // NOTE: The following logic makes it impossible to withdraw all of the vault's liquidity.
     let mut u: U256 = fixed_point_math::ln_wad(
         fixed_point_math::div_wad_down(
             effective_supply,
-            effective_supply - U256::from(vault_tokens.u128())  // Subtraction is underflow safe, as the above 'execute_burn' guarantees that 'vault_tokens' is contained in 'effective_supply'
-        )?.as_i256()                                           // Casting my overflow to a negative value. In that case, 'ln_wad' will fail.
+            effective_supply.wrapping_sub(U256::from(vault_tokens))  // 'wrapping_sub' is underflow safe, as the above 'execute_burn' guarantees that 'vault_tokens' is contained in 'effective_supply'
+        )?.as_i256()                                           // Casting may overflow to a negative value. In that case, 'ln_wad' will fail.
     )?.as_u256()                                               // Casting is safe, as ln is computed of values >= 1, hence output is always positive
-        .checked_mul(w_sum)?;
+        .checked_mul(weights_sum)?;
 
     // Compute the withdraw amounts
     let assets = ASSETS.load(deps.storage)?;
@@ -416,21 +476,17 @@ pub fn withdraw_mixed(
         .zip(&min_out)                      // zip: min_out.len() == assets.len()
         .map(|((asset, asset_withdraw_ratio), asset_min_out)| {
 
-            let weight = WEIGHTS.load(deps.storage, asset.as_ref())?;
-
-            let escrowed_balance = TOTAL_ESCROWED_ASSETS.load(deps.storage, asset.as_ref())?;
-
             // Calculate the units allocated for the specific asset
             let units_for_asset = fixed_point_math::mul_wad_down(u, U256::from(*asset_withdraw_ratio))?;
-            if units_for_asset == U256::zero() {
+            if units_for_asset.is_zero() {
 
                 // There should not be a non-zero withdraw ratio after a withdraw ratio of 1 (protect against user error)
-                if *asset_withdraw_ratio != Uint64::zero() {
+                if !asset_withdraw_ratio.is_zero() {
                     return Err(ContractError::WithdrawRatioNotZero {}) 
                 };
 
                 // Check that the minimum output is honoured.
-                if asset_min_out != Uint128::zero() {
+                if !asset_min_out.is_zero() {
                     return Err(ContractError::ReturnInsufficient { out: Uint128::zero(), min_out: *asset_min_out })
                 };
 
@@ -444,12 +500,18 @@ pub fn withdraw_mixed(
             let vault_asset_balance = deps.querier.query_wasm_smart::<BalanceResponse>(
                 asset,
                 &Cw20QueryMsg::Balance { address: env.contract.address.to_string() }
-            )?.balance - escrowed_balance;
+            )?.balance;
+
+            let escrowed_balance = TOTAL_ESCROWED_ASSETS.load(deps.storage, asset.as_ref())?;
+
+            let effective_vault_asset_balance = vault_asset_balance
+                .checked_sub(escrowed_balance)?;
 
             // Calculate the asset amount corresponding to the asset units
+            let weight = WEIGHTS.load(deps.storage, asset.as_ref())?;
             let withdraw_amount = calc_price_curve_limit(
                 units_for_asset,
-                U256::from(vault_asset_balance.u128()),
+                U256::from(effective_vault_asset_balance),
                 U256::from(weight)
             )?.try_into()?;
 
@@ -462,12 +524,15 @@ pub fn withdraw_mixed(
         }).collect::<Result<Vec<Uint128>, ContractError>>()?;
 
     // Make sure all units have been consumed
-    if u != U256::zero() { return Err(ContractError::UnusedUnitsAfterWithdrawal { units: u }) };
+    if !u.is_zero() { return Err(ContractError::UnusedUnitsAfterWithdrawal { units: u }) };
 
-    // Build messages to order the transfer of tokens from the vault to the depositor
+    // Build the messages to order the transfer of tokens from the vault to the depositor
+    // ! IMPORTANT: Some cw20 contracts disallow zero-valued token transfers. Do not generate
+    // ! transfer messages for zero-valued balance transfers to prevent these cases from 
+    // ! resulting in failed transactions.
     let transfer_msgs: Vec<CosmosMsg> = assets.iter()
-        .zip(&withdraw_amounts)                                                             // zip: withdraw_amounts.len() == assets.len()
-        .filter(|(_, withdraw_amount)| **withdraw_amount != Uint128::zero())     // Do not create transfer messages for zero-valued withdrawals
+        .zip(&withdraw_amounts)         // zip: withdraw_amounts.len() == assets.len()
+        .filter(|(_, withdraw_amount)| !withdraw_amount.is_zero())     // Do not create transfer messages for zero-valued withdrawals
         .map(|(asset, amount)| {
             Ok(CosmosMsg::Wasm(
                 cosmwasm_std::WasmMsg::Execute {
@@ -501,6 +566,15 @@ pub fn withdraw_mixed(
     
 }
 
+
+/// Perform a local asset swap.
+/// 
+/// # Arguments:
+/// * `from_asset` - The source asset.
+/// * `to_asset` - The destination asset.
+/// * `amount` - The `from_asset` amount sold to the vault.
+/// * `min_out` - The mininmum return to get of `to_asset`.
+/// 
 pub fn local_swap(
     deps: &mut DepsMut,
     env: Env,
@@ -524,14 +598,14 @@ pub fn local_swap(
         env.clone(),
         &from_asset,
         &to_asset,
-        amount - vault_fee
+        amount.wrapping_sub(vault_fee)      // 'wrapping_sub' is safe, as 'vault_fee' is included in 'amount'
     )?;
 
     if min_out > out {
         return Err(ContractError::ReturnInsufficient { out, min_out });
     }
 
-    // Build message to transfer input assets to the vault
+    // Build the message to transfer input assets to the vault
     let transfer_from_asset_msg = CosmosMsg::Wasm(
         cosmwasm_std::WasmMsg::Execute {
             contract_addr: from_asset.clone(),
@@ -544,7 +618,7 @@ pub fn local_swap(
         }
     );
 
-    // Build message to transfer output assets to the swapper
+    // Build the message to transfer output assets to the swapper
     let transfer_to_asset_msg = CosmosMsg::Wasm(
         cosmwasm_std::WasmMsg::Execute {
             contract_addr: to_asset.clone(),
@@ -586,7 +660,19 @@ pub fn local_swap(
 }
 
 
-pub fn send_asset(
+/// Initiate a cross-chain asset swap.
+/// 
+/// # Arguments:
+/// * `channel_id` - The target chain identifier.
+/// * `to_vault` - The target vault on the target chain (Catalyst encoded).
+/// * `to_account` - The recipient of the swap on the target chain (Catalyst encoded).
+/// * `from_asset` - The source asset.
+/// * `to_asset_index` - The destination asset index.
+/// * `amount` - The `from_asset` amount sold to the vault.
+/// * `min_out` - The mininum `to_asset` output amount to get on the target vault.
+/// * `fallback_account` - The recipient of the swapped amount should the swap fail.
+/// * `calldata` - Arbitrary data to be executed on the target chain upon successful execution of the swap.
+    pub fn send_asset(
     deps: &mut DepsMut,
     env: Env,
     info: MessageInfo,
@@ -597,7 +683,7 @@ pub fn send_asset(
     to_asset_index: u8,
     amount: Uint128,
     min_out: U256,
-    fallback_account: String,   //TODO EVM mismatch
+    fallback_account: String,
     calldata: Binary
 ) -> Result<Response, ContractError> {
 
@@ -609,23 +695,26 @@ pub fn send_asset(
     update_weights(deps, env.block.time)?;
 
     let vault_fee: Uint128 = mul_wad_down(
-        U256::from(amount.u128()),
+        U256::from(amount),
         U256::from(VAULT_FEE.load(deps.storage)?)
     )?.as_uint128();    // Casting safe, as fee < amount, and amount is Uint128
 
-    // Calculate the group-specific units bought
+    let effective_swap_amount = amount.wrapping_sub(vault_fee);     // 'wrapping_sub' is safe, as 'vault_fee' is contained by 'amount'
+
+    // Calculate the units bought
     let u = calc_send_asset(
         &deps.as_ref(),
         env.clone(),
         &from_asset,
-        amount - vault_fee
+        effective_swap_amount
     )?;
 
+    // Create a 'send asset' escrow
     let block_number = env.block.height as u32;
     let send_asset_hash = compute_send_asset_hash(
         to_account.as_slice(),
         u,
-        amount - vault_fee,
+        effective_swap_amount,
         &from_asset,
         block_number
     );
@@ -633,12 +722,16 @@ pub fn send_asset(
     create_asset_escrow(
         deps,
         send_asset_hash.clone(),
-        amount - vault_fee,
+        effective_swap_amount,  // NOTE: The fee is also deducted from the escrow  
+                                // amount to prevent denial of service attacks.
         &from_asset,
         fallback_account
     )?;
 
-    // Build message to transfer input assets to the vault
+    // NOTE: The security limit adjustment is delayed until the swap confirmation is received to
+    // prevent a router from abusing swap 'timeouts' to circumvent the security limit.
+
+    // Build the message to transfer the input assets to the vault
     let transfer_from_asset_msg = CosmosMsg::Wasm(
         cosmwasm_std::WasmMsg::Execute {
             contract_addr: from_asset.clone(),
@@ -651,14 +744,14 @@ pub fn send_asset(
         }
     );
 
-    // Build collect governance fee message
+    // Build the collect governance fee message
     let collect_governance_fee_message = collect_governance_fee_message(
         &deps.as_ref(),
         from_asset.clone(),
         vault_fee
     )?;
 
-    // Build message to 'send' the asset via the IBC interface
+    // Build the message to send the purchased units via the IBC interface
     let send_cross_chain_asset_msg = InterfaceExecuteMsg::SendCrossChainAsset {
         channel_id: channel_id.clone(),
         to_vault: to_vault.clone(),
@@ -707,6 +800,24 @@ pub fn send_asset(
     )
 }
 
+
+/// Receive a cross-chain asset swap.
+/// 
+/// **NOTE**: Only the chain interface may invoke this function.
+/// 
+/// # Arguments:
+/// * `channel_id` - The source chain identifier.
+/// * `from_vault` - The source vault on the source chain.
+/// * `to_asset_index` - The index of the purchased asset.
+/// * `to_account` - The recipient of the swap.
+/// * `u` - The incoming units.
+/// * `min_out` - The mininum output amount.
+/// * `from_amount` - The `from_asset` amount sold to the source vault.
+/// * `from_asset` - The source asset.
+/// * `from_block_number_mod` - The block number at which the swap transaction was commited (modulo 2^32).
+/// * `calldata_target` - The contract address to invoke upon successful execution of the swap.
+/// * `calldata` - The data to pass to `calldata_target` upon successful execution of the swap.
+/// 
 pub fn receive_asset(
     deps: &mut DepsMut,
     env: Env,
@@ -736,22 +847,23 @@ pub fn receive_asset(
 
     update_weights(deps, env.block.time)?;
 
+    // Check and update the security limit
+    update_limit_capacity(deps, env.block.time, u)?;
+
+    // Calculate the swap return. Note that the fee is always taken on the sending side.
     let assets = ASSETS.load(deps.storage)?;
     let to_asset = assets
         .get(to_asset_index as usize)
         .ok_or(ContractError::AssetNotFound {})?
         .clone();
-
-    update_limit_capacity(deps, env.block.time, u)?;
-
     let out = calc_receive_asset(&deps.as_ref(), env.clone(), to_asset.as_str(), u)?;
     
-
     if min_out > out {
         return Err(ContractError::ReturnInsufficient { out, min_out });
     }
 
-    // Build message to transfer output assets to to_account
+
+    // Build the message to transfer the output assets to to_account
     let transfer_to_asset_msg = CosmosMsg::Wasm(
         cosmwasm_std::WasmMsg::Execute {
             contract_addr: to_asset.to_string(),
@@ -763,7 +875,7 @@ pub fn receive_asset(
         }
     );
 
-    // Build data message
+    // Build the calldata message
     let calldata_message = calldata_target.map(|target| {
         CosmosMsg::Wasm(
             cosmwasm_std::WasmMsg::Execute {
@@ -774,7 +886,7 @@ pub fn receive_asset(
         )
     });
 
-    // Build and send response
+    // Build and send the response
     let mut response = Response::new();
 
     if let Some(msg) = calldata_message {
@@ -799,6 +911,23 @@ pub fn receive_asset(
     )
 }
 
+
+/// Initiate a cross-chain liquidity swap.
+/// 
+/// This is a macro *equivalent* to performing an even withdrawal from the vault and 
+/// sending the withdrawed assets to another vault. This is implemeted via a single
+/// step.
+/// 
+/// # Arguments:
+/// * `channel_id` - The target chain identifier.
+/// * `to_vault` - The target vault on the target chain (Catalyst encoded).
+/// * `to_account` - The recipient of the swap on the target chain (Catalyst encoded).
+/// * `amount` - The vault tokens amount sold to the vault.
+/// * `min_vault_tokens` - The mininum vault tokens output amount to get on the target vault.
+/// * `min_reference_asset` - The mininum reference asset value on the target vault.
+/// * `fallback_account` - The recipient of the swapped amount should the swap fail.
+/// * `calldata` - Arbitrary data to be executed on the target chain upon successful execution of the swap.
+/// 
 pub fn send_liquidity(
     deps: &mut DepsMut,
     env: Env,
@@ -806,10 +935,10 @@ pub fn send_liquidity(
     channel_id: String,
     to_vault: Binary,
     to_account: Binary,
-    amount: Uint128,            //TODO EVM mismatch
+    amount: Uint128,
     min_vault_tokens: U256,
     min_reference_asset: U256,
-    fallback_account: String,   //TODO EVM mismatch
+    fallback_account: String,
     calldata: Binary
 ) -> Result<Response, ContractError> {
 
@@ -818,31 +947,30 @@ pub fn send_liquidity(
         return Err(ContractError::VaultNotConnected { channel_id, vault: to_vault })
     }
 
-    // Update weights
     update_weights(deps, env.block.time)?;
 
     // Include the 'escrowed' vault tokens in the total supply of vault tokens of the vault
     let escrowed_vault_tokens = TOTAL_ESCROWED_LIQUIDITY.load(deps.storage)?;
-    let effective_supply = U256::from(total_supply(deps.as_ref())?.u128()) 
-        + U256::from(escrowed_vault_tokens.u128());        // Addition is overflow safe because of casting into U256
+    let effective_supply = U256::from(total_supply(deps.as_ref())?)
+        .wrapping_add(U256::from(escrowed_vault_tokens));        // 'wrapping_add' is overflow safe because of casting into U256
 
     // Burn the vault tokens of the sender
     let burn_response = execute_burn(deps.branch(), env.clone(), info, amount)?;
 
-    // Derive the weight sum (w_sum) from the security limit capacity
-    let w_sum = MAX_LIMIT_CAPACITY.load(deps.storage)? / fixed_point_math::LN2;
+    // Derive the weights sum from the security limit capacity
+    let weights_sum = MAX_LIMIT_CAPACITY.load(deps.storage)? / fixed_point_math::LN2;
 
-    // Compute the unit value of the provided vaultTokens
+    // Compute the unit value of the provided vault tokens
     // This step simplifies withdrawing and swapping into a single step
     let u = fixed_point_math::ln_wad(
         fixed_point_math::div_wad_down(
             effective_supply,
-            effective_supply - U256::from(amount.u128())   // subtraction is safe, as 'amount' is always contained in 'effective_supply'
-        )?.as_i256()                                         // if casting overflows into a negative value, posterior 'ln' calc will fail
-    )?.as_u256()                                         // casting safe as 'ln' is computed of a value >= 1 (hence result always positive)
-        .checked_mul(w_sum)?;
+            effective_supply.wrapping_sub(U256::from(amount))   // 'wrapping_sub' is safe, as 'amount' is always contained in 'effective_supply'
+        )?.as_i256()                    // if casting overflows into a negative value, the 'ln' calculation will fail
+    )?.as_u256()                        // casting is safe as 'ln' is computed of a value >= 1 (hence result is always positive)
+        .checked_mul(weights_sum)?;
 
-    // Compute the hash of the 'send_liquidity' transaction
+    // Create a 'send liquidity' escrow
     let block_number = env.block.height as u32;
     let send_liquidity_hash = compute_send_liquidity_hash(
         to_account.as_slice(),
@@ -851,7 +979,6 @@ pub fn send_liquidity(
         block_number
     );
 
-    // Escrow the vault tokens
     create_liquidity_escrow(
         deps,
         send_liquidity_hash.clone(),
@@ -859,7 +986,10 @@ pub fn send_liquidity(
         fallback_account
     )?;
 
-    // Build message to 'send' the liquidity via the IBC interface
+    // NOTE: The security limit adjustment is delayed until the swap confirmation is received to
+    // prevent a router from abusing swap 'timeouts' to circumvent the security limit.
+
+    // Build the message to 'send' the liquidity via the IBC interface
     let send_cross_chain_asset_msg = InterfaceExecuteMsg::SendCrossChainLiquidity {
         channel_id: channel_id.clone(),
         to_vault: to_vault.clone(),
@@ -901,6 +1031,23 @@ pub fn send_liquidity(
     )
 }
 
+
+/// Receive a cross-chain liquidity swap.
+/// 
+/// **NOTE**: Only the chain interface may invoke this function.
+/// 
+/// # Arguments:
+/// * `channel_id` - The source chain identifier.
+/// * `from_vault` - The source vault on the source chain.
+/// * `to_account` - The recipient of the swap.
+/// * `u` - The incoming units.
+/// * `min_vault_tokens` - The mininum vault tokens output amount.
+/// * `min_reference_asset` - The mininum reference asset value.
+/// * `from_amount` - The `from_asset` amount sold to the source vault.
+/// * `from_block_number_mod` - The block number at which the swap transaction was commited (modulo 2^32).
+/// * `calldata_target` - The contract address to invoke upon successful execution of the swap.
+/// * `calldata` - The data to pass to `calldata_target` upon successful execution of the swap.
+/// 
 pub fn receive_liquidity(
     deps: &mut DepsMut,
     env: Env,
@@ -929,19 +1076,20 @@ pub fn receive_liquidity(
 
     update_weights(deps, env.block.time)?;
 
+    // Check and update the security limit
     update_limit_capacity(deps, env.block.time, u)?;
 
-    // Derive the weight sum (w_sum) from the security limit capacity
-    let w_sum = MAX_LIMIT_CAPACITY.load(deps.storage)? / fixed_point_math::LN2;
+    // Derive the weights sum from the security limit capacity
+    let weights_sum = MAX_LIMIT_CAPACITY.load(deps.storage)? / fixed_point_math::LN2;
 
     // Do not include the 'escrowed' vault tokens in the total supply of vault tokens of the vault (return less)
-    let effective_supply = U256::from(total_supply(deps.as_ref())?.u128());
+    let effective_supply = U256::from(total_supply(deps.as_ref())?);
 
     // Use 'calc_price_curve_limit_share' to get the % of vault tokens that should be minted (in WAD terms)
     // Multiply by 'effective_supply' to get the absolute amount (not in WAD terms) using 'mul_wad_down' so
     // that the result is also NOT in WAD terms.
     let out: Uint128 = fixed_point_math::mul_wad_down(
-        calc_price_curve_limit_share(u, w_sum)?,
+        calc_price_curve_limit_share(u, weights_sum)?,
         effective_supply
     )?.try_into()?;
 
@@ -953,7 +1101,7 @@ pub fn receive_liquidity(
 
         let assets = ASSETS.load(deps.storage)?;
 
-        // Compute the vault reference amount: product(balance(i)**weight(i))**(1/weights_sum)
+        // Compute the vault reference amount: [product(balance(i)**weight(i))]**(1/weights_sum)
         // The direct calculation of this value would overflow, hence it is calculated as:
         //      exp( sum( ln(balance(i)) * weight(i) ) / weights_sum )
 
@@ -970,18 +1118,18 @@ pub fn receive_liquidity(
 
                 acc.checked_add(
                     ln_wad(
-                        Into::<I256>::into(vault_asset_balance) * WAD.as_i256()     // i256 casting: 'vault_asset_balance * WAD' always fits in an I256 (~2^128 * ~2^64)
-                    )?.as_u256()                                                // u256 casting: 'vault_asset_balance * WAD' >= WAD (for balance != 0), hence 'ln_wad' return is always positive (otherwise 'ln_wad' will fail)
+                        I256::from(vault_asset_balance)     // i256 casting: safe as Uint128::MAX < I256::MAX
+                            .wrapping_mul(WAD.as_i256())    //'wrapping_mul' safe as Uint128::MAX * WAD < I256::MAX (i.e. ~2^128 * ~2^64 < ~2^255)
+                    )?.as_u256()                            // u256 casting: 'vault_asset_balance * WAD' >= WAD (for balance != 0), hence 'ln_wad' return is always positive (otherwise 'ln_wad' will fail)
                     .checked_mul(U256::from(weight))?
                 ).map_err(|_| ContractError::ArithmeticError {})
             })?;
 
         // Finish the calculation: exp( 'weighted_balance_sum' / weights_sum )
         let vault_reference_amount = exp_wad(
-            (weighted_balance_sum / w_sum)          // Division is safe, as w_sum is never 0
-                .as_i256()                          // If casting overflows to a negative number, the result of the exponent will be 0, 
-                                                    // which will cause the 'min_reference_asset' check to fail (if set, otherwise the result 
-                                                    // of this calculation is not relevant).
+            (weighted_balance_sum / weights_sum)    // Division is safe, as w_sum is never 0
+                .as_i256()                          // If casting overflows to a negative number, the result of the exponent will be 0
+                                                    // (after dividing by WAD), which will cause the 'min_reference_asset' check to fail.
         )?.as_u256() / WAD;                         // Division is safe, as WAD != 0
 
         // Compute the fraction of the 'vault_reference_amount' that the swapper owns.
@@ -989,7 +1137,13 @@ pub fn receive_liquidity(
         // Include the vault tokens as they are going to be minted.
         let escrowed_vault_tokens = TOTAL_ESCROWED_LIQUIDITY.load(deps.storage)?;
         let user_reference_amount: Uint128 = (
-            (vault_reference_amount * U256::from(out.u128()))/(effective_supply + U256::from(escrowed_vault_tokens.u128()) + U256::from(out.u128()))
+            vault_reference_amount
+                .checked_mul(U256::from(out))?
+                .div(
+                    effective_supply
+                        .wrapping_add(U256::from(escrowed_vault_tokens))    // 'wrapping_add' is safe because of casting to U256 (and 'effective_supply' <= Uint128::MAX)
+                        .wrapping_add(U256::from(out))                      // 'wrapping_add' is safe because of casting to U256 (and 'effective_supply' <= Uint128::MAX)
+                )
         ).try_into()?;
 
         if min_reference_asset > user_reference_amount {
@@ -1010,7 +1164,7 @@ pub fn receive_liquidity(
         out
     )?;
 
-    // Build data message
+    // Build the calldata message
     let calldata_message = calldata_target.map(|target| {
         CosmosMsg::Wasm(
             cosmwasm_std::WasmMsg::Execute {
@@ -1021,7 +1175,7 @@ pub fn receive_liquidity(
         )
     });
 
-    // Build and send response
+    // Build and send the response
     let mut response = Response::new();
 
     if let Some(msg) = calldata_message {
