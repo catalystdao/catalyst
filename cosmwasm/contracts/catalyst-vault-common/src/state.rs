@@ -18,7 +18,7 @@ use crate::{ContractError, msg::{ChainInterfaceResponse, SetupMasterResponse, Re
 pub const MAX_ASSETS: usize = 3;
 
 pub const DECIMALS: u8 = 6;
-pub const INITIAL_MINT_AMOUNT: Uint128 = Uint128::new(1000000000000000000u128); // 1e18
+pub const INITIAL_MINT_AMOUNT: Uint128 = Uint128::new(10u128.pow(DECIMALS as u32));
 
 pub const MAX_VAULT_FEE             : Uint64 = Uint64::new(1000000000000000000u64);       // 100%
 pub const MAX_GOVERNANCE_FEE_SHARE  : Uint64 = Uint64::new(75u64 * 10000000000000000u64); // 75%
