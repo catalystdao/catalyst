@@ -1,5 +1,11 @@
 use cosmwasm_std::{Event, Uint64};
 
+/// Generate the event of the amplification update.
+/// 
+/// # Arguments:
+/// * `target_timestamp` - The time at which the amplification update must be completed.
+/// * `target_amplification` - The new target amplification.
+/// 
 pub fn set_amplification_event(
     target_timestamp: Uint64,
     target_amplification: Uint64

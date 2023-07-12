@@ -1,16 +1,14 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{Uint128, Binary, Uint64};
+use cosmwasm_std::{Uint64, Uint128, Binary};
 use catalyst_types::{U256, I256};
-pub use catalyst_vault_common::msg::{InstantiateMsg, ExecuteMsg};
+pub use catalyst_vault_common::msg::InstantiateMsg;
 use catalyst_vault_common::msg::{
-    AssetEscrowResponse, AssetsResponse, CalcLocalSwapResponse, CalcReceiveAssetResponse, CalcSendAssetResponse,
-    ChainInterfaceResponse, FeeAdministratorResponse, GetLimitCapacityResponse, GovernanceFeeShareResponse,
-    LiquidityEscrowResponse, OnlyLocalResponse, VaultConnectionStateResponse, VaultFeeResponse, ReadyResponse,
-    SetupMasterResponse, TotalEscrowedAssetResponse, TotalEscrowedLiquidityResponse, WeightResponse, FactoryResponse, FactoryOwnerResponse
+    ExecuteMsg, AssetEscrowResponse, AssetsResponse, CalcLocalSwapResponse, CalcReceiveAssetResponse, CalcSendAssetResponse, ChainInterfaceResponse, FeeAdministratorResponse, GetLimitCapacityResponse, GovernanceFeeShareResponse, LiquidityEscrowResponse, OnlyLocalResponse, VaultConnectionStateResponse, VaultFeeResponse, ReadyResponse, SetupMasterResponse, TotalEscrowedAssetResponse, TotalEscrowedLiquidityResponse, WeightResponse, FactoryResponse, FactoryOwnerResponse
 };
 use cw20::{AllowanceResponse, BalanceResponse, TokenInfoResponse};
 
 
+// Extend Catalyst's base ExecuteMsg enum with custom messages
 #[cw_serde]
 pub enum AmplifiedExecuteExtension {
 
@@ -29,7 +27,7 @@ pub type AmplifiedExecuteMsg = ExecuteMsg<AmplifiedExecuteExtension>;
 pub enum QueryMsg {
 
 
-    // Common Queries
+    // Catalyst Base Queries
     #[returns(ChainInterfaceResponse)]
     ChainInterface {},
     #[returns(SetupMasterResponse)]
@@ -62,8 +60,8 @@ pub enum QueryMsg {
     GovernanceFeeShare {},
     #[returns(FeeAdministratorResponse)]
     FeeAdministrator {},
-    #[returns(CalcSendAssetResponse)]
 
+    #[returns(CalcSendAssetResponse)]
     CalcSendAsset {
         from_asset: String,
         amount: Uint128

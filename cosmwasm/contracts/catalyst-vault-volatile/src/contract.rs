@@ -3,22 +3,19 @@ use cosmwasm_std::entry_point;
 use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, to_binary};
 use cw2::set_contract_version;
 use cw20_base::allowances::{
-    execute_decrease_allowance, execute_increase_allowance, execute_send_from,
-    execute_transfer_from, query_allowance,
+    execute_decrease_allowance, execute_increase_allowance, execute_send_from, execute_transfer_from, query_allowance,
 };
 use cw20_base::contract::{
     execute_send, execute_transfer, query_balance, query_token_info,
 };
 use catalyst_vault_common::ContractError;
 use catalyst_vault_common::state::{
-    setup, finish_setup, set_fee_administrator, set_vault_fee, set_governance_fee_share, set_connection,
-    on_send_asset_failure, on_send_liquidity_failure, query_chain_interface, query_setup_master, query_ready, query_only_local, query_assets, query_weight, query_vault_fee, query_governance_fee_share, query_fee_administrator, query_total_escrowed_liquidity, query_total_escrowed_asset, query_asset_escrow, query_liquidity_escrow, query_vault_connection_state, query_factory, query_factory_owner
+    setup, finish_setup, set_fee_administrator, set_vault_fee, set_governance_fee_share, set_connection, on_send_asset_failure, on_send_liquidity_failure, query_chain_interface, query_setup_master, query_ready, query_only_local, query_assets, query_weight, query_vault_fee, query_governance_fee_share, query_fee_administrator, query_total_escrowed_liquidity, query_total_escrowed_asset, query_asset_escrow, query_liquidity_escrow, query_vault_connection_state, query_factory, query_factory_owner
 };
 
 use crate::msg::{VolatileExecuteMsg, InstantiateMsg, QueryMsg, VolatileExecuteExtension};
 use crate::state::{
-    initialize_swap_curves, set_weights, deposit_mixed, withdraw_all, withdraw_mixed, local_swap, send_asset, receive_asset,
-    send_liquidity, receive_liquidity, query_calc_send_asset, query_calc_receive_asset, query_calc_local_swap, query_get_limit_capacity, query_target_weight, query_weights_update_finish_timestamp, on_send_asset_success_volatile, on_send_liquidity_success_volatile
+    initialize_swap_curves, set_weights, deposit_mixed, withdraw_all, withdraw_mixed, local_swap, send_asset, receive_asset, send_liquidity, receive_liquidity, query_calc_send_asset, query_calc_receive_asset, query_calc_local_swap, query_get_limit_capacity, query_target_weight, query_weights_update_finish_timestamp, on_send_asset_success_volatile, on_send_liquidity_success_volatile
 };
 
 // Version information
@@ -348,16 +345,22 @@ pub fn execute(
             block_number_mod
         ),
 
-        VolatileExecuteMsg::Custom(VolatileExecuteExtension::SetWeights {
-            target_timestamp,
-            new_weights
-        }) => set_weights(
-            &mut deps,
-            &env,
-            info,
-            target_timestamp,
-            new_weights
-        ),
+        VolatileExecuteMsg::Custom(extension) => {
+
+            match extension {
+                VolatileExecuteExtension::SetWeights {
+                    target_timestamp,
+                    new_weights
+                } => set_weights(
+                    &mut deps,
+                    &env,
+                    info,
+                    target_timestamp,
+                    new_weights
+                ),
+            }
+
+        },
 
 
         // CW20 execute msgs - Use cw20-base for the implementation

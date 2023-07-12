@@ -4,14 +4,23 @@ use cw20_base::contract::{execute_mint, execute_burn};
 use cw_storage_plus::{Item, Map};
 use catalyst_ibc_interface::msg::ExecuteMsg as InterfaceExecuteMsg;
 use catalyst_types::{U256, AsI256, I256, AsU256};
-use catalyst_vault_common::{state::{ASSETS, MAX_ASSETS, WEIGHTS, INITIAL_MINT_AMOUNT, VAULT_FEE, MAX_LIMIT_CAPACITY, USED_LIMIT_CAPACITY, CHAIN_INTERFACE, TOTAL_ESCROWED_LIQUIDITY, TOTAL_ESCROWED_ASSETS, is_connected, update_limit_capacity, collect_governance_fee_message, compute_send_asset_hash, compute_send_liquidity_hash, create_asset_escrow, create_liquidity_escrow, on_send_asset_success, on_send_liquidity_success, total_supply, get_limit_capacity, FACTORY, factory_owner, initialize_limit_capacity, initialize_escrow_totals}, ContractError, msg::{CalcSendAssetResponse, CalcReceiveAssetResponse, CalcLocalSwapResponse, GetLimitCapacityResponse}, event::{local_swap_event, send_asset_event, receive_asset_event, send_liquidity_event, receive_liquidity_event, deposit_event, withdraw_event, cw20_response_to_standard_event}};
-use fixed_point_math::{LN2, mul_wad_down, self, ln_wad, WAD, exp_wad};
+use catalyst_vault_common::{
+    ContractError,
+    event::{local_swap_event, send_asset_event, receive_asset_event, send_liquidity_event, receive_liquidity_event, deposit_event, withdraw_event, cw20_response_to_standard_event}, 
+    msg::{CalcSendAssetResponse, CalcReceiveAssetResponse, CalcLocalSwapResponse, GetLimitCapacityResponse},
+    state::{ASSETS, FACTORY, MAX_ASSETS, WEIGHTS, INITIAL_MINT_AMOUNT, VAULT_FEE, MAX_LIMIT_CAPACITY, USED_LIMIT_CAPACITY, CHAIN_INTERFACE, TOTAL_ESCROWED_LIQUIDITY, TOTAL_ESCROWED_ASSETS, is_connected, update_limit_capacity, collect_governance_fee_message, compute_send_asset_hash, compute_send_liquidity_hash, create_asset_escrow, create_liquidity_escrow, on_send_asset_success, on_send_liquidity_success, total_supply, get_limit_capacity, factory_owner, initialize_limit_capacity, initialize_escrow_totals}
+};
+use fixed_point_math::{self, WAD, LN2, mul_wad_down, ln_wad, exp_wad};
 use std::ops::Div;
 
-use crate::{calculation_helpers::{calc_price_curve_area, calc_price_curve_limit, calc_combined_price_curves, calc_price_curve_limit_share}, msg::{TargetWeightResponse, WeightsUpdateFinishTimestampResponse}, event::set_weights_event};
+use crate::{
+    calculation_helpers::{calc_price_curve_area, calc_price_curve_limit, calc_combined_price_curves, calc_price_curve_limit_share},
+    event::set_weights_event,
+    msg::{TargetWeightResponse, WeightsUpdateFinishTimestampResponse}
+};
 
 
-// Weight adjustment variables
+// Weight adjustment storage variables and constants
 pub const TARGET_WEIGHTS: Map<&str, Uint128> = Map::new("catalyst-vault-volatile-target-weights");
 pub const WEIGHT_UPDATE_TIMESTAMP_SECONDS: Item<Uint64> = Item::new("catalyst-vault-volatile-weight-update-timestamp");
 pub const WEIGHT_UPDATE_FINISH_TIMESTAMP_SECONDS: Item<Uint64> = Item::new("catalyst-vault-volatile-weight-update-finish-timestamp");
@@ -30,7 +39,7 @@ const MAX_WEIGHT_ADJUSTMENT_FACTOR : Uint128 = Uint128::new(10);
 /// # Arguments:
 /// * `assets` - The list of the assets that are to be supported by the vault.
 /// * `weights` - The weights applied to the assets.
-/// * `amp` - The amplification value applied to the vault.
+/// * `amp` - The amplification value applied to the vault (should be WAD).
 /// * `depositor` - The account that will receive the initial vault tokens.
 /// 
 pub fn initialize_swap_curves(
@@ -76,7 +85,7 @@ pub fn initialize_swap_curves(
             let balance = deps.querier.query_wasm_smart::<BalanceResponse>(
                 asset,
                 &Cw20QueryMsg::Balance { address: env.contract.address.to_string() }
-            ).map(|response| response.balance)?;
+            )?.balance;
 
             if balance.is_zero() {
                 return Err(ContractError::InvalidZeroBalance {});

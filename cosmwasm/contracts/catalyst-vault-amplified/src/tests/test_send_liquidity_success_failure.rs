@@ -5,7 +5,7 @@ mod test_amplified_send_liquidity_success_failure {
     use catalyst_vault_common::{ContractError, msg::{TotalEscrowedLiquidityResponse, LiquidityEscrowResponse}, state::{compute_send_liquidity_hash, INITIAL_MINT_AMOUNT}};
     use test_helpers::{math::{uint128_to_f64, f64_to_uint128}, misc::{encode_payload_address, get_response_attribute}, token::{deploy_test_tokens, transfer_tokens, query_token_info, query_token_balance}, definitions::{SETUP_MASTER, CHANNEL_ID, SWAPPER_B, SWAPPER_A}, contract::{mock_instantiate_interface, mock_factory_deploy_vault, mock_set_vault_connection}};
 
-    use crate::{msg::{AmplifiedExecuteMsg, QueryMsg}, tests::{helpers::{amplified_vault_contract_storage}, parameters::{AMPLIFICATION, TEST_VAULT_BALANCES, TEST_VAULT_WEIGHTS, TEST_VAULT_ASSET_COUNT}}};
+    use crate::{msg::{AmplifiedExecuteMsg, QueryMsg}, tests::{helpers::amplified_vault_contract_storage, parameters::{AMPLIFICATION, TEST_VAULT_BALANCES, TEST_VAULT_WEIGHTS, TEST_VAULT_ASSET_COUNT}}};
 
 
     //TODO check events

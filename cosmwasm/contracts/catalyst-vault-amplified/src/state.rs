@@ -2,37 +2,54 @@ use cosmwasm_std::{Addr, Uint128, DepsMut, Env, MessageInfo, Response, StdResult
 use cw20::{Cw20ExecuteMsg, Cw20QueryMsg, BalanceResponse};
 use cw20_base::contract::{execute_mint, execute_burn};
 use cw_storage_plus::Item;
+use catalyst_ibc_interface::msg::ExecuteMsg as InterfaceExecuteMsg;
 use catalyst_types::{U256, AsI256, I256, AsU256, u256};
-use fixed_point_math::{mul_wad_down, self, WAD, pow_wad, WADWAD, div_wad_up, div_wad_down, mul_wad_up};
 use catalyst_vault_common::{
-    state::{
-        ASSETS, MAX_ASSETS, WEIGHTS, INITIAL_MINT_AMOUNT, VAULT_FEE, MAX_LIMIT_CAPACITY, USED_LIMIT_CAPACITY, CHAIN_INTERFACE,
-        TOTAL_ESCROWED_LIQUIDITY, TOTAL_ESCROWED_ASSETS, is_connected, update_limit_capacity,
-        collect_governance_fee_message, compute_send_asset_hash, compute_send_liquidity_hash, create_asset_escrow,
-        create_liquidity_escrow, on_send_asset_success, total_supply, get_limit_capacity, FACTORY, on_send_asset_failure, on_send_liquidity_failure, factory_owner, initialize_escrow_totals, initialize_limit_capacity,
-    },
-    ContractError, msg::{CalcSendAssetResponse, CalcReceiveAssetResponse, CalcLocalSwapResponse, GetLimitCapacityResponse}, event::{local_swap_event, send_asset_event, receive_asset_event, send_liquidity_event, receive_liquidity_event, deposit_event, withdraw_event, cw20_response_to_standard_event}
+    ContractError,
+    event::{local_swap_event, send_asset_event, receive_asset_event, send_liquidity_event, receive_liquidity_event, deposit_event, withdraw_event, cw20_response_to_standard_event},
+    msg::{CalcSendAssetResponse, CalcReceiveAssetResponse, CalcLocalSwapResponse, GetLimitCapacityResponse}, 
+    state::{ASSETS, FACTORY, MAX_ASSETS, WEIGHTS, INITIAL_MINT_AMOUNT, VAULT_FEE, MAX_LIMIT_CAPACITY, USED_LIMIT_CAPACITY, CHAIN_INTERFACE, TOTAL_ESCROWED_LIQUIDITY, TOTAL_ESCROWED_ASSETS, is_connected, update_limit_capacity, collect_governance_fee_message, compute_send_asset_hash, compute_send_liquidity_hash, create_asset_escrow, create_liquidity_escrow, on_send_asset_success, total_supply, get_limit_capacity, on_send_asset_failure, on_send_liquidity_failure, factory_owner, initialize_escrow_totals, initialize_limit_capacity}
 };
+use fixed_point_math::{self, WAD, WADWAD, mul_wad_down, pow_wad, div_wad_up, div_wad_down, mul_wad_up};
 use std::ops::Div;
 
-use catalyst_ibc_interface::msg::ExecuteMsg as InterfaceExecuteMsg;
+use crate::{
+    calculation_helpers::{calc_price_curve_area, calc_price_curve_limit, calc_combined_price_curves, calc_price_curve_limit_share, calc_weighted_alpha_0_ampped}, 
+    event::set_amplification_event,
+    msg::{TargetAmplificationResponse, AmplificationUpdateFinishTimestampResponse, Balance0Response, AmplificationResponse, UnitTrackerResponse}
+};
 
-use crate::{calculation_helpers::{calc_price_curve_area, calc_price_curve_limit, calc_combined_price_curves, calc_price_curve_limit_share, calc_weighted_alpha_0_ampped}, event::set_amplification_event, msg::{TargetAmplificationResponse, AmplificationUpdateFinishTimestampResponse, Balance0Response, AmplificationResponse, UnitTrackerResponse}};
 
-pub const ONE_MINUS_AMP: Item<I256> = Item::new("catalyst-vault-amplified-one-minus-amp");
+// Amplified-vault specific storage variables and constants
+pub const ONE_MINUS_AMP : Item<I256> = Item::new("catalyst-vault-amplified-one-minus-amp");
+pub const UNIT_TRACKER  : Item<I256> = Item::new("catalyst-vault-amplified-unit-tracker");
+
+const SMALL_SWAP_RATIO  : Uint128 = Uint128::new(1000000000000u128);   // 1e12
+const SMALL_SWAP_RETURN : U256 = u256!("950000000000000000");          // 0.95 * WAD
+
+// Amplification adjustment storage variables and constants
 pub const TARGET_ONE_MINUS_AMP: Item<I256> = Item::new("catalyst-vault-amplified-target-one-minus-amp");
 pub const AMP_UPDATE_TIMESTAMP_SECONDS: Item<Uint64> = Item::new("catalyst-vault-amplified-amp-update-timestamp");
 pub const AMP_UPDATE_FINISH_TIMESTAMP_SECONDS: Item<Uint64> = Item::new("catalyst-vault-amplified-amp-update-finish-timestamp");
-pub const UNIT_TRACKER: Item<I256> = Item::new("catalyst-vault-amplified-unit-tracker");
 
 const MIN_ADJUSTMENT_TIME_SECONDS : Uint64 = Uint64::new(7 * 24 * 60 * 60);     // 7 days
 const MAX_ADJUSTMENT_TIME_SECONDS : Uint64 = Uint64::new(365 * 24 * 60 * 60);   // 1 year
-const MAX_AMP_ADJUSTMENT_FACTOR : Uint64 = Uint64::new(2);
-
-const SMALL_SWAP_RATIO  : Uint128 = Uint128::new(1000000000000u128);   // 1e12
-const SMALL_SWAP_RETURN : U256 = u256!("950000000000000000");           // 0.95 * WAD
+const MAX_AMP_ADJUSTMENT_FACTOR   : Uint64 = Uint64::new(2);
 
 
+/// Initialize the vault swap curves.
+/// 
+/// The initial asset amounts must be sent to the vault before calling this function.
+/// Only the instantiator of the vault may invoke this function (i.e. the `FACTORY`).
+/// This should be handled by the Catalyst vault factory.
+/// 
+/// # Arguments:
+/// * `assets` - The list of the assets that are to be supported by the vault.
+/// * `weights` - The weights applied to the assets. These should be set such that
+/// all weight-asset products are equal (to effectively set 1:1 asset prices).
+/// * `amp` - The amplification value applied to the vault (should be < WAD).
+/// * `depositor` - The account that will receive the initial vault tokens.
+/// 
 pub fn initialize_swap_curves(
     deps: &mut DepsMut,
     env: Env,
@@ -54,7 +71,7 @@ pub fn initialize_swap_curves(
     }
 
     // Check that the amplification is correct (set to < 1)
-    if amp >= Uint64::new(10u64.pow(18)) {
+    if amp >= Uint64::new(WAD.as_u64()) {
         return Err(ContractError::InvalidAmplification {})
     }
 
@@ -69,20 +86,15 @@ pub fn initialize_swap_curves(
         });
     }
 
-    // Save the amplification value. It is stored as 1 - amp since most equations uses amp this way.
-    let one_minus_amp = WAD.as_i256().wrapping_sub(I256::from(amp));
+    // Save the amplification value. It is stored as '1 - amplification' since most 
+    // equations use the value in this way.
+    let one_minus_amp = WAD.as_i256()
+        .wrapping_sub(I256::from(amp));    // 'wrapping_sub' is safe, as amp < WAD (checked above)
     ONE_MINUS_AMP.save(deps.storage, &one_minus_amp)?;
-    TARGET_ONE_MINUS_AMP.save(deps.storage, &one_minus_amp)?;
 
-    // Validate and save assets
-    ASSETS.save(
-        deps.storage,
-        &assets
-            .iter()
-            .map(|asset_addr| deps.api.addr_validate(&asset_addr))
-            .collect::<StdResult<Vec<Addr>>>()
-            .map_err(|_| ContractError::InvalidAssets {})?
-    )?;
+    TARGET_ONE_MINUS_AMP.save(deps.storage, &one_minus_amp)?;
+    AMP_UPDATE_TIMESTAMP_SECONDS.save(deps.storage, &Uint64::zero())?;
+    AMP_UPDATE_FINISH_TIMESTAMP_SECONDS.save(deps.storage, &Uint64::zero())?;
 
     // Query and validate the vault asset balances
     let assets_balances = assets.iter()
@@ -91,7 +103,7 @@ pub fn initialize_swap_curves(
             let balance = deps.querier.query_wasm_smart::<BalanceResponse>(
                 asset,
                 &Cw20QueryMsg::Balance { address: env.contract.address.to_string() }
-            ).map(|response| response.balance)?;
+            )?.balance;
 
             if balance.is_zero() {
                 return Err(ContractError::InvalidZeroBalance {});
@@ -101,10 +113,21 @@ pub fn initialize_swap_curves(
         })
         .collect::<Result<Vec<Uint128>, ContractError>>()?;
 
+    // Save the assets
+    // NOTE: there is no need to validate the assets addresses, as invalid asset addresses
+    // would have caused the previous 'asset balance' check to fail.
+    ASSETS.save(
+        deps.storage,
+        &assets
+            .iter()
+            .map(|asset| Addr::unchecked(asset))
+            .collect::<Vec<Addr>>()
+    )?;
+
     // Validate and save weights
     weights
         .iter()
-        .zip(&assets)
+        .zip(&assets)   // zip: assets.len() == weights.len() (checked above)
         .try_for_each(|(weight, asset)| -> Result<(), ContractError> {
 
             if weight.is_zero() {
@@ -115,27 +138,28 @@ pub fn initialize_swap_curves(
 
             Ok(())
         })?;
-        
-    AMP_UPDATE_TIMESTAMP_SECONDS.save(deps.storage, &Uint64::zero())?;
-    AMP_UPDATE_FINISH_TIMESTAMP_SECONDS.save(deps.storage, &Uint64::zero())?;
 
     // Initialize the escrows
     initialize_escrow_totals(deps, assets)?;
 
     // Initialize the security limit
+    // The maximum limit is derived from the sum of the of the weight-asset products.
     let max_limit_capacity = weights
         .iter()
-        .zip(&assets_balances)
-        .fold(
+        .zip(&assets_balances)      // zip: weights.len() == assets_balances.len()
+        .try_fold(
             U256::zero(),
-            |acc, (next_weight, next_balance)| {
-                acc + U256::from(*next_weight).wrapping_mul(U256::from(*next_balance))     // Overflow safe, as U256 >> u64*Uint128
+            |acc, (weight, balance)| {
+                acc.checked_add(
+                    U256::from(*weight).wrapping_mul(U256::from(*balance))     // Overflow safe, as U256::MAX > Uint128::MAX*Uint128::MAX
+                )
             }
-        );
+        )?;
     initialize_limit_capacity(deps, max_limit_capacity)?;
 
     // Initialize the unit tracker
     UNIT_TRACKER.save(deps.storage, &I256::zero())?;
+
 
     // Mint vault tokens for the depositor
     // Make up a 'MessageInfo' with the sender set to this contract itself => this is to allow the use of the 'execute_mint'

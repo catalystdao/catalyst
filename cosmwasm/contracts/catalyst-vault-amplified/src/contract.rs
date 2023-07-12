@@ -3,37 +3,35 @@ use cosmwasm_std::entry_point;
 use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, to_binary};
 use cw2::set_contract_version;
 use cw20_base::allowances::{
-    execute_decrease_allowance, execute_increase_allowance, execute_send_from,
-    execute_transfer_from, query_allowance,
+    execute_decrease_allowance, execute_increase_allowance, execute_send_from, execute_transfer_from, query_allowance,
 };
 use cw20_base::contract::{
     execute_send, execute_transfer, query_balance, query_token_info,
 };
 use catalyst_vault_common::ContractError;
 use catalyst_vault_common::state::{
-    setup, finish_setup, set_fee_administrator, set_vault_fee, set_governance_fee_share, set_connection,
-    query_chain_interface, query_setup_master, query_ready, query_only_local, query_assets, query_weight, query_vault_fee, query_governance_fee_share, query_fee_administrator, query_total_escrowed_liquidity, query_total_escrowed_asset, query_asset_escrow, query_liquidity_escrow, query_vault_connection_state, query_factory, query_factory_owner, on_send_liquidity_success
+    setup, finish_setup, set_fee_administrator, set_vault_fee, set_governance_fee_share, set_connection, query_chain_interface, query_setup_master, query_ready, query_only_local, query_assets, query_weight, query_vault_fee, query_governance_fee_share, query_fee_administrator, query_total_escrowed_liquidity, query_total_escrowed_asset, query_asset_escrow, query_liquidity_escrow, query_vault_connection_state, query_factory, query_factory_owner, on_send_liquidity_success
 };
 
 use crate::msg::{AmplifiedExecuteMsg, InstantiateMsg, QueryMsg, AmplifiedExecuteExtension};
 use crate::state::{
-    initialize_swap_curves, deposit_mixed, withdraw_all, withdraw_mixed, local_swap, send_asset, receive_asset,
-    send_liquidity, receive_liquidity, query_calc_send_asset, query_calc_receive_asset, query_calc_local_swap, query_get_limit_capacity, on_send_asset_success_amplified, on_send_asset_failure_amplified, on_send_liquidity_failure_amplified, set_amplification, query_target_amplification, query_amplification_update_finish_timestamp, query_balance_0, query_amplification, query_unit_tracker
+    initialize_swap_curves, deposit_mixed, withdraw_all, withdraw_mixed, local_swap, send_asset, receive_asset, send_liquidity, receive_liquidity, query_calc_send_asset, query_calc_receive_asset, query_calc_local_swap, query_get_limit_capacity, on_send_asset_success_amplified, on_send_asset_failure_amplified, on_send_liquidity_failure_amplified, set_amplification, query_target_amplification, query_amplification_update_finish_timestamp, query_balance_0, query_amplification, query_unit_tracker
 };
 
-
-// version info for migration info
+// Version information
 const CONTRACT_NAME: &str = "catalyst-vault-amplified";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 
+
+// Instantiation **********************************************************************************
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
     mut deps: DepsMut,
     env: Env,
     info: MessageInfo,
-    msg: InstantiateMsg,
+    msg: InstantiateMsg
 ) -> Result<Response, ContractError> {
 
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
@@ -55,6 +53,8 @@ pub fn instantiate(
 
 
 
+// Execution **************************************************************************************
+
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(
     mut deps: DepsMut,
@@ -62,6 +62,7 @@ pub fn execute(
     info: MessageInfo,
     msg: AmplifiedExecuteMsg,
 ) -> Result<Response, ContractError> {
+
     match msg {
 
         AmplifiedExecuteMsg::InitializeSwapCurves {
@@ -79,24 +80,31 @@ pub fn execute(
             depositor
         ),
 
-        AmplifiedExecuteMsg::FinishSetup {} => finish_setup(
+        AmplifiedExecuteMsg::FinishSetup {
+        } => finish_setup(
             &mut deps,
             info
         ),
 
-        AmplifiedExecuteMsg::SetFeeAdministrator { administrator } => set_fee_administrator(
+        AmplifiedExecuteMsg::SetFeeAdministrator {
+            administrator
+        } => set_fee_administrator(
             &mut deps,
             info,
             administrator
         ),
 
-        AmplifiedExecuteMsg::SetVaultFee { fee } => set_vault_fee(
+        AmplifiedExecuteMsg::SetVaultFee {
+            fee
+        } => set_vault_fee(
             &mut deps,
             info,
             fee
         ),
 
-        AmplifiedExecuteMsg::SetGovernanceFeeShare { fee } => set_governance_fee_share(
+        AmplifiedExecuteMsg::SetGovernanceFeeShare {
+            fee
+        } => set_governance_fee_share(
             &mut deps,
             info,
             fee
@@ -112,75 +120,6 @@ pub fn execute(
             channel_id,
             to_vault,
             state
-        ),
-
-        AmplifiedExecuteMsg::OnSendAssetSuccess {
-            channel_id,
-            to_account,
-            u,
-            escrow_amount,
-            asset,
-            block_number_mod
-        } => on_send_asset_success_amplified(        // ! Use the amplified specific 'on_send_asset_success'
-            &mut deps,
-            info,
-            channel_id,
-            to_account,
-            u,
-            escrow_amount,
-            asset,
-            block_number_mod
-        ),
-
-        AmplifiedExecuteMsg::OnSendAssetFailure {
-            channel_id,
-            to_account,
-            u,
-            escrow_amount,
-            asset,
-            block_number_mod
-        } => on_send_asset_failure_amplified(       // ! Use the amplified specific 'on_send_asset_failure'
-            &mut deps,
-            info,
-            channel_id,
-            to_account,
-            u,
-            escrow_amount,
-            asset,
-            block_number_mod
-        ),
-
-        AmplifiedExecuteMsg::OnSendLiquiditySuccess {
-            channel_id,
-            to_account,
-            u,
-            escrow_amount,
-            block_number_mod
-        } => on_send_liquidity_success(
-            &mut deps,
-            info,
-            channel_id,
-            to_account,
-            u,
-            escrow_amount,
-            block_number_mod
-        ),
-
-        AmplifiedExecuteMsg::OnSendLiquidityFailure {
-            channel_id,
-            to_account,
-            u,
-            escrow_amount,
-            block_number_mod
-        } => on_send_liquidity_failure_amplified(   // ! Use the amplified specific 'on_send_liquidity_failure'
-            &mut deps,
-            env,
-            info,
-            channel_id,
-            to_account,
-            u,
-            escrow_amount,
-            block_number_mod
         ),
 
         AmplifiedExecuteMsg::DepositMixed {
@@ -337,6 +276,75 @@ pub fn execute(
             calldata
         ),
 
+        AmplifiedExecuteMsg::OnSendAssetSuccess {
+            channel_id,
+            to_account,
+            u,
+            escrow_amount,
+            asset,
+            block_number_mod
+        } => on_send_asset_success_amplified(        // ! Use the amplified specific 'on_send_asset_success'
+            &mut deps,
+            info,
+            channel_id,
+            to_account,
+            u,
+            escrow_amount,
+            asset,
+            block_number_mod
+        ),
+
+        AmplifiedExecuteMsg::OnSendAssetFailure {
+            channel_id,
+            to_account,
+            u,
+            escrow_amount,
+            asset,
+            block_number_mod
+        } => on_send_asset_failure_amplified(       // ! Use the amplified specific 'on_send_asset_failure'
+            &mut deps,
+            info,
+            channel_id,
+            to_account,
+            u,
+            escrow_amount,
+            asset,
+            block_number_mod
+        ),
+
+        AmplifiedExecuteMsg::OnSendLiquiditySuccess {
+            channel_id,
+            to_account,
+            u,
+            escrow_amount,
+            block_number_mod
+        } => on_send_liquidity_success(
+            &mut deps,
+            info,
+            channel_id,
+            to_account,
+            u,
+            escrow_amount,
+            block_number_mod
+        ),
+
+        AmplifiedExecuteMsg::OnSendLiquidityFailure {
+            channel_id,
+            to_account,
+            u,
+            escrow_amount,
+            block_number_mod
+        } => on_send_liquidity_failure_amplified(   // ! Use the amplified specific 'on_send_liquidity_failure'
+            &mut deps,
+            env,
+            info,
+            channel_id,
+            to_account,
+            u,
+            escrow_amount,
+            block_number_mod
+        ),
+
         AmplifiedExecuteMsg::Custom(extension) => {
 
             match extension {
@@ -420,6 +428,8 @@ pub fn execute(
 }
 
 
+
+// Query ******************************************************************************************
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
