@@ -411,7 +411,7 @@ pub fn withdraw_all(
 
 /// Withdraw an uneven amount of assets from the vault (i.e. according to a user defined ratio).
 /// 
-/// **NOTE**: 
+/// **NOTE**: This function cannot be used to withdraw all the vault liquidity (for that use `withdraw_all`).
 /// 
 /// # Arguments:
 /// * `vault_tokens` - The amount of vault tokens to burn.
@@ -569,6 +569,8 @@ pub fn withdraw_mixed(
 
 /// Perform a local asset swap.
 /// 
+/// **NOTE**: The vault's access to the source asset must be approved by the user. 
+/// 
 /// # Arguments:
 /// * `from_asset` - The source asset.
 /// * `to_asset` - The destination asset.
@@ -605,7 +607,7 @@ pub fn local_swap(
         return Err(ContractError::ReturnInsufficient { out, min_out });
     }
 
-    // Build the message to transfer input assets to the vault
+    // Build the message to transfer the input assets to the vault
     let transfer_from_asset_msg = CosmosMsg::Wasm(
         cosmwasm_std::WasmMsg::Execute {
             contract_addr: from_asset.clone(),
@@ -618,7 +620,7 @@ pub fn local_swap(
         }
     );
 
-    // Build the message to transfer output assets to the swapper
+    // Build the message to transfer the output assets to the swapper
     let transfer_to_asset_msg = CosmosMsg::Wasm(
         cosmwasm_std::WasmMsg::Execute {
             contract_addr: to_asset.clone(),
@@ -662,6 +664,8 @@ pub fn local_swap(
 
 /// Initiate a cross-chain asset swap.
 /// 
+/// **NOTE**: The vault's access to the source asset must be approved by the user. 
+/// 
 /// # Arguments:
 /// * `channel_id` - The target chain identifier.
 /// * `to_vault` - The target vault on the target chain (Catalyst encoded).
@@ -672,7 +676,8 @@ pub fn local_swap(
 /// * `min_out` - The mininum `to_asset` output amount to get on the target vault.
 /// * `fallback_account` - The recipient of the swapped amount should the swap fail.
 /// * `calldata` - Arbitrary data to be executed on the target chain upon successful execution of the swap.
-    pub fn send_asset(
+/// 
+pub fn send_asset(
     deps: &mut DepsMut,
     env: Env,
     info: MessageInfo,
@@ -850,7 +855,8 @@ pub fn receive_asset(
     // Check and update the security limit
     update_limit_capacity(deps, env.block.time, u)?;
 
-    // Calculate the swap return. Note that the fee is always taken on the sending side.
+    // Calculate the swap return.
+    // NOTE: no fee is taken here, the fee is always taken on the sending side.
     let assets = ASSETS.load(deps.storage)?;
     let to_asset = assets
         .get(to_asset_index as usize)
@@ -914,9 +920,9 @@ pub fn receive_asset(
 
 /// Initiate a cross-chain liquidity swap.
 /// 
-/// This is a macro *equivalent* to performing an even withdrawal from the vault and 
-/// sending the withdrawed assets to another vault. This is implemeted via a single
-/// step.
+/// This is a macro *equivalent* to performing a withdrawal from the vault and 
+/// sending the withdrawed assets to another vault. This is implemeted in a single
+/// step (i.e. without performing the individual operations).
 /// 
 /// # Arguments:
 /// * `channel_id` - The target chain identifier.
@@ -1033,6 +1039,10 @@ pub fn send_liquidity(
 
 
 /// Receive a cross-chain liquidity swap.
+/// 
+/// This is a macro *equivalent* to receiveing assets from another vault and performing
+/// a deposit of those assets into the vault. This is implemeted in a single step
+/// (i.e. without performing the individual operations).
 /// 
 /// **NOTE**: Only the chain interface may invoke this function.
 /// 
@@ -1204,6 +1214,14 @@ pub fn receive_liquidity(
 
 
 
+/// Compute the return of 'send_asset' (not including fees).
+/// 
+/// **NOTE**: This function reverts if 'from_asset' does not form part of the vault.
+/// 
+/// # Arguments:
+/// * `from_asset` - The source asset.
+/// * `amount` - The `from_asset` amount sold to the vault (excluding the vault fee).
+/// 
 pub fn calc_send_asset(
     deps: &Deps,
     env: Env,
@@ -1211,21 +1229,29 @@ pub fn calc_send_asset(
     amount: Uint128
 ) -> Result<U256, ContractError> {
 
+    let from_asset_weight = WEIGHTS.load(deps.storage, from_asset.as_ref())
+        .map_err(|_| ContractError::AssetNotFound {})?;
+
     let from_asset_balance: Uint128 = deps.querier.query_wasm_smart::<BalanceResponse>(
         from_asset,
         &Cw20QueryMsg::Balance { address: env.contract.address.to_string() }
     )?.balance;
 
-    let from_asset_weight = WEIGHTS.load(deps.storage, from_asset.as_ref())
-        .map_err(|_| ContractError::AssetNotFound {})?;
-
     calc_price_curve_area(
-        amount.u128().into(),
-        from_asset_balance.u128().into(),
-        U256::from(from_asset_weight),
+        amount.into(),
+        from_asset_balance.into(),
+        from_asset_weight.into(),
     )
 }
 
+/// Compute the return of 'receive_asset'.
+/// 
+/// **NOTE**: This function reverts if 'to_asset' does not form part of the vault.
+/// 
+/// # Arguments:
+/// * `to_asset` - The target asset.
+/// * `u` - The incoming units.
+/// 
 pub fn calc_receive_asset(
     deps: &Deps,
     env: Env,
@@ -1233,6 +1259,10 @@ pub fn calc_receive_asset(
     u: U256
 ) -> Result<Uint128, ContractError> {
 
+    let to_asset_weight = WEIGHTS.load(deps.storage, to_asset.as_ref())
+        .map_err(|_| ContractError::AssetNotFound {})?;
+
+    // Subtract the escrowed balance from the vault's total balance to return a smaller output.
     let to_asset_escrowed_balance: Uint128 = TOTAL_ESCROWED_ASSETS.load(
         deps.storage,
         to_asset
@@ -1240,20 +1270,30 @@ pub fn calc_receive_asset(
     let to_asset_balance: Uint128 = deps.querier.query_wasm_smart::<BalanceResponse>(
         to_asset,
         &Cw20QueryMsg::Balance { address: env.contract.address.to_string() }
-    )?.balance.checked_sub(to_asset_escrowed_balance)?;      // vault balance minus escrowed balance
-
-    let to_asset_weight = WEIGHTS.load(deps.storage, to_asset.as_ref())?;
+    )?.balance.checked_sub(to_asset_escrowed_balance)?;
     
     calc_price_curve_limit(
         u,
-        to_asset_balance.u128().into(),
-        U256::from(to_asset_weight),
+        to_asset_balance.into(),
+        to_asset_weight.into(),
     ).and_then(
         |val| TryInto::<Uint128>::try_into(val).map_err(|err| err.into())
     )
 
 }
 
+/// Compute the return of 'local_swap' (not including fees).
+/// 
+/// If 'from_asset' and 'to_asset' have equal weights, a simplified formula is used.
+/// 
+/// **NOTE**: This function reverts if 'from_asset' or 'to_asset' do not form part 
+/// of the vault.
+/// 
+/// # Arguments:
+/// * `from_asset` - The source asset.
+/// * `to_asset` - The destination asset.
+/// * `amount` - The `from_asset` amount sold to the vault (excluding fees).
+/// 
 pub fn calc_local_swap(
     deps: &Deps,
     env: Env,
@@ -1273,6 +1313,8 @@ pub fn calc_local_swap(
         &Cw20QueryMsg::Balance { address: env.contract.address.to_string() }
     )?.balance;
 
+    // Subtract the 'to_asset' escrowed balance from the vault's total balance 
+    // to return a smaller output.
     let to_asset_escrowed_balance: Uint128 = TOTAL_ESCROWED_ASSETS.load(
         deps.storage,
         to_asset
@@ -1280,86 +1322,116 @@ pub fn calc_local_swap(
     let to_asset_balance: Uint128 = deps.querier.query_wasm_smart::<BalanceResponse>(
         to_asset,
         &Cw20QueryMsg::Balance { address: env.contract.address.to_string() }
-    )?.balance.checked_sub(to_asset_escrowed_balance)?;      // vault balance minus escrowed balance
+    )?.balance.checked_sub(to_asset_escrowed_balance)?;
 
+    // Use a simplified formula for equal 'from' and 'to' weights (saves gas and is exact).
     if from_asset_weight == to_asset_weight {
-        // Saves gas and is exact
-        // NOTE: If W_A == 0 and W_B == 0 then W_A == W_B and the calculation will not fail (unlike with the full calculation).
-        // This cannot be used to extract an asset from the vault using an asset that is not in the vault, as all assets in 
-        // the vault have a non-zero weight.
+        // NOTE: in this implementation it is not possible for either weight to be zero.
         return Ok(
             to_asset_balance.checked_mul(amount)? / from_asset_balance.checked_add(amount)?
         )
     }
 
     calc_combined_price_curves(
-        amount.u128().into(),
-        from_asset_balance.u128().into(),
-        to_asset_balance.u128().into(),
-        U256::from(from_asset_weight),
-        U256::from(to_asset_weight)
+        amount.into(),
+        from_asset_balance.into(),
+        to_asset_balance.into(),
+        from_asset_weight.into(),
+        to_asset_weight.into()
     ).and_then(
         |val| TryInto::<Uint128>::try_into(val).map_err(|err| err.into())
     )
 }
 
 
+/// Volatile-specific handling of the confirmation of a successful asset swap.
+/// 
+/// This function adds security limit adjustment to the default implementation.
+/// 
+/// # Arguments:
+/// * `channel_id` - The swap's channel id.
+/// * `to_account` - The recipient of the swap output.
+/// * `u` - The units value of the swap.
+/// * `escrow_amount` - The escrowed asset amount.
+/// * `asset` - The swap source asset.
+/// * `block_number_mod` - The block number at which the swap transaction was commited (modulo 2^32).
+/// 
 pub fn on_send_asset_success_volatile(
     deps: &mut DepsMut,
     info: MessageInfo,
     channel_id: String,
     to_account: Binary,
     u: U256,
-    amount: Uint128,
+    escrow_amount: Uint128,
     asset: String,
     block_number_mod: u32
 ) -> Result<Response, ContractError> {
 
+    // Execute the common escrow logic
     let response = on_send_asset_success(
         deps,
         info,
         channel_id,
         to_account,
         u,
-        amount,
+        escrow_amount,
         asset,
         block_number_mod
     )?;
 
-    let used_capacity = USED_LIMIT_CAPACITY.load(deps.storage)?;
+    // Outgoing units are subtracted from the used limit capacity to avoid having a fixed
+    // maximum daily cross chain volume. If the router were fraudulent, no one would execute 
+    // an outgoing swap.
 
     // Minor optimization: avoid storage write if the used capacity is already at zero
-    if used_capacity != U256::zero() {
+    let used_capacity = USED_LIMIT_CAPACITY.load(deps.storage)?;
+    if !used_capacity.is_zero() {
         USED_LIMIT_CAPACITY.save(deps.storage, &used_capacity.saturating_sub(u))?;
     }
 
     Ok(response)
 }
 
+
+/// Volatile-specific handling of the confirmation of a successful liquidity swap.
+/// 
+/// This function adds security limit adjustment to the default implementation.
+/// 
+/// # Arguments:
+/// * `channel_id` - The swap's channel id.
+/// * `to_account` - The recipient of the swap output.
+/// * `u` - The units value of the swap.
+/// * `escrow_amount` - The escrowed liquidity amount.
+/// * `block_number_mod` - The block number at which the swap transaction was commited (modulo 2^32).
+/// 
 pub fn on_send_liquidity_success_volatile(
     deps: &mut DepsMut,
     info: MessageInfo,
     channel_id: String,
     to_account: Binary,
     u: U256,
-    amount: Uint128,
+    escrow_amount: Uint128,
     block_number_mod: u32
 ) -> Result<Response, ContractError> {
 
+    // Execute the common escrow logic
     let response = on_send_liquidity_success(
         deps,
         info,
         channel_id,
         to_account,
         u,
-        amount,
+        escrow_amount,
         block_number_mod
     )?;
 
-    let used_capacity = USED_LIMIT_CAPACITY.load(deps.storage)?;
+    // Outgoing units are subtracted from the used limit capacity to avoid having a fixed
+    // maximum daily cross chain volume. If the router were fraudulent, no one would execute 
+    // an outgoing swap.
 
     // Minor optimization: avoid storage write if the used capacity is already at zero
-    if used_capacity != U256::zero() {
+    let used_capacity = USED_LIMIT_CAPACITY.load(deps.storage)?;
+    if !used_capacity.is_zero() {
         USED_LIMIT_CAPACITY.save(deps.storage, &used_capacity.saturating_sub(u))?;
     }
 
@@ -1367,11 +1439,27 @@ pub fn on_send_liquidity_success_volatile(
 }
 
 
+/// Allow governance to modify the vault asset weights.
+/// 
+/// **NOTE**: the weights cannot be set to 0 nor can they introduce a change larger than
+/// `MAX_WEIGHT_ADJUSTMENT_FACTOR`.
+/// 
+/// **NOTE**: `target_timestamp` must be within `MIN_ADJUSTMENT_TIME_SECONDS` and
+/// `MAX_ADJUSTMENT_TIME_SECONDS` from the current time.
+/// 
+/// **NOTE**: It is not recommended to update the weights if they have been initialized
+/// to small values (<≈100), as the incremental `update_weights` function would result 
+/// in large step updates which are undesirable (because of the low integer resolution).
+/// 
+/// # Arguments:
+/// * `target_timestamp` - The time at which the weights update must be completed.
+/// * `new_weights` - The new weights
+/// 
 pub fn set_weights(
     deps: &mut DepsMut,
     env: &Env,
     info: MessageInfo,
-    target_timestamp: Uint64,   //TODO EVM mismatch (targetTime),
+    target_timestamp: Uint64,
     new_weights: Vec<Uint128>
 ) -> Result<Response, ContractError> {
 
@@ -1380,9 +1468,7 @@ pub fn set_weights(
         return Err(ContractError::Unauthorized {});
     }
 
-    let assets = ASSETS.load(deps.storage)?;
-
-    // Check 'target_timestamp' is within the defined acceptable bounds
+    // Check that 'target_timestamp' is within the defined acceptable bounds
     let current_time = Uint64::new(env.block.time.seconds());
     if
         target_timestamp < current_time + MIN_ADJUSTMENT_TIME_SECONDS ||
@@ -1392,18 +1478,20 @@ pub fn set_weights(
     }
 
     // Check the new requested weights and store them
+    let assets = ASSETS.load(deps.storage)?;
     if new_weights.len() != assets.len() {
         return Err(ContractError::InvalidParameters { reason: "Invalid weights count.".to_string() });
     }
 
     assets
         .iter()
-        .zip(&new_weights)                                      // zip: weights.len() == current_weights.len()
-        .map(|(asset, new_weight)| {
+        .zip(&new_weights)      // zip: weights.len() == current_weights.len() (checked above)
+        .try_for_each(|(asset, new_weight)| -> Result<(), ContractError> {
 
             let current_weight = WEIGHTS.load(deps.storage, asset.as_ref())?;
 
-            // Check that the new weight is neither 0 nor larger than the maximum allowed relative change
+            // Check that the new weight is neither 0 nor larger/smaller than the maximum 
+            // allowed relative change
             if 
                 *new_weight == Uint128::zero() ||
                 *new_weight > current_weight.checked_mul(MAX_WEIGHT_ADJUSTMENT_FACTOR)? ||
@@ -1412,9 +1500,11 @@ pub fn set_weights(
                 return Err(ContractError::InvalidWeight {});
             }
 
-            Ok(*new_weight)
+            TARGET_WEIGHTS.save(deps.storage, asset.as_ref(), new_weight)?;
 
-        }).collect::<Result<Vec<Uint128>, ContractError>>()?;
+            Ok(())
+
+        })?;
     
     // Set the weight update time parameters
     WEIGHT_UPDATE_FINISH_TIMESTAMP_SECONDS.save(deps.storage, &target_timestamp)?;
@@ -1431,16 +1521,26 @@ pub fn set_weights(
     )
 }
 
+
+/// Perform an incremental weight update.
+/// 
+/// **NOTE**: This algorithm is intended to introduce a gradual small-stepped update to the
+/// asset weights. This will not be the case if the weights are initialized to small values.
+/// 
+/// **DEV-NOTE**: This function should be called at the beginning of weight-dependent functions.
+/// 
 pub fn update_weights(
     deps: &mut DepsMut,
     current_timestamp: Timestamp
 ) -> Result<(), ContractError> {
 
+    // This algorithm adjusts the current weights to the target weights via linear interpolation.
+
     let current_timestamp = Uint64::new(current_timestamp.seconds());
     
     // Only run update logic if 'param_update_finish_timestamp' is set
     let param_update_finish_timestamp = WEIGHT_UPDATE_FINISH_TIMESTAMP_SECONDS.load(deps.storage)?;
-    if param_update_finish_timestamp == Uint64::zero() {
+    if param_update_finish_timestamp.is_zero() {
         return Ok(());
     }
 
@@ -1463,7 +1563,8 @@ pub fn update_weights(
 
                 let new_weight = TARGET_WEIGHTS.load(deps.storage, asset.as_ref())?;
 
-                new_weight_sum = new_weight_sum.checked_add(U256::from(new_weight))?;
+                new_weight_sum = new_weight_sum
+                    .wrapping_add(U256::from(new_weight));  // 'wrapping_add' is safe because of casting to U256 (N*Uint128::MAX << U256::MAX for small N)
 
                 WEIGHTS.save(deps.storage, asset.as_ref(), &new_weight)?;
 
@@ -1492,7 +1593,7 @@ pub fn update_weights(
                 if current_weight == target_weight {
 
                     new_weight_sum = new_weight_sum
-                        .checked_add(U256::from(target_weight))?;
+                        .wrapping_add(U256::from(target_weight));  // 'wrapping_add' is safe because of casting to U256 (N*Uint128::MAX << U256::MAX for small N)
 
                     return Ok(());
 
@@ -1503,23 +1604,38 @@ pub fn update_weights(
                 //        (distance to the target weight) x (time since last update) / (time from last update until update finish)
                 //     ]
                 let new_weight: Uint128;
+
+                let time_since_last_update = Uint128::from(
+                    current_timestamp.checked_sub(param_update_timestamp)?   // Using 'checked_sub' for extra precaution.
+                );
+
+                let total_update_time_remaining = Uint128::from(
+                    param_update_finish_timestamp.checked_sub(param_update_timestamp)?  // Using 'checked_sub' for extra precaution.
+                );
+
                 if target_weight > current_weight {
-                    new_weight = current_weight + (
-                        (target_weight - current_weight)
-                            .checked_mul(Uint128::from(current_timestamp - param_update_timestamp))?
-                            .div(Uint128::from(param_update_finish_timestamp - param_update_timestamp))
+
+                    let weight_delta = target_weight.wrapping_sub(current_weight);    // 'wrapping_sub' is safe, as it has been checked that 'target_weight' > 'current_weight'
+
+                    new_weight = current_weight.wrapping_add(         // 'wrapping_add' is safe, as from the algorithm's design, the resulting 'new_weight' is <= 'target_weight'
+                        weight_delta
+                            .checked_mul(time_since_last_update)?
+                            .div(total_update_time_remaining)
                     );
                 }
                 else {
-                    new_weight = current_weight - (
-                        (current_weight - target_weight)
-                        .checked_mul(Uint128::from(current_timestamp - param_update_timestamp))?
-                        .div(Uint128::from(param_update_finish_timestamp - param_update_timestamp))
+
+                    let weight_delta = current_weight.wrapping_sub(target_weight);    // 'wrapping_sub' is safe, as it has been checked that 'current_weight' >= 'target_weight'
+
+                    new_weight = current_weight.wrapping_sub(         // 'wrapping_sub' is safe, as from the algorithm's design, the resulting 'new_weight' is >= 'target_weight'
+                        weight_delta
+                            .checked_mul(time_since_last_update)?
+                            .div(total_update_time_remaining)
                     );
                 }
 
                 new_weight_sum = new_weight_sum
-                    .checked_add(U256::from(new_weight))?;
+                    .wrapping_add(U256::from(new_weight));  // 'wrapping_add' is safe because of casting to U256 (N*Uint128::MAX << U256::MAX for small N)
 
                 // Update the weight
                 WEIGHTS.save(deps.storage, asset.as_ref(), &new_weight)?;
@@ -1533,7 +1649,7 @@ pub fn update_weights(
     // Update the maximum limit capacity
     MAX_LIMIT_CAPACITY.save(
         deps.storage,
-        &new_weight_sum.checked_mul(fixed_point_math::LN2)?
+        &new_weight_sum.wrapping_mul(fixed_point_math::LN2) // 'wrapping_mul' is safe as N*2^128 * ~2^60 << U256::MAX for small N
     )?;
 
     // Update the update timestamp
@@ -1550,6 +1666,12 @@ pub fn update_weights(
 
 // Query helpers ****************************************************************************************************************
 
+/// Query a 'send_asset' calculation.
+/// 
+/// # Arguments:
+/// * `from_asset` - The source asset.
+/// * `amount` - The `from_asset` amount (excluding the vault fee).
+/// 
 pub fn query_calc_send_asset(
     deps: Deps,
     env: Env,
@@ -1566,6 +1688,12 @@ pub fn query_calc_send_asset(
 }
 
 
+/// Query a 'receive_asset' calculation.
+/// 
+/// # Arguments:
+/// * `to_asset` - The target asset.
+/// * `u` - The incoming units.
+/// 
 pub fn query_calc_receive_asset(
     deps: Deps,
     env: Env,
@@ -1582,6 +1710,13 @@ pub fn query_calc_receive_asset(
 }
 
 
+/// Query a 'local_swap' calculation
+/// 
+/// # Arguments:
+/// * `from_asset` - The source asset.
+/// * `to_asset` - The target asset.
+/// * `amount` - The `from_asset` amount (excluding the vault fee).
+/// 
 pub fn query_calc_local_swap(
     deps: Deps,
     env: Env,
@@ -1599,6 +1734,7 @@ pub fn query_calc_local_swap(
 }
 
 
+/// Query the current limit capacity
 pub fn query_get_limit_capacity(
     deps: Deps,
     env: Env
@@ -1613,6 +1749,11 @@ pub fn query_get_limit_capacity(
 }
 
 
+/// Query an asset's target weight.
+/// 
+/// # Arguments:
+/// * `asset` - The asset of which to query the target weight.
+/// 
 pub fn query_target_weight(
     deps: Deps,
     asset: String
@@ -1626,6 +1767,8 @@ pub fn query_target_weight(
 
 }
 
+
+/// Query the weights update finish timestamp.
 pub fn query_weights_update_finish_timestamp(
     deps: Deps
 ) -> StdResult<WeightsUpdateFinishTimestampResponse> {

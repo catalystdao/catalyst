@@ -118,7 +118,7 @@ pub fn execute(
             channel_id,
             to_account,
             u,
-            amount,
+            escrow_amount,
             asset,
             block_number_mod
         } => on_send_asset_success_amplified(        // ! Use the amplified specific 'on_send_asset_success'
@@ -127,7 +127,7 @@ pub fn execute(
             channel_id,
             to_account,
             u,
-            amount,
+            escrow_amount,
             asset,
             block_number_mod
         ),
@@ -136,7 +136,7 @@ pub fn execute(
             channel_id,
             to_account,
             u,
-            amount,
+            escrow_amount,
             asset,
             block_number_mod
         } => on_send_asset_failure_amplified(       // ! Use the amplified specific 'on_send_asset_failure'
@@ -145,7 +145,7 @@ pub fn execute(
             channel_id,
             to_account,
             u,
-            amount,
+            escrow_amount,
             asset,
             block_number_mod
         ),
@@ -154,7 +154,7 @@ pub fn execute(
             channel_id,
             to_account,
             u,
-            amount,
+            escrow_amount,
             block_number_mod
         } => on_send_liquidity_success(
             &mut deps,
@@ -162,7 +162,7 @@ pub fn execute(
             channel_id,
             to_account,
             u,
-            amount,
+            escrow_amount,
             block_number_mod
         ),
 
@@ -170,7 +170,7 @@ pub fn execute(
             channel_id,
             to_account,
             u,
-            amount,
+            escrow_amount,
             block_number_mod
         } => on_send_liquidity_failure_amplified(   // ! Use the amplified specific 'on_send_liquidity_failure'
             &mut deps,
@@ -179,7 +179,7 @@ pub fn execute(
             channel_id,
             to_account,
             u,
-            amount,
+            escrow_amount,
             block_number_mod
         ),
 

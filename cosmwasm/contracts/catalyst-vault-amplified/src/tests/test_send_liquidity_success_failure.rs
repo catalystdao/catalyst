@@ -114,7 +114,7 @@ mod test_amplified_send_liquidity_success_failure {
                 channel_id: CHANNEL_ID.to_string(),
                 to_account: env.to_account.clone(),
                 u: env.u,
-                amount: env.from_amount,
+                escrow_amount: env.from_amount,
                 block_number_mod: env.block_number,
             },
             &[]
@@ -187,7 +187,7 @@ mod test_amplified_send_liquidity_success_failure {
                 channel_id: CHANNEL_ID.to_string(),
                 to_account: env.to_account.clone(),
                 u: env.u,
-                amount: env.from_amount,
+                escrow_amount: env.from_amount,
                 block_number_mod: env.block_number,
             },
             &[]
@@ -257,7 +257,7 @@ mod test_amplified_send_liquidity_success_failure {
                 channel_id: CHANNEL_ID.to_string(),
                 to_account: env.to_account.clone(),
                 u: env.u,
-                amount: env.from_amount,
+                escrow_amount: env.from_amount,
                 block_number_mod: env.block_number,
             },
             &[]
@@ -273,7 +273,7 @@ mod test_amplified_send_liquidity_success_failure {
                 channel_id: CHANNEL_ID.to_string(),
                 to_account: env.to_account.clone(),
                 u: env.u,
-                amount: env.from_amount,
+                escrow_amount: env.from_amount,
                 block_number_mod: env.block_number,
             },
             &[]
@@ -306,7 +306,7 @@ mod test_amplified_send_liquidity_success_failure {
                 channel_id: CHANNEL_ID.to_string(),
                 to_account: env.to_account.clone(),
                 u: env.u,
-                amount: env.from_amount,
+                escrow_amount: env.from_amount,
                 block_number_mod: env.block_number,
             },
             &[]
@@ -322,7 +322,7 @@ mod test_amplified_send_liquidity_success_failure {
                 channel_id: CHANNEL_ID.to_string(),
                 to_account: env.to_account.clone(),
                 u: env.u,
-                amount: env.from_amount,
+                escrow_amount: env.from_amount,
                 block_number_mod: env.block_number,
             },
             &[]
@@ -357,7 +357,7 @@ mod test_amplified_send_liquidity_success_failure {
                 channel_id: CHANNEL_ID.to_string(),
                 to_account: env.to_account.clone(),
                 u: env.u,
-                amount: env.from_amount,
+                escrow_amount: env.from_amount,
                 block_number_mod: env.block_number,
             },
             &[]
@@ -390,7 +390,7 @@ mod test_amplified_send_liquidity_success_failure {
                 channel_id: CHANNEL_ID.to_string(),
                 to_account: env.to_account.clone(),
                 u: env.u,
-                amount: env.from_amount,
+                escrow_amount: env.from_amount,
                 block_number_mod: env.block_number,
             },
             &[]
@@ -424,7 +424,7 @@ mod test_amplified_send_liquidity_success_failure {
                 channel_id: CHANNEL_ID.to_string(),
                 to_account: Binary("not_to_account".as_bytes().to_vec()),   // ! Not the chain interface
                 u: env.u,
-                amount: env.from_amount,
+                escrow_amount: env.from_amount,
                 block_number_mod: env.block_number 
             },
             &[]
@@ -441,7 +441,7 @@ mod test_amplified_send_liquidity_success_failure {
                 channel_id: CHANNEL_ID.to_string(),
                 to_account: env.to_account.clone(),
                 u: env.u + u256!("1"),                              // ! Increased units
-                amount: env.from_amount,
+                escrow_amount: env.from_amount,
                 block_number_mod: env.block_number 
             },
             &[]
@@ -458,7 +458,7 @@ mod test_amplified_send_liquidity_success_failure {
                 channel_id: CHANNEL_ID.to_string(),
                 to_account: env.to_account.clone(),
                 u: env.u,
-                amount: env.from_amount + Uint128::from(1u64),      // ! Increased from amount
+                escrow_amount: env.from_amount + Uint128::from(1u64),      // ! Increased from amount
                 block_number_mod: env.block_number 
             },
             &[]
@@ -475,7 +475,7 @@ mod test_amplified_send_liquidity_success_failure {
                 channel_id: CHANNEL_ID.to_string(),
                 to_account: env.to_account.clone(),
                 u: env.u,
-                amount: env.from_amount,
+                escrow_amount: env.from_amount,
                 block_number_mod: 101u32                            // ! Not the original block number
             },
             &[]
@@ -492,7 +492,7 @@ mod test_amplified_send_liquidity_success_failure {
                 channel_id: CHANNEL_ID.to_string(),
                 to_account: env.to_account,
                 u: env.u,
-                amount: env.from_amount,
+                escrow_amount: env.from_amount,
                 block_number_mod: env.block_number,
             },
             &[]
@@ -517,7 +517,7 @@ mod test_amplified_send_liquidity_success_failure {
                 channel_id: CHANNEL_ID.to_string(),
                 to_account: Binary("not_to_account".as_bytes().to_vec()),   // ! Not the chain interface
                 u: env.u,
-                amount: env.from_amount,
+                escrow_amount: env.from_amount,
                 block_number_mod: env.block_number 
             },
             &[]
@@ -534,7 +534,7 @@ mod test_amplified_send_liquidity_success_failure {
                 channel_id: CHANNEL_ID.to_string(),
                 to_account: env.to_account.clone(),
                 u: env.u + u256!("1"),                              // ! Increased units
-                amount: env.from_amount,
+                escrow_amount: env.from_amount,
                 block_number_mod: env.block_number 
             },
             &[]
@@ -551,7 +551,7 @@ mod test_amplified_send_liquidity_success_failure {
                 channel_id: CHANNEL_ID.to_string(),
                 to_account: env.to_account.clone(),
                 u: env.u,
-                amount: env.from_amount + Uint128::from(1u64),      // ! Increased from amount
+                escrow_amount: env.from_amount + Uint128::from(1u64),      // ! Increased from amount
                 block_number_mod: env.block_number 
             },
             &[]
@@ -568,7 +568,7 @@ mod test_amplified_send_liquidity_success_failure {
                 channel_id: CHANNEL_ID.to_string(),
                 to_account: env.to_account.clone(),
                 u: env.u,
-                amount: env.from_amount,
+                escrow_amount: env.from_amount,
                 block_number_mod: 101u32                            // ! Not the original block number
             },
             &[]
@@ -585,7 +585,7 @@ mod test_amplified_send_liquidity_success_failure {
                 channel_id: CHANNEL_ID.to_string(),
                 to_account: env.to_account,
                 u: env.u,
-                amount: env.from_amount,
+                escrow_amount: env.from_amount,
                 block_number_mod: env.block_number,
             },
             &[]

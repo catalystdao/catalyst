@@ -283,7 +283,7 @@ pub fn execute(
             channel_id,
             to_account,
             u,
-            amount,
+            escrow_amount,
             asset,
             block_number_mod
         } => on_send_asset_success_volatile(        // ! Use the volatile specific 'on_send_asset_success'
@@ -292,7 +292,7 @@ pub fn execute(
             channel_id,
             to_account,
             u,
-            amount,
+            escrow_amount,
             asset,
             block_number_mod
         ),
@@ -301,7 +301,7 @@ pub fn execute(
             channel_id,
             to_account,
             u,
-            amount,
+            escrow_amount,
             asset,
             block_number_mod
         } => on_send_asset_failure(
@@ -310,7 +310,7 @@ pub fn execute(
             channel_id,
             to_account,
             u,
-            amount,
+            escrow_amount,
             asset,
             block_number_mod
         ),
@@ -319,7 +319,7 @@ pub fn execute(
             channel_id,
             to_account,
             u,
-            amount,
+            escrow_amount,
             block_number_mod
         } => on_send_liquidity_success_volatile(    // ! Use the volatile specific 'on_send_liquidity_success'
             &mut deps,
@@ -327,7 +327,7 @@ pub fn execute(
             channel_id,
             to_account,
             u,
-            amount,
+            escrow_amount,
             block_number_mod
         ),
 
@@ -335,7 +335,7 @@ pub fn execute(
             channel_id,
             to_account,
             u,
-            amount,
+            escrow_amount,
             block_number_mod
         } => on_send_liquidity_failure(
             &mut deps,
@@ -344,7 +344,7 @@ pub fn execute(
             channel_id,
             to_account,
             u,
-            amount,
+            escrow_amount,
             block_number_mod
         ),
 

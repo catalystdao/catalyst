@@ -208,7 +208,7 @@ pub enum ExecuteMsg<T> {
         channel_id: String,
         to_account: Binary,
         u: U256,
-        amount: Uint128,
+        escrow_amount: Uint128,
         asset: String,
         block_number_mod: u32
     },
@@ -224,7 +224,7 @@ pub enum ExecuteMsg<T> {
         channel_id: String,
         to_account: Binary,
         u: U256,
-        amount: Uint128,
+        escrow_amount: Uint128,
         asset: String,
         block_number_mod: u32
     },
@@ -239,7 +239,7 @@ pub enum ExecuteMsg<T> {
         channel_id: String,
         to_account: Binary,
         u: U256,
-        amount: Uint128,
+        escrow_amount: Uint128,
         block_number_mod: u32
     },
 
@@ -253,7 +253,7 @@ pub enum ExecuteMsg<T> {
         channel_id: String,
         to_account: Binary,
         u: U256,
-        amount: Uint128,
+        escrow_amount: Uint128,
         block_number_mod: u32
     },
 

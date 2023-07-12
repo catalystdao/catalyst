@@ -5,7 +5,7 @@ mod test_volatile_send_liquidity_success_failure {
     use catalyst_vault_common::{ContractError, msg::{TotalEscrowedLiquidityResponse, LiquidityEscrowResponse}, state::{compute_send_liquidity_hash, INITIAL_MINT_AMOUNT}};
     use test_helpers::{math::{uint128_to_f64, f64_to_uint128}, misc::{encode_payload_address, get_response_attribute}, token::{deploy_test_tokens, transfer_tokens, query_token_info, query_token_balance}, definitions::{SETUP_MASTER, CHANNEL_ID, SWAPPER_B, SWAPPER_A}, contract::{mock_instantiate_interface, mock_factory_deploy_vault, mock_set_vault_connection}};
 
-    use crate::{msg::{VolatileExecuteMsg, QueryMsg}, tests::{helpers::{volatile_vault_contract_storage}, parameters::{TEST_VAULT_BALANCES, TEST_VAULT_WEIGHTS, AMPLIFICATION, TEST_VAULT_ASSET_COUNT}}};
+    use crate::{msg::{VolatileExecuteMsg, QueryMsg}, tests::{helpers::volatile_vault_contract_storage, parameters::{TEST_VAULT_BALANCES, TEST_VAULT_WEIGHTS, AMPLIFICATION, TEST_VAULT_ASSET_COUNT}}};
 
     //TODO check events
 
@@ -113,7 +113,7 @@ mod test_volatile_send_liquidity_success_failure {
                 channel_id: CHANNEL_ID.to_string(),
                 to_account: env.to_account.clone(),
                 u: env.u,
-                amount: env.from_amount,
+                escrow_amount: env.from_amount,
                 block_number_mod: env.block_number,
             },
             &[]
@@ -186,7 +186,7 @@ mod test_volatile_send_liquidity_success_failure {
                 channel_id: CHANNEL_ID.to_string(),
                 to_account: env.to_account.clone(),
                 u: env.u,
-                amount: env.from_amount,
+                escrow_amount: env.from_amount,
                 block_number_mod: env.block_number,
             },
             &[]
@@ -256,7 +256,7 @@ mod test_volatile_send_liquidity_success_failure {
                 channel_id: CHANNEL_ID.to_string(),
                 to_account: env.to_account.clone(),
                 u: env.u,
-                amount: env.from_amount,
+                escrow_amount: env.from_amount,
                 block_number_mod: env.block_number,
             },
             &[]
@@ -272,7 +272,7 @@ mod test_volatile_send_liquidity_success_failure {
                 channel_id: CHANNEL_ID.to_string(),
                 to_account: env.to_account.clone(),
                 u: env.u,
-                amount: env.from_amount,
+                escrow_amount: env.from_amount,
                 block_number_mod: env.block_number,
             },
             &[]
@@ -305,7 +305,7 @@ mod test_volatile_send_liquidity_success_failure {
                 channel_id: CHANNEL_ID.to_string(),
                 to_account: env.to_account.clone(),
                 u: env.u,
-                amount: env.from_amount,
+                escrow_amount: env.from_amount,
                 block_number_mod: env.block_number,
             },
             &[]
@@ -321,7 +321,7 @@ mod test_volatile_send_liquidity_success_failure {
                 channel_id: CHANNEL_ID.to_string(),
                 to_account: env.to_account.clone(),
                 u: env.u,
-                amount: env.from_amount,
+                escrow_amount: env.from_amount,
                 block_number_mod: env.block_number,
             },
             &[]
@@ -356,7 +356,7 @@ mod test_volatile_send_liquidity_success_failure {
                 channel_id: CHANNEL_ID.to_string(),
                 to_account: env.to_account.clone(),
                 u: env.u,
-                amount: env.from_amount,
+                escrow_amount: env.from_amount,
                 block_number_mod: env.block_number,
             },
             &[]
@@ -389,7 +389,7 @@ mod test_volatile_send_liquidity_success_failure {
                 channel_id: CHANNEL_ID.to_string(),
                 to_account: env.to_account.clone(),
                 u: env.u,
-                amount: env.from_amount,
+                escrow_amount: env.from_amount,
                 block_number_mod: env.block_number,
             },
             &[]
@@ -423,7 +423,7 @@ mod test_volatile_send_liquidity_success_failure {
                 channel_id: CHANNEL_ID.to_string(),
                 to_account: Binary("not_to_account".as_bytes().to_vec()),   // ! Not the chain interface
                 u: env.u,
-                amount: env.from_amount,
+                escrow_amount: env.from_amount,
                 block_number_mod: env.block_number 
             },
             &[]
@@ -440,7 +440,7 @@ mod test_volatile_send_liquidity_success_failure {
                 channel_id: CHANNEL_ID.to_string(),
                 to_account: env.to_account.clone(),
                 u: env.u + u256!("1"),                              // ! Increased units
-                amount: env.from_amount,
+                escrow_amount: env.from_amount,
                 block_number_mod: env.block_number 
             },
             &[]
@@ -457,7 +457,7 @@ mod test_volatile_send_liquidity_success_failure {
                 channel_id: CHANNEL_ID.to_string(),
                 to_account: env.to_account.clone(),
                 u: env.u,
-                amount: env.from_amount + Uint128::from(1u64),      // ! Increased from amount
+                escrow_amount: env.from_amount + Uint128::from(1u64),      // ! Increased from amount
                 block_number_mod: env.block_number 
             },
             &[]
@@ -474,7 +474,7 @@ mod test_volatile_send_liquidity_success_failure {
                 channel_id: CHANNEL_ID.to_string(),
                 to_account: env.to_account.clone(),
                 u: env.u,
-                amount: env.from_amount,
+                escrow_amount: env.from_amount,
                 block_number_mod: 101u32                            // ! Not the original block number
             },
             &[]
@@ -491,7 +491,7 @@ mod test_volatile_send_liquidity_success_failure {
                 channel_id: CHANNEL_ID.to_string(),
                 to_account: env.to_account,
                 u: env.u,
-                amount: env.from_amount,
+                escrow_amount: env.from_amount,
                 block_number_mod: env.block_number,
             },
             &[]
@@ -516,7 +516,7 @@ mod test_volatile_send_liquidity_success_failure {
                 channel_id: CHANNEL_ID.to_string(),
                 to_account: Binary("not_to_account".as_bytes().to_vec()),   // ! Not the chain interface
                 u: env.u,
-                amount: env.from_amount,
+                escrow_amount: env.from_amount,
                 block_number_mod: env.block_number 
             },
             &[]
@@ -533,7 +533,7 @@ mod test_volatile_send_liquidity_success_failure {
                 channel_id: CHANNEL_ID.to_string(),
                 to_account: env.to_account.clone(),
                 u: env.u + u256!("1"),                              // ! Increased units
-                amount: env.from_amount,
+                escrow_amount: env.from_amount,
                 block_number_mod: env.block_number 
             },
             &[]
@@ -550,7 +550,7 @@ mod test_volatile_send_liquidity_success_failure {
                 channel_id: CHANNEL_ID.to_string(),
                 to_account: env.to_account.clone(),
                 u: env.u,
-                amount: env.from_amount + Uint128::from(1u64),      // ! Increased from amount
+                escrow_amount: env.from_amount + Uint128::from(1u64),      // ! Increased from amount
                 block_number_mod: env.block_number 
             },
             &[]
@@ -567,7 +567,7 @@ mod test_volatile_send_liquidity_success_failure {
                 channel_id: CHANNEL_ID.to_string(),
                 to_account: env.to_account.clone(),
                 u: env.u,
-                amount: env.from_amount,
+                escrow_amount: env.from_amount,
                 block_number_mod: 101u32                            // ! Not the original block number
             },
             &[]
@@ -584,7 +584,7 @@ mod test_volatile_send_liquidity_success_failure {
                 channel_id: CHANNEL_ID.to_string(),
                 to_account: env.to_account,
                 u: env.u,
-                amount: env.from_amount,
+                escrow_amount: env.from_amount,
                 block_number_mod: env.block_number,
             },
             &[]
