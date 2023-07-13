@@ -283,7 +283,7 @@ pub fn execute(
             escrow_amount,
             asset,
             block_number_mod
-        } => on_send_asset_success_amplified(        // ! Use the amplified specific 'on_send_asset_success'
+        } => on_send_asset_success_amplified(       // ! Use the amplified specific 'on_send_asset_success'
             &mut deps,
             info,
             channel_id,
@@ -301,7 +301,7 @@ pub fn execute(
             escrow_amount,
             asset,
             block_number_mod
-        } => on_send_asset_failure_amplified(       // ! Use the amplified specific 'on_send_asset_failure'
+        } => on_send_asset_failure_amplified(      // ! Use the amplified specific 'on_send_asset_failure'
             &mut deps,
             info,
             channel_id,
@@ -318,8 +318,8 @@ pub fn execute(
             u,
             escrow_amount,
             block_number_mod
-        } => on_send_liquidity_success(
-            &mut deps,
+        } => on_send_liquidity_success(            // NOTE: there is no amplified-specific implementation for
+            &mut deps,                             // 'on_send_liquidity_success'. See 'state.rs' for more information.
             info,
             channel_id,
             to_account,
@@ -334,7 +334,7 @@ pub fn execute(
             u,
             escrow_amount,
             block_number_mod
-        } => on_send_liquidity_failure_amplified(   // ! Use the amplified specific 'on_send_liquidity_failure'
+        } => on_send_liquidity_failure_amplified(  // ! Use the amplified specific 'on_send_liquidity_failure'
             &mut deps,
             env,
             info,

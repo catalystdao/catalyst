@@ -192,7 +192,7 @@ pub fn calc_weighted_alpha_0_ampped(
             if !vault_asset_balance.is_zero() {
 
                 let weighted_asset_balance = U256::from(vault_asset_balance)
-                    .wrapping_mul((*weight).into());           // 'wrapping_mul' is safe as U256.max >= Uint128.max * Uint128.max
+                    .wrapping_mul((*weight).into());           // 'wrapping_mul' is safe as U256.max > Uint128.max * Uint128.max
     
                 let weighted_asset_balance_ampped = pow_wad(
                     weighted_asset_balance.checked_mul(WAD)?.as_i256(), // If casting overflows to a negative number 'pow_wad' will fail

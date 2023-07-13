@@ -1238,7 +1238,7 @@ pub fn calc_send_asset(
     amount: Uint128
 ) -> Result<U256, ContractError> {
 
-    let from_asset_weight = WEIGHTS.load(deps.storage, from_asset.as_ref())
+    let from_asset_weight = WEIGHTS.load(deps.storage, from_asset)
         .map_err(|_| ContractError::AssetNotFound {})?;
 
     let from_asset_balance: Uint128 = deps.querier.query_wasm_smart::<BalanceResponse>(
@@ -1268,7 +1268,7 @@ pub fn calc_receive_asset(
     u: U256
 ) -> Result<Uint128, ContractError> {
 
-    let to_asset_weight = WEIGHTS.load(deps.storage, to_asset.as_ref())
+    let to_asset_weight = WEIGHTS.load(deps.storage, to_asset)
         .map_err(|_| ContractError::AssetNotFound {})?;
 
     // Subtract the escrowed balance from the vault's total balance to return a smaller output.
@@ -1357,6 +1357,8 @@ pub fn calc_local_swap(
 /// 
 /// This function adds security limit adjustment to the default implementation.
 /// 
+/// **DEV NOTE**: This function should never revert (for valid swap data).
+/// 
 /// # Arguments:
 /// * `channel_id` - The swap's channel id.
 /// * `to_account` - The recipient of the swap output.
@@ -1376,7 +1378,7 @@ pub fn on_send_asset_success_volatile(
     block_number_mod: u32
 ) -> Result<Response, ContractError> {
 
-    // Execute the common escrow logic
+    // Execute the common 'success' logic
     let response = on_send_asset_success(
         deps,
         info,
@@ -1389,8 +1391,8 @@ pub fn on_send_asset_success_volatile(
     )?;
 
     // Outgoing units are subtracted from the used limit capacity to avoid having a fixed
-    // maximum daily cross chain volume. If the router were fraudulent, no one would execute 
-    // an outgoing swap.
+    // one-sided maximum daily cross chain volume. If the router was fraudulent, no one would 
+    // execute an outgoing swap.
 
     // Minor optimization: avoid storage write if the used capacity is already at zero
     let used_capacity = USED_LIMIT_CAPACITY.load(deps.storage)?;
@@ -1405,6 +1407,8 @@ pub fn on_send_asset_success_volatile(
 /// Volatile-specific handling of the confirmation of a successful liquidity swap.
 /// 
 /// This function adds security limit adjustment to the default implementation.
+/// 
+/// **DEV NOTE**: This function should never revert (for valid swap data).
 /// 
 /// # Arguments:
 /// * `channel_id` - The swap's channel id.
@@ -1423,7 +1427,7 @@ pub fn on_send_liquidity_success_volatile(
     block_number_mod: u32
 ) -> Result<Response, ContractError> {
 
-    // Execute the common escrow logic
+    // Execute the common 'success' logic
     let response = on_send_liquidity_success(
         deps,
         info,
@@ -1435,8 +1439,8 @@ pub fn on_send_liquidity_success_volatile(
     )?;
 
     // Outgoing units are subtracted from the used limit capacity to avoid having a fixed
-    // maximum daily cross chain volume. If the router were fraudulent, no one would execute 
-    // an outgoing swap.
+    // one-sided maximum daily cross chain volume. If the router was fraudulent, no one would 
+    // execute an outgoing swap.
 
     // Minor optimization: avoid storage write if the used capacity is already at zero
     let used_capacity = USED_LIMIT_CAPACITY.load(deps.storage)?;
@@ -1531,19 +1535,23 @@ pub fn set_weights(
 }
 
 
-/// Perform an incremental weight update.
+/// Perform an incremental weights update.
 /// 
 /// **NOTE**: This algorithm is intended to introduce a gradual small-stepped update to the
 /// asset weights. This will not be the case if the weights are initialized to small values.
 /// 
 /// **DEV-NOTE**: This function should be called at the beginning of weight-dependent functions.
 /// 
+/// # Arguments:
+/// * `current_timestamp` - The current time.
+/// 
 pub fn update_weights(
     deps: &mut DepsMut,
     current_timestamp: Timestamp
 ) -> Result<(), ContractError> {
 
-    // This algorithm adjusts the current weights to the target weights via linear interpolation.
+    // This algorithm incrementally adjusts the current weights to the target weights via 
+    // linear interpolation.
 
     let current_timestamp = Uint64::new(current_timestamp.seconds());
     
@@ -1701,7 +1709,7 @@ pub fn query_calc_send_asset(
 /// 
 /// # Arguments:
 /// * `to_asset` - The target asset.
-/// * `u` - The incoming units.
+/// * `u` - The incoming units (in WAD notation).
 /// 
 pub fn query_calc_receive_asset(
     deps: Deps,
@@ -1719,7 +1727,7 @@ pub fn query_calc_receive_asset(
 }
 
 
-/// Query a 'local_swap' calculation
+/// Query a 'local_swap' calculation.
 /// 
 /// # Arguments:
 /// * `from_asset` - The source asset.
@@ -1743,7 +1751,7 @@ pub fn query_calc_local_swap(
 }
 
 
-/// Query the current limit capacity
+/// Query the current limit capacity.
 pub fn query_get_limit_capacity(
     deps: Deps,
     env: Env

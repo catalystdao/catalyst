@@ -1445,6 +1445,15 @@ pub fn receive_liquidity(
 
 
 
+/// Compute the return of 'send_asset' (not including fees).
+/// 
+/// **NOTE**: This function reverts if 'from_asset' does not form part of the vault or
+/// if `amount` and the vault's asset balance are both 0.
+/// 
+/// # Arguments:
+/// * `from_asset` - The source asset.
+/// * `amount` - The `from_asset` amount sold to the vault (excluding the vault fee).
+/// 
 pub fn calc_send_asset(
     deps: &Deps,
     env: Env,
@@ -1452,15 +1461,15 @@ pub fn calc_send_asset(
     amount: Uint128
 ) -> Result<U256, ContractError> {
 
-    let one_minus_amp = ONE_MINUS_AMP.load(deps.storage)?;
+    let from_asset_weight = WEIGHTS.load(deps.storage, from_asset)
+        .map_err(|_| ContractError::AssetNotFound {})?;
 
     let from_asset_balance: Uint128 = deps.querier.query_wasm_smart::<BalanceResponse>(
         from_asset,
         &Cw20QueryMsg::Balance { address: env.contract.address.to_string() }
     )?.balance;
 
-    let from_asset_weight = WEIGHTS.load(deps.storage, from_asset)
-        .map_err(|_| ContractError::AssetNotFound {})?;
+    let one_minus_amp = ONE_MINUS_AMP.load(deps.storage)?;
 
     let units = calc_price_curve_area(
         amount.u128().into(),
@@ -1469,15 +1478,31 @@ pub fn calc_send_asset(
         one_minus_amp
     )?;
 
+    // If the swap amount is small with respect to the vault's asset balance, add an 
+    // additional fee to cover up for mathematical errors of the implementation.
     if from_asset_balance / SMALL_SWAP_RATIO >= amount {
         return Ok(
-            units.wrapping_mul(SMALL_SWAP_RETURN) / WAD
+            units
+                .wrapping_mul(SMALL_SWAP_RETURN)    // 'wrapping_mul' is safe, as the 'units' value depends heavily on the swapped
+                                                    // amount wrt to the vault's balance, and thus it will have a small value in
+                                                    // this case. In any case, if it were to overflow less would be returned to the 
+                                                    // user, which would not be critical from the vault's safety point of view.
+                .div(WAD)
         )
     }
 
     Ok(units)
 }
 
+
+/// Compute the return of 'receive_asset'.
+/// 
+/// **NOTE**: This function reverts if 'to_asset' does not form part of the vault.
+/// 
+/// # Arguments:
+/// * `to_asset` - The target asset.
+/// * `u` - The incoming units.
+/// 
 pub fn calc_receive_asset(
     deps: &Deps,
     env: Env,
@@ -1485,8 +1510,10 @@ pub fn calc_receive_asset(
     u: U256
 ) -> Result<Uint128, ContractError> {
 
-    let one_minus_amp = ONE_MINUS_AMP.load(deps.storage)?;
+    let to_asset_weight = WEIGHTS.load(deps.storage, to_asset)
+        .map_err(|_| ContractError::AssetNotFound {})?;
 
+    // Subtract the escrowed balance from the vault's total balance to return a smaller output.
     let to_asset_escrowed_balance: Uint128 = TOTAL_ESCROWED_ASSETS.load(
         deps.storage,
         to_asset
@@ -1494,9 +1521,10 @@ pub fn calc_receive_asset(
     let to_asset_balance: Uint128 = deps.querier.query_wasm_smart::<BalanceResponse>(
         to_asset,
         &Cw20QueryMsg::Balance { address: env.contract.address.to_string() }
-    )?.balance.checked_sub(to_asset_escrowed_balance)?;      // vault balance minus escrowed balance
-    let to_asset_weight = WEIGHTS.load(deps.storage, to_asset)?;
+    )?.balance.checked_sub(to_asset_escrowed_balance)?;
     
+    let one_minus_amp = ONE_MINUS_AMP.load(deps.storage)?;
+
     calc_price_curve_limit(
         u,
         to_asset_balance.u128().into(),
@@ -1508,6 +1536,17 @@ pub fn calc_receive_asset(
 
 }
 
+
+/// Compute the return of 'local_swap' (not including fees).
+/// 
+/// **NOTE**: This function reverts if 'from_asset' or 'to_asset' do not form part 
+/// of the vault or if `amount` and the vault's asset balance are both 0.
+/// 
+/// # Arguments:
+/// * `from_asset` - The source asset.
+/// * `to_asset` - The destination asset.
+/// * `amount` - The `from_asset` amount sold to the vault (excluding fees).
+/// 
 pub fn calc_local_swap(
     deps: &Deps,
     env: Env,
@@ -1515,8 +1554,6 @@ pub fn calc_local_swap(
     to_asset: &str,
     amount: Uint128
 ) -> Result<Uint128, ContractError> {
-
-    let one_minus_amp = ONE_MINUS_AMP.load(deps.storage)?;
 
     let from_asset_weight = WEIGHTS.load(deps.storage, from_asset)
         .map_err(|_| ContractError::AssetNotFound {})?;
@@ -1529,6 +1566,8 @@ pub fn calc_local_swap(
         &Cw20QueryMsg::Balance { address: env.contract.address.to_string() }
     )?.balance;
 
+    // Subtract the 'to_asset' escrowed balance from the vault's total balance 
+    // to return a smaller output.
     let to_asset_escrowed_balance: Uint128 = TOTAL_ESCROWED_ASSETS.load(
         deps.storage,
         to_asset
@@ -1536,20 +1575,28 @@ pub fn calc_local_swap(
     let to_asset_balance: Uint128 = deps.querier.query_wasm_smart::<BalanceResponse>(
         to_asset,
         &Cw20QueryMsg::Balance { address: env.contract.address.to_string() }
-    )?.balance.checked_sub(to_asset_escrowed_balance)?;      // vault balance minus escrowed balance
+    )?.balance.checked_sub(to_asset_escrowed_balance)?;
+
+    let one_minus_amp = ONE_MINUS_AMP.load(deps.storage)?;
 
     let output: Uint128 = calc_combined_price_curves(
-        amount.u128().into(),
-        from_asset_balance.u128().into(),
-        to_asset_balance.u128().into(),
-        U256::from(from_asset_weight),
-        U256::from(to_asset_weight),
+        amount.into(),
+        from_asset_balance.into(),
+        to_asset_balance.into(),
+        from_asset_weight.into(),
+        to_asset_weight.into(),
         one_minus_amp
     )?.try_into()?;
 
-    if output / SMALL_SWAP_RATIO >= amount {
+    // If the swap amount is small with respect to the vault's asset balance, add an 
+    // additional fee to cover up for mathematical errors of the implementation.
+    if from_asset_balance / SMALL_SWAP_RATIO >= amount {
         return Ok(
-            (U256::from(output).wrapping_mul(SMALL_SWAP_RETURN) / WAD).as_uint128()     // Casting is safe, as the result is always <= output, and output is <= Uint128::max
+            (
+                U256::from(output)
+                    .wrapping_mul(SMALL_SWAP_RETURN)  // 'wrapping_mul' is safe as U256::MAX > Uint128::MAX*~2^64
+                    .div(WAD)
+                ).as_uint128()     // Casting is safe, as the result is always <= 'output', and 'output' is <= Uint128::MAX
         )
     }
 
@@ -1558,6 +1605,19 @@ pub fn calc_local_swap(
 
 
 
+/// Compute the vault's balance0. This value allows for the derivation of the vault's assets balances
+/// that would be required such that their pricing were 1:1.
+/// 
+/// **NOTE**: This function takes as argument `one_minus_amp`, as this value is most times readily 
+/// available whenever this function is called, and thus it is avoided reading twice from the store
+/// in these cases.
+/// 
+/// **NOTE**: This function also returns the vault's asset count, as it is always used in conjunction
+/// with the balance0 value.
+/// 
+/// # Arguments:
+/// * `one_minus_amp` - One minus the vault's amplification.
+/// 
 pub fn calc_balance_0(
     deps: Deps,
     env: Env,
@@ -1570,14 +1630,31 @@ pub fn calc_balance_0(
         one_minus_amp
     )?;
 
+    // Remove the power from 'balance_0_ampped'
     let balance_0 = pow_wad(
-        balance_0_ampped.as_i256(),
+        balance_0_ampped.as_i256(),   // If casting overflows to a negative number 'pow_wad' will fail
         WADWAD / one_minus_amp
     )?.as_u256();
 
     Ok((balance_0, asset_count))
 }
 
+
+/// Compute the vault's balance0 to the power of `one_minus_amp`. This value allows for the derivation 
+/// of the vault's assets balances that would be required such that their pricing were 1:1.
+/// 
+/// **NOTE**: This function takes as argument `one_minus_amp`, as this value is most times readily 
+/// available whenever this function is called, and thus it is avoided reading twice from the store
+/// in these cases.
+/// 
+/// **NOTE**: This function also returns the vault's asset count, as it is always used in conjunction
+/// with the balance0_ampped value.
+/// 
+/// **NOTE-DEV**: This function is called `_computeBalance0` on the EVM implementation.
+/// 
+/// # Arguments:
+/// * `one_minus_amp` - One minus the vault's amplification.
+/// 
 pub fn calc_balance_0_ampped(
     deps: Deps,
     env: Env,
@@ -1619,46 +1696,68 @@ pub fn calc_balance_0_ampped(
 }
 
 
+
+/// Amplified-specific handling of the confirmation of a successful asset swap.
+/// 
+/// This function adds security limit adjustment to the default implementation.
+/// 
+/// **DEV NOTE**: This function should never revert (for valid swap data).
+/// 
+/// # Arguments:
+/// * `channel_id` - The swap's channel id.
+/// * `to_account` - The recipient of the swap output.
+/// * `u` - The units value of the swap.
+/// * `escrow_amount` - The escrowed asset amount.
+/// * `asset` - The swap source asset.
+/// * `block_number_mod` - The block number at which the swap transaction was commited (modulo 2^32).
+/// 
 pub fn on_send_asset_success_amplified(
     deps: &mut DepsMut,
     info: MessageInfo,
     channel_id: String,
     to_account: Binary,
     u: U256,
-    amount: Uint128,
+    escrow_amount: Uint128,
     asset: String,
     block_number_mod: u32
-) -> Result<Response, ContractError> {  //TODO replace ContractError with NEVER (i.e. it never errors)?
+) -> Result<Response, ContractError> {
 
+    // Execute the common 'success' logic
     let response = on_send_asset_success(
         deps,
         info,
         channel_id,
         to_account,
         u,
-        amount,
+        escrow_amount,
         asset.clone(),
         block_number_mod
     )?;
 
-    let used_capacity = USED_LIMIT_CAPACITY.load(deps.storage)?;
-
-    // Minor optimization: avoid storage write if the used capacity is already at zero
-    if used_capacity != U256::zero() {
-        USED_LIMIT_CAPACITY.save(deps.storage, &used_capacity.saturating_sub(u))?;
-    }
+    // The outgoing 'flow' is subtracted from the used limit capacity to avoid having a fixed
+    // one-sided maximum daily cross chain volume. If the router was fraudulent, no one would
+    // execute an outgoing swap.
 
     let weight = WEIGHTS.load(deps.storage, asset.as_ref())?;
+    let limit_delta = U256::from(escrow_amount).wrapping_mul(weight.into());     // 'wrapping_mul' is safe, as U256.max >= Uint128.max * Uint128.max
+
+    // Minor optimization: avoid storage write if the used capacity is already at zero
+    let used_capacity = USED_LIMIT_CAPACITY.load(deps.storage)?;
+    if !used_capacity.is_zero() {
+        USED_LIMIT_CAPACITY.save(deps.storage, &used_capacity.saturating_sub(limit_delta))?;
+    }
+
+    // The 'max_limit_capacity' must also be updated, as for the amplified vault it depends 
+    // on the vault's asset balances.
 
     MAX_LIMIT_CAPACITY.update(
         deps.storage,
         |max_limit_capacity| -> StdResult<_> {
-            // The max capacity update calculation might overflow, yet it should never make the callback revert.
-            // Hence the capacity is set to the maximum allowed value without allowing it to overflow (saturating_mul and saturating_add).
+            // The max capacity update calculation might overflow, yet it should never make 
+            // the callback revert. Hence the capacity is set to the maximum allowed value 
+            // without allowing it to overflow (saturating_add).
             Ok(
-                max_limit_capacity.saturating_add(
-                    U256::from(amount).wrapping_mul(U256::from(weight))     // Multiplication is overflow safe, as U256.max >= Uint128.max * u64.max
-                )
+                max_limit_capacity.saturating_add(limit_delta)
             )
         }
     )?;
@@ -1666,41 +1765,77 @@ pub fn on_send_asset_success_amplified(
     Ok(response)
 }
 
+
+/// Amplified-specific handling of the confirmation of an unsuccessful asset swap.
+/// 
+/// This function adds unit tracker adjustment to the default implementation.
+/// 
+/// **DEV NOTE**: This function should never revert (for valid swap data).
+/// 
+/// # Arguments:
+/// * `channel_id` - The swap's channel id.
+/// * `to_account` - The recipient of the swap output.
+/// * `u` - The units value of the swap.
+/// * `escrow_amount` - The escrowed asset amount.
+/// * `asset` - The swap source asset.
+/// * `block_number_mod` - The block number at which the swap transaction was commited (modulo 2^32).
+/// 
 pub fn on_send_asset_failure_amplified(
     deps: &mut DepsMut,
     info: MessageInfo,
     channel_id: String,
     to_account: Binary,
     u: U256,
-    amount: Uint128,
+    escrow_amount: Uint128,
     asset: String,
     block_number_mod: u32
-) -> Result<Response, ContractError> {  //TODO replace ContractError with NEVER (i.e. it never errors)?
+) -> Result<Response, ContractError> {
 
+    // Execute the common 'failure' logic
     let response = on_send_asset_failure(
         deps,
         info,
         channel_id,
         to_account,
         u,
-        amount,
+        escrow_amount,
         asset,
         block_number_mod
     )?;
 
     // Remove the timed-out units from the unit tracker.
     UNIT_TRACKER.update(deps.storage, |unit_tracker| -> StdResult<_> {
-        Ok(unit_tracker.wrapping_sub(u.as_i256()))      //TODO can wrapping_sub underflow? // 'u' casting to i256 is safe, this has been checked on 'send_asset'
+        Ok(
+            unit_tracker.checked_sub(   // Using 'checked_sub' as it would be extremely bad for the 'unit_tracker' to underflow.
+                                        // It is extremely difficult for this to happen.
+                u.as_i256()             // 'u' casting to i256 is safe, as this requirement has been checked on 'send_asset'
+            )?
+        )
     })?;
 
     Ok(response)
 }
 
-// on_send_liquidity_success is not overwritten since we are unable to increase
-// the security limit. This is because it is very expensive to compute the update
-// to the security limit. If someone liquidity swapped a significant amount of assets
-// it is assumed the vault has low liquidity. In these cases, liquidity swaps shouldn't be used.
 
+// 'on_send_liquidity_success' is not overwritten as it is very expensive to compute the update
+// to the security limit. Realistically, this is only detrimental for the cases in which a large
+// share of the vault assets are liquidity swapped. This is likely to only happen when the vault
+// is low on liquidity, case in which liquidity swaps shouldn't be used. 
+
+
+/// Amplified-specific handling of the confirmation of an unsuccessful liquidity swap.
+/// 
+/// This function adds unit tracker adjustment to the default implementation.
+/// 
+/// **DEV NOTE**: This function should never revert (for valid swap data).
+/// 
+/// # Arguments:
+/// * `channel_id` - The swap's channel id.
+/// * `to_account` - The recipient of the swap output.
+/// * `u` - The units value of the swap.
+/// * `escrow_amount` - The escrowed asset amount.
+/// * `block_number_mod` - The block number at which the swap transaction was commited (modulo 2^32).
+/// 
 pub fn on_send_liquidity_failure_amplified(
     deps: &mut DepsMut,
     env: Env,
@@ -1708,10 +1843,11 @@ pub fn on_send_liquidity_failure_amplified(
     channel_id: String,
     to_account: Binary,
     u: U256,
-    amount: Uint128,
+    escrow_amount: Uint128,
     block_number_mod: u32
-) -> Result<Response, ContractError> {  //TODO replace ContractError with NEVER (i.e. it never errors)?
+) -> Result<Response, ContractError> {
 
+    // Execute the common 'failure' logic
     let response = on_send_liquidity_failure(
         deps,
         env,
@@ -1719,19 +1855,36 @@ pub fn on_send_liquidity_failure_amplified(
         channel_id,
         to_account,
         u,
-        amount,
+        escrow_amount,
         block_number_mod
     )?;
 
     // Remove the timed-out units from the unit tracker.
     UNIT_TRACKER.update(deps.storage, |unit_tracker| -> StdResult<_> {
-        Ok(unit_tracker.wrapping_sub(u.as_i256()))      //TODO can wrapping_sub underflow? // 'u' casting to i256 is safe, this has been checked on 'send_liquidity'
+        Ok(
+            unit_tracker.checked_sub(   // Using 'checked_sub' as it would be extremely bad for the 'unit_tracker' to underflow.
+                                        // It is extremely difficult for this to happen.
+                u.as_i256()             // 'u' casting to i256 is safe, as this requirement has been checked on 'send_liquidity'
+            )?
+        )
     })?;
 
     Ok(response)
 }
 
 
+/// Allow governance to modify the vault amplification.
+/// 
+/// **NOTE**: the amplification value has to be less than 1 (in WAD notation) and it cannot 
+/// introduce a change larger than `MAX_AMP_ADJUSTMENT_FACTOR`.
+/// 
+/// **NOTE**: `target_timestamp` must be within `MIN_ADJUSTMENT_TIME_SECONDS` and
+/// `MAX_ADJUSTMENT_TIME_SECONDS` from the current time.
+/// 
+/// # Arguments:
+/// * `target_timestamp` - The time at which the amplification update must be completed.
+/// * `target_amplification` - The new desired amplification.
+/// 
 pub fn set_amplification(
     deps: &mut DepsMut,
     env: &Env,
@@ -1739,6 +1892,14 @@ pub fn set_amplification(
     target_timestamp: Uint64,
     target_amplification: Uint64
 ) -> Result<Response, ContractError> {
+
+    // Amplification changes are disabled for cross-chain vaults, as the 'unit_tracker' implementation
+    // is incompatible with amplification changes.
+    if CHAIN_INTERFACE.load(deps.storage)?.is_some() {
+        return Err(
+            ContractError::Error("Amplification adjustment is disabled for cross-chain vaults.".to_string())
+        );
+    }
 
     // Only allow amplification changes by the factory owner
     if info.sender != factory_owner(&deps.as_ref())? {
@@ -1754,12 +1915,7 @@ pub fn set_amplification(
         return Err(ContractError::InvalidTargetTime {});
     }
 
-    let current_amplification: Uint64 = WAD
-        .as_i256()                                          // Casting is safe as 'WAD' < I256.max
-        .wrapping_sub(ONE_MINUS_AMP.load(deps.storage)?)    // 'wrapping_sub' is safe as 'ONE_MINUS_AMP' <= 'WAD'
-        .as_u64().into();                                   // Casting is safe as 'AMP' <= u64.max
-
-    // Check that the target_amplification is correct (set to < 1)
+    // Check that the specified 'target_amplification' is correct (set to < 1)
     if target_amplification >= WAD.as_u64().into() {        // Casting is safe as 'WAD' < u64.max
         return Err(ContractError::InvalidAmplification {})
     }
@@ -1769,15 +1925,16 @@ pub fn set_amplification(
     // amplification will never be allowed to be set to 0 if it is initialized to any other value 
     // (note how 'target_amplification*MAX_AMP_ADJUSTMENT_FACTOR < current_amplification' is used
     // instead of 'target_amplification < current_amplification/MAX_AMP_ADJUSTMENT_FACTOR').
+    let current_amplification: Uint64 = WAD
+        .as_i256()                                          // Casting is safe as 'WAD' < I256.max
+        .wrapping_sub(ONE_MINUS_AMP.load(deps.storage)?)    // 'wrapping_sub' is safe as 'ONE_MINUS_AMP' <= 'WAD'
+        .as_u64().into();                                   // Casting is safe as 'AMP' <= u64.max
+
     if
         target_amplification > current_amplification.checked_mul(MAX_AMP_ADJUSTMENT_FACTOR)? ||
         target_amplification.checked_mul(MAX_AMP_ADJUSTMENT_FACTOR)? < current_amplification
     {
         return Err(ContractError::InvalidAmplification {});
-    }
-
-    if CHAIN_INTERFACE.load(deps.storage)?.is_some() {
-        return Err(ContractError::Error("Amplification adjustment is disabled for cross-chain vaults.".to_string()));
     }
 
     // Save the target amplification
@@ -1804,17 +1961,27 @@ pub fn set_amplification(
 
 }
 
+
+/// Perform an incremental amplification update.
+/// 
+/// **DEV-NOTE**: This function should be called at the beginning of amplification-dependent functions.
+/// 
+/// # Arguments:
+/// * `current_timestamp` - The current time.
+/// 
 pub fn update_amplification(
     deps: &mut DepsMut,
     current_timestamp: Timestamp
 ) -> Result<(), ContractError> {
 
+    // This algorithm incrementally adjusts the current amplification to the target amplification 
+    // via linear interpolation.
+
     let current_timestamp = Uint64::new(current_timestamp.seconds());
-    
-    // TODO check instead if the variable *exists* rather than it being set to 0?
+
     // Only run update logic if 'amp_update_finish_timestamp' is set
     let amp_update_finish_timestamp = AMP_UPDATE_FINISH_TIMESTAMP_SECONDS.load(deps.storage)?;
-    if amp_update_finish_timestamp == Uint64::zero() {
+    if amp_update_finish_timestamp.is_zero() {
         return Ok(());
     }
 
@@ -1829,12 +1996,7 @@ pub fn update_amplification(
     // If the 'amp_update_finish_timestamp' has been reached, finish the amplification update
     if current_timestamp >= amp_update_finish_timestamp {
 
-        ONE_MINUS_AMP.update(
-            deps.storage,
-            |_| -> StdResult<_> {
-                Ok(target_one_minus_amp)
-            }
-        )?;
+        ONE_MINUS_AMP.save(deps.storage, &target_one_minus_amp)?;
 
         // Clear the 'amp_update_finish_timestamp' to disable the update logic
         AMP_UPDATE_FINISH_TIMESTAMP_SECONDS.save(
@@ -1854,7 +2016,7 @@ pub fn update_amplification(
         //      time_since_last_update = current_timestamp - amp_update_timestamp
         //          => time_since_last_update <= current_timestamp < 2**64
         //      remaining_update_time = amp_update_finish_timestamp - amp_update_timestamp
-        //          => remaining_update_time > time_since_last_update since amp_update_finish_timestamp > current_timestamp
+        //          => remaining_update_time > time_since_last_update, since amp_update_finish_timestamp > current_timestamp
         //
         //      X = remaining_value_change*time_since_last_update
         //          => |X| < 2**128, which means I256.min < X < I256.max
@@ -1894,8 +2056,15 @@ pub fn update_amplification(
 }
 
 
+
 // Query helpers ****************************************************************************************************************
 
+/// Query a 'send_asset' calculation (returned 'units' in WAD notation).
+/// 
+/// # Arguments:
+/// * `from_asset` - The source asset.
+/// * `amount` - The `from_asset` amount (excluding the vault fee).
+/// 
 pub fn query_calc_send_asset(
     deps: Deps,
     env: Env,
@@ -1912,6 +2081,12 @@ pub fn query_calc_send_asset(
 }
 
 
+/// Query a 'receive_asset' calculation.
+/// 
+/// # Arguments:
+/// * `to_asset` - The target asset.
+/// * `u` - The incoming units (in WAD notation).
+/// 
 pub fn query_calc_receive_asset(
     deps: Deps,
     env: Env,
@@ -1928,6 +2103,13 @@ pub fn query_calc_receive_asset(
 }
 
 
+/// Query a 'local_swap' calculation.
+/// 
+/// # Arguments:
+/// * `from_asset` - The source asset.
+/// * `to_asset` - The target asset.
+/// * `amount` - The `from_asset` amount (excluding the vault fee).
+/// 
 pub fn query_calc_local_swap(
     deps: Deps,
     env: Env,
@@ -1945,6 +2127,7 @@ pub fn query_calc_local_swap(
 }
 
 
+/// Query the current limit capacity.
 pub fn query_get_limit_capacity(
     deps: Deps,
     env: Env
@@ -1959,6 +2142,7 @@ pub fn query_get_limit_capacity(
 }
 
 
+/// Query the vault amplification (in WAD notation).
 pub fn query_amplification(
     deps: Deps
 ) -> StdResult<AmplificationResponse> {
@@ -1978,6 +2162,7 @@ pub fn query_amplification(
 }
 
 
+/// Query the vault target amplification (in WAD notation).
 pub fn query_target_amplification(
     deps: Deps
 ) -> StdResult<TargetAmplificationResponse> {
@@ -1996,6 +2181,8 @@ pub fn query_target_amplification(
 
 }
 
+
+/// Query the amplification update finish timestamp.
 pub fn query_amplification_update_finish_timestamp(
     deps: Deps
 ) -> StdResult<AmplificationUpdateFinishTimestampResponse> {
@@ -2008,6 +2195,8 @@ pub fn query_amplification_update_finish_timestamp(
 
 }
 
+
+// Query the vault's current balance0 (in WAD notation).
 pub fn query_balance_0(
     deps: Deps,
     env: Env
@@ -2022,8 +2211,11 @@ pub fn query_balance_0(
             )?.0
         }
     )
+
 }
 
+
+// Query the vault's current unit tracker (in WAD notation).
 pub fn query_unit_tracker(
     deps: Deps
 ) -> StdResult<UnitTrackerResponse> {
