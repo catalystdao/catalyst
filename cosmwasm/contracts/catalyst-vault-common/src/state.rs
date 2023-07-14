@@ -479,7 +479,7 @@ pub fn collect_governance_fee_message(
 
     // Compute the governance fee as the GOVERNANCE_FEE_SHARE percentage of the vault_fee_amount.
     let gov_fee_amount: Uint128 = mul_wad_down(
-        U256::from(vault_fee_amount.u128()),
+        U256::from(vault_fee_amount),
         U256::from(GOVERNANCE_FEE_SHARE.load(deps.storage)?)
     )?.try_into()?;
 

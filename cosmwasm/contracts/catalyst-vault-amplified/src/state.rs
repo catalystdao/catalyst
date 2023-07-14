@@ -1686,8 +1686,8 @@ pub fn calc_send_asset(
     let one_minus_amp = ONE_MINUS_AMP.load(deps.storage)?;
 
     let units = calc_price_curve_area(
-        amount.u128().into(),
-        from_asset_balance.u128().into(),
+        amount.into(),
+        from_asset_balance.into(),
         U256::from(from_asset_weight),
         one_minus_amp
     )?;
@@ -1741,7 +1741,7 @@ pub fn calc_receive_asset(
 
     calc_price_curve_limit(
         u,
-        to_asset_balance.u128().into(),
+        to_asset_balance.into(),
         U256::from(to_asset_weight),
         one_minus_amp
     ).and_then(
