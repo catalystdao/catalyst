@@ -608,7 +608,7 @@ pub fn local_swap(
         env.clone(),
         &from_asset,
         &to_asset,
-        amount.wrapping_sub(vault_fee)      // 'wrapping_sub' is safe, as 'vault_fee' is included in 'amount'
+        amount.checked_sub(vault_fee)?      // Using 'checked_sub' for extra precaution ('wrapping_sub' should suffice)
     )?;
 
     if min_out > out {
@@ -712,7 +712,7 @@ pub fn send_asset(
         U256::from(VAULT_FEE.load(deps.storage)?)
     )?.as_uint128();    // Casting safe, as fee < amount, and amount is Uint128
 
-    let effective_swap_amount = amount.wrapping_sub(vault_fee);     // 'wrapping_sub' is safe, as 'vault_fee' is contained by 'amount'
+    let effective_swap_amount = amount.checked_sub(vault_fee)?;     // Using 'checked_sub' for extra precaution ('wrapping_sub' should suffice)
 
     // Calculate the units bought.
     let u = calc_send_asset(
