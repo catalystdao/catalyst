@@ -441,9 +441,7 @@ pub fn withdraw_mixed(
     // This withdraw function works by computing the 'units' value of the provided vault tokens,
     // and then translating those into assets balances according to the provided 'withdraw_ratio'.
     
-
     update_weights(deps, env.block.time)?;
-
 
     // Include the 'escrowed' vault tokens in the total supply of vault tokens of the vault
     let escrowed_vault_tokens = TOTAL_ESCROWED_LIQUIDITY.load(deps.storage)?;
@@ -502,8 +500,9 @@ pub fn withdraw_mixed(
                 return Ok(Uint128::zero());
             }
 
-            // Subtract the units used from the total units amount. This will underflow for malicious withdraw ratios (i.e. ratios > 1).
-            u = u.checked_sub(units_for_asset)?;
+            // Subtract the units used from the total units amount.
+            u = u.checked_sub(units_for_asset)?; // ! 'checked_sub' important: This will underflow for 
+                                                 // ! malicious withdraw ratios (i.e. ratios > 1).
         
             // Get the vault asset balance (subtract the escrowed assets to return less)
             let vault_asset_balance = deps.querier.query_wasm_smart::<BalanceResponse>(
@@ -535,7 +534,7 @@ pub fn withdraw_mixed(
     // Make sure all units have been consumed
     if !u.is_zero() { return Err(ContractError::UnusedUnitsAfterWithdrawal { units: u }) };
 
-    // Build the messages to order the transfer of tokens from the vault to the depositor
+    // Build the messages to order the transfer of tokens from the vault to the depositor.
     // ! IMPORTANT: Some cw20 contracts disallow zero-valued token transfers. Do not generate
     // ! transfer messages for zero-valued balance transfers to prevent these cases from 
     // ! resulting in failed transactions.

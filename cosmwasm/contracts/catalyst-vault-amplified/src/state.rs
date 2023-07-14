@@ -198,13 +198,26 @@ pub fn initialize_swap_curves(
 
 
 
+/// Deposit a user-configurable balance of assets on the vault.
+/// 
+/// **NOTE**: The vault's access to the deposited assets must be approved by the user. 
+/// 
+/// **NOTE**: The vault fee is imposed on deposits.
+/// 
+/// # Arguments:
+/// * `deposit_amounts` - The asset amounts to be deposited.
+/// * `min_out` - The minimum output of vault tokens to get in return.
+/// 
 pub fn deposit_mixed(
     deps: &mut DepsMut,
     env: Env,
     info: MessageInfo,
-    deposit_amounts: Vec<Uint128>,  //TODO EVM MISMATCH
+    deposit_amounts: Vec<Uint128>,
     min_out: Uint128
 ) -> Result<Response, ContractError> {
+
+    // This deposit function works by calculating how many units the deposited assets
+    // are worth, and translating those into vault tokens.
 
     update_amplification(deps, env.block.time)?;
 
@@ -223,14 +236,16 @@ pub fn deposit_mixed(
     // Compute how much 'units' the assets are worth.
     // Iterate over the assets, weights and deposit_amounts
     let mut units: U256 = U256::zero();                             // EVM mismatch: variable is *signed* on EVM (because of stack issues)
-    let mut weighted_asset_balance_ampped_sum: U256 = U256::zero();
+    let mut weighted_asset_balance_ampped_sum: I256 = I256::zero();
     let mut weighted_deposit_sum: U256 = U256::zero();              // NOTE: named 'assetDepositSum' on EVM
 
     assets.iter()
         .zip(&deposit_amounts)          // zip: deposit_amounts.len() == assets.len()
         .try_for_each(|(asset, deposit_amount)| -> Result<_, ContractError> {
 
-            let weight = WEIGHTS.load(deps.storage, asset.as_ref())?;
+            let weight = U256::from(
+                WEIGHTS.load(deps.storage, asset.as_ref())?
+            );
 
             let vault_asset_balance = deps.querier.query_wasm_smart::<BalanceResponse>(
                 asset,
@@ -238,24 +253,22 @@ pub fn deposit_mixed(
             )?.balance;
 
             let weighted_asset_balance = U256::from(vault_asset_balance)
-                .wrapping_mul(weight.into());           // 'wrapping_mul' is safe as U256.max >= Uint128.max * u64.max
+                .wrapping_mul(weight);           // 'wrapping_mul' is safe as U256.max >= Uint128.max * Uint128.max
 
-            let weighted_deposit = U256::from(*deposit_amount)
-                .wrapping_mul(weight.into());           // 'wrapping_mul' is safe as U256.max >= Uint128.max * u64.max
-
-
-            // Compute wa^(1-k) (WAD). Handle the case a=0 separatelly, as the implemented numerical calculation
+            // Compute (w·a)^(1-k) (WAD). Handle the case a=0 separatelly, as the implemented numerical calculation
             // will fail for that case.
             let weighted_asset_balance_ampped;    // EVM mismatch: variable is *signed* on EVM (because of stack issues)
                                                         // NOTE: named 'wab' on EVM
             if weighted_asset_balance.is_zero() {
-                weighted_asset_balance_ampped = U256::zero();
+                weighted_asset_balance_ampped = I256::zero();
             }
             else {
                 weighted_asset_balance_ampped = pow_wad(
-                    weighted_asset_balance.wrapping_mul(WAD).as_i256(), // 'wrapping_mul' is safe as U256.max >= Uint128.max * u64.max * WAD
+                    weighted_asset_balance.checked_mul(WAD)?
+                        .as_i256(),     // If casting overflows to a negative number, 'pow_wad' will fail
                     one_minus_amp
-                )?.as_u256();
+                )?;
+
                 weighted_asset_balance_ampped_sum = weighted_asset_balance_ampped_sum.checked_add(weighted_asset_balance_ampped)?;
             }
 
@@ -264,26 +277,36 @@ pub fn deposit_mixed(
                 return Ok(());
             }
 
-            // Cache the weighted deposit sum to later update the security limit
-            weighted_deposit_sum = weighted_deposit_sum.checked_add(weighted_deposit)?;
-
             // Compute the units corresponding to the asset in question: F(a+input) - F(a)
             // where F(x) = x^(1-k)
-            let units_for_asset = pow_wad(
+
+            let weighted_deposit = U256::from(*deposit_amount)
+                .wrapping_mul(weight);           // 'wrapping_mul' is safe as U256.max >= Uint128.max * Uint128.max
+
+            let weighted_asset_balance_ampped_after_deposit = pow_wad(
                 weighted_asset_balance
                     .checked_add(weighted_deposit)?
                     .checked_mul(WAD)?
-                    .as_i256(),
+                    .as_i256(),         // If casting overflows to a negative number, 'pow_wad' will fail
                 one_minus_amp
-            )?.as_u256().wrapping_sub(weighted_asset_balance_ampped);
+            )?.as_u256();               // Casting always casts a positive number
+
+            let units_for_asset = weighted_asset_balance_ampped_after_deposit
+                .checked_sub(                               // Using 'checked_sub' for extra precaution ('wrapping_sub' should suffice).
+                    weighted_asset_balance_ampped.as_u256() // Casting always casts a positive number
+                )?;
 
             units = units.checked_add(units_for_asset)?;
+
+            // Cache the weighted deposit sum to later update the security limit
+            weighted_deposit_sum = weighted_deposit_sum.checked_add(weighted_deposit)?;
 
             Ok(())
         }
     )?;
 
-    // Update the security limit variables  //TODO create helper functions for these?
+
+    // Update the security limit variables
     MAX_LIMIT_CAPACITY.update(
         deps.storage,
         |max_limit_capacity| -> StdResult<_> {
@@ -297,24 +320,40 @@ pub fn deposit_mixed(
         deps.storage,
         |used_limit_capacity| -> StdResult<_> {
             used_limit_capacity
-                .checked_add(weighted_deposit_sum)          // ! Addition must be checked as 'used_limit_capacity' may be larger than 'max_limit_capacity'
+                .checked_add(weighted_deposit_sum)      // ! Addition must be 'checked', as 'used_limit_capacity' 
+                                                        // ! may be larger than 'max_limit_capacity' (i.e. cannot 
+                                                        // ! rely on the 'max' capacity calculation not overflowing)
                 .map_err(|err| err.into())
         }
     )?;
 
-    // Compute the reference liquidity
-    let weighted_alpha_0_ampped: U256 = weighted_asset_balance_ampped_sum.as_i256()
-        .wrapping_sub(UNIT_TRACKER.load(deps.storage)?)
-        .as_u256()
-        .div(U256::from(assets.len() as u64));
 
-    //TODO check for intU >= 0 as in EVM?
+    // Compute the reference liquidity.
+    // 'wrapping_sub' in the following calculation is safe:
+    //   - for positive 'unit_tracker': by desing, 'weighted_asset_balance_ampped_sum' > 'unit_tracker'
+    //   - for negative 'unit_tracker': the subtraction could actually overflow, but the result will 
+    //     be correct once casted to u256.
+    // NOTE: The division by 'asset_count' is technically not required, as 'weighted_alpha_0_ampped'
+    // is multiplied by this same value shortly after this line. This is intentional and is to
+    // make sure the rounding introduced into 'weighted_alpha_0_ampped' is consistent everywhere it
+    // is computed (that is, standardizing the way 'weighted_alpha_0_ampped' is calculated).
+    let asset_count = U256::from(assets.len() as u64);
+    let weighted_alpha_0_ampped: U256 = weighted_asset_balance_ampped_sum
+        .wrapping_sub(UNIT_TRACKER.load(deps.storage)?) 
+        .as_u256()                      // Casting is safe (see reasoning above)
+        .div(asset_count);
+
 
     // Subtract the vault fee from U to prevent deposit and withdrawals being employed as a method of swapping.
     // To recude costs, the governance fee is not taken. This is not an issue as swapping via this method is 
     // disincentivized by its higher gas costs.
     let vault_fee = VAULT_FEE.load(deps.storage)?;
-    let units = fixed_point_math::mul_wad_down(units, fixed_point_math::WAD.wrapping_sub(vault_fee.into()))?;   //TODO EVM mismatch
+    // EVM-MISMATCH: The following calculation is implemented on EVM manually using 'unchecked' operations to
+    // further optimize the implementation. This optimization has not been implemented on this implementation.
+    let units = fixed_point_math::mul_wad_down(
+        units,
+        fixed_point_math::WAD.wrapping_sub(vault_fee.into())    // 'wrapping_sub' is safe, as 'vault_fee' <= 'WAD'
+    )?;
 
     // Do not include the 'escrowed' vault tokens in the total supply of vault tokens (return less)
     let effective_supply = U256::from(total_supply(deps.as_ref())?);
@@ -323,7 +362,8 @@ pub fn deposit_mixed(
     let out: Uint128 = calc_price_curve_limit_share(
         units,
         effective_supply,
-        weighted_alpha_0_ampped.checked_mul((assets.len() as u64).into())?,
+        weighted_alpha_0_ampped.wrapping_mul(asset_count),  // 'wrapping_mul' is safe, see the 
+                                                            // 'weighted_alpha_0_ampped' calculation
         WADWAD / one_minus_amp
     )?.try_into()?;
 
@@ -346,8 +386,8 @@ pub fn deposit_mixed(
 
     // Build messages to order the transfer of tokens from the depositor to the vault
     let transfer_msgs: Vec<CosmosMsg> = assets.iter()
-        .zip(&deposit_amounts)                                              // zip: depsoit_amounts.len() == assets.len()
-        .filter(|(_, balance)| **balance != Uint128::zero())     // Do not create transfer messages for zero-valued deposits
+        .zip(&deposit_amounts)                                    // zip: depsoit_amounts.len() == assets.len() (checked above)
+        .filter(|(_, balance)| !balance.is_zero())     // Do not create transfer messages for zero-valued deposits
         .map(|(asset, balance)| {
             Ok(CosmosMsg::Wasm(
                 cosmwasm_std::WasmMsg::Execute {
@@ -380,6 +420,15 @@ pub fn deposit_mixed(
     )
 }
 
+
+/// Withdraw an even amount of assets from the vault (i.e. according to the current balance ratios).
+/// 
+/// **NOTE**: This is the only way to withdraw 100% of the vault liquidity.
+/// 
+/// # Arguments:
+/// * `vault_tokens` - The amount of vault tokens to burn.
+/// * `min_out` - The minimum output of assets to get in return.
+/// 
 pub fn withdraw_all(
     deps: &mut DepsMut,
     env: Env,
@@ -388,13 +437,21 @@ pub fn withdraw_all(
     min_out: Vec<Uint128>,
 ) -> Result<Response, ContractError> {
 
+    // This withdraw function works by computing the share of the total vault tokens that 
+    // the provided ones account for. Assets are then returned to the user according to
+    // this share.
+
     update_amplification(deps, env.block.time)?;
 
     // Burn the vault tokens of the withdrawer
+    // NOTE: since the vault tokens are burnt at this point, the 'vault_tokens' amount
+    // has to be added to 'total_supply' whenever it's queried.
     let sender = info.sender.to_string();
     let burn_response = execute_burn(deps.branch(), env.clone(), info.clone(), vault_tokens)?;
 
-    // Compute the withdraw amounts
+
+    // Compute weighted_alpha_0 to find the reference vault balances (i.e. the number of assets
+    // the vault should have for 1:1 pricing).
     let assets = ASSETS.load(deps.storage)?;
     let one_minus_amp = ONE_MINUS_AMP.load(deps.storage)?;
     
@@ -411,10 +468,10 @@ pub fn withdraw_all(
         );
     }
 
-    let mut weighted_asset_balance_ampped_sum: U256 = U256::zero();
+    let mut weighted_asset_balance_ampped_sum: I256 = I256::zero();
 
     let effective_weighted_asset_balances = assets.iter()
-        .zip(&weights)
+        .zip(&weights)          // zip: weights.len() == assets.len()
         .map(|(asset, weight)| -> Result<U256, ContractError> {
 
             let vault_asset_balance = deps.querier.query_wasm_smart::<BalanceResponse>(
@@ -424,22 +481,24 @@ pub fn withdraw_all(
 
             if !vault_asset_balance.is_zero() {
 
-                let escrowed_asset_balance = TOTAL_ESCROWED_ASSETS.load(deps.storage, &asset.to_string())?;
-
                 let weighted_asset_balance = U256::from(vault_asset_balance)
-                    .wrapping_mul((*weight).into());           // 'wrapping_mul' is safe as U256.max >= Uint128.max * u64.max
+                    .wrapping_mul((*weight).into());           // 'wrapping_mul' is safe as U256.max >= Uint128.max * Uint128.max
     
                 let weighted_asset_balance_ampped = pow_wad(
-                    weighted_asset_balance.wrapping_mul(WAD).as_i256(), // 'wrapping_mul' is safe as U256.max >= Uint128.max * u64.max * WAD
+                    weighted_asset_balance.checked_mul(WAD)?
+                        .as_i256(), // If casting overflows to a negative number 'pow_wad' will fail
                     one_minus_amp
-                )?.as_u256();
+                )?;
 
-                weighted_asset_balance_ampped_sum = weighted_asset_balance_ampped_sum.checked_add(weighted_asset_balance_ampped)?;
+                weighted_asset_balance_ampped_sum = weighted_asset_balance_ampped_sum
+                    .checked_add(weighted_asset_balance_ampped)?;
+
+                let escrowed_asset_balance = TOTAL_ESCROWED_ASSETS.load(deps.storage, &asset.to_string())?;
 
                 Ok(
-                    weighted_asset_balance.wrapping_sub(
+                    weighted_asset_balance.checked_sub(
                         U256::from(escrowed_asset_balance).wrapping_mul((*weight).into())
-                    )
+                    )?
                 )
             }
             else {
@@ -449,68 +508,86 @@ pub fn withdraw_all(
         })
         .collect::<Result<Vec<U256>, ContractError>>()?;
 
-    // Compute the reference liquidity
-    let weighted_alpha_0_ampped: U256 = weighted_asset_balance_ampped_sum.as_i256()
-        .wrapping_sub(UNIT_TRACKER.load(deps.storage)?)
-        .as_u256()
+    // Compute the reference liquidity.
+    // 'wrapping_sub' in the following calculation is safe:
+    //   - for positive 'unit_tracker': by desing, 'weighted_asset_balance_ampped_sum' > 'unit_tracker'
+    //   - for negative 'unit_tracker': the subtraction could actually overflow, but the result will 
+    //     be correct once casted to u256.
+    let weighted_alpha_0_ampped: U256 = weighted_asset_balance_ampped_sum
+        .wrapping_sub(UNIT_TRACKER.load(deps.storage)?) 
+        .as_u256()                                      // Casting is safe (see reasoning above)
         .div(U256::from(assets.len() as u64));
 
     // Compute the effective supply. Include 'vault_tokens' to the queried supply as these have already been burnt
-    // and also include the escrowed tokens to yield a smaller return
+    // and also include the escrowed tokens to yield a smaller return.
     let effective_supply = U256::from(total_supply(deps.as_ref())?)
-        .wrapping_add(vault_tokens.into())                                      // 'wrapping_add' is safe as U256.max >> Uint128.max
-        .wrapping_add(TOTAL_ESCROWED_LIQUIDITY.load(deps.storage)?.into());     // 'wrapping_add' is safe as U256.max >> Uint128.max
+        .wrapping_add(vault_tokens.into())                                   // 'wrapping_add' is safe as U256.max >> Uint128.max
+        .wrapping_add(TOTAL_ESCROWED_LIQUIDITY.load(deps.storage)?.into());  // 'wrapping_add' is safe as U256.max >> Uint128.max
 
     // Compute 'supply after withdrawal'/'supply before withdrawal' (in WAD terms)
+    //    vault_tokens_share = (TS - vault_tokens) / TS
     let vault_tokens_share = effective_supply
-        .wrapping_sub(vault_tokens.into())          // 'wrapping_sub' is safe as the 'vault_tokens' have been successfully burnt at the beginning of this function
-        .wrapping_mul(WAD)                          // 'wrapping_mul' is safe as U256.max > Uint128.max * WAD
+        .wrapping_sub(vault_tokens.into())          // 'wrapping_sub' is safe as per the previous line
+        .wrapping_mul(WAD)                          // 'wrapping_mul' is safe as U256.max > Uint128.max * ~2^60
         .div(effective_supply);
 
+    // inner_diff = (w·a_0)^(1-k) · (1-vault_tokens_share^(1-k))
     let inner_diff = mul_wad_down(
         weighted_alpha_0_ampped,
-        WAD.wrapping_sub(
+        WAD.checked_sub(                            // Using 'checked_sub' for extra precaution ('wrapping_sub' should suffice)
             pow_wad(
-                vault_tokens_share.as_i256(),       // Casting is safe as 'vault_tokens_share' <= 1
+                vault_tokens_share.as_i256(),       // Casting is safe as 'vault_tokens_share' <= 1 (WAD)
                 one_minus_amp
             )?.as_u256()                            // Casting is safe as 'pow_wad' result is >= 0
-        )
+        )?
     )?;
 
+
+    // Compute the asset withdraw amounts
     let one_minus_amp_inverse = WADWAD / one_minus_amp;
 
-    let mut weighted_withdraw_sum = U256::zero();
+    let mut weighted_withdraw_sum = U256::zero(); // NOTE: named 'totalWithdrawn' on EVM
     let withdraw_amounts: Vec<Uint128> = weights
         .iter()
-        .zip(&min_out)                                      // zip: min_out.len() == weights.len()
-        .zip(effective_weighted_asset_balances)             // zip: effective_weighted_asset_balances.len() == weights.len()
+        .zip(&min_out)                                  // zip: min_out.len() == weights.len()
+        .zip(effective_weighted_asset_balances)         // zip: effective_weighted_asset_balances.len() == weights.len()
         .map(|((weight, asset_min_out), effective_weighted_asset_balance)| {
 
+            // Compute the 'weighted_asset_balance_ampped' **with** the escrow balance taken into account
             let effective_weighted_asset_balance_ampped = pow_wad(
-                effective_weighted_asset_balance.wrapping_mul(WAD).as_i256(), // 'wrapping_mul' is safe as U256.max >= Uint128.max * u64.max * WAD
+                effective_weighted_asset_balance
+                    .checked_mul(WAD)?
+                    .as_i256(),     // If casting overflows to a negative number 'pow_wad' will fail
                 one_minus_amp
-            )?.as_u256();
+            )?.as_u256();           // Casting always casts a positive number
 
+            // Compute the user's withdraw amount
             let weighted_withdraw_amount;
             if inner_diff < effective_weighted_asset_balance_ampped {
+                // w·a · ( 1 - [ ((w·a)^(1-k) - inner_diff)/((w·a)^(1-k)) ]^(1/(1-k)) )
                 weighted_withdraw_amount = mul_wad_down(
                     effective_weighted_asset_balance,
-                    WAD.wrapping_sub(
+                    WAD.checked_sub(    // Using 'checked_sub' for extra precaution ('wrapping_sub' should suffice)
                         pow_wad(
                             div_wad_up(
+                                // 'wrapping_sub' is safe because of the previous 'if' statement
                                 effective_weighted_asset_balance_ampped.wrapping_sub(inner_diff),
                                 effective_weighted_asset_balance_ampped
-                            )?.as_i256(),
+                            )?.as_i256(),   // Casting is safe, as the result is <= 1 (WAD)
                             one_minus_amp_inverse
-                        )?.as_u256()
-                    )
+                        )?.as_u256()        // Casting always casts a positive number
+                    )?
                 )?
             }
             else {
+                // If the vault does not have enough assets, withdraw all of the vault's assets. This
+                // happens if 'inner_diff' >= 'effective_weighted_asset_balance_ampped'. The user can
+                // protect itself from such a scenario by specifying a minimum output.
                 weighted_withdraw_amount = effective_weighted_asset_balance;
             }
 
             weighted_withdraw_sum = weighted_withdraw_sum.checked_add(weighted_withdraw_amount)?;
+
             let withdraw_amount: Uint128 = (weighted_withdraw_amount / U256::from(*weight)).try_into()?;
 
             // Check that the minimum output is honoured.
@@ -521,13 +598,13 @@ pub fn withdraw_all(
             Ok(withdraw_amount)
         }).collect::<Result<Vec<Uint128>, ContractError>>()?;
 
-    //TODO use helper methods for the following updates?
+
     // Update the security limit variables
     MAX_LIMIT_CAPACITY.update(
         deps.storage,
         |max_limit_capacity| -> StdResult<_> {
             max_limit_capacity
-                .checked_sub(weighted_withdraw_sum)         //TODO use wrapping_sub?
+                .checked_sub(weighted_withdraw_sum)
                 .map_err(|err| err.into())
         }
     )?;
@@ -541,19 +618,22 @@ pub fn withdraw_all(
         }
     )?;
 
-    // Build messages to order the transfer of tokens from the vault to the depositor
-    let transfer_msgs: Vec<CosmosMsg> = assets.iter().zip(&withdraw_amounts).map(|(asset, amount)| {    // zip: withdraw_amounts.len() == assets.len()
-        Ok(CosmosMsg::Wasm(
-            cosmwasm_std::WasmMsg::Execute {
-                contract_addr: asset.to_string(),
-                msg: to_binary(&Cw20ExecuteMsg::Transfer {
-                    recipient: sender.clone(),
-                    amount: *amount
-                })?,
-                funds: vec![]
-            }
-        ))
-    }).collect::<StdResult<Vec<CosmosMsg>>>()?;
+
+    // Build messages to order the transfer of tokens from the vault to the withdrawer.
+    let transfer_msgs: Vec<CosmosMsg> = assets.iter()
+        .zip(&withdraw_amounts)    // zip: withdraw_amounts.len() == assets.len()
+        .map(|(asset, amount)| {
+            Ok(CosmosMsg::Wasm(
+                cosmwasm_std::WasmMsg::Execute {
+                    contract_addr: asset.to_string(),
+                    msg: to_binary(&Cw20ExecuteMsg::Transfer {
+                        recipient: sender.clone(),
+                        amount: *amount
+                    })?,
+                    funds: vec![]
+                }
+            ))
+        }).collect::<StdResult<Vec<CosmosMsg>>>()?;
 
 
     Ok(Response::new()
@@ -575,6 +655,17 @@ pub fn withdraw_all(
 }
 
 
+/// Withdraw an uneven amount of assets from the vault (i.e. according to a user defined ratio).
+/// 
+/// **NOTE**: This function cannot be used to withdraw all the vault liquidity (for that use `withdraw_all`).
+/// 
+/// # Arguments:
+/// * `vault_tokens` - The amount of vault tokens to burn.
+/// * `withdraw_ratio` - The ratio at which to withdraw the assets. Each value is the percentage 
+/// of the remaining units to be used for the corresponding asset (i.e. given \[r0, r1, r2\],
+/// U0 = U · r0, U1 = (U - U0) · r1, U2 = (U - U0 - U1) · r2). In WAD terms.
+/// * `min_out` - The minimum output of assets to get in return.
+/// 
 pub fn withdraw_mixed(
     deps: &mut DepsMut,
     env: Env,
@@ -584,13 +675,19 @@ pub fn withdraw_mixed(
     min_out: Vec<Uint128>,
 ) -> Result<Response, ContractError> {
 
+    // This withdraw function works by computing the 'units' value of the provided vault tokens,
+    // and then translating those into assets balances according to the provided 'withdraw_ratio'.
+
     update_amplification(deps, env.block.time)?;
 
     // Burn the vault tokens of the withdrawer
     let sender = info.sender.to_string();
     let burn_response = execute_burn(deps.branch(), env.clone(), info.clone(), vault_tokens)?;
 
-    // Compute the withdraw amounts
+
+    // Compute weighted_alpha_0 to find the reference vault balances (i.e. the number of assets
+    // the vault should have for 1:1 pricing). This value is then used to compute the corresponding
+    // 'units' of the withdrawal.
     let assets = ASSETS.load(deps.storage)?;
     let one_minus_amp = ONE_MINUS_AMP.load(deps.storage)?;
     
@@ -599,10 +696,10 @@ pub fn withdraw_mixed(
         .map(|asset| WEIGHTS.load(deps.storage, asset.as_ref()))
         .collect::<StdResult<Vec<Uint128>>>()?;
 
-    // Compute the unit worth of the vault tokens.
-    let mut weighted_asset_balance_ampped_sum: U256 = U256::zero();
+    let mut weighted_asset_balance_ampped_sum: I256 = I256::zero();
+
     let effective_asset_balances = assets.iter()
-        .zip(&weights)
+        .zip(&weights)      // zip: weights.len() == assets.len()
         .map(|(asset, weight)| -> Result<Uint128, ContractError> {
             
             let vault_asset_balance = deps.querier.query_wasm_smart::<BalanceResponse>(
@@ -613,19 +710,21 @@ pub fn withdraw_mixed(
             if !vault_asset_balance.is_zero() {
 
                 let weighted_asset_balance = U256::from(vault_asset_balance)
-                    .wrapping_mul((*weight).into());           // 'wrapping_mul' is safe as U256.max >= Uint128.max * u64.max
+                    .wrapping_mul((*weight).into());     // 'wrapping_mul' is safe as U256.max >= Uint128.max * Uint128.max
     
                 let weighted_asset_balance_ampped = pow_wad(
-                    weighted_asset_balance.wrapping_mul(WAD).as_i256(), // 'wrapping_mul' is safe as U256.max >= Uint128.max * u64.max * WAD
+                    weighted_asset_balance.checked_mul(WAD)?
+                        .as_i256(), // If casting overflows to a negative number 'pow_wad' will fail
                     one_minus_amp
-                )?.as_u256();
+                )?;
 
-                weighted_asset_balance_ampped_sum = weighted_asset_balance_ampped_sum.checked_add(weighted_asset_balance_ampped)?;
+                weighted_asset_balance_ampped_sum = weighted_asset_balance_ampped_sum
+                    .checked_add(weighted_asset_balance_ampped)?;
 
                 Ok(
-                    vault_asset_balance.wrapping_sub(
+                    vault_asset_balance.checked_sub(
                         TOTAL_ESCROWED_ASSETS.load(deps.storage, &asset.to_string())?
-                    )
+                    )?
                 )
             }
             else {
@@ -634,36 +733,44 @@ pub fn withdraw_mixed(
         })
         .collect::<Result<Vec<Uint128>, ContractError>>()?;
 
-    // Compute the reference liquidity
-    let weighted_alpha_0_ampped: U256 = weighted_asset_balance_ampped_sum.as_i256()
-        .wrapping_sub(UNIT_TRACKER.load(deps.storage)?)
-        .as_u256()
+    // Compute the reference liquidity.
+    // 'wrapping_sub' in the following calculation is safe:
+    //   - for positive 'unit_tracker': by desing, 'weighted_asset_balance_ampped_sum' > 'unit_tracker'
+    //   - for negative 'unit_tracker': the subtraction could actually overflow, but the result will 
+    //     be correct once casted to u256.
+    let weighted_alpha_0_ampped: U256 = weighted_asset_balance_ampped_sum
+        .wrapping_sub(UNIT_TRACKER.load(deps.storage)?) 
+        .as_u256()                                      // Casting is safe (see reasoning above)
         .div(U256::from(assets.len() as u64));
 
     // Compute the effective supply. Include 'vault_tokens' to the queried supply as these have already been burnt
-    // and also include the escrowed tokens to yield a smaller return
+    // and also include the escrowed tokens to yield a smaller return.
     let effective_supply = U256::from(total_supply(deps.as_ref())?)
-        .wrapping_add(vault_tokens.into())                                      // 'wrapping_add' is safe as U256.max >> Uint128.max
-        .wrapping_add(TOTAL_ESCROWED_LIQUIDITY.load(deps.storage)?.into());     // 'wrapping_add' is safe as U256.max >> Uint128.max
+        .wrapping_add(vault_tokens.into())                                   // 'wrapping_add' is safe as U256.max >> Uint128.max
+        .wrapping_add(TOTAL_ESCROWED_LIQUIDITY.load(deps.storage)?.into());  // 'wrapping_add' is safe as U256.max >> Uint128.max
 
     // Compute 'supply after withdrawal'/'supply before withdrawal' (in WAD terms)
-    let vault_tokens_share = div_wad_down(
-        effective_supply.wrapping_sub(vault_tokens.into()),  // 'wrapping_sub' is safe as the 'vault_tokens' have been successfully burnt at the beginning of this function
-        effective_supply
-    )?;
+    //    vault_tokens_share = (TS - vault_tokens) / TS
+    let vault_tokens_share = effective_supply
+        .wrapping_sub(vault_tokens.into())          // 'wrapping_sub' is safe as per the previous line
+        .wrapping_mul(WAD)                          // 'wrapping_mul' is safe as U256.max > Uint128.max * ~2^60
+        .div(effective_supply);
 
+    // Compute the 'units' worth of the provided vault tokens.
     let mut units = U256::from(assets.len() as u64).checked_mul(
         mul_wad_down(
             weighted_alpha_0_ampped,
-            WAD.wrapping_sub(
+            WAD.checked_sub(        // Using 'checked_sub' for extra precaution ('wrapping_sub' should suffice)
                 pow_wad(
-                    vault_tokens_share.as_i256(),
+                    vault_tokens_share.as_i256(),   // If casting overflows to a negative number 'pow_wad' will fail
                     one_minus_amp
-                )?.as_u256()
-            )
+                )?.as_u256()        // Casting always casts a positive number
+            )?
         )?
     )?;
 
+
+    // Compute the asset withdraw amounts
     if withdraw_ratio.len() != assets.len() || min_out.len() != assets.len() {
         return Err(
             ContractError::InvalidParameters {
@@ -672,7 +779,7 @@ pub fn withdraw_mixed(
         );
     }
 
-    let mut weighted_withdraw_sum = U256::zero();
+    let mut weighted_withdraw_sum = U256::zero(); // NOTE: named 'totalWithdrawn' on EVM
     let withdraw_amounts: Vec<Uint128> = weights
         .iter()
         .zip(&withdraw_ratio)               // zip: withdraw_ratio.len() == weights.len()
@@ -682,29 +789,30 @@ pub fn withdraw_mixed(
 
             // Calculate the units allocated for the specific asset
             let units_for_asset = fixed_point_math::mul_wad_down(units, U256::from(*asset_withdraw_ratio))?;
-            if units_for_asset == U256::zero() {
+            if units_for_asset.is_zero() {
 
                 // There should not be a non-zero withdraw ratio after a withdraw ratio of 1 (protect against user error)
-                if *asset_withdraw_ratio != Uint64::zero() {
+                if !asset_withdraw_ratio.is_zero() {
                     return Err(ContractError::WithdrawRatioNotZero {}) 
                 };
 
                 // Check that the minimum output is honoured.
-                if asset_min_out != Uint128::zero() {
+                if !asset_min_out.is_zero() {
                     return Err(ContractError::ReturnInsufficient { out: Uint128::zero(), min_out: *asset_min_out })
                 };
 
                 return Ok(Uint128::zero());
             }
 
-            // Subtract the units used from the total units amount. This will underflow for malicious withdraw ratios (i.e. ratios > 1).
-            units = units.checked_sub(units_for_asset)?;
+            // Subtract the units used from the total units amount.
+            units = units.checked_sub(units_for_asset)?; // ! 'checked_sub' important: This will underflow for 
+                                                         // ! malicious withdraw ratios (i.e. ratios > 1).
 
             // Calculate the asset amount corresponding to the asset units
             let withdraw_amount = calc_price_curve_limit(
                 units_for_asset,
-                U256::from(effective_asset_balance),
-                U256::from(*weight),
+                effective_asset_balance.into(),
+                (*weight).into(),
                 one_minus_amp
             )?.try_into()?;
 
@@ -714,22 +822,22 @@ pub fn withdraw_mixed(
             };
 
             weighted_withdraw_sum = weighted_withdraw_sum.checked_add(
-                U256::from(withdraw_amount).checked_mul((*weight).into())?
+                U256::from(withdraw_amount).wrapping_mul((*weight).into())  // 'wrapping_mul' is safe as U256.max >= Uint128.max * Uint128.max
             )?;
 
             Ok(withdraw_amount)
         }).collect::<Result<Vec<Uint128>, ContractError>>()?;
 
     // Make sure all units have been consumed
-    if units != U256::zero() { return Err(ContractError::UnusedUnitsAfterWithdrawal { units }) };
+    if !units.is_zero() { return Err(ContractError::UnusedUnitsAfterWithdrawal { units }) };
 
-    //TODO use helper methods for the following updates?
+
     // Update the security limit variables
     MAX_LIMIT_CAPACITY.update(
         deps.storage,
         |max_limit_capacity| -> StdResult<_> {
             max_limit_capacity
-                .checked_sub(weighted_withdraw_sum)         //TODO use wrapping_sub?
+                .checked_sub(weighted_withdraw_sum)
                 .map_err(|err| err.into())
         }
     )?;
@@ -743,9 +851,12 @@ pub fn withdraw_mixed(
         }
     )?;
 
-    // Build messages to order the transfer of tokens from the vault to the depositor
+    // Build messages to order the transfer of tokens from the vault to the withdrawer.
+    // ! IMPORTANT: Some cw20 contracts disallow zero-valued token transfers. Do not generate
+    // ! transfer messages for zero-valued balance transfers to prevent these cases from 
+    // ! resulting in failed transactions.
     let transfer_msgs: Vec<CosmosMsg> = assets.iter()
-        .zip(&withdraw_amounts)                                                             // zip: withdraw_amounts.len() == assets.len()
+        .zip(&withdraw_amounts)         // zip: withdraw_amounts.len() == assets.len()
         .filter(|(_, withdraw_amount)| **withdraw_amount != Uint128::zero())     // Do not create transfer messages for zero-valued withdrawals
         .map(|(asset, amount)| {
             Ok(CosmosMsg::Wasm(
