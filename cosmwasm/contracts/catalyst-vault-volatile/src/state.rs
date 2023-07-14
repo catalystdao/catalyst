@@ -615,7 +615,7 @@ pub fn local_swap(
         return Err(ContractError::ReturnInsufficient { out, min_out });
     }
 
-    // Build the message to transfer the input assets to the vault
+    // Build the message to transfer the input assets to the vault.
     let transfer_from_asset_msg = CosmosMsg::Wasm(
         cosmwasm_std::WasmMsg::Execute {
             contract_addr: from_asset.clone(),
@@ -640,7 +640,7 @@ pub fn local_swap(
         }
     );
 
-    // Build collect governance fee message
+    // Build the message to collect the governance fee.
     let collect_governance_fee_message = collect_governance_fee_message(
         &deps.as_ref(),
         from_asset.clone(),
@@ -700,7 +700,7 @@ pub fn send_asset(
     calldata: Binary
 ) -> Result<Response, ContractError> {
 
-    // Only allow connected vaults
+    // Only allow connected vaults.
     if !is_connected(&deps.as_ref(), &channel_id, to_vault.clone()) {
         return Err(ContractError::VaultNotConnected { channel_id, vault: to_vault })
     }
@@ -714,7 +714,7 @@ pub fn send_asset(
 
     let effective_swap_amount = amount.wrapping_sub(vault_fee);     // 'wrapping_sub' is safe, as 'vault_fee' is contained by 'amount'
 
-    // Calculate the units bought
+    // Calculate the units bought.
     let u = calc_send_asset(
         &deps.as_ref(),
         env.clone(),
@@ -744,7 +744,7 @@ pub fn send_asset(
     // NOTE: The security limit adjustment is delayed until the swap confirmation is received to
     // prevent a router from abusing swap 'timeouts' to circumvent the security limit.
 
-    // Build the message to transfer the input assets to the vault
+    // Build the message to transfer the input assets to the vault.
     let transfer_from_asset_msg = CosmosMsg::Wasm(
         cosmwasm_std::WasmMsg::Execute {
             contract_addr: from_asset.clone(),
@@ -757,14 +757,14 @@ pub fn send_asset(
         }
     );
 
-    // Build the collect governance fee message
+    // Build the message to collect the governance fee.
     let collect_governance_fee_message = collect_governance_fee_message(
         &deps.as_ref(),
         from_asset.clone(),
         vault_fee
     )?;
 
-    // Build the message to send the purchased units via the IBC interface
+    // Build the message to send the purchased units via the IBC interface.
     let send_cross_chain_asset_msg = InterfaceExecuteMsg::SendCrossChainAsset {
         channel_id: channel_id.clone(),
         to_vault: to_vault.clone(),
@@ -848,19 +848,19 @@ pub fn receive_asset(
     calldata: Option<Binary>
 ) -> Result<Response, ContractError> {
 
-    // Only allow the 'chain_interface' to invoke this function
+    // Only allow the 'chain_interface' to invoke this function.
     if Some(info.sender) != CHAIN_INTERFACE.load(deps.storage)? {
         return Err(ContractError::Unauthorized {});
     }
 
-    // Only allow connected vaults
+    // Only allow connected vaults.
     if !is_connected(&deps.as_ref(), &channel_id, from_vault.clone()) {
         return Err(ContractError::VaultNotConnected { channel_id, vault: from_vault })
     }
 
     update_weights(deps, env.block.time)?;
 
-    // Check and update the security limit
+    // Check and update the security limit.
     update_limit_capacity(deps, env.block.time, u)?;
 
     // Calculate the swap return.
@@ -877,7 +877,7 @@ pub fn receive_asset(
     }
 
 
-    // Build the message to transfer the output assets to to_account
+    // Build the message to transfer the output assets to the swapper.
     let transfer_to_asset_msg = CosmosMsg::Wasm(
         cosmwasm_std::WasmMsg::Execute {
             contract_addr: to_asset.to_string(),
@@ -889,7 +889,7 @@ pub fn receive_asset(
         }
     );
 
-    // Build the calldata message
+    // Build the calldata message.
     let calldata_message = calldata_target.map(|target| {
         CosmosMsg::Wasm(
             cosmwasm_std::WasmMsg::Execute {
@@ -900,15 +900,15 @@ pub fn receive_asset(
         )
     });
 
-    // Build and send the response
-    let mut response = Response::new();
+    // Build and send the response.
+    let mut response = Response::new()
+        .add_message(transfer_to_asset_msg);
 
     if let Some(msg) = calldata_message {
         response = response.add_message(msg);
     }
 
     Ok(response
-        .add_message(transfer_to_asset_msg)
         .add_event(
             receive_asset_event(
                 channel_id,
@@ -1003,7 +1003,7 @@ pub fn send_liquidity(
     // NOTE: The security limit adjustment is delayed until the swap confirmation is received to
     // prevent a router from abusing swap 'timeouts' to circumvent the security limit.
 
-    // Build the message to 'send' the liquidity via the IBC interface
+    // Build the message to 'send' the liquidity via the IBC interface.
     let send_cross_chain_asset_msg = InterfaceExecuteMsg::SendCrossChainLiquidity {
         channel_id: channel_id.clone(),
         to_vault: to_vault.clone(),
@@ -1082,12 +1082,12 @@ pub fn receive_liquidity(
     calldata: Option<Binary>
 ) -> Result<Response, ContractError> {
 
-    // Only allow the 'chain_interface' to invoke this function
+    // Only allow the 'chain_interface' to invoke this function.
     if Some(info.sender) != CHAIN_INTERFACE.load(deps.storage)? {
         return Err(ContractError::Unauthorized {});
     }
 
-    // Only allow connected vaults
+    // Only allow connected vaults.
     if !is_connected(&deps.as_ref(), &channel_id, from_vault.clone()) {
         return Err(ContractError::VaultNotConnected { channel_id, vault: from_vault })
     }
@@ -1182,7 +1182,7 @@ pub fn receive_liquidity(
         out
     )?;
 
-    // Build the calldata message
+    // Build the calldata message.
     let calldata_message = calldata_target.map(|target| {
         CosmosMsg::Wasm(
             cosmwasm_std::WasmMsg::Execute {
@@ -1193,7 +1193,7 @@ pub fn receive_liquidity(
         )
     });
 
-    // Build and send the response
+    // Build and send the response.
     let mut response = Response::new();
 
     if let Some(msg) = calldata_message {
