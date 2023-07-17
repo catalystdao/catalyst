@@ -22,6 +22,9 @@ pub enum ContractError {
     #[error("Payload deoding failed.")]
     PayloadDecodingError {},
 
+    #[error("Invalid Catalyst 65-byte encoded address.")]
+    InvalidCatalystEncodedAddress {},
+
     #[error("Submessage reply id unknown: {id}")]
     UnknownReplyId { id: u64 }
 }

@@ -116,6 +116,8 @@ use cosmwasm_std::{Deps, Addr, Binary};
 use catalyst_types::U256;
 use crate::ContractError;
 
+const CATALYST_ADDRESS_LENGTH: usize = 65;
+
 
 // Catalyst Packet **************************************************************************************************************
 
@@ -537,6 +539,15 @@ impl CatalystV1VariablePayload for SendLiquidityVariablePayload {
 
 // Misc helpers *****************************************************************************************************************
 
+/// Parse calldata bytes. Returns *None* for no calldata.
+/// 
+/// **NOTE**: Unlike with all the other payload helpers, the `target` address **does** get validated. This
+/// is to avoid executing the entire swap logic should an invalid address be provided. Note that this step
+/// is not critical for the safety of the protocol.
+/// 
+/// # Arguments:
+/// * `calldata` - Bytes to parse.
+/// 
 pub fn parse_calldata(
     deps: Deps,
     calldata: Binary
@@ -566,7 +577,7 @@ pub fn parse_calldata(
     )
 }
 
-// Wrapper around a bytes vec for encoding/decoding of 65-byte Catalyst payload addresses
+/// Wrapper around a bytes vec for encoding/decoding of Catalyst's 65-byte payload addresses.
 pub struct CatalystEncodedAddress(Vec<u8>);
 
 impl AsRef<[u8]> for CatalystEncodedAddress {
@@ -592,8 +603,8 @@ impl TryFrom<Vec<u8>> for CatalystEncodedAddress {
 
     fn try_from(value: Vec<u8>) -> Result<Self, Self::Error> {
 
-        if value.len() != 65 {
-            return Err(ContractError::PayloadDecodingError {})
+        if value.len() != CATALYST_ADDRESS_LENGTH {
+            return Err(ContractError::InvalidCatalystEncodedAddress {})
         }
 
         Ok(Self(value))
@@ -605,8 +616,8 @@ impl TryFrom<Binary> for CatalystEncodedAddress {
 
     fn try_from(value: Binary) -> Result<Self, Self::Error> {
 
-        if value.len() != 65 {
-            return Err(ContractError::PayloadDecodingError {})  //TODO error
+        if value.len() != CATALYST_ADDRESS_LENGTH {
+            return Err(ContractError::InvalidCatalystEncodedAddress {})
         }
 
         Ok(Self(value.0))
@@ -618,8 +629,8 @@ impl TryFrom<&[u8]> for CatalystEncodedAddress {
 
     fn try_from(value: &[u8]) -> Result<Self, Self::Error> {
 
-        if value.len() != 65 {
-            return Err(ContractError::PayloadDecodingError {})
+        if value.len() != CATALYST_ADDRESS_LENGTH {
+            return Err(ContractError::InvalidCatalystEncodedAddress {})
         }
 
         Ok(Self(value.to_vec()))
@@ -629,30 +640,48 @@ impl TryFrom<&[u8]> for CatalystEncodedAddress {
 
 impl CatalystEncodedAddress {
 
+    /// Return a vector representation of the address.
     pub fn to_vec(self) -> Vec<u8> {
         self.0
     }
 
+    /// Return a Binary representation of the address.
     pub fn to_binary(self) -> Binary {
         Binary(self.0)
     }
 
+    /// Create a CatalystEncodedAddress from a slice.
+    /// 
+    /// ! **IMPORTANT!**: This method must only be used when it is guaranteed that data.len() is 65 bytes long.
+    /// 
+    /// # Arguments:
+    /// * `data` - The slice from which to create the CatalystEncodedAddress.
+    /// 
     pub fn from_slice_unchecked(data: &[u8]) -> Self {
-        // This method must only be used when it is guaranteed that data.len() is 65 bytes long
         Self(data.to_vec())
     }
 
+    /// Try to encode an address from a slice. The encoded address always has fixed length
+    /// (`CATALYST_ADDRESS_LENGTH`), and is of the following form:
+    /// 
+    ///     <Address length (1 byte)> <Zero padding> <Address>
+    /// 
+    /// # Arguments:
+    /// * `address` - The slice that is to be encoded.
+    /// 
     pub fn try_encode(address: &[u8]) -> Result<Self, ContractError> {
 
         let address_len = address.len();
-        if address_len > 64 {   //TODO use constant
+        if address_len > (CATALYST_ADDRESS_LENGTH - 1) {   // Subtracting '1', as the first byte of the encoded 
+                                                           // address is reserved for the address length
             return Err(ContractError::PayloadEncodingError {});
         }
 
-        let mut encoded_address: Vec<u8> = Vec::with_capacity(65);
-        encoded_address.push(address_len as u8);             // Casting to u8 is safe, as address_len is <= 64
+        let mut encoded_address: Vec<u8> = Vec::with_capacity(CATALYST_ADDRESS_LENGTH);
+        encoded_address.push(address_len as u8);     // Casting to u8 is safe, as address_len is < CATALYST_ADDRESS_LENGTH < u8.max
 
-        if address_len != 64 {
+        // Pad the encoded address with '0' if the provided slice is less than (CATALYST_ADDRESS_LENGTH-1) bytes long.
+        if address_len != CATALYST_ADDRESS_LENGTH - 1 {
             encoded_address.extend_from_slice(vec![0u8; 64-address_len].as_ref());
         }
 
@@ -661,17 +690,24 @@ impl CatalystEncodedAddress {
         Ok(Self(encoded_address))
     }
 
+    /// Try to decode a Catalyst-encoded address into a vector of bytes.
     pub fn try_decode(&self) -> Result<Vec<u8>, ContractError> {
 
         let address_length: usize = *self.0.get(0)
             .ok_or(ContractError::PayloadDecodingError {})? as usize;
 
-        self.0.get(65-address_length..)
+        // Get the last <address_length> bytes of the encoded address.
+        let address_start_byte = CATALYST_ADDRESS_LENGTH
+            .checked_sub(address_length)
+            .ok_or(ContractError::InvalidCatalystEncodedAddress {})?;
+
+        self.0.get(address_start_byte..)
             .ok_or(ContractError::PayloadDecodingError {})
             .map(|slice| slice.to_vec())
 
     }
 
+    /// Try to decode a Catalyst-encoded address into a utf8 string.
     pub fn try_decode_as_string(&self) -> Result<String, ContractError> {
 
         String::from_utf8(
