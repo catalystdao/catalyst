@@ -324,7 +324,7 @@ pub fn is_connected(
 /// !IMPORTANT: This function DOES NOT check the sender of the transaction.
 /// 
 /// # Arguments:
-/// * `administrator`: The account of the new addministrator.
+/// * `administrator` - The account of the new addministrator.
 /// 
 pub fn set_fee_administrator_unchecked(
     deps: &mut DepsMut,
@@ -347,7 +347,7 @@ pub fn set_fee_administrator_unchecked(
 /// **NOTE**: This function checks whether the sender of the transaction is the factory owner.
 /// 
 /// # Arguments:
-/// * `administrator`: The new administrator account.
+/// * `administrator` - The new administrator account.
 /// 
 pub fn set_fee_administrator(
     deps: &mut DepsMut,
@@ -370,7 +370,7 @@ pub fn set_fee_administrator(
 /// !IMPORTANT: This function DOES NOT check the sender of the transaction.
 /// 
 /// # Arguments:
-/// * `fee`: The new vault fee (18 decimals).
+/// * `fee` - The new vault fee (18 decimals).
 /// 
 pub fn set_vault_fee_unchecked(
     deps: &mut DepsMut,
@@ -396,7 +396,7 @@ pub fn set_vault_fee_unchecked(
 /// **NOTE**: This function checks whether the sender of the transaction is the fee administrator.
 /// 
 /// # Arguments:
-/// * `fee`: The new vault fee (18 decimals).
+/// * `fee` - The new vault fee (18 decimals).
 /// 
 pub fn set_vault_fee(
     deps: &mut DepsMut,
@@ -421,7 +421,7 @@ pub fn set_vault_fee(
 /// !IMPORTANT: This function DOES NOT check the sender of the transaction.
 /// 
 /// # Arguments:
-/// * `fee`: The new governance fee share (18 decimals).
+/// * `fee` - The new governance fee share (18 decimals).
 /// 
 pub fn set_governance_fee_share_unchecked(
     deps: &mut DepsMut,
@@ -447,7 +447,7 @@ pub fn set_governance_fee_share_unchecked(
 /// **NOTE**: This function checks whether the sender of the transaction is the factory owner.
 /// 
 /// # Arguments:
-/// * `fee`: The new governance fee share (18 decimals).
+/// * `fee` - The new governance fee share (18 decimals).
 /// 
 pub fn set_governance_fee_share(
     deps: &mut DepsMut,
@@ -512,7 +512,7 @@ pub fn collect_governance_fee_message(
 /// 
 /// # Arguments:
 /// 
-/// * `timestamp`: Time at which to compute the limit capacity (usually this is the current timestamp).
+/// * `timestamp` - Time at which to compute the limit capacity (usually this is the current timestamp).
 /// 
 pub fn get_limit_capacity(
     deps: &Deps,
@@ -559,8 +559,8 @@ pub fn get_limit_capacity(
 /// 
 /// # Arguments:
 /// 
-/// * `current_timestamp`: The current time.
-/// * `amount`: The amount by which to decrease the limit capacity.
+/// * `current_timestamp` - The current time.
+/// * `amount` - The amount by which to decrease the limit capacity.
 /// 
 pub fn update_limit_capacity(
     deps: &mut DepsMut,

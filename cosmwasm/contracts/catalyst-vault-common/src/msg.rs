@@ -45,15 +45,15 @@ pub enum ExecuteMsg<T> {
     FinishSetup {},
 
     /// Set the vault fee.
-    /// * `fee`: The new vault fee (18 decimals).
+    /// * `fee` - The new vault fee (18 decimals).
     SetVaultFee { fee: Uint64 },
 
     /// Set the governance fee share.
-    /// * `fee`: The new governance fee share (18 decimals).
+    /// * `fee` - The new governance fee share (18 decimals).
     SetGovernanceFeeShare { fee: Uint64 },
 
     /// Set the fee administrator.
-    /// * `administrator`: The new administrator account.
+    /// * `administrator` - The new administrator account.
     SetFeeAdministrator { administrator: String },
 
     /// Setup a vault connection.
