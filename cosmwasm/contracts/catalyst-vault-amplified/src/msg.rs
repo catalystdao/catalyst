@@ -17,6 +17,9 @@ pub enum AmplifiedExecuteExtension {
         target_amplification: Uint64
     },
 
+    UpdateMaxLimitCapacity {
+    }
+
 }
 
 pub type AmplifiedExecuteMsg = ExecuteMsg<AmplifiedExecuteExtension>;

@@ -15,7 +15,7 @@ use catalyst_vault_common::state::{
 
 use crate::msg::{AmplifiedExecuteMsg, InstantiateMsg, QueryMsg, AmplifiedExecuteExtension};
 use crate::state::{
-    initialize_swap_curves, deposit_mixed, withdraw_all, withdraw_mixed, local_swap, send_asset, receive_asset, send_liquidity, receive_liquidity, query_calc_send_asset, query_calc_receive_asset, query_calc_local_swap, query_get_limit_capacity, on_send_asset_success_amplified, on_send_asset_failure_amplified, on_send_liquidity_failure_amplified, set_amplification, query_target_amplification, query_amplification_update_finish_timestamp, query_balance_0, query_amplification, query_unit_tracker
+    initialize_swap_curves, deposit_mixed, withdraw_all, withdraw_mixed, local_swap, send_asset, receive_asset, send_liquidity, receive_liquidity, query_calc_send_asset, query_calc_receive_asset, query_calc_local_swap, query_get_limit_capacity, on_send_asset_success_amplified, on_send_asset_failure_amplified, on_send_liquidity_failure_amplified, set_amplification, query_target_amplification, query_amplification_update_finish_timestamp, query_balance_0, query_amplification, query_unit_tracker, update_max_limit_capacity
 };
 
 // Version information
@@ -357,6 +357,12 @@ pub fn execute(
                     info,
                     target_timestamp,
                     target_amplification
+                ),
+
+                AmplifiedExecuteExtension::UpdateMaxLimitCapacity {
+                } => update_max_limit_capacity(
+                    &mut deps,
+                    env
                 )
             }
 

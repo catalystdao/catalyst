@@ -2270,6 +2270,46 @@ pub fn update_amplification(
 }
 
 
+/// Recompute the maximum security limit capacity.
+pub fn update_max_limit_capacity(
+    deps: &mut DepsMut,
+    env: Env
+) -> Result<Response, ContractError> {
+    
+    let assets = ASSETS.load(deps.storage)?;
+
+    // Compute the sum of the vault's asset balance-weight products.
+    let max_limit_capacity = assets.iter()
+        .try_fold(
+            U256::zero(),
+            |acc, asset| -> StdResult<_> {
+
+                let vault_asset_balance = deps.querier.query_wasm_smart::<BalanceResponse>(
+                    asset,
+                    &Cw20QueryMsg::Balance { address: env.contract.address.to_string() }
+                )?.balance;
+
+                let escrowed_balance = TOTAL_ESCROWED_ASSETS.load(deps.storage, asset.as_ref())?;
+
+                let effective_balance = vault_asset_balance.checked_sub(escrowed_balance)?;
+
+                let weight = WEIGHTS.load(deps.storage, asset.as_ref())?;
+
+                acc.checked_add(
+                    // 'wrapping_mul' is safe as U256.max >= Uint128.max * Uint128.max
+                    U256::from(effective_balance).wrapping_mul(weight.into())
+                ).map_err(|err| err.into())
+            }
+        )?;
+    
+    MAX_LIMIT_CAPACITY.save(deps.storage, &max_limit_capacity)?;
+
+    Ok(
+        Response::new()
+    )
+}
+
+
 
 // Query helpers ****************************************************************************************************************
 
