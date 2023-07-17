@@ -97,8 +97,8 @@ pub fn execute_ibc_packet_ack(
     let response = match ack {
         Some(ack_id) => {
             match ack_id {
-                &ACK_SUCCESS => on_packet_success(deps, mock_ibc_packet),
-                &ACK_FAIL => on_packet_failure(deps, mock_ibc_packet),
+                &ACK_SUCCESS => on_packet_success(mock_ibc_packet),
+                &ACK_FAIL => on_packet_failure(mock_ibc_packet),
                 _ => Ok(IbcBasicResponse::new())    // If ack type is not recognized, just exit without error   //TODO do we want this?
             }
         },
@@ -125,7 +125,6 @@ pub fn execute_ibc_packet_timeout(
     }
 
     let response = on_packet_failure(
-        deps,
         build_mock_ibc_packet(data, channel_id)
     ).map_err(|_| ContractError::Std(StdError::generic_err("IBC timeout packet execution failed.")))?;
 

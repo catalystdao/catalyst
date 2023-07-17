@@ -9,14 +9,15 @@ use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg, PortResponse, ListChannelsResponse};
 use crate::state::OPEN_CHANNELS;
 
-// version info for migration info
+// Version information
 const CONTRACT_NAME: &str = "catalyst-ibc-interface";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
-const TRANSACTION_TIMEOUT: u64 = 2 * 60 * 60;   // 2 hours      //TODO allow this to be set on interface instantiation?
-                                                                //TODO allow this to be customized on a per-channel basis?
-                                                                //TODO allow this to be overriden on 'sendAsset' and 'sendLiquidity'?
+const TRANSACTION_TIMEOUT_SECONDS: u64 = 2 * 60 * 60;   // 2 hours
 
+
+
+// Instantiation **********************************************************************************
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
@@ -33,6 +34,9 @@ pub fn instantiate(
     )
 }
 
+
+
+// Execution **************************************************************************************
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(
@@ -96,6 +100,25 @@ pub fn execute(
     }
 }
 
+
+/// Pack the arguments of a 'send_asset' transaction into a byte array following Catalyst's
+/// payload definition, and initiate an IBC cross chain transaction.
+/// 
+/// **NOTE**: This call is **permissionless**. The recipient of the transaction must validate
+/// the sender of the transaction.
+/// 
+/// # Arguments: 
+/// * `channel_id` - The target chain identifier.
+/// * `to_vault` - The target vault on the target chain (Catalyst encoded).
+/// * `to_account` - The recipient of the swap on the target chain (Catalyst encoded).
+/// * `to_asset_index` - The destination asset index.
+/// * `u` - The outgoing 'units'.
+/// * `min_out` - The mininum `to_asset` output amount to get on the target vault.
+/// * `from_amount` - The `from_asset` amount sold to the vault.
+/// * `from_asset` - The source asset.
+/// * `block_number` - The block number at which the transaction has been committed.
+/// * `calldata` - Arbitrary data to be executed on the target chain upon successful execution of the swap.
+/// 
 fn execute_send_cross_chain_asset(
     env: Env,
     info: MessageInfo,
@@ -111,16 +134,16 @@ fn execute_send_cross_chain_asset(
     calldata: Binary
 ) -> Result<Response, ContractError> {
 
-    // Build payload
+    // Build the payload
     let payload = CatalystV1SendAssetPayload {
         from_vault: CatalystEncodedAddress::try_encode(info.sender.as_bytes())?,
-        to_vault: CatalystEncodedAddress::try_from(to_vault)?,                        // to_vault should already be encoded
-        to_account: CatalystEncodedAddress::try_from(to_account)?,                  // to_account should already be encoded
+        to_vault: CatalystEncodedAddress::try_from(to_vault)?,        // 'to_vault' should already be correctly encoded
+        to_account: CatalystEncodedAddress::try_from(to_account)?,    // 'to_account' should already be correctly encoded
         u,
         variable_payload: SendAssetVariablePayload {
             to_asset_index,
             min_out,
-            from_amount: U256::from(from_amount.u128()),
+            from_amount: U256::from(from_amount),
             from_asset: CatalystEncodedAddress::try_encode(from_asset.as_bytes())?,
             block_number,
             calldata,
@@ -131,7 +154,7 @@ fn execute_send_cross_chain_asset(
     let ibc_msg = IbcMsg::SendPacket {
         channel_id,
         data: payload.try_encode()?.into(),     // Encode the parameters into a byte vector
-        timeout: env.block.time.plus_seconds(TRANSACTION_TIMEOUT).into()
+        timeout: env.block.time.plus_seconds(TRANSACTION_TIMEOUT_SECONDS).into()
     };
 
     Ok(Response::new()
@@ -139,6 +162,24 @@ fn execute_send_cross_chain_asset(
     )
 }
 
+
+/// Pack the arguments of a 'send_liquidity' transaction into a byte array following Catalyst's
+/// payload definition, and initiate an IBC cross chain transaction.
+/// 
+/// **NOTE**: This call is **permissionless**. The recipient of the transaction must validate
+/// the sender of the transaction.
+/// 
+/// # Arguments: 
+/// * `channel_id` - The target chain identifier.
+/// * `to_vault` - The target vault on the target chain (Catalyst encoded).
+/// * `to_account` - The recipient of the swap on the target chain (Catalyst encoded).
+/// * `u` - The outgoing 'units'.
+/// * `min_vault_tokens` - The mininum vault tokens output amount to get on the target vault.
+/// * `min_reference_asset` - The mininum reference asset value on the target vault.
+/// * `from_amount` - The `from_asset` amount sold to the vault.
+/// * `block_number` - The block number at which the transaction has been committed.
+/// * `calldata` - Arbitrary data to be executed on the target chain upon successful execution of the swap.
+/// 
 fn execute_send_cross_chain_liquidity(
     env: Env,
     info: MessageInfo,
@@ -153,16 +194,16 @@ fn execute_send_cross_chain_liquidity(
     calldata: Binary
 ) -> Result<Response, ContractError> {
 
-    // Build payload
+    // Build the payload
     let payload = CatalystV1SendLiquidityPayload {
         from_vault: CatalystEncodedAddress::try_encode(info.sender.as_bytes())?,
-        to_vault: CatalystEncodedAddress::try_from(to_vault)?,                        // to_vault should already be encoded
-        to_account: CatalystEncodedAddress::try_from(to_account)?,                  // to_account should already be encoded
+        to_vault: CatalystEncodedAddress::try_from(to_vault)?,        // 'to_vault' should already be correctly encoded
+        to_account: CatalystEncodedAddress::try_from(to_account)?,    // 'to_account' should already be correctly encoded
         u,
         variable_payload: SendLiquidityVariablePayload {
             min_vault_tokens,
             min_reference_asset,
-            from_amount: U256::from(from_amount.u128()),
+            from_amount: U256::from(from_amount),
             block_number,
             calldata,
         },
@@ -172,7 +213,7 @@ fn execute_send_cross_chain_liquidity(
     let ibc_msg = IbcMsg::SendPacket {
         channel_id,
         data: payload.try_encode()?.into(),     // Encode the parameters into a byte vector
-        timeout: env.block.time.plus_seconds(TRANSACTION_TIMEOUT).into()
+        timeout: env.block.time.plus_seconds(TRANSACTION_TIMEOUT_SECONDS).into()
     };
 
     Ok(Response::new()
@@ -181,7 +222,12 @@ fn execute_send_cross_chain_liquidity(
 }
 
 
-// The following 'query' code has been taken in part from the cw20-ics20 contract of the cw-plus repository.
+
+// Query ******************************************************************************************
+
+// The following 'query' code has been taken in part from the cw20-ics20 contract of the cw-plus 
+// repository.
+
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
@@ -197,7 +243,6 @@ fn query_port(deps: Deps) -> StdResult<PortResponse> {
 }
 
 fn query_list(deps: Deps) -> StdResult<ListChannelsResponse> {
-    //TODO use IbcQuery like with query_port?
     let channels = OPEN_CHANNELS
         .range_raw(deps.storage, None, None, Order::Ascending)
         .map(|r| r.map(|(_, v)| v))
@@ -205,6 +250,12 @@ fn query_list(deps: Deps) -> StdResult<ListChannelsResponse> {
     Ok(ListChannelsResponse { channels })
 }
 
+//TODO add queries? (see cw20-ics20)
+
+
+
+
+// Tests ******************************************************************************************
 
 #[cfg(test)]
 mod catalyst_ibc_interface_tests {
@@ -239,7 +290,7 @@ mod catalyst_ibc_interface_tests {
                 channel_id: channel_id.to_string(),
             },
             7,
-            mock_env().block.time.plus_seconds(TRANSACTION_TIMEOUT).into(),     // Note mock_env() always returns the same block time
+            mock_env().block.time.plus_seconds(TRANSACTION_TIMEOUT_SECONDS).into(),     // Note mock_env() always returns the same block time
         )
     }
     
@@ -408,7 +459,7 @@ mod catalyst_ibc_interface_tests {
                     variable_payload: SendAssetVariablePayload {
                         to_asset_index,
                         min_out,
-                        from_amount: override_from_amount.unwrap_or(U256::from(from_amount.u128())),
+                        from_amount: override_from_amount.unwrap_or(U256::from(from_amount)),
                         from_asset: CatalystEncodedAddress::try_encode(from_asset.as_ref()).unwrap(),
                         block_number,
                         calldata
@@ -434,7 +485,7 @@ mod catalyst_ibc_interface_tests {
                     variable_payload: SendLiquidityVariablePayload {
                         min_vault_tokens,
                         min_reference_asset,
-                        from_amount: override_from_amount.unwrap_or(U256::from(from_amount.u128())),
+                        from_amount: override_from_amount.unwrap_or(U256::from(from_amount)),
                         block_number,
                         calldata
                     },
@@ -679,7 +730,7 @@ mod catalyst_ibc_interface_tests {
             &SubMsg::new(IbcMsg::SendPacket {
                 channel_id: channel_id.to_string(),
                 data: build_payload(from_vault.as_bytes(), execute_msg, None).unwrap().into(),
-                timeout: IbcTimeout::with_timestamp(mock_env().block.time.plus_seconds(TRANSACTION_TIMEOUT))
+                timeout: IbcTimeout::with_timestamp(mock_env().block.time.plus_seconds(TRANSACTION_TIMEOUT_SECONDS))
             })
         );
 
@@ -966,7 +1017,7 @@ mod catalyst_ibc_interface_tests {
         let from_vault = "sender";
         let to_vault = "to_vault";
         let send_msg = mock_send_asset_msg(channel_id, to_vault.as_bytes().to_vec(), None);
-        let ibc_packet = mock_ibc_packet(channel_id, from_vault, send_msg, Some(U256::from(Uint128::MAX.u128()) + U256::from(1u64)));   // ! Inject an invalid from_amount into the ibc_packet
+        let ibc_packet = mock_ibc_packet(channel_id, from_vault, send_msg, Some(U256::from(Uint128::MAX) + U256::from(1u64)));   // ! Inject an invalid from_amount into the ibc_packet
 
 
 
@@ -1070,7 +1121,7 @@ mod catalyst_ibc_interface_tests {
             &SubMsg::new(IbcMsg::SendPacket {
                 channel_id: channel_id.to_string(),
                 data: build_payload(from_vault.as_bytes(), execute_msg, None).unwrap().into(),
-                timeout: IbcTimeout::with_timestamp(mock_env().block.time.plus_seconds(TRANSACTION_TIMEOUT))
+                timeout: IbcTimeout::with_timestamp(mock_env().block.time.plus_seconds(TRANSACTION_TIMEOUT_SECONDS))
             })
         );
 
@@ -1409,7 +1460,7 @@ mod catalyst_ibc_interface_tests {
         let from_vault = "sender";
         let to_vault = "to_vault";
         let send_msg = mock_send_liquidity_msg(channel_id, to_vault.as_bytes().to_vec(), None, None);
-        let ibc_packet = mock_ibc_packet(channel_id, from_vault, send_msg, Some(U256::from(Uint128::MAX.u128()) + U256::from(1u64)));   // ! Inject an invalid from_amount into the ibc_packet
+        let ibc_packet = mock_ibc_packet(channel_id, from_vault, send_msg, Some(U256::from(Uint128::MAX) + U256::from(1u64)));   // ! Inject an invalid from_amount into the ibc_packet
 
 
 

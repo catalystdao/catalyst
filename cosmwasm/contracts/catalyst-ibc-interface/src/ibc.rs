@@ -2,12 +2,12 @@
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
     DepsMut, Env, IbcChannelOpenMsg, IbcChannelConnectMsg, IbcBasicResponse, IbcChannelCloseMsg, 
-    IbcPacketReceiveMsg, IbcReceiveResponse, IbcPacketAckMsg, IbcPacketTimeoutMsg, IbcChannel, IbcPacket, Binary, CosmosMsg, to_binary, SubMsg, Reply, Response, SubMsgResult
+    IbcPacketReceiveMsg, IbcReceiveResponse, IbcPacketAckMsg, IbcPacketTimeoutMsg, IbcChannel, IbcPacket, Binary, CosmosMsg, to_binary, SubMsg, Reply, Response, SubMsgResult, Uint128
 };
 
 use catalyst_vault_common::msg::ExecuteMsg as VaultExecuteMsg;
 
-use crate::{ContractError, state::{IbcChannelInfo, OPEN_CHANNELS}, catalyst_ibc_payload::CatalystV1Packet, error::Never};
+use crate::{ContractError, state::{IbcChannelInfo, OPEN_CHANNELS}, catalyst_ibc_payload::{CatalystV1Packet, parse_calldata}, error::Never};
 
 
 // NOTE: Large parts of this IBC section are based on the cw20-ics20 example repository.
@@ -160,7 +160,7 @@ pub fn reply(
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn ibc_packet_ack(
-    deps: DepsMut,
+    _deps: DepsMut,
     _env: Env,
     msg: IbcPacketAckMsg,
 ) -> Result<IbcBasicResponse, Never> {
@@ -170,8 +170,8 @@ pub fn ibc_packet_ack(
     match ack {
         Some(ack_id) => {
             match ack_id {
-                &ACK_SUCCESS => on_packet_success(deps, msg.original_packet),
-                &ACK_FAIL => on_packet_failure(deps, msg.original_packet),
+                &ACK_SUCCESS => on_packet_success(msg.original_packet),
+                &ACK_FAIL => on_packet_failure(msg.original_packet),
                 _ => Ok(IbcBasicResponse::new())    // If ack type is not recognized, just exit without error   //TODO do we want this?
             }
         },
@@ -182,11 +182,11 @@ pub fn ibc_packet_ack(
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn ibc_packet_timeout(
-    deps: DepsMut,
+    _deps: DepsMut,
     _env: Env,
     msg: IbcPacketTimeoutMsg,
 ) -> Result<IbcBasicResponse, Never> {
-    on_packet_failure(deps, msg.packet)
+    on_packet_failure(msg.packet)
 }
 
 
@@ -212,18 +212,27 @@ pub fn on_packet_receive(
     let receive_asset_execute_msg: cosmwasm_std::WasmMsg = match catalyst_packet {
         CatalystV1Packet::SendAsset(payload) => {
 
+            // Parse the calldata
+            let parsed_calldata = parse_calldata(
+                deps.as_ref(),
+                payload.variable_payload.calldata.clone()
+            )?;
+
+            // Convert min_out into Uint128
+            let min_out: Uint128 = payload.variable_payload.min_out.try_into()
+                .map_err(|_| ContractError::PayloadDecodingError {})?;
+
             // Build execute message
-            let to_account = payload.to_account_validated(deps.as_ref())?.into_string();     // Validate to_account  //TODO do we need to validate this?
-            let parsed_calldata = payload.variable_payload.parse_calldata(deps.as_ref())?;
+            // NOTE: none of the fields are validated, these must be correctly handled by the vault.
             Ok::<cosmwasm_std::WasmMsg, ContractError>(cosmwasm_std::WasmMsg::Execute {
-                contract_addr: payload.to_vault_validated(deps.as_ref())?.into_string(),         // Validate to_vault     //TODO do we need to validated this?
+                contract_addr: payload.to_vault.try_decode_as_string()?,    // No need to validate, 'Execute' will fail for an invalid address
                 msg: to_binary(&VaultExecuteMsg::<()>::ReceiveAsset {
                     channel_id: packet.dest.channel_id,
-                    from_vault: payload.from_vault.to_binary(),                                      // Do not validate from_vault as its format is unknown. It is only used for logging
+                    from_vault: payload.from_vault.to_binary(),
                     to_asset_index: payload.variable_payload.to_asset_index,
-                    to_account,
+                    to_account: payload.to_account.try_decode_as_string()?,
                     u: payload.u,
-                    min_out: payload.variable_payload.min_out()?,                               // Convert min_out into Uint128
+                    min_out,
                     from_amount: payload.variable_payload.from_amount,
                     from_asset: payload.variable_payload.from_asset.to_binary(),
                     from_block_number_mod: payload.variable_payload.block_number,
@@ -236,18 +245,29 @@ pub fn on_packet_receive(
         },
         CatalystV1Packet::SendLiquidity(payload) => {
 
+            // Parse the calldata
+            let parsed_calldata = parse_calldata(
+                deps.as_ref(),
+                payload.variable_payload.calldata.clone()
+            )?;
+
+            // Convert the minimum outputs into Uint128
+            let min_vault_tokens: Uint128 = payload.variable_payload.min_vault_tokens.try_into()
+                .map_err(|_| ContractError::PayloadDecodingError {})?;
+            let min_reference_asset: Uint128 = payload.variable_payload.min_reference_asset.try_into()
+                .map_err(|_| ContractError::PayloadDecodingError {})?;
+
             // Build execute message
-            let to_account = payload.to_account_validated(deps.as_ref())?.into_string();     // Validate to_account  //TODO do we need to validate this?
-            let parsed_calldata = payload.variable_payload.parse_calldata(deps.as_ref())?;
+            // NOTE: none of the fields are validated, these must be correctly handled by the vault.
             Ok::<cosmwasm_std::WasmMsg, ContractError>(cosmwasm_std::WasmMsg::Execute {
-                contract_addr: payload.to_vault_validated(deps.as_ref())?.into_string(),         // Validate to_vault     //TODO do we need to validate this?
+                contract_addr: payload.to_vault.try_decode_as_string()?,
                 msg: to_binary(&VaultExecuteMsg::<()>::ReceiveLiquidity {
                     channel_id: packet.dest.channel_id,
-                    from_vault: payload.from_vault.to_binary(),                                      // Do not validate from_vault as its format is unknown. It is only used for logging
-                    to_account,
+                    from_vault: payload.from_vault.to_binary(),
+                    to_account: payload.to_account.try_decode_as_string()?,
                     u: payload.u,
-                    min_vault_tokens: payload.variable_payload.min_vault_tokens()?,                           // Convert min_vault_tokens into Uint128
-                    min_reference_asset: payload.variable_payload.min_reference_asset()?,                   // Convert min_reference_asset into Uint128
+                    min_vault_tokens,
+                    min_reference_asset,
                     from_amount: payload.variable_payload.from_amount,
                     from_block_number_mod: payload.variable_payload.block_number,
                     calldata_target: parsed_calldata.clone().map(|data| data.target),
@@ -265,7 +285,7 @@ pub fn on_packet_receive(
         RECEIVE_REPLY_ID
     );
 
-    Ok(IbcReceiveResponse::new()        //TODO add attributes?
+    Ok(IbcReceiveResponse::new()
         .set_ack(ack_success())
         .add_submessage(sub_msg)
     )
@@ -274,7 +294,6 @@ pub fn on_packet_receive(
 
 
 pub fn on_packet_response(
-    deps: DepsMut,
     packet: IbcPacket,
     success: bool
 ) -> Result<IbcBasicResponse, ContractError> {
@@ -285,30 +304,33 @@ pub fn on_packet_response(
     let receive_asset_execute_msg: cosmwasm_std::WasmMsg = match catalyst_packet {
         CatalystV1Packet::SendAsset(payload) => {
 
-            let from_vault = payload.from_vault_validated(deps.as_ref())?.into_string();  // Validate from_vault   //TODO do we need to validate this?
+            // Convert 'from_amount' into Uint128
+            let from_amount: Uint128 = payload.variable_payload.from_amount.try_into()
+                .map_err(|_| ContractError::PayloadDecodingError {})?;
 
             // Build execute message
+            // NOTE: none of the fields are validated, these must be correctly handled by the vault.
             let msg = match success {
                 true => VaultExecuteMsg::<()>::OnSendAssetSuccess {
                     channel_id: packet.dest.channel_id,
-                    to_account: payload.to_account.to_binary(),                            // No need to validate, as it must match the one with which the 'swap_hash' was derived
+                    to_account: payload.to_account.to_binary(),
                     u: payload.u,
-                    escrow_amount: payload.variable_payload.from_amount()?,
-                    asset: payload.variable_payload.from_asset_as_string()?,            // No need to validate, as it must match the one with which the 'swap_hash' was derived
+                    escrow_amount: from_amount,
+                    asset: payload.variable_payload.from_asset.try_decode_as_string()?,
                     block_number_mod: payload.variable_payload.block_number
                 },
                 false => VaultExecuteMsg::<()>::OnSendAssetFailure {
                     channel_id: packet.dest.channel_id,
-                    to_account: payload.to_account.to_binary(),                            // No need to validate, as it must match the one with which the 'swap_hash' was derived
+                    to_account: payload.to_account.to_binary(),
                     u: payload.u,
-                    escrow_amount: payload.variable_payload.from_amount()?,
-                    asset: payload.variable_payload.from_asset_as_string()?,            // No need to validate, as it must match the one with which the 'swap_hash' was derived
+                    escrow_amount: from_amount,
+                    asset: payload.variable_payload.from_asset.try_decode_as_string()?,
                     block_number_mod: payload.variable_payload.block_number
                 },
             };
 
             Ok::<cosmwasm_std::WasmMsg, ContractError>(cosmwasm_std::WasmMsg::Execute {
-                contract_addr: from_vault,
+                contract_addr: payload.from_vault.try_decode_as_string()?,
                 msg: to_binary(&msg)?,
                 funds: vec![]
             })
@@ -316,28 +338,31 @@ pub fn on_packet_response(
         },
         CatalystV1Packet::SendLiquidity(payload) => {
 
-            let from_vault = payload.from_vault_validated(deps.as_ref())?.into_string();  // Validate from_vault   //TODO do we need to validate this?
+            // Convert 'from_amount' into Uint128
+            let from_amount: Uint128 = payload.variable_payload.from_amount.try_into()
+                .map_err(|_| ContractError::PayloadDecodingError {})?;
 
             // Build execute message
+            // NOTE: none of the fields are validated, these must be correctly handled by the vault.
             let msg = match success {
                 true => VaultExecuteMsg::<()>::OnSendLiquiditySuccess {
                     channel_id: packet.dest.channel_id,
-                    to_account: payload.to_account.to_binary(),                            // No need to validate, as it must match the one with which the 'swap_hash' was derived
+                    to_account: payload.to_account.to_binary(),
                     u: payload.u,
-                    escrow_amount: payload.variable_payload.from_amount()?,                    // No need to validate, as it must match the one with which the 'swap_hash' was derived
+                    escrow_amount: from_amount,
                     block_number_mod: payload.variable_payload.block_number
                 },
                 false => VaultExecuteMsg::<()>::OnSendLiquidityFailure {
                     channel_id: packet.dest.channel_id,
-                    to_account: payload.to_account.to_binary(),                            // No need to validate, as it must match the one with which the 'swap_hash' was derived
+                    to_account: payload.to_account.to_binary(),
                     u: payload.u,
-                    escrow_amount: payload.variable_payload.from_amount()?,                    // No need to validate, as it must match the one with which the 'swap_hash' was derived
+                    escrow_amount: from_amount,
                     block_number_mod: payload.variable_payload.block_number
                 },
             };
 
             Ok::<cosmwasm_std::WasmMsg, ContractError>(cosmwasm_std::WasmMsg::Execute {
-                contract_addr: from_vault,
+                contract_addr: payload.from_vault.try_decode_as_string()?,
                 msg: to_binary(&msg)?,
                 funds: vec![]
             })
@@ -348,27 +373,25 @@ pub fn on_packet_response(
     // Build the 'execute' messsage
     let response_msg = CosmosMsg::Wasm(receive_asset_execute_msg);
 
-    Ok(IbcBasicResponse::new()      //TODO add attributes?
+    Ok(IbcBasicResponse::new()
         .add_message(response_msg)
     )
 }
 
 
 pub fn on_packet_success(
-    deps: DepsMut,
     packet: IbcPacket
 ) -> Result<IbcBasicResponse, Never> {
     //TODO The following makes sure packet response processing never fails. Do we want this? If the payload is corrupt (e.g. from_amount > Uint128::MAX), why catch the error?
-    on_packet_response(deps, packet, true)
+    on_packet_response(packet, true)
         .or_else(|_| { Ok(IbcBasicResponse::new()) })           //TODO add attributes? (e.g. indicate success ack failed)
 }
 
 
 pub fn on_packet_failure(
-    deps: DepsMut,
     packet: IbcPacket
 ) -> Result<IbcBasicResponse, Never> {
     //TODO The following makes sure packet response processing never fails. Do we want this? If the payload is corrupt (e.g. from_amount > Uint128::MAX), why catch the error?
-    on_packet_response(deps, packet, false)
+    on_packet_response(packet, false)
         .or_else(|_| { Ok(IbcBasicResponse::new()) })           //TODO add attributes? (e.g. indicate failed ack/timeout failed)
 }

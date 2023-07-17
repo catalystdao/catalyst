@@ -3,7 +3,7 @@
 // Catalyst IBC payload structure
 // ******************************************************************************************************************************
 
-// Common Payload (beginning)
+// Common Payload
 //    CONTEXT                   0   (1 byte)
 //    + FROM_VAULT              1   (65 bytes)
 //    + TO_VAULT                66  (65 bytes)
@@ -19,11 +19,12 @@
 //       + BLOCK_NUMBER         358 (4 bytes)
 //
 //    CTX1 - 0x01 - Liquidity Swap Payload
-//       + MIN_OUT              228 (32 bytes)
-//       + FROM_AMOUNT          260 (32 bytes)
-//       + BLOCK_NUMBER         292 (4 bytes)
+//       + MIN_VAULT_TOKENS     228 (32 bytes)
+//       + MIN_REFERENCE        260 (32 bytes)
+//       + FROM_AMOUNT          292 (32 bytes)
+//       + BLOCK_NUMBER         324 (4 bytes)
 //
-// Common Payload (end)
+// Calldata
 //    + DATA_LENGTH             LENGTH-N-2 (2 bytes)
 //    + DATA                    LENGTH-N   (N bytes)
 
@@ -111,7 +112,7 @@ pub const CALLDATA_BYTES_START       : usize = 65;
 // ******************************************************************************************************************************
 // Payload Helpers
 // ******************************************************************************************************************************
-use cosmwasm_std::{Deps, Addr, Uint128, Binary};
+use cosmwasm_std::{Deps, Addr, Binary};
 use catalyst_types::U256;
 use crate::ContractError;
 
@@ -128,6 +129,7 @@ pub enum CatalystV1Packet {
 }
 
 impl CatalystV1Packet {
+
     #[cfg(test)]
     pub fn try_encode(
         &self
@@ -140,8 +142,6 @@ impl CatalystV1Packet {
 
     }
 
-    //TODO pass the 'IbcPacket' to try_decode and return a copy of the data and not references to it?
-    //TODO Or make CatalystV1SendAssetPayload/CatalystV1SendLiquidityPayload accept the IBC packet directly (rename them to CatalystV1SendAssetPACKET)
     pub fn try_decode(
         data: Binary
     ) -> Result<CatalystV1Packet, ContractError> {
@@ -159,16 +159,24 @@ impl CatalystV1Packet {
         }
 
     }
+
 }
 
 
 
-// Catalyst payload *************************************************************************************************************
+// Catalyst Payload *************************************************************************************************************
 
-// The CatalystV1Payload struct is used to encode/decode a Catalyst payload. It itself encodes/decodes the common part of the
-// Catalyst payload, and uses a generic `variable_payload` to encode/decode the variable part of the payload.
-
-
+/// CatalystV1Payload is used to encode/decode a Catalyst payload. It itself encodes/decodes 
+/// the common part of the Catalyst payload, and uses a generic `variable_payload` to 
+/// encode/decode the variable part of the payload.
+/// 
+/// # Fields:
+/// * `from_vault` - The source vault.
+/// * `to_vault` - The target vault.
+/// * `to_account` - The destination account.
+/// * `u` - The transferred units.
+/// * `variable_payload` - Data specific to one of the possible Catalyst payload configurations.
+/// 
 pub struct CatalystV1Payload<T: CatalystV1VariablePayload> {
     pub from_vault: CatalystEncodedAddress,
     pub to_vault: CatalystEncodedAddress,
@@ -177,83 +185,85 @@ pub struct CatalystV1Payload<T: CatalystV1VariablePayload> {
     pub variable_payload: T
 }
 
+/// Trait to be implemented by the extensions of the base Catalyst payload struct.
+pub trait CatalystV1VariablePayload: Sized {
+    const CONTEXT: u8;
+    fn size(&self) -> usize;
+    fn try_encode(&self, buffer: &mut Vec<u8>) -> Result<(), ContractError>;
+    fn try_decode(buffer: Vec<u8>) -> Result<Self, ContractError>;
+}
+
 impl<T: CatalystV1VariablePayload> CatalystV1Payload<T> {
 
+
+    /// Get the size of the payload in bytes.
     pub fn size(&self) -> usize {
-        // Addition is way below the overflow threshold
-        1                                   // Context
-        + 65                                // From vault
-        + 65                                // To vault
-        + 65                                // To account
-        + 32                                // Units
-        + self.variable_payload.size()
+        UNITS_END - CONTEXT_POS
+            + self.variable_payload.size()
     }
 
+
+    /// Encode the payload into a binary representation.
     pub fn try_encode(
         &self
     ) -> Result<Binary, ContractError> {
 
-        // Preallocate the required size for the IBC payload to avoid runtime reallocations.
+        // Preallocate the required size for the payload to avoid runtime reallocations.
         let mut data: Vec<u8> = Vec::with_capacity(self.size());   
     
-        // Context
-        data.push(T::context());
-    
-        // From vault
+        // Encode the common part of the payload
+        data.push(T::CONTEXT);
         data.extend_from_slice(self.from_vault.as_ref());
-    
-        // To vault
         data.extend_from_slice(self.to_vault.as_ref());
-    
-        // To account
         data.extend_from_slice(self.to_account.as_ref());
-    
-        // Units
         data.extend_from_slice(&self.u.to_be_bytes());
 
-        // Variable payload
+        // Encode the variable part of the payload
         self.variable_payload.try_encode(&mut data)?;
     
         Ok(Binary(data))
 
     }
 
+
+    /// Decode a vector of bytes into a Catalyst payload.
     pub fn try_decode(
         data: Binary
     ) -> Result<CatalystV1Payload<T>, ContractError> {
 
-        //TODO skip this check?
+        // Make sure the 'context' of the payload matches the expected one.
         let context = data.get(CONTEXT_POS).ok_or(ContractError::PayloadDecodingError {})?;
-        if context != &T::context() {
+        if context != &T::CONTEXT {
             return Err(ContractError::PayloadDecodingError {});
         }
     
-        // From vault
+        // Decode the common part of the payload
+        // NOTE: The decoded address are not verified at this point, as they might not get used by the
+        // implementation during the lifetime of the struct.
         let from_vault = CatalystEncodedAddress::from_slice_unchecked(
             data.get(FROM_VAULT_START .. FROM_VAULT_END)
                 .ok_or(ContractError::PayloadDecodingError {})?
         );
-    
-        // To vault
+
         let to_vault = CatalystEncodedAddress::from_slice_unchecked(
             data.get(TO_VAULT_START .. TO_VAULT_END)
                 .ok_or(ContractError::PayloadDecodingError {})?
         );
 
-        // To account
         let to_account = CatalystEncodedAddress::from_slice_unchecked(
             data.get(TO_ACCOUNT_START .. TO_ACCOUNT_END)
                 .ok_or(ContractError::PayloadDecodingError {})?
         );
-    
-        // Units
+
         let u = U256::from_be_bytes(
             data.get(UNITS_START .. UNITS_END)
                 .ok_or(ContractError::PayloadDecodingError {})?
-                .try_into().unwrap()                            // If 'UNITS_START' and 'UNITS_END' are 32 bytes apart, this should never panic //TODO overhaul
+                .try_into().unwrap()    // If 'UNITS_START' and 'UNITS_END' are 32 bytes apart, this should never panic.
         );
 
+        // Decode the variable part of the payload
         let variable_payload = T::try_decode(data.0)?;
+
 
         return Ok(
             Self {
@@ -264,90 +274,16 @@ impl<T: CatalystV1VariablePayload> CatalystV1Payload<T> {
                 variable_payload
             }
         )
-    
 
     }
 
-    pub fn from_vault_as_string(
-        &self
-    ) -> Result<String, ContractError> {
-
-        String::from_utf8(
-            self.from_vault.try_decode()?
-        ).map_err(|_| ContractError::PayloadDecodingError {})
-
-    }
-
-    pub fn from_vault_validated(
-        &self,
-        deps: Deps
-    ) -> Result<Addr, ContractError> {
-
-        deps.api.addr_validate(
-            &self.from_vault_as_string()?
-        ).map_err(|err| err.into())
-
-    }
-
-    pub fn to_vault_as_string(
-        &self
-    ) -> Result<String, ContractError> {
-
-        String::from_utf8(
-            self.to_vault.try_decode()?
-        ).map_err(|_| ContractError::PayloadDecodingError {})
-
-    }
-
-    pub fn to_vault_validated(
-        &self,
-        deps: Deps
-    ) -> Result<Addr, ContractError> {
-
-        deps.api.addr_validate(
-            &self.to_vault_as_string()?
-        ).map_err(|err| err.into())
-
-    }
-
-    pub fn to_account_as_string(
-        &self
-    ) -> Result<String, ContractError> {
-
-        String::from_utf8(
-            self.to_account.try_decode()?
-        ).map_err(|_| ContractError::PayloadDecodingError {})
-
-    }
-
-    pub fn to_account_validated(
-        &self,
-        deps: Deps
-    ) -> Result<Addr, ContractError> {
-
-        deps.api.addr_validate(
-            &self.to_account_as_string()?
-        ).map_err(|err| err.into())
-
-    }
 }
 
 
 
-// Variable Payloads ************************************************************************************************************
-pub trait CatalystV1VariablePayload: Sized {
+// Payload Implementations ******************************************************************************************************
 
-    fn context() -> u8;
-
-    fn size(&self) -> usize;
-
-    fn try_encode(&self, buffer: &mut Vec<u8>) -> Result<(), ContractError>;
-
-    fn try_decode(buffer: Vec<u8>) -> Result<Self, ContractError>;
-
-}
-
-
+/// Type for decoded calldata.
 #[derive(Clone)]
 pub struct CatalystCalldata {
     pub target: Addr,
@@ -355,7 +291,16 @@ pub struct CatalystCalldata {
 }
 
 
-// Send asset payload
+/// Send asset variable payload.
+/// 
+/// # Fields:
+/// * `to_asset_index` - The target asset index.
+/// * `min_out` - The minimum output.
+/// * `from_amount` - The source asset amount.
+/// * `from_asset` - The source asset.
+/// * `block_number` - The block number at which the transaction was committed.
+/// * `calldata` - Arbitrary data to be executed on the destination.
+/// 
 pub struct SendAssetVariablePayload {
     pub to_asset_index: u8,
     pub min_out: U256,
@@ -365,142 +310,89 @@ pub struct SendAssetVariablePayload {
     pub calldata: Binary
 }
 
-impl SendAssetVariablePayload {
-
-    pub fn from_asset_as_string(
-        &self
-    ) -> Result<String, ContractError> {
-        
-        String::from_utf8(
-            self.from_asset.try_decode()?
-        ).map_err(|_| ContractError::PayloadDecodingError {})
-
-    }
-
-    pub fn min_out(
-        &self
-    ) -> Result<Uint128, ContractError> {
-
-        Ok(
-            self.min_out
-                .try_into()
-                .map_err(|_| ContractError::PayloadDecodingError {})?
-        )
-
-    }
-
-    pub fn from_amount(
-        &self
-    ) -> Result<Uint128, ContractError> {
-
-        Ok(
-            self.from_amount
-                .try_into()
-                .map_err(|_| ContractError::PayloadDecodingError {})?
-        )
-
-    }
-
-    pub fn parse_calldata(
-        &self,
-        deps: Deps
-    ) -> Result<Option<CatalystCalldata>, ContractError> {
-        
-        parse_calldata(deps, self.calldata.0.clone())
-
-    }
-
-}
-
 impl CatalystV1VariablePayload for SendAssetVariablePayload {
 
-    fn context() -> u8 {
-        CTX0_ASSET_SWAP
-    }
 
+    /// The context of the payload.
+    const CONTEXT: u8 = CTX0_ASSET_SWAP;
+
+
+    /// Get the size of the payload
     fn size(&self) -> usize {
-        // Note: The following addition is way below the overflow threshold, and even if it were to overflow the code 
-        // would still function properly, as this is just a runtime optimization.
-        1                           // to asset index
-        + 32                        // min out
-        + 32                        // from amount
-        + 65                        // from asset
-        + 4                         // block number
-        + 2                         // calldata length
-        + self.calldata.len()       // calldata
+        CTX0_DATA_START - CTX0_TO_ASSET_INDEX_POS
+            + self.calldata.len()
     }
 
+
+    /// Encode the variable payload into a binary representation.
+    /// 
+    /// # Arguments:
+    /// * `buffer` - Buffer into which to encode the payload.
+    /// 
     fn try_encode(&self, buffer: &mut Vec<u8>) -> Result<(), ContractError> {
 
-        // To asset index
         buffer.push(self.to_asset_index);
-    
-        // Min out
         buffer.extend_from_slice(&self.min_out.to_be_bytes());
-    
-        // From amount
         buffer.extend_from_slice(&self.from_amount.to_be_bytes());
-    
-        // From asset
         buffer.extend_from_slice(self.from_asset.as_ref());
-    
-        // Block number
         buffer.extend_from_slice(&self.block_number.to_be_bytes());
     
-        // Calldata
-        let calldata_length: u16 = self.calldata.len().try_into().map_err(|_| ContractError::PayloadEncodingError {})?;    // Cast length into u16 catching overflow
+        let calldata_length: u16 = self.calldata.len().try_into()
+            .map_err(|_| ContractError::PayloadEncodingError {})?;    // Cast length into u16 catching overflow.
         buffer.extend_from_slice(&calldata_length.to_be_bytes());
         buffer.extend_from_slice(&self.calldata);
 
         Ok(())
     }
 
+
+    /// Decode a vector of bytes into a 'SendAsset' payload (variable part).
+    /// 
+    /// # Arguments:
+    /// * `buffer` - They bytes to be decoded.
+    /// 
     fn try_decode(buffer: Vec<u8>) -> Result<Self, ContractError> {
 
-        // To asset index
         let to_asset_index = buffer.get(CTX0_TO_ASSET_INDEX_POS)
             .ok_or(ContractError::PayloadDecodingError {})?.clone();
 
-        // Min out
         let min_out = U256::from_be_bytes(
             buffer.get(
                 CTX0_MIN_OUT_START .. CTX0_MIN_OUT_END
             ).ok_or(
                 ContractError::PayloadDecodingError {}
-            )?.try_into().unwrap()                          // If 'CTX0_MIN_OUT_START' and 'CTX0_MIN_OUT_END' are 32 bytes apart, this should never panic //TODO overhaul
+            )?.try_into().unwrap()      // If 'CTX0_MIN_OUT_START' and 'CTX0_MIN_OUT_END' are 32 bytes apart, this should never panic.
         );
 
-        // From amount
         let from_amount = U256::from_be_bytes(
             buffer.get(
                 CTX0_FROM_AMOUNT_START .. CTX0_FROM_AMOUNT_END
             ).ok_or(
                 ContractError::PayloadDecodingError {}
-            )?.try_into().unwrap()                          // If 'CTX0_FROM_AMOUNT_START' and 'CTX0_FROM_AMOUNT_END' are 32 bytes apart, this should never panic //TODO overhaul
+            )?.try_into().unwrap()      // If 'CTX0_FROM_AMOUNT_START' and 'CTX0_FROM_AMOUNT_END' are 32 bytes apart, this should never panic.
         );
 
-        // From asset
+        // NOTE: The decoded address is not verified at this point, as it might not get used by the
+        // implementation during the lifetime of the struct.
         let from_asset = CatalystEncodedAddress::from_slice_unchecked(
             buffer.get(CTX0_FROM_ASSET_START .. CTX0_FROM_ASSET_END)
                 .ok_or(ContractError::PayloadDecodingError {})?
         );
-    
-        // Block number
+
         let block_number = u32::from_be_bytes(
             buffer.get(
                 CTX0_BLOCK_NUMBER_START .. CTX0_BLOCK_NUMBER_END
             ).ok_or(
                 ContractError::PayloadDecodingError {}
-            )?.try_into().unwrap()                          // If 'CTX0_BLOCK_NUMBER_START' and 'CTX0_BLOCK_NUMBER_END' are 4 bytes apart, this should never panic //TODO overhaul
+            )?.try_into().unwrap()      // If 'CTX0_BLOCK_NUMBER_START' and 'CTX0_BLOCK_NUMBER_END' are 4 bytes apart, this should never panic.
         );
 
-        // Calldata
         let calldata_length: usize = u16::from_be_bytes(
             buffer.get(
                 CTX0_DATA_LENGTH_START .. CTX0_DATA_LENGTH_END
             ).ok_or(
                 ContractError::PayloadDecodingError {}
-            )?.try_into().unwrap()                          // If 'CTX0_DATA_LENGTH_START' and 'CTX0_DATA_LENGTH_END' are 2 bytes apart, this should never panic //TODO overhaul
+            )?.try_into().unwrap()      // If 'CTX0_DATA_LENGTH_START' and 'CTX0_DATA_LENGTH_END' are 2 bytes apart, this should never panic.
         ) as usize;
 
         let calldata = Binary(
@@ -523,7 +415,15 @@ impl CatalystV1VariablePayload for SendAssetVariablePayload {
 }
 
 
-// Send liquidity payload
+/// Send liquidity variable payload.
+/// 
+/// # Fields:
+/// * `min_vault_tokens` - The mininum vault tokens output amount to get on the target vault.
+/// * `min_reference_asset` - The mininum reference asset value on the target vault.
+/// * `from_amount` - The source vault tokens amount.
+/// * `block_number` - The block number at which the transaction was committed.
+/// * `calldata` - Arbitrary data to be executed on the destination.
+/// 
 pub struct SendLiquidityVariablePayload {
     pub min_vault_tokens: U256,
     pub min_reference_asset: U256,
@@ -532,138 +432,86 @@ pub struct SendLiquidityVariablePayload {
     pub calldata: Binary
 }
 
-impl SendLiquidityVariablePayload {
-
-    pub fn min_vault_tokens(
-        &self
-    ) -> Result<Uint128, ContractError> {
-
-        Ok(
-            self.min_vault_tokens
-                .try_into()
-                .map_err(|_| ContractError::PayloadDecodingError {})?
-        )
-
-    }
-
-    //TODO overhaul - is the 'Uint128' type for this correct, or use U256?
-    pub fn min_reference_asset(
-        &self
-    ) -> Result<Uint128, ContractError> {
-
-        Ok(
-            self.min_reference_asset
-                .try_into()
-                .map_err(|_| ContractError::PayloadDecodingError {})?
-        )
-
-    }
-
-    pub fn from_amount(
-        &self
-    ) -> Result<Uint128, ContractError> {
-
-        Ok(
-            self.from_amount
-                .try_into()
-                .map_err(|_| ContractError::PayloadDecodingError {})?
-        )
-
-    }
-
-    pub fn parse_calldata(
-        &self,
-        deps: Deps
-    ) -> Result<Option<CatalystCalldata>, ContractError> {
-        
-        parse_calldata(deps, self.calldata.0.clone())
-
-    }
-
-}
-
 impl CatalystV1VariablePayload for SendLiquidityVariablePayload {
 
-    fn context() -> u8 {
-        CTX1_LIQUIDITY_SWAP
-    }
 
+    /// The context of the payload.
+    const CONTEXT: u8 = CTX1_LIQUIDITY_SWAP;
+
+
+    /// Get the size of the payload
     fn size(&self) -> usize {
-        // Note: The following addition is way below the overflow threshold, and even if it were to overflow the code 
-        // would still function properly, as this is just a runtime optimization.
-        32                          // min vault tokens
-        + 32                        // min reference asset
-        + 32                        // from amount
-        + 4                         // block number
-        + 2                         // calldata length
-        + self.calldata.len()       // calldata
+        CTX1_DATA_START - CTX1_MIN_VAULT_TOKEN_START
+            + self.calldata.len()
     }
 
+
+    /// Encode the variable payload into a binary representation.
+    /// 
+    /// # Arguments:
+    /// * `buffer` - Buffer into which to encode the payload.
+    /// 
     fn try_encode(&self, buffer: &mut Vec<u8>) -> Result<(), ContractError> {
     
-        // Min out (vault tokens and reference amount)
         buffer.extend_from_slice(&self.min_vault_tokens.to_be_bytes());
         buffer.extend_from_slice(&self.min_reference_asset.to_be_bytes());
-    
-        // From amount
         buffer.extend_from_slice(&self.from_amount.to_be_bytes());
-    
-        // Block number
         buffer.extend_from_slice(&self.block_number.to_be_bytes());
-    
-        // Calldata
-        let calldata_length: u16 = self.calldata.len().try_into().map_err(|_| ContractError::PayloadEncodingError {})?;    // Cast length into u16 catching overflow
+
+        let calldata_length: u16 = self.calldata.len().try_into()
+            .map_err(|_| ContractError::PayloadEncodingError {})?;    // Cast length into u16 catching overflow.
         buffer.extend_from_slice(&calldata_length.to_be_bytes());
         buffer.extend_from_slice(&self.calldata);
 
         Ok(())
     }
 
+
+    /// Decode a vector of bytes into a 'SendLiquidity' payload (variable part).
+    /// 
+    /// # Arguments:
+    /// * `buffer` - They bytes to be decoded.
+    /// 
     fn try_decode(buffer: Vec<u8>) -> Result<Self, ContractError> {
 
-        // Min vault tokens
         let min_vault_tokens = U256::from_be_bytes(
             buffer.get(
                 CTX1_MIN_VAULT_TOKEN_START .. CTX1_MIN_VAULT_TOKEN_END
             ).ok_or(
                 ContractError::PayloadDecodingError {}
-            )?.try_into().unwrap()                          // If 'CTX1_MIN_VAULT_TOKEN_START' and 'CTX1_MIN_VAULT_TOKEN_END' are 32 bytes apart, this should never panic //TODO overhaul
+            )?.try_into().unwrap()      // If 'CTX1_MIN_VAULT_TOKEN_START' and 'CTX1_MIN_VAULT_TOKEN_END' are 32 bytes apart, this should never panic.
         );
 
-        // Min reference asset
         let min_reference_asset = U256::from_be_bytes(
             buffer.get(
                 CTX1_MIN_REFERENCE_START .. CTX1_MIN_REFERENCE_END
             ).ok_or(
                 ContractError::PayloadDecodingError {}
-            )?.try_into().unwrap()                          // If 'CTX1_MIN_REFERENCE_START' and 'CTX1_MIN_REFERENCE_END' are 32 bytes apart, this should never panic //TODO overhaul
+            )?.try_into().unwrap()      // If 'CTX1_MIN_REFERENCE_START' and 'CTX1_MIN_REFERENCE_END' are 32 bytes apart, this should never panic.
         );
 
-        // From amount
         let from_amount = U256::from_be_bytes(
             buffer.get(
                 CTX1_FROM_AMOUNT_START .. CTX1_FROM_AMOUNT_END
             ).ok_or(
                 ContractError::PayloadDecodingError {}
-            )?.try_into().unwrap()                          // If 'CTX1_FROM_AMOUNT_START' and 'CTX1_FROM_AMOUNT_END' are 32 bytes apart, this should never panic //TODO overhaul
+            )?.try_into().unwrap()      // If 'CTX1_FROM_AMOUNT_START' and 'CTX1_FROM_AMOUNT_END' are 32 bytes apart, this should never panic.
         );
-    
-        // Block number
+
         let block_number = u32::from_be_bytes(
             buffer.get(
                 CTX1_BLOCK_NUMBER_START .. CTX1_BLOCK_NUMBER_END
             ).ok_or(
                 ContractError::PayloadDecodingError {}
-            )?.try_into().unwrap()                          // If 'CTX1_BLOCK_NUMBER_START' and 'CTX1_BLOCK_NUMBER_END' are 4 bytes apart, this should never panic //TODO overhaul
+            )?.try_into().unwrap()      // If 'CTX1_BLOCK_NUMBER_START' and 'CTX1_BLOCK_NUMBER_END' are 4 bytes apart, this should never panic.
         );
 
-        // Calldata
         let calldata_length: usize = u16::from_be_bytes(
             buffer.get(
                 CTX1_DATA_LENGTH_START .. CTX1_DATA_LENGTH_END
             ).ok_or(
                 ContractError::PayloadDecodingError {}
-            )?.try_into().unwrap()                          // If 'CTX1_DATA_LENGTH_START' and 'CTX1_DATA_LENGTH_END' are 2 bytes apart, this should never panic //TODO overhaul
+            )?.try_into().unwrap()      // If 'CTX1_DATA_LENGTH_START' and 'CTX1_DATA_LENGTH_END' are 2 bytes apart, this should never panic.
         ) as usize;
 
         let calldata = Binary(
@@ -689,9 +537,9 @@ impl CatalystV1VariablePayload for SendLiquidityVariablePayload {
 
 // Misc helpers *****************************************************************************************************************
 
-fn parse_calldata(
+pub fn parse_calldata(
     deps: Deps,
-    calldata: Vec<u8>
+    calldata: Binary
 ) -> Result<Option<CatalystCalldata>, ContractError> {
 
     if calldata.len() == 0 {
@@ -758,7 +606,7 @@ impl TryFrom<Binary> for CatalystEncodedAddress {
     fn try_from(value: Binary) -> Result<Self, Self::Error> {
 
         if value.len() != 65 {
-            return Err(ContractError::PayloadDecodingError {})
+            return Err(ContractError::PayloadDecodingError {})  //TODO error
         }
 
         Ok(Self(value.0))
@@ -797,7 +645,7 @@ impl CatalystEncodedAddress {
     pub fn try_encode(address: &[u8]) -> Result<Self, ContractError> {
 
         let address_len = address.len();
-        if address_len > 64 {
+        if address_len > 64 {   //TODO use constant
             return Err(ContractError::PayloadEncodingError {});
         }
 
@@ -821,6 +669,14 @@ impl CatalystEncodedAddress {
         self.0.get(65-address_length..)
             .ok_or(ContractError::PayloadDecodingError {})
             .map(|slice| slice.to_vec())
+
+    }
+
+    pub fn try_decode_as_string(&self) -> Result<String, ContractError> {
+
+        String::from_utf8(
+            self.try_decode()?
+        ).map_err(|_| ContractError::PayloadDecodingError {})
 
     }
 }

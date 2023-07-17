@@ -1,7 +1,7 @@
 use cosmwasm_std::StdError;
 use thiserror::Error;
 
-/// Never is a placeholder to ensure we don't return any errors
+/// Never is a placeholder to ensure no errors are returned.
 #[derive(Error, Debug)]
 pub enum Never {}
 

@@ -12,6 +12,20 @@ pub struct InstantiateMsg {
 #[cw_serde]
 pub enum ExecuteMsg {
 
+    /// Initiate a 'send_asset' cross-chain call.
+    /// 
+    /// # Arguments: 
+    /// * `channel_id` - The target chain identifier.
+    /// * `to_vault` - The target vault on the target chain (Catalyst encoded).
+    /// * `to_account` - The recipient of the swap on the target chain (Catalyst encoded).
+    /// * `to_asset_index` - The destination asset index.
+    /// * `u` - The outgoing 'units'.
+    /// * `min_out` - The mininum `to_asset` output amount to get on the target vault.
+    /// * `from_amount` - The `from_asset` amount sold to the vault.
+    /// * `from_asset` - The source asset.
+    /// * `block_number` - The block number at which the transaction has been committed.
+    /// * `calldata` - Arbitrary data to be executed on the target chain upon successful execution of the swap.
+    /// 
     SendCrossChainAsset {
         channel_id: String,
         to_vault: Binary,
@@ -25,13 +39,27 @@ pub enum ExecuteMsg {
         calldata: Binary
     },
 
+
+    /// Initiate a 'send_liquidity' cross-chain call.
+    /// 
+    /// # Arguments: 
+    /// * `channel_id` - The target chain identifier.
+    /// * `to_vault` - The target vault on the target chain (Catalyst encoded).
+    /// * `to_account` - The recipient of the swap on the target chain (Catalyst encoded).
+    /// * `u` - The outgoing 'units'.
+    /// * `min_vault_tokens` - The mininum vault tokens output amount to get on the target vault.
+    /// * `min_reference_asset` - The mininum reference asset value on the target vault.
+    /// * `from_amount` - The `from_asset` amount sold to the vault.
+    /// * `block_number` - The block number at which the transaction has been committed.
+    /// * `calldata` - Arbitrary data to be executed on the target chain upon successful execution of the swap.
+    /// 
     SendCrossChainLiquidity {
         channel_id: String,
         to_vault: Binary,
         to_account: Binary,
         u: U256,
-        min_vault_tokens: U256,      //TODO EVM mismatch
-        min_reference_asset: U256,  //TODO EVM mismatch
+        min_vault_tokens: U256,
+        min_reference_asset: U256,
         from_amount: Uint128,
         block_number: u32,
         calldata: Binary
@@ -43,20 +71,25 @@ pub enum ExecuteMsg {
 #[cw_serde]
 #[derive(QueryResponses)]
 pub enum QueryMsg {
-    // Get the port id bound by the interface
+
+    // Get the port id bound by the interface.
     #[returns(PortResponse)]
     Port {},
-    // Get a list of the channels that are used by the interface
+
+    // Get a list of the channels that are used by the interface.
     #[returns(ListChannelsResponse)]
     ListChannels {}
+
 }
 
 #[cw_serde]
 pub struct PortResponse {
-    pub port_id: String,
+    // The port id used by the interface.
+    pub port_id: String
 }
 
 #[cw_serde]
 pub struct ListChannelsResponse {
-    pub channels: Vec<IbcChannelInfo>,
+    // List of the channels used by the interface.
+    pub channels: Vec<IbcChannelInfo>
 }
