@@ -1,13 +1,16 @@
 use catalyst_ibc_interface::ContractError;
-use cosmwasm_std::{Addr, Deps, DepsMut, Event, Response, MessageInfo};
-use cw_storage_plus::Item;
+use cosmwasm_std::{Addr, Deps, DepsMut, Event, Response, MessageInfo, Empty};
+use cw_controllers::Admin;
 
-pub const OWNER: Item<Addr> = Item::new("catalyst-interface-authority");
+const ADMIN: Admin = Admin::new("catalyst-factory-admin");
 
 pub fn owner(
     deps: Deps
 ) -> Result<Option<Addr>, ContractError> {
-    OWNER.may_load(deps.storage).map_err(|err| err.into())
+
+    ADMIN.get(deps)
+        .map_err(|err| err.into())
+
 }
 
 pub fn is_owner(
@@ -15,47 +18,51 @@ pub fn is_owner(
     account: Addr,
 ) -> Result<bool, ContractError> {
 
-    let owner = OWNER.may_load(deps.storage)?;
-
-    match owner {
-        Some(saved_value) => Ok(saved_value == account),
-        None => Ok(false)
-    }
+    ADMIN.is_admin(deps, &account)
+        .map_err(|err| err.into())
 
 }
 
 pub fn set_owner_unchecked(
-    deps: &mut DepsMut,
+    deps: DepsMut,
     account: Addr
 ) -> Result<Event, ContractError> {
-    OWNER.save(deps.storage, &account)?;
+    
+    ADMIN.set(deps, Some(account.clone()))?;
     
     Ok(
-        Event::new(String::from("SetOwner"))
-            .add_attribute("owner", account)
+        set_owner_event(account.to_string())
     )
 }
 
-pub fn set_owner(
-    deps: &mut DepsMut,
+pub fn update_owner(
+    deps: DepsMut,
     info: MessageInfo,
     account: String
 ) -> Result<Response, ContractError> {
 
-    // Verify the caller of the transaction is the current owner
-    if !is_owner(deps.as_ref(), info.sender)? {
-        return Err(ContractError::Unauthorized {});
-    }
-
     // Validate the new owner account
     let account = deps.api.addr_validate(account.as_str())?;
 
-    // Set the new owner
-    let set_owner_event = set_owner_unchecked(deps, account)?;     //TODO overhaul event
+    // ! The 'update' call also verifies whether the caller of the transaction is the current factory owner
+    ADMIN.execute_update_admin::<Empty, Empty>(deps, info, Some(account.clone()))
+        .map_err(|err| {
+            match err {
+                cw_controllers::AdminError::Std(err) => err.into(),
+                cw_controllers::AdminError::NotAdmin {} => ContractError::Unauthorized {},
+            }
+        })?;
 
     Ok(
         Response::new()
-            .add_event(set_owner_event)
+            .add_event(set_owner_event(account.to_string()))
     )
 
+}
+
+pub fn set_owner_event(
+    account: String
+) -> Event {
+    Event::new("set-owner")
+        .add_attribute("account", account)
 }

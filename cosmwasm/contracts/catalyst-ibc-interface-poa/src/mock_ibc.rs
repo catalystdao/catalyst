@@ -2,9 +2,9 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    DepsMut, Env, IbcBasicResponse, IbcReceiveResponse, Reply, Response, SubMsgResult, IbcPacket, IbcEndpoint, Binary, Timestamp, StdError, MessageInfo
+    DepsMut, Env, IbcReceiveResponse, Reply, Response, SubMsgResult, IbcPacket, IbcEndpoint, Binary, Timestamp, MessageInfo
 };
-use catalyst_ibc_interface::{ContractError, ibc::{on_packet_receive, ack_fail, on_packet_success, on_packet_failure, RECEIVE_REPLY_ID, ACK_SUCCESS, ACK_FAIL, ack_success}};
+use catalyst_ibc_interface::{ContractError, ibc::{on_packet_receive, ack_fail, on_packet_success, on_packet_failure, RECEIVE_REPLY_ID, ACK_SUCCESS, ack_success}};
 
 use crate::state::is_owner;
 
@@ -37,7 +37,7 @@ pub fn execute_ibc_packet_receive(
     // This function should never error, rather it should send a failure message within the returned ack.
     let ibc_response: Result<IbcReceiveResponse, ContractError> = on_packet_receive(deps, mock_ibc_packet)
         .or_else(|_| {
-            Ok(IbcReceiveResponse::new()            //TODO add attributes?
+            Ok(IbcReceiveResponse::new()
                 .set_ack(ack_fail())
             )
         });
@@ -92,18 +92,17 @@ pub fn execute_ibc_packet_ack(
 
     let mock_ibc_packet = build_mock_ibc_packet(data, channel_id);
 
-    //TODO only the first byte of the response is checked, the rest is ignored. Do we want this?
     let ack = response.0.get(0);
-    let response = match ack {
-        Some(ack_id) => {
-            match ack_id {
-                &ACK_SUCCESS => on_packet_success(mock_ibc_packet),
-                &ACK_FAIL => on_packet_failure(mock_ibc_packet),
-                _ => Ok(IbcBasicResponse::new())    // If ack type is not recognized, just exit without error   //TODO do we want this?
-            }
-        },
-        None => Ok(IbcBasicResponse::new())         // If ack type is not recognized, just exit without error   //TODO do we want this?
-    }.map_err(|_| ContractError::Std(StdError::generic_err("IBC ack packet execution failed.")))?;
+
+    let response;
+    if ack == Some(&ACK_SUCCESS) {
+        // Handle the 'success' case.
+        response = on_packet_success(mock_ibc_packet)?;
+    }
+    else {
+        // Handle every other case as a 'failure'.
+        response = on_packet_failure(mock_ibc_packet)?;
+    }
 
     Ok(
         Response::new()
@@ -126,7 +125,7 @@ pub fn execute_ibc_packet_timeout(
 
     let response = on_packet_failure(
         build_mock_ibc_packet(data, channel_id)
-    ).map_err(|_| ContractError::Std(StdError::generic_err("IBC timeout packet execution failed.")))?;
+    )?;
 
     Ok(
         Response::new()

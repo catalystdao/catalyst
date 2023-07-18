@@ -9,16 +9,17 @@ use catalyst_ibc_interface::catalyst_ibc_payload::{CatalystV1SendAssetPayload, S
 
 use crate::mock_ibc::{execute_ibc_packet_receive, execute_ibc_packet_ack, execute_ibc_packet_timeout};
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
-use crate::state::{set_owner_unchecked, set_owner};
+use crate::state::{set_owner_unchecked, update_owner};
 
-// version info for migration info
+// Version information
 const CONTRACT_NAME: &str = "catalyst-ibc-interface-poa";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
-const TRANSACTION_TIMEOUT: u64 = 2 * 60 * 60;   // 2 hours      //TODO allow this to be set on interface instantiation?
-                                                                //TODO allow this to be customized on a per-channel basis?
-                                                                //TODO allow this to be overriden on 'sendAsset' and 'sendLiquidity'?
+const TRANSACTION_TIMEOUT: u64 = 2 * 60 * 60;   // 2 hours
 
+
+
+// Instantiation **********************************************************************************
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
@@ -30,13 +31,16 @@ pub fn instantiate(
 
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
-    set_owner_unchecked(&mut deps, info.sender)?;
+    set_owner_unchecked(deps.branch(), info.sender)?;
 
     Ok(
         Response::new()
     )
 }
 
+
+
+// Execution **************************************************************************************
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(
@@ -156,16 +160,16 @@ fn execute_send_cross_chain_asset(
     calldata: Binary
 ) -> Result<Response, ContractError> {
 
-    // Build payload
+    // Build the payload
     let payload = CatalystV1SendAssetPayload {
         from_vault: CatalystEncodedAddress::try_encode(info.sender.as_bytes())?,
-        to_vault: CatalystEncodedAddress::try_from(to_vault)?,                        // to_vault should already be encoded
-        to_account: CatalystEncodedAddress::try_from(to_account)?,                  // to_account should already be encoded
+        to_vault: CatalystEncodedAddress::try_from(to_vault)?,        // 'to_vault' should already be correctly encoded
+        to_account: CatalystEncodedAddress::try_from(to_account)?,    // 'to_account' should already be correctly encoded
         u,
         variable_payload: SendAssetVariablePayload {
             to_asset_index,
             min_out,
-            from_amount: from_amount.into(),
+            from_amount: U256::from(from_amount),
             from_asset: CatalystEncodedAddress::try_encode(from_asset.as_bytes())?,
             block_number,
             calldata,
@@ -194,16 +198,16 @@ fn execute_send_cross_chain_liquidity(
     calldata: Binary
 ) -> Result<Response, ContractError> {
 
-    // Build payload
+    // Build the payload
     let payload = CatalystV1SendLiquidityPayload {
         from_vault: CatalystEncodedAddress::try_encode(info.sender.as_bytes())?,
-        to_vault: CatalystEncodedAddress::try_from(to_vault)?,                        // to_vault should already be encoded
-        to_account: CatalystEncodedAddress::try_from(to_account)?,                  // to_account should already be encoded
+        to_vault: CatalystEncodedAddress::try_from(to_vault)?,        // 'to_vault' should already be correctly encoded
+        to_account: CatalystEncodedAddress::try_from(to_account)?,    // 'to_account' should already be correctly encoded
         u,
         variable_payload: SendLiquidityVariablePayload {
             min_vault_tokens,
             min_reference_asset,
-            from_amount: U256::from(from_amount.u128()),
+            from_amount: U256::from(from_amount),
             block_number,
             calldata,
         },
@@ -219,14 +223,14 @@ fn execute_send_cross_chain_liquidity(
 
 
 fn execute_transfer_ownership(
-    mut deps: DepsMut,
+    deps: DepsMut,
     info: MessageInfo,
     new_owner: String
 ) -> Result<Response, ContractError> {
-    set_owner(&mut deps, info, new_owner)
+    update_owner(deps, info, new_owner)
 }
 
-// The following 'query' code has been taken in part from the cw20-ics20 contract of the cw-plus repository.
+
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(_deps: Deps, _env: Env, _msg: QueryMsg) -> StdResult<Binary> {
     unimplemented!()
