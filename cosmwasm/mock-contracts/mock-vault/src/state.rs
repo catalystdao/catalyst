@@ -1,8 +1,8 @@
-use cosmwasm_std::{Addr, Uint128, DepsMut, Env, MessageInfo, Response, StdResult, Deps, StdError, Uint64};
+use cosmwasm_std::{Addr, Uint128, DepsMut, Env, MessageInfo, Response, Uint64};
 use cw20::{Cw20QueryMsg, BalanceResponse};
 use cw20_base::contract::execute_mint;
 use catalyst_vault_common::{
-    state::{ASSETS, MAX_ASSETS, WEIGHTS, INITIAL_MINT_AMOUNT, FACTORY, factory_owner, CHAIN_INTERFACE, SETUP_MASTER}, ContractError, msg::{ChainInterfaceResponse, SetupMasterResponse, FactoryResponse, FactoryOwnerResponse},
+    state::{ASSETS, MAX_ASSETS, WEIGHTS, INITIAL_MINT_AMOUNT, FACTORY}, ContractError, event::{deposit_event, cw20_response_to_standard_event},
 };
 
 
@@ -16,7 +16,7 @@ pub fn initialize_swap_curves(
     depositor: String
 ) -> Result<Response, ContractError> {
 
-    // Check the caller is the Factory    //TODO does this make sense? Unlike on EVM, the 'factory' is not set as 'immutable', but rather it is set as the caller of 'instantiate'
+    // Check the caller is the Factory
     if info.sender != FACTORY.load(deps.storage)? {
         return Err(ContractError::Unauthorized {});
     }
@@ -37,32 +37,33 @@ pub fn initialize_swap_curves(
         });
     }
 
-    // Validate the depositor address
-    deps.api.addr_validate(&depositor)?;
+    // Query and validate the vault asset balances
+    let assets_balances = assets.iter()
+        .map(|asset| {
 
-    // Validate and save assets
+            let balance = deps.querier.query_wasm_smart::<BalanceResponse>(
+                asset,
+                &Cw20QueryMsg::Balance { address: env.contract.address.to_string() }
+            )?.balance;
+
+            if balance.is_zero() {
+                return Err(ContractError::InvalidZeroBalance {});
+            }
+
+            Ok(balance)
+        })
+        .collect::<Result<Vec<Uint128>, ContractError>>()?;
+
+    // Save the assets
+    // NOTE: there is no need to validate the assets addresses, as invalid asset addresses
+    // would have caused the previous 'asset balance' check to fail.
     ASSETS.save(
         deps.storage,
         &assets
             .iter()
-            .map(|asset_addr| deps.api.addr_validate(&asset_addr))
-            .collect::<StdResult<Vec<Addr>>>()
-            .map_err(|_| ContractError::InvalidAssets {})?
+            .map(|asset| Addr::unchecked(asset))
+            .collect::<Vec<Addr>>()
     )?;
-
-    // Query and validate the vault asset balances
-    let assets_balances = assets.iter()
-        .map(|asset| {
-            deps.querier.query_wasm_smart::<BalanceResponse>(
-                asset,
-                &Cw20QueryMsg::Balance { address: env.contract.address.to_string() }
-            ).map(|response| response.balance)
-        })
-        .collect::<StdResult<Vec<Uint128>>>()?;
-    
-    if assets_balances.iter().any(|balance| balance.is_zero()) {
-        return Err(ContractError::InvalidZeroBalance {});
-    }
 
     // Validate and save weights
     weights
@@ -88,7 +89,7 @@ pub fn initialize_swap_curves(
         funds: vec![],
     };
     let minted_amount = INITIAL_MINT_AMOUNT;
-    execute_mint(
+    let mint_response = execute_mint(
         deps.branch(),
         env.clone(),
         execute_mint_info,
@@ -98,59 +99,17 @@ pub fn initialize_swap_curves(
 
     Ok(
         Response::new()
-            .add_attribute("to_account", depositor)
-            .add_attribute("mint", minted_amount)
-            .add_attribute("assets", format_vec_for_event(assets_balances))
+            .add_event(
+                deposit_event(
+                    depositor,
+                    minted_amount,
+                    assets_balances
+                )
+            )
+            .add_event(
+                cw20_response_to_standard_event(
+                    mint_response
+                )
+            )
     )
-}
-
-
-
-
-
-// Query helpers ****************************************************************************************************************
-
-pub fn query_chain_interface(deps: Deps) -> StdResult<ChainInterfaceResponse> {
-    Ok(
-        ChainInterfaceResponse {
-            chain_interface: CHAIN_INTERFACE.load(deps.storage)?
-        }
-    )
-}
-
-pub fn query_setup_master(deps: Deps) -> StdResult<SetupMasterResponse> {
-    Ok(
-        SetupMasterResponse {
-            setup_master: SETUP_MASTER.load(deps.storage)?
-        }
-    )
-}
-
-pub fn query_factory(deps: Deps) -> StdResult<FactoryResponse> {
-    Ok(
-        FactoryResponse {
-            factory: FACTORY.load(deps.storage)?
-        }
-    )
-}
-
-pub fn query_factory_owner(deps: Deps) -> StdResult<FactoryOwnerResponse> {
-    Ok(
-        FactoryOwnerResponse {
-            factory_owner: factory_owner(&deps).map_err(|_| StdError::generic_err("Unable to get factory_owner."))?
-        }
-    )
-}
-
-
-
-
-// Misc helpers *****************************************************************************************************************
-//TODO move helper somewhere else? (To reuse across implementations)
-pub fn format_vec_for_event<T: ToString>(vec: Vec<T>) -> String {
-    //TODO review output format
-    vec
-        .iter()
-        .map(T::to_string)
-        .collect::<Vec<String>>().join(", ")
 }

@@ -5,10 +5,10 @@ use cw2::set_contract_version;
 use cw20_base::contract::query_token_info;
 use catalyst_vault_common::ContractError;
 use catalyst_vault_common::msg::ExecuteMsg;
-use catalyst_vault_common::state::{setup, query_assets, query_weight, query_vault_fee, query_governance_fee_share, query_fee_administrator};
+use catalyst_vault_common::state::{setup, query_assets, query_weight, query_vault_fee, query_governance_fee_share, query_fee_administrator, query_chain_interface, query_setup_master, query_factory, query_factory_owner};
 
 use crate::msg::{InstantiateMsg, QueryMsg};
-use crate::state::{initialize_swap_curves, query_chain_interface, query_setup_master, query_factory, query_factory_owner};
+use crate::state::initialize_swap_curves;
 
 // version info for migration info
 const CONTRACT_NAME: &str = "catalyst-mock-vault";
