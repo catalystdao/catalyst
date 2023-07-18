@@ -250,8 +250,6 @@ fn query_list(deps: Deps) -> StdResult<ListChannelsResponse> {
     Ok(ListChannelsResponse { channels })
 }
 
-//TODO add queries? (see cw20-ics20)
-
 
 
 
@@ -770,12 +768,6 @@ mod catalyst_ibc_interface_tests {
 
         // Check the transaction passes
         let response = response_result.unwrap();
-
-        // Check the returned ack
-        assert_eq!(
-            response.acknowledgement.clone(),
-            Binary(vec![0u8])                   // ! Check ack returned has value of 0 (i.e. no error)
-        );
     
         // Check vault is invoked
         assert_eq!(response.messages.len(), 1);
@@ -849,7 +841,7 @@ mod catalyst_ibc_interface_tests {
 
 
     #[test]
-    fn test_send_asset_success() {
+    fn test_send_asset_ack() {
 
         let mut deps = mock_dependencies();
       
@@ -939,16 +931,26 @@ mod catalyst_ibc_interface_tests {
         );
 
         // Check the transaction passes
-        let response = response_result.unwrap();    // ! Make sure the transaction does not return error even for the invalid response
-
-        // Check vault is not invoked
-        assert_eq!(response.messages.len(), 0);
+        let response = response_result.unwrap();
+    
+        // Check vault ack is invoked
+        assert_eq!(response.messages.len(), 1);
+        assert_eq!(
+            response.messages[0],
+            SubMsg::new(
+                cosmwasm_std::WasmMsg::Execute {
+                    contract_addr: from_vault.to_string(),
+                    msg: to_binary(&mock_vault_send_asset_failure_msg(channel_id)).unwrap(),    // Invalid responses are treated as failures.
+                    funds: vec![]
+                }
+            )
+        );
 
     }
 
 
     #[test]
-    fn test_send_asset_failure() {
+    fn test_send_asset_timeout() {
 
         let mut deps = mock_dependencies();
       
@@ -998,7 +1000,7 @@ mod catalyst_ibc_interface_tests {
 
 
     #[test]
-    fn test_send_asset_success_failure_invalid_from_amount() {
+    fn test_send_asset_ack_timeout_invalid_from_amount() {
 
         let mut deps = mock_dependencies();
       
@@ -1031,11 +1033,11 @@ mod catalyst_ibc_interface_tests {
             )
         );
 
-        // Check the transaction passes
-        let response = response_result.unwrap();
-    
-        // Check vault ack is not invoked
-        assert_eq!(response.messages.len(), 0);
+        // Check the transaction does not pass
+        assert!(matches!(
+            response_result.err().unwrap(),
+            ContractError::PayloadDecodingError {}
+        ));
 
 
 
@@ -1049,11 +1051,11 @@ mod catalyst_ibc_interface_tests {
             )
         );
 
-        // Check the transaction passes
-        let response = response_result.unwrap();
-    
-        // Check vault ack is not invoked
-        assert_eq!(response.messages.len(), 0);
+        // Check the transaction does not pass
+        assert!(matches!(
+            response_result.err().unwrap(),
+            ContractError::PayloadDecodingError {}
+        ));
 
 
 
@@ -1066,11 +1068,11 @@ mod catalyst_ibc_interface_tests {
             )
         );
 
-        // Check the transaction passes
-        let response = response_result.unwrap();
-    
-        // Check vault ack is not invoked
-        assert_eq!(response.messages.len(), 0);
+        // Check the transaction does not pass
+        assert!(matches!(
+            response_result.err().unwrap(),
+            ContractError::PayloadDecodingError {}
+        ));
 
     }
 
@@ -1161,12 +1163,6 @@ mod catalyst_ibc_interface_tests {
 
         // Check the transaction passes
         let response = response_result.unwrap();
-
-        // Check the returned ack
-        assert_eq!(
-            response.acknowledgement.clone(),
-            Binary(vec![0u8])                   // ! Check ack returned has value of 0 (i.e. no error)
-        );
     
         // Check vault is invoked
         assert_eq!(response.messages.len(), 1);
@@ -1292,7 +1288,7 @@ mod catalyst_ibc_interface_tests {
 
 
     #[test]
-    fn test_send_liquidity_success() {
+    fn test_send_liquidity_ack() {
 
         let mut deps = mock_dependencies();
       
@@ -1382,16 +1378,26 @@ mod catalyst_ibc_interface_tests {
         );
 
         // Check the transaction passes
-        let response = response_result.unwrap();    // ! Make sure the transaction does not return error even for the invalid response
-
-        // Check vault is not invoked
-        assert_eq!(response.messages.len(), 0);
+        let response = response_result.unwrap();
+    
+        // Check vault ack is invoked
+        assert_eq!(response.messages.len(), 1);
+        assert_eq!(
+            response.messages[0],
+            SubMsg::new(
+                cosmwasm_std::WasmMsg::Execute {
+                    contract_addr: from_vault.to_string(),
+                    msg: to_binary(&mock_vault_send_liquidity_failure_msg(channel_id)).unwrap(),    // Invalid responses are treated as failures.
+                    funds: vec![]
+                }
+            )
+        );
 
     }
 
 
     #[test]
-    fn test_send_liquidity_failure() {
+    fn test_send_liquidity_timeout() {
 
         let mut deps = mock_dependencies();
       
@@ -1441,7 +1447,7 @@ mod catalyst_ibc_interface_tests {
 
 
     #[test]
-    fn test_send_liquidity_success_failure_invalid_from_amount() {
+    fn test_send_liquidity_ack_timeout_invalid_from_amount() {
 
         let mut deps = mock_dependencies();
       
@@ -1474,11 +1480,11 @@ mod catalyst_ibc_interface_tests {
             )
         );
 
-        // Check the transaction passes
-        let response = response_result.unwrap();
-    
-        // Check vault ack is not invoked
-        assert_eq!(response.messages.len(), 0);
+        // Check the transaction does not pass
+        assert!(matches!(
+            response_result.err().unwrap(),
+            ContractError::PayloadDecodingError {}
+        ));
 
 
 
@@ -1492,11 +1498,11 @@ mod catalyst_ibc_interface_tests {
             )
         );
 
-        // Check the transaction passes
-        let response = response_result.unwrap();
-    
-        // Check vault ack is not invoked
-        assert_eq!(response.messages.len(), 0);
+        // Check the transaction does not pass
+        assert!(matches!(
+            response_result.err().unwrap(),
+            ContractError::PayloadDecodingError {}
+        ));
 
 
 
@@ -1509,11 +1515,11 @@ mod catalyst_ibc_interface_tests {
             )
         );
 
-        // Check the transaction passes
-        let response = response_result.unwrap();
-    
-        // Check vault ack is not invoked
-        assert_eq!(response.messages.len(), 0);
+        // Check the transaction does not pass
+        assert!(matches!(
+            response_result.err().unwrap(),
+            ContractError::PayloadDecodingError {}
+        ));
 
     }
 
@@ -1556,7 +1562,7 @@ mod catalyst_ibc_interface_tests {
         assert_eq!(response.messages.len(), 0);
         assert_eq!(
             response.data,
-            None                        //  ! If the submessage call by 'ibc_packet_receive' does not return error, leave the response 'data' field untouched
+            Some(Binary(vec![0]))     // ! If the submessage call by 'ibc_packet_receive' is successful, the response 'data' field should be a success ack.
         );
 
 
@@ -1578,7 +1584,7 @@ mod catalyst_ibc_interface_tests {
         assert_eq!(response.messages.len(), 0);
         assert_eq!(
             response.data,
-            Some(Binary(vec![1]))     // ! If the submessage call by 'ibc_packet_receive' returns error, overwrite the response 'data' field to a failed ack
+            Some(Binary(vec![1]))     // ! If the submessage call by 'ibc_packet_receive' returns an error, the response 'data' field should be a failed ack.
         );
 
     }

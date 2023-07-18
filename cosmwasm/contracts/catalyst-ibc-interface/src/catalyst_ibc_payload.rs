@@ -577,6 +577,7 @@ pub fn parse_calldata(
     )
 }
 
+
 /// Wrapper around a bytes vec for encoding/decoding of Catalyst's 65-byte payload addresses.
 pub struct CatalystEncodedAddress(Vec<u8>);
 
