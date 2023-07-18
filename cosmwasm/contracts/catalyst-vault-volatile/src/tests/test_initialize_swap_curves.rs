@@ -8,7 +8,7 @@ mod test_volatile_initialize_swap_curves {
     use catalyst_vault_common::{ContractError, msg::{AssetsResponse, WeightResponse, GetLimitCapacityResponse, TotalEscrowedAssetResponse, TotalEscrowedLiquidityResponse}};
     use test_helpers::{token::deploy_test_tokens, definitions::{SETUP_MASTER, DEPOSITOR, DEPLOYER}, contract::{mock_instantiate_vault, InitializeSwapCurvesMockConfig}};
 
-    use crate::{tests::{helpers::volatile_vault_contract_storage, parameters::{TEST_VAULT_BALANCES, TEST_VAULT_WEIGHTS, AMPLIFICATION, TEST_VAULT_ASSET_COUNT}}};
+    use crate::tests::{helpers::volatile_vault_contract_storage, parameters::{TEST_VAULT_BALANCES, TEST_VAULT_WEIGHTS, AMPLIFICATION, TEST_VAULT_ASSET_COUNT}};
 
 
 
