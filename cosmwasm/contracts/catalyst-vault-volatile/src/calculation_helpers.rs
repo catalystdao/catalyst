@@ -54,12 +54,12 @@ pub fn calc_price_curve_limit(
                 //   - If the casting overflows exactly by 1 (i.e. the result is exactly i256::MIN), when the 
                 //     value is negated it again overflows and remains unchanged (i.e. -i256::MIN = i256::MIN),
                 //     This is not a problem, as it is exactly what it is desired.
-                //     NOTE: the negation overflow is not catched by Rust's overflow-checks as it is not caused
-                //     by a primitive type.
                 //   - Otherwise, the value becomes positive when it gets negated. This will cause the result 
                 //     of the following exponent calculation to be greater than one, which will cause the 
                 //     following 'checked_sub' operation to fail.
-                -(u.checked_div(w)?).as_i256()
+                (u.checked_div(w)?)
+                    .as_i256()
+                    .wrapping_neg()
             )?.as_u256()            // Casting is safe, as 'exp_wad' result is always positive.
         )?
     ).map_err(|err| err.into())
@@ -111,12 +111,12 @@ pub fn calc_price_curve_limit_share(
         //   - If the casting overflows exactly by 1 (i.e. the result is exactly i256::MIN), when the 
         //     value is negated it again overflows and remains unchanged (i.e. -i256::MIN = i256::MIN),
         //     This is not a problem, as it is exactly what it is desired.
-        //     NOTE: the negation overflow is not catched by Rust's overflow-checks as it is not caused
-        //     by a primitive type.
         //   - Otherwise, the value becomes positive when it gets negated. This will cause the result 
         //     of the following exponent calculation to be greater than one, which will cause the 
         //     'checked_sub' operation inside the following 'div_wad_down' to fail.
-        -(u.checked_div(w_sum)?).as_i256()
+        (u.checked_div(w_sum)?)
+            .as_i256()
+            .wrapping_neg()
     )?.as_u256();    // Casting is safe, as 'exp_wad' result is always positive.
 
     // Return the vault ownership share *before* the share is included in the vault.

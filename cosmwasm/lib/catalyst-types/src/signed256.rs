@@ -2,17 +2,18 @@ use forward_ref::{forward_ref_binop, forward_ref_op_assign};
 use schemars::JsonSchema;
 use serde::{de, ser, Deserialize, Deserializer, Serialize};
 use std::fmt;
-use std::ops::{
-    Add, AddAssign, Div, DivAssign, Mul, MulAssign, Rem, RemAssign, Shl, Shr, ShrAssign, Sub,
-    SubAssign, BitOr, BitOrAssign, BitAndAssign, BitAnd, Neg,
-};
+use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Rem, RemAssign, Shl, Shr, ShrAssign, Sub, SubAssign, BitOr, BitOrAssign, BitAndAssign, BitAnd, Neg};
 use std::str::FromStr;
 
 use cosmwasm_std::{forward_ref_partial_eq, StdError, Uint128, OverflowError, OverflowOperation, DivideByZeroError, Uint64, ConversionOverflowError};
 
+
+// NOTE: This wrapper is based on CosmWasm's Uint256.
+
+
 /// Used internally - we don't want to leak this type since we might change
 /// the implementation in the future.
-use ethnum::I256 as BaseI256;
+use ethnum::{I256 as BaseI256, int};
 
 use crate::U256;
 use crate::traits::{AsU256, AsI256};
@@ -31,12 +32,18 @@ impl I256 {
     pub const MAX: I256 = I256(BaseI256::MAX);
     pub const MIN: I256 = I256(BaseI256::MIN);
 
-    // Note: this method is provided for maximum efficiency when forming the base structure (ethnum::I256).
+    /// Create a I256 from two i128 values.
+    /// 
+    /// **NOTE**: this method is provided for maximum efficiency when creating the base structure (ethnum::I256).
+    ///
     pub const fn from_words(hi: i128, lo: i128) -> Self {
         Self(BaseI256::from_words(hi, lo))
     }
 
-    // Note: this method is provided for maximum efficiency when decomposing the base structure (ethnum::I256).
+    /// Decompose a I256 into two i128 values.
+    /// 
+    /// **NOTE**: this method is provided for maximum efficiency when decomposing the base structure (ethnum::I256).
+    ///
     pub const fn into_words(self) -> (i128, i128) {
         self.0.into_words()
     }
@@ -71,11 +78,6 @@ impl I256 {
     }
 
     #[must_use]
-    pub const fn as_uint128(self) -> Uint128 {
-        Uint128::new(self.0.as_u128())
-    }
-
-    #[must_use]
     pub const fn as_u8(self) -> u8 {
         let (_, lo) = self.0.into_words();
         lo as _
@@ -103,6 +105,11 @@ impl I256 {
     pub const fn as_u128(self) -> u128 {
         let (_, lo) = self.0.into_words();
         lo as _
+    }
+
+    #[must_use]
+    pub const fn as_uint128(self) -> Uint128 {
+        Uint128::new(self.0.as_u128())
     }
 
 
@@ -180,7 +187,7 @@ impl I256 {
 
     pub fn checked_pow(self, exp: u32) -> Result<Self, OverflowError> {
         self.0
-            .checked_pow(exp.into())
+            .checked_pow(exp)
             .map(Self)
             .ok_or_else(|| OverflowError::new(OverflowOperation::Pow, self, exp))
     }
@@ -217,6 +224,13 @@ impl I256 {
         }
 
         Ok(Self(self.0.shl(other)))
+    }
+
+    pub fn checked_neg(self) -> Result<Self, OverflowError> {
+        self.0
+            .checked_neg()
+            .map(Self)
+            .ok_or_else(|| OverflowError::new(OverflowOperation::Mul, self, I256(int!("-1"))))
     }
 
     #[must_use = "this returns the result of the operation, without modifying the original"]
@@ -256,6 +270,12 @@ impl I256 {
     }
 
     #[must_use = "this returns the result of the operation, without modifying the original"]
+    #[inline]
+    pub fn wrapping_neg(self) -> Self {
+        Self(self.0.wrapping_neg())
+    }
+
+    #[must_use = "this returns the result of the operation, without modifying the original"]
     pub fn saturating_add(self, other: Self) -> Self {
         Self(self.0.saturating_add(other.0))
     }
@@ -271,19 +291,11 @@ impl I256 {
     }
 
     #[must_use = "this returns the result of the operation, without modifying the original"]
-    pub fn saturating_pow(self, exp: u32) -> Self {
-        match self.checked_pow(exp) {
-            Ok(value) => value,
-            Err(_) => Self::MAX,
-        }
-    }
-
-    #[must_use = "this returns the result of the operation, without modifying the original"]
-    pub fn abs_diff(self, other: Self) -> Self {
+    pub fn abs_diff(self, other: Self) -> U256 {
         if self < other {
-            other - self
+            other.wrapping_sub(self).as_u256()
         } else {
-            self - other
+            self.wrapping_sub(other).as_u256()
         }
     }
 
@@ -335,7 +347,13 @@ impl TryFrom<I256> for Uint128 {
     type Error = ConversionOverflowError;
 
     fn try_from(value: I256) -> Result<Self, Self::Error> {
-        Ok(Uint128::new(value.0.try_into().map_err(|_| {
+        // ! As of ethnum 1.3.2, 'I256::try_into<u128>' overflows silently for negative values of I256
+        // ! A workaround has been implemented.
+        if value < I256::zero() {
+            return Err(ConversionOverflowError::new("I256", "Uint128", value.to_string()))
+        }
+
+        Ok(Uint128::new(value.0.as_u256().try_into().map_err(|_| {
             ConversionOverflowError::new("I256", "Uint128", value.to_string())
         })?))
     }
@@ -384,8 +402,7 @@ impl From<I256> for String {
 
 impl fmt::Display for I256 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        // The inner type doesn't work as expected with padding, so we
-        // work around that.
+
         let unpadded = self.0.to_string();
 
         f.pad_integral(true, "", &unpadded)
@@ -538,7 +555,12 @@ impl Neg for I256 {
     type Output = I256;
 
     fn neg(self) -> Self::Output {
-        Self(self.0.neg())
+        self.checked_neg().unwrap_or_else(|_| {
+            panic!(
+                "negation overflow: negated {} is larger than I256::MAX",
+                self
+            )
+        })
     }
 }
 

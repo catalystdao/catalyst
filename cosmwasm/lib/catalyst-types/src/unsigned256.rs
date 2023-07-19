@@ -2,13 +2,14 @@ use forward_ref::{forward_ref_binop, forward_ref_op_assign};
 use schemars::JsonSchema;
 use serde::{de, ser, Deserialize, Deserializer, Serialize};
 use std::fmt;
-use std::ops::{
-    Add, AddAssign, Div, DivAssign, Mul, MulAssign, Rem, RemAssign, Shl, Shr, ShrAssign, Sub,
-    SubAssign, BitOr, BitOrAssign, BitAndAssign, BitAnd,
-};
+use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Rem, RemAssign, Shl, Shr, ShrAssign, Sub, SubAssign, BitOr, BitOrAssign, BitAndAssign, BitAnd};
 use std::str::FromStr;
 
 use cosmwasm_std::{forward_ref_partial_eq, StdError, Uint128, OverflowError, OverflowOperation, DivideByZeroError, Uint64, ConversionOverflowError};
+
+
+// NOTE: This wrapper is based on CosmWasm's Uint256.
+
 
 /// Used internally - we don't want to leak this type since we might change
 /// the implementation in the future.
@@ -31,12 +32,18 @@ impl U256 {
     pub const MAX: U256 = U256(BaseU256::MAX);
     pub const MIN: U256 = U256(BaseU256::MIN);
 
-    // Note: this method is provided for maximum efficiency when forming the base structure (ethnum::U256).
+    /// Create a U256 from two u128 values.
+    /// 
+    /// **NOTE**: this method is provided for maximum efficiency when creating the base structure (ethnum::U256).
+    /// 
     pub const fn from_words(hi: u128, lo: u128) -> Self {
         Self(BaseU256::from_words(hi, lo))
     }
 
-    // Note: this method is provided for maximum efficiency when decomposing the base structure (ethnum::U256).
+    /// Decompose a U256 into two u128 values.
+    /// 
+    /// **NOTE**: this method is provided for maximum efficiency when decomposing the base structure (ethnum::U256).
+    ///
     pub const fn into_words(self) -> (u128, u128) {
         self.0.into_words()
     }
@@ -78,11 +85,6 @@ impl U256 {
     }
 
     #[must_use]
-    pub const fn as_uint128(self) -> Uint128 {
-        Uint128::new(self.0.as_u128())
-    }
-
-    #[must_use]
     pub const fn as_u8(self) -> u8 {
         let (_, lo) = self.0.into_words();
         lo as _
@@ -110,6 +112,11 @@ impl U256 {
     pub const fn as_u128(self) -> u128 {
         let (_, lo) = self.0.into_words();
         lo
+    }
+
+    #[must_use]
+    pub const fn as_uint128(self) -> Uint128 {
+        Uint128::new(self.0.as_u128())
     }
 
 
@@ -187,7 +194,7 @@ impl U256 {
 
     pub fn checked_pow(self, exp: u32) -> Result<Self, OverflowError> {
         self.0
-            .checked_pow(exp.into())
+            .checked_pow(exp)
             .map(Self)
             .ok_or_else(|| OverflowError::new(OverflowOperation::Pow, self, exp))
     }
@@ -288,9 +295,9 @@ impl U256 {
     #[must_use = "this returns the result of the operation, without modifying the original"]
     pub fn abs_diff(self, other: Self) -> Self {
         if self < other {
-            other - self
+            other.wrapping_sub(self)
         } else {
-            self - other
+            self.wrapping_sub(other)
         }
     }
 
@@ -391,8 +398,7 @@ impl From<U256> for String {
 
 impl fmt::Display for U256 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        // The inner type doesn't work as expected with padding, so we
-        // work around that.
+
         let unpadded = self.0.to_string();
 
         f.pad_integral(true, "", &unpadded)
