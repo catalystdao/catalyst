@@ -1,11 +1,13 @@
 use catalyst_types::{U256, I256, AsI256, AsU256, u256, i256, errors::OverflowError};
 use thiserror::Error;
 
-/// @notice Arithmetic library with operations for fixed-point numbers.
-/// @author Solmate (https://github.com/transmissions11/solmate/blob/ed67feda67b24fdeff8ad1032360f0ee6047ba0a/src/utils/FixedPointMathLib.sol)
+/// Arithmetic library with operations for fixed-point numbers.
+/// Author: Solmate (https://github.com/transmissions11/solmate/blob/ed67feda67b24fdeff8ad1032360f0ee6047ba0a/src/utils/FixedPointMathLib.sol)
+/// Transpilation by Cata Labs
 
-// NOTE the following code uses 'wrapping' functions (e.g. 'wrapping_add') instead of the intrinsic types (e.g. '+') as they are more gas efficient.
-// (The intrinsic types *always* check for overflows. This is specific to the U256 library and to CosmWasm's Uint classes, NOT to Rust native types)
+/// NOTE: the following code uses 'wrapping' functions (e.g. 'wrapping_add') instead of the intrinsic types (e.g. '+') 
+/// as they are more gas efficient. (The intrinsic types *always* check for overflows. This is specific to the U256 library
+/// and to CosmWasm's Uint classes, NOT to Rust native types unless 'overflow-checks' are enabled on 'Cargo.toml'.)
 
 /***************************************************************
                 SIMPLIFIED FIXED POINT OPERATIONS
@@ -24,11 +26,11 @@ pub fn mul_wad_up(x: U256, y: U256) -> Result<U256, FixedPointMathError> {
 }
 
 pub fn div_wad_down(x: U256, y: U256) -> Result<U256, FixedPointMathError> {
-    mul_div_down(x, WAD, y)  // Equivalent to (x * WAD) / y rounded down.
+    mul_div_down(x, WAD, y)     // Equivalent to (x * WAD) / y rounded down.
 }
 
 pub fn div_wad_up(x: U256, y: U256) -> Result<U256, FixedPointMathError> {
-    mul_div_up(x, WAD, y)    // Equivalent to (x * WAD) / y rounded up.
+    mul_div_up(x, WAD, y)       // Equivalent to (x * WAD) / y rounded up.
 }
 
 pub fn pow_wad(x: I256, y: I256) -> Result<I256, FixedPointMathError> {
@@ -38,7 +40,7 @@ pub fn pow_wad(x: I256, y: I256) -> Result<I256, FixedPointMathError> {
     )
 }
 
-pub fn exp_wad(x: I256) -> Result<I256, FixedPointMathError> {   //TODO make output be U256? (result will always be positive)
+pub fn exp_wad(x: I256) -> Result<I256, FixedPointMathError> {
 
     // When the result is < 0.5 we return zero. This happens when
     // x <= floor(log(0.5e18) * 1e18) ~ -42e18
@@ -51,7 +53,7 @@ pub fn exp_wad(x: I256) -> Result<I256, FixedPointMathError> {   //TODO make out
     // x is now in the range (-42, 136) * 1e18. Convert to (-42, 136) * 2**96
     // for more intermediate precision and a binary basis. This base conversion
     // is a multiplication by 1e18 / 2**96 = 5**18 / 2**78.
-    let mut x = (x.wrapping_shl(78)) / i256!("3814697265625");
+    let mut x = (x.wrapping_shl(78)) / i256!("3814697265625");  // On EVM: The denominator is 5**18
 
     // Reduce range of x to (-½ ln 2, ½ ln 2) * 2**96 by factoring out powers
     // of two such that exp(x) = exp(x') * 2**k, where k is an integer.
@@ -59,7 +61,7 @@ pub fn exp_wad(x: I256) -> Result<I256, FixedPointMathError> {   //TODO make out
     let k: I256 = (
         (
             (x.wrapping_shl(96)) / i256!("54916777467707473351141471128")
-        ).wrapping_add(i256!("39614081257132168796771975168"))
+        ).wrapping_add(i256!("39614081257132168796771975168"))  // On EVM: The literal is 2**95
     ).wrapping_shr(96);
     x = x.wrapping_sub(k.wrapping_mul(i256!("54916777467707473351141471128")));
 
@@ -71,7 +73,7 @@ pub fn exp_wad(x: I256) -> Result<I256, FixedPointMathError> {   //TODO make out
     y = ((y.wrapping_mul(x)).wrapping_shr(96)).wrapping_add(i256!("57155421227552351082224309758442"));
     let mut p = y.wrapping_add(x).wrapping_sub(i256!("94201549194550492254356042504812"));
     p = ((p.wrapping_mul(y)).wrapping_shr(96)).wrapping_add(i256!("28719021644029726153956944680412240"));
-    p = p.wrapping_mul(x).wrapping_add(i256!("4385272521454847904659076985693276").wrapping_shl(96));
+    p = p.wrapping_mul(x).wrapping_add(i256!("347437083999162433888837515002539729507623920905942392673140736"));   // On EVM: The literal is '4385272521454847904659076985693276 << 96'
 
     // We leave p in 2**192 basis so we don't need to scale it back up for the division.
     let mut q = x.wrapping_sub(i256!("2855989394907223263936484059900"));
@@ -96,12 +98,12 @@ pub fn exp_wad(x: I256) -> Result<I256, FixedPointMathError> {   //TODO make out
     Ok(
         r.as_u256()
             .wrapping_mul(u256!("3822833074963236453042738258902158003155416615667"))
-            .wrapping_shr(u256!("195").wrapping_sub(k.as_u256()).as_u32())
+            .wrapping_shr(195i32.wrapping_sub(k.as_i32()) as u32)   // Use of i32 is safe: k is in the range [-61, 195]
             .as_i256()
     )
 }
 
-pub fn ln_wad(x: I256) -> Result<I256, FixedPointMathError> {   //TODO make input U256?
+pub fn ln_wad(x: I256) -> Result<I256, FixedPointMathError> {
 
     if x <= I256::zero() { return Err(FixedPointMathError::UndefinedError {}) }
 
@@ -112,8 +114,8 @@ pub fn ln_wad(x: I256) -> Result<I256, FixedPointMathError> {   //TODO make inpu
 
     // Reduce range of x to (1, 2) * 2**96
     // ln(2^k * x) = k * ln(2) + ln(x)
-    let k: i32 = log2(x.as_u256())?.as_i32() - 96;          // ! type u32 mismatch with EVM impl. (safe as log2(U256::MAX)=255, hence k is within [-96, 159])
-    let mut x: I256 = x.wrapping_shl((159 - k) as u32);     // ! 159 - k is always >= 0 and <= 255 because of the result of the line above
+    let k: i32 = log2(x.as_u256())?.as_i32().wrapping_sub(96);          // ! type i32 mismatch with EVM impl. (safe as log2(U256::MAX)=255, hence k is within [-96, 159])
+    let mut x: I256 = x.wrapping_shl((159i32.wrapping_sub(k)) as u32);  // ! 159 - k is always >= 0 and <= 255 because of the result of the line above
     x = (x.as_u256().wrapping_shr(159u32)).as_i256();
 
     // Evaluate using a (8, 8)-term rational approximation.
@@ -124,7 +126,7 @@ pub fn ln_wad(x: I256) -> Result<I256, FixedPointMathError> {   //TODO make inpu
     p = ((p.wrapping_mul(x)).wrapping_shr(96)).wrapping_sub(i256!("11111509109440967052023855526967"));
     p = ((p.wrapping_mul(x)).wrapping_shr(96)).wrapping_sub(i256!("45023709667254063763336534515857"));
     p = ((p.wrapping_mul(x)).wrapping_shr(96)).wrapping_sub(i256!("14706773417378608786704636184526"));
-    p = p.wrapping_mul(x).wrapping_sub(i256!("795164235651350426258249787498") << 96);     //TODO is '<< 96' evaluated at compile time?
+    p = p.wrapping_mul(x).wrapping_sub(i256!("62999401287715976015676079709131874438408901006995465699328"));   // On EVM: The literal is '795164235651350426258249787498 << 96'.
 
     // We leave p in 2**192 basis so we don't need to scale it back up for the division.
     // q is monic by convention.
@@ -170,7 +172,7 @@ pub fn mul_div_down(x: U256, y: U256, denominator: U256) -> Result<U256, FixedPo
     let z = x.wrapping_mul(y);
 
     // Equivalent to require(denominator != 0 && (x == 0 || (x * y) / x == y))
-    if !(denominator != U256::zero() && (x == U256::zero() || (z/x == y))) {
+    if !(!denominator.is_zero() && (x.is_zero() || (z/x == y))) {
         return Err(FixedPointMathError::ArithemticError {})     //NOTE: Using 'ArithmeticError' as the error could be 'undefined' or 'overflow'.
     }
 
@@ -183,7 +185,7 @@ pub fn mul_div_up(x: U256, y: U256, denominator: U256) -> Result<U256, FixedPoin
     let z = x.wrapping_mul(y);
 
     // Equivalent to require(denominator != 0 && (x == 0 || (x * y) / x == y))
-    if !(denominator != U256::zero() && (x == U256::zero() || (z/x == y))) {
+    if !(!denominator.is_zero() && (x.is_zero() || (z/x == y))) {
         return Err(FixedPointMathError::ArithemticError {})     //NOTE: Using 'ArithmeticError' as the error could be 'undefined' or 'overflow'.
     }
 
@@ -191,7 +193,7 @@ pub fn mul_div_up(x: U256, y: U256, denominator: U256) -> Result<U256, FixedPoin
     // We allow z - 1 to underflow if z is 0, because we multiply the
     // end result by 0 if z is zero, ensuring we return 0 if z is zero.
     Ok(
-        (z != U256::zero()).as_u256()
+        (!z.is_zero()).as_u256()
             .wrapping_mul(
                 ((z.wrapping_sub(U256::one())) / denominator).wrapping_add(U256::one())
             )
@@ -203,7 +205,7 @@ pub fn mul_div_up(x: U256, y: U256, denominator: U256) -> Result<U256, FixedPoin
 ***************************************************************/
 
 pub fn log2(x: U256) -> Result<U256, FixedPointMathError> {
-    if x == U256::zero() { return Err(FixedPointMathError::UndefinedError {}) }
+    if x.is_zero() { return Err(FixedPointMathError::UndefinedError {}) }
 
     let mut r = (u256!("0xffffffffffffffffffffffffffffffff") < x).as_u256().wrapping_shl(7);
     r |= (u256!("0xffffffffffffffff") < (x.wrapping_shr(r.as_u32()))).as_u256().wrapping_shl(6);
@@ -229,7 +231,7 @@ pub enum FixedPointMathError {
     #[error("Undefined")]
     UndefinedError {},
 
-    #[error("ArithmeticError")]
+    #[error("Arithmetic Error")]
     ArithemticError {}
 }
 
@@ -238,4 +240,3 @@ impl From<OverflowError> for FixedPointMathError {
         FixedPointMathError::OverflowError {}
     }
 }
-
