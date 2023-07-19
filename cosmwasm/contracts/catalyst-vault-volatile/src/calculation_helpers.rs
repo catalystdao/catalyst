@@ -1,4 +1,4 @@
-use catalyst_types::{U256, AsI256, AsU256};
+use catalyst_types::U256;
 use catalyst_vault_common::ContractError;
 use fixed_point_math::{ln_wad, div_wad_down, mul_wad_down, WAD, exp_wad};
 

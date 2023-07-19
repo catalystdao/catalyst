@@ -1,4 +1,4 @@
-use catalyst_types::{U256, I256, AsI256, AsU256, u256, i256, errors::OverflowError};
+use catalyst_types::{U256, I256, AsU256, u256, i256, errors::OverflowError};
 use thiserror::Error;
 
 /// Arithmetic library with operations for fixed-point numbers.

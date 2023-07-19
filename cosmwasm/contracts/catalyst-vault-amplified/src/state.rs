@@ -3,7 +3,7 @@ use cw20::{Cw20ExecuteMsg, Cw20QueryMsg, BalanceResponse};
 use cw20_base::contract::{execute_mint, execute_burn};
 use cw_storage_plus::Item;
 use catalyst_ibc_interface::msg::ExecuteMsg as InterfaceExecuteMsg;
-use catalyst_types::{U256, AsI256, I256, AsU256, u256};
+use catalyst_types::{U256, I256, u256};
 use catalyst_vault_common::{
     ContractError,
     event::{local_swap_event, send_asset_event, receive_asset_event, send_liquidity_event, receive_liquidity_event, deposit_event, withdraw_event, cw20_response_to_standard_event},

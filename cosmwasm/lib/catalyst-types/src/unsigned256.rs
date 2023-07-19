@@ -16,7 +16,7 @@ use cosmwasm_std::{forward_ref_partial_eq, StdError, Uint128, OverflowError, Ove
 use ethnum::U256 as BaseU256;
 
 use crate::I256;
-use crate::traits::{AsI256, AsU256};
+use crate::traits::AsU256;
 
 /// An implementation of u256 that is using strings for JSON encoding/decoding,
 /// such that the full u256 range can be used for clients that convert JSON numbers to floats,
@@ -148,6 +148,12 @@ impl U256 {
     pub const fn as_i128(self) -> i128 {
         let (_, lo) = self.0.into_words();
         lo as _
+    }
+
+    #[must_use]
+    pub const fn as_i256(self) -> I256 {
+        let (hi, lo) = self.0.into_words();
+        I256::from_words(hi as _, lo as _)
     }
 
     /// Returns a copy of the number as big endian bytes.
@@ -671,14 +677,6 @@ where
 {
     fn sum<I: Iterator<Item = A>>(iter: I) -> Self {
         iter.fold(Self::zero(), Add::add)
-    }
-}
-
-
-impl AsI256 for U256 {
-    fn as_i256(self) -> I256 {
-        let (hi, lo) = self.0.into_words();
-        I256::from_words(hi as _, lo as _)
     }
 }
 

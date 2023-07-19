@@ -1,5 +1,5 @@
 use std::ops::Div;
-use catalyst_types::{U256, AsI256, AsU256, I256};
+use catalyst_types::{U256, I256};
 use catalyst_vault_common::ContractError;
 use cosmwasm_std::Uint128;
 use fixed_point_math::{div_wad_down, mul_wad_down, WAD, pow_wad, div_wad_up, WADWAD};
