@@ -257,7 +257,7 @@ pub fn on_packet_receive(
                     from_amount: payload.variable_payload.from_amount,
                     from_asset: payload.variable_payload.from_asset.to_binary(),
                     from_block_number_mod: payload.variable_payload.block_number,
-                    calldata_target: parsed_calldata.clone().map(|data| data.target),
+                    calldata_target: parsed_calldata.clone().map(|data| data.target.to_string()),
                     calldata: parsed_calldata.map(|data| data.bytes)
                 })?,
                 funds: vec![]
@@ -291,7 +291,7 @@ pub fn on_packet_receive(
                     min_reference_asset,
                     from_amount: payload.variable_payload.from_amount,
                     from_block_number_mod: payload.variable_payload.block_number,
-                    calldata_target: parsed_calldata.clone().map(|data| data.target),
+                    calldata_target: parsed_calldata.clone().map(|data| data.target.to_string()),
                     calldata: parsed_calldata.map(|data| data.bytes)
                 })?,
                 funds: vec![]

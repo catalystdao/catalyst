@@ -548,7 +548,7 @@ mod test_amplified_receive_asset {
                 from_amount: U256::zero(),
                 from_asset: Binary("from_asset".as_bytes().to_vec()),
                 from_block_number_mod: 0u32,
-                calldata_target: Some(calldata_target.clone()),
+                calldata_target: Some(calldata_target.to_string()),
                 calldata: Some(calldata.clone())
             },
             &[]

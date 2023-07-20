@@ -576,7 +576,7 @@ mod test_amplified_receive_liquidity {
                 min_reference_asset: Uint128::zero(),
                 from_amount: U256::zero(),
                 from_block_number_mod: 0u32,
-                calldata_target: Some(calldata_target.clone()),
+                calldata_target: Some(calldata_target.to_string()),
                 calldata: Some(calldata.clone())
             },
             &[]

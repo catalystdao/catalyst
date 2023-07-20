@@ -1196,7 +1196,7 @@ pub fn receive_asset(
     from_amount: U256,
     from_asset: Binary,
     from_block_number_mod: u32,
-    calldata_target: Option<Addr>,
+    calldata_target: Option<String>,
     calldata: Option<Binary>
 ) -> Result<Response, ContractError> {
 
@@ -1269,7 +1269,7 @@ pub fn receive_asset(
     // Build the calldata message.
     let calldata_message = match calldata_target {
         Some(target) => Some(create_on_catalyst_call_msg(
-            target.to_string(),
+            target,
             out,
             calldata.unwrap_or_default()
         )?),
@@ -1484,7 +1484,7 @@ pub fn receive_liquidity(
     min_reference_asset: Uint128,
     from_amount: U256,
     from_block_number_mod: u32,
-    calldata_target: Option<Addr>,
+    calldata_target: Option<String>,
     calldata: Option<Binary>
 ) -> Result<Response, ContractError> {
 
@@ -1621,7 +1621,7 @@ pub fn receive_liquidity(
     // Build the calldata message.
     let calldata_message = match calldata_target {
         Some(target) => Some(create_on_catalyst_call_msg(
-            target.to_string(),
+            target,
             vault_tokens,
             calldata.unwrap_or_default()
         )?),

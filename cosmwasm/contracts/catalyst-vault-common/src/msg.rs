@@ -150,7 +150,7 @@ pub enum ExecuteMsg<T> {
         from_amount: U256,
         from_asset: Binary,
         from_block_number_mod: u32,
-        calldata_target: Option<Addr>,
+        calldata_target: Option<String>,
         calldata: Option<Binary>
     },
 
@@ -194,7 +194,7 @@ pub enum ExecuteMsg<T> {
         min_reference_asset: Uint128,
         from_amount: U256,
         from_block_number_mod: u32,
-        calldata_target: Option<Addr>,
+        calldata_target: Option<String>,
         calldata: Option<Binary>
     },
 
