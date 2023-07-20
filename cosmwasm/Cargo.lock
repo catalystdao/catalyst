@@ -701,6 +701,7 @@ name = "mock-catalyst-ibc-interface"
 version = "0.1.0"
 dependencies = [
  "catalyst-ibc-interface",
+ "catalyst-types",
  "cosmwasm-schema",
  "cosmwasm-std",
  "cosmwasm-storage",
