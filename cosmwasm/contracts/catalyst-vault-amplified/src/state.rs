@@ -404,6 +404,7 @@ pub fn deposit_mixed(
         .collect::<StdResult<Vec<CosmosMsg>>>()?;
 
     Ok(Response::new()
+        .set_data(to_binary(&out)?)     // Return the deposit output
         .add_messages(transfer_msgs)
         .add_event(
             deposit_event(
@@ -637,6 +638,7 @@ pub fn withdraw_all(
 
 
     Ok(Response::new()
+        .set_data(to_binary(&withdraw_amounts)?)    // Return the withdrawn amounts
         .add_messages(transfer_msgs)
         .add_event(
             withdraw_event(
@@ -874,6 +876,7 @@ pub fn withdraw_mixed(
 
 
     Ok(Response::new()
+        .set_data(to_binary(&withdraw_amounts)?)    // Return the withdrawn amounts
         .add_messages(transfer_msgs)
         .add_event(
             withdraw_event(
@@ -989,6 +992,7 @@ pub fn local_swap(
 
     // Build response
     let mut response = Response::new()
+        .set_data(to_binary(&out)?)     // Return the swap output
         .add_message(transfer_from_asset_msg)
         .add_message(transfer_to_asset_msg);
 
@@ -1140,6 +1144,7 @@ pub fn send_asset(
 
     // Build response
     let mut response = Response::new()
+        .set_data(to_binary(&u)?)       // Return the purchased 'units'
         .add_message(transfer_from_asset_msg);
 
     if let Some(msg) = collect_governance_fee_message {
@@ -1278,6 +1283,7 @@ pub fn receive_asset(
 
     // Build and send the response.
     let mut response = Response::new()
+        .set_data(to_binary(&out)?)     // Return the purchased tokens
         .add_message(transfer_to_asset_msg);
 
     if let Some(msg) = calldata_message {
@@ -1431,6 +1437,7 @@ pub fn send_liquidity(
     );
 
     Ok(Response::new()
+        .set_data(to_binary(&units)?)   // Return the 'units' sent
         .add_message(send_liquidity_execute_msg)
         .add_event(
             send_liquidity_event(
@@ -1629,7 +1636,8 @@ pub fn receive_liquidity(
     };
 
     // Build and send the response.
-    let mut response = Response::new();
+    let mut response = Response::new()
+        .set_data(to_binary(&vault_tokens)?);   // Return the vault tokens 'received'
 
     if let Some(msg) = calldata_message {
         response = response.add_message(msg);

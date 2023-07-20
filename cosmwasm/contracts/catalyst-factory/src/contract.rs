@@ -290,6 +290,7 @@ fn handle_deploy_vault_reply(
 
     Ok(
         Response::new()
+            .set_data(to_binary(&vault_address)?)   // Return the deployed vault address.
             .add_messages(transfer_msgs)
             .add_message(initialize_swap_curves_msg)
             .add_event(
