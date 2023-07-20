@@ -9,7 +9,7 @@ use std::ops::Div;
 use catalyst_types::{U256, u256};
 use fixed_point_math::mul_wad_down;
 
-use crate::{ContractError, msg::{ChainInterfaceResponse, SetupMasterResponse, ReadyResponse, OnlyLocalResponse, AssetsResponse, WeightResponse, VaultFeeResponse, GovernanceFeeShareResponse, FeeAdministratorResponse, TotalEscrowedAssetResponse, TotalEscrowedLiquidityResponse, AssetEscrowResponse, LiquidityEscrowResponse, VaultConnectionStateResponse, FactoryResponse, FactoryOwnerResponse}, event::{send_asset_success_event, send_asset_failure_event, send_liquidity_success_event, send_liquidity_failure_event, finish_setup_event, set_fee_administrator_event, set_vault_fee_event, set_governance_fee_share_event, set_connection_event, cw20_response_to_standard_event}};
+use crate::{ContractError, msg::{ChainInterfaceResponse, SetupMasterResponse, ReadyResponse, OnlyLocalResponse, AssetsResponse, WeightResponse, VaultFeeResponse, GovernanceFeeShareResponse, FeeAdministratorResponse, TotalEscrowedAssetResponse, TotalEscrowedLiquidityResponse, AssetEscrowResponse, LiquidityEscrowResponse, VaultConnectionStateResponse, FactoryResponse, FactoryOwnerResponse, ReceiverExecuteMsg}, event::{send_asset_success_event, send_asset_failure_event, send_liquidity_success_event, send_liquidity_failure_event, finish_setup_event, set_fee_administrator_event, set_vault_fee_event, set_governance_fee_share_event, set_connection_event, cw20_response_to_standard_event}};
 
 
 
@@ -1060,6 +1060,33 @@ pub fn compute_send_liquidity_hash(
     hash_data.extend_from_slice(&block_number_mod.to_be_bytes());
     
     calc_keccak256(hash_data)
+}
+
+
+/// Create the 'OnCatalystCall' execution message.
+/// 
+/// # Arguments:
+/// * `calldata_target` - The contract address to invoke.
+/// * `purchased_tokens` - The swap return.
+/// * `data` - Arbitrary data to be passed onto the `calldata_target`.
+/// 
+pub fn create_on_catalyst_call_msg(
+    calldata_target: String,
+    purchased_tokens: Uint128,
+    data: Binary
+) -> Result<CosmosMsg, ContractError> {
+
+    Ok(CosmosMsg::Wasm(
+        cosmwasm_std::WasmMsg::Execute {
+            contract_addr: calldata_target,
+            msg: to_binary(&ReceiverExecuteMsg::OnCatalystCall {
+                purchased_tokens,
+                data
+            })?,
+            funds: vec![]
+        }
+    ))
+
 }
 
 

@@ -402,4 +402,101 @@ mod test_amplified_send_asset {
 
     }
 
+
+    #[test]
+    fn test_send_asset_calldata() {
+
+        let mut app = App::default();
+
+        // Instantiate and initialize vault
+        let interface = mock_instantiate_interface(&mut app);
+        let vault_tokens = deploy_test_tokens(&mut app, SETUP_MASTER.to_string(), None, TEST_VAULT_ASSET_COUNT);
+        let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
+        let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
+        let vault_code_id = amplified_vault_contract_storage(&mut app);
+        let vault = mock_factory_deploy_vault(
+            &mut app,
+            vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
+            vault_initial_balances.clone(),
+            vault_weights.clone(),
+            AMPLIFICATION,
+            vault_code_id,
+            Some(interface.clone()),
+            None
+        );
+
+        // Connect vault with a mock vault
+        let target_vault = encode_payload_address(b"target_vault");
+        mock_set_vault_connection(
+            &mut app,
+            vault.clone(),
+            CHANNEL_ID.to_string(),
+            target_vault.clone(),
+            true
+        );
+
+        // Define send asset configuration
+        let from_asset_idx = 0;
+        let from_asset = vault_tokens[from_asset_idx].clone();
+        let from_balance = vault_initial_balances[from_asset_idx];
+        let send_percentage = 0.15;
+        let swap_amount = f64_to_uint128(uint128_to_f64(from_balance) * send_percentage).unwrap();
+
+        let to_asset_idx = 1;
+
+        // Fund swapper with tokens and set vault allowance
+        transfer_tokens(
+            &mut app,
+            swap_amount,
+            from_asset.clone(),
+            Addr::unchecked(SETUP_MASTER),
+            SWAPPER_A.to_string()
+        );
+
+        set_token_allowance(
+            &mut app,
+            swap_amount,
+            from_asset.clone(),
+            Addr::unchecked(SWAPPER_A),
+            vault.to_string()
+        );
+
+        // Define the calldata
+        let target_account = encode_payload_address("CALLDATA_ADDRESS".as_bytes());
+        let target_data = vec![0x43, 0x41, 0x54, 0x41, 0x4C, 0x59, 0x53, 0x54];
+        let calldata = Binary([target_account.0, target_data].concat());
+
+
+        // Tested action: send asset calldata
+        let response = app.execute_contract(
+            Addr::unchecked(SWAPPER_A),
+            vault.clone(),
+            &AmplifiedExecuteMsg::SendAsset {
+                channel_id: CHANNEL_ID.to_string(),
+                to_vault: target_vault,
+                to_account: encode_payload_address(SWAPPER_B.as_bytes()),
+                from_asset: from_asset.to_string(),
+                to_asset_index: to_asset_idx,
+                amount: swap_amount,
+                min_out: U256::zero(),
+                fallback_account: SWAPPER_A.to_string(),
+                calldata: calldata.clone()
+            },
+            &[]
+        ).unwrap();
+
+
+
+        // Verify the swap return
+        let payload_calldata = Binary::from_base64(
+            &get_response_attribute::<String>(response.events[7].clone(), "calldata").unwrap()
+        ).unwrap();
+
+        assert_eq!(
+            payload_calldata,
+            calldata
+        );
+
+    }
+
 }

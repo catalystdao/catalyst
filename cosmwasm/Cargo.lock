@@ -153,6 +153,7 @@ dependencies = [
  "cw20",
  "cw20-base",
  "fixed-point-math",
+ "mock-calldata-target",
  "mock-catalyst-ibc-interface",
  "schemars",
  "serde",
@@ -197,6 +198,7 @@ dependencies = [
  "cw20",
  "cw20-base",
  "fixed-point-math",
+ "mock-calldata-target",
  "mock-catalyst-ibc-interface",
  "schemars",
  "serde",
@@ -697,6 +699,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f92be4933c13fd498862a9e02a3055f8a8d9c039ce33db97306fd5a6caa7f29b"
 
 [[package]]
+name = "mock-calldata-target"
+version = "0.1.0"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "schemars",
+ "serde",
+ "thiserror",
+]
+
+[[package]]
 name = "mock-catalyst-ibc-interface"
 version = "0.1.0"
 dependencies = [
@@ -1029,6 +1042,7 @@ dependencies = [
  "cw2",
  "cw20",
  "cw20-base",
+ "mock-calldata-target",
  "mock-catalyst-ibc-interface",
 ]
 

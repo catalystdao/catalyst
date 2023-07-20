@@ -26,6 +26,7 @@ pub struct InstantiateMsg {
 }
 
 
+/// Vault execution messages
 #[cw_serde]
 pub enum ExecuteMsg<T> {
 
@@ -302,6 +303,20 @@ pub enum ExecuteMsg<T> {
     },
 }
 
+
+/// 'OnCatalystCall' callback message format.
+#[cw_serde]
+pub enum ReceiverExecuteMsg {
+
+    OnCatalystCall {
+        purchased_tokens: Uint128,
+        data: Binary
+    }
+
+}
+
+
+// Query response formats
 
 #[cw_serde]
 pub struct ChainInterfaceResponse {

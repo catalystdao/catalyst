@@ -8,7 +8,7 @@ use catalyst_vault_common::{
     ContractError,
     event::{local_swap_event, send_asset_event, receive_asset_event, send_liquidity_event, receive_liquidity_event, deposit_event, withdraw_event, cw20_response_to_standard_event}, 
     msg::{CalcSendAssetResponse, CalcReceiveAssetResponse, CalcLocalSwapResponse, GetLimitCapacityResponse},
-    state::{ASSETS, FACTORY, MAX_ASSETS, WEIGHTS, INITIAL_MINT_AMOUNT, VAULT_FEE, MAX_LIMIT_CAPACITY, USED_LIMIT_CAPACITY, CHAIN_INTERFACE, TOTAL_ESCROWED_LIQUIDITY, TOTAL_ESCROWED_ASSETS, is_connected, update_limit_capacity, collect_governance_fee_message, compute_send_asset_hash, compute_send_liquidity_hash, create_asset_escrow, create_liquidity_escrow, on_send_asset_success, on_send_liquidity_success, total_supply, get_limit_capacity, factory_owner, initialize_limit_capacity, initialize_escrow_totals}
+    state::{ASSETS, FACTORY, MAX_ASSETS, WEIGHTS, INITIAL_MINT_AMOUNT, VAULT_FEE, MAX_LIMIT_CAPACITY, USED_LIMIT_CAPACITY, CHAIN_INTERFACE, TOTAL_ESCROWED_LIQUIDITY, TOTAL_ESCROWED_ASSETS, is_connected, update_limit_capacity, collect_governance_fee_message, compute_send_asset_hash, compute_send_liquidity_hash, create_asset_escrow, create_liquidity_escrow, on_send_asset_success, on_send_liquidity_success, total_supply, get_limit_capacity, factory_owner, initialize_limit_capacity, initialize_escrow_totals, create_on_catalyst_call_msg}
 };
 use fixed_point_math::{self, WAD, LN2, mul_wad_down, ln_wad, exp_wad};
 use std::ops::Div;
@@ -890,15 +890,14 @@ pub fn receive_asset(
     );
 
     // Build the calldata message.
-    let calldata_message = calldata_target.map(|target| {
-        CosmosMsg::Wasm(
-            cosmwasm_std::WasmMsg::Execute {
-                contract_addr: target.to_string(),
-                msg: Binary::from(calldata.unwrap_or(Binary(vec![]))),
-                funds: vec![]
-            }
-        )
-    });
+    let calldata_message = match calldata_target {
+        Some(target) => Some(create_on_catalyst_call_msg(
+            target.to_string(),
+            out,
+            calldata.unwrap_or_default()
+        )?),
+        None => None
+    };
 
     // Build and send the response.
     let mut response = Response::new()
@@ -1183,15 +1182,14 @@ pub fn receive_liquidity(
     )?;
 
     // Build the calldata message.
-    let calldata_message = calldata_target.map(|target| {
-        CosmosMsg::Wasm(
-            cosmwasm_std::WasmMsg::Execute {
-                contract_addr: target.to_string(),
-                msg: Binary::from(calldata.unwrap_or(Binary(vec![]))),
-                funds: vec![]
-            }
-        )
-    });
+    let calldata_message = match calldata_target {
+        Some(target) => Some(create_on_catalyst_call_msg(
+            target.to_string(),
+            out,
+            calldata.unwrap_or_default()
+        )?),
+        None => None
+    };
 
     // Build and send the response.
     let mut response = Response::new();

@@ -21,3 +21,4 @@ cw20 = "1.1.0"
 cw20-base = { version = "1.1.0", features = ["library"] }
 cw-multi-test = "0.16.4"
 mock-catalyst-ibc-interface = { path = "../../mock-contracts/mock-catalyst-ibc-interface", features = ["library"] }
+mock-calldata-target = { path = "../../mock-contracts/mock-calldata-target", features = ["library"] }

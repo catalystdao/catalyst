@@ -1,9 +1,9 @@
 mod test_volatile_receive_liquidity {
-    use cosmwasm_std::{Uint128, Addr};
+    use cosmwasm_std::{Uint128, Addr, Binary};
     use cw_multi_test::{App, Executor};
     use catalyst_types::{U256, u256};
     use catalyst_vault_common::{ContractError, state::INITIAL_MINT_AMOUNT};
-    use test_helpers::{math::{uint128_to_f64, f64_to_uint128}, misc::{get_response_attribute, encode_payload_address}, token::{deploy_test_tokens, query_token_balance, query_token_info}, definitions::{SETUP_MASTER, CHAIN_INTERFACE, CHANNEL_ID, SWAPPER_B}, contract::{mock_factory_deploy_vault, mock_set_vault_connection}};
+    use test_helpers::{math::{uint128_to_f64, f64_to_uint128}, misc::{get_response_attribute, encode_payload_address}, token::{deploy_test_tokens, query_token_balance, query_token_info}, definitions::{SETUP_MASTER, CHAIN_INTERFACE, CHANNEL_ID, SWAPPER_B}, contract::{mock_factory_deploy_vault, mock_set_vault_connection, mock_instantiate_calldata_target}};
 
     use crate::{msg::VolatileExecuteMsg, tests::{helpers::{compute_expected_receive_liquidity, compute_expected_reference_asset, volatile_vault_contract_storage}, parameters::{TEST_VAULT_BALANCES, TEST_VAULT_WEIGHTS, AMPLIFICATION, TEST_VAULT_ASSET_COUNT}}};
 
@@ -507,6 +507,91 @@ mod test_volatile_receive_liquidity {
             response_result.err().unwrap().downcast().unwrap(),
             ContractError::Unauthorized {}
         ));
+
+    }
+
+
+    #[test]
+    fn test_receive_liquidity_calldata() {
+
+        let mut app = App::default();
+
+        // Instantiate and initialize vault
+        let vault_tokens = deploy_test_tokens(&mut app, SETUP_MASTER.to_string(), None, TEST_VAULT_ASSET_COUNT);
+        let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
+        let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
+        let vault_code_id = volatile_vault_contract_storage(&mut app);
+        let vault = mock_factory_deploy_vault(
+            &mut app,
+            vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
+            vault_initial_balances.clone(),
+            vault_weights.clone(),
+            AMPLIFICATION,
+            vault_code_id,
+            Some(Addr::unchecked(CHAIN_INTERFACE)),         // Using a mock address, no need for an interface to be deployed
+            None
+        );
+
+        // Connect vault with a mock vault
+        let from_vault = encode_payload_address(b"from_vault");
+        mock_set_vault_connection(
+            &mut app,
+            vault.clone(),
+            CHANNEL_ID.to_string(),
+            from_vault.clone(),
+            true
+        );
+
+        // Define the receive liquidity configuration        
+        let swap_units = u256!("500000000000000000");
+
+        // Define the calldata
+        let calldata_target = mock_instantiate_calldata_target(&mut app);
+        let calldata = Binary(vec![0x43, 0x41, 0x54, 0x41, 0x4C, 0x59, 0x53, 0x54]);
+
+
+
+        // Tested action: receive liquidity calldata
+        let response = app.execute_contract(
+            Addr::unchecked(CHAIN_INTERFACE),
+            vault.clone(),
+            &VolatileExecuteMsg::ReceiveLiquidity {
+                channel_id: CHANNEL_ID.to_string(),
+                from_vault,
+                to_account: SWAPPER_B.to_string(),
+                u: swap_units,
+                min_vault_tokens: Uint128::zero(),
+                min_reference_asset: Uint128::zero(),
+                from_amount: U256::zero(),
+                from_block_number_mod: 0u32,
+                calldata_target: Some(calldata_target.clone()),
+                calldata: Some(calldata.clone())
+            },
+            &[]
+        ).unwrap();
+
+
+
+        // Verify the 'calldata' target is executed
+        let mock_target_event = response.events[4].clone();
+        let observed_action = get_response_attribute::<String>(mock_target_event.clone(), "action").unwrap();
+        assert_eq!(
+            observed_action,
+            "on-catalyst-call"
+        );
+    
+        let observed_purchased_tokens = get_response_attribute::<Uint128>(mock_target_event.clone(), "purchased_tokens").unwrap();
+        let observed_return = get_response_attribute::<Uint128>(response.events[1].clone(), "to_amount").unwrap();
+        assert_eq!(
+            observed_purchased_tokens,
+            observed_return
+        );
+
+        let observed_data = get_response_attribute::<String>(mock_target_event.clone(), "data").unwrap();
+        assert_eq!(
+            Binary::from_base64(&observed_data).unwrap(),
+            calldata
+        )
 
     }
 

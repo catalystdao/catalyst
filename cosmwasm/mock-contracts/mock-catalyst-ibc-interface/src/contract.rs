@@ -89,6 +89,11 @@ fn execute_send_cross_chain_asset(
     calldata: Binary
 ) -> Result<Response, ContractError> {
 
+    let calldata = match calldata.len() {
+        0 => String::from("None"),  // NOTE: It is not possible to add empty attributes
+        _ => calldata.to_base64()
+    };
+
     Ok(
         Response::new()
             .add_attribute("action", "mock-interface-send-asset")
@@ -101,7 +106,7 @@ fn execute_send_cross_chain_asset(
             .add_attribute("from_amount", from_amount)
             .add_attribute("from_asset", from_asset)
             .add_attribute("block_number", block_number.to_string())
-            .add_attribute("calldata", calldata.to_base64())
+            .add_attribute("calldata", calldata)
     )
 
 }
@@ -118,9 +123,14 @@ fn execute_send_cross_chain_liquidity(
     calldata: Binary
 ) -> Result<Response, ContractError> {
 
+    let calldata = match calldata.len() {
+        0 => String::from("None"),  // NOTE: It is not possible to add empty attributes
+        _ => calldata.to_base64()
+    };
+
     Ok(
         Response::new()
-            .add_attribute("action", "mock-interface-send-asset")
+            .add_attribute("action", "mock-interface-send-liquidity")
             .add_attribute("channel_id", channel_id)
             .add_attribute("to_vault", to_vault.to_base64())
             .add_attribute("to_account", to_account.to_base64())
@@ -129,7 +139,7 @@ fn execute_send_cross_chain_liquidity(
             .add_attribute("min_reference_asset", min_reference_asset)
             .add_attribute("from_amount", from_amount)
             .add_attribute("block_number", block_number.to_string())
-            .add_attribute("calldata", calldata.to_base64())
+            .add_attribute("calldata", calldata)
     )
 
 }

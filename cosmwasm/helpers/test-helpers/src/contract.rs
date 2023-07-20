@@ -1,5 +1,5 @@
 use cosmwasm_std::{Uint128, Addr, Uint64, Binary};
-use cw20::{Cw20ExecuteMsg};
+use cw20::Cw20ExecuteMsg;
 use cw_multi_test::{ContractWrapper, App, Executor, AppResponse};
 use catalyst_vault_common::msg::{InstantiateMsg, ExecuteMsg};
 use crate::{misc::get_response_attribute, definitions::{SETUP_MASTER, FACTORY_OWNER}};
@@ -10,7 +10,7 @@ pub const DEFAULT_TEST_GOV_FEE  : Uint64 = Uint64::new(50000000000000000u64);   
 
 
 
-// Contracts
+// Contracts storage
 
 pub fn vault_factory_contract_storage(
     app: &mut App
@@ -42,28 +42,25 @@ pub fn interface_contract_storage(
     app.store_code(Box::new(contract))
 }
 
-
-
-// Interface helpers
-
-pub fn mock_instantiate_interface(
+pub fn calldata_target_contract_storage(
     app: &mut App
-) -> Addr {
+) -> u64 {
 
-    let contract_code_storage = interface_contract_storage(app);
+    // Create contract wrapper
+    let contract = ContractWrapper::new(
+        mock_calldata_target::contract::execute,
+        mock_calldata_target::contract::instantiate,
+        mock_calldata_target::contract::query,
+    );
 
-    app.instantiate_contract(
-        contract_code_storage,
-        Addr::unchecked(SETUP_MASTER),
-        &catalyst_ibc_interface::msg::InstantiateMsg {},
-        &[],
-        "interface",
-        None
-    ).unwrap()
+    // 'Deploy' the contract
+    app.store_code(Box::new(contract))
 }
 
 
-// Factory management helpers
+
+// Contracts instantiation
+
 pub fn mock_instantiate_factory(
     app: &mut App,
     default_governance_fee_share: Option<Uint64>
@@ -82,6 +79,42 @@ pub fn mock_instantiate_factory(
         None
     ).unwrap()
 }
+
+pub fn mock_instantiate_interface(
+    app: &mut App
+) -> Addr {
+
+    let contract_code_storage = interface_contract_storage(app);
+
+    app.instantiate_contract(
+        contract_code_storage,
+        Addr::unchecked(SETUP_MASTER),
+        &catalyst_ibc_interface::msg::InstantiateMsg {},
+        &[],
+        "interface",
+        None
+    ).unwrap()
+}
+
+pub fn mock_instantiate_calldata_target(
+    app: &mut App
+) -> Addr {
+
+    let contract_code_storage = calldata_target_contract_storage(app);
+
+    app.instantiate_contract(
+        contract_code_storage,
+        Addr::unchecked(SETUP_MASTER),
+        &mock_calldata_target::msg::InstantiateMsg {},
+        &[],
+        "calldata-target",
+        None
+    ).unwrap()
+}
+
+
+
+// Factory helpers
 
 pub fn mock_factory_deploy_vault(
     app: &mut App,
