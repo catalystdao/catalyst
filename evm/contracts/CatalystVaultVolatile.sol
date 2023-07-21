@@ -730,12 +730,12 @@ contract CatalystVaultVolatile is CatalystVaultCommon {
         );
 
         // Escrow the tokens used to purchase units. These will be sent back if transaction doesn't arrive / timeout.
-        require(_escrowedTokensFor[sendAssetHash] == address(0)); // dev: Escrow already exists.
-        _escrowedTokensFor[sendAssetHash] = fallbackUser;
-        unchecked {
-            // Must be less than than the vault balance.
-            _escrowedTokens[fromAsset] += amount - fee;
-        }
+        _setTokenEscrow(
+            sendAssetHash,
+            fallbackUser,
+            fromAsset,
+            amount - fee
+        );
         // Notice that the fee is subtracted from the escrow. If this is not done, the escrow can be used as a cheap denial of service vector.
         // This is unfortunate.
 
@@ -789,7 +789,55 @@ contract CatalystVaultVolatile is CatalystVaultCommon {
 
     /**
      * @notice Completes a cross-chain swap by converting units to the desired token.
-     * @dev Can only be called by the chainInterface.
+     * @dev Internal function that implement the majority of swap logic.
+     */
+    function _receiveAsset(
+        bytes32 channelId,
+        bytes calldata fromVault,
+        uint256 toAssetIndex,
+        address toAccount,
+        uint256 U,
+        uint256 minOut,
+        uint256 fromAmount,
+        bytes calldata fromAsset,
+        uint32 blockNumberMod
+    ) nonReentrant onlyChainInterface onlyConnectedPool(channelId, fromVault) internal returns (bytes1, uint256) {
+        _updateWeights();
+
+        // Convert the asset index (toAsset) into the asset to be purchased.
+        address toAsset = _tokenIndexing[toAssetIndex];
+
+        // Check and update the security limit.
+        bool securityLimitStatus = _updateUnitCapacity(U);
+        if (!securityLimitStatus) return(0x12, 0); //revert ExceedsSecurityLimit(Units - MUC)
+
+        // Calculate the swap return value. Fee is always taken on the sending token.
+        uint256 purchasedTokens = calcReceiveAsset(toAsset, U);
+
+        // Ensure the user is satisfied with the number of tokens.
+        if (minOut > purchasedTokens) return (0x11, 0); // revert ReturnInsufficient(purchasedTokens, minOut);
+
+        // Send the assets to the user.
+        ERC20(toAsset).safeTransfer(toAccount, purchasedTokens);
+
+        emit ReceiveAsset(
+            channelId, 
+            fromVault, 
+            toAccount, 
+            toAsset, 
+            U, 
+            purchasedTokens, 
+            fromAmount,
+            fromAsset,
+            blockNumberMod
+        );
+
+        return (0x00, purchasedTokens);
+    }
+
+    /**
+     * @notice Completes a cross-chain swap by converting units to the desired token.
+     * @dev Security checks are performed by _receiveAsset.
      * @param channelId The source chain identifier.
      * @param fromVault The source vault.
      * @param toAssetIndex Index of the asset to be purchased.
@@ -810,39 +858,26 @@ contract CatalystVaultVolatile is CatalystVaultCommon {
         uint256 fromAmount,
         bytes calldata fromAsset,
         uint32 blockNumberMod
-    ) nonReentrant onlyChainInterface onlyConnectedPool(channelId, fromVault) public override returns (uint256) {
-        _updateWeights();
-
-        // Convert the asset index (toAsset) into the asset to be purchased.
-        address toAsset = _tokenIndexing[toAssetIndex];
-
-        // Check and update the security limit.
-        _updateUnitCapacity(U);
-
-        // Calculate the swap return value. Fee is always taken on the sending token.
-        uint256 purchasedTokens = calcReceiveAsset(toAsset, U);
-
-        // Ensure the user is satisfied with the number of tokens.
-        if (minOut > purchasedTokens) revert ReturnInsufficient(purchasedTokens, minOut);
-
-        // Send the assets to the user.
-        ERC20(toAsset).safeTransfer(toAccount, purchasedTokens);
-
-        emit ReceiveAsset(
-            channelId, 
-            fromVault, 
-            toAccount, 
-            toAsset, 
-            U, 
-            purchasedTokens, 
+    ) external override returns (bytes1) {
+        (bytes1 status, uint256 purchasedTokens) = _receiveAsset(
+            channelId,
+            fromVault,
+            toAssetIndex,
+            toAccount,
+            U,
+            minOut,
             fromAmount,
             fromAsset,
             blockNumberMod
         );
 
-        return purchasedTokens;
+        return status;
     }
 
+    /**
+     * @notice Exposes _receiveAsset and calls an external contract
+     * @dev Security checks are performed by _receiveAsset.
+     */
     function receiveAsset(
         bytes32 channelId,
         bytes calldata fromVault,
@@ -855,8 +890,8 @@ contract CatalystVaultVolatile is CatalystVaultCommon {
         uint32 blockNumberMod,
         address dataTarget,
         bytes calldata data
-    ) external override returns (uint256) {
-        uint256 purchasedTokens = receiveAsset(
+    ) external override returns (bytes1) {
+        (bytes1 status,uint256 purchasedTokens) = _receiveAsset(
             channelId,
             fromVault,
             toAssetIndex,
@@ -867,6 +902,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon {
             fromAsset,
             blockNumberMod
         );
+        if (status != 0x00) return status;
 
         // Let users define custom logic which should be executed after the swap.
         // The logic is not contained within a try - except so if the logic reverts
@@ -875,7 +911,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon {
         ICatalystReceiver(dataTarget).onCatalystCall(purchasedTokens, data);
         // If dataTarget doesn't implement onCatalystCall BUT implements a fallback function, the call will still succeed.
 
-        return purchasedTokens;
+        return status;
     }
 
     //--- Liquidity swapping ---//
@@ -958,14 +994,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon {
             uint32(block.number)    // May overflow, but this is desired (% 2**32)
         );
 
-        // Escrow the vault token used to purchase units. These will be sent back if transaction doesn't arrive / timeout.
-        require(_escrowedVaultTokensFor[sendLiquidityHash] == address(0));
-        _escrowedVaultTokensFor[sendLiquidityHash] = fallbackUser;
-        _escrowedVaultTokens += vaultTokens;
-
-        // Adjustment of the security limit is delayed until ack to avoid
-        // a router abusing timeout to circumvent the security limit at a low cost.
-
+        // Emit event before setting escrow to clear up variables from stack.
         emit SendLiquidity(
             channelId,
             toVault,
@@ -974,6 +1003,16 @@ contract CatalystVaultVolatile is CatalystVaultCommon {
             minOut,
             U
         );
+
+        // Escrow the vault tokens used to purchase units. These will be sent back if transaction doesn't arrive / timeout.
+        _setLiquidityEscrow(
+            sendLiquidityHash,
+            fallbackUser,
+            vaultTokens
+        );
+
+        // Adjustment of the security limit is delayed until ack to avoid
+        // a router abusing timeout to circumvent the security limit at a low cost.
 
         return U;
     }
@@ -1001,20 +1040,9 @@ contract CatalystVaultVolatile is CatalystVaultCommon {
 
     /**
      * @notice Completes a cross-chain liquidity swap by converting units to tokens and depositing.
-     * @dev Called exclusively by the chainInterface.
-     * While the description says units are converted to tokens and then deposited, units are converted
-     * directly to vault tokens through the following equation: pt = PT · (1 - exp(-U/sum W_i))/exp(-U/sum W_i)
-     * @param channelId The source chain identifier.
-     * @param fromVault The source vault.
-     * @param toAccount The recipient.
-     * @param U Incoming units.
-     * @param minVaultTokens The minimum number of vault tokens to mint on target vault. Otherwise: Reject
-     * @param minReferenceAsset The minimum number of reference asset the vaults tokens are worth. Otherwise: Reject
-     * @param fromAmount Used to match cross-chain swap events. The input amount on the source chain.
-     * @param blockNumberMod Used to match cross-chain swap events. The block number from the source chain.
-     * @return uint256 Number of vault tokens minted to the recipient.
+     * @dev Internal function that implement the majority of swap logic.
      */
-    function receiveLiquidity(
+    function _receiveLiquidity(
         bytes32 channelId,
         bytes calldata fromVault,
         address toAccount,
@@ -1023,11 +1051,11 @@ contract CatalystVaultVolatile is CatalystVaultCommon {
         uint256 minReferenceAsset,
         uint256 fromAmount,
         uint32 blockNumberMod
-    ) nonReentrant onlyChainInterface onlyConnectedPool(channelId, fromVault) public override returns (uint256) {
+    ) nonReentrant onlyChainInterface onlyConnectedPool(channelId, fromVault) internal returns (bytes1, uint256) {
         _updateWeights();
 
-        // Check if the swap is according to the swap limits
-        _updateUnitCapacity(U);
+        bool securityLimitStatus = _updateUnitCapacity(U);
+        if (!securityLimitStatus) return(0x12, 0); //revert ExceedsSecurityLimit(Units - MUC)
 
         // Fetch wsum.
         uint256 wsum = _maxUnitCapacity / FixedPointMathLib.LN2;
@@ -1037,7 +1065,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon {
         uint256 vaultTokens = FixedPointMathLib.mulWadDown(_calcPriceCurveLimitShare(U, wsum), totalSupply);
 
         // Check if more than the minimum output is returned.
-        if (minVaultTokens > vaultTokens) revert ReturnInsufficient(vaultTokens, minVaultTokens);
+        if (minVaultTokens > vaultTokens) return (0x11, 0); // revert ReturnInsufficient(vaultTokens, minVaultTokens);
         // Then check if the minimum number of reference assets is honoured.
         if (minReferenceAsset > 0) {
             // This is done by computing the reference balance through a locally observable method.
@@ -1087,7 +1115,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon {
             // Add escrow to ensure that even if all ongoing transaction revert, the user gets their expected amount.
             // Add vault tokens because they are going to be minted.
             referenceAmount = (referenceAmount * vaultTokens)/(totalSupply + _escrowedVaultTokens + vaultTokens);
-            if (minReferenceAsset > referenceAmount) revert ReturnInsufficient(referenceAmount, minReferenceAsset);
+            if (minReferenceAsset > referenceAmount) return (0x21, 0); // revert ReturnInsufficient(referenceAmount, minReferenceAsset);
         }
 
         // Mint vault tokens for the user.
@@ -1095,14 +1123,56 @@ contract CatalystVaultVolatile is CatalystVaultCommon {
 
         emit ReceiveLiquidity(channelId, fromVault, toAccount, U, vaultTokens, fromAmount, blockNumberMod);
 
-        return vaultTokens;
+        return (0x00, vaultTokens);
     }
 
-    
+     /**
+     * @notice Completes a cross-chain liquidity swap by converting units to tokens and depositing.
+     * @dev Security checks are performed by _receiveLiquidity.
+     * While the description says units are converted to tokens and then deposited, units are converted
+     * directly to vault tokens through the following equation: pt = PT · (1 - exp(-U/sum W_i))/exp(-U/sum W_i)
+     * @param channelId The source chain identifier.
+     * @param fromVault The source vault.
+     * @param toAccount The recipient.
+     * @param U Incoming units.
+     * @param minVaultTokens The minimum number of vault tokens to mint on target vault. Otherwise: Reject
+     * @param minReferenceAsset The minimum number of reference asset the vaults tokens are worth. Otherwise: Reject
+     * @param fromAmount Used to match cross-chain swap events. The input amount on the source chain.
+     * @param blockNumberMod Used to match cross-chain swap events. The block number from the source chain.
+     * @return uint256 Number of vault tokens minted to the recipient.
+     */
     function receiveLiquidity(
         bytes32 channelId,
         bytes calldata fromVault,
-        address who,
+        address toAccount,
+        uint256 U,
+        uint256 minVaultTokens,
+        uint256 minReferenceAsset,
+        uint256 fromAmount,
+        uint32 blockNumberMod
+    ) external override returns (bytes1) {
+        (bytes1 status, uint256 purchasedTokens) = _receiveLiquidity(
+            channelId,
+            fromVault,
+            toAccount,
+            U,
+            minVaultTokens,
+            minReferenceAsset,
+            fromAmount,
+            blockNumberMod
+        );
+
+        return status;
+    }
+
+    /**
+     * @notice Exposes _receiveLiquidity and calls an external contract
+     * @dev Security checks are performed by _receiveLiquidity.
+     */
+    function receiveLiquidity(
+        bytes32 channelId,
+        bytes calldata fromVault,
+        address toAccount,
         uint256 U,
         uint256 minVaultTokens,
         uint256 minReferenceAsset,
@@ -1110,17 +1180,18 @@ contract CatalystVaultVolatile is CatalystVaultCommon {
         uint32 blockNumberMod,
         address dataTarget,
         bytes calldata data
-    ) external override returns (uint256) {
-        uint256 purchasedVaultTokens = receiveLiquidity(
+    ) external override returns (bytes1) {
+        (bytes1 status, uint256 purchasedVaultTokens) = _receiveLiquidity(
             channelId,
             fromVault,
-            who,
+            toAccount,
             U,
             minVaultTokens,
             minReferenceAsset,
             fromAmount,
             blockNumberMod
         );
+        if (status != 0x00) return status;
 
         // Let users define custom logic which should be executed after the swap.
         // The logic is not contained within a try - except so if the logic reverts
@@ -1129,7 +1200,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon {
         ICatalystReceiver(dataTarget).onCatalystCall(purchasedVaultTokens, data);
         // If dataTarget doesn't implement onCatalystCall BUT implements a fallback function, the call will still succeed.
 
-        return purchasedVaultTokens;
+        return status;
     }
 
     //-- Escrow Functions --//

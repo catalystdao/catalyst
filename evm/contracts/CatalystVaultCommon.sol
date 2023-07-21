@@ -115,13 +115,12 @@ abstract contract CatalystVaultCommon is
     // Escrow reference
     /// @notice Total current escrowed tokens
     mapping(address => uint256) public _escrowedTokens;
-    /// @notice Specific escrow information
-    mapping(bytes32 => address) public _escrowedTokensFor;
-
     /// @notice Total current escrowed vault tokens
     uint256 public _escrowedVaultTokens;
-    /// @notice Specific escrow information (Liquidity)
-    mapping(bytes32 => address) public _escrowedVaultTokensFor;
+
+    /// @notice Find escrow information. Used for both normal swaps and liquidity swaps.
+    mapping(bytes32 => address) public _escrowLookup;
+
 
     constructor(address factory_) ERC20("Catalyst Vault Template", "", DECIMALS) {
         FACTORY = factory_;
@@ -169,6 +168,8 @@ abstract contract CatalystVaultCommon is
         return _chainInterface == address(0);
     }
 
+    // -- Setup Functions -- //
+
     /** @notice Setup a vault. */
     function setup(
         string calldata name_,
@@ -194,6 +195,54 @@ abstract contract CatalystVaultCommon is
         symbol = symbol_;
         // END ERC20 //
     }
+
+
+    /**
+     * @notice Creates a connection to toVault on the channel_channelId.
+     * @dev Encoding addresses in 64 + 1 bytes for EVM.
+     * For Solidity, this can be done as abi.encodePacket(uint8(20), bytes32(0), abi.encode(toAddress))
+     * @param channelId Target chain identifier.
+     * @param toVault 64 + 1 bytes representation of the target vault.
+     * @param state Boolean indicating if the connection should be open or closed.
+     */
+    function setConnection(
+        bytes32 channelId,
+        bytes calldata toVault,
+        bool state
+    ) external override {
+        require((msg.sender == _setupMaster) || (msg.sender == factoryOwner())); // dev: No auth
+        require(toVault.length == 65);  // dev: Vault addresses are uint8 + 64 bytes.
+
+        _vaultConnection[channelId][toVault] = state;
+
+        emit SetConnection(channelId, toVault, state);
+    }
+
+    /**
+     * @notice Gives up short-term ownership of the vault. This makes the vault unstoppable.
+     * @dev This function should ALWAYS be called before other liquidity providers deposit liquidity.
+     * While it is not recommended, the escrow should ensure it is relativly safe trading through it (assuming a minimum output is set).
+     */
+    function finishSetup() external override {
+        require(msg.sender == _setupMaster); // dev: No auth
+
+        _setupMaster = address(0);
+
+        emit FinishSetup();
+    }
+
+    /**
+     * @notice View function to signal if a vault is safe to use.
+     * @dev Checks if the setup master has been set to ZERO_ADDRESS.
+     * In other words, has finishSetup been called?
+     */
+    function ready() external view override returns (bool) {
+        // _setupMaster == address(0) ensures the pool is safe. The setup master can drain the pool!
+        // _tokenIndexing[0] != address(0) check if the pool has been initialized correctly.
+        // The additional check is there to ensure that the initial deployment returns false. 
+        return _setupMaster == address(0) && _tokenIndexing[0] != address(0);
+    }
+
 
     /** @notice  Returns the current cross-chain swap capacity. */
     function getUnitCapacity() public view virtual override returns (uint256) {
@@ -231,13 +280,15 @@ abstract contract CatalystVaultCommon is
 
     }
 
+    // -- Utils -- // 
+
     /**
      * @notice Checks if the vault supports an inflow of units and decreases
      * unit capacity by the inflow.
      * @dev Implement a lot of similar logic to getUnitCapacity. 
      * @param Units The number of units to check and set.
      */
-    function _updateUnitCapacity(uint256 Units) internal {
+    function _updateUnitCapacity(uint256 Units) internal returns(bool status) {
         uint256 MUC = _maxUnitCapacity;
 
         // The delta change to the limit is: timePassed · slope = timePassed · Max/decayrate
@@ -260,9 +311,9 @@ abstract contract CatalystVaultCommon is
         uint256 UC = _usedUnitCapacity; 
         // If the change is greater than the units which have passed through the limit is max
         if (UC <= unitCapacityReleased) {
-            if (Units > MUC) revert ExceedsSecurityLimit(Units - MUC);
+            if (Units > MUC) return false; // revert ExceedsSecurityLimit(Units - MUC);
             _usedUnitCapacity = Units;
-            return;
+            return true;
         }
         
         uint256 newUnitFlow = UC + Units;  // (UC + units) - unitCapacityReleased
@@ -270,10 +321,13 @@ abstract contract CatalystVaultCommon is
             // We know that UC > unitCapacityReleased
             newUnitFlow -= unitCapacityReleased;
         }
-        if (newUnitFlow > MUC) revert ExceedsSecurityLimit(newUnitFlow - MUC);
+        if (newUnitFlow > MUC) return false; // revert ExceedsSecurityLimit(newUnitFlow - MUC);
         _usedUnitCapacity = newUnitFlow;
+        return true;
     }
 
+
+    // -- Governance Functions -- //
 
     /// @notice Sets a new fee administrator that can configure vault fees.
     /// @dev The fee administrator is responsible for modifying vault fees.
@@ -324,66 +378,45 @@ abstract contract CatalystVaultCommon is
         }
     }
 
-    /**
-     * @notice Creates a connection to toVault on the channel_channelId.
-     * @dev Encoding addresses in 64 + 1 bytes for EVM.
-     * For Solidity, this can be done as abi.encodePacket(uint8(20), bytes32(0), abi.encode(toAddress))
-     * @param channelId Target chain identifier.
-     * @param toVault 64 + 1 bytes representation of the target vault.
-     * @param state Boolean indicating if the connection should be open or closed.
-     */
-    function setConnection(
-        bytes32 channelId,
-        bytes calldata toVault,
-        bool state
-    ) external override {
-        require((msg.sender == _setupMaster) || (msg.sender == factoryOwner())); // dev: No auth
-        require(toVault.length == 65);  // dev: Vault addresses are uint8 + 64 bytes.
-
-        _vaultConnection[channelId][toVault] = state;
-
-        emit SetConnection(channelId, toVault, state);
-    }
-
-    /**
-     * @notice Gives up short-term ownership of the vault. This makes the vault unstoppable.
-     * @dev This function should ALWAYS be called before other liquidity providers deposit liquidity.
-     * While it is not recommended, the escrow should ensure it is relativly safe trading through it (assuming a minimum output is set).
-     */
-    function finishSetup() external override {
-        require(msg.sender == _setupMaster); // dev: No auth
-
-        _setupMaster = address(0);
-
-        emit FinishSetup();
-    }
-
-    /**
-     * @notice View function to signal if a vault is safe to use.
-     * @dev Checks if the setup master has been set to ZERO_ADDRESS.
-     * In other words, has finishSetup been called?
-     */
-    function ready() external view override returns (bool) {
-        // _setupMaster == address(0) ensures the pool is safe. The setup master can drain the pool!
-        // _tokenIndexing[0] != address(0) check if the pool has been initialized correctly.
-        // The additional check is there to ensure that the initial deployment returns false. 
-        return _setupMaster == address(0) && _tokenIndexing[0] != address(0);
-    }
-
-
     //-- Escrow Functions --//
 
+    /// @notice Creates a token escrow for a swap.
+    function _setTokenEscrow(
+        bytes32 sendAssetHash,
+        address fallbackUser,
+        address fromAsset,
+        uint256 amount
+    ) internal {
+        if (_escrowLookup[sendAssetHash] != address(0))  revert EscrowAlreadyExists();
+        _escrowLookup[sendAssetHash] = fallbackUser;
+        unchecked {
+            // Must be less than than the vault balance.
+            _escrowedTokens[fromAsset] += amount;
+        }
+    }
+
+    /// @notice Creates a liquidity escrow for a swap.
+    function _setLiquidityEscrow(
+        bytes32 sendLiquidityHash,
+        address fallbackUser,
+        uint256 vaultTokens
+    ) internal {
+        if (_escrowLookup[sendLiquidityHash] != address(0)) revert EscrowAlreadyExists();
+        _escrowLookup[sendLiquidityHash] = fallbackUser;
+        _escrowedVaultTokens += vaultTokens;
+    }
+
     /// @notice Returns the fallbackUser for the escrow and cleans up the escrow information.
-    /// @dev 'delete _escrowedTokensFor[sendAssetHash]' ensures this function can only be called once.
+    /// @dev 'delete _escrowLookup[sendAssetHash]' ensures this function can only be called once.
     function _releaseAssetEscrow(
         bytes32 sendAssetHash,
         uint256 escrowAmount,
         address escrowToken
     ) internal returns(address) {
 
-        address fallbackUser = _escrowedTokensFor[sendAssetHash];  // Passing in an invalid swapHash returns address(0)
+        address fallbackUser = _escrowLookup[sendAssetHash];  // Passing in an invalid swapHash returns address(0)
         require(fallbackUser != address(0));  // dev: Invalid swapHash. Alt: Escrow doesn't exist.
-        delete _escrowedTokensFor[sendAssetHash];  // Stops timeout and further acks from being called
+        delete _escrowLookup[sendAssetHash];  // Stops timeout and further acks from being called
 
         unchecked {
             // escrowAmount \subseteq _escrowedTokens => escrowAmount <= _escrowedTokens. Cannot be called twice since the 3 lines before ensure this can only be reached once.
@@ -394,15 +427,15 @@ abstract contract CatalystVaultCommon is
     }
 
     /// @notice Returns the fallbackUser for the escrow and cleans up the escrow information.
-    /// @dev 'delete _escrowedTokensFor[sendAssetHash]' ensures this function can only be called once.
+    /// @dev 'delete _escrowLookup[sendAssetHash]' ensures this function can only be called once.
     function _releaseLiquidityEscrow(
         bytes32 sendLiquidityHash,
         uint256 escrowAmount
     ) internal returns(address) {
 
-        address fallbackUser = _escrowedVaultTokensFor[sendLiquidityHash];  // Passing in an invalid swapHash returns address(0)
+        address fallbackUser = _escrowLookup[sendLiquidityHash];  // Passing in an invalid swapHash returns address(0)
         require(fallbackUser != address(0));  // dev: Invalid swapHash. Alt: Escrow doesn't exist.
-        delete _escrowedVaultTokensFor[sendLiquidityHash];  // Stops timeout and further acks from being called
+        delete _escrowLookup[sendLiquidityHash];  // Stops timeout and further acks from being called
 
         unchecked {
             // escrowAmount \subseteq _escrowedVaultTokens => escrowAmount <= _escrowedVaultTokens. Cannot be called twice since the 3 lines before ensure this can only be reached once.

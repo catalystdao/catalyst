@@ -1117,12 +1117,12 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
         );
 
         // Escrow the tokens used to purchase units. These will be sent back if transaction doesn't arrive / timeout.
-        require(_escrowedTokensFor[sendAssetHash] == address(0)); // dev: Escrow already exists.
-        _escrowedTokensFor[sendAssetHash] = fallbackUser;
-        unchecked {
-            // Must be less than than the vault balance.
-            _escrowedTokens[fromAsset] += amount - fee;
-        }
+        _setTokenEscrow(
+            sendAssetHash,
+            fallbackUser,
+            fromAsset,
+            amount - fee
+        );
         // Notice that the fee is subtracted from the escrow. If this is not done, the escrow can be used as a cheap denial of service vector.
         // This is unfortunate.
 
@@ -1176,7 +1176,65 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
 
     /**
      * @notice Completes a cross-chain swap by converting units to the desired token.
-     * @dev Can only be called by the chainInterface.
+     * @dev Internal function that implement the majority of swap logic.
+     */
+    function _receiveAsset(
+        bytes32 channelId,
+        bytes calldata fromVault,
+        uint256 toAssetIndex,
+        address toAccount,
+        uint256 U,
+        uint256 minOut,
+        uint256 fromAmount,
+        bytes calldata fromAsset,
+        uint32 blockNumberMod
+    ) nonReentrant onlyChainInterface onlyConnectedPool(channelId, fromVault) internal returns (bytes1, uint256) {
+        _updateAmplification();
+
+        // Convert the asset index (toAsset) into the asset to be purchased.
+        address toAsset = _tokenIndexing[toAssetIndex];
+
+
+        // Calculate the swap return value. Fee is always taken on the sending token.
+        uint256 purchasedTokens = calcReceiveAsset(toAsset, U);
+
+        // Check if the swap is according to the swap limits
+        uint256 deltaSecurityLimit = purchasedTokens * _weight[toAsset];
+        if (_maxUnitCapacity <= deltaSecurityLimit) return(0x12, 0); //revert ExceedsSecurityLimit(Units - MUC)
+        unchecked {
+            // We know that _maxUnitCapacity > deltaSecurityLimit so it cannot underflow.
+            _maxUnitCapacity -= deltaSecurityLimit;
+        }
+        bool securityLimitStatus = _updateUnitCapacity(deltaSecurityLimit);
+        if (!securityLimitStatus) return(0x12, 0); //revert ExceedsSecurityLimit(Units - MUC)
+
+        // Ensure the user is satisfied with the number of tokens.
+        if (minOut > purchasedTokens) return (0x11, 0); // revert ReturnInsufficient(purchasedTokens, minOut);
+
+        // Track units for balance0 computation.
+        _unitTracker -= int256(U);
+
+        // Send the assets to the user.
+        ERC20(toAsset).safeTransfer(toAccount, purchasedTokens);
+
+        emit ReceiveAsset(
+            channelId, 
+            fromVault, 
+            toAccount, 
+            toAsset, 
+            U, 
+            purchasedTokens, 
+            fromAmount,
+            fromAsset,
+            blockNumberMod
+        );
+
+        return (0x00, purchasedTokens);
+    }
+
+    /**
+     * @notice Completes a cross-chain swap by converting units to the desired token.
+     * @dev Security checks are performed by _receiveAsset.
      * @param channelId The source chain identifier.
      * @param fromVault The source vault.
      * @param toAssetIndex Index of the asset to be purchased.
@@ -1197,45 +1255,26 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
         uint256 fromAmount,
         bytes calldata fromAsset,
         uint32 blockNumberMod
-    ) nonReentrant onlyChainInterface onlyConnectedPool(channelId, fromVault) public override returns (uint256) {
-        _updateAmplification();
-
-        // Convert the asset index (toAsset) into the asset to be purchased.
-        address toAsset = _tokenIndexing[toAssetIndex];
-
-
-        // Calculate the swap return value. Fee is always taken on the sending token.
-        uint256 purchasedTokens = calcReceiveAsset(toAsset, U);
-
-        // Check if the swap is according to the swap limits
-        uint256 deltaSecurityLimit = purchasedTokens * _weight[toAsset];
-        _maxUnitCapacity -= deltaSecurityLimit;
-        _updateUnitCapacity(deltaSecurityLimit);
-
-        // Ensure the user is satisfied with the number of tokens.
-        if (minOut > purchasedTokens) revert ReturnInsufficient(purchasedTokens, minOut);
-
-        // Track units for balance0 computation.
-        _unitTracker -= int256(U);
-
-        // Send the assets to the user.
-        ERC20(toAsset).safeTransfer(toAccount, purchasedTokens);
-
-        emit ReceiveAsset(
-            channelId, 
-            fromVault, 
-            toAccount, 
-            toAsset, 
-            U, 
-            purchasedTokens, 
+    ) external override returns (bytes1) {
+        (bytes1 status, uint256 purchasedTokens) = _receiveAsset(
+            channelId,
+            fromVault,
+            toAssetIndex,
+            toAccount,
+            U,
+            minOut,
             fromAmount,
             fromAsset,
             blockNumberMod
         );
 
-        return purchasedTokens;
+        return status;
     }
 
+    /**
+     * @notice Exposes _receiveAsset and calls an external contract
+     * @dev Security checks are performed by _receiveAsset.
+     */
     function receiveAsset(
         bytes32 channelId,
         bytes calldata fromVault,
@@ -1248,8 +1287,8 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
         uint32 blockNumberMod,
         address dataTarget,
         bytes calldata data
-    ) external override returns (uint256) {
-        uint256 purchasedTokens = receiveAsset(
+    ) external override returns (bytes1) {
+        (bytes1 status,uint256 purchasedTokens) = _receiveAsset(
             channelId,
             fromVault,
             toAssetIndex,
@@ -1260,6 +1299,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
             fromAsset,
             blockNumberMod
         );
+        if (status != 0x00) return status;
 
         // Let users define custom logic which should be executed after the swap.
         // The logic is not contained within a try - except so if the logic reverts
@@ -1268,7 +1308,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
         ICatalystReceiver(dataTarget).onCatalystCall(purchasedTokens, data);
         // If dataTarget doesn't implement onCatalystCall BUT implements a fallback function, the call will still succeed.
 
-        return purchasedTokens;
+        return status;
     }
 
     //--- Liquidity swapping ---//
@@ -1428,14 +1468,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
             uint32(block.number)    // May overflow, but this is desired (% 2**32)
         );
 
-        // Escrow the vault token used to purchase units. These will be sent back if transaction doesn't arrive / timeout.
-        require(_escrowedVaultTokensFor[sendLiquidityHash] == address(0));
-        _escrowedVaultTokensFor[sendLiquidityHash] = fallbackUser;
-        _escrowedVaultTokens += vaultTokens;
-
-        // Adjustment of the security limit is delayed until ack to avoid
-        // a router abusing timeout to circumvent the security limit at a low cost.
-
+        // Emit event before setting escrow to clear up variables from stack.
         emit SendLiquidity(
             channelId,
             toVault,
@@ -1444,6 +1477,16 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
             minOut,
             U
         );
+
+        // Escrow the vault token used to purchase units. These will be sent back if transaction doesn't arrive / timeout.
+        _setLiquidityEscrow(
+            sendLiquidityHash,
+            fallbackUser,
+            vaultTokens
+        );
+
+        // Adjustment of the security limit is delayed until ack to avoid
+        // a router abusing timeout to circumvent the security limit at a low cost.
 
         return U;
     }
@@ -1471,7 +1514,86 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
 
     /**
      * @notice Completes a cross-chain liquidity swap by converting units to tokens and depositing.
-     * @dev Called exclusively by the chainInterface.
+     * @dev Internal function that implement the majority of swap logic.
+     */
+    function _receiveLiquidity(
+        bytes32 channelId,
+        bytes calldata fromVault,
+        address toAccount,
+        uint256 U,
+        uint256 minVaultTokens,
+        uint256 minReferenceAsset,
+        uint256 fromAmount,
+        uint32 blockNumberMod
+    ) nonReentrant onlyChainInterface onlyConnectedPool(channelId, fromVault) internal returns (bytes1, uint256) {
+        _updateAmplification();
+
+        int256 oneMinusAmp = _oneMinusAmp;
+
+        // Compute walpha_0 to find the reference balances. This lets us evaluate the
+        // number of tokens the vault should have If the price in the pool is 1:1.
+        (uint256 walpha_0_ampped, uint256 it) = _computeBalance0(oneMinusAmp);
+
+        int256 oneMinusAmpInverse = FixedPointMathLib.WADWAD / oneMinusAmp;
+
+        uint256 it_times_walpha_amped = it * walpha_0_ampped;
+
+        // On totalSupply. Do not add escrow amount, as higher amount results in a larger return.
+        uint256 vaultTokens = _calcPriceCurveLimitShare(U, totalSupply, it_times_walpha_amped, oneMinusAmpInverse);
+
+        // Check if more than the minimum output is returned.
+        if (minVaultTokens > vaultTokens) return (0x11, 0); // revert ReturnInsufficient(vaultTokens, minVaultTokens);
+        // Then check if the minimum number of reference assets is honoured.
+        if (minReferenceAsset != 0) {
+            uint256 walpha_0 = uint256(FixedPointMathLib.powWad(  // uint256 casting: Is always positive.
+                int256(walpha_0_ampped), // int256 casting: If casts to a negative number, powWad fails because it uses ln which can't take negative numbers.
+                oneMinusAmpInverse
+            )); 
+            // Add escrow to ensure that even if all ongoing transaction revert, the user gets their expected amount.
+            // Add vault tokens because they are going to be minted.
+            uint256 walpha_0_owned = ((walpha_0 * vaultTokens) / (totalSupply + _escrowedVaultTokens + vaultTokens)) / FixedPointMathLib.WAD;
+            if (minReferenceAsset > walpha_0_owned) return (0x21, 0);  // revert ReturnInsufficient(walpha_0_owned, minReferenceAsset);
+        }
+
+        // Update the unit tracker:
+        _unitTracker -= int256(U);
+
+        // Security limit
+        {
+            // To calculate the vaultTokenEquiv, we set \alpha_t = \alpha_0.
+            // This should be a close enough approximation.
+            // If U > it_times_walpha_amped, then U can purchase more than 50% of the vault.
+            // And the below calculation doesn't work.
+            if (it_times_walpha_amped <= U) return(0x12, 0); // revert ExceedsSecurityLimit(U - it_times_walpha_amped);
+            uint256 vaultTokenEquiv = FixedPointMathLib.mulWadUp(
+                uint256(FixedPointMathLib.powWad(  // Always casts a positive value
+                    int256(it_times_walpha_amped),  // If casting overflows to a negative number, powWad fails
+                    oneMinusAmpInverse
+                )),
+                FixedPointMathLib.WAD - uint256(FixedPointMathLib.powWad(  // powWad is always <= 1, as 'base' is always <= 1
+                    int256(FixedPointMathLib.divWadDown(  // Casting never overflows, as division result is always <= 1
+                        it_times_walpha_amped - U,
+                        it_times_walpha_amped
+                    )),
+                    oneMinusAmpInverse
+                ))
+            );
+            // Check if the swap is according to the swap limits
+            bool securityLimitStatus = _updateUnitCapacity(FixedPointMathLib.mulWadDown(2, vaultTokenEquiv));
+            if (!securityLimitStatus) return(0x12, 0); //revert ExceedsSecurityLimit(Units - MUC)
+        }
+
+        // Mint vault tokens for the user.
+        _mint(toAccount, vaultTokens);
+
+        emit ReceiveLiquidity(channelId, fromVault, toAccount, U, vaultTokens, fromAmount, blockNumberMod);
+
+        return (0x00, vaultTokens);
+    }
+
+    /**
+     * @notice Completes a cross-chain liquidity swap by converting units to tokens and depositing.
+     * @dev Security checks are performed by _receiveLiquidity.
      * While the description says units are converted to tokens and then deposited, units are converted
      * directly to vault tokens through the following equation: pt = PT · (((N · wa_0^(1-k) + U)/(N · wa_0^(1-k))^(1/(1-k)) - 1)
      * @param channelId The source chain identifier.
@@ -1493,76 +1615,29 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
         uint256 minReferenceAsset,
         uint256 fromAmount,
         uint32 blockNumberMod
-    ) nonReentrant onlyChainInterface onlyConnectedPool(channelId, fromVault) public override returns (uint256) {
-        _updateAmplification();
+    ) external override returns (bytes1) {
+        (bytes1 status, uint256 purchasedTokens) = _receiveLiquidity(
+            channelId,
+            fromVault,
+            toAccount,
+            U,
+            minVaultTokens,
+            minReferenceAsset,
+            fromAmount,
+            blockNumberMod
+        );
 
-        int256 oneMinusAmp = _oneMinusAmp;
-
-        // Compute walpha_0 to find the reference balances. This lets us evaluate the
-        // number of tokens the vault should have If the price in the pool is 1:1.
-        (uint256 walpha_0_ampped, uint256 it) = _computeBalance0(oneMinusAmp);
-
-        int256 oneMinusAmpInverse = FixedPointMathLib.WADWAD / oneMinusAmp;
-
-        uint256 it_times_walpha_amped = it * walpha_0_ampped;
-
-        // On totalSupply. Do not add escrow amount, as higher amount results in a larger return.
-        uint256 vaultTokens = _calcPriceCurveLimitShare(U, totalSupply, it_times_walpha_amped, oneMinusAmpInverse);
-
-        // Check if more than the minimum output is returned.
-        if(minVaultTokens > vaultTokens) revert ReturnInsufficient(vaultTokens, minVaultTokens);
-        // Then check if the minimum number of reference assets is honoured.
-        if (minReferenceAsset != 0) {
-            uint256 walpha_0 = uint256(FixedPointMathLib.powWad(  // uint256 casting: Is always positive.
-                int256(walpha_0_ampped), // int256 casting: If casts to a negative number, powWad fails because it uses ln which can't take negative numbers.
-                oneMinusAmpInverse
-            )); 
-            // Add escrow to ensure that even if all ongoing transaction revert, the user gets their expected amount.
-            // Add vault tokens because they are going to be minted.
-            uint256 walpha_0_owned = ((walpha_0 * vaultTokens) / (totalSupply + _escrowedVaultTokens + vaultTokens)) / FixedPointMathLib.WAD;
-            if (minReferenceAsset > walpha_0_owned) revert ReturnInsufficient(walpha_0_owned, minReferenceAsset);
-        }
-
-        // Update the unit tracker:
-        _unitTracker -= int256(U);
-
-        // Security limit
-        {
-            // To calculate the vaultTokenEquiv, we set \alpha_t = \alpha_0.
-            // This should be a close enough approximation.
-            // If U > it_times_walpha_amped, then U can purchase more than 50% of the vault.
-            // And the below calculation doesn't work.
-            if (it_times_walpha_amped <= U) revert ExceedsSecurityLimit(U - it_times_walpha_amped);
-            uint256 vaultTokenEquiv = FixedPointMathLib.mulWadUp(
-                uint256(FixedPointMathLib.powWad(  // Always casts a positive value
-                    int256(it_times_walpha_amped),  // If casting overflows to a negative number, powWad fails
-                    oneMinusAmpInverse
-                )),
-                FixedPointMathLib.WAD - uint256(FixedPointMathLib.powWad(  // powWad is always <= 1, as 'base' is always <= 1
-                    int256(FixedPointMathLib.divWadDown(  // Casting never overflows, as division result is always <= 1
-                        it_times_walpha_amped - U,
-                        it_times_walpha_amped
-                    )),
-                    oneMinusAmpInverse
-                ))
-            );
-            // Check if the swap is according to the swap limits
-            _updateUnitCapacity(FixedPointMathLib.mulWadDown(2, vaultTokenEquiv));
-        }
-
-        // Mint vault tokens for the user.
-        _mint(toAccount, vaultTokens);
-
-        emit ReceiveLiquidity(channelId, fromVault, toAccount, U, vaultTokens, fromAmount, blockNumberMod);
-
-        return vaultTokens;
+        return status;
     }
 
-    
+    /**
+     * @notice Exposes _receiveLiquidity and calls an external contract
+     * @dev Security checks are performed by _receiveLiquidity.
+     */
     function receiveLiquidity(
         bytes32 channelId,
         bytes calldata fromVault,
-        address who,
+        address toAccount,
         uint256 U,
         uint256 minVaultTokens,
         uint256 minReferenceAsset,
@@ -1570,17 +1645,18 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
         uint32 blockNumberMod,
         address dataTarget,
         bytes calldata data
-    ) external override returns (uint256) {
-        uint256 purchasedVaultTokens = receiveLiquidity(
+    ) external override returns (bytes1) {
+        (bytes1 status, uint256 purchasedVaultTokens)  = _receiveLiquidity(
             channelId,
             fromVault,
-            who,
+            toAccount,
             U,
             minVaultTokens,
             minReferenceAsset,
             fromAmount,
             blockNumberMod
         );
+        if (status != 0x00) return status;
 
         // Let users define custom logic which should be executed after the swap.
         // The logic is not contained within a try - except so if the logic reverts
@@ -1589,7 +1665,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
         ICatalystReceiver(dataTarget).onCatalystCall(purchasedVaultTokens, data);
         // If dataTarget doesn't implement onCatalystCall BUT implements a fallback function, the call will still succeed.
 
-        return purchasedVaultTokens;
+        return status;
     }
 
     //-- Escrow Functions --//

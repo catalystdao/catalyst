@@ -2,8 +2,8 @@
 
 pragma solidity ^0.8.16;
 
-import "./polymerase/IbcDispatcher.sol";
-import "./polymerase/IbcReceiver.sol";
+import "./external/vIBC/IbcDispatcher.sol";
+import "./external/vIBC/IbcReceiver.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./ICatalystV1Vault.sol";
 import "./interfaces/ICatalystV1VaultState.sol"; // structs
@@ -115,7 +115,7 @@ contract CatalystIBCInterface is Ownable, IbcReceiver {
      * @notice Packs cross-chain swap information into a bytearray and sends it to the target vault with IBC.
      * @dev Callable by anyone but this cannot be abused since the connection management ensures no
      * wrong messages enter a healthy vault.
-     * @param channelId The target chain identifier.
+     * @param channelId The target chain identifier. 
      * @param toVault The target vault on the target chain. Encoded in 64 + 1 bytes.
      * @param toAccount The recipient of the transaction on the target chain. Encoded in 64 + 1 bytes.
      * @param U The calculated liquidity reference. (Units)
