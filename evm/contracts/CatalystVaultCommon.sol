@@ -304,14 +304,11 @@ abstract contract CatalystVaultCommon is
             unitCapacityReleased /= DECAY_RATE;
         }
 
-        // Set last change to block.timestamp.
-        // Otherwise it would have to be repeated twice. (small deployment savings)
-        _usedUnitCapacityTimestamp = block.timestamp; 
-
         uint256 UC = _usedUnitCapacity; 
         // If the change is greater than the units which have passed through the limit is max
         if (UC <= unitCapacityReleased) {
             if (Units > MUC) return false; // revert ExceedsSecurityLimit(Units - MUC);
+            _usedUnitCapacityTimestamp = block.timestamp;  // Set last change to block.timestamp.
             _usedUnitCapacity = Units;
             return true;
         }
@@ -322,6 +319,7 @@ abstract contract CatalystVaultCommon is
             newUnitFlow -= unitCapacityReleased;
         }
         if (newUnitFlow > MUC) return false; // revert ExceedsSecurityLimit(newUnitFlow - MUC);
+        _usedUnitCapacityTimestamp = block.timestamp;  // Set last change to block.timestamp.
         _usedUnitCapacity = newUnitFlow;
         return true;
     }
