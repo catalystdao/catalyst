@@ -792,12 +792,10 @@ contract CatalystVaultVolatile is CatalystVaultCommon {
      * @dev Internal function that implement the majority of swap logic.
      */
     function _receiveAsset(
-        bytes32 channelId,
-        bytes calldata fromVault,
         address toAsset,
         uint256 U,
         uint256 minOut
-    ) nonReentrant onlyChainInterface onlyConnectedPool(channelId, fromVault) internal returns (bytes1, uint256) {
+    ) nonReentrant onlyChainInterface internal returns (bytes1, uint256) {
         _updateWeights();
 
         // Check and update the security limit.
@@ -836,12 +834,10 @@ contract CatalystVaultVolatile is CatalystVaultCommon {
         uint256 fromAmount,
         bytes calldata fromAsset,
         uint32 blockNumberMod
-    ) external override returns (bytes1) {
+    ) onlyConnectedPool(channelId, fromVault) external override returns (bytes1) {
         // Convert the asset index (toAsset) into the asset to be purchased.
         address toAsset = _tokenIndexing[toAssetIndex];
         (bytes1 status, uint256 purchasedTokens) = _receiveAsset(
-            channelId,
-            fromVault,
             toAsset,
             U,
             minOut
@@ -882,12 +878,10 @@ contract CatalystVaultVolatile is CatalystVaultCommon {
         uint32 blockNumberMod,
         address dataTarget,
         bytes calldata data
-    ) external override returns (bytes1) {
+    ) onlyConnectedPool(channelId, fromVault) external override returns (bytes1) {
         // Convert the asset index (toAsset) into the asset to be purchased.
         address toAsset = _tokenIndexing[toAssetIndex];
         (bytes1 status,uint256 purchasedTokens) = _receiveAsset(
-            channelId,
-            fromVault,
             toAsset,
             U,
             minOut
@@ -1048,12 +1042,10 @@ contract CatalystVaultVolatile is CatalystVaultCommon {
      * @dev Internal function that implement the majority of swap logic.
      */
     function _receiveLiquidity(
-        bytes32 channelId,
-        bytes calldata fromVault,
         uint256 U,
         uint256 minVaultTokens,
         uint256 minReferenceAsset
-    ) nonReentrant onlyChainInterface onlyConnectedPool(channelId, fromVault) internal returns (bytes1, uint256) {
+    ) nonReentrant onlyChainInterface internal returns (bytes1, uint256) {
         _updateWeights();
 
         bool securityLimitStatus = _updateUnitCapacity(U);
@@ -1147,10 +1139,8 @@ contract CatalystVaultVolatile is CatalystVaultCommon {
         uint256 minReferenceAsset,
         uint256 fromAmount,
         uint32 blockNumberMod
-    ) external override returns (bytes1) {
+    ) onlyConnectedPool(channelId, fromVault) external override returns (bytes1) {
         (bytes1 status, uint256 purchasedVaultTokens) = _receiveLiquidity(
-            channelId,
-            fromVault,
             U,
             minVaultTokens,
             minReferenceAsset
@@ -1180,10 +1170,8 @@ contract CatalystVaultVolatile is CatalystVaultCommon {
         uint32 blockNumberMod,
         address dataTarget,
         bytes calldata data
-    ) external override returns (bytes1) {
+    ) onlyConnectedPool(channelId, fromVault) external override returns (bytes1) {
         (bytes1 status, uint256 purchasedVaultTokens) = _receiveLiquidity(
-            channelId,
-            fromVault,
             U,
             minVaultTokens,
             minReferenceAsset

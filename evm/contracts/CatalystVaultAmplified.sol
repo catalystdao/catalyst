@@ -1179,12 +1179,10 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
      * @dev Internal function that implement the majority of swap logic.
      */
     function _receiveAsset(
-        bytes32 channelId,
-        bytes calldata fromVault,
         address toAsset,
         uint256 U,
         uint256 minOut
-    ) nonReentrant onlyChainInterface onlyConnectedPool(channelId, fromVault) internal returns (bytes1, uint256) {
+    ) nonReentrant onlyChainInterface internal returns (bytes1, uint256) {
         _updateAmplification();
 
         // Calculate the swap return value. Fee is always taken on the sending token.
@@ -1232,12 +1230,10 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
         uint256 fromAmount,
         bytes calldata fromAsset,
         uint32 blockNumberMod
-    ) external override returns (bytes1) {
+    ) onlyConnectedPool(channelId, fromVault) external override returns (bytes1) {
         // Convert the asset index (toAsset) into the asset to be purchased.
         address toAsset = _tokenIndexing[toAssetIndex];
         (bytes1 status, uint256 purchasedTokens) = _receiveAsset(
-            channelId,
-            fromVault,
             toAsset,
             U,
             minOut
@@ -1278,12 +1274,10 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
         uint32 blockNumberMod,
         address dataTarget,
         bytes calldata data
-    ) external override returns (bytes1) {
+    ) onlyConnectedPool(channelId, fromVault) external override returns (bytes1) {
         // Convert the asset index (toAsset) into the asset to be purchased.
         address toAsset = _tokenIndexing[toAssetIndex];
         (bytes1 status,uint256 purchasedTokens) = _receiveAsset(
-            channelId,
-            fromVault,
             toAsset,
             U,
             minOut
@@ -1521,12 +1515,10 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
      * @dev Internal function that implement the majority of swap logic.
      */
     function _receiveLiquidity(
-        bytes32 channelId,
-        bytes calldata fromVault,
         uint256 U,
         uint256 minVaultTokens,
         uint256 minReferenceAsset
-    ) nonReentrant onlyChainInterface onlyConnectedPool(channelId, fromVault) internal returns (bytes1, uint256) {
+    ) nonReentrant onlyChainInterface internal returns (bytes1, uint256) {
         _updateAmplification();
 
         int256 oneMinusAmp = _oneMinusAmp;
@@ -1611,10 +1603,8 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
         uint256 minReferenceAsset,
         uint256 fromAmount,
         uint32 blockNumberMod
-    ) external override returns (bytes1) {
+    ) onlyConnectedPool(channelId, fromVault) external override returns (bytes1) {
         (bytes1 status, uint256 purchasedVaultTokens) = _receiveLiquidity(
-            channelId,
-            fromVault,
             U,
             minVaultTokens,
             minReferenceAsset
@@ -1645,10 +1635,8 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
         uint32 blockNumberMod,
         address dataTarget,
         bytes calldata data
-    ) external override returns (bytes1) {
+    ) onlyConnectedPool(channelId, fromVault) external override returns (bytes1) {
         (bytes1 status, uint256 purchasedVaultTokens)  = _receiveLiquidity(
-            channelId,
-            fromVault,
             U,
             minVaultTokens,
             minReferenceAsset
