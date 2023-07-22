@@ -1181,19 +1181,11 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
     function _receiveAsset(
         bytes32 channelId,
         bytes calldata fromVault,
-        uint256 toAssetIndex,
-        address toAccount,
+        address toAsset,
         uint256 U,
-        uint256 minOut,
-        uint256 fromAmount,
-        bytes calldata fromAsset,
-        uint32 blockNumberMod
+        uint256 minOut
     ) nonReentrant onlyChainInterface onlyConnectedPool(channelId, fromVault) internal returns (bytes1, uint256) {
         _updateAmplification();
-
-        // Convert the asset index (toAsset) into the asset to be purchased.
-        address toAsset = _tokenIndexing[toAssetIndex];
-
 
         // Calculate the swap return value. Fee is always taken on the sending token.
         uint256 purchasedTokens = calcReceiveAsset(toAsset, U);
@@ -1213,21 +1205,6 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
 
         // Track units for balance0 computation.
         _unitTracker -= int256(U);
-
-        // Send the assets to the user.
-        ERC20(toAsset).safeTransfer(toAccount, purchasedTokens);
-
-        emit ReceiveAsset(
-            channelId, 
-            fromVault, 
-            toAccount, 
-            toAsset, 
-            U, 
-            purchasedTokens, 
-            fromAmount,
-            fromAsset,
-            blockNumberMod
-        );
 
         return (0x00, purchasedTokens);
     }
@@ -1256,19 +1233,33 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
         bytes calldata fromAsset,
         uint32 blockNumberMod
     ) external override returns (bytes1) {
+        // Convert the asset index (toAsset) into the asset to be purchased.
+        address toAsset = _tokenIndexing[toAssetIndex];
         (bytes1 status, uint256 purchasedTokens) = _receiveAsset(
             channelId,
             fromVault,
-            toAssetIndex,
-            toAccount,
+            toAsset,
             U,
-            minOut,
+            minOut
+        );
+        if (status != 0x00) return status;
+
+        emit ReceiveAsset(
+            channelId, 
+            fromVault, 
+            toAccount, 
+            toAsset, 
+            U, 
+            purchasedTokens, 
             fromAmount,
             fromAsset,
             blockNumberMod
         );
 
-        return status;
+        // Send the assets to the user.
+        ERC20(_tokenIndexing[toAssetIndex]).safeTransfer(toAccount, purchasedTokens);
+
+        return 0x00;
     }
 
     /**
@@ -1288,18 +1279,31 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
         address dataTarget,
         bytes calldata data
     ) external override returns (bytes1) {
+        // Convert the asset index (toAsset) into the asset to be purchased.
+        address toAsset = _tokenIndexing[toAssetIndex];
         (bytes1 status,uint256 purchasedTokens) = _receiveAsset(
             channelId,
             fromVault,
-            toAssetIndex,
-            toAccount,
+            toAsset,
             U,
-            minOut,
+            minOut
+        );
+        if (status != 0x00) return status;
+
+        emit ReceiveAsset(
+            channelId, 
+            fromVault, 
+            toAccount, 
+            toAsset, 
+            U, 
+            purchasedTokens, 
             fromAmount,
             fromAsset,
             blockNumberMod
         );
-        if (status != 0x00) return status;
+
+        // Send the assets to the user.
+        ERC20(toAsset).safeTransfer(toAccount, purchasedTokens);
 
         // Let users define custom logic which should be executed after the swap.
         // The logic is not contained within a try - except so if the logic reverts
@@ -1308,7 +1312,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
         ICatalystReceiver(dataTarget).onCatalystCall(purchasedTokens, data);
         // If dataTarget doesn't implement onCatalystCall BUT implements a fallback function, the call will still succeed.
 
-        return status;
+        return 0x00;
     }
 
     //--- Liquidity swapping ---//
@@ -1519,12 +1523,9 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
     function _receiveLiquidity(
         bytes32 channelId,
         bytes calldata fromVault,
-        address toAccount,
         uint256 U,
         uint256 minVaultTokens,
-        uint256 minReferenceAsset,
-        uint256 fromAmount,
-        uint32 blockNumberMod
+        uint256 minReferenceAsset
     ) nonReentrant onlyChainInterface onlyConnectedPool(channelId, fromVault) internal returns (bytes1, uint256) {
         _updateAmplification();
 
@@ -1583,11 +1584,6 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
             if (!securityLimitStatus) return(0x12, 0); //revert ExceedsSecurityLimit(Units - MUC)
         }
 
-        // Mint vault tokens for the user.
-        _mint(toAccount, vaultTokens);
-
-        emit ReceiveLiquidity(channelId, fromVault, toAccount, U, vaultTokens, fromAmount, blockNumberMod);
-
         return (0x00, vaultTokens);
     }
 
@@ -1616,18 +1612,22 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
         uint256 fromAmount,
         uint32 blockNumberMod
     ) external override returns (bytes1) {
-        (bytes1 status, uint256 purchasedTokens) = _receiveLiquidity(
+        (bytes1 status, uint256 purchasedVaultTokens) = _receiveLiquidity(
             channelId,
             fromVault,
-            toAccount,
             U,
             minVaultTokens,
-            minReferenceAsset,
-            fromAmount,
-            blockNumberMod
+            minReferenceAsset
         );
+        if (status != 0x00) return status;
 
-        return status;
+        emit ReceiveLiquidity(channelId, fromVault, toAccount, U, purchasedVaultTokens, fromAmount, blockNumberMod);
+
+        // Mint vault tokens for the user.
+        _mint(toAccount, purchasedVaultTokens);
+
+
+        return 0x00;
     }
 
     /**
@@ -1649,14 +1649,16 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
         (bytes1 status, uint256 purchasedVaultTokens)  = _receiveLiquidity(
             channelId,
             fromVault,
-            toAccount,
             U,
             minVaultTokens,
-            minReferenceAsset,
-            fromAmount,
-            blockNumberMod
+            minReferenceAsset
         );
         if (status != 0x00) return status;
+
+        emit ReceiveLiquidity(channelId, fromVault, toAccount, U, purchasedVaultTokens, fromAmount, blockNumberMod);
+
+        // Mint vault tokens for the user.
+        _mint(toAccount, purchasedVaultTokens);
 
         // Let users define custom logic which should be executed after the swap.
         // The logic is not contained within a try - except so if the logic reverts
@@ -1665,7 +1667,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
         ICatalystReceiver(dataTarget).onCatalystCall(purchasedVaultTokens, data);
         // If dataTarget doesn't implement onCatalystCall BUT implements a fallback function, the call will still succeed.
 
-        return status;
+        return 0x00;
     }
 
     //-- Escrow Functions --//
