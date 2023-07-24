@@ -140,7 +140,7 @@ interface ICatalystV1VaultPermissionless {
         uint256 fromAmount,
         bytes calldata fromAsset,
         uint32 blockNumberMod
-    ) external returns (bytes1);
+    ) external;
 
     function receiveAsset(
         bytes32 channelId,
@@ -154,7 +154,7 @@ interface ICatalystV1VaultPermissionless {
         uint32 blockNumberMod,
         address dataTarget,
         bytes calldata data
-    ) external returns (bytes1);
+    ) external;
 
     /**
      * @notice Initiate a cross-chain liquidity swap by withdrawing tokens and converting them to units.
@@ -201,7 +201,6 @@ interface ICatalystV1VaultPermissionless {
      * @param minReferenceAsset The minimum number of reference asset the vaults tokens are worth. Otherwise: Reject
      * @param fromAmount Used to match cross-chain swap events. The input amount on the sending chain.
      * @param blockNumberMod Used to match cross-chain swap events. The block number from the host side.
-     * @return uint256 Number of vault tokens minted to the recipient.
      */
     function receiveLiquidity(
         bytes32 channelId,
@@ -212,7 +211,7 @@ interface ICatalystV1VaultPermissionless {
         uint256 minReferenceAsset,
         uint256 fromAmount,
         uint32 blockNumberMod
-    ) external returns (bytes1);
+    ) external;
 
     function receiveLiquidity(
         bytes32 channelId,
@@ -225,5 +224,5 @@ interface ICatalystV1VaultPermissionless {
         uint32 blockNumberMod,
         address dataTarget,
         bytes calldata data
-    ) external returns (bytes1);
+    ) external;
 }

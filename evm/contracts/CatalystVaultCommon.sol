@@ -288,7 +288,7 @@ abstract contract CatalystVaultCommon is
      * @dev Implement a lot of similar logic to getUnitCapacity. 
      * @param Units The number of units to check and set.
      */
-    function _updateUnitCapacity(uint256 Units) internal returns(bool status) {
+    function _updateUnitCapacity(uint256 Units) internal {
         uint256 MUC = _maxUnitCapacity;
 
         // The delta change to the limit is: timePassed · slope = timePassed · Max/decayrate
@@ -307,10 +307,10 @@ abstract contract CatalystVaultCommon is
         uint256 UC = _usedUnitCapacity; 
         // If the change is greater than the units which have passed through the limit is max
         if (UC <= unitCapacityReleased) {
-            if (Units > MUC) return false; // revert ExceedsSecurityLimit(Units - MUC);
+            if (Units > MUC) revert ExceedsSecurityLimit();
             _usedUnitCapacityTimestamp = block.timestamp;  // Set last change to block.timestamp.
             _usedUnitCapacity = Units;
-            return true;
+            return;
         }
         
         uint256 newUnitFlow = UC + Units;  // (UC + units) - unitCapacityReleased
@@ -318,10 +318,10 @@ abstract contract CatalystVaultCommon is
             // We know that UC > unitCapacityReleased
             newUnitFlow -= unitCapacityReleased;
         }
-        if (newUnitFlow > MUC) return false; // revert ExceedsSecurityLimit(newUnitFlow - MUC);
+        if (newUnitFlow > MUC) revert ExceedsSecurityLimit();
         _usedUnitCapacityTimestamp = block.timestamp;  // Set last change to block.timestamp.
         _usedUnitCapacity = newUnitFlow;
-        return true;
+        return;
     }
 
 

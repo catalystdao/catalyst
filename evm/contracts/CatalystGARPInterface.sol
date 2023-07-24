@@ -50,6 +50,14 @@ contract CatalystGARPInterface is Ownable, ICrossChainReceiver, Bytes65, IMessag
         _;
     }
 
+    function _handleError(bytes memory err) internal returns (bytes1) {
+        bytes32 errorHash = keccak256(err);
+        // TODO: Use memory slices to use the same error for both sendAsset and receiveAsset?
+        if (keccak256(abi.encodeWithSelector(ExceedsSecurityLimit.selector)) == errorHash) return 0x11;
+        if (keccak256(abi.encodeWithSelector(ReturnInsufficientOnReceive.selector)) == errorHash) return 0x12;
+        return 0x01;
+    }
+
     /// @notice Get the address on the destination chain.
     function getAddressForChainIdentifier(bytes32 chainIdentifier) view public returns(bytes memory identifier) {
         identifier = chainIdentifierToDestinationAddress[chainIdentifier];
@@ -299,7 +307,6 @@ contract CatalystGARPInterface is Ownable, ICrossChainReceiver, Bytes65, IMessag
         if (uint96(bytes12(data[TO_ACCOUNT_START+32:TO_ACCOUNT_START_EVM])) != 0) revert InvalidAddress();  // Check the next 32-20=12 bytes are 0.
         // To vault will not be checked. If it is assumed that any error is random, then an incorrect toVault will result in the call failling.
 
-        acknowledgement = 0x01;
         if (context == CTX0_ASSET_SWAP) {
             return acknowledgement = _handleOrdinarySwap(sourceIdentifierbytes, data);
         }
@@ -308,6 +315,7 @@ contract CatalystGARPInterface is Ownable, ICrossChainReceiver, Bytes65, IMessag
         }
         /* revert InvalidContext(context); */
         // No return here. Instead, another implementation can override this implementation. It should just keep adding ifs with returns inside.
+        return acknowledgement = 0x01;
     }
 
 
@@ -320,7 +328,7 @@ contract CatalystGARPInterface is Ownable, ICrossChainReceiver, Bytes65, IMessag
         uint16 dataLength = uint16(bytes2(data[CTX0_DATA_LENGTH_START:CTX0_DATA_LENGTH_END]));
         // CCI sets dataLength > 0 if calldata is passed.
         if (dataLength != 0) {
-            return ICatalystV1Vault(toVault).receiveAsset(
+            try ICatalystV1Vault(toVault).receiveAsset(
                 sourceIdentifierbytes,                                                      // connectionId
                 fromVault,                                                                   // fromVault
                 uint8(data[CTX0_TO_ASSET_INDEX_POS]),                                       // toAssetIndex
@@ -332,9 +340,13 @@ contract CatalystGARPInterface is Ownable, ICrossChainReceiver, Bytes65, IMessag
                 uint32(bytes4(data[ CTX0_BLOCK_NUMBER_START : CTX0_BLOCK_NUMBER_END ])),    // block number
                 address(bytes20(data[ CTX0_DATA_START : CTX0_DATA_START+20 ])),            // dataTarget
                 data[ CTX0_DATA_START+20 : CTX0_DATA_START+dataLength ]                     // dataArguments
-            );
+            ) {
+                return 0x00;
+            } catch (bytes memory err) {
+                return _handleError(err);
+            }
         } else {
-            return ICatalystV1Vault(toVault).receiveAsset(
+            try ICatalystV1Vault(toVault).receiveAsset(
                 sourceIdentifierbytes,                                                      // connectionId
                 fromVault,                                                                   // fromVault
                 uint8(data[CTX0_TO_ASSET_INDEX_POS]),                                       // toAssetIndex
@@ -344,7 +356,11 @@ contract CatalystGARPInterface is Ownable, ICrossChainReceiver, Bytes65, IMessag
                 uint256(bytes32(data[ CTX0_FROM_AMOUNT_START : CTX0_FROM_AMOUNT_END ])),    // fromAmount
                 bytes(data[ CTX0_FROM_ASSET_LENGTH_POS : CTX0_FROM_ASSET_END ]),            // fromAsset
                 uint32(bytes4(data[ CTX0_BLOCK_NUMBER_START : CTX0_BLOCK_NUMBER_END ]))     // blocknumber
-            );
+            ) {
+                return 0x00;
+            } catch (bytes memory err) {
+                return _handleError(err);
+            }
         }
     }
 
@@ -357,7 +373,7 @@ contract CatalystGARPInterface is Ownable, ICrossChainReceiver, Bytes65, IMessag
         uint16 dataLength = uint16(bytes2(data[CTX1_DATA_LENGTH_START:CTX1_DATA_LENGTH_END]));
         // CCI sets dataLength > 0 if calldata is passed.
         if (dataLength != 0) {
-            return ICatalystV1Vault(toVault).receiveLiquidity(
+            try ICatalystV1Vault(toVault).receiveLiquidity(
                 sourceIdentifierbytes,                                                      // connectionId
                 fromVault,                                                                  // fromVault
                 address(bytes20(data[ TO_ACCOUNT_START_EVM : TO_ACCOUNT_END ])),            // toAccount
@@ -368,9 +384,13 @@ contract CatalystGARPInterface is Ownable, ICrossChainReceiver, Bytes65, IMessag
                 uint32(bytes4(data[ CTX1_BLOCK_NUMBER_START : CTX1_BLOCK_NUMBER_END ])),    // block number
                 address(bytes20(data[ CTX1_DATA_START : CTX1_DATA_START+20 ])),             // dataTarget
                 data[ CTX1_DATA_START+20 : CTX1_DATA_START+dataLength ]                     // dataArguments
-            );
+            ) {
+                return 0x00;
+            } catch (bytes memory err) {
+                return _handleError(err);
+            }
         } else {
-            return ICatalystV1Vault(toVault).receiveLiquidity(
+            try ICatalystV1Vault(toVault).receiveLiquidity(
                 sourceIdentifierbytes,                                                      // connectionId
                 fromVault,                                                                   // fromVault
                 address(bytes20(data[ TO_ACCOUNT_START_EVM : TO_ACCOUNT_END ])),            // toAccount
@@ -379,7 +399,11 @@ contract CatalystGARPInterface is Ownable, ICrossChainReceiver, Bytes65, IMessag
                 uint256(bytes32(data[ CTX1_MIN_REFERENCE_START : CTX1_MIN_REFERENCE_END ])),// minOut
                 uint256(bytes32(data[ CTX1_FROM_AMOUNT_START : CTX1_FROM_AMOUNT_END ])),    // fromAmount
                 uint32(bytes4(data[ CTX1_BLOCK_NUMBER_START : CTX1_BLOCK_NUMBER_END ]))     // blocknumber
-            );
+            ) {
+                return 0x00;
+            } catch (bytes memory err) {
+                return _handleError(err);
+            }
         }
     }
 }

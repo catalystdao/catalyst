@@ -795,20 +795,19 @@ contract CatalystVaultVolatile is CatalystVaultCommon {
         address toAsset,
         uint256 U,
         uint256 minOut
-    ) nonReentrant onlyChainInterface internal returns (bytes1, uint256) {
+    ) nonReentrant onlyChainInterface internal returns (uint256) {
         _updateWeights();
 
         // Check and update the security limit.
-        bool securityLimitStatus = _updateUnitCapacity(U);
-        if (!securityLimitStatus) return(0x12, 0); //revert ExceedsSecurityLimit(Units - MUC)
+        _updateUnitCapacity(U);
 
         // Calculate the swap return value. Fee is always taken on the sending token.
         uint256 purchasedTokens = calcReceiveAsset(toAsset, U);
 
         // Ensure the user is satisfied with the number of tokens.
-        if (minOut > purchasedTokens) return (0x11, 0); // revert ReturnInsufficient(purchasedTokens, minOut);
+        if (minOut > purchasedTokens)  revert ReturnInsufficientOnReceive();
 
-        return (0x00, purchasedTokens);
+        return purchasedTokens;
     }
 
     /**
@@ -834,15 +833,14 @@ contract CatalystVaultVolatile is CatalystVaultCommon {
         uint256 fromAmount,
         bytes calldata fromAsset,
         uint32 blockNumberMod
-    ) onlyConnectedPool(channelId, fromVault) external override returns (bytes1) {
+    ) onlyConnectedPool(channelId, fromVault) external override {
         // Convert the asset index (toAsset) into the asset to be purchased.
         address toAsset = _tokenIndexing[toAssetIndex];
-        (bytes1 status, uint256 purchasedTokens) = _receiveAsset(
+        uint256 purchasedTokens = _receiveAsset(
             toAsset,
             U,
             minOut
         );
-        if (status != 0x00) return status;
 
         emit ReceiveAsset(
             channelId, 
@@ -858,8 +856,6 @@ contract CatalystVaultVolatile is CatalystVaultCommon {
 
         // Send the assets to the user.
         ERC20(toAsset).safeTransfer(toAccount, purchasedTokens);
-
-        return 0x00;
     }
 
     /**
@@ -878,15 +874,14 @@ contract CatalystVaultVolatile is CatalystVaultCommon {
         uint32 blockNumberMod,
         address dataTarget,
         bytes calldata data
-    ) onlyConnectedPool(channelId, fromVault) external override returns (bytes1) {
+    ) onlyConnectedPool(channelId, fromVault) external override {
         // Convert the asset index (toAsset) into the asset to be purchased.
         address toAsset = _tokenIndexing[toAssetIndex];
-        (bytes1 status,uint256 purchasedTokens) = _receiveAsset(
+        uint256 purchasedTokens = _receiveAsset(
             toAsset,
             U,
             minOut
         );
-        if (status != 0x00) return status;
 
         emit ReceiveAsset(
             channelId, 
@@ -909,8 +904,6 @@ contract CatalystVaultVolatile is CatalystVaultCommon {
         // If this is not desired, wrap further logic in a try - except at dataTarget.
         ICatalystReceiver(dataTarget).onCatalystCall(purchasedTokens, data);
         // If dataTarget doesn't implement onCatalystCall BUT implements a fallback function, the call will still succeed.
-
-        return 0x00;
     }
 
     //--- Liquidity swapping ---//
@@ -1045,11 +1038,10 @@ contract CatalystVaultVolatile is CatalystVaultCommon {
         uint256 U,
         uint256 minVaultTokens,
         uint256 minReferenceAsset
-    ) nonReentrant onlyChainInterface internal returns (bytes1, uint256) {
+    ) nonReentrant onlyChainInterface internal returns (uint256) {
         _updateWeights();
 
-        bool securityLimitStatus = _updateUnitCapacity(U);
-        if (!securityLimitStatus) return(0x12, 0); //revert ExceedsSecurityLimit(Units - MUC)
+        _updateUnitCapacity(U);
 
         // Fetch wsum.
         uint256 wsum = _maxUnitCapacity / FixedPointMathLib.LN2;
@@ -1059,7 +1051,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon {
         uint256 vaultTokens = FixedPointMathLib.mulWadDown(_calcPriceCurveLimitShare(U, wsum), totalSupply);
 
         // Check if more than the minimum output is returned.
-        if (minVaultTokens > vaultTokens) return (0x11, 0); // revert ReturnInsufficient(vaultTokens, minVaultTokens);
+        if (minVaultTokens > vaultTokens) revert ReturnInsufficientOnReceive();
         // Then check if the minimum number of reference assets is honoured.
         if (minReferenceAsset > 0) {
             // This is done by computing the reference balance through a locally observable method.
@@ -1109,10 +1101,10 @@ contract CatalystVaultVolatile is CatalystVaultCommon {
             // Add escrow to ensure that even if all ongoing transaction revert, the user gets their expected amount.
             // Add vault tokens because they are going to be minted.
             referenceAmount = (referenceAmount * vaultTokens)/(totalSupply + _escrowedVaultTokens + vaultTokens);
-            if (minReferenceAsset > referenceAmount) return (0x21, 0); // revert ReturnInsufficient(referenceAmount, minReferenceAsset);
+            if (minReferenceAsset > referenceAmount) revert ReturnInsufficientOnReceive();
         }
 
-        return (0x00, vaultTokens);
+        return vaultTokens;
     }
 
      /**
@@ -1128,7 +1120,6 @@ contract CatalystVaultVolatile is CatalystVaultCommon {
      * @param minReferenceAsset The minimum number of reference asset the vaults tokens are worth. Otherwise: Reject
      * @param fromAmount Used to match cross-chain swap events. The input amount on the source chain.
      * @param blockNumberMod Used to match cross-chain swap events. The block number from the source chain.
-     * @return uint256 Number of vault tokens minted to the recipient.
      */
     function receiveLiquidity(
         bytes32 channelId,
@@ -1139,20 +1130,17 @@ contract CatalystVaultVolatile is CatalystVaultCommon {
         uint256 minReferenceAsset,
         uint256 fromAmount,
         uint32 blockNumberMod
-    ) onlyConnectedPool(channelId, fromVault) external override returns (bytes1) {
-        (bytes1 status, uint256 purchasedVaultTokens) = _receiveLiquidity(
+    ) onlyConnectedPool(channelId, fromVault) external override {
+        uint256 purchasedVaultTokens = _receiveLiquidity(
             U,
             minVaultTokens,
             minReferenceAsset
         );
-        if (status != 0x00) return status;
 
         emit ReceiveLiquidity(channelId, fromVault, toAccount, U, purchasedVaultTokens, fromAmount, blockNumberMod);
 
         // Mint vault tokens for the user.
         _mint(toAccount, purchasedVaultTokens);
-
-        return 0x00;
     }
 
     /**
@@ -1170,13 +1158,12 @@ contract CatalystVaultVolatile is CatalystVaultCommon {
         uint32 blockNumberMod,
         address dataTarget,
         bytes calldata data
-    ) onlyConnectedPool(channelId, fromVault) external override returns (bytes1) {
-        (bytes1 status, uint256 purchasedVaultTokens) = _receiveLiquidity(
+    ) onlyConnectedPool(channelId, fromVault) external override {
+        uint256 purchasedVaultTokens = _receiveLiquidity(
             U,
             minVaultTokens,
             minReferenceAsset
         );
-        if (status != 0x00) return status;
 
         emit ReceiveLiquidity(channelId, fromVault, toAccount, U, purchasedVaultTokens, fromAmount, blockNumberMod);
 
@@ -1189,8 +1176,6 @@ contract CatalystVaultVolatile is CatalystVaultCommon {
         // If this is not desired, wrap further logic in a try - except at dataTarget.
         ICatalystReceiver(dataTarget).onCatalystCall(purchasedVaultTokens, data);
         // If dataTarget doesn't implement onCatalystCall BUT implements a fallback function, the call will still succeed.
-
-        return 0x00;
     }
 
     //-- Escrow Functions --//
