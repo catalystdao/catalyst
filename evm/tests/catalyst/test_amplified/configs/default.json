@@ -3,13 +3,13 @@
         {
             "name": "Token1",
             "symbol": "TKN1",
-            "decimals": 18,
+            "decimals": 6,
             "supply": 10000
         },
         {
             "name": "Token2",
             "symbol": "TKN2",
-            "decimals": 18,
+            "decimals": 6,
             "supply": 10000
         },
         {
@@ -37,7 +37,7 @@
             "supply": 10000
         }
     ],
-    "amplification": "10**16",
+    "amplification": "900000000000000000",
     "vaults": [
         {
             "tokens": [
@@ -46,46 +46,17 @@
                 2
             ],
             "initBalances": [
-                "10 * 10**18",
-                "1000 * 10**18",
-                "1000 * 10**6"
+                "100 * 1000000",
+                "20 * 1000000",
+                "3 * 1000000"
             ],
             "weights": [
-                100,
-                1,
-                1000000000000
+                60000,
+                300000,
+                2000000
             ],
             "name": "Amp1_VAULTNAME",
             "symbol": "A1_PS"
-        },
-        {
-            "tokens": [
-                3,
-                4
-            ],
-            "initBalances": [
-                "10 * 10**18",
-                "100 * 10**18"
-            ],
-            "weights": [
-                100,
-                10
-            ],
-            "name": "Amp2_AnotherVaultName",
-            "symbol": "A2_APN"
-        },
-        {
-            "tokens": [
-                5
-            ],
-            "initBalances": [
-                "1000 * 10**6"
-            ],
-            "weights": [
-                1000000000000
-            ],
-            "name": "Amp3_VAULTNAME2",
-            "symbol": "A3_PS2"
         }
     ]
 }
