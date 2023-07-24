@@ -33,8 +33,8 @@ panic = 'abort'
 rpath = false
 
 [dependencies]
-cosmwasm-schema = "1.2.7"
-cosmwasm-std = "1.2.7"
+cosmwasm-schema = "1.3.0"
+cosmwasm-std = "1.3.0"
 schemars = "0.8.10"
 serde = { version = "1.0.145", default-features = false, features = ["derive"] }
 thiserror = { version = "1.0.31" }
