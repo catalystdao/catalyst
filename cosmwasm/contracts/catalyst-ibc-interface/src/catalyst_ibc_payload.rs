@@ -664,7 +664,6 @@ impl CatalystEncodedAddress {
 
     /// Try to encode an address from a slice. The encoded address always has fixed length
     /// (`CATALYST_ADDRESS_LENGTH`), and is of the following form:
-    /// 
     ///     <Address length (1 byte)> <Zero padding> <Address>
     /// 
     /// # Arguments:
