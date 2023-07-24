@@ -48,4 +48,4 @@ catalyst-types = { path = "../../lib/catalyst-types" }
 fixed-point-math = { path = "../../lib/fixed-point-math" }
 
 [dev-dependencies]
-cw-multi-test = "0.16.2"
+cw-multi-test = "0.16.5"

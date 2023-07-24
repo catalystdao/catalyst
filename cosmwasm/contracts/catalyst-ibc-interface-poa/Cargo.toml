@@ -48,4 +48,4 @@ catalyst-ibc-interface = { path = "../catalyst-ibc-interface", features = ["libr
 
 
 [dev-dependencies]
-cw-multi-test = "0.16.2"
+cw-multi-test = "0.16.5"

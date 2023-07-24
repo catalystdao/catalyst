@@ -47,6 +47,6 @@ thiserror = { version = "1.0.31" }
 catalyst-vault-common = { path = "../catalyst-vault-common" }
 
 [dev-dependencies]
-cw-multi-test = "0.16.2"
+cw-multi-test = "0.16.5"
 test-helpers = { path = "../../helpers/test-helpers" }
 mock-vault = { path = "../../mock-contracts/mock-vault" }

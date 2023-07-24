@@ -46,4 +46,4 @@ catalyst-types = { path = "../../lib/catalyst-types" }
 catalyst-vault-common = { path = "../catalyst-vault-common", features = ["library"] }
 
 [dev-dependencies]
-cw-multi-test = "0.16.2"
+cw-multi-test = "0.16.5"
