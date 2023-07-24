@@ -48,11 +48,11 @@ abstract contract CatalystVaultCommon is
     uint256 constant DECAY_RATE = 1 days;
 
     /// @notice Number of decimals used by the vault's vault tokens
-    uint8 constant DECIMALS = 18;
+    uint8 constant DECIMALS = 6;
 
     /// @notice The vault tokens initially minted to the user who set up the vault.
     /// @dev The initial deposit along with this value determines the base value of a vault token.
-    uint256 constant INITIAL_MINT_AMOUNT = 1e18;  // 10**decimals
+    uint256 constant INITIAL_MINT_AMOUNT = 1e6;  // 10**decimals
 
     /// @notice Maximum number of assets supported
     /// @dev Impacts the cost of some for loops. Can be changed without breaking compatibility.
