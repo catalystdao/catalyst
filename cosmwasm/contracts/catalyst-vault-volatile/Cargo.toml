@@ -41,7 +41,7 @@ cw2 = "1.1.0"
 cw20 = "1.1.0"
 cw20-base = { version = "1.1.0", features = ["library"] }
 schemars = "0.8.10"
-serde = { version = "1.0.145", default-features = false, features = ["derive"] }
+serde = { version = "1.0.103", default-features = false, features = ["derive"] }
 thiserror = { version = "1.0.31" }
 catalyst-vault-common = { path = "../catalyst-vault-common" }
 catalyst-types = { path = "../../lib/catalyst-types" }
