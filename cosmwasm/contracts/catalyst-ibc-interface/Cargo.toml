@@ -39,7 +39,7 @@ cosmwasm-storage = "1.3.0"
 cw-storage-plus = "1.1.0"
 cw-controllers = "1.1.0"
 cw2 = "1.1.0"
-schemars = "0.8.10"
+schemars = "0.8.3"
 serde = { version = "1.0.103", default-features = false, features = ["derive"] }
 thiserror = { version = "1.0.31" }
 catalyst-types = { path = "../../lib/catalyst-types" }
