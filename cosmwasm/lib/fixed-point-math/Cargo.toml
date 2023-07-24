@@ -17,4 +17,4 @@ rpath = false
 
 [dependencies]
 catalyst-types = { path = "../catalyst-types" }
-thiserror = { version = "1.0.31" }
+thiserror = { version = "1.0.26" }
