@@ -207,14 +207,14 @@ pub fn mul_div_up(x: U256, y: U256, denominator: U256) -> Result<U256, FixedPoin
 pub fn log2(x: U256) -> Result<U256, FixedPointMathError> {
     if x.is_zero() { return Err(FixedPointMathError::UndefinedError {}) }
 
-    let mut r = (u256!("0xffffffffffffffffffffffffffffffff") < x).as_u256().wrapping_shl(7);
-    r |= (u256!("0xffffffffffffffff") < (x.wrapping_shr(r.as_u32()))).as_u256().wrapping_shl(6);
-    r |= (u256!("0xffffffff") < (x.wrapping_shr(r.as_u32()))).as_u256().wrapping_shl(5);
-    r |= (u256!("0xffff") < (x.wrapping_shr(r.as_u32()))).as_u256().wrapping_shl(4);
-    r |= (u256!("0xff") < (x.wrapping_shr(r.as_u32()))).as_u256().wrapping_shl(3);
-    r |= (u256!("0xf") < (x.wrapping_shr(r.as_u32()))).as_u256().wrapping_shl(2);
-    r |= (u256!("0x3") < (x.wrapping_shr(r.as_u32()))).as_u256().wrapping_shl(1);
-    r |= (u256!("0x1") < (x.wrapping_shr(r.as_u32()))).as_u256();
+    let mut r = (u256!("ffffffffffffffffffffffffffffffff", 16) < x).as_u256().wrapping_shl(7);
+    r |= (u256!("ffffffffffffffff", 16) < (x.wrapping_shr(r.as_u32()))).as_u256().wrapping_shl(6);
+    r |= (u256!("ffffffff", 16) < (x.wrapping_shr(r.as_u32()))).as_u256().wrapping_shl(5);
+    r |= (u256!("ffff", 16) < (x.wrapping_shr(r.as_u32()))).as_u256().wrapping_shl(4);
+    r |= (u256!("ff", 16) < (x.wrapping_shr(r.as_u32()))).as_u256().wrapping_shl(3);
+    r |= (u256!("f", 16) < (x.wrapping_shr(r.as_u32()))).as_u256().wrapping_shl(2);
+    r |= (u256!("3", 16) < (x.wrapping_shr(r.as_u32()))).as_u256().wrapping_shl(1);
+    r |= (u256!("1", 16) < (x.wrapping_shr(r.as_u32()))).as_u256();
 
     Ok(r)
 }

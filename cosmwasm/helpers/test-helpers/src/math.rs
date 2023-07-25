@@ -5,21 +5,25 @@ use catalyst_types::{U256, I256};
 
 
 pub fn u256_to_f64(val: U256) -> f64 {
-    let (hi, lo) = val.into_words();
+    let bytes = val.to_le_bytes();
 
-    let mut out: f64 = lo as f64;
-    out += (hi as f64) * 2_f64.powf(128_f64);
-
-    out
+    bytes.iter().enumerate().fold(
+        0.,
+        |acc, (i, val)| {
+            acc + (*val as f64) * 2_f64.powf((i as f64)*8.)
+        }
+    )
 }
 
 pub fn i256_to_f64(val: I256) -> f64 {
-    let (hi, lo) = val.into_words();
+    
+    if val < I256::zero() {
+        -1. * u256_to_f64(val.wrapping_neg().as_u256())
+    }
+    else {
+        u256_to_f64(val.as_u256())
+    }
 
-    let mut out: f64 = lo as f64;
-    out += (hi as f64) * 2_f64.powf(128_f64);
-
-    out
 }
 
 pub fn uint128_to_f64(val: Uint128) -> f64 {
@@ -57,7 +61,7 @@ pub fn f64_to_u256(val: f64) -> Result<U256, String> {
     // always starts with 1)
     mantissa_arr[1] = (mantissa_arr[1] & 0x0Fu8) | 0x10u8;   
 
-    let significant_figure = u64::from_be_bytes(mantissa_arr) as u128;
+    let significant_figure = u64::from_be_bytes(mantissa_arr);
                                                                     
 
     // Convert the exponent into the net bit shift required to move the significant figure into the U256 number
@@ -73,21 +77,44 @@ pub fn f64_to_u256(val: f64) -> Result<U256, String> {
     }
 
     // Create a U256 from the mantissa_arr given the computed exponent
-    Ok(U256::from_words(
+    let words: [u64; 4] = [
+        if exponent < 64 {
+            if      exponent == 0   { significant_figure                  }
+            else if exponent < 0    { significant_figure.shr(-exponent)   }
+            else                    { significant_figure.shl(exponent)    }
+        } else {0_u64},
 
-        if exponent > 0 && exponent < 256 {
+        if exponent > 0 && exponent < 128 {
+            if      exponent == 64  { significant_figure                  }
+            else if exponent < 64   { significant_figure.shr(64-exponent) }
+            else                    { significant_figure.shl(exponent-64) }
+        } else {0_u64},
+
+        if exponent > 64 && exponent < 192 {
             if      exponent == 128 { significant_figure                   }
             else if exponent < 128  { significant_figure.shr(128-exponent) }
             else                    { significant_figure.shl(exponent-128) }
-        } else {0_u128},
+        } else {0_u64},
 
-        if exponent < 128 {
-            if      exponent == 0   { significant_figure                  }
-            else if exponent < 0    { significant_figure.shr(-exponent) }
-            else                    { significant_figure.shl(exponent) }
-        } else {0_u128},
+        if exponent > 128 && exponent < 256 {
+            if      exponent == 192 { significant_figure                   }
+            else if exponent < 192  { significant_figure.shr(192-exponent) }
+            else                    { significant_figure.shl(exponent-192) }
+        } else {0_u64},
+    ];
 
-    ))
+    let words = [
+        words[0].to_le_bytes(),
+        words[1].to_le_bytes(),
+        words[2].to_le_bytes(),
+        words[3].to_le_bytes(),
+    ];
+
+    let bytes = unsafe {
+        std::mem::transmute::<[[u8; 8]; 4], [u8; 32]>(words)
+    };
+
+    Ok(U256::from_le_bytes(bytes))
 }
 
 pub fn f64_to_uint128(val: f64) -> Result<Uint128, String> {

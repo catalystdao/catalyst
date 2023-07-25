@@ -1,10 +1,16 @@
+
+// NOTE: The following macros are wrappers around 'parse_str_radix'. These are here for
+// backwards compatibility.
+
 #[macro_export]
 macro_rules! u256 {
     ($integer:literal) => {{
         use $crate::U256;
-        use $crate::macros::internal::uint;
-        let (hi, lo) = uint!($integer).into_words();
-        U256::from_words(hi, lo)
+        U256::parse_str_radix($integer, 10)
+    }};
+    ($integer:literal, $radix:expr) => {{
+        use $crate::U256;
+        U256::parse_str_radix($integer, $radix)
     }};
 }
 
@@ -12,14 +18,10 @@ macro_rules! u256 {
 macro_rules! i256 {
     ($integer:literal) => {{
         use $crate::I256;
-        use $crate::macros::internal::int;
-        let (hi, lo) = int!($integer).into_words();
-        I256::from_words(hi, lo)
+        I256::parse_str_radix($integer, 10)
     }};
-}
-
-// Re-export ethnum's uint and int macro
-#[doc(hidden)]
-pub mod internal {
-    pub use ethnum::{uint, int};
+    ($integer:literal, $radix:expr) => {{
+        use $crate::I256;
+        I256::parse_str_radix($integer, $radix)
+    }};
 }

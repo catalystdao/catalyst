@@ -15,4 +15,16 @@ pub use crate::{
 /// Re-export cosmwasm_std errors
 pub mod errors {
     pub use cosmwasm_std::{OverflowError, DivideByZeroError, ConversionOverflowError};
+    use thiserror::Error;
+
+    // NOTE: This error should be imported directly from 'cosmwasm_std', but as of version 1.3.0
+    // the error is not exposed.
+    #[derive(Error, Debug, PartialEq, Eq)]
+    pub enum DivisionError {
+        #[error("Divide by zero")]
+        DivideByZero,
+
+        #[error("Overflow in division")]
+        Overflow,
+    }
 }
