@@ -1,13 +1,11 @@
 mod test_volatile_deposit{
-    use cosmwasm_std::{Uint128, Addr};
+    use cosmwasm_std::{Uint128, Addr, Attribute};
     use cw_multi_test::{App, Executor};
-    use catalyst_vault_common::{ContractError, state::INITIAL_MINT_AMOUNT};
+    use catalyst_vault_common::{ContractError, state::INITIAL_MINT_AMOUNT, event::format_vec_for_event};
     use test_helpers::{math::{uint128_to_f64, f64_to_uint128}, misc::get_response_attribute, token::{deploy_test_tokens, transfer_tokens, set_token_allowance, query_token_balance, query_token_info}, definitions::{SETUP_MASTER, DEPOSITOR}, contract::{mock_factory_deploy_vault, DEFAULT_TEST_VAULT_FEE}};
 
     use crate::{msg::VolatileExecuteMsg, tests::{helpers::{compute_expected_deposit_mixed, volatile_vault_contract_storage}, parameters::{TEST_VAULT_BALANCES, TEST_VAULT_WEIGHTS, AMPLIFICATION, TEST_VAULT_ASSET_COUNT}}};
 
-
-    //TODO add test for the deposit event
 
 
     #[test]
@@ -127,6 +125,93 @@ mod test_volatile_deposit{
         assert_eq!(
             vault_token_info.total_supply,
             INITIAL_MINT_AMOUNT + observed_return
+        );
+
+    }
+
+
+    #[test]
+    fn test_deposit_event() {
+
+        let mut app = App::default();
+
+        // Instantiate and initialize vault
+        let vault_tokens = deploy_test_tokens(&mut app, SETUP_MASTER.to_string(), None, TEST_VAULT_ASSET_COUNT);
+        let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
+        let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
+        let vault_code_id = volatile_vault_contract_storage(&mut app);let 
+        vault = mock_factory_deploy_vault(
+            &mut app,
+            vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
+            vault_initial_balances.clone(),
+            vault_weights.clone(),
+            AMPLIFICATION,
+            vault_code_id,
+            None,
+            None
+        );
+
+        // Define deposit config
+        let deposit_percentage = 0.15;
+        let deposit_amounts: Vec<Uint128> = vault_initial_balances.iter()
+            .map(|vault_balance| {
+                f64_to_uint128(
+                    uint128_to_f64(*vault_balance) * deposit_percentage
+                ).unwrap()
+            }).collect();
+
+        // Fund swapper with tokens and set vault allowance
+        vault_tokens.iter()
+            .zip(&deposit_amounts)
+            .for_each(|(asset, deposit_amount)| {
+                
+                transfer_tokens(
+                    &mut app,
+                    *deposit_amount,
+                    Addr::unchecked(asset),
+                    Addr::unchecked(SETUP_MASTER),
+                    DEPOSITOR.to_string(),
+                );
+
+                set_token_allowance(
+                    &mut app,
+                    *deposit_amount,
+                    Addr::unchecked(asset),
+                    Addr::unchecked(DEPOSITOR),
+                    vault.to_string()
+                );
+            });
+
+
+
+        // Tested action: deposit
+        let result = app.execute_contract(
+            Addr::unchecked(DEPOSITOR),
+            vault.clone(),
+            &VolatileExecuteMsg::DepositMixed {
+                deposit_amounts: deposit_amounts.clone(),
+                min_out: Uint128::zero()
+            },
+            &[]
+        ).unwrap();
+
+
+
+        // Check the event
+        let event = result.events[1].clone();
+
+        assert_eq!(event.ty, "wasm-deposit");
+        
+        assert_eq!(
+            event.attributes[1],
+            Attribute::new("to_account", DEPOSITOR)
+        );
+
+        //NOTE: 'mint' is indirectly checked on `test_deposit_calculation`
+
+        assert_eq!(
+            event.attributes[3],
+            Attribute::new("deposit_amounts", format_vec_for_event(deposit_amounts))
         );
 
     }
