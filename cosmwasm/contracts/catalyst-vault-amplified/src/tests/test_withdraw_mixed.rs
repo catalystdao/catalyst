@@ -2,7 +2,7 @@ mod test_amplified_withdraw_mixed {
     use std::str::FromStr;
 
     use catalyst_types::I256;
-    use cosmwasm_std::{Uint128, Addr, Uint64};
+    use cosmwasm_std::{Uint128, Addr, Uint64, Attribute};
     use cw_multi_test::{App, Executor};
     use catalyst_vault_common::{ContractError, state::INITIAL_MINT_AMOUNT};
     use fixed_point_math::WAD;
@@ -11,7 +11,6 @@ mod test_amplified_withdraw_mixed {
     use crate::{msg::AmplifiedExecuteMsg, tests::{helpers::{compute_expected_withdraw_mixed, amplified_vault_contract_storage}, parameters::{AMPLIFICATION, TEST_VAULT_BALANCES, TEST_VAULT_WEIGHTS, TEST_VAULT_ASSET_COUNT}}};
 
 
-    //TODO add test for the withdraw event
 
     #[test]
     fn test_withdraw_mixed_calculation() {
@@ -129,6 +128,78 @@ mod test_amplified_withdraw_mixed {
             vault_token_info.total_supply,
             INITIAL_MINT_AMOUNT - withdraw_amount
         );
+
+    }
+
+
+    #[test]
+    fn test_withdraw_mixed_event() {
+
+        let mut app = App::default();
+
+        // Instantiate and initialize vault
+        let vault_tokens = deploy_test_tokens(&mut app, SETUP_MASTER.to_string(), None, TEST_VAULT_ASSET_COUNT);
+        let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
+        let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
+        let vault_code_id = amplified_vault_contract_storage(&mut app);
+        let vault = mock_factory_deploy_vault(
+            &mut app,
+            vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
+            vault_initial_balances.clone(),
+            vault_weights.clone(),
+            AMPLIFICATION,
+            vault_code_id,
+            None,
+            None
+        );
+
+        // Define withdraw config
+        let withdraw_percentage = 0.15;     // Percentage of vault tokens supply
+        let withdraw_amount = f64_to_uint128(uint128_to_f64(INITIAL_MINT_AMOUNT) * withdraw_percentage).unwrap();
+        let withdraw_ratio_f64 = vec![0.5, 0.2, 1.][3-TEST_VAULT_ASSET_COUNT..].to_vec();
+        let withdraw_ratio = withdraw_ratio_f64.iter()
+            .map(|val| ((val * 1e18) as u64).into()).collect::<Vec<Uint64>>();
+
+        // Fund withdrawer with vault tokens
+        transfer_tokens(
+            &mut app,
+            withdraw_amount,
+            vault.clone(),
+            Addr::unchecked(SETUP_MASTER),
+            WITHDRAWER.to_string()
+        );
+    
+
+    
+        // Tested action: withdraw mixed
+        let result = app.execute_contract(
+            Addr::unchecked(WITHDRAWER),
+            vault.clone(),
+            &AmplifiedExecuteMsg::WithdrawMixed {
+                vault_tokens: withdraw_amount,
+                withdraw_ratio: withdraw_ratio.clone(),
+                min_out: vec![Uint128::zero(); TEST_VAULT_ASSET_COUNT]
+            },
+            &[]
+        ).unwrap();
+
+
+
+        // Check the event
+        let event = result.events[1].clone();
+
+        assert_eq!(event.ty, "wasm-withdraw");
+
+        assert_eq!(
+            event.attributes[1],
+            Attribute::new("to_account", WITHDRAWER)
+        );
+        assert_eq!(
+            event.attributes[2],
+            Attribute::new("burn", withdraw_amount)
+        );
+
+        // NOTE: 'withdraw_amounts' is indirectly checked on `test_withdraw_even_calculation`
 
     }
 
