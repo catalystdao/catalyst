@@ -1,5 +1,5 @@
 mod test_volatile_receive_liquidity {
-    use cosmwasm_std::{Uint128, Addr, Binary};
+    use cosmwasm_std::{Uint128, Addr, Binary, Attribute};
     use cw_multi_test::{App, Executor};
     use catalyst_types::{U256, u256};
     use catalyst_vault_common::{ContractError, state::INITIAL_MINT_AMOUNT};
@@ -7,7 +7,7 @@ mod test_volatile_receive_liquidity {
 
     use crate::{msg::VolatileExecuteMsg, tests::{helpers::{compute_expected_receive_liquidity, compute_expected_reference_asset, volatile_vault_contract_storage}, parameters::{TEST_VAULT_BALANCES, TEST_VAULT_WEIGHTS, AMPLIFICATION, TEST_VAULT_ASSET_COUNT}}};
 
-    //TODO check event
+
 
     #[test]
     fn test_receive_liquidity_calculation() {
@@ -90,6 +90,101 @@ mod test_volatile_receive_liquidity {
         assert_eq!(
             vault_token_info.total_supply,
             INITIAL_MINT_AMOUNT + observed_return
+        );
+
+    }
+
+
+    #[test]
+    fn test_receive_liquidity_event() {
+
+        let mut app = App::default();
+
+        // Instantiate and initialize vault
+        let vault_tokens = deploy_test_tokens(&mut app, SETUP_MASTER.to_string(), None, TEST_VAULT_ASSET_COUNT);
+        let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
+        let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
+        let vault_code_id = volatile_vault_contract_storage(&mut app);
+        let vault = mock_factory_deploy_vault(
+            &mut app,
+            vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
+            vault_initial_balances.clone(),
+            vault_weights.clone(),
+            AMPLIFICATION,
+            vault_code_id,
+            Some(Addr::unchecked(CHAIN_INTERFACE)),         // Using a mock address, no need for an interface to be deployed
+            None
+        );
+
+        // Connect vault with a mock vault
+        let from_vault = encode_payload_address(b"from_vault");
+        mock_set_vault_connection(
+            &mut app,
+            vault.clone(),
+            CHANNEL_ID.to_string(),
+            from_vault.clone(),
+            true
+        );
+
+        // Define the receive liquidity configuration        
+        let swap_units = u256!("500000000000000000");
+        let from_amount = u256!("12345678");      // Some random value
+        let from_block_number_mod = 15u32;         // Some random value
+
+
+
+        // Tested action: receive liquidity
+        let response = app.execute_contract(
+            Addr::unchecked(CHAIN_INTERFACE),
+            vault.clone(),
+            &VolatileExecuteMsg::ReceiveLiquidity {
+                channel_id: CHANNEL_ID.to_string(),
+                from_vault: from_vault.clone(),
+                to_account: SWAPPER_B.to_string(),
+                u: swap_units,
+                min_vault_tokens: Uint128::zero(),
+                min_reference_asset: Uint128::zero(),
+                from_amount,
+                from_block_number_mod,
+                calldata_target: None,
+                calldata: None
+            },
+            &[]
+        ).unwrap();
+
+
+
+        // Check the event
+        let event = response.events[1].clone();
+
+        assert_eq!(event.ty, "wasm-receive-liquidity");
+
+        assert_eq!(
+            event.attributes[1],
+            Attribute::new("channel_id", CHANNEL_ID)
+        );
+        assert_eq!(
+            event.attributes[2],
+            Attribute::new("from_vault", from_vault.to_base64())
+        );
+        assert_eq!(
+            event.attributes[3],
+            Attribute::new("to_account", SWAPPER_B.to_string())
+        );
+        assert_eq!(
+            event.attributes[4],
+            Attribute::new("units", swap_units)
+        );
+
+        //NOTE: 'to_amount' is indirectly checked on `test_receive_liquidity_calculation`
+
+        assert_eq!(
+            event.attributes[6],
+            Attribute::new("from_amount", from_amount.to_string())
+        );
+        assert_eq!(
+            event.attributes[7],
+            Attribute::new("from_block_number_mod", from_block_number_mod.to_string())
         );
 
     }
