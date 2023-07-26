@@ -194,7 +194,7 @@ pub fn withdraw_event(
     burn: Uint128,
     withdraw_amounts: Vec<Uint128>
 ) -> Event {
-    Event::new("deposit")
+    Event::new("withdraw")
         .add_attribute("to_account", to_account)
         .add_attribute("burn", burn)
         .add_attribute("withdraw_amounts", format_vec_for_event(withdraw_amounts))
