@@ -1,14 +1,13 @@
 mod test_amplified_send_liquidity {
-    use cosmwasm_std::{Uint128, Addr, Binary};
+    use cosmwasm_std::{Uint128, Addr, Binary, Attribute};
     use cw_multi_test::{App, Executor};
-    use catalyst_types::{U256, I256};
+    use catalyst_types::{U256, I256, u256};
     use catalyst_vault_common::{ContractError, msg::{TotalEscrowedLiquidityResponse, LiquidityEscrowResponse}, state::{INITIAL_MINT_AMOUNT, compute_send_liquidity_hash}};
     use test_helpers::{math::{uint128_to_f64, f64_to_uint128, u256_to_f64}, misc::{encode_payload_address, get_response_attribute}, token::{deploy_test_tokens, transfer_tokens, query_token_balance, query_token_info}, definitions::{SETUP_MASTER, CHANNEL_ID, SWAPPER_A, SWAPPER_B, SWAPPER_C}, contract::{mock_instantiate_interface, mock_factory_deploy_vault, mock_set_vault_connection}};
 
     use crate::{msg::AmplifiedExecuteMsg, tests::{helpers::{compute_expected_send_liquidity, amplified_vault_contract_storage}, parameters::{AMPLIFICATION, TEST_VAULT_BALANCES, TEST_VAULT_WEIGHTS, TEST_VAULT_ASSET_COUNT}}};
 
 
-    //TODO check event
 
     #[test]
     fn test_send_liquidity_calculation() {
@@ -142,6 +141,110 @@ mod test_amplified_send_liquidity {
             Addr::unchecked(invoked_interface),
             interface
         );
+
+    }
+
+
+    #[test]
+    fn test_send_liquidity_event() {
+
+        let mut app = App::default();
+
+        // Instantiate and initialize vault
+        let interface = mock_instantiate_interface(&mut app);
+        let vault_tokens = deploy_test_tokens(&mut app, SETUP_MASTER.to_string(), None, TEST_VAULT_ASSET_COUNT);
+        let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
+        let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
+        let vault_code_id = amplified_vault_contract_storage(&mut app);
+        let vault = mock_factory_deploy_vault(
+            &mut app,
+            vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
+            vault_initial_balances.clone(),
+            vault_weights.clone(),
+            AMPLIFICATION,
+            vault_code_id,
+            Some(interface.clone()),
+            None
+        );
+
+        // Set target mock vault
+        let target_vault = encode_payload_address(b"target_vault");
+        mock_set_vault_connection(
+            &mut app,
+            vault.clone(),
+            CHANNEL_ID.to_string(),
+            target_vault.clone(),
+            true
+        );
+
+        // Define send liquidity configuration
+        let send_percentage = 0.15;
+        let swap_amount = f64_to_uint128(uint128_to_f64(INITIAL_MINT_AMOUNT) * send_percentage).unwrap();
+        let to_account = encode_payload_address(SWAPPER_B.as_bytes());
+        let min_vault_tokens = u256!("123456789");  // Some random value
+        let min_reference_asset = u256!("987654321");  // Some random value
+
+        // Fund swapper with tokens
+        transfer_tokens(
+            &mut app,
+            swap_amount,
+            vault.clone(),
+            Addr::unchecked(SETUP_MASTER),
+            SWAPPER_A.to_string()
+        );
+
+
+
+        // Tested action: send liquidity
+        let response = app.execute_contract(
+            Addr::unchecked(SWAPPER_A),
+            vault.clone(),
+            &AmplifiedExecuteMsg::SendLiquidity {
+                channel_id: CHANNEL_ID.to_string(),
+                to_vault: target_vault.clone(),
+                to_account: to_account.clone(),
+                amount: swap_amount,
+                min_vault_tokens,
+                min_reference_asset,
+                fallback_account: SWAPPER_C.to_string(),
+                calldata: Binary(vec![])
+            },
+            &[]
+        ).unwrap();
+
+
+
+        // Check the event
+        let event = response.events[1].clone();
+
+        assert_eq!(event.ty, "wasm-send-liquidity");
+
+        assert_eq!(
+            event.attributes[1],
+            Attribute::new("channel_id", CHANNEL_ID)
+        );
+        assert_eq!(
+            event.attributes[2],
+            Attribute::new("to_vault", target_vault.to_base64())
+        );
+        assert_eq!(
+            event.attributes[3],
+            Attribute::new("to_account", to_account.to_string())
+        );
+        assert_eq!(
+            event.attributes[4],
+            Attribute::new("from_amount", swap_amount)
+        );
+        assert_eq!(
+            event.attributes[5],
+            Attribute::new("min_vault_tokens", min_vault_tokens)
+        );
+        assert_eq!(
+            event.attributes[6],
+            Attribute::new("min_reference_asset", min_reference_asset)
+        );
+
+        //NOTE: 'units' is indirectly checked on `test_send_liquidity_calculation`
 
     }
 
