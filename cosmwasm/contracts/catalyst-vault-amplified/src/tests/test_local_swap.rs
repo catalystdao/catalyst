@@ -1,14 +1,11 @@
 mod test_amplified_local_swap {
-    use cosmwasm_std::{Uint128, Addr, Uint64};
+    use cosmwasm_std::{Uint128, Addr, Uint64, Attribute};
     use cw_multi_test::{App, Executor};
     use catalyst_vault_common::ContractError;
     use fixed_point_math::WAD;
     use test_helpers::{math::{uint128_to_f64, f64_to_uint128}, token::{deploy_test_tokens, transfer_tokens, set_token_allowance, query_token_balance}, definitions::{SETUP_MASTER, LOCAL_SWAPPER, FACTORY_OWNER}, contract::{mock_factory_deploy_vault, DEFAULT_TEST_VAULT_FEE, DEFAULT_TEST_GOV_FEE, mock_set_governance_fee_share}};
 
     use crate::{msg::AmplifiedExecuteMsg, tests::{helpers::{compute_expected_local_swap, amplified_vault_contract_storage}, parameters::{AMPLIFICATION, TEST_VAULT_BALANCES, TEST_VAULT_WEIGHTS, TEST_VAULT_ASSET_COUNT}}};
-
-
-    //TODO add test for the local swap event
 
 
     #[test]
@@ -243,9 +240,102 @@ mod test_amplified_local_swap {
         ).unwrap();
 
 
+    }
+        
+
+    #[test]
+    fn test_local_swap_event() {
+
+        let mut app = App::default();
+
+        // Instantiate and initialize vault
+        let vault_tokens = deploy_test_tokens(&mut app, SETUP_MASTER.to_string(), None, TEST_VAULT_ASSET_COUNT);
+        let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
+        let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
+        let vault_code_id = amplified_vault_contract_storage(&mut app);
+        let vault = mock_factory_deploy_vault(
+            &mut app,
+            vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
+            vault_initial_balances.clone(),
+            vault_weights.clone(),
+            AMPLIFICATION,
+            vault_code_id,
+            None,
+            None
+        );
+
+        // Define local swap config
+        let from_asset_idx = 0;
+        let from_asset = vault_tokens[from_asset_idx].clone();
+        let from_balance = vault_initial_balances[from_asset_idx];
+
+        let to_asset_idx = 1;
+        let to_asset = vault_tokens[to_asset_idx].clone();
+
+        // Swap 25% of the vault
+        let swap_amount = from_balance * Uint128::from(25u64)/ Uint128::from(100u64);
+
+        // Fund swapper with tokens
+        transfer_tokens(
+            &mut app,
+            swap_amount,
+            from_asset.clone(),
+            Addr::unchecked(SETUP_MASTER),
+            LOCAL_SWAPPER.to_string(),
+        );
+
+        // Set vault allowance
+        set_token_allowance(
+            &mut app,
+            swap_amount,
+            from_asset.clone(),
+            Addr::unchecked(LOCAL_SWAPPER),
+            vault.to_string()
+        );
+
+
+
+        // Tested action: local swap
+        let result = app.execute_contract(
+            Addr::unchecked(LOCAL_SWAPPER),
+            vault.clone(),
+            &AmplifiedExecuteMsg::LocalSwap {
+                from_asset: from_asset.to_string(),
+                to_asset: to_asset.to_string(),
+                amount: swap_amount,
+                min_out: Uint128::zero()
+            },
+            &[]
+        ).unwrap();
+
+
+
+        // Check the event
+        let local_swap_event = result.events[1].clone();
+        
+        assert_eq!(local_swap_event.ty, "wasm-local-swap");
+
+        assert_eq!(
+            local_swap_event.attributes[1],
+            Attribute::new("account", LOCAL_SWAPPER)
+        );
+        assert_eq!(
+            local_swap_event.attributes[2],
+            Attribute::new("from_asset", from_asset)
+        );
+        assert_eq!(
+            local_swap_event.attributes[3],
+            Attribute::new("to_asset", to_asset)
+        );
+        assert_eq!(
+            local_swap_event.attributes[4],
+            Attribute::new("from_amount", swap_amount)
+        );
+    
+        //NOTE: 'to_amount' is indirectly checked on `test_local_swap_calculation`
 
     }
-    
+
 
     #[test]
     fn test_local_swap_from_asset_not_in_vault() {
