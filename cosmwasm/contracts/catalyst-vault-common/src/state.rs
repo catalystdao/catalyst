@@ -89,21 +89,21 @@ pub fn total_supply(deps: Deps) -> Result<Uint128, ContractError> {
 // Redefine the types used by the 'factory' for queries (the factory contract cannot be imported by this contract, 
 // as it would create a cyclic dependency)
 #[cw_serde]
-pub enum QueryMsg {
+enum FactoryContractQueryMsg {
     Owner {}
 }
 
 #[cw_serde]
-pub struct OwnerResponse {
+struct FactoryContractOwnerResponse {
     pub owner: Option<Addr>
 }
 
 /// Query the factory owner directly from the factory contract.
 pub fn factory_owner(deps: &Deps) -> Result<Addr, ContractError> {
 
-    let response = deps.querier.query_wasm_smart::<OwnerResponse>(
+    let response = deps.querier.query_wasm_smart::<FactoryContractOwnerResponse>(
         FACTORY.load(deps.storage)?,
-        &QueryMsg::Owner {}
+        &FactoryContractQueryMsg::Owner {}
     )?;
 
     response.owner.ok_or(ContractError::Error("Factory has no owner.".to_string()))
