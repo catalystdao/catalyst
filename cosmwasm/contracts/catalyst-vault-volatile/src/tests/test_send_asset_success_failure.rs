@@ -1,5 +1,5 @@
 mod test_volatile_send_asset_success_failure {
-    use cosmwasm_std::{Uint128, Addr, Binary};
+    use cosmwasm_std::{Uint128, Addr, Binary, Attribute};
     use cw_multi_test::{App, Executor};
     use catalyst_types::{U256, u256};
     use catalyst_vault_common::{ContractError, msg::{TotalEscrowedAssetResponse, AssetEscrowResponse}, state::compute_send_asset_hash};
@@ -7,7 +7,7 @@ mod test_volatile_send_asset_success_failure {
 
     use crate::{msg::{VolatileExecuteMsg, QueryMsg}, tests::{helpers::volatile_vault_contract_storage, parameters::{TEST_VAULT_BALANCES, TEST_VAULT_WEIGHTS, AMPLIFICATION, TEST_VAULT_ASSET_COUNT}}};
 
-    //TODO check events
+
 
     struct TestEnv {
         pub interface: Addr,
@@ -271,6 +271,124 @@ mod test_volatile_send_asset_success_failure {
         assert_eq!(
             swapper_to_asset_balance,
             env.from_amount - env.fee
+        );
+
+    }
+
+
+    #[test]
+    fn test_send_asset_success_event() {
+
+        // Setup test
+        let mut app = App::default();
+        let env = TestEnv::initiate_mock_env(&mut app);
+
+    
+
+        // Tested action: send asset success
+        let response = app.execute_contract(
+            env.interface,
+            env.vault.clone(),
+            &VolatileExecuteMsg::OnSendAssetSuccess {
+                channel_id: CHANNEL_ID.to_string(),
+                to_account: env.to_account.clone(),
+                u: env.u,
+                escrow_amount: env.from_amount - env.fee,
+                asset: env.from_asset.to_string(),
+                block_number_mod: env.block_number,
+            },
+            &[]
+        ).unwrap();
+
+
+
+        // Check the event
+        let event = response.events[1].clone();
+
+        assert_eq!(event.ty, "wasm-send-asset-success");
+
+        assert_eq!(
+            event.attributes[1],
+            Attribute::new("channel_id", CHANNEL_ID)
+        );
+        assert_eq!(
+            event.attributes[2],
+            Attribute::new("to_account", env.to_account.to_string())
+        );
+        assert_eq!(
+            event.attributes[3],
+            Attribute::new("units", env.u.to_string())
+        );
+        assert_eq!(
+            event.attributes[4],
+            Attribute::new("escrow_amount", (env.from_amount - env.fee).to_string())
+        );
+        assert_eq!(
+            event.attributes[5],
+            Attribute::new("asset", env.from_asset.to_string())
+        );
+        assert_eq!(
+            event.attributes[6],
+            Attribute::new("block_number_mod", env.block_number.to_string())
+        );
+
+    }
+
+
+    #[test]
+    fn test_send_asset_failure_event() {
+
+        // Setup test
+        let mut app = App::default();
+        let env = TestEnv::initiate_mock_env(&mut app);
+
+    
+
+        // Tested action: send asset failure
+        let response = app.execute_contract(
+            env.interface,
+            env.vault.clone(),
+            &VolatileExecuteMsg::OnSendAssetFailure {
+                channel_id: CHANNEL_ID.to_string(),
+                to_account: env.to_account.clone(),
+                u: env.u,
+                escrow_amount: env.from_amount - env.fee,
+                asset: env.from_asset.to_string(),
+                block_number_mod: env.block_number,
+            },
+            &[]
+        ).unwrap();
+
+
+
+        // Check the event
+        let event = response.events[1].clone();
+
+        assert_eq!(event.ty, "wasm-send-asset-failure");
+
+        assert_eq!(
+            event.attributes[1],
+            Attribute::new("channel_id", CHANNEL_ID)
+        );
+        assert_eq!(
+            event.attributes[2],
+            Attribute::new("to_account", env.to_account.to_string())
+        );
+        assert_eq!(
+            event.attributes[3],
+            Attribute::new("units", env.u.to_string())
+        );
+        assert_eq!(
+            event.attributes[4],
+            Attribute::new("escrow_amount", (env.from_amount - env.fee).to_string())
+        );
+        assert_eq!(
+            event.attributes[5],
+            Attribute::new("asset", env.from_asset.to_string())
+        );
+        assert_eq!(
+            event.attributes[6],
+            Attribute::new("block_number_mod", env.block_number.to_string())
         );
 
     }
