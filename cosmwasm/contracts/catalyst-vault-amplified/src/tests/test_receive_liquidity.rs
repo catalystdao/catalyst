@@ -41,7 +41,7 @@ mod test_amplified_receive_liquidity {
         );
 
         // Define the receive liquidity configuration        
-        let swap_units = u256!("500000000000000");
+        let swap_units = u256!("100000000000000");
 
 
 
@@ -304,7 +304,7 @@ mod test_amplified_receive_liquidity {
         );
 
         // Define the receive liquidity configuration
-        let swap_units = u256!("500000000000000");
+        let swap_units = u256!("100000000000000");
         
         // Compute the expected return
         let expected_return = compute_expected_receive_liquidity(
@@ -409,7 +409,7 @@ mod test_amplified_receive_liquidity {
         );
 
         // Define the receive liquidity configuration
-        let swap_units = u256!("500000000000000");
+        let swap_units = u256!("100000000000000");
         
         // Compute the expected return and the expected reference asset value
         let expected_return = compute_expected_receive_liquidity(
@@ -516,7 +516,7 @@ mod test_amplified_receive_liquidity {
         let from_vault = encode_payload_address(b"from_vault");
 
         // Define the receive liquidity configuration
-        let swap_units = u256!("500000000000000");
+        let swap_units = u256!("100000000000000");
 
 
 
@@ -583,7 +583,7 @@ mod test_amplified_receive_liquidity {
         );
 
         // Define the receive liquidity configuration
-        let swap_units = u256!("500000000000000");
+        let swap_units = u256!("100000000000000");
 
 
 
@@ -649,7 +649,7 @@ mod test_amplified_receive_liquidity {
         );
 
         // Define the receive liquidity configuration        
-        let swap_units = u256!("500000000000000");
+        let swap_units = u256!("100000000000000");
 
         // Define the calldata
         let calldata_target = mock_instantiate_calldata_target(&mut app);
