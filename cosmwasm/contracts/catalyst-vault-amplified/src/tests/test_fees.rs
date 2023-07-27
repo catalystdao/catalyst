@@ -1,5 +1,5 @@
 mod test_amplified_fees {
-    use cosmwasm_std::{Addr, Uint64};
+    use cosmwasm_std::{Addr, Uint64, Attribute};
     use cw_multi_test::{App, Executor};
     use catalyst_vault_common::{ContractError, msg::{FeeAdministratorResponse, VaultFeeResponse, GovernanceFeeShareResponse}};
     use test_helpers::{token::deploy_test_tokens, definitions::{SETUP_MASTER, FACTORY_OWNER}, contract::mock_factory_deploy_vault};
@@ -36,7 +36,7 @@ mod test_amplified_fees {
 
 
         // Tested action: set fee administrator
-        let _response = app.execute_contract::<AmplifiedExecuteMsg>(
+        let response = app.execute_contract::<AmplifiedExecuteMsg>(
             Addr::unchecked(FACTORY_OWNER),
             vault.clone(),
             &AmplifiedExecuteMsg::SetFeeAdministrator { administrator: new_fee_administrator.to_string() },
@@ -44,7 +44,15 @@ mod test_amplified_fees {
         ).unwrap();
 
         
-        // TODO verify response attributes (event)
+        // Verify the event
+        let event = response.events[1].clone();
+
+        assert_eq!(event.ty, "wasm-set-fee-administrator");
+
+        assert_eq!(
+            event.attributes[1],
+            Attribute::new("administrator", new_fee_administrator.to_string())
+        );
 
         // Verify the new fee administrator is set
         let queried_fee_administrator: Addr = app
