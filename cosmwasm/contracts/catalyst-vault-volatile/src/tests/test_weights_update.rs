@@ -206,7 +206,7 @@ mod test_volatile_weights_update {
 
 
     #[test]
-    fn test_set_too_large_weight() {
+    fn test_set_too_large_weight_change() {
         
         let mut app = App::default();
 
