@@ -6,7 +6,7 @@ mod test_amplified_initialize_swap_curves {
     use catalyst_types::U256;
     use fixed_point_math::WAD;
     use catalyst_vault_common::{ContractError, msg::{AssetsResponse, WeightResponse, GetLimitCapacityResponse, TotalEscrowedAssetResponse, TotalEscrowedLiquidityResponse}, state::INITIAL_MINT_AMOUNT, event::format_vec_for_event};
-    use test_helpers::{token::deploy_test_tokens, definitions::{SETUP_MASTER, DEPOSITOR, DEPLOYER}, contract::{mock_instantiate_vault, InitializeSwapCurvesMockConfig}};
+    use test_helpers::{token::deploy_test_tokens, definitions::{SETUP_MASTER, DEPOSITOR, DEPLOYER}, contract::{mock_instantiate_vault, InitializeSwapCurvesMockConfig, mock_instantiate_vault_msg}};
 
     use crate::{tests::{helpers::amplified_vault_contract_storage, parameters::{AMPLIFICATION, TEST_VAULT_WEIGHTS, TEST_VAULT_BALANCES, TEST_VAULT_ASSET_COUNT}}, msg::AmplificationResponse};
 
@@ -55,7 +55,6 @@ mod test_amplified_initialize_swap_curves {
         ).unwrap();
 
 
-    //     //TODO verify only the factory can invoke initialize_swap_curves
 
         // Verify the assets have been transferred to the vault
         test_tokens
@@ -651,5 +650,68 @@ mod test_amplified_initialize_swap_curves {
         
     }
 
+
+    #[test]
+    fn test_initializer_must_be_instantiator() {
+
+        let mut app = App::default();
+
+        // Instantiate vault
+        let vault_code_id = amplified_vault_contract_storage(&mut app);
+        
+        let instantiate_msg = mock_instantiate_vault_msg(None);
+
+        let vault = app.instantiate_contract(
+            vault_code_id,
+            Addr::unchecked(SETUP_MASTER),
+            &instantiate_msg,
+            &[],
+            "vault",
+            None
+        ).unwrap();
+
+        // Create tokens and set vault allowances
+        let test_tokens = deploy_test_tokens(
+            &mut app,
+            SETUP_MASTER.to_string(),
+            None,
+            TEST_VAULT_ASSET_COUNT
+        );
+
+        // Define InitializeSwapCurves parameters
+        let initialize_msg = InitializeSwapCurvesMockConfig {
+            assets: test_tokens.iter().map(|addr| addr.to_string()).collect(),
+            assets_balances: TEST_VAULT_BALANCES.to_vec(),
+            weights: TEST_VAULT_WEIGHTS.to_vec(),
+            amp: AMPLIFICATION,
+            depositor: DEPOSITOR.to_string()
+        };
+
+        // Transfer tokens to the vault
+        initialize_msg.transfer_vault_allowances(
+            &mut app,
+            vault.to_string(),
+            Addr::unchecked(SETUP_MASTER)
+        );
+
+
+
+        // Tested action: initialize swap curves with an unauthorized caller
+        let response_result = app.execute_contract(
+            Addr::unchecked("not-setup-master"),    // ! Not the vault instantiator
+            vault.clone(),
+            &initialize_msg.clone().into_execute_msg(),
+            &[]
+        );
+
+
+
+        // Make sure the transaction fails
+        assert!(matches!(
+            response_result.err().unwrap().downcast().unwrap(),
+            ContractError::Unauthorized {}
+        ));
+
+    }
 
 }
