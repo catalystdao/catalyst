@@ -45,17 +45,18 @@ contract CatalystGARPInterface is Ownable, ICrossChainReceiver, Bytes65, IMessag
         if (msg.sender != address(GARP)) revert InvalidCaller();
         _;
     }
+
     modifier verifySourceChainAddress(bytes32 sourceChainIdentifier, bytes calldata fromApplication) {
         if (keccak256(fromApplication) != keccak256(getAddressForChainIdentifier(sourceChainIdentifier))) revert InvalidSourceApplication();
         _;
     }
 
-    function _handleError(bytes memory err) internal returns (bytes1) {
+    function _handleError(bytes memory err) pure internal returns (bytes1) {
         bytes32 errorHash = keccak256(err);
         // TODO: Use memory slices to use the same error for both sendAsset and receiveAsset?
         if (keccak256(abi.encodeWithSelector(ExceedsSecurityLimit.selector)) == errorHash) return 0x11;
         if (keccak256(abi.encodeWithSelector(ReturnInsufficientOnReceive.selector)) == errorHash) return 0x12;
-        return 0x01;
+        return 0x01; // unknown error.
     }
 
     /// @notice Get the address on the destination chain.
@@ -158,7 +159,7 @@ contract CatalystGARPInterface is Ownable, ICrossChainReceiver, Bytes65, IMessag
         uint256 fromAmount,
         IncentiveDescription calldata incentive,
         bytes memory calldata_
-    ) external payable checkBytes65Address(toVault) checkBytes65Address(toAccount) {
+    ) checkBytes65Address(toVault) checkBytes65Address(toAccount) external payable{
         // We need to ensure that all information is in the correct places. This ensures that calls to this contract
         // will always be decoded semi-correctly even if the input is very incorrect. This also checks that the user 
         // inputs into the swap contracts are correct while making the cross-chain interface flexible for future implementations.
@@ -221,6 +222,7 @@ contract CatalystGARPInterface is Ownable, ICrossChainReceiver, Bytes65, IMessag
             );
         }
         else {
+            // A proper message should never get here. If the message got here, we are never going to be able to properly process it.
             revert InvalidContext(context);
         }
     }
@@ -254,6 +256,7 @@ contract CatalystGARPInterface is Ownable, ICrossChainReceiver, Bytes65, IMessag
             );
         }
         else {
+            // A proper message should never get here. If the message got here, we are never going to be able to properly process it.
             revert InvalidContext(context);
         }
     }
@@ -314,7 +317,9 @@ contract CatalystGARPInterface is Ownable, ICrossChainReceiver, Bytes65, IMessag
             return acknowledgement = _handleLiquiditySwap(sourceIdentifierbytes, data);
         }
         /* revert InvalidContext(context); */
-        // No return here. Instead, another implementation can override this implementation. It should just keep adding ifs with returns inside.
+        // No return here. Instead, another implementation can override this implementation. It should just keep adding ifs with returns inside:
+        // acknowledgement = super._receiveMessage(...)
+        // if (acknowledgement == 0x01) { if (context == CTXX) ...}
         return acknowledgement = 0x01;
     }
 
