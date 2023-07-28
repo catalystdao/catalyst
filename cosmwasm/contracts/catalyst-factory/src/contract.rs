@@ -28,7 +28,7 @@ pub fn instantiate(
 
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
-    set_owner_unchecked(deps.branch(), info.sender)?;
+    let set_owner_event = set_owner_unchecked(deps.branch(), info.sender)?;
 
     let set_default_fee_event = set_default_governance_fee_share_unchecked(
         &mut deps,
@@ -37,6 +37,7 @@ pub fn instantiate(
 
     Ok(
         Response::new()
+            .add_event(set_owner_event)
             .add_event(set_default_fee_event)
     )
 }
