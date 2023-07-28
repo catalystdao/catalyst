@@ -2,8 +2,8 @@ mod test_amplified_send_asset {
     use cosmwasm_std::{Uint128, Addr, Binary, Attribute};
     use cw_multi_test::{App, Executor};
     use catalyst_types::U256;
-    use catalyst_vault_common::{ContractError, msg::TotalEscrowedAssetResponse};
-    use test_helpers::{math::{uint128_to_f64, f64_to_uint128, u256_to_f64, f64_to_u256}, misc::{encode_payload_address, get_response_attribute}, token::{deploy_test_tokens, transfer_tokens, set_token_allowance, query_token_balance}, definitions::{SETUP_MASTER, CHANNEL_ID, SWAPPER_B, SWAPPER_A, FACTORY_OWNER}, contract::{mock_instantiate_interface, mock_factory_deploy_vault, DEFAULT_TEST_VAULT_FEE, DEFAULT_TEST_GOV_FEE, mock_set_vault_connection}};
+    use catalyst_vault_common::{ContractError, msg::{TotalEscrowedAssetResponse, AssetEscrowResponse}, state::compute_send_asset_hash};
+    use test_helpers::{math::{uint128_to_f64, f64_to_uint128, u256_to_f64, f64_to_u256}, misc::{encode_payload_address, get_response_attribute}, token::{deploy_test_tokens, transfer_tokens, set_token_allowance, query_token_balance}, definitions::{SETUP_MASTER, CHANNEL_ID, SWAPPER_B, SWAPPER_A, FACTORY_OWNER, SWAPPER_C}, contract::{mock_instantiate_interface, mock_factory_deploy_vault, DEFAULT_TEST_VAULT_FEE, DEFAULT_TEST_GOV_FEE, mock_set_vault_connection}};
 
     use crate::{msg::AmplifiedExecuteMsg, tests::{helpers::{compute_expected_send_asset, amplified_vault_contract_storage}, parameters::{AMPLIFICATION, TEST_VAULT_BALANCES, TEST_VAULT_WEIGHTS, TEST_VAULT_ASSET_COUNT}}};
 
@@ -50,6 +50,7 @@ mod test_amplified_send_asset {
         let swap_amount = f64_to_uint128(uint128_to_f64(from_balance) * send_percentage).unwrap();
 
         let to_asset_idx = 1;
+        let to_account = encode_payload_address(SWAPPER_B.as_bytes());
 
         // Fund swapper with tokens and set vault allowance
         transfer_tokens(
@@ -77,12 +78,12 @@ mod test_amplified_send_asset {
             &AmplifiedExecuteMsg::SendAsset {
                 channel_id: CHANNEL_ID.to_string(),
                 to_vault: target_vault,
-                to_account: encode_payload_address(SWAPPER_B.as_bytes()),
+                to_account: to_account.clone(),
                 from_asset: from_asset.to_string(),
                 to_asset_index: to_asset_idx,
                 amount: swap_amount,
                 min_out: U256::zero(),
-                fallback_account: SWAPPER_A.to_string(),
+                fallback_account: SWAPPER_C.to_string(),
                 calldata: Binary(vec![])
             },
             &[]
@@ -138,7 +139,26 @@ mod test_amplified_send_asset {
         assert!(queried_escrowed_total >= expected_escrowed_total * 0.999999);
     
         // Verify the fallback account/escrow is set
-        // TODO how do we compute the swapHash? Where do we get the (fromAmount - fee) from?
+        let observed_fee = get_response_attribute::<Uint128>(response.events[1].clone(), "fee").unwrap();
+
+        let expected_asset_swap_hash = compute_send_asset_hash(
+            to_account.as_ref(),
+            observed_return,
+            swap_amount - observed_fee,
+            from_asset.as_ref(),
+            app.block_info().height as u32
+        );
+
+        let queried_fallback_account = app
+            .wrap()
+            .query_wasm_smart::<AssetEscrowResponse>(vault.clone(), &crate::msg::QueryMsg::AssetEscrow { hash: Binary(expected_asset_swap_hash) })
+            .unwrap()
+            .fallback_account;
+
+        assert_eq!(
+            queried_fallback_account,
+            Some(Addr::unchecked(SWAPPER_C))
+        );
 
         // Verify interface contract gets invoked
         let invoked_interface = get_response_attribute::<String>(response.events[response.events.len()-1].clone(), "_contract_addr").unwrap();
