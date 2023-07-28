@@ -6,7 +6,7 @@ import {ERC20} from 'solmate/src/tokens/ERC20.sol';
 import {SafeTransferLib} from 'solmate/src/utils/SafeTransferLib.sol';
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "./FixedPointMathLib.sol";
-import "./CatalystIBCInterface.sol";
+import "./CatalystGARPInterface.sol";
 import "./CatalystVaultCommon.sol";
 import "./ICatalystV1Vault.sol";
 
@@ -686,6 +686,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon {
         uint256 amount,
         uint256 minOut,
         address fallbackUser,
+        IncentiveDescription calldata incentive,
         bytes memory calldata_
     ) nonReentrant onlyConnectedPool(channelId, toVault) public override returns (uint256) {
         // Fallback user cannot be address(0) since this is used as a check for the existance of an escrow.
@@ -705,7 +706,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon {
         uint256 U = calcSendAsset(fromAsset, amount - fee);
 
         // Send the purchased units to the target vault on the target chain.
-        CatalystIBCInterface(_chainInterface).sendCrossChainAsset(
+        CatalystGARPInterface(_chainInterface).sendCrossChainAsset(
             channelId,
             toVault,
             toAccount,
@@ -714,6 +715,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon {
             minOut,
             amount - fee,
             fromAsset,
+            incentive,
             calldata_
         );
 
@@ -765,13 +767,14 @@ contract CatalystVaultVolatile is CatalystVaultCommon {
     /** @notice Copy of sendAsset with no calldata_ */
     function sendAsset(
         bytes32 channelId,
-        bytes calldata toVault,
-        bytes calldata toAccount,
+        bytes memory toVault,
+        bytes memory toAccount,
         address fromAsset,
         uint8 toAssetIndex,
         uint256 amount,
         uint256 minOut,
-        address fallbackUser
+        address fallbackUser,
+        IncentiveDescription calldata incentive
     ) external override returns (uint256) {
         bytes memory calldata_ = new bytes(0);
         return sendAsset(
@@ -783,6 +786,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon {
             amount,
             minOut,
             fallbackUser,
+            incentive,
             calldata_
         );
     }
@@ -937,6 +941,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon {
         uint256 vaultTokens,
         uint256[2] calldata minOut,
         address fallbackUser,
+        IncentiveDescription calldata incentive,
         bytes memory calldata_
     ) nonReentrant onlyConnectedPool(channelId, toVault) public override returns (uint256) {
         // Fallback user cannot be address(0) since this is used as a check for the existance of an escrow.
@@ -966,13 +971,14 @@ contract CatalystVaultVolatile is CatalystVaultCommon {
         )) * wsum;
 
         // Transfer the units to the target vault.
-        CatalystIBCInterface(_chainInterface).sendCrossChainLiquidity(
+        CatalystGARPInterface(_chainInterface).sendCrossChainLiquidity(
             channelId,
             toVault,
             toAccount,
             U,
             minOut,
             vaultTokens,
+            incentive,
             calldata_
         );
 
@@ -1016,7 +1022,8 @@ contract CatalystVaultVolatile is CatalystVaultCommon {
         bytes calldata toAccount,
         uint256 vaultTokens,
         uint256[2] calldata minOut,
-        address fallbackUser
+        address fallbackUser,
+        IncentiveDescription calldata incentive
     ) external override returns (uint256) {
         bytes memory calldata_ = new bytes(0);
         return sendLiquidity(
@@ -1026,6 +1033,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon {
             vaultTokens,
             minOut,
             fallbackUser,
+            incentive,
             calldata_
         );
     }

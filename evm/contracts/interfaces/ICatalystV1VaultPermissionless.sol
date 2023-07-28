@@ -2,7 +2,9 @@
 
 pragma solidity ^0.8.16;
 
-interface ICatalystV1VaultPermissionless {
+import { IMessageEscrowStructs } from "../external/GARP/IMessageEscrowStructs.sol";
+
+interface ICatalystV1VaultPermissionless is IMessageEscrowStructs {
     /** 
      * @notice Setup a vault.
      * @param name_ Name of the Vault token.
@@ -89,6 +91,7 @@ interface ICatalystV1VaultPermissionless {
      * @param amount The number of fromAsset to sell to the vault.
      * @param minOut The minimum number of returned tokens to the toAccount on the target chain.
      * @param fallbackUser If the transaction fails, send the escrowed funds to this address.
+     * @param incentive A struct which descripes the incentives for a cross-chain message.
      * @return uint256 The number of units minted.
      */
     function sendAsset(
@@ -99,7 +102,8 @@ interface ICatalystV1VaultPermissionless {
         uint8 toAssetIndex,
         uint256 amount,
         uint256 minOut,
-        address fallbackUser
+        address fallbackUser,
+        IncentiveDescription calldata incentive
     ) external returns (uint256);
 
     /// @notice Includes calldata_
@@ -114,6 +118,7 @@ interface ICatalystV1VaultPermissionless {
         uint256 amount,
         uint256 minOut,
         address fallbackUser,
+        IncentiveDescription calldata incentive,
         bytes memory calldata_
     ) external returns (uint256);
 
@@ -167,6 +172,7 @@ interface ICatalystV1VaultPermissionless {
      * @param vaultTokens The number of vault tokens to exchange.
      * @param minOut An array of minout describing: [the minimum number of vault tokens, the minimum number of reference assets].
      * @param fallbackUser If the transaction fails, send the escrowed funds to this address.
+     * @param incentive A struct which descripes the incentives for a cross-chain message.
      * @return uint256 The number of units minted.
      */
     function sendLiquidity(
@@ -175,7 +181,8 @@ interface ICatalystV1VaultPermissionless {
         bytes calldata toAccount,
         uint256 vaultTokens,
         uint256[2] calldata minOut,
-        address fallbackUser
+        address fallbackUser,
+        IncentiveDescription calldata incentive
     ) external returns (uint256);
 
     /// @notice Includes calldata_
@@ -188,6 +195,7 @@ interface ICatalystV1VaultPermissionless {
         uint256 vaultTokens,
         uint256[2] calldata minOut,
         address fallbackUser,
+        IncentiveDescription calldata incentive,
         bytes memory calldata_
     ) external returns (uint256);
 
