@@ -113,7 +113,7 @@ mod test_amplified_fees {
 
 
         // Tested action: set vault fee
-        let _response = app.execute_contract::<AmplifiedExecuteMsg>(
+        let response = app.execute_contract::<AmplifiedExecuteMsg>(
             Addr::unchecked(FACTORY_OWNER),
             vault.clone(),
             &AmplifiedExecuteMsg::SetVaultFee { fee: new_vault_fee },
@@ -121,7 +121,15 @@ mod test_amplified_fees {
         ).unwrap();
 
         
-        // TODO verify response attributes (event)
+        // Verify the event
+        let event = response.events[1].clone();
+
+        assert_eq!(event.ty, "wasm-set-vault-fee");
+
+        assert_eq!(
+            event.attributes[1],
+            Attribute::new("fee", new_vault_fee.to_string())
+        );
 
         // Verify the new vault fee is set
         let queried_vault_fee: Uint64 = app
@@ -247,7 +255,7 @@ mod test_amplified_fees {
 
 
         // Tested action: set governance fee share
-        let _response = app.execute_contract::<AmplifiedExecuteMsg>(
+        let response = app.execute_contract::<AmplifiedExecuteMsg>(
             Addr::unchecked(FACTORY_OWNER),
             vault.clone(),
             &AmplifiedExecuteMsg::SetGovernanceFeeShare { fee: new_gov_fee_share },
@@ -255,7 +263,15 @@ mod test_amplified_fees {
         ).unwrap();
 
         
-        // TODO verify response attributes (event)
+        // Verify the event
+        let event = response.events[1].clone();
+
+        assert_eq!(event.ty, "wasm-set-governance-fee-share");
+
+        assert_eq!(
+            event.attributes[1],
+            Attribute::new("fee", new_gov_fee_share.to_string())
+        );
 
         // Verify the new governance fee share is set
         let queried_gov_fee_share: Uint64 = app
