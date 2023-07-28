@@ -1,5 +1,5 @@
 mod test_amplified_vault_connections {
-    use cosmwasm_std::{Addr, Binary};
+    use cosmwasm_std::{Addr, Binary, Attribute};
     use cw_multi_test::{Executor, App};
     use catalyst_vault_common::{ContractError, msg::VaultConnectionStateResponse};
     use test_helpers::{misc::encode_payload_address, token::deploy_test_tokens, definitions::{SETUP_MASTER, FACTORY_OWNER}, contract::{mock_instantiate_interface, mock_factory_deploy_vault, mock_finish_vault_setup}};
@@ -36,7 +36,7 @@ mod test_amplified_vault_connections {
 
 
         // Tested action: set connection
-        let _response = app.execute_contract::<AmplifiedExecuteMsg>(
+        let response = app.execute_contract::<AmplifiedExecuteMsg>(
             Addr::unchecked(SETUP_MASTER),
             vault.clone(),
             &AmplifiedExecuteMsg::SetConnection {
@@ -49,7 +49,23 @@ mod test_amplified_vault_connections {
 
 
 
-        // TODO verify response attributes (event)
+        // Verify the event
+        let event = response.events[1].clone();
+
+        assert_eq!(event.ty, "wasm-set-connection");
+
+        assert_eq!(
+            event.attributes[1],
+            Attribute::new("channel_id", channel_id.to_string())
+        );
+        assert_eq!(
+            event.attributes[2],
+            Attribute::new("vault", target_vault.to_base64())
+        );
+        assert_eq!(
+            event.attributes[3],
+            Attribute::new("state", true.to_string())
+        );
 
         // Verify the connection is set
         let queried_connection_state: bool = app.wrap().query_wasm_smart::<VaultConnectionStateResponse>(
@@ -93,7 +109,7 @@ mod test_amplified_vault_connections {
 
 
         // Tested action: unset the connection
-        let _response = app.execute_contract::<AmplifiedExecuteMsg>(
+        let response = app.execute_contract::<AmplifiedExecuteMsg>(
             Addr::unchecked(SETUP_MASTER),
             vault.clone(),
             &AmplifiedExecuteMsg::SetConnection {
@@ -105,6 +121,24 @@ mod test_amplified_vault_connections {
         ).unwrap();
 
 
+
+        // Verify the event
+        let event = response.events[1].clone();
+
+        assert_eq!(event.ty, "wasm-set-connection");
+
+        assert_eq!(
+            event.attributes[1],
+            Attribute::new("channel_id", channel_id.to_string())
+        );
+        assert_eq!(
+            event.attributes[2],
+            Attribute::new("vault", target_vault.to_base64())
+        );
+        assert_eq!(
+            event.attributes[3],
+            Attribute::new("state", false.to_string())
+        );
 
         // Verify the connection is not set
         let queried_connection_state: bool = app.wrap().query_wasm_smart::<VaultConnectionStateResponse>(
