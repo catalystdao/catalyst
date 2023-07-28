@@ -8,7 +8,7 @@ import { ICrossChainReceiver } from "./external/GARP/ICrossChainReceiver.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./ICatalystV1Vault.sol";
 import "./interfaces/ICatalystV1VaultState.sol"; // structs
-import "./CatalystIBCPayload.sol";
+import "./CatalystPayload.sol";
 import {Bytes65} from "./utils/Bytes65.sol";
 
 /**
@@ -109,7 +109,7 @@ contract CatalystGARPInterface is Ownable, ICrossChainReceiver, Bytes65, IMessag
         // Anyone can call this function, but unless someone can also manage to pass the security check on onRecvPacket
         // they cannot drain any value. As such, the very worst they can do is waste gas.
 
-        // Encode payload. See CatalystIBCPayload.sol for the payload definition
+        // Encode payload. See CatalystPayload.sol for the payload definition
         bytes memory data = abi.encodePacked(
             CTX0_ASSET_SWAP,
             uint8(20),      // EVM addresses are 20 bytes.
@@ -168,7 +168,7 @@ contract CatalystGARPInterface is Ownable, ICrossChainReceiver, Bytes65, IMessag
         // Anyone can call this function, but unless someone can also manage to pass the security check on onRecvPacket
         // they cannot drain any value. As such, the very worst they can do is waste gas.
 
-        // Encode payload. See CatalystIBCPayload.sol for the payload definition
+        // Encode payload. See CatalystPayload.sol for the payload definition
         bytes memory data =  abi.encodePacked(
             CTX1_LIQUIDITY_SWAP,
             uint8(20),  // EVM addresses are 20 bytes.
