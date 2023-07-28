@@ -1073,7 +1073,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
         address fallbackUser,
         IncentiveDescription calldata incentive,
         bytes memory calldata_
-    ) nonReentrant onlyConnectedPool(channelId, toVault) public override returns (uint256) {
+    ) nonReentrant onlyConnectedPool(channelId, toVault) public payable override returns (uint256) {
         // Fallback user cannot be address(0) since this is used as a check for the existance of an escrow.
         // It would also be a silly fallback address.
         require(fallbackUser != address(0));
@@ -1094,7 +1094,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
         _unitTracker += int256(U);
 
         // Send the purchased units to the target vault on the target chain.
-        CatalystGARPInterface(_chainInterface).sendCrossChainAsset(
+        CatalystGARPInterface(_chainInterface).sendCrossChainAsset{value: msg.value}(
             channelId,
             toVault,
             toAccount,
@@ -1162,7 +1162,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
         uint256 minOut,
         address fallbackUser,
         IncentiveDescription calldata incentive
-    ) external override returns (uint256) {
+    ) external payable override returns (uint256) {
         bytes memory calldata_ = new bytes(0);
         return sendAsset(
             channelId,
@@ -1404,7 +1404,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
         address fallbackUser,
         IncentiveDescription calldata incentive,
         bytes memory calldata_
-    ) nonReentrant onlyConnectedPool(channelId, toVault) public override returns (uint256) {
+    ) nonReentrant onlyConnectedPool(channelId, toVault) public payable override returns (uint256) {
         // Fallback user cannot be address(0) since this is used as a check for the existance of an escrow.
         // It would also be a silly fallback address.
         require(fallbackUser != address(0));
@@ -1444,7 +1444,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
         }
 
         // Transfer the units to the target vault.
-        CatalystGARPInterface(_chainInterface).sendCrossChainLiquidity(
+        CatalystGARPInterface(_chainInterface).sendCrossChainLiquidity{value: msg.value}(
             channelId,
             toVault,
             toAccount,
@@ -1497,7 +1497,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
         uint256[2] calldata minOut,
         address fallbackUser,
         IncentiveDescription calldata incentive
-    ) external override returns (uint256) {
+    ) external payable override returns (uint256) {
         bytes memory calldata_ = new bytes(0);
         return sendLiquidity(
             channelId,

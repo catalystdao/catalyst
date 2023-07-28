@@ -104,7 +104,7 @@ interface ICatalystV1VaultPermissionless is IMessageEscrowStructs {
         uint256 minOut,
         address fallbackUser,
         IncentiveDescription calldata incentive
-    ) external returns (uint256);
+    ) external payable returns (uint256);
 
     /// @notice Includes calldata_
     /// @param calldata_ Data field if a call should be made on the target chain.
@@ -120,7 +120,7 @@ interface ICatalystV1VaultPermissionless is IMessageEscrowStructs {
         address fallbackUser,
         IncentiveDescription calldata incentive,
         bytes memory calldata_
-    ) external returns (uint256);
+    ) external payable returns (uint256);
 
     /**
      * @notice Completes a cross-chain swap by converting units to the desired token (toAsset)
@@ -183,7 +183,7 @@ interface ICatalystV1VaultPermissionless is IMessageEscrowStructs {
         uint256[2] calldata minOut,
         address fallbackUser,
         IncentiveDescription calldata incentive
-    ) external returns (uint256);
+    ) external payable returns (uint256);
 
     /// @notice Includes calldata_
     /// @param calldata_ Data field if a call should be made on the target chain.
@@ -197,7 +197,7 @@ interface ICatalystV1VaultPermissionless is IMessageEscrowStructs {
         address fallbackUser,
         IncentiveDescription calldata incentive,
         bytes memory calldata_
-    ) external returns (uint256);
+    ) external payable returns (uint256);
 
     /**
      * @notice Completes a cross-chain liquidity swap by converting units to tokens and depositing.

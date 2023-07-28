@@ -28,7 +28,15 @@ contract CatalystGARPInterface is Ownable, ICrossChainReceiver, Bytes65, IMessag
     error InvalidAddress();
     error InvalidSourceApplication();
     error SubcallOutOfGas();
+    error NotEnoughIncentives();
+
+
     event SwapFailed(bytes1 error);
+    
+    event MinGasFor(
+        bytes32 identifier,
+        uint48 minGas
+    );
 
     //--- Config ---//
     IIncentivizedMessageEscrow public immutable GARP; // Set on deployment
@@ -36,9 +44,30 @@ contract CatalystGARPInterface is Ownable, ICrossChainReceiver, Bytes65, IMessag
     // If not set, then the identifier is abi.encodePacked(uint8(20), bytes32(0), bytes32(msg.sender))
     mapping(bytes32 => bytes) public chainIdentifierToDestinationAddress;
 
+    mapping(bytes32 => uint48) public minGasFor;
+
     constructor(address GARP_) {
         require(address(GARP_) != address(0));  // dev: GARP_ cannot be zero address
         GARP = IIncentivizedMessageEscrow(GARP_);
+    }
+
+    /// @notice Allow updating of the minimum gas limit.
+    /// @dev Set chainIdentifier to 0 for gas for ack. 
+    function setMinGasFor(bytes32 chainIdentifier, uint48 minGas) external onlyOwner {
+        minGasFor[chainIdentifier] = minGas;
+
+        emit MinGasFor(chainIdentifier, minGas);
+    }
+
+    modifier checkIncentives(bytes32 destinationChainIdentifier, IncentiveDescription calldata incentive) {
+        // 1. Gas limits
+        if (incentive.maxGasDelivery < minGasFor[destinationChainIdentifier]) revert NotEnoughIncentives();
+        if (incentive.maxGasAck < minGasFor[bytes32(0)]) revert NotEnoughIncentives();
+
+        // 2. Gas prices
+        // You need to provide more than 10% gas than spent on this transaction.
+        if (incentive.priceOfAckGas < tx.gasprice * 11 / 10) revert NotEnoughIncentives();
+        _;
     }
 
     modifier onlyGARP() {
@@ -100,7 +129,7 @@ contract CatalystGARPInterface is Ownable, ICrossChainReceiver, Bytes65, IMessag
         address fromAsset,
         IncentiveDescription calldata incentive,
         bytes calldata calldata_
-    ) checkBytes65Address(toVault) checkBytes65Address(toAccount) external payable {
+    ) checkBytes65Address(toVault) checkBytes65Address(toAccount) checkIncentives(chainIdentifier, incentive) external payable {
         // We need to ensure that all information is in the correct places. This ensures that calls to this contract
         // will always be decoded semi-correctly even if the input is very incorrect. This also checks that the user 
         // inputs into the swap contracts are correct while making the cross-chain interface flexible for future implementations.
@@ -129,7 +158,7 @@ contract CatalystGARPInterface is Ownable, ICrossChainReceiver, Bytes65, IMessag
             calldata_
         );
 
-        GARP.escrowMessage(
+        GARP.escrowMessage{value: msg.value}(
             chainIdentifier,
             getAddressForChainIdentifier(chainIdentifier),
             data,
@@ -159,7 +188,7 @@ contract CatalystGARPInterface is Ownable, ICrossChainReceiver, Bytes65, IMessag
         uint256 fromAmount,
         IncentiveDescription calldata incentive,
         bytes memory calldata_
-    ) checkBytes65Address(toVault) checkBytes65Address(toAccount) external payable{
+    ) checkBytes65Address(toVault) checkBytes65Address(toAccount) checkIncentives(chainIdentifier, incentive) external payable {
         // We need to ensure that all information is in the correct places. This ensures that calls to this contract
         // will always be decoded semi-correctly even if the input is very incorrect. This also checks that the user 
         // inputs into the swap contracts are correct while making the cross-chain interface flexible for future implementations.
@@ -169,7 +198,7 @@ contract CatalystGARPInterface is Ownable, ICrossChainReceiver, Bytes65, IMessag
         // they cannot drain any value. As such, the very worst they can do is waste gas.
 
         // Encode payload. See CatalystPayload.sol for the payload definition
-        bytes memory data =  abi.encodePacked(
+        bytes memory data = abi.encodePacked(
             CTX1_LIQUIDITY_SWAP,
             uint8(20),  // EVM addresses are 20 bytes.
             bytes32(0),  // EVM only uses 20 bytes. abi.encode packs the 20 bytes into 32 then we need to add 32 more
@@ -185,7 +214,7 @@ contract CatalystGARPInterface is Ownable, ICrossChainReceiver, Bytes65, IMessag
             calldata_
         );
 
-        GARP.escrowMessage(
+        GARP.escrowMessage{value: msg.value}(
             chainIdentifier,
             getAddressForChainIdentifier(chainIdentifier),
             data,
