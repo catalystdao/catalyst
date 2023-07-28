@@ -1182,7 +1182,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
         address toAsset,
         uint256 U,
         uint256 minOut
-    ) nonReentrant onlyChainInterface internal returns (uint256) {
+    ) internal returns (uint256) {
         _updateAmplification();
 
         // Calculate the swap return value. Fee is always taken on the sending token.
@@ -1229,7 +1229,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
         uint256 fromAmount,
         bytes calldata fromAsset,
         uint32 blockNumberMod
-    ) onlyConnectedPool(channelId, fromVault) external override {
+    ) nonReentrant onlyChainInterface onlyConnectedPool(channelId, fromVault) external override {
         // Convert the asset index (toAsset) into the asset to be purchased.
         address toAsset = _tokenIndexing[toAssetIndex];
         uint256 purchasedTokens = _receiveAsset(
@@ -1270,7 +1270,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
         uint32 blockNumberMod,
         address dataTarget,
         bytes calldata data
-    ) onlyConnectedPool(channelId, fromVault) external override {
+    ) nonReentrant onlyChainInterface onlyConnectedPool(channelId, fromVault) external override {
         // Convert the asset index (toAsset) into the asset to be purchased.
         address toAsset = _tokenIndexing[toAssetIndex];
         uint256 purchasedTokens = _receiveAsset(
@@ -1511,7 +1511,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
         uint256 U,
         uint256 minVaultTokens,
         uint256 minReferenceAsset
-    ) nonReentrant onlyChainInterface internal returns (uint256) {
+    ) internal returns (uint256) {
         _updateAmplification();
 
         int256 oneMinusAmp = _oneMinusAmp;
@@ -1594,7 +1594,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
         uint256 minReferenceAsset,
         uint256 fromAmount,
         uint32 blockNumberMod
-    ) onlyConnectedPool(channelId, fromVault) external override {
+    ) nonReentrant onlyChainInterface onlyConnectedPool(channelId, fromVault) external override {
         uint256 purchasedVaultTokens = _receiveLiquidity(
             U,
             minVaultTokens,
@@ -1622,7 +1622,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
         uint32 blockNumberMod,
         address dataTarget,
         bytes calldata data
-    ) onlyConnectedPool(channelId, fromVault) external override {
+    ) nonReentrant onlyChainInterface onlyConnectedPool(channelId, fromVault) external override {
         uint256 purchasedVaultTokens  = _receiveLiquidity(
             U,
             minVaultTokens,
