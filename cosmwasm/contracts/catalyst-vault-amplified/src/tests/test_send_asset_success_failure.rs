@@ -439,7 +439,7 @@ mod test_amplified_send_asset_success_failure {
         assert!(
             format!(
                 "{}", response_result.err().unwrap().root_cause()
-            ).contains("Addr not found")     // TODO implement a better error rather than the current 'cosmwasm_std::addresses::Addr not found'
+            ).contains("Addr not found")
         )
 
     }
@@ -490,7 +490,7 @@ mod test_amplified_send_asset_success_failure {
         assert!(
             format!(
                 "{}", response_result.err().unwrap().root_cause()
-            ).contains("Addr not found")     // TODO implement a better error rather than the current 'cosmwasm_std::addresses::Addr not found'
+            ).contains("Addr not found")
         )
 
     }

@@ -723,7 +723,6 @@ mod catalyst_vault_factory_tests {
         );
 
 
-        //TODO review where the 'name' and 'symbol' are saved
         // Verify the deployed vault has the 'name' and 'symbol' set
         let queried_token_info = app.wrap().query_wasm_smart::<TokenInfoResponse>(
             vault.clone(),

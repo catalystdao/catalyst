@@ -269,7 +269,6 @@ mod catalyst_ibc_interface_tests {
 
 
     // Helpers ******************************************************************************************************************
-    //TODO move helpers somewhere else?
 
     fn mock_ibc_packet(
         channel_id: &str,
@@ -430,7 +429,6 @@ mod catalyst_ibc_interface_tests {
     }
 
 
-    // TODO move into struct implementation?
     fn build_payload(
         from_vault: &[u8],
         msg: ExecuteMsg,
