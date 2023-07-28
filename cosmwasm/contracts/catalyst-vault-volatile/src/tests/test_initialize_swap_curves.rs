@@ -1,11 +1,11 @@
 mod test_volatile_initialize_swap_curves {
 
-    use cosmwasm_std::{Uint128, Addr, Uint64};
+    use cosmwasm_std::{Uint128, Addr, Uint64, Attribute};
     use cw20::{ TokenInfoResponse, BalanceResponse, Cw20QueryMsg};
     use cw_multi_test::{App, Executor};
     use catalyst_types::U256;
     use fixed_point_math::{LN2, WAD};
-    use catalyst_vault_common::{ContractError, msg::{AssetsResponse, WeightResponse, GetLimitCapacityResponse, TotalEscrowedAssetResponse, TotalEscrowedLiquidityResponse}};
+    use catalyst_vault_common::{ContractError, msg::{AssetsResponse, WeightResponse, GetLimitCapacityResponse, TotalEscrowedAssetResponse, TotalEscrowedLiquidityResponse}, state::INITIAL_MINT_AMOUNT, event::format_vec_for_event};
     use test_helpers::{token::deploy_test_tokens, definitions::{SETUP_MASTER, DEPOSITOR, DEPLOYER}, contract::{mock_instantiate_vault, InitializeSwapCurvesMockConfig}};
 
     use crate::tests::{helpers::volatile_vault_contract_storage, parameters::{TEST_VAULT_BALANCES, TEST_VAULT_WEIGHTS, AMPLIFICATION, TEST_VAULT_ASSET_COUNT}};
@@ -48,16 +48,13 @@ mod test_volatile_initialize_swap_curves {
 
 
         // Tested action: initialize swap curves
-        let _response = app.execute_contract(
+        app.execute_contract(
             Addr::unchecked(SETUP_MASTER),
             vault.clone(),
             &initialize_msg.clone().into_execute_msg(),
             &[]
         ).unwrap();
 
-
-
-    //     //TODO check response attributes (event)
 
     //     //TODO verify only the factory can invoke initialize_swap_curves
 
@@ -178,6 +175,72 @@ mod test_volatile_initialize_swap_curves {
         assert_eq!(
             total_escrowed_liquidity,
             Uint128::zero()
+        );
+
+    }
+
+
+    #[test]
+    fn test_initialize_deposit_event() {
+
+        let mut app = App::default();
+
+        // Instantiate vault
+        let vault_code_id = volatile_vault_contract_storage(&mut app);
+        let vault = mock_instantiate_vault(&mut app, vault_code_id, None);
+
+        // Create tokens and set vault allowances
+        let test_tokens = deploy_test_tokens(
+            &mut app,
+            SETUP_MASTER.to_string(),
+            None,
+            TEST_VAULT_ASSET_COUNT
+        );
+
+        // Define InitializeSwapCurves parameters
+        let initialize_msg = InitializeSwapCurvesMockConfig {
+            assets: test_tokens.iter().map(|addr| addr.to_string()).collect(),
+            assets_balances: TEST_VAULT_BALANCES.to_vec(),
+            weights: TEST_VAULT_WEIGHTS.to_vec(),
+            amp: AMPLIFICATION,
+            depositor: DEPOSITOR.to_string()
+        };
+
+        // Transfer tokens to the vault
+        initialize_msg.transfer_vault_allowances(
+            &mut app,
+            vault.to_string(),
+            Addr::unchecked(SETUP_MASTER)
+        );
+
+
+
+        // Tested action: initialize swap curves
+        let response = app.execute_contract(
+            Addr::unchecked(SETUP_MASTER),
+            vault.clone(),
+            &initialize_msg.clone().into_execute_msg(),
+            &[]
+        ).unwrap();
+
+
+
+        // Check the event
+        let event = response.events[1].clone();
+
+        assert_eq!(event.ty, "wasm-deposit");
+        
+        assert_eq!(
+            event.attributes[1],
+            Attribute::new("to_account", DEPOSITOR)
+        );
+        assert_eq!(
+            event.attributes[2],
+            Attribute::new("mint", INITIAL_MINT_AMOUNT.to_string())
+        );
+        assert_eq!(
+            event.attributes[3],
+            Attribute::new("deposit_amounts", format_vec_for_event(TEST_VAULT_BALANCES.to_vec()))
         );
 
     }
