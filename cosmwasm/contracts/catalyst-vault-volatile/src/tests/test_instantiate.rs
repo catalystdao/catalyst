@@ -1,6 +1,6 @@
 
 mod test_volatile_instantiate {
-    use cosmwasm_std::{Uint128, Addr, Uint64};
+    use cosmwasm_std::{Uint128, Addr, Uint64, WasmMsg, to_binary, Attribute};
     use cw20_base::state::TokenInfo;
     use cw_multi_test::{App, Executor};
     use catalyst_vault_common::msg::{SetupMasterResponse, ChainInterfaceResponse, OnlyLocalResponse, VaultFeeResponse, GovernanceFeeShareResponse};
@@ -18,6 +18,7 @@ mod test_volatile_instantiate {
         let instantiate_msg = mock_instantiate_vault_msg(chain_interface);
 
 
+
         // Tested action: instantiate contract
         let contract_code_storage = volatile_vault_contract_storage(&mut app);
         let vault_contract = app.instantiate_contract(
@@ -30,7 +31,6 @@ mod test_volatile_instantiate {
         ).unwrap();
 
 
-        //TODO Check response attributes
 
         // Query and verify setup master
         let setup_master: Option<Addr> = app
@@ -121,6 +121,7 @@ mod test_volatile_instantiate {
         let instantiate_msg = mock_instantiate_vault_msg(chain_interface);
 
 
+
         // Tested action: instantiate contract
         let contract_code_storage = volatile_vault_contract_storage(&mut app);
         let vault_contract = app.instantiate_contract(
@@ -133,7 +134,6 @@ mod test_volatile_instantiate {
         ).unwrap();
 
 
-        //TODO Check response attributes
 
         // Query and verify chain interface
         let chain_interface: Option<Addr> = app
@@ -158,6 +158,59 @@ mod test_volatile_instantiate {
             only_local,
             true
         );
+    }
+
+
+    #[test]
+    fn test_instantiate_events() {
+
+        let mut app = App::default();
+
+        let chain_interface = Some("chain_interface".to_string());
+        let instantiate_msg = mock_instantiate_vault_msg(chain_interface);
+
+
+
+        // Tested action: instantiate contract
+        let contract_code_storage = volatile_vault_contract_storage(&mut app);
+
+        let wasm_instantiate_msg = WasmMsg::Instantiate {
+            admin: None,
+            code_id: contract_code_storage,
+            msg: to_binary(&instantiate_msg).unwrap(),
+            funds: vec![],
+            label: "volatile_vault".into(),
+        };
+
+        let response = app.execute(
+            Addr::unchecked(DEPLOYER),
+            wasm_instantiate_msg.into()
+        ).unwrap();
+
+    
+
+        // Check the events
+        let fee_administrator_event = response.events[1].clone();
+        assert_eq!(fee_administrator_event.ty, "wasm-set-fee-administrator");
+        assert_eq!(
+            fee_administrator_event.attributes[1],
+            Attribute::new("administrator", instantiate_msg.fee_administrator.to_string())
+        );
+
+        let vault_fee_event = response.events[2].clone();
+        assert_eq!(vault_fee_event.ty, "wasm-set-vault-fee");
+        assert_eq!(
+            vault_fee_event.attributes[1],
+            Attribute::new("fee", instantiate_msg.vault_fee.to_string())
+        );
+
+        let governance_fee_event = response.events[3].clone();
+        assert_eq!(governance_fee_event.ty, "wasm-set-governance-fee-share");
+        assert_eq!(
+            governance_fee_event.attributes[1],
+            Attribute::new("fee", instantiate_msg.governance_fee_share.to_string())
+        );
+
     }
 
 }
