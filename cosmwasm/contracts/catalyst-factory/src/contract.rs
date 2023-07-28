@@ -347,7 +347,7 @@ fn query_default_governance_fee_share(deps: Deps) -> StdResult<DefaultGovernance
 mod catalyst_vault_factory_tests {
     use std::str::FromStr;
 
-    use cosmwasm_std::{Addr, Uint64, Uint128, Event, StdError, Attribute};
+    use cosmwasm_std::{Addr, Uint64, Uint128, Event, StdError, Attribute, WasmMsg, to_binary};
     use cw20::{TokenInfoResponse, BalanceResponse, Cw20QueryMsg};
     use cw_multi_test::{App, Executor, ContractWrapper};
     use test_helpers::token::{deploy_test_tokens, set_token_allowance};
@@ -432,8 +432,6 @@ mod catalyst_vault_factory_tests {
 
 
 
-        // TODO verify event
-
         // Verify the governance fee is set correctly
         let queried_default_governance_fee_share = app.wrap()
             .query_wasm_smart::<DefaultGovernanceFeeShareResponse>(factory, &QueryMsg::DefaultGovernanceFeeShare {})
@@ -444,6 +442,52 @@ mod catalyst_vault_factory_tests {
             queried_default_governance_fee_share,
             default_governance_fee_share
         )
+
+    }
+
+
+    #[test]
+    fn test_instantiate_event() {
+
+        let mut app = App::default();
+    
+        // 'Deploy' the contract
+        let code_id = mock_factory_contract(&mut app);
+
+        let default_governance_fee_share = Uint64::new(10101u64);
+
+
+
+        // Tested action
+        let wasm_instantiate_msg = WasmMsg::Instantiate {
+            admin: None,
+            code_id: code_id,
+            msg: to_binary(&InstantiateMsg { default_governance_fee_share }).unwrap(),
+            funds: vec![],
+            label: "catalyst-factory".into(),
+        };
+
+        let response = app.execute(
+            Addr::unchecked(GOVERNANCE),
+            wasm_instantiate_msg.into()
+        ).unwrap();
+
+
+
+        // Check the events
+        let owner_event = response.events[1].clone();
+        assert_eq!(owner_event.ty, "wasm-set-owner");
+        assert_eq!(
+            owner_event.attributes[1],
+            Attribute::new("account", GOVERNANCE)
+        );
+
+        let default_governance_fee_event = response.events[2].clone();
+        assert_eq!(default_governance_fee_event.ty, "wasm-set-default-governance-fee-share");
+        assert_eq!(
+            default_governance_fee_event.attributes[1],
+            Attribute::new("fee", default_governance_fee_share.to_string())
+        );
 
     }
 
