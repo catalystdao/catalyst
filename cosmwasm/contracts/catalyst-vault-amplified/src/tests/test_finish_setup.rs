@@ -18,7 +18,7 @@ mod test_amplified_finish_setup {
 
 
         // Tested action: finish setup
-        let _response = app.execute_contract::<AmplifiedExecuteMsg>(
+        let response = app.execute_contract::<AmplifiedExecuteMsg>(
             Addr::unchecked(SETUP_MASTER),
             vault.clone(),
             &AmplifiedExecuteMsg::FinishSetup {},
@@ -26,7 +26,10 @@ mod test_amplified_finish_setup {
         ).unwrap();
 
         
-        // TODO verify response attributes (event)
+        // Check the event
+        let event = response.events[1].clone();
+        assert_eq!(event.ty, "wasm-finish-setup");
+
 
         // Verify the setup master is removed
         let setup_master: Option<Addr> = app
