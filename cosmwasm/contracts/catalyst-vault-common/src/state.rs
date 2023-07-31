@@ -582,10 +582,16 @@ pub fn update_limit_capacity(
         );
     }
 
-    let new_capacity = capacity - amount;
     let timestamp = current_timestamp.seconds();
 
-    USED_LIMIT_CAPACITY.save(deps.storage, &new_capacity)?;
+    USED_LIMIT_CAPACITY.update(
+        deps.storage,
+        |used_capacity| -> StdResult<_> {
+            used_capacity
+                .checked_add(amount)
+                .map_err(|err| err.into())
+        }
+    )?;
     USED_LIMIT_CAPACITY_TIMESTAMP_SECONDS.save(deps.storage, &timestamp.into())?;
 
     Ok(())
