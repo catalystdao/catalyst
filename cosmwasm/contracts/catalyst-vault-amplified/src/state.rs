@@ -2395,7 +2395,9 @@ pub fn query_get_limit_capacity(
 
     Ok(
         GetLimitCapacityResponse {
-            capacity: get_limit_capacity(&deps, env.block.time)?
+            // NOTE: the common implementation of `get_limit_capacity` is divided by 2 because
+            // of how the limit is implemented for amplified vaults.
+            capacity: get_limit_capacity(&deps, env.block.time)? / u256!("2")
         }
     )
 
