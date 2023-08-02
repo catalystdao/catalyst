@@ -63,16 +63,16 @@ mod test_volatile_security_limit {
         let intitial_limit_capacity = query_limit_capacity(app, vault.clone());
 
         let current_limit_capacity: U256;
-        if bias_limit_capacity != 0. {
+        if bias_limit_capacity != 1. {
             // Perform a 'receive asset' call to bias the limit capacity
             let units_received: U256;
-            if bias_limit_capacity == 1. {
+            if bias_limit_capacity == 0. {
                 // Avoid rounding errors if bias is at 100%
                 units_received = intitial_limit_capacity;
             }
             else {
                 units_received = f64_to_u256(
-                    u256_to_f64(intitial_limit_capacity) * (1.-bias_limit_capacity)
+                    u256_to_f64(intitial_limit_capacity) * (1. - bias_limit_capacity)
                 ).unwrap();
             }
 
@@ -301,7 +301,7 @@ mod test_volatile_security_limit {
         // Instantiate and initialize vault
         let mock_vault_config = set_mock_vault(
             &mut app,
-            1.         // ! Decrease the initial limit capacity by 100%
+            0.         // ! Decrease the initial limit capacity by 100%
         );
         let vault = mock_vault_config.vault.clone();
 
