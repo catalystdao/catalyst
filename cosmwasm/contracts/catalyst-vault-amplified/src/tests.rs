@@ -9,6 +9,7 @@ mod test_instantiate;
 mod test_local_swap;
 mod test_receive_asset;
 mod test_receive_liquidity;
+mod test_security_limit;
 mod test_send_asset;
 mod test_send_asset_success_failure;
 mod test_send_liquidity;
