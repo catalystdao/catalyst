@@ -1,9 +1,10 @@
 mod test_amplified_initialize_swap_curves {
 
+    use std::ops::Div;
     use cosmwasm_std::{Uint128, Addr, Uint64, Attribute};
     use cw20::{ TokenInfoResponse, BalanceResponse, Cw20QueryMsg};
     use cw_multi_test::{App, Executor};
-    use catalyst_types::U256;
+    use catalyst_types::{U256, u256};
     use fixed_point_math::WAD;
     use catalyst_vault_common::{ContractError, msg::{AssetsResponse, WeightResponse, GetLimitCapacityResponse, TotalEscrowedAssetResponse, TotalEscrowedLiquidityResponse}, state::INITIAL_MINT_AMOUNT, event::format_vec_for_event};
     use test_helpers::{token::deploy_test_tokens, definitions::{SETUP_MASTER, DEPOSITOR, DEPLOYER}, contract::{mock_instantiate_vault, InitializeSwapCurvesMockConfig, mock_instantiate_vault_msg}};
@@ -123,7 +124,8 @@ mod test_amplified_initialize_swap_curves {
                 acc.checked_add(
                     U256::from(*balance).checked_mul(U256::from(weight)).unwrap()
                 ).unwrap()
-            });
+            })
+            .div(u256!("2"));
 
         assert_eq!(
             max_limit_capacity,
