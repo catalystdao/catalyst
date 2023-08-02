@@ -1,8 +1,10 @@
 mod test_volatile_weights_update {
+    use std::f64::consts::LN_2;
+
     use cosmwasm_std::{Uint128, Addr, Attribute, Timestamp};
     use cw_multi_test::{App, Executor};
-    use catalyst_vault_common::{ContractError, msg::WeightResponse, event::format_vec_for_event};
-    use test_helpers::{math::{uint128_to_f64, f64_to_uint128}, token::{deploy_test_tokens, set_token_allowance}, definitions::{SETUP_MASTER, FACTORY_OWNER}, contract::mock_factory_deploy_vault};
+    use catalyst_vault_common::{ContractError, msg::{WeightResponse, GetLimitCapacityResponse}, event::format_vec_for_event};
+    use test_helpers::{math::{uint128_to_f64, f64_to_uint128, u256_to_f64}, token::{deploy_test_tokens, set_token_allowance}, definitions::{SETUP_MASTER, FACTORY_OWNER}, contract::mock_factory_deploy_vault};
 
     use crate::{msg::{VolatileExecuteMsg, VolatileExecuteExtension, QueryMsg, TargetWeightResponse, WeightsUpdateFinishTimestampResponse}, tests::{helpers::volatile_vault_contract_storage, parameters::AMPLIFICATION}};
 
@@ -735,8 +737,93 @@ mod test_volatile_weights_update {
 
     #[test]
     fn test_weights_update_security_limit() {
-        //TODO
-        unimplemented!()
+        
+        let mut app = App::default();
+
+        // Instantiate and initialize vault
+        let vault_tokens = deploy_test_tokens(&mut app, SETUP_MASTER.to_string(), None, 3);
+        let initial_vault_weights = vec![Uint128::from(2000u128), Uint128::from(300000u128), Uint128::from(500000u128)];
+        let vault = set_mock_vault(
+            &mut app,
+            vault_tokens.clone(),
+            initial_vault_weights.clone()
+        );
+
+        // Define and set the new weights and the target time
+        let new_weights: Vec<Uint128> = vec![
+            Uint128::from(7777u128),    // First weight increases
+            Uint128::from(222222u128),  // Second weight decreases
+            Uint128::from(500000u128)   // Third weight does not change
+        ];
+        let update_duration = 30*24*60*60;   // 30 days
+        let start_timestamp = app.block_info().time.seconds();
+        let target_timestamp = start_timestamp + update_duration;
+
+        app.execute_contract(
+            Addr::unchecked(FACTORY_OWNER),
+            vault.clone(),
+            &VolatileExecuteMsg::Custom(
+                VolatileExecuteExtension::SetWeights {
+                    target_timestamp: target_timestamp.into(),
+                    new_weights: new_weights.clone()
+                }
+            ),
+            &[]
+        ).unwrap();
+
+
+
+        // Test action: Trigger update at different stages of the update and verify the weights
+        let update_checks = vec![
+            0.,
+            0.25,
+            0.25,   // ! Trigger an update twice on the same block
+            0.80,
+            1.,
+            1.1     // ! Make sure the update stops after 100%
+        ];
+
+        update_checks
+            .iter()
+            .for_each(|update_progress| {
+                
+                // Execute a local swap to trigger a weights recomputation
+                trigger_weights_update(
+                    &mut app,
+                    vault.clone(),
+                    vault_tokens.clone(),
+                    Timestamp::from_seconds(
+                        start_timestamp
+                        + (update_duration as f64 * update_progress) as u64
+                    )
+                );
+
+                // Verify that the security limit is correct
+                let current_weights = vault_tokens.iter()
+                    .map(|asset| {
+
+                        app.wrap().query_wasm_smart::<WeightResponse>(
+                            vault.clone(),
+                            &QueryMsg::Weight { asset: asset.to_string() }
+                        ).unwrap().weight
+    
+                    })
+                    .collect::<Vec<Uint128>>();
+
+                let expected_limit_capacity = uint128_to_f64(current_weights.iter().sum())
+                    * LN_2
+                    * 1e18; // Multiplied by 1e18 as the queried limit capacity is in WAD notation
+                
+                let queried_limit_capacity = u256_to_f64(
+                        app.wrap().query_wasm_smart::<GetLimitCapacityResponse>(
+                        vault.clone(),
+                        &QueryMsg::GetLimitCapacity {}
+                    ).unwrap().capacity
+                );
+        
+                assert!(queried_limit_capacity <= expected_limit_capacity * 1.000001);
+                assert!(queried_limit_capacity >= expected_limit_capacity * 0.999999);
+            })
     }
 
 }
