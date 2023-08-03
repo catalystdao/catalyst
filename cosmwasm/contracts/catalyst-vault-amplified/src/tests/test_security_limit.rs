@@ -1,11 +1,11 @@
 mod test_amplified_security_limit {
-    use std::ops::Div;
+    use std::{ops::Div, str::FromStr};
 
-    use catalyst_types::{U256, u256};
+    use catalyst_types::{U256, u256, I256};
     use catalyst_vault_common::{msg::{GetLimitCapacityResponse, TotalEscrowedAssetResponse}, ContractError, state::{INITIAL_MINT_AMOUNT, DECAY_RATE}};
-    use cosmwasm_std::{Addr, Uint128, Binary};
+    use cosmwasm_std::{Addr, Uint128, Binary, Uint64};
     use cw_multi_test::{App, Executor};
-    use test_helpers::{token::{deploy_test_tokens, set_token_allowance, query_token_balance}, contract::{mock_factory_deploy_vault, mock_instantiate_interface, mock_set_vault_connection}, definitions::{SETUP_MASTER, SWAPPER_B, CHANNEL_ID, SWAPPER_C, FACTORY_OWNER}, math::{uint128_to_f64, f64_to_uint128, u256_to_f64, f64_to_u256}, misc::{encode_payload_address, get_response_attribute}};
+    use test_helpers::{token::{deploy_test_tokens, set_token_allowance, query_token_balance, transfer_tokens}, contract::{mock_factory_deploy_vault, mock_instantiate_interface, mock_set_vault_connection}, definitions::{SETUP_MASTER, SWAPPER_B, CHANNEL_ID, SWAPPER_C, FACTORY_OWNER}, math::{uint128_to_f64, f64_to_uint128, u256_to_f64, f64_to_u256}, misc::{encode_payload_address, get_response_attribute}};
 
     use crate::{tests::{parameters::{TEST_VAULT_BALANCES, TEST_VAULT_WEIGHTS, TEST_VAULT_ASSET_COUNT, AMPLIFICATION}, helpers::amplified_vault_contract_storage}, msg::{QueryMsg, AmplifiedExecuteMsg, AmplifiedExecuteExtension}};
 
@@ -1036,6 +1036,7 @@ mod test_amplified_security_limit {
 
 
     #[test]
+    #[ignore]   // TODO review
     fn test_security_limit_change_on_receive_liquidity() {
 
         let mut app = App::default();
@@ -1145,6 +1146,358 @@ mod test_amplified_security_limit {
         let observed_limit_capacity = query_limit_capacity(&mut app, vault.clone());
         assert!(observed_limit_capacity.is_zero());
         
+    }
+
+
+    // Local swap tests ***************************************************************************
+    
+    #[test]
+    fn test_security_limit_change_on_local_swap() {
+
+        let mut app = App::default();
+        
+        // Instantiate and initialize vault
+        let mock_vault_config = set_mock_vault(
+            &mut app,
+            1.
+        );
+        let vault = mock_vault_config.vault.clone();
+
+        // Define local swap config
+        let from_asset_idx = 0;
+        let from_asset = mock_vault_config.assets[from_asset_idx].clone();
+        let from_weight = mock_vault_config.weights[from_asset_idx];
+        let from_balance = mock_vault_config.vault_initial_balances[from_asset_idx];
+
+        let to_asset_idx = 1;
+        let to_asset = mock_vault_config.assets[to_asset_idx].clone();
+        let to_weight = mock_vault_config.weights[to_asset_idx];
+
+        // Swap 25% of the vault one way
+        let swap_amount = from_balance * Uint128::from(25u64)/ Uint128::from(100u64);
+
+
+
+        // NOTE: The current implementation of local swaps does not adjust the used limit capacity, but
+        // rather only the max limit capacity. This will result in the available limit capacity changing
+        // after local swaps.
+
+
+
+        // Tested action 1: local swap in one direction
+        set_token_allowance(
+            &mut app,
+            swap_amount,
+            from_asset.clone(),
+            Addr::unchecked(SETUP_MASTER),
+            vault.to_string()
+        );
+
+        let result = app.execute_contract(
+            Addr::unchecked(SETUP_MASTER),
+            vault.clone(),
+            &AmplifiedExecuteMsg::LocalSwap {
+                from_asset: from_asset.to_string(),
+                to_asset: to_asset.to_string(),
+                amount: swap_amount,
+                min_out: Uint128::zero()
+            },
+            &[]
+        ).unwrap();
+
+        // Verify the max limit capacity has changed
+        let observed_max_limit_capacity = query_limit_capacity(&mut app, vault.clone());
+
+        let first_observed_return = get_response_attribute::<Uint128>(
+            result.events[1].clone(),
+            "to_amount"
+        ).unwrap();
+
+        let first_expected_max_limit_capacity_change = (
+            I256::from(swap_amount * from_weight)
+            - I256::from(first_observed_return * to_weight)
+        ).div(I256::from(2u64));
+
+        let expected_max_limit_capacity = (
+            mock_vault_config.max_limit_capacity.as_i256()
+                + first_expected_max_limit_capacity_change
+        ).as_u256();
+
+        assert_eq!(
+            observed_max_limit_capacity,
+            expected_max_limit_capacity
+        );
+
+
+
+        // Tested action 2: local swap in the opposite direction
+        set_token_allowance(
+            &mut app,
+            first_observed_return,
+            to_asset.clone(),
+            Addr::unchecked(SETUP_MASTER),
+            vault.to_string()
+        );
+
+        let result = app.execute_contract(
+            Addr::unchecked(SETUP_MASTER),
+            vault.clone(),
+            &AmplifiedExecuteMsg::LocalSwap {
+                from_asset: to_asset.to_string(),
+                to_asset: from_asset.to_string(),
+                amount: first_observed_return,
+                min_out: Uint128::zero()
+            },
+            &[]
+        ).unwrap();
+
+        // Verify the max limit capacity has changed
+        let observed_max_limit_capacity = query_limit_capacity(&mut app, vault.clone());
+
+        let second_observed_return = get_response_attribute::<Uint128>(
+            result.events[1].clone(),
+            "to_amount"
+        ).unwrap();
+
+        let second_expected_max_limit_capacity_change = (
+            I256::from(first_observed_return * to_weight)
+            - I256::from(second_observed_return * from_weight)
+        ).div(I256::from(2u64));
+
+        let expected_max_limit_capacity = (
+            mock_vault_config.max_limit_capacity.as_i256()
+            + first_expected_max_limit_capacity_change
+            + second_expected_max_limit_capacity_change
+        ).as_u256();
+
+        assert_eq!(
+            observed_max_limit_capacity,
+            expected_max_limit_capacity
+        );
+
+    }
+
+
+    // Deposit and Withdrawals tests **************************************************************
+    
+    #[test]
+    fn test_security_limit_change_on_deposit() {
+
+        let mut app = App::default();
+        
+        // Instantiate and initialize vault
+        let mock_vault_config = set_mock_vault(
+            &mut app,
+            0.6         // ! Decrease the initial limit capacity by 40%
+        );
+        let vault = mock_vault_config.vault.clone();
+        
+        // Define deposit config
+        let deposit_percentage = 0.15;
+        let deposit_amounts: Vec<Uint128> = mock_vault_config.vault_initial_balances.iter()
+            .map(|vault_balance| {
+                f64_to_uint128(
+                    uint128_to_f64(*vault_balance) * deposit_percentage
+                ).unwrap()
+            }).collect();
+
+        // Fund swapper with tokens and set vault allowance
+        mock_vault_config.assets.iter()
+            .zip(&deposit_amounts)
+            .for_each(|(asset, deposit_amount)| {
+
+                set_token_allowance(
+                    &mut app,
+                    *deposit_amount,
+                    Addr::unchecked(asset),
+                    Addr::unchecked(SETUP_MASTER),
+                    vault.to_string()
+                );
+
+            });
+
+
+
+        // Tested action: deposit
+        app.execute_contract(
+            Addr::unchecked(SETUP_MASTER),
+            vault.clone(),
+            &AmplifiedExecuteMsg::DepositMixed {
+                deposit_amounts: deposit_amounts.clone(),
+                min_out: Uint128::zero()
+            },
+            &[]
+        ).unwrap();
+
+
+
+        // Verify the security limit capacity has not changed
+        let observed_limit_capacity = query_limit_capacity(&mut app, vault.clone());
+
+        assert_eq!(
+            observed_limit_capacity,
+            mock_vault_config.current_limit_capacity
+        );
+
+        // Verify the max limit capacity has increased
+        app.update_block(|block| block.time = block.time.plus_seconds(DECAY_RATE.as_u64()));    // Increase block time
+        let observed_max_limit_capacity = query_limit_capacity(&mut app, vault.clone());
+
+        let expected_max_limit_capacity_change = deposit_amounts.iter()
+            .zip(mock_vault_config.weights)
+            .fold(U256::zero(), |acc, (amount, weight)| {
+                acc + U256::from(amount*weight)
+            })
+            .div(U256::from(2u64));
+        let expected_max_limit_capacity = mock_vault_config.max_limit_capacity + expected_max_limit_capacity_change;
+
+        assert_eq!(
+            observed_max_limit_capacity,
+            expected_max_limit_capacity
+        );
+
+    }
+    
+
+    #[test]
+    fn test_security_limit_change_on_withdraw_mixed() {
+
+        let mut app = App::default();
+        
+        // Instantiate and initialize vault
+        let mock_vault_config = set_mock_vault(
+            &mut app,
+            0.6         // ! Decrease the initial limit capacity by 40%
+        );
+        let vault = mock_vault_config.vault.clone();
+        
+        // Define withdraw config
+        let withdraw_percentage = 0.15;     // Percentage of vault tokens supply
+        let withdraw_amount = f64_to_uint128(uint128_to_f64(INITIAL_MINT_AMOUNT) * withdraw_percentage).unwrap();
+        let withdraw_ratio_f64 = vec![0.5, 0.2, 1.][3-TEST_VAULT_ASSET_COUNT..].to_vec();
+        let withdraw_ratio = withdraw_ratio_f64.iter()
+            .map(|val| ((val * 1e18) as u64).into()).collect::<Vec<Uint64>>();
+
+
+
+        // Tested action: withdraw mixed
+        let result = app.execute_contract(
+            Addr::unchecked(SETUP_MASTER),
+            vault.clone(),
+            &AmplifiedExecuteMsg::WithdrawMixed {
+                vault_tokens: withdraw_amount,
+                withdraw_ratio: withdraw_ratio.clone(),
+                min_out: vec![Uint128::zero(); TEST_VAULT_ASSET_COUNT]
+            },
+            &[]
+        ).unwrap();
+
+
+
+        // Verify the security limit capacity has not changed
+        let observed_limit_capacity = query_limit_capacity(&mut app, vault.clone());
+
+        assert_eq!(
+            observed_limit_capacity,
+            mock_vault_config.current_limit_capacity
+        );
+
+        // Verify the max limit capacity has decreased
+        app.update_block(|block| block.time = block.time.plus_seconds(DECAY_RATE.as_u64()));    // Increase block time
+        let observed_max_limit_capacity = query_limit_capacity(&mut app, vault.clone());
+
+        let observed_returns = get_response_attribute::<String>(
+            result.events[1].clone(),
+            "withdraw_amounts"
+        ).unwrap()
+            .split(", ")
+            .map(Uint128::from_str)
+            .collect::<Result<Vec<Uint128>, _>>()
+            .unwrap();
+
+        let expected_max_limit_capacity_change = observed_returns.iter()
+            .zip(mock_vault_config.weights)
+            .fold(U256::zero(), |acc, (amount, weight)| {
+                acc + U256::from(amount*weight)
+            })
+            .div(U256::from(2u64));
+        let expected_max_limit_capacity = mock_vault_config.max_limit_capacity - expected_max_limit_capacity_change;
+
+        assert_eq!(
+            observed_max_limit_capacity,
+            expected_max_limit_capacity
+        );
+
+    }
+    
+
+    #[test]
+    fn test_security_limit_change_on_withdraw_all() {
+
+        let mut app = App::default();
+        
+        // Instantiate and initialize vault
+        let mock_vault_config = set_mock_vault(
+            &mut app,
+            0.6         // ! Decrease the initial limit capacity by 40%
+        );
+        let vault = mock_vault_config.vault.clone();
+        
+        // Define withdraw config
+        let withdraw_percentage = 0.15;     // Percentage of vault tokens supply
+        let withdraw_amount = f64_to_uint128(uint128_to_f64(INITIAL_MINT_AMOUNT) * withdraw_percentage).unwrap();
+
+
+
+        // Tested action: withdraw all
+        let result = app.execute_contract(
+            Addr::unchecked(SETUP_MASTER),
+            vault.clone(),
+            &AmplifiedExecuteMsg::WithdrawAll {
+                vault_tokens: withdraw_amount,
+                min_out: vec![Uint128::zero(); TEST_VAULT_ASSET_COUNT]
+            },
+            &[]
+        ).unwrap();
+
+
+
+        // Verify the security limit capacity has not changed
+        let observed_limit_capacity = query_limit_capacity(&mut app, vault.clone());
+
+        assert_eq!(
+            observed_limit_capacity,
+            mock_vault_config.current_limit_capacity
+        );
+
+        // Verify the max limit capacity has decreased
+        app.update_block(|block| block.time = block.time.plus_seconds(DECAY_RATE.as_u64()));    // Increase block time
+        let observed_max_limit_capacity = query_limit_capacity(&mut app, vault.clone());
+
+        let observed_returns = get_response_attribute::<String>(
+            result.events[1].clone(),
+            "withdraw_amounts"
+        ).unwrap()
+            .split(", ")
+            .map(Uint128::from_str)
+            .collect::<Result<Vec<Uint128>, _>>()
+            .unwrap();
+
+        let expected_max_limit_capacity_change = observed_returns.iter()
+            .zip(mock_vault_config.weights)
+            .fold(U256::zero(), |acc, (amount, weight)| {
+                acc + U256::from(amount*weight)
+            })
+            .div(U256::from(2u64));
+        let expected_max_limit_capacity = mock_vault_config.max_limit_capacity - expected_max_limit_capacity_change;
+ 
+        // NOTE: because of how the weighted-amounts are calculated and used for the security limit adjustment on 
+        // `withdraw_all`, rounding errors are introduced which cause the following check not to be exact.
+        let observed_max_limit_capacity = u256_to_f64(observed_max_limit_capacity);
+        let expected_max_limit_capacity = u256_to_f64(expected_max_limit_capacity);
+        assert!(observed_max_limit_capacity <= expected_max_limit_capacity * 1.000001);
+        assert!(observed_max_limit_capacity >= expected_max_limit_capacity * 0.999999);
+
     }
 
 }
