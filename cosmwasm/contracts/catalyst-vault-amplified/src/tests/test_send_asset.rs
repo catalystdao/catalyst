@@ -171,6 +171,116 @@ mod test_amplified_send_asset {
 
 
     #[test]
+    fn test_send_asset_very_small_swap_calculation() {
+
+        // This test purposely checks that very small swaps (with respect to the vault size) always
+        // return LESS than the theoretical return. (The vault implementation adds an extra fee on these
+        // cases to compensate for calculation errors)
+
+        let mut app = App::default();
+
+        // Instantiate and initialize vault
+        let interface = mock_instantiate_interface(&mut app);
+        let vault_tokens = deploy_test_tokens(&mut app, SETUP_MASTER.to_string(), None, 2);
+        let vault_initial_balances = vec![Uint128::from(1000000000000000000u128), Uint128::from(50000000000000000000u128)];
+        let vault_weights = vec![Uint128::from(50000000000u128), Uint128::from(1000000000u128)];
+        let vault_code_id = amplified_vault_contract_storage(&mut app);
+        let vault = mock_factory_deploy_vault(
+            &mut app,
+            vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
+            vault_initial_balances.clone(),
+            vault_weights.clone(),
+            AMPLIFICATION,
+            vault_code_id,
+            Some(interface.clone()),
+            None
+        );
+
+        // Connect vault with a mock vault
+        let target_vault = encode_payload_address(b"target_vault");
+        mock_set_vault_connection(
+            &mut app,
+            vault.clone(),
+            CHANNEL_ID.to_string(),
+            target_vault.clone(),
+            true
+        );
+
+        // Define send asset configuration
+        let from_asset_idx = 0;
+        let from_asset = vault_tokens[from_asset_idx].clone();
+        let from_weight = vault_weights[from_asset_idx];
+        let from_balance = vault_initial_balances[from_asset_idx];
+
+        let to_asset_idx = 1;
+        let to_account = encode_payload_address(SWAPPER_B.as_bytes());
+
+        // Swap 0.000000000001% of the vault
+        let swap_amount = from_balance / Uint128::from(10000000000000u128);
+
+        // Make sure the 'small swap' condition is being met
+        let small_swap_ratio = 1e12;
+        assert!(!swap_amount.is_zero());
+        assert!(uint128_to_f64(from_balance)/small_swap_ratio >= uint128_to_f64(swap_amount));
+
+        // Fund swapper with tokens and set vault allowance
+        transfer_tokens(
+            &mut app,
+            swap_amount,
+            from_asset.clone(),
+            Addr::unchecked(SETUP_MASTER),
+            SWAPPER_A.to_string()
+        );
+
+        set_token_allowance(
+            &mut app,
+            swap_amount,
+            from_asset.clone(),
+            Addr::unchecked(SWAPPER_A),
+            vault.to_string()
+        );
+
+
+
+        // Tested action: send asset
+        let response = app.execute_contract(
+            Addr::unchecked(SWAPPER_A),
+            vault.clone(),
+            &AmplifiedExecuteMsg::SendAsset {
+                channel_id: CHANNEL_ID.to_string(),
+                to_vault: target_vault,
+                to_account: to_account.clone(),
+                from_asset: from_asset.to_string(),
+                to_asset_index: to_asset_idx,
+                amount: swap_amount,
+                min_out: U256::zero(),
+                fallback_account: SWAPPER_C.to_string(),
+                calldata: Binary(vec![])
+            },
+            &[]
+        ).unwrap();
+
+
+
+        // Verify the swap return
+        let expected_return = compute_expected_send_asset(
+            swap_amount,
+            from_weight,
+            from_balance,
+            AMPLIFICATION,
+            Some(DEFAULT_TEST_VAULT_FEE),
+            Some(DEFAULT_TEST_GOV_FEE)
+        );
+
+        let observed_return = get_response_attribute::<U256>(response.events[1].clone(), "units").unwrap();
+        
+        assert!(u256_to_f64(observed_return) / 1e18 <= expected_return.u);
+        assert!(u256_to_f64(observed_return) / 1e18 >= expected_return.u * 0.90); // Expect degraded performance
+
+    }
+
+
+    #[test]
     fn test_send_asset_event() {
 
         let mut app = App::default();
