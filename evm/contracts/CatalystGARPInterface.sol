@@ -82,10 +82,13 @@ contract CatalystGARPInterface is Ownable, ICrossChainReceiver, Bytes65, IMessag
 
     function _handleError(bytes memory err) pure internal returns (bytes1) {
         bytes32 errorHash = keccak256(err);
-        // TODO: Use memory slices to use the same error for both sendAsset and receiveAsset?
+        // We can use memory sclies to get better insight into exactly the error which occured.
+        // This would also allow us to reuse events.
+        // However, it looks like it will significantly increase gas costs so this works for now.
+        // It looks like Solidity will improve their error catch implementation which will replace this.
         if (keccak256(abi.encodeWithSelector(ExceedsSecurityLimit.selector)) == errorHash) return 0x11;
         if (keccak256(abi.encodeWithSelector(ReturnInsufficientOnReceive.selector)) == errorHash) return 0x12;
-        return 0x01; // unknown error.
+        return 0x10; // unknown error.
     }
 
     /// @notice Get the address on the destination chain.
