@@ -4,7 +4,7 @@ pragma solidity ^0.8.16;
 
 import {ERC20} from 'solmate/src/tokens/ERC20.sol';
 import {SafeTransferLib} from 'solmate/src/utils/SafeTransferLib.sol';
-import { IMessageEscrowStructs } from "./external/GARP/IMessageEscrowStructs.sol";
+import { IMessageEscrowStructs } from "./external/GARP/interfaces/IMessageEscrowStructs.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/utils/Multicall.sol";

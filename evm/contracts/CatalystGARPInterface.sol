@@ -2,14 +2,14 @@
 
 pragma solidity ^0.8.16;
 
-import { IMessageEscrowStructs } from "./external/GARP/IMessageEscrowStructs.sol";
-import { IIncentivizedMessageEscrow } from "./external/GARP/IIncentivizedMessageEscrow.sol";
-import { ICrossChainReceiver } from "./external/GARP/ICrossChainReceiver.sol";
+import { IMessageEscrowStructs } from "./external/GARP/interfaces/IMessageEscrowStructs.sol";
+import { IIncentivizedMessageEscrow } from "./external/GARP/interfaces/IIncentivizedMessageEscrow.sol";
+import { ICrossChainReceiver } from "./external/GARP/interfaces/ICrossChainReceiver.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./ICatalystV1Vault.sol";
 import "./interfaces/ICatalystV1VaultState.sol"; // structs
 import "./CatalystPayload.sol";
-import {Bytes65} from "./utils/Bytes65.sol";
+import {Bytes65} from "./external/GARP/utils/Bytes65.sol";
 
 /**
  * @title Catalyst: Generalised IBC Interface
@@ -294,7 +294,7 @@ contract CatalystGARPInterface is Ownable, ICrossChainReceiver, Bytes65, IMessag
     }
 
     /**
-     * @notice IBC Acknowledgement package handler
+     * @notice The Acknowledgement package handler
      * @dev Should never revert.
      * @param destinationIdentifier Identifier for the destination chain
      * @param acknowledgement The acknowledgement bytes for the cross-chain swap.
@@ -312,9 +312,8 @@ contract CatalystGARPInterface is Ownable, ICrossChainReceiver, Bytes65, IMessag
     }
 
     /**
-     * @notice IBC packet handler
+     * @notice The receive packet handler
      * @param sourceIdentifier Source chain identifier.
-     * @param messageIdentifier An identifier for the message (unused).
      * @param fromApplication The bytes65 encoded fromApplication.
      * @param message The message sent by the source chain.
      * @return acknowledgement The acknowledgement status of the transaction after execution.
