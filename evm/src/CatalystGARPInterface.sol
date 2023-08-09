@@ -29,9 +29,11 @@ contract CatalystGARPInterface is Ownable, ICrossChainReceiver, Bytes65, IMessag
     error InvalidSourceApplication();
     error SubcallOutOfGas();
     error NotEnoughIncentives();
+    error ChainAlreadySetup();
 
 
     event SwapFailed(bytes1 error);
+    event RemoteImplementationSet(bytes32 chainIdentifier, bytes remoteCCI, bytes remoteGARP);
     
     event MinGasFor(
         bytes32 identifier,
@@ -76,7 +78,7 @@ contract CatalystGARPInterface is Ownable, ICrossChainReceiver, Bytes65, IMessag
     }
 
     modifier verifySourceChainAddress(bytes32 sourceChainIdentifier, bytes calldata fromApplication) {
-        if (keccak256(fromApplication) != keccak256(getAddressForChainIdentifier(sourceChainIdentifier))) revert InvalidSourceApplication();
+        if (keccak256(fromApplication) != keccak256(chainIdentifierToDestinationAddress[sourceChainIdentifier])) revert InvalidSourceApplication();
         _;
     }
 
@@ -91,19 +93,19 @@ contract CatalystGARPInterface is Ownable, ICrossChainReceiver, Bytes65, IMessag
         return 0x10; // unknown error.
     }
 
-    /// @notice Get the address on the destination chain.
-    function getAddressForChainIdentifier(bytes32 chainIdentifier) view public returns(bytes memory identifier) {
-        identifier = chainIdentifierToDestinationAddress[chainIdentifier];
-        if (uint8(identifier[0]) == 0) return thisBytes65();  /// If not set, then use this address encoded in bytes65.
-    }
+    /// @notice Connects this CCI with another contract on another chain.
+    /// @dev To simplify the implementation, each chain can only be setup once. This reduces governance risks.
+    /// @param remoteCCI The bytes65 encoded address on the destination chain.
+    /// @param remoteGARP The messaging router encoded address on the destination chain.
+    function connectNewChain(bytes32 chainIdentifier, bytes calldata remoteCCI, bytes calldata remoteGARP) onlyOwner checkBytes65Address(remoteCCI) external {
+        // Set the remote messaging router escrow.
+        GARP.setRemoteEscrowImplementation(chainIdentifier, remoteGARP);
 
-    /// @notice set the address on the destination chain.
-    /// @dev This can be used for /some/ evil. They cannot steal any value but they can cause you to lose
-    /// the value of the swap. (the swap might not revert back if set to an evil address)
-    function setAddressForChainIdentifier(bytes32 chainIdentifier, bytes calldata identifier) onlyOwner checkBytes65Address(identifier) external {
-        // Address must be bytes65. (modifier)
-        // Store the new destination address.
-        chainIdentifierToDestinationAddress[chainIdentifier] = identifier;
+        // Set the remote CCI. Only the first 32 bytes are checked. For most chains, this should be enough.
+        if (bytes32(chainIdentifierToDestinationAddress[chainIdentifier]) != bytes32(0)) revert ChainAlreadySetup();
+        chainIdentifierToDestinationAddress[chainIdentifier] = remoteCCI;
+
+        emit RemoteImplementationSet(chainIdentifier, remoteCCI, remoteGARP);
     }
 
     /**
@@ -167,7 +169,7 @@ contract CatalystGARPInterface is Ownable, ICrossChainReceiver, Bytes65, IMessag
 
         GARP.escrowMessage{value: msg.value}(
             chainIdentifier,
-            getAddressForChainIdentifier(chainIdentifier),
+            chainIdentifierToDestinationAddress[chainIdentifier],
             data,
             incentive
         );
@@ -223,7 +225,7 @@ contract CatalystGARPInterface is Ownable, ICrossChainReceiver, Bytes65, IMessag
 
         GARP.escrowMessage{value: msg.value}(
             chainIdentifier,
-            getAddressForChainIdentifier(chainIdentifier),
+            chainIdentifierToDestinationAddress[chainIdentifier],
             data,
             incentive
         );

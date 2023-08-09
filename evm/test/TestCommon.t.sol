@@ -6,6 +6,7 @@ import "../src/CatalystFactory.sol";
 import "../src/CatalystVaultVolatile.sol";
 import "../src/CatalystVaultAmplified.sol";
 import "../src/CatalystGARPInterface.sol";
+import {Token} from "./mocks/token.sol";
 
 import "GARP/apps/mock/IncentivizedMockEscrow.sol";
 
@@ -41,6 +42,36 @@ contract TestCommon is Test {
     string DEFAULT_POOL_SYMBOL;
     string DEFAULT_POOL_NAME;
 
+    function getTokens(uint256 N) internal returns(address[] memory tokens) {
+        tokens = new address[](N);
+        for (uint256 i = 0; i < N; ++i) {
+            tokens[i] = address(deployToken());
+        }
+    }
+
+    function getTokens(uint256 N, uint256[] memory balances) internal returns(address[] memory tokens) {
+        tokens = new address[](N);
+        for (uint256 i = 0; i < N; ++i) {
+            tokens[i] = address(deployToken(18, balances[i]));
+        }
+    }
+
+    function approveTokens(address target, address[] memory tokens, uint256[] memory amounts) internal {
+        for (uint256 i = 0; i < tokens.length; ++i) {
+            Token(tokens[i]).approve(target, amounts[i]);
+        }
+    }
+
+    function verifyBalances(address target, address[] memory tokens, uint256[] memory amounts) internal {
+        for (uint256 i = 0; i < tokens.length; ++i) {
+            assertEq(
+                Token(tokens[i]).balanceOf(target),
+                amounts[i],
+                "verifyBalances(...) failed"
+            );
+        }
+    }
+
     function deployVault (
         address vaultTemplate,
         address[] calldata assets,
@@ -48,8 +79,33 @@ contract TestCommon is Test {
         uint256[] calldata weights,
         uint256 amp,
         uint256 vaultFee
-    ) public returns(address vault) {
+    ) internal returns(address vault) {
+
+        for (uint256 i = 0; i < assets.length; ++i) {
+            Token(assets[i]).approve(address(catFactory), init_balances[i]);
+        }
+
         vault = catFactory.deployVault(vaultTemplate, assets, init_balances, weights, amp, vaultFee, DEFAULT_POOL_NAME, DEFAULT_POOL_SYMBOL, address(CCI));
+    }
+
+    function deployToken(
+        string memory name,
+        string memory symbol,
+        uint8 decimals_,
+        uint256 initialSupply
+    ) internal returns (Token token) {
+        return token = new Token(name, symbol, decimals_, initialSupply);
+    }
+
+    function deployToken(
+        uint8 decimals_,
+        uint256 initialSupply
+    ) internal returns (Token token) {
+        return token = deployToken("Token", "TKN", decimals_, initialSupply);
+    }
+
+    function deployToken() internal returns(Token token) {
+        return deployToken(18, 1e6);
     }
 }
 
