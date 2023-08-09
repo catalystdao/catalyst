@@ -1,7 +1,6 @@
-[submodule "lib/forge-std"]
+[submodule "evm/lib/forge-std"]
 	path = evm/lib/forge-std
 	url = https://github.com/foundry-rs/forge-std
-
-[submodule "GeneralisedIncentives"]
+[submodule "evm/lib/GeneralisedIncentives"]
 	path = evm/lib/GeneralisedIncentives
 	url = https://github.com/catalystdao/GeneralisedIncentives.git
