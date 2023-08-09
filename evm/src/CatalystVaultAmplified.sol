@@ -746,8 +746,6 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
             );
         }
 
-        int256 oneMinusAmpInverse = FixedPointMathLib.WADWAD / oneMinusAmp;
-
         uint256 totalWithdrawn;
         for (uint256 it; it < MAX_ASSETS;) {
             address token = tokenIndexed[it];
@@ -775,6 +773,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
                 // the transaction reverts. If that is the case, use withdrawAll.
                 // This quirk is "okay", since it means fewer tokens are always returned.
 
+                int256 oneMinusAmpInverse = FixedPointMathLib.WADWAD / oneMinusAmp;
                 // Since tokens are withdrawn, the change is negative. As such, multiply the
                 // equation by -1.
                 weightedTokenAmount = FixedPointMathLib.mulWadDown(
@@ -857,7 +856,6 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
         // Cache weights and balances.
         address[MAX_ASSETS] memory tokenIndexed;
         uint256[MAX_ASSETS] memory effAssetBalances;  // The 'effective' balances (compensated with the escrowed balances)
-        uint256[MAX_ASSETS] memory assetWeight;
 
         uint256 U = 0;
         // Compute walpha_0 to find the reference balances. This lets us evaluate the
@@ -878,7 +876,6 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
                     if (token == address(0)) break;
                     tokenIndexed[U] = token;
                     uint256 weight = _weight[token];
-                    assetWeight[U] = weight;
 
                     // Whenever balance0 is computed, the true balance should be used.
                     uint256 ab = ERC20(token).balanceOf(address(this));
@@ -936,8 +933,6 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
                 )) 
             );
         }
-        
-        int256 oneMinusAmpInverse = FixedPointMathLib.WADWAD / oneMinusAmp;
 
         // For later event logging, the amounts transferred to the vault are stored.
         uint256[] memory amounts = new uint256[](MAX_ASSETS);
@@ -961,8 +956,9 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
             }
             U -= U_i;  // Subtract the number of units used. This will underflow for malicious withdrawRatios > 1.
             
+            uint256 assetWeight = _weight[tokenIndexed[it]];
             // Units are shared between "liquidity units" and "token units". As such, we just need to convert the units to tokens.
-            uint256 tokenAmount = _calcPriceCurveLimit(U_i, effAssetBalances[it], assetWeight[it], oneMinusAmp);
+            uint256 tokenAmount = _calcPriceCurveLimit(U_i, effAssetBalances[it], assetWeight, oneMinusAmp);
 
             // Ensure the output satisfies the user.
             if (minOut[it] > tokenAmount) revert ReturnInsufficient(tokenAmount, minOut[it]);
@@ -974,7 +970,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
             ERC20(tokenIndexed[it]).safeTransfer(msg.sender, tokenAmount);
 
             // Decrease the security limit by the amount withdrawn.
-            totalWithdrawn += tokenAmount * _weight[tokenIndexed[it]];
+            totalWithdrawn += tokenAmount * assetWeight;
 
             unchecked {
                 it++;
