@@ -188,7 +188,7 @@ contract TestSwapIntegration is TestCommon {
             MINOUT,
             TO_ACCOUNT,
             _INCENTIVE
-        );
+        );  
 
         // The message is event 2. (index 1)
         Vm.Log[] memory entries = vm.getRecordedLogs();
