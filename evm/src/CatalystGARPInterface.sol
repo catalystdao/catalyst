@@ -31,6 +31,8 @@ contract CatalystGARPInterface is Ownable, ICrossChainReceiver, Bytes65, IMessag
     error NotEnoughIncentives();
     error ChainAlreadySetup();
 
+    bytes32 constant KECCACK_OF_NOTHING = 0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470;
+
 
     event SwapFailed(bytes1 error);
     event RemoteImplementationSet(bytes32 chainIdentifier, bytes remoteCCI, bytes remoteGARP);
@@ -98,14 +100,17 @@ contract CatalystGARPInterface is Ownable, ICrossChainReceiver, Bytes65, IMessag
     /// @param remoteCCI The bytes65 encoded address on the destination chain.
     /// @param remoteGARP The messaging router encoded address on the destination chain.
     function connectNewChain(bytes32 chainIdentifier, bytes calldata remoteCCI, bytes calldata remoteGARP) onlyOwner checkBytes65Address(remoteCCI) external {
-        // Set the remote messaging router escrow.
-        GARP.setRemoteEscrowImplementation(chainIdentifier, remoteGARP);
+        // Check if the chain has already been set.
+        // If it has, we don't allow setting it as another. This would impact existing pools.
+        if (keccak256(chainIdentifierToDestinationAddress[chainIdentifier]) != KECCACK_OF_NOTHING) revert ChainAlreadySetup();
 
         // Set the remote CCI. Only the first 32 bytes are checked. For most chains, this should be enough.
-        if (bytes32(chainIdentifierToDestinationAddress[chainIdentifier]) != bytes32(0)) revert ChainAlreadySetup();
         chainIdentifierToDestinationAddress[chainIdentifier] = remoteCCI;
 
         emit RemoteImplementationSet(chainIdentifier, remoteCCI, remoteGARP);
+
+        // Set the remote messaging router escrow.
+        GARP.setRemoteEscrowImplementation(chainIdentifier, remoteGARP);
     }
 
     /**

@@ -8,9 +8,11 @@ import "../src/CatalystVaultAmplified.sol";
 import "../src/CatalystGARPInterface.sol";
 import {Token} from "./mocks/token.sol";
 
+import {Bytes65} from "GARP/utils/Bytes65.sol";
 import "GARP/apps/mock/IncentivizedMockEscrow.sol";
+import { IMessageEscrowStructs } from "GARP/interfaces/IMessageEscrowStructs.sol";
 
-contract TestCommon is Test {
+contract TestCommon is Test, Bytes65, IMessageEscrowStructs {
     
     bytes32 constant DESTINATION_IDENTIFIER = bytes32(uint256(0x123123) + uint256(2**255));
 
@@ -62,6 +64,16 @@ contract TestCommon is Test {
         }
     }
 
+    function approveTokens(address target, address[] memory tokens) internal {
+        uint256[] memory amounts = new uint256[](tokens.length);
+
+        for (uint256 i = 0; i < amounts.length; ++i) {
+            amounts[i] = 2**256 - 1;
+        }
+
+        approveTokens(target, tokens, amounts);
+    }
+
     function verifyBalances(address target, address[] memory tokens, uint256[] memory amounts) internal {
         for (uint256 i = 0; i < tokens.length; ++i) {
             assertEq(
@@ -73,10 +85,9 @@ contract TestCommon is Test {
     }
 
     function deployVault (
-        address vaultTemplate,
-        address[] calldata assets,
-        uint256[] calldata init_balances,
-        uint256[] calldata weights,
+        address[] memory assets,
+        uint256[] memory init_balances,
+        uint256[] memory weights,
         uint256 amp,
         uint256 vaultFee
     ) internal returns(address vault) {
@@ -85,7 +96,32 @@ contract TestCommon is Test {
             Token(assets[i]).approve(address(catFactory), init_balances[i]);
         }
 
-        vault = catFactory.deployVault(vaultTemplate, assets, init_balances, weights, amp, vaultFee, DEFAULT_POOL_NAME, DEFAULT_POOL_SYMBOL, address(CCI));
+        address vaultTemplate = amp == 10**18 ? address(volatileTemplate) : address(amplifiedTemplate);
+
+        vault = catFactory.deployVault(
+            vaultTemplate,
+            assets, init_balances, weights, amp, vaultFee, DEFAULT_POOL_NAME, DEFAULT_POOL_SYMBOL, address(CCI));
+    }
+
+    function setConnection(address vault1, address vault2, bytes32 chainIdentifier1, bytes32 chainIdentifier2) internal {
+        setUpChains(chainIdentifier1);
+        if (chainIdentifier1 != chainIdentifier2) setUpChains(chainIdentifier2);
+
+        ICatalystV1Vault(vault1).setConnection(
+            chainIdentifier2,
+            convertEVMTo65(vault2),
+            true
+        );
+
+        ICatalystV1Vault(vault2).setConnection(
+            chainIdentifier1,
+            convertEVMTo65(vault1),
+            true
+        );
+    }
+
+    function setUpChains(bytes32 chainIdentifier) internal {
+        CCI.connectNewChain(chainIdentifier, convertEVMTo65(address(CCI)), abi.encode(address(GARP)));
     }
 
     function deployToken(
@@ -106,6 +142,18 @@ contract TestCommon is Test {
 
     function deployToken() internal returns(Token token) {
         return deployToken(18, 1e6);
+    }
+
+    function signMessageForMock(bytes memory message) internal view returns(uint8 v, bytes32 r, bytes32 s) {
+        (v, r, s) = vm.sign(PRIVATEKEY, keccak256(message));
+    }
+
+    function getVerifiedMessage(address emitter, bytes memory message) internal view returns(bytes memory _metadata, bytes memory newMessage) {
+        newMessage = abi.encodePacked(bytes32(uint256(uint160(emitter))), message);
+
+        (uint8 v, bytes32 r, bytes32 s) = signMessageForMock(newMessage);
+
+        _metadata = abi.encode(v, r, s);
     }
 }
 
