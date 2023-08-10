@@ -109,7 +109,7 @@ contract TestSwapIntegration is TestCommon {
     }
 
     function test_cross_chain_swap_volatile() external {
-        uint256 amount = 10**18*1e4;
+        uint256 amount = 10**18;
         (address vault1, address vault2) = pool1();
         t_cross_chain_swap(vault1, vault2, amount);
     }
