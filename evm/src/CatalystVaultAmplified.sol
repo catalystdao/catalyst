@@ -1553,10 +1553,13 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
         // the inswapped amount of trust in the vault. If this wasn't implemented, there would be
         // a maximum daily cross chain volume, which is bad for liquidity providers.
         unchecked {
+            // escrowAmount * _weight[escrowToken] has been calculated before.
+            uint256 escrowAmountTimesWeight = escrowAmount * _weight[escrowToken];
+
             uint256 UC = _usedUnitCapacity;
             // If UC < escrowAmount and we do UC - escrowAmount < 0 underflow => bad.
-            if (UC > escrowAmount) {
-                _usedUnitCapacity = UC - escrowAmount; // Does not underflow since _usedUnitCapacity > escrowAmount.
+            if (UC > escrowAmountTimesWeight) {
+                _usedUnitCapacity = UC - escrowAmountTimesWeight; // Does not underflow since _usedUnitCapacity > escrowAmount.
             } else if (UC != 0) {
                 // If UC == 0, then we shouldn't do anything. Skip that case.
                 // when UC <= escrowAmount => UC - escrowAmount <= 0 => max(UC - escrowAmount, 0) = 0
@@ -1567,7 +1570,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
             // since the number has never been calculated before. This function should never revert so the computation
             // has to be done unchecked.
             uint256 muc = _maxUnitCapacity;
-            uint256 new_muc = muc + escrowAmount * _weight[escrowToken]; // Might overflow. Can be checked by comparing it against MUC.
+            uint256 new_muc = muc + escrowAmountTimesWeight; // Might overflow. Can be checked by comparing it against MUC.
 
             // If new_muc < muc, then new_muc has overflown. As a result, we should set muc = uint256::MAX
             if (new_muc < muc) {
