@@ -4,7 +4,7 @@ pragma solidity ^0.8.16;
 
 import {ERC20} from 'solmate/src/tokens/ERC20.sol';
 import {SafeTransferLib} from 'solmate/src/utils/SafeTransferLib.sol';
-import { IMessageEscrowStructs } from "GARP/interfaces/IMessageEscrowStructs.sol";
+import { IMessageEscrowStructs } from "GeneralisedIncentives/src/interfaces/IMessageEscrowStructs.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/utils/Multicall.sol";
@@ -121,9 +121,12 @@ abstract contract CatalystVaultCommon is
     /// @notice Find escrow information. Used for both normal swaps and liquidity swaps.
     mapping(bytes32 => address) public _escrowLookup;
 
+    /// @notice A mathematical lib which describes various properties of this contract. These helper functions are not contained the swap template, since they notisably inflate the contract side which reduceses the number of optimizer runs => increase the gas cost.
+    address immutable public MATHLIB;
 
-    constructor(address factory_) ERC20("Catalyst Vault Template", "", DECIMALS) {
+    constructor(address factory_, address mathlib) ERC20("Catalyst Vault Template", "", DECIMALS) {
         FACTORY = factory_;
+        MATHLIB = mathlib;
 
         // Disable the contract from being initialized. This ensures the factory is
         // used to deploy vaults.

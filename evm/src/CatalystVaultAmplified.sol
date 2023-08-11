@@ -9,6 +9,7 @@ import "./utils/FixedPointMathLib.sol";
 import "./CatalystGARPInterface.sol";
 import "./CatalystVaultCommon.sol";
 import "./ICatalystV1Vault.sol";
+import "./IntegralsAmplified.sol";
 
 /**
  * @title Catalyst: The Multi-Chain Vault
@@ -40,7 +41,7 @@ import "./ICatalystV1Vault.sol";
  * over the vault. 
  * !If finishSetup is not called, the vault can be drained by the creators!
  */
-contract CatalystVaultAmplified is CatalystVaultCommon {
+contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
     using SafeTransferLib for ERC20;
 
     //--- ERRORS ---//
@@ -67,7 +68,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
     // the local unit balance. That is, do other vaults own or owe assets to this vault?
     int256 public _unitTracker;
 
-    constructor(address factory_) CatalystVaultCommon(factory_) {}
+    constructor(address factory_, address mathlib_) CatalystVaultCommon(factory_, mathlib_) {}
 
     /**
      * @notice Configures an empty vault.
@@ -144,7 +145,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
         // Mint vault tokens for vault creator.
         _mint(depositor, INITIAL_MINT_AMOUNT);
 
-        emit Deposit(depositor, INITIAL_MINT_AMOUNT, initialBalances);
+        emit VaultDeposit(depositor, INITIAL_MINT_AMOUNT, initialBalances);
     }
 
     /** 
@@ -269,139 +270,13 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
 
     //--- Swap integrals ---//
 
-    /**
-     * @notice Computes the integral \int_{wA}^{wA+wx} 1/w^k · (1-k) dw
-     *     = (wA + wx)^(1-k) - wA^(1-k)
-     * The value is returned as units, which is always WAD.
-     * @dev Since units are always denominated in WAD, the function should be treated as mathematically *native*.
-     * @param input The input amount provided by the user.
-     * @param A The balance of the vault.
-     * @param W The weight associated with the traded token.
-     * @param oneMinusAmp The amplification of the vault (in WAD).
-     * @return uint256 Units (units are **always** WAD).
-     */
-    function _calcPriceCurveArea(
-        uint256 input,
-        uint256 A,
-        uint256 W,
-        int256 oneMinusAmp
-    ) internal pure returns (uint256) {
-        // Will revert if W = 0. 
-        // Or if A + input == 0.
-        int256 calc = FixedPointMathLib.powWad(
-            int256(W * (A + input) * FixedPointMathLib.WAD),  // If casting overflows to a negative number, powWad fails because powWad=exp(ln(a)*b) and ln(<0) is undefined.
-            oneMinusAmp
-        );
-
-        // If the vault contains 0 assets, the below computation will fail. That is bad.
-        // Instead, check if A is 0. If it is then skip because: (W · A)^(1-k) = (W · 0)^(1-k) = 0
-        if (A != 0) {
-            unchecked {
-                // W * A * FixedPointMathLib.WAD < W * (A + input) * FixedPointMathLib.WAD 
-                calc -= FixedPointMathLib.powWad(
-                    int256(W * A * FixedPointMathLib.WAD),  // If casting overflows to a negative number, powWad fails
-                    oneMinusAmp
-                );
-            }
-        }
-        
-        return uint256(calc);   // Casting always safe, as calc always >= 0
-    }
-
-    /**
-     * @notice Solves the equation U = \int_{wA-wy}^{wA} W/w^k · (1-k) dw for y
-     *     = B · (1 - (
-     *             (wB^(1-k) - U) / (wB^(1-k))
-     *         )^(1/(1-k))
-     *     )
-     * The value is returned as output token. (not WAD)
-     * @dev Since units are always denominated in WAD, the function should be treated as mathematically *native*.
-     * @param U Incoming Units (in WAD).
-     * @param B The balance of the vault.
-     * @param W The weight associated with the traded token.
-     * @param oneMinusAmp The vault amplification (in WAD).
-     * @return uint25 Output tokens (not WAD).
-     */
-    function _calcPriceCurveLimit(
-        uint256 U,
-        uint256 B,
-        uint256 W,
-        int256 oneMinusAmp
-    ) internal pure returns (uint256) {
-        // W_B · B^(1-k) is repeated twice and requires 1 power.
-        // As a result, we compute it and cache it.
-        uint256 W_BxBtoOMA = uint256(                   // Always casts a positive value
-            FixedPointMathLib.powWad(
-                int256(W * B * FixedPointMathLib.WAD),  // If casting overflows to a negative number, powWad fails
-                oneMinusAmp
-            )
-        );
-
-        return FixedPointMathLib.mulWadDown(
-            B,
-            FixedPointMathLib.WAD - uint256(                                         // Always casts a positive value
-                FixedPointMathLib.powWad(
-                    int256(FixedPointMathLib.divWadUp(W_BxBtoOMA - U, W_BxBtoOMA)),  // Casting never overflows, as division result is always < 1
-                    FixedPointMathLib.WADWAD / oneMinusAmp 
-                )
-            )
-        );
-    }
-
-    /**
-     * @notice Solves the combined price equations. To reduce attack vectors
-     * cross-chain swaps and atomic swaps are implemented with the same equations.
-     * As such, _calcPriceCurveArea and _calcPriceCurveLimit are used rather than the
-     * true full equation.
-     * @param input The input amount provided by the user.
-     * @param A The vault balance for the input token.
-     * @param B The vault balance for the output token.
-     * @param W_A The weight associated with the input token 
-     * @param W_B The weight associated with the output token 
-     * @param oneMinusAmp The vault amplification (in WAD).
-     * @return uint256 Output tokens (not WAD).
-     */
-    function _calcCombinedPriceCurves(
-        uint256 input,
-        uint256 A,
-        uint256 B,
-        uint256 W_A,
-        uint256 W_B,
-        int256 oneMinusAmp
-    ) internal pure returns (uint256) {
-        return _calcPriceCurveLimit(_calcPriceCurveArea(input, A, W_A, oneMinusAmp), B, W_B, oneMinusAmp);
-    }
-
-    /**
-     * @notice Solves the liquidity to units equation.
-     * @dev The function leaves a lot of computation to the external implementation. This is done to avoid recomputing values several times.
-     * @param U Incoming Units.
-     * @param ts The current vault token supply. The escrowed vault tokens should not be added, since the function then returns more.
-     * @param it_times_walpha_amped wa_0^(1-k),
-     * @param oneMinusAmpInverse The vault amplification.
-     * @return uint256 Vault tokens.
-     */
-    function _calcPriceCurveLimitShare(uint256 U, uint256 ts, uint256 it_times_walpha_amped, int256 oneMinusAmpInverse) internal pure returns (uint256) {
-        uint256 vaultTokens = FixedPointMathLib.mulWadDown(
-            ts,
-            uint256(  // Always casts a positive value, as powWad >= 1, hence powWad - WAD >= 0
-                FixedPointMathLib.powWad(  // powWad always >= 1, as the 'base' is always >= 1
-                    int256(FixedPointMathLib.divWadDown(  // If casting overflows to a negative number, powWad fails
-                        it_times_walpha_amped + U,
-                        it_times_walpha_amped
-                    )),
-                    oneMinusAmpInverse
-                ) - int256(FixedPointMathLib.WAD)
-            )
-        );
-
-        return vaultTokens;
-    }
+    // Inherited from the Integrals file.
 
     /**
      * @notice Computes the return of SendAsset excluding fees.
      * @dev Reverts if 'fromAsset' is not a token in the vault or if 
      * 'amount' and the vault asset balance are both 0.
+     * Does not contain the swap fee.
      * @param fromAsset The address of the token to sell.
      * @param amount The amount of from token to sell.
      * @return uint256 Units.
@@ -433,6 +308,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
     /**
      * @notice Computes the output of ReceiveAsset excluding fees.
      * @dev Reverts if 'toAsset' is not a token in the vault
+     * Does not contain the swap fee.
      * @param toAsset The address of the token to buy.
      * @param U The number of units to convert.
      * @return uint256 Number of purchased tokens.
@@ -457,6 +333,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
      * @dev Implemented through _calcCombinedPriceCurves.
      * Reverts if either 'fromAsset' or 'toAsset' is not in the vault, or if the vault 'fromAsset'
      * balance and 'amount' are both 0.
+     * Does not contain the swap fee.
      * @param fromAsset The address of the token to sell.
      * @param toAsset The address of the token to buy.
      * @param amount The amount of from token to sell for to token.
@@ -643,7 +520,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
         _mint(msg.sender, vaultTokens);
 
         // Emit the deposit event
-        emit Deposit(msg.sender, vaultTokens, tokenAmounts);
+        emit VaultDeposit(msg.sender, vaultTokens, tokenAmounts);
 
         return vaultTokens;
     }
@@ -823,7 +700,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
     
 
         // Emit the event
-        emit Withdraw(msg.sender, vaultTokens, amounts);
+        emit VaultWithdraw(msg.sender, vaultTokens, amounts);
 
         return amounts;
     }
@@ -991,7 +868,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon {
         }
 
         // Emit the event
-        emit Withdraw(msg.sender, vaultTokens, amounts);
+        emit VaultWithdraw(msg.sender, vaultTokens, amounts);
 
         return amounts;
     }

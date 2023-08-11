@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.16;
 
-import { IMessageEscrowStructs } from "GARP/interfaces/IMessageEscrowStructs.sol";
+import { IMessageEscrowStructs } from "GeneralisedIncentives/src/interfaces/IMessageEscrowStructs.sol";
 
 interface ICatalystV1VaultPermissionless is IMessageEscrowStructs {
     /** 
