@@ -7,7 +7,7 @@ import {Token} from "../mocks/token.sol";
 import "../../src/utils/FixedPointMathLib.sol";
 
 abstract contract TestInvariant is TestCommon {
-    function getNumberOfAssets(address[] memory vaults) internal returns(uint256 numAssets) {
+    function getNumberOfAssets(address[] memory vaults) view internal returns(uint256 numAssets) {
         for (uint256 i = 0; i < vaults.length; ++i) {
             address vault = vaults[i];
             uint256 j = 0;
@@ -21,7 +21,7 @@ abstract contract TestInvariant is TestCommon {
     }
 
 
-    function getBalances(address[] memory vaults) internal returns(uint256[] memory balances, uint256[] memory weights) {
+    function getBalances(address[] memory vaults) view internal returns(uint256[] memory balances, uint256[] memory weights) {
         uint256 numAssets = getNumberOfAssets(vaults);
         balances = new uint256[](numAssets);
         weights = new uint256[](numAssets);
@@ -41,24 +41,31 @@ abstract contract TestInvariant is TestCommon {
         }
     }
 
-    function logArray(uint256[] memory x) internal returns(uint256[] memory y) {
+    function logArray(uint256[] memory x) pure internal returns(uint256[] memory y) {
         y = new uint256[](x.length);
         for (uint256 i = 0; i < x.length; ++i) {
             y[i] = uint256(FixedPointMathLib.lnWad(int256(x[i] * FixedPointMathLib.WAD)));
         }
     }
 
-    function getSum(uint256[] memory values) internal returns(uint256 sum) {
+    function getSum(uint256[] memory values) pure internal returns(uint256 sum) {
         for (uint256 i = 0; i < values.length; ++i) {
             sum += values[i];
         }
     }
 
-    function xProduct(uint256[] memory a, uint256[] memory b) internal returns(uint256[] memory c) {
+    function xProduct(uint256[] memory a, uint256[] memory b) pure internal returns(uint256[] memory c) {
         require(a.length == b.length, "Cannot cross-multiply if lengths are different");
         c = new uint256[](a.length);
         for (uint256 i = 0; i < a.length; ++i) {
             c[i] = a[i] * b[i];
+        }
+    }
+
+    function powerArray(uint256[] memory x, int256 power) pure internal returns(uint256[] memory y) {
+        y = new uint256[](x.length);
+        for (uint256 i = 0; i < x.length; ++i) {
+            y[i] = uint256(FixedPointMathLib.powWad(int256(x[i]), power));
         }
     }
 }
