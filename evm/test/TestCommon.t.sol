@@ -9,12 +9,13 @@ import "../src/registry/CatalystMathAmp.sol";
 import "../src/CatalystVaultAmplified.sol";
 import "../src/CatalystGARPInterface.sol";
 import {Token} from "./mocks/token.sol";
+import {TestTokenFunctions} from "./CommonTokenFunctions.t.sol";
 
 import {Bytes65} from "GeneralisedIncentives/src/utils/Bytes65.sol";
 import "GeneralisedIncentives/src/apps/mock/IncentivizedMockEscrow.sol";
 import { IMessageEscrowStructs } from "GeneralisedIncentives/src/interfaces/IMessageEscrowStructs.sol";
 
-contract TestCommon is Test, Bytes65, IMessageEscrowStructs {
+contract TestCommon is Test, Bytes65, IMessageEscrowStructs, TestTokenFunctions {
     
     bytes32 constant DESTINATION_IDENTIFIER = bytes32(uint256(0x123123) + uint256(2**255));
 
@@ -45,50 +46,6 @@ contract TestCommon is Test, Bytes65, IMessageEscrowStructs {
         GARP = new IncentivizedMockEscrow(DESTINATION_IDENTIFIER, SIGNER);
 
         CCI = new CatalystGARPInterface(address(GARP));
-    }
-
-
-    string DEFAULT_POOL_SYMBOL;
-    string DEFAULT_POOL_NAME;
-
-    function getTokens(uint256 N) internal returns(address[] memory tokens) {
-        tokens = new address[](N);
-        for (uint256 i = 0; i < N; ++i) {
-            tokens[i] = address(deployToken());
-        }
-    }
-
-    function getTokens(uint256 N, uint256[] memory balances) internal returns(address[] memory tokens) {
-        tokens = new address[](N);
-        for (uint256 i = 0; i < N; ++i) {
-            tokens[i] = address(deployToken(18, balances[i]));
-        }
-    }
-
-    function approveTokens(address target, address[] memory tokens, uint256[] memory amounts) internal {
-        for (uint256 i = 0; i < tokens.length; ++i) {
-            Token(tokens[i]).approve(target, amounts[i]);
-        }
-    }
-
-    function approveTokens(address target, address[] memory tokens) internal {
-        uint256[] memory amounts = new uint256[](tokens.length);
-
-        for (uint256 i = 0; i < amounts.length; ++i) {
-            amounts[i] = 2**256 - 1;
-        }
-
-        approveTokens(target, tokens, amounts);
-    }
-
-    function verifyBalances(address target, address[] memory tokens, uint256[] memory amounts) internal {
-        for (uint256 i = 0; i < tokens.length; ++i) {
-            assertEq(
-                Token(tokens[i]).balanceOf(target),
-                amounts[i],
-                "verifyBalances(...) failed"
-            );
-        }
     }
 
     function deployVault (
@@ -129,26 +86,6 @@ contract TestCommon is Test, Bytes65, IMessageEscrowStructs {
 
     function setUpChains(bytes32 chainIdentifier) internal {
         CCI.connectNewChain(chainIdentifier, convertEVMTo65(address(CCI)), abi.encode(address(GARP)));
-    }
-
-    function deployToken(
-        string memory name,
-        string memory symbol,
-        uint8 decimals_,
-        uint256 initialSupply
-    ) internal returns (Token token) {
-        return token = new Token(name, symbol, decimals_, initialSupply);
-    }
-
-    function deployToken(
-        uint8 decimals_,
-        uint256 initialSupply
-    ) internal returns (Token token) {
-        return token = deployToken("Token", "TKN", decimals_, initialSupply);
-    }
-
-    function deployToken() internal returns(Token token) {
-        return deployToken(18, 1e6);
     }
 
     function signMessageForMock(bytes memory message) internal view returns(uint8 v, bytes32 r, bytes32 s) {
