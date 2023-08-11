@@ -5,7 +5,22 @@ import "forge-std/Test.sol";
 import { TestCommon } from "../TestCommon.t.sol";
 import {Token} from "../mocks/token.sol";
 import "../../src/ICatalystV1Vault.sol";
+import { IMessageEscrowStructs } from "GARP/interfaces/IMessageEscrowStructs.sol";
 
+
+interface RA {
+    function receiveAsset(
+        bytes32 channelId,
+        bytes calldata fromVault,
+        uint256 toAssetIndex,
+        address toAccount,
+        uint256 U,
+        uint256 minOut,
+        uint256 fromAmount,
+        bytes calldata fromAsset,
+        uint32 blockNumberMod
+    ) external;
+}
 
 contract TestSwapIntegration is TestCommon {
 
@@ -27,9 +42,18 @@ contract TestSwapIntegration is TestCommon {
         uint256 fee
     );
 
-    bytes32 FEE_RECIPITANT = bytes32(uint256(uint160(9191919191)));
+    event SendAssetSuccess(
+        bytes32 channelId,
+        bytes toAccount,
+        uint256 Units,
+        uint256 escrowAmount,
+        address escrowToken,
+        uint32 blockNumberMod
+    ); 
 
-    address TO_ACCOUNT = address(uint160(123123));
+    bytes32 FEE_RECIPITANT = bytes32(uint256(uint160(0xfee0eec191fa4f)));
+
+    address TO_ACCOUNT = address(uint160(0xe00acc084f));
 
     address _REFUND_GAS_TO = TO_ACCOUNT;
 
@@ -113,6 +137,20 @@ contract TestSwapIntegration is TestCommon {
         (address vault1, address vault2) = pool1();
         t_cross_chain_swap(vault1, vault2, amount);
     }
+
+    function test_cross_chain_swap_amplified() external {
+        uint256 amount = 10**18;
+        (address vault1, address vault2) = pool2();
+        t_cross_chain_swap(vault1, vault2, amount);
+    }
+
+    function sliceMemory(bytes calldata a, uint256 start) external returns(bytes calldata) {
+        return a[start:];
+    }
+
+    function sliceMemory(bytes calldata a, uint256 start, uint256 end) external returns(bytes calldata) {
+        return a[start:end];
+    }
     
     function t_cross_chain_swap(address fromVault, address toVault, uint256 amount) internal {
         address tkn = ICatalystV1Vault(fromVault)._tokenIndexing(0);
@@ -190,12 +228,65 @@ contract TestSwapIntegration is TestCommon {
             _INCENTIVE
         );  
 
-        // The message is event 2. (index 1)
+        // The message is event 2 while bounty place is number 1. (index 1, 0)
         Vm.Log[] memory entries = vm.getRecordedLogs();
+
+
 
         (bytes32 destinationIdentifier, bytes memory recipitent, bytes memory messageWithContext) = abi.decode(entries[1].data, (bytes32, bytes, bytes));
 
+        bytes32 messageIdentifier = bytes32(this.sliceMemory(messageWithContext, 64+1, 64+1+32));
+
         (bytes memory _metadata, bytes memory toExecuteMessage) = getVerifiedMessage(address(GARP), messageWithContext);
+
+        vm.expectCall(
+            address(CCI),
+            abi.encodeCall(
+                CCI.receiveMessage,
+                (
+                    DESTINATION_IDENTIFIER,
+                    messageIdentifier,
+                    convertEVMTo65(address(CCI)),
+                    this.sliceMemory(messageWithContext, 64+169)
+                )
+            )
+        );
+
+        vm.expectCall(
+            address(toVault),
+            abi.encodeCall(
+                RA.receiveAsset,
+                (
+                    DESTINATION_IDENTIFIER,
+                    convertEVMTo65(fromVault),
+                    0,
+                    TO_ACCOUNT,
+                    UNITS,
+                    MINOUT,
+                    amount,
+                    convertEVMTo65(tkn),
+                    1
+                )
+            )
+        );
+
+        vm.recordLogs();
+        GARP.processMessage(_metadata, toExecuteMessage, FEE_RECIPITANT);
+
+        entries = vm.getRecordedLogs();
+        (destinationIdentifier, recipitent, messageWithContext) = abi.decode(entries[3].data, (bytes32, bytes, bytes));
+
+        (_metadata, toExecuteMessage) = getVerifiedMessage(address(GARP), messageWithContext);
+
+        vm.expectEmit();
+        emit SendAssetSuccess(
+            DESTINATION_IDENTIFIER,
+            convertEVMTo65(TO_ACCOUNT),
+            UNITS,
+            amount,
+            tkn,
+            1
+        );
 
         GARP.processMessage(_metadata, toExecuteMessage, FEE_RECIPITANT);
     }
