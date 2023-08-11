@@ -3,14 +3,16 @@ pragma solidity ^0.8.13;
 
 import "forge-std/Test.sol";
 import "../src/CatalystFactory.sol";
+import "../src/registry/CatalystMathVol.sol";
 import "../src/CatalystVaultVolatile.sol";
+import "../src/registry/CatalystMathAmp.sol";
 import "../src/CatalystVaultAmplified.sol";
 import "../src/CatalystGARPInterface.sol";
 import {Token} from "./mocks/token.sol";
 
-import {Bytes65} from "GARP/utils/Bytes65.sol";
-import "GARP/apps/mock/IncentivizedMockEscrow.sol";
-import { IMessageEscrowStructs } from "GARP/interfaces/IMessageEscrowStructs.sol";
+import {Bytes65} from "GeneralisedIncentives/src/utils/Bytes65.sol";
+import "GeneralisedIncentives/src/apps/mock/IncentivizedMockEscrow.sol";
+import { IMessageEscrowStructs } from "GeneralisedIncentives/src/interfaces/IMessageEscrowStructs.sol";
 
 contract TestCommon is Test, Bytes65, IMessageEscrowStructs {
     
@@ -22,7 +24,9 @@ contract TestCommon is Test, Bytes65, IMessageEscrowStructs {
     IncentivizedMockEscrow GARP;
 
     CatalystFactory catFactory;
+    CatalystMathVol volatileMathlib; 
     CatalystVaultVolatile volatileTemplate; 
+    CatalystMathAmp amplifiedMathlib; 
     CatalystVaultAmplified amplifiedTemplate;
 
     CatalystGARPInterface CCI;
@@ -32,8 +36,11 @@ contract TestCommon is Test, Bytes65, IMessageEscrowStructs {
 
         catFactory = new CatalystFactory(0);
 
-        volatileTemplate = new CatalystVaultVolatile(address(catFactory));
-        amplifiedTemplate = new CatalystVaultAmplified(address(catFactory));
+        volatileMathlib = new CatalystMathVol();
+        volatileTemplate = new CatalystVaultVolatile(address(catFactory), address(volatileMathlib));
+
+        amplifiedMathlib = new CatalystMathAmp();
+        amplifiedTemplate = new CatalystVaultAmplified(address(catFactory), address(amplifiedMathlib));
 
         GARP = new IncentivizedMockEscrow(DESTINATION_IDENTIFIER, SIGNER);
 

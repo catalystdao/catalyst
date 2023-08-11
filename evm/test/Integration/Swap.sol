@@ -5,7 +5,7 @@ import "forge-std/Test.sol";
 import { TestCommon } from "../TestCommon.t.sol";
 import {Token} from "../mocks/token.sol";
 import "../../src/ICatalystV1Vault.sol";
-import { IMessageEscrowStructs } from "GARP/interfaces/IMessageEscrowStructs.sol";
+import { IMessageEscrowStructs } from "GeneralisedIncentives/src/interfaces/IMessageEscrowStructs.sol";
 
 
 interface RA {

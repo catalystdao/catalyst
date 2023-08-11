@@ -9,6 +9,7 @@ import "./utils/FixedPointMathLib.sol";
 import "./CatalystGARPInterface.sol";
 import "./CatalystVaultCommon.sol";
 import "./ICatalystV1Vault.sol";
+import "./IntegralsVolatile.sol";
 
 /**
  * @title Catalyst: The Multi-Chain Vault
@@ -40,7 +41,7 @@ import "./ICatalystV1Vault.sol";
  * over the vault. 
  * !If finishSetup is not called, the vault can be drained by the creators!
  */
-contract CatalystVaultVolatile is CatalystVaultCommon {
+contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
     using SafeTransferLib for ERC20;
 
     //--- ERRORS ---//
@@ -56,7 +57,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon {
     //-- Variables --//
     mapping(address => uint256) public _targetWeight;
 
-    constructor(address factory_) CatalystVaultCommon(factory_) {}
+    constructor(address factory_, address mathlib_) CatalystVaultCommon(factory_, mathlib_) {}
 
     /**
      * @notice Configures an empty vault.
@@ -125,7 +126,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon {
         // Mint vault tokens for vault creator.
         _mint(depositor, INITIAL_MINT_AMOUNT);
 
-        emit Deposit(depositor, INITIAL_MINT_AMOUNT, initialBalances);
+        emit VaultDeposit(depositor, INITIAL_MINT_AMOUNT, initialBalances);
     }
 
     /**
@@ -257,93 +258,12 @@ contract CatalystVaultVolatile is CatalystVaultCommon {
 
     //--- Swap integrals ---//
 
-    /**
-     * @notice Computes the integral \int_{A}^{A+x} W/w dw = W ln((A+x)/A)
-     * The value is returned as units, which is always WAD.
-     * @dev All input parameters should be the raw numbers and not WAD.
-     * Since units are always denominated in WAD, the function should be treated as mathematically *native*.
-     * @param input The input amount provided by the user.
-     * @param A The balance of the vault.
-     * @param W The weight associated with the traded token.
-     * @return uint256 Units (units are **always** WAD).
-     */
-    function _calcPriceCurveArea(
-        uint256 input,
-        uint256 A,
-        uint256 W
-    ) internal pure returns (uint256) {
-        // Notice, A + in and A are not WAD but divWadDown is used anyway.
-        // That is because divWadDown is a shortcut for (10**18 * A/B) and lnWad requires a WAD number.
-        return W * uint256(FixedPointMathLib.lnWad(int256(FixedPointMathLib.divWadDown(A + input, A))));    // int256 casting is safe. If overflow, it is negative and lnWad fails on negative numbers.
-    }
-
-    /**
-     * @notice Solves the equation U = \int_{B-y}^{B} W/w dw for y = B · (1 - exp(-U/W))
-     * The value is returned as output token. (not WAD)
-     * @dev Since units are always denominated in WAD, the function should be treated as mathematically *native*.
-     * @param U Incoming Units (in WAD).
-     * @param B The balance of the vault.
-     * @param W The weight associated with the traded token.
-     * @return uint256 Output tokens (not WAD).
-     */
-    function _calcPriceCurveLimit(
-        uint256 U,
-        uint256 B,
-        uint256 W
-    ) internal pure returns (uint256) {
-        return FixedPointMathLib.mulWadDown(
-            B,
-            FixedPointMathLib.WAD - uint256(FixedPointMathLib.expWad(-int256(U / W)))   // int256 casting is initially not safe. If overflow, the equation becomes: 1 - exp(U/W) => exp(U/W) > 1. In this case, Solidity's built-in safe math protection catches the overflow since 1 - exp(U/W) < 0. It is then safe.
-        );
-    }
-
-    /**
-     * @notice Solves the combined price equations. To reduce attack vectors
-     * cross-chain swaps and atomic swaps are implemented with the same equations.
-     * As such, _calcPriceCurveArea and _calcPriceCurveLimit are used rather than the
-     * true full equation.
-     * @dev All input parameters should be the raw numbers and not WAD.
-     * @param input The input amount provided by the user.
-     * @param A The vault balance for the input token.
-     * @param B The vault balance for the output token.
-     * @param W_A The weight associated with the input token 
-     * @param W_B The weight associated with the output token 
-     * @return uint256 Output tokens (not WAD).
-     */
-    function _calcCombinedPriceCurves(
-        uint256 input,
-        uint256 A,
-        uint256 B,
-        uint256 W_A,
-        uint256 W_B
-    ) internal pure returns (uint256) {
-        return _calcPriceCurveLimit(_calcPriceCurveArea(input, A, W_A), B, W_B);
-    }
-
-    /**
-     * @notice Solves the liquidity to units equation.
-     * @dev While the equation looks very similar to _calcPriceCurveLimit this is
-     * a mathematical quirk rather than a pattern.
-     * Furthermore, there has to be an adjustment to the equation to adjust a withdrawal bias.
-     * @param U Incoming Units.
-     * @param W Sum of the vault weights.
-     * @return uint256 Vault share scaled by WAD.
-     */
-    function _calcPriceCurveLimitShare(
-        uint256 U,
-        uint256 W
-    ) internal pure returns (uint256) {
-        // Compute the non vault ownership share. (1 - vault ownership share)
-        uint256 npos = uint256(FixedPointMathLib.expWad(-int256(U / W)));   // int256 casting is initially not safe. If overflow, the equation becomes: exp(U/W). In this case, when subtracted from 1 (later), Solidity's built-in safe math protection catches the overflow since exp(U/W) > 1.
-        
-        // Compute the vault owner share before liquidity has been added.
-        // (solve share = pt/(PT+pt) for pt.)
-        return FixedPointMathLib.divWadDown(FixedPointMathLib.WAD - npos, npos);
-    }
+    // Inherited from the Integrals file.
 
     /**
      * @notice Computes the return of SendAsset excluding fees.
      * @dev Returns 0 if 'fromAsset' is not a token in the vault
+     * Does not contain the swap fee.
      * @param fromAsset The address of the token to sell.
      * @param amount The amount of from token to sell.
      * @return uint256 Units.
@@ -364,6 +284,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon {
     /**
      * @notice Computes the output of ReceiveAsset excluding fees.
      * @dev Reverts if 'toAsset' is not a token in the vault
+     * Does not contain the swap fee.
      * @param toAsset The address of the token to buy.
      * @param U The number of units to convert.
      * @return uint256 Number of purchased tokens.
@@ -388,6 +309,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon {
      * @dev If the vault weights of the 2 tokens are equal, a very simple curve is used.
      * If from or to is not part of the vault, the swap will either return 0 or revert respectively.
      * If both from and to are not part of the vault, the swap can actually return a positive value.
+     * Does not contain the swap fee.
      * @param fromAsset The address of the token to sell.
      * @param toAsset The address of the token to buy.
      * @param amount The amount of from token to sell for to token.
@@ -488,7 +410,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon {
         _mint(msg.sender, vaultTokens);
 
         // Emit the deposit event
-        emit Deposit(msg.sender, vaultTokens, tokenAmounts);
+        emit VaultDeposit(msg.sender, vaultTokens, tokenAmounts);
 
         return vaultTokens;
     }
@@ -540,7 +462,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon {
         }
 
         // Emit the event
-        emit Withdraw(msg.sender, vaultTokens, amounts);
+        emit VaultWithdraw(msg.sender, vaultTokens, amounts);
 
         return amounts;
     }
@@ -621,7 +543,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon {
         if (U != 0) revert UnusedUnitsAfterWithdrawal(U);
 
         // Emit the event
-        emit Withdraw(msg.sender, vaultTokens, amounts);
+        emit VaultWithdraw(msg.sender, vaultTokens, amounts);
 
         return amounts;
     }
