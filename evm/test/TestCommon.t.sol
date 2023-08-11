@@ -16,11 +16,24 @@ import "GeneralisedIncentives/src/apps/mock/IncentivizedMockEscrow.sol";
 import { IMessageEscrowStructs } from "GeneralisedIncentives/src/interfaces/IMessageEscrowStructs.sol";
 
 contract TestCommon is Test, Bytes65, IMessageEscrowStructs, TestTokenFunctions {
+
+    // add this to be excluded from coverage report
+    function test() public {}
+
     
     bytes32 constant DESTINATION_IDENTIFIER = bytes32(uint256(0x123123) + uint256(2**255));
 
     address SIGNER;
     uint256 PRIVATEKEY;
+
+    IncentiveDescription _INCENTIVE = IncentiveDescription({
+        maxGasDelivery: 1199199,
+        maxGasAck: 1188188,
+        refundGasTo: address(0),
+        priceOfDeliveryGas: 123321,
+        priceOfAckGas: 321123,
+        targetDelta: 30 minutes
+    });
 
     IncentivizedMockEscrow GARP;
 
@@ -34,6 +47,8 @@ contract TestCommon is Test, Bytes65, IMessageEscrowStructs, TestTokenFunctions 
 
     function setUp() virtual public {
         (SIGNER, PRIVATEKEY) = makeAddrAndKey("signer");
+
+        _INCENTIVE.refundGasTo = makeAddr("refundGasTo");
 
         catFactory = new CatalystFactory(0);
 
@@ -90,6 +105,10 @@ contract TestCommon is Test, Bytes65, IMessageEscrowStructs, TestTokenFunctions 
 
     function signMessageForMock(bytes memory message) internal view returns(uint8 v, bytes32 r, bytes32 s) {
         (v, r, s) = vm.sign(PRIVATEKEY, keccak256(message));
+    }
+
+    function _getTotalIncentive(IncentiveDescription memory incentive) internal pure returns(uint256) {
+        return incentive.maxGasDelivery * incentive.priceOfDeliveryGas + incentive.maxGasAck * incentive.priceOfAckGas;
     }
 
     function getVerifiedMessage(address emitter, bytes memory message) internal view returns(bytes memory _metadata, bytes memory newMessage) {

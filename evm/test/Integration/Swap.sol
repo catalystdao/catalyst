@@ -57,19 +57,6 @@ contract TestSwapIntegration is TestCommon {
 
     address _REFUND_GAS_TO = TO_ACCOUNT;
 
-    IncentiveDescription _INCENTIVE = IncentiveDescription({
-        maxGasDelivery: 1199199,
-        maxGasAck: 1188188,
-        refundGasTo: _REFUND_GAS_TO,
-        priceOfDeliveryGas: 123321,
-        priceOfAckGas: 321123,
-        targetDelta: 30 minutes
-    });
-
-    function _getTotalIncentive(IncentiveDescription memory incentive) internal pure returns(uint256) {
-        return incentive.maxGasDelivery * incentive.priceOfDeliveryGas + incentive.maxGasAck * incentive.priceOfAckGas;
-    }
-
     function pool1() internal returns(address vault1, address vault2) {
 
         // Deploy tokens.

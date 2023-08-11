@@ -4,7 +4,7 @@ pragma solidity ^0.8.13;
 import "forge-std/Test.sol";
 import {Token} from "./mocks/token.sol";
 
-contract TestTokenFunctions is Test {
+abstract contract TestTokenFunctions is Test {
 
     string DEFAULT_POOL_SYMBOL;
     string DEFAULT_POOL_NAME;

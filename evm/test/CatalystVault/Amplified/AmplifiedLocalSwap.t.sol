@@ -8,8 +8,17 @@ import "../Invariant.t.sol";
 import "../LocalSwap.t.sol";
 
 contract TestVolatileInvariant is TestInvariant, TestLocalswap {
+
+    function getLargestSwap(address fromVault, address toVault, address fromAsset, address toAsset) view override internal returns(uint256 amount) {
+        uint256 fromWeight = ICatalystV1Vault(fromVault)._weight(fromAsset);
+        uint256 toWeight = ICatalystV1Vault(toVault)._weight(toAsset);
+
+        amount = Token(toAsset).balanceOf(toVault) * toWeight / fromWeight;
+        uint256 amount2 = Token(fromAsset).balanceOf(address(this));
+        if (amount2 < amount) amount = amount2;
+    }
     
-    function invariant(address[] memory vaults) internal override returns(uint256 inv) {
+    function invariant(address[] memory vaults) view internal override returns(uint256 inv) {
         (uint256[] memory balances, uint256[] memory weights) = getBalances(vaults);
 
         int256 oneMinusAmp = CatalystVaultAmplified(vaults[0])._oneMinusAmp();
