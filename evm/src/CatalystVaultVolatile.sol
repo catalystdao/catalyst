@@ -721,7 +721,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
         address toAsset,
         uint256 U,
         uint256 minOut
-    ) internal returns (uint256) {
+    ) internal override returns (uint256) {
         _updateWeights();
 
         // Check and update the security limit.

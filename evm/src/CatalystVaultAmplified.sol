@@ -1059,7 +1059,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
         address toAsset,
         uint256 U,
         uint256 minOut
-    ) internal returns (uint256) {
+    ) internal override returns (uint256) {
         _updateAmplification();
 
         // Calculate the swap return value. Fee is always taken on the sending token.

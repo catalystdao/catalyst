@@ -177,7 +177,7 @@ abstract contract CatalystVaultCommon is
         address toAsset,
         uint256 U,
         uint256 minOut
-    ) internal returns (uint256);
+    ) virtual internal returns (uint256);
 
     // -- Underwrite Asset Swaps -- //
 

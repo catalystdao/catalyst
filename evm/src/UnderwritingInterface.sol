@@ -7,7 +7,7 @@ import {SafeTransferLib} from 'solmate/src/utils/SafeTransferLib.sol';
 import { ICatalystReceiver } from "./interfaces/IOnCatalyst.sol";
 import { CatalystGARPInterface } from "./CatalystGARPInterface.sol";
 import { ICatalystV1Vault } from "./ICatalystV1Vault.sol";
-import "./FixedPointMathLib.sol";
+import "./utils/FixedPointMathLib.sol";
 import { CTX2_ASSET_SWAP_PLEASE_UNDERWRITE, CTX3_ASSET_SWAP_PURPOSE_UNDERWRITE } from "./CatalystPayload.sol";
 import "./CatalystPayload.sol";
 
@@ -70,7 +70,7 @@ contract UnderwritingInterface is CatalystGARPInterface {
         address toAccount,
         uint256 fromAmount,
         bytes calldata cdata
-    ) public returns (bytes32 identifier) {
+    ) public pure returns (bytes32 identifier) {
         return identifier = keccak256(
             abi.encodePacked(
                 targetVault,
@@ -215,7 +215,6 @@ contract UnderwritingInterface is CatalystGARPInterface {
         }
     }
     
-    // TODO: Underwriting incentives.
     function sendCrossChainPleaseUnderwrite(
         bytes32 chainIdentifier,
         bytes calldata toVault,
@@ -225,6 +224,7 @@ contract UnderwritingInterface is CatalystGARPInterface {
         uint256 minOut,
         uint256 fromAmount,
         address fromAsset,
+        uint16 underwritePercentageX16,
         IncentiveDescription calldata incentive,
         bytes calldata calldata_
     ) checkBytes65Address(toVault) checkBytes65Address(toAccount) checkIncentives(chainIdentifier, incentive) external payable {
@@ -251,14 +251,15 @@ contract UnderwritingInterface is CatalystGARPInterface {
             uint8(20),      // EVM addresses are 20 bytes.
             bytes32(0),     // EVM only uses 20 bytes. abi.encode packs the 20 bytes into 32 then we need to add 32 more
             abi.encode(fromAsset),  // Use abi.encode to encode address into 32 bytes
-            uint32(block.number),   // This is the same as block.number mod 2**32-1
+            uint32(block.number),   // This is the same as block.number mod 2**32-1,
+            uint16(underwritePercentageX16),
             uint16(calldata_.length),   // max length of calldata is 2**16-1 = 65535 bytes which should be more than plenty.
             calldata_
         );
 
         GARP.escrowMessage{value: msg.value}(
             chainIdentifier,
-            getAddressForChainIdentifier(chainIdentifier),
+            chainIdentifierToDestinationAddress[chainIdentifier],
             data,
             incentive
         );
@@ -306,7 +307,7 @@ contract UnderwritingInterface is CatalystGARPInterface {
 
         GARP.escrowMessage{value: msg.value}(
             chainIdentifier,
-            getAddressForChainIdentifier(chainIdentifier),
+           chainIdentifierToDestinationAddress[chainIdentifier],
             data,
             incentive
         );
@@ -320,7 +321,7 @@ contract UnderwritingInterface is CatalystGARPInterface {
         // We know that toVault is an EVM address
         address toVault = address(bytes20(data[ TO_VAULT_START_EVM : TO_VAULT_END ]));
 
-        uint16 dataLength = uint16(bytes2(data[CTX0_DATA_LENGTH_START:CTX0_DATA_LENGTH_END]));
+        // uint16 dataLength = uint16(bytes2(data[CTX0_DATA_LENGTH_START:CTX0_DATA_LENGTH_END]));
 
         // Select excess calldata. Excess calldata is not decoded.
         bytes calldata cdata = data[CTX0_DATA_LENGTH_START:];
@@ -381,7 +382,7 @@ contract UnderwritingInterface is CatalystGARPInterface {
                 // Since the swap already properly executed, we shouldn't have to do anything extra.
                 // Instead, the best fallback is to sacrafiise the unspent units.
             }
-            return 0x00;
+            return acknowledgement = 0x00;
         }
 
         return acknowledgement = 0x00;
