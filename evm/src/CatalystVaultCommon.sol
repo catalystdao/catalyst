@@ -171,6 +171,52 @@ abstract contract CatalystVaultCommon is
         return _chainInterface == address(0);
     }
 
+    // -- Receive Abstract Functions -- //
+
+    function _receiveAsset(
+        address toAsset,
+        uint256 U,
+        uint256 minOut
+    ) internal returns (uint256);
+
+    // -- Underwrite Asset Swaps -- //
+
+    function underwriteAsset(
+        bytes32 identifier,
+        address toAsset,
+        uint256 U,
+        uint256 minOut
+    ) onlyChainInterface external returns (uint256 purchasedTokens) {
+        purchasedTokens = _receiveAsset(toAsset, U, minOut);
+        // Set the escrow.
+        // TODO: Does this correctly set the escrow? (+ / -)
+        _setTokenEscrow(
+            identifier,
+            address(msg.sender),  // is always ChainInterface but msg.sender is cheaper than slaod.
+            toAsset,
+            purchasedTokens
+        );
+    }
+
+    function releaseUnderwriteAsset(
+        bytes32 identifier,
+        uint256 escrowAmount,
+        address escrowToken
+    ) onlyChainInterface external {
+         _releaseAssetEscrow(identifier, escrowAmount, escrowToken); // Only reverts for missing escrow
+
+        // Send escrowed tokens to underwriting module. (chainInterface == msg.sender)
+        ERC20(escrowToken).safeTransfer(msg.sender, escrowAmount);
+    }
+
+    function deleteUnderwriteAsset(
+        bytes32 identifier,
+        uint256 escrowAmount,
+        address escrowToken
+    ) onlyChainInterface external {
+         _releaseAssetEscrow(identifier, escrowAmount, escrowToken); // Only reverts for missing escrow
+    }
+
     // -- Setup Functions -- //
 
     /** @notice Setup a vault. */
