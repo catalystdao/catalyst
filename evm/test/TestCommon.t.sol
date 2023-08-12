@@ -118,5 +118,13 @@ contract TestCommon is Test, Bytes65, IMessageEscrowStructs, TestTokenFunctions 
 
         _metadata = abi.encode(v, r, s);
     }
+
+    function sliceMemory(bytes calldata a, uint256 start) pure external returns(bytes calldata) {
+        return a[start:];
+    }
+
+    function sliceMemory(bytes calldata a, uint256 start, uint256 end) pure external returns(bytes calldata) {
+        return a[start:end];
+    }
 }
 

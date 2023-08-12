@@ -4,12 +4,21 @@ pragma solidity ^0.8.13;
 import "../../../src/ICatalystV1Vault.sol";
 
 import "../Invariant.t.sol";
-import "../SendAsset.t.sol";
+import {TestSendAsset} from "../SendAsset.t.sol";
+import {TestReceiveAsset} from "../ReceiveAsset.t.sol";
 
-contract TestVolatileInvariant2 is TestInvariant, TestSendAsset {
+contract TestVolatileInvariant2 is TestInvariant, TestSendAsset, TestReceiveAsset {
 
     function getLargestSwap(address fromVault, address toVault, address fromAsset, address toAsset) view override internal returns(uint256 amount) {
-        amount = Token(fromAsset).balanceOf(fromVault) * 100;
+        return getLargestSwap(fromVault, toVault, fromAsset, toAsset, false);
+    }
+
+    function getLargestSwap(address fromVault, address toVault, address fromAsset, address toAsset, bool securityLimit) view override internal returns(uint256 amount) {
+        if (securityLimit) {
+            amount = Token(fromAsset).balanceOf(fromVault) / 2;
+        } else {
+            amount = Token(fromAsset).balanceOf(fromVault) * 1000;
+        }
         uint256 amount2 = Token(fromAsset).balanceOf(address(this));
         if (amount2 < amount) amount = amount2;
     }

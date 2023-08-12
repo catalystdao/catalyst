@@ -5,6 +5,7 @@ import "forge-std/Test.sol";
 import "../../src/ICatalystV1Vault.sol";
 import {Token} from "../mocks/token.sol";
 import "../../src/utils/FixedPointMathLib.sol";
+import {AVaultInterfaces} from "./AVaultInterfaces.t.sol";
 
 interface TF {
     function transferFrom(
@@ -14,16 +15,10 @@ interface TF {
     ) external returns (bool);
 }
 
-abstract contract TestLocalswap is Test {
-
-    uint256 constant MARGIN_NUM = 1;
-    uint256 constant MARGIN_DENOM = 1e12;
-
-    function invariant(address[] memory vaults) view virtual internal returns(uint256 inv);
-
-    function getTestConfig() virtual internal returns(address[] memory vaults);
-
-    function getLargestSwap(address fromVault, address toVault, address fromAsset, address toAsset) virtual internal returns(uint256 amount);
+abstract contract TestLocalswap is Test, AVaultInterfaces {
+    
+    uint256 private constant MARGIN_NUM = 1;
+    uint256 private constant MARGIN_DENOM = 1e12;
 
     function t_only_localswap(address vault, uint256 amount, address fromAsset, address toAsset) internal {
         ICatalystV1Vault v = ICatalystV1Vault(vault);

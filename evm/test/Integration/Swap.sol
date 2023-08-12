@@ -130,14 +130,6 @@ contract TestSwapIntegration is TestCommon {
         (address vault1, address vault2) = pool2();
         t_cross_chain_swap(vault1, vault2, amount);
     }
-
-    function sliceMemory(bytes calldata a, uint256 start) external returns(bytes calldata) {
-        return a[start:];
-    }
-
-    function sliceMemory(bytes calldata a, uint256 start, uint256 end) external returns(bytes calldata) {
-        return a[start:end];
-    }
     
     function t_cross_chain_swap(address fromVault, address toVault, uint256 amount) internal {
         address tkn = ICatalystV1Vault(fromVault)._tokenIndexing(0);

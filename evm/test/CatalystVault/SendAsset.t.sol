@@ -6,6 +6,7 @@ import "../TestCommon.t.sol";
 import "../../src/ICatalystV1Vault.sol";
 import {Token} from "../mocks/token.sol";
 import "../../src/utils/FixedPointMathLib.sol";
+import {AVaultInterfaces} from "./AVaultInterfaces.t.sol";
 
 interface TF {
     function transferFrom(
@@ -15,18 +16,13 @@ interface TF {
     ) external returns (bool);
 }
 
-abstract contract TestSendAsset is TestCommon {
+abstract contract TestSendAsset is TestCommon, AVaultInterfaces {
 
-    uint256 constant MARGIN_NUM = 1;
-    uint256 constant MARGIN_DENOM = 1e18;
+    uint256 private constant MARGIN_NUM = 1;
+    uint256 private constant MARGIN_DENOM = 1e12;
 
-    function invariant(address[] memory vaults) view virtual internal returns(uint256 inv);
-
-    function getTestConfig() virtual internal returns(address[] memory vaults);
-
-    function getLargestSwap(address fromVault, address toVault, address fromAsset, address toAsset) virtual internal returns(uint256 amount);
-    
-    function test_sendAsset(bytes32 channelId, uint56 amount, address toAccount) external virtual {
+    /// forge-config: default.fuzz.runs = 1000
+    function test_sendAsset(bytes32 channelId, uint32 swapSizePercentage, address toAccount) external virtual {
         vm.assume(toAccount != address(0));
         address[] memory vaults = getTestConfig();
         require(vaults.length >= 2, "Not enough vaults defined");
@@ -39,11 +35,15 @@ abstract contract TestSendAsset is TestCommon {
         address fromVault = vaults[fromVaultIndex];
         address toVault = vaults[toVaultIndex];
 
+
         setConnection(fromVault, toVault, channelId, channelId);
 
         uint256 initial_invariant = invariant(vaults);
 
         address fromToken = ICatalystV1Vault(fromVault)._tokenIndexing(fromAssetIndex);
+
+        uint256 amount = getLargestSwap(fromVault, toVault, fromToken, ICatalystV1Vault(toVault)._tokenIndexing(toAssetIndex)) * uint256(swapSizePercentage) / (2**32 - 1);
+
         Token(fromToken).approve(fromVault, amount);
 
         uint256 units = ICatalystV1Vault(fromVault).sendAsset{value: _getTotalIncentive(_INCENTIVE)}(
@@ -67,6 +67,37 @@ abstract contract TestSendAsset is TestCommon {
                 "Swap error beyond margin found"
             );
         }
+    }
+
+    function test_error_failback_address_0(bytes32 channelId, uint56 amount, address toAccount) external virtual {
+        address[] memory vaults = getTestConfig();
+        require(vaults.length >= 2, "Not enough vaults defined");
+
+        uint8 fromVaultIndex = 0;
+        uint8 toVaultIndex = 1;
+        uint8 fromAssetIndex = 0;
+        uint8 toAssetIndex = 0;
+
+        address fromVault = vaults[fromVaultIndex];
+        address toVault = vaults[toVaultIndex];
+
+        setConnection(fromVault, toVault, channelId, channelId);
+
+        address fromToken = ICatalystV1Vault(fromVault)._tokenIndexing(fromAssetIndex);
+        Token(fromToken).approve(fromVault, amount);
+
+        vm.expectRevert();
+        ICatalystV1Vault(fromVault).sendAsset{value: _getTotalIncentive(_INCENTIVE)}(
+            channelId,
+            convertEVMTo65(toVault),
+            convertEVMTo65(toAccount),
+            fromToken,
+            toAssetIndex, 
+            uint256(amount), 
+            uint256(amount)/2, 
+            address(0), 
+            _INCENTIVE
+        );
     }
 }
 
