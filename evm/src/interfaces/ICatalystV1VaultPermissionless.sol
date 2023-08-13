@@ -123,6 +123,25 @@ interface ICatalystV1VaultPermissionless is IMessageEscrowStructs {
     ) external payable returns (uint256);
 
     /**
+     * @notice Initiate a cross-chain swap by purchasing units and transfering the units to the target vault.
+     * Then allow for underwriters to underwrite the cross-chain swap for faster execution
+     * @param underwritePercentageX16 The payment for underwriting the swap (out of type(uint16.max))
+     */
+    function sendAssetUnderwrite(
+        bytes32 channelId,
+        bytes memory toVault,
+        bytes memory toAccount,
+        address fromAsset,
+        uint8 toAssetIndex,
+        uint256 amount,
+        uint256 minOut,
+        address fallbackUser,
+        uint16 underwritePercentageX16,
+        IncentiveDescription calldata incentive,
+        bytes memory calldata_
+    ) external payable returns (uint256);
+
+    /**
      * @notice Completes a cross-chain swap by converting units to the desired token (toAsset)
      * @dev Can only be called by the chainInterface.
      * @param channelId The incoming connection identifier.

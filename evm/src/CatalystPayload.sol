@@ -38,9 +38,6 @@ pragma solidity ^0.8.16;
 //       + FROM_ASSET_LEN   293 (1 byte)
 //       + FROM_ASSET       294 (64 bytes)
 //       + BLOCK_NUMBER     358 (4 bytes)
-//      (Fallback Logic)
-//       + TO_ACCOUNT_FALLBACK_LEN 262 (1 byte)
-//       + TO_ACCOUNT_FALLBACK     263 (64 bytes)
 //      (Underwrite Logic)
 //       + UW_INCENTIVE     327 (2 bytes)
 //
@@ -158,18 +155,13 @@ uint constant CTX2_FROM_ASSET_END        = 358;
 uint constant CTX2_BLOCK_NUMBER_START    = 358;
 uint constant CTX2_BLOCK_NUMBER_END      = 362;
 
-uint constant CTX2_TO_ACCOUNT_FALLBACK_LENGTH_POS   = 362;
-uint constant CTX2_TO_ACCOUNT_FALLBACK_START        = 363;
-uint constant CTX2_TO_ACCOUNT_FALLBACK_START_EVM    = 407;  // If the address is an EVM address, this is the start
-uint constant CTX2_TO_ACCOUNT_FALLBACK_END          = 427;
+uint constant CTX2_UW_INCENTIVE_START    = 362;
+uint constant CTX2_UW_INCENTIVE_END      = 364;
 
-uint constant CTX2_UW_INCENTIVE_START    = 427;
-uint constant CTX2_UW_INCENTIVE_END      = 429;
+uint constant CTX2_DATA_LENGTH_START     = 364;
+uint constant CTX2_DATA_LENGTH_END       = 366;
 
-uint constant CTX2_DATA_LENGTH_START     = 429;
-uint constant CTX2_DATA_LENGTH_END       = 431;
-
-uint constant CTX2_DATA_START            = 431;
+uint constant CTX2_DATA_START            = 366;
 
 
 

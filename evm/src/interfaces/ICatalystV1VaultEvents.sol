@@ -46,6 +46,19 @@ interface ICatalystV1VaultEvents {
         uint256 fee
     );
 
+    event SendAssetUnderwritable(
+        bytes32 channelId,
+        bytes toVault,
+        bytes toAccount,
+        address fromAsset,
+        uint8 toAssetIndex,
+        uint256 fromAmount,
+        uint256 minOut,
+        uint256 units,
+        uint256 fee,
+        uint16 underwritePercentageX16
+    );
+
     /**
      * @notice Describes the arrival of an external swap: Cross-chain swap.
      * If toAccount is used to match trades, remember to convert it into 64 + 1 bytes.

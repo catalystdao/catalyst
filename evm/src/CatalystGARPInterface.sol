@@ -803,11 +803,10 @@ contract CatalystGARPInterface is Ownable, ICrossChainReceiver, Bytes65, IMessag
         uint256 minOut,
         uint256 fromAmount,
         address fromAsset,
-        bytes calldata fallbackAccount,
         uint16 underwritePercentageX16,
         IncentiveDescription calldata incentive,
         bytes calldata calldata_
-    ) checkBytes65Address(toVault) checkBytes65Address(toAccount) checkBytes65Address(fallbackAccount) checkIncentives(chainIdentifier, incentive) external payable {
+    ) checkBytes65Address(toVault) checkBytes65Address(toAccount) checkIncentives(chainIdentifier, incentive) external payable {
         // We need to ensure that all information is in the correct places. This ensures that calls to this contract
         // will always be decoded semi-correctly even if the input is very incorrect. This also checks that the user 
         // inputs into the swap contracts are correct while making the cross-chain interface flexible for future implementations.
@@ -836,7 +835,6 @@ contract CatalystGARPInterface is Ownable, ICrossChainReceiver, Bytes65, IMessag
                 abi.encode(fromAsset)  // Use abi.encode to encode address into 32 bytes
             ),
             uint32(block.number),   // This is the same as block.number mod 2**32-1,
-            fallbackAccount,
             uint16(underwritePercentageX16),
             uint16(calldata_.length),   // max length of calldata is 2**16-1 = 65535 bytes which should be more than plenty.
             calldata_
@@ -903,26 +901,8 @@ contract CatalystGARPInterface is Ownable, ICrossChainReceiver, Bytes65, IMessag
         if (U == unusedUnits) {
             // The swap hasn't been underwritten. Lets execute the swap properly:
             return acknowledgement = _handleOrdinarySwap(sourceIdentifier, data);
-        }
-        if (unusedUnits > 0) {
-            // Use unspent units to purchase tokens. This is fallback logic. The payload won't be executed again.
-            try ICatalystV1Vault(toVault).receiveAsset(
-                sourceIdentifier,                                                                               // connectionId
-                fromVault,                                                                                      // fromVault
-                toAssetIndex,                                                                                   // toAssetIndex
-                address(bytes20(data[ CTX2_TO_ACCOUNT_FALLBACK_START_EVM : CTX2_TO_ACCOUNT_FALLBACK_END ])),    // toAccount
-                uint256(unusedUnits),                                                                           // units
-                uint256(0),                                                                                     // minOut
-                fromAmount,                                                                                     // fromAmount
-                bytes(data[ CTX2_FROM_ASSET_LENGTH_POS : CTX2_FROM_ASSET_END ]),                                // fromAsset
-                uint32(bytes4(data[ CTX2_BLOCK_NUMBER_START : CTX2_BLOCK_NUMBER_END ]))                         // block number
-            ) {
-                // Return outside try catch to save a bit of deployment gas.
-            } catch (bytes memory err) {
-                // Since the swap already properly executed, we shouldn't have to do anything extra.
-                // Instead, the best fallback is to burn the unspent units.
-            }
-            return acknowledgement = 0x00;
+        } else {
+            // todo: There shouldn't ever be a case where this is the case.
         }
 
         return acknowledgement = 0x00;
