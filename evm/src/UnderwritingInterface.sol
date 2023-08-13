@@ -24,23 +24,69 @@ import "./CatalystPayload.sol";
 contract UnderwritingInterface is CatalystGARPInterface {
     using SafeTransferLib for ERC20;
 
-    uint256 constant public UNDERWRITING_UNFULFILLED_FEE = 101;
-    uint256 constant public UNDERWRITING_UNFULFILLED_FEE_DENOMINATOR = 100;
+    uint256 constant public UNDERWRITING_UNFULFILLED_FEE = 1035;  // 3,5% extra as collatoral.
+    uint256 constant public UNDERWRITING_UNFULFILLED_FEE_DENOMINATOR = 1000;
+
+    uint256 constant public EXPIRE_CALLER_REWARD = 35;  // 35% of the 3,5% = 1,225%. Of $1000 = $12,25
+    uint256 constant public EXPIRE_CALLER_REWARD_DENOMINATOR = 100;
 
     error SwapError(bytes1 errorCode);
     error SwapAlreadyUnderwritten();
     error RefundToZeroAddress();
+    error UnderwriteDoesNotExist(bytes32 identifier);
+    error UnderwriteNotExpired(uint256 timeUnitilExpiry);
+    error MaxUnderwriteDurationTooLong();
 
     struct UnderwritingStorage {
-        uint256 U;
-        uint256 tokens;
-        address token;
-        address refundTo; 
+        uint256 tokens;     // 1 slot
+        address refundTo;   // 2 slot: 20/32
+        uint80 expiry;      // 2 slot: 30/32
     }
+
+    /**
+     * @dev The collatoral and thus the reward for expiring an underwrite can be derived through fromAmount. 
+     * All the arguments to derive the identifier can be found within event. This reduces the complexity for clients
+     * calling expired underwrites.
+     */
+    event UnderwriteSwap(
+        bytes32 indexed identifier,
+        address indexed underwriter,
+        uint80 expiry,
+        address targetVault,
+        address toAsset,
+        uint256 U,
+        uint256 minOut,
+        address toAccount,
+        uint256 fromAmount,
+        bytes cdata
+    );
+
+    event FulfillUnderwrite(
+        bytes32 indexed identifier
+    );
+
+    event ExpireUnderwrite(
+        bytes32 indexed identifier,
+        address expirer,
+        uint256 reward
+    );
+
+    /// @notice Sets the maximum duration for underwriting.
+    /// @dev Should be set long enough for all swaps to be able to confirm + a small buffer
+    /// Should also be set long enough to not take up an excess amount of escrow usage.
+    uint256 public maxUnderwritingDuration = 12 hours;
 
     mapping(bytes32 => UnderwritingStorage) public underwritingStorage;
 
     constructor(address GARP_) CatalystGARPInterface(GARP_) {
+    }
+
+    // TODO: only owner
+    function setMaxUnderwritingDuration(uint256 newMaxUnderwriteDuration) external {
+        // If the underwriting duration is too long, users can freeze up a lot of value for not a lot of cost.
+        if (newMaxUnderwriteDuration > 15 days) revert MaxUnderwriteDurationTooLong();
+
+        maxUnderwritingDuration = newMaxUnderwriteDuration;
     }
 
     function _receiveMessage(bytes32 sourceIdentifierbytes, bytes calldata data) internal override returns (bytes1 acknowledgement) {
@@ -93,7 +139,7 @@ contract UnderwritingInterface is CatalystGARPInterface {
         address toAccount,
         uint256 fromAmount,
         bytes calldata cdata
-    ) internal {
+    ) external {
         // Do not allow refundTo zero address. This field will be used to check if a swap has already been
         // underwritten, as a result disallow zero address. (Is also makes no sense from an underwriting perspective)  
         if (refundTo == address(0)) revert RefundToZeroAddress();
@@ -165,38 +211,88 @@ contract UnderwritingInterface is CatalystGARPInterface {
 
 
         underwritingStorage[identifier] = UnderwritingStorage({
-            U: U,
             tokens: purchasedTokens,
-            token: toAsset, // TODO: included in identifier?
-            refundTo: refundTo
+            refundTo: refundTo,
+            expiry: uint80(uint256(block.timestamp) + uint256(maxUnderwritingDuration))  // Should never overflow.
         });
+    }
+
+    /**
+     * @notice Resolves unexpired underwrites so that the escrowed value can be freed.
+     * @dev The underwrite owner can expire it at any time. Other callers needs to wait until after expiry. 
+     */
+    function expireUnderwrite(
+        address targetVault,
+        address toAsset,
+        uint256 U,
+        uint256 minOut,
+        address toAccount,
+        uint256 fromAmount,
+        bytes calldata cdata
+    ) external {
+        bytes32 identifier = getSwapIdentifier(
+            targetVault,
+            toAsset,
+            U,
+            minOut,
+            toAccount,
+            fromAmount,
+            cdata
+        );
+
+        UnderwritingStorage storage underwriteState = underwritingStorage[identifier];
+        // Check that the refundTo address is set. (Indicated that the underwrite exists.)
+        if (underwriteState.refundTo == address(0)) revert UnderwriteDoesNotExist(identifier);
+        
+        // Check that the underwriting can be expired. If the msg.sender is the refundTo address, then it can be expired at any time.
+        if (msg.sender != underwriteState.refundTo) {
+            // Otherwise, the expiry time must have been passed.
+            if (underwriteState.expiry > block.timestamp) revert UnderwriteNotExpired(underwriteState.expiry - block.timestamp);
+        }
+        uint256 underWrittenTokens = underwriteState.tokens;
+        // The next line acts as reentry protection. When the storage is deleted underwriteState.refundTo == address(0) will be true.
+        delete underwritingStorage[identifier];
+
+        // Delete the escrow
+        ICatalystV1Vault(targetVault).deleteUnderwriteAsset(identifier, fromAmount, toAsset);
+
+        // Get the collatoral.
+        uint256 refundAmount = underwriteState.tokens * (
+            UNDERWRITING_UNFULFILLED_FEE
+        )/UNDERWRITING_UNFULFILLED_FEE_DENOMINATOR;
+        // Send the coded shares of the collatoral to the vault the rest to the expirer.
+
+        uint256 expireShare = refundAmount * EXPIRE_CALLER_REWARD / EXPIRE_CALLER_REWARD_DENOMINATOR;
+        ERC20(toAsset).safeTransfer(msg.sender, expireShare);
+        uint256 vaultShare = refundAmount - expireShare;
+        ERC20(toAsset).safeTransfer(targetVault, vaultShare);
+
+        // The underwriting storage has already been deleted.
     }
 
     function _matchUnderwrite(
         bytes32 identifier,
         address toAsset,
         address vault,
+        uint256 underwrittenU,
         uint256 incomingU
     ) internal returns (uint256 unitExcess) {
-        // TODO: Test gas cost vs memory
         UnderwritingStorage storage underwriteState = underwritingStorage[identifier];
-        if (underwriteState.refundTo == address(0)) return unitExcess = incomingU;
-
-        // Calculate how well the underwrite was filled. (This is used for purposeFill)v
-        uint256 fillPercentage = FixedPointMathLib.WAD * incomingU / underwriteState.U;
-
+        // Load number of tokens from storage.
+        uint256 underwrittenTokenAmount = underwriteState.tokens;
+        address refundTo = underwriteState.refundTo;
+        if (refundTo == address(0)) return unitExcess = incomingU;
 
         // If the swap was filled less than 100%, then fail the swap.
+        // This is only possible for purpose underwrite.
         // TODO: alt just fill it by the units collected? If the swap finally fails, then let the 
-        // underwrite execute a swap of x units. (TODO: There needs to be some strict expirey 
-        // to make sure that the number of outstanding units is always kept low.)
-        if (fillPercentage < FixedPointMathLib.WAD) {
+        // underwrite execute a swap of x units.
+        if (underwrittenU > incomingU) {
             // Set the most significant bit to signal that the swap reverted.
             return unitExcess = 2**255;
         }
-
-        // Load number of tokens from storage.
-        uint256 underwrittenTokenAmount = underwriteState.tokens;
+        // Reentry protection. No external calls are allowed before this line.
+        delete underwritingStorage[identifier];
 
         // Delete escrow information and send tokens to this contract.
         ICatalystV1Vault(vault).releaseUnderwriteAsset(identifier, underwrittenTokenAmount, toAsset);
@@ -205,13 +301,11 @@ contract UnderwritingInterface is CatalystGARPInterface {
         uint256 refundAmount = underwrittenTokenAmount * (
             UNDERWRITING_UNFULFILLED_FEE_DENOMINATOR+UNDERWRITING_UNFULFILLED_FEE
         )/UNDERWRITING_UNFULFILLED_FEE_DENOMINATOR;
-        ERC20(toAsset).safeTransfer(underwriteState.refundTo, refundAmount);
+        ERC20(toAsset).safeTransfer(refundTo, refundAmount);
 
         // uint256 unitExcess is initialized to 0.
-        if (fillPercentage == FixedPointMathLib.WAD) {
-            delete underwriteState.refundTo; // Delete the underwriting storage & free up the identifier.
-        } else if (fillPercentage > FixedPointMathLib.WAD) {
-            unitExcess = incomingU * (fillPercentage - FixedPointMathLib.WAD) / FixedPointMathLib.WAD;
+        if (underwrittenU < incomingU) {
+            unitExcess = incomingU - underwrittenU;
         }
     }
     
@@ -352,6 +446,7 @@ contract UnderwritingInterface is CatalystGARPInterface {
             identifier,
             toAsset,
             toVault,
+            U,
             U
         );
 
