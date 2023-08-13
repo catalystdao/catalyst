@@ -160,7 +160,7 @@ abstract contract CatalystVaultCommon is
      */ 
     modifier onlyConnectedPool(bytes32 channelId, bytes memory vault) {
         // Only allow connected vaults
-        if (!_vaultConnection[channelId][vault]) revert VaultNotConnected(channelId, vault);
+        if (!_vaultConnection[channelId][vault]) revert VaultNotConnected();
         _;
     }
 

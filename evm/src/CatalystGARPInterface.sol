@@ -92,6 +92,7 @@ contract CatalystGARPInterface is Ownable, ICrossChainReceiver, Bytes65, IMessag
         // It looks like Solidity will improve their error catch implementation which will replace this.
         if (keccak256(abi.encodeWithSelector(ExceedsSecurityLimit.selector)) == errorHash) return 0x11;
         if (keccak256(abi.encodeWithSelector(ReturnInsufficientOnReceive.selector)) == errorHash) return 0x12;
+        if (keccak256(abi.encodeWithSelector(VaultNotConnected.selector)) == errorHash) return 0x13;
         return 0x10; // unknown error.
     }
 

@@ -42,7 +42,7 @@ pragma solidity ^0.8.16;
 //       + TO_ACCOUNT_FALLBACK_LEN 262 (1 byte)
 //       + TO_ACCOUNT_FALLBACK     263 (64 bytes)
 //      (Underwrite Logic)
-//       + UW_INCENTIVE     327 (16 bytes)
+//       + UW_INCENTIVE     327 (2 bytes)
 //
 //    CTX3 - 0x03 - Purpose Underwrite Payload
 //      (Fallback Logic)
@@ -164,12 +164,12 @@ uint constant CTX2_TO_ACCOUNT_FALLBACK_START_EVM    = 407;  // If the address is
 uint constant CTX2_TO_ACCOUNT_FALLBACK_END          = 427;
 
 uint constant CTX2_UW_INCENTIVE_START    = 427;
-uint constant CTX2_UW_INCENTIVE_END      = 443;
+uint constant CTX2_UW_INCENTIVE_END      = 429;
 
-uint constant CTX2_DATA_LENGTH_START     = 443;
-uint constant CTX2_DATA_LENGTH_END       = 445;
+uint constant CTX2_DATA_LENGTH_START     = 429;
+uint constant CTX2_DATA_LENGTH_END       = 431;
 
-uint constant CTX2_DATA_START            = 445;
+uint constant CTX2_DATA_START            = 431;
 
 
 

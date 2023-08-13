@@ -39,6 +39,9 @@ interface ICatalystV1VaultState {
     /// @notice Total current escrowed vault tokens
     function _escrowedVaultTokens() external view returns (uint256);
 
+    /// @notice Checks if there is a connection to the described vault
+    function _vaultConnection(bytes32 sourceIdentifier, bytes calldata fromVault) external view returns (bool);
+
     function factoryOwner() external view returns (address);
 
     /**
