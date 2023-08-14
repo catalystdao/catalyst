@@ -7,11 +7,11 @@ import {ERC20} from 'solmate/src/tokens/ERC20.sol';
 import {Payments} from './Payments.sol';
 import {ICatalystV1Vault} from '../../ICatalystV1Vault.sol';
 import {BytesLib} from './BytesLib.sol';
-import {IMessageEscrowStructs} from 'GeneralisedIncentives/src/interfaces/IMessageEscrowStructs.sol';
+import {ICatalystV1Structs} from '../../interfaces/ICatalystV1VaultState.sol';
 
 /// @title Catalyst Exchange Wrapper
 /// @notice Wraps the Catalyst exchange calls
-abstract contract CatalystExchange is RouterImmutables, IMessageEscrowStructs {
+abstract contract CatalystExchange is RouterImmutables, ICatalystV1Structs {
     using BytesLib for bytes;
 
     /**
@@ -42,16 +42,13 @@ abstract contract CatalystExchange is RouterImmutables, IMessageEscrowStructs {
 
     function sendAsset(
         address vault,
-        bytes32 channelId,
-        bytes memory toVault,
-        bytes memory toAccount,
+        RouteDescription memory routeDescription,
         address fromAsset,
         uint8 toAssetIndex,
         uint256 amount,
         uint256 minOut,
         address fallbackUser,
         uint256 gas,
-        IncentiveDescription memory incentive,
         bytes calldata calldata_
     ) internal {
         amount = amount == Constants.CONTRACT_BALANCE ? ERC20(fromAsset).balanceOf(address(this)) : amount;
@@ -60,42 +57,33 @@ abstract contract CatalystExchange is RouterImmutables, IMessageEscrowStructs {
         ERC20(fromAsset).approve(vault, amount);
 
         ICatalystV1Vault(vault).sendAsset{value: gas}(
-            channelId,
-            toVault,
-            toAccount,
+            routeDescription,
             fromAsset,
             toAssetIndex,
             amount,
             minOut,
             fallbackUser,
-            incentive,
             calldata_
         );
     }
 
     function sendLiquidity(
         address vault,
-        bytes32 channelId,
-        bytes memory toVault,
-        bytes memory toAccount,
+        RouteDescription memory routeDescription,
         uint256 vaultTokens,
         uint256[2] memory minOut,
         address fallbackUser,
         uint256 gas,
-        IncentiveDescription memory incentive,
-        bytes memory calldata_
+        bytes calldata calldata_
     ) internal {
         vaultTokens = vaultTokens == Constants.CONTRACT_BALANCE ? ERC20(vault).balanceOf(address(this)) : vaultTokens;
         gas = gas == Constants.CONTRACT_BALANCE ? address(this).balance : gas;
 
         ICatalystV1Vault(vault).sendLiquidity{value: gas}(
-            channelId,
-            toVault,
-            toAccount,
+            routeDescription,
             vaultTokens,
             minOut,
             fallbackUser,
-            incentive,
             calldata_
         );
     }

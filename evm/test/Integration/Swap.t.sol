@@ -5,7 +5,7 @@ import "forge-std/Test.sol";
 import { TestCommon } from "../TestCommon.t.sol";
 import {Token} from "../mocks/token.sol";
 import "../../src/ICatalystV1Vault.sol";
-import { IMessageEscrowStructs } from "GeneralisedIncentives/src/interfaces/IMessageEscrowStructs.sol";
+import { ICatalystV1Structs } from "../../src/interfaces/ICatalystV1VaultState.sol";
 
 
 interface RA {
@@ -145,18 +145,23 @@ contract TestSwapIntegration is TestCommon {
         // );
 
         uint256 MINOUT = 3213;
+
+        ICatalystV1Structs.RouteDescription memory routeDescription = ICatalystV1Structs.RouteDescription({
+            chainIdentifier: DESTINATION_IDENTIFIER,
+            toVault: convertEVMTo65(toVault),
+            toAccount: convertEVMTo65(TO_ACCOUNT),
+            incentive: _INCENTIVE
+        });
         
         uint256 snapshotId = vm.snapshot();
         uint256 UNITS = ICatalystV1Vault(fromVault).sendAsset{value: _getTotalIncentive(_INCENTIVE)}(
-            DESTINATION_IDENTIFIER,
-            convertEVMTo65(toVault),
-            convertEVMTo65(TO_ACCOUNT),
+            routeDescription,
             tkn,
             0,
             amount,
             MINOUT,
             TO_ACCOUNT,
-            _INCENTIVE
+            hex""
         );
         vm.revertTo(snapshotId);
 
@@ -180,15 +185,12 @@ contract TestSwapIntegration is TestCommon {
             abi.encodeCall(
                 CCI.sendCrossChainAsset,
                 (
-                    DESTINATION_IDENTIFIER,
-                    convertEVMTo65(toVault),
-                    convertEVMTo65(TO_ACCOUNT),
+                    routeDescription,
                     0,
                     UNITS,
                     MINOUT,
                     amount,
                     tkn,
-                    _INCENTIVE,
                     hex""
                 )
             )
@@ -196,15 +198,13 @@ contract TestSwapIntegration is TestCommon {
 
         vm.recordLogs();
         ICatalystV1Vault(fromVault).sendAsset{value: _getTotalIncentive(_INCENTIVE)}(
-            DESTINATION_IDENTIFIER,
-            convertEVMTo65(toVault),
-            convertEVMTo65(TO_ACCOUNT),
+            routeDescription,
             tkn,
             0,
             amount,
             MINOUT,
             TO_ACCOUNT,
-            _INCENTIVE
+            hex""
         );  
 
         // The message is event 2 while bounty place is number 1. (index 1, 0)

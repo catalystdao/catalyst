@@ -146,14 +146,26 @@ contract CatalystGARPInterface is Ownable, ICrossChainReceiver, Bytes65, IMessag
         maxUnderwritingDuration = newMaxUnderwriteDuration;
     }
 
-    modifier checkIncentives(bytes32 destinationChainIdentifier, IncentiveDescription calldata incentive) {
+    modifier checkRouteDescription(ICatalystV1Vault.RouteDescription calldata routeDescription) {
+        // -- Check incentives -- //
+
+        ICatalystV1Vault.IncentiveDescription calldata incentive = routeDescription.incentive;
         // 1. Gas limits
-        if (incentive.maxGasDelivery < minGasFor[destinationChainIdentifier]) revert NotEnoughIncentives();
+        if (incentive.maxGasDelivery < minGasFor[routeDescription.chainIdentifier]) revert NotEnoughIncentives();
         if (incentive.maxGasAck < minGasFor[bytes32(0)]) revert NotEnoughIncentives();
 
         // 2. Gas prices
         // You need to provide more than 10% gas than spent on this transaction.
         if (incentive.priceOfAckGas < tx.gasprice * 11 / 10) revert NotEnoughIncentives();
+
+        // -- Check Address Lengths -- //
+
+        // toAccount
+        if (!_checkBytes65(routeDescription.toAccount)) revert InvalidBytes65Address();
+
+        // toVault
+        if (!_checkBytes65(routeDescription.toVault)) revert InvalidBytes65Address();
+
         _;
     }
 
@@ -203,9 +215,7 @@ contract CatalystGARPInterface is Ownable, ICrossChainReceiver, Bytes65, IMessag
      * @notice Packs cross-chain swap information into a bytearray and sends it to the target vault with IBC.
      * @dev Callable by anyone but this cannot be abused since the connection management ensures no
      * wrong messages enter a healthy vault.
-     * @param chainIdentifier The target chain identifier.
-     * @param toVault The target vault on the target chain. Encoded in 64 + 1 bytes.
-     * @param toAccount The recipient of the transaction on the target chain. Encoded in 64 + 1 bytes.
+     * @param routeDescription A cross-chain route description which contains the chainIdentifier, toAccount, toVault and relaying incentive.
      * @param toAssetIndex The index of the asset the user wants to buy in the target vault.
      * @param U The calculated liquidity reference. (Units)
      * @param minOut The minimum number output of tokens on the target chain.
@@ -215,17 +225,14 @@ contract CatalystGARPInterface is Ownable, ICrossChainReceiver, Bytes65, IMessag
      * Encoding depends on the target chain, with EVM: abi.encodePacket(bytes20(<address>), <data>).
      */
     function sendCrossChainAsset(
-        bytes32 chainIdentifier,
-        bytes calldata toVault,
-        bytes calldata toAccount,
+        ICatalystV1Vault.RouteDescription calldata routeDescription,
         uint8 toAssetIndex,
         uint256 U,
         uint256 minOut,
         uint256 fromAmount,
         address fromAsset,
-        IncentiveDescription calldata incentive,
         bytes calldata calldata_
-    ) checkBytes65Address(toVault) checkBytes65Address(toAccount) checkIncentives(chainIdentifier, incentive) external payable {
+    ) checkRouteDescription(routeDescription) external payable {
         // We need to ensure that all information is in the correct places. This ensures that calls to this contract
         // will always be decoded semi-correctly even if the input is very incorrect. This also checks that the user 
         // inputs into the swap contracts are correct while making the cross-chain interface flexible for future implementations.
@@ -242,8 +249,8 @@ contract CatalystGARPInterface is Ownable, ICrossChainReceiver, Bytes65, IMessag
                 bytes32(0),     // EVM only uses 20 bytes. abi.encode packs the 20 bytes into 32 then we need to add 32 more
                 abi.encode(msg.sender)  // Use abi.encode to encode address into 32 bytes
             ),
-            toVault,    // Length is expected to be pre-encoded.
-            toAccount,  // Length is expected to be pre-encoded.
+            routeDescription.toVault,    // Length is expected to be pre-encoded.
+            routeDescription.toAccount,  // Length is expected to be pre-encoded.
             U,
             toAssetIndex,
             minOut,
@@ -259,10 +266,10 @@ contract CatalystGARPInterface is Ownable, ICrossChainReceiver, Bytes65, IMessag
         );
 
         GARP.escrowMessage{value: msg.value}(
-            chainIdentifier,
-            chainIdentifierToDestinationAddress[chainIdentifier],
+            routeDescription.chainIdentifier,
+            chainIdentifierToDestinationAddress[routeDescription.chainIdentifier],
             data,
-            incentive
+            routeDescription.incentive
         );
     }
 
@@ -270,9 +277,7 @@ contract CatalystGARPInterface is Ownable, ICrossChainReceiver, Bytes65, IMessag
      * @notice Packs cross-chain swap information into a bytearray and sends it to the target vault with IBC.
      * @dev Callable by anyone but this cannot be abused since the connection management ensures no
      * wrong messages enter a healthy vault.
-     * @param chainIdentifier The target chain identifier. 
-     * @param toVault The target vault on the target chain. Encoded in 64 + 1 bytes.
-     * @param toAccount The recipient of the transaction on the target chain. Encoded in 64 + 1 bytes.
+     * @param routeDescription A cross-chain route description which contains the chainIdentifier, toAccount, toVault and relaying incentive.
      * @param U The calculated liquidity reference. (Units)
      * @param minOut An array of minout describing: [the minimum number of vault tokens, the minimum number of reference assets]
      * @param fromAmount Escrow related value. The amount returned if the swap fails.
@@ -280,15 +285,12 @@ contract CatalystGARPInterface is Ownable, ICrossChainReceiver, Bytes65, IMessag
      * Encoding depends on the target chain, with EVM: abi.encodePacket(bytes20(<address>), <data>).
      */
     function sendCrossChainLiquidity(
-        bytes32 chainIdentifier,
-        bytes calldata toVault,
-        bytes calldata toAccount,
+        ICatalystV1Vault.RouteDescription calldata routeDescription,
         uint256 U,
         uint256[2] calldata minOut,
         uint256 fromAmount,
-        IncentiveDescription calldata incentive,
         bytes memory calldata_
-    ) checkBytes65Address(toVault) checkBytes65Address(toAccount) checkIncentives(chainIdentifier, incentive) external payable {
+    ) checkRouteDescription(routeDescription) external payable {
         // We need to ensure that all information is in the correct places. This ensures that calls to this contract
         // will always be decoded semi-correctly even if the input is very incorrect. This also checks that the user 
         // inputs into the swap contracts are correct while making the cross-chain interface flexible for future implementations.
@@ -303,8 +305,8 @@ contract CatalystGARPInterface is Ownable, ICrossChainReceiver, Bytes65, IMessag
             uint8(20),  // EVM addresses are 20 bytes.
             bytes32(0),  // EVM only uses 20 bytes. abi.encode packs the 20 bytes into 32 then we need to add 32 more
             abi.encode(msg.sender),  // Use abi.encode to encode address into 32 bytes
-            toVault,  // Length is expected to be pre-encoded.
-            toAccount,  // Length is expected to be pre-encoded.
+            routeDescription.toVault,  // Length is expected to be pre-encoded.
+            routeDescription.toAccount,  // Length is expected to be pre-encoded.
             U,
             minOut[0],
             minOut[1],
@@ -315,10 +317,10 @@ contract CatalystGARPInterface is Ownable, ICrossChainReceiver, Bytes65, IMessag
         );
 
         GARP.escrowMessage{value: msg.value}(
-            chainIdentifier,
-            chainIdentifierToDestinationAddress[chainIdentifier],
+            routeDescription.chainIdentifier,
+            chainIdentifierToDestinationAddress[routeDescription.chainIdentifier],
             data,
-            incentive
+            routeDescription.incentive
         );
     }
 
@@ -795,18 +797,15 @@ contract CatalystGARPInterface is Ownable, ICrossChainReceiver, Bytes65, IMessag
     }
     
     function sendCrossChainPleaseUnderwrite(
-        bytes32 chainIdentifier,
-        bytes calldata toVault,
-        bytes calldata toAccount,
+        ICatalystV1Vault.RouteDescription calldata routeDescription,
         uint8 toAssetIndex,
         uint256 U,
         uint256 minOut,
         uint256 fromAmount,
         address fromAsset,
         uint16 underwritePercentageX16,
-        IncentiveDescription calldata incentive,
         bytes calldata calldata_
-    ) checkBytes65Address(toVault) checkBytes65Address(toAccount) checkIncentives(chainIdentifier, incentive) external payable {
+    ) checkRouteDescription(routeDescription) external payable {
         // We need to ensure that all information is in the correct places. This ensures that calls to this contract
         // will always be decoded semi-correctly even if the input is very incorrect. This also checks that the user 
         // inputs into the swap contracts are correct while making the cross-chain interface flexible for future implementations.
@@ -823,8 +822,8 @@ contract CatalystGARPInterface is Ownable, ICrossChainReceiver, Bytes65, IMessag
                 bytes32(0),     // EVM only uses 20 bytes. abi.encode packs the 20 bytes into 32 then we need to add 32 more
                 abi.encode(msg.sender)  // Use abi.encode to encode address into 32 bytes
             ),
-            toVault,    // Length is expected to be pre-encoded.
-            toAccount,  // Length is expected to be pre-encoded.
+            routeDescription.toVault,    // Length is expected to be pre-encoded.
+            routeDescription.toAccount,  // Length is expected to be pre-encoded.
             U,
             toAssetIndex,
             minOut,
@@ -841,10 +840,10 @@ contract CatalystGARPInterface is Ownable, ICrossChainReceiver, Bytes65, IMessag
         );
 
         GARP.escrowMessage{value: msg.value}(
-            chainIdentifier,
-            chainIdentifierToDestinationAddress[chainIdentifier],
+            routeDescription.chainIdentifier,
+            chainIdentifierToDestinationAddress[routeDescription.chainIdentifier],
             data,
-            incentive
+            routeDescription.incentive
         );
     }
 

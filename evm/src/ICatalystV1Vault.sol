@@ -19,5 +19,6 @@ interface ICatalystV1Vault is
     ICatalystV1VaultImmutables,
     ICatalystV1VaultPermissionless,
     ICatalystV1VaultState,
+    ICatalystV1Structs,
     ICatalystV1Underwriting
 {}
