@@ -1,14 +1,33 @@
 use cosmwasm_std::{CosmosMsg, DepsMut, Env, Binary};
 
-use crate::error::ContractError;
+use crate::{error::ContractError, executors::{catalyst::catalyst_executors, payments::payments_executors, cancel_swap::cancel_swap_executors}};
 
 
 /// Commands Encoding *****************************************************************************
 
+// TODO do we want to encode the commands as bytes, or use an 'enum' instead?
+// TODO   - how would the 'allow revert' flag be encoded then? As another param?
+
+// TODO review:
+// NOTE command values have been changed from the EVM implementation as some commands
+// have been removed and to accomodate for possible new ones.
+
 pub const COMMAND_ALLOW_REVERT_FLAG     : u8 = 0x80;
 pub const COMMAND_ID_MASK               : u8 = 0x3f;
 
-//TODO define commands here
+pub const COMMAND_LOCAL_SWAP            : u8 = 0x00;
+pub const COMMAND_SEND_ASSET            : u8 = 0x01;
+pub const COMMAND_SEND_LIQUIDITY        : u8 = 0x02;
+pub const COMMAND_WITHDRAW_EQUAL        : u8 = 0x03;
+pub const COMMAND_WITHDRAW_MIXED        : u8 = 0x04;
+pub const COMMAND_DEPOSIT_MIXED         : u8 = 0x05;
+
+pub const COMMAND_SWEEP                 : u8 = 0x06;
+pub const COMMAND_TRANSFER              : u8 = 0x07;
+pub const COMMAND_PAY_PORTION           : u8 = 0x08;
+pub const COMMAND_BALANCE_CHECK         : u8 = 0x09;
+
+pub const COMMAND_ALLOW_CANCEL          : u8 = 0x0d;
 
 
 /// Get the command id given a raw command byte.
@@ -57,8 +76,22 @@ pub fn execute_command(
 ) -> Result<CommandResult, ContractError> {
 
     match command_id {
-        //TODO implement commands here
-        _ => unimplemented!()
+
+        COMMAND_LOCAL_SWAP     => catalyst_executors::execute_local_swap(deps, env, input),
+        COMMAND_SEND_ASSET     => catalyst_executors::execute_send_asset(deps, env, input),
+        COMMAND_SEND_LIQUIDITY => catalyst_executors::execute_send_liquidity(deps, env, input),
+        COMMAND_WITHDRAW_EQUAL => catalyst_executors::execute_withdraw_equal(deps, env, input),
+        COMMAND_WITHDRAW_MIXED => catalyst_executors::execute_withdraw_mixed(deps, env, input),
+        COMMAND_DEPOSIT_MIXED  => catalyst_executors::execute_deposit_mixed(deps, env, input),
+
+        COMMAND_SWEEP          => payments_executors::execute_sweep(deps, env, input),
+        COMMAND_TRANSFER       => payments_executors::execute_transfer(deps, env, input),
+        COMMAND_PAY_PORTION    => payments_executors::execute_pay_portion(deps, env, input),
+        COMMAND_BALANCE_CHECK  => payments_executors::execute_balance_check(deps, env, input),
+
+        COMMAND_ALLOW_CANCEL   => cancel_swap_executors::execute_cancel_swap(deps, env, input),
+
+        _ => Err(ContractError::InvalidCommand{command_id})
     }
 
 }

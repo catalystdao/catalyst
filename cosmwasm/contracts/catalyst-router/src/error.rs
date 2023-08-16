@@ -10,6 +10,11 @@ pub enum ContractError {
     #[error("Unauthorized")]
     Unauthorized {},
 
+    #[error("Unrecognized command id: {command_id}")]
+    InvalidCommand{
+        command_id: u8
+    },
+
     #[error("Command {index} reverted: {error}")]
     CommandReverted{
         index: u64,
