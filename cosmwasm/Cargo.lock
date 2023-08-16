@@ -132,6 +132,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "catalyst-router"
+version = "0.1.0"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cosmwasm-storage",
+ "cw-controllers",
+ "cw-multi-test",
+ "cw-storage-plus",
+ "cw0",
+ "cw2",
+ "cw20",
+ "schemars",
+ "serde",
+ "test-helpers",
+ "thiserror",
+]
+
+[[package]]
 name = "catalyst-types"
 version = "0.1.0"
 dependencies = [
