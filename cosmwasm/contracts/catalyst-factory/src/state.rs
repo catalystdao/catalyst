@@ -1,3 +1,4 @@
+use catalyst_vault_common::asset::Asset;
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, DepsMut, Response, Event, MessageInfo, Deps, Uint128, Uint64, Empty};
 use cw_controllers::Admin;
@@ -169,7 +170,7 @@ pub const DEPLOY_VAULT_REPLY_ID: u64 = 0x100;
 #[cw_serde]
 pub struct DeployVaultReplyArgs {
     pub vault_code_id: u64,
-    pub assets: Vec<String>,
+    pub assets: Vec<Asset>,
     pub assets_balances: Vec<Uint128>,
     pub weights: Vec<Uint128>,
     pub amplification: Uint64,

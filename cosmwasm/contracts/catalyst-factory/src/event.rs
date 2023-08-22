@@ -1,5 +1,5 @@
 use cosmwasm_std::{Event, Uint64};
-use catalyst_vault_common::event::format_vec_for_event;
+use catalyst_vault_common::{event::format_vec_for_event, asset::Asset};
 
 
 /// Generate an event for vault deployment.
@@ -18,7 +18,7 @@ pub fn deploy_vault_event(
     chain_interface: Option<String>,
     deployer: String,
     vault_address: String,
-    assets: Vec<String>,
+    assets: Vec<Asset>,
     k: Uint64
 ) -> Event {
     Event::new("deploy-vault")

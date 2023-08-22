@@ -2,7 +2,7 @@ use cosmwasm_std::{Addr, Uint128, DepsMut, Env, MessageInfo, Response, Uint64};
 use cw20::{Cw20QueryMsg, BalanceResponse};
 use cw20_base::contract::execute_mint;
 use catalyst_vault_common::{
-    state::{ASSETS, MAX_ASSETS, WEIGHTS, INITIAL_MINT_AMOUNT, FACTORY}, ContractError, event::{deposit_event, cw20_response_to_standard_event},
+    state::{MAX_ASSETS, WEIGHTS, INITIAL_MINT_AMOUNT, FACTORY}, ContractError, event::{deposit_event, cw20_response_to_standard_event}, asset::{Asset, VaultAssets, VaultAssetsTrait, AssetTrait},
 };
 
 
@@ -10,7 +10,7 @@ pub fn initialize_swap_curves(
     deps: &mut DepsMut,
     env: Env,
     info: MessageInfo,
-    assets: Vec<String>,
+    assets: Vec<Asset>,
     weights: Vec<Uint128>,
     _amp: Uint64,
     depositor: String
@@ -22,7 +22,7 @@ pub fn initialize_swap_curves(
     }
 
     // Make sure this function may only be invoked once (check whether assets have already been saved)
-    if ASSETS.may_load(deps.storage) != Ok(None) {
+    if VaultAssets::load_assets(&deps.as_ref()).is_ok() {
         return Err(ContractError::Unauthorized {});
     }
 
@@ -41,10 +41,7 @@ pub fn initialize_swap_curves(
     let assets_balances = assets.iter()
         .map(|asset| {
 
-            let balance = deps.querier.query_wasm_smart::<BalanceResponse>(
-                asset,
-                &Cw20QueryMsg::Balance { address: env.contract.address.to_string() }
-            )?.balance;
+            let balance = asset.query_balance(&deps.as_ref(), env.contract.address.to_string())?;
 
             if balance.is_zero() {
                 return Err(ContractError::InvalidZeroBalance {});
@@ -57,25 +54,22 @@ pub fn initialize_swap_curves(
     // Save the assets
     // NOTE: there is no need to validate the assets addresses, as invalid asset addresses
     // would have caused the previous 'asset balance' check to fail.
-    ASSETS.save(
-        deps.storage,
-        &assets
-            .iter()
-            .map(|asset| Addr::unchecked(asset))
-            .collect::<Vec<Addr>>()
-    )?;
+    let vault_assets = VaultAssets::new(assets);
+    vault_assets.save_assets(deps)?;
+
+    let asset_refs = vault_assets.get_assets_refs();
 
     // Validate and save weights
     weights
         .iter()
-        .zip(&assets)
-        .try_for_each(|(weight, asset)| -> Result<(), ContractError> {
+        .zip(&asset_refs)
+        .try_for_each(|(weight, asset_ref)| -> Result<(), ContractError> {
 
             if weight.is_zero() {
                 return Err(ContractError::InvalidWeight {});
             }
 
-            WEIGHTS.save(deps.storage, asset, weight)?;
+            WEIGHTS.save(deps.storage, asset_ref, weight)?;
             
             Ok(())
         })?;

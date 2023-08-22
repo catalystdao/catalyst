@@ -1,3 +1,4 @@
+use catalyst_vault_common::asset::Asset;
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Uint64, Uint128, Addr};
 
@@ -24,7 +25,7 @@ pub enum ExecuteMsg {
     /// * `chain_interface` - The interface used for cross-chain swaps. It can be set to None to disable cross-chain swaps.
     DeployVault {
         vault_code_id: u64,
-        assets: Vec<String>,
+        assets: Vec<Asset>,
         assets_balances: Vec<Uint128>,
         weights: Vec<Uint128>,
         amplification: Uint64,

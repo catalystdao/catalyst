@@ -3,7 +3,7 @@ use cosmwasm_std::entry_point;
 use cosmwasm_std::{DepsMut, Env, MessageInfo, Response, Uint128, CosmosMsg, to_binary, StdError, SubMsg, Reply, SubMsgResult, StdResult, Uint64, Deps, Binary};
 use cw0::parse_reply_instantiate_data;
 use cw2::set_contract_version;
-use cw20::Cw20ExecuteMsg;
+use catalyst_vault_common::asset::{Asset, VaultAssets, VaultAssetsTrait};
 
 use crate::error::ContractError;
 use crate::event::deploy_vault_event;
@@ -49,7 +49,7 @@ pub fn instantiate(
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(
     deps: DepsMut,
-    _env: Env,
+    env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
@@ -67,6 +67,7 @@ pub fn execute(
             chain_interface
         } => execute_deploy_vault(
             deps,
+            env,
             info,
             vault_code_id,
             assets,
@@ -117,9 +118,10 @@ pub fn execute(
 /// 
 fn execute_deploy_vault(
     mut deps: DepsMut,
+    env: Env,
     info: MessageInfo,
     vault_code_id: u64,
-    assets: Vec<String>,
+    assets: Vec<Asset>,
     assets_balances: Vec<Uint128>,
     weights: Vec<Uint128>,
     amplification: Uint64,
@@ -138,6 +140,14 @@ fn execute_deploy_vault(
         return Err(StdError::generic_err("Invalid asset/balances/weights count.").into());
     }
 
+    // Handle asset transfer from the deployer to the factory
+    let assets = VaultAssets::new(assets);
+    let transfer_msgs = assets.receive_assets(
+        &env,
+        &info,
+        assets_balances.clone()
+    )?;
+
     // Save the required args to initalize the vault curves after the vault instantiation (used on 'reply').
     // ! This is set to only work if data is NOT present on the store (prevent a reentrancy attack).
     // This cannot be abused to 'lock' the contract from deploying vaults (i.e. somehow make it so that
@@ -151,7 +161,7 @@ fn execute_deploy_vault(
         deps.branch(),
         DeployVaultReplyArgs {
             vault_code_id: vault_code_id.clone(),
-            assets,
+            assets: assets.get_assets().to_owned(),
             assets_balances,
             weights,
             amplification,
@@ -185,6 +195,7 @@ fn execute_deploy_vault(
     
     Ok(
         Response::new()
+            .add_messages(transfer_msgs)
             .add_submessage(instantiate_vault_submsg)
     )
 }
@@ -226,12 +237,12 @@ fn execute_transfer_ownership(
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn reply(
     deps: DepsMut,
-    _env: Env,
+    env: Env,
     reply: Reply
 ) -> Result<Response, ContractError> {
     match reply.id {
         DEPLOY_VAULT_REPLY_ID => match reply.result {
-            SubMsgResult::Ok(_) => handle_deploy_vault_reply(deps, reply),
+            SubMsgResult::Ok(_) => handle_deploy_vault_reply(deps, env, reply),
             SubMsgResult::Err(_) => {       // Reply is set to 'on_success', so the code should never reach this point
                 Err(StdError::GenericErr { msg: "Vault deployment failed.".to_string() }.into())
             }
@@ -244,6 +255,7 @@ pub fn reply(
 /// Setup the newly deployed vault after instantiation.
 fn handle_deploy_vault_reply(
     deps: DepsMut,
+    env: Env,
     reply: Reply
 ) -> Result<Response, ContractError> {
 
@@ -257,22 +269,13 @@ fn handle_deploy_vault_reply(
     // ! would become 'locked', and no further vault deployments would be possible.
     let deploy_args = get_deploy_vault_reply_args(deps)?;
 
-    // Build messages to order the transfer of tokens from 'setup_master' to the vault
-    let transfer_msgs: Vec<CosmosMsg> = deploy_args.assets.iter()
-        .zip(&deploy_args.assets_balances)  // zip: assets_balances.len() == assets.len() (check performed on 'execute_deploy_vault')
-        .map(|(asset, balance)| {
-            Ok(CosmosMsg::Wasm(
-                cosmwasm_std::WasmMsg::Execute {
-                    contract_addr: asset.to_string(),
-                    msg: to_binary(&Cw20ExecuteMsg::TransferFrom {
-                        owner: deploy_args.depositor.to_string(),
-                        recipient: vault_address.clone(),
-                        amount: *balance
-                    })?,
-                    funds: vec![]
-                }
-            ))
-        }).collect::<StdResult<Vec<CosmosMsg>>>()?;
+    // Handle asset transfer from the factory to the vault
+    let assets = VaultAssets::new(deploy_args.assets.clone());
+    let transfer_msgs = assets.send_assets(
+        &env,
+        deploy_args.assets_balances.clone(),
+        vault_address.clone()
+    )?;
 
     // Build a message to invoke the initialization of the vault swap curves
     let initialize_swap_curves_msg = CosmosMsg::Wasm(

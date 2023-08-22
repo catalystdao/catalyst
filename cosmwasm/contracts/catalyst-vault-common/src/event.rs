@@ -13,8 +13,8 @@ use catalyst_types::U256;
 /// 
 pub fn local_swap_event(
     account: String,
-    from_asset: String,
-    to_asset: String,
+    from_asset: impl Into<String>,
+    to_asset: impl Into<String>,
     from_amount: Uint128,
     to_amount: Uint128
 ) -> Event {
@@ -44,7 +44,7 @@ pub fn send_asset_event(
     channel_id: String,
     to_vault: Binary,
     to_account: Binary,
-    from_asset: String,
+    from_asset: impl Into<String>,
     to_asset_index: u8,
     from_amount: Uint128,
     min_out: U256,
@@ -81,7 +81,7 @@ pub fn receive_asset_event(
     channel_id: String,
     from_vault: Binary,
     to_account: String,
-    to_asset: String,
+    to_asset: impl Into<String>,
     units: U256,
     to_amount: Uint128,
     from_amount: U256,
@@ -216,7 +216,7 @@ pub fn send_asset_success_event(
     to_account: Binary,
     units: U256,
     escrow_amount: Uint128,
-    asset: String,
+    asset: impl Into<String>,
     block_number_mod: u32
 ) -> Event {
     Event::new("send-asset-success")
@@ -244,7 +244,7 @@ pub fn send_asset_failure_event(
     to_account: Binary,
     units: U256,
     escrow_amount: Uint128,
-    asset: String,
+    asset: impl Into<String>,
     block_number_mod: u32
 ) -> Event {
     Event::new("send-asset-failure")

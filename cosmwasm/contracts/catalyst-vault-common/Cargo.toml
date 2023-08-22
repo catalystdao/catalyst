@@ -44,6 +44,7 @@ sha3 = "0.10.6"
 schemars = "0.8.3"
 serde = { version = "1.0.103", default-features = false, features = ["derive"] }
 thiserror = { version = "1.0.26" }
+vault-assets = { path = "../../lib/vault-assets" }
 catalyst-types = { path = "../../lib/catalyst-types" }
 fixed-point-math = { path = "../../lib/fixed-point-math" }
 

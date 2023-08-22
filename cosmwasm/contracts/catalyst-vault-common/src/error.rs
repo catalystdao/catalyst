@@ -18,7 +18,7 @@ pub enum ContractError {
     #[error("Arithmetic error")]
     ArithmeticError {},
 
-    #[error("Invalid assets (invalid number of assets or invalid asset address)")]
+    #[error("Invalid assets (invalid number of assets or invalid asset.)")]
     InvalidAssets {},
 
     #[error("Invalid parameters: {reason}")]
@@ -26,6 +26,15 @@ pub enum ContractError {
 
     #[error("The requested asset does not form part of the vault.")]
     AssetNotFound {},
+
+    #[error("Surplus of assets received by the vault.")]
+    ReceivedAssetCountSurplus {},
+
+    #[error("Shortage of assets received by the vault")]
+    ReceivedAssetCountShortage {},
+
+    #[error("Received asset is invalid: {reason}")]
+    ReceivedAssetInvalid{ reason: String },
 
     #[error("Invalid amplification value.")]
     InvalidAmplification {},
@@ -98,6 +107,20 @@ impl From<cw20_base::ContractError> for ContractError {
             _ => ContractError::Error("cw20 error.".to_string())    // Match all other cw20_base errors for completeness. None of these
                                                                     // are expected to be encountered by the vaults (including the deprecated 
                                                                     // InvalidZeroAmount variant).
+        }
+    }
+}
+
+
+impl From<vault_assets::error::AssetError> for ContractError {
+    fn from(err: vault_assets::error::AssetError) -> Self {
+        match err {
+            vault_assets::error::AssetError::Std(error) => ContractError::Std(error),
+            vault_assets::error::AssetError::InvalidParameters { reason } => ContractError::InvalidParameters { reason },
+            vault_assets::error::AssetError::AssetNotFound {} => ContractError::AssetNotFound {},
+            vault_assets::error::AssetError::ReceivedAssetCountSurplus {} => ContractError::ReceivedAssetCountSurplus {},
+            vault_assets::error::AssetError::ReceivedAssetCountShortage {} => ContractError::ReceivedAssetCountShortage {},
+            vault_assets::error::AssetError::ReceivedAssetInvalid { reason } => ContractError::ReceivedAssetInvalid { reason },
         }
     }
 }

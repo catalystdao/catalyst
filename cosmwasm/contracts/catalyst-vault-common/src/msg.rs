@@ -4,6 +4,8 @@ use cosmwasm_std::{Binary, Uint64, Uint128, Addr};
 use cw20::Expiration;
 use catalyst_types::U256;
 
+use crate::asset::Asset;
+
 
 
 /// Vault instantiation struct
@@ -36,7 +38,7 @@ pub enum ExecuteMsg<T> {
     /// * `amp` - The amplification value applied to the vault.
     /// * `depositor` - The account that will receive the initial vault tokens.
     InitializeSwapCurves {
-        assets: Vec<String>,
+        assets: Vec<Asset>,
         weights: Vec<Uint128>,
         amp: Uint64,
         depositor: String
@@ -95,8 +97,8 @@ pub enum ExecuteMsg<T> {
     },
 
     /// Perform a local asset swap.
-    /// * `from_asset` - The source asset.
-    /// * `to_asset` - The destination asset.
+    /// * `from_asset` - The source asset reference.
+    /// * `to_asset` - The destination asset reference.
     /// * `amount` - The `from_asset` amount sold to the vault.
     /// * `min_out` - The mininmum return to get of `to_asset`.
     LocalSwap {
@@ -110,7 +112,7 @@ pub enum ExecuteMsg<T> {
     /// * `channel_id` - The target chain identifier.
     /// * `to_vault` - The target vault on the target chain (Catalyst encoded).
     /// * `to_account` - The recipient of the swap on the target chain (Catalyst encoded).
-    /// * `from_asset` - The source asset.
+    /// * `from_asset` - The source asset reference.
     /// * `to_asset_index` - The destination asset index.
     /// * `amount` - The `from_asset` amount sold to the vault.
     /// * `min_out` - The mininum `to_asset` output amount to get on the target vault.
@@ -136,7 +138,7 @@ pub enum ExecuteMsg<T> {
     /// * `u` - The incoming units.
     /// * `min_out` - The mininum output amount.
     /// * `from_amount` - The `from_asset` amount sold to the source vault.
-    /// * `from_asset` - The source asset.
+    /// * `from_asset` - The source asset reference.
     /// * `from_block_number_mod` - The block number at which the swap transaction was commited (modulo 2^32).
     /// * `calldata_target` - The contract address to invoke upon successful execution of the swap.
     /// * `calldata` - The data to pass to `calldata_target` upon successful execution of the swap.
@@ -203,7 +205,7 @@ pub enum ExecuteMsg<T> {
     /// * `to_account` - The recipient of the swap output.
     /// * `u` - The units value of the swap.
     /// * `escrow_amount` - The escrowed asset amount.
-    /// * `asset` - The swap source asset.
+    /// * `asset` - The swap source asset reference.
     /// * `block_number_mod` - The block number at which the swap transaction was commited (modulo 2^32).
     OnSendAssetSuccess {
         channel_id: String,
@@ -219,7 +221,7 @@ pub enum ExecuteMsg<T> {
     /// * `to_account` - The recipient of the swap output.
     /// * `u` - The units value of the swap.
     /// * `escrow_amount` - The escrowed asset amount.
-    /// * `asset` - The swap source asset.
+    /// * `asset` - The swap source asset reference.
     /// * `block_number_mod` - The block number at which the swap transaction was commited (modulo 2^32).
     OnSendAssetFailure {
         channel_id: String,
@@ -350,7 +352,7 @@ pub struct OnlyLocalResponse {
 
 #[cw_serde]
 pub struct AssetsResponse {
-    pub assets: Vec<Addr>
+    pub assets: Vec<Asset>
 }
 
 #[cw_serde]

@@ -1,5 +1,4 @@
-use cosmwasm_std::{Addr, Uint128, DepsMut, Env, MessageInfo, Response, StdResult, CosmosMsg, to_binary, Deps, Binary, Uint64, Timestamp};
-use cw20::{Cw20ExecuteMsg, Cw20QueryMsg, BalanceResponse};
+use cosmwasm_std::{Uint128, DepsMut, Env, MessageInfo, Response, StdResult, CosmosMsg, to_binary, Deps, Binary, Uint64, Timestamp};
 use cw20_base::contract::{execute_mint, execute_burn};
 use cw_storage_plus::{Item, Map};
 use catalyst_ibc_interface::msg::ExecuteMsg as InterfaceExecuteMsg;
@@ -8,7 +7,7 @@ use catalyst_vault_common::{
     ContractError,
     event::{local_swap_event, send_asset_event, receive_asset_event, send_liquidity_event, receive_liquidity_event, deposit_event, withdraw_event, cw20_response_to_standard_event}, 
     msg::{CalcSendAssetResponse, CalcReceiveAssetResponse, CalcLocalSwapResponse, GetLimitCapacityResponse},
-    state::{ASSETS, FACTORY, MAX_ASSETS, WEIGHTS, INITIAL_MINT_AMOUNT, VAULT_FEE, MAX_LIMIT_CAPACITY, USED_LIMIT_CAPACITY, CHAIN_INTERFACE, TOTAL_ESCROWED_LIQUIDITY, TOTAL_ESCROWED_ASSETS, is_connected, update_limit_capacity, collect_governance_fee_message, compute_send_asset_hash, compute_send_liquidity_hash, create_asset_escrow, create_liquidity_escrow, on_send_asset_success, on_send_liquidity_success, total_supply, get_limit_capacity, factory_owner, initialize_limit_capacity, initialize_escrow_totals, create_on_catalyst_call_msg}
+    state::{FACTORY, MAX_ASSETS, WEIGHTS, INITIAL_MINT_AMOUNT, VAULT_FEE, MAX_LIMIT_CAPACITY, USED_LIMIT_CAPACITY, CHAIN_INTERFACE, TOTAL_ESCROWED_LIQUIDITY, TOTAL_ESCROWED_ASSETS, is_connected, update_limit_capacity, collect_governance_fee_message, compute_send_asset_hash, compute_send_liquidity_hash, create_asset_escrow, create_liquidity_escrow, on_send_asset_success, on_send_liquidity_success, total_supply, get_limit_capacity, factory_owner, initialize_limit_capacity, initialize_escrow_totals, create_on_catalyst_call_msg}, asset::{VaultAssets, Asset, VaultAssetsTrait, AssetTrait}
 };
 use fixed_point_math::{self, WAD, LN2, mul_wad_down, ln_wad, exp_wad};
 use std::ops::Div;
@@ -46,7 +45,7 @@ pub fn initialize_swap_curves(
     deps: &mut DepsMut,
     env: Env,
     info: MessageInfo,
-    assets: Vec<String>,
+    assets: Vec<Asset>,
     weights: Vec<Uint128>,
     amp: Uint64,
     depositor: String
@@ -58,7 +57,7 @@ pub fn initialize_swap_curves(
     }
 
     // Make sure this function may only be invoked once (check whether assets have already been saved)
-    if ASSETS.may_load(deps.storage) != Ok(None) {
+    if VaultAssets::load_assets(&deps.as_ref()).is_ok() {
         return Err(ContractError::Unauthorized {});
     }
 
@@ -82,10 +81,7 @@ pub fn initialize_swap_curves(
     let assets_balances = assets.iter()
         .map(|asset| {
 
-            let balance = deps.querier.query_wasm_smart::<BalanceResponse>(
-                asset,
-                &Cw20QueryMsg::Balance { address: env.contract.address.to_string() }
-            )?.balance;
+            let balance = asset.query_balance(&deps.as_ref(), env.contract.address.to_string())?;
 
             if balance.is_zero() {
                 return Err(ContractError::InvalidZeroBalance {});
@@ -96,28 +92,25 @@ pub fn initialize_swap_curves(
         .collect::<Result<Vec<Uint128>, ContractError>>()?;
 
     // Save the assets
-    // NOTE: there is no need to validate the assets addresses, as invalid asset addresses
+    // NOTE: there is no need to validate the assets, as invalid asset addresses
     // would have caused the previous 'asset balance' check to fail.
-    ASSETS.save(
-        deps.storage,
-        &assets
-            .iter()
-            .map(|asset| Addr::unchecked(asset))
-            .collect::<Vec<Addr>>()
-    )?;
+    let vault_assets = VaultAssets::new(assets);
+    vault_assets.save_assets(deps)?;
+
+    let asset_refs = vault_assets.get_assets_refs();
 
     // Validate and save weights
     weights
         .iter()
-        .zip(&assets)   // zip: assets.len() == weights.len() (checked above)
-        .try_for_each(|(weight, asset)| -> Result<(), ContractError> {
+        .zip(&asset_refs)   // zip: asset_refs.len() == weights.len() (checked above)
+        .try_for_each(|(weight, asset_ref)| -> Result<(), ContractError> {
 
             if weight.is_zero() {
                 return Err(ContractError::InvalidWeight {});
             }
 
-            WEIGHTS.save(deps.storage, asset, weight)?;
-            TARGET_WEIGHTS.save(deps.storage, asset, weight)?;     // Initialize the target_weights storage (values do not matter)
+            WEIGHTS.save(deps.storage, asset_ref, weight)?;
+            TARGET_WEIGHTS.save(deps.storage, asset_ref, weight)?;     // Initialize the target_weights storage (values do not matter)
             
             Ok(())
         })?;
@@ -126,7 +119,7 @@ pub fn initialize_swap_curves(
     WEIGHT_UPDATE_FINISH_TIMESTAMP_SECONDS.save(deps.storage, &Uint64::zero())?;
 
     // Initialize the escrows
-    initialize_escrow_totals(deps, assets)?;
+    initialize_escrow_totals(deps, asset_refs)?;
 
     // Initialize the security limit
     // The maximum unit flow is \sum{weights}·ln(2)
@@ -195,9 +188,9 @@ pub fn deposit_mixed(
 
     update_weights(deps, env.block.time)?;
 
-    let assets = ASSETS.load(deps.storage)?;
+    let assets = VaultAssets::load_assets(&deps.as_ref())?;
 
-    if deposit_amounts.len() != assets.len() {
+    if deposit_amounts.len() != assets.get_assets().len() {
         return Err(
             ContractError::InvalidParameters{
                 reason: "Invalid deposit_amounts count.".to_string()
@@ -206,7 +199,8 @@ pub fn deposit_mixed(
     }
 
     // Compute how many 'units' the assets are worth.
-    let u = assets.iter()
+    let u = assets.get_assets()
+        .iter()
         .zip(&deposit_amounts)      // zip: deposit_amounts.len() == assets.len() (checked above)
         .try_fold(U256::zero(), |acc, (asset, deposit_amount)| {
 
@@ -215,12 +209,12 @@ pub fn deposit_mixed(
                 return Ok(acc);
             }
 
-            let vault_asset_balance = deps.querier.query_wasm_smart::<BalanceResponse>(
-                asset,
-                &Cw20QueryMsg::Balance { address: env.contract.address.to_string() }
-            )?.balance;
+            let vault_asset_balance = asset.query_balance(
+                &deps.as_ref(),
+                env.contract.address.to_string()
+            )?;
 
-            let weight = WEIGHTS.load(deps.storage, asset.as_ref())?;
+            let weight = WEIGHTS.load(deps.storage, &asset.get_asset_ref())?;
 
             acc.checked_add(
                 calc_price_curve_area(
@@ -270,31 +264,16 @@ pub fn deposit_mixed(
         out
     )?;
 
-    // Build the messages to order the transfer of tokens from the depositor to the vault
-    // ! IMPORTANT: Some cw20 contracts disallow zero-valued token transfers. Do not generate
-    // ! transfer messages for zero-valued balance transfers to prevent these cases from 
-    // ! resulting in failed transactions.
-    let transfer_msgs: Vec<CosmosMsg> = assets.iter()
-        .zip(&deposit_amounts)                                              // zip: depsoit_amounts.len() == assets.len()
-        .filter(|(_, balance)| **balance != Uint128::zero())     // Do not create transfer messages for zero-valued deposits
-        .map(|(asset, balance)| {
-            Ok(CosmosMsg::Wasm(
-                cosmwasm_std::WasmMsg::Execute {
-                    contract_addr: asset.to_string(),
-                    msg: to_binary(&Cw20ExecuteMsg::TransferFrom {
-                        owner: info.sender.to_string(),
-                        recipient: env.contract.address.to_string(),
-                        amount: *balance
-                    })?,
-                    funds: vec![]
-                }
-            ))
-        })
-        .collect::<StdResult<Vec<CosmosMsg>>>()?;
+    // Handle asset transfer from the depositor to the vault
+    let receive_asset_msgs = assets.receive_assets(
+        &env,
+        &info,
+        deposit_amounts.clone()
+    )?;
 
     Ok(Response::new()
         .set_data(to_binary(&out)?)     // Return the deposit output
-        .add_messages(transfer_msgs)
+        .add_messages(receive_asset_msgs)
         .add_event(
             deposit_event(
                 info.sender.to_string(),
@@ -338,13 +317,12 @@ pub fn withdraw_all(
     let effective_supply = total_supply(deps.as_ref())?.checked_add(escrowed_vault_tokens)?;
 
     // Burn the vault tokens of the withdrawer
-    let sender = info.sender.to_string();
     let burn_response = execute_burn(deps.branch(), env.clone(), info.clone(), vault_tokens)?;
 
     // Compute the withdraw amounts
-    let assets = ASSETS.load(deps.storage)?;
+    let assets = VaultAssets::load_assets(&deps.as_ref())?;
 
-    if min_out.len() != assets.len() {
+    if min_out.len() != assets.get_assets().len() {
         return Err(
             ContractError::InvalidParameters {
                 reason: "Invalid min_out count.".to_string()
@@ -352,17 +330,17 @@ pub fn withdraw_all(
         );
     }
 
-    let withdraw_amounts: Vec<Uint128> = assets
+    let withdraw_amounts: Vec<Uint128> = assets.get_assets()
         .iter()
         .zip(&min_out)          // zip: assets.len() == min_out.len()
         .map(|(asset, asset_min_out)| {
 
-            let escrowed_balance = TOTAL_ESCROWED_ASSETS.load(deps.storage, asset.as_str())?;
+            let escrowed_balance = TOTAL_ESCROWED_ASSETS.load(deps.storage, asset.get_asset_ref())?;
             
-            let vault_asset_balance = deps.querier.query_wasm_smart::<BalanceResponse>(
-                asset,
-                &Cw20QueryMsg::Balance { address: env.contract.address.to_string() }
-            )?.balance;
+            let vault_asset_balance = asset.query_balance(
+                &deps.as_ref(),
+                env.contract.address.to_string()
+            )?;
 
             let effective_vault_asset_balance = vault_asset_balance
                 .checked_sub(escrowed_balance)?;    // Theoretically 'escrowed_balance' is always included 
@@ -382,22 +360,12 @@ pub fn withdraw_all(
             Ok(withdraw_amount)
         }).collect::<Result<Vec<Uint128>, ContractError>>()?;
 
-    // Build the messages to order the transfer of tokens from the vault to the depositor
-    let transfer_msgs: Vec<CosmosMsg> = assets
-        .iter()    // zip: withdraw_amounts.len() == assets.len()
-        .zip(&withdraw_amounts)
-        .map(|(asset, amount)| {
-            Ok(CosmosMsg::Wasm(
-                cosmwasm_std::WasmMsg::Execute {
-                    contract_addr: asset.to_string(),
-                    msg: to_binary(&Cw20ExecuteMsg::Transfer {
-                        recipient: sender.clone(),
-                        amount: *amount
-                    })?,
-                    funds: vec![]
-                }
-            ))
-        }).collect::<StdResult<Vec<CosmosMsg>>>()?;
+    // Handle asset transfer from the vault to the withdrawer
+    let transfer_msgs: Vec<CosmosMsg> = assets.send_assets(
+        &env,
+        withdraw_amounts.clone(),
+        info.sender.to_string()
+    )?;
 
 
     Ok(Response::new()
@@ -452,7 +420,6 @@ pub fn withdraw_mixed(
     );
 
     // Burn the vault tokens of the withdrawer
-    let sender = info.sender.to_string();
     let burn_response = execute_burn(deps.branch(), env.clone(), info.clone(), vault_tokens)?;
 
     // Derive the weights sum from the security limit capacity
@@ -469,9 +436,10 @@ pub fn withdraw_mixed(
         .checked_mul(weights_sum)?;
 
     // Compute the withdraw amounts
-    let assets = ASSETS.load(deps.storage)?;
+    let assets = VaultAssets::load_assets(&deps.as_ref())?;
+    let assets_count = assets.get_assets().len();
 
-    if withdraw_ratio.len() != assets.len() || min_out.len() != assets.len() {
+    if withdraw_ratio.len() != assets_count || min_out.len() != assets_count {
         return Err(
             ContractError::InvalidParameters {
                 reason: "Invalid withdraw_ratio/min_out count.".to_string()
@@ -479,7 +447,7 @@ pub fn withdraw_mixed(
         );
     }
 
-    let withdraw_amounts: Vec<Uint128> = assets
+    let withdraw_amounts: Vec<Uint128> = assets.get_assets()
         .iter()
         .zip(&withdraw_ratio)               // zip: withdraw_ratio.len() == assets.len()
         .zip(&min_out)                      // zip: min_out.len() == assets.len()
@@ -507,18 +475,18 @@ pub fn withdraw_mixed(
                                                  // ! malicious withdraw ratios (i.e. ratios > 1).
         
             // Get the vault asset balance (subtract the escrowed assets to return less)
-            let vault_asset_balance = deps.querier.query_wasm_smart::<BalanceResponse>(
-                asset,
-                &Cw20QueryMsg::Balance { address: env.contract.address.to_string() }
-            )?.balance;
+            let vault_asset_balance = asset.query_balance(
+                &deps.as_ref(),
+                env.contract.address.to_string()
+            )?;
 
-            let escrowed_balance = TOTAL_ESCROWED_ASSETS.load(deps.storage, asset.as_ref())?;
+            let escrowed_balance = TOTAL_ESCROWED_ASSETS.load(deps.storage, asset.get_asset_ref())?;
 
             let effective_vault_asset_balance = vault_asset_balance
                 .checked_sub(escrowed_balance)?;
 
             // Calculate the asset amount corresponding to the asset units
-            let weight = WEIGHTS.load(deps.storage, asset.as_ref())?;
+            let weight = WEIGHTS.load(deps.storage, asset.get_asset_ref())?;
             let withdraw_amount = calc_price_curve_limit(
                 units_for_asset,
                 U256::from(effective_vault_asset_balance),
@@ -536,26 +504,12 @@ pub fn withdraw_mixed(
     // Make sure all units have been consumed
     if !u.is_zero() { return Err(ContractError::UnusedUnitsAfterWithdrawal { units: u }) };
 
-    // Build the messages to order the transfer of tokens from the vault to the depositor.
-    // ! IMPORTANT: Some cw20 contracts disallow zero-valued token transfers. Do not generate
-    // ! transfer messages for zero-valued balance transfers to prevent these cases from 
-    // ! resulting in failed transactions.
-    let transfer_msgs: Vec<CosmosMsg> = assets.iter()
-        .zip(&withdraw_amounts)         // zip: withdraw_amounts.len() == assets.len()
-        .filter(|(_, withdraw_amount)| !withdraw_amount.is_zero())     // Do not create transfer messages for zero-valued withdrawals
-        .map(|(asset, amount)| {
-            Ok(CosmosMsg::Wasm(
-                cosmwasm_std::WasmMsg::Execute {
-                    contract_addr: asset.to_string(),
-                    msg: to_binary(&Cw20ExecuteMsg::Transfer {
-                        recipient: sender.clone(),
-                        amount: *amount
-                    })?,
-                    funds: vec![]
-                }
-            ))
-        })
-        .collect::<StdResult<Vec<CosmosMsg>>>()?;
+    // Handle asset transfer from the vault to the withdrawer
+    let transfer_msgs: Vec<CosmosMsg> = assets.send_assets(
+        &env,
+        withdraw_amounts.clone(),
+        info.sender.to_string()
+    )?;   
 
 
     Ok(Response::new()
@@ -606,6 +560,8 @@ pub fn local_swap(
     )?.as_uint128();    // Casting safe, as fee < amount, and amount is Uint128
 
     // Calculate the return value
+    let from_asset = Asset::load(&deps.as_ref(), &from_asset)?;
+    let to_asset = Asset::load(&deps.as_ref(), &to_asset)?;
     let out: Uint128 = calc_local_swap(
         &deps.as_ref(),
         env.clone(),
@@ -618,43 +574,31 @@ pub fn local_swap(
         return Err(ContractError::ReturnInsufficient { out, min_out });
     }
 
-    // Build the message to transfer the input assets to the vault.
-    let transfer_from_asset_msg = CosmosMsg::Wasm(
-        cosmwasm_std::WasmMsg::Execute {
-            contract_addr: from_asset.clone(),
-            msg: to_binary(&Cw20ExecuteMsg::TransferFrom {
-                owner: info.sender.to_string(),
-                recipient: env.contract.address.to_string(),
-                amount
-            })?,
-            funds: vec![]
-        }
-    );
+    // Handle asset transfer from the swapper to the vault
+    let receive_asset_msg = from_asset.receive_asset(&env, &info, amount)?;
 
-    // Build the message to transfer the output assets to the swapper
-    let transfer_to_asset_msg = CosmosMsg::Wasm(
-        cosmwasm_std::WasmMsg::Execute {
-            contract_addr: to_asset.clone(),
-            msg: to_binary(&Cw20ExecuteMsg::Transfer {
-                recipient: info.sender.to_string(),
-                amount: out
-            })?,
-            funds: vec![]
-        }
-    );
+    // Handle asset transfer from the vault to the swapper
+    let send_asset_msg = to_asset.send_asset(&env, out, info.sender.to_string())?;
 
     // Build the message to collect the governance fee.
     let collect_governance_fee_message = collect_governance_fee_message(
         &deps.as_ref(),
-        from_asset.clone(),
+        &env,
+        &from_asset,
         vault_fee
     )?;
 
     // Build response
     let mut response = Response::new()
-        .set_data(to_binary(&out)?)     // Return the swap output
-        .add_message(transfer_from_asset_msg)
-        .add_message(transfer_to_asset_msg);
+        .set_data(to_binary(&out)?);     // Return the swap output
+
+    if let Some(msg) = receive_asset_msg {
+        response = response.add_message(msg);
+    }
+
+    if let Some(msg) = send_asset_msg {
+        response = response.add_message(msg);
+    }
 
     if let Some(msg) = collect_governance_fee_message {
         response = response.add_message(msg);
@@ -664,8 +608,8 @@ pub fn local_swap(
         .add_event(
             local_swap_event(
                 info.sender.to_string(),
-                from_asset,
-                to_asset,
+                from_asset.get_asset_ref(),
+                to_asset.get_asset_ref(),
                 amount,
                 out
             )
@@ -719,6 +663,7 @@ pub fn send_asset(
     let effective_swap_amount = amount.checked_sub(vault_fee)?;     // Using 'checked_sub' for extra precaution ('wrapping_sub' should suffice)
 
     // Calculate the units bought.
+    let from_asset = Asset::load(&deps.as_ref(), &from_asset)?;
     let u = calc_send_asset(
         &deps.as_ref(),
         env.clone(),
@@ -732,7 +677,7 @@ pub fn send_asset(
         to_account.as_slice(),
         u,
         effective_swap_amount,
-        &from_asset,
+        &from_asset.get_asset_ref(),
         block_number
     );
 
@@ -741,30 +686,21 @@ pub fn send_asset(
         send_asset_hash.clone(),
         effective_swap_amount,  // NOTE: The fee is also deducted from the escrow  
                                 // amount to prevent denial of service attacks.
-        &from_asset,
+        &from_asset.get_asset_ref(),
         fallback_account
     )?;
 
     // NOTE: The security limit adjustment is delayed until the swap confirmation is received to
     // prevent a router from abusing swap 'timeouts' to circumvent the security limit.
 
-    // Build the message to transfer the input assets to the vault.
-    let transfer_from_asset_msg = CosmosMsg::Wasm(
-        cosmwasm_std::WasmMsg::Execute {
-            contract_addr: from_asset.clone(),
-            msg: to_binary(&Cw20ExecuteMsg::TransferFrom {
-                owner: info.sender.to_string(),
-                recipient: env.contract.address.to_string(),
-                amount
-            })?,
-            funds: vec![]
-        }
-    );
+    // Handle asset transfer from the swapper to the vault
+    let receive_asset_msg = from_asset.receive_asset(&env, &info, amount)?;
 
     // Build the message to collect the governance fee.
     let collect_governance_fee_message = collect_governance_fee_message(
         &deps.as_ref(),
-        from_asset.clone(),
+        &env,
+        &from_asset,
         vault_fee
     )?;
 
@@ -777,7 +713,7 @@ pub fn send_asset(
         u,
         min_out,
         from_amount: effective_swap_amount,
-        from_asset: from_asset.clone(),
+        from_asset: from_asset.get_asset_ref().to_string(),
         block_number,
         calldata
     };
@@ -792,8 +728,11 @@ pub fn send_asset(
 
     // Build response
     let mut response = Response::new()
-        .set_data(to_binary(&u)?)       // Return the purchased 'units'
-        .add_message(transfer_from_asset_msg);
+        .set_data(to_binary(&u)?);       // Return the purchased 'units'
+
+    if let Some(msg) = receive_asset_msg {
+        response = response.add_message(msg);
+    }
 
     if let Some(msg) = collect_governance_fee_message {
         response = response.add_message(msg);
@@ -807,7 +746,7 @@ pub fn send_asset(
                 channel_id,
                 to_vault,
                 to_account,
-                from_asset,
+                from_asset.get_asset_ref(),
                 to_asset_index,
                 amount,
                 min_out,
@@ -870,29 +809,20 @@ pub fn receive_asset(
 
     // Calculate the swap return.
     // NOTE: no fee is taken here, the fee is always taken on the sending side.
-    let assets = ASSETS.load(deps.storage)?;
-    let to_asset = assets
+    let to_asset = VaultAssets::load_assets(&deps.as_ref())?
+        .get_assets()
         .get(to_asset_index as usize)
         .ok_or(ContractError::AssetNotFound {})?
         .clone();
-    let out = calc_receive_asset(&deps.as_ref(), env.clone(), to_asset.as_str(), u)?;
+    let out = calc_receive_asset(&deps.as_ref(), env.clone(), &to_asset, u)?;
     
     if min_out > out {
         return Err(ContractError::ReturnInsufficient { out, min_out });
     }
 
 
-    // Build the message to transfer the output assets to the swapper.
-    let transfer_to_asset_msg = CosmosMsg::Wasm(
-        cosmwasm_std::WasmMsg::Execute {
-            contract_addr: to_asset.to_string(),
-            msg: to_binary(&Cw20ExecuteMsg::Transfer {
-                recipient: to_account.to_string(),
-                amount: out
-            })?,
-            funds: vec![]
-        }
-    );
+    // Handle asset transfer from the vault to the swapper
+    let send_asset_msg = to_asset.send_asset(&env, out, to_account.clone())?;
 
     // Build the calldata message.
     let calldata_message = match calldata_target {
@@ -906,8 +836,11 @@ pub fn receive_asset(
 
     // Build and send the response.
     let mut response = Response::new()
-        .set_data(to_binary(&out)?)     // Return the purchased tokens
-        .add_message(transfer_to_asset_msg);
+        .set_data(to_binary(&out)?);     // Return the purchased tokens
+
+    if let Some(msg) = send_asset_msg {
+        response = response.add_message(msg);
+    }
 
     if let Some(msg) = calldata_message {
         response = response.add_message(msg);
@@ -919,7 +852,7 @@ pub fn receive_asset(
                 channel_id,
                 from_vault,
                 to_account,
-                to_asset.to_string(),
+                to_asset.get_asset_ref(),
                 u,
                 out,
                 from_amount,
@@ -1123,22 +1056,22 @@ pub fn receive_liquidity(
 
     if !min_reference_asset.is_zero() {
 
-        let assets = ASSETS.load(deps.storage)?;
+        let assets = VaultAssets::load_assets(&deps.as_ref())?;
 
         // Compute the vault reference amount: [product(balance(i)**weight(i))]**(1/weights_sum)
         // The direct calculation of this value would overflow, hence it is calculated as:
         //      exp( sum( ln(balance(i)) * weight(i) ) / weights_sum )
 
         // Compute first: sum( ln(balance(i)) * weight(i) )
-        let weighted_balance_sum = assets.iter()
+        let weighted_balance_sum = assets.get_assets().iter()
             .try_fold(U256::zero(), |acc, asset| {
 
-                let weight = WEIGHTS.load(deps.storage, asset.as_ref())?;
+                let weight = WEIGHTS.load(deps.storage, asset.get_asset_ref())?;
 
-                let vault_asset_balance = deps.querier.query_wasm_smart::<BalanceResponse>(
-                    asset,
-                    &Cw20QueryMsg::Balance { address: env.contract.address.to_string() }
-                )?.balance;
+                let vault_asset_balance = asset.query_balance(
+                    &deps.as_ref(),
+                    env.contract.address.to_string()
+                )?;
 
                 acc.checked_add(
                     ln_wad(
@@ -1239,17 +1172,14 @@ pub fn receive_liquidity(
 pub fn calc_send_asset(
     deps: &Deps,
     env: Env,
-    from_asset: &str,
+    from_asset: &Asset,
     amount: Uint128
 ) -> Result<U256, ContractError> {
 
-    let from_asset_weight = WEIGHTS.load(deps.storage, from_asset)
+    let from_asset_weight = WEIGHTS.load(deps.storage, from_asset.get_asset_ref())
         .map_err(|_| ContractError::AssetNotFound {})?;
 
-    let from_asset_balance: Uint128 = deps.querier.query_wasm_smart::<BalanceResponse>(
-        from_asset,
-        &Cw20QueryMsg::Balance { address: env.contract.address.to_string() }
-    )?.balance;
+    let from_asset_balance: Uint128 = from_asset.query_balance(deps, env.contract.address)?;
 
     calc_price_curve_area(
         amount.into(),
@@ -1269,22 +1199,21 @@ pub fn calc_send_asset(
 pub fn calc_receive_asset(
     deps: &Deps,
     env: Env,
-    to_asset: &str,
+    to_asset: &Asset,
     u: U256
 ) -> Result<Uint128, ContractError> {
 
-    let to_asset_weight = WEIGHTS.load(deps.storage, to_asset)
+    let to_asset_weight = WEIGHTS.load(deps.storage, to_asset.get_asset_ref())
         .map_err(|_| ContractError::AssetNotFound {})?;
 
     // Subtract the escrowed balance from the vault's total balance to return a smaller output.
     let to_asset_escrowed_balance: Uint128 = TOTAL_ESCROWED_ASSETS.load(
         deps.storage,
-        to_asset
+        to_asset.get_asset_ref()
     )?;
-    let to_asset_balance: Uint128 = deps.querier.query_wasm_smart::<BalanceResponse>(
-        to_asset,
-        &Cw20QueryMsg::Balance { address: env.contract.address.to_string() }
-    )?.balance.checked_sub(to_asset_escrowed_balance)?;
+    let to_asset_balance: Uint128 = to_asset
+    .query_balance(deps, env.contract.address)?
+    .checked_sub(to_asset_escrowed_balance)?;
     
     calc_price_curve_limit(
         u,
@@ -1311,32 +1240,28 @@ pub fn calc_receive_asset(
 pub fn calc_local_swap(
     deps: &Deps,
     env: Env,
-    from_asset: &str,
-    to_asset: &str,
+    from_asset: &Asset,
+    to_asset: &Asset,
     amount: Uint128
 ) -> Result<Uint128, ContractError> {
 
-    let from_asset_weight = WEIGHTS.load(deps.storage, from_asset)
+    let from_asset_weight = WEIGHTS.load(deps.storage, from_asset.get_asset_ref())
         .map_err(|_| ContractError::AssetNotFound {})?;
 
-    let to_asset_weight = WEIGHTS.load(deps.storage, to_asset)
+    let to_asset_weight = WEIGHTS.load(deps.storage, to_asset.get_asset_ref())
         .map_err(|_| ContractError::AssetNotFound {})?;
 
-    let from_asset_balance: Uint128 = deps.querier.query_wasm_smart::<BalanceResponse>(
-        from_asset,
-        &Cw20QueryMsg::Balance { address: env.contract.address.to_string() }
-    )?.balance;
+    let from_asset_balance: Uint128 = from_asset.query_balance(deps, env.contract.address.to_string())?;
 
     // Subtract the 'to_asset' escrowed balance from the vault's total balance 
     // to return a smaller output.
     let to_asset_escrowed_balance: Uint128 = TOTAL_ESCROWED_ASSETS.load(
         deps.storage,
-        to_asset
+        to_asset.get_asset_ref()
     )?;
-    let to_asset_balance: Uint128 = deps.querier.query_wasm_smart::<BalanceResponse>(
-        to_asset,
-        &Cw20QueryMsg::Balance { address: env.contract.address.to_string() }
-    )?.balance.checked_sub(to_asset_escrowed_balance)?;
+    let to_asset_balance: Uint128 = to_asset
+        .query_balance(deps, env.contract.address.to_string())?
+        .checked_sub(to_asset_escrowed_balance)?;
 
     // Use a simplified formula for equal 'from' and 'to' weights (saves gas and is exact).
     if from_asset_weight == to_asset_weight {
@@ -1374,7 +1299,8 @@ pub fn calc_local_swap(
 /// 
 pub fn on_send_asset_success_volatile(
     deps: &mut DepsMut,
-    info: MessageInfo,
+    env: &Env,
+    info: &MessageInfo,
     channel_id: String,
     to_account: Binary,
     u: U256,
@@ -1386,6 +1312,7 @@ pub fn on_send_asset_success_volatile(
     // Execute the common 'success' logic
     let response = on_send_asset_success(
         deps,
+        env,
         info,
         channel_id,
         to_account,
@@ -1424,7 +1351,8 @@ pub fn on_send_asset_success_volatile(
 /// 
 pub fn on_send_liquidity_success_volatile(
     deps: &mut DepsMut,
-    info: MessageInfo,
+    env: &Env,
+    info: &MessageInfo,
     channel_id: String,
     to_account: Binary,
     u: U256,
@@ -1435,6 +1363,7 @@ pub fn on_send_liquidity_success_volatile(
     // Execute the common 'success' logic
     let response = on_send_liquidity_success(
         deps,
+        env,
         info,
         channel_id,
         to_account,
@@ -1496,17 +1425,17 @@ pub fn set_weights(
     }
 
     // Check the new requested weights and store them
-    let assets = ASSETS.load(deps.storage)?;
-    if new_weights.len() != assets.len() {
+    let assets = VaultAssets::load_assets(&deps.as_ref())?;
+    if new_weights.len() != assets.get_assets().len() {
         return Err(ContractError::InvalidParameters { reason: "Invalid weights count.".to_string() });
     }
 
-    assets
+    assets.get_assets()
         .iter()
         .zip(&new_weights)      // zip: weights.len() == current_weights.len() (checked above)
         .try_for_each(|(asset, new_weight)| -> Result<(), ContractError> {
 
-            let current_weight = WEIGHTS.load(deps.storage, asset.as_ref())?;
+            let current_weight = WEIGHTS.load(deps.storage, asset.get_asset_ref())?;
 
             // Check that the new weight is neither 0 nor larger/smaller than the maximum 
             // allowed relative change
@@ -1518,7 +1447,7 @@ pub fn set_weights(
                 return Err(ContractError::InvalidWeight {});
             }
 
-            TARGET_WEIGHTS.save(deps.storage, asset.as_ref(), new_weight)?;
+            TARGET_WEIGHTS.save(deps.storage, asset.get_asset_ref(), new_weight)?;
 
             Ok(())
 
@@ -1572,23 +1501,23 @@ pub fn update_weights(
         return Ok(());
     }
 
-    let assets = ASSETS.load(deps.storage)?;
+    let assets = VaultAssets::load_assets(&deps.as_ref())?;
     let mut new_weight_sum = U256::zero();
 
     // If the 'param_update_finish_timestamp' has been reached, finish the weights update
     if current_timestamp >= param_update_finish_timestamp {
 
         // Set the weights equal to the target_weights
-        assets
+        assets.get_assets()
             .iter()
             .try_for_each(|asset| -> StdResult<()> {
 
-                let new_weight = TARGET_WEIGHTS.load(deps.storage, asset.as_ref())?;
+                let new_weight = TARGET_WEIGHTS.load(deps.storage, asset.get_asset_ref())?;
 
                 new_weight_sum = new_weight_sum
                     .wrapping_add(U256::from(new_weight));  // 'wrapping_add' is safe because of casting to U256 (N*Uint128::MAX << U256::MAX for small N)
 
-                WEIGHTS.save(deps.storage, asset.as_ref(), &new_weight)?;
+                WEIGHTS.save(deps.storage, asset.get_asset_ref(), &new_weight)?;
 
                 Ok(())
 
@@ -1604,12 +1533,12 @@ pub fn update_weights(
     else {
 
         // Calculate and set the partial weight change
-        assets
+        assets.get_assets()
             .iter()
             .try_for_each(|asset| -> StdResult<()> {
 
-                let current_weight = WEIGHTS.load(deps.storage, asset.as_ref())?;
-                let target_weight = TARGET_WEIGHTS.load(deps.storage, asset.as_ref())?;
+                let current_weight = WEIGHTS.load(deps.storage, asset.get_asset_ref())?;
+                let target_weight = TARGET_WEIGHTS.load(deps.storage, asset.get_asset_ref())?;
 
                 // Skip the partial update if the weight has already reached the target
                 if current_weight == target_weight {
@@ -1660,7 +1589,7 @@ pub fn update_weights(
                     .wrapping_add(U256::from(new_weight));  // 'wrapping_add' is safe because of casting to U256 (N*Uint128::MAX << U256::MAX for small N)
 
                 // Update the weight
-                WEIGHTS.save(deps.storage, asset.as_ref(), &new_weight)?;
+                WEIGHTS.save(deps.storage, asset.get_asset_ref(), &new_weight)?;
 
                 Ok(())
 
@@ -1703,7 +1632,12 @@ pub fn query_calc_send_asset(
 
     Ok(
         CalcSendAssetResponse {
-            u: calc_send_asset(&deps, env, from_asset, amount)?
+            u: calc_send_asset(
+                &deps,
+                env,
+                &Asset::load(&deps, from_asset)?,
+                amount
+            )?
         }
     )
 
@@ -1725,7 +1659,12 @@ pub fn query_calc_receive_asset(
 
     Ok(
         CalcReceiveAssetResponse {
-            to_amount: calc_receive_asset(&deps, env, to_asset, u)?
+            to_amount: calc_receive_asset(
+                &deps,
+                env,
+                &Asset::load(&deps, to_asset)?,
+                u
+            )?
         }
     )
 
@@ -1749,7 +1688,13 @@ pub fn query_calc_local_swap(
 
     Ok(
         CalcLocalSwapResponse {
-            to_amount: calc_local_swap(&deps, env, from_asset, to_asset, amount)?
+            to_amount: calc_local_swap(
+                &deps,
+                env,
+                &Asset::load(&deps, from_asset)?,
+                &Asset::load(&deps, to_asset)?,
+                amount
+            )?
         }
     )
 
