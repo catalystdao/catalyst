@@ -200,10 +200,6 @@ pub fn resume_dispatching(
             Ok(Some(order.into()))
         },
         None => {
-
-            // If all of the commands have been processed, remove the router state.
-            ROUTER_STATE.remove(deps.storage);
-
             Ok(None)
         }
     }
