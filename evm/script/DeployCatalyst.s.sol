@@ -31,7 +31,6 @@ import { IncentivizedMockEscrow } from "GeneralisedIncentives/src/apps/mock/Ince
 struct JsonContracts {
     address amplified_mathlib;
     address amplified_template;
-    address crosschaininterface;
     address describer;
     address describer_registry;
     address factory;
@@ -47,10 +46,15 @@ contract DeployCatalyst is Script {
     // string config_contract;
     // string config_chain;
 
+    address[] CCIs;
+
+    address WGAS;
+
     bool fillDescriber = false;
 
     JsonContracts contracts;
 
+    string chain;
     bytes32 chainIdentifier;
 
     error NoWrappedGasTokenFound();
@@ -60,10 +64,11 @@ contract DeployCatalyst is Script {
         if (permit2 != address(0)) return permit2;
 
         permit2 = address(new Permit2());
+        contracts.permit2 = permit2;
     }
 
     function getGasToken() internal returns(address wrappedGas) {
-        wrappedGas = address(0); // TODO:
+        wrappedGas = WGAS;
 
         if (wrappedGas == address(0)) {
             revert NoWrappedGasTokenFound();
@@ -71,7 +76,23 @@ contract DeployCatalyst is Script {
     }
 
     function whitelistAllCCIs(CatalystDescriber catalyst_describer) internal {
+        // read config_interfaces
+        string memory pathRoot = vm.projectRoot();
+        string memory pathToInterfacesConfig = string.concat(pathRoot, "/script/config/config_interfaces.json");
+        string memory config_interfaces = vm.readFile(pathToInterfacesConfig);
 
+        string[] memory availableInterfaces = abi.decode(config_interfaces.parseRaw(string.concat(".", chain)), (string[]));
+
+        for (uint256 i = 0; i < availableInterfaces.length; ++i) {
+            string memory interfaceVersion = availableInterfaces[i];
+            address interfaceAddress = abi.decode(config_interfaces.parseRaw(string.concat(".", chain, ".", interfaceVersion, ".interface")), (address));
+            CCIs.push(interfaceAddress);
+        }
+
+
+        for (uint256 i = 0; i < CCIs.length; ++i) {
+            catalyst_describer.add_whitelisted_cci(CCIs[i]);
+        }
     }
 
     function deployAllContracts() internal {
@@ -148,7 +169,7 @@ contract DeployCatalyst is Script {
         catalyst_describer.add_vault_factory(contracts.factory);
         catalyst_describer.add_whitelisted_template(contracts.volatile_template, 1);
         catalyst_describer.add_whitelisted_template(contracts.amplified_template, 1);
-        catalyst_describer.add_whitelisted_cci(contracts.crosschaininterface);
+        whitelistAllCCIs(catalyst_describer);
     }
 
 
@@ -156,15 +177,22 @@ contract DeployCatalyst is Script {
         uint256 deployerPrivateKey = vm.envUint("DEPLOYER_KEY");
 
         string memory pathRoot = vm.projectRoot();
-        string memory pathToChainConfig = string.concat(pathRoot, "/config/config_chain.json");
-        string memory pathToContractConfig = string.concat(pathRoot, "/config/config_contracts.json");
+        string memory pathToChainConfig = string.concat(pathRoot, "/script/config/config_chain.json");
+        string memory pathToContractConfig = string.concat(pathRoot, "/script/config/config_contracts.json");
+        string memory pathToTokenConfig = string.concat(pathRoot, "/script/config/config_tokens.json");
 
-        string memory chain = vm.envString("CHAIN_NAME");
+        // Get the chain config
+        chain = vm.envString("CHAIN_NAME");
         string memory config_chain = vm.readFile(pathToChainConfig);
-        chainIdentifier = bytes32(vm.parseJsonUint(config_chain, chain));
+        chainIdentifier = abi.decode(config_chain.parseRaw(string.concat(".", chain, ".chainIdentifier")), (bytes32));
 
+        // Get the contracts
         string memory config_contract = vm.readFile(pathToContractConfig);
-        contracts = abi.decode(vm.parseJson(config_contract, chain), (JsonContracts));
+        contracts = abi.decode(config_contract.parseRaw(string.concat(".", chain)), (JsonContracts));
+
+        // Get wrapped gas
+        string memory config_token = vm.readFile(pathToTokenConfig);
+        WGAS = abi.decode(config_token.parseRaw(string.concat(".", chain, ".", vm.envString("WGAS"))), (address));
 
         vm.startBroadcast(deployerPrivateKey);
 
@@ -175,11 +203,11 @@ contract DeployCatalyst is Script {
         uint256 registryPrivateKey = vm.envUint("REGISTRY_KEY");
 
         // Fill registry
-        if (fillDescriber == true) {
-            vm.startBroadcast(registryPrivateKey);
-            setupDescriber();
-            vm.stopBroadcast();
-        }
+        // if (fillDescriber == true) {
+        //     vm.startBroadcast(registryPrivateKey);
+        //     setupDescriber();
+        //     vm.stopBroadcast();
+        // }
 
         // Save json
 
@@ -187,18 +215,17 @@ contract DeployCatalyst is Script {
 
         vm.serializeAddress(obj, "amplified_mathlib", contracts.amplified_mathlib);
         vm.serializeAddress(obj, "amplified_template", contracts.amplified_template);
-        vm.serializeAddress(obj, "crosschaininterface", contracts.crosschaininterface);
         vm.serializeAddress(obj, "describer", contracts.describer);
         vm.serializeAddress(obj, "describer_registry", contracts.describer_registry);
         vm.serializeAddress(obj, "factory", contracts.factory);
         vm.serializeAddress(obj, "permit2", contracts.permit2);
         vm.serializeAddress(obj, "router", contracts.router);
         vm.serializeAddress(obj, "volatile_mathlib", contracts.volatile_mathlib);
-        vm.serializeAddress(obj, "volatile_template", contracts.volatile_template);
+        string memory finalJson = vm.serializeAddress(obj, "volatile_template", contracts.volatile_template);
         
         // string memory finalJson = vm.serializeString(chain, "object", output);
 
-        vm.writeJson(obj, "./config/config_contracts.json", chain);
+        vm.writeJson(finalJson, pathToContractConfig, string.concat(".", chain));
 
     }
 }
