@@ -1,10 +1,10 @@
 mod test_volatile_receive_asset {
     use cosmwasm_std::{Uint128, Addr, Binary, Attribute};
-    use cw_multi_test::{App, Executor};
     use catalyst_types::{U256, u256};
     use catalyst_vault_common::ContractError;
-    use test_helpers::{math::{uint128_to_f64, f64_to_uint128}, misc::{encode_payload_address, get_response_attribute}, token::{deploy_test_tokens, query_token_balance}, definitions::{SETUP_MASTER, CHAIN_INTERFACE, CHANNEL_ID, SWAPPER_B}, contract::{mock_factory_deploy_vault, mock_set_vault_connection, mock_instantiate_calldata_target}};
+    use test_helpers::{math::{uint128_to_f64, f64_to_uint128}, misc::{encode_payload_address, get_response_attribute}, definitions::{SETUP_MASTER, CHAIN_INTERFACE, CHANNEL_ID, SWAPPER_B}, contract::{mock_factory_deploy_vault, mock_set_vault_connection, mock_instantiate_calldata_target}, env::CustomTestEnv, asset::CustomTestAsset};
 
+    use crate::tests::TestEnv;
     use crate::{msg::VolatileExecuteMsg, tests::{helpers::{compute_expected_receive_asset, volatile_vault_contract_storage}, parameters::{TEST_VAULT_BALANCES, TEST_VAULT_WEIGHTS, AMPLIFICATION, TEST_VAULT_ASSET_COUNT}}};
 
 
@@ -12,16 +12,16 @@ mod test_volatile_receive_asset {
     #[test]
     fn test_receive_asset_calculation() {
 
-        let mut app = App::default();
+        let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
 
         // Instantiate and initialize vault
-        let vault_tokens = deploy_test_tokens(&mut app, SETUP_MASTER.to_string(), None, TEST_VAULT_ASSET_COUNT);
+        let vault_tokens = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
-        let vault_code_id = volatile_vault_contract_storage(&mut app);
+        let vault_code_id = volatile_vault_contract_storage(env.get_app());
         let vault = mock_factory_deploy_vault(
-            &mut app,
-            vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
+            &mut env,
+            vault_tokens.clone(),
             vault_initial_balances.clone(),
             vault_weights.clone(),
             AMPLIFICATION,
@@ -33,7 +33,7 @@ mod test_volatile_receive_asset {
         // Connect vault with a mock vault
         let from_vault = encode_payload_address(b"from_vault");
         mock_set_vault_connection(
-            &mut app,
+            env.get_app(),
             vault.clone(),
             CHANNEL_ID.to_string(),
             from_vault.clone(),
@@ -51,7 +51,7 @@ mod test_volatile_receive_asset {
 
 
         // Tested action: receive asset
-        let response = app.execute_contract(
+        let response = env.execute_contract(
             Addr::unchecked(CHAIN_INTERFACE),
             vault.clone(),
             &VolatileExecuteMsg::ReceiveAsset {
@@ -67,7 +67,8 @@ mod test_volatile_receive_asset {
                 calldata_target: None,
                 calldata: None
             },
-            &[]
+            vec![],
+            vec![]
         ).unwrap();
 
 
@@ -85,14 +86,14 @@ mod test_volatile_receive_asset {
         assert!(uint128_to_f64(observed_return) >= expected_return.to_amount * 0.999999);
 
         // Verify the output assets have been transferred to the swapper
-        let vault_to_asset_balance = query_token_balance(&mut app, to_asset.clone(), vault.to_string());
+        let vault_to_asset_balance = to_asset.query_balance(env.get_app(), vault.to_string());
         assert_eq!(
             vault_to_asset_balance,
             vault_initial_balances[to_asset_idx] - observed_return
         );
 
         // Verify the output assets have been received by the swapper
-        let swapper_to_asset_balance = query_token_balance(&mut app, to_asset.clone(), SWAPPER_B.to_string());
+        let swapper_to_asset_balance = to_asset.query_balance(env.get_app(), SWAPPER_B.to_string());
         assert_eq!(
             swapper_to_asset_balance,
             observed_return
@@ -104,16 +105,16 @@ mod test_volatile_receive_asset {
     #[test]
     fn test_receive_asset_event() {
 
-        let mut app = App::default();
+        let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
 
         // Instantiate and initialize vault
-        let vault_tokens = deploy_test_tokens(&mut app, SETUP_MASTER.to_string(), None, TEST_VAULT_ASSET_COUNT);
+        let vault_tokens = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
-        let vault_code_id = volatile_vault_contract_storage(&mut app);
+        let vault_code_id = volatile_vault_contract_storage(env.get_app());
         let vault = mock_factory_deploy_vault(
-            &mut app,
-            vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
+            &mut env,
+            vault_tokens.clone(),
             vault_initial_balances.clone(),
             vault_weights.clone(),
             AMPLIFICATION,
@@ -125,7 +126,7 @@ mod test_volatile_receive_asset {
         // Connect vault with a mock vault
         let from_vault = encode_payload_address(b"from_vault");
         mock_set_vault_connection(
-            &mut app,
+            env.get_app(),
             vault.clone(),
             CHANNEL_ID.to_string(),
             from_vault.clone(),
@@ -146,7 +147,7 @@ mod test_volatile_receive_asset {
 
 
         // Tested action: receive asset
-        let response = app.execute_contract(
+        let response = env.execute_contract(
             Addr::unchecked(CHAIN_INTERFACE),
             vault.clone(),
             &VolatileExecuteMsg::ReceiveAsset {
@@ -162,7 +163,8 @@ mod test_volatile_receive_asset {
                 calldata_target: None,
                 calldata: None
             },
-            &[]
+            vec![],
+            vec![]
         ).unwrap();
 
 
@@ -186,7 +188,7 @@ mod test_volatile_receive_asset {
         );
         assert_eq!(
             event.attributes[4],
-            Attribute::new("to_asset", to_asset)
+            Attribute::new("to_asset", to_asset.get_asset_ref().to_string())
         );
         assert_eq!(
             event.attributes[5],
@@ -215,16 +217,16 @@ mod test_volatile_receive_asset {
     #[test]
     fn test_receive_asset_zero_amount() {
 
-        let mut app = App::default();
+        let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
 
         // Instantiate and initialize vault
-        let vault_tokens = deploy_test_tokens(&mut app, SETUP_MASTER.to_string(), None, TEST_VAULT_ASSET_COUNT);
+        let vault_tokens = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
-        let vault_code_id = volatile_vault_contract_storage(&mut app);
+        let vault_code_id = volatile_vault_contract_storage(env.get_app());
         let vault = mock_factory_deploy_vault(
-            &mut app,
-            vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
+            &mut env,
+            vault_tokens.clone(),
             vault_initial_balances.clone(),
             vault_weights.clone(),
             AMPLIFICATION,
@@ -236,7 +238,7 @@ mod test_volatile_receive_asset {
         // Connect vault with a mock vault
         let from_vault = encode_payload_address(b"from_vault");
         mock_set_vault_connection(
-            &mut app,
+            env.get_app(),
             vault.clone(),
             CHANNEL_ID.to_string(),
             from_vault.clone(),
@@ -252,7 +254,7 @@ mod test_volatile_receive_asset {
 
 
         // Tested action: receive asset
-        let response = app.execute_contract(
+        let response = env.execute_contract(
             Addr::unchecked(CHAIN_INTERFACE),
             vault.clone(),
             &VolatileExecuteMsg::ReceiveAsset {
@@ -268,7 +270,8 @@ mod test_volatile_receive_asset {
                 calldata_target: None,
                 calldata: None
             },
-            &[]
+            vec![],
+            vec![]
         ).unwrap();
 
 
@@ -278,14 +281,14 @@ mod test_volatile_receive_asset {
         assert!(uint128_to_f64(observed_return) == 0.);
 
         // Verify the vault asset balance remains unchanged
-        let vault_to_asset_balance = query_token_balance(&mut app, to_asset.clone(), vault.to_string());
+        let vault_to_asset_balance = to_asset.query_balance(env.get_app(), vault.to_string());
         assert_eq!(
             vault_to_asset_balance,
             vault_initial_balances[to_asset_idx]
         );
 
         // Verify the swapper asset balance remains unchanged
-        let swapper_to_asset_balance = query_token_balance(&mut app, to_asset.clone(), SWAPPER_B.to_string());
+        let swapper_to_asset_balance = to_asset.query_balance(env.get_app(), SWAPPER_B.to_string());
         assert_eq!(
             swapper_to_asset_balance,
             Uint128::zero()
@@ -298,16 +301,16 @@ mod test_volatile_receive_asset {
     #[test]
     fn test_receive_asset_minout() {
 
-        let mut app = App::default();
+        let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
 
         // Instantiate and initialize vault
-        let vault_tokens = deploy_test_tokens(&mut app, SETUP_MASTER.to_string(), None, TEST_VAULT_ASSET_COUNT);
+        let vault_tokens = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
-        let vault_code_id = volatile_vault_contract_storage(&mut app);
+        let vault_code_id = volatile_vault_contract_storage(env.get_app());
         let vault = mock_factory_deploy_vault(
-            &mut app,
-            vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
+            &mut env,
+            vault_tokens.clone(),
             vault_initial_balances.clone(),
             vault_weights.clone(),
             AMPLIFICATION,
@@ -319,7 +322,7 @@ mod test_volatile_receive_asset {
         // Connect vault with a mock vault
         let from_vault = encode_payload_address(b"from_vault");
         mock_set_vault_connection(
-            &mut app,
+            env.get_app(),
             vault.clone(),
             CHANNEL_ID.to_string(),
             from_vault.clone(),
@@ -349,7 +352,7 @@ mod test_volatile_receive_asset {
 
 
         // Tested action 1: receive asset with min_out > expected_return fails
-        let response_result = app.execute_contract(
+        let response_result = env.execute_contract(
             Addr::unchecked(CHAIN_INTERFACE),
             vault.clone(),
             &VolatileExecuteMsg::ReceiveAsset {
@@ -365,7 +368,8 @@ mod test_volatile_receive_asset {
                 calldata_target: None,
                 calldata: None
             },
-            &[]
+            vec![],
+            vec![]
         );
 
 
@@ -380,7 +384,7 @@ mod test_volatile_receive_asset {
 
 
         // Tested action 2: receive asset with min_out <= expected_return succeeds
-        app.execute_contract(
+        env.execute_contract(
             Addr::unchecked(CHAIN_INTERFACE),
             vault.clone(),
             &VolatileExecuteMsg::ReceiveAsset {
@@ -396,7 +400,8 @@ mod test_volatile_receive_asset {
                 calldata_target: None,
                 calldata: None
             },
-            &[]
+            vec![],
+            vec![]
         ).unwrap();
 
     }
@@ -405,16 +410,16 @@ mod test_volatile_receive_asset {
     #[test]
     fn test_receive_asset_not_connected_vault() {
 
-        let mut app = App::default();
+        let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
 
         // Instantiate and initialize vault
-        let vault_tokens = deploy_test_tokens(&mut app, SETUP_MASTER.to_string(), None, TEST_VAULT_ASSET_COUNT);
+        let vault_tokens = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
-        let vault_code_id = volatile_vault_contract_storage(&mut app);
+        let vault_code_id = volatile_vault_contract_storage(env.get_app());
         let vault = mock_factory_deploy_vault(
-            &mut app,
-            vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
+            &mut env,
+            vault_tokens.clone(),
             vault_initial_balances.clone(),
             vault_weights.clone(),
             AMPLIFICATION,
@@ -433,7 +438,7 @@ mod test_volatile_receive_asset {
 
 
         // Tested action: receive asset
-        let response_result = app.execute_contract(
+        let response_result = env.execute_contract(
             Addr::unchecked(CHAIN_INTERFACE),
             vault.clone(),
             &VolatileExecuteMsg::ReceiveAsset {
@@ -449,7 +454,8 @@ mod test_volatile_receive_asset {
                 calldata_target: None,
                 calldata: None
             },
-            &[]
+            vec![],
+            vec![]
         );
 
 
@@ -467,16 +473,16 @@ mod test_volatile_receive_asset {
     #[test]
     fn test_receive_asset_invalid_to_asset_index() {
 
-        let mut app = App::default();
+        let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
 
         // Instantiate and initialize vault
-        let vault_tokens = deploy_test_tokens(&mut app, SETUP_MASTER.to_string(), None, TEST_VAULT_ASSET_COUNT);
+        let vault_tokens = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
-        let vault_code_id = volatile_vault_contract_storage(&mut app);
+        let vault_code_id = volatile_vault_contract_storage(env.get_app());
         let vault = mock_factory_deploy_vault(
-            &mut app,
-            vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
+            &mut env,
+            vault_tokens.clone(),
             vault_initial_balances.clone(),
             vault_weights.clone(),
             AMPLIFICATION,
@@ -488,7 +494,7 @@ mod test_volatile_receive_asset {
         // Connect vault with a mock vault
         let from_vault = encode_payload_address(b"from_vault");
         mock_set_vault_connection(
-            &mut app,
+            env.get_app(),
             vault.clone(),
             CHANNEL_ID.to_string(),
             from_vault.clone(),
@@ -496,13 +502,13 @@ mod test_volatile_receive_asset {
         );
 
         // Define the receive asset configuration
-        let to_asset_idx = TEST_VAULT_ASSET_COUNT;   // ! Invalid index)
+        let to_asset_idx = TEST_VAULT_ASSET_COUNT;   // ! Invalid index
         let swap_units = u256!("500000000000000000");
 
 
 
         // Tested action: receive asset
-        let response_result = app.execute_contract(
+        let response_result = env.execute_contract(
             Addr::unchecked(CHAIN_INTERFACE),
             vault.clone(),
             &VolatileExecuteMsg::ReceiveAsset {
@@ -518,7 +524,8 @@ mod test_volatile_receive_asset {
                 calldata_target: None,
                 calldata: None
             },
-            &[]
+            vec![],
+            vec![]
         );
 
 
@@ -535,16 +542,16 @@ mod test_volatile_receive_asset {
     #[test]
     fn test_receive_asset_caller_not_interface() {
 
-        let mut app = App::default();
+        let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
 
         // Instantiate and initialize vault
-        let vault_tokens = deploy_test_tokens(&mut app, SETUP_MASTER.to_string(), None, TEST_VAULT_ASSET_COUNT);
+        let vault_tokens = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
-        let vault_code_id = volatile_vault_contract_storage(&mut app);
+        let vault_code_id = volatile_vault_contract_storage(env.get_app());
         let vault = mock_factory_deploy_vault(
-            &mut app,
-            vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
+            &mut env,
+            vault_tokens.clone(),
             vault_initial_balances.clone(),
             vault_weights.clone(),
             AMPLIFICATION,
@@ -556,7 +563,7 @@ mod test_volatile_receive_asset {
         // Connect vault with a mock vault
         let from_vault = encode_payload_address(b"from_vault");
         mock_set_vault_connection(
-            &mut app,
+            env.get_app(),
             vault.clone(),
             CHANNEL_ID.to_string(),
             from_vault.clone(),
@@ -570,7 +577,7 @@ mod test_volatile_receive_asset {
 
 
         // Tested action: receive asset
-        let response_result = app.execute_contract(
+        let response_result = env.execute_contract(
             Addr::unchecked("not_chain_interface"),     // ! Caller is not CHAIN_INTERFACE
             vault.clone(),
             &VolatileExecuteMsg::ReceiveAsset {
@@ -586,7 +593,8 @@ mod test_volatile_receive_asset {
                 calldata_target: None,
                 calldata: None
             },
-            &[]
+            vec![],
+            vec![]
         );
 
 
@@ -603,16 +611,16 @@ mod test_volatile_receive_asset {
     #[test]
     fn test_receive_asset_calldata() {
 
-        let mut app = App::default();
+        let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
 
         // Instantiate and initialize vault
-        let vault_tokens = deploy_test_tokens(&mut app, SETUP_MASTER.to_string(), None, TEST_VAULT_ASSET_COUNT);
+        let vault_tokens = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
-        let vault_code_id = volatile_vault_contract_storage(&mut app);
+        let vault_code_id = volatile_vault_contract_storage(env.get_app());
         let vault = mock_factory_deploy_vault(
-            &mut app,
-            vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
+            &mut env,
+            vault_tokens.clone(),
             vault_initial_balances.clone(),
             vault_weights.clone(),
             AMPLIFICATION,
@@ -624,7 +632,7 @@ mod test_volatile_receive_asset {
         // Connect vault with a mock vault
         let from_vault = encode_payload_address(b"from_vault");
         mock_set_vault_connection(
-            &mut app,
+            env.get_app(),
             vault.clone(),
             CHANNEL_ID.to_string(),
             from_vault.clone(),
@@ -637,13 +645,13 @@ mod test_volatile_receive_asset {
         let swap_units = u256!("500000000000000000");
 
         // Define the calldata
-        let calldata_target = mock_instantiate_calldata_target(&mut app);
+        let calldata_target = mock_instantiate_calldata_target(env.get_app());
         let calldata = Binary(vec![0x43, 0x41, 0x54, 0x41, 0x4C, 0x59, 0x53, 0x54]);
 
 
 
         // Tested action: receive asset calldata
-        let response = app.execute_contract(
+        let response = env.execute_contract(
             Addr::unchecked(CHAIN_INTERFACE),
             vault.clone(),
             &VolatileExecuteMsg::ReceiveAsset {
@@ -659,7 +667,8 @@ mod test_volatile_receive_asset {
                 calldata_target: Some(calldata_target.to_string()),
                 calldata: Some(calldata.clone())
             },
-            &[]
+            vec![],
+            vec![]
         ).unwrap();
 
 
