@@ -1,0 +1,11 @@
+{
+    "canto": {
+        "chainIdentifier": 1
+    },
+    "cronos": {
+        "chainIdentifier": 2
+    },
+    "scroll": {
+        "chainIdentifier": 3
+    }
+}

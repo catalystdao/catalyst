@@ -1,0 +1,61 @@
+{
+    "Gas CCS": {
+        "canto": {
+            "address": "0x1A1b856B75c6242d20B2a1a7223809E240a6975a",
+            "weights": [
+                100
+            ],
+            "fee": 0.005,
+            "tokens": {
+                "WCANTO": 0.5
+            }
+        },
+        "cronos": {
+            "address": "0x1A1b856B75c6242d20B2a1a7223809E240a6975a",
+            "weights": [
+                100
+            ],
+            "fee": 0.005,
+            "tokens": {
+                "WCRO": 0.5
+            }
+        },
+        "scroll": {
+            "address": "0x1A1b856B75c6242d20B2a1a7223809E240a6975a",
+            "weights": [
+                100
+            ],
+            "fee": 0.005,
+            "tokens": {
+                "WETH": 0.01
+            }
+        }
+    },
+    "NOTE - Stables CS": {
+        "amplification": 0.125,
+        "scroll": {
+            "address": "0xb7DF9dfda28eD381e7Ab38a668197C79f56C2F3C",
+            "weights": [
+                1000000000000,
+                1000000000000,
+                1
+            ],
+            "fee": 0.0005,
+            "tokens": {
+                "USDT": 250000,
+                "USDC": 250000,
+                "DAI": 250000
+            }
+        },
+        "canto": {
+            "address": "0xb7DF9dfda28eD381e7Ab38a668197C79f56C2F3C",
+            "weights": [
+                1
+            ],
+            "fee": 0.0005,
+            "tokens": {
+                "NOTE": 250000
+            }
+        }
+    }
+}
