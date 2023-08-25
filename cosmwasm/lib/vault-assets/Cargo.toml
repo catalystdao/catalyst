@@ -15,11 +15,6 @@ overflow-checks = true
 panic = 'abort'
 rpath = false
 
-[features]
-default = ["asset_cw20"]
-asset_native = []
-asset_cw20 = []
-
 [dependencies]
 cosmwasm-schema = "1.3.0"
 cosmwasm-std = "1.3.0"

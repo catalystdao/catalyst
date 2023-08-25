@@ -4,27 +4,8 @@ use std::fmt::Debug;
 
 use crate::error::AssetError;
 
-#[cfg(all(not(feature="asset_native"), not(feature="asset_cw20")))]
-compile_error!("An asset-type feature must be enabled (\"asset_native\" or \"asset_cw20\")");
-
-#[cfg(all(feature="asset_native", feature="asset_cw20"))]
-compile_error!("Multiple asset-type features cannot be enabled at the same time (\"asset_native\" and \"asset_cw20\")");
-
-#[cfg(feature="asset_native")]
-mod asset_native;
-#[cfg(feature="asset_native")]
-pub use asset_native::NativeAsset as Asset;
-#[cfg(feature="asset_native")]
-pub use asset_native::NativeVaultAssets as VaultAssets;
-
-#[cfg(feature="asset_cw20")]
-mod asset_cw20;
-#[cfg(feature="asset_cw20")]
-pub use asset_cw20::Cw20Asset as Asset;
-#[cfg(feature="asset_cw20")]
-pub use asset_cw20::Cw20VaultAssets as VaultAssets;
-
-
+pub mod asset_native;
+pub mod asset_cw20;
 
 pub trait VaultAssetsTrait<'a, T: AssetTrait + 'a> {
 
