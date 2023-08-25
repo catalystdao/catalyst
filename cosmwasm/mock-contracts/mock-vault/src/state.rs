@@ -41,7 +41,7 @@ pub fn initialize_swap_curves(
     let assets_balances = assets.iter()
         .map(|asset| {
 
-            let balance = asset.query_balance(&deps.as_ref(), env.contract.address.to_string())?;
+            let balance = asset.query_prior_balance(&deps.as_ref(), Some(&info), env.contract.address.to_string())?;
 
             if balance.is_zero() {
                 return Err(ContractError::InvalidZeroBalance {});

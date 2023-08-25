@@ -108,9 +108,9 @@ pub trait AssetTrait: Serialize + PartialEq + Debug + Clone + ToString {
 
     fn save(&self, deps: &mut DepsMut) -> Result<(), AssetError>;
 
-    fn query_balance(&self, deps: &Deps, account: impl Into<String>) -> Result<Uint128, AssetError>;
+    fn query_prior_balance(&self, deps: &Deps, info: Option<&MessageInfo>, account: impl Into<String>) -> Result<Uint128, AssetError>;
 
-    //TODO replace &MessageInfo with 'sender'? (match `send_asset` structure)
+    //TODO replace &MessageInfo with 'sender'? (match `send_asset` structure)   //No
     fn receive_asset(&self, env: &Env, info: &MessageInfo, amount: Uint128) -> Result<Option<CosmosMsg>, AssetError>;
 
     //TODO use 'into<String>' instead of 'String' for recipient

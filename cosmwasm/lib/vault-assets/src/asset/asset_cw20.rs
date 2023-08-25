@@ -120,7 +120,7 @@ impl AssetTrait for Cw20Asset {
         Ok(())
     }
 
-    fn query_balance(&self, deps: &Deps, account: impl Into<String>) -> Result<Uint128, AssetError> {
+    fn query_prior_balance(&self, deps: &Deps, _info: Option<&MessageInfo>, account: impl Into<String>,) -> Result<Uint128, AssetError> {
         
         let amount = deps.querier.query_wasm_smart::<BalanceResponse>(
             self.0.to_owned(),

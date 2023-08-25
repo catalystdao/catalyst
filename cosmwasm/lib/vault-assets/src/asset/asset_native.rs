@@ -137,11 +137,32 @@ impl AssetTrait for NativeAsset {
         Ok(())
     }
 
-    fn query_balance(&self, deps: &Deps, account: impl Into<String>) -> Result<Uint128, AssetError> {
+    fn query_prior_balance(&self, deps: &Deps, info: Option<&MessageInfo>, account: impl Into<String>) -> Result<Uint128, AssetError> {
         
-        let amount = deps.querier.query_balance(account, self.denom.to_string())?;
+        let amount = deps.querier.query_balance(account, self.denom.to_string())?.amount;
 
-        Ok(amount.amount)
+        let incoming_funds = match info {
+            Some(info) => {
+                info.funds.iter()
+                    .find(|coin| coin.denom == self.denom)
+                    .and_then(|coin| Some(coin.amount))
+            },
+            None => None,
+        };
+
+        match incoming_funds {
+            Some(funds) => {
+                Ok(
+                    amount
+                        .checked_sub(funds)
+                        .map_err(|err| AssetError::Std(err.into()))?
+                )
+                
+            },
+            None => {
+                Ok(amount)
+            }
+        }
 
     }
 
