@@ -30,7 +30,7 @@ pub struct InstantiateMsg {
 
 /// Vault execution messages
 #[cw_serde]
-pub enum ExecuteMsg<T> {
+pub enum ExecuteMsg<T, A=Asset> {
 
     /// Initialize the vault swap curves.
     /// * `assets` - The list of the assets that are to be supported by the vault.
@@ -38,7 +38,7 @@ pub enum ExecuteMsg<T> {
     /// * `amp` - The amplification value applied to the vault.
     /// * `depositor` - The account that will receive the initial vault tokens.
     InitializeSwapCurves {
-        assets: Vec<Asset>,
+        assets: Vec<A>,
         weights: Vec<Uint128>,
         amp: Uint64,
         depositor: String
@@ -351,8 +351,8 @@ pub struct OnlyLocalResponse {
 }
 
 #[cw_serde]
-pub struct AssetsResponse {
-    pub assets: Vec<Asset>
+pub struct AssetsResponse<A = Asset> {
+    pub assets: Vec<A>
 }
 
 #[cw_serde]

@@ -8,6 +8,7 @@ edition = "2021"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
+anyhow = "1.0.41"
 catalyst-ibc-interface = { path = "../../contracts/catalyst-ibc-interface", features = ["library"] }
 catalyst-factory = { path = "../../contracts/catalyst-factory", features = ["library"] }
 catalyst-types = { path = "../../lib/catalyst-types" }
@@ -22,3 +23,4 @@ cw20-base = { version = "1.1.0", features = ["library"] }
 cw-multi-test = "0.16.4"
 mock-catalyst-ibc-interface = { path = "../../mock-contracts/mock-catalyst-ibc-interface", features = ["library"] }
 mock-calldata-target = { path = "../../mock-contracts/mock-calldata-target", features = ["library"] }
+vault-assets = { path = "../../lib/vault-assets" }

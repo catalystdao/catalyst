@@ -11,7 +11,7 @@ pub struct InstantiateMsg {
 
 
 #[cw_serde]
-pub enum ExecuteMsg {
+pub enum ExecuteMsg<A = Asset> {
 
     /// Deploy a new vault (permissionless).
     /// * `vault_code_id` - The code id of the *stored* contract with which to deploy the new vault.
@@ -25,7 +25,7 @@ pub enum ExecuteMsg {
     /// * `chain_interface` - The interface used for cross-chain swaps. It can be set to None to disable cross-chain swaps.
     DeployVault {
         vault_code_id: u64,
-        assets: Vec<Asset>,
+        assets: Vec<A>,
         assets_balances: Vec<Uint128>,
         weights: Vec<Uint128>,
         amplification: Uint64,

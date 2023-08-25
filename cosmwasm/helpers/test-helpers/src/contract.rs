@@ -1,8 +1,9 @@
 use cosmwasm_std::{Uint128, Addr, Uint64, Binary};
-use cw20::Cw20ExecuteMsg;
 use cw_multi_test::{ContractWrapper, App, Executor, AppResponse};
 use catalyst_vault_common::msg::{InstantiateMsg, ExecuteMsg};
-use crate::{misc::get_response_attribute, definitions::{SETUP_MASTER, FACTORY_OWNER}};
+use std::marker::PhantomData;
+use vault_assets::asset::AssetTrait;
+use crate::{misc::get_response_attribute, definitions::{SETUP_MASTER, FACTORY_OWNER}, env::CustomTestEnv, asset::CustomTestAsset};
 
 
 pub const DEFAULT_TEST_VAULT_FEE : Uint64 = Uint64::new(70000000000000000u64);   // 7%
@@ -116,9 +117,9 @@ pub fn mock_instantiate_calldata_target(
 
 // Factory helpers
 
-pub fn mock_factory_deploy_vault(
-    app: &mut App,
-    assets: Vec<String>,
+pub fn mock_factory_deploy_vault<A: AssetTrait, T: CustomTestAsset<A>>(
+    env: &mut impl CustomTestEnv<A, T>,
+    assets: Vec<T>,
     assets_balances: Vec<Uint128>,
     weights: Vec<Uint128>,
     amplification: Uint64,
@@ -129,35 +130,21 @@ pub fn mock_factory_deploy_vault(
 
     // Deploy factory if not provided
     let factory = factory.unwrap_or(
-        mock_instantiate_factory(app, None)
+        mock_instantiate_factory(env.get_app(), None)
     );
 
-    // Set asset allowances for the factory
-    assets
-        .iter()
-        .zip(&assets_balances)
-        .filter(|(_, amount)| *amount != Uint128::zero())
-        .for_each(|(asset, amount)| {
-            app.execute_contract::<Cw20ExecuteMsg>(
-                Addr::unchecked(SETUP_MASTER),
-                Addr::unchecked(asset),
-                &Cw20ExecuteMsg::IncreaseAllowance {
-                    spender: factory.to_string(),
-                    amount: *amount,
-                    expires: None
-                },
-                &[]
-            ).unwrap();
-        });
+    let vault_assets: Vec<A> = assets.iter()
+        .map(|asset| asset.into_vault_asset())
+        .collect();
 
     // Deploy the new vault
-    let response = app.execute_contract(
+    let response = env.execute_contract(
         Addr::unchecked(SETUP_MASTER),
         factory,
         &catalyst_factory::msg::ExecuteMsg::DeployVault {
             vault_code_id,
-            assets,
-            assets_balances,
+            assets: vault_assets,
+            assets_balances: assets_balances.clone(),
             weights,
             amplification,
             vault_fee: DEFAULT_TEST_VAULT_FEE,
@@ -165,10 +152,17 @@ pub fn mock_factory_deploy_vault(
             symbol: "TP".to_string(),
             chain_interface: chain_interface.map(|value| value.to_string())
         },
-        &[]
+        assets,
+        assets_balances
     ).unwrap();
 
-    let vault = get_response_attribute::<String>(response.events[6].clone(), "vault_address").unwrap();
+    let deploy_vault_event = response.events.iter()
+        .find(|event| {
+            event.ty == "wasm-deploy-vault".to_string()
+        })
+        .unwrap().clone();
+
+    let vault = get_response_attribute::<String>(deploy_vault_event, "vault_address").unwrap();
 
     Addr::unchecked(vault)
 }
@@ -176,16 +170,18 @@ pub fn mock_factory_deploy_vault(
 
 
 #[derive(Clone)]
-pub struct InitializeSwapCurvesMockConfig {
-    pub assets: Vec<String>,
+pub struct InitializeSwapCurvesMockConfig<A: AssetTrait, T: CustomTestAsset<A>> {
+    pub assets: Vec<T>,
     pub assets_balances: Vec<Uint128>,
     pub weights: Vec<Uint128>,
     pub amp: Uint64,
-    pub depositor: String
+    pub depositor: String,
+    asset_trait: PhantomData<A>
 }
 
-impl InitializeSwapCurvesMockConfig {
-    pub fn transfer_vault_allowances(
+impl<A: AssetTrait, T: CustomTestAsset<A>> InitializeSwapCurvesMockConfig<A, T> {
+
+    pub fn transfer_vault_assets(
         &self,
         app: &mut App,
         vault: String,
@@ -196,31 +192,37 @@ impl InitializeSwapCurvesMockConfig {
             .zip(&self.assets_balances)
             .filter(|(_, amount)| *amount != Uint128::zero())
             .for_each(|(asset, amount)| {
-                app.execute_contract::<Cw20ExecuteMsg>(
+
+                asset.transfer(
+                    app,
+                    *amount,
                     depositor.clone(),
-                    Addr::unchecked(asset),
-                    &Cw20ExecuteMsg::Transfer {
-                        recipient: vault.clone(),
-                        amount: *amount
-                    },
-                    &[]
-                ).unwrap();
+                    vault.to_string()
+                );
+
             });
     }
 
-    pub fn into_execute_msg(self) -> ExecuteMsg<()> {
+    pub fn into_execute_msg(self) -> ExecuteMsg<(), A> {
         Into::into(self)
     }
+
 }
 
-impl Into<ExecuteMsg<()>> for InitializeSwapCurvesMockConfig {
-    fn into(self) -> ExecuteMsg<()> {
-        ExecuteMsg::<()>::InitializeSwapCurves {
-            assets: self.assets,
+impl<A: AssetTrait, T: CustomTestAsset<A>> Into<ExecuteMsg<(), A>> for InitializeSwapCurvesMockConfig<A, T> {
+    fn into(self) -> ExecuteMsg<(), A> {
+
+        let vault_assets = self.assets.iter()
+            .map(|test_asset| test_asset.into_vault_asset())
+            .collect::<Vec<A>>();
+
+        ExecuteMsg::<(), A>::InitializeSwapCurves {
+            assets: vault_assets,
             weights: self.weights,
             amp: self.amp,
             depositor: self.depositor
         }
+
     }
 }
 

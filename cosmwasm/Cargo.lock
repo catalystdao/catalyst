@@ -1031,6 +1031,7 @@ dependencies = [
 name = "test-helpers"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "catalyst-factory",
  "catalyst-ibc-interface",
  "catalyst-types",
@@ -1045,6 +1046,7 @@ dependencies = [
  "cw20-base",
  "mock-calldata-target",
  "mock-catalyst-ibc-interface",
+ "vault-assets",
 ]
 
 [[package]]
