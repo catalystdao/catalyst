@@ -6,7 +6,7 @@ use cw2::set_contract_version;
 use crate::dispatcher::{start_dispatching, resume_dispatching};
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, get_reply_allow_revert_flag, get_reply_command_index, get_reply_is_last_flag};
-use crate::state::{lock_router, unlock_router};
+use crate::state::{lock_router, unlock_router, ROUTER_STATE};
 
 // Version information
 const CONTRACT_NAME: &str = "catalyst-router";
@@ -157,6 +157,8 @@ pub fn reply(
     }
 
     if is_last {
+        // If all of the commands have been processed, remove the router state.
+        ROUTER_STATE.remove(deps.storage);
         unlock_router(&mut deps);
     }
 
