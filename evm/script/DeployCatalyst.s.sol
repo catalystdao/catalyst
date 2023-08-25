@@ -82,7 +82,7 @@ contract DeployCatalyst is Script {
         if (address(catalyst_describer) == address(0)) {
             catalyst_describer = new CatalystDescriber();
         }
-        contracts.catalyst_describer = address(catalyst_describer);
+        contracts.describer = address(catalyst_describer);
 
         {
             CatalystDescriberRegistry describer_registry = CatalystDescriberRegistry(contracts.describer_registry); 
@@ -132,9 +132,9 @@ contract DeployCatalyst is Script {
         address wrappedGas = getGasToken();
 
         // Router
-        CatalystRouter router = CatalystRouter(contracts.router);
+        CatalystRouter router = CatalystRouter(payable(contracts.router));
         if (address(router) == address(0)) {
-            CatalystRouter router = new CatalystRouter(RouterParameters({
+            router = new CatalystRouter(RouterParameters({
                 permit2: address(permit2),
                 weth9: address(wrappedGas)
             }));
@@ -142,25 +142,28 @@ contract DeployCatalyst is Script {
         contracts.router = address(router);
     }
 
-    function fillRegistry() {
+    function setupDescriber() internal {
         CatalystDescriber catalyst_describer = CatalystDescriber(contracts.describer);
 
         catalyst_describer.add_vault_factory(contracts.factory);
         catalyst_describer.add_whitelisted_template(contracts.volatile_template, 1);
         catalyst_describer.add_whitelisted_template(contracts.amplified_template, 1);
-        catalyst_describer.add_whitelisted_cii(contracts.crosschaininterface);
+        catalyst_describer.add_whitelisted_cci(contracts.crosschaininterface);
     }
 
 
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("DEPLOYER_KEY");
 
-        
+        string memory pathRoot = vm.projectRoot();
+        string memory pathToChainConfig = string.concat(pathRoot, "/config/config_chain.json");
+        string memory pathToContractConfig = string.concat(pathRoot, "/config/config_contracts.json");
+
         string memory chain = vm.envString("CHAIN_NAME");
-        string memory config_chain = vm.readFile("./config/config_chain.json");
+        string memory config_chain = vm.readFile(pathToChainConfig);
         chainIdentifier = bytes32(vm.parseJsonUint(config_chain, chain));
 
-        string memory config_contract = vm.readFile("./config/config_contracts.json");
+        string memory config_contract = vm.readFile(pathToContractConfig);
         contracts = abi.decode(vm.parseJson(config_contract, chain), (JsonContracts));
 
         vm.startBroadcast(deployerPrivateKey);
@@ -172,9 +175,9 @@ contract DeployCatalyst is Script {
         uint256 registryPrivateKey = vm.envUint("REGISTRY_KEY");
 
         // Fill registry
-        if (fillRegistry() == true) {
+        if (fillDescriber == true) {
             vm.startBroadcast(registryPrivateKey);
-            fillRegistry();
+            setupDescriber();
             vm.stopBroadcast();
         }
 
@@ -182,15 +185,20 @@ contract DeployCatalyst is Script {
 
         string memory obj = chain;
 
-        string[] memory keys = ["amplified_mathlib", "amplified_template", "crosschaininterface", "describer", "describer_registry", "factory", "permit2", "router", "volatile_mathlib", "volatile_template"];
-        for (uint256 i = 0; i < keys.length; ++i) {
-            string memory key = keys[i];
-            vm.serializeAddress(obj, key, contracts[key]);
-        }
+        vm.serializeAddress(obj, "amplified_mathlib", contracts.amplified_mathlib);
+        vm.serializeAddress(obj, "amplified_template", contracts.amplified_template);
+        vm.serializeAddress(obj, "crosschaininterface", contracts.crosschaininterface);
+        vm.serializeAddress(obj, "describer", contracts.describer);
+        vm.serializeAddress(obj, "describer_registry", contracts.describer_registry);
+        vm.serializeAddress(obj, "factory", contracts.factory);
+        vm.serializeAddress(obj, "permit2", contracts.permit2);
+        vm.serializeAddress(obj, "router", contracts.router);
+        vm.serializeAddress(obj, "volatile_mathlib", contracts.volatile_mathlib);
+        vm.serializeAddress(obj, "volatile_template", contracts.volatile_template);
         
         // string memory finalJson = vm.serializeString(chain, "object", output);
 
-        vm.writeJson(ojb, "./config/config_contracts.json", chain);
+        vm.writeJson(obj, "./config/config_contracts.json", chain);
 
     }
 }

@@ -41,7 +41,7 @@ struct JsonContracts {
     address volatile_template;
 }
 
-contract DeployCatalyst is Script {
+contract DeployInterfaces is Script {
     using stdJson for string;
 
     error IncentivesIdNotFound();
@@ -88,7 +88,7 @@ contract DeployCatalyst is Script {
         }
     }
 
-    function deployCCI(CatalystDescriber describer, string memory version) internal {
+    function deployCCI(string memory version) internal {
         address incentive = getOrDeployGeneralisedIncentives(version);
 
         CatalystGARPInterface cci = new CatalystGARPInterface(incentive);

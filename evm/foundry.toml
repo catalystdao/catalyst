@@ -7,3 +7,5 @@ optimizer = true
 optimizer_runs = 1_000
 
 # See more config options https://github.com/foundry-rs/foundry/tree/master/config
+
+fs_permission = [{access = "write", path="./scripts/config"}]
