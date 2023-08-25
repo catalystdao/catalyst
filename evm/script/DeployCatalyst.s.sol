@@ -81,7 +81,7 @@ contract DeployCatalyst is Script {
         string memory pathToInterfacesConfig = string.concat(pathRoot, "/script/config/config_interfaces.json");
         string memory config_interfaces = vm.readFile(pathToInterfacesConfig);
 
-        string[] memory availableInterfaces = abi.decode(config_interfaces.parseRaw(string.concat(".", chain)), (string[]));
+        string[] memory availableInterfaces = abi.decode(config_interfaces.parseRaw(string.concat(".", chain, ".available")), (string[]));
 
         for (uint256 i = 0; i < availableInterfaces.length; ++i) {
             string memory interfaceVersion = availableInterfaces[i];
@@ -174,7 +174,6 @@ contract DeployCatalyst is Script {
 
 
     function run() external {
-        uint256 deployerPrivateKey = vm.envUint("DEPLOYER_KEY");
 
         string memory pathRoot = vm.projectRoot();
         string memory pathToChainConfig = string.concat(pathRoot, "/script/config/config_chain.json");
@@ -194,6 +193,7 @@ contract DeployCatalyst is Script {
         string memory config_token = vm.readFile(pathToTokenConfig);
         WGAS = abi.decode(config_token.parseRaw(string.concat(".", chain, ".", vm.envString("WGAS"))), (address));
 
+        uint256 deployerPrivateKey = vm.envUint("CATALYST_KEY");
         vm.startBroadcast(deployerPrivateKey);
 
         deployAllContracts();
@@ -201,6 +201,7 @@ contract DeployCatalyst is Script {
         vm.stopBroadcast();
 
         uint256 registryPrivateKey = vm.envUint("REGISTRY_KEY");
+        vm.startBroadcast(registryPrivateKey);
 
         // Fill registry
         // if (fillDescriber == true) {
@@ -208,6 +209,8 @@ contract DeployCatalyst is Script {
         //     setupDescriber();
         //     vm.stopBroadcast();
         // }
+
+        vm.stopBroadcast();
 
         // Save json
 

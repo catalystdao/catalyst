@@ -3,50 +3,20 @@ pragma solidity ^0.8.13;
 
 import "forge-std/Script.sol";
 import {stdJson} from "forge-std/StdJson.sol";
-import { Permit2 } from "../lib/permit2/src/Permit2.sol";
 
-// Math libs
-import { CatalystMathVol } from "../src/registry/CatalystMathVol.sol";
-import { CatalystMathAmp } from "../src/registry/CatalystMathAmp.sol";
-
-// Registry
-import { CatalystDescriber } from "../src/registry/CatalystDescriber.sol";
-import { CatalystDescriberRegistry } from "../src/registry/CatalystDescriberRegistry.sol";
-
-// Router
-import { CatalystRouter } from "../src/router/CatalystRouter.sol";
-import { RouterParameters } from "../src/router/base/RouterImmutables.sol";
-
-// Core Catalyst
-import { CatalystFactory } from "../src/CatalystFactory.sol";
 import { CatalystGARPInterface } from "../src/CatalystGARPInterface.sol";
-/// Catalyst Templates
-import { CatalystVaultVolatile } from "../src/CatalystVaultVolatile.sol";
-import { CatalystVaultAmplified } from "../src/CatalystVaultAmplified.sol";
 
 
 // Generalised Incentives
 import { IncentivizedMockEscrow } from "GeneralisedIncentives/src/apps/mock/IncentivizedMockEscrow.sol";
-
-struct JsonContracts {
-    address amplified_mathlib;
-    address amplified_template;
-    address crosschaininterface;
-    address describer;
-    address describer_registry;
-    address factory;
-    address permit2;
-    address router;
-    address volatile_mathlib;
-    address volatile_template;
-}
 
 contract DeployInterfaces is Script {
     using stdJson for string;
 
     error IncentivesIdNotFound();
 
-    string config_interfaces;
+    string[] incentive_versions;
+    address[] incentive_addresses;
 
     string chain;
     bytes32 chainIdentifier;
@@ -58,71 +28,87 @@ contract DeployInterfaces is Script {
         // id == 1: Wormhole
 
         if (keccak256(abi.encodePacked(version)) == keccak256(abi.encodePacked("MOCK"))) {
-            string memory json_structure = string.concat(
-                ".",
-                chain,
-                ".",
-                version,
-                "."
-                "incentive"
-            );
-            incentive = abi.decode(config_interfaces.parseRaw(json_structure), (address));
-            if (incentive != address(0)) return incentive;
+            address signer = vm.envAddress("MOCK_SIGNER");
 
-            // Load the signer
-            json_structure = string.concat(
-                ".",
-                chain,
-                ".",
-                version,
-                "."
-                "signer"
-            );
-            address signer = abi.decode(config_interfaces.parseRaw(json_structure), (address));
+            uint256 pv_key = vm.envUint("MOCK_KEY");
+            vm.startBroadcast(pv_key);
 
             incentive = address(new IncentivizedMockEscrow(chainIdentifier, signer));
+
+            vm.stopBroadcast();
         } else if (keccak256(abi.encodePacked(version)) == keccak256(abi.encodePacked("Wormhole"))) {
+            uint256 pv_key = vm.envUint("WORMHOLE_KEY");
+            vm.startBroadcast(pv_key);
             // TODO:
+            vm.stopBroadcast();
         } else {
             revert IncentivesIdNotFound();
         }
     }
 
-    function deployCCI(string memory version) internal {
-        address incentive = getOrDeployGeneralisedIncentives(version);
+    function getOrDeployAllIncentives() internal {
+        // read config_interfaces
+        string memory pathRoot = vm.projectRoot();
+        string memory pathToInterfacesConfig = string.concat(pathRoot, "/script/config/config_interfaces.json");
+        string memory config_interfaces = vm.readFile(pathToInterfacesConfig);
 
-        CatalystGARPInterface cci = new CatalystGARPInterface(incentive);
-    }
+        string[] memory availableInterfaces = abi.decode(config_interfaces.parseRaw(string.concat(".", chain, ".available")), (string[]));
 
-    function deployAllCCIs() internal {
-        string memory json_structure = string.concat(
-            ".",
-            chain,
-            ".",
-            "available"
-        );
-        string[] memory available_versions = abi.decode(
-            config_interfaces.parseRaw(json_structure), (string[])
-        );
+        for (uint256 i = 0; i < availableInterfaces.length; ++i) {
+            string memory incentiveVersion = availableInterfaces[i];
+            // Check if the incentives contract has already been deployed.
+            address incentiveAddress = abi.decode(config_interfaces.parseRaw(string.concat(".", chain, ".", incentiveVersion, ".interface")), (address));
+            if (incentiveAddress == address(0)) continue;
 
-        for (uint256 i = 0; i < available_versions.length; ++i) {
-            string memory key = available_versions[i];
-            deployCCI(key);
+            // otherwise we need to deploy it
+            incentiveAddress = getOrDeployGeneralisedIncentives(incentiveVersion);
+
+            // write the deployment
+            string memory obj = chain;
+            string memory finalJson = vm.serializeAddress(obj, "incentive", incentiveAddress);
+            vm.writeJson(finalJson, pathToInterfacesConfig, string.concat(".", chain, ".", incentiveVersion));
+
+            incentive_versions.push(incentiveVersion);
+            incentive_addresses.push(incentiveAddress);
         }
     }
 
+    function getOrDeployAllCCIs() internal {
+        string memory pathRoot = vm.projectRoot();
+        string memory pathToInterfacesConfig = string.concat(pathRoot, "/script/config/config_interfaces.json");
+
+        for (uint256 i = 0; i < incentive_versions.length; ++i) {
+            string memory incentiveVersion = incentive_versions[i];
+            address incentiveAddress = incentive_addresses[i];
+
+            // otherwise we need to deploy it
+            CatalystGARPInterface interfaceAddress = new CatalystGARPInterface(incentiveAddress);
+
+            // Write
+            string memory obj = chain;
+            string memory finalJson = vm.serializeAddress(obj, "interface", address(interfaceAddress));
+            vm.writeJson(finalJson, pathToInterfacesConfig, string.concat(".", chain, ".", incentiveVersion));
+        }
+    }
 
     function run() external {
-        uint256 deployerPrivateKey = vm.envUint("DEPLOYER_KEY");
 
+        string memory pathRoot = vm.projectRoot();
+        string memory pathToChainConfig = string.concat(pathRoot, "/script/config/config_chain.json");
         
+        // Get the chain config
         chain = vm.envString("CHAIN_NAME");
-        string memory config_chain = vm.readFile("./config/config_chain.json");
-        chainIdentifier = bytes32(vm.parseJsonUint(config_chain, chain));
+        string memory config_chain = vm.readFile(pathToChainConfig);
+        chainIdentifier = abi.decode(config_chain.parseRaw(string.concat(".", chain, ".chainIdentifier")), (bytes32));
 
+
+        getOrDeployAllIncentives();
+
+
+        uint256 deployerPrivateKey = vm.envUint("CATALYST_INTERFACES_KEY");
         vm.startBroadcast(deployerPrivateKey);
 
-        deployAllCCIs();
+        getOrDeployAllCCIs();
 
         vm.stopBroadcast();
     }
