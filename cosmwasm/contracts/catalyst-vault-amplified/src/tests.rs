@@ -6,7 +6,7 @@ mod parameters;
 // mod test_finish_setup;
 // mod test_initialize_swap_curves;
 // mod test_instantiate;
-// mod test_local_swap;
+mod test_local_swap;
 // mod test_receive_asset;
 // mod test_receive_liquidity;
 // mod test_security_limit;
