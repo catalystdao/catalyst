@@ -513,7 +513,7 @@ mod test_amplified_withdraw_mixed {
         // Define withdraw config
         let withdraw_percentage = 0.15;     // Percentage of vault tokens supply
         let withdraw_amount = f64_to_uint128(uint128_to_f64(INITIAL_MINT_AMOUNT) * withdraw_percentage).unwrap();
-        let withdraw_ratio_f64 = vec![0.5, 0.2, 1.][..TEST_VAULT_ASSET_COUNT].to_vec();
+        let withdraw_ratio_f64 = vec![0.5, 0.2, 1.][3-TEST_VAULT_ASSET_COUNT..].to_vec();
         let withdraw_ratio = withdraw_ratio_f64.iter()
             .map(|val| ((val * 1e18) as u64).into()).collect::<Vec<Uint64>>();
 
