@@ -3,6 +3,7 @@ pragma solidity ^0.8.13;
 
 import "forge-std/Script.sol";
 import {stdJson} from "forge-std/StdJson.sol";
+import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
 
 import { CatalystGARPInterface } from "../src/CatalystGARPInterface.sol";
 
@@ -82,9 +83,7 @@ contract DeployInterfaces is Script {
             CatalystGARPInterface interfaceAddress = new CatalystGARPInterface(incentiveAddress);
 
             // Write
-            string memory obj = chain;
-            string memory finalJson = vm.serializeAddress(obj, "interface", address(interfaceAddress));
-            vm.writeJson(finalJson, pathToInterfacesConfig, string.concat(".", chain, ".", incentiveVersion));
+            vm.writeJson(Strings.toHexString(uint160(address(interfaceAddress)), 20), pathToInterfacesConfig, string.concat(".", chain, ".", incentiveVersion));
         }
     }
 

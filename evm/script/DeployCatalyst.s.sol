@@ -152,6 +152,10 @@ contract DeployCatalyst is Script {
         // Get the wrapped token for router
         address wrappedGas = getGasToken();
 
+
+        vm.stopBroadcast();
+        
+        vm.startBroadcast(vm.envUint("CATALYST_ROUTER_KEY"));
         // Router
         CatalystRouter router = CatalystRouter(payable(contracts.router));
         if (address(router) == address(0)) {
@@ -161,6 +165,8 @@ contract DeployCatalyst is Script {
             }));
         }
         contracts.router = address(router);
+
+        vm.startBroadcast(vm.envUint("CATALYST_KEY"));
     }
 
     function setupDescriber() internal {
