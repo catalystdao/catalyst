@@ -6,7 +6,7 @@ use vault_assets::asset::{AssetTrait, asset_cw20::Cw20Asset, asset_native::Nativ
 use crate::token::{query_token_balance, transfer_tokens};
 
 
-pub trait CustomTestAsset<T: AssetTrait>: Clone + Debug {
+pub trait CustomTestAsset<T: AssetTrait>: Clone + Debug + PartialEq {
 
     fn get_asset_ref(&self) -> &str;
 
@@ -16,10 +16,12 @@ pub trait CustomTestAsset<T: AssetTrait>: Clone + Debug {
 
     fn into_vault_asset(&self) -> T;
 
+    fn from_vault_asset(asset: &T) -> Self;
+
 }
 
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct TestNativeAsset {
     pub denom: String,
     pub alias: String
@@ -58,12 +60,19 @@ impl CustomTestAsset<NativeAsset> for TestNativeAsset {
             alias: self.alias.to_string()
         }
     }
+
+    fn from_vault_asset(asset: &NativeAsset) -> Self {
+        Self {
+            denom: asset.denom.clone(),
+            alias: asset.alias.clone()
+        }
+    }
 }
 
 
 
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct TestCw20Asset(pub String);
 
 impl CustomTestAsset<Cw20Asset> for TestCw20Asset {
@@ -96,6 +105,10 @@ impl CustomTestAsset<Cw20Asset> for TestCw20Asset {
 
     fn into_vault_asset(&self) -> Cw20Asset {
         Cw20Asset(self.0.to_string())
+    }
+
+    fn from_vault_asset(asset: &Cw20Asset) -> Self {
+        Self(asset.0.clone())
     }
 
 }
