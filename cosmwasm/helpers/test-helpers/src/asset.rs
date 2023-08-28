@@ -1,11 +1,12 @@
 
+use std::fmt::Debug;
 use cosmwasm_std::{Uint128, Addr, Coin, CosmosMsg};
 use cw_multi_test::{App, Executor};
 use vault_assets::asset::{AssetTrait, asset_cw20::Cw20Asset, asset_native::NativeAsset};
 use crate::token::{query_token_balance, transfer_tokens};
 
 
-pub trait CustomTestAsset<T: AssetTrait>: Clone {
+pub trait CustomTestAsset<T: AssetTrait>: Clone + Debug {
 
     fn get_asset_ref(&self) -> &str;
 
@@ -18,7 +19,7 @@ pub trait CustomTestAsset<T: AssetTrait>: Clone {
 }
 
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct TestNativeAsset {
     pub denom: String,
     pub alias: String
@@ -62,7 +63,7 @@ impl CustomTestAsset<NativeAsset> for TestNativeAsset {
 
 
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct TestCw20Asset(pub String);
 
 impl CustomTestAsset<Cw20Asset> for TestCw20Asset {
