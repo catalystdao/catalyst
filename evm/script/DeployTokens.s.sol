@@ -6,7 +6,7 @@ import {stdJson} from "forge-std/StdJson.sol";
 import { Token } from "../test/mocks/token.sol";
 import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
 
-contract DeployCatalyst is Script {
+contract DeployTokens is Script {
     using stdJson for string;
 
     string pathToTokenConfig;

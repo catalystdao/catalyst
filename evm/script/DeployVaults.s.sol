@@ -41,7 +41,7 @@ struct JsonContracts {
     address volatile_template;
 }
 
-contract DeployCatalyst is Script {
+contract DeployVaults is Script {
     using stdJson for string;
 
     // string config_contract;

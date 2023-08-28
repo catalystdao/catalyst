@@ -2,7 +2,7 @@
     "canto": {
         "WCANTO": "0x0728B93B969f84A248Df7e499358A6733834FD7b",
         "NOTE": {
-            "address": "0x03F734Bd9847575fDbE9bEaDDf9C166F880B5E5f",
+            "address": "0x0000000000000000000000000000000000000000",
             "decimals": 18
         }
     },
@@ -15,15 +15,15 @@
     "scroll": {
         "WETH": "0xa1ea0b2354f5a344110af2b6ad68e75545009a03",
         "USDT": {
-            "address": "0x186c0c26c45a8da1da34339ee513624a9609156d",
+            "address": "0x0000000000000000000000000000000000000000",
             "decimals": 6
         },
         "USDC": {
-            "address": "0x2C9678042D52B97D27f2bD2947F7111d93F3dD0D",
+            "address": "0x0000000000000000000000000000000000000000",
             "decimals": 6
         },
         "DAI": {
-            "address": "0x7984E363c38b590bB4CA35aEd5133Ef2c6619C40",
+            "address": "0x0000000000000000000000000000000000000000",
             "decimals": 18
         }
     }

@@ -165,6 +165,8 @@ contract DeployCatalyst is Script {
             }));
         }
         contracts.router = address(router);
+        
+        vm.stopBroadcast();
 
         vm.startBroadcast(vm.envUint("CATALYST_KEY"));
     }
