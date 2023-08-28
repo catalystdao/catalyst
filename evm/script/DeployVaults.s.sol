@@ -5,6 +5,7 @@ import "forge-std/Script.sol";
 import {stdJson} from "forge-std/StdJson.sol";
 import { Permit2 } from "../lib/permit2/src/Permit2.sol";
 import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
+import { Token } from "../test/mocks/token.sol";
 
 // Math libs
 import { CatalystMathVol } from "../src/registry/CatalystMathVol.sol";
@@ -44,8 +45,10 @@ struct JsonContracts {
 contract DeployVaults is Script {
     using stdJson for string;
 
-    // string config_contract;
-    // string config_chain;
+    event Debug(uint256 a);
+    event Debug(uint256[] a);
+    event Debug(address[] a);
+    event Debug(string[] a);
 
     string pathToVaultConfig;
     string config_vault;
@@ -83,6 +86,9 @@ contract DeployVaults is Script {
         } else {
             vaultTemplate = contracts.amplified_template;
         }
+        for (uint256 i = 0; i < assets.length; ++i) {
+            Token(assets[i]).approve(address(factory), init_balances[i]);
+        }
         vaultAddress = factory.deployVault(vaultTemplate, assets, init_balances, weights, amp, vaultFee, name, symbol, chainInterface);
     }
 
@@ -103,10 +109,25 @@ contract DeployVaults is Script {
 
             string[] memory assets_name = vm.parseJsonKeys(config_vault, string.concat(".", vault, ".", chain, ".tokens"));
             address[] memory assets = new address[](assets_name.length);
-            uint256[] memory init_balances;
+            uint256[] memory init_balances = new uint256[](assets_name.length);
+            for (uint256 i = 0; i < assets_name.length; ++i) {
+                if (vm.keyExists(config_token, string.concat(".", chain, ".", assets_name[i], ".address"))) {
+                    assets[i] = vm.parseJsonAddress(
+                        config_token, string.concat(".", chain, ".", assets_name[i], ".address")
+                    );
+                } else {
+                    assets[i] = vm.parseJsonAddress(
+                        config_token, string.concat(".", chain, ".", assets_name[i])
+                    );
+                }
+                init_balances[i] = vm.parseJsonUint(config_vault, string.concat(".", vault, ".", chain, ".tokens.", assets_name[i]));
+            }
             uint256[] memory weights = vm.parseJsonUintArray(config_vault, string.concat(".", vault, ".", chain, ".weights"));
-            uint256 amp;
-            uint256 vaultFee;
+            uint256 amp = 10**18;
+            if (vm.keyExists(config_vault, string.concat(".", vault, ".amplification"))) {
+                amp = vm.parseJsonUint(config_vault, string.concat(".", vault, ".amplification"));
+            }
+            uint256 vaultFee = vm.parseJsonUint(config_vault, string.concat(".", vault, ".", chain, ".fee"));
             vaultAddress = deployVault(
                 assets, init_balances, weights, amp, vaultFee, vault, vault, CCI
             );
@@ -134,6 +155,7 @@ contract DeployVaults is Script {
         // Get the contracts
         string memory config_contract = vm.readFile(pathToContractConfig);
         contracts = abi.decode(config_contract.parseRaw(string.concat(".", chain)), (JsonContracts));
+        factory = CatalystFactory(contracts.factory);
 
         // Get wrapped gas
         config_token = vm.readFile(pathToTokenConfig);

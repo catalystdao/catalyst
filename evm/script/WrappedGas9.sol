@@ -20,8 +20,8 @@
 pragma solidity ^0.4.18;
 
 contract WrappedGas9 {
-    string public name     = "Wrapped Ether";
-    string public symbol   = "WETH";
+    string public name;
+    string public symbol;
     uint8  public decimals = 18;
 
     constructor(string memory name_, string memory symbol_) {
