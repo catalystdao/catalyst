@@ -176,7 +176,7 @@ pub struct InitializeSwapCurvesMockConfig<A: AssetTrait, T: CustomTestAsset<A>> 
     pub weights: Vec<Uint128>,
     pub amp: Uint64,
     pub depositor: String,
-    asset_trait: PhantomData<A>
+    pub asset_trait: PhantomData<A>
 }
 
 impl<A: AssetTrait, T: CustomTestAsset<A>> InitializeSwapCurvesMockConfig<A, T> {
