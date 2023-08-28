@@ -3,7 +3,7 @@ mod parameters;
 // mod test_amplification_update;
 // mod test_deposit;
 mod test_fees;
-// mod test_finish_setup;
+mod test_finish_setup;
 // mod test_initialize_swap_curves;
 // mod test_instantiate;
 mod test_local_swap;
