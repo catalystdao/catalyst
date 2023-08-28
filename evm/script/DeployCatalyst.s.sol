@@ -129,7 +129,7 @@ contract DeployCatalyst is Script {
         address volatile_template = contracts.volatile_template;
         if (volatile_template == address(0)) {
             volatile_template = address(
-                new CatalystVaultAmplified(address(factory), volatile_mathlib)
+                new CatalystVaultVolatile(address(factory), volatile_mathlib)
             );
         }
         contracts.volatile_template = address(volatile_template);
@@ -165,7 +165,7 @@ contract DeployCatalyst is Script {
             }));
         }
         contracts.router = address(router);
-        
+
         vm.stopBroadcast();
 
         vm.startBroadcast(vm.envUint("CATALYST_KEY"));

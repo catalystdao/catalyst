@@ -39,12 +39,12 @@ contract FundAddresses is Script {
         if (MOCK_SHARE > 0 )                payable(MOCK_ADDRESS)               .transfer(MOCK_SHARE * total / sum);
         if (TOKENS_SHARE > 0 )              payable(TOKENS_ADDRESS)             .transfer(TOKENS_SHARE * total / sum);
         if (REGISTRY_SHARE > 0 )            payable(REGISTRY_ADDRESS)           .transfer(REGISTRY_SHARE * total / sum);
-        if (WGAS_SHARE > 0 )                payable(WGAS_ADDRESS)                .transfer(WGAS_SHARE * total / sum);
+        if (WGAS_SHARE > 0 )                payable(WGAS_ADDRESS)               .transfer(WGAS_SHARE * total / sum);
 
 
         uint256 VAULT_AMOUNT = 1 ether;
         address VAULT_ADDRESS=vm.envAddress("VAULT_ADDRESS");
-        if (VAULT_AMOUNT > 0 )               payable(VAULT_ADDRESS)              .transfer(VAULT_AMOUNT);
+        if (VAULT_AMOUNT > 0 )               payable(VAULT_ADDRESS)             .transfer(VAULT_AMOUNT);
 
         vm.stopBroadcast();
     }

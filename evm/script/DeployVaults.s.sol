@@ -6,6 +6,7 @@ import {stdJson} from "forge-std/StdJson.sol";
 import { Permit2 } from "../lib/permit2/src/Permit2.sol";
 import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
 import { Token } from "../test/mocks/token.sol";
+import { IWETH } from "./IWETH.sol";
 
 // Math libs
 import { CatalystMathVol } from "../src/registry/CatalystMathVol.sol";
@@ -47,7 +48,9 @@ contract DeployVaults is Script {
 
     event Debug(uint256 a);
     event Debug(uint256[] a);
+    event Debug(address a);
     event Debug(address[] a);
+    event Debug(string a);
     event Debug(string[] a);
 
     string pathToVaultConfig;
@@ -89,6 +92,16 @@ contract DeployVaults is Script {
         for (uint256 i = 0; i < assets.length; ++i) {
             Token(assets[i]).approve(address(factory), init_balances[i]);
         }
+        emit Debug(vaultTemplate);
+        emit Debug(assets);
+        emit Debug(init_balances);
+        emit Debug(weights);
+        emit Debug(amp);
+        emit Debug(vaultFee);
+        emit Debug(name);
+        emit Debug(symbol);
+        emit Debug(chainInterface);
+
         vaultAddress = factory.deployVault(vaultTemplate, assets, init_balances, weights, amp, vaultFee, name, symbol, chainInterface);
     }
 
@@ -110,17 +123,18 @@ contract DeployVaults is Script {
             string[] memory assets_name = vm.parseJsonKeys(config_vault, string.concat(".", vault, ".", chain, ".tokens"));
             address[] memory assets = new address[](assets_name.length);
             uint256[] memory init_balances = new uint256[](assets_name.length);
-            for (uint256 i = 0; i < assets_name.length; ++i) {
-                if (vm.keyExists(config_token, string.concat(".", chain, ".", assets_name[i], ".address"))) {
-                    assets[i] = vm.parseJsonAddress(
-                        config_token, string.concat(".", chain, ".", assets_name[i], ".address")
+            for (uint256 j = 0; j < assets_name.length; ++j) {
+                init_balances[j] = vm.parseJsonUint(config_vault, string.concat(".", vault, ".", chain, ".tokens.", assets_name[j]));
+                if (vm.keyExists(config_token, string.concat(".", chain, ".", assets_name[j], ".address"))) {
+                    assets[j] = vm.parseJsonAddress(
+                        config_token, string.concat(".", chain, ".", assets_name[j], ".address")
                     );
                 } else {
-                    assets[i] = vm.parseJsonAddress(
-                        config_token, string.concat(".", chain, ".", assets_name[i])
+                    assets[j] = vm.parseJsonAddress(
+                        config_token, string.concat(".", chain, ".", assets_name[j])
                     );
+                    IWETH(assets[j]).deposit{value: init_balances[j]}();
                 }
-                init_balances[i] = vm.parseJsonUint(config_vault, string.concat(".", vault, ".", chain, ".tokens.", assets_name[i]));
             }
             uint256[] memory weights = vm.parseJsonUintArray(config_vault, string.concat(".", vault, ".", chain, ".weights"));
             uint256 amp = 10**18;
