@@ -1,2 +1,7 @@
+forge script DeployInterfaces
 
-forge 
+forge script DeployCatalyst
+
+forge script DeployTokens
+
+forge script DeployVaults

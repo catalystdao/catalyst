@@ -13,6 +13,8 @@ import { IncentivizedMockEscrow } from "GeneralisedIncentives/src/apps/mock/Ince
 contract DeployInterfaces is Script {
     using stdJson for string;
 
+    string pathToInterfacesConfig;
+
     error IncentivesIdNotFound();
 
     string[] incentive_versions;
@@ -48,11 +50,9 @@ contract DeployInterfaces is Script {
 
     function getOrDeployAllIncentives() internal {
         // read config_interfaces
-        string memory pathRoot = vm.projectRoot();
-        string memory pathToInterfacesConfig = string.concat(pathRoot, "/script/config/config_interfaces.json");
         string memory config_interfaces = vm.readFile(pathToInterfacesConfig);
 
-        string[] memory availableInterfaces = abi.decode(config_interfaces.parseRaw(string.concat(".", chain, ".available")), (string[]));
+        string[] memory availableInterfaces = vm.parseJsonKeys(config_interfaces, string.concat(".", chain));
 
         for (uint256 i = 0; i < availableInterfaces.length; ++i) {
             string memory incentiveVersion = availableInterfaces[i];
@@ -74,9 +74,6 @@ contract DeployInterfaces is Script {
     }
 
     function getOrDeployAllCCIs() internal {
-        string memory pathRoot = vm.projectRoot();
-        string memory pathToInterfacesConfig = string.concat(pathRoot, "/script/config/config_interfaces.json");
-
         for (uint256 i = 0; i < incentive_versions.length; ++i) {
             string memory incentiveVersion = incentive_versions[i];
             address incentiveAddress = incentive_addresses[i];
@@ -95,6 +92,7 @@ contract DeployInterfaces is Script {
 
         string memory pathRoot = vm.projectRoot();
         string memory pathToChainConfig = string.concat(pathRoot, "/script/config/config_chain.json");
+        pathToInterfacesConfig = string.concat(pathRoot, "/script/config/config_interfaces.json");
         
         // Get the chain config
         chain = vm.envString("CHAIN_NAME");
