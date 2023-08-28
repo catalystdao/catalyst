@@ -15,8 +15,8 @@ mod test_send_asset;
 mod test_send_liquidity;
 // mod test_send_liquidity_success_failure;
 mod test_vault_connections;
-// mod test_withdraw_even;
-// mod test_withdraw_mixed;
+mod test_withdraw_even;
+mod test_withdraw_mixed;
 
 #[cfg(feature="asset_native")]
 pub use test_helpers::asset::TestNativeAsset as TestAsset;
