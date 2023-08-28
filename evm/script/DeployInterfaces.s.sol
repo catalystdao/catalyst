@@ -15,6 +15,9 @@ contract DeployInterfaces is Script {
     using stdJson for string;
 
     string pathToInterfacesConfig;
+    
+    event Debug(uint256 a);
+    event Debug(string a);
 
     error IncentivesIdNotFound();
 
@@ -58,16 +61,18 @@ contract DeployInterfaces is Script {
         for (uint256 i = 0; i < availableInterfaces.length; ++i) {
             string memory incentiveVersion = availableInterfaces[i];
             // Check if the incentives contract has already been deployed.
-            address incentiveAddress = abi.decode(config_interfaces.parseRaw(string.concat(".", chain, ".", incentiveVersion, ".interface")), (address));
-            if (incentiveAddress == address(0)) continue;
+            address incentiveAddress = abi.decode(config_interfaces.parseRaw(string.concat(".", chain, ".", incentiveVersion, ".incentive")), (address));
+            if (incentiveAddress != address(0)) {
+                incentive_versions.push(incentiveVersion);
+                incentive_addresses.push(incentiveAddress);
+                continue;
+            }
 
             // otherwise we need to deploy it
             incentiveAddress = getOrDeployGeneralisedIncentives(incentiveVersion);
 
             // write the deployment
-            string memory obj = chain;
-            string memory finalJson = vm.serializeAddress(obj, "incentive", incentiveAddress);
-            vm.writeJson(finalJson, pathToInterfacesConfig, string.concat(".", chain, ".", incentiveVersion));
+            vm.writeJson(Strings.toHexString(uint160(address(incentiveAddress)), 20), pathToInterfacesConfig, string.concat(".", chain, ".", incentiveVersion, ".incentive"));
 
             incentive_versions.push(incentiveVersion);
             incentive_addresses.push(incentiveAddress);
@@ -83,7 +88,7 @@ contract DeployInterfaces is Script {
             CatalystGARPInterface interfaceAddress = new CatalystGARPInterface(incentiveAddress);
 
             // Write
-            vm.writeJson(Strings.toHexString(uint160(address(interfaceAddress)), 20), pathToInterfacesConfig, string.concat(".", chain, ".", incentiveVersion));
+            vm.writeJson(Strings.toHexString(uint160(address(interfaceAddress)), 20), pathToInterfacesConfig, string.concat(".", chain, ".", incentiveVersion, ".interface"));
         }
     }
 
