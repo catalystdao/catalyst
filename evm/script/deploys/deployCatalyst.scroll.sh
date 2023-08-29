@@ -1,7 +1,6 @@
-CHAIN_NAME="scroll"
-WGAS="WETH"
-RPC_URL="http://127.0.0.1:8545"
-
+set -o allexport
+source .scroll.env
+set +o allexport
 
 forge script FundAddresses --fork-url=$RPC_URL --broadcast
 

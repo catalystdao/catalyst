@@ -1,7 +1,6 @@
-CHAIN_NAME="canto"
-WGAS="WCANTO"
-RPC_URL="http://127.0.0.1:8546"
-
+set -o allexport
+source .canto.env
+set +o allexport
 
 forge script FundAddresses --fork-url=$RPC_URL --broadcast
 

@@ -1,7 +1,6 @@
-CHAIN_NAME="cronos"
-WGAS="WCRO"
-RPC_URL="http://127.0.0.1:8547"
-
+set -o allexport
+source .cronos.env
+set +o allexport
 
 forge script FundAddresses --fork-url=$RPC_URL --broadcast
 

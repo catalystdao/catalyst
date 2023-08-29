@@ -7,6 +7,7 @@ import { Permit2 } from "../lib/permit2/src/Permit2.sol";
 import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
 import { Token } from "../test/mocks/token.sol";
 import { IWETH } from "./IWETH.sol";
+import { ICatalystV1Vault } from "../src/ICatalystV1Vault.sol";
 
 // Math libs
 import { CatalystMathVol } from "../src/registry/CatalystMathVol.sol";
@@ -61,6 +62,7 @@ contract DeployVaults is Script {
     address CCI;
 
     string chain;
+    string config_chain;
     bytes32 chainIdentifier;
 
     error NoWrappedGasTokenFound();
@@ -147,7 +149,7 @@ contract DeployVaults is Script {
 
         // Get the chain config
         chain = vm.envString("CHAIN_NAME");
-        string memory config_chain = vm.readFile(pathToChainConfig);
+        config_chain = vm.readFile(pathToChainConfig);
         chainIdentifier = abi.decode(config_chain.parseRaw(string.concat(".", chain, ".chainIdentifier")), (bytes32));
 
         // Get the contracts
@@ -185,7 +187,40 @@ contract DeployVaults is Script {
         uint256 deployerPrivateKey = vm.envUint("VAULT_KEY");
         vm.startBroadcast(deployerPrivateKey);
 
-        deployAllVaults();
+        // Get all pool
+        string[] memory pools = vm.parseJsonKeys(config_vault, "$");
+        for (uint256 i = 0; i < pools.length; ++i) {
+            string memory pool_name = pools[i];
+            // Check if the vault has a (this chain) component.
+            if (!vm.keyExists(config_vault, string.concat(".", pool_name, ".", chain))) continue;
+
+            address vault_address = vm.parseJsonAddress(config_vault, string.concat(".", pool_name, ".", chain, ".address"));
+            require(vault_address != address(0), "local vault not deployed");
+
+            string[] memory pool_chains = vm.parseJsonKeys(config_vault, string.concat(".", pool_name));
+
+            for (uint256 ii = 0; ii < pool_chains.length; ++ii) {
+                // get all other chains
+                string memory other_chain = pool_chains[ii];
+
+                // skip this chain
+                if (keccak256(abi.encodePacked(other_chain)) == keccak256(abi.encodePacked(chain))) continue;
+                if (keccak256(abi.encodePacked(other_chain)) == keccak256(abi.encodePacked("amplification"))) continue;
+
+                address other_vault = vm.parseJsonAddress(config_vault, string.concat(".", pool_name, ".", other_chain, ".address"));
+                require(other_vault != address(0), "remote vault not deployed");
+
+                bytes32 other_chainIdentifier = abi.decode(config_chain.parseRaw(string.concat(".", other_chain, ".chainIdentifier")), (bytes32));
+
+                // set connections
+                ICatalystV1Vault(vault_address).setConnection(
+                    other_chainIdentifier,
+                    abi.encodePacked(uint8(20), bytes32(0), abi.encode(other_vault)),
+                    true
+                );
+            }
+        }
+        // set connections
 
         vm.stopBroadcast();
     }
