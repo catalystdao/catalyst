@@ -674,7 +674,7 @@ mod test_volatile_receive_asset {
 
 
         // Verify the 'calldata' target is executed
-        let mock_target_event = response.events[5].clone();
+        let mock_target_event = response.events[response.events.len()-1].clone(); // Mock target event is the last one
         let observed_action = get_response_attribute::<String>(mock_target_event.clone(), "action").unwrap();
         assert_eq!(
             observed_action,
