@@ -46,13 +46,6 @@ struct JsonContracts {
 contract DeployVaults is Script {
     using stdJson for string;
 
-    event Debug(uint256 a);
-    event Debug(uint256[] a);
-    event Debug(address a);
-    event Debug(address[] a);
-    event Debug(string a);
-    event Debug(string[] a);
-
     string pathToVaultConfig;
     string config_vault;
 
@@ -92,15 +85,6 @@ contract DeployVaults is Script {
         for (uint256 i = 0; i < assets.length; ++i) {
             Token(assets[i]).approve(address(factory), init_balances[i]);
         }
-        emit Debug(vaultTemplate);
-        emit Debug(assets);
-        emit Debug(init_balances);
-        emit Debug(weights);
-        emit Debug(amp);
-        emit Debug(vaultFee);
-        emit Debug(name);
-        emit Debug(symbol);
-        emit Debug(chainInterface);
 
         vaultAddress = factory.deployVault(vaultTemplate, assets, init_balances, weights, amp, vaultFee, name, symbol, chainInterface);
     }
