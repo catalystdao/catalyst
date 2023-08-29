@@ -482,6 +482,13 @@ mod test_volatile_deposit{
 
 
         // Make sure the transaction fails
+        assert!(response_result.is_err());
+        #[cfg(feature="asset_native")]
+        assert_eq!(
+            response_result.err().unwrap().root_cause().to_string(),
+            format!("Received asset is invalid: {}{} not received", deposit_amounts[0], vault_tokens[0].denom)
+        );
+        #[cfg(feature="asset_cw20")]
         assert_eq!(
             response_result.err().unwrap().root_cause().to_string(),
             "No allowance for this account".to_string()
