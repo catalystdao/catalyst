@@ -63,7 +63,7 @@ contract DeployCatalyst is Script {
         permit2 = contracts.permit2;
         if (permit2 != address(0)) return permit2;
 
-        permit2 = address(new Permit2());
+        permit2 = address(new Permit2{salt: bytes32(0)}());
         contracts.permit2 = permit2;
     }
 
@@ -136,35 +136,28 @@ contract DeployCatalyst is Script {
         address wrappedGas = getGasToken();
 
 
-        vm.stopBroadcast();
-        
-        vm.startBroadcast(vm.envUint("CATALYST_ROUTER_KEY"));
         // Router
         CatalystRouter router = CatalystRouter(payable(contracts.router));
         if (address(router) == address(0)) {
-            router = new CatalystRouter(RouterParameters({
+            router = new CatalystRouter{salt: bytes32(0)}(RouterParameters({
                 permit2: address(permit2),
                 weth9: address(wrappedGas)
             }));
         }
         contracts.router = address(router);
 
-        vm.stopBroadcast();
-
-        vm.startBroadcast(vm.envUint("CATALYST_KEY"));
-
         // Deploy Registry
         
         CatalystDescriber catalyst_describer = CatalystDescriber(contracts.describer);
         if (address(catalyst_describer) == address(0)) {
-            catalyst_describer = new CatalystDescriber();
+            catalyst_describer = new CatalystDescriber{salt: bytes32(0)}();
         }
         contracts.describer = address(catalyst_describer);
 
         {
             CatalystDescriberRegistry describer_registry = CatalystDescriberRegistry(contracts.describer_registry); 
             if (address(describer_registry) == address(0)) {
-                describer_registry = new CatalystDescriberRegistry();
+                describer_registry = new CatalystDescriberRegistry{salt: bytes32(0)}();
                 fillDescriber = true;
             }
             contracts.describer_registry = address(describer_registry);
@@ -201,7 +194,7 @@ contract DeployCatalyst is Script {
         string memory config_token = vm.readFile(pathToTokenConfig);
         WGAS = abi.decode(config_token.parseRaw(string.concat(".", chain, ".", vm.envString("WGAS"))), (address));
 
-        uint256 deployerPrivateKey = vm.envUint("CATALYST_KEY");
+        uint256 deployerPrivateKey = vm.envUint("CATALYST_DEPLOYER");
         vm.startBroadcast(deployerPrivateKey);
 
         deployAllContracts();

@@ -172,7 +172,7 @@ contract DeployVaults is Script {
     function run() external {
         setup();
 
-        uint256 deployerPrivateKey = vm.envUint("VAULT_KEY");
+        uint256 deployerPrivateKey = vm.envUint("CATALYST_DEPLOYER");
         vm.startBroadcast(deployerPrivateKey);
 
         deployAllVaults();
@@ -184,7 +184,7 @@ contract DeployVaults is Script {
     function setConnections() external {
         setup();
 
-        uint256 deployerPrivateKey = vm.envUint("VAULT_KEY");
+        uint256 deployerPrivateKey = vm.envUint("CATALYST_DEPLOYER");
         vm.startBroadcast(deployerPrivateKey);
 
         // Get all pool

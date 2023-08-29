@@ -36,17 +36,9 @@ contract DeployInterfaces is Script {
         if (keccak256(abi.encodePacked(version)) == keccak256(abi.encodePacked("MOCK"))) {
             address signer = vm.envAddress("MOCK_SIGNER");
 
-            uint256 pv_key = vm.envUint("MOCK_KEY");
-            vm.startBroadcast(pv_key);
+            incentive = address(new IncentivizedMockEscrow{salt: bytes32(0)}(chainIdentifier, signer));
 
-            incentive = address(new IncentivizedMockEscrow(chainIdentifier, signer));
-
-            vm.stopBroadcast();
         } else if (keccak256(abi.encodePacked(version)) == keccak256(abi.encodePacked("Wormhole"))) {
-            uint256 pv_key = vm.envUint("WORMHOLE_KEY");
-            vm.startBroadcast(pv_key);
-            // TODO:
-            vm.stopBroadcast();
         } else {
             revert IncentivesIdNotFound();
         }
@@ -85,7 +77,7 @@ contract DeployInterfaces is Script {
             address incentiveAddress = incentive_addresses[i];
 
             // otherwise we need to deploy it
-            CatalystGARPInterface interfaceAddress = new CatalystGARPInterface(incentiveAddress);
+            CatalystGARPInterface interfaceAddress = new CatalystGARPInterface{salt: bytes32(0)}(incentiveAddress);
 
             // Write
             vm.writeJson(Strings.toHexString(uint160(address(interfaceAddress)), 20), pathToInterfacesConfig, string.concat(".", chain, ".", incentiveVersion, ".interface"));
@@ -103,12 +95,10 @@ contract DeployInterfaces is Script {
         string memory config_chain = vm.readFile(pathToChainConfig);
         chainIdentifier = abi.decode(config_chain.parseRaw(string.concat(".", chain, ".chainIdentifier")), (bytes32));
 
+        uint256 pv_key = vm.envUint("CATALYST_DEPLOYER");
+        vm.startBroadcast(pv_key);
 
         getOrDeployAllIncentives();
-
-
-        uint256 deployerPrivateKey = vm.envUint("CATALYST_INTERFACES_KEY");
-        vm.startBroadcast(deployerPrivateKey);
 
         getOrDeployAllCCIs();
 

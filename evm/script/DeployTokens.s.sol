@@ -28,7 +28,7 @@ contract DeployTokens is Script {
         token = abi.decode(config_token.parseRaw(string.concat(".", chain, ".", name, ".", "address")), (address));
         if (token == address(0)) {
             token = address(new Token(name, symbol, decimals, initialSupply));
-            Token(token).transfer(vm.envAddress("VAULT_ADDRESS"), Token(token).totalSupply());
+            Token(token).transfer(vm.envAddress("CATALYST_ADDRESS"), Token(token).totalSupply());
 
             vm.writeJson(Strings.toHexString(uint160(token), 20), pathToTokenConfig, string.concat(".", chain, ".", name, ".address"));
         }
@@ -60,7 +60,7 @@ contract DeployTokens is Script {
         // Get wrapped gas
         WGAS_NAME =  vm.envString("WGAS");
 
-        uint256 deployerPrivateKey = vm.envUint("TOKENS_KEY");
+        uint256 deployerPrivateKey = vm.envUint("CATALYST_DEPLOYER");
         vm.startBroadcast(deployerPrivateKey);
 
         deployAllTokens();
