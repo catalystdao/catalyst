@@ -44,6 +44,10 @@ impl CustomTestAsset<NativeAsset> for TestNativeAsset {
 
     fn transfer(&self, app: &mut App, amount: Uint128, account: Addr, recipient: impl Into<String>) {
 
+        if amount.is_zero() {
+            return;
+        }
+
         app.execute(
             account,
             CosmosMsg::Bank(cosmwasm_std::BankMsg::Send {

@@ -69,6 +69,7 @@ impl CustomTestEnv<NativeAsset, TestNativeAsset> for TestNativeAssetEnv {
         // Get funds
         let funds = send_assets.iter()
             .zip(send_amounts)
+            .filter(|(_, amount)| !amount.is_zero())    // Bank module does not allow zero-valued amounts
             .map(|(asset, amount)| {
                 Coin::new(amount.u128(), asset.denom.clone())
             })

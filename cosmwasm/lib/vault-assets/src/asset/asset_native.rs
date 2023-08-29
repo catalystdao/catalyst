@@ -33,29 +33,24 @@ impl<'a> VaultAssetsTrait<'a, NativeAsset> for NativeVaultAssets {
 
     fn receive_assets(&self, _env: &Env, info: &MessageInfo, amounts: Vec<Uint128>) -> Result<Vec<CosmosMsg>, AssetError> {
         
-        //NOTE: This function assumes that the assets contained within the `NativeVaultAssets` struct are unique.
-
-        let received_funds_count = info.funds.len();
-        let assets_count = self.get_assets().len();
+        //!NOTE: This function assumes that the assets contained within the `NativeVaultAssets` struct are unique.
         
-        if received_funds_count < assets_count {
-            return Err(AssetError::ReceivedAssetCountShortage {});
-        }
-        else if received_funds_count > assets_count {
-            return Err(AssetError::ReceivedAssetCountSurplus {});
-        }
-        
-        if amounts.len() != assets_count {
+        if amounts.len() != self.get_assets().len() {
             return Err(AssetError::InvalidParameters {
                 reason: "Invalid 'amounts' count when receiving assets.".to_string()
             })
         }
+
+        let mut non_zero_assets_count = 0;
         
         //TODO better way to do this?
         self.get_assets()
             .iter()
             .zip(amounts)
+            .filter(|(_, amount)| !amount.is_zero())    // Bank transfers do not allow zero-valued amounts
             .try_for_each(|(asset, amount)| -> Result<(), AssetError> {
+
+                non_zero_assets_count += 1;
 
                 let received_coin = info.funds.iter().find(|coin| {
                     coin.denom == asset.denom
@@ -78,6 +73,16 @@ impl<'a> VaultAssetsTrait<'a, NativeAsset> for NativeVaultAssets {
                 }
             })?;
 
+            let received_funds_count = info.funds.len();
+
+            // NOTE: There is no need to check whether 'received_funds_count < non_zero_assets_count',
+            // as in that case the check above would have failed for at least one of the expected assets
+            // (assuming all assets contained are unique).
+        
+            if received_funds_count > non_zero_assets_count {
+                return Err(AssetError::ReceivedAssetCountSurplus {});
+            }
+
         Ok(vec![])
     }
 
@@ -92,6 +97,7 @@ impl<'a> VaultAssetsTrait<'a, NativeAsset> for NativeVaultAssets {
         let cosmos_messages = self.get_assets()
             .iter()
             .zip(amounts)
+            .filter(|(_, amount)| !amount.is_zero())    // Bank transfers do not allow zero-valued amounts
             .map(|(asset, amount)| {
                 CosmosMsg::Bank(BankMsg::Send {
                     to_address: recipient.clone(),
@@ -167,6 +173,15 @@ impl AssetTrait for NativeAsset {
     }
 
     fn receive_asset(&self, _env: &Env, info: &MessageInfo, amount: Uint128) -> Result<Option<CosmosMsg>, AssetError> {
+
+        if amount.is_zero() {
+            if info.funds.len() != 0 {
+                return Err(AssetError::ReceivedAssetCountSurplus {});
+            }
+            
+            return Ok(None);
+        }
+
         match info.funds.len() {
             0 => Err(AssetError::ReceivedAssetCountShortage {}),
             1 => {
@@ -186,6 +201,11 @@ impl AssetTrait for NativeAsset {
     }
 
     fn send_asset(&self, _env: &Env, amount: Uint128, recipient: String) -> Result<Option<CosmosMsg>, AssetError> {
+
+        if amount.is_zero() {
+            return Ok(None);
+        }
+
         Ok(Some(CosmosMsg::Bank(BankMsg::Send {
             to_address: recipient,
             amount: vec![Coin::new(amount.u128(), self.denom.clone())]
