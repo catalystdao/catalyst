@@ -126,7 +126,10 @@ impl AssetTrait for NativeAsset {
 
     fn load(deps: &Deps, asset_ref: &str) -> Result<Self, AssetError> {
         
-        let denom = ASSETS_ALIASES.load(deps.storage, asset_ref)?;
+        let denom = match ASSETS_ALIASES.load(deps.storage, asset_ref) {
+            Ok(denom) => denom,
+            Err(_) => return Err(AssetError::AssetNotFound {}),
+        };
 
         Ok(NativeAsset {
             denom,
