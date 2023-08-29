@@ -65,6 +65,8 @@ contract DeployVaults is Script {
     string config_chain;
     bytes32 chainIdentifier;
 
+    string config_interfaces;
+
     error NoWrappedGasTokenFound();
 
     function getToken(string memory name, string memory symbol, uint8 decimals, uint256 initialSupply) internal returns(address token) {
@@ -164,7 +166,7 @@ contract DeployVaults is Script {
         // Get vaults
         config_vault = vm.readFile(pathToVaultConfig);
 
-        string memory config_interfaces = vm.readFile(pathToInterfacesConfig);
+        config_interfaces = vm.readFile(pathToInterfacesConfig);
         CCI = vm.parseJsonAddress(config_interfaces, string.concat(".", chain, ".", vm.envString("CCI_VERSION"), ".interface"));
     }
 
@@ -186,6 +188,37 @@ contract DeployVaults is Script {
 
         uint256 deployerPrivateKey = vm.envUint("CATALYST_DEPLOYER");
         vm.startBroadcast(deployerPrivateKey);
+
+        string[] memory chains = vm.parseJsonKeys(config_interfaces, "$");
+        string[] memory bridge_versions = vm.parseJsonKeys(config_interfaces, string.concat(".", chain));
+        for (uint256 ii = 0; ii < bridge_versions.length; ++ii) {
+            string memory version = bridge_versions[ii];
+
+        address localCCI = vm.parseJsonAddress(config_interfaces, string.concat(".", chain, ".", version, ".interface"));
+        require(localCCI != address(0), "CCI not deployed");
+
+        // Set CCI connections.
+            for (uint256 i = 0; i < chains.length; ++i) {
+                string memory other_chain = chains[i];
+                if (keccak256(abi.encodePacked(other_chain)) == keccak256(abi.encodePacked(chain))) continue;
+                if (!vm.keyExists(config_interfaces, string.concat(".", other_chain, ".", version))) continue;
+
+                bytes32 other_chainIdentifier = abi.decode(config_chain.parseRaw(string.concat(".", other_chain, ".chainIdentifier")), (bytes32));
+
+                address remoteCCI = vm.parseJsonAddress(config_interfaces, string.concat(".", other_chain, ".", version, ".interface"));
+                address remoteGI = vm.parseJsonAddress(config_interfaces, string.concat(".", other_chain, ".", version, ".incentive"));
+                if (remoteCCI == address(0)) continue;
+                if (remoteCCI == address(0)) continue;
+
+                // Check if a connection has already been set.
+                bytes memory read_remote_cci = CatalystGARPInterface(localCCI).chainIdentifierToDestinationAddress(other_chainIdentifier);
+                if (keccak256(read_remote_cci) != keccak256(bytes(hex""))) continue;
+
+                // set
+                CatalystGARPInterface(localCCI).connectNewChain(other_chainIdentifier, abi.encodePacked(uint8(20), bytes32(0), abi.encode(remoteCCI)), abi.encode(remoteGI));
+
+            }
+        }
 
         // Get all pool
         string[] memory pools = vm.parseJsonKeys(config_vault, "$");

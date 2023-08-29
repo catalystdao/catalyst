@@ -1,5 +1,9 @@
 forge compile
 
+set -o allexport
+source ../../.env
+set +o allexport
+
 ./deployCatalyst.canto.sh &
 scroll=$!
 ./deployCatalyst.cronos.sh &

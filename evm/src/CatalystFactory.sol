@@ -27,8 +27,8 @@ contract CatalystFactory is Ownable, ICatalystV1FactoryEvents {
     /// @notice Default governance fee. When a vault is created, this is the governance fee applied to that vault.
     uint256 public _defaultGovernanceFee;
 
-    constructor(uint256 defaultGovernanceFee) {
-        setDefaultGovernanceFee(defaultGovernanceFee);
+    constructor(address defaultOwner) {
+        _transferOwnership(defaultOwner);
     }
 
     function setDefaultGovernanceFee(uint256 fee) public onlyOwner {

@@ -50,7 +50,7 @@ contract TestCommon is Test, Bytes65, IMessageEscrowStructs, TestTokenFunctions 
 
         _INCENTIVE.refundGasTo = makeAddr("refundGasTo");
 
-        catFactory = new CatalystFactory(0);
+        catFactory = new CatalystFactory(address(this));
 
         volatileMathlib = new CatalystMathVol();
         volatileTemplate = new CatalystVaultVolatile(address(catFactory), address(volatileMathlib));
@@ -60,7 +60,7 @@ contract TestCommon is Test, Bytes65, IMessageEscrowStructs, TestTokenFunctions 
 
         GARP = new IncentivizedMockEscrow(DESTINATION_IDENTIFIER, SIGNER);
 
-        CCI = new CatalystGARPInterface(address(GARP));
+        CCI = new CatalystGARPInterface(address(GARP), address(this));
     }
 
     function deployVault (

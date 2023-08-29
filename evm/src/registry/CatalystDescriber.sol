@@ -51,6 +51,10 @@ contract CatalystDescriber is Ownable {
 
     mapping(bytes32 => int256) internal _vault_abi_version;
 
+    constructor(address defaultOwner) {
+        _transferOwnership(defaultOwner);
+    }
+
 
     //--- Whitelisted Templates ---//
 

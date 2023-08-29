@@ -50,9 +50,10 @@ contract CatalystGARPInterface is Ownable, ICrossChainReceiver, Bytes65, IMessag
 
     mapping(bytes32 => uint48) public minGasFor;
 
-    constructor(address GARP_) {
+    constructor(address GARP_, address defaultOwner) {
         require(address(GARP_) != address(0));  // dev: GARP_ cannot be zero address
         GARP = IIncentivizedMessageEscrow(GARP_);
+        _transferOwnership(defaultOwner);
     }
 
     /// @notice Allow updating of the minimum gas limit.

@@ -55,15 +55,13 @@ contract MineSalt is Script, StdAssertions {
         salt = bytes32(vm.parseUint(saltStr));
     }
 
-    function factory() public {
-        uint256 baseGovFee = 0;
-
-        bytes32 initCodeHash = keccak256(abi.encodePacked(type(CatalystFactory).creationCode, abi.encode(baseGovFee)));
+    function factory() public returns(address actualAddress) {
+        bytes32 initCodeHash = keccak256(abi.encodePacked(type(CatalystFactory).creationCode, abi.encode(vm.envAddress("CATALYST_ADDRESS"))));
         (bytes32 salt, address expectedAddress) = mineSalt(initCodeHash, "000000");
 
         // DEPLOY
         vm.startBroadcast();
-        address actualAddress = address(new CatalystFactory{salt: bytes32(salt)}(baseGovFee));
+        actualAddress = address(new CatalystFactory{salt: bytes32(salt)}(vm.envAddress("CATALYST_ADDRESS")));
         vm.stopBroadcast();
 
         assertEq(actualAddress, expectedAddress);
@@ -71,13 +69,13 @@ contract MineSalt is Script, StdAssertions {
         console2.log("salt", uint256(salt));
     }
 
-    function mathvol() public {
+    function mathvol() public returns(address actualAddress) {
         bytes32 initCodeHash = keccak256(abi.encodePacked(type(CatalystMathVol).creationCode));
-        (bytes32 salt, address expectedAddress) = mineSalt(initCodeHash, "0ca70");
+        (bytes32 salt, address expectedAddress) = mineSalt(initCodeHash, "000");
 
         // DEPLOY
         vm.startBroadcast();
-        address actualAddress = address(new CatalystMathVol{salt: bytes32(salt)}());
+        actualAddress = address(new CatalystMathVol{salt: bytes32(salt)}());
         vm.stopBroadcast();
 
         assertEq(actualAddress, expectedAddress);
@@ -85,13 +83,13 @@ contract MineSalt is Script, StdAssertions {
         console2.log("salt", uint256(salt));
     }
 
-    function mathamp() public {
+    function mathamp() public returns(address actualAddress) {
         bytes32 initCodeHash = keccak256(abi.encodePacked(type(CatalystMathAmp).creationCode));
-        (bytes32 salt, address expectedAddress) = mineSalt(initCodeHash, "0ca70");
+        (bytes32 salt, address expectedAddress) = mineSalt(initCodeHash, "000");
 
         // DEPLOY
         vm.startBroadcast();
-        address actualAddress = address(new CatalystMathAmp{salt: bytes32(salt)}());
+        actualAddress = address(new CatalystMathAmp{salt: bytes32(salt)}());
         vm.stopBroadcast();
 
         assertEq(actualAddress, expectedAddress);
@@ -99,13 +97,13 @@ contract MineSalt is Script, StdAssertions {
         console2.log("salt", uint256(salt));
     }
 
-    function templatevolatile() public {
-        bytes32 initCodeHash = keccak256(abi.encodePacked(type(CatalystVaultVolatile).creationCode, abi.encode(address(0x000000acd176D987fCf664f43491684760B90858), address(0x0ca7066880cD2F03d886461812fBf7544df56B19))));
-        (bytes32 salt, address expectedAddress) = mineSalt(initCodeHash, "000000");
+    function templatevolatile(address factory_address, address math_lib) public returns(address actualAddress) {
+        bytes32 initCodeHash = keccak256(abi.encodePacked(type(CatalystVaultVolatile).creationCode, abi.encode(factory_address, math_lib)));
+        (bytes32 salt, address expectedAddress) = mineSalt(initCodeHash, "00000000");
 
         // DEPLOY
         vm.startBroadcast();
-        address actualAddress = address(new CatalystVaultVolatile{salt: bytes32(salt)}(address(0x000000acd176D987fCf664f43491684760B90858), address(0x0ca7066880cD2F03d886461812fBf7544df56B19)));
+        actualAddress = address(new CatalystVaultVolatile{salt: bytes32(salt)}(factory_address, math_lib));
         vm.stopBroadcast();
 
         assertEq(actualAddress, expectedAddress);
@@ -113,13 +111,13 @@ contract MineSalt is Script, StdAssertions {
         console2.log("salt", uint256(salt));
     }
 
-    function templateamplified() public {
-        bytes32 initCodeHash = keccak256(abi.encodePacked(type(CatalystVaultAmplified).creationCode, abi.encode(address(0x000000acd176D987fCf664f43491684760B90858), address(0x0ca70b3718EF58e3be946f5D09a7E8F44CB934ac))));
-        (bytes32 salt, address expectedAddress) = mineSalt(initCodeHash, "000000");
+    function templateamplified(address factory_address, address math_lib) public returns(address actualAddress) {
+        bytes32 initCodeHash = keccak256(abi.encodePacked(type(CatalystVaultAmplified).creationCode, abi.encode(factory_address, math_lib)));
+        (bytes32 salt, address expectedAddress) = mineSalt(initCodeHash, "00000000");
 
         // DEPLOY
         vm.startBroadcast();
-        address actualAddress = address(new CatalystVaultAmplified{salt: bytes32(salt)}(address(0x000000acd176D987fCf664f43491684760B90858), address(0x0ca70b3718EF58e3be946f5D09a7E8F44CB934ac)));
+        actualAddress = address(new CatalystVaultAmplified{salt: bytes32(salt)}(factory_address, math_lib));
         vm.stopBroadcast();
 
         assertEq(actualAddress, expectedAddress);
@@ -128,10 +126,10 @@ contract MineSalt is Script, StdAssertions {
     }
 
     function run() public {
-        // factory(); is 0x000000acd176D987fCf664f43491684760B90858 with salt 114709421156958415186027217025547827737296622131151675381220287808246552851098
-        // mathvol(); is 0x0ca7066880cD2F03d886461812fBf7544df56B19 with salt 97319872752460098323199248802066309034939976127668417001544311163263852915521
-        // mathamp(); is 0x0ca70b3718EF58e3be946f5D09a7E8F44CB934ac with salt 63722654287578236768624707543115016453003725919344306794241604926482092720364
-        // templatevolatile(); is 0x0000004f4ac7F19dD840C6f032A1F2bD49FCD253 with salt 60662232750751397629041053606497919570818143080516418923077142053432447907648
-        // templateamplified(); is 0x0000007802DdBEA102743a705306D9377303259a with salt 62066348516751541895847183559269671012091941168857148659880307387008083129007
+        address factory_address = address(0x000000833bCE31E92256B0495F689C960Ab43ecF); // factory(); salt: 10939276613522903274843397318942176140916222402700924666769304012145111727455
+        address math_lib_vol = address(0x000B5ea158396635B4baA3d4434cAC1b7f21a27A); // mathvol(); salt: 74033924058872986406176265824008880344335346982926356649690178493693274618638
+        address math_lib_amp = address(0x00079a894bcB0E6DaBc277F42C6856d63Ab63dDd); // mathamp(); salt: 18470954962426965460301953922945832700396418726579815624870618255990400962467
+        templatevolatile(factory_address, math_lib_vol);
+        templateamplified(factory_address, math_lib_amp);
     }
 }
