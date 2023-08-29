@@ -6,8 +6,10 @@ from hashlib import sha256
 from time import sleep
 
 import web3
-from eth_abi.abi import encode_abi
-from eth_abi.packed import encode_abi_packed
+from eth_abi import encode
+from eth_account import Account
+from eth_account.signers.local import LocalAccount
+from eth_abi.packed import encode_packed
 from web3 import Web3
 from web3.middleware import geth_poa
 from poa_signer import MessageSigner
@@ -21,7 +23,7 @@ def decode_chain_from_channel(channelid):
 
 
 def convert_64_bytes_address(address) -> bytes:
-    return encode_abi_packed(
+    return encode_packed(
         ["uint8", "bytes32", "bytes32"], [20, 0, address]
     )
     
@@ -39,18 +41,18 @@ class PoARelayer(MessageSigner):
         chains={
             1: {
                 "name": "scroll",
-                "confirmations": 20,
-                "url": os.environ["SCROLL_RPC"],
-                "middleware": geth_poa,
-                "GI_contract": "",
-                "key": os.environ["key"]
+                "confirmations": 0,
+                "url": "http://127.0.0.1:8546",  # os.environ["SCROLL_RPC"],
+                # "middleware": geth_poa,
+                "GI_contract": Web3.to_checksum_address("0x336615f193affdbeffcaeb2cc61d0dead286e242"),
+                "key": os.environ["PRIVATE_KEY_ROUTER"]
             },
             2: {
-                "name": "qwert",
-                "confirmations": 20,
-                "url": os.environ["CRONOS_RPC"],
-                "GI_contract": "",
-                "key": os.environ["key"]
+                "name": "canto",
+                "confirmations": 0,
+                "url": "http://127.0.0.1:8545",  # os.environ["CRONOS_RPC"],
+                "GI_contract": Web3.to_checksum_address("0x4fb0f5fb6c4c0b0b133e958c04465a27aef5bc60"),
+                "key": os.environ["PRIVATE_KEY_ROUTER"]
             }
         }
     ):
@@ -67,8 +69,8 @@ class PoARelayer(MessageSigner):
 
             self.chains[chain]["w3"] = w3
             self.chains[chain]["GI"] = w3.eth.contract(address=self.chains[chain]["GI_contract"], abi=IncentivizedMockEscrow_abi)
-            self.chains[chain]["relayer"] = w3.eth.account.from_key(self.chains[chain]["PK"])
-            self.chains[chain]["nonce"] = w3.eth.getTransactionCount(self.chains[chain]["relayer"])
+            self.chains[chain]["relayer"] = Account.from_key(self.chains[chain]["key"])
+            self.chains[chain]["nonce"] = w3.eth.get_transaction_count(self.chains[chain]["relayer"].address)
         
     def checkConfirmations(self, chainId: int, confirmations: int) -> bool:
         return self.chains[chainId]["confirmations"] >= confirmations
@@ -91,7 +93,7 @@ class PoARelayer(MessageSigner):
                 emitter = log["address"]
                 message = log["args"]["message"]
                 
-                newMessage = encode_abi_packed(["bytes", "bytes"], [encode_abi(["address"], [emitter]), bytes.fromhex(message)]).hex()
+                newMessage = encode_packed(["bytes", "bytes"], [encode(["address"], [emitter]), bytes.fromhex(message)]).hex()
                 
                 sig = self.signMessage(
                     newMessage
@@ -100,14 +102,14 @@ class PoARelayer(MessageSigner):
                 signatures.append(
                     [
                         newMessage,
-                        encode_abi(["uint8", "bytes32", "bytes32"], [sig.v, sig.r, sig.s])
+                        encode(["uint8", "bytes32", "bytes32"], [sig.v, sig.r, sig.s])
                     ]
                 )
         
         return signatures
 
     def fetch_logs(self, chain, fromBlock, toBlock):
-        logs = self.chains[chain]["GI"].events.Message.getLogs(
+        logs = self.chains[chain]["GI"].events.Message.get_logs(
             fromBlock=fromBlock, toBlock=toBlock
         )
         return logs
@@ -127,7 +129,7 @@ class PoARelayer(MessageSigner):
 
         # Execute the transaction on the target side:
         tx = GI.functions.processMessage(
-            signature[1], signature[0], encode_abi(["address"], [relayer_address])
+            signature[1], signature[0], encode(["address"], [relayer_address])
         ).build_transaction(
             {
                 "from": relayer_address,
@@ -151,9 +153,9 @@ class PoARelayer(MessageSigner):
         blocknumbers = {}
 
         for chain in chains:
-            blocknumber = self.chains[chain]["w3"].eth.blockNumber
+            blocknumber = self.chains[chain]["w3"].eth.block_number
             logging.info(
-                f"Loaded {chain} at block: {blocknumber} with relayer {self.chains[chain]['acct'].address}"
+                f"Loaded {chain} at block: {blocknumber} with relayer {self.chains[chain]['relayer'].address}"
             )
             blocknumbers[chain] = blocknumber
 
@@ -161,7 +163,7 @@ class PoARelayer(MessageSigner):
             for chain in chains:
                 w3 = self.chains[chain]["w3"]
                 fromBlock = blocknumbers[chain]
-                toBlock = w3.eth.blockNumber
+                toBlock = w3.eth.block_number
 
                 if fromBlock <= toBlock:
                     blocknumbers[chain] = toBlock + 1
@@ -180,22 +182,16 @@ class PoARelayer(MessageSigner):
 def main():
     parser = argparse.ArgumentParser("proxy relayer")
     parser.add_argument(
-        "config_location", nargs="?", help="The path to the config location", type=str
-    )
-    parser.add_argument(
         "log_location", nargs="?", help="The log location. If not set, print to std-out.", type=str
     )
     args = parser.parse_args()
-    config_location = "./scripts/deploy_config.json"
-    if args.config_location:
-        config_location = args.config_location
     if args.log_location:
         # setup log
         logging.basicConfig(level=logging.INFO, filename=args.log_location, filemode="a")
     else:
         logging.basicConfig(level=logging.INFO)
 
-    relayer = PoARelayer(config_name=config_location)
+    relayer = PoARelayer()
     relayer.run()
 
 
