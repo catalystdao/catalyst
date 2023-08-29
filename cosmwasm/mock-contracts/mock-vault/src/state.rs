@@ -1,5 +1,4 @@
-use cosmwasm_std::{Addr, Uint128, DepsMut, Env, MessageInfo, Response, Uint64};
-use cw20::{Cw20QueryMsg, BalanceResponse};
+use cosmwasm_std::{Uint128, DepsMut, Env, MessageInfo, Response, Uint64};
 use cw20_base::contract::execute_mint;
 use catalyst_vault_common::{
     state::{MAX_ASSETS, WEIGHTS, INITIAL_MINT_AMOUNT, FACTORY}, ContractError, event::{deposit_event, cw20_response_to_standard_event}, asset::{Asset, VaultAssets, VaultAssetsTrait, AssetTrait},
@@ -22,7 +21,7 @@ pub fn initialize_swap_curves(
     }
 
     // Make sure this function may only be invoked once (check whether assets have already been saved)
-    if VaultAssets::load_assets(&deps.as_ref()).is_ok() {
+    if VaultAssets::load_refs(&deps.as_ref()).is_ok() {
         return Err(ContractError::Unauthorized {});
     }
 
@@ -41,7 +40,7 @@ pub fn initialize_swap_curves(
     let assets_balances = assets.iter()
         .map(|asset| {
 
-            let balance = asset.query_prior_balance(&deps.as_ref(), Some(&info), env.contract.address.to_string())?;
+            let balance = asset.query_prior_balance(&deps.as_ref(), &env, Some(&info))?;
 
             if balance.is_zero() {
                 return Err(ContractError::InvalidZeroBalance {});
@@ -55,7 +54,7 @@ pub fn initialize_swap_curves(
     // NOTE: there is no need to validate the assets addresses, as invalid asset addresses
     // would have caused the previous 'asset balance' check to fail.
     let vault_assets = VaultAssets::new(assets);
-    vault_assets.save_assets(deps)?;
+    vault_assets.save(deps)?;
 
     let asset_refs = vault_assets.get_assets_refs();
 

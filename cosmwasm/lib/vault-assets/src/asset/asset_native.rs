@@ -13,6 +13,7 @@ impl<'a> VaultAssetsTrait<'a, NativeAsset> for NativeVaultAssets {
 
     //TODO rename new_unchecked?
     fn new(assets: Vec<NativeAsset>) -> Self {
+        //TODO check unique
         Self(assets)
     }
 
@@ -26,8 +27,16 @@ impl<'a> VaultAssetsTrait<'a, NativeAsset> for NativeVaultAssets {
             .map_err(|err| err.into())
     }
 
-    fn save_refs(deps: &mut DepsMut, asset_refs: &Vec<String>) -> Result<(), AssetError> {
-        ASSETS.save(deps.storage, asset_refs)
+    fn save_refs(&self, deps: &mut DepsMut) -> Result<(), AssetError> {
+
+        let assets_refs = self.get_assets()
+            .iter()
+            .map(|asset| {
+                asset.get_asset_ref().to_owned()
+            })
+            .collect();
+
+        ASSETS.save(deps.storage, &assets_refs)
             .map_err(|err| err.into())
     }
 
@@ -120,11 +129,7 @@ pub struct NativeAsset {
 
 impl AssetTrait for NativeAsset {
 
-    fn get_asset_ref(&self) -> &str {
-        &self.alias
-    }
-
-    fn load(deps: &Deps, asset_ref: &str) -> Result<Self, AssetError> {
+    fn from_asset_ref(deps: &Deps, asset_ref: &str) -> Result<Self, AssetError> {
         
         let denom = match ASSETS_ALIASES.load(deps.storage, asset_ref) {
             Ok(denom) => denom,
@@ -137,6 +142,10 @@ impl AssetTrait for NativeAsset {
         })
     }
 
+    fn get_asset_ref(&self) -> &str {
+        &self.alias
+    }
+
     fn save(&self, deps: &mut DepsMut) -> Result<(), AssetError> {
 
         let asset_ref = self.get_asset_ref();
@@ -146,9 +155,12 @@ impl AssetTrait for NativeAsset {
         Ok(())
     }
 
-    fn query_prior_balance(&self, deps: &Deps, info: Option<&MessageInfo>, account: impl Into<String>) -> Result<Uint128, AssetError> {
+    fn query_prior_balance(&self, deps: &Deps, env: &Env, info: Option<&MessageInfo>) -> Result<Uint128, AssetError> {
         
-        let amount = deps.querier.query_balance(account, self.denom.to_string())?.amount;
+        let amount = deps.querier.query_balance(
+            env.contract.address.to_string(),
+            self.denom.to_string()
+        )?.amount;
 
         let incoming_funds = match info {
             Some(info) => {

@@ -24,8 +24,16 @@ impl<'a> VaultAssetsTrait<'a, Cw20Asset> for Cw20VaultAssets {
             .map_err(|err| err.into())
     }
 
-    fn save_refs(deps: &mut DepsMut, asset_refs: &Vec<String>) -> Result<(), AssetError> {
-        ASSETS.save(deps.storage, asset_refs)
+    fn save_refs(&self, deps: &mut DepsMut) -> Result<(), AssetError> {
+
+        let assets_refs = self.get_assets()
+            .iter()
+            .map(|asset| {
+                asset.get_asset_ref().to_owned()
+            })
+            .collect();
+
+        ASSETS.save(deps.storage, &assets_refs)
             .map_err(|err| err.into())
     }
 
@@ -86,7 +94,7 @@ impl<'a> VaultAssetsTrait<'a, Cw20Asset> for Cw20VaultAssets {
                     cosmwasm_std::WasmMsg::Execute {
                         contract_addr: asset.0.to_owned(),
                         msg: to_binary(&Cw20ExecuteMsg::Transfer {
-                            recipient: recipient.to_string(),
+                            recipient: recipient.clone(),
                             amount
                         })?,
                         funds: vec![]
@@ -106,13 +114,13 @@ pub struct Cw20Asset(pub String);
 
 impl AssetTrait for Cw20Asset {
 
-    fn get_asset_ref(&self) -> &str {
-        &self.0
-    }
-
-    fn load(_deps: &Deps, asset_ref: &str) -> Result<Self, AssetError> {
+    fn from_asset_ref(_deps: &Deps, asset_ref: &str) -> Result<Self, AssetError> {
 
         Ok(Cw20Asset(asset_ref.to_owned()))
+    }
+
+    fn get_asset_ref(&self) -> &str {
+        &self.0
     }
 
     fn save(&self, _deps: &mut DepsMut) -> Result<(), AssetError> {
@@ -120,11 +128,11 @@ impl AssetTrait for Cw20Asset {
         Ok(())
     }
 
-    fn query_prior_balance(&self, deps: &Deps, _info: Option<&MessageInfo>, account: impl Into<String>,) -> Result<Uint128, AssetError> {
+    fn query_prior_balance(&self, deps: &Deps, env: &Env, _info: Option<&MessageInfo>) -> Result<Uint128, AssetError> {
         
         let amount = deps.querier.query_wasm_smart::<BalanceResponse>(
             self.0.to_owned(),
-            &Cw20QueryMsg::Balance { address: account.into() }
+            &Cw20QueryMsg::Balance { address: env.contract.address.to_string() }
         )?.balance;
 
         Ok(amount)

@@ -70,9 +70,9 @@ pub fn only_local(deps: &Deps) -> StdResult<bool> {
 pub fn ready(deps: &Deps) -> StdResult<bool> {
 
     let setup_master = SETUP_MASTER.load(deps.storage)?;
-    let assets = VaultAssets::load_assets(deps)?;
+    let assets = VaultAssets::load_refs(deps)?;
 
-    Ok(setup_master.is_none() && assets.get_assets().len() > 0)
+    Ok(setup_master.is_none() && assets.len() > 0)
 
 }
 
@@ -826,7 +826,7 @@ pub fn on_send_asset_failure(
     let fallback_address = release_asset_escrow(deps, send_asset_hash.clone(), escrow_amount, &asset_label)?;
 
     // Transfer the escrowed assets to the fallback user.
-    let transfer_msg: Option<CosmosMsg> = Asset::load(&deps.as_ref(), &asset_label)?
+    let transfer_msg: Option<CosmosMsg> = Asset::from_asset_ref(&deps.as_ref(), &asset_label)?
         .send_asset(env, escrow_amount, fallback_address.to_string())?;
 
     let response = match transfer_msg {
@@ -1146,7 +1146,7 @@ pub fn query_only_local(deps: Deps) -> StdResult<OnlyLocalResponse> {
 pub fn query_assets(deps: Deps) -> StdResult<AssetsResponse> {
     Ok(
         AssetsResponse {
-            assets: VaultAssets::load_assets(&deps)?
+            assets: VaultAssets::load(&deps)?
                 .get_assets()
                 .to_owned()
         }

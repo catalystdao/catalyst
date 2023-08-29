@@ -65,7 +65,7 @@ pub fn initialize_swap_curves(
     }
 
     // Make sure this function may only be invoked once (check whether assets have already been saved)
-    if VaultAssets::load_assets(&deps.as_ref()).is_ok() {
+    if VaultAssets::load_refs(&deps.as_ref()).is_ok() {
         return Err(ContractError::Unauthorized {});
     }
 
@@ -99,7 +99,7 @@ pub fn initialize_swap_curves(
     let assets_balances = assets.iter()
         .map(|asset| {
 
-            let balance = asset.query_prior_balance(&deps.as_ref(), Some(&info), env.contract.address.to_string())?;
+            let balance = asset.query_prior_balance(&deps.as_ref(), &env, Some(&info))?;
 
             if balance.is_zero() {
                 return Err(ContractError::InvalidZeroBalance {});
@@ -113,7 +113,7 @@ pub fn initialize_swap_curves(
     // NOTE: there is no need to validate the assets, as invalid asset addresses
     // would have caused the previous 'asset balance' check to fail.
     let vault_assets = VaultAssets::new(assets);
-    vault_assets.save_assets(deps)?;
+    vault_assets.save(deps)?;
 
     let asset_refs = vault_assets.get_assets_refs();
 
@@ -216,7 +216,7 @@ pub fn deposit_mixed(
 
     let one_minus_amp = ONE_MINUS_AMP.load(deps.storage)?;
 
-    let assets = VaultAssets::load_assets(&deps.as_ref())?;
+    let assets = VaultAssets::load(&deps.as_ref())?;
 
     if deposit_amounts.len() != assets.get_assets().len() {
         return Err(
@@ -243,8 +243,8 @@ pub fn deposit_mixed(
 
             let vault_asset_balance = asset.query_prior_balance(
                 &deps.as_ref(),
-                Some(&info),
-                env.contract.address.to_string()
+                &env,
+                Some(&info)
             )?;
 
             let weighted_asset_balance = U256::from(vault_asset_balance)
@@ -435,7 +435,7 @@ pub fn withdraw_all(
 
     // Compute weighted_alpha_0 to find the reference vault balances (i.e. the number of assets
     // the vault should have for 1:1 pricing).
-    let assets = VaultAssets::load_assets(&deps.as_ref())?;
+    let assets = VaultAssets::load(&deps.as_ref())?;
     let one_minus_amp = ONE_MINUS_AMP.load(deps.storage)?;
     
     let weights = assets.get_assets()
@@ -460,8 +460,8 @@ pub fn withdraw_all(
 
             let vault_asset_balance = asset.query_prior_balance(
                 &deps.as_ref(),
-                Some(&info),
-                env.contract.address.to_string()
+                &env,
+                Some(&info)
             )?;
 
             if !vault_asset_balance.is_zero() {
@@ -664,7 +664,7 @@ pub fn withdraw_mixed(
     // Compute weighted_alpha_0 to find the reference vault balances (i.e. the number of assets
     // the vault should have for 1:1 pricing). This value is then used to compute the corresponding
     // 'units' of the withdrawal.
-    let assets = VaultAssets::load_assets(&deps.as_ref())?;
+    let assets = VaultAssets::load(&deps.as_ref())?;
     let one_minus_amp = ONE_MINUS_AMP.load(deps.storage)?;
     
     let weights = assets.get_assets()
@@ -681,8 +681,8 @@ pub fn withdraw_mixed(
             
             let vault_asset_balance = asset.query_prior_balance(
                 &deps.as_ref(),
-                Some(&info),
-                env.contract.address.to_string()
+                &env,
+                Some(&info)
             )?;
 
             if !vault_asset_balance.is_zero() {
@@ -886,8 +886,8 @@ pub fn local_swap(
     )?.as_uint128();    // Casting safe, as fee < amount, and amount is Uint128
 
     // Calculate the return value
-    let from_asset = Asset::load(&deps.as_ref(), &from_asset)?;
-    let to_asset = Asset::load(&deps.as_ref(), &to_asset)?;
+    let from_asset = Asset::from_asset_ref(&deps.as_ref(), &from_asset)?;
+    let to_asset = Asset::from_asset_ref(&deps.as_ref(), &to_asset)?;
     let out: Uint128 = calc_local_swap(
         &deps.as_ref(),
         env.clone(),
@@ -1013,7 +1013,7 @@ pub fn send_asset(
     let effective_swap_amount = amount.checked_sub(vault_fee)?;     // Using 'checked_sub' for extra precaution ('wrapping_sub' should suffice)
 
     // Calculate the units bought.
-    let from_asset = Asset::load(&deps.as_ref(), &from_asset)?;
+    let from_asset = Asset::from_asset_ref(&deps.as_ref(), &from_asset)?;
     let u = calc_send_asset(
         &deps.as_ref(),
         env.clone(),
@@ -1169,11 +1169,11 @@ pub fn receive_asset(
 
     // Calculate the swap return.
     // NOTE: no fee is taken here, the fee is always taken on the sending side.
-    let to_asset = VaultAssets::load_assets(&deps.as_ref())?
-        .get_assets()
+    let to_asset_ref = VaultAssets::load_refs(&deps.as_ref())?
         .get(to_asset_index as usize)
         .ok_or(ContractError::AssetNotFound {})?
         .clone();
+    let to_asset = Asset::from_asset_ref(&deps.as_ref(), &to_asset_ref)?;
     let out = calc_receive_asset(&deps.as_ref(), env.clone(), Some(&info), &to_asset, u)?;
 
     if min_out > out {
@@ -1630,7 +1630,7 @@ pub fn calc_send_asset(
     let from_asset_weight = WEIGHTS.load(deps.storage, from_asset.get_asset_ref())
         .map_err(|_| ContractError::AssetNotFound {})?;
 
-    let from_asset_balance: Uint128 = from_asset.query_prior_balance(deps, info, env.contract.address)?;
+    let from_asset_balance: Uint128 = from_asset.query_prior_balance(deps, &env, info)?;
 
     let one_minus_amp = ONE_MINUS_AMP.load(deps.storage)?;
 
@@ -1683,7 +1683,7 @@ pub fn calc_receive_asset(
         to_asset.get_asset_ref()
     )?;
     let to_asset_balance: Uint128 = to_asset
-        .query_prior_balance(deps, info, env.contract.address)?
+        .query_prior_balance(deps, &env, info)?
         .checked_sub(to_asset_escrowed_balance)?;
     
     let one_minus_amp = ONE_MINUS_AMP.load(deps.storage)?;
@@ -1725,7 +1725,7 @@ pub fn calc_local_swap(
     let to_asset_weight = WEIGHTS.load(deps.storage, to_asset.get_asset_ref())
         .map_err(|_| ContractError::AssetNotFound {})?;
 
-    let from_asset_balance: Uint128 = from_asset.query_prior_balance(deps, info, env.contract.address.to_string())?;
+    let from_asset_balance: Uint128 = from_asset.query_prior_balance(deps, &env, info)?;
 
     // Subtract the 'to_asset' escrowed balance from the vault's total balance 
     // to return a smaller output.
@@ -1734,7 +1734,7 @@ pub fn calc_local_swap(
         to_asset.get_asset_ref()
     )?;
     let to_asset_balance: Uint128 = to_asset
-        .query_prior_balance(deps, info, env.contract.address)?
+        .query_prior_balance(deps, &env, info)?
         .checked_sub(to_asset_escrowed_balance)?;
 
     let one_minus_amp = ONE_MINUS_AMP.load(deps.storage)?;
@@ -1824,7 +1824,7 @@ pub fn calc_balance_0_ampped(
     one_minus_amp: I256
 ) -> Result<(U256, usize), ContractError> {
     
-    let assets = VaultAssets::load_assets(&deps)?;
+    let assets = VaultAssets::load(&deps)?;
     let unit_tracker = UNIT_TRACKER.load(deps.storage)?;
 
     let weights = assets.get_assets()
@@ -1838,7 +1838,7 @@ pub fn calc_balance_0_ampped(
         .iter()
         .map(|asset| -> Result<Uint128, ContractError> {
             Ok(
-                asset.query_prior_balance(&deps, info, env.contract.address.to_string())?
+                asset.query_prior_balance(&deps, &env, info)?
             )
         })
         .collect::<Result<Vec<Uint128>, ContractError>>()?;
@@ -2227,7 +2227,7 @@ pub fn update_max_limit_capacity(
     info: &MessageInfo
 ) -> Result<Response, ContractError> {
     
-    let assets = VaultAssets::load_assets(&deps.as_ref())?;
+    let assets = VaultAssets::load(&deps.as_ref())?;
 
     // Compute the sum of the vault's asset balance-weight products.
     let max_limit_capacity = assets.get_assets().iter()
@@ -2237,8 +2237,8 @@ pub fn update_max_limit_capacity(
 
                 let vault_asset_balance = asset.query_prior_balance(
                     &deps.as_ref(),
-                    Some(info),
-                    env.contract.address.to_string()
+                    &env,
+                    Some(info)
                 )?;
 
                 let escrowed_balance = TOTAL_ESCROWED_ASSETS.load(deps.storage, asset.get_asset_ref())?;
@@ -2284,7 +2284,7 @@ pub fn query_calc_send_asset(
                 &deps,
                 env,
                 None,
-                &Asset::load(&deps, from_asset)?,
+                &Asset::from_asset_ref(&deps, from_asset)?,
                 amount
             )?
         }
@@ -2312,7 +2312,7 @@ pub fn query_calc_receive_asset(
                 &deps,
                 env,
                 None,
-                &Asset::load(&deps, to_asset)?,
+                &Asset::from_asset_ref(&deps, to_asset)?,
                 u
             )?
         }
@@ -2342,8 +2342,8 @@ pub fn query_calc_local_swap(
                 &deps,
                 env,
                 None,
-                &Asset::load(&deps, from_asset)?,
-                &Asset::load(&deps, to_asset)?,
+                &Asset::from_asset_ref(&deps, from_asset)?,
+                &Asset::from_asset_ref(&deps, to_asset)?,
                 amount
             )?
         }
