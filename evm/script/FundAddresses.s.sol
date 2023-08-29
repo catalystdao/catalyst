@@ -6,7 +6,7 @@ import "forge-std/Script.sol";
 contract FundAddresses is Script {
 
     function run() external {
-        uint256 CATALYST_SHARE = 100;
+        uint256 CATALYST_SHARE = 110;
         address CATALYST_ADDRESS = vm.envAddress("CATALYST_ADDRESS");
 
         uint256 CATALYST_ROUTER_SHARE = 5;
@@ -21,15 +21,12 @@ contract FundAddresses is Script {
         uint256 TOKENS_SHARE = 10;
         address TOKENS_ADDRESS = vm.envAddress("TOKENS_ADDRESS");
 
-        uint256 REGISTRY_SHARE = 10;
-        address REGISTRY_ADDRESS = vm.envAddress("REGISTRY_ADDRESS");
-
         uint256 WGAS_SHARE = 5;
         address WGAS_ADDRESS = vm.envAddress("WGAS_DEPLOYER_ADDRESS");
 
 
         uint256 total = 1 ether;
-        uint256 sum = CATALYST_SHARE + CATALYST_ROUTER_SHARE + CATALYST_INTERFACES_SHARE + MOCK_SHARE + TOKENS_SHARE + REGISTRY_SHARE + WGAS_SHARE;
+        uint256 sum = CATALYST_SHARE + CATALYST_ROUTER_SHARE + CATALYST_INTERFACES_SHARE + MOCK_SHARE + TOKENS_SHARE + WGAS_SHARE;
 
         vm.startBroadcast(vm.envUint("BASE_DEPLOYER_KEY"));
 
@@ -38,7 +35,6 @@ contract FundAddresses is Script {
         if (CATALYST_INTERFACES_SHARE > 0 ) payable(CATALYST_INTERFACES_ADDRESS).transfer(CATALYST_INTERFACES_SHARE * total / sum);
         if (MOCK_SHARE > 0 )                payable(MOCK_ADDRESS)               .transfer(MOCK_SHARE * total / sum);
         if (TOKENS_SHARE > 0 )              payable(TOKENS_ADDRESS)             .transfer(TOKENS_SHARE * total / sum);
-        if (REGISTRY_SHARE > 0 )            payable(REGISTRY_ADDRESS)           .transfer(REGISTRY_SHARE * total / sum);
         if (WGAS_SHARE > 0 )                payable(WGAS_ADDRESS)               .transfer(WGAS_SHARE * total / sum);
 
 

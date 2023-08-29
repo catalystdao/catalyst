@@ -97,51 +97,34 @@ contract DeployCatalyst is Script {
 
     function deployAllContracts() internal {
 
-        // Deploy Registry
-        
-        CatalystDescriber catalyst_describer = CatalystDescriber(contracts.describer);
-        if (address(catalyst_describer) == address(0)) {
-            catalyst_describer = new CatalystDescriber();
-        }
-        contracts.describer = address(catalyst_describer);
-
-        {
-            CatalystDescriberRegistry describer_registry = CatalystDescriberRegistry(contracts.describer_registry); 
-            if (address(describer_registry) == address(0)) {
-                describer_registry = new CatalystDescriberRegistry();
-                fillDescriber = true;
-            }
-            contracts.describer_registry = address(describer_registry);
-        }
-
         // Deploy Factory
         CatalystFactory factory = CatalystFactory(contracts.factory);
         if (address(factory) == address(0)) {
-            factory = new CatalystFactory(0);
+            factory = new CatalystFactory{salt: bytes32(uint256(114709421156958415186027217025547827737296622131151675381220287808246552851098))}(0);
         }
         contracts.factory = address(factory);
 
         // Deploy Templates
         address volatile_mathlib = contracts.volatile_mathlib;
-        if (volatile_mathlib == address(0)) volatile_mathlib = address(new CatalystMathVol());
+        if (volatile_mathlib == address(0)) volatile_mathlib = address(new CatalystMathVol{salt: bytes32(uint256(97319872752460098323199248802066309034939976127668417001544311163263852915521))}());
         contracts.volatile_mathlib = address(volatile_mathlib);
 
         address volatile_template = contracts.volatile_template;
         if (volatile_template == address(0)) {
             volatile_template = address(
-                new CatalystVaultVolatile(address(factory), volatile_mathlib)
+                new CatalystVaultVolatile{salt: bytes32(uint256(60662232750751397629041053606497919570818143080516418923077142053432447907648))}(address(factory), volatile_mathlib)
             );
         }
         contracts.volatile_template = address(volatile_template);
 
         address amplified_mathlib = contracts.amplified_mathlib;
-        if (amplified_mathlib == address(0)) amplified_mathlib = address(new CatalystMathAmp());
+        if (amplified_mathlib == address(0)) amplified_mathlib = address(new CatalystMathAmp{salt: bytes32(uint256(63722654287578236768624707543115016453003725919344306794241604926482092720364))}());
         contracts.amplified_mathlib = address(amplified_mathlib);
 
         address amplified_template = contracts.amplified_template;
         if (amplified_template == address(0)) {
             amplified_template = address(
-                new CatalystVaultAmplified(address(factory), amplified_mathlib)
+                new CatalystVaultAmplified{salt: bytes32(uint256(62066348516751541895847183559269671012091941168857148659880307387008083129007))}(address(factory), amplified_mathlib)
             );
         }
         contracts.amplified_template = address(amplified_template);
@@ -169,6 +152,23 @@ contract DeployCatalyst is Script {
         vm.stopBroadcast();
 
         vm.startBroadcast(vm.envUint("CATALYST_KEY"));
+
+        // Deploy Registry
+        
+        CatalystDescriber catalyst_describer = CatalystDescriber(contracts.describer);
+        if (address(catalyst_describer) == address(0)) {
+            catalyst_describer = new CatalystDescriber();
+        }
+        contracts.describer = address(catalyst_describer);
+
+        {
+            CatalystDescriberRegistry describer_registry = CatalystDescriberRegistry(contracts.describer_registry); 
+            if (address(describer_registry) == address(0)) {
+                describer_registry = new CatalystDescriberRegistry();
+                fillDescriber = true;
+            }
+            contracts.describer_registry = address(describer_registry);
+        }
     }
 
     function setupDescriber() internal {
@@ -205,11 +205,6 @@ contract DeployCatalyst is Script {
         vm.startBroadcast(deployerPrivateKey);
 
         deployAllContracts();
-
-        vm.stopBroadcast();
-
-        uint256 registryPrivateKey = vm.envUint("REGISTRY_KEY");
-        vm.startBroadcast(registryPrivateKey);
 
         // Fill registry
         // if (fillDescriber == true) {
