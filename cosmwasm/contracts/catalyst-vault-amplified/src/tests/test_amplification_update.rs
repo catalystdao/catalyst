@@ -33,7 +33,6 @@ mod test_amplified_amplification_update {
 
     }
 
-    //TODO the following function does not work for native assets, as zero valued transfers are not allowed
     /// Trigger an interal `update_amplification()` by executing a zero-valued local swap.
     fn trigger_amplification_update(
         env: &mut TestEnv,
