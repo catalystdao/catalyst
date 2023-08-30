@@ -15,13 +15,13 @@ mod test_amplified_deposit{
         let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
 
         // Instantiate and initialize vault
-        let vault_tokens = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
+        let vault_assets = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
         let vault_code_id = amplified_vault_contract_storage(env.get_app());let 
         vault = mock_factory_deploy_vault(
             &mut env,
-            vault_tokens.clone(),
+            vault_assets.clone(),
             vault_initial_balances.clone(),
             vault_weights.clone(),
             AMPLIFICATION,
@@ -40,7 +40,7 @@ mod test_amplified_deposit{
             }).collect();
 
         // Fund swapper with tokens
-        vault_tokens.iter()
+        vault_assets.iter()
             .zip(&deposit_amounts)
             .for_each(|(asset, deposit_amount)| {
                 asset.transfer(
@@ -61,7 +61,7 @@ mod test_amplified_deposit{
                 deposit_amounts: deposit_amounts.clone(),
                 min_out: Uint128::zero()
             },
-            vault_tokens.clone(),
+            vault_assets.clone(),
             deposit_amounts.clone()
         ).unwrap();
 
@@ -82,7 +82,7 @@ mod test_amplified_deposit{
 
 
         // Verify the deposited assets have been transferred from the swapper to the vault
-        vault_tokens.iter()
+        vault_assets.iter()
             .for_each(|asset| {
                 let swapper_asset_balance = asset.query_balance(env.get_app(), DEPOSITOR.to_string());
                 assert_eq!(
@@ -93,7 +93,7 @@ mod test_amplified_deposit{
             });
 
         // Verify the deposited assets have been received by the vault
-        vault_tokens.iter()
+        vault_assets.iter()
             .zip(&vault_initial_balances)
             .zip(&deposit_amounts)
             .for_each(|((asset, vault_balance), deposit_amount)| {
@@ -128,13 +128,13 @@ mod test_amplified_deposit{
         let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
 
         // Instantiate and initialize vault
-        let vault_tokens = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
+        let vault_assets = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
         let vault_code_id = amplified_vault_contract_storage(env.get_app());let 
         vault = mock_factory_deploy_vault(
             &mut env,
-            vault_tokens.clone(),
+            vault_assets.clone(),
             vault_initial_balances.clone(),
             vault_weights.clone(),
             AMPLIFICATION,
@@ -153,7 +153,7 @@ mod test_amplified_deposit{
             }).collect();
 
         // Fund swapper with tokens
-        vault_tokens.iter()
+        vault_assets.iter()
             .zip(&deposit_amounts)
             .for_each(|(asset, deposit_amount)| {
                 asset.transfer(
@@ -174,7 +174,7 @@ mod test_amplified_deposit{
                 deposit_amounts: deposit_amounts.clone(),
                 min_out: Uint128::zero()
             },
-            vault_tokens.clone(),
+            vault_assets.clone(),
             deposit_amounts.clone()
         ).unwrap();
 
@@ -208,13 +208,13 @@ mod test_amplified_deposit{
         let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
 
         // Instantiate and initialize vault
-        let vault_tokens = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
+        let vault_assets = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
         let vault_code_id = amplified_vault_contract_storage(env.get_app());
         let vault = mock_factory_deploy_vault(
             &mut env,
-            vault_tokens.clone(),
+            vault_assets.clone(),
             vault_initial_balances.clone(),
             vault_weights.clone(),
             AMPLIFICATION,
@@ -234,7 +234,7 @@ mod test_amplified_deposit{
             }).collect();
 
         // Fund swapper with tokens
-        vault_tokens.iter()
+        vault_assets.iter()
             .zip(&deposit_amounts)
             .filter(|(_, deposit_amount)| *deposit_amount != Uint128::zero())
             .for_each(|(asset, deposit_amount)| {
@@ -256,7 +256,7 @@ mod test_amplified_deposit{
                 deposit_amounts: deposit_amounts.clone(),
                 min_out: Uint128::zero()
             },
-            vault_tokens.clone(),
+            vault_assets.clone(),
             deposit_amounts.clone()
         ).unwrap();
 
@@ -290,13 +290,13 @@ mod test_amplified_deposit{
         let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
 
         // Instantiate and initialize vault
-        let vault_tokens = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
+        let vault_assets = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
         let vault_code_id = amplified_vault_contract_storage(env.get_app());
         let vault = mock_factory_deploy_vault(
             &mut env,
-            vault_tokens.clone(),
+            vault_assets.clone(),
             vault_initial_balances.clone(),
             vault_weights.clone(),
             AMPLIFICATION,
@@ -318,7 +318,7 @@ mod test_amplified_deposit{
                 deposit_amounts: deposit_amounts.clone(),
                 min_out: Uint128::zero()
             },
-            vault_tokens.clone(),
+            vault_assets.clone(),
             deposit_amounts.clone()
         ).unwrap();
 
@@ -352,13 +352,13 @@ mod test_amplified_deposit{
         let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
 
         // Instantiate and initialize vault
-        let vault_tokens = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
+        let vault_assets = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
         let vault_code_id = amplified_vault_contract_storage(env.get_app());
         let vault = mock_factory_deploy_vault(
             &mut env,
-            vault_tokens.clone(),
+            vault_assets.clone(),
             vault_initial_balances.clone(),
             vault_weights.clone(),
             AMPLIFICATION,
@@ -377,7 +377,7 @@ mod test_amplified_deposit{
             }).collect();
 
         // Fund swapper with tokens
-        vault_tokens.iter()
+        vault_assets.iter()
             .zip(&deposit_amounts)
             .for_each(|(asset, deposit_amount)| {
                 asset.transfer(
@@ -407,7 +407,7 @@ mod test_amplified_deposit{
                 deposit_amounts: deposit_amounts.clone(),
                 min_out: min_out_invalid
             },
-            vault_tokens.clone(),
+            vault_assets.clone(),
             deposit_amounts.clone()
         );
         
@@ -430,7 +430,7 @@ mod test_amplified_deposit{
                 deposit_amounts: deposit_amounts.clone(),
                 min_out: min_out_valid
             },
-            vault_tokens.clone(),
+            vault_assets.clone(),
             deposit_amounts.clone()
         ).unwrap();     // Make sure the transaction succeeds
 
@@ -444,13 +444,13 @@ mod test_amplified_deposit{
         let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
 
         // Instantiate and initialize vault
-        let vault_tokens = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
+        let vault_assets = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
         let vault_code_id = amplified_vault_contract_storage(env.get_app());let 
         vault = mock_factory_deploy_vault(
             &mut env,
-            vault_tokens.clone(),
+            vault_assets.clone(),
             vault_initial_balances.clone(),
             vault_weights.clone(),
             AMPLIFICATION,
@@ -489,7 +489,7 @@ mod test_amplified_deposit{
         #[cfg(feature="asset_native")]
         assert_eq!(
             response_result.err().unwrap().root_cause().to_string(),
-            format!("Received asset is invalid: {}{} not received", deposit_amounts[0], vault_tokens[0].denom)
+            format!("Received asset is invalid: {}{} not received", deposit_amounts[0], vault_assets[0].denom)
         );
         #[cfg(feature="asset_cw20")]
         assert_eq!(

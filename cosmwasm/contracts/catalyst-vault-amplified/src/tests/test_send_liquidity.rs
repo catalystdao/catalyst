@@ -16,13 +16,13 @@ mod test_amplified_send_liquidity {
 
         // Instantiate and initialize vault
         let interface = mock_instantiate_interface(env.get_app());
-        let vault_tokens = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
+        let vault_assets = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
         let vault_code_id = amplified_vault_contract_storage(env.get_app());
         let vault = mock_factory_deploy_vault(
             &mut env,
-            vault_tokens.clone(),
+            vault_assets.clone(),
             vault_initial_balances.clone(),
             vault_weights.clone(),
             AMPLIFICATION,
@@ -153,13 +153,13 @@ mod test_amplified_send_liquidity {
 
         // Instantiate and initialize vault
         let interface = mock_instantiate_interface(env.get_app());
-        let vault_tokens = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
+        let vault_assets = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
         let vault_code_id = amplified_vault_contract_storage(env.get_app());
         let vault = mock_factory_deploy_vault(
             &mut env,
-            vault_tokens.clone(),
+            vault_assets.clone(),
             vault_initial_balances.clone(),
             vault_weights.clone(),
             AMPLIFICATION,
@@ -258,13 +258,13 @@ mod test_amplified_send_liquidity {
 
         // Instantiate and initialize vault
         let interface = mock_instantiate_interface(env.get_app());
-        let vault_tokens = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
+        let vault_assets = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
         let vault_code_id = amplified_vault_contract_storage(env.get_app());
         let vault = mock_factory_deploy_vault(
             &mut env,
-            vault_tokens.clone(),
+            vault_assets.clone(),
             vault_initial_balances.clone(),
             vault_weights.clone(),
             AMPLIFICATION,
@@ -334,13 +334,13 @@ mod test_amplified_send_liquidity {
 
         // Instantiate and initialize vault
         let interface = mock_instantiate_interface(env.get_app());
-        let vault_tokens = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
+        let vault_assets = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
         let vault_code_id = amplified_vault_contract_storage(env.get_app());
         let vault = mock_factory_deploy_vault(
             &mut env,
-            vault_tokens.clone(),
+            vault_assets.clone(),
             vault_initial_balances.clone(),
             vault_weights.clone(),
             AMPLIFICATION,
@@ -405,13 +405,13 @@ mod test_amplified_send_liquidity {
 
         // Instantiate and initialize vault
         let interface = mock_instantiate_interface(env.get_app());
-        let vault_tokens = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
+        let vault_assets = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
         let vault_code_id = amplified_vault_contract_storage(env.get_app());
         let vault = mock_factory_deploy_vault(
             &mut env,
-            vault_tokens.clone(),
+            vault_assets.clone(),
             vault_initial_balances.clone(),
             vault_weights.clone(),
             AMPLIFICATION,

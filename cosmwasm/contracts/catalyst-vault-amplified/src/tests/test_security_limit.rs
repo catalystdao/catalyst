@@ -37,13 +37,13 @@ mod test_amplified_security_limit {
 
         // Instantiate and initialize vault
         let interface = mock_instantiate_interface(env.get_app());
-        let vault_tokens = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
+        let vault_assets = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
         let vault_code_id = amplified_vault_contract_storage(env.get_app());
         let vault = mock_factory_deploy_vault(
             env,
-            vault_tokens.clone(),
+            vault_assets.clone(),
             vault_initial_balances.clone(),
             vault_weights.clone(),
             AMPLIFICATION,
@@ -119,14 +119,14 @@ mod test_amplified_security_limit {
         let max_limit_capacity = calc_max_limit_capacity(
             env,
             vault.clone(),
-            vault_tokens.clone(),
+            vault_assets.clone(),
             vault_weights.clone()
         );
 
         MockVaultConfig {
             interface,
             vault,
-            assets: vault_tokens,
+            assets: vault_assets,
             weights: vault_weights,
             vault_initial_balances,
             remote_vault,
@@ -167,10 +167,10 @@ mod test_amplified_security_limit {
     fn calc_max_limit_capacity(
         env: &mut TestEnv,
         vault: Addr,
-        vault_tokens: Vec<TestAsset>,
+        vault_assets: Vec<TestAsset>,
         vault_weights: Vec<Uint128>
     ) -> U256 {
-        vault_tokens.iter()
+        vault_assets.iter()
             .zip(vault_weights)
             .fold(U256::zero(), |acc, (asset, weight)| {
 
@@ -333,7 +333,7 @@ mod test_amplified_security_limit {
 
         // Instantiate and initialize vault
         let interface = mock_instantiate_interface(env.get_app());
-        let vault_tokens = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
+        let vault_assets = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
         let vault_code_id = amplified_vault_contract_storage(env.get_app());
@@ -343,7 +343,7 @@ mod test_amplified_security_limit {
         // Tested action: intialize a new vault
         let vault = mock_factory_deploy_vault(
             &mut env,
-            vault_tokens.clone(),
+            vault_assets.clone(),
             vault_initial_balances.clone(),
             vault_weights.clone(),
             AMPLIFICATION,

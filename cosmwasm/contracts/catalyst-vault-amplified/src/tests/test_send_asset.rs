@@ -16,13 +16,13 @@ mod test_amplified_send_asset {
 
         // Instantiate and initialize vault
         let interface = mock_instantiate_interface(env.get_app());
-        let vault_tokens = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
+        let vault_assets = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
         let vault_code_id = amplified_vault_contract_storage(env.get_app());
         let vault = mock_factory_deploy_vault(
             &mut env,
-            vault_tokens.clone(),
+            vault_assets.clone(),
             vault_initial_balances.clone(),
             vault_weights.clone(),
             AMPLIFICATION,
@@ -43,7 +43,7 @@ mod test_amplified_send_asset {
 
         // Define send asset configuration
         let from_asset_idx = 0;
-        let from_asset = vault_tokens[from_asset_idx].clone();
+        let from_asset = vault_assets[from_asset_idx].clone();
         let from_weight = vault_weights[from_asset_idx];
         let from_balance = vault_initial_balances[from_asset_idx];
         let send_percentage = 0.15;
@@ -176,13 +176,13 @@ mod test_amplified_send_asset {
 
         // Instantiate and initialize vault
         let interface = mock_instantiate_interface(env.get_app());
-        let vault_tokens = env.get_assets()[..2].to_vec();
+        let vault_assets = env.get_assets()[..2].to_vec();
         let vault_initial_balances = vec![Uint128::from(1000000000000000000u128), Uint128::from(50000000000000000000u128)];
         let vault_weights = vec![Uint128::from(50000000000u128), Uint128::from(1000000000u128)];
         let vault_code_id = amplified_vault_contract_storage(env.get_app());
         let vault = mock_factory_deploy_vault(
             &mut env,
-            vault_tokens.clone(),
+            vault_assets.clone(),
             vault_initial_balances.clone(),
             vault_weights.clone(),
             AMPLIFICATION,
@@ -203,7 +203,7 @@ mod test_amplified_send_asset {
 
         // Define send asset configuration
         let from_asset_idx = 0;
-        let from_asset = vault_tokens[from_asset_idx].clone();
+        let from_asset = vault_assets[from_asset_idx].clone();
         let from_weight = vault_weights[from_asset_idx];
         let from_balance = vault_initial_balances[from_asset_idx];
 
@@ -274,13 +274,13 @@ mod test_amplified_send_asset {
 
         // Instantiate and initialize vault
         let interface = mock_instantiate_interface(env.get_app());
-        let vault_tokens = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
+        let vault_assets = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
         let vault_code_id = amplified_vault_contract_storage(env.get_app());
         let vault = mock_factory_deploy_vault(
             &mut env,
-            vault_tokens.clone(),
+            vault_assets.clone(),
             vault_initial_balances.clone(),
             vault_weights.clone(),
             AMPLIFICATION,
@@ -301,7 +301,7 @@ mod test_amplified_send_asset {
 
         // Define send asset configuration
         let from_asset_idx = 0;
-        let from_asset = vault_tokens[from_asset_idx].clone();
+        let from_asset = vault_assets[from_asset_idx].clone();
         let from_balance = vault_initial_balances[from_asset_idx];
         let send_percentage = 0.15;
         let swap_amount = f64_to_uint128(uint128_to_f64(from_balance) * send_percentage).unwrap();
@@ -386,13 +386,13 @@ mod test_amplified_send_asset {
 
         // Instantiate and initialize vault
         let interface = mock_instantiate_interface(env.get_app());
-        let vault_tokens = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
+        let vault_assets = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
         let vault_code_id = amplified_vault_contract_storage(env.get_app());
         let vault = mock_factory_deploy_vault(
             &mut env,
-            vault_tokens.clone(),
+            vault_assets.clone(),
             vault_initial_balances.clone(),
             vault_weights.clone(),
             AMPLIFICATION,
@@ -413,7 +413,7 @@ mod test_amplified_send_asset {
 
         // Define send asset configuration
         let from_asset_idx = 0;
-        let from_asset = vault_tokens[from_asset_idx].clone();
+        let from_asset = vault_assets[from_asset_idx].clone();
         let swap_amount = Uint128::zero();
 
         let to_asset_idx = 1;
@@ -458,13 +458,13 @@ mod test_amplified_send_asset {
 
         // Instantiate and initialize vault
         let interface = mock_instantiate_interface(env.get_app());
-        let vault_tokens = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
+        let vault_assets = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
         let vault_code_id = amplified_vault_contract_storage(env.get_app());
         let vault = mock_factory_deploy_vault(
             &mut env,
-            vault_tokens.clone(),
+            vault_assets.clone(),
             vault_initial_balances.clone(),
             vault_weights.clone(),
             AMPLIFICATION,
@@ -479,7 +479,7 @@ mod test_amplified_send_asset {
 
         // Define send asset configuration
         let from_asset_idx = 0;
-        let from_asset = vault_tokens[from_asset_idx].clone();
+        let from_asset = vault_assets[from_asset_idx].clone();
         let from_balance = vault_initial_balances[from_asset_idx];
         let send_percentage = 0.15;
         let swap_amount = f64_to_uint128(uint128_to_f64(from_balance) * send_percentage).unwrap();
@@ -534,13 +534,13 @@ mod test_amplified_send_asset {
 
         // Instantiate and initialize vault
         let interface = mock_instantiate_interface(env.get_app());
-        let vault_tokens = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
+        let vault_assets = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
         let vault_code_id = amplified_vault_contract_storage(env.get_app());
         let vault = mock_factory_deploy_vault(
             &mut env,
-            vault_tokens.clone(),
+            vault_assets.clone(),
             vault_initial_balances.clone(),
             vault_weights.clone(),
             AMPLIFICATION,
@@ -612,13 +612,13 @@ mod test_amplified_send_asset {
 
         // Instantiate and initialize vault
         let interface = mock_instantiate_interface(env.get_app());
-        let vault_tokens = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
+        let vault_assets = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
         let vault_code_id = amplified_vault_contract_storage(env.get_app());
         let vault = mock_factory_deploy_vault(
             &mut env,
-            vault_tokens.clone(),
+            vault_assets.clone(),
             vault_initial_balances.clone(),
             vault_weights.clone(),
             AMPLIFICATION,
@@ -639,7 +639,7 @@ mod test_amplified_send_asset {
 
         // Define send asset configuration
         let from_asset_idx = 0;
-        let from_asset = vault_tokens[from_asset_idx].clone();
+        let from_asset = vault_assets[from_asset_idx].clone();
         let from_balance = vault_initial_balances[from_asset_idx];
         let send_percentage = 0.15;
         let swap_amount = f64_to_uint128(uint128_to_f64(from_balance) * send_percentage).unwrap();

@@ -18,13 +18,13 @@ mod test_amplified_withdraw_mixed {
         let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
 
         // Instantiate and initialize vault
-        let vault_tokens = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
+        let vault_assets = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
         let vault_code_id = amplified_vault_contract_storage(env.get_app());
         let vault = mock_factory_deploy_vault(
             &mut env,
-            vault_tokens.clone(),
+            vault_assets.clone(),
             vault_initial_balances.clone(),
             vault_weights.clone(),
             AMPLIFICATION,
@@ -94,7 +94,7 @@ mod test_amplified_withdraw_mixed {
 
 
         // Verify the withdrawn assets have been sent by the vault and received by the withdrawer
-        vault_tokens.iter()
+        vault_assets.iter()
             .zip(&vault_initial_balances)
             .zip(&observed_returns)
             .for_each(|((asset, initial_vault_balance), withdraw_amount) | {
@@ -139,13 +139,13 @@ mod test_amplified_withdraw_mixed {
         let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
 
         // Instantiate and initialize vault
-        let vault_tokens = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
+        let vault_assets = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
         let vault_code_id = amplified_vault_contract_storage(env.get_app());
         let vault = mock_factory_deploy_vault(
             &mut env,
-            vault_tokens.clone(),
+            vault_assets.clone(),
             vault_initial_balances.clone(),
             vault_weights.clone(),
             AMPLIFICATION,
@@ -215,13 +215,13 @@ mod test_amplified_withdraw_mixed {
         let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
 
         // Instantiate and initialize vault
-        let vault_tokens = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
+        let vault_assets = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
         let vault_code_id = amplified_vault_contract_storage(env.get_app());
         let vault = mock_factory_deploy_vault(
             &mut env,
-            vault_tokens.clone(),
+            vault_assets.clone(),
             vault_initial_balances.clone(),
             vault_weights.clone(),
             AMPLIFICATION,
@@ -292,7 +292,7 @@ mod test_amplified_withdraw_mixed {
         );
 
         // Verify no assets have been received by the withdrawer
-        vault_tokens.iter().for_each(|token| {
+        vault_assets.iter().for_each(|token| {
             assert_eq!(
                 token.query_balance(env.get_app(), WITHDRAWER.to_string()),
                 Uint128::zero()
@@ -308,13 +308,13 @@ mod test_amplified_withdraw_mixed {
         let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
 
         // Instantiate and initialize vault
-        let vault_tokens = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
+        let vault_assets = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
         let vault_code_id = amplified_vault_contract_storage(env.get_app());
         let vault = mock_factory_deploy_vault(
             &mut env,
-            vault_tokens.clone(),
+            vault_assets.clone(),
             vault_initial_balances.clone(),
             vault_weights.clone(),
             AMPLIFICATION,
@@ -415,13 +415,13 @@ mod test_amplified_withdraw_mixed {
         let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
 
         // Instantiate and initialize vault
-        let vault_tokens = env.get_assets()[..3].to_vec();
+        let vault_assets = env.get_assets()[..3].to_vec();
         let vault_initial_balances = vec![Uint128::from(1u64) * WAD.as_uint128(), Uint128::from(2u64) * WAD.as_uint128(), Uint128::from(3u64) * WAD.as_uint128()];
         let vault_weights = vec![Uint128::one(), Uint128::one(), Uint128::one()];
         let vault_code_id = amplified_vault_contract_storage(env.get_app());
         let vault = mock_factory_deploy_vault(
             &mut env,
-            vault_tokens.clone(),
+            vault_assets.clone(),
             vault_initial_balances.clone(),
             vault_weights.clone(),
             AMPLIFICATION,
@@ -495,13 +495,13 @@ mod test_amplified_withdraw_mixed {
         let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
 
         // Instantiate and initialize vault
-        let vault_tokens = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
+        let vault_assets = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
         let vault_code_id = amplified_vault_contract_storage(env.get_app());
         let vault = mock_factory_deploy_vault(
             &mut env,
-            vault_tokens.clone(),
+            vault_assets.clone(),
             vault_initial_balances.clone(),
             vault_weights.clone(),
             AMPLIFICATION,
@@ -551,13 +551,13 @@ mod test_amplified_withdraw_mixed {
         let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
 
         // Instantiate and initialize vault
-        let vault_tokens = env.get_assets()[..3].to_vec();
+        let vault_assets = env.get_assets()[..3].to_vec();
         let vault_initial_balances = vec![Uint128::from(1u64) * WAD.as_uint128(), Uint128::from(2u64) * WAD.as_uint128(), Uint128::from(3u64) * WAD.as_uint128()];
         let vault_weights = vec![Uint128::one(), Uint128::one(), Uint128::one()];
         let vault_code_id = amplified_vault_contract_storage(env.get_app());
         let vault = mock_factory_deploy_vault(
             &mut env,
-            vault_tokens.clone(),
+            vault_assets.clone(),
             vault_initial_balances.clone(),
             vault_weights.clone(),
             AMPLIFICATION,

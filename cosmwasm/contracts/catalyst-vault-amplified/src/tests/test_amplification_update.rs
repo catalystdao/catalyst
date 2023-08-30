@@ -48,18 +48,18 @@ mod test_amplified_amplification_update {
         });
 
         // Execute the local swap
-        let vault_tokens = env.get_assets();
+        let vault_assets = env.get_assets();
         
         env.execute_contract(
             Addr::unchecked(SETUP_MASTER),
             vault.clone(),
             &AmplifiedExecuteMsg::LocalSwap {
-                from_asset_ref: vault_tokens[0].get_asset_ref(),
-                to_asset_ref: vault_tokens[1].get_asset_ref(),
+                from_asset_ref: vault_assets[0].get_asset_ref(),
+                to_asset_ref: vault_assets[1].get_asset_ref(),
                 amount: Uint128::zero(),
                 min_out: Uint128::zero()
             },
-            vec![vault_tokens[0].clone()],
+            vec![vault_assets[0].clone()],
             vec![Uint128::zero()]
         ).unwrap();
     }

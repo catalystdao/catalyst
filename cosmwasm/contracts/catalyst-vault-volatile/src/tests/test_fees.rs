@@ -10,11 +10,11 @@ mod test_volatile_fees {
 
     // Set Fee Administrator Tests **********************************************************************************************
     fn deploy_mock_vault(env: &mut TestEnv) -> Addr {
-        let vault_tokens = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
+        let vault_assets = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
         let vault_code_id = volatile_vault_contract_storage(env.get_app());
         mock_factory_deploy_vault(
             env,
-            vault_tokens,
+            vault_assets,
             TEST_VAULT_BALANCES.to_vec(),
             TEST_VAULT_WEIGHTS.to_vec(),
             AMPLIFICATION,

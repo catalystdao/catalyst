@@ -52,18 +52,18 @@ mod test_volatile_weights_update {
         });
 
         // Execute the local swap
-        let vault_tokens = env.get_assets();
+        let vault_assets = env.get_assets();
         
         env.execute_contract(
             Addr::unchecked(SETUP_MASTER),
             vault.clone(),
             &VolatileExecuteMsg::LocalSwap {
-                from_asset_ref: vault_tokens[0].get_asset_ref(),
-                to_asset_ref: vault_tokens[1].get_asset_ref(),
+                from_asset_ref: vault_assets[0].get_asset_ref(),
+                to_asset_ref: vault_assets[1].get_asset_ref(),
                 amount: Uint128::zero(),
                 min_out: Uint128::zero()
             },
-            vec![vault_tokens[0].clone()],
+            vec![vault_assets[0].clone()],
             vec![Uint128::zero()]
         ).unwrap();
     }
@@ -78,11 +78,11 @@ mod test_volatile_weights_update {
         let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
 
         // Instantiate and initialize vault
-        let vault_tokens = env.get_assets()[..3].to_vec();
+        let vault_assets = env.get_assets()[..3].to_vec();
         let initial_vault_weights = vec![Uint128::from(2000u128), Uint128::from(300000u128), Uint128::from(500000u128)];
         let vault = set_mock_vault(
             &mut env,
-            vault_tokens.clone(),
+            vault_assets.clone(),
             initial_vault_weights.clone()
         );
 
@@ -126,7 +126,7 @@ mod test_volatile_weights_update {
 
 
         // Check that the target weights are set
-        vault_tokens.iter()
+        vault_assets.iter()
             .enumerate()
             .for_each(|(i, asset)| {
 
@@ -161,11 +161,11 @@ mod test_volatile_weights_update {
         let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
 
         // Instantiate and initialize vault
-        let vault_tokens = env.get_assets()[..3].to_vec();
+        let vault_assets = env.get_assets()[..3].to_vec();
         let initial_vault_weights = vec![Uint128::from(2000u128), Uint128::from(300000u128), Uint128::from(500000u128)];
         let vault = set_mock_vault(
             &mut env,
-            vault_tokens,
+            vault_assets,
             initial_vault_weights.clone()
         );
 
@@ -210,11 +210,11 @@ mod test_volatile_weights_update {
         let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
 
         // Instantiate and initialize vault
-        let vault_tokens = env.get_assets()[..3].to_vec();
+        let vault_assets = env.get_assets()[..3].to_vec();
         let initial_vault_weights = vec![Uint128::from(2000u128), Uint128::from(300000u128), Uint128::from(500000u128)];
         let vault = set_mock_vault(
             &mut env,
-            vault_tokens,
+            vault_assets,
             initial_vault_weights.clone()
         );
 
@@ -333,11 +333,11 @@ mod test_volatile_weights_update {
         let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
 
         // Instantiate and initialize vault
-        let vault_tokens = env.get_assets()[..3].to_vec();
+        let vault_assets = env.get_assets()[..3].to_vec();
         let initial_vault_weights = vec![Uint128::from(2000u128), Uint128::from(300000u128), Uint128::from(500000u128)];
         let vault = set_mock_vault(
             &mut env,
-            vault_tokens,
+            vault_assets,
             initial_vault_weights.clone()
         );
 
@@ -443,11 +443,11 @@ mod test_volatile_weights_update {
         let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
 
         // Instantiate and initialize vault
-        let vault_tokens = env.get_assets()[..3].to_vec();
+        let vault_assets = env.get_assets()[..3].to_vec();
         let initial_vault_weights = vec![Uint128::from(2000u128), Uint128::from(300000u128), Uint128::from(500000u128)];
         let vault = set_mock_vault(
             &mut env,
-            vault_tokens,
+            vault_assets,
             initial_vault_weights.clone()
         );
 
@@ -540,11 +540,11 @@ mod test_volatile_weights_update {
         let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
 
         // Instantiate and initialize vault
-        let vault_tokens = env.get_assets()[..3].to_vec();
+        let vault_assets = env.get_assets()[..3].to_vec();
         let initial_vault_weights = vec![Uint128::from(2000u128), Uint128::from(300000u128), Uint128::from(500000u128)];
         let vault = set_mock_vault(
             &mut env,
-            vault_tokens,
+            vault_assets,
             initial_vault_weights.clone()
         );
 
@@ -587,11 +587,11 @@ mod test_volatile_weights_update {
         let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
 
         // Instantiate and initialize vault
-        let vault_tokens = env.get_assets()[..3].to_vec();
+        let vault_assets = env.get_assets()[..3].to_vec();
         let initial_vault_weights = vec![Uint128::from(2000u128), Uint128::from(300000u128), Uint128::from(500000u128)];
         let vault = set_mock_vault(
             &mut env,
-            vault_tokens.clone(),
+            vault_assets.clone(),
             initial_vault_weights.clone()
         );
 
@@ -645,7 +645,7 @@ mod test_volatile_weights_update {
                 );
 
                 // Verify that the weights are set correctly
-                vault_tokens.iter()
+                vault_assets.iter()
                     .enumerate()
                     .for_each(|(i, asset)| {
 
@@ -672,11 +672,11 @@ mod test_volatile_weights_update {
         let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
 
         // Instantiate and initialize vault
-        let vault_tokens = env.get_assets()[..3].to_vec();
+        let vault_assets = env.get_assets()[..3].to_vec();
         let initial_vault_weights = vec![Uint128::from(2000u128), Uint128::from(300000u128), Uint128::from(500000u128)];
         let vault = set_mock_vault(
             &mut env,
-            vault_tokens.clone(),
+            vault_assets.clone(),
             initial_vault_weights.clone()
         );
 
@@ -716,7 +716,7 @@ mod test_volatile_weights_update {
         );
 
         // Verify that the weights are set correctly
-        vault_tokens.iter()
+        vault_assets.iter()
             .enumerate()
             .for_each(|(i, asset)| {
 
@@ -750,11 +750,11 @@ mod test_volatile_weights_update {
         let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
 
         // Instantiate and initialize vault
-        let vault_tokens = env.get_assets()[..3].to_vec();
+        let vault_assets = env.get_assets()[..3].to_vec();
         let initial_vault_weights = vec![Uint128::from(2000u128), Uint128::from(300000u128), Uint128::from(500000u128)];
         let vault = set_mock_vault(
             &mut env,
-            vault_tokens.clone(),
+            vault_assets.clone(),
             initial_vault_weights.clone()
         );
 
@@ -808,7 +808,7 @@ mod test_volatile_weights_update {
                 );
 
                 // Verify that the security limit is correct
-                let current_weights = vault_tokens.iter()
+                let current_weights = vault_assets.iter()
                     .map(|asset| {
 
                         env.get_app().wrap().query_wasm_smart::<WeightResponse>(

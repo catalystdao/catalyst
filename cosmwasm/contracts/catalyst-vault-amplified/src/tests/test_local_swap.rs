@@ -14,13 +14,13 @@ mod test_amplified_local_swap {
         let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
 
         // Instantiate and initialize vault
-        let vault_tokens = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
+        let vault_assets = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
         let vault_code_id = amplified_vault_contract_storage(env.get_app());
         let vault = mock_factory_deploy_vault(
             &mut env,
-            vault_tokens.clone(),
+            vault_assets.clone(),
             vault_initial_balances.clone(),
             vault_weights.clone(),
             AMPLIFICATION,
@@ -31,12 +31,12 @@ mod test_amplified_local_swap {
 
         // Define local swap config
         let from_asset_idx = 0;
-        let from_asset = vault_tokens[from_asset_idx].clone();
+        let from_asset = vault_assets[from_asset_idx].clone();
         let from_weight = vault_weights[from_asset_idx];
         let from_balance = vault_initial_balances[from_asset_idx];
 
         let to_asset_idx = 1;
-        let to_asset = vault_tokens[to_asset_idx].clone();
+        let to_asset = vault_assets[to_asset_idx].clone();
         let to_weight = vault_weights[to_asset_idx];
         let to_balance = vault_initial_balances[to_asset_idx];
 
@@ -135,13 +135,13 @@ mod test_amplified_local_swap {
         let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
 
         // Instantiate and initialize vault
-        let vault_tokens = env.get_assets()[..2].to_vec();
+        let vault_assets = env.get_assets()[..2].to_vec();
         let vault_initial_balances = vec![Uint128::from(1000000000000000000u128), Uint128::from(50000000000000000000u128)];
         let vault_weights = vec![Uint128::from(50000000000u128), Uint128::from(1000000000u128)];
         let vault_code_id = amplified_vault_contract_storage(env.get_app());
         let vault = mock_factory_deploy_vault(
             &mut env,
-            vault_tokens.clone(),
+            vault_assets.clone(),
             vault_initial_balances.clone(),
             vault_weights.clone(),
             AMPLIFICATION,
@@ -152,12 +152,12 @@ mod test_amplified_local_swap {
 
         // Define local swap config
         let from_asset_idx = 0;
-        let from_asset = vault_tokens[from_asset_idx].clone();
+        let from_asset = vault_assets[from_asset_idx].clone();
         let from_weight = vault_weights[from_asset_idx];
         let from_balance = vault_initial_balances[from_asset_idx];
 
         let to_asset_idx = 1;
-        let to_asset = vault_tokens[to_asset_idx].clone();
+        let to_asset = vault_assets[to_asset_idx].clone();
         let to_weight = vault_weights[to_asset_idx];
         let to_balance = vault_initial_balances[to_asset_idx];
 
@@ -223,13 +223,13 @@ mod test_amplified_local_swap {
         let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
 
         // Instantiate and initialize vault
-        let vault_tokens = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
+        let vault_assets = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
         let vault_code_id = amplified_vault_contract_storage(env.get_app());
         let vault = mock_factory_deploy_vault(
             &mut env,
-            vault_tokens.clone(),
+            vault_assets.clone(),
             vault_initial_balances.clone(),
             vault_weights.clone(),
             AMPLIFICATION,
@@ -240,12 +240,12 @@ mod test_amplified_local_swap {
 
         // Define local swap config
         let from_asset_idx = 0;
-        let from_asset = vault_tokens[from_asset_idx].clone();
+        let from_asset = vault_assets[from_asset_idx].clone();
         let from_weight = vault_weights[from_asset_idx];
         let from_balance = vault_initial_balances[from_asset_idx];
 
         let to_asset_idx = 1;
-        let to_asset = vault_tokens[to_asset_idx].clone();
+        let to_asset = vault_assets[to_asset_idx].clone();
         let to_weight = vault_weights[to_asset_idx];
         let to_balance = vault_initial_balances[to_asset_idx];
 
@@ -324,13 +324,13 @@ mod test_amplified_local_swap {
         let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
 
         // Instantiate and initialize vault
-        let vault_tokens = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
+        let vault_assets = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
         let vault_code_id = amplified_vault_contract_storage(env.get_app());
         let vault = mock_factory_deploy_vault(
             &mut env,
-            vault_tokens.clone(),
+            vault_assets.clone(),
             vault_initial_balances.clone(),
             vault_weights.clone(),
             AMPLIFICATION,
@@ -341,11 +341,11 @@ mod test_amplified_local_swap {
 
         // Define local swap config
         let from_asset_idx = 0;
-        let from_asset = vault_tokens[from_asset_idx].clone();
+        let from_asset = vault_assets[from_asset_idx].clone();
         let from_balance = vault_initial_balances[from_asset_idx];
 
         let to_asset_idx = 1;
-        let to_asset = vault_tokens[to_asset_idx].clone();
+        let to_asset = vault_assets[to_asset_idx].clone();
 
         // Swap 25% of the vault
         let swap_amount = from_balance * Uint128::from(25u64)/ Uint128::from(100u64);
@@ -409,13 +409,13 @@ mod test_amplified_local_swap {
         let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
 
         // Instantiate and initialize vault
-        let vault_tokens = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
+        let vault_assets = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
         let vault_code_id = amplified_vault_contract_storage(env.get_app());
         let vault = mock_factory_deploy_vault(
             &mut env,
-            vault_tokens.clone(),
+            vault_assets.clone(),
             vault_initial_balances.clone(),
             vault_weights.clone(),
             AMPLIFICATION,
@@ -428,7 +428,7 @@ mod test_amplified_local_swap {
         let from_asset = env.get_assets()[TEST_VAULT_ASSET_COUNT+1].clone();
 
         let to_asset_idx = 1;
-        let to_asset = vault_tokens[to_asset_idx].clone();
+        let to_asset = vault_assets[to_asset_idx].clone();
 
         let swap_amount = Uint128::from(10000000u64);
 
@@ -473,13 +473,13 @@ mod test_amplified_local_swap {
         let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
 
         // Instantiate and initialize vault
-        let vault_tokens = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
+        let vault_assets = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
         let vault_code_id = amplified_vault_contract_storage(env.get_app());
         let vault = mock_factory_deploy_vault(
             &mut env,
-            vault_tokens.clone(),
+            vault_assets.clone(),
             vault_initial_balances.clone(),
             vault_weights.clone(),
             AMPLIFICATION,
@@ -490,7 +490,7 @@ mod test_amplified_local_swap {
 
         // Define local swap config
         let from_asset_idx = 0;
-        let from_asset = vault_tokens[from_asset_idx].clone();
+        let from_asset = vault_assets[from_asset_idx].clone();
 
         let to_asset = env.get_assets()[TEST_VAULT_ASSET_COUNT+1].clone();
 
@@ -537,13 +537,13 @@ mod test_amplified_local_swap {
         let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
 
         // Instantiate and initialize vault
-        let vault_tokens = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
+        let vault_assets = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
         let vault_code_id = amplified_vault_contract_storage(env.get_app());
         let vault = mock_factory_deploy_vault(
             &mut env,
-            vault_tokens.clone(),
+            vault_assets.clone(),
             vault_initial_balances.clone(),
             vault_weights.clone(),
             AMPLIFICATION,
@@ -554,10 +554,10 @@ mod test_amplified_local_swap {
 
         // Define local swap config
         let from_asset_idx = 0;
-        let from_asset = vault_tokens[from_asset_idx].clone();
+        let from_asset = vault_assets[from_asset_idx].clone();
 
         let to_asset_idx = 1;
-        let to_asset = vault_tokens[to_asset_idx].clone();
+        let to_asset = vault_assets[to_asset_idx].clone();
 
         // Swap amount set to 0
         let swap_amount = Uint128::zero();
@@ -603,13 +603,13 @@ mod test_amplified_local_swap {
         let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
 
         // Instantiate and initialize vault
-        let vault_tokens = env.get_assets()[..3].to_vec();
+        let vault_assets = env.get_assets()[..3].to_vec();
         let vault_initial_balances = vec![Uint128::from(1u64) * WAD.as_uint128(), Uint128::from(2u64), Uint128::from(3u64) * WAD.as_uint128()];   // ! Initialize to_asset's vault balance to a very small value, to force the output of swaps to be 0
         let vault_weights = vec![Uint128::one(), Uint128::one(), Uint128::one()];
         let vault_code_id = amplified_vault_contract_storage(env.get_app());
         let vault = mock_factory_deploy_vault(
             &mut env,
-            vault_tokens.clone(),
+            vault_assets.clone(),
             vault_initial_balances.clone(),
             vault_weights.clone(),
             AMPLIFICATION,
@@ -620,12 +620,12 @@ mod test_amplified_local_swap {
 
         // Define local swap config
         let from_asset_idx = 0;
-        let from_asset = vault_tokens[from_asset_idx].clone();
+        let from_asset = vault_assets[from_asset_idx].clone();
         let from_weight = vault_weights[from_asset_idx];
         let from_balance = vault_initial_balances[from_asset_idx];
 
         let to_asset_idx = 1;
-        let to_asset = vault_tokens[to_asset_idx].clone();
+        let to_asset = vault_assets[to_asset_idx].clone();
         let to_weight = vault_weights[to_asset_idx];
         let to_balance = vault_initial_balances[to_asset_idx];
 
@@ -700,13 +700,13 @@ mod test_amplified_local_swap {
         let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
 
         // Instantiate and initialize vault
-        let vault_tokens = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
+        let vault_assets = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
         let vault_code_id = amplified_vault_contract_storage(env.get_app());
         let vault = mock_factory_deploy_vault(
             &mut env,
-            vault_tokens.clone(),
+            vault_assets.clone(),
             vault_initial_balances.clone(),
             vault_weights.clone(),
             AMPLIFICATION,
@@ -724,10 +724,10 @@ mod test_amplified_local_swap {
 
         // Define local swap config
         let from_asset_idx = 0;
-        let from_asset = vault_tokens[from_asset_idx].clone();
+        let from_asset = vault_assets[from_asset_idx].clone();
 
         let to_asset_idx = 1;
-        let to_asset = vault_tokens[to_asset_idx].clone();
+        let to_asset = vault_assets[to_asset_idx].clone();
 
         // Swap 25% of the vaultt
         let swap_amount = vault_initial_balances[from_asset_idx] * Uint128::from(25u64)/ Uint128::from(100u64);

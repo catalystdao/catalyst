@@ -36,13 +36,13 @@ mod test_volatile_security_limit {
 
         // Instantiate and initialize vault
         let interface = mock_instantiate_interface(env.get_app());
-        let vault_tokens = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
+        let vault_assets = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
         let vault_code_id = volatile_vault_contract_storage(env.get_app());
         let vault = mock_factory_deploy_vault(
             env,
-            vault_tokens.clone(),
+            vault_assets.clone(),
             vault_initial_balances.clone(),
             vault_weights.clone(),
             AMPLIFICATION,
@@ -106,7 +106,7 @@ mod test_volatile_security_limit {
         MockVaultConfig {
             interface,
             vault,
-            assets: vault_tokens,
+            assets: vault_assets,
             vault_initial_balances,
             remote_vault,
             max_limit_capacity: intitial_limit_capacity,
@@ -254,7 +254,7 @@ mod test_volatile_security_limit {
 
         // Instantiate and initialize vault
         let interface = mock_instantiate_interface(env.get_app());
-        let vault_tokens = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
+        let vault_assets = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
         let vault_code_id = volatile_vault_contract_storage(env.get_app());
@@ -264,7 +264,7 @@ mod test_volatile_security_limit {
         // Tested action: intialize a new vault
         let vault = mock_factory_deploy_vault(
             &mut env,
-            vault_tokens.clone(),
+            vault_assets.clone(),
             vault_initial_balances.clone(),
             vault_weights.clone(),
             AMPLIFICATION,
