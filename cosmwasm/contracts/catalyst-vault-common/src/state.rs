@@ -709,7 +709,7 @@ pub fn release_asset_escrow(
 /// # Arguments:
 /// * `send_liquidity_hash` - The id of the escrow to be released.
 /// * `amount` - The escrow amount.
-/// * `fallback_account` - The account which to return the escrowed assets in the case of an unsuccessful swap.
+/// * `fallback_account` - The account which to return the escrowed liquidity in the case of an unsuccessful swap.
 /// 
 pub fn release_liquidity_escrow(
     deps: &mut DepsMut,
@@ -725,7 +725,7 @@ pub fn release_liquidity_escrow(
     let escrowed_vault_tokens = TOTAL_ESCROWED_LIQUIDITY.load(deps.storage)?;
     TOTAL_ESCROWED_LIQUIDITY.save(
         deps.storage,
-        &(escrowed_vault_tokens.wrapping_sub(amount))   // 'wrapping_sub' is safe, as 'amount' is always contained in 'escrowed_assets'
+        &(escrowed_vault_tokens.wrapping_sub(amount))   // 'wrapping_sub' is safe, as 'amount' is always contained in 'escrowed_liquidity'
                                                         // ! This is only the case if the 'amount' value is correct. But this a safe assumption
                                                         // ! as the 'amount' value should ALWAYS be verified before calling this function.
     )?;
@@ -1043,7 +1043,7 @@ pub fn compute_send_asset_hash(
 /// # Arguments:
 /// * `to_account` - The recipient of the swap output. Ensures no collisions between different users.
 /// * `u` - The units value of the swap. Used to randomize the hash.
-/// * `escrow_amount` - The escrowed asset amount. ! Required to validate the release escrow data.
+/// * `escrow_amount` - The escrowed liquidity amount. ! Required to validate the release escrow data.
 /// * `block_number_mod` - The block number at which the swap transaction was commited (modulo 2^32). Used to randomize the hash.
 /// 
 pub fn compute_send_liquidity_hash(

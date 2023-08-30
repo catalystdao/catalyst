@@ -1416,7 +1416,7 @@ pub fn send_liquidity(
     // prevent a router from abusing swap 'timeouts' to circumvent the security limit.
 
     // Build the message to 'send' the liquidity via the IBC interface.
-    let send_cross_chain_asset_msg = InterfaceExecuteMsg::SendCrossChainLiquidity {
+    let send_cross_chain_liquidity_msg = InterfaceExecuteMsg::SendCrossChainLiquidity {
         channel_id: channel_id.clone(),
         to_vault: to_vault.clone(),
         to_account: to_account.clone(),
@@ -1431,7 +1431,7 @@ pub fn send_liquidity(
     let send_liquidity_execute_msg = CosmosMsg::Wasm(
         cosmwasm_std::WasmMsg::Execute {
             contract_addr: chain_interface.as_ref().ok_or(ContractError::VaultHasNoInterface {})?.to_string(),
-            msg: to_binary(&send_cross_chain_asset_msg)?,
+            msg: to_binary(&send_cross_chain_liquidity_msg)?,
             funds: vec![]
         }
     );
@@ -1474,7 +1474,7 @@ pub fn send_liquidity(
 /// * `u` - The incoming units.
 /// * `min_vault_tokens` - The mininum vault tokens output amount.
 /// * `min_reference_asset` - The mininum reference asset value.
-/// * `from_amount` - The `from_asset` amount sold to the source vault.
+/// * `from_amount` - The liquidity amount sold to the source vault.
 /// * `from_block_number_mod` - The block number at which the swap transaction was commited (modulo 2^32).
 /// * `calldata_target` - The contract address to invoke upon successful execution of the swap.
 /// * `calldata` - The data to pass to `calldata_target` upon successful execution of the swap.
