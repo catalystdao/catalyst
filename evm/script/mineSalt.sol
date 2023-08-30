@@ -99,7 +99,7 @@ contract MineSalt is Script, StdAssertions {
 
     function templatevolatile(address factory_address, address math_lib) public returns(address actualAddress) {
         bytes32 initCodeHash = keccak256(abi.encodePacked(type(CatalystVaultVolatile).creationCode, abi.encode(factory_address, math_lib)));
-        (bytes32 salt, address expectedAddress) = mineSalt(initCodeHash, "00000000");
+        (bytes32 salt, address expectedAddress) = mineSalt(initCodeHash, "0000000");
 
         // DEPLOY
         vm.startBroadcast();
@@ -113,7 +113,7 @@ contract MineSalt is Script, StdAssertions {
 
     function templateamplified(address factory_address, address math_lib) public returns(address actualAddress) {
         bytes32 initCodeHash = keccak256(abi.encodePacked(type(CatalystVaultAmplified).creationCode, abi.encode(factory_address, math_lib)));
-        (bytes32 salt, address expectedAddress) = mineSalt(initCodeHash, "00000000");
+        (bytes32 salt, address expectedAddress) = mineSalt(initCodeHash, "0000000");
 
         // DEPLOY
         vm.startBroadcast();
@@ -125,10 +125,26 @@ contract MineSalt is Script, StdAssertions {
         console2.log("salt", uint256(salt));
     }
 
+    function cci(address incentive) public returns(address actualAddress) {
+        bytes32 initCodeHash = keccak256(abi.encodePacked(type(CatalystGARPInterface).creationCode, abi.encode(incentive, vm.envAddress("CATALYST_ADDRESS"))));
+        (bytes32 salt, address expectedAddress) = mineSalt(initCodeHash, "000000");
+
+        // DEPLOY
+        vm.startBroadcast();
+        actualAddress = address(new CatalystGARPInterface{salt: bytes32(salt)}(incentive, vm.envAddress("CATALYST_ADDRESS")));
+        vm.stopBroadcast();
+
+        assertEq(actualAddress, expectedAddress);
+        console2.log("Deployed incentive at", actualAddress);
+        console2.log("salt", uint256(salt));
+    }
+
     function run() public {
         address factory_address = address(0x000000833bCE31E92256B0495F689C960Ab43ecF); // factory(); salt: 10939276613522903274843397318942176140916222402700924666769304012145111727455
         address math_lib_vol = address(0x000B5ea158396635B4baA3d4434cAC1b7f21a27A); // mathvol(); salt: 74033924058872986406176265824008880344335346982926356649690178493693274618638
         address math_lib_amp = address(0x00079a894bcB0E6DaBc277F42C6856d63Ab63dDd); // mathamp(); salt: 18470954962426965460301953922945832700396418726579815624870618255990400962467
+        address incentive = address(0x000000641AC10b4e000fe361F2149E2a531061c5);
+        address cci = address(0x000000fbDa7dAf29ea5C8A3CEd2d05D65733917b); // cci(incentive); salt: 96570294397286943990946847491866188430491972815926572221094897960520587353076
         templatevolatile(factory_address, math_lib_vol);
         templateamplified(factory_address, math_lib_amp);
     }

@@ -8,6 +8,7 @@ from time import sleep
 import web3
 from eth_abi import encode
 from eth_account import Account
+from eth_account.messages import encode_defunct, defunct_hash_message
 from eth_account.signers.local import LocalAccount
 from eth_abi.packed import encode_packed
 from web3 import Web3
@@ -17,15 +18,19 @@ from poa_signer import MessageSigner
 with open("external/IncentivizedMockEscrow.json", "r") as f:
     IncentivizedMockEscrow_abi = json.load(f)["abi"]
 
+with open("../../script/config/config_chain.json", "r") as f:
+    chain_config = json.load(f)
 
-def decode_chain_from_channel(channelid):
-    return channelid[0:16].decode().replace("\x00", "")
+
+def decode_chain_from_channel(channelid: bytes) -> int:
+    return int.from_bytes(channelid, byteorder='big')
 
 
 def convert_64_bytes_address(address) -> bytes:
     return encode_packed(
         ["uint8", "bytes32", "bytes32"], [20, 0, address]
     )
+
     
 
 logging.basicConfig(level=logging.INFO)
@@ -39,19 +44,26 @@ class PoARelayer(MessageSigner):
         self,
         private_key: str = os.environ["SIGNER"],
         chains={
-            1: {
+            3: {
                 "name": "scroll",
                 "confirmations": 0,
-                "url": "http://127.0.0.1:8546",  # os.environ["SCROLL_RPC"],
+                "url": "http://127.0.0.1:8545",  # os.environ["SCROLL_RPC"],
                 # "middleware": geth_poa,
-                "GI_contract": Web3.to_checksum_address("0x336615f193affdbeffcaeb2cc61d0dead286e242"),
+                "GI_contract": Web3.to_checksum_address("0x000000641ac10b4e000fe361f2149e2a531061c5"),
                 "key": os.environ["PRIVATE_KEY_ROUTER"]
             },
             2: {
+                "name": "cronos",
+                "confirmations": 0,
+                "url": "http://127.0.0.1:8547",  # os.environ["CRONOS_RPC"],
+                "GI_contract": Web3.to_checksum_address("0x000000641ac10b4e000fe361f2149e2a531061c5"),
+                "key": os.environ["PRIVATE_KEY_ROUTER"]
+            },
+            1: {
                 "name": "canto",
                 "confirmations": 0,
-                "url": "http://127.0.0.1:8545",  # os.environ["CRONOS_RPC"],
-                "GI_contract": Web3.to_checksum_address("0x4fb0f5fb6c4c0b0b133e958c04465a27aef5bc60"),
+                "url": "http://127.0.0.1:8546",  # os.environ["CRONOS_RPC"],
+                "GI_contract": Web3.to_checksum_address("0x000000641ac10b4e000fe361f2149e2a531061c5"),
                 "key": os.environ["PRIVATE_KEY_ROUTER"]
             }
         }
@@ -76,7 +88,7 @@ class PoARelayer(MessageSigner):
         return self.chains[chainId]["confirmations"] >= confirmations
 
     def signTransaction(self, chainId: int, transactionHash) -> list:
-        w3: Web3 = self.chains[chainId]["provider"]
+        w3: Web3 = self.chains[chainId]["w3"]
         
         transaction = w3.eth.get_transaction_receipt(transactionHash)
         confirmations: int = w3.eth.block_number - transaction["blockNumber"]
@@ -87,24 +99,29 @@ class PoARelayer(MessageSigner):
         
         signatures: list = []
         for log in logs:
-            if log["topics"][0] == "":
-                log = GeneralizedIncentivesMock.events.Message().processLog(log)
+            if log["topics"][0].hex() == "0x55d98696b252b788d21d4bb968cd6e13002c2a1fdda6f421bf95f58fea7dbdd1":
+                log = GeneralizedIncentivesMock.events.Message().process_log(log)
                 
                 emitter = log["address"]
                 message = log["args"]["message"]
                 
-                newMessage = encode_packed(["bytes", "bytes"], [encode(["address"], [emitter]), bytes.fromhex(message)]).hex()
+                newMessage = encode_packed(
+                    ["bytes", "bytes"],
+                    [encode(["address"], [emitter]), message]
+                )
+                messageHash = Web3.solidity_keccak(["bytes"], [newMessage]).hex()
                 
                 sig = self.signMessage(
-                    newMessage
+                    messageHash
                 )
                 
                 signatures.append(
                     [
                         newMessage,
-                        encode(["uint8", "bytes32", "bytes32"], [sig.v, sig.r, sig.s])
+                        encode(["uint8", "uint256", "uint256"], [sig.v, sig.r, sig.s])
                     ]
                 )
+
         
         return signatures
 
@@ -116,6 +133,8 @@ class PoARelayer(MessageSigner):
 
     def execute(self, fromChain, event):
         toChain = event["args"]["destinationIdentifier"]
+        # convert to string based on json.
+        toChain = decode_chain_from_channel(toChain)
         
         GI = self.chains[toChain]["GI"]
         
@@ -129,10 +148,10 @@ class PoARelayer(MessageSigner):
 
         # Execute the transaction on the target side:
         tx = GI.functions.processMessage(
-            signature[1], signature[0], encode(["address"], [relayer_address])
+            signature[1], signature[0], encode(["address"], [relayer_address.address])
         ).build_transaction(
             {
-                "from": relayer_address,
+                "from": relayer_address.address,
                 "nonce": self.chains[toChain]["nonce"]
             }
         )
@@ -144,7 +163,7 @@ class PoARelayer(MessageSigner):
         tx_hash = w3.eth.send_raw_transaction(signed_txn.rawTransaction)
         self.chains[toChain]["nonce"] = self.chains[toChain]["nonce"] + 1
 
-        logging.info(f"Execute: {fromChain} -> {toChain, Web3.toHex(tx_hash)}")
+        logging.info(f"Execute: {fromChain} -> {toChain, tx_hash}")
 
         return tx_hash
           

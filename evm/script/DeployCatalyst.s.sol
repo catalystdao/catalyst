@@ -112,7 +112,7 @@ contract DeployCatalyst is Script {
         address volatile_template = contracts.volatile_template;
         if (volatile_template == address(0)) {
             volatile_template = address(
-                new CatalystVaultVolatile{salt: bytes32(uint256(4382922435790043594670636943566850636188519296600851940082711801970208080762))}(address(factory), volatile_mathlib)
+                new CatalystVaultVolatile{salt: bytes32(uint256(90666029254614484818957216435590672288571609039713533572803031357623145398741))}(address(factory), volatile_mathlib)
             );
         }
         contracts.volatile_template = address(volatile_template);
@@ -124,7 +124,7 @@ contract DeployCatalyst is Script {
         address amplified_template = contracts.amplified_template;
         if (amplified_template == address(0)) {
             amplified_template = address(
-                new CatalystVaultAmplified{salt: bytes32(uint256(29760976314930895393164676106066830337776320435002657993444587327034851182046))}(address(factory), amplified_mathlib)
+                new CatalystVaultAmplified{salt: bytes32(uint256(33798383540615207293971370085840030437050046331622854713137360565723565106899))}(address(factory), amplified_mathlib)
             );
         }
         contracts.amplified_template = address(amplified_template);
