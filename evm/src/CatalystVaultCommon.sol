@@ -1,17 +1,18 @@
-//SPDX-License-Identifier: Unlicensed
+//SPDX-License-Identifier: UNLICENSED
 
 pragma solidity ^0.8.16;
 
 import {ERC20} from 'solmate/src/tokens/ERC20.sol';
 import {SafeTransferLib} from 'solmate/src/utils/SafeTransferLib.sol';
 import { IMessageEscrowStructs } from "GeneralisedIncentives/src/interfaces/IMessageEscrowStructs.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
-import "@openzeppelin/contracts/utils/Multicall.sol";
-import "./CatalystFactory.sol";
-import "./utils/FixedPointMathLib.sol";
-import "./interfaces/IOnCatalyst.sol";
-import "./ICatalystV1Vault.sol";
+import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
+import { ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import { Initializable } from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
+import { Multicall } from "@openzeppelin/contracts/utils/Multicall.sol";
+import { MAX_GOVERNANCE_FEE_SHARE } from"./CatalystFactory.sol";
+import { FixedPointMathLib} from "./utils/FixedPointMathLib.sol";
+import { ICatalystReceiver} from "./interfaces/IOnCatalyst.sol";
+import { ICatalystV1Vault } from "./ICatalystV1Vault.sol";
 import "./interfaces/ICatalystV1VaultErrors.sol";
 
 /**
@@ -134,7 +135,7 @@ abstract contract CatalystVaultCommon is
     }
 
     function factoryOwner() public view override returns (address) {
-        return CatalystFactory(FACTORY).owner();
+        return Ownable(FACTORY).owner();
     }
 
     /**

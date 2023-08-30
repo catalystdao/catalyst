@@ -100,31 +100,31 @@ contract DeployCatalyst is Script {
         // Deploy Factory
         CatalystFactory factory = CatalystFactory(contracts.factory);
         if (address(factory) == address(0)) {
-            factory = new CatalystFactory{salt: bytes32(uint256(10939276613522903274843397318942176140916222402700924666769304012145111727455))}(vm.envAddress("CATALYST_ADDRESS"));
+            factory = new CatalystFactory{salt: bytes32(uint256(17913527253544052377148342935207663648266424961550501187556387275812090712216))}(vm.envAddress("CATALYST_ADDRESS"));
         }
         contracts.factory = address(factory);
 
         // Deploy Templates
         address volatile_mathlib = contracts.volatile_mathlib;
-        if (volatile_mathlib == address(0)) volatile_mathlib = address(new CatalystMathVol{salt: bytes32(uint256(74033924058872986406176265824008880344335346982926356649690178493693274618638))}());
+        if (volatile_mathlib == address(0)) volatile_mathlib = address(new CatalystMathVol{salt: bytes32(uint256(85598404464591085278359771032523095787540092714401110853070981275698672848766))}());
         contracts.volatile_mathlib = address(volatile_mathlib);
 
         address volatile_template = contracts.volatile_template;
         if (volatile_template == address(0)) {
             volatile_template = address(
-                new CatalystVaultVolatile{salt: bytes32(uint256(90666029254614484818957216435590672288571609039713533572803031357623145398741))}(address(factory), volatile_mathlib)
+                new CatalystVaultVolatile{salt: bytes32(uint256(88648653197096078481732261810093446584084026526013867546544780279441951553797))}(address(factory), volatile_mathlib)
             );
         }
         contracts.volatile_template = address(volatile_template);
 
         address amplified_mathlib = contracts.amplified_mathlib;
-        if (amplified_mathlib == address(0)) amplified_mathlib = address(new CatalystMathAmp{salt: bytes32(uint256(18470954962426965460301953922945832700396418726579815624870618255990400962467))}());
+        if (amplified_mathlib == address(0)) amplified_mathlib = address(new CatalystMathAmp{salt: bytes32(uint256(112267599032000726981556348618800808014156055146433051612035005254394394945477))}());
         contracts.amplified_mathlib = address(amplified_mathlib);
 
         address amplified_template = contracts.amplified_template;
         if (amplified_template == address(0)) {
             amplified_template = address(
-                new CatalystVaultAmplified{salt: bytes32(uint256(33798383540615207293971370085840030437050046331622854713137360565723565106899))}(address(factory), amplified_mathlib)
+                new CatalystVaultAmplified{salt: bytes32(uint256(77308261969657442296406024174680786851572270974085798458143326301183087901106))}(address(factory), amplified_mathlib)
             );
         }
         contracts.amplified_template = address(amplified_template);

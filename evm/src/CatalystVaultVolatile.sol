@@ -1,15 +1,15 @@
-//SPDX-License-Identifier: Unlicensed
+//SPDX-License-Identifier: UNLICENSED
 
 pragma solidity ^0.8.16;
 
-import {ERC20} from 'solmate/src/tokens/ERC20.sol';
-import {SafeTransferLib} from 'solmate/src/utils/SafeTransferLib.sol';
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import "./utils/FixedPointMathLib.sol";
-import "./CatalystGARPInterface.sol";
-import "./CatalystVaultCommon.sol";
+import { ERC20 } from 'solmate/src/tokens/ERC20.sol';
+import { SafeTransferLib } from 'solmate/src/utils/SafeTransferLib.sol';
+import { FixedPointMathLib } from "./utils/FixedPointMathLib.sol";
+import { CatalystGARPInterface } from "./CatalystGARPInterface.sol";
+import { CatalystVaultCommon } from "./CatalystVaultCommon.sol";
+import { IntegralsVolatile } from "./IntegralsVolatile.sol";
+import { ICatalystReceiver} from "./interfaces/IOnCatalyst.sol";
 import "./ICatalystV1Vault.sol";
-import "./IntegralsVolatile.sol";
 
 /**
  * @title Catalyst: The Multi-Chain Vault

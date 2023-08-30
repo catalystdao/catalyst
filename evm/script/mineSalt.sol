@@ -135,16 +135,16 @@ contract MineSalt is Script, StdAssertions {
         vm.stopBroadcast();
 
         assertEq(actualAddress, expectedAddress);
-        console2.log("Deployed incentive at", actualAddress);
+        console2.log("Deployed cci at", actualAddress);
         console2.log("salt", uint256(salt));
     }
 
     function run() public {
-        address factory_address = address(0x000000833bCE31E92256B0495F689C960Ab43ecF); // factory(); salt: 10939276613522903274843397318942176140916222402700924666769304012145111727455
-        address math_lib_vol = address(0x000B5ea158396635B4baA3d4434cAC1b7f21a27A); // mathvol(); salt: 74033924058872986406176265824008880344335346982926356649690178493693274618638
-        address math_lib_amp = address(0x00079a894bcB0E6DaBc277F42C6856d63Ab63dDd); // mathamp(); salt: 18470954962426965460301953922945832700396418726579815624870618255990400962467
+        address factory_address = address(0x0000003B2d6feA85e801d0e3cFd82562D78B7421); // factory(); // salt: 17913527253544052377148342935207663648266424961550501187556387275812090712216
+        address math_lib_vol = address(0x0002EDE97B6779C1898a715a7bbABf5A3FF01B11); // mathvol(); // salt: 85598404464591085278359771032523095787540092714401110853070981275698672848766
+        address math_lib_amp = address(0x000be580b95551826fFeEBD7f87A381168352EFB); // mathamp(); // salt: 112267599032000726981556348618800808014156055146433051612035005254394394945477
         address incentive = address(0x000000641AC10b4e000fe361F2149E2a531061c5);
-        address cci = address(0x000000fbDa7dAf29ea5C8A3CEd2d05D65733917b); // cci(incentive); salt: 96570294397286943990946847491866188430491972815926572221094897960520587353076
+        address cci = address(0x00000077cE61884b85c528206BbB6Da912C20069); // cci(incentive); // salt: 23662216287711495946301799928329798522602365757173561077693070255109652532690
         templatevolatile(factory_address, math_lib_vol);
         templateamplified(factory_address, math_lib_amp);
     }

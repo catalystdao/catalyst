@@ -5,11 +5,11 @@ pragma solidity ^0.8.16;
 import { IMessageEscrowStructs } from "GeneralisedIncentives/src/interfaces/IMessageEscrowStructs.sol";
 import { IIncentivizedMessageEscrow } from "GeneralisedIncentives/src/interfaces/IIncentivizedMessageEscrow.sol";
 import { ICrossChainReceiver } from "GeneralisedIncentives/src/interfaces/ICrossChainReceiver.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import { Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import "./ICatalystV1Vault.sol";
 import "./interfaces/ICatalystV1VaultState.sol"; // structs
 import "./CatalystPayload.sol";
-import {Bytes65} from "GeneralisedIncentives/src/utils/Bytes65.sol";
+import { Bytes65 } from "GeneralisedIncentives/src/utils/Bytes65.sol";
 
 /**
  * @title Catalyst: Generalised IBC Interface

@@ -77,7 +77,7 @@ contract DeployInterfaces is Script {
             address incentiveAddress = incentive_addresses[i];
 
             // otherwise we need to deploy it
-            CatalystGARPInterface interfaceAddress = new CatalystGARPInterface{salt: bytes32(uint256(96570294397286943990946847491866188430491972815926572221094897960520587353076))}(incentiveAddress, vm.envAddress("CATALYST_ADDRESS"));
+            CatalystGARPInterface interfaceAddress = new CatalystGARPInterface{salt: bytes32(uint256(23662216287711495946301799928329798522602365757173561077693070255109652532690))}(incentiveAddress, vm.envAddress("CATALYST_ADDRESS"));
 
             // Write
             vm.writeJson(Strings.toHexString(uint160(address(interfaceAddress)), 20), pathToInterfacesConfig, string.concat(".", chain, ".", incentiveVersion, ".interface"));
