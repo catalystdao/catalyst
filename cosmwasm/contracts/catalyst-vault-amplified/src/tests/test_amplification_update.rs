@@ -54,8 +54,8 @@ mod test_amplified_amplification_update {
             Addr::unchecked(SETUP_MASTER),
             vault.clone(),
             &AmplifiedExecuteMsg::LocalSwap {
-                from_asset: vault_tokens[0].get_asset_ref().to_string(),
-                to_asset: vault_tokens[1].get_asset_ref().to_string(),
+                from_asset: vault_tokens[0].get_asset_ref(),
+                to_asset: vault_tokens[1].get_asset_ref(),
                 amount: Uint128::zero(),
                 min_out: Uint128::zero()
             },

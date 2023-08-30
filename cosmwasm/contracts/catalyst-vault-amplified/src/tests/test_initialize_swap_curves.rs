@@ -159,7 +159,7 @@ mod test_amplified_initialize_swap_curves {
                     .wrap()
                     .query_wasm_smart::<TotalEscrowedAssetResponse>(
                         vault.clone(),
-                        &crate::msg::QueryMsg::TotalEscrowedAsset { asset: asset.get_asset_ref().to_string() })
+                        &crate::msg::QueryMsg::TotalEscrowedAsset { asset: asset.get_asset_ref() })
                     .unwrap()
                     .amount;
 

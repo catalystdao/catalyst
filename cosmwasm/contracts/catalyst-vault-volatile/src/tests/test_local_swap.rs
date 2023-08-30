@@ -58,8 +58,8 @@ mod test_volatile_local_swap {
             Addr::unchecked(LOCAL_SWAPPER),
             vault.clone(),
             &VolatileExecuteMsg::LocalSwap {
-                from_asset: from_asset.get_asset_ref().to_string(),
-                to_asset: to_asset.get_asset_ref().to_string(),
+                from_asset: from_asset.get_asset_ref(),
+                to_asset: to_asset.get_asset_ref(),
                 amount: swap_amount,
                 min_out: Uint128::zero()
             },
@@ -188,8 +188,8 @@ mod test_volatile_local_swap {
             Addr::unchecked(LOCAL_SWAPPER),
             vault.clone(),
             &VolatileExecuteMsg::LocalSwap {
-                from_asset: from_asset.get_asset_ref().to_string(),
-                to_asset: to_asset.get_asset_ref().to_string(),
+                from_asset: from_asset.get_asset_ref(),
+                to_asset: to_asset.get_asset_ref(),
                 amount: swap_amount,
                 min_out
             },
@@ -211,8 +211,8 @@ mod test_volatile_local_swap {
             Addr::unchecked(LOCAL_SWAPPER),
             vault.clone(),
             &VolatileExecuteMsg::LocalSwap {
-                from_asset: from_asset.get_asset_ref().to_string(),
-                to_asset: to_asset.get_asset_ref().to_string(),
+                from_asset: from_asset.get_asset_ref(),
+                to_asset: to_asset.get_asset_ref(),
                 amount: swap_amount,
                 min_out: f64_to_uint128(expected_swap.to_amount * 0.99).unwrap()
             },
@@ -271,8 +271,8 @@ mod test_volatile_local_swap {
             Addr::unchecked(LOCAL_SWAPPER),
             vault.clone(),
             &VolatileExecuteMsg::LocalSwap {
-                from_asset: from_asset.get_asset_ref().to_string(),
-                to_asset: to_asset.get_asset_ref().to_string(),
+                from_asset: from_asset.get_asset_ref(),
+                to_asset: to_asset.get_asset_ref(),
                 amount: swap_amount,
                 min_out: Uint128::zero()
             },
@@ -293,11 +293,11 @@ mod test_volatile_local_swap {
         );
         assert_eq!(
             local_swap_event.attributes[2],
-            Attribute::new("from_asset", from_asset.get_asset_ref().to_string())
+            Attribute::new("from_asset", from_asset.get_asset_ref())
         );
         assert_eq!(
             local_swap_event.attributes[3],
-            Attribute::new("to_asset", to_asset.get_asset_ref().to_string())
+            Attribute::new("to_asset", to_asset.get_asset_ref())
         );
         assert_eq!(
             local_swap_event.attributes[4],
@@ -353,8 +353,8 @@ mod test_volatile_local_swap {
             Addr::unchecked(LOCAL_SWAPPER),
             vault.clone(),
             &VolatileExecuteMsg::LocalSwap {
-                from_asset: from_asset.get_asset_ref().to_string(),
-                to_asset: to_asset.get_asset_ref().to_string(),
+                from_asset: from_asset.get_asset_ref(),
+                to_asset: to_asset.get_asset_ref(),
                 amount: swap_amount,
                 min_out: Uint128::zero()
             },
@@ -417,8 +417,8 @@ mod test_volatile_local_swap {
             Addr::unchecked(LOCAL_SWAPPER),
             vault.clone(),
             &VolatileExecuteMsg::LocalSwap {
-                from_asset: from_asset.get_asset_ref().to_string(),
-                to_asset: to_asset.get_asset_ref().to_string(),
+                from_asset: from_asset.get_asset_ref(),
+                to_asset: to_asset.get_asset_ref(),
                 amount: swap_amount,
                 min_out: Uint128::zero()
             },
@@ -475,8 +475,8 @@ mod test_volatile_local_swap {
             Addr::unchecked(LOCAL_SWAPPER),
             vault.clone(),
             &VolatileExecuteMsg::LocalSwap {
-                from_asset: from_asset.get_asset_ref().to_string(),
-                to_asset: to_asset.get_asset_ref().to_string(),
+                from_asset: from_asset.get_asset_ref(),
+                to_asset: to_asset.get_asset_ref(),
                 amount: swap_amount,
                 min_out: Uint128::zero()
             },
@@ -568,8 +568,8 @@ mod test_volatile_local_swap {
             Addr::unchecked(LOCAL_SWAPPER),
             vault.clone(),
             &VolatileExecuteMsg::LocalSwap {
-                from_asset: from_asset.get_asset_ref().to_string(),
-                to_asset: to_asset.get_asset_ref().to_string(),
+                from_asset: from_asset.get_asset_ref(),
+                to_asset: to_asset.get_asset_ref(),
                 amount: swap_amount,
                 min_out: Uint128::zero()
             },
@@ -652,8 +652,8 @@ mod test_volatile_local_swap {
             Addr::unchecked(LOCAL_SWAPPER),
             vault.clone(),
             &VolatileExecuteMsg::LocalSwap {
-                from_asset: from_asset.get_asset_ref().to_string(),
-                to_asset: to_asset.get_asset_ref().to_string(),
+                from_asset: from_asset.get_asset_ref(),
+                to_asset: to_asset.get_asset_ref(),
                 amount: swap_amount,
                 min_out: Uint128::zero()
             },

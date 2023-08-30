@@ -6,9 +6,10 @@ use vault_assets::asset::{AssetTrait, asset_cw20::Cw20Asset, asset_native::Nativ
 use crate::token::{query_token_balance, transfer_tokens};
 
 
+/// Interface for mock test assets.
 pub trait CustomTestAsset<T: AssetTrait>: Clone + Debug + PartialEq {
 
-    fn get_asset_ref(&self) -> &str;
+    fn get_asset_ref(&self) -> String;
 
     fn query_balance(&self, app: &mut App, account: impl Into<String>) -> Uint128;
 
@@ -29,8 +30,8 @@ pub struct TestNativeAsset {
 
 impl CustomTestAsset<NativeAsset> for TestNativeAsset {
 
-    fn get_asset_ref(&self) -> &str {
-        &self.alias
+    fn get_asset_ref(&self) -> String {
+        self.alias.clone()
     }
 
     fn query_balance(&self, app: &mut App, account: impl Into<String>) -> Uint128 {
@@ -81,8 +82,8 @@ pub struct TestCw20Asset(pub String);
 
 impl CustomTestAsset<Cw20Asset> for TestCw20Asset {
 
-    fn get_asset_ref(&self) -> &str {
-        &self.0
+    fn get_asset_ref(&self) -> String {
+        self.0.clone()
     }
 
     fn query_balance(&self, app: &mut App, account: impl Into<String>) -> Uint128 {

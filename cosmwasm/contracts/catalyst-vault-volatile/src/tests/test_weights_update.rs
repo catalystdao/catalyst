@@ -58,8 +58,8 @@ mod test_volatile_weights_update {
             Addr::unchecked(SETUP_MASTER),
             vault.clone(),
             &VolatileExecuteMsg::LocalSwap {
-                from_asset: vault_tokens[0].get_asset_ref().to_string(),
-                to_asset: vault_tokens[1].get_asset_ref().to_string(),
+                from_asset: vault_tokens[0].get_asset_ref(),
+                to_asset: vault_tokens[1].get_asset_ref(),
                 amount: Uint128::zero(),
                 min_out: Uint128::zero()
             },
@@ -132,7 +132,7 @@ mod test_volatile_weights_update {
 
                 let queried_target_weight = env.get_app().wrap().query_wasm_smart::<TargetWeightResponse>(
                     vault.clone(),
-                    &QueryMsg::TargetWeight { asset: asset.get_asset_ref().to_string() }
+                    &QueryMsg::TargetWeight { asset: asset.get_asset_ref() }
                 ).unwrap().target_weight;
 
                 assert_eq!(
@@ -651,7 +651,7 @@ mod test_volatile_weights_update {
 
                         let queried_current_weight = env.get_app().wrap().query_wasm_smart::<WeightResponse>(
                             vault.clone(),
-                            &QueryMsg::Weight { asset: asset.get_asset_ref().to_string() }
+                            &QueryMsg::Weight { asset: asset.get_asset_ref() }
                         ).unwrap().weight;
 
                         let initial_weight = initial_vault_weights[i].u128() as f64;
@@ -722,7 +722,7 @@ mod test_volatile_weights_update {
 
                 let queried_current_weight = env.get_app().wrap().query_wasm_smart::<WeightResponse>(
                     vault.clone(),
-                    &QueryMsg::Weight { asset: asset.get_asset_ref().to_string() }
+                    &QueryMsg::Weight { asset: asset.get_asset_ref() }
                 ).unwrap().weight;
 
                 assert_eq!(
@@ -813,7 +813,7 @@ mod test_volatile_weights_update {
 
                         env.get_app().wrap().query_wasm_smart::<WeightResponse>(
                             vault.clone(),
-                            &QueryMsg::Weight { asset: asset.get_asset_ref().to_string() }
+                            &QueryMsg::Weight { asset: asset.get_asset_ref() }
                         ).unwrap().weight
     
                     })
