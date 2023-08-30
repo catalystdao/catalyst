@@ -1,5 +1,5 @@
 use cosmwasm_std::{Uint128, Addr};
-use cw20::{Cw20Coin, MinterResponse, BalanceResponse, Cw20QueryMsg, TokenInfoResponse, Cw20ExecuteMsg};
+use cw20::{Cw20Coin, MinterResponse, BalanceResponse, Cw20QueryMsg, TokenInfoResponse, Cw20ExecuteMsg, AllowanceResponse};
 use cw_multi_test::{App, ContractWrapper, AppResponse, Executor};
 
 pub const WAD: Uint128 = Uint128::new(1000000000000000000u128);
@@ -195,7 +195,25 @@ pub fn query_token_info(
 }
 
 
-pub fn set_token_allowance(
+pub fn get_token_allowance(
+    app: &mut App,
+    asset: Addr,
+    account: Addr,
+    spender: String,
+) -> AllowanceResponse {
+
+    app.wrap().query_wasm_smart(
+        asset,
+        &Cw20QueryMsg::Allowance {
+            owner: account.to_string(),
+            spender
+        }
+    ).unwrap()
+
+}
+
+
+pub fn increase_token_allowance(
     app: &mut App,
     amount: Uint128,
     asset: Addr,
@@ -206,6 +224,26 @@ pub fn set_token_allowance(
         account,
         asset,
         &Cw20ExecuteMsg::IncreaseAllowance {
+            spender,
+            amount,
+            expires: None
+        },
+        &[]
+    ).unwrap()
+}
+
+
+pub fn decrease_token_allowance(
+    app: &mut App,
+    amount: Uint128,
+    asset: Addr,
+    account: Addr,
+    spender: String,
+) -> AppResponse {
+    app.execute_contract::<Cw20ExecuteMsg>(
+        account,
+        asset,
+        &Cw20ExecuteMsg::DecreaseAllowance {
             spender,
             amount,
             expires: None

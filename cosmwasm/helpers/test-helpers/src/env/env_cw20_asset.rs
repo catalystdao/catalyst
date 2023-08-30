@@ -4,7 +4,7 @@ use cosmwasm_std::{Uint128, Addr};
 use cw_multi_test::{App, Executor, AppResponse};
 use vault_assets::asset::asset_cw20::Cw20Asset;
 
-use crate::{asset::TestCw20Asset, token::{deploy_test_tokens, set_token_allowance}};
+use crate::{asset::TestCw20Asset, token::{deploy_test_tokens, get_token_allowance, increase_token_allowance, decrease_token_allowance}};
 
 use super::CustomTestEnv;
 
@@ -47,11 +47,23 @@ impl CustomTestEnv<Cw20Asset, TestCw20Asset> for TestCw20AssetEnv {
             bail!("Assets and amounts len mismatch.".to_string());
         }
 
+        // Get the initial contract allowances
+        let initial_allowances: Vec<Uint128> = send_assets.iter()
+            .map(|asset| {
+                get_token_allowance(
+                    self.get_app(),
+                    Addr::unchecked(asset.0.clone()),
+                    sender.clone(),
+                    contract_addr.to_string()
+                ).allowance
+            })
+            .collect();
+
         // Set allowances
         send_assets.iter()
             .zip(send_amounts)
             .for_each(|(asset, amount)| {
-                set_token_allowance(
+                increase_token_allowance(
                     self.get_app(),
                     amount,
                     Addr::unchecked(asset.0.to_string()),
@@ -62,12 +74,36 @@ impl CustomTestEnv<Cw20Asset, TestCw20Asset> for TestCw20AssetEnv {
             });
 
         // Execute contract
-        self.get_app().execute_contract(
-            sender,
-            contract_addr,
+        let result = self.get_app().execute_contract(
+            sender.clone(),
+            contract_addr.clone(),
             msg,
             &[]
-        )
+        );
+
+        // Reset the contract allowances
+        send_assets.iter()
+            .zip(initial_allowances)
+            .for_each(|(asset, initial_allowance)| {
+                let new_allowance = get_token_allowance(
+                    self.get_app(),
+                    Addr::unchecked(asset.0.clone()),
+                    sender.clone(),
+                    contract_addr.to_string()
+                ).allowance;
+
+                if new_allowance > initial_allowance {
+                    decrease_token_allowance(
+                        self.get_app(),
+                        new_allowance - initial_allowance,
+                        Addr::unchecked(asset.0.to_string()),
+                        sender.clone(),
+                        contract_addr.to_string()
+                    );
+                }
+            });
+
+        result
     }
 
 }
