@@ -317,7 +317,7 @@ contract CatalystGARPInterface is Ownable, ICrossChainReceiver, Bytes65, IMessag
         bytes1 swapStatus = acknowledgement[0];
         if (swapStatus != 0x00) {
             emit SwapFailed(swapStatus);
-            return _onPacketFailure(destinationIdentifier, acknowledgement);
+            return _onPacketFailure(destinationIdentifier, acknowledgement[1:]);
         }
         // Otherwise, it must be a success:
         _onPacketSuccess(destinationIdentifier, acknowledgement[1:]);
