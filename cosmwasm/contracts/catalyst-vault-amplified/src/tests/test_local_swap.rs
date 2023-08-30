@@ -58,8 +58,8 @@ mod test_amplified_local_swap {
             Addr::unchecked(LOCAL_SWAPPER),
             vault.clone(),
             &AmplifiedExecuteMsg::LocalSwap {
-                from_asset: from_asset.get_asset_ref(),
-                to_asset: to_asset.get_asset_ref(),
+                from_asset_ref: from_asset.get_asset_ref(),
+                to_asset_ref: to_asset.get_asset_ref(),
                 amount: swap_amount,
                 min_out: Uint128::zero()
             },
@@ -184,8 +184,8 @@ mod test_amplified_local_swap {
             Addr::unchecked(LOCAL_SWAPPER),
             vault.clone(),
             &AmplifiedExecuteMsg::LocalSwap {
-                from_asset: from_asset.get_asset_ref(),
-                to_asset: to_asset.get_asset_ref(),
+                from_asset_ref: from_asset.get_asset_ref(),
+                to_asset_ref: to_asset.get_asset_ref(),
                 amount: swap_amount,
                 min_out: Uint128::zero()
             },
@@ -282,8 +282,8 @@ mod test_amplified_local_swap {
             Addr::unchecked(LOCAL_SWAPPER),
             vault.clone(),
             &AmplifiedExecuteMsg::LocalSwap {
-                from_asset: from_asset.get_asset_ref(),
-                to_asset: to_asset.get_asset_ref(),
+                from_asset_ref: from_asset.get_asset_ref(),
+                to_asset_ref: to_asset.get_asset_ref(),
                 amount: swap_amount,
                 min_out
             },
@@ -305,8 +305,8 @@ mod test_amplified_local_swap {
             Addr::unchecked(LOCAL_SWAPPER),
             vault.clone(),
             &AmplifiedExecuteMsg::LocalSwap {
-                from_asset: from_asset.get_asset_ref(),
-                to_asset: to_asset.get_asset_ref(),
+                from_asset_ref: from_asset.get_asset_ref(),
+                to_asset_ref: to_asset.get_asset_ref(),
                 amount: swap_amount,
                 min_out: f64_to_uint128(expected_swap.to_amount * 0.99).unwrap()
             },
@@ -365,8 +365,8 @@ mod test_amplified_local_swap {
             Addr::unchecked(LOCAL_SWAPPER),
             vault.clone(),
             &AmplifiedExecuteMsg::LocalSwap {
-                from_asset: from_asset.get_asset_ref(),
-                to_asset: to_asset.get_asset_ref(),
+                from_asset_ref: from_asset.get_asset_ref(),
+                to_asset_ref: to_asset.get_asset_ref(),
                 amount: swap_amount,
                 min_out: Uint128::zero()
             },
@@ -387,11 +387,11 @@ mod test_amplified_local_swap {
         );
         assert_eq!(
             local_swap_event.attributes[2],
-            Attribute::new("from_asset", from_asset.get_asset_ref())
+            Attribute::new("from_asset_ref", from_asset.get_asset_ref())
         );
         assert_eq!(
             local_swap_event.attributes[3],
-            Attribute::new("to_asset", to_asset.get_asset_ref())
+            Attribute::new("to_asset_ref", to_asset.get_asset_ref())
         );
         assert_eq!(
             local_swap_event.attributes[4],
@@ -447,8 +447,8 @@ mod test_amplified_local_swap {
             Addr::unchecked(LOCAL_SWAPPER),
             vault.clone(),
             &AmplifiedExecuteMsg::LocalSwap {
-                from_asset: from_asset.get_asset_ref(),
-                to_asset: to_asset.get_asset_ref(),
+                from_asset_ref: from_asset.get_asset_ref(),
+                to_asset_ref: to_asset.get_asset_ref(),
                 amount: swap_amount,
                 min_out: Uint128::zero()
             },
@@ -511,8 +511,8 @@ mod test_amplified_local_swap {
             Addr::unchecked(LOCAL_SWAPPER),
             vault.clone(),
             &AmplifiedExecuteMsg::LocalSwap {
-                from_asset: from_asset.get_asset_ref(),
-                to_asset: to_asset.get_asset_ref(),
+                from_asset_ref: from_asset.get_asset_ref(),
+                to_asset_ref: to_asset.get_asset_ref(),
                 amount: swap_amount,
                 min_out: Uint128::zero()
             },
@@ -569,8 +569,8 @@ mod test_amplified_local_swap {
             Addr::unchecked(LOCAL_SWAPPER),
             vault.clone(),
             &AmplifiedExecuteMsg::LocalSwap {
-                from_asset: from_asset.get_asset_ref(),
-                to_asset: to_asset.get_asset_ref(),
+                from_asset_ref: from_asset.get_asset_ref(),
+                to_asset_ref: to_asset.get_asset_ref(),
                 amount: swap_amount,
                 min_out: Uint128::zero()
             },
@@ -663,8 +663,8 @@ mod test_amplified_local_swap {
             Addr::unchecked(LOCAL_SWAPPER),
             vault.clone(),
             &AmplifiedExecuteMsg::LocalSwap {
-                from_asset: from_asset.get_asset_ref(),
-                to_asset: to_asset.get_asset_ref(),
+                from_asset_ref: from_asset.get_asset_ref(),
+                to_asset_ref: to_asset.get_asset_ref(),
                 amount: swap_amount,
                 min_out: Uint128::zero()
             },
@@ -747,8 +747,8 @@ mod test_amplified_local_swap {
             Addr::unchecked(LOCAL_SWAPPER),
             vault.clone(),
             &AmplifiedExecuteMsg::LocalSwap {
-                from_asset: from_asset.get_asset_ref(),
-                to_asset: to_asset.get_asset_ref(),
+                from_asset_ref: from_asset.get_asset_ref(),
+                to_asset_ref: to_asset.get_asset_ref(),
                 amount: swap_amount,
                 min_out: Uint128::zero()
             },

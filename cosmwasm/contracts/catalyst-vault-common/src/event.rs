@@ -6,22 +6,22 @@ use catalyst_types::U256;
 /// 
 /// # Arguments:
 /// * `account` - The account which has executed the swap.
-/// * `from_asset` - The source asset.
-/// * `to_asset` - The destination asset.
-/// * `from_amount` - The `from_asset` amount sold to the vault.
-/// * `to_amount` - The `to_asset` amount bought from the vault.
+/// * `from_asset_ref` - The source asset reference.
+/// * `to_asset_ref` - The destination asset reference.
+/// * `from_amount` - The `from_asset_ref` amount sold to the vault.
+/// * `to_amount` - The `to_asset_ref` amount bought from the vault.
 /// 
 pub fn local_swap_event(
     account: String,
-    from_asset: impl Into<String>,
-    to_asset: impl Into<String>,
+    from_asset_ref: impl Into<String>,
+    to_asset_ref: impl Into<String>,
     from_amount: Uint128,
     to_amount: Uint128
 ) -> Event {
     Event::new("local-swap")
         .add_attribute("account", account)
-        .add_attribute("from_asset", from_asset)
-        .add_attribute("to_asset", to_asset)
+        .add_attribute("from_asset_ref", from_asset_ref)
+        .add_attribute("to_asset_ref", to_asset_ref)
         .add_attribute("from_amount", from_amount)
         .add_attribute("to_amount", to_amount)
 }
@@ -33,18 +33,18 @@ pub fn local_swap_event(
 /// * `channel_id` - The target chain identifier.
 /// * `to_vault` - The target vault on the target chain (Catalyst encoded).
 /// * `to_account` - The recipient of the swap on the target chain (Catalyst encoded).
-/// * `from_asset` - The source asset.
+/// * `from_asset_ref` - The source asset reference.
 /// * `to_asset_index` - The destination asset index.
-/// * `from_amount` - The `from_asset` amount sold to the vault.
+/// * `from_amount` - The `from_asset_ref` amount sold to the vault.
 /// * `min_out` - The mininum `to_asset` output amount to get on the target vault.
 /// * `units` - The amount of units bought.
-/// * `fee` - The amount of `from_asset` paid to the vault in fees.
+/// * `fee` - The amount of `from_asset_ref` paid to the vault in fees.
 /// 
 pub fn send_asset_event(
     channel_id: String,
     to_vault: Binary,
     to_account: Binary,
-    from_asset: impl Into<String>,
+    from_asset_ref: impl Into<String>,
     to_asset_index: u8,
     from_amount: Uint128,
     min_out: U256,
@@ -55,7 +55,7 @@ pub fn send_asset_event(
         .add_attribute("channel_id", channel_id)
         .add_attribute("to_vault", to_vault.to_base64())
         .add_attribute("to_account", to_account.to_base64())
-        .add_attribute("from_asset", from_asset)
+        .add_attribute("from_asset_ref", from_asset_ref)
         .add_attribute("to_asset_index", to_asset_index.to_string())
         .add_attribute("from_amount", from_amount)
         .add_attribute("min_out", min_out)
@@ -70,7 +70,7 @@ pub fn send_asset_event(
 /// * `channel_id` - The source chain identifier.
 /// * `from_vault` - The source vault on the source chain.
 /// * `to_account` - The recipient of the swap.
-/// * `to_asset` - The destination asset.
+/// * `to_asset_ref` - The destination asset reference.
 /// * `units` - The incoming units.
 /// * `to_amount` - The `to_asset` amount bought from the vault.
 /// * `from_amount` - The `from_asset` amount sold to the source vault.
@@ -81,7 +81,7 @@ pub fn receive_asset_event(
     channel_id: String,
     from_vault: Binary,
     to_account: String,
-    to_asset: impl Into<String>,
+    to_asset_ref: impl Into<String>,
     units: U256,
     to_amount: Uint128,
     from_amount: U256,
@@ -92,7 +92,7 @@ pub fn receive_asset_event(
         .add_attribute("channel_id", channel_id)
         .add_attribute("from_vault", from_vault.to_base64())
         .add_attribute("to_account", to_account)
-        .add_attribute("to_asset", to_asset)
+        .add_attribute("to_asset_ref", to_asset_ref)
         .add_attribute("units", units)
         .add_attribute("to_amount", to_amount)
         .add_attribute("from_amount", from_amount)
@@ -208,7 +208,7 @@ pub fn withdraw_event(
 /// * `to_account` - The recipient of the swap output.
 /// * `units` - The units value of the swap.
 /// * `escrow_amount` - The escrowed asset amount.
-/// * `asset` - The swap source asset.
+/// * `asset_ref` - The swap source asset reference.
 /// * `block_number_mod` - The block number at which the swap transaction was commited (modulo 2^32).
 /// 
 pub fn send_asset_success_event(
@@ -216,7 +216,7 @@ pub fn send_asset_success_event(
     to_account: Binary,
     units: U256,
     escrow_amount: Uint128,
-    asset: impl Into<String>,
+    asset_ref: impl Into<String>,
     block_number_mod: u32
 ) -> Event {
     Event::new("send-asset-success")
@@ -224,7 +224,7 @@ pub fn send_asset_success_event(
         .add_attribute("to_account", to_account.to_base64())
         .add_attribute("units", units)
         .add_attribute("escrow_amount", escrow_amount)
-        .add_attribute("asset", asset)
+        .add_attribute("asset_ref", asset_ref)
         .add_attribute("block_number_mod", block_number_mod.to_string())
 }
 
@@ -236,7 +236,7 @@ pub fn send_asset_success_event(
 /// * `to_account` - The recipient of the swap output.
 /// * `units` - The units value of the swap.
 /// * `escrow_amount` - The escrowed asset amount.
-/// * `asset` - The swap source asset.
+/// * `asset_ref` - The swap source asset reference.
 /// * `block_number_mod` - The block number at which the swap transaction was commited (modulo 2^32).
 /// 
 pub fn send_asset_failure_event(
@@ -244,7 +244,7 @@ pub fn send_asset_failure_event(
     to_account: Binary,
     units: U256,
     escrow_amount: Uint128,
-    asset: impl Into<String>,
+    asset_ref: impl Into<String>,
     block_number_mod: u32
 ) -> Event {
     Event::new("send-asset-failure")
@@ -252,7 +252,7 @@ pub fn send_asset_failure_event(
         .add_attribute("to_account", to_account.to_base64())
         .add_attribute("units", units)
         .add_attribute("escrow_amount", escrow_amount)
-        .add_attribute("asset", asset)
+        .add_attribute("asset_ref", asset_ref)
         .add_attribute("block_number_mod", block_number_mod.to_string())
 }
 

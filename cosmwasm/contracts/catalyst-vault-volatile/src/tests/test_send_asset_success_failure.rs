@@ -79,7 +79,7 @@ mod test_volatile_send_asset_success_failure {
                     channel_id: CHANNEL_ID.to_string(),
                     to_vault: target_vault,
                     to_account: to_account.clone(),
-                    from_asset: from_asset.get_asset_ref(),
+                    from_asset_ref: from_asset.get_asset_ref(),
                     to_asset_index: to_asset_idx,
                     amount: swap_amount,
                     min_out: U256::zero(),
@@ -131,7 +131,7 @@ mod test_volatile_send_asset_success_failure {
                 to_account: mock.to_account.clone(),
                 u: mock.u,
                 escrow_amount: mock.from_amount - mock.fee,
-                asset: mock.from_asset.get_asset_ref(),
+                asset_ref: mock.from_asset.get_asset_ref(),
                 block_number_mod: mock.block_number,
             },
             vec![],
@@ -164,7 +164,7 @@ mod test_volatile_send_asset_success_failure {
             .wrap()
             .query_wasm_smart::<TotalEscrowedAssetResponse>(
                 mock.vault.clone(),
-                &QueryMsg::TotalEscrowedAsset { asset: mock.from_asset.get_asset_ref() }
+                &QueryMsg::TotalEscrowedAsset { asset_ref: mock.from_asset.get_asset_ref() }
             ).unwrap();
         
         assert_eq!(
@@ -210,7 +210,7 @@ mod test_volatile_send_asset_success_failure {
                 to_account: mock.to_account.clone(),
                 u: mock.u,
                 escrow_amount: mock.from_amount - mock.fee,
-                asset: mock.from_asset.get_asset_ref(),
+                asset_ref: mock.from_asset.get_asset_ref(),
                 block_number_mod: mock.block_number,
             },
             vec![],
@@ -242,7 +242,7 @@ mod test_volatile_send_asset_success_failure {
             .wrap()
             .query_wasm_smart::<TotalEscrowedAssetResponse>(
                 mock.vault.clone(),
-                &QueryMsg::TotalEscrowedAsset { asset: mock.from_asset.get_asset_ref() }
+                &QueryMsg::TotalEscrowedAsset { asset_ref: mock.from_asset.get_asset_ref() }
             ).unwrap();
         
         assert_eq!(
@@ -288,7 +288,7 @@ mod test_volatile_send_asset_success_failure {
                 to_account: mock.to_account.clone(),
                 u: mock.u,
                 escrow_amount: mock.from_amount - mock.fee,
-                asset: mock.from_asset.get_asset_ref(),
+                asset_ref: mock.from_asset.get_asset_ref(),
                 block_number_mod: mock.block_number,
             },
             vec![],
@@ -320,7 +320,7 @@ mod test_volatile_send_asset_success_failure {
         );
         assert_eq!(
             event.attributes[5],
-            Attribute::new("asset", mock.from_asset.get_asset_ref())
+            Attribute::new("asset_ref", mock.from_asset.get_asset_ref())
         );
         assert_eq!(
             event.attributes[6],
@@ -348,7 +348,7 @@ mod test_volatile_send_asset_success_failure {
                 to_account: mock.to_account.clone(),
                 u: mock.u,
                 escrow_amount: mock.from_amount - mock.fee,
-                asset: mock.from_asset.get_asset_ref(),
+                asset_ref: mock.from_asset.get_asset_ref(),
                 block_number_mod: mock.block_number,
             },
             vec![],
@@ -380,7 +380,7 @@ mod test_volatile_send_asset_success_failure {
         );
         assert_eq!(
             event.attributes[5],
-            Attribute::new("asset", mock.from_asset.get_asset_ref())
+            Attribute::new("asset_ref", mock.from_asset.get_asset_ref())
         );
         assert_eq!(
             event.attributes[6],
@@ -406,7 +406,7 @@ mod test_volatile_send_asset_success_failure {
                 to_account: mock.to_account.clone(),
                 u: mock.u,
                 escrow_amount: mock.from_amount - mock.fee,
-                asset: mock.from_asset.get_asset_ref(),
+                asset_ref: mock.from_asset.get_asset_ref(),
                 block_number_mod: mock.block_number,
             },
             vec![],
@@ -424,7 +424,7 @@ mod test_volatile_send_asset_success_failure {
                 to_account: mock.to_account.clone(),
                 u: mock.u,
                 escrow_amount: mock.from_amount - mock.fee,
-                asset: mock.from_asset.get_asset_ref(),
+                asset_ref: mock.from_asset.get_asset_ref(),
                 block_number_mod: mock.block_number,
             },
             vec![],
@@ -459,7 +459,7 @@ mod test_volatile_send_asset_success_failure {
                 to_account: mock.to_account.clone(),
                 u: mock.u,
                 escrow_amount: mock.from_amount - mock.fee,
-                asset: mock.from_asset.get_asset_ref(),
+                asset_ref: mock.from_asset.get_asset_ref(),
                 block_number_mod: mock.block_number,
             },
             vec![],
@@ -477,7 +477,7 @@ mod test_volatile_send_asset_success_failure {
                 to_account: mock.to_account.clone(),
                 u: mock.u,
                 escrow_amount: mock.from_amount - mock.fee,
-                asset: mock.from_asset.get_asset_ref(),
+                asset_ref: mock.from_asset.get_asset_ref(),
                 block_number_mod: mock.block_number,
             },
             vec![],
@@ -514,7 +514,7 @@ mod test_volatile_send_asset_success_failure {
                 to_account: mock.to_account.clone(),
                 u: mock.u,
                 escrow_amount: mock.from_amount - mock.fee,
-                asset: mock.from_asset.get_asset_ref(),
+                asset_ref: mock.from_asset.get_asset_ref(),
                 block_number_mod: mock.block_number,
             },
             vec![],
@@ -549,7 +549,7 @@ mod test_volatile_send_asset_success_failure {
                 to_account: mock.to_account.clone(),
                 u: mock.u,
                 escrow_amount: mock.from_amount - mock.fee,
-                asset: mock.from_asset.get_asset_ref(),
+                asset_ref: mock.from_asset.get_asset_ref(),
                 block_number_mod: mock.block_number,
             },
             vec![],
@@ -585,7 +585,7 @@ mod test_volatile_send_asset_success_failure {
                 to_account: Binary("not_to_account".as_bytes().to_vec()),   // ! Not the chain interface
                 u: mock.u,
                 escrow_amount: mock.from_amount - mock.fee,
-                asset: mock.from_asset.get_asset_ref(),
+                asset_ref: mock.from_asset.get_asset_ref(),
                 block_number_mod: mock.block_number 
             },
             vec![],
@@ -604,7 +604,7 @@ mod test_volatile_send_asset_success_failure {
                 to_account: mock.to_account.clone(),
                 u: mock.u + u256!("1"),                              // ! Increased units
                 escrow_amount: mock.from_amount - mock.fee,
-                asset: mock.from_asset.get_asset_ref(),
+                asset_ref: mock.from_asset.get_asset_ref(),
                 block_number_mod: mock.block_number 
             },
             vec![],
@@ -623,7 +623,7 @@ mod test_volatile_send_asset_success_failure {
                 to_account: mock.to_account.clone(),
                 u: mock.u,
                 escrow_amount: (mock.from_amount - mock.fee) + Uint128::from(1u64),      // ! Increased from amount
-                asset: mock.from_asset.get_asset_ref(),
+                asset_ref: mock.from_asset.get_asset_ref(),
                 block_number_mod: mock.block_number 
             },
             vec![],
@@ -642,7 +642,7 @@ mod test_volatile_send_asset_success_failure {
                 to_account: mock.to_account.clone(),
                 u: mock.u,
                 escrow_amount: mock.from_amount - mock.fee,
-                asset: "not_from_asset".to_string(),                // ! Not the original asset
+                asset_ref: "not_from_asset".to_string(),                // ! Not the original asset
                 block_number_mod: mock.block_number 
             },
             vec![],
@@ -661,7 +661,7 @@ mod test_volatile_send_asset_success_failure {
                 to_account: mock.to_account.clone(),
                 u: mock.u,
                 escrow_amount: mock.from_amount - mock.fee,
-                asset: mock.from_asset.get_asset_ref(),
+                asset_ref: mock.from_asset.get_asset_ref(),
                 block_number_mod: 101u32                            // ! Not the original block number
             },
             vec![],
@@ -680,7 +680,7 @@ mod test_volatile_send_asset_success_failure {
                 to_account: mock.to_account,
                 u: mock.u,
                 escrow_amount: mock.from_amount - mock.fee,
-                asset: mock.from_asset.get_asset_ref(),
+                asset_ref: mock.from_asset.get_asset_ref(),
                 block_number_mod: mock.block_number,
             },
             vec![],
@@ -707,7 +707,7 @@ mod test_volatile_send_asset_success_failure {
                 to_account: Binary("not_to_account".as_bytes().to_vec()),   // ! Not the chain interface
                 u: mock.u,
                 escrow_amount: mock.from_amount - mock.fee,
-                asset: mock.from_asset.get_asset_ref(),
+                asset_ref: mock.from_asset.get_asset_ref(),
                 block_number_mod: mock.block_number 
             },
             vec![],
@@ -726,7 +726,7 @@ mod test_volatile_send_asset_success_failure {
                 to_account: mock.to_account.clone(),
                 u: mock.u + u256!("1"),                              // ! Increased units
                 escrow_amount: mock.from_amount - mock.fee,
-                asset: mock.from_asset.get_asset_ref(),
+                asset_ref: mock.from_asset.get_asset_ref(),
                 block_number_mod: mock.block_number 
             },
             vec![],
@@ -745,7 +745,7 @@ mod test_volatile_send_asset_success_failure {
                 to_account: mock.to_account.clone(),
                 u: mock.u,
                 escrow_amount: (mock.from_amount - mock.fee) * Uint128::from(2u64),      // ! Increased from amount
-                asset: mock.from_asset.get_asset_ref(),
+                asset_ref: mock.from_asset.get_asset_ref(),
                 block_number_mod: mock.block_number 
             },
             vec![],
@@ -764,7 +764,7 @@ mod test_volatile_send_asset_success_failure {
                 to_account: mock.to_account.clone(),
                 u: mock.u,
                 escrow_amount: mock.from_amount - mock.fee,
-                asset: mock.vault_assets[mock.from_asset_idx+1].get_asset_ref(),   // ! Not the original asset
+                asset_ref: mock.vault_assets[mock.from_asset_idx+1].get_asset_ref(),   // ! Not the original asset
                 block_number_mod: mock.block_number 
             },
             vec![],
@@ -783,7 +783,7 @@ mod test_volatile_send_asset_success_failure {
                 to_account: mock.to_account.clone(),
                 u: mock.u,
                 escrow_amount: mock.from_amount - mock.fee,
-                asset: mock.from_asset.get_asset_ref(),
+                asset_ref: mock.from_asset.get_asset_ref(),
                 block_number_mod: 101u32                            // ! Not the original block number
             },
             vec![],
@@ -802,7 +802,7 @@ mod test_volatile_send_asset_success_failure {
                 to_account: mock.to_account,
                 u: mock.u,
                 escrow_amount: mock.from_amount - mock.fee,
-                asset: mock.from_asset.get_asset_ref(),
+                asset_ref: mock.from_asset.get_asset_ref(),
                 block_number_mod: mock.block_number,
             },
             vec![],

@@ -93,7 +93,7 @@ mod test_volatile_initialize_swap_curves {
                     .wrap()
                     .query_wasm_smart::<WeightResponse>(
                         vault.clone(),
-                        &crate::msg::QueryMsg::Weight { asset: asset.get_asset_ref().to_string() }
+                        &crate::msg::QueryMsg::Weight { asset_ref: asset.get_asset_ref().to_string() }
                     )
                     .unwrap()
                     .weight;
@@ -150,7 +150,7 @@ mod test_volatile_initialize_swap_curves {
                     .wrap()
                     .query_wasm_smart::<TotalEscrowedAssetResponse>(
                         vault.clone(),
-                        &crate::msg::QueryMsg::TotalEscrowedAsset { asset: asset.get_asset_ref() })
+                        &crate::msg::QueryMsg::TotalEscrowedAsset { asset_ref: asset.get_asset_ref() })
                     .unwrap()
                     .amount;
 

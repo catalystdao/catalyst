@@ -97,13 +97,13 @@ pub enum ExecuteMsg<T, A=Asset> {
     },
 
     /// Perform a local asset swap.
-    /// * `from_asset` - The source asset reference.
-    /// * `to_asset` - The destination asset reference.
-    /// * `amount` - The `from_asset` amount sold to the vault.
-    /// * `min_out` - The mininmum return to get of `to_asset`.
+    /// * `from_asset_ref` - The source asset reference.
+    /// * `to_asset_ref` - The destination asset reference.
+    /// * `amount` - The `from_asset_ref` amount sold to the vault.
+    /// * `min_out` - The mininmum return to get of `to_asset_ref`.
     LocalSwap {
-        from_asset: String,
-        to_asset: String,
+        from_asset_ref: String,
+        to_asset_ref: String,
         amount: Uint128,
         min_out: Uint128,
     },
@@ -112,9 +112,9 @@ pub enum ExecuteMsg<T, A=Asset> {
     /// * `channel_id` - The target chain identifier.
     /// * `to_vault` - The target vault on the target chain (Catalyst encoded).
     /// * `to_account` - The recipient of the swap on the target chain (Catalyst encoded).
-    /// * `from_asset` - The source asset reference.
+    /// * `from_asset_ref` - The source asset reference.
     /// * `to_asset_index` - The destination asset index.
-    /// * `amount` - The `from_asset` amount sold to the vault.
+    /// * `amount` - The `from_asset_ref` amount sold to the vault.
     /// * `min_out` - The mininum `to_asset` output amount to get on the target vault.
     /// * `fallback_account` - The recipient of the swapped amount should the swap fail.
     /// * `calldata` - Arbitrary data to be executed on the target chain upon successful execution of the swap.
@@ -122,7 +122,7 @@ pub enum ExecuteMsg<T, A=Asset> {
         channel_id: String,
         to_vault: Binary,
         to_account: Binary,
-        from_asset: String,
+        from_asset_ref: String,
         to_asset_index: u8,
         amount: Uint128,
         min_out: U256,
@@ -205,14 +205,14 @@ pub enum ExecuteMsg<T, A=Asset> {
     /// * `to_account` - The recipient of the swap output.
     /// * `u` - The units value of the swap.
     /// * `escrow_amount` - The escrowed asset amount.
-    /// * `asset` - The swap source asset reference.
+    /// * `asset_ref` - The swap source asset reference.
     /// * `block_number_mod` - The block number at which the swap transaction was commited (modulo 2^32).
     OnSendAssetSuccess {
         channel_id: String,
         to_account: Binary,
         u: U256,
         escrow_amount: Uint128,
-        asset: String,
+        asset_ref: String,
         block_number_mod: u32
     },
 
@@ -221,14 +221,14 @@ pub enum ExecuteMsg<T, A=Asset> {
     /// * `to_account` - The recipient of the swap output.
     /// * `u` - The units value of the swap.
     /// * `escrow_amount` - The escrowed asset amount.
-    /// * `asset` - The swap source asset reference.
+    /// * `asset_ref` - The swap source asset reference.
     /// * `block_number_mod` - The block number at which the swap transaction was commited (modulo 2^32).
     OnSendAssetFailure {
         channel_id: String,
         to_account: Binary,
         u: U256,
         escrow_amount: Uint128,
-        asset: String,
+        asset_ref: String,
         block_number_mod: u32
     },
 

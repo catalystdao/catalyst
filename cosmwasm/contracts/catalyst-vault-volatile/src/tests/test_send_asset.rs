@@ -70,7 +70,7 @@ mod test_volatile_send_asset {
                 channel_id: CHANNEL_ID.to_string(),
                 to_vault: target_vault,
                 to_account: to_account.clone(),
-                from_asset: from_asset.get_asset_ref(),
+                from_asset_ref: from_asset.get_asset_ref(),
                 to_asset_index: to_asset_idx,
                 amount: swap_amount,
                 min_out: U256::zero(),
@@ -122,7 +122,7 @@ mod test_volatile_send_asset {
                 .wrap()
                 .query_wasm_smart::<TotalEscrowedAssetResponse>(
                     vault.clone(),
-                    &crate::msg::QueryMsg::TotalEscrowedAsset { asset: from_asset.get_asset_ref() }
+                    &crate::msg::QueryMsg::TotalEscrowedAsset { asset_ref: from_asset.get_asset_ref() }
                 )
                 .unwrap()
                 .amount
@@ -224,7 +224,7 @@ mod test_volatile_send_asset {
                 channel_id: CHANNEL_ID.to_string(),
                 to_vault: target_vault.clone(),
                 to_account: encode_payload_address(SWAPPER_B.as_bytes()),
-                from_asset: from_asset.get_asset_ref(),
+                from_asset_ref: from_asset.get_asset_ref(),
                 to_asset_index: to_asset_idx,
                 amount: swap_amount,
                 min_out,
@@ -256,7 +256,7 @@ mod test_volatile_send_asset {
         );
         assert_eq!(
             send_asset_event.attributes[4],
-            Attribute::new("from_asset", from_asset.get_asset_ref())
+            Attribute::new("from_asset_ref", from_asset.get_asset_ref())
         );
         assert_eq!(
             send_asset_event.attributes[5],
@@ -325,7 +325,7 @@ mod test_volatile_send_asset {
                 channel_id: CHANNEL_ID.to_string(),
                 to_vault: target_vault,
                 to_account: encode_payload_address(SWAPPER_B.as_bytes()),
-                from_asset: from_asset.get_asset_ref(),
+                from_asset_ref: from_asset.get_asset_ref(),
                 to_asset_index: to_asset_idx,
                 amount: swap_amount,
                 min_out: U256::zero(),
@@ -401,7 +401,7 @@ mod test_volatile_send_asset {
                 channel_id: CHANNEL_ID.to_string(),
                 to_vault: target_vault.clone(),
                 to_account: encode_payload_address(SWAPPER_B.as_bytes()),
-                from_asset: from_asset.get_asset_ref(),
+                from_asset_ref: from_asset.get_asset_ref(),
                 to_asset_index: to_asset_idx,
                 amount: swap_amount,
                 min_out: U256::zero(),
@@ -480,7 +480,7 @@ mod test_volatile_send_asset {
                 channel_id: CHANNEL_ID.to_string(),
                 to_vault: target_vault,
                 to_account: encode_payload_address(SWAPPER_B.as_bytes()),
-                from_asset: from_asset.get_asset_ref(),
+                from_asset_ref: from_asset.get_asset_ref(),
                 to_asset_index: to_asset_idx,
                 amount: swap_amount,
                 min_out: U256::zero(),
@@ -565,7 +565,7 @@ mod test_volatile_send_asset {
                 channel_id: CHANNEL_ID.to_string(),
                 to_vault: target_vault,
                 to_account: encode_payload_address(SWAPPER_B.as_bytes()),
-                from_asset: from_asset.get_asset_ref(),
+                from_asset_ref: from_asset.get_asset_ref(),
                 to_asset_index: to_asset_idx,
                 amount: swap_amount,
                 min_out: U256::zero(),

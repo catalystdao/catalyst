@@ -679,7 +679,7 @@ mod catalyst_vault_factory_tests {
             .for_each(|(asset, weight)| {
                 let queried_weight = test_env.get_app().wrap().query_wasm_smart::<WeightResponse>(
                     vault.clone(),
-                    &MockVaultQueryMsg::Weight { asset: asset.get_asset_ref() }
+                    &MockVaultQueryMsg::Weight { asset_ref: asset.get_asset_ref() }
                 ).unwrap().weight;
         
                 assert_eq!(

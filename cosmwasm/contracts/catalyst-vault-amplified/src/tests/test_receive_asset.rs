@@ -189,7 +189,7 @@ mod test_amplified_receive_asset {
         );
         assert_eq!(
             event.attributes[4],
-            Attribute::new("to_asset", to_asset.get_asset_ref())
+            Attribute::new("to_asset_ref", to_asset.get_asset_ref())
         );
         assert_eq!(
             event.attributes[5],

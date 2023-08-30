@@ -84,8 +84,8 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::FactoryOwner {} => to_binary(&query_factory_owner(deps)?),
         QueryMsg::Assets {} => to_binary(&query_assets(deps)?),
         QueryMsg::Weight {
-            asset
-        } => to_binary(&query_weight(deps, asset)?),
+            asset_ref
+        } => to_binary(&query_weight(deps, asset_ref)?),
         QueryMsg::VaultFee {} => to_binary(&query_vault_fee(deps)?),
         QueryMsg::GovernanceFeeShare {} => to_binary(&query_governance_fee_share(deps)?),
         QueryMsg::FeeAdministrator {} => to_binary(&query_fee_administrator(deps)?),

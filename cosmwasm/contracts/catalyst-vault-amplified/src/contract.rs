@@ -158,16 +158,16 @@ pub fn execute(
         ),
 
         AmplifiedExecuteMsg::LocalSwap {
-            from_asset,
-            to_asset,
+            from_asset_ref,
+            to_asset_ref,
             amount,
             min_out
         } => local_swap(
             &mut deps,
             env,
             info,
-            from_asset,
-            to_asset,
+            from_asset_ref,
+            to_asset_ref,
             amount,
             min_out
         ),
@@ -176,7 +176,7 @@ pub fn execute(
             channel_id,
             to_vault,
             to_account,
-            from_asset,
+            from_asset_ref,
             to_asset_index,
             amount,
             min_out,
@@ -189,7 +189,7 @@ pub fn execute(
             channel_id,
             to_vault,
             to_account,
-            from_asset,
+            from_asset_ref,
             to_asset_index,
             amount,
             min_out,
@@ -281,7 +281,7 @@ pub fn execute(
             to_account,
             u,
             escrow_amount,
-            asset,
+            asset_ref,
             block_number_mod
         } => on_send_asset_success_amplified(       // ! Use the amplified specific 'on_send_asset_success'
             &mut deps,
@@ -291,7 +291,7 @@ pub fn execute(
             to_account,
             u,
             escrow_amount,
-            asset,
+            asset_ref,
             block_number_mod
         ),
 
@@ -300,7 +300,7 @@ pub fn execute(
             to_account,
             u,
             escrow_amount,
-            asset,
+            asset_ref,
             block_number_mod
         } => on_send_asset_failure_amplified(      // ! Use the amplified specific 'on_send_asset_failure'
             &mut deps,
@@ -310,7 +310,7 @@ pub fn execute(
             to_account,
             u,
             escrow_amount,
-            asset,
+            asset_ref,
             block_number_mod
         ),
 
@@ -460,32 +460,32 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::OnlyLocal{} => to_binary(&query_only_local(deps)?),
         QueryMsg::Assets {} => to_binary(&query_assets(deps)?),
         QueryMsg::Weight {
-            asset
-        } => to_binary(&query_weight(deps, asset)?),
+            asset_ref
+        } => to_binary(&query_weight(deps, asset_ref)?),
 
         QueryMsg::VaultFee {} => to_binary(&query_vault_fee(deps)?),
         QueryMsg::GovernanceFeeShare {} => to_binary(&query_governance_fee_share(deps)?),
         QueryMsg::FeeAdministrator {} => to_binary(&query_fee_administrator(deps)?),
 
         QueryMsg::CalcSendAsset{
-            from_asset,
+            from_asset_ref,
             amount
-        } => to_binary(&query_calc_send_asset(deps,env, &from_asset,amount)?),
+        } => to_binary(&query_calc_send_asset(deps,env, &from_asset_ref, amount)?),
         QueryMsg::CalcReceiveAsset{
-            to_asset,
+            to_asset_ref,
             u
-        } => to_binary(&query_calc_receive_asset(deps,env, &to_asset,u)?),
+        } => to_binary(&query_calc_receive_asset(deps,env, &to_asset_ref, u)?),
         QueryMsg::CalcLocalSwap{
-            from_asset,
-            to_asset,
+            from_asset_ref,
+            to_asset_ref,
             amount
-        } => to_binary(&query_calc_local_swap(deps,env, &from_asset, &to_asset,amount)?),
+        } => to_binary(&query_calc_local_swap(deps,env, &from_asset_ref, &to_asset_ref, amount)?),
 
         QueryMsg::GetLimitCapacity{} => to_binary(&query_get_limit_capacity(deps,env)?),
 
         QueryMsg::TotalEscrowedAsset {
-            asset
-        } => to_binary(&query_total_escrowed_asset(deps, asset.as_ref())?),
+            asset_ref
+        } => to_binary(&query_total_escrowed_asset(deps, asset_ref)?),
         QueryMsg::TotalEscrowedLiquidity {} => to_binary(&query_total_escrowed_liquidity(deps)?),
         QueryMsg::AssetEscrow { hash } => to_binary(&query_asset_escrow(deps, hash)?),
         QueryMsg::LiquidityEscrow { hash } => to_binary(&query_liquidity_escrow(deps, hash)?),

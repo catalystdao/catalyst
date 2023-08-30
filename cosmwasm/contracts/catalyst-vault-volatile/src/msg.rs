@@ -52,7 +52,7 @@ pub enum QueryMsg {
     Assets {},
     #[returns(WeightResponse)]
     Weight {
-        asset: String
+        asset_ref: String
     },
 
     #[returns(VaultFeeResponse)]
@@ -64,18 +64,18 @@ pub enum QueryMsg {
 
     #[returns(CalcSendAssetResponse)]
     CalcSendAsset {
-        from_asset: String,
+        from_asset_ref: String,
         amount: Uint128
     },
     #[returns(CalcReceiveAssetResponse)]
     CalcReceiveAsset {
-        to_asset: String,
+        to_asset_ref: String,
         u: U256
     },
     #[returns(CalcLocalSwapResponse)]
     CalcLocalSwap {
-        from_asset: String,
-        to_asset: String,
+        from_asset_ref: String,
+        to_asset_ref: String,
         amount: Uint128
     },
 
@@ -84,7 +84,7 @@ pub enum QueryMsg {
 
     #[returns(TotalEscrowedAssetResponse)]
     TotalEscrowedAsset {
-        asset: String
+        asset_ref: String
     },
     #[returns(TotalEscrowedLiquidityResponse)]
     TotalEscrowedLiquidity {},
@@ -101,7 +101,7 @@ pub enum QueryMsg {
     // Volatile vault specific queries
     #[returns(TargetWeightResponse)]
     TargetWeight {
-        asset: String
+        asset_ref: String
     },
     #[returns(WeightsUpdateFinishTimestampResponse)]
     WeightsUpdateFinishTimestamp {},

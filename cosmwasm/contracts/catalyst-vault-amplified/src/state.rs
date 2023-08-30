@@ -863,17 +863,17 @@ pub fn withdraw_mixed(
 /// **NOTE**: The vault's access to the source asset must be approved by the user. 
 /// 
 /// # Arguments:
-/// * `from_asset` - The source asset.
-/// * `to_asset` - The destination asset.
-/// * `amount` - The `from_asset` amount sold to the vault.
-/// * `min_out` - The mininmum return to get of `to_asset`.
+/// * `from_asset_ref` - The source asset reference.
+/// * `to_asset_ref` - The destination asset reference.
+/// * `amount` - The `from_asset_ref` amount sold to the vault.
+/// * `min_out` - The mininmum return to get of `to_asset_ref`.
 /// 
 pub fn local_swap(
     deps: &mut DepsMut,
     env: Env,
     info: MessageInfo,
-    from_asset: String,
-    to_asset: String,
+    from_asset_ref: String,
+    to_asset_ref: String,
     amount: Uint128,
     min_out: Uint128
 ) -> Result<Response, ContractError> {
@@ -886,8 +886,8 @@ pub fn local_swap(
     )?.as_uint128();    // Casting safe, as fee < amount, and amount is Uint128
 
     // Calculate the return value
-    let from_asset = Asset::from_asset_ref(&deps.as_ref(), &from_asset)?;
-    let to_asset = Asset::from_asset_ref(&deps.as_ref(), &to_asset)?;
+    let from_asset = Asset::from_asset_ref(&deps.as_ref(), &from_asset_ref)?;
+    let to_asset = Asset::from_asset_ref(&deps.as_ref(), &to_asset_ref)?;
     let out: Uint128 = calc_local_swap(
         &deps.as_ref(),
         env.clone(),
@@ -976,9 +976,9 @@ pub fn local_swap(
 /// * `channel_id` - The target chain identifier.
 /// * `to_vault` - The target vault on the target chain (Catalyst encoded).
 /// * `to_account` - The recipient of the swap on the target chain (Catalyst encoded).
-/// * `from_asset` - The source asset.
+/// * `from_asset_ref` - The source asset reference.
 /// * `to_asset_index` - The destination asset index.
-/// * `amount` - The `from_asset` amount sold to the vault.
+/// * `amount` - The `from_asset_ref` amount sold to the vault.
 /// * `min_out` - The mininum `to_asset` output amount to get on the target vault.
 /// * `fallback_account` - The recipient of the swapped amount should the swap fail.
 /// * `calldata` - Arbitrary data to be executed on the target chain upon successful execution of the swap.
@@ -990,7 +990,7 @@ pub fn send_asset(
     channel_id: String,
     to_vault: Binary,
     to_account: Binary,
-    from_asset: String,
+    from_asset_ref: String,
     to_asset_index: u8,
     amount: Uint128,
     min_out: U256,
@@ -1013,7 +1013,7 @@ pub fn send_asset(
     let effective_swap_amount = amount.checked_sub(vault_fee)?;     // Using 'checked_sub' for extra precaution ('wrapping_sub' should suffice)
 
     // Calculate the units bought.
-    let from_asset = Asset::from_asset_ref(&deps.as_ref(), &from_asset)?;
+    let from_asset = Asset::from_asset_ref(&deps.as_ref(), &from_asset_ref)?;
     let u = calc_send_asset(
         &deps.as_ref(),
         env.clone(),
@@ -1868,7 +1868,7 @@ pub fn calc_balance_0_ampped(
 /// * `to_account` - The recipient of the swap output.
 /// * `u` - The units value of the swap.
 /// * `escrow_amount` - The escrowed asset amount.
-/// * `asset` - The swap source asset.
+/// * `asset_ref` - The swap source asset reference.
 /// * `block_number_mod` - The block number at which the swap transaction was commited (modulo 2^32).
 /// 
 pub fn on_send_asset_success_amplified(
@@ -1879,7 +1879,7 @@ pub fn on_send_asset_success_amplified(
     to_account: Binary,
     u: U256,
     escrow_amount: Uint128,
-    asset: String,
+    asset_ref: String,
     block_number_mod: u32
 ) -> Result<Response, ContractError> {
 
@@ -1892,7 +1892,7 @@ pub fn on_send_asset_success_amplified(
         to_account,
         u,
         escrow_amount,
-        asset.clone(),
+        asset_ref.clone(),
         block_number_mod
     )?;
 
@@ -1900,7 +1900,7 @@ pub fn on_send_asset_success_amplified(
     // one-sided maximum daily cross chain volume. If the router was fraudulent, no one would
     // execute an outgoing swap.
 
-    let weight = WEIGHTS.load(deps.storage, asset.as_ref())?;
+    let weight = WEIGHTS.load(deps.storage, asset_ref.as_ref())?;
     let limit_delta = U256::from(escrow_amount).wrapping_mul(weight.into());     // 'wrapping_mul' is safe, as U256.max >= Uint128.max * Uint128.max
 
     // Minor optimization: avoid storage write if the used capacity is already at zero
@@ -1939,7 +1939,7 @@ pub fn on_send_asset_success_amplified(
 /// * `to_account` - The recipient of the swap output.
 /// * `u` - The units value of the swap.
 /// * `escrow_amount` - The escrowed asset amount.
-/// * `asset` - The swap source asset.
+/// * `asset_ref` - The swap source asset reference.
 /// * `block_number_mod` - The block number at which the swap transaction was commited (modulo 2^32).
 /// 
 pub fn on_send_asset_failure_amplified(
@@ -1950,7 +1950,7 @@ pub fn on_send_asset_failure_amplified(
     to_account: Binary,
     u: U256,
     escrow_amount: Uint128,
-    asset: String,
+    asset_ref: String,
     block_number_mod: u32
 ) -> Result<Response, ContractError> {
 
@@ -1963,7 +1963,7 @@ pub fn on_send_asset_failure_amplified(
         to_account,
         u,
         escrow_amount,
-        asset,
+        asset_ref,
         block_number_mod
     )?;
 
@@ -2268,13 +2268,13 @@ pub fn update_max_limit_capacity(
 /// Query a 'send_asset' calculation (returned 'units' in WAD notation).
 /// 
 /// # Arguments:
-/// * `from_asset` - The source asset.
-/// * `amount` - The `from_asset` amount (excluding the vault fee).
+/// * `from_asset_ref` - The source asset reference.
+/// * `amount` - The `from_asset_ref` amount (excluding the vault fee).
 /// 
 pub fn query_calc_send_asset(
     deps: Deps,
     env: Env,
-    from_asset: &str,
+    from_asset_ref: &str,
     amount: Uint128
 ) -> StdResult<CalcSendAssetResponse> {
 
@@ -2284,7 +2284,7 @@ pub fn query_calc_send_asset(
                 &deps,
                 env,
                 None,
-                &Asset::from_asset_ref(&deps, from_asset)?,
+                &Asset::from_asset_ref(&deps, from_asset_ref)?,
                 amount
             )?
         }
@@ -2296,13 +2296,13 @@ pub fn query_calc_send_asset(
 /// Query a 'receive_asset' calculation.
 /// 
 /// # Arguments:
-/// * `to_asset` - The target asset.
+/// * `to_asset_ref` - The target asset reference.
 /// * `u` - The incoming units (in WAD notation).
 /// 
 pub fn query_calc_receive_asset(
     deps: Deps,
     env: Env,
-    to_asset: &str,
+    to_asset_ref: &str,
     u: U256
 ) -> StdResult<CalcReceiveAssetResponse> {
 
@@ -2312,7 +2312,7 @@ pub fn query_calc_receive_asset(
                 &deps,
                 env,
                 None,
-                &Asset::from_asset_ref(&deps, to_asset)?,
+                &Asset::from_asset_ref(&deps, to_asset_ref)?,
                 u
             )?
         }
@@ -2324,15 +2324,15 @@ pub fn query_calc_receive_asset(
 /// Query a 'local_swap' calculation.
 /// 
 /// # Arguments:
-/// * `from_asset` - The source asset.
-/// * `to_asset` - The target asset.
-/// * `amount` - The `from_asset` amount (excluding the vault fee).
+/// * `from_asset_ref` - The source asset reference.
+/// * `to_asset_ref` - The target asset reference.
+/// * `amount` - The `from_asset_ref` amount (excluding the vault fee).
 /// 
 pub fn query_calc_local_swap(
     deps: Deps,
     env: Env,
-    from_asset: &str,
-    to_asset: &str,
+    from_asset_ref: &str,
+    to_asset_ref: &str,
     amount: Uint128
 ) -> StdResult<CalcLocalSwapResponse> {
 
@@ -2342,8 +2342,8 @@ pub fn query_calc_local_swap(
                 &deps,
                 env,
                 None,
-                &Asset::from_asset_ref(&deps, from_asset)?,
-                &Asset::from_asset_ref(&deps, to_asset)?,
+                &Asset::from_asset_ref(&deps, from_asset_ref)?,
+                &Asset::from_asset_ref(&deps, to_asset_ref)?,
                 amount
             )?
         }

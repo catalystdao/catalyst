@@ -181,7 +181,7 @@ mod test_amplified_security_limit {
 
                 let escrowed_balance = env.get_app().wrap().query_wasm_smart::<TotalEscrowedAssetResponse>(
                     vault.clone(),
-                    &QueryMsg::TotalEscrowedAsset { asset: asset.get_asset_ref() }
+                    &QueryMsg::TotalEscrowedAsset { asset_ref: asset.get_asset_ref() }
                 ).unwrap().amount;
 
                 let effective_balance = vault_balance - escrowed_balance;
@@ -227,7 +227,7 @@ mod test_amplified_security_limit {
                 channel_id: CHANNEL_ID.to_string(),
                 to_vault: remote_vault,
                 to_account: to_account.clone(),
-                from_asset: from_asset.get_asset_ref(),
+                from_asset_ref: from_asset.get_asset_ref(),
                 to_asset_index: to_asset_idx,
                 amount: swap_amount,
                 min_out: U256::zero(),
@@ -451,7 +451,7 @@ mod test_amplified_security_limit {
                 channel_id: CHANNEL_ID.to_string(),
                 to_vault: remote_vault,
                 to_account: to_account.clone(),
-                from_asset: from_asset.get_asset_ref(),
+                from_asset_ref: from_asset.get_asset_ref(),
                 to_asset_index: to_asset_idx,
                 amount: swap_amount,
                 min_out: U256::zero(),
@@ -517,7 +517,7 @@ mod test_amplified_security_limit {
                 to_account: mock_send_asset_result.to_account.clone(),
                 u: mock_send_asset_result.units.clone(),
                 escrow_amount: effective_swap_amount,
-                asset: mock_send_asset_result.from_asset.get_asset_ref(),
+                asset_ref: mock_send_asset_result.from_asset.get_asset_ref(),
                 block_number_mod
             },
             vec![],
@@ -554,7 +554,7 @@ mod test_amplified_security_limit {
                 to_account: mock_send_asset_result.to_account.clone(),
                 u: mock_send_asset_result.units.clone(),
                 escrow_amount: effective_swap_amount,
-                asset: mock_send_asset_result.from_asset.get_asset_ref(),
+                asset_ref: mock_send_asset_result.from_asset.get_asset_ref(),
                 block_number_mod
             },
             vec![],
@@ -604,7 +604,7 @@ mod test_amplified_security_limit {
                 to_account: mock_send_asset_result.to_account.clone(),
                 u: mock_send_asset_result.units.clone(),
                 escrow_amount: mock_send_asset_result.swap_amount - mock_send_asset_result.fee,
-                asset: mock_send_asset_result.from_asset.get_asset_ref(),
+                asset_ref: mock_send_asset_result.from_asset.get_asset_ref(),
                 block_number_mod
             },
             vec![],
@@ -843,7 +843,7 @@ mod test_amplified_security_limit {
                 to_account: mock_send_asset_result.to_account.clone(),
                 u: mock_send_asset_result.units.clone(),
                 escrow_amount: effective_swap_amount,
-                asset: mock_send_asset_result.from_asset.get_asset_ref(),
+                asset_ref: mock_send_asset_result.from_asset.get_asset_ref(),
                 block_number_mod
             },
             vec![],
@@ -1195,8 +1195,8 @@ mod test_amplified_security_limit {
             Addr::unchecked(SETUP_MASTER),
             vault.clone(),
             &AmplifiedExecuteMsg::LocalSwap {
-                from_asset: from_asset.get_asset_ref(),
-                to_asset: to_asset.get_asset_ref(),
+                from_asset_ref: from_asset.get_asset_ref(),
+                to_asset_ref: to_asset.get_asset_ref(),
                 amount: swap_amount,
                 min_out: Uint128::zero()
             },
@@ -1234,8 +1234,8 @@ mod test_amplified_security_limit {
             Addr::unchecked(SETUP_MASTER),
             vault.clone(),
             &AmplifiedExecuteMsg::LocalSwap {
-                from_asset: to_asset.get_asset_ref(),
-                to_asset: from_asset.get_asset_ref(),
+                from_asset_ref: to_asset.get_asset_ref(),
+                to_asset_ref: from_asset.get_asset_ref(),
                 amount: first_observed_return,
                 min_out: Uint128::zero()
             },

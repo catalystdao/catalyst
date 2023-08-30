@@ -185,17 +185,17 @@ pub fn setup(
 /// Initialize the escrow totals storage variables.
 /// 
 /// # Arguments:
-/// * `assets_labels` - The vault assets labels.
+/// * `assets_refs` - The vault assets references.
 /// 
 pub fn initialize_escrow_totals(
     deps: &mut DepsMut,
-    assets_labels: Vec<&str>
+    assets_refs: Vec<&str>
 ) -> Result<(), ContractError> {
 
-    assets_labels
+    assets_refs
         .iter()
-        .map(|label| {
-            TOTAL_ESCROWED_ASSETS.save(deps.storage, label, &Uint128::zero())
+        .map(|asset_ref| {
+            TOTAL_ESCROWED_ASSETS.save(deps.storage, asset_ref, &Uint128::zero())
         })
         .collect::<StdResult<Vec<_>>>()?;
 
@@ -596,14 +596,14 @@ pub fn update_limit_capacity(
 /// # Arguments:
 /// * `send_asset_hash` - The id under which to create the escrow.
 /// * `amount` - The escrow amount.
-/// * `asset_label` - The escrowed asset label.
+/// * `asset_ref` - The escrowed asset reference.
 /// * `fallback_account` - The account which to return the escrowed assets in the case of an unsuccessful swap.
 /// 
 pub fn create_asset_escrow(
     deps: &mut DepsMut,
     send_asset_hash: Vec<u8>,
     amount: Uint128,
-    asset_label: &str,
+    asset_ref: &str,
     fallback_account: String
 ) -> Result<(), ContractError> {
 
@@ -616,8 +616,8 @@ pub fn create_asset_escrow(
     let fallback_account = deps.api.addr_validate(&fallback_account)?;
     ASSET_ESCROWS.save(deps.storage, send_asset_hash, &fallback_account)?;
 
-    let escrowed_assets = TOTAL_ESCROWED_ASSETS.load(deps.storage, asset_label)?;
-    TOTAL_ESCROWED_ASSETS.save(deps.storage, asset_label, &escrowed_assets.checked_add(amount)?)?;
+    let escrowed_assets = TOTAL_ESCROWED_ASSETS.load(deps.storage, asset_ref)?;
+    TOTAL_ESCROWED_ASSETS.save(deps.storage, asset_ref, &escrowed_assets.checked_add(amount)?)?;
 
     Ok(())
 }
@@ -661,7 +661,7 @@ pub fn create_liquidity_escrow(
 /// # Arguments:
 /// * `send_asset_hash` - The id of the escrow to be released.
 /// * `amount` - The escrow amount.
-/// * `asset_label` - The escrowed asset label.
+/// * `asset_ref` - The escrowed asset reference.
 /// * `fallback_account` - The account which to return the escrowed assets in the case of an unsuccessful swap.
 /// 
 /// 
@@ -669,7 +669,7 @@ pub fn release_asset_escrow(
     deps: &mut DepsMut,
     send_asset_hash: Vec<u8>,
     amount: Uint128,
-    asset_label: &str
+    asset_ref: &str
 ) -> Result<Addr, ContractError> {
 
     // Get the escrow information and delete the escrow
@@ -677,10 +677,10 @@ pub fn release_asset_escrow(
     ASSET_ESCROWS.remove(deps.storage, send_asset_hash);
 
     // Decrease the `total_escrowed_assets` tracker.
-    let escrowed_assets = TOTAL_ESCROWED_ASSETS.load(deps.storage, asset_label)?;
+    let escrowed_assets = TOTAL_ESCROWED_ASSETS.load(deps.storage, asset_ref)?;
     TOTAL_ESCROWED_ASSETS.save(
         deps.storage,
-        asset_label,
+        asset_ref,
         &(escrowed_assets.wrapping_sub(amount))     // 'wrapping_sub' is safe, as 'amount' is always contained in 'escrowed_assets'
                                                     // ! This is only the case if the 'amount' value is correct. But this a safe assumption
                                                     // ! as the 'amount' value should ALWAYS be verified before calling this function.
@@ -735,7 +735,7 @@ pub fn release_liquidity_escrow(
 /// * `to_account` - The recipient of the swap output.
 /// * `u` - The units value of the swap.
 /// * `escrow_amount` - The escrowed asset amount.
-/// * `asset_label` - The swap source asset label.
+/// * `asset_ref` - The swap source asset reference.
 /// * `block_number_mod` - The block number at which the swap transaction was commited (modulo 2^32).
 /// 
 pub fn on_send_asset_success(
@@ -746,7 +746,7 @@ pub fn on_send_asset_success(
     to_account: Binary,
     u: U256,
     escrow_amount: Uint128,
-    asset_label: String,
+    asset_ref: String,
     block_number_mod: u32
 ) -> Result<Response, ContractError> {
 
@@ -760,11 +760,11 @@ pub fn on_send_asset_success(
         to_account.as_slice(),
         u,
         escrow_amount,
-        asset_label.as_str(),
+        asset_ref.as_str(),
         block_number_mod
     );
 
-    release_asset_escrow(deps, send_asset_hash.clone(), escrow_amount, &asset_label)?;
+    release_asset_escrow(deps, send_asset_hash.clone(), escrow_amount, &asset_ref)?;
 
     Ok(
         Response::new()
@@ -774,7 +774,7 @@ pub fn on_send_asset_success(
                     to_account,
                     u,
                     escrow_amount,
-                    asset_label,
+                    asset_ref,
                     block_number_mod
                 )
             )
@@ -794,7 +794,7 @@ pub fn on_send_asset_success(
 /// * `to_account` - The recipient of the swap output.
 /// * `u` - The units value of the swap.
 /// * `escrow_amount` - The escrowed asset amount.
-/// * `asset_label` - The swap source asset label.
+/// * `asset_ref` - The swap source asset reference.
 /// * `block_number_mod` - The block number at which the swap transaction was commited (modulo 2^32).
 /// 
 pub fn on_send_asset_failure(
@@ -805,7 +805,7 @@ pub fn on_send_asset_failure(
     to_account: Binary,
     u: U256,
     escrow_amount: Uint128,
-    asset_label: String,
+    asset_ref: String,
     block_number_mod: u32
 ) -> Result<Response, ContractError> {
 
@@ -819,14 +819,14 @@ pub fn on_send_asset_failure(
         to_account.as_slice(),
         u,
         escrow_amount,
-        asset_label.as_str(),
+        asset_ref.as_str(),
         block_number_mod
     );
 
-    let fallback_address = release_asset_escrow(deps, send_asset_hash.clone(), escrow_amount, &asset_label)?;
+    let fallback_address = release_asset_escrow(deps, send_asset_hash.clone(), escrow_amount, &asset_ref)?;
 
     // Transfer the escrowed assets to the fallback user.
-    let transfer_msg: Option<CosmosMsg> = Asset::from_asset_ref(&deps.as_ref(), &asset_label)?
+    let transfer_msg: Option<CosmosMsg> = Asset::from_asset_ref(&deps.as_ref(), &asset_ref)?
         .send_asset(env, escrow_amount, fallback_address.to_string())?;
 
     let response = match transfer_msg {
@@ -842,7 +842,7 @@ pub fn on_send_asset_failure(
                     to_account,
                     u,
                     escrow_amount,
-                    asset_label,
+                    asset_ref,
                     block_number_mod
                 )
             )
@@ -995,18 +995,18 @@ fn calc_keccak256(bytes: Vec<u8>) -> Vec<u8> {
 /// * `to_account` - The recipient of the swap output. Ensures no collisions between different users.
 /// * `u` - The units value of the swap. Used to randomize the hash.
 /// * `escrow_amount` - The escrowed asset amount. ! Required to validate the release escrow data.
-/// * `asset_label` - The swap source asset label. ! Required to validate the release escrow data.
+/// * `asset_ref` - The swap source asset reference. ! Required to validate the release escrow data.
 /// * `block_number_mod` - The block number at which the swap transaction was commited (modulo 2^32). Used to randomize the hash.
 /// 
 pub fn compute_send_asset_hash(
     to_account: &[u8],
     u: U256,
     escrow_amount: Uint128,
-    asset_label: &str,
+    asset_ref: &str,
     block_number_mod: u32        
 ) -> Vec<u8> {
 
-    let asset_bytes = asset_label.as_bytes();
+    let asset_bytes = asset_ref.as_bytes();
 
     let mut hash_data: Vec<u8> = Vec::with_capacity(    // Initialize vec with the specified capacity to avoid reallocations
         to_account.len()
@@ -1156,12 +1156,12 @@ pub fn query_assets(deps: Deps) -> StdResult<AssetsResponse> {
 /// Query the weight of an asset.
 /// 
 /// # Arguments:
-/// * `asset_label` - The label of the asset of which to get the weight of.
+/// * `asset_ref` - The reference of the asset of which to get the weight of.
 /// 
-pub fn query_weight(deps: Deps, asset_label: String) -> StdResult<WeightResponse> {
+pub fn query_weight(deps: Deps, asset_ref: String) -> StdResult<WeightResponse> {
     Ok(
         WeightResponse {
-            weight: WEIGHTS.load(deps.storage, &asset_label)?
+            weight: WEIGHTS.load(deps.storage, &asset_ref)?
         }
     )
 }
@@ -1196,12 +1196,12 @@ pub fn query_fee_administrator(deps: Deps) -> StdResult<FeeAdministratorResponse
 /// Query the total escrowed amount of an asset.
 /// 
 /// # Arguments:
-/// * `asset_label` - The label of the asset of which to get the total escrowed amount.
+/// * `asset_ref` - The reference of the asset of which to get the total escrowed amount.
 /// 
-pub fn query_total_escrowed_asset(deps: Deps, asset_label: &str) -> StdResult<TotalEscrowedAssetResponse> {
+pub fn query_total_escrowed_asset(deps: Deps, asset_ref: String) -> StdResult<TotalEscrowedAssetResponse> {
     Ok(
         TotalEscrowedAssetResponse {
-            amount: TOTAL_ESCROWED_ASSETS.load(deps.storage, asset_label)?
+            amount: TOTAL_ESCROWED_ASSETS.load(deps.storage, &asset_ref)?
         }
     )
 }
