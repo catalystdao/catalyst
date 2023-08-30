@@ -17,8 +17,8 @@ rpath = false
 
 [dependencies]
 bnum = "0.7.0"
-cosmwasm-std = "1.3.0"
+cosmwasm-std = { workspace = true }
 forward_ref = "1"
-schemars = "0.8.3"
-serde = { version = "1.0.103", default-features = false, features = ["derive"] }
-thiserror = "1.0.26"
+schemars = { workspace = true }
+serde = { workspace = true }
+thiserror = { workspace = true }
