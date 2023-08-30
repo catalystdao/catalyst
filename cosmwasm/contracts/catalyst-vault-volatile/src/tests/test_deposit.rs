@@ -434,9 +434,8 @@ mod test_volatile_deposit{
     }
 
 
-    //TODO replace with test_deposit_no_funds (i.e. test what happens when no funds are set/allowance is set)
     #[test]
-    fn test_deposit_no_allowance() {
+    fn test_deposit_invalid_funds() {
 
         let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
 
@@ -444,8 +443,8 @@ mod test_volatile_deposit{
         let vault_assets = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
-        let vault_code_id = volatile_vault_contract_storage(env.get_app());let 
-        vault = mock_factory_deploy_vault(
+        let vault_code_id = volatile_vault_contract_storage(env.get_app());
+        let vault = mock_factory_deploy_vault(
             &mut env,
             vault_assets.clone(),
             vault_initial_balances.clone(),
@@ -467,9 +466,9 @@ mod test_volatile_deposit{
 
 
 
-        // Tested action: deposit
+        // Tested action 1: no funds
         let response_result = env.execute_contract(
-            Addr::unchecked(DEPOSITOR),
+            Addr::unchecked(SETUP_MASTER),
             vault.clone(),
             &VolatileExecuteMsg::DepositMixed {
                 deposit_amounts: deposit_amounts.clone(),
@@ -479,20 +478,156 @@ mod test_volatile_deposit{
             vec![]
         );
 
-
-
         // Make sure the transaction fails
         assert!(response_result.is_err());
         #[cfg(feature="asset_native")]
-        assert_eq!(
-            response_result.err().unwrap().root_cause().to_string(),
-            format!("Received asset is invalid: {}{} not received", deposit_amounts[0], vault_assets[0].denom)
+        matches!(
+            response_result.err().unwrap().downcast().unwrap(),
+            ContractError::AssetNotReceived { asset }
+                if asset == vault_assets[0].into_vault_asset().to_string()  // Error corresponds to the first asset that is not received
         );
         #[cfg(feature="asset_cw20")]
         assert_eq!(
             response_result.err().unwrap().root_cause().to_string(),
             "No allowance for this account".to_string()
         );
+
+
+
+        // Tested action 2: too few assets
+        let response_result = env.execute_contract(
+            Addr::unchecked(SETUP_MASTER),
+            vault.clone(),
+            &VolatileExecuteMsg::DepositMixed {
+                deposit_amounts: deposit_amounts.clone(),
+                min_out: Uint128::zero()
+            },
+            vault_assets[..vault_assets.len()-1].to_vec(),      // ! Send one asset less
+            deposit_amounts[..deposit_amounts.len()-1].to_vec()
+        );
+
+        // Make sure the transaction fails
+        assert!(response_result.is_err());
+        #[cfg(feature="asset_native")]
+        matches!(
+            response_result.err().unwrap().downcast().unwrap(),
+            ContractError::AssetNotReceived { asset }
+                if asset == vault_assets[vault_assets.len()-1].into_vault_asset().to_string()  // Error corresponds to the first asset that is not received
+        );
+        #[cfg(feature="asset_cw20")]
+        assert_eq!(
+            response_result.err().unwrap().root_cause().to_string(),
+            "No allowance for this account".to_string()
+        );
+
+
+
+        // Tested action 3: too many assets
+        let response_result = env.execute_contract(
+            Addr::unchecked(SETUP_MASTER),
+            vault.clone(),
+            &VolatileExecuteMsg::DepositMixed {
+                deposit_amounts: deposit_amounts.clone(),
+                min_out: Uint128::zero()
+            },
+            env.get_assets()[..TEST_VAULT_ASSET_COUNT+1].to_vec(),      // ! Send one asset more
+            deposit_amounts.iter().cloned().chain(vec![Uint128::from(1000u128)].into_iter()).collect()
+        );
+
+        // Make sure the transaction fails
+        #[cfg(feature="asset_native")]
+        assert!(response_result.is_err());
+        #[cfg(feature="asset_native")]
+        matches!(
+            response_result.err().unwrap().downcast().unwrap(),
+            ContractError::AssetSurplusReceived {}
+        );
+        
+        // NOTE: this does not error for cw20 assets, as it's just the *allowance* that is set.
+        #[cfg(feature="asset_cw20")]
+        assert!(response_result.is_ok());
+
+
+
+        // Tested action 4: asset amount too low
+        let mut too_low_deposit_amounts = deposit_amounts.clone();
+        too_low_deposit_amounts[0] = too_low_deposit_amounts[0] - Uint128::one();
+
+        let response_result = env.execute_contract(
+            Addr::unchecked(SETUP_MASTER),
+            vault.clone(),
+            &VolatileExecuteMsg::DepositMixed {
+                deposit_amounts: deposit_amounts.clone(),
+                min_out: Uint128::zero()
+            },
+            vault_assets.clone(),
+            too_low_deposit_amounts.clone()
+        );
+
+        // Make sure the transaction fails
+        assert!(response_result.is_err());
+        #[cfg(feature="asset_native")]
+        matches!(
+            response_result.err().unwrap().downcast().unwrap(),
+            ContractError::UnexpectedAssetAmountReceived { received_amount, expected_amount, asset }
+                if
+                    received_amount == too_low_deposit_amounts[0] &&
+                    expected_amount == deposit_amounts[0] &&
+                    asset == vault_assets[0].into_vault_asset().to_string()
+        );
+        #[cfg(feature="asset_cw20")]
+        assert_eq!(
+            response_result.err().unwrap().root_cause().to_string(),
+            format!("Cannot Sub with {} and {}", too_low_deposit_amounts[0], deposit_amounts[0])
+        );
+
+
+
+        // Tested action 5: asset amount too high
+        let mut too_high_deposit_amounts = deposit_amounts.clone();
+        too_high_deposit_amounts[0] = too_high_deposit_amounts[0] + Uint128::one();
+
+        let response_result = env.execute_contract(
+            Addr::unchecked(SETUP_MASTER),
+            vault.clone(),
+            &VolatileExecuteMsg::DepositMixed {
+                deposit_amounts: deposit_amounts.clone(),
+                min_out: Uint128::zero()
+            },
+            vault_assets.clone(),
+            too_high_deposit_amounts.clone()
+        );
+
+        // Make sure the transaction fails
+        #[cfg(feature="asset_native")]
+        assert!(response_result.is_err());
+        #[cfg(feature="asset_native")]
+        matches!(
+            response_result.err().unwrap().downcast().unwrap(),
+            ContractError::UnexpectedAssetAmountReceived { received_amount, expected_amount, asset }
+                if
+                    received_amount == too_high_deposit_amounts[0] &&
+                    expected_amount == deposit_amounts[0] &&
+                    asset == vault_assets[0].into_vault_asset().to_string()
+        );
+        
+        // NOTE: this does not error for cw20 assets, as it's just the *allowance* that is set too high.
+        #[cfg(feature="asset_cw20")]
+        assert!(response_result.is_ok());
+
+
+
+        // Make sure the deposit works for valid amounts
+        env.execute_contract(
+            Addr::unchecked(SETUP_MASTER),
+            vault.clone(),
+            &VolatileExecuteMsg::DepositMixed {
+                deposit_amounts: deposit_amounts.clone(),
+                min_out: Uint128::zero()
+            },
+            vault_assets,
+            deposit_amounts
+        ).unwrap();
 
     }
 
