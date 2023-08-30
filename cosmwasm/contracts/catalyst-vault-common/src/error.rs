@@ -27,14 +27,18 @@ pub enum ContractError {
     #[error("The requested asset does not form part of the vault.")]
     AssetNotFound {},
 
-    #[error("Surplus of assets received by the vault.")]
-    ReceivedAssetCountSurplus {},
+    #[error("Expected asset not received: {asset}.")]
+    AssetNotReceived { asset: String },
 
-    #[error("Shortage of assets received by the vault")]
-    ReceivedAssetCountShortage {},
+    #[error("Asset surplus received.")]
+    AssetSurplusReceived {},
 
-    #[error("Received asset is invalid: {reason}")]
-    ReceivedAssetInvalid{ reason: String },
+    #[error("Invalid amount {received_amount} for asset {asset} received (expected {expected_amount}).")]
+    UnexpectedAssetAmountReceived {
+        received_amount: Uint128,
+        expected_amount: Uint128,
+        asset: String
+    },
 
     #[error("Invalid amplification value.")]
     InvalidAmplification {},
@@ -118,9 +122,13 @@ impl From<vault_assets::error::AssetError> for ContractError {
             vault_assets::error::AssetError::Std(error) => ContractError::Std(error),
             vault_assets::error::AssetError::InvalidParameters { reason } => ContractError::InvalidParameters { reason },
             vault_assets::error::AssetError::AssetNotFound {} => ContractError::AssetNotFound {},
-            vault_assets::error::AssetError::ReceivedAssetCountSurplus {} => ContractError::ReceivedAssetCountSurplus {},
-            vault_assets::error::AssetError::ReceivedAssetCountShortage {} => ContractError::ReceivedAssetCountShortage {},
-            vault_assets::error::AssetError::ReceivedAssetInvalid { reason } => ContractError::ReceivedAssetInvalid { reason },
+            vault_assets::error::AssetError::AssetNotReceived { asset } => ContractError::AssetNotReceived { asset },
+            vault_assets::error::AssetError::AssetSurplusReceived {} => ContractError::AssetSurplusReceived {},
+            vault_assets::error::AssetError::UnexpectedAssetAmountReceived {
+                received_amount,
+                expected_amount,
+                asset
+            } => ContractError::UnexpectedAssetAmountReceived {received_amount, expected_amount, asset},
         }
     }
 }

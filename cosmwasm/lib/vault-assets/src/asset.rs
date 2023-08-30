@@ -92,7 +92,7 @@ pub trait VaultAssetsTrait<'a, T: AssetTrait + 'a> {
     fn receive_no_assets(info: &MessageInfo) -> Result<(), AssetError> {
 
         if info.funds.len() > 0 {
-            Err(AssetError::ReceivedAssetCountSurplus {})
+            Err(AssetError::AssetSurplusReceived {})
         }
         else {
             Ok(())

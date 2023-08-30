@@ -56,7 +56,7 @@ impl<'a> VaultAssetsTrait<'a, Cw20Asset> for Cw20VaultAssets {
 
         // No native assets are expected when handling cw20 assets.
         if info.funds.len() != 0 {
-            return Err(AssetError::ReceivedAssetCountSurplus {});
+            return Err(AssetError::AssetSurplusReceived {});
         }
         
         if amounts.len() != self.get_assets().len() {
@@ -183,7 +183,7 @@ impl AssetTrait for Cw20Asset {
     ) -> Result<Option<CosmosMsg>, AssetError> {
 
         if info.funds.len() != 0 {
-            return Err(AssetError::ReceivedAssetCountSurplus {});
+            return Err(AssetError::AssetSurplusReceived {});
         }
 
         // NOTE: Some cw20 contracts disallow zero-valued token transfers. Do not generate

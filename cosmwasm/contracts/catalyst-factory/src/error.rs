@@ -1,4 +1,4 @@
-use cosmwasm_std::{StdError, Uint64};
+use cosmwasm_std::{StdError, Uint64, Uint128};
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -18,14 +18,18 @@ pub enum ContractError {
     #[error("Submessage reply id unknown: {id}")]
     UnknownReplyId { id: u64 },
 
-    #[error("Surplus of assets received by the vault.")]
-    ReceivedAssetCountSurplus {},
+    #[error("Expected asset not received: {asset}.")]
+    AssetNotReceived { asset: String },
 
-    #[error("Shortage of assets received by the vault")]
-    ReceivedAssetCountShortage {},
+    #[error("Asset surplus received.")]
+    AssetSurplusReceived {},
 
-    #[error("Received asset is invalid: {reason}")]
-    ReceivedAssetInvalid{ reason: String },
+    #[error("Invalid amount {received_amount} for asset {asset} received (expected {expected_amount}).")]
+    UnexpectedAssetAmountReceived {
+        received_amount: Uint128,
+        expected_amount: Uint128,
+        asset: String
+    },
 }
 
 impl From<ContractError> for StdError {
@@ -39,9 +43,13 @@ impl From<vault_assets::error::AssetError> for ContractError {
     fn from(err: vault_assets::error::AssetError) -> Self {
         match err {
             vault_assets::error::AssetError::Std(error) => ContractError::Std(error),
-            vault_assets::error::AssetError::ReceivedAssetCountSurplus {} => ContractError::ReceivedAssetCountSurplus {},
-            vault_assets::error::AssetError::ReceivedAssetCountShortage {} => ContractError::ReceivedAssetCountShortage {},
-            vault_assets::error::AssetError::ReceivedAssetInvalid { reason } => ContractError::ReceivedAssetInvalid { reason },
+            vault_assets::error::AssetError::AssetNotReceived { asset } => ContractError::AssetNotReceived { asset },
+            vault_assets::error::AssetError::AssetSurplusReceived {} => ContractError::AssetSurplusReceived {},
+            vault_assets::error::AssetError::UnexpectedAssetAmountReceived {
+                received_amount,
+                expected_amount,
+                asset
+            } => ContractError::UnexpectedAssetAmountReceived {received_amount, expected_amount, asset},
             other => ContractError::Std(other.into())   // This should never happen
         }
     }

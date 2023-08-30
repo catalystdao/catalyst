@@ -83,23 +83,18 @@ impl<'a> VaultAssetsTrait<'a, NativeAsset> for NativeVaultAssets {
                 match received_coin {
                     Some(coin) => {
                         if coin.amount != amount {
-                            Err(AssetError::ReceivedAssetInvalid {
-                                reason: format!(
-                                    "Received {}, expected {}",
-                                    coin,
-                                    Coin::new(amount.u128(), asset.denom.to_owned())
-                                )
+                            Err(AssetError::UnexpectedAssetAmountReceived {
+                                received_amount: coin.amount,
+                                expected_amount: amount,
+                                asset: asset.to_string()
                             })
                         }
                         else {
                             Ok(())
                         }
                     },
-                    None => Err(AssetError::ReceivedAssetInvalid {
-                        reason: format!(
-                            "{} not received",
-                            Coin::new(amount.u128(), asset.denom.to_owned())
-                        )
+                    None => Err(AssetError::AssetNotReceived {
+                        asset: asset.to_string()
                     })
                 }
             })?;
@@ -111,7 +106,7 @@ impl<'a> VaultAssetsTrait<'a, NativeAsset> for NativeVaultAssets {
             // (assuming all assets contained by the vault are unique).
         
             if received_funds_count > non_zero_assets_count {
-                return Err(AssetError::ReceivedAssetCountSurplus {});
+                return Err(AssetError::AssetSurplusReceived {});
             }
 
         Ok(vec![])
@@ -253,27 +248,33 @@ impl AssetTrait for NativeAsset {
         // received funds for these cases.
         if amount.is_zero() {
             if info.funds.len() != 0 {
-                return Err(AssetError::ReceivedAssetCountSurplus {});
+                return Err(AssetError::AssetSurplusReceived {});
             }
             
             return Ok(None);
         }
 
         match info.funds.len() {
-            0 => Err(AssetError::ReceivedAssetCountShortage {}),
+            0 => Err(AssetError::AssetNotReceived { asset: self.to_string() }),
             1 => {
-                let received_coin = info.funds[0].to_owned();
-                let expected_coin = Coin::new(amount.u128(), self.denom.to_owned());
-                if received_coin != expected_coin {
-                    Err(AssetError::ReceivedAssetInvalid {
-                        reason: format!("Received {}, expected {}", received_coin, expected_coin)
+
+                if info.funds[0].denom != self.denom {
+                    return Err(AssetError::AssetNotReceived {
+                        asset: self.to_string()
                     })
                 }
-                else {
-                    Ok(None)
+
+                if info.funds[0].amount != amount {
+                    return Err(AssetError::UnexpectedAssetAmountReceived {
+                        received_amount: info.funds[0].amount,
+                        expected_amount: amount,
+                        asset: self.to_string()
+                    });
                 }
+
+                Ok(None)
             },
-            _ => Err(AssetError::ReceivedAssetCountSurplus {})
+            _ => Err(AssetError::AssetSurplusReceived {})
         }
     }
 

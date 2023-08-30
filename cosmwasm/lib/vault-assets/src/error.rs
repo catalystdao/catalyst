@@ -1,4 +1,4 @@
-use cosmwasm_std::StdError;
+use cosmwasm_std::{StdError, Uint128};
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -13,14 +13,18 @@ pub enum AssetError {
     #[error("The requested asset does not form part of the vault.")]
     AssetNotFound {},
 
-    #[error("Surplus of assets received by the vault.")]
-    ReceivedAssetCountSurplus {},
+    #[error("Expected asset not received: {asset}.")]
+    AssetNotReceived { asset: String },
 
-    #[error("Shortage of assets received by the vault")]
-    ReceivedAssetCountShortage {},
+    #[error("Asset surplus received.")]
+    AssetSurplusReceived {},
 
-    #[error("Received asset is invalid: {reason}")]
-    ReceivedAssetInvalid{ reason: String },
+    #[error("Invalid amount {received_amount} for asset {asset} received (expected {expected_amount}).")]
+    UnexpectedAssetAmountReceived {
+        received_amount: Uint128,
+        expected_amount: Uint128,
+        asset: String
+    },
 
 }
 
