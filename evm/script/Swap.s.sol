@@ -45,17 +45,17 @@ contract Swap is Script, IMessageEscrowStructs {
         address toVault = address(0x7caF4D258906495515Af49aDc778cF9Ce711d5f4);
 
 
-        address WGAS = address(0x0000005eff5E63a9B4C4505Af65F701354d0Bef7);
+        address WGAS = address(0xE67ABDA0D43f7AC8f37876bBF00D1DFadbB93aaa);
         Token(WGAS).approve(fromVault, 2**256-1);
-        IWETH(WGAS).deposit{value: uint256(0.01*1e18)}();
+        IWETH(WGAS).deposit{value: uint256(0.1*1e18)}();
 
         ICatalystV1Vault(fromVault).sendAsset{value: 2000000 * 10 gwei + 2000000 * 10 gwei}(
-            bytes32(uint256(2)),
+            bytes32(uint256(84531)),
             abi.encodePacked(uint8(20), bytes32(0), abi.encode(toVault)),
             abi.encodePacked(uint8(20), bytes32(0), abi.encode(address(this))),
             WGAS,
             0,
-            uint256(0.01*1e18),
+            uint256(0.1*1e18),
             0,
             address(this),
             IncentiveDescription({

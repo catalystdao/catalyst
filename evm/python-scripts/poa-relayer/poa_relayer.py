@@ -44,23 +44,23 @@ class PoARelayer(MessageSigner):
         self,
         private_key: str = os.environ["SIGNER"],
         chains={
-            3: {
-                "name": "scroll",
+            80001: {
+                "name": "mumbai",
                 "confirmations": 0,
                 "url": "http://127.0.0.1:8545",  # os.environ["SCROLL_RPC"],
                 # "middleware": geth_poa,
                 "GI_contract": Web3.to_checksum_address("0x000000641ac10b4e000fe361f2149e2a531061c5"),
                 "key": os.environ["PRIVATE_KEY_ROUTER"]
             },
-            2: {
-                "name": "cronos",
+            11155111: {
+                "name": "sepolia",
                 "confirmations": 0,
                 "url": "http://127.0.0.1:8547",  # os.environ["CRONOS_RPC"],
                 "GI_contract": Web3.to_checksum_address("0x000000641ac10b4e000fe361f2149e2a531061c5"),
                 "key": os.environ["PRIVATE_KEY_ROUTER"]
             },
-            1: {
-                "name": "canto",
+            84531: {
+                "name": "base-goerli",
                 "confirmations": 0,
                 "url": "http://127.0.0.1:8546",  # os.environ["CRONOS_RPC"],
                 "GI_contract": Web3.to_checksum_address("0x000000641ac10b4e000fe361f2149e2a531061c5"),
@@ -85,7 +85,7 @@ class PoARelayer(MessageSigner):
             self.chains[chain]["nonce"] = w3.eth.get_transaction_count(self.chains[chain]["relayer"].address)
         
     def checkConfirmations(self, chainId: int, confirmations: int) -> bool:
-        return self.chains[chainId]["confirmations"] >= confirmations
+        return self.chains[chainId]["confirmations"] <= confirmations
 
     def signTransaction(self, chainId: int, transactionHash) -> list:
         w3: Web3 = self.chains[chainId]["w3"]
@@ -152,7 +152,8 @@ class PoARelayer(MessageSigner):
         ).build_transaction(
             {
                 "from": relayer_address.address,
-                "nonce": self.chains[toChain]["nonce"]
+                "nonce": self.chains[toChain]["nonce"],
+                "gas": 10000000
             }
         )
 
@@ -182,7 +183,7 @@ class PoARelayer(MessageSigner):
             for chain in chains:
                 w3 = self.chains[chain]["w3"]
                 fromBlock = blocknumbers[chain]
-                toBlock = w3.eth.block_number
+                toBlock = w3.eth.block_number - self.chains[chain]["confirmations"] - 1
 
                 if fromBlock <= toBlock:
                     blocknumbers[chain] = toBlock + 1

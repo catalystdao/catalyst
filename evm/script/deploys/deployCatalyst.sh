@@ -1,40 +1,42 @@
 forge compile
 
+# Load global envs
 set -o allexport
 source ../../.env
-set +o allexport
 
-./deployCatalyst.canto.sh &
-scroll=$!
-./deployCatalyst.cronos.sh &
-canto=$!
-./deployCatalyst.scroll.sh &
-cronos=$!
-wait $scroll $canto $cronos
+# Setup each of the envs
+source .mumbai.env
+./deployCatalyst.base.sh &
+mumbai=$!
+sleep 1s  # The delay is to ensure the scripts aren't writing / reading at the same time and causing a conflict.
 
-# Set the connections
+source .sepolia.env
+./deployCatalyst.base.sh &
+sepolia=$!
+sleep 1s # The delay is to ensure the scripts aren't writing / reading at the same time and causing a conflict.
+
+source .base-goerli.env
+./deployCatalyst.base.sh &
+base_goerli=$!
+sleep 1s # The delay is to ensure the scripts aren't writing / reading at the same time and causing a conflict.
+
+wait $base_goerli $mumbai $sepolia
+
 sleep 1s
 
-set -o allexport
-source .canto.env
-set +o allexport
-
+# Set the connections
+source .base-goerli.env
 forge script DeployVaults --sig "setConnections()" --fork-url=$RPC_URL --broadcast &
-canto=$!
+base_goerli=$!
 
-set -o allexport
-source .cronos.env
-set +o allexport
-
+source .sepolia.env
 forge script DeployVaults --sig "setConnections()" --fork-url=$RPC_URL --broadcast &
-cronos=$!
+sepolia=$!
 
-set -o allexport
-source .scroll.env
-set +o allexport
-
+source .mumbai.env
 forge script DeployVaults --sig "setConnections()" --fork-url=$RPC_URL --broadcast &
-scroll=$!
+mumbai=$!
 
+wait $base_goerli $mumbai $sepolia
 
-wait $scroll $canto $cronos
+set +o allexport

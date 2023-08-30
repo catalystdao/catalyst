@@ -208,7 +208,7 @@ contract DeployVaults is Script {
                 address remoteCCI = vm.parseJsonAddress(config_interfaces, string.concat(".", other_chain, ".", version, ".interface"));
                 address remoteGI = vm.parseJsonAddress(config_interfaces, string.concat(".", other_chain, ".", version, ".incentive"));
                 if (remoteCCI == address(0)) continue;
-                if (remoteCCI == address(0)) continue;
+                if (remoteGI == address(0)) continue;
 
                 // Check if a connection has already been set.
                 bytes memory read_remote_cci = CatalystGARPInterface(localCCI).chainIdentifierToDestinationAddress(other_chainIdentifier);
