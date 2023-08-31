@@ -463,18 +463,18 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::CalcSendAsset{
             from_asset_ref,
             amount
-        } => to_binary(&query_calc_send_asset(deps,env, from_asset_ref, amount)?),
+        } => to_binary(&query_calc_send_asset(deps, env, from_asset_ref, amount)?),
         QueryMsg::CalcReceiveAsset{
             to_asset_ref,
             u
-        } => to_binary(&query_calc_receive_asset(deps,env, to_asset_ref, u)?),
+        } => to_binary(&query_calc_receive_asset(deps, env, to_asset_ref, u)?),
         QueryMsg::CalcLocalSwap{
             from_asset_ref,
             to_asset_ref,
             amount
-        } => to_binary(&query_calc_local_swap(deps,env, from_asset_ref, to_asset_ref, amount)?),
+        } => to_binary(&query_calc_local_swap(deps, env, from_asset_ref, to_asset_ref, amount)?),
 
-        QueryMsg::GetLimitCapacity{} => to_binary(&query_get_limit_capacity(deps,env)?),
+        QueryMsg::GetLimitCapacity{} => to_binary(&query_get_limit_capacity(deps, env)?),
 
         QueryMsg::TotalEscrowedAsset {
             asset_ref
