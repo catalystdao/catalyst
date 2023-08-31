@@ -766,4 +766,210 @@ mod test_amplified_local_swap {
 
     }
 
+
+    #[test]
+    fn test_local_swap_invalid_funds() {
+
+        let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
+
+        // Instantiate and initialize vault
+        let vault_assets = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
+        let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
+        let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
+        let vault_code_id = amplified_vault_contract_storage(env.get_app());
+        let vault = mock_factory_deploy_vault(
+            &mut env,
+            vault_assets.clone(),
+            vault_initial_balances.clone(),
+            vault_weights.clone(),
+            AMPLIFICATION,
+            vault_code_id,
+            None,
+            None
+        );
+
+        // Define local swap config
+        let from_asset_idx = 0;
+        let from_asset = vault_assets[from_asset_idx].clone();
+        let from_balance = vault_initial_balances[from_asset_idx];
+
+        let to_asset_idx = 1;
+        let to_asset = vault_assets[to_asset_idx].clone();
+
+        // Swap 25% of the vault
+        let swap_amount = from_balance * Uint128::from(25u64)/ Uint128::from(100u64);
+
+
+
+        // Tested action 1: no funds
+        let response_result = env.execute_contract(
+            Addr::unchecked(SETUP_MASTER),
+            vault.clone(),
+            &AmplifiedExecuteMsg::LocalSwap {
+                from_asset_ref: from_asset.get_asset_ref(),
+                to_asset_ref: to_asset.get_asset_ref(),
+                amount: swap_amount,
+                min_out: Uint128::zero()
+            },
+            vec![],   // ! Do not send funds
+            vec![]
+        );
+
+        // Make sure the transaction fails
+        assert!(response_result.is_err());
+        #[cfg(feature="asset_native")]
+        matches!(
+            response_result.err().unwrap().downcast().unwrap(),
+            ContractError::AssetNotReceived { asset }
+                if asset == from_asset.into_vault_asset().to_string()
+        );
+        #[cfg(feature="asset_cw20")]
+        assert_eq!(
+            response_result.err().unwrap().root_cause().to_string(),
+            "No allowance for this account".to_string()
+        );
+
+
+
+        // Tested action 2: invalid asset
+        let response_result = env.execute_contract(
+            Addr::unchecked(SETUP_MASTER),
+            vault.clone(),
+            &AmplifiedExecuteMsg::LocalSwap {
+                from_asset_ref: from_asset.get_asset_ref(),
+                to_asset_ref: to_asset.get_asset_ref(),
+                amount: swap_amount,
+                min_out: Uint128::zero()
+            },
+            vec![to_asset.clone()],   // ! Send 'to_asset' instead of 'from_asset'
+            vec![swap_amount]
+        );
+
+        // Make sure the transaction fails
+        assert!(response_result.is_err());
+        #[cfg(feature="asset_native")]
+        matches!(
+            response_result.err().unwrap().downcast().unwrap(),
+            ContractError::AssetNotReceived { asset }
+                if asset == from_asset.into_vault_asset().to_string()
+        );
+        #[cfg(feature="asset_cw20")]
+        assert_eq!(
+            response_result.err().unwrap().root_cause().to_string(),
+            "No allowance for this account".to_string()
+        );
+
+
+
+        // Tested action 3: too many assets
+        let response_result = env.execute_contract(
+            Addr::unchecked(SETUP_MASTER),
+            vault.clone(),
+            &AmplifiedExecuteMsg::LocalSwap {
+                from_asset_ref: from_asset.get_asset_ref(),
+                to_asset_ref: to_asset.get_asset_ref(),
+                amount: swap_amount,
+                min_out: Uint128::zero()
+            },
+            vec![from_asset.clone(), to_asset.clone()],   // ! Send both 'from_asset' and 'to_asset'
+            vec![swap_amount, Uint128::one()]
+        );
+
+        // Make sure the transaction fails
+        #[cfg(feature="asset_native")]
+        assert!(response_result.is_err());
+        #[cfg(feature="asset_native")]
+        matches!(
+            response_result.err().unwrap().downcast().unwrap(),
+            ContractError::AssetSurplusReceived {}
+        );
+        
+        // NOTE: this does not error for cw20 assets, as it's just the *allowance* that is set.
+        #[cfg(feature="asset_cw20")]
+        assert!(response_result.is_ok());
+
+
+
+        // Tested action 4: asset amount too low
+        let response_result = env.execute_contract(
+            Addr::unchecked(SETUP_MASTER),
+            vault.clone(),
+            &AmplifiedExecuteMsg::LocalSwap {
+                from_asset_ref: from_asset.get_asset_ref(),
+                to_asset_ref: to_asset.get_asset_ref(),
+                amount: swap_amount,
+                min_out: Uint128::zero()
+            },
+            vec![from_asset.clone()],
+            vec![swap_amount - Uint128::one()]
+        );
+
+        // Make sure the transaction fails
+        assert!(response_result.is_err());
+        #[cfg(feature="asset_native")]
+        matches!(
+            response_result.err().unwrap().downcast().unwrap(),
+            ContractError::UnexpectedAssetAmountReceived { received_amount, expected_amount, asset }
+                if
+                    received_amount == swap_amount - Uint128::one() &&
+                    expected_amount == swap_amount &&
+                    asset == from_asset.into_vault_asset().to_string()
+        );
+        #[cfg(feature="asset_cw20")]
+        assert_eq!(
+            response_result.err().unwrap().root_cause().to_string(),
+            format!("Cannot Sub with {} and {}", swap_amount - Uint128::one(), swap_amount)
+        );
+
+
+
+        // Tested action 5: asset amount too high
+        let response_result = env.execute_contract(
+            Addr::unchecked(SETUP_MASTER),
+            vault.clone(),
+            &AmplifiedExecuteMsg::LocalSwap {
+                from_asset_ref: from_asset.get_asset_ref(),
+                to_asset_ref: to_asset.get_asset_ref(),
+                amount: swap_amount,
+                min_out: Uint128::zero()
+            },
+            vec![from_asset.clone()],
+            vec![swap_amount + Uint128::one()]
+        );
+
+        // Make sure the transaction fails
+        #[cfg(feature="asset_native")]
+        assert!(response_result.is_err());
+        #[cfg(feature="asset_native")]
+        matches!(
+            response_result.err().unwrap().downcast().unwrap(),
+            ContractError::UnexpectedAssetAmountReceived { received_amount, expected_amount, asset }
+                if
+                    received_amount == swap_amount + Uint128::one() &&
+                    expected_amount == swap_amount &&
+                    asset == from_asset.into_vault_asset().to_string()
+        );
+        
+        // NOTE: this does not error for cw20 assets, as it's just the *allowance* that is set too high.
+        #[cfg(feature="asset_cw20")]
+        assert!(response_result.is_ok());
+
+
+
+        // Make sure the swap works for a valid amount
+        env.execute_contract(
+            Addr::unchecked(SETUP_MASTER),
+            vault.clone(),
+            &AmplifiedExecuteMsg::LocalSwap {
+                from_asset_ref: from_asset.get_asset_ref(),
+                to_asset_ref: to_asset.get_asset_ref(),
+                amount: swap_amount,
+                min_out: Uint128::zero()
+            },
+            vec![from_asset.clone()],
+            vec![swap_amount]
+        ).unwrap();
+
+    }
+
 }
