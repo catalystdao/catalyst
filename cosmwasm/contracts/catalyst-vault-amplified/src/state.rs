@@ -2274,7 +2274,7 @@ pub fn update_max_limit_capacity(
 pub fn query_calc_send_asset(
     deps: Deps,
     env: Env,
-    from_asset_ref: &str,
+    from_asset_ref: String,
     amount: Uint128
 ) -> StdResult<CalcSendAssetResponse> {
 
@@ -2284,7 +2284,7 @@ pub fn query_calc_send_asset(
                 &deps,
                 &env,
                 None,
-                &Asset::from_asset_ref(&deps, from_asset_ref)?,
+                &Asset::from_asset_ref(&deps, &from_asset_ref)?,
                 amount
             )?
         }
@@ -2302,7 +2302,7 @@ pub fn query_calc_send_asset(
 pub fn query_calc_receive_asset(
     deps: Deps,
     env: Env,
-    to_asset_ref: &str,
+    to_asset_ref: String,
     u: U256
 ) -> StdResult<CalcReceiveAssetResponse> {
 
@@ -2312,7 +2312,7 @@ pub fn query_calc_receive_asset(
                 &deps,
                 &env,
                 None,
-                &Asset::from_asset_ref(&deps, to_asset_ref)?,
+                &Asset::from_asset_ref(&deps, &to_asset_ref)?,
                 u
             )?
         }
@@ -2331,8 +2331,8 @@ pub fn query_calc_receive_asset(
 pub fn query_calc_local_swap(
     deps: Deps,
     env: Env,
-    from_asset_ref: &str,
-    to_asset_ref: &str,
+    from_asset_ref: String,
+    to_asset_ref: String,
     amount: Uint128
 ) -> StdResult<CalcLocalSwapResponse> {
 
@@ -2342,8 +2342,8 @@ pub fn query_calc_local_swap(
                 &deps,
                 &env,
                 None,
-                &Asset::from_asset_ref(&deps, from_asset_ref)?,
-                &Asset::from_asset_ref(&deps, to_asset_ref)?,
+                &Asset::from_asset_ref(&deps, &from_asset_ref)?,
+                &Asset::from_asset_ref(&deps, &to_asset_ref)?,
                 amount
             )?
         }
