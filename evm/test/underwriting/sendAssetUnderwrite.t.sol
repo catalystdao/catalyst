@@ -26,7 +26,10 @@ contract TestSendAssetUnderwrite is TestCommon, ICatalystReceiver {
         setConnection(vault1, vault2, DESTINATION_IDENTIFIER, DESTINATION_IDENTIFIER);
     }
 
-    function test_send_asset_underwrite() external {
+    function test_send_asset_underwrite(address refundTo, address toAccount) external {
+        vm.assume(refundTo != address(0));
+        vm.assume(toAccount != address(0));
+        vm.assume(toAccount != refundTo);  // makes it really hard to debug
         // execute the swap.
         address token1 = ICatalystV1Vault(vault1)._tokenIndexing(0);
 
@@ -35,7 +38,7 @@ contract TestSendAssetUnderwrite is TestCommon, ICatalystReceiver {
         ICatalystV1Structs.RouteDescription memory routeDescription = ICatalystV1Structs.RouteDescription({
             chainIdentifier: DESTINATION_IDENTIFIER,
             toVault: convertEVMTo65(vault2),
-            toAccount: convertEVMTo65(address(this)),
+            toAccount: convertEVMTo65(toAccount),
             incentive: _INCENTIVE
         });
 
@@ -47,7 +50,7 @@ contract TestSendAssetUnderwrite is TestCommon, ICatalystReceiver {
             0, 
             uint256(1e17), 
             0,
-            address(this),
+            toAccount,
             0,
             hex""
         );
@@ -61,23 +64,46 @@ contract TestSendAssetUnderwrite is TestCommon, ICatalystReceiver {
 
         Token(token2).approve(address(CCI), 2**256-1);
         
-        CCI.underwrite(
-            address(this), // non-zero address
+        bytes32 underwriteIdentifier = CCI.underwrite(
+            refundTo, // non-zero address
             vault2,  // -- Swap information
             token2,
             units,
             0,
-            address(this),
+            toAccount,
             uint256(1e17),
             0,
             hex"0000"
+        );
+
+        (uint256 numTokens, , ) = CCI.underwritingStorage(underwriteIdentifier);
+
+        assertEq(
+            Token(token2).balanceOf(address(CCI)),
+            numTokens * (
+                CCI.UNDERWRITING_UNFULFILLED_FEE()
+            )/CCI.UNDERWRITING_UNFULFILLED_FEE_DENOMINATOR(),
+            "CCI balance incorrect"
         );
 
         // Then let the package arrive.
         (bytes memory _metadata, bytes memory toExecuteMessage) = getVerifiedMessage(address(GARP), messageWithContext);
 
         GARP.processMessage(_metadata, toExecuteMessage, FEE_RECIPITANT);
-        
+
+        assertEq(
+            Token(token2).balanceOf(address(CCI)),
+            0,
+            "CCI balance not 0"
+        );
+
+        assertEq(
+            Token(token2).balanceOf(refundTo),
+            numTokens + numTokens * (
+                CCI.UNDERWRITING_UNFULFILLED_FEE()
+            )/CCI.UNDERWRITING_UNFULFILLED_FEE_DENOMINATOR(),
+            "refundTo balance not expected"
+        );
     }
     
     bytes on_catalyst_call_data;
