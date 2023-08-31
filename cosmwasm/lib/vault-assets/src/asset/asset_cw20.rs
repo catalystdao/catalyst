@@ -257,12 +257,72 @@ mod asset_cw20_tests {
     const RECEIVER_ADDR : &str = "receiver_addr";
 
     
+    fn get_mock_asset() -> Cw20Asset {
+        Cw20Asset("contract_a".to_string())
+    }
+
+    
     fn get_mock_assets() -> Vec<Cw20Asset> {
         vec![
             Cw20Asset("contract_a".to_string()),
             Cw20Asset("contract_b".to_string()),
             Cw20Asset("contract_c".to_string())
         ]
+    }
+
+    fn verify_cw20_transfer_from_msg(
+        cosmos_msg: CosmosMsg,
+        asset: Cw20Asset,
+        amount: Uint128,
+        owner: String,
+        recipient: String
+    ) {
+
+        let expected_execute_msg = Cw20ExecuteMsg::TransferFrom {
+            owner,
+            recipient,
+            amount
+        };
+
+        matches!(
+            cosmos_msg.clone(),
+            CosmosMsg::Wasm(
+                WasmMsg::Execute {
+                    contract_addr,
+                    msg,
+                    funds
+                }
+            )
+                if contract_addr == asset.0
+                    && msg == to_binary(&expected_execute_msg).unwrap()
+                    && funds == vec![]
+        );
+    }
+
+    fn verify_cw20_transfer_msg(
+        cosmos_msg: CosmosMsg,
+        asset: Cw20Asset,
+        amount: Uint128,
+        recipient: String
+    ) {
+        let expected_execute_msg = Cw20ExecuteMsg::Transfer {
+            recipient,
+            amount
+        };
+
+        matches!(
+            cosmos_msg.clone(),
+            CosmosMsg::Wasm(
+                WasmMsg::Execute {
+                    contract_addr,
+                    msg,
+                    funds
+                }
+            )
+                if contract_addr == asset.0
+                    && msg == to_binary(&expected_execute_msg).unwrap()
+                    && funds == vec![]
+        );
     }
 
     fn verify_cw20_transfer_from_msgs(
@@ -281,26 +341,15 @@ mod asset_cw20_tests {
             .zip(&amounts)
             .for_each(|((cosmos_msg, asset), expected_amount)| {
 
-                let expected_execute_msg = Cw20ExecuteMsg::TransferFrom {
-                    owner: owner.to_string(),
-                    recipient: recipient.to_string(),
-                    amount: expected_amount.clone()
-                };
-
-                matches!(
-                    cosmos_msg.clone(),
-                    CosmosMsg::Wasm(
-                        WasmMsg::Execute {
-                            contract_addr,
-                            msg,
-                            funds
-                        }
-                    )
-                        if contract_addr == asset.0
-                            && msg == to_binary(&expected_execute_msg).unwrap()
-                            && funds == vec![]
+                verify_cw20_transfer_from_msg(
+                    cosmos_msg.to_owned(),
+                    asset.to_owned(),
+                    expected_amount.to_owned(),
+                    owner.clone(),
+                    recipient.clone()
                 );
-            })
+
+            });
     }
 
     fn verify_cw20_transfer_msgs(
@@ -318,27 +367,20 @@ mod asset_cw20_tests {
             .zip(&amounts)
             .for_each(|((cosmos_msg, asset), expected_amount)| {
 
-                let expected_execute_msg = Cw20ExecuteMsg::Transfer {
-                    recipient: recipient.to_string(),
-                    amount: expected_amount.clone()
-                };
-
-                matches!(
-                    cosmos_msg.clone(),
-                    CosmosMsg::Wasm(
-                        WasmMsg::Execute {
-                            contract_addr,
-                            msg,
-                            funds
-                        }
-                    )
-                        if contract_addr == asset.0
-                            && msg == to_binary(&expected_execute_msg).unwrap()
-                            && funds == vec![]
+                verify_cw20_transfer_msg(
+                    cosmos_msg.to_owned(),
+                    asset.to_owned(),
+                    expected_amount.to_owned(),
+                    recipient.clone()
                 );
-            })
+
+            });
     }
 
+
+
+    // Handler tests
+    // ********************************************************************************************
 
     #[test]
     fn test_new_vault_assets_handler() {
@@ -651,5 +693,183 @@ mod asset_cw20_tests {
         assert!(cosmos_msgs.len() == 0);
 
     }
+
+
+
+
+    // Asset tests
+    // ********************************************************************************************
+
+    #[test]
+    fn test_save_and_load_asset() {
+
+        let mut deps = mock_dependencies();
+
+        let asset = Cw20Asset("address".to_string());
+
+
+
+        // Tested action 1: Save asset
+        asset.save(&mut deps.as_mut()).unwrap();
+
+
+
+        // Tested action 2: load asset using its ref
+        let loaded_asset = Cw20Asset::from_asset_ref(
+            &deps.as_ref(),
+            asset.get_asset_ref()
+        ).unwrap();
+
+
+
+        // Verify the loaded asset matches the original asset definition
+        assert_eq!(
+            loaded_asset,
+            asset
+        )
+    }
+
+
+    #[test]
+    fn test_asset_ref() {
+
+        let asset = Cw20Asset("address".to_string());
+
+
+
+        // Tested action: get the asset ref
+        let asset_ref = asset.get_asset_ref();
+
+
+        
+        // Verify the asset ref is the token address
+        assert_eq!(
+            asset_ref.to_string(),
+            asset.0
+        )
+    }
+
+
+    #[test]
+    fn test_receive_asset() {
+
+        let env = mock_env();
+
+        let asset = get_mock_asset();
+        let desired_received_amount = Uint128::from(123_u128);
+
+
+
+        // Tested action: receive asset
+        let cosmos_msg = asset.receive_asset(
+            &env,
+            &mock_info(
+                SENDER_ADDR,
+                &[]
+            ),
+            desired_received_amount.clone()
+        ).unwrap();     // Call is successful
+
+
+
+        // Verify the genereted transfer Cosmos message
+        assert!(cosmos_msg.is_some());
+        verify_cw20_transfer_from_msg(
+            cosmos_msg.unwrap(),
+            asset,
+            desired_received_amount,
+            SENDER_ADDR.to_string(),
+            env.contract.address.to_string()
+        );
+
+    }
+
+
+    #[test]
+    fn test_receive_asset_zero_amount() {
+
+        let env = mock_env();
+
+        let asset = get_mock_asset();
+        let desired_received_amount = Uint128::zero();
+
+
+
+        // Tested action: receive zero amount
+        let result = asset.receive_asset(
+            &env,
+            &mock_info(
+                SENDER_ADDR,
+                &[]
+            ),
+            desired_received_amount
+        );
+
+
+
+        // Verify action passes
+        assert!(result.is_ok());
+        assert!(result.ok().unwrap().is_none());
+
+    }
+
+
+    #[test]
+    fn test_send_asset() {
+
+        let env = mock_env();
+
+        let asset = get_mock_asset();
+        let desired_send_amount = Uint128::from(123_u128);
+
+
+
+        // Tested action: send asset
+        let cosmos_msg = asset.send_asset(
+            &env,
+            desired_send_amount,
+            RECEIVER_ADDR.to_string()
+        ).unwrap();
+
+
+
+        // Verify the generated Cosmos message
+        assert!(cosmos_msg.is_some());
+        verify_cw20_transfer_msg(
+            cosmos_msg.unwrap(),
+            asset,
+            desired_send_amount,
+            RECEIVER_ADDR.to_string()
+        );
+
+    }
+
+
+    #[test]
+    fn test_send_asset_zero_amount() {
+
+        let env = mock_env();
+
+        let asset = get_mock_asset();
+        let desired_send_amount = Uint128::zero();
+
+
+
+        // Tested action: send asset
+        let cosmos_msg = asset.send_asset(
+            &env,
+            desired_send_amount,
+            RECEIVER_ADDR.to_string()
+        ).unwrap();
+
+
+
+        // Verify the generated Cosmos message
+        assert!(cosmos_msg.is_none());
+    }
+
+
+    // NOTE: 'query_prior_balance' cannot be unit tested, as the operation requires the interaction
+    // with an external contract.
 
 }
