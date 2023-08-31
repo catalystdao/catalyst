@@ -32,6 +32,7 @@ import { CatalystVaultAmplified } from "../src/CatalystVaultAmplified.sol";
 // Generalised Incentives
 import { IncentivizedMockEscrow } from "GeneralisedIncentives/src/apps/mock/IncentivizedMockEscrow.sol";
 import { IMessageEscrowStructs } from "GeneralisedIncentives/src/interfaces/IMessageEscrowStructs.sol";
+import { ICatalystV1Structs } from "../src/interfaces/ICatalystV1VaultState.sol";
 
 
 contract Swap is Script, IMessageEscrowStructs {
@@ -50,24 +51,26 @@ contract Swap is Script, IMessageEscrowStructs {
         IWETH(WGAS).deposit{value: uint256(0.1*1e18)}();
 
         ICatalystV1Vault(fromVault).sendAsset{value: 2000000 * 10 gwei + 2000000 * 10 gwei}(
-            bytes32(uint256(80001)),
-            abi.encodePacked(uint8(20), bytes32(0), abi.encode(toVault)),
-            abi.encodePacked(uint8(20), bytes32(0), abi.encode(address(this))),
+            ICatalystV1Structs.RouteDescription({
+                chainIdentifier: bytes32(uint256(80001)),
+                toVault: abi.encodePacked(uint8(20), bytes32(0), abi.encode(toVault)),
+                toAccount: abi.encodePacked(uint8(20), bytes32(0), abi.encode(address(this))),
+                incentive: IncentiveDescription({
+                    maxGasDelivery: 2000000,
+                    maxGasAck: 2000000,
+                    refundGasTo: address(this),
+                    priceOfDeliveryGas: 10 gwei,
+                    priceOfAckGas: 10 gwei,
+                    targetDelta: 0 minutes
+                })
+            }),
             WGAS,
             0,
             uint256(0.1*1e18),
             0,
             address(this),
-            IncentiveDescription({
-                maxGasDelivery: 2000000,
-                maxGasAck: 2000000,
-                refundGasTo: address(this),
-                priceOfDeliveryGas: 10 gwei,
-                priceOfAckGas: 10 gwei,
-                targetDelta: 0 minutes
-            })
+            hex""
         );
-
 
         vm.stopBroadcast();
 
