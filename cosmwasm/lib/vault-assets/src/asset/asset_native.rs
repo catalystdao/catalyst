@@ -320,6 +320,14 @@ mod asset_native_tests {
     const RECEIVER_ADDR : &str = "receiver_addr";
 
     
+    fn get_mock_asset() -> NativeAsset {
+        NativeAsset {
+            denom: "asset_a".to_string(),
+            alias: "a".to_string()
+        }
+    }
+
+    
     fn get_mock_assets() -> Vec<NativeAsset> {
         vec![
             NativeAsset {
@@ -337,6 +345,10 @@ mod asset_native_tests {
         ]
     }
 
+
+
+    // Handler tests
+    // ********************************************************************************************
 
     #[test]
     fn test_new_vault_assets_handler() {
@@ -592,7 +604,7 @@ mod asset_native_tests {
 
 
 
-        // Tested action 4: asset amount too large
+        // Tested action 5: asset amount too large
         let mut received_coins_large_amount = valid_received_coins.clone();
         received_coins_large_amount[1].amount = received_coins_large_amount[1].amount + Uint128::one();
         let result = handler.receive_assets(
@@ -826,5 +838,323 @@ mod asset_native_tests {
         assert!(cosmos_msgs.len() == 0);
 
     }
+
+
+
+
+    // Asset tests
+    // ********************************************************************************************
+
+    #[test]
+    fn test_save_and_load_asset() {
+
+        let mut deps = mock_dependencies();
+
+        let asset = NativeAsset {
+            denom: "denom".to_string(),
+            alias: "alias".to_string(),
+        };
+
+
+
+        // Tested action 1: Save asset
+        asset.save(&mut deps.as_mut()).unwrap();
+
+
+
+        // Tested action 2: load asset using its ref
+        let loaded_asset = NativeAsset::from_asset_ref(
+            &deps.as_ref(),
+            asset.get_asset_ref()
+        ).unwrap();
+
+
+
+        // Verify the loaded asset matches the original asset definition
+        assert_eq!(
+            loaded_asset,
+            asset
+        )
+    }
+
+
+    #[test]
+    fn test_asset_ref() {
+
+        let asset = NativeAsset {
+            denom: "denom".to_string(),
+            alias: "alias".to_string(),
+        };
+
+
+
+        // Tested action: get the asset ref
+        let asset_ref = asset.get_asset_ref();
+
+
+        
+        // Verify the asset ref is the asset alias
+        assert_eq!(
+            asset_ref.to_string(),
+            asset.alias
+        )
+    }
+
+    
+    // TODO query
+
+
+    #[test]
+    fn test_receive_asset() {
+
+        let env = mock_env();
+
+        let asset = get_mock_asset();
+        let desired_received_amount = Uint128::from(123_u128);
+        let received_coin = Coin::new(
+            desired_received_amount.u128(),
+            asset.denom.clone()
+        );
+
+
+
+        // Tested action: receive asset
+        let cosmos_msg = asset.receive_asset(
+            &env,
+            &mock_info(
+                SENDER_ADDR,
+                &[received_coin]
+            ),
+            desired_received_amount.clone()
+        ).unwrap();     // Call is successful
+
+
+
+        // Verify no Cosmos messages are generated
+        assert!(cosmos_msg.is_none())
+
+    }
+
+
+    #[test]
+    fn test_receive_asset_invalid_funds() {
+
+        let env = mock_env();
+
+        let asset = get_mock_asset();
+        let desired_received_amount = Uint128::from(123_u128);
+        let valid_received_coin = Coin::new(
+            desired_received_amount.u128(),
+            asset.denom.clone()
+        );
+
+
+
+        // Tested action 1: no funds
+        let result = asset.receive_asset(
+            &env,
+            &mock_info(
+                SENDER_ADDR,
+                &[]             // No funds
+            ),
+            desired_received_amount.clone()
+        );
+
+        // Make sure action fails
+        matches!(
+            result.err().unwrap(),
+            AssetError::AssetNotReceived { asset: error_asset }
+                if error_asset == asset.to_string()
+        );
+
+
+
+        // Tested action 2: too many assets
+        let result = asset.receive_asset(
+            &env,
+            &mock_info(
+                SENDER_ADDR,
+                &[valid_received_coin.clone(), Coin::new(99u128, "other_coin")]    // One asset more than expected
+            ),
+            desired_received_amount.clone()
+        );
+
+        // Make sure action fails
+        matches!(
+            result.err().unwrap(),
+            AssetError::AssetSurplusReceived {}
+        );
+
+
+
+        // Tested action 3: invalid asset
+        let result = asset.receive_asset(
+            &env,
+            &mock_info(
+                SENDER_ADDR,
+                &[Coin::new(99u128, "other_coin")]    // Different asset
+            ),
+            desired_received_amount.clone()
+        );
+
+        // Make sure action fails
+        matches!(
+            result.err().unwrap(),
+            AssetError::AssetNotReceived { asset: error_asset }
+                if error_asset == asset.to_string()
+        );
+
+
+
+        // Tested action 4: asset amount too small
+        let mut received_coin_small_amount = valid_received_coin.clone();
+        received_coin_small_amount.amount = received_coin_small_amount.amount - Uint128::one();
+        let result = asset.receive_asset(
+            &env,
+            &mock_info(
+                SENDER_ADDR,
+                &[received_coin_small_amount.clone()]    // Amount too small
+            ),
+            desired_received_amount.clone()
+        );
+
+        // Make sure action fails
+        matches!(
+            result.err().unwrap(),
+            AssetError::UnexpectedAssetAmountReceived {asset: error_asset, received_amount, expected_amount }
+                if error_asset == asset.to_string()
+                    && received_amount == received_coin_small_amount.amount
+                    && expected_amount == valid_received_coin.amount
+        );
+
+
+
+        // Tested action 5: asset amount too large
+        let mut received_coin_large_amount = valid_received_coin.clone();
+        received_coin_large_amount.amount = received_coin_large_amount.amount + Uint128::one();
+        let result = asset.receive_asset(
+            &env,
+            &mock_info(
+                SENDER_ADDR,
+                &[received_coin_large_amount.clone()]    // Amount too large
+            ),
+            desired_received_amount.clone()
+        );
+
+        // Make sure action fails
+        matches!(
+            result.err().unwrap(),
+            AssetError::UnexpectedAssetAmountReceived {asset: error_asset, received_amount, expected_amount }
+                if error_asset == asset.to_string()
+                    && received_amount == received_coin_large_amount.amount
+                    && expected_amount == valid_received_coin.amount
+        );
+
+
+    
+        // Make sure 'receive' works for valid funds
+        asset.receive_asset(
+            &env,
+            &mock_info(
+                SENDER_ADDR,
+                &[valid_received_coin]
+            ),
+            desired_received_amount.clone()
+        ).unwrap();     // Call is successful
+
+    }
+
+
+    #[test]
+    fn test_receive_asset_zero_amount() {
+
+        let env = mock_env();
+
+        let asset = get_mock_asset();
+        let desired_received_amount = Uint128::zero();
+
+
+
+        // Tested action: receive zero amount
+        let result = asset.receive_asset(
+            &env,
+            &mock_info(
+                SENDER_ADDR,
+                &[]
+            ),
+            desired_received_amount
+        );
+
+
+
+        // Verify action passes
+        assert!(result.is_ok());
+        assert!(result.ok().unwrap().is_none());
+
+    }
+
+
+    #[test]
+    fn test_send_asset() {
+
+        let env = mock_env();
+
+        let asset = get_mock_asset();
+        let desired_send_amount = Uint128::from(123_u128);
+
+
+
+        // Tested action: send asset
+        let cosmos_msg = asset.send_asset(
+            &env,
+            desired_send_amount,
+            RECEIVER_ADDR.to_string()
+        ).unwrap();
+
+
+
+        // Verify the generated Cosmos message
+        assert!(cosmos_msg.is_some());
+
+        let expected_sent_coin = Coin::new(
+            desired_send_amount.u128(),
+            asset.denom.clone()
+        );
+        matches!(
+            cosmos_msg.unwrap(),
+            CosmosMsg::Bank(cosmwasm_std::BankMsg::Send { to_address, amount })
+            if to_address == SENDER_ADDR.to_string()
+                && amount == vec![expected_sent_coin]
+        );
+
+    }
+
+
+    #[test]
+    fn test_send_asset_zero_amount() {
+
+        let env = mock_env();
+
+        let asset = get_mock_asset();
+        let desired_send_amount = Uint128::zero();
+
+
+
+        // Tested action: send asset
+        let cosmos_msg = asset.send_asset(
+            &env,
+            desired_send_amount,
+            RECEIVER_ADDR.to_string()
+        ).unwrap();
+
+
+
+        // Verify the generated Cosmos message
+        assert!(cosmos_msg.is_none());
+    }
+
+
+    // NOTE: 'query_prior_balance' cannot be unit tested, as the operation requires the interaction
+    // with the bank module.
 
 }
