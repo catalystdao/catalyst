@@ -22,6 +22,9 @@ contract CatalystDescriberRegistry is Ownable {
     address[] private _vault_describers;
     mapping(address => uint256) private _describer_version;
 
+    constructor(address defaultOwner) {
+        _transferOwnership(defaultOwner);
+    }
 
     /** 
     * @notice Given a Catalyst version, returns the current vault describer.

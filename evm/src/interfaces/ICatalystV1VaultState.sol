@@ -1,4 +1,4 @@
-//SPDX-License-Identifier: Unlicensed
+//SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.16;
 
 
@@ -25,6 +25,8 @@ interface ICatalystV1VaultState {
 
     /// @notice If the vault has no cross chain connection, this is true. Should not be trusted if setupMaster != ZERO_ADDRESS
     function onlyLocal() external view returns (bool);
+
+    function _vaultConnection(bytes32 channelIdentifier, bytes calldata remoteVault) external view returns (bool);
 
     /// @notice The token weights. Used for maintaining a non symmetric vault asset balance.
     function _weight(address token) external view returns (uint256);

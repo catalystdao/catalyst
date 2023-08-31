@@ -28,3 +28,5 @@ reports
 *.cpython*
 
 snapshots/0x*
+
+brownie

@@ -1,0 +1,23 @@
+{
+  "sepolia": {
+    "WETH10": "0xE67ABDA0D43f7AC8f37876bBF00D1DFadbB93aaa",
+    "TokenSepolia": {
+      "address": "0x0000000000000000000000000000000000000000",
+      "decimals": 18
+    }
+  },
+  "mumbai": {
+    "WMATIC": "0x9c3C9283D3e44854697Cd22D3Faa240Cfb032889",
+    "TokenMumbai": {
+      "address": "0x0000000000000000000000000000000000000000",
+      "decimals": 18
+    }
+  },
+  "base-goerli": {
+    "WETH": "0x231401dC8b53338d78c08f83CC4EBc74148196d0",
+    "TokenBase": {
+      "address": "0x0000000000000000000000000000000000000000",
+      "decimals": 18
+    }
+  }
+}

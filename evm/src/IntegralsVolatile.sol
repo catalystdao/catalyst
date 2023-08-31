@@ -1,8 +1,8 @@
-//SPDX-License-Identifier: Unlicensed
+//SPDX-License-Identifier: UNLICENSED
 
 pragma solidity ^0.8.16;
 
-import "./utils/FixedPointMathLib.sol";
+import { FixedPointMathLib } from "./utils/FixedPointMathLib.sol";
 
 /**
  * @title Catalyst: Volatile Integrals

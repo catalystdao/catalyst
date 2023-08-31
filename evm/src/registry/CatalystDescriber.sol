@@ -51,6 +51,10 @@ contract CatalystDescriber is Ownable {
 
     mapping(bytes32 => int256) internal _vault_abi_version;
 
+    constructor(address defaultOwner) {
+        _transferOwnership(defaultOwner);
+    }
+
 
     //--- Whitelisted Templates ---//
 
@@ -136,7 +140,7 @@ contract CatalystDescriber is Ownable {
      * @notice Whitelist a cross-chain interface.
      * @param cci_to_whitelist The address of the CCI to whitelisted.
      */
-    function add_whitelisted_cii(address cci_to_whitelist) external onlyOwner {
+    function add_whitelisted_cci(address cci_to_whitelist) external onlyOwner {
         if (cci_to_whitelist == address(0)) revert ZeroAddress(); 
 
         _whitelisted_ccis.push(cci_to_whitelist);

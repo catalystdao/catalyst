@@ -9,11 +9,11 @@ import { IIncentivizedMessageEscrow } from "GeneralisedIncentives/src/interfaces
 import { ICatalystReceiver } from "./interfaces/IOnCatalyst.sol";
 import { ICrossChainReceiver } from "GeneralisedIncentives/src/interfaces/ICrossChainReceiver.sol";
 import { ICatalystV1Vault } from "./ICatalystV1Vault.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import { Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import "./ICatalystV1Vault.sol";
 import "./interfaces/ICatalystV1VaultState.sol"; // structs
 import "./CatalystPayload.sol";
-import {Bytes65} from "GeneralisedIncentives/src/utils/Bytes65.sol";
+import { Bytes65 } from "GeneralisedIncentives/src/utils/Bytes65.sol";
 
 /**
  * @title Catalyst: Generalised IBC Interface
@@ -99,12 +99,6 @@ contract CatalystGARPInterface is Ownable, ICrossChainReceiver, Bytes65, IMessag
     IIncentivizedMessageEscrow public immutable GARP; // Set on deployment
 
 
-    constructor(address GARP_) {
-        require(address(GARP_) != address(0));  // dev: GARP_ cannot be zero address
-        GARP = IIncentivizedMessageEscrow(GARP_);
-    }
-
-
     //-- Underwriting Config--//
 
     uint256 constant public UNDERWRITING_UNFULFILLED_FEE = 1035;  // 3,5% extra as collatoral.
@@ -128,6 +122,13 @@ contract CatalystGARPInterface is Ownable, ICrossChainReceiver, Bytes65, IMessag
     uint256 public maxUnderwritingDuration = 12 hours;
 
      mapping(bytes32 => UnderwritingStorage) public underwritingStorage;
+
+
+    constructor(address GARP_, address defaultOwner) {
+        require(address(GARP_) != address(0));  // dev: GARP_ cannot be zero address
+        GARP = IIncentivizedMessageEscrow(GARP_);
+        _transferOwnership(defaultOwner);
+    }
 
     //-- Admin--//
 
@@ -404,7 +405,7 @@ contract CatalystGARPInterface is Ownable, ICrossChainReceiver, Bytes65, IMessag
         bytes1 swapStatus = acknowledgement[0];
         if (swapStatus != 0x00) {
             emit SwapFailed(swapStatus);
-            return _onPacketFailure(destinationIdentifier, acknowledgement);
+            return _onPacketFailure(destinationIdentifier, acknowledgement[1:]);
         }
         // Otherwise, it must be a success:
         _onPacketSuccess(destinationIdentifier, acknowledgement[1:]);

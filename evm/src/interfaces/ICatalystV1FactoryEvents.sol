@@ -1,4 +1,4 @@
-//SPDX-License-Identifier: Unlicensed
+//SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.16;
 
 /// @title Events emitted by Catalyst v1 Factory
