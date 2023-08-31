@@ -341,7 +341,7 @@ mod asset_cw20_tests {
 
 
     #[test]
-    fn test_new_handler() {
+    fn test_new_vault_assets_handler() {
 
         let assets = get_mock_assets();
         let handler = Cw20VaultAssets::new(assets.clone());
@@ -354,7 +354,7 @@ mod asset_cw20_tests {
 
 
     #[test]
-    fn test_save_and_load_handler() {
+    fn test_save_and_load_vault_assets_handler() {
 
         let mut deps = mock_dependencies();
 
@@ -391,7 +391,7 @@ mod asset_cw20_tests {
 
 
     #[test]
-    fn test_receive_asset() {
+    fn test_handler_receive_assets() {
 
         let env = mock_env();
 
@@ -432,7 +432,7 @@ mod asset_cw20_tests {
 
 
     #[test]
-    fn test_receive_asset_invalid_amounts_count() {
+    fn test_handler_receive_asset_invalid_amounts_count() {
 
         let env = mock_env();
 
@@ -469,7 +469,7 @@ mod asset_cw20_tests {
 
 
     #[test]
-    fn test_receive_assets_zero_amount() {
+    fn test_handler_receive_assets_zero_amount() {
 
         let env = mock_env();
 
@@ -530,7 +530,7 @@ mod asset_cw20_tests {
 
 
     #[test]
-    fn test_send_assets() {
+    fn test_handler_send_assets() {
 
         let env = mock_env();
 
@@ -567,7 +567,7 @@ mod asset_cw20_tests {
 
 
     #[test]
-    fn test_send_assets_invalid_amounts_count() {
+    fn test_handler_send_assets_invalid_amounts_count() {
 
         let env = mock_env();
 
@@ -601,7 +601,7 @@ mod asset_cw20_tests {
 
 
     #[test]
-    fn test_send_assets_zero_amount() {
+    fn test_handler_send_assets_zero_amount() {
 
         let env = mock_env();
 
