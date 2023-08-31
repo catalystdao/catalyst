@@ -101,7 +101,7 @@ contract CatalystGARPInterface is Ownable, ICrossChainReceiver, Bytes65, IMessag
 
     //-- Underwriting Config--//
 
-    uint256 constant public UNDERWRITING_UNFULFILLED_FEE = 1035;  // 3,5% extra as collatoral.
+    uint256 constant public UNDERWRITING_UNFULFILLED_FEE = 35;  // 3,5% extra as collatoral.
     uint256 constant public UNDERWRITING_UNFULFILLED_FEE_DENOMINATOR = 1000;
 
     uint256 constant public EXPIRE_CALLER_REWARD = 350;  // 35% of the 3,5% = 1,225%. Of $1000 = $12,25
@@ -612,7 +612,25 @@ contract CatalystGARPInterface is Ownable, ICrossChainReceiver, Bytes65, IMessag
     /**
      * @notice Underwrite a swap.
      * There are a few important properties that underwriters should be aware of:
-     * 1. There is nothing which checks if the connection is valid on this call. This check should be done seperately. If this is important, use the underwriteAndCheck function.
+     * 1. There is nothing that checks if the connection is valid on this call. This check should be done seperately.
+     *      Even if a swap is executed where it appears that it is possible to execute the swap,
+     *      these values should be read and a connection should be checked. (via this function).
+     *      As you can underwrite the swap (where there is no connection) but when the swap arrives it
+     *      does not fill the underwrite but instead fails on ack and releases the input on the source chain.
+     *      You can use the similar function underwriteAndCheckConnection to also check the connection.
+     *
+     * 2. You are underwriting the specific instance of the transaction not the inclusion of the transaction.
+     *      What this means for you, is that if the block of the transaction is lost/abandon/re-entered, then
+     *      the underwriting will not be noted unless the transaction is re-executed almost EXACTLY as it was before.
+     *      The most important parameter is U which is volatile and any change to the vault balances on the source chain
+     *      will cause U to be different.
+     *      In other words, if that transaction is re-executed before or after another swap which wasn't the case before
+     *      then it won't fill the underwrite anymore and either be exeucted as an ordinary swap (to the user) or fail
+     *      with an ack and release the original funds back to the user.
+     *
+     * 3. The execution of the underwrite is dependent on the correct execution of both
+     *      the minout but also the additional logic. If either fails, then the swap is not
+     *      underwritable. As a result, it is important that the underwrite is simulated before executed.
      */
     function underwrite(
         address refundTo,     // -- Underwriting State
@@ -624,7 +642,7 @@ contract CatalystGARPInterface is Ownable, ICrossChainReceiver, Bytes65, IMessag
         uint256 fromAmount,
         uint16 underwritePercentageX16,
         bytes calldata cdata
-    ) public {
+    ) public returns(bytes32 identifier) {
         // Do not allow refundTo zero address. This field will be used to check if a swap has already been
         // underwritten, as a result disallow zero address. (Is also makes no sense from an underwriting perspective)  
         if (refundTo == address(0)) revert RefundToZeroAddress();
@@ -637,7 +655,7 @@ contract CatalystGARPInterface is Ownable, ICrossChainReceiver, Bytes65, IMessag
         // the implementations, both methods use the same identifier deriviation.
         // For other implementations: This arguments the identifier is based on should be the same but the hashing
         // algorithm doesn't matter. It is only used and computed on the destination chain.
-        bytes32 identifier = getSwapIdentifier(
+        identifier = getSwapIdentifier(
             targetVault,
             toAsset,
             U,
@@ -650,14 +668,14 @@ contract CatalystGARPInterface is Ownable, ICrossChainReceiver, Bytes65, IMessag
         // Observation: A swapper can execute multiple swaps which return the same U. 
         // In these cases, it would not be possible to underwrite the second swap until after the
         // first swap has arrived. This can be counteracted by either:
-        // 1. Changing U. U is pretty *volatile*, to this would have to be deliberate. Note that the 
+        // 1. Changing U. The tail of U is *volatile*, to this would have to be deliberate. Note that the 
         // identifier also contains fromAmount and as a result, it is incredibly unlikely that someone
-        // would be able to generate identical identifiers. (especially if fee > 0.)
+        // would be able to generate identical identifiers even if deliberate. (especially if fee > 0.)
         // 2. Add random noise to minOut. For tokens with 18 decimals, this noise can be as small as 1e-12
-        // but the chance that 2 swaps collide would be 1 in a million'th. (literally 1/(1e(18-12)))
+        // then the chance that 2 swaps collide would be 1 in a million'th. (literally 1/(1e(18-12)) = 1/1e6)
         // 3. Add either a counter to cdata or some noise.
 
-        // For most implementations, the observation ignored entirely.
+        // For most implementations, the observation can be ignored because of the strength of point 1.
 
         // Ensure the swap hasn't already been underwritten by checking if refundTo is set.
         if (underwritingStorage[identifier].refundTo != address(0)) revert SwapAlreadyUnderwritten();
@@ -673,8 +691,16 @@ contract CatalystGARPInterface is Ownable, ICrossChainReceiver, Bytes65, IMessag
             U,
             minOut
         );
+        // Save the underwriting state.
+        underwritingStorage[identifier] = UnderwritingStorage({
+            tokens: purchasedTokens,
+            refundTo: refundTo,
+            expiry: uint80(uint256(block.timestamp) + uint256(maxUnderwritingDuration))  // Should never overflow.
+        });
 
         // Collect tokens and collatoral from underwriter.
+        // We still collect the tokens used to incentivise the underwriter as otherwise they could freely reserve liquidity
+        // in the vaults. Vaults would essentially be a free option source which isn't wanted.
         ERC20(toAsset).safeTransferFrom(
             msg.sender, 
             address(this),
@@ -682,6 +708,13 @@ contract CatalystGARPInterface is Ownable, ICrossChainReceiver, Bytes65, IMessag
                 UNDERWRITING_UNFULFILLED_FEE_DENOMINATOR+UNDERWRITING_UNFULFILLED_FEE
             )/UNDERWRITING_UNFULFILLED_FEE_DENOMINATOR
         );
+
+        // Subtract the underwrite incentive from the funds sent to the user.
+        uint256 underwritingIncentive = (purchasedTokens * uint256(underwritePercentageX16)) >> 16;
+        unchecked {
+            // underwritingIncentive <= purchasedTokens.
+            purchasedTokens -= underwritingIncentive;
+        }
 
         // Send the assets to the user.
         ERC20(toAsset).safeTransfer(toAccount, purchasedTokens);
@@ -693,16 +726,9 @@ contract CatalystGARPInterface is Ownable, ICrossChainReceiver, Bytes65, IMessag
         uint16 calldataLength = uint16(bytes2(cdata[0:2]));
         if (calldataLength != 0) {
             address dataTarget = address(bytes20(cdata[2:2+20]));
-            bytes calldata customCalldata = cdata[2+20:2+20+calldataLength];
+            bytes calldata customCalldata = cdata[2+20:2+calldataLength];
             ICatalystReceiver(dataTarget).onCatalystCall(purchasedTokens, customCalldata);
-        }
-
-
-        underwritingStorage[identifier] = UnderwritingStorage({
-            tokens: purchasedTokens,
-            refundTo: refundTo,
-            expiry: uint80(uint256(block.timestamp) + uint256(maxUnderwritingDuration))  // Should never overflow.
-        });
+        } 
     }
 
     /**
@@ -735,6 +761,7 @@ contract CatalystGARPInterface is Ownable, ICrossChainReceiver, Bytes65, IMessag
         if (underwriteState.refundTo == address(0)) revert UnderwriteDoesNotExist(identifier);
         
         // Check that the underwriting can be expired. If the msg.sender is the refundTo address, then it can be expired at any time.
+        // This lets the underwriter reclaim *some* of the collatoral they provided if they change their mind or observed an issue.
         if (msg.sender != underwriteState.refundTo) {
             // Otherwise, the expiry time must have been passed.
             if (underwriteState.expiry > block.timestamp) revert UnderwriteNotExpired(underwriteState.expiry - block.timestamp);
@@ -746,26 +773,42 @@ contract CatalystGARPInterface is Ownable, ICrossChainReceiver, Bytes65, IMessag
         // Delete the escrow
         ICatalystV1Vault(targetVault).deleteUnderwriteAsset(identifier, fromAmount, toAsset);
 
-        // Get the collatoral.
-        uint256 refundAmount = underWrittenTokens * (
-            UNDERWRITING_UNFULFILLED_FEE
-        )/UNDERWRITING_UNFULFILLED_FEE_DENOMINATOR;
-        // Send the coded shares of the collatoral to the vault the rest to the expirer.
+        unchecked {
+            // Compute the underwriting incentive. 
+            // Notice the parts that we only have: incentive + collatoral to work with
+            // The incentive was never sent to the user, neither was the underwriting incentive.
+            uint256 underwritingIncentive = (underWrittenTokens * uint256(underwritePercentageX16)) >> 16; 
+            // This computation has been done before.
 
-        uint256 expireShare = refundAmount * EXPIRE_CALLER_REWARD / EXPIRE_CALLER_REWARD_DENOMINATOR;
-        ERC20(toAsset).safeTransfer(msg.sender, expireShare);
-        uint256 vaultShare = refundAmount - expireShare;
-        ERC20(toAsset).safeTransfer(targetVault, vaultShare);
+            // Get the collatoral.
+            // A larger computation has already been done when the swap was initially underwritten.
+            uint256 refundAmount = underWrittenTokens * (
+                UNDERWRITING_UNFULFILLED_FEE
+            )/UNDERWRITING_UNFULFILLED_FEE_DENOMINATOR + underwritingIncentive;
+            // collatoral + underwritingIncentive must be less than the full amount.
+
+            // Send the coded shares of the collatoral to the expirer the rest to the vault.
+        
+            // This following logic might overflow but we would rather have it overflow (which reduces expireShare)
+            // than to never be able to expire an underwrite.
+            uint256 expireShare = refundAmount * EXPIRE_CALLER_REWARD / EXPIRE_CALLER_REWARD_DENOMINATOR;
+            ERC20(toAsset).safeTransfer(msg.sender, expireShare);
+            // refundAmount > expireShare, and specially when expireShare overflows.
+            uint256 vaultShare = refundAmount - expireShare;
+            ERC20(toAsset).safeTransfer(targetVault, vaultShare);
+        }
 
         // The underwriting storage has already been deleted.
     }
 
+    // It is important that any call to this functions has pre-checked the vault connection.
     function _matchUnderwrite(
         bytes32 identifier,
         address toAsset,
         address vault,
         uint256 underwrittenU,
-        uint256 incomingU
+        uint256 incomingU,
+        uint16 underwritePercentageX16
     ) internal returns (uint256 unitExcess) {
         UnderwritingStorage storage underwriteState = underwritingStorage[identifier];
         // Load number of tokens from storage.
@@ -779,7 +822,7 @@ contract CatalystGARPInterface is Ownable, ICrossChainReceiver, Bytes65, IMessag
             // Set the most significant bit to signal that the swap reverted.
             return unitExcess = 2**255;
         }
-        // Reentry protection. No external calls are allowed before this line.
+        // Reentry protection. No external calls are allowed before this line. The line 'if (refundTo == address(0)) ...' will always be true.
         delete underwritingStorage[identifier];
 
         // Delete escrow information and send tokens to this contract.
@@ -789,6 +832,16 @@ contract CatalystGARPInterface is Ownable, ICrossChainReceiver, Bytes65, IMessag
         uint256 refundAmount = underwrittenTokenAmount * (
             UNDERWRITING_UNFULFILLED_FEE_DENOMINATOR+UNDERWRITING_UNFULFILLED_FEE
         )/UNDERWRITING_UNFULFILLED_FEE_DENOMINATOR;
+
+        // add the underwriting incentive as well. Notice that 2x refundAmount are in play.
+        //   1. The first part comes from the underwriter + collatoral.
+        // + 1. The second part comes from the vault after the matching message arrives.
+        // = 2 parts
+        // 1 - incentive has been sent to the user.
+        // That leaves us with part (1 - (1 - incentive)) + (1) = incentive + 1
+        uint256 underwritingIncentive = (underwrittenTokenAmount * uint256(underwritePercentageX16)) >> 16;
+        refundAmount += underwritingIncentive;
+
         ERC20(toAsset).safeTransfer(refundTo, refundAmount);
 
         // uint256 unitExcess is initialized to 0.
@@ -891,7 +944,8 @@ contract CatalystGARPInterface is Ownable, ICrossChainReceiver, Bytes65, IMessag
             toAsset,
             toVault,
             U,
-            U
+            U,
+            underwritePercentageX16
         );
 
         if (unusedUnits == 2**255) {
@@ -901,9 +955,10 @@ contract CatalystGARPInterface is Ownable, ICrossChainReceiver, Bytes65, IMessag
         if (U == unusedUnits) {
             // The swap hasn't been underwritten. Lets execute the swap properly:
             return acknowledgement = _handleOrdinarySwap(sourceIdentifier, data);
-        } else {
-            // todo: There shouldn't ever be a case where this is the case.
         }
+        // There is no case where only a subset of the units are filled. As either the complete swap (through the swap identifier)
+        // is underwritten or it wasn't underwritten.
+        // Technically, a purpose underwrite can arrive before and fill the swap but an underwrite cannot be partially filled. So in the case it got filled, the unusedUnits would still be all units.
 
         return acknowledgement = 0x00;
     }
@@ -1005,7 +1060,8 @@ contract CatalystGARPInterface is Ownable, ICrossChainReceiver, Bytes65, IMessag
             toAsset,
             toVault,
             U,
-            U
+            U,
+            underwritePercentageX16
         );
 
         if (unusedUnits == 2**255) {
