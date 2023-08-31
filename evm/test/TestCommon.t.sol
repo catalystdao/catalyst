@@ -79,7 +79,25 @@ contract TestCommon is Test, Bytes65, IMessageEscrowStructs, TestTokenFunctions 
 
         vault = catFactory.deployVault(
             vaultTemplate,
-            assets, init_balances, weights, amp, vaultFee, DEFAULT_POOL_NAME, DEFAULT_POOL_SYMBOL, address(CCI));
+            assets, init_balances, weights, amp, vaultFee, DEFAULT_POOL_NAME, DEFAULT_POOL_SYMBOL, address(CCI)
+        );
+    }
+
+    function simpleVault(uint256 numTokens) internal returns(address vault) {
+        address[] memory assets = new address[](numTokens);
+        uint256[] memory init_balances = new uint256[](numTokens);
+        uint256[] memory weights = new uint256[](numTokens);
+        
+        for (uint256 i = 0; i < numTokens; i++) {
+            assets[i] = address(new Token("TEST", "TEST", 18, 1e6));
+            init_balances[i] = 1000 * 1e18;
+            weights[i] = 1;
+        }
+
+        uint256 amp = 10**18;
+        uint256 vaultFee = 0;
+
+        return vault = deployVault(assets, init_balances, weights, amp, vaultFee);
     }
 
     function setConnection(address vault1, address vault2, bytes32 chainIdentifier1, bytes32 chainIdentifier2) internal {
