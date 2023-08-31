@@ -1022,6 +1022,233 @@ mod catalyst_vault_factory_tests {
     }
 
 
+    #[test]
+    fn test_deploy_vault_invalid_funds() {
+
+        // Use the 'TestEnv' helper for 'deploy_vault' tests to handle asset transfers
+        let mut test_env = TestEnv::initialize(SETUP_MASTER.to_string());
+    
+        // Instantiate factory
+        let factory = mock_factory(test_env.get_app());
+
+        // Deploy vault contract
+        let vault_code_id = mock_vault_contract(test_env.get_app());
+
+        // Define vault config
+        let vault_assets = test_env.get_assets()[..3].to_vec();
+        let vault_initial_balances = vec![Uint128::from(1u64), Uint128::from(2u64), Uint128::from(3u64)];
+        let vault_weights = vec![Uint128::one(), Uint128::one(), Uint128::one()];
+
+
+
+        // Tested action 1: no funds
+        let response_result = test_env.execute_contract(
+            Addr::unchecked(SETUP_MASTER),
+            factory.clone(),
+            &crate::msg::ExecuteMsg::DeployVault {
+                vault_code_id,
+                assets: vault_assets.iter().map(|asset| asset.into_vault_asset()).collect(),
+                assets_balances: vault_initial_balances.clone(),
+                weights: vault_weights.clone(),
+                amplification: Uint64::new(1000000000000000000u64),
+                vault_fee: TEST_VAULT_FEE,
+                name: "TestVault".to_string(),
+                symbol: "TP".to_string(),
+                chain_interface: Some("chain_interface".to_string())
+            },
+            vec![],   // ! Do not send funds
+            vec![]
+        );
+
+        // Make sure the transaction fails
+        assert!(response_result.is_err());
+        #[cfg(feature="asset_native")]
+        matches!(
+            response_result.err().unwrap().downcast().unwrap(),
+            ContractError::AssetNotReceived { asset }
+                if asset == vault_assets[0].into_vault_asset().to_string()  // Error corresponds to the first asset that is not received
+        );
+        #[cfg(feature="asset_cw20")]
+        assert_eq!(
+            response_result.err().unwrap().root_cause().to_string(),
+            "No allowance for this account".to_string()
+        );
+
+
+
+        // Tested action 2: too few assets
+        let response_result = test_env.execute_contract(
+            Addr::unchecked(SETUP_MASTER),
+            factory.clone(),
+            &crate::msg::ExecuteMsg::DeployVault {
+                vault_code_id,
+                assets: vault_assets.iter().map(|asset| asset.into_vault_asset()).collect(),
+                assets_balances: vault_initial_balances.clone(),
+                weights: vault_weights.clone(),
+                amplification: Uint64::new(1000000000000000000u64),
+                vault_fee: TEST_VAULT_FEE,
+                name: "TestVault".to_string(),
+                symbol: "TP".to_string(),
+                chain_interface: Some("chain_interface".to_string())
+            },
+            vault_assets[..vault_assets.len()-1].to_vec(),      // ! Send one asset less
+            vault_initial_balances[..vault_initial_balances.len()-1].to_vec()
+        );
+
+        // Make sure the transaction fails
+        assert!(response_result.is_err());
+        #[cfg(feature="asset_native")]
+        matches!(
+            response_result.err().unwrap().downcast().unwrap(),
+            ContractError::AssetNotReceived { asset }
+                if asset == vault_assets[vault_assets.len()-1].into_vault_asset().to_string()  // Error corresponds to the first asset that is not received
+        );
+        #[cfg(feature="asset_cw20")]
+        assert_eq!(
+            response_result.err().unwrap().root_cause().to_string(),
+            "No allowance for this account".to_string()
+        );
+
+
+
+        // Tested action 3: too many assets
+        let response_result = test_env.execute_contract(
+            Addr::unchecked(SETUP_MASTER),
+            factory.clone(),
+            &crate::msg::ExecuteMsg::DeployVault {
+                vault_code_id,
+                assets: vault_assets.iter().map(|asset| asset.into_vault_asset()).collect(),
+                assets_balances: vault_initial_balances.clone(),
+                weights: vault_weights.clone(),
+                amplification: Uint64::new(1000000000000000000u64),
+                vault_fee: TEST_VAULT_FEE,
+                name: "TestVault".to_string(),
+                symbol: "TP".to_string(),
+                chain_interface: Some("chain_interface".to_string())
+            },
+            test_env.get_assets()[..3+1].to_vec(),      // ! Send one asset more
+            vault_initial_balances.iter().cloned().chain(vec![Uint128::from(1000u128)].into_iter()).collect()
+        );
+
+        // Make sure the transaction fails
+        #[cfg(feature="asset_native")]
+        assert!(response_result.is_err());
+        #[cfg(feature="asset_native")]
+        matches!(
+            response_result.err().unwrap().downcast().unwrap(),
+            ContractError::AssetSurplusReceived {}
+        );
+        
+        // NOTE: this does not error for cw20 assets, as it's just the *allowance* that is set.
+        #[cfg(feature="asset_cw20")]
+        assert!(response_result.is_ok());
+
+
+
+        // Tested action 4: asset amount too low
+        let mut too_low_vault_initial_balances = vault_initial_balances.clone();
+        too_low_vault_initial_balances[0] = too_low_vault_initial_balances[0] - Uint128::one();
+
+        let response_result = test_env.execute_contract(
+            Addr::unchecked(SETUP_MASTER),
+            factory.clone(),
+            &crate::msg::ExecuteMsg::DeployVault {
+                vault_code_id,
+                assets: vault_assets.iter().map(|asset| asset.into_vault_asset()).collect(),
+                assets_balances: vault_initial_balances.clone(),
+                weights: vault_weights.clone(),
+                amplification: Uint64::new(1000000000000000000u64),
+                vault_fee: TEST_VAULT_FEE,
+                name: "TestVault".to_string(),
+                symbol: "TP".to_string(),
+                chain_interface: Some("chain_interface".to_string())
+            },
+            vault_assets.clone(),
+            too_low_vault_initial_balances.clone()
+        );
+
+        // Make sure the transaction fails
+        assert!(response_result.is_err());
+        #[cfg(feature="asset_native")]
+        matches!(
+            response_result.err().unwrap().downcast().unwrap(),
+            ContractError::UnexpectedAssetAmountReceived { received_amount, expected_amount, asset }
+                if
+                    received_amount == too_low_vault_initial_balances[0] &&
+                    expected_amount == vault_initial_balances[0] &&
+                    asset == vault_assets[0].into_vault_asset().to_string()
+        );
+        #[cfg(feature="asset_cw20")]
+        assert_eq!(
+            response_result.err().unwrap().root_cause().to_string(),
+            format!("Cannot Sub with {} and {}", too_low_vault_initial_balances[0], vault_initial_balances[0])
+        );
+
+
+
+        // Tested action 5: asset amount too high
+        let mut too_high_vault_initial_balances = vault_initial_balances.clone();
+        too_high_vault_initial_balances[0] = too_high_vault_initial_balances[0] + Uint128::one();
+
+        let response_result = test_env.execute_contract(
+            Addr::unchecked(SETUP_MASTER),
+            factory.clone(),
+            &crate::msg::ExecuteMsg::DeployVault {
+                vault_code_id,
+                assets: vault_assets.iter().map(|asset| asset.into_vault_asset()).collect(),
+                assets_balances: vault_initial_balances.clone(),
+                weights: vault_weights.clone(),
+                amplification: Uint64::new(1000000000000000000u64),
+                vault_fee: TEST_VAULT_FEE,
+                name: "TestVault".to_string(),
+                symbol: "TP".to_string(),
+                chain_interface: Some("chain_interface".to_string())
+            },
+            vault_assets.clone(),
+            too_high_vault_initial_balances.clone()
+        );
+
+        // Make sure the transaction fails
+        #[cfg(feature="asset_native")]
+        assert!(response_result.is_err());
+        #[cfg(feature="asset_native")]
+        matches!(
+            response_result.err().unwrap().downcast().unwrap(),
+            ContractError::UnexpectedAssetAmountReceived { received_amount, expected_amount, asset }
+                if
+                    received_amount == too_high_vault_initial_balances[0] &&
+                    expected_amount == vault_initial_balances[0] &&
+                    asset == vault_assets[0].into_vault_asset().to_string()
+        );
+        
+        // NOTE: this does not error for cw20 assets, as it's just the *allowance* that is set too high.
+        #[cfg(feature="asset_cw20")]
+        assert!(response_result.is_ok());
+
+
+
+        // Make sure the deployment works for valid amounts
+        test_env.execute_contract(
+            Addr::unchecked(SETUP_MASTER),
+            factory.clone(),
+            &crate::msg::ExecuteMsg::DeployVault {
+                vault_code_id,
+                assets: vault_assets.iter().map(|asset| asset.into_vault_asset()).collect(),
+                assets_balances: vault_initial_balances.clone(),
+                weights: vault_weights.clone(),
+                amplification: Uint64::new(1000000000000000000u64),
+                vault_fee: TEST_VAULT_FEE,
+                name: "TestVault".to_string(),
+                symbol: "TP".to_string(),
+                chain_interface: Some("chain_interface".to_string())
+            },
+            vault_assets.clone(),
+            vault_initial_balances.clone()
+        ).unwrap();     // Make sure the transaction succeeds
+
+    }
+
+
 
 
     #[test]
