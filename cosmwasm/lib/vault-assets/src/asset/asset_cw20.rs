@@ -241,3 +241,415 @@ impl ToString for Cw20Asset {
         self.0.to_string()
     }
 }
+
+
+
+#[cfg(test)]
+mod asset_cw20_tests {
+    use cosmwasm_std::{testing::{mock_dependencies, mock_env, mock_info}, Uint128, CosmosMsg, WasmMsg, to_binary};
+    use cw20::Cw20ExecuteMsg;
+
+    use crate::{asset::{VaultAssetsTrait, AssetTrait}, error::AssetError};
+
+    use super::{Cw20VaultAssets, Cw20Asset};
+
+    const SENDER_ADDR   : &str = "sender_addr";
+    const RECEIVER_ADDR : &str = "receiver_addr";
+
+    
+    fn get_mock_assets() -> Vec<Cw20Asset> {
+        vec![
+            Cw20Asset("contract_a".to_string()),
+            Cw20Asset("contract_b".to_string()),
+            Cw20Asset("contract_c".to_string())
+        ]
+    }
+
+    fn verify_cw20_transfer_from_msgs(
+        cosmos_msgs: Vec<CosmosMsg>,
+        assets: Vec<Cw20Asset>,
+        amounts: Vec<Uint128>,
+        owner: String,
+        recipient: String
+    ) {
+
+        assert!(cosmos_msgs.len() == assets.len());
+        assert!(cosmos_msgs.len() == amounts.len());
+
+        cosmos_msgs.iter()
+            .zip(&assets)
+            .zip(&amounts)
+            .for_each(|((cosmos_msg, asset), expected_amount)| {
+
+                let expected_execute_msg = Cw20ExecuteMsg::TransferFrom {
+                    owner: owner.to_string(),
+                    recipient: recipient.to_string(),
+                    amount: expected_amount.clone()
+                };
+
+                matches!(
+                    cosmos_msg.clone(),
+                    CosmosMsg::Wasm(
+                        WasmMsg::Execute {
+                            contract_addr,
+                            msg,
+                            funds
+                        }
+                    )
+                        if contract_addr == asset.0
+                            && msg == to_binary(&expected_execute_msg).unwrap()
+                            && funds == vec![]
+                );
+            })
+    }
+
+    fn verify_cw20_transfer_msgs(
+        cosmos_msgs: Vec<CosmosMsg>,
+        assets: Vec<Cw20Asset>,
+        amounts: Vec<Uint128>,
+        recipient: String
+    ) {
+
+        assert!(cosmos_msgs.len() == assets.len());
+        assert!(cosmos_msgs.len() == amounts.len());
+
+        cosmos_msgs.iter()
+            .zip(&assets)
+            .zip(&amounts)
+            .for_each(|((cosmos_msg, asset), expected_amount)| {
+
+                let expected_execute_msg = Cw20ExecuteMsg::Transfer {
+                    recipient: recipient.to_string(),
+                    amount: expected_amount.clone()
+                };
+
+                matches!(
+                    cosmos_msg.clone(),
+                    CosmosMsg::Wasm(
+                        WasmMsg::Execute {
+                            contract_addr,
+                            msg,
+                            funds
+                        }
+                    )
+                        if contract_addr == asset.0
+                            && msg == to_binary(&expected_execute_msg).unwrap()
+                            && funds == vec![]
+                );
+            })
+    }
+
+
+    #[test]
+    fn test_new_handler() {
+
+        let assets = get_mock_assets();
+        let handler = Cw20VaultAssets::new(assets.clone());
+
+        assert_eq!(
+            handler.get_assets().to_owned(),
+            assets
+        )
+    }
+
+
+    #[test]
+    fn test_save_and_load_handler() {
+
+        let mut deps = mock_dependencies();
+
+        let assets = get_mock_assets();
+        let handler = Cw20VaultAssets::new(assets.clone());
+
+
+
+        // Tested action 1: save handler
+        // NOTE: `save_refs` is tested indirectly via the `save` method.
+        handler.save(&mut deps.as_mut()).unwrap();
+
+
+
+        // Tested action 2: load references only
+        let loaded_refs = Cw20VaultAssets::load_refs(&deps.as_ref()).unwrap();
+        assert_eq!(
+            loaded_refs,
+            assets.iter().map(|asset| asset.get_asset_ref().to_owned()).collect::<Vec<String>>()
+        );
+
+
+
+        // Tested action 3: load the entire handler
+        let loaded_handler = Cw20VaultAssets::load(&deps.as_ref()).unwrap();
+
+        // Make sure the loaded assets match the saved ones
+        assert_eq!(
+            loaded_handler.get_assets().to_owned(),
+            assets.clone()
+        );
+
+    }
+
+
+    #[test]
+    fn test_receive_asset() {
+
+        let env = mock_env();
+
+        let assets = get_mock_assets();
+        let handler = Cw20VaultAssets::new(assets.clone());
+
+        let desired_received_amounts: Vec<Uint128> = vec![
+            Uint128::from(123u128),
+            Uint128::from(456u128),
+            Uint128::from(789u128)
+        ];
+
+
+
+        // Tested action: receive assets
+        let cosmos_msgs = handler.receive_assets(
+            &env,
+            &mock_info(
+                SENDER_ADDR,
+                &[]
+            ),
+            desired_received_amounts.clone()
+        ).unwrap();     // Call is successful
+
+
+
+        // Verify transfer Cosmos messages are generated
+        assert!(cosmos_msgs.len() == 3);
+        verify_cw20_transfer_from_msgs(
+            cosmos_msgs,
+            assets.clone(),
+            desired_received_amounts.clone(),
+            SENDER_ADDR.to_string(),
+            env.contract.address.to_string()
+        );
+
+    }
+
+
+    #[test]
+    fn test_receive_asset_invalid_amounts_count() {
+
+        let env = mock_env();
+
+        let assets = get_mock_assets();
+        let handler = Cw20VaultAssets::new(assets.clone());
+
+        let desired_received_amounts: Vec<Uint128> = vec![
+            Uint128::from(123u128),
+            Uint128::from(456u128)      // One amount less than assets hold by the vault
+        ];
+
+
+
+        // Tested action: receive assets with invalid 'amounts' count
+        let result = handler.receive_assets(
+            &env,
+            &mock_info(
+                SENDER_ADDR,
+                &[]
+            ),
+            desired_received_amounts.clone()
+        );
+
+
+
+        // Make sure the call errors
+        matches!(
+            result.err().unwrap(),
+            AssetError::InvalidParameters { reason }
+                if reason == "Invalid 'amounts' count when receiving assets.".to_string()
+        );
+
+    }
+
+
+    #[test]
+    fn test_receive_assets_zero_amount() {
+
+        let env = mock_env();
+
+        let assets = get_mock_assets();
+        let handler = Cw20VaultAssets::new(assets.clone());
+
+
+
+        // Tested action 1: one asset with zero amount
+        let desired_received_amounts: Vec<Uint128> = vec![
+            Uint128::from(123u128),
+            Uint128::zero(),        // Zero amount
+            Uint128::from(789u128)
+        ];
+
+        let cosmos_msgs = handler.receive_assets(
+            &env,
+            &mock_info(
+                SENDER_ADDR,
+                &[]
+            ),
+            desired_received_amounts.clone()
+        ).unwrap();     // Make sure result is successful
+
+        // Verify no transfer msg is generated for the zero-valued asset transfer
+        assert!(cosmos_msgs.len() == 2);
+        
+        verify_cw20_transfer_from_msgs(
+            cosmos_msgs,
+            vec![assets[0].clone(), assets[2].clone()],             // Skip zero-valued asset
+            vec![Uint128::from(123u128), Uint128::from(789u128)],   // Skip zero-valued asset
+            SENDER_ADDR.to_string(),
+            env.contract.address.to_string()
+        );
+
+
+
+        // Tested action 2: all assets with zero amount
+        let desired_received_amounts: Vec<Uint128> = vec![
+            Uint128::zero(),
+            Uint128::zero(),
+            Uint128::zero()
+        ];
+
+        let cosmos_msgs = handler.receive_assets(
+            &env,
+            &mock_info(
+                SENDER_ADDR,
+                &[]
+            ),
+            desired_received_amounts.clone()
+        ).unwrap();     // Make sure result is successful
+
+        // Verify no cosmos msgs are generated
+        assert!(cosmos_msgs.len() == 0);
+
+    }
+
+
+    #[test]
+    fn test_send_assets() {
+
+        let env = mock_env();
+
+        let assets = get_mock_assets();
+        let handler = Cw20VaultAssets::new(assets.clone());
+
+        let desired_send_amounts: Vec<Uint128> = vec![
+            Uint128::from(123u128),
+            Uint128::from(456u128),
+            Uint128::from(789u128)
+        ];
+
+
+
+        // Tested action: send assets
+        let cosmos_msgs = handler.send_assets(
+            &env,
+            desired_send_amounts.clone(),
+            RECEIVER_ADDR.to_string()
+        ).unwrap();
+
+
+
+        // Verify that the generated Cosmos messages are valid
+        assert!(cosmos_msgs.len() == 3);
+        verify_cw20_transfer_msgs(
+            cosmos_msgs,
+            assets,
+            desired_send_amounts,
+            RECEIVER_ADDR.to_string()
+        );
+
+    }
+
+
+    #[test]
+    fn test_send_assets_invalid_amounts_count() {
+
+        let env = mock_env();
+
+        let assets = get_mock_assets();
+        let handler = Cw20VaultAssets::new(assets.clone());
+
+        let desired_send_amounts: Vec<Uint128> = vec![
+            Uint128::from(123u128),
+            Uint128::from(456u128)      // One amount less than assets hold by the vault
+        ];
+
+
+
+        // Tested action: send assets with invalid 'amounts' count
+        let result = handler.send_assets(
+            &env,
+            desired_send_amounts.clone(),
+            RECEIVER_ADDR.to_string()
+        );
+
+
+
+        // Verify that the generated Cosmos messages are valid
+        matches!(
+            result.err().unwrap(),
+            AssetError::InvalidParameters { reason }
+                if reason == "Invalid 'amounts' count when sending assets.".to_string()
+        );
+
+    }
+
+
+    #[test]
+    fn test_send_assets_zero_amount() {
+
+        let env = mock_env();
+
+        let assets = get_mock_assets();
+        let handler = Cw20VaultAssets::new(assets.clone());
+
+
+
+        // Tested action 1: one asset with zero amount
+        let desired_send_amounts: Vec<Uint128> = vec![
+            Uint128::from(123u128),
+            Uint128::zero(),        // Zero amount
+            Uint128::from(789u128)
+        ];
+
+        let cosmos_msgs = handler.send_assets(
+            &env,
+            desired_send_amounts.clone(),
+            RECEIVER_ADDR.to_string()
+        ).unwrap();     // Make sure result is successful
+
+        // Verify that no transfer message is generated for the zero-valued asset transfer
+        assert!(cosmos_msgs.len() == 2);
+        verify_cw20_transfer_msgs(
+            cosmos_msgs,
+            vec![assets[0].clone(), assets[2].clone()],             // Skip zero-valued asset
+            vec![Uint128::from(123u128), Uint128::from(789u128)],   // Skip zero-valued asset
+            RECEIVER_ADDR.to_string()
+        );
+
+
+
+        // Tested action 2: all assets with zero amount
+        let desired_send_amounts: Vec<Uint128> = vec![
+            Uint128::zero(),
+            Uint128::zero(),
+            Uint128::zero()
+        ];
+
+        let cosmos_msgs = handler.send_assets(
+            &env,
+            desired_send_amounts.clone(),
+            RECEIVER_ADDR.to_string()
+        ).unwrap();     // Make sure result is successful
+
+        // Verify that no Cosmos messages are generated
+        assert!(cosmos_msgs.len() == 0);
+
+    }
+
+}
