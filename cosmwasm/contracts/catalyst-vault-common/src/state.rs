@@ -16,7 +16,7 @@ use crate::{ContractError, asset::{VaultAssets, Asset, VaultAssetsTrait, AssetTr
 
 pub const MAX_ASSETS: usize = 3;
 
-pub const DECIMALS: u8 = 6;
+pub const DECIMALS: u8 = 18;
 pub const INITIAL_MINT_AMOUNT: Uint128 = Uint128::new(10u128.pow(DECIMALS as u32));
 
 pub const MAX_VAULT_FEE             : Uint64 = Uint64::new(1000000000000000000u64);       // 100%
