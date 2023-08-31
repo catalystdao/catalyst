@@ -691,7 +691,7 @@ contract CatalystGARPInterface is Ownable, ICrossChainReceiver, Bytes65, IMessag
         // An underwrite should simulate the tx execution before submitting the transaction as otherwise
         // they could be out the associated gas.
         uint16 calldataLength = uint16(bytes2(cdata[0:2]));
-        if (calldataLength > 0) {
+        if (calldataLength != 0) {
             address dataTarget = address(bytes20(cdata[2:2+20]));
             bytes calldata customCalldata = cdata[2+20:2+20+calldataLength];
             ICatalystReceiver(dataTarget).onCatalystCall(purchasedTokens, customCalldata);
@@ -1016,7 +1016,7 @@ contract CatalystGARPInterface is Ownable, ICrossChainReceiver, Bytes65, IMessag
             // The swap hasn't been underwritten. Lets execute the swap properly:
             return acknowledgement = _handleOrdinarySwap(sourceIdentifier, data);
         }
-        if (unusedUnits > 0) {
+        if (unusedUnits != 0) {
             // Use unspent units to purchase tokens. This is fallback logic. The payload won't be executed again.
             address fallbackAccount = address(bytes20(data[ CTX2_TO_ACCOUNT_FALLBACK_START_EVM : CTX2_TO_ACCOUNT_FALLBACK_END ]));
             try ICatalystV1Vault(toVault).receiveAsset(

@@ -78,7 +78,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
         uint256[] calldata weights,
         uint256 amp,
         address depositor
-    ) public override {
+    ) external override {
         // May only be invoked by the FACTORY. The factory only invokes this function for proxy contracts.
         require(msg.sender == FACTORY && _tokenIndexing[0] == address(0));  // dev: swap curves may only be initialized once by the factory
         require(amp == FixedPointMathLib.WAD);  // dev: amplification not set correctly.
@@ -115,7 +115,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
             maxUnitCapacity += weight;
 
             unchecked {
-                it++;
+                ++it;
             }
         }
 
@@ -165,7 +165,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
             _targetWeight[token] = newWeight;
 
             unchecked {
-                it++;
+                ++it;
             }
         }
 
@@ -208,7 +208,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
                     _weight[token] = targetWeight;
 
                     unchecked {
-                        it++;
+                        ++it;
                     }
                 }
                 // Save weight sum.
@@ -365,7 +365,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
             // Save gas if the user provides no tokens.
             if (tokenAmounts[it] == 0) {
                 unchecked {
-                    it++;
+                    ++it;
                 }
                 continue;
             }
@@ -382,7 +382,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
             ); // dev: Token transfer from user failed.
 
             unchecked {
-                it++;
+                ++it;
             }
         }
 
@@ -457,7 +457,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
             ERC20(token).safeTransfer(msg.sender, tokenAmount);
 
             unchecked {
-                it++;
+                ++it;
             }
         }
 
@@ -514,7 +514,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
                 if (minOut[it] != 0) revert ReturnInsufficient(0, minOut[it]);
                 
                 unchecked {
-                    it++;
+                    ++it;
                 }
                 continue;
             }
@@ -536,7 +536,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
             ERC20(token).safeTransfer(msg.sender, tokenAmount);
 
             unchecked {
-                it++;
+                ++it;
             }
         }
         // Ensure all units are used. This should be done by setting at least one withdrawRatio to 1.
@@ -605,7 +605,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
         uint256 minOut,
         address fallbackUser,
         bytes calldata calldata_
-    ) nonReentrant onlyConnectedPool(routeDescription.chainIdentifier, routeDescription.toVault) public payable override returns (uint256) {
+    ) nonReentrant onlyConnectedPool(routeDescription.chainIdentifier, routeDescription.toVault) external payable override returns (uint256) {
         // Fallback user cannot be address(0) since this is used as a check for the existance of an escrow.
         // It would also be a silly fallback address.
         require(fallbackUser != address(0));
@@ -692,7 +692,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
         address fallbackUser,
         uint16 underwritePercentageX16,
         bytes calldata calldata_
-    ) nonReentrant onlyConnectedPool(routeDescription.chainIdentifier, routeDescription.toVault) public payable override returns (uint256) {// Fallback user cannot be address(0) since this is used as a check for the existance of an escrow.
+    ) nonReentrant onlyConnectedPool(routeDescription.chainIdentifier, routeDescription.toVault) external payable override returns (uint256) {// Fallback user cannot be address(0) since this is used as a check for the existance of an escrow.
         // It would also be a silly fallback address.
         require(fallbackUser != address(0));
         // Correct address format is checked on the cross-chain interface. As a result, the below snippit is not needed.
@@ -913,7 +913,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
         uint256[2] calldata minOut,
         address fallbackUser,
         bytes calldata calldata_
-    ) nonReentrant onlyConnectedPool(routeDescription.chainIdentifier, routeDescription.toVault) public payable override returns (uint256) {
+    ) nonReentrant onlyConnectedPool(routeDescription.chainIdentifier, routeDescription.toVault) external payable override returns (uint256) {
         // Fallback user cannot be address(0) since this is used as a check for the existance of an escrow.
         // It would also be a silly fallback address.
         require(fallbackUser != address(0));
@@ -1030,7 +1030,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
                 )) * weight; 
 
                 unchecked {
-                    it++;
+                    ++it;
                 }
             }
 

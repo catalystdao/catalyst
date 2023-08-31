@@ -65,7 +65,7 @@ contract CatalystFactory is Ownable, ICatalystV1FactoryEvents {
         address chainInterface
     ) external returns (address) {
         // Check if an invalid asset count has been provided
-        require(assets.length > 0);  // dev: invalid asset count
+        require(assets.length != 0);  // dev: invalid asset count
         // Check if an invalid weight count has been provided
         require(weights.length == assets.length); //dev: invalid weight count
         // init_balances length not checked: if shorter than assets, the funds transfer loop
@@ -75,12 +75,16 @@ contract CatalystFactory is Ownable, ICatalystV1FactoryEvents {
         address vault = Clones.clone(vaultTemplate);
 
         // The vault expects the balances to exist in the vault when setup is called.
-        for (uint256 it; it < assets.length; it++) {
+        for (uint256 it; it < assets.length;) {
             ERC20(assets[it]).safeTransferFrom(
                 msg.sender,
                 vault,
                 init_balances[it]
             );
+
+            unchecked {
+                ++it;
+            }
         }
 
         // Call setup

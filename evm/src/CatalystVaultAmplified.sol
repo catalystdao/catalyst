@@ -89,7 +89,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
         uint256[] calldata weights,
         uint256 amp,
         address depositor
-    ) public override {
+    ) external override {
         // May only be invoked by the FACTORY. The factory only invokes this function for proxy contracts.
         require(msg.sender == FACTORY && _tokenIndexing[0] == address(0));  // dev: swap curves may only be initialized once by the factory
         // Check that the amplification is correct.
@@ -133,7 +133,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
             maxUnitCapacity += weight * balanceOfSelf;
 
             unchecked {
-                it++;
+                ++it;
             }
         }
 
@@ -170,7 +170,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
             maxUnitCapacity += (ERC20(asset).balanceOf(address(this)) - _escrowedTokens[asset]) * _weight[asset];
 
             unchecked {
-                it++;
+                ++it;
             }
         }
         _maxUnitCapacity = maxUnitCapacity;
@@ -186,22 +186,23 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
         unchecked {
             require(targetTime >= block.timestamp + MIN_ADJUSTMENT_TIME); // dev: targetTime must be more than MIN_ADJUSTMENT_TIME in the future.
             require(targetTime <= block.timestamp + 365 days); // dev: Target time cannot be too far into the future.
-        }
+        
+            uint256 currentAmplification = FixedPointMathLib.WAD - uint256(_oneMinusAmp);
+            require(targetAmplification < FixedPointMathLib.WAD);  // dev: amplification not set correctly.
+            // Limit the maximum allowed relative amplification change to a factor of 2. Note that this effectively 'locks'
+            // the amplification if it gets intialized to 0. Similarly, the amplification will never be allowed to be set to
+            // 0 if it is initialized to any other value (note how 'targetAmplification*2 >= currentAmplification' is used
+            // instead of 'targetAmplification >= currentAmplification/2').
 
-        uint256 currentAmplification = FixedPointMathLib.WAD - uint256(_oneMinusAmp);
-        require(targetAmplification < FixedPointMathLib.WAD);  // dev: amplification not set correctly.
-        // Limit the maximum allowed relative amplification change to a factor of 2. Note that this effectively 'locks'
-        // the amplification if it gets intialized to 0. Similarly, the amplification will never be allowed to be set to
-        // 0 if it is initialized to any other value (note how 'targetAmplification*2 >= currentAmplification' is used
-        // instead of 'targetAmplification >= currentAmplification/2').
-        require(targetAmplification <= currentAmplification*2 && targetAmplification*2 >= currentAmplification); // dev: targetAmplification must be maximum a factor of 2 larger/smaller than the current amplification to protect liquidity providers.
-        // Because of the balance0 (_unitTracker) implementation, amplification adjustment has to be disabled for cross-chain vaults.
-        require(_chainInterface == address(0));  // dev: Amplification adjustment is disabled for cross-chain vaults.
+            require(targetAmplification <= currentAmplification << 2 && targetAmplification << 2 >= currentAmplification); // dev: targetAmplification must be maximum a factor of 2 larger/smaller than the current amplification to protect liquidity providers.
+        
+            // Because of the balance0 (_unitTracker) implementation, amplification adjustment has to be disabled for cross-chain vaults.
+            require(_chainInterface == address(0));  // dev: Amplification adjustment is disabled for cross-chain vaults.
 
-        // Save adjustment information
-        _adjustmentTarget = targetTime;
-        _lastModificationTime = block.timestamp;
-        unchecked {
+            // Save adjustment information
+            _adjustmentTarget = targetTime;
+            _lastModificationTime = block.timestamp;
+
             _targetAmplification = int256(FixedPointMathLib.WAD - targetAmplification);
         }
 
@@ -350,7 +351,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
         uint256 W_B = _weight[toAsset];
         int256 oneMinusAmp = _oneMinusAmp;
 
-        uint256 output = _calcCombinedPriceCurves(amount, A, B, W_A, W_B, oneMinusAmp);
+        uint256 output = _calcPriceCurveLimit(_calcPriceCurveArea(amount, A, W_A, oneMinusAmp), B, W_B, oneMinusAmp); // _calcCombinedPriceCurves(amount, A, B, W_A, W_B, oneMinusAmp);
 
         // If the swap is a very small portion of the vault
         // Add an additional fee. This covers mathematical errors.
@@ -435,7 +436,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
                     // Save gas if the user provides no tokens, as the rest of the loop has no effect in that case
                     if (tokenAmounts[it] == 0) {
                         unchecked {
-                            it++;
+                            ++it;
                         }
                         continue;
                     }
@@ -465,7 +466,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
                 );  // dev: Token withdrawal from user failed.
 
                 unchecked {
-                    it++;
+                    ++it;
                 }
             }
             // Increase the security limit by the amount deposited.
@@ -584,7 +585,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
                 }
 
                 unchecked {
-                    it++;
+                    ++it;
                 }
             }
 
@@ -683,7 +684,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
             ERC20(token).safeTransfer(msg.sender, weightedTokenAmount);
 
             unchecked {
-                it++;
+                ++it;
             }
         }
 
@@ -827,7 +828,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
                 if (minOut[it] != 0) revert ReturnInsufficient(0, minOut[it]);
 
                 unchecked {
-                    it++;
+                    ++it;
                 }
                 continue;
             }
@@ -850,7 +851,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
             totalWithdrawn += tokenAmount * assetWeight;
 
             unchecked {
-                it++;
+                ++it;
             }
         }
         // Ensure all units are used. This should be done by setting at least one withdrawRatio to 1.
@@ -941,7 +942,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
         uint256 minOut,
         address fallbackUser,
         bytes calldata calldata_
-    ) nonReentrant onlyConnectedPool(routeDescription.chainIdentifier, routeDescription.toVault) public payable override returns (uint256) {
+    ) nonReentrant onlyConnectedPool(routeDescription.chainIdentifier, routeDescription.toVault) external payable override returns (uint256) {
         // Fallback user cannot be address(0) since this is used as a check for the existance of an escrow.
         // It would also be a silly fallback address.
         require(fallbackUser != address(0));
@@ -1030,7 +1031,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
         address fallbackUser,
         uint16 underwritePercentageX16,
         bytes calldata calldata_
-    ) nonReentrant onlyConnectedPool(routeDescription.chainIdentifier, routeDescription.toVault) public payable override returns (uint256) {
+    ) nonReentrant onlyConnectedPool(routeDescription.chainIdentifier, routeDescription.toVault) external payable override returns (uint256) {
         // Fallback user cannot be address(0) since this is used as a check for the existance of an escrow.
         // It would also be a silly fallback address.
         require(fallbackUser != address(0));
@@ -1280,7 +1281,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
             }
 
             unchecked {
-                it++;
+                ++it;
             }
         }
 
@@ -1300,7 +1301,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
      * @return walpha_0 Balance0**(1-amp)
      */
     function computeBalance0() external view returns(uint256 walpha_0) {
-       (uint256 walpha_0_ampped, uint256 it) = _computeBalance0(_oneMinusAmp);
+       (uint256 walpha_0_ampped, ) = _computeBalance0(_oneMinusAmp);
 
         walpha_0 = uint256( // casting: powWad is not negative.
             FixedPointMathLib.powWad(
@@ -1328,7 +1329,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
         uint256[2] calldata minOut,
         address fallbackUser,
         bytes calldata calldata_
-    ) nonReentrant onlyConnectedPool(routeDescription.chainIdentifier, routeDescription.toVault) public payable override returns (uint256) {
+    ) nonReentrant onlyConnectedPool(routeDescription.chainIdentifier, routeDescription.toVault) external payable override returns (uint256) {
         // Fallback user cannot be address(0) since this is used as a check for the existance of an escrow.
         // It would also be a silly fallback address.
         require(fallbackUser != address(0));
