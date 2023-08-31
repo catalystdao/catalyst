@@ -567,7 +567,7 @@ pub fn local_swap(
     let to_asset = Asset::from_asset_ref(&deps.as_ref(), &to_asset_ref)?;
     let out: Uint128 = calc_local_swap(
         &deps.as_ref(),
-        env.clone(),
+        &env,
         Some(&info),
         &from_asset,
         &to_asset,
@@ -670,7 +670,7 @@ pub fn send_asset(
     let from_asset = Asset::from_asset_ref(&deps.as_ref(), &from_asset_ref)?;
     let u = calc_send_asset(
         &deps.as_ref(),
-        env.clone(),
+        &env,
         Some(&info),
         &from_asset,
         effective_swap_amount
@@ -819,7 +819,7 @@ pub fn receive_asset(
         .ok_or(ContractError::AssetNotFound {})?
         .clone();
     let to_asset = Asset::from_asset_ref(&deps.as_ref(), &to_asset_ref)?;
-    let out = calc_receive_asset(&deps.as_ref(), env.clone(), Some(&info), &to_asset, u)?;
+    let out = calc_receive_asset(&deps.as_ref(), &env, Some(&info), &to_asset, u)?;
 
     if min_out > out {
         return Err(ContractError::ReturnInsufficient { out, min_out });
@@ -1177,7 +1177,7 @@ pub fn receive_liquidity(
 /// 
 pub fn calc_send_asset(
     deps: &Deps,
-    env: Env,
+    env: &Env,
     info: Option<&MessageInfo>,
     from_asset: &Asset,
     amount: Uint128
@@ -1205,7 +1205,7 @@ pub fn calc_send_asset(
 /// 
 pub fn calc_receive_asset(
     deps: &Deps,
-    env: Env,
+    env: &Env,
     info: Option<&MessageInfo>,
     to_asset: &Asset,
     u: U256
@@ -1247,7 +1247,7 @@ pub fn calc_receive_asset(
 /// 
 pub fn calc_local_swap(
     deps: &Deps,
-    env: Env,
+    env: &Env,
     info: Option<&MessageInfo>,
     from_asset: &Asset,
     to_asset: &Asset,
@@ -1643,7 +1643,7 @@ pub fn query_calc_send_asset(
         CalcSendAssetResponse {
             u: calc_send_asset(
                 &deps,
-                env,
+                &env,
                 None,
                 &Asset::from_asset_ref(&deps, from_asset_ref)?,
                 amount
@@ -1671,7 +1671,7 @@ pub fn query_calc_receive_asset(
         CalcReceiveAssetResponse {
             to_amount: calc_receive_asset(
                 &deps,
-                env,
+                &env,
                 None,
                 &Asset::from_asset_ref(&deps, to_asset_ref)?,
                 u
@@ -1701,7 +1701,7 @@ pub fn query_calc_local_swap(
         CalcLocalSwapResponse {
             to_amount: calc_local_swap(
                 &deps,
-                env,
+                &env,
                 None,
                 &Asset::from_asset_ref(&deps, from_asset_ref)?,
                 &Asset::from_asset_ref(&deps, to_asset_ref)?,

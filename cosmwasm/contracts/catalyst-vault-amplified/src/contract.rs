@@ -365,7 +365,7 @@ pub fn execute(
                 AmplifiedExecuteExtension::UpdateMaxLimitCapacity {
                 } => update_max_limit_capacity(
                     &mut deps,
-                    env,
+                    &env,
                     &info
                 )
             }
