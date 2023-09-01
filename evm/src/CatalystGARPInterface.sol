@@ -75,7 +75,7 @@ contract CatalystGARPInterface is Ownable, ICrossChainReceiver, Bytes65, IMessag
         bytes32 indexed identifier,
         address indexed underwriter,
         uint80 expiry,
-        bytes32 getSwapIdentifier,
+        bytes32 getUnderwriteIdentifier,
         address targetVault,
         address toAsset,
         uint256 U,
@@ -550,8 +550,14 @@ contract CatalystGARPInterface is Ownable, ICrossChainReceiver, Bytes65, IMessag
     }
 
     //--- Underwriting ---//
+    // The following section contains the underwriting module of Catalyst.
+    // It serves to speedup swap execution by letting a thirdparty take on the confirmation / delivery risk
+    // by pre-executing the latter part and then reserving the swap result in the escrow.
 
-    function getSwapIdentifier(
+    /**
+     * @notice Returns the underwriting identifier for a Catalyst swap.
+     */
+    function _getUnderwriteIdentifier(
         address targetVault,
         address toAsset,
         uint256 U,
@@ -560,7 +566,7 @@ contract CatalystGARPInterface is Ownable, ICrossChainReceiver, Bytes65, IMessag
         uint256 fromAmount,
         uint16 underwritePercentageX16,
         bytes calldata cdata
-    ) public pure returns (bytes32 identifier) {
+    ) internal pure returns (bytes32 identifier) {
         return identifier = keccak256(
             abi.encodePacked(
                 targetVault,
@@ -572,6 +578,31 @@ contract CatalystGARPInterface is Ownable, ICrossChainReceiver, Bytes65, IMessag
                 underwritePercentageX16,
                 cdata
             )
+        );
+    }
+
+    /**
+     * @notice Returns the underwriting identifier for a Catalyst swap.
+     */
+    function getUnderwriteIdentifier(
+        address targetVault,
+        address toAsset,
+        uint256 U,
+        uint256 minOut,
+        address toAccount,
+        uint256 fromAmount,
+        uint16 underwritePercentageX16,
+        bytes calldata cdata
+    ) external pure returns (bytes32 identifier) {
+        return identifier = _getUnderwriteIdentifier(
+            targetVault,
+            toAsset,
+            U,
+            minOut,
+            toAccount,
+            fromAmount,
+            underwritePercentageX16,
+            cdata
         );
     }
 
@@ -653,9 +684,9 @@ contract CatalystGARPInterface is Ownable, ICrossChainReceiver, Bytes65, IMessag
         // As a result, once the swap arrives (and the underwriter is competent), the same identifier will be computed and matched.
         // For "_purposeFill (CTX3)", how the identifier is computed doesn't matter. Only that it is relativly unigue. To simplify
         // the implementations, both methods use the same identifier deriviation.
-        // For other implementations: This arguments the identifier is based on should be the same but the hashing
+        // For other implementations: The arguments the identifier is based on should be the same but the hashing
         // algorithm doesn't matter. It is only used and computed on the destination chain.
-        identifier = getSwapIdentifier(
+        identifier = _getUnderwriteIdentifier(
             targetVault,
             toAsset,
             U,
@@ -689,8 +720,10 @@ contract CatalystGARPInterface is Ownable, ICrossChainReceiver, Bytes65, IMessag
             identifier,
             toAsset,
             U,
-            minOut
+            0  // minout is checked here.
         );
+        
+
         // Save the underwriting state.
         underwritingStorage[identifier] = UnderwritingStorage({
             tokens: purchasedTokens,
@@ -709,12 +742,15 @@ contract CatalystGARPInterface is Ownable, ICrossChainReceiver, Bytes65, IMessag
             )/UNDERWRITING_UNFULFILLED_FEE_DENOMINATOR
         );
 
-        // Subtract the underwrite incentive from the funds sent to the user.
         uint256 underwritingIncentive = (purchasedTokens * uint256(underwritePercentageX16)) >> 16;
+        // Subtract the underwrite incentive from the funds sent to the user.
         unchecked {
             // underwritingIncentive <= purchasedTokens.
             purchasedTokens -= underwritingIncentive;
         }
+
+        // Check minOut with the underwriting incentive subtracted.
+        if (purchasedTokens < minOut) revert ReturnInsufficientOnReceive();
 
         // Send the assets to the user.
         ERC20(toAsset).safeTransfer(toAccount, purchasedTokens);
@@ -745,7 +781,7 @@ contract CatalystGARPInterface is Ownable, ICrossChainReceiver, Bytes65, IMessag
         uint16 underwritePercentageX16,
         bytes calldata cdata
     ) external {
-        bytes32 identifier = getSwapIdentifier(
+        bytes32 identifier = _getUnderwriteIdentifier(
             targetVault,
             toAsset,
             U,
@@ -806,22 +842,16 @@ contract CatalystGARPInterface is Ownable, ICrossChainReceiver, Bytes65, IMessag
         bytes32 identifier,
         address toAsset,
         address vault,
-        uint256 underwrittenU,
-        uint256 incomingU,
         uint16 underwritePercentageX16
-    ) internal returns (uint256 unitExcess) {
+    ) internal returns (bool swapUnderwritten) {
         UnderwritingStorage storage underwriteState = underwritingStorage[identifier];
         // Load number of tokens from storage.
         uint256 underwrittenTokenAmount = underwriteState.tokens;
+        // Check if the swap was underwritten => refundTo != address(0)
         address refundTo = underwriteState.refundTo;
-        if (refundTo == address(0)) return unitExcess = incomingU;
+        // if refundTo == address(0) then the swap wasnøt underwritten.
+        if (refundTo == address(0)) return swapUnderwritten = false;
 
-        // If the swap was filled less than 100%, then fail the swap.
-        // This is only possible for purpose underwrite.
-        if (underwrittenU > incomingU) {
-            // Set the most significant bit to signal that the swap reverted.
-            return unitExcess = 2**255;
-        }
         // Reentry protection. No external calls are allowed before this line. The line 'if (refundTo == address(0)) ...' will always be true.
         delete underwritingStorage[identifier];
 
@@ -844,10 +874,7 @@ contract CatalystGARPInterface is Ownable, ICrossChainReceiver, Bytes65, IMessag
 
         ERC20(toAsset).safeTransfer(refundTo, refundAmount);
 
-        // uint256 unitExcess is initialized to 0.
-        if (underwrittenU < incomingU) {
-            unitExcess = incomingU - underwrittenU;
-        }
+        return swapUnderwritten = true;
     }
     
     function sendCrossChainPleaseUnderwrite(
@@ -927,7 +954,7 @@ contract CatalystGARPInterface is Ownable, ICrossChainReceiver, Bytes65, IMessag
         uint16 underwritePercentageX16 = uint16(bytes2(data[CTX2_UW_INCENTIVE_START:CTX2_UW_INCENTIVE_END]));
 
         // Get the underwriting identifier.
-        bytes32 identifier = getSwapIdentifier(
+        bytes32 identifier = _getUnderwriteIdentifier(
             toVault,
             toAsset,
             U,
@@ -939,20 +966,14 @@ contract CatalystGARPInterface is Ownable, ICrossChainReceiver, Bytes65, IMessag
         );
 
         // Check if the swap has been underwritten. If it has, return funds to underwriter.
-        uint256 unusedUnits = _matchUnderwrite(
+        bool swapUnderwritten = _matchUnderwrite(
             identifier,
             toAsset,
             toVault,
-            U,
-            U,
             underwritePercentageX16
         );
 
-        if (unusedUnits == 2**255) {
-            return acknowledgement = 0x21; // Not enough units were provided..
-        }
-
-        if (U == unusedUnits) {
+        if (!swapUnderwritten) {
             // The swap hasn't been underwritten. Lets execute the swap properly:
             return acknowledgement = _handleOrdinarySwap(sourceIdentifier, data);
         }
@@ -1043,7 +1064,7 @@ contract CatalystGARPInterface is Ownable, ICrossChainReceiver, Bytes65, IMessag
         uint16 underwritePercentageX16 = uint16(bytes2(data[ CTX2_UW_INCENTIVE_START : CTX2_UW_INCENTIVE_END ]));
 
         // Get the underwriting identifier.
-        bytes32 identifier = getSwapIdentifier(
+        bytes32 identifier = _getUnderwriteIdentifier(
             toVault,
             toAsset,
             U,
