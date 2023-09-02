@@ -948,9 +948,9 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
         require(fallbackUser != address(0));
         // Correct address format is checked on the cross-chain interface. As a result, the below snippit is not needed.
         /*
-        require(toVault.length == 65);  // dev: Vault addresses are uint8 + 64 bytes.
-        require(toAccount.length == 65);  // dev: Account addresses are uint8 + 64 bytes.
-         */
+            require(toVault.length == 65);  // dev: Vault addresses are uint8 + 64 bytes.
+            require(toAccount.length == 65);  // dev: Account addresses are uint8 + 64 bytes.
+        */
 
         _updateAmplification();
         uint256 fee = FixedPointMathLib.mulWadDown(amount, _vaultFee);
@@ -1037,9 +1037,9 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
         require(fallbackUser != address(0));
         // Correct address format is checked on the cross-chain interface. As a result, the below snippit is not needed.
         /*
-        require(toVault.length == 65);  // dev: Vault addresses are uint8 + 64 bytes.
-        require(toAccount.length == 65);  // dev: Account addresses are uint8 + 64 bytes.
-         */
+            require(toVault.length == 65);  // dev: Vault addresses are uint8 + 64 bytes.
+            require(toAccount.length == 65);  // dev: Account addresses are uint8 + 64 bytes.
+        */
 
         _updateAmplification();
         uint256 fee = FixedPointMathLib.mulWadDown(amount, _vaultFee);
@@ -1103,6 +1103,99 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
             U,
             fee,
             underwritePercentageX16
+        );
+
+        return U;
+    }
+
+    /**
+     * @notice Initiate a cross-chain swap by purchasing units and transfering the units to the target vault.
+     * Then allow for underwriters to underwrite the cross-chain swap for faster execution
+     * @dev Any difference between the bought units and minU are lost as fees to the pool.
+     * @param minU The number of units which has been underwritten on the destination chain.
+     */
+    function sendAssetUnderwritePurpose(
+        RouteDescription calldata routeDescription,
+        address fromAsset,
+        uint8 toAssetIndex,
+        uint256 amount,
+        uint256 minOut,
+        uint256 minU,
+        address fallbackUser,
+        bytes calldata calldata_
+    ) nonReentrant onlyConnectedPool(routeDescription.chainIdentifier, routeDescription.toVault) external payable override returns (uint256) {
+        // Fallback user cannot be address(0) since this is used as a check for the existance of an escrow.
+        // It would also be a silly fallback address.
+        require(fallbackUser != address(0));
+        // Correct address format is checked on the cross-chain interface. As a result, the below snippit is not needed.
+        /*
+            require(toVault.length == 65);  // dev: Vault addresses are uint8 + 64 bytes.
+            require(toAccount.length == 65);  // dev: Account addresses are uint8 + 64 bytes.
+        */
+
+        _updateAmplification();
+        uint256 fee = FixedPointMathLib.mulWadDown(amount, _vaultFee);
+
+        // Calculate the units bought.
+        uint256 U = calcSendAsset(fromAsset, amount - fee);
+        if (U < minU) revert ReturnInsufficient(U, minU);
+        U = minU;
+
+        // onSendAssetSuccess requires casting U to int256 to update the _unitTracker and must never revert. Check for overflow here.
+        require(U < uint256(type(int256).max));  // int256 max fits in uint256
+        _unitTracker += int256(U);
+
+        // Send the purchased units to the target vault on the target chain.
+        CatalystGARPInterface(_chainInterface).sendCrossChainPurposeUnderwrite{value: msg.value}(
+            routeDescription,
+            toAssetIndex,
+            U,
+            minOut,
+            amount - fee,
+            fromAsset,
+            calldata_
+        );
+
+        // Store the escrow information. For that, an index is required. Since we need this index twice, we store it.
+        // Only information which is relevant for the escrow has to be hashed. (+ some extra for randomisation)
+        // No need to hash context (as token/liquidity escrow data is different), fromVault, toVault, targetAssetIndex, minOut, CallData
+        bytes32 sendAssetHash = _computeSendAssetHash(
+            routeDescription.toAccount,              // Ensures no collisions between different users
+            U,                      // Used to randomise the hash
+            amount - fee,           // Required! to validate release escrow data
+            fromAsset,              // Required! to validate release escrow data
+            uint32(block.number)    // May overflow, but this is desired (% 2**32)
+        );
+
+        // Escrow the tokens used to purchase units. These will be sent back if transaction doesn't arrive / timeout.
+        _setTokenEscrow(
+            sendAssetHash,
+            fallbackUser,
+            fromAsset,
+            amount - fee
+        );
+        // Notice that the fee is subtracted from the escrow. If this is not done, the escrow can be used as a cheap denial of service vector.
+        // This is unfortunate.
+
+        // Collect the tokens from the user.
+        ERC20(fromAsset).safeTransferFrom(msg.sender, address(this), amount);
+
+        // Governance Fee
+        _collectGovernanceFee(fromAsset, fee);
+
+        // Adjustment of the security limit is delayed until ack to avoid a router abusing timeout to circumvent the security limit.
+
+        emit SendAssetUnderwritable(
+            routeDescription.chainIdentifier,
+            routeDescription.toVault,
+            routeDescription.toAccount,
+            fromAsset,
+            toAssetIndex,
+            amount,
+            minOut,
+            U,
+            fee,
+            0
         );
 
         return U;
@@ -1335,9 +1428,9 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
         require(fallbackUser != address(0));
         // Correct address format is checked on the cross-chain interface. As a result, the below snippit is not needed.
         /*
-        require(toVault.length == 65);  // dev: Vault addresses are uint8 + 64 bytes.
-        require(toAccount.length == 65);  // dev: Account addresses are uint8 + 64 bytes.
-         */
+            require(toVault.length == 65);  // dev: Vault addresses are uint8 + 64 bytes.
+            require(toAccount.length == 65);  // dev: Account addresses are uint8 + 64 bytes.
+        */
 
         // Update amplification
         _updateAmplification();

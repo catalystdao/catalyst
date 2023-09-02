@@ -119,7 +119,7 @@ contract CatalystGARPInterface is Ownable, ICrossChainReceiver, Bytes65, IMessag
     /// @notice Sets the maximum duration for underwriting.
     /// @dev Should be set long enough for all swaps to be able to confirm + a small buffer
     /// Should also be set long enough to not take up an excess amount of escrow usage.
-    uint256 public maxUnderwritingDuration = 12 hours;
+    uint256 public maxUnderwritingDuration = 24 hours;
 
      mapping(bytes32 => UnderwritingStorage) public underwritingStorage;
 
@@ -442,7 +442,7 @@ contract CatalystGARPInterface is Ownable, ICrossChainReceiver, Bytes65, IMessag
         // To vault will not be checked. If it is assumed that any error is random, then an incorrect toVault will result in the call failling.
 
         if (context == CTX0_ASSET_SWAP) {
-            return acknowledgement = _handleOrdinarySwap(sourceIdentifier, data);
+            return acknowledgement = _handleOrdinarySwap(sourceIdentifier, data, 0);
         }
         if (context == CTX1_LIQUIDITY_SWAP) {
             return acknowledgement = _handleLiquiditySwap(sourceIdentifier, data);
@@ -451,7 +451,7 @@ contract CatalystGARPInterface is Ownable, ICrossChainReceiver, Bytes65, IMessag
             return acknowledgement = _pleaseFill(sourceIdentifier, data);
         }
         if (context == CTX3_ASSET_SWAP_PURPOSE_UNDERWRITE) {
-            // return acknowledgement = _purposeFill(sourceIdentifier, data);
+            return acknowledgement = _purposeFill(sourceIdentifier, data);
         }
         /* revert InvalidContext(context); */
         // No return here. Instead, another implementation can override this implementation. It should just keep adding ifs with returns inside:
@@ -461,7 +461,7 @@ contract CatalystGARPInterface is Ownable, ICrossChainReceiver, Bytes65, IMessag
     }
 
 
-    function _handleOrdinarySwap(bytes32 sourceIdentifier, bytes calldata data) internal returns (bytes1 status) {
+    function _handleOrdinarySwap(bytes32 sourceIdentifier, bytes calldata data, uint256 call_data_offset) internal returns (bytes1 status) {
         // We don't know how from_vault is encoded. So we load it as bytes. Including the length.
         bytes calldata fromVault = data[ FROM_VAULT_LENGTH_POS : FROM_VAULT_END ];
         // We know that toVault is an EVM address
@@ -470,6 +470,7 @@ contract CatalystGARPInterface is Ownable, ICrossChainReceiver, Bytes65, IMessag
         uint16 dataLength = uint16(bytes2(data[CTX0_DATA_LENGTH_START:CTX0_DATA_LENGTH_END]));
         // CCI sets dataLength > 0 if calldata is passed.
         if (dataLength != 0) {
+            uint256 call_data_start = CTX0_DATA_START + call_data_offset;
             try ICatalystV1Vault(toVault).receiveAsset(
                 sourceIdentifier,                                                      // connectionId
                 fromVault,                                                                   // fromVault
@@ -480,8 +481,8 @@ contract CatalystGARPInterface is Ownable, ICrossChainReceiver, Bytes65, IMessag
                 uint256(bytes32(data[ CTX0_FROM_AMOUNT_START : CTX0_FROM_AMOUNT_END ])),    // fromAmount
                 bytes(data[ CTX0_FROM_ASSET_LENGTH_POS : CTX0_FROM_ASSET_END ]),            // fromAsset
                 uint32(bytes4(data[ CTX0_BLOCK_NUMBER_START : CTX0_BLOCK_NUMBER_END ])),    // block number
-                address(bytes20(data[ CTX0_DATA_START : CTX0_DATA_START+20 ])),            // dataTarget
-                data[ CTX0_DATA_START+20 : CTX0_DATA_START+dataLength ]                     // dataArguments
+                address(bytes20(data[ call_data_start : call_data_start+20 ])),            // dataTarget
+                data[ call_data_start+20 : call_data_start+dataLength ]                     // dataArguments
             ) {
                 return 0x00;
             } catch (bytes memory err) {
@@ -890,7 +891,7 @@ contract CatalystGARPInterface is Ownable, ICrossChainReceiver, Bytes65, IMessag
         // We need to ensure that all information is in the correct places. This ensures that calls to this contract
         // will always be decoded semi-correctly even if the input is very incorrect. This also checks that the user 
         // inputs into the swap contracts are correct while making the cross-chain interface flexible for future implementations.
-        // These checks are done by modifiers.
+        // These checks are done by the modifier.
 
         // Anyone can call this function, but unless someone can also manage to pass the security check on onRecvPacket
         // they cannot drain any value. As such, the very worst they can do is waste gas.
@@ -937,8 +938,6 @@ contract CatalystGARPInterface is Ownable, ICrossChainReceiver, Bytes65, IMessag
         // Check that there is a connection. Otherwise, send a bad (non 0x00) ack back.
         if (!ICatalystV1Vault(toVault)._vaultConnection(sourceIdentifier, fromVault)) return acknowledgement = 0x23;
 
-        // uint16 dataLength = uint16(bytes2(data[CTX2_DATA_LENGTH_START:CTX2_DATA_LENGTH_END]));
-
         // Select excess calldata. Excess calldata is not decoded.
         bytes calldata cdata = data[CTX2_DATA_LENGTH_START:];
 
@@ -974,8 +973,10 @@ contract CatalystGARPInterface is Ownable, ICrossChainReceiver, Bytes65, IMessag
         );
 
         if (!swapUnderwritten) {
-            // The swap hasn't been underwritten. Lets execute the swap properly:
-            return acknowledgement = _handleOrdinarySwap(sourceIdentifier, data);
+            // The swap hasn't been underwritten lets execute the swap properly.
+            // The message has another 2 bytes before calldata which is the underwriting incentive.
+            // as a result, we need to off-set the calldata index by 2 bytes.
+            return acknowledgement = _handleOrdinarySwap(sourceIdentifier, data, 2);
         }
         // There is no case where only a subset of the units are filled. As either the complete swap (through the swap identifier)
         // is underwritten or it wasn't underwritten.
@@ -984,84 +985,84 @@ contract CatalystGARPInterface is Ownable, ICrossChainReceiver, Bytes65, IMessag
         return acknowledgement = 0x00;
     }
 
-/* 
+
 
     function sendCrossChainPurposeUnderwrite(
-        bytes32 chainIdentifier,
-        bytes calldata toVault,
-        bytes calldata toAccount,
+        ICatalystV1Vault.RouteDescription calldata routeDescription,
         uint8 toAssetIndex,
         uint256 U,
         uint256 minOut,
         uint256 fromAmount,
         address fromAsset,
-        IncentiveDescription calldata incentive,
         bytes calldata calldata_
-    ) checkBytes65Address(toVault) checkBytes65Address(toAccount) checkIncentives(chainIdentifier, incentive) external payable {
+    ) checkRouteDescription(routeDescription) external payable {
         // We need to ensure that all information is in the correct places. This ensures that calls to this contract
         // will always be decoded semi-correctly even if the input is very incorrect. This also checks that the user 
         // inputs into the swap contracts are correct while making the cross-chain interface flexible for future implementations.
-        // These checks are done by modifiers.
+        // These checks are done by the modifier.
 
         // Anyone can call this function, but unless someone can also manage to pass the security check on onRecvPacket
         // they cannot drain any value. As such, the very worst they can do is waste gas.
 
         // Encode payload. See CatalystPayload.sol for the payload definition
         bytes memory data = abi.encodePacked(
-            CTX2_ASSET_SWAP_PLEASE_UNDERWRITE,
-            uint8(20),      // EVM addresses are 20 bytes.
-            bytes32(0),     // EVM only uses 20 bytes. abi.encode packs the 20 bytes into 32 then we need to add 32 more
-            abi.encode(msg.sender),  // Use abi.encode to encode address into 32 bytes
-            toVault,    // Length is expected to be pre-encoded.
-            toAccount,  // Length is expected to be pre-encoded.
+            CTX3_ASSET_SWAP_PURPOSE_UNDERWRITE,
+            abi.encodePacked(
+                uint8(20),      // EVM addresses are 20 bytes.
+                bytes32(0),     // EVM only uses 20 bytes. abi.encode packs the 20 bytes into 32 then we need to add 32 more
+                abi.encode(msg.sender)  // Use abi.encode to encode address into 32 bytes
+            ),
+            routeDescription.toVault,    // Length is expected to be pre-encoded.
+            routeDescription.toAccount,  // Length is expected to be pre-encoded.
             U,
             toAssetIndex,
             minOut,
             fromAmount,
-            uint8(20),      // EVM addresses are 20 bytes.
-            bytes32(0),     // EVM only uses 20 bytes. abi.encode packs the 20 bytes into 32 then we need to add 32 more
-            abi.encode(fromAsset),  // Use abi.encode to encode address into 32 bytes
-            uint32(block.number),   // This is the same as block.number mod 2**32-1
+            abi.encodePacked(
+                uint8(20),      // EVM addresses are 20 bytes.
+                bytes32(0),     // EVM only uses 20 bytes. abi.encode packs the 20 bytes into 32 then we need to add 32 more
+                abi.encode(fromAsset)  // Use abi.encode to encode address into 32 bytes
+            ),
+            uint32(block.number),   // This is the same as block.number mod 2**32-1,
             uint16(calldata_.length),   // max length of calldata is 2**16-1 = 65535 bytes which should be more than plenty.
             calldata_
         );
 
         GARP.escrowMessage{value: msg.value}(
-            chainIdentifier,
-           chainIdentifierToDestinationAddress[chainIdentifier],
+            routeDescription.chainIdentifier,
+            chainIdentifierToDestinationAddress[routeDescription.chainIdentifier],
             data,
-            incentive
+            routeDescription.incentive
         );
     }
 
-    This function is used to pre-specify the identifier to backfill underwritten swaps.
-    While _pleaseFill could technically be used for it, it can't because the identifier contains U. 
+    /**
+     * @notice This function is used to pre-specify the identifier to backfill underwritten swaps.
+     * While _pleaseFill could technically be used for it, it is very difficul because the identifier contains
+     * both U and fromAmount which are volatile.
+    */ 
     function _purposeFill(bytes32 sourceIdentifier, bytes calldata data) internal returns (bytes1 acknowledgement) {
-        // 1. Generate the underwriting ID.
-
         // We don't know how from_vault is encoded. So we load it as bytes. Including the length.
         bytes calldata fromVault = data[ FROM_VAULT_LENGTH_POS : FROM_VAULT_END ];
         // We know that toVault is an EVM address
         address toVault = address(bytes20(data[ TO_VAULT_START_EVM : TO_VAULT_END ]));
 
-        // Check that there is a connection.
-        if (!ICatalystV1Vault(toVault)._vaultConnection(sourceIdentifier, fromVault)) return 0x23;
+        // Check that there is a connection. Otherwise, send a bad (non 0x00) ack back.
+        if (!ICatalystV1Vault(toVault)._vaultConnection(sourceIdentifier, fromVault)) return acknowledgement = 0x23;
 
-        // uint16 dataLength = uint16(bytes2(data[CTX2_DATA_LENGTH_START:CTX2_DATA_LENGTH_END]));
-
-        // Select excess calldata. Excess calldata is not decoded.
-        bytes calldata cdata = data[CTX2_DATA_LENGTH_START:];
+        // Check if the swap is valid: minU <= U.
+        uint256 U = uint256(bytes32(data[ UNITS_START : UNITS_END ]));
 
         // Get the toAsset
-        uint8 toAssetIndex = uint8(data[CTX2_TO_ASSET_INDEX_POS]);
+        uint8 toAssetIndex = uint8(data[CTX3_TO_ASSET_INDEX_POS]);
         address toAsset = ICatalystV1Vault(toVault)._tokenIndexing(toAssetIndex);
 
         // Get the rest of the swap parameters.
         address toAccount = address(bytes20(data[ TO_ACCOUNT_START_EVM : TO_ACCOUNT_END ]));
-        uint256 U = uint256(bytes32(data[ UNITS_START : UNITS_END ]));
-        uint256 minOut = uint256(bytes32(data[ CTX2_MIN_OUT_START : CTX2_MIN_OUT_END ]));
-        uint256 fromAmount = uint256(bytes32(data[ CTX2_FROM_AMOUNT_START : CTX2_FROM_AMOUNT_END ]));
-        uint16 underwritePercentageX16 = uint16(bytes2(data[ CTX2_UW_INCENTIVE_START : CTX2_UW_INCENTIVE_END ]));
+        uint256 minOut = uint256(bytes32(data[ CTX3_MIN_OUT_START : CTX3_MIN_OUT_END ]));
+
+        // Select excess calldata. Excess calldata is not decoded.
+        bytes calldata cdata = data[CTX2_DATA_LENGTH_START:];
 
         // Get the underwriting identifier.
         bytes32 identifier = _getUnderwriteIdentifier(
@@ -1070,52 +1071,26 @@ contract CatalystGARPInterface is Ownable, ICrossChainReceiver, Bytes65, IMessag
             U,
             minOut,
             toAccount,
-            fromAmount,
-            underwritePercentageX16,
+            uint256(0),
+            uint16(0),
             cdata
         );
 
-        // 2. Check if the swap has been underwritten. If it has, return funds to underwriter.
-        uint256 unusedUnits = _matchUnderwrite(
+        // Check if the swap has been underwritten. If it has, return funds to underwriter.
+        bool swapUnderwritten = _matchUnderwrite(
             identifier,
             toAsset,
             toVault,
-            U,
-            U,
-            underwritePercentageX16
+            uint16(0)
         );
 
-        if (unusedUnits == 2**255) {
-            return 0x21; // Not enough units were provided..
+        if (!swapUnderwritten) {
+            // The swap hasn't been underwritten. This is not allowed for purpose underwrite.
+            return acknowledgement = 0x2f;
         }
 
-        if (U == unusedUnits) {
-            // The swap hasn't been underwritten. Lets execute the swap properly:
-            return acknowledgement = _handleOrdinarySwap(sourceIdentifier, data);
-        }
-        if (unusedUnits != 0) {
-            // Use unspent units to purchase tokens. This is fallback logic. The payload won't be executed again.
-            address fallbackAccount = address(bytes20(data[ CTX2_TO_ACCOUNT_FALLBACK_START_EVM : CTX2_TO_ACCOUNT_FALLBACK_END ]));
-            try ICatalystV1Vault(toVault).receiveAsset(
-                sourceIdentifier,                                                           // connectionId
-                fromVault,                                                                  // fromVault
-                toAssetIndex,                                                               // toAssetIndex
-                fallbackAccount,                                                            // toAccount
-                uint256(unusedUnits),                                                       // units
-                uint256(0),                                                                 // minOut
-                fromAmount,                                                                 // fromAmount
-                bytes(data[ CTX2_FROM_ASSET_LENGTH_POS : CTX2_FROM_ASSET_END ]),            // fromAsset
-                uint32(bytes4(data[ CTX2_BLOCK_NUMBER_START : CTX2_BLOCK_NUMBER_END ]))     // block number
-            ) {
-                // Return outside try catch to save a bit of deployment gas.
-            } catch (bytes memory err) {
-                // Since the swap already properly executed, we shouldn't have to do anything extra.
-                // Instead, the best fallback is to burn the unspent units.
-            }
-            return acknowledgement = 0x00;
-        }
+        // The difference between U and minU is lost.
 
         return acknowledgement = 0x00;
     }
-*/
 }

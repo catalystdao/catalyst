@@ -39,18 +39,15 @@ pragma solidity ^0.8.16;
 //       + FROM_ASSET       294 (64 bytes)
 //       + BLOCK_NUMBER     358 (4 bytes)
 //      (Underwrite Logic)
-//       + UW_INCENTIVE     327 (2 bytes)
+//       + UW_INCENTIVE     362 (2 bytes)
 //
 //    CTX3 - 0x03 - Purpose Underwrite Payload
-//      (Fallback Logic)
 //       + TO_ASSET_INDEX   228 (1 byte)
-//      (Escrow Logic)
-//       + FROM_AMOUNT      229 (32 bytes)
-//       + FROM_ASSET_LEN   261 (1 byte)
-//       + FROM_ASSET       262 (64 bytes)
-//       + BLOCK_NUMBER     226 (4 bytes)
-//      (Underwrite Logic)
-//       + UNDERWRITE_ID    330 (32 bytes)
+//       + MIN_OUT          229 (32 bytes)
+//       + FROM_AMOUNT      261 (32 bytes)
+//       + FROM_ASSET_LEN   293 (1 byte)
+//       + FROM_ASSET       294 (64 bytes)
+//       + BLOCK_NUMBER     358 (4 bytes)
 // 
 // Common Payload (end)
 //    + DATA_LENGTH         LENGTH-N-2 (2 bytes)
@@ -169,21 +166,21 @@ uint constant CTX2_DATA_START            = 366;
 
 uint constant CTX3_TO_ASSET_INDEX_POS    = 228;
 
-uint constant CTX3_FROM_AMOUNT_START     = 229;
-uint constant CTX3_FROM_AMOUNT_END       = 261;
+uint constant CTX3_MIN_OUT_START         = 229;
+uint constant CTX3_MIN_OUT_END           = 261;
 
-uint constant CTX3_FROM_ASSET_LENGTH_POS = 261; 
-uint constant CTX3_FROM_ASSET_START      = 262; 
-uint constant CTX3_FROM_ASSET_START_EVM  = 306;  // If the address is an EVM address, this is the start
-uint constant CTX3_FROM_ASSET_END        = 326;
+uint constant CTX3_FROM_AMOUNT_START     = 261;
+uint constant CTX3_FROM_AMOUNT_END       = 293;
 
-uint constant CTX3_BLOCK_NUMBER_START    = 326;
-uint constant CTX3_BLOCK_NUMBER_END      = 330;
+uint constant CTX3_FROM_ASSET_LENGTH_POS = 293; 
+uint constant CTX3_FROM_ASSET_START      = 294; 
+uint constant CTX3_FROM_ASSET_START_EVM  = 338;  // If the address is an EVM address, this is the start
+uint constant CTX3_FROM_ASSET_END        = 358;
 
-uint constant CTX3_UNDERWRITE_ID_START   = 330;
-uint constant CTX3_UNDERWRITE_ID_END     = 362;
+uint constant CTX3_BLOCK_NUMBER_START    = 358;
+uint constant CTX3_BLOCK_NUMBER_END      = 362;
 
 uint constant CTX3_DATA_LENGTH_START     = 362;
 uint constant CTX3_DATA_LENGTH_END       = 364;
 
-uint constant CTX3_DATA_START            = 384;
+uint constant CTX3_DATA_START            = 364;

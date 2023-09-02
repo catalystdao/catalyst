@@ -120,6 +120,23 @@ interface ICatalystV1VaultPermissionless {
     ) external payable returns (uint256);
 
     /**
+     * @notice Initiate a cross-chain swap by purchasing units and transfering the units to the target vault.
+     * Then allow for underwriters to underwrite the cross-chain swap for faster execution
+     * @dev Any difference between the bought units and minU are lost as fees to the pool.
+     * @param minU The number of units which has been underwritten on the destination chain.
+     */
+    function sendAssetUnderwritePurpose(
+        ICatalystV1Structs.RouteDescription calldata routeDescription,
+        address fromAsset,
+        uint8 toAssetIndex,
+        uint256 amount,
+        uint256 minOut,
+        uint256 minU,
+        address fallbackUser,
+        bytes calldata calldata_
+    ) external payable returns (uint256);
+
+    /**
      * @notice Completes a cross-chain swap by converting units to the desired token (toAsset)
      * @dev Can only be called by the chainInterface.
      * @param channelId The incoming connection identifier.
