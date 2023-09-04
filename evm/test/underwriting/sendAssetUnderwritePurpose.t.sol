@@ -11,11 +11,13 @@ import { Token } from "../mocks/token.sol";
 
 import { ICatalystReceiver } from "../../src/interfaces/IOnCatalyst.sol";
 
-contract TestSendAssetUnderwrite is TestCommon {
+contract TestSendAssetUnderwritePurpose is TestCommon {
     address vault1;
     address vault2;
 
     bytes32 FEE_RECIPITANT = bytes32(uint256(uint160(0xfee0eec191fa4f)));
+
+    event SwapFailed(bytes1 error);
     
     function setUp() virtual override public {
         super.setUp();
@@ -26,7 +28,7 @@ contract TestSendAssetUnderwrite is TestCommon {
         setConnection(vault1, vault2, DESTINATION_IDENTIFIER, DESTINATION_IDENTIFIER);
     }
 
-    function test_send_asset_underwrite(address refundTo, address toAccount) external {
+    function test_send_asset_underwrite_purpose(address refundTo, address toAccount) external {
         vm.assume(refundTo != address(0));
         vm.assume(toAccount != address(0));
         vm.assume(toAccount != refundTo);  // makes it really hard to debug
@@ -42,23 +44,6 @@ contract TestSendAssetUnderwrite is TestCommon {
             incentive: _INCENTIVE
         });
 
-
-        vm.recordLogs();
-        uint256 units = ICatalystV1Vault(vault1).sendAssetUnderwrite{value: _getTotalIncentive(_INCENTIVE)}(
-            routeDescription,
-            token1,
-            0, 
-            uint256(1e17), 
-            0,
-            toAccount,
-            0,
-            hex""
-        );
-        Vm.Log[] memory entries = vm.getRecordedLogs();
-
-        (, , bytes memory messageWithContext) = abi.decode(entries[1].data, (bytes32, bytes, bytes));
-
-
         address token2 = ICatalystV1Vault(vault2)._tokenIndexing(0);
 
 
@@ -68,13 +53,33 @@ contract TestSendAssetUnderwrite is TestCommon {
             refundTo, // non-zero address
             vault2,  // -- Swap information
             token2,
-            units,
+            99995000333308,
             0,
             toAccount,
-            uint256(1e17),
+            0, // For purpose underwrite the from_amount is always set to 0.
             0,
             hex"0000"
         );
+
+
+        vm.recordLogs();
+        uint256 units = ICatalystV1Vault(vault1).sendAssetUnderwritePurpose{value: _getTotalIncentive(_INCENTIVE)}(
+            routeDescription,
+            token1,
+            0, 
+            uint256(1e17), 
+            0,
+            99995000333308,
+            toAccount,
+            hex""
+        );
+        Vm.Log[] memory entries = vm.getRecordedLogs();
+
+        (, , bytes memory messageWithContext) = abi.decode(entries[1].data, (bytes32, bytes, bytes));
+
+        assertEq(units, 99995000333308, "expected number of units");
+
+
 
         (uint256 numTokens, , ) = CCI.underwritingStorage(underwriteIdentifier);
 
@@ -114,7 +119,7 @@ contract TestSendAssetUnderwrite is TestCommon {
     }
 
 
-    function test_send_asset_not_underwrite(address refundTo, address toAccount) external {
+    function test_send_asset_not_underwrite_purpose(address refundTo, address toAccount) external {
         vm.assume(refundTo != address(0));
         vm.assume(toAccount != address(0));
         vm.assume(toAccount != refundTo);  // makes it really hard to debug
@@ -132,14 +137,14 @@ contract TestSendAssetUnderwrite is TestCommon {
 
 
         vm.recordLogs();
-        ICatalystV1Vault(vault1).sendAssetUnderwrite{value: _getTotalIncentive(_INCENTIVE)}(
+        ICatalystV1Vault(vault1).sendAssetUnderwritePurpose{value: _getTotalIncentive(_INCENTIVE)}(
             routeDescription,
             token1,
             0, 
             uint256(1e17), 
             0,
+            99995000333308,
             toAccount,
-            0,
             hex""
         );
         Vm.Log[] memory entries = vm.getRecordedLogs();
@@ -153,15 +158,27 @@ contract TestSendAssetUnderwrite is TestCommon {
         // Then let the package arrive.
         (bytes memory _metadata, bytes memory toExecuteMessage) = getVerifiedMessage(address(GARP), messageWithContext);
 
+
+        vm.recordLogs();
         GARP.processMessage(_metadata, toExecuteMessage, FEE_RECIPITANT);
+        entries = vm.getRecordedLogs();
 
         // check that the user received their tokens like nothing happened.
         assertEq(
             Token(token2).balanceOf(toAccount),
-            99990000999900000,
-            "tokens received"
+            0,
+            "no tokens should have been sent."
         );
 
+        // Lets execute the message on the source chain and check for the swap revert message.
+        (,, messageWithContext) = abi.decode(entries[1].data, (bytes32, bytes, bytes));
+        (_metadata, toExecuteMessage) = getVerifiedMessage(address(GARP), messageWithContext);
+
+        // we need to check that 
+        vm.expectEmit();
+        emit SwapFailed(0x2f);
+
+        GARP.processMessage(_metadata, toExecuteMessage, FEE_RECIPITANT);
+        
     }
 }
-
