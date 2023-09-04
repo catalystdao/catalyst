@@ -985,8 +985,6 @@ contract CatalystGARPInterface is Ownable, ICrossChainReceiver, Bytes65, IMessag
         return acknowledgement = 0x00;
     }
 
-
-
     function sendCrossChainPurposeUnderwrite(
         ICatalystV1Vault.RouteDescription calldata routeDescription,
         uint8 toAssetIndex,
@@ -1062,7 +1060,7 @@ contract CatalystGARPInterface is Ownable, ICrossChainReceiver, Bytes65, IMessag
         uint256 minOut = uint256(bytes32(data[ CTX3_MIN_OUT_START : CTX3_MIN_OUT_END ]));
 
         // Select excess calldata. Excess calldata is not decoded.
-        bytes calldata cdata = data[CTX2_DATA_LENGTH_START:];
+        bytes calldata cdata = data[CTX3_DATA_LENGTH_START:];
 
         // Get the underwriting identifier.
         bytes32 identifier = _getUnderwriteIdentifier(
