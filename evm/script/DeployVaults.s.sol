@@ -23,7 +23,7 @@ import { RouterParameters } from "../src/router/base/RouterImmutables.sol";
 
 // Core Catalyst
 import { CatalystFactory } from "../src/CatalystFactory.sol";
-import { CatalystGARPInterface } from "../src/CatalystGARPInterface.sol";
+import { CatalystChainInterface } from "../src/CatalystChainInterface.sol";
 /// Catalyst Templates
 import { CatalystVaultVolatile } from "../src/CatalystVaultVolatile.sol";
 import { CatalystVaultAmplified } from "../src/CatalystVaultAmplified.sol";
@@ -69,7 +69,7 @@ contract DeployVaults is Script {
 
     error NoWrappedGasTokenFound();
 
-    function getToken(string memory name, string memory symbol, uint8 decimals, uint256 initialSupply) internal returns(address token) {
+    function getToken(string memory name, string memory symbol, uint8 decimals, uint256 initialSupply) view internal returns(address token) {
         // Check if the token is a WGAS:
         if (keccak256(abi.encodePacked(name)) == keccak256(abi.encodePacked(WGAS_NAME))) {
             return token = abi.decode(config_token.parseRaw(string.concat(".", chain, ".", name)), (address));
@@ -211,11 +211,11 @@ contract DeployVaults is Script {
                 if (remoteGI == address(0)) continue;
 
                 // Check if a connection has already been set.
-                bytes memory read_remote_cci = CatalystGARPInterface(localCCI).chainIdentifierToDestinationAddress(other_chainIdentifier);
+                bytes memory read_remote_cci = CatalystChainInterface(localCCI).chainIdentifierToDestinationAddress(other_chainIdentifier);
                 if (keccak256(read_remote_cci) != keccak256(bytes(hex""))) continue;
 
                 // set
-                CatalystGARPInterface(localCCI).connectNewChain(other_chainIdentifier, abi.encodePacked(uint8(20), bytes32(0), abi.encode(remoteCCI)), abi.encode(remoteGI));
+                CatalystChainInterface(localCCI).connectNewChain(other_chainIdentifier, abi.encodePacked(uint8(20), bytes32(0), abi.encode(remoteCCI)), abi.encode(remoteGI));
 
             }
         }

@@ -5,7 +5,7 @@ pragma solidity ^0.8.16;
 import { ERC20 } from 'solmate/src/tokens/ERC20.sol';
 import { SafeTransferLib } from 'solmate/src/utils/SafeTransferLib.sol';
 import { FixedPointMathLib } from "./utils/FixedPointMathLib.sol";
-import { CatalystGARPInterface } from "./CatalystGARPInterface.sol";
+import { CatalystChainInterface } from "./CatalystChainInterface.sol";
 import { CatalystVaultCommon } from "./CatalystVaultCommon.sol";
 import { IntegralsAmplified } from "./IntegralsAmplified.sol";
 import { ICatalystReceiver} from "./interfaces/IOnCatalyst.sol";
@@ -963,7 +963,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
         _unitTracker += int256(U);
 
         // Send the purchased units to the target vault on the target chain.
-        CatalystGARPInterface(_chainInterface).sendCrossChainAsset{value: msg.value}(
+        CatalystChainInterface(_chainInterface).sendCrossChainAsset{value: msg.value}(
             routeDescription,
             toAssetIndex,
             U,
@@ -1052,7 +1052,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
         _unitTracker += int256(U);
 
         // Send the purchased units to the target vault on the target chain.
-        CatalystGARPInterface(_chainInterface).sendCrossChainPleaseUnderwrite{value: msg.value}(
+        CatalystChainInterface(_chainInterface).sendCrossChainPleaseUnderwrite{value: msg.value}(
             routeDescription,
             toAssetIndex,
             U,
@@ -1146,7 +1146,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
         _unitTracker += int256(U);
 
         // Send the purchased units to the target vault on the target chain.
-        CatalystGARPInterface(_chainInterface).sendCrossChainPurposeUnderwrite{value: msg.value}(
+        CatalystChainInterface(_chainInterface).sendCrossChainPurposeUnderwrite{value: msg.value}(
             routeDescription,
             toAssetIndex,
             U,
@@ -1462,7 +1462,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
         }
 
         // Transfer the units to the target vault.
-        CatalystGARPInterface(_chainInterface).sendCrossChainLiquidity{value: msg.value}(
+        CatalystChainInterface(_chainInterface).sendCrossChainLiquidity{value: msg.value}(
             routeDescription,
             U,
             minOut,

@@ -5,7 +5,7 @@ import "forge-std/Test.sol";
 import { TestCommon } from "../TestCommon.t.sol";
 
 import { ICatalystV1Vault } from "../../src/ICatalystV1Vault.sol";
-import { CatalystGARPInterface } from "../../src/CatalystGARPInterface.sol";
+import { CatalystChainInterface } from "../../src/CatalystChainInterface.sol";
 import { Token } from "../mocks/token.sol";
 
 import { ICatalystReceiver } from "../../src/interfaces/IOnCatalyst.sol";

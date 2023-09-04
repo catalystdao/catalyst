@@ -23,7 +23,7 @@ import { RouterParameters } from "../src/router/base/RouterImmutables.sol";
 
 // Core Catalyst
 import { CatalystFactory } from "../src/CatalystFactory.sol";
-import { CatalystGARPInterface } from "../src/CatalystGARPInterface.sol";
+import { CatalystChainInterface } from "../src/CatalystChainInterface.sol";
 /// Catalyst Templates
 import { CatalystVaultVolatile } from "../src/CatalystVaultVolatile.sol";
 import { CatalystVaultAmplified } from "../src/CatalystVaultAmplified.sol";
@@ -126,12 +126,12 @@ contract MineSalt is Script, StdAssertions {
     }
 
     function cci(address incentive) public returns(address actualAddress) {
-        bytes32 initCodeHash = keccak256(abi.encodePacked(type(CatalystGARPInterface).creationCode, abi.encode(incentive, vm.envAddress("CATALYST_ADDRESS"))));
+        bytes32 initCodeHash = keccak256(abi.encodePacked(type(CatalystChainInterface).creationCode, abi.encode(incentive, vm.envAddress("CATALYST_ADDRESS"))));
         (bytes32 salt, address expectedAddress) = mineSalt(initCodeHash, "000000");
 
         // DEPLOY
         vm.startBroadcast();
-        actualAddress = address(new CatalystGARPInterface{salt: bytes32(salt)}(incentive, vm.envAddress("CATALYST_ADDRESS")));
+        actualAddress = address(new CatalystChainInterface{salt: bytes32(salt)}(incentive, vm.envAddress("CATALYST_ADDRESS")));
         vm.stopBroadcast();
 
         assertEq(actualAddress, expectedAddress);

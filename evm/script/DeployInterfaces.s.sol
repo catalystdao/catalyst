@@ -5,7 +5,7 @@ import "forge-std/Script.sol";
 import {stdJson} from "forge-std/StdJson.sol";
 import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
 
-import { CatalystGARPInterface } from "../src/CatalystGARPInterface.sol";
+import { CatalystChainInterface } from "../src/CatalystChainInterface.sol";
 
 
 // Generalised Incentives
@@ -77,7 +77,7 @@ contract DeployInterfaces is Script {
             address incentiveAddress = incentive_addresses[i];
 
             // otherwise we need to deploy it
-            CatalystGARPInterface interfaceAddress = new CatalystGARPInterface{salt: bytes32(uint256(23662216287711495946301799928329798522602365757173561077693070255109652532690))}(incentiveAddress, vm.envAddress("CATALYST_ADDRESS"));
+            CatalystChainInterface interfaceAddress = new CatalystChainInterface{salt: bytes32(uint256(23662216287711495946301799928329798522602365757173561077693070255109652532690))}(incentiveAddress, vm.envAddress("CATALYST_ADDRESS"));
 
             // Write
             vm.writeJson(Strings.toHexString(uint160(address(interfaceAddress)), 20), pathToInterfacesConfig, string.concat(".", chain, ".", incentiveVersion, ".interface"));

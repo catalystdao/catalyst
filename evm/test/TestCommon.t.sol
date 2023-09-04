@@ -7,7 +7,7 @@ import "../src/registry/CatalystMathVol.sol";
 import "../src/CatalystVaultVolatile.sol";
 import "../src/registry/CatalystMathAmp.sol";
 import "../src/CatalystVaultAmplified.sol";
-import "../src/CatalystGARPInterface.sol";
+import "../src/CatalystChainInterface.sol";
 import {Token} from "./mocks/token.sol";
 import {TestTokenFunctions} from "./CommonTokenFunctions.t.sol";
 
@@ -43,7 +43,7 @@ contract TestCommon is Test, Bytes65, IMessageEscrowStructs, TestTokenFunctions 
     CatalystMathAmp amplifiedMathlib; 
     CatalystVaultAmplified amplifiedTemplate;
 
-    CatalystGARPInterface CCI;
+    CatalystChainInterface CCI;
 
     function setUp() virtual public {
         (SIGNER, PRIVATEKEY) = makeAddrAndKey("signer");
@@ -60,7 +60,7 @@ contract TestCommon is Test, Bytes65, IMessageEscrowStructs, TestTokenFunctions 
 
         GARP = new IncentivizedMockEscrow(DESTINATION_IDENTIFIER, SIGNER);
 
-        CCI = new CatalystGARPInterface(address(GARP), address(this));
+        CCI = new CatalystChainInterface(address(GARP), address(this));
     }
 
     function deployVault (

@@ -25,7 +25,7 @@ import { Bytes65 } from "GeneralisedIncentives/src/utils/Bytes65.sol";
  * development of the vaults and allows Catalyst to adopt or change
  * message routers with more flexibility.
  */
-contract CatalystGARPInterface is Ownable, ICrossChainReceiver, Bytes65, IMessageEscrowStructs {
+contract CatalystChainInterface is Ownable, ICrossChainReceiver, Bytes65, IMessageEscrowStructs {
     using SafeTransferLib for ERC20;
     
     //--- ERRORS ---//

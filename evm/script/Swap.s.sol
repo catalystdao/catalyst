@@ -23,7 +23,7 @@ import { RouterParameters } from "../src/router/base/RouterImmutables.sol";
 
 // Core Catalyst
 import { CatalystFactory } from "../src/CatalystFactory.sol";
-import { CatalystGARPInterface } from "../src/CatalystGARPInterface.sol";
+import { CatalystChainInterface } from "../src/CatalystChainInterface.sol";
 /// Catalyst Templates
 import { CatalystVaultVolatile } from "../src/CatalystVaultVolatile.sol";
 import { CatalystVaultAmplified } from "../src/CatalystVaultAmplified.sol";
