@@ -1,4 +1,4 @@
-use cosmwasm_std::{Uint128, CosmosMsg, Deps, DepsMut, MessageInfo, Env};
+use cosmwasm_std::{Uint128, Deps, DepsMut, MessageInfo, Env};
 use serde::Serialize;
 use std::fmt::Debug;
 
@@ -9,7 +9,7 @@ pub mod asset_cw20;
 
 
 /// Trait defining the interface of the vault assets handler struct.
-pub trait VaultAssetsTrait<'a, T: AssetTrait + 'a> {
+pub trait VaultAssetsTrait<'a, T: AssetTrait<Msg> + 'a, Msg> {
 
     /// Generate a new vault assets handler with the specified assets.
     /// 
@@ -103,7 +103,7 @@ pub trait VaultAssetsTrait<'a, T: AssetTrait + 'a> {
 
     /// Receive the specified amounts of the vault assets within the message execution.
     /// 
-    /// NOTE: May return `CosmosMsg`s to order the transfer of the assets.
+    /// NOTE: May return `Msg`s to order the transfer of the assets.
     /// 
     /// # Arguments:
     /// * `amounts` - The amounts of the assets to receive.
@@ -113,12 +113,12 @@ pub trait VaultAssetsTrait<'a, T: AssetTrait + 'a> {
         env: &Env,
         info: &MessageInfo,
         amounts: Vec<Uint128>
-    ) -> Result<Vec<CosmosMsg>, AssetError>;
+    ) -> Result<Vec<Msg>, AssetError>;
 
 
     /// Send the specified amounts of the vault assets within the message execution.
     /// 
-    /// NOTE: Always returns `CosmosMsg`s to order the transfer of the assets except for
+    /// NOTE: Always returns `Msg`s to order the transfer of the assets except for
     /// zero-valued amounts.
     /// 
     /// # Arguments:
@@ -129,13 +129,13 @@ pub trait VaultAssetsTrait<'a, T: AssetTrait + 'a> {
         env: &Env,
         amounts: Vec<Uint128>,
         recipient: String
-    ) -> Result<Vec<CosmosMsg>, AssetError>;
+    ) -> Result<Vec<Msg>, AssetError>;
 
 }
 
 
 /// Trait defining the interface of the individual vault assets.
-pub trait AssetTrait: Serialize + PartialEq + Debug + Clone + ToString {
+pub trait AssetTrait<Msg>: Serialize + PartialEq + Debug + Clone + ToString {
 
     /// Get the asset corresponding to a specific asset_ref.
     /// 
@@ -176,7 +176,7 @@ pub trait AssetTrait: Serialize + PartialEq + Debug + Clone + ToString {
 
     /// Receive the specified amount of the asset within the message execution.
     /// 
-    /// NOTE: May return a `CosmosMsg` to order the transfer of the assets.
+    /// NOTE: May return a `Msg` to order the transfer of the assets.
     /// 
     /// # Arguments:
     /// * `amount` - The asset amount to receive
@@ -185,12 +185,12 @@ pub trait AssetTrait: Serialize + PartialEq + Debug + Clone + ToString {
         env: &Env,
         info: &MessageInfo,
         amount: Uint128
-    ) -> Result<Option<CosmosMsg>, AssetError>;
+    ) -> Result<Option<Msg>, AssetError>;
 
 
     /// Send the specified amount of the asset to a recipient within the message execution.
     /// 
-    /// NOTE: Always returns a `CosmosMsg` to order the transfer of the assets except for
+    /// NOTE: Always returns a `Msg` to order the transfer of the assets except for
     /// zero-valued amounts.
     /// 
     /// # Arguments:
@@ -200,7 +200,7 @@ pub trait AssetTrait: Serialize + PartialEq + Debug + Clone + ToString {
         env: &Env,
         amount: Uint128,
         recipient: String
-    ) -> Result<Option<CosmosMsg>, AssetError>;
+    ) -> Result<Option<Msg>, AssetError>;
 
 }
 

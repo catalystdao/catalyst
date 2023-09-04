@@ -133,6 +133,15 @@ impl From<vault_assets::error::AssetError> for ContractError {
     }
 }
 
+impl From<vault_token::error::VaultTokenError> for ContractError {
+    fn from(err: vault_token::error::VaultTokenError) -> Self {
+        match err {
+            vault_token::error::VaultTokenError::Std(error) => ContractError::Std(error),
+            other_err => ContractError::Error(other_err.to_string())
+        }
+    }
+}
+
 impl From<OverflowError> for ContractError {
     fn from(_err: OverflowError) -> Self {
         ContractError::ArithmeticError {}

@@ -1,9 +1,9 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{DepsMut, Env, MessageInfo, Response, Uint128, CosmosMsg, to_binary, StdError, SubMsg, Reply, SubMsgResult, StdResult, Uint64, Deps, Binary};
+use cosmwasm_std::{DepsMut, Env, MessageInfo, Uint128, CosmosMsg, to_binary, StdError, SubMsg, Reply, SubMsgResult, StdResult, Uint64, Deps, Binary};
 use cw0::parse_reply_instantiate_data;
 use cw2::set_contract_version;
-use catalyst_vault_common::asset::{Asset, VaultAssets, VaultAssetsTrait};
+use catalyst_vault_common::asset::{Asset, VaultAssets, VaultAssetsTrait, VaultResponse, IntoCosmosVaultMsg, VaultMsg};
 
 use crate::error::ContractError;
 use crate::event::deploy_vault_event;
@@ -24,7 +24,7 @@ pub fn instantiate(
     _env: Env,
     info: MessageInfo,
     msg: InstantiateMsg,
-) -> Result<Response, ContractError> {
+) -> Result<VaultResponse, ContractError> {
 
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
@@ -36,7 +36,7 @@ pub fn instantiate(
     )?;
 
     Ok(
-        Response::new()
+        VaultResponse::new()
             .add_event(set_owner_event)
             .add_event(set_default_fee_event)
     )
@@ -52,7 +52,7 @@ pub fn execute(
     env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
-) -> Result<Response, ContractError> {
+) -> Result<VaultResponse, ContractError> {
 
     match msg {
         ExecuteMsg::DeployVault {
@@ -129,7 +129,7 @@ fn execute_deploy_vault(
     name: String,
     symbol: String,
     chain_interface: Option<String>
-) -> Result<Response, ContractError> {
+) -> Result<VaultResponse, ContractError> {
 
     // Verify the correctness of the arguments
     if
@@ -194,8 +194,12 @@ fn execute_deploy_vault(
     );
     
     Ok(
-        Response::new()
-            .add_messages(transfer_msgs)
+        VaultResponse::new()
+            .add_messages(
+                transfer_msgs.into_iter()
+                    .map(|msg| msg.into_cosmos_vault_msg())
+                    .collect::<Vec<CosmosMsg<VaultMsg>>>()
+                )
             .add_submessage(instantiate_vault_submsg)
     )
 }
@@ -211,7 +215,7 @@ fn execute_set_default_governance_fee_share(
     mut deps: DepsMut,
     info: MessageInfo,
     fee: Uint64
-) -> Result<Response, ContractError> {
+) -> Result<VaultResponse, ContractError> {
     set_default_governance_fee_share(&mut deps, info, fee)
 }
 
@@ -226,7 +230,7 @@ fn execute_transfer_ownership(
     deps: DepsMut,
     info: MessageInfo,
     new_owner: String
-) -> Result<Response, ContractError> {
+) -> Result<VaultResponse, ContractError> {
     update_owner(deps, info, new_owner)
 }
 
@@ -239,7 +243,7 @@ pub fn reply(
     deps: DepsMut,
     env: Env,
     reply: Reply
-) -> Result<Response, ContractError> {
+) -> Result<VaultResponse, ContractError> {
     match reply.id {
         DEPLOY_VAULT_REPLY_ID => match reply.result {
             SubMsgResult::Ok(_) => handle_deploy_vault_reply(deps, env, reply),
@@ -257,7 +261,7 @@ fn handle_deploy_vault_reply(
     deps: DepsMut,
     env: Env,
     reply: Reply
-) -> Result<Response, ContractError> {
+) -> Result<VaultResponse, ContractError> {
 
     // Get the deployed vault contract address
     let vault_address = parse_reply_instantiate_data(reply)
@@ -293,9 +297,13 @@ fn handle_deploy_vault_reply(
 
 
     Ok(
-        Response::new()
+        VaultResponse::new()
             .set_data(to_binary(&vault_address)?)   // Return the deployed vault address.
-            .add_messages(transfer_msgs)
+            .add_messages(
+                transfer_msgs.into_iter()
+                    .map(|msg| msg.into_cosmos_vault_msg())
+                    .collect::<Vec<CosmosMsg<VaultMsg>>>()
+            )
             .add_message(initialize_swap_curves_msg)
             .add_event(
                 deploy_vault_event(

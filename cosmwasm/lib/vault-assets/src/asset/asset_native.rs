@@ -1,5 +1,5 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{DepsMut, Deps, Uint128, MessageInfo, Coin, CosmosMsg, BankMsg, Env};
+use cosmwasm_std::{DepsMut, Deps, Uint128, MessageInfo, Coin, BankMsg, Env};
 use cw_storage_plus::{Item, Map};
 
 use crate::{asset::{AssetTrait, VaultAssetsTrait}, error::AssetError};
@@ -12,10 +12,16 @@ const ASSETS: Map<&str, String> = Map::new("catalyst-vault-native-assets");
 // implemented methods.
 
 
+#[derive(Clone, Debug)]
+pub enum NativeAssetMsg {
+    Bank(BankMsg)
+}
+
+
 /// Vault native asset handler
 pub struct NativeVaultAssets(pub Vec<NativeAsset>);
 
-impl<'a> VaultAssetsTrait<'a, NativeAsset> for NativeVaultAssets {
+impl<'a> VaultAssetsTrait<'a, NativeAsset, NativeAssetMsg> for NativeVaultAssets {
 
 
     fn new(assets: Vec<NativeAsset>) -> Self {
@@ -53,7 +59,7 @@ impl<'a> VaultAssetsTrait<'a, NativeAsset> for NativeVaultAssets {
         _env: &Env,
         info: &MessageInfo,
         amounts: Vec<Uint128>
-    ) -> Result<Vec<CosmosMsg>, AssetError> {
+    ) -> Result<Vec<NativeAssetMsg>, AssetError> {
         
         // ! **IMPORTANT**: This function assumes that the assets contained within the `NativeVaultAssets`
         // ! struct are unique.
@@ -118,7 +124,7 @@ impl<'a> VaultAssetsTrait<'a, NativeAsset> for NativeVaultAssets {
         _env: &Env,
         amounts: Vec<Uint128>,
         recipient: String
-    ) -> Result<Vec<CosmosMsg>, AssetError> {
+    ) -> Result<Vec<NativeAssetMsg>, AssetError> {
         
         if amounts.len() != self.get_assets().len() {
             return Err(AssetError::InvalidParameters {
@@ -142,12 +148,12 @@ impl<'a> VaultAssetsTrait<'a, NativeAsset> for NativeVaultAssets {
             return Ok(vec![]);
         }
 
-        let cosmos_message = CosmosMsg::Bank(BankMsg::Send {
+        let message = NativeAssetMsg::Bank(BankMsg::Send {
             to_address: recipient.clone(),
             amount: transfer_amounts
         });
 
-        Ok(vec![cosmos_message])
+        Ok(vec![message])
     }
 
 }
@@ -164,7 +170,7 @@ pub struct NativeAsset {
     pub alias: String
 }
 
-impl AssetTrait for NativeAsset {
+impl AssetTrait<NativeAssetMsg> for NativeAsset {
 
     fn from_asset_ref(deps: &Deps, asset_ref: &str) -> Result<Self, AssetError> {
         
@@ -242,7 +248,7 @@ impl AssetTrait for NativeAsset {
         _env: &Env,
         info: &MessageInfo,
         amount: Uint128
-    ) -> Result<Option<CosmosMsg>, AssetError> {
+    ) -> Result<Option<NativeAssetMsg>, AssetError> {
 
         // NOTE: The 'bank' module disallows zero-valued coin transfers. Do not check
         // received funds for these cases.
@@ -283,7 +289,7 @@ impl AssetTrait for NativeAsset {
         _env: &Env,
         amount: Uint128,
         recipient: String
-    ) -> Result<Option<CosmosMsg>, AssetError> {
+    ) -> Result<Option<NativeAssetMsg>, AssetError> {
 
         // NOTE: The 'bank' module disallows zero-valued coin transfers. Do not generate
         // transfer orders for zero-valued balance transfers to prevent these cases from 
@@ -292,7 +298,7 @@ impl AssetTrait for NativeAsset {
             return Ok(None);
         }
 
-        Ok(Some(CosmosMsg::Bank(BankMsg::Send {
+        Ok(Some(NativeAssetMsg::Bank(BankMsg::Send {
             to_address: recipient,
             amount: vec![Coin::new(amount.u128(), self.denom.clone())]
         })))
@@ -310,9 +316,9 @@ impl ToString for NativeAsset {
 
 #[cfg(test)]
 mod asset_native_tests {
-    use cosmwasm_std::{testing::{mock_dependencies, mock_env, mock_info}, Uint128, Coin, CosmosMsg};
+    use cosmwasm_std::{testing::{mock_dependencies, mock_env, mock_info}, Uint128, Coin};
 
-    use crate::{asset::{VaultAssetsTrait, AssetTrait}, error::AssetError};
+    use crate::{asset::{VaultAssetsTrait, AssetTrait, asset_native::NativeAssetMsg}, error::AssetError};
 
     use super::{NativeVaultAssets, NativeAsset};
 
@@ -424,7 +430,7 @@ mod asset_native_tests {
 
 
         // Tested action: receive assets
-        let cosmos_msgs = handler.receive_assets(
+        let msgs = handler.receive_assets(
             &env,
             &mock_info(
                 SENDER_ADDR,
@@ -435,8 +441,8 @@ mod asset_native_tests {
 
 
 
-        // Verify no Cosmos messages are generated
-        assert!(cosmos_msgs.len() == 0)
+        // Verify no messages are generated
+        assert!(msgs.len() == 0)
 
     }
 
@@ -714,7 +720,7 @@ mod asset_native_tests {
 
 
         // Tested action: send assets
-        let cosmos_msgs = handler.send_assets(
+        let msgs = handler.send_assets(
             &env,
             desired_send_amounts.clone(),
             RECEIVER_ADDR.to_string()
@@ -722,9 +728,9 @@ mod asset_native_tests {
 
 
 
-        // Verify that the generated Cosmos messages are valid
-        assert!(cosmos_msgs.len() == 1);
-        let cosmos_msg = cosmos_msgs[0].clone();
+        // Verify that the generated messages are valid
+        assert!(msgs.len() == 1);
+        let msg = msgs[0].clone();
 
         let expected_sent_coins: Vec<Coin> = assets.iter()
             .zip(&desired_send_amounts)
@@ -734,8 +740,8 @@ mod asset_native_tests {
             .collect();
 
         matches!(
-            cosmos_msg,
-            CosmosMsg::Bank(cosmwasm_std::BankMsg::Send { to_address, amount })
+            msg,
+            NativeAssetMsg::Bank(cosmwasm_std::BankMsg::Send { to_address, amount })
             if to_address == SENDER_ADDR.to_string()
                 && amount == expected_sent_coins
         );
@@ -767,7 +773,7 @@ mod asset_native_tests {
 
 
 
-        // Verify that the generated Cosmos messages are valid
+        // Verify that the generated messages are valid
         matches!(
             result.err().unwrap(),
             AssetError::InvalidParameters { reason }
@@ -794,15 +800,15 @@ mod asset_native_tests {
             Uint128::from(789u128)
         ];
 
-        let cosmos_msgs = handler.send_assets(
+        let msgs = handler.send_assets(
             &env,
             desired_send_amounts.clone(),
             RECEIVER_ADDR.to_string()
         ).unwrap();     // Make sure result is successful
 
-        // Verify that the generated Cosmos messages are valid
-        assert!(cosmos_msgs.len() == 1);
-        let cosmos_msg = cosmos_msgs[0].clone();
+        // Verify that the generated messages are valid
+        assert!(msgs.len() == 1);
+        let msg = msgs[0].clone();
 
         let expected_sent_coins: Vec<Coin> = assets.iter()
             .zip(&desired_send_amounts)
@@ -813,8 +819,8 @@ mod asset_native_tests {
             .collect();
 
         matches!(
-            cosmos_msg,
-            CosmosMsg::Bank(cosmwasm_std::BankMsg::Send { to_address, amount })
+            msg,
+            NativeAssetMsg::Bank(cosmwasm_std::BankMsg::Send { to_address, amount })
             if to_address == SENDER_ADDR.to_string()
                 && amount == expected_sent_coins
         );
@@ -828,14 +834,14 @@ mod asset_native_tests {
             Uint128::zero()
         ];
 
-        let cosmos_msgs = handler.send_assets(
+        let msgs = handler.send_assets(
             &env,
             desired_send_amounts.clone(),
             RECEIVER_ADDR.to_string()
         ).unwrap();     // Make sure result is successful
 
-        // Verify that no Cosmos messages are generated
-        assert!(cosmos_msgs.len() == 0);
+        // Verify that no messages are generated
+        assert!(msgs.len() == 0);
 
     }
 
@@ -919,7 +925,7 @@ mod asset_native_tests {
 
 
         // Tested action: receive asset
-        let cosmos_msg = asset.receive_asset(
+        let msg = asset.receive_asset(
             &env,
             &mock_info(
                 SENDER_ADDR,
@@ -930,8 +936,8 @@ mod asset_native_tests {
 
 
 
-        // Verify no Cosmos messages are generated
-        assert!(cosmos_msg.is_none())
+        // Verify no messages are generated
+        assert!(msg.is_none())
 
     }
 
@@ -1105,7 +1111,7 @@ mod asset_native_tests {
 
 
         // Tested action: send asset
-        let cosmos_msg = asset.send_asset(
+        let msg = asset.send_asset(
             &env,
             desired_send_amount,
             RECEIVER_ADDR.to_string()
@@ -1113,16 +1119,16 @@ mod asset_native_tests {
 
 
 
-        // Verify the generated Cosmos message
-        assert!(cosmos_msg.is_some());
+        // Verify the generated message
+        assert!(msg.is_some());
 
         let expected_sent_coin = Coin::new(
             desired_send_amount.u128(),
             asset.denom.clone()
         );
         matches!(
-            cosmos_msg.unwrap(),
-            CosmosMsg::Bank(cosmwasm_std::BankMsg::Send { to_address, amount })
+            msg.unwrap(),
+            NativeAssetMsg::Bank(cosmwasm_std::BankMsg::Send { to_address, amount })
             if to_address == SENDER_ADDR.to_string()
                 && amount == vec![expected_sent_coin]
         );
@@ -1141,7 +1147,7 @@ mod asset_native_tests {
 
 
         // Tested action: send asset
-        let cosmos_msg = asset.send_asset(
+        let msg = asset.send_asset(
             &env,
             desired_send_amount,
             RECEIVER_ADDR.to_string()
@@ -1149,8 +1155,8 @@ mod asset_native_tests {
 
 
 
-        // Verify the generated Cosmos message
-        assert!(cosmos_msg.is_none());
+        // Verify the generated message
+        assert!(msg.is_none());
     }
 
 

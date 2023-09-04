@@ -1,7 +1,7 @@
-use cosmwasm_std::{Uint128, DepsMut, Env, MessageInfo, Response, Uint64};
+use cosmwasm_std::{Uint128, DepsMut, Env, MessageInfo, Uint64};
 use cw20_base::contract::execute_mint;
 use catalyst_vault_common::{
-    state::{MAX_ASSETS, WEIGHTS, INITIAL_MINT_AMOUNT, FACTORY}, ContractError, event::{deposit_event, cw20_response_to_standard_event}, asset::{Asset, VaultAssets, VaultAssetsTrait, AssetTrait},
+    state::{MAX_ASSETS, WEIGHTS, INITIAL_MINT_AMOUNT, FACTORY}, ContractError, event::{deposit_event, cw20_response_to_standard_event}, asset::{Asset, VaultAssets, VaultAssetsTrait, AssetTrait, VaultResponse},
 };
 
 
@@ -13,7 +13,7 @@ pub fn initialize_swap_curves(
     weights: Vec<Uint128>,
     _amp: Uint64,
     depositor: String
-) -> Result<Response, ContractError> {
+) -> Result<VaultResponse, ContractError> {
 
     // Check the caller is the Factory
     if info.sender != FACTORY.load(deps.storage)? {
@@ -91,7 +91,7 @@ pub fn initialize_swap_curves(
     )?;
 
     Ok(
-        Response::new()
+        VaultResponse::new()
             .add_event(
                 deposit_event(
                     depositor,

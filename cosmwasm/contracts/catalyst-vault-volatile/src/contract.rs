@@ -1,3 +1,4 @@
+use catalyst_vault_common::asset::{VaultResponse, IntoVaultResponse};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, to_binary};
@@ -32,7 +33,7 @@ pub fn instantiate(
     env: Env,
     info: MessageInfo,
     msg: InstantiateMsg
-) -> Result<Response, ContractError> {
+) -> Result<VaultResponse, ContractError> {
 
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
@@ -61,7 +62,7 @@ pub fn execute(
     env: Env,
     info: MessageInfo,
     msg: VolatileExecuteMsg,
-) -> Result<Response, ContractError> {
+) -> Result<VaultResponse, ContractError> {
 
     match msg {
 
@@ -372,6 +373,7 @@ pub fn execute(
             amount
         } => Ok(
             execute_transfer(deps, env, info, recipient, amount)?
+                .into_vault_response()
         ),
 
         VolatileExecuteMsg::Burn {
@@ -386,6 +388,7 @@ pub fn execute(
             msg,
         } => Ok(
             execute_send(deps, env, info, contract, amount, msg)?
+                .into_vault_response()
         ),
 
         VolatileExecuteMsg::IncreaseAllowance {
@@ -394,6 +397,7 @@ pub fn execute(
             expires,
         } => Ok(
             execute_increase_allowance(deps, env, info, spender, amount, expires)?
+                .into_vault_response()
         ),
 
         VolatileExecuteMsg::DecreaseAllowance {
@@ -402,6 +406,7 @@ pub fn execute(
             expires,
         } => Ok(
             execute_decrease_allowance(deps, env, info, spender, amount, expires)?
+                .into_vault_response()
         ),
 
         VolatileExecuteMsg::TransferFrom {
@@ -410,6 +415,7 @@ pub fn execute(
             amount,
         } => Ok(
             execute_transfer_from(deps, env, info, owner, recipient, amount)?
+                .into_vault_response()
         ),
 
         VolatileExecuteMsg::BurnFrom {
@@ -426,6 +432,7 @@ pub fn execute(
             msg,
         } => Ok(
             execute_send_from(deps, env, info, owner, contract, amount, msg)?
+            .into_vault_response()
         ),
     }
 }

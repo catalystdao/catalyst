@@ -1,5 +1,5 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{DepsMut, Deps, Uint128, MessageInfo, CosmosMsg, Env, to_binary};
+use cosmwasm_std::{DepsMut, Deps, Uint128, MessageInfo, Env, to_binary, WasmMsg};
 use cw20::{BalanceResponse, Cw20QueryMsg, Cw20ExecuteMsg};
 use cw_storage_plus::Item;
 
@@ -12,10 +12,16 @@ const ASSETS: Item<Vec<String>> = Item::new("catalyst-vault-cw20-assets");
 // implemented methods.
 
 
+#[derive(Clone, Debug)]
+pub enum Cw20AssetMsg {
+    Wasm(WasmMsg)
+}
+
+
 /// Vault cw20 asset handler
 pub struct Cw20VaultAssets(pub Vec<Cw20Asset>);
 
-impl<'a> VaultAssetsTrait<'a, Cw20Asset> for Cw20VaultAssets {
+impl<'a> VaultAssetsTrait<'a, Cw20Asset, Cw20AssetMsg> for Cw20VaultAssets {
 
     fn new(assets: Vec<Cw20Asset>) -> Self {
         Self(assets)
@@ -52,7 +58,7 @@ impl<'a> VaultAssetsTrait<'a, Cw20Asset> for Cw20VaultAssets {
         env: &Env,
         info: &MessageInfo,
         amounts: Vec<Uint128>
-    ) -> Result<Vec<CosmosMsg>, AssetError> {
+    ) -> Result<Vec<Cw20AssetMsg>, AssetError> {
 
         // No native assets are expected when handling cw20 assets.
         if info.funds.len() != 0 {
@@ -68,12 +74,12 @@ impl<'a> VaultAssetsTrait<'a, Cw20Asset> for Cw20VaultAssets {
         // NOTE: Some cw20 contracts disallow zero-valued token transfers. Do not generate
         // transfer messages for zero-valued balance transfers to prevent these cases from 
         // resulting in failed transactions.
-        let cosmos_messages = self.get_assets()
+        let messages = self.get_assets()
             .iter()
             .zip(amounts)
             .filter(|(_, balance)| !balance.is_zero())     // Do not create transfer messages for zero-valued transfers
             .map(|(asset, amount)| {
-                Ok(CosmosMsg::Wasm(
+                Ok(Cw20AssetMsg::Wasm(
                     cosmwasm_std::WasmMsg::Execute {
                         contract_addr: asset.0.clone(),
                         msg: to_binary(&Cw20ExecuteMsg::TransferFrom {
@@ -85,9 +91,9 @@ impl<'a> VaultAssetsTrait<'a, Cw20Asset> for Cw20VaultAssets {
                     }
                 ))
             })
-            .collect::<Result<Vec<CosmosMsg>, AssetError>>()?;
+            .collect::<Result<Vec<Cw20AssetMsg>, AssetError>>()?;
 
-        Ok(cosmos_messages)
+        Ok(messages)
     }
 
 
@@ -96,7 +102,7 @@ impl<'a> VaultAssetsTrait<'a, Cw20Asset> for Cw20VaultAssets {
         _env: &Env,
         amounts: Vec<Uint128>,
         recipient: String
-    ) -> Result<Vec<CosmosMsg>, AssetError> {
+    ) -> Result<Vec<Cw20AssetMsg>, AssetError> {
         
         if amounts.len() != self.get_assets().len() {
             return Err(AssetError::InvalidParameters {
@@ -107,12 +113,12 @@ impl<'a> VaultAssetsTrait<'a, Cw20Asset> for Cw20VaultAssets {
         // NOTE: Some cw20 contracts disallow zero-valued token transfers. Do not generate
         // transfer messages for zero-valued balance transfers to prevent these cases from 
         // resulting in failed transactions.
-        let cosmos_messages = self.get_assets()
+        let messages = self.get_assets()
             .iter()
             .zip(amounts)
             .filter(|(_, amount)| !amount.is_zero())     // Do not create transfer messages for zero-valued transfers
             .map(|(asset, amount)| {
-                Ok(CosmosMsg::Wasm(
+                Ok(Cw20AssetMsg::Wasm(
                     cosmwasm_std::WasmMsg::Execute {
                         contract_addr: asset.0.to_owned(),
                         msg: to_binary(&Cw20ExecuteMsg::Transfer {
@@ -123,9 +129,9 @@ impl<'a> VaultAssetsTrait<'a, Cw20Asset> for Cw20VaultAssets {
                     }
                 ))
             })
-            .collect::<Result<Vec<CosmosMsg>, AssetError>>()?;
+            .collect::<Result<Vec<Cw20AssetMsg>, AssetError>>()?;
 
-        Ok(cosmos_messages)
+        Ok(messages)
     }
 
 }
@@ -139,7 +145,7 @@ impl<'a> VaultAssetsTrait<'a, Cw20Asset> for Cw20VaultAssets {
 #[cw_serde]
 pub struct Cw20Asset(pub String);
 
-impl AssetTrait for Cw20Asset {
+impl AssetTrait<Cw20AssetMsg> for Cw20Asset {
 
     fn from_asset_ref(_deps: &Deps, asset_ref: &str) -> Result<Self, AssetError> {
         Ok(Cw20Asset(asset_ref.to_owned()))
@@ -180,7 +186,7 @@ impl AssetTrait for Cw20Asset {
         env: &Env,
         info: &MessageInfo,
         amount: Uint128
-    ) -> Result<Option<CosmosMsg>, AssetError> {
+    ) -> Result<Option<Cw20AssetMsg>, AssetError> {
 
         if info.funds.len() != 0 {
             return Err(AssetError::AssetSurplusReceived {});
@@ -193,7 +199,7 @@ impl AssetTrait for Cw20Asset {
             return Ok(None);
         }
 
-        Ok(Some(CosmosMsg::Wasm(
+        Ok(Some(Cw20AssetMsg::Wasm(
             cosmwasm_std::WasmMsg::Execute {
                 contract_addr: self.0.clone(),
                 msg: to_binary(&Cw20ExecuteMsg::TransferFrom {
@@ -212,7 +218,7 @@ impl AssetTrait for Cw20Asset {
         _env: &Env,
         amount: Uint128,
         recipient: String
-    ) -> Result<Option<CosmosMsg>, AssetError> {
+    ) -> Result<Option<Cw20AssetMsg>, AssetError> {
 
         // NOTE: Some cw20 contracts disallow zero-valued token transfers. Do not generate
         // transfer messages for zero-valued balance transfers to prevent these cases from 
@@ -221,7 +227,7 @@ impl AssetTrait for Cw20Asset {
             return Ok(None);
         }
 
-        Ok(Some(CosmosMsg::Wasm(
+        Ok(Some(Cw20AssetMsg::Wasm(
             cosmwasm_std::WasmMsg::Execute {
                 contract_addr: self.0.to_owned(),
                 msg: to_binary(&Cw20ExecuteMsg::Transfer {
@@ -246,12 +252,12 @@ impl ToString for Cw20Asset {
 
 #[cfg(test)]
 mod asset_cw20_tests {
-    use cosmwasm_std::{testing::{mock_dependencies, mock_env, mock_info}, Uint128, CosmosMsg, WasmMsg, to_binary};
+    use cosmwasm_std::{testing::{mock_dependencies, mock_env, mock_info}, Uint128, to_binary, WasmMsg};
     use cw20::Cw20ExecuteMsg;
 
     use crate::{asset::{VaultAssetsTrait, AssetTrait}, error::AssetError};
 
-    use super::{Cw20VaultAssets, Cw20Asset};
+    use super::{Cw20VaultAssets, Cw20Asset, Cw20AssetMsg};
 
     const SENDER_ADDR   : &str = "sender_addr";
     const RECEIVER_ADDR : &str = "receiver_addr";
@@ -271,7 +277,7 @@ mod asset_cw20_tests {
     }
 
     fn verify_cw20_transfer_from_msg(
-        cosmos_msg: CosmosMsg,
+        asset_msg: Cw20AssetMsg,
         asset: Cw20Asset,
         amount: Uint128,
         owner: String,
@@ -285,8 +291,8 @@ mod asset_cw20_tests {
         };
 
         matches!(
-            cosmos_msg.clone(),
-            CosmosMsg::Wasm(
+            asset_msg.clone(),
+            Cw20AssetMsg::Wasm(
                 WasmMsg::Execute {
                     contract_addr,
                     msg,
@@ -300,7 +306,7 @@ mod asset_cw20_tests {
     }
 
     fn verify_cw20_transfer_msg(
-        cosmos_msg: CosmosMsg,
+        asset_msg: Cw20AssetMsg,
         asset: Cw20Asset,
         amount: Uint128,
         recipient: String
@@ -311,8 +317,8 @@ mod asset_cw20_tests {
         };
 
         matches!(
-            cosmos_msg.clone(),
-            CosmosMsg::Wasm(
+            asset_msg.clone(),
+            Cw20AssetMsg::Wasm(
                 WasmMsg::Execute {
                     contract_addr,
                     msg,
@@ -326,23 +332,23 @@ mod asset_cw20_tests {
     }
 
     fn verify_cw20_transfer_from_msgs(
-        cosmos_msgs: Vec<CosmosMsg>,
+        asset_msgs: Vec<Cw20AssetMsg>,
         assets: Vec<Cw20Asset>,
         amounts: Vec<Uint128>,
         owner: String,
         recipient: String
     ) {
 
-        assert!(cosmos_msgs.len() == assets.len());
-        assert!(cosmos_msgs.len() == amounts.len());
+        assert!(asset_msgs.len() == assets.len());
+        assert!(asset_msgs.len() == amounts.len());
 
-        cosmos_msgs.iter()
+        asset_msgs.iter()
             .zip(&assets)
             .zip(&amounts)
-            .for_each(|((cosmos_msg, asset), expected_amount)| {
+            .for_each(|((asset_msg, asset), expected_amount)| {
 
                 verify_cw20_transfer_from_msg(
-                    cosmos_msg.to_owned(),
+                    asset_msg.to_owned(),
                     asset.to_owned(),
                     expected_amount.to_owned(),
                     owner.clone(),
@@ -353,22 +359,22 @@ mod asset_cw20_tests {
     }
 
     fn verify_cw20_transfer_msgs(
-        cosmos_msgs: Vec<CosmosMsg>,
+        asset_msgs: Vec<Cw20AssetMsg>,
         assets: Vec<Cw20Asset>,
         amounts: Vec<Uint128>,
         recipient: String
     ) {
 
-        assert!(cosmos_msgs.len() == assets.len());
-        assert!(cosmos_msgs.len() == amounts.len());
+        assert!(asset_msgs.len() == assets.len());
+        assert!(asset_msgs.len() == amounts.len());
 
-        cosmos_msgs.iter()
+        asset_msgs.iter()
             .zip(&assets)
             .zip(&amounts)
-            .for_each(|((cosmos_msg, asset), expected_amount)| {
+            .for_each(|((asset_msg, asset), expected_amount)| {
 
                 verify_cw20_transfer_msg(
-                    cosmos_msg.to_owned(),
+                    asset_msg.to_owned(),
                     asset.to_owned(),
                     expected_amount.to_owned(),
                     recipient.clone()
@@ -449,7 +455,7 @@ mod asset_cw20_tests {
 
 
         // Tested action: receive assets
-        let cosmos_msgs = handler.receive_assets(
+        let asset_msgs = handler.receive_assets(
             &env,
             &mock_info(
                 SENDER_ADDR,
@@ -460,10 +466,10 @@ mod asset_cw20_tests {
 
 
 
-        // Verify transfer Cosmos messages are generated
-        assert!(cosmos_msgs.len() == 3);
+        // Verify transfer messages are generated
+        assert!(asset_msgs.len() == 3);
         verify_cw20_transfer_from_msgs(
-            cosmos_msgs,
+            asset_msgs,
             assets.clone(),
             desired_received_amounts.clone(),
             SENDER_ADDR.to_string(),
@@ -527,7 +533,7 @@ mod asset_cw20_tests {
             Uint128::from(789u128)
         ];
 
-        let cosmos_msgs = handler.receive_assets(
+        let asset_msgs = handler.receive_assets(
             &env,
             &mock_info(
                 SENDER_ADDR,
@@ -537,10 +543,10 @@ mod asset_cw20_tests {
         ).unwrap();     // Make sure result is successful
 
         // Verify no transfer msg is generated for the zero-valued asset transfer
-        assert!(cosmos_msgs.len() == 2);
+        assert!(asset_msgs.len() == 2);
         
         verify_cw20_transfer_from_msgs(
-            cosmos_msgs,
+            asset_msgs,
             vec![assets[0].clone(), assets[2].clone()],             // Skip zero-valued asset
             vec![Uint128::from(123u128), Uint128::from(789u128)],   // Skip zero-valued asset
             SENDER_ADDR.to_string(),
@@ -556,7 +562,7 @@ mod asset_cw20_tests {
             Uint128::zero()
         ];
 
-        let cosmos_msgs = handler.receive_assets(
+        let asset_msgs = handler.receive_assets(
             &env,
             &mock_info(
                 SENDER_ADDR,
@@ -565,8 +571,8 @@ mod asset_cw20_tests {
             desired_received_amounts.clone()
         ).unwrap();     // Make sure result is successful
 
-        // Verify no cosmos msgs are generated
-        assert!(cosmos_msgs.len() == 0);
+        // Verify no messages are generated
+        assert!(asset_msgs.len() == 0);
 
     }
 
@@ -588,7 +594,7 @@ mod asset_cw20_tests {
 
 
         // Tested action: send assets
-        let cosmos_msgs = handler.send_assets(
+        let asset_msgs = handler.send_assets(
             &env,
             desired_send_amounts.clone(),
             RECEIVER_ADDR.to_string()
@@ -596,10 +602,10 @@ mod asset_cw20_tests {
 
 
 
-        // Verify that the generated Cosmos messages are valid
-        assert!(cosmos_msgs.len() == 3);
+        // Verify that the generated messages are valid
+        assert!(asset_msgs.len() == 3);
         verify_cw20_transfer_msgs(
-            cosmos_msgs,
+            asset_msgs,
             assets,
             desired_send_amounts,
             RECEIVER_ADDR.to_string()
@@ -632,7 +638,7 @@ mod asset_cw20_tests {
 
 
 
-        // Verify that the generated Cosmos messages are valid
+        // Verify that the generated messages are valid
         matches!(
             result.err().unwrap(),
             AssetError::InvalidParameters { reason }
@@ -659,16 +665,16 @@ mod asset_cw20_tests {
             Uint128::from(789u128)
         ];
 
-        let cosmos_msgs = handler.send_assets(
+        let asset_msgs = handler.send_assets(
             &env,
             desired_send_amounts.clone(),
             RECEIVER_ADDR.to_string()
         ).unwrap();     // Make sure result is successful
 
         // Verify that no transfer message is generated for the zero-valued asset transfer
-        assert!(cosmos_msgs.len() == 2);
+        assert!(asset_msgs.len() == 2);
         verify_cw20_transfer_msgs(
-            cosmos_msgs,
+            asset_msgs,
             vec![assets[0].clone(), assets[2].clone()],             // Skip zero-valued asset
             vec![Uint128::from(123u128), Uint128::from(789u128)],   // Skip zero-valued asset
             RECEIVER_ADDR.to_string()
@@ -683,14 +689,14 @@ mod asset_cw20_tests {
             Uint128::zero()
         ];
 
-        let cosmos_msgs = handler.send_assets(
+        let asset_msgs = handler.send_assets(
             &env,
             desired_send_amounts.clone(),
             RECEIVER_ADDR.to_string()
         ).unwrap();     // Make sure result is successful
 
-        // Verify that no Cosmos messages are generated
-        assert!(cosmos_msgs.len() == 0);
+        // Verify that no messages are generated
+        assert!(asset_msgs.len() == 0);
 
     }
 
@@ -761,7 +767,7 @@ mod asset_cw20_tests {
 
 
         // Tested action: receive asset
-        let cosmos_msg = asset.receive_asset(
+        let asset_msg = asset.receive_asset(
             &env,
             &mock_info(
                 SENDER_ADDR,
@@ -772,10 +778,10 @@ mod asset_cw20_tests {
 
 
 
-        // Verify the genereted transfer Cosmos message
-        assert!(cosmos_msg.is_some());
+        // Verify the genereted transfer message
+        assert!(asset_msg.is_some());
         verify_cw20_transfer_from_msg(
-            cosmos_msg.unwrap(),
+            asset_msg.unwrap(),
             asset,
             desired_received_amount,
             SENDER_ADDR.to_string(),
@@ -825,7 +831,7 @@ mod asset_cw20_tests {
 
 
         // Tested action: send asset
-        let cosmos_msg = asset.send_asset(
+        let asset_msg = asset.send_asset(
             &env,
             desired_send_amount,
             RECEIVER_ADDR.to_string()
@@ -833,10 +839,10 @@ mod asset_cw20_tests {
 
 
 
-        // Verify the generated Cosmos message
-        assert!(cosmos_msg.is_some());
+        // Verify the generated message
+        assert!(asset_msg.is_some());
         verify_cw20_transfer_msg(
-            cosmos_msg.unwrap(),
+            asset_msg.unwrap(),
             asset,
             desired_send_amount,
             RECEIVER_ADDR.to_string()
@@ -856,7 +862,7 @@ mod asset_cw20_tests {
 
 
         // Tested action: send asset
-        let cosmos_msg = asset.send_asset(
+        let asset_msg = asset.send_asset(
             &env,
             desired_send_amount,
             RECEIVER_ADDR.to_string()
@@ -864,8 +870,8 @@ mod asset_cw20_tests {
 
 
 
-        // Verify the generated Cosmos message
-        assert!(cosmos_msg.is_none());
+        // Verify the generated message
+        assert!(asset_msg.is_none());
     }
 
 

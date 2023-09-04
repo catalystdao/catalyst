@@ -1,13 +1,12 @@
-use cosmwasm_std::{Uint128, DepsMut, Env, MessageInfo, Response, StdResult, CosmosMsg, to_binary, Deps, Binary, Uint64, Timestamp};
-use cw20_base::contract::{execute_mint, execute_burn};
+use cosmwasm_std::{Uint128, DepsMut, Env, MessageInfo, StdResult, CosmosMsg, to_binary, Deps, Binary, Uint64, Timestamp};
 use cw_storage_plus::{Item, Map};
 use catalyst_ibc_interface::msg::ExecuteMsg as InterfaceExecuteMsg;
 use catalyst_types::{U256, I256};
 use catalyst_vault_common::{
     ContractError,
-    event::{local_swap_event, send_asset_event, receive_asset_event, send_liquidity_event, receive_liquidity_event, deposit_event, withdraw_event, cw20_response_to_standard_event}, 
+    event::{local_swap_event, send_asset_event, receive_asset_event, send_liquidity_event, receive_liquidity_event, deposit_event, withdraw_event}, 
     msg::{CalcSendAssetResponse, CalcReceiveAssetResponse, CalcLocalSwapResponse, GetLimitCapacityResponse},
-    state::{FACTORY, MAX_ASSETS, WEIGHTS, INITIAL_MINT_AMOUNT, VAULT_FEE, MAX_LIMIT_CAPACITY, USED_LIMIT_CAPACITY, CHAIN_INTERFACE, TOTAL_ESCROWED_LIQUIDITY, TOTAL_ESCROWED_ASSETS, is_connected, update_limit_capacity, collect_governance_fee_message, compute_send_asset_hash, compute_send_liquidity_hash, create_asset_escrow, create_liquidity_escrow, on_send_asset_success, on_send_liquidity_success, total_supply, get_limit_capacity, factory_owner, initialize_limit_capacity, initialize_escrow_totals, create_on_catalyst_call_msg}, asset::{VaultAssets, Asset, VaultAssetsTrait, AssetTrait}
+    state::{FACTORY, MAX_ASSETS, WEIGHTS, INITIAL_MINT_AMOUNT, VAULT_FEE, MAX_LIMIT_CAPACITY, USED_LIMIT_CAPACITY, CHAIN_INTERFACE, TOTAL_ESCROWED_LIQUIDITY, TOTAL_ESCROWED_ASSETS, is_connected, update_limit_capacity, collect_governance_fee_message, compute_send_asset_hash, compute_send_liquidity_hash, create_asset_escrow, create_liquidity_escrow, on_send_asset_success, on_send_liquidity_success, total_supply, get_limit_capacity, factory_owner, initialize_limit_capacity, initialize_escrow_totals, create_on_catalyst_call_msg}, asset::{VaultAssets, Asset, VaultAssetsTrait, AssetTrait, VaultToken, VaultTokenTrait, VaultResponse, IntoCosmosVaultMsg, VaultMsg}
 };
 use fixed_point_math::{self, WAD, LN2, mul_wad_down, ln_wad, exp_wad};
 use std::ops::Div;
@@ -49,7 +48,7 @@ pub fn initialize_swap_curves(
     weights: Vec<Uint128>,
     amp: Uint64,
     depositor: String
-) -> Result<Response, ContractError> {
+) -> Result<VaultResponse, ContractError> {
 
     // Check the caller is the Factory
     if info.sender != FACTORY.load(deps.storage)? {
@@ -129,34 +128,29 @@ pub fn initialize_swap_curves(
 
 
     // Mint vault tokens for the depositor
-    // Make up a 'MessageInfo' with the sender set to this contract itself => this is to allow the use of the 'execute_mint'
-    // function as provided by cw20-base, which will match the 'sender' of 'MessageInfo' with the allowed minter that
-    // was set when initializing the cw20 token (this contract itself).
-    let execute_mint_info = MessageInfo {
-        sender: env.contract.address.clone(),
-        funds: vec![],
-    };
     let minted_amount = INITIAL_MINT_AMOUNT;
-    let mint_response = execute_mint(
-        deps.branch(),
-        env.clone(),
-        execute_mint_info,
-        depositor.clone(),  // NOTE: the address is validated by the 'execute_mint' call
-        minted_amount
+    let mut vault_token = VaultToken::load(&deps.as_ref())?;
+    let mint_msg = vault_token.mint(
+        deps,
+        &env,
+        &info,
+        minted_amount,
+        depositor.clone()
     )?;
 
+    let mut response = VaultResponse::new();
+
+    if let Some(msg) = mint_msg {
+        response = response.add_message(msg.into_cosmos_vault_msg());
+    }
+
     Ok(
-        Response::new()
+        response
             .add_event(
                 deposit_event(
                     depositor,
                     minted_amount,
                     assets_balances
-                )
-            )
-            .add_event(
-                cw20_response_to_standard_event(
-                    mint_response
                 )
             )
     )
@@ -181,7 +175,7 @@ pub fn deposit_mixed(
     info: MessageInfo,
     deposit_amounts: Vec<Uint128>,
     min_out: Uint128
-) -> Result<Response, ContractError> {
+) -> Result<VaultResponse, ContractError> {
 
     // This deposit function works by calculating how many units the deposited assets
     // are worth, and translating those into vault tokens.
@@ -254,15 +248,13 @@ pub fn deposit_mixed(
     }
 
     // Mint the vault tokens
-    let mint_response = execute_mint(
-        deps.branch(),
-        env.clone(),
-        MessageInfo {
-            sender: env.contract.address.clone(),   // This contract itself is the one 'sending' the mint operation
-            funds: vec![],
-        },
-        info.sender.to_string(),
-        out
+    let mut vault_token = VaultToken::load(&deps.as_ref())?;
+    let mint_msg = vault_token.mint(
+        deps,
+        &env,
+        &info,
+        out,
+        info.sender.to_string()
     )?;
 
     // Handle asset transfer from the depositor to the vault
@@ -272,19 +264,26 @@ pub fn deposit_mixed(
         deposit_amounts.clone()
     )?;
 
-    Ok(Response::new()
+
+    let mut response = VaultResponse::new()
         .set_data(to_binary(&out)?)     // Return the deposit output
-        .add_messages(receive_asset_msgs)
+        .add_messages(
+            receive_asset_msgs
+                .into_iter()
+                .map(|msg| msg.into_cosmos_vault_msg())
+                .collect::<Vec<CosmosMsg<VaultMsg>>>()
+        );
+
+    if let Some(msg) = mint_msg {
+        response = response.add_message(msg.into_cosmos_vault_msg());
+    }
+
+    Ok(response
         .add_event(
             deposit_event(
                 info.sender.to_string(),
                 out,
                 deposit_amounts
-            )
-        )
-        .add_event(
-            cw20_response_to_standard_event(
-                mint_response
             )
         )
     )
@@ -305,7 +304,7 @@ pub fn withdraw_all(
     info: MessageInfo,
     vault_tokens: Uint128,
     min_out: Vec<Uint128>,
-) -> Result<Response, ContractError> {
+) -> Result<VaultResponse, ContractError> {
 
     // This withdraw function works by computing the share of the total vault tokens that 
     // the provided ones account for. That share of the vault's assets balances is returned
@@ -318,7 +317,13 @@ pub fn withdraw_all(
     let effective_supply = total_supply(deps.as_ref())?.checked_add(escrowed_vault_tokens)?;
 
     // Burn the vault tokens of the withdrawer
-    let burn_response = execute_burn(deps.branch(), env.clone(), info.clone(), vault_tokens)?;
+    let mut vault_token = VaultToken::load(&deps.as_ref())?;
+    let burn_msg = vault_token.burn(
+        deps,
+        &env,
+        &info,
+        vault_tokens
+    )?;
 
     // Compute the withdraw amounts
     let assets = VaultAssets::load(&deps.as_ref())?;
@@ -363,26 +368,32 @@ pub fn withdraw_all(
         }).collect::<Result<Vec<Uint128>, ContractError>>()?;
 
     // Handle asset transfer from the vault to the withdrawer
-    let transfer_msgs: Vec<CosmosMsg> = assets.send_assets(
+    let transfer_msgs = assets.send_assets(
         &env,
         withdraw_amounts.clone(),
         info.sender.to_string()
     )?;
 
 
-    Ok(Response::new()
+
+    let mut response = VaultResponse::new();
+
+    if let Some(msg) = burn_msg {
+        response = response.add_message(msg.into_cosmos_vault_msg());
+    }
+
+    Ok(response
         .set_data(to_binary(&withdraw_amounts)?)    // Return the withdrawn amounts
-        .add_messages(transfer_msgs)
+        .add_messages(
+            transfer_msgs.into_iter()
+                .map(|msg| msg.into_cosmos_vault_msg())
+                .collect::<Vec<CosmosMsg<VaultMsg>>>()
+        )
         .add_event(
             withdraw_event(
                 info.sender.to_string(),
                 vault_tokens,
                 withdraw_amounts
-            )
-        )
-        .add_event(
-            cw20_response_to_standard_event(
-                burn_response
             )
         )
     )
@@ -408,7 +419,7 @@ pub fn withdraw_mixed(
     vault_tokens: Uint128,
     withdraw_ratio: Vec<Uint64>,
     min_out: Vec<Uint128>,
-) -> Result<Response, ContractError> {
+) -> Result<VaultResponse, ContractError> {
 
     // This withdraw function works by computing the 'units' value of the provided vault tokens,
     // and then translating those into assets balances according to the provided 'withdraw_ratio'.
@@ -422,7 +433,13 @@ pub fn withdraw_mixed(
     );
 
     // Burn the vault tokens of the withdrawer
-    let burn_response = execute_burn(deps.branch(), env.clone(), info.clone(), vault_tokens)?;
+    let mut vault_token = VaultToken::load(&deps.as_ref())?;
+    let burn_msg = vault_token.burn(
+        deps,
+        &env,
+        &info,
+        vault_tokens
+    )?;
 
     // Derive the weights sum from the security limit capacity
     let weights_sum = MAX_LIMIT_CAPACITY.load(deps.storage)? / fixed_point_math::LN2;
@@ -508,26 +525,31 @@ pub fn withdraw_mixed(
     if !u.is_zero() { return Err(ContractError::UnusedUnitsAfterWithdrawal { units: u }) };
 
     // Handle asset transfer from the vault to the withdrawer
-    let transfer_msgs: Vec<CosmosMsg> = assets.send_assets(
+    let transfer_msgs = assets.send_assets(
         &env,
         withdraw_amounts.clone(),
         info.sender.to_string()
     )?;   
 
 
-    Ok(Response::new()
+    let mut response = VaultResponse::new();
+
+    if let Some(msg) = burn_msg {
+        response = response.add_message(msg.into_cosmos_vault_msg());
+    }
+
+    Ok(response
         .set_data(to_binary(&withdraw_amounts)?)    // Return the withdrawn amounts
-        .add_messages(transfer_msgs)
+        .add_messages(
+            transfer_msgs.into_iter()
+                .map(|msg| msg.into_cosmos_vault_msg())
+                .collect::<Vec<CosmosMsg<VaultMsg>>>()
+        )
         .add_event(
             withdraw_event(
                 info.sender.to_string(),
                 vault_tokens,
                 withdraw_amounts
-            )
-        )
-        .add_event(
-            cw20_response_to_standard_event(
-                burn_response
             )
         )
     )
@@ -553,7 +575,7 @@ pub fn local_swap(
     to_asset_ref: String,
     amount: Uint128,
     min_out: Uint128
-) -> Result<Response, ContractError> {
+) -> Result<VaultResponse, ContractError> {
 
     update_weights(deps, env.block.time)?;
 
@@ -593,15 +615,15 @@ pub fn local_swap(
     )?;
 
     // Build response
-    let mut response = Response::new()
+    let mut response = VaultResponse::new()
         .set_data(to_binary(&out)?);     // Return the swap output
 
     if let Some(msg) = receive_asset_msg {
-        response = response.add_message(msg);
+        response = response.add_message(msg.into_cosmos_vault_msg());
     }
 
     if let Some(msg) = send_asset_msg {
-        response = response.add_message(msg);
+        response = response.add_message(msg.into_cosmos_vault_msg());
     }
 
     if let Some(msg) = collect_governance_fee_message {
@@ -650,7 +672,7 @@ pub fn send_asset(
     min_out: U256,
     fallback_account: String,
     calldata: Binary
-) -> Result<Response, ContractError> {
+) -> Result<VaultResponse, ContractError> {
 
     // Only allow connected vaults.
     if !is_connected(&deps.as_ref(), &channel_id, to_vault.clone()) {
@@ -732,11 +754,11 @@ pub fn send_asset(
     );
 
     // Build response
-    let mut response = Response::new()
+    let mut response = VaultResponse::new()
         .set_data(to_binary(&u)?);       // Return the purchased 'units'
 
     if let Some(msg) = receive_asset_msg {
-        response = response.add_message(msg);
+        response = response.add_message(msg.into_cosmos_vault_msg());
     }
 
     if let Some(msg) = collect_governance_fee_message {
@@ -795,7 +817,7 @@ pub fn receive_asset(
     from_block_number_mod: u32,
     calldata_target: Option<String>,
     calldata: Option<Binary>
-) -> Result<Response, ContractError> {
+) -> Result<VaultResponse, ContractError> {
 
     // Only allow the 'chain_interface' to invoke this function.
     if Some(info.sender.clone()) != CHAIN_INTERFACE.load(deps.storage)? {
@@ -840,11 +862,11 @@ pub fn receive_asset(
     };
 
     // Build and send the response.
-    let mut response = Response::new()
+    let mut response = VaultResponse::new()
         .set_data(to_binary(&out)?);     // Return the purchased tokens
 
     if let Some(msg) = send_asset_msg {
-        response = response.add_message(msg);
+        response = response.add_message(msg.into_cosmos_vault_msg());
     }
 
     if let Some(msg) = calldata_message {
@@ -897,7 +919,7 @@ pub fn send_liquidity(
     min_reference_asset: U256,
     fallback_account: String,
     calldata: Binary
-) -> Result<Response, ContractError> {
+) -> Result<VaultResponse, ContractError> {
 
     // Only allow connected vaults
     if !is_connected(&deps.as_ref(), &channel_id, to_vault.clone()) {
@@ -912,7 +934,13 @@ pub fn send_liquidity(
         .wrapping_add(U256::from(escrowed_vault_tokens));        // 'wrapping_add' is overflow safe because of casting into U256
 
     // Burn the vault tokens of the sender
-    let burn_response = execute_burn(deps.branch(), env.clone(), info, amount)?;
+    let mut vault_token = VaultToken::load(&deps.as_ref())?;
+    let burn_msg = vault_token.burn(
+        deps,
+        &env,
+        &info,
+        amount
+    )?;
 
     // Derive the weights sum from the security limit capacity
     let weights_sum = MAX_LIMIT_CAPACITY.load(deps.storage)? / fixed_point_math::LN2;
@@ -967,7 +995,14 @@ pub fn send_liquidity(
         }
     );
 
-    Ok(Response::new()
+
+    let mut response = VaultResponse::new();
+
+    if let Some(msg) = burn_msg {
+        response = response.add_message(msg.into_cosmos_vault_msg());
+    }
+
+    Ok(response
         .set_data(to_binary(&u)?)   // Return the 'units' sent
         .add_message(send_liquidity_execute_msg)
         .add_event(
@@ -979,11 +1014,6 @@ pub fn send_liquidity(
                 min_vault_tokens,
                 min_reference_asset,
                 u
-            )
-        )
-        .add_event(
-            cw20_response_to_standard_event(
-                burn_response
             )
         )
     )
@@ -1024,7 +1054,7 @@ pub fn receive_liquidity(
     from_block_number_mod: u32,
     calldata_target: Option<String>,
     calldata: Option<Binary>
-) -> Result<Response, ContractError> {
+) -> Result<VaultResponse, ContractError> {
 
     // Only allow the 'chain_interface' to invoke this function.
     if Some(info.sender.clone()) != CHAIN_INTERFACE.load(deps.storage)? {
@@ -1116,15 +1146,13 @@ pub fn receive_liquidity(
     }
 
     // Mint the vault tokens
-    let mint_response = execute_mint(
-        deps.branch(),
-        env.clone(),
-        MessageInfo {
-            sender: env.contract.address.clone(),   // This contract itself is the one 'sending' the mint operation
-            funds: vec![],
-        },
-        to_account.clone(),  // NOTE: the address is validated by the 'execute_mint' call
-        out
+    let mut vault_token = VaultToken::load(&deps.as_ref())?;
+    let mint_msg = vault_token.mint(
+        deps,
+        &env,
+        &info,
+        out,
+        to_account.clone()
     )?;
 
     // Build the calldata message.
@@ -1138,8 +1166,12 @@ pub fn receive_liquidity(
     };
 
     // Build and send the response.
-    let mut response = Response::new()
+    let mut response = VaultResponse::new()
         .set_data(to_binary(&out)?);   // Return the vault tokens 'received'
+
+    if let Some(msg) = mint_msg {
+        response = response.add_message(msg.into_cosmos_vault_msg());
+    }
 
     if let Some(msg) = calldata_message {
         response = response.add_message(msg);
@@ -1155,11 +1187,6 @@ pub fn receive_liquidity(
                 out,
                 from_amount,
                 from_block_number_mod
-            )
-        )
-        .add_event(
-            cw20_response_to_standard_event(
-                mint_response
             )
         )
     )
@@ -1316,7 +1343,7 @@ pub fn on_send_asset_success_volatile(
     escrow_amount: Uint128,
     asset_ref: String,
     block_number_mod: u32
-) -> Result<Response, ContractError> {
+) -> Result<VaultResponse, ContractError> {
 
     // Execute the common 'success' logic
     let response = on_send_asset_success(
@@ -1367,7 +1394,7 @@ pub fn on_send_liquidity_success_volatile(
     u: U256,
     escrow_amount: Uint128,
     block_number_mod: u32
-) -> Result<Response, ContractError> {
+) -> Result<VaultResponse, ContractError> {
 
     // Execute the common 'success' logic
     let response = on_send_liquidity_success(
@@ -1417,7 +1444,7 @@ pub fn set_weights(
     info: MessageInfo,
     target_timestamp: Uint64,
     new_weights: Vec<Uint128>
-) -> Result<Response, ContractError> {
+) -> Result<VaultResponse, ContractError> {
 
     // Only allow weight changes by the factory owner
     if info.sender != factory_owner(&deps.as_ref())? {
@@ -1467,7 +1494,7 @@ pub fn set_weights(
     WEIGHT_UPDATE_TIMESTAMP_SECONDS.save(deps.storage, &current_time)?;
 
     Ok(
-        Response::new()
+        VaultResponse::new()
             .add_event(
                 set_weights_event(
                     target_timestamp,

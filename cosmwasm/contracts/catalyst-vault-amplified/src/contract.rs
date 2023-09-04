@@ -1,6 +1,6 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, to_binary};
+use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, StdResult, to_binary};
 use cw2::set_contract_version;
 use cw20_base::allowances::{
     execute_decrease_allowance, execute_increase_allowance, execute_send_from, execute_transfer_from, query_allowance,
@@ -8,6 +8,7 @@ use cw20_base::allowances::{
 use cw20_base::contract::{
     execute_send, execute_transfer, query_balance, query_token_info,
 };
+use catalyst_vault_common::asset::{VaultResponse, IntoVaultResponse};
 use catalyst_vault_common::ContractError;
 use catalyst_vault_common::state::{
     setup, finish_setup, set_fee_administrator, set_vault_fee, set_governance_fee_share, set_connection, query_chain_interface, query_setup_master, query_ready, query_only_local, query_assets, query_weight, query_vault_fee, query_governance_fee_share, query_fee_administrator, query_total_escrowed_liquidity, query_total_escrowed_asset, query_asset_escrow, query_liquidity_escrow, query_vault_connection_state, query_factory, query_factory_owner, on_send_liquidity_success
@@ -32,7 +33,7 @@ pub fn instantiate(
     env: Env,
     info: MessageInfo,
     msg: InstantiateMsg
-) -> Result<Response, ContractError> {
+) -> Result<VaultResponse, ContractError> {
 
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
@@ -61,7 +62,7 @@ pub fn execute(
     env: Env,
     info: MessageInfo,
     msg: AmplifiedExecuteMsg,
-) -> Result<Response, ContractError> {
+) -> Result<VaultResponse, ContractError> {
 
     match msg {
 
@@ -379,6 +380,7 @@ pub fn execute(
             amount
         } => Ok(
             execute_transfer(deps, env, info, recipient, amount)?
+                .into_vault_response()
         ),
 
         AmplifiedExecuteMsg::Burn {
@@ -393,6 +395,7 @@ pub fn execute(
             msg,
         } => Ok(
             execute_send(deps, env, info, contract, amount, msg)?
+                .into_vault_response()
         ),
 
         AmplifiedExecuteMsg::IncreaseAllowance {
@@ -401,6 +404,7 @@ pub fn execute(
             expires,
         } => Ok(
             execute_increase_allowance(deps, env, info, spender, amount, expires)?
+                .into_vault_response()
         ),
 
         AmplifiedExecuteMsg::DecreaseAllowance {
@@ -409,6 +413,7 @@ pub fn execute(
             expires,
         } => Ok(
             execute_decrease_allowance(deps, env, info, spender, amount, expires)?
+                .into_vault_response()
         ),
 
         AmplifiedExecuteMsg::TransferFrom {
@@ -417,6 +422,7 @@ pub fn execute(
             amount,
         } => Ok(
             execute_transfer_from(deps, env, info, owner, recipient, amount)?
+                .into_vault_response()
         ),
 
         AmplifiedExecuteMsg::BurnFrom {
@@ -433,6 +439,7 @@ pub fn execute(
             msg,
         } => Ok(
             execute_send_from(deps, env, info, owner, contract, amount, msg)?
+                .into_vault_response()
         ),
     }
 }

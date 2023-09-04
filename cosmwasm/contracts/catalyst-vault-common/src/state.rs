@@ -1,14 +1,13 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, Uint128, DepsMut, Env, Response, Event, MessageInfo, Deps, StdResult, CosmosMsg, to_binary, Timestamp, StdError, Binary, Uint64};
+use cosmwasm_std::{Addr, Uint128, DepsMut, Env, Response, Event, MessageInfo, Deps, StdResult, to_binary, Timestamp, StdError, Binary, Uint64, CosmosMsg};
 use cw_storage_plus::{Map, Item};
-use cw20_base::{state::{MinterData, TokenInfo, TOKEN_INFO}, contract::execute_mint};
 use sha3::{Digest, Keccak256};
 use std::ops::Div;
 
 use catalyst_types::{U256, u256};
 use fixed_point_math::mul_wad_down;
 
-use crate::{ContractError, asset::{VaultAssets, Asset, VaultAssetsTrait, AssetTrait}, msg::{ChainInterfaceResponse, SetupMasterResponse, ReadyResponse, OnlyLocalResponse, AssetsResponse, WeightResponse, VaultFeeResponse, GovernanceFeeShareResponse, FeeAdministratorResponse, TotalEscrowedAssetResponse, TotalEscrowedLiquidityResponse, AssetEscrowResponse, LiquidityEscrowResponse, VaultConnectionStateResponse, FactoryResponse, FactoryOwnerResponse, ReceiverExecuteMsg}, event::{send_asset_success_event, send_asset_failure_event, send_liquidity_success_event, send_liquidity_failure_event, finish_setup_event, set_fee_administrator_event, set_vault_fee_event, set_governance_fee_share_event, set_connection_event, cw20_response_to_standard_event}};
+use crate::{ContractError, asset::{VaultAssets, Asset, VaultAssetsTrait, AssetTrait, VaultToken, VaultTokenTrait, VaultResponse, IntoCosmosVaultMsg, VaultMsg}, msg::{ChainInterfaceResponse, SetupMasterResponse, ReadyResponse, OnlyLocalResponse, AssetsResponse, WeightResponse, VaultFeeResponse, GovernanceFeeShareResponse, FeeAdministratorResponse, TotalEscrowedAssetResponse, TotalEscrowedLiquidityResponse, AssetEscrowResponse, LiquidityEscrowResponse, VaultConnectionStateResponse, FactoryResponse, FactoryOwnerResponse, ReceiverExecuteMsg}, event::{send_asset_success_event, send_asset_failure_event, send_liquidity_success_event, send_liquidity_failure_event, finish_setup_event, set_fee_administrator_event, set_vault_fee_event, set_governance_fee_share_event, set_connection_event}};
 
 
 
@@ -79,8 +78,11 @@ pub fn ready(deps: &Deps) -> StdResult<bool> {
 
 /// Get the vault's token supply.
 pub fn total_supply(deps: Deps) -> Result<Uint128, ContractError> {
-    let info = TOKEN_INFO.load(deps.storage)?;
-    Ok(info.total_supply)
+    
+    VaultToken::load(&deps)?
+        .query_prior_total_supply(&deps)
+        .map_err(|err| err.into())
+
 }
 
 
@@ -134,7 +136,7 @@ pub fn setup(
     governance_fee_share: Uint64,
     fee_administrator: String,
     setup_master: String
-) -> Result<Response, ContractError> {
+) -> Result<VaultResponse, ContractError> {
 
     // Save accounts
     FACTORY.save(
@@ -160,21 +162,23 @@ pub fn setup(
     let vault_fee_event = set_vault_fee_unchecked(deps, vault_fee)?;
     let gov_fee_event = set_governance_fee_share_unchecked(deps, governance_fee_share)?;
 
-    // Setup the Vault Token (store token info using the cw20-base format)
-    let data = TokenInfo {
+    // Setup the Vault Token
+    let create_vault_token_msg = VaultToken::create(
+        deps,
+        env,
         name,
         symbol,
-        decimals: DECIMALS,
-        total_supply: Uint128::zero(),
-        mint: Some(MinterData {
-            minter: env.contract.address.clone(),  // Set self as minter
-            cap: None
-        })
-    };
-    TOKEN_INFO.save(deps.storage, &data)?;
+        DECIMALS
+    )?;
+
+    let mut response = Response::new();
+
+    if let Some(msg) = create_vault_token_msg {
+        response = response.add_message(msg.into_cosmos_vault_msg());
+    }
 
     Ok(
-        Response::new()
+        response
             .add_event(admin_fee_event)
             .add_event(vault_fee_event)
             .add_event(gov_fee_event)
@@ -229,7 +233,7 @@ pub fn initialize_limit_capacity(
 pub fn finish_setup(
     deps: &mut DepsMut,
     info: MessageInfo
-) -> Result<Response, ContractError> {
+) -> Result<VaultResponse, ContractError> {
 
     let setup_master = SETUP_MASTER.load(deps.storage)?;
 
@@ -266,7 +270,7 @@ pub fn set_connection(
     channel_id: String,
     vault: Binary,
     state: bool
-) -> Result<Response, ContractError> {
+) -> Result<VaultResponse, ContractError> {
 
     // Only allow a connection setup if the caller is the setup master or the factory owner
     let setup_master = SETUP_MASTER.load(deps.storage)?;
@@ -351,7 +355,7 @@ pub fn set_fee_administrator(
     deps: &mut DepsMut,
     info: MessageInfo,
     administrator: String
-) -> Result<Response, ContractError> {
+) -> Result<VaultResponse, ContractError> {
 
     if info.sender != factory_owner(&deps.as_ref())? {
         return Err(ContractError::Unauthorized {})
@@ -400,7 +404,7 @@ pub fn set_vault_fee(
     deps: &mut DepsMut,
     info: MessageInfo,
     fee: Uint64
-) -> Result<Response, ContractError> {
+) -> Result<VaultResponse, ContractError> {
 
     let fee_administrator = FEE_ADMINISTRATOR.load(deps.storage)?;
 
@@ -451,7 +455,7 @@ pub fn set_governance_fee_share(
     deps: &mut DepsMut,
     info: MessageInfo,
     fee: Uint64
-) -> Result<Response, ContractError> {
+) -> Result<VaultResponse, ContractError> {
 
     if info.sender != factory_owner(&deps.as_ref())? {
         return Err(ContractError::Unauthorized {})
@@ -474,7 +478,7 @@ pub fn collect_governance_fee_message(
     env: &Env,
     asset: &Asset,
     vault_fee_amount: Uint128
-) -> Result<Option<CosmosMsg>, ContractError> {
+) -> Result<Option<CosmosMsg<VaultMsg>>, ContractError> {   //TODO return AssetMsg instead of CosmosMsg?
 
     // Compute the governance fee as the GOVERNANCE_FEE_SHARE percentage of the vault_fee_amount.
     let gov_fee_amount: Uint128 = mul_wad_down(
@@ -488,6 +492,7 @@ pub fn collect_governance_fee_message(
             gov_fee_amount,
             factory_owner(deps)?.to_string()
         )?
+        .and_then(|msg| Some(msg.into_cosmos_vault_msg()))
     )
     
 }
@@ -748,7 +753,7 @@ pub fn on_send_asset_success(
     escrow_amount: Uint128,
     asset_ref: String,
     block_number_mod: u32
-) -> Result<Response, ContractError> {
+) -> Result<VaultResponse, ContractError> {
 
     if Some(info.sender.clone()) != CHAIN_INTERFACE.load(deps.storage)? {
         return Err(ContractError::Unauthorized {})
@@ -807,7 +812,7 @@ pub fn on_send_asset_failure(
     escrow_amount: Uint128,
     asset_ref: String,
     block_number_mod: u32
-) -> Result<Response, ContractError> {
+) -> Result<VaultResponse, ContractError> {
 
     if Some(info.sender.clone()) != CHAIN_INTERFACE.load(deps.storage)? {
         return Err(ContractError::Unauthorized {})
@@ -826,12 +831,12 @@ pub fn on_send_asset_failure(
     let fallback_address = release_asset_escrow(deps, send_asset_hash.clone(), escrow_amount, &asset_ref)?;
 
     // Transfer the escrowed assets to the fallback user.
-    let transfer_msg: Option<CosmosMsg> = Asset::from_asset_ref(&deps.as_ref(), &asset_ref)?
+    let transfer_msg = Asset::from_asset_ref(&deps.as_ref(), &asset_ref)?
         .send_asset(env, escrow_amount, fallback_address.to_string())?;
 
     let response = match transfer_msg {
-        Some(msg) => Response::new().add_message(msg),
-        None => Response::new()
+        Some(msg) => Response::<VaultMsg>::new().add_message(msg.into_cosmos_vault_msg()),
+        None => Response::<VaultMsg>::new()
     };
 
     Ok(
@@ -872,7 +877,7 @@ pub fn on_send_liquidity_success(
     u: U256,
     escrow_amount: Uint128,
     block_number_mod: u32
-) -> Result<Response, ContractError> {
+) -> Result<VaultResponse, ContractError> {
 
     if Some(info.sender.clone()) != CHAIN_INTERFACE.load(deps.storage)? {
         return Err(ContractError::Unauthorized {})
@@ -927,7 +932,7 @@ pub fn on_send_liquidity_failure(
     u: U256,
     escrow_amount: Uint128,
     block_number_mod: u32
-) -> Result<Response, ContractError> {
+) -> Result<VaultResponse, ContractError> {
 
     if Some(info.sender.clone()) != CHAIN_INTERFACE.load(deps.storage)? {
         return Err(ContractError::Unauthorized {})
@@ -945,20 +950,23 @@ pub fn on_send_liquidity_failure(
     let fallback_address = release_liquidity_escrow(deps, send_liquidity_hash.clone(), escrow_amount)?;
 
     // Mint the escrowed vault tokens for the fallback account.
-    let execute_mint_info = MessageInfo {
-        sender: env.contract.address.clone(),
-        funds: vec![],
-    };
-    let mint_response = execute_mint(
-        deps.branch(),
-        env.to_owned(),
-        execute_mint_info,
-        fallback_address.to_string(),
-        escrow_amount
+    let mut vault_token = VaultToken::load(&deps.as_ref())?;
+    let mint_msg = vault_token.mint(
+        deps,
+        env,
+        info,
+        escrow_amount,
+        fallback_address.to_string()
     )?;
 
+    let mut response = Response::new();
+
+    if let Some(msg) = mint_msg {
+        response = response.add_message(msg.into_cosmos_vault_msg());
+    }
+
     Ok(
-        Response::new()
+        response
             .add_event(
                 send_liquidity_failure_event(
                     channel_id,
@@ -966,11 +974,6 @@ pub fn on_send_liquidity_failure(
                     u,
                     escrow_amount,
                     block_number_mod
-                )
-            )
-            .add_event(
-                cw20_response_to_standard_event(
-                    mint_response
                 )
             )
     )
@@ -1068,7 +1071,7 @@ pub fn create_on_catalyst_call_msg(
     calldata_target: String,
     purchased_tokens: Uint128,
     data: Binary
-) -> Result<CosmosMsg, ContractError> {
+) -> Result<CosmosMsg<VaultMsg>, ContractError> {
 
     Ok(CosmosMsg::Wasm(
         cosmwasm_std::WasmMsg::Execute {

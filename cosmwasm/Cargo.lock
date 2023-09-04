@@ -207,6 +207,7 @@ dependencies = [
  "sha3",
  "thiserror",
  "vault-assets",
+ "vault-token",
 ]
 
 [[package]]
@@ -1070,6 +1071,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "token-bindings"
+version = "0.10.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "752a7997ebaa191cf3d8436261e449732e65268e552e8bea6133c3b21b48fe36"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "schemars",
+ "serde",
+]
+
+[[package]]
 name = "typenum"
 version = "1.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1095,6 +1108,23 @@ dependencies = [
  "schemars",
  "serde",
  "thiserror",
+]
+
+[[package]]
+name = "vault-token"
+version = "0.1.0"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cosmwasm-storage",
+ "cw-storage-plus",
+ "cw2",
+ "cw20",
+ "cw20-base",
+ "schemars",
+ "serde",
+ "thiserror",
+ "token-bindings",
 ]
 
 [[package]]
