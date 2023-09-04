@@ -58,7 +58,7 @@ contract TestCommon is Test, Bytes65, IMessageEscrowStructs, TestTokenFunctions 
         amplifiedMathlib = new CatalystMathAmp();
         amplifiedTemplate = new CatalystVaultAmplified(address(catFactory), address(amplifiedMathlib));
 
-        GARP = new IncentivizedMockEscrow(DESTINATION_IDENTIFIER, SIGNER);
+        GARP = new IncentivizedMockEscrow(DESTINATION_IDENTIFIER, SIGNER, 0);
 
         CCI = new CatalystChainInterface(address(GARP), address(this));
     }

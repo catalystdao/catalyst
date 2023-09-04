@@ -36,7 +36,7 @@ contract DeployInterfaces is Script {
         if (keccak256(abi.encodePacked(version)) == keccak256(abi.encodePacked("MOCK"))) {
             address signer = vm.envAddress("MOCK_SIGNER");
 
-            incentive = address(new IncentivizedMockEscrow(chainIdentifier, signer));
+            incentive = address(new IncentivizedMockEscrow(chainIdentifier, signer, 0));
 
         } else if (keccak256(abi.encodePacked(version)) == keccak256(abi.encodePacked("Wormhole"))) {
         } else {
