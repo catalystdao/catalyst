@@ -211,7 +211,7 @@ abstract contract Dispatcher is Permit2Payments, CatalystExchange, CancelSwap, L
             } else if (command < 0x10) {
                 if (command == Commands.SENDLIQUIDITY) {
                     // TODO: Decode memory variables in calldata. See sendAsset.
-                    (address vault, RouteDescription memory routeDescription, address fromAsset, uint256 amount, uint256[2] memory minOut, address fallbackUser, uint256 gas) = abi.decode(inputs, (address, RouteDescription, address, uint256, uint256[2], address, uint256));
+                    (address vault, RouteDescription memory routeDescription, uint256 amount, uint256[2] memory minOut, address fallbackUser, uint256 gas) = abi.decode(inputs, (address, RouteDescription, uint256, uint256[2], address, uint256));
 
                     // We don't have space in the stack do dynamically decode the calldata. 
                     // To circumvent that, we have to decode it as a slice. We need to start after

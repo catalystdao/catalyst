@@ -60,7 +60,7 @@ abstract contract TestReceiveAsset is TestCommon, AVaultInterfaces {
         );
         Vm.Log[] memory entries = vm.getRecordedLogs();
 
-        (bytes32 destinationIdentifier, bytes memory recipitent, bytes memory messageWithContext_) = abi.decode(entries[1].data, (bytes32, bytes, bytes));
+        (, , bytes memory messageWithContext_) = abi.decode(entries[1].data, (bytes32, bytes, bytes));
 
         return (units, messageWithContext = messageWithContext_);
     }
