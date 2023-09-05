@@ -473,7 +473,10 @@ mod test_amplified_send_liquidity {
 
         // Verify the swap return
         let payload_calldata = Binary::from_base64(
-            &get_response_attribute::<String>(response.events[4].clone(), "calldata").unwrap()
+            &get_response_attribute::<String>(
+                response.events[response.events.len()-1].clone(),
+                "calldata"
+            ).unwrap()
         ).unwrap();
 
         assert_eq!(

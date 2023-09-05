@@ -394,7 +394,7 @@ mod test_volatile_withdraw_even {
         // Make sure the transaction fails
         assert_eq!(
             response_result.err().unwrap().root_cause().to_string(),
-            format!("Cannot Sub with 0 and {}", withdraw_amount)
+            format!("Error: Burn failed: Overflow: Cannot Sub with 0 and {}", withdraw_amount)
         );
 
     }

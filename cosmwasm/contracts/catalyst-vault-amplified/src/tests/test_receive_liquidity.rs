@@ -689,7 +689,7 @@ mod test_amplified_receive_liquidity {
 
 
         // Verify the 'calldata' target is executed
-        let mock_target_event = response.events[4].clone();
+        let mock_target_event = response.events[response.events.len()-1].clone();
         let observed_action = get_response_attribute::<String>(mock_target_event.clone(), "action").unwrap();
         assert_eq!(
             observed_action,
