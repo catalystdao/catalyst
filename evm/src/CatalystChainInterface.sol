@@ -329,34 +329,56 @@ contract CatalystChainInterface is Ownable, ICrossChainReceiver, Bytes65, IMessa
      * @notice Cross-chain message success handler
      * @dev Should never revert.
      */
-    function _onPacketSuccess(bytes32 destinationIdentifierbytes, bytes calldata data) internal {
+    function _onPacketSuccess(bytes32 destinationIdentifier, bytes calldata data) internal {
         bytes1 context = data[CONTEXT_POS];
         // Since this is a callback, fromVault must be an EVM address.
         address fromVault = address(bytes20(data[ FROM_VAULT_START_EVM : FROM_VAULT_END ]));
 
         if (context == CTX0_ASSET_SWAP) {
             ICatalystV1Vault(fromVault).onSendAssetSuccess(
-                destinationIdentifierbytes,                                              // connectionId
+                destinationIdentifier,                                              // connectionId
                 data[ TO_ACCOUNT_LENGTH_POS : TO_ACCOUNT_END ],                             // toAccount
                 uint256(bytes32(data[ UNITS_START : UNITS_END ])),                          // units
                 uint256(bytes32(data[ CTX0_FROM_AMOUNT_START : CTX0_FROM_AMOUNT_END ])),    // fromAmount
                 address(bytes20(data[ CTX0_FROM_ASSET_START_EVM : CTX0_FROM_ASSET_END ])),  // fromAsset
                 uint32(bytes4(data[ CTX0_BLOCK_NUMBER_START : CTX0_BLOCK_NUMBER_END ]))     // block number
             );
+            return;
         }
-        else if (context == CTX1_LIQUIDITY_SWAP) {
+        if (context == CTX1_LIQUIDITY_SWAP) {
             ICatalystV1Vault(fromVault).onSendLiquiditySuccess(
-                destinationIdentifierbytes,                                              // connectionId
+                destinationIdentifier,                                              // connectionId
                 data[ TO_ACCOUNT_LENGTH_POS : TO_ACCOUNT_END ],                             // toAccount
                 uint256(bytes32(data[ UNITS_START : UNITS_END ])),                          // units
                 uint256(bytes32(data[ CTX1_FROM_AMOUNT_START : CTX1_FROM_AMOUNT_END ])),    // fromAmount
                 uint32(bytes4(data[ CTX1_BLOCK_NUMBER_START : CTX1_BLOCK_NUMBER_END ]))     // block number
             );
+            return;
         }
-        else {
-            // A proper message should never get here. If the message got here, we are never going to be able to properly process it.
-            revert InvalidContext(context);
+        if (context == CTX2_ASSET_SWAP_PLEASE_UNDERWRITE) {
+            ICatalystV1Vault(fromVault).onSendAssetSuccess(
+                destinationIdentifier,                                        // connectionId
+                data[ TO_ACCOUNT_LENGTH_POS : TO_ACCOUNT_END ],                             // toAccount
+                uint256(bytes32(data[ UNITS_START : UNITS_END ])),                          // units
+                uint256(bytes32(data[ CTX2_FROM_AMOUNT_START : CTX2_FROM_AMOUNT_END ])),    // fromAmount
+                address(bytes20(data[ CTX2_FROM_ASSET_START_EVM : CTX2_FROM_ASSET_END ])),  // fromAsset
+                uint32(bytes4(data[ CTX2_BLOCK_NUMBER_START : CTX2_BLOCK_NUMBER_END ]))     // block number
+            );
+            return;
         }
+        if (context == CTX3_ASSET_SWAP_PURPOSE_UNDERWRITE) {
+            ICatalystV1Vault(fromVault).onSendAssetSuccess(
+                destinationIdentifier,                                        // connectionId
+                data[ TO_ACCOUNT_LENGTH_POS : TO_ACCOUNT_END ],                             // toAccount
+                uint256(bytes32(data[ UNITS_START : UNITS_END ])),                          // units
+                uint256(bytes32(data[ CTX3_FROM_AMOUNT_START : CTX3_FROM_AMOUNT_END ])),    // fromAmount
+                address(bytes20(data[ CTX3_FROM_ASSET_START_EVM : CTX3_FROM_ASSET_END ])),  // fromAsset
+                uint32(bytes4(data[ CTX3_BLOCK_NUMBER_START : CTX3_BLOCK_NUMBER_END ]))     // block number
+            );
+            return;
+        }
+        // A proper message should never get here. If the message got here, we are never going to be able to properly process it.
+        revert InvalidContext(context);
     }
 
     /**
@@ -377,8 +399,9 @@ contract CatalystChainInterface is Ownable, ICrossChainReceiver, Bytes65, IMessa
                 address(bytes20(data[ CTX0_FROM_ASSET_START_EVM : CTX0_FROM_ASSET_END ])),  // fromAsset
                 uint32(bytes4(data[ CTX0_BLOCK_NUMBER_START : CTX0_BLOCK_NUMBER_END ]))     // block number
             );
+            return;
         }
-        else if (context == CTX1_LIQUIDITY_SWAP) {
+        if (context == CTX1_LIQUIDITY_SWAP) {
             ICatalystV1Vault(fromVault).onSendLiquidityFailure(
                 destinationIdentifier,                                        // connectionId
                 data[ TO_ACCOUNT_LENGTH_POS : TO_ACCOUNT_END ],                             // toAccount
@@ -386,11 +409,32 @@ contract CatalystChainInterface is Ownable, ICrossChainReceiver, Bytes65, IMessa
                 uint256(bytes32(data[ CTX1_FROM_AMOUNT_START : CTX1_FROM_AMOUNT_END ])),    // fromAmount
                 uint32(bytes4(data[ CTX1_BLOCK_NUMBER_START : CTX1_BLOCK_NUMBER_END ]))     // block number
             );
+            return;
         }
-        else {
-            // A proper message should never get here. If the message got here, we are never going to be able to properly process it.
-            revert InvalidContext(context);
+        if (context == CTX2_ASSET_SWAP_PLEASE_UNDERWRITE) {
+            ICatalystV1Vault(fromVault).onSendAssetFailure(
+                destinationIdentifier,                                        // connectionId
+                data[ TO_ACCOUNT_LENGTH_POS : TO_ACCOUNT_END ],                             // toAccount
+                uint256(bytes32(data[ UNITS_START : UNITS_END ])),                          // units
+                uint256(bytes32(data[ CTX2_FROM_AMOUNT_START : CTX2_FROM_AMOUNT_END ])),    // fromAmount
+                address(bytes20(data[ CTX2_FROM_ASSET_START_EVM : CTX2_FROM_ASSET_END ])),  // fromAsset
+                uint32(bytes4(data[ CTX2_BLOCK_NUMBER_START : CTX2_BLOCK_NUMBER_END ]))     // block number
+            );
+            return;
         }
+        if (context == CTX3_ASSET_SWAP_PURPOSE_UNDERWRITE) {
+            ICatalystV1Vault(fromVault).onSendAssetFailure(
+                destinationIdentifier,                                        // connectionId
+                data[ TO_ACCOUNT_LENGTH_POS : TO_ACCOUNT_END ],                             // toAccount
+                uint256(bytes32(data[ UNITS_START : UNITS_END ])),                          // units
+                uint256(bytes32(data[ CTX3_FROM_AMOUNT_START : CTX3_FROM_AMOUNT_END ])),    // fromAmount
+                address(bytes20(data[ CTX3_FROM_ASSET_START_EVM : CTX3_FROM_ASSET_END ])),  // fromAsset
+                uint32(bytes4(data[ CTX3_BLOCK_NUMBER_START : CTX3_BLOCK_NUMBER_END ]))     // block number
+            );
+            return;
+        }
+        // A proper message should never get here. If the message got here, we are never going to be able to properly process it.
+        revert InvalidContext(context);
     }
 
     /**
