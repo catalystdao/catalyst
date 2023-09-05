@@ -21,9 +21,15 @@ mod test_withdraw_mixed;
 #[cfg(feature="asset_native")]
 pub use test_helpers::asset::TestNativeAsset as TestAsset;
 #[cfg(feature="asset_native")]
-pub use test_helpers::env::env_native_asset::TestNativeAssetEnv as TestEnv;
+pub use test_helpers::env::env_native_asset::{
+    TestNativeAssetEnv as TestEnv,
+    NativeAssetApp as TestApp
+};
 
 #[cfg(feature="asset_cw20")]
 pub use test_helpers::asset::TestCw20Asset as TestAsset;
 #[cfg(feature="asset_cw20")]
-pub use test_helpers::env::env_cw20_asset::TestCw20AssetEnv as TestEnv;
+pub use test_helpers::env::env_cw20_asset::{
+    TestCw20AssetEnv as TestEnv,
+    Cw20AssetApp as TestApp
+};

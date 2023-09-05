@@ -1,9 +1,11 @@
-use cosmwasm_std::{Uint128, Addr, Uint64, Binary};
-use cw_multi_test::{ContractWrapper, App, Executor, AppResponse};
-use catalyst_vault_common::msg::{InstantiateMsg, ExecuteMsg};
-use std::marker::PhantomData;
-use vault_assets::asset::AssetTrait;
-use crate::{misc::get_response_attribute, definitions::{SETUP_MASTER, FACTORY_OWNER}, env::CustomTestEnv, asset::CustomTestAsset};
+use cosmwasm_schema::serde::Serialize;
+use cosmwasm_std::{Uint128, Addr, Uint64, Binary, Empty};
+use cw_multi_test::{ContractWrapper, Executor, AppResponse, Module};
+use std::{marker::PhantomData, fmt::Debug};
+
+use catalyst_vault_common::{msg::{InstantiateMsg, ExecuteMsg}, asset::CustomMsg};
+
+use crate::{misc::get_response_attribute, definitions::{SETUP_MASTER, FACTORY_OWNER}, env::{CustomTestEnv, CustomApp}, asset::CustomTestAsset};
 
 
 pub const DEFAULT_TEST_VAULT_FEE : Uint64 = Uint64::new(70000000000000000u64);   // 7%
@@ -11,11 +13,16 @@ pub const DEFAULT_TEST_GOV_FEE  : Uint64 = Uint64::new(50000000000000000u64);   
 
 
 
-// Contracts storage
 
-pub fn vault_factory_contract_storage(
-    app: &mut App
-) -> u64 {
+// Contracts storage
+// ************************************************************************************************
+
+pub fn vault_factory_contract_storage<HandlerC>(
+    app: &mut CustomApp<HandlerC, CustomMsg>
+) -> u64
+where
+    HandlerC: Module<ExecT = CustomMsg, QueryT = Empty>
+{
 
     // Create contract wrapper
     let contract = ContractWrapper::new(
@@ -28,12 +35,15 @@ pub fn vault_factory_contract_storage(
     app.store_code(Box::new(contract))
 }
 
-pub fn interface_contract_storage(
-    app: &mut App
-) -> u64 {
+pub fn interface_contract_storage<HandlerC>(
+    app: &mut CustomApp<HandlerC, CustomMsg>
+) -> u64
+where
+    HandlerC: Module<ExecT = CustomMsg, QueryT = Empty>
+{
 
     // Create contract wrapper
-    let contract = ContractWrapper::new(
+    let contract = ContractWrapper::new_with_empty(
         mock_catalyst_ibc_interface::contract::execute,
         mock_catalyst_ibc_interface::contract::instantiate,
         mock_catalyst_ibc_interface::contract::query,
@@ -43,12 +53,15 @@ pub fn interface_contract_storage(
     app.store_code(Box::new(contract))
 }
 
-pub fn calldata_target_contract_storage(
-    app: &mut App
-) -> u64 {
+pub fn calldata_target_contract_storage<HandlerC>(
+    app: &mut CustomApp<HandlerC, CustomMsg>
+) -> u64
+where
+    HandlerC: Module<ExecT = CustomMsg, QueryT = Empty>
+{
 
     // Create contract wrapper
-    let contract = ContractWrapper::new(
+    let contract = ContractWrapper::new_with_empty(
         mock_calldata_target::contract::execute,
         mock_calldata_target::contract::instantiate,
         mock_calldata_target::contract::query,
@@ -60,12 +73,16 @@ pub fn calldata_target_contract_storage(
 
 
 
-// Contracts instantiation
 
-pub fn mock_instantiate_factory(
-    app: &mut App,
+// Contracts instantiation
+// ************************************************************************************************
+
+pub fn mock_instantiate_factory<HandlerC>(
+    app: &mut CustomApp<HandlerC, CustomMsg>,
     default_governance_fee_share: Option<Uint64>
-) -> Addr {
+) -> Addr
+    where HandlerC: Module<ExecT = CustomMsg, QueryT = Empty>
+{
 
     let factory_contract_code = vault_factory_contract_storage(app);
 
@@ -81,9 +98,12 @@ pub fn mock_instantiate_factory(
     ).unwrap()
 }
 
-pub fn mock_instantiate_interface(
-    app: &mut App
-) -> Addr {
+pub fn mock_instantiate_interface<HandlerC>(
+    app: &mut CustomApp<HandlerC, CustomMsg>
+) -> Addr
+where
+    HandlerC: Module<ExecT = CustomMsg, QueryT = Empty>
+{
 
     let contract_code_storage = interface_contract_storage(app);
 
@@ -97,9 +117,12 @@ pub fn mock_instantiate_interface(
     ).unwrap()
 }
 
-pub fn mock_instantiate_calldata_target(
-    app: &mut App
-) -> Addr {
+pub fn mock_instantiate_calldata_target<HandlerC>(
+    app: &mut CustomApp<HandlerC, CustomMsg>
+) -> Addr
+where
+    HandlerC: Module<ExecT = CustomMsg, QueryT = Empty>
+{
 
     let contract_code_storage = calldata_target_contract_storage(app);
 
@@ -115,26 +138,33 @@ pub fn mock_instantiate_calldata_target(
 
 
 
-// Factory helpers
 
-pub fn mock_factory_deploy_vault<A: AssetTrait, T: CustomTestAsset<A>>(
-    env: &mut impl CustomTestEnv<A, T>,
-    assets: Vec<T>,
+// Factory helpers
+// ************************************************************************************************
+
+pub fn mock_factory_deploy_vault<AssetC, TestAssetC, HandlerC>(
+    env: &mut impl CustomTestEnv<CustomApp<HandlerC, CustomMsg>, TestAssetC>,
+    assets: Vec<TestAssetC>,
     assets_balances: Vec<Uint128>,
     weights: Vec<Uint128>,
     amplification: Uint64,
     vault_code_id: u64,
     chain_interface: Option<Addr>,
     factory: Option<Addr>
-) -> Addr {
+) -> Addr
+where
+    AssetC: From<TestAssetC> + Serialize + Debug,
+    TestAssetC: CustomTestAsset<CustomApp<HandlerC, CustomMsg>>,
+    HandlerC: Module<ExecT = CustomMsg, QueryT = Empty>
+{
 
     // Deploy factory if not provided
     let factory = factory.unwrap_or(
         mock_instantiate_factory(env.get_app(), None)
     );
 
-    let vault_assets: Vec<A> = assets.iter()
-        .map(|asset| asset.into_vault_asset())
+    let vault_assets: Vec<AssetC> = assets.iter()
+        .map(|asset| asset.clone().into())
         .collect();
 
     // Deploy the new vault
@@ -169,21 +199,33 @@ pub fn mock_factory_deploy_vault<A: AssetTrait, T: CustomTestAsset<A>>(
 
 
 
+
+// Vault helpers
+// ************************************************************************************************
+
 #[derive(Clone)]
-pub struct InitializeSwapCurvesMockConfig<A: AssetTrait, T: CustomTestAsset<A>> {
-    pub assets: Vec<T>,
+pub struct InitializeSwapCurvesMockConfig<AssetC, TestAssetC, AppC>
+where
+    TestAssetC: CustomTestAsset<AppC>,
+    AssetC: From<TestAssetC>
+{
+    pub assets: Vec<TestAssetC>,
     pub assets_balances: Vec<Uint128>,
     pub weights: Vec<Uint128>,
     pub amp: Uint64,
     pub depositor: String,
-    pub asset_trait: PhantomData<A>
+    pub phantom_data: PhantomData<(AssetC, AppC)>
 }
 
-impl<A: AssetTrait, T: CustomTestAsset<A>> InitializeSwapCurvesMockConfig<A, T> {
+impl<AssetC, TestAssetC, AppC> InitializeSwapCurvesMockConfig<AssetC, TestAssetC, AppC>
+where
+    TestAssetC: CustomTestAsset<AppC>,
+    AssetC: From<TestAssetC>
+{
 
     pub fn transfer_vault_assets(
         &self,
-        app: &mut App,
+        app: &mut AppC,
         vault: String,
         depositor: Addr
     ) {
@@ -203,32 +245,22 @@ impl<A: AssetTrait, T: CustomTestAsset<A>> InitializeSwapCurvesMockConfig<A, T> 
             });
     }
 
-    pub fn into_execute_msg(self) -> ExecuteMsg<(), A> {
-        Into::into(self)
-    }
-
-}
-
-impl<A: AssetTrait, T: CustomTestAsset<A>> Into<ExecuteMsg<(), A>> for InitializeSwapCurvesMockConfig<A, T> {
-    fn into(self) -> ExecuteMsg<(), A> {
+    pub fn build_execute_msg(&self) -> ExecuteMsg<(), AssetC> {
 
         let vault_assets = self.assets.iter()
-            .map(|test_asset| test_asset.into_vault_asset())
-            .collect::<Vec<A>>();
+            .map(|test_asset| test_asset.clone().into())
+            .collect::<Vec<AssetC>>();
 
-        ExecuteMsg::<(), A>::InitializeSwapCurves {
+        ExecuteMsg::<(), AssetC>::InitializeSwapCurves {
             assets: vault_assets,
-            weights: self.weights,
-            amp: self.amp,
-            depositor: self.depositor
+            weights: self.weights.clone(),
+            amp: self.amp.clone(),
+            depositor: self.depositor.clone()
         }
-
+    
     }
+
 }
-
-
-
-// Vault management helpers
 
 pub fn mock_instantiate_vault_msg(
     chain_interface: Option<String>
@@ -244,11 +276,14 @@ pub fn mock_instantiate_vault_msg(
     }
 }
 
-pub fn mock_instantiate_vault(
-    app: &mut App,
+pub fn mock_instantiate_vault<HandlerC>(
+    app: &mut CustomApp<HandlerC, CustomMsg>,
     vault_code_id: u64,
     chain_interface: Option<Addr>
-) -> Addr {
+) -> Addr
+where
+    HandlerC: Module<ExecT = CustomMsg, QueryT = Empty>
+{
 
     let instantiate_msg = mock_instantiate_vault_msg(
         chain_interface.map(|addr| addr.to_string())
@@ -265,10 +300,13 @@ pub fn mock_instantiate_vault(
 }
 
 
-pub fn mock_finish_vault_setup(
-    app: &mut App,
+pub fn mock_finish_vault_setup<HandlerC>(
+    app: &mut CustomApp<HandlerC, CustomMsg>,
     vault_contract: Addr
-) -> AppResponse {
+) -> AppResponse
+where
+    HandlerC: Module<ExecT = CustomMsg, QueryT = Empty>
+{
     app.execute_contract(
         Addr::unchecked(SETUP_MASTER),
         vault_contract,
@@ -278,13 +316,16 @@ pub fn mock_finish_vault_setup(
 }
 
 
-pub fn mock_set_vault_connection(
-    app: &mut App,
+pub fn mock_set_vault_connection<HandlerC>(
+    app: &mut CustomApp<HandlerC, CustomMsg>,
     vault_contract: Addr,
     channel_id: String,
     to_vault: Binary,
     state: bool
-) -> AppResponse {
+) -> AppResponse
+where
+    HandlerC: Module<ExecT = CustomMsg, QueryT = Empty>
+{
     app.execute_contract::<ExecuteMsg::<()>>(
         Addr::unchecked(FACTORY_OWNER),
         vault_contract,
@@ -298,11 +339,14 @@ pub fn mock_set_vault_connection(
 }
 
 
-pub fn mock_set_vault_fee(
-    app: &mut App,
+pub fn mock_set_vault_fee<HandlerC>(
+    app: &mut CustomApp<HandlerC, CustomMsg>,
     vault_contract: Addr,
     fee: Uint64
-) -> AppResponse {
+) -> AppResponse
+where
+    HandlerC: Module<ExecT = CustomMsg, QueryT = Empty>
+{
     app.execute_contract(
         Addr::unchecked(FACTORY_OWNER),
         vault_contract,
@@ -312,11 +356,14 @@ pub fn mock_set_vault_fee(
 }
 
 
-pub fn mock_set_governance_fee_share(
-    app: &mut App,
+pub fn mock_set_governance_fee_share<HandlerC>(
+    app: &mut CustomApp<HandlerC, CustomMsg>,
     vault_contract: Addr,
     fee: Uint64
-) -> AppResponse {
+) -> AppResponse
+where
+    HandlerC: Module<ExecT = CustomMsg, QueryT = Empty>
+{
     app.execute_contract(
         Addr::unchecked(FACTORY_OWNER),
         vault_contract,

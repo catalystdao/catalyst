@@ -1,7 +1,7 @@
 mod test_volatile_send_asset {
     use cosmwasm_std::{Uint128, Addr, Binary, Attribute};
     use catalyst_types::U256;
-    use catalyst_vault_common::{ContractError, msg::{TotalEscrowedAssetResponse, AssetEscrowResponse}, state::compute_send_asset_hash};
+    use catalyst_vault_common::{ContractError, msg::{TotalEscrowedAssetResponse, AssetEscrowResponse}, state::compute_send_asset_hash, asset::Asset};
     use test_helpers::{math::{uint128_to_f64, f64_to_uint128, u256_to_f64, f64_to_u256}, misc::{encode_payload_address, get_response_attribute}, definitions::{SETUP_MASTER, CHANNEL_ID, SWAPPER_B, SWAPPER_A, FACTORY_OWNER, SWAPPER_C}, contract::{mock_instantiate_interface, mock_factory_deploy_vault, DEFAULT_TEST_VAULT_FEE, DEFAULT_TEST_GOV_FEE, mock_set_vault_connection}, env::CustomTestEnv, asset::CustomTestAsset};
 
     use crate::tests::TestEnv;
@@ -20,7 +20,7 @@ mod test_volatile_send_asset {
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
         let vault_code_id = volatile_vault_contract_storage(env.get_app());
-        let vault = mock_factory_deploy_vault(
+        let vault = mock_factory_deploy_vault::<Asset, _, _>(
             &mut env,
             vault_assets.clone(),
             vault_initial_balances.clone(),
@@ -175,7 +175,7 @@ mod test_volatile_send_asset {
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
         let vault_code_id = volatile_vault_contract_storage(env.get_app());
-        let vault = mock_factory_deploy_vault(
+        let vault = mock_factory_deploy_vault::<Asset, _, _>(
             &mut env,
             vault_assets.clone(),
             vault_initial_balances.clone(),
@@ -287,7 +287,7 @@ mod test_volatile_send_asset {
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
         let vault_code_id = volatile_vault_contract_storage(env.get_app());
-        let vault = mock_factory_deploy_vault(
+        let vault = mock_factory_deploy_vault::<Asset, _, _>(
             &mut env,
             vault_assets.clone(),
             vault_initial_balances.clone(),
@@ -359,7 +359,7 @@ mod test_volatile_send_asset {
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
         let vault_code_id = volatile_vault_contract_storage(env.get_app());
-        let vault = mock_factory_deploy_vault(
+        let vault = mock_factory_deploy_vault::<Asset, _, _>(
             &mut env,
             vault_assets.clone(),
             vault_initial_balances.clone(),
@@ -435,7 +435,7 @@ mod test_volatile_send_asset {
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
         let vault_code_id = volatile_vault_contract_storage(env.get_app());
-        let vault = mock_factory_deploy_vault(
+        let vault = mock_factory_deploy_vault::<Asset, _, _>(
             &mut env,
             vault_assets.clone(),
             vault_initial_balances.clone(),
@@ -513,7 +513,7 @@ mod test_volatile_send_asset {
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
         let vault_code_id = volatile_vault_contract_storage(env.get_app());
-        let vault = mock_factory_deploy_vault(
+        let vault = mock_factory_deploy_vault::<Asset, _, _>(
             &mut env,
             vault_assets.clone(),
             vault_initial_balances.clone(),
@@ -602,7 +602,7 @@ mod test_volatile_send_asset {
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
         let vault_code_id = volatile_vault_contract_storage(env.get_app());
-        let vault = mock_factory_deploy_vault(
+        let vault = mock_factory_deploy_vault::<Asset, _, _>(
             &mut env,
             vault_assets.clone(),
             vault_initial_balances.clone(),
@@ -662,7 +662,7 @@ mod test_volatile_send_asset {
         matches!(
             response_result.err().unwrap().downcast().unwrap(),
             ContractError::AssetNotReceived { asset }
-                if asset == from_asset.into_vault_asset().to_string()
+                if asset == Into::<Asset>::into(from_asset.clone()).to_string()
         );
         #[cfg(feature="asset_cw20")]
         assert_eq!(
@@ -697,7 +697,7 @@ mod test_volatile_send_asset {
         matches!(
             response_result.err().unwrap().downcast().unwrap(),
             ContractError::AssetNotReceived { asset }
-                if asset == from_asset.into_vault_asset().to_string()
+                if asset == Into::<Asset>::into(from_asset.clone()).to_string()
         );
         #[cfg(feature="asset_cw20")]
         assert_eq!(
@@ -769,7 +769,7 @@ mod test_volatile_send_asset {
                 if
                     received_amount == swap_amount - Uint128::one() &&
                     expected_amount == swap_amount &&
-                    asset == from_asset.into_vault_asset().to_string()
+                    asset == Into::<Asset>::into(from_asset.clone()).to_string()
         );
         #[cfg(feature="asset_cw20")]
         assert_eq!(
@@ -808,7 +808,7 @@ mod test_volatile_send_asset {
                 if
                     received_amount == swap_amount + Uint128::one() &&
                     expected_amount == swap_amount &&
-                    asset == from_asset.into_vault_asset().to_string()
+                    asset == Into::<Asset>::into(from_asset.clone()).to_string()
         );
         
         // NOTE: this does not error for cw20 assets, as it's just the *allowance* that is set too high.

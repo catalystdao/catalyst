@@ -12,7 +12,7 @@ const ASSETS: Map<&str, String> = Map::new("catalyst-vault-native-assets");
 // implemented methods.
 
 
-#[derive(Clone, Debug)]
+#[cw_serde]
 pub enum NativeAssetMsg {
     Bank(BankMsg)
 }

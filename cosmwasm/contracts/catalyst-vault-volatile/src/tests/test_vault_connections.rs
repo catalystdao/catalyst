@@ -1,6 +1,6 @@
 mod test_volatile_vault_connections {
     use cosmwasm_std::{Addr, Binary, Attribute};
-    use catalyst_vault_common::{ContractError, msg::VaultConnectionStateResponse};
+    use catalyst_vault_common::{ContractError, msg::VaultConnectionStateResponse, asset::Asset};
     use test_helpers::{misc::encode_payload_address, definitions::{SETUP_MASTER, FACTORY_OWNER}, contract::{mock_instantiate_interface, mock_factory_deploy_vault, mock_finish_vault_setup}, env::CustomTestEnv};
 
     use crate::tests::TestEnv;
@@ -10,7 +10,7 @@ mod test_volatile_vault_connections {
         let interface = mock_instantiate_interface(env.get_app());
         let vault_assets = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
         let vault_code_id = volatile_vault_contract_storage(env.get_app());
-        mock_factory_deploy_vault(
+        mock_factory_deploy_vault::<Asset, _, _>(
             env,
             vault_assets,
             TEST_VAULT_BALANCES.to_vec(),

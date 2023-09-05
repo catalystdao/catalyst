@@ -2,7 +2,7 @@ mod test_volatile_weights_update {
     use std::f64::consts::LN_2;
 
     use cosmwasm_std::{Uint128, Addr, Attribute, Timestamp};
-    use catalyst_vault_common::{ContractError, msg::{WeightResponse, GetLimitCapacityResponse}, event::format_vec_for_event};
+    use catalyst_vault_common::{ContractError, msg::{WeightResponse, GetLimitCapacityResponse}, event::format_vec_for_event, asset::Asset};
     use test_helpers::{math::{uint128_to_f64, f64_to_uint128, u256_to_f64}, definitions::{SETUP_MASTER, FACTORY_OWNER}, contract::mock_factory_deploy_vault, env::CustomTestEnv, asset::CustomTestAsset};
 
     use crate::tests::{TestEnv, TestAsset};
@@ -24,7 +24,7 @@ mod test_volatile_weights_update {
 
         let vault_code_id = volatile_vault_contract_storage(env.get_app());
 
-        mock_factory_deploy_vault(
+        mock_factory_deploy_vault::<Asset, _, _>(
             env,
             vault_assets,
             vault_balances.clone(),

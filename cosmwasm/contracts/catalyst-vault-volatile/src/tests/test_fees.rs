@@ -1,6 +1,6 @@
 mod test_volatile_fees {
     use cosmwasm_std::{Addr, Uint64, Attribute};
-    use catalyst_vault_common::{ContractError, msg::{FeeAdministratorResponse, VaultFeeResponse, GovernanceFeeShareResponse}};
+    use catalyst_vault_common::{ContractError, msg::{FeeAdministratorResponse, VaultFeeResponse, GovernanceFeeShareResponse}, asset::Asset};
     use test_helpers::{definitions::{SETUP_MASTER, FACTORY_OWNER}, contract::mock_factory_deploy_vault, env::CustomTestEnv};
 
     use crate::tests::TestEnv;
@@ -12,7 +12,7 @@ mod test_volatile_fees {
     fn deploy_mock_vault(env: &mut TestEnv) -> Addr {
         let vault_assets = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
         let vault_code_id = volatile_vault_contract_storage(env.get_app());
-        mock_factory_deploy_vault(
+        mock_factory_deploy_vault::<Asset, _, _>(
             env,
             vault_assets,
             TEST_VAULT_BALANCES.to_vec(),

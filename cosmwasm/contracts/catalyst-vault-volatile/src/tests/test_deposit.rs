@@ -1,6 +1,6 @@
 mod test_volatile_deposit{
     use cosmwasm_std::{Uint128, Addr, Attribute};
-    use catalyst_vault_common::{ContractError, state::INITIAL_MINT_AMOUNT, event::format_vec_for_event};
+    use catalyst_vault_common::{ContractError, state::INITIAL_MINT_AMOUNT, event::format_vec_for_event, asset::Asset};
     use test_helpers::{math::{uint128_to_f64, f64_to_uint128}, misc::get_response_attribute, token::{query_token_balance, query_token_info}, definitions::{SETUP_MASTER, DEPOSITOR}, contract::{mock_factory_deploy_vault, DEFAULT_TEST_VAULT_FEE}, env::CustomTestEnv, asset::CustomTestAsset};
 
     use crate::tests::TestEnv;
@@ -18,7 +18,7 @@ mod test_volatile_deposit{
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
         let vault_code_id = volatile_vault_contract_storage(env.get_app());let 
-        vault = mock_factory_deploy_vault(
+        vault = mock_factory_deploy_vault::<Asset, _, _>(
             &mut env,
             vault_assets.clone(),
             vault_initial_balances.clone(),
@@ -131,7 +131,7 @@ mod test_volatile_deposit{
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
         let vault_code_id = volatile_vault_contract_storage(env.get_app());let 
-        vault = mock_factory_deploy_vault(
+        vault = mock_factory_deploy_vault::<Asset, _, _>(
             &mut env,
             vault_assets.clone(),
             vault_initial_balances.clone(),
@@ -211,7 +211,7 @@ mod test_volatile_deposit{
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
         let vault_code_id = volatile_vault_contract_storage(env.get_app());
-        let vault = mock_factory_deploy_vault(
+        let vault = mock_factory_deploy_vault::<Asset, _, _>(
             &mut env,
             vault_assets.clone(),
             vault_initial_balances.clone(),
@@ -291,7 +291,7 @@ mod test_volatile_deposit{
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
         let vault_code_id = volatile_vault_contract_storage(env.get_app());
-        let vault = mock_factory_deploy_vault(
+        let vault = mock_factory_deploy_vault::<Asset, _, _>(
             &mut env,
             vault_assets.clone(),
             vault_initial_balances.clone(),
@@ -353,7 +353,7 @@ mod test_volatile_deposit{
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
         let vault_code_id = volatile_vault_contract_storage(env.get_app());
-        let vault = mock_factory_deploy_vault(
+        let vault = mock_factory_deploy_vault::<Asset, _, _>(
             &mut env,
             vault_assets.clone(),
             vault_initial_balances.clone(),
@@ -444,7 +444,7 @@ mod test_volatile_deposit{
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
         let vault_code_id = volatile_vault_contract_storage(env.get_app());
-        let vault = mock_factory_deploy_vault(
+        let vault = mock_factory_deploy_vault::<Asset, _, _>(
             &mut env,
             vault_assets.clone(),
             vault_initial_balances.clone(),
@@ -484,7 +484,7 @@ mod test_volatile_deposit{
         matches!(
             response_result.err().unwrap().downcast().unwrap(),
             ContractError::AssetNotReceived { asset }
-                if asset == vault_assets[0].into_vault_asset().to_string()  // Error corresponds to the first asset that is not received
+                if asset == Into::<Asset>::into(vault_assets[0].clone()).to_string()  // Error corresponds to the first asset that is not received
         );
         #[cfg(feature="asset_cw20")]
         assert_eq!(
@@ -512,7 +512,7 @@ mod test_volatile_deposit{
         matches!(
             response_result.err().unwrap().downcast().unwrap(),
             ContractError::AssetNotReceived { asset }
-                if asset == vault_assets[vault_assets.len()-1].into_vault_asset().to_string()  // Error corresponds to the first asset that is not received
+                if asset == Into::<Asset>::into(vault_assets[vault_assets.len()-1].clone()).to_string()  // Error corresponds to the first asset that is not received
         );
         #[cfg(feature="asset_cw20")]
         assert_eq!(
@@ -573,7 +573,7 @@ mod test_volatile_deposit{
                 if
                     received_amount == too_low_deposit_amounts[0] &&
                     expected_amount == deposit_amounts[0] &&
-                    asset == vault_assets[0].into_vault_asset().to_string()
+                    asset == Into::<Asset>::into(vault_assets[0].clone()).to_string()
         );
         #[cfg(feature="asset_cw20")]
         assert_eq!(
@@ -608,7 +608,7 @@ mod test_volatile_deposit{
                 if
                     received_amount == too_high_deposit_amounts[0] &&
                     expected_amount == deposit_amounts[0] &&
-                    asset == vault_assets[0].into_vault_asset().to_string()
+                    asset == Into::<Asset>::into(vault_assets[0].clone()).to_string()
         );
         
         // NOTE: this does not error for cw20 assets, as it's just the *allowance* that is set too high.

@@ -2,12 +2,11 @@ mod test_volatile_security_limit {
     use std::f64::consts::LN_2;
 
     use catalyst_types::U256;
-    use catalyst_vault_common::{msg::GetLimitCapacityResponse, ContractError, state::{INITIAL_MINT_AMOUNT, DECAY_RATE}};
+    use catalyst_vault_common::{msg::GetLimitCapacityResponse, ContractError, state::{INITIAL_MINT_AMOUNT, DECAY_RATE}, asset::Asset};
     use cosmwasm_std::{Addr, Uint128, Binary};
-    use cw_multi_test::App;
     use test_helpers::{contract::{mock_factory_deploy_vault, mock_instantiate_interface, mock_set_vault_connection}, definitions::{SETUP_MASTER, SWAPPER_B, CHANNEL_ID, SWAPPER_C}, math::{uint128_to_f64, f64_to_uint128, u256_to_f64, f64_to_u256}, misc::{encode_payload_address, get_response_attribute}, env::CustomTestEnv, asset::CustomTestAsset};
 
-    use crate::tests::{TestEnv, TestAsset};
+    use crate::tests::{TestEnv, TestAsset, TestApp};
     use crate::{tests::{parameters::{TEST_VAULT_BALANCES, TEST_VAULT_WEIGHTS, TEST_VAULT_ASSET_COUNT, AMPLIFICATION}, helpers::volatile_vault_contract_storage}, msg::{QueryMsg, VolatileExecuteMsg}};
 
 
@@ -40,7 +39,7 @@ mod test_volatile_security_limit {
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
         let vault_code_id = volatile_vault_contract_storage(env.get_app());
-        let vault = mock_factory_deploy_vault(
+        let vault = mock_factory_deploy_vault::<Asset, _, _>(
             env,
             vault_assets.clone(),
             vault_initial_balances.clone(),
@@ -234,7 +233,7 @@ mod test_volatile_security_limit {
     }
 
     fn query_limit_capacity(
-        app: &mut App,
+        app: &mut TestApp,
         vault: Addr
     ) -> U256 {
         app.wrap().query_wasm_smart::<GetLimitCapacityResponse>(
@@ -262,7 +261,7 @@ mod test_volatile_security_limit {
 
 
         // Tested action: intialize a new vault
-        let vault = mock_factory_deploy_vault(
+        let vault = mock_factory_deploy_vault::<Asset, _, _>(
             &mut env,
             vault_assets.clone(),
             vault_initial_balances.clone(),

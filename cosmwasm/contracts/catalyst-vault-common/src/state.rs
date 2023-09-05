@@ -7,7 +7,7 @@ use std::ops::Div;
 use catalyst_types::{U256, u256};
 use fixed_point_math::mul_wad_down;
 
-use crate::{ContractError, asset::{VaultAssets, Asset, VaultAssetsTrait, AssetTrait, VaultToken, VaultTokenTrait, VaultResponse, IntoCosmosVaultMsg, VaultMsg}, msg::{ChainInterfaceResponse, SetupMasterResponse, ReadyResponse, OnlyLocalResponse, AssetsResponse, WeightResponse, VaultFeeResponse, GovernanceFeeShareResponse, FeeAdministratorResponse, TotalEscrowedAssetResponse, TotalEscrowedLiquidityResponse, AssetEscrowResponse, LiquidityEscrowResponse, VaultConnectionStateResponse, FactoryResponse, FactoryOwnerResponse, ReceiverExecuteMsg}, event::{send_asset_success_event, send_asset_failure_event, send_liquidity_success_event, send_liquidity_failure_event, finish_setup_event, set_fee_administrator_event, set_vault_fee_event, set_governance_fee_share_event, set_connection_event}};
+use crate::{ContractError, asset::{VaultAssets, Asset, VaultAssetsTrait, AssetTrait, VaultToken, VaultTokenTrait, VaultResponse, IntoCosmosCustomMsg, CustomMsg}, msg::{ChainInterfaceResponse, SetupMasterResponse, ReadyResponse, OnlyLocalResponse, AssetsResponse, WeightResponse, VaultFeeResponse, GovernanceFeeShareResponse, FeeAdministratorResponse, TotalEscrowedAssetResponse, TotalEscrowedLiquidityResponse, AssetEscrowResponse, LiquidityEscrowResponse, VaultConnectionStateResponse, FactoryResponse, FactoryOwnerResponse, ReceiverExecuteMsg}, event::{send_asset_success_event, send_asset_failure_event, send_liquidity_success_event, send_liquidity_failure_event, finish_setup_event, set_fee_administrator_event, set_vault_fee_event, set_governance_fee_share_event, set_connection_event}};
 
 
 
@@ -478,7 +478,7 @@ pub fn collect_governance_fee_message(
     env: &Env,
     asset: &Asset,
     vault_fee_amount: Uint128
-) -> Result<Option<CosmosMsg<VaultMsg>>, ContractError> {   //TODO return AssetMsg instead of CosmosMsg?
+) -> Result<Option<CosmosMsg<CustomMsg>>, ContractError> {   //TODO return AssetMsg instead of CosmosMsg?
 
     // Compute the governance fee as the GOVERNANCE_FEE_SHARE percentage of the vault_fee_amount.
     let gov_fee_amount: Uint128 = mul_wad_down(
@@ -835,8 +835,8 @@ pub fn on_send_asset_failure(
         .send_asset(env, escrow_amount, fallback_address.to_string())?;
 
     let response = match transfer_msg {
-        Some(msg) => Response::<VaultMsg>::new().add_message(msg.into_cosmos_vault_msg()),
-        None => Response::<VaultMsg>::new()
+        Some(msg) => Response::<CustomMsg>::new().add_message(msg.into_cosmos_vault_msg()),
+        None => Response::<CustomMsg>::new()
     };
 
     Ok(
@@ -1071,7 +1071,7 @@ pub fn create_on_catalyst_call_msg(
     calldata_target: String,
     purchased_tokens: Uint128,
     data: Binary
-) -> Result<CosmosMsg<VaultMsg>, ContractError> {
+) -> Result<CosmosMsg<CustomMsg>, ContractError> {
 
     Ok(CosmosMsg::Wasm(
         cosmwasm_std::WasmMsg::Execute {

@@ -1,23 +1,19 @@
 
 use std::fmt::Debug;
 use cosmwasm_std::{Uint128, Addr, Coin, CosmosMsg};
-use cw_multi_test::{App, Executor};
-use vault_assets::asset::{AssetTrait, asset_cw20::Cw20Asset, asset_native::NativeAsset};
-use crate::token::{query_token_balance, transfer_tokens};
+use cw_multi_test::Executor;
+use vault_assets::asset::{asset_cw20::Cw20Asset, asset_native::NativeAsset};
+use crate::{token::{query_token_balance, transfer_tokens}, env::{env_cw20_asset::Cw20AssetApp, env_native_asset::NativeAssetApp}};
 
 
 /// Interface for mock test assets.
-pub trait CustomTestAsset<T: AssetTrait>: Clone + Debug + PartialEq {
+pub trait CustomTestAsset<CustomApp>: Clone + Debug + PartialEq {
 
     fn get_asset_ref(&self) -> String;
 
-    fn query_balance(&self, app: &mut App, account: impl Into<String>) -> Uint128;
+    fn query_balance(&self, app: &mut CustomApp, account: impl Into<String>) -> Uint128;
 
-    fn transfer(&self, app: &mut App, amount: Uint128, account: Addr, recipient: impl Into<String>);
-
-    fn into_vault_asset(&self) -> T;
-
-    fn from_vault_asset(asset: &T) -> Self;
+    fn transfer(&self, app: &mut CustomApp, amount: Uint128, account: Addr, recipient: impl Into<String>);
 
 }
 
@@ -28,13 +24,13 @@ pub struct TestNativeAsset {
     pub alias: String
 }
 
-impl CustomTestAsset<NativeAsset> for TestNativeAsset {
+impl CustomTestAsset<NativeAssetApp> for TestNativeAsset {
 
     fn get_asset_ref(&self) -> String {
         self.alias.clone()
     }
 
-    fn query_balance(&self, app: &mut App, account: impl Into<String>) -> Uint128 {
+    fn query_balance(&self, app: &mut NativeAssetApp, account: impl Into<String>) -> Uint128 {
 
         app.wrap().query_balance(
             account.into(),
@@ -43,7 +39,7 @@ impl CustomTestAsset<NativeAsset> for TestNativeAsset {
 
     }
 
-    fn transfer(&self, app: &mut App, amount: Uint128, account: Addr, recipient: impl Into<String>) {
+    fn transfer(&self, app: &mut NativeAssetApp, amount: Uint128, account: Addr, recipient: impl Into<String>) {
 
         if amount.is_zero() {
             return;
@@ -59,17 +55,22 @@ impl CustomTestAsset<NativeAsset> for TestNativeAsset {
 
     }
 
-    fn into_vault_asset(&self) -> NativeAsset {
-        NativeAsset {
-            denom: self.denom.to_string(),
-            alias: self.alias.to_string()
+}
+
+impl From<TestNativeAsset> for NativeAsset {
+    fn from(value: TestNativeAsset) -> Self {
+        Self {
+            denom: value.denom,
+            alias: value.alias
         }
     }
+}
 
-    fn from_vault_asset(asset: &NativeAsset) -> Self {
+impl From<NativeAsset> for TestNativeAsset {
+    fn from(value: NativeAsset) -> Self {
         Self {
-            denom: asset.denom.clone(),
-            alias: asset.alias.clone()
+            denom: value.denom,
+            alias: value.alias
         }
     }
 }
@@ -80,13 +81,13 @@ impl CustomTestAsset<NativeAsset> for TestNativeAsset {
 #[derive(Debug, Clone, PartialEq)]
 pub struct TestCw20Asset(pub String);
 
-impl CustomTestAsset<Cw20Asset> for TestCw20Asset {
+impl CustomTestAsset<Cw20AssetApp> for TestCw20Asset {
 
     fn get_asset_ref(&self) -> String {
         self.0.clone()
     }
 
-    fn query_balance(&self, app: &mut App, account: impl Into<String>) -> Uint128 {
+    fn query_balance(&self, app: &mut Cw20AssetApp, account: impl Into<String>) -> Uint128 {
 
         query_token_balance(
             app,
@@ -96,7 +97,7 @@ impl CustomTestAsset<Cw20Asset> for TestCw20Asset {
 
     }
 
-    fn transfer(&self, app: &mut App, amount: Uint128, account: Addr, recipient: impl Into<String>) {
+    fn transfer(&self, app: &mut Cw20AssetApp, amount: Uint128, account: Addr, recipient: impl Into<String>) {
 
         transfer_tokens(
             app,
@@ -108,13 +109,17 @@ impl CustomTestAsset<Cw20Asset> for TestCw20Asset {
 
     }
 
-    fn into_vault_asset(&self) -> Cw20Asset {
-        Cw20Asset(self.0.to_string())
-    }
+}
 
-    fn from_vault_asset(asset: &Cw20Asset) -> Self {
-        Self(asset.0.clone())
+impl From<TestCw20Asset> for Cw20Asset {
+    fn from(value: TestCw20Asset) -> Self {
+        Self(value.0)
     }
+}
 
+impl From<Cw20Asset> for TestCw20Asset {
+    fn from(value: Cw20Asset) -> Self {
+        Self(value.0)
+    }
 }
 

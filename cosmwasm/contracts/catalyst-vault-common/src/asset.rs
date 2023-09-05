@@ -6,8 +6,8 @@ compile_error!("An asset-type feature must be enabled (\"asset_native\" or \"ass
 compile_error!("Multiple asset-type features cannot be enabled at the same time (\"asset_native\" and \"asset_cw20\")");
 
 
-pub trait IntoCosmosVaultMsg {
-    fn into_cosmos_vault_msg(self) -> CosmosMsg<VaultMsg>;
+pub trait IntoCosmosCustomMsg {
+    fn into_cosmos_vault_msg(self) -> CosmosMsg<CustomMsg>;
 }
 
 pub trait IntoVaultResponse {
@@ -37,36 +37,36 @@ pub mod native_asset_vault_modules {
         NativeVaultTokenMsg as VaultTokenMsg
     };
 
-    use super::IntoCosmosVaultMsg;
+    use super::IntoCosmosCustomMsg;
 
     #[cw_serde]
-    pub enum VaultMsg {     // NOTE: This must match the allowed msgs of CosmosMsg::Custom
+    pub enum CustomMsg {     // NOTE: This must match the allowed msgs of CosmosMsg::Custom
         Token(token_bindings::TokenMsg),
     }
 
-    impl IntoCosmosVaultMsg for AssetMsg {
-        fn into_cosmos_vault_msg(self) -> CosmosMsg<VaultMsg> {
+    impl IntoCosmosCustomMsg for AssetMsg {
+        fn into_cosmos_vault_msg(self) -> CosmosMsg<CustomMsg> {
             match self {
                 AssetMsg::Bank(bank_msg) => CosmosMsg::Bank(bank_msg)
             }
         }
     }
 
-    impl IntoCosmosVaultMsg for VaultTokenMsg {
-        fn into_cosmos_vault_msg(self) -> CosmosMsg<VaultMsg> {
+    impl IntoCosmosCustomMsg for VaultTokenMsg {
+        fn into_cosmos_vault_msg(self) -> CosmosMsg<CustomMsg> {
             match self {
-                VaultTokenMsg::Token(token_msg) => CosmosMsg::Custom(VaultMsg::Token(token_msg)),
+                VaultTokenMsg::Token(token_msg) => CosmosMsg::Custom(CustomMsg::Token(token_msg)),
             }
         }
     }
 
     //TODO this shouldn't be needed
-    impl IntoCosmosVaultMsg for CosmosMsg<Empty> {
-        fn into_cosmos_vault_msg(self) -> CosmosMsg<VaultMsg> {
+    impl IntoCosmosCustomMsg for CosmosMsg<Empty> {
+        fn into_cosmos_vault_msg(self) -> CosmosMsg<CustomMsg> {
             match self {
                 CosmosMsg::Bank(bank_msg) => CosmosMsg::Bank(bank_msg),
                 CosmosMsg::Wasm(wasm_msg) => CosmosMsg::Wasm(wasm_msg),
-                CosmosMsg::Custom(_) => panic!("Unable to cast from CosmosMsg::Custom(Empty) to CosmosMsg::Custom(VaultMsg)"),
+                CosmosMsg::Custom(_) => panic!("Unable to cast from CosmosMsg::Custom(Empty) to CosmosMsg::Custom(CustomMsg)"),
                 CosmosMsg::Staking(staking_msg) => CosmosMsg::Staking(staking_msg),
                 CosmosMsg::Distribution(distribution_msg) => CosmosMsg::Distribution(distribution_msg),
                 CosmosMsg::Stargate { type_url, value } => CosmosMsg::Stargate { type_url, value },
@@ -101,32 +101,32 @@ pub mod cw20_asset_vault_modules {
         Cw20VaultTokenMsg as VaultTokenMsg
     };
     
-    use super::IntoCosmosVaultMsg;
+    use super::IntoCosmosCustomMsg;
 
     #[cw_serde]
-    pub enum VaultMsg {
+    pub enum CustomMsg {
     }
 
-    impl IntoCosmosVaultMsg for AssetMsg {
-        fn into_cosmos_vault_msg(self) -> CosmosMsg<VaultMsg> {
+    impl IntoCosmosCustomMsg for AssetMsg {
+        fn into_cosmos_vault_msg(self) -> CosmosMsg<CustomMsg> {
             match self {
                 AssetMsg::Wasm(wasm_msg) => CosmosMsg::Wasm(wasm_msg),
             }
         }
     }
 
-    impl IntoCosmosVaultMsg for VaultTokenMsg {
-        fn into_cosmos_vault_msg(self) -> CosmosMsg<VaultMsg> {
+    impl IntoCosmosCustomMsg for VaultTokenMsg {
+        fn into_cosmos_vault_msg(self) -> CosmosMsg<CustomMsg> {
             panic!("Unsupported empty message casting.")    // Code should never reach this point
         }
     }
 
-    impl IntoCosmosVaultMsg for CosmosMsg<Empty> {
-        fn into_cosmos_vault_msg(self) -> CosmosMsg<VaultMsg> {
+    impl IntoCosmosCustomMsg for CosmosMsg<Empty> {
+        fn into_cosmos_vault_msg(self) -> CosmosMsg<CustomMsg> {
             match self {
                 CosmosMsg::Bank(bank_msg) => CosmosMsg::Bank(bank_msg),
                 CosmosMsg::Wasm(wasm_msg) => CosmosMsg::Wasm(wasm_msg),
-                CosmosMsg::Custom(_) => panic!("Unable to cast from CosmosMsg::Custom(Empty) to CosmosMsg::Custom(VaultMsg)"),
+                CosmosMsg::Custom(_) => panic!("Unable to cast from CosmosMsg::Custom(Empty) to CosmosMsg::Custom(CustomMsg)"),
                 CosmosMsg::Staking(staking_msg) => CosmosMsg::Staking(staking_msg),
                 CosmosMsg::Distribution(distribution_msg) => CosmosMsg::Distribution(distribution_msg),
                 CosmosMsg::Stargate { type_url, value } => CosmosMsg::Stargate { type_url, value },
@@ -144,7 +144,7 @@ pub mod cw20_asset_vault_modules {
 pub use vault_assets::asset::{VaultAssetsTrait, AssetTrait};
 pub use vault_token::vault_token::VaultTokenTrait;
 
-pub type VaultResponse = cosmwasm_std::Response<VaultMsg>;
+pub type VaultResponse = cosmwasm_std::Response<CustomMsg>;
 
 impl IntoVaultResponse for Response<Empty> {
     fn into_vault_response(self) -> VaultResponse {
@@ -159,7 +159,7 @@ impl IntoVaultResponse for Response<Empty> {
                     gas_limit: sub_msg.gas_limit,
                     reply_on: sub_msg.reply_on.clone(),
                 }
-            }).collect::<Vec<SubMsg<VaultMsg>>>()
+            }).collect::<Vec<SubMsg<CustomMsg>>>()
         );
 
         response = response.add_attributes(

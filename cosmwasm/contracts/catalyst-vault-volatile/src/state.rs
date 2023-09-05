@@ -6,7 +6,7 @@ use catalyst_vault_common::{
     ContractError,
     event::{local_swap_event, send_asset_event, receive_asset_event, send_liquidity_event, receive_liquidity_event, deposit_event, withdraw_event}, 
     msg::{CalcSendAssetResponse, CalcReceiveAssetResponse, CalcLocalSwapResponse, GetLimitCapacityResponse},
-    state::{FACTORY, MAX_ASSETS, WEIGHTS, INITIAL_MINT_AMOUNT, VAULT_FEE, MAX_LIMIT_CAPACITY, USED_LIMIT_CAPACITY, CHAIN_INTERFACE, TOTAL_ESCROWED_LIQUIDITY, TOTAL_ESCROWED_ASSETS, is_connected, update_limit_capacity, collect_governance_fee_message, compute_send_asset_hash, compute_send_liquidity_hash, create_asset_escrow, create_liquidity_escrow, on_send_asset_success, on_send_liquidity_success, total_supply, get_limit_capacity, factory_owner, initialize_limit_capacity, initialize_escrow_totals, create_on_catalyst_call_msg}, asset::{VaultAssets, Asset, VaultAssetsTrait, AssetTrait, VaultToken, VaultTokenTrait, VaultResponse, IntoCosmosVaultMsg, VaultMsg}
+    state::{FACTORY, MAX_ASSETS, WEIGHTS, INITIAL_MINT_AMOUNT, VAULT_FEE, MAX_LIMIT_CAPACITY, USED_LIMIT_CAPACITY, CHAIN_INTERFACE, TOTAL_ESCROWED_LIQUIDITY, TOTAL_ESCROWED_ASSETS, is_connected, update_limit_capacity, collect_governance_fee_message, compute_send_asset_hash, compute_send_liquidity_hash, create_asset_escrow, create_liquidity_escrow, on_send_asset_success, on_send_liquidity_success, total_supply, get_limit_capacity, factory_owner, initialize_limit_capacity, initialize_escrow_totals, create_on_catalyst_call_msg}, asset::{VaultAssets, Asset, VaultAssetsTrait, AssetTrait, VaultToken, VaultTokenTrait, VaultResponse, IntoCosmosCustomMsg, CustomMsg}
 };
 use fixed_point_math::{self, WAD, LN2, mul_wad_down, ln_wad, exp_wad};
 use std::ops::Div;
@@ -271,7 +271,7 @@ pub fn deposit_mixed(
             receive_asset_msgs
                 .into_iter()
                 .map(|msg| msg.into_cosmos_vault_msg())
-                .collect::<Vec<CosmosMsg<VaultMsg>>>()
+                .collect::<Vec<CosmosMsg<CustomMsg>>>()
         );
 
     if let Some(msg) = mint_msg {
@@ -387,7 +387,7 @@ pub fn withdraw_all(
         .add_messages(
             transfer_msgs.into_iter()
                 .map(|msg| msg.into_cosmos_vault_msg())
-                .collect::<Vec<CosmosMsg<VaultMsg>>>()
+                .collect::<Vec<CosmosMsg<CustomMsg>>>()
         )
         .add_event(
             withdraw_event(
@@ -543,7 +543,7 @@ pub fn withdraw_mixed(
         .add_messages(
             transfer_msgs.into_iter()
                 .map(|msg| msg.into_cosmos_vault_msg())
-                .collect::<Vec<CosmosMsg<VaultMsg>>>()
+                .collect::<Vec<CosmosMsg<CustomMsg>>>()
         )
         .add_event(
             withdraw_event(

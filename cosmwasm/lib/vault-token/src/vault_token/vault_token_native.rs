@@ -1,3 +1,4 @@
+use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Uint128, Deps, DepsMut, Env, MessageInfo};
 use cw_storage_plus::Item;
 use token_bindings::TokenMsg;
@@ -11,7 +12,7 @@ const VAULT_TOKEN_DENOM: Item<String> = Item::new("catalyst-vault-token-denom");
 
 
 
-#[derive(Clone, Debug)]
+#[cw_serde]
 pub enum NativeVaultTokenMsg {
     Token(TokenMsg)
 }

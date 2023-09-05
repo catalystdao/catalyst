@@ -1,6 +1,10 @@
-use cosmwasm_std::{Uint128, Addr};
+use cosmwasm_schema::{schemars::JsonSchema, serde::{Serialize, de::DeserializeOwned}};
+use cosmwasm_std::{Uint128, Addr, Empty};
 use cw20::{Cw20Coin, MinterResponse, BalanceResponse, Cw20QueryMsg, TokenInfoResponse, Cw20ExecuteMsg, AllowanceResponse};
-use cw_multi_test::{App, ContractWrapper, AppResponse, Executor};
+use cw_multi_test::{ContractWrapper, AppResponse, Executor, Module};
+use std::fmt::Debug;
+
+use crate::env::CustomApp;
 
 pub const WAD: Uint128 = Uint128::new(1000000000000000000u128);
 
@@ -15,12 +19,16 @@ pub struct TestTokenDefinition {
 
 impl TestTokenDefinition {
 
-    pub fn deploy_token(
+    pub fn deploy_token<AppC, ExecC>(
         &self,
-        app: &mut App,
+        app: &mut AppC,
         cw20_contract: u64,
         minter: Addr
-    ) -> Addr {
+    ) -> Addr
+    where
+        AppC: Executor<ExecC>,
+        ExecC: Clone + Debug + PartialEq + JsonSchema + Serialize + DeserializeOwned + 'static
+    {
         app.instantiate_contract::<cw20_base::msg::InstantiateMsg, _>(
             cw20_contract,
             minter.clone(),
@@ -110,12 +118,16 @@ pub fn mock_test_token_definitions(
 }
 
 
-pub fn cw20_contract_storage(
-    app: &mut App
-) -> u64 {
+pub fn cw20_contract_storage<HandlerC, ExecC>(
+    app: &mut CustomApp<HandlerC, ExecC>
+) -> u64
+where
+    HandlerC: Module<ExecT = ExecC, QueryT = Empty, SudoT = Empty>,
+    ExecC: Clone + Debug + PartialEq + JsonSchema + Serialize + DeserializeOwned + 'static
+{
 
     // Create contract wrapper
-    let contract = ContractWrapper::new(
+    let contract = ContractWrapper::new_with_empty(
         cw20_base::contract::execute,
         cw20_base::contract::instantiate,
         cw20_base::contract::query
@@ -126,12 +138,16 @@ pub fn cw20_contract_storage(
 }
 
 
-pub fn deploy_test_tokens(
-    app: &mut App,
+pub fn deploy_test_tokens<HandlerC, ExecC>(
+    app: &mut CustomApp<HandlerC, ExecC>,
     minter: String,
     cw20_contract: Option<u64>,
     count: usize
-) -> Vec<Addr> {
+) -> Vec<Addr>
+where
+    HandlerC: Module<ExecT = ExecC, QueryT = Empty, SudoT = Empty>,
+    ExecC: Clone + Debug + PartialEq + JsonSchema + Serialize + DeserializeOwned + 'static
+{
 
     deploy_test_token_definitions(
         app,
@@ -143,12 +159,16 @@ pub fn deploy_test_tokens(
 }
 
 
-pub fn deploy_test_token_definitions(
-    app: &mut App,
+pub fn deploy_test_token_definitions<HandlerC, ExecC>(
+    app: &mut CustomApp<HandlerC, ExecC>,
     minter: String,
     cw20_contract: Option<u64>,
     token_definitions: Vec<TestTokenDefinition>
-) -> Vec<Addr> {
+) -> Vec<Addr>
+where
+    HandlerC: Module<ExecT = ExecC, QueryT = Empty, SudoT = Empty>,
+    ExecC: Clone + Debug + PartialEq + JsonSchema + Serialize + DeserializeOwned + 'static
+{
 
     let cw20_contract = cw20_contract.unwrap_or(cw20_contract_storage(app));
 
@@ -168,11 +188,15 @@ pub fn deploy_test_token_definitions(
 }
 
 
-pub fn query_token_balance(
-    app: &mut App,
+pub fn query_token_balance<HandlerC, ExecC>(
+    app: &mut CustomApp<HandlerC, ExecC>,
     asset: Addr,
     account: String
-) -> Uint128 {
+) -> Uint128
+where
+    HandlerC: Module<ExecT = ExecC, QueryT = Empty, SudoT = Empty>,
+    ExecC: Clone + Debug + PartialEq + JsonSchema + Serialize + DeserializeOwned + 'static
+{
     
     app.wrap().query_wasm_smart::<BalanceResponse>(
         asset,
@@ -182,10 +206,14 @@ pub fn query_token_balance(
 }
 
 
-pub fn query_token_info(
-    app: &mut App,
+pub fn query_token_info<HandlerC, ExecC>(
+    app: &mut CustomApp<HandlerC, ExecC>,
     asset: Addr
-) -> TokenInfoResponse {
+) -> TokenInfoResponse
+where
+    HandlerC: Module<ExecT = ExecC, QueryT = Empty, SudoT = Empty>,
+    ExecC: Clone + Debug + PartialEq + JsonSchema + Serialize + DeserializeOwned + 'static
+{
     
     app.wrap().query_wasm_smart::<TokenInfoResponse>(
         asset,
@@ -195,12 +223,16 @@ pub fn query_token_info(
 }
 
 
-pub fn get_token_allowance(
-    app: &mut App,
+pub fn get_token_allowance<HandlerC, ExecC>(
+    app: &mut CustomApp<HandlerC, ExecC>,
     asset: Addr,
     account: Addr,
     spender: String,
-) -> AllowanceResponse {
+) -> AllowanceResponse
+where
+    HandlerC: Module<ExecT = ExecC, QueryT = Empty, SudoT = Empty>,
+    ExecC: Clone + Debug + PartialEq + JsonSchema + Serialize + DeserializeOwned + 'static
+{
 
     app.wrap().query_wasm_smart(
         asset,
@@ -213,13 +245,17 @@ pub fn get_token_allowance(
 }
 
 
-pub fn increase_token_allowance(
-    app: &mut App,
+pub fn increase_token_allowance<HandlerC, ExecC>(
+    app: &mut CustomApp<HandlerC, ExecC>,
     amount: Uint128,
     asset: Addr,
     account: Addr,
     spender: String,
-) -> AppResponse {
+) -> AppResponse
+where
+    HandlerC: Module<ExecT = ExecC, QueryT = Empty, SudoT = Empty>,
+    ExecC: Clone + Debug + PartialEq + JsonSchema + Serialize + DeserializeOwned + 'static
+{
     app.execute_contract::<Cw20ExecuteMsg>(
         account,
         asset,
@@ -233,13 +269,17 @@ pub fn increase_token_allowance(
 }
 
 
-pub fn decrease_token_allowance(
-    app: &mut App,
+pub fn decrease_token_allowance<HandlerC, ExecC>(
+    app: &mut CustomApp<HandlerC, ExecC>,
     amount: Uint128,
     asset: Addr,
     account: Addr,
     spender: String,
-) -> AppResponse {
+) -> AppResponse
+where
+    HandlerC: Module<ExecT = ExecC, QueryT = Empty, SudoT = Empty>,
+    ExecC: Clone + Debug + PartialEq + JsonSchema + Serialize + DeserializeOwned + 'static
+{
     app.execute_contract::<Cw20ExecuteMsg>(
         account,
         asset,
@@ -253,13 +293,17 @@ pub fn decrease_token_allowance(
 }
 
 
-pub fn transfer_tokens(
-    app: &mut App,
+pub fn transfer_tokens<HandlerC, ExecC>(
+    app: &mut CustomApp<HandlerC, ExecC>,
     amount: Uint128,
     asset: Addr,
     account: Addr,
     recipient: String
-) -> AppResponse {
+) -> AppResponse
+where
+    HandlerC: Module<ExecT = ExecC, QueryT = Empty, SudoT = Empty>,
+    ExecC: Clone + Debug + PartialEq + JsonSchema + Serialize + DeserializeOwned + 'static
+{
     app.execute_contract::<Cw20ExecuteMsg>(
         account,
         asset,

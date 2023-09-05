@@ -1,17 +1,18 @@
 mod test_amplified_instantiate {
     use cosmwasm_std::{Uint128, Addr, Uint64, WasmMsg, to_binary, Attribute};
     use cw20_base::state::TokenInfo;
-    use cw_multi_test::{App, Executor};
+    use cw_multi_test::Executor;
     use catalyst_vault_common::msg::{SetupMasterResponse, ChainInterfaceResponse, OnlyLocalResponse, VaultFeeResponse, GovernanceFeeShareResponse};
-    use test_helpers::{definitions::DEPLOYER, contract::mock_instantiate_vault_msg};
+    use test_helpers::{definitions::{DEPLOYER, SETUP_MASTER}, contract::mock_instantiate_vault_msg, env::CustomTestEnv};
 
+    use crate::tests::TestEnv;
     use crate::{msg::QueryMsg, tests::helpers::amplified_vault_contract_storage};
 
 
     #[test]
     fn test_instantiate() {
 
-        let mut app = App::default();
+        let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
 
         let chain_interface = Some("chain_interface".to_string());
         let instantiate_msg = mock_instantiate_vault_msg(chain_interface);
@@ -19,8 +20,8 @@ mod test_amplified_instantiate {
 
 
         // Tested action: instantiate contract
-        let contract_code_storage = amplified_vault_contract_storage(&mut app);
-        let vault_contract = app.instantiate_contract(
+        let contract_code_storage = amplified_vault_contract_storage(env.get_app());
+        let vault_contract = env.get_app().instantiate_contract(
             contract_code_storage,
             Addr::unchecked(DEPLOYER),
             &instantiate_msg,
@@ -32,7 +33,7 @@ mod test_amplified_instantiate {
 
 
         // Query and verify setup master
-        let setup_master: Option<Addr> = app
+        let setup_master: Option<Addr> = env.get_app()
             .wrap()
             .query_wasm_smart::<SetupMasterResponse>(vault_contract.clone(), &QueryMsg::SetupMaster {})
             .unwrap()
@@ -44,7 +45,7 @@ mod test_amplified_instantiate {
         );
 
         // Query and verify chain interface
-        let chain_interface: Option<Addr> = app
+        let chain_interface: Option<Addr> = env.get_app()
             .wrap()
             .query_wasm_smart::<ChainInterfaceResponse>(vault_contract.clone(), &QueryMsg::ChainInterface {})
             .unwrap()
@@ -56,7 +57,7 @@ mod test_amplified_instantiate {
         );
 
         // Query and verify OnlyLocal property
-        let only_local: bool = app
+        let only_local: bool = env.get_app()
             .wrap()
             .query_wasm_smart::<OnlyLocalResponse>(vault_contract.clone(), &QueryMsg::OnlyLocal {})
             .unwrap()
@@ -68,7 +69,7 @@ mod test_amplified_instantiate {
         );
 
         // Query and verify vault fee
-        let vault_fee: Uint64 = app
+        let vault_fee: Uint64 = env.get_app()
             .wrap()
             .query_wasm_smart::<VaultFeeResponse>(vault_contract.clone(), &QueryMsg::VaultFee {})
             .unwrap()
@@ -80,7 +81,7 @@ mod test_amplified_instantiate {
         );
 
         // Query and verify governance fee
-        let gov_fee_share: Uint64 = app
+        let gov_fee_share: Uint64 = env.get_app()
             .wrap()
             .query_wasm_smart::<GovernanceFeeShareResponse>(vault_contract.clone(), &QueryMsg::GovernanceFeeShare {})
             .unwrap()
@@ -92,7 +93,7 @@ mod test_amplified_instantiate {
         );
 
         // Query and verify token info
-        let token_info: TokenInfo = app
+        let token_info: TokenInfo = env.get_app()
             .wrap()
             .query_wasm_smart::<TokenInfo>(vault_contract.clone(), &QueryMsg::TokenInfo {})
             .unwrap();
@@ -114,7 +115,7 @@ mod test_amplified_instantiate {
     #[test]
     fn test_instantiate_only_local() {
 
-        let mut app = App::default();
+        let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
 
         let chain_interface = None;
         let instantiate_msg = mock_instantiate_vault_msg(chain_interface);
@@ -122,8 +123,8 @@ mod test_amplified_instantiate {
 
 
         // Tested action: instantiate contract
-        let contract_code_storage = amplified_vault_contract_storage(&mut app);
-        let vault_contract = app.instantiate_contract(
+        let contract_code_storage = amplified_vault_contract_storage(env.get_app());
+        let vault_contract = env.get_app().instantiate_contract(
             contract_code_storage,
             Addr::unchecked(DEPLOYER),
             &instantiate_msg,
@@ -135,7 +136,7 @@ mod test_amplified_instantiate {
 
 
         // Query and verify chain interface
-        let chain_interface: Option<Addr> = app
+        let chain_interface: Option<Addr> = env.get_app()
             .wrap()
             .query_wasm_smart::<ChainInterfaceResponse>(vault_contract.clone(), &QueryMsg::ChainInterface {})
             .unwrap()
@@ -147,7 +148,7 @@ mod test_amplified_instantiate {
         );
 
         // Query and verify OnlyLocal property
-        let only_local: bool = app
+        let only_local: bool = env.get_app()
             .wrap()
             .query_wasm_smart::<OnlyLocalResponse>(vault_contract.clone(), &QueryMsg::OnlyLocal {})
             .unwrap()
@@ -163,7 +164,7 @@ mod test_amplified_instantiate {
     #[test]
     fn test_instantiate_events() {
 
-        let mut app = App::default();
+        let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
 
         let chain_interface = Some("chain_interface".to_string());
         let instantiate_msg = mock_instantiate_vault_msg(chain_interface);
@@ -171,7 +172,7 @@ mod test_amplified_instantiate {
 
 
         // Tested action: instantiate contract
-        let contract_code_storage = amplified_vault_contract_storage(&mut app);
+        let contract_code_storage = amplified_vault_contract_storage(env.get_app());
 
         let wasm_instantiate_msg = WasmMsg::Instantiate {
             admin: None,
@@ -181,7 +182,7 @@ mod test_amplified_instantiate {
             label: "amplified_vault".into(),
         };
 
-        let response = app.execute(
+        let response = env.get_app().execute(
             Addr::unchecked(DEPLOYER),
             wasm_instantiate_msg.into()
         ).unwrap();

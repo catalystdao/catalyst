@@ -1,13 +1,14 @@
 use cosmwasm_std::{Uint128, Uint64};
-use cw_multi_test::{ContractWrapper, App};
+use cw_multi_test::ContractWrapper;
 use catalyst_types::{U256, I256};
 use test_helpers::{math::{u256_to_f64, uint128_to_f64, i256_to_f64}, contract::{ExpectedLocalSwapResult, ExpectedSendAssetResult, ExpectedReceiveAssetResult, ExpectedSendLiquidityResult, ExpectedReceiveLiquidityResult, ExpectedReferenceAsset}};
+use crate::tests::TestApp;
 
 
 
 // Contracts
 pub fn amplified_vault_contract_storage(
-    app: &mut App
+    app: &mut TestApp
 ) -> u64 {
 
     // Create contract wrapper

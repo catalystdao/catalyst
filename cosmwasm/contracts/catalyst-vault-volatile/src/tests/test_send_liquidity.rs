@@ -1,7 +1,7 @@
 mod test_volatile_send_liquidity {
     use cosmwasm_std::{Uint128, Addr, Binary, Attribute};
     use catalyst_types::{U256, u256};
-    use catalyst_vault_common::{ContractError, msg::{TotalEscrowedLiquidityResponse, LiquidityEscrowResponse}, state::{INITIAL_MINT_AMOUNT, compute_send_liquidity_hash}};
+    use catalyst_vault_common::{ContractError, msg::{TotalEscrowedLiquidityResponse, LiquidityEscrowResponse}, state::{INITIAL_MINT_AMOUNT, compute_send_liquidity_hash}, asset::Asset};
     use test_helpers::{math::{uint128_to_f64, f64_to_uint128, u256_to_f64}, misc::{encode_payload_address, get_response_attribute}, token::{transfer_tokens, query_token_balance, query_token_info}, definitions::{SETUP_MASTER, CHANNEL_ID, SWAPPER_A, SWAPPER_B, SWAPPER_C}, contract::{mock_instantiate_interface, mock_factory_deploy_vault, mock_set_vault_connection}, env::CustomTestEnv};
 
     use crate::tests::TestEnv;
@@ -20,7 +20,7 @@ mod test_volatile_send_liquidity {
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
         let vault_code_id = volatile_vault_contract_storage(env.get_app());
-        let vault = mock_factory_deploy_vault(
+        let vault = mock_factory_deploy_vault::<Asset, _, _>(
             &mut env,
             vault_assets.clone(),
             vault_initial_balances.clone(),
@@ -154,7 +154,7 @@ mod test_volatile_send_liquidity {
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
         let vault_code_id = volatile_vault_contract_storage(env.get_app());
-        let vault = mock_factory_deploy_vault(
+        let vault = mock_factory_deploy_vault::<Asset, _, _>(
             &mut env,
             vault_assets.clone(),
             vault_initial_balances.clone(),
@@ -259,7 +259,7 @@ mod test_volatile_send_liquidity {
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
         let vault_code_id = volatile_vault_contract_storage(env.get_app());
-        let vault = mock_factory_deploy_vault(
+        let vault = mock_factory_deploy_vault::<Asset, _, _>(
             &mut env,
             vault_assets.clone(),
             vault_initial_balances.clone(),
@@ -335,7 +335,7 @@ mod test_volatile_send_liquidity {
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
         let vault_code_id = volatile_vault_contract_storage(env.get_app());
-        let vault = mock_factory_deploy_vault(
+        let vault = mock_factory_deploy_vault::<Asset, _, _>(
             &mut env,
             vault_assets.clone(),
             vault_initial_balances.clone(),
@@ -406,7 +406,7 @@ mod test_volatile_send_liquidity {
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
         let vault_code_id = volatile_vault_contract_storage(env.get_app());
-        let vault = mock_factory_deploy_vault(
+        let vault = mock_factory_deploy_vault::<Asset, _, _>(
             &mut env,
             vault_assets.clone(),
             vault_initial_balances.clone(),

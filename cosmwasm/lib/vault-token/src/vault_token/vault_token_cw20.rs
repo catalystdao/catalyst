@@ -1,3 +1,4 @@
+use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Uint128, Deps, DepsMut, Env, MessageInfo, Int128};
 use cw20_base::{state::{TOKEN_INFO, TokenInfo, MinterData}, contract::{execute_mint, execute_burn}};
 
@@ -8,7 +9,7 @@ use super::VaultTokenTrait;
 
 
 
-#[derive(Clone, Debug)]
+#[cw_serde]
 pub enum Cw20VaultTokenMsg {
 }
 

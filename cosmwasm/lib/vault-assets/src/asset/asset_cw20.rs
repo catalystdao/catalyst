@@ -12,7 +12,7 @@ const ASSETS: Item<Vec<String>> = Item::new("catalyst-vault-cw20-assets");
 // implemented methods.
 
 
-#[derive(Clone, Debug)]
+#[cw_serde]
 pub enum Cw20AssetMsg {
     Wasm(WasmMsg)
 }

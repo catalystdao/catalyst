@@ -9,7 +9,7 @@ mod test_amplified_initialize_swap_curves {
     use catalyst_vault_common::{ContractError, msg::{AssetsResponse, WeightResponse, GetLimitCapacityResponse, TotalEscrowedAssetResponse, TotalEscrowedLiquidityResponse}, state::INITIAL_MINT_AMOUNT, event::format_vec_for_event, asset::{Asset, AssetTrait}};
     use test_helpers::{definitions::{SETUP_MASTER, DEPOSITOR, DEPLOYER}, contract::{mock_instantiate_vault, InitializeSwapCurvesMockConfig, mock_instantiate_vault_msg}, env::CustomTestEnv, asset::CustomTestAsset};
 
-    use crate::tests::{TestEnv, TestAsset};
+    use crate::tests::{TestEnv, TestAsset, TestApp};
     use crate::{tests::{helpers::amplified_vault_contract_storage, parameters::{AMPLIFICATION, TEST_VAULT_WEIGHTS, TEST_VAULT_BALANCES, TEST_VAULT_ASSET_COUNT}}, msg::AmplificationResponse};
 
 
@@ -32,7 +32,7 @@ mod test_amplified_initialize_swap_curves {
             weights: TEST_VAULT_WEIGHTS.to_vec(),
             amp: AMPLIFICATION,
             depositor: DEPOSITOR.to_string(),
-            asset_trait: std::marker::PhantomData::<_>
+            phantom_data: std::marker::PhantomData::<(Asset, _)>
         };
 
         // Transfer tokens to the vault
@@ -48,7 +48,7 @@ mod test_amplified_initialize_swap_curves {
         env.execute_contract(
             Addr::unchecked(SETUP_MASTER),
             vault.clone(),
-            &initialize_msg.clone().into_execute_msg(),
+            &initialize_msg.build_execute_msg(),
             vec![],
             vec![]
         ).unwrap();
@@ -79,7 +79,7 @@ mod test_amplified_initialize_swap_curves {
             assets,
             initialize_msg.assets
                 .iter()
-                .map(|asset| asset.into_vault_asset())
+                .map(|asset| asset.clone().into())
                 .collect::<Vec<_>>()
         );
 
@@ -216,7 +216,7 @@ mod test_amplified_initialize_swap_curves {
             weights: TEST_VAULT_WEIGHTS.to_vec(),
             amp: AMPLIFICATION,
             depositor: DEPOSITOR.to_string(),
-            asset_trait: std::marker::PhantomData::<_>
+            phantom_data: std::marker::PhantomData::<(Asset, _)>
         };
 
         // Transfer tokens to the vault
@@ -232,7 +232,7 @@ mod test_amplified_initialize_swap_curves {
         let response = env.execute_contract(
             Addr::unchecked(SETUP_MASTER),
             vault.clone(),
-            &initialize_msg.clone().into_execute_msg(),
+            &initialize_msg.build_execute_msg(),
             vec![],
             vec![]
         ).unwrap();
@@ -279,7 +279,7 @@ mod test_amplified_initialize_swap_curves {
             weights: TEST_VAULT_WEIGHTS.to_vec(),
             amp: AMPLIFICATION,
             depositor: DEPOSITOR.to_string(),
-            asset_trait: std::marker::PhantomData::<_>
+            phantom_data: std::marker::PhantomData::<(Asset, _)>
         };
 
         // Transfer tokens to the vault
@@ -293,7 +293,7 @@ mod test_amplified_initialize_swap_curves {
         let _response = env.execute_contract(
             Addr::unchecked(SETUP_MASTER),
             vault.clone(),
-            &initialize_msg.clone().into_execute_msg(),
+            &initialize_msg.build_execute_msg(),
             vec![],
             vec![]
         ).unwrap();
@@ -304,7 +304,7 @@ mod test_amplified_initialize_swap_curves {
         let response_result = env.execute_contract(
             Addr::unchecked(SETUP_MASTER),
             vault.clone(),
-            &initialize_msg.clone().into_execute_msg(),
+            &initialize_msg.build_execute_msg(),
             vec![],
             vec![]
         );
@@ -329,13 +329,13 @@ mod test_amplified_initialize_swap_curves {
         let vault_code_id = amplified_vault_contract_storage(env.get_app());
         let vault = mock_instantiate_vault(env.get_app(), vault_code_id, None);
 
-        let initialize_msg = InitializeSwapCurvesMockConfig::<Asset, TestAsset> {
+        let initialize_msg = InitializeSwapCurvesMockConfig::<Asset, TestAsset, TestApp> {
             assets: vec![],
             assets_balances: vec![],
             weights: vec![],
             amp: AMPLIFICATION,
             depositor: DEPLOYER.to_string(),
-            asset_trait: std::marker::PhantomData::<_>
+            phantom_data: std::marker::PhantomData::<(Asset, _)>
         };
 
 
@@ -343,7 +343,7 @@ mod test_amplified_initialize_swap_curves {
         let response_result = env.execute_contract(
             Addr::unchecked(SETUP_MASTER),
             vault.clone(),
-            &initialize_msg.clone().into_execute_msg(),
+            &initialize_msg.build_execute_msg(),
             vec![],
             vec![]
         );
@@ -382,7 +382,7 @@ mod test_amplified_initialize_swap_curves {
             weights: vec![Uint128::one(), Uint128::one(), Uint128::one(), Uint128::one()],
             amp: AMPLIFICATION,
             depositor: DEPOSITOR.to_string(),
-            asset_trait: std::marker::PhantomData::<_>
+            phantom_data: std::marker::PhantomData::<(Asset, _)>
         };
 
         // Transfer tokens to the vault
@@ -398,7 +398,7 @@ mod test_amplified_initialize_swap_curves {
         let response_result = env.execute_contract(
             Addr::unchecked(SETUP_MASTER),
             vault.clone(),
-            &initialize_msg.clone().into_execute_msg(),
+            &initialize_msg.build_execute_msg(),
             vec![],
             vec![]
         );
@@ -437,7 +437,7 @@ mod test_amplified_initialize_swap_curves {
             weights: vec![Uint128::one(), Uint128::one(), Uint128::one()],
             amp: AMPLIFICATION,
             depositor: DEPOSITOR.to_string(),
-            asset_trait: std::marker::PhantomData::<_>
+            phantom_data: std::marker::PhantomData::<(Asset, _)>
         };
 
         // Transfer tokens to the vault
@@ -453,7 +453,7 @@ mod test_amplified_initialize_swap_curves {
         let response_result = env.execute_contract(
             Addr::unchecked(SETUP_MASTER),
             vault.clone(),
-            &initialize_msg.clone().into_execute_msg(),
+            &initialize_msg.build_execute_msg(),
             vec![],
             vec![]
         );
@@ -492,7 +492,7 @@ mod test_amplified_initialize_swap_curves {
             weights: vec![Uint128::one(), Uint128::one()],    // ! Only 2 weights are specified
             amp: AMPLIFICATION,
             depositor: DEPOSITOR.to_string(),
-            asset_trait: std::marker::PhantomData::<_>
+            phantom_data: std::marker::PhantomData::<(Asset, _)>
         };
 
         // Transfer tokens to the vault
@@ -508,7 +508,7 @@ mod test_amplified_initialize_swap_curves {
         let response_result = env.execute_contract(
             Addr::unchecked(SETUP_MASTER),
             vault.clone(),
-            &initialize_msg.clone().into_execute_msg(),
+            &initialize_msg.build_execute_msg(),
             vec![],
             vec![]
         );
@@ -548,7 +548,7 @@ mod test_amplified_initialize_swap_curves {
             weights: vec![Uint128::one(), Uint128::one(), Uint128::zero()],    // ! Weight set to 0
             amp: AMPLIFICATION,
             depositor: DEPOSITOR.to_string(),
-            asset_trait: std::marker::PhantomData::<_>
+            phantom_data: std::marker::PhantomData::<(Asset, _)>
         };
 
         // Transfer tokens to the vault
@@ -564,7 +564,7 @@ mod test_amplified_initialize_swap_curves {
         let response_result = env.execute_contract(
             Addr::unchecked(SETUP_MASTER),
             vault.clone(),
-            &initialize_msg.clone().into_execute_msg(),
+            &initialize_msg.build_execute_msg(),
             vec![],
             vec![]
         );
@@ -599,7 +599,7 @@ mod test_amplified_initialize_swap_curves {
             weights: TEST_VAULT_WEIGHTS.to_vec(),
             amp: Uint64::new(1000000000000000000u64),                 // ! Invalid amplification is specified
             depositor: DEPOSITOR.to_string(),
-            asset_trait: std::marker::PhantomData::<_>
+            phantom_data: std::marker::PhantomData::<(Asset, _)>
         };
 
         // Transfer tokens to the vault
@@ -615,7 +615,7 @@ mod test_amplified_initialize_swap_curves {
         let response_result = env.execute_contract(
             Addr::unchecked(SETUP_MASTER),
             vault.clone(),
-            &initialize_msg.clone().into_execute_msg(),
+            &initialize_msg.build_execute_msg(),
             vec![],
             vec![]
         );
@@ -659,7 +659,7 @@ mod test_amplified_initialize_swap_curves {
             weights: TEST_VAULT_WEIGHTS.to_vec(),
             amp: AMPLIFICATION,
             depositor: DEPOSITOR.to_string(),
-            asset_trait: std::marker::PhantomData::<_>
+            phantom_data: std::marker::PhantomData::<(Asset, _)>
         };
 
         // Transfer tokens to the vault
@@ -675,7 +675,7 @@ mod test_amplified_initialize_swap_curves {
         let response_result = env.execute_contract(
             Addr::unchecked("not-setup-master"),    // ! Not the vault instantiator
             vault.clone(),
-            &initialize_msg.clone().into_execute_msg(),
+            &initialize_msg.build_execute_msg(),
             vec![],
             vec![]
         );

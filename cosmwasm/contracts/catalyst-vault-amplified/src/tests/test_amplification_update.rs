@@ -1,6 +1,6 @@
 mod test_amplified_amplification_update {
     use cosmwasm_std::{Uint128, Addr, Attribute, Timestamp, Uint64};
-    use catalyst_vault_common::ContractError;
+    use catalyst_vault_common::{ContractError, asset::Asset};
     use test_helpers::{definitions::{SETUP_MASTER, FACTORY_OWNER, CHAIN_INTERFACE}, contract::mock_factory_deploy_vault, env::CustomTestEnv, asset::CustomTestAsset};
 
     use crate::tests::TestEnv;
@@ -19,7 +19,7 @@ mod test_amplified_amplification_update {
 
         let test_tokens =  env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
 
-        mock_factory_deploy_vault(
+        mock_factory_deploy_vault::<Asset, _, _>(
             env,
             test_tokens,
             TEST_VAULT_BALANCES.to_vec(),
@@ -471,7 +471,7 @@ mod test_amplified_amplification_update {
 
         let test_tokens =  env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
 
-        let vault = mock_factory_deploy_vault(
+        let vault = mock_factory_deploy_vault::<Asset, _, _>(
             &mut env,
             test_tokens,
             TEST_VAULT_BALANCES.to_vec(),

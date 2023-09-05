@@ -206,6 +206,7 @@ dependencies = [
  "serde",
  "sha3",
  "thiserror",
+ "token-bindings",
  "vault-assets",
  "vault-token",
 ]

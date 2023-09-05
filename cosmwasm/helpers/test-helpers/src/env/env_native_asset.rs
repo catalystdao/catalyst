@@ -1,16 +1,73 @@
 use anyhow::{Result as AnyResult, bail};
-use cosmwasm_schema::serde::Serialize;
-use cosmwasm_std::{Uint128, Coin, Addr};
-use cw_multi_test::{App, Executor, AppResponse};
-use vault_assets::asset::asset_native::NativeAsset;
+use catalyst_vault_common::asset::CustomMsg;
+use cosmwasm_schema::{serde::{Serialize, de::DeserializeOwned}, schemars::JsonSchema};
+use cosmwasm_std::{Uint128, Coin, Addr, Empty, Api, Storage, BlockInfo, CustomQuery, Querier, Binary};
+use cw_multi_test::{Executor, AppResponse, Module, CosmosRouter, BasicAppBuilder};
 
 use crate::asset::TestNativeAsset;
+use super::{CustomTestEnv, CustomApp};
 
-use super::CustomTestEnv;
+pub struct NativeAssetCustomHandler {}
+pub type NativeAssetApp = CustomApp<NativeAssetCustomHandler, CustomMsg>;
 
-pub struct TestNativeAssetEnv(App, Vec<TestNativeAsset>);
+impl Module for NativeAssetCustomHandler {
+    type ExecT = CustomMsg;
+    type QueryT = Empty;
+    type SudoT = Empty;
 
-impl CustomTestEnv<NativeAsset, TestNativeAsset> for TestNativeAssetEnv {
+    fn execute<ExecC, QueryC>(
+        &self,
+        _api: &dyn Api,
+        _storage: &mut dyn Storage,
+        _router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
+        _block: &BlockInfo,
+        _sender: Addr,
+        msg: Self::ExecT,
+    ) -> AnyResult<AppResponse>
+    where
+        ExecC:
+            std::fmt::Debug + Clone + PartialEq + JsonSchema + DeserializeOwned + 'static,
+        QueryC: CustomQuery + DeserializeOwned + 'static,
+    {
+
+        println!("custom handler execute");
+        println!("{:?}", msg);
+
+        Ok(AppResponse::default())
+
+    }
+
+    fn sudo<ExecC, QueryC>(
+        &self,
+        _api: &dyn Api,
+        _storage: &mut dyn Storage,
+        _router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
+        _block: &BlockInfo,
+        _msg: Self::SudoT,
+    ) -> AnyResult<AppResponse>
+    where
+        ExecC:
+            std::fmt::Debug + Clone + PartialEq + JsonSchema + DeserializeOwned + 'static,
+        QueryC: CustomQuery + DeserializeOwned + 'static,
+    {
+        bail!("sudo not implemented for NativeAssetCustomHandler")
+    }
+
+    fn query(
+        &self,
+        _api: &dyn Api,
+        _storage: &dyn Storage,
+        _querier: &dyn Querier,
+        _block: &BlockInfo,
+        _request: Self::QueryT,
+    ) -> AnyResult<Binary> {
+        bail!("query not implemented for NativeAssetCustomHandler")
+    }
+}
+
+pub struct TestNativeAssetEnv(NativeAssetApp, Vec<TestNativeAsset>);
+
+impl CustomTestEnv<NativeAssetApp, TestNativeAsset> for TestNativeAssetEnv {
 
     fn initialize(gov: String) -> Self {
 
@@ -38,14 +95,16 @@ impl CustomTestEnv<NativeAsset, TestNativeAsset> for TestNativeAssetEnv {
             })
             .collect();
 
-        let app = App::new(|router, _, storage| {
-            router.bank.init_balance(storage, &Addr::unchecked(gov), coins).unwrap()
-        });
+        let app = BasicAppBuilder::<CustomMsg, Empty>::new_custom()
+            .with_custom(NativeAssetCustomHandler {})
+            .build(|router, _, storage| {
+                router.bank.init_balance(storage, &Addr::unchecked(gov), coins).unwrap()
+            });
 
         TestNativeAssetEnv(app, assets)
     }
 
-    fn get_app(&mut self) -> &mut App {
+    fn get_app(&mut self) -> &mut NativeAssetApp {
         &mut self.0
     }
 

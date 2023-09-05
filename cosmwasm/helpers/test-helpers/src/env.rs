@@ -1,16 +1,25 @@
 use anyhow::Result as AnyResult;
 use cosmwasm_schema::serde::Serialize;
-use cosmwasm_std::{Uint128, Addr};
-use cw_multi_test::{App, AppResponse};
-use vault_assets::asset::AssetTrait;
+use cosmwasm_std::{Uint128, Addr, testing::{MockApi, MockStorage}, Empty};
+use cw_multi_test::{App, AppResponse, BankKeeper, WasmKeeper, FailingModule};
 
 use crate::asset::CustomTestAsset;
 
 pub mod env_cw20_asset;
 pub mod env_native_asset;
 
+
+pub type CustomApp<CustomHandler=FailingModule<Empty, Empty, Empty>, ExecT=Empty> = App<
+    BankKeeper,
+    MockApi,
+    MockStorage,
+    CustomHandler,
+    WasmKeeper<ExecT, Empty>
+>;
+
+
 /// Helper around `cw_multi_test::App` to allow configurable contract testing.
-pub trait CustomTestEnv<A: AssetTrait, T: CustomTestAsset<A>> {
+pub trait CustomTestEnv<AppC, TestAssetC: CustomTestAsset<AppC>> {
 
     /// Setup the test 'environment'. This includes creating mock assets according to the
     /// desired asset type (native assets/cw20).
@@ -22,11 +31,11 @@ pub trait CustomTestEnv<A: AssetTrait, T: CustomTestAsset<A>> {
 
 
     /// Get a reference to `cw_multi_test::App`.
-    fn get_app(&mut self) -> &mut App;
+    fn get_app(&mut self) -> &mut AppC;
 
 
     /// Get the mock assets.
-    fn get_assets(&self) -> Vec<T>;
+    fn get_assets(&self) -> Vec<TestAssetC>;
 
 
     /// Execute a contract with the specified funds.
@@ -37,7 +46,7 @@ pub trait CustomTestEnv<A: AssetTrait, T: CustomTestAsset<A>> {
         sender: Addr,
         contract_addr: Addr,
         msg: &U,
-        send_assets: Vec<T>,
+        send_assets: Vec<TestAssetC>,
         send_amounts: Vec<Uint128>
     ) -> AnyResult<AppResponse>;
 

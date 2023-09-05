@@ -1,7 +1,7 @@
 mod test_amplified_receive_asset {
     use cosmwasm_std::{Uint128, Addr, Binary, Attribute};
     use catalyst_types::{U256, u256};
-    use catalyst_vault_common::ContractError;
+    use catalyst_vault_common::{ContractError, asset::Asset};
     use test_helpers::{math::{uint128_to_f64, f64_to_uint128}, misc::{encode_payload_address, get_response_attribute}, definitions::{SETUP_MASTER, CHAIN_INTERFACE, CHANNEL_ID, SWAPPER_B}, contract::{mock_factory_deploy_vault, mock_set_vault_connection, mock_instantiate_calldata_target}, env::CustomTestEnv, asset::CustomTestAsset};
 
     use crate::tests::TestEnv;
@@ -19,7 +19,7 @@ mod test_amplified_receive_asset {
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
         let vault_code_id = amplified_vault_contract_storage(env.get_app());
-        let vault = mock_factory_deploy_vault(
+        let vault = mock_factory_deploy_vault::<Asset, _, _>(
             &mut env,
             vault_assets.clone(),
             vault_initial_balances.clone(),
@@ -113,7 +113,7 @@ mod test_amplified_receive_asset {
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
         let vault_code_id = amplified_vault_contract_storage(env.get_app());
-        let vault = mock_factory_deploy_vault(
+        let vault = mock_factory_deploy_vault::<Asset, _, _>(
             &mut env,
             vault_assets.clone(),
             vault_initial_balances.clone(),
@@ -225,7 +225,7 @@ mod test_amplified_receive_asset {
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
         let vault_code_id = amplified_vault_contract_storage(env.get_app());
-        let vault = mock_factory_deploy_vault(
+        let vault = mock_factory_deploy_vault::<Asset, _, _>(
             &mut env,
             vault_assets.clone(),
             vault_initial_balances.clone(),
@@ -309,7 +309,7 @@ mod test_amplified_receive_asset {
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
         let vault_code_id = amplified_vault_contract_storage(env.get_app());
-        let vault = mock_factory_deploy_vault(
+        let vault = mock_factory_deploy_vault::<Asset, _, _>(
             &mut env,
             vault_assets.clone(),
             vault_initial_balances.clone(),
@@ -419,7 +419,7 @@ mod test_amplified_receive_asset {
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
         let vault_code_id = amplified_vault_contract_storage(env.get_app());
-        let vault = mock_factory_deploy_vault(
+        let vault = mock_factory_deploy_vault::<Asset, _, _>(
             &mut env,
             vault_assets.clone(),
             vault_initial_balances.clone(),
@@ -482,7 +482,7 @@ mod test_amplified_receive_asset {
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
         let vault_code_id = amplified_vault_contract_storage(env.get_app());
-        let vault = mock_factory_deploy_vault(
+        let vault = mock_factory_deploy_vault::<Asset, _, _>(
             &mut env,
             vault_assets.clone(),
             vault_initial_balances.clone(),
@@ -551,7 +551,7 @@ mod test_amplified_receive_asset {
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
         let vault_code_id = amplified_vault_contract_storage(env.get_app());
-        let vault = mock_factory_deploy_vault(
+        let vault = mock_factory_deploy_vault::<Asset, _, _>(
             &mut env,
             vault_assets.clone(),
             vault_initial_balances.clone(),
@@ -620,7 +620,7 @@ mod test_amplified_receive_asset {
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
         let vault_code_id = amplified_vault_contract_storage(env.get_app());
-        let vault = mock_factory_deploy_vault(
+        let vault = mock_factory_deploy_vault::<Asset, _, _>(
             &mut env,
             vault_assets.clone(),
             vault_initial_balances.clone(),
