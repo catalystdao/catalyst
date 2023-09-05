@@ -18,6 +18,15 @@ contract TestUnderwriteNoConnection is TestCommon {
     bytes32 FEE_RECIPITANT = bytes32(uint256(uint160(0xfee0eec191fa4f)));
 
     event SwapFailed(bytes1 error);
+    event SendAssetFailure(
+        bytes32 channelId,
+        bytes toAccount,
+        uint256 units,
+        uint256 escrowAmount,
+        address escrowToken,
+        uint32 blockNumberMod
+    );
+    event Transfer(address indexed from, address indexed to, uint256 amount);
     
     function setUp() virtual override public {
         super.setUp();
@@ -53,7 +62,7 @@ contract TestUnderwriteNoConnection is TestCommon {
         });
 
         vm.recordLogs();
-        ICatalystV1Vault(vault1).sendAssetUnderwrite{value: _getTotalIncentive(_INCENTIVE)}(
+        uint256 units = ICatalystV1Vault(vault1).sendAssetUnderwrite{value: _getTotalIncentive(_INCENTIVE)}(
             routeDescription,
             token1,
             0, 
@@ -89,6 +98,11 @@ contract TestUnderwriteNoConnection is TestCommon {
         // we need to check that 
         vm.expectEmit();
         emit SwapFailed(0x23);
+        vm.expectEmit();
+        emit Transfer(vault1, toAccount, uint256(1e17));
+        vm.expectEmit();
+        emit SendAssetFailure(DESTINATION_IDENTIFIER, convertEVMTo65(toAccount), units, uint256(1e17), address(token1), 1);
+
 
         GARP.processMessage(_metadata, toExecuteMessage, FEE_RECIPITANT);
     }

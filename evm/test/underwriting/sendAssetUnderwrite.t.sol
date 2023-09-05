@@ -16,6 +16,25 @@ contract TestSendAssetUnderwrite is TestCommon {
     address vault2;
 
     bytes32 FEE_RECIPITANT = bytes32(uint256(uint160(0xfee0eec191fa4f)));
+
+    event SendAssetSuccess(
+        bytes32 channelId,
+        bytes toAccount,
+        uint256 units,
+        uint256 escrowAmount,
+        address escrowToken,
+        uint32 blockNumberMod
+    );
+
+    event SendAssetFailure(
+        bytes32 channelId,
+        bytes toAccount,
+        uint256 units,
+        uint256 escrowAmount,
+        address escrowToken,
+        uint32 blockNumberMod
+    );
+    event Transfer(address indexed from, address indexed to, uint256 amount);
     
     function setUp() virtual override public {
         super.setUp();
@@ -96,7 +115,9 @@ contract TestSendAssetUnderwrite is TestCommon {
         // Then let the package arrive.
         (bytes memory _metadata, bytes memory toExecuteMessage) = getVerifiedMessage(address(GARP), messageWithContext);
 
+        vm.recordLogs();
         GARP.processMessage(_metadata, toExecuteMessage, FEE_RECIPITANT);
+        entries = vm.getRecordedLogs();
 
         assertEq(
             Token(token2).balanceOf(address(CCI)),
@@ -111,6 +132,16 @@ contract TestSendAssetUnderwrite is TestCommon {
             )/CCI.UNDERWRITING_UNFULFILLED_FEE_DENOMINATOR(),
             "refundTo balance not expected"
         );
+
+        // Lets execute the message on the source chain and check that the escrow is properly removed.
+        (,, messageWithContext) = abi.decode(entries[3].data, (bytes32, bytes, bytes));
+        (_metadata, toExecuteMessage) = getVerifiedMessage(address(GARP), messageWithContext);
+
+        // Check for the success event
+        vm.expectEmit();
+        emit SendAssetSuccess(DESTINATION_IDENTIFIER, convertEVMTo65(toAccount), units, uint256(1e17), address(token1), 1);
+
+        GARP.processMessage(_metadata, toExecuteMessage, FEE_RECIPITANT);
     }
 
 
@@ -132,7 +163,7 @@ contract TestSendAssetUnderwrite is TestCommon {
 
 
         vm.recordLogs();
-        ICatalystV1Vault(vault1).sendAssetUnderwrite{value: _getTotalIncentive(_INCENTIVE)}(
+        uint256 units = ICatalystV1Vault(vault1).sendAssetUnderwrite{value: _getTotalIncentive(_INCENTIVE)}(
             routeDescription,
             token1,
             0, 
@@ -153,7 +184,9 @@ contract TestSendAssetUnderwrite is TestCommon {
         // Then let the package arrive.
         (bytes memory _metadata, bytes memory toExecuteMessage) = getVerifiedMessage(address(GARP), messageWithContext);
 
+        vm.recordLogs();
         GARP.processMessage(_metadata, toExecuteMessage, FEE_RECIPITANT);
+        entries = vm.getRecordedLogs();
 
         // check that the user received their tokens like nothing happened.
         assertEq(
@@ -161,6 +194,23 @@ contract TestSendAssetUnderwrite is TestCommon {
             99990000999900000,
             "tokens received"
         );
+
+        // Lets execute the message on the source chain and check for the swap revert message.
+        (,, messageWithContext) = abi.decode(entries[3].data, (bytes32, bytes, bytes));
+        (_metadata, toExecuteMessage) = getVerifiedMessage(address(GARP), messageWithContext);
+
+        // we need to check that 
+        vm.expectEmit();
+        emit SendAssetSuccess(
+            DESTINATION_IDENTIFIER,
+            convertEVMTo65(toAccount),
+            units,
+            uint256(1e17),
+            token1,
+            1
+        );
+
+        GARP.processMessage(_metadata, toExecuteMessage, FEE_RECIPITANT);
 
     }
 }
