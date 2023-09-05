@@ -166,7 +166,7 @@ interface ICatalystV1VaultEvents {
         uint256 units,
         uint256 escrowAmount,
         uint32 blockNumberMod
-        );
+    );
 
     /** @notice Called upon failed liquidity swap. */
     event SendLiquidityFailure(
