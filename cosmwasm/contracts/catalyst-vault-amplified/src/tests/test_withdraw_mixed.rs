@@ -5,9 +5,9 @@ mod test_amplified_withdraw_mixed {
     use cosmwasm_std::{Uint128, Addr, Uint64, Attribute};
     use catalyst_vault_common::{ContractError, state::INITIAL_MINT_AMOUNT, asset::Asset};
     use fixed_point_math::WAD;
-    use test_helpers::{math::{uint128_to_f64, f64_to_uint128}, misc::get_response_attribute, token::{transfer_tokens, query_token_balance, query_token_info}, definitions::{SETUP_MASTER, WITHDRAWER}, contract::mock_factory_deploy_vault, env::CustomTestEnv, asset::CustomTestAsset};
+    use test_helpers::{math::{uint128_to_f64, f64_to_uint128}, misc::get_response_attribute, definitions::{SETUP_MASTER, WITHDRAWER, VAULT_TOKEN_DENOM}, contract::mock_factory_deploy_vault, env::CustomTestEnv, asset::CustomTestAsset, vault_token::CustomTestVaultToken};
 
-    use crate::tests::TestEnv;
+    use crate::tests::{TestEnv, TestVaultToken};
     use crate::{msg::AmplifiedExecuteMsg, tests::{helpers::{compute_expected_withdraw_mixed, amplified_vault_contract_storage}, parameters::{AMPLIFICATION, TEST_VAULT_BALANCES, TEST_VAULT_WEIGHTS, TEST_VAULT_ASSET_COUNT}}};
 
 
@@ -41,10 +41,10 @@ mod test_amplified_withdraw_mixed {
             .map(|val| ((val * 1e18) as u64).into()).collect::<Vec<Uint64>>();
 
         // Fund withdrawer with vault tokens
-        transfer_tokens(
+        let vault_token = TestVaultToken::load(vault.to_string(), VAULT_TOKEN_DENOM.to_string());
+        vault_token.transfer(
             env.get_app(),
             withdraw_amount,
-            vault.clone(),
             Addr::unchecked(SETUP_MASTER),
             WITHDRAWER.to_string()
         );
@@ -117,16 +117,16 @@ mod test_amplified_withdraw_mixed {
 
 
         // Verify the vault tokens have been burnt
-        let withdrawer_vault_tokens_balance = query_token_balance(env.get_app(), vault.clone(), WITHDRAWER.to_string());
+        let withdrawer_vault_tokens_balance = vault_token.query_balance(env.get_app(), WITHDRAWER.to_string());
         assert_eq!(
             withdrawer_vault_tokens_balance,
             Uint128::zero()
         );
     
         // Verify the vault total vault tokens supply
-        let vault_token_info = query_token_info(env.get_app(), vault.clone());
+        let vault_token_supply = vault_token.total_supply(env.get_app());
         assert_eq!(
-            vault_token_info.total_supply,
+            vault_token_supply,
             INITIAL_MINT_AMOUNT - withdraw_amount
         );
 
@@ -162,10 +162,10 @@ mod test_amplified_withdraw_mixed {
             .map(|val| ((val * 1e18) as u64).into()).collect::<Vec<Uint64>>();
 
         // Fund withdrawer with vault tokens
-        transfer_tokens(
+        let vault_token = TestVaultToken::load(vault.to_string(), VAULT_TOKEN_DENOM.to_string());
+        vault_token.transfer(
             env.get_app(),
             withdraw_amount,
-            vault.clone(),
             Addr::unchecked(SETUP_MASTER),
             WITHDRAWER.to_string()
         );
@@ -331,10 +331,10 @@ mod test_amplified_withdraw_mixed {
             .map(|val| ((val * 1e18) as u64).into()).collect::<Vec<Uint64>>();
 
         // Fund withdrawer with vault tokens
-        transfer_tokens(
+        let vault_token = TestVaultToken::load(vault.to_string(), VAULT_TOKEN_DENOM.to_string());
+        vault_token.transfer(
             env.get_app(),
             withdraw_amount,
-            vault.clone(),
             Addr::unchecked(SETUP_MASTER),
             WITHDRAWER.to_string()
         );
@@ -438,10 +438,10 @@ mod test_amplified_withdraw_mixed {
             .map(|val| ((val * 1e18) as u64).into()).collect::<Vec<Uint64>>();
 
         // Fund withdrawer with vault tokens
-        transfer_tokens(
+        let vault_token = TestVaultToken::load(vault.to_string(), VAULT_TOKEN_DENOM.to_string());
+        vault_token.transfer(
             env.get_app(),
             withdraw_amount,
-            vault.clone(),
             Addr::unchecked(SETUP_MASTER),
             WITHDRAWER.to_string()
         );

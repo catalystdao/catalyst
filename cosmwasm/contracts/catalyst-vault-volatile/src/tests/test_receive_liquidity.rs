@@ -2,9 +2,9 @@ mod test_volatile_receive_liquidity {
     use cosmwasm_std::{Uint128, Addr, Binary, Attribute};
     use catalyst_types::{U256, u256};
     use catalyst_vault_common::{ContractError, state::INITIAL_MINT_AMOUNT, asset::Asset};
-    use test_helpers::{math::{uint128_to_f64, f64_to_uint128}, misc::{get_response_attribute, encode_payload_address}, token::{query_token_balance, query_token_info}, definitions::{SETUP_MASTER, CHAIN_INTERFACE, CHANNEL_ID, SWAPPER_B}, contract::{mock_factory_deploy_vault, mock_set_vault_connection, mock_instantiate_calldata_target}, env::CustomTestEnv};
+    use test_helpers::{math::{uint128_to_f64, f64_to_uint128}, misc::{get_response_attribute, encode_payload_address}, definitions::{SETUP_MASTER, CHAIN_INTERFACE, CHANNEL_ID, SWAPPER_B, VAULT_TOKEN_DENOM}, contract::{mock_factory_deploy_vault, mock_set_vault_connection, mock_instantiate_calldata_target}, env::CustomTestEnv, vault_token::CustomTestVaultToken};
 
-    use crate::tests::TestEnv;
+    use crate::tests::{TestEnv, TestVaultToken};
     use crate::{msg::VolatileExecuteMsg, tests::{helpers::{compute_expected_receive_liquidity, compute_expected_reference_asset, volatile_vault_contract_storage}, parameters::{TEST_VAULT_BALANCES, TEST_VAULT_WEIGHTS, AMPLIFICATION, TEST_VAULT_ASSET_COUNT}}};
 
 
@@ -80,16 +80,17 @@ mod test_volatile_receive_liquidity {
         assert!(uint128_to_f64(observed_return) >= expected_return.to_amount * 0.999999);
         
         // Verify the vault tokens have been minted to the swapper
-        let depositor_vault_tokens_balance = query_token_balance(env.get_app(), vault.clone(), SWAPPER_B.to_string());
+        let vault_token = TestVaultToken::load(vault.to_string(), VAULT_TOKEN_DENOM.to_string());
+        let depositor_vault_tokens_balance = vault_token.query_balance(env.get_app(), SWAPPER_B.to_string());
         assert_eq!(
             depositor_vault_tokens_balance,
             observed_return
         );
     
         // Verify the vault total vault tokens supply
-        let vault_token_info = query_token_info(env.get_app(), vault.clone());
+        let vault_token_supply = vault_token.total_supply(env.get_app());
         assert_eq!(
-            vault_token_info.total_supply,
+            vault_token_supply,
             INITIAL_MINT_AMOUNT + observed_return
         );
 
@@ -255,16 +256,17 @@ mod test_volatile_receive_liquidity {
         assert!(uint128_to_f64(observed_return) == 0.);
         
         // Verify no vault tokens have been minted to the swapper
-        let depositor_vault_tokens_balance = query_token_balance(env.get_app(), vault.clone(), SWAPPER_B.to_string());
+        let vault_token = TestVaultToken::load(vault.to_string(), VAULT_TOKEN_DENOM.to_string());
+        let depositor_vault_tokens_balance = vault_token.query_balance(env.get_app(), SWAPPER_B.to_string());
         assert_eq!(
             depositor_vault_tokens_balance,
             Uint128::zero()
         );
     
         // Verify the vault total vault tokens supply
-        let vault_token_info = query_token_info(env.get_app(), vault.clone());
+        let vault_token_supply = vault_token.total_supply(env.get_app());
         assert_eq!(
-            vault_token_info.total_supply,
+            vault_token_supply,
             INITIAL_MINT_AMOUNT
         );
 

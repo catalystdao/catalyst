@@ -2,9 +2,9 @@ mod test_volatile_send_liquidity {
     use cosmwasm_std::{Uint128, Addr, Binary, Attribute};
     use catalyst_types::{U256, u256};
     use catalyst_vault_common::{ContractError, msg::{TotalEscrowedLiquidityResponse, LiquidityEscrowResponse}, state::{INITIAL_MINT_AMOUNT, compute_send_liquidity_hash}, asset::Asset};
-    use test_helpers::{math::{uint128_to_f64, f64_to_uint128, u256_to_f64}, misc::{encode_payload_address, get_response_attribute}, token::{transfer_tokens, query_token_balance, query_token_info}, definitions::{SETUP_MASTER, CHANNEL_ID, SWAPPER_A, SWAPPER_B, SWAPPER_C}, contract::{mock_instantiate_interface, mock_factory_deploy_vault, mock_set_vault_connection}, env::CustomTestEnv};
+    use test_helpers::{math::{uint128_to_f64, f64_to_uint128, u256_to_f64}, misc::{encode_payload_address, get_response_attribute}, definitions::{SETUP_MASTER, CHANNEL_ID, SWAPPER_A, SWAPPER_B, SWAPPER_C, VAULT_TOKEN_DENOM}, contract::{mock_instantiate_interface, mock_factory_deploy_vault, mock_set_vault_connection}, env::CustomTestEnv, vault_token::CustomTestVaultToken};
 
-    use crate::tests::TestEnv;
+    use crate::tests::{TestEnv, TestVaultToken};
     use crate::{msg::VolatileExecuteMsg, tests::{helpers::{compute_expected_send_liquidity, volatile_vault_contract_storage}, parameters::{TEST_VAULT_BALANCES, TEST_VAULT_WEIGHTS, AMPLIFICATION, TEST_VAULT_ASSET_COUNT}}};
 
 
@@ -47,10 +47,10 @@ mod test_volatile_send_liquidity {
         let to_account = encode_payload_address(SWAPPER_B.as_bytes());
 
         // Fund swapper with tokens
-        transfer_tokens(
+        let vault_token = TestVaultToken::load(vault.to_string(), VAULT_TOKEN_DENOM.to_string());
+        vault_token.transfer(
             env.get_app(),
             swap_amount,
-            vault.clone(),
             Addr::unchecked(SETUP_MASTER),
             SWAPPER_A.to_string()
         );
@@ -91,16 +91,16 @@ mod test_volatile_send_liquidity {
 
 
         // Verify the vault tokens have been burnt
-        let swapper_vault_tokens_balance = query_token_balance(env.get_app(), vault.clone(), SWAPPER_A.to_string());
+        let swapper_vault_tokens_balance = vault_token.query_balance(env.get_app(), SWAPPER_A.to_string());
         assert_eq!(
             swapper_vault_tokens_balance,
             Uint128::zero()
         );
     
         // Verify the vault total vault tokens supply
-        let vault_token_info = query_token_info(env.get_app(), vault.clone());
+        let vault_token_supply = vault_token.total_supply(env.get_app());
         assert_eq!(
-            vault_token_info.total_supply,
+            vault_token_supply,
             INITIAL_MINT_AMOUNT - swap_amount
         );
 
@@ -183,10 +183,10 @@ mod test_volatile_send_liquidity {
         let min_reference_asset = u256!("987654321");  // Some random value
 
         // Fund swapper with tokens
-        transfer_tokens(
+        let vault_token = TestVaultToken::load(vault.to_string(), VAULT_TOKEN_DENOM.to_string());
+        vault_token.transfer(
             env.get_app(),
             swap_amount,
-            vault.clone(),
             Addr::unchecked(SETUP_MASTER),
             SWAPPER_A.to_string()
         );
@@ -284,10 +284,10 @@ mod test_volatile_send_liquidity {
         let swap_amount = Uint128::zero();
 
         // Fund swapper with tokens
-        transfer_tokens(
+        let vault_token = TestVaultToken::load(vault.to_string(), VAULT_TOKEN_DENOM.to_string());
+        vault_token.transfer(
             env.get_app(),
             swap_amount,
-            vault.clone(),
             Addr::unchecked(SETUP_MASTER),
             SWAPPER_A.to_string()
         );
@@ -355,10 +355,10 @@ mod test_volatile_send_liquidity {
         let swap_amount = f64_to_uint128(uint128_to_f64(INITIAL_MINT_AMOUNT) * send_percentage).unwrap();
 
         // Fund swapper with tokens
-        transfer_tokens(
+        let vault_token = TestVaultToken::load(vault.to_string(), VAULT_TOKEN_DENOM.to_string());
+        vault_token.transfer(
             env.get_app(),
             swap_amount,
-            vault.clone(),
             Addr::unchecked(SETUP_MASTER),
             SWAPPER_A.to_string()
         );
@@ -433,10 +433,10 @@ mod test_volatile_send_liquidity {
         let to_account = encode_payload_address(SWAPPER_B.as_bytes());
 
         // Fund swapper with tokens
-        transfer_tokens(
+        let vault_token = TestVaultToken::load(vault.to_string(), VAULT_TOKEN_DENOM.to_string());
+        vault_token.transfer(
             env.get_app(),
             swap_amount,
-            vault.clone(),
             Addr::unchecked(SETUP_MASTER),
             SWAPPER_A.to_string()
         );
