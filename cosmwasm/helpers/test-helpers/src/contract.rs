@@ -5,7 +5,7 @@ use std::{marker::PhantomData, fmt::Debug};
 
 use catalyst_vault_common::{msg::{InstantiateMsg, ExecuteMsg}, asset::CustomMsg};
 
-use crate::{misc::get_response_attribute, definitions::{SETUP_MASTER, FACTORY_OWNER}, env::{CustomTestEnv, CustomApp}, asset::CustomTestAsset};
+use crate::{misc::get_response_attribute, definitions::{SETUP_MASTER, FACTORY_OWNER, VAULT_TOKEN_DENOM}, env::{CustomTestEnv, CustomApp}, asset::CustomTestAsset};
 
 
 pub const DEFAULT_TEST_VAULT_FEE : Uint64 = Uint64::new(70000000000000000u64);   // 7%
@@ -179,7 +179,7 @@ where
             amplification,
             vault_fee: DEFAULT_TEST_VAULT_FEE,
             name: "TestVault".to_string(),
-            symbol: "TP".to_string(),
+            symbol: VAULT_TOKEN_DENOM.to_string(),
             chain_interface: chain_interface.map(|value| value.to_string())
         },
         assets,
@@ -267,7 +267,7 @@ pub fn mock_instantiate_vault_msg(
 ) -> InstantiateMsg {
     InstantiateMsg {
         name: "TestVault".to_string(),
-        symbol: "TP".to_string(),
+        symbol: VAULT_TOKEN_DENOM.to_string(),
         chain_interface,
         vault_fee: DEFAULT_TEST_VAULT_FEE,
         governance_fee_share: DEFAULT_TEST_GOV_FEE,

@@ -361,7 +361,7 @@ mod catalyst_vault_factory_tests {
     use cosmwasm_std::{Addr, Uint64, Uint128, Event, StdError, Attribute, WasmMsg, to_binary};
     use cw20::TokenInfoResponse;
     use cw_multi_test::{Executor, ContractWrapper};
-    use test_helpers::{env::CustomTestEnv, asset::CustomTestAsset};
+    use test_helpers::{env::CustomTestEnv, asset::CustomTestAsset, definitions::VAULT_TOKEN_DENOM};
 
     use crate::{msg::{InstantiateMsg, QueryMsg, OwnerResponse, ExecuteMsg, DefaultGovernanceFeeShareResponse}, state::MAX_DEFAULT_GOVERNANCE_FEE_SHARE, error::ContractError};
 
@@ -604,7 +604,7 @@ mod catalyst_vault_factory_tests {
                 amplification: Uint64::new(1000000000000000000u64),
                 vault_fee: TEST_VAULT_FEE,
                 name: "TestVault".to_string(),
-                symbol: "TP".to_string(),
+                symbol: VAULT_TOKEN_DENOM.to_string(),
                 chain_interface: Some("chain_interface".to_string())
             },
             vault_assets.clone(),
@@ -752,7 +752,7 @@ mod catalyst_vault_factory_tests {
 
         assert_eq!(
             queried_token_info.symbol,
-            "TP"
+            VAULT_TOKEN_DENOM
         );
 
     }
@@ -789,7 +789,7 @@ mod catalyst_vault_factory_tests {
                 amplification: Uint64::new(1000000000000000000u64),
                 vault_fee: TEST_VAULT_FEE,
                 name: "TestVault".to_string(),
-                symbol: "TP".to_string(),
+                symbol: VAULT_TOKEN_DENOM.to_string(),
                 chain_interface: Some("chain_interface".to_string())
             },
             vault_assets.clone(),
@@ -865,7 +865,7 @@ mod catalyst_vault_factory_tests {
                 amplification: Uint64::new(1000000000000000000u64),
                 vault_fee: TEST_VAULT_FEE,
                 name: "TestVault".to_string(),
-                symbol: "TP".to_string(),
+                symbol: VAULT_TOKEN_DENOM.to_string(),
                 chain_interface: None   // ! Interface set to 'None'
             },
             vault_assets.clone(),
@@ -920,7 +920,7 @@ mod catalyst_vault_factory_tests {
                 amplification: Uint64::new(1000000000000000000u64),
                 vault_fee: Uint64::zero(),
                 name: "TestVault".to_string(),
-                symbol: "TP".to_string(),
+                symbol: VAULT_TOKEN_DENOM.to_string(),
                 chain_interface: None
             },
             vec![],
@@ -970,7 +970,7 @@ mod catalyst_vault_factory_tests {
                 amplification: Uint64::new(1000000000000000000u64),
                 vault_fee: Uint64::zero(),
                 name: "TestVault".to_string(),
-                symbol: "TP".to_string(),
+                symbol: VAULT_TOKEN_DENOM.to_string(),
                 chain_interface: None
             },
             vault_assets.clone(),
@@ -998,7 +998,7 @@ mod catalyst_vault_factory_tests {
                 amplification: Uint64::new(1000000000000000000u64),
                 vault_fee: Uint64::zero(),
                 name: "TestVault".to_string(),
-                symbol: "TP".to_string(),
+                symbol: VAULT_TOKEN_DENOM.to_string(),
                 chain_interface: None
             },
             vault_assets.clone(),
@@ -1026,7 +1026,7 @@ mod catalyst_vault_factory_tests {
                 amplification: Uint64::new(1000000000000000000u64),
                 vault_fee: Uint64::zero(),
                 name: "TestVault".to_string(),
-                symbol: "TP".to_string(),
+                symbol: VAULT_TOKEN_DENOM.to_string(),
                 chain_interface: None
             },
             vault_assets.clone(),
@@ -1067,7 +1067,7 @@ mod catalyst_vault_factory_tests {
                 amplification: Uint64::new(1000000000000000000u64),
                 vault_fee: TEST_VAULT_FEE,
                 name: "TestVault".to_string(),
-                symbol: "TP".to_string(),
+                symbol: VAULT_TOKEN_DENOM.to_string(),
                 chain_interface: Some("chain_interface".to_string())
             },
             vec![],   // ! Do not send funds
@@ -1102,7 +1102,7 @@ mod catalyst_vault_factory_tests {
                 amplification: Uint64::new(1000000000000000000u64),
                 vault_fee: TEST_VAULT_FEE,
                 name: "TestVault".to_string(),
-                symbol: "TP".to_string(),
+                symbol: VAULT_TOKEN_DENOM.to_string(),
                 chain_interface: Some("chain_interface".to_string())
             },
             vault_assets[..vault_assets.len()-1].to_vec(),      // ! Send one asset less
@@ -1137,7 +1137,7 @@ mod catalyst_vault_factory_tests {
                 amplification: Uint64::new(1000000000000000000u64),
                 vault_fee: TEST_VAULT_FEE,
                 name: "TestVault".to_string(),
-                symbol: "TP".to_string(),
+                symbol: VAULT_TOKEN_DENOM.to_string(),
                 chain_interface: Some("chain_interface".to_string())
             },
             test_env.get_assets()[..3+1].to_vec(),      // ! Send one asset more
@@ -1174,7 +1174,7 @@ mod catalyst_vault_factory_tests {
                 amplification: Uint64::new(1000000000000000000u64),
                 vault_fee: TEST_VAULT_FEE,
                 name: "TestVault".to_string(),
-                symbol: "TP".to_string(),
+                symbol: VAULT_TOKEN_DENOM.to_string(),
                 chain_interface: Some("chain_interface".to_string())
             },
             vault_assets.clone(),
@@ -1215,7 +1215,7 @@ mod catalyst_vault_factory_tests {
                 amplification: Uint64::new(1000000000000000000u64),
                 vault_fee: TEST_VAULT_FEE,
                 name: "TestVault".to_string(),
-                symbol: "TP".to_string(),
+                symbol: VAULT_TOKEN_DENOM.to_string(),
                 chain_interface: Some("chain_interface".to_string())
             },
             vault_assets.clone(),
@@ -1253,7 +1253,7 @@ mod catalyst_vault_factory_tests {
                 amplification: Uint64::new(1000000000000000000u64),
                 vault_fee: TEST_VAULT_FEE,
                 name: "TestVault".to_string(),
-                symbol: "TP".to_string(),
+                symbol: VAULT_TOKEN_DENOM.to_string(),
                 chain_interface: Some("chain_interface".to_string())
             },
             vault_assets.clone(),
