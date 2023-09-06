@@ -108,10 +108,13 @@ pub enum QueryMsg {
 
 
     // CW20 Implementation
+    #[cfg(feature="asset_cw20")]
     #[returns(BalanceResponse)]
     Balance { address: String },
+    #[cfg(feature="asset_cw20")]
     #[returns(TokenInfoResponse)]
     TokenInfo {},
+    #[cfg(feature="asset_cw20")]
     #[returns(AllowanceResponse)]
     Allowance { owner: String, spender: String },
 

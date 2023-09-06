@@ -513,8 +513,11 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::UnitTracker {} => to_binary(&query_unit_tracker(deps)?),
 
         // CW20 query msgs - Use cw20-base for the implementation
+        #[cfg(feature="asset_cw20")]
         QueryMsg::TokenInfo {} => to_binary(&query_token_info(deps)?),
+        #[cfg(feature="asset_cw20")]
         QueryMsg::Balance { address } => to_binary(&query_balance(deps, address)?),
+        #[cfg(feature="asset_cw20")]
         QueryMsg::Allowance { owner, spender } => to_binary(&query_allowance(deps, owner, spender)?)
     }
 }
