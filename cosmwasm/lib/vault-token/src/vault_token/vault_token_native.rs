@@ -1,7 +1,7 @@
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Uint128, Deps, DepsMut, Env, MessageInfo};
 use cw_storage_plus::Item;
-use token_bindings::TokenMsg;
+use token_bindings::{TokenMsg, Metadata, DenomUnit};
 
 use crate::error::VaultTokenError;
 
@@ -28,28 +28,35 @@ impl VaultTokenTrait<NativeVaultTokenMsg> for NativeVaultToken {
         env: &Env,
         name: String,
         symbol: String,
-        decimals: u8
+        _decimals: u8
     ) -> Result<Option<NativeVaultTokenMsg>, VaultTokenError> {
+
+        let denom = format!("factory/{}/{}", env.contract.address.to_string(), symbol);
 
         // Save the vault token denom
         VAULT_TOKEN_DENOM.save(
             deps.storage,
-            &format!("factory/{}/{}", env.contract.address.to_string(), symbol)
+            &denom
         )?;
-        
-        // TODO set metadata
-        // let metadata = Metadata {
-        //     description: None,
-        //     denom_units: vec![],
-        //     base: ,
-        //     display: todo!(),
-        //     name: todo!(),
-        //     symbol: todo!(),
-        // }
+
+        let metadata = Metadata {
+            description: None,
+            denom_units: vec![
+                DenomUnit {
+                    denom: denom.clone(),
+                    exponent: 0,
+                    aliases: vec![]
+                }
+            ],
+            base: Some(denom.clone()),
+            display: Some(denom),
+            name: Some(name),
+            symbol: Some(symbol.clone()),
+        };
 
         let create_msg = TokenMsg::CreateDenom {
             subdenom: symbol,
-            metadata: None
+            metadata: Some(metadata)
         };
 
         Ok(
