@@ -1,22 +1,23 @@
 use anyhow::{Result as AnyResult, bail};
-use catalyst_vault_common::asset::CustomMsg;
 use cosmwasm_schema::serde::Serialize;
 use cosmwasm_std::{Uint128, Addr, Empty};
 use cw_multi_test::{Executor, AppResponse, FailingModule, BasicAppBuilder};
+
+use catalyst_vault_common::asset::cw20_asset_vault_modules::Cw20AssetCustomMsg;
 
 use crate::{asset::TestCw20Asset, token::{deploy_test_tokens, get_token_allowance, increase_token_allowance, decrease_token_allowance}};
 use super::{CustomTestEnv, CustomApp};
 
 
-pub type Cw20AssetCustomHandler = FailingModule<CustomMsg, Empty, Empty>;
-pub type Cw20AssetApp = CustomApp<Cw20AssetCustomHandler, CustomMsg>;
+pub type Cw20AssetCustomHandler = FailingModule<Cw20AssetCustomMsg, Empty, Empty>;
+pub type Cw20AssetApp = CustomApp<Cw20AssetCustomHandler, Cw20AssetCustomMsg>;
 
 pub struct TestCw20AssetEnv(Cw20AssetApp, Vec<TestCw20Asset>);
 
 impl CustomTestEnv<Cw20AssetApp, TestCw20Asset> for TestCw20AssetEnv {
     fn initialize(gov: String) -> Self {
 
-        let mut app = BasicAppBuilder::<CustomMsg, Empty>::new_custom()
+        let mut app = BasicAppBuilder::<Cw20AssetCustomMsg, Empty>::new_custom()
         .build(|_, _, _| {});
 
         let assets = deploy_test_tokens(

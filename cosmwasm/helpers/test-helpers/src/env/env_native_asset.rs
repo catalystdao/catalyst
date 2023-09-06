@@ -1,27 +1,31 @@
 use anyhow::{Result as AnyResult, bail};
-use catalyst_vault_common::asset::CustomMsg;
 use cosmwasm_schema::{serde::{Serialize, de::DeserializeOwned}, schemars::JsonSchema};
-use cosmwasm_std::{Uint128, Coin, Addr, Empty, Api, Storage, BlockInfo, CustomQuery, Querier, Binary};
-use cw_multi_test::{Executor, AppResponse, Module, CosmosRouter, BasicAppBuilder};
+use cosmwasm_std::{Uint128, Coin, Addr, Empty, Api, Storage, BlockInfo, CustomQuery, Querier, Binary, coins, BankMsg};
+use cw_multi_test::{Executor, AppResponse, Module, CosmosRouter, BasicAppBuilder, BankKeeper, BankSudo};
+
+use catalyst_vault_common::asset::native_asset_vault_modules::NativeAssetCustomMsg;
+use token_bindings::TokenMsg;
 
 use crate::asset::TestNativeAsset;
 use super::{CustomTestEnv, CustomApp};
 
-pub struct NativeAssetCustomHandler {}
-pub type NativeAssetApp = CustomApp<NativeAssetCustomHandler, CustomMsg>;
+// Custom handler to handle TokenFactory messages
+pub struct NativeAssetCustomHandler {
+}
+pub type NativeAssetApp = CustomApp<NativeAssetCustomHandler, NativeAssetCustomMsg>;
 
 impl Module for NativeAssetCustomHandler {
-    type ExecT = CustomMsg;
+    type ExecT = NativeAssetCustomMsg;
     type QueryT = Empty;
     type SudoT = Empty;
 
     fn execute<ExecC, QueryC>(
         &self,
-        _api: &dyn Api,
-        _storage: &mut dyn Storage,
-        _router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
-        _block: &BlockInfo,
-        _sender: Addr,
+        api: &dyn Api,
+        storage: &mut dyn Storage,
+        router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
+        block: &BlockInfo,
+        sender: Addr,
         msg: Self::ExecT,
     ) -> AnyResult<AppResponse>
     where
@@ -30,8 +34,78 @@ impl Module for NativeAssetCustomHandler {
         QueryC: CustomQuery + DeserializeOwned + 'static,
     {
 
-        println!("custom handler execute");
-        println!("{:?}", msg);
+        match msg {
+            NativeAssetCustomMsg::Token(token_msg) => {
+                match token_msg {
+
+                    TokenMsg::CreateDenom { subdenom, metadata } => {
+
+                        let denom = format!("factory/{}/{}", sender.to_string(), subdenom);
+
+                        //TODO! metadata
+
+                        let bank = BankKeeper::new();
+                        bank.init_balance(storage, &sender, coins(0u128, denom))?
+                    },
+
+                    TokenMsg::MintTokens {
+                        denom,
+                        amount,
+                        mint_to_address
+                    } => {
+
+                        // Check sender
+                        // NOTE: The sender should be checked against the token ADMIN instead, but
+                        // this is fine for the purposes of the Catalyst vault tests
+                        if sender != get_denom_creator(denom.clone()) {
+                            panic!("Unable to mint native token: sender does not match token creator.")
+                        }
+
+                        let bank = BankKeeper::new();
+                        bank.sudo(
+                            api,
+                            storage,
+                            router,
+                            block,
+                            BankSudo::Mint {
+                                to_address: mint_to_address,
+                                amount: coins(amount.u128(), denom),
+                            }
+                        )?;
+                        
+                    },
+
+                    TokenMsg::BurnTokens {
+                        denom,
+                        amount,
+                        burn_from_address
+                    } => {
+
+                        // Check sender
+                        // NOTE: The sender should be checked against the token ADMIN instead, but
+                        // this is fine for the purposes of the Catalyst vault tests
+                        if sender != get_denom_creator(denom.clone()) {
+                            panic!("Unable to mint native token: sender does not match token creator.")
+                        }
+
+                        let bank = BankKeeper::new();
+                        bank.execute(
+                            api,
+                            storage,
+                            router,
+                            block,
+                            Addr::unchecked(burn_from_address), // The 'Bank' module expects the 'burn' msg to come from the token holder
+                            BankMsg::Burn { amount: coins(amount.u128(), denom) }
+                        )?;
+
+                    },
+
+                    _ => panic!("Custom test handler unable to process the requested TokenFactory msg")
+
+                }
+            },
+        };
+        
 
         Ok(AppResponse::default())
 
@@ -95,7 +169,7 @@ impl CustomTestEnv<NativeAssetApp, TestNativeAsset> for TestNativeAssetEnv {
             })
             .collect();
 
-        let app = BasicAppBuilder::<CustomMsg, Empty>::new_custom()
+        let app = BasicAppBuilder::<NativeAssetCustomMsg, Empty>::new_custom()
             .with_custom(NativeAssetCustomHandler {})
             .build(|router, _, storage| {
                 router.bank.init_balance(storage, &Addr::unchecked(gov), coins).unwrap()
@@ -141,6 +215,26 @@ impl CustomTestEnv<NativeAssetApp, TestNativeAsset> for TestNativeAssetEnv {
             msg,
             funds.as_ref()
         )
+    }
+
+}
+
+
+fn get_denom_creator(denom: String) -> String {
+
+    if !denom.starts_with("factory/") {
+        panic!("Invalid native token denom (must start with 'factory/')");
+    }
+
+    let denom_split = denom[8..].split_once("/");
+
+    match denom_split {
+        Some((creator_split, _)) => {
+            creator_split.to_string()
+        },
+        None => {
+            denom[8..].to_string()
+        },
     }
 
 }
