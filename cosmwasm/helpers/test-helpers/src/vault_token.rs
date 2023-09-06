@@ -1,8 +1,22 @@
+use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, Uint128, CosmosMsg, BankMsg, Coin};
+use cw20_base::state::TokenInfo;
 use cw_multi_test::Executor;
 use std::fmt::Debug;
 
 use crate::{env::{env_cw20_asset::{Cw20AssetApp, TestCw20AssetEnv}, env_native_asset::{NativeAssetApp, TestNativeAssetEnv}}, token::{query_token_info, query_token_balance, transfer_tokens}};
+
+
+pub struct VaultTokenInfo {
+    pub name: String,
+    pub symbol: String,
+    pub decimals: u8
+}
+
+#[cw_serde]
+enum TokenInfoQuery {
+    TokenInfo {}
+}
 
 
 pub trait CustomTestVaultToken<AppC, TestEnvC>: Clone + Debug + PartialEq {
@@ -14,6 +28,8 @@ pub trait CustomTestVaultToken<AppC, TestEnvC>: Clone + Debug + PartialEq {
     fn query_balance(&self, app: &mut AppC, account: impl Into<String>) -> Uint128;
 
     fn transfer(&self, app: &mut AppC, amount: Uint128, account: Addr, recipient: impl Into<String>);
+
+    fn query_token_info(&self, app: &mut AppC) -> VaultTokenInfo;
 
 }
 
@@ -61,6 +77,10 @@ impl CustomTestVaultToken<NativeAssetApp, TestNativeAssetEnv> for TestNativeVaul
             )
         ).unwrap();
     }
+
+    fn query_token_info(&self, app: &mut NativeAssetApp) -> VaultTokenInfo {
+        todo!()
+    }
 }
 
 
@@ -98,6 +118,20 @@ impl CustomTestVaultToken<Cw20AssetApp, TestCw20AssetEnv> for TestCw20VaultToken
             account,
             recipient.into()
         );
+    }
+
+    fn query_token_info(&self, app: &mut Cw20AssetApp) -> VaultTokenInfo {
+        
+        let token_info: TokenInfo = app
+            .wrap()
+            .query_wasm_smart::<TokenInfo>(self.0.clone(), &TokenInfoQuery::TokenInfo {})
+            .unwrap();
+
+        VaultTokenInfo {
+            name: token_info.name.clone(),
+            symbol: token_info.symbol.clone(),
+            decimals: token_info.decimals
+        }
     }
     
 }

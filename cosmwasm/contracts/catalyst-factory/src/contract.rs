@@ -359,9 +359,8 @@ mod catalyst_vault_factory_tests {
     use std::str::FromStr;
 
     use cosmwasm_std::{Addr, Uint64, Uint128, Event, StdError, Attribute, WasmMsg, to_binary};
-    use cw20::TokenInfoResponse;
     use cw_multi_test::{Executor, ContractWrapper};
-    use test_helpers::{env::CustomTestEnv, asset::CustomTestAsset, definitions::VAULT_TOKEN_DENOM};
+    use test_helpers::{env::CustomTestEnv, asset::CustomTestAsset, definitions::VAULT_TOKEN_DENOM, vault_token::CustomTestVaultToken};
 
     use crate::{msg::{InstantiateMsg, QueryMsg, OwnerResponse, ExecuteMsg, DefaultGovernanceFeeShareResponse}, state::MAX_DEFAULT_GOVERNANCE_FEE_SHARE, error::ContractError};
 
@@ -369,20 +368,24 @@ mod catalyst_vault_factory_tests {
     use mock_vault::msg::QueryMsg as MockVaultQueryMsg;
 
     #[cfg(feature="asset_native")]
-    use test_helpers::asset::TestNativeAsset as TestAsset;
-    #[cfg(feature="asset_native")]
     use test_helpers::env::env_native_asset::{
         TestNativeAssetEnv as TestEnv,
         NativeAssetApp as TestApp
     };
+    #[cfg(feature="asset_native")]
+    use test_helpers::asset::TestNativeAsset as TestAsset;
+    #[cfg(feature="asset_native")]
+    use test_helpers::vault_token::TestNativeVaultToken as TestVaultToken;
     
-    #[cfg(feature="asset_cw20")]
-    use test_helpers::asset::TestCw20Asset as TestAsset;
     #[cfg(feature="asset_cw20")]
     use test_helpers::env::env_cw20_asset::{
         TestCw20AssetEnv as TestEnv,
         Cw20AssetApp as TestApp
     };
+    #[cfg(feature="asset_cw20")]
+    use test_helpers::asset::TestCw20Asset as TestAsset;
+    #[cfg(feature="asset_cw20")]
+    use test_helpers::vault_token::TestCw20VaultToken as TestVaultToken;
 
     const GOVERNANCE: &str = "governance_addr";
     const SETUP_MASTER: &str = "setup_master_addr";
@@ -740,18 +743,16 @@ mod catalyst_vault_factory_tests {
 
 
         // Verify the deployed vault has the 'name' and 'symbol' set
-        let queried_token_info = test_env.get_app().wrap().query_wasm_smart::<TokenInfoResponse>(
-            vault.clone(),
-            &MockVaultQueryMsg::TokenInfo {}
-        ).unwrap();
+        let vault_token = TestVaultToken::load(vault.clone(), VAULT_TOKEN_DENOM.to_string());
+        let vault_token_info = vault_token.query_token_info(test_env.get_app());
 
         assert_eq!(
-            queried_token_info.name,
+            vault_token_info.name,
             "TestVault"
         );
 
         assert_eq!(
-            queried_token_info.symbol,
+            vault_token_info.symbol,
             VAULT_TOKEN_DENOM
         );
 
