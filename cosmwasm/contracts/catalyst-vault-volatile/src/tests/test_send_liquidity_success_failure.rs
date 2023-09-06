@@ -2,9 +2,9 @@ mod test_volatile_send_liquidity_success_failure {
     use cosmwasm_std::{Uint128, Addr, Binary, Attribute};
     use catalyst_types::{U256, u256};
     use catalyst_vault_common::{ContractError, msg::{TotalEscrowedLiquidityResponse, LiquidityEscrowResponse}, state::{compute_send_liquidity_hash, INITIAL_MINT_AMOUNT}, asset::Asset};
-    use test_helpers::{math::{uint128_to_f64, f64_to_uint128}, misc::{encode_payload_address, get_response_attribute}, token::{transfer_tokens, query_token_info, query_token_balance}, definitions::{SETUP_MASTER, CHANNEL_ID, SWAPPER_B, SWAPPER_A}, contract::{mock_instantiate_interface, mock_factory_deploy_vault, mock_set_vault_connection}, env::CustomTestEnv};
+    use test_helpers::{math::{uint128_to_f64, f64_to_uint128}, misc::{encode_payload_address, get_response_attribute}, definitions::{SETUP_MASTER, CHANNEL_ID, SWAPPER_B, SWAPPER_A, VAULT_TOKEN_DENOM}, contract::{mock_instantiate_interface, mock_factory_deploy_vault, mock_set_vault_connection}, env::CustomTestEnv, vault_token::CustomTestVaultToken};
 
-    use crate::tests::TestEnv;
+    use crate::tests::{TestEnv, TestVaultToken};
     use crate::{msg::{VolatileExecuteMsg, QueryMsg}, tests::{helpers::volatile_vault_contract_storage, parameters::{TEST_VAULT_BALANCES, TEST_VAULT_WEIGHTS, AMPLIFICATION, TEST_VAULT_ASSET_COUNT}}};
 
 
@@ -54,10 +54,10 @@ mod test_volatile_send_liquidity_success_failure {
             let to_account = encode_payload_address(SWAPPER_B.as_bytes());
     
             // Fund swapper with tokens and set vault allowance
-            transfer_tokens(
+            let vault_token = TestVaultToken::load(vault.to_string(), VAULT_TOKEN_DENOM.to_string());
+            vault_token.transfer(
                 test_env.get_app(),
                 swap_amount,
-                vault.clone(),
                 Addr::unchecked(SETUP_MASTER),
                 SWAPPER_A.to_string()
             );
@@ -155,14 +155,15 @@ mod test_volatile_send_liquidity_success_failure {
         );
 
         // Verify the vault token supply remains unchanged
-        let vault_supply = query_token_info(test_env.get_app(), mock.vault.clone()).total_supply;
+        let vault_token = TestVaultToken::load(mock.vault.to_string(), VAULT_TOKEN_DENOM.to_string());
+        let vault_supply = vault_token.total_supply(test_env.get_app());
         assert_eq!(
             vault_supply,
             INITIAL_MINT_AMOUNT - mock.from_amount
         );
 
         // Verify vault tokens have not been received by the swapper
-        let swapper_vault_token_balance = query_token_balance(test_env.get_app(), mock.vault.clone(), SWAPPER_A.to_string());
+        let swapper_vault_token_balance = vault_token.query_balance(test_env.get_app(), SWAPPER_A.to_string());
         assert_eq!(
             swapper_vault_token_balance,
             Uint128::zero()
@@ -228,14 +229,15 @@ mod test_volatile_send_liquidity_success_failure {
         );
 
         // Verify the vault token supply
-        let vault_supply = query_token_info(test_env.get_app(), mock.vault.clone()).total_supply;
+        let vault_token = TestVaultToken::load(mock.vault.to_string(), VAULT_TOKEN_DENOM.to_string());
+        let vault_supply = vault_token.total_supply(test_env.get_app());
         assert_eq!(
             vault_supply,
             INITIAL_MINT_AMOUNT        // The vault balance returns to the initial vault balance
         );
 
         // Verify the vault tokens have been received by the swapper
-        let swapper_vault_token_balance = query_token_balance(test_env.get_app(), mock.vault.clone(), SWAPPER_A.to_string());
+        let swapper_vault_token_balance = vault_token.query_balance(test_env.get_app(), SWAPPER_A.to_string());
         assert_eq!(
             swapper_vault_token_balance,
             mock.from_amount

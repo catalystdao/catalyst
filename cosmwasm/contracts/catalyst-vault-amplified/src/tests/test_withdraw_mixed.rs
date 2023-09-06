@@ -537,6 +537,12 @@ mod test_amplified_withdraw_mixed {
 
 
         // Make sure the transaction fails
+        #[cfg(feature="asset_native")]
+        assert_eq!(
+            response_result.err().unwrap().root_cause().to_string(),
+            format!("Cannot Sub with 0 and {}", withdraw_amount)
+        );
+        #[cfg(feature="asset_cw20")]
         assert_eq!(
             response_result.err().unwrap().root_cause().to_string(),
             format!("Error: Burn failed: Overflow: Cannot Sub with 0 and {}", withdraw_amount)

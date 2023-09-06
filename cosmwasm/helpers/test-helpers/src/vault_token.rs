@@ -46,6 +46,11 @@ impl CustomTestVaultToken<NativeAssetApp, TestNativeAssetEnv> for TestNativeVaul
     }
 
     fn transfer(&self, app: &mut NativeAssetApp, amount: Uint128, account: Addr, recipient: impl Into<String>) {
+
+        if amount.is_zero() {
+            return;
+        }
+
         app.execute(
             account,
             CosmosMsg::Bank(

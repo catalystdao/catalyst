@@ -1,14 +1,13 @@
 mod test_volatile_initialize_swap_curves {
 
     use cosmwasm_std::{Uint128, Addr, Uint64, Attribute};
-    use cw20::{ TokenInfoResponse, BalanceResponse};
     use cw_multi_test::Executor;
     use catalyst_types::U256;
     use fixed_point_math::{LN2, WAD};
     use catalyst_vault_common::{ContractError, msg::{AssetsResponse, WeightResponse, GetLimitCapacityResponse, TotalEscrowedAssetResponse, TotalEscrowedLiquidityResponse}, state::INITIAL_MINT_AMOUNT, event::format_vec_for_event, asset::{Asset, AssetTrait}};
-    use test_helpers::{definitions::{SETUP_MASTER, DEPOSITOR, DEPLOYER}, contract::{mock_instantiate_vault, InitializeSwapCurvesMockConfig, mock_instantiate_vault_msg}, env::CustomTestEnv, asset::CustomTestAsset};
+    use test_helpers::{definitions::{SETUP_MASTER, DEPOSITOR, DEPLOYER, VAULT_TOKEN_DENOM}, contract::{mock_instantiate_vault, InitializeSwapCurvesMockConfig, mock_instantiate_vault_msg}, env::CustomTestEnv, asset::CustomTestAsset, vault_token::CustomTestVaultToken};
 
-    use crate::tests::{TestEnv, TestAsset, TestApp};
+    use crate::tests::{TestEnv, TestAsset, TestApp, TestVaultToken};
     use crate::tests::{helpers::volatile_vault_contract_storage, parameters::{TEST_VAULT_BALANCES, TEST_VAULT_WEIGHTS, AMPLIFICATION, TEST_VAULT_ASSET_COUNT}};
 
 
@@ -119,11 +118,8 @@ mod test_volatile_initialize_swap_curves {
         );
 
         // Query and verify the vault token supply
-        let vault_token_supply: Uint128 = env.get_app()
-            .wrap()
-            .query_wasm_smart::<TokenInfoResponse>(vault.clone(), &crate::msg::QueryMsg::TokenInfo {})
-            .unwrap()
-            .total_supply;
+        let vault_token = TestVaultToken::load(vault.to_string(), VAULT_TOKEN_DENOM.to_string());
+        let vault_token_supply = vault_token.total_supply(env.get_app());
 
         assert_eq!(
             vault_token_supply,
@@ -131,11 +127,7 @@ mod test_volatile_initialize_swap_curves {
         );
 
         // Query and verify the vault tokens of the depositor
-        let depositor_vault_tokens: Uint128 = env.get_app()
-            .wrap()
-            .query_wasm_smart::<BalanceResponse>(vault.clone(), &crate::msg::QueryMsg::Balance { address: DEPOSITOR.to_string() })
-            .unwrap()
-            .balance;
+        let depositor_vault_tokens: Uint128 = vault_token.query_balance(env.get_app(), DEPOSITOR.to_string());
 
         assert_eq!(
             depositor_vault_tokens,
