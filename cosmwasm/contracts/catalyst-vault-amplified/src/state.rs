@@ -6,7 +6,7 @@ use catalyst_vault_common::{
     ContractError,
     event::{local_swap_event, send_asset_event, receive_asset_event, send_liquidity_event, receive_liquidity_event, deposit_event, withdraw_event},
     msg::{CalcSendAssetResponse, CalcReceiveAssetResponse, CalcLocalSwapResponse, GetLimitCapacityResponse}, 
-    state::{FACTORY, MAX_ASSETS, WEIGHTS, INITIAL_MINT_AMOUNT, VAULT_FEE, MAX_LIMIT_CAPACITY, USED_LIMIT_CAPACITY, CHAIN_INTERFACE, TOTAL_ESCROWED_LIQUIDITY, TOTAL_ESCROWED_ASSETS, is_connected, update_limit_capacity, collect_governance_fee_message, compute_send_asset_hash, compute_send_liquidity_hash, create_asset_escrow, create_liquidity_escrow, on_send_asset_success, total_supply, get_limit_capacity, on_send_asset_failure, on_send_liquidity_failure, factory_owner, initialize_escrow_totals, initialize_limit_capacity, create_on_catalyst_call_msg}, asset::{Asset, AssetTrait, VaultAssets, VaultAssetsTrait, VaultToken, VaultTokenTrait, VaultResponse, IntoCosmosCustomMsg, CustomMsg}
+    state::{FACTORY, MAX_ASSETS, WEIGHTS, INITIAL_MINT_AMOUNT, VAULT_FEE, MAX_LIMIT_CAPACITY, USED_LIMIT_CAPACITY, CHAIN_INTERFACE, TOTAL_ESCROWED_LIQUIDITY, TOTAL_ESCROWED_ASSETS, is_connected, update_limit_capacity, collect_governance_fee_message, compute_send_asset_hash, compute_send_liquidity_hash, create_asset_escrow, create_liquidity_escrow, on_send_asset_success, get_limit_capacity, on_send_asset_failure, on_send_liquidity_failure, factory_owner, initialize_escrow_totals, initialize_limit_capacity, create_on_catalyst_call_msg}, asset::{Asset, AssetTrait, VaultAssets, VaultAssetsTrait, VaultToken, VaultTokenTrait, VaultResponse, IntoCosmosCustomMsg, CustomMsg}
 };
 use fixed_point_math::{self, WAD, WADWAD, mul_wad_down, pow_wad, div_wad_up, div_wad_down, mul_wad_up};
 use std::ops::Div;
@@ -345,7 +345,8 @@ pub fn deposit_mixed(
     )?;
 
     // Do not include the 'escrowed' vault tokens in the total supply of vault tokens (return less)
-    let effective_supply = U256::from(total_supply(deps.as_ref())?);
+    let mut vault_token = VaultToken::load(&deps.as_ref())?;
+    let effective_supply = U256::from(vault_token.query_total_supply(&deps.as_ref())?);
 
     // Compute the vault tokens to be minted.
     let out: Uint128 = calc_price_curve_limit_share(
@@ -362,7 +363,6 @@ pub fn deposit_mixed(
     }
 
     // Mint the vault tokens
-    let mut vault_token = VaultToken::load(&deps.as_ref())?;
     let mint_msg = vault_token.mint(
         deps,
         &env,
@@ -425,15 +425,18 @@ pub fn withdraw_all(
 
     update_amplification(deps, env.block.time)?;
 
-    // Burn the vault tokens of the withdrawer
+    // Compute the effective supply. Include the escrowed tokens to yield a smaller return.
     let mut vault_token = VaultToken::load(&deps.as_ref())?;
+    let effective_supply = U256::from(vault_token.query_total_supply(&deps.as_ref())?)
+        .wrapping_add(TOTAL_ESCROWED_LIQUIDITY.load(deps.storage)?.into());  // 'wrapping_add' is safe as U256.max >> Uint128.max
+
+    // Burn the vault tokens of the withdrawer
     let burn_msg = vault_token.burn(
         deps,
         &env,
         &info,
         vault_tokens
     )?;
-    // ! TODO fix supply
 
 
     // Compute weighted_alpha_0 to find the reference vault balances (i.e. the number of assets
@@ -505,12 +508,6 @@ pub fn withdraw_all(
         .wrapping_sub(UNIT_TRACKER.load(deps.storage)?) 
         .as_u256()                                      // Casting is safe (see reasoning above)
         .div(U256::from(assets.get_assets().len() as u64));
-
-    // Compute the effective supply. Include 'vault_tokens' to the queried supply as these have already been burnt
-    // and also include the escrowed tokens to yield a smaller return.
-    let effective_supply = U256::from(total_supply(deps.as_ref())?)
-        .wrapping_add(vault_tokens.into())                                   // 'wrapping_add' is safe as U256.max >> Uint128.max
-        .wrapping_add(TOTAL_ESCROWED_LIQUIDITY.load(deps.storage)?.into());  // 'wrapping_add' is safe as U256.max >> Uint128.max
 
     // Compute 'supply after withdrawal'/'supply before withdrawal' (in WAD terms)
     //    vault_tokens_share = (TS - vault_tokens) / TS
@@ -665,15 +662,18 @@ pub fn withdraw_mixed(
 
     update_amplification(deps, env.block.time)?;
 
-    // Burn the vault tokens of the withdrawer
+    // Compute the effective supply. Include the escrowed tokens to yield a smaller return.
     let mut vault_token = VaultToken::load(&deps.as_ref())?;
+    let effective_supply = U256::from(vault_token.query_total_supply(&deps.as_ref())?)
+        .wrapping_add(TOTAL_ESCROWED_LIQUIDITY.load(deps.storage)?.into());  // 'wrapping_add' is safe as U256.max >> Uint128.max
+
+    // Burn the vault tokens of the withdrawer
     let burn_msg = vault_token.burn(
         deps,
         &env,
         &info,
         vault_tokens
     )?;
-    // ! TODO fix supply
 
 
     // Compute weighted_alpha_0 to find the reference vault balances (i.e. the number of assets
@@ -735,12 +735,6 @@ pub fn withdraw_mixed(
         .wrapping_sub(UNIT_TRACKER.load(deps.storage)?) 
         .as_u256()                                      // Casting is safe (see reasoning above)
         .div(U256::from(assets.get_assets().len() as u64));
-
-    // Compute the effective supply. Include 'vault_tokens' to the queried supply as these have already been burnt
-    // and also include the escrowed tokens to yield a smaller return.
-    let effective_supply = U256::from(total_supply(deps.as_ref())?)
-        .wrapping_add(vault_tokens.into())                                   // 'wrapping_add' is safe as U256.max >> Uint128.max
-        .wrapping_add(TOTAL_ESCROWED_LIQUIDITY.load(deps.storage)?.into());  // 'wrapping_add' is safe as U256.max >> Uint128.max
 
     // Compute 'supply after withdrawal'/'supply before withdrawal' (in WAD terms)
     //    vault_tokens_share = (TS - vault_tokens) / TS
@@ -1308,15 +1302,18 @@ pub fn send_liquidity(
 
     update_amplification(deps, env.block.time)?;
 
-    // Burn the vault tokens of the sender
+    // Compute the effective supply. Iclude the escrowed tokens to yield a smaller return.
     let mut vault_token = VaultToken::load(&deps.as_ref())?;
+    let effective_supply = U256::from(vault_token.query_total_supply(&deps.as_ref())?)
+        .wrapping_add(TOTAL_ESCROWED_LIQUIDITY.load(deps.storage)?.into()); // 'wrapping_add' is safe as U256.max >> Uint128.max
+
+    // Burn the vault tokens of the sender
     let burn_msg = vault_token.burn(
         deps,
         &env,
         &info,
         amount
     )?;
-    // ! TODO fix supply
 
     // Compute (w·alpha_0)^(1-k) to find the vault's reference balances (point at which
     // the assets are priced 1:1).
@@ -1327,12 +1324,6 @@ pub fn send_liquidity(
         Some(&info),
         one_minus_amp
     )?;
-
-    // Compute the effective supply. Include 'vault_tokens' to the queried supply as these have 
-    // already been burnt and also include the escrowed tokens to yield a smaller return.
-    let effective_supply = U256::from(total_supply(deps.as_ref())?)
-        .wrapping_add(amount.into())                                        // 'wrapping_add' is safe as U256.max >> Uint128.max
-        .wrapping_add(TOTAL_ESCROWED_LIQUIDITY.load(deps.storage)?.into()); // 'wrapping_add' is safe as U256.max >> Uint128.max
 
     // Compute 'supply after withdrawal'/'supply before withdrawal' (in WAD terms)
     //    vault_tokens_share = (TS + vault_tokens) / TS
@@ -1498,7 +1489,8 @@ pub fn receive_liquidity(
 
     // Do not include the 'escrowed' vault tokens in the total supply of vault tokens 
     // of the vault to return less.
-    let total_supply = U256::from(total_supply(deps.as_ref())?);
+    let mut vault_token = VaultToken::load(&deps.as_ref())?;
+    let total_supply = U256::from(vault_token.query_total_supply(&deps.as_ref())?);
 
     // Calculate the 'vault_tokens' corresponding to the received 'units'.
     let vault_tokens: Uint128 = calc_price_curve_limit_share(
@@ -1588,7 +1580,6 @@ pub fn receive_liquidity(
     )?;
 
     // Mint the vault tokens.
-    let mut vault_token = VaultToken::load(&deps.as_ref())?;
     let mint_msg = vault_token.mint(
         deps,
         &env,

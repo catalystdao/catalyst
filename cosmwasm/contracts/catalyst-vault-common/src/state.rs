@@ -76,16 +76,6 @@ pub fn ready(deps: &Deps) -> StdResult<bool> {
 }
 
 
-/// Get the vault's token supply.
-pub fn total_supply(deps: Deps) -> Result<Uint128, ContractError> {
-    
-    VaultToken::load(&deps)?
-        .query_prior_total_supply(&deps)
-        .map_err(|err| err.into())
-
-}
-
-
 // Redefine the types used by the 'factory' for queries (the factory contract cannot be imported by this contract, 
 // as it would create a cyclic dependency)
 #[cw_serde]
