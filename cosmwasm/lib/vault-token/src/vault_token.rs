@@ -19,7 +19,7 @@ pub trait VaultTokenTrait<Msg> {
 
     fn load(deps: &Deps) -> Result<Self, VaultTokenError> where Self: Sized;
 
-    fn query_prior_total_supply(&self, deps: &Deps) -> Result<Uint128, VaultTokenError>;
+    fn query_total_supply(&self, deps: &Deps) -> Result<Uint128, VaultTokenError>;
 
     fn mint(
         &mut self,

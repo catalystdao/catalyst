@@ -17,9 +17,7 @@ pub enum Cw20VaultTokenMsg {
 
 //TODO what about events emitted by execute_mint and execute_burn?
 
-pub struct Cw20VaultToken{
-    supply_offset: Int128   //TODO remove and add warning?
-}
+pub struct Cw20VaultToken();
 
 impl VaultTokenTrait<Cw20VaultTokenMsg> for Cw20VaultToken {
 
@@ -50,20 +48,13 @@ impl VaultTokenTrait<Cw20VaultTokenMsg> for Cw20VaultToken {
 
     fn load(_deps: &Deps) -> Result<Self, VaultTokenError> where Self: Sized {
         Ok(
-            Cw20VaultToken {
-                supply_offset: Int128::zero()
-            }
+            Cw20VaultToken()
         )
     }
 
-    fn query_prior_total_supply(&self, deps: &Deps) -> Result<Uint128, VaultTokenError> {
-
-        let supply = TOKEN_INFO.load(deps.storage)?.total_supply;
-
-        let offset = Uint128::from(self.supply_offset.i128() as u128);
-
+    fn query_total_supply(&self, deps: &Deps) -> Result<Uint128, VaultTokenError> {
         Ok(
-            supply.wrapping_sub(offset) //TODO review 'wrapping_sub'
+            TOKEN_INFO.load(deps.storage)?.total_supply
         )
     }
 
@@ -76,11 +67,9 @@ impl VaultTokenTrait<Cw20VaultTokenMsg> for Cw20VaultToken {
         recipient: String
     ) -> Result<Option<Cw20VaultTokenMsg>, VaultTokenError> {
 
-        self.supply_offset = self.supply_offset.checked_add(
-            Int128::from(
-                TryInto::<i128>::try_into(amount.u128()).unwrap()   //TODO remove unwrap()
-            )
-        )?;
+        if amount.is_zero() {
+            return Ok(None);
+        }
 
         let mint_result = execute_mint(
             deps.branch(),
@@ -108,11 +97,9 @@ impl VaultTokenTrait<Cw20VaultTokenMsg> for Cw20VaultToken {
         amount: Uint128
     ) -> Result<Option<Cw20VaultTokenMsg>, VaultTokenError> {
 
-        self.supply_offset = self.supply_offset.checked_sub(
-            Int128::from(
-                TryInto::<i128>::try_into(amount.u128()).unwrap()   //TODO remove unwrap()
-            )
-        )?;
+        if amount.is_zero() {
+            return Ok(None);
+        }
 
         let mint_result = execute_burn(
             deps.branch(),

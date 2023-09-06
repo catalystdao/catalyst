@@ -64,7 +64,7 @@ impl VaultTokenTrait<NativeVaultTokenMsg> for NativeVaultToken {
         Ok(NativeVaultToken(denom))
     }
 
-    fn query_prior_total_supply(&self, deps: &Deps) -> Result<Uint128, VaultTokenError> {
+    fn query_total_supply(&self, deps: &Deps) -> Result<Uint128, VaultTokenError> {
 
         let response = deps.querier.query_supply(self.0.clone())?;
 
@@ -80,6 +80,10 @@ impl VaultTokenTrait<NativeVaultTokenMsg> for NativeVaultToken {
         amount: Uint128,
         recipient: String
     ) -> Result<Option<NativeVaultTokenMsg>, VaultTokenError> {
+
+        if amount.is_zero() {
+            return Ok(None);
+        }
 
         let mint_msg = TokenMsg::MintTokens {
             denom: self.0.to_owned(),
@@ -100,6 +104,10 @@ impl VaultTokenTrait<NativeVaultTokenMsg> for NativeVaultToken {
         info: &MessageInfo,
         amount: Uint128
     ) -> Result<Option<NativeVaultTokenMsg>, VaultTokenError> {
+
+        if amount.is_zero() {
+            return Ok(None);
+        }
 
         let burn_msg = TokenMsg::BurnTokens {
             denom: self.0.to_owned(),
