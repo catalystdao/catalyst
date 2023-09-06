@@ -266,39 +266,47 @@ pub enum ExecuteMsg<T, A=Asset> {
 
     // CW20 Implementation (base messages + 'approval' extension)
     // Refer to the cw20 package for a description on the following message definitions.
+    #[cfg(feature="asset_cw20")]
     Transfer {
         recipient: String,
         amount: Uint128
     },
+    #[cfg(feature="asset_cw20")]
     Burn {
         amount: Uint128
     },
+    #[cfg(feature="asset_cw20")]
     Send {
         contract: String,
         amount: Uint128,
         msg: Binary,
     },
+    #[cfg(feature="asset_cw20")]
     IncreaseAllowance {
         spender: String,
         amount: Uint128,
         expires: Option<Expiration>,
     },
+    #[cfg(feature="asset_cw20")]
     DecreaseAllowance {
         spender: String,
         amount: Uint128,
         expires: Option<Expiration>,
     },
+    #[cfg(feature="asset_cw20")]
     TransferFrom {
         owner: String,
         recipient: String,
         amount: Uint128,
     },
+    #[cfg(feature="asset_cw20")]
     SendFrom {
         owner: String,
         contract: String,
         amount: Uint128,
         msg: Binary,
     },
+    #[cfg(feature="asset_cw20")]
     BurnFrom {
         owner: String,
         amount: Uint128

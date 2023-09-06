@@ -375,6 +375,7 @@ pub fn execute(
 
 
         // CW20 execute msgs - Use cw20-base for the implementation
+        #[cfg(feature="asset_cw20")]
         AmplifiedExecuteMsg::Transfer {
             recipient,
             amount
@@ -383,12 +384,14 @@ pub fn execute(
                 .into_vault_response()
         ),
 
+        #[cfg(feature="asset_cw20")]
         AmplifiedExecuteMsg::Burn {
             amount: _
          } => Err(
             ContractError::Unauthorized {}     // Vault token burn handled by withdraw function
         ),
 
+        #[cfg(feature="asset_cw20")]
         AmplifiedExecuteMsg::Send {
             contract,
             amount,
@@ -398,6 +401,7 @@ pub fn execute(
                 .into_vault_response()
         ),
 
+        #[cfg(feature="asset_cw20")]
         AmplifiedExecuteMsg::IncreaseAllowance {
             spender,
             amount,
@@ -407,6 +411,7 @@ pub fn execute(
                 .into_vault_response()
         ),
 
+        #[cfg(feature="asset_cw20")]
         AmplifiedExecuteMsg::DecreaseAllowance {
             spender,
             amount,
@@ -416,6 +421,7 @@ pub fn execute(
                 .into_vault_response()
         ),
 
+        #[cfg(feature="asset_cw20")]
         AmplifiedExecuteMsg::TransferFrom {
             owner,
             recipient,
@@ -425,6 +431,7 @@ pub fn execute(
                 .into_vault_response()
         ),
 
+        #[cfg(feature="asset_cw20")]
         AmplifiedExecuteMsg::BurnFrom {
             owner: _,
             amount: _
@@ -432,6 +439,7 @@ pub fn execute(
             ContractError::Unauthorized {}      // Vault token burn handled by withdraw function
         ),
 
+        #[cfg(feature="asset_cw20")]
         AmplifiedExecuteMsg::SendFrom {
             owner,
             contract,

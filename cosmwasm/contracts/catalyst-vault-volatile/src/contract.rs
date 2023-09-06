@@ -368,6 +368,7 @@ pub fn execute(
 
 
         // CW20 execute msgs - Use cw20-base for the implementation
+        #[cfg(feature="asset_cw20")]
         VolatileExecuteMsg::Transfer {
             recipient,
             amount
@@ -376,12 +377,14 @@ pub fn execute(
                 .into_vault_response()
         ),
 
+        #[cfg(feature="asset_cw20")]
         VolatileExecuteMsg::Burn {
             amount: _
          } => Err(
             ContractError::Unauthorized {}     // Vault token burn handled by withdraw function
         ),
 
+        #[cfg(feature="asset_cw20")]
         VolatileExecuteMsg::Send {
             contract,
             amount,
@@ -391,6 +394,7 @@ pub fn execute(
                 .into_vault_response()
         ),
 
+        #[cfg(feature="asset_cw20")]
         VolatileExecuteMsg::IncreaseAllowance {
             spender,
             amount,
@@ -400,6 +404,7 @@ pub fn execute(
                 .into_vault_response()
         ),
 
+        #[cfg(feature="asset_cw20")]
         VolatileExecuteMsg::DecreaseAllowance {
             spender,
             amount,
@@ -409,6 +414,7 @@ pub fn execute(
                 .into_vault_response()
         ),
 
+        #[cfg(feature="asset_cw20")]
         VolatileExecuteMsg::TransferFrom {
             owner,
             recipient,
@@ -418,6 +424,7 @@ pub fn execute(
                 .into_vault_response()
         ),
 
+        #[cfg(feature="asset_cw20")]
         VolatileExecuteMsg::BurnFrom {
             owner: _,
             amount: _
@@ -425,6 +432,7 @@ pub fn execute(
             ContractError::Unauthorized {}      // Vault token burn handled by withdraw function
         ),
 
+        #[cfg(feature="asset_cw20")]
         VolatileExecuteMsg::SendFrom {
             owner,
             contract,

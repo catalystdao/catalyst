@@ -48,7 +48,6 @@ pub use cw20_asset_vault_modules::{
 pub mod native_asset_vault_modules {
     use cosmwasm_schema::cw_serde;
     use cosmwasm_std::CosmosMsg;
-    use cosmwasm_std::Empty;
 
     pub use vault_assets::asset::asset_native::{
         NativeAsset, NativeAssetMsg, NativeVaultAssets
@@ -81,23 +80,6 @@ pub mod native_asset_vault_modules {
                 NativeVaultTokenMsg::Token(token_msg) => {
                     CosmosMsg::Custom(NativeAssetCustomMsg::Token(token_msg))
                 },
-            }
-        }
-    }
-
-    //TODO this shouldn't be needed
-    impl IntoCosmosCustomMsg<NativeAssetCustomMsg> for CosmosMsg<Empty> {
-        fn into_cosmos_vault_msg(self) -> CosmosMsg<NativeAssetCustomMsg> {
-            match self {
-                CosmosMsg::Bank(bank_msg) => CosmosMsg::Bank(bank_msg),
-                CosmosMsg::Wasm(wasm_msg) => CosmosMsg::Wasm(wasm_msg),
-                CosmosMsg::Custom(_) => panic!("Unable to cast from CosmosMsg::Custom(Empty) to CosmosMsg::Custom(NativeAssetCustomMsg)"),
-                CosmosMsg::Staking(staking_msg) => CosmosMsg::Staking(staking_msg),
-                CosmosMsg::Distribution(distribution_msg) => CosmosMsg::Distribution(distribution_msg),
-                CosmosMsg::Stargate { type_url, value } => CosmosMsg::Stargate { type_url, value },
-                CosmosMsg::Ibc(ibc_msg) => CosmosMsg::Ibc(ibc_msg),
-                CosmosMsg::Gov(gov_msg) => CosmosMsg::Gov(gov_msg),
-                _ => unimplemented!(),
             }
         }
     }
@@ -162,6 +144,7 @@ pub mod cw20_asset_vault_modules {
 
 pub type VaultResponse = cosmwasm_std::Response<CustomMsg>;
 
+#[cfg(feature="asset_cw20")]
 impl IntoVaultResponse for Response<Empty> {
     fn into_vault_response(self) -> VaultResponse {
 
