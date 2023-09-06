@@ -1,7 +1,6 @@
 use cosmwasm_std::{Uint128, DepsMut, Env, MessageInfo, Uint64};
-use cw20_base::contract::execute_mint;
 use catalyst_vault_common::{
-    state::{MAX_ASSETS, WEIGHTS, INITIAL_MINT_AMOUNT, FACTORY}, ContractError, event::{deposit_event, cw20_response_to_standard_event}, asset::{Asset, VaultAssets, VaultAssetsTrait, AssetTrait, VaultResponse},
+    state::{MAX_ASSETS, WEIGHTS, INITIAL_MINT_AMOUNT, FACTORY}, ContractError, event::deposit_event, asset::{Asset, VaultAssets, VaultAssetsTrait, AssetTrait, VaultResponse, VaultToken, VaultTokenTrait, IntoCosmosCustomMsg},
 };
 
 
@@ -74,34 +73,29 @@ pub fn initialize_swap_curves(
         })?;
 
     // Mint vault tokens for the depositor
-    // Make up a 'MessageInfo' with the sender set to this contract itself => this is to allow the use of the 'execute_mint'
-    // function as provided by cw20-base, which will match the 'sender' of 'MessageInfo' with the allowed minter that
-    // was set when initializing the cw20 token (this contract itself).
-    let execute_mint_info = MessageInfo {
-        sender: env.contract.address.clone(),
-        funds: vec![],
-    };
     let minted_amount = INITIAL_MINT_AMOUNT;
-    let mint_response = execute_mint(
-        deps.branch(),
-        env.clone(),
-        execute_mint_info,
-        depositor.clone(),
-        minted_amount
+    let mut vault_token = VaultToken::load(&deps.as_ref())?;
+    let mint_msg = vault_token.mint(
+        deps,
+        &env,
+        &info,
+        minted_amount,
+        depositor.clone()
     )?;
 
+    let mut response = VaultResponse::new();
+
+    if let Some(msg) = mint_msg {
+        response = response.add_message(msg.into_cosmos_vault_msg());
+    }
+
     Ok(
-        VaultResponse::new()
+        response
             .add_event(
                 deposit_event(
                     depositor,
                     minted_amount,
                     assets_balances
-                )
-            )
-            .add_event(
-                cw20_response_to_standard_event(
-                    mint_response
                 )
             )
     )
