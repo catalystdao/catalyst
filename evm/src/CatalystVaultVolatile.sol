@@ -5,7 +5,7 @@ pragma solidity ^0.8.16;
 import { ERC20 } from 'solmate/src/tokens/ERC20.sol';
 import { SafeTransferLib } from 'solmate/src/utils/SafeTransferLib.sol';
 import { FixedPointMathLib } from "./utils/FixedPointMathLib.sol";
-import { CatalystGARPInterface } from "./CatalystGARPInterface.sol";
+import { CatalystChainInterface } from "./CatalystChainInterface.sol";
 import { CatalystVaultCommon } from "./CatalystVaultCommon.sol";
 import { IntegralsVolatile } from "./IntegralsVolatile.sol";
 import { ICatalystReceiver} from "./interfaces/IOnCatalyst.sol";
@@ -78,7 +78,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
         uint256[] calldata weights,
         uint256 amp,
         address depositor
-    ) public override {
+    ) external override {
         // May only be invoked by the FACTORY. The factory only invokes this function for proxy contracts.
         require(msg.sender == FACTORY && _tokenIndexing[0] == address(0));  // dev: swap curves may only be initialized once by the factory
         require(amp == FixedPointMathLib.WAD);  // dev: amplification not set correctly.
@@ -115,7 +115,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
             maxUnitCapacity += weight;
 
             unchecked {
-                it++;
+                ++it;
             }
         }
 
@@ -165,7 +165,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
             _targetWeight[token] = newWeight;
 
             unchecked {
-                it++;
+                ++it;
             }
         }
 
@@ -208,7 +208,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
                     _weight[token] = targetWeight;
 
                     unchecked {
-                        it++;
+                        ++it;
                     }
                 }
                 // Save weight sum.
@@ -365,7 +365,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
             // Save gas if the user provides no tokens.
             if (tokenAmounts[it] == 0) {
                 unchecked {
-                    it++;
+                    ++it;
                 }
                 continue;
             }
@@ -382,7 +382,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
             ); // dev: Token transfer from user failed.
 
             unchecked {
-                it++;
+                ++it;
             }
         }
 
@@ -457,7 +457,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
             ERC20(token).safeTransfer(msg.sender, tokenAmount);
 
             unchecked {
-                it++;
+                ++it;
             }
         }
 
@@ -514,7 +514,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
                 if (minOut[it] != 0) revert ReturnInsufficient(0, minOut[it]);
                 
                 unchecked {
-                    it++;
+                    ++it;
                 }
                 continue;
             }
@@ -536,7 +536,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
             ERC20(token).safeTransfer(msg.sender, tokenAmount);
 
             unchecked {
-                it++;
+                ++it;
             }
         }
         // Ensure all units are used. This should be done by setting at least one withdrawRatio to 1.
@@ -587,9 +587,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
 
     /**
      * @notice Initiate a cross-chain swap by purchasing units and transfering the units to the target vault.
-     * @param channelId The target chain identifier.
-     * @param toVault The target vault on the target chain. Encoded in 64 + 1 bytes.
-     * @param toAccount The recipient of the transaction on the target chain. Encoded in 64 + 1 bytes.
+     * @param routeDescription A cross-chain route description which contains the chainIdentifier, toAccount, toVault and relaying incentive.
      * @param fromAsset The asset the user wants to sell.
      * @param toAssetIndex The index of the asset the user wants to buy in the target vault.
      * @param amount The number of fromAsset to sell to the vault.
@@ -600,25 +598,22 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
      * @return uint256 The number of units bought.
      */
     function sendAsset(
-        bytes32 channelId,
-        bytes memory toVault,
-        bytes memory toAccount,
+        RouteDescription calldata routeDescription,
         address fromAsset,
         uint8 toAssetIndex,
         uint256 amount,
         uint256 minOut,
         address fallbackUser,
-        IncentiveDescription calldata incentive,
-        bytes memory calldata_
-    ) nonReentrant onlyConnectedPool(channelId, toVault) public payable override returns (uint256) {
+        bytes calldata calldata_
+    ) nonReentrant onlyConnectedPool(routeDescription.chainIdentifier, routeDescription.toVault) external payable override returns (uint256) {
         // Fallback user cannot be address(0) since this is used as a check for the existance of an escrow.
         // It would also be a silly fallback address.
         require(fallbackUser != address(0));
         // Correct address format is checked on the cross-chain interface. As a result, the below snippit is not needed.
         /*
-        require(toVault.length == 65);  // dev: Vault addresses are uint8 + 64 bytes.
-        require(toAccount.length == 65);  // dev: Account addresses are uint8 + 64 bytes.
-         */
+            require(toVault.length == 65);  // dev: Vault addresses are uint8 + 64 bytes.
+            require(toAccount.length == 65);  // dev: Account addresses are uint8 + 64 bytes.
+        */
 
         _updateWeights();
 
@@ -628,16 +623,13 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
         uint256 U = calcSendAsset(fromAsset, amount - fee);
 
         // Send the purchased units to the target vault on the target chain.
-        CatalystGARPInterface(_chainInterface).sendCrossChainAsset{value: msg.value}(
-            channelId,
-            toVault,
-            toAccount,
+        CatalystChainInterface(_chainInterface).sendCrossChainAsset{value: msg.value}(
+            routeDescription,
             toAssetIndex,
             U,
             minOut,
             amount - fee,
             fromAsset,
-            incentive,
             calldata_
         );
 
@@ -646,7 +638,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
         // Only information which is relevant for the escrow has to be hashed. (+ some extra for randomisation)
         // No need to hash context (as token/liquidity escrow data is different), fromVault, toVault, targetAssetIndex, minOut, CallData
         bytes32 sendAssetHash = _computeSendAssetHash(
-            toAccount,              // Ensures no collisions between different users
+            routeDescription.toAccount,              // Ensures no collisions between different users
             U,                      // Used to randomise the hash
             amount - fee,           // Required! to validate release escrow data
             fromAsset,              // Required! to validate release escrow data
@@ -672,9 +664,9 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
         // Adjustment of the security limit is delayed until ack to avoid a router abusing timeout to circumvent the security limit.
 
         emit SendAsset(
-            channelId,
-            toVault,
-            toAccount,
+            routeDescription.chainIdentifier,
+            routeDescription.toVault,
+            routeDescription.toAccount,
             fromAsset,
             toAssetIndex,
             amount,
@@ -686,31 +678,182 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
         return U;
     }
 
-    /** @notice Copy of sendAsset with no calldata_ */
-    function sendAsset(
-        bytes32 channelId,
-        bytes memory toVault,
-        bytes memory toAccount,
+    /**
+     * @notice Initiate a cross-chain swap by purchasing units and transfering the units to the target vault.
+     * Then allow for underwriters to underwrite the cross-chain swap for faster execution
+     * @param underwritePercentageX16 The payment for underwriting the swap (out of type(uint16.max))
+     */
+    function sendAssetUnderwrite(
+        RouteDescription calldata routeDescription,
         address fromAsset,
         uint8 toAssetIndex,
         uint256 amount,
         uint256 minOut,
         address fallbackUser,
-        IncentiveDescription calldata incentive
-    ) external payable override returns (uint256) {
-        bytes memory calldata_ = new bytes(0);
-        return sendAsset(
-            channelId,
-            toVault,
-            toAccount,
+        uint16 underwritePercentageX16,
+        bytes calldata calldata_
+    ) nonReentrant onlyConnectedPool(routeDescription.chainIdentifier, routeDescription.toVault) external payable override returns (uint256) {// Fallback user cannot be address(0) since this is used as a check for the existance of an escrow.
+        // It would also be a silly fallback address.
+        require(fallbackUser != address(0));
+        // Correct address format is checked on the cross-chain interface. As a result, the below snippit is not needed.
+        /*
+            require(toVault.length == 65);  // dev: Vault addresses are uint8 + 64 bytes.
+            require(toAccount.length == 65);  // dev: Account addresses are uint8 + 64 bytes.
+        */
+
+        _updateWeights();
+
+        uint256 fee = FixedPointMathLib.mulWadDown(amount, _vaultFee);
+
+        // Calculate the units bought.
+        uint256 U = calcSendAsset(fromAsset, amount - fee);
+
+        // Send the purchased units to the target vault on the target chain.
+        CatalystChainInterface(_chainInterface).sendCrossChainPleaseUnderwrite{value: msg.value}(
+            routeDescription,
+            toAssetIndex,
+            U,
+            minOut,
+            amount - fee,
+            fromAsset,
+            underwritePercentageX16,
+            calldata_
+        );
+
+
+        // Store the escrow information. For that, an index is required. Since we need this index twice, we store it.
+        // Only information which is relevant for the escrow has to be hashed. (+ some extra for randomisation)
+        // No need to hash context (as token/liquidity escrow data is different), fromVault, toVault, targetAssetIndex, minOut, CallData
+        bytes32 sendAssetHash = _computeSendAssetHash(
+            routeDescription.toAccount,              // Ensures no collisions between different users
+            U,                      // Used to randomise the hash
+            amount - fee,           // Required! to validate release escrow data
+            fromAsset,              // Required! to validate release escrow data
+            uint32(block.number)    // May overflow, but this is desired (% 2**32)
+        );
+
+        // Escrow the tokens used to purchase units. These will be sent back if transaction doesn't arrive / timeout.
+        _setTokenEscrow(
+            sendAssetHash,
+            fallbackUser,
+            fromAsset,
+            amount - fee
+        );
+        // Notice that the fee is subtracted from the escrow. If this is not done, the escrow can be used as a cheap denial of service vector.
+        // This is unfortunate.
+
+        // Collect the tokens from the user.
+        ERC20(fromAsset).safeTransferFrom(msg.sender, address(this), amount);
+
+        // Governance Fee
+        _collectGovernanceFee(fromAsset, fee);
+
+        // Adjustment of the security limit is delayed until ack to avoid a router abusing timeout to circumvent the security limit.
+
+        emit SendAssetUnderwritable(
+            routeDescription.chainIdentifier,
+            routeDescription.toVault,
+            routeDescription.toAccount,
             fromAsset,
             toAssetIndex,
             amount,
             minOut,
-            fallbackUser,
-            incentive,
+            U,
+            fee,
+            underwritePercentageX16
+        );
+
+        return U;
+    }
+
+    /**
+     * @notice Initiate a cross-chain swap by purchasing units and transfering the units to the target vault.
+     * Then allow for underwriters to underwrite the cross-chain swap for faster execution
+     * @dev Any difference between the bought units and minU are lost as fees to the pool.
+     * @param minU The number of units which has been underwritten on the destination chain.
+     */
+    function sendAssetUnderwritePurpose(
+        RouteDescription calldata routeDescription,
+        address fromAsset,
+        uint8 toAssetIndex,
+        uint256 amount,
+        uint256 minOut,
+        uint256 minU,
+        address fallbackUser,
+        bytes calldata calldata_
+    ) nonReentrant onlyConnectedPool(routeDescription.chainIdentifier, routeDescription.toVault) external payable override returns (uint256) {// Fallback user cannot be address(0) since this is used as a check for the existance of an escrow.
+        // It would also be a silly fallback address.
+        require(fallbackUser != address(0));
+        // Correct address format is checked on the cross-chain interface. As a result, the below snippit is not needed.
+        /*
+            require(toVault.length == 65);  // dev: Vault addresses are uint8 + 64 bytes.
+            require(toAccount.length == 65);  // dev: Account addresses are uint8 + 64 bytes.
+        */
+
+        _updateWeights();
+
+        uint256 fee = FixedPointMathLib.mulWadDown(amount, _vaultFee);
+
+        // Calculate the units bought.
+        uint256 U = calcSendAsset(fromAsset, amount - fee);
+        if (U < minU) revert ReturnInsufficient(U, minU);
+        U = minU;
+
+        // Send the purchased units to the target vault on the target chain.
+        CatalystChainInterface(_chainInterface).sendCrossChainPurposeUnderwrite{value: msg.value}(
+            routeDescription,
+            toAssetIndex,
+            U,
+            minOut,
+            amount - fee,
+            fromAsset,
             calldata_
         );
+
+
+        // Store the escrow information. For that, an index is required. Since we need this index twice, we store it.
+        // Only information which is relevant for the escrow has to be hashed. (+ some extra for randomisation)
+        // No need to hash context (as token/liquidity escrow data is different), fromVault, toVault, targetAssetIndex, minOut, CallData
+        bytes32 sendAssetHash = _computeSendAssetHash(
+            routeDescription.toAccount,              // Ensures no collisions between different users
+            U,                      // Used to randomise the hash
+            amount - fee,           // Required! to validate release escrow data
+            fromAsset,              // Required! to validate release escrow data
+            uint32(block.number)    // May overflow, but this is desired (% 2**32)
+        );
+
+        // Escrow the tokens used to purchase units. These will be sent back if transaction doesn't arrive / timeout.
+        _setTokenEscrow(
+            sendAssetHash,
+            fallbackUser,
+            fromAsset,
+            amount - fee
+        );
+        // Notice that the fee is subtracted from the escrow. If this is not done, the escrow can be used as a cheap denial of service vector.
+        // This is unfortunate.
+
+        // Collect the tokens from the user.
+        ERC20(fromAsset).safeTransferFrom(msg.sender, address(this), amount);
+
+        // Governance Fee
+        _collectGovernanceFee(fromAsset, fee);
+
+        // Adjustment of the security limit is delayed until ack to avoid a router abusing timeout to circumvent the security limit.
+
+        emit SendAssetUnderwritable(
+            routeDescription.chainIdentifier,
+            routeDescription.toVault,
+            routeDescription.toAccount,
+            fromAsset,
+            toAssetIndex,
+            amount,
+            minOut,
+            U,
+            fee,
+            0
+        );
+
+        return U;
     }
 
     /**
@@ -721,7 +864,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
         address toAsset,
         uint256 U,
         uint256 minOut
-    ) internal returns (uint256) {
+    ) internal override returns (uint256) {
         _updateWeights();
 
         // Check and update the security limit.
@@ -846,9 +989,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
      * @notice Initiate a cross-chain liquidity swap by withdrawing tokens and converting them to units.
      * @dev While the description says tokens are withdrawn and then converted to units, vault tokens are converted
      * directly into units through the following equation: U = ln(PT/(PT-pt)) * \sum W_i
-     * @param channelId The target chain identifier.
-     * @param toVault The target vault on the target chain. Encoded in 64 + 1 bytes.
-     * @param toAccount The recipient of the transaction on the target chain. Encoded in 64 + 1 bytes.
+     * @param routeDescription A cross-chain route description which contains the chainIdentifier, toAccount, toVault and relaying incentive.
      * @param vaultTokens The number of vault tokens to exchange.
      * @param minOut An array of minout describing: [the minimum number of vault tokens, the minimum number of reference assets].
      * @param fallbackUser If the transaction fails, send the escrowed funds to this address.
@@ -857,23 +998,20 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
      * @return uint256 The number of units bought.
      */
     function sendLiquidity(
-        bytes32 channelId,
-        bytes calldata toVault,
-        bytes calldata toAccount,
+        RouteDescription calldata routeDescription,
         uint256 vaultTokens,
         uint256[2] calldata minOut,
         address fallbackUser,
-        IncentiveDescription calldata incentive,
-        bytes memory calldata_
-    ) nonReentrant onlyConnectedPool(channelId, toVault) public payable override returns (uint256) {
+        bytes calldata calldata_
+    ) nonReentrant onlyConnectedPool(routeDescription.chainIdentifier, routeDescription.toVault) external payable override returns (uint256) {
         // Fallback user cannot be address(0) since this is used as a check for the existance of an escrow.
         // It would also be a silly fallback address.
         require(fallbackUser != address(0));
         // Correct address format is checked on the cross-chain interface. As a result, the below snippit is not needed.
         /*
-        require(toVault.length == 65);  // dev: Vault addresses are uint8 + 64 bytes.
-        require(toAccount.length == 65);  // dev: Account addresses are uint8 + 64 bytes.
-         */
+            require(toVault.length == 65);  // dev: Vault addresses are uint8 + 64 bytes.
+            require(toAccount.length == 65);  // dev: Account addresses are uint8 + 64 bytes.
+        */
 
         // Update weights
         _updateWeights();
@@ -893,14 +1031,11 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
         )) * wsum;
 
         // Transfer the units to the target vault.
-        CatalystGARPInterface(_chainInterface).sendCrossChainLiquidity{value: msg.value}(
-            channelId,
-            toVault,
-            toAccount,
+        CatalystChainInterface(_chainInterface).sendCrossChainLiquidity{value: msg.value}(
+            routeDescription,
             U,
             minOut,
             vaultTokens,
-            incentive,
             calldata_
         );
 
@@ -908,7 +1043,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
         // Only information which is relevant for the escrow has to be hashed. (+ some extra for randomisation)
         // No need to hash context (as token/liquidity escrow data is different), fromVault, toVault, targetAssetIndex, minOut, CallData
         bytes32 sendLiquidityHash = _computeSendLiquidityHash(
-            toAccount,              // Ensures no collisions between different users
+            routeDescription.toAccount,              // Ensures no collisions between different users
             U,                      // Used to randomise the hash
             vaultTokens,            // Required! to validate release escrow data
             uint32(block.number)    // May overflow, but this is desired (% 2**32)
@@ -916,9 +1051,9 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
 
         // Emit event before setting escrow to clear up variables from stack.
         emit SendLiquidity(
-            channelId,
-            toVault,
-            toAccount,
+            routeDescription.chainIdentifier,
+            routeDescription.toVault,
+            routeDescription.toAccount,
             vaultTokens,
             minOut,
             U
@@ -935,29 +1070,6 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
         // a router abusing timeout to circumvent the security limit at a low cost.
 
         return U;
-    }
-
-    /** @notice Copy of sendLiquidity with no calldata_ */
-    function sendLiquidity(
-        bytes32 channelId,
-        bytes calldata toVault,
-        bytes calldata toAccount,
-        uint256 vaultTokens,
-        uint256[2] calldata minOut,
-        address fallbackUser,
-        IncentiveDescription calldata incentive
-    ) external payable override returns (uint256) {
-        bytes memory calldata_ = new bytes(0);
-        return sendLiquidity(
-            channelId,
-            toVault,
-            toAccount,
-            vaultTokens,
-            minOut,
-            fallbackUser,
-            incentive,
-            calldata_
-        );
     }
 
     /**
@@ -1008,7 +1120,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
                 )) * weight; 
 
                 unchecked {
-                    it++;
+                    ++it;
                 }
             }
 

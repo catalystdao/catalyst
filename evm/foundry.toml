@@ -4,7 +4,7 @@ out = "out"
 libs = ["lib"]
 via_ir = true
 optimizer = true
-optimizer_runs = 1_000
+optimizer_runs = 500
 fs_permissions = [{ access = "read-write", path = "./script/config" }]
 
 

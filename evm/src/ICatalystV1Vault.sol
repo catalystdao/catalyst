@@ -9,6 +9,7 @@ import "./interfaces/ICatalystV1VaultEvents.sol";
 import "./interfaces/ICatalystV1VaultImmutables.sol";
 import "./interfaces/ICatalystV1VaultPermissionless.sol";
 import "./interfaces/ICatalystV1VaultState.sol";
+import "./interfaces/ICatalystV1Underwriting.sol";
 
 interface ICatalystV1Vault is
     ICatalystV1VaultSuccessFailure,
@@ -17,5 +18,7 @@ interface ICatalystV1Vault is
     ICatalystV1VaultEvents,
     ICatalystV1VaultImmutables,
     ICatalystV1VaultPermissionless,
-    ICatalystV1VaultState
+    ICatalystV1VaultState,
+    ICatalystV1Structs,
+    ICatalystV1Underwriting
 {}

@@ -1,13 +1,30 @@
 //SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.16;
 
+
+import { IMessageEscrowStructs } from "GeneralisedIncentives/src/interfaces/IMessageEscrowStructs.sol";
+
+interface ICatalystV1Structs is IMessageEscrowStructs {
+    /**
+     * @param chainIdentifier The target chain identifier.
+     * @param toVault The target vault on the target chain. Encoded in 64 + 1 bytes.
+     * @param toAccount The recipient of the transaction on the target chain. Encoded in 64 + 1 bytes.
+     * @param incentive The cross-chain relaying incentive description.
+     */
+    struct RouteDescription {
+        bytes32 chainIdentifier;
+        bytes toVault;
+        bytes toAccount;
+        IncentiveDescription incentive;
+    }
+}
+
 /// @title Vault state
 /// @notice Contains all vault storage which depends on the vault state.
 interface ICatalystV1VaultState {
+
     /// @notice If the vault has no cross chain connection, this is true. Should not be trusted if setupMaster != ZERO_ADDRESS
     function onlyLocal() external view returns (bool);
-
-    function _vaultConnection(bytes32 channelIdentifier, bytes calldata remoteVault) external view returns (bool);
 
     /// @notice The token weights. Used for maintaining a non symmetric vault asset balance.
     function _weight(address token) external view returns (uint256);
@@ -40,6 +57,9 @@ interface ICatalystV1VaultState {
 
     /// @notice Total current escrowed vault tokens
     function _escrowedVaultTokens() external view returns (uint256);
+
+    /// @notice Checks if there is a connection to the described vault
+    function _vaultConnection(bytes32 sourceIdentifier, bytes calldata fromVault) external view returns (bool);
 
     function factoryOwner() external view returns (address);
 

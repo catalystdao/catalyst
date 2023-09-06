@@ -11,6 +11,7 @@ import {Commands} from '../libraries/Commands.sol';
 import {BytesLib} from '../libraries/BytesLib.sol';
 import {CancelSwap} from '../libraries/CancelSwap.sol';
 import {LockAndMsgSender} from './LockAndMsgSender.sol';
+import {ICatalystV1Structs} from '../../interfaces/ICatalystV1VaultState.sol';
 
 /// @title Decodes and Executes Commands
 /// @notice Called by the UniversalRouter contract to efficiently decode and execute a singular command
@@ -77,7 +78,7 @@ abstract contract Dispatcher is Permit2Payments, CatalystExchange, CancelSwap, L
                     // }
 
                     // TODO: Decode memory bytes in calldata. See above.
-                    (address vault, bytes32 channelId, bytes memory toVault, bytes memory toUser, address fromAsset, uint8 toAssetIndex8, uint256 amount, uint256 minOut, address fallbackUser, uint256 gas, IncentiveDescription memory incentive) = abi.decode(inputs, (address, bytes32, bytes, bytes, address, uint8, uint256, uint256, address, uint256, IncentiveDescription));
+                    (address vault, RouteDescription memory routeDescription, address fromAsset, uint8 toAssetIndex8, uint256 amount, uint256 minOut, address fallbackUser, uint256 gas) = abi.decode(inputs, (address, RouteDescription, address, uint8, uint256, uint256, address, uint256));
 
                     // We don't have space in the stack do dynamically decode the calldata. 
                     // To circumvent that, we have to decode it as a slice. We need to start after
@@ -88,7 +89,7 @@ abstract contract Dispatcher is Permit2Payments, CatalystExchange, CancelSwap, L
                     // TODO:
                     bytes calldata calldata_ = inputs[0x280:];
                     
-                    CatalystExchange.sendAsset(vault, channelId, toVault, toUser, fromAsset, toAssetIndex8, amount, minOut, map(fallbackUser), gas, incentive, calldata_);
+                    CatalystExchange.sendAsset(vault, routeDescription, fromAsset, toAssetIndex8, amount, minOut, map(fallbackUser), gas, calldata_);
                 } else if (command == Commands.PERMIT2_TRANSFER_FROM) {
                     // equivalent: abi.decode(inputs, (address, address, uint160))
                     address token;
@@ -210,7 +211,7 @@ abstract contract Dispatcher is Permit2Payments, CatalystExchange, CancelSwap, L
             } else if (command < 0x10) {
                 if (command == Commands.SENDLIQUIDITY) {
                     // TODO: Decode memory variables in calldata. See sendAsset.
-                    (address vault, bytes32 channelId, bytes memory toVault, bytes memory toUser, address fromAsset, uint256 amount, uint256[2] memory minOut, address fallbackUser, uint256 gas, IncentiveDescription memory incentive) = abi.decode(inputs, (address, bytes32, bytes, bytes, address, uint256, uint256[2], address, uint256, IncentiveDescription));
+                    (address vault, RouteDescription memory routeDescription, uint256 amount, uint256[2] memory minOut, address fallbackUser, uint256 gas) = abi.decode(inputs, (address, RouteDescription, uint256, uint256[2], address, uint256));
 
                     // We don't have space in the stack do dynamically decode the calldata. 
                     // To circumvent that, we have to decode it as a slice. We need to start after
@@ -220,7 +221,7 @@ abstract contract Dispatcher is Permit2Payments, CatalystExchange, CancelSwap, L
                     // TODO:
                     bytes calldata calldata_ = inputs[0x220:];
                     
-                    CatalystExchange.sendLiquidity(vault, channelId, toVault, toUser, amount, minOut, fallbackUser, gas, incentive, calldata_);
+                    CatalystExchange.sendLiquidity(vault, routeDescription, amount, minOut, fallbackUser, gas, calldata_);
                 } else if (command == Commands.ALLOW_CANCEL) {
                     // equivalent: abi.decode(inputs, (address, bytes32))
                     address swappie;

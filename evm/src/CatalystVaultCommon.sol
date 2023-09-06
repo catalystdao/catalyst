@@ -161,7 +161,7 @@ abstract contract CatalystVaultCommon is
      */ 
     modifier onlyConnectedPool(bytes32 channelId, bytes memory vault) {
         // Only allow connected vaults
-        if (!_vaultConnection[channelId][vault]) revert VaultNotConnected(channelId, vault);
+        if (!_vaultConnection[channelId][vault]) revert VaultNotConnected();
         _;
     }
 
@@ -170,6 +170,52 @@ abstract contract CatalystVaultCommon is
     /// no connections have been created and this returns false.
     function onlyLocal() public view override returns (bool) {
         return _chainInterface == address(0);
+    }
+
+    // -- Receive Abstract Functions -- //
+
+    function _receiveAsset(
+        address toAsset,
+        uint256 U,
+        uint256 minOut
+    ) virtual internal returns (uint256);
+
+    // -- Underwrite Asset Swaps -- //
+
+    function underwriteAsset(
+        bytes32 identifier,
+        address toAsset,
+        uint256 U,
+        uint256 minOut
+    ) onlyChainInterface external returns (uint256 purchasedTokens) {
+        purchasedTokens = _receiveAsset(toAsset, U, minOut);
+        // Set the escrow.
+        // TODO: Does this correctly set the escrow? (+ / -)
+        _setTokenEscrow(
+            identifier,
+            address(msg.sender),  // is always ChainInterface but msg.sender is cheaper than slaod.
+            toAsset,
+            purchasedTokens
+        );
+    }
+
+    function releaseUnderwriteAsset(
+        bytes32 identifier,
+        uint256 escrowAmount,
+        address escrowToken
+    ) onlyChainInterface external {
+         _releaseAssetEscrow(identifier, escrowAmount, escrowToken); // Only reverts for missing escrow
+
+        // Send escrowed tokens to underwriting module. (chainInterface == msg.sender)
+        ERC20(escrowToken).safeTransfer(msg.sender, escrowAmount);
+    }
+
+    function deleteUnderwriteAsset(
+        bytes32 identifier,
+        uint256 escrowAmount,
+        address escrowToken
+    ) onlyChainInterface external {
+         _releaseAssetEscrow(identifier, escrowAmount, escrowToken); // Only reverts for missing escrow
     }
 
     // -- Setup Functions -- //
@@ -463,7 +509,7 @@ abstract contract CatalystVaultCommon is
         uint256 escrowAmount,
         address escrowToken,
         uint32 blockNumberMod
-    ) nonReentrant onlyChainInterface public override virtual {
+    ) onlyChainInterface public override virtual {
 
         // We need to find the location of the escrow using the information below.
         // We need to do this twice: 1. Get the address. 2. Delete the escrow.
@@ -504,7 +550,7 @@ abstract contract CatalystVaultCommon is
         uint256 escrowAmount,
         address escrowToken,
         uint32 blockNumberMod
-    ) nonReentrant onlyChainInterface public override virtual {
+    ) onlyChainInterface public override virtual {
 
         // We need to find the location of the escrow using the information below.
         // We need to do this twice: 1. Get the address. 2. Delete the escrow.
@@ -517,6 +563,7 @@ abstract contract CatalystVaultCommon is
             blockNumberMod  // Used to randomize the hash.
         );
 
+        // This call provides re-entry protection against re-entering this call. Otherwise, this call can always be called.
         address fallbackAddress = _releaseAssetEscrow(sendAssetHash, escrowAmount, escrowToken); // Only reverts for missing escrow,
 
         ERC20(escrowToken).safeTransfer(fallbackAddress, escrowAmount);  // Would fail if there is no balance. To protect against this, the escrow amount should be removed from what can be claimed by users.
@@ -545,7 +592,7 @@ abstract contract CatalystVaultCommon is
         uint256 U,
         uint256 escrowAmount,
         uint32 blockNumberMod
-    ) nonReentrant onlyChainInterface public override virtual {
+    ) onlyChainInterface public override virtual {
 
         // We need to find the location of the escrow using the information below.
         // We need to do this twice: 1. Get the address. 2. Delete the escrow.
@@ -582,7 +629,7 @@ abstract contract CatalystVaultCommon is
         uint256 U,
         uint256 escrowAmount,
         uint32 blockNumberMod
-    ) nonReentrant onlyChainInterface public override virtual {
+    ) onlyChainInterface public override virtual {
 
         bytes32 sendLiquidityHash = _computeSendLiquidityHash( // Computing the hash doesn't revert.
             toAccount,      // Ensures no collisions between different users
@@ -591,6 +638,7 @@ abstract contract CatalystVaultCommon is
             blockNumberMod  // Used to randomize the hash.
         );
 
+        // This call provides re-entry protection against re-entering this call. Otherwise, this call can always be called.
         address fallbackAddress = _releaseLiquidityEscrow(sendLiquidityHash, escrowAmount); // Only reverts for missing escrow
 
         _mint(fallbackAddress, escrowAmount); // Never reverts.

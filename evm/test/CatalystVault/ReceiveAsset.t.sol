@@ -7,6 +7,7 @@ import "../../src/ICatalystV1Vault.sol";
 import {Token} from "../mocks/token.sol";
 import "../../src/utils/FixedPointMathLib.sol";
 import {AVaultInterfaces} from "./AVaultInterfaces.t.sol";
+import { ICatalystV1Structs } from "../../src/interfaces/ICatalystV1VaultState.sol";
 
 interface TF {
     function transferFrom(
@@ -34,29 +35,32 @@ abstract contract TestReceiveAsset is TestCommon, AVaultInterfaces {
 
         setConnection(fromVault, toVault, DESTINATION_IDENTIFIER, DESTINATION_IDENTIFIER);
 
-        uint256 initial_invariant = invariant(vaults);
-
         address fromToken = ICatalystV1Vault(fromVault)._tokenIndexing(fromAssetIndex);
 
         uint256 amount = getLargestSwap(fromVault, toVault, fromToken, ICatalystV1Vault(toVault)._tokenIndexing(toAssetIndex), true) * uint256(swapSizePercentage) / (2**32 - 1);
 
         Token(fromToken).approve(fromVault, amount);
 
+        ICatalystV1Structs.RouteDescription memory routeDescription = ICatalystV1Structs.RouteDescription({
+            chainIdentifier: DESTINATION_IDENTIFIER,
+            toVault: convertEVMTo65(toVault),
+            toAccount: convertEVMTo65(toAccount),
+            incentive: _INCENTIVE
+        });
+
         vm.recordLogs();
         units = ICatalystV1Vault(fromVault).sendAsset{value: _getTotalIncentive(_INCENTIVE)}(
-            DESTINATION_IDENTIFIER,
-            convertEVMTo65(toVault),
-            convertEVMTo65(toAccount),
+            routeDescription,
             fromToken,
             toAssetIndex, 
             uint256(amount), 
             uint256(amount)/2, 
-            toAccount, 
-            _INCENTIVE
+            toAccount,
+            hex""
         );
         Vm.Log[] memory entries = vm.getRecordedLogs();
 
-        (bytes32 destinationIdentifier, bytes memory recipitent, bytes memory messageWithContext_) = abi.decode(entries[1].data, (bytes32, bytes, bytes));
+        (, , bytes memory messageWithContext_) = abi.decode(entries[1].data, (bytes32, bytes, bytes));
 
         return (units, messageWithContext = messageWithContext_);
     }

@@ -5,7 +5,7 @@ pragma solidity ^0.8.16;
 import { ERC20 } from 'solmate/src/tokens/ERC20.sol';
 import { SafeTransferLib } from 'solmate/src/utils/SafeTransferLib.sol';
 import { FixedPointMathLib } from "./utils/FixedPointMathLib.sol";
-import { CatalystGARPInterface } from "./CatalystGARPInterface.sol";
+import { CatalystChainInterface } from "./CatalystChainInterface.sol";
 import { CatalystVaultCommon } from "./CatalystVaultCommon.sol";
 import { IntegralsAmplified } from "./IntegralsAmplified.sol";
 import { ICatalystReceiver} from "./interfaces/IOnCatalyst.sol";
@@ -89,7 +89,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
         uint256[] calldata weights,
         uint256 amp,
         address depositor
-    ) public override {
+    ) external override {
         // May only be invoked by the FACTORY. The factory only invokes this function for proxy contracts.
         require(msg.sender == FACTORY && _tokenIndexing[0] == address(0));  // dev: swap curves may only be initialized once by the factory
         // Check that the amplification is correct.
@@ -133,7 +133,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
             maxUnitCapacity += weight * balanceOfSelf;
 
             unchecked {
-                it++;
+                ++it;
             }
         }
 
@@ -170,102 +170,10 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
             maxUnitCapacity += (ERC20(asset).balanceOf(address(this)) - _escrowedTokens[asset]) * _weight[asset];
 
             unchecked {
-                it++;
+                ++it;
             }
         }
         _maxUnitCapacity = maxUnitCapacity;
-    }
-
-    /**
-     * @notice Allows Governance to modify the vault weights to optimise liquidity.
-     * @dev targetTime needs to be more than MIN_ADJUSTMENT_TIME in the future.
-     * @param targetTime Once reached, _weight[...] = newWeights[...]
-     * @param targetAmplification The new weights to apply
-     */
-    function setAmplification(uint256 targetTime, uint256 targetAmplification) external onlyFactoryOwner {
-        unchecked {
-            require(targetTime >= block.timestamp + MIN_ADJUSTMENT_TIME); // dev: targetTime must be more than MIN_ADJUSTMENT_TIME in the future.
-            require(targetTime <= block.timestamp + 365 days); // dev: Target time cannot be too far into the future.
-        }
-
-        uint256 currentAmplification = FixedPointMathLib.WAD - uint256(_oneMinusAmp);
-        require(targetAmplification < FixedPointMathLib.WAD);  // dev: amplification not set correctly.
-        // Limit the maximum allowed relative amplification change to a factor of 2. Note that this effectively 'locks'
-        // the amplification if it gets intialized to 0. Similarly, the amplification will never be allowed to be set to
-        // 0 if it is initialized to any other value (note how 'targetAmplification*2 >= currentAmplification' is used
-        // instead of 'targetAmplification >= currentAmplification/2').
-        require(targetAmplification <= currentAmplification*2 && targetAmplification*2 >= currentAmplification); // dev: targetAmplification must be maximum a factor of 2 larger/smaller than the current amplification to protect liquidity providers.
-        // Because of the balance0 (_unitTracker) implementation, amplification adjustment has to be disabled for cross-chain vaults.
-        require(_chainInterface == address(0));  // dev: Amplification adjustment is disabled for cross-chain vaults.
-
-        // Save adjustment information
-        _adjustmentTarget = targetTime;
-        _lastModificationTime = block.timestamp;
-        unchecked {
-            _targetAmplification = int256(FixedPointMathLib.WAD - targetAmplification);
-        }
-
-        emit SetAmplification(targetTime, targetAmplification);
-    }
-
-    /**
-     * @notice If the governance requests an amplification change, this function will adjust the vault amplificaiton.
-     * @dev Called first thing on every function depending on amplification.
-     */
-    function _updateAmplification() internal {
-        // We might use adjustment target more than once. Since we don't change it, store it.
-        uint256 adjTarget = _adjustmentTarget;
-
-        if (adjTarget != 0) {
-            // We need to use lastModification multiple times. Store it.
-            uint256 lastModification = _lastModificationTime;
-
-            // If no time has passed since the last update, then we don't need to update anything.
-            if (block.timestamp == lastModification) return;
-
-            // Since we are storing lastModification, update the variable now. This avoid repetitions.
-            _lastModificationTime = block.timestamp;
-
-            // If the current time is past the adjustment, the amplification needs to be finalized.
-            if (block.timestamp >= adjTarget) {
-                _oneMinusAmp = _targetAmplification;
-
-                // Set adjustmentTime to 0. This ensures the if statement is never entered.
-                _adjustmentTarget = 0;
-
-                return;
-            }
-
-            // Calculate partial amp change
-            int256 targetAmplification = _targetAmplification;  // uint256 0 < _targetAmplification < WAD
-            int256 currentAmplification = _oneMinusAmp;  // uint256 0 < _oneMinusAmp < WAD
-
-            unchecked {
-                // Lets check each mathematical computation one by one.
-                // First part is (targetAmplification - currentAmplification). We know that targetAmplification + currentAmplification < 2e18
-                // => |targetAmplification - currentAmplification| < 2e18.
-
-                // int256(block.timestamp - lastModification), it is fair to assume that block.timestamp < 2**64. Thus
-                // block.timestamp - lastModification < block.timestamp < 2**64
-
-                // |targetAmplification - currentAmplification| * (block.timestamp - lastModification) < 2*10**18 * 2**64  < 2**87 (no overflow)
-
-                // dividing by int256(adjTarget - lastModification) reduces the number. If adjTarget = lastModification (division by 0)
-                // => This function has been called before. Thus it must be that lastModification = block.timestamp. But that cannot be the case
-                // since block.timestamp >= adjTarget => adjTarget = 0.
-
-                // We know that int256(block.timestamp - lastModification) / int256(adjTarget - lastModification) < 1, since
-                // adjTarget > block.timestamp. So int256(block.timestamp - lastModification) / int256(adjTarget - lastModification) *
-                // |targetAmplification - currentAmplification| < 1 * 2**64.
-                // Sorry for having you go through all that to make the calculation unchecked. We need the gas savings.
-
-                // Add the change to the current amp.
-                _oneMinusAmp = currentAmplification + (
-                    (targetAmplification - currentAmplification) * int256(block.timestamp - lastModification)  // timestamp is largest but small relative to int256.
-                ) / int256(adjTarget - lastModification);   // adjTarget is bounded by block.timestap + 1 year
-            }
-            
-        }
     }
 
     //--- Swap integrals ---//
@@ -350,7 +258,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
         uint256 W_B = _weight[toAsset];
         int256 oneMinusAmp = _oneMinusAmp;
 
-        uint256 output = _calcCombinedPriceCurves(amount, A, B, W_A, W_B, oneMinusAmp);
+        uint256 output = _calcPriceCurveLimit(_calcPriceCurveArea(amount, A, W_A, oneMinusAmp), B, W_B, oneMinusAmp); // _calcCombinedPriceCurves(amount, A, B, W_A, W_B, oneMinusAmp);
 
         // If the swap is a very small portion of the vault
         // Add an additional fee. This covers mathematical errors.
@@ -377,7 +285,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
         uint256[] calldata tokenAmounts,
         uint256 minOut
     ) nonReentrant external override returns(uint256) {
-        _updateAmplification();
+        // _updateAmplification();
         int256 oneMinusAmp = _oneMinusAmp;
 
         uint256 walpha_0_ampped;
@@ -435,7 +343,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
                     // Save gas if the user provides no tokens, as the rest of the loop has no effect in that case
                     if (tokenAmounts[it] == 0) {
                         unchecked {
-                            it++;
+                            ++it;
                         }
                         continue;
                     }
@@ -465,7 +373,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
                 );  // dev: Token withdrawal from user failed.
 
                 unchecked {
-                    it++;
+                    ++it;
                 }
             }
             // Increase the security limit by the amount deposited.
@@ -537,7 +445,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
         uint256 vaultTokens,
         uint256[] calldata minOut
     ) nonReentrant external override returns(uint256[] memory) {
-        _updateAmplification();
+        // _updateAmplification();
         // Burn the desired number of vault tokens to the user.
         // If they don't have it, it saves gas.
         // * Remember to add vaultTokens when accessing totalSupply
@@ -584,7 +492,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
                 }
 
                 unchecked {
-                    it++;
+                    ++it;
                 }
             }
 
@@ -683,7 +591,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
             ERC20(token).safeTransfer(msg.sender, weightedTokenAmount);
 
             unchecked {
-                it++;
+                ++it;
             }
         }
 
@@ -720,7 +628,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
         uint256[] calldata withdrawRatio,
         uint256[] calldata minOut
     ) nonReentrant external override returns(uint256[] memory) {
-        _updateAmplification();
+        // _updateAmplification();
         // Burn the desired number of vault tokens to the user.
         // If they don't have it, it saves gas.
         // * Remember to add vaultTokens when accessing totalSupply
@@ -827,7 +735,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
                 if (minOut[it] != 0) revert ReturnInsufficient(0, minOut[it]);
 
                 unchecked {
-                    it++;
+                    ++it;
                 }
                 continue;
             }
@@ -850,7 +758,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
             totalWithdrawn += tokenAmount * assetWeight;
 
             unchecked {
-                it++;
+                ++it;
             }
         }
         // Ensure all units are used. This should be done by setting at least one withdrawRatio to 1.
@@ -887,7 +795,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
         uint256 amount,
         uint256 minOut
     ) nonReentrant external override returns (uint256) {
-        _updateAmplification();
+        // _updateAmplification();
         uint256 fee = FixedPointMathLib.mulWadDown(amount, _vaultFee);
 
         // Calculate the return value.
@@ -923,9 +831,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
 
     /**
      * @notice Initiate a cross-chain swap by purchasing units and transfering the units to the target vault.
-     * @param channelId The target chain identifier.
-     * @param toVault The target vault on the target chain. Encoded in 64 + 1 bytes.
-     * @param toAccount The recipient of the transaction on the target chain. Encoded in 64 + 1 bytes.
+     * @param routeDescription A cross-chain route description which contains the chainIdentifier, toAccount, toVault and relaying incentive.
      * @param fromAsset The asset the user wants to sell.
      * @param toAssetIndex The index of the asset the user wants to buy in the target vault.
      * @param amount The number of fromAsset to sell to the vault.
@@ -936,27 +842,24 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
      * @return uint256 The number of units bought.
      */
     function sendAsset(
-        bytes32 channelId,
-        bytes memory toVault,
-        bytes memory toAccount,
+        RouteDescription calldata routeDescription,
         address fromAsset,
         uint8 toAssetIndex,
         uint256 amount,
         uint256 minOut,
         address fallbackUser,
-        IncentiveDescription calldata incentive,
-        bytes memory calldata_
-    ) nonReentrant onlyConnectedPool(channelId, toVault) public payable override returns (uint256) {
+        bytes calldata calldata_
+    ) nonReentrant onlyConnectedPool(routeDescription.chainIdentifier, routeDescription.toVault) external payable override returns (uint256) {
         // Fallback user cannot be address(0) since this is used as a check for the existance of an escrow.
         // It would also be a silly fallback address.
         require(fallbackUser != address(0));
         // Correct address format is checked on the cross-chain interface. As a result, the below snippit is not needed.
         /*
-        require(toVault.length == 65);  // dev: Vault addresses are uint8 + 64 bytes.
-        require(toAccount.length == 65);  // dev: Account addresses are uint8 + 64 bytes.
-         */
+            require(toVault.length == 65);  // dev: Vault addresses are uint8 + 64 bytes.
+            require(toAccount.length == 65);  // dev: Account addresses are uint8 + 64 bytes.
+        */
 
-        _updateAmplification();
+        // _updateAmplification();
         uint256 fee = FixedPointMathLib.mulWadDown(amount, _vaultFee);
 
         // Calculate the units bought.
@@ -967,16 +870,13 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
         _unitTracker += int256(U);
 
         // Send the purchased units to the target vault on the target chain.
-        CatalystGARPInterface(_chainInterface).sendCrossChainAsset{value: msg.value}(
-            channelId,
-            toVault,
-            toAccount,
+        CatalystChainInterface(_chainInterface).sendCrossChainAsset{value: msg.value}(
+            routeDescription,
             toAssetIndex,
             U,
             minOut,
             amount - fee,
             fromAsset,
-            incentive,
             calldata_
         );
 
@@ -984,7 +884,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
         // Only information which is relevant for the escrow has to be hashed. (+ some extra for randomisation)
         // No need to hash context (as token/liquidity escrow data is different), fromVault, toVault, targetAssetIndex, minOut, CallData
         bytes32 sendAssetHash = _computeSendAssetHash(
-            toAccount,              // Ensures no collisions between different users
+            routeDescription.toAccount,              // Ensures no collisions between different users
             U,                      // Used to randomise the hash
             amount - fee,           // Required! to validate release escrow data
             fromAsset,              // Required! to validate release escrow data
@@ -1010,9 +910,9 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
         // Adjustment of the security limit is delayed until ack to avoid a router abusing timeout to circumvent the security limit.
 
         emit SendAsset(
-            channelId,
-            toVault,
-            toAccount,
+            routeDescription.chainIdentifier,
+            routeDescription.toVault,
+            routeDescription.toAccount,
             fromAsset,
             toAssetIndex,
             amount,
@@ -1024,31 +924,188 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
         return U;
     }
 
-    /** @notice Copy of sendAsset with no calldata_ */
-    function sendAsset(
-        bytes32 channelId,
-        bytes memory toVault,
-        bytes memory toAccount,
+    /**
+     * @notice Initiate a cross-chain swap by purchasing units and transfering the units to the target vault.
+     * Then allow for underwriters to underwrite the cross-chain swap for faster execution
+     * @param underwritePercentageX16 The payment for underwriting the swap (out of type(uint16.max))
+     */
+    function sendAssetUnderwrite(
+        RouteDescription calldata routeDescription,
         address fromAsset,
         uint8 toAssetIndex,
         uint256 amount,
         uint256 minOut,
         address fallbackUser,
-        IncentiveDescription calldata incentive
-    ) external payable override returns (uint256) {
-        bytes memory calldata_ = new bytes(0);
-        return sendAsset(
-            channelId,
-            toVault,
-            toAccount,
+        uint16 underwritePercentageX16,
+        bytes calldata calldata_
+    ) nonReentrant onlyConnectedPool(routeDescription.chainIdentifier, routeDescription.toVault) external payable override returns (uint256) {
+        // Fallback user cannot be address(0) since this is used as a check for the existance of an escrow.
+        // It would also be a silly fallback address.
+        require(fallbackUser != address(0));
+        // Correct address format is checked on the cross-chain interface. As a result, the below snippit is not needed.
+        /*
+            require(toVault.length == 65);  // dev: Vault addresses are uint8 + 64 bytes.
+            require(toAccount.length == 65);  // dev: Account addresses are uint8 + 64 bytes.
+        */
+
+        // _updateAmplification();
+        uint256 fee = FixedPointMathLib.mulWadDown(amount, _vaultFee);
+
+        // Calculate the units bought.
+        uint256 U = calcSendAsset(fromAsset, amount - fee);
+
+        // onSendAssetSuccess requires casting U to int256 to update the _unitTracker and must never revert. Check for overflow here.
+        require(U < uint256(type(int256).max));  // int256 max fits in uint256
+        _unitTracker += int256(U);
+
+        // Send the purchased units to the target vault on the target chain.
+        CatalystChainInterface(_chainInterface).sendCrossChainPleaseUnderwrite{value: msg.value}(
+            routeDescription,
+            toAssetIndex,
+            U,
+            minOut,
+            amount - fee,
+            fromAsset,
+            underwritePercentageX16,
+            calldata_
+        );
+
+        // Store the escrow information. For that, an index is required. Since we need this index twice, we store it.
+        // Only information which is relevant for the escrow has to be hashed. (+ some extra for randomisation)
+        // No need to hash context (as token/liquidity escrow data is different), fromVault, toVault, targetAssetIndex, minOut, CallData
+        bytes32 sendAssetHash = _computeSendAssetHash(
+            routeDescription.toAccount,              // Ensures no collisions between different users
+            U,                      // Used to randomise the hash
+            amount - fee,           // Required! to validate release escrow data
+            fromAsset,              // Required! to validate release escrow data
+            uint32(block.number)    // May overflow, but this is desired (% 2**32)
+        );
+
+        // Escrow the tokens used to purchase units. These will be sent back if transaction doesn't arrive / timeout.
+        _setTokenEscrow(
+            sendAssetHash,
+            fallbackUser,
+            fromAsset,
+            amount - fee
+        );
+        // Notice that the fee is subtracted from the escrow. If this is not done, the escrow can be used as a cheap denial of service vector.
+        // This is unfortunate.
+
+        // Collect the tokens from the user.
+        ERC20(fromAsset).safeTransferFrom(msg.sender, address(this), amount);
+
+        // Governance Fee
+        _collectGovernanceFee(fromAsset, fee);
+
+        // Adjustment of the security limit is delayed until ack to avoid a router abusing timeout to circumvent the security limit.
+
+        emit SendAssetUnderwritable(
+            routeDescription.chainIdentifier,
+            routeDescription.toVault,
+            routeDescription.toAccount,
             fromAsset,
             toAssetIndex,
             amount,
             minOut,
-            fallbackUser,
-            incentive,
+            U,
+            fee,
+            underwritePercentageX16
+        );
+
+        return U;
+    }
+
+    /**
+     * @notice Initiate a cross-chain swap by purchasing units and transfering the units to the target vault.
+     * Then allow for underwriters to underwrite the cross-chain swap for faster execution
+     * @dev Any difference between the bought units and minU are lost as fees to the pool.
+     * @param minU The number of units which has been underwritten on the destination chain.
+     */
+    function sendAssetUnderwritePurpose(
+        RouteDescription calldata routeDescription,
+        address fromAsset,
+        uint8 toAssetIndex,
+        uint256 amount,
+        uint256 minOut,
+        uint256 minU,
+        address fallbackUser,
+        bytes calldata calldata_
+    ) nonReentrant onlyConnectedPool(routeDescription.chainIdentifier, routeDescription.toVault) external payable override returns (uint256) {
+        // Fallback user cannot be address(0) since this is used as a check for the existance of an escrow.
+        // It would also be a silly fallback address.
+        require(fallbackUser != address(0));
+        // Correct address format is checked on the cross-chain interface. As a result, the below snippit is not needed.
+        /*
+            require(toVault.length == 65);  // dev: Vault addresses are uint8 + 64 bytes.
+            require(toAccount.length == 65);  // dev: Account addresses are uint8 + 64 bytes.
+        */
+
+        // _updateAmplification();
+        uint256 fee = FixedPointMathLib.mulWadDown(amount, _vaultFee);
+
+        // Calculate the units bought.
+        uint256 U = calcSendAsset(fromAsset, amount - fee);
+        if (U < minU) revert ReturnInsufficient(U, minU);
+        U = minU;
+
+        // onSendAssetSuccess requires casting U to int256 to update the _unitTracker and must never revert. Check for overflow here.
+        require(U < uint256(type(int256).max));  // int256 max fits in uint256
+        _unitTracker += int256(U);
+
+        // Send the purchased units to the target vault on the target chain.
+        CatalystChainInterface(_chainInterface).sendCrossChainPurposeUnderwrite{value: msg.value}(
+            routeDescription,
+            toAssetIndex,
+            U,
+            minOut,
+            amount - fee,
+            fromAsset,
             calldata_
         );
+
+        // Store the escrow information. For that, an index is required. Since we need this index twice, we store it.
+        // Only information which is relevant for the escrow has to be hashed. (+ some extra for randomisation)
+        // No need to hash context (as token/liquidity escrow data is different), fromVault, toVault, targetAssetIndex, minOut, CallData
+        bytes32 sendAssetHash = _computeSendAssetHash(
+            routeDescription.toAccount,              // Ensures no collisions between different users
+            U,                      // Used to randomise the hash
+            amount - fee,           // Required! to validate release escrow data
+            fromAsset,              // Required! to validate release escrow data
+            uint32(block.number)    // May overflow, but this is desired (% 2**32)
+        );
+
+        // Escrow the tokens used to purchase units. These will be sent back if transaction doesn't arrive / timeout.
+        _setTokenEscrow(
+            sendAssetHash,
+            fallbackUser,
+            fromAsset,
+            amount - fee
+        );
+        // Notice that the fee is subtracted from the escrow. If this is not done, the escrow can be used as a cheap denial of service vector.
+        // This is unfortunate.
+
+        // Collect the tokens from the user.
+        ERC20(fromAsset).safeTransferFrom(msg.sender, address(this), amount);
+
+        // Governance Fee
+        _collectGovernanceFee(fromAsset, fee);
+
+        // Adjustment of the security limit is delayed until ack to avoid a router abusing timeout to circumvent the security limit.
+
+        emit SendAssetUnderwritable(
+            routeDescription.chainIdentifier,
+            routeDescription.toVault,
+            routeDescription.toAccount,
+            fromAsset,
+            toAssetIndex,
+            amount,
+            minOut,
+            U,
+            fee,
+            0
+        );
+
+        return U;
     }
 
     /**
@@ -1059,8 +1116,8 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
         address toAsset,
         uint256 U,
         uint256 minOut
-    ) internal returns (uint256) {
-        _updateAmplification();
+    ) internal override returns (uint256) {
+        // _updateAmplification();
 
         // Calculate the swap return value. Fee is always taken on the sending token.
         uint256 purchasedTokens = calcReceiveAsset(toAsset, U);
@@ -1224,7 +1281,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
             }
 
             unchecked {
-                it++;
+                ++it;
             }
         }
 
@@ -1244,7 +1301,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
      * @return walpha_0 Balance0**(1-amp)
      */
     function computeBalance0() external view returns(uint256 walpha_0) {
-       (uint256 walpha_0_ampped, uint256 it) = _computeBalance0(_oneMinusAmp);
+       (uint256 walpha_0_ampped, ) = _computeBalance0(_oneMinusAmp);
 
         walpha_0 = uint256( // casting: powWad is not negative.
             FixedPointMathLib.powWad(
@@ -1258,9 +1315,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
      * @notice Initiate a cross-chain liquidity swap by withdrawing tokens and converting them to units.
      * @dev While the description says tokens are withdrawn and then converted to units, vault tokens are converted
      * directly into units through the following equation: U = N · wa^(1-k) · (((PT + pt)/PT)^(1-k) - 1)
-     * @param channelId The target chain identifier.
-     * @param toVault The target vault on the target chain. Encoded in 64 + 1 bytes.
-     * @param toAccount The recipient of the transaction on the target chain. Encoded in 64 + 1 bytes.
+     * @param routeDescription A cross-chain route description which contains the chainIdentifier, toAccount, toVault and relaying incentive.
      * @param vaultTokens The number of vault tokens to exchange.
      * @param minOut An array of minout describing: [the minimum number of vault tokens, the minimum number of reference assets].
      * @param fallbackUser If the transaction fails, send the escrowed funds to this address.
@@ -1269,26 +1324,23 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
      * @return uint256 The number of units bought.
      */
     function sendLiquidity(
-        bytes32 channelId,
-        bytes calldata toVault,
-        bytes calldata toAccount,
+        RouteDescription calldata routeDescription,
         uint256 vaultTokens,
         uint256[2] calldata minOut,
         address fallbackUser,
-        IncentiveDescription calldata incentive,
-        bytes memory calldata_
-    ) nonReentrant onlyConnectedPool(channelId, toVault) public payable override returns (uint256) {
+        bytes calldata calldata_
+    ) nonReentrant onlyConnectedPool(routeDescription.chainIdentifier, routeDescription.toVault) external payable override returns (uint256) {
         // Fallback user cannot be address(0) since this is used as a check for the existance of an escrow.
         // It would also be a silly fallback address.
         require(fallbackUser != address(0));
         // Correct address format is checked on the cross-chain interface. As a result, the below snippit is not needed.
         /*
-        require(toVault.length == 65);  // dev: Vault addresses are uint8 + 64 bytes.
-        require(toAccount.length == 65);  // dev: Account addresses are uint8 + 64 bytes.
-         */
+            require(toVault.length == 65);  // dev: Vault addresses are uint8 + 64 bytes.
+            require(toAccount.length == 65);  // dev: Account addresses are uint8 + 64 bytes.
+        */
 
         // Update amplification
-        _updateAmplification();
+        // _updateAmplification();
 
         _burn(msg.sender, vaultTokens);
 
@@ -1317,14 +1369,11 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
         }
 
         // Transfer the units to the target vault.
-        CatalystGARPInterface(_chainInterface).sendCrossChainLiquidity{value: msg.value}(
-            channelId,
-            toVault,
-            toAccount,
+        CatalystChainInterface(_chainInterface).sendCrossChainLiquidity{value: msg.value}(
+            routeDescription,
             U,
             minOut,
             vaultTokens,
-            incentive,
             calldata_
         );
 
@@ -1332,7 +1381,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
         // Only information which is relevant for the escrow has to be hashed. (+ some extra for randomisation)
         // No need to hash context (as token/liquidity escrow data is different), fromVault, toVault, targetAssetIndex, minOut, CallData
         bytes32 sendLiquidityHash = _computeSendLiquidityHash(
-            toAccount,              // Ensures no collisions between different users
+            routeDescription.toAccount,              // Ensures no collisions between different users
             U,                      // Used to randomise the hash
             vaultTokens,            // Required! to validate release escrow data
             uint32(block.number)    // May overflow, but this is desired (% 2**32)
@@ -1340,9 +1389,9 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
 
         // Emit event before setting escrow to clear up variables from stack.
         emit SendLiquidity(
-            channelId,
-            toVault,
-            toAccount,
+            routeDescription.chainIdentifier,
+            routeDescription.toVault,
+            routeDescription.toAccount,
             vaultTokens,
             minOut,
             U
@@ -1361,29 +1410,6 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
         return U;
     }
 
-    /** @notice Copy of sendLiquidity with no calldata_ */
-    function sendLiquidity(
-        bytes32 channelId,
-        bytes calldata toVault,
-        bytes calldata toAccount,
-        uint256 vaultTokens,
-        uint256[2] calldata minOut,
-        address fallbackUser,
-        IncentiveDescription calldata incentive
-    ) external payable override returns (uint256) {
-        bytes memory calldata_ = new bytes(0);
-        return sendLiquidity(
-            channelId,
-            toVault,
-            toAccount,
-            vaultTokens,
-            minOut,
-            fallbackUser,
-            incentive,
-            calldata_
-        );
-    }
-
     /**
      * @notice Completes a cross-chain liquidity swap by converting units to tokens and depositing.
      * @dev Internal function that implement the majority of swap logic.
@@ -1393,7 +1419,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
         uint256 minVaultTokens,
         uint256 minReferenceAsset
     ) internal returns (uint256) {
-        _updateAmplification();
+        // _updateAmplification();
 
         int256 oneMinusAmp = _oneMinusAmp;
 

@@ -2,9 +2,9 @@
 
 pragma solidity ^0.8.16;
 
-import { IMessageEscrowStructs } from "GeneralisedIncentives/src/interfaces/IMessageEscrowStructs.sol";
+import { ICatalystV1Structs } from "./ICatalystV1VaultState.sol";
 
-interface ICatalystV1VaultPermissionless is IMessageEscrowStructs {
+interface ICatalystV1VaultPermissionless {
     /** 
      * @notice Setup a vault.
      * @param name_ Name of the Vault token.
@@ -83,43 +83,57 @@ interface ICatalystV1VaultPermissionless is IMessageEscrowStructs {
      * @notice Initiate a cross-chain swap by purchasing units and transfer them to another vault.
      * @dev Addresses are encoded in 64 + 1 bytes. To encode for EVM, encode as:
      * Solidity: abi.encodePacket(uint8(20), bytes32(0), abi.encode(<vaultAddress>))
-     * @param channelId The target chain identifier.
-     * @param toVault The target vault on the target chain encoded in 64 + 1 bytes.
-     * @param toAccount The recipient of the transaction on the target chain. Encoded in 64 + 1 bytes.
+     * @param routeDescription A cross-chain route description which contains the chainIdentifier, toAccount, toVault and relaying incentive.
      * @param fromAsset The asset the user wants to sell.
      * @param toAssetIndex The index of the asset the user wants to buy in the target vault.
      * @param amount The number of fromAsset to sell to the vault.
      * @param minOut The minimum number of returned tokens to the toAccount on the target chain.
      * @param fallbackUser If the transaction fails, send the escrowed funds to this address.
-     * @param incentive A struct which descripes the incentives for a cross-chain message.
+     * @param calldata_ Data field if a call should be made on the target chain.
+     * Encoding depends on the target chain, with evm being: abi.encodePacket(bytes20(<address>), <data>)
      * @return uint256 The number of units minted.
      */
     function sendAsset(
-        bytes32 channelId,
-        bytes calldata toVault,
-        bytes calldata toAccount,
+        ICatalystV1Structs.RouteDescription calldata routeDescription,
         address fromAsset,
         uint8 toAssetIndex,
         uint256 amount,
         uint256 minOut,
         address fallbackUser,
-        IncentiveDescription calldata incentive
+        bytes calldata calldata_
     ) external payable returns (uint256);
 
-    /// @notice Includes calldata_
-    /// @param calldata_ Data field if a call should be made on the target chain.
-    /// Encoding depends on the target chain, with evm being: abi.encodePacket(bytes20(<address>), <data>)
-    function sendAsset(
-        bytes32 channelId,
-        bytes calldata toVault,
-        bytes calldata toAccount,
+    /**
+     * @notice Initiate a cross-chain swap by purchasing units and transfering the units to the target vault.
+     * Then allow for underwriters to underwrite the cross-chain swap for faster execution
+     * @param underwritePercentageX16 The payment for underwriting the swap (out of type(uint16.max))
+     */
+    function sendAssetUnderwrite(
+        ICatalystV1Structs.RouteDescription calldata routeDescription,
         address fromAsset,
         uint8 toAssetIndex,
         uint256 amount,
         uint256 minOut,
         address fallbackUser,
-        IncentiveDescription calldata incentive,
-        bytes memory calldata_
+        uint16 underwritePercentageX16,
+        bytes calldata calldata_
+    ) external payable returns (uint256);
+
+    /**
+     * @notice Initiate a cross-chain swap by purchasing units and transfering the units to the target vault.
+     * Then allow for underwriters to underwrite the cross-chain swap for faster execution
+     * @dev Any difference between the bought units and minU are lost as fees to the pool.
+     * @param minU The number of units which has been underwritten on the destination chain.
+     */
+    function sendAssetUnderwritePurpose(
+        ICatalystV1Structs.RouteDescription calldata routeDescription,
+        address fromAsset,
+        uint8 toAssetIndex,
+        uint256 amount,
+        uint256 minOut,
+        uint256 minU,
+        address fallbackUser,
+        bytes calldata calldata_
     ) external payable returns (uint256);
 
     /**
@@ -166,37 +180,20 @@ interface ICatalystV1VaultPermissionless is IMessageEscrowStructs {
      * @dev While the description says tokens are withdrawn and then converted to units, vault tokens are converted
      * directly into units through the following equation:
      *      U = ln(PT/(PT-pt)) * \sum W_i
-     * @param channelId The target chain identifier.
-     * @param toVault The target vault on the target chain encoded in 64 + 1 bytes.
-     * @param toAccount The recipient of the transaction on the target chain. Encoded in 64 bytes + 1.
+     * @param routeDescription A cross-chain route description which contains the chainIdentifier, toAccount, toVault and relaying incentive.
      * @param vaultTokens The number of vault tokens to exchange.
      * @param minOut An array of minout describing: [the minimum number of vault tokens, the minimum number of reference assets].
      * @param fallbackUser If the transaction fails, send the escrowed funds to this address.
-     * @param incentive A struct which descripes the incentives for a cross-chain message.
+     * @param calldata_ Data field if a call should be made on the target chain.
+     * Encoding depends on the target chain, with evm being: abi.encodePacket(bytes20(<address>), <data>)
      * @return uint256 The number of units minted.
      */
     function sendLiquidity(
-        bytes32 channelId,
-        bytes calldata toVault,
-        bytes calldata toAccount,
+        ICatalystV1Structs.RouteDescription calldata routeDescription,
         uint256 vaultTokens,
         uint256[2] calldata minOut,
         address fallbackUser,
-        IncentiveDescription calldata incentive
-    ) external payable returns (uint256);
-
-    /// @notice Includes calldata_
-    /// @param calldata_ Data field if a call should be made on the target chain.
-    /// Encoding depends on the target chain, with evm being: abi.encodePacket(bytes20(<address>), <data>)
-    function sendLiquidity(
-        bytes32 channelId,
-        bytes calldata toVault,
-        bytes calldata toAccount,
-        uint256 vaultTokens,
-        uint256[2] calldata minOut,
-        address fallbackUser,
-        IncentiveDescription calldata incentive,
-        bytes memory calldata_
+        bytes calldata calldata_
     ) external payable returns (uint256);
 
     /**

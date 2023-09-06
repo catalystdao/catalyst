@@ -7,6 +7,7 @@ import "../../src/ICatalystV1Vault.sol";
 import {Token} from "../mocks/token.sol";
 import "../../src/utils/FixedPointMathLib.sol";
 import {AVaultInterfaces} from "./AVaultInterfaces.t.sol";
+import { ICatalystV1Structs } from "../../src/interfaces/ICatalystV1VaultState.sol";
 
 interface TF {
     function transferFrom(
@@ -46,16 +47,21 @@ abstract contract TestSendAsset is TestCommon, AVaultInterfaces {
 
         Token(fromToken).approve(fromVault, amount);
 
+        ICatalystV1Structs.RouteDescription memory routeDescription = ICatalystV1Structs.RouteDescription({
+            chainIdentifier: channelId,
+            toVault: convertEVMTo65(toVault),
+            toAccount: convertEVMTo65(toAccount),
+            incentive: _INCENTIVE
+        });
+
         uint256 units = ICatalystV1Vault(fromVault).sendAsset{value: _getTotalIncentive(_INCENTIVE)}(
-            channelId,
-            convertEVMTo65(toVault),
-            convertEVMTo65(toAccount),
+            routeDescription,
             fromToken,
             toAssetIndex, 
             uint256(amount), 
             uint256(amount)/2, 
-            toAccount, 
-            _INCENTIVE
+            toAccount,
+            hex""
         );
 
         uint256 after_invariant = invariant(vaults);
@@ -86,17 +92,23 @@ abstract contract TestSendAsset is TestCommon, AVaultInterfaces {
         address fromToken = ICatalystV1Vault(fromVault)._tokenIndexing(fromAssetIndex);
         Token(fromToken).approve(fromVault, amount);
 
+        ICatalystV1Structs.RouteDescription memory routeDescription = ICatalystV1Structs.RouteDescription({
+            chainIdentifier: channelId,
+            toVault: convertEVMTo65(toVault),
+            toAccount: convertEVMTo65(toAccount),
+            incentive: _INCENTIVE
+        });
+
         vm.expectRevert();
+
         ICatalystV1Vault(fromVault).sendAsset{value: _getTotalIncentive(_INCENTIVE)}(
-            channelId,
-            convertEVMTo65(toVault),
-            convertEVMTo65(toAccount),
+            routeDescription,
             fromToken,
             toAssetIndex, 
             uint256(amount), 
             uint256(amount)/2, 
-            address(0), 
-            _INCENTIVE
+            address(0),
+            hex""
         );
     }
 }
