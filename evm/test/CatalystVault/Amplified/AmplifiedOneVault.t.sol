@@ -6,8 +6,26 @@ import "../../../src/CatalystVaultAmplified.sol";
 
 import "../Invariant.t.sol";
 import "../LocalSwap.t.sol";
+import "../CrossChainInterfaceOnly.t.sol";
+import "../LocalSwap.minout.t.sol";
 
-contract TestVolatileInvariant is TestInvariant, TestLocalswap {
+contract TestVolatileInvariant is TestInvariant, TestLocalswap, TestCrossChainInterfaceOnly, TestLocalswapMinout {
+
+    address[] _vaults;
+
+    function setUp() virtual override public {
+        super.setUp();
+
+        address[] memory assets = getTokens(3);
+        uint256[] memory init_balances = new uint256[](3);
+        init_balances[0] = 10 * 10**18; init_balances[1] = 100 * 10**18; init_balances[2] = 1000 * 10**18;
+        uint256[] memory weights = new uint256[](3);
+        weights[0] = 100; weights[1] = 10; weights[2] = 1;
+
+        address vault1 = deployVault(assets, init_balances, weights, 10**18 / 2, 0);
+
+        _vaults.push(vault1);
+    }
 
     function getLargestSwap(address fromVault, address toVault, address fromAsset, address toAsset) view override internal returns(uint256 amount) {
         return getLargestSwap(fromVault, toVault, fromAsset, toAsset, false);
@@ -39,16 +57,7 @@ contract TestVolatileInvariant is TestInvariant, TestLocalswap {
     }
 
     function getTestConfig() internal override returns(address[] memory vaults) {
-        vaults = new address[](1);
-        address[] memory assets = getTokens(3);
-        uint256[] memory init_balances = new uint256[](3);
-        init_balances[0] = 10 * 10**18; init_balances[1] = 100 * 10**18; init_balances[2] = 1000 * 10**18;
-        uint256[] memory weights = new uint256[](3);
-        weights[0] = 100; weights[1] = 10; weights[2] = 1;
-
-        address vault = deployVault(assets, init_balances, weights, 10**18 / 2, 0);
-
-        vaults[0] = vault;
+        return vaults = _vaults;
     }
 }
 

@@ -9,6 +9,32 @@ import {TestReceiveAsset} from "../ReceiveAsset.t.sol";
 
 contract TestVolatileInvariant2 is TestInvariant, TestSendAsset, TestReceiveAsset {
 
+    address[] _vaults;
+
+    function setUp() virtual override public {
+        super.setUp();
+
+        address[] memory assets = getTokens(2);
+        uint256[] memory init_balances = new uint256[](2);
+        init_balances[0] = 10 * 10**18; init_balances[1] = 100 * 10**18;
+        uint256[] memory weights = new uint256[](2);
+        weights[0] = 3; weights[1] = 2;
+
+        address vault1 = deployVault(assets, init_balances, weights, 10**18, 0);
+
+        _vaults.push(vault1);
+
+        assets = getTokens(1);
+        init_balances = new uint256[](1);
+        init_balances[0] = 10 * 10**18;
+        weights = new uint256[](1);
+        weights[0] = 2;
+
+        address vault2 = deployVault(assets, init_balances, weights, 10**18, 0);
+
+        _vaults.push(vault2);
+
+    }
     function getLargestSwap(address fromVault, address toVault, address fromAsset, address toAsset) view override internal returns(uint256 amount) {
         return getLargestSwap(fromVault, toVault, fromAsset, toAsset, false);
     }
@@ -34,26 +60,7 @@ contract TestVolatileInvariant2 is TestInvariant, TestSendAsset, TestReceiveAsse
     }
 
     function getTestConfig() internal override returns(address[] memory vaults) {
-        vaults = new address[](2);
-        address[] memory assets = getTokens(2);
-        uint256[] memory init_balances = new uint256[](2);
-        init_balances[0] = 10 * 10**18; init_balances[1] = 100 * 10**18;
-        uint256[] memory weights = new uint256[](2);
-        weights[0] = 3; weights[1] = 2;
-
-        address vault1 = deployVault(assets, init_balances, weights, 10**18, 0);
-
-        vaults[0] = vault1;
-
-        assets = getTokens(1);
-        init_balances = new uint256[](1);
-        init_balances[0] = 10 * 10**18;
-        weights = new uint256[](1);
-        weights[0] = 2;
-
-        address vault2 = deployVault(assets, init_balances, weights, 10**18, 0);
-
-        vaults[1] = vault2;
+        return vaults = _vaults;
     }
 }
 
