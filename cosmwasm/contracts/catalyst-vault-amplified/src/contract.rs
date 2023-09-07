@@ -8,11 +8,11 @@ use cw20_base::allowances::{
 use cw20_base::contract::{
     execute_send, execute_transfer, query_balance, query_token_info,
 };
-use catalyst_vault_common::bindings::{VaultResponse, IntoVaultResponse};
 use catalyst_vault_common::ContractError;
 use catalyst_vault_common::state::{
     setup, finish_setup, set_fee_administrator, set_vault_fee, set_governance_fee_share, set_connection, query_chain_interface, query_setup_master, query_ready, query_only_local, query_assets, query_weight, query_vault_fee, query_governance_fee_share, query_fee_administrator, query_total_escrowed_liquidity, query_total_escrowed_asset, query_asset_escrow, query_liquidity_escrow, query_vault_connection_state, query_factory, query_factory_owner, on_send_liquidity_success, query_total_supply
 };
+use catalyst_vault_common::bindings::{VaultResponse, IntoVaultResponse, VaultAssets, VaultAssetsTrait};
 
 use crate::msg::{AmplifiedExecuteMsg, InstantiateMsg, QueryMsg, AmplifiedExecuteExtension};
 use crate::state::{
@@ -64,7 +64,9 @@ pub fn execute(
     msg: AmplifiedExecuteMsg,
 ) -> Result<VaultResponse, ContractError> {
 
-    match msg {
+    let mut receive_no_assets = true;
+
+    let result = match msg {
 
         AmplifiedExecuteMsg::InitializeSwapCurves {
             assets,
@@ -74,7 +76,7 @@ pub fn execute(
         } => initialize_swap_curves(
             &mut deps,
             env,
-            info,
+            info.clone(),
             assets,
             weights,
             amp,
@@ -84,14 +86,14 @@ pub fn execute(
         AmplifiedExecuteMsg::FinishSetup {
         } => finish_setup(
             &mut deps,
-            info
+            info.clone()
         ),
 
         AmplifiedExecuteMsg::SetFeeAdministrator {
             administrator
         } => set_fee_administrator(
             &mut deps,
-            info,
+            info.clone(),
             administrator
         ),
 
@@ -99,7 +101,7 @@ pub fn execute(
             fee
         } => set_vault_fee(
             &mut deps,
-            info,
+            info.clone(),
             fee
         ),
 
@@ -107,7 +109,7 @@ pub fn execute(
             fee
         } => set_governance_fee_share(
             &mut deps,
-            info,
+            info.clone(),
             fee
         ),
 
@@ -117,7 +119,7 @@ pub fn execute(
             state
         } => set_connection(
             &mut deps,
-            info,
+            info.clone(),
             channel_id,
             to_vault,
             state
@@ -126,52 +128,64 @@ pub fn execute(
         AmplifiedExecuteMsg::DepositMixed {
             deposit_amounts,
             min_out
-        } => deposit_mixed(
-            &mut deps,
-            env,
-            info,
-            deposit_amounts,
-            min_out
-        ),
+        } => {
+            receive_no_assets = false;
+            deposit_mixed(
+                &mut deps,
+                env,
+                info.clone(),
+                deposit_amounts,
+                min_out
+            )
+        },
 
         AmplifiedExecuteMsg::WithdrawAll {
             vault_tokens,
             min_out
-        } => withdraw_all(
-            &mut deps,
-            env,
-            info,
-            vault_tokens,
-            min_out
-        ),
+        } => {
+            receive_no_assets = false;
+            withdraw_all(
+                &mut deps,
+                env,
+                info.clone(),
+                vault_tokens,
+                min_out
+            )
+        },
 
         AmplifiedExecuteMsg::WithdrawMixed {
             vault_tokens,
             withdraw_ratio,
             min_out
-        } => withdraw_mixed(
-            &mut deps,
-            env,
-            info,
-            vault_tokens,
-            withdraw_ratio,
-            min_out
-        ),
+        } => {
+            receive_no_assets = false;
+            withdraw_mixed(
+                &mut deps,
+                env,
+                info.clone(),
+                vault_tokens,
+                withdraw_ratio,
+                min_out
+            )
+        },
 
         AmplifiedExecuteMsg::LocalSwap {
             from_asset_ref,
             to_asset_ref,
             amount,
             min_out
-        } => local_swap(
-            &mut deps,
-            env,
-            info,
-            from_asset_ref,
-            to_asset_ref,
-            amount,
-            min_out
-        ),
+        } => {
+            receive_no_assets = false;
+            local_swap(
+                &mut deps,
+                env,
+                info.clone(),
+                from_asset_ref,
+                to_asset_ref,
+                amount,
+                min_out
+            )
+        },
 
         AmplifiedExecuteMsg::SendAsset {
             channel_id,
@@ -183,20 +197,23 @@ pub fn execute(
             min_out,
             fallback_account,
             calldata
-        } => send_asset(
-            &mut deps,
-            env,
-            info,
-            channel_id,
-            to_vault,
-            to_account,
-            from_asset_ref,
-            to_asset_index,
-            amount,
-            min_out,
-            fallback_account,
-            calldata
-        ),
+        } => {
+            receive_no_assets = false;
+            send_asset(
+                &mut deps,
+                env,
+                info.clone(),
+                channel_id,
+                to_vault,
+                to_account,
+                from_asset_ref,
+                to_asset_index,
+                amount,
+                min_out,
+                fallback_account,
+                calldata
+            )
+        },
 
         AmplifiedExecuteMsg::ReceiveAsset {
             channel_id,
@@ -213,7 +230,7 @@ pub fn execute(
         } => receive_asset(
             &mut deps,
             env,
-            info,
+            info.clone(),
             channel_id,
             from_vault,
             to_asset_index,
@@ -239,7 +256,7 @@ pub fn execute(
         } => send_liquidity(
             &mut deps,
             env,
-            info,
+            info.clone(),
             channel_id,
             to_vault,
             to_account,
@@ -264,7 +281,7 @@ pub fn execute(
         } => receive_liquidity(
             &mut deps,
             env,
-            info,
+            info.clone(),
             channel_id,
             from_vault,
             to_account,
@@ -358,7 +375,7 @@ pub fn execute(
                 } => set_amplification(
                     &mut deps,
                     &env,
-                    info,
+                    info.clone(),
                     target_timestamp,
                     target_amplification
                 ),
@@ -380,7 +397,7 @@ pub fn execute(
             recipient,
             amount
         } => Ok(
-            execute_transfer(deps, env, info, recipient, amount)?
+            execute_transfer(deps, env, info.clone(), recipient, amount)?
                 .into_vault_response()
         ),
 
@@ -397,7 +414,7 @@ pub fn execute(
             amount,
             msg,
         } => Ok(
-            execute_send(deps, env, info, contract, amount, msg)?
+            execute_send(deps, env, info.clone(), contract, amount, msg)?
                 .into_vault_response()
         ),
 
@@ -407,7 +424,7 @@ pub fn execute(
             amount,
             expires,
         } => Ok(
-            execute_increase_allowance(deps, env, info, spender, amount, expires)?
+            execute_increase_allowance(deps, env, info.clone(), spender, amount, expires)?
                 .into_vault_response()
         ),
 
@@ -417,7 +434,7 @@ pub fn execute(
             amount,
             expires,
         } => Ok(
-            execute_decrease_allowance(deps, env, info, spender, amount, expires)?
+            execute_decrease_allowance(deps, env, info.clone(), spender, amount, expires)?
                 .into_vault_response()
         ),
 
@@ -427,7 +444,7 @@ pub fn execute(
             recipient,
             amount,
         } => Ok(
-            execute_transfer_from(deps, env, info, owner, recipient, amount)?
+            execute_transfer_from(deps, env, info.clone(), owner, recipient, amount)?
                 .into_vault_response()
         ),
 
@@ -446,10 +463,16 @@ pub fn execute(
             amount,
             msg,
         } => Ok(
-            execute_send_from(deps, env, info, owner, contract, amount, msg)?
-                .into_vault_response()
+            execute_send_from(deps, env, info.clone(), owner, contract, amount, msg)?
+            .into_vault_response()
         ),
+    };
+
+    if receive_no_assets {
+        VaultAssets::receive_no_assets(&info)?;
     }
+
+    result
 }
 
 
