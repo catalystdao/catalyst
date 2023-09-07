@@ -15,3 +15,5 @@ docs/
 .env
 
 lcov.info
+
+mineSalt.*

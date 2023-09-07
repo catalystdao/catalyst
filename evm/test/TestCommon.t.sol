@@ -15,7 +15,9 @@ import {Bytes65} from "GeneralisedIncentives/src/utils/Bytes65.sol";
 import "GeneralisedIncentives/src/apps/mock/IncentivizedMockEscrow.sol";
 import { IMessageEscrowStructs } from "GeneralisedIncentives/src/interfaces/IMessageEscrowStructs.sol";
 
-contract TestCommon is Test, Bytes65, IMessageEscrowStructs, TestTokenFunctions {
+import { DeployCatalyst, JsonContracts } from "../script/DeployCatalyst.s.sol";
+
+contract TestCommon is Test, Bytes65, IMessageEscrowStructs, TestTokenFunctions, DeployCatalyst {
 
     // add this to be excluded from coverage report
     function test() public {}
@@ -50,13 +52,15 @@ contract TestCommon is Test, Bytes65, IMessageEscrowStructs, TestTokenFunctions 
 
         _INCENTIVE.refundGasTo = makeAddr("refundGasTo");
 
-        catFactory = new CatalystFactory(address(this));
+        deployAllContracts();
 
-        volatileMathlib = new CatalystMathVol();
-        volatileTemplate = new CatalystVaultVolatile(address(catFactory), address(volatileMathlib));
+        catFactory = CatalystFactory(contracts.factory);
 
-        amplifiedMathlib = new CatalystMathAmp();
-        amplifiedTemplate = new CatalystVaultAmplified(address(catFactory), address(amplifiedMathlib));
+        volatileMathlib = CatalystMathVol(contracts.volatile_mathlib);
+        volatileTemplate = CatalystVaultVolatile(contracts.volatile_template);
+
+        amplifiedMathlib = CatalystMathAmp(contracts.amplified_mathlib);
+        amplifiedTemplate = CatalystVaultAmplified(contracts.amplified_template);
 
         GARP = new IncentivizedMockEscrow(DESTINATION_IDENTIFIER, SIGNER, 0);
 
