@@ -33,5 +33,38 @@ abstract contract TestLocalswapFees is Test, AVaultInterfaces {
             assertEq(expectedSwapReturn, swapReturnWithFee, "return after fee not expected.");
         }
     }
+
+    function test_local_swap_governance_fee(uint16 swapPercentage, uint48 vaultFee, uint48 governanceFee) external virtual {
+        vm.assume(uint256(governanceFee) < 75 * 10**16);
+        address[] memory vaults = getTestConfig();
+
+        for (uint256 i = 0; i < vaults.length; ++i) {
+            address vault = vaults[i];
+            ICatalystV1Vault v = ICatalystV1Vault(vault);
+
+            address fromToken = v._tokenIndexing(0);
+            address toToken = v._tokenIndexing(1);
+
+            assertEq(Token(fromToken).balanceOf(v.factoryOwner()), 0, "return after fee not expected.");
+
+            uint256 swapAmount = getLargestSwap(vault, vault, fromToken, toToken) * swapPercentage / (2**16 - 1);
+
+            Token(fromToken).approve(vault, swapAmount);
+
+            uint256 expectedSwapReturn = v.calcLocalSwap(fromToken, toToken, swapAmount - swapAmount * vaultFee / 10**18);
+
+            vm.prank(v.factoryOwner());
+            v.setVaultFee(vaultFee);
+
+            vm.prank(v.factoryOwner());
+            v.setGovernanceFee(governanceFee);
+
+            uint256 swapReturnWithFee = v.localSwap(fromToken, toToken, swapAmount, 0);
+
+            assertEq(expectedSwapReturn, swapReturnWithFee, "return after fee not expected.");
+
+            assertEq(Token(fromToken).balanceOf(v.factoryOwner()), swapAmount * vaultFee / 10**18 * governanceFee / 10**18, "return after fee not expected.");
+        }
+    }
 }
 

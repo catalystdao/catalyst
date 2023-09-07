@@ -51,6 +51,7 @@ contract TestSendAssetUnderwrite is TestCommon {
         vm.assume(toAccount != refundTo);  // makes it really hard to debug
         vm.assume(toAccount != vault1);
         vm.assume(toAccount != address(CCI));
+        vm.assume(toAccount != address(this));
         address token1 = ICatalystV1Vault(vault1)._tokenIndexing(0);
 
         Token(token1).approve(vault1, 2**256-1);
@@ -152,6 +153,7 @@ contract TestSendAssetUnderwrite is TestCommon {
         vm.assume(toAccount != refundTo);  // makes it really hard to debug
         vm.assume(toAccount != vault1);
         vm.assume(toAccount != address(CCI));
+        vm.assume(toAccount != address(this));
         address token1 = ICatalystV1Vault(vault1)._tokenIndexing(0);
 
         Token(token1).approve(vault1, 2**256-1);
