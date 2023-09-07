@@ -2,7 +2,7 @@
 mod test_volatile_instantiate {
     use cosmwasm_std::{Uint128, Addr, Uint64, WasmMsg, to_binary, Attribute};
     use cw_multi_test::Executor;
-    use catalyst_vault_common::msg::{SetupMasterResponse, ChainInterfaceResponse, OnlyLocalResponse, VaultFeeResponse, GovernanceFeeShareResponse};
+    use catalyst_vault_common::msg::{SetupMasterResponse, ChainInterfaceResponse, OnlyLocalResponse, VaultFeeResponse, GovernanceFeeShareResponse, TotalSupplyResponse};
     use test_helpers::{definitions::{DEPLOYER, SETUP_MASTER, VAULT_TOKEN_DENOM}, contract::mock_instantiate_vault_msg, env::CustomTestEnv, vault_token::CustomTestVaultToken};
 
     use crate::tests::{TestEnv, TestVaultToken};
@@ -93,15 +93,20 @@ mod test_volatile_instantiate {
         );
 
         // Query and verify token info
-        let vault_token = TestVaultToken::load(vault_contract.to_string(), VAULT_TOKEN_DENOM.to_string());
+        let vault_token_supply: Uint128 = env.get_app()
+            .wrap()
+            .query_wasm_smart::<TotalSupplyResponse>(vault_contract.clone(), &QueryMsg::TotalSupply {})
+            .unwrap()
+            .total_supply;
 
-        let vault_token_supply = vault_token.total_supply(env.get_app());
         assert_eq!(
             vault_token_supply,
             Uint128::zero()
         );
 
+        let vault_token = TestVaultToken::load(vault_contract.to_string(), VAULT_TOKEN_DENOM.to_string());
         let vault_token_info = vault_token.query_token_info(env.get_app());
+
         assert_eq!(
             vault_token_info.name,
             "TestVault"
