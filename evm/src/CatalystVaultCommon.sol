@@ -165,13 +165,6 @@ abstract contract CatalystVaultCommon is
         _;
     }
 
-    /// @notice Does this vault define a pool without other vaults?
-    /// @dev Checked by comparing  _chainInterface to address(0). It is possible that 
-    /// no connections have been created and this returns false.
-    function onlyLocal() public view override returns (bool) {
-        return _chainInterface == address(0);
-    }
-
     // -- Receive Abstract Functions -- //
 
     function _receiveAsset(

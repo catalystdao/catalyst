@@ -22,10 +22,6 @@ interface ICatalystV1Structs is IMessageEscrowStructs {
 /// @title Vault state
 /// @notice Contains all vault storage which depends on the vault state.
 interface ICatalystV1VaultState {
-
-    /// @notice If the vault has no cross chain connection, this is true. Should not be trusted if setupMaster != ZERO_ADDRESS
-    function onlyLocal() external view returns (bool);
-
     /// @notice The token weights. Used for maintaining a non symmetric vault asset balance.
     function _weight(address token) external view returns (uint256);
 
