@@ -1,18 +1,55 @@
 use anyhow::{Result as AnyResult, bail};
 use cosmwasm_schema::{serde::{Serialize, de::DeserializeOwned}, schemars::JsonSchema};
 use cosmwasm_std::{Uint128, Coin, Addr, Empty, Api, Storage, BlockInfo, CustomQuery, Querier, Binary, coins, BankMsg};
+use cosmwasm_storage::{prefixed, prefixed_read};
 use cw_multi_test::{Executor, AppResponse, Module, CosmosRouter, BasicAppBuilder, BankKeeper, BankSudo};
 
 use catalyst_vault_common::asset::native_asset_vault_modules::NativeAssetCustomMsg;
-use token_bindings::TokenMsg;
+use cw_storage_plus::Map;
+use token_bindings::{TokenMsg, Metadata};
 
 use crate::asset::TestNativeAsset;
 use super::{CustomTestEnv, CustomApp};
 
+
+
 // Custom handler to handle TokenFactory messages
-pub struct NativeAssetCustomHandler {
-}
+pub struct NativeAssetCustomHandler {}
 pub type NativeAssetApp = CustomApp<NativeAssetCustomHandler, NativeAssetCustomMsg>;
+
+impl NativeAssetCustomHandler {
+
+    const BANK_METADATA_NAMESPACE: &[u8] = b"bank-metadata";
+    const BANK_METADATA: Map<'static, String, Metadata> = Map::new("denom-metadata");
+
+    // Extend the 'BankKeeper' functionality with a new storage map that holds denom metadata
+    // NOTE: The following code mirrors the logic of `cw_multi_test::bank.rs`
+
+    pub fn save_denom_metadata(
+        storage: &mut dyn Storage,
+        denom: String,
+        metadata: Metadata
+    ) -> AnyResult<()> {
+        let mut bank_metadata_storage = prefixed(storage, Self::BANK_METADATA_NAMESPACE);
+        Self::BANK_METADATA
+            .save(&mut bank_metadata_storage, denom, &metadata)
+            .map_err(Into::into)
+    }
+
+    pub fn load_denom_metadata(
+        storage: &dyn Storage,
+        denom: String
+    ) -> AnyResult<Option<Metadata>> {
+        let mut bank_metadata_storage = prefixed_read(storage, Self::BANK_METADATA_NAMESPACE);
+        
+        Ok(
+            Self::BANK_METADATA
+                .load(&mut bank_metadata_storage, denom)
+                .ok()
+        )
+
+    }
+}
 
 impl Module for NativeAssetCustomHandler {
     type ExecT = NativeAssetCustomMsg;
@@ -42,7 +79,9 @@ impl Module for NativeAssetCustomHandler {
 
                         let denom = format!("factory/{}/{}", sender.to_string(), subdenom);
 
-                        //TODO! metadata
+                        if let Some(metadata) = metadata {
+                            Self::save_denom_metadata(storage, denom.clone(), metadata)?;
+                        }
 
                         let bank = BankKeeper::new();
                         bank.init_balance(storage, &sender, coins(0u128, denom))?

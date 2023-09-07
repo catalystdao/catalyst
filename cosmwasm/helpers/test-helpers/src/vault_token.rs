@@ -1,10 +1,12 @@
+use catalyst_vault_common::state::DECIMALS;
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, Uint128, CosmosMsg, BankMsg, Coin};
 use cw20_base::state::TokenInfo;
 use cw_multi_test::Executor;
+use token_bindings::Metadata;
 use std::fmt::Debug;
 
-use crate::{env::{env_cw20_asset::{Cw20AssetApp, TestCw20AssetEnv}, env_native_asset::{NativeAssetApp, TestNativeAssetEnv}}, token::{query_token_info, query_token_balance, transfer_tokens}};
+use crate::{env::{env_cw20_asset::Cw20AssetApp, env_native_asset::{NativeAssetApp, NativeAssetCustomHandler}}, token::{query_token_info, query_token_balance, transfer_tokens}};
 
 
 pub struct VaultTokenInfo {
@@ -19,7 +21,7 @@ enum TokenInfoQuery {
 }
 
 
-pub trait CustomTestVaultToken<AppC, TestEnvC>: Clone + Debug + PartialEq {
+pub trait CustomTestVaultToken<AppC>: Clone + Debug + PartialEq {
 
     fn load(vault: String, denom: String) -> Self;
 
@@ -38,7 +40,7 @@ pub trait CustomTestVaultToken<AppC, TestEnvC>: Clone + Debug + PartialEq {
 #[derive(Debug, Clone, PartialEq)]
 pub struct TestNativeVaultToken(String);
 
-impl CustomTestVaultToken<NativeAssetApp, TestNativeAssetEnv> for TestNativeVaultToken {
+impl CustomTestVaultToken<NativeAssetApp> for TestNativeVaultToken {
 
     fn load(vault: String, denom: String) -> Self {
         TestNativeVaultToken(format!("factory/{}/{}", vault, denom))
@@ -79,7 +81,19 @@ impl CustomTestVaultToken<NativeAssetApp, TestNativeAssetEnv> for TestNativeVaul
     }
 
     fn query_token_info(&self, app: &mut NativeAssetApp) -> VaultTokenInfo {
-        todo!()
+
+        let metadata = app.read_module::<_, Option<Metadata>>(|_, _, storage| {
+            NativeAssetCustomHandler::load_denom_metadata(storage, self.0.clone()).unwrap()
+        });
+
+        match metadata {
+            Some(metadata) => VaultTokenInfo {
+                name: metadata.name.unwrap_or("".to_string()),
+                symbol: metadata.symbol.unwrap_or("".to_string()),
+                decimals: DECIMALS, // Hardcode decimals, as these are not set on the TokenFactory vault token
+            },
+            None => panic!("No metadata found for denom {}", self.0),
+        }
     }
 }
 
@@ -89,7 +103,7 @@ impl CustomTestVaultToken<NativeAssetApp, TestNativeAssetEnv> for TestNativeVaul
 #[derive(Debug, Clone, PartialEq)]
 pub struct TestCw20VaultToken(String);
 
-impl CustomTestVaultToken<Cw20AssetApp, TestCw20AssetEnv> for TestCw20VaultToken {
+impl CustomTestVaultToken<Cw20AssetApp> for TestCw20VaultToken {
 
     fn load(vault: String, _denom: String) -> Self {
         TestCw20VaultToken(vault)
