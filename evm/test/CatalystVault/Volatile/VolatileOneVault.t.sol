@@ -3,18 +3,24 @@ pragma solidity ^0.8.13;
 
 import "../../../src/ICatalystV1Vault.sol";
 
+
 import "../Invariant.t.sol";
 import "../LocalSwap.t.sol";
 import "../CrossChainInterfaceOnly.t.sol";
 import "../LocalSwap.minout.t.sol";
 import "../PoolTokenInterface.t.sol";
+import "../SetupFinish.t.sol";
+import "../SetVaultFee.t.sol";
+import "../SetGovernanceFee.t.sol";
+import "../LocalSwap.fees.t.sol";
 
-contract TestVolatileInvariant is TestInvariant, TestLocalswap, TestCrossChainInterfaceOnly, TestLocalswapMinout, TestPoolTokenInterface {
+contract TestVolatileInvariant is TestInvariant, TestLocalswap, TestCrossChainInterfaceOnly, TestLocalswapMinout, TestPoolTokenInterface, TestSetupFinish, TestSetVaultFee, TestSetGovernanceFee, TestLocalswapFees {
 
     address[] _vaults;
 
     function setUp() virtual override public {
         super.setUp();
+        
         address[] memory assets = getTokens(3);
         uint256[] memory init_balances = new uint256[](3);
         init_balances[0] = 10 * 10**18; init_balances[1] = 100 * 10**18; init_balances[2] = 1000 * 10**18;
