@@ -1,4 +1,4 @@
-use catalyst_vault_common::asset::Asset;
+use catalyst_vault_common::bindings::Asset;
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Uint64, Uint128, Addr};
 

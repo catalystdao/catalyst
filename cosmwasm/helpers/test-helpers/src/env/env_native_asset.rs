@@ -4,7 +4,7 @@ use cosmwasm_std::{Uint128, Coin, Addr, Empty, Api, Storage, BlockInfo, CustomQu
 use cosmwasm_storage::{prefixed, prefixed_read};
 use cw_multi_test::{Executor, AppResponse, Module, CosmosRouter, BasicAppBuilder, BankKeeper, BankSudo};
 
-use catalyst_vault_common::asset::native_asset_vault_modules::NativeAssetCustomMsg;
+use catalyst_vault_common::bindings::native_asset_vault_modules::NativeAssetCustomMsg;
 use cw_storage_plus::Map;
 use token_bindings::{TokenMsg, Metadata};
 

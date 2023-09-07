@@ -1,10 +1,8 @@
 use cosmwasm_schema::cw_serde;
 
-use cosmwasm_std::{Binary, Uint64, Uint128, Addr};
-use cw20::Expiration;
+use cosmwasm_std::{Binary, Uint64, Uint128, Addr, Empty};
 use catalyst_types::U256;
-
-use crate::asset::Asset;
+use cw20::Expiration;
 
 
 
@@ -30,7 +28,7 @@ pub struct InstantiateMsg {
 
 /// Vault execution messages
 #[cw_serde]
-pub enum ExecuteMsg<T, A=Asset> {
+pub enum ExecuteMsg<T, A=Empty> {
 
     /// Initialize the vault swap curves.
     /// * `assets` - The list of the assets that are to be supported by the vault.
@@ -359,7 +357,7 @@ pub struct OnlyLocalResponse {
 }
 
 #[cw_serde]
-pub struct AssetsResponse<A = Asset> {
+pub struct AssetsResponse<A = Empty> {
     pub assets: Vec<A>
 }
 

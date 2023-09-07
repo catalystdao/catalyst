@@ -2,7 +2,7 @@ mod test_volatile_security_limit {
     use std::f64::consts::LN_2;
 
     use catalyst_types::U256;
-    use catalyst_vault_common::{msg::GetLimitCapacityResponse, ContractError, state::{INITIAL_MINT_AMOUNT, DECAY_RATE}, asset::Asset};
+    use catalyst_vault_common::{msg::GetLimitCapacityResponse, ContractError, state::{INITIAL_MINT_AMOUNT, DECAY_RATE}, bindings::Asset};
     use cosmwasm_std::{Addr, Uint128, Binary};
     use test_helpers::{contract::{mock_factory_deploy_vault, mock_instantiate_interface, mock_set_vault_connection}, definitions::{SETUP_MASTER, SWAPPER_B, CHANNEL_ID, SWAPPER_C}, math::{uint128_to_f64, f64_to_uint128, u256_to_f64, f64_to_u256}, misc::{encode_payload_address, get_response_attribute}, env::CustomTestEnv, asset::CustomTestAsset};
 

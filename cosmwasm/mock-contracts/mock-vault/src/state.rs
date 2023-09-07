@@ -1,6 +1,6 @@
 use cosmwasm_std::{Uint128, DepsMut, Env, MessageInfo, Uint64};
 use catalyst_vault_common::{
-    state::{MAX_ASSETS, WEIGHTS, INITIAL_MINT_AMOUNT, FACTORY}, ContractError, event::deposit_event, asset::{Asset, VaultAssets, VaultAssetsTrait, AssetTrait, VaultResponse, VaultToken, VaultTokenTrait, IntoCosmosCustomMsg},
+    state::{MAX_ASSETS, WEIGHTS, INITIAL_MINT_AMOUNT, FACTORY}, ContractError, event::deposit_event, bindings::{Asset, VaultAssets, VaultAssetsTrait, AssetTrait, VaultResponse, VaultToken, VaultTokenTrait, IntoCosmosCustomMsg},
 };
 
 

@@ -3,7 +3,7 @@ use cosmwasm_std::entry_point;
 use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, StdResult, to_binary};
 use cw2::set_contract_version;
 use cw20_base::contract::query_token_info;
-use catalyst_vault_common::asset::VaultResponse;
+use catalyst_vault_common::bindings::{VaultResponse, Asset};
 use catalyst_vault_common::ContractError;
 use catalyst_vault_common::msg::ExecuteMsg;
 use catalyst_vault_common::state::{setup, query_assets, query_weight, query_vault_fee, query_governance_fee_share, query_fee_administrator, query_chain_interface, query_setup_master, query_factory, query_factory_owner};
@@ -49,11 +49,11 @@ pub fn execute(
     mut deps: DepsMut,
     env: Env,
     info: MessageInfo,
-    msg: ExecuteMsg<()>,
+    msg: ExecuteMsg<(), Asset>,
 ) -> Result<VaultResponse, ContractError> {
     match msg {
 
-        ExecuteMsg::<()>::InitializeSwapCurves {
+        ExecuteMsg::<(), Asset>::InitializeSwapCurves {
             assets,
             weights,
             amp,

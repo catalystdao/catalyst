@@ -8,7 +8,7 @@ use cw20_base::allowances::{
 use cw20_base::contract::{
     execute_send, execute_transfer, query_balance, query_token_info,
 };
-use catalyst_vault_common::asset::{VaultResponse, IntoVaultResponse};
+use catalyst_vault_common::bindings::{VaultResponse, IntoVaultResponse};
 use catalyst_vault_common::ContractError;
 use catalyst_vault_common::state::{
     setup, finish_setup, set_fee_administrator, set_vault_fee, set_governance_fee_share, set_connection, query_chain_interface, query_setup_master, query_ready, query_only_local, query_assets, query_weight, query_vault_fee, query_governance_fee_share, query_fee_administrator, query_total_escrowed_liquidity, query_total_escrowed_asset, query_asset_escrow, query_liquidity_escrow, query_vault_connection_state, query_factory, query_factory_owner, on_send_liquidity_success, query_total_supply

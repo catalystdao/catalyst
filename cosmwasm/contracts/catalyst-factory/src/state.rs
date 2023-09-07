@@ -1,4 +1,4 @@
-use catalyst_vault_common::asset::{Asset, VaultResponse};
+use catalyst_vault_common::bindings::{Asset, VaultResponse};
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, DepsMut, Event, MessageInfo, Deps, Uint128, Uint64, Empty};
 use cw_controllers::Admin;

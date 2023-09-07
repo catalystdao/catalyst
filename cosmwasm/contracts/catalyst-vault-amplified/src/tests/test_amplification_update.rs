@@ -1,6 +1,6 @@
 mod test_amplified_amplification_update {
     use cosmwasm_std::{Uint128, Addr, Attribute, Timestamp, Uint64};
-    use catalyst_vault_common::{ContractError, asset::Asset};
+    use catalyst_vault_common::{ContractError, bindings::Asset};
     use test_helpers::{definitions::{SETUP_MASTER, FACTORY_OWNER, CHAIN_INTERFACE}, contract::mock_factory_deploy_vault, env::CustomTestEnv, asset::CustomTestAsset};
 
     use crate::tests::TestEnv;

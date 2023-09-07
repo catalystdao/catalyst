@@ -5,9 +5,6 @@ pub use vault_assets::asset::{VaultAssetsTrait, AssetTrait};
 pub use vault_token::vault_token::VaultTokenTrait;
 
 
-//TODO rename asset.rs, as now vault tokens are also included in this file
-#[cfg(all(not(feature="asset_native"), not(feature="asset_cw20")))]
-compile_error!("An asset-type feature must be enabled (\"asset_native\" or \"asset_cw20\")");
 
 #[cfg(all(feature="asset_native", feature="asset_cw20"))]
 compile_error!("Multiple asset-type features cannot be enabled at the same time (\"asset_native\" and \"asset_cw20\")");
@@ -22,6 +19,16 @@ pub trait IntoVaultResponse {
 }
 
 
+
+#[cfg(not(any(feature="asset_native", feature="asset_cw20")))]
+pub use empty_vault_modules::{
+    EmptyAsset as Asset,
+    EmptyAssetMsg as AssetMsg,
+    EmptyVaultAssets as VaultAssets,
+    EmptyVaultToken as VaultToken,
+    EmptyVaultTokenMsg as VaultTokenMsg,
+    EmptyAssetCustomMsg as CustomMsg
+};
 
 #[cfg(feature="asset_native")]
 pub use native_asset_vault_modules::{
@@ -42,6 +49,19 @@ pub use cw20_asset_vault_modules::{
     Cw20VaultTokenMsg as VaultTokenMsg,
     Cw20AssetCustomMsg as CustomMsg
 };
+
+
+
+pub mod empty_vault_modules {
+    use cosmwasm_std::Empty;
+
+    pub type EmptyAsset = Empty;
+    pub type EmptyAssetMsg = Empty;
+    pub type EmptyVaultAssets = Empty;
+    pub type EmptyVaultToken = Empty;
+    pub type EmptyVaultTokenMsg = Empty;
+    pub type EmptyAssetCustomMsg = Empty;
+}
 
 
 
@@ -82,6 +102,9 @@ pub mod native_asset_vault_modules {
                 },
             }
         }
+    }
+
+    impl cosmwasm_std::CustomMsg for NativeAssetCustomMsg { 
     }
 
 }
@@ -128,16 +151,13 @@ pub mod cw20_asset_vault_modules {
                 CosmosMsg::Bank(bank_msg) => CosmosMsg::Bank(bank_msg),
                 CosmosMsg::Wasm(wasm_msg) => CosmosMsg::Wasm(wasm_msg),
                 CosmosMsg::Custom(_) => panic!("Unable to cast from CosmosMsg::Custom(Empty) to CosmosMsg::Custom(Cw20AssetCustomMsg)"),
-                CosmosMsg::Staking(staking_msg) => CosmosMsg::Staking(staking_msg),
-                CosmosMsg::Distribution(distribution_msg) => CosmosMsg::Distribution(distribution_msg),
-                CosmosMsg::Stargate { type_url, value } => CosmosMsg::Stargate { type_url, value },
-                CosmosMsg::Ibc(ibc_msg) => CosmosMsg::Ibc(ibc_msg),
-                CosmosMsg::Gov(gov_msg) => CosmosMsg::Gov(gov_msg),
                 _ => unimplemented!(),
             }
         }
     }
 
+    impl cosmwasm_std::CustomMsg for Cw20AssetCustomMsg { 
+    }
     
 }
 

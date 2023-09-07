@@ -1,7 +1,7 @@
 mod test_amplified_receive_asset {
     use cosmwasm_std::{Uint128, Addr, Binary, Attribute};
     use catalyst_types::{U256, u256};
-    use catalyst_vault_common::{ContractError, asset::Asset};
+    use catalyst_vault_common::{ContractError, bindings::Asset};
     use test_helpers::{math::{uint128_to_f64, f64_to_uint128}, misc::{encode_payload_address, get_response_attribute}, definitions::{SETUP_MASTER, CHAIN_INTERFACE, CHANNEL_ID, SWAPPER_B}, contract::{mock_factory_deploy_vault, mock_set_vault_connection, mock_instantiate_calldata_target}, env::CustomTestEnv, asset::CustomTestAsset};
 
     use crate::tests::TestEnv;

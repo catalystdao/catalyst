@@ -1,5 +1,5 @@
 use cosmwasm_std::{Event, Uint64};
-use catalyst_vault_common::{event::format_vec_for_event, asset::Asset};
+use catalyst_vault_common::{event::format_vec_for_event, bindings::Asset};
 
 
 /// Generate an event for vault deployment.

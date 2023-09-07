@@ -1,6 +1,6 @@
 mod test_amplified_vault_connections {
     use cosmwasm_std::{Addr, Binary, Attribute};
-    use catalyst_vault_common::{ContractError, msg::VaultConnectionStateResponse, asset::Asset};
+    use catalyst_vault_common::{ContractError, msg::VaultConnectionStateResponse, bindings::Asset};
     use test_helpers::{misc::encode_payload_address, definitions::{SETUP_MASTER, FACTORY_OWNER}, contract::{mock_instantiate_interface, mock_factory_deploy_vault, mock_finish_vault_setup}, env::CustomTestEnv};
 
     use crate::tests::TestEnv;

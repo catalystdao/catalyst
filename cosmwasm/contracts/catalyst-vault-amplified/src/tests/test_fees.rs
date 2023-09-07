@@ -1,6 +1,6 @@
 mod test_amplified_fees {
     use cosmwasm_std::{Addr, Uint64, Attribute};
-    use catalyst_vault_common::{ContractError, msg::{FeeAdministratorResponse, VaultFeeResponse, GovernanceFeeShareResponse}, asset::Asset};
+    use catalyst_vault_common::{ContractError, msg::{FeeAdministratorResponse, VaultFeeResponse, GovernanceFeeShareResponse}, bindings::Asset};
     use test_helpers::{definitions::{SETUP_MASTER, FACTORY_OWNER}, contract::mock_factory_deploy_vault, env::CustomTestEnv};
 
     use crate::tests::TestEnv;

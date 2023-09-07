@@ -1,7 +1,7 @@
 mod test_amplified_send_asset {
     use cosmwasm_std::{Uint128, Addr, Binary, Attribute};
     use catalyst_types::U256;
-    use catalyst_vault_common::{ContractError, msg::{TotalEscrowedAssetResponse, AssetEscrowResponse}, state::compute_send_asset_hash, asset::Asset};
+    use catalyst_vault_common::{ContractError, msg::{TotalEscrowedAssetResponse, AssetEscrowResponse}, state::compute_send_asset_hash, bindings::Asset};
     use test_helpers::{math::{uint128_to_f64, f64_to_uint128, u256_to_f64, f64_to_u256}, misc::{encode_payload_address, get_response_attribute}, definitions::{SETUP_MASTER, CHANNEL_ID, SWAPPER_B, SWAPPER_A, FACTORY_OWNER, SWAPPER_C}, contract::{mock_instantiate_interface, mock_factory_deploy_vault, DEFAULT_TEST_VAULT_FEE, DEFAULT_TEST_GOV_FEE, mock_set_vault_connection}, env::CustomTestEnv, asset::CustomTestAsset};
 
     use crate::tests::TestEnv;

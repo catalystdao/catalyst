@@ -1,7 +1,7 @@
 mod test_volatile_send_liquidity {
     use cosmwasm_std::{Uint128, Addr, Binary, Attribute};
     use catalyst_types::{U256, u256};
-    use catalyst_vault_common::{ContractError, msg::{TotalEscrowedLiquidityResponse, LiquidityEscrowResponse}, state::{INITIAL_MINT_AMOUNT, compute_send_liquidity_hash}, asset::Asset};
+    use catalyst_vault_common::{ContractError, msg::{TotalEscrowedLiquidityResponse, LiquidityEscrowResponse}, state::{INITIAL_MINT_AMOUNT, compute_send_liquidity_hash}, bindings::Asset};
     use test_helpers::{math::{uint128_to_f64, f64_to_uint128, u256_to_f64}, misc::{encode_payload_address, get_response_attribute}, definitions::{SETUP_MASTER, CHANNEL_ID, SWAPPER_A, SWAPPER_B, SWAPPER_C, VAULT_TOKEN_DENOM}, contract::{mock_instantiate_interface, mock_factory_deploy_vault, mock_set_vault_connection}, env::CustomTestEnv, vault_token::CustomTestVaultToken};
 
     use crate::tests::{TestEnv, TestVaultToken};

@@ -1,4 +1,4 @@
-use catalyst_vault_common::asset::{VaultResponse, IntoVaultResponse};
+use catalyst_vault_common::bindings::{VaultResponse, IntoVaultResponse};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, to_binary};

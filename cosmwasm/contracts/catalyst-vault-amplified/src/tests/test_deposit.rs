@@ -1,7 +1,7 @@
 mod test_amplified_deposit{
     use catalyst_types::I256;
     use cosmwasm_std::{Uint128, Addr, Attribute};
-    use catalyst_vault_common::{ContractError, state::INITIAL_MINT_AMOUNT, event::format_vec_for_event, asset::Asset};
+    use catalyst_vault_common::{ContractError, state::INITIAL_MINT_AMOUNT, event::format_vec_for_event, bindings::Asset};
     use test_helpers::{math::{uint128_to_f64, f64_to_uint128}, misc::get_response_attribute, definitions::{SETUP_MASTER, DEPOSITOR, VAULT_TOKEN_DENOM}, contract::{mock_factory_deploy_vault, DEFAULT_TEST_VAULT_FEE}, env::CustomTestEnv, asset::CustomTestAsset, vault_token::CustomTestVaultToken};
 
     use crate::tests::{TestEnv, TestVaultToken};

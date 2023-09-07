@@ -5,7 +5,7 @@ mod test_amplified_initialize_swap_curves {
     use cw_multi_test::Executor;
     use catalyst_types::{U256, u256};
     use fixed_point_math::WAD;
-    use catalyst_vault_common::{ContractError, msg::{AssetsResponse, WeightResponse, GetLimitCapacityResponse, TotalEscrowedAssetResponse, TotalEscrowedLiquidityResponse}, state::INITIAL_MINT_AMOUNT, event::format_vec_for_event, asset::{Asset, AssetTrait}};
+    use catalyst_vault_common::{ContractError, msg::{AssetsResponse, WeightResponse, GetLimitCapacityResponse, TotalEscrowedAssetResponse, TotalEscrowedLiquidityResponse}, state::INITIAL_MINT_AMOUNT, event::format_vec_for_event, bindings::{Asset, AssetTrait}};
     use test_helpers::{definitions::{SETUP_MASTER, DEPOSITOR, DEPLOYER, VAULT_TOKEN_DENOM}, contract::{mock_instantiate_vault, InitializeSwapCurvesMockConfig, mock_instantiate_vault_msg}, env::CustomTestEnv, asset::CustomTestAsset, vault_token::CustomTestVaultToken};
 
     use crate::tests::{TestEnv, TestAsset, TestApp, TestVaultToken};
@@ -70,7 +70,7 @@ mod test_amplified_initialize_swap_curves {
         // Query and verify the assets
         let assets = env.get_app()
             .wrap()
-            .query_wasm_smart::<AssetsResponse>(vault.clone(), &crate::msg::QueryMsg::Assets {})
+            .query_wasm_smart::<AssetsResponse<Asset>>(vault.clone(), &crate::msg::QueryMsg::Assets {})
             .unwrap()
             .assets;
 

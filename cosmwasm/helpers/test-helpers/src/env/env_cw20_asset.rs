@@ -3,7 +3,7 @@ use cosmwasm_schema::serde::Serialize;
 use cosmwasm_std::{Uint128, Addr, Empty};
 use cw_multi_test::{Executor, AppResponse, FailingModule, BasicAppBuilder};
 
-use catalyst_vault_common::asset::cw20_asset_vault_modules::Cw20AssetCustomMsg;
+use catalyst_vault_common::bindings::cw20_asset_vault_modules::Cw20AssetCustomMsg;
 
 use crate::{asset::TestCw20Asset, token::{deploy_test_tokens, get_token_allowance, increase_token_allowance, decrease_token_allowance}};
 use super::{CustomTestEnv, CustomApp};

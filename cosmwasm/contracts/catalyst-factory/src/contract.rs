@@ -3,7 +3,7 @@ use cosmwasm_std::entry_point;
 use cosmwasm_std::{DepsMut, Env, MessageInfo, Uint128, CosmosMsg, to_binary, StdError, SubMsg, Reply, SubMsgResult, StdResult, Uint64, Deps, Binary};
 use cw0::parse_reply_instantiate_data;
 use cw2::set_contract_version;
-use catalyst_vault_common::asset::{Asset, VaultAssets, VaultAssetsTrait, VaultResponse, IntoCosmosCustomMsg, CustomMsg};
+use catalyst_vault_common::bindings::{Asset, VaultAssets, VaultAssetsTrait, VaultResponse, IntoCosmosCustomMsg, CustomMsg};
 
 use crate::error::ContractError;
 use crate::event::deploy_vault_event;
@@ -285,7 +285,7 @@ fn handle_deploy_vault_reply(
     let initialize_swap_curves_msg = CosmosMsg::Wasm(
         cosmwasm_std::WasmMsg::Execute {
             contract_addr: vault_address.clone(),
-            msg: to_binary(&catalyst_vault_common::msg::ExecuteMsg::<()>::InitializeSwapCurves {
+            msg: to_binary(&catalyst_vault_common::msg::ExecuteMsg::<(), Asset>::InitializeSwapCurves {
                 assets: deploy_args.assets.clone(),
                 weights: deploy_args.weights,
                 amp: deploy_args.amplification,
@@ -364,7 +364,7 @@ mod catalyst_vault_factory_tests {
 
     use crate::{msg::{InstantiateMsg, QueryMsg, OwnerResponse, ExecuteMsg, DefaultGovernanceFeeShareResponse}, state::MAX_DEFAULT_GOVERNANCE_FEE_SHARE, error::ContractError};
 
-    use catalyst_vault_common::{msg::{ChainInterfaceResponse, FactoryResponse, SetupMasterResponse, AssetsResponse, WeightResponse, VaultFeeResponse, GovernanceFeeShareResponse, FeeAdministratorResponse}, event::format_vec_for_event, asset::Asset};
+    use catalyst_vault_common::{msg::{ChainInterfaceResponse, FactoryResponse, SetupMasterResponse, AssetsResponse, WeightResponse, VaultFeeResponse, GovernanceFeeShareResponse, FeeAdministratorResponse}, event::format_vec_for_event, bindings::Asset};
     use mock_vault::msg::QueryMsg as MockVaultQueryMsg;
 
     #[cfg(feature="asset_native")]
@@ -675,7 +675,7 @@ mod catalyst_vault_factory_tests {
 
 
         // Verify the deployed vault has the 'assets' set
-        let queried_assets = test_env.get_app().wrap().query_wasm_smart::<AssetsResponse>(
+        let queried_assets = test_env.get_app().wrap().query_wasm_smart::<AssetsResponse<Asset>>(
             vault.clone(),
             &MockVaultQueryMsg::Assets {}
         ).unwrap().assets;

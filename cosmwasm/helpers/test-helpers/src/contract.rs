@@ -3,7 +3,7 @@ use cosmwasm_std::{Uint128, Addr, Uint64, Binary, Empty};
 use cw_multi_test::{ContractWrapper, Executor, AppResponse, Module};
 use std::{marker::PhantomData, fmt::Debug};
 
-use catalyst_vault_common::{msg::{InstantiateMsg, ExecuteMsg}, asset::CustomMsg};
+use catalyst_vault_common::{msg::{InstantiateMsg, ExecuteMsg}, bindings::CustomMsg};
 
 use crate::{misc::get_response_attribute, definitions::{SETUP_MASTER, FACTORY_OWNER, VAULT_TOKEN_DENOM}, env::{CustomTestEnv, CustomApp}, asset::CustomTestAsset};
 

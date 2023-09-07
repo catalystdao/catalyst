@@ -2,7 +2,7 @@ mod test_volatile_withdraw_even {
     use std::str::FromStr;
 
     use cosmwasm_std::{Uint128, Addr, Attribute};
-    use catalyst_vault_common::{ContractError, state::INITIAL_MINT_AMOUNT, asset::Asset};
+    use catalyst_vault_common::{ContractError, state::INITIAL_MINT_AMOUNT, bindings::Asset};
     use test_helpers::{math::{uint128_to_f64, f64_to_uint128}, misc::get_response_attribute, definitions::{SETUP_MASTER, WITHDRAWER, VAULT_TOKEN_DENOM}, contract::mock_factory_deploy_vault, env::CustomTestEnv, asset::CustomTestAsset, vault_token::CustomTestVaultToken};
 
     use crate::tests::{TestEnv, TestVaultToken};
