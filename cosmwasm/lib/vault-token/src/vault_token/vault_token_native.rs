@@ -4,12 +4,12 @@ use cw_storage_plus::Item;
 use token_bindings::{TokenMsg, Metadata, DenomUnit};
 
 use crate::error::VaultTokenError;
-
 use super::VaultTokenTrait;
 
 const VAULT_TOKEN_DENOM: Item<String> = Item::new("catalyst-vault-token-denom");
 
 
+// NOTE: See the `VaultTokenTrait` definition for documentation on the implemented methods.
 
 
 #[cw_serde]
@@ -18,7 +18,7 @@ pub enum NativeVaultTokenMsg {
 }
 
 
-
+// Native vault token handler
 pub struct NativeVaultToken(String);
 
 impl VaultTokenTrait<NativeVaultTokenMsg> for NativeVaultToken {
@@ -33,7 +33,6 @@ impl VaultTokenTrait<NativeVaultTokenMsg> for NativeVaultToken {
 
         let denom = format!("factory/{}/{}", env.contract.address.to_string(), symbol);
 
-        // Save the vault token denom
         VAULT_TOKEN_DENOM.save(
             deps.storage,
             &denom
@@ -64,6 +63,7 @@ impl VaultTokenTrait<NativeVaultTokenMsg> for NativeVaultToken {
         )
     }
 
+
     fn load(deps: &Deps) -> Result<Self, VaultTokenError> where Self: Sized {
         
         let denom = VAULT_TOKEN_DENOM.load(deps.storage)?;
@@ -71,13 +71,14 @@ impl VaultTokenTrait<NativeVaultTokenMsg> for NativeVaultToken {
         Ok(NativeVaultToken(denom))
     }
 
+
     fn query_total_supply(&self, deps: &Deps) -> Result<Uint128, VaultTokenError> {
 
         let response = deps.querier.query_supply(self.0.clone())?;
 
         Ok(response.amount)
-
     }
+
 
     fn mint(
         &mut self,
@@ -103,6 +104,7 @@ impl VaultTokenTrait<NativeVaultTokenMsg> for NativeVaultToken {
         )
         
     }
+
 
     fn burn(
         &mut self,

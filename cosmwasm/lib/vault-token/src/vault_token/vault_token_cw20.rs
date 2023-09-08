@@ -1,12 +1,12 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Uint128, Deps, DepsMut, Env, MessageInfo, Int128};
+use cosmwasm_std::{Uint128, Deps, DepsMut, Env, MessageInfo};
 use cw20_base::{state::{TOKEN_INFO, TokenInfo, MinterData}, contract::{execute_mint, execute_burn}};
 
 use crate::error::VaultTokenError;
-
 use super::VaultTokenTrait;
 
 
+// NOTE: See the `VaultTokenTrait` definition for documentation on the implemented methods.
 
 
 #[cw_serde]
@@ -14,9 +14,7 @@ pub enum Cw20VaultTokenMsg {
 }
 
 
-
-//TODO what about events emitted by execute_mint and execute_burn?
-
+// Cw20 vault token handler
 pub struct Cw20VaultToken();
 
 impl VaultTokenTrait<Cw20VaultTokenMsg> for Cw20VaultToken {
@@ -46,17 +44,20 @@ impl VaultTokenTrait<Cw20VaultTokenMsg> for Cw20VaultToken {
         Ok(None)
     }
 
+
     fn load(_deps: &Deps) -> Result<Self, VaultTokenError> where Self: Sized {
         Ok(
             Cw20VaultToken()
         )
     }
 
+
     fn query_total_supply(&self, deps: &Deps) -> Result<Uint128, VaultTokenError> {
         Ok(
             TOKEN_INFO.load(deps.storage)?.total_supply
         )
     }
+
 
     fn mint(
         &mut self,
@@ -88,6 +89,7 @@ impl VaultTokenTrait<Cw20VaultTokenMsg> for Cw20VaultToken {
         }
         
     }
+
 
     fn burn(
         &mut self,
