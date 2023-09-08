@@ -2,10 +2,10 @@
 pragma solidity ^0.8.13;
 
 import "forge-std/Test.sol";
-import "../../src/ICatalystV1Vault.sol";
-import {Token} from "../mocks/token.sol";
-import "../../src/utils/FixedPointMathLib.sol";
-import {AVaultInterfaces} from "./AVaultInterfaces.t.sol";
+import "src/ICatalystV1Vault.sol";
+import "src/utils/FixedPointMathLib.sol";
+import {Token} from "../../mocks/token.sol";
+import {AVaultInterfaces} from "../AVaultInterfaces.t.sol";
 
 abstract contract TestLocalswapFees is Test, AVaultInterfaces {
     function test_local_swap_with_fee(uint16 swapPercentage, uint48 vaultFee) external virtual {
