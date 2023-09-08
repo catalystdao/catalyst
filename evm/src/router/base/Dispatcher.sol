@@ -55,39 +55,11 @@ abstract contract Dispatcher is Permit2Payments, CatalystExchange, CancelSwap, L
                     }
                     CatalystExchange.localSwap(vault, fromAsset, toAsset, amount, minOut);
                 }  else if (command == Commands.SENDASSET) {
-                    // equivalent: abi.decode(inputs, (address, bytes32, bytes, bytes, address, uint256, uint256, uint256, address))
-                    // address vault;
-                    // bytes32 channelId;
-                    // bytes calldata toVault = inputs.toBytes(0x40);
-                    // bytes calldata toUser = inputs.toBytes(0x60);
-                    // address fromAsset;
-                    // uint256 toAssetIndex256;
-                    // uint256 amount;
-                    // uint256 minOut;
-                    // address fallbackUser;
-                    // assembly {
-                    //     vault := calldataload(inputs.offset)
-                    //     channelId := calldataload(add(inputs.offset, 0x20))
-                    //     // toVault := calldataload(add(inputs.offset, 0x40))
-                    //     // toUser := calldataload(add(inputs.offset, 0x60))
-                    //     fromAsset := calldataload(add(inputs.offset, 0x80))
-                    //     toAssetIndex256 := calldataload(add(inputs.offset, 0xa0))
-                    //     amount := calldataload(add(inputs.offset, 0xc0))
-                    //     minOut := calldataload(add(inputs.offset, 0xe0))
-                    //     fallbackUser := calldataload(add(inputs.offset, 0x100))
-                    // }
-
-                    // TODO: Decode memory bytes in calldata. See above.
                     (address vault, RouteDescription memory routeDescription, address fromAsset, uint8 toAssetIndex8, uint256 amount, uint256 minOut, address fallbackUser, uint256 gas) = abi.decode(inputs, (address, RouteDescription, address, uint8, uint256, uint256, address, uint256));
 
-                    // We don't have space in the stack do dynamically decode the calldata. 
-                    // To circumvent that, we have to decode it as a slice. We need to start after
-                    // all initial variables (ends at 0x140) AND after the dynamically decoded bytes.
-                    // Luckly, we know that toVault and toUser is 65 bytes long. With 2 length indicators of 32 bytes
-                    // And the incentive description is 64 bytes long with 1 length indecator of 32 bytes.
-                    // Calldata must be everything after: 0x140 + 65 * 2 + (32*3-65) * 2 + 2 * 32 + (64 + 32) = 544 + 96 = 0x280.
-                    // TODO:
-                    bytes calldata calldata_ = inputs[0x280:];
+                    // To save gas, the calldata is decoded as a slice at the end. This is possible because we know the exact sizes of
+                    // other variables.
+                    bytes calldata calldata_ = inputs[800:];
                     
                     CatalystExchange.sendAsset(vault, routeDescription, fromAsset, toAssetIndex8, amount, minOut, map(fallbackUser), gas, calldata_);
                 } else if (command == Commands.PERMIT2_TRANSFER_FROM) {
@@ -210,16 +182,11 @@ abstract contract Dispatcher is Permit2Payments, CatalystExchange, CancelSwap, L
                 // 0x0e <= command < 0x10
             } else if (command < 0x10) {
                 if (command == Commands.SENDLIQUIDITY) {
-                    // TODO: Decode memory variables in calldata. See sendAsset.
                     (address vault, RouteDescription memory routeDescription, uint256 amount, uint256[2] memory minOut, address fallbackUser, uint256 gas) = abi.decode(inputs, (address, RouteDescription, uint256, uint256[2], address, uint256));
 
-                    // We don't have space in the stack do dynamically decode the calldata. 
-                    // To circumvent that, we have to decode it as a slice. We need to start after
-                    // all initial variables (ends at 0x140) AND after the dynamically decoded bytes.
-                    // Luckly, we know that toVault and toUser is 65 bytes long. With 2 length indicators of 32 bytes
-                    // Calldata must be everything after: 0x140 + 65 * 2 + (32*3-65) * 2 + 2 * 32 = 544 = 0x220.
-                    // TODO:
-                    bytes calldata calldata_ = inputs[0x220:];
+                    // To save gas, the calldata is decoded as a slice at the end. This is possible because we know the exact sizes of
+                    // other variables.
+                    bytes calldata calldata_ = inputs[768:];
                     
                     CatalystExchange.sendLiquidity(vault, routeDescription, amount, minOut, fallbackUser, gas, calldata_);
                 } else if (command == Commands.ALLOW_CANCEL) {
