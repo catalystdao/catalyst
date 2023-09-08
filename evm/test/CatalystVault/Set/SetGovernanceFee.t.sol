@@ -48,5 +48,39 @@ abstract contract TestSetGovernanceFee is Test, AVaultInterfaces {
             v.setGovernanceFee(governanceFee);
         }
     }
+
+
+
+
+    function test_set_governance_fee_not_too_large() external virtual {
+        address[] memory vaults = getTestConfig();
+
+        uint256 vaultFee = 75 * 10**16;
+
+        for (uint256 i = 0; i < vaults.length; ++i) {
+            address vault = vaults[i];
+
+            ICatalystV1Vault v = ICatalystV1Vault(vault);
+
+            vm.prank(v.factoryOwner());
+            v.setGovernanceFee(vaultFee);
+        }
+    }
+
+    function test_error_set_governance_fee_too_large() external virtual {
+        address[] memory vaults = getTestConfig();
+
+        uint256 vaultFee = 75 * 10**16 + 1;
+
+        for (uint256 i = 0; i < vaults.length; ++i) {
+            address vault = vaults[i];
+
+            ICatalystV1Vault v = ICatalystV1Vault(vault);
+
+            vm.prank(v.factoryOwner());
+            vm.expectRevert(bytes(""));
+            v.setGovernanceFee(vaultFee);
+        }
+    }
 }
 

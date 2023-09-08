@@ -40,9 +40,41 @@ abstract contract TestSetVaultFee is Test, AVaultInterfaces {
             address vault = vaults[i];
 
             ICatalystV1Vault v = ICatalystV1Vault(vault);
-            if (impersonator != v.factoryOwner()) continue;
+            if (impersonator == v.factoryOwner()) continue;
 
             vm.prank(impersonator);
+            vm.expectRevert(bytes(""));
+            v.setVaultFee(vaultFee);
+        }
+    }
+
+
+    function test_set_fee_not_too_large() external virtual {
+        address[] memory vaults = getTestConfig();
+
+        uint256 vaultFee = 10**18;
+
+        for (uint256 i = 0; i < vaults.length; ++i) {
+            address vault = vaults[i];
+
+            ICatalystV1Vault v = ICatalystV1Vault(vault);
+
+            vm.prank(v.factoryOwner());
+            v.setVaultFee(vaultFee);
+        }
+    }
+
+    function test_error_set_fee_too_large() external virtual {
+        address[] memory vaults = getTestConfig();
+
+        uint256 vaultFee = 10**18 + 1;
+
+        for (uint256 i = 0; i < vaults.length; ++i) {
+            address vault = vaults[i];
+
+            ICatalystV1Vault v = ICatalystV1Vault(vault);
+
+            vm.prank(v.factoryOwner());
             vm.expectRevert(bytes(""));
             v.setVaultFee(vaultFee);
         }
