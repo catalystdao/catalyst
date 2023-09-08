@@ -3,6 +3,8 @@ pragma solidity ^0.8.13;
 
 abstract contract AVaultInterfaces  {
 
+    bool internal amplified;
+
     function invariant(address[] memory vaults) view virtual internal returns(uint256 inv);
 
     function getTestConfig() virtual internal returns(address[] memory vaults);

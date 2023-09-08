@@ -8,6 +8,7 @@ import "../Invariant.t.sol";
 import "../LocalSwap/LocalSwap.t.sol";
 import "../LocalSwap/LocalSwap.minout.t.sol";
 import "../LocalSwap/LocalSwap.fees.t.sol";
+import "../non-exploits/LocalSwap.SwapWorthlessToken.t.sol";
 import "../Set/SetVaultFee.t.sol";
 import "../Set/SetGovernanceFee.t.sol";
 import "../Setup/Setup.t.sol";
@@ -15,12 +16,13 @@ import "../Setup/SetupFinish.t.sol";
 import "../CrossChainInterfaceOnly.t.sol";
 import "../TokenInterface.t.sol";
 
-contract TestVolatileInvariant is TestInvariant, TestLocalswap, TestCrossChainInterfaceOnly, TestLocalswapMinout, TestPoolTokenInterface, TestSetupFinish, TestSetVaultFee, TestSetGovernanceFee, TestLocalswapFees {
-
+contract TestVolatileInvariant is TestInvariant, TestLocalswap, TestCrossChainInterfaceOnly, TestLocalswapMinout, TestPoolTokenInterface, TestSetupFinish, TestSetVaultFee, TestSetGovernanceFee, TestLocalswapFees, TestSwapWorthlessTokenLocal {
     address[] _vaults;
 
     function setUp() virtual override public {
         super.setUp();
+
+        amplified = true;
 
         address[] memory assets = getTokens(3);
         uint256[] memory init_balances = new uint256[](3);

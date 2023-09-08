@@ -2,9 +2,9 @@
 pragma solidity ^0.8.13;
 
 import "../TestCommon.t.sol";
-import "../../src/ICatalystV1Vault.sol";
+import "src/ICatalystV1Vault.sol";
+import "src/utils/FixedPointMathLib.sol";
 import {Token} from "../mocks/token.sol";
-import "../../src/utils/FixedPointMathLib.sol";
 
 abstract contract TestInvariant is TestCommon {
     function getNumberOfAssets(address[] memory vaults) view internal returns(uint256 numAssets) {

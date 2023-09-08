@@ -6,13 +6,16 @@ import "../../../src/ICatalystV1Vault.sol";
 import "../Invariant.t.sol";
 import {TestSendAsset} from "../SendAsset.t.sol";
 import {TestReceiveAsset} from "../ReceiveAsset.t.sol";
+import "../non-exploits/CrossSwap.SwapWorthlessToken.t.sol";
 
-contract TestVolatileInvariant2 is TestInvariant, TestSendAsset, TestReceiveAsset {
+contract TestVolatileInvariant2 is TestInvariant, TestSendAsset, TestReceiveAsset, TestSwapWorthlessTokenCrossChain {
 
     address[] _vaults;
 
     function setUp() virtual override public {
         super.setUp();
+
+        amplified = false;
 
         address[] memory assets = getTokens(2);
         uint256[] memory init_balances = new uint256[](2);
