@@ -1,4 +1,7 @@
-use cosmwasm_std::{CosmosMsg, Response, SubMsg, Empty};
+use cosmwasm_std::CosmosMsg;
+
+#[cfg(feature="asset_cw20")]
+use cosmwasm_std::{Response, SubMsg, Empty};
 
 // Re-export traits
 pub use vault_assets::asset::{VaultAssetsTrait, AssetTrait};

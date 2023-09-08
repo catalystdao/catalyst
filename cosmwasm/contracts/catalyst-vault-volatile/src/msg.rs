@@ -5,6 +5,8 @@ pub use catalyst_vault_common::msg::InstantiateMsg;
 use catalyst_vault_common::{msg::{
     ExecuteMsg, AssetEscrowResponse, AssetsResponse, CalcLocalSwapResponse, CalcReceiveAssetResponse, CalcSendAssetResponse, ChainInterfaceResponse, FeeAdministratorResponse, GetLimitCapacityResponse, GovernanceFeeShareResponse, LiquidityEscrowResponse, OnlyLocalResponse, VaultConnectionStateResponse, VaultFeeResponse, ReadyResponse, SetupMasterResponse, TotalEscrowedAssetResponse, TotalEscrowedLiquidityResponse, WeightResponse, FactoryResponse, FactoryOwnerResponse, TotalSupplyResponse
 }, bindings::Asset};
+
+#[cfg(feature="asset_cw20")]
 use cw20::{AllowanceResponse, BalanceResponse, TokenInfoResponse};
 
 

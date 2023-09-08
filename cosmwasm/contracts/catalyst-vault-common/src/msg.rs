@@ -2,6 +2,8 @@ use cosmwasm_schema::cw_serde;
 
 use cosmwasm_std::{Binary, Uint64, Uint128, Addr, Empty};
 use catalyst_types::U256;
+
+#[cfg(feature="asset_cw20")]
 use cw20::Expiration;
 
 
