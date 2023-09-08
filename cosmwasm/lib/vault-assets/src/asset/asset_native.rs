@@ -929,9 +929,6 @@ mod asset_native_tests {
         )
     }
 
-    
-    // TODO query
-
 
     #[test]
     fn test_receive_asset() {

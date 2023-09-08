@@ -468,7 +468,7 @@ pub fn collect_governance_fee_message(
     env: &Env,
     asset: &Asset,
     vault_fee_amount: Uint128
-) -> Result<Option<CosmosMsg<CustomMsg>>, ContractError> {   //TODO return AssetMsg instead of CosmosMsg?
+) -> Result<Option<CosmosMsg<CustomMsg>>, ContractError> {
 
     // Compute the governance fee as the GOVERNANCE_FEE_SHARE percentage of the vault_fee_amount.
     let gov_fee_amount: Uint128 = mul_wad_down(
