@@ -129,3 +129,240 @@ impl VaultTokenTrait<NativeVaultTokenMsg> for NativeVaultToken {
         )
     }
 }
+
+
+
+#[cfg(test)]
+mod vault_token_cw20_tests{
+    use cosmwasm_std::{testing::{mock_dependencies, mock_env, mock_info}, Uint128, DepsMut, Env};
+    use token_bindings::TokenMsg;
+
+    use crate::vault_token::{VaultTokenTrait, vault_token_native::NativeVaultTokenMsg};
+    use super::NativeVaultToken;
+
+
+    const VAULT_TOKEN_NAME     : &str = "vault_token_name";
+    const VAULT_TOKEN_SYMBOL   : &str = "vault_token_symbol";
+    const VAULT_TOKEN_DECIMALS : u8  = 5;
+
+    const TOKEN_HOLDER         : &str = "token_holder";
+
+
+    fn mock_vault_token(deps: &mut DepsMut, env: &Env) -> NativeVaultToken {
+
+        NativeVaultToken::create(
+            deps,
+            env,
+            VAULT_TOKEN_NAME.to_string(),
+            VAULT_TOKEN_SYMBOL.to_string(),
+            VAULT_TOKEN_DECIMALS
+        ).unwrap();
+
+        NativeVaultToken::load(&deps.as_ref()).unwrap()
+    }
+
+    fn mock_vault_token_denom() -> String {
+        format!("factory/{}/{}", mock_env().contract.address, VAULT_TOKEN_SYMBOL)
+    }
+
+
+    #[test]
+    fn test_vault_token_creation() {
+
+        let mut deps = mock_dependencies();
+        let env = mock_env();
+
+
+
+        // Tested action: create vault token
+        let result = NativeVaultToken::create(
+            &mut deps.as_mut(),
+            &env,
+            VAULT_TOKEN_NAME.to_string(),
+            VAULT_TOKEN_SYMBOL.to_string(),
+            VAULT_TOKEN_DECIMALS
+        ).unwrap();     // Make sure the transaction passes
+
+
+
+        // Verify the TokenFactory message
+        if let NativeVaultTokenMsg::Token(
+            TokenMsg::CreateDenom { subdenom, metadata }
+        ) = result.unwrap() {
+
+            assert_eq!(
+                subdenom,
+                VAULT_TOKEN_SYMBOL.to_string()
+            );
+
+            assert_eq!(
+                metadata.unwrap().name.unwrap(),
+                VAULT_TOKEN_NAME.to_string()
+            );
+        }
+        else {
+            panic!("Invalid create message.")
+        }
+
+        // Verify load
+        let loaded_vault_token = NativeVaultToken::load(&deps.as_ref()).unwrap();
+        assert_eq!(
+            loaded_vault_token.0,
+            mock_vault_token_denom()
+        );
+    }
+
+
+    #[test]
+    fn test_mint() {
+
+        let mut deps = mock_dependencies();
+        let env = mock_env();
+
+        let mut vault_token = mock_vault_token(
+            &mut deps.as_mut(),
+            &env
+        );
+
+        let mint_amount = Uint128::from(678u128);
+
+
+
+        // Tested action: mint tokens
+        let result = vault_token.mint(
+            &mut deps.as_mut(),
+            &env,
+            &mock_info(
+                &"", // The 'sender' of the transaction doesn't matter
+                &[]
+            ),
+            mint_amount,
+            TOKEN_HOLDER.to_string()
+        ).unwrap();
+
+
+
+        // Check the generated message
+        assert!(matches!(
+            result.unwrap(),
+            NativeVaultTokenMsg::Token(token_msg)
+                if token_msg == TokenMsg::MintTokens {
+                    denom: mock_vault_token_denom(),
+                    amount: mint_amount,
+                    mint_to_address: TOKEN_HOLDER.to_string()
+                }
+        ))
+
+    }
+
+
+    #[test]
+    fn test_mint_zero() {
+
+        let mut deps = mock_dependencies();
+        let env = mock_env();
+
+        let mut vault_token = mock_vault_token(
+            &mut deps.as_mut(),
+            &env
+        );
+
+        let mint_amount = Uint128::zero();  // Mint zero amount
+
+
+
+        // Tested action: mint zero tokens
+        let result = vault_token.mint(
+            &mut deps.as_mut(),
+            &env,
+            &mock_info(
+                &"", // The 'sender' of the transaction doesn't matter
+                &[]
+            ),
+            mint_amount,
+            TOKEN_HOLDER.to_string()
+        ).unwrap();
+
+
+
+        // Check no messages are generated
+        assert!(result.is_none());
+
+    }
+
+
+    #[test]
+    fn test_burn() {
+
+        let mut deps = mock_dependencies();
+        let env = mock_env();
+
+        let mut vault_token = mock_vault_token(
+            &mut deps.as_mut(),
+            &env
+        );
+
+        let burn_amount = Uint128::from(678u128);
+
+
+
+        // Tested action: burn tokens
+        let result = vault_token.burn(
+            &mut deps.as_mut(),
+            &env,
+            &mock_info(
+                TOKEN_HOLDER,
+                &[]
+            ),
+            burn_amount
+        ).unwrap();
+
+
+
+        // Check the generated message
+        assert!(matches!(
+            result.unwrap(),
+            NativeVaultTokenMsg::Token(token_msg)
+                if token_msg == TokenMsg::BurnTokens {
+                    denom: mock_vault_token_denom(),
+                    amount: burn_amount,
+                    burn_from_address: TOKEN_HOLDER.to_string()
+                }
+        ))
+
+    }
+
+
+    #[test]
+    fn test_burn_zero() {
+
+        let mut deps = mock_dependencies();
+        let env = mock_env();
+
+        let mut vault_token = mock_vault_token(
+            &mut deps.as_mut(),
+            &env
+        );
+
+        let burn_amount = Uint128::zero();  // Burn zero amount
+
+
+
+        // Tested action: burn zero tokens
+        let result = vault_token.burn(
+            &mut deps.as_mut(),
+            &env,
+            &mock_info(
+                TOKEN_HOLDER,
+                &[]
+            ),
+            burn_amount
+        ).unwrap();
+
+
+
+        // Check no messages are generated
+        assert!(result.is_none());
+
+    }
+}
