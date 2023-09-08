@@ -406,6 +406,40 @@ mod vault_token_cw20_tests{
 
     
     #[test]
+    fn test_burn_zero() {
+
+        let mut deps = mock_dependencies();
+        let env = mock_env();
+
+        let mut vault_token = mock_vault_token(
+            &mut deps.as_mut(),
+            &env
+        );
+
+        let burn_amount = Uint128::zero();
+
+
+
+        // Tested action: burn tokens
+        let result = vault_token.burn(
+            &mut deps.as_mut(),
+            &env,
+            &mock_info(
+                TOKEN_HOLDER,
+                &[]
+            ),
+            burn_amount,
+        ).unwrap(); // Make sure the transaction succeeds
+
+
+
+        // Check no messages are generated
+        assert!(result.is_none());
+
+    }
+
+    
+    #[test]
     fn test_burn_without_balance() {
 
         let mut deps = mock_dependencies();
