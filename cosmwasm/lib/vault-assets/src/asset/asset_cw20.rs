@@ -1,9 +1,10 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{DepsMut, Deps, Uint128, MessageInfo, Env, to_binary, WasmMsg};
+use cosmwasm_std::{DepsMut, Deps, Uint128, MessageInfo, Env, to_binary, WasmMsg, Coin};
 use cw20::{BalanceResponse, Cw20QueryMsg, Cw20ExecuteMsg};
 use cw_storage_plus::Item;
 
 use crate::{asset::{AssetTrait, VaultAssetsTrait}, error::AssetError};
+use super::subtract_gas_from_funds;
 
 const ASSETS: Item<Vec<String>> = Item::new("catalyst-vault-cw20-assets");
 
@@ -57,18 +58,28 @@ impl<'a> VaultAssetsTrait<'a, Cw20Asset, Cw20AssetMsg> for Cw20VaultAssets {
         &self,
         env: &Env,
         info: &MessageInfo,
-        amounts: Vec<Uint128>
+        amounts: Vec<Uint128>,
+        gas: Option<Vec<Coin>>
     ) -> Result<Vec<Cw20AssetMsg>, AssetError> {
 
-        // No native assets are expected when handling cw20 assets.
-        if info.funds.len() != 0 {
-            return Err(AssetError::AssetSurplusReceived {});
-        }
-        
         if amounts.len() != self.get_assets().len() {
             return Err(AssetError::InvalidParameters {
                 reason: "Invalid 'amounts' count when receiving assets.".to_string()
             })
+        }
+
+        // Subtract the expected gas from the received funds
+        let mut received_funds = info.funds.clone();
+        if let Some(gas) = gas {
+            received_funds = subtract_gas_from_funds(
+                received_funds,
+                gas
+            )?;
+        }
+
+        // No native assets are expected when handling cw20 assets (except gas).
+        if received_funds.len() != 0 {
+            return Err(AssetError::AssetSurplusReceived {});
         }
 
         // NOTE: Some cw20 contracts disallow zero-valued token transfers. Do not generate
@@ -461,7 +472,8 @@ mod asset_cw20_tests {
                 SENDER_ADDR,
                 &[]
             ),
-            desired_received_amounts.clone()
+            desired_received_amounts.clone(),
+            None
         ).unwrap();     // Call is successful
 
 
@@ -501,7 +513,8 @@ mod asset_cw20_tests {
                 SENDER_ADDR,
                 &[]
             ),
-            desired_received_amounts.clone()
+            desired_received_amounts.clone(),
+            None
         );
 
 
@@ -539,7 +552,8 @@ mod asset_cw20_tests {
                 SENDER_ADDR,
                 &[]
             ),
-            desired_received_amounts.clone()
+            desired_received_amounts.clone(),
+            None
         ).unwrap();     // Make sure result is successful
 
         // Verify no transfer msg is generated for the zero-valued asset transfer
@@ -568,7 +582,8 @@ mod asset_cw20_tests {
                 SENDER_ADDR,
                 &[]
             ),
-            desired_received_amounts.clone()
+            desired_received_amounts.clone(),
+            None
         ).unwrap();     // Make sure result is successful
 
         // Verify no messages are generated

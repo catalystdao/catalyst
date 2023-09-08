@@ -261,7 +261,8 @@ pub fn deposit_mixed(
     let receive_asset_msgs = assets.receive_assets(
         &env,
         &info,
-        deposit_amounts.clone()
+        deposit_amounts.clone(),
+        None
     )?;
 
 

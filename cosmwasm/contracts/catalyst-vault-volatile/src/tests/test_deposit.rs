@@ -26,6 +26,7 @@ mod test_volatile_deposit{
             AMPLIFICATION,
             vault_code_id,
             None,
+            None,
             None
         );
 
@@ -140,6 +141,7 @@ mod test_volatile_deposit{
             AMPLIFICATION,
             vault_code_id,
             None,
+            None,
             None
         );
 
@@ -219,6 +221,7 @@ mod test_volatile_deposit{
             vault_weights.clone(),
             AMPLIFICATION,
             vault_code_id,
+            None,
             None,
             None
         );
@@ -300,6 +303,7 @@ mod test_volatile_deposit{
             AMPLIFICATION,
             vault_code_id,
             None,
+            None,
             None
         );
 
@@ -362,6 +366,7 @@ mod test_volatile_deposit{
             vault_weights.clone(),
             AMPLIFICATION,
             vault_code_id,
+            None,
             None,
             None
         );
@@ -453,6 +458,7 @@ mod test_volatile_deposit{
             vault_weights.clone(),
             AMPLIFICATION,
             vault_code_id,
+            None,
             None,
             None
         );

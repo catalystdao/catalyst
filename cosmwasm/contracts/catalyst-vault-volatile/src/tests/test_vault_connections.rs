@@ -18,6 +18,7 @@ mod test_volatile_vault_connections {
             AMPLIFICATION,
             vault_code_id,
             Some(interface.clone()),
+            None,
             None
         )
     }

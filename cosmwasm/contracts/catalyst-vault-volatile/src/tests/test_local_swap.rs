@@ -26,6 +26,7 @@ mod test_volatile_local_swap {
             AMPLIFICATION,
             vault_code_id,
             None,
+            None,
             None
         );
 
@@ -142,6 +143,7 @@ mod test_volatile_local_swap {
             AMPLIFICATION,
             vault_code_id,
             None,
+            None,
             None
         );
 
@@ -242,6 +244,7 @@ mod test_volatile_local_swap {
             AMPLIFICATION,
             vault_code_id,
             None,
+            None,
             None
         );
 
@@ -327,6 +330,7 @@ mod test_volatile_local_swap {
             AMPLIFICATION,
             vault_code_id,
             None,
+            None,
             None
         );
 
@@ -391,6 +395,7 @@ mod test_volatile_local_swap {
             AMPLIFICATION,
             vault_code_id,
             None,
+            None,
             None
         );
 
@@ -454,6 +459,7 @@ mod test_volatile_local_swap {
             vault_weights.clone(),
             AMPLIFICATION,
             vault_code_id,
+            None,
             None,
             None
         );
@@ -520,6 +526,7 @@ mod test_volatile_local_swap {
             vault_weights.clone(),
             AMPLIFICATION,
             vault_code_id,
+            None,
             None,
             None
         );
@@ -617,6 +624,7 @@ mod test_volatile_local_swap {
             AMPLIFICATION,
             vault_code_id,
             None,
+            None,
             None
         );
 
@@ -689,6 +697,7 @@ mod test_volatile_local_swap {
             vault_weights.clone(),
             AMPLIFICATION,
             vault_code_id,
+            None,
             None,
             None
         );

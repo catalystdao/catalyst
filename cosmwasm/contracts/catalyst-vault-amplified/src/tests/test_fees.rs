@@ -20,6 +20,7 @@ mod test_amplified_fees {
             AMPLIFICATION,
             vault_code_id,
             None,
+            None,
             None
         )
     }

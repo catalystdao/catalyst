@@ -1,6 +1,6 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{DepsMut, Env, MessageInfo, Uint128, CosmosMsg, to_binary, StdError, SubMsg, Reply, SubMsgResult, StdResult, Uint64, Deps, Binary};
+use cosmwasm_std::{DepsMut, Env, MessageInfo, Uint128, CosmosMsg, to_binary, StdError, SubMsg, Reply, SubMsgResult, StdResult, Uint64, Deps, Binary, Coin};
 use cw0::parse_reply_instantiate_data;
 use cw2::set_contract_version;
 use catalyst_vault_common::bindings::{Asset, VaultAssets, VaultAssetsTrait, VaultResponse, IntoCosmosCustomMsg, CustomMsg};
@@ -64,7 +64,8 @@ pub fn execute(
             vault_fee,
             name,
             symbol,
-            chain_interface
+            chain_interface,
+            gas
         } => execute_deploy_vault(
             deps,
             env,
@@ -77,7 +78,8 @@ pub fn execute(
             vault_fee,
             name,
             symbol,
-            chain_interface               
+            chain_interface,
+            gas
         ),
 
         ExecuteMsg::SetDefaultGovernanceFeeShare {
@@ -115,6 +117,7 @@ pub fn execute(
 /// * `name` - The name of the vault token.
 /// * `symbol` - The symbol of the vault token.
 /// * `chain_interface` - The interface used for cross-chain swaps. It can be set to None to disable cross-chain swaps.
+/// * `gas` - Coin amounts to send to the vault on instantiation.
 /// 
 fn execute_deploy_vault(
     mut deps: DepsMut,
@@ -128,7 +131,8 @@ fn execute_deploy_vault(
     vault_fee: Uint64,
     name: String,
     symbol: String,
-    chain_interface: Option<String>
+    chain_interface: Option<String>,
+    gas: Option<Vec<Coin>>
 ) -> Result<VaultResponse, ContractError> {
 
     // Verify the correctness of the arguments
@@ -145,7 +149,8 @@ fn execute_deploy_vault(
     let transfer_msgs = assets.receive_assets(
         &env,
         &info,
-        assets_balances.clone()
+        assets_balances.clone(),
+        gas.clone()
     )?;
 
     // Save the required args to initalize the vault curves after the vault instantiation (used on 'reply').
@@ -187,7 +192,7 @@ fn execute_deploy_vault(
                                                                     // of the contract (or to set it to an invalid address).
                 setup_master: info.sender.to_string()
             })?,
-            funds: vec![],
+            funds: gas.unwrap_or(vec![]),
             label: symbol.to_string()
         },
         DEPLOY_VAULT_REPLY_ID
@@ -608,7 +613,8 @@ mod catalyst_vault_factory_tests {
                 vault_fee: TEST_VAULT_FEE,
                 name: "TestVault".to_string(),
                 symbol: VAULT_TOKEN_DENOM.to_string(),
-                chain_interface: Some("chain_interface".to_string())
+                chain_interface: Some("chain_interface".to_string()),
+                gas: None
             },
             vault_assets.clone(),
             vault_initial_balances.clone()
@@ -791,7 +797,8 @@ mod catalyst_vault_factory_tests {
                 vault_fee: TEST_VAULT_FEE,
                 name: "TestVault".to_string(),
                 symbol: VAULT_TOKEN_DENOM.to_string(),
-                chain_interface: Some("chain_interface".to_string())
+                chain_interface: Some("chain_interface".to_string()),
+                gas: None
             },
             vault_assets.clone(),
             vault_initial_balances.clone()
@@ -867,7 +874,8 @@ mod catalyst_vault_factory_tests {
                 vault_fee: TEST_VAULT_FEE,
                 name: "TestVault".to_string(),
                 symbol: VAULT_TOKEN_DENOM.to_string(),
-                chain_interface: None   // ! Interface set to 'None'
+                chain_interface: None,   // ! Interface set to 'None'
+                gas: None
             },
             vault_assets.clone(),
             vault_initial_balances.clone()
@@ -922,7 +930,8 @@ mod catalyst_vault_factory_tests {
                 vault_fee: Uint64::zero(),
                 name: "TestVault".to_string(),
                 symbol: VAULT_TOKEN_DENOM.to_string(),
-                chain_interface: None
+                chain_interface: None,
+                gas: None
             },
             vec![],
             vec![]
@@ -972,7 +981,8 @@ mod catalyst_vault_factory_tests {
                 vault_fee: Uint64::zero(),
                 name: "TestVault".to_string(),
                 symbol: VAULT_TOKEN_DENOM.to_string(),
-                chain_interface: None
+                chain_interface: None,
+                gas: None
             },
             vault_assets.clone(),
             vault_initial_balances.clone()
@@ -1000,7 +1010,8 @@ mod catalyst_vault_factory_tests {
                 vault_fee: Uint64::zero(),
                 name: "TestVault".to_string(),
                 symbol: VAULT_TOKEN_DENOM.to_string(),
-                chain_interface: None
+                chain_interface: None,
+                gas: None
             },
             vault_assets.clone(),
             vault_initial_balances.clone()
@@ -1028,7 +1039,8 @@ mod catalyst_vault_factory_tests {
                 vault_fee: Uint64::zero(),
                 name: "TestVault".to_string(),
                 symbol: VAULT_TOKEN_DENOM.to_string(),
-                chain_interface: None
+                chain_interface: None,
+                gas: None
             },
             vault_assets.clone(),
             vault_initial_balances.clone()
@@ -1069,7 +1081,8 @@ mod catalyst_vault_factory_tests {
                 vault_fee: TEST_VAULT_FEE,
                 name: "TestVault".to_string(),
                 symbol: VAULT_TOKEN_DENOM.to_string(),
-                chain_interface: Some("chain_interface".to_string())
+                chain_interface: Some("chain_interface".to_string()),
+                gas: None
             },
             vec![],   // ! Do not send funds
             vec![]
@@ -1104,7 +1117,8 @@ mod catalyst_vault_factory_tests {
                 vault_fee: TEST_VAULT_FEE,
                 name: "TestVault".to_string(),
                 symbol: VAULT_TOKEN_DENOM.to_string(),
-                chain_interface: Some("chain_interface".to_string())
+                chain_interface: Some("chain_interface".to_string()),
+                gas: None
             },
             vault_assets[..vault_assets.len()-1].to_vec(),      // ! Send one asset less
             vault_initial_balances[..vault_initial_balances.len()-1].to_vec()
@@ -1139,7 +1153,8 @@ mod catalyst_vault_factory_tests {
                 vault_fee: TEST_VAULT_FEE,
                 name: "TestVault".to_string(),
                 symbol: VAULT_TOKEN_DENOM.to_string(),
-                chain_interface: Some("chain_interface".to_string())
+                chain_interface: Some("chain_interface".to_string()),
+                gas: None
             },
             test_env.get_assets()[..3+1].to_vec(),      // ! Send one asset more
             vault_initial_balances.iter().cloned().chain(vec![Uint128::from(1000u128)].into_iter()).collect()
@@ -1176,7 +1191,8 @@ mod catalyst_vault_factory_tests {
                 vault_fee: TEST_VAULT_FEE,
                 name: "TestVault".to_string(),
                 symbol: VAULT_TOKEN_DENOM.to_string(),
-                chain_interface: Some("chain_interface".to_string())
+                chain_interface: Some("chain_interface".to_string()),
+                gas: None
             },
             vault_assets.clone(),
             too_low_vault_initial_balances.clone()
@@ -1217,7 +1233,8 @@ mod catalyst_vault_factory_tests {
                 vault_fee: TEST_VAULT_FEE,
                 name: "TestVault".to_string(),
                 symbol: VAULT_TOKEN_DENOM.to_string(),
-                chain_interface: Some("chain_interface".to_string())
+                chain_interface: Some("chain_interface".to_string()),
+                gas: None
             },
             vault_assets.clone(),
             too_high_vault_initial_balances.clone()
@@ -1255,7 +1272,8 @@ mod catalyst_vault_factory_tests {
                 vault_fee: TEST_VAULT_FEE,
                 name: "TestVault".to_string(),
                 symbol: VAULT_TOKEN_DENOM.to_string(),
-                chain_interface: Some("chain_interface".to_string())
+                chain_interface: Some("chain_interface".to_string()),
+                gas: None
             },
             vault_assets.clone(),
             vault_initial_balances.clone()

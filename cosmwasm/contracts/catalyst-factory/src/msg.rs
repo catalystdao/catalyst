@@ -1,6 +1,6 @@
 use catalyst_vault_common::bindings::Asset;
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{Uint64, Uint128, Addr};
+use cosmwasm_std::{Uint64, Uint128, Addr, Coin};
 
 
 #[cw_serde]
@@ -23,6 +23,7 @@ pub enum ExecuteMsg<A = Asset> {
     /// * `name` - The name of the vault token.
     /// * `symbol` - The symbol of the vault token.
     /// * `chain_interface` - The interface used for cross-chain swaps. It can be set to None to disable cross-chain swaps.
+    /// * `gas` - Coin amounts to send to the vault on instantiation.
     DeployVault {
         vault_code_id: u64,
         assets: Vec<A>,
@@ -32,7 +33,8 @@ pub enum ExecuteMsg<A = Asset> {
         vault_fee: Uint64,
         name: String,
         symbol: String,
-        chain_interface: Option<String>
+        chain_interface: Option<String>,
+        gas: Option<Vec<Coin>>
     },
 
 

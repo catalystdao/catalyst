@@ -27,6 +27,7 @@ mod test_volatile_receive_liquidity {
             AMPLIFICATION,
             vault_code_id,
             Some(Addr::unchecked(CHAIN_INTERFACE)),         // Using a mock address, no need for an interface to be deployed
+            None,
             None
         );
 
@@ -115,6 +116,7 @@ mod test_volatile_receive_liquidity {
             AMPLIFICATION,
             vault_code_id,
             Some(Addr::unchecked(CHAIN_INTERFACE)),         // Using a mock address, no need for an interface to be deployed
+            None,
             None
         );
 
@@ -211,6 +213,7 @@ mod test_volatile_receive_liquidity {
             AMPLIFICATION,
             vault_code_id,
             Some(Addr::unchecked(CHAIN_INTERFACE)),         // Using a mock address, no need for an interface to be deployed
+            None,
             None
         );
 
@@ -292,6 +295,7 @@ mod test_volatile_receive_liquidity {
             AMPLIFICATION,
             vault_code_id,
             Some(Addr::unchecked(CHAIN_INTERFACE)),         // Using a mock address, no need for an interface to be deployed
+            None,
             None
         );
 
@@ -396,6 +400,7 @@ mod test_volatile_receive_liquidity {
             AMPLIFICATION,
             vault_code_id,
             Some(Addr::unchecked(CHAIN_INTERFACE)),         // Using a mock address, no need for an interface to be deployed
+            None,
             None
         );
 
@@ -507,6 +512,7 @@ mod test_volatile_receive_liquidity {
             AMPLIFICATION,
             vault_code_id,
             Some(Addr::unchecked(CHAIN_INTERFACE)),         // Using a mock address, no need for an interface to be deployed
+            None,
             None
         );
 
@@ -568,6 +574,7 @@ mod test_volatile_receive_liquidity {
             AMPLIFICATION,
             vault_code_id,
             Some(Addr::unchecked(CHAIN_INTERFACE)),         // Using a mock address, no need for an interface to be deployed
+            None,
             None
         );
 
@@ -635,6 +642,7 @@ mod test_volatile_receive_liquidity {
             AMPLIFICATION,
             vault_code_id,
             Some(Addr::unchecked(CHAIN_INTERFACE)),         // Using a mock address, no need for an interface to be deployed
+            None,
             None
         );
 

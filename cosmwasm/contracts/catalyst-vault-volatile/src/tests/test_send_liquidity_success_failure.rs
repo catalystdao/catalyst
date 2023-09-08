@@ -35,6 +35,7 @@ mod test_volatile_send_liquidity_success_failure {
                 AMPLIFICATION,
                 vault_code_id,
                 Some(interface.clone()),
+                None,
                 None
             );
     

@@ -1,5 +1,5 @@
 use cosmwasm_schema::serde::Serialize;
-use cosmwasm_std::{Uint128, Addr, Uint64, Binary, Empty};
+use cosmwasm_std::{Uint128, Addr, Uint64, Binary, Empty, Coin};
 use cw_multi_test::{ContractWrapper, Executor, AppResponse, Module};
 use std::{marker::PhantomData, fmt::Debug};
 
@@ -150,7 +150,8 @@ pub fn mock_factory_deploy_vault<AssetC, TestAssetC, HandlerC>(
     amplification: Uint64,
     vault_code_id: u64,
     chain_interface: Option<Addr>,
-    factory: Option<Addr>
+    factory: Option<Addr>,
+    gas: Option<Vec<Coin>>
 ) -> Addr
 where
     AssetC: From<TestAssetC> + Serialize + Debug,
@@ -180,7 +181,8 @@ where
             vault_fee: DEFAULT_TEST_VAULT_FEE,
             name: "TestVault".to_string(),
             symbol: VAULT_TOKEN_DENOM.to_string(),
-            chain_interface: chain_interface.map(|value| value.to_string())
+            chain_interface: chain_interface.map(|value| value.to_string()),
+            gas
         },
         assets,
         assets_balances

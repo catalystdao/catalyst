@@ -32,6 +32,7 @@ mod test_volatile_weights_update {
             AMPLIFICATION,
             vault_code_id,
             None,
+            None,
             None
         )
 

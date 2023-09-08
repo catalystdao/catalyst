@@ -1,4 +1,4 @@
-use cosmwasm_std::{StdError, OverflowError, Uint64, Uint128, Binary, ConversionOverflowError, DivideByZeroError};
+use cosmwasm_std::{StdError, OverflowError, Uint64, Uint128, Binary, ConversionOverflowError, DivideByZeroError, Coin};
 use catalyst_types::U256;
 use fixed_point_math::FixedPointMathError;
 use thiserror::Error;
@@ -38,6 +38,15 @@ pub enum ContractError {
         received_amount: Uint128,
         expected_amount: Uint128,
         asset: String
+    },
+
+    #[error("Expected gas not received: {gas}.")]
+    GasNotReceived { gas: Coin },
+
+    #[error("Not enough gas received: {received} (expected {expected}).")]
+    NotEnoughGasReceived {
+        received: Coin,
+        expected: Coin,
     },
 
     #[error("Invalid amplification value.")]
@@ -129,6 +138,11 @@ impl From<vault_assets::error::AssetError> for ContractError {
                 expected_amount,
                 asset
             } => ContractError::UnexpectedAssetAmountReceived {received_amount, expected_amount, asset},
+            vault_assets::error::AssetError::GasNotReceived { gas } => ContractError::GasNotReceived { gas },
+            vault_assets::error::AssetError::NotEnoughGasReceived { 
+                received,
+                expected
+            } => ContractError::NotEnoughGasReceived { received, expected },
         }
     }
 }

@@ -27,8 +27,9 @@ mod test_amplified_amplification_update {
             initial_amplification,
             vault_code_id,
             None,
-            None    // ! Set the vault WITHOUT a cross-chain interface, as amplification changes are disabled 
+            None,   // ! Set the vault WITHOUT a cross-chain interface, as amplification changes are disabled 
                     // ! for cross-chain enabled vaults
+            None
         )
 
     }
@@ -479,6 +480,7 @@ mod test_amplified_amplification_update {
             initial_amplification.into(),
             vault_code_id,
             Some(Addr::unchecked(CHAIN_INTERFACE)), // ! Setup the vault WITH a chain interface
+            None,
             None
         );
 

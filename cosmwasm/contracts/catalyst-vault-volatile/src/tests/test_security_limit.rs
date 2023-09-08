@@ -47,6 +47,7 @@ mod test_volatile_security_limit {
             AMPLIFICATION,
             vault_code_id,
             Some(interface.clone()),
+            None,
             None
         );
 
@@ -269,6 +270,7 @@ mod test_volatile_security_limit {
             AMPLIFICATION,
             vault_code_id,
             Some(interface.clone()),
+            None,
             None
         );
 

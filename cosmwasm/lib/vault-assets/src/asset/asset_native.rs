@@ -3,6 +3,7 @@ use cosmwasm_std::{DepsMut, Deps, Uint128, MessageInfo, Coin, BankMsg, Env};
 use cw_storage_plus::{Item, Map};
 
 use crate::{asset::{AssetTrait, VaultAssetsTrait}, error::AssetError};
+use super::subtract_gas_from_funds;
 
 const ASSETS_ALIASES: Item<Vec<String>> = Item::new("catalyst-vault-native-assets-aliases");
 const ASSETS: Map<&str, String> = Map::new("catalyst-vault-native-assets");
@@ -58,7 +59,8 @@ impl<'a> VaultAssetsTrait<'a, NativeAsset, NativeAssetMsg> for NativeVaultAssets
         &self,
         _env: &Env,
         info: &MessageInfo,
-        amounts: Vec<Uint128>
+        amounts: Vec<Uint128>,
+        gas: Option<Vec<Coin>>
     ) -> Result<Vec<NativeAssetMsg>, AssetError> {
         
         // ! **IMPORTANT**: This function assumes that the assets contained within the `NativeVaultAssets`
@@ -69,6 +71,16 @@ impl<'a> VaultAssetsTrait<'a, NativeAsset, NativeAssetMsg> for NativeVaultAssets
                 reason: "Invalid 'amounts' count when receiving assets.".to_string()
             })
         }
+
+        // Subtract the expected gas from the received funds
+        let mut received_funds = info.funds.clone();
+        if let Some(gas) = gas {
+            received_funds = subtract_gas_from_funds(
+                received_funds,
+                gas
+            )?;
+        }
+        
 
         // NOTE: The 'bank' module disallows zero-valued coin transfers. Do not check
         // received funds for these cases.
@@ -82,7 +94,7 @@ impl<'a> VaultAssetsTrait<'a, NativeAsset, NativeAssetMsg> for NativeVaultAssets
 
                 non_zero_assets_count += 1;
 
-                let received_coin = info.funds.iter().find(|coin| {
+                let received_coin = received_funds.iter().find(|coin| {
                     coin.denom == asset.denom
                 });
 
@@ -105,7 +117,7 @@ impl<'a> VaultAssetsTrait<'a, NativeAsset, NativeAssetMsg> for NativeVaultAssets
                 }
             })?;
 
-            let received_funds_count = info.funds.len();
+            let received_funds_count = received_funds.len();
 
             // NOTE: There is no need to check whether 'received_funds_count < non_zero_assets_count',
             // as in that case the check above would have failed for at least one of the expected assets
@@ -436,7 +448,8 @@ mod asset_native_tests {
                 SENDER_ADDR,
                 &received_coins
             ),
-            desired_received_amounts.clone()
+            desired_received_amounts.clone(),
+            None
         ).unwrap();     // Call is successful
 
 
@@ -469,7 +482,8 @@ mod asset_native_tests {
                 SENDER_ADDR,
                 &[]    // No need to provide coins, should error before this is checked
             ),
-            desired_received_amounts.clone()
+            desired_received_amounts.clone(),
+            None
         );
 
 
@@ -514,7 +528,8 @@ mod asset_native_tests {
                 SENDER_ADDR,
                 &[]             // No funds
             ),
-            desired_received_amounts.clone()
+            desired_received_amounts.clone(),
+            None
         );
 
         // Make sure action fails
@@ -533,7 +548,8 @@ mod asset_native_tests {
                 SENDER_ADDR,
                 &valid_received_coins[..2]     // One asset less than expected
             ),
-            desired_received_amounts.clone()
+            desired_received_amounts.clone(),
+            None
         );
 
         // Make sure action fails
@@ -555,7 +571,8 @@ mod asset_native_tests {
                     .chain(vec![Coin::new(99u128, "other_coin")].into_iter())
                     .collect::<Vec<Coin>>().as_slice()
             ),
-            desired_received_amounts.clone()
+            desired_received_amounts.clone(),
+            None
         );
 
         // Make sure action fails
@@ -575,7 +592,8 @@ mod asset_native_tests {
                 SENDER_ADDR,
                 &received_coins_invalid_asset    // Last expected asset different
             ),
-            desired_received_amounts.clone()
+            desired_received_amounts.clone(),
+            None
         );
 
         // Make sure action fails
@@ -596,7 +614,8 @@ mod asset_native_tests {
                 SENDER_ADDR,
                 &received_coins_small_amount    // Amount too small for the second asset
             ),
-            desired_received_amounts.clone()
+            desired_received_amounts.clone(),
+            None
         );
 
         // Make sure action fails
@@ -619,7 +638,8 @@ mod asset_native_tests {
                 SENDER_ADDR,
                 &received_coins_large_amount    // Amount too large for the second asset
             ),
-            desired_received_amounts.clone()
+            desired_received_amounts.clone(),
+            None
         );
 
         // Make sure action fails
@@ -640,7 +660,8 @@ mod asset_native_tests {
                 SENDER_ADDR,
                 &valid_received_coins    // Valid funds
             ),
-            desired_received_amounts.clone()
+            desired_received_amounts.clone(),
+            None
         ).unwrap();
 
     }
@@ -677,7 +698,8 @@ mod asset_native_tests {
                 SENDER_ADDR,
                 &received_coins
             ),
-            desired_received_amounts.clone()
+            desired_received_amounts.clone(),
+            None
         ).unwrap();     // Make sure result is successful
 
 
@@ -697,7 +719,8 @@ mod asset_native_tests {
                 SENDER_ADDR,
                 &received_coins
             ),
-            desired_received_amounts.clone()
+            desired_received_amounts.clone(),
+            None
         ).unwrap();     // Make sure result is successful
 
     }

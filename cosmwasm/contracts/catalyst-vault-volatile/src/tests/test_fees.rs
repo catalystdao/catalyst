@@ -20,6 +20,7 @@ mod test_volatile_fees {
             AMPLIFICATION,
             vault_code_id,
             None,
+            None,
             None
         )
     }

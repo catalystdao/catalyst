@@ -1,4 +1,4 @@
-use cosmwasm_std::{Uint128, Deps, DepsMut, MessageInfo, Env};
+use cosmwasm_std::{Uint128, Deps, DepsMut, MessageInfo, Env, Coin};
 use serde::Serialize;
 use std::fmt::Debug;
 
@@ -107,12 +107,14 @@ pub trait VaultAssetsTrait<'a, T: AssetTrait<Msg> + 'a, Msg> {
     /// 
     /// # Arguments:
     /// * `amounts` - The amounts of the assets to receive.
+    /// * `gas` - Optional: gas to receive.
     /// 
     fn receive_assets(
         &self,
         env: &Env,
         info: &MessageInfo,
-        amounts: Vec<Uint128>
+        amounts: Vec<Uint128>,
+        gas: Option<Vec<Coin>>
     ) -> Result<Vec<Msg>, AssetError>;
 
 
@@ -204,3 +206,60 @@ pub trait AssetTrait<Msg>: Serialize + PartialEq + Debug + Clone + ToString {
 
 }
 
+
+
+// Helpers
+// ************************************************************************************************
+
+/// Deduct gas from received funds.
+/// 
+/// # Arguments:
+/// * `funds` - The funds.
+/// * `gas` - The gas amount.
+/// 
+pub fn subtract_gas_from_funds(
+    mut funds: Vec<Coin>,
+    gas: Vec<Coin>
+) -> Result<Vec<Coin>, AssetError> {
+
+    gas.iter()
+        .try_for_each(|gas_coin| {
+
+            // Find if the gas denom is part of the funds
+            let fund = funds.iter_mut()
+                .find(|fund| fund.denom == gas_coin.denom);
+
+            match fund {
+                Some(fund) => {
+                    if fund.amount < gas_coin.amount {
+                        Err(
+                            AssetError::NotEnoughGasReceived {
+                                received: fund.to_owned(),
+                                expected: gas_coin.to_owned()
+                            }
+                        )
+                    }
+                    else {
+                        fund.amount = fund.amount
+                            .wrapping_sub(gas_coin.amount); // 'wrapping_sub' safe: fund.amount < gas_coin.amount checked above
+                        Ok(())
+                    }
+                },
+                None => Err(
+                    AssetError::GasNotReceived {
+                        gas: gas_coin.to_owned()
+                    }
+                ),
+            }
+        })?;
+
+    // Remove empty amounts from the resulting funds (i.e. without gas) vec.
+    // This is to simplify any posterior checks of these funds. Note that by default messages
+    // never contain zero-valued funds.
+    Ok(
+        funds.into_iter()
+            .filter(|fund| !fund.amount.is_zero())
+            .collect()
+    )
+
+}

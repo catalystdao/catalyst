@@ -1,4 +1,4 @@
-use cosmwasm_std::{StdError, Uint128};
+use cosmwasm_std::{StdError, Uint128, Coin};
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -24,6 +24,15 @@ pub enum AssetError {
         received_amount: Uint128,
         expected_amount: Uint128,
         asset: String
+    },
+
+    #[error("Expected gas not received: {gas}.")]
+    GasNotReceived { gas: Coin },
+
+    #[error("Not enough gas received: {received} (expected {expected}).")]
+    NotEnoughGasReceived {
+        received: Coin,
+        expected: Coin,
     },
 
 }

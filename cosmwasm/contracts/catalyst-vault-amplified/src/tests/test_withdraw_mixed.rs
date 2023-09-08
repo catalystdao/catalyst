@@ -30,6 +30,7 @@ mod test_amplified_withdraw_mixed {
             AMPLIFICATION,
             vault_code_id,
             None,
+            None,
             None
         );
 
@@ -151,6 +152,7 @@ mod test_amplified_withdraw_mixed {
             AMPLIFICATION,
             vault_code_id,
             None,
+            None,
             None
         );
 
@@ -226,6 +228,7 @@ mod test_amplified_withdraw_mixed {
             vault_weights.clone(),
             AMPLIFICATION,
             vault_code_id,
+            None,
             None,
             None
         );
@@ -319,6 +322,7 @@ mod test_amplified_withdraw_mixed {
             vault_weights.clone(),
             AMPLIFICATION,
             vault_code_id,
+            None,
             None,
             None
         );
@@ -427,6 +431,7 @@ mod test_amplified_withdraw_mixed {
             AMPLIFICATION,
             vault_code_id,
             None,
+            None,
             None
         );
 
@@ -507,6 +512,7 @@ mod test_amplified_withdraw_mixed {
             AMPLIFICATION,
             vault_code_id,
             None,
+            None,
             None
         );
 
@@ -568,6 +574,7 @@ mod test_amplified_withdraw_mixed {
             vault_weights.clone(),
             AMPLIFICATION,
             vault_code_id,
+            None,
             None,
             None
         );
