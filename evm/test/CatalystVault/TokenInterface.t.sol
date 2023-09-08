@@ -31,19 +31,6 @@ abstract contract TestPoolTokenInterface is TestCommon, AVaultInterfaces {
         vaultTokens = ICatalystV1Vault(vault).depositMixed(deposit_amounts, 0);
     }
 
-    function get_vault_tokens(address vault) internal returns(address[] memory vault_tokens) {
-        uint256 numTokens;
-        for (numTokens = 0; numTokens < 256; ++numTokens) {
-            address token = ICatalystV1Vault(vault)._tokenIndexing(numTokens);
-            if (token == address(0)) break;
-        }
-        vault_tokens = new address[](numTokens);
-        for (uint256 i = 0; i < numTokens; ++i) {
-            address token = ICatalystV1Vault(vault)._tokenIndexing(i);
-            vault_tokens[i] = token;
-        }
-    }
-
     function test_vault_token_total_supply_query() external {
         address[] memory vaults = getTestConfig();
         address alice = makeAddr("alice");
@@ -51,7 +38,7 @@ abstract contract TestPoolTokenInterface is TestCommon, AVaultInterfaces {
         for (uint256 i = 0; i < vaults.length; ++i) {
             address vault = vaults[i];
 
-            address[] memory vault_tokens = get_vault_tokens(vault);
+            address[] memory vault_tokens = getVaultTokens(vault);
             uint256 mintedVaultTokens = alice_vault_token_deposit(vault, vault_tokens, alice);
 
             assertEq(
@@ -76,7 +63,7 @@ abstract contract TestPoolTokenInterface is TestCommon, AVaultInterfaces {
         for (uint256 i = 0; i < vaults.length; ++i) {
             address vault = vaults[i];
 
-            address[] memory vault_tokens = get_vault_tokens(vault);
+            address[] memory vault_tokens = getVaultTokens(vault);
             uint256 mintedVaultTokens = alice_vault_token_deposit(vault, vault_tokens, alice);
 
             assertEq(
@@ -116,7 +103,7 @@ abstract contract TestPoolTokenInterface is TestCommon, AVaultInterfaces {
         for (uint256 i = 0; i < vaults.length; ++i) {
             address vault = vaults[i];
 
-            address[] memory vault_tokens = get_vault_tokens(vault);
+            address[] memory vault_tokens = getVaultTokens(vault);
             uint256 mintedVaultTokens = alice_vault_token_deposit(vault, vault_tokens, alice);
 
             uint256 transfer_amount = 11 * mintedVaultTokens / 10;
@@ -135,7 +122,7 @@ abstract contract TestPoolTokenInterface is TestCommon, AVaultInterfaces {
         for (uint256 i = 0; i < vaults.length; ++i) {
             address vault = vaults[i];
 
-            address[] memory vault_tokens = get_vault_tokens(vault);
+            address[] memory vault_tokens = getVaultTokens(vault);
             uint256 mintedVaultTokens = alice_vault_token_deposit(vault, vault_tokens, alice);
 
             vm.prank(alice);
@@ -158,7 +145,7 @@ abstract contract TestPoolTokenInterface is TestCommon, AVaultInterfaces {
         for (uint256 i = 0; i < vaults.length; ++i) {
             address vault = vaults[i];
 
-            address[] memory vault_tokens = get_vault_tokens(vault);
+            address[] memory vault_tokens = getVaultTokens(vault);
             uint256 mintedVaultTokens = alice_vault_token_deposit(vault, vault_tokens, alice);
 
             uint256 allowance_amount = 3 * mintedVaultTokens / 10;
@@ -187,7 +174,7 @@ abstract contract TestPoolTokenInterface is TestCommon, AVaultInterfaces {
         for (uint256 i = 0; i < vaults.length; ++i) {
             address vault = vaults[i];
 
-            address[] memory vault_tokens = get_vault_tokens(vault);
+            address[] memory vault_tokens = getVaultTokens(vault);
             uint256 mintedVaultTokens = alice_vault_token_deposit(vault, vault_tokens, alice);
 
             uint256 allowance_amount = 2 * mintedVaultTokens / 10;

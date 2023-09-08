@@ -148,5 +148,18 @@ contract TestCommon is Test, Bytes65, IMessageEscrowStructs, TestTokenFunctions,
     function sliceMemory(bytes calldata a, uint256 start, uint256 end) pure external returns(bytes calldata) {
         return a[start:end];
     }
+
+    function getVaultTokens(address vault) internal returns(address[] memory vault_tokens) {
+        uint256 numTokens;
+        for (numTokens = 0; numTokens < 256; ++numTokens) {
+            address token = ICatalystV1Vault(vault)._tokenIndexing(numTokens);
+            if (token == address(0)) break;
+        }
+        vault_tokens = new address[](numTokens);
+        for (uint256 i = 0; i < numTokens; ++i) {
+            address token = ICatalystV1Vault(vault)._tokenIndexing(i);
+            vault_tokens[i] = token;
+        }
+    }
 }
 
