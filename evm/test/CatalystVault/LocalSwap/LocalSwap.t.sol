@@ -48,26 +48,39 @@ abstract contract TestLocalswap is Test, AVaultInterfaces {
     function test_local_swap_invariance(uint32 swapSizePercentage) external virtual {
         address[] memory vaults = getTestConfig();
 
-        address swapVault = vaults[0];
+        address vault = vaults[0];
+            ICatalystV1Vault v = ICatalystV1Vault(vault);
 
-        address fromToken = ICatalystV1Vault(swapVault)._tokenIndexing(0);
-        address toToken = ICatalystV1Vault(swapVault)._tokenIndexing(1);
+        address fromToken = v._tokenIndexing(0);
+        address toToken = v._tokenIndexing(1);
 
-        uint256 swapAmount = getLargestSwap(swapVault, swapVault, fromToken, toToken) * uint256(swapSizePercentage) / (2**32 - 1);
+        uint256 swapAmount = getLargestSwap(vault, vault, fromToken, toToken) * uint256(swapSizePercentage) / (2**32 - 1);
 
-        t_localswap(vaults, swapVault, swapAmount, fromToken, toToken);
+        t_localswap(vaults, vault, swapAmount, fromToken, toToken);
+    }
+
+    function test_local_swap_invariance_same_token(uint32 swapSizePercentage) external virtual {
+        address[] memory vaults = getTestConfig();
+
+        address vault = vaults[0];
+
+        address sameToken = ICatalystV1Vault(vault)._tokenIndexing(0);
+
+        uint256 swapAmount = getLargestSwap(vault, vault, sameToken, sameToken) * uint256(swapSizePercentage) / (2**32 - 1);
+
+        t_localswap(vaults, vault, swapAmount, sameToken, sameToken);
     }
 
     function test_local_swap_zero() external virtual {
         address[] memory vaults = getTestConfig();
 
         for (uint256 i = 0; i < vaults.length; ++i) {
-            address swapVault = vaults[i];
+            address vault = vaults[i];
+            ICatalystV1Vault v = ICatalystV1Vault(vault);
 
-            address fromToken = ICatalystV1Vault(swapVault)._tokenIndexing(0);
-            address toToken = ICatalystV1Vault(swapVault)._tokenIndexing(1);
+            address fromToken = v._tokenIndexing(0);
+            address toToken = v._tokenIndexing(1);
 
-            ICatalystV1Vault v = ICatalystV1Vault(swapVault);
 
             vm.expectRevert(
                 abi.encodeWithSignature(
@@ -77,9 +90,9 @@ abstract contract TestLocalswap is Test, AVaultInterfaces {
             );
             v.localSwap(fromToken, toToken, 0, 1);
 
-            uint256 balanceBefore = Token(toToken).balanceOf(swapVault);
+            uint256 balanceBefore = Token(toToken).balanceOf(vault);
             v.localSwap(fromToken, toToken, 0, 0);
-            uint256 balanceAfter = Token(toToken).balanceOf(swapVault);
+            uint256 balanceAfter = Token(toToken).balanceOf(vault);
 
             assertEq(balanceBefore, balanceAfter, "0 value swap changed pool balances");
         }
@@ -90,12 +103,12 @@ abstract contract TestLocalswap is Test, AVaultInterfaces {
         address[] memory vaults = getTestConfig();
 
         for (uint256 i = 0; i < vaults.length; ++i) {
-            address swapVault = vaults[i];
+            address vault = vaults[i];
+            ICatalystV1Vault v = ICatalystV1Vault(vault);
 
-            address fromToken = ICatalystV1Vault(swapVault)._tokenIndexing(0);
-            address toToken = ICatalystV1Vault(swapVault)._tokenIndexing(1);
+            address fromToken = v._tokenIndexing(0);
+            address toToken = v._tokenIndexing(1);
 
-            ICatalystV1Vault v = ICatalystV1Vault(swapVault);
 
             vm.expectRevert(
                 "TRANSFER_FROM_FAILED"
@@ -108,14 +121,14 @@ abstract contract TestLocalswap is Test, AVaultInterfaces {
         address[] memory vaults = getTestConfig();
 
         for (uint256 i = 0; i < vaults.length; ++i) {
-            address swapVault = vaults[i];
+            address vault = vaults[i];
+            ICatalystV1Vault v = ICatalystV1Vault(vault);
 
-            address fromToken = ICatalystV1Vault(swapVault)._tokenIndexing(0);
-            address toToken = ICatalystV1Vault(swapVault)._tokenIndexing(1);
+            address fromToken = v._tokenIndexing(0);
+            address toToken = v._tokenIndexing(1);
 
-            ICatalystV1Vault v = ICatalystV1Vault(swapVault);
 
-            Token(fromToken).approve(swapVault, amount);
+            Token(fromToken).approve(vault, amount);
             uint256 balanceBefore = Token(fromToken).balanceOf(address(this));
             v.localSwap(fromToken, toToken, amount, 0);
             uint256 balanceAfter = Token(fromToken).balanceOf(address(this));
@@ -127,14 +140,14 @@ abstract contract TestLocalswap is Test, AVaultInterfaces {
         address[] memory vaults = getTestConfig();
 
         for (uint256 i = 0; i < vaults.length; ++i) {
-            address swapVault = vaults[i];
+            address vault = vaults[i];
+            ICatalystV1Vault v = ICatalystV1Vault(vault);
 
-            address fromToken = ICatalystV1Vault(swapVault)._tokenIndexing(0);
-            address toToken = ICatalystV1Vault(swapVault)._tokenIndexing(1);
+            address fromToken = v._tokenIndexing(0);
+            address toToken = v._tokenIndexing(1);
 
-            ICatalystV1Vault v = ICatalystV1Vault(swapVault);
 
-            Token(fromToken).approve(swapVault, amount);
+            Token(fromToken).approve(vault, amount);
 
             vm.expectCall(
                 fromToken,
@@ -142,7 +155,7 @@ abstract contract TestLocalswap is Test, AVaultInterfaces {
                     TF.transferFrom,
                     (
                         address(this),
-                        swapVault,
+                        vault,
                         amount
                     )
                 )
