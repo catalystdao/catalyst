@@ -1,4 +1,4 @@
-use cosmwasm_std::{StdError, Uint64, Uint128};
+use cosmwasm_std::{StdError, Uint64, Uint128, Coin};
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -30,6 +30,15 @@ pub enum ContractError {
         expected_amount: Uint128,
         asset: String
     },
+
+    #[error("Expected gas not received: {gas}.")]
+    GasNotReceived { gas: Coin },
+
+    #[error("Not enough gas received: {received} (expected {expected}).")]
+    NotEnoughGasReceived {
+        received: Coin,
+        expected: Coin,
+    },
 }
 
 impl From<ContractError> for StdError {
@@ -50,7 +59,12 @@ impl From<vault_assets::error::AssetError> for ContractError {
                 expected_amount,
                 asset
             } => ContractError::UnexpectedAssetAmountReceived {received_amount, expected_amount, asset},
-            other => ContractError::Std(other.into())   // This should never happen
+            vault_assets::error::AssetError::GasNotReceived { gas } => ContractError::GasNotReceived { gas },
+            vault_assets::error::AssetError::NotEnoughGasReceived {
+                received,
+                expected
+            } => ContractError::NotEnoughGasReceived { received, expected },
+            other => ContractError::Std(other.into()),   // This should never happen
         }
     }
 }
