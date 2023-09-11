@@ -1,11 +1,29 @@
 {
-    "sepolia": {
-        "chainIdentifier": 11155111
-    },
     "mumbai": {
         "chainIdentifier": 80001
     },
     "base-goerli": {
         "chainIdentifier": 84531
+    },
+    "mantle" : {
+        "chainIdentifier": 5001
+    },
+    "taiko": {
+        "chainIdentifier": 167006
+    },
+    "scroll-sepolia": {
+        "chainIdentifier": 534351
+    },
+    "arbitrum": {
+        "chainIdentifier": 421613
+    },
+    "optimism": {
+        "chainIdentifier": 420
+    },
+    "bsc": {
+        "chainIdentifier": 97
+    },
+    "opbnb": {
+        "chainIdentifier": 5611
     }
 }
