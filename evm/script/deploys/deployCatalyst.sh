@@ -5,20 +5,15 @@ set -o allexport
 source ../../.env
 
 # Setup each of the envs
-source .mumbai.env
-./deployCatalyst.base.sh &
-mumbai=$!
-sleep 1  # The delay is to ensure the scripts aren't writing / reading at the same time and causing a conflict.
 
-source .sepolia.env
-./deployCatalyst.base.sh &
-sepolia=$!
-sleep 1 # The delay is to ensure the scripts aren't writing / reading at the same time and causing a conflict.
+arr=()
 
-source .base-goerli.env
-./deployCatalyst.base.sh &
-base_goerli=$!
-sleep 1 # The delay is to ensure the scripts aren't writing / reading at the same time and causing a conflict.
+for filename in envs/*.env; do
+    source $filename
+    ./deployCatalyst.base.sh &
+    arr += ("'$!'")
+    sleep 1  # The delay is to ensure the scripts aren't writing / reading at the same time and causing a conflict.
+done
 
 wait $base_goerli $mumbai $sepolia
 
