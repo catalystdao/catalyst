@@ -145,7 +145,7 @@ fn execute_deploy_vault(
     }
 
     // Handle asset transfer from the deployer to the factory
-    let assets = VaultAssets::new(assets);
+    let assets = VaultAssets::new(assets)?;
     let transfer_msgs = assets.receive_assets(
         &env,
         &info,
@@ -279,7 +279,7 @@ fn handle_deploy_vault_reply(
     let deploy_args = get_deploy_vault_reply_args(deps)?;
 
     // Handle asset transfer from the factory to the vault
-    let assets = VaultAssets::new(deploy_args.assets.clone());
+    let assets = VaultAssets::new_unchecked(deploy_args.assets.clone());
     let transfer_msgs = assets.send_assets(
         &env,
         deploy_args.assets_balances.clone(),

@@ -111,7 +111,7 @@ pub fn initialize_swap_curves(
     // Save the assets
     // NOTE: there is no need to validate the assets, as invalid asset addresses
     // would have caused the previous 'asset balance' check to fail.
-    let vault_assets = VaultAssets::new(assets);
+    let vault_assets = VaultAssets::new(assets)?;
     vault_assets.save(deps)?;
 
     let asset_refs = vault_assets.get_assets_refs();

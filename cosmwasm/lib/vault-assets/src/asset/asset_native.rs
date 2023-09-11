@@ -25,7 +25,30 @@ pub struct NativeVaultAssets(pub Vec<NativeAsset>);
 impl<'a> VaultAssetsTrait<'a, NativeAsset, NativeAssetMsg> for NativeVaultAssets {
 
 
-    fn new(assets: Vec<NativeAsset>) -> Self {
+    fn new(assets: Vec<NativeAsset>) -> Result<Self, AssetError> where Self: Sized {
+
+        if assets.len() == 0 {
+            return Err(AssetError::InvalidParameters { reason: "No assets provided.".to_string() })
+        }
+
+        // Make sure denoms and aliases are unique
+        let contains_duplicate = (1..assets.len())
+            .any(|i| {
+                assets[i..].iter().any(|matched_asset| {
+                        let ref_asset = &assets[i-1];
+                        matched_asset.denom == ref_asset.denom || matched_asset.alias == ref_asset.alias
+                    })
+            });
+
+        if contains_duplicate {
+            return Err(AssetError::InvalidParameters { reason: "Provided asset denom/aliases are not unique.".to_string() })
+        }
+        
+        Ok(Self::new_unchecked(assets))
+    }
+
+
+    fn new_unchecked(assets: Vec<NativeAsset>) -> Self {
         Self(assets)
     }
 
@@ -372,7 +395,7 @@ mod asset_native_tests {
     fn test_new_vault_assets_handler() {
 
         let assets = get_mock_assets();
-        let handler = NativeVaultAssets::new(assets.clone());
+        let handler = NativeVaultAssets::new(assets.clone()).unwrap();
 
         assert_eq!(
             handler.get_assets().to_owned(),
@@ -382,12 +405,88 @@ mod asset_native_tests {
 
 
     #[test]
+    fn test_new_vault_assets_handler_no_assets() {
+
+        // Tested action: no assets
+        let result = NativeVaultAssets::new(
+            vec![]
+        );
+
+        // Make sure handler creation failed
+        assert!(matches!(
+            result.err().unwrap(),
+            AssetError::InvalidParameters { reason }
+                if reason == "No assets provided.".to_string()
+        ));
+
+    }
+
+
+    #[test]
+    fn test_new_vault_assets_handler_duplicated_assets() {
+
+        // Tested action 1: duplicated denoms
+        let result = NativeVaultAssets::new(
+            vec![
+                NativeAsset {
+                    denom: "asset_a".to_string(),
+                    alias: "a".to_string()
+                },
+                NativeAsset {
+                    denom: "asset_a".to_string(),   // Duplicated denom
+                    alias: "b".to_string()
+                },
+                NativeAsset {
+                    denom: "asset_c".to_string(),
+                    alias: "c".to_string()
+                }
+            ]
+        );
+
+        // Make sure handler creation failed
+        assert!(matches!(
+            result.err().unwrap(),
+            AssetError::InvalidParameters { reason }
+                if reason == "Provided asset denom/aliases are not unique.".to_string()
+        ));
+
+
+
+        // Tested action 2: duplicated aliases
+        let result = NativeVaultAssets::new(
+            vec![
+                NativeAsset {
+                    denom: "asset_a".to_string(),
+                    alias: "a".to_string()
+                },
+                NativeAsset {
+                    denom: "asset_b".to_string(),
+                    alias: "b".to_string()
+                },
+                NativeAsset {
+                    denom: "asset_c".to_string(),
+                    alias: "a".to_string()          // Duplicated alias
+                }
+            ]
+        );
+
+        // Make sure handler creation failed
+        assert!(matches!(
+            result.err().unwrap(),
+            AssetError::InvalidParameters { reason }
+                if reason == "Provided asset denom/aliases are not unique.".to_string()
+        ))
+
+    }
+
+
+    #[test]
     fn test_save_and_load_vault_assets_handler() {
 
         let mut deps = mock_dependencies();
 
         let assets = get_mock_assets();
-        let handler = NativeVaultAssets::new(assets.clone());
+        let handler = NativeVaultAssets::new(assets.clone()).unwrap();
 
 
 
@@ -424,7 +523,7 @@ mod asset_native_tests {
         let env = mock_env();
 
         let assets = get_mock_assets();
-        let handler = NativeVaultAssets::new(assets.clone());
+        let handler = NativeVaultAssets::new(assets.clone()).unwrap();
 
         let desired_received_amounts: Vec<Uint128> = vec![
             Uint128::from(123u128),
@@ -466,7 +565,7 @@ mod asset_native_tests {
         let env = mock_env();
 
         let assets = get_mock_assets();
-        let handler = NativeVaultAssets::new(assets.clone());
+        let handler = NativeVaultAssets::new(assets.clone()).unwrap();
 
         let desired_received_amounts: Vec<Uint128> = vec![
             Uint128::from(123u128),
@@ -504,7 +603,7 @@ mod asset_native_tests {
         let env = mock_env();
 
         let assets = get_mock_assets();
-        let handler = NativeVaultAssets::new(assets.clone());
+        let handler = NativeVaultAssets::new(assets.clone()).unwrap();
 
         let desired_received_amounts: Vec<Uint128> = vec![
             Uint128::from(123u128),
@@ -673,7 +772,7 @@ mod asset_native_tests {
         let env = mock_env();
 
         let assets = get_mock_assets();
-        let handler = NativeVaultAssets::new(assets.clone());
+        let handler = NativeVaultAssets::new(assets.clone()).unwrap();
 
 
 
@@ -732,7 +831,7 @@ mod asset_native_tests {
         let env = mock_env();
 
         let assets = get_mock_assets();
-        let handler = NativeVaultAssets::new(assets.clone());
+        let handler = NativeVaultAssets::new(assets.clone()).unwrap();
 
         let desired_send_amounts: Vec<Uint128> = vec![
             Uint128::from(123u128),
@@ -778,7 +877,7 @@ mod asset_native_tests {
         let env = mock_env();
 
         let assets = get_mock_assets();
-        let handler = NativeVaultAssets::new(assets.clone());
+        let handler = NativeVaultAssets::new(assets.clone()).unwrap();
 
         let desired_send_amounts: Vec<Uint128> = vec![
             Uint128::from(123u128),
@@ -812,7 +911,7 @@ mod asset_native_tests {
         let env = mock_env();
 
         let assets = get_mock_assets();
-        let handler = NativeVaultAssets::new(assets.clone());
+        let handler = NativeVaultAssets::new(assets.clone()).unwrap();
 
 
 

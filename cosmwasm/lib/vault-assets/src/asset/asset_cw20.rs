@@ -24,7 +24,30 @@ pub struct Cw20VaultAssets(pub Vec<Cw20Asset>);
 
 impl<'a> VaultAssetsTrait<'a, Cw20Asset, Cw20AssetMsg> for Cw20VaultAssets {
 
-    fn new(assets: Vec<Cw20Asset>) -> Self {
+    fn new(assets: Vec<Cw20Asset>) -> Result<Self, AssetError> where Self: Sized {
+
+        if assets.len() == 0 {
+            return Err(AssetError::InvalidParameters { reason: "No assets provided.".to_string() })
+        }
+
+        // Make sure cw20 addresses are unique
+        let contains_duplicate = (1..assets.len())
+            .any(|i| {
+                assets[i..].iter().any(|matched_asset| {
+                        let ref_asset = &assets[i-1];
+                        matched_asset.0 == ref_asset.0
+                    })
+            });
+
+        if contains_duplicate {
+            return Err(AssetError::InvalidParameters { reason: "Provided assets are not unique.".to_string() })
+        }
+
+        Ok(Self::new_unchecked(assets))
+    }
+
+
+    fn new_unchecked(assets: Vec<Cw20Asset>) -> Self {
         Self(assets)
     }
 
@@ -403,7 +426,7 @@ mod asset_cw20_tests {
     fn test_new_vault_assets_handler() {
 
         let assets = get_mock_assets();
-        let handler = Cw20VaultAssets::new(assets.clone());
+        let handler = Cw20VaultAssets::new(assets.clone()).unwrap();
 
         assert_eq!(
             handler.get_assets().to_owned(),
@@ -413,12 +436,52 @@ mod asset_cw20_tests {
 
 
     #[test]
+    fn test_new_vault_assets_handler_no_assets() {
+
+        // Tested action: no assets
+        let result = Cw20VaultAssets::new(
+            vec![]
+        );
+
+        // Make sure handler creation failed
+        assert!(matches!(
+            result.err().unwrap(),
+            AssetError::InvalidParameters { reason }
+                if reason == "No assets provided.".to_string()
+        ));
+
+    }
+
+
+    #[test]
+    fn test_new_vault_assets_handler_duplicated_assets() {
+
+        // Tested action: duplicated cw20
+        let result = Cw20VaultAssets::new(
+            vec![
+                Cw20Asset("contract_a".to_string()),
+                Cw20Asset("contract_a".to_string()),    // Duplicated cw20
+                Cw20Asset("contract_c".to_string())
+            ]
+        );
+
+        // Make sure handler creation failed
+        assert!(matches!(
+            result.err().unwrap(),
+            AssetError::InvalidParameters { reason }
+                if reason == "Provided assets are not unique.".to_string()
+        ));
+
+    }
+
+
+    #[test]
     fn test_save_and_load_vault_assets_handler() {
 
         let mut deps = mock_dependencies();
 
         let assets = get_mock_assets();
-        let handler = Cw20VaultAssets::new(assets.clone());
+        let handler = Cw20VaultAssets::new(assets.clone()).unwrap();
 
 
 
@@ -455,7 +518,7 @@ mod asset_cw20_tests {
         let env = mock_env();
 
         let assets = get_mock_assets();
-        let handler = Cw20VaultAssets::new(assets.clone());
+        let handler = Cw20VaultAssets::new(assets.clone()).unwrap();
 
         let desired_received_amounts: Vec<Uint128> = vec![
             Uint128::from(123u128),
@@ -497,7 +560,7 @@ mod asset_cw20_tests {
         let env = mock_env();
 
         let assets = get_mock_assets();
-        let handler = Cw20VaultAssets::new(assets.clone());
+        let handler = Cw20VaultAssets::new(assets.clone()).unwrap();
 
         let desired_received_amounts: Vec<Uint128> = vec![
             Uint128::from(123u128),
@@ -535,7 +598,7 @@ mod asset_cw20_tests {
         let env = mock_env();
 
         let assets = get_mock_assets();
-        let handler = Cw20VaultAssets::new(assets.clone());
+        let handler = Cw20VaultAssets::new(assets.clone()).unwrap();
 
 
 
@@ -598,7 +661,7 @@ mod asset_cw20_tests {
         let env = mock_env();
 
         let assets = get_mock_assets();
-        let handler = Cw20VaultAssets::new(assets.clone());
+        let handler = Cw20VaultAssets::new(assets.clone()).unwrap();
 
         let desired_send_amounts: Vec<Uint128> = vec![
             Uint128::from(123u128),
@@ -635,7 +698,7 @@ mod asset_cw20_tests {
         let env = mock_env();
 
         let assets = get_mock_assets();
-        let handler = Cw20VaultAssets::new(assets.clone());
+        let handler = Cw20VaultAssets::new(assets.clone()).unwrap();
 
         let desired_send_amounts: Vec<Uint128> = vec![
             Uint128::from(123u128),
@@ -669,7 +732,7 @@ mod asset_cw20_tests {
         let env = mock_env();
 
         let assets = get_mock_assets();
-        let handler = Cw20VaultAssets::new(assets.clone());
+        let handler = Cw20VaultAssets::new(assets.clone()).unwrap();
 
 
 

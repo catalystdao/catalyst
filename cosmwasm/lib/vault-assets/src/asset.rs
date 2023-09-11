@@ -13,12 +13,21 @@ pub trait VaultAssetsTrait<'a, T: AssetTrait<Msg> + 'a, Msg> {
 
     /// Generate a new vault assets handler with the specified assets.
     /// 
-    /// ! **IMPORTANT**: This function does not check the validity of the provided assets.
+    /// ! **IMPORTANT**: This function does not check whether the provided assets exist/are valid,
+    /// but may check whether they are well formatted.
     /// 
     /// # Arguments:
     /// * `assets` - The assets contained by the vault.
     /// 
-    fn new(assets: Vec<T>) -> Self;
+    fn new(assets: Vec<T>) -> Result<Self, AssetError> where Self: Sized;
+
+
+    /// Like `new`, but without any data validation checks.
+    /// 
+    /// # Arguments:
+    /// * `assets` - The assets contained by the vault.
+    /// 
+    fn new_unchecked(assets: Vec<T>) -> Self;
 
 
     /// Get the vault assets.
@@ -64,7 +73,7 @@ pub trait VaultAssetsTrait<'a, T: AssetTrait<Msg> + 'a, Msg> {
         let assets_refs = Self::load_refs(deps)?;
 
         Ok(
-            Self::new(
+            Self::new_unchecked(
                 assets_refs.iter()
                     .map(|asset_ref| T::from_asset_ref(deps, asset_ref))
                     .collect::<Result<Vec<T>, AssetError>>()?
