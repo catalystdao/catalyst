@@ -8,25 +8,25 @@
   "base-goerli": {
     "WETH": "0x231401dC8b53338d78c08f83CC4EBc74148196d0"
   },
-  "mantle" : {
+  "mantletestnet" : {
     "WETH": "0x4200000000000000000000000000000000000006"
   },
-  "taiko": {
+  "taikoeldfell": {
     "WETH": "0x1017f42d1d3e7d490ea3cc4c95591c339ba71ac5"
   },
-  "scroll-sepolia": {
+  "scrollsepolia": {
     "WETH": "0xBa4Cec9b8137DDf02546534f14e438940ba58AF6"
   },
-  "arbitrum-goerli": {
+  "arbitrumgoerli": {
     "WETH": "0x7F5bc2250ea57d8ca932898297b1FF9aE1a04999"
   },
-  "optimism-goerli": {
+  "optimismgoerli": {
     "WETH": "0x4200000000000000000000000000000000000006"
   },
-  "bsc": {
+  "bsctestnet": {
     "WBNB": "0xae13d989daC2f0dEbFf460aC112a837C89BAa7cd"
   },
-  "opbnb": {
+  "opbnbtestnet": {
     "WBNB": "0xB5C20CD5F998C028a1fC0FDdCE3D61c5a50F7B38"
   }
 }

@@ -15,9 +15,9 @@ import {Bytes65} from "GeneralisedIncentives/src/utils/Bytes65.sol";
 import "GeneralisedIncentives/src/apps/mock/IncentivizedMockEscrow.sol";
 import { IMessageEscrowStructs } from "GeneralisedIncentives/src/interfaces/IMessageEscrowStructs.sol";
 
-import { DeployCatalyst, JsonContracts } from "../script/DeployCatalyst.s.sol";
+import { DeployContracts, JsonContracts } from "../script/DeployContracts.s.sol";
 
-contract TestCommon is Test, Bytes65, IMessageEscrowStructs, TestTokenFunctions, DeployCatalyst {
+contract TestCommon is Test, Bytes65, IMessageEscrowStructs, TestTokenFunctions, DeployContracts {
 
     // add this to be excluded from coverage report
     function test() public {}
@@ -52,7 +52,7 @@ contract TestCommon is Test, Bytes65, IMessageEscrowStructs, TestTokenFunctions,
 
         _INCENTIVE.refundGasTo = makeAddr("refundGasTo");
 
-        deployAllContracts();
+        deployAllContracts(address(this));
 
         catFactory = CatalystFactory(contracts.factory);
 

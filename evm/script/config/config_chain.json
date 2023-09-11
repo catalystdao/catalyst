@@ -5,25 +5,25 @@
     "base-goerli": {
         "chainIdentifier": 84531
     },
-    "mantle" : {
+    "mantletestnet" : {
         "chainIdentifier": 5001
     },
-    "taiko": {
+    "taikoeldfell": {
         "chainIdentifier": 167006
     },
-    "scroll-sepolia": {
+    "scrollsepolia": {
         "chainIdentifier": 534351
     },
-    "arbitrum": {
+    "arbitrumgoerli": {
         "chainIdentifier": 421613
     },
-    "optimism": {
+    "optimismgoerli": {
         "chainIdentifier": 420
     },
-    "bsc": {
+    "bsctestnet": {
         "chainIdentifier": 97
     },
-    "opbnb": {
+    "opbnbtestnet": {
         "chainIdentifier": 5611
     }
 }

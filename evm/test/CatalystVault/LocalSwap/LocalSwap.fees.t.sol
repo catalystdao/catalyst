@@ -30,7 +30,7 @@ abstract contract TestLocalswapFees is Test, AVaultInterfaces {
 
             uint256 swapReturnWithFee = v.localSwap(fromToken, toToken, swapAmount, 0);
 
-            assertEq(expectedSwapReturn, swapReturnWithFee, "return after fee not expected.");
+            assertEq(expectedSwapReturn, swapReturnWithFee, "return after fee not expected4.");
         }
     }
 
@@ -44,8 +44,8 @@ abstract contract TestLocalswapFees is Test, AVaultInterfaces {
 
             address fromToken = v._tokenIndexing(0);
             address toToken = v._tokenIndexing(1);
-
-            assertEq(Token(fromToken).balanceOf(v.factoryOwner()), 0, "return after fee not expected.");
+            
+            uint256 initialFromTokenBalance = Token(fromToken).balanceOf(v.factoryOwner());
 
             uint256 swapAmount = getLargestSwap(vault, vault, fromToken, toToken) * swapPercentage / (2**16 - 1);
 
@@ -61,9 +61,9 @@ abstract contract TestLocalswapFees is Test, AVaultInterfaces {
 
             uint256 swapReturnWithFee = v.localSwap(fromToken, toToken, swapAmount, 0);
 
-            assertEq(expectedSwapReturn, swapReturnWithFee, "return after fee not expected.");
+            assertEq(expectedSwapReturn, swapReturnWithFee, "return after fee not expected2.");
 
-            assertEq(Token(fromToken).balanceOf(v.factoryOwner()), swapAmount * vaultFee / 10**18 * governanceFee / 10**18, "return after fee not expected.");
+            assertEq(Token(fromToken).balanceOf(v.factoryOwner()) - (initialFromTokenBalance - swapAmount), swapAmount * vaultFee / 10**18 * governanceFee / 10**18, "return after fee not expected3.");
         }
     }
 }
