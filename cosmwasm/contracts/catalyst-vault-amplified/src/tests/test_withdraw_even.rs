@@ -2,10 +2,10 @@ mod test_amplified_withdraw_even {
     use std::str::FromStr;
 
     use cosmwasm_std::{Uint128, Addr, Attribute};
-    use cw_multi_test::{App, Executor};
-    use catalyst_vault_common::{ContractError, state::INITIAL_MINT_AMOUNT};
-    use test_helpers::{math::{uint128_to_f64, f64_to_uint128}, misc::get_response_attribute, token::{deploy_test_tokens, query_token_balance, query_token_info, transfer_tokens}, definitions::{SETUP_MASTER, WITHDRAWER}, contract::mock_factory_deploy_vault};
+    use catalyst_vault_common::{ContractError, state::INITIAL_MINT_AMOUNT, bindings::Asset};
+    use test_helpers::{math::{uint128_to_f64, f64_to_uint128}, misc::get_response_attribute, definitions::{SETUP_MASTER, WITHDRAWER, VAULT_TOKEN_DENOM}, contract::mock_factory_deploy_vault, env::CustomTestEnv, asset::CustomTestAsset, vault_token::CustomTestVaultToken};
 
+    use crate::tests::{TestEnv, TestVaultToken};
     use crate::{msg::AmplifiedExecuteMsg, tests::{helpers::amplified_vault_contract_storage, parameters::{AMPLIFICATION, TEST_VAULT_BALANCES, TEST_VAULT_WEIGHTS, TEST_VAULT_ASSET_COUNT}}};
 
 
@@ -13,20 +13,21 @@ mod test_amplified_withdraw_even {
     #[test]
     fn test_withdraw_even_calculation() {
 
-        let mut app = App::default();
+        let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
 
         // Instantiate and initialize vault
-        let vault_tokens = deploy_test_tokens(&mut app, SETUP_MASTER.to_string(), None, TEST_VAULT_ASSET_COUNT);
+        let vault_assets = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
-        let vault_code_id = amplified_vault_contract_storage(&mut app);
-        let vault = mock_factory_deploy_vault(
-            &mut app,
-            vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
+        let vault_code_id = amplified_vault_contract_storage(env.get_app());
+        let vault = mock_factory_deploy_vault::<Asset, _, _>(
+            &mut env,
+            vault_assets.clone(),
             vault_initial_balances.clone(),
             vault_weights.clone(),
             AMPLIFICATION,
             vault_code_id,
+            None,
             None,
             None
         );
@@ -36,10 +37,10 @@ mod test_amplified_withdraw_even {
         let withdraw_amount = f64_to_uint128(uint128_to_f64(INITIAL_MINT_AMOUNT) * withdraw_percentage).unwrap();
 
         // Fund withdrawer with vault tokens
-        transfer_tokens(
-            &mut app,
+        let vault_token = TestVaultToken::load(vault.to_string(), VAULT_TOKEN_DENOM.to_string());
+        vault_token.transfer(
+            env.get_app(),
             withdraw_amount,
-            vault.clone(),
             Addr::unchecked(SETUP_MASTER),
             WITHDRAWER.to_string()
         );
@@ -47,14 +48,15 @@ mod test_amplified_withdraw_even {
 
     
         // Tested action: withdraw all
-        let result = app.execute_contract(
+        let result = env.execute_contract(
             Addr::unchecked(WITHDRAWER),
             vault.clone(),
             &AmplifiedExecuteMsg::WithdrawAll {
                 vault_tokens: withdraw_amount,
                 min_out: vec![Uint128::zero(); TEST_VAULT_ASSET_COUNT]
             },
-            &[]
+            vec![],
+            vec![]
         ).unwrap();
 
 
@@ -81,20 +83,20 @@ mod test_amplified_withdraw_even {
 
 
         // Verify the withdrawn assets have been sent by the vault and received by the withdrawer
-        vault_tokens.iter()
+        vault_assets.iter()
             .zip(&vault_initial_balances)
             .zip(&observed_returns)
             .for_each(|((asset, initial_vault_balance), withdraw_amount) | {
 
                 // Vault balance
-                let vault_balance = query_token_balance(&mut app, Addr::unchecked(asset), vault.to_string());
+                let vault_balance = asset.query_balance(env.get_app(), vault.to_string());
                 assert_eq!(
                     vault_balance,
                     *initial_vault_balance - withdraw_amount
                 );
 
                 // Withdrawer balance
-                let withdrawer_balance = query_token_balance(&mut app, Addr::unchecked(asset), WITHDRAWER.to_string());
+                let withdrawer_balance = asset.query_balance(env.get_app(), WITHDRAWER.to_string());
                 assert_eq!(
                     withdrawer_balance,
                     *withdraw_amount
@@ -104,16 +106,16 @@ mod test_amplified_withdraw_even {
 
 
         // Verify the vault tokens have been burnt
-        let withdrawer_vault_tokens_balance = query_token_balance(&mut app, vault.clone(), WITHDRAWER.to_string());
+        let withdrawer_vault_tokens_balance = vault_token.query_balance(env.get_app(), WITHDRAWER.to_string());
         assert_eq!(
             withdrawer_vault_tokens_balance,
             Uint128::zero()
         );
     
         // Verify the vault total vault tokens supply
-        let vault_token_info = query_token_info(&mut app, vault.clone());
+        let vault_token_supply = vault_token.total_supply(env.get_app());
         assert_eq!(
-            vault_token_info.total_supply,
+            vault_token_supply,
             INITIAL_MINT_AMOUNT - withdraw_amount
         );
 
@@ -123,20 +125,21 @@ mod test_amplified_withdraw_even {
     #[test]
     fn test_withdraw_even_event() {
 
-        let mut app = App::default();
+        let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
 
         // Instantiate and initialize vault
-        let vault_tokens = deploy_test_tokens(&mut app, SETUP_MASTER.to_string(), None, TEST_VAULT_ASSET_COUNT);
+        let vault_assets = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
-        let vault_code_id = amplified_vault_contract_storage(&mut app);
-        let vault = mock_factory_deploy_vault(
-            &mut app,
-            vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
+        let vault_code_id = amplified_vault_contract_storage(env.get_app());
+        let vault = mock_factory_deploy_vault::<Asset, _, _>(
+            &mut env,
+            vault_assets.clone(),
             vault_initial_balances.clone(),
             vault_weights.clone(),
             AMPLIFICATION,
             vault_code_id,
+            None,
             None,
             None
         );
@@ -146,10 +149,10 @@ mod test_amplified_withdraw_even {
         let withdraw_amount = f64_to_uint128(uint128_to_f64(INITIAL_MINT_AMOUNT) * withdraw_percentage).unwrap();
 
         // Fund withdrawer with vault tokens
-        transfer_tokens(
-            &mut app,
+        let vault_token = TestVaultToken::load(vault.to_string(), VAULT_TOKEN_DENOM.to_string());
+        vault_token.transfer(
+            env.get_app(),
             withdraw_amount,
-            vault.clone(),
             Addr::unchecked(SETUP_MASTER),
             WITHDRAWER.to_string()
         );
@@ -157,14 +160,15 @@ mod test_amplified_withdraw_even {
 
     
         // Tested action: withdraw all
-        let result = app.execute_contract(
+        let result = env.execute_contract(
             Addr::unchecked(WITHDRAWER),
             vault.clone(),
             &AmplifiedExecuteMsg::WithdrawAll {
                 vault_tokens: withdraw_amount,
                 min_out: vec![Uint128::zero(); TEST_VAULT_ASSET_COUNT]
             },
-            &[]
+            vec![],
+            vec![]
         ).unwrap();
 
 
@@ -191,20 +195,21 @@ mod test_amplified_withdraw_even {
     #[test]
     fn test_withdraw_even_zero_balance() {
 
-        let mut app = App::default();
+        let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
 
         // Instantiate and initialize vault
-        let vault_tokens = deploy_test_tokens(&mut app, SETUP_MASTER.to_string(), None, TEST_VAULT_ASSET_COUNT);
+        let vault_assets = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
-        let vault_code_id = amplified_vault_contract_storage(&mut app);
-        let vault = mock_factory_deploy_vault(
-            &mut app,
-            vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
+        let vault_code_id = amplified_vault_contract_storage(env.get_app());
+        let vault = mock_factory_deploy_vault::<Asset, _, _>(
+            &mut env,
+            vault_assets.clone(),
             vault_initial_balances.clone(),
             vault_weights.clone(),
             AMPLIFICATION,
             vault_code_id,
+            None,
             None,
             None
         );
@@ -215,14 +220,15 @@ mod test_amplified_withdraw_even {
 
     
         // Tested action: withdraw all
-        let result = app.execute_contract(
+        let result = env.execute_contract(
             Addr::unchecked(WITHDRAWER),
             vault.clone(),
             &AmplifiedExecuteMsg::WithdrawAll {
                 vault_tokens: withdraw_amount,
                 min_out: vec![Uint128::zero(); TEST_VAULT_ASSET_COUNT]
             },
-            &[]
+            vec![],
+            vec![]
         ).unwrap();
 
 
@@ -245,9 +251,9 @@ mod test_amplified_withdraw_even {
         );
 
         // Verify no assets have been received by the withdrawer
-        vault_tokens.iter().for_each(|token| {
+        vault_assets.iter().for_each(|token| {
             assert_eq!(
-                query_token_balance(&mut app, token.clone(), WITHDRAWER.to_string()),
+                token.query_balance(env.get_app(), WITHDRAWER.to_string()),
                 Uint128::zero()
             );
         });
@@ -258,20 +264,21 @@ mod test_amplified_withdraw_even {
     #[test]
     fn test_withdraw_even_min_out() {
 
-        let mut app = App::default();
+        let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
 
         // Instantiate and initialize vault
-        let vault_tokens = deploy_test_tokens(&mut app, SETUP_MASTER.to_string(), None, TEST_VAULT_ASSET_COUNT);
+        let vault_assets = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
-        let vault_code_id = amplified_vault_contract_storage(&mut app);
-        let vault = mock_factory_deploy_vault(
-            &mut app,
-            vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
+        let vault_code_id = amplified_vault_contract_storage(env.get_app());
+        let vault = mock_factory_deploy_vault::<Asset, _, _>(
+            &mut env,
+            vault_assets.clone(),
             vault_initial_balances.clone(),
             vault_weights.clone(),
             AMPLIFICATION,
             vault_code_id,
+            None,
             None,
             None
         );
@@ -281,10 +288,10 @@ mod test_amplified_withdraw_even {
         let withdraw_amount = f64_to_uint128(uint128_to_f64(INITIAL_MINT_AMOUNT) * withdraw_percentage).unwrap();
 
         // Fund withdrawer with vault tokens
-        transfer_tokens(
-            &mut app,
+        let vault_token = TestVaultToken::load(vault.to_string(), VAULT_TOKEN_DENOM.to_string());
+        vault_token.transfer(
+            env.get_app(),
             withdraw_amount,
-            vault.clone(),
             Addr::unchecked(SETUP_MASTER),
             WITHDRAWER.to_string()
         );
@@ -307,14 +314,15 @@ mod test_amplified_withdraw_even {
 
     
         // Tested action 1: 'withdraw all' with min_out > expected_return fails
-        let response_result = app.execute_contract(
+        let response_result = env.execute_contract(
             Addr::unchecked(WITHDRAWER),
             vault.clone(),
             &AmplifiedExecuteMsg::WithdrawAll {
                 vault_tokens: withdraw_amount,
                 min_out: min_out_invalid.clone()
             },
-            &[]
+            vec![],
+            vec![]
         );
 
 
@@ -333,14 +341,15 @@ mod test_amplified_withdraw_even {
 
     
         // Tested action 2: withdraw all with min_out == expected_return succeeds
-        app.execute_contract(
+        env.execute_contract(
             Addr::unchecked(WITHDRAWER),
             vault.clone(),
             &AmplifiedExecuteMsg::WithdrawAll {
                 vault_tokens: withdraw_amount,
                 min_out: min_out_valid
             },
-            &[]
+            vec![],
+            vec![]
         ).unwrap();     // Make sure the transaction succeeds
 
     }
@@ -349,20 +358,21 @@ mod test_amplified_withdraw_even {
     #[test]
     fn test_withdraw_even_with_no_funds() {
 
-        let mut app = App::default();
+        let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
 
         // Instantiate and initialize vault
-        let vault_tokens = deploy_test_tokens(&mut app, SETUP_MASTER.to_string(), None, TEST_VAULT_ASSET_COUNT);
+        let vault_assets = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
-        let vault_code_id = amplified_vault_contract_storage(&mut app);
-        let vault = mock_factory_deploy_vault(
-            &mut app,
-            vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
+        let vault_code_id = amplified_vault_contract_storage(env.get_app());
+        let vault = mock_factory_deploy_vault::<Asset, _, _>(
+            &mut env,
+            vault_assets.clone(),
             vault_initial_balances.clone(),
             vault_weights.clone(),
             AMPLIFICATION,
             vault_code_id,
+            None,
             None,
             None
         );
@@ -376,22 +386,29 @@ mod test_amplified_withdraw_even {
 
     
         // Tested action: withdraw all
-        let response_result = app.execute_contract(
+        let response_result = env.execute_contract(
             Addr::unchecked(WITHDRAWER),
             vault.clone(),
             &AmplifiedExecuteMsg::WithdrawAll {
                 vault_tokens: withdraw_amount,
                 min_out: vec![Uint128::zero(); TEST_VAULT_ASSET_COUNT]
             },
-            &[]
+            vec![],
+            vec![]
         );
 
 
 
         // Make sure the transaction fails
+        #[cfg(feature="asset_native")]
         assert_eq!(
             response_result.err().unwrap().root_cause().to_string(),
             format!("Cannot Sub with 0 and {}", withdraw_amount)
+        );
+        #[cfg(feature="asset_cw20")]
+        assert_eq!(
+            response_result.err().unwrap().root_cause().to_string(),
+            format!("Error: Burn failed: Overflow: Cannot Sub with 0 and {}", withdraw_amount)
         );
 
     }

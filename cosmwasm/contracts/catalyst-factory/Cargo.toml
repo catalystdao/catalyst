@@ -20,6 +20,8 @@ crate-type = ["cdylib", "rlib"]
 backtraces = ["cosmwasm-std/backtraces"]
 # use library feature to disable all instantiate/execute/query exports
 library = []
+asset_native = ["catalyst-vault-common/asset_native"]
+asset_cw20 = ["catalyst-vault-common/asset_cw20"]
 
 [profile.release]
 codegen-units = 1
@@ -44,6 +46,7 @@ cw20 = { workspace = true }
 schemars = { workspace = true }
 serde = { workspace = true }
 thiserror = { workspace = true }
+vault-assets = { path = "../../lib/vault-assets" }
 catalyst-vault-common = { path = "../catalyst-vault-common" }
 
 [dev-dependencies]

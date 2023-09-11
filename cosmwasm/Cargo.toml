@@ -1,4 +1,5 @@
 [workspace]
+resolver = "2"
 
 members = [
   'contracts/*',
@@ -18,11 +19,15 @@ rpath = false
 
 [workspace.dependencies]
 cosmwasm-schema = "1.3.0"
-cosmwasm-std = "1.3.0"
+cosmwasm-std = { version = "1.3.0", features = ["cosmwasm_1_1"] }
 cosmwasm-storage = "1.3.0"
 cw-controllers = "1.1.0"
 cw-storage-plus = "1.1.0"
-cw-multi-test = "0.16.5"
+
+# TODO ! Replace the following dependency with the one form the package registry once it is updated with the
+# 'get_supply' query feature (currently this is only available from the github repo) - as of 0.16.5
+cw-multi-test = { git = "https://github.com/CosmWasm/cw-multi-test.git", rev="ce37144ec33c8000bd0ad0d7d01713b11a547170" }
+
 cw0 = "0.10.3"
 cw2 = "1.1.0"
 cw20 = "1.1.0"
@@ -31,3 +36,4 @@ schemars = "0.8.3"
 serde = { version = "1.0.103", default-features = false, features = ["derive"] }
 sha3 = "0.10.6"
 thiserror = "1.0.26"
+token-bindings = "0.10.3"

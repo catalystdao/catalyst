@@ -1,9 +1,9 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{DepsMut, Env, MessageInfo, Response, Uint128, CosmosMsg, to_binary, StdError, SubMsg, Reply, SubMsgResult, StdResult, Uint64, Deps, Binary};
+use cosmwasm_std::{DepsMut, Env, MessageInfo, Uint128, CosmosMsg, to_binary, StdError, SubMsg, Reply, SubMsgResult, StdResult, Uint64, Deps, Binary, Coin};
 use cw0::parse_reply_instantiate_data;
 use cw2::set_contract_version;
-use cw20::Cw20ExecuteMsg;
+use catalyst_vault_common::bindings::{Asset, VaultAssets, VaultAssetsTrait, VaultResponse, IntoCosmosCustomMsg, CustomMsg};
 
 use crate::error::ContractError;
 use crate::event::deploy_vault_event;
@@ -24,7 +24,7 @@ pub fn instantiate(
     _env: Env,
     info: MessageInfo,
     msg: InstantiateMsg,
-) -> Result<Response, ContractError> {
+) -> Result<VaultResponse, ContractError> {
 
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
@@ -36,7 +36,7 @@ pub fn instantiate(
     )?;
 
     Ok(
-        Response::new()
+        VaultResponse::new()
             .add_event(set_owner_event)
             .add_event(set_default_fee_event)
     )
@@ -49,13 +49,13 @@ pub fn instantiate(
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(
     deps: DepsMut,
-    _env: Env,
+    env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
-) -> Result<Response, ContractError> {
+) -> Result<VaultResponse, ContractError> {
 
     match msg {
-        ExecuteMsg::DeployVault {
+        ExecuteMsg::<Asset>::DeployVault {
             vault_code_id,
             assets,
             assets_balances,
@@ -64,9 +64,11 @@ pub fn execute(
             vault_fee,
             name,
             symbol,
-            chain_interface
+            chain_interface,
+            gas
         } => execute_deploy_vault(
             deps,
+            env,
             info,
             vault_code_id,
             assets,
@@ -76,7 +78,8 @@ pub fn execute(
             vault_fee,
             name,
             symbol,
-            chain_interface               
+            chain_interface,
+            gas
         ),
 
         ExecuteMsg::SetDefaultGovernanceFeeShare {
@@ -114,20 +117,23 @@ pub fn execute(
 /// * `name` - The name of the vault token.
 /// * `symbol` - The symbol of the vault token.
 /// * `chain_interface` - The interface used for cross-chain swaps. It can be set to None to disable cross-chain swaps.
+/// * `gas` - Coin amounts to send to the vault on instantiation.
 /// 
 fn execute_deploy_vault(
     mut deps: DepsMut,
+    env: Env,
     info: MessageInfo,
     vault_code_id: u64,
-    assets: Vec<String>,
+    assets: Vec<Asset>,
     assets_balances: Vec<Uint128>,
     weights: Vec<Uint128>,
     amplification: Uint64,
     vault_fee: Uint64,
     name: String,
     symbol: String,
-    chain_interface: Option<String>
-) -> Result<Response, ContractError> {
+    chain_interface: Option<String>,
+    gas: Option<Vec<Coin>>
+) -> Result<VaultResponse, ContractError> {
 
     // Verify the correctness of the arguments
     if
@@ -137,6 +143,15 @@ fn execute_deploy_vault(
     {
         return Err(StdError::generic_err("Invalid asset/balances/weights count.").into());
     }
+
+    // Handle asset transfer from the deployer to the factory
+    let assets = VaultAssets::new(assets)?;
+    let transfer_msgs = assets.receive_assets(
+        &env,
+        &info,
+        assets_balances.clone(),
+        gas.clone()
+    )?;
 
     // Save the required args to initalize the vault curves after the vault instantiation (used on 'reply').
     // ! This is set to only work if data is NOT present on the store (prevent a reentrancy attack).
@@ -151,7 +166,7 @@ fn execute_deploy_vault(
         deps.branch(),
         DeployVaultReplyArgs {
             vault_code_id: vault_code_id.clone(),
-            assets,
+            assets: assets.get_assets().to_owned(),
             assets_balances,
             weights,
             amplification,
@@ -177,14 +192,19 @@ fn execute_deploy_vault(
                                                                     // of the contract (or to set it to an invalid address).
                 setup_master: info.sender.to_string()
             })?,
-            funds: vec![],
+            funds: gas.unwrap_or(vec![]),
             label: symbol.to_string()
         },
         DEPLOY_VAULT_REPLY_ID
     );
     
     Ok(
-        Response::new()
+        VaultResponse::new()
+            .add_messages(
+                transfer_msgs.into_iter()
+                    .map(|msg| msg.into_cosmos_vault_msg())
+                    .collect::<Vec<CosmosMsg<CustomMsg>>>()
+                )
             .add_submessage(instantiate_vault_submsg)
     )
 }
@@ -200,7 +220,7 @@ fn execute_set_default_governance_fee_share(
     mut deps: DepsMut,
     info: MessageInfo,
     fee: Uint64
-) -> Result<Response, ContractError> {
+) -> Result<VaultResponse, ContractError> {
     set_default_governance_fee_share(&mut deps, info, fee)
 }
 
@@ -215,7 +235,7 @@ fn execute_transfer_ownership(
     deps: DepsMut,
     info: MessageInfo,
     new_owner: String
-) -> Result<Response, ContractError> {
+) -> Result<VaultResponse, ContractError> {
     update_owner(deps, info, new_owner)
 }
 
@@ -226,12 +246,12 @@ fn execute_transfer_ownership(
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn reply(
     deps: DepsMut,
-    _env: Env,
+    env: Env,
     reply: Reply
-) -> Result<Response, ContractError> {
+) -> Result<VaultResponse, ContractError> {
     match reply.id {
         DEPLOY_VAULT_REPLY_ID => match reply.result {
-            SubMsgResult::Ok(_) => handle_deploy_vault_reply(deps, reply),
+            SubMsgResult::Ok(_) => handle_deploy_vault_reply(deps, env, reply),
             SubMsgResult::Err(_) => {       // Reply is set to 'on_success', so the code should never reach this point
                 Err(StdError::GenericErr { msg: "Vault deployment failed.".to_string() }.into())
             }
@@ -244,8 +264,9 @@ pub fn reply(
 /// Setup the newly deployed vault after instantiation.
 fn handle_deploy_vault_reply(
     deps: DepsMut,
+    env: Env,
     reply: Reply
-) -> Result<Response, ContractError> {
+) -> Result<VaultResponse, ContractError> {
 
     // Get the deployed vault contract address
     let vault_address = parse_reply_instantiate_data(reply)
@@ -257,28 +278,19 @@ fn handle_deploy_vault_reply(
     // ! would become 'locked', and no further vault deployments would be possible.
     let deploy_args = get_deploy_vault_reply_args(deps)?;
 
-    // Build messages to order the transfer of tokens from 'setup_master' to the vault
-    let transfer_msgs: Vec<CosmosMsg> = deploy_args.assets.iter()
-        .zip(&deploy_args.assets_balances)  // zip: assets_balances.len() == assets.len() (check performed on 'execute_deploy_vault')
-        .map(|(asset, balance)| {
-            Ok(CosmosMsg::Wasm(
-                cosmwasm_std::WasmMsg::Execute {
-                    contract_addr: asset.to_string(),
-                    msg: to_binary(&Cw20ExecuteMsg::TransferFrom {
-                        owner: deploy_args.depositor.to_string(),
-                        recipient: vault_address.clone(),
-                        amount: *balance
-                    })?,
-                    funds: vec![]
-                }
-            ))
-        }).collect::<StdResult<Vec<CosmosMsg>>>()?;
+    // Handle asset transfer from the factory to the vault
+    let assets = VaultAssets::new_unchecked(deploy_args.assets.clone());
+    let transfer_msgs = assets.send_assets(
+        &env,
+        deploy_args.assets_balances.clone(),
+        vault_address.clone()
+    )?;
 
     // Build a message to invoke the initialization of the vault swap curves
     let initialize_swap_curves_msg = CosmosMsg::Wasm(
         cosmwasm_std::WasmMsg::Execute {
             contract_addr: vault_address.clone(),
-            msg: to_binary(&catalyst_vault_common::msg::ExecuteMsg::<()>::InitializeSwapCurves {
+            msg: to_binary(&catalyst_vault_common::msg::ExecuteMsg::<(), Asset>::InitializeSwapCurves {
                 assets: deploy_args.assets.clone(),
                 weights: deploy_args.weights,
                 amp: deploy_args.amplification,
@@ -290,9 +302,13 @@ fn handle_deploy_vault_reply(
 
 
     Ok(
-        Response::new()
+        VaultResponse::new()
             .set_data(to_binary(&vault_address)?)   // Return the deployed vault address.
-            .add_messages(transfer_msgs)
+            .add_messages(
+                transfer_msgs.into_iter()
+                    .map(|msg| msg.into_cosmos_vault_msg())
+                    .collect::<Vec<CosmosMsg<CustomMsg>>>()
+            )
             .add_message(initialize_swap_curves_msg)
             .add_event(
                 deploy_vault_event(
@@ -348,14 +364,33 @@ mod catalyst_vault_factory_tests {
     use std::str::FromStr;
 
     use cosmwasm_std::{Addr, Uint64, Uint128, Event, StdError, Attribute, WasmMsg, to_binary};
-    use cw20::{TokenInfoResponse, BalanceResponse, Cw20QueryMsg};
-    use cw_multi_test::{App, Executor, ContractWrapper};
-    use test_helpers::token::{deploy_test_tokens, set_token_allowance};
+    use cw_multi_test::{Executor, ContractWrapper};
+    use test_helpers::{env::CustomTestEnv, asset::CustomTestAsset, definitions::VAULT_TOKEN_DENOM, vault_token::CustomTestVaultToken};
 
     use crate::{msg::{InstantiateMsg, QueryMsg, OwnerResponse, ExecuteMsg, DefaultGovernanceFeeShareResponse}, state::MAX_DEFAULT_GOVERNANCE_FEE_SHARE, error::ContractError};
 
-    use catalyst_vault_common::{msg::{ChainInterfaceResponse, FactoryResponse, SetupMasterResponse, AssetsResponse, WeightResponse, VaultFeeResponse, GovernanceFeeShareResponse, FeeAdministratorResponse}, event::format_vec_for_event};
+    use catalyst_vault_common::{msg::{ChainInterfaceResponse, FactoryResponse, SetupMasterResponse, AssetsResponse, WeightResponse, VaultFeeResponse, GovernanceFeeShareResponse, FeeAdministratorResponse}, event::format_vec_for_event, bindings::Asset};
     use mock_vault::msg::QueryMsg as MockVaultQueryMsg;
+
+    #[cfg(feature="asset_native")]
+    use test_helpers::env::env_native_asset::{
+        TestNativeAssetEnv as TestEnv,
+        NativeAssetApp as TestApp
+    };
+    #[cfg(feature="asset_native")]
+    use test_helpers::asset::TestNativeAsset as TestAsset;
+    #[cfg(feature="asset_native")]
+    use test_helpers::vault_token::TestNativeVaultToken as TestVaultToken;
+    
+    #[cfg(feature="asset_cw20")]
+    use test_helpers::env::env_cw20_asset::{
+        TestCw20AssetEnv as TestEnv,
+        Cw20AssetApp as TestApp
+    };
+    #[cfg(feature="asset_cw20")]
+    use test_helpers::asset::TestCw20Asset as TestAsset;
+    #[cfg(feature="asset_cw20")]
+    use test_helpers::vault_token::TestCw20VaultToken as TestVaultToken;
 
     const GOVERNANCE: &str = "governance_addr";
     const SETUP_MASTER: &str = "setup_master_addr";
@@ -364,7 +399,7 @@ mod catalyst_vault_factory_tests {
     const TEST_GOVERNANCE_FEE: Uint64 = Uint64::new(111111111u64);
 
 
-    fn mock_factory_contract(app: &mut App) -> u64 {
+    fn mock_factory_contract(app: &mut TestApp) -> u64 {
         app.store_code(
             Box::new(
                 ContractWrapper::new(
@@ -377,7 +412,7 @@ mod catalyst_vault_factory_tests {
     }
 
 
-    fn mock_vault_contract(app: &mut App) -> u64 {
+    fn mock_vault_contract(app: &mut TestApp) -> u64 {
         app.store_code(
             Box::new(
                 ContractWrapper::new(
@@ -390,7 +425,7 @@ mod catalyst_vault_factory_tests {
     }
 
 
-    fn mock_factory(app: &mut App) -> Addr {
+    fn mock_factory(app: &mut TestApp) -> Addr {
         
         let factory_code_id = mock_factory_contract(app);
         
@@ -411,17 +446,17 @@ mod catalyst_vault_factory_tests {
     #[test]
     fn test_instantiate() {
 
-        let mut app = App::default();
+        let mut env = TestEnv::initialize(GOVERNANCE.to_string());
     
         // 'Deploy' the contract
-        let code_id = mock_factory_contract(&mut app);
+        let code_id = mock_factory_contract(env.get_app());
 
         let default_governance_fee_share = Uint64::new(10101u64);
 
 
 
         // Tested action
-        let factory = app.instantiate_contract(
+        let factory = env.get_app().instantiate_contract(
             code_id,
             Addr::unchecked(GOVERNANCE),
             &InstantiateMsg { default_governance_fee_share },
@@ -433,7 +468,7 @@ mod catalyst_vault_factory_tests {
 
 
         // Verify the governance fee is set correctly
-        let queried_default_governance_fee_share = app.wrap()
+        let queried_default_governance_fee_share = env.get_app().wrap()
             .query_wasm_smart::<DefaultGovernanceFeeShareResponse>(factory, &QueryMsg::DefaultGovernanceFeeShare {})
             .unwrap()
             .fee;
@@ -449,10 +484,10 @@ mod catalyst_vault_factory_tests {
     #[test]
     fn test_instantiate_event() {
 
-        let mut app = App::default();
+        let mut env = TestEnv::initialize(GOVERNANCE.to_string());
     
         // 'Deploy' the contract
-        let code_id = mock_factory_contract(&mut app);
+        let code_id = mock_factory_contract(env.get_app());
 
         let default_governance_fee_share = Uint64::new(10101u64);
 
@@ -467,7 +502,7 @@ mod catalyst_vault_factory_tests {
             label: "catalyst-factory".into(),
         };
 
-        let response = app.execute(
+        let response = env.get_app().execute(
             Addr::unchecked(GOVERNANCE),
             wasm_instantiate_msg.into()
         ).unwrap();
@@ -504,16 +539,16 @@ mod catalyst_vault_factory_tests {
     #[test]
     fn test_instantiate_governance_fee_share_max() {
 
-        let mut app = App::default();
+        let mut env = TestEnv::initialize(GOVERNANCE.to_string());
     
         // 'Deploy' the contract
-        let code_id = mock_factory_contract(&mut app);
+        let code_id = mock_factory_contract(env.get_app());
 
 
 
         // Tested action 1: Set max fee
         let default_governance_fee_share = MAX_DEFAULT_GOVERNANCE_FEE_SHARE;
-        app.instantiate_contract(
+        env.get_app().instantiate_contract(
             code_id,
             Addr::unchecked(GOVERNANCE),
             &InstantiateMsg { default_governance_fee_share },
@@ -527,7 +562,7 @@ mod catalyst_vault_factory_tests {
 
         // Tested action 2: Set fee too large
         let default_governance_fee_share = MAX_DEFAULT_GOVERNANCE_FEE_SHARE + Uint64::one();  // ! Governance fee too large
-        let response_result = app.instantiate_contract(
+        let response_result = env.get_app().instantiate_contract(
             code_id,
             Addr::unchecked(GOVERNANCE),
             &InstantiateMsg { default_governance_fee_share },
@@ -549,71 +584,58 @@ mod catalyst_vault_factory_tests {
     #[test]
     fn test_deploy_vault() {
 
-        let mut app = App::default();
+        // Use the 'TestEnv' helper for 'deploy_vault' tests to handle asset transfers
+        let mut test_env = TestEnv::initialize(SETUP_MASTER.to_string());
     
         // Instantiate factory
-        let factory = mock_factory(&mut app);
+        let factory = mock_factory(test_env.get_app());
 
         // Deploy vault contract
-        let vault_code_id = mock_vault_contract(&mut app);
+        let vault_code_id = mock_vault_contract(test_env.get_app());
 
         // Define vault config
-        let vault_assets = deploy_test_tokens(
-            &mut app,
-            SETUP_MASTER.to_string(),
-            None,
-            3
-        );
+        let vault_assets = test_env.get_assets()[..3].to_vec();
         let vault_initial_balances = vec![Uint128::from(1u64), Uint128::from(2u64), Uint128::from(3u64)];
         let vault_weights = vec![Uint128::one(), Uint128::one(), Uint128::one()];
-
-        // Set asset allowances for the factory
-        vault_assets
-            .iter()
-            .zip(&vault_initial_balances)
-            .for_each(|(asset, amount)| {
-                set_token_allowance(
-                    &mut app,
-                    *amount,
-                    asset.clone(),
-                    Addr::unchecked(SETUP_MASTER),
-                    factory.to_string()
-                );
-            });
 
 
 
         // Tested action
-        let response = app.execute_contract(
+        let response = test_env.execute_contract(
             Addr::unchecked(SETUP_MASTER),
             factory.clone(),
-            &crate::msg::ExecuteMsg::DeployVault {
+            &crate::msg::ExecuteMsg::<Asset>::DeployVault {
                 vault_code_id,
-                assets: vault_assets.iter().map(|asset| asset.to_string()).collect(),
+                assets: vault_assets.iter().map(|asset| asset.clone().into()).collect(),
                 assets_balances: vault_initial_balances.clone(),
                 weights: vault_weights.clone(),
                 amplification: Uint64::new(1000000000000000000u64),
                 vault_fee: TEST_VAULT_FEE,
                 name: "TestVault".to_string(),
-                symbol: "TP".to_string(),
-                chain_interface: Some("chain_interface".to_string())
+                symbol: VAULT_TOKEN_DENOM.to_string(),
+                chain_interface: Some("chain_interface".to_string()),
+                gas: None
             },
-            &[]
+            vault_assets.clone(),
+            vault_initial_balances.clone()
         ).unwrap();     // Make sure the transaction succeeds
 
 
 
-        let vault = get_response_attribute::<String>(response.events[6].clone(), "vault_address").unwrap();
+        let deploy_vault_event = response.events
+            .iter()
+            .find(|event| event.ty == "wasm-deploy-vault".to_string())
+            .unwrap()
+            .clone();
+
+        let vault = get_response_attribute::<String>(deploy_vault_event, "vault_address").unwrap();
 
         // Verify the assets have been transferred to the vault
         vault_assets
             .iter()
             .zip(&vault_initial_balances)
             .for_each(|(asset, balance)| {
-                let queried_balance: Uint128 = app.wrap().query_wasm_smart::<BalanceResponse>(
-                    asset,
-                    &Cw20QueryMsg::Balance { address: vault.clone() }
-                ).unwrap().balance;
+                let queried_balance: Uint128 = asset.query_balance(test_env.get_app(), vault.clone());
 
                 assert_eq!(
                     queried_balance,
@@ -623,7 +645,7 @@ mod catalyst_vault_factory_tests {
 
 
         // Verify the deployed vault has the 'factory' set
-        let queried_factory = app.wrap().query_wasm_smart::<FactoryResponse>(
+        let queried_factory = test_env.get_app().wrap().query_wasm_smart::<FactoryResponse>(
             vault.clone(),
             &MockVaultQueryMsg::Factory {}
         ).unwrap().factory;
@@ -635,7 +657,7 @@ mod catalyst_vault_factory_tests {
 
 
         // Verify the deployed vault has the 'setup master' set
-        let queried_setup_master = app.wrap().query_wasm_smart::<SetupMasterResponse>(
+        let queried_setup_master = test_env.get_app().wrap().query_wasm_smart::<SetupMasterResponse>(
             vault.clone(),
             &MockVaultQueryMsg::SetupMaster {}
         ).unwrap().setup_master;
@@ -647,7 +669,7 @@ mod catalyst_vault_factory_tests {
 
 
         // Verify the deployed vault has the 'chain interface' set
-        let queried_interface = app.wrap().query_wasm_smart::<ChainInterfaceResponse>(
+        let queried_interface = test_env.get_app().wrap().query_wasm_smart::<ChainInterfaceResponse>(
             vault.clone(),
             &MockVaultQueryMsg::ChainInterface {}
         ).unwrap().chain_interface;
@@ -659,14 +681,17 @@ mod catalyst_vault_factory_tests {
 
 
         // Verify the deployed vault has the 'assets' set
-        let queried_assets = app.wrap().query_wasm_smart::<AssetsResponse>(
+        let queried_assets = test_env.get_app().wrap().query_wasm_smart::<AssetsResponse<Asset>>(
             vault.clone(),
             &MockVaultQueryMsg::Assets {}
         ).unwrap().assets;
 
         assert_eq!(
-            queried_assets,
-            vault_assets.iter().map(|asset| asset.to_string()).collect::<Vec<String>>()
+            queried_assets
+                .iter()
+                .map(|asset| Into::<TestAsset>::into(asset.clone()))
+                .collect::<Vec<TestAsset>>(),
+            vault_assets
         );
 
 
@@ -675,9 +700,9 @@ mod catalyst_vault_factory_tests {
             .iter()
             .zip(&vault_weights)
             .for_each(|(asset, weight)| {
-                let queried_weight = app.wrap().query_wasm_smart::<WeightResponse>(
+                let queried_weight = test_env.get_app().wrap().query_wasm_smart::<WeightResponse>(
                     vault.clone(),
-                    &MockVaultQueryMsg::Weight { asset: asset.to_string() }
+                    &MockVaultQueryMsg::Weight { asset_ref: asset.get_asset_ref() }
                 ).unwrap().weight;
         
                 assert_eq!(
@@ -688,7 +713,7 @@ mod catalyst_vault_factory_tests {
 
 
         // Verify the deployed vault has the 'vault_fee' set
-        let queried_vault_fee = app.wrap().query_wasm_smart::<VaultFeeResponse>(
+        let queried_vault_fee = test_env.get_app().wrap().query_wasm_smart::<VaultFeeResponse>(
             vault.clone(),
             &MockVaultQueryMsg::VaultFee {}
         ).unwrap().fee;
@@ -700,7 +725,7 @@ mod catalyst_vault_factory_tests {
 
 
         // Verify the deployed vault has the 'governance_fee_share' set
-        let queried_governance_fee_share = app.wrap().query_wasm_smart::<GovernanceFeeShareResponse>(
+        let queried_governance_fee_share = test_env.get_app().wrap().query_wasm_smart::<GovernanceFeeShareResponse>(
             vault.clone(),
             &MockVaultQueryMsg::GovernanceFeeShare {}
         ).unwrap().fee;
@@ -712,7 +737,7 @@ mod catalyst_vault_factory_tests {
 
 
         // Verify the deployed vault has the 'fee_administrator' set
-        let queried_fee_administrator = app.wrap().query_wasm_smart::<FeeAdministratorResponse>(
+        let queried_fee_administrator = test_env.get_app().wrap().query_wasm_smart::<FeeAdministratorResponse>(
             vault.clone(),
             &MockVaultQueryMsg::FeeAdministrator {}
         ).unwrap().administrator;
@@ -724,19 +749,17 @@ mod catalyst_vault_factory_tests {
 
 
         // Verify the deployed vault has the 'name' and 'symbol' set
-        let queried_token_info = app.wrap().query_wasm_smart::<TokenInfoResponse>(
-            vault.clone(),
-            &MockVaultQueryMsg::TokenInfo {}
-        ).unwrap();
+        let vault_token = TestVaultToken::load(vault.clone(), VAULT_TOKEN_DENOM.to_string());
+        let vault_token_info = vault_token.query_token_info(test_env.get_app());
 
         assert_eq!(
-            queried_token_info.name,
+            vault_token_info.name,
             "TestVault"
         );
 
         assert_eq!(
-            queried_token_info.symbol,
-            "TP"
+            vault_token_info.symbol,
+            VAULT_TOKEN_DENOM
         );
 
     }
@@ -745,86 +768,74 @@ mod catalyst_vault_factory_tests {
     #[test]
     fn test_deploy_vault_event() {
 
-        let mut app = App::default();
+        // Use the 'TestEnv' helper for 'deploy_vault' tests to handle asset transfers
+        let mut test_env = TestEnv::initialize(SETUP_MASTER.to_string());
     
         // Instantiate factory
-        let factory = mock_factory(&mut app);
+        let factory = mock_factory(test_env.get_app());
 
         // Deploy vault contract
-        let vault_code_id = mock_vault_contract(&mut app);
+        let vault_code_id = mock_vault_contract(test_env.get_app());
 
         // Define vault config
-        let vault_assets = deploy_test_tokens(
-            &mut app,
-            SETUP_MASTER.to_string(),
-            None,
-            3
-        );
+        let vault_assets = test_env.get_assets()[..3].to_vec();
         let vault_initial_balances = vec![Uint128::from(1u64), Uint128::from(2u64), Uint128::from(3u64)];
         let vault_weights = vec![Uint128::one(), Uint128::one(), Uint128::one()];
-
-        // Set asset allowances for the factory
-        vault_assets
-            .iter()
-            .zip(&vault_initial_balances)
-            .for_each(|(asset, amount)| {
-                set_token_allowance(
-                    &mut app,
-                    *amount,
-                    asset.clone(),
-                    Addr::unchecked(SETUP_MASTER),
-                    factory.to_string()
-                );
-            });
 
 
 
         // Tested action
-        let response = app.execute_contract(
+        let response = test_env.execute_contract(
             Addr::unchecked(SETUP_MASTER),
             factory.clone(),
-            &crate::msg::ExecuteMsg::DeployVault {
+            &crate::msg::ExecuteMsg::<Asset>::DeployVault {
                 vault_code_id,
-                assets: vault_assets.iter().map(|asset| asset.to_string()).collect(),
+                assets: vault_assets.iter().map(|asset| asset.clone().into()).collect(),
                 assets_balances: vault_initial_balances.clone(),
                 weights: vault_weights.clone(),
                 amplification: Uint64::new(1000000000000000000u64),
                 vault_fee: TEST_VAULT_FEE,
                 name: "TestVault".to_string(),
-                symbol: "TP".to_string(),
-                chain_interface: Some("chain_interface".to_string())
+                symbol: VAULT_TOKEN_DENOM.to_string(),
+                chain_interface: Some("chain_interface".to_string()),
+                gas: None
             },
-            &[]
+            vault_assets.clone(),
+            vault_initial_balances.clone()
         ).unwrap();     // Make sure the transaction succeeds
 
 
 
         // Check the event
-        let event = response.events[6].clone();
-
-        assert_eq!(event.ty, "wasm-deploy-vault");
+        let deploy_vault_event = response.events
+            .iter()
+            .find(|event| event.ty == "wasm-deploy-vault".to_string())
+            .unwrap()
+            .clone();
 
         assert_eq!(
-            event.attributes[1],
+            deploy_vault_event.attributes[1],
             Attribute::new("vault_code_id", vault_code_id.to_string())
         );
         assert_eq!(
-            event.attributes[2],
+            deploy_vault_event.attributes[2],
             Attribute::new("chain_interface", "chain_interface".to_string())
         );
         assert_eq!(
-            event.attributes[3],
+            deploy_vault_event.attributes[3],
             Attribute::new("deployer", SETUP_MASTER.to_string())
         );
         
         // NOTE: 'vault_address' is indirectly checked on `test_deploy_vault`.
 
         assert_eq!(
-            event.attributes[5],
-            Attribute::new("assets", format_vec_for_event(vault_assets))
+            deploy_vault_event.attributes[5],
+            Attribute::new("assets", format_vec_for_event(
+                vault_assets.iter().map(|asset| Into::<Asset>::into(asset.clone()).to_string()).collect()
+            ))
         );
         assert_eq!(
-            event.attributes[6],
+            deploy_vault_event.attributes[6],
             Attribute::new("k", Uint64::new(1000000000000000000u64).to_string())
         );
 
@@ -834,67 +845,53 @@ mod catalyst_vault_factory_tests {
     #[test]
     fn test_deploy_vault_no_interface_event() {
 
-        let mut app = App::default();
+        // Use the 'TestEnv' helper for 'deploy_vault' tests to handle asset transfers
+        let mut test_env = TestEnv::initialize(SETUP_MASTER.to_string());
     
         // Instantiate factory
-        let factory = mock_factory(&mut app);
+        let factory = mock_factory(test_env.get_app());
 
         // Deploy vault contract
-        let vault_code_id = mock_vault_contract(&mut app);
+        let vault_code_id = mock_vault_contract(test_env.get_app());
 
         // Define vault config
-        let vault_assets = deploy_test_tokens(
-            &mut app,
-            SETUP_MASTER.to_string(),
-            None,
-            3
-        );
+        let vault_assets = test_env.get_assets()[..3].to_vec();
         let vault_initial_balances = vec![Uint128::from(1u64), Uint128::from(2u64), Uint128::from(3u64)];
         let vault_weights = vec![Uint128::one(), Uint128::one(), Uint128::one()];
-
-        // Set asset allowances for the factory
-        vault_assets
-            .iter()
-            .zip(&vault_initial_balances)
-            .for_each(|(asset, amount)| {
-                set_token_allowance(
-                    &mut app,
-                    *amount,
-                    asset.clone(),
-                    Addr::unchecked(SETUP_MASTER),
-                    factory.to_string()
-                );
-            });
 
 
 
         // Tested action
-        let response = app.execute_contract(
+        let response = test_env.execute_contract(
             Addr::unchecked(SETUP_MASTER),
             factory.clone(),
-            &crate::msg::ExecuteMsg::DeployVault {
+            &crate::msg::ExecuteMsg::<Asset>::DeployVault {
                 vault_code_id,
-                assets: vault_assets.iter().map(|asset| asset.to_string()).collect(),
+                assets: vault_assets.iter().map(|asset| asset.clone().into()).collect(),
                 assets_balances: vault_initial_balances.clone(),
                 weights: vault_weights.clone(),
                 amplification: Uint64::new(1000000000000000000u64),
                 vault_fee: TEST_VAULT_FEE,
                 name: "TestVault".to_string(),
-                symbol: "TP".to_string(),
-                chain_interface: None   // ! Interface set to 'None'
+                symbol: VAULT_TOKEN_DENOM.to_string(),
+                chain_interface: None,   // ! Interface set to 'None'
+                gas: None
             },
-            &[]
+            vault_assets.clone(),
+            vault_initial_balances.clone()
         ).unwrap();     // Make sure the transaction succeeds
 
 
 
         // Check the event
-        let event = response.events[6].clone();
-
-        assert_eq!(event.ty, "wasm-deploy-vault");
+        let deploy_vault_event = response.events
+            .iter()
+            .find(|event| event.ty == "wasm-deploy-vault".to_string())
+            .unwrap()
+            .clone();
 
         assert_eq!(
-            event.attributes[2],
+            deploy_vault_event.attributes[2],
             Attribute::new("chain_interface", "null".to_string())
         );
 
@@ -904,26 +901,27 @@ mod catalyst_vault_factory_tests {
     #[test]
     fn test_deploy_vault_no_assets() {
 
-        let mut app = App::default();
+        // Use the 'TestEnv' helper for 'deploy_vault' tests to handle asset transfers
+        let mut test_env = TestEnv::initialize(SETUP_MASTER.to_string());
     
         // Instantiate factory
-        let factory = mock_factory(&mut app);
+        let factory = mock_factory(test_env.get_app());
 
         // Deploy vault contract
-        let vault_code_id = mock_vault_contract(&mut app);
+        let vault_code_id = mock_vault_contract(test_env.get_app());
 
         // Define vault config
-        let vault_assets = vec![];              // ! no assets
+        let vault_assets: Vec<Asset> = vec![];              // ! no assets
         let vault_initial_balances = vec![];
         let vault_weights = vec![];
 
 
 
         // Tested action
-        let response_result = app.execute_contract(
+        let response_result = test_env.execute_contract(
             Addr::unchecked(SETUP_MASTER),
             factory,
-            &crate::msg::ExecuteMsg::DeployVault {
+            &crate::msg::ExecuteMsg::<Asset>::DeployVault {
                 vault_code_id,
                 assets: vault_assets,
                 assets_balances: vault_initial_balances,
@@ -931,10 +929,12 @@ mod catalyst_vault_factory_tests {
                 amplification: Uint64::new(1000000000000000000u64),
                 vault_fee: Uint64::zero(),
                 name: "TestVault".to_string(),
-                symbol: "TP".to_string(),
-                chain_interface: None
+                symbol: VAULT_TOKEN_DENOM.to_string(),
+                chain_interface: None,
+                gas: None
             },
-            &[]
+            vec![],
+            vec![]
         );
 
         
@@ -952,56 +952,40 @@ mod catalyst_vault_factory_tests {
     #[test]
     fn test_deploy_vault_invalid_weights_balances() {
 
-        let mut app = App::default();
+        // Use the 'TestEnv' helper for 'deploy_vault' tests to handle asset transfers
+        let mut test_env = TestEnv::initialize(SETUP_MASTER.to_string());
     
         // Instantiate factory
-        let factory = mock_factory(&mut app);
+        let factory = mock_factory(test_env.get_app());
 
         // Deploy vault contract
-        let vault_code_id = mock_vault_contract(&mut app);
+        let vault_code_id = mock_vault_contract(test_env.get_app());
 
         // Define vault config
-        let vault_assets = deploy_test_tokens(
-            &mut app,
-            SETUP_MASTER.to_string(),
-            None,
-            3
-        );
+        let vault_assets = test_env.get_assets()[..3].to_vec();
         let vault_initial_balances = vec![Uint128::from(1u64), Uint128::from(2u64), Uint128::from(3u64)];
         let vault_weights = vec![Uint128::one(), Uint128::one(), Uint128::one()];
-
-        // Set asset allowances for the factory
-        vault_assets
-            .iter()
-            .zip(&vault_initial_balances)
-            .for_each(|(asset, amount)| {
-                set_token_allowance(
-                    &mut app,
-                    *amount,
-                    asset.clone(),
-                    Addr::unchecked(SETUP_MASTER),
-                    factory.to_string()
-                );
-            });
 
 
 
         // Tested action 1: len(assets_balances) != len(assets)
-        let response_result = app.execute_contract(
+        let response_result = test_env.execute_contract(
             Addr::unchecked(SETUP_MASTER),
             factory.clone(),
-            &crate::msg::ExecuteMsg::DeployVault {
+            &crate::msg::ExecuteMsg::<Asset>::DeployVault {
                 vault_code_id,
-                assets: vault_assets.iter().map(|asset| asset.to_string()).collect(),
+                assets: vault_assets.iter().map(|asset| asset.clone().into()).collect(),
                 assets_balances: vault_initial_balances[..2].to_vec(),   // ! Only 2 balances are provided 
                 weights: vault_weights.clone(),
                 amplification: Uint64::new(1000000000000000000u64),
                 vault_fee: Uint64::zero(),
                 name: "TestVault".to_string(),
-                symbol: "TP".to_string(),
-                chain_interface: None
+                symbol: VAULT_TOKEN_DENOM.to_string(),
+                chain_interface: None,
+                gas: None
             },
-            &[]
+            vault_assets.clone(),
+            vault_initial_balances.clone()
         );
 
         // Make sure the transaction fails
@@ -1014,21 +998,23 @@ mod catalyst_vault_factory_tests {
 
 
         // Tested action 2: len(weights) != len(assets)
-        let response_result = app.execute_contract(
+        let response_result = test_env.execute_contract(
             Addr::unchecked(SETUP_MASTER),
             factory.clone(),
-            &crate::msg::ExecuteMsg::DeployVault {
+            &crate::msg::ExecuteMsg::<Asset>::DeployVault {
                 vault_code_id,
-                assets: vault_assets.iter().map(|asset| asset.to_string()).collect(),
+                assets: vault_assets.iter().map(|asset| asset.clone().into()).collect(),
                 assets_balances: vault_initial_balances.clone(),
                 weights: vault_weights[..2].to_vec(),   // ! Only 2 weights are provided 
                 amplification: Uint64::new(1000000000000000000u64),
                 vault_fee: Uint64::zero(),
                 name: "TestVault".to_string(),
-                symbol: "TP".to_string(),
-                chain_interface: None
+                symbol: VAULT_TOKEN_DENOM.to_string(),
+                chain_interface: None,
+                gas: None
             },
-            &[]
+            vault_assets.clone(),
+            vault_initial_balances.clone()
         );
 
         // Make sure the transaction fails
@@ -1041,22 +1027,257 @@ mod catalyst_vault_factory_tests {
 
 
         // Make sure the transaction does succeed with valid params
-        app.execute_contract(
+        test_env.execute_contract(
             Addr::unchecked(SETUP_MASTER),
             factory,
-            &crate::msg::ExecuteMsg::DeployVault {
+            &crate::msg::ExecuteMsg::<Asset>::DeployVault {
                 vault_code_id,
-                assets: vault_assets.iter().map(|asset| asset.to_string()).collect(),
-                assets_balances: vault_initial_balances,
+                assets: vault_assets.iter().map(|asset| asset.clone().into()).collect(),
+                assets_balances: vault_initial_balances.clone(),
                 weights: vault_weights,
                 amplification: Uint64::new(1000000000000000000u64),
                 vault_fee: Uint64::zero(),
                 name: "TestVault".to_string(),
-                symbol: "TP".to_string(),
-                chain_interface: None
+                symbol: VAULT_TOKEN_DENOM.to_string(),
+                chain_interface: None,
+                gas: None
             },
-            &[]
+            vault_assets.clone(),
+            vault_initial_balances.clone()
         ).unwrap();     // ! Make sure the transaction succeeds
+
+    }
+
+
+    #[test]
+    fn test_deploy_vault_invalid_funds() {
+
+        // Use the 'TestEnv' helper for 'deploy_vault' tests to handle asset transfers
+        let mut test_env = TestEnv::initialize(SETUP_MASTER.to_string());
+    
+        // Instantiate factory
+        let factory = mock_factory(test_env.get_app());
+
+        // Deploy vault contract
+        let vault_code_id = mock_vault_contract(test_env.get_app());
+
+        // Define vault config
+        let vault_assets = test_env.get_assets()[..3].to_vec();
+        let vault_initial_balances = vec![Uint128::from(1u64), Uint128::from(2u64), Uint128::from(3u64)];
+        let vault_weights = vec![Uint128::one(), Uint128::one(), Uint128::one()];
+
+
+
+        // Tested action 1: no funds
+        let response_result = test_env.execute_contract(
+            Addr::unchecked(SETUP_MASTER),
+            factory.clone(),
+            &crate::msg::ExecuteMsg::<Asset>::DeployVault {
+                vault_code_id,
+                assets: vault_assets.iter().map(|asset| asset.clone().into()).collect(),
+                assets_balances: vault_initial_balances.clone(),
+                weights: vault_weights.clone(),
+                amplification: Uint64::new(1000000000000000000u64),
+                vault_fee: TEST_VAULT_FEE,
+                name: "TestVault".to_string(),
+                symbol: VAULT_TOKEN_DENOM.to_string(),
+                chain_interface: Some("chain_interface".to_string()),
+                gas: None
+            },
+            vec![],   // ! Do not send funds
+            vec![]
+        );
+
+        // Make sure the transaction fails
+        assert!(response_result.is_err());
+        #[cfg(feature="asset_native")]
+        matches!(
+            response_result.err().unwrap().downcast().unwrap(),
+            ContractError::AssetNotReceived { asset }
+                if asset == Into::<Asset>::into(vault_assets[0].clone()).to_string()  // Error corresponds to the first asset that is not received
+        );
+        #[cfg(feature="asset_cw20")]
+        assert_eq!(
+            response_result.err().unwrap().root_cause().to_string(),
+            "No allowance for this account".to_string()
+        );
+
+
+
+        // Tested action 2: too few assets
+        let response_result = test_env.execute_contract(
+            Addr::unchecked(SETUP_MASTER),
+            factory.clone(),
+            &crate::msg::ExecuteMsg::<Asset>::DeployVault {
+                vault_code_id,
+                assets: vault_assets.iter().map(|asset| asset.clone().into()).collect(),
+                assets_balances: vault_initial_balances.clone(),
+                weights: vault_weights.clone(),
+                amplification: Uint64::new(1000000000000000000u64),
+                vault_fee: TEST_VAULT_FEE,
+                name: "TestVault".to_string(),
+                symbol: VAULT_TOKEN_DENOM.to_string(),
+                chain_interface: Some("chain_interface".to_string()),
+                gas: None
+            },
+            vault_assets[..vault_assets.len()-1].to_vec(),      // ! Send one asset less
+            vault_initial_balances[..vault_initial_balances.len()-1].to_vec()
+        );
+
+        // Make sure the transaction fails
+        assert!(response_result.is_err());
+        #[cfg(feature="asset_native")]
+        matches!(
+            response_result.err().unwrap().downcast().unwrap(),
+            ContractError::AssetNotReceived { asset }
+                if asset == Into::<Asset>::into(vault_assets[vault_assets.len()-1].clone()).to_string()  // Error corresponds to the first asset that is not received
+        );
+        #[cfg(feature="asset_cw20")]
+        assert_eq!(
+            response_result.err().unwrap().root_cause().to_string(),
+            "No allowance for this account".to_string()
+        );
+
+
+
+        // Tested action 3: too many assets
+        let response_result = test_env.execute_contract(
+            Addr::unchecked(SETUP_MASTER),
+            factory.clone(),
+            &crate::msg::ExecuteMsg::<Asset>::DeployVault {
+                vault_code_id,
+                assets: vault_assets.iter().map(|asset| asset.clone().into()).collect(),
+                assets_balances: vault_initial_balances.clone(),
+                weights: vault_weights.clone(),
+                amplification: Uint64::new(1000000000000000000u64),
+                vault_fee: TEST_VAULT_FEE,
+                name: "TestVault".to_string(),
+                symbol: VAULT_TOKEN_DENOM.to_string(),
+                chain_interface: Some("chain_interface".to_string()),
+                gas: None
+            },
+            test_env.get_assets()[..3+1].to_vec(),      // ! Send one asset more
+            vault_initial_balances.iter().cloned().chain(vec![Uint128::from(1000u128)].into_iter()).collect()
+        );
+
+        // Make sure the transaction fails
+        #[cfg(feature="asset_native")]
+        assert!(response_result.is_err());
+        #[cfg(feature="asset_native")]
+        matches!(
+            response_result.err().unwrap().downcast().unwrap(),
+            ContractError::AssetSurplusReceived {}
+        );
+        
+        // NOTE: this does not error for cw20 assets, as it's just the *allowance* that is set.
+        #[cfg(feature="asset_cw20")]
+        assert!(response_result.is_ok());
+
+
+
+        // Tested action 4: asset amount too low
+        let mut too_low_vault_initial_balances = vault_initial_balances.clone();
+        too_low_vault_initial_balances[0] = too_low_vault_initial_balances[0] - Uint128::one();
+
+        let response_result = test_env.execute_contract(
+            Addr::unchecked(SETUP_MASTER),
+            factory.clone(),
+            &crate::msg::ExecuteMsg::<Asset>::DeployVault {
+                vault_code_id,
+                assets: vault_assets.iter().map(|asset| asset.clone().into()).collect(),
+                assets_balances: vault_initial_balances.clone(),
+                weights: vault_weights.clone(),
+                amplification: Uint64::new(1000000000000000000u64),
+                vault_fee: TEST_VAULT_FEE,
+                name: "TestVault".to_string(),
+                symbol: VAULT_TOKEN_DENOM.to_string(),
+                chain_interface: Some("chain_interface".to_string()),
+                gas: None
+            },
+            vault_assets.clone(),
+            too_low_vault_initial_balances.clone()
+        );
+
+        // Make sure the transaction fails
+        assert!(response_result.is_err());
+        #[cfg(feature="asset_native")]
+        matches!(
+            response_result.err().unwrap().downcast().unwrap(),
+            ContractError::UnexpectedAssetAmountReceived { received_amount, expected_amount, asset }
+                if
+                    received_amount == too_low_vault_initial_balances[0] &&
+                    expected_amount == vault_initial_balances[0] &&
+                    asset == Into::<Asset>::into(vault_assets[0].clone()).to_string()
+        );
+        #[cfg(feature="asset_cw20")]
+        assert_eq!(
+            response_result.err().unwrap().root_cause().to_string(),
+            format!("Cannot Sub with {} and {}", too_low_vault_initial_balances[0], vault_initial_balances[0])
+        );
+
+
+
+        // Tested action 5: asset amount too high
+        let mut too_high_vault_initial_balances = vault_initial_balances.clone();
+        too_high_vault_initial_balances[0] = too_high_vault_initial_balances[0] + Uint128::one();
+
+        let response_result = test_env.execute_contract(
+            Addr::unchecked(SETUP_MASTER),
+            factory.clone(),
+            &crate::msg::ExecuteMsg::<Asset>::DeployVault {
+                vault_code_id,
+                assets: vault_assets.iter().map(|asset| asset.clone().into()).collect(),
+                assets_balances: vault_initial_balances.clone(),
+                weights: vault_weights.clone(),
+                amplification: Uint64::new(1000000000000000000u64),
+                vault_fee: TEST_VAULT_FEE,
+                name: "TestVault".to_string(),
+                symbol: VAULT_TOKEN_DENOM.to_string(),
+                chain_interface: Some("chain_interface".to_string()),
+                gas: None
+            },
+            vault_assets.clone(),
+            too_high_vault_initial_balances.clone()
+        );
+
+        // Make sure the transaction fails
+        #[cfg(feature="asset_native")]
+        assert!(response_result.is_err());
+        #[cfg(feature="asset_native")]
+        matches!(
+            response_result.err().unwrap().downcast().unwrap(),
+            ContractError::UnexpectedAssetAmountReceived { received_amount, expected_amount, asset }
+                if
+                    received_amount == too_high_vault_initial_balances[0] &&
+                    expected_amount == vault_initial_balances[0] &&
+                    asset == Into::<Asset>::into(vault_assets[0].clone()).to_string()
+        );
+        
+        // NOTE: this does not error for cw20 assets, as it's just the *allowance* that is set too high.
+        #[cfg(feature="asset_cw20")]
+        assert!(response_result.is_ok());
+
+
+
+        // Make sure the deployment works for valid amounts
+        test_env.execute_contract(
+            Addr::unchecked(SETUP_MASTER),
+            factory.clone(),
+            &crate::msg::ExecuteMsg::<Asset>::DeployVault {
+                vault_code_id,
+                assets: vault_assets.iter().map(|asset| asset.clone().into()).collect(),
+                assets_balances: vault_initial_balances.clone(),
+                weights: vault_weights.clone(),
+                amplification: Uint64::new(1000000000000000000u64),
+                vault_fee: TEST_VAULT_FEE,
+                name: "TestVault".to_string(),
+                symbol: VAULT_TOKEN_DENOM.to_string(),
+                chain_interface: Some("chain_interface".to_string()),
+                gas: None
+            },
+            vault_assets.clone(),
+            vault_initial_balances.clone()
+        ).unwrap();     // Make sure the transaction succeeds
 
     }
 
@@ -1066,16 +1287,16 @@ mod catalyst_vault_factory_tests {
     #[test]
     fn test_change_default_governance_fee_share() {
 
-        let mut app = App::default();
+        let mut env = TestEnv::initialize(GOVERNANCE.to_string());
     
         // 'Deploy' the contract
-        let code_id = mock_factory_contract(&mut app);
+        let code_id = mock_factory_contract(env.get_app());
 
         let initial_default_governance_fee_share = Uint64::new(10101u64);
         let new_default_governance_fee_share = Uint64::new(20202u64);
 
         // Instantiate factory
-        let factory = app.instantiate_contract(
+        let factory = env.get_app().instantiate_contract(
             code_id,
             Addr::unchecked(GOVERNANCE),
             &InstantiateMsg { default_governance_fee_share: initial_default_governance_fee_share },
@@ -1087,10 +1308,10 @@ mod catalyst_vault_factory_tests {
 
 
         // Tested action
-        let response = app.execute_contract(
+        let response = env.get_app().execute_contract(
             Addr::unchecked(GOVERNANCE),
             factory.clone(),
-            &ExecuteMsg::SetDefaultGovernanceFeeShare { fee: new_default_governance_fee_share },
+            &ExecuteMsg::<()>::SetDefaultGovernanceFeeShare { fee: new_default_governance_fee_share },
             &[]
         ).unwrap();     // Make sure the transaction passes
 
@@ -1107,7 +1328,7 @@ mod catalyst_vault_factory_tests {
         );
 
         // Verify the governance fee is set correctly
-        let queried_default_governance_fee_share = app.wrap()
+        let queried_default_governance_fee_share = env.get_app().wrap()
             .query_wasm_smart::<DefaultGovernanceFeeShareResponse>(factory, &QueryMsg::DefaultGovernanceFeeShare {})
             .unwrap()
             .fee;
@@ -1122,16 +1343,16 @@ mod catalyst_vault_factory_tests {
     #[test]
     fn test_change_default_governance_fee_share_no_auth() {
 
-        let mut app = App::default();
+        let mut env = TestEnv::initialize(GOVERNANCE.to_string());
     
         // 'Deploy' the contract
-        let code_id = mock_factory_contract(&mut app);
+        let code_id = mock_factory_contract(env.get_app());
 
         let initial_default_governance_fee_share = Uint64::new(10101u64);
         let new_default_governance_fee_share = Uint64::new(20202u64);
 
         // Instantiate factory
-        let factory = app.instantiate_contract(
+        let factory = env.get_app().instantiate_contract(
             code_id,
             Addr::unchecked(GOVERNANCE),
             &InstantiateMsg { default_governance_fee_share: initial_default_governance_fee_share },
@@ -1143,10 +1364,10 @@ mod catalyst_vault_factory_tests {
 
 
         // Tested action
-        let response_result = app.execute_contract(
+        let response_result = env.get_app().execute_contract(
             Addr::unchecked("not_governance"),      // ! Not the contract owner (i.e. GOVERNANCE)
             factory.clone(),
-            &ExecuteMsg::SetDefaultGovernanceFeeShare { fee: new_default_governance_fee_share },
+            &ExecuteMsg::<()>::SetDefaultGovernanceFeeShare { fee: new_default_governance_fee_share },
             &[]
         );
 
@@ -1165,15 +1386,15 @@ mod catalyst_vault_factory_tests {
     #[test]
     fn test_owner_is_set_on_instantiation_and_query() {
 
-        let mut app = App::default();
+        let mut env = TestEnv::initialize(GOVERNANCE.to_string());
     
         // 'Deploy' the contract
-        let code_id = mock_factory_contract(&mut app);
+        let code_id = mock_factory_contract(env.get_app());
 
 
 
         // Tested action
-        let factory = app.instantiate_contract(
+        let factory = env.get_app().instantiate_contract(
             code_id,
             Addr::unchecked(GOVERNANCE),
             &InstantiateMsg { default_governance_fee_share: Uint64::zero() },
@@ -1185,7 +1406,7 @@ mod catalyst_vault_factory_tests {
 
 
         // Query owner
-        let owner_response = app.wrap().query_wasm_smart::<OwnerResponse>(factory, &QueryMsg::Owner {}).unwrap();
+        let owner_response = env.get_app().wrap().query_wasm_smart::<OwnerResponse>(factory, &QueryMsg::Owner {}).unwrap();
 
         assert_eq!(
             owner_response.owner,
@@ -1198,13 +1419,13 @@ mod catalyst_vault_factory_tests {
     #[test]
     fn test_transfer_ownership_and_query() {
 
-        let mut app = App::default();
+        let mut env = TestEnv::initialize(GOVERNANCE.to_string());
     
         // 'Deploy' the contract
-        let code_id = mock_factory_contract(&mut app);
+        let code_id = mock_factory_contract(env.get_app());
 
         // Instantiate a factory
-        let factory = app.instantiate_contract(
+        let factory = env.get_app().instantiate_contract(
             code_id,
             Addr::unchecked(GOVERNANCE),
             &InstantiateMsg { default_governance_fee_share: Uint64::zero() },
@@ -1218,10 +1439,10 @@ mod catalyst_vault_factory_tests {
 
 
         // Tested action: transfer ownership
-        let response = app.execute_contract(
+        let response = env.get_app().execute_contract(
             Addr::unchecked(GOVERNANCE),
             factory.clone(),
-            &ExecuteMsg::TransferOwnership { new_owner: new_owner.clone() },
+            &ExecuteMsg::<()>::TransferOwnership { new_owner: new_owner.clone() },
             &[]
         ).unwrap();     // Make sure the transaction passes
 
@@ -1238,7 +1459,7 @@ mod catalyst_vault_factory_tests {
         );
 
         // Query owner
-        let owner_response = app.wrap().query_wasm_smart::<OwnerResponse>(factory, &QueryMsg::Owner {}).unwrap();
+        let owner_response = env.get_app().wrap().query_wasm_smart::<OwnerResponse>(factory, &QueryMsg::Owner {}).unwrap();
 
         assert_eq!(
             owner_response.owner,
@@ -1251,13 +1472,13 @@ mod catalyst_vault_factory_tests {
     #[test]
     fn test_transfer_ownership_no_auth() {
 
-        let mut app = App::default();
+        let mut env = TestEnv::initialize(GOVERNANCE.to_string());
     
         // 'Deploy' the contract
-        let code_id = mock_factory_contract(&mut app);
+        let code_id = mock_factory_contract(env.get_app());
 
         // Instantiate a factory
-        let factory = app.instantiate_contract(
+        let factory = env.get_app().instantiate_contract(
             code_id,
             Addr::unchecked(GOVERNANCE),
             &InstantiateMsg { default_governance_fee_share: Uint64::zero() },
@@ -1271,10 +1492,10 @@ mod catalyst_vault_factory_tests {
 
 
         // Tested action: transfer ownership
-        let response_result = app.execute_contract(
+        let response_result = env.get_app().execute_contract(
             Addr::unchecked("not-factory-owner"),           // ! Not the factory owner (i.e. GOVERNANCE)
             factory.clone(),
-            &ExecuteMsg::TransferOwnership { new_owner: new_owner.clone() },
+            &ExecuteMsg::<()>::TransferOwnership { new_owner: new_owner.clone() },
             &[]
         );
 

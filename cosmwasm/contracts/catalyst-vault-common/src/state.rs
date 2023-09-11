@@ -1,15 +1,13 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, Uint128, DepsMut, Env, Response, Event, MessageInfo, Deps, StdResult, CosmosMsg, to_binary, Timestamp, StdError, Binary, Uint64};
+use cosmwasm_std::{Addr, Uint128, DepsMut, Env, Response, Event, MessageInfo, Deps, StdResult, to_binary, Timestamp, StdError, Binary, Uint64, CosmosMsg};
 use cw_storage_plus::{Map, Item};
-use cw20::Cw20ExecuteMsg;
-use cw20_base::{state::{MinterData, TokenInfo, TOKEN_INFO}, contract::execute_mint};
 use sha3::{Digest, Keccak256};
 use std::ops::Div;
 
 use catalyst_types::{U256, u256};
 use fixed_point_math::mul_wad_down;
 
-use crate::{ContractError, msg::{ChainInterfaceResponse, SetupMasterResponse, ReadyResponse, OnlyLocalResponse, AssetsResponse, WeightResponse, VaultFeeResponse, GovernanceFeeShareResponse, FeeAdministratorResponse, TotalEscrowedAssetResponse, TotalEscrowedLiquidityResponse, AssetEscrowResponse, LiquidityEscrowResponse, VaultConnectionStateResponse, FactoryResponse, FactoryOwnerResponse, ReceiverExecuteMsg}, event::{send_asset_success_event, send_asset_failure_event, send_liquidity_success_event, send_liquidity_failure_event, finish_setup_event, set_fee_administrator_event, set_vault_fee_event, set_governance_fee_share_event, set_connection_event, cw20_response_to_standard_event}};
+use crate::{ContractError, bindings::{VaultAssets, Asset, VaultAssetsTrait, AssetTrait, VaultToken, VaultTokenTrait, VaultResponse, IntoCosmosCustomMsg, CustomMsg}, msg::{ChainInterfaceResponse, SetupMasterResponse, ReadyResponse, OnlyLocalResponse, AssetsResponse, WeightResponse, VaultFeeResponse, GovernanceFeeShareResponse, FeeAdministratorResponse, TotalEscrowedAssetResponse, TotalEscrowedLiquidityResponse, AssetEscrowResponse, LiquidityEscrowResponse, VaultConnectionStateResponse, FactoryResponse, FactoryOwnerResponse, ReceiverExecuteMsg, TotalSupplyResponse}, event::{send_asset_success_event, send_asset_failure_event, send_liquidity_success_event, send_liquidity_failure_event, finish_setup_event, set_fee_administrator_event, set_vault_fee_event, set_governance_fee_share_event, set_connection_event}};
 
 
 
@@ -36,7 +34,6 @@ pub const FACTORY: Item<Addr> = Item::new("catalyst-vault-factory");
 pub const SETUP_MASTER: Item<Option<Addr>> = Item::new("catalyst-vault-setup-master");
 pub const CHAIN_INTERFACE: Item<Option<Addr>> = Item::new("catalyst-vault-chain-interface");
 
-pub const ASSETS: Item<Vec<Addr>> = Item::new("catalyst-vault-assets");
 pub const WEIGHTS: Map<&str, Uint128> = Map::new("catalyst-vault-weights");
 
 pub const FEE_ADMINISTRATOR: Item<Addr> = Item::new("catalyst-vault-fee-administrator");
@@ -72,17 +69,10 @@ pub fn only_local(deps: &Deps) -> StdResult<bool> {
 pub fn ready(deps: &Deps) -> StdResult<bool> {
 
     let setup_master = SETUP_MASTER.load(deps.storage)?;
-    let assets = ASSETS.load(deps.storage)?;
+    let assets = VaultAssets::load_refs(deps)?;
 
     Ok(setup_master.is_none() && assets.len() > 0)
 
-}
-
-
-/// Get the vault's token supply.
-pub fn total_supply(deps: Deps) -> Result<Uint128, ContractError> {
-    let info = TOKEN_INFO.load(deps.storage)?;
-    Ok(info.total_supply)
 }
 
 
@@ -136,7 +126,7 @@ pub fn setup(
     governance_fee_share: Uint64,
     fee_administrator: String,
     setup_master: String
-) -> Result<Response, ContractError> {
+) -> Result<VaultResponse, ContractError> {
 
     // Save accounts
     FACTORY.save(
@@ -162,21 +152,23 @@ pub fn setup(
     let vault_fee_event = set_vault_fee_unchecked(deps, vault_fee)?;
     let gov_fee_event = set_governance_fee_share_unchecked(deps, governance_fee_share)?;
 
-    // Setup the Vault Token (store token info using the cw20-base format)
-    let data = TokenInfo {
+    // Setup the Vault Token
+    let create_vault_token_msg = VaultToken::create(
+        deps,
+        env,
         name,
         symbol,
-        decimals: DECIMALS,
-        total_supply: Uint128::zero(),
-        mint: Some(MinterData {
-            minter: env.contract.address.clone(),  // Set self as minter
-            cap: None
-        })
-    };
-    TOKEN_INFO.save(deps.storage, &data)?;
+        DECIMALS
+    )?;
+
+    let mut response = Response::new();
+
+    if let Some(msg) = create_vault_token_msg {
+        response = response.add_message(msg.into_cosmos_vault_msg());
+    }
 
     Ok(
-        Response::new()
+        response
             .add_event(admin_fee_event)
             .add_event(vault_fee_event)
             .add_event(gov_fee_event)
@@ -187,17 +179,17 @@ pub fn setup(
 /// Initialize the escrow totals storage variables.
 /// 
 /// # Arguments:
-/// * `assets` - The vault assets.
+/// * `assets_refs` - The vault assets references.
 /// 
 pub fn initialize_escrow_totals(
     deps: &mut DepsMut,
-    assets: Vec<String>
+    assets_refs: Vec<&str>
 ) -> Result<(), ContractError> {
 
-    assets
+    assets_refs
         .iter()
-        .map(|asset| {
-            TOTAL_ESCROWED_ASSETS.save(deps.storage, asset, &Uint128::zero())
+        .map(|asset_ref| {
+            TOTAL_ESCROWED_ASSETS.save(deps.storage, asset_ref, &Uint128::zero())
         })
         .collect::<StdResult<Vec<_>>>()?;
 
@@ -231,7 +223,7 @@ pub fn initialize_limit_capacity(
 pub fn finish_setup(
     deps: &mut DepsMut,
     info: MessageInfo
-) -> Result<Response, ContractError> {
+) -> Result<VaultResponse, ContractError> {
 
     let setup_master = SETUP_MASTER.load(deps.storage)?;
 
@@ -268,7 +260,7 @@ pub fn set_connection(
     channel_id: String,
     vault: Binary,
     state: bool
-) -> Result<Response, ContractError> {
+) -> Result<VaultResponse, ContractError> {
 
     // Only allow a connection setup if the caller is the setup master or the factory owner
     let setup_master = SETUP_MASTER.load(deps.storage)?;
@@ -353,7 +345,7 @@ pub fn set_fee_administrator(
     deps: &mut DepsMut,
     info: MessageInfo,
     administrator: String
-) -> Result<Response, ContractError> {
+) -> Result<VaultResponse, ContractError> {
 
     if info.sender != factory_owner(&deps.as_ref())? {
         return Err(ContractError::Unauthorized {})
@@ -402,7 +394,7 @@ pub fn set_vault_fee(
     deps: &mut DepsMut,
     info: MessageInfo,
     fee: Uint64
-) -> Result<Response, ContractError> {
+) -> Result<VaultResponse, ContractError> {
 
     let fee_administrator = FEE_ADMINISTRATOR.load(deps.storage)?;
 
@@ -453,7 +445,7 @@ pub fn set_governance_fee_share(
     deps: &mut DepsMut,
     info: MessageInfo,
     fee: Uint64
-) -> Result<Response, ContractError> {
+) -> Result<VaultResponse, ContractError> {
 
     if info.sender != factory_owner(&deps.as_ref())? {
         return Err(ContractError::Unauthorized {})
@@ -473,9 +465,10 @@ pub fn set_governance_fee_share(
 /// 
 pub fn collect_governance_fee_message(
     deps: &Deps,
-    asset: String,
+    env: &Env,
+    asset: &Asset,
     vault_fee_amount: Uint128
-) -> Result<Option<CosmosMsg>, ContractError> {
+) -> Result<Option<CosmosMsg<CustomMsg>>, ContractError> {
 
     // Compute the governance fee as the GOVERNANCE_FEE_SHARE percentage of the vault_fee_amount.
     let gov_fee_amount: Uint128 = mul_wad_down(
@@ -483,23 +476,14 @@ pub fn collect_governance_fee_message(
         U256::from(GOVERNANCE_FEE_SHARE.load(deps.storage)?)
     )?.try_into()?;
 
-    // ! IMPORTANT: Some cw20 contracts disallow zero-valued token transfers. Do not generate
-    // ! transfer messages for zero-valued governance fee collections to prevent these cases from 
-    // ! resulting in failed transactions.
-    if gov_fee_amount.is_zero() {
-        return Ok(None)
-    }
-
-    Ok(Some(CosmosMsg::Wasm(
-        cosmwasm_std::WasmMsg::Execute {
-            contract_addr: asset,
-            msg: to_binary(&Cw20ExecuteMsg::Transfer {
-                recipient: factory_owner(deps)?.to_string(),
-                amount: gov_fee_amount
-            })?,
-            funds: vec![]
-        }
-    )))
+    Ok(
+        asset.send_asset(
+            env,
+            gov_fee_amount,
+            factory_owner(deps)?.to_string()
+        )?
+        .and_then(|msg| Some(msg.into_cosmos_vault_msg()))
+    )
     
 }
 
@@ -607,14 +591,14 @@ pub fn update_limit_capacity(
 /// # Arguments:
 /// * `send_asset_hash` - The id under which to create the escrow.
 /// * `amount` - The escrow amount.
-/// * `asset` - The escrowed asset.
+/// * `asset_ref` - The escrowed asset reference.
 /// * `fallback_account` - The account which to return the escrowed assets in the case of an unsuccessful swap.
 /// 
 pub fn create_asset_escrow(
     deps: &mut DepsMut,
     send_asset_hash: Vec<u8>,
     amount: Uint128,
-    asset: &str,
+    asset_ref: &str,
     fallback_account: String
 ) -> Result<(), ContractError> {
 
@@ -627,8 +611,8 @@ pub fn create_asset_escrow(
     let fallback_account = deps.api.addr_validate(&fallback_account)?;
     ASSET_ESCROWS.save(deps.storage, send_asset_hash, &fallback_account)?;
 
-    let escrowed_assets = TOTAL_ESCROWED_ASSETS.load(deps.storage, asset)?;
-    TOTAL_ESCROWED_ASSETS.save(deps.storage, asset, &escrowed_assets.checked_add(amount)?)?;
+    let escrowed_assets = TOTAL_ESCROWED_ASSETS.load(deps.storage, asset_ref)?;
+    TOTAL_ESCROWED_ASSETS.save(deps.storage, asset_ref, &escrowed_assets.checked_add(amount)?)?;
 
     Ok(())
 }
@@ -672,7 +656,7 @@ pub fn create_liquidity_escrow(
 /// # Arguments:
 /// * `send_asset_hash` - The id of the escrow to be released.
 /// * `amount` - The escrow amount.
-/// * `asset` - The escrowed asset.
+/// * `asset_ref` - The escrowed asset reference.
 /// * `fallback_account` - The account which to return the escrowed assets in the case of an unsuccessful swap.
 /// 
 /// 
@@ -680,7 +664,7 @@ pub fn release_asset_escrow(
     deps: &mut DepsMut,
     send_asset_hash: Vec<u8>,
     amount: Uint128,
-    asset: &str
+    asset_ref: &str
 ) -> Result<Addr, ContractError> {
 
     // Get the escrow information and delete the escrow
@@ -688,10 +672,10 @@ pub fn release_asset_escrow(
     ASSET_ESCROWS.remove(deps.storage, send_asset_hash);
 
     // Decrease the `total_escrowed_assets` tracker.
-    let escrowed_assets = TOTAL_ESCROWED_ASSETS.load(deps.storage, asset)?;
+    let escrowed_assets = TOTAL_ESCROWED_ASSETS.load(deps.storage, asset_ref)?;
     TOTAL_ESCROWED_ASSETS.save(
         deps.storage,
-        asset,
+        asset_ref,
         &(escrowed_assets.wrapping_sub(amount))     // 'wrapping_sub' is safe, as 'amount' is always contained in 'escrowed_assets'
                                                     // ! This is only the case if the 'amount' value is correct. But this a safe assumption
                                                     // ! as the 'amount' value should ALWAYS be verified before calling this function.
@@ -746,21 +730,22 @@ pub fn release_liquidity_escrow(
 /// * `to_account` - The recipient of the swap output.
 /// * `u` - The units value of the swap.
 /// * `escrow_amount` - The escrowed asset amount.
-/// * `asset` - The swap source asset.
+/// * `asset_ref` - The swap source asset reference.
 /// * `block_number_mod` - The block number at which the swap transaction was commited (modulo 2^32).
 /// 
 pub fn on_send_asset_success(
     deps: &mut DepsMut,
-    info: MessageInfo,
+    _env: &Env,
+    info: &MessageInfo,
     channel_id: String,
     to_account: Binary,
     u: U256,
     escrow_amount: Uint128,
-    asset: String,
+    asset_ref: String,
     block_number_mod: u32
-) -> Result<Response, ContractError> {
+) -> Result<VaultResponse, ContractError> {
 
-    if Some(info.sender) != CHAIN_INTERFACE.load(deps.storage)? {
+    if Some(info.sender.clone()) != CHAIN_INTERFACE.load(deps.storage)? {
         return Err(ContractError::Unauthorized {})
     }
 
@@ -770,11 +755,11 @@ pub fn on_send_asset_success(
         to_account.as_slice(),
         u,
         escrow_amount,
-        asset.as_str(),
+        asset_ref.as_str(),
         block_number_mod
     );
 
-    release_asset_escrow(deps, send_asset_hash.clone(), escrow_amount, &asset)?;
+    release_asset_escrow(deps, send_asset_hash.clone(), escrow_amount, &asset_ref)?;
 
     Ok(
         Response::new()
@@ -784,7 +769,7 @@ pub fn on_send_asset_success(
                     to_account,
                     u,
                     escrow_amount,
-                    asset,
+                    asset_ref,
                     block_number_mod
                 )
             )
@@ -804,21 +789,22 @@ pub fn on_send_asset_success(
 /// * `to_account` - The recipient of the swap output.
 /// * `u` - The units value of the swap.
 /// * `escrow_amount` - The escrowed asset amount.
-/// * `asset` - The swap source asset.
+/// * `asset_ref` - The swap source asset reference.
 /// * `block_number_mod` - The block number at which the swap transaction was commited (modulo 2^32).
 /// 
 pub fn on_send_asset_failure(
     deps: &mut DepsMut,
-    info: MessageInfo,
+    env: &Env,
+    info: &MessageInfo,
     channel_id: String,
     to_account: Binary,
     u: U256,
     escrow_amount: Uint128,
-    asset: String,
+    asset_ref: String,
     block_number_mod: u32
-) -> Result<Response, ContractError> {
+) -> Result<VaultResponse, ContractError> {
 
-    if Some(info.sender) != CHAIN_INTERFACE.load(deps.storage)? {
+    if Some(info.sender.clone()) != CHAIN_INTERFACE.load(deps.storage)? {
         return Err(ContractError::Unauthorized {})
     }
 
@@ -828,34 +814,30 @@ pub fn on_send_asset_failure(
         to_account.as_slice(),
         u,
         escrow_amount,
-        asset.as_str(),
+        asset_ref.as_str(),
         block_number_mod
     );
 
-    let fallback_address = release_asset_escrow(deps, send_asset_hash.clone(), escrow_amount, &asset)?;
+    let fallback_address = release_asset_escrow(deps, send_asset_hash.clone(), escrow_amount, &asset_ref)?;
 
     // Transfer the escrowed assets to the fallback user.
-    let transfer_msg: CosmosMsg = CosmosMsg::Wasm(
-        cosmwasm_std::WasmMsg::Execute {
-            contract_addr: asset.to_string(),
-            msg: to_binary(&Cw20ExecuteMsg::Transfer {
-                recipient: fallback_address.to_string(),
-                amount: escrow_amount
-            })?,
-            funds: vec![]
-        }
-    );
+    let transfer_msg = Asset::from_asset_ref(&deps.as_ref(), &asset_ref)?
+        .send_asset(env, escrow_amount, fallback_address.to_string())?;
+
+    let response = match transfer_msg {
+        Some(msg) => Response::<CustomMsg>::new().add_message(msg.into_cosmos_vault_msg()),
+        None => Response::<CustomMsg>::new()
+    };
 
     Ok(
-        Response::new()
-            .add_message(transfer_msg)
+        response
             .add_event(
                 send_asset_failure_event(
                     channel_id,
                     to_account,
                     u,
                     escrow_amount,
-                    asset,
+                    asset_ref,
                     block_number_mod
                 )
             )
@@ -878,15 +860,16 @@ pub fn on_send_asset_failure(
 /// 
 pub fn on_send_liquidity_success(
     deps: &mut DepsMut,
-    info: MessageInfo,
+    _env: &Env,
+    info: &MessageInfo,
     channel_id: String,
     to_account: Binary,
     u: U256,
     escrow_amount: Uint128,
     block_number_mod: u32
-) -> Result<Response, ContractError> {
+) -> Result<VaultResponse, ContractError> {
 
-    if Some(info.sender) != CHAIN_INTERFACE.load(deps.storage)? {
+    if Some(info.sender.clone()) != CHAIN_INTERFACE.load(deps.storage)? {
         return Err(ContractError::Unauthorized {})
     }
 
@@ -932,16 +915,16 @@ pub fn on_send_liquidity_success(
 /// 
 pub fn on_send_liquidity_failure(
     deps: &mut DepsMut,
-    env: Env,
-    info: MessageInfo,
+    env: &Env,
+    info: &MessageInfo,
     channel_id: String,
     to_account: Binary,
     u: U256,
     escrow_amount: Uint128,
     block_number_mod: u32
-) -> Result<Response, ContractError> {
+) -> Result<VaultResponse, ContractError> {
 
-    if Some(info.sender) != CHAIN_INTERFACE.load(deps.storage)? {
+    if Some(info.sender.clone()) != CHAIN_INTERFACE.load(deps.storage)? {
         return Err(ContractError::Unauthorized {})
     }
 
@@ -957,20 +940,23 @@ pub fn on_send_liquidity_failure(
     let fallback_address = release_liquidity_escrow(deps, send_liquidity_hash.clone(), escrow_amount)?;
 
     // Mint the escrowed vault tokens for the fallback account.
-    let execute_mint_info = MessageInfo {
-        sender: env.contract.address.clone(),
-        funds: vec![],
-    };
-    let mint_response = execute_mint(
-        deps.branch(),
+    let mut vault_token = VaultToken::load(&deps.as_ref())?;
+    let mint_msg = vault_token.mint(
+        deps,
         env,
-        execute_mint_info,
-        fallback_address.to_string(),
-        escrow_amount
+        info,
+        escrow_amount,
+        fallback_address.to_string()
     )?;
 
+    let mut response = Response::new();
+
+    if let Some(msg) = mint_msg {
+        response = response.add_message(msg.into_cosmos_vault_msg());
+    }
+
     Ok(
-        Response::new()
+        response
             .add_event(
                 send_liquidity_failure_event(
                     channel_id,
@@ -978,11 +964,6 @@ pub fn on_send_liquidity_failure(
                     u,
                     escrow_amount,
                     block_number_mod
-                )
-            )
-            .add_event(
-                cw20_response_to_standard_event(
-                    mint_response
                 )
             )
     )
@@ -1007,18 +988,18 @@ fn calc_keccak256(bytes: Vec<u8>) -> Vec<u8> {
 /// * `to_account` - The recipient of the swap output. Ensures no collisions between different users.
 /// * `u` - The units value of the swap. Used to randomize the hash.
 /// * `escrow_amount` - The escrowed asset amount. ! Required to validate the release escrow data.
-/// * `asset` - The swap source asset. ! Required to validate the release escrow data.
+/// * `asset_ref` - The swap source asset reference. ! Required to validate the release escrow data.
 /// * `block_number_mod` - The block number at which the swap transaction was commited (modulo 2^32). Used to randomize the hash.
 /// 
 pub fn compute_send_asset_hash(
     to_account: &[u8],
     u: U256,
     escrow_amount: Uint128,
-    asset: &str,
+    asset_ref: &str,
     block_number_mod: u32        
 ) -> Vec<u8> {
 
-    let asset_bytes = asset.as_bytes();
+    let asset_bytes = asset_ref.as_bytes();
 
     let mut hash_data: Vec<u8> = Vec::with_capacity(    // Initialize vec with the specified capacity to avoid reallocations
         to_account.len()
@@ -1080,7 +1061,7 @@ pub fn create_on_catalyst_call_msg(
     calldata_target: String,
     purchased_tokens: Uint128,
     data: Binary
-) -> Result<CosmosMsg, ContractError> {
+) -> Result<CosmosMsg<CustomMsg>, ContractError> {
 
     Ok(CosmosMsg::Wasm(
         cosmwasm_std::WasmMsg::Execute {
@@ -1155,10 +1136,12 @@ pub fn query_only_local(deps: Deps) -> StdResult<OnlyLocalResponse> {
 }
 
 /// Query the vault's assets.
-pub fn query_assets(deps: Deps) -> StdResult<AssetsResponse> {
+pub fn query_assets(deps: Deps) -> StdResult<AssetsResponse<Asset>> {
     Ok(
         AssetsResponse {
-            assets: ASSETS.load(deps.storage)?
+            assets: VaultAssets::load(&deps)?
+                .get_assets()
+                .to_owned()
         }
     )
 }
@@ -1166,12 +1149,22 @@ pub fn query_assets(deps: Deps) -> StdResult<AssetsResponse> {
 /// Query the weight of an asset.
 /// 
 /// # Arguments:
-/// * `asset` - The asset of which to get the weight of.
+/// * `asset_ref` - The reference of the asset of which to get the weight of.
 /// 
-pub fn query_weight(deps: Deps, asset: String) -> StdResult<WeightResponse> {
+pub fn query_weight(deps: Deps, asset_ref: String) -> StdResult<WeightResponse> {
     Ok(
         WeightResponse {
-            weight: WEIGHTS.load(deps.storage, &asset)?
+            weight: WEIGHTS.load(deps.storage, &asset_ref)?
+        }
+    )
+}
+
+/// Query the vault total supply.
+pub fn query_total_supply(deps: Deps) -> StdResult<TotalSupplyResponse> {
+    Ok(
+        TotalSupplyResponse {
+            total_supply: VaultToken::load(&deps)?
+                .query_total_supply(&deps)?
         }
     )
 }
@@ -1206,12 +1199,12 @@ pub fn query_fee_administrator(deps: Deps) -> StdResult<FeeAdministratorResponse
 /// Query the total escrowed amount of an asset.
 /// 
 /// # Arguments:
-/// * `asset` - The asset of which to get the total escrowed amount.
+/// * `asset_ref` - The reference of the asset of which to get the total escrowed amount.
 /// 
-pub fn query_total_escrowed_asset(deps: Deps, asset: &str) -> StdResult<TotalEscrowedAssetResponse> {
+pub fn query_total_escrowed_asset(deps: Deps, asset_ref: String) -> StdResult<TotalEscrowedAssetResponse> {
     Ok(
         TotalEscrowedAssetResponse {
-            amount: TOTAL_ESCROWED_ASSETS.load(deps.storage, asset)?
+            amount: TOTAL_ESCROWED_ASSETS.load(deps.storage, &asset_ref)?
         }
     )
 }

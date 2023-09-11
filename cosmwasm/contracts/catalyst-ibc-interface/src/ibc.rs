@@ -347,7 +347,7 @@ pub fn on_packet_response(
                     to_account: payload.to_account.to_binary(),
                     u: payload.u,
                     escrow_amount: from_amount,
-                    asset: payload.variable_payload.from_asset.try_decode_as_string()?,
+                    asset_ref: payload.variable_payload.from_asset.try_decode_as_string()?,
                     block_number_mod: payload.variable_payload.block_number
                 },
                 false => VaultExecuteMsg::<()>::OnSendAssetFailure {
@@ -355,7 +355,7 @@ pub fn on_packet_response(
                     to_account: payload.to_account.to_binary(),
                     u: payload.u,
                     escrow_amount: from_amount,
-                    asset: payload.variable_payload.from_asset.try_decode_as_string()?,
+                    asset_ref: payload.variable_payload.from_asset.try_decode_as_string()?,
                     block_number_mod: payload.variable_payload.block_number
                 },
             };

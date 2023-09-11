@@ -1,4 +1,4 @@
-use cosmwasm_std::{StdError, OverflowError, Uint64, Uint128, Binary, ConversionOverflowError, DivideByZeroError};
+use cosmwasm_std::{StdError, OverflowError, Uint64, Uint128, Binary, ConversionOverflowError, DivideByZeroError, Coin};
 use catalyst_types::U256;
 use fixed_point_math::FixedPointMathError;
 use thiserror::Error;
@@ -18,7 +18,7 @@ pub enum ContractError {
     #[error("Arithmetic error")]
     ArithmeticError {},
 
-    #[error("Invalid assets (invalid number of assets or invalid asset address)")]
+    #[error("Invalid assets (invalid number of assets or invalid asset.)")]
     InvalidAssets {},
 
     #[error("Invalid parameters: {reason}")]
@@ -26,6 +26,28 @@ pub enum ContractError {
 
     #[error("The requested asset does not form part of the vault.")]
     AssetNotFound {},
+
+    #[error("Expected asset not received: {asset}.")]
+    AssetNotReceived { asset: String },
+
+    #[error("Asset surplus received.")]
+    AssetSurplusReceived {},
+
+    #[error("Invalid amount {received_amount} for asset {asset} received (expected {expected_amount}).")]
+    UnexpectedAssetAmountReceived {
+        received_amount: Uint128,
+        expected_amount: Uint128,
+        asset: String
+    },
+
+    #[error("Expected gas not received: {gas}.")]
+    GasNotReceived { gas: Coin },
+
+    #[error("Not enough gas received: {received} (expected {expected}).")]
+    NotEnoughGasReceived {
+        received: Coin,
+        expected: Coin,
+    },
 
     #[error("Invalid amplification value.")]
     InvalidAmplification {},
@@ -98,6 +120,38 @@ impl From<cw20_base::ContractError> for ContractError {
             _ => ContractError::Error("cw20 error.".to_string())    // Match all other cw20_base errors for completeness. None of these
                                                                     // are expected to be encountered by the vaults (including the deprecated 
                                                                     // InvalidZeroAmount variant).
+        }
+    }
+}
+
+
+impl From<vault_assets::error::AssetError> for ContractError {
+    fn from(err: vault_assets::error::AssetError) -> Self {
+        match err {
+            vault_assets::error::AssetError::Std(error) => ContractError::Std(error),
+            vault_assets::error::AssetError::InvalidParameters { reason } => ContractError::InvalidParameters { reason },
+            vault_assets::error::AssetError::AssetNotFound {} => ContractError::AssetNotFound {},
+            vault_assets::error::AssetError::AssetNotReceived { asset } => ContractError::AssetNotReceived { asset },
+            vault_assets::error::AssetError::AssetSurplusReceived {} => ContractError::AssetSurplusReceived {},
+            vault_assets::error::AssetError::UnexpectedAssetAmountReceived {
+                received_amount,
+                expected_amount,
+                asset
+            } => ContractError::UnexpectedAssetAmountReceived {received_amount, expected_amount, asset},
+            vault_assets::error::AssetError::GasNotReceived { gas } => ContractError::GasNotReceived { gas },
+            vault_assets::error::AssetError::NotEnoughGasReceived { 
+                received,
+                expected
+            } => ContractError::NotEnoughGasReceived { received, expected },
+        }
+    }
+}
+
+impl From<vault_token::error::VaultTokenError> for ContractError {
+    fn from(err: vault_token::error::VaultTokenError) -> Self {
+        match err {
+            vault_token::error::VaultTokenError::Std(error) => ContractError::Std(error),
+            other_err => ContractError::Error(other_err.to_string())
         }
     }
 }

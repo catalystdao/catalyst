@@ -1,17 +1,24 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, to_binary};
+use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, StdResult, to_binary};
 use cw2::set_contract_version;
+use catalyst_vault_common::ContractError;
+use catalyst_vault_common::state::{
+    setup, finish_setup, set_fee_administrator, set_vault_fee, set_governance_fee_share, set_connection, on_send_asset_failure, on_send_liquidity_failure, query_chain_interface, query_setup_master, query_ready, query_only_local, query_assets, query_weight, query_vault_fee, query_governance_fee_share, query_fee_administrator, query_total_escrowed_liquidity, query_total_escrowed_asset, query_asset_escrow, query_liquidity_escrow, query_vault_connection_state, query_factory, query_factory_owner, query_total_supply
+};
+use catalyst_vault_common::bindings::{VaultResponse, VaultAssets, VaultAssetsTrait};
+
+#[cfg(feature="asset_cw20")]
 use cw20_base::allowances::{
     execute_decrease_allowance, execute_increase_allowance, execute_send_from, execute_transfer_from, query_allowance,
 };
+#[cfg(feature="asset_cw20")]
 use cw20_base::contract::{
     execute_send, execute_transfer, query_balance, query_token_info,
 };
-use catalyst_vault_common::ContractError;
-use catalyst_vault_common::state::{
-    setup, finish_setup, set_fee_administrator, set_vault_fee, set_governance_fee_share, set_connection, on_send_asset_failure, on_send_liquidity_failure, query_chain_interface, query_setup_master, query_ready, query_only_local, query_assets, query_weight, query_vault_fee, query_governance_fee_share, query_fee_administrator, query_total_escrowed_liquidity, query_total_escrowed_asset, query_asset_escrow, query_liquidity_escrow, query_vault_connection_state, query_factory, query_factory_owner
-};
+#[cfg(feature="asset_cw20")]
+use catalyst_vault_common::bindings::IntoVaultResponse;
+
 
 use crate::msg::{VolatileExecuteMsg, InstantiateMsg, QueryMsg, VolatileExecuteExtension};
 use crate::state::{
@@ -32,7 +39,7 @@ pub fn instantiate(
     env: Env,
     info: MessageInfo,
     msg: InstantiateMsg
-) -> Result<Response, ContractError> {
+) -> Result<VaultResponse, ContractError> {
 
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
@@ -61,9 +68,11 @@ pub fn execute(
     env: Env,
     info: MessageInfo,
     msg: VolatileExecuteMsg,
-) -> Result<Response, ContractError> {
+) -> Result<VaultResponse, ContractError> {
 
-    match msg {
+    let mut receive_no_assets = true;
+
+    let result = match msg {
 
         VolatileExecuteMsg::InitializeSwapCurves {
             assets,
@@ -73,7 +82,7 @@ pub fn execute(
         } => initialize_swap_curves(
             &mut deps,
             env,
-            info,
+            info.clone(),
             assets,
             weights,
             amp,
@@ -83,14 +92,14 @@ pub fn execute(
         VolatileExecuteMsg::FinishSetup {
         } => finish_setup(
             &mut deps,
-            info
+            info.clone()
         ),
 
         VolatileExecuteMsg::SetFeeAdministrator {
             administrator
         } => set_fee_administrator(
             &mut deps,
-            info,
+            info.clone(),
             administrator
         ),
 
@@ -98,7 +107,7 @@ pub fn execute(
             fee
         } => set_vault_fee(
             &mut deps,
-            info,
+            info.clone(),
             fee
         ),
 
@@ -106,7 +115,7 @@ pub fn execute(
             fee
         } => set_governance_fee_share(
             &mut deps,
-            info,
+            info.clone(),
             fee
         ),
 
@@ -116,7 +125,7 @@ pub fn execute(
             state
         } => set_connection(
             &mut deps,
-            info,
+            info.clone(),
             channel_id,
             to_vault,
             state
@@ -125,77 +134,92 @@ pub fn execute(
         VolatileExecuteMsg::DepositMixed {
             deposit_amounts,
             min_out
-        } => deposit_mixed(
-            &mut deps,
-            env,
-            info,
-            deposit_amounts,
-            min_out
-        ),
+        } => {
+            receive_no_assets = false;
+            deposit_mixed(
+                &mut deps,
+                env,
+                info.clone(),
+                deposit_amounts,
+                min_out
+            )
+        },
 
         VolatileExecuteMsg::WithdrawAll {
             vault_tokens,
             min_out
-        } => withdraw_all(
-            &mut deps,
-            env,
-            info,
-            vault_tokens,
-            min_out
-        ),
+        } => {
+            receive_no_assets = false;
+            withdraw_all(
+                &mut deps,
+                env,
+                info.clone(),
+                vault_tokens,
+                min_out
+            )
+        },
 
         VolatileExecuteMsg::WithdrawMixed {
             vault_tokens,
             withdraw_ratio,
             min_out
-        } => withdraw_mixed(
-            &mut deps,
-            env,
-            info,
-            vault_tokens,
-            withdraw_ratio,
-            min_out
-        ),
+        } => {
+            receive_no_assets = false;
+            withdraw_mixed(
+                &mut deps,
+                env,
+                info.clone(),
+                vault_tokens,
+                withdraw_ratio,
+                min_out
+            )
+        },
 
         VolatileExecuteMsg::LocalSwap {
-            from_asset,
-            to_asset,
+            from_asset_ref,
+            to_asset_ref,
             amount,
             min_out
-        } => local_swap(
-            &mut deps,
-            env,
-            info,
-            from_asset,
-            to_asset,
-            amount,
-            min_out
-        ),
+        } => {
+            receive_no_assets = false;
+            local_swap(
+                &mut deps,
+                env,
+                info.clone(),
+                from_asset_ref,
+                to_asset_ref,
+                amount,
+                min_out
+            )
+        },
 
         VolatileExecuteMsg::SendAsset {
             channel_id,
             to_vault,
             to_account,
-            from_asset,
+            from_asset_ref,
             to_asset_index,
             amount,
             min_out,
             fallback_account,
             calldata
-        } => send_asset(
-            &mut deps,
-            env,
-            info,
-            channel_id,
-            to_vault,
-            to_account,
-            from_asset,
-            to_asset_index,
-            amount,
-            min_out,
-            fallback_account,
-            calldata
-        ),
+        } => {
+            receive_no_assets = false;
+            send_asset(
+                &mut deps,
+                env,
+                info.clone(),
+                channel_id,
+                to_vault,
+                to_account,
+                from_asset_ref,
+                to_asset_index,
+                amount,
+                min_out,
+                fallback_account,
+                calldata
+            )
+        },
 
         VolatileExecuteMsg::ReceiveAsset {
             channel_id,
@@ -212,7 +236,7 @@ pub fn execute(
         } => receive_asset(
             &mut deps,
             env,
-            info,
+            info.clone(),
             channel_id,
             from_vault,
             to_asset_index,
@@ -238,7 +262,7 @@ pub fn execute(
         } => send_liquidity(
             &mut deps,
             env,
-            info,
+            info.clone(),
             channel_id,
             to_vault,
             to_account,
@@ -263,7 +287,7 @@ pub fn execute(
         } => receive_liquidity(
             &mut deps,
             env,
-            info,
+            info.clone(),
             channel_id,
             from_vault,
             to_account,
@@ -281,16 +305,17 @@ pub fn execute(
             to_account,
             u,
             escrow_amount,
-            asset,
+            asset_ref,
             block_number_mod
         } => on_send_asset_success_volatile(        // ! Use the volatile specific 'on_send_asset_success'
             &mut deps,
-            info,
+            &env,
+            &info,
             channel_id,
             to_account,
             u,
             escrow_amount,
-            asset,
+            asset_ref,
             block_number_mod
         ),
 
@@ -299,16 +324,17 @@ pub fn execute(
             to_account,
             u,
             escrow_amount,
-            asset,
+            asset_ref,
             block_number_mod
         } => on_send_asset_failure(
             &mut deps,
-            info,
+            &env,
+            &info,
             channel_id,
             to_account,
             u,
             escrow_amount,
-            asset,
+            asset_ref,
             block_number_mod
         ),
 
@@ -320,7 +346,8 @@ pub fn execute(
             block_number_mod
         } => on_send_liquidity_success_volatile(    // ! Use the volatile specific 'on_send_liquidity_success'
             &mut deps,
-            info,
+            &env,
+            &info,
             channel_id,
             to_account,
             u,
@@ -336,8 +363,8 @@ pub fn execute(
             block_number_mod
         } => on_send_liquidity_failure(
             &mut deps,
-            env,
-            info,
+            &env,
+            &info,
             channel_id,
             to_account,
             u,
@@ -354,7 +381,7 @@ pub fn execute(
                 } => set_weights(
                     &mut deps,
                     &env,
-                    info,
+                    info.clone(),
                     target_timestamp,
                     new_weights
                 ),
@@ -364,51 +391,63 @@ pub fn execute(
 
 
         // CW20 execute msgs - Use cw20-base for the implementation
+        #[cfg(feature="asset_cw20")]
         VolatileExecuteMsg::Transfer {
             recipient,
             amount
         } => Ok(
-            execute_transfer(deps, env, info, recipient, amount)?
+            execute_transfer(deps, env, info.clone(), recipient, amount)?
+                .into_vault_response()
         ),
 
+        #[cfg(feature="asset_cw20")]
         VolatileExecuteMsg::Burn {
             amount: _
          } => Err(
             ContractError::Unauthorized {}     // Vault token burn handled by withdraw function
         ),
 
+        #[cfg(feature="asset_cw20")]
         VolatileExecuteMsg::Send {
             contract,
             amount,
             msg,
         } => Ok(
-            execute_send(deps, env, info, contract, amount, msg)?
+            execute_send(deps, env, info.clone(), contract, amount, msg)?
+                .into_vault_response()
         ),
 
+        #[cfg(feature="asset_cw20")]
         VolatileExecuteMsg::IncreaseAllowance {
             spender,
             amount,
             expires,
         } => Ok(
-            execute_increase_allowance(deps, env, info, spender, amount, expires)?
+            execute_increase_allowance(deps, env, info.clone(), spender, amount, expires)?
+                .into_vault_response()
         ),
 
+        #[cfg(feature="asset_cw20")]
         VolatileExecuteMsg::DecreaseAllowance {
             spender,
             amount,
             expires,
         } => Ok(
-            execute_decrease_allowance(deps, env, info, spender, amount, expires)?
+            execute_decrease_allowance(deps, env, info.clone(), spender, amount, expires)?
+                .into_vault_response()
         ),
 
+        #[cfg(feature="asset_cw20")]
         VolatileExecuteMsg::TransferFrom {
             owner,
             recipient,
             amount,
         } => Ok(
-            execute_transfer_from(deps, env, info, owner, recipient, amount)?
+            execute_transfer_from(deps, env, info.clone(), owner, recipient, amount)?
+                .into_vault_response()
         ),
 
+        #[cfg(feature="asset_cw20")]
         VolatileExecuteMsg::BurnFrom {
             owner: _,
             amount: _
@@ -416,15 +455,23 @@ pub fn execute(
             ContractError::Unauthorized {}      // Vault token burn handled by withdraw function
         ),
 
+        #[cfg(feature="asset_cw20")]
         VolatileExecuteMsg::SendFrom {
             owner,
             contract,
             amount,
             msg,
         } => Ok(
-            execute_send_from(deps, env, info, owner, contract, amount, msg)?
+            execute_send_from(deps, env, info.clone(), owner, contract, amount, msg)?
+            .into_vault_response()
         ),
+    };
+
+    if receive_no_assets {
+        VaultAssets::receive_no_assets(&info)?;
     }
+
+    result
 }
 
 
@@ -450,45 +497,49 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::OnlyLocal{} => to_binary(&query_only_local(deps)?),
         QueryMsg::Assets {} => to_binary(&query_assets(deps)?),
         QueryMsg::Weight {
-            asset
-        } => to_binary(&query_weight(deps, asset)?),
+            asset_ref
+        } => to_binary(&query_weight(deps, asset_ref)?),
+        QueryMsg::TotalSupply {} => to_binary(&query_total_supply(deps)?),
 
         QueryMsg::VaultFee {} => to_binary(&query_vault_fee(deps)?),
         QueryMsg::GovernanceFeeShare {} => to_binary(&query_governance_fee_share(deps)?),
         QueryMsg::FeeAdministrator {} => to_binary(&query_fee_administrator(deps)?),
 
         QueryMsg::CalcSendAsset{
-            from_asset,
+            from_asset_ref,
             amount
-        } => to_binary(&query_calc_send_asset(deps,env, &from_asset,amount)?),
+        } => to_binary(&query_calc_send_asset(deps, env, from_asset_ref, amount)?),
         QueryMsg::CalcReceiveAsset{
-            to_asset,
+            to_asset_ref,
             u
-        } => to_binary(&query_calc_receive_asset(deps,env, &to_asset,u)?),
+        } => to_binary(&query_calc_receive_asset(deps, env, to_asset_ref, u)?),
         QueryMsg::CalcLocalSwap{
-            from_asset,
-            to_asset,
+            from_asset_ref,
+            to_asset_ref,
             amount
-        } => to_binary(&query_calc_local_swap(deps,env, &from_asset, &to_asset,amount)?),
+        } => to_binary(&query_calc_local_swap(deps, env, from_asset_ref, to_asset_ref, amount)?),
 
-        QueryMsg::GetLimitCapacity{} => to_binary(&query_get_limit_capacity(deps,env)?),
+        QueryMsg::GetLimitCapacity{} => to_binary(&query_get_limit_capacity(deps, env)?),
 
         QueryMsg::TotalEscrowedAsset {
-            asset
-        } => to_binary(&query_total_escrowed_asset(deps, asset.as_ref())?),
+            asset_ref
+        } => to_binary(&query_total_escrowed_asset(deps, asset_ref)?),
         QueryMsg::TotalEscrowedLiquidity {} => to_binary(&query_total_escrowed_liquidity(deps)?),
         QueryMsg::AssetEscrow { hash } => to_binary(&query_asset_escrow(deps, hash)?),
         QueryMsg::LiquidityEscrow { hash } => to_binary(&query_liquidity_escrow(deps, hash)?),
 
         // Volatile-Specific Queries
         QueryMsg::TargetWeight {
-            asset
-        } => to_binary(&query_target_weight(deps, asset)?),
+            asset_ref
+        } => to_binary(&query_target_weight(deps, asset_ref)?),
         QueryMsg::WeightsUpdateFinishTimestamp {} => to_binary(&query_weights_update_finish_timestamp(deps)?),
 
         // CW20 query msgs - Use cw20-base for the implementation
+        #[cfg(feature="asset_cw20")]
         QueryMsg::TokenInfo {} => to_binary(&query_token_info(deps)?),
+        #[cfg(feature="asset_cw20")]
         QueryMsg::Balance { address } => to_binary(&query_balance(deps, address)?),
+        #[cfg(feature="asset_cw20")]
         QueryMsg::Allowance { owner, spender } => to_binary(&query_allowance(deps, owner, spender)?)
     }
 }

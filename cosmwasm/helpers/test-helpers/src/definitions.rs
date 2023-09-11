@@ -9,4 +9,6 @@ pub const SWAPPER_A             : &str = "swapper_a_addr";
 pub const SWAPPER_B             : &str = "swapper_b_addr";
 pub const SWAPPER_C             : &str = "swapper_c_addr";
 
+pub const VAULT_TOKEN_DENOM     : &str = "CAT";
+
 pub const CHANNEL_ID            : &str = "channel_id";

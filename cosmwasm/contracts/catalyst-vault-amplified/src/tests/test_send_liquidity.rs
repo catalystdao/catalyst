@@ -1,10 +1,10 @@
 mod test_amplified_send_liquidity {
     use cosmwasm_std::{Uint128, Addr, Binary, Attribute};
-    use cw_multi_test::{App, Executor};
     use catalyst_types::{U256, I256, u256};
-    use catalyst_vault_common::{ContractError, msg::{TotalEscrowedLiquidityResponse, LiquidityEscrowResponse}, state::{INITIAL_MINT_AMOUNT, compute_send_liquidity_hash}};
-    use test_helpers::{math::{uint128_to_f64, f64_to_uint128, u256_to_f64}, misc::{encode_payload_address, get_response_attribute}, token::{deploy_test_tokens, transfer_tokens, query_token_balance, query_token_info}, definitions::{SETUP_MASTER, CHANNEL_ID, SWAPPER_A, SWAPPER_B, SWAPPER_C}, contract::{mock_instantiate_interface, mock_factory_deploy_vault, mock_set_vault_connection}};
+    use catalyst_vault_common::{ContractError, msg::{TotalEscrowedLiquidityResponse, LiquidityEscrowResponse}, state::{INITIAL_MINT_AMOUNT, compute_send_liquidity_hash}, bindings::Asset};
+    use test_helpers::{math::{uint128_to_f64, f64_to_uint128, u256_to_f64}, misc::{encode_payload_address, get_response_attribute}, definitions::{SETUP_MASTER, CHANNEL_ID, SWAPPER_A, SWAPPER_B, SWAPPER_C, VAULT_TOKEN_DENOM}, contract::{mock_instantiate_interface, mock_factory_deploy_vault, mock_set_vault_connection}, env::CustomTestEnv, vault_token::CustomTestVaultToken};
 
+    use crate::tests::{TestEnv, TestVaultToken};
     use crate::{msg::AmplifiedExecuteMsg, tests::{helpers::{compute_expected_send_liquidity, amplified_vault_contract_storage}, parameters::{AMPLIFICATION, TEST_VAULT_BALANCES, TEST_VAULT_WEIGHTS, TEST_VAULT_ASSET_COUNT}}};
 
 
@@ -12,29 +12,30 @@ mod test_amplified_send_liquidity {
     #[test]
     fn test_send_liquidity_calculation() {
 
-        let mut app = App::default();
+        let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
 
         // Instantiate and initialize vault
-        let interface = mock_instantiate_interface(&mut app);
-        let vault_tokens = deploy_test_tokens(&mut app, SETUP_MASTER.to_string(), None, TEST_VAULT_ASSET_COUNT);
+        let interface = mock_instantiate_interface(env.get_app());
+        let vault_assets = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
-        let vault_code_id = amplified_vault_contract_storage(&mut app);
-        let vault = mock_factory_deploy_vault(
-            &mut app,
-            vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
+        let vault_code_id = amplified_vault_contract_storage(env.get_app());
+        let vault = mock_factory_deploy_vault::<Asset, _, _>(
+            &mut env,
+            vault_assets.clone(),
             vault_initial_balances.clone(),
             vault_weights.clone(),
             AMPLIFICATION,
             vault_code_id,
             Some(interface.clone()),
+            None,
             None
         );
 
         // Set target mock vault
         let target_vault = encode_payload_address(b"target_vault");
         mock_set_vault_connection(
-            &mut app,
+            env.get_app(),
             vault.clone(),
             CHANNEL_ID.to_string(),
             target_vault.clone(),
@@ -47,10 +48,10 @@ mod test_amplified_send_liquidity {
         let to_account = encode_payload_address(SWAPPER_B.as_bytes());
 
         // Fund swapper with tokens
-        transfer_tokens(
-            &mut app,
+        let vault_token = TestVaultToken::load(vault.to_string(), VAULT_TOKEN_DENOM.to_string());
+        vault_token.transfer(
+            env.get_app(),
             swap_amount,
-            vault.clone(),
             Addr::unchecked(SETUP_MASTER),
             SWAPPER_A.to_string()
         );
@@ -58,7 +59,7 @@ mod test_amplified_send_liquidity {
 
 
         // Tested action: send liquidity
-        let response = app.execute_contract(
+        let response = env.execute_contract(
             Addr::unchecked(SWAPPER_A),
             vault.clone(),
             &AmplifiedExecuteMsg::SendLiquidity {
@@ -71,7 +72,8 @@ mod test_amplified_send_liquidity {
                 fallback_account: SWAPPER_C.to_string(),
                 calldata: Binary(vec![])
             },
-            &[]
+            vec![],
+            vec![]
         ).unwrap();
 
 
@@ -93,21 +95,21 @@ mod test_amplified_send_liquidity {
 
 
         // Verify the vault tokens have been burnt
-        let swapper_vault_tokens_balance = query_token_balance(&mut app, vault.clone(), SWAPPER_A.to_string());
+        let swapper_vault_tokens_balance = vault_token.query_balance(env.get_app(), SWAPPER_A.to_string());
         assert_eq!(
             swapper_vault_tokens_balance,
             Uint128::zero()
         );
     
         // Verify the vault total vault tokens supply
-        let vault_token_info = query_token_info(&mut app, vault.clone());
+        let vault_token_supply = vault_token.total_supply(env.get_app());
         assert_eq!(
-            vault_token_info.total_supply,
+            vault_token_supply,
             INITIAL_MINT_AMOUNT - swap_amount
         );
 
         // Verify the vault tokens are escrowed
-        let queried_escrowed_total = app
+        let queried_escrowed_total = env.get_app()
             .wrap()
             .query_wasm_smart::<TotalEscrowedLiquidityResponse>(vault.clone(), &crate::msg::QueryMsg::TotalEscrowedLiquidity {  })
             .unwrap()
@@ -120,10 +122,10 @@ mod test_amplified_send_liquidity {
             to_account.as_ref(),
             observed_return,
             swap_amount,
-            app.block_info().height as u32
+            env.get_app().block_info().height as u32
         );
 
-        let queried_fallback_account = app
+        let queried_fallback_account = env.get_app()
             .wrap()
             .query_wasm_smart::<LiquidityEscrowResponse>(vault.clone(), &crate::msg::QueryMsg::LiquidityEscrow { hash: Binary(expected_liquidity_swap_hash) })
             .unwrap()
@@ -148,29 +150,30 @@ mod test_amplified_send_liquidity {
     #[test]
     fn test_send_liquidity_event() {
 
-        let mut app = App::default();
+        let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
 
         // Instantiate and initialize vault
-        let interface = mock_instantiate_interface(&mut app);
-        let vault_tokens = deploy_test_tokens(&mut app, SETUP_MASTER.to_string(), None, TEST_VAULT_ASSET_COUNT);
+        let interface = mock_instantiate_interface(env.get_app());
+        let vault_assets = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
-        let vault_code_id = amplified_vault_contract_storage(&mut app);
-        let vault = mock_factory_deploy_vault(
-            &mut app,
-            vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
+        let vault_code_id = amplified_vault_contract_storage(env.get_app());
+        let vault = mock_factory_deploy_vault::<Asset, _, _>(
+            &mut env,
+            vault_assets.clone(),
             vault_initial_balances.clone(),
             vault_weights.clone(),
             AMPLIFICATION,
             vault_code_id,
             Some(interface.clone()),
+            None,
             None
         );
 
         // Set target mock vault
         let target_vault = encode_payload_address(b"target_vault");
         mock_set_vault_connection(
-            &mut app,
+            env.get_app(),
             vault.clone(),
             CHANNEL_ID.to_string(),
             target_vault.clone(),
@@ -185,10 +188,10 @@ mod test_amplified_send_liquidity {
         let min_reference_asset = u256!("987654321");  // Some random value
 
         // Fund swapper with tokens
-        transfer_tokens(
-            &mut app,
+        let vault_token = TestVaultToken::load(vault.to_string(), VAULT_TOKEN_DENOM.to_string());
+        vault_token.transfer(
+            env.get_app(),
             swap_amount,
-            vault.clone(),
             Addr::unchecked(SETUP_MASTER),
             SWAPPER_A.to_string()
         );
@@ -196,7 +199,7 @@ mod test_amplified_send_liquidity {
 
 
         // Tested action: send liquidity
-        let response = app.execute_contract(
+        let response = env.execute_contract(
             Addr::unchecked(SWAPPER_A),
             vault.clone(),
             &AmplifiedExecuteMsg::SendLiquidity {
@@ -209,7 +212,8 @@ mod test_amplified_send_liquidity {
                 fallback_account: SWAPPER_C.to_string(),
                 calldata: Binary(vec![])
             },
-            &[]
+            vec![],
+            vec![]
         ).unwrap();
 
 
@@ -252,29 +256,30 @@ mod test_amplified_send_liquidity {
     #[test]
     fn test_send_liquidity_zero_amount() {
 
-        let mut app = App::default();
+        let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
 
         // Instantiate and initialize vault
-        let interface = mock_instantiate_interface(&mut app);
-        let vault_tokens = deploy_test_tokens(&mut app, SETUP_MASTER.to_string(), None, TEST_VAULT_ASSET_COUNT);
+        let interface = mock_instantiate_interface(env.get_app());
+        let vault_assets = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
-        let vault_code_id = amplified_vault_contract_storage(&mut app);
-        let vault = mock_factory_deploy_vault(
-            &mut app,
-            vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
+        let vault_code_id = amplified_vault_contract_storage(env.get_app());
+        let vault = mock_factory_deploy_vault::<Asset, _, _>(
+            &mut env,
+            vault_assets.clone(),
             vault_initial_balances.clone(),
             vault_weights.clone(),
             AMPLIFICATION,
             vault_code_id,
             Some(interface.clone()),
+            None,
             None
         );
 
         // Set target mock vault
         let target_vault = encode_payload_address(b"target_vault");
         mock_set_vault_connection(
-            &mut app,
+            env.get_app(),
             vault.clone(),
             CHANNEL_ID.to_string(),
             target_vault.clone(),
@@ -285,10 +290,10 @@ mod test_amplified_send_liquidity {
         let swap_amount = Uint128::zero();
 
         // Fund swapper with tokens
-        transfer_tokens(
-            &mut app,
+        let vault_token = TestVaultToken::load(vault.to_string(), VAULT_TOKEN_DENOM.to_string());
+        vault_token.transfer(
+            env.get_app(),
             swap_amount,
-            vault.clone(),
             Addr::unchecked(SETUP_MASTER),
             SWAPPER_A.to_string()
         );
@@ -296,7 +301,7 @@ mod test_amplified_send_liquidity {
 
 
         // Tested action: send liquidity
-        let response = app.execute_contract(
+        let response = env.execute_contract(
             Addr::unchecked(SWAPPER_A),
             vault.clone(),
             &AmplifiedExecuteMsg::SendLiquidity {
@@ -309,7 +314,8 @@ mod test_amplified_send_liquidity {
                 fallback_account: SWAPPER_C.to_string(),
                 calldata: Binary(vec![])
             },
-            &[]
+            vec![],
+            vec![]
         ).unwrap();
 
 
@@ -327,22 +333,23 @@ mod test_amplified_send_liquidity {
     #[test]
     fn test_send_liquidity_not_connected_vault() {
 
-        let mut app = App::default();
+        let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
 
         // Instantiate and initialize vault
-        let interface = mock_instantiate_interface(&mut app);
-        let vault_tokens = deploy_test_tokens(&mut app, SETUP_MASTER.to_string(), None, TEST_VAULT_ASSET_COUNT);
+        let interface = mock_instantiate_interface(env.get_app());
+        let vault_assets = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
-        let vault_code_id = amplified_vault_contract_storage(&mut app);
-        let vault = mock_factory_deploy_vault(
-            &mut app,
-            vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
+        let vault_code_id = amplified_vault_contract_storage(env.get_app());
+        let vault = mock_factory_deploy_vault::<Asset, _, _>(
+            &mut env,
+            vault_assets.clone(),
             vault_initial_balances.clone(),
             vault_weights.clone(),
             AMPLIFICATION,
             vault_code_id,
             Some(interface.clone()),
+            None,
             None
         );
 
@@ -355,10 +362,10 @@ mod test_amplified_send_liquidity {
         let swap_amount = f64_to_uint128(uint128_to_f64(INITIAL_MINT_AMOUNT) * send_percentage).unwrap();
 
         // Fund swapper with tokens
-        transfer_tokens(
-            &mut app,
+        let vault_token = TestVaultToken::load(vault.to_string(), VAULT_TOKEN_DENOM.to_string());
+        vault_token.transfer(
+            env.get_app(),
             swap_amount,
-            vault.clone(),
             Addr::unchecked(SETUP_MASTER),
             SWAPPER_A.to_string()
         );
@@ -366,7 +373,7 @@ mod test_amplified_send_liquidity {
 
 
         // Tested action: send liquidity
-        let response_result = app.execute_contract(
+        let response_result = env.execute_contract(
             Addr::unchecked(SWAPPER_A),
             vault.clone(),
             &AmplifiedExecuteMsg::SendLiquidity {
@@ -379,7 +386,8 @@ mod test_amplified_send_liquidity {
                 fallback_account: SWAPPER_C.to_string(),
                 calldata: Binary(vec![])
             },
-            &[]
+            vec![],
+            vec![]
         );
     
 
@@ -397,29 +405,30 @@ mod test_amplified_send_liquidity {
     #[test]
     fn test_send_liquidity_calldata() {
 
-        let mut app = App::default();
+        let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
 
         // Instantiate and initialize vault
-        let interface = mock_instantiate_interface(&mut app);
-        let vault_tokens = deploy_test_tokens(&mut app, SETUP_MASTER.to_string(), None, TEST_VAULT_ASSET_COUNT);
+        let interface = mock_instantiate_interface(env.get_app());
+        let vault_assets = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
-        let vault_code_id = amplified_vault_contract_storage(&mut app);
-        let vault = mock_factory_deploy_vault(
-            &mut app,
-            vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
+        let vault_code_id = amplified_vault_contract_storage(env.get_app());
+        let vault = mock_factory_deploy_vault::<Asset, _, _>(
+            &mut env,
+            vault_assets.clone(),
             vault_initial_balances.clone(),
             vault_weights.clone(),
             AMPLIFICATION,
             vault_code_id,
             Some(interface.clone()),
+            None,
             None
         );
 
         // Set target mock vault
         let target_vault = encode_payload_address(b"target_vault");
         mock_set_vault_connection(
-            &mut app,
+            env.get_app(),
             vault.clone(),
             CHANNEL_ID.to_string(),
             target_vault.clone(),
@@ -432,10 +441,10 @@ mod test_amplified_send_liquidity {
         let to_account = encode_payload_address(SWAPPER_B.as_bytes());
 
         // Fund swapper with tokens
-        transfer_tokens(
-            &mut app,
+        let vault_token = TestVaultToken::load(vault.to_string(), VAULT_TOKEN_DENOM.to_string());
+        vault_token.transfer(
+            env.get_app(),
             swap_amount,
-            vault.clone(),
             Addr::unchecked(SETUP_MASTER),
             SWAPPER_A.to_string()
         );
@@ -448,7 +457,7 @@ mod test_amplified_send_liquidity {
 
 
         // Tested action: send liquidity calldata
-        let response = app.execute_contract(
+        let response = env.execute_contract(
             Addr::unchecked(SWAPPER_A),
             vault.clone(),
             &AmplifiedExecuteMsg::SendLiquidity {
@@ -461,14 +470,18 @@ mod test_amplified_send_liquidity {
                 fallback_account: SWAPPER_C.to_string(),
                 calldata: calldata.clone()
             },
-            &[]
+            vec![],
+            vec![]
         ).unwrap();
 
 
 
         // Verify the swap return
         let payload_calldata = Binary::from_base64(
-            &get_response_attribute::<String>(response.events[4].clone(), "calldata").unwrap()
+            &get_response_attribute::<String>(
+                response.events[response.events.len()-1].clone(),
+                "calldata"
+            ).unwrap()
         ).unwrap();
 
         assert_eq!(

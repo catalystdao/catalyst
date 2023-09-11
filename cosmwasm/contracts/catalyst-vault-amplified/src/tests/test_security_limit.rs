@@ -2,11 +2,11 @@ mod test_amplified_security_limit {
     use std::{ops::Div, str::FromStr};
 
     use catalyst_types::{U256, u256, I256};
-    use catalyst_vault_common::{msg::{GetLimitCapacityResponse, TotalEscrowedAssetResponse}, ContractError, state::{INITIAL_MINT_AMOUNT, DECAY_RATE}};
+    use catalyst_vault_common::{msg::{GetLimitCapacityResponse, TotalEscrowedAssetResponse}, ContractError, state::{INITIAL_MINT_AMOUNT, DECAY_RATE}, bindings::Asset};
     use cosmwasm_std::{Addr, Uint128, Binary, Uint64};
-    use cw_multi_test::{App, Executor};
-    use test_helpers::{token::{deploy_test_tokens, set_token_allowance, query_token_balance, transfer_tokens}, contract::{mock_factory_deploy_vault, mock_instantiate_interface, mock_set_vault_connection}, definitions::{SETUP_MASTER, SWAPPER_B, CHANNEL_ID, SWAPPER_C, FACTORY_OWNER}, math::{uint128_to_f64, f64_to_uint128, u256_to_f64, f64_to_u256}, misc::{encode_payload_address, get_response_attribute}};
+    use test_helpers::{contract::{mock_factory_deploy_vault, mock_instantiate_interface, mock_set_vault_connection}, definitions::{SETUP_MASTER, SWAPPER_B, CHANNEL_ID, SWAPPER_C, FACTORY_OWNER}, math::{uint128_to_f64, f64_to_uint128, u256_to_f64, f64_to_u256}, misc::{encode_payload_address, get_response_attribute}, env::CustomTestEnv, asset::CustomTestAsset};
 
+    use crate::tests::{TestEnv, TestAsset, TestApp};
     use crate::{tests::{parameters::{TEST_VAULT_BALANCES, TEST_VAULT_WEIGHTS, TEST_VAULT_ASSET_COUNT, AMPLIFICATION}, helpers::amplified_vault_contract_storage}, msg::{QueryMsg, AmplifiedExecuteMsg, AmplifiedExecuteExtension}};
 
 
@@ -21,7 +21,7 @@ mod test_amplified_security_limit {
     struct MockVaultConfig {
         interface: Addr,
         vault: Addr,
-        assets: Vec<Addr>,
+        assets: Vec<TestAsset>,
         weights: Vec<Uint128>,
         vault_initial_balances: Vec<Uint128>,
         remote_vault: Binary,
@@ -30,38 +30,39 @@ mod test_amplified_security_limit {
     }
 
     fn set_mock_vault(
-        app: &mut App,
+        env: &mut TestEnv,
         bias_limit_capacity: f64
     ) -> MockVaultConfig {
 
         // Instantiate and initialize vault
-        let interface = mock_instantiate_interface(app);
-        let vault_tokens = deploy_test_tokens(app, SETUP_MASTER.to_string(), None, TEST_VAULT_ASSET_COUNT);
+        let interface = mock_instantiate_interface(env.get_app());
+        let vault_assets = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
-        let vault_code_id = amplified_vault_contract_storage(app);
-        let vault = mock_factory_deploy_vault(
-            app,
-            vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
+        let vault_code_id = amplified_vault_contract_storage(env.get_app());
+        let vault = mock_factory_deploy_vault::<Asset, _, _>(
+            env,
+            vault_assets.clone(),
             vault_initial_balances.clone(),
             vault_weights.clone(),
             AMPLIFICATION,
             vault_code_id,
             Some(interface.clone()),
+            None,
             None
         );
 
         // Connect the vault with a mock vault
         let remote_vault = encode_payload_address(REMOTE_VAULT.as_bytes());
         mock_set_vault_connection(
-            app,
+            env.get_app(),
             vault.clone(),
             CHANNEL_ID.to_string(),
             remote_vault.clone(),
             true
         );
 
-        let intitial_limit_capacity = query_limit_capacity(app, vault.clone());
+        let intitial_limit_capacity = query_limit_capacity(env.get_app(), vault.clone());
 
         let current_limit_capacity: U256;
         if bias_limit_capacity != 1. {
@@ -87,7 +88,7 @@ mod test_amplified_security_limit {
 
                     // Perform a 'receive asset' call to bias the limit capacity
 
-                    app.execute_contract(
+                    env.execute_contract(
                         interface.clone(),
                         vault.clone(),
                         &AmplifiedExecuteMsg::ReceiveAsset {
@@ -103,11 +104,12 @@ mod test_amplified_security_limit {
                             calldata_target: None,
                             calldata: None
                         },
-                        &[]
+                        vec![],
+                        vec![]
                     ).unwrap();
                 });
 
-            current_limit_capacity = query_limit_capacity(app, vault.clone());
+            current_limit_capacity = query_limit_capacity(env.get_app(), vault.clone());
         }
         else {
             current_limit_capacity = intitial_limit_capacity;
@@ -115,16 +117,16 @@ mod test_amplified_security_limit {
 
         // Recompute the max limit capacity (as it depends on asset balances for amplified vaults)
         let max_limit_capacity = calc_max_limit_capacity(
-            app,
+            env,
             vault.clone(),
-            vault_tokens.clone(),
+            vault_assets.clone(),
             vault_weights.clone()
         );
 
         MockVaultConfig {
             interface,
             vault,
-            assets: vault_tokens,
+            assets: vault_assets,
             weights: vault_weights,
             vault_initial_balances,
             remote_vault,
@@ -163,24 +165,23 @@ mod test_amplified_security_limit {
 
     /// Helper to calculate the theoretical maximum limit capacity based PURELY on the vault's asset balances.
     fn calc_max_limit_capacity(
-        app: &mut App,
+        env: &mut TestEnv,
         vault: Addr,
-        vault_tokens: Vec<Addr>,
+        vault_assets: Vec<TestAsset>,
         vault_weights: Vec<Uint128>
     ) -> U256 {
-        vault_tokens.iter()
+        vault_assets.iter()
             .zip(vault_weights)
             .fold(U256::zero(), |acc, (asset, weight)| {
 
-                let vault_balance = query_token_balance(
-                    app,
-                    asset.clone(),
+                let vault_balance = asset.query_balance(
+                    env.get_app(),
                     vault.to_string()
                 );
 
-                let escrowed_balance = app.wrap().query_wasm_smart::<TotalEscrowedAssetResponse>(
+                let escrowed_balance = env.get_app().wrap().query_wasm_smart::<TotalEscrowedAssetResponse>(
                     vault.clone(),
-                    &QueryMsg::TotalEscrowedAsset { asset: asset.to_string() }
+                    &QueryMsg::TotalEscrowedAsset { asset_ref: asset.get_asset_ref() }
                 ).unwrap().amount;
 
                 let effective_balance = vault_balance - escrowed_balance;
@@ -195,7 +196,7 @@ mod test_amplified_security_limit {
     #[allow(dead_code)]
     struct MockSendAsset {
         to_account: Binary,
-        from_asset: Addr,
+        from_asset: TestAsset,
         from_weight: Uint128,
         swap_amount: Uint128,
         units: U256,
@@ -203,7 +204,7 @@ mod test_amplified_security_limit {
     }
 
     fn execute_mock_send_asset(
-        app: &mut App,
+        env: &mut TestEnv,
         mock_vault_config: MockVaultConfig,
         send_percentage: f64
     ) -> MockSendAsset {
@@ -217,32 +218,24 @@ mod test_amplified_security_limit {
         let to_asset_idx = 1;
         let to_account = encode_payload_address(SWAPPER_B.as_bytes());
 
-        // Set swap allowance
-        set_token_allowance(
-            app,
-            swap_amount,
-            from_asset.clone(),
-            Addr::unchecked(SETUP_MASTER),
-            mock_vault_config.vault.to_string()
-        );
-
         // Execute send asset
         let remote_vault = encode_payload_address(REMOTE_VAULT.as_bytes());
-        let response = app.execute_contract(
+        let response = env.execute_contract(
             Addr::unchecked(SETUP_MASTER),
             mock_vault_config.vault.clone(),
             &AmplifiedExecuteMsg::SendAsset {
                 channel_id: CHANNEL_ID.to_string(),
                 to_vault: remote_vault,
                 to_account: to_account.clone(),
-                from_asset: from_asset.to_string(),
+                from_asset_ref: from_asset.get_asset_ref(),
                 to_asset_index: to_asset_idx,
                 amount: swap_amount,
                 min_out: U256::zero(),
                 fallback_account: SWAPPER_C.to_string(),
                 calldata: Binary(vec![])
             },
-            &[]
+            vec![from_asset.clone()],
+            vec![swap_amount]
         ).unwrap();
 
         let observed_units = get_response_attribute::<U256>(
@@ -276,7 +269,7 @@ mod test_amplified_security_limit {
     }
 
     fn execute_mock_send_liquidity(
-        app: &mut App,
+        env: &mut TestEnv,
         mock_vault_config: MockVaultConfig,
         send_percentage: f64
     ) -> MockSendLiquidity {
@@ -289,7 +282,7 @@ mod test_amplified_security_limit {
 
         // Execute send liquidity
         let remote_vault = encode_payload_address(REMOTE_VAULT.as_bytes());
-        let response = app.execute_contract(
+        let response = env.execute_contract(
             Addr::unchecked(SETUP_MASTER),
             mock_vault_config.vault.clone(),
             &AmplifiedExecuteMsg::SendLiquidity {
@@ -302,7 +295,8 @@ mod test_amplified_security_limit {
                 fallback_account: SWAPPER_C.to_string(),
                 calldata: Binary(vec![])
             },
-            &[]
+            vec![],
+            vec![]
         ).unwrap();
 
         let observed_units = get_response_attribute::<U256>(
@@ -319,7 +313,7 @@ mod test_amplified_security_limit {
     }
 
     fn query_limit_capacity(
-        app: &mut App,
+        app: &mut TestApp,
         vault: Addr
     ) -> U256 {
         app.wrap().query_wasm_smart::<GetLimitCapacityResponse>(
@@ -335,33 +329,34 @@ mod test_amplified_security_limit {
     #[test]
     fn test_security_limit_initialization() {
 
-        let mut app = App::default();
+        let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
 
         // Instantiate and initialize vault
-        let interface = mock_instantiate_interface(&mut app);
-        let vault_tokens = deploy_test_tokens(&mut app, SETUP_MASTER.to_string(), None, TEST_VAULT_ASSET_COUNT);
+        let interface = mock_instantiate_interface(env.get_app());
+        let vault_assets = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
-        let vault_code_id = amplified_vault_contract_storage(&mut app);
+        let vault_code_id = amplified_vault_contract_storage(env.get_app());
 
 
 
         // Tested action: intialize a new vault
-        let vault = mock_factory_deploy_vault(
-            &mut app,
-            vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
+        let vault = mock_factory_deploy_vault::<Asset, _, _>(
+            &mut env,
+            vault_assets.clone(),
             vault_initial_balances.clone(),
             vault_weights.clone(),
             AMPLIFICATION,
             vault_code_id,
             Some(interface.clone()),
+            None,
             None
         );
 
 
 
         // Check the limit capacity
-        let queried_limit_capacity = u256_to_f64(query_limit_capacity(&mut app, vault.clone()));
+        let queried_limit_capacity = u256_to_f64(query_limit_capacity(env.get_app(), vault.clone()));
 
         let expected_limit_capacity = vault_initial_balances.iter()
             .zip(&vault_weights)
@@ -382,11 +377,11 @@ mod test_amplified_security_limit {
     #[test]
     fn test_security_limit_decay() {
 
-        let mut app = App::default();
+        let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
         
         // Instantiate and initialize vault
         let mock_vault_config = set_mock_vault(
-            &mut app,
+            &mut env,
             0.         // ! Decrease the initial limit capacity by 100%
         );
         let vault = mock_vault_config.vault.clone();
@@ -397,18 +392,18 @@ mod test_amplified_security_limit {
         assert!(relative_capacity < 0.001);
 
         // Check the capacity calculation at different intervals
-        let start_timestamp = app.block_info().time;
+        let start_timestamp = env.get_app().block_info().time;
         let check_steps = vec![0.2, 0.7, 1., 1.1];
 
         check_steps.iter().for_each(|step| {
 
             let time_elapsed = (u256_to_f64(DECAY_RATE) * step) as u64;
-            app.update_block(|block| {
+            env.get_app().update_block(|block| {
                 block.time = start_timestamp.plus_seconds(time_elapsed);
             });
 
             let queried_capacity = u256_to_f64(
-                query_limit_capacity(&mut app, vault.clone())
+                query_limit_capacity(env.get_app(), vault.clone())
             );
 
             let expected_capacity = u256_to_f64(
@@ -427,11 +422,11 @@ mod test_amplified_security_limit {
     #[test]
     fn test_security_limit_change_on_send_asset() {
 
-        let mut app = App::default();
+        let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
         
         // Instantiate and initialize vault
         let mock_vault_config = set_mock_vault(
-            &mut app,
+            &mut env,
             0.7         // ! Decrease the initial limit capacity by 30%
         );
         let vault = mock_vault_config.vault.clone();
@@ -446,34 +441,26 @@ mod test_amplified_security_limit {
         let to_asset_idx = 1;
         let to_account = encode_payload_address(SWAPPER_B.as_bytes());
 
-        // Set swap allowance
-        set_token_allowance(
-            &mut app,
-            swap_amount,
-            from_asset.clone(),
-            Addr::unchecked(SETUP_MASTER),
-            vault.to_string()
-        );
-
 
 
         // Tested action: send asset
         let remote_vault = encode_payload_address(REMOTE_VAULT.as_bytes());
-        app.execute_contract(
+        env.execute_contract(
             Addr::unchecked(SETUP_MASTER),
             vault.clone(),
             &AmplifiedExecuteMsg::SendAsset {
                 channel_id: CHANNEL_ID.to_string(),
                 to_vault: remote_vault,
                 to_account: to_account.clone(),
-                from_asset: from_asset.to_string(),
+                from_asset_ref: from_asset.get_asset_ref(),
                 to_asset_index: to_asset_idx,
                 amount: swap_amount,
                 min_out: U256::zero(),
                 fallback_account: SWAPPER_C.to_string(),
                 calldata: Binary(vec![])
             },
-            &[]
+            vec![from_asset.clone()],
+            vec![swap_amount]
         ).unwrap();
 
 
@@ -483,7 +470,7 @@ mod test_amplified_security_limit {
 
         // Make sure the security limit has not increased (as it does not get increased until the ACK
         // is received)
-        let observed_limit_capacity = query_limit_capacity(&mut app, vault.clone());
+        let observed_limit_capacity = query_limit_capacity(env.get_app(), vault.clone());
         assert_eq!(
             observed_limit_capacity,
             mock_vault_config.current_limit_capacity
@@ -495,11 +482,11 @@ mod test_amplified_security_limit {
     #[test]
     fn test_security_limit_change_on_send_asset_success() {
 
-        let mut app = App::default();
+        let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
         
         // Instantiate and initialize vault
         let mock_vault_config = set_mock_vault(
-            &mut app,
+            &mut env,
             0.7         // ! Decrease the initial limit capacity by 30%
         );
         let vault = mock_vault_config.vault.clone();
@@ -512,7 +499,7 @@ mod test_amplified_security_limit {
 
         // Tested action 1: small send asset success
         let mock_send_asset_result = execute_mock_send_asset(
-            &mut app,
+            &mut env,
             mock_vault_config.clone(),
             0.05    // ! Small swap
         );
@@ -522,7 +509,8 @@ mod test_amplified_security_limit {
         let effective_swap_amount = mock_send_asset_result.swap_amount - mock_send_asset_result.fee;
         expected_max_limit_capacity += U256::from(effective_swap_amount * mock_send_asset_result.from_weight)/u256!("2");
 
-        app.execute_contract(
+        let block_number_mod = env.get_app().block_info().height as u32;
+        env.execute_contract(
             mock_vault_config.interface.clone(),
             vault.clone(),
             &AmplifiedExecuteMsg::OnSendAssetSuccess {
@@ -530,14 +518,15 @@ mod test_amplified_security_limit {
                 to_account: mock_send_asset_result.to_account.clone(),
                 u: mock_send_asset_result.units.clone(),
                 escrow_amount: effective_swap_amount,
-                asset: mock_send_asset_result.from_asset.to_string(),
-                block_number_mod: app.block_info().height as u32,
+                asset_ref: mock_send_asset_result.from_asset.get_asset_ref(),
+                block_number_mod
             },
-            &[]
+            vec![],
+            vec![]
         ).unwrap();
 
         // Make sure the security limit capacity has increased by the received amount.
-        let observed_limit_capacity = query_limit_capacity(&mut app, vault.clone());
+        let observed_limit_capacity = query_limit_capacity(env.get_app(), vault.clone());
         let expected_limit_capacity = mock_vault_config.current_limit_capacity
             + U256::from(effective_swap_amount)*U256::from(mock_send_asset_result.from_weight);
         assert_eq!(
@@ -549,7 +538,7 @@ mod test_amplified_security_limit {
 
         // Tested action 2: very large send asset success (saturate the limit capacity)
         let mock_send_asset_result = execute_mock_send_asset(
-            &mut app,
+            &mut env,
             mock_vault_config.clone(),
             1.  // ! Very large swap
         );
@@ -557,7 +546,8 @@ mod test_amplified_security_limit {
         let effective_swap_amount = mock_send_asset_result.swap_amount - mock_send_asset_result.fee;
         expected_max_limit_capacity += U256::from(effective_swap_amount * mock_send_asset_result.from_weight)/u256!("2");
 
-        app.execute_contract(
+        let block_number_mod = env.get_app().block_info().height as u32;
+        env.execute_contract(
             mock_vault_config.interface.clone(),
             vault.clone(),
             &AmplifiedExecuteMsg::OnSendAssetSuccess {
@@ -565,14 +555,15 @@ mod test_amplified_security_limit {
                 to_account: mock_send_asset_result.to_account.clone(),
                 u: mock_send_asset_result.units.clone(),
                 escrow_amount: effective_swap_amount,
-                asset: mock_send_asset_result.from_asset.to_string(),
-                block_number_mod: app.block_info().height as u32,
+                asset_ref: mock_send_asset_result.from_asset.get_asset_ref(),
+                block_number_mod
             },
-            &[]
+            vec![],
+            vec![]
         ).unwrap();
 
         // Make sure the security limit capacity is at the expected maximum.
-        let observed_limit_capacity = query_limit_capacity(&mut app, vault.clone());
+        let observed_limit_capacity = query_limit_capacity(env.get_app(), vault.clone());
 
         assert_eq!(
             observed_limit_capacity,
@@ -585,11 +576,11 @@ mod test_amplified_security_limit {
     #[test]
     fn test_security_limit_change_on_send_asset_timeout() {
 
-        let mut app = App::default();
+        let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
         
         // Instantiate and initialize vault
         let mock_vault_config = set_mock_vault(
-            &mut app,
+            &mut env,
             0.7         // ! Decrease the initial limit capacity by 30%
         );
         let vault = mock_vault_config.vault.clone();
@@ -598,14 +589,15 @@ mod test_amplified_security_limit {
 
         // Tested action: send asset failure
         let mock_send_asset_result = execute_mock_send_asset(
-            &mut app,
+            &mut env,
             mock_vault_config.clone(),
             0.05
         );
         // Make sure some units have been sent (i.e. that the test is correctly setup)
         assert!(!mock_send_asset_result.units.is_zero());
 
-        app.execute_contract(
+        let block_number_mod = env.get_app().block_info().height as u32;
+        env.execute_contract(
             mock_vault_config.interface.clone(),
             vault.clone(),
             &AmplifiedExecuteMsg::OnSendAssetFailure {
@@ -613,16 +605,17 @@ mod test_amplified_security_limit {
                 to_account: mock_send_asset_result.to_account.clone(),
                 u: mock_send_asset_result.units.clone(),
                 escrow_amount: mock_send_asset_result.swap_amount - mock_send_asset_result.fee,
-                asset: mock_send_asset_result.from_asset.to_string(),
-                block_number_mod: app.block_info().height as u32,
+                asset_ref: mock_send_asset_result.from_asset.get_asset_ref(),
+                block_number_mod
             },
-            &[]
+            vec![],
+            vec![]
         ).unwrap();
 
 
 
         // Make sure the security limit capacity has not changed.
-        let observed_limit_capacity = query_limit_capacity(&mut app, vault.clone());
+        let observed_limit_capacity = query_limit_capacity(env.get_app(), vault.clone());
         assert_eq!(
             observed_limit_capacity,
             mock_vault_config.current_limit_capacity
@@ -634,11 +627,11 @@ mod test_amplified_security_limit {
     #[test]
     fn test_security_limit_change_on_receive_asset() {
 
-        let mut app = App::default();
+        let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
         
         // Instantiate and initialize vault
         let mock_vault_config = set_mock_vault(
-            &mut app,
+            &mut env,
             0.1         // ! Decrease the initial limit capacity by 90%
         );
         let vault = mock_vault_config.vault.clone();
@@ -659,7 +652,7 @@ mod test_amplified_security_limit {
             mock_vault_config.weights[0].u128() as f64
         );
 
-        let response = app.execute_contract(
+        let response = env.execute_contract(
             mock_vault_config.interface.clone(),
             vault.clone(),
             &AmplifiedExecuteMsg::ReceiveAsset {
@@ -675,11 +668,12 @@ mod test_amplified_security_limit {
                 calldata_target: None,
                 calldata: None
             },
-            &[]
+            vec![],
+            vec![]
         ).unwrap();
 
         // Make sure the security limit capacity has decreased by the return amount.
-        let observed_limit_capacity = query_limit_capacity(&mut app, vault.clone());
+        let observed_limit_capacity = query_limit_capacity(env.get_app(), vault.clone());
 
         let observed_return = get_response_attribute::<Uint128>(
             response.events[1].clone(),
@@ -698,7 +692,7 @@ mod test_amplified_security_limit {
 
 
         // Tested action 2: too large receive asset
-        let vault_balance = query_token_balance(&mut app, mock_vault_config.assets[0].clone(), vault.to_string());
+        let vault_balance = mock_vault_config.assets[0].query_balance(env.get_app(), vault.to_string());
         let max_units = calc_units_for_limit_change(
             1. - (AMPLIFICATION.u64() as f64) / 1e18,
             observed_limit_capacity,
@@ -711,7 +705,7 @@ mod test_amplified_security_limit {
             1.01 * u256_to_f64(max_units)     // ! Try to receive more than allowed
         ).unwrap();
 
-        let response_result = app.execute_contract(
+        let response_result = env.execute_contract(
             mock_vault_config.interface.clone(),
             vault.clone(),
             &AmplifiedExecuteMsg::ReceiveAsset {
@@ -727,7 +721,8 @@ mod test_amplified_security_limit {
                 calldata_target: None,
                 calldata: None
             },
-            &[]
+            vec![],
+            vec![]
         );
 
         // Make sure the transaction fails
@@ -741,7 +736,7 @@ mod test_amplified_security_limit {
 
 
         // Tested action 3: max receive asset
-        let response = app.execute_contract(
+        let response = env.execute_contract(
             mock_vault_config.interface.clone(),
             vault.clone(),
             &AmplifiedExecuteMsg::ReceiveAsset {
@@ -757,15 +752,16 @@ mod test_amplified_security_limit {
                 calldata_target: None,
                 calldata: None
             },
-            &[]
+            vec![],
+            vec![]
         ).unwrap();
 
         // Make sure the security limit capacity is close zero.
-        let observed_limit_capacity = query_limit_capacity(&mut app, vault.clone());
+        let observed_limit_capacity = query_limit_capacity(env.get_app(), vault.clone());
         assert!(u256_to_f64(observed_limit_capacity) / u256_to_f64(expected_max_limit_capacity) < 0.01);
 
         // Verify the max_limit_capacity (increase the block time by DECAY_RATE)
-        app.update_block(|block| block.time = block.time.plus_seconds(DECAY_RATE.as_u64()));
+        env.get_app().update_block(|block| block.time = block.time.plus_seconds(DECAY_RATE.as_u64()));
 
         let observed_return = get_response_attribute::<Uint128>(
             response.events[1].clone(),
@@ -775,7 +771,7 @@ mod test_amplified_security_limit {
 
         expected_max_limit_capacity -= expected_limit_change/u256!("2");
 
-        let observed_limit_capacity = query_limit_capacity(&mut app, vault.clone());
+        let observed_limit_capacity = query_limit_capacity(env.get_app(), vault.clone());
         assert_eq!(
             observed_limit_capacity,
             expected_max_limit_capacity
@@ -787,18 +783,18 @@ mod test_amplified_security_limit {
     #[test]
     fn test_security_limit_max_capacity_recalculation() {
 
-        let mut app = App::default();
+        let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
         
         // Instantiate and initialize vault
         let mock_vault_config = set_mock_vault(
-            &mut app,
+            &mut env,
             1.
         );
         let vault = mock_vault_config.vault.clone();
 
         // Execute a send asset
         let mock_send_asset_result = execute_mock_send_asset(
-            &mut app,
+            &mut env,
             mock_vault_config.clone(),
             0.05
         );
@@ -808,23 +804,23 @@ mod test_amplified_security_limit {
 
 
         // Tested action 1: Recalculate the max capacity BEFORE 'success' is received
-        app.execute_contract(
+        env.execute_contract(
             Addr::unchecked(SETUP_MASTER),
             vault.clone(),
             &AmplifiedExecuteMsg::Custom(
                 AmplifiedExecuteExtension::UpdateMaxLimitCapacity {}
             ),
-            &[]
+            vec![],
+            vec![]
         ).unwrap();
 
         // Make sure the max limit capacity has only increased by the swap's FEE amount (minus the gov fee!),
         // as the effective swap amount may be returned to the swapper in the case of an unsuccessful swap.
-        let observed_limit_capacity = query_limit_capacity(&mut app, vault.clone());
+        let observed_limit_capacity = query_limit_capacity(env.get_app(), vault.clone());
 
         let observed_fee = mock_send_asset_result.fee;
-        let observed_gov_fee = query_token_balance(
-            &mut app,
-            mock_vault_config.assets[0].clone(),
+        let observed_gov_fee = mock_vault_config.assets[0].query_balance(
+            env.get_app(),
             FACTORY_OWNER.to_string()
         );
         let expected_limit_capacity = mock_vault_config.max_limit_capacity
@@ -839,7 +835,8 @@ mod test_amplified_security_limit {
 
         // Execute swap success
         let effective_swap_amount = mock_send_asset_result.swap_amount - mock_send_asset_result.fee;
-        app.execute_contract(
+        let block_number_mod = env.get_app().block_info().height as u32;
+        env.execute_contract(
             mock_vault_config.interface.clone(),
             vault.clone(),
             &AmplifiedExecuteMsg::OnSendAssetSuccess {
@@ -847,26 +844,28 @@ mod test_amplified_security_limit {
                 to_account: mock_send_asset_result.to_account.clone(),
                 u: mock_send_asset_result.units.clone(),
                 escrow_amount: effective_swap_amount,
-                asset: mock_send_asset_result.from_asset.to_string(),
-                block_number_mod: app.block_info().height as u32,
+                asset_ref: mock_send_asset_result.from_asset.get_asset_ref(),
+                block_number_mod
             },
-            &[]
+            vec![],
+            vec![]
         ).unwrap();
 
 
 
         // Tested action 2: Recalculate the max capacity AFTER 'success' is received
-        app.execute_contract(
+        env.execute_contract(
             Addr::unchecked(SETUP_MASTER),
             vault.clone(),
             &AmplifiedExecuteMsg::Custom(
                 AmplifiedExecuteExtension::UpdateMaxLimitCapacity {}
             ),
-            &[]
+            vec![],
+            vec![]
         ).unwrap();
 
         // Make sure the max limit capacity has increased by the TOTAL swap amount (minus the gov fee!).
-        let observed_limit_capacity = query_limit_capacity(&mut app, vault.clone());
+        let observed_limit_capacity = query_limit_capacity(env.get_app(), vault.clone());
         let expected_limit_capacity = mock_vault_config.max_limit_capacity
             + U256::from(
                 (mock_send_asset_result.swap_amount-observed_gov_fee)*mock_send_asset_result.from_weight
@@ -885,11 +884,11 @@ mod test_amplified_security_limit {
     #[test]
     fn test_security_limit_change_on_send_liquidity() {
 
-        let mut app = App::default();
+        let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
         
         // Instantiate and initialize vault
         let mock_vault_config = set_mock_vault(
-            &mut app,
+            &mut env,
             0.8         // ! Decrease the initial limit capacity by 20%
         );
         let vault = mock_vault_config.vault.clone();
@@ -906,7 +905,7 @@ mod test_amplified_security_limit {
 
         // Tested action: send liquidity
         let remote_vault = encode_payload_address(REMOTE_VAULT.as_bytes());
-        let response = app.execute_contract(
+        let response = env.execute_contract(
             Addr::unchecked(SETUP_MASTER),
             vault.clone(),
             &AmplifiedExecuteMsg::SendLiquidity {
@@ -919,7 +918,8 @@ mod test_amplified_security_limit {
                 fallback_account: SWAPPER_C.to_string(),
                 calldata: Binary(vec![])
             },
-            &[]
+            vec![],
+            vec![]
         ).unwrap();
 
 
@@ -932,7 +932,7 @@ mod test_amplified_security_limit {
         assert!(!observed_units.is_zero());
 
         // Make sure the security limit has not increased.
-        let observed_limit_capacity = query_limit_capacity(&mut app, vault.clone());
+        let observed_limit_capacity = query_limit_capacity(env.get_app(), vault.clone());
         assert_eq!(
             observed_limit_capacity,
             mock_vault_config.current_limit_capacity
@@ -944,11 +944,11 @@ mod test_amplified_security_limit {
     #[test]
     fn test_security_limit_change_on_send_liquidity_success() {
 
-        let mut app = App::default();
+        let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
         
         // Instantiate and initialize vault
         let mock_vault_config = set_mock_vault(
-            &mut app,
+            &mut env,
             0.8         // ! Decrease the initial limit capacity by 20%
         );
         let vault = mock_vault_config.vault.clone();
@@ -957,14 +957,15 @@ mod test_amplified_security_limit {
 
         // Tested action: send liquidity success
         let mock_send_liquidity_result = execute_mock_send_liquidity(
-            &mut app,
+            &mut env,
             mock_vault_config.clone(),
             0.05
         );
         // Make sure some units have been sent (i.e. that the test is correctly setup)
         assert!(!mock_send_liquidity_result.units.is_zero());
 
-        app.execute_contract(
+        let block_number_mod = env.get_app().block_info().height as u32;
+        env.execute_contract(
             mock_vault_config.interface.clone(),
             vault.clone(),
             &AmplifiedExecuteMsg::OnSendLiquiditySuccess {
@@ -972,13 +973,14 @@ mod test_amplified_security_limit {
                 to_account: mock_send_liquidity_result.to_account.clone(),
                 u: mock_send_liquidity_result.units.clone(),
                 escrow_amount: mock_send_liquidity_result.swap_amount,
-                block_number_mod: app.block_info().height as u32,
+                block_number_mod
             },
-            &[]
+            vec![],
+            vec![]
         ).unwrap();
 
         // Check the security limit has not increased. (Quirk of the amplified vault)
-        let observed_limit_capacity = query_limit_capacity(&mut app, vault.clone());
+        let observed_limit_capacity = query_limit_capacity(env.get_app(), vault.clone());
         assert_eq!(
             observed_limit_capacity,
             mock_vault_config.current_limit_capacity
@@ -990,11 +992,11 @@ mod test_amplified_security_limit {
     #[test]
     fn test_security_limit_change_on_send_liquidity_timeout() {
 
-        let mut app = App::default();
+        let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
         
         // Instantiate and initialize vault
         let mock_vault_config = set_mock_vault(
-            &mut app,
+            &mut env,
             0.8         // ! Decrease the initial limit capacity by 20%
         );
         let vault = mock_vault_config.vault.clone();
@@ -1003,14 +1005,15 @@ mod test_amplified_security_limit {
 
         // Tested action: send liquidity failure
         let mock_send_liquidity_result = execute_mock_send_liquidity(
-            &mut app,
+            &mut env,
             mock_vault_config.clone(),
             0.05
         );
         // Make sure some units have been sent (i.e. that the test is correctly setup)
         assert!(!mock_send_liquidity_result.units.is_zero());
 
-        app.execute_contract(
+        let block_number_mod = env.get_app().block_info().height as u32;
+        env.execute_contract(
             mock_vault_config.interface.clone(),
             vault.clone(),
             &AmplifiedExecuteMsg::OnSendLiquidityFailure {
@@ -1018,15 +1021,16 @@ mod test_amplified_security_limit {
                 to_account: mock_send_liquidity_result.to_account.clone(),
                 u: mock_send_liquidity_result.units.clone(),
                 escrow_amount: mock_send_liquidity_result.swap_amount,
-                block_number_mod: app.block_info().height as u32,
+                block_number_mod
             },
-            &[]
+            vec![],
+            vec![]
         ).unwrap();
 
 
 
         // Make sure the security limit capacity has not changed.
-        let observed_limit_capacity = query_limit_capacity(&mut app, vault.clone());
+        let observed_limit_capacity = query_limit_capacity(env.get_app(), vault.clone());
         assert_eq!(
             observed_limit_capacity,
             mock_vault_config.current_limit_capacity
@@ -1039,11 +1043,11 @@ mod test_amplified_security_limit {
     #[ignore]   // TODO review
     fn test_security_limit_change_on_receive_liquidity() {
 
-        let mut app = App::default();
+        let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
         
         // Instantiate and initialize vault
         let mock_vault_config = set_mock_vault(
-            &mut app,
+            &mut env,
             0.1         // ! Decrease the initial limit capacity by 20%
         );
         let vault = mock_vault_config.vault.clone();
@@ -1059,7 +1063,7 @@ mod test_amplified_security_limit {
             mock_vault_config.vault_initial_balances[0].u128() as f64,
             mock_vault_config.weights[0].u128() as f64
         );
-        app.execute_contract(
+        env.execute_contract(
             mock_vault_config.interface.clone(),
             vault.clone(),
             &AmplifiedExecuteMsg::ReceiveLiquidity {
@@ -1074,11 +1078,12 @@ mod test_amplified_security_limit {
                 calldata_target: None,
                 calldata: None
             },
-            &[]
+            vec![],
+            vec![]
         ).unwrap();
 
         // Make sure the security limit capacity has decreased.
-        let observed_limit_capacity = query_limit_capacity(&mut app, vault.clone());
+        let observed_limit_capacity = query_limit_capacity(env.get_app(), vault.clone());
         assert!(
             observed_limit_capacity < mock_vault_config.current_limit_capacity
         );
@@ -1095,7 +1100,7 @@ mod test_amplified_security_limit {
         let units = f64_to_u256(
             1.01 * u256_to_f64(max_units)
         ).unwrap();
-        let response_result = app.execute_contract(
+        let response_result = env.execute_contract(
             mock_vault_config.interface.clone(),
             vault.clone(),
             &AmplifiedExecuteMsg::ReceiveLiquidity {
@@ -1110,7 +1115,8 @@ mod test_amplified_security_limit {
                 calldata_target: None,
                 calldata: None
             },
-            &[]
+            vec![],
+            vec![]
         );
 
         // Make sure the transaction fails
@@ -1124,7 +1130,7 @@ mod test_amplified_security_limit {
 
         // Tested action 3: max receive liquidity
         let units = observed_limit_capacity;
-        app.execute_contract(
+        env.execute_contract(
             mock_vault_config.interface.clone(),
             vault.clone(),
             &AmplifiedExecuteMsg::ReceiveLiquidity {
@@ -1139,11 +1145,12 @@ mod test_amplified_security_limit {
                 calldata_target: None,
                 calldata: None
             },
-            &[]
+            vec![],
+            vec![]
         ).unwrap();
 
         // Make sure the security limit capacity is at zero.
-        let observed_limit_capacity = query_limit_capacity(&mut app, vault.clone());
+        let observed_limit_capacity = query_limit_capacity(env.get_app(), vault.clone());
         assert!(observed_limit_capacity.is_zero());
         
     }
@@ -1154,11 +1161,11 @@ mod test_amplified_security_limit {
     #[test]
     fn test_security_limit_change_on_local_swap() {
 
-        let mut app = App::default();
+        let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
         
         // Instantiate and initialize vault
         let mock_vault_config = set_mock_vault(
-            &mut app,
+            &mut env,
             1.
         );
         let vault = mock_vault_config.vault.clone();
@@ -1185,28 +1192,21 @@ mod test_amplified_security_limit {
 
 
         // Tested action 1: local swap in one direction
-        set_token_allowance(
-            &mut app,
-            swap_amount,
-            from_asset.clone(),
-            Addr::unchecked(SETUP_MASTER),
-            vault.to_string()
-        );
-
-        let result = app.execute_contract(
+        let result = env.execute_contract(
             Addr::unchecked(SETUP_MASTER),
             vault.clone(),
             &AmplifiedExecuteMsg::LocalSwap {
-                from_asset: from_asset.to_string(),
-                to_asset: to_asset.to_string(),
+                from_asset_ref: from_asset.get_asset_ref(),
+                to_asset_ref: to_asset.get_asset_ref(),
                 amount: swap_amount,
                 min_out: Uint128::zero()
             },
-            &[]
+            vec![from_asset.clone()],
+            vec![swap_amount]
         ).unwrap();
 
         // Verify the max limit capacity has changed
-        let observed_max_limit_capacity = query_limit_capacity(&mut app, vault.clone());
+        let observed_max_limit_capacity = query_limit_capacity(env.get_app(), vault.clone());
 
         let first_observed_return = get_response_attribute::<Uint128>(
             result.events[1].clone(),
@@ -1231,28 +1231,21 @@ mod test_amplified_security_limit {
 
 
         // Tested action 2: local swap in the opposite direction
-        set_token_allowance(
-            &mut app,
-            first_observed_return,
-            to_asset.clone(),
-            Addr::unchecked(SETUP_MASTER),
-            vault.to_string()
-        );
-
-        let result = app.execute_contract(
+        let result = env.execute_contract(
             Addr::unchecked(SETUP_MASTER),
             vault.clone(),
             &AmplifiedExecuteMsg::LocalSwap {
-                from_asset: to_asset.to_string(),
-                to_asset: from_asset.to_string(),
+                from_asset_ref: to_asset.get_asset_ref(),
+                to_asset_ref: from_asset.get_asset_ref(),
                 amount: first_observed_return,
                 min_out: Uint128::zero()
             },
-            &[]
+            vec![to_asset.clone()],
+            vec![first_observed_return]
         ).unwrap();
 
         // Verify the max limit capacity has changed
-        let observed_max_limit_capacity = query_limit_capacity(&mut app, vault.clone());
+        let observed_max_limit_capacity = query_limit_capacity(env.get_app(), vault.clone());
 
         let second_observed_return = get_response_attribute::<Uint128>(
             result.events[1].clone(),
@@ -1283,11 +1276,11 @@ mod test_amplified_security_limit {
     #[test]
     fn test_security_limit_change_on_deposit() {
 
-        let mut app = App::default();
+        let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
         
         // Instantiate and initialize vault
         let mock_vault_config = set_mock_vault(
-            &mut app,
+            &mut env,
             0.6         // ! Decrease the initial limit capacity by 40%
         );
         let vault = mock_vault_config.vault.clone();
@@ -1301,38 +1294,22 @@ mod test_amplified_security_limit {
                 ).unwrap()
             }).collect();
 
-        // Fund swapper with tokens and set vault allowance
-        mock_vault_config.assets.iter()
-            .zip(&deposit_amounts)
-            .for_each(|(asset, deposit_amount)| {
-
-                set_token_allowance(
-                    &mut app,
-                    *deposit_amount,
-                    Addr::unchecked(asset),
-                    Addr::unchecked(SETUP_MASTER),
-                    vault.to_string()
-                );
-
-            });
-
-
-
         // Tested action: deposit
-        app.execute_contract(
+        env.execute_contract(
             Addr::unchecked(SETUP_MASTER),
             vault.clone(),
             &AmplifiedExecuteMsg::DepositMixed {
                 deposit_amounts: deposit_amounts.clone(),
                 min_out: Uint128::zero()
             },
-            &[]
+            mock_vault_config.assets.clone(),
+            deposit_amounts.clone()
         ).unwrap();
 
 
 
         // Verify the security limit capacity has not changed
-        let observed_limit_capacity = query_limit_capacity(&mut app, vault.clone());
+        let observed_limit_capacity = query_limit_capacity(env.get_app(), vault.clone());
 
         assert_eq!(
             observed_limit_capacity,
@@ -1340,8 +1317,8 @@ mod test_amplified_security_limit {
         );
 
         // Verify the max limit capacity has increased
-        app.update_block(|block| block.time = block.time.plus_seconds(DECAY_RATE.as_u64()));    // Increase block time
-        let observed_max_limit_capacity = query_limit_capacity(&mut app, vault.clone());
+        env.get_app().update_block(|block| block.time = block.time.plus_seconds(DECAY_RATE.as_u64()));    // Increase block time
+        let observed_max_limit_capacity = query_limit_capacity(env.get_app(), vault.clone());
 
         let expected_max_limit_capacity_change = deposit_amounts.iter()
             .zip(mock_vault_config.weights)
@@ -1362,11 +1339,11 @@ mod test_amplified_security_limit {
     #[test]
     fn test_security_limit_change_on_withdraw_mixed() {
 
-        let mut app = App::default();
+        let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
         
         // Instantiate and initialize vault
         let mock_vault_config = set_mock_vault(
-            &mut app,
+            &mut env,
             0.6         // ! Decrease the initial limit capacity by 40%
         );
         let vault = mock_vault_config.vault.clone();
@@ -1381,7 +1358,7 @@ mod test_amplified_security_limit {
 
 
         // Tested action: withdraw mixed
-        let result = app.execute_contract(
+        let result = env.execute_contract(
             Addr::unchecked(SETUP_MASTER),
             vault.clone(),
             &AmplifiedExecuteMsg::WithdrawMixed {
@@ -1389,13 +1366,14 @@ mod test_amplified_security_limit {
                 withdraw_ratio: withdraw_ratio.clone(),
                 min_out: vec![Uint128::zero(); TEST_VAULT_ASSET_COUNT]
             },
-            &[]
+            vec![],
+            vec![]
         ).unwrap();
 
 
 
         // Verify the security limit capacity has not changed
-        let observed_limit_capacity = query_limit_capacity(&mut app, vault.clone());
+        let observed_limit_capacity = query_limit_capacity(env.get_app(), vault.clone());
 
         assert_eq!(
             observed_limit_capacity,
@@ -1403,8 +1381,8 @@ mod test_amplified_security_limit {
         );
 
         // Verify the max limit capacity has decreased
-        app.update_block(|block| block.time = block.time.plus_seconds(DECAY_RATE.as_u64()));    // Increase block time
-        let observed_max_limit_capacity = query_limit_capacity(&mut app, vault.clone());
+        env.get_app().update_block(|block| block.time = block.time.plus_seconds(DECAY_RATE.as_u64()));    // Increase block time
+        let observed_max_limit_capacity = query_limit_capacity(env.get_app(), vault.clone());
 
         let observed_returns = get_response_attribute::<String>(
             result.events[1].clone(),
@@ -1434,11 +1412,11 @@ mod test_amplified_security_limit {
     #[test]
     fn test_security_limit_change_on_withdraw_all() {
 
-        let mut app = App::default();
+        let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
         
         // Instantiate and initialize vault
         let mock_vault_config = set_mock_vault(
-            &mut app,
+            &mut env,
             0.6         // ! Decrease the initial limit capacity by 40%
         );
         let vault = mock_vault_config.vault.clone();
@@ -1450,20 +1428,21 @@ mod test_amplified_security_limit {
 
 
         // Tested action: withdraw all
-        let result = app.execute_contract(
+        let result = env.execute_contract(
             Addr::unchecked(SETUP_MASTER),
             vault.clone(),
             &AmplifiedExecuteMsg::WithdrawAll {
                 vault_tokens: withdraw_amount,
                 min_out: vec![Uint128::zero(); TEST_VAULT_ASSET_COUNT]
             },
-            &[]
+            vec![],
+            vec![]
         ).unwrap();
 
 
 
         // Verify the security limit capacity has not changed
-        let observed_limit_capacity = query_limit_capacity(&mut app, vault.clone());
+        let observed_limit_capacity = query_limit_capacity(env.get_app(), vault.clone());
 
         assert_eq!(
             observed_limit_capacity,
@@ -1471,8 +1450,8 @@ mod test_amplified_security_limit {
         );
 
         // Verify the max limit capacity has decreased
-        app.update_block(|block| block.time = block.time.plus_seconds(DECAY_RATE.as_u64()));    // Increase block time
-        let observed_max_limit_capacity = query_limit_capacity(&mut app, vault.clone());
+        env.get_app().update_block(|block| block.time = block.time.plus_seconds(DECAY_RATE.as_u64()));    // Increase block time
+        let observed_max_limit_capacity = query_limit_capacity(env.get_app(), vault.clone());
 
         let observed_returns = get_response_attribute::<String>(
             result.events[1].clone(),

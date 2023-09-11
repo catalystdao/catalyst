@@ -34,7 +34,7 @@ pub enum QueryMsg {
     Assets {},
     #[returns(WeightResponse)]
     Weight {
-        asset: String
+        asset_ref: String
     },
 
     #[returns(VaultFeeResponse)]

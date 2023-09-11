@@ -1,8 +1,10 @@
 use cosmwasm_schema::cw_serde;
 
-use cosmwasm_std::{Binary, Uint64, Uint128, Addr};
-use cw20::Expiration;
+use cosmwasm_std::{Binary, Uint64, Uint128, Addr, Empty};
 use catalyst_types::U256;
+
+#[cfg(feature="asset_cw20")]
+use cw20::Expiration;
 
 
 
@@ -28,7 +30,7 @@ pub struct InstantiateMsg {
 
 /// Vault execution messages
 #[cw_serde]
-pub enum ExecuteMsg<T> {
+pub enum ExecuteMsg<T, A=Empty> {
 
     /// Initialize the vault swap curves.
     /// * `assets` - The list of the assets that are to be supported by the vault.
@@ -36,7 +38,7 @@ pub enum ExecuteMsg<T> {
     /// * `amp` - The amplification value applied to the vault.
     /// * `depositor` - The account that will receive the initial vault tokens.
     InitializeSwapCurves {
-        assets: Vec<String>,
+        assets: Vec<A>,
         weights: Vec<Uint128>,
         amp: Uint64,
         depositor: String
@@ -95,13 +97,13 @@ pub enum ExecuteMsg<T> {
     },
 
     /// Perform a local asset swap.
-    /// * `from_asset` - The source asset.
-    /// * `to_asset` - The destination asset.
-    /// * `amount` - The `from_asset` amount sold to the vault.
-    /// * `min_out` - The mininmum return to get of `to_asset`.
+    /// * `from_asset_ref` - The source asset reference.
+    /// * `to_asset_ref` - The destination asset reference.
+    /// * `amount` - The `from_asset_ref` amount sold to the vault.
+    /// * `min_out` - The mininmum return to get of `to_asset_ref`.
     LocalSwap {
-        from_asset: String,
-        to_asset: String,
+        from_asset_ref: String,
+        to_asset_ref: String,
         amount: Uint128,
         min_out: Uint128,
     },
@@ -110,9 +112,9 @@ pub enum ExecuteMsg<T> {
     /// * `channel_id` - The target chain identifier.
     /// * `to_vault` - The target vault on the target chain (Catalyst encoded).
     /// * `to_account` - The recipient of the swap on the target chain (Catalyst encoded).
-    /// * `from_asset` - The source asset.
+    /// * `from_asset_ref` - The source asset reference.
     /// * `to_asset_index` - The destination asset index.
-    /// * `amount` - The `from_asset` amount sold to the vault.
+    /// * `amount` - The `from_asset_ref` amount sold to the vault.
     /// * `min_out` - The mininum `to_asset` output amount to get on the target vault.
     /// * `fallback_account` - The recipient of the swapped amount should the swap fail.
     /// * `calldata` - Arbitrary data to be executed on the target chain upon successful execution of the swap.
@@ -120,7 +122,7 @@ pub enum ExecuteMsg<T> {
         channel_id: String,
         to_vault: Binary,
         to_account: Binary,
-        from_asset: String,
+        from_asset_ref: String,
         to_asset_index: u8,
         amount: Uint128,
         min_out: U256,
@@ -136,7 +138,7 @@ pub enum ExecuteMsg<T> {
     /// * `u` - The incoming units.
     /// * `min_out` - The mininum output amount.
     /// * `from_amount` - The `from_asset` amount sold to the source vault.
-    /// * `from_asset` - The source asset.
+    /// * `from_asset` - The source asset reference.
     /// * `from_block_number_mod` - The block number at which the swap transaction was commited (modulo 2^32).
     /// * `calldata_target` - The contract address to invoke upon successful execution of the swap.
     /// * `calldata` - The data to pass to `calldata_target` upon successful execution of the swap.
@@ -203,14 +205,14 @@ pub enum ExecuteMsg<T> {
     /// * `to_account` - The recipient of the swap output.
     /// * `u` - The units value of the swap.
     /// * `escrow_amount` - The escrowed asset amount.
-    /// * `asset` - The swap source asset.
+    /// * `asset_ref` - The swap source asset reference.
     /// * `block_number_mod` - The block number at which the swap transaction was commited (modulo 2^32).
     OnSendAssetSuccess {
         channel_id: String,
         to_account: Binary,
         u: U256,
         escrow_amount: Uint128,
-        asset: String,
+        asset_ref: String,
         block_number_mod: u32
     },
 
@@ -219,14 +221,14 @@ pub enum ExecuteMsg<T> {
     /// * `to_account` - The recipient of the swap output.
     /// * `u` - The units value of the swap.
     /// * `escrow_amount` - The escrowed asset amount.
-    /// * `asset` - The swap source asset.
+    /// * `asset_ref` - The swap source asset reference.
     /// * `block_number_mod` - The block number at which the swap transaction was commited (modulo 2^32).
     OnSendAssetFailure {
         channel_id: String,
         to_account: Binary,
         u: U256,
         escrow_amount: Uint128,
-        asset: String,
+        asset_ref: String,
         block_number_mod: u32
     },
 
@@ -264,39 +266,47 @@ pub enum ExecuteMsg<T> {
 
     // CW20 Implementation (base messages + 'approval' extension)
     // Refer to the cw20 package for a description on the following message definitions.
+    #[cfg(feature="asset_cw20")]
     Transfer {
         recipient: String,
         amount: Uint128
     },
+    #[cfg(feature="asset_cw20")]
     Burn {
         amount: Uint128
     },
+    #[cfg(feature="asset_cw20")]
     Send {
         contract: String,
         amount: Uint128,
         msg: Binary,
     },
+    #[cfg(feature="asset_cw20")]
     IncreaseAllowance {
         spender: String,
         amount: Uint128,
         expires: Option<Expiration>,
     },
+    #[cfg(feature="asset_cw20")]
     DecreaseAllowance {
         spender: String,
         amount: Uint128,
         expires: Option<Expiration>,
     },
+    #[cfg(feature="asset_cw20")]
     TransferFrom {
         owner: String,
         recipient: String,
         amount: Uint128,
     },
+    #[cfg(feature="asset_cw20")]
     SendFrom {
         owner: String,
         contract: String,
         amount: Uint128,
         msg: Binary,
     },
+    #[cfg(feature="asset_cw20")]
     BurnFrom {
         owner: String,
         amount: Uint128
@@ -349,13 +359,18 @@ pub struct OnlyLocalResponse {
 }
 
 #[cw_serde]
-pub struct AssetsResponse {
-    pub assets: Vec<Addr>
+pub struct AssetsResponse<A = Empty> {
+    pub assets: Vec<A>
 }
 
 #[cw_serde]
 pub struct WeightResponse {
     pub weight: Uint128
+}
+
+#[cw_serde]
+pub struct TotalSupplyResponse {
+    pub total_supply: Uint128
 }
 
 #[cw_serde]

@@ -1,10 +1,10 @@
 mod test_amplified_receive_liquidity {
     use cosmwasm_std::{Uint128, Addr, Binary, Attribute};
-    use cw_multi_test::{App, Executor};
     use catalyst_types::{U256, u256, I256};
-    use catalyst_vault_common::{ContractError, state::INITIAL_MINT_AMOUNT};
-    use test_helpers::{math::{uint128_to_f64, f64_to_uint128}, misc::{get_response_attribute, encode_payload_address}, token::{deploy_test_tokens, query_token_balance, query_token_info}, definitions::{SETUP_MASTER, CHAIN_INTERFACE, CHANNEL_ID, SWAPPER_B}, contract::{mock_factory_deploy_vault, mock_set_vault_connection, mock_instantiate_calldata_target}};
+    use catalyst_vault_common::{ContractError, state::INITIAL_MINT_AMOUNT, bindings::Asset};
+    use test_helpers::{math::{uint128_to_f64, f64_to_uint128}, misc::{get_response_attribute, encode_payload_address}, definitions::{SETUP_MASTER, CHAIN_INTERFACE, CHANNEL_ID, SWAPPER_B, VAULT_TOKEN_DENOM}, contract::{mock_factory_deploy_vault, mock_set_vault_connection, mock_instantiate_calldata_target}, env::CustomTestEnv, vault_token::CustomTestVaultToken};
 
+    use crate::tests::{TestEnv, TestVaultToken};
     use crate::{msg::AmplifiedExecuteMsg, tests::{helpers::{compute_expected_receive_liquidity, compute_expected_reference_asset, amplified_vault_contract_storage}, parameters::{AMPLIFICATION, TEST_VAULT_BALANCES, TEST_VAULT_WEIGHTS, TEST_VAULT_ASSET_COUNT}}};
 
 
@@ -12,28 +12,29 @@ mod test_amplified_receive_liquidity {
     #[test]
     fn test_receive_liquidity_calculation() {
 
-        let mut app = App::default();
+        let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
 
         // Instantiate and initialize vault
-        let vault_tokens = deploy_test_tokens(&mut app, SETUP_MASTER.to_string(), None, TEST_VAULT_ASSET_COUNT);
+        let vault_assets = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
-        let vault_code_id = amplified_vault_contract_storage(&mut app);
-        let vault = mock_factory_deploy_vault(
-            &mut app,
-            vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
+        let vault_code_id = amplified_vault_contract_storage(env.get_app());
+        let vault = mock_factory_deploy_vault::<Asset, _, _>(
+            &mut env,
+            vault_assets.clone(),
             vault_initial_balances.clone(),
             vault_weights.clone(),
             AMPLIFICATION,
             vault_code_id,
             Some(Addr::unchecked(CHAIN_INTERFACE)),         // Using a mock address, no need for an interface to be deployed
+            None,
             None
         );
 
         // Connect vault with a mock vault
         let from_vault = encode_payload_address(b"from_vault");
         mock_set_vault_connection(
-            &mut app,
+            env.get_app(),
             vault.clone(),
             CHANNEL_ID.to_string(),
             from_vault.clone(),
@@ -46,7 +47,7 @@ mod test_amplified_receive_liquidity {
 
 
         // Tested action: receive liquidity
-        let response = app.execute_contract(
+        let response = env.execute_contract(
             Addr::unchecked(CHAIN_INTERFACE),
             vault.clone(),
             &AmplifiedExecuteMsg::ReceiveLiquidity {
@@ -61,7 +62,8 @@ mod test_amplified_receive_liquidity {
                 calldata_target: None,
                 calldata: None
             },
-            &[]
+            vec![],
+            vec![]
         ).unwrap();
 
 
@@ -82,16 +84,17 @@ mod test_amplified_receive_liquidity {
         assert!(uint128_to_f64(observed_return) >= expected_return.to_amount * 0.999999);
         
         // Verify the vault tokens have been minted to the swapper
-        let depositor_vault_tokens_balance = query_token_balance(&mut app, vault.clone(), SWAPPER_B.to_string());
+        let vault_token = TestVaultToken::load(vault.to_string(), VAULT_TOKEN_DENOM.to_string());
+        let depositor_vault_tokens_balance = vault_token.query_balance(env.get_app(), SWAPPER_B.to_string());
         assert_eq!(
             depositor_vault_tokens_balance,
             observed_return
         );
     
         // Verify the vault total vault tokens supply
-        let vault_token_info = query_token_info(&mut app, vault.clone());
+        let vault_token_supply = vault_token.total_supply(env.get_app());
         assert_eq!(
-            vault_token_info.total_supply,
+            vault_token_supply,
             INITIAL_MINT_AMOUNT + observed_return
         );
 
@@ -101,28 +104,29 @@ mod test_amplified_receive_liquidity {
     #[test]
     fn test_receive_liquidity_event() {
 
-        let mut app = App::default();
+        let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
 
         // Instantiate and initialize vault
-        let vault_tokens = deploy_test_tokens(&mut app, SETUP_MASTER.to_string(), None, TEST_VAULT_ASSET_COUNT);
+        let vault_assets = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
-        let vault_code_id = amplified_vault_contract_storage(&mut app);
-        let vault = mock_factory_deploy_vault(
-            &mut app,
-            vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
+        let vault_code_id = amplified_vault_contract_storage(env.get_app());
+        let vault = mock_factory_deploy_vault::<Asset, _, _>(
+            &mut env,
+            vault_assets.clone(),
             vault_initial_balances.clone(),
             vault_weights.clone(),
             AMPLIFICATION,
             vault_code_id,
             Some(Addr::unchecked(CHAIN_INTERFACE)),         // Using a mock address, no need for an interface to be deployed
+            None,
             None
         );
 
         // Connect vault with a mock vault
         let from_vault = encode_payload_address(b"from_vault");
         mock_set_vault_connection(
-            &mut app,
+            env.get_app(),
             vault.clone(),
             CHANNEL_ID.to_string(),
             from_vault.clone(),
@@ -137,7 +141,7 @@ mod test_amplified_receive_liquidity {
 
 
         // Tested action: receive liquidity
-        let response = app.execute_contract(
+        let response = env.execute_contract(
             Addr::unchecked(CHAIN_INTERFACE),
             vault.clone(),
             &AmplifiedExecuteMsg::ReceiveLiquidity {
@@ -152,7 +156,8 @@ mod test_amplified_receive_liquidity {
                 calldata_target: None,
                 calldata: None
             },
-            &[]
+            vec![],
+            vec![]
         ).unwrap();
 
 
@@ -196,28 +201,29 @@ mod test_amplified_receive_liquidity {
     #[test]
     fn test_receive_liquidity_zero_amount() {
 
-        let mut app = App::default();
+        let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
 
         // Instantiate and initialize vault
-        let vault_tokens = deploy_test_tokens(&mut app, SETUP_MASTER.to_string(), None, TEST_VAULT_ASSET_COUNT);
+        let vault_assets = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
-        let vault_code_id = amplified_vault_contract_storage(&mut app);
-        let vault = mock_factory_deploy_vault(
-            &mut app,
-            vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
+        let vault_code_id = amplified_vault_contract_storage(env.get_app());
+        let vault = mock_factory_deploy_vault::<Asset, _, _>(
+            &mut env,
+            vault_assets.clone(),
             vault_initial_balances.clone(),
             vault_weights.clone(),
             AMPLIFICATION,
             vault_code_id,
             Some(Addr::unchecked(CHAIN_INTERFACE)),         // Using a mock address, no need for an interface to be deployed
+            None,
             None
         );
 
         // Connect vault with a mock vault
         let from_vault = encode_payload_address(b"from_vault");
         mock_set_vault_connection(
-            &mut app,
+            env.get_app(),
             vault.clone(),
             CHANNEL_ID.to_string(),
             from_vault.clone(),
@@ -230,7 +236,7 @@ mod test_amplified_receive_liquidity {
 
 
         // Tested action: receive liquidity
-        let response = app.execute_contract(
+        let response = env.execute_contract(
             Addr::unchecked(CHAIN_INTERFACE),
             vault.clone(),
             &AmplifiedExecuteMsg::ReceiveLiquidity {
@@ -245,7 +251,8 @@ mod test_amplified_receive_liquidity {
                 calldata_target: None,
                 calldata: None
             },
-            &[]
+            vec![],
+            vec![]
         ).unwrap();
 
 
@@ -255,16 +262,17 @@ mod test_amplified_receive_liquidity {
         assert!(uint128_to_f64(observed_return) == 0.);
         
         // Verify no vault tokens have been minted to the swapper
-        let depositor_vault_tokens_balance = query_token_balance(&mut app, vault.clone(), SWAPPER_B.to_string());
+        let vault_token = TestVaultToken::load(vault.to_string(), VAULT_TOKEN_DENOM.to_string());
+        let depositor_vault_tokens_balance = vault_token.query_balance(env.get_app(), SWAPPER_B.to_string());
         assert_eq!(
             depositor_vault_tokens_balance,
             Uint128::zero()
         );
     
         // Verify the vault total vault tokens supply
-        let vault_token_info = query_token_info(&mut app, vault.clone());
+        let vault_token_supply = vault_token.total_supply(env.get_app());
         assert_eq!(
-            vault_token_info.total_supply,
+            vault_token_supply,
             INITIAL_MINT_AMOUNT
         );
 
@@ -275,28 +283,29 @@ mod test_amplified_receive_liquidity {
     #[test]
     fn test_receive_liquidity_min_vault_tokens() {
 
-        let mut app = App::default();
+        let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
 
         // Instantiate and initialize vault
-        let vault_tokens = deploy_test_tokens(&mut app, SETUP_MASTER.to_string(), None, TEST_VAULT_ASSET_COUNT);
+        let vault_assets = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
-        let vault_code_id = amplified_vault_contract_storage(&mut app);
-        let vault = mock_factory_deploy_vault(
-            &mut app,
-            vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
+        let vault_code_id = amplified_vault_contract_storage(env.get_app());
+        let vault = mock_factory_deploy_vault::<Asset, _, _>(
+            &mut env,
+            vault_assets.clone(),
             vault_initial_balances.clone(),
             vault_weights.clone(),
             AMPLIFICATION,
             vault_code_id,
             Some(Addr::unchecked(CHAIN_INTERFACE)),         // Using a mock address, no need for an interface to be deployed
+            None,
             None
         );
 
         // Connect vault with a mock vault
         let from_vault = encode_payload_address(b"from_vault");
         mock_set_vault_connection(
-            &mut app,
+            env.get_app(),
             vault.clone(),
             CHANNEL_ID.to_string(),
             from_vault.clone(),
@@ -325,7 +334,7 @@ mod test_amplified_receive_liquidity {
 
 
         // Tested action 1: receive liquidity with min_out > expected_return fails
-        let response_result = app.execute_contract(
+        let response_result = env.execute_contract(
             Addr::unchecked(CHAIN_INTERFACE),
             vault.clone(),
             &AmplifiedExecuteMsg::ReceiveLiquidity {
@@ -340,7 +349,8 @@ mod test_amplified_receive_liquidity {
                 calldata_target: None,
                 calldata: None
             },
-            &[]
+            vec![],
+            vec![]
         );
 
 
@@ -355,7 +365,7 @@ mod test_amplified_receive_liquidity {
 
 
         // Tested action 2: receive liquidity with min_out <= expected_return succeeds
-        app.execute_contract(
+        env.execute_contract(
             Addr::unchecked(CHAIN_INTERFACE),
             vault.clone(),
             &AmplifiedExecuteMsg::ReceiveLiquidity {
@@ -370,7 +380,8 @@ mod test_amplified_receive_liquidity {
                 calldata_target: None,
                 calldata: None
             },
-            &[]
+            vec![],
+            vec![]
         ).unwrap();
 
     }
@@ -380,28 +391,29 @@ mod test_amplified_receive_liquidity {
     #[test]
     fn test_receive_liquidity_min_reference_asset() {
 
-        let mut app = App::default();
+        let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
 
         // Instantiate and initialize vault
-        let vault_tokens = deploy_test_tokens(&mut app, SETUP_MASTER.to_string(), None, TEST_VAULT_ASSET_COUNT);
+        let vault_assets = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
-        let vault_code_id = amplified_vault_contract_storage(&mut app);
-        let vault = mock_factory_deploy_vault(
-            &mut app,
-            vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
+        let vault_code_id = amplified_vault_contract_storage(env.get_app());
+        let vault = mock_factory_deploy_vault::<Asset, _, _>(
+            &mut env,
+            vault_assets.clone(),
             vault_initial_balances.clone(),
             vault_weights.clone(),
             AMPLIFICATION,
             vault_code_id,
             Some(Addr::unchecked(CHAIN_INTERFACE)),         // Using a mock address, no need for an interface to be deployed
+            None,
             None
         );
 
         // Connect vault with a mock vault
         let from_vault = encode_payload_address(b"from_vault");
         mock_set_vault_connection(
-            &mut app,
+            env.get_app(),
             vault.clone(),
             CHANNEL_ID.to_string(),
             from_vault.clone(),
@@ -440,7 +452,7 @@ mod test_amplified_receive_liquidity {
 
 
         // Tested action 1: receive liquidity with min_reference_asset > expected_reference_asset_amount fails
-        let response_result = app.execute_contract(
+        let response_result = env.execute_contract(
             Addr::unchecked(CHAIN_INTERFACE),
             vault.clone(),
             &AmplifiedExecuteMsg::ReceiveLiquidity {
@@ -455,7 +467,8 @@ mod test_amplified_receive_liquidity {
                 calldata_target: None,
                 calldata: None
             },
-            &[]
+            vec![],
+            vec![]
         );
 
 
@@ -470,7 +483,7 @@ mod test_amplified_receive_liquidity {
 
 
         // Tested action 2: receive liquidity with min_reference_asset <= expected_reference_asset_amount succeeds
-        app.execute_contract(
+        env.execute_contract(
             Addr::unchecked(CHAIN_INTERFACE),
             vault.clone(),
             &AmplifiedExecuteMsg::ReceiveLiquidity {
@@ -485,7 +498,8 @@ mod test_amplified_receive_liquidity {
                 calldata_target: None,
                 calldata: None
             },
-            &[]
+            vec![],
+            vec![]
         ).unwrap();
 
     }
@@ -494,21 +508,22 @@ mod test_amplified_receive_liquidity {
     #[test]
     fn test_receive_liquidity_not_connected_vault() {
 
-        let mut app = App::default();
+        let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
 
         // Instantiate and initialize vault
-        let vault_tokens = deploy_test_tokens(&mut app, SETUP_MASTER.to_string(), None, TEST_VAULT_ASSET_COUNT);
+        let vault_assets = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
-        let vault_code_id = amplified_vault_contract_storage(&mut app);
-        let vault = mock_factory_deploy_vault(
-            &mut app,
-            vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
+        let vault_code_id = amplified_vault_contract_storage(env.get_app());
+        let vault = mock_factory_deploy_vault::<Asset, _, _>(
+            &mut env,
+            vault_assets.clone(),
             vault_initial_balances.clone(),
             vault_weights.clone(),
             AMPLIFICATION,
             vault_code_id,
             Some(Addr::unchecked(CHAIN_INTERFACE)),         // Using a mock address, no need for an interface to be deployed
+            None,
             None
         );
 
@@ -521,7 +536,7 @@ mod test_amplified_receive_liquidity {
 
 
         // Tested action: receive liquidity
-        let response_result = app.execute_contract(
+        let response_result = env.execute_contract(
             Addr::unchecked(CHAIN_INTERFACE),
             vault.clone(),
             &AmplifiedExecuteMsg::ReceiveLiquidity {
@@ -536,7 +551,8 @@ mod test_amplified_receive_liquidity {
                 calldata_target: None,
                 calldata: None
             },
-            &[]
+            vec![],
+            vec![]
         );
 
 
@@ -554,28 +570,29 @@ mod test_amplified_receive_liquidity {
     #[test]
     fn test_receive_liquidity_caller_not_interface() {
 
-        let mut app = App::default();
+        let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
 
         // Instantiate and initialize vault
-        let vault_tokens = deploy_test_tokens(&mut app, SETUP_MASTER.to_string(), None, TEST_VAULT_ASSET_COUNT);
+        let vault_assets = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
-        let vault_code_id = amplified_vault_contract_storage(&mut app);
-        let vault = mock_factory_deploy_vault(
-            &mut app,
-            vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
+        let vault_code_id = amplified_vault_contract_storage(env.get_app());
+        let vault = mock_factory_deploy_vault::<Asset, _, _>(
+            &mut env,
+            vault_assets.clone(),
             vault_initial_balances.clone(),
             vault_weights.clone(),
             AMPLIFICATION,
             vault_code_id,
             Some(Addr::unchecked(CHAIN_INTERFACE)),         // Using a mock address, no need for an interface to be deployed
+            None,
             None
         );
 
         // Connect vault with a mock vault
         let from_vault = encode_payload_address(b"from_vault");
         mock_set_vault_connection(
-            &mut app,
+            env.get_app(),
             vault.clone(),
             CHANNEL_ID.to_string(),
             from_vault.clone(),
@@ -588,7 +605,7 @@ mod test_amplified_receive_liquidity {
 
 
         // Tested action: receive liquidity
-        let response_result = app.execute_contract(
+        let response_result = env.execute_contract(
             Addr::unchecked("not_chain_interface"),     // ! Caller is not CHAIN_INTERFACE
             vault.clone(),
             &AmplifiedExecuteMsg::ReceiveLiquidity {
@@ -603,7 +620,8 @@ mod test_amplified_receive_liquidity {
                 calldata_target: None,
                 calldata: None
             },
-            &[]
+            vec![],
+            vec![]
         );
 
 
@@ -620,28 +638,29 @@ mod test_amplified_receive_liquidity {
     #[test]
     fn test_receive_liquidity_calldata() {
 
-        let mut app = App::default();
+        let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
 
         // Instantiate and initialize vault
-        let vault_tokens = deploy_test_tokens(&mut app, SETUP_MASTER.to_string(), None, TEST_VAULT_ASSET_COUNT);
+        let vault_assets = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
-        let vault_code_id = amplified_vault_contract_storage(&mut app);
-        let vault = mock_factory_deploy_vault(
-            &mut app,
-            vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
+        let vault_code_id = amplified_vault_contract_storage(env.get_app());
+        let vault = mock_factory_deploy_vault::<Asset, _, _>(
+            &mut env,
+            vault_assets.clone(),
             vault_initial_balances.clone(),
             vault_weights.clone(),
             AMPLIFICATION,
             vault_code_id,
             Some(Addr::unchecked(CHAIN_INTERFACE)),         // Using a mock address, no need for an interface to be deployed
+            None,
             None
         );
 
         // Connect vault with a mock vault
         let from_vault = encode_payload_address(b"from_vault");
         mock_set_vault_connection(
-            &mut app,
+            env.get_app(),
             vault.clone(),
             CHANNEL_ID.to_string(),
             from_vault.clone(),
@@ -652,13 +671,13 @@ mod test_amplified_receive_liquidity {
         let swap_units = u256!("100000000000000");
 
         // Define the calldata
-        let calldata_target = mock_instantiate_calldata_target(&mut app);
+        let calldata_target = mock_instantiate_calldata_target(env.get_app());
         let calldata = Binary(vec![0x43, 0x41, 0x54, 0x41, 0x4C, 0x59, 0x53, 0x54]);
 
 
 
         // Tested action: receive liquidity calldata
-        let response = app.execute_contract(
+        let response = env.execute_contract(
             Addr::unchecked(CHAIN_INTERFACE),
             vault.clone(),
             &AmplifiedExecuteMsg::ReceiveLiquidity {
@@ -673,13 +692,14 @@ mod test_amplified_receive_liquidity {
                 calldata_target: Some(calldata_target.to_string()),
                 calldata: Some(calldata.clone())
             },
-            &[]
+            vec![],
+            vec![]
         ).unwrap();
 
 
 
         // Verify the 'calldata' target is executed
-        let mock_target_event = response.events[4].clone();
+        let mock_target_event = response.events[response.events.len()-1].clone();
         let observed_action = get_response_attribute::<String>(mock_target_event.clone(), "action").unwrap();
         assert_eq!(
             observed_action,

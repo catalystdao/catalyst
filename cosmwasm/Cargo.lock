@@ -92,6 +92,7 @@ dependencies = [
  "serde",
  "test-helpers",
  "thiserror",
+ "vault-assets",
 ]
 
 [[package]]
@@ -205,6 +206,9 @@ dependencies = [
  "serde",
  "sha3",
  "thiserror",
+ "token-bindings",
+ "vault-assets",
+ "vault-token",
 ]
 
 [[package]]
@@ -382,8 +386,7 @@ dependencies = [
 [[package]]
 name = "cw-multi-test"
 version = "0.16.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "127c7bb95853b8e828bdab97065c81cb5ddc20f7339180b61b2300565aaa99d1"
+source = "git+https://github.com/CosmWasm/cw-multi-test.git?rev=ce37144ec33c8000bd0ad0d7d01713b11a547170#ce37144ec33c8000bd0ad0d7d01713b11a547170"
 dependencies = [
  "anyhow",
  "cosmwasm-std",
@@ -1029,6 +1032,7 @@ dependencies = [
 name = "test-helpers"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "catalyst-factory",
  "catalyst-ibc-interface",
  "catalyst-types",
@@ -1043,6 +1047,8 @@ dependencies = [
  "cw20-base",
  "mock-calldata-target",
  "mock-catalyst-ibc-interface",
+ "token-bindings",
+ "vault-assets",
 ]
 
 [[package]]
@@ -1066,6 +1072,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "token-bindings"
+version = "0.10.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "752a7997ebaa191cf3d8436261e449732e65268e552e8bea6133c3b21b48fe36"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "schemars",
+ "serde",
+]
+
+[[package]]
 name = "typenum"
 version = "1.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1076,6 +1094,39 @@ name = "unicode-ident"
 version = "1.0.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b15811caf2415fb889178633e7724bad2509101cde276048e013b9def5e51fa0"
+
+[[package]]
+name = "vault-assets"
+version = "0.1.0"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cosmwasm-storage",
+ "cw-storage-plus",
+ "cw2",
+ "cw20",
+ "cw20-base",
+ "schemars",
+ "serde",
+ "thiserror",
+]
+
+[[package]]
+name = "vault-token"
+version = "0.1.0"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cosmwasm-storage",
+ "cw-storage-plus",
+ "cw2",
+ "cw20",
+ "cw20-base",
+ "schemars",
+ "serde",
+ "thiserror",
+ "token-bindings",
+]
 
 [[package]]
 name = "version_check"

@@ -1,10 +1,10 @@
 mod test_volatile_send_asset {
     use cosmwasm_std::{Uint128, Addr, Binary, Attribute};
-    use cw_multi_test::{App, Executor};
     use catalyst_types::U256;
-    use catalyst_vault_common::{ContractError, msg::{TotalEscrowedAssetResponse, AssetEscrowResponse}, state::compute_send_asset_hash};
-    use test_helpers::{math::{uint128_to_f64, f64_to_uint128, u256_to_f64, f64_to_u256}, misc::{encode_payload_address, get_response_attribute}, token::{deploy_test_tokens, transfer_tokens, set_token_allowance, query_token_balance}, definitions::{SETUP_MASTER, CHANNEL_ID, SWAPPER_B, SWAPPER_A, FACTORY_OWNER, SWAPPER_C}, contract::{mock_instantiate_interface, mock_factory_deploy_vault, DEFAULT_TEST_VAULT_FEE, DEFAULT_TEST_GOV_FEE, mock_set_vault_connection}};
+    use catalyst_vault_common::{ContractError, msg::{TotalEscrowedAssetResponse, AssetEscrowResponse}, state::compute_send_asset_hash, bindings::Asset};
+    use test_helpers::{math::{uint128_to_f64, f64_to_uint128, u256_to_f64, f64_to_u256}, misc::{encode_payload_address, get_response_attribute}, definitions::{SETUP_MASTER, CHANNEL_ID, SWAPPER_B, SWAPPER_A, FACTORY_OWNER, SWAPPER_C}, contract::{mock_instantiate_interface, mock_factory_deploy_vault, DEFAULT_TEST_VAULT_FEE, DEFAULT_TEST_GOV_FEE, mock_set_vault_connection}, env::CustomTestEnv, asset::CustomTestAsset};
 
+    use crate::tests::TestEnv;
     use crate::{msg::VolatileExecuteMsg, tests::{helpers::{compute_expected_send_asset, volatile_vault_contract_storage}, parameters::{TEST_VAULT_BALANCES, TEST_VAULT_WEIGHTS, AMPLIFICATION, TEST_VAULT_ASSET_COUNT}}};
 
 
@@ -12,29 +12,30 @@ mod test_volatile_send_asset {
     #[test]
     fn test_send_asset_calculation() {
 
-        let mut app = App::default();
+        let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
 
         // Instantiate and initialize vault
-        let interface = mock_instantiate_interface(&mut app);
-        let vault_tokens = deploy_test_tokens(&mut app, SETUP_MASTER.to_string(), None, TEST_VAULT_ASSET_COUNT);
+        let interface = mock_instantiate_interface(env.get_app());
+        let vault_assets = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
-        let vault_code_id = volatile_vault_contract_storage(&mut app);
-        let vault = mock_factory_deploy_vault(
-            &mut app,
-            vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
+        let vault_code_id = volatile_vault_contract_storage(env.get_app());
+        let vault = mock_factory_deploy_vault::<Asset, _, _>(
+            &mut env,
+            vault_assets.clone(),
             vault_initial_balances.clone(),
             vault_weights.clone(),
             AMPLIFICATION,
             vault_code_id,
             Some(interface.clone()),
+            None,
             None
         );
 
         // Connect vault with a mock vault
         let target_vault = encode_payload_address(b"target_vault");
         mock_set_vault_connection(
-            &mut app,
+            env.get_app(),
             vault.clone(),
             CHANNEL_ID.to_string(),
             target_vault.clone(),
@@ -43,7 +44,7 @@ mod test_volatile_send_asset {
 
         // Define send asset configuration
         let from_asset_idx = 0;
-        let from_asset = vault_tokens[from_asset_idx].clone();
+        let from_asset = vault_assets[from_asset_idx].clone();
         let from_weight = vault_weights[from_asset_idx];
         let from_balance = vault_initial_balances[from_asset_idx];
         let send_percentage = 0.15;
@@ -53,40 +54,32 @@ mod test_volatile_send_asset {
         let to_account = encode_payload_address(SWAPPER_B.as_bytes());
 
         // Fund swapper with tokens and set vault allowance
-        transfer_tokens(
-            &mut app,
+        from_asset.transfer(
+            env.get_app(),
             swap_amount,
-            from_asset.clone(),
             Addr::unchecked(SETUP_MASTER),
             SWAPPER_A.to_string()
-        );
-
-        set_token_allowance(
-            &mut app,
-            swap_amount,
-            from_asset.clone(),
-            Addr::unchecked(SWAPPER_A),
-            vault.to_string()
         );
 
 
 
         // Tested action: send asset
-        let response = app.execute_contract(
+        let response = env.execute_contract(
             Addr::unchecked(SWAPPER_A),
             vault.clone(),
             &VolatileExecuteMsg::SendAsset {
                 channel_id: CHANNEL_ID.to_string(),
                 to_vault: target_vault,
                 to_account: to_account.clone(),
-                from_asset: from_asset.to_string(),
+                from_asset_ref: from_asset.get_asset_ref(),
                 to_asset_index: to_asset_idx,
                 amount: swap_amount,
                 min_out: U256::zero(),
                 fallback_account: SWAPPER_C.to_string(),
                 calldata: Binary(vec![])
             },
-            &[]
+            vec![from_asset.clone()],
+            vec![swap_amount]
         ).unwrap();
 
 
@@ -106,7 +99,7 @@ mod test_volatile_send_asset {
         assert!(u256_to_f64(observed_return) / 1e18 >= expected_return.u * 0.999999);
 
         // Verify the input assets have been transferred from the swapper to the vault
-        let swapper_from_asset_balance = query_token_balance(&mut app, from_asset.clone(), SWAPPER_A.to_string());
+        let swapper_from_asset_balance = from_asset.query_balance(env.get_app(), SWAPPER_A.to_string());
         assert_eq!(
             swapper_from_asset_balance,
             Uint128::zero()
@@ -114,8 +107,8 @@ mod test_volatile_send_asset {
 
         // Verify the input assets have been received by the vault and the governance fee has been collected
         // Note: the vault fee calculation is indirectly tested via the governance fee calculation
-        let vault_from_asset_balance = query_token_balance(&mut app, from_asset.clone(), vault.to_string());
-        let factory_owner_from_asset_balance = query_token_balance(&mut app, from_asset.clone(), FACTORY_OWNER.to_string());
+        let vault_from_asset_balance = from_asset.query_balance(env.get_app(), vault.to_string());
+        let factory_owner_from_asset_balance = from_asset.query_balance(env.get_app(), FACTORY_OWNER.to_string());
         assert_eq!(
             vault_from_asset_balance + factory_owner_from_asset_balance,    // Some of the swappers balance will have gone to the factory owner (governance fee)
             vault_initial_balances[from_asset_idx] + swap_amount
@@ -126,11 +119,14 @@ mod test_volatile_send_asset {
 
         // Verify the input assets are escrowed
         let queried_escrowed_total = uint128_to_f64(
-            app
-            .wrap()
-            .query_wasm_smart::<TotalEscrowedAssetResponse>(vault.clone(), &crate::msg::QueryMsg::TotalEscrowedAsset { asset: from_asset.to_string() })
-            .unwrap()
-            .amount
+            env.get_app()
+                .wrap()
+                .query_wasm_smart::<TotalEscrowedAssetResponse>(
+                    vault.clone(),
+                    &crate::msg::QueryMsg::TotalEscrowedAsset { asset_ref: from_asset.get_asset_ref() }
+                )
+                .unwrap()
+                .amount
         );
         let expected_escrowed_total = uint128_to_f64(swap_amount) - expected_return.vault_fee - expected_return.governance_fee;
 
@@ -144,11 +140,11 @@ mod test_volatile_send_asset {
             to_account.as_ref(),
             observed_return,
             swap_amount - observed_fee,
-            from_asset.as_ref(),
-            app.block_info().height as u32
+            from_asset.get_asset_ref().as_str(),
+            env.get_app().block_info().height as u32
         );
 
-        let queried_fallback_account = app
+        let queried_fallback_account = env.get_app()
             .wrap()
             .query_wasm_smart::<AssetEscrowResponse>(vault.clone(), &crate::msg::QueryMsg::AssetEscrow { hash: Binary(expected_asset_swap_hash) })
             .unwrap()
@@ -172,29 +168,30 @@ mod test_volatile_send_asset {
     #[test]
     fn test_send_asset_event() {
 
-        let mut app = App::default();
+        let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
 
         // Instantiate and initialize vault
-        let interface = mock_instantiate_interface(&mut app);
-        let vault_tokens = deploy_test_tokens(&mut app, SETUP_MASTER.to_string(), None, TEST_VAULT_ASSET_COUNT);
+        let interface = mock_instantiate_interface(env.get_app());
+        let vault_assets = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
-        let vault_code_id = volatile_vault_contract_storage(&mut app);
-        let vault = mock_factory_deploy_vault(
-            &mut app,
-            vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
+        let vault_code_id = volatile_vault_contract_storage(env.get_app());
+        let vault = mock_factory_deploy_vault::<Asset, _, _>(
+            &mut env,
+            vault_assets.clone(),
             vault_initial_balances.clone(),
             vault_weights.clone(),
             AMPLIFICATION,
             vault_code_id,
             Some(interface.clone()),
+            None,
             None
         );
 
         // Connect vault with a mock vault
         let target_vault = encode_payload_address(b"target_vault");
         mock_set_vault_connection(
-            &mut app,
+            env.get_app(),
             vault.clone(),
             CHANNEL_ID.to_string(),
             target_vault.clone(),
@@ -203,7 +200,7 @@ mod test_volatile_send_asset {
 
         // Define send asset configuration
         let from_asset_idx = 0;
-        let from_asset = vault_tokens[from_asset_idx].clone();
+        let from_asset = vault_assets[from_asset_idx].clone();
         let from_balance = vault_initial_balances[from_asset_idx];
         let send_percentage = 0.15;
         let swap_amount = f64_to_uint128(uint128_to_f64(from_balance) * send_percentage).unwrap();
@@ -212,40 +209,32 @@ mod test_volatile_send_asset {
         let min_out = f64_to_u256(12345.678).unwrap();  // Some random value
 
         // Fund swapper with tokens and set vault allowance
-        transfer_tokens(
-            &mut app,
+        from_asset.transfer(
+            env.get_app(),
             swap_amount,
-            from_asset.clone(),
             Addr::unchecked(SETUP_MASTER),
             SWAPPER_A.to_string()
-        );
-
-        set_token_allowance(
-            &mut app,
-            swap_amount,
-            from_asset.clone(),
-            Addr::unchecked(SWAPPER_A),
-            vault.to_string()
         );
 
 
 
         // Tested action: send asset
-        let response = app.execute_contract(
+        let response = env.execute_contract(
             Addr::unchecked(SWAPPER_A),
             vault.clone(),
             &VolatileExecuteMsg::SendAsset {
                 channel_id: CHANNEL_ID.to_string(),
                 to_vault: target_vault.clone(),
                 to_account: encode_payload_address(SWAPPER_B.as_bytes()),
-                from_asset: from_asset.to_string(),
+                from_asset_ref: from_asset.get_asset_ref(),
                 to_asset_index: to_asset_idx,
                 amount: swap_amount,
                 min_out,
                 fallback_account: SWAPPER_A.to_string(),
                 calldata: Binary(vec![])
             },
-            &[]
+            vec![from_asset.clone()],
+            vec![swap_amount]
         ).unwrap();
 
 
@@ -269,7 +258,7 @@ mod test_volatile_send_asset {
         );
         assert_eq!(
             send_asset_event.attributes[4],
-            Attribute::new("from_asset", from_asset)
+            Attribute::new("from_asset_ref", from_asset.get_asset_ref())
         );
         assert_eq!(
             send_asset_event.attributes[5],
@@ -292,29 +281,30 @@ mod test_volatile_send_asset {
     #[test]
     fn test_send_asset_zero_amount() {
 
-        let mut app = App::default();
+        let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
 
         // Instantiate and initialize vault
-        let interface = mock_instantiate_interface(&mut app);
-        let vault_tokens = deploy_test_tokens(&mut app, SETUP_MASTER.to_string(), None, TEST_VAULT_ASSET_COUNT);
+        let interface = mock_instantiate_interface(env.get_app());
+        let vault_assets = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
-        let vault_code_id = volatile_vault_contract_storage(&mut app);
-        let vault = mock_factory_deploy_vault(
-            &mut app,
-            vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
+        let vault_code_id = volatile_vault_contract_storage(env.get_app());
+        let vault = mock_factory_deploy_vault::<Asset, _, _>(
+            &mut env,
+            vault_assets.clone(),
             vault_initial_balances.clone(),
             vault_weights.clone(),
             AMPLIFICATION,
             vault_code_id,
             Some(interface.clone()),
+            None,
             None
         );
 
         // Connect vault with a mock vault
         let target_vault = encode_payload_address(b"target_vault");
         mock_set_vault_connection(
-            &mut app,
+            env.get_app(),
             vault.clone(),
             CHANNEL_ID.to_string(),
             target_vault.clone(),
@@ -323,40 +313,30 @@ mod test_volatile_send_asset {
 
         // Define send asset configuration
         let from_asset_idx = 0;
-        let from_asset = vault_tokens[from_asset_idx].clone();
+        let from_asset = vault_assets[from_asset_idx].clone();
         let swap_amount = Uint128::zero();
 
         let to_asset_idx = 1;
 
-        
-        // Set vault allowance
-        // NOTE: if an allowance is not set, the swap tx will fail with a 'no allowance for this account' error.
-        set_token_allowance(
-            &mut app,
-            swap_amount,
-            from_asset.clone(),
-            Addr::unchecked(SWAPPER_A),
-            vault.to_string()
-        );
-
 
 
         // Tested action: send asset
-        let response = app.execute_contract(
+        let response = env.execute_contract(
             Addr::unchecked(SWAPPER_A),
             vault.clone(),
             &VolatileExecuteMsg::SendAsset {
                 channel_id: CHANNEL_ID.to_string(),
                 to_vault: target_vault,
                 to_account: encode_payload_address(SWAPPER_B.as_bytes()),
-                from_asset: from_asset.to_string(),
+                from_asset_ref: from_asset.get_asset_ref(),
                 to_asset_index: to_asset_idx,
                 amount: swap_amount,
                 min_out: U256::zero(),
                 fallback_account: SWAPPER_A.to_string(),
                 calldata: Binary(vec![])
             },
-            &[]
+            vec![from_asset.clone()],
+            vec![swap_amount]
         ).unwrap();
 
 
@@ -374,22 +354,23 @@ mod test_volatile_send_asset {
     #[test]
     fn test_send_asset_not_connected_vault() {
 
-        let mut app = App::default();
+        let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
 
         // Instantiate and initialize vault
-        let interface = mock_instantiate_interface(&mut app);
-        let vault_tokens = deploy_test_tokens(&mut app, SETUP_MASTER.to_string(), None, TEST_VAULT_ASSET_COUNT);
+        let interface = mock_instantiate_interface(env.get_app());
+        let vault_assets = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
-        let vault_code_id = volatile_vault_contract_storage(&mut app);
-        let vault = mock_factory_deploy_vault(
-            &mut app,
-            vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
+        let vault_code_id = volatile_vault_contract_storage(env.get_app());
+        let vault = mock_factory_deploy_vault::<Asset, _, _>(
+            &mut env,
+            vault_assets.clone(),
             vault_initial_balances.clone(),
             vault_weights.clone(),
             AMPLIFICATION,
             vault_code_id,
             Some(interface.clone()),
+            None,
             None
         );
 
@@ -399,7 +380,7 @@ mod test_volatile_send_asset {
 
         // Define send asset configuration
         let from_asset_idx = 0;
-        let from_asset = vault_tokens[from_asset_idx].clone();
+        let from_asset = vault_assets[from_asset_idx].clone();
         let from_balance = vault_initial_balances[from_asset_idx];
         let send_percentage = 0.15;
         let swap_amount = f64_to_uint128(uint128_to_f64(from_balance) * send_percentage).unwrap();
@@ -407,40 +388,32 @@ mod test_volatile_send_asset {
         let to_asset_idx = 1;
 
         // Fund swapper with tokens and set vault allowance
-        transfer_tokens(
-            &mut app,
+        from_asset.transfer(
+            env.get_app(),
             swap_amount,
-            from_asset.clone(),
             Addr::unchecked(SETUP_MASTER),
             SWAPPER_A.to_string()
-        );
-
-        set_token_allowance(
-            &mut app,
-            swap_amount,
-            from_asset.clone(),
-            Addr::unchecked(SWAPPER_A),
-            vault.to_string()
         );
 
 
 
         // Tested action: send asset
-        let response_result = app.execute_contract(
+        let response_result = env.execute_contract(
             Addr::unchecked(SWAPPER_A),
             vault.clone(),
             &VolatileExecuteMsg::SendAsset {
                 channel_id: CHANNEL_ID.to_string(),
                 to_vault: target_vault.clone(),
                 to_account: encode_payload_address(SWAPPER_B.as_bytes()),
-                from_asset: from_asset.to_string(),
+                from_asset_ref: from_asset.get_asset_ref(),
                 to_asset_index: to_asset_idx,
                 amount: swap_amount,
                 min_out: U256::zero(),
                 fallback_account: SWAPPER_A.to_string(),
                 calldata: Binary(vec![])
             },
-            &[]
+            vec![from_asset.clone()],
+            vec![swap_amount]
         );
 
 
@@ -458,29 +431,30 @@ mod test_volatile_send_asset {
     #[test]
     fn test_send_asset_from_asset_not_in_vault() {
 
-        let mut app = App::default();
+        let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
 
         // Instantiate and initialize vault
-        let interface = mock_instantiate_interface(&mut app);
-        let vault_tokens = deploy_test_tokens(&mut app, SETUP_MASTER.to_string(), None, TEST_VAULT_ASSET_COUNT);
+        let interface = mock_instantiate_interface(env.get_app());
+        let vault_assets = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
-        let vault_code_id = volatile_vault_contract_storage(&mut app);
-        let vault = mock_factory_deploy_vault(
-            &mut app,
-            vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
+        let vault_code_id = volatile_vault_contract_storage(env.get_app());
+        let vault = mock_factory_deploy_vault::<Asset, _, _>(
+            &mut env,
+            vault_assets.clone(),
             vault_initial_balances.clone(),
             vault_weights.clone(),
             AMPLIFICATION,
             vault_code_id,
             Some(interface.clone()),
+            None,
             None
         );
 
         // Connect vault with a mock vault
         let target_vault = encode_payload_address(b"target_vault");
         mock_set_vault_connection(
-            &mut app,
+            env.get_app(),
             vault.clone(),
             CHANNEL_ID.to_string(),
             target_vault.clone(),
@@ -488,46 +462,38 @@ mod test_volatile_send_asset {
         );
 
         // Define send asset configuration
-        let from_asset = deploy_test_tokens(&mut app, SETUP_MASTER.to_string(), None, 1)[0].clone();
+        let from_asset = env.get_assets()[TEST_VAULT_ASSET_COUNT+1].clone();
         let swap_amount = Uint128::from(10000000u64);
 
         let to_asset_idx = 1;
 
         // Fund swapper with tokens and set vault allowance
-        transfer_tokens(
-            &mut app,
+        from_asset.transfer(
+            env.get_app(),
             swap_amount,
-            from_asset.clone(),
             Addr::unchecked(SETUP_MASTER),
             SWAPPER_A.to_string()
-        );
-
-        set_token_allowance(
-            &mut app,
-            swap_amount,
-            from_asset.clone(),
-            Addr::unchecked(SWAPPER_A),
-            vault.to_string()
         );
 
 
 
         // Tested action: send asset
-        let response_result = app.execute_contract(
+        let response_result = env.execute_contract(
             Addr::unchecked(SWAPPER_A),
             vault.clone(),
             &VolatileExecuteMsg::SendAsset {
                 channel_id: CHANNEL_ID.to_string(),
                 to_vault: target_vault,
                 to_account: encode_payload_address(SWAPPER_B.as_bytes()),
-                from_asset: from_asset.to_string(),
+                from_asset_ref: from_asset.get_asset_ref(),
                 to_asset_index: to_asset_idx,
                 amount: swap_amount,
                 min_out: U256::zero(),
                 fallback_account: SWAPPER_A.to_string(),
                 calldata: Binary(vec![])
             },
-            &[]
+            vec![from_asset.clone()],
+            vec![swap_amount]
         );
 
 
@@ -544,29 +510,30 @@ mod test_volatile_send_asset {
     #[test]
     fn test_send_asset_calldata() {
 
-        let mut app = App::default();
+        let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
 
         // Instantiate and initialize vault
-        let interface = mock_instantiate_interface(&mut app);
-        let vault_tokens = deploy_test_tokens(&mut app, SETUP_MASTER.to_string(), None, TEST_VAULT_ASSET_COUNT);
+        let interface = mock_instantiate_interface(env.get_app());
+        let vault_assets = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
-        let vault_code_id = volatile_vault_contract_storage(&mut app);
-        let vault = mock_factory_deploy_vault(
-            &mut app,
-            vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
+        let vault_code_id = volatile_vault_contract_storage(env.get_app());
+        let vault = mock_factory_deploy_vault::<Asset, _, _>(
+            &mut env,
+            vault_assets.clone(),
             vault_initial_balances.clone(),
             vault_weights.clone(),
             AMPLIFICATION,
             vault_code_id,
             Some(interface.clone()),
+            None,
             None
         );
 
         // Connect vault with a mock vault
         let target_vault = encode_payload_address(b"target_vault");
         mock_set_vault_connection(
-            &mut app,
+            env.get_app(),
             vault.clone(),
             CHANNEL_ID.to_string(),
             target_vault.clone(),
@@ -575,7 +542,7 @@ mod test_volatile_send_asset {
 
         // Define send asset configuration
         let from_asset_idx = 0;
-        let from_asset = vault_tokens[from_asset_idx].clone();
+        let from_asset = vault_assets[from_asset_idx].clone();
         let from_balance = vault_initial_balances[from_asset_idx];
         let send_percentage = 0.15;
         let swap_amount = f64_to_uint128(uint128_to_f64(from_balance) * send_percentage).unwrap();
@@ -583,20 +550,11 @@ mod test_volatile_send_asset {
         let to_asset_idx = 1;
 
         // Fund swapper with tokens and set vault allowance
-        transfer_tokens(
-            &mut app,
+        from_asset.transfer(
+            env.get_app(),
             swap_amount,
-            from_asset.clone(),
             Addr::unchecked(SETUP_MASTER),
             SWAPPER_A.to_string()
-        );
-
-        set_token_allowance(
-            &mut app,
-            swap_amount,
-            from_asset.clone(),
-            Addr::unchecked(SWAPPER_A),
-            vault.to_string()
         );
 
         // Define the calldata
@@ -606,34 +564,284 @@ mod test_volatile_send_asset {
 
 
         // Tested action: send asset calldata
-        let response = app.execute_contract(
+        let response = env.execute_contract(
             Addr::unchecked(SWAPPER_A),
             vault.clone(),
             &VolatileExecuteMsg::SendAsset {
                 channel_id: CHANNEL_ID.to_string(),
                 to_vault: target_vault,
                 to_account: encode_payload_address(SWAPPER_B.as_bytes()),
-                from_asset: from_asset.to_string(),
+                from_asset_ref: from_asset.get_asset_ref(),
                 to_asset_index: to_asset_idx,
                 amount: swap_amount,
                 min_out: U256::zero(),
                 fallback_account: SWAPPER_A.to_string(),
                 calldata: calldata.clone()
             },
-            &[]
+            vec![from_asset.clone()],
+            vec![swap_amount]
         ).unwrap();
 
 
 
         // Verify the swap return
         let payload_calldata = Binary::from_base64(
-            &get_response_attribute::<String>(response.events[7].clone(), "calldata").unwrap()
+            &get_response_attribute::<String>(response.events[response.events.len()-1].clone(), "calldata").unwrap()
         ).unwrap();
 
         assert_eq!(
             payload_calldata,
             calldata
         );
+
+    }
+
+
+    #[test]
+    fn test_send_asset_invalid_funds() {
+
+        let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
+
+        // Instantiate and initialize vault
+        let interface = mock_instantiate_interface(env.get_app());
+        let vault_assets = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
+        let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
+        let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
+        let vault_code_id = volatile_vault_contract_storage(env.get_app());
+        let vault = mock_factory_deploy_vault::<Asset, _, _>(
+            &mut env,
+            vault_assets.clone(),
+            vault_initial_balances.clone(),
+            vault_weights.clone(),
+            AMPLIFICATION,
+            vault_code_id,
+            Some(interface.clone()),
+            None,
+            None
+        );
+
+        // Connect vault with a mock vault
+        let target_vault = encode_payload_address(b"target_vault");
+        mock_set_vault_connection(
+            env.get_app(),
+            vault.clone(),
+            CHANNEL_ID.to_string(),
+            target_vault.clone(),
+            true
+        );
+
+        // Define send asset configuration
+        let from_asset_idx = 0;
+        let from_asset = vault_assets[from_asset_idx].clone();
+        let from_balance = vault_initial_balances[from_asset_idx];
+        let send_percentage = 0.15;
+        let swap_amount = f64_to_uint128(uint128_to_f64(from_balance) * send_percentage).unwrap();
+
+        let to_asset_idx = 1;
+        let to_account = encode_payload_address(SWAPPER_B.as_bytes());
+
+        let other_asset = env.get_assets()[TEST_VAULT_ASSET_COUNT].clone();
+
+
+
+        // Tested action 1: no funds
+        let response_result = env.execute_contract(
+            Addr::unchecked(SETUP_MASTER),
+            vault.clone(),
+            &VolatileExecuteMsg::SendAsset {
+                channel_id: CHANNEL_ID.to_string(),
+                to_vault: target_vault.clone(),
+                to_account: to_account.clone(),
+                from_asset_ref: from_asset.get_asset_ref(),
+                to_asset_index: to_asset_idx,
+                amount: swap_amount,
+                min_out: U256::zero(),
+                fallback_account: SWAPPER_C.to_string(),
+                calldata: Binary(vec![])
+            },
+            vec![],   // ! Do not send funds
+            vec![]
+        );
+
+        // Make sure the transaction fails
+        assert!(response_result.is_err());
+        #[cfg(feature="asset_native")]
+        matches!(
+            response_result.err().unwrap().downcast().unwrap(),
+            ContractError::AssetNotReceived { asset }
+                if asset == Into::<Asset>::into(from_asset.clone()).to_string()
+        );
+        #[cfg(feature="asset_cw20")]
+        assert_eq!(
+            response_result.err().unwrap().root_cause().to_string(),
+            "No allowance for this account".to_string()
+        );
+
+
+
+        // Tested action 2: invalid asset
+        let response_result = env.execute_contract(
+            Addr::unchecked(SETUP_MASTER),
+            vault.clone(),
+            &VolatileExecuteMsg::SendAsset {
+                channel_id: CHANNEL_ID.to_string(),
+                to_vault: target_vault.clone(),
+                to_account: to_account.clone(),
+                from_asset_ref: from_asset.get_asset_ref(),
+                to_asset_index: to_asset_idx,
+                amount: swap_amount,
+                min_out: U256::zero(),
+                fallback_account: SWAPPER_C.to_string(),
+                calldata: Binary(vec![])
+            },
+            vec![other_asset.clone()],   // ! Send 'other_asset' instead of 'from_asset'
+            vec![swap_amount]
+        );
+
+        // Make sure the transaction fails
+        assert!(response_result.is_err());
+        #[cfg(feature="asset_native")]
+        matches!(
+            response_result.err().unwrap().downcast().unwrap(),
+            ContractError::AssetNotReceived { asset }
+                if asset == Into::<Asset>::into(from_asset.clone()).to_string()
+        );
+        #[cfg(feature="asset_cw20")]
+        assert_eq!(
+            response_result.err().unwrap().root_cause().to_string(),
+            "No allowance for this account".to_string()
+        );
+
+
+
+        // Tested action 3: too many assets
+        let response_result = env.execute_contract(
+            Addr::unchecked(SETUP_MASTER),
+            vault.clone(),
+            &VolatileExecuteMsg::SendAsset {
+                channel_id: CHANNEL_ID.to_string(),
+                to_vault: target_vault.clone(),
+                to_account: to_account.clone(),
+                from_asset_ref: from_asset.get_asset_ref(),
+                to_asset_index: to_asset_idx,
+                amount: swap_amount,
+                min_out: U256::zero(),
+                fallback_account: SWAPPER_C.to_string(),
+                calldata: Binary(vec![])
+            },
+            vec![from_asset.clone(), other_asset.clone()],   // ! Send another asset together with 'from_asset'
+            vec![swap_amount, Uint128::one()]
+        );
+
+        // Make sure the transaction fails
+        #[cfg(feature="asset_native")]
+        assert!(response_result.is_err());
+        #[cfg(feature="asset_native")]
+        matches!(
+            response_result.err().unwrap().downcast().unwrap(),
+            ContractError::AssetSurplusReceived {}
+        );
+        
+        // NOTE: this does not error for cw20 assets, as it's just the *allowance* that is set.
+        #[cfg(feature="asset_cw20")]
+        assert!(response_result.is_ok());
+
+
+
+        // Tested action 4: asset amount too low
+        let response_result = env.execute_contract(
+            Addr::unchecked(SETUP_MASTER),
+            vault.clone(),
+            &VolatileExecuteMsg::SendAsset {
+                channel_id: CHANNEL_ID.to_string(),
+                to_vault: target_vault.clone(),
+                to_account: to_account.clone(),
+                from_asset_ref: from_asset.get_asset_ref(),
+                to_asset_index: to_asset_idx,
+                amount: swap_amount,
+                min_out: U256::zero(),
+                fallback_account: SWAPPER_C.to_string(),
+                calldata: Binary(vec![])
+            },
+            vec![from_asset.clone()],
+            vec![swap_amount - Uint128::one()]
+        );
+
+        // Make sure the transaction fails
+        assert!(response_result.is_err());
+        #[cfg(feature="asset_native")]
+        matches!(
+            response_result.err().unwrap().downcast().unwrap(),
+            ContractError::UnexpectedAssetAmountReceived { received_amount, expected_amount, asset }
+                if
+                    received_amount == swap_amount - Uint128::one() &&
+                    expected_amount == swap_amount &&
+                    asset == Into::<Asset>::into(from_asset.clone()).to_string()
+        );
+        #[cfg(feature="asset_cw20")]
+        assert_eq!(
+            response_result.err().unwrap().root_cause().to_string(),
+            format!("Cannot Sub with {} and {}", swap_amount - Uint128::one(), swap_amount)
+        );
+
+
+
+        // Tested action 5: asset amount too high
+        let response_result = env.execute_contract(
+            Addr::unchecked(SETUP_MASTER),
+            vault.clone(),
+            &VolatileExecuteMsg::SendAsset {
+                channel_id: CHANNEL_ID.to_string(),
+                to_vault: target_vault.clone(),
+                to_account: to_account.clone(),
+                from_asset_ref: from_asset.get_asset_ref(),
+                to_asset_index: to_asset_idx,
+                amount: swap_amount,
+                min_out: U256::zero(),
+                fallback_account: SWAPPER_C.to_string(),
+                calldata: Binary(vec![])
+            },
+            vec![from_asset.clone()],
+            vec![swap_amount + Uint128::one()]
+        );
+
+        // Make sure the transaction fails
+        #[cfg(feature="asset_native")]
+        assert!(response_result.is_err());
+        #[cfg(feature="asset_native")]
+        matches!(
+            response_result.err().unwrap().downcast().unwrap(),
+            ContractError::UnexpectedAssetAmountReceived { received_amount, expected_amount, asset }
+                if
+                    received_amount == swap_amount + Uint128::one() &&
+                    expected_amount == swap_amount &&
+                    asset == Into::<Asset>::into(from_asset.clone()).to_string()
+        );
+        
+        // NOTE: this does not error for cw20 assets, as it's just the *allowance* that is set too high.
+        #[cfg(feature="asset_cw20")]
+        assert!(response_result.is_ok());
+
+
+
+        // Make sure the swap works for a valid amount
+        env.execute_contract(
+            Addr::unchecked(SETUP_MASTER),
+            vault.clone(),
+            &VolatileExecuteMsg::SendAsset {
+                channel_id: CHANNEL_ID.to_string(),
+                to_vault: target_vault,
+                to_account: to_account.clone(),
+                from_asset_ref: from_asset.get_asset_ref(),
+                to_asset_index: to_asset_idx,
+                amount: swap_amount,
+                min_out: U256::zero(),
+                fallback_account: SWAPPER_C.to_string(),
+                calldata: Binary(vec![])
+            },
+            vec![from_asset.clone()],
+            vec![swap_amount]
+        ).unwrap();
 
     }
 

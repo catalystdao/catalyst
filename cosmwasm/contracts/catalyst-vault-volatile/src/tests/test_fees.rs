@@ -1,24 +1,25 @@
 mod test_volatile_fees {
     use cosmwasm_std::{Addr, Uint64, Attribute};
-    use cw_multi_test::{App, Executor};
-    use catalyst_vault_common::{ContractError, msg::{FeeAdministratorResponse, VaultFeeResponse, GovernanceFeeShareResponse}};
-    use test_helpers::{token::deploy_test_tokens, definitions::{SETUP_MASTER, FACTORY_OWNER}, contract::mock_factory_deploy_vault};
+    use catalyst_vault_common::{ContractError, msg::{FeeAdministratorResponse, VaultFeeResponse, GovernanceFeeShareResponse}, bindings::Asset};
+    use test_helpers::{definitions::{SETUP_MASTER, FACTORY_OWNER}, contract::mock_factory_deploy_vault, env::CustomTestEnv};
 
+    use crate::tests::TestEnv;
     use crate::{msg::{VolatileExecuteMsg, QueryMsg}, tests::{helpers::volatile_vault_contract_storage, parameters::{TEST_VAULT_BALANCES, TEST_VAULT_WEIGHTS, AMPLIFICATION, TEST_VAULT_ASSET_COUNT}}};
 
 
 
     // Set Fee Administrator Tests **********************************************************************************************
-    fn deploy_mock_vault(app: &mut App) -> Addr {
-        let vault_tokens = deploy_test_tokens(app, SETUP_MASTER.to_string(), None, TEST_VAULT_ASSET_COUNT);
-        let vault_code_id = volatile_vault_contract_storage(app);
-        mock_factory_deploy_vault(
-            app,
-            vault_tokens.iter().map(|token_addr| token_addr.to_string()).collect(),
+    fn deploy_mock_vault(env: &mut TestEnv) -> Addr {
+        let vault_assets = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
+        let vault_code_id = volatile_vault_contract_storage(env.get_app());
+        mock_factory_deploy_vault::<Asset, _, _>(
+            env,
+            vault_assets,
             TEST_VAULT_BALANCES.to_vec(),
             TEST_VAULT_WEIGHTS.to_vec(),
             AMPLIFICATION,
             vault_code_id,
+            None,
             None,
             None
         )
@@ -27,20 +28,21 @@ mod test_volatile_fees {
     #[test]
     fn test_set_fee_administrator() {
 
-        let mut app = App::default();
+        let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
 
         // Deploy vault
-        let vault = deploy_mock_vault(&mut app);
+        let vault = deploy_mock_vault(&mut env);
 
         let new_fee_administrator: &str = "new_fee_administrator";
 
 
         // Tested action: set fee administrator
-        let response = app.execute_contract::<VolatileExecuteMsg>(
+        let response = env.execute_contract::<VolatileExecuteMsg>(
             Addr::unchecked(FACTORY_OWNER),
             vault.clone(),
             &VolatileExecuteMsg::SetFeeAdministrator { administrator: new_fee_administrator.to_string() },
-            &[]
+            vec![],
+            vec![]
         ).unwrap();
 
         
@@ -55,7 +57,7 @@ mod test_volatile_fees {
         );
 
         // Verify the new fee administrator is set
-        let queried_fee_administrator: Addr = app
+        let queried_fee_administrator: Addr = env.get_app()
             .wrap()
             .query_wasm_smart::<FeeAdministratorResponse>(vault, &QueryMsg::FeeAdministrator {})
             .unwrap()
@@ -72,20 +74,21 @@ mod test_volatile_fees {
     #[test]
     fn test_set_fee_administrator_invalid_caller() {
 
-        let mut app = App::default();
+        let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
 
         // Deploy vault
-        let vault = deploy_mock_vault(&mut app);
+        let vault = deploy_mock_vault(&mut env);
 
         let new_fee_administrator: &str = "new_fee_administrator";
 
 
         // Tested action: set fee administrator
-        let response_result = app.execute_contract::<VolatileExecuteMsg>(
+        let response_result = env.execute_contract::<VolatileExecuteMsg>(
             Addr::unchecked("not_factory_owner"),   // ! Not FACTORY_OWNER
             vault.clone(),
             &VolatileExecuteMsg::SetFeeAdministrator { administrator: new_fee_administrator.to_string() },
-            &[]
+            vec![],
+            vec![]
         );
 
 
@@ -104,20 +107,21 @@ mod test_volatile_fees {
     #[test]
     fn test_set_vault_fee() {
 
-        let mut app = App::default();
+        let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
 
         // Deploy vault
-        let vault = deploy_mock_vault(&mut app);
+        let vault = deploy_mock_vault(&mut env);
 
         let new_vault_fee = Uint64::new(500);
 
 
         // Tested action: set vault fee
-        let response = app.execute_contract::<VolatileExecuteMsg>(
+        let response = env.execute_contract::<VolatileExecuteMsg>(
             Addr::unchecked(FACTORY_OWNER),
             vault.clone(),
             &VolatileExecuteMsg::SetVaultFee { fee: new_vault_fee },
-            &[]
+            vec![],
+            vec![]
         ).unwrap();
 
         
@@ -132,7 +136,7 @@ mod test_volatile_fees {
         );
 
         // Verify the new vault fee is set
-        let queried_vault_fee: Uint64 = app
+        let queried_vault_fee: Uint64 = env.get_app()
             .wrap()
             .query_wasm_smart::<VaultFeeResponse>(vault, &QueryMsg::VaultFee {})
             .unwrap()
@@ -149,25 +153,26 @@ mod test_volatile_fees {
     #[test]
     fn test_set_vault_fee_max() {
 
-        let mut app = App::default();
+        let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
 
         // Deploy vault
-        let vault = deploy_mock_vault(&mut app);
+        let vault = deploy_mock_vault(&mut env);
 
         let new_vault_fee = Uint64::new(1000000000000000000u64);
 
 
         // Tested action: set max vault fee
-        let _response = app.execute_contract::<VolatileExecuteMsg>(
+        let _response = env.execute_contract::<VolatileExecuteMsg>(
             Addr::unchecked(FACTORY_OWNER),
             vault.clone(),
             &VolatileExecuteMsg::SetVaultFee { fee: new_vault_fee },
-            &[]
+            vec![],
+            vec![]
         ).unwrap();
 
 
         // Verify the max vault fee is set
-        let queried_vault_fee: Uint64 = app
+        let queried_vault_fee: Uint64 = env.get_app()
             .wrap()
             .query_wasm_smart::<VaultFeeResponse>(vault, &QueryMsg::VaultFee {})
             .unwrap()
@@ -184,20 +189,21 @@ mod test_volatile_fees {
     #[test]
     fn test_set_vault_fee_larger_than_max() {
 
-        let mut app = App::default();
+        let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
 
         // Deploy vault
-        let vault = deploy_mock_vault(&mut app);
+        let vault = deploy_mock_vault(&mut env);
 
         let new_vault_fee = Uint64::new(1000000000000000000u64 + 1u64);
 
 
         // Tested action: set vault fee larger than maximum allowed
-        let response_result = app.execute_contract::<VolatileExecuteMsg>(
+        let response_result = env.execute_contract::<VolatileExecuteMsg>(
             Addr::unchecked(FACTORY_OWNER),
             vault.clone(),
             &VolatileExecuteMsg::SetVaultFee { fee: new_vault_fee },
-            &[]
+            vec![],
+            vec![]
         );
 
 
@@ -214,20 +220,21 @@ mod test_volatile_fees {
     #[test]
     fn test_set_vault_fee_invalid_caller() {
 
-        let mut app = App::default();
+        let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
 
         // Deploy vault
-        let vault = deploy_mock_vault(&mut app);
+        let vault = deploy_mock_vault(&mut env);
 
         let new_vault_fee = Uint64::new(500);
 
 
         // Tested action: set vaultt fee
-        let response_result = app.execute_contract::<VolatileExecuteMsg>(
+        let response_result = env.execute_contract::<VolatileExecuteMsg>(
             Addr::unchecked("not_fee_administrator"),       // ! Not FACTORY_OWNER
             vault.clone(),
             &VolatileExecuteMsg::SetVaultFee { fee: new_vault_fee },
-            &[]
+            vec![],
+            vec![]
         );
 
 
@@ -246,20 +253,21 @@ mod test_volatile_fees {
     #[test]
     fn test_set_gov_fee_share() {
 
-        let mut app = App::default();
+        let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
 
         // Deploy vault
-        let vault = deploy_mock_vault(&mut app);
+        let vault = deploy_mock_vault(&mut env);
 
         let new_gov_fee_share = Uint64::new(700);
 
 
         // Tested action: set governance fee share
-        let response = app.execute_contract::<VolatileExecuteMsg>(
+        let response = env.execute_contract::<VolatileExecuteMsg>(
             Addr::unchecked(FACTORY_OWNER),
             vault.clone(),
             &VolatileExecuteMsg::SetGovernanceFeeShare { fee: new_gov_fee_share },
-            &[]
+            vec![],
+            vec![]
         ).unwrap();
 
         
@@ -274,7 +282,7 @@ mod test_volatile_fees {
         );
 
         // Verify the new governance fee share is set
-        let queried_gov_fee_share: Uint64 = app
+        let queried_gov_fee_share: Uint64 = env.get_app()
             .wrap()
             .query_wasm_smart::<GovernanceFeeShareResponse>(vault, &QueryMsg::GovernanceFeeShare {})
             .unwrap()
@@ -291,25 +299,26 @@ mod test_volatile_fees {
     #[test]
     fn test_set_gov_fee_share_max() {
 
-        let mut app = App::default();
+        let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
 
         // Deploy vault
-        let vault = deploy_mock_vault(&mut app);
+        let vault = deploy_mock_vault(&mut env);
 
         let new_gov_fee_share = Uint64::new(750000000000000000u64);
 
 
         // Tested action: set max governance fee share
-        let _response = app.execute_contract::<VolatileExecuteMsg>(
+        let _response = env.execute_contract::<VolatileExecuteMsg>(
             Addr::unchecked(FACTORY_OWNER),
             vault.clone(),
             &VolatileExecuteMsg::SetGovernanceFeeShare { fee: new_gov_fee_share },
-            &[]
+            vec![],
+            vec![]
         ).unwrap();
 
 
         // Verify the max governance fee share is set
-        let queried_gov_fee_share: Uint64 = app
+        let queried_gov_fee_share: Uint64 = env.get_app()
             .wrap()
             .query_wasm_smart::<GovernanceFeeShareResponse>(vault, &QueryMsg::GovernanceFeeShare {})
             .unwrap()
@@ -326,20 +335,21 @@ mod test_volatile_fees {
     #[test]
     fn test_set_gov_fee_share_larger_than_max() {
 
-        let mut app = App::default();
+        let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
 
         // Deploy vault
-        let vault = deploy_mock_vault(&mut app);
+        let vault = deploy_mock_vault(&mut env);
 
         let new_gov_fee_share = Uint64::new(750000000000000000u64 + 1u64);
 
 
         // Tested action: set governance fee share larger than maximum allowed
-        let response_result = app.execute_contract::<VolatileExecuteMsg>(
+        let response_result = env.execute_contract::<VolatileExecuteMsg>(
             Addr::unchecked(FACTORY_OWNER),
             vault.clone(),
             &VolatileExecuteMsg::SetGovernanceFeeShare { fee: new_gov_fee_share },
-            &[]
+            vec![],
+            vec![]
         );
 
 
@@ -356,20 +366,21 @@ mod test_volatile_fees {
     #[test]
     fn test_set_gov_fee_share_invalid_caller() {
 
-        let mut app = App::default();
+        let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
 
         // Deploy vault
-        let vault = deploy_mock_vault(&mut app);
+        let vault = deploy_mock_vault(&mut env);
 
         let new_gov_fee_share = Uint64::new(700);
 
 
         // Tested action: set governance fee share with invalid caller
-        let response_result = app.execute_contract::<VolatileExecuteMsg>(
+        let response_result = env.execute_contract::<VolatileExecuteMsg>(
             Addr::unchecked("not_fee_administrator"),       // ! Not FACTORY_OWNER
             vault.clone(),
             &VolatileExecuteMsg::SetGovernanceFeeShare { fee: new_gov_fee_share },
-            &[]
+            vec![],
+            vec![]
         );
 
 

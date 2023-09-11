@@ -1,8 +1,11 @@
-use cosmwasm_std::{Uint128, Addr, Uint64, Binary};
-use cw20::Cw20ExecuteMsg;
-use cw_multi_test::{ContractWrapper, App, Executor, AppResponse};
-use catalyst_vault_common::msg::{InstantiateMsg, ExecuteMsg};
-use crate::{misc::get_response_attribute, definitions::{SETUP_MASTER, FACTORY_OWNER}};
+use cosmwasm_schema::serde::Serialize;
+use cosmwasm_std::{Uint128, Addr, Uint64, Binary, Empty, Coin};
+use cw_multi_test::{ContractWrapper, Executor, AppResponse, Module};
+use std::{marker::PhantomData, fmt::Debug};
+
+use catalyst_vault_common::{msg::{InstantiateMsg, ExecuteMsg}, bindings::CustomMsg};
+
+use crate::{misc::get_response_attribute, definitions::{SETUP_MASTER, FACTORY_OWNER, VAULT_TOKEN_DENOM}, env::{CustomTestEnv, CustomApp}, asset::CustomTestAsset};
 
 
 pub const DEFAULT_TEST_VAULT_FEE : Uint64 = Uint64::new(70000000000000000u64);   // 7%
@@ -10,11 +13,16 @@ pub const DEFAULT_TEST_GOV_FEE  : Uint64 = Uint64::new(50000000000000000u64);   
 
 
 
-// Contracts storage
 
-pub fn vault_factory_contract_storage(
-    app: &mut App
-) -> u64 {
+// Contracts storage
+// ************************************************************************************************
+
+pub fn vault_factory_contract_storage<HandlerC>(
+    app: &mut CustomApp<HandlerC, CustomMsg>
+) -> u64
+where
+    HandlerC: Module<ExecT = CustomMsg, QueryT = Empty>
+{
 
     // Create contract wrapper
     let contract = ContractWrapper::new(
@@ -27,12 +35,15 @@ pub fn vault_factory_contract_storage(
     app.store_code(Box::new(contract))
 }
 
-pub fn interface_contract_storage(
-    app: &mut App
-) -> u64 {
+pub fn interface_contract_storage<HandlerC>(
+    app: &mut CustomApp<HandlerC, CustomMsg>
+) -> u64
+where
+    HandlerC: Module<ExecT = CustomMsg, QueryT = Empty>
+{
 
     // Create contract wrapper
-    let contract = ContractWrapper::new(
+    let contract = ContractWrapper::new_with_empty(
         mock_catalyst_ibc_interface::contract::execute,
         mock_catalyst_ibc_interface::contract::instantiate,
         mock_catalyst_ibc_interface::contract::query,
@@ -42,12 +53,15 @@ pub fn interface_contract_storage(
     app.store_code(Box::new(contract))
 }
 
-pub fn calldata_target_contract_storage(
-    app: &mut App
-) -> u64 {
+pub fn calldata_target_contract_storage<HandlerC>(
+    app: &mut CustomApp<HandlerC, CustomMsg>
+) -> u64
+where
+    HandlerC: Module<ExecT = CustomMsg, QueryT = Empty>
+{
 
     // Create contract wrapper
-    let contract = ContractWrapper::new(
+    let contract = ContractWrapper::new_with_empty(
         mock_calldata_target::contract::execute,
         mock_calldata_target::contract::instantiate,
         mock_calldata_target::contract::query,
@@ -59,12 +73,16 @@ pub fn calldata_target_contract_storage(
 
 
 
-// Contracts instantiation
 
-pub fn mock_instantiate_factory(
-    app: &mut App,
+// Contracts instantiation
+// ************************************************************************************************
+
+pub fn mock_instantiate_factory<HandlerC>(
+    app: &mut CustomApp<HandlerC, CustomMsg>,
     default_governance_fee_share: Option<Uint64>
-) -> Addr {
+) -> Addr
+    where HandlerC: Module<ExecT = CustomMsg, QueryT = Empty>
+{
 
     let factory_contract_code = vault_factory_contract_storage(app);
 
@@ -80,9 +98,12 @@ pub fn mock_instantiate_factory(
     ).unwrap()
 }
 
-pub fn mock_instantiate_interface(
-    app: &mut App
-) -> Addr {
+pub fn mock_instantiate_interface<HandlerC>(
+    app: &mut CustomApp<HandlerC, CustomMsg>
+) -> Addr
+where
+    HandlerC: Module<ExecT = CustomMsg, QueryT = Empty>
+{
 
     let contract_code_storage = interface_contract_storage(app);
 
@@ -96,9 +117,12 @@ pub fn mock_instantiate_interface(
     ).unwrap()
 }
 
-pub fn mock_instantiate_calldata_target(
-    app: &mut App
-) -> Addr {
+pub fn mock_instantiate_calldata_target<HandlerC>(
+    app: &mut CustomApp<HandlerC, CustomMsg>
+) -> Addr
+where
+    HandlerC: Module<ExecT = CustomMsg, QueryT = Empty>
+{
 
     let contract_code_storage = calldata_target_contract_storage(app);
 
@@ -114,80 +138,96 @@ pub fn mock_instantiate_calldata_target(
 
 
 
-// Factory helpers
 
-pub fn mock_factory_deploy_vault(
-    app: &mut App,
-    assets: Vec<String>,
+// Factory helpers
+// ************************************************************************************************
+
+pub fn mock_factory_deploy_vault<AssetC, TestAssetC, HandlerC>(
+    env: &mut impl CustomTestEnv<CustomApp<HandlerC, CustomMsg>, TestAssetC>,
+    assets: Vec<TestAssetC>,
     assets_balances: Vec<Uint128>,
     weights: Vec<Uint128>,
     amplification: Uint64,
     vault_code_id: u64,
     chain_interface: Option<Addr>,
-    factory: Option<Addr>
-) -> Addr {
+    factory: Option<Addr>,
+    gas: Option<Vec<Coin>>
+) -> Addr
+where
+    AssetC: From<TestAssetC> + Serialize + Debug,
+    TestAssetC: CustomTestAsset<CustomApp<HandlerC, CustomMsg>>,
+    HandlerC: Module<ExecT = CustomMsg, QueryT = Empty>
+{
 
     // Deploy factory if not provided
     let factory = factory.unwrap_or(
-        mock_instantiate_factory(app, None)
+        mock_instantiate_factory(env.get_app(), None)
     );
 
-    // Set asset allowances for the factory
-    assets
-        .iter()
-        .zip(&assets_balances)
-        .filter(|(_, amount)| *amount != Uint128::zero())
-        .for_each(|(asset, amount)| {
-            app.execute_contract::<Cw20ExecuteMsg>(
-                Addr::unchecked(SETUP_MASTER),
-                Addr::unchecked(asset),
-                &Cw20ExecuteMsg::IncreaseAllowance {
-                    spender: factory.to_string(),
-                    amount: *amount,
-                    expires: None
-                },
-                &[]
-            ).unwrap();
-        });
+    let vault_assets: Vec<AssetC> = assets.iter()
+        .map(|asset| asset.clone().into())
+        .collect();
 
     // Deploy the new vault
-    let response = app.execute_contract(
+    let response = env.execute_contract(
         Addr::unchecked(SETUP_MASTER),
         factory,
         &catalyst_factory::msg::ExecuteMsg::DeployVault {
             vault_code_id,
-            assets,
-            assets_balances,
+            assets: vault_assets,
+            assets_balances: assets_balances.clone(),
             weights,
             amplification,
             vault_fee: DEFAULT_TEST_VAULT_FEE,
             name: "TestVault".to_string(),
-            symbol: "TP".to_string(),
-            chain_interface: chain_interface.map(|value| value.to_string())
+            symbol: VAULT_TOKEN_DENOM.to_string(),
+            chain_interface: chain_interface.map(|value| value.to_string()),
+            gas
         },
-        &[]
+        assets,
+        assets_balances
     ).unwrap();
 
-    let vault = get_response_attribute::<String>(response.events[6].clone(), "vault_address").unwrap();
+    let deploy_vault_event = response.events.iter()
+        .find(|event| {
+            event.ty == "wasm-deploy-vault".to_string()
+        })
+        .unwrap().clone();
+
+    let vault = get_response_attribute::<String>(deploy_vault_event, "vault_address").unwrap();
 
     Addr::unchecked(vault)
 }
 
 
 
+
+// Vault helpers
+// ************************************************************************************************
+
 #[derive(Clone)]
-pub struct InitializeSwapCurvesMockConfig {
-    pub assets: Vec<String>,
+pub struct InitializeSwapCurvesMockConfig<AssetC, TestAssetC, AppC>
+where
+    TestAssetC: CustomTestAsset<AppC>,
+    AssetC: From<TestAssetC>
+{
+    pub assets: Vec<TestAssetC>,
     pub assets_balances: Vec<Uint128>,
     pub weights: Vec<Uint128>,
     pub amp: Uint64,
-    pub depositor: String
+    pub depositor: String,
+    pub phantom_data: PhantomData<(AssetC, AppC)>
 }
 
-impl InitializeSwapCurvesMockConfig {
-    pub fn transfer_vault_allowances(
+impl<AssetC, TestAssetC, AppC> InitializeSwapCurvesMockConfig<AssetC, TestAssetC, AppC>
+where
+    TestAssetC: CustomTestAsset<AppC>,
+    AssetC: From<TestAssetC>
+{
+
+    pub fn transfer_vault_assets(
         &self,
-        app: &mut App,
+        app: &mut AppC,
         vault: String,
         depositor: Addr
     ) {
@@ -196,44 +236,40 @@ impl InitializeSwapCurvesMockConfig {
             .zip(&self.assets_balances)
             .filter(|(_, amount)| *amount != Uint128::zero())
             .for_each(|(asset, amount)| {
-                app.execute_contract::<Cw20ExecuteMsg>(
+
+                asset.transfer(
+                    app,
+                    *amount,
                     depositor.clone(),
-                    Addr::unchecked(asset),
-                    &Cw20ExecuteMsg::Transfer {
-                        recipient: vault.clone(),
-                        amount: *amount
-                    },
-                    &[]
-                ).unwrap();
+                    vault.to_string()
+                );
+
             });
     }
 
-    pub fn into_execute_msg(self) -> ExecuteMsg<()> {
-        Into::into(self)
-    }
-}
+    pub fn build_execute_msg(&self) -> ExecuteMsg<(), AssetC> {
 
-impl Into<ExecuteMsg<()>> for InitializeSwapCurvesMockConfig {
-    fn into(self) -> ExecuteMsg<()> {
-        ExecuteMsg::<()>::InitializeSwapCurves {
-            assets: self.assets,
-            weights: self.weights,
-            amp: self.amp,
-            depositor: self.depositor
+        let vault_assets = self.assets.iter()
+            .map(|test_asset| test_asset.clone().into())
+            .collect::<Vec<AssetC>>();
+
+        ExecuteMsg::<(), AssetC>::InitializeSwapCurves {
+            assets: vault_assets,
+            weights: self.weights.clone(),
+            amp: self.amp.clone(),
+            depositor: self.depositor.clone()
         }
+    
     }
+
 }
-
-
-
-// Vault management helpers
 
 pub fn mock_instantiate_vault_msg(
     chain_interface: Option<String>
 ) -> InstantiateMsg {
     InstantiateMsg {
         name: "TestVault".to_string(),
-        symbol: "TP".to_string(),
+        symbol: VAULT_TOKEN_DENOM.to_string(),
         chain_interface,
         vault_fee: DEFAULT_TEST_VAULT_FEE,
         governance_fee_share: DEFAULT_TEST_GOV_FEE,
@@ -242,11 +278,14 @@ pub fn mock_instantiate_vault_msg(
     }
 }
 
-pub fn mock_instantiate_vault(
-    app: &mut App,
+pub fn mock_instantiate_vault<HandlerC>(
+    app: &mut CustomApp<HandlerC, CustomMsg>,
     vault_code_id: u64,
     chain_interface: Option<Addr>
-) -> Addr {
+) -> Addr
+where
+    HandlerC: Module<ExecT = CustomMsg, QueryT = Empty>
+{
 
     let instantiate_msg = mock_instantiate_vault_msg(
         chain_interface.map(|addr| addr.to_string())
@@ -263,10 +302,13 @@ pub fn mock_instantiate_vault(
 }
 
 
-pub fn mock_finish_vault_setup(
-    app: &mut App,
+pub fn mock_finish_vault_setup<HandlerC>(
+    app: &mut CustomApp<HandlerC, CustomMsg>,
     vault_contract: Addr
-) -> AppResponse {
+) -> AppResponse
+where
+    HandlerC: Module<ExecT = CustomMsg, QueryT = Empty>
+{
     app.execute_contract(
         Addr::unchecked(SETUP_MASTER),
         vault_contract,
@@ -276,13 +318,16 @@ pub fn mock_finish_vault_setup(
 }
 
 
-pub fn mock_set_vault_connection(
-    app: &mut App,
+pub fn mock_set_vault_connection<HandlerC>(
+    app: &mut CustomApp<HandlerC, CustomMsg>,
     vault_contract: Addr,
     channel_id: String,
     to_vault: Binary,
     state: bool
-) -> AppResponse {
+) -> AppResponse
+where
+    HandlerC: Module<ExecT = CustomMsg, QueryT = Empty>
+{
     app.execute_contract::<ExecuteMsg::<()>>(
         Addr::unchecked(FACTORY_OWNER),
         vault_contract,
@@ -296,11 +341,14 @@ pub fn mock_set_vault_connection(
 }
 
 
-pub fn mock_set_vault_fee(
-    app: &mut App,
+pub fn mock_set_vault_fee<HandlerC>(
+    app: &mut CustomApp<HandlerC, CustomMsg>,
     vault_contract: Addr,
     fee: Uint64
-) -> AppResponse {
+) -> AppResponse
+where
+    HandlerC: Module<ExecT = CustomMsg, QueryT = Empty>
+{
     app.execute_contract(
         Addr::unchecked(FACTORY_OWNER),
         vault_contract,
@@ -310,11 +358,14 @@ pub fn mock_set_vault_fee(
 }
 
 
-pub fn mock_set_governance_fee_share(
-    app: &mut App,
+pub fn mock_set_governance_fee_share<HandlerC>(
+    app: &mut CustomApp<HandlerC, CustomMsg>,
     vault_contract: Addr,
     fee: Uint64
-) -> AppResponse {
+) -> AppResponse
+where
+    HandlerC: Module<ExecT = CustomMsg, QueryT = Empty>
+{
     app.execute_contract(
         Addr::unchecked(FACTORY_OWNER),
         vault_contract,

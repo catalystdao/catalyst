@@ -1,5 +1,6 @@
+use catalyst_vault_common::bindings::{Asset, VaultResponse};
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, DepsMut, Response, Event, MessageInfo, Deps, Uint128, Uint64, Empty};
+use cosmwasm_std::{Addr, DepsMut, Event, MessageInfo, Deps, Uint128, Uint64, Empty};
 use cw_controllers::Admin;
 use cw_storage_plus::Item;
 
@@ -75,7 +76,7 @@ pub fn update_owner(
     deps: DepsMut,
     info: MessageInfo,
     account: String
-) -> Result<Response, ContractError> {
+) -> Result<VaultResponse, ContractError> {
 
     // Validate the new owner account
     let account = deps.api.addr_validate(account.as_str())?;
@@ -90,7 +91,7 @@ pub fn update_owner(
         })?;
 
     Ok(
-        Response::new()
+        VaultResponse::new()
             .add_event(set_owner_event(account.to_string()))
     )
 
@@ -148,7 +149,7 @@ pub fn set_default_governance_fee_share(
     deps: &mut DepsMut,
     info: MessageInfo,
     fee: Uint64
-) -> Result<Response, ContractError> {
+) -> Result<VaultResponse, ContractError> {
 
     // Verify the caller of the transaction is the factory owner
     if !is_owner(deps.as_ref(), info.sender)? {
@@ -158,7 +159,7 @@ pub fn set_default_governance_fee_share(
     // Set the new default governance fee
     let event = set_default_governance_fee_share_unchecked(deps, fee)?;
 
-    Ok(Response::new().add_event(event))
+    Ok(VaultResponse::new().add_event(event))
 }
 
 
@@ -169,7 +170,7 @@ pub const DEPLOY_VAULT_REPLY_ID: u64 = 0x100;
 #[cw_serde]
 pub struct DeployVaultReplyArgs {
     pub vault_code_id: u64,
-    pub assets: Vec<String>,
+    pub assets: Vec<Asset>,
     pub assets_balances: Vec<Uint128>,
     pub weights: Vec<Uint128>,
     pub amplification: Uint64,

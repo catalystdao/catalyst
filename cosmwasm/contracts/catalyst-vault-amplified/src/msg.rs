@@ -2,9 +2,11 @@ use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Uint64, Uint128, Binary};
 use catalyst_types::{U256, I256};
 pub use catalyst_vault_common::msg::InstantiateMsg;
-use catalyst_vault_common::msg::{
-    ExecuteMsg, AssetEscrowResponse, AssetsResponse, CalcLocalSwapResponse, CalcReceiveAssetResponse, CalcSendAssetResponse, ChainInterfaceResponse, FeeAdministratorResponse, GetLimitCapacityResponse, GovernanceFeeShareResponse, LiquidityEscrowResponse, OnlyLocalResponse, VaultConnectionStateResponse, VaultFeeResponse, ReadyResponse, SetupMasterResponse, TotalEscrowedAssetResponse, TotalEscrowedLiquidityResponse, WeightResponse, FactoryResponse, FactoryOwnerResponse
-};
+use catalyst_vault_common::{msg::{
+    ExecuteMsg, AssetEscrowResponse, AssetsResponse, CalcLocalSwapResponse, CalcReceiveAssetResponse, CalcSendAssetResponse, ChainInterfaceResponse, FeeAdministratorResponse, GetLimitCapacityResponse, GovernanceFeeShareResponse, LiquidityEscrowResponse, OnlyLocalResponse, VaultConnectionStateResponse, VaultFeeResponse, ReadyResponse, SetupMasterResponse, TotalEscrowedAssetResponse, TotalEscrowedLiquidityResponse, WeightResponse, FactoryResponse, FactoryOwnerResponse, TotalSupplyResponse
+}, bindings::Asset};
+
+#[cfg(feature="asset_cw20")]
 use cw20::{AllowanceResponse, BalanceResponse, TokenInfoResponse};
 
 
@@ -22,7 +24,7 @@ pub enum AmplifiedExecuteExtension {
 
 }
 
-pub type AmplifiedExecuteMsg = ExecuteMsg<AmplifiedExecuteExtension>;
+pub type AmplifiedExecuteMsg = ExecuteMsg<AmplifiedExecuteExtension, Asset>;
 
 
 #[cw_serde]
@@ -54,8 +56,10 @@ pub enum QueryMsg {
     Assets {},
     #[returns(WeightResponse)]
     Weight {
-        asset: String
+        asset_ref: String
     },
+    #[returns(TotalSupplyResponse)]
+    TotalSupply {},
 
     #[returns(VaultFeeResponse)]
     VaultFee {},
@@ -66,18 +70,18 @@ pub enum QueryMsg {
 
     #[returns(CalcSendAssetResponse)]
     CalcSendAsset {
-        from_asset: String,
+        from_asset_ref: String,
         amount: Uint128
     },
     #[returns(CalcReceiveAssetResponse)]
     CalcReceiveAsset {
-        to_asset: String,
+        to_asset_ref: String,
         u: U256
     },
     #[returns(CalcLocalSwapResponse)]
     CalcLocalSwap {
-        from_asset: String,
-        to_asset: String,
+        from_asset_ref: String,
+        to_asset_ref: String,
         amount: Uint128
     },
 
@@ -86,7 +90,7 @@ pub enum QueryMsg {
 
     #[returns(TotalEscrowedAssetResponse)]
     TotalEscrowedAsset {
-        asset: String
+        asset_ref: String
     },
     #[returns(TotalEscrowedLiquidityResponse)]
     TotalEscrowedLiquidity {},
@@ -114,10 +118,13 @@ pub enum QueryMsg {
 
 
     // CW20 Implementation
+    #[cfg(feature="asset_cw20")]
     #[returns(BalanceResponse)]
     Balance { address: String },
+    #[cfg(feature="asset_cw20")]
     #[returns(TokenInfoResponse)]
     TokenInfo {},
+    #[cfg(feature="asset_cw20")]
     #[returns(AllowanceResponse)]
     Allowance { owner: String, spender: String },
 

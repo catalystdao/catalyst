@@ -1,17 +1,23 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, to_binary};
+use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, StdResult, to_binary};
 use cw2::set_contract_version;
+use catalyst_vault_common::ContractError;
+use catalyst_vault_common::state::{
+    setup, finish_setup, set_fee_administrator, set_vault_fee, set_governance_fee_share, set_connection, query_chain_interface, query_setup_master, query_ready, query_only_local, query_assets, query_weight, query_vault_fee, query_governance_fee_share, query_fee_administrator, query_total_escrowed_liquidity, query_total_escrowed_asset, query_asset_escrow, query_liquidity_escrow, query_vault_connection_state, query_factory, query_factory_owner, on_send_liquidity_success, query_total_supply
+};
+use catalyst_vault_common::bindings::{VaultResponse, VaultAssets, VaultAssetsTrait};
+
+#[cfg(feature="asset_cw20")]
 use cw20_base::allowances::{
     execute_decrease_allowance, execute_increase_allowance, execute_send_from, execute_transfer_from, query_allowance,
 };
+#[cfg(feature="asset_cw20")]
 use cw20_base::contract::{
     execute_send, execute_transfer, query_balance, query_token_info,
 };
-use catalyst_vault_common::ContractError;
-use catalyst_vault_common::state::{
-    setup, finish_setup, set_fee_administrator, set_vault_fee, set_governance_fee_share, set_connection, query_chain_interface, query_setup_master, query_ready, query_only_local, query_assets, query_weight, query_vault_fee, query_governance_fee_share, query_fee_administrator, query_total_escrowed_liquidity, query_total_escrowed_asset, query_asset_escrow, query_liquidity_escrow, query_vault_connection_state, query_factory, query_factory_owner, on_send_liquidity_success
-};
+#[cfg(feature="asset_cw20")]
+use catalyst_vault_common::bindings::IntoVaultResponse;
 
 use crate::msg::{AmplifiedExecuteMsg, InstantiateMsg, QueryMsg, AmplifiedExecuteExtension};
 use crate::state::{
@@ -32,7 +38,7 @@ pub fn instantiate(
     env: Env,
     info: MessageInfo,
     msg: InstantiateMsg
-) -> Result<Response, ContractError> {
+) -> Result<VaultResponse, ContractError> {
 
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
@@ -61,9 +67,11 @@ pub fn execute(
     env: Env,
     info: MessageInfo,
     msg: AmplifiedExecuteMsg,
-) -> Result<Response, ContractError> {
+) -> Result<VaultResponse, ContractError> {
 
-    match msg {
+    let mut receive_no_assets = true;
+
+    let result = match msg {
 
         AmplifiedExecuteMsg::InitializeSwapCurves {
             assets,
@@ -73,7 +81,7 @@ pub fn execute(
         } => initialize_swap_curves(
             &mut deps,
             env,
-            info,
+            info.clone(),
             assets,
             weights,
             amp,
@@ -83,14 +91,14 @@ pub fn execute(
         AmplifiedExecuteMsg::FinishSetup {
         } => finish_setup(
             &mut deps,
-            info
+            info.clone()
         ),
 
         AmplifiedExecuteMsg::SetFeeAdministrator {
             administrator
         } => set_fee_administrator(
             &mut deps,
-            info,
+            info.clone(),
             administrator
         ),
 
@@ -98,7 +106,7 @@ pub fn execute(
             fee
         } => set_vault_fee(
             &mut deps,
-            info,
+            info.clone(),
             fee
         ),
 
@@ -106,7 +114,7 @@ pub fn execute(
             fee
         } => set_governance_fee_share(
             &mut deps,
-            info,
+            info.clone(),
             fee
         ),
 
@@ -116,7 +124,7 @@ pub fn execute(
             state
         } => set_connection(
             &mut deps,
-            info,
+            info.clone(),
             channel_id,
             to_vault,
             state
@@ -125,77 +133,92 @@ pub fn execute(
         AmplifiedExecuteMsg::DepositMixed {
             deposit_amounts,
             min_out
-        } => deposit_mixed(
-            &mut deps,
-            env,
-            info,
-            deposit_amounts,
-            min_out
-        ),
+        } => {
+            receive_no_assets = false;
+            deposit_mixed(
+                &mut deps,
+                env,
+                info.clone(),
+                deposit_amounts,
+                min_out
+            )
+        },
 
         AmplifiedExecuteMsg::WithdrawAll {
             vault_tokens,
             min_out
-        } => withdraw_all(
-            &mut deps,
-            env,
-            info,
-            vault_tokens,
-            min_out
-        ),
+        } => {
+            receive_no_assets = false;
+            withdraw_all(
+                &mut deps,
+                env,
+                info.clone(),
+                vault_tokens,
+                min_out
+            )
+        },
 
         AmplifiedExecuteMsg::WithdrawMixed {
             vault_tokens,
             withdraw_ratio,
             min_out
-        } => withdraw_mixed(
-            &mut deps,
-            env,
-            info,
-            vault_tokens,
-            withdraw_ratio,
-            min_out
-        ),
+        } => {
+            receive_no_assets = false;
+            withdraw_mixed(
+                &mut deps,
+                env,
+                info.clone(),
+                vault_tokens,
+                withdraw_ratio,
+                min_out
+            )
+        },
 
         AmplifiedExecuteMsg::LocalSwap {
-            from_asset,
-            to_asset,
+            from_asset_ref,
+            to_asset_ref,
             amount,
             min_out
-        } => local_swap(
-            &mut deps,
-            env,
-            info,
-            from_asset,
-            to_asset,
-            amount,
-            min_out
-        ),
+        } => {
+            receive_no_assets = false;
+            local_swap(
+                &mut deps,
+                env,
+                info.clone(),
+                from_asset_ref,
+                to_asset_ref,
+                amount,
+                min_out
+            )
+        },
 
         AmplifiedExecuteMsg::SendAsset {
             channel_id,
             to_vault,
             to_account,
-            from_asset,
+            from_asset_ref,
             to_asset_index,
             amount,
             min_out,
             fallback_account,
             calldata
-        } => send_asset(
-            &mut deps,
-            env,
-            info,
-            channel_id,
-            to_vault,
-            to_account,
-            from_asset,
-            to_asset_index,
-            amount,
-            min_out,
-            fallback_account,
-            calldata
-        ),
+        } => {
+            receive_no_assets = false;
+            send_asset(
+                &mut deps,
+                env,
+                info.clone(),
+                channel_id,
+                to_vault,
+                to_account,
+                from_asset_ref,
+                to_asset_index,
+                amount,
+                min_out,
+                fallback_account,
+                calldata
+            )
+        },
 
         AmplifiedExecuteMsg::ReceiveAsset {
             channel_id,
@@ -212,7 +235,7 @@ pub fn execute(
         } => receive_asset(
             &mut deps,
             env,
-            info,
+            info.clone(),
             channel_id,
             from_vault,
             to_asset_index,
@@ -238,7 +261,7 @@ pub fn execute(
         } => send_liquidity(
             &mut deps,
             env,
-            info,
+            info.clone(),
             channel_id,
             to_vault,
             to_account,
@@ -263,7 +286,7 @@ pub fn execute(
         } => receive_liquidity(
             &mut deps,
             env,
-            info,
+            info.clone(),
             channel_id,
             from_vault,
             to_account,
@@ -281,16 +304,17 @@ pub fn execute(
             to_account,
             u,
             escrow_amount,
-            asset,
+            asset_ref,
             block_number_mod
         } => on_send_asset_success_amplified(       // ! Use the amplified specific 'on_send_asset_success'
             &mut deps,
-            info,
+            &env,
+            &info,
             channel_id,
             to_account,
             u,
             escrow_amount,
-            asset,
+            asset_ref,
             block_number_mod
         ),
 
@@ -299,16 +323,17 @@ pub fn execute(
             to_account,
             u,
             escrow_amount,
-            asset,
+            asset_ref,
             block_number_mod
         } => on_send_asset_failure_amplified(      // ! Use the amplified specific 'on_send_asset_failure'
             &mut deps,
-            info,
+            &env,
+            &info,
             channel_id,
             to_account,
             u,
             escrow_amount,
-            asset,
+            asset_ref,
             block_number_mod
         ),
 
@@ -320,7 +345,8 @@ pub fn execute(
             block_number_mod
         } => on_send_liquidity_success(            // NOTE: there is no amplified-specific implementation for
             &mut deps,                             // 'on_send_liquidity_success'. See 'state.rs' for more information.
-            info,
+            &env,
+            &info,
             channel_id,
             to_account,
             u,
@@ -336,8 +362,8 @@ pub fn execute(
             block_number_mod
         } => on_send_liquidity_failure_amplified(  // ! Use the amplified specific 'on_send_liquidity_failure'
             &mut deps,
-            env,
-            info,
+            &env,
+            &info,
             channel_id,
             to_account,
             u,
@@ -354,7 +380,7 @@ pub fn execute(
                 } => set_amplification(
                     &mut deps,
                     &env,
-                    info,
+                    info.clone(),
                     target_timestamp,
                     target_amplification
                 ),
@@ -362,7 +388,8 @@ pub fn execute(
                 AmplifiedExecuteExtension::UpdateMaxLimitCapacity {
                 } => update_max_limit_capacity(
                     &mut deps,
-                    env
+                    &env,
+                    &info
                 )
             }
 
@@ -370,51 +397,63 @@ pub fn execute(
 
 
         // CW20 execute msgs - Use cw20-base for the implementation
+        #[cfg(feature="asset_cw20")]
         AmplifiedExecuteMsg::Transfer {
             recipient,
             amount
         } => Ok(
-            execute_transfer(deps, env, info, recipient, amount)?
+            execute_transfer(deps, env, info.clone(), recipient, amount)?
+                .into_vault_response()
         ),
 
+        #[cfg(feature="asset_cw20")]
         AmplifiedExecuteMsg::Burn {
             amount: _
          } => Err(
             ContractError::Unauthorized {}     // Vault token burn handled by withdraw function
         ),
 
+        #[cfg(feature="asset_cw20")]
         AmplifiedExecuteMsg::Send {
             contract,
             amount,
             msg,
         } => Ok(
-            execute_send(deps, env, info, contract, amount, msg)?
+            execute_send(deps, env, info.clone(), contract, amount, msg)?
+                .into_vault_response()
         ),
 
+        #[cfg(feature="asset_cw20")]
         AmplifiedExecuteMsg::IncreaseAllowance {
             spender,
             amount,
             expires,
         } => Ok(
-            execute_increase_allowance(deps, env, info, spender, amount, expires)?
+            execute_increase_allowance(deps, env, info.clone(), spender, amount, expires)?
+                .into_vault_response()
         ),
 
+        #[cfg(feature="asset_cw20")]
         AmplifiedExecuteMsg::DecreaseAllowance {
             spender,
             amount,
             expires,
         } => Ok(
-            execute_decrease_allowance(deps, env, info, spender, amount, expires)?
+            execute_decrease_allowance(deps, env, info.clone(), spender, amount, expires)?
+                .into_vault_response()
         ),
 
+        #[cfg(feature="asset_cw20")]
         AmplifiedExecuteMsg::TransferFrom {
             owner,
             recipient,
             amount,
         } => Ok(
-            execute_transfer_from(deps, env, info, owner, recipient, amount)?
+            execute_transfer_from(deps, env, info.clone(), owner, recipient, amount)?
+                .into_vault_response()
         ),
 
+        #[cfg(feature="asset_cw20")]
         AmplifiedExecuteMsg::BurnFrom {
             owner: _,
             amount: _
@@ -422,15 +461,23 @@ pub fn execute(
             ContractError::Unauthorized {}      // Vault token burn handled by withdraw function
         ),
 
+        #[cfg(feature="asset_cw20")]
         AmplifiedExecuteMsg::SendFrom {
             owner,
             contract,
             amount,
             msg,
         } => Ok(
-            execute_send_from(deps, env, info, owner, contract, amount, msg)?
+            execute_send_from(deps, env, info.clone(), owner, contract, amount, msg)?
+            .into_vault_response()
         ),
+    };
+
+    if receive_no_assets {
+        VaultAssets::receive_no_assets(&info)?;
     }
+
+    result
 }
 
 
@@ -456,32 +503,33 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::OnlyLocal{} => to_binary(&query_only_local(deps)?),
         QueryMsg::Assets {} => to_binary(&query_assets(deps)?),
         QueryMsg::Weight {
-            asset
-        } => to_binary(&query_weight(deps, asset)?),
+            asset_ref
+        } => to_binary(&query_weight(deps, asset_ref)?),
+        QueryMsg::TotalSupply {} => to_binary(&query_total_supply(deps)?),
 
         QueryMsg::VaultFee {} => to_binary(&query_vault_fee(deps)?),
         QueryMsg::GovernanceFeeShare {} => to_binary(&query_governance_fee_share(deps)?),
         QueryMsg::FeeAdministrator {} => to_binary(&query_fee_administrator(deps)?),
 
         QueryMsg::CalcSendAsset{
-            from_asset,
+            from_asset_ref,
             amount
-        } => to_binary(&query_calc_send_asset(deps,env, &from_asset,amount)?),
+        } => to_binary(&query_calc_send_asset(deps, env, from_asset_ref, amount)?),
         QueryMsg::CalcReceiveAsset{
-            to_asset,
+            to_asset_ref,
             u
-        } => to_binary(&query_calc_receive_asset(deps,env, &to_asset,u)?),
+        } => to_binary(&query_calc_receive_asset(deps, env, to_asset_ref, u)?),
         QueryMsg::CalcLocalSwap{
-            from_asset,
-            to_asset,
+            from_asset_ref,
+            to_asset_ref,
             amount
-        } => to_binary(&query_calc_local_swap(deps,env, &from_asset, &to_asset,amount)?),
+        } => to_binary(&query_calc_local_swap(deps, env, from_asset_ref, to_asset_ref, amount)?),
 
-        QueryMsg::GetLimitCapacity{} => to_binary(&query_get_limit_capacity(deps,env)?),
+        QueryMsg::GetLimitCapacity{} => to_binary(&query_get_limit_capacity(deps, env)?),
 
         QueryMsg::TotalEscrowedAsset {
-            asset
-        } => to_binary(&query_total_escrowed_asset(deps, asset.as_ref())?),
+            asset_ref
+        } => to_binary(&query_total_escrowed_asset(deps, asset_ref)?),
         QueryMsg::TotalEscrowedLiquidity {} => to_binary(&query_total_escrowed_liquidity(deps)?),
         QueryMsg::AssetEscrow { hash } => to_binary(&query_asset_escrow(deps, hash)?),
         QueryMsg::LiquidityEscrow { hash } => to_binary(&query_liquidity_escrow(deps, hash)?),
@@ -494,8 +542,11 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::UnitTracker {} => to_binary(&query_unit_tracker(deps)?),
 
         // CW20 query msgs - Use cw20-base for the implementation
+        #[cfg(feature="asset_cw20")]
         QueryMsg::TokenInfo {} => to_binary(&query_token_info(deps)?),
+        #[cfg(feature="asset_cw20")]
         QueryMsg::Balance { address } => to_binary(&query_balance(deps, address)?),
+        #[cfg(feature="asset_cw20")]
         QueryMsg::Allowance { owner, spender } => to_binary(&query_allowance(deps, owner, spender)?)
     }
 }

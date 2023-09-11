@@ -20,6 +20,9 @@ crate-type = ["cdylib", "rlib"]
 backtraces = ["cosmwasm-std/backtraces"]
 # use library feature to disable all instantiate/execute/query exports
 library = []
+# configure the asset type support using either of the following features
+asset_native = []
+asset_cw20 = []
 
 [profile.release]
 codegen-units = 1
@@ -44,6 +47,9 @@ schemars = { workspace = true }
 serde = { workspace = true }
 sha3 = { workspace = true }
 thiserror = { workspace = true }
+token-bindings = { workspace = true }
+vault-assets = { path = "../../lib/vault-assets" }
+vault-token = { path = "../../lib/vault-token" }
 catalyst-types = { path = "../../lib/catalyst-types" }
 fixed-point-math = { path = "../../lib/fixed-point-math" }
 

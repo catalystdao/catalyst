@@ -342,7 +342,7 @@ mod catalyst_ibc_interface_tests {
             to_account: CatalystEncodedAddress::try_encode(b"to_account").unwrap().to_binary(),
             u: u256!("78456988731590487483448276103933454935747871349630657124267302091643025406701"),          // Some large U256 number
             escrow_amount: Uint128::from(4920222095670429824873974121747892731u128),                                   // Some large Uint128 number
-            asset: "from_asset".to_string(),
+            asset_ref: "from_asset".to_string(),
             block_number_mod: 1356u32
         }
     }
@@ -355,7 +355,7 @@ mod catalyst_ibc_interface_tests {
             to_account: CatalystEncodedAddress::try_encode(b"to_account").unwrap().to_binary(),
             u: u256!("78456988731590487483448276103933454935747871349630657124267302091643025406701"),          // Some large U256 number
             escrow_amount: Uint128::from(4920222095670429824873974121747892731u128),                                   // Some large Uint128 number
-            asset: "from_asset".to_string(),
+            asset_ref: "from_asset".to_string(),
             block_number_mod: 1356u32
         }
     }
