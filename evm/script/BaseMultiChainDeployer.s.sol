@@ -28,8 +28,6 @@ import { CatalystVaultAmplified } from "../src/CatalystVaultAmplified.sol";
 import { IncentivizedMockEscrow } from "GeneralisedIncentives/src/apps/mock/IncentivizedMockEscrow.sol";
 
 contract BaseMultiChainDeployer is Script {
-    Chains[] chain_list;
-
     enum Stage {
         test,
         prod
@@ -53,51 +51,8 @@ contract BaseMultiChainDeployer is Script {
 
     uint256 pk;
 
-    constructor() {
-        rpc[Chains.Mumbai] = "mumbai";
-        wrapped_gas[Chains.Mumbai] = "WMATIC";
-        chain_list.push(Chains.Mumbai);
-
-        rpc[Chains.Sepolia] = "sepolia";
-        wrapped_gas[Chains.Sepolia] = "WETH10";
-        chain_list.push(Chains.Sepolia);
-
-        rpc[Chains.BaseGoerli] = "basegoerli";
-        wrapped_gas[Chains.BaseGoerli] = "WETH";
-        chain_list.push(Chains.BaseGoerli);
-
-        rpc[Chains.ArbitrumGoerli] = "arbitrumgoerli";
-        wrapped_gas[Chains.ArbitrumGoerli] = "WETH";
-        chain_list.push(Chains.ArbitrumGoerli);
-
-        rpc[Chains.ScrollSepolia] = "scrollsepolia";
-        wrapped_gas[Chains.ScrollSepolia] = "WETH";
-        chain_list.push(Chains.ScrollSepolia);
-
-        rpc[Chains.OptimismGoerli] = "optimismgoerli";
-        wrapped_gas[Chains.OptimismGoerli] = "WETH";
-        chain_list.push(Chains.OptimismGoerli);
-
-        rpc[Chains.TaikoEldfell] = "taikoeldfell";
-        wrapped_gas[Chains.TaikoEldfell] = "WETH";
-        chain_list.push(Chains.TaikoEldfell);
-
-        rpc[Chains.OPBNBTestnet] = "opbnbtestnet";
-        wrapped_gas[Chains.OPBNBTestnet] = "WBNB";
-        chain_list.push(Chains.OPBNBTestnet);
-
-        rpc[Chains.BSCTestnet] = "bsctestnet";
-        wrapped_gas[Chains.BSCTestnet] = "WBNB";
-        chain_list.push(Chains.BSCTestnet);
-
-        rpc[Chains.MantleTestnet] = "mantletestnet";
-        wrapped_gas[Chains.MantleTestnet] = "WETH";
-        chain_list.push(Chains.MantleTestnet);
-    }
-
-
     function selectFork(Chains chain) internal {
-        console.log("vm.envString(rpc[chain])");
+        console.log(vm.envString(rpc[chain]));
         vm.createSelectFork(vm.envString(rpc[chain]));
     }
 
