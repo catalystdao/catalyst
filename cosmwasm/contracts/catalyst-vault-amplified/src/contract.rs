@@ -147,32 +147,26 @@ pub fn execute(
         AmplifiedExecuteMsg::WithdrawAll {
             vault_tokens,
             min_out
-        } => {
-            receive_no_assets = false;
-            withdraw_all(
-                &mut deps,
-                env,
-                info.clone(),
-                vault_tokens,
-                min_out
-            )
-        },
+        } => withdraw_all(
+            &mut deps,
+            env,
+            info.clone(),
+            vault_tokens,
+            min_out
+        ),
 
         AmplifiedExecuteMsg::WithdrawMixed {
             vault_tokens,
             withdraw_ratio,
             min_out
-        } => {
-            receive_no_assets = false;
-            withdraw_mixed(
-                &mut deps,
-                env,
-                info.clone(),
-                vault_tokens,
-                withdraw_ratio,
-                min_out
-            )
-        },
+        } => withdraw_mixed(
+            &mut deps,
+            env,
+            info.clone(),
+            vault_tokens,
+            withdraw_ratio,
+            min_out
+        ),
 
         AmplifiedExecuteMsg::LocalSwap {
             from_asset_ref,
