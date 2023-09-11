@@ -52,23 +52,23 @@ contract DeployCatalyst is Script {
     function deployAllContracts() internal {
 
         // Deploy Factory
-        CatalystFactory factory = new CatalystFactory{salt: 0x61501635278aae8ae4157b2d2c65b1f07f61a0af03ec117d4fee18d6ec435db8}(vm.envAddress("CATALYST_ADDRESS"));
+        CatalystFactory factory = new CatalystFactory{salt: 0x2ea0e39ef7366f6b504c30f3769f869a827835dc79ad25e94fe3e456cfa35bd8}(vm.envAddress("CATALYST_ADDRESS"));
         contracts.factory = address(factory);
 
         // Deploy Templates
-        address volatile_mathlib = address(new CatalystMathVol{salt: 0xb007205e1058308f80830cfb124f8025ec13c921a28ed82df2c82883eb53bbd0}());
+        address volatile_mathlib = address(new CatalystMathVol{salt: 0xd2c762d8d12ded8f566f25d86ef4cf6fd4ab1beffcc4073adde9ce9ae8ddd803}());
         contracts.volatile_mathlib = address(volatile_mathlib);
 
         address volatile_template = address(
-            new CatalystVaultVolatile{salt: 0xa46411ab5dd9f6503cd98b322f8d881cd8aed5aeec4c607fba6e249fada09502}(address(factory), volatile_mathlib)
+            new CatalystVaultVolatile{salt: 0xdc8a4cea8d4c6d0f765a266acda548ab542382f65a68e6cb6e371e3746c86cc3}(address(factory), volatile_mathlib)
         );
         contracts.volatile_template = address(volatile_template);
 
-        address amplified_mathlib = address(new CatalystMathAmp{salt: 0x74c361461aa088d1d143e8cdd85276e5d770dc1b3256bcb006c3113b01f0fa78}());
+        address amplified_mathlib = address(new CatalystMathAmp{salt: 0x6f3ca6dd912c11c354a6e06318c17f9a71ef6d1d936afa273cea1cf1eff3675f}());
         contracts.amplified_mathlib = address(amplified_mathlib);
 
         address amplified_template = address(
-            new CatalystVaultAmplified{salt: 0xb279fc99702860dd7101fd8cb0bfbc14e8e3d387b152e021e01c70ed56c2f66a}(address(factory), amplified_mathlib)
+            new CatalystVaultAmplified{salt: 0x2a55d4f99a04ad2ac8cb16f32934098dd0bdc8562add1fb567e6608cc1524cf7}(address(factory), amplified_mathlib)
         );
         contracts.amplified_template = address(amplified_template);
 
