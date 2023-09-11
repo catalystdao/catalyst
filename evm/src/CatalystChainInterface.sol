@@ -180,6 +180,12 @@ contract CatalystChainInterface is Ownable, ICrossChainReceiver, Bytes65, IMessa
         _;
     }
 
+    //-- Transparent viewer --//
+
+    function estimateAdditionalCost() external view returns(address asset, uint256 amount) {
+        (asset, amount) = GARP.estimateAdditionalCost();
+    }
+
     //-- Functions --//
 
     function _handleError(bytes memory err) pure internal returns (bytes1) {
