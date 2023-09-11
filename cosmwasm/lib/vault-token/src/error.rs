@@ -11,7 +11,7 @@ pub enum VaultTokenError {
     MintFailed { reason: String },
 
     #[error("Burn failed: {reason}")]
-    BurnFailed {reason: String}
+    BurnFailed { reason: String }
 }
 
 impl From<VaultTokenError> for StdError {
