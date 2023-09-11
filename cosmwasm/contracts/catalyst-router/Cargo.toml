@@ -44,6 +44,9 @@ cw20 = { workspace = true }
 schemars = { workspace = true }
 serde = { workspace = true }
 thiserror = { workspace = true }
+catalyst-types = { path = "../../lib/catalyst-types" }
+catalyst-vault-common = { path = "../catalyst-vault-common" }
+vault-assets = { path = "../../lib/vault-assets" }
 
 [dev-dependencies]
 cw-multi-test = { workspace = true }

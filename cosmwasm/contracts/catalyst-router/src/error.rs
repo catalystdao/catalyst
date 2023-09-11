@@ -10,6 +10,9 @@ pub enum ContractError {
     #[error("Unauthorized")]
     Unauthorized {},
 
+    #[error("Invalid parameters: {reason}")]
+    InvalidParameters { reason: String },
+
     #[error("Unrecognized command id: {command_id}")]
     InvalidCommand{
         command_id: u8

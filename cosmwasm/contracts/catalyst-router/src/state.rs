@@ -1,5 +1,5 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, DepsMut, MessageInfo, Env, Binary};
+use cosmwasm_std::{Addr, DepsMut, MessageInfo, Env, Binary, Deps};
 use cw_storage_plus::Item;
 
 use crate::error::ContractError;
@@ -62,7 +62,7 @@ pub fn unlock_router(
 
 /// Query the current router locker.
 pub fn get_router_locker(
-    deps: &mut DepsMut
+    deps: &Deps
 ) -> Result<Addr, ContractError> {
     
     let lock = ROUTER_LOCK.load(deps.storage)?;

@@ -77,17 +77,17 @@ pub fn execute_command(
 
     match command_id {
 
-        COMMAND_LOCAL_SWAP     => catalyst_executors::execute_local_swap(deps, env, input),
-        COMMAND_SEND_ASSET     => catalyst_executors::execute_send_asset(deps, env, input),
-        COMMAND_SEND_LIQUIDITY => catalyst_executors::execute_send_liquidity(deps, env, input),
-        COMMAND_WITHDRAW_EQUAL => catalyst_executors::execute_withdraw_equal(deps, env, input),
-        COMMAND_WITHDRAW_MIXED => catalyst_executors::execute_withdraw_mixed(deps, env, input),
-        COMMAND_DEPOSIT_MIXED  => catalyst_executors::execute_deposit_mixed(deps, env, input),
+        COMMAND_LOCAL_SWAP     => catalyst_executors::execute_local_swap(&deps.as_ref(), env, input),
+        COMMAND_SEND_ASSET     => catalyst_executors::execute_send_asset(&deps.as_ref(), env, input),
+        COMMAND_SEND_LIQUIDITY => catalyst_executors::execute_send_liquidity(&deps.as_ref(), env, input),
+        COMMAND_WITHDRAW_EQUAL => catalyst_executors::execute_withdraw_equal(&deps.as_ref(), env, input),
+        COMMAND_WITHDRAW_MIXED => catalyst_executors::execute_withdraw_mixed(&deps.as_ref(), env, input),
+        COMMAND_DEPOSIT_MIXED  => catalyst_executors::execute_deposit_mixed(&deps.as_ref(), env, input),
 
-        COMMAND_SWEEP          => payments_executors::execute_sweep(deps, env, input),
-        COMMAND_TRANSFER       => payments_executors::execute_transfer(deps, env, input),
-        COMMAND_PAY_PORTION    => payments_executors::execute_pay_portion(deps, env, input),
-        COMMAND_BALANCE_CHECK  => payments_executors::execute_balance_check(deps, env, input),
+        COMMAND_SWEEP          => payments_executors::execute_sweep(&deps.as_ref(), env, input),
+        COMMAND_TRANSFER       => payments_executors::execute_transfer(&deps.as_ref(), env, input),
+        COMMAND_PAY_PORTION    => payments_executors::execute_pay_portion(&deps.as_ref(), env, input),
+        COMMAND_BALANCE_CHECK  => payments_executors::execute_balance_check(&deps.as_ref(), env, input),
 
         COMMAND_ALLOW_CANCEL   => cancel_swap_executors::execute_cancel_swap(deps, env, input),
 

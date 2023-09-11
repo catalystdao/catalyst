@@ -136,6 +136,8 @@ dependencies = [
 name = "catalyst-router"
 version = "0.1.0"
 dependencies = [
+ "catalyst-types",
+ "catalyst-vault-common",
  "cosmwasm-schema",
  "cosmwasm-std",
  "cosmwasm-storage",
@@ -149,6 +151,7 @@ dependencies = [
  "serde",
  "test-helpers",
  "thiserror",
+ "vault-assets",
 ]
 
 [[package]]
