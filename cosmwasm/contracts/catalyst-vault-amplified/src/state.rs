@@ -1303,7 +1303,7 @@ pub fn send_liquidity(
 
     update_amplification(deps, env.block.time)?;
 
-    // Compute the effective supply. Iclude the escrowed tokens to yield a smaller return.
+    // Compute the effective supply. Include the escrowed tokens to yield a smaller return.
     let mut vault_token = VaultToken::load(&deps.as_ref())?;
     let effective_supply = U256::from(vault_token.query_total_supply(&deps.as_ref())?)
         .wrapping_add(TOTAL_ESCROWED_LIQUIDITY.load(deps.storage)?.into()); // 'wrapping_add' is safe as U256.max >> Uint128.max
