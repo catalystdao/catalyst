@@ -5,6 +5,7 @@ use cw2::set_contract_version;
 
 use crate::dispatcher::{start_dispatching, resume_dispatching};
 use crate::error::ContractError;
+use crate::executors::cancel_swap::cancel_swap_executors::set_cancel_swap_state;
 use crate::msg::{ExecuteMsg, InstantiateMsg, get_reply_allow_revert_flag, get_reply_command_index, get_reply_is_last_flag, ExecuteParams};
 use crate::state::{lock_router, unlock_router, ROUTER_STATE};
 
@@ -70,9 +71,20 @@ pub fn execute(
                 params.inputs,
                 params.deadline
             )
-        }
+        },
 
         // TODO Batched command
+
+        ExecuteMsg::CancelSwap {
+            identifier,
+            state
+        } => execute_cancel_swap(
+            &mut deps,
+            info,
+            identifier,
+            state
+        )
+        
     }
 
 }
@@ -127,6 +139,31 @@ fn execute_execute(
     };
 
     Ok(response)
+}
+
+
+/// Set a cancel swap order.
+/// 
+/// # Arguments:
+/// * `identifier` - The swap identifier.
+/// * `state` - Optional 'cancel' state (None defaults to true, i.e. cancel the swap).
+/// 
+fn execute_cancel_swap(
+    deps: &mut DepsMut,
+    info: MessageInfo,
+    identifier: Binary,
+    state: Option<bool>
+) -> Result<Response, ContractError> {
+
+    set_cancel_swap_state(
+        deps,
+        info.sender.to_string(),
+        identifier,
+        state.unwrap_or(true)
+    )?;
+
+    Ok(Response::new())
+
 }
 
 

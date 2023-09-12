@@ -89,7 +89,7 @@ pub fn execute_command(
         COMMAND_PAY_PORTION    => payments_executors::execute_pay_portion(&deps.as_ref(), env, input),
         COMMAND_BALANCE_CHECK  => payments_executors::execute_balance_check(&deps.as_ref(), env, input),
 
-        COMMAND_ALLOW_CANCEL   => cancel_swap_executors::execute_cancel_swap(deps, env, input),
+        COMMAND_ALLOW_CANCEL   => cancel_swap_executors::execute_allow_cancel(deps, input),
 
         _ => Err(ContractError::InvalidCommand{command_id})
     }

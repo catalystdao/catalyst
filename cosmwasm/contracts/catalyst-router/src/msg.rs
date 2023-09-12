@@ -19,6 +19,11 @@ pub enum ExecuteMsg {
     OnCatalystCall {
         purchased_tokens: Uint128,
         data: Binary
+    },
+
+    CancelSwap {
+        identifier: Binary,
+        state: Option<bool>
     }
 
 }
