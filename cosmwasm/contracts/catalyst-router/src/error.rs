@@ -24,6 +24,9 @@ pub enum ContractError {
         error: String
     },
 
+    #[error("Transaction deadline passed.")]
+    TransactionDeadlinePassed {},
+
     #[error("The router does not implement any queries.")]
     NoQueries {}
 }

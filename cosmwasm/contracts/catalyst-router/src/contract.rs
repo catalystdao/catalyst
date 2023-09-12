@@ -46,13 +46,14 @@ pub fn execute(
         ExecuteMsg::Execute {
             commands,
             inputs,
-            deadline        //TODO implement deadline check
+            deadline
         } => execute_execute(
             &mut deps,
             &env,
             info,
             commands,
-            inputs
+            inputs,
+            deadline
         ),
 
         ExecuteMsg::OnCatalystCall {
@@ -74,14 +75,22 @@ pub fn execute(
 /// # Arguments:
 /// * `commands` - The router commands.
 /// * `inputs` - The inputs corresponding to the router commands.
+/// * `deadline` - Time at which the router request expires.
 /// 
 fn execute_execute(
     deps: &mut DepsMut,
     env: &Env,
     info: MessageInfo,
     commands: Binary,
-    inputs: Vec<Binary>
+    inputs: Vec<Binary>,
+    deadline: Option<u64>
 ) -> Result<Response, ContractError> {
+
+    if let Some(time) = deadline {
+        if env.block.time.seconds() > time {
+            return Err(ContractError::TransactionDeadlinePassed {})
+        };
+    }
 
     // NOTE: It is important to lock the router here and not only if a message is generated, as some
     // instructions may rely on the lock to be present to query the original sender of the transaction.
