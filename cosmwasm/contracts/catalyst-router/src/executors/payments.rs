@@ -4,6 +4,8 @@ pub mod payments_executors {
 
     use crate::{commands::CommandResult, error::ContractError, executors::types::types::{Account, Amount, Denom}};
 
+    pub const BIPS_BASE: Uint128 = Uint128::new(10_000u128);
+
     #[cw_serde]
     struct TransferCommand {
         amounts: Vec<Amount>,
@@ -134,7 +136,7 @@ pub mod payments_executors {
         }
 
         let invalid_bips = args.bips.iter()
-            .any(|bip| bip.is_zero() || bip > &Uint128::new(10_000u128));
+            .any(|bip| bip.is_zero() || bip > &BIPS_BASE);
 
         if invalid_bips {
             return Err(ContractError::InvalidParameters {
@@ -151,7 +153,7 @@ pub mod payments_executors {
 
                 let pay_amount = router_coin.amount
                     .checked_mul(bips)?
-                    .checked_div(Uint128::new(10_000u128))?;
+                    .checked_div(BIPS_BASE)?;
 
                 Ok(
                     Coin::new(pay_amount.u128(), denom)
