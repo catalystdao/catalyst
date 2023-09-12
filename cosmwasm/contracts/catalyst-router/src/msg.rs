@@ -24,6 +24,15 @@ pub enum ExecuteMsg {
 }
 
 
+/// Struct to allow the deserialization of the binary encoded parameters of `ExecuteMsg::Execute`.
+#[cw_serde]
+pub struct ExecuteParams {
+    pub commands: Binary,
+    pub inputs: Vec<Binary>,
+    pub deadline: Option<u64>
+}
+
+
 // Reply id flags/masks and helpers
 
 pub const REPLY_ID_FLAG_IS_LAST      : u64 = 0x8000000000000000;

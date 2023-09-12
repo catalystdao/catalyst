@@ -1,11 +1,11 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{DepsMut, Env, MessageInfo, Response, Reply, StdResult, Deps, Binary, Empty};
+use cosmwasm_std::{DepsMut, Env, MessageInfo, Response, Reply, StdResult, Deps, Binary, Empty, from_binary};
 use cw2::set_contract_version;
 
 use crate::dispatcher::{start_dispatching, resume_dispatching};
 use crate::error::ContractError;
-use crate::msg::{ExecuteMsg, InstantiateMsg, get_reply_allow_revert_flag, get_reply_command_index, get_reply_is_last_flag};
+use crate::msg::{ExecuteMsg, InstantiateMsg, get_reply_allow_revert_flag, get_reply_command_index, get_reply_is_last_flag, ExecuteParams};
 use crate::state::{lock_router, unlock_router, ROUTER_STATE};
 
 // Version information
@@ -57,9 +57,20 @@ pub fn execute(
         ),
 
         ExecuteMsg::OnCatalystCall {
-            purchased_tokens,
+            purchased_tokens: _,
             data
-        } => todo!()        //TODO
+        } => {
+            let params: ExecuteParams = from_binary(&data)?;
+
+            execute_execute(
+                &mut deps,
+                &env,
+                info,
+                params.commands,
+                params.inputs,
+                params.deadline
+            )
+        }
 
         // TODO Batched command
     }
