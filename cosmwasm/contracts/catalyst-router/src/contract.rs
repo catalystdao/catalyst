@@ -73,8 +73,6 @@ pub fn execute(
             )
         },
 
-        // TODO Batched command
-
         ExecuteMsg::CancelSwap {
             identifier,
             state
