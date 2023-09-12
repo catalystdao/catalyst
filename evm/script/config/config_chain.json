@@ -1,8 +1,11 @@
 {
+    "sepolia": {
+        "chainIdentifier": 11155111
+    },
     "mumbai": {
         "chainIdentifier": 80001
     },
-    "base-goerli": {
+    "basegoerli": {
         "chainIdentifier": 84531
     },
     "mantletestnet" : {
@@ -25,5 +28,8 @@
     },
     "opbnbtestnet": {
         "chainIdentifier": 5611
+    },
+    "omnitestnet": {
+        "chainIdentifier": 165
     }
 }

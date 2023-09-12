@@ -1,62 +1,68 @@
 {
   "sepolia": {
     "MOCK": {
-      "incentive": "0x0000000000000000000000000000000000000000",
-      "interface": "0x0000000000000000000000000000000000000000"
+      "incentive": "0x000000641ac10b4e000fe361f2149e2a531061c5",
+      "interface": "0x000000E83CCb819B54184d573B4b1e7f4B6d48e6"
     }
   },
   "mumbai": {
     "MOCK": {
-      "incentive": "0x0000000000000000000000000000000000000000",
-      "interface": "0x0000000000000000000000000000000000000000"
+      "incentive": "0x000000641ac10b4e000fe361f2149e2a531061c5",
+      "interface": "0x000000E83CCb819B54184d573B4b1e7f4B6d48e6"
     }
   },
-  "base-goerli": {
+  "basegoerli": {
     "MOCK": {
-      "incentive": "0x0000000000000000000000000000000000000000",
-      "interface": "0x0000000000000000000000000000000000000000"
+      "incentive": "0x000000641ac10b4e000fe361f2149e2a531061c5",
+      "interface": "0x000000E83CCb819B54184d573B4b1e7f4B6d48e6"
     }
   },
   "mantletestnet" : {
     "MOCK": {
-      "incentive": "0x0000000000000000000000000000000000000000",
-      "interface": "0x0000000000000000000000000000000000000000"
+      "incentive": "0x000000641ac10b4e000fe361f2149e2a531061c5",
+      "interface": "0x000000E83CCb819B54184d573B4b1e7f4B6d48e6"
     }
   },
   "taikoeldfell": {
     "MOCK": {
-      "incentive": "0x0000000000000000000000000000000000000000",
-      "interface": "0x0000000000000000000000000000000000000000"
+      "incentive": "0x000000641ac10b4e000fe361f2149e2a531061c5",
+      "interface": "0x000000E83CCb819B54184d573B4b1e7f4B6d48e6"
     }
   },
   "scrollsepolia": {
     "MOCK": {
-      "incentive": "0x0000000000000000000000000000000000000000",
-      "interface": "0x0000000000000000000000000000000000000000"
+      "incentive": "0x000000641ac10b4e000fe361f2149e2a531061c5",
+      "interface": "0x000000E83CCb819B54184d573B4b1e7f4B6d48e6"
     }
   },
   "arbitrumgoerli": {
     "MOCK": {
-      "incentive": "0x0000000000000000000000000000000000000000",
-      "interface": "0x0000000000000000000000000000000000000000"
+      "incentive": "0x000000641ac10b4e000fe361f2149e2a531061c5",
+      "interface": "0x000000E83CCb819B54184d573B4b1e7f4B6d48e6"
     }
   },
   "optimismgoerli": {
     "MOCK": {
-      "incentive": "0x0000000000000000000000000000000000000000",
-      "interface": "0x0000000000000000000000000000000000000000"
+      "incentive": "0x000000641ac10b4e000fe361f2149e2a531061c5",
+      "interface": "0x000000E83CCb819B54184d573B4b1e7f4B6d48e6"
     }
   },
   "bsctestnet": {
     "MOCK": {
-      "incentive": "0x0000000000000000000000000000000000000000",
-      "interface": "0x0000000000000000000000000000000000000000"
+      "incentive": "0x000000641ac10b4e000fe361f2149e2a531061c5",
+      "interface": "0x000000E83CCb819B54184d573B4b1e7f4B6d48e6"
     }
   },
   "opbnbtestnet": {
     "MOCK": {
-      "incentive": "0x0000000000000000000000000000000000000000",
-      "interface": "0x0000000000000000000000000000000000000000"
+      "incentive": "0x000000641ac10b4e000fe361f2149e2a531061c5",
+      "interface": "0x000000E83CCb819B54184d573B4b1e7f4B6d48e6"
+    }
+  },
+  "omnitestnet": {
+    "MOCK": {
+      "incentive": "0x000000641ac10b4e000fe361f2149e2a531061c5",
+      "interface": "0x000000E83CCb819B54184d573B4b1e7f4B6d48e6"
     }
   }
 }
