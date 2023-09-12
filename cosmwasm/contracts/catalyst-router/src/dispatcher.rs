@@ -91,10 +91,10 @@ fn dispatch_commands(
 
             CommandResult::Check(value) => {
                 
-                // Verify that no error is returned by the command or that the `allow_revert` flag is set.
-
-                //TODO why would this be ever used? If we don't care whether a query succeeds, why include the command at all?
-                if value.is_err() && !get_command_allow_revert_flag(*raw_command) {
+                // Verify that no error is returned by the command
+                // NOTE: 'Checks' purposely ignore the 'allow revert flag'. Rather than allowing a
+                // 'check' to revert, simply do not perform it in the first place.
+                if value.is_err() {
                     return Err(ContractError::CommandReverted {
                         index: (local_index + offset) as u64,
                         error: value.err().unwrap()
