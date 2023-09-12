@@ -16,7 +16,7 @@ import "../Setup/SetupFinish.t.sol";
 import "../CrossChainInterfaceOnly.t.sol";
 import "../TokenInterface.t.sol";
 
-contract TestVolatileInvariant is TestInvariant, TestLocalswap, TestCrossChainInterfaceOnly, TestLocalswapMinout, TestPoolTokenInterface, TestSetupFinish, TestSetVaultFee, TestSetGovernanceFee, TestLocalswapFees, TestSwapWorthlessTokenLocal {
+contract TestAmplifiedInvariant is TestInvariant, TestLocalswap, TestCrossChainInterfaceOnly, TestLocalswapMinout, TestPoolTokenInterface, TestSetupFinish, TestSetVaultFee, TestSetGovernanceFee, TestLocalswapFees, TestSwapWorthlessTokenLocal {
     address[] _vaults;
 
     function setUp() virtual override public {
@@ -64,7 +64,7 @@ contract TestVolatileInvariant is TestInvariant, TestLocalswap, TestCrossChainIn
         inv = getSum(balances);
     }
 
-    function getTestConfig() internal override returns(address[] memory vaults) {
+    function getTestConfig() internal override view returns(address[] memory vaults) {
         return vaults = _vaults;
     }
 }

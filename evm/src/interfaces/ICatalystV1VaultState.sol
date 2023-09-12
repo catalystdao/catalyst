@@ -59,6 +59,8 @@ interface ICatalystV1VaultState {
 
     function factoryOwner() external view returns (address);
 
+    function governanceFeeDestination() external view returns (address);
+
     /**
      * @notice External view function purely used to signal if a vault is safe to use.
      * @dev Just checks if the setup master has been set to ZERO_ADDRESS. In other words, has finishSetup been called?

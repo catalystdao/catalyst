@@ -9,7 +9,7 @@ import {TestSendAsset} from "../SendAsset.t.sol";
 import {TestReceiveAsset} from "../ReceiveAsset.t.sol";
 import "../non-exploits/CrossSwap.SwapWorthlessToken.t.sol";
 
-contract TestVolatileInvariant is TestInvariant, TestSendAsset, TestReceiveAsset, TestSwapWorthlessTokenCrossChain {
+contract TestAmplifiedInvariant2 is TestInvariant, TestSendAsset, TestReceiveAsset, TestSwapWorthlessTokenCrossChain {
 
     address[] _vaults;
 
@@ -69,7 +69,7 @@ contract TestVolatileInvariant is TestInvariant, TestSendAsset, TestReceiveAsset
     }
 
     
-    function getTestConfig() internal override returns(address[] memory vaults) {
+    function getTestConfig() internal override view returns(address[] memory vaults) {
         return vaults = _vaults;
     }
 }

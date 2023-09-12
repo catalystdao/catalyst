@@ -30,4 +30,11 @@ interface ICatalystV1FactoryEvents {
     event SetDefaultGovernanceFee(
         uint256 fee
     );
+
+    /**
+     * @notice Sets a new destination for governance fees.
+     */
+    event SetGovernanceFeeDestination(
+        address newFeeDestination
+    );
 }

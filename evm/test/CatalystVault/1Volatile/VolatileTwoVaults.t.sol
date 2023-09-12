@@ -62,7 +62,7 @@ contract TestVolatileInvariant2 is TestInvariant, TestSendAsset, TestReceiveAsse
         inv = getSum(balances);
     }
 
-    function getTestConfig() internal override returns(address[] memory vaults) {
+    function getTestConfig() internal override view returns(address[] memory vaults) {
         return vaults = _vaults;
     }
 }

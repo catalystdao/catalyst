@@ -13,6 +13,7 @@ import { MAX_GOVERNANCE_FEE_SHARE } from"./CatalystFactory.sol";
 import { FixedPointMathLib} from "./utils/FixedPointMathLib.sol";
 import { ICatalystReceiver} from "./interfaces/IOnCatalyst.sol";
 import { ICatalystV1Vault } from "./ICatalystV1Vault.sol";
+import { ICatalystV1Factory } from "./interfaces/ICatalystV1Factory.sol";
 import "./interfaces/ICatalystV1VaultErrors.sol";
 
 /**
@@ -138,6 +139,10 @@ abstract contract CatalystVaultCommon is
         return Ownable(FACTORY).owner();
     }
 
+    function governanceFeeDestination() public view override returns (address) {
+        return ICatalystV1Factory(FACTORY)._governanceFeeDestination();
+    }
+
     /**
      * @notice Only allow Governance to change vault parameters
      * @dev Because of dangerous permissions (setConnection, weight changes, amplification changes):
@@ -183,7 +188,6 @@ abstract contract CatalystVaultCommon is
     ) onlyChainInterface external returns (uint256 purchasedTokens) {
         purchasedTokens = _receiveAsset(toAsset, U, minOut);
         // Set the escrow.
-        // TODO: Does this correctly set the escrow? (+ / -)
         _setTokenEscrow(
             identifier,
             address(msg.sender),  // is always ChainInterface but msg.sender is cheaper than slaod.
@@ -253,7 +257,7 @@ abstract contract CatalystVaultCommon is
         bytes calldata toVault,
         bool state
     ) external override {
-        require((msg.sender == _setupMaster) || (msg.sender == factoryOwner())); // dev: No auth
+        require(msg.sender == _setupMaster); // dev: No auth
         require(toVault.length == 65);  // dev: Vault addresses are uint8 + 64 bytes.
 
         _vaultConnection[channelId][toVault] = state;
@@ -415,7 +419,7 @@ abstract contract CatalystVaultCommon is
         // If governanceFeeShare == 0, then skip the rest of the logic.
         if (governanceFeeShare != 0) {
             uint256 governanceFeeAmount = FixedPointMathLib.mulWadDown(vaultFeeAmount, governanceFeeShare);
-            ERC20(asset).safeTransfer(factoryOwner(), governanceFeeAmount);
+            ERC20(asset).safeTransfer(governanceFeeDestination(), governanceFeeAmount);
         }
     }
 

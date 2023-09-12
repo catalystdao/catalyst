@@ -7,7 +7,7 @@ import { ERC20 } from 'solmate/src/tokens/ERC20.sol';
 import { SafeTransferLib } from 'solmate/src/utils/SafeTransferLib.sol';
 import { ICatalystV1Vault } from "./ICatalystV1Vault.sol";
 import { Clones } from "@openzeppelin/contracts/proxy/Clones.sol";
-import { ICatalystV1FactoryEvents} from "./interfaces/ICatalystV1FactoryEvents.sol";
+import { ICatalystV1Factory } from "./interfaces/ICatalystV1Factory.sol";
 
 uint256 constant MAX_GOVERNANCE_FEE_SHARE = 75e16;   // 75%
 
@@ -18,7 +18,7 @@ uint256 constant MAX_GOVERNANCE_FEE_SHARE = 75e16;   // 75%
  * and defines governance address for vaults to read.
  * !The owner of the factory must be a timelock!
  */
-contract CatalystFactory is Ownable, ICatalystV1FactoryEvents {
+contract CatalystFactory is Ownable, ICatalystV1Factory {
     using SafeTransferLib for ERC20;
 
     /// @notice A mapping which describes if a vault has been created by this factory. Indexed by chainInterface then vault address.
@@ -27,16 +27,26 @@ contract CatalystFactory is Ownable, ICatalystV1FactoryEvents {
     /// @notice Default governance fee. When a vault is created, this is the governance fee applied to that vault.
     uint256 public _defaultGovernanceFee;
 
+    address public _governanceFeeDestination;
+
     constructor(address defaultOwner) {
         _transferOwnership(defaultOwner);
+        _governanceFeeDestination = defaultOwner;
     }
 
-    function setDefaultGovernanceFee(uint256 fee) public onlyOwner {
+    function setDefaultGovernanceFee(uint256 fee) override public onlyOwner {
         require(fee <= MAX_GOVERNANCE_FEE_SHARE); // dev: Maximum GovernanceFeeSare exceeded.
 
         emit SetDefaultGovernanceFee(fee);
 
         _defaultGovernanceFee = fee;
+    }
+
+    function setGovernanceFeeDestination(address feeDestination) override public onlyOwner {
+        require(feeDestination != address(0), "Fee destination cannot be address(0)");
+        emit SetGovernanceFeeDestination(feeDestination);
+
+        _governanceFeeDestination = feeDestination;
     }
 
     /**
@@ -63,7 +73,7 @@ contract CatalystFactory is Ownable, ICatalystV1FactoryEvents {
         string calldata name,
         string calldata symbol,
         address chainInterface
-    ) external returns (address) {
+    ) override external returns (address) {
         // Check if an invalid asset count has been provided
         require(assets.length != 0);  // dev: invalid asset count
         // Check if an invalid weight count has been provided
