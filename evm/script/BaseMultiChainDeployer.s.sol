@@ -129,5 +129,11 @@ contract BaseMultiChainDeployer is Script {
 
         vm.stopBroadcast();
     }
+
+    function fund(address toFund, uint256 amount) internal {
+        if (toFund.balance >= amount) return;
+
+        payable(toFund).transfer(amount);
+    }
 }
 

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.13;
+pragma solidity 0.8.17;
 
 import "forge-std/Script.sol";
 import {stdJson} from "forge-std/StdJson.sol";
@@ -108,10 +108,13 @@ contract DeployInterfaces is BaseMultiChainDeployer {
             describer.add_whitelisted_cci(interfaceAddress);
         }
     }
-
-    function deploy() load_config iter_chains(chain_list) broadcast external {
+    
+    function _deploy() internal {
         address admin = vm.envAddress("CATALYST_ADDRESS");
         bytes32 chainIdentifier = abi.decode(config_chain.parseRaw(string.concat(".", rpc[chain], ".chainIdentifier")), (bytes32));
+
+        fund(vm.envAddress("INCENTIVE_DEPLOYER_ADDRESS"), 0.05*10**18);
+
         deployBaseInterfaces(chainIdentifier);
 
         deployCCI(admin);
@@ -119,14 +122,12 @@ contract DeployInterfaces is BaseMultiChainDeployer {
         whitelistCCI(0x8950BAe1ADc61D28300009b4C2CfddfE5f55cb52);
     }
 
+    function deploy() load_config iter_chains(chain_list) broadcast external {
+        _deploy();
+    }
+
     function deploy_legacy() load_config iter_chains(chain_list_legacy) broadcast external {
-        address admin = vm.envAddress("CATALYST_ADDRESS");
-        bytes32 chainIdentifier = abi.decode(config_chain.parseRaw(string.concat(".", rpc[chain], ".chainIdentifier")), (bytes32));
-        deployBaseInterfaces(chainIdentifier);
-
-        deployCCI(admin);
-
-        whitelistCCI(0x8950BAe1ADc61D28300009b4C2CfddfE5f55cb52);
+        _deploy();
     }
 }
 
