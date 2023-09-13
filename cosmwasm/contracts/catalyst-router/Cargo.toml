@@ -50,4 +50,5 @@ vault-assets = { path = "../../lib/vault-assets" }
 
 [dev-dependencies]
 cw-multi-test = { workspace = true }
+catalyst-vault-volatile = { path = "../catalyst-vault-volatile" }
 test-helpers = { path = "../../helpers/test-helpers" }

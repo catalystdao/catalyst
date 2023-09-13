@@ -57,6 +57,7 @@ pub fn get_command_allow_revert_flag(raw_command: u8) -> bool {
 
 /// Return type for the commands execution handlers. It can be either a `CosmosMsg` to be
 /// dispatched, or the 'Result' of an atomic check operation.
+#[derive(Debug)]
 pub enum CommandResult {
     Message(CosmosMsg),
     Check(Result<(), String>)

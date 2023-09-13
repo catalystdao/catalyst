@@ -138,6 +138,7 @@ version = "0.1.0"
 dependencies = [
  "catalyst-types",
  "catalyst-vault-common",
+ "catalyst-vault-volatile",
  "cosmwasm-schema",
  "cosmwasm-std",
  "cosmwasm-storage",
