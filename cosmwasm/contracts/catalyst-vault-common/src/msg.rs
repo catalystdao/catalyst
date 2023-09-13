@@ -437,3 +437,9 @@ pub struct LiquidityEscrowResponse {
 pub struct VaultConnectionStateResponse {
     pub state: bool
 }
+
+#[cfg(feature="asset_native")]
+#[cw_serde]
+pub struct VaultTokenDenomResponse {
+    pub denom: String
+}

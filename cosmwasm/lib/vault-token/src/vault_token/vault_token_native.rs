@@ -21,6 +21,14 @@ pub enum NativeVaultTokenMsg {
 // Native vault token handler
 pub struct NativeVaultToken(String);
 
+impl NativeVaultToken {
+
+    pub fn denom(&self) -> &str {
+        &self.0
+    }
+
+}
+
 impl VaultTokenTrait<NativeVaultTokenMsg> for NativeVaultToken {
 
     fn create(

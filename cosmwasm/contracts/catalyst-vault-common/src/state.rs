@@ -9,6 +9,8 @@ use fixed_point_math::mul_wad_down;
 
 use crate::{ContractError, bindings::{VaultAssets, Asset, VaultAssetsTrait, AssetTrait, VaultToken, VaultTokenTrait, VaultResponse, IntoCosmosCustomMsg, CustomMsg}, msg::{ChainInterfaceResponse, SetupMasterResponse, ReadyResponse, OnlyLocalResponse, AssetsResponse, WeightResponse, VaultFeeResponse, GovernanceFeeShareResponse, FeeAdministratorResponse, TotalEscrowedAssetResponse, TotalEscrowedLiquidityResponse, AssetEscrowResponse, LiquidityEscrowResponse, VaultConnectionStateResponse, FactoryResponse, FactoryOwnerResponse, ReceiverExecuteMsg, TotalSupplyResponse, BalanceResponse}, event::{send_asset_success_event, send_asset_failure_event, send_liquidity_success_event, send_liquidity_failure_event, finish_setup_event, set_fee_administrator_event, set_vault_fee_event, set_governance_fee_share_event, set_connection_event}};
 
+#[cfg(feature="asset_native")]
+use crate::msg::VaultTokenDenomResponse;
 
 
 // Vault Constants **************************************************************************************************************
@@ -1175,6 +1177,17 @@ pub fn query_balance(deps: Deps, address: String) -> StdResult<BalanceResponse> 
         BalanceResponse {
             balance: VaultToken::load(&deps)?
                 .query_balance(&deps, address)?
+        }
+    )
+}
+
+/// Query the vault token denom.
+#[cfg(feature="asset_native")]
+pub fn query_vault_token_denom(deps: Deps) -> StdResult<VaultTokenDenomResponse> {
+    Ok(
+        VaultTokenDenomResponse {
+            denom: VaultToken::load(&deps)?
+                .denom().to_string()
         }
     )
 }

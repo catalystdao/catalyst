@@ -8,6 +8,9 @@ use catalyst_vault_common::state::{
 };
 use catalyst_vault_common::bindings::{VaultResponse, VaultAssets, VaultAssetsTrait};
 
+#[cfg(feature="asset_native")]
+use catalyst_vault_common::state::query_vault_token_denom;
+
 #[cfg(feature="asset_cw20")]
 use cw20_base::allowances::{
     execute_decrease_allowance, execute_increase_allowance, execute_send_from, execute_transfer_from, query_allowance,
@@ -536,6 +539,10 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::AmplificationUpdateFinishTimestamp {} => to_binary(&query_amplification_update_finish_timestamp(deps)?),
         QueryMsg::Balance0 {} => to_binary(&query_balance_0(deps, env)?),
         QueryMsg::UnitTracker {} => to_binary(&query_unit_tracker(deps)?),
+
+        // Native asset query msgs
+        #[cfg(feature="asset_native")]
+        QueryMsg::VaultTokenDenom {} => to_binary(&query_vault_token_denom(deps)?),
 
         // CW20 query msgs - Use cw20-base for the implementation
         #[cfg(feature="asset_cw20")]
