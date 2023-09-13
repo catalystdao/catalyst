@@ -41,7 +41,22 @@ pub trait VaultTokenTrait<Msg> {
     /// 
     fn query_total_supply(&self, deps: &Deps) -> Result<Uint128, VaultTokenError>;
 
-    
+
+    /// Query an address' vault token balance.
+    /// 
+    /// ! **IMPORTANT**: `mint`/`burn` operations may influence the `balance` returned
+    /// **within** the message execution. The time at which the `mint`/`burn` operations are 
+    /// commited is **NOT** guaranteed. To obtain consistent behavior across implementations of
+    /// the trait, always cache the `balance` using this method before executing any
+    /// `mint`/`burn` operations.
+    ///
+    fn query_balance(
+        &self,
+        deps: &Deps,
+        address: String
+    ) -> Result<Uint128, VaultTokenError>;
+
+
     /// Mint a specific amount of vault tokens for a specific recipient.
     /// 
     /// ! **IMPORTANT**: The time at which the `mint` operation is commited is **NOT** guaranteed.

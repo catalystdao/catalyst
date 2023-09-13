@@ -1,6 +1,6 @@
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Uint128, Deps, DepsMut, Env, MessageInfo};
-use cw20_base::{state::{TOKEN_INFO, TokenInfo, MinterData}, contract::{execute_mint, execute_burn}};
+use cw20_base::{state::{TOKEN_INFO, TokenInfo, MinterData}, contract::{execute_mint, execute_burn, query_balance}};
 
 use crate::error::VaultTokenError;
 use super::VaultTokenTrait;
@@ -55,6 +55,17 @@ impl VaultTokenTrait<Cw20VaultTokenMsg> for Cw20VaultToken {
     fn query_total_supply(&self, deps: &Deps) -> Result<Uint128, VaultTokenError> {
         Ok(
             TOKEN_INFO.load(deps.storage)?.total_supply
+        )
+    }
+
+
+    fn query_balance(
+        &self,
+        deps: &Deps,
+        address: String
+    ) -> Result<Uint128, VaultTokenError> {
+        Ok(
+            query_balance(deps.to_owned(), address)?.balance
         )
     }
 

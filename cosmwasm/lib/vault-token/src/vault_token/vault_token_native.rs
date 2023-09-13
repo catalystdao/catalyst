@@ -80,6 +80,17 @@ impl VaultTokenTrait<NativeVaultTokenMsg> for NativeVaultToken {
     }
 
 
+    fn query_balance(
+        &self,
+        deps: &Deps,
+        address: String
+    ) -> Result<Uint128, VaultTokenError> {
+        Ok(
+            deps.querier.query_balance(address, self.0.clone())?.amount
+        )
+    }
+
+
     fn mint(
         &mut self,
         _deps: &mut DepsMut,

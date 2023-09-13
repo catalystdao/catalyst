@@ -4,7 +4,7 @@ use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, StdResult, to_binary
 use cw2::set_contract_version;
 use catalyst_vault_common::ContractError;
 use catalyst_vault_common::state::{
-    setup, finish_setup, set_fee_administrator, set_vault_fee, set_governance_fee_share, set_connection, query_chain_interface, query_setup_master, query_ready, query_only_local, query_assets, query_weight, query_vault_fee, query_governance_fee_share, query_fee_administrator, query_total_escrowed_liquidity, query_total_escrowed_asset, query_asset_escrow, query_liquidity_escrow, query_vault_connection_state, query_factory, query_factory_owner, on_send_liquidity_success, query_total_supply
+    setup, finish_setup, set_fee_administrator, set_vault_fee, set_governance_fee_share, set_connection, query_chain_interface, query_setup_master, query_ready, query_only_local, query_assets, query_weight, query_vault_fee, query_governance_fee_share, query_fee_administrator, query_total_escrowed_liquidity, query_total_escrowed_asset, query_asset_escrow, query_liquidity_escrow, query_vault_connection_state, query_factory, query_factory_owner, on_send_liquidity_success, query_total_supply, query_balance
 };
 use catalyst_vault_common::bindings::{VaultResponse, VaultAssets, VaultAssetsTrait};
 
@@ -14,7 +14,7 @@ use cw20_base::allowances::{
 };
 #[cfg(feature="asset_cw20")]
 use cw20_base::contract::{
-    execute_send, execute_transfer, query_balance, query_token_info,
+    execute_send, execute_transfer, query_token_info,
 };
 #[cfg(feature="asset_cw20")]
 use catalyst_vault_common::bindings::IntoVaultResponse;
@@ -499,7 +499,9 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::Weight {
             asset_ref
         } => to_binary(&query_weight(deps, asset_ref)?),
+
         QueryMsg::TotalSupply {} => to_binary(&query_total_supply(deps)?),
+        QueryMsg::Balance { address } => to_binary(&query_balance(deps, address)?),
 
         QueryMsg::VaultFee {} => to_binary(&query_vault_fee(deps)?),
         QueryMsg::GovernanceFeeShare {} => to_binary(&query_governance_fee_share(deps)?),
@@ -538,8 +540,6 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
         // CW20 query msgs - Use cw20-base for the implementation
         #[cfg(feature="asset_cw20")]
         QueryMsg::TokenInfo {} => to_binary(&query_token_info(deps)?),
-        #[cfg(feature="asset_cw20")]
-        QueryMsg::Balance { address } => to_binary(&query_balance(deps, address)?),
         #[cfg(feature="asset_cw20")]
         QueryMsg::Allowance { owner, spender } => to_binary(&query_allowance(deps, owner, spender)?)
     }

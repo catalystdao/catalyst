@@ -374,6 +374,11 @@ pub struct TotalSupplyResponse {
 }
 
 #[cw_serde]
+pub struct BalanceResponse {
+    pub balance: Uint128
+}
+
+#[cw_serde]
 pub struct VaultFeeResponse {
     pub fee: Uint64
 }
