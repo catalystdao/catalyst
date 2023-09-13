@@ -119,6 +119,12 @@ mod test_amplified_instantiate {
             18
         );
 
+        #[cfg(feature="asset_native")]
+        assert_eq!(
+            vault_token.denom(),
+            vault_token.query_denom(env.get_app())
+        )
+
     }
 
 

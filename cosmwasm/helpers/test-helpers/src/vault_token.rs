@@ -19,7 +19,13 @@ pub struct VaultTokenInfo {
 enum VaultQueryMsg {
     TotalSupply {},
     Balance { address: String },
-    TokenInfo {}
+    TokenInfo {},
+    VaultTokenDenom {}
+}
+
+#[cw_serde]
+struct VaultTokenDenomResponse {
+    denom: String
 }
 
 
@@ -43,6 +49,23 @@ pub trait CustomTestVaultToken<AppC>: Clone + Debug + PartialEq {
 pub struct TestNativeVaultToken{
     vault: String,
     denom: String
+}
+
+impl TestNativeVaultToken {
+
+    pub fn denom(&self) -> String {
+        self.denom.clone()
+    }
+
+    pub fn query_denom(&self, app: &mut NativeAssetApp) -> String {
+        app.wrap()
+            .query_wasm_smart::<VaultTokenDenomResponse>(
+                self.vault.clone(),
+                &VaultQueryMsg::VaultTokenDenom {}
+            )
+            .unwrap()
+            .denom
+    }
 }
 
 impl CustomTestVaultToken<NativeAssetApp> for TestNativeVaultToken {
