@@ -7,5 +7,12 @@ optimizer = true
 optimizer_runs = 500
 fs_permissions = [{ access = "read-write", path = "./script/config" }]
 
+remappings = [
+    "forge-std/=lib/forge-std/src/",
+    "@openzeppelin=node_modules/@openzeppelin",
+    "solmate=node_modules/solmate/",
+    "GeneralisedIncentives/=lib/GeneralisedIncentives/",
+    "permit2/=lib/permit2/"
+]
 
 # See more config options https://github.com/foundry-rs/foundry/tree/master/config
