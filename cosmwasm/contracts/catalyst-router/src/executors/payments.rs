@@ -2,13 +2,13 @@ pub mod payments_executors {
     use cosmwasm_schema::cw_serde;
     use cosmwasm_std::{Env, Binary, Coin, from_binary, BankMsg, CosmosMsg, Uint128, StdResult, Deps};
 
-    use crate::{commands::CommandResult, error::ContractError, executors::types::types::{Account, Amount, Denom}};
+    use crate::{commands::CommandResult, error::ContractError, executors::types::types::{Account, CoinAmount, Denom}};
 
     pub const BIPS_BASE: Uint128 = Uint128::new(10_000u128);
 
     #[cw_serde]
     struct TransferCommand {
-        amounts: Vec<Amount>,
+        amounts: Vec<CoinAmount>,
         recipient: Account
     }
 

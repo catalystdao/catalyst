@@ -1,6 +1,6 @@
 pub mod types {
     use cosmwasm_schema::cw_serde;
-    use cosmwasm_std::{Coin, Env, Deps};
+    use cosmwasm_std::{Coin, Env, Deps, Uint128};
 
     use crate::{error::ContractError, state::get_router_locker};
 
@@ -8,11 +8,17 @@ pub mod types {
 
     #[cw_serde]
     pub enum Amount {
+        Amount(Uint128),
+        RouterBalance()
+    }
+
+    #[cw_serde]
+    pub enum CoinAmount {
         Coin(Coin),
         RouterBalance(Denom),
     }
 
-    impl Amount {
+    impl CoinAmount {
         
         pub fn get_amount(
             &self,
@@ -20,8 +26,8 @@ pub mod types {
             env: &Env
         ) -> Result<Coin, ContractError> {
             match self {
-                Amount::Coin(coin) => Ok(coin.clone()),
-                Amount::RouterBalance(denom) => {
+                CoinAmount::Coin(coin) => Ok(coin.clone()),
+                CoinAmount::RouterBalance(denom) => {
                     deps.querier
                         .query_balance(env.contract.address.clone(), denom)
                         .map_err(|err| err.into())

@@ -1,73 +1,80 @@
 pub mod catalyst_executors {
     use catalyst_types::U256;
+    use catalyst_vault_common::msg::BalanceResponse;
     use cosmwasm_schema::cw_serde;
     use cosmwasm_std::{Env, Binary, CosmosMsg, to_binary, from_binary, Uint128, Uint64, Coin, Deps};
 
-    use crate::{commands::CommandResult, error::ContractError, executors::types::types::Amount};
+    use crate::{commands::CommandResult, error::ContractError, executors::types::types::{Amount, CoinAmount}};
 
     type CatalystExecuteMsg = catalyst_vault_common::msg::ExecuteMsg<()>;
 
     #[cw_serde]
-    struct LocalSwapCommand {
-        vault: String,
-        from_asset_ref: String,
-        to_asset_ref: String,
-        amount: Amount,
-        min_out: Uint128
+    pub struct LocalSwapCommand {
+        pub vault: String,
+        pub from_asset_ref: String,
+        pub to_asset_ref: String,
+        pub amount: CoinAmount,
+        pub min_out: Uint128
     }
 
 
     #[cw_serde]
-    struct SendAssetCommand {
-        vault: String,
-        channel_id: String,
-        to_vault: Binary,
-        to_account: Binary,
-        from_asset_ref: String,
-        to_asset_index: u8,
-        amount: Amount,
-        min_out: U256,
-        fallback_account: String,
-        calldata: Binary
+    pub struct SendAssetCommand {
+        pub vault: String,
+        pub channel_id: String,
+        pub to_vault: Binary,
+        pub to_account: Binary,
+        pub from_asset_ref: String,
+        pub to_asset_index: u8,
+        pub amount: CoinAmount,
+        pub min_out: U256,
+        pub fallback_account: String,
+        pub calldata: Binary
     }
 
 
     #[cw_serde]
-    struct SendLiquidityCommand {
-        vault: String,
-        channel_id: String,
-        to_vault: Binary,
-        to_account: Binary,
-        amount: Amount,
-        min_vault_tokens: U256,
-        min_reference_asset: U256,
-        fallback_account: String,
-        calldata: Binary
+    pub struct SendLiquidityCommand {
+        pub vault: String,
+        pub channel_id: String,
+        pub to_vault: Binary,
+        pub to_account: Binary,
+        pub amount: Amount,
+        pub min_vault_tokens: U256,
+        pub min_reference_asset: U256,
+        pub fallback_account: String,
+        pub calldata: Binary
     }
 
 
     #[cw_serde]
-    struct DepositMixedCommand {
-        vault: String,
-        deposit_amounts: Vec<Amount>,
-        min_out: Uint128
+    pub struct DepositMixedCommand {
+        pub vault: String,
+        pub deposit_amounts: Vec<CoinAmount>,
+        pub min_out: Uint128
     }
 
 
     #[cw_serde]
-    struct WithdrawAllCommand {
-        vault: String,
-        amount: Amount,
-        min_out: Vec<Uint128>
+    pub struct WithdrawAllCommand {
+        pub vault: String,
+        pub amount: Amount,
+        pub min_out: Vec<Uint128>
     }
 
 
     #[cw_serde]
-    struct WithdrawMixedCommand {
-        vault: String,
-        amount: Amount,
-        withdraw_ratio: Vec<Uint64>,
-        min_out: Vec<Uint128>,
+    pub struct WithdrawMixedCommand {
+        pub vault: String,
+        pub amount: Amount,
+        pub withdraw_ratio: Vec<Uint64>,
+        pub min_out: Vec<Uint128>,
+    }
+
+
+    #[cw_serde]
+    struct BalanceQuery {
+        address: String
     }
 
 
@@ -142,13 +149,19 @@ pub mod catalyst_executors {
 
         let args = from_binary::<SendLiquidityCommand>(input)?;
 
-        let swap_amount = args.amount.get_amount(deps, env)?;
+        let send_amount = match args.amount {
+            Amount::Amount(amount) => amount,
+            Amount::RouterBalance() => deps.querier.query_wasm_smart::<BalanceResponse>(
+                args.vault.clone(),
+                &BalanceQuery{ address: env.contract.address.to_string() }
+            )?.balance,
+        };
         
         let msg = CatalystExecuteMsg::SendLiquidity {
             channel_id: args.channel_id,
             to_vault: args.to_vault,
             to_account: args.to_account,
-            amount: swap_amount.amount,
+            amount: send_amount,
             min_vault_tokens: args.min_vault_tokens,
             min_reference_asset: args.min_reference_asset,
             fallback_account: args.fallback_account,
@@ -213,10 +226,16 @@ pub mod catalyst_executors {
 
         let args = from_binary::<WithdrawAllCommand>(input)?;
 
-        let withdraw_amount = args.amount.get_amount(deps, env)?;
+        let withdraw_amount = match args.amount {
+            Amount::Amount(amount) => amount,
+            Amount::RouterBalance() => deps.querier.query_wasm_smart::<BalanceResponse>(
+                args.vault.clone(),
+                &BalanceQuery{ address: env.contract.address.to_string() }
+            )?.balance,
+        };
 
         let msg = CatalystExecuteMsg::WithdrawAll {
-            vault_tokens: withdraw_amount.amount,
+            vault_tokens: withdraw_amount,
             min_out: args.min_out
         };
 
@@ -240,10 +259,16 @@ pub mod catalyst_executors {
 
         let args = from_binary::<WithdrawMixedCommand>(input)?;
 
-        let withdraw_amount = args.amount.get_amount(deps, env)?;
+        let withdraw_amount = match args.amount {
+            Amount::Amount(amount) => amount,
+            Amount::RouterBalance() => deps.querier.query_wasm_smart::<BalanceResponse>(
+                args.vault.clone(),
+                &BalanceQuery{ address: env.contract.address.to_string() }
+            )?.balance,
+        };
 
         let msg = CatalystExecuteMsg::WithdrawMixed {
-            vault_tokens: withdraw_amount.amount,
+            vault_tokens: withdraw_amount,
             withdraw_ratio: args.withdraw_ratio,
             min_out: args.min_out,
         };
