@@ -1,4 +1,4 @@
-use catalyst_vault_common::state::DECIMALS;
+use catalyst_vault_common::{state::DECIMALS, msg::{TotalSupplyResponse, BalanceResponse}};
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, Uint128, CosmosMsg, BankMsg, Coin};
 use cw20_base::state::TokenInfo;
@@ -6,7 +6,7 @@ use cw_multi_test::Executor;
 use token_bindings::Metadata;
 use std::fmt::Debug;
 
-use crate::{env::{env_cw20_asset::Cw20AssetApp, env_native_asset::{NativeAssetApp, NativeAssetCustomHandler}}, token::{query_token_info, query_token_balance, transfer_tokens}};
+use crate::{env::{env_cw20_asset::Cw20AssetApp, env_native_asset::{NativeAssetApp, NativeAssetCustomHandler}}, token::transfer_tokens};
 
 
 pub struct VaultTokenInfo {
@@ -16,7 +16,9 @@ pub struct VaultTokenInfo {
 }
 
 #[cw_serde]
-enum TokenInfoQuery {
+enum VaultQueryMsg {
+    TotalSupply {},
+    Balance { address: String },
     TokenInfo {}
 }
 
@@ -38,29 +40,38 @@ pub trait CustomTestVaultToken<AppC>: Clone + Debug + PartialEq {
 
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct TestNativeVaultToken(String);
+pub struct TestNativeVaultToken{
+    vault: String,
+    denom: String
+}
 
 impl CustomTestVaultToken<NativeAssetApp> for TestNativeVaultToken {
 
     fn load(vault: String, denom: String) -> Self {
-        TestNativeVaultToken(format!("factory/{}/{}", vault, denom))
+        TestNativeVaultToken {
+            vault: vault.clone(),
+            denom: format!("factory/{}/{}", vault, denom)
+        }
     }
 
     fn total_supply(&self, app: &mut NativeAssetApp) -> Uint128 {
         app.wrap()
-            .query_supply(self.0.clone())
+            .query_wasm_smart::<TotalSupplyResponse>(
+                self.vault.clone(),
+                &VaultQueryMsg::TotalSupply {}
+            )
             .unwrap()
-            .amount
+            .total_supply
     }
 
     fn query_balance(&self, app: &mut NativeAssetApp, account: impl Into<String>) -> Uint128 {
         app.wrap()
-            .query_balance(
-                account,
-                self.0.clone()
+            .query_wasm_smart::<BalanceResponse>(
+                self.vault.clone(),
+                &VaultQueryMsg::Balance { address: account.into() }
             )
             .unwrap()
-            .amount
+            .balance
     }
 
     fn transfer(&self, app: &mut NativeAssetApp, amount: Uint128, account: Addr, recipient: impl Into<String>) {
@@ -74,7 +85,7 @@ impl CustomTestVaultToken<NativeAssetApp> for TestNativeVaultToken {
             CosmosMsg::Bank(
                 BankMsg::Send {
                     to_address: recipient.into(),
-                    amount: vec![Coin::new(amount.u128(), self.0.clone())]
+                    amount: vec![Coin::new(amount.u128(), self.denom.clone())]
                 }
             )
         ).unwrap();
@@ -83,7 +94,7 @@ impl CustomTestVaultToken<NativeAssetApp> for TestNativeVaultToken {
     fn query_token_info(&self, app: &mut NativeAssetApp) -> VaultTokenInfo {
 
         let metadata = app.read_module::<_, Option<Metadata>>(|_, _, storage| {
-            NativeAssetCustomHandler::load_denom_metadata(storage, self.0.clone()).unwrap()
+            NativeAssetCustomHandler::load_denom_metadata(storage, self.denom.clone()).unwrap()
         });
 
         match metadata {
@@ -92,7 +103,7 @@ impl CustomTestVaultToken<NativeAssetApp> for TestNativeVaultToken {
                 symbol: metadata.symbol.unwrap_or("".to_string()),
                 decimals: DECIMALS, // Hardcode decimals, as these are not set on the TokenFactory vault token
             },
-            None => panic!("No metadata found for denom {}", self.0),
+            None => panic!("No metadata found for denom {}", self.denom),
         }
     }
 }
@@ -101,34 +112,43 @@ impl CustomTestVaultToken<NativeAssetApp> for TestNativeVaultToken {
 
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct TestCw20VaultToken(String);
+pub struct TestCw20VaultToken {
+    vault: String
+}
 
 impl CustomTestVaultToken<Cw20AssetApp> for TestCw20VaultToken {
 
     fn load(vault: String, _denom: String) -> Self {
-        TestCw20VaultToken(vault)
+        TestCw20VaultToken {
+            vault
+        }
     }
 
     fn total_supply(&self, app: &mut Cw20AssetApp) -> Uint128 {
-        query_token_info(
-            app,
-            Addr::unchecked(self.0.clone())
-        ).total_supply
+        app.wrap()
+            .query_wasm_smart::<TotalSupplyResponse>(
+                self.vault.clone(),
+                &VaultQueryMsg::TotalSupply {}
+            )
+            .unwrap()
+            .total_supply
     }
 
     fn query_balance(&self, app: &mut Cw20AssetApp, account: impl Into<String>) -> Uint128 {
-        query_token_balance(
-            app,
-            Addr::unchecked(self.0.clone()),
-            account.into()
-        )
+        app.wrap()
+            .query_wasm_smart::<BalanceResponse>(
+                self.vault.clone(),
+                &VaultQueryMsg::Balance { address: account.into() }
+            )
+            .unwrap()
+            .balance
     }
 
     fn transfer(&self, app: &mut Cw20AssetApp, amount: Uint128, account: Addr, recipient: impl Into<String>) {
         transfer_tokens(
             app,
             amount,
-            Addr::unchecked(self.0.clone()),
+            Addr::unchecked(self.vault.clone()),
             account,
             recipient.into()
         );
@@ -138,7 +158,7 @@ impl CustomTestVaultToken<Cw20AssetApp> for TestCw20VaultToken {
         
         let token_info: TokenInfo = app
             .wrap()
-            .query_wasm_smart::<TokenInfo>(self.0.clone(), &TokenInfoQuery::TokenInfo {})
+            .query_wasm_smart::<TokenInfo>(self.vault.clone(), &VaultQueryMsg::TokenInfo {})
             .unwrap();
 
         VaultTokenInfo {
