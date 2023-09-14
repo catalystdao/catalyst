@@ -6,6 +6,7 @@ from hashlib import sha256
 from time import sleep
 
 import web3
+import web3.exceptions
 from eth_abi import encode
 from eth_account import Account
 from eth_account.messages import encode_defunct, defunct_hash_message
@@ -146,21 +147,26 @@ class PoARelayer(MessageSigner):
         
         w3 = self.chains[toChain]["w3"]
 
-        # Execute the transaction on the target side:
-        tx = GI.functions.processMessage(
-            signature[1], signature[0], encode(["address"], [relayer_address.address])
-        ).build_transaction(
-            {
-                "from": relayer_address.address,
-                "nonce": self.chains[toChain]["nonce"],
-                "gas": 10000000
-            } if not self.chains[toChain]["legacy"] else {
-                "from": relayer_address.address,
-                "nonce": self.chains[toChain]["nonce"],
-                "gas": 10000000,
-                "gasPrice": w3.eth.gas_price
-            }
-        )
+        try:
+            # Execute the transaction on the target side:
+            tx = GI.functions.processMessage(
+                signature[1], signature[0], encode(["address"], [relayer_address.address])
+            ).build_transaction(
+                {
+                    "from": relayer_address.address,
+                    "nonce": self.chains[toChain]["nonce"],
+                } if not self.chains[toChain]["legacy"] else {
+                    "from": relayer_address.address,
+                    "nonce": self.chains[toChain]["nonce"],
+                    "gasPrice": w3.eth.gas_price
+                }
+            )
+        except web3.exceptions.ContractCustomError as e:
+            error_message = e
+            em = {"0x8af35858": "MessageAlreadyAcked()", "0xe954aba2": "MessageAlreadySpent()"}
+            error_message = em.get(str(e)) if em.get(str(e)) is not None else error_message
+            logging.info(f"Skipped 1 event because {error_message}")
+            return "no tx"
 
         signed_txn = w3.eth.account.sign_transaction(
             tx, private_key=self.chains[toChain]["key"]
