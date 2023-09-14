@@ -68,6 +68,5 @@ contract DeployRouter is BaseMultiChainDeployer {
     function deploy_legacy() load_config iter_chains(chain_list_legacy) broadcast external {
         _deploy();
     }
-
 }
 

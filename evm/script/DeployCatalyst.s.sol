@@ -17,5 +17,13 @@ contract DeployCatalyst is BaseMultiChainDeployer, DeployContracts {
         address admin = vm.envAddress("CATALYST_ADDRESS");
         deployAllContracts(admin);
     }
+
+    function fund_address(address toFund) iter_chains(chain_list) broadcast external {
+        fund(toFund, 0.1*10**18);
+    }
+
+    function fund_address_legacy(address toFund) iter_chains(chain_list_legacy) broadcast external {
+        fund(toFund, 0.1*10**18);
+    }
 }
 
