@@ -1,6 +1,6 @@
 mod test_payments_executor {
 
-    use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_dependencies_with_balance};
+    use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_dependencies_with_balance, MOCK_CONTRACT_ADDR};
     use cosmwasm_std::{Uint128, to_binary, Addr, Coin};
 
     use test_helpers::definitions::SETUP_MASTER;
@@ -9,7 +9,7 @@ mod test_payments_executor {
 
     use crate::commands::CommandResult;
     use crate::error::ContractError;
-    use crate::executors::payments::payments_executors::{SweepCommand, execute_sweep, TransferCommand, execute_transfer, PayPortionCommand, execute_pay_portion};
+    use crate::executors::payments::payments_executors::{SweepCommand, execute_sweep, TransferCommand, execute_transfer, PayPortionCommand, execute_pay_portion, BalanceCheckCommand, execute_balance_check};
     use crate::executors::types::types::{Account, CoinAmount};
     use crate::tests::helpers::{ROUTER, RECIPIENT, run_command_result, fund_account};
 
@@ -651,4 +651,156 @@ mod test_payments_executor {
         ));
 
     }
+
+
+
+    // Balance Check Tests
+    // ********************************************************************************************
+
+    #[test]
+    fn test_balance_check_command() {
+
+        let test_env = TestNativeAssetEnv::initialize(SETUP_MASTER.to_string());
+
+        let assets =  test_env.get_assets()[..2].to_vec();
+        let denoms: Vec<String> = vec![
+            assets[0].denom.clone(),
+            assets[1].denom.clone(),
+        ];
+
+        let router_funds = vec![
+            Coin::new(1234u128, assets[0].denom.clone()),
+            Coin::new(5678u128, assets[1].denom.clone())
+        ];
+
+
+
+        // Tested action
+        // NOTE: Using `mock_dependencies` and `mock_env` effectively results in the 'execution' 
+        // of the following command to **NOT** be within the `cw_multi_test::App` simulation
+        // logic. This is fine as long as any required application state is replicated on the 
+        // `mock_dependencies` and `mock_env`.
+        let command_result = execute_balance_check(
+            &mock_dependencies_with_balance(&router_funds).as_ref(),
+            &mock_env(),
+            &to_binary(&BalanceCheckCommand {
+                denoms,
+                minimum_amounts: vec![Uint128::zero(), Uint128::zero()],
+                account: Account::Address(MOCK_CONTRACT_ADDR.to_string()),  // Check the balance of the router.
+                                                                            // Using 'mock_env()', the router takes the address 'MOCK_CONTRACT_ADDR'
+            }).unwrap()
+        ).unwrap();
+
+
+
+        // Verify the check is successful
+        assert!(matches!(
+            command_result,
+            CommandResult::Check(result)
+                if result.is_ok()
+        ));
+
+    }
+
+
+    #[test]
+    fn test_balance_check_command_invalid_min_out() {
+
+        let test_env = TestNativeAssetEnv::initialize(SETUP_MASTER.to_string());
+
+        let assets =  test_env.get_assets()[..2].to_vec();
+        let denoms: Vec<String> = vec![
+            assets[0].denom.clone(),
+            assets[1].denom.clone(),
+        ];
+
+        let router_funds = vec![
+            Coin::new(1234u128, assets[0].denom.clone()),
+            Coin::new(5678u128, assets[1].denom.clone())
+        ];
+
+
+
+        // Tested action
+        // NOTE: Using `mock_dependencies` and `mock_env` effectively results in the 'execution' 
+        // of the following command to **NOT** be within the `cw_multi_test::App` simulation
+        // logic. This is fine as long as any required application state is replicated on the 
+        // `mock_dependencies` and `mock_env`.
+        let minimum_amounts = vec![
+            router_funds[0].amount + Uint128::one(),    // Specify too large min out
+            Uint128::zero()
+        ];
+        let command_result = execute_balance_check(
+            &mock_dependencies_with_balance(&router_funds).as_ref(),
+            &mock_env(),
+            &to_binary(&BalanceCheckCommand {
+                denoms,
+                minimum_amounts: minimum_amounts.clone(), 
+                account: Account::Address(MOCK_CONTRACT_ADDR.to_string()),  // Check the balance of the router.
+                                                                            // Using 'mock_env()', the router takes the address 'MOCK_CONTRACT_ADDR'
+            }).unwrap()
+        ).unwrap();
+
+
+
+        // Verify the command fails the min out check
+        assert!(matches!(
+            command_result,
+            CommandResult::Check(check_result)
+                if check_result.clone().err().unwrap() == format!(
+                    "Minimum amount {} not fulfilled on balance check operation (found {}{})",
+                    router_funds[0],
+                    minimum_amounts[0],
+                    router_funds[0].denom
+                )
+        ));
+    }
+
+
+    #[test]
+    fn test_balance_check_command_invalid_params() {
+
+        let test_env = TestNativeAssetEnv::initialize(SETUP_MASTER.to_string());
+
+        let assets =  test_env.get_assets()[..2].to_vec();
+        let denoms: Vec<String> = vec![
+            assets[0].denom.clone(),
+            assets[1].denom.clone(),
+        ];
+
+        let router_funds = vec![
+            Coin::new(1234u128, assets[0].denom.clone()),
+            Coin::new(5678u128, assets[1].denom.clone())
+        ];
+
+
+
+        // Tested action
+        // NOTE: Using `mock_dependencies` and `mock_env` effectively results in the 'execution' 
+        // of the following command to **NOT** be within the `cw_multi_test::App` simulation
+        // logic. This is fine as long as any required application state is replicated on the 
+        // `mock_dependencies` and `mock_env`.
+        let command_result = execute_balance_check(
+            &mock_dependencies_with_balance(&router_funds).as_ref(),
+            &mock_env(),
+            &to_binary(&BalanceCheckCommand {
+                denoms, 
+                minimum_amounts: vec![
+                    Uint128::zero()     // Specify minimum_amounts.len != denoms.len
+                ].clone(), 
+                account: Account::Address(MOCK_CONTRACT_ADDR.to_string()),  // Check the balance of the router.
+                                                                            // Using 'mock_env()', the router takes the address 'MOCK_CONTRACT_ADDR'
+            }).unwrap()
+        );
+
+
+
+        // Verify the command fails
+        assert!(matches!(
+            command_result.err().unwrap(),
+            ContractError::InvalidParameters { reason }
+                if reason == "denoms/mininimum_amounts count mismatch".to_string()
+        ));
+    }
+
 }
