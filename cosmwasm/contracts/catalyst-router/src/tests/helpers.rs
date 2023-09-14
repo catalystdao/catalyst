@@ -17,7 +17,8 @@ use crate::commands::CommandResult;
 // Definition
 // ********************************************************************************************
 
-pub const ROUTER: &str = "router";
+pub const ROUTER    : &str = "router";
+pub const RECIPIENT : &str = "recipient";
 
 
 
