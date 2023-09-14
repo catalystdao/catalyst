@@ -55,6 +55,10 @@ pub mod payments_executors {
             })
             .collect::<Result<Vec<_>, _>>()?;
 
+        if coins.len() == 0 {
+            return Ok(CommandResult::Check(Ok(())));
+        }
+
         let msg = BankMsg::Send {
             to_address: args.recipient.get_address(deps, env)?,
             amount: coins
@@ -172,6 +176,10 @@ pub mod payments_executors {
                 }
             })
             .collect::<Result<Vec<_>, _>>()?;
+
+        if coins.len() == 0 {
+            return Ok(CommandResult::Check(Ok(())));
+        }
 
         let msg = BankMsg::Send {
             to_address: args.recipient.get_address(deps, env)?,
