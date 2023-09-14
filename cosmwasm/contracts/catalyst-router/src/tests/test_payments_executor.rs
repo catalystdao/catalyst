@@ -9,8 +9,8 @@ mod test_payments_executor {
 
     use crate::commands::CommandResult;
     use crate::error::ContractError;
-    use crate::executors::payments::payments_executors::{SweepCommand, execute_sweep};
-    use crate::executors::types::types::Account;
+    use crate::executors::payments::payments_executors::{SweepCommand, execute_sweep, TransferCommand, execute_transfer};
+    use crate::executors::types::types::{Account, CoinAmount};
     use crate::tests::helpers::{ROUTER, RECIPIENT, run_command_result, fund_account};
 
 
@@ -261,6 +261,150 @@ mod test_payments_executor {
             ContractError::InvalidParameters { reason }
                 if reason == "denoms/mininimum_amounts count mismatch".to_string()
         ))
+
+    }
+
+
+
+    // Transfer Tests
+    // ********************************************************************************************
+
+    #[test]
+    fn test_transfer_command() {
+
+        let mut test_env = TestNativeAssetEnv::initialize(SETUP_MASTER.to_string());
+
+        let assets =  test_env.get_assets()[..2].to_vec();
+
+        // Include a zero amount to verify the executor filters out any zero-valued
+        // balance.
+        let transfer_coins = vec![
+            Coin::new(1234u128, assets[0].denom.clone()),
+            Coin::new(0u128, assets[1].denom.clone())
+        ];
+
+
+
+        // Tested action
+        // NOTE: Using `mock_dependencies` and `mock_env` effectively results in the 'execution' 
+        // of the following command to **NOT** be within the `cw_multi_test::App` simulation
+        // logic. This is fine as long as any required application state is replicated on the 
+        // `mock_dependencies` and `mock_env`.
+        let command_result = execute_transfer(
+            &mock_dependencies_with_balance(&transfer_coins).as_ref(),
+            &mock_env(),
+            &to_binary(&TransferCommand {
+                amounts: transfer_coins.iter()
+                    .map(|coin| CoinAmount::Coin(coin.clone()))
+                    .collect(),
+                recipient: Account::Address(RECIPIENT.to_string()),
+            }).unwrap()
+        ).unwrap();
+
+
+
+        // Verify the result message works
+        fund_account(
+            &mut test_env,
+            Addr::unchecked(ROUTER),
+            transfer_coins.clone()
+        );
+        run_command_result(
+            &mut test_env,
+            Addr::unchecked(ROUTER),
+            command_result
+        );
+
+        // Verify the funds have been received by the recipient
+        transfer_coins.into_iter()
+            .for_each(|coin| {
+                assert_eq!(
+                    test_env.get_app()
+                        .wrap()
+                        .query_balance(RECIPIENT, coin.denom.clone())
+                        .unwrap(),
+                    coin
+                )
+            })
+
+    }
+
+
+    #[test]
+    fn test_transfer_command_all_zero() {
+
+        // NOTE: Important to test the following behavior, as the bank module does not
+        // allow messages with empty coin vectors.
+
+        let test_env = TestNativeAssetEnv::initialize(SETUP_MASTER.to_string());
+
+        let assets =  test_env.get_assets()[..2].to_vec();
+
+        // All coins set to 0
+        let transfer_amounts = vec![
+            Coin::new(0u128, assets[0].denom.clone()),
+            Coin::new(0u128, assets[1].denom.clone())
+        ];
+
+
+        // Tested action
+        // NOTE: Using `mock_dependencies` and `mock_env` effectively results in the 'execution' 
+        // of the following command to **NOT** be within the `cw_multi_test::App` simulation
+        // logic. This is fine as long as any required application state is replicated on the 
+        // `mock_dependencies` and `mock_env`.
+        let command_result = execute_transfer(
+            &mock_dependencies().as_ref(),
+            &mock_env(),
+            &to_binary(&TransferCommand {
+                amounts: transfer_amounts.iter()
+                    .map(|coin| CoinAmount::Coin(coin.clone()))
+                    .collect(),
+                recipient: Account::Address(RECIPIENT.to_string()),
+            }).unwrap()
+        ).unwrap();
+
+
+
+        // Verify no 'CosmosMsg' is generated.
+        assert!(matches!(
+            command_result,
+            CommandResult::Check(result)
+                if result.is_ok()
+        ));
+
+    }
+
+
+    #[test]
+    fn test_transfer_command_empty() {
+
+        // NOTE: Important to test the following behavior, as the bank module does not
+        // allow messages with empty coin vectors.
+
+
+
+        // Tested action
+        // NOTE: Using `mock_dependencies` and `mock_env` effectively results in the 'execution' 
+        // of the following command to **NOT** be within the `cw_multi_test::App` simulation
+        // logic. This is fine as long as any required application state is replicated on the 
+        // `mock_dependencies` and `mock_env`.
+        let command_result = execute_transfer(
+            &mock_dependencies().as_ref(),
+            &mock_env(),
+            &to_binary(&TransferCommand {
+                amounts: vec![],    // Empty
+                recipient: Account::Address(RECIPIENT.to_string()),
+            }).unwrap()
+        ).unwrap();
+
+
+
+        // Verify no 'CosmosMsg' is generated.
+        assert!(matches!(
+            command_result,
+            CommandResult::Check(result)
+                if result.is_ok()
+        ));
 
     }
 }
