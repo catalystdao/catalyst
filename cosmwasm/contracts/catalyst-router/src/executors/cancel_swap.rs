@@ -7,9 +7,9 @@ use crate::{commands::CommandResult, error::ContractError};
 pub const CANCEL_ORDERS: Map<(&str, &str), bool> = Map::new("catalyst-router-cancel-orders");
 
 #[cw_serde]
-struct AllowCancelCommand {
-    authority: String,
-    identifier: Binary
+pub struct AllowCancelCommand {
+    pub authority: String,
+    pub identifier: Binary
 }
 
 pub fn set_cancel_swap_state(
