@@ -9,8 +9,8 @@ mod test_payments_executor {
 
     use crate::commands::CommandResult;
     use crate::error::ContractError;
-    use crate::executors::payments::payments_executors::{SweepCommand, execute_sweep, TransferCommand, execute_transfer, PayPortionCommand, execute_pay_portion, BalanceCheckCommand, execute_balance_check};
-    use crate::executors::types::types::{Account, CoinAmount};
+    use crate::executors::payments::{SweepCommand, execute_sweep, TransferCommand, execute_transfer, PayPortionCommand, execute_pay_portion, BalanceCheckCommand, execute_balance_check};
+    use crate::executors::types::{Account, CoinAmount};
     use crate::tests::helpers::{ROUTER, RECIPIENT, run_command_result, fund_account};
 
 

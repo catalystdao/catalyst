@@ -1,6 +1,6 @@
 use cosmwasm_std::{CosmosMsg, DepsMut, Env, Binary};
 
-use crate::{error::ContractError, executors::{catalyst::catalyst_executors, payments::payments_executors, cancel_swap::cancel_swap_executors}};
+use crate::{error::ContractError, executors::{catalyst, payments, cancel_swap}};
 
 
 /// Commands Encoding *****************************************************************************
@@ -78,19 +78,19 @@ pub fn execute_command(
 
     match command_id {
 
-        COMMAND_LOCAL_SWAP     => catalyst_executors::execute_local_swap(&deps.as_ref(), env, input),
-        COMMAND_SEND_ASSET     => catalyst_executors::execute_send_asset(&deps.as_ref(), env, input),
-        COMMAND_SEND_LIQUIDITY => catalyst_executors::execute_send_liquidity(&deps.as_ref(), env, input),
-        COMMAND_WITHDRAW_EQUAL => catalyst_executors::execute_withdraw_equal(&deps.as_ref(), env, input),
-        COMMAND_WITHDRAW_MIXED => catalyst_executors::execute_withdraw_mixed(&deps.as_ref(), env, input),
-        COMMAND_DEPOSIT_MIXED  => catalyst_executors::execute_deposit_mixed(&deps.as_ref(), env, input),
+        COMMAND_LOCAL_SWAP     => catalyst::execute_local_swap(&deps.as_ref(), env, input),
+        COMMAND_SEND_ASSET     => catalyst::execute_send_asset(&deps.as_ref(), env, input),
+        COMMAND_SEND_LIQUIDITY => catalyst::execute_send_liquidity(&deps.as_ref(), env, input),
+        COMMAND_WITHDRAW_EQUAL => catalyst::execute_withdraw_equal(&deps.as_ref(), env, input),
+        COMMAND_WITHDRAW_MIXED => catalyst::execute_withdraw_mixed(&deps.as_ref(), env, input),
+        COMMAND_DEPOSIT_MIXED  => catalyst::execute_deposit_mixed(&deps.as_ref(), env, input),
 
-        COMMAND_SWEEP          => payments_executors::execute_sweep(&deps.as_ref(), env, input),
-        COMMAND_TRANSFER       => payments_executors::execute_transfer(&deps.as_ref(), env, input),
-        COMMAND_PAY_PORTION    => payments_executors::execute_pay_portion(&deps.as_ref(), env, input),
-        COMMAND_BALANCE_CHECK  => payments_executors::execute_balance_check(&deps.as_ref(), env, input),
+        COMMAND_SWEEP          => payments::execute_sweep(&deps.as_ref(), env, input),
+        COMMAND_TRANSFER       => payments::execute_transfer(&deps.as_ref(), env, input),
+        COMMAND_PAY_PORTION    => payments::execute_pay_portion(&deps.as_ref(), env, input),
+        COMMAND_BALANCE_CHECK  => payments::execute_balance_check(&deps.as_ref(), env, input),
 
-        COMMAND_ALLOW_CANCEL   => cancel_swap_executors::execute_allow_cancel(deps, input),
+        COMMAND_ALLOW_CANCEL   => cancel_swap::execute_allow_cancel(deps, input),
 
         _ => Err(ContractError::InvalidCommand{command_id})
     }

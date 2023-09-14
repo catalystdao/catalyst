@@ -9,8 +9,8 @@ mod test_catalyst_executor {
     use test_helpers::env::env_native_asset::TestNativeAssetEnv;
     use test_helpers::misc::encode_payload_address;
 
-    use crate::executors::catalyst::catalyst_executors::{execute_local_swap, LocalSwapCommand, SendAssetCommand, execute_send_asset, SendLiquidityCommand, execute_send_liquidity, DepositMixedCommand, execute_deposit_mixed, WithdrawMixedCommand, execute_withdraw_mixed, WithdrawAllCommand, execute_withdraw_equal};
-    use crate::executors::types::types::{CoinAmount, Amount};
+    use crate::executors::catalyst::{execute_local_swap, LocalSwapCommand, SendAssetCommand, execute_send_asset, SendLiquidityCommand, execute_send_liquidity, DepositMixedCommand, execute_deposit_mixed, WithdrawMixedCommand, execute_withdraw_mixed, WithdrawAllCommand, execute_withdraw_equal};
+    use crate::executors::types::{CoinAmount, Amount};
     use crate::tests::helpers::{MockVault, ROUTER, run_command_result, fund_account};
 
 
