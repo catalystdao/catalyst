@@ -1,4 +1,4 @@
-use cosmwasm_std::{CosmosMsg, DepsMut, Env, Binary};
+use cosmwasm_std::{CosmosMsg, Deps, Env, Binary};
 
 use crate::{error::ContractError, executors::{catalyst, payments, cancel_swap}};
 
@@ -70,7 +70,7 @@ pub enum CommandResult {
 /// * `input` - The input for the command to be executed.
 /// 
 pub fn execute_command(
-    deps: &mut DepsMut,
+    deps: &Deps,
     env: &Env,
     command_id: u8,
     input: &Binary
@@ -78,17 +78,17 @@ pub fn execute_command(
 
     match command_id {
 
-        COMMAND_LOCAL_SWAP     => catalyst::execute_local_swap(&deps.as_ref(), env, input),
-        COMMAND_SEND_ASSET     => catalyst::execute_send_asset(&deps.as_ref(), env, input),
-        COMMAND_SEND_LIQUIDITY => catalyst::execute_send_liquidity(&deps.as_ref(), env, input),
-        COMMAND_WITHDRAW_EQUAL => catalyst::execute_withdraw_equal(&deps.as_ref(), env, input),
-        COMMAND_WITHDRAW_MIXED => catalyst::execute_withdraw_mixed(&deps.as_ref(), env, input),
-        COMMAND_DEPOSIT_MIXED  => catalyst::execute_deposit_mixed(&deps.as_ref(), env, input),
+        COMMAND_LOCAL_SWAP     => catalyst::execute_local_swap(deps, env, input),
+        COMMAND_SEND_ASSET     => catalyst::execute_send_asset(deps, env, input),
+        COMMAND_SEND_LIQUIDITY => catalyst::execute_send_liquidity(deps, env, input),
+        COMMAND_WITHDRAW_EQUAL => catalyst::execute_withdraw_equal(deps, env, input),
+        COMMAND_WITHDRAW_MIXED => catalyst::execute_withdraw_mixed(deps, env, input),
+        COMMAND_DEPOSIT_MIXED  => catalyst::execute_deposit_mixed(deps, env, input),
 
-        COMMAND_SWEEP          => payments::execute_sweep(&deps.as_ref(), env, input),
-        COMMAND_TRANSFER       => payments::execute_transfer(&deps.as_ref(), env, input),
-        COMMAND_PAY_PORTION    => payments::execute_pay_portion(&deps.as_ref(), env, input),
-        COMMAND_BALANCE_CHECK  => payments::execute_balance_check(&deps.as_ref(), env, input),
+        COMMAND_SWEEP          => payments::execute_sweep(deps, env, input),
+        COMMAND_TRANSFER       => payments::execute_transfer(deps, env, input),
+        COMMAND_PAY_PORTION    => payments::execute_pay_portion(deps, env, input),
+        COMMAND_BALANCE_CHECK  => payments::execute_balance_check(deps, env, input),
 
         COMMAND_ALLOW_CANCEL   => cancel_swap::execute_allow_cancel(deps, input),
 

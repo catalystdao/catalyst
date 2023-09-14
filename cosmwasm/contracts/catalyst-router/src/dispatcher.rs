@@ -66,7 +66,7 @@ fn dispatch_commands(
 
 
         match execute_command(
-            deps,
+            &deps.as_ref(),
             env,
             get_command_id(*raw_command),
             input

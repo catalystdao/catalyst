@@ -1,5 +1,5 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{DepsMut, Binary, from_binary};
+use cosmwasm_std::{Deps, DepsMut, Binary, from_binary};
 use cw_storage_plus::Map;
 
 use crate::{commands::CommandResult, error::ContractError};
@@ -29,7 +29,7 @@ pub fn set_cancel_swap_state(
 }
 
 pub fn get_cancel_swap_state(
-    deps: &mut DepsMut,
+    deps: &Deps,
     authority: String,
     identifier: Binary
 ) -> Result<bool, ContractError> {
@@ -44,7 +44,7 @@ pub fn get_cancel_swap_state(
 
 
 pub fn execute_allow_cancel(
-    deps: &mut DepsMut,
+    deps: &Deps,
     input: &Binary
 ) -> Result<CommandResult, ContractError> {
 
