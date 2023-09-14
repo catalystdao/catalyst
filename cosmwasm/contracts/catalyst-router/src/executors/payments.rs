@@ -22,8 +22,8 @@ pub mod payments_executors {
     #[cw_serde]
     pub struct SweepCommand {
         pub denoms: Vec<Denom>,
-        pub recipient: Account,
-        pub minimum_amounts: Vec<Uint128>
+        pub minimum_amounts: Vec<Uint128>,
+        pub recipient: Account
     }
 
     #[cw_serde]
