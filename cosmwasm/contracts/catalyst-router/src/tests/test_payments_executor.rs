@@ -254,7 +254,7 @@ mod test_payments_executor {
 
 
 
-        // Verify the message fails the min out check
+        // Verify the command fails
         assert!(matches!(
             command_result.err().unwrap(),
             ContractError::InvalidParameters { reason }
