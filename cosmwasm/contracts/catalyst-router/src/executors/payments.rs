@@ -7,30 +7,30 @@ pub mod payments_executors {
     pub const BIPS_BASE: Uint128 = Uint128::new(10_000u128);
 
     #[cw_serde]
-    struct TransferCommand {
-        amounts: Vec<CoinAmount>,
-        recipient: Account
+    pub struct TransferCommand {
+        pub amounts: Vec<CoinAmount>,
+        pub recipient: Account
     }
 
     #[cw_serde]
-    struct PayPortionCommand {
-        denoms: Vec<Denom>,
-        bips: Vec<Uint128>,
-        recipient: Account
+    pub struct PayPortionCommand {
+        pub denoms: Vec<Denom>,
+        pub bips: Vec<Uint128>,
+        pub recipient: Account
     }
 
     #[cw_serde]
-    struct SweepCommand {
-        denoms: Vec<Denom>,
-        recipient: Account,
-        minimum_amounts: Vec<Uint128>
+    pub struct SweepCommand {
+        pub denoms: Vec<Denom>,
+        pub recipient: Account,
+        pub minimum_amounts: Vec<Uint128>
     }
 
     #[cw_serde]
-    struct BalanceCheck {
-        denoms: Vec<Denom>,
-        account: Account,
-        minimum_amounts: Vec<Uint128>
+    pub struct BalanceCheck {
+        pub denoms: Vec<Denom>,
+        pub account: Account,
+        pub minimum_amounts: Vec<Uint128>
     }
 
 
