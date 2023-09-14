@@ -107,11 +107,17 @@ pub mod payments_executors {
             return Ok(CommandResult::Check(Err(error)));
         }
 
+        let send_amounts: Vec<_> = router_coins.into_iter()
+            .filter(|coin| !coin.amount.is_zero())
+            .collect();
+
+        if send_amounts.len() == 0 {
+            return Ok(CommandResult::Check(Ok(())));
+        }
+
         let msg = BankMsg::Send {
             to_address: args.recipient.get_address(deps, env)?,
-            amount: router_coins.into_iter()
-                .filter(|coin| !coin.amount.is_zero())
-                .collect()
+            amount: send_amounts
         };
 
         Ok(CommandResult::Message(
