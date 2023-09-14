@@ -27,10 +27,10 @@ pub mod payments_executors {
     }
 
     #[cw_serde]
-    pub struct BalanceCheck {
+    pub struct BalanceCheckCommand {
         pub denoms: Vec<Denom>,
-        pub account: Account,
-        pub minimum_amounts: Vec<Uint128>
+        pub minimum_amounts: Vec<Uint128>,
+        pub account: Account
     }
 
 
@@ -199,7 +199,7 @@ pub mod payments_executors {
         input: &Binary
     ) -> Result<CommandResult, ContractError> {
         
-        let args = from_binary::<BalanceCheck>(input)?;
+        let args = from_binary::<BalanceCheckCommand>(input)?;
 
         if args.denoms.len() != args.minimum_amounts.len() {
             return Err(ContractError::InvalidParameters {
