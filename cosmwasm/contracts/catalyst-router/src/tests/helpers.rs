@@ -24,6 +24,53 @@ pub const ROUTER: &str = "router";
 // Helpers
 // ********************************************************************************************
 
+pub fn fund_account(
+    test_env: &mut TestNativeAssetEnv,
+    account: Addr,
+    funds: Vec<Coin>
+) {
+    let funds: Vec<Coin> = funds
+        .into_iter()
+        .filter(|coin| !coin.amount.is_zero())
+        .collect();
+
+    test_env.get_app().send_tokens(
+        Addr::unchecked(SETUP_MASTER),
+        account,
+        &funds
+    ).unwrap();
+}
+
+pub fn run_command_result(
+    test_env: &mut TestNativeAssetEnv,
+    router: Addr,
+    command_result: CommandResult
+) -> AppResponse {
+
+    match command_result {
+        CommandResult::Message(msg) => {
+
+            let casted_msg: CosmosMsg<NativeAssetCustomMsg> = match msg {
+                CosmosMsg::Wasm(wasm_msg) => CosmosMsg::<NativeAssetCustomMsg>::Wasm(wasm_msg),
+                CosmosMsg::Bank(bank_msg) => CosmosMsg::<NativeAssetCustomMsg>::Bank(bank_msg),
+                _ => panic!("Unexpected cosmos message type."),
+            };
+
+            test_env.get_app().execute(
+                router,
+                casted_msg
+            ).unwrap()
+
+        },
+        CommandResult::Check(check_result) => {
+            match check_result {
+                Ok(_) => AppResponse::default(),
+                Err(error) => panic!("Command result check error: {}", error),
+            }
+        },
+    }
+}
+
 pub struct  MockVault {
     pub vault_assets: Vec<TestNativeAsset>,
     pub vault: Addr,
@@ -84,40 +131,6 @@ impl MockVault {
             channel_id
         }
 
-    }
-
-    pub fn run_executor_result(
-        &self,
-        test_env: &mut TestNativeAssetEnv,
-        router: Addr,
-        command_result: CommandResult,
-        fund_router: Option<Vec<Coin>>
-    ) -> AppResponse {
-
-        if let Some(router_coins) = fund_router {
-            test_env.get_app().send_tokens(
-                Addr::unchecked(SETUP_MASTER),
-                router.clone(),
-                &router_coins
-            ).unwrap();
-        }
-
-        match command_result {
-            CommandResult::Message(msg) => {
-
-                let casted_msg: CosmosMsg<NativeAssetCustomMsg> = match msg {
-                    CosmosMsg::Wasm(wasm_msg) => CosmosMsg::<NativeAssetCustomMsg>::Wasm(wasm_msg),
-                    _ => panic!("Unexpected cosmos message type."),
-                };
-
-                test_env.get_app().execute(
-                    router,
-                    casted_msg
-                ).unwrap()
-
-            },
-            CommandResult::Check(_) => panic!("Invalid 'check' CommandResult (expecting message)"),
-        }
     }
 
 }

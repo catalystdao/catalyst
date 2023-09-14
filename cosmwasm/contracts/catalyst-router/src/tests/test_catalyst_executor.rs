@@ -11,7 +11,7 @@ mod test_catalyst_executor {
 
     use crate::executors::catalyst::catalyst_executors::{execute_local_swap, LocalSwapCommand, SendAssetCommand, execute_send_asset, SendLiquidityCommand, execute_send_liquidity, DepositMixedCommand, execute_deposit_mixed, WithdrawMixedCommand, execute_withdraw_mixed, WithdrawAllCommand, execute_withdraw_equal};
     use crate::executors::types::types::{CoinAmount, Amount};
-    use crate::tests::helpers::{MockVault, ROUTER};
+    use crate::tests::helpers::{MockVault, ROUTER, run_command_result, fund_account};
 
 
 
@@ -35,6 +35,12 @@ mod test_catalyst_executor {
             min_out: Uint128::zero(),
         };
 
+        fund_account(
+            &mut test_env,
+            Addr::unchecked(ROUTER),
+            vec![swap_amount]
+        );
+
 
 
         // Tested action
@@ -47,11 +53,10 @@ mod test_catalyst_executor {
 
 
         // Verify the result message works
-        let response = mock_vault_config.run_executor_result(
+        let response = run_command_result(
             &mut test_env,
             Addr::unchecked(ROUTER),
             command_result,
-            Some(vec![swap_amount])
         );
 
         // Verify a 'local-swap' event is emitted
@@ -86,6 +91,12 @@ mod test_catalyst_executor {
             calldata: Binary(vec![])
         };
 
+        fund_account(
+            &mut test_env,
+            Addr::unchecked(ROUTER),
+            vec![swap_amount]
+        );
+
 
 
         // Tested action
@@ -98,11 +109,10 @@ mod test_catalyst_executor {
 
 
         // Verify the result message works
-        let response = mock_vault_config.run_executor_result(
+        let response = run_command_result(
             &mut test_env,
             Addr::unchecked(ROUTER),
             command_result,
-            Some(vec![swap_amount])
         );
 
         // Verify a 'send-asset' event is emitted
@@ -135,6 +145,12 @@ mod test_catalyst_executor {
             calldata: Binary(vec![])
         };
 
+        fund_account(
+            &mut test_env,
+            Addr::unchecked(ROUTER),
+            vec![swap_amount_coin]
+        );
+
 
 
         // Tested action
@@ -147,11 +163,10 @@ mod test_catalyst_executor {
 
 
         // Verify the result message works
-        let response = mock_vault_config.run_executor_result(
+        let response = run_command_result(
             &mut test_env,
             Addr::unchecked(ROUTER),
-            command_result,
-            Some(vec![swap_amount_coin])
+            command_result
         );
 
         // Verify a 'send-liquidity' event is emitted
@@ -178,6 +193,12 @@ mod test_catalyst_executor {
             min_out: vec![Uint128::zero(), Uint128::zero()]
         };
 
+        fund_account(
+            &mut test_env,
+            Addr::unchecked(ROUTER),
+            vec![withdraw_amount_coin]
+        );
+
 
 
         // Tested action
@@ -190,11 +211,10 @@ mod test_catalyst_executor {
 
 
         // Verify the result message works
-        let response = mock_vault_config.run_executor_result(
+        let response = run_command_result(
             &mut test_env,
             Addr::unchecked(ROUTER),
-            command_result,
-            Some(vec![withdraw_amount_coin])
+            command_result
         );
 
         // Verify a 'withdraw' event is emitted
@@ -222,6 +242,12 @@ mod test_catalyst_executor {
             min_out: vec![Uint128::zero(), Uint128::zero()]
         };
 
+        fund_account(
+            &mut test_env,
+            Addr::unchecked(ROUTER),
+            vec![withdraw_amount_coin]
+        );
+
 
 
         // Tested action
@@ -234,11 +260,10 @@ mod test_catalyst_executor {
 
 
         // Verify the result message works
-        let response = mock_vault_config.run_executor_result(
+        let response = run_command_result(
             &mut test_env,
             Addr::unchecked(ROUTER),
-            command_result,
-            Some(vec![withdraw_amount_coin])
+            command_result
         );
 
         // Verify a 'withdraw' event is emitted
@@ -268,6 +293,12 @@ mod test_catalyst_executor {
             min_out: Uint128::zero(),
         };
 
+        fund_account(
+            &mut test_env,
+            Addr::unchecked(ROUTER),
+            deposit_amounts
+        );
+
 
 
         // Tested action
@@ -280,11 +311,10 @@ mod test_catalyst_executor {
 
 
         // Verify the result message works
-        let response = mock_vault_config.run_executor_result(
+        let response = run_command_result(
             &mut test_env,
             Addr::unchecked(ROUTER),
-            command_result,
-            Some(deposit_amounts)
+            command_result
         );
 
         // Verify a 'deposit' event is emitted
