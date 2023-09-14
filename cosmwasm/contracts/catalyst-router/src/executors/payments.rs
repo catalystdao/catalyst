@@ -80,7 +80,7 @@ pub mod payments_executors {
 
         if args.denoms.len() != args.minimum_amounts.len() {
             return Err(ContractError::InvalidParameters {
-                reason: "denoms/mininimum_amounts count mismatch".to_string()
+                reason: "denoms/minimum_amounts count mismatch".to_string()
             });
         }
 
@@ -203,7 +203,7 @@ pub mod payments_executors {
 
         if args.denoms.len() != args.minimum_amounts.len() {
             return Err(ContractError::InvalidParameters {
-                reason: "denoms/mininimum_amounts count mismatch".to_string()
+                reason: "denoms/minimum_amounts count mismatch".to_string()
             });
         }
 

@@ -258,7 +258,7 @@ mod test_payments_executor {
         assert!(matches!(
             command_result.err().unwrap(),
             ContractError::InvalidParameters { reason }
-                if reason == "denoms/mininimum_amounts count mismatch".to_string()
+                if reason == "denoms/minimum_amounts count mismatch".to_string()
         ))
 
     }
@@ -799,7 +799,7 @@ mod test_payments_executor {
         assert!(matches!(
             command_result.err().unwrap(),
             ContractError::InvalidParameters { reason }
-                if reason == "denoms/mininimum_amounts count mismatch".to_string()
+                if reason == "denoms/minimum_amounts count mismatch".to_string()
         ));
     }
 
