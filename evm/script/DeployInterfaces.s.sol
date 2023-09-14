@@ -26,6 +26,8 @@ contract DeployInterfaces is BaseMultiChainDeployer {
 
     mapping(address => bytes32) interfaceSalt;
 
+    bytes32 constant KECCACK_OF_NOTHING = 0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470;
+
     constructor() {
         interfaceSalt[0x000000641AC10b4e000fe361F2149E2a531061c5] = bytes32(0xd2c66ec619a687874ed1cbc01390b279ae3822887485f5ee26b1fa083dcaf1f9);
     }
@@ -128,6 +130,64 @@ contract DeployInterfaces is BaseMultiChainDeployer {
 
     function deploy_legacy() load_config iter_chains(chain_list_legacy) broadcast external {
         _deploy();
+    }
+
+    function _connect_cci() forEachInterface internal {
+        Chains[] memory all_chains = new Chains[](chain_list.length + chain_list_legacy.length);
+        uint256 i = 0;
+        for (i = 0; i < chain_list.length; ++i) {
+            all_chains[i] = chain_list[i];
+        }
+        for (uint256 j = 0; j < chain_list_legacy.length; ++j) {
+            all_chains[i+j] = chain_list_legacy[j];
+        }
+
+
+        CatalystChainInterface cci = CatalystChainInterface(abi.decode(config_interfaces.parseRaw(string.concat(".", rpc[chain], ".", incentiveVersion, ".interface")), (address)));
+
+        for (i = 0; i < all_chains.length; ++i) {
+            Chains remoteChain = all_chains[i];
+            if (chain == remoteChain) continue;
+
+            bytes32 chainIdentifier = abi.decode(config_chain.parseRaw(string.concat(".", rpc[remoteChain], ".chainIdentifier")), (bytes32));
+            // check if a connection has already been set.
+
+            if (keccak256(cci.chainIdentifierToDestinationAddress(chainIdentifier)) != KECCACK_OF_NOTHING) {
+                console2.log(
+                "skipping",
+                rpc[chain],
+                rpc[remoteChain]
+            );
+                continue;
+            }
+
+            address remoteInterface = abi.decode(config_interfaces.parseRaw(string.concat(".", rpc[remoteChain], ".", incentiveVersion, ".interface")), (address));
+            address remoteIncentive = abi.decode(config_interfaces.parseRaw(string.concat(".", rpc[remoteChain], ".", incentiveVersion, ".incentive")), (address));
+
+            console2.log(
+                "connecting",
+                rpc[chain],
+                rpc[remoteChain]
+            );
+
+            cci.connectNewChain(
+                chainIdentifier, 
+                abi.encodePacked(
+                    uint8(20), 
+                    bytes32(0), 
+                    abi.encode(remoteInterface)
+                ),
+                abi.encode(remoteIncentive)
+            );
+        }
+    }
+
+    function connect_cci() load_config iter_chains(chain_list) broadcast external {
+        _connect_cci();
+    }
+
+    function connect_cci_legacy() load_config iter_chains(chain_list_legacy) broadcast external {
+        _connect_cci();
     }
 }
 
