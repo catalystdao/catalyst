@@ -1,11 +1,14 @@
-use cosmwasm_std::{Uint64, Uint128, Addr, CosmosMsg, Coin, Binary};
-use cw_multi_test::{ContractWrapper, Executor, AppResponse};
+use cosmwasm_std::{Uint64, Uint128, Addr, CosmosMsg, Coin, Binary, Empty};
+use cw_multi_test::{ContractWrapper, Executor, AppResponse, Module};
 
 use catalyst_vault_common::bindings::native_asset_vault_modules::{NativeAsset, NativeAssetCustomMsg};
-use test_helpers::asset::TestNativeAsset;
+use schemars::JsonSchema;
+use serde::de::DeserializeOwned;
+use std::fmt::Debug;
 
+use test_helpers::asset::TestNativeAsset;
 use test_helpers::definitions::SETUP_MASTER;
-use test_helpers::env::CustomTestEnv;
+use test_helpers::env::{CustomTestEnv, CustomApp};
 use test_helpers::env::env_native_asset::TestNativeAssetEnv;
 use test_helpers::misc::encode_payload_address;
 use test_helpers::contract::{mock_factory_deploy_vault, mock_set_vault_connection, mock_instantiate_interface};
@@ -25,6 +28,48 @@ pub const RECIPIENT : &str = "recipient";
 // Helpers
 // ********************************************************************************************
 
+pub fn router_contract_storage<HandlerC, ExecC>(
+    app: &mut CustomApp<HandlerC, ExecC>
+) -> u64
+where
+    HandlerC: Module<ExecT = ExecC, QueryT = Empty>,
+    ExecC: Clone + Debug + DeserializeOwned + JsonSchema + PartialEq + 'static
+{
+
+    // Create contract wrapper
+    let contract = ContractWrapper::new_with_empty(
+        crate::contract::execute,
+        crate::contract::instantiate,
+        crate::contract::query,
+    ).with_reply_empty(crate::contract::reply);
+
+    // 'Deploy' the contract
+    app.store_code(Box::new(contract))
+}
+
+
+pub fn mock_instantiate_router<HandlerC, ExecC>(
+    app: &mut CustomApp<HandlerC, ExecC>
+) -> Addr
+where
+    HandlerC: Module<ExecT = ExecC, QueryT = Empty>,
+    ExecC: Clone + Debug + DeserializeOwned + JsonSchema + PartialEq + 'static
+{
+
+    let contract_code_storage = router_contract_storage(app);
+
+    app.instantiate_contract(
+        contract_code_storage,
+        Addr::unchecked(SETUP_MASTER),
+        &crate::msg::InstantiateMsg {},
+        &[],
+        "router",
+        None
+    ).unwrap()
+}
+
+
+
 pub fn fund_account(
     test_env: &mut TestNativeAssetEnv,
     account: Addr,
@@ -41,6 +86,7 @@ pub fn fund_account(
         &funds
     ).unwrap();
 }
+
 
 pub fn run_command_result(
     test_env: &mut TestNativeAssetEnv,
@@ -71,6 +117,8 @@ pub fn run_command_result(
         },
     }
 }
+
+
 
 pub struct  MockVault {
     pub vault_assets: Vec<TestNativeAsset>,
