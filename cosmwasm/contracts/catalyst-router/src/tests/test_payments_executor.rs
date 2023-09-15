@@ -1,7 +1,7 @@
 mod test_payments_executor {
 
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_dependencies_with_balance, MOCK_CONTRACT_ADDR};
-    use cosmwasm_std::{Uint128, to_binary, Addr, Coin};
+    use cosmwasm_std::{Uint128, Addr, Coin};
 
     use test_helpers::definitions::SETUP_MASTER;
     use test_helpers::env::CustomTestEnv;
@@ -9,7 +9,7 @@ mod test_payments_executor {
 
     use crate::commands::CommandResult;
     use crate::error::ContractError;
-    use crate::executors::payments::{SweepCommand, execute_sweep, TransferCommand, execute_transfer, PayPortionCommand, execute_pay_portion, BalanceCheckCommand, execute_balance_check};
+    use crate::executors::payments::{execute_sweep, execute_transfer, execute_pay_portion, execute_balance_check};
     use crate::executors::types::{Account, CoinAmount};
     use crate::tests::helpers::{ROUTER, RECIPIENT, run_command_result, fund_account};
 
@@ -46,11 +46,9 @@ mod test_payments_executor {
         let command_result = execute_sweep(
             &mock_dependencies_with_balance(&router_funds).as_ref(),
             &mock_env(),
-            &to_binary(&SweepCommand {
-                denoms,
-                recipient: Account::Address(RECIPIENT.to_string()),
-                minimum_amounts: vec![Uint128::zero(), Uint128::zero()]
-            }).unwrap()
+            denoms,
+            vec![Uint128::zero(), Uint128::zero()],
+            Account::Address(RECIPIENT.to_string())
         ).unwrap();
 
 
@@ -106,11 +104,9 @@ mod test_payments_executor {
         let command_result = execute_sweep(
             &mock_dependencies().as_ref(),  // Do not 'fund' the router
             &mock_env(),
-            &to_binary(&SweepCommand {
-                denoms,
-                recipient: Account::Address(RECIPIENT.to_string()),
-                minimum_amounts: vec![Uint128::zero(), Uint128::zero()]
-            }).unwrap()
+            denoms,
+            vec![Uint128::zero(), Uint128::zero()],
+            Account::Address(RECIPIENT.to_string())
         ).unwrap();
 
 
@@ -140,11 +136,9 @@ mod test_payments_executor {
         let command_result = execute_sweep(
             &mock_dependencies().as_ref(),
             &mock_env(),
-            &to_binary(&SweepCommand {
-                denoms: vec![],         // Empty
-                recipient: Account::Address(RECIPIENT.to_string()),
-                minimum_amounts: vec![] // Empty
-            }).unwrap()
+            vec![],         // Empty
+            vec![],         // Empty
+            Account::Address(RECIPIENT.to_string())
         ).unwrap();
 
 
@@ -191,11 +185,9 @@ mod test_payments_executor {
         let command_result = execute_sweep(
             &mock_dependencies_with_balance(&router_funds).as_ref(),
             &mock_env(),
-            &to_binary(&SweepCommand {
-                denoms,
-                recipient: Account::Address(RECIPIENT.to_string()),
-                minimum_amounts: minimum_amounts.clone()
-            }).unwrap()
+            denoms,
+            minimum_amounts.clone(),
+            Account::Address(RECIPIENT.to_string())
         ).unwrap();
 
 
@@ -243,13 +235,9 @@ mod test_payments_executor {
         let command_result = execute_sweep(
             &mock_dependencies_with_balance(&router_funds).as_ref(),
             &mock_env(),
-            &to_binary(&SweepCommand {
-                denoms,
-                recipient: Account::Address(RECIPIENT.to_string()),
-                minimum_amounts: vec![
-                    Uint128::zero()     // Specify minimum_amounts.len != denoms.len
-                ]
-            }).unwrap()
+            denoms,
+            vec![Uint128::zero()],     // Specify minimum_amounts.len != denoms.len
+            Account::Address(RECIPIENT.to_string())
         );
 
 
@@ -292,12 +280,10 @@ mod test_payments_executor {
         let command_result = execute_transfer(
             &mock_dependencies_with_balance(&transfer_coins).as_ref(),
             &mock_env(),
-            &to_binary(&TransferCommand {
-                amounts: transfer_coins.iter()
-                    .map(|coin| CoinAmount::Coin(coin.clone()))
-                    .collect(),
-                recipient: Account::Address(RECIPIENT.to_string()),
-            }).unwrap()
+            transfer_coins.iter()
+                .map(|coin| CoinAmount::Coin(coin.clone()))
+                .collect(),
+            Account::Address(RECIPIENT.to_string()),
         ).unwrap();
 
 
@@ -354,12 +340,10 @@ mod test_payments_executor {
         let command_result = execute_transfer(
             &mock_dependencies().as_ref(),
             &mock_env(),
-            &to_binary(&TransferCommand {
-                amounts: transfer_amounts.iter()
-                    .map(|coin| CoinAmount::Coin(coin.clone()))
-                    .collect(),
-                recipient: Account::Address(RECIPIENT.to_string()),
-            }).unwrap()
+            transfer_amounts.iter()
+                .map(|coin| CoinAmount::Coin(coin.clone()))
+                .collect(),
+            Account::Address(RECIPIENT.to_string()),
         ).unwrap();
 
 
@@ -389,10 +373,8 @@ mod test_payments_executor {
         let command_result = execute_transfer(
             &mock_dependencies().as_ref(),
             &mock_env(),
-            &to_binary(&TransferCommand {
-                amounts: vec![],    // Empty
-                recipient: Account::Address(RECIPIENT.to_string()),
-            }).unwrap()
+            vec![],    // Empty
+            Account::Address(RECIPIENT.to_string()),
         ).unwrap();
 
 
@@ -443,11 +425,9 @@ mod test_payments_executor {
         let command_result = execute_pay_portion(
             &mock_dependencies_with_balance(&router_funds).as_ref(),
             &mock_env(),
-            &to_binary(&PayPortionCommand {
-                denoms,
-                bips: pay_portion_bips,
-                recipient: Account::Address(RECIPIENT.to_string())
-            }).unwrap()
+            denoms,
+            pay_portion_bips,
+            Account::Address(RECIPIENT.to_string())
         ).unwrap();
 
 
@@ -517,11 +497,9 @@ mod test_payments_executor {
         let command_result = execute_pay_portion(
             &mock_dependencies_with_balance(&router_funds).as_ref(),
             &mock_env(),
-            &to_binary(&PayPortionCommand {
-                denoms,
-                bips: pay_portion_bips,
-                recipient: Account::Address(RECIPIENT.to_string())
-            }).unwrap()
+            denoms,
+            pay_portion_bips,
+            Account::Address(RECIPIENT.to_string())
         ).unwrap();
 
 
@@ -551,11 +529,9 @@ mod test_payments_executor {
         let command_result = execute_pay_portion(
             &mock_dependencies().as_ref(),
             &mock_env(),
-            &to_binary(&PayPortionCommand {
-                denoms: vec![],     // Empty
-                bips: vec![],       // Empty
-                recipient: Account::Address(RECIPIENT.to_string())
-            }).unwrap()
+            vec![],     // Empty
+            vec![],       // Empty
+            Account::Address(RECIPIENT.to_string())
         ).unwrap();
 
 
@@ -594,11 +570,9 @@ mod test_payments_executor {
         let command_result = execute_pay_portion(
             &mock_dependencies_with_balance(&router_funds).as_ref(),
             &mock_env(),
-            &to_binary(&PayPortionCommand {
-                denoms: denoms.clone(),
-                bips: vec![Uint128::new(10000u128)],
-                recipient: Account::Address(RECIPIENT.to_string())
-            }).unwrap()
+            denoms.clone(),
+            vec![Uint128::new(10000u128)],
+            Account::Address(RECIPIENT.to_string())
         );
 
         // Verify the excution fails
@@ -614,11 +588,9 @@ mod test_payments_executor {
         let command_result = execute_pay_portion(
             &mock_dependencies_with_balance(&router_funds).as_ref(),
             &mock_env(),
-            &to_binary(&PayPortionCommand {
-                denoms: denoms.clone(),
-                bips: vec![Uint128::zero(), Uint128::new(10000u128)],   // Zero bips
-                recipient: Account::Address(RECIPIENT.to_string())
-            }).unwrap()
+            denoms.clone(),
+            vec![Uint128::zero(), Uint128::new(10000u128)],   // Zero bips
+            Account::Address(RECIPIENT.to_string())
         );
 
         println!("{:?}", command_result);
@@ -636,11 +608,9 @@ mod test_payments_executor {
         let command_result = execute_pay_portion(
             &mock_dependencies_with_balance(&router_funds).as_ref(),
             &mock_env(),
-            &to_binary(&PayPortionCommand {
-                denoms: denoms.clone(),
-                bips: vec![Uint128::new(10001u128), Uint128::new(10000u128)],   // Bips > 1
-                recipient: Account::Address(RECIPIENT.to_string())
-            }).unwrap()
+            denoms.clone(),
+            vec![Uint128::new(10001u128), Uint128::new(10000u128)],   // Bips > 1
+            Account::Address(RECIPIENT.to_string())
         );
 
         // Verify the excution fails
@@ -683,12 +653,10 @@ mod test_payments_executor {
         let command_result = execute_balance_check(
             &mock_dependencies_with_balance(&router_funds).as_ref(),
             &mock_env(),
-            &to_binary(&BalanceCheckCommand {
                 denoms,
-                minimum_amounts: vec![Uint128::zero(), Uint128::zero()],
-                account: Account::Address(MOCK_CONTRACT_ADDR.to_string()),  // Check the balance of the router.
-                                                                            // Using 'mock_env()', the router takes the address 'MOCK_CONTRACT_ADDR'
-            }).unwrap()
+                vec![Uint128::zero(), Uint128::zero()],
+                Account::Address(MOCK_CONTRACT_ADDR.to_string()),   // Check the balance of the router.
+                                                                    // Using 'mock_env()', the router takes the address 'MOCK_CONTRACT_ADDR'
         ).unwrap();
 
 
@@ -733,12 +701,10 @@ mod test_payments_executor {
         let command_result = execute_balance_check(
             &mock_dependencies_with_balance(&router_funds).as_ref(),
             &mock_env(),
-            &to_binary(&BalanceCheckCommand {
                 denoms,
-                minimum_amounts: minimum_amounts.clone(), 
-                account: Account::Address(MOCK_CONTRACT_ADDR.to_string()),  // Check the balance of the router.
-                                                                            // Using 'mock_env()', the router takes the address 'MOCK_CONTRACT_ADDR'
-            }).unwrap()
+                minimum_amounts.clone(), 
+                Account::Address(MOCK_CONTRACT_ADDR.to_string()),   // Check the balance of the router.
+                                                                    // Using 'mock_env()', the router takes the address 'MOCK_CONTRACT_ADDR'
         ).unwrap();
 
 
@@ -783,14 +749,12 @@ mod test_payments_executor {
         let command_result = execute_balance_check(
             &mock_dependencies_with_balance(&router_funds).as_ref(),
             &mock_env(),
-            &to_binary(&BalanceCheckCommand {
                 denoms, 
-                minimum_amounts: vec![
+                vec![
                     Uint128::zero()     // Specify minimum_amounts.len != denoms.len
                 ].clone(), 
-                account: Account::Address(MOCK_CONTRACT_ADDR.to_string()),  // Check the balance of the router.
-                                                                            // Using 'mock_env()', the router takes the address 'MOCK_CONTRACT_ADDR'
-            }).unwrap()
+                Account::Address(MOCK_CONTRACT_ADDR.to_string()),   // Check the balance of the router.
+                                                                    // Using 'mock_env()', the router takes the address 'MOCK_CONTRACT_ADDR'
         );
 
 
