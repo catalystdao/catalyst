@@ -1,6 +1,6 @@
-use cosmwasm_std::{Binary, CosmosMsg, DepsMut, Env, ReplyOn, SubMsg, StdError};
+use cosmwasm_std::{CosmosMsg, DepsMut, Env, ReplyOn, SubMsg, StdError};
 
-use crate::{error::ContractError, commands::{CommandResult, execute_command, get_command_allow_revert_flag, get_command_id}, state::{ROUTER_STATE, RouterState}};
+use crate::{error::ContractError, commands::{execute_command, CommandOrder, CommandResult}, state::{ROUTER_STATE, RouterState}};
 
 
 
@@ -36,8 +36,7 @@ impl From<DispatchOrder> for SubMsg {
 /// to be executed, or `None` if all commands have been processed.
 /// 
 /// # Arguments:
-/// * `commands` - The byte-encoded commands to be executed.
-/// * `inputs` - Vector of the byte-encoded inputs that correspond to the commands to be executed.
+/// * `command_orders` - The command orders to be executed.
 /// * `next_command_index` - The index of the next command that is to be executed.
 /// * `offset` - Adjustment factor of the `next_command_index` to match the `commands` and `inputs`
 /// variables.
@@ -45,45 +44,36 @@ impl From<DispatchOrder> for SubMsg {
 fn dispatch_commands(
     deps: &mut DepsMut,
     env: &Env,
-    commands: &Binary,
-    inputs: &Vec<Binary>,
+    command_orders: &Vec<CommandOrder>,
     next_command_index: usize,
     offset: usize
 ) -> Result<Option<DispatchOrder>, ContractError> {
 
-    let local_commands_count = commands.len();
+    let local_commands_count = command_orders.len();
     let local_resume_index = next_command_index - offset;
 
     for local_index in local_resume_index..local_commands_count {
 
-        let raw_command = commands
-            .get(local_index)
-            .unwrap();  // The command at `local_index` should always exist.
-
-        let input = inputs
-            .get(local_index)
-            .unwrap();  // The input at `local_index` should always exist.
-
+        let command_order = command_orders[local_index].clone();
 
         match execute_command(
             &deps.as_ref(),
             env,
-            get_command_id(*raw_command),
-            input
+            command_order.command
         )? {
 
-            CommandResult::Message(cosmos_msg) => {
+            CommandResult::Message(message) => {
 
                 // Return the `DispatchOrder` for the current command (if required).
 
-                let allow_revert = get_command_allow_revert_flag(*raw_command);
+                let message_index = local_index + offset;
                 let is_last = local_index == local_commands_count - 1;
 
                 return Ok(Some(
                     DispatchOrder{
-                        message: cosmos_msg,
-                        message_index: local_index + offset,
-                        allow_revert,
+                        message,
+                        message_index,
+                        allow_revert: command_order.allow_revert,
                         is_last
                     }
                 ))
@@ -117,21 +107,18 @@ fn dispatch_commands(
 /// router `reply` handler.
 /// 
 /// # Arguments:
-/// * `commands` - The router commands.
-/// * `inputs` - The inputs corresponding to the router commands.
+/// * `command_orders` - The command orders to be executed.
 /// 
 pub fn start_dispatching(
     deps: &mut DepsMut,
     env: &Env,
-    commands: Binary,
-    inputs: Vec<Binary>
+    command_orders: Vec<CommandOrder>
 ) -> Result<Option<SubMsg>, ContractError> {
 
     let dispatch_order = dispatch_commands(
         deps,
         env,
-        &commands,
-        &inputs,
+        &command_orders,
         0,
         0
     )?;
@@ -151,8 +138,7 @@ pub fn start_dispatching(
                             .map_err(|_| StdError::GenericErr {
                                 msg: "Failed to save the router state offset (too many commands).".to_string()
                             })?,
-                        commands: Binary(commands[next_message_index..].to_vec()),
-                        inputs: inputs[next_message_index..].to_vec(),
+                        command_orders: command_orders[next_message_index..].to_vec(),
                     }
                 )?;
     
@@ -189,8 +175,7 @@ pub fn resume_dispatching(
     let dispatch_order_option = dispatch_commands(
         deps,
         env,
-        &state.commands,
-        &state.inputs,
+        &state.command_orders,
         next_command_index,
         state.offset as usize
     )?;

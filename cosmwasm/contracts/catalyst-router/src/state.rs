@@ -1,8 +1,8 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, DepsMut, MessageInfo, Env, Binary, Deps};
+use cosmwasm_std::{Addr, DepsMut, MessageInfo, Env, Deps};
 use cw_storage_plus::Item;
 
-use crate::error::ContractError;
+use crate::{error::ContractError, commands::CommandOrder};
 
 pub const ROUTER_LOCK: Item<RouterLock> = Item::new("router-lock");
 pub const ROUTER_STATE: Item<RouterState> = Item::new("router-state");
@@ -21,8 +21,7 @@ pub struct RouterLock {
 #[cw_serde]
 pub struct RouterState {
     pub offset: u8,
-    pub commands: Binary,
-    pub inputs: Vec<Binary>
+    pub command_orders: Vec<CommandOrder>
 }
 
 

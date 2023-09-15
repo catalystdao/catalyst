@@ -1,48 +1,19 @@
-use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Env, Binary, Coin, from_binary, BankMsg, CosmosMsg, Uint128, StdResult, Deps};
+use cosmwasm_std::{Env, Coin, BankMsg, CosmosMsg, Uint128, StdResult, Deps};
 
 use crate::{commands::CommandResult, error::ContractError, executors::types::{Account, CoinAmount, Denom}};
 
 pub const BIPS_BASE: Uint128 = Uint128::new(10_000u128);
 
-#[cw_serde]
-pub struct TransferCommand {
-    pub amounts: Vec<CoinAmount>,
-    pub recipient: Account
-}
-
-#[cw_serde]
-pub struct PayPortionCommand {
-    pub denoms: Vec<Denom>,
-    pub bips: Vec<Uint128>,
-    pub recipient: Account
-}
-
-#[cw_serde]
-pub struct SweepCommand {
-    pub denoms: Vec<Denom>,
-    pub minimum_amounts: Vec<Uint128>,
-    pub recipient: Account
-}
-
-#[cw_serde]
-pub struct BalanceCheckCommand {
-    pub denoms: Vec<Denom>,
-    pub minimum_amounts: Vec<Uint128>,
-    pub account: Account
-}
-
 
 pub fn execute_transfer(
     deps: &Deps,
     env: &Env,
-    input: &Binary
+    amounts: Vec<CoinAmount>,
+    recipient: Account
 ) -> Result<CommandResult, ContractError> {
-    
-    let args = from_binary::<TransferCommand>(input)?;
 
     // Filter out zero amounts
-    let coins = args.amounts.iter()
+    let coins = amounts.iter()
         .map(|amount| -> Result<_, _> {
             amount.get_amount(deps, env)
         })
@@ -59,7 +30,7 @@ pub fn execute_transfer(
     }
 
     let msg = BankMsg::Send {
-        to_address: args.recipient.get_address(deps, env)?,
+        to_address: recipient.get_address(deps, env)?,
         amount: coins
     };
 
@@ -72,25 +43,25 @@ pub fn execute_transfer(
 pub fn execute_sweep(
     deps: &Deps,
     env: &Env,
-    input: &Binary
+    denoms: Vec<Denom>,
+    minimum_amounts: Vec<Uint128>,
+    recipient: Account
 ) -> Result<CommandResult, ContractError> {
-    
-    let args = from_binary::<SweepCommand>(input)?;
 
-    if args.denoms.len() != args.minimum_amounts.len() {
+    if denoms.len() != minimum_amounts.len() {
         return Err(ContractError::InvalidParameters {
             reason: "denoms/minimum_amounts count mismatch".to_string()
         });
     }
 
-    let router_coins = args.denoms.iter()
+    let router_coins = denoms.iter()
         .map(|denom| {
             deps.querier.query_balance(env.contract.address.clone(), denom)
         })
         .collect::<Result<Vec<_>, _>>()?;
 
     let is_minimum_not_reached = router_coins.iter()
-        .zip(args.minimum_amounts)
+        .zip(minimum_amounts)
         .find_map(|(coin, minimum_amount)| {
             if coin.amount < minimum_amount {
                 Some((coin, minimum_amount))
@@ -119,7 +90,7 @@ pub fn execute_sweep(
     }
 
     let msg = BankMsg::Send {
-        to_address: args.recipient.get_address(deps, env)?,
+        to_address: recipient.get_address(deps, env)?,
         amount: send_amounts
     };
 
@@ -133,18 +104,18 @@ pub fn execute_sweep(
 pub fn execute_pay_portion(
     deps: &Deps,
     env: &Env,
-    input: &Binary
+    denoms: Vec<Denom>,
+    bips: Vec<Uint128>,
+    recipient: Account
 ) -> Result<CommandResult, ContractError> {
-    
-    let args = from_binary::<PayPortionCommand>(input)?;
 
-    if args.denoms.len() != args.bips.len() {
+    if denoms.len() != bips.len() {
         return Err(ContractError::InvalidParameters {
             reason: "denoms/bips count mismatch".to_string()
         });
     }
 
-    let invalid_bips = args.bips.iter()
+    let invalid_bips = bips.iter()
         .any(|bip| bip.is_zero() || bip > &BIPS_BASE);
 
     if invalid_bips {
@@ -153,8 +124,8 @@ pub fn execute_pay_portion(
         });
     }
 
-    let coins = args.denoms.iter()
-        .zip(args.bips)
+    let coins = denoms.iter()
+        .zip(bips)
         .map(|(denom, bips)| -> StdResult<_> {
 
             let router_coin = deps.querier
@@ -181,7 +152,7 @@ pub fn execute_pay_portion(
     }
 
     let msg = BankMsg::Send {
-        to_address: args.recipient.get_address(deps, env)?,
+        to_address: recipient.get_address(deps, env)?,
         amount: coins
     };
 
@@ -195,25 +166,25 @@ pub fn execute_pay_portion(
 pub fn execute_balance_check(
     deps: &Deps,
     env: &Env,
-    input: &Binary
+    denoms: Vec<Denom>,
+    minimum_amounts: Vec<Uint128>,
+    account: Account
 ) -> Result<CommandResult, ContractError> {
-    
-    let args = from_binary::<BalanceCheckCommand>(input)?;
 
-    if args.denoms.len() != args.minimum_amounts.len() {
+    if denoms.len() != minimum_amounts.len() {
         return Err(ContractError::InvalidParameters {
             reason: "denoms/minimum_amounts count mismatch".to_string()
         });
     }
 
-    let account_coins = args.denoms.iter()
+    let account_coins = denoms.iter()
         .map(|denom| {
-            deps.querier.query_balance(args.account.get_address(deps, env)?, denom)
+            deps.querier.query_balance(account.get_address(deps, env)?, denom)
         })
         .collect::<Result<Vec<_>, _>>()?;
 
     let minimum_check = account_coins.iter()
-        .zip(args.minimum_amounts)
+        .zip(minimum_amounts)
         .try_for_each(|(coin, minimum_amount)| {
             if coin.amount < minimum_amount {
                 Err(

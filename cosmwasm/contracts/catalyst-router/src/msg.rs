@@ -1,6 +1,8 @@
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Binary, Uint128};
 
+use crate::commands::CommandOrder;
+
 
 #[cw_serde]
 pub struct InstantiateMsg {
@@ -11,8 +13,7 @@ pub struct InstantiateMsg {
 pub enum ExecuteMsg {
 
     Execute {
-        commands: Binary,
-        inputs: Vec<Binary>,
+        command_orders: Vec<CommandOrder>,
         deadline: Option<u64>
     },
 
@@ -32,8 +33,7 @@ pub enum ExecuteMsg {
 /// Struct to allow the deserialization of the binary encoded parameters of `ExecuteMsg::Execute`.
 #[cw_serde]
 pub struct ExecuteParams {
-    pub commands: Binary,
-    pub inputs: Vec<Binary>,
+    pub command_orders: Vec<CommandOrder>,
     pub deadline: Option<u64>
 }
 

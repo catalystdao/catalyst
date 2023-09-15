@@ -1,59 +1,103 @@
-use cosmwasm_std::{CosmosMsg, Deps, Env, Binary};
+use catalyst_types::U256;
+use cosmwasm_schema::cw_serde;
+use cosmwasm_std::{CosmosMsg, Deps, Env, Binary, Uint128, Uint64};
 
-use crate::{error::ContractError, executors::{catalyst, payments, cancel_swap}};
-
-
-/// Commands Encoding *****************************************************************************
-
-// TODO do we want to encode the commands as bytes, or use an 'enum' instead?
-// TODO   - how would the 'allow revert' flag be encoded then? As another param?
-
-// TODO review:
-// NOTE command values have been changed from the EVM implementation as some commands
-// have been removed and to accomodate for possible new ones.
-
-pub const COMMAND_ALLOW_REVERT_FLAG     : u8 = 0x80;
-pub const COMMAND_ID_MASK               : u8 = 0x3f;
-
-pub const COMMAND_LOCAL_SWAP            : u8 = 0x00;
-pub const COMMAND_SEND_ASSET            : u8 = 0x01;
-pub const COMMAND_SEND_LIQUIDITY        : u8 = 0x02;
-pub const COMMAND_WITHDRAW_EQUAL        : u8 = 0x03;
-pub const COMMAND_WITHDRAW_MIXED        : u8 = 0x04;
-pub const COMMAND_DEPOSIT_MIXED         : u8 = 0x05;
-
-pub const COMMAND_SWEEP                 : u8 = 0x06;
-pub const COMMAND_TRANSFER              : u8 = 0x07;
-pub const COMMAND_PAY_PORTION           : u8 = 0x08;
-pub const COMMAND_BALANCE_CHECK         : u8 = 0x09;
-
-pub const COMMAND_ALLOW_CANCEL          : u8 = 0x0d;
+use crate::{error::ContractError, executors::{catalyst, payments, cancel_swap, types::{CoinAmount, Denom, Account, Amount}}};
 
 
-/// Get the command id given a raw command byte.
-/// 
-/// # Arguments:
-/// * `raw_command` - The raw command byte.
-/// 
-#[inline(always)]
-pub fn get_command_id(raw_command: u8) -> u8 {
-    raw_command & COMMAND_ID_MASK
+
+/// Commands Encoding
+// ************************************************************************************************
+
+#[cw_serde]
+pub struct CommandOrder {
+    pub command: CommandMsg,
+    pub allow_revert: bool
 }
 
-/// Get the 'allow revert' flag given a raw command byte.
-/// 
-/// # Arguments:
-/// * `raw_command` - The raw command byte.
-/// 
-#[inline(always)]
-pub fn get_command_allow_revert_flag(raw_command: u8) -> bool {
-    (raw_command & COMMAND_ALLOW_REVERT_FLAG) != 0u8
+#[cw_serde]
+pub enum CommandMsg {
+
+    // Catalyst
+    LocalSwap {
+        vault: String,
+        from_asset_ref: String,
+        to_asset_ref: String,
+        amount: CoinAmount,
+        min_out: Uint128
+    },
+    SendAsset {
+        vault: String,
+        channel_id: String,
+        to_vault: Binary,
+        to_account: Binary,
+        from_asset_ref: String,
+        to_asset_index: u8,
+        amount: CoinAmount,
+        min_out: U256,
+        fallback_account: String,
+        calldata: Binary
+    },
+    SendLiquidity {
+        vault: String,
+        channel_id: String,
+        to_vault: Binary,
+        to_account: Binary,
+        amount: Amount,
+        min_vault_tokens: U256,
+        min_reference_asset: U256,
+        fallback_account: String,
+        calldata: Binary
+    },
+    WithdrawEqual {
+        vault: String,
+        amount: Amount,
+        min_out: Vec<Uint128>
+    },
+    WithdrawMixed {
+        vault: String,
+        amount: Amount,
+        withdraw_ratio: Vec<Uint64>,
+        min_out: Vec<Uint128>,
+    },
+    DepositMixed {
+        vault: String,
+        deposit_amounts: Vec<CoinAmount>,
+        min_out: Uint128
+    },
+
+    // Payments
+    Sweep {
+        denoms: Vec<Denom>,
+        minimum_amounts: Vec<Uint128>,
+        recipient: Account
+    },
+    Transfer {
+        amounts: Vec<CoinAmount>,
+        recipient: Account
+    },
+    PayPortion {
+        denoms: Vec<Denom>,
+        bips: Vec<Uint128>,
+        recipient: Account
+    },
+    BalanceCheck {
+        denoms: Vec<Denom>,
+        minimum_amounts: Vec<Uint128>,
+        account: Account
+    },
+
+    // Swap Cancel
+    AllowCancel {
+        authority: String,
+        identifier: Binary
+    }
 }
 
 
 
-
-// Commands Execution *****************************************************************************
+// Commands Execution
+// ************************************************************************************************
 
 /// Return type for the commands execution handlers. It can be either a `CosmosMsg` to be
 /// dispatched, or the 'Result' of an atomic check operation.
@@ -66,33 +110,163 @@ pub enum CommandResult {
 /// Command executor selector.
 /// 
 /// # Arguments:
-/// * `command_id` - The id of the command to be executed.
-/// * `input` - The input for the command to be executed.
+/// * `command` - The command to execute.
 /// 
 pub fn execute_command(
     deps: &Deps,
     env: &Env,
-    command_id: u8,
-    input: &Binary
+    command: CommandMsg
 ) -> Result<CommandResult, ContractError> {
 
-    match command_id {
-
-        COMMAND_LOCAL_SWAP     => catalyst::execute_local_swap(deps, env, input),
-        COMMAND_SEND_ASSET     => catalyst::execute_send_asset(deps, env, input),
-        COMMAND_SEND_LIQUIDITY => catalyst::execute_send_liquidity(deps, env, input),
-        COMMAND_WITHDRAW_EQUAL => catalyst::execute_withdraw_equal(deps, env, input),
-        COMMAND_WITHDRAW_MIXED => catalyst::execute_withdraw_mixed(deps, env, input),
-        COMMAND_DEPOSIT_MIXED  => catalyst::execute_deposit_mixed(deps, env, input),
-
-        COMMAND_SWEEP          => payments::execute_sweep(deps, env, input),
-        COMMAND_TRANSFER       => payments::execute_transfer(deps, env, input),
-        COMMAND_PAY_PORTION    => payments::execute_pay_portion(deps, env, input),
-        COMMAND_BALANCE_CHECK  => payments::execute_balance_check(deps, env, input),
-
-        COMMAND_ALLOW_CANCEL   => cancel_swap::execute_allow_cancel(deps, input),
-
-        _ => Err(ContractError::InvalidCommand{command_id})
+    match command {
+        CommandMsg::LocalSwap {
+            vault,
+            from_asset_ref,
+            to_asset_ref,
+            amount,
+            min_out
+        } => catalyst::execute_local_swap(
+            deps,
+            env,
+            vault,
+            from_asset_ref,
+            to_asset_ref,
+            amount,
+            min_out
+        ),
+        CommandMsg::SendAsset {
+            vault,
+            channel_id,
+            to_vault,
+            to_account,
+            from_asset_ref,
+            to_asset_index,
+            amount,
+            min_out,
+            fallback_account,
+            calldata
+        } => catalyst::execute_send_asset(
+            deps,
+            env,
+            vault,
+            channel_id,
+            to_vault,
+            to_account,
+            from_asset_ref,
+            to_asset_index,
+            amount,
+            min_out,
+            fallback_account,
+            calldata
+        ),
+        CommandMsg::SendLiquidity {
+            vault,
+            channel_id,
+            to_vault,
+            to_account,
+            amount,
+            min_vault_tokens,
+            min_reference_asset,
+            fallback_account,
+            calldata
+        } => catalyst::execute_send_liquidity(
+            deps,
+            env,
+            vault,
+            channel_id,
+            to_vault,
+            to_account,
+            amount,
+            min_vault_tokens,
+            min_reference_asset,
+            fallback_account,
+            calldata
+        ),
+        CommandMsg::WithdrawEqual {
+            vault,
+            amount,
+            min_out
+        } => catalyst::execute_withdraw_equal(
+            deps,
+            env,
+            vault,
+            amount,
+            min_out
+        ),
+        CommandMsg::WithdrawMixed {
+            vault,
+            amount,
+            withdraw_ratio,
+            min_out
+        } => catalyst::execute_withdraw_mixed(
+            deps,
+            env,
+            vault,
+            amount,
+            withdraw_ratio,
+            min_out
+        ),
+        CommandMsg::DepositMixed {
+            vault,
+            deposit_amounts,
+            min_out
+        } => catalyst::execute_deposit_mixed(
+            deps,
+            env,
+            vault,
+            deposit_amounts,
+            min_out
+        ),
+        CommandMsg::Sweep {
+            denoms,
+            minimum_amounts,
+            recipient
+        } => payments::execute_sweep(
+            deps,
+            env,
+            denoms,
+            minimum_amounts,
+            recipient
+        ),
+        CommandMsg::Transfer {
+            amounts,
+            recipient
+        } => payments::execute_transfer(
+            deps,
+            env,
+            amounts,
+            recipient
+        ),
+        CommandMsg::PayPortion {
+            denoms,
+            bips,
+            recipient
+        } => payments::execute_pay_portion(
+            deps,
+            env,
+            denoms,
+            bips,
+            recipient
+        ),
+        CommandMsg::BalanceCheck {
+            denoms,
+            minimum_amounts,
+            account
+        } => payments::execute_balance_check(
+            deps,
+            env,
+            denoms,
+            minimum_amounts,
+            account
+        ),
+        CommandMsg::AllowCancel {
+            authority,
+            identifier
+        } => cancel_swap::execute_allow_cancel(
+            deps,
+            authority,
+            identifier
+        )
     }
 
 }

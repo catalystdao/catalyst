@@ -1,16 +1,10 @@
-use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Deps, DepsMut, Binary, from_binary};
+use cosmwasm_std::{Deps, DepsMut, Binary};
 use cw_storage_plus::Map;
 
 use crate::{commands::CommandResult, error::ContractError};
 
 pub const CANCEL_ORDERS: Map<(&str, &str), bool> = Map::new("catalyst-router-cancel-orders");
 
-#[cw_serde]
-pub struct AllowCancelCommand {
-    pub authority: String,
-    pub identifier: Binary
-}
 
 pub fn set_cancel_swap_state(
     deps: &mut DepsMut,
@@ -45,23 +39,22 @@ pub fn get_cancel_swap_state(
 
 pub fn execute_allow_cancel(
     deps: &Deps,
-    input: &Binary
+    authority: String,
+    identifier: Binary
 ) -> Result<CommandResult, ContractError> {
-
-    let args = from_binary::<AllowCancelCommand>(input)?;
 
     let cancel_swap = get_cancel_swap_state(
         deps,
-        args.authority.clone(),
-        args.identifier.clone()
+        authority.clone(),
+        identifier.clone()
     )?;
 
     if cancel_swap {
         Ok(CommandResult::Check(Err(
             format!(
                 "Swap cancelled (authority {}, identifier {})",
-                args.authority,
-                args.identifier.to_base64()
+                authority,
+                identifier.to_base64()
             )
         )))
     }

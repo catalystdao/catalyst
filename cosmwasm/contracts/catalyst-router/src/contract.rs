@@ -3,6 +3,7 @@ use cosmwasm_std::entry_point;
 use cosmwasm_std::{DepsMut, Env, MessageInfo, Response, Reply, StdResult, Deps, Binary, Empty, from_binary};
 use cw2::set_contract_version;
 
+use crate::commands::CommandOrder;
 use crate::dispatcher::{start_dispatching, resume_dispatching};
 use crate::error::ContractError;
 use crate::executors::cancel_swap::set_cancel_swap_state;
@@ -45,15 +46,13 @@ pub fn execute(
     match msg {
 
         ExecuteMsg::Execute {
-            commands,
-            inputs,
+            command_orders,
             deadline
         } => execute_execute(
             &mut deps,
             &env,
             info,
-            commands,
-            inputs,
+            command_orders,
             deadline
         ),
 
@@ -67,8 +66,7 @@ pub fn execute(
                 &mut deps,
                 &env,
                 info,
-                params.commands,
-                params.inputs,
+                params.command_orders,
                 params.deadline
             )
         },
@@ -94,16 +92,14 @@ pub fn execute(
 /// ongoing.
 /// 
 /// # Arguments:
-/// * `commands` - The router commands.
-/// * `inputs` - The inputs corresponding to the router commands.
+/// * `command_orders` - The router command orders to execute.
 /// * `deadline` - Time at which the router request expires.
 /// 
 fn execute_execute(
     deps: &mut DepsMut,
     env: &Env,
     info: MessageInfo,
-    commands: Binary,
-    inputs: Vec<Binary>,
+    command_orders: Vec<CommandOrder>,
     deadline: Option<u64>
 ) -> Result<Response, ContractError> {
 
@@ -120,8 +116,7 @@ fn execute_execute(
     let initial_submessage = start_dispatching(
         deps,
         env,
-        commands,
-        inputs
+        command_orders
     )?;
 
     let response = match initial_submessage {
