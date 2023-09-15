@@ -714,10 +714,10 @@ mod test_payments_executor {
             command_result,
             CommandResult::Check(check_result)
                 if check_result.clone().err().unwrap() == format!(
-                    "Minimum amount {} not fulfilled on balance check operation (found {}{})",
-                    router_funds[0],
+                    "Minimum amount {}{} not fulfilled on balance check operation (found {})",
                     minimum_amounts[0],
-                    router_funds[0].denom
+                    router_funds[0].denom,
+                    router_funds[0]
                 )
         ));
     }

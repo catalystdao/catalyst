@@ -189,10 +189,10 @@ pub fn execute_balance_check(
             if coin.amount < minimum_amount {
                 Err(
                     format!(
-                        "Minimum amount {} not fulfilled on balance check operation (found {}{})",
-                        coin,
+                        "Minimum amount {}{} not fulfilled on balance check operation (found {})",
                         minimum_amount,
-                        coin.denom
+                        coin.denom,
+                        coin
                     )
                 )
             }
