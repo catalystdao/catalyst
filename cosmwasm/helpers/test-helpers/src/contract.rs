@@ -1,4 +1,4 @@
-use cosmwasm_schema::serde::Serialize;
+use cosmwasm_schema::{serde::{Serialize, de::DeserializeOwned}, schemars::JsonSchema};
 use cosmwasm_std::{Uint128, Addr, Uint64, Binary, Empty, Coin};
 use cw_multi_test::{ContractWrapper, Executor, AppResponse, Module};
 use std::{marker::PhantomData, fmt::Debug};
@@ -18,7 +18,7 @@ pub const DEFAULT_TEST_GOV_FEE  : Uint64 = Uint64::new(50000000000000000u64);   
 // ************************************************************************************************
 
 pub fn vault_factory_contract_storage<HandlerC>(
-    app: &mut CustomApp<HandlerC, CustomMsg>
+    app: &mut CustomApp<HandlerC, CustomMsg>    // Cannot be generic on `ExecC`, as the factory contract is hardcoded with `CustomMsg`
 ) -> u64
 where
     HandlerC: Module<ExecT = CustomMsg, QueryT = Empty>
@@ -35,11 +35,12 @@ where
     app.store_code(Box::new(contract))
 }
 
-pub fn interface_contract_storage<HandlerC>(
-    app: &mut CustomApp<HandlerC, CustomMsg>
+pub fn interface_contract_storage<HandlerC, ExecC>(
+    app: &mut CustomApp<HandlerC, ExecC>
 ) -> u64
 where
-    HandlerC: Module<ExecT = CustomMsg, QueryT = Empty>
+    HandlerC: Module<ExecT = ExecC, QueryT = Empty>,
+    ExecC: Clone + Debug + DeserializeOwned + JsonSchema + PartialEq + 'static
 {
 
     // Create contract wrapper
@@ -53,11 +54,12 @@ where
     app.store_code(Box::new(contract))
 }
 
-pub fn calldata_target_contract_storage<HandlerC>(
-    app: &mut CustomApp<HandlerC, CustomMsg>
+pub fn calldata_target_contract_storage<HandlerC, ExecC>(
+    app: &mut CustomApp<HandlerC, ExecC>
 ) -> u64
 where
-    HandlerC: Module<ExecT = CustomMsg, QueryT = Empty>
+    HandlerC: Module<ExecT = ExecC, QueryT = Empty>,
+    ExecC: Clone + Debug + DeserializeOwned + JsonSchema + PartialEq + 'static
 {
 
     // Create contract wrapper
@@ -98,11 +100,12 @@ pub fn mock_instantiate_factory<HandlerC>(
     ).unwrap()
 }
 
-pub fn mock_instantiate_interface<HandlerC>(
-    app: &mut CustomApp<HandlerC, CustomMsg>
+pub fn mock_instantiate_interface<HandlerC, ExecC>(
+    app: &mut CustomApp<HandlerC, ExecC>
 ) -> Addr
 where
-    HandlerC: Module<ExecT = CustomMsg, QueryT = Empty>
+    HandlerC: Module<ExecT = ExecC, QueryT = Empty>,
+    ExecC: Clone + Debug + DeserializeOwned + JsonSchema + PartialEq + 'static
 {
 
     let contract_code_storage = interface_contract_storage(app);
@@ -117,11 +120,12 @@ where
     ).unwrap()
 }
 
-pub fn mock_instantiate_calldata_target<HandlerC>(
-    app: &mut CustomApp<HandlerC, CustomMsg>
+pub fn mock_instantiate_calldata_target<HandlerC, ExecC>(
+    app: &mut CustomApp<HandlerC, ExecC>
 ) -> Addr
 where
-    HandlerC: Module<ExecT = CustomMsg, QueryT = Empty>
+    HandlerC: Module<ExecT = ExecC, QueryT = Empty>,
+    ExecC: Clone + Debug + DeserializeOwned + JsonSchema + PartialEq + 'static
 {
 
     let contract_code_storage = calldata_target_contract_storage(app);
