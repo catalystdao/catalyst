@@ -593,8 +593,6 @@ mod test_payments_executor {
             Account::Address(RECIPIENT.to_string())
         );
 
-        println!("{:?}", command_result);
-
         // Verify the excution fails
         assert!(matches!(
             command_result.err().unwrap(),
