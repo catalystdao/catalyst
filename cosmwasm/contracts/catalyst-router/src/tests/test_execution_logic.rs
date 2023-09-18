@@ -88,7 +88,7 @@ mod test_execution_logic {
         // Check the router has performed the last 'sweep' operation
         let router_balances = test_env.get_app()
             .wrap()
-            .query_all_balances(router)
+            .query_all_balances(router.clone())
             .unwrap()
             .len();
 
@@ -96,6 +96,14 @@ mod test_execution_logic {
             router_balances,
             0
         );
+
+        // Check the router has not created a state
+        let router_state_raw = test_env.get_app().wrap().query_wasm_raw(
+            router,
+            "router-state".as_bytes()
+        ).unwrap();
+
+        assert!(router_state_raw.is_none());
 
     }
 
@@ -142,7 +150,7 @@ mod test_execution_logic {
         // Tested action 2: Check passes
         let result = test_env.execute_contract(
             Addr::unchecked(SETUP_MASTER),
-            router,
+            router.clone(),
             &ExecuteMsg::Execute {
                 command_orders,
                 deadline: None
@@ -155,6 +163,14 @@ mod test_execution_logic {
         assert!(
             result.is_ok()
         );
+
+        // Check the router has not created a state
+        let router_state_raw = test_env.get_app().wrap().query_wasm_raw(
+            router,
+            "router-state".as_bytes()
+        ).unwrap();
+
+        assert!(router_state_raw.is_none());
 
     }
 
@@ -214,7 +230,7 @@ mod test_execution_logic {
         // Check the router has performed the last 'sweep' operation
         let router_balances = test_env.get_app()
             .wrap()
-            .query_all_balances(router)
+            .query_all_balances(router.clone())
             .unwrap()
             .len();
 
@@ -222,6 +238,14 @@ mod test_execution_logic {
             router_balances,
             0
         );
+
+        // Check the router has cleared its state
+        let router_state_raw = test_env.get_app().wrap().query_wasm_raw(
+            router,
+            "router-state".as_bytes()
+        ).unwrap();
+
+        assert!(router_state_raw.is_none());
 
     }
 
@@ -282,7 +306,7 @@ mod test_execution_logic {
         // Tested action 1: Final check passes
         let result = test_env.execute_contract(
             Addr::unchecked(SETUP_MASTER),
-            router,
+            router.clone(),
             &ExecuteMsg::Execute {
                 command_orders,
                 deadline: None
@@ -295,6 +319,14 @@ mod test_execution_logic {
         assert!(
             result.is_ok()
         );
+
+        // Check the router has cleared its state
+        let router_state_raw = test_env.get_app().wrap().query_wasm_raw(
+            router,
+            "router-state".as_bytes()
+        ).unwrap();
+
+        assert!(router_state_raw.is_none());
 
     }
 
