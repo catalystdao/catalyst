@@ -10,8 +10,10 @@ type CatalystExecuteMsg = catalyst_vault_common::msg::ExecuteMsg<()>;
 
 
 #[cw_serde]
-struct BalanceQuery {
-    address: String
+enum VaultQuery {
+    Balance {
+        address: String
+    }
 }
 
 
@@ -106,7 +108,7 @@ pub fn execute_send_liquidity(
         Amount::Amount(amount) => amount,
         Amount::RouterBalance() => deps.querier.query_wasm_smart::<BalanceResponse>(
             vault.clone(),
-            &BalanceQuery{ address: env.contract.address.to_string() }
+            &VaultQuery::Balance { address: env.contract.address.to_string() }
         )?.balance,
     };
     
@@ -183,7 +185,7 @@ pub fn execute_withdraw_all(
         Amount::Amount(amount) => amount,
         Amount::RouterBalance() => deps.querier.query_wasm_smart::<BalanceResponse>(
             vault.clone(),
-            &BalanceQuery{ address: env.contract.address.to_string() }
+            &VaultQuery::Balance { address: env.contract.address.to_string() }
         )?.balance,
     };
 
@@ -217,7 +219,7 @@ pub fn execute_withdraw_mixed(
         Amount::Amount(amount) => amount,
         Amount::RouterBalance() => deps.querier.query_wasm_smart::<BalanceResponse>(
             vault.clone(),
-            &BalanceQuery{ address: env.contract.address.to_string() }
+            &VaultQuery::Balance { address: env.contract.address.to_string() }
         )?.balance,
     };
 
