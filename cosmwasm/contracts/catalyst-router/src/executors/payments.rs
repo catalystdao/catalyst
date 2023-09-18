@@ -20,7 +20,8 @@ pub fn execute_transfer(
         .filter(|map_result| {
             match map_result {
                 Ok(coin) => !coin.amount.is_zero(),
-                _ => true,
+                Err(_) => true, // If 'map' errors, do not discard the error.
+                                // It will be catched by 'collect'.
             }
         })
         .collect::<Result<Vec<_>, _>>()?;
@@ -142,7 +143,8 @@ pub fn execute_pay_portion(
         .filter(|map_result| {
             match map_result {
                 Ok(coin) => !coin.amount.is_zero(),
-                _ => true,
+                Err(_) => true, // If 'map' errors, do not discard the error.
+                                // It will be catched by 'collect'.
             }
         })
         .collect::<Result<Vec<_>, _>>()?;
