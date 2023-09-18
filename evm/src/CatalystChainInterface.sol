@@ -110,9 +110,10 @@ contract CatalystChainInterface is Ownable, ICrossChainReceiver, Bytes65, IMessa
 
     //--- Storage ---//
 
-    // If not set, then the identifier is abi.encodePacked(uint8(20), bytes32(0), bytes32(msg.sender))
+    /// @notice The destination address on the chain by chain identifier.
     mapping(bytes32 => bytes) public chainIdentifierToDestinationAddress;
 
+    /// @notice The minimum amount of gas for a specific chain. bytes32(0) indicates ack.
     mapping(bytes32 => uint48) public minGasFor;
 
     //-- Underwriting Storage --//
@@ -121,6 +122,8 @@ contract CatalystChainInterface is Ownable, ICrossChainReceiver, Bytes65, IMessa
     /// Should also be set long enough to not take up an excess amount of escrow usage.
     uint256 public maxUnderwritingDuration = 24 hours;
 
+    /// @notice Maps underwriting identifiers to underwriting state.
+    /// refundTo can be checked to see if the ID has been underwritten.
      mapping(bytes32 => UnderwritingStorage) public underwritingStorage;
 
 
@@ -129,6 +132,7 @@ contract CatalystChainInterface is Ownable, ICrossChainReceiver, Bytes65, IMessa
         GARP = IIncentivizedMessageEscrow(GARP_);
         _transferOwnership(defaultOwner);
     }
+
 
     //-- Admin--//
 
@@ -156,7 +160,7 @@ contract CatalystChainInterface is Ownable, ICrossChainReceiver, Bytes65, IMessa
         if (incentive.maxGasAck < minGasFor[bytes32(0)]) revert NotEnoughIncentives();
 
         // 2. Gas prices
-        // You need to provide more than 10% gas than spent on this transaction.
+        // The gas price of ack has to be 10% higher than the gas price spent on this transaction.
         if (incentive.priceOfAckGas < tx.gasprice * 11 / 10) revert NotEnoughIncentives();
 
         // -- Check Address Lengths -- //
@@ -182,12 +186,17 @@ contract CatalystChainInterface is Ownable, ICrossChainReceiver, Bytes65, IMessa
 
     //-- Transparent viewer --//
 
+    /// @notice Estimate the addition verification cost beyond the 
+    /// cost paid to the relayer.
     function estimateAdditionalCost() external view returns(address asset, uint256 amount) {
         (asset, amount) = GARP.estimateAdditionalCost();
     }
 
     //-- Functions --//
 
+    /// @notice matches the hash of error calldata to common revert functions
+    /// and then reverts a relevant ack which can be exposed on the origin to provide information
+    /// about why the transaction didn't execute as expected.
     function _handleError(bytes memory err) pure internal returns (bytes1) {
         bytes32 errorHash = keccak256(err);
         // We can use memory sclies to get better insight into exactly the error which occured.
@@ -209,7 +218,7 @@ contract CatalystChainInterface is Ownable, ICrossChainReceiver, Bytes65, IMessa
         // If it has, we don't allow setting it as another. This would impact existing pools.
         if (keccak256(chainIdentifierToDestinationAddress[chainIdentifier]) != KECCACK_OF_NOTHING) revert ChainAlreadySetup();
 
-        // Set the remote CCI. Only the first 32 bytes are checked. For most chains, this should be enough.
+        // Set the remote CCI.
         chainIdentifierToDestinationAddress[chainIdentifier] = remoteCCI;
 
         emit RemoteImplementationSet(chainIdentifier, remoteCCI, remoteGARP);
@@ -243,7 +252,7 @@ contract CatalystChainInterface is Ownable, ICrossChainReceiver, Bytes65, IMessa
         // We need to ensure that all information is in the correct places. This ensures that calls to this contract
         // will always be decoded semi-correctly even if the input is very incorrect. This also checks that the user 
         // inputs into the swap contracts are correct while making the cross-chain interface flexible for future implementations.
-        // These checks are done by modifiers.
+        // These checks are done by the modifier.
 
         // Anyone can call this function, but unless someone can also manage to pass the security check on onRecvPacket
         // they cannot drain any value. As such, the very worst they can do is waste gas.
@@ -301,7 +310,7 @@ contract CatalystChainInterface is Ownable, ICrossChainReceiver, Bytes65, IMessa
         // We need to ensure that all information is in the correct places. This ensures that calls to this contract
         // will always be decoded semi-correctly even if the input is very incorrect. This also checks that the user 
         // inputs into the swap contracts are correct while making the cross-chain interface flexible for future implementations.
-        // These checks are done by modifiers.
+        // These checks are done by the modifier.
 
         // Anyone can call this function, but unless someone can also manage to pass the security check on onRecvPacket
         // they cannot drain any value. As such, the very worst they can do is waste gas.
@@ -333,7 +342,7 @@ contract CatalystChainInterface is Ownable, ICrossChainReceiver, Bytes65, IMessa
 
     /**
      * @notice Cross-chain message success handler
-     * @dev Should never revert.
+     * @dev Should never revert. (on valid messages)
      */
     function _onPacketSuccess(bytes32 destinationIdentifier, bytes calldata data) internal {
         bytes1 context = data[CONTEXT_POS];
@@ -389,7 +398,7 @@ contract CatalystChainInterface is Ownable, ICrossChainReceiver, Bytes65, IMessa
 
     /**
      * @notice Cross-chain message failure handler
-     * @dev Should never revert.
+     * @dev Should never revert. (on valid messages)
      */
     function _onPacketFailure(bytes32 destinationIdentifier, bytes calldata data) internal {
         bytes1 context = data[CONTEXT_POS];
@@ -445,19 +454,21 @@ contract CatalystChainInterface is Ownable, ICrossChainReceiver, Bytes65, IMessa
 
     /**
      * @notice The Acknowledgement package handler
-     * @dev Should never revert.
+     * @dev Should never revert. (on valid messages)
      * @param destinationIdentifier Identifier for the destination chain
      * @param acknowledgement The acknowledgement bytes for the cross-chain swap.
      */
     function ackMessage(bytes32 destinationIdentifier, bytes32 messageIdentifier, bytes calldata acknowledgement) onlyGARP external {
         // If the transaction executed but some logic failed, an ack is sent back with an error acknowledgement.
         // This is known as "fail on ack". The package should be failed.
+        // The acknowledgement is prepended the message, so we need to fetch it.
+        // Then, we need to ignore it when passing the data to the handlers.
         bytes1 swapStatus = acknowledgement[0];
         if (swapStatus != 0x00) {
-            emit SwapFailed(swapStatus);
+            emit SwapFailed(swapStatus);  // The acknowledgement can be mapped to get some information about what happened.
             return _onPacketFailure(destinationIdentifier, acknowledgement[1:]);
         }
-        // Otherwise, it must be a success:
+        // Otherwise, swapStatus == 0x00 which implies success.
         _onPacketSuccess(destinationIdentifier, acknowledgement[1:]);
     }
 
@@ -468,10 +479,10 @@ contract CatalystChainInterface is Ownable, ICrossChainReceiver, Bytes65, IMessa
      * @param message The message sent by the source chain.
      * @return acknowledgement The acknowledgement status of the transaction after execution.
      */
-    function receiveMessage(bytes32 sourceIdentifier, bytes32 messageIdentifier, bytes calldata fromApplication, bytes calldata message) onlyGARP verifySourceChainAddress(sourceIdentifier, fromApplication) external override returns (bytes memory acknowledgement) {
+    function receiveMessage(bytes32 sourceIdentifier, bytes32 /* messageIdentifier */, bytes calldata fromApplication, bytes calldata message) onlyGARP verifySourceChainAddress(sourceIdentifier, fromApplication) external override returns (bytes memory acknowledgement) {
         bytes1 swapStatus = _receiveMessage(sourceIdentifier, message);
 
-        return bytes.concat(
+        return acknowledgement = bytes.concat(
             swapStatus,
             message
         );
@@ -490,6 +501,8 @@ contract CatalystChainInterface is Ownable, ICrossChainReceiver, Bytes65, IMessa
         if (uint256(bytes32(data[TO_ACCOUNT_START:TO_ACCOUNT_START+32])) != 0) revert InvalidAddress();  // Check first 32 bytes are 0.
         if (uint96(bytes12(data[TO_ACCOUNT_START+32:TO_ACCOUNT_START_EVM])) != 0) revert InvalidAddress();  // Check the next 32-20=12 bytes are 0.
         // To vault will not be checked. If it is assumed that any error is random, then an incorrect toVault will result in the call failling.
+        // The reason toAccount is checked is that any to account will be treated as valid. So any random error will result
+        // in lost funds.
 
         if (context == CTX0_ASSET_SWAP) {
             return acknowledgement = _handleOrdinarySwap(sourceIdentifier, data, 0);
