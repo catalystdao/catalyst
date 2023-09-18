@@ -262,8 +262,12 @@ mod test_catalyst_executor {
 
         let mock_vault_config = MockVault::new(&mut test_env);
 
+        // Include a zero-valued deposit amount.
         let deposit_amounts: Vec<_> = mock_vault_config.vault_assets.iter()
-            .map(|asset| coin(100u128, asset.denom.clone()))
+            .enumerate()
+            .map(|(index, asset)| {
+                coin(100u128 * index as u128, asset.denom.clone())  // Multiply by 'index' to make the first asset amount 0
+            })
             .collect();
 
         fund_account(
