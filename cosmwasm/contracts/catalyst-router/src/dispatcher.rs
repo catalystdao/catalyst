@@ -197,3 +197,160 @@ pub fn resume_dispatching(
         }
     }
 }
+
+
+
+#[cfg(test)]
+mod test_dispatch_order {
+    use cosmwasm_std::{CosmosMsg, Empty, SubMsg, ReplyOn};
+
+    use crate::msg::{get_reply_allow_revert_flag, get_reply_is_last_flag, get_reply_command_index};
+
+    use super::DispatchOrder;
+
+    const MOCK_COSMOS_MSG: CosmosMsg = CosmosMsg::Custom(Empty {});
+
+
+    #[test]
+    fn test_dispatch_order_to_sub_msg() {
+
+        let message_index = 67usize;
+
+        let dispatch_order = DispatchOrder {
+            message: MOCK_COSMOS_MSG,
+            message_index,
+            allow_revert: false,
+            is_last: false,
+        };
+
+
+
+        // Tested action
+        let sub_msg: SubMsg = dispatch_order.into();
+
+
+
+        assert_eq!(
+            sub_msg.reply_on,
+            ReplyOn::Always
+        );
+
+        assert_eq!(
+            message_index,
+            get_reply_command_index(sub_msg.id)
+        );
+
+        assert!(
+            !get_reply_allow_revert_flag(sub_msg.id)
+        );
+
+        assert!(
+            !get_reply_is_last_flag(sub_msg.id)
+        );
+    }
+
+
+    #[test]
+    fn test_dispatch_order_to_sub_msg_allow_revert() {
+
+        let message_index = 67usize;
+
+        let dispatch_order = DispatchOrder {
+            message: MOCK_COSMOS_MSG,
+            message_index,
+            allow_revert: true,     // ! allow revert
+            is_last: false,
+        };
+
+
+
+        // Tested action
+        let sub_msg: SubMsg = dispatch_order.into();
+
+
+
+
+        assert_eq!(
+            message_index,
+            get_reply_command_index(sub_msg.id)
+        );
+
+        assert!(
+            get_reply_allow_revert_flag(sub_msg.id)
+        );
+
+        assert!(
+            !get_reply_is_last_flag(sub_msg.id)
+        );
+    }
+
+
+    #[test]
+    fn test_dispatch_order_to_sub_msg_is_last() {
+
+        let message_index = 67usize;
+
+        let dispatch_order = DispatchOrder {
+            message: MOCK_COSMOS_MSG,
+            message_index,
+            allow_revert: false,
+            is_last: true,          // ! is last
+        };
+
+
+
+        // Tested action
+        let sub_msg: SubMsg = dispatch_order.into();
+
+
+
+
+        assert_eq!(
+            message_index,
+            get_reply_command_index(sub_msg.id)
+        );
+
+        assert!(
+            !get_reply_allow_revert_flag(sub_msg.id)
+        );
+
+        assert!(
+            get_reply_is_last_flag(sub_msg.id)
+        );
+    }
+
+
+    #[test]
+    fn test_dispatch_order_to_sub_msg_allow_revert_and_is_last() {
+
+        let message_index = 67usize;
+
+        let dispatch_order = DispatchOrder {
+            message: MOCK_COSMOS_MSG,
+            message_index,
+            allow_revert: true,     // ! allow revert
+            is_last: true,          // ! is last
+        };
+
+
+
+        // Tested action
+        let sub_msg: SubMsg = dispatch_order.into();
+
+
+
+
+        assert_eq!(
+            message_index,
+            get_reply_command_index(sub_msg.id)
+        );
+
+        assert!(
+            get_reply_allow_revert_flag(sub_msg.id)
+        );
+
+        assert!(
+            get_reply_is_last_flag(sub_msg.id)
+        );
+    }
+}
