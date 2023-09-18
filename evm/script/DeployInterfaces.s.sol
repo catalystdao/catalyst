@@ -3,7 +3,7 @@ pragma solidity 0.8.17;
 
 import "forge-std/Script.sol";
 import {stdJson} from "forge-std/StdJson.sol";
-import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
+import { Strings } from "openzeppelin-contracts/contracts/utils/Strings.sol";
 
 import { CatalystChainInterface } from "../src/CatalystChainInterface.sol";
 

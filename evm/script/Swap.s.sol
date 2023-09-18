@@ -4,7 +4,7 @@ pragma solidity 0.8.17;
 import "forge-std/Script.sol";
 import {stdJson} from "forge-std/StdJson.sol";
 import { Permit2 } from "../lib/permit2/src/Permit2.sol";
-import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
+import { Strings } from "openzeppelin-contracts/contracts/utils/Strings.sol";
 import { Token } from "../test/mocks/token.sol";
 import { IWETH } from "./IWETH.sol";
 import { ICatalystV1Vault } from "../src/ICatalystV1Vault.sol";

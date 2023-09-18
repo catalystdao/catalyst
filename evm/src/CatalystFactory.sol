@@ -2,11 +2,11 @@
 
 pragma solidity ^0.8.16;
 
-import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
+import { Ownable } from "openzeppelin-contracts/contracts/access/Ownable.sol";
 import { ERC20 } from 'solmate/src/tokens/ERC20.sol';
 import { SafeTransferLib } from 'solmate/src/utils/SafeTransferLib.sol';
 import { ICatalystV1Vault } from "./ICatalystV1Vault.sol";
-import { Clones } from "@openzeppelin/contracts/proxy/Clones.sol";
+import { Clones } from "openzeppelin-contracts/contracts/proxy/Clones.sol";
 import { ICatalystV1Factory } from "./interfaces/ICatalystV1Factory.sol";
 
 uint256 constant MAX_GOVERNANCE_FEE_SHARE = 75e16;   // 75%

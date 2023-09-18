@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.16;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "openzeppelin-contracts/contracts/access/Ownable.sol";
 import "../interfaces/ICatalystV1VaultImmutables.sol";
 import "./interfaces/ICatalystMathLibCommon.sol";
 import "../CatalystFactory.sol";

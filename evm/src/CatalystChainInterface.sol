@@ -8,7 +8,7 @@ import { IMessageEscrowStructs } from "GeneralisedIncentives/src/interfaces/IMes
 import { IIncentivizedMessageEscrow } from "GeneralisedIncentives/src/interfaces/IIncentivizedMessageEscrow.sol";
 import { ICatalystReceiver } from "./interfaces/IOnCatalyst.sol";
 import { ICatalystV1Vault } from "./ICatalystV1Vault.sol";
-import { Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import { Ownable} from "openzeppelin-contracts/contracts/access/Ownable.sol";
 import "./ICatalystV1Vault.sol";
 import "./interfaces/ICatalystV1VaultState.sol"; // structs
 import "./CatalystPayload.sol";
