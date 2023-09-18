@@ -483,6 +483,95 @@ mod test_execution_logic {
     }
 
 
+    /// Like `test_router_commands_failed_command_submessage`, but with the **last** message being
+    /// the one that fails. This test intends to verify that the 'command index' variable is
+    /// correctly computed when resuming dispatching on the `reply` handler.
+    #[test]
+    fn test_router_commands_failed_command_submessage_last() {
+
+        let mut test_env = TestNativeAssetEnv::initialize(SETUP_MASTER.to_string());
+        let assets = test_env.get_assets()[..2].to_vec();
+
+        let router = mock_instantiate_router(test_env.get_app());
+        let amount = coin(1000u128, assets[0].denom.clone());
+
+        let mut command_orders = vec![
+            CommandOrder {                                  // ! Perform balance check
+                command: CommandMsg::BalanceCheck {
+                    denoms: vec![amount.denom.clone()],
+                    minimum_amounts: vec![Uint128::one()],
+                    account: Account::Router,
+                },
+                allow_revert: false
+            },
+            CommandOrder {                                  // ! Perform balance check
+                command: CommandMsg::BalanceCheck {
+                    denoms: vec![amount.denom.clone()],
+                    minimum_amounts: vec![Uint128::one()],
+                    account: Account::Router,
+                },
+                allow_revert: false
+            },
+            CommandOrder {                                  // ! Create a CosmosMsg
+                command: CommandMsg::Transfer {
+                    amounts: vec![CoinAmount::Coin(amount.clone())],
+                    recipient: Account::Sender
+                },
+                allow_revert: false
+            },
+            CommandOrder {                                  // ! Create a failing CosmosMsg
+                command: CommandMsg::Transfer {
+                    amounts: vec![CoinAmount::Coin(amount.clone())],
+                    recipient: Account::Sender
+                },
+                allow_revert: false
+            },
+        ];
+
+
+
+        // Tested action 1: 'allow_revert' set to 'false'
+        let result = test_env.execute_contract(
+            Addr::unchecked(SETUP_MASTER),
+            router.clone(),
+            &ExecuteMsg::Execute {
+                command_orders: command_orders.clone(),
+                deadline: None
+            },
+            vec![assets[0].clone()],
+            vec![amount.amount]
+        );
+
+        // Make sure the transaction fails
+        assert!(matches!(
+            result.err().unwrap().downcast().unwrap(),
+            ContractError::CommandReverted { index, error: _ }
+                if index == 3   // ! Make sure that the failing message is the fourth one (index=3).
+        ));
+
+
+
+        // Tested action 2: 'allow_revert' set to 'true'
+        command_orders[3].allow_revert = true;
+        let result = test_env.execute_contract(
+            Addr::unchecked(SETUP_MASTER),
+            router,
+            &ExecuteMsg::Execute {
+                command_orders,
+                deadline: None
+            },
+            vec![assets[0].clone()],
+            vec![amount.amount]
+        );
+
+        // Make sure the transaction passes
+        assert!(
+            result.is_ok()
+        );
+
+    }
+
+
     #[test]
     fn test_router_commands_failed_command_check() {
 
