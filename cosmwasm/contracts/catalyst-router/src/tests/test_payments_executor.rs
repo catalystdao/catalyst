@@ -9,7 +9,7 @@ mod test_payments_executor {
 
     use crate::commands::CommandResult;
     use crate::error::ContractError;
-    use crate::executors::payments::{execute_sweep, execute_transfer, execute_pay_portion, execute_balance_check};
+    use crate::executors::payments::{execute_sweep, execute_transfer, execute_pay_portion, execute_balance_check, execute_sweep_all};
     use crate::executors::types::{Account, CoinAmount};
     use crate::tests::helpers::{ROUTER, RECIPIENT, run_command_result, fund_account};
 
@@ -248,6 +248,108 @@ mod test_payments_executor {
             ContractError::InvalidParameters { reason }
                 if reason == "denoms/minimum_amounts count mismatch".to_string()
         ))
+
+    }
+
+
+
+    // Sweep All Tests
+    // ********************************************************************************************
+
+    #[test]
+    fn test_sweep_all_command() {
+
+        let mut test_env = TestNativeAssetEnv::initialize(SETUP_MASTER.to_string());
+
+        let assets =  test_env.get_assets()[..2].to_vec();
+
+        let router_funds = vec![
+            Coin::new(1234u128, assets[0].denom.clone()),
+            Coin::new(5678u128, assets[1].denom.clone())
+        ];
+
+
+
+        // Tested action
+        // NOTE: Using `mock_dependencies` and `mock_env` effectively results in the 'execution' 
+        // of the following command to **NOT** be within the `cw_multi_test::App` simulation
+        // logic. This is fine as long as any required application state is replicated on the 
+        // `mock_dependencies` and `mock_env`.
+        let command_result = execute_sweep_all(
+            &mock_dependencies_with_balance(&router_funds).as_ref(),
+            &mock_env(),
+            Account::Address(RECIPIENT.to_string())
+        ).unwrap();
+
+
+
+        // Verify the result message works
+        fund_account(
+            &mut test_env,
+            Addr::unchecked(ROUTER),
+            router_funds.clone()
+        );
+        run_command_result(
+            &mut test_env,
+            Addr::unchecked(ROUTER),
+            command_result
+        );
+
+        // Verify the funds have been received by the recipient
+        router_funds.into_iter()
+            .for_each(|coin| {
+                assert_eq!(
+                    test_env.get_app()
+                        .wrap()
+                        .query_balance(RECIPIENT, coin.denom.clone())
+                        .unwrap(),
+                    coin
+                )
+            });
+
+        // Verify the router has no funds left
+        let router_coins = test_env.get_app()
+            .wrap()
+            .query_all_balances(ROUTER.to_string())
+            .unwrap();
+        assert!(router_coins.len() == 0);
+
+    }
+
+
+    #[test]
+    fn test_sweep_all_command_no_funds() {
+
+        let mut test_env = TestNativeAssetEnv::initialize(SETUP_MASTER.to_string());
+
+
+
+        // Tested action
+        // NOTE: Using `mock_dependencies` and `mock_env` effectively results in the 'execution' 
+        // of the following command to **NOT** be within the `cw_multi_test::App` simulation
+        // logic. This is fine as long as any required application state is replicated on the 
+        // `mock_dependencies` and `mock_env`.
+        let command_result = execute_sweep_all(
+            &mock_dependencies().as_ref(),      // ! Do not set any funds for the router
+            &mock_env(),
+            Account::Address(RECIPIENT.to_string())
+        ).unwrap();
+
+
+
+        // Verify the result message works
+        run_command_result(
+            &mut test_env,
+            Addr::unchecked(ROUTER),
+            command_result
+        );
+
+        // Verify the router has no funds
+        let router_coins = test_env.get_app()
+            .wrap()
+            .query_all_balances(ROUTER.to_string())
+            .unwrap();
+        assert!(router_coins.len() == 0);
 
     }
 
