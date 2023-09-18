@@ -107,11 +107,11 @@ contract DeployContracts is Script {
 
         deployFactory(0xecb27b5741b5f2273f40ac08abfad1bbdd9205460aa8a99887a088b69338492d);
 
-        deploy_volatile_mathlib(0x86e62d84e2e6f2f0e8a0da8bfd9ba70703f1e33cebf81329387b131a11dd7d43);
-        deploy_amplified_mathlib(0xa05704bddab346efe587e3ed02eba725eb470d45ef4f228f1af96e1f82c42e79);
+        deploy_volatile_mathlib(0xa5015afd43b55c526060c73a8ff50bd4935b7ce89fda26b5af063463c8fc25d2);
+        deploy_amplified_mathlib(0xd110856a7a3360942ce1fb0123bbe7f165d77479c9ff8a06904384c1e3df3bc6);
 
-        deploy_volatile_template(0x64483c70da87dea70d9addf0fb8214ee5cee6ba57c07f9b16eb8a36312159f9d);
-        deploy_amplified_template(0xa7de7e9e7700702c2c0f3f4b3dcc6b5e300b1171a65e580e78a9f0b528209dc4);
+        deploy_volatile_template(0x41d057d951d17f247c64145d3e39b3d3fdc3593fe25c73300df5a44b8632f668);
+        deploy_amplified_template(0x605a5e4a0939267fff0c526b9907539a893e0e4e0cfdb16d7393250c4750fe2d);
 
         // Deploy Registry
         deploy_describer(bytes32(0));

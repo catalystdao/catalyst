@@ -13,6 +13,8 @@ import { CatalystDescriber } from "../src/registry/CatalystDescriber.sol";
 
 // Generalised Incentives
 import { IncentivizedMockEscrow } from "GeneralisedIncentives/src/apps/mock/IncentivizedMockEscrow.sol";
+import { IncentivizedWormholeEscrow } from "GeneralisedIncentives/src/apps/wormhole/IncentivizedWormholeEscrow.sol";
+
 
 contract DeployInterfaces is BaseMultiChainDeployer {
     using stdJson for string;
@@ -28,8 +30,16 @@ contract DeployInterfaces is BaseMultiChainDeployer {
 
     bytes32 constant KECCACK_OF_NOTHING = 0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470;
 
+    mapping(Chains => address) wormholeBridge;
+
     constructor() {
         interfaceSalt[0x000000641AC10b4e000fe361F2149E2a531061c5] = bytes32(0xd2c66ec619a687874ed1cbc01390b279ae3822887485f5ee26b1fa083dcaf1f9);
+
+        interfaceSalt[0x000000ED80503e3A7EA614FFB5507FD52584a1f2] = bytes32(0x314f61d3dc0fe23dd68890ad2fd2a850756a315992df95875553848ffd843840);
+
+        wormholeBridge[Chains.Sepolia] = 0x4a8bc80Ed5a4067f1CCf107057b8270E0cC11A78;
+
+        wormholeBridge[Chains.Mumbai] = 0x0CBE91CF822c73C2315FB05100C2F714765d5c20;
     }
 
     function deployGeneralisedIncentives(string memory version, bytes32 chainIdentifier) internal returns(address incentive) {
@@ -50,7 +60,14 @@ contract DeployInterfaces is BaseMultiChainDeployer {
             vm.startBroadcast(pk);
 
         } else if (keccak256(abi.encodePacked(version)) == keccak256(abi.encodePacked("Wormhole"))) {
-            revert IncentivesIdNotFound();
+            vm.stopBroadcast();
+            uint256 pv_key = vm.envUint("WORMHOLE_DEPLOYER");
+            vm.startBroadcast(pv_key);
+
+            incentive = address(new IncentivizedWormholeEscrow(wormholeBridge[chain]));
+
+            vm.stopBroadcast();
+            vm.startBroadcast(pk);
         } else {
             revert IncentivesIdNotFound();
         }
@@ -80,6 +97,7 @@ contract DeployInterfaces is BaseMultiChainDeployer {
     function deployBaseInterfaces(bytes32 chainIdentifier) forEachInterface() internal {
         // Get the address of the incentives contract.
         address incentiveAddress = abi.decode(config_interfaces.parseRaw(string.concat(".", rpc[chain], ".", incentiveVersion, ".incentive")), (address));
+        console.log(incentiveVersion);
         if (incentiveAddress.codehash != bytes32(0)) {
             console.logAddress(incentiveAddress);
             return;

@@ -7,13 +7,14 @@ import {SafeTransferLib} from 'solmate/src/utils/SafeTransferLib.sol';
 import { IMessageEscrowStructs } from "GeneralisedIncentives/src/interfaces/IMessageEscrowStructs.sol";
 import { IIncentivizedMessageEscrow } from "GeneralisedIncentives/src/interfaces/IIncentivizedMessageEscrow.sol";
 import { ICatalystReceiver } from "./interfaces/IOnCatalyst.sol";
-import { ICrossChainReceiver } from "GeneralisedIncentives/src/interfaces/ICrossChainReceiver.sol";
 import { ICatalystV1Vault } from "./ICatalystV1Vault.sol";
 import { Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import "./ICatalystV1Vault.sol";
 import "./interfaces/ICatalystV1VaultState.sol"; // structs
 import "./CatalystPayload.sol";
 import { Bytes65 } from "GeneralisedIncentives/src/utils/Bytes65.sol";
+
+import { ICatalystChainInterface } from "./interfaces/ICatalystChainInterface.sol";
 
 /**
  * @title Catalyst: Generalised IBC Interface
@@ -25,7 +26,7 @@ import { Bytes65 } from "GeneralisedIncentives/src/utils/Bytes65.sol";
  * development of the vaults and allows Catalyst to adopt or change
  * message routers with more flexibility.
  */
-contract CatalystChainInterface is Ownable, ICrossChainReceiver, Bytes65, IMessageEscrowStructs {
+contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
     using SafeTransferLib for ERC20;
     
     //--- ERRORS ---//
@@ -138,13 +139,13 @@ contract CatalystChainInterface is Ownable, ICrossChainReceiver, Bytes65, IMessa
 
     /// @notice Allow updating of the minimum gas limit.
     /// @dev Set chainIdentifier to 0 for gas for ack. 
-    function setMinGasFor(bytes32 chainIdentifier, uint48 minGas) external onlyOwner {
+    function setMinGasFor(bytes32 chainIdentifier, uint48 minGas) override external onlyOwner {
         minGasFor[chainIdentifier] = minGas;
 
         emit MinGasFor(chainIdentifier, minGas);
     }
 
-    function setMaxUnderwritingDuration(uint256 newMaxUnderwriteDuration) onlyOwner external {
+    function setMaxUnderwritingDuration(uint256 newMaxUnderwriteDuration) onlyOwner override external {
         // If the underwriting duration is too long, users can freeze up a lot of value for not a lot of cost.
         if (newMaxUnderwriteDuration > 15 days) revert MaxUnderwriteDurationTooLong();
 
@@ -188,7 +189,7 @@ contract CatalystChainInterface is Ownable, ICrossChainReceiver, Bytes65, IMessa
 
     /// @notice Estimate the addition verification cost beyond the 
     /// cost paid to the relayer.
-    function estimateAdditionalCost() external view returns(address asset, uint256 amount) {
+    function estimateAdditionalCost() override external view returns(address asset, uint256 amount) {
         (asset, amount) = GARP.estimateAdditionalCost();
     }
 
@@ -213,7 +214,7 @@ contract CatalystChainInterface is Ownable, ICrossChainReceiver, Bytes65, IMessa
     /// @dev To simplify the implementation, each chain can only be setup once. This reduces governance risks.
     /// @param remoteCCI The bytes65 encoded address on the destination chain.
     /// @param remoteGARP The messaging router encoded address on the destination chain.
-    function connectNewChain(bytes32 chainIdentifier, bytes calldata remoteCCI, bytes calldata remoteGARP) onlyOwner checkBytes65Address(remoteCCI) external {
+    function connectNewChain(bytes32 chainIdentifier, bytes calldata remoteCCI, bytes calldata remoteGARP) onlyOwner checkBytes65Address(remoteCCI) override external {
         // Check if the chain has already been set.
         // If it has, we don't allow setting it as another. This would impact existing pools.
         if (keccak256(chainIdentifierToDestinationAddress[chainIdentifier]) != KECCACK_OF_NOTHING) revert ChainAlreadySetup();
@@ -248,7 +249,7 @@ contract CatalystChainInterface is Ownable, ICrossChainReceiver, Bytes65, IMessa
         uint256 fromAmount,
         address fromAsset,
         bytes calldata calldata_
-    ) checkRouteDescription(routeDescription) external payable {
+    ) checkRouteDescription(routeDescription) override external payable {
         // We need to ensure that all information is in the correct places. This ensures that calls to this contract
         // will always be decoded semi-correctly even if the input is very incorrect. This also checks that the user 
         // inputs into the swap contracts are correct while making the cross-chain interface flexible for future implementations.
@@ -306,7 +307,7 @@ contract CatalystChainInterface is Ownable, ICrossChainReceiver, Bytes65, IMessa
         uint256[2] calldata minOut,
         uint256 fromAmount,
         bytes memory calldata_
-    ) checkRouteDescription(routeDescription) external payable {
+    ) checkRouteDescription(routeDescription) override external payable {
         // We need to ensure that all information is in the correct places. This ensures that calls to this contract
         // will always be decoded semi-correctly even if the input is very incorrect. This also checks that the user 
         // inputs into the swap contracts are correct while making the cross-chain interface flexible for future implementations.
@@ -458,7 +459,7 @@ contract CatalystChainInterface is Ownable, ICrossChainReceiver, Bytes65, IMessa
      * @param destinationIdentifier Identifier for the destination chain
      * @param acknowledgement The acknowledgement bytes for the cross-chain swap.
      */
-    function ackMessage(bytes32 destinationIdentifier, bytes32 messageIdentifier, bytes calldata acknowledgement) onlyGARP external {
+    function ackMessage(bytes32 destinationIdentifier, bytes32 messageIdentifier, bytes calldata acknowledgement) onlyGARP override external {
         // If the transaction executed but some logic failed, an ack is sent back with an error acknowledgement.
         // This is known as "fail on ack". The package should be failed.
         // The acknowledgement is prepended the message, so we need to fetch it.
@@ -479,7 +480,7 @@ contract CatalystChainInterface is Ownable, ICrossChainReceiver, Bytes65, IMessa
      * @param message The message sent by the source chain.
      * @return acknowledgement The acknowledgement status of the transaction after execution.
      */
-    function receiveMessage(bytes32 sourceIdentifier, bytes32 /* messageIdentifier */, bytes calldata fromApplication, bytes calldata message) onlyGARP verifySourceChainAddress(sourceIdentifier, fromApplication) external override returns (bytes memory acknowledgement) {
+    function receiveMessage(bytes32 sourceIdentifier, bytes32 /* messageIdentifier */, bytes calldata fromApplication, bytes calldata message) onlyGARP verifySourceChainAddress(sourceIdentifier, fromApplication) override external returns (bytes memory acknowledgement) {
         bytes1 swapStatus = _receiveMessage(sourceIdentifier, message);
 
         return acknowledgement = bytes.concat(
@@ -657,7 +658,7 @@ contract CatalystChainInterface is Ownable, ICrossChainReceiver, Bytes65, IMessa
         uint256 fromAmount,
         uint16 underwritePercentageX16,
         bytes calldata cdata
-    ) external pure returns (bytes32 identifier) {
+    ) override external pure returns (bytes32 identifier) {
         return identifier = _getUnderwriteIdentifier(
             targetVault,
             toAsset,
@@ -688,7 +689,7 @@ contract CatalystChainInterface is Ownable, ICrossChainReceiver, Bytes65, IMessa
         uint256 fromAmount,
         uint16 underwritePercentageX16,
         bytes calldata cdata
-    ) external {
+    ) override external {
         if (!ICatalystV1Vault(targetVault)._vaultConnection(sourceIdentifier, fromVault)) revert NoVaultConnection();
 
         underwrite(
@@ -844,7 +845,7 @@ contract CatalystChainInterface is Ownable, ICrossChainReceiver, Bytes65, IMessa
         uint256 fromAmount,
         uint16 underwritePercentageX16,
         bytes calldata cdata
-    ) external {
+    ) override external {
         bytes32 identifier = _getUnderwriteIdentifier(
             targetVault,
             toAsset,
@@ -950,7 +951,7 @@ contract CatalystChainInterface is Ownable, ICrossChainReceiver, Bytes65, IMessa
         address fromAsset,
         uint16 underwritePercentageX16,
         bytes calldata calldata_
-    ) checkRouteDescription(routeDescription) external payable {
+    ) checkRouteDescription(routeDescription) override external payable {
         // We need to ensure that all information is in the correct places. This ensures that calls to this contract
         // will always be decoded semi-correctly even if the input is very incorrect. This also checks that the user 
         // inputs into the swap contracts are correct while making the cross-chain interface flexible for future implementations.
@@ -1056,7 +1057,7 @@ contract CatalystChainInterface is Ownable, ICrossChainReceiver, Bytes65, IMessa
         uint256 fromAmount,
         address fromAsset,
         bytes calldata calldata_
-    ) checkRouteDescription(routeDescription) external payable {
+    ) checkRouteDescription(routeDescription) override external payable {
         // We need to ensure that all information is in the correct places. This ensures that calls to this contract
         // will always be decoded semi-correctly even if the input is very incorrect. This also checks that the user 
         // inputs into the swap contracts are correct while making the cross-chain interface flexible for future implementations.

@@ -16,7 +16,7 @@ More specifically, the code structure is as follows:
   - `CatalystVaultAmplified.sol` : Extends `CatalystVaultCommon.sol` with the price curve $P(w) = \left(1 - \theta\right) \frac{W}{(W w)^\theta}$.
   - `FixedPointMathLib.sol` : The mathematical library used by Catalyst (based on the [solmate](https://github.com/transmissions11/solmate/blob/ed67feda67b24fdeff8ad1032360f0ee6047ba0a/src/utils/FixedPointMathLib.sol)).
 - `CatalystFactory.sol` : Simplifies the deployment of vaults via Open Zeppelin's *Clones*: vaults are deployed as minimal proxies which delegate call to the above vault contracts. This significantly reduces vault deployment cost.
-- `CatalystIBCInterface.sol` : Bridges the Catalyst protocol with the message router of choice.
+- `CatalystChainInterface.sol` : Bridges the Catalyst protocol with [Generalised Incentives](https://github.com/catalystdao/GeneralisedIncentives) which enables Catalyst to support any AMB through the same interface and with the same impact on user experience.
 
 # Catalyst Contracts
 
@@ -42,11 +42,11 @@ Extends `CatalystVaultCommon.sol` with the price curve $P(w) = \left(1 - \theta\
 
 `CatalystFactory.sol` handles the deployment and configuration of Catalyst vaults proxy contracts within a single call.
 
-## CatalystIBCInterface.sol
+## CatalystChainInterface.sol
 
-An intermediate contract designed to interface Catalyst vaults with an IBC compliant messaging router. It wraps and unwraps the swaps calls to and from byte arrays so that they can be seamlessly sent and received by the router.
+An intermediate contract designed to interface Catalyst vaults with [Generalised Incentives](https://github.com/catalystdao/GeneralisedIncentives) AMB interfaces. It wraps and unwraps swap calls to and from byte arrays. Furthermore, it also allows swaps to be underwritten where an external actor takes on the confirmation risk of the swap.
 
-Catalyst v1 implements 2 type of swaps, *Asset Swaps* and *Liquidity Swaps*. The byte array specification for these can be found in `/contracts/CatalystPayload.sol`.
+Catalyst v1 implements 4 type of swaps, *Asset Swaps*, *Liquidity Swaps*, *Please Underwrite*, and *Purpose Underwrite*. The byte array specification for these can be found in `/contracts/CatalystPayload.sol`.
 
 - <u>`0x00`: Asset Swap</u><br/> Swaps with context `0x00` define asset swaps. Although primarily designed for cross-chain asset swaps, there is nothing from stopping a user of *Asset Swapping* between 2 vaults on the same chain.
 - <u>`0x01`: Liquidity Swap</u><br/> Swaps with context `0x01` define liquidity swaps. These reduce the cost of rebalancing the liquidity distribution across vaults by combining the following steps into a single transaction:
@@ -54,24 +54,23 @@ Catalyst v1 implements 2 type of swaps, *Asset Swaps* and *Liquidity Swaps*. The
   2. Convert tokens to units and transfer to target vault
   3. Convert units to an even mix of tokens
   4. Deposit the tokens into the vault.
-
-Refer to the helpers `encode_swap_payload` and `decode_payload` on `tests/catalyst/utils/vault_utils.py` for examples on how to encode and decode a Catalyst message.
-
-# EVM Development
-
-This repository uses Brownie for the development, testing and deployment of the smart contracts. Brownie can handle multiple versions of Solidity and Vyper and will automatically combine contracts to be deploy-ready.
+- <u>`0x02`: Please Underwrite</u><br/> Swaps with context `0x02` are very similar to Asset Swaps. If they aren't underwritten, they will fallback to the same handler as Asset Swaps. Unlike Asset Swaps, they can be underwritten allowing traders to get almost immediate cross-chain swap execution. This includes any additional logic associated with the swap.
+- <u>`0x03`: Purpose Underwrite</u><br/> Swaps with context `0x03` are very different to Please Underwrite. Unlike Please Underwrite, this type of swap is intended to be used to fill already executed underwrites rather than being underwritten. If the swap arrives with no matching underwrite, the swap entirely reverts.
 
 ## Dev dependencies
 
-Note that the following dependencies have been tested to work with `python3.9`. The installation steps included here are for reference only, please refer to the specific documentation of each of the mentioned packages for further information.
-
-- Install the `ganache-cli` globaly (required by `brownie`)
+- Install`foundryup`
   
-  - `pnpm install -g ganache`
+  - `https://book.getfoundry.sh/getting-started/installation`
+  - or read https://book.getfoundry.sh/getting-started/installation
 
-- Install the contract templates [@openzeppelin/contracts](https://www.npmjs.com/package/@openzeppelin/contracts) and [Solmate](https://www.npmjs.com/package/solmate)
+- Install the oz contracts [@openzeppelin/contracts](https://www.npmjs.com/package/@openzeppelin/contracts) and [Solmate](https://www.npmjs.com/package/solmate)
   
   - `pnpm install` (run from the `evm` root directory)
+
+- Fetch the submodules:
+
+  - `git submodule update --init`
 
 - Install `eth-brownie`
   

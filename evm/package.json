@@ -2,6 +2,7 @@
   "dependencies": {
     "@openzeppelin/contracts": "^4.8.1",
     "commitlint": "^14.1.0",
+    "solady": "^0.0.123",
     "solium": "^1.2.5",
     "solmate": "^6.7.0"
   },

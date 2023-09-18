@@ -11,6 +11,9 @@ dependencies:
   commitlint:
     specifier: ^14.1.0
     version: 14.1.0
+  solady:
+    specifier: ^0.0.123
+    version: 0.0.123
   solium:
     specifier: ^1.2.5
     version: 1.2.5
@@ -2342,6 +2345,10 @@ packages:
 
   /sol-explore@1.6.1:
     resolution: {integrity: sha1-tZ8HPGn+MyVg1aEMMrqMp/KYbPs=}
+
+  /solady@0.0.123:
+    resolution: {integrity: sha512-F/B8OMCplGsS4FrdPrnEG0xdg8HKede5PwC+Rum8soj/LWxfKckA0p+Uwnlbgey2iI82IHvmSOCNhsdbA+lUrw==}
+    dev: false
 
   /solidity-comments-extractor@0.0.7:
     resolution: {integrity: sha512-wciNMLg/Irp8OKGrh3S2tfvZiZ0NEyILfcRCXCD4mp7SgK/i9gzLfhY2hY7VMCQJ3kH9UB9BzNdibIVMchzyYw==}
