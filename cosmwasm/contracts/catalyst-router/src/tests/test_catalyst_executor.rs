@@ -1,15 +1,16 @@
 mod test_catalyst_executor {
     use catalyst_types::U256;
     use cosmwasm_std::testing::{mock_dependencies, mock_env};
-    use cosmwasm_std::{Uint64, Uint128, Addr, coin, Binary};
+    use cosmwasm_std::{Uint64, Uint128, Addr, coin, Binary, CosmosMsg, BankMsg, Deps, QuerierWrapper, Env, ContractInfo};
 
+    use cw_multi_test::Executor;
     use test_helpers::asset::CustomTestAsset;
     use test_helpers::definitions::{SETUP_MASTER, VAULT_TOKEN_DENOM};
     use test_helpers::env::CustomTestEnv;
     use test_helpers::env::env_native_asset::TestNativeAssetEnv;
     use test_helpers::misc::encode_payload_address;
 
-    use crate::executors::catalyst::{execute_local_swap, execute_send_asset, execute_send_liquidity, execute_deposit_mixed, execute_withdraw_mixed, execute_withdraw_all};
+    use crate::executors::catalyst::{execute_local_swap, execute_send_asset, execute_send_liquidity, execute_deposit_mixed, execute_withdraw_mixed, execute_withdraw_all, get_vault_token_amount};
     use crate::executors::types::{CoinAmount, Amount};
     use crate::tests::helpers::{MockVault, ROUTER, run_command_result, fund_account};
 
@@ -297,6 +298,82 @@ mod test_catalyst_executor {
         assert_eq!(
             response.events[1].ty,
             "wasm-deposit".to_string()
+        );
+    }
+
+
+    #[test]
+    fn test_get_vault_token_amount() {
+
+        let mut test_env = TestNativeAssetEnv::initialize(SETUP_MASTER.to_string());
+
+        let mock_vault_config = MockVault::new(&mut test_env);
+        let vault = mock_vault_config.vault;
+
+
+
+        // Tested action 1: Value amount
+        let value = Uint128::new(909u128);
+        let amount = Amount::Amount(value);
+
+        let helper_result = get_vault_token_amount(
+            &mock_dependencies().as_ref(),
+            &mock_env(),
+            vault.to_string(),
+            amount
+        ).unwrap();
+
+        assert_eq!(
+            helper_result,
+            value
+        );
+
+
+
+        // Tested action 2: Router balance
+        let router_balance = Uint128::new(543u128);
+        let denom = format!("factory/{}/{}", vault.clone(), VAULT_TOKEN_DENOM.to_string());
+        let amount = Amount::RouterBalance();
+
+        // Send amount to the router
+        test_env.get_app().execute(
+            Addr::unchecked(SETUP_MASTER),
+            CosmosMsg::Bank(BankMsg::Send {
+                to_address: vault.to_string(),
+                amount: vec![coin(router_balance.u128(), denom)]
+            })
+        ).unwrap();
+
+        // NOTE: Cannot use `mock_dependencies`, as `get_vault_token_amount` performs a query to
+        // the vault contract to get the router's vault token balance.
+        let block_info = test_env.get_app().block_info();
+        let helper_result = test_env.get_app().read_module(
+            |router, api, storage| {
+
+                let router_querier = router.querier(api, storage, &block_info);
+                let deps = Deps {
+                    storage,
+                    api,
+                    querier: QuerierWrapper::new(&router_querier),
+                };
+                let env = Env {
+                    block: block_info.clone(),
+                    transaction: None,
+                    contract: ContractInfo { address: vault.clone() },
+                };
+
+                get_vault_token_amount(
+                    &deps,
+                    &env,
+                    vault.to_string(),
+                    amount
+                ).unwrap()
+            }
+        );
+
+        assert_eq!(
+            helper_result,
+            router_balance
         );
     }
 }

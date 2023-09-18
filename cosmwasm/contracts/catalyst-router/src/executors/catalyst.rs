@@ -9,6 +9,10 @@ type CatalystExecuteMsg = catalyst_vault_common::msg::ExecuteMsg<()>;
 
 
 
+
+// Helpers and Definitions
+// ************************************************************************************************
+
 #[cw_serde]
 enum VaultQuery {
     Balance {
@@ -17,6 +21,29 @@ enum VaultQuery {
 }
 
 
+pub(crate) fn get_vault_token_amount(
+    deps: &Deps,
+    env: &Env,
+    vault: String,
+    amount: Amount
+) -> Result<Uint128, ContractError> {
+
+    let amount = match amount {
+        Amount::Amount(amount) => amount,
+        Amount::RouterBalance() => deps.querier.query_wasm_smart::<BalanceResponse>(
+            vault,
+            &VaultQuery::Balance{ address: env.contract.address.to_string() }
+        )?.balance,
+    };
+
+    Ok(amount)
+}
+
+
+
+
+// Executors
+// ************************************************************************************************
 
 pub fn execute_local_swap(
     deps: &Deps,
@@ -104,13 +131,12 @@ pub fn execute_send_liquidity(
     calldata: Binary
 ) -> Result<CommandResult, ContractError> {
 
-    let send_amount = match amount {
-        Amount::Amount(amount) => amount,
-        Amount::RouterBalance() => deps.querier.query_wasm_smart::<BalanceResponse>(
-            vault.clone(),
-            &VaultQuery::Balance { address: env.contract.address.to_string() }
-        )?.balance,
-    };
+    let send_amount = get_vault_token_amount(
+        deps,
+        env,
+        vault.clone(),
+        amount
+    )?;
     
     let msg = CatalystExecuteMsg::SendLiquidity {
         channel_id,
@@ -181,13 +207,12 @@ pub fn execute_withdraw_all(
     min_out: Vec<Uint128>
 ) -> Result<CommandResult, ContractError> {
 
-    let withdraw_amount = match amount {
-        Amount::Amount(amount) => amount,
-        Amount::RouterBalance() => deps.querier.query_wasm_smart::<BalanceResponse>(
-            vault.clone(),
-            &VaultQuery::Balance { address: env.contract.address.to_string() }
-        )?.balance,
-    };
+    let withdraw_amount = get_vault_token_amount(
+        deps,
+        env,
+        vault.clone(),
+        amount
+    )?;
 
     let msg = CatalystExecuteMsg::WithdrawAll {
         vault_tokens: withdraw_amount,
@@ -215,13 +240,12 @@ pub fn execute_withdraw_mixed(
     min_out: Vec<Uint128>,
 ) -> Result<CommandResult, ContractError> {
 
-    let withdraw_amount = match amount {
-        Amount::Amount(amount) => amount,
-        Amount::RouterBalance() => deps.querier.query_wasm_smart::<BalanceResponse>(
-            vault.clone(),
-            &VaultQuery::Balance { address: env.contract.address.to_string() }
-        )?.balance,
-    };
+    let withdraw_amount = get_vault_token_amount(
+        deps,
+        env,
+        vault.clone(),
+        amount
+    )?;
 
     let msg = CatalystExecuteMsg::WithdrawMixed {
         vault_tokens: withdraw_amount,
