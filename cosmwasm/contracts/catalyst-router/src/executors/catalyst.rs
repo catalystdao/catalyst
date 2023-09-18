@@ -169,17 +169,16 @@ pub fn execute_deposit_mixed(
     min_out: Uint128
 ) -> Result<CommandResult, ContractError> {
 
-    let deposit_coins = deposit_amounts.iter()
+    let deposit_coins = deposit_amounts.into_iter()
         .map(|amount| amount.get_amount(deps, env))
         .collect::<Result<Vec<Coin>, _>>()?;
 
     let deposit_amounts = deposit_coins.iter()
-        .filter_map(|coin| {
-            match coin.amount.is_zero() {
-                true => None,
-                false => Some(coin.amount),
-            }
-        })
+        .map(|coin| coin.amount)
+        .collect();
+
+    let send_coins = deposit_coins.into_iter()
+        .filter(|coin| !coin.amount.is_zero())
         .collect();
 
     let msg = CatalystExecuteMsg::DepositMixed {
@@ -192,7 +191,7 @@ pub fn execute_deposit_mixed(
             cosmwasm_std::WasmMsg::Execute {
                 contract_addr: vault,
                 msg: to_binary(&msg)?,
-                funds: deposit_coins
+                funds: send_coins
             }
         )
     ))
