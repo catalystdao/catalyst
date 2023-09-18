@@ -4,7 +4,7 @@ pragma solidity 0.8.17;
 import "forge-std/Script.sol";
 
 import { BaseMultiChainDeployer } from "./BaseMultiChainDeployer.s.sol";
-import { DeployContracts } from "./DeployContracts.s.soL";
+import { DeployContracts } from "./DeployContracts.s.sol";
 
 
 contract DeployCatalyst is BaseMultiChainDeployer, DeployContracts {
