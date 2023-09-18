@@ -182,9 +182,17 @@ pub fn resume_dispatching(
 
     match dispatch_order_option {
         Some(order) => {
+
+            if order.is_last {
+                ROUTER_STATE.remove(deps.storage);
+            }
+
             Ok(Some(order.into()))
         },
         None => {
+
+            ROUTER_STATE.remove(deps.storage);
+
             Ok(None)
         }
     }

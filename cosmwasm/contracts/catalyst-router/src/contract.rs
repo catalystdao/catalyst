@@ -8,7 +8,7 @@ use crate::dispatcher::{start_dispatching, resume_dispatching};
 use crate::error::ContractError;
 use crate::executors::cancel_swap::set_cancel_swap_state;
 use crate::msg::{ExecuteMsg, InstantiateMsg, get_reply_allow_revert_flag, get_reply_command_index, get_reply_is_last_flag, ExecuteParams};
-use crate::state::{lock_router, unlock_router, ROUTER_STATE};
+use crate::state::{lock_router, unlock_router};
 
 // Version information
 const CONTRACT_NAME: &str = "catalyst-router";
@@ -207,8 +207,7 @@ pub fn reply(
     }
 
     if is_last {
-        // If all of the commands have been processed, remove the router state.
-        ROUTER_STATE.remove(deps.storage);
+        // If all of the commands have been processed, remove the router lock.
         unlock_router(&mut deps);
     }
 
