@@ -9,7 +9,7 @@ mod test_catalyst_executor {
     use test_helpers::env::env_native_asset::TestNativeAssetEnv;
     use test_helpers::misc::encode_payload_address;
 
-    use crate::executors::catalyst::{execute_local_swap, execute_send_asset, execute_send_liquidity, execute_deposit_mixed, execute_withdraw_mixed, execute_withdraw_equal};
+    use crate::executors::catalyst::{execute_local_swap, execute_send_asset, execute_send_liquidity, execute_deposit_mixed, execute_withdraw_mixed, execute_withdraw_all};
     use crate::executors::types::{CoinAmount, Amount};
     use crate::tests::helpers::{MockVault, ROUTER, run_command_result, fund_account};
 
@@ -184,7 +184,7 @@ mod test_catalyst_executor {
 
 
         // Tested action
-        let command_result = execute_withdraw_equal(
+        let command_result = execute_withdraw_all(
             &mock_dependencies().as_ref(),  // Can use mock_dependencies, as no state is required for this test
             &mock_env(),                    // Can use mock_env, as no state is required for this test
             mock_vault_config.vault.to_string(),

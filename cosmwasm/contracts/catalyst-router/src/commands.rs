@@ -49,7 +49,7 @@ pub enum CommandMsg {
         fallback_account: String,
         calldata: Binary
     },
-    WithdrawEqual {
+    WithdrawAll {
         vault: String,
         amount: Amount,
         min_out: Vec<Uint128>
@@ -182,11 +182,11 @@ pub fn execute_command(
             fallback_account,
             calldata
         ),
-        CommandMsg::WithdrawEqual {
+        CommandMsg::WithdrawAll {
             vault,
             amount,
             min_out
-        } => catalyst::execute_withdraw_equal(
+        } => catalyst::execute_withdraw_all(
             deps,
             env,
             vault,

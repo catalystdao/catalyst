@@ -171,7 +171,7 @@ pub fn execute_deposit_mixed(
 }
 
 
-pub fn execute_withdraw_equal(
+pub fn execute_withdraw_all(
     deps: &Deps,
     env: &Env,
     vault: String,
