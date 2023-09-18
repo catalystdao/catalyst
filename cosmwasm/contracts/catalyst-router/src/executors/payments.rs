@@ -102,6 +102,30 @@ pub fn execute_sweep(
 }
 
 
+pub fn execute_sweep_all(
+    deps: &Deps,
+    env: &Env,
+    recipient: Account
+) -> Result<CommandResult, ContractError> {
+
+    let router_coins = deps.querier.query_all_balances(env.contract.address.to_string())?;
+
+    if router_coins.len() == 0 {
+        return Ok(CommandResult::Check(Ok(())));
+    }
+
+    let msg = BankMsg::Send {
+        to_address: recipient.get_address(deps, env)?,
+        amount: router_coins
+    };
+
+    Ok(CommandResult::Message(
+        CosmosMsg::Bank(msg)
+    ))
+
+}
+
+
 pub fn execute_pay_portion(
     deps: &Deps,
     env: &Env,

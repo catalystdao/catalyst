@@ -72,6 +72,9 @@ pub enum CommandMsg {
         minimum_amounts: Vec<Uint128>,
         recipient: Account
     },
+    SweepAll {
+        recipient: Account
+    },
     Transfer {
         amounts: Vec<CoinAmount>,
         recipient: Account
@@ -226,6 +229,13 @@ pub fn execute_command(
             env,
             denoms,
             minimum_amounts,
+            recipient
+        ),
+        CommandMsg::SweepAll {
+            recipient
+        } => payments::execute_sweep_all(
+            deps,
+            env,
             recipient
         ),
         CommandMsg::Transfer {
