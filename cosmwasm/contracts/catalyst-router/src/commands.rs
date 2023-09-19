@@ -104,7 +104,6 @@ pub enum CommandMsg {
 
 /// Return type for the commands execution handlers. It can be either a `CosmosMsg` to be
 /// dispatched, or the 'Result' of an atomic check operation.
-#[derive(Debug)]
 pub enum CommandResult {
     Message(CosmosMsg),
     Check(Result<(), String>)
