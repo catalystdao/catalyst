@@ -3,7 +3,7 @@ use catalyst_vault_common::msg::BalanceResponse;
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Env, Binary, CosmosMsg, to_binary, Uint128, Uint64, Coin, Deps};
 
-use crate::{commands::CommandResult, error::ContractError, executors::types::{Amount, CoinAmount}};
+use crate::{commands::CommandResult, error::ContractError, executors::types::{ValueAmount, CoinAmount}};
 
 type CatalystExecuteMsg = catalyst_vault_common::msg::ExecuteMsg<()>;
 
@@ -25,12 +25,12 @@ pub(crate) fn get_vault_token_amount(
     deps: &Deps,
     env: &Env,
     vault: String,
-    amount: Amount
+    amount: ValueAmount
 ) -> Result<Uint128, ContractError> {
 
     let amount = match amount {
-        Amount::Amount(amount) => amount,
-        Amount::RouterBalance => deps.querier.query_wasm_smart::<BalanceResponse>(
+        ValueAmount::Value(amount) => amount,
+        ValueAmount::RouterBalance => deps.querier.query_wasm_smart::<BalanceResponse>(
             vault,
             &VaultQuery::Balance{ address: env.contract.address.to_string() }
         )?.balance,
@@ -55,7 +55,7 @@ pub fn execute_local_swap(
     min_out: Uint128
 ) -> Result<CommandResult, ContractError> {
 
-    let swap_amount = amount.get_amount(deps, env)?;
+    let swap_amount = amount.get_coin(deps, env)?;
     
     let msg = CatalystExecuteMsg::LocalSwap {
         from_asset_ref,
@@ -91,7 +91,7 @@ pub fn execute_send_asset(
     calldata: Binary
 ) -> Result<CommandResult, ContractError> {
 
-    let swap_amount = amount.get_amount(deps, env)?;
+    let swap_amount = amount.get_coin(deps, env)?;
     
     let msg = CatalystExecuteMsg::SendAsset {
         channel_id,
@@ -124,7 +124,7 @@ pub fn execute_send_liquidity(
     channel_id: String,
     to_vault: Binary,
     to_account: Binary,
-    amount: Amount,
+    amount: ValueAmount,
     min_vault_tokens: U256,
     min_reference_asset: U256,
     fallback_account: String,
@@ -170,7 +170,7 @@ pub fn execute_deposit_mixed(
 ) -> Result<CommandResult, ContractError> {
 
     let deposit_coins = deposit_amounts.into_iter()
-        .map(|amount| amount.get_amount(deps, env))
+        .map(|amount| amount.get_coin(deps, env))
         .collect::<Result<Vec<Coin>, _>>()?;
 
     let deposit_amounts = deposit_coins.iter()
@@ -202,7 +202,7 @@ pub fn execute_withdraw_all(
     deps: &Deps,
     env: &Env,
     vault: String,
-    amount: Amount,
+    amount: ValueAmount,
     min_out: Vec<Uint128>
 ) -> Result<CommandResult, ContractError> {
 
@@ -234,7 +234,7 @@ pub fn execute_withdraw_mixed(
     deps: &Deps,
     env: &Env,
     vault: String,
-    amount: Amount,
+    amount: ValueAmount,
     withdraw_ratio: Vec<Uint64>,
     min_out: Vec<Uint128>,
 ) -> Result<CommandResult, ContractError> {

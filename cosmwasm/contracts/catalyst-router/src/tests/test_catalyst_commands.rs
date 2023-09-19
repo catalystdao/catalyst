@@ -12,7 +12,7 @@ mod test_catalyst_commands {
 
     use crate::commands::{execute_command, CommandMsg};
     use crate::executors::catalyst::get_vault_token_amount;
-    use crate::executors::types::{CoinAmount, Amount};
+    use crate::executors::types::{CoinAmount, ValueAmount};
     use crate::tests::helpers::{MockVault, ROUTER, run_command_result, fund_account};
 
 
@@ -148,7 +148,7 @@ mod test_catalyst_commands {
                 channel_id: mock_vault_config.channel_id.clone(),
                 to_vault: mock_vault_config.target_vault.clone(),
                 to_account: encode_payload_address(b"to-account"),
-                amount: Amount::Amount(swap_amount_coin.amount),
+                amount: ValueAmount::Value(swap_amount_coin.amount),
                 min_vault_tokens: U256::zero(),
                 min_reference_asset: U256::zero(),
                 fallback_account: "fallback-account".to_string(),
@@ -197,7 +197,7 @@ mod test_catalyst_commands {
             &mock_env(),                    // Can use mock_env, as no state is required for this test
             CommandMsg::WithdrawAll {
                 vault: mock_vault_config.vault.to_string(),
-                amount: Amount::Amount(withdraw_amount_coin.amount),
+                amount: ValueAmount::Value(withdraw_amount_coin.amount),
                 min_out: vec![Uint128::zero(), Uint128::zero()]
             }
         ).unwrap();
@@ -243,7 +243,7 @@ mod test_catalyst_commands {
             &mock_env(),                    // Can use mock_env, as no state is required for this test
             CommandMsg::WithdrawMixed {
                 vault: mock_vault_config.vault.to_string(),
-                amount: Amount::Amount(withdraw_amount_coin.amount),
+                amount: ValueAmount::Value(withdraw_amount_coin.amount),
                 withdraw_ratio: vec![Uint64::new(1000000000000000000), Uint64::zero()],
                 min_out: vec![Uint128::zero(), Uint128::zero()]
             }
@@ -331,7 +331,7 @@ mod test_catalyst_commands {
 
         // Tested action 1: Value amount
         let value = Uint128::new(909u128);
-        let amount = Amount::Amount(value);
+        let amount = ValueAmount::Value(value);
 
         let helper_result = get_vault_token_amount(
             &mock_dependencies().as_ref(),
@@ -350,7 +350,7 @@ mod test_catalyst_commands {
         // Tested action 2: Router balance
         let router_balance = Uint128::new(543u128);
         let denom = format!("factory/{}/{}", vault.clone(), VAULT_TOKEN_DENOM.to_string());
-        let amount = Amount::RouterBalance;
+        let amount = ValueAmount::RouterBalance;
 
         // Send amount to the router
         test_env.get_app().execute(

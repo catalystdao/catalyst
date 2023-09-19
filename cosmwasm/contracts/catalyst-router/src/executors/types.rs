@@ -5,11 +5,13 @@ use crate::{error::ContractError, state::get_router_locker};
 
 pub type Denom = String;
 
+
 #[cw_serde]
-pub enum Amount {
-    Amount(Uint128),
+pub enum ValueAmount {
+    Value(Uint128),
     RouterBalance
 }
+
 
 #[cw_serde]
 pub enum CoinAmount {
@@ -19,7 +21,7 @@ pub enum CoinAmount {
 
 impl CoinAmount {
     
-    pub fn get_amount(
+    pub fn get_coin(
         &self,
         deps: &Deps,
         env: &Env
@@ -34,6 +36,7 @@ impl CoinAmount {
         }
     }
 }
+
 
 #[cw_serde]
 pub enum Account {
@@ -73,7 +76,7 @@ mod test_types {
     // ********************************************************************************************
 
     #[test]
-    fn test_amount_get_amount_coin() {
+    fn test_amount_coin_get_coin() {
 
         let set_coin = coin(987, "denom");
 
@@ -81,7 +84,7 @@ mod test_types {
 
         // Tested action
         let amount = CoinAmount::Coin(set_coin.clone());
-        let read_coin = amount.get_amount(
+        let read_coin = amount.get_coin(
             &mock_dependencies().as_ref(),
             &mock_env()
         ).unwrap();
@@ -96,7 +99,7 @@ mod test_types {
 
 
     #[test]
-    fn test_amount_get_amount_balance() {
+    fn test_amount_balance_get_coin() {
 
         let denom = "denom".to_string();
         let router_coin = coin(987, denom.clone());
@@ -105,7 +108,7 @@ mod test_types {
 
         // Tested action
         let amount = CoinAmount::RouterBalance(denom);
-        let read_coin = amount.get_amount(
+        let read_coin = amount.get_coin(
             &mock_dependencies_with_balance(&[router_coin.clone()]).as_ref(),
             &mock_env()
         ).unwrap();
@@ -120,7 +123,7 @@ mod test_types {
 
 
     #[test]
-    fn test_amount_get_amount_balance_zero() {
+    fn test_amount_balance_get_coin_zero() {
 
         let denom = "denom".to_string();
 
@@ -128,7 +131,7 @@ mod test_types {
 
         // Tested action
         let amount = CoinAmount::RouterBalance(denom.clone());
-        let read_coin = amount.get_amount(
+        let read_coin = amount.get_coin(
             &mock_dependencies().as_ref(),  // Don't set up balances
             &mock_env()
         ).unwrap();

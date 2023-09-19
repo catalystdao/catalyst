@@ -15,7 +15,7 @@ pub fn execute_transfer(
     // Filter out zero amounts
     let coins = amounts.iter()
         .map(|amount| -> Result<_, _> {
-            amount.get_amount(deps, env)
+            amount.get_coin(deps, env)
         })
         .filter(|map_result| {
             match map_result {

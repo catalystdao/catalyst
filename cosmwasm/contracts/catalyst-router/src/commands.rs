@@ -2,7 +2,7 @@ use catalyst_types::U256;
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{CosmosMsg, Deps, Env, Binary, Uint128, Uint64};
 
-use crate::{error::ContractError, executors::{catalyst, payments, cancel_swap, types::{CoinAmount, Denom, Account, Amount}}};
+use crate::{error::ContractError, executors::{catalyst, payments, cancel_swap, types::{CoinAmount, Denom, Account, ValueAmount}}};
 
 
 
@@ -43,7 +43,7 @@ pub enum CommandMsg {
         channel_id: String,
         to_vault: Binary,
         to_account: Binary,
-        amount: Amount,
+        amount: ValueAmount,
         min_vault_tokens: U256,
         min_reference_asset: U256,
         fallback_account: String,
@@ -51,12 +51,12 @@ pub enum CommandMsg {
     },
     WithdrawAll {
         vault: String,
-        amount: Amount,
+        amount: ValueAmount,
         min_out: Vec<Uint128>
     },
     WithdrawMixed {
         vault: String,
-        amount: Amount,
+        amount: ValueAmount,
         withdraw_ratio: Vec<Uint64>,
         min_out: Vec<Uint128>,
     },
