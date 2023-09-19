@@ -1,4 +1,4 @@
-mod test_catalyst_executor {
+mod test_catalyst_commands {
     use catalyst_types::U256;
     use cosmwasm_std::testing::{mock_dependencies, mock_env};
     use cosmwasm_std::{Uint64, Uint128, Addr, coin, Binary, CosmosMsg, BankMsg, Deps, QuerierWrapper, Env, ContractInfo};

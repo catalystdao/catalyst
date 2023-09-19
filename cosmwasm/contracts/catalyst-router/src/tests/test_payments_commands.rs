@@ -1,4 +1,4 @@
-mod test_payments_executor {
+mod test_payments_commands {
 
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_dependencies_with_balance, MOCK_CONTRACT_ADDR};
     use cosmwasm_std::{Uint128, Addr, Coin};

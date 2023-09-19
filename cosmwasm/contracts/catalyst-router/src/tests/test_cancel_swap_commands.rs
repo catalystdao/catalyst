@@ -1,4 +1,4 @@
-mod test_cancel_swap_executor {
+mod test_cancel_swap_commands {
     use cosmwasm_std::{testing::{mock_dependencies, mock_env}, Binary};
 
     use crate::{executors::cancel_swap::{set_cancel_swap_state, get_cancel_swap_state,}, commands::{CommandResult, execute_command, CommandMsg}};
