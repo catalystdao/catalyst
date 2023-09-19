@@ -184,12 +184,14 @@ pub fn resume_dispatching(
         Some(order) => {
 
             if order.is_last {
+                // All commands have been processed
                 ROUTER_STATE.remove(deps.storage);
             }
 
             Ok(Some(order.into()))
         },
         None => {
+            // All commands have been processed (with the last command being a 'check' operation)
 
             ROUTER_STATE.remove(deps.storage);
 
