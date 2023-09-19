@@ -7,9 +7,8 @@ mod test_payments_executor {
     use test_helpers::env::CustomTestEnv;
     use test_helpers::env::env_native_asset::TestNativeAssetEnv;
 
-    use crate::commands::CommandResult;
+    use crate::commands::{CommandResult, CommandMsg, execute_command};
     use crate::error::ContractError;
-    use crate::executors::payments::{execute_sweep, execute_transfer, execute_pay_portion, execute_balance_check, execute_sweep_all};
     use crate::executors::types::{Account, CoinAmount};
     use crate::tests::helpers::{ROUTER, RECIPIENT, run_command_result, fund_account};
 
@@ -43,12 +42,14 @@ mod test_payments_executor {
         // of the following command to **NOT** be within the `cw_multi_test::App` simulation
         // logic. This is fine as long as any required application state is replicated on the 
         // `mock_dependencies` and `mock_env`.
-        let command_result = execute_sweep(
+        let command_result = execute_command(
             &mock_dependencies_with_balance(&router_funds).as_ref(),
             &mock_env(),
-            denoms,
-            vec![Uint128::zero(), Uint128::zero()],
-            Account::Address(RECIPIENT.to_string())
+            CommandMsg::Sweep {
+                denoms,
+                minimum_amounts: vec![Uint128::zero(), Uint128::zero()],
+                recipient: Account::Address(RECIPIENT.to_string())
+            }
         ).unwrap();
 
 
@@ -101,12 +102,14 @@ mod test_payments_executor {
         // of the following command to **NOT** be within the `cw_multi_test::App` simulation
         // logic. This is fine as long as any required application state is replicated on the 
         // `mock_dependencies` and `mock_env`.
-        let command_result = execute_sweep(
+        let command_result = execute_command(
             &mock_dependencies().as_ref(),  // Do not 'fund' the router
             &mock_env(),
-            denoms,
-            vec![Uint128::zero(), Uint128::zero()],
-            Account::Address(RECIPIENT.to_string())
+            CommandMsg::Sweep {
+                denoms,
+                minimum_amounts: vec![Uint128::zero(), Uint128::zero()],
+                recipient: Account::Address(RECIPIENT.to_string())
+            }
         ).unwrap();
 
 
@@ -133,12 +136,14 @@ mod test_payments_executor {
         // of the following command to **NOT** be within the `cw_multi_test::App` simulation
         // logic. This is fine as long as any required application state is replicated on the 
         // `mock_dependencies` and `mock_env`.
-        let command_result = execute_sweep(
+        let command_result = execute_command(
             &mock_dependencies().as_ref(),
             &mock_env(),
-            vec![],         // Empty
-            vec![],         // Empty
-            Account::Address(RECIPIENT.to_string())
+            CommandMsg::Sweep {
+                denoms: vec![],             // Empty
+                minimum_amounts: vec![],    // Empty
+                recipient: Account::Address(RECIPIENT.to_string())
+            }
         ).unwrap();
 
 
@@ -182,12 +187,14 @@ mod test_payments_executor {
             router_funds[0].amount + Uint128::one(),    // Specify too large min out
             Uint128::zero()
         ];
-        let command_result = execute_sweep(
+        let command_result = execute_command(
             &mock_dependencies_with_balance(&router_funds).as_ref(),
             &mock_env(),
-            denoms,
-            minimum_amounts.clone(),
-            Account::Address(RECIPIENT.to_string())
+            CommandMsg::Sweep {
+                denoms,
+                minimum_amounts: minimum_amounts.clone(),
+                recipient: Account::Address(RECIPIENT.to_string())
+            }
         ).unwrap();
 
 
@@ -232,12 +239,14 @@ mod test_payments_executor {
         // of the following command to **NOT** be within the `cw_multi_test::App` simulation
         // logic. This is fine as long as any required application state is replicated on the 
         // `mock_dependencies` and `mock_env`.
-        let command_result = execute_sweep(
+        let command_result = execute_command(
             &mock_dependencies_with_balance(&router_funds).as_ref(),
             &mock_env(),
-            denoms,
-            vec![Uint128::zero()],     // Specify minimum_amounts.len != denoms.len
-            Account::Address(RECIPIENT.to_string())
+            CommandMsg::Sweep {
+                denoms,
+                minimum_amounts: vec![Uint128::zero()],     // Specify minimum_amounts.len != denoms.len
+                recipient: Account::Address(RECIPIENT.to_string())
+            }
         );
 
 
@@ -275,10 +284,12 @@ mod test_payments_executor {
         // of the following command to **NOT** be within the `cw_multi_test::App` simulation
         // logic. This is fine as long as any required application state is replicated on the 
         // `mock_dependencies` and `mock_env`.
-        let command_result = execute_sweep_all(
+        let command_result = execute_command(
             &mock_dependencies_with_balance(&router_funds).as_ref(),
             &mock_env(),
-            Account::Address(RECIPIENT.to_string())
+            CommandMsg::SweepAll {
+                recipient: Account::Address(RECIPIENT.to_string())
+            }
         ).unwrap();
 
 
@@ -329,10 +340,12 @@ mod test_payments_executor {
         // of the following command to **NOT** be within the `cw_multi_test::App` simulation
         // logic. This is fine as long as any required application state is replicated on the 
         // `mock_dependencies` and `mock_env`.
-        let command_result = execute_sweep_all(
+        let command_result = execute_command(
             &mock_dependencies().as_ref(),      // ! Do not set any funds for the router
             &mock_env(),
-            Account::Address(RECIPIENT.to_string())
+            CommandMsg::SweepAll {
+                recipient: Account::Address(RECIPIENT.to_string())
+            }
         ).unwrap();
 
 
@@ -379,13 +392,15 @@ mod test_payments_executor {
         // of the following command to **NOT** be within the `cw_multi_test::App` simulation
         // logic. This is fine as long as any required application state is replicated on the 
         // `mock_dependencies` and `mock_env`.
-        let command_result = execute_transfer(
+        let command_result = execute_command(
             &mock_dependencies_with_balance(&transfer_coins).as_ref(),
             &mock_env(),
-            transfer_coins.iter()
-                .map(|coin| CoinAmount::Coin(coin.clone()))
-                .collect(),
-            Account::Address(RECIPIENT.to_string()),
+            CommandMsg::Transfer {
+                amounts: transfer_coins.iter()
+                    .map(|coin| CoinAmount::Coin(coin.clone()))
+                    .collect(),
+                recipient: Account::Address(RECIPIENT.to_string()),
+            }
         ).unwrap();
 
 
@@ -439,13 +454,15 @@ mod test_payments_executor {
         // of the following command to **NOT** be within the `cw_multi_test::App` simulation
         // logic. This is fine as long as any required application state is replicated on the 
         // `mock_dependencies` and `mock_env`.
-        let command_result = execute_transfer(
+        let command_result = execute_command(
             &mock_dependencies().as_ref(),
             &mock_env(),
-            transfer_amounts.iter()
-                .map(|coin| CoinAmount::Coin(coin.clone()))
-                .collect(),
-            Account::Address(RECIPIENT.to_string()),
+            CommandMsg::Transfer {
+                amounts: transfer_amounts.iter()
+                    .map(|coin| CoinAmount::Coin(coin.clone()))
+                    .collect(),
+                recipient: Account::Address(RECIPIENT.to_string()),
+            }
         ).unwrap();
 
 
@@ -472,11 +489,13 @@ mod test_payments_executor {
         // of the following command to **NOT** be within the `cw_multi_test::App` simulation
         // logic. This is fine as long as any required application state is replicated on the 
         // `mock_dependencies` and `mock_env`.
-        let command_result = execute_transfer(
+        let command_result = execute_command(
             &mock_dependencies().as_ref(),
             &mock_env(),
-            vec![],    // Empty
-            Account::Address(RECIPIENT.to_string()),
+            CommandMsg::Transfer {
+                amounts: vec![],    // Empty
+                recipient: Account::Address(RECIPIENT.to_string()),
+            }
         ).unwrap();
 
 
@@ -524,12 +543,14 @@ mod test_payments_executor {
         // of the following command to **NOT** be within the `cw_multi_test::App` simulation
         // logic. This is fine as long as any required application state is replicated on the 
         // `mock_dependencies` and `mock_env`.
-        let command_result = execute_pay_portion(
+        let command_result = execute_command(
             &mock_dependencies_with_balance(&router_funds).as_ref(),
             &mock_env(),
-            denoms,
-            pay_portion_bips,
-            Account::Address(RECIPIENT.to_string())
+            CommandMsg::PayPortion {
+                denoms,
+                bips: pay_portion_bips,
+                recipient: Account::Address(RECIPIENT.to_string())
+            }
         ).unwrap();
 
 
@@ -596,12 +617,14 @@ mod test_payments_executor {
         // of the following command to **NOT** be within the `cw_multi_test::App` simulation
         // logic. This is fine as long as any required application state is replicated on the 
         // `mock_dependencies` and `mock_env`.
-        let command_result = execute_pay_portion(
+        let command_result = execute_command(
             &mock_dependencies_with_balance(&router_funds).as_ref(),
             &mock_env(),
-            denoms,
-            pay_portion_bips,
-            Account::Address(RECIPIENT.to_string())
+            CommandMsg::PayPortion {
+                denoms,
+                bips: pay_portion_bips,
+                recipient: Account::Address(RECIPIENT.to_string())
+            }
         ).unwrap();
 
 
@@ -628,12 +651,14 @@ mod test_payments_executor {
         // of the following command to **NOT** be within the `cw_multi_test::App` simulation
         // logic. This is fine as long as any required application state is replicated on the 
         // `mock_dependencies` and `mock_env`.
-        let command_result = execute_pay_portion(
+        let command_result = execute_command(
             &mock_dependencies().as_ref(),
             &mock_env(),
-            vec![],     // Empty
-            vec![],       // Empty
-            Account::Address(RECIPIENT.to_string())
+            CommandMsg::PayPortion {
+                denoms: vec![],     // Empty
+                bips: vec![],       // Empty
+                recipient: Account::Address(RECIPIENT.to_string())
+            }
         ).unwrap();
 
 
@@ -669,12 +694,14 @@ mod test_payments_executor {
 
 
         // Tested action 1: bips.len != denoms.len
-        let command_result = execute_pay_portion(
+        let command_result = execute_command(
             &mock_dependencies_with_balance(&router_funds).as_ref(),
             &mock_env(),
-            denoms.clone(),
-            vec![Uint128::new(10000u128)],
-            Account::Address(RECIPIENT.to_string())
+            CommandMsg::PayPortion {
+                denoms: denoms.clone(),
+                bips: vec![Uint128::new(10000u128)],
+                recipient: Account::Address(RECIPIENT.to_string())
+            }
         );
 
         // Verify the excution fails
@@ -687,12 +714,14 @@ mod test_payments_executor {
 
 
         // Tested action 2: bips == 0
-        let command_result = execute_pay_portion(
+        let command_result = execute_command(
             &mock_dependencies_with_balance(&router_funds).as_ref(),
             &mock_env(),
-            denoms.clone(),
-            vec![Uint128::zero(), Uint128::new(10000u128)],   // Zero bips
-            Account::Address(RECIPIENT.to_string())
+            CommandMsg::PayPortion {
+                denoms: denoms.clone(),
+                bips: vec![Uint128::zero(), Uint128::new(10000u128)],   // Zero bips
+                recipient: Account::Address(RECIPIENT.to_string())
+            }
         );
 
         // Verify the excution fails
@@ -705,12 +734,14 @@ mod test_payments_executor {
 
 
         // Tested action 3: bips > 1 (10000)
-        let command_result = execute_pay_portion(
+        let command_result = execute_command(
             &mock_dependencies_with_balance(&router_funds).as_ref(),
             &mock_env(),
-            denoms.clone(),
-            vec![Uint128::new(10001u128), Uint128::new(10000u128)],   // Bips > 1
-            Account::Address(RECIPIENT.to_string())
+            CommandMsg::PayPortion {
+                denoms: denoms.clone(),
+                bips: vec![Uint128::new(10001u128), Uint128::new(10000u128)],   // Bips > 1
+                recipient: Account::Address(RECIPIENT.to_string())
+            }
         );
 
         // Verify the excution fails
@@ -750,13 +781,15 @@ mod test_payments_executor {
         // of the following command to **NOT** be within the `cw_multi_test::App` simulation
         // logic. This is fine as long as any required application state is replicated on the 
         // `mock_dependencies` and `mock_env`.
-        let command_result = execute_balance_check(
+        let command_result = execute_command(
             &mock_dependencies_with_balance(&router_funds).as_ref(),
             &mock_env(),
+            CommandMsg::BalanceCheck {
                 denoms,
-                vec![Uint128::zero(), Uint128::zero()],
-                Account::Address(MOCK_CONTRACT_ADDR.to_string()),   // Check the balance of the router.
-                                                                    // Using 'mock_env()', the router takes the address 'MOCK_CONTRACT_ADDR'
+                minimum_amounts: vec![Uint128::zero(), Uint128::zero()],
+                account: Account::Address(MOCK_CONTRACT_ADDR.to_string()),  // Check the balance of the router.
+                                                                            // Using 'mock_env()', the router takes the address 'MOCK_CONTRACT_ADDR'
+            }
         ).unwrap();
 
 
@@ -798,13 +831,15 @@ mod test_payments_executor {
             router_funds[0].amount + Uint128::one(),    // Specify too large min out
             Uint128::zero()
         ];
-        let command_result = execute_balance_check(
+        let command_result = execute_command(
             &mock_dependencies_with_balance(&router_funds).as_ref(),
             &mock_env(),
+            CommandMsg::BalanceCheck {
                 denoms,
-                minimum_amounts.clone(), 
-                Account::Address(MOCK_CONTRACT_ADDR.to_string()),   // Check the balance of the router.
-                                                                    // Using 'mock_env()', the router takes the address 'MOCK_CONTRACT_ADDR'
+                minimum_amounts: minimum_amounts.clone(), 
+                account: Account::Address(MOCK_CONTRACT_ADDR.to_string()),  // Check the balance of the router.
+                                                                            // Using 'mock_env()', the router takes the address 'MOCK_CONTRACT_ADDR'
+            }
         ).unwrap();
 
 
@@ -846,15 +881,17 @@ mod test_payments_executor {
         // of the following command to **NOT** be within the `cw_multi_test::App` simulation
         // logic. This is fine as long as any required application state is replicated on the 
         // `mock_dependencies` and `mock_env`.
-        let command_result = execute_balance_check(
+        let command_result = execute_command(
             &mock_dependencies_with_balance(&router_funds).as_ref(),
             &mock_env(),
+            CommandMsg::BalanceCheck {
                 denoms, 
-                vec![
+                minimum_amounts: vec![
                     Uint128::zero()     // Specify minimum_amounts.len != denoms.len
                 ].clone(), 
-                Account::Address(MOCK_CONTRACT_ADDR.to_string()),   // Check the balance of the router.
-                                                                    // Using 'mock_env()', the router takes the address 'MOCK_CONTRACT_ADDR'
+                account: Account::Address(MOCK_CONTRACT_ADDR.to_string()),  // Check the balance of the router.
+                                                                            // Using 'mock_env()', the router takes the address 'MOCK_CONTRACT_ADDR'
+            }
         );
 
 

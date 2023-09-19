@@ -10,7 +10,8 @@ mod test_catalyst_executor {
     use test_helpers::env::env_native_asset::TestNativeAssetEnv;
     use test_helpers::misc::encode_payload_address;
 
-    use crate::executors::catalyst::{execute_local_swap, execute_send_asset, execute_send_liquidity, execute_deposit_mixed, execute_withdraw_mixed, execute_withdraw_all, get_vault_token_amount};
+    use crate::commands::{execute_command, CommandMsg};
+    use crate::executors::catalyst::get_vault_token_amount;
     use crate::executors::types::{CoinAmount, Amount};
     use crate::tests::helpers::{MockVault, ROUTER, run_command_result, fund_account};
 
@@ -37,14 +38,16 @@ mod test_catalyst_executor {
 
 
         // Tested action
-        let command_result = execute_local_swap(
+        let command_result = execute_command(
             &mock_dependencies().as_ref(),  // Can use mock_dependencies, as no state is required for this test
             &mock_env(),                    // Can use mock_env, as no state is required for this test
-            mock_vault_config.vault.to_string(),
-            from_asset.get_asset_ref(),
-            to_asset.get_asset_ref(),
-            CoinAmount::Coin(swap_amount.clone()),
-            Uint128::zero(),
+            CommandMsg::LocalSwap {
+                vault: mock_vault_config.vault.to_string(), 
+                from_asset_ref: from_asset.get_asset_ref(),
+                to_asset_ref: to_asset.get_asset_ref(), 
+                amount: CoinAmount::Coin(swap_amount.clone()),
+                min_out: Uint128::zero(),
+            }
         ).unwrap();
 
 
@@ -84,19 +87,21 @@ mod test_catalyst_executor {
 
 
         // Tested action
-        let command_result = execute_send_asset(
+        let command_result = execute_command(
             &mock_dependencies().as_ref(),  // Can use mock_dependencies, as no state is required for this test
             &mock_env(),                    // Can use mock_env, as no state is required for this test
-            mock_vault_config.vault.to_string(),
-            mock_vault_config.channel_id.clone(),
-            mock_vault_config.target_vault.clone(),
-            encode_payload_address(b"to-account"),
-            from_asset.get_asset_ref(),
-            to_asset_index,
-            CoinAmount::Coin(swap_amount.clone()),
-            U256::zero(),
-            "fallback-account".to_string(),
-            Binary(vec![])
+            CommandMsg::SendAsset {
+                vault: mock_vault_config.vault.to_string(),
+                channel_id: mock_vault_config.channel_id.clone(),
+                to_vault: mock_vault_config.target_vault.clone(),
+                to_account: encode_payload_address(b"to-account"),
+                from_asset_ref: from_asset.get_asset_ref(),
+                to_asset_index,
+                amount: CoinAmount::Coin(swap_amount.clone()),
+                min_out: U256::zero(),
+                fallback_account: "fallback-account".to_string(),
+                calldata: Binary(vec![])
+            }
         ).unwrap();
 
 
@@ -135,18 +140,20 @@ mod test_catalyst_executor {
 
 
         // Tested action
-        let command_result = execute_send_liquidity(
+        let command_result = execute_command(
             &mock_dependencies().as_ref(),  // Can use mock_dependencies, as no state is required for this test
             &mock_env(),                    // Can use mock_env, as no state is required for this test
-            mock_vault_config.vault.to_string(),
-            mock_vault_config.channel_id.clone(),
-            mock_vault_config.target_vault.clone(),
-            encode_payload_address(b"to-account"),
-            Amount::Amount(swap_amount_coin.amount),
-            U256::zero(),
-            U256::zero(),
-            "fallback-account".to_string(),
-            Binary(vec![])
+            CommandMsg::SendLiquidity {
+                vault: mock_vault_config.vault.to_string(),
+                channel_id: mock_vault_config.channel_id.clone(),
+                to_vault: mock_vault_config.target_vault.clone(),
+                to_account: encode_payload_address(b"to-account"),
+                amount: Amount::Amount(swap_amount_coin.amount),
+                min_vault_tokens: U256::zero(),
+                min_reference_asset: U256::zero(),
+                fallback_account: "fallback-account".to_string(),
+                calldata: Binary(vec![])
+            }
         ).unwrap();
 
 
@@ -185,12 +192,14 @@ mod test_catalyst_executor {
 
 
         // Tested action
-        let command_result = execute_withdraw_all(
+        let command_result = execute_command(
             &mock_dependencies().as_ref(),  // Can use mock_dependencies, as no state is required for this test
             &mock_env(),                    // Can use mock_env, as no state is required for this test
-            mock_vault_config.vault.to_string(),
-            Amount::Amount(withdraw_amount_coin.amount),
-            vec![Uint128::zero(), Uint128::zero()]
+            CommandMsg::WithdrawAll {
+                vault: mock_vault_config.vault.to_string(),
+                amount: Amount::Amount(withdraw_amount_coin.amount),
+                min_out: vec![Uint128::zero(), Uint128::zero()]
+            }
         ).unwrap();
 
 
@@ -229,13 +238,15 @@ mod test_catalyst_executor {
 
 
         // Tested action
-        let command_result = execute_withdraw_mixed(
+        let command_result = execute_command(
             &mock_dependencies().as_ref(),  // Can use mock_dependencies, as no state is required for this test
             &mock_env(),                    // Can use mock_env, as no state is required for this test
-            mock_vault_config.vault.to_string(),
-            Amount::Amount(withdraw_amount_coin.amount),
-            vec![Uint64::new(1000000000000000000), Uint64::zero()],
-            vec![Uint128::zero(), Uint128::zero()]
+            CommandMsg::WithdrawMixed {
+                vault: mock_vault_config.vault.to_string(),
+                amount: Amount::Amount(withdraw_amount_coin.amount),
+                withdraw_ratio: vec![Uint64::new(1000000000000000000), Uint64::zero()],
+                min_out: vec![Uint128::zero(), Uint128::zero()]
+            }
         ).unwrap();
 
 
@@ -279,14 +290,16 @@ mod test_catalyst_executor {
 
 
         // Tested action
-        let command_result = execute_deposit_mixed(
+        let command_result = execute_command(
             &mock_dependencies().as_ref(),  // Can use mock_dependencies, as no state is required for this test
             &mock_env(),                    // Can use mock_env, as no state is required for this test
-            mock_vault_config.vault.to_string(),
-            deposit_amounts.iter()
-                .map(|coin| CoinAmount::Coin(coin.clone()))
-                .collect(),
-            Uint128::zero(),
+            CommandMsg::DepositMixed {
+                vault: mock_vault_config.vault.to_string(),
+                deposit_amounts: deposit_amounts.iter()
+                    .map(|coin| CoinAmount::Coin(coin.clone()))
+                    .collect(),
+                min_out: Uint128::zero()
+            }
         ).unwrap();
 
 

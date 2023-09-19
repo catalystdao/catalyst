@@ -1,7 +1,7 @@
 mod test_cancel_swap_executor {
-    use cosmwasm_std::{testing::mock_dependencies, Binary};
+    use cosmwasm_std::{testing::{mock_dependencies, mock_env}, Binary};
 
-    use crate::{executors::cancel_swap::{set_cancel_swap_state, get_cancel_swap_state, execute_allow_cancel}, commands::CommandResult};
+    use crate::{executors::cancel_swap::{set_cancel_swap_state, get_cancel_swap_state,}, commands::{CommandResult, execute_command, CommandMsg}};
 
 
 
@@ -116,10 +116,13 @@ mod test_cancel_swap_executor {
 
 
         // Tested action
-        let command_result = execute_allow_cancel(
+        let command_result = execute_command(
             &deps.as_ref(),
-            authority.to_string(),
-            identifier.clone()
+            &mock_env(),
+            CommandMsg::AllowCancel {
+                authority: authority.to_string(),
+                identifier: identifier.clone()
+            }
         ).unwrap();
 
 
@@ -153,10 +156,13 @@ mod test_cancel_swap_executor {
 
 
         // Tested action
-        let command_result = execute_allow_cancel(
+        let command_result = execute_command(
             &deps.as_ref(),
-            authority.to_string(),
-            identifier.clone()
+            &mock_env(),
+            CommandMsg::AllowCancel {
+                authority: authority.to_string(),
+                identifier: identifier.clone()
+            }
         ).unwrap();
 
 
