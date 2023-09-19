@@ -7,4 +7,3 @@ mod test_on_catalyst_call;
 mod test_payments_commands;
 mod test_query;
 mod test_reentry_lock;
-mod test_types;
