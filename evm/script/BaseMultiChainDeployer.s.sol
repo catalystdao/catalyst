@@ -23,10 +23,6 @@ import { CatalystChainInterface } from "../src/CatalystChainInterface.sol";
 import { CatalystVaultVolatile } from "../src/CatalystVaultVolatile.sol";
 import { CatalystVaultAmplified } from "../src/CatalystVaultAmplified.sol";
 
-
-// Generalised Incentives
-import { IncentivizedMockEscrow } from "GeneralisedIncentives/src/apps/mock/IncentivizedMockEscrow.sol";
-
 contract BaseMultiChainDeployer is Script {
     enum Stage {
         test,
