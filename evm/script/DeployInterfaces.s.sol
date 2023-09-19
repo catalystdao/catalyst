@@ -33,9 +33,9 @@ contract DeployInterfaces is BaseMultiChainDeployer {
     mapping(Chains => address) wormholeBridge;
 
     constructor() {
-        interfaceSalt[0x000000641AC10b4e000fe361F2149E2a531061c5] = bytes32(0xd2c66ec619a687874ed1cbc01390b279ae3822887485f5ee26b1fa083dcaf1f9);
+        interfaceSalt[0x00000001a9818a7807998dbc243b05F2B3CfF6f4] = bytes32(0xfb5d7080c10f7c4a95069b43b0ba06d246a8a9a6f2f3fbbbfde47a6f6eb2d3ca);
 
-        interfaceSalt[0x000000ED80503e3A7EA614FFB5507FD52584a1f2] = bytes32(0x314f61d3dc0fe23dd68890ad2fd2a850756a315992df95875553848ffd843840);
+        interfaceSalt[0x000000ED80503e3A7EA614FFB5507FD52584a1f2] = bytes32(0x526041c1059f5a0db3ed779269c367ee5637a3427bf73365ec3b94bafddad14c);
 
         wormholeBridge[Chains.Sepolia] = 0x4a8bc80Ed5a4067f1CCf107057b8270E0cC11A78;
 
@@ -94,28 +94,37 @@ contract DeployInterfaces is BaseMultiChainDeployer {
         _;
     }
 
-    function deployBaseInterfaces(bytes32 chainIdentifier) forEachInterface() internal {
+    function deployBaseIncentive(bytes32 chainIdentifier) forEachInterface() internal {
         // Get the address of the incentives contract.
         address incentiveAddress = abi.decode(config_interfaces.parseRaw(string.concat(".", rpc[chain], ".", incentiveVersion, ".incentive")), (address));
-        console.log(incentiveVersion);
+        console.log("inc", incentiveVersion);
         if (incentiveAddress.codehash != bytes32(0)) {
             console.logAddress(incentiveAddress);
             return;
         }
         address newlyDeployedIncentiveAddress = deployGeneralisedIncentives(incentiveVersion, chainIdentifier);
+        console.logAddress(newlyDeployedIncentiveAddress);
         require(newlyDeployedIncentiveAddress == incentiveAddress, "Newly deployed incentive address isn't expected address");
     }
 
     function deployCCI(address admin) forEachInterface() internal {
         // Get the address of the incentives contract.
         address interfaceAddress = abi.decode(config_interfaces.parseRaw(string.concat(".", rpc[chain], ".", incentiveVersion, ".interface")), (address));
+        console.log("cci", incentiveVersion);
         if (interfaceAddress.codehash != bytes32(0)) {
             console.logAddress(interfaceAddress);
             return;
         }
         address incentiveAddress = abi.decode(config_interfaces.parseRaw(string.concat(".", rpc[chain], ".", incentiveVersion, ".incentive")), (address));
 
-        address newlyDeployedInterfaceAddress = address(new CatalystChainInterface{salt: interfaceSalt[incentiveAddress]}(incentiveAddress, admin));
+        bytes32 salt = interfaceSalt[incentiveAddress];
+
+        address newlyDeployedInterfaceAddress = address(
+            new CatalystChainInterface{salt: salt}(incentiveAddress, admin)
+        );
+
+        console.logAddress(newlyDeployedInterfaceAddress);
+
         require(newlyDeployedInterfaceAddress == interfaceAddress, "Newly deployed interface address isn't expected address");
     }
 
@@ -130,16 +139,16 @@ contract DeployInterfaces is BaseMultiChainDeployer {
     }
     
     function _deploy() internal {
-        address admin = vm.envAddress("CATALYST_ADDRESS");
+        address admin = address(0x0000007aAAC54131e031b3C0D6557723f9365A5B);
         bytes32 chainIdentifier = abi.decode(config_chain.parseRaw(string.concat(".", rpc[chain], ".chainIdentifier")), (bytes32));
 
         fund(vm.envAddress("INCENTIVE_DEPLOYER_ADDRESS"), 0.05*10**18);
 
-        deployBaseInterfaces(chainIdentifier);
+        deployBaseIncentive(chainIdentifier);
 
         deployCCI(admin);
 
-        whitelistCCI(0x8950BAe1ADc61D28300009b4C2CfddfE5f55cb52);
+        whitelistCCI(0xfB933A070D9a1D43CF973714e35bed7e4a5A0545);
     }
 
     function deploy() load_config iter_chains(chain_list) broadcast external {

@@ -1,76 +1,76 @@
 {
   "sepolia": {
     "MOCK": {
-      "incentive": "0x000000641ac10b4e000fe361f2149e2a531061c5",
-      "interface": "0x000000E83CCb819B54184d573B4b1e7f4B6d48e6"
+      "incentive": "0x00000001a9818a7807998dbc243b05F2B3CfF6f4",
+      "interface": "0x0000000CC613E3Da01da44B438B6916849529128"
     },
     "Wormhole": {
       "incentive": "0x000000ED80503e3A7EA614FFB5507FD52584a1f2",
-      "interface": "0x0000002c1433f91dd8eBebC0F4407235647ABbfb"
+      "interface": "0x0000000BFC5C80DFe4E801edaa071a1BD9271D0A"
     }
   },
   "mumbai": {
     "MOCK": {
-      "incentive": "0x000000641ac10b4e000fe361f2149e2a531061c5",
-      "interface": "0x000000E83CCb819B54184d573B4b1e7f4B6d48e6"
+      "incentive": "0x00000001a9818a7807998dbc243b05F2B3CfF6f4",
+      "interface": "0x0000000CC613E3Da01da44B438B6916849529128"
     },
     "Wormhole": {
       "incentive": "0x000000ED80503e3A7EA614FFB5507FD52584a1f2",
-      "interface": "0x0000002c1433f91dd8eBebC0F4407235647ABbfb"
+      "interface": "0x0000000BFC5C80DFe4E801edaa071a1BD9271D0A"
     }
   },
   "basegoerli": {
     "MOCK": {
-      "incentive": "0x000000641ac10b4e000fe361f2149e2a531061c5",
-      "interface": "0x000000E83CCb819B54184d573B4b1e7f4B6d48e6"
+      "incentive": "0x00000001a9818a7807998dbc243b05F2B3CfF6f4",
+      "interface": "0x0000000CC613E3Da01da44B438B6916849529128"
     }
   },
   "mantletestnet" : {
     "MOCK": {
-      "incentive": "0x000000641ac10b4e000fe361f2149e2a531061c5",
-      "interface": "0x000000E83CCb819B54184d573B4b1e7f4B6d48e6"
+      "incentive": "0x00000001a9818a7807998dbc243b05F2B3CfF6f4",
+      "interface": "0x0000000CC613E3Da01da44B438B6916849529128"
     }
   },
   "taikoeldfell": {
     "MOCK": {
-      "incentive": "0x000000641ac10b4e000fe361f2149e2a531061c5",
-      "interface": "0x000000E83CCb819B54184d573B4b1e7f4B6d48e6"
+      "incentive": "0x00000001a9818a7807998dbc243b05F2B3CfF6f4",
+      "interface": "0x0000000CC613E3Da01da44B438B6916849529128"
     }
   },
   "scrollsepolia": {
     "MOCK": {
-      "incentive": "0x000000641ac10b4e000fe361f2149e2a531061c5",
-      "interface": "0x000000E83CCb819B54184d573B4b1e7f4B6d48e6"
+      "incentive": "0x00000001a9818a7807998dbc243b05F2B3CfF6f4",
+      "interface": "0x0000000CC613E3Da01da44B438B6916849529128"
     }
   },
   "arbitrumgoerli": {
     "MOCK": {
-      "incentive": "0x000000641ac10b4e000fe361f2149e2a531061c5",
-      "interface": "0x000000E83CCb819B54184d573B4b1e7f4B6d48e6"
+      "incentive": "0x00000001a9818a7807998dbc243b05F2B3CfF6f4",
+      "interface": "0x0000000CC613E3Da01da44B438B6916849529128"
     }
   },
   "optimismgoerli": {
     "MOCK": {
-      "incentive": "0x000000641ac10b4e000fe361f2149e2a531061c5",
-      "interface": "0x000000E83CCb819B54184d573B4b1e7f4B6d48e6"
+      "incentive": "0x00000001a9818a7807998dbc243b05F2B3CfF6f4",
+      "interface": "0x0000000CC613E3Da01da44B438B6916849529128"
     }
   },
   "bsctestnet": {
     "MOCK": {
-      "incentive": "0x000000641ac10b4e000fe361f2149e2a531061c5",
-      "interface": "0x000000E83CCb819B54184d573B4b1e7f4B6d48e6"
+      "incentive": "0x00000001a9818a7807998dbc243b05F2B3CfF6f4",
+      "interface": "0x0000000CC613E3Da01da44B438B6916849529128"
     }
   },
   "opbnbtestnet": {
     "MOCK": {
-      "incentive": "0x000000641ac10b4e000fe361f2149e2a531061c5",
-      "interface": "0x000000E83CCb819B54184d573B4b1e7f4B6d48e6"
+      "incentive": "0x00000001a9818a7807998dbc243b05F2B3CfF6f4",
+      "interface": "0x0000000CC613E3Da01da44B438B6916849529128"
     }
   },
   "omnitestnet": {
     "MOCK": {
-      "incentive": "0x000000641ac10b4e000fe361f2149e2a531061c5",
-      "interface": "0x000000E83CCb819B54184d573B4b1e7f4B6d48e6"
+      "incentive": "0x00000001a9818a7807998dbc243b05F2B3CfF6f4",
+      "interface": "0x0000000CC613E3Da01da44B438B6916849529128"
     }
   }
 }
