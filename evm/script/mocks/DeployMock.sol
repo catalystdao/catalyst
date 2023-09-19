@@ -7,7 +7,7 @@ import { Strings } from "openzeppelin-contracts/contracts/utils/Strings.sol";
 
 import { BaseMultiChainDeployer} from "../BaseMultiChainDeployer.s.sol";
 
-import { MockApplication } from "../MockApplication.sol";
+import { MockApplication } from "./MockApplication.sol";
 
 import { IMessageEscrowStructs } from "GeneralisedIncentives/src/interfaces/IMessageEscrowStructs.sol";
 
@@ -41,6 +41,10 @@ contract DeployMock is BaseMultiChainDeployer, IMessageEscrowStructs {
                 targetDelta: 0 minutes
             })
         );
+    }
+
+    function fundRan() broadcast external {
+        payable(0xFffF0655fBD96fC67542B360A4A16717553991a1).transfer(1);
     }
 }
 
