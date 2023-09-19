@@ -105,13 +105,13 @@ contract DeployContracts is Script {
 
         admin = admin_;
 
-        deployFactory(0xecb27b5741b5f2273f40ac08abfad1bbdd9205460aa8a99887a088b69338492d);
+        deployFactory(0x316be2c1a565b2d6a49b0467e2a52587ab1c4db20b3bfae60187efb23220d044);
 
-        deploy_volatile_mathlib(0xa5015afd43b55c526060c73a8ff50bd4935b7ce89fda26b5af063463c8fc25d2);
-        deploy_amplified_mathlib(0xd110856a7a3360942ce1fb0123bbe7f165d77479c9ff8a06904384c1e3df3bc6);
+        deploy_volatile_mathlib(0xd7baa2068cd0f425bea1cb1f9eabbef3d4a2cdabb1044a2142a46ab8b6be7cee);
+        deploy_amplified_mathlib(0x21da4cf759ec3518bc50f96cad6e024121aead1b0c9b92342abf8e91f4502ec1);
 
-        deploy_volatile_template(0x41d057d951d17f247c64145d3e39b3d3fdc3593fe25c73300df5a44b8632f668);
-        deploy_amplified_template(0x605a5e4a0939267fff0c526b9907539a893e0e4e0cfdb16d7393250c4750fe2d);
+        deploy_volatile_template(0x26de960282cbf188509690cd641e1f65cae2bc0b95e0ca34d048addeca2c0064);
+        deploy_amplified_template(0x7c8f34dec62aa0254bcd27daad030548e2615dc2075d42fa4f682bf8416bb57a);
 
         // Deploy Registry
         deploy_describer(bytes32(0));

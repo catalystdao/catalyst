@@ -64,25 +64,21 @@ Catalyst v1 implements 4 type of swaps, *Asset Swaps*, *Liquidity Swaps*, *Pleas
   - `https://book.getfoundry.sh/getting-started/installation`
   - or read https://book.getfoundry.sh/getting-started/installation
 
-- Install the oz contracts [@openzeppelin/contracts](https://www.npmjs.com/package/@openzeppelin/contracts) and [Solmate](https://www.npmjs.com/package/solmate)
-  
-  - `pnpm install` (run from the `evm` root directory)
+# Development with Foundry
 
-- Fetch the submodules:
+This repository contains a helper script for deployment `script/DeployCatalyst.s.sol` which is based on `script/DeployContracts.s.sol` which is the origin for most of the testing configuration. This deploys core swap contracts but not the cross-chain interface. This is instead done by `script/DeployInterfaces.s.sol` which also handles management/deployment of the dependency on [Generalised Incentives](https://github.com/catalystdao/GeneralisedIncentives).
 
-  - `git submodule update --init`
+## Local Catalyst
 
-- Install `eth-brownie`
-  
-  - via `pip`: `pip3 install eth-brownie` (check that `$PATH` is properly configured).
-  - via [`poetry`](https://python-poetry.org):
-    - If `poetry` is not installed on your system, use `brew install poetry`
-    - Set the `poetry` python version with `poetry env use python3.9`.
-    - `poetry install` (run from the `evm` root directory). This will install all the dependencies specified in `./pyproject.toml`.
+Local Catalyst consists of Volatile and Amplified pools along with the Factory. To deploy Local Catalyst to another chain, add the chain config to `script/BaseMultiChainDeployer.s.sol`. For chains without EIP-1559 add them as a legacy chain.Then run `forge script DeployCatalyst --sig "deploy()" --broadcast` or `forge script DeployCatalyst --sig "deploy_legacy()" --legacy --broadcast` depending on if the chain added was with EIP-1559 support (non-legacy) or with (legacy). Some chains require running with `--slow`. If deployment fails, wait a few blocks and re-try.
 
-# Development with Brownie
+## Cross-chain Catalyst
 
-This repository contains a deployment helper. This helper can be used both for internal development but also for external deployment. (found in `/scripts/deployCatalyst.py`). It deploys all relevant Catalyst contracts, along with tokens handling and optional vault creation. As an example, the below step go over deploying Catalyst and executing a local swap and a cross-vault swap (from and to the same vault) are outlined. Because all computation is contained within the vaults, cross-chain swaps can be simulated fully on a single chain purely through cross-vault swaps. As such, to simulate a pool another has to be deployed and then connections has to be established.
+Cross-chain Catalyst requires governance approval. This is unavoidable, since there are no trustless way to verify which chain identifier belongs to which chain. While the cross-chain interface can be deployed by anyone, the setup can only be done by the pre-designated address.
+
+## Deployment verification
+
+The deployment scheme is designed such that any deployment which matches the addresses in `script/config/config_contracts.json` is legitimate. This makes it easy for anyone to deploy, verify, and scale Catalyst.
 
 ## Catalyst Setup
 
