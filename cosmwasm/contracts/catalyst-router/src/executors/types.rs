@@ -8,7 +8,7 @@ pub type Denom = String;
 #[cw_serde]
 pub enum Amount {
     Amount(Uint128),
-    RouterBalance()
+    RouterBalance
 }
 
 #[cw_serde]

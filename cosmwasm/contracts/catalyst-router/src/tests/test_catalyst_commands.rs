@@ -350,7 +350,7 @@ mod test_catalyst_commands {
         // Tested action 2: Router balance
         let router_balance = Uint128::new(543u128);
         let denom = format!("factory/{}/{}", vault.clone(), VAULT_TOKEN_DENOM.to_string());
-        let amount = Amount::RouterBalance();
+        let amount = Amount::RouterBalance;
 
         // Send amount to the router
         test_env.get_app().execute(

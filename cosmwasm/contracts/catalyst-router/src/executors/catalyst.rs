@@ -30,7 +30,7 @@ pub(crate) fn get_vault_token_amount(
 
     let amount = match amount {
         Amount::Amount(amount) => amount,
-        Amount::RouterBalance() => deps.querier.query_wasm_smart::<BalanceResponse>(
+        Amount::RouterBalance => deps.querier.query_wasm_smart::<BalanceResponse>(
             vault,
             &VaultQuery::Balance{ address: env.contract.address.to_string() }
         )?.balance,
