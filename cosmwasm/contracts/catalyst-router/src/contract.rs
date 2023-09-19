@@ -56,6 +56,14 @@ pub fn execute(
             deadline
         ),
 
+        // `ExecuteMsg` can be extended with a `WrapExecute` variant to `wrap` a router command
+        // that requires the execution of multiple `CosmosMsg` (e.g. to transfer multiple `cw20`
+        // tokens). This would be required because of the `allow_revert` feature of the router, as 
+        // if multiple `CosmosMsg` are emitted and one of them fails (that is not the first one),
+        // the router would not be able to revert the state of the messages that did not fail. If
+        // all the messages are wrapped within one 'main' message, any failure would cause the
+        // 'main' message to revert.
+
         ExecuteMsg::OnCatalystCall {
             purchased_tokens: _,
             data
