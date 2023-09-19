@@ -6,5 +6,5 @@ mod executors;
 pub mod msg;
 pub mod state;
 
-#[cfg(test)]
+#[cfg(all(test,feature="asset_native"))]
 pub mod tests;

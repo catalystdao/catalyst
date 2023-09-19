@@ -20,6 +20,7 @@ crate-type = ["cdylib", "rlib"]
 backtraces = ["cosmwasm-std/backtraces"]
 # use library feature to disable all instantiate/execute/query exports
 library = []
+asset_native = ["catalyst-vault-volatile/asset_native"]   # Used to configure 'catalyst-vault-volatile' for testing
 
 [profile.release]
 codegen-units = 1
