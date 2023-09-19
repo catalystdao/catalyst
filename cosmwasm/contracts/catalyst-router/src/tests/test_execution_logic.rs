@@ -1,6 +1,6 @@
 mod test_execution_logic {
 
-    use cosmwasm_std::{Uint128, Addr, Coin, coin, StdError};
+    use cosmwasm_std::{Uint128, Addr, Coin, coin, StdError, Binary};
     use std::iter;
 
     use test_helpers::definitions::SETUP_MASTER;
@@ -749,4 +749,107 @@ mod test_execution_logic {
         ));
 
     }
+
+
+
+    // Cancel Swap Tests
+    // ********************************************************************************************
+
+    #[test]
+    fn test_cancel_swap() {
+
+        let mut test_env = TestNativeAssetEnv::initialize(SETUP_MASTER.to_string());
+        let assets = test_env.get_assets()[..2].to_vec();
+
+        let router = mock_instantiate_router(test_env.get_app());
+        let amount = coin(1000u128, assets[0].denom.clone());
+        let allow_cancel_id = Binary::from("cancel-id".as_bytes());
+        let command_orders = vec![
+            CommandOrder {
+                command: CommandMsg::BalanceCheck {
+                    denoms: vec![amount.denom.clone()],
+                    minimum_amounts: vec![Uint128::one()],
+                    account: Account::Router
+                },
+                allow_revert: false
+            },
+            CommandOrder {
+                command: CommandMsg::Sweep {
+                    denoms: vec![amount.denom],
+                    minimum_amounts: vec![Uint128::one()],
+                    recipient: Account::Sender
+                },
+                allow_revert: false
+            },
+            CommandOrder {
+                command: CommandMsg::AllowCancel {
+                    authority: SETUP_MASTER.to_string(),
+                    identifier: allow_cancel_id.clone()
+                },
+                allow_revert: false
+            }
+        ];
+
+        // ! Do not 'cancel' the swap
+
+
+
+        // Tested action 1: 'cancel' unset
+        let result = test_env.execute_contract(
+            Addr::unchecked(SETUP_MASTER),
+            router.clone(),
+            &ExecuteMsg::Execute {
+                command_orders: command_orders.clone(),
+                deadline: None
+            },
+            assets.clone(),
+            vec![Uint128::new(1000u128), Uint128::new(1000u128)]
+        );
+
+        // Make sure the transaction passes
+        assert!(
+            result.is_ok()
+        );
+
+
+
+        // Tested action 2: 'cancel' set
+
+        // Set the 'cancel' state
+        test_env.execute_contract(
+            Addr::unchecked(SETUP_MASTER),
+            router.clone(),
+            &ExecuteMsg::CancelSwap {
+                identifier: allow_cancel_id.clone(),
+                state: None     // ! 'Cancel' the swap
+            },
+            assets.clone(),
+            vec![Uint128::new(1000u128), Uint128::new(1000u128)]
+        ).unwrap();
+
+        // Execute commands
+        let result = test_env.execute_contract(
+            Addr::unchecked(SETUP_MASTER),
+            router,
+            &ExecuteMsg::Execute {
+                command_orders,
+                deadline: None
+            },
+            assets,
+            vec![Uint128::new(1000u128), Uint128::new(1000u128)]
+        );
+        
+        // Make sure the transaction fails
+        assert!(matches!(
+            result.err().unwrap().downcast().unwrap(),
+            ContractError::CommandReverted { index, error }
+                if index == 2 && error == format!(
+                    "Swap cancelled (authority {}, identifier {})",
+                    SETUP_MASTER,
+                    allow_cancel_id.to_base64()
+                )
+        ));
+
+    }
+
 }
