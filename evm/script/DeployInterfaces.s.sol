@@ -137,6 +137,50 @@ contract DeployInterfaces is BaseMultiChainDeployer {
             describer.add_whitelisted_cci(interfaceAddress);
         }
     }
+
+    function unwhitelistCCI() load_config iter_chains(chain_list) broadcast external {
+        CatalystDescriber describer = CatalystDescriber(0xfB933A070D9a1D43CF973714e35bed7e4a5A0545);
+        address[] memory whitelistedCCI = describer.get_whitelisted_CCI();
+
+        bool found = false;
+        for (uint256 i = 0; i < whitelistedCCI.length; ++i) {
+            address cci = whitelistedCCI[i];
+
+            if (cci == 0x0000000CC613E3Da01da44B438B6916849529128) {
+                found = true;
+            }
+            if (cci == 0x0000000c5ebB5b2bE933e98dFE9A441b58A2820E) {
+                describer.remove_whitelisted_cci(cci, i);
+            }
+            console.logAddress(cci);
+        }
+
+        if (found == false) {
+            describer.add_whitelisted_cci(0x0000000CC613E3Da01da44B438B6916849529128);
+        }
+    }
+
+    function unwhitelistCCI_legacy() load_config iter_chains(chain_list_legacy) broadcast external {
+        CatalystDescriber describer = CatalystDescriber(0xfB933A070D9a1D43CF973714e35bed7e4a5A0545);
+        address[] memory whitelistedCCI = describer.get_whitelisted_CCI();
+
+        bool found = false;
+        for (uint256 i = 0; i < whitelistedCCI.length; ++i) {
+            address cci = whitelistedCCI[i];
+
+            if (cci == 0x0000000CC613E3Da01da44B438B6916849529128) {
+                found = true;
+            }
+            if (cci == 0x0000000c5ebB5b2bE933e98dFE9A441b58A2820E) {
+                describer.remove_whitelisted_cci(cci, i);
+            }
+            console.logAddress(cci);
+        }
+
+        if (found == false) {
+            describer.add_whitelisted_cci(0x0000000CC613E3Da01da44B438B6916849529128);
+        }
+    }
     
     function _deploy() internal {
         address admin = address(0x0000007aAAC54131e031b3C0D6557723f9365A5B);
@@ -175,6 +219,9 @@ contract DeployInterfaces is BaseMultiChainDeployer {
         for (i = 0; i < all_chains.length; ++i) {
             Chains remoteChain = all_chains[i];
             if (chain == remoteChain) continue;
+            if (
+                !vm.keyExists(config_interfaces, string.concat(".", rpc[remoteChain], ".", incentiveVersion))
+            ) continue;
 
             bytes32 chainIdentifier = abi.decode(config_chain.parseRaw(string.concat(".", rpc[remoteChain], ".chainIdentifier")), (bytes32));
             // check if a connection has already been set.

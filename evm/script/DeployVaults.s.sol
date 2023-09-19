@@ -126,20 +126,24 @@ contract DeployVaults is BaseMultiChainDeployer {
         string[] memory pools = vm.parseJsonKeys(config_vault, "$");
         for (uint256 p_i = 0; p_i < pools.length; ++p_i) {
             string memory pool = pools[p_i];
+            console.log(pool);
 
             // Check if the vault exists on this chain.
             if (!vm.keyExists(config_vault, string.concat(".", pool, ".", chain_name))) continue;
 
             // Check if the address has been set
             address vaultAddress = vm.parseJsonAddress(config_vault, string.concat(".", pool, ".", chain_name, ".address"));
+            console.logAddress(vaultAddress);
             if (vaultAddress == address(0)) continue;
 
             // check if vault has already been setup.
+            console.logAddress(ICatalystV1Vault(vaultAddress)._setupMaster());
             if (ICatalystV1Vault(vaultAddress)._setupMaster() == address(0)) continue;
 
             string[] memory vault_chains = vm.parseJsonKeys(config_vault, string.concat(".", pool));
             for (uint256 vc_i = 0; vc_i < vault_chains.length; ++ vc_i) {
                 string memory vault_chain = vault_chains[vc_i];
+                console.log(vault_chain);
                 if (keccak256(abi.encodePacked(chain_name)) == keccak256(abi.encodePacked(vault_chain))) continue;
 
                 bytes32 chainIdentifier = bytes32(vm.parseJsonUint(config_chain, string.concat(".", vault_chain, ".chainIdentifier")));

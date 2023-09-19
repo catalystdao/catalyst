@@ -34,19 +34,26 @@ import { IncentivizedMockEscrow } from "GeneralisedIncentives/src/apps/mock/Ince
 import { IMessageEscrowStructs } from "GeneralisedIncentives/src/interfaces/IMessageEscrowStructs.sol";
 import { ICatalystV1Structs } from "../src/interfaces/ICatalystV1VaultState.sol";
 
+import { IncentivizedWormholeEscrow } from "GeneralisedIncentives/src/apps/wormhole/IncentivizedWormholeEscrow.sol";
 
 contract Swap is Script, IMessageEscrowStructs {
+
+    function getChainIdentifierWormhole() external {
+        address wormhole_incentive = 0x000000ED80503e3A7EA614FFB5507FD52584a1f2;
+
+        console.logUint(IncentivizedWormholeEscrow(wormhole_incentive).chainId());
+    }
 
     function swap(uint256 n) public {
 
         uint256 deployerPrivateKey = vm.envUint("CATALYST_DEPLOYER");
         vm.startBroadcast(deployerPrivateKey);
 
-        address fromVault = address(0xB0D751e5E8a337515f7faa528ef807727998c401);
-        address toVault = address(0xB0D751e5E8a337515f7faa528ef807727998c401);
+        address fromVault = address(0x8eEfc0F0E47994dcF7542ff080b8970cD4CF09EC);
+        address toVault = address(0x8eEfc0F0E47994dcF7542ff080b8970cD4CF09EC);
 
         // mantle
-        address WGAS = address(0x4200000000000000000000000000000000000006);
+        address WGAS = address(0x9c3C9283D3e44854697Cd22D3Faa240Cfb032889);
 
         uint256 amount = 0.0001 * 1e18;
 
@@ -56,7 +63,7 @@ contract Swap is Script, IMessageEscrowStructs {
         for (uint256 i = 0; i < n; ++i) {
             ICatalystV1Vault(fromVault).sendAsset{value: 2000000 * 10 gwei + 2000000 * 10 gwei}(
                 ICatalystV1Structs.RouteDescription({
-                    chainIdentifier: bytes32(uint256(84531)),
+                    chainIdentifier: bytes32(uint256(10002)),
                     toVault: abi.encodePacked(uint8(20), bytes32(0), abi.encode(toVault)),
                     toAccount: abi.encodePacked(uint8(20), bytes32(0), abi.encode(address(0x0000007aAAC54131e031b3C0D6557723f9365A5B))),
                     incentive: IncentiveDescription({
