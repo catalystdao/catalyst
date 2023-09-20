@@ -42,9 +42,5 @@ contract DeployMock is BaseMultiChainDeployer, IMessageEscrowStructs {
             })
         );
     }
-
-    function fundRan() broadcast external {
-        payable(0xFffF0655fBD96fC67542B360A4A16717553991a1).transfer(1);
-    }
 }
 
