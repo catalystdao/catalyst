@@ -273,7 +273,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
         uint256 amount
     ) public view override returns (uint256) {
         // A high => fewer units returned. Do not subtract the escrow amount
-        uint256 A = ERC20(fromAsset).balanceOf(address(this));
+        uint256 A = ERC20(fromAsset).balanceOf(address(this)) + _underwriteEscrowedTokens[fromAsset];
         uint256 W = _weight[fromAsset];
 
         // If 'fromAsset' is not part of the vault, W is 0. This returns 0 by
@@ -321,7 +321,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
         uint256 amount
     ) public view override returns (uint256) {
         // Do not remove escrow from A but remove escrow from B.
-        uint256 A = ERC20(fromAsset).balanceOf(address(this));
+        uint256 A = ERC20(fromAsset).balanceOf(address(this)) + _underwriteEscrowedTokens[fromAsset];
         uint256 B = ERC20(toAsset).balanceOf(address(this)) - _escrowedTokens[toAsset];
         uint256 W_A = _weight[fromAsset];
         uint256 W_B = _weight[toAsset];
@@ -371,7 +371,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
             }
 
             // A high => fewer units returned. Do not subtract the escrow amount
-            uint256 At = ERC20(token).balanceOf(address(this));
+            uint256 At = ERC20(token).balanceOf(address(this)) + _underwriteEscrowedTokens[token];
 
             U += _calcPriceCurveArea(tokenAmounts[it], At, _weight[token]);
 
@@ -774,6 +774,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
      */
     function _receiveAsset(
         address toAsset,
+        address toAccount,
         uint256 U,
         uint256 minOut
     ) internal override returns (uint256) {
@@ -787,6 +788,10 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
 
         // Ensure the user is satisfied with the number of tokens.
         if (minOut > purchasedTokens)  revert ReturnInsufficientOnReceive();
+
+
+        // Send the assets to the user.
+        ERC20(toAsset).safeTransfer(toAccount, purchasedTokens);
 
         return purchasedTokens;
     }
@@ -819,6 +824,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
         address toAsset = _tokenIndexing[toAssetIndex];
         uint256 purchasedTokens = _receiveAsset(
             toAsset,
+            toAccount,
             U,
             minOut
         );
@@ -834,9 +840,6 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
             fromAsset,
             blockNumberMod
         );
-
-        // Send the assets to the user.
-        ERC20(toAsset).safeTransfer(toAccount, purchasedTokens);
     }
 
     /**
@@ -860,6 +863,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
         address toAsset = _tokenIndexing[toAssetIndex];
         uint256 purchasedTokens = _receiveAsset(
             toAsset,
+            toAccount,
             U,
             minOut
         );
@@ -875,9 +879,6 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
             fromAsset,
             blockNumberMod
         );
-
-        // Send the assets to the user.
-        ERC20(toAsset).safeTransfer(toAccount, purchasedTokens);
 
         // Let users define custom logic which should be executed after the swap.
         // The logic is not contained within a try - except so if the logic reverts
@@ -1026,7 +1027,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
                 address token = _tokenIndexing[it];
                 if (token == address(0)) break;
                 uint256 weight = _weight[token];
-                uint256 balance = ERC20(token).balanceOf(address(this));
+                uint256 balance = ERC20(token).balanceOf(address(this)) + _underwriteEscrowedTokens[token];
                 localInvariant += uint256(FixedPointMathLib.lnWad( // uint256 casting: Since balance*FixedPointMathLib.WAD >= FixedPointMathLib.WAD, lnWad always returns more than 0.
                     int256(balance*FixedPointMathLib.WAD) // int256 casting: If it overflows and becomes negative, then lnWad fails.
                 )) * weight; 
