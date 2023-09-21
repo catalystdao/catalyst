@@ -1664,4 +1664,31 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
                                     // Cannot be manipulated by the router as, otherwise, the swapHash check will fail
     }
 
+    function underwriteAsset(
+        bytes32 identifier,
+        address toAsset,
+        uint256 U,
+        uint256 minOut
+    ) override public returns (uint256 purchasedTokens) {
+        // We need to ensure that the conversion in deleteUnderwrite (and receiveAsset) doesn't overflow.
+        require(U < uint256(type(int256).max));  // int256 max fits in uint256
+        
+        super.underwriteAsset(identifier, toAsset, U, minOut);
+
+        // unit tracking is handled by _receiveAsset.
+    }
+
+    function deleteUnderwriteAsset(
+        bytes32 identifier,
+        uint256 U,
+        uint256 escrowAmount,
+        address escrowToken
+    ) override public {
+        super.deleteUnderwriteAsset(identifier, U, escrowAmount, escrowToken);
+        
+        // update the unit tracker. When underwriteAsset was called, the _unitTracker was updated with
+        // _unitTrakcer -= int256(U) so we need to cancel that.
+        _unitTracker += int256(U);  // It has already been checked on sendAsset that casting to int256 will not overflow.
+                                    // Cannot be manipulated by the router as, otherwise, the swapHash check will fail
+    }
 }
