@@ -785,7 +785,7 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
             identifier,
             toAsset,
             U,
-            0  // minout is checked here.
+            minOut * (2**16-1) / (2**16-1 - uint256(underwritePercentageX16))  // minout is checked after underwrite fee.
         );
         
 
@@ -813,9 +813,6 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
             // underwritingIncentive <= purchasedTokens.
             purchasedTokens -= underwritingIncentive;
         }
-
-        // Check minOut with the underwriting incentive subtracted.
-        if (purchasedTokens < minOut) revert ReturnInsufficientOnReceive();
 
         // Send the assets to the user.
         ERC20(toAsset).safeTransfer(toAccount, purchasedTokens);
