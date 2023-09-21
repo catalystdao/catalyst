@@ -18,6 +18,7 @@ interface ICatalystV1Underwriting {
 
     function deleteUnderwriteAsset(
         bytes32 identifier,
+        uint256 U,
         uint256 escrowAmount,
         address escrowToken
     ) external;

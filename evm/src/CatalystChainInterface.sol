@@ -872,7 +872,7 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
         delete underwritingStorage[identifier];
 
         // Delete the escrow
-        ICatalystV1Vault(targetVault).deleteUnderwriteAsset(identifier, fromAmount, toAsset);
+        ICatalystV1Vault(targetVault).deleteUnderwriteAsset(identifier, U, fromAmount, toAsset);
 
         unchecked {
             // Compute the underwriting incentive. 

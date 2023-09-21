@@ -185,7 +185,7 @@ abstract contract CatalystVaultCommon is
         address toAsset,
         uint256 U,
         uint256 minOut
-    ) onlyChainInterface external returns (uint256 purchasedTokens) {
+    ) onlyChainInterface virtual public returns (uint256 purchasedTokens) {
         purchasedTokens = _receiveAsset(toAsset, U, minOut);
         // Set the escrow.
         _setTokenEscrow(
@@ -209,9 +209,10 @@ abstract contract CatalystVaultCommon is
 
     function deleteUnderwriteAsset(
         bytes32 identifier,
+        uint256 U,
         uint256 escrowAmount,
         address escrowToken
-    ) onlyChainInterface external {
+    ) onlyChainInterface virtual public {
          _releaseAssetEscrow(identifier, escrowAmount, escrowToken); // Only reverts for missing escrow
     }
 
