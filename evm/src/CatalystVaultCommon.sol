@@ -117,6 +117,8 @@ abstract contract CatalystVaultCommon is
     // Escrow reference
     /// @notice Total current escrowed tokens
     mapping(address => uint256) public _escrowedTokens;
+    /// @notice Total current escrowed tokens
+    mapping(address => uint256) public _underwriteEscrowedTokens;
     /// @notice Total current escrowed vault tokens
     uint256 public _escrowedVaultTokens;
 
@@ -174,6 +176,7 @@ abstract contract CatalystVaultCommon is
 
     function _receiveAsset(
         address toAsset,
+        address toAccount,
         uint256 U,
         uint256 minOut
     ) virtual internal returns (uint256);
@@ -186,11 +189,10 @@ abstract contract CatalystVaultCommon is
         uint256 U,
         uint256 minOut
     ) onlyChainInterface virtual public returns (uint256 purchasedTokens) {
-        purchasedTokens = _receiveAsset(toAsset, U, minOut);
+        purchasedTokens = _receiveAsset(toAsset, msg.sender, U, minOut);  // msg.sender is cheaper than sload.
         // Set the escrow.
-        _setTokenEscrow(
+        _setUnderwriteEscrow(
             identifier,
-            address(msg.sender),  // is always ChainInterface but msg.sender is cheaper than slaod.
             toAsset,
             purchasedTokens
         );
@@ -201,10 +203,7 @@ abstract contract CatalystVaultCommon is
         uint256 escrowAmount,
         address escrowToken
     ) onlyChainInterface external {
-         _releaseAssetEscrow(identifier, escrowAmount, escrowToken); // Only reverts for missing escrow
-
-        // Send escrowed tokens to underwriting module. (chainInterface == msg.sender)
-        ERC20(escrowToken).safeTransfer(msg.sender, escrowAmount);
+         _releaseUnderwriteEscrow(identifier, escrowAmount, escrowToken); // Only reverts for missing escrow
     }
 
     function deleteUnderwriteAsset(
@@ -213,7 +212,7 @@ abstract contract CatalystVaultCommon is
         uint256 escrowAmount,
         address escrowToken
     ) onlyChainInterface virtual public {
-         _releaseAssetEscrow(identifier, escrowAmount, escrowToken); // Only reverts for missing escrow
+         _releaseUnderwriteEscrow(identifier, escrowAmount, escrowToken); // Only reverts for missing escrow
     }
 
     // -- Setup Functions -- //
@@ -452,6 +451,20 @@ abstract contract CatalystVaultCommon is
         _escrowedVaultTokens += vaultTokens;
     }
 
+    /// @notice Creates a token escrow for a swap.
+    function _setUnderwriteEscrow(
+        bytes32 underwriteIdentifier,
+        address fromAsset,
+        uint256 amount
+    ) internal {
+        if (_escrowLookup[underwriteIdentifier] != address(0))  revert EscrowAlreadyExists();
+        _escrowLookup[underwriteIdentifier] = address(uint160(1));
+        unchecked {
+            // Must be less than than the vault balance.
+            _underwriteEscrowedTokens[fromAsset] += amount;
+        }
+    }
+
     /// @notice Returns the fallbackUser for the escrow and cleans up the escrow information.
     /// @dev 'delete _escrowLookup[sendAssetHash]' ensures this function can only be called once.
     function _releaseAssetEscrow(
@@ -486,6 +499,26 @@ abstract contract CatalystVaultCommon is
         unchecked {
             // escrowAmount \subseteq _escrowedVaultTokens => escrowAmount <= _escrowedVaultTokens. Cannot be called twice since the 3 lines before ensure this can only be reached once.
             _escrowedVaultTokens -= escrowAmount;
+        }
+        
+        return fallbackUser;
+    }
+
+    /// @notice Returns the fallbackUser for the escrow and cleans up the escrow information.
+    /// @dev 'delete _escrowLookup[sendAssetHash]' ensures this function can only be called once.
+    function _releaseUnderwriteEscrow(
+        bytes32 sendAssetHash,
+        uint256 escrowAmount,
+        address escrowToken
+    ) internal returns(address) {
+
+        address fallbackUser = _escrowLookup[sendAssetHash];  // Passing in an invalid swapHash returns address(0)
+        require(fallbackUser != address(0));  // dev: Invalid swapHash. Alt: Escrow doesn't exist.
+        delete _escrowLookup[sendAssetHash];  // Stops timeout and further acks from being called
+
+        unchecked {
+            // escrowAmount \subseteq _escrowedTokens => escrowAmount <= _escrowedTokens. Cannot be called twice since the 3 lines before ensure this can only be reached once.
+            _underwriteEscrowedTokens[escrowToken] -= escrowAmount;
         }
         
         return fallbackUser;

@@ -194,7 +194,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
         uint256 amount
     ) public view override returns (uint256) {
         // A high => fewer units returned. Do not subtract the escrow amount
-        uint256 A = ERC20(fromAsset).balanceOf(address(this));
+        uint256 A = ERC20(fromAsset).balanceOf(address(this)) + _underwriteEscrowedTokens[fromAsset];
         uint256 W = _weight[fromAsset];
 
 
@@ -252,7 +252,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
         address toAsset,
         uint256 amount
     ) public view override returns (uint256) {
-        uint256 A = ERC20(fromAsset).balanceOf(address(this));
+        uint256 A = ERC20(fromAsset).balanceOf(address(this)) + _underwriteEscrowedTokens[fromAsset];
         uint256 B = ERC20(toAsset).balanceOf(address(this)) - _escrowedTokens[toAsset];
         uint256 W_A = _weight[fromAsset];
         uint256 W_B = _weight[toAsset];
@@ -335,6 +335,14 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
 
                         // if wab == 0, there is no need to add it. So only add if != 0.
                         weightedAssetBalanceSum += wab;
+
+                        // we need to recalculate wab using the modified (and larger) balance if all underwrites were to fail.
+                        weightAssetBalance += weight * _underwriteEscrowedTokens[token];
+
+                        wab = FixedPointMathLib.powWad(
+                            int256(weightAssetBalance * FixedPointMathLib.WAD),  // If casting overflows to a negative number, powWad fails
+                            oneMinusAmp
+                        );
                     }
                     
                     // This line is the origin of the stack too deep issue.
@@ -1017,6 +1025,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
      */
     function _receiveAsset(
         address toAsset,
+        address toAccount,
         uint256 U,
         uint256 minOut
     ) internal override returns (uint256) {
@@ -1039,6 +1048,8 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
 
         // Track units for balance0 computation.
         _unitTracker -= int256(U);
+        // Send the assets to the user.
+        ERC20(toAsset).safeTransfer(toAccount, purchasedTokens);
 
         return purchasedTokens;
     }
@@ -1071,6 +1082,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
         address toAsset = _tokenIndexing[toAssetIndex];
         uint256 purchasedTokens = _receiveAsset(
             toAsset,
+            toAccount,
             U,
             minOut
         );
@@ -1086,9 +1098,6 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
             fromAsset,
             blockNumberMod
         );
-
-        // Send the assets to the user.
-        ERC20(_tokenIndexing[toAssetIndex]).safeTransfer(toAccount, purchasedTokens);
     }
 
     /**
@@ -1112,6 +1121,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
         address toAsset = _tokenIndexing[toAssetIndex];
         uint256 purchasedTokens = _receiveAsset(
             toAsset,
+            toAccount,
             U,
             minOut
         );
@@ -1127,9 +1137,6 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
             fromAsset,
             blockNumberMod
         );
-
-        // Send the assets to the user.
-        ERC20(toAsset).safeTransfer(toAccount, purchasedTokens);
 
         // Let users define custom logic which should be executed after the swap.
         // The logic is not contained within a try - except so if the logic reverts

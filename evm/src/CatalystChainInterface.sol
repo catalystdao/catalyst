@@ -809,6 +809,9 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
         // The next line acts as reentry protection. When the storage is deleted underwriteState.refundTo == address(0) will be true.
         delete underwritingStorage[identifier];
 
+        // send the tokens we got from the vault back to the vault.
+        // This is cheaper than using a pull system where we approve and the vault withdraws from us.
+        ERC20(toAsset).safeTransfer(targetVault, underWrittenTokens);
         // Delete the escrow
         ICatalystV1Vault(targetVault).deleteUnderwriteAsset(identifier, U, underWrittenTokens, toAsset);
 
