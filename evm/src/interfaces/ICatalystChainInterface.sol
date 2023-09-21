@@ -19,8 +19,7 @@ interface ICatalystChainInterface is ICatalystV1Structs, ICrossChainReceiver {
         uint256 U,
         uint256 minOut,
         address toAccount,
-        uint256 fromAmount,
-        uint16 underwritePercentageX16,
+        uint16 underwriteIncentiveX16,
         bytes memory cdata
     ) external;
     function getUnderwriteIdentifier(
@@ -29,8 +28,7 @@ interface ICatalystChainInterface is ICatalystV1Structs, ICrossChainReceiver {
         uint256 U,
         uint256 minOut,
         address toAccount,
-        uint256 fromAmount,
-        uint16 underwritePercentageX16,
+        uint16 underwriteIncentiveX16,
         bytes memory cdata
     ) external pure returns (bytes32 identifier);
     function maxUnderwritingDuration() external view returns (uint256);
@@ -42,6 +40,7 @@ interface ICatalystChainInterface is ICatalystV1Structs, ICrossChainReceiver {
         uint256 minOut,
         uint256 fromAmount,
         address fromAsset,
+        uint16 underwriteIncentiveX16,
         bytes memory calldata_
     ) external payable;
     function sendCrossChainLiquidity(
@@ -49,25 +48,6 @@ interface ICatalystChainInterface is ICatalystV1Structs, ICrossChainReceiver {
         uint256 U,
         uint256[2] memory minOut,
         uint256 fromAmount,
-        bytes memory calldata_
-    ) external payable;
-    function sendCrossChainPleaseUnderwrite(
-        RouteDescription memory routeDescription,
-        uint8 toAssetIndex,
-        uint256 U,
-        uint256 minOut,
-        uint256 fromAmount,
-        address fromAsset,
-        uint16 underwritePercentageX16,
-        bytes memory calldata_
-    ) external payable;
-    function sendCrossChainPurposeUnderwrite(
-        RouteDescription memory routeDescription,
-        uint8 toAssetIndex,
-        uint256 U,
-        uint256 minOut,
-        uint256 fromAmount,
-        address fromAsset,
         bytes memory calldata_
     ) external payable;
     function setMaxUnderwritingDuration(uint256 newMaxUnderwriteDuration) external;
@@ -79,8 +59,7 @@ interface ICatalystChainInterface is ICatalystV1Structs, ICrossChainReceiver {
         uint256 U,
         uint256 minOut,
         address toAccount,
-        uint256 fromAmount,
-        uint16 underwritePercentageX16,
+        uint16 underwriteIncentiveX16,
         bytes memory cdata
     ) external returns (bytes32 identifier);
     function underwriteAndCheckConnection(
@@ -92,8 +71,7 @@ interface ICatalystChainInterface is ICatalystV1Structs, ICrossChainReceiver {
         uint256 U,
         uint256 minOut,
         address toAccount,
-        uint256 fromAmount,
-        uint16 underwritePercentageX16,
+        uint16 underwriteIncentiveX16,
         bytes memory cdata
     ) external;
     function underwritingStorage(bytes32) external view returns (uint256 tokens, address refundTo, uint80 expiry);

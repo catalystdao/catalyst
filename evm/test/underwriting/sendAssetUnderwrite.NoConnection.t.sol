@@ -64,7 +64,7 @@ contract TestUnderwriteNoConnection is TestCommon {
         });
 
         vm.recordLogs();
-        uint256 units = ICatalystV1Vault(vault1).sendAssetUnderwrite{value: _getTotalIncentive(_INCENTIVE)}(
+        uint256 units = ICatalystV1Vault(vault1).sendAsset{value: _getTotalIncentive(_INCENTIVE)}(
             routeDescription,
             token1,
             0, 

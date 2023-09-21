@@ -161,6 +161,7 @@ contract TestSwapIntegration is TestCommon {
             amount,
             MINOUT,
             TO_ACCOUNT,
+            0,
             hex""
         );
         vm.revertTo(snapshotId);
@@ -191,6 +192,7 @@ contract TestSwapIntegration is TestCommon {
                     MINOUT,
                     amount,
                     tkn,
+                    0,
                     hex""
                 )
             )
@@ -204,6 +206,7 @@ contract TestSwapIntegration is TestCommon {
             amount,
             MINOUT,
             TO_ACCOUNT,
+            0,
             hex""
         );  
 

@@ -61,6 +61,7 @@ abstract contract TestSendAsset is TestCommon, AVaultInterfaces {
             uint256(amount), 
             uint256(amount)/2, 
             toAccount,
+            0,
             hex""
         );
 
@@ -108,6 +109,7 @@ abstract contract TestSendAsset is TestCommon, AVaultInterfaces {
             uint256(amount), 
             uint256(amount)/2, 
             address(0),
+            0,
             hex""
         );
     }

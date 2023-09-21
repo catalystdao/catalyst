@@ -40,7 +40,6 @@ contract TestUnderwriteAndCheckConnection is TestCommon {
             1e17,
             0,
             address(this),
-            10**18,
             0,
             hex"0000"
         );
@@ -64,7 +63,6 @@ contract TestUnderwriteAndCheckConnection is TestCommon {
             1e17,
             0,
             address(this),
-            10**18,
             0,
             hex"0000"
         );
