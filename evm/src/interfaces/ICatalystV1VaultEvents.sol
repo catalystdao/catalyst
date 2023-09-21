@@ -56,7 +56,7 @@ interface ICatalystV1VaultEvents {
         uint256 minOut,
         uint256 units,
         uint256 fee,
-        uint16 underwritePercentageX16
+        uint16 underwriteIncentiveX16
     );
 
     /**

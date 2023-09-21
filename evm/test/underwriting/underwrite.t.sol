@@ -35,7 +35,6 @@ contract TestUnderwrite is TestCommon, ICatalystReceiver {
             1e17,
             0,
             address(this),
-            10**18,
             0,
             hex"0000"
         );
@@ -56,7 +55,6 @@ contract TestUnderwrite is TestCommon, ICatalystReceiver {
             1e17,
             0,
             sendTo,
-            10**18,
             0,
             hex"0000"
         );
@@ -98,7 +96,6 @@ contract TestUnderwrite is TestCommon, ICatalystReceiver {
             1e17,
             0,
             address(this),
-            10**18,
             0,
             abi.encodePacked(
                 uint16(encoded_calldata.length),

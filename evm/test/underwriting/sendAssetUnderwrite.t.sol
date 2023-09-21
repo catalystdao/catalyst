@@ -65,7 +65,7 @@ contract TestSendAssetUnderwrite is TestCommon {
 
 
         vm.recordLogs();
-        uint256 units = ICatalystV1Vault(vault1).sendAssetUnderwrite{value: _getTotalIncentive(_INCENTIVE)}(
+        uint256 units = ICatalystV1Vault(vault1).sendAsset{value: _getTotalIncentive(_INCENTIVE)}(
             routeDescription,
             token1,
             0, 
@@ -92,7 +92,6 @@ contract TestSendAssetUnderwrite is TestCommon {
             units,
             0,
             toAccount,
-            uint256(1e17),
             0,
             hex"0000"
         );
@@ -167,7 +166,7 @@ contract TestSendAssetUnderwrite is TestCommon {
 
 
         vm.recordLogs();
-        uint256 units = ICatalystV1Vault(vault1).sendAssetUnderwrite{value: _getTotalIncentive(_INCENTIVE)}(
+        uint256 units = ICatalystV1Vault(vault1).sendAsset{value: _getTotalIncentive(_INCENTIVE)}(
             routeDescription,
             token1,
             0, 

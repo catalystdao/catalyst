@@ -89,6 +89,7 @@ interface ICatalystV1VaultPermissionless {
      * @param amount The number of fromAsset to sell to the vault.
      * @param minOut The minimum number of returned tokens to the toAccount on the target chain.
      * @param fallbackUser If the transaction fails, send the escrowed funds to this address.
+     * @param underwriteIncentiveX16 The payment for underwriting the swap (out of type(uint16.max))
      * @param calldata_ Data field if a call should be made on the target chain.
      * Encoding depends on the target chain, with evm being: abi.encodePacket(bytes20(<address>), <data>)
      * @return uint256 The number of units minted.
@@ -100,32 +101,27 @@ interface ICatalystV1VaultPermissionless {
         uint256 amount,
         uint256 minOut,
         address fallbackUser,
+        uint16 underwriteIncentiveX16,
         bytes calldata calldata_
     ) external payable returns (uint256);
 
     /**
-     * @notice Initiate a cross-chain swap by purchasing units and transfering the units to the target vault.
-     * Then allow for underwriters to underwrite the cross-chain swap for faster execution
-     * @param underwritePercentageX16 The payment for underwriting the swap (out of type(uint16.max))
+     * @notice Initiate a cross-chain swap by purchasing units and transfer them to another vault using a fixed number of units.
+     * @dev Addresses are encoded in 64 + 1 bytes. To encode for EVM, encode as:
+     * Solidity: abi.encodePacket(uint8(20), bytes32(0), abi.encode(<vaultAddress>))
+     * @param routeDescription A cross-chain route description which contains the chainIdentifier, toAccount, toVault and relaying incentive.
+     * @param fromAsset The asset the user wants to sell.
+     * @param toAssetIndex The index of the asset the user wants to buy in the target vault.
+     * @param amount The number of fromAsset to sell to the vault.
+     * @param minOut The minimum number of returned tokens to the toAccount on the target chain.
+     * @param minU The minimum and exact number of units sent.
+     * @param fallbackUser If the transaction fails, send the escrowed funds to this address.
+     * @param calldata_ Data field if a call should be made on the target chain.
+     * Encoding depends on the target chain, with evm being: abi.encodePacket(bytes20(<address>), <data>)
+     * @param underwriteIncentiveX16 The payment for underwriting the swap (out of type(uint16.max))
+     * @return uint256 The number of units minted.
      */
-    function sendAssetUnderwrite(
-        ICatalystV1Structs.RouteDescription calldata routeDescription,
-        address fromAsset,
-        uint8 toAssetIndex,
-        uint256 amount,
-        uint256 minOut,
-        address fallbackUser,
-        uint16 underwritePercentageX16,
-        bytes calldata calldata_
-    ) external payable returns (uint256);
-
-    /**
-     * @notice Initiate a cross-chain swap by purchasing units and transfering the units to the target vault.
-     * Then allow for underwriters to underwrite the cross-chain swap for faster execution
-     * @dev Any difference between the bought units and minU are lost as fees to the pool.
-     * @param minU The number of units which has been underwritten on the destination chain.
-     */
-    function sendAssetUnderwritePurpose(
+    function sendAssetFixedUnit(
         ICatalystV1Structs.RouteDescription calldata routeDescription,
         address fromAsset,
         uint8 toAssetIndex,
@@ -133,6 +129,7 @@ interface ICatalystV1VaultPermissionless {
         uint256 minOut,
         uint256 minU,
         address fallbackUser,
+        uint16 underwriteIncentiveX16,
         bytes calldata calldata_
     ) external payable returns (uint256);
 
