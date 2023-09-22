@@ -69,8 +69,8 @@ contract TestUnderwrite is TestCommon, ICatalystReceiver {
         assertEq(
             Token(token).balanceOf(address(CCI)),
             tokensStorage + tokensStorage * (
-                CCI.UNDERWRITING_UNFULFILLED_FEE()
-            )/CCI.UNDERWRITING_UNFULFILLED_FEE_DENOMINATOR(),
+                CCI.UNDERWRITING_COLLATORAL()
+            )/CCI.UNDERWRITING_COLLATORAL_DENOMINATOR(),
             "Tokens storage not correctly set"
         );
 

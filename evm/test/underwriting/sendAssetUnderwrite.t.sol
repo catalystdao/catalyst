@@ -108,8 +108,8 @@ contract TestSendAssetUnderwrite is TestCommon {
         assertEq(
             Token(token2).balanceOf(address(CCI)),
             numTokens + numTokens * (
-                CCI.UNDERWRITING_UNFULFILLED_FEE()
-            )/CCI.UNDERWRITING_UNFULFILLED_FEE_DENOMINATOR(),
+                CCI.UNDERWRITING_COLLATORAL()
+            )/CCI.UNDERWRITING_COLLATORAL_DENOMINATOR(),
             "CCI balance incorrect"
         );
 
@@ -129,8 +129,8 @@ contract TestSendAssetUnderwrite is TestCommon {
         assertEq(
             Token(token2).balanceOf(refundTo),
             numTokens + numTokens * (
-                CCI.UNDERWRITING_UNFULFILLED_FEE()
-            )/CCI.UNDERWRITING_UNFULFILLED_FEE_DENOMINATOR(),
+                CCI.UNDERWRITING_COLLATORAL()
+            )/CCI.UNDERWRITING_COLLATORAL_DENOMINATOR(),
             "refundTo balance not expected"
         );
 

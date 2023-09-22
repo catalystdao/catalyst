@@ -101,8 +101,8 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
 
     //-- Underwriting Config--//
 
-    uint256 constant public UNDERWRITING_UNFULFILLED_FEE = 35;  // 3,5% extra as collatoral.
-    uint256 constant public UNDERWRITING_UNFULFILLED_FEE_DENOMINATOR = 1000;
+    uint256 constant public UNDERWRITING_COLLATORAL = 35;  // 3,5% extra as collatoral.
+    uint256 constant public UNDERWRITING_COLLATORAL_DENOMINATOR = 1000;
 
     uint256 constant public EXPIRE_CALLER_REWARD = 350;  // 35% of the 3,5% = 1,225%. Of $1000 = $12,25
     uint256 constant public EXPIRE_CALLER_REWARD_DENOMINATOR = 1000;
@@ -746,8 +746,8 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
             msg.sender, 
             address(this),
             purchasedTokens * (
-                UNDERWRITING_UNFULFILLED_FEE_DENOMINATOR+UNDERWRITING_UNFULFILLED_FEE
-            )/UNDERWRITING_UNFULFILLED_FEE_DENOMINATOR
+                UNDERWRITING_COLLATORAL_DENOMINATOR+UNDERWRITING_COLLATORAL
+            )/UNDERWRITING_COLLATORAL_DENOMINATOR
         );
 
         uint256 underwritingIncentive = (purchasedTokens * uint256(underwriteIncentiveX16)) >> 16;
@@ -825,8 +825,8 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
             // Get the collatoral.
             // A larger computation has already been done when the swap was initially underwritten.
             uint256 refundAmount = underWrittenTokens * (
-                UNDERWRITING_UNFULFILLED_FEE
-            )/UNDERWRITING_UNFULFILLED_FEE_DENOMINATOR + underwritingIncentive;
+                UNDERWRITING_COLLATORAL
+            )/UNDERWRITING_COLLATORAL_DENOMINATOR + underwritingIncentive;
             // collatoral + underwritingIncentive must be less than the full amount.
 
             // Send the coded shares of the collatoral to the expirer the rest to the vault.
@@ -866,8 +866,8 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
 
         // Also refund the collatoral.
         uint256 refundAmount = underwrittenTokenAmount * (
-            UNDERWRITING_UNFULFILLED_FEE_DENOMINATOR+UNDERWRITING_UNFULFILLED_FEE
-        )/UNDERWRITING_UNFULFILLED_FEE_DENOMINATOR;
+            UNDERWRITING_COLLATORAL_DENOMINATOR+UNDERWRITING_COLLATORAL
+        )/UNDERWRITING_COLLATORAL_DENOMINATOR;
 
         // add the underwriting incentive as well. Notice that 2x refundAmount are in play.
         //   1. The first part comes from the underwriter + collatoral.
