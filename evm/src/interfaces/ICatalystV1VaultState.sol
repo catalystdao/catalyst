@@ -48,9 +48,6 @@ interface ICatalystV1VaultState {
     /// @notice Total current escrowed tokens
     function _escrowedTokens(address token) external view returns (uint256);
 
-    /// @notice Total current escrowed tokens
-    function _underwriteEscrowedTokens(address token) external view returns (uint256);
-
     /// @notice Find escrow information. Used for both normal swaps and liquidity swaps.
     function _escrowLookup(bytes32 sendAssetHash) external view returns (address);
 

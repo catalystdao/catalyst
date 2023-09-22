@@ -50,17 +50,10 @@ contract TestUnderwrite is TestCommon, ICatalystReceiver {
 
         assertEq(
             Token(token).balanceOf(address(CCI)),
-            tokensStorage + tokensStorage * (
+             tokensStorage * (
                 CCI.UNDERWRITING_COLLATORAL()
             )/CCI.UNDERWRITING_COLLATORAL_DENOMINATOR(),
             "Tokens storage not correctly set"
-        );
-
-        // Check that the escrow is set.
-
-        assertEq(
-            ICatalystV1Vault(vault2)._underwriteEscrowedTokens(token),
-            tokensStorage
         );
 
         // check the balance of sendTo

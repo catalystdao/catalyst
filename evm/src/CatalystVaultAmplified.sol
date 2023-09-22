@@ -44,6 +44,12 @@ import "./ICatalystV1Vault.sol";
 contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
     using SafeTransferLib for ERC20;
 
+    //--- Storage ---//
+    
+    /// @notice Adjustment used to remove a certain escrow amount from the balance 0 computation
+    /// because the units already have been subtracted.
+    mapping(address => uint256) public _underwriteEscrowMatchBalance0;
+
     //--- ERRORS ---//
     // Errors are defined in interfaces/ICatalystV1VaultErrors.sol
 
@@ -194,7 +200,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
         uint256 amount
     ) public view override returns (uint256) {
         // A high => fewer units returned. Do not subtract the escrow amount
-        uint256 A = ERC20(fromAsset).balanceOf(address(this)) + _underwriteEscrowedTokens[fromAsset];
+        uint256 A = ERC20(fromAsset).balanceOf(address(this));
         uint256 W = _weight[fromAsset];
 
 
@@ -252,7 +258,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
         address toAsset,
         uint256 amount
     ) public view override returns (uint256) {
-        uint256 A = ERC20(fromAsset).balanceOf(address(this)) + _underwriteEscrowedTokens[fromAsset];
+        uint256 A = ERC20(fromAsset).balanceOf(address(this));
         uint256 B = ERC20(toAsset).balanceOf(address(this)) - _escrowedTokens[toAsset];
         uint256 W_A = _weight[fromAsset];
         uint256 W_B = _weight[toAsset];
@@ -328,16 +334,14 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
                     // If weightAssetBalance == 0, then this computation would fail. However since 0^(1-k) = 0, we can set it to 0.
                     int256 wab = 0;
                     if (weightAssetBalance != 0){
+                        // calculate balance 0 with the underwritten amount gone.
                         wab = FixedPointMathLib.powWad(
-                            int256(weightAssetBalance * FixedPointMathLib.WAD),  // If casting overflows to a negative number, powWad fails
+                            int256((weightAssetBalance - _underwriteEscrowMatchBalance0[token] * weight) * FixedPointMathLib.WAD),  // If casting overflows to a negative number, powWad fails
                             oneMinusAmp
                         );
 
                         // if wab == 0, there is no need to add it. So only add if != 0.
                         weightedAssetBalanceSum += wab;
-
-                        // we need to recalculate wab using the modified (and larger) balance if all underwrites were to fail.
-                        weightAssetBalance += weight * _underwriteEscrowedTokens[token];
 
                         wab = FixedPointMathLib.powWad(
                             int256(weightAssetBalance * FixedPointMathLib.WAD),  // If casting overflows to a negative number, powWad fails
@@ -491,7 +495,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
                 // If weightAssetBalance == 0, then this computation would fail. However since 0^(1-k) = 0, we can set it to 0.
                 if (weightAssetBalance != 0) {
                     int256 wab = FixedPointMathLib.powWad(
-                        int256(weightAssetBalance * FixedPointMathLib.WAD),  // If casting overflows to a negative number, powWad fails
+                        int256((weightAssetBalance - _underwriteEscrowMatchBalance0[token] * weight) * FixedPointMathLib.WAD),  // If casting overflows to a negative number, powWad fails
                         oneMinusAmp
                     );
 
@@ -677,7 +681,8 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
                     // such that less is returned.
                     effAssetBalances[U] = ab - _escrowedTokens[token];
                     
-                    uint256 weightAssetBalance = weight * ab;
+                    // subtract _underwriteEscrowMatchBalance0 since this is used for balance0.
+                    uint256 weightAssetBalance = weight * (ab - _underwriteEscrowMatchBalance0[token]);
                     
 
                     // If weightAssetBalance == 0, then this computation would fail. However since 0^(1-k) = 0, we can set it to 0.
@@ -1049,8 +1054,6 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
 
         // Track units for balance0 computation.
         _unitTracker -= int256(U);
-        // Send the assets to the user.
-        ERC20(toAsset).safeTransfer(toAccount, purchasedTokens);
 
         return purchasedTokens;
     }
@@ -1087,6 +1090,9 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
             U,
             minOut
         );
+
+        // Send the assets to the user.
+        ERC20(toAsset).safeTransfer(toAccount, purchasedTokens);
 
         emit ReceiveAsset(
             channelId, 
@@ -1126,6 +1132,9 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
             U,
             minOut
         );
+
+        // Send the assets to the user.
+        ERC20(toAsset).safeTransfer(toAccount, purchasedTokens);
 
         emit ReceiveAsset(
             channelId, 
@@ -1177,7 +1186,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
             if (token == address(0)) break;
             uint256 weight = _weight[token];
 
-            uint256 weightAssetBalance = weight * ERC20(token).balanceOf(address(this));
+            uint256 weightAssetBalance = weight * (ERC20(token).balanceOf(address(this)) - _underwriteEscrowMatchBalance0[token]);
 
             // If weightAssetBalance == 0, then this computation would fail. However since 0^(1-k) = 0, we can set it to 0.
             int256 wab = 0;
@@ -1589,6 +1598,18 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
         // unit tracking is handled by _receiveAsset.
     }
 
+    function releaseUnderwriteAsset(
+        bytes32 identifier,
+        uint256 escrowAmount,
+        address escrowToken
+    )  override public {
+         super.releaseUnderwriteAsset(identifier, escrowAmount, escrowToken);
+
+        unchecked {
+            _underwriteEscrowMatchBalance0[escrowToken] -= escrowAmount;
+        }
+    }
+
     function deleteUnderwriteAsset(
         bytes32 identifier,
         uint256 U,
@@ -1601,5 +1622,9 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
         // _unitTrakcer -= int256(U) so we need to cancel that.
         _unitTracker += int256(U);  // It has already been checked on sendAsset that casting to int256 will not overflow.
                                     // Cannot be manipulated by the router as, otherwise, the swapHash check will fail
+
+        unchecked {
+            _underwriteEscrowMatchBalance0[escrowToken] -= escrowAmount;
+        }
     }
 }

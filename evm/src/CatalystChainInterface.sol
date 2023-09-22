@@ -700,8 +700,6 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
 
         // For most implementations, the observation can be ignored because of the strength of point 1.
 
-        uint256 balanceBeforeUnderwrite = ERC20(toAsset).balanceOf(address(this));
-
         // Get the number of purchased units from the vault. This uses a custom call which doesn't return
         // any assets.
         // This calls also escrows the purchasedTokens on the vault.
@@ -713,12 +711,6 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
             U,
             minOut * (2**16-1) / (2**16-1 - uint256(underwriteIncentiveX16))  // minout is checked after underwrite fee.
         );
-
-        uint256 balanceAfterUnderwrite = ERC20(toAsset).balanceOf(address(this));
-
-        unchecked {
-            if (balanceAfterUnderwrite - balanceBeforeUnderwrite != purchasedTokens) revert MaliciousVault();
-        }
 
         // The following number of lines act as re-entry protection.
 
@@ -810,9 +802,6 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
         // The next line acts as reentry protection. When the storage is deleted underwriteState.refundTo == address(0) will be true.
         delete underwritingStorage[identifier];
 
-        // send the tokens we got from the vault back to the vault.
-        // This is cheaper than using a pull system where we approve and the vault withdraws from us.
-        ERC20(toAsset).safeTransfer(targetVault, underWrittenTokens);
         // Delete the escrow
         ICatalystV1Vault(targetVault).deleteUnderwriteAsset(identifier, U, underWrittenTokens, toAsset);
 
@@ -868,8 +857,19 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
         // Reentry protection. No external calls are allowed before this line. The line 'if (refundTo == address(0)) ...' will always be true.
         delete underwritingStorage[identifier];
 
+        // Ensure the vault sends us the tokens before we send the tokens to the underwriter, otherwise they can 
+        // drain the cci of the collatoral
+        uint256 balanceBeforeUnderwrite = ERC20(toAsset).balanceOf(address(this));
+
         // Delete escrow information and send tokens to this contract.
         ICatalystV1Vault(vault).releaseUnderwriteAsset(identifier, underwrittenTokenAmount, toAsset);
+
+
+        uint256 balanceAfterUnderwrite = ERC20(toAsset).balanceOf(address(this));
+
+        unchecked {
+            if (balanceAfterUnderwrite - balanceBeforeUnderwrite != underwrittenTokenAmount) revert MaliciousVault();
+        }
 
         // Also refund the collatoral.
         uint256 refundAmount = underwrittenTokenAmount * (

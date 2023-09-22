@@ -117,8 +117,6 @@ abstract contract CatalystVaultCommon is
     // Escrow reference
     /// @notice Total current escrowed tokens
     mapping(address => uint256) public _escrowedTokens;
-    /// @notice Total current escrowed tokens
-    mapping(address => uint256) public _underwriteEscrowedTokens;
     /// @notice Total current escrowed vault tokens
     uint256 public _escrowedVaultTokens;
 
@@ -202,8 +200,11 @@ abstract contract CatalystVaultCommon is
         bytes32 identifier,
         uint256 escrowAmount,
         address escrowToken
-    ) onlyChainInterface external {
+    ) onlyChainInterface virtual public {
          _releaseUnderwriteEscrow(identifier, escrowAmount, escrowToken); // Only reverts for missing escrow
+
+        // Send the assets to the user.
+        ERC20(escrowToken).safeTransfer(msg.sender, escrowAmount);
     }
 
     function deleteUnderwriteAsset(
@@ -461,7 +462,7 @@ abstract contract CatalystVaultCommon is
         _escrowLookup[underwriteIdentifier] = address(uint160(1));
         unchecked {
             // Must be less than than the vault balance.
-            _underwriteEscrowedTokens[fromAsset] += amount;
+            _escrowedTokens[fromAsset] += amount;
         }
     }
 
@@ -518,7 +519,7 @@ abstract contract CatalystVaultCommon is
 
         unchecked {
             // escrowAmount \subseteq _escrowedTokens => escrowAmount <= _escrowedTokens. Cannot be called twice since the 3 lines before ensure this can only be reached once.
-            _underwriteEscrowedTokens[escrowToken] -= escrowAmount;
+            _escrowedTokens[escrowToken] -= escrowAmount;
         }
         
         return fallbackUser;
