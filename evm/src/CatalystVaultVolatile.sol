@@ -816,10 +816,10 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
         uint256 fromAmount,
         bytes calldata fromAsset,
         uint32 blockNumberMod
-    ) nonReentrant onlyChainInterface onlyConnectedPool(channelId, fromVault) external override {
+    ) nonReentrant onlyChainInterface onlyConnectedPool(channelId, fromVault) external override returns(uint256 purchasedTokens) {
         // Convert the asset index (toAsset) into the asset to be purchased.
         address toAsset = _tokenIndexing[toAssetIndex];
-        uint256 purchasedTokens = _receiveAsset(
+        purchasedTokens = _receiveAsset(
             toAsset,
             toAccount,
             U,
@@ -840,55 +840,6 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
             fromAsset,
             blockNumberMod
         );
-    }
-
-    /**
-     * @notice Exposes _receiveAsset and calls an external contract
-     * @dev Security checks are performed by _receiveAsset.
-     */
-    function receiveAsset(
-        bytes32 channelId,
-        bytes calldata fromVault,
-        uint256 toAssetIndex,
-        address toAccount,
-        uint256 U,
-        uint256 minOut,
-        uint256 fromAmount,
-        bytes calldata fromAsset,
-        uint32 blockNumberMod,
-        address dataTarget,
-        bytes calldata data
-    ) nonReentrant onlyChainInterface onlyConnectedPool(channelId, fromVault) external override {
-        // Convert the asset index (toAsset) into the asset to be purchased.
-        address toAsset = _tokenIndexing[toAssetIndex];
-        uint256 purchasedTokens = _receiveAsset(
-            toAsset,
-            toAccount,
-            U,
-            minOut
-        );
-
-        // Send the assets to the user.
-        ERC20(toAsset).safeTransfer(toAccount, purchasedTokens);
-
-        emit ReceiveAsset(
-            channelId, 
-            fromVault, 
-            toAccount, 
-            toAsset, 
-            U, 
-            purchasedTokens, 
-            fromAmount,
-            fromAsset,
-            blockNumberMod
-        );
-
-        // Let users define custom logic which should be executed after the swap.
-        // The logic is not contained within a try - except so if the logic reverts
-        // the transaction will timeout and the user gets the input tokens on the sending chain.
-        // If this is not desired, wrap further logic in a try - except at dataTarget.
-        ICatalystReceiver(dataTarget).onCatalystCall(purchasedTokens, data);
-        // If dataTarget doesn't implement onCatalystCall BUT implements a fallback function, the call will still succeed.
     }
 
     //--- Liquidity swapping ---//
@@ -1088,8 +1039,8 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
         uint256 minReferenceAsset,
         uint256 fromAmount,
         uint32 blockNumberMod
-    ) nonReentrant onlyChainInterface onlyConnectedPool(channelId, fromVault) external override {
-        uint256 purchasedVaultTokens = _receiveLiquidity(
+    ) nonReentrant onlyChainInterface onlyConnectedPool(channelId, fromVault) external override returns(uint256 purchasedVaultTokens) {
+        purchasedVaultTokens = _receiveLiquidity(
             U,
             minVaultTokens,
             minReferenceAsset
@@ -1099,41 +1050,6 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
 
         // Mint vault tokens for the user.
         _mint(toAccount, purchasedVaultTokens);
-    }
-
-    /**
-     * @notice Exposes _receiveLiquidity and calls an external contract
-     * @dev Security checks are performed by _receiveLiquidity.
-     */
-    function receiveLiquidity(
-        bytes32 channelId,
-        bytes calldata fromVault,
-        address toAccount,
-        uint256 U,
-        uint256 minVaultTokens,
-        uint256 minReferenceAsset,
-        uint256 fromAmount,
-        uint32 blockNumberMod,
-        address dataTarget,
-        bytes calldata data
-    ) nonReentrant onlyChainInterface onlyConnectedPool(channelId, fromVault) external override {
-        uint256 purchasedVaultTokens = _receiveLiquidity(
-            U,
-            minVaultTokens,
-            minReferenceAsset
-        );
-
-        emit ReceiveLiquidity(channelId, fromVault, toAccount, U, purchasedVaultTokens, fromAmount, blockNumberMod);
-
-        // Mint vault tokens for the user.
-        _mint(toAccount, purchasedVaultTokens);
-
-        // Let users define custom logic which should be executed after the swap.
-        // The logic is not contained within a try - except so if the logic reverts
-        // the transaction will timeout and the user gets the input tokens on the sending chain.
-        // If this is not desired, wrap further logic in a try - except at dataTarget.
-        ICatalystReceiver(dataTarget).onCatalystCall(purchasedVaultTokens, data);
-        // If dataTarget doesn't implement onCatalystCall BUT implements a fallback function, the call will still succeed.
     }
 
     //-- Escrow Functions --//
