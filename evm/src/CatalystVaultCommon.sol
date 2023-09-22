@@ -179,43 +179,6 @@ abstract contract CatalystVaultCommon is
         uint256 minOut
     ) virtual internal returns (uint256);
 
-    // -- Underwrite Asset Swaps -- //
-
-    function underwriteAsset(
-        bytes32 identifier,
-        address toAsset,
-        uint256 U,
-        uint256 minOut
-    ) onlyChainInterface virtual public returns (uint256 purchasedTokens) {
-        purchasedTokens = _receiveAsset(toAsset, msg.sender, U, minOut);  // msg.sender is cheaper than sload.
-        // Set the escrow.
-        _setUnderwriteEscrow(
-            identifier,
-            toAsset,
-            purchasedTokens
-        );
-    }
-
-    function releaseUnderwriteAsset(
-        bytes32 identifier,
-        uint256 escrowAmount,
-        address escrowToken
-    ) onlyChainInterface virtual public {
-         _releaseUnderwriteEscrow(identifier, escrowAmount, escrowToken); // Only reverts for missing escrow
-
-        // Send the assets to the user.
-        ERC20(escrowToken).safeTransfer(msg.sender, escrowAmount);
-    }
-
-    function deleteUnderwriteAsset(
-        bytes32 identifier,
-        uint256 U,
-        uint256 escrowAmount,
-        address escrowToken
-    ) onlyChainInterface virtual public {
-         _releaseUnderwriteEscrow(identifier, escrowAmount, escrowToken); // Only reverts for missing escrow
-    }
-
     // -- Setup Functions -- //
 
     /** @notice Setup a vault. */
@@ -720,6 +683,43 @@ abstract contract CatalystVaultCommon is
                 blockNumberMod  // Used to randomize the hash.
             )
         );
+    }
+
+    // -- Underwrite Asset Swaps -- //
+
+    function underwriteAsset(
+        bytes32 identifier,
+        address toAsset,
+        uint256 U,
+        uint256 minOut
+    ) onlyChainInterface virtual public returns (uint256 purchasedTokens) {
+        purchasedTokens = _receiveAsset(toAsset, msg.sender, U, minOut);  // msg.sender is cheaper than sload.
+        // Set the escrow.
+        _setUnderwriteEscrow(
+            identifier,
+            toAsset,
+            purchasedTokens
+        );
+    }
+
+    function releaseUnderwriteAsset(
+        bytes32 identifier,
+        uint256 escrowAmount,
+        address escrowToken
+    ) onlyChainInterface virtual public {
+         _releaseUnderwriteEscrow(identifier, escrowAmount, escrowToken); // Only reverts for missing escrow
+
+        // Send the assets to the user.
+        ERC20(escrowToken).safeTransfer(msg.sender, escrowAmount);
+    }
+
+    function deleteUnderwriteAsset(
+        bytes32 identifier,
+        uint256 U,
+        uint256 escrowAmount,
+        address escrowToken
+    ) onlyChainInterface virtual public {
+         _releaseUnderwriteEscrow(identifier, escrowAmount, escrowToken); // Only reverts for missing escrow
     }
 
 }
