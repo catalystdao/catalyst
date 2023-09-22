@@ -46,7 +46,7 @@ Extends `CatalystVaultCommon.sol` with the price curve $P(w) = \left(1 - \theta\
 
 An intermediate contract designed to interface Catalyst vaults with [Generalised Incentives](https://github.com/catalystdao/GeneralisedIncentives) AMB interfaces. It wraps and unwraps swap calls to and from byte arrays. Furthermore, it also allows swaps to be underwritten where an external actor takes on the confirmation risk of the swap.
 
-Catalyst v1 implements 4 type of swaps, *Asset Swaps*, *Liquidity Swaps*, *Please Underwrite*, and *Purpose Underwrite*. The byte array specification for these can be found in `/contracts/CatalystPayload.sol`.
+Catalyst v1 implements 2 type of swaps, *Asset Swaps* and *Liquidity Swaps*. The byte array specification for these can be found in `/contracts/CatalystPayload.sol`.
 
 - <u>`0x00`: Asset Swap</u><br/> Swaps with context `0x00` define asset swaps. Although primarily designed for cross-chain asset swaps, there is nothing from stopping a user of *Asset Swapping* between 2 vaults on the same chain.
 - <u>`0x01`: Liquidity Swap</u><br/> Swaps with context `0x01` define liquidity swaps. These reduce the cost of rebalancing the liquidity distribution across vaults by combining the following steps into a single transaction:
@@ -54,8 +54,6 @@ Catalyst v1 implements 4 type of swaps, *Asset Swaps*, *Liquidity Swaps*, *Pleas
   2. Convert tokens to units and transfer to target vault
   3. Convert units to an even mix of tokens
   4. Deposit the tokens into the vault.
-- <u>`0x02`: Please Underwrite</u><br/> Swaps with context `0x02` are very similar to Asset Swaps. If they aren't underwritten, they will fallback to the same handler as Asset Swaps. Unlike Asset Swaps, they can be underwritten allowing traders to get almost immediate cross-chain swap execution. This includes any additional logic associated with the swap.
-- <u>`0x03`: Purpose Underwrite</u><br/> Swaps with context `0x03` are very different to Please Underwrite. Unlike Please Underwrite, this type of swap is intended to be used to fill already executed underwrites rather than being underwritten. If the swap arrives with no matching underwrite, the swap entirely reverts.
 
 ## Dev dependencies
 
