@@ -42,9 +42,6 @@ pragma solidity ^0.8.16;
 
 bytes1 constant CTX0_ASSET_SWAP     = 0x00;
 bytes1 constant CTX1_LIQUIDITY_SWAP = 0x01;
-bytes1 constant CTX2_ASSET_SWAP_PLEASE_UNDERWRITE = 0x02;
-bytes1 constant CTX3_ASSET_SWAP_PURPOSE_UNDERWRITE = 0x03;
-
 
 
 // Common Payload ***************************************************************************************************************

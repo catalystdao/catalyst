@@ -653,11 +653,9 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
     ) public returns(bytes32 identifier) {
 
         // Get the swap identifier.
-        // When an incoming swap says: "_pleaseUnderwrite (CTX2)", the same identifier will be computed based on the provided
-        // CTX0 (asset swap) arguments. Assuming that the swap has already been executed, these arguments are constant and known.
+        // For any incoming swap, the swap will have a semi-unique identifier, which can be derived solely based on the
+        // swap parameters. Assuming that the swap has already been executed, these arguments are constant and known.
         // As a result, once the swap arrives (and the underwriter is competent), the same identifier will be computed and matched.
-        // For "_purposeFill (CTX3)", how the identifier is computed doesn't matter. Only that it is relativly unigue. To simplify
-        // the implementations, both methods use the same identifier deriviation.
         // For other implementations: The arguments the identifier is based on should be the same but the hashing
         // algorithm doesn't matter. It is only used and computed on the destination chain.
         identifier = _getUnderwriteIdentifier(
@@ -669,22 +667,20 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
             underwriteIncentiveX16,
             cdata
         );
-        // TODO: Update this comment by removing mentions of fromasset.
         // Observation: A swapper can execute multiple swaps which return the same U. 
-        // In these cases, it would not be possible to underwrite the second swap until after the
-        // first swap has arrived. This can be counteracted by either:
-        // 1. Changing U. The tail of U is *volatile*, to this would have to be deliberate. Note that the 
-        // identifier also contains fromAmount and as a result, it is incredibly unlikely that someone
-        // would be able to generate identical identifiers even if deliberate. (especially if fee > 0.)
-        // 2. Add random noise to minOut. For tokens with 18 decimals, this noise can be as small as 1e-12
-        // then the chance that 2 swaps collide would be 1 in a million'th. (literally 1/(1e(18-12)) = 1/1e6)
-        // 3. Add either a counter to cdata or some noise.
+        // In these cases, it would not be possible to underwrite the second swap (or further swaps) 
+        // until after the first swap has arrived. This can be counteracted by either:
+        // 1. Changing U. The tail of U is **volatile**. As a result, to get overlapping identifiers,
+        // it would have to be done deliberatly.
+        // 2. Add random noise to minOut or underwriteIncentiveX16. For tokens with 18 decimals, this noise can
+        // be as small as 1e-12 then the chance that 2 swaps collide would be 1 in a million'th. (literally 1/(1e(18-12)) = 1/1e6)
+        // 3. Add either a counter or noise to cdata.
 
         // For most implementations, the observation can be ignored because of the strength of point 1.
 
         // Get the number of purchased units from the vault. This uses a custom call which doesn't return
         // any assets.
-        // This calls also escrows the purchasedTokens on the vault.
+        // This calls escrows the purchasedTokens on the vault.
         // Importantly! The connection is not checked here. Instead it is checked when the
         // message arrives. As a result, the underwriter should verify that a message is good.
         uint256 purchasedTokens = ICatalystV1Vault(targetVault).underwriteAsset(
@@ -706,11 +702,11 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
             expiry: uint80(uint256(block.timestamp) + uint256(maxUnderwritingDuration))  // Should never overflow.
         });
 
-        // The above combination of lines act as re-entry protection.
+        // The above combination of lines act as local re-entry protection.
 
         // Collect tokens and collatoral from underwriter.
         // We still collect the tokens used to incentivise the underwriter as otherwise they could freely reserve liquidity
-        // in the vaults. Vaults would essentially be a free option source which isn't wanted.
+        // in the vaults. Vaults would essentially be a free source of short term options which isn't wanted.
         ERC20(toAsset).safeTransferFrom(
             msg.sender, 
             address(this),
@@ -771,7 +767,7 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
         );
 
         UnderwritingStorage storage underwriteState = underwritingStorage[identifier];
-        // Check that the refundTo address is set. (Indicated that the underwrite exists.)
+        // Check that the refundTo address is set. (Indicates that the underwrite exists.)
         if (underwriteState.refundTo == address(0)) revert UnderwriteDoesNotExist(identifier);
         
         // Check that the underwriting can be expired. If the msg.sender is the refundTo address, then it can be expired at any time.
@@ -833,19 +829,18 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
         uint256 underwrittenTokenAmount = underwriteState.tokens;
         // Check if the swap was underwritten => refundTo != address(0)
         address refundTo = underwriteState.refundTo;
-        // if refundTo == address(0) then the swap wasnøt underwritten.
+        // if refundTo == address(0) then the swap hasn't been underwritten.
         if (refundTo == address(0)) return swapUnderwritten = false;
 
         // Reentry protection. No external calls are allowed before this line. The line 'if (refundTo == address(0)) ...' will always be true.
         delete underwritingStorage[identifier];
 
         // Ensure the vault sends us the tokens before we send the tokens to the underwriter, otherwise they can 
-        // drain the cci of the collatoral
+        // drain the cci of the collatoral.
         uint256 balanceBeforeUnderwrite = ERC20(toAsset).balanceOf(address(this));
 
         // Delete escrow information and send tokens to this contract.
         ICatalystV1Vault(vault).releaseUnderwriteAsset(identifier, underwrittenTokenAmount, toAsset);
-
 
         uint256 balanceAfterUnderwrite = ERC20(toAsset).balanceOf(address(this));
 
@@ -926,7 +921,6 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
         }
         // There is no case where only a subset of the units are filled. As either the complete swap (through the swap identifier)
         // is underwritten or it wasn't underwritten.
-        // Technically, a purpose underwrite can arrive before and fill the swap but an underwrite cannot be partially filled. So in the case it got filled, the unusedUnits would still be all units.
 
         return acknowledgement = 0x00;
     }
