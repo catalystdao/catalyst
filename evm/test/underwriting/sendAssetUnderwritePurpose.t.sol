@@ -52,6 +52,7 @@ contract TestSendAssetUnderwritePurpose is TestCommon {
         vm.assume(toAccount != address(0));
         vm.assume(toAccount != refundTo);  // makes it really hard to debug
         vm.assume(toAccount != vault1);
+        vm.assume(toAccount != vault2);
         vm.assume(toAccount != address(CCI));
         vm.assume(toAccount != address(this));
         // execute the swap.

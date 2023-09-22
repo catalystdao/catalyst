@@ -35,6 +35,7 @@ abstract contract TestSetGovernanceFee is Test, AVaultInterfaces {
     }
 
     function test_error_non_admin_set_governance_fee(address impersonator, uint48 governanceFee) external virtual {
+        vm.assume(impersonator != address(this));
         address[] memory vaults = getTestConfig();
 
         for (uint256 i = 0; i < vaults.length; ++i) {

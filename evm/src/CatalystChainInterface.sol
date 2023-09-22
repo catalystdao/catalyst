@@ -472,42 +472,32 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
         // We know that toVault is an EVM address
         address toVault = address(bytes20(data[ TO_VAULT_START_EVM : TO_VAULT_END ]));
 
-        uint16 dataLength = uint16(bytes2(data[CTX0_DATA_LENGTH_START:CTX0_DATA_LENGTH_END]));
-        // CCI sets dataLength > 0 if calldata is passed.
-        if (dataLength != 0) {
-            try ICatalystV1Vault(toVault).receiveAsset(
-                sourceIdentifier,                                                      // connectionId
-                fromVault,                                                                   // fromVault
-                uint8(data[CTX0_TO_ASSET_INDEX_POS]),                                       // toAssetIndex
-                address(bytes20(data[ TO_ACCOUNT_START_EVM : TO_ACCOUNT_END ])),           // toAccount
-                uint256(bytes32(data[ UNITS_START : UNITS_END ])),                          // units
-                uint256(bytes32(data[ CTX0_MIN_OUT_START : CTX0_MIN_OUT_END ])),            // minOut
-                uint256(bytes32(data[ CTX0_FROM_AMOUNT_START : CTX0_FROM_AMOUNT_END ])),    // fromAmount
-                bytes(data[ CTX0_FROM_ASSET_LENGTH_POS : CTX0_FROM_ASSET_END ]),            // fromAsset
-                uint32(bytes4(data[ CTX0_BLOCK_NUMBER_START : CTX0_BLOCK_NUMBER_END ])),    // block number
-                address(bytes20(data[ CTX0_DATA_START : CTX0_DATA_START+20 ])),            // dataTarget
-                data[ CTX0_DATA_START+20 : CTX0_DATA_START+dataLength ]                     // dataArguments
-            ) {
-                return 0x00;
-            } catch (bytes memory err) {
-                return _handleError(err);
+        try ICatalystV1Vault(toVault).receiveAsset(
+            sourceIdentifier,                                                      // connectionId
+            fromVault,                                                                   // fromVault
+            uint8(data[CTX0_TO_ASSET_INDEX_POS]),                                       // toAssetIndex
+            address(bytes20(data[ TO_ACCOUNT_START_EVM : TO_ACCOUNT_END ])),           // toAccount
+            uint256(bytes32(data[ UNITS_START : UNITS_END ])),                          // units
+            uint256(bytes32(data[ CTX0_MIN_OUT_START : CTX0_MIN_OUT_END ])),            // minOut
+            uint256(bytes32(data[ CTX0_FROM_AMOUNT_START : CTX0_FROM_AMOUNT_END ])),    // fromAmount
+            bytes(data[ CTX0_FROM_ASSET_LENGTH_POS : CTX0_FROM_ASSET_END ]),            // fromAsset
+            uint32(bytes4(data[ CTX0_BLOCK_NUMBER_START : CTX0_BLOCK_NUMBER_END ]))     // blocknumber
+        ) returns(uint256 purchasedTokens) {
+            uint16 dataLength = uint16(bytes2(data[CTX0_DATA_LENGTH_START:CTX0_DATA_LENGTH_END]));
+            if (dataLength != 0) {
+                address dataTarget = address(bytes20(data[ CTX0_DATA_START : CTX0_DATA_START+20 ]));
+                bytes calldata dataArguments = data[ CTX0_DATA_START+20 : CTX0_DATA_START+dataLength ];
+                
+                // Let users define custom logic which should be executed after the swap.
+                // The logic is not contained within a try - except so if the logic reverts
+                // the transaction will timeout and the user gets the input tokens on the sending chain.
+                // If this is not desired, wrap further logic in a try - except at dataTarget.
+                ICatalystReceiver(dataTarget).onCatalystCall(purchasedTokens, dataArguments);
+                // If dataTarget doesn't implement onCatalystCall BUT implements a fallback function, the call will still succeed.
             }
-        } else {
-            try ICatalystV1Vault(toVault).receiveAsset(
-                sourceIdentifier,                                                      // connectionId
-                fromVault,                                                                   // fromVault
-                uint8(data[CTX0_TO_ASSET_INDEX_POS]),                                       // toAssetIndex
-                address(bytes20(data[ TO_ACCOUNT_START_EVM : TO_ACCOUNT_END ])),           // toAccount
-                uint256(bytes32(data[ UNITS_START : UNITS_END ])),                          // units
-                uint256(bytes32(data[ CTX0_MIN_OUT_START : CTX0_MIN_OUT_END ])),            // minOut
-                uint256(bytes32(data[ CTX0_FROM_AMOUNT_START : CTX0_FROM_AMOUNT_END ])),    // fromAmount
-                bytes(data[ CTX0_FROM_ASSET_LENGTH_POS : CTX0_FROM_ASSET_END ]),            // fromAsset
-                uint32(bytes4(data[ CTX0_BLOCK_NUMBER_START : CTX0_BLOCK_NUMBER_END ]))     // blocknumber
-            ) {
-                return 0x00;
-            } catch (bytes memory err) {
-                return _handleError(err);
-            }
+            return 0x00;
+        } catch (bytes memory err) {
+            return _handleError(err);
         }
     }
 
@@ -517,41 +507,33 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
         // We know that toVault is an EVM address
         address toVault = address(bytes20(data[ TO_VAULT_START_EVM : TO_VAULT_END ]));
 
-        uint16 dataLength = uint16(bytes2(data[CTX1_DATA_LENGTH_START:CTX1_DATA_LENGTH_END]));
-        // CCI sets dataLength > 0 if calldata is passed.
-        if (dataLength != 0) {
-            try ICatalystV1Vault(toVault).receiveLiquidity(
-                sourceIdentifier,                                                      // connectionId
-                fromVault,                                                                  // fromVault
-                address(bytes20(data[ TO_ACCOUNT_START_EVM : TO_ACCOUNT_END ])),            // toAccount
-                uint256(bytes32(data[ UNITS_START : UNITS_END ])),                          // units
-                uint256(bytes32(data[ CTX1_MIN_VAULT_TOKEN_START : CTX1_MIN_VAULT_TOKEN_END ])), // minOut
-                uint256(bytes32(data[ CTX1_MIN_REFERENCE_START : CTX1_MIN_REFERENCE_END ])),// minOut
-                uint256(bytes32(data[ CTX1_FROM_AMOUNT_START : CTX1_FROM_AMOUNT_END ])),    // fromAmount
-                uint32(bytes4(data[ CTX1_BLOCK_NUMBER_START : CTX1_BLOCK_NUMBER_END ])),    // block number
-                address(bytes20(data[ CTX1_DATA_START : CTX1_DATA_START+20 ])),             // dataTarget
-                data[ CTX1_DATA_START+20 : CTX1_DATA_START+dataLength ]                     // dataArguments
-            ) {
-                return 0x00;
-            } catch (bytes memory err) {
-                return _handleError(err);
+        try ICatalystV1Vault(toVault).receiveLiquidity(
+            sourceIdentifier,                                                           // connectionId
+            fromVault,                                                                  // fromVault
+            address(bytes20(data[ TO_ACCOUNT_START_EVM : TO_ACCOUNT_END ])),            // toAccount
+            uint256(bytes32(data[ UNITS_START : UNITS_END ])),                          // units
+            uint256(bytes32(data[ CTX1_MIN_VAULT_TOKEN_START : CTX1_MIN_VAULT_TOKEN_END ])), // minOut
+            uint256(bytes32(data[ CTX1_MIN_REFERENCE_START : CTX1_MIN_REFERENCE_END ])),// minOut
+            uint256(bytes32(data[ CTX1_FROM_AMOUNT_START : CTX1_FROM_AMOUNT_END ])),    // fromAmount
+            uint32(bytes4(data[ CTX1_BLOCK_NUMBER_START : CTX1_BLOCK_NUMBER_END ]))     // blocknumber
+        ) returns (uint256 purchasedVaultTokens) {
+            uint16 dataLength = uint16(bytes2(data[CTX1_DATA_LENGTH_START:CTX1_DATA_LENGTH_END]));
+            if (dataLength != 0) {
+                address dataTarget = address(bytes20(data[ CTX1_DATA_START : CTX1_DATA_START+20 ]));
+                bytes calldata dataArguments = data[ CTX1_DATA_START+20 : CTX1_DATA_START+dataLength ];
+                
+                // Let users define custom logic which should be executed after the swap.
+                // The logic is not contained within a try - except so if the logic reverts
+                // the transaction will timeout and the user gets the input tokens on the sending chain.
+                // If this is not desired, wrap further logic in a try - except at dataTarget.
+                ICatalystReceiver(dataTarget).onCatalystCall(purchasedVaultTokens, dataArguments);
+                // If dataTarget doesn't implement onCatalystCall BUT implements a fallback function, the call will still succeed.
             }
-        } else {
-            try ICatalystV1Vault(toVault).receiveLiquidity(
-                sourceIdentifier,                                                      // connectionId
-                fromVault,                                                                   // fromVault
-                address(bytes20(data[ TO_ACCOUNT_START_EVM : TO_ACCOUNT_END ])),            // toAccount
-                uint256(bytes32(data[ UNITS_START : UNITS_END ])),                          // units
-                uint256(bytes32(data[ CTX1_MIN_VAULT_TOKEN_START : CTX1_MIN_VAULT_TOKEN_END ])), // minOut
-                uint256(bytes32(data[ CTX1_MIN_REFERENCE_START : CTX1_MIN_REFERENCE_END ])),// minOut
-                uint256(bytes32(data[ CTX1_FROM_AMOUNT_START : CTX1_FROM_AMOUNT_END ])),    // fromAmount
-                uint32(bytes4(data[ CTX1_BLOCK_NUMBER_START : CTX1_BLOCK_NUMBER_END ]))     // blocknumber
-            ) {
-                return 0x00;
-            } catch (bytes memory err) {
-                return _handleError(err);
-            }
+            return 0x00;
+        } catch (bytes memory err) {
+            return _handleError(err);
         }
+        
     }
 
     //--- Underwriting ---//

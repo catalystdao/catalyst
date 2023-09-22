@@ -156,21 +156,7 @@ interface ICatalystV1VaultPermissionless {
         uint256 fromAmount,
         bytes calldata fromAsset,
         uint32 blockNumberMod
-    ) external;
-
-    function receiveAsset(
-        bytes32 channelId,
-        bytes calldata fromVault,
-        uint256 toAssetIndex,
-        address toAccount,
-        uint256 U,
-        uint256 minOut,
-        uint256 fromAmount,
-        bytes calldata fromAsset,
-        uint32 blockNumberMod,
-        address dataTarget,
-        bytes calldata data
-    ) external;
+    ) external returns(uint256 purchasedTokens);
 
     /**
      * @notice Initiate a cross-chain liquidity swap by withdrawing tokens and converting them to units.
@@ -213,18 +199,5 @@ interface ICatalystV1VaultPermissionless {
         uint256 minReferenceAsset,
         uint256 fromAmount,
         uint32 blockNumberMod
-    ) external;
-
-    function receiveLiquidity(
-        bytes32 channelId,
-        bytes calldata fromVault,
-        address toAccount,
-        uint256 U,
-        uint256 minVaultTokens,
-        uint256 minReferenceAsset,
-        uint256 fromAmount,
-        uint32 blockNumberMod,
-        address dataTarget,
-        bytes calldata data
-    ) external;
+    ) external returns(uint256 purchasedVaultTokens);
 }
