@@ -74,6 +74,13 @@ contract TestUnderwrite is TestCommon, ICatalystReceiver {
             "Tokens storage not correctly set"
         );
 
+        // Check that the escrow is set.
+
+        assertEq(
+            ICatalystV1Vault(vault2)._underwriteEscrowedTokens(token),
+            tokensStorage
+        );
+
         // check the balance of sendTo
 
         assertEq(
