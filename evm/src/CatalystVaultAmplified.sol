@@ -904,7 +904,8 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
             amount,
             minOut,
             U,
-            fee
+            fee,
+            underwriteIncentiveX16
         );
     }
 

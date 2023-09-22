@@ -23,23 +23,6 @@ contract TestUnderwrite is TestCommon, ICatalystReceiver {
         setConnection(vault1, vault2, DESTINATION_IDENTIFIER, DESTINATION_IDENTIFIER);
     }
 
-    function test_error_underwrite_refund_to_zero_address() external {    
-        address token = ICatalystV1Vault(vault2)._tokenIndexing(0);    
-        vm.expectRevert(
-            abi.encodeWithSignature("RefundToZeroAddress()")
-        ); 
-        CCI.underwrite(
-            address(0), // zero address
-            vault2,
-            token,
-            1e17,
-            0,
-            address(this),
-            0,
-            hex"0000"
-        );
-    }
-
     function test_underwrite_storage(address sendTo) external {
         vm.assume(sendTo != address(0));
         uint256 maxUnderwritingDuration = CCI.maxUnderwritingDuration();
@@ -49,7 +32,6 @@ contract TestUnderwrite is TestCommon, ICatalystReceiver {
         Token(token).approve(address(CCI), 2**256-1);
 
         bytes32 identifier = CCI.underwrite(
-            address(this), // non-zero address
             vault2,  // -- Swap information
             token,
             1e17,
@@ -97,7 +79,6 @@ contract TestUnderwrite is TestCommon, ICatalystReceiver {
         bytes memory encoded_calldata = abi.encodePacked(address(this), base_cdata);
 
         CCI.underwrite(
-            address(this), // non-zero address
             vault2,  // -- Swap information
             token,
             1e17,
