@@ -38,8 +38,9 @@ contract TestSwapIntegration is TestCommon {
         uint8 toAssetIndex,
         uint256 fromAmount,
         uint256 minOut,
-        uint256 Units,
-        uint256 fee
+        uint256 units,
+        uint256 fee,
+        uint16 underwriteIncentiveX16
     );
 
     event SendAssetSuccess(
@@ -177,6 +178,7 @@ contract TestSwapIntegration is TestCommon {
             amount,
             MINOUT,
             UNITS,
+            0,
             0
         );
 

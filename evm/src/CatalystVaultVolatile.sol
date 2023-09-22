@@ -649,7 +649,8 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
             amount,
             minOut,
             U,
-            fee
+            fee,
+            underwriteIncentiveX16
         );
     }
 

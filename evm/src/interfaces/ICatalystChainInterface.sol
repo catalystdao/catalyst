@@ -53,7 +53,6 @@ interface ICatalystChainInterface is ICatalystV1Structs, ICrossChainReceiver {
     function setMaxUnderwritingDuration(uint256 newMaxUnderwriteDuration) external;
     function setMinGasFor(bytes32 chainIdentifier, uint48 minGas) external;
     function underwrite(
-        address refundTo,
         address targetVault,
         address toAsset,
         uint256 U,
@@ -65,7 +64,6 @@ interface ICatalystChainInterface is ICatalystV1Structs, ICrossChainReceiver {
     function underwriteAndCheckConnection(
         bytes32 sourceIdentifier,
         bytes memory fromVault,
-        address refundTo,
         address targetVault,
         address toAsset,
         uint256 U,

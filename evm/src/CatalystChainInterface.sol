@@ -40,21 +40,11 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
 
     //-- Underwriting Errors --//
     error SwapAlreadyUnderwritten();
-    error RefundToZeroAddress();
     error UnderwriteDoesNotExist(bytes32 identifier);
     error UnderwriteNotExpired(uint256 timeUnitilExpiry);
     error MaxUnderwriteDurationTooLong();
     error NoVaultConnection();
-
-    //--- Structs ---//
-
-    struct UnderwritingStorage {
-        uint256 tokens;     // 1 slot
-        address refundTo;   // 2 slot: 20/32
-        uint80 expiry;      // 2 slot: 30/32
-    }
-
-    bytes32 constant KECCACK_OF_NOTHING = 0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470;
+    error MaliciousVault();
 
     //--- Events ---//
 
@@ -67,22 +57,11 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
     );
 
     //-- Underwriting Events --//
-    /**
-     * @dev The collatoral and thus the reward for expiring an underwrite can be derived through fromAmount. 
-     * All the arguments to derive the identifier can be found within event. This reduces the complexity for clients
-     * calling expired underwrites.
-     */
+
     event UnderwriteSwap(
         bytes32 indexed identifier,
         address indexed underwriter,
-        uint80 expiry,
-        bytes32 getUnderwriteIdentifier,
-        address targetVault,
-        address toAsset,
-        uint256 U,
-        uint256 minOut,
-        address toAccount,
-        bytes cdata
+        uint80 expiry
     );
 
     event FulfillUnderwrite(
@@ -94,6 +73,16 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
         address expirer,
         uint256 reward
     );
+
+    //--- Structs ---//
+
+    struct UnderwritingStorage {
+        uint256 tokens;     // 1 slot
+        address refundTo;   // 2 slot: 20/32
+        uint80 expiry;      // 2 slot: 30/32
+    }
+
+    bytes32 constant KECCACK_OF_NOTHING = 0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470;
 
     //--- Config ---//
     IIncentivizedMessageEscrow public immutable GARP; // Set on deployment
@@ -627,7 +616,6 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
     function underwriteAndCheckConnection(
         bytes32 sourceIdentifier,
         bytes calldata fromVault, // -- Conection Check
-        address refundTo,     // -- Underwriting State
         address targetVault,  // -- Swap information
         address toAsset,
         uint256 U,
@@ -639,7 +627,6 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
         if (!ICatalystV1Vault(targetVault)._vaultConnection(sourceIdentifier, fromVault)) revert NoVaultConnection();
 
         underwrite(
-            refundTo,
             targetVault,
             toAsset,
             U,
@@ -674,7 +661,6 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
      *      underwritable. As a result, it is important that the underwrite is simulated before executed.
      */
     function underwrite(
-        address refundTo,     // -- Underwriting State
         address targetVault,  // -- Swap information
         address toAsset,
         uint256 U,
@@ -683,9 +669,6 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
         uint16 underwriteIncentiveX16,
         bytes calldata cdata
     ) public returns(bytes32 identifier) {
-        // Do not allow refundTo zero address. This field will be used to check if a swap has already been
-        // underwritten, as a result disallow zero address. (Is also makes no sense from an underwriting perspective)  
-        if (refundTo == address(0)) revert RefundToZeroAddress();
 
         // Get the swap identifier.
         // When an incoming swap says: "_pleaseUnderwrite (CTX2)", the same identifier will be computed based on the provided
@@ -704,6 +687,7 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
             underwriteIncentiveX16,
             cdata
         );
+        // TODO: Update this comment by removing mentions of fromasset.
         // Observation: A swapper can execute multiple swaps which return the same U. 
         // In these cases, it would not be possible to underwrite the second swap until after the
         // first swap has arrived. This can be counteracted by either:
@@ -716,8 +700,7 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
 
         // For most implementations, the observation can be ignored because of the strength of point 1.
 
-        // Ensure the swap hasn't already been underwritten by checking if refundTo is set.
-        if (underwritingStorage[identifier].refundTo != address(0)) revert SwapAlreadyUnderwritten();
+        uint256 balanceBeforeUnderwrite = ERC20(toAsset).balanceOf(address(this));
 
         // Get the number of purchased units from the vault. This uses a custom call which doesn't return
         // any assets.
@@ -730,14 +713,26 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
             U,
             minOut * (2**16-1) / (2**16-1 - uint256(underwriteIncentiveX16))  // minout is checked after underwrite fee.
         );
-        
+
+        uint256 balanceAfterUnderwrite = ERC20(toAsset).balanceOf(address(this));
+
+        unchecked {
+            if (balanceAfterUnderwrite - balanceBeforeUnderwrite != purchasedTokens) revert MaliciousVault();
+        }
+
+        // The following number of lines act as re-entry protection.
+
+        // Ensure the swap hasn't already been underwritten by checking if refundTo is set. 
+        if (underwritingStorage[identifier].refundTo != address(0)) revert SwapAlreadyUnderwritten();
 
         // Save the underwriting state.
         underwritingStorage[identifier] = UnderwritingStorage({
             tokens: purchasedTokens,
-            refundTo: refundTo,
+            refundTo: msg.sender,
             expiry: uint80(uint256(block.timestamp) + uint256(maxUnderwritingDuration))  // Should never overflow.
         });
+
+        // The above combination of lines act as re-entry protection.
 
         // Collect tokens and collatoral from underwriter.
         // We still collect the tokens used to incentivise the underwriter as otherwise they could freely reserve liquidity
@@ -769,7 +764,13 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
             address dataTarget = address(bytes20(cdata[2:2+20]));
             bytes calldata customCalldata = cdata[2+20:2+calldataLength];
             ICatalystReceiver(dataTarget).onCatalystCall(purchasedTokens, customCalldata);
-        } 
+        }
+        
+        emit UnderwriteSwap(
+            identifier,
+            msg.sender,
+            uint80(uint256(block.timestamp) + uint256(maxUnderwritingDuration))
+        );
     }
 
     /**
@@ -838,6 +839,12 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
             // refundAmount > expireShare, and specially when expireShare overflows.
             uint256 vaultShare = refundAmount - expireShare;
             ERC20(toAsset).safeTransfer(targetVault, vaultShare);
+
+            emit ExpireUnderwrite(
+                identifier,
+                msg.sender,
+                expireShare
+            );
         }
 
         // The underwriting storage has already been deleted.
@@ -880,10 +887,15 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
 
         ERC20(toAsset).safeTransfer(refundTo, refundAmount);
 
+        emit FulfillUnderwrite(
+            identifier
+        );
+
         return swapUnderwritten = true;
     }
 
     function _handlePleaseFill(bytes32 sourceIdentifier, bytes calldata data) internal returns (bytes1 acknowledgement) {
+        // TODO: merge this function into _handleSendAsset
         // We don't know how from_vault is encoded. So we load it as bytes. Including the length.
         bytes calldata fromVault = data[ FROM_VAULT_LENGTH_POS : FROM_VAULT_END ];
         // We know that toVault is an EVM address

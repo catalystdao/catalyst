@@ -85,8 +85,11 @@ contract TestSendAssetUnderwrite is TestCommon {
 
         Token(token2).approve(address(CCI), 2**256-1);
         
+        Token(token2).transfer(refundTo, 103489651034896500);
+        vm.prank(refundTo);
+        Token(token2).approve(address(CCI), 2**256-1);
+        vm.prank(refundTo);
         bytes32 underwriteIdentifier = CCI.underwrite(
-            refundTo, // non-zero address
             vault2,  // -- Swap information
             token2,
             units,
@@ -135,7 +138,7 @@ contract TestSendAssetUnderwrite is TestCommon {
         );
 
         // Lets execute the message on the source chain and check that the escrow is properly removed.
-        (,, messageWithContext) = abi.decode(entries[2].data, (bytes32, bytes, bytes));
+        (,, messageWithContext) = abi.decode(entries[3].data, (bytes32, bytes, bytes));
         (_metadata, toExecuteMessage) = getVerifiedMessage(address(GARP), messageWithContext);
 
         // Check for the success event

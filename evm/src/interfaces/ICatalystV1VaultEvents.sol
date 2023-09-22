@@ -32,21 +32,10 @@ interface ICatalystV1VaultEvents {
      * @param fromAmount The number of _fromAsset sold.
      * @param minOut The minimum output to be accepted of fromAsset.
      * @param units The calculated number of units bought. Will be sold to buy _toAsset
+     * @param underwriteIncentiveX16 The incentive out of 2**16 - 1 provided to the underwriter.
      * @param fee The number of tokens paid to the vault in fees.
      */
     event SendAsset(
-        bytes32 channelId,
-        bytes toVault,
-        bytes toAccount,
-        address fromAsset,
-        uint8 toAssetIndex,
-        uint256 fromAmount,
-        uint256 minOut,
-        uint256 units,
-        uint256 fee
-    );
-
-    event SendAssetUnderwritable(
         bytes32 channelId,
         bytes toVault,
         bytes toAccount,

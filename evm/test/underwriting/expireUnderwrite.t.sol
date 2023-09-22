@@ -59,7 +59,6 @@ contract TestExpireUnderwrite is TestCommon {
         Token(token).approve(address(CCI), 2**256-1);
 
         bytes32 identifier = CCI.underwrite(
-            address(this), // non-zero address
             vault2,  // -- Swap information
             token,
             1e17,
@@ -102,7 +101,6 @@ contract TestExpireUnderwrite is TestCommon {
         Token(token).approve(address(CCI), 2**256-1);
 
         CCI.underwrite(
-            address(this), // non-zero address
             vault2,  // -- Swap information
             token,
             1e17,
@@ -132,7 +130,6 @@ contract TestExpireUnderwrite is TestCommon {
         Token(token).approve(address(CCI), 2**256-1);
 
         bytes32 identifier = CCI.underwrite(
-            address(this), // non-zero address
             vault2,  // -- Swap information
             token,
             1e17,
@@ -168,7 +165,6 @@ contract TestExpireUnderwrite is TestCommon {
         Token(token).approve(address(CCI), 2**256-1);
 
         bytes32 identifier = CCI.underwrite(
-            address(this), // non-zero address
             vault2,  // -- Swap information
             token,
             1e17,
