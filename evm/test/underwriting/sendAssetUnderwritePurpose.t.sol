@@ -116,7 +116,7 @@ contract TestSendAssetUnderwritePurpose is TestCommon {
 
         assertEq(
             Token(token2).balanceOf(address(CCI)),
-            numTokens + numTokens * (
+            numTokens * (
                 CCI.UNDERWRITING_COLLATORAL()
             )/CCI.UNDERWRITING_COLLATORAL_DENOMINATOR(),
             "CCI balance incorrect"
@@ -144,7 +144,7 @@ contract TestSendAssetUnderwritePurpose is TestCommon {
         );
 
         // Lets execute the message on the source chain and check that the escrow is properly removed.
-        (,, messageWithContext) = abi.decode(entries[3].data, (bytes32, bytes, bytes));
+        (,, messageWithContext) = abi.decode(entries[4].data, (bytes32, bytes, bytes));
         (_metadata, toExecuteMessage) = getVerifiedMessage(address(GARP), messageWithContext);
 
         // Check for the success event
