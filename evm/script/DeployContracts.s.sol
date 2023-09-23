@@ -109,8 +109,8 @@ contract DeployContracts is Script {
         deploy_amplified_template(0x7c8f34dec62aa0254bcd27daad030548e2615dc2075d42fa4f682bf8416bb57a);
 
         // Deploy Registry
-        deploy_describer(bytes32(0));
-        deploy_registry(bytes32(0));
+        deploy_describer(bytes32(uint256(1)));
+        deploy_registry(bytes32(uint256(1)));
 
         // Fill registry
         setupDescriber();

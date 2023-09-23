@@ -158,7 +158,7 @@ contract DeployInterfaces is BaseMultiChainDeployer {
 
         deployCCI(admin);
 
-        whitelistCCI(0x7C52D11EDe2AAA85562dE3D485592F40E0C87615);
+        whitelistCCI(0x27CD96fdcBA981A963e386feF2408136d275723d);
     }
 
     function deploy() load_config iter_chains(chain_list) broadcast external {
