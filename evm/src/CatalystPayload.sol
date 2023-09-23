@@ -1,6 +1,6 @@
 //SPDX-License-Identifier: UNLICENSED
 
-pragma solidity ^0.8.16;
+pragma solidity ^0.8.17;
 
 // Catalyst IBC payload structure ***********************************************************************************************
 // Note: Addresses have 65 bytes reserved, however, the first byte should only be used for the address size.
