@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.16;
 
-import {ERC20} from 'solmate/src/tokens/ERC20.sol';
+import {ERC20} from 'solmate/tokens/ERC20.sol';
 import {ICatalystMathLibVol} from "./interfaces/ICatalystMathLibVol.sol";
 import "../utils/FixedPointMathLib.sol";
 import "../interfaces/ICatalystV1VaultDerived.sol";

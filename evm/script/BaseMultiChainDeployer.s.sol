@@ -2,7 +2,6 @@
 pragma solidity ^0.8.13;
 
 import "forge-std/Script.sol";
-import { Permit2 } from "../lib/permit2/src/Permit2.sol";
 
 // Math libs
 import { CatalystMathVol } from "../src/registry/CatalystMathVol.sol";

@@ -3,7 +3,6 @@ pragma solidity 0.8.17;
 
 import "forge-std/Script.sol";
 import {stdJson} from "forge-std/StdJson.sol";
-import { Permit2 } from "../lib/permit2/src/Permit2.sol";
 
 // Math libs
 import { CatalystMathVol } from "../src/registry/CatalystMathVol.sol";
