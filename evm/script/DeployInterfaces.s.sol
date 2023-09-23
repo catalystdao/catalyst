@@ -133,7 +133,17 @@ contract DeployInterfaces is BaseMultiChainDeployer {
 
         address interfaceAddress = abi.decode(config_interfaces.parseRaw(string.concat(".", rpc[chain], ".", incentiveVersion, ".interface")), (address));
 
-        if (describer.get_num_whitelisted_ccis() == 0) {
+        bool foundCCI = false;
+        address[] memory ccis = describer.get_whitelisted_CCI();
+        for (uint256 i = 0; i < ccis.length; ++i) {
+            address ci = ccis[i];
+            if (ci == interfaceAddress) {
+                foundCCI = true;
+                break;
+            }
+        }
+
+        if (foundCCI == false) {
             describer.add_whitelisted_cci(interfaceAddress);
         }
     }
@@ -192,7 +202,7 @@ contract DeployInterfaces is BaseMultiChainDeployer {
 
         deployCCI(admin);
 
-        whitelistCCI(0xfB933A070D9a1D43CF973714e35bed7e4a5A0545);
+        whitelistCCI(0x7C52D11EDe2AAA85562dE3D485592F40E0C87615);
     }
 
     function deploy() load_config iter_chains(chain_list) broadcast external {
