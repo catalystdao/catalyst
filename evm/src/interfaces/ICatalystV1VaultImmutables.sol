@@ -1,5 +1,5 @@
 //SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.16;
+pragma solidity ^0.8.17;
 
 /// @title Immutable vault state
 /// @notice Contains all vault state which doesn't change once set.
