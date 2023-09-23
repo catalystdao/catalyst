@@ -2,8 +2,8 @@
 
 pragma solidity ^0.8.16;
 
-import { ERC20 } from 'solmate/src/tokens/ERC20.sol';
-import { SafeTransferLib } from 'solmate/src/utils/SafeTransferLib.sol';
+import { ERC20 } from 'solmate/tokens/ERC20.sol';
+import { SafeTransferLib } from 'solmate/utils/SafeTransferLib.sol';
 import { FixedPointMathLib } from "./utils/FixedPointMathLib.sol";
 import { ICatalystChainInterface } from "./interfaces/ICatalystChainInterface.sol";
 import { CatalystVaultCommon } from "./CatalystVaultCommon.sol";
