@@ -18,6 +18,11 @@ contract CatalystDescriber is Ownable {
     error IncorrectAbi();
 
     uint256 constant MAX_MEMORY_LIMIT = 64;
+    
+    struct CrossChainInterface {
+        address cci;
+        string version;
+    }
 
     /// @notice Emitted when a vault template is whitelisted and unwhitelisted.
     event ModifyWhitelistedTemplate(
@@ -45,7 +50,7 @@ contract CatalystDescriber is Ownable {
 
     address[] private _whitelisted_templates;
 
-    address[] private _whitelisted_ccis;
+    CrossChainInterface[] private _whitelisted_ccis;
 
     address[] private _vault_factories;
 
@@ -122,7 +127,7 @@ contract CatalystDescriber is Ownable {
      * @notice Returns an array of whitelisted CCIs.
      * @dev Might contain address(0).
      */ 
-    function get_whitelisted_CCI() external view returns (address[] memory whitelistedCCI) {
+    function get_whitelisted_CCI() external view returns (CrossChainInterface[] memory whitelistedCCI) {
         return _whitelisted_ccis;
     }
 
@@ -140,10 +145,10 @@ contract CatalystDescriber is Ownable {
      * @notice Whitelist a cross-chain interface.
      * @param cci_to_whitelist The address of the CCI to whitelisted.
      */
-    function add_whitelisted_cci(address cci_to_whitelist) external onlyOwner {
+    function add_whitelisted_cci(address cci_to_whitelist, string memory version) external onlyOwner {
         if (cci_to_whitelist == address(0)) revert ZeroAddress(); 
 
-        _whitelisted_ccis.push(cci_to_whitelist);
+        _whitelisted_ccis.push(CrossChainInterface({cci: cci_to_whitelist, version: version}));
 
         emit ModifyWhitelistedCCI(cci_to_whitelist, true);
     }
@@ -158,10 +163,10 @@ contract CatalystDescriber is Ownable {
     function remove_whitelisted_cci(address cci_to_unwhitelist, uint256 cci_index) external onlyOwner {
         if (cci_to_unwhitelist == address(0)) revert ZeroAddress();
         // Check that the cci_index corrosponds to the expected cci (cci_to_unwhitelist).
-        if (_whitelisted_ccis[cci_index] != cci_to_unwhitelist) revert InvalidIndex(cci_to_unwhitelist, _whitelisted_ccis[cci_index]);
+        if (_whitelisted_ccis[cci_index].cci != cci_to_unwhitelist) revert InvalidIndex(cci_to_unwhitelist, _whitelisted_ccis[cci_index].cci);
 
         // Set the cci to address(0);
-        _whitelisted_ccis[cci_index] = address(0);
+        delete _whitelisted_ccis[cci_index];
 
         // Emit event
         emit ModifyWhitelistedTemplate(cci_to_unwhitelist, false);

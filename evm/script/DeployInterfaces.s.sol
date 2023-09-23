@@ -134,9 +134,9 @@ contract DeployInterfaces is BaseMultiChainDeployer {
         address interfaceAddress = abi.decode(config_interfaces.parseRaw(string.concat(".", rpc[chain], ".", incentiveVersion, ".interface")), (address));
 
         bool foundCCI = false;
-        address[] memory ccis = describer.get_whitelisted_CCI();
+        CatalystDescriber.CrossChainInterface[] memory ccis = describer.get_whitelisted_CCI();
         for (uint256 i = 0; i < ccis.length; ++i) {
-            address ci = ccis[i];
+            address ci = ccis[i].cci;
             if (ci == interfaceAddress) {
                 foundCCI = true;
                 break;
@@ -144,51 +144,7 @@ contract DeployInterfaces is BaseMultiChainDeployer {
         }
 
         if (foundCCI == false) {
-            describer.add_whitelisted_cci(interfaceAddress);
-        }
-    }
-
-    function unwhitelistCCI() load_config iter_chains(chain_list) broadcast external {
-        CatalystDescriber describer = CatalystDescriber(0xfB933A070D9a1D43CF973714e35bed7e4a5A0545);
-        address[] memory whitelistedCCI = describer.get_whitelisted_CCI();
-
-        bool found = false;
-        for (uint256 i = 0; i < whitelistedCCI.length; ++i) {
-            address cci = whitelistedCCI[i];
-
-            if (cci == 0x0000000CC613E3Da01da44B438B6916849529128) {
-                found = true;
-            }
-            if (cci == 0x0000000c5ebB5b2bE933e98dFE9A441b58A2820E) {
-                describer.remove_whitelisted_cci(cci, i);
-            }
-            console.logAddress(cci);
-        }
-
-        if (found == false) {
-            describer.add_whitelisted_cci(0x0000000CC613E3Da01da44B438B6916849529128);
-        }
-    }
-
-    function unwhitelistCCI_legacy() load_config iter_chains(chain_list_legacy) broadcast external {
-        CatalystDescriber describer = CatalystDescriber(0xfB933A070D9a1D43CF973714e35bed7e4a5A0545);
-        address[] memory whitelistedCCI = describer.get_whitelisted_CCI();
-
-        bool found = false;
-        for (uint256 i = 0; i < whitelistedCCI.length; ++i) {
-            address cci = whitelistedCCI[i];
-
-            if (cci == 0x0000000CC613E3Da01da44B438B6916849529128) {
-                found = true;
-            }
-            if (cci == 0x0000000c5ebB5b2bE933e98dFE9A441b58A2820E) {
-                describer.remove_whitelisted_cci(cci, i);
-            }
-            console.logAddress(cci);
-        }
-
-        if (found == false) {
-            describer.add_whitelisted_cci(0x0000000CC613E3Da01da44B438B6916849529128);
+            describer.add_whitelisted_cci(interfaceAddress, incentiveVersion);
         }
     }
     
