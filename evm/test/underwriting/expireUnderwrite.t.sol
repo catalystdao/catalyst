@@ -190,5 +190,38 @@ contract TestExpireUnderwrite is TestCommon {
             "CCI balance is not 0"
         );
     }
+
+    function test_expire_underwrite_with_incentive(uint16 underwritingIncentive) external {
+        vm.assume(underwritingIncentive != type(uint16).max);
+        address token = ICatalystV1Vault(vault2)._tokenIndexing(0);
+
+        Token(token).approve(address(CCI), 2**256-1);
+
+        CCI.underwrite(
+            vault2,  // -- Swap information
+            token,
+            1e17,
+            0,
+            address(this),
+            underwritingIncentive,
+            hex"0000"
+        );
+
+        CCI.expireUnderwrite(
+            vault2,  // -- Swap information
+            token,
+            1e17,
+            0,
+            address(this),
+            underwritingIncentive,
+            hex"0000"
+        );
+
+        assertEq(
+            Token(token).balanceOf(address(CCI)),
+            0,
+            "CCI balance is not 0"
+        );
+    }
 }
 
