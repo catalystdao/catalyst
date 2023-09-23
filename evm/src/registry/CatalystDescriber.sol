@@ -172,6 +172,23 @@ contract CatalystDescriber is Ownable {
         emit ModifyWhitelistedTemplate(cci_to_unwhitelist, false);
     }
 
+    /**
+     * @notice Reverse lookup a cci version.
+     * @dev If there are multiple ccis with the same version, it will return the latest.
+     * If none are found address(0) will be returned.
+     */
+    function find_whitelisted_cci(string memory target_version) external returns(address cci) {
+        CrossChainInterface[] memory ccis = _whitelisted_ccis;
+        bytes32 target_version_hash = keccak256(abi.encodePacked(target_version));
+        uint256 num_ccis = ccis.length;
+        for (uint256 i = 0; i < num_ccis; ++i) {
+            bytes32 lookup_version_hash = keccak256(abi.encodePacked(ccis[num_ccis - 1 - i].version));
+            if (lookup_version_hash == target_version_hash) {
+                return ccis[num_ccis - 1 - i].cci;
+            }
+        }
+    }
+
     //--- Vault Factories ---//
 
     /**
