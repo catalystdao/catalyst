@@ -4,9 +4,6 @@
 [submodule "evm/lib/GeneralisedIncentives"]
 	path = evm/lib/GeneralisedIncentives
 	url = https://github.com/catalystdao/GeneralisedIncentives.git
-[submodule "evm/lib/permit2"]
-	path = evm/lib/permit2
-	url = https://github.com/Uniswap/permit2.git
 [submodule "evm/lib/solady"]
 	path = evm/lib/solady
 	url = https://github.com/vectorized/solady

@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.17;
 
-import {IAllowanceTransfer} from 'lib/permit2/src/interfaces/IAllowanceTransfer.sol';
-import {SafeCast160} from 'lib/permit2/src/libraries/SafeCast160.sol';
+import {IAllowanceTransfer} from './permit2/IAllowanceTransfer.sol';
 import {Payments} from './Payments.sol';
 import {Constants} from '../libraries/Constants.sol';
 import {RouterImmutables} from '../base/RouterImmutables.sol';
@@ -10,8 +9,6 @@ import {RouterImmutables} from '../base/RouterImmutables.sol';
 /// @title Payments through Permit2
 /// @notice Performs interactions with Permit2 to transfer tokens
 abstract contract Permit2Payments is Payments {
-    using SafeCast160 for uint256;
-
     error FromAddressIsNotOwner();
 
     /// @notice Performs a transferFrom on Permit2
