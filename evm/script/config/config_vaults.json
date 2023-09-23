@@ -2,7 +2,7 @@
   "Mantle-Base": {
     "mantletestnet": {
       "cci": "0x0000000CC613E3Da01da44B438B6916849529128",
-      "address": "0x8eefc0f0e47994dcf7542ff080b8970cd4cf09ec",
+      "address": "0x0000000000000000000000000000000000000000",
       "weights": [
         1
       ],
@@ -13,31 +13,7 @@
     },
     "basegoerli": {
       "cci": "0x0000000CC613E3Da01da44B438B6916849529128",
-      "address": "0x8eefc0f0e47994dcf7542ff080b8970cd4cf09ec",
-      "weights": [
-        1
-      ],
-      "fee": 500000000000000,
-      "tokens": {
-        "WGAS": 10000000000000000
-      }
-    }
-  },
-  "WormholeSepoliaMumbai": {
-    "sepolia": {
-      "cci": "0x0000000BFC5C80DFe4E801edaa071a1BD9271D0A",
-      "address": "0x8eefc0f0e47994dcf7542ff080b8970cd4cf09ec",
-      "weights": [
-        1
-      ],
-      "fee": 500000000000000,
-      "tokens": {
-        "WGAS": 10000000000000000
-      }
-    },
-    "mumbai": {
-      "cci": "0x0000000BFC5C80DFe4E801edaa071a1BD9271D0A",
-      "address": "0x8eefc0f0e47994dcf7542ff080b8970cd4cf09ec",
+      "address": "0x0000000000000000000000000000000000000000",
       "weights": [
         1
       ],

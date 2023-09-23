@@ -118,10 +118,13 @@ contract DeployContracts is Script {
 
     function setupDescriber() internal {
         CatalystDescriber catalyst_describer = CatalystDescriber(contracts.describer);
+        CatalystDescriberRegistry catalyst_registry = CatalystDescriberRegistry(contracts.describer_registry);
 
         if (catalyst_describer.get_num_vault_factories() != 0) {
             return;
         }
+
+        catalyst_registry.add_describer(address(catalyst_describer));
 
         catalyst_describer.add_vault_factory(contracts.factory);
         catalyst_describer.add_whitelisted_template(contracts.volatile_template, 1);
