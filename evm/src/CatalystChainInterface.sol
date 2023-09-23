@@ -872,7 +872,6 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
     }
 
     function _handlePleaseFill(bytes32 sourceIdentifier, bytes calldata data) internal returns (bytes1 acknowledgement) {
-        // TODO: merge this function into _handleSendAsset
         // We don't know how from_vault is encoded. So we load it as bytes. Including the length.
         bytes calldata fromVault = data[ FROM_VAULT_LENGTH_POS : FROM_VAULT_END ];
         // We know that toVault is an EVM address
@@ -915,8 +914,6 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
 
         if (!swapUnderwritten) {
             // The swap hasn't been underwritten lets execute the swap properly.
-            // The message has another 2 bytes before calldata which is the underwriting incentive.
-            // as a result, we need to off-set the calldata index by 2 bytes.
             return acknowledgement = _handleReceiveAsset(sourceIdentifier, data);
         }
         // There is no case where only a subset of the units are filled. As either the complete swap (through the swap identifier)
