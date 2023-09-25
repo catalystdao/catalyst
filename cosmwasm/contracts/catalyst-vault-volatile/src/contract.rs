@@ -4,7 +4,7 @@ use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, StdResult, to_binary
 use cw2::set_contract_version;
 use catalyst_vault_common::ContractError;
 use catalyst_vault_common::state::{
-    setup, finish_setup, set_fee_administrator, set_vault_fee, set_governance_fee_share, set_connection, on_send_asset_failure, on_send_liquidity_failure, query_chain_interface, query_setup_master, query_ready, query_only_local, query_assets, query_weight, query_vault_fee, query_governance_fee_share, query_fee_administrator, query_total_escrowed_liquidity, query_total_escrowed_asset, query_asset_escrow, query_liquidity_escrow, query_vault_connection_state, query_factory, query_factory_owner, query_total_supply, query_balance
+    setup, finish_setup, set_fee_administrator, set_vault_fee, set_governance_fee_share, set_connection, on_send_asset_failure, on_send_liquidity_failure, query_chain_interface, query_setup_master, query_ready, query_only_local, query_assets, query_weight, query_vault_fee, query_governance_fee_share, query_fee_administrator, query_total_escrowed_liquidity, query_total_escrowed_asset, query_asset_escrow, query_liquidity_escrow, query_vault_connection_state, query_factory, query_factory_owner, query_total_supply, query_balance, underwrite_asset, release_underwrite_asset, delete_underwrite_asset
 };
 use catalyst_vault_common::bindings::{VaultResponse, VaultAssets, VaultAssetsTrait};
 
@@ -25,7 +25,7 @@ use catalyst_vault_common::bindings::IntoVaultResponse;
 
 use crate::msg::{VolatileExecuteMsg, InstantiateMsg, QueryMsg, VolatileExecuteExtension};
 use crate::state::{
-    initialize_swap_curves, set_weights, deposit_mixed, withdraw_all, withdraw_mixed, local_swap, send_asset, receive_asset, send_liquidity, receive_liquidity, query_calc_send_asset, query_calc_receive_asset, query_calc_local_swap, query_get_limit_capacity, query_target_weight, query_weights_update_finish_timestamp, on_send_asset_success_volatile, on_send_liquidity_success_volatile
+    initialize_swap_curves, set_weights, deposit_mixed, withdraw_all, withdraw_mixed, local_swap, send_asset, receive_asset, send_liquidity, receive_liquidity, query_calc_send_asset, query_calc_receive_asset, query_calc_local_swap, query_get_limit_capacity, query_target_weight, query_weights_update_finish_timestamp, on_send_asset_success_volatile, on_send_liquidity_success_volatile, send_asset_fixed_units
 };
 
 // Version information
@@ -199,6 +199,7 @@ pub fn execute(
             amount,
             min_out,
             fallback_account,
+            underwrite_incentive_x16,
             calldata
         } => {
             receive_no_assets = false;
@@ -214,6 +215,39 @@ pub fn execute(
                 amount,
                 min_out,
                 fallback_account,
+                underwrite_incentive_x16,
+                calldata
+            )
+        },
+
+        VolatileExecuteMsg::SendAssetFixedUnits {
+            channel_id,
+            to_vault,
+            to_account,
+            from_asset_ref,
+            to_asset_index,
+            amount,
+            min_out,
+            u,
+            fallback_account,
+            underwrite_incentive_x16,
+            calldata
+        } => {
+            receive_no_assets = false;
+            send_asset_fixed_units(
+                &mut deps,
+                env,
+                info.clone(),
+                channel_id,
+                to_vault,
+                to_account,
+                from_asset_ref,
+                to_asset_index,
+                amount,
+                min_out,
+                u,
+                fallback_account,
+                underwrite_incentive_x16,
                 calldata
             )
         },
@@ -245,6 +279,40 @@ pub fn execute(
             from_block_number_mod,
             calldata_target,
             calldata
+        ),
+
+        VolatileExecuteMsg::UnderwriteAsset {
+            identifier,
+            asset_ref,
+            u,
+            min_out
+        } => underwrite_asset(
+            identifier,
+            asset_ref,
+            u,
+            min_out
+        ),
+
+        VolatileExecuteMsg::ReleaseUnderwriteAsset {
+            identifier,
+            asset_ref,
+            escrow_amount
+        } => release_underwrite_asset(
+            identifier,
+            asset_ref,
+            escrow_amount
+        ),
+
+        VolatileExecuteMsg::DeleteUnderwriteAsset {
+            identifier,
+            asset_ref,
+            u,
+            escrow_amount
+        } => delete_underwrite_asset(
+            identifier,
+            asset_ref,
+            u,
+            escrow_amount
         ),
 
         VolatileExecuteMsg::SendLiquidity {

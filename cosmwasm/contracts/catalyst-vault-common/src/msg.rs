@@ -117,6 +117,7 @@ pub enum ExecuteMsg<T, A=Empty> {
     /// * `amount` - The `from_asset_ref` amount sold to the vault.
     /// * `min_out` - The mininum `to_asset` output amount to get on the target vault.
     /// * `fallback_account` - The recipient of the swapped amount should the swap fail.
+    /// * `underwrite_incentive_x16` - The share of the swap return that is offered to an underwriter as incentive.
     /// * `calldata` - Arbitrary data to be executed on the target chain upon successful execution of the swap.
     SendAsset {
         channel_id: String,
@@ -127,6 +128,33 @@ pub enum ExecuteMsg<T, A=Empty> {
         amount: Uint128,
         min_out: U256,
         fallback_account: String,
+        underwrite_incentive_x16: u16,
+        calldata: Binary
+    },
+
+    /// Initiate a cross-chain asset swap specifying the amount of units to send.
+    /// * `channel_id` - The target chain identifier.
+    /// * `to_vault` - The target vault on the target chain (Catalyst encoded).
+    /// * `to_account` - The recipient of the swap on the target chain (Catalyst encoded).
+    /// * `from_asset_ref` - The source asset reference.
+    /// * `to_asset_index` - The destination asset index.
+    /// * `amount` - The `from_asset_ref` amount sold to the vault.
+    /// * `min_out` - The mininum `to_asset` output amount to get on the target vault.
+    /// * `u` - The amount of units to send.
+    /// * `fallback_account` - The recipient of the swapped amount should the swap fail.
+    /// * `underwrite_incentive_x16` - The share of the swap return that is offered to an underwriter as incentive.
+    /// * `calldata` - Arbitrary data to be executed on the target chain upon successful execution of the swap.
+    SendAssetFixedUnits {
+        channel_id: String,
+        to_vault: Binary,
+        to_account: Binary,
+        from_asset_ref: String,
+        to_asset_index: u8,
+        amount: Uint128,
+        min_out: U256,
+        u: U256,
+        fallback_account: String,
+        underwrite_incentive_x16: u16,
         calldata: Binary
     },
 
@@ -154,6 +182,29 @@ pub enum ExecuteMsg<T, A=Empty> {
         from_block_number_mod: u32,
         calldata_target: Option<String>,
         calldata: Option<Binary>
+    },
+
+    //TODO-UNDERWRITE documentation
+    UnderwriteAsset {
+        identifier: Binary,
+        asset_ref: String,
+        u: U256,
+        min_out: Uint128
+    },
+
+    //TODO-UNDERWRITE documentation
+    ReleaseUnderwriteAsset {
+        identifier: Binary,
+        asset_ref: String,
+        escrow_amount: Uint128
+    },
+
+    //TODO-UNDERWRITE documentation
+    DeleteUnderwriteAsset {
+        identifier: Binary,
+        asset_ref: String,
+        u: U256,
+        escrow_amount: Uint128
     },
 
     /// Initiate a cross-chain liquidity swap.

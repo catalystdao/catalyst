@@ -24,7 +24,7 @@ use catalyst_vault_common::bindings::IntoVaultResponse;
 
 use crate::msg::{AmplifiedExecuteMsg, InstantiateMsg, QueryMsg, AmplifiedExecuteExtension};
 use crate::state::{
-    initialize_swap_curves, deposit_mixed, withdraw_all, withdraw_mixed, local_swap, send_asset, receive_asset, send_liquidity, receive_liquidity, query_calc_send_asset, query_calc_receive_asset, query_calc_local_swap, query_get_limit_capacity, on_send_asset_success_amplified, on_send_asset_failure_amplified, on_send_liquidity_failure_amplified, set_amplification, query_target_amplification, query_amplification_update_finish_timestamp, query_balance_0, query_amplification, query_unit_tracker, update_max_limit_capacity
+    initialize_swap_curves, deposit_mixed, withdraw_all, withdraw_mixed, local_swap, send_asset, receive_asset, send_liquidity, receive_liquidity, query_calc_send_asset, query_calc_receive_asset, query_calc_local_swap, query_get_limit_capacity, on_send_asset_success_amplified, on_send_asset_failure_amplified, on_send_liquidity_failure_amplified, set_amplification, query_target_amplification, query_amplification_update_finish_timestamp, query_balance_0, query_amplification, query_unit_tracker, update_max_limit_capacity, send_asset_fixed_units, underwrite_asset_amplified, release_underwrite_asset_amplified, delete_underwrite_asset_amplified
 };
 
 // Version information
@@ -198,6 +198,7 @@ pub fn execute(
             amount,
             min_out,
             fallback_account,
+            underwrite_incentive_x16,
             calldata
         } => {
             receive_no_assets = false;
@@ -213,6 +214,39 @@ pub fn execute(
                 amount,
                 min_out,
                 fallback_account,
+                underwrite_incentive_x16,
+                calldata
+            )
+        },
+
+        AmplifiedExecuteMsg::SendAssetFixedUnits {
+            channel_id,
+            to_vault,
+            to_account,
+            from_asset_ref,
+            to_asset_index,
+            amount,
+            min_out,
+            u,
+            fallback_account,
+            underwrite_incentive_x16,
+            calldata
+        } => {
+            receive_no_assets = false;
+            send_asset_fixed_units(
+                &mut deps,
+                env,
+                info.clone(),
+                channel_id,
+                to_vault,
+                to_account,
+                from_asset_ref,
+                to_asset_index,
+                amount,
+                min_out,
+                u,
+                fallback_account,
+                underwrite_incentive_x16,
                 calldata
             )
         },
@@ -244,6 +278,40 @@ pub fn execute(
             from_block_number_mod,
             calldata_target,
             calldata
+        ),
+
+        AmplifiedExecuteMsg::UnderwriteAsset {
+            identifier,
+            asset_ref,
+            u,
+            min_out
+        } => underwrite_asset_amplified(
+            identifier,
+            asset_ref,
+            u,
+            min_out
+        ),
+
+        AmplifiedExecuteMsg::ReleaseUnderwriteAsset {
+            identifier,
+            asset_ref,
+            escrow_amount
+        } => release_underwrite_asset_amplified(
+            identifier,
+            asset_ref,
+            escrow_amount
+        ),
+
+        AmplifiedExecuteMsg::DeleteUnderwriteAsset {
+            identifier,
+            asset_ref,
+            u,
+            escrow_amount
+        } => delete_underwrite_asset_amplified(
+            identifier,
+            asset_ref,
+            u,
+            escrow_amount
         ),
 
         AmplifiedExecuteMsg::SendLiquidity {

@@ -23,6 +23,7 @@ pub enum ExecuteMsg {
     /// * `min_out` - The mininum `to_asset` output amount to get on the target vault.
     /// * `from_amount` - The `from_asset` amount sold to the vault.
     /// * `from_asset` - The source asset.
+    /// * `underwrite_incentive_x16` - The share of the swap return that is offered to an underwriter as incentive.
     /// * `block_number` - The block number at which the transaction has been committed.
     /// * `calldata` - Arbitrary data to be executed on the target chain upon successful execution of the swap.
     /// 
@@ -35,6 +36,7 @@ pub enum ExecuteMsg {
         min_out: U256,
         from_amount: Uint128,
         from_asset: String,
+        underwrite_incentive_x16: u16,
         block_number: u32,
         calldata: Binary
     },
@@ -63,6 +65,48 @@ pub enum ExecuteMsg {
         from_amount: Uint128,
         block_number: u32,
         calldata: Binary
+    },
+
+
+    //TODO-UNDERWRITE documentation
+    SetMaxUnderwriteDuration {
+        new_max_underwrite_duration: u64
+    },
+
+
+    //TODO-UNDERWRITE documentation
+    Underwrite {
+        to_vault: String,
+        to_asset_ref: String,
+        u: U256,
+        min_out: Uint128,
+        to_account: String,
+        underwrite_incentive_x16: u16,
+        calldata: Binary
+    },
+
+
+    //TODO-UNDERWRITE documentation
+    UnderwriteAndCheckConnection {
+        to_vault: String,
+        to_asset_ref: String,
+        u: U256,
+        min_out: Uint128,
+        to_account: String,
+        underwrite_incentive_x16: u16,
+        calldata: Binary
+    },
+
+
+    //TODO-UNDERWRITE documentation
+    ExpireUnderwrite {
+        to_vault: String,
+        to_asset_ref: String,
+        u: U256,
+        min_out: Uint128,
+        to_account: String,
+        underwrite_incentive_x16: u16,
+        calldata: Binary
     }
 
 }
@@ -78,7 +122,19 @@ pub enum QueryMsg {
 
     // Get a list of the channels that are used by the interface.
     #[returns(ListChannelsResponse)]
-    ListChannels {}
+    ListChannels {},
+
+    //TODO-UNDERWRITE documentation
+    #[returns(UnderwriteIdentifierResponse)]
+    UnderwriteIdentifier {
+        to_vault: String,
+        to_asset_ref: String,
+        u: U256,
+        min_out: Uint128,
+        to_account: String,
+        underwrite_incentive_x16: u16,
+        calldata: Binary
+    },
 
 }
 
@@ -92,4 +148,11 @@ pub struct PortResponse {
 pub struct ListChannelsResponse {
     // List of the channels used by the interface.
     pub channels: Vec<IbcChannelInfo>
+}
+
+
+#[cw_serde]
+pub struct UnderwriteIdentifierResponse {
+    //TODO-UNDERWRITE documentation
+    pub identifier: Binary
 }

@@ -658,6 +658,7 @@ pub fn local_swap(
 /// * `amount` - The `from_asset_ref` amount sold to the vault.
 /// * `min_out` - The mininum `to_asset` output amount to get on the target vault.
 /// * `fallback_account` - The recipient of the swapped amount should the swap fail.
+/// * `underwrite_incentive_x16` - The share of the swap return that is offered to an underwriter as incentive.
 /// * `calldata` - Arbitrary data to be executed on the target chain upon successful execution of the swap.
 /// 
 pub fn send_asset(
@@ -672,6 +673,7 @@ pub fn send_asset(
     amount: Uint128,
     min_out: U256,
     fallback_account: String,
+    underwrite_incentive_x16: u16,
     calldata: Binary
 ) -> Result<VaultResponse, ContractError> {
 
@@ -742,6 +744,7 @@ pub fn send_asset(
         min_out,
         from_amount: effective_swap_amount,
         from_asset: from_asset.get_asset_ref().to_string(),
+        underwrite_incentive_x16,
         block_number,
         calldata
     };
@@ -770,7 +773,7 @@ pub fn send_asset(
 
     Ok(response
         .add_event(
-            send_asset_event(
+            send_asset_event(   //TODO-UNDERWRITE add incentive
                 channel_id,
                 to_vault,
                 to_account,
@@ -783,6 +786,27 @@ pub fn send_asset(
             )
         )
     )
+}
+
+
+//TODO-UNDERWRITE documentation
+pub fn send_asset_fixed_units(
+    deps: &mut DepsMut,
+    env: Env,
+    info: MessageInfo,
+    channel_id: String,
+    to_vault: Binary,
+    to_account: Binary,
+    from_asset_ref: String,
+    to_asset_index: u8,
+    amount: Uint128,
+    min_out: U256,
+    u: U256,                        //TODO-UNDERWRITE implement
+    fallback_account: String,
+    underwrite_incentive_x16: u16,  //TODO-UNDERWRITE implement
+    calldata: Binary
+) -> Result<VaultResponse, ContractError> {
+    todo!()     //TODO-UNDERWRITE
 }
 
 

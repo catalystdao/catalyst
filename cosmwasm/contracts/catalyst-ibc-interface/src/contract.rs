@@ -6,7 +6,7 @@ use catalyst_types::U256;
 
 use crate::catalyst_ibc_payload::{CatalystV1SendAssetPayload, SendAssetVariablePayload, CatalystV1SendLiquidityPayload, SendLiquidityVariablePayload, CatalystEncodedAddress};
 use crate::error::ContractError;
-use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg, PortResponse, ListChannelsResponse};
+use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg, PortResponse, ListChannelsResponse, UnderwriteIdentifierResponse};
 use crate::state::OPEN_CHANNELS;
 
 // Version information
@@ -56,6 +56,7 @@ pub fn execute(
             min_out,
             from_amount,
             from_asset,
+            underwrite_incentive_x16,
             block_number,
             calldata
         } => execute_send_cross_chain_asset(
@@ -69,6 +70,7 @@ pub fn execute(
             min_out,
             from_amount,
             from_asset,
+            underwrite_incentive_x16,
             block_number,
             calldata
         ),
@@ -95,6 +97,66 @@ pub fn execute(
             from_amount,
             block_number,
             calldata
+        ),
+
+        ExecuteMsg::SetMaxUnderwriteDuration {
+            new_max_underwrite_duration
+        } => execute_set_max_underwrite_duration(
+            new_max_underwrite_duration
+        ),
+
+        ExecuteMsg::Underwrite {
+            to_vault,
+            to_asset_ref,
+            u,
+            min_out,
+            to_account,
+            underwrite_incentive_x16,
+            calldata
+        } => execute_underwrite(
+            to_vault,
+            to_asset_ref,
+            u,
+            min_out,
+            to_account,
+            underwrite_incentive_x16,
+            calldata
+        ),
+
+        ExecuteMsg::UnderwriteAndCheckConnection {
+            to_vault,
+            to_asset_ref,
+            u,
+            min_out,
+            to_account,
+            underwrite_incentive_x16,
+            calldata
+        } => execute_underwrite_and_check_connection(
+            to_vault,
+            to_asset_ref,
+            u,
+            min_out,
+            to_account,
+            underwrite_incentive_x16,
+            calldata
+        ),
+
+        ExecuteMsg::ExpireUnderwrite {
+            to_vault,
+            to_asset_ref,
+            u,
+            min_out,
+            to_account,
+            underwrite_incentive_x16,
+            calldata
+        } => execute_expire_underwrite(
+            to_vault,
+            to_asset_ref,
+            u,
+            min_out,
+            to_account,
+            underwrite_incentive_x16,
+            calldata
         )
 
     }
@@ -116,6 +178,7 @@ pub fn execute(
 /// * `min_out` - The mininum `to_asset` output amount to get on the target vault.
 /// * `from_amount` - The `from_asset` amount sold to the vault.
 /// * `from_asset` - The source asset.
+/// * `underwrite_incentive_x16` - The share of the swap return that is offered to an underwriter as incentive.
 /// * `block_number` - The block number at which the transaction has been committed.
 /// * `calldata` - Arbitrary data to be executed on the target chain upon successful execution of the swap.
 /// 
@@ -130,6 +193,7 @@ fn execute_send_cross_chain_asset(
     min_out: U256,
     from_amount: Uint128,
     from_asset: String,
+    underwrite_incentive_x16: u16,  //TODO-UNDERWRITER implement
     block_number: u32,
     calldata: Binary
 ) -> Result<Response, ContractError> {
@@ -222,6 +286,60 @@ fn execute_send_cross_chain_liquidity(
 }
 
 
+//TODO-UNDERWRITE documentation
+fn execute_set_max_underwrite_duration(
+    new_max_underwrite_duration: u64
+) -> Result<Response, ContractError> {
+    //TODO-UNDERWRITE
+    todo!()
+}
+
+
+//TODO-UNDERWRITE documentation
+fn execute_underwrite(
+    to_vault: String,
+    to_asset_ref: String,
+    u: U256,
+    min_out: Uint128,
+    to_account: String,
+    underwrite_incentive_x16: u16,
+    calldata: Binary
+) -> Result<Response, ContractError> {
+    //TODO-UNDERWRITE
+    todo!()
+}
+
+
+//TODO-UNDERWRITE documentation
+fn execute_underwrite_and_check_connection(
+    to_vault: String,
+    to_asset_ref: String,
+    u: U256,
+    min_out: Uint128,
+    to_account: String,
+    underwrite_incentive_x16: u16,
+    calldata: Binary
+) -> Result<Response, ContractError> {
+    //TODO-UNDERWRITE
+    todo!()
+}
+
+
+//TODO-UNDERWRITE documentation
+fn execute_expire_underwrite(
+    to_vault: String,
+    to_asset_ref: String,
+    u: U256,
+    min_out: Uint128,
+    to_account: String,
+    underwrite_incentive_x16: u16,
+    calldata: Binary
+) -> Result<Response, ContractError> {
+    //TODO-UNDERWRITE
+    todo!()
+}
+
+
 
 // Query ******************************************************************************************
 
@@ -232,7 +350,26 @@ fn execute_send_cross_chain_liquidity(
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::Port {} => to_binary(&query_port(deps)?),
-        QueryMsg::ListChannels {} => to_binary(&query_list(deps)?)
+        QueryMsg::ListChannels {} => to_binary(&query_list(deps)?),
+        QueryMsg::UnderwriteIdentifier {
+            to_vault,
+            to_asset_ref,
+            u,
+            min_out,
+            to_account,
+            underwrite_incentive_x16,
+            calldata
+        } => to_binary(
+            &query_underwrite_identifier(
+                to_vault,
+                to_asset_ref,
+                u,
+                min_out,
+                to_account,
+                underwrite_incentive_x16,
+                calldata
+            )?
+        )
     }
 }
 
@@ -248,6 +385,20 @@ fn query_list(deps: Deps) -> StdResult<ListChannelsResponse> {
         .map(|r| r.map(|(_, v)| v))
         .collect::<StdResult<_>>()?;
     Ok(ListChannelsResponse { channels })
+}
+
+//TODO-UNDERWRITE documentation
+fn query_underwrite_identifier(
+    to_vault: String,
+    to_asset_ref: String,
+    u: U256,
+    min_out: Uint128,
+    to_account: String,
+    underwrite_incentive_x16: u16,
+    calldata: Binary
+) -> StdResult<UnderwriteIdentifierResponse> {
+    //TODO-UNDERWRITE
+    todo!()
 }
 
 
@@ -486,7 +637,8 @@ mod catalyst_ibc_interface_tests {
                         calldata
                     },
                 }
-            )
+            ),
+            _ => todo!()    //TODO-UNDERWRITE
         };
 
         packet.try_encode()

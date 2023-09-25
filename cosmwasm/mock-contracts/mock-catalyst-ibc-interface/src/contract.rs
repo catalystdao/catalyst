@@ -36,6 +36,7 @@ pub fn execute(
             min_out,
             from_amount,
             from_asset,
+            underwrite_incentive_x16,
             block_number,
             calldata
         } => execute_send_cross_chain_asset(
@@ -47,6 +48,7 @@ pub fn execute(
             min_out,
             from_amount,
             from_asset,
+            underwrite_incentive_x16,
             block_number,
             calldata
         ),
@@ -72,6 +74,66 @@ pub fn execute(
             block_number,
             calldata
         ),
+
+        ExecuteMsg::SetMaxUnderwriteDuration {
+            new_max_underwrite_duration
+        } => execute_set_max_underwrite_duration(
+            new_max_underwrite_duration
+        ),
+
+        ExecuteMsg::Underwrite {
+            to_vault,
+            to_asset_ref,
+            u,
+            min_out,
+            to_account,
+            underwrite_incentive_x16,
+            calldata
+        } => execute_underwrite(
+            to_vault,
+            to_asset_ref,
+            u,
+            min_out,
+            to_account,
+            underwrite_incentive_x16,
+            calldata
+        ),
+
+        ExecuteMsg::UnderwriteAndCheckConnection {
+            to_vault,
+            to_asset_ref,
+            u,
+            min_out,
+            to_account,
+            underwrite_incentive_x16,
+            calldata
+        } => execute_underwrite_and_check_connection(
+            to_vault,
+            to_asset_ref,
+            u,
+            min_out,
+            to_account,
+            underwrite_incentive_x16,
+            calldata
+        ),
+
+        ExecuteMsg::ExpireUnderwrite {
+            to_vault,
+            to_asset_ref,
+            u,
+            min_out,
+            to_account,
+            underwrite_incentive_x16,
+            calldata
+        } => execute_expire_underwrite(
+            to_vault,
+            to_asset_ref,
+            u,
+            min_out,
+            to_account,
+            underwrite_incentive_x16,
+            calldata
+        )
     }
 
 }
@@ -85,6 +147,7 @@ fn execute_send_cross_chain_asset(
     min_out: U256,
     from_amount: Uint128,
     from_asset: String,
+    underwrite_incentive_x16: u16,
     block_number: u32,
     calldata: Binary
 ) -> Result<Response, ContractError> {
@@ -105,6 +168,7 @@ fn execute_send_cross_chain_asset(
             .add_attribute("min_out", min_out)
             .add_attribute("from_amount", from_amount)
             .add_attribute("from_asset", from_asset)
+            .add_attribute("underwrite_incentive_x16", underwrite_incentive_x16.to_string())
             .add_attribute("block_number", block_number.to_string())
             .add_attribute("calldata", calldata)
     )
@@ -142,6 +206,104 @@ fn execute_send_cross_chain_liquidity(
             .add_attribute("calldata", calldata)
     )
 
+}
+
+
+fn execute_set_max_underwrite_duration(
+    new_max_underwrite_duration: u64
+) -> Result<Response, ContractError> {
+    Ok(
+        Response::new()
+            .add_attribute("action", "mock-interface-set-max-underwrite-duration")
+            .add_attribute("new_max_underwrite_duration", new_max_underwrite_duration.to_string())
+    )
+}
+
+
+fn execute_underwrite(
+    to_vault: String,
+    to_asset_ref: String,
+    u: U256,
+    min_out: Uint128,
+    to_account: String,
+    underwrite_incentive_x16: u16,
+    calldata: Binary
+) -> Result<Response, ContractError> {
+
+    let calldata = match calldata.len() {
+        0 => String::from("None"),  // NOTE: It is not possible to add empty attributes
+        _ => calldata.to_base64()
+    };
+
+    Ok(
+        Response::new()
+            .add_attribute("action", "mock-interface-underwrite")
+            .add_attribute("to_vault", to_vault)
+            .add_attribute("to_asset_ref", to_asset_ref)
+            .add_attribute("u", u)
+            .add_attribute("min_out", min_out)
+            .add_attribute("to_account", to_account)
+            .add_attribute("underwrite_incentive_x16", underwrite_incentive_x16.to_string())
+            .add_attribute("calldata", calldata)
+    )
+}
+
+
+fn execute_underwrite_and_check_connection(
+    to_vault: String,
+    to_asset_ref: String,
+    u: U256,
+    min_out: Uint128,
+    to_account: String,
+    underwrite_incentive_x16: u16,
+    calldata: Binary
+) -> Result<Response, ContractError> {
+
+    let calldata = match calldata.len() {
+        0 => String::from("None"),  // NOTE: It is not possible to add empty attributes
+        _ => calldata.to_base64()
+    };
+
+    Ok(
+        Response::new()
+            .add_attribute("action", "mock-interface-underwrite-and-check-connection")
+            .add_attribute("to_vault", to_vault)
+            .add_attribute("to_asset_ref", to_asset_ref)
+            .add_attribute("u", u)
+            .add_attribute("min_out", min_out)
+            .add_attribute("to_account", to_account)
+            .add_attribute("underwrite_incentive_x16", underwrite_incentive_x16.to_string())
+            .add_attribute("calldata", calldata)
+    )
+}
+
+
+fn execute_expire_underwrite(
+    to_vault: String,
+    to_asset_ref: String,
+    u: U256,
+    min_out: Uint128,
+    to_account: String,
+    underwrite_incentive_x16: u16,
+    calldata: Binary
+) -> Result<Response, ContractError> {
+
+    let calldata = match calldata.len() {
+        0 => String::from("None"),  // NOTE: It is not possible to add empty attributes
+        _ => calldata.to_base64()
+    };
+
+    Ok(
+        Response::new()
+            .add_attribute("action", "mock-interface-expire-underwrite")
+            .add_attribute("to_vault", to_vault)
+            .add_attribute("to_asset_ref", to_asset_ref)
+            .add_attribute("u", u)
+            .add_attribute("min_out", min_out)
+            .add_attribute("to_account", to_account)
+            .add_attribute("underwrite_incentive_x16", underwrite_incentive_x16.to_string())
+            .add_attribute("calldata", calldata)
+    )
 }
 
 

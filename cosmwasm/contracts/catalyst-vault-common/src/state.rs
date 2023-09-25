@@ -972,6 +972,41 @@ pub fn on_send_liquidity_failure(
 }
 
 
+//TODO-UNDERWRITE documentation
+pub fn underwrite_asset(
+    identifier: Binary,
+    asset_ref: String,
+    u: U256,
+    min_out: Uint128
+) -> Result<VaultResponse, ContractError> {
+    //TODO-UNDERWRITE
+    todo!()
+}
+
+
+//TODO-UNDERWRITE documentation
+pub fn release_underwrite_asset(
+    identifier: Binary,
+    asset_ref: String,
+    escrow_amount: Uint128
+) -> Result<VaultResponse, ContractError> {
+    //TODO-UNDERWRITE
+    todo!()
+}
+
+
+//TODO-UNDERWRITE documentation
+pub fn delete_underwrite_asset(
+    identifier: Binary,
+    asset_ref: String,
+    u: U256,
+    escrow_amount: Uint128
+) -> Result<VaultResponse, ContractError> {
+    //TODO-UNDERWRITE
+    todo!()
+}
+
+
 /// Compute the keccak256 of the provided bytes.
 /// 
 /// # Arguments:
