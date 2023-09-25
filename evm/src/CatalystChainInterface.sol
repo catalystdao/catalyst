@@ -835,10 +835,6 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
         // Reentry protection. No external calls are allowed before this line. The line 'if (refundTo == address(0)) ...' will always be true.
         delete underwritingStorage[identifier];
 
-        // Ensure the vault sends us the tokens before we send the tokens to the underwriter, otherwise they can 
-        // drain the cci of the collatoral.
-        uint256 balanceBeforeUnderwrite = ERC20(toAsset).balanceOf(address(this));
-
         // Delete escrow information and send swap tokens directly to the underwriter.
         ICatalystV1Vault(vault).releaseUnderwriteAsset(refundTo, identifier, underwrittenTokenAmount, toAsset);
         // We know only need to handle the collatoral and underwriting incentive.
