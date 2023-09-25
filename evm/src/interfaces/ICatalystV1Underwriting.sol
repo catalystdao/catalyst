@@ -11,6 +11,7 @@ interface ICatalystV1Underwriting {
     ) external returns (uint256);
 
     function releaseUnderwriteAsset(
+        address refundTo,
         bytes32 identifier,
         uint256 escrowAmount,
         address escrowToken

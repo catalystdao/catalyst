@@ -670,6 +670,7 @@ abstract contract CatalystVaultCommon is
     }
 
     function releaseUnderwriteAsset(
+        address refundTo,
         bytes32 identifier,
         uint256 escrowAmount,
         address escrowToken
@@ -677,7 +678,7 @@ abstract contract CatalystVaultCommon is
          _releaseAssetEscrow(identifier, escrowAmount, escrowToken); // Only reverts for missing escrow
 
         // Send the assets to the user.
-        ERC20(escrowToken).safeTransfer(msg.sender, escrowAmount);
+        ERC20(escrowToken).safeTransfer(refundTo, escrowAmount);
     }
 
     function deleteUnderwriteAsset(
