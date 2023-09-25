@@ -54,12 +54,18 @@ contract CatalystDescriber is Ownable {
 
     address[] private _vault_factories;
 
+    address public latestRouter;
+
     mapping(bytes32 => int256) internal _vault_abi_version;
 
     constructor(address defaultOwner) {
         _transferOwnership(defaultOwner);
     }
 
+    //--- Router ---//
+    function set_latest_router(address newRouter) external onlyOwner {
+        latestRouter = newRouter;
+    }
 
     //--- Whitelisted Templates ---//
 

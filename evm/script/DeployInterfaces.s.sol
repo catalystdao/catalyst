@@ -15,6 +15,15 @@ import { CatalystDescriber } from "../src/registry/CatalystDescriber.sol";
 import { IncentivizedMockEscrow } from "GeneralisedIncentives/src/apps/mock/IncentivizedMockEscrow.sol";
 import { IncentivizedWormholeEscrow } from "GeneralisedIncentives/src/apps/wormhole/IncentivizedWormholeEscrow.sol";
 
+struct JsonContracts {
+    address amplified_mathlib;
+    address amplified_template;
+    address describer;
+    address describer_registry;
+    address factory;
+    address volatile_mathlib;
+    address volatile_template;
+}
 
 contract DeployInterfaces is BaseMultiChainDeployer {
     using stdJson for string;
@@ -26,6 +35,8 @@ contract DeployInterfaces is BaseMultiChainDeployer {
 
     string incentiveVersion;
 
+    JsonContracts contracts;
+
     mapping(address => bytes32) interfaceSalt;
 
     bytes32 constant KECCACK_OF_NOTHING = 0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470;
@@ -33,9 +44,9 @@ contract DeployInterfaces is BaseMultiChainDeployer {
     mapping(Chains => address) wormholeBridge;
 
     constructor() {
-        interfaceSalt[0x00000001a9818a7807998dbc243b05F2B3CfF6f4] = bytes32(0xfb5d7080c10f7c4a95069b43b0ba06d246a8a9a6f2f3fbbbfde47a6f6eb2d3ca);
+        interfaceSalt[0x00000001a9818a7807998dbc243b05F2B3CfF6f4] = bytes32(0);
 
-        interfaceSalt[0x000000ED80503e3A7EA614FFB5507FD52584a1f2] = bytes32(0x526041c1059f5a0db3ed779269c367ee5637a3427bf73365ec3b94bafddad14c);
+        interfaceSalt[0x000000ED80503e3A7EA614FFB5507FD52584a1f2] = bytes32(0);
 
         wormholeBridge[Chains.Sepolia] = 0x4a8bc80Ed5a4067f1CCf107057b8270E0cC11A78;
 
@@ -87,6 +98,11 @@ contract DeployInterfaces is BaseMultiChainDeployer {
         string memory pathToChainConfig = string.concat(pathRoot, "/script/config/config_chain.json");
         string memory pathToInterfacesConfig = string.concat(pathRoot, "/script/config/config_interfaces.json");
         config_interfaces = vm.readFile(pathToInterfacesConfig);
+
+        string memory pathToContractConfig = string.concat(pathRoot, "/script/config/config_contracts.json");
+        string memory config_contract = vm.readFile(pathToContractConfig);
+        contracts = abi.decode(config_contract.parseRaw(string.concat(".contracts")), (JsonContracts));
+        
         
         // Get the chain config
         config_chain = vm.readFile(pathToChainConfig);
@@ -158,7 +174,9 @@ contract DeployInterfaces is BaseMultiChainDeployer {
 
         deployCCI(admin);
 
-        whitelistCCI(0x27CD96fdcBA981A963e386feF2408136d275723d);
+        // get describer
+
+        whitelistCCI(contracts.describer);
     }
 
     function deploy() load_config iter_chains(chain_list) broadcast external {
