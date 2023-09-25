@@ -760,7 +760,6 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
      */
     function _receiveAsset(
         address toAsset,
-        address toAccount,
         uint256 U,
         uint256 minOut
     ) internal override returns (uint256) {
@@ -806,7 +805,6 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
         address toAsset = _tokenIndexing[toAssetIndex];
         purchasedTokens = _receiveAsset(
             toAsset,
-            toAccount,
             U,
             minOut
         );

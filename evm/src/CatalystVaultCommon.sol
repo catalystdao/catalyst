@@ -174,7 +174,6 @@ abstract contract CatalystVaultCommon is
 
     function _receiveAsset(
         address toAsset,
-        address toAccount,
         uint256 U,
         uint256 minOut
     ) virtual internal returns (uint256);
