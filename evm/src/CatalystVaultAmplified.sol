@@ -1509,17 +1509,26 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
         // We need to ensure that the conversion in deleteUnderwrite (and receiveAsset) doesn't overflow.
         require(U < uint256(type(int256).max));  // int256 max fits in uint256
         
-        super.underwriteAsset(identifier, toAsset, U, minOut);
+        purchasedTokens = super.underwriteAsset(identifier, toAsset, U, minOut);
 
         // unit tracking is handled by _receiveAsset.
+
+        // since _unitTrakcer -= int256(U) has been set but no tokens have
+        // let the pool, we need to remove the corresponding amount from
+        // the balance 0 computation to ensure it is still correct.
+        unchecked {
+            // Must be less than the vault balance.
+            _underwriteEscrowMatchBalance0[toAsset] += purchasedTokens;
+        }
     }
 
     function releaseUnderwriteAsset(
+        address refundTo,
         bytes32 identifier,
         uint256 escrowAmount,
         address escrowToken
     )  override public {
-         super.releaseUnderwriteAsset(identifier, escrowAmount, escrowToken);
+         super.releaseUnderwriteAsset(refundTo, identifier, escrowAmount, escrowToken);
 
         unchecked {
             _underwriteEscrowMatchBalance0[escrowToken] -= escrowAmount;

@@ -598,6 +598,9 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
         uint16 underwriteIncentiveX16,
         bytes calldata calldata_
     ) internal {
+        // Fallback user cannot be address(0) since this is used as a check for the existance of an escrow.
+        // It would also be a silly fallback address.
+        require(fallbackUser != address(0));
         // Send the purchased units to the target vault on the target chain.
         ICatalystChainInterface(_chainInterface).sendCrossChainAsset{value: msg.value}(
             routeDescription,
@@ -677,15 +680,6 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
         uint16 underwriteIncentiveX16,
         bytes calldata calldata_
     ) nonReentrant onlyConnectedPool(routeDescription.chainIdentifier, routeDescription.toVault) external payable override returns (uint256) {
-        // Fallback user cannot be address(0) since this is used as a check for the existance of an escrow.
-        // It would also be a silly fallback address.
-        require(fallbackUser != address(0));
-        // Correct address format is checked on the cross-chain interface. As a result, the below snippit is not needed.
-        /*
-            require(toVault.length == 65);  // dev: Vault addresses are uint8 + 64 bytes.
-            require(toAccount.length == 65);  // dev: Account addresses are uint8 + 64 bytes.
-        */
-
         _updateWeights();
 
         uint256 fee = FixedPointMathLib.mulWadDown(amount, _vaultFee);
@@ -734,15 +728,6 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
         uint16 underwriteIncentiveX16,
         bytes calldata calldata_
     ) nonReentrant onlyConnectedPool(routeDescription.chainIdentifier, routeDescription.toVault) external payable override returns (uint256) {
-        // Fallback user cannot be address(0) since this is used as a check for the existance of an escrow.
-        // It would also be a silly fallback address.
-        require(fallbackUser != address(0));
-        // Correct address format is checked on the cross-chain interface. As a result, the below snippit is not needed.
-        /*
-            require(toVault.length == 65);  // dev: Vault addresses are uint8 + 64 bytes.
-            require(toAccount.length == 65);  // dev: Account addresses are uint8 + 64 bytes.
-        */
-
         _updateWeights();
 
         uint256 fee = FixedPointMathLib.mulWadDown(amount, _vaultFee);

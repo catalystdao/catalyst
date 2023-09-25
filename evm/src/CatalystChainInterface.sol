@@ -453,7 +453,7 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
         // in lost funds.
 
         if (context == CTX0_ASSET_SWAP) {
-            return acknowledgement = _handlePleaseFill(sourceIdentifier, data);
+            return acknowledgement = _handleReceiveAsset(sourceIdentifier, data);
         }
         if (context == CTX1_LIQUIDITY_SWAP) {
             return acknowledgement = _handleReceiveLiquidity(sourceIdentifier, data);
@@ -466,7 +466,7 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
     }
 
 
-    function _handleReceiveAsset(bytes32 sourceIdentifier, bytes calldata data) internal returns (bytes1 status) {
+    function _handleReceiveAssetFallback(bytes32 sourceIdentifier, bytes calldata data) internal returns (bytes1 status) {
         // We don't know how from_vault is encoded. So we load it as bytes. Including the length.
         bytes calldata fromVault = data[ FROM_VAULT_LENGTH_POS : FROM_VAULT_END ];
         // We know that toVault is an EVM address
@@ -839,18 +839,14 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
         // drain the cci of the collatoral.
         uint256 balanceBeforeUnderwrite = ERC20(toAsset).balanceOf(address(this));
 
-        // Delete escrow information and send tokens to this contract.
-        ICatalystV1Vault(vault).releaseUnderwriteAsset(identifier, underwrittenTokenAmount, toAsset);
-
-        uint256 balanceAfterUnderwrite = ERC20(toAsset).balanceOf(address(this));
-
-        unchecked {
-            if (balanceAfterUnderwrite - balanceBeforeUnderwrite != underwrittenTokenAmount) revert MaliciousVault();
-        }
+        // Delete escrow information and send swap tokens directly to the underwriter.
+        ICatalystV1Vault(vault).releaseUnderwriteAsset(refundTo, identifier, underwrittenTokenAmount, toAsset);
+        // We know only need to handle the collatoral and underwriting incentive.
+        // We also don't have to check that the vault didn't lie to us about underwriting.
 
         // Also refund the collatoral.
         uint256 refundAmount = underwrittenTokenAmount * (
-            UNDERWRITING_COLLATORAL_DENOMINATOR+UNDERWRITING_COLLATORAL
+            UNDERWRITING_COLLATORAL
         )/UNDERWRITING_COLLATORAL_DENOMINATOR;
 
         // add the underwriting incentive as well. Notice that 2x refundAmount are in play.
@@ -871,7 +867,7 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
         return swapUnderwritten = true;
     }
 
-    function _handlePleaseFill(bytes32 sourceIdentifier, bytes calldata data) internal returns (bytes1 acknowledgement) {
+    function _handleReceiveAsset(bytes32 sourceIdentifier, bytes calldata data) internal returns (bytes1 acknowledgement) {
         // We don't know how from_vault is encoded. So we load it as bytes. Including the length.
         bytes calldata fromVault = data[ FROM_VAULT_LENGTH_POS : FROM_VAULT_END ];
         // We know that toVault is an EVM address
@@ -914,7 +910,7 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
 
         if (!swapUnderwritten) {
             // The swap hasn't been underwritten lets execute the swap properly.
-            return acknowledgement = _handleReceiveAsset(sourceIdentifier, data);
+            return acknowledgement = _handleReceiveAssetFallback(sourceIdentifier, data);
         }
         // There is no case where only a subset of the units are filled. As either the complete swap (through the swap identifier)
         // is underwritten or it wasn't underwritten.

@@ -695,22 +695,24 @@ abstract contract CatalystVaultCommon is
     ) onlyChainInterface virtual public returns (uint256 purchasedTokens) {
         purchasedTokens = _receiveAsset(toAsset, msg.sender, U, minOut);  // msg.sender is cheaper than sload.
         // Set the escrow.
-        _setUnderwriteEscrow(
+        _setTokenEscrow(
             identifier,
+            address(uint160(1)),
             toAsset,
             purchasedTokens
         );
     }
 
     function releaseUnderwriteAsset(
+        address refundTo,
         bytes32 identifier,
         uint256 escrowAmount,
         address escrowToken
     ) onlyChainInterface virtual public {
-         _releaseUnderwriteEscrow(identifier, escrowAmount, escrowToken); // Only reverts for missing escrow
+         _releaseAssetEscrow(identifier, escrowAmount, escrowToken); // Only reverts for missing escrow
 
         // Send the assets to the user.
-        ERC20(escrowToken).safeTransfer(msg.sender, escrowAmount);
+        ERC20(escrowToken).safeTransfer(refundTo, escrowAmount);
     }
 
     function deleteUnderwriteAsset(
@@ -719,7 +721,7 @@ abstract contract CatalystVaultCommon is
         uint256 escrowAmount,
         address escrowToken
     ) onlyChainInterface virtual public {
-         _releaseUnderwriteEscrow(identifier, escrowAmount, escrowToken); // Only reverts for missing escrow
+         _releaseAssetEscrow(identifier, escrowAmount, escrowToken); // Only reverts for missing escrow
     }
 
 }
