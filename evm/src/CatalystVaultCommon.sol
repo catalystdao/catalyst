@@ -666,6 +666,13 @@ abstract contract CatalystVaultCommon is
             toAsset,
             purchasedTokens
         );
+
+        emit SwapUnderwritten(
+            identifier,
+            toAsset,
+            U,
+            purchasedTokens
+        );
     }
 
     function releaseUnderwriteAsset(

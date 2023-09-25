@@ -224,4 +224,17 @@ interface ICatalystV1VaultEvents {
         bytes toVault,
         bool newState
     );
+
+    //-- Underwriting Events --//
+
+    /**
+     * @notice A swap has been underwritten.
+     */
+    event SwapUnderwritten(
+        bytes32 indexed identifier,
+        address toAsset,
+        uint256 U,
+        uint256 purchasedTokens
+    );
+
 }
