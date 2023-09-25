@@ -855,6 +855,9 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
         uint16 underwriteIncentiveX16,
         bytes calldata calldata_
     ) internal {
+        // Fallback user cannot be address(0) since this is used as a check for the existance of an escrow.
+        // It would also be a silly fallback address.
+        require(fallbackUser != address(0));
         // onSendAssetSuccess requires casting U to int256 to update the _unitTracker and must never revert. Check for overflow here.
         require(U < uint256(type(int256).max));  // int256 max fits in uint256
         _unitTracker += int256(U);
