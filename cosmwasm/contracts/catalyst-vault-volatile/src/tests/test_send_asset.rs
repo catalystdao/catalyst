@@ -76,6 +76,7 @@ mod test_volatile_send_asset {
                 amount: swap_amount,
                 min_out: U256::zero(),
                 fallback_account: SWAPPER_C.to_string(),
+                underwrite_incentive_x16: 0u16,
                 calldata: Binary(vec![])
             },
             vec![from_asset.clone()],
@@ -231,6 +232,7 @@ mod test_volatile_send_asset {
                 amount: swap_amount,
                 min_out,
                 fallback_account: SWAPPER_A.to_string(),
+                underwrite_incentive_x16: 0u16,
                 calldata: Binary(vec![])
             },
             vec![from_asset.clone()],
@@ -333,6 +335,7 @@ mod test_volatile_send_asset {
                 amount: swap_amount,
                 min_out: U256::zero(),
                 fallback_account: SWAPPER_A.to_string(),
+                underwrite_incentive_x16: 0u16,
                 calldata: Binary(vec![])
             },
             vec![from_asset.clone()],
@@ -410,6 +413,7 @@ mod test_volatile_send_asset {
                 amount: swap_amount,
                 min_out: U256::zero(),
                 fallback_account: SWAPPER_A.to_string(),
+                underwrite_incentive_x16: 0u16,
                 calldata: Binary(vec![])
             },
             vec![from_asset.clone()],
@@ -490,6 +494,7 @@ mod test_volatile_send_asset {
                 amount: swap_amount,
                 min_out: U256::zero(),
                 fallback_account: SWAPPER_A.to_string(),
+                underwrite_incentive_x16: 0u16,
                 calldata: Binary(vec![])
             },
             vec![from_asset.clone()],
@@ -576,6 +581,7 @@ mod test_volatile_send_asset {
                 amount: swap_amount,
                 min_out: U256::zero(),
                 fallback_account: SWAPPER_A.to_string(),
+                underwrite_incentive_x16: 0u16,
                 calldata: calldata.clone()
             },
             vec![from_asset.clone()],
@@ -657,6 +663,7 @@ mod test_volatile_send_asset {
                 amount: swap_amount,
                 min_out: U256::zero(),
                 fallback_account: SWAPPER_C.to_string(),
+                underwrite_incentive_x16: 0u16,
                 calldata: Binary(vec![])
             },
             vec![],   // ! Do not send funds
@@ -692,6 +699,7 @@ mod test_volatile_send_asset {
                 amount: swap_amount,
                 min_out: U256::zero(),
                 fallback_account: SWAPPER_C.to_string(),
+                underwrite_incentive_x16: 0u16,
                 calldata: Binary(vec![])
             },
             vec![other_asset.clone()],   // ! Send 'other_asset' instead of 'from_asset'
@@ -727,6 +735,7 @@ mod test_volatile_send_asset {
                 amount: swap_amount,
                 min_out: U256::zero(),
                 fallback_account: SWAPPER_C.to_string(),
+                underwrite_incentive_x16: 0u16,
                 calldata: Binary(vec![])
             },
             vec![from_asset.clone(), other_asset.clone()],   // ! Send another asset together with 'from_asset'
@@ -761,6 +770,7 @@ mod test_volatile_send_asset {
                 amount: swap_amount,
                 min_out: U256::zero(),
                 fallback_account: SWAPPER_C.to_string(),
+                underwrite_incentive_x16: 0u16,
                 calldata: Binary(vec![])
             },
             vec![from_asset.clone()],
@@ -799,6 +809,7 @@ mod test_volatile_send_asset {
                 amount: swap_amount,
                 min_out: U256::zero(),
                 fallback_account: SWAPPER_C.to_string(),
+                underwrite_incentive_x16: 0u16,
                 calldata: Binary(vec![])
             },
             vec![from_asset.clone()],
@@ -837,6 +848,7 @@ mod test_volatile_send_asset {
                 amount: swap_amount,
                 min_out: U256::zero(),
                 fallback_account: SWAPPER_C.to_string(),
+                underwrite_incentive_x16: 0u16,
                 calldata: Binary(vec![])
             },
             vec![from_asset.clone()],

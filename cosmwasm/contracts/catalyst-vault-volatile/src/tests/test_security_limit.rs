@@ -154,6 +154,7 @@ mod test_volatile_security_limit {
                 amount: swap_amount,
                 min_out: U256::zero(),
                 fallback_account: SWAPPER_C.to_string(),
+                underwrite_incentive_x16: 0u16,
                 calldata: Binary(vec![])
             },
             vec![from_asset.clone()],
@@ -370,6 +371,7 @@ mod test_volatile_security_limit {
                 amount: swap_amount,
                 min_out: U256::zero(),
                 fallback_account: SWAPPER_C.to_string(),
+                underwrite_incentive_x16: 0u16,
                 calldata: Binary(vec![])
             },
             vec![from_asset.clone()],

@@ -461,6 +461,7 @@ mod catalyst_ibc_interface_tests {
             ),
             from_amount: Uint128::from(4920222095670429824873974121747892731u128),                          // Some large Uint128 number
             from_asset: "from_asset".to_string(),
+            underwrite_incentive_x16: 1001u16,
             block_number: 1356u32,
             calldata: Binary(vec![])
         }
@@ -595,6 +596,7 @@ mod catalyst_ibc_interface_tests {
                 min_out,
                 from_amount,
                 from_asset,
+                underwrite_incentive_x16,   //TODO-UNDERWRITER implement
                 block_number,
                 calldata
             } => CatalystV1Packet::SendAsset(
