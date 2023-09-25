@@ -44,9 +44,9 @@ contract DeployInterfaces is BaseMultiChainDeployer {
     mapping(Chains => address) wormholeBridge;
 
     constructor() {
-        interfaceSalt[0x00000001a9818a7807998dbc243b05F2B3CfF6f4] = bytes32(0);
+        interfaceSalt[0x00000001a9818a7807998dbc243b05F2B3CfF6f4] = bytes32(uint256(1));
 
-        interfaceSalt[0x000000ED80503e3A7EA614FFB5507FD52584a1f2] = bytes32(0);
+        interfaceSalt[0x000000ED80503e3A7EA614FFB5507FD52584a1f2] = bytes32(uint256(1));
 
         wormholeBridge[Chains.Sepolia] = 0x4a8bc80Ed5a4067f1CCf107057b8270E0cC11A78;
 
@@ -127,10 +127,10 @@ contract DeployInterfaces is BaseMultiChainDeployer {
         // Get the address of the incentives contract.
         address interfaceAddress = abi.decode(config_interfaces.parseRaw(string.concat(".", rpc[chain], ".", incentiveVersion, ".interface")), (address));
         console.log("cci", incentiveVersion);
-        if (interfaceAddress.codehash != bytes32(0)) {
+        /* if (interfaceAddress.codehash != bytes32(0)) {
             console.logAddress(interfaceAddress);
             return;
-        }
+        } */
         address incentiveAddress = abi.decode(config_interfaces.parseRaw(string.concat(".", rpc[chain], ".", incentiveVersion, ".incentive")), (address));
 
         bytes32 salt = interfaceSalt[incentiveAddress];

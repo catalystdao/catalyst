@@ -50,7 +50,7 @@ class PoARelayer(MessageSigner):
                 "confirmations": 0,
                 "url": os.environ["mantletestnet"],
                 "middleware": geth_poa_middleware,
-                "GI_contract": Web3.to_checksum_address("0x000000641ac10b4e000fe361f2149e2a531061c5"),
+                "GI_contract": Web3.to_checksum_address("0x00000001a9818a7807998dbc243b05F2B3CfF6f4"),
                 "key": os.environ["PRIVATE_KEY_ROUTER"],
                 "legacy": True
             },
@@ -59,7 +59,7 @@ class PoARelayer(MessageSigner):
                 "confirmations": 0,
                 "url": os.environ["basegoerli"],
                 # "middleware": geth_poa_middleware,
-                "GI_contract": Web3.to_checksum_address("0x000000641ac10b4e000fe361f2149e2a531061c5"),
+                "GI_contract": Web3.to_checksum_address("0x00000001a9818a7807998dbc243b05F2B3CfF6f4"),
                 "key": os.environ["PRIVATE_KEY_ROUTER"],
                 "legacy": False
             }

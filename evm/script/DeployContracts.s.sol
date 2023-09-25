@@ -100,17 +100,17 @@ contract DeployContracts is Script {
 
         admin = admin_;
 
-        deployFactory(bytes32(0));
+        deployFactory(bytes32(uint256(10)));
 
-        deploy_volatile_mathlib(bytes32(0));
-        deploy_amplified_mathlib(bytes32(0));
+        deploy_volatile_mathlib(bytes32(uint256(10)));
+        deploy_amplified_mathlib(bytes32(uint256(10)));
 
-        deploy_volatile_template(bytes32(0));
-        deploy_amplified_template(bytes32(0));
+        deploy_volatile_template(bytes32(uint256(10)));
+        deploy_amplified_template(bytes32(uint256(10)));
 
         // Deploy Registry
-        deploy_describer(bytes32(uint256(2)));
-        deploy_registry(bytes32(uint256(2)));
+        deploy_describer(bytes32(uint256(10)));
+        deploy_registry(bytes32(uint256(10)));
 
         // Fill registry
         setupDescriber();
