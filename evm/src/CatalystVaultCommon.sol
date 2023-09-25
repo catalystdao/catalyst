@@ -174,7 +174,6 @@ abstract contract CatalystVaultCommon is
 
     function _receiveAsset(
         address toAsset,
-        address toAccount,
         uint256 U,
         uint256 minOut
     ) virtual internal returns (uint256);
@@ -659,7 +658,7 @@ abstract contract CatalystVaultCommon is
         uint256 U,
         uint256 minOut
     ) onlyChainInterface virtual public returns (uint256 purchasedTokens) {
-        purchasedTokens = _receiveAsset(toAsset, msg.sender, U, minOut);  // msg.sender is cheaper than sload.
+        purchasedTokens = _receiveAsset(toAsset, U, minOut);  // msg.sender is cheaper than sload.
         // Set the escrow.
         _setTokenEscrow(
             identifier,

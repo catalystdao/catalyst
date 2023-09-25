@@ -1031,7 +1031,6 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
      */
     function _receiveAsset(
         address toAsset,
-        address toAccount,
         uint256 U,
         uint256 minOut
     ) internal override returns (uint256) {
@@ -1086,7 +1085,6 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
         address toAsset = _tokenIndexing[toAssetIndex];
         purchasedTokens = _receiveAsset(
             toAsset,
-            toAccount,
             U,
             minOut
         );
