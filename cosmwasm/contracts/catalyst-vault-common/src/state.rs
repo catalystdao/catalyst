@@ -27,6 +27,8 @@ pub const DECAY_RATE: U256 = u256!("86400");    // 60*60*24
 
 pub const CATALYST_ENCODED_ADDRESS_LENGTH: usize = 65usize;
 
+pub const UNDERWRITER_ESCROW_ADDRESS_ID: &str = "underwriter";
+
 
 
 
@@ -650,6 +652,30 @@ pub fn create_liquidity_escrow(
 }
 
 
+/// Create an underwrite escrow.
+/// 
+/// # Arguments:
+/// * `underwrite_identifier` - The underwrite id.
+/// * `amount` - The escrow amount.
+/// * `asset_ref` - The escrowed asset reference.
+/// 
+pub fn create_underwrite_escrow(
+    deps: &mut DepsMut,
+    underwrite_identifier: Vec<u8>,
+    amount: Uint128,
+    asset_ref: &str
+) -> Result<(), ContractError> {
+
+    create_asset_escrow(
+        deps,
+        underwrite_identifier,
+        amount,
+        asset_ref,
+        UNDERWRITER_ESCROW_ADDRESS_ID.to_string()
+    )
+}
+
+
 /// Release an asset escrow and return the escrow's fallback account.
 /// 
 /// ! IMPORTANT: This function has no means of verifying the correctness of the escrow `amount`. 
@@ -717,6 +743,34 @@ pub fn release_liquidity_escrow(
     )?;
 
     Ok(fallback_account)
+}
+
+
+/// Release an underwrite escrow.
+/// 
+/// ! IMPORTANT: This function has no means of verifying the correctness of the escrow `amount`. 
+/// The caller of this function should make sure that the `amount` is correct.
+/// 
+/// # Arguments:
+/// * `underwrite_identifier` - The underwrite id.
+/// * `amount` - The escrow amount.
+/// * `asset_ref` - The escrowed asset reference.
+/// 
+pub fn release_underwrite_escrow(
+    deps: &mut DepsMut,
+    underwrite_identifier: Vec<u8>,
+    amount: Uint128,
+    asset_ref: &str
+) -> Result<(), ContractError> {
+
+    release_asset_escrow(
+        deps,
+        underwrite_identifier,
+        amount,
+        asset_ref
+    )?;
+
+    Ok(())
 }
 
 
@@ -969,41 +1023,6 @@ pub fn on_send_liquidity_failure(
                 )
             )
     )
-}
-
-
-//TODO-UNDERWRITE documentation
-pub fn underwrite_asset(
-    identifier: Binary,
-    asset_ref: String,
-    u: U256,
-    min_out: Uint128
-) -> Result<VaultResponse, ContractError> {
-    //TODO-UNDERWRITE
-    todo!()
-}
-
-
-//TODO-UNDERWRITE documentation
-pub fn release_underwrite_asset(
-    identifier: Binary,
-    asset_ref: String,
-    escrow_amount: Uint128
-) -> Result<VaultResponse, ContractError> {
-    //TODO-UNDERWRITE
-    todo!()
-}
-
-
-//TODO-UNDERWRITE documentation
-pub fn delete_underwrite_asset(
-    identifier: Binary,
-    asset_ref: String,
-    u: U256,
-    escrow_amount: Uint128
-) -> Result<VaultResponse, ContractError> {
-    //TODO-UNDERWRITE
-    todo!()
 }
 
 

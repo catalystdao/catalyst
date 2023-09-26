@@ -196,7 +196,8 @@ pub enum ExecuteMsg<T, A=Empty> {
     ReleaseUnderwriteAsset {
         identifier: Binary,
         asset_ref: String,
-        escrow_amount: Uint128
+        escrow_amount: Uint128,
+        recipient: String
     },
 
     //TODO-UNDERWRITE documentation

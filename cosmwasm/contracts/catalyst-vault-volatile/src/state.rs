@@ -4,9 +4,9 @@ use catalyst_ibc_interface::msg::ExecuteMsg as InterfaceExecuteMsg;
 use catalyst_types::{U256, I256};
 use catalyst_vault_common::{
     ContractError,
-    event::{local_swap_event, send_asset_event, receive_asset_event, send_liquidity_event, receive_liquidity_event, deposit_event, withdraw_event}, 
+    event::{local_swap_event, send_asset_event, receive_asset_event, send_liquidity_event, receive_liquidity_event, deposit_event, withdraw_event, underwrite_asset_event}, 
     msg::{CalcSendAssetResponse, CalcReceiveAssetResponse, CalcLocalSwapResponse, GetLimitCapacityResponse},
-    state::{FACTORY, MAX_ASSETS, WEIGHTS, INITIAL_MINT_AMOUNT, VAULT_FEE, MAX_LIMIT_CAPACITY, USED_LIMIT_CAPACITY, CHAIN_INTERFACE, TOTAL_ESCROWED_LIQUIDITY, TOTAL_ESCROWED_ASSETS, is_connected, update_limit_capacity, collect_governance_fee_message, compute_send_asset_hash, compute_send_liquidity_hash, create_asset_escrow, create_liquidity_escrow, on_send_asset_success, on_send_liquidity_success, get_limit_capacity, factory_owner, initialize_limit_capacity, initialize_escrow_totals, create_on_catalyst_call_msg}, bindings::{VaultAssets, Asset, VaultAssetsTrait, AssetTrait, VaultToken, VaultTokenTrait, VaultResponse, IntoCosmosCustomMsg, CustomMsg}
+    state::{FACTORY, MAX_ASSETS, WEIGHTS, INITIAL_MINT_AMOUNT, VAULT_FEE, MAX_LIMIT_CAPACITY, USED_LIMIT_CAPACITY, CHAIN_INTERFACE, TOTAL_ESCROWED_LIQUIDITY, TOTAL_ESCROWED_ASSETS, is_connected, update_limit_capacity, collect_governance_fee_message, compute_send_asset_hash, compute_send_liquidity_hash, create_asset_escrow, create_liquidity_escrow, on_send_asset_success, on_send_liquidity_success, get_limit_capacity, factory_owner, initialize_limit_capacity, initialize_escrow_totals, create_on_catalyst_call_msg, create_underwrite_escrow, release_underwrite_escrow}, bindings::{VaultAssets, Asset, VaultAssetsTrait, AssetTrait, VaultToken, VaultTokenTrait, VaultResponse, IntoCosmosCustomMsg, CustomMsg}
 };
 use fixed_point_math::{self, WAD, LN2, mul_wad_down, ln_wad, exp_wad};
 use std::ops::Div;
@@ -810,6 +810,39 @@ pub fn send_asset_fixed_units(
 }
 
 
+/// Update the vault state on `receive asset`.
+/// 
+/// # Arguments:
+/// * `to_asset` - The destination asset.
+/// * `u` - The incoming units.
+/// * `min_out` - The mininum output amount.
+/// 
+fn handle_receive_asset(
+    deps: &mut DepsMut,
+    env: Env,
+    info: MessageInfo,
+    to_asset: &Asset,
+    u: U256,
+    min_out: Uint128
+) -> Result<Uint128, ContractError> {
+
+    update_weights(deps, env.block.time)?;
+
+    // Check and update the security limit.
+    update_limit_capacity(deps, env.block.time, u)?;
+
+    // Calculate the swap return.
+    // NOTE: no fee is taken here, the fee is always taken on the sending side.
+    let out = calc_receive_asset(&deps.as_ref(), &env, Some(&info), to_asset, u)?;
+
+    if min_out > out {
+        return Err(ContractError::ReturnInsufficient { out, min_out });
+    }
+    
+    Ok(out)
+}
+
+
 /// Receive a cross-chain asset swap.
 /// 
 /// **NOTE**: Only the chain interface may invoke this function.
@@ -854,23 +887,21 @@ pub fn receive_asset(
         return Err(ContractError::VaultNotConnected { channel_id, vault: from_vault })
     }
 
-    update_weights(deps, env.block.time)?;
-
-    // Check and update the security limit.
-    update_limit_capacity(deps, env.block.time, u)?;
-
-    // Calculate the swap return.
-    // NOTE: no fee is taken here, the fee is always taken on the sending side.
+    // Update the vault state and calculate the swap return.
     let to_asset_ref = VaultAssets::load_refs(&deps.as_ref())?
         .get(to_asset_index as usize)
         .ok_or(ContractError::AssetNotFound {})?
         .clone();
     let to_asset = Asset::from_asset_ref(&deps.as_ref(), &to_asset_ref)?;
-    let out = calc_receive_asset(&deps.as_ref(), &env, Some(&info), &to_asset, u)?;
 
-    if min_out > out {
-        return Err(ContractError::ReturnInsufficient { out, min_out });
-    }
+    let out = handle_receive_asset(
+        deps,
+        env.clone(),
+        info,
+        &to_asset,
+        u,
+        min_out
+    )?;
 
 
     // Handle asset transfer from the vault to the swapper
@@ -913,6 +944,123 @@ pub fn receive_asset(
             )
         )
     )
+}
+
+
+//TODO-UNDERWRITE documentation
+pub fn underwrite_asset(
+    deps: &mut DepsMut,
+    env: Env,
+    info: MessageInfo,
+    identifier: Binary,
+    to_asset_ref: String,
+    u: U256,
+    min_out: Uint128
+) -> Result<VaultResponse, ContractError> {
+
+    // Only allow the 'chain_interface' to invoke this function.
+    if Some(info.sender.clone()) != CHAIN_INTERFACE.load(deps.storage)? {
+        return Err(ContractError::Unauthorized {});
+    }
+
+    let to_asset = Asset::from_asset_ref(&deps.as_ref(), &to_asset_ref)?;
+    let swap_return = handle_receive_asset(
+        deps,
+        env,
+        info,
+        &to_asset,
+        u,
+        min_out
+    )?;
+
+    create_underwrite_escrow(
+        deps,
+        identifier.to_vec(),
+        swap_return,
+        &to_asset_ref
+    )?;
+    
+    Ok(
+        VaultResponse::new()
+            .add_event(
+                underwrite_asset_event(
+                    identifier,
+                    to_asset_ref,
+                    u,
+                    swap_return
+                )
+            )
+    )
+}
+
+
+//TODO-UNDERWRITE documentation
+pub fn release_underwrite_asset(
+    deps: &mut DepsMut,
+    env: Env,
+    info: MessageInfo,
+    identifier: Binary,
+    to_asset_ref: String,
+    escrow_amount: Uint128,
+    recipient: String
+) -> Result<VaultResponse, ContractError> {
+
+    // Only allow the 'chain_interface' to invoke this function.
+    if Some(info.sender.clone()) != CHAIN_INTERFACE.load(deps.storage)? {
+        return Err(ContractError::Unauthorized {});
+    }
+
+    release_underwrite_escrow(
+        deps,
+        identifier.to_vec(),
+        escrow_amount,
+        &to_asset_ref
+    )?;
+
+    // Create the message to send the escrowed amount to the recipient
+    let to_asset = Asset::from_asset_ref(&deps.as_ref(), &to_asset_ref)?;
+    let send_asset_msg = to_asset.send_asset(
+        &env,
+        escrow_amount,
+        recipient
+    )?;
+
+    let mut response = VaultResponse::new();
+
+    if let Some(msg) = send_asset_msg {
+        response = response.add_message(msg.into_cosmos_vault_msg());
+    }
+
+    Ok(response)
+}
+
+
+//TODO-UNDERWRITE documentation
+pub fn delete_underwrite_asset(
+    deps: &mut DepsMut,
+    _env: Env,
+    info: MessageInfo,
+    identifier: Binary,
+    to_asset_ref: String,
+    _u: U256,
+    escrow_amount: Uint128
+) -> Result<VaultResponse, ContractError> {
+
+    // Only allow the 'chain_interface' to invoke this function.
+    if Some(info.sender.clone()) != CHAIN_INTERFACE.load(deps.storage)? {
+        return Err(ContractError::Unauthorized {});
+    }
+
+    release_underwrite_escrow(
+        deps,
+        identifier.to_vec(),
+        escrow_amount,
+        &to_asset_ref
+    )?;
+
+    // Do **not** send the escrowed amount to the recipient
+
+    Ok(VaultResponse::new())
 }
 
 

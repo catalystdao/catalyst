@@ -1,12 +1,12 @@
 use cosmwasm_std::{Uint128, DepsMut, Env, MessageInfo, StdResult, CosmosMsg, to_binary, Deps, Binary, Uint64, Timestamp};
-use cw_storage_plus::Item;
+use cw_storage_plus::{Item, Map};
 use catalyst_ibc_interface::msg::ExecuteMsg as InterfaceExecuteMsg;
 use catalyst_types::{U256, I256, u256};
 use catalyst_vault_common::{
     ContractError,
-    event::{local_swap_event, send_asset_event, receive_asset_event, send_liquidity_event, receive_liquidity_event, deposit_event, withdraw_event},
+    event::{local_swap_event, send_asset_event, receive_asset_event, send_liquidity_event, receive_liquidity_event, deposit_event, withdraw_event, underwrite_asset_event},
     msg::{CalcSendAssetResponse, CalcReceiveAssetResponse, CalcLocalSwapResponse, GetLimitCapacityResponse}, 
-    state::{FACTORY, MAX_ASSETS, WEIGHTS, INITIAL_MINT_AMOUNT, VAULT_FEE, MAX_LIMIT_CAPACITY, USED_LIMIT_CAPACITY, CHAIN_INTERFACE, TOTAL_ESCROWED_LIQUIDITY, TOTAL_ESCROWED_ASSETS, is_connected, update_limit_capacity, collect_governance_fee_message, compute_send_asset_hash, compute_send_liquidity_hash, create_asset_escrow, create_liquidity_escrow, on_send_asset_success, get_limit_capacity, on_send_asset_failure, on_send_liquidity_failure, factory_owner, initialize_escrow_totals, initialize_limit_capacity, create_on_catalyst_call_msg}, bindings::{Asset, AssetTrait, VaultAssets, VaultAssetsTrait, VaultToken, VaultTokenTrait, VaultResponse, IntoCosmosCustomMsg, CustomMsg}
+    state::{FACTORY, MAX_ASSETS, WEIGHTS, INITIAL_MINT_AMOUNT, VAULT_FEE, MAX_LIMIT_CAPACITY, USED_LIMIT_CAPACITY, CHAIN_INTERFACE, TOTAL_ESCROWED_LIQUIDITY, TOTAL_ESCROWED_ASSETS, is_connected, update_limit_capacity, collect_governance_fee_message, compute_send_asset_hash, compute_send_liquidity_hash, create_asset_escrow, create_liquidity_escrow, on_send_asset_success, get_limit_capacity, on_send_asset_failure, on_send_liquidity_failure, factory_owner, initialize_escrow_totals, initialize_limit_capacity, create_on_catalyst_call_msg, create_underwrite_escrow, release_underwrite_escrow}, bindings::{Asset, AssetTrait, VaultAssets, VaultAssetsTrait, VaultToken, VaultTokenTrait, VaultResponse, IntoCosmosCustomMsg, CustomMsg}
 };
 use fixed_point_math::{self, WAD, WADWAD, mul_wad_down, pow_wad, div_wad_up, div_wad_down, mul_wad_up};
 use std::ops::Div;
@@ -24,6 +24,8 @@ pub const UNIT_TRACKER  : Item<I256> = Item::new("catalyst-vault-amplified-unit-
 
 const SMALL_SWAP_RATIO  : Uint128 = Uint128::new(1000000000000u128);   // 1e12
 const SMALL_SWAP_RETURN : U256 = u256!("950000000000000000");          // 0.95 * WAD
+
+pub const TOTAL_UNDERWRITTEN_ESCROWED_ASSETS: Map<&str, Uint128> = Map::new("catalyst-vault-amplified-underwritten-escrowed-assets");
 
 // Amplification adjustment storage variables and constants
 pub const TARGET_ONE_MINUS_AMP: Item<I256> = Item::new("catalyst-vault-amplified-target-one-minus-amp");
@@ -1160,6 +1162,63 @@ pub fn send_asset_fixed_units(
 }
 
 
+/// Update the vault state on `receive asset`.
+/// 
+/// # Arguments:
+/// * `to_asset` - The destination asset.
+/// * `u` - The incoming units.
+/// * `min_out` - The mininum output amount.
+/// 
+fn handle_receive_asset(
+    deps: &mut DepsMut,
+    env: Env,
+    info: MessageInfo,
+    to_asset: &Asset,
+    u: U256,
+    min_out: Uint128
+) -> Result<Uint128, ContractError> {
+
+    update_amplification(deps, env.block.time)?;
+
+    // Calculate the swap return.
+    // NOTE: no fee is taken here, the fee is always taken on the sending side.
+    let out = calc_receive_asset(&deps.as_ref(), &env, Some(&info), &to_asset, u)?;
+
+    if min_out > out {
+        return Err(ContractError::ReturnInsufficient { out, min_out });
+    }
+
+    // Update the max limit capacity and the used limit capacity.
+    let to_weight = WEIGHTS.load(deps.storage, to_asset.get_asset_ref())?;
+    let limit_capacity_delta = U256::from(out)
+        .wrapping_mul(U256::from(to_weight));   // 'wrapping_mul' is safe as U256.max >= Uint128.max * Uint128.max
+
+
+    // The 'max_limit_capacity' must be updated, as for amplified vaults it depends on
+    // the vault's asset balances.
+    MAX_LIMIT_CAPACITY.update(
+        deps.storage,
+        |max_limit_capacity| -> StdResult<_> {
+            max_limit_capacity
+                .checked_sub(limit_capacity_delta)
+                .map_err(|err| err.into())
+        }
+    )?;
+    update_limit_capacity(deps, env.block.time, limit_capacity_delta)?;
+
+    // Update the 'unit_tracker' for the 'balance0' calculations.
+    UNIT_TRACKER.update(
+        deps.storage,
+        |unit_tracker| -> StdResult<_> {
+            unit_tracker
+                .checked_sub(u.try_into()?)
+                .map_err(|err| err.into())
+        }
+    )?;
+
+    Ok(out)
+}
+
 /// Receive a cross-chain asset swap.
 /// 
 /// **NOTE**: Only the chain interface may invoke this function.
@@ -1204,47 +1263,20 @@ pub fn receive_asset(
         return Err(ContractError::VaultNotConnected { channel_id, vault: from_vault })
     }
 
-    update_amplification(deps, env.block.time)?;
-
-    // Calculate the swap return.
-    // NOTE: no fee is taken here, the fee is always taken on the sending side.
+    // Update the vault state and calculate the swap return.
     let to_asset_ref = VaultAssets::load_refs(&deps.as_ref())?
         .get(to_asset_index as usize)
         .ok_or(ContractError::AssetNotFound {})?
         .clone();
     let to_asset = Asset::from_asset_ref(&deps.as_ref(), &to_asset_ref)?;
-    let out = calc_receive_asset(&deps.as_ref(), &env, Some(&info), &to_asset, u)?;
 
-    if min_out > out {
-        return Err(ContractError::ReturnInsufficient { out, min_out });
-    }
-
-    // Update the max limit capacity and the used limit capacity.
-    let to_weight = WEIGHTS.load(deps.storage, to_asset.get_asset_ref())?;
-    let limit_capacity_delta = U256::from(out)
-        .wrapping_mul(U256::from(to_weight));   // 'wrapping_mul' is safe as U256.max >= Uint128.max * Uint128.max
-
-
-    // The 'max_limit_capacity' must be updated, as for amplified vaults it depends on
-    // the vault's asset balances.
-    MAX_LIMIT_CAPACITY.update(
-        deps.storage,
-        |max_limit_capacity| -> StdResult<_> {
-            max_limit_capacity
-                .checked_sub(limit_capacity_delta)
-                .map_err(|err| err.into())
-        }
-    )?;
-    update_limit_capacity(deps, env.block.time, limit_capacity_delta)?;
-
-    // Update the 'unit_tracker' for the 'balance0' calculations.
-    UNIT_TRACKER.update(
-        deps.storage,
-        |unit_tracker| -> StdResult<_> {
-            unit_tracker
-                .checked_sub(u.try_into()?)
-                .map_err(|err| err.into())
-        }
+    let out = handle_receive_asset(
+        deps,
+        env.clone(),
+        info,
+        &to_asset,
+        u,
+        min_out
     )?;
 
     // Handle asset transfer from the vault to the swapper
@@ -1291,37 +1323,175 @@ pub fn receive_asset(
 
 
 //TODO-UNDERWRITE documentation
-pub fn underwrite_asset_amplified(
+pub fn underwrite_asset(
+    deps: &mut DepsMut,
+    env: Env,
+    info: MessageInfo,
     identifier: Binary,
-    asset_ref: String,
+    to_asset_ref: String,
     u: U256,
     min_out: Uint128
 ) -> Result<VaultResponse, ContractError> {
-    //TODO-UNDERWRITE
-    todo!()
+
+    // Only allow the 'chain_interface' to invoke this function.
+    if Some(info.sender.clone()) != CHAIN_INTERFACE.load(deps.storage)? {
+        return Err(ContractError::Unauthorized {});
+    }
+
+    // NOTE: `handle_receive_asset` will fail if `u` cannot be converted to I256.
+
+    let to_asset = Asset::from_asset_ref(&deps.as_ref(), &to_asset_ref)?;
+    let swap_return = handle_receive_asset(
+        deps,
+        env,
+        info,
+        &to_asset,
+        u,
+        min_out
+    )?;
+
+    create_underwrite_escrow(
+        deps,
+        identifier.to_vec(),
+        swap_return,
+        &to_asset_ref
+    )?;
+
+    // Keep track of the underwritten escrowed assets to be able to accurately calculate the
+    // the vault's `balance0`. This is required as units have been 'received', but no assets 
+    // have left the vault.
+    TOTAL_UNDERWRITTEN_ESCROWED_ASSETS.update(
+        deps.storage,
+        &to_asset_ref,
+        |amount| -> StdResult<_> {
+            amount
+                .unwrap_or_default()
+                .checked_add(swap_return)
+                .map_err(|err| err.into())
+        }
+    )?;
+    
+    Ok(
+        VaultResponse::new()
+            .add_event(
+                underwrite_asset_event(
+                    identifier,
+                    to_asset_ref,
+                    u,
+                    swap_return
+                )
+            )
+    )
 }
 
 
 //TODO-UNDERWRITE documentation
-pub fn release_underwrite_asset_amplified(
+pub fn release_underwrite_asset(
+    deps: &mut DepsMut,
+    env: Env,
+    info: MessageInfo,
     identifier: Binary,
-    asset_ref: String,
-    escrow_amount: Uint128
+    to_asset_ref: String,
+    escrow_amount: Uint128,
+    recipient: String
 ) -> Result<VaultResponse, ContractError> {
-    //TODO-UNDERWRITE
-    todo!()
+
+    // Only allow the 'chain_interface' to invoke this function.
+    if Some(info.sender.clone()) != CHAIN_INTERFACE.load(deps.storage)? {
+        return Err(ContractError::Unauthorized {});
+    }
+
+    release_underwrite_escrow(
+        deps,
+        identifier.to_vec(),
+        escrow_amount,
+        &to_asset_ref
+    )?;
+
+    // Create the message to send the escrowed amount to the recipient
+    let to_asset = Asset::from_asset_ref(&deps.as_ref(), &to_asset_ref)?;
+    let send_asset_msg = to_asset.send_asset(
+        &env,
+        escrow_amount,
+        recipient
+    )?;
+
+    // Keep track of the underwritten escrowed assets to be able to accurately calculate the
+    // the vault's `balance0`.
+    TOTAL_UNDERWRITTEN_ESCROWED_ASSETS.update(
+        deps.storage,
+        &to_asset_ref,
+        |amount| -> StdResult<_> {
+            amount
+                .unwrap()   // Will never fail, as `underwrite_asset` must always be called before
+                            // this function.
+                .checked_sub(escrow_amount)
+                .map_err(|err| err.into())
+        }
+    )?;
+
+    let mut response = VaultResponse::new();
+
+    if let Some(msg) = send_asset_msg {
+        response = response.add_message(msg.into_cosmos_vault_msg());
+    }
+
+    Ok(response)
 }
 
 
-//TODO-UNDERWRITE documentation
-pub fn delete_underwrite_asset_amplified(
+//TODO-UNDERWRITE documentation // ! Mention passed units are **not** verified
+pub fn delete_underwrite_asset(
+    deps: &mut DepsMut,
+    _env: Env,
+    info: MessageInfo,
     identifier: Binary,
-    asset_ref: String,
+    to_asset_ref: String,
     u: U256,
     escrow_amount: Uint128
 ) -> Result<VaultResponse, ContractError> {
-    //TODO-UNDERWRITE
-    todo!()
+
+    // Only allow the 'chain_interface' to invoke this function.
+    if Some(info.sender.clone()) != CHAIN_INTERFACE.load(deps.storage)? {
+        return Err(ContractError::Unauthorized {});
+    }
+
+    release_underwrite_escrow(
+        deps,
+        identifier.to_vec(),
+        escrow_amount,
+        &to_asset_ref
+    )?;
+
+    // Do **not** send the escrowed amount to the recipient
+
+    // Correct the unit-tracker, as it was updated according to the 'received' units on
+    // `underwrite_asset` (on its `handle_receive_asset` call), and now the 'underwrite' is being
+    // reversed.
+    UNIT_TRACKER.update(
+        deps.storage,
+        |unit_tracker| -> StdResult<_> {
+            unit_tracker
+            .checked_add(u.try_into()?)
+            .map_err(|err| err.into())
+        }
+    )?;
+
+    // Keep track of the 'underwritten' escrowed assets to be able to accurately calculate the
+    // the vault's `balance0`.
+    TOTAL_UNDERWRITTEN_ESCROWED_ASSETS.update(
+        deps.storage,
+        &to_asset_ref,
+        |amount| -> StdResult<_> {
+            amount
+                .unwrap()   // Will never fail, as `underwrite_asset` must always be called before
+                            // this function.
+                .checked_sub(escrow_amount)
+                .map_err(|err| err.into())
+        }
+    )?;
+
+    Ok(VaultResponse::new())
 }
 
 

@@ -101,6 +101,28 @@ pub fn receive_asset_event(
 }
 
 
+/// Generate the event of the underwrite of a cross-chain asset swap.
+/// 
+/// # Arguments:
+/// * `identifier` - The underwrite id.
+/// * `to_asset_ref` - The destination asset reference.
+/// * `units` - The incoming units.
+/// * `to_amount` - The `to_asset` amount bought from the vault.
+/// 
+pub fn underwrite_asset_event(
+    identifier: Binary,
+    to_asset_ref: impl Into<String>,
+    units: U256,
+    to_amount: Uint128,
+) -> Event {
+    Event::new("underwrite-asset")
+        .add_attribute("identifier", identifier.to_base64())
+        .add_attribute("to_asset_ref", to_asset_ref)
+        .add_attribute("units", units)
+        .add_attribute("to_amount", to_amount)
+}
+
+
 /// Generate the event of the initiation of a liquidity cross-chain swap.
 /// 
 /// # Arguments:
