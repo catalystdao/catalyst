@@ -19,11 +19,11 @@ contract DeployCatalyst is BaseMultiChainDeployer, DeployContracts {
     }
 
     function fund_address(address toFund) iter_chains(chain_list) broadcast external {
-        fund(toFund, 0.1*10**18);
+        fund(toFund, 0.2*10**18);
     }
 
     function fund_address_legacy(address toFund) iter_chains(chain_list_legacy) broadcast external {
-        fund(toFund, 0.1*10**18);
+        fund(toFund, 0.2*10**18);
     }
 }
 
