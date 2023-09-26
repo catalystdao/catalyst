@@ -193,7 +193,7 @@ fn execute_send_cross_chain_asset(
     min_out: U256,
     from_amount: Uint128,
     from_asset: String,
-    underwrite_incentive_x16: u16,  //TODO-UNDERWRITER implement
+    underwrite_incentive_x16: u16,
     block_number: u32,
     calldata: Binary
 ) -> Result<Response, ContractError> {
@@ -210,6 +210,7 @@ fn execute_send_cross_chain_asset(
             from_amount: U256::from(from_amount),
             from_asset: CatalystEncodedAddress::try_encode(from_asset.as_bytes())?,
             block_number,
+            underwrite_incentive_x16,
             calldata,
         },
     };
@@ -596,7 +597,7 @@ mod catalyst_ibc_interface_tests {
                 min_out,
                 from_amount,
                 from_asset,
-                underwrite_incentive_x16,   //TODO-UNDERWRITER implement
+                underwrite_incentive_x16,
                 block_number,
                 calldata
             } => CatalystV1Packet::SendAsset(
@@ -611,6 +612,7 @@ mod catalyst_ibc_interface_tests {
                         from_amount: override_from_amount.unwrap_or(U256::from(from_amount)),
                         from_asset: CatalystEncodedAddress::try_encode(from_asset.as_ref()).unwrap(),
                         block_number,
+                        underwrite_incentive_x16,
                         calldata
                     },
                 }
