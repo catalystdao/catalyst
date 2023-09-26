@@ -25,7 +25,7 @@ use catalyst_vault_common::bindings::IntoVaultResponse;
 
 use crate::msg::{VolatileExecuteMsg, InstantiateMsg, QueryMsg, VolatileExecuteExtension};
 use crate::state::{
-    initialize_swap_curves, set_weights, deposit_mixed, withdraw_all, withdraw_mixed, local_swap, send_asset, receive_asset, send_liquidity, receive_liquidity, query_calc_send_asset, query_calc_receive_asset, query_calc_local_swap, query_get_limit_capacity, query_target_weight, query_weights_update_finish_timestamp, on_send_asset_success_volatile, on_send_liquidity_success_volatile, send_asset_fixed_units, underwrite_asset, release_underwrite_asset, delete_underwrite_asset
+    initialize_swap_curves, set_weights, deposit_mixed, withdraw_all, withdraw_mixed, local_swap, send_asset, receive_asset, send_liquidity, receive_liquidity, query_calc_send_asset, query_calc_receive_asset, query_calc_local_swap, query_get_limit_capacity, query_target_weight, query_weights_update_finish_timestamp, on_send_asset_success_volatile, on_send_liquidity_success_volatile, underwrite_asset, release_underwrite_asset, delete_underwrite_asset
 };
 
 // Version information
@@ -214,6 +214,7 @@ pub fn execute(
                 to_asset_index,
                 amount,
                 min_out,
+                None,
                 fallback_account,
                 underwrite_incentive_x16,
                 calldata
@@ -234,7 +235,7 @@ pub fn execute(
             calldata
         } => {
             receive_no_assets = false;
-            send_asset_fixed_units(
+            send_asset(
                 &mut deps,
                 env,
                 info.clone(),
@@ -245,7 +246,7 @@ pub fn execute(
                 to_asset_index,
                 amount,
                 min_out,
-                u,
+                Some(u),
                 fallback_account,
                 underwrite_incentive_x16,
                 calldata

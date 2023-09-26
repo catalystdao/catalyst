@@ -657,6 +657,7 @@ pub fn local_swap(
 /// * `to_asset_index` - The destination asset index.
 /// * `amount` - The `from_asset_ref` amount sold to the vault.
 /// * `min_out` - The mininum `to_asset` output amount to get on the target vault.
+/// * `fixed_units` - The amount of units to send.
 /// * `fallback_account` - The recipient of the swapped amount should the swap fail.
 /// * `underwrite_incentive_x16` - The share of the swap return that is offered to an underwriter as incentive.
 /// * `calldata` - Arbitrary data to be executed on the target chain upon successful execution of the swap.
@@ -672,6 +673,7 @@ pub fn send_asset(
     to_asset_index: u8,
     amount: Uint128,
     min_out: U256,
+    fixed_units: Option<U256>,
     fallback_account: String,
     underwrite_incentive_x16: u16,
     calldata: Binary
@@ -693,13 +695,24 @@ pub fn send_asset(
 
     // Calculate the units bought.
     let from_asset = Asset::from_asset_ref(&deps.as_ref(), &from_asset_ref)?;
-    let u = calc_send_asset(
+    let mut u = calc_send_asset(
         &deps.as_ref(),
         &env,
         Some(&info),
         &from_asset,
         effective_swap_amount
     )?;
+
+    if let Some(fixed_units) = fixed_units {
+        if u < fixed_units {
+            return Err(
+                ContractError::ReturnInsufficientUnits {
+                    units: u, fixed_units
+                }
+            );
+        }
+        u = fixed_units;
+    }
 
     // Create a 'send asset' escrow
     let block_number = env.block.height as u32;
@@ -786,27 +799,6 @@ pub fn send_asset(
             )
         )
     )
-}
-
-
-//TODO-UNDERWRITE documentation
-pub fn send_asset_fixed_units(
-    deps: &mut DepsMut,
-    env: Env,
-    info: MessageInfo,
-    channel_id: String,
-    to_vault: Binary,
-    to_account: Binary,
-    from_asset_ref: String,
-    to_asset_index: u8,
-    amount: Uint128,
-    min_out: U256,
-    u: U256,                        //TODO-UNDERWRITE implement
-    fallback_account: String,
-    underwrite_incentive_x16: u16,  //TODO-UNDERWRITE implement
-    calldata: Binary
-) -> Result<VaultResponse, ContractError> {
-    todo!()     //TODO-UNDERWRITE
 }
 
 

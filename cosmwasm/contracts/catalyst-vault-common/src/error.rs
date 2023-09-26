@@ -70,6 +70,9 @@ pub enum ContractError {
     #[error("Return insufficient: output is {out}, minimum output is {min_out}.")]
     ReturnInsufficient { out: Uint128, min_out: Uint128 },
 
+    #[error("Return insufficient for fixed units: output is {units}, specified units is {fixed_units}.")]
+    ReturnInsufficientUnits { units: U256, fixed_units: U256 },
+
     #[error("Vault not connected (channel id: {channel_id}, vault: {vault}).")]
     VaultNotConnected { channel_id: String, vault: Binary },
 
