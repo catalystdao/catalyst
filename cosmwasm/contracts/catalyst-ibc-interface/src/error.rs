@@ -1,4 +1,4 @@
-use cosmwasm_std::StdError;
+use cosmwasm_std::{StdError, Uint64};
 use thiserror::Error;
 
 /// Never is a placeholder to ensure no errors are returned.
@@ -26,5 +26,11 @@ pub enum ContractError {
     InvalidCatalystEncodedAddress {},
 
     #[error("Submessage reply id unknown: {id}")]
-    UnknownReplyId { id: u64 }
+    UnknownReplyId { id: u64 },
+
+    #[error("The specified max underwrite duration is too long (set {set_duration}, max {max_duration})")]
+    MaxUnderwriteDurationTooLong {
+        set_duration: Uint64,
+        max_duration: Uint64
+    }
 }

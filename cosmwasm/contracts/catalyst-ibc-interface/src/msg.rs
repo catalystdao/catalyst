@@ -1,5 +1,5 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{Uint128, Binary};
+use cosmwasm_std::{Uint64, Uint128, Binary};
 use catalyst_types::U256;
 
 use crate::state::IbcChannelInfo;
@@ -70,7 +70,7 @@ pub enum ExecuteMsg {
 
     //TODO-UNDERWRITE documentation
     SetMaxUnderwriteDuration {
-        new_max_underwrite_duration: u64
+        new_max_underwrite_duration: Uint64
     },
 
 

@@ -1,13 +1,13 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, IbcMsg, to_binary, IbcQuery, PortIdResponse, Order, Uint128};
+use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, IbcMsg, to_binary, IbcQuery, PortIdResponse, Order, Uint128, Uint64};
 use cw2::set_contract_version;
 use catalyst_types::U256;
 
 use crate::catalyst_ibc_payload::{CatalystV1SendAssetPayload, SendAssetVariablePayload, CatalystV1SendLiquidityPayload, SendLiquidityVariablePayload, CatalystEncodedAddress};
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg, PortResponse, ListChannelsResponse, UnderwriteIdentifierResponse};
-use crate::state::{OPEN_CHANNELS, set_owner_unchecked, update_owner};
+use crate::state::{OPEN_CHANNELS, set_owner_unchecked, update_owner, set_max_underwriting_duration};
 
 // Version information
 const CONTRACT_NAME: &str = "catalyst-ibc-interface";
@@ -43,7 +43,7 @@ pub fn instantiate(
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(
-    deps: DepsMut,
+    mut deps: DepsMut,
     env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
@@ -104,7 +104,9 @@ pub fn execute(
 
         ExecuteMsg::SetMaxUnderwriteDuration {
             new_max_underwrite_duration
-        } => execute_set_max_underwrite_duration(
+        } => set_max_underwriting_duration(
+            &mut deps,
+            &info,
             new_max_underwrite_duration
         ),
 
@@ -294,15 +296,6 @@ fn execute_send_cross_chain_liquidity(
     Ok(Response::new()
         .add_message(ibc_msg)
     )
-}
-
-
-//TODO-UNDERWRITE documentation
-fn execute_set_max_underwrite_duration(
-    new_max_underwrite_duration: u64
-) -> Result<Response, ContractError> {
-    //TODO-UNDERWRITE
-    todo!()
 }
 
 

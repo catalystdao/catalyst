@@ -1,7 +1,7 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{IbcEndpoint, Deps, Addr, DepsMut, Event, MessageInfo, Empty, Response};
+use cosmwasm_std::{IbcEndpoint, Deps, Addr, DepsMut, Event, MessageInfo, Empty, Response, Uint64};
 use cw_controllers::Admin;
-use cw_storage_plus::Map;
+use cw_storage_plus::{Map, Item};
 
 use crate::{ContractError, event::set_owner_event};
 
@@ -22,6 +22,55 @@ pub struct IbcChannelInfo {
     pub endpoint: IbcEndpoint,
     pub counterparty_endpoint: IbcEndpoint,
     pub connection_id: String
+}
+
+
+
+// Underwriting
+// ************************************************************************************************
+
+const MAX_UNDERWRITE_DURATION_ALLOWED_SECONDS: Uint64 = Uint64::new(15 * 24 * 60 * 60); // 15 days
+
+const MAX_UNDERWRITE_DURATION_SECONDS: Item<Uint64> = Item::new("catalyst-ibc-interface-max-underwrite-duration");
+
+
+/// Set the maximum underwriting duration (only applies to new underwrite orders).
+/// 
+/// NOTE: This function checks that the sender of the transaction is the current interface owner.
+/// 
+/// # Arguments:
+/// * `new_max_duration` - The new desired maximum underwriting duration.
+pub fn set_max_underwriting_duration(
+    deps: &mut DepsMut,
+    info: &MessageInfo,
+    new_max_duration: Uint64
+) -> Result<Response, ContractError> {
+
+    only_owner(deps.as_ref(), info)?;
+
+    if new_max_duration > MAX_UNDERWRITE_DURATION_ALLOWED_SECONDS {
+        return Err(ContractError::MaxUnderwriteDurationTooLong {
+            set_duration: new_max_duration,
+            max_duration: MAX_UNDERWRITE_DURATION_ALLOWED_SECONDS,
+        })
+    }
+
+    MAX_UNDERWRITE_DURATION_SECONDS.save(deps.storage, &new_max_duration)?;
+
+    Ok(Response::new())
+
+}
+
+
+/// Get the maximum underwriting duration.
+pub fn get_max_underwrite_duration(
+    deps: &Deps
+) -> Result<Uint64, ContractError> {
+
+    MAX_UNDERWRITE_DURATION_SECONDS
+        .load(deps.storage)
+        .map_err(|err| err.into())
+
 }
 
 

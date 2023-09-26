@@ -1,6 +1,6 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, Uint128};
+use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, Uint128, Uint64};
 use catalyst_types::U256;
 use catalyst_ibc_interface::{msg::{ExecuteMsg, InstantiateMsg, QueryMsg}, ContractError, state::update_owner};
 
@@ -217,7 +217,7 @@ fn execute_send_cross_chain_liquidity(
 
 
 fn execute_set_max_underwrite_duration(
-    new_max_underwrite_duration: u64
+    new_max_underwrite_duration: Uint64
 ) -> Result<Response, ContractError> {
     Ok(
         Response::new()
