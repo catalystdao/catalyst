@@ -107,6 +107,16 @@ pub enum ExecuteMsg {
         to_account: String,
         underwrite_incentive_x16: u16,
         calldata: Binary
+    },
+
+
+
+    // Ownership msgs
+
+    /// Transfer the ownership of the interface.
+    /// * `new_owner` - The new owner of the contract. Must be a valid address.
+    TransferOwnership {
+        new_owner: String
     }
 
 }

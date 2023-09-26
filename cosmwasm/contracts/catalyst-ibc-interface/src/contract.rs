@@ -7,7 +7,7 @@ use catalyst_types::U256;
 use crate::catalyst_ibc_payload::{CatalystV1SendAssetPayload, SendAssetVariablePayload, CatalystV1SendLiquidityPayload, SendLiquidityVariablePayload, CatalystEncodedAddress};
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg, PortResponse, ListChannelsResponse, UnderwriteIdentifierResponse};
-use crate::state::OPEN_CHANNELS;
+use crate::state::{OPEN_CHANNELS, set_owner_unchecked, update_owner};
 
 // Version information
 const CONTRACT_NAME: &str = "catalyst-ibc-interface";
@@ -23,14 +23,17 @@ const TRANSACTION_TIMEOUT_SECONDS: u64 = 2 * 60 * 60;   // 2 hours
 pub fn instantiate(
     deps: DepsMut,
     _env: Env,
-    _info: MessageInfo,
+    info: MessageInfo,
     _msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
 
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
+    let set_owner_event = set_owner_unchecked(deps, info.sender)?;
+
     Ok(
         Response::new()
+            .add_event(set_owner_event)
     )
 }
 
@@ -40,7 +43,7 @@ pub fn instantiate(
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(
-    _deps: DepsMut,
+    deps: DepsMut,
     env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
@@ -157,7 +160,14 @@ pub fn execute(
             to_account,
             underwrite_incentive_x16,
             calldata
-        )
+        ),
+
+
+
+        // Ownership msgs
+        ExecuteMsg::TransferOwnership {
+            new_owner
+        } => update_owner(deps, info, new_owner)
 
     }
 }

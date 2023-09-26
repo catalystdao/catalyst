@@ -1,9 +1,19 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::IbcEndpoint;
+use cosmwasm_std::{IbcEndpoint, Deps, Addr, DepsMut, Event, MessageInfo, Empty, Response};
+use cw_controllers::Admin;
 use cw_storage_plus::Map;
+
+use crate::{ContractError, event::set_owner_event};
 
 // Interface storage
 pub const OPEN_CHANNELS: Map<&str, IbcChannelInfo> = Map::new("catalyst-ibc-interface-open-channels");
+
+const ADMIN: Admin = Admin::new("catalyst-ibc-interface-admin");
+
+
+
+// IBC
+// ************************************************************************************************
 
 // Use a stripped down version of cosmwasm_std::IbcChannel to store the information of the
 // interface's open channels.
@@ -14,3 +24,98 @@ pub struct IbcChannelInfo {
     pub connection_id: String
 }
 
+
+
+// Admin
+// ************************************************************************************************
+
+/// Get the current interface owner.
+pub fn owner(
+    deps: Deps
+) -> Result<Option<Addr>, ContractError> {
+
+    ADMIN.get(deps)
+        .map_err(|err| err.into())
+
+}
+
+/// Assert that the message sender is the interface owner.
+pub fn only_owner(
+    deps: Deps,
+    info: &MessageInfo
+) -> Result<(), ContractError> {
+ 
+    match is_owner(deps, &info.sender)? {
+        true => Ok(()),
+        false => Err(ContractError::Unauthorized {})
+    }
+}
+
+/// Check if an address is the interface owner.
+/// 
+/// Arguments:
+/// 
+/// * `account` - The address of the account to check whether it is the interface owner.
+/// 
+pub fn is_owner(
+    deps: Deps,
+    account: &Addr,
+) -> Result<bool, ContractError> {
+
+    ADMIN.is_admin(deps, account)
+        .map_err(|err| err.into())
+
+}
+
+/// Set the interface owner.
+/// 
+/// !IMPORTANT: This function DOES NOT check the sender of the transaction.
+/// 
+/// # Arguments
+/// 
+/// * `account` - The new interface owner.
+/// 
+pub fn set_owner_unchecked(
+    deps: DepsMut,
+    account: Addr
+) -> Result<Event, ContractError> {
+    
+    ADMIN.set(deps, Some(account.clone()))?;
+    
+    Ok(
+        set_owner_event(account.to_string())
+    )
+}
+
+/// Update the interface owner.
+/// 
+/// NOTE: This function checks that the sender of the transaction is the current interface owner.
+/// 
+/// # Arguments
+/// 
+/// * `account` - The new interface owner.
+/// 
+pub fn update_owner(
+    deps: DepsMut,
+    info: MessageInfo,
+    account: String
+) -> Result<Response, ContractError> {
+
+    // Validate the new owner account
+    let account = deps.api.addr_validate(account.as_str())?;
+
+    // ! The 'update' call also verifies whether the caller of the transaction is the current interface owner
+    ADMIN.execute_update_admin::<Empty, Empty>(deps, info, Some(account.clone()))
+        .map_err(|err| {
+            match err {
+                cw_controllers::AdminError::Std(err) => err.into(),
+                cw_controllers::AdminError::NotAdmin {} => ContractError::Unauthorized {},
+            }
+        })?;
+
+    Ok(
+        Response::new()
+            .add_event(set_owner_event(account.to_string()))
+    )
+
+}
