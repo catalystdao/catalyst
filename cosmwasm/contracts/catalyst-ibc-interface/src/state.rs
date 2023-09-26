@@ -1,7 +1,9 @@
+use catalyst_types::U256;
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{IbcEndpoint, Deps, Addr, DepsMut, Event, MessageInfo, Empty, Response, Uint64};
+use cosmwasm_std::{IbcEndpoint, Deps, Addr, DepsMut, Event, MessageInfo, Empty, Response, Uint64, Uint128, Binary};
 use cw_controllers::Admin;
 use cw_storage_plus::{Map, Item};
+use sha3::{Keccak256, Digest};
 
 use crate::{ContractError, event::set_owner_event};
 
@@ -32,6 +34,52 @@ pub struct IbcChannelInfo {
 const MAX_UNDERWRITE_DURATION_ALLOWED_SECONDS: Uint64 = Uint64::new(15 * 24 * 60 * 60); // 15 days
 
 const MAX_UNDERWRITE_DURATION_SECONDS: Item<Uint64> = Item::new("catalyst-ibc-interface-max-underwrite-duration");
+
+
+/// Compute the underwriting identifier of the provided underwrite parameters.
+/// 
+/// # Arguments:
+/// * `to_vault` - The target vault.
+/// * `to_asset_ref` - The destination asset.
+/// * `u` - The underwritten units.
+/// * `min_out` - The mininum `to_asset_ref` output amount to get on the target vault.
+/// * `to_account` - The recipient of the swap.
+/// * `underwrite_incentive_x16` - The underwriting incentive.
+/// * `calldata` - The swap calldata.
+/// 
+pub fn get_underwrite_identifier(
+    to_vault: &str,
+    to_asset_ref: &str,
+    u: &U256,
+    min_out: &Uint128,
+    to_account: &str,
+    underwrite_incentive_x16: u16,
+    calldata: &Binary
+) -> Binary {
+
+    // Initialize vec with the specified capacity to avoid reallocations
+    let mut identifier_data: Vec<u8> = Vec::with_capacity(
+        to_vault.len()
+            + to_asset_ref.len()
+            + 32
+            + 16
+            + to_account.len()
+            + 2
+            + calldata.len()
+    );
+
+    identifier_data.extend_from_slice(to_vault.as_bytes());
+    identifier_data.extend_from_slice(to_asset_ref.as_bytes());
+    identifier_data.extend_from_slice(&u.to_be_bytes());
+    identifier_data.extend_from_slice(&min_out.to_be_bytes());
+    identifier_data.extend_from_slice(to_account.as_bytes());
+    identifier_data.extend_from_slice(&underwrite_incentive_x16.to_be_bytes());
+    identifier_data.extend_from_slice(&calldata.0);
+
+    let mut hasher = Keccak256::new();
+    hasher.update(identifier_data);
+    Binary(hasher.finalize().to_vec())
+}
 
 
 /// Set the maximum underwriting duration (only applies to new underwrite orders).

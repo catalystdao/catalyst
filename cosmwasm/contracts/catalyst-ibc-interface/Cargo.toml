@@ -41,6 +41,7 @@ cw-controllers = { workspace = true }
 cw2 = { workspace = true }
 schemars = { workspace = true }
 serde = { workspace = true }
+sha3 = { workspace = true }
 thiserror = { workspace = true }
 catalyst-types = { path = "../../lib/catalyst-types" }
 catalyst-vault-common = { path = "../catalyst-vault-common", features = ["library"] }

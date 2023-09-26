@@ -7,7 +7,7 @@ use catalyst_types::U256;
 use crate::catalyst_ibc_payload::{CatalystV1SendAssetPayload, SendAssetVariablePayload, CatalystV1SendLiquidityPayload, SendLiquidityVariablePayload, CatalystEncodedAddress};
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg, PortResponse, ListChannelsResponse, UnderwriteIdentifierResponse};
-use crate::state::{OPEN_CHANNELS, set_owner_unchecked, update_owner, set_max_underwriting_duration};
+use crate::state::{OPEN_CHANNELS, set_owner_unchecked, update_owner, set_max_underwriting_duration, get_underwrite_identifier};
 
 // Version information
 const CONTRACT_NAME: &str = "catalyst-ibc-interface";
@@ -391,7 +391,18 @@ fn query_list(deps: Deps) -> StdResult<ListChannelsResponse> {
     Ok(ListChannelsResponse { channels })
 }
 
-//TODO-UNDERWRITE documentation
+
+/// Query the identifier of the provided underwrite parameters.
+/// 
+/// # Arguments:
+/// * `to_vault` - The target vault.
+/// * `to_asset_ref` - The destination asset.
+/// * `u` - The underwritten units.
+/// * `min_out` - The mininum `to_asset_ref` output amount to get on the target vault.
+/// * `to_account` - The recipient of the swap.
+/// * `underwrite_incentive_x16` - The underwriting incentive.
+/// * `calldata` - The swap calldata.
+/// 
 fn query_underwrite_identifier(
     to_vault: String,
     to_asset_ref: String,
@@ -401,8 +412,19 @@ fn query_underwrite_identifier(
     underwrite_incentive_x16: u16,
     calldata: Binary
 ) -> StdResult<UnderwriteIdentifierResponse> {
-    //TODO-UNDERWRITE
-    todo!()
+    Ok(
+        UnderwriteIdentifierResponse {
+            identifier: get_underwrite_identifier(
+                &to_vault,
+                &to_asset_ref,
+                &u,
+                &min_out,
+                &to_account,
+                underwrite_incentive_x16,
+                &calldata
+            )
+        }
+    )
 }
 
 

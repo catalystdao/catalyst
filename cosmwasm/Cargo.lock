@@ -110,6 +110,7 @@ dependencies = [
  "cw2",
  "schemars",
  "serde",
+ "sha3",
  "thiserror",
 ]
 
