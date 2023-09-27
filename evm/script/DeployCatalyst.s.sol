@@ -10,10 +10,12 @@ import { DeployContracts } from "./DeployContracts.s.sol";
 contract DeployCatalyst is BaseMultiChainDeployer, DeployContracts {
 
     function deploy() iter_chains(chain_list) broadcast external {
+        verify = true;
         address admin = vm.envAddress("CATALYST_ADDRESS");
         deployAllContracts(admin);
     }
     function deploy_legacy() iter_chains(chain_list_legacy) broadcast external {
+        verify = true;
         address admin = vm.envAddress("CATALYST_ADDRESS");
         deployAllContracts(admin);
     }

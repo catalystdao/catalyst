@@ -89,12 +89,12 @@ contract BaseMultiChainDeployer is Script {
         // chain_list.push(Chains.BSCTestnet);
 
         rpc[Chains.MantleTestnet] = "mantletestnet";
-        wrapped_gas[Chains.MantleTestnet] = "WBIT";
+        wrapped_gas[Chains.MantleTestnet] = "WMNT";
         chain_list_legacy.push(Chains.MantleTestnet);
 
-        // rpc[Chains.OmniTestnet] = "omnitestnet";
-        // wrapped_gas[Chains.OmniTestnet] = "WOMNI";
-        // chain_list_legacy.push(Chains.OmniTestnet);
+        rpc[Chains.OmniTestnet] = "omnitestnet";
+        wrapped_gas[Chains.OmniTestnet] = "WOMNI";
+        chain_list_legacy.push(Chains.OmniTestnet);
     }
 
     uint256 pk;
