@@ -416,6 +416,11 @@ pub struct AssetsResponse<A = Empty> {
 }
 
 #[cw_serde]
+pub struct AssetResponse<A = Empty> {
+    pub asset: A
+}
+
+#[cw_serde]
 pub struct WeightResponse {
     pub weight: Uint128
 }
