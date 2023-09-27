@@ -127,10 +127,10 @@ contract DeployInterfaces is BaseMultiChainDeployer {
         // Get the address of the incentives contract.
         address interfaceAddress = abi.decode(config_interfaces.parseRaw(string.concat(".", rpc[chain], ".", incentiveVersion, ".interface")), (address));
         console.log("cci", incentiveVersion);
-        /* if (interfaceAddress.codehash != bytes32(0)) {
+        if (interfaceAddress.codehash != bytes32(0)) {
             console.logAddress(interfaceAddress);
             return;
-        } */
+        }
         address incentiveAddress = abi.decode(config_interfaces.parseRaw(string.concat(".", rpc[chain], ".", incentiveVersion, ".incentive")), (address));
 
         bytes32 salt = interfaceSalt[incentiveAddress];
