@@ -286,7 +286,7 @@ impl ToString for Cw20Asset {
 
 #[cfg(test)]
 mod asset_cw20_tests {
-    use cosmwasm_std::{testing::{mock_dependencies, mock_env, mock_info}, Uint128, to_binary, WasmMsg};
+    use cosmwasm_std::{testing::{mock_dependencies, mock_env, mock_info}, Uint128, to_binary, WasmMsg, coin};
     use cw20::Cw20ExecuteMsg;
 
     use crate::{asset::{VaultAssetsTrait, AssetTrait}, error::AssetError};
@@ -894,6 +894,38 @@ mod asset_cw20_tests {
         // Verify action passes
         assert!(result.is_ok());
         assert!(result.ok().unwrap().is_none());
+
+    }
+
+
+    #[test]
+    fn test_receive_asset_native_funds() {
+
+        let env = mock_env();
+
+        let asset = get_mock_asset();
+        let desired_received_amount = Uint128::from(123_u128);
+        let received_coin = coin(1u128, "some-asset");
+
+
+
+        // Tested action: receive asset with native funds
+        let result = asset.receive_asset(
+            &env,
+            &mock_info(
+                SENDER_ADDR,
+                &[received_coin]    // ! Non-empty native funds
+            ),
+            desired_received_amount.clone()
+        );
+
+
+
+        // Verify the execution fails
+        assert!(matches!(
+            result.err().unwrap(),
+            AssetError::AssetSurplusReceived {}
+        ))
 
     }
 
