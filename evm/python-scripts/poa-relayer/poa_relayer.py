@@ -62,6 +62,24 @@ class PoARelayer(MessageSigner):
                 "GI_contract": Web3.to_checksum_address("0x00000001a9818a7807998dbc243b05F2B3CfF6f4"),
                 "key": os.environ["PRIVATE_KEY_ROUTER"],
                 "legacy": False
+            },
+            11155111: {
+                "name": "sepolia",
+                "confirmations": 0,
+                "url": os.environ["sepolia"],
+                "middleware": geth_poa_middleware,
+                "GI_contract": Web3.to_checksum_address("0x00000001a9818a7807998dbc243b05F2B3CfF6f4"),
+                "key": os.environ["PRIVATE_KEY_ROUTER"],
+                "legacy": True
+            },
+            80001: {
+                "name": "mumbai",
+                "confirmations": 0,
+                "url": os.environ["mumbai"],
+                # "middleware": geth_poa_middleware,
+                "GI_contract": Web3.to_checksum_address("0x00000001a9818a7807998dbc243b05F2B3CfF6f4"),
+                "key": os.environ["PRIVATE_KEY_ROUTER"],
+                "legacy": False
             }
         }
     ):
