@@ -1,8 +1,8 @@
 {
   "Mantle-Base": {
     "mantletestnet": {
-      "cci": "0xdEf8359242FfD915f427e53346A5dC645F0F2637",
-      "address": "0x377a8efcc5ca26af3891088b09f12fcf8cb06d79",
+      "cci": "0xF6b469228822d92c867f5949DA58431673095aEA",
+      "address": "0x66efc14c5a8bac9a4068248b2781b312edfff552",
       "weights": [
         1
       ],
@@ -12,8 +12,8 @@
       }
     },
     "basegoerli": {
-      "cci": "0xdEf8359242FfD915f427e53346A5dC645F0F2637",
-      "address": "0x377a8efcc5ca26af3891088b09f12fcf8cb06d79",
+      "cci": "0xF6b469228822d92c867f5949DA58431673095aEA",
+      "address": "0x66efc14c5a8bac9a4068248b2781b312edfff552",
       "weights": [
         1
       ],

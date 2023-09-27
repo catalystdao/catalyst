@@ -1,11 +1,11 @@
 {
   "contracts": {
-    "amplified_mathlib": "0xf51253f4fa53d5B0ccF2Ac4d8cDf5ea9BFb0e0e8",
-    "amplified_template": "0xeC6Bffc130BA268571FC2A94d45B2DFC1836Ff6d",
-    "describer": "0x61bEFC9a2D021eC39f9c3048b8D19Bb77d15d7dD",
-    "describer_registry": "0xdC03AC4b6ceBE06863082e805Dd0eEfCB463E4f4",
-    "factory": "0x46b29E7e20f50B17eF1D56280C6d71B0158a7efa",
-    "volatile_mathlib": "0x446075E231283F2499970F5350116dea3350cda8",
-    "volatile_template": "0x0EFF57C577234f49E02C1cd790005b5939A05B91"
+    "amplified_mathlib": "0x2D839638C8Af49be7Fd0B2a658B4B5b8b35fc92c",
+    "amplified_template": "0x6fB403937EA6bB0eDb426aa4BCc479Dc00F27e68",
+    "describer": "0x9E89844c4522ec024d77a8D3547B0E1F4BA8e65F",
+    "describer_registry": "0x14102265f9CC6cc1dF38e3Ba41525beE7525214B",
+    "factory": "0x07d65856c75a29d676BAb767aCe94874586Cc87C",
+    "volatile_mathlib": "0xF190b290b0d040d26CE191cCbde5F456f2f831e4",
+    "volatile_template": "0x3a93831598E4E582cb2FFa765B11198E34cF1106"
   }
 }

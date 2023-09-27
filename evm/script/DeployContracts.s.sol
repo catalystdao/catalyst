@@ -106,45 +106,31 @@ contract DeployContracts is Script {
         contracts.describer_registry = describer_registry;
     }
 
-    function deployAllContracts(address admin_) internal {
+    function load_config() internal {
         string memory pathRoot = vm.projectRoot();
         string memory pathToContractConfig = string.concat(pathRoot, "/script/config/config_contracts.json");
 
         // Get the contracts
         string memory config_contract = vm.readFile(pathToContractConfig);
         contracts = abi.decode(config_contract.parseRaw(string.concat(".contracts")), (JsonContracts));
+    }
+
+    function deployAllContracts(address admin_) internal {
+        load_config();
 
         admin = admin_;
 
-        deployFactory(bytes32(uint256(9)));
+        deployFactory(bytes32(uint256(251)));
 
-        deploy_volatile_mathlib(bytes32(uint256(9)));
-        deploy_amplified_mathlib(bytes32(uint256(9)));
+        deploy_volatile_mathlib(bytes32(uint256(251)));
+        deploy_amplified_mathlib(bytes32(uint256(251)));
 
-        deploy_volatile_template(bytes32(uint256(9)));
-        deploy_amplified_template(bytes32(uint256(9)));
+        deploy_volatile_template(bytes32(uint256(251)));
+        deploy_amplified_template(bytes32(uint256(251)));
 
         // Deploy Registry
-        deploy_describer(bytes32(uint256(9)));
-        deploy_registry(bytes32(uint256(9)));
-
-        // Fill registry
-        setupDescriber();
-    }
-
-    function setupDescriber() internal {
-        CatalystDescriber catalyst_describer = CatalystDescriber(contracts.describer);
-        CatalystDescriberRegistry catalyst_registry = CatalystDescriberRegistry(contracts.describer_registry);
-
-        if (catalyst_describer.get_num_vault_factories() != 0) {
-            return;
-        }
-
-        catalyst_registry.add_describer(address(catalyst_describer));
-
-        catalyst_describer.add_vault_factory(contracts.factory);
-        catalyst_describer.add_whitelisted_template(contracts.volatile_template, 1);
-        catalyst_describer.add_whitelisted_template(contracts.amplified_template, 1);
+        deploy_describer(bytes32(uint256(251)));
+        deploy_registry(bytes32(uint256(251)));
     }
 
     function getAddresses() external {

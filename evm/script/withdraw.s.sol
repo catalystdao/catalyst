@@ -35,62 +35,26 @@ import { ICatalystV1Structs } from "../src/interfaces/ICatalystV1VaultState.sol"
 
 import { IncentivizedWormholeEscrow } from "GeneralisedIncentives/src/apps/wormhole/IncentivizedWormholeEscrow.sol";
 
-contract Swap is Script, IMessageEscrowStructs {
+contract Withdraw is Script, IMessageEscrowStructs {
 
-    function getChainIdentifierWormhole() external {
-        address wormhole_incentive = 0x000000ED80503e3A7EA614FFB5507FD52584a1f2;
-
-        console.logUint(IncentivizedWormholeEscrow(wormhole_incentive).chainId());
-    }
-
-    function swap(uint256 n) public {
+    function withdraw() public {
 
         uint256 deployerPrivateKey = vm.envUint("CATALYST_DEPLOYER");
         vm.startBroadcast(deployerPrivateKey);
 
-        address fromVault = address(0x377a8Efcc5Ca26AF3891088B09F12fcf8CB06d79);
-        address toVault = address(0x377a8Efcc5Ca26AF3891088B09F12fcf8CB06d79);
+        address vault = address(0x377a8Efcc5Ca26AF3891088B09F12fcf8CB06d79);
 
-        // mantle
-        address WGAS = ICatalystV1Vault(fromVault)._tokenIndexing(0);
+        uint256[] memory minOut = new uint256[](1);
+        minOut[0] = 0;
 
-        uint256 amount = 0.0001 * 1e18;
-
-        Token(WGAS).approve(fromVault, 2**256-1);
-        IWETH(WGAS).deposit{value: amount}();
-
-        for (uint256 i = 0; i < n; ++i) {
-            console.log(ICatalystV1Vault(fromVault).calcSendAsset(WGAS, amount));
-            ICatalystV1Vault(fromVault).sendAsset{value: 0.01 ether}(
-                ICatalystV1Structs.RouteDescription({
-                    chainIdentifier: bytes32(uint256(5001)),
-                    toVault: abi.encodePacked(uint8(20), bytes32(0), abi.encode(toVault)),
-                    toAccount: abi.encodePacked(uint8(20), bytes32(0), abi.encode(address(0x0000007aAAC54131e031b3C0D6557723f9365A5B))),
-                    incentive: IncentiveDescription({
-                        maxGasDelivery: 2000000,
-                        maxGasAck: 2000000,
-                        refundGasTo: address(0x0000007aAAC54131e031b3C0D6557723f9365A5B),
-                        priceOfDeliveryGas: 10 gwei,
-                        priceOfAckGas: 20 gwei,
-                        targetDelta: 0 minutes
-                    })
-                }),
-                WGAS,
-                0,
-                0/n,
-                0,
-                address(0),
-                0,
-                hex""
-            );
-        }
+        ICatalystV1Vault(vault).withdrawAll(Token(vault).balanceOf(address(this)), minOut);
 
         vm.stopBroadcast();
 
     }
 
     function run() external {
-        swap(1);
+        withdraw();
     }
 
     receive() external payable {
