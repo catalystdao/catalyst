@@ -1,5 +1,5 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{DepsMut, Deps, Uint128, MessageInfo, Env, to_binary, WasmMsg, Coin};
+use cosmwasm_std::{DepsMut, Deps, Uint128, MessageInfo, Env, to_binary, WasmMsg, Coin, Addr};
 use cw20::{BalanceResponse, Cw20QueryMsg, Cw20ExecuteMsg};
 use cw_storage_plus::Item;
 
@@ -244,6 +244,21 @@ impl AssetTrait<Cw20AssetMsg> for Cw20Asset {
                 funds: vec![]
             }
         )))
+    }
+
+
+    fn receive_asset_with_refund(
+        &self,
+        env: &Env,
+        info: &MessageInfo,
+        amount: Uint128,
+        _refund_address: Option<Addr>
+    ) -> Result<Option<Cw20AssetMsg>, AssetError> {
+
+        // CW20 assets do not need to implement 'refund' logic, as the receiving contract is always
+        // the one that specifies the 'receive' amount.
+
+        self.receive_asset(env, info, amount)
     }
 
 

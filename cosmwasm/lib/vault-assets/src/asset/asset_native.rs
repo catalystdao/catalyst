@@ -1,5 +1,5 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{DepsMut, Deps, Uint128, MessageInfo, Coin, BankMsg, Env};
+use cosmwasm_std::{DepsMut, Deps, Uint128, MessageInfo, Coin, BankMsg, Env, Addr};
 use cw_storage_plus::{Item, Map};
 
 use crate::{asset::{AssetTrait, VaultAssetsTrait}, error::AssetError};
@@ -285,18 +285,15 @@ impl AssetTrait<NativeAssetMsg> for NativeAsset {
         amount: Uint128
     ) -> Result<Option<NativeAssetMsg>, AssetError> {
 
-        // NOTE: The 'bank' module disallows zero-valued coin transfers. Do not check
-        // received funds for these cases.
-        if amount.is_zero() {
-            if info.funds.len() != 0 {
-                return Err(AssetError::AssetSurplusReceived {});
-            }
-            
-            return Ok(None);
-        }
-
         match info.funds.len() {
-            0 => Err(AssetError::AssetNotReceived { asset: self.to_string() }),
+            0 => {
+                if amount.is_zero() {
+                    Ok(None)
+                }
+                else {
+                    Err(AssetError::AssetNotReceived { asset: self.to_string() })
+                }
+            },
             1 => {
 
                 if info.funds[0].denom != self.denom {
@@ -318,6 +315,60 @@ impl AssetTrait<NativeAssetMsg> for NativeAsset {
             _ => Err(AssetError::AssetSurplusReceived {})
         }
     }
+
+
+    fn receive_asset_with_refund(
+        &self,
+        _env: &Env,
+        info: &MessageInfo,
+        amount: Uint128,
+        refund_address: Option<Addr>
+    ) -> Result<Option<NativeAssetMsg>, AssetError> {
+
+        match info.funds.len() {
+            0 => {
+                if amount.is_zero() {
+                    Ok(None)
+                }
+                else {
+                    Err(AssetError::AssetNotReceived { asset: self.to_string() })
+                }
+            },
+            1 => {
+
+                if info.funds[0].denom != self.denom {
+                    return Err(AssetError::AssetNotReceived {
+                        asset: self.to_string()
+                    })
+                }
+
+                if info.funds[0].amount < amount {
+                    return Err(AssetError::UnexpectedAssetAmountReceived {
+                        received_amount: info.funds[0].amount,
+                        expected_amount: amount,
+                        asset: self.to_string()
+                    });
+                }
+                else if info.funds[0].amount > amount {
+
+                    let refund_amount = info.funds[0].amount - amount;
+
+                    let to_address = refund_address
+                        .map(|address| address.to_string())
+                        .unwrap_or_else(|| info.sender.to_string());
+
+                    return Ok(Some(NativeAssetMsg::Bank(BankMsg::Send {
+                        to_address,
+                        amount: vec![Coin::new(refund_amount.u128(), self.denom.clone())]
+                    })))
+                }
+
+                Ok(None)
+            },
+            _ => Err(AssetError::AssetSurplusReceived {})
+        }
+    }
+
 
     fn send_asset(
         &self,
