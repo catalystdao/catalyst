@@ -46,9 +46,10 @@ contract DeployContracts is Script {
     function deployFactory(bytes32 salt) internal {
         if (contracts.factory.codehash != NO_ADDRESS_CODEHASH) {
             return;
+        }
         address factory = address(new CatalystFactory{salt: salt}(admin));
         if (verify) require(contracts.factory == factory, "not expected address, factory");
-        contracts.factory = factory;}
+        contracts.factory = factory;
     }
 
     function deploy_volatile_mathlib(bytes32 salt) internal {
@@ -115,17 +116,17 @@ contract DeployContracts is Script {
 
         admin = admin_;
 
-        deployFactory(bytes32(uint256(3)));
+        deployFactory(bytes32(uint256(9)));
 
-        deploy_volatile_mathlib(bytes32(uint256(3)));
-        deploy_amplified_mathlib(bytes32(uint256(3)));
+        deploy_volatile_mathlib(bytes32(uint256(9)));
+        deploy_amplified_mathlib(bytes32(uint256(9)));
 
-        deploy_volatile_template(bytes32(uint256(3)));
-        deploy_amplified_template(bytes32(uint256(3)));
+        deploy_volatile_template(bytes32(uint256(9)));
+        deploy_amplified_template(bytes32(uint256(9)));
 
         // Deploy Registry
-        deploy_describer(bytes32(uint256(3)));
-        deploy_registry(bytes32(uint256(3)));
+        deploy_describer(bytes32(uint256(9)));
+        deploy_registry(bytes32(uint256(9)));
 
         // Fill registry
         setupDescriber();

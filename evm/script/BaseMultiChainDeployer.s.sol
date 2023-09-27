@@ -36,8 +36,8 @@ contract BaseMultiChainDeployer is Script {
         ScrollSepolia,
         OptimismGoerli,
         // TaikoEldfell,
-        // OPBNBTestnet,
-        // BSCTestnet,
+        OPBNBTestnet,
+        BSCTestnet,
         MantleTestnet,
         OmniTestnet
     }
@@ -80,13 +80,13 @@ contract BaseMultiChainDeployer is Script {
         // wrapped_gas[Chains.TaikoEldfell] = "WETH";
         // chain_list.push(Chains.TaikoEldfell);
 
-        // rpc[Chains.OPBNBTestnet] = "opbnbtestnet";
-        // wrapped_gas[Chains.OPBNBTestnet] = "WBNB";
-        // chain_list.push(Chains.OPBNBTestnet);
+        rpc[Chains.OPBNBTestnet] = "opbnbtestnet";
+        wrapped_gas[Chains.OPBNBTestnet] = "WBNB";
+        chain_list.push(Chains.OPBNBTestnet);
 
-        // rpc[Chains.BSCTestnet] = "bsctestnet";
-        // wrapped_gas[Chains.BSCTestnet] = "WBNB";
-        // chain_list.push(Chains.BSCTestnet);
+        rpc[Chains.BSCTestnet] = "bsctestnet";
+        wrapped_gas[Chains.BSCTestnet] = "WBNB";
+        chain_list.push(Chains.BSCTestnet);
 
         rpc[Chains.MantleTestnet] = "mantletestnet";
         wrapped_gas[Chains.MantleTestnet] = "WMNT";

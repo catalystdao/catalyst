@@ -36,7 +36,7 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
     error InvalidAddress(); // e6c4247b
     error InvalidSourceApplication(); // 003923e0
     error SubcallOutOfGas(); // d271060e
-    error NotEnoughIncentives(); // 72701868
+    error NotEnoughIncentives(uint256 expected, uint256 actual); // 6de78246
     error ChainAlreadySetup(); // b8e35614
     
     //-- Underwriting Errors --//
@@ -146,12 +146,12 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
 
         ICatalystV1Vault.IncentiveDescription calldata incentive = routeDescription.incentive;
         // 1. Gas limits
-        if (incentive.maxGasDelivery < minGasFor[routeDescription.chainIdentifier]) revert NotEnoughIncentives();
-        if (incentive.maxGasAck < minGasFor[bytes32(0)]) revert NotEnoughIncentives();
+        if (incentive.maxGasDelivery < minGasFor[routeDescription.chainIdentifier]) revert NotEnoughIncentives(minGasFor[routeDescription.chainIdentifier], incentive.maxGasDelivery);
+        if (incentive.maxGasAck < minGasFor[bytes32(0)]) revert NotEnoughIncentives(minGasFor[bytes32(0)], incentive.maxGasAck);
 
         // 2. Gas prices
         // The gas price of ack has to be 10% higher than the gas price spent on this transaction.
-        if (incentive.priceOfAckGas < tx.gasprice * 11 / 10) revert NotEnoughIncentives();
+        if (incentive.priceOfAckGas < tx.gasprice * 11 / 10) revert NotEnoughIncentives(tx.gasprice * 11 / 10, incentive.priceOfAckGas);
 
         // -- Check Address Lengths -- //
 
