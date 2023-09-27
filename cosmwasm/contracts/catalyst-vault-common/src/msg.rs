@@ -1,4 +1,4 @@
-use cosmwasm_schema::cw_serde;
+use cosmwasm_schema::{cw_serde, QueryResponses};
 
 use cosmwasm_std::{Binary, Uint64, Uint128, Addr, Empty};
 use catalyst_types::U256;
@@ -363,6 +363,110 @@ pub enum ExecuteMsg<T, A=Empty> {
         owner: String,
         amount: Uint128
     },
+}
+
+
+/// Vault query messages
+/// 
+/// NOTE: This enum defines the queries that **all** vaults should support, but is not necessarilly an
+/// exhaustive collection of all the vault's possible queries, as vaults are free to implement custom
+/// queries of their own. Because of implementation limitations, each vault should define its own
+/// `QueryMsg` duplicating the queries of this list.
+/// 
+#[cw_serde]
+#[derive(QueryResponses)]
+pub enum CommonQueryMsg {
+
+
+    // Catalyst Base Queries
+    #[returns(ChainInterfaceResponse)]
+    ChainInterface {},
+    #[returns(SetupMasterResponse)]
+    SetupMaster {},
+    #[returns(FactoryResponse)]
+    Factory {},
+    #[returns(FactoryOwnerResponse)]
+    FactoryOwner {},
+
+    #[returns(VaultConnectionStateResponse)]
+    VaultConnectionState {
+        channel_id: String,
+        vault: Binary
+    },
+
+    #[returns(ReadyResponse)]
+    Ready {},
+    #[returns(OnlyLocalResponse)]
+    OnlyLocal {},
+    #[returns(AssetsResponse)]
+    Assets {},
+    #[returns(AssetResponse)]
+    Asset{
+        asset_ref: String
+    },
+    #[returns(WeightResponse)]
+    Weight {
+        asset_ref: String
+    },
+
+    #[returns(TotalSupplyResponse)]
+    TotalSupply {},
+    #[returns(BalanceResponse)]
+    Balance {
+        address: String
+    },
+
+    #[returns(VaultFeeResponse)]
+    VaultFee {},
+    #[returns(GovernanceFeeShareResponse)]
+    GovernanceFeeShare {},
+    #[returns(FeeAdministratorResponse)]
+    FeeAdministrator {},
+
+    #[returns(CalcSendAssetResponse)]
+    CalcSendAsset {
+        from_asset_ref: String,
+        amount: Uint128
+    },
+    #[returns(CalcReceiveAssetResponse)]
+    CalcReceiveAsset {
+        to_asset_ref: String,
+        u: U256
+    },
+    #[returns(CalcLocalSwapResponse)]
+    CalcLocalSwap {
+        from_asset_ref: String,
+        to_asset_ref: String,
+        amount: Uint128
+    },
+
+    #[returns(GetLimitCapacityResponse)]
+    GetLimitCapacity {},
+
+    #[returns(TotalEscrowedAssetResponse)]
+    TotalEscrowedAsset {
+        asset_ref: String
+    },
+    #[returns(TotalEscrowedLiquidityResponse)]
+    TotalEscrowedLiquidity {},
+    #[returns(AssetEscrowResponse)]
+    AssetEscrow {
+        hash: Binary
+    },
+    #[returns(LiquidityEscrowResponse)]
+    LiquidityEscrow {
+        hash: Binary
+    },
+
+
+    // CW20 Implementation
+    #[cfg(feature="asset_cw20")]
+    #[returns(TokenInfoResponse)]
+    TokenInfo {},
+    #[cfg(feature="asset_cw20")]
+    #[returns(AllowanceResponse)]
+    Allowance { owner: String, spender: String },
+
 }
 
 
