@@ -3,16 +3,16 @@ pragma solidity ^0.8.17;
 
 interface ICatalystRouter {
     /// @notice Thrown when a required command has failed
-    error ExecutionFailed(uint256 commandIndex, bytes message);
+    error ExecutionFailed(uint256 commandIndex, bytes message);  // 2c4029e9
 
     /// @notice Thrown when attempting to send ETH directly to the contract
-    error ETHNotAccepted();
+    error ETHNotAccepted();  // 1231ae4
 
     /// @notice Thrown when executing commands with an expired deadline
-    error TransactionDeadlinePassed();
+    error TransactionDeadlinePassed();  // 5bf6f916
 
     /// @notice Thrown when attempting to execute commands and an incorrect number of inputs are provided
-    error LengthMismatch();
+    error LengthMismatch();  // ff633a38
 
     /// @notice Executes encoded commands along with provided inputs. Reverts if deadline has expired.
     /// @param commands A set of concatenated commands, each 1 byte in length

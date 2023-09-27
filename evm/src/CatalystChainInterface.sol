@@ -30,21 +30,22 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
     using SafeTransferLib for ERC20;
     
     //--- ERRORS ---//
-    error InvalidCaller();  // Only the message router should be able to deliver messages.
-    error InvalidContext(bytes1 context);
-    error InvalidAddress();
-    error InvalidSourceApplication();
-    error SubcallOutOfGas();
-    error NotEnoughIncentives();
-    error ChainAlreadySetup();
-
+     // Only the message router should be able to deliver messages.
+    error InvalidCaller(); // 48f5c3ed 
+    error InvalidContext(bytes1 context); // 9f769791
+    error InvalidAddress(); // e6c4247b
+    error InvalidSourceApplication(); // 003923e0
+    error SubcallOutOfGas(); // d271060e
+    error NotEnoughIncentives(); // 72701868
+    error ChainAlreadySetup(); // b8e35614
+    
     //-- Underwriting Errors --//
-    error SwapAlreadyUnderwritten();
-    error UnderwriteDoesNotExist(bytes32 identifier);
-    error UnderwriteNotExpired(uint256 timeUnitilExpiry);
-    error MaxUnderwriteDurationTooLong();
-    error NoVaultConnection();
-    error MaliciousVault();
+    error SwapAlreadyUnderwritten(); // d0c27c9f
+    error UnderwriteDoesNotExist(bytes32 identifier); // ae029d69
+    error UnderwriteNotExpired(uint256 timeUnitilExpiry); // 62141db5
+    error MaxUnderwriteDurationTooLong(); // 3f6368aa
+    error NoVaultConnection(); // ea66ca6d
+    error MaliciousVault(); // 847ca49a
 
     //--- Events ---//
 

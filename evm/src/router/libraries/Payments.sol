@@ -12,9 +12,9 @@ abstract contract Payments is RouterImmutables {
     using SafeTransferLib for ERC20;
     using SafeTransferLib for address;
 
-    error InsufficientToken();
-    error InsufficientETH();
-    error InvalidBips();
+    error InsufficientToken();  // 675cae38
+    error InsufficientETH();  // 6a12f104
+    error InvalidBips();  // deaa01e6
 
     uint256 internal constant FEE_BIPS_BASE = 10_000;
 

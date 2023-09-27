@@ -30,3 +30,4 @@ reports
 snapshots/0x*
 
 brownie
+evm/script/replicate.s.sol

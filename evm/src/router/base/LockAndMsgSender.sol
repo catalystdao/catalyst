@@ -4,7 +4,7 @@ pragma solidity ^0.8.17;
 import {Constants} from '../libraries/Constants.sol';
 
 contract LockAndMsgSender {
-    error ContractLocked();
+    error ContractLocked();  // 6f5ffb7e
 
     address private constant ADDRESS_ONE = address(1);
     address internal lockedBy = ADDRESS_ONE;

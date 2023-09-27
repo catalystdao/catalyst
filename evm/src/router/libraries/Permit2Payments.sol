@@ -9,10 +9,10 @@ import {RouterImmutables} from '../base/RouterImmutables.sol';
 /// @title Payments through Permit2
 /// @notice Performs interactions with Permit2 to transfer tokens
 abstract contract Permit2Payments is Payments {
-    error FromAddressIsNotOwner();
+    error FromAddressIsNotOwner();  // e7002877
     
     /// @notice Thrown when a valude greater than type(uint160).max is cast to uint160
-    error UnsafeCast();
+    error UnsafeCast();  // c4bd89a9
 
     /// @notice Safely casts uint256 to uint160
     /// @dev https://github.com/Uniswap/permit2/blob/main/src/libraries/SafeCast160.sol
