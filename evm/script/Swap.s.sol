@@ -48,8 +48,8 @@ contract Swap is Script, IMessageEscrowStructs {
         uint256 deployerPrivateKey = vm.envUint("CATALYST_DEPLOYER");
         vm.startBroadcast(deployerPrivateKey);
 
-        address fromVault = address(0x377a8Efcc5Ca26AF3891088B09F12fcf8CB06d79);
-        address toVault = address(0x377a8Efcc5Ca26AF3891088B09F12fcf8CB06d79);
+        address fromVault = address(0x66efC14C5a8bAC9a4068248b2781B312eDfff552);
+        address toVault = address(0x66efC14C5a8bAC9a4068248b2781B312eDfff552);
 
         // mantle
         address WGAS = ICatalystV1Vault(fromVault)._tokenIndexing(0);
@@ -60,8 +60,7 @@ contract Swap is Script, IMessageEscrowStructs {
         IWETH(WGAS).deposit{value: amount}();
 
         for (uint256 i = 0; i < n; ++i) {
-            console.log(ICatalystV1Vault(fromVault).calcSendAsset(WGAS, amount));
-            ICatalystV1Vault(fromVault).sendAsset{value: 0.01 ether}(
+            ICatalystV1Vault(fromVault).sendAsset{value: 0.1 ether}(
                 ICatalystV1Structs.RouteDescription({
                     chainIdentifier: bytes32(uint256(5001)),
                     toVault: abi.encodePacked(uint8(20), bytes32(0), abi.encode(toVault)),
@@ -70,16 +69,16 @@ contract Swap is Script, IMessageEscrowStructs {
                         maxGasDelivery: 2000000,
                         maxGasAck: 2000000,
                         refundGasTo: address(0x0000007aAAC54131e031b3C0D6557723f9365A5B),
-                        priceOfDeliveryGas: 10 gwei,
-                        priceOfAckGas: 20 gwei,
+                        priceOfDeliveryGas: 5 gwei,
+                        priceOfAckGas: 5 gwei,
                         targetDelta: 0 minutes
                     })
                 }),
                 WGAS,
                 0,
-                0/n,
-                0,
-                address(0),
+                amount/n,
+                2**256-1,
+                address(0x0000007aAAC54131e031b3C0D6557723f9365A5B),
                 0,
                 hex""
             );

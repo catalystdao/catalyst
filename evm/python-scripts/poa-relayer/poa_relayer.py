@@ -196,7 +196,7 @@ class PoARelayer(MessageSigner):
         )
 
         tx_hash = w3.eth.send_raw_transaction(signed_txn.rawTransaction)
-        sleep(0.02)
+        sleep(0.1)
         self.chains[toChain]["nonce"] = self.chains[toChain]["nonce"] + 1
 
         logging.info(f"Execute: {fromChain} -> {toChain, tx_hash}")
@@ -217,7 +217,7 @@ class PoARelayer(MessageSigner):
             for log in logs:
                 executes.append((log, self.execute(chain, log)))
           
-    def run(self, wait=5):
+    def run(self, wait=7):
         chains = self.chains.keys()
         blocknumbers = {}
 
