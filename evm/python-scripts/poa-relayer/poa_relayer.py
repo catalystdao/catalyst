@@ -15,6 +15,7 @@ from eth_abi.packed import encode_packed
 from web3 import Web3
 from web3.middleware import geth_poa_middleware
 from poa_signer import MessageSigner
+import requests.exceptions
 
 with open("external/IncentivizedMockEscrow.json", "r") as f:
     IncentivizedMockEscrow_abi = json.load(f)["abi"]
@@ -144,9 +145,19 @@ class PoARelayer(MessageSigner):
         return signatures
 
     def fetch_logs(self, chain, fromBlock, toBlock):
-        logs = self.chains[chain]["GI"].events.Message.get_logs(
-            fromBlock=fromBlock, toBlock=toBlock
-        )
+        try:
+            logs = self.chains[chain]["GI"].events.Message.get_logs(
+                fromBlock=fromBlock, toBlock=toBlock
+            )
+        except requests.exceptions.HTTPError as e:
+            error_message = e
+            logging.info(f"Rate limited, block number, {error_message}")
+            sleep(1)
+            try:
+                logs = self.chains[chain]["GI"].events.Message.get_logs(
+                    fromBlock=fromBlock, toBlock=toBlock
+                )
+            except: return []
         return logs
         
 
@@ -190,12 +201,40 @@ class PoARelayer(MessageSigner):
             error_message = e
             logging.info(f"Skipping because {error_message}, which implies it has already been relayed")
             return "no tx"
+        
+        except requests.exceptions.HTTPError as e:
+            error_message = e
+            logging.info(f"Rate limited, simulate, {error_message}")
+            sleep(1)
+            try:
+                tx = GI.functions.processMessage(
+                    signature[1], signature[0], encode(["address"], [relayer_address.address])
+                ).build_transaction(
+                    {
+                        "from": relayer_address.address,
+                        "nonce": self.chains[toChain]["nonce"],
+                    } if not self.chains[toChain]["legacy"] else {
+                        "from": relayer_address.address,
+                        "nonce": self.chains[toChain]["nonce"],
+                        "gasPrice": w3.eth.gas_price
+                    }
+                )
+            except: return "no tx"
 
         signed_txn = w3.eth.account.sign_transaction(
             tx, private_key=self.chains[toChain]["key"]
         )
 
-        tx_hash = w3.eth.send_raw_transaction(signed_txn.rawTransaction)
+        try:
+            tx_hash = w3.eth.send_raw_transaction(signed_txn.rawTransaction)
+        except requests.exceptions.HTTPError as e:
+            error_message = e
+            logging.info(f"Rate limited, send, {error_message}")
+            sleep(1)
+            try:
+                tx_hash = w3.eth.send_raw_transaction(signed_txn.rawTransaction)
+            except: return "no tx"
+
         sleep(0.1)
         self.chains[toChain]["nonce"] = self.chains[toChain]["nonce"] + 1
 
@@ -217,7 +256,7 @@ class PoARelayer(MessageSigner):
             for log in logs:
                 executes.append((log, self.execute(chain, log)))
           
-    def run(self, wait=7):
+    def run(self, wait=8):
         chains = self.chains.keys()
         blocknumbers = {}
 
@@ -232,7 +271,15 @@ class PoARelayer(MessageSigner):
             for chain in chains:
                 w3 = self.chains[chain]["w3"]
                 fromBlock = blocknumbers[chain]
-                toBlock = w3.eth.block_number - self.chains[chain]["confirmations"] - 1
+                try:
+                    toBlock = w3.eth.block_number - self.chains[chain]["confirmations"] - 1
+                except requests.exceptions.HTTPError as e:
+                    error_message = e
+                    logging.info(f"Rate limited, block number, {error_message}")
+                    sleep(1)
+                    try:
+                        toBlock = w3.eth.block_number - self.chains[chain]["confirmations"] - 1
+                    except: continue
 
                 if fromBlock <= toBlock:
                     blocknumbers[chain] = toBlock + 1
