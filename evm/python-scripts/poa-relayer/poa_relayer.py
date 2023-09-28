@@ -186,6 +186,11 @@ class PoARelayer(MessageSigner):
             logging.info(f"Skipped 1 event because {error_message}")
             return "no tx"
 
+        except ValueError as e:
+            error_message = e
+            logging.info(f"Skipping because {error_message}, which implies it has already been relayed")
+            return "no tx"
+
         signed_txn = w3.eth.account.sign_transaction(
             tx, private_key=self.chains[toChain]["key"]
         )
