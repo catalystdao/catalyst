@@ -419,22 +419,25 @@ files = [
 
 [[package]]
 name = "crytic-compile"
-version = "0.3.1"
+version = "0.3.4"
 description = "Util to facilitate smart contracts compilation."
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "crytic-compile-0.3.1.tar.gz", hash = "sha256:2f0030315b297d1852353b03ace8a484fb0415e07b16ff6172173fbb51313590"},
-    {file = "crytic_compile-0.3.1-py3-none-any.whl", hash = "sha256:2180ce6338ff9034077cd721f5ba1dca2ef05355f689f822cd640b7146313228"},
+    {file = "crytic-compile-0.3.4.tar.gz", hash = "sha256:f4bbabe616d09dcae73c3cd4140b719845ff67993c0159ec0de7d4e20642725d"},
+    {file = "crytic_compile-0.3.4-py3-none-any.whl", hash = "sha256:5ae0ac789d5aff22d13b7ec564ab81f5b97991f702c5d8b78af538b6306d08b1"},
 ]
 
 [package.dependencies]
 cbor2 = "*"
 pycryptodome = ">=3.4.6"
-solc-select = ">=v1.0.2"
+solc-select = ">=v1.0.4"
 
 [package.extras]
-dev = ["black (==22.3.0)", "darglint (==1.8.0)", "mypy (==0.942)", "pylint (==2.13.4)"]
+dev = ["crytic-compile[doc,lint,test]"]
+doc = ["pdoc"]
+lint = ["black (==22.3.0)", "darglint (==1.8.0)", "mypy (==0.942)", "pylint (==2.13.4)"]
+test = ["pytest", "pytest-cov"]
 
 [[package]]
 name = "cytoolz"
@@ -1615,33 +1618,40 @@ files = [
 
 [[package]]
 name = "slither-analyzer"
-version = "0.9.2"
+version = "0.9.6"
 description = "Slither is a Solidity static analysis framework written in Python 3."
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "slither-analyzer-0.9.2.tar.gz", hash = "sha256:625ef0c18b9484e4be094ea3d2b15649f93d8724f165d4d6f9adc8ccddf6ebcf"},
-    {file = "slither_analyzer-0.9.2-py3-none-any.whl", hash = "sha256:0ef1835a6a6e1220773700cd79406debac04a3756f1e79dd97e05ead8f1d31b5"},
+    {file = "slither-analyzer-0.9.6.tar.gz", hash = "sha256:3ee724a3bbd29d631d9c4ed766a63bcd18ed39775b39796b19f02edf4de3fe80"},
+    {file = "slither_analyzer-0.9.6-py3-none-any.whl", hash = "sha256:26f7683e9385d6f4b7dba8b43aaf6688c09927993ea026e1579fe1ec6f91b919"},
 ]
 
 [package.dependencies]
-crytic-compile = ">=0.3.0"
+crytic-compile = ">=0.3.3,<0.4.0"
+eth-abi = ">=4.0.0"
+eth-typing = ">=3.0.0"
+eth-utils = ">=2.1.0"
 packaging = "*"
-prettytable = ">=0.7.2"
+prettytable = ">=3.3.0"
 pycryptodome = ">=3.4.6"
+web3 = ">=6.0.0"
 
 [package.extras]
-dev = ["black (==22.3.0)", "deepdiff", "numpy", "openai", "pylint (==2.13.4)", "pytest", "pytest-cov", "solc-select (>=v1.0.0b1)"]
+dev = ["openai", "slither-analyzer[doc,lint,test]"]
+doc = ["pdoc"]
+lint = ["black (==22.3.0)", "pylint (==2.13.4)"]
+test = ["coverage[toml]", "deepdiff", "filelock", "numpy", "pytest", "pytest-cov", "pytest-insta", "pytest-xdist"]
 
 [[package]]
 name = "solc-select"
-version = "1.0.3"
+version = "1.0.4"
 description = "Manage multiple Solidity compiler versions."
 optional = false
 python-versions = ">=3.6"
 files = [
-    {file = "solc-select-1.0.3.tar.gz", hash = "sha256:f39d08035355bd0e0a887e4a1088ea10a15dd64e4408cc7fcd72d913b46fc799"},
-    {file = "solc_select-1.0.3-py3-none-any.whl", hash = "sha256:ae812dc26483ba96c27b903239d12c5b2e6bd3997a49b475852a03b15c6d13b4"},
+    {file = "solc-select-1.0.4.tar.gz", hash = "sha256:db7b9de009af6de3a5416b80bbe5b6d636bf314703c016319b8c1231e248a6c7"},
+    {file = "solc_select-1.0.4-py3-none-any.whl", hash = "sha256:9a28b8a612ff18a171929d23e2ed68a6263f4e11784fc47fa81476a3219874cb"},
 ]
 
 [package.dependencies]

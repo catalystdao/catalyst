@@ -1,5 +1,5 @@
 //SPDX-License-Identifier: Unlicensed
-pragma solidity ^0.8.16;
+pragma solidity ^0.8.17;
 
 /// @title Extensions to vaults which supports underwriting.
 interface ICatalystV1Underwriting {
@@ -11,6 +11,7 @@ interface ICatalystV1Underwriting {
     ) external returns (uint256);
 
     function releaseUnderwriteAsset(
+        address refundTo,
         bytes32 identifier,
         uint256 escrowAmount,
         address escrowToken
@@ -18,6 +19,7 @@ interface ICatalystV1Underwriting {
 
     function deleteUnderwriteAsset(
         bytes32 identifier,
+        uint256 U,
         uint256 escrowAmount,
         address escrowToken
     ) external;

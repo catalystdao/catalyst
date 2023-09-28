@@ -31,7 +31,7 @@ abstract contract TestPoolTokenInterface is TestCommon, AVaultInterfaces {
         vaultTokens = ICatalystV1Vault(vault).depositMixed(deposit_amounts, 0);
     }
 
-    function get_vault_tokens(address vault) internal returns(address[] memory vault_tokens) {
+    function get_vault_tokens(address vault) internal view returns(address[] memory vault_tokens) {
         uint256 numTokens;
         for (numTokens = 0; numTokens < 256; ++numTokens) {
             address token = ICatalystV1Vault(vault)._tokenIndexing(numTokens);

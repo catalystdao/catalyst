@@ -65,7 +65,7 @@ contract TestSendAssetUnderwrite is TestCommon {
 
 
         vm.recordLogs();
-        uint256 units = ICatalystV1Vault(vault1).sendAssetUnderwrite{value: _getTotalIncentive(_INCENTIVE)}(
+        uint256 units = ICatalystV1Vault(vault1).sendAsset{value: _getTotalIncentive(_INCENTIVE)}(
             routeDescription,
             token1,
             0, 
@@ -85,14 +85,16 @@ contract TestSendAssetUnderwrite is TestCommon {
 
         Token(token2).approve(address(CCI), 2**256-1);
         
+        Token(token2).transfer(refundTo, 103489651034896500);
+        vm.prank(refundTo);
+        Token(token2).approve(address(CCI), 2**256-1);
+        vm.prank(refundTo);
         bytes32 underwriteIdentifier = CCI.underwrite(
-            refundTo, // non-zero address
             vault2,  // -- Swap information
             token2,
             units,
             0,
             toAccount,
-            uint256(1e17),
             0,
             hex"0000"
         );
@@ -109,8 +111,8 @@ contract TestSendAssetUnderwrite is TestCommon {
         assertEq(
             Token(token2).balanceOf(address(CCI)),
             numTokens * (
-                CCI.UNDERWRITING_UNFULFILLED_FEE()
-            )/CCI.UNDERWRITING_UNFULFILLED_FEE_DENOMINATOR(),
+                CCI.UNDERWRITING_COLLATORAL()
+            )/CCI.UNDERWRITING_COLLATORAL_DENOMINATOR(),
             "CCI balance incorrect"
         );
 
@@ -130,13 +132,13 @@ contract TestSendAssetUnderwrite is TestCommon {
         assertEq(
             Token(token2).balanceOf(refundTo),
             numTokens + numTokens * (
-                CCI.UNDERWRITING_UNFULFILLED_FEE()
-            )/CCI.UNDERWRITING_UNFULFILLED_FEE_DENOMINATOR(),
+                CCI.UNDERWRITING_COLLATORAL()
+            )/CCI.UNDERWRITING_COLLATORAL_DENOMINATOR(),
             "refundTo balance not expected"
         );
 
         // Lets execute the message on the source chain and check that the escrow is properly removed.
-        (,, messageWithContext) = abi.decode(entries[3].data, (bytes32, bytes, bytes));
+        (,, messageWithContext) = abi.decode(entries[4].data, (bytes32, bytes, bytes));
         (_metadata, toExecuteMessage) = getVerifiedMessage(address(GARP), messageWithContext);
 
         // Check for the success event
@@ -154,6 +156,7 @@ contract TestSendAssetUnderwrite is TestCommon {
         vm.assume(toAccount != vault1);
         vm.assume(toAccount != address(CCI));
         vm.assume(toAccount != address(this));
+        vm.assume(toAccount != vault2);
         address token1 = ICatalystV1Vault(vault1)._tokenIndexing(0);
 
         Token(token1).approve(vault1, 2**256-1);
@@ -167,7 +170,7 @@ contract TestSendAssetUnderwrite is TestCommon {
 
 
         vm.recordLogs();
-        uint256 units = ICatalystV1Vault(vault1).sendAssetUnderwrite{value: _getTotalIncentive(_INCENTIVE)}(
+        uint256 units = ICatalystV1Vault(vault1).sendAsset{value: _getTotalIncentive(_INCENTIVE)}(
             routeDescription,
             token1,
             0, 

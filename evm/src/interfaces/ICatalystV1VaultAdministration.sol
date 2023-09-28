@@ -1,5 +1,5 @@
 //SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.16;
+pragma solidity ^0.8.17;
 
 /// @title Administrative actions defined by Catalyst v1 Vaults
 /// @notice Contains all functions which can only be called by privileged users.

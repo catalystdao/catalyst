@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity ^0.8.16;
+pragma solidity ^0.8.17;
 
-import {IAllowanceTransfer} from 'permit2/src/interfaces/IAllowanceTransfer.sol';
-import {ERC20} from 'solmate/src/tokens/ERC20.sol';
+import {IAllowanceTransfer} from '../libraries/permit2/IAllowanceTransfer.sol';
+import {ERC20} from 'solmate/tokens/ERC20.sol';
 import {RouterImmutables} from '../base/RouterImmutables.sol';
 import {Payments} from '../libraries/Payments.sol';
 import {Permit2Payments} from '../libraries/Permit2Payments.sol';
@@ -18,12 +18,9 @@ import {ICatalystV1Structs} from '../../interfaces/ICatalystV1VaultState.sol';
 abstract contract Dispatcher is Permit2Payments, CatalystExchange, CancelSwap, LockAndMsgSender {
     using BytesLib for bytes;
 
-    error debugError(bytes tt);
-    error InvalidCommandType(uint256 commandType);
-    error BuyPunkFailed();
-    error InvalidOwnerERC721();
-    error InvalidOwnerERC1155();
-    error BalanceTooLow();
+    error debugError(bytes tt);  // 300df159
+    error InvalidCommandType(uint256 commandType);  // d76a1e9e
+    error BalanceTooLow();  // a3281672
 
     /// @notice Decodes and executes the given command with the given inputs
     /// @param commandType The command type to execute

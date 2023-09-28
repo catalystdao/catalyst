@@ -4,7 +4,7 @@ pragma solidity ^0.8.17;
 /// @title Cancel on-going swaps
 /// @notice Allows swappers to cancel their swaps. Given that they already have gas and access to the target chain.
 abstract contract CancelSwap {
-    error SwapCanceled();
+    error SwapCanceled();  // 599be0bf
 
     mapping(address => mapping(bytes32 => bool)) public swapIdentifier;
 

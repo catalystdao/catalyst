@@ -1,20 +1,76 @@
 {
   "sepolia": {
     "MOCK": {
-      "incentive": "0x0000000000000000000000000000000000000000",
-      "interface": "0x0000000000000000000000000000000000000000"
+      "incentive": "0x00000001a9818a7807998dbc243b05F2B3CfF6f4",
+      "interface": "0xF6b469228822d92c867f5949DA58431673095aEA"
+    },
+    "Wormhole": {
+      "incentive": "0x000000ED80503e3A7EA614FFB5507FD52584a1f2",
+      "interface": "0xdEf8359242FfD915f427e53346A5dC645F0F2637"
     }
   },
   "mumbai": {
     "MOCK": {
-      "incentive": "0x0000000000000000000000000000000000000000",
-      "interface": "0x0000000000000000000000000000000000000000"
+      "incentive": "0x00000001a9818a7807998dbc243b05F2B3CfF6f4",
+      "interface": "0xF6b469228822d92c867f5949DA58431673095aEA"
+    },
+    "Wormhole": {
+      "incentive": "0x000000ED80503e3A7EA614FFB5507FD52584a1f2",
+      "interface": "0xdEf8359242FfD915f427e53346A5dC645F0F2637"
     }
   },
-  "base-goerli": {
+  "basegoerli": {
     "MOCK": {
-      "incentive": "0x0000000000000000000000000000000000000000",
-      "interface": "0x0000000000000000000000000000000000000000"
+      "incentive": "0x00000001a9818a7807998dbc243b05F2B3CfF6f4",
+      "interface": "0xF6b469228822d92c867f5949DA58431673095aEA"
+    }
+  },
+  "mantletestnet" : {
+    "MOCK": {
+      "incentive": "0x00000001a9818a7807998dbc243b05F2B3CfF6f4",
+      "interface": "0xF6b469228822d92c867f5949DA58431673095aEA"
+    }
+  },
+  "taikoeldfell": {
+    "MOCK": {
+      "incentive": "0x00000001a9818a7807998dbc243b05F2B3CfF6f4",
+      "interface": "0xF6b469228822d92c867f5949DA58431673095aEA"
+    }
+  },
+  "scrollsepolia": {
+    "MOCK": {
+      "incentive": "0x00000001a9818a7807998dbc243b05F2B3CfF6f4",
+      "interface": "0xF6b469228822d92c867f5949DA58431673095aEA"
+    }
+  },
+  "arbitrumgoerli": {
+    "MOCK": {
+      "incentive": "0x00000001a9818a7807998dbc243b05F2B3CfF6f4",
+      "interface": "0xF6b469228822d92c867f5949DA58431673095aEA"
+    }
+  },
+  "optimismgoerli": {
+    "MOCK": {
+      "incentive": "0x00000001a9818a7807998dbc243b05F2B3CfF6f4",
+      "interface": "0xF6b469228822d92c867f5949DA58431673095aEA"
+    }
+  },
+  "bsctestnet": {
+    "MOCK": {
+      "incentive": "0x00000001a9818a7807998dbc243b05F2B3CfF6f4",
+      "interface": "0xF6b469228822d92c867f5949DA58431673095aEA"
+    }
+  },
+  "opbnbtestnet": {
+    "MOCK": {
+      "incentive": "0x00000001a9818a7807998dbc243b05F2B3CfF6f4",
+      "interface": "0xF6b469228822d92c867f5949DA58431673095aEA"
+    }
+  },
+  "omnitestnet": {
+    "MOCK": {
+      "incentive": "0x00000001a9818a7807998dbc243b05F2B3CfF6f4",
+      "interface": "0xF6b469228822d92c867f5949DA58431673095aEA"
     }
   }
 }

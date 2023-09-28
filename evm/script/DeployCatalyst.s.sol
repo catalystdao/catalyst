@@ -1,119 +1,67 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.13;
+pragma solidity ^0.8.17;
 
 import "forge-std/Script.sol";
 import {stdJson} from "forge-std/StdJson.sol";
-import { Permit2 } from "../lib/permit2/src/Permit2.sol";
 
-// Math libs
-import { CatalystMathVol } from "../src/registry/CatalystMathVol.sol";
-import { CatalystMathAmp } from "../src/registry/CatalystMathAmp.sol";
+import { BaseMultiChainDeployer } from "./BaseMultiChainDeployer.s.sol";
+import { JsonContracts, DeployContracts } from "./DeployContracts.s.sol";
 
 // Registry
 import { CatalystDescriber } from "../src/registry/CatalystDescriber.sol";
 import { CatalystDescriberRegistry } from "../src/registry/CatalystDescriberRegistry.sol";
 
-// Router
-import { CatalystRouter } from "../src/router/CatalystRouter.sol";
-import { RouterParameters } from "../src/router/base/RouterImmutables.sol";
 
-// Core Catalyst
-import { CatalystFactory } from "../src/CatalystFactory.sol";
-import { CatalystChainInterface } from "../src/CatalystChainInterface.sol";
-/// Catalyst Templates
-import { CatalystVaultVolatile } from "../src/CatalystVaultVolatile.sol";
-import { CatalystVaultAmplified } from "../src/CatalystVaultAmplified.sol";
-
-
-// Generalised Incentives
-import { IncentivizedMockEscrow } from "GeneralisedIncentives/src/apps/mock/IncentivizedMockEscrow.sol";
-
-struct JsonContracts {
-    address amplified_mathlib;
-    address amplified_template;
-    address describer;
-    address describer_registry;
-    address factory;
-    address volatile_mathlib;
-    address volatile_template;
-}
-
-contract DeployCatalyst is Script {
+contract DeployCatalyst is BaseMultiChainDeployer, DeployContracts {
     using stdJson for string;
 
-    address[] CCIs;
+    function deploy() iter_chains(chain_list) broadcast external {
+        verify = true;
+        address admin = vm.envAddress("CATALYST_ADDRESS");
+        deployAllContracts(admin);
 
-    bool fillDescriber = false;
+        setupDescriber();
+    }
+    function deploy_legacy() iter_chains(chain_list_legacy) broadcast external {
+        verify = true;
+        address admin = vm.envAddress("CATALYST_ADDRESS");
+        deployAllContracts(admin);
 
-    JsonContracts contracts;
+        setupDescriber();
+    }
 
-    string chain;
+    function fund_address(address toFund) iter_chains(chain_list) broadcast external {
+        fund(toFund, 0.2*10**18);
+    }
 
-    function deployAllContracts() internal {
-
-        // Deploy Factory
-        CatalystFactory factory = new CatalystFactory{salt: 0x2ea0e39ef7366f6b504c30f3769f869a827835dc79ad25e94fe3e456cfa35bd8}(vm.envAddress("CATALYST_ADDRESS"));
-        contracts.factory = address(factory);
-
-        // Deploy Templates
-        address volatile_mathlib = address(new CatalystMathVol{salt: 0xd2c762d8d12ded8f566f25d86ef4cf6fd4ab1beffcc4073adde9ce9ae8ddd803}());
-        contracts.volatile_mathlib = address(volatile_mathlib);
-
-        address volatile_template = address(
-            new CatalystVaultVolatile{salt: 0xdc8a4cea8d4c6d0f765a266acda548ab542382f65a68e6cb6e371e3746c86cc3}(address(factory), volatile_mathlib)
-        );
-        contracts.volatile_template = address(volatile_template);
-
-        address amplified_mathlib = address(new CatalystMathAmp{salt: 0x6f3ca6dd912c11c354a6e06318c17f9a71ef6d1d936afa273cea1cf1eff3675f}());
-        contracts.amplified_mathlib = address(amplified_mathlib);
-
-        address amplified_template = address(
-            new CatalystVaultAmplified{salt: 0x2a55d4f99a04ad2ac8cb16f32934098dd0bdc8562add1fb567e6608cc1524cf7}(address(factory), amplified_mathlib)
-        );
-        contracts.amplified_template = address(amplified_template);
-
-        // Deploy Registry
-        CatalystDescriber catalyst_describer = new CatalystDescriber{salt: bytes32(0)}(vm.envAddress("CATALYST_ADDRESS"));
-        contracts.describer = address(catalyst_describer);
-
-        
-        CatalystDescriberRegistry describer_registry = new CatalystDescriberRegistry{salt: bytes32(0)}(vm.envAddress("CATALYST_ADDRESS"));
-        contracts.describer_registry = address(describer_registry);
-        
+    function fund_address_legacy(address toFund) iter_chains(chain_list_legacy) broadcast external {
+        fund(toFund, 0.2*10**18);
     }
 
     function setupDescriber() internal {
         CatalystDescriber catalyst_describer = CatalystDescriber(contracts.describer);
+        CatalystDescriberRegistry catalyst_registry = CatalystDescriberRegistry(contracts.describer_registry);
 
-        catalyst_describer.add_vault_factory(contracts.factory);
-        catalyst_describer.add_whitelisted_template(contracts.volatile_template, 1);
-        catalyst_describer.add_whitelisted_template(contracts.amplified_template, 1);
-    }
+        if (catalyst_describer.get_num_vault_factories() == 0) {
+            catalyst_describer.add_vault_factory(contracts.factory);
+        }
+        if (catalyst_describer.get_num_whitelisted_templates() == 0) {
+            catalyst_describer.add_whitelisted_template(contracts.volatile_template, 1);
+            catalyst_describer.add_whitelisted_template(contracts.amplified_template, 1);
+        }
 
-
-    function run() external {
-        deploy(false);
+        if (catalyst_registry.catalyst_version() == 0) {
+            catalyst_registry.add_describer(address(catalyst_describer));
+        }
     }
 
     function getAddresses() external {
-        deploy(true);
-    }
+        address admin_ = vm.envAddress("CATALYST_ADDRESS");
+        uint256 pk = vm.envUint("CATALYST_DEPLOYER");
 
-    function deploy(bool writeAddresses) internal {
-        string memory pathRoot = vm.projectRoot();
-        string memory pathToContractConfig = string.concat(pathRoot, "/script/config/config_contracts.json");
+        vm.startBroadcast(pk);
 
-        // Get the contracts
-        string memory config_contract = vm.readFile(pathToContractConfig);
-        contracts = abi.decode(config_contract.parseRaw(string.concat(".contracts")), (JsonContracts));
-
-        uint256 deployerPrivateKey = vm.envUint("CATALYST_DEPLOYER");
-        vm.startBroadcast(deployerPrivateKey);
-
-        deployAllContracts();
-
-        // Fill registry
-        setupDescriber();
+        deployAllContracts(admin_);
 
         vm.stopBroadcast();
 
@@ -135,6 +83,43 @@ contract DeployCatalyst is Script {
         string memory finalJson = vm.serializeAddress(obj, "volatile_template", contracts.volatile_template);
 
         vm.writeJson(finalJson, pathToContractConfig, string.concat(".contracts"));
+    }
+
+
+    function _regStore() iter_chains(chain_list) internal {
+        CatalystDescriber desc =CatalystDescriber(contracts.describer);
+
+        console.log("factories");
+        address[] memory facts = desc.get_vault_factories();
+        for (uint256 i = 0; i < facts.length; ++i) {
+            console.logAddress(facts[i]);
+        }
+
+        console.log("templates");
+        address[] memory templates = desc.get_whitelisted_templates();
+        for (uint256 i = 0; i < templates.length; ++i) {
+            console.logAddress(templates[i]);
+        }
+
+        console.log("cci");
+        CatalystDescriber.CrossChainInterface[] memory cci = desc.get_whitelisted_CCI();
+        for (uint256 i = 0; i < cci.length; ++i) {
+            console.log(cci[i].version);
+            console.logAddress(cci[i].cci);
+        }
+    }
+
+    function regStore() external {
+        load_config();
+
+        _regStore();
+    }
+
+
+    function regStore_legacy() external {
+        load_config();
+
+        _regStore();
     }
 }
 

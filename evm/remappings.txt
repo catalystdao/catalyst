@@ -1,5 +1,4 @@
 forge-std/=lib/forge-std/src/
-@openzeppelin=node_modules/@openzeppelin
-solmate=node_modules/solmate/
+openzeppelin-contracts=lib/openzeppelin-contracts
+solmate=lib/solmate/src/
 GeneralisedIncentives/=lib/GeneralisedIncentives/
-permit2/=lib/permit2/

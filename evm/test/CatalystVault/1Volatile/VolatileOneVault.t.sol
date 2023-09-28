@@ -70,7 +70,7 @@ contract TestVolatileInvariant is TestInvariant, TestLocalswap, TestCrossChainIn
         inv = getSum(balances);
     }
 
-    function getTestConfig() internal override returns(address[] memory vaults) {
+    function getTestConfig() internal override view returns(address[] memory vaults) {
         return vaults = _vaults;
     }
 }

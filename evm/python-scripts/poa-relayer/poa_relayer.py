@@ -6,14 +6,16 @@ from hashlib import sha256
 from time import sleep
 
 import web3
+import web3.exceptions
 from eth_abi import encode
 from eth_account import Account
 from eth_account.messages import encode_defunct, defunct_hash_message
 from eth_account.signers.local import LocalAccount
 from eth_abi.packed import encode_packed
 from web3 import Web3
-from web3.middleware import geth_poa
+from web3.middleware import geth_poa_middleware
 from poa_signer import MessageSigner
+import requests.exceptions
 
 with open("external/IncentivizedMockEscrow.json", "r") as f:
     IncentivizedMockEscrow_abi = json.load(f)["abi"]
@@ -44,27 +46,41 @@ class PoARelayer(MessageSigner):
         self,
         private_key: str = os.environ["SIGNER"],
         chains={
-            80001: {
-                "name": "mumbai",
+            5001: {
+                "name": "mantletestnet",
                 "confirmations": 0,
-                "url": "http://127.0.0.1:8545",  # os.environ["SCROLL_RPC"],
-                # "middleware": geth_poa,
-                "GI_contract": Web3.to_checksum_address("0x000000641ac10b4e000fe361f2149e2a531061c5"),
-                "key": os.environ["PRIVATE_KEY_ROUTER"]
+                "url": os.environ["mantletestnet"],
+                "middleware": geth_poa_middleware,
+                "GI_contract": Web3.to_checksum_address("0x00000001a9818a7807998dbc243b05F2B3CfF6f4"),
+                "key": os.environ["PRIVATE_KEY_ROUTER"],
+                "legacy": True
+            },
+            84531: {
+                "name": "basegoerli",
+                "confirmations": 0,
+                "url": os.environ["basegoerli"],
+                # "middleware": geth_poa_middleware,
+                "GI_contract": Web3.to_checksum_address("0x00000001a9818a7807998dbc243b05F2B3CfF6f4"),
+                "key": os.environ["PRIVATE_KEY_ROUTER"],
+                "legacy": False
             },
             11155111: {
                 "name": "sepolia",
                 "confirmations": 0,
-                "url": "http://127.0.0.1:8547",  # os.environ["CRONOS_RPC"],
-                "GI_contract": Web3.to_checksum_address("0x000000641ac10b4e000fe361f2149e2a531061c5"),
-                "key": os.environ["PRIVATE_KEY_ROUTER"]
+                "url": os.environ["sepolia"],
+                "middleware": geth_poa_middleware,
+                "GI_contract": Web3.to_checksum_address("0x00000001a9818a7807998dbc243b05F2B3CfF6f4"),
+                "key": os.environ["PRIVATE_KEY_ROUTER"],
+                "legacy": True
             },
-            84531: {
-                "name": "base-goerli",
+            80001: {
+                "name": "mumbai",
                 "confirmations": 0,
-                "url": "http://127.0.0.1:8546",  # os.environ["CRONOS_RPC"],
-                "GI_contract": Web3.to_checksum_address("0x000000641ac10b4e000fe361f2149e2a531061c5"),
-                "key": os.environ["PRIVATE_KEY_ROUTER"]
+                "url": os.environ["mumbai"],
+                # "middleware": geth_poa_middleware,
+                "GI_contract": Web3.to_checksum_address("0x00000001a9818a7807998dbc243b05F2B3CfF6f4"),
+                "key": os.environ["PRIVATE_KEY_ROUTER"],
+                "legacy": False
             }
         }
     ):
@@ -73,6 +89,7 @@ class PoARelayer(MessageSigner):
 
         self.chains = chains
         for chain in self.chains.keys():
+            logging.info(f"Init {chain}")
             w3 = Web3(web3.HTTPProvider(self.chains[chain]["url"]))
 
             middleware = self.chains[chain].get("middleware")
@@ -83,6 +100,8 @@ class PoARelayer(MessageSigner):
             self.chains[chain]["GI"] = w3.eth.contract(address=self.chains[chain]["GI_contract"], abi=IncentivizedMockEscrow_abi)
             self.chains[chain]["relayer"] = Account.from_key(self.chains[chain]["key"])
             self.chains[chain]["nonce"] = w3.eth.get_transaction_count(self.chains[chain]["relayer"].address)
+            self.chains[chain]["legacy"] = self.chains[chain]["legacy"]
+            logging.info(f"Init {chain}, {self.chains[chain]['relayer'].address}, {self.chains[chain]['nonce']}")
         
     def checkConfirmations(self, chainId: int, confirmations: int) -> bool:
         return self.chains[chainId]["confirmations"] <= confirmations
@@ -126,10 +145,21 @@ class PoARelayer(MessageSigner):
         return signatures
 
     def fetch_logs(self, chain, fromBlock, toBlock):
-        logs = self.chains[chain]["GI"].events.Message.get_logs(
-            fromBlock=fromBlock, toBlock=toBlock
-        )
+        try:
+            logs = self.chains[chain]["GI"].events.Message.get_logs(
+                fromBlock=fromBlock, toBlock=toBlock
+            )
+        except requests.exceptions.HTTPError as e:
+            error_message = e
+            logging.info(f"Rate limited, block number, {error_message}")
+            sleep(1)
+            try:
+                logs = self.chains[chain]["GI"].events.Message.get_logs(
+                    fromBlock=fromBlock, toBlock=toBlock
+                )
+            except: return []
         return logs
+        
 
     def execute(self, fromChain, event):
         toChain = event["args"]["destinationIdentifier"]
@@ -146,29 +176,87 @@ class PoARelayer(MessageSigner):
         
         w3 = self.chains[toChain]["w3"]
 
-        # Execute the transaction on the target side:
-        tx = GI.functions.processMessage(
-            signature[1], signature[0], encode(["address"], [relayer_address.address])
-        ).build_transaction(
-            {
-                "from": relayer_address.address,
-                "nonce": self.chains[toChain]["nonce"],
-                "gas": 10000000
-            }
-        )
+        try:
+            # Execute the transaction on the target side:
+            tx = GI.functions.processMessage(
+                signature[1], signature[0], encode(["address"], [relayer_address.address])
+            ).build_transaction(
+                {
+                    "from": relayer_address.address,
+                    "nonce": self.chains[toChain]["nonce"],
+                } if not self.chains[toChain]["legacy"] else {
+                    "from": relayer_address.address,
+                    "nonce": self.chains[toChain]["nonce"],
+                    "gasPrice": w3.eth.gas_price
+                }
+            )
+        except web3.exceptions.ContractCustomError as e:
+            error_message = e
+            em = {"0x8af35858": "MessageAlreadyAcked()", "0xe954aba2": "MessageAlreadySpent()"}
+            error_message = em.get(str(e)) if em.get(str(e)) is not None else error_message
+            logging.info(f"Skipped 1 event because {error_message}")
+            return "no tx"
+
+        except ValueError as e:
+            error_message = e
+            logging.info(f"Skipping because {error_message}, which implies it has already been relayed")
+            return "no tx"
+        
+        except requests.exceptions.HTTPError as e:
+            error_message = e
+            logging.info(f"Rate limited, simulate, {error_message}")
+            sleep(1)
+            try:
+                tx = GI.functions.processMessage(
+                    signature[1], signature[0], encode(["address"], [relayer_address.address])
+                ).build_transaction(
+                    {
+                        "from": relayer_address.address,
+                        "nonce": self.chains[toChain]["nonce"],
+                    } if not self.chains[toChain]["legacy"] else {
+                        "from": relayer_address.address,
+                        "nonce": self.chains[toChain]["nonce"],
+                        "gasPrice": w3.eth.gas_price
+                    }
+                )
+            except: return "no tx"
 
         signed_txn = w3.eth.account.sign_transaction(
             tx, private_key=self.chains[toChain]["key"]
         )
 
-        tx_hash = w3.eth.send_raw_transaction(signed_txn.rawTransaction)
+        try:
+            tx_hash = w3.eth.send_raw_transaction(signed_txn.rawTransaction)
+        except requests.exceptions.HTTPError as e:
+            error_message = e
+            logging.info(f"Rate limited, send, {error_message}")
+            sleep(1)
+            try:
+                tx_hash = w3.eth.send_raw_transaction(signed_txn.rawTransaction)
+            except: return "no tx"
+
+        sleep(0.1)
         self.chains[toChain]["nonce"] = self.chains[toChain]["nonce"] + 1
 
         logging.info(f"Execute: {fromChain} -> {toChain, tx_hash}")
 
         return tx_hash
+    
+    def redo(self, chain, fromBlock, toBlock):
+        w3 = self.chains[chain]["w3"]
+        toBlock = w3.eth.block_number - self.chains[chain]["confirmations"] - 1
+
+        if fromBlock <= toBlock:
+            logs = self.fetch_logs(chain, fromBlock, toBlock)
+            logging.info(
+                f"{chain}: {len(logs)} logs between block {fromBlock}-{toBlock}"
+            )
+
+            executes = []
+            for log in logs:
+                executes.append((log, self.execute(chain, log)))
           
-    def run(self, wait=5):
+    def run(self, wait=8):
         chains = self.chains.keys()
         blocknumbers = {}
 
@@ -183,7 +271,15 @@ class PoARelayer(MessageSigner):
             for chain in chains:
                 w3 = self.chains[chain]["w3"]
                 fromBlock = blocknumbers[chain]
-                toBlock = w3.eth.block_number - self.chains[chain]["confirmations"] - 1
+                try:
+                    toBlock = w3.eth.block_number - self.chains[chain]["confirmations"] - 1
+                except requests.exceptions.HTTPError as e:
+                    error_message = e
+                    logging.info(f"Rate limited, block number, {error_message}")
+                    sleep(1)
+                    try:
+                        toBlock = w3.eth.block_number - self.chains[chain]["confirmations"] - 1
+                    except: continue
 
                 if fromBlock <= toBlock:
                     blocknumbers[chain] = toBlock + 1

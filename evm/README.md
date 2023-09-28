@@ -16,7 +16,7 @@ More specifically, the code structure is as follows:
   - `CatalystVaultAmplified.sol` : Extends `CatalystVaultCommon.sol` with the price curve $P(w) = \left(1 - \theta\right) \frac{W}{(W w)^\theta}$.
   - `FixedPointMathLib.sol` : The mathematical library used by Catalyst (based on the [solmate](https://github.com/transmissions11/solmate/blob/ed67feda67b24fdeff8ad1032360f0ee6047ba0a/src/utils/FixedPointMathLib.sol)).
 - `CatalystFactory.sol` : Simplifies the deployment of vaults via Open Zeppelin's *Clones*: vaults are deployed as minimal proxies which delegate call to the above vault contracts. This significantly reduces vault deployment cost.
-- `CatalystIBCInterface.sol` : Bridges the Catalyst protocol with the message router of choice.
+- `CatalystChainInterface.sol` : Bridges the Catalyst protocol with [Generalised Incentives](https://github.com/catalystdao/GeneralisedIncentives) which enables Catalyst to support any AMB through the same interface and with the same impact on user experience.
 
 # Catalyst Contracts
 
@@ -42,9 +42,9 @@ Extends `CatalystVaultCommon.sol` with the price curve $P(w) = \left(1 - \theta\
 
 `CatalystFactory.sol` handles the deployment and configuration of Catalyst vaults proxy contracts within a single call.
 
-## CatalystIBCInterface.sol
+## CatalystChainInterface.sol
 
-An intermediate contract designed to interface Catalyst vaults with an IBC compliant messaging router. It wraps and unwraps the swaps calls to and from byte arrays so that they can be seamlessly sent and received by the router.
+An intermediate contract designed to interface Catalyst vaults with [Generalised Incentives](https://github.com/catalystdao/GeneralisedIncentives) AMB interfaces. It wraps and unwraps swap calls to and from byte arrays. Furthermore, it also allows swaps to be underwritten where an external actor takes on the confirmation risk of the swap.
 
 Catalyst v1 implements 2 type of swaps, *Asset Swaps* and *Liquidity Swaps*. The byte array specification for these can be found in `/contracts/CatalystPayload.sol`.
 
@@ -55,35 +55,28 @@ Catalyst v1 implements 2 type of swaps, *Asset Swaps* and *Liquidity Swaps*. The
   3. Convert units to an even mix of tokens
   4. Deposit the tokens into the vault.
 
-Refer to the helpers `encode_swap_payload` and `decode_payload` on `tests/catalyst/utils/vault_utils.py` for examples on how to encode and decode a Catalyst message.
-
-# EVM Development
-
-This repository uses Brownie for the development, testing and deployment of the smart contracts. Brownie can handle multiple versions of Solidity and Vyper and will automatically combine contracts to be deploy-ready.
-
 ## Dev dependencies
 
-Note that the following dependencies have been tested to work with `python3.9`. The installation steps included here are for reference only, please refer to the specific documentation of each of the mentioned packages for further information.
-
-- Install the `ganache-cli` globaly (required by `brownie`)
+- Install`foundryup`
   
-  - `pnpm install -g ganache`
+  - `https://book.getfoundry.sh/getting-started/installation`
+  - or read https://book.getfoundry.sh/getting-started/installation
 
-- Install the contract templates [@openzeppelin/contracts](https://www.npmjs.com/package/@openzeppelin/contracts) and [Solmate](https://www.npmjs.com/package/solmate)
-  
-  - `pnpm install` (run from the `evm` root directory)
+# Development with Foundry
 
-- Install `eth-brownie`
-  
-  - via `pip`: `pip3 install eth-brownie` (check that `$PATH` is properly configured).
-  - via [`poetry`](https://python-poetry.org):
-    - If `poetry` is not installed on your system, use `brew install poetry`
-    - Set the `poetry` python version with `poetry env use python3.9`.
-    - `poetry install` (run from the `evm` root directory). This will install all the dependencies specified in `./pyproject.toml`.
+This repository contains a helper script for deployment `script/DeployCatalyst.s.sol` which is based on `script/DeployContracts.s.sol` which is the origin for most of the testing configuration. This deploys core swap contracts but not the cross-chain interface. This is instead done by `script/DeployInterfaces.s.sol` which also handles management/deployment of the dependency on [Generalised Incentives](https://github.com/catalystdao/GeneralisedIncentives).
 
-# Development with Brownie
+## Local Catalyst
 
-This repository contains a deployment helper. This helper can be used both for internal development but also for external deployment. (found in `/scripts/deployCatalyst.py`). It deploys all relevant Catalyst contracts, along with tokens handling and optional vault creation. As an example, the below step go over deploying Catalyst and executing a local swap and a cross-vault swap (from and to the same vault) are outlined. Because all computation is contained within the vaults, cross-chain swaps can be simulated fully on a single chain purely through cross-vault swaps. As such, to simulate a pool another has to be deployed and then connections has to be established.
+Local Catalyst consists of Volatile and Amplified pools along with the Factory. To deploy Local Catalyst to another chain, add the chain config to `script/BaseMultiChainDeployer.s.sol`. For chains without EIP-1559 add them as a legacy chain.Then run `forge script DeployCatalyst --sig "deploy()" --broadcast` or `forge script DeployCatalyst --sig "deploy_legacy()" --legacy --broadcast` depending on if the chain added was with EIP-1559 support (non-legacy) or with (legacy). Some chains require running with `--slow`. If deployment fails, wait a few blocks and re-try.
+
+## Cross-chain Catalyst
+
+Cross-chain Catalyst requires governance approval. This is unavoidable, since there are no trustless way to verify which chain identifier belongs to which chain. While the cross-chain interface can be deployed by anyone, the setup can only be done by the pre-designated address.
+
+## Deployment verification
+
+The deployment scheme is designed such that any deployment which matches the addresses in `script/config/config_contracts.json` is legitimate. This makes it easy for anyone to deploy, verify, and scale Catalyst.
 
 ## Catalyst Setup
 

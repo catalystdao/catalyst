@@ -1,11 +1,11 @@
 //SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.16;
+pragma solidity 0.8.19;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "openzeppelin-contracts/contracts/access/Ownable.sol";
 import "../interfaces/ICatalystV1VaultImmutables.sol";
 import "./interfaces/ICatalystMathLibCommon.sol";
-import "../CatalystFactory.sol";
+import "../interfaces/ICatalystV1Factory.sol";
 /**
  * @title Catalyst: Catalyst Describer
  * @author Catalyst Labs
@@ -18,6 +18,11 @@ contract CatalystDescriber is Ownable {
     error IncorrectAbi();
 
     uint256 constant MAX_MEMORY_LIMIT = 64;
+    
+    struct CrossChainInterface {
+        address cci;
+        string version;
+    }
 
     /// @notice Emitted when a vault template is whitelisted and unwhitelisted.
     event ModifyWhitelistedTemplate(
@@ -45,9 +50,11 @@ contract CatalystDescriber is Ownable {
 
     address[] private _whitelisted_templates;
 
-    address[] private _whitelisted_ccis;
+    CrossChainInterface[] private _whitelisted_ccis;
 
     address[] private _vault_factories;
+
+    address public latestRouter;
 
     mapping(bytes32 => int256) internal _vault_abi_version;
 
@@ -55,6 +62,10 @@ contract CatalystDescriber is Ownable {
         _transferOwnership(defaultOwner);
     }
 
+    //--- Router ---//
+    function set_latest_router(address newRouter) external onlyOwner {
+        latestRouter = newRouter;
+    }
 
     //--- Whitelisted Templates ---//
 
@@ -122,7 +133,7 @@ contract CatalystDescriber is Ownable {
      * @notice Returns an array of whitelisted CCIs.
      * @dev Might contain address(0).
      */ 
-    function get_whitelisted_CCI() external view returns (address[] memory whitelistedCCI) {
+    function get_whitelisted_CCI() external view returns (CrossChainInterface[] memory whitelistedCCI) {
         return _whitelisted_ccis;
     }
 
@@ -140,10 +151,10 @@ contract CatalystDescriber is Ownable {
      * @notice Whitelist a cross-chain interface.
      * @param cci_to_whitelist The address of the CCI to whitelisted.
      */
-    function add_whitelisted_cci(address cci_to_whitelist) external onlyOwner {
+    function add_whitelisted_cci(address cci_to_whitelist, string memory version) external onlyOwner {
         if (cci_to_whitelist == address(0)) revert ZeroAddress(); 
 
-        _whitelisted_ccis.push(cci_to_whitelist);
+        _whitelisted_ccis.push(CrossChainInterface({cci: cci_to_whitelist, version: version}));
 
         emit ModifyWhitelistedCCI(cci_to_whitelist, true);
     }
@@ -158,13 +169,30 @@ contract CatalystDescriber is Ownable {
     function remove_whitelisted_cci(address cci_to_unwhitelist, uint256 cci_index) external onlyOwner {
         if (cci_to_unwhitelist == address(0)) revert ZeroAddress();
         // Check that the cci_index corrosponds to the expected cci (cci_to_unwhitelist).
-        if (_whitelisted_ccis[cci_index] != cci_to_unwhitelist) revert InvalidIndex(cci_to_unwhitelist, _whitelisted_ccis[cci_index]);
+        if (_whitelisted_ccis[cci_index].cci != cci_to_unwhitelist) revert InvalidIndex(cci_to_unwhitelist, _whitelisted_ccis[cci_index].cci);
 
         // Set the cci to address(0);
-        _whitelisted_ccis[cci_index] = address(0);
+        delete _whitelisted_ccis[cci_index];
 
         // Emit event
         emit ModifyWhitelistedTemplate(cci_to_unwhitelist, false);
+    }
+
+    /**
+     * @notice Reverse lookup a cci version.
+     * @dev If there are multiple ccis with the same version, it will return the latest.
+     * If none are found address(0) will be returned.
+     */
+    function find_whitelisted_cci(string memory target_version) external returns(address cci) {
+        CrossChainInterface[] memory ccis = _whitelisted_ccis;
+        bytes32 target_version_hash = keccak256(abi.encodePacked(target_version));
+        uint256 num_ccis = ccis.length;
+        for (uint256 i = 0; i < num_ccis; ++i) {
+            bytes32 lookup_version_hash = keccak256(abi.encodePacked(ccis[num_ccis - 1 - i].version));
+            if (lookup_version_hash == target_version_hash) {
+                return ccis[num_ccis - 1 - i].cci;
+            }
+        }
     }
 
     //--- Vault Factories ---//
@@ -228,7 +256,7 @@ contract CatalystDescriber is Ownable {
         factory = ICatalystV1VaultImmutables(vault).FACTORY();
         address cci = ICatalystV1VaultImmutables(vault)._chainInterface();
         // Check if the factory agree
-        if (!CatalystFactory(factory).isCreatedByFactory(cci, vault)) factory = address(0);
+        if (!ICatalystV1Factory(factory).isCreatedByFactory(cci, vault)) factory = address(0);
     }
 
 

@@ -34,13 +34,11 @@ contract TestUnderwriteAndCheckConnection is TestCommon {
             abi.encodePacked(
                 uint8(20), bytes32(0), abi.encode(vault1)
             ),
-            address(this), // non-zero address
             vault2,  // -- Swap information
             token,
             1e17,
             0,
             address(this),
-            10**18,
             0,
             hex"0000"
         );
@@ -58,13 +56,11 @@ contract TestUnderwriteAndCheckConnection is TestCommon {
             abi.encodePacked(
                 uint8(20), bytes32(0), abi.encode(vault1)
             ),
-            address(this), // non-zero address
             vault2,  // -- Swap information
             token,
             1e17,
             0,
             address(this),
-            10**18,
             0,
             hex"0000"
         );

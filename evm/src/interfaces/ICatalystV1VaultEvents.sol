@@ -1,5 +1,5 @@
 //SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.16;
+pragma solidity ^0.8.17;
 
 /// @title Events emitted by Catalyst v1 Vaults
 /// @notice Contains all events emitted by the vault
@@ -32,6 +32,7 @@ interface ICatalystV1VaultEvents {
      * @param fromAmount The number of _fromAsset sold.
      * @param minOut The minimum output to be accepted of fromAsset.
      * @param units The calculated number of units bought. Will be sold to buy _toAsset
+     * @param underwriteIncentiveX16 The incentive out of 2**16 - 1 provided to the underwriter.
      * @param fee The number of tokens paid to the vault in fees.
      */
     event SendAsset(
@@ -43,20 +44,8 @@ interface ICatalystV1VaultEvents {
         uint256 fromAmount,
         uint256 minOut,
         uint256 units,
-        uint256 fee
-    );
-
-    event SendAssetUnderwritable(
-        bytes32 channelId,
-        bytes toVault,
-        bytes toAccount,
-        address fromAsset,
-        uint8 toAssetIndex,
-        uint256 fromAmount,
-        uint256 minOut,
-        uint256 units,
         uint256 fee,
-        uint16 underwritePercentageX16
+        uint16 underwriteIncentiveX16
     );
 
     /**
@@ -235,4 +224,17 @@ interface ICatalystV1VaultEvents {
         bytes toVault,
         bool newState
     );
+
+    //-- Underwriting Events --//
+
+    /**
+     * @notice A swap has been underwritten.
+     */
+    event SwapUnderwritten(
+        bytes32 indexed identifier,
+        address toAsset,
+        uint256 U,
+        uint256 purchasedTokens
+    );
+
 }

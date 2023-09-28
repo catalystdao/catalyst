@@ -1,5 +1,5 @@
 //SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.16;
+pragma solidity ^0.8.17;
 
 /// @title Derived Vault state
 /// @notice Contains all vault state which is derived from vault storage

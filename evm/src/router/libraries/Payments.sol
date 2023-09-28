@@ -3,8 +3,8 @@ pragma solidity ^0.8.17;
 
 import {Constants} from '../libraries/Constants.sol';
 import {RouterImmutables} from '../base/RouterImmutables.sol';
-import {SafeTransferLib} from 'solmate/src/utils/SafeTransferLib.sol';
-import {ERC20} from 'solmate/src/tokens/ERC20.sol';
+import {SafeTransferLib} from 'solmate/utils/SafeTransferLib.sol';
+import {ERC20} from 'solmate/tokens/ERC20.sol';
 
 /// @title Payments contract
 /// @notice Performs various operations around the payment of ETH and tokens
@@ -12,9 +12,9 @@ abstract contract Payments is RouterImmutables {
     using SafeTransferLib for ERC20;
     using SafeTransferLib for address;
 
-    error InsufficientToken();
-    error InsufficientETH();
-    error InvalidBips();
+    error InsufficientToken();  // 675cae38
+    error InsufficientETH();  // 6a12f104
+    error InvalidBips();  // deaa01e6
 
     uint256 internal constant FEE_BIPS_BASE = 10_000;
 

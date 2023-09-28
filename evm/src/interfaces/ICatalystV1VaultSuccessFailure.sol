@@ -1,5 +1,5 @@
 //SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.16;
+pragma solidity ^0.8.17;
 
 /// @title Escrow related functions defined by Catalyst v1 Vaults
 /// @notice Contains the functions used to manage escrows by the cross-chain interface.

@@ -1,5 +1,5 @@
 //SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.16;
+pragma solidity ^0.8.17;
 
 
 import { IMessageEscrowStructs } from "GeneralisedIncentives/src/interfaces/IMessageEscrowStructs.sol";
@@ -58,6 +58,8 @@ interface ICatalystV1VaultState {
     function _vaultConnection(bytes32 sourceIdentifier, bytes calldata fromVault) external view returns (bool);
 
     function factoryOwner() external view returns (address);
+
+    function governanceFeeDestination() external view returns (address);
 
     /**
      * @notice External view function purely used to signal if a vault is safe to use.

@@ -1,18 +1,19 @@
 //SPDX-License-Identifier: UNLICENSED
 
-pragma solidity ^0.8.16;
+pragma solidity ^0.8.17;
 
-import {ERC20} from 'solmate/src/tokens/ERC20.sol';
-import {SafeTransferLib} from 'solmate/src/utils/SafeTransferLib.sol';
+import {ERC20} from 'solmate/tokens/ERC20.sol';
+import {SafeTransferLib} from 'solmate/utils/SafeTransferLib.sol';
 import { IMessageEscrowStructs } from "GeneralisedIncentives/src/interfaces/IMessageEscrowStructs.sol";
-import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
-import { ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import { Initializable } from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
-import { Multicall } from "@openzeppelin/contracts/utils/Multicall.sol";
+import { Ownable } from "openzeppelin-contracts/contracts/access/Ownable.sol";
+import { ReentrancyGuard} from "openzeppelin-contracts/contracts/security/ReentrancyGuard.sol";
+import { Initializable } from "openzeppelin-contracts/contracts/proxy/utils/Initializable.sol";
+import { Multicall } from "openzeppelin-contracts/contracts/utils/Multicall.sol";
 import { MAX_GOVERNANCE_FEE_SHARE } from"./CatalystFactory.sol";
 import { FixedPointMathLib} from "./utils/FixedPointMathLib.sol";
 import { ICatalystReceiver} from "./interfaces/IOnCatalyst.sol";
 import { ICatalystV1Vault } from "./ICatalystV1Vault.sol";
+import { ICatalystV1Factory } from "./interfaces/ICatalystV1Factory.sol";
 import "./interfaces/ICatalystV1VaultErrors.sol";
 
 /**
@@ -138,6 +139,10 @@ abstract contract CatalystVaultCommon is
         return Ownable(FACTORY).owner();
     }
 
+    function governanceFeeDestination() public view override returns (address) {
+        return ICatalystV1Factory(FACTORY)._governanceFeeDestination();
+    }
+
     /**
      * @notice Only allow Governance to change vault parameters
      * @dev Because of dangerous permissions (setConnection, weight changes, amplification changes):
@@ -172,44 +177,6 @@ abstract contract CatalystVaultCommon is
         uint256 U,
         uint256 minOut
     ) virtual internal returns (uint256);
-
-    // -- Underwrite Asset Swaps -- //
-
-    function underwriteAsset(
-        bytes32 identifier,
-        address toAsset,
-        uint256 U,
-        uint256 minOut
-    ) onlyChainInterface external returns (uint256 purchasedTokens) {
-        purchasedTokens = _receiveAsset(toAsset, U, minOut);
-        // Set the escrow.
-        // TODO: Does this correctly set the escrow? (+ / -)
-        _setTokenEscrow(
-            identifier,
-            address(msg.sender),  // is always ChainInterface but msg.sender is cheaper than slaod.
-            toAsset,
-            purchasedTokens
-        );
-    }
-
-    function releaseUnderwriteAsset(
-        bytes32 identifier,
-        uint256 escrowAmount,
-        address escrowToken
-    ) onlyChainInterface external {
-         _releaseAssetEscrow(identifier, escrowAmount, escrowToken); // Only reverts for missing escrow
-
-        // Send escrowed tokens to underwriting module. (chainInterface == msg.sender)
-        ERC20(escrowToken).safeTransfer(msg.sender, escrowAmount);
-    }
-
-    function deleteUnderwriteAsset(
-        bytes32 identifier,
-        uint256 escrowAmount,
-        address escrowToken
-    ) onlyChainInterface external {
-         _releaseAssetEscrow(identifier, escrowAmount, escrowToken); // Only reverts for missing escrow
-    }
 
     // -- Setup Functions -- //
 
@@ -253,7 +220,7 @@ abstract contract CatalystVaultCommon is
         bytes calldata toVault,
         bool state
     ) external override {
-        require((msg.sender == _setupMaster) || (msg.sender == factoryOwner())); // dev: No auth
+        require(msg.sender == _setupMaster); // dev: No auth
         require(toVault.length == 65);  // dev: Vault addresses are uint8 + 64 bytes.
 
         _vaultConnection[channelId][toVault] = state;
@@ -415,7 +382,7 @@ abstract contract CatalystVaultCommon is
         // If governanceFeeShare == 0, then skip the rest of the logic.
         if (governanceFeeShare != 0) {
             uint256 governanceFeeAmount = FixedPointMathLib.mulWadDown(vaultFeeAmount, governanceFeeShare);
-            ERC20(asset).safeTransfer(factoryOwner(), governanceFeeAmount);
+            ERC20(asset).safeTransfer(governanceFeeDestination(), governanceFeeAmount);
         }
     }
 
@@ -445,6 +412,20 @@ abstract contract CatalystVaultCommon is
         if (_escrowLookup[sendLiquidityHash] != address(0)) revert EscrowAlreadyExists();
         _escrowLookup[sendLiquidityHash] = fallbackUser;
         _escrowedVaultTokens += vaultTokens;
+    }
+
+    /// @notice Creates a token escrow for a swap.
+    function _setUnderwriteEscrow(
+        bytes32 underwriteIdentifier,
+        address fromAsset,
+        uint256 amount
+    ) internal {
+        if (_escrowLookup[underwriteIdentifier] != address(0))  revert EscrowAlreadyExists();
+        _escrowLookup[underwriteIdentifier] = address(uint160(1));
+        unchecked {
+            // Must be less than than the vault balance.
+            _escrowedTokens[fromAsset] += amount;
+        }
     }
 
     /// @notice Returns the fallbackUser for the escrow and cleans up the escrow information.
@@ -481,6 +462,26 @@ abstract contract CatalystVaultCommon is
         unchecked {
             // escrowAmount \subseteq _escrowedVaultTokens => escrowAmount <= _escrowedVaultTokens. Cannot be called twice since the 3 lines before ensure this can only be reached once.
             _escrowedVaultTokens -= escrowAmount;
+        }
+        
+        return fallbackUser;
+    }
+
+    /// @notice Returns the fallbackUser for the escrow and cleans up the escrow information.
+    /// @dev 'delete _escrowLookup[sendAssetHash]' ensures this function can only be called once.
+    function _releaseUnderwriteEscrow(
+        bytes32 sendAssetHash,
+        uint256 escrowAmount,
+        address escrowToken
+    ) internal returns(address) {
+
+        address fallbackUser = _escrowLookup[sendAssetHash];  // Passing in an invalid swapHash returns address(0)
+        require(fallbackUser != address(0));  // dev: Invalid swapHash. Alt: Escrow doesn't exist.
+        delete _escrowLookup[sendAssetHash];  // Stops timeout and further acks from being called
+
+        unchecked {
+            // escrowAmount \subseteq _escrowedTokens => escrowAmount <= _escrowedTokens. Cannot be called twice since the 3 lines before ensure this can only be reached once.
+            _escrowedTokens[escrowToken] -= escrowAmount;
         }
         
         return fallbackUser;
@@ -681,6 +682,52 @@ abstract contract CatalystVaultCommon is
                 blockNumberMod  // Used to randomize the hash.
             )
         );
+    }
+
+    // -- Underwrite Asset Swaps -- //
+
+    function underwriteAsset(
+        bytes32 identifier,
+        address toAsset,
+        uint256 U,
+        uint256 minOut
+    ) onlyChainInterface virtual public returns (uint256 purchasedTokens) {
+        purchasedTokens = _receiveAsset(toAsset, U, minOut);  // msg.sender is cheaper than sload.
+        // Set the escrow.
+        _setTokenEscrow(
+            identifier,
+            address(uint160(1)),
+            toAsset,
+            purchasedTokens
+        );
+
+        emit SwapUnderwritten(
+            identifier,
+            toAsset,
+            U,
+            purchasedTokens
+        );
+    }
+
+    function releaseUnderwriteAsset(
+        address refundTo,
+        bytes32 identifier,
+        uint256 escrowAmount,
+        address escrowToken
+    ) onlyChainInterface virtual public {
+         _releaseAssetEscrow(identifier, escrowAmount, escrowToken); // Only reverts for missing escrow
+
+        // Send the assets to the user.
+        ERC20(escrowToken).safeTransfer(refundTo, escrowAmount);
+    }
+
+    function deleteUnderwriteAsset(
+        bytes32 identifier,
+        uint256 U,
+        uint256 escrowAmount,
+        address escrowToken
+    ) onlyChainInterface virtual public {
+         _releaseAssetEscrow(identifier, escrowAmount, escrowToken); // Only reverts for missing escrow
     }
 
 }

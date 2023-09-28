@@ -1,5 +1,5 @@
 //SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.16;
+pragma solidity ^0.8.17;
 
 /// @title Events emitted by Catalyst v1 Factory
 /// @notice Contains all events emitted by the Factory
@@ -29,5 +29,12 @@ interface ICatalystV1FactoryEvents {
      */
     event SetDefaultGovernanceFee(
         uint256 fee
+    );
+
+    /**
+     * @notice Sets a new destination for governance fees.
+     */
+    event SetGovernanceFeeDestination(
+        address newFeeDestination
     );
 }
