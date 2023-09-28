@@ -38,56 +38,6 @@ contract DeployCatalyst is BaseMultiChainDeployer, DeployContracts {
         fund(toFund, 0.2*10**18);
     }
 
-    function regStore() iter_chains(chain_list) broadcast external {
-        load_config();
-
-        CatalystDescriber desc =CatalystDescriber(contracts.describer);
-
-        console.log("factories");
-        address[] memory facts = desc.get_vault_factories();
-        for (uint256 i = 0; i < facts.length; ++i) {
-            console.logAddress(facts[i]);
-        }
-
-        console.log("templates");
-        address[] memory templates = desc.get_whitelisted_templates();
-        for (uint256 i = 0; i < templates.length; ++i) {
-            console.logAddress(templates[i]);
-        }
-
-        console.log("cci");
-        CatalystDescriber.CrossChainInterface[] memory cci = desc.get_whitelisted_CCI();
-        for (uint256 i = 0; i < cci.length; ++i) {
-            console.log(cci[i].version);
-            console.logAddress(cci[i].cci);
-        }
-    }
-
-    function regStore_legacy() iter_chains(chain_list_legacy) broadcast external {
-        load_config();
-
-        CatalystDescriber desc =CatalystDescriber(contracts.describer);
-
-        console.log("factories");
-        address[] memory facts = desc.get_vault_factories();
-        for (uint256 i = 0; i < facts.length; ++i) {
-            console.logAddress(facts[i]);
-        }
-
-        console.log("templates");
-        address[] memory templates = desc.get_whitelisted_templates();
-        for (uint256 i = 0; i < templates.length; ++i) {
-            console.logAddress(templates[i]);
-        }
-
-        console.log("cci");
-        CatalystDescriber.CrossChainInterface[] memory cci = desc.get_whitelisted_CCI();
-        for (uint256 i = 0; i < cci.length; ++i) {
-            console.log(cci[i].version);
-            console.logAddress(cci[i].cci);
-        }
-    }
-
     function setupDescriber() internal {
         CatalystDescriber catalyst_describer = CatalystDescriber(contracts.describer);
         CatalystDescriberRegistry catalyst_registry = CatalystDescriberRegistry(contracts.describer_registry);
@@ -103,6 +53,73 @@ contract DeployCatalyst is BaseMultiChainDeployer, DeployContracts {
         if (catalyst_registry.catalyst_version() == 0) {
             catalyst_registry.add_describer(address(catalyst_describer));
         }
+    }
+
+    function getAddresses() external {
+        address admin_ = vm.envAddress("CATALYST_ADDRESS");
+        uint256 pk = vm.envUint("CATALYST_DEPLOYER");
+
+        vm.startBroadcast(pk);
+
+        deployAllContracts(admin_);
+
+        vm.stopBroadcast();
+
+        // Save json
+        writeToJson();
+    }
+
+    function writeToJson() internal {
+        string memory pathRoot = vm.projectRoot();
+        string memory pathToContractConfig = string.concat(pathRoot, "/script/config/config_contracts.json");
+        string memory obj = "";
+
+        vm.serializeAddress(obj, "amplified_mathlib", contracts.amplified_mathlib);
+        vm.serializeAddress(obj, "amplified_template", contracts.amplified_template);
+        vm.serializeAddress(obj, "describer", contracts.describer);
+        vm.serializeAddress(obj, "describer_registry", contracts.describer_registry);
+        vm.serializeAddress(obj, "factory", contracts.factory);
+        vm.serializeAddress(obj, "volatile_mathlib", contracts.volatile_mathlib);
+        string memory finalJson = vm.serializeAddress(obj, "volatile_template", contracts.volatile_template);
+
+        vm.writeJson(finalJson, pathToContractConfig, string.concat(".contracts"));
+    }
+
+
+    function _regStore() iter_chains(chain_list) internal {
+        CatalystDescriber desc =CatalystDescriber(contracts.describer);
+
+        console.log("factories");
+        address[] memory facts = desc.get_vault_factories();
+        for (uint256 i = 0; i < facts.length; ++i) {
+            console.logAddress(facts[i]);
+        }
+
+        console.log("templates");
+        address[] memory templates = desc.get_whitelisted_templates();
+        for (uint256 i = 0; i < templates.length; ++i) {
+            console.logAddress(templates[i]);
+        }
+
+        console.log("cci");
+        CatalystDescriber.CrossChainInterface[] memory cci = desc.get_whitelisted_CCI();
+        for (uint256 i = 0; i < cci.length; ++i) {
+            console.log(cci[i].version);
+            console.logAddress(cci[i].cci);
+        }
+    }
+
+    function regStore() external {
+        load_config();
+
+        _regStore();
+    }
+
+
+    function regStore_legacy() external {
+        load_config();
+
+        _regStore();
     }
 }
 

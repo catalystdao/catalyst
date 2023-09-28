@@ -132,35 +132,5 @@ contract DeployContracts is Script {
         deploy_describer(bytes32(uint256(251)));
         deploy_registry(bytes32(uint256(251)));
     }
-
-    function getAddresses() external {
-        address admin_ = vm.envAddress("CATALYST_ADDRESS");
-        uint256 pk = vm.envUint("CATALYST_DEPLOYER");
-
-        vm.startBroadcast(pk);
-
-        deployAllContracts(admin_);
-
-        vm.stopBroadcast();
-
-        // Save json
-        writeToJson();
-    }
-
-    function writeToJson() internal {
-        string memory pathRoot = vm.projectRoot();
-        string memory pathToContractConfig = string.concat(pathRoot, "/script/config/config_contracts.json");
-        string memory obj = "";
-
-        vm.serializeAddress(obj, "amplified_mathlib", contracts.amplified_mathlib);
-        vm.serializeAddress(obj, "amplified_template", contracts.amplified_template);
-        vm.serializeAddress(obj, "describer", contracts.describer);
-        vm.serializeAddress(obj, "describer_registry", contracts.describer_registry);
-        vm.serializeAddress(obj, "factory", contracts.factory);
-        vm.serializeAddress(obj, "volatile_mathlib", contracts.volatile_mathlib);
-        string memory finalJson = vm.serializeAddress(obj, "volatile_template", contracts.volatile_template);
-
-        vm.writeJson(finalJson, pathToContractConfig, string.concat(".contracts"));
-    }
 }
 
