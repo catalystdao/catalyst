@@ -1,13 +1,15 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, IbcMsg, to_binary, IbcQuery, PortIdResponse, Order, Uint128, Uint64};
+use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, IbcMsg, to_binary, IbcQuery, PortIdResponse, Order, Uint128, WasmMsg, SubMsg, CosmosMsg, ReplyOn};
 use cw2::set_contract_version;
 use catalyst_types::U256;
+use catalyst_vault_common::{bindings::VaultResponse, msg::ExecuteMsg as VaultExecuteMsg};
+use std::ops::Shl;
 
-use crate::catalyst_ibc_payload::{CatalystV1SendAssetPayload, SendAssetVariablePayload, CatalystV1SendLiquidityPayload, SendLiquidityVariablePayload, CatalystEncodedAddress};
+use crate::catalyst_ibc_payload::{CatalystV1SendAssetPayload, SendAssetVariablePayload, CatalystV1SendLiquidityPayload, SendLiquidityVariablePayload, CatalystEncodedAddress, parse_calldata};
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg, PortResponse, ListChannelsResponse, UnderwriteIdentifierResponse};
-use crate::state::{OPEN_CHANNELS, set_owner_unchecked, update_owner, set_max_underwriting_duration, get_underwrite_identifier};
+use crate::state::{OPEN_CHANNELS, set_owner_unchecked, update_owner, set_max_underwriting_duration, get_underwrite_identifier, UNDERWRITE_REPLY_ID, UnderwriteParams};
 
 // Version information
 const CONTRACT_NAME: &str = "catalyst-ibc-interface";
@@ -25,7 +27,7 @@ pub fn instantiate(
     _env: Env,
     info: MessageInfo,
     _msg: InstantiateMsg,
-) -> Result<Response, ContractError> {
+) -> Result<VaultResponse, ContractError> {
 
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
@@ -47,7 +49,7 @@ pub fn execute(
     env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
-) -> Result<Response, ContractError> {
+) -> Result<VaultResponse, ContractError> {
     match msg {
 
         ExecuteMsg::SendCrossChainAsset {
@@ -119,6 +121,8 @@ pub fn execute(
             underwrite_incentive_x16,
             calldata
         } => execute_underwrite(
+            &mut deps,
+            &info,
             to_vault,
             to_asset_ref,
             u,
@@ -208,7 +212,7 @@ fn execute_send_cross_chain_asset(
     underwrite_incentive_x16: u16,
     block_number: u32,
     calldata: Binary
-) -> Result<Response, ContractError> {
+) -> Result<VaultResponse, ContractError> {
 
     // Build the payload
     let payload = CatalystV1SendAssetPayload {
@@ -269,7 +273,7 @@ fn execute_send_cross_chain_liquidity(
     from_amount: Uint128,
     block_number: u32,
     calldata: Binary
-) -> Result<Response, ContractError> {
+) -> Result<VaultResponse, ContractError> {
 
     // Build the payload
     let payload = CatalystV1SendLiquidityPayload {
@@ -299,8 +303,27 @@ fn execute_send_cross_chain_liquidity(
 }
 
 
-//TODO-UNDERWRITE documentation
+/// Underwrite an asset swap.
+/// 
+/// **NOTE**: All the arguments passed to this function must **exactly match** those of the
+/// desired swap to be underwritten.
+/// 
+/// **NOTE**: This method does not take into account any source vault parameters.
+/// 
+/// # Arguments: 
+/// * `channel_id` - The target chain identifier.
+/// * `to_vault` - The target vault on the target chain (Catalyst encoded).
+/// * `to_account` - The recipient of the swap on the target chain (Catalyst encoded).
+/// * `u` - The outgoing 'units'.
+/// * `min_vault_tokens` - The mininum vault tokens output amount to get on the target vault.
+/// * `min_reference_asset` - The mininum reference asset value on the target vault.
+/// * `from_amount` - The `from_asset` amount sold to the vault.
+/// * `block_number` - The block number at which the transaction has been committed.
+/// * `calldata` - Arbitrary data to be executed on the target chain upon successful execution of the swap.
+/// 
 fn execute_underwrite(
+    deps: &mut DepsMut,
+    info: &MessageInfo,
     to_vault: String,
     to_asset_ref: String,
     u: U256,
@@ -308,9 +331,62 @@ fn execute_underwrite(
     to_account: String,
     underwrite_incentive_x16: u16,
     calldata: Binary
-) -> Result<Response, ContractError> {
-    //TODO-UNDERWRITE
-    todo!()
+) -> Result<VaultResponse, ContractError> {
+
+    let identifier = get_underwrite_identifier(
+        &to_vault,
+        &to_asset_ref,
+        &u,
+        &min_out,
+        &to_account,
+        underwrite_incentive_x16,
+        &calldata
+    );
+
+    // Parse the calldata now to avoid executing all the underwrite logic should the calldata be
+    // wrongly formatted.
+    let parsed_calldata = parse_calldata(deps.as_ref(), calldata)?;
+
+    // Save the underwrite parameters to the store so that they can be recovered on the 'reply'
+    // handler to finish the 'underwrite' logic.
+    let underwrite_params = UnderwriteParams {
+        identifier: identifier.clone(),
+        underwriter: info.sender.clone(),
+        to_vault: to_vault.clone(),
+        to_asset_ref: to_asset_ref.clone(),
+        to_account,
+        underwrite_incentive_x16,
+        calldata: parsed_calldata,
+        funds: info.funds.clone()
+    };
+    underwrite_params.save(deps)?;
+
+    // The swap `min_out` must be increased to take into account the underwriter's incentive
+    let min_out = min_out * Uint128::new(2u128.shl(64))
+        / (Uint128::new(2u128.shl(64) - underwrite_incentive_x16 as u128));
+    
+    // Invoke the vault
+    let underwrite_message = WasmMsg::Execute {
+        contract_addr: to_vault,
+        msg: to_binary(&VaultExecuteMsg::<()>::UnderwriteAsset {
+            identifier,
+            asset_ref: to_asset_ref,
+            u,
+            min_out
+        })?,
+        funds: vec![]
+    };
+
+    Ok(Response::new()
+        .add_submessage(
+            SubMsg {
+                id: UNDERWRITE_REPLY_ID,
+                msg: CosmosMsg::Wasm(underwrite_message),
+                gas_limit: None,
+                reply_on: ReplyOn::Success,
+            }
+        )
+    )
 }
 
 
@@ -323,7 +399,7 @@ fn execute_underwrite_and_check_connection(
     to_account: String,
     underwrite_incentive_x16: u16,
     calldata: Binary
-) -> Result<Response, ContractError> {
+) -> Result<VaultResponse, ContractError> {
     //TODO-UNDERWRITE
     todo!()
 }
@@ -338,7 +414,7 @@ fn execute_expire_underwrite(
     to_account: String,
     underwrite_incentive_x16: u16,
     calldata: Binary
-) -> Result<Response, ContractError> {
+) -> Result<VaultResponse, ContractError> {
     //TODO-UNDERWRITE
     todo!()
 }

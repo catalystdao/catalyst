@@ -1,4 +1,4 @@
-use cosmwasm_std::{StdError, Uint64};
+use cosmwasm_std::{StdError, Uint64, Binary};
 use thiserror::Error;
 
 /// Never is a placeholder to ensure no errors are returned.
@@ -27,6 +27,9 @@ pub enum ContractError {
 
     #[error("Submessage reply id unknown: {id}")]
     UnknownReplyId { id: u64 },
+
+    #[error("The swap has already been underwritten, id: {id}")]
+    SwapAlreadyUnderwritten { id: Binary },
 
     #[error("The specified max underwrite duration is too long (set {set_duration}, max {max_duration})")]
     MaxUnderwriteDurationTooLong {

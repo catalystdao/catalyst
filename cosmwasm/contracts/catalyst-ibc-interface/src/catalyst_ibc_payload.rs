@@ -116,6 +116,7 @@ pub const CALLDATA_BYTES_START       : usize = 65;
 // ******************************************************************************************************************************
 // Payload Helpers
 // ******************************************************************************************************************************
+use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Deps, Addr, Binary};
 use catalyst_types::U256;
 use crate::ContractError;
@@ -290,7 +291,7 @@ impl<T: CatalystV1VariablePayload> CatalystV1Payload<T> {
 // Payload Implementations ******************************************************************************************************
 
 /// Type for decoded calldata.
-#[derive(Clone)]
+#[cw_serde]
 pub struct CatalystCalldata {
     pub target: Addr,
     pub bytes: Binary

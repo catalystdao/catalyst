@@ -74,7 +74,20 @@ pub enum ExecuteMsg {
     },
 
 
-    //TODO-UNDERWRITE documentation
+    /// Underwrite an asset swap.
+    /// 
+    /// **NOTE**: All the arguments passed to this function must **exactly match** those of the
+    /// desired swap to be underwritten.
+    /// 
+    /// # Arguments:
+    /// * `to_vault` - The target vault.
+    /// * `to_asset_ref` - The destination asset.
+    /// * `u` - The underwritten units.
+    /// * `min_out` - The mininum `to_asset_ref` output amount to get on the target vault.
+    /// * `to_account` - The recipient of the swap.
+    /// * `underwrite_incentive_x16` - The underwriting incentive.
+    /// * `calldata` - The swap calldata.
+    /// 
     Underwrite {
         to_vault: String,
         to_asset_ref: String,
