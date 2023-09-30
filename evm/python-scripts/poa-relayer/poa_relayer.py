@@ -308,7 +308,12 @@ def main():
         logging.basicConfig(level=logging.INFO)
 
     relayer = PoARelayer()
-    relayer.run()
+    
+    while True:
+        try:
+            relayer.run()
+        except:
+            sleep(2)
 
 
 if __name__ == "__main__":
