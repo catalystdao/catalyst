@@ -184,10 +184,12 @@ class PoARelayer(MessageSigner):
                 {
                     "from": relayer_address.address,
                     "nonce": self.chains[toChain]["nonce"],
+                    "gas": 1000000
                 } if not self.chains[toChain]["legacy"] else {
                     "from": relayer_address.address,
                     "nonce": self.chains[toChain]["nonce"],
-                    "gasPrice": w3.eth.gas_price
+                    "gasPrice": w3.eth.gas_price,
+                    "gas": 1000000
                 }
             )
         except web3.exceptions.ContractCustomError as e:
@@ -213,10 +215,12 @@ class PoARelayer(MessageSigner):
                     {
                         "from": relayer_address.address,
                         "nonce": self.chains[toChain]["nonce"],
+                        "gas": 2000000
                     } if not self.chains[toChain]["legacy"] else {
                         "from": relayer_address.address,
                         "nonce": self.chains[toChain]["nonce"],
-                        "gasPrice": w3.eth.gas_price
+                        "gasPrice": w3.eth.gas_price,
+                        "gas": 2000000
                     }
                 )
             except: return "no tx"
