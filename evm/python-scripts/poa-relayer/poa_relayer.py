@@ -177,19 +177,33 @@ class PoARelayer(MessageSigner):
         w3 = self.chains[toChain]["w3"]
 
         try:
-            # Execute the transaction on the target side:
+            # Build the transaction and simulate
+            GI.functions.processMessage(
+                signature[1], signature[0], encode(["address"], [relayer_address.address])
+            ).build_transaction(
+                {
+                    "from": relayer_address.address,
+                    "nonce": self.chains[toChain]["nonce"]
+                } if not self.chains[toChain]["legacy"] else {
+                    "from": relayer_address.address,
+                    "nonce": self.chains[toChain]["nonce"],
+                    "gasPrice": w3.eth.gas_price
+                }
+            )
+            
+            # If we can build it and correctly simulate it, execute with 2 million gas.
             tx = GI.functions.processMessage(
                 signature[1], signature[0], encode(["address"], [relayer_address.address])
             ).build_transaction(
                 {
                     "from": relayer_address.address,
                     "nonce": self.chains[toChain]["nonce"],
-                    "gas": 1000000
+                    "gas": 2000000
                 } if not self.chains[toChain]["legacy"] else {
                     "from": relayer_address.address,
                     "nonce": self.chains[toChain]["nonce"],
                     "gasPrice": w3.eth.gas_price,
-                    "gas": 1000000
+                    "gas": 2000000
                 }
             )
         except web3.exceptions.ContractCustomError as e:
