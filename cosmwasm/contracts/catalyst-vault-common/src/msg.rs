@@ -4,8 +4,7 @@ use cosmwasm_std::{Binary, Uint64, Uint128, Addr, Empty};
 use catalyst_types::U256;
 
 #[cfg(feature="asset_cw20")]
-use cw20::Expiration;
-
+use cw20::{Expiration, AllowanceResponse, TokenInfoResponse};
 
 
 /// Vault instantiation struct
@@ -461,6 +460,12 @@ pub enum CommonQueryMsg {
     LiquidityEscrow {
         hash: Binary
     },
+
+
+    // Native Asset Implementation
+    #[cfg(feature="asset_native")]
+    #[returns(VaultTokenDenomResponse)]
+    VaultTokenDenom {},
 
 
     // CW20 Implementation
