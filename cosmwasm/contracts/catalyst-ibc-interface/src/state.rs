@@ -225,7 +225,7 @@ impl UnderwriteEvent {
     /// # Arguments:
     /// * `identifier` - The underwrite identifier of which to retrieve and remove the event.
     /// 
-    pub fn recover(
+    pub fn remove(
         deps: &mut DepsMut,
         identifier: Binary
     ) -> Result<Option<Self>, ContractError> {
@@ -278,7 +278,7 @@ impl UnderwriteParams {
     /// 
     /// **NOTE**: The call will fail if there is no data saved on the store.
     /// 
-    pub fn recover(
+    pub fn remove(
         deps: &mut DepsMut
     ) -> Result<Self, ContractError> {
 
@@ -357,7 +357,7 @@ pub fn handle_underwrite_reply(
         underwrite_incentive_x16,
         calldata,
         funds,
-    } = UnderwriteParams::recover(&mut deps)?;
+    } = UnderwriteParams::remove(&mut deps)?;
 
 
     // Store the underwrite 'event' (i.e. store that an underwrite is active)
@@ -485,7 +485,7 @@ pub fn match_underwrite(
     );
 
     // Get and delete the underwrite event
-    let underwrite_event = UnderwriteEvent::recover(
+    let underwrite_event = UnderwriteEvent::remove(
         deps,
         identifier.clone()
     )?;
