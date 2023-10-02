@@ -1,6 +1,6 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{DepsMut, Env, IbcChannelOpenMsg, IbcChannelConnectMsg, IbcBasicResponse, IbcChannelCloseMsg, IbcPacketReceiveMsg, IbcReceiveResponse, IbcPacketAckMsg, IbcPacketTimeoutMsg, IbcChannel, IbcPacket, Binary, CosmosMsg, to_binary, SubMsg, Reply, Response, SubMsgResult, Uint128, WasmMsg};
+use cosmwasm_std::{DepsMut, Env, IbcChannelOpenMsg, IbcChannelConnectMsg, IbcBasicResponse, IbcChannelCloseMsg, IbcPacketReceiveMsg, IbcReceiveResponse, IbcPacketAckMsg, IbcPacketTimeoutMsg, IbcChannel, IbcPacket, Binary, CosmosMsg, to_binary, SubMsg, Reply, Response, SubMsgResult, Uint128, WasmMsg, ReplyOn};
 
 use catalyst_vault_common::{msg::ExecuteMsg as VaultExecuteMsg, bindings::{VaultResponse, CustomMsg}};
 
@@ -305,14 +305,41 @@ pub fn on_packet_receive(
             )
         },
         1 => {
-            let mut sub_msg = sub_msgs[0].clone();
-            sub_msg.id = RECEIVE_REPLY_ID;
 
-            Ok(IbcReceiveResponse::new()    // 'ack' set on 'reply'
-                .add_submessage(sub_msg)
-                .add_attributes(handle_response.attributes)
-                .add_events(handle_response.events)
-            )
+            // If the requested submessage does not require extra handling on 'reply', set it to
+            // trigger the `RECEIVE_REPLY_ID` logic.
+            if sub_msgs[0].reply_on == ReplyOn::Never {
+
+                let mut sub_msg = sub_msgs[0].clone();
+                sub_msg.id = RECEIVE_REPLY_ID;      // Can override the `id` safely, as `reply_on` is set to `Never`
+                sub_msg.reply_on = ReplyOn::Always;
+    
+                Ok(IbcReceiveResponse::new()    // 'ack' set on 'reply'
+                    .add_submessage(sub_msg)
+                    .add_attributes(handle_response.attributes)
+                    .add_events(handle_response.events)
+                )
+            }
+            // Otherwise, wrap it in another submessage to make sure its 'reply' logic does not
+            // interfere with the `RECEIVE_REPLY_ID` logic.
+            else {
+                let cosmos_msg = CosmosMsg::Wasm(WasmMsg::Execute {
+                    contract_addr: env.contract.address.to_string(),
+                    msg: to_binary(&ExecuteMsg::WrapSubMsgs { sub_msgs })?,
+                    funds: vec![]
+                });
+    
+                let sub_msg = SubMsg::reply_always(
+                    cosmos_msg,
+                    RECEIVE_REPLY_ID
+                );
+    
+                Ok(IbcReceiveResponse::new()    // 'ack' set on 'reply'
+                    .add_submessage(sub_msg)
+                    .add_attributes(handle_response.attributes)
+                    .add_events(handle_response.events)
+                )
+            }
         },
         _ => {
 
