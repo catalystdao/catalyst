@@ -3,10 +3,10 @@ use cosmwasm_std::entry_point;
 use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, IbcMsg, to_binary, IbcQuery, PortIdResponse, Order, Uint128, WasmMsg, SubMsg, CosmosMsg, ReplyOn};
 use cw2::set_contract_version;
 use catalyst_types::U256;
-use catalyst_vault_common::{bindings::{VaultResponse, CustomMsg}, msg::ExecuteMsg as VaultExecuteMsg};
-use std::ops::Shl;
+use catalyst_vault_common::{bindings::{VaultResponse, CustomMsg, Asset, AssetTrait, IntoCosmosCustomMsg}, msg::{ExecuteMsg as VaultExecuteMsg, AssetResponse, CommonQueryMsg}};
+use std::ops::{Shl, Div};
 
-use crate::catalyst_ibc_payload::{CatalystV1SendAssetPayload, SendAssetVariablePayload, CatalystV1SendLiquidityPayload, SendLiquidityVariablePayload, CatalystEncodedAddress, parse_calldata};
+use crate::{catalyst_ibc_payload::{CatalystV1SendAssetPayload, SendAssetVariablePayload, CatalystV1SendLiquidityPayload, SendLiquidityVariablePayload, CatalystEncodedAddress, parse_calldata}, state::{UnderwriteEvent, UNDERWRITING_COLLATERAL, UNDERWRITING_COLLATERAL_BASE, UNDERWRITING_EXPIRE_REWARD, UNDERWRITING_EXPIRE_REWARD_BASE}, event::expire_underwrite_event};
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg, PortResponse, ListChannelsResponse, UnderwriteIdentifierResponse};
 use crate::state::{OPEN_CHANNELS, set_owner_unchecked, update_owner, set_max_underwriting_duration, get_underwrite_identifier, UNDERWRITE_REPLY_ID, UnderwriteParams};
@@ -159,6 +159,9 @@ pub fn execute(
             underwrite_incentive_x16,
             calldata
         } => execute_expire_underwrite(
+            &mut deps,
+            &env,
+            &info,
             to_vault,
             to_asset_ref,
             u,
@@ -413,8 +416,24 @@ fn execute_underwrite_and_check_connection(
 }
 
 
-//TODO-UNDERWRITE documentation
+/// Expire an underwrite and free the escrowed assets.
+/// 
+/// **NOTE**: The underwriter may expire the underwrite at any time. Any other account must wait
+/// until after the expiry time.
+/// 
+/// # Arguments: 
+/// * `to_vault` - The target vault.
+/// * `to_asset_ref` - The destination asset.
+/// * `u` - The underwritten units.
+/// * `min_out` - The mininum `to_asset_ref` output amount to get on the target vault.
+/// * `to_account` - The recipient of the swap.
+/// * `underwrite_incentive_x16` - The underwriting incentive.
+/// * `calldata` - The swap calldata.
+///
 fn execute_expire_underwrite(
+    deps: &mut DepsMut,
+    env: &Env,
+    info: &MessageInfo,
     to_vault: String,
     to_asset_ref: String,
     u: U256,
@@ -423,8 +442,106 @@ fn execute_expire_underwrite(
     underwrite_incentive_x16: u16,
     calldata: Binary
 ) -> Result<VaultResponse, ContractError> {
-    //TODO-UNDERWRITE
-    todo!()
+
+    let identifier = get_underwrite_identifier(
+        &to_vault,
+        &to_asset_ref,
+        &u,
+        &min_out,
+        &to_account,
+        underwrite_incentive_x16,
+        &calldata
+    );
+
+    // ! Remove the underwrite event to prevent 'expire' being called multiple times
+    let underwrite_event = UnderwriteEvent::remove(deps, identifier.clone())?
+        .ok_or(ContractError::UnderwriteDoesNotExist{ id: identifier.clone() })?;
+
+    // Verify that the underwrite has expired. Note that the underwriter may 'expire' the
+    // underwrite at any time.
+    if underwrite_event.underwriter != info.sender {
+        let current_time = env.block.time.seconds();
+        let expiry_time = underwrite_event.expiry.u64();
+        if current_time < expiry_time {
+            return Err(ContractError::UnderwriteNotExpired{
+                // 'wrapping_sub' safe, 'current_time < expiry_time' checked above 
+                time_remaining: expiry_time.wrapping_sub(current_time).into()
+            })
+        }
+    }
+
+    // Build the message to invoke the vault's `DeleteUnderwriteAsset`.
+    let underwrite_amount = underwrite_event.amount;
+    let delete_underwrite_msg = WasmMsg::Execute {
+        contract_addr: to_vault.clone(),
+        msg: to_binary(&VaultExecuteMsg::<()>::DeleteUnderwriteAsset {
+            identifier: identifier.clone(),
+            asset_ref: to_asset_ref.clone(),
+            u,
+            escrow_amount: underwrite_amount
+        })?,
+        funds: vec![]
+    };
+
+    // Build the messages to transfer the escrowed assets.
+    //   -> refund = collateral + incentive
+    let underwrite_incentive_x16 = Uint128::new(underwrite_incentive_x16 as u128);
+    let underwrite_incentive = (underwrite_amount * underwrite_incentive_x16) >> 16;
+    let underwrite_collateral = underwrite_amount * (
+        UNDERWRITING_COLLATERAL
+    ) / UNDERWRITING_COLLATERAL_BASE;
+    let refund_amount = underwrite_incentive
+        .wrapping_add(underwrite_collateral);  // 'wrapping_add` safe: a larger computation has already
+                                                // been done on the initial 'underwrite' call.
+
+    // Compute the share of the refund amount that goes to the caller and to the vault
+    // NOTE: Use U256 to make sure the following calculation never overflowS
+    let expire_reward = U256::from(refund_amount)
+        .wrapping_mul(U256::from_uint128(UNDERWRITING_EXPIRE_REWARD))   // 'wrapping_mul' safe: U256.max > Uint128.max * Uint128.max
+        .div(U256::from_uint128(UNDERWRITING_EXPIRE_REWARD_BASE))
+        .as_uint128();  // Casting safe, as UNDERWRITING_EXPIRE_REWARD < UNDERWRITING_EXPIRE_REWARD_BASE
+
+    let vault_reward = refund_amount.wrapping_sub(expire_reward);   // 'wrapping_sub' safe: expire_reward < refund_amount
+
+    let asset = deps.querier.query_wasm_smart::<AssetResponse<Asset>>(
+        to_vault.clone(),
+        &CommonQueryMsg::Asset { asset_ref: to_asset_ref }
+    )?.asset;
+
+    let expire_reward_msg = asset.send_asset(
+        env,
+        expire_reward,
+        info.sender.to_string()
+    )?;
+
+    let vault_reward_transfer_msg = asset.send_asset(
+        env,
+        vault_reward,
+        to_vault
+    )?;
+
+    // Build the response
+    let mut response = VaultResponse::new()
+        .add_message(delete_underwrite_msg);
+
+    if let Some(msg) = expire_reward_msg {
+        response = response.add_message(msg.into_cosmos_vault_msg());
+    }
+
+    if let Some(msg) = vault_reward_transfer_msg {
+        response = response.add_message(msg.into_cosmos_vault_msg());
+    }
+
+    Ok(
+        response
+            .add_event(
+                expire_underwrite_event(
+                    identifier,
+                    info.sender.to_string(),
+                    expire_reward
+                )
+            )
+    )
 }
 
 

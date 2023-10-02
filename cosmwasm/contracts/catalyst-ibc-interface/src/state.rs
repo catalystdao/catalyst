@@ -170,8 +170,11 @@ pub fn handle_receive_liquidity(
 // Underwriting
 // ************************************************************************************************
 
-pub const UNDERWRITING_COLLATERAL: Uint128 = Uint128::new(35);        // 3.5% collateral
+pub const UNDERWRITING_COLLATERAL: Uint128 = Uint128::new(35);          // 3.5% collateral
 pub const UNDERWRITING_COLLATERAL_BASE: Uint128 = Uint128::new(1000);
+
+pub const UNDERWRITING_EXPIRE_REWARD: Uint128 = Uint128::new(350);      // 35% of the collateral
+pub const UNDERWRITING_EXPIRE_REWARD_BASE: Uint128 = Uint128::new(1000);
 
 pub const MAX_UNDERWRITE_DURATION_ALLOWED_SECONDS: Uint64 = Uint64::new(15 * 24 * 60 * 60); // 15 days
 

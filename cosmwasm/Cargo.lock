@@ -112,6 +112,7 @@ dependencies = [
  "serde",
  "sha3",
  "thiserror",
+ "vault-assets",
 ]
 
 [[package]]

@@ -1,5 +1,6 @@
-use cosmwasm_std::{StdError, Uint64, Binary};
+use cosmwasm_std::{StdError, Uint64, Binary, OverflowError};
 use thiserror::Error;
+use vault_assets::error::AssetError;
 
 /// Never is a placeholder to ensure no errors are returned.
 #[derive(Error, Debug)]
@@ -31,9 +32,28 @@ pub enum ContractError {
     #[error("The swap has already been underwritten, id: {id}")]
     SwapAlreadyUnderwritten { id: Binary },
 
+    #[error("An underwrite for the given parameters does not exist, id: {id}")]
+    UnderwriteDoesNotExist { id: Binary },
+
+    #[error("The underwrite has not expired. Time remaining: {time_remaining}")]
+    UnderwriteNotExpired { time_remaining: Uint64 },
+
     #[error("The specified max underwrite duration is too long (set {set_duration}, max {max_duration})")]
     MaxUnderwriteDurationTooLong {
         set_duration: Uint64,
         max_duration: Uint64
+    }
+}
+
+
+impl From<AssetError> for ContractError {
+    fn from(err: AssetError) -> Self {
+        StdError::from(err).into()
+    }
+}
+
+impl From<OverflowError> for ContractError {
+    fn from(err: OverflowError) -> Self {
+        StdError::from(err).into()
     }
 }
