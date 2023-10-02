@@ -294,7 +294,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
         uint256 U
     ) public view override returns (uint256) {
         // B low => fewer tokens returned. Subtract the escrow amount to decrease the balance.
-        uint256 B = ERC20(toAsset).balanceOf(address(this));
+        uint256 B = ERC20(toAsset).balanceOf(address(this)) - _escrowedTokens[toAsset];
         uint256 W = _weight[toAsset];
 
         // If someone were to purchase a token which is not part of the vault on setup
