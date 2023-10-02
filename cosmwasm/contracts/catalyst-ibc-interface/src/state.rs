@@ -1,12 +1,12 @@
 use catalyst_types::U256;
-use catalyst_vault_common::{msg::{CommonQueryMsg, AssetResponse, ReceiverExecuteMsg}, bindings::{Asset, AssetTrait, CustomMsg, VaultResponse, IntoCosmosCustomMsg}};
+use catalyst_vault_common::{msg::{CommonQueryMsg, AssetResponse, ReceiverExecuteMsg, ExecuteMsg as VaultExecuteMsg}, bindings::{Asset, AssetTrait, CustomMsg, VaultResponse, IntoCosmosCustomMsg}};
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{IbcEndpoint, Deps, Addr, DepsMut, Event, MessageInfo, Empty, Response, Uint64, Uint128, Binary, Env, from_binary, StdError, Coin, CosmosMsg, to_binary, SubMsgResponse};
+use cosmwasm_std::{IbcEndpoint, Deps, Addr, DepsMut, Event, MessageInfo, Empty, Response, Uint64, Uint128, Binary, Env, from_binary, StdError, Coin, CosmosMsg, to_binary, SubMsgResponse, WasmMsg};
 use cw_controllers::Admin;
 use cw_storage_plus::{Map, Item};
 use sha3::{Keccak256, Digest};
 
-use crate::{ContractError, event::{set_owner_event, underwrite_swap_event}, catalyst_ibc_payload::CatalystCalldata};
+use crate::{ContractError, event::{set_owner_event, underwrite_swap_event, fulfill_underwrite_event}, catalyst_ibc_payload::{CatalystCalldata, parse_calldata}};
 
 // Interface storage
 pub const OPEN_CHANNELS: Map<&str, IbcChannelInfo> = Map::new("catalyst-ibc-interface-open-channels");
@@ -34,6 +34,135 @@ pub struct IbcChannelInfo {
     pub endpoint: IbcEndpoint,
     pub counterparty_endpoint: IbcEndpoint,
     pub connection_id: String
+}
+
+
+
+
+// Receive Helpers
+// ************************************************************************************************
+
+//TODO-UNDERWRITE documentation
+pub fn handle_receive_asset(
+    deps: &mut DepsMut,
+    env: &Env,
+    channel_id: String,
+    to_vault: String,
+    to_asset_index: u8,
+    to_account: String,
+    u: U256,
+    min_out: Uint128,
+    underwrite_incentive_x16: u16,
+    from_vault: Binary,
+    from_amount: U256,
+    from_asset: Binary,
+    from_block_number_mod: u32,
+    calldata: Binary
+) -> Result<VaultResponse, ContractError> {
+
+    let to_asset = deps.querier.query_wasm_smart::<AssetResponse<Asset>>(
+        to_vault.clone(),
+        &CommonQueryMsg::AssetByIndex { asset_index: to_asset_index }
+    )?.asset;
+
+    let match_underwrite_response = match_underwrite(
+        deps,
+        env,
+        &to_vault,
+        &to_asset,
+        &u,
+        &min_out,
+        &to_account,
+        underwrite_incentive_x16,
+        &calldata
+    )?;
+
+    match match_underwrite_response {
+        Some(response) => Ok(response),
+        None => {
+
+            // Parse the calldata
+            let parsed_calldata = parse_calldata(
+                deps.as_ref(),
+                calldata
+            )?;
+
+            // Build the message to execute the reception of the swap.
+            // NOTE: none of the fields are validated, these must be correctly handled by the vault.
+            let wasm_msg = WasmMsg::Execute {
+                contract_addr: to_vault,
+                msg: to_binary(&VaultExecuteMsg::<()>::ReceiveAsset {
+                    channel_id,
+                    from_vault,
+                    to_asset_index,
+                    to_account,
+                    u,
+                    min_out,
+                    from_amount,
+                    from_asset,
+                    from_block_number_mod,
+                    calldata_target: parsed_calldata.as_ref().map(|data| data.target.to_string()),
+                    calldata: parsed_calldata.map(|data| data.bytes)
+                })?,
+                funds: vec![]
+            };
+
+            Ok(
+                Response::new()
+                    .add_message(wasm_msg)
+            )
+
+        },
+    }
+    
+}
+
+
+//TODO-UNDERWRITE documentation
+pub fn handle_receive_liquidity(
+    deps: &mut DepsMut,
+    channel_id: String,
+    to_vault: String,
+    to_account: String,
+    u: U256,
+    min_vault_tokens: Uint128,
+    min_reference_asset: Uint128,
+    from_vault: Binary,
+    from_amount: U256,
+    from_block_number_mod: u32,
+    calldata: Binary
+) -> Result<VaultResponse, ContractError> {
+
+    // Parse the calldata
+    let parsed_calldata = parse_calldata(
+        deps.as_ref(),
+        calldata
+    )?;
+
+    // Build the message to execute the reception of the swap.
+    // NOTE: none of the fields are validated, these must be correctly handled by the vault.
+    let wasm_msg = WasmMsg::Execute {
+        contract_addr: to_vault,    // No need to validate, 'Execute' will fail for an invalid address.
+        msg: to_binary(&VaultExecuteMsg::<()>::ReceiveLiquidity {
+            channel_id,
+            from_vault,
+            to_account,
+            u,
+            min_vault_tokens,
+            min_reference_asset,
+            from_amount,
+            from_block_number_mod,
+            calldata_target: parsed_calldata.as_ref().map(|data| data.target.to_string()),
+            calldata: parsed_calldata.map(|data| data.bytes)
+        })?,
+        funds: vec![]
+    };
+
+    Ok(
+        Response::new()
+            .add_message(wasm_msg)
+    )
+
 }
 
 
@@ -90,21 +219,23 @@ impl UnderwriteEvent {
 
     /// Retrieve and remove the event from the store of the given identifier.
     /// 
-    /// **NOTE**: The call will fail if there is no data saved on the store with the given
+    /// **NOTE**: Will return `None` if there is no data saved on the store with the given
     /// identifier.
     /// 
     /// # Arguments:
     /// * `identifier` - The underwrite identifier of which to retrieve and remove the event.
     /// 
-    pub fn remove(
+    pub fn recover(
         deps: &mut DepsMut,
         identifier: Binary
-    ) -> Result<Self, ContractError> {
+    ) -> Result<Option<Self>, ContractError> {
 
         let key = UNDERWRITE_EVENTS.key(identifier.0);
 
-        let event = key.load(deps.storage)?;
-        key.remove(deps.storage);
+        let event = key.may_load(deps.storage)?;
+        if event.is_some() {
+            key.remove(deps.storage);
+        }
 
         Ok(event)
     }
@@ -147,7 +278,7 @@ impl UnderwriteParams {
     /// 
     /// **NOTE**: The call will fail if there is no data saved on the store.
     /// 
-    pub fn remove(
+    pub fn recover(
         deps: &mut DepsMut
     ) -> Result<Self, ContractError> {
 
@@ -226,7 +357,7 @@ pub fn handle_underwrite_reply(
         underwrite_incentive_x16,
         calldata,
         funds,
-    } = UnderwriteParams::remove(&mut deps)?;
+    } = UnderwriteParams::recover(&mut deps)?;
 
 
     // Store the underwrite 'event' (i.e. store that an underwrite is active)
@@ -315,6 +446,106 @@ pub fn handle_underwrite_reply(
             )
         )
     )
+
+}
+
+
+/// Match the an incoming asset swap with an underwrite event. Returns `None` if no underwrite
+/// is found.
+/// 
+/// # Arguments:
+/// * `to_vault` - The target vault.
+/// * `to_asset` - The destination asset.
+/// * `u` - The underwritten units.
+/// * `min_out` - The mininum `to_asset_ref` output amount to get on the target vault.
+/// * `to_account` - The recipient of the swap.
+/// * `underwrite_incentive_x16` - The underwriting incentive share.
+/// * `calldata` - The swap calldata.
+/// 
+pub fn match_underwrite(
+    deps: &mut DepsMut,
+    env: &Env,
+    to_vault: &str,
+    to_asset: &Asset,
+    u: &U256,
+    min_out: &Uint128,
+    to_account: &str,
+    underwrite_incentive_x16: u16,
+    calldata: &Binary
+) -> Result<Option<VaultResponse>, ContractError> {
+
+    let identifier = get_underwrite_identifier(
+        to_vault,
+        to_asset.get_asset_ref(),
+        u,
+        min_out,
+        to_account,
+        underwrite_incentive_x16,
+        calldata
+    );
+
+    // Get and delete the underwrite event
+    let underwrite_event = UnderwriteEvent::recover(
+        deps,
+        identifier.clone()
+    )?;
+
+
+    if underwrite_event.is_none() {
+        return Ok(None);
+    }
+
+
+    let UnderwriteEvent {
+        amount: underwritten_amount,
+        underwriter,
+        expiry: _,
+    } = underwrite_event.unwrap();  // Unwrap safe: if the event is `None`, the function returns on
+                                    // the previous statement.
+
+    // Call the vault to release the underwrite escrow
+    let release_underwrite_messsage = WasmMsg::Execute {
+        contract_addr: to_vault.to_owned(),
+        msg: to_binary(&VaultExecuteMsg::<()>::ReleaseUnderwriteAsset {
+            identifier: identifier.clone(),
+            asset_ref: to_asset.get_asset_ref().to_owned(),
+            escrow_amount: underwritten_amount,
+            recipient: underwriter.to_string()
+        })?,
+        funds: vec![]
+    };
+
+    //  Send the underwrite collateral plus the incentive to the underwriter.
+    let underwriter_collateral = underwritten_amount * (
+        UNDERWRITING_COLLATERAL
+    ) / UNDERWRITING_COLLATERAL_BASE;
+
+    let underwrite_incentive_x16 = Uint128::new(underwrite_incentive_x16 as u128);
+    let underwrite_incentive = (underwritten_amount * underwrite_incentive_x16) >> 16;
+    
+    let underwriter_payment = underwriter_collateral + underwrite_incentive;
+
+    let underwriter_payment_msg = to_asset.send_asset(
+        env,
+        underwriter_payment,
+        underwriter.to_string()
+    ).map_err(|err| StdError::from(err))?;
+
+    // Build the response
+    let mut response = Response::new()
+        .add_message(release_underwrite_messsage);
+    
+    if let Some(msg) = underwriter_payment_msg {
+        response = response.add_message(msg.into_cosmos_vault_msg());
+    }
+    
+    Ok(Some(response
+        .add_event(
+            fulfill_underwrite_event(
+                identifier
+            )
+        )
+    ))
 
 }
 

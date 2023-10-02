@@ -1,10 +1,10 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{DepsMut, Env, IbcChannelOpenMsg, IbcChannelConnectMsg, IbcBasicResponse, IbcChannelCloseMsg, IbcPacketReceiveMsg, IbcReceiveResponse, IbcPacketAckMsg, IbcPacketTimeoutMsg, IbcChannel, IbcPacket, Binary, CosmosMsg, to_binary, SubMsg, Reply, Response, SubMsgResult, Uint128};
+use cosmwasm_std::{DepsMut, Env, IbcChannelOpenMsg, IbcChannelConnectMsg, IbcBasicResponse, IbcChannelCloseMsg, IbcPacketReceiveMsg, IbcReceiveResponse, IbcPacketAckMsg, IbcPacketTimeoutMsg, IbcChannel, IbcPacket, Binary, CosmosMsg, to_binary, SubMsg, Reply, Response, SubMsgResult, Uint128, WasmMsg};
 
-use catalyst_vault_common::{msg::ExecuteMsg as VaultExecuteMsg, bindings::VaultResponse};
+use catalyst_vault_common::{msg::ExecuteMsg as VaultExecuteMsg, bindings::{VaultResponse, CustomMsg}};
 
-use crate::{ContractError, state::{IbcChannelInfo, OPEN_CHANNELS, UNDERWRITE_REPLY_ID, handle_underwrite_reply}, catalyst_ibc_payload::{CatalystV1Packet, parse_calldata}, error::Never};
+use crate::{ContractError, state::{IbcChannelInfo, OPEN_CHANNELS, UNDERWRITE_REPLY_ID, handle_underwrite_reply, handle_receive_asset, handle_receive_liquidity}, catalyst_ibc_payload::CatalystV1Packet, error::Never, msg::ExecuteMsg};
 
 
 // NOTE: Large parts of this IBC section are based on the cw20-ics20 example repository.
@@ -131,13 +131,13 @@ fn validate_ibc_channel_config(
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn ibc_packet_receive(
     deps: DepsMut,
-    _env: Env,
+    env: Env,
     msg: IbcPacketReceiveMsg,
-) -> Result<IbcReceiveResponse, Never> {
+) -> Result<IbcReceiveResponse<CustomMsg>, Never> {
 
     // Invoke the receive function (either 'ReceiveAsset' or 'ReceiveLiquidity') of the destination vault.
     // This function should never error, rather it should send a failure message within the returned ack.
-    on_packet_receive(deps, msg.packet)
+    on_packet_receive(deps, env, msg.packet)
         .or_else(|_| {
             Ok(IbcReceiveResponse::new()
                 .set_ack(ack_fail())
@@ -189,7 +189,7 @@ pub fn ibc_packet_ack(
     _deps: DepsMut,
     _env: Env,
     msg: IbcPacketAckMsg,
-) -> Result<IbcBasicResponse, ContractError> {
+) -> Result<IbcBasicResponse<CustomMsg>, ContractError> {
 
     // NOTE: Only the first byte of the 'ack' response is checked. This allows future 'ack' implementations to
     // extend the 'ack' format.
@@ -211,7 +211,7 @@ pub fn ibc_packet_timeout(
     _deps: DepsMut,
     _env: Env,
     msg: IbcPacketTimeoutMsg,
-) -> Result<IbcBasicResponse, ContractError> {
+) -> Result<IbcBasicResponse<CustomMsg>, ContractError> {
 
     on_packet_failure(msg.packet)
 
@@ -235,54 +235,41 @@ pub fn ack_fail() -> Binary {
 /// * `packet` - The IBC packet.
 /// 
 pub fn on_packet_receive(
-    deps: DepsMut,
+    mut deps: DepsMut,
+    env: Env,
     packet: IbcPacket
-) -> Result<IbcReceiveResponse, ContractError> {
+) -> Result<IbcReceiveResponse<CustomMsg>, ContractError> {
 
     let catalyst_packet = CatalystV1Packet::try_decode(packet.data)?;
 
     // Match the payload type and build up the execute message
-    let receive_asset_execute_msg: cosmwasm_std::WasmMsg = match catalyst_packet {
-        CatalystV1Packet::SendAsset(payload) => {
+    let handle_response = match catalyst_packet {
 
-            // Parse the calldata
-            let parsed_calldata = parse_calldata(
-                deps.as_ref(),
-                payload.variable_payload.calldata.clone()
-            )?;
+        CatalystV1Packet::SendAsset(payload) => {
 
             // Convert min_out into Uint128
             let min_out: Uint128 = payload.variable_payload.min_out.try_into()
                 .map_err(|_| ContractError::PayloadDecodingError {})?;
 
-            // Build the message to execute the reception of the swap.
-            // NOTE: none of the fields are validated, these must be correctly handled by the vault.
-            Ok::<cosmwasm_std::WasmMsg, ContractError>(cosmwasm_std::WasmMsg::Execute {
-                contract_addr: payload.to_vault.try_decode_as_string()?,    // No need to validate, 'Execute' will fail for an invalid address.
-                msg: to_binary(&VaultExecuteMsg::<()>::ReceiveAsset {
-                    channel_id: packet.dest.channel_id,
-                    from_vault: payload.from_vault.to_binary(),
-                    to_asset_index: payload.variable_payload.to_asset_index,
-                    to_account: payload.to_account.try_decode_as_string()?,
-                    u: payload.u,
-                    min_out,
-                    from_amount: payload.variable_payload.from_amount,
-                    from_asset: payload.variable_payload.from_asset.to_binary(),
-                    from_block_number_mod: payload.variable_payload.block_number,
-                    calldata_target: parsed_calldata.clone().map(|data| data.target.to_string()),
-                    calldata: parsed_calldata.map(|data| data.bytes)
-                })?,
-                funds: vec![]
-            })
-
+            handle_receive_asset(
+                &mut deps,
+                &env,
+                packet.dest.channel_id,
+                payload.to_vault.try_decode_as_string()?,
+                payload.variable_payload.to_asset_index,
+                payload.to_account.try_decode_as_string()?,
+                payload.u,
+                min_out,
+                payload.variable_payload.underwrite_incentive_x16,
+                payload.from_vault.to_binary(),
+                payload.variable_payload.from_amount,
+                payload.variable_payload.from_asset.to_binary(),
+                payload.variable_payload.block_number,
+                payload.variable_payload.calldata
+            )
         },
-        CatalystV1Packet::SendLiquidity(payload) => {
 
-            // Parse the calldata
-            let parsed_calldata = parse_calldata(
-                deps.as_ref(),
-                payload.variable_payload.calldata.clone()
-            )?;
+        CatalystV1Packet::SendLiquidity(payload) => {
 
             // Convert the minimum outputs into Uint128
             let min_vault_tokens: Uint128 = payload.variable_payload.min_vault_tokens.try_into()
@@ -290,39 +277,66 @@ pub fn on_packet_receive(
             let min_reference_asset: Uint128 = payload.variable_payload.min_reference_asset.try_into()
                 .map_err(|_| ContractError::PayloadDecodingError {})?;
 
-            // Build the message to execute the reception of the swap.
-            // NOTE: none of the fields are validated, these must be correctly handled by the vault.
-            Ok::<cosmwasm_std::WasmMsg, ContractError>(cosmwasm_std::WasmMsg::Execute {
-                contract_addr: payload.to_vault.try_decode_as_string()?,    // No need to validate, 'Execute' will fail for an invalid address.
-                msg: to_binary(&VaultExecuteMsg::<()>::ReceiveLiquidity {
-                    channel_id: packet.dest.channel_id,
-                    from_vault: payload.from_vault.to_binary(),
-                    to_account: payload.to_account.try_decode_as_string()?,
-                    u: payload.u,
-                    min_vault_tokens,
-                    min_reference_asset,
-                    from_amount: payload.variable_payload.from_amount,
-                    from_block_number_mod: payload.variable_payload.block_number,
-                    calldata_target: parsed_calldata.clone().map(|data| data.target.to_string()),
-                    calldata: parsed_calldata.map(|data| data.bytes)
-                })?,
-                funds: vec![]
-            })
-
+            handle_receive_liquidity(
+                &mut deps,
+                packet.dest.channel_id,
+                payload.to_vault.try_decode_as_string()?,
+                payload.to_account.try_decode_as_string()?,
+                payload.u,
+                min_vault_tokens,
+                min_reference_asset,
+                payload.from_vault.to_binary(),
+                payload.variable_payload.from_amount,
+                payload.variable_payload.block_number,
+                payload.variable_payload.calldata
+            )
         }
     }?;
 
-    // Build the response message.
-    // ! Set 'reply_always' so that the 'reply' handler can set the 'success'/'fail' acknowledgement on
-    // ! the returned response.
-    let sub_msg = SubMsg::reply_always(
-        receive_asset_execute_msg,
-        RECEIVE_REPLY_ID
-    );
+    // Convert the 'handle' response into an IbcReceiveResponse
+    let sub_msgs = handle_response.messages;
 
-    Ok(IbcReceiveResponse::new()
-        .add_submessage(sub_msg)
-    )
+    match sub_msgs.len() {
+        0 => {
+            Ok(IbcReceiveResponse::new()
+                .set_ack(ack_success())
+                .add_attributes(handle_response.attributes)
+                .add_events(handle_response.events)
+            )
+        },
+        1 => {
+            let mut sub_msg = sub_msgs[0].clone();
+            sub_msg.id = RECEIVE_REPLY_ID;
+
+            Ok(IbcReceiveResponse::new()    // 'ack' set on 'reply'
+                .add_submessage(sub_msg)
+                .add_attributes(handle_response.attributes)
+                .add_events(handle_response.events)
+            )
+        },
+        _ => {
+
+            // Wrap the submessages within a single message. This is required to be able to revert
+            // the entire state of all the sub messages should one of the messages revert without
+            // having to fail the entire transaction.
+            let cosmos_msg = CosmosMsg::Wasm(WasmMsg::Execute {
+                contract_addr: env.contract.address.to_string(),
+                msg: to_binary(&ExecuteMsg::WrapSubMsgs { sub_msgs })?,
+                funds: vec![]
+            });
+
+            let sub_msg = SubMsg::reply_always(
+                cosmos_msg,
+                RECEIVE_REPLY_ID
+            );
+
+            Ok(IbcReceiveResponse::new()    // 'ack' set on 'reply'
+                .add_submessage(sub_msg)
+                .add_attributes(handle_response.attributes)
+                .add_events(handle_response.events)
+            )
+        }
+    }
 }
 
 
@@ -338,7 +352,7 @@ pub fn on_packet_receive(
 pub fn on_packet_response(
     packet: IbcPacket,
     success: bool
-) -> Result<IbcBasicResponse, ContractError> {
+) -> Result<IbcBasicResponse<CustomMsg>, ContractError> {
 
     let catalyst_packet = CatalystV1Packet::try_decode(packet.data)?;
     
@@ -430,7 +444,7 @@ pub fn on_packet_response(
 /// 
 pub fn on_packet_success(
     packet: IbcPacket
-) -> Result<IbcBasicResponse, ContractError> {
+) -> Result<IbcBasicResponse<CustomMsg>, ContractError> {
     on_packet_response(packet, true)
 }
 
@@ -442,6 +456,6 @@ pub fn on_packet_success(
 /// 
 pub fn on_packet_failure(
     packet: IbcPacket
-) -> Result<IbcBasicResponse, ContractError> {
+) -> Result<IbcBasicResponse<CustomMsg>, ContractError> {
     on_packet_response(packet, false)
 }

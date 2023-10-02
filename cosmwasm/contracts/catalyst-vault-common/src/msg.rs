@@ -404,6 +404,10 @@ pub enum CommonQueryMsg {
     Asset{
         asset_ref: String
     },
+    #[returns(AssetResponse)]
+    AssetByIndex{
+        asset_index: u8
+    },
     #[returns(WeightResponse)]
     Weight {
         asset_ref: String

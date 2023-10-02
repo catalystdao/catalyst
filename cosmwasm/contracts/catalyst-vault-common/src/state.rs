@@ -1218,6 +1218,28 @@ pub fn query_asset(
     )
 }
 
+/// Query the vault's asset that corresponds to the given asset index.
+/// 
+/// # Arguments:
+/// * `asset_index` - The asset index.
+/// 
+pub fn query_asset_by_index(
+    deps: Deps,
+    asset_index: u8
+) -> StdResult<AssetResponse<Asset>> {
+
+    let asset_ref = VaultAssets::load_refs(&deps)?
+        .get(asset_index as usize)
+        .ok_or(ContractError::AssetNotFound {})?
+        .clone();
+
+    Ok(
+        AssetResponse {
+            asset: Asset::from_asset_ref(&deps, &asset_ref)?
+        }
+    )
+}
+
 /// Query the weight of an asset.
 /// 
 /// # Arguments:

@@ -1,5 +1,5 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{Uint64, Uint128, Binary};
+use cosmwasm_std::{Uint64, Uint128, Binary, SubMsg, Empty};
 use catalyst_types::U256;
 
 use crate::state::IbcChannelInfo;
@@ -10,7 +10,7 @@ pub struct InstantiateMsg {
 
 
 #[cw_serde]
-pub enum ExecuteMsg {
+pub enum ExecuteMsg<T=Empty> {
 
     /// Initiate a 'send_asset' cross-chain call.
     /// 
@@ -120,6 +120,11 @@ pub enum ExecuteMsg {
         to_account: String,
         underwrite_incentive_x16: u16,
         calldata: Binary
+    },
+
+    //TODO-UNDERWRITE documentation
+    WrapSubMsgs {
+        sub_msgs: Vec<SubMsg<T>>
     },
 
 

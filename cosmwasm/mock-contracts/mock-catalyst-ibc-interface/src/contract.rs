@@ -134,13 +134,15 @@ pub fn execute(
             underwrite_incentive_x16,
             calldata
         ),
+
+        ExecuteMsg::WrapSubMsgs { sub_msgs } => todo!(),
     
 
 
         // Ownership msgs
         ExecuteMsg::TransferOwnership {
             new_owner
-        } => update_owner(deps, info, new_owner)
+        } => todo!(),
     }
 
 }

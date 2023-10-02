@@ -3,6 +3,7 @@ use cosmwasm_std::entry_point;
 use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, Uint128};
 use cw2::set_contract_version;
 use catalyst_types::U256;
+use catalyst_vault_common::bindings::VaultResponse;
 
 use catalyst_ibc_interface::ContractError;
 use catalyst_ibc_interface::catalyst_ibc_payload::{CatalystV1SendAssetPayload, SendAssetVariablePayload, CatalystV1SendLiquidityPayload, SendLiquidityVariablePayload, CatalystEncodedAddress};
@@ -27,7 +28,7 @@ pub fn instantiate(
     _env: Env,
     info: MessageInfo,
     _msg: InstantiateMsg,
-) -> Result<Response, ContractError> {
+) -> Result<VaultResponse, ContractError> {
 
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
@@ -48,7 +49,7 @@ pub fn execute(
     env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
-) -> Result<Response, ContractError> {
+) -> Result<VaultResponse, ContractError> {
     match msg {
 
         ExecuteMsg::SendCrossChainAsset {
@@ -108,6 +109,7 @@ pub fn execute(
             channel_id
         } => execute_ibc_packet_receive(
             deps,
+            env,
             info,
             data,
             channel_id
@@ -161,7 +163,7 @@ fn execute_send_cross_chain_asset(
     underwrite_incentive_x16: u16,
     block_number: u32,
     calldata: Binary
-) -> Result<Response, ContractError> {
+) -> Result<VaultResponse, ContractError> {
 
     // Build the payload
     let payload = CatalystV1SendAssetPayload {
@@ -200,7 +202,7 @@ fn execute_send_cross_chain_liquidity(
     from_amount: Uint128,
     block_number: u32,
     calldata: Binary
-) -> Result<Response, ContractError> {
+) -> Result<VaultResponse, ContractError> {
 
     // Build the payload
     let payload = CatalystV1SendLiquidityPayload {
@@ -230,7 +232,7 @@ fn execute_transfer_ownership(
     deps: DepsMut,
     info: MessageInfo,
     new_owner: String
-) -> Result<Response, ContractError> {
+) -> Result<VaultResponse, ContractError> {
     update_owner(deps, info, new_owner)
 }
 

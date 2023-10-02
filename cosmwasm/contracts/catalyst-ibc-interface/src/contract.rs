@@ -3,7 +3,7 @@ use cosmwasm_std::entry_point;
 use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, IbcMsg, to_binary, IbcQuery, PortIdResponse, Order, Uint128, WasmMsg, SubMsg, CosmosMsg, ReplyOn};
 use cw2::set_contract_version;
 use catalyst_types::U256;
-use catalyst_vault_common::{bindings::VaultResponse, msg::ExecuteMsg as VaultExecuteMsg};
+use catalyst_vault_common::{bindings::{VaultResponse, CustomMsg}, msg::ExecuteMsg as VaultExecuteMsg};
 use std::ops::Shl;
 
 use crate::catalyst_ibc_payload::{CatalystV1SendAssetPayload, SendAssetVariablePayload, CatalystV1SendLiquidityPayload, SendLiquidityVariablePayload, CatalystEncodedAddress, parse_calldata};
@@ -48,7 +48,7 @@ pub fn execute(
     mut deps: DepsMut,
     env: Env,
     info: MessageInfo,
-    msg: ExecuteMsg,
+    msg: ExecuteMsg<CustomMsg>,
 ) -> Result<VaultResponse, ContractError> {
     match msg {
 
@@ -166,6 +166,14 @@ pub fn execute(
             to_account,
             underwrite_incentive_x16,
             calldata
+        ),
+
+        ExecuteMsg::WrapSubMsgs {
+            sub_msgs
+        } => execute_wrap_sub_msgs(
+            &info,
+            &env,
+            sub_msgs
         ),
 
 
@@ -417,6 +425,31 @@ fn execute_expire_underwrite(
 ) -> Result<VaultResponse, ContractError> {
     //TODO-UNDERWRITE
     todo!()
+}
+
+
+/// Wrap multiple submessages within a single submessage.
+/// 
+/// ! **IMPORTANT**: This method can only be invoked by the interface itself.
+/// 
+/// # Arguments:
+/// *sub_msgs* - The submessages to wrap into a single submessage.
+/// 
+fn execute_wrap_sub_msgs(
+    info: &MessageInfo,
+    env: &Env,
+    sub_msgs: Vec<SubMsg<CustomMsg>>
+) -> Result<VaultResponse, ContractError> {
+
+    // ! Only the interface itself may invoke this function
+    if info.sender != env.contract.address {
+        return Err(ContractError::Unauthorized {});
+    }
+
+    Ok(
+        VaultResponse::new()
+            .add_submessages(sub_msgs)
+    )
 }
 
 

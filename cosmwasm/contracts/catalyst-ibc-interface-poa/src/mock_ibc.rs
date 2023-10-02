@@ -1,10 +1,10 @@
-
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
     DepsMut, Env, IbcReceiveResponse, Reply, Response, SubMsgResult, IbcPacket, IbcEndpoint, Binary, Timestamp, MessageInfo
 };
 use catalyst_ibc_interface::{ContractError, ibc::{on_packet_receive, ack_fail, on_packet_success, on_packet_failure, RECEIVE_REPLY_ID, ACK_SUCCESS, ack_success}};
+use catalyst_vault_common::bindings::VaultResponse;
 
 use crate::state::is_owner;
 
@@ -22,10 +22,11 @@ fn build_mock_ibc_packet(data: Binary, channel_id: String) -> IbcPacket {
 // NOTE: this function is based on 'ibc_packet_receive' of the catalyst-ibc-interface
 pub fn execute_ibc_packet_receive(
     deps: DepsMut,
+    env: Env,
     info: MessageInfo,
     data: Binary,
     channel_id: String
-) -> Result<Response, ContractError> {
+) -> Result<VaultResponse, ContractError> {
 
     if !is_owner(deps.as_ref(), info.sender)? {
         return Err(ContractError::Unauthorized {});
@@ -35,7 +36,7 @@ pub fn execute_ibc_packet_receive(
 
     // Invoke the receive function (either 'ReceiveAsset' or 'ReceiveLiquidity') of the destination vault.
     // This function should never error, rather it should send a failure message within the returned ack.
-    let ibc_response: Result<IbcReceiveResponse, ContractError> = on_packet_receive(deps, mock_ibc_packet)
+    let ibc_response: Result<IbcReceiveResponse<_>, ContractError> = on_packet_receive(deps, env, mock_ibc_packet)
         .or_else(|_| {
             Ok(IbcReceiveResponse::new()
                 .set_ack(ack_fail())
@@ -44,7 +45,7 @@ pub fn execute_ibc_packet_receive(
 
     Ok(
         Response::new()
-            .add_submessages(ibc_response?.messages)
+        .add_submessages(ibc_response?.messages)
     )
 }
 
@@ -58,7 +59,7 @@ pub fn reply(
     _deps: DepsMut,
     _env: Env,
     reply: Reply
-) -> Result<Response, ContractError> {
+) -> Result<VaultResponse, ContractError> {
     match reply.id {
         RECEIVE_REPLY_ID => match reply.result {
             SubMsgResult::Ok(_) => Ok(
@@ -84,7 +85,7 @@ pub fn execute_ibc_packet_ack(
     data: Binary,
     response: Binary,
     channel_id: String
-) -> Result<Response, ContractError> {
+) -> Result<VaultResponse, ContractError> {
 
     if !is_owner(deps.as_ref(), info.sender)? {
         return Err(ContractError::Unauthorized {});
@@ -117,7 +118,7 @@ pub fn execute_ibc_packet_timeout(
     info: MessageInfo,
     data: Binary,
     channel_id: String
-) -> Result<Response, ContractError> {
+) -> Result<VaultResponse, ContractError> {
 
     if !is_owner(deps.as_ref(), info.sender)? {
         return Err(ContractError::Unauthorized {});

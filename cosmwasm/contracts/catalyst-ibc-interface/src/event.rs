@@ -3,7 +3,7 @@ use cosmwasm_std::{Event, Binary, Addr, Uint64};
 
 /// Generate an event for a contract owner update.
 /// 
-/// # Arguments
+/// # Arguments:
 /// * `account` - The new owner.
 /// 
 pub fn set_owner_event(
@@ -16,7 +16,7 @@ pub fn set_owner_event(
 
 /// Generate an event for a swap underwrite.
 /// 
-/// # Arguments
+/// # Arguments:
 /// * `identifier` - The underwritten swap identifier.
 /// * `underwriter` - The underwritter.
 /// * `expiry` - Time at which the underwrite expires.
@@ -30,4 +30,17 @@ pub fn underwrite_swap_event(
         .add_attribute("identifier", identifier.to_base64())
         .add_attribute("underwriter", underwriter)
         .add_attribute("expiry", expiry)
+}
+
+
+/// Generate an event for a fulfilled underwrite.
+/// 
+/// # Arguments:
+/// * `identifier` - The fulfilled underwritten swap identifier.
+/// 
+pub fn fulfill_underwrite_event(
+    identifier: Binary
+) -> Event {
+    Event::new("fulfill-underwrite")
+        .add_attribute("identifier", identifier.to_base64())
 }

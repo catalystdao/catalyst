@@ -35,11 +35,11 @@ pub fn set_owner_unchecked(
     )
 }
 
-pub fn update_owner(
+pub fn update_owner<T>(
     deps: DepsMut,
     info: MessageInfo,
     account: String
-) -> Result<Response, ContractError> {
+) -> Result<Response<T>, ContractError> {
 
     // Validate the new owner account
     let account = deps.api.addr_validate(account.as_str())?;
