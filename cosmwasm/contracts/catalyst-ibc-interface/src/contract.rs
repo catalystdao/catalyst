@@ -559,7 +559,7 @@ mod catalyst_ibc_interface_tests {
     fn mock_ibc_packet(
         channel_id: &str,
         from_vault: &str,
-        send_msg: ExecuteMsg,
+        send_msg: ExecuteMsg<CustomMsg>,
         from_amount: Option<U256>    // Allow to override the send_msg from_amount to provide invalid configs
     ) -> IbcPacket {
         IbcPacket::new(
@@ -584,7 +584,7 @@ mod catalyst_ibc_interface_tests {
         channel_id: &str,
         to_vault: Vec<u8>,
         min_out: Option<U256>          // Allow to override the default value to provide invalid configs
-    ) -> ExecuteMsg {
+    ) -> ExecuteMsg<CustomMsg> {
         ExecuteMsg::SendCrossChainAsset {
             channel_id: channel_id.into(),
             to_vault: CatalystEncodedAddress::try_encode(to_vault.as_ref()).unwrap().to_binary(),
@@ -605,7 +605,7 @@ mod catalyst_ibc_interface_tests {
     fn mock_vault_receive_asset_msg(
         channel_id: &str,
         from_vault: Vec<u8>,
-    ) -> catalyst_vault_common::msg::ExecuteMsg<()> {
+    ) -> catalyst_vault_common::msg::ExecuteMsg<(), CustomMsg> {
         catalyst_vault_common::msg::ExecuteMsg::ReceiveAsset {
             channel_id: channel_id.into(),
             from_vault: CatalystEncodedAddress::try_encode(from_vault.as_ref()).unwrap().to_binary(),
@@ -623,7 +623,7 @@ mod catalyst_ibc_interface_tests {
 
     fn mock_vault_send_asset_success_msg(
         channel_id: &str,
-    ) -> catalyst_vault_common::msg::ExecuteMsg<()> {
+    ) -> catalyst_vault_common::msg::ExecuteMsg<(), CustomMsg> {
         catalyst_vault_common::msg::ExecuteMsg::OnSendAssetSuccess {
             channel_id: channel_id.into(),
             to_account: CatalystEncodedAddress::try_encode(b"to_account").unwrap().to_binary(),
@@ -636,7 +636,7 @@ mod catalyst_ibc_interface_tests {
 
     fn mock_vault_send_asset_failure_msg(
         channel_id: &str,
-    ) -> catalyst_vault_common::msg::ExecuteMsg<()> {
+    ) -> catalyst_vault_common::msg::ExecuteMsg<(), CustomMsg> {
         catalyst_vault_common::msg::ExecuteMsg::OnSendAssetFailure {
             channel_id: channel_id.into(),
             to_account: CatalystEncodedAddress::try_encode(b"to_account").unwrap().to_binary(),
@@ -655,7 +655,7 @@ mod catalyst_ibc_interface_tests {
         to_vault: Vec<u8>,
         min_vault_tokens: Option<U256>,          // Allow to override the default value to provide invalid configs
         min_reference_asset: Option<U256>       // Allow to override the default value to provide invalid configs
-    ) -> ExecuteMsg {
+    ) -> ExecuteMsg<CustomMsg> {
         ExecuteMsg::SendCrossChainLiquidity {
             channel_id: channel_id.into(),
             to_vault: CatalystEncodedAddress::try_encode(to_vault.as_ref()).unwrap().to_binary(),
@@ -718,7 +718,7 @@ mod catalyst_ibc_interface_tests {
 
     fn build_payload(
         from_vault: &[u8],
-        msg: ExecuteMsg,
+        msg: ExecuteMsg<CustomMsg>,
         override_from_amount: Option<U256>    // Allow to override the msg 'from_amount' to provide invalid configs
     ) -> Result<Binary, ContractError> {
         let packet = match msg {
@@ -1023,6 +1023,7 @@ mod catalyst_ibc_interface_tests {
     }
 
 
+    //TODO REVIEW TEST UNDERWRITING
     #[test]
     fn test_receive_asset() {
 
@@ -1078,6 +1079,7 @@ mod catalyst_ibc_interface_tests {
     }
 
 
+    //TODO REVIEW TEST UNDERWRITING
     #[test]
     fn test_receive_asset_invalid_min_out() {
 
