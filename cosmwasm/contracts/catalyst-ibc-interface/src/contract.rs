@@ -322,15 +322,13 @@ fn execute_send_cross_chain_liquidity(
 /// **NOTE**: This method does not take into account any source vault parameters.
 /// 
 /// # Arguments: 
-/// * `channel_id` - The target chain identifier.
-/// * `to_vault` - The target vault on the target chain (Catalyst encoded).
-/// * `to_account` - The recipient of the swap on the target chain (Catalyst encoded).
-/// * `u` - The outgoing 'units'.
-/// * `min_vault_tokens` - The mininum vault tokens output amount to get on the target vault.
-/// * `min_reference_asset` - The mininum reference asset value on the target vault.
-/// * `from_amount` - The `from_asset` amount sold to the vault.
-/// * `block_number` - The block number at which the transaction has been committed.
-/// * `calldata` - Arbitrary data to be executed on the target chain upon successful execution of the swap.
+/// * `to_vault` - The target vault.
+/// * `to_asset_ref` - The destination asset.
+/// * `u` - The underwritten units.
+/// * `min_out` - The mininum `to_asset_ref` output amount to get on the target vault.
+/// * `to_account` - The recipient of the swap.
+/// * `underwrite_incentive_x16` - The underwriting incentive.
+/// * `calldata` - The swap calldata.
 /// 
 fn execute_underwrite(
     deps: &mut DepsMut,
