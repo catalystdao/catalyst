@@ -68,7 +68,13 @@ pub enum ExecuteMsg<T=Empty> {
     },
 
 
-    //TODO-UNDERWRITE documentation
+    /// Set the maximum underwriting duration (only applies to new underwrite orders).
+    /// 
+    /// NOTE: This function checks that the sender of the transaction is the current interface owner.
+    /// 
+    /// # Arguments:
+    /// * `new_max_duration` - The new desired maximum underwriting duration.
+    /// 
     SetMaxUnderwriteDuration {
         new_max_underwrite_duration: Uint64
     },
@@ -129,7 +135,20 @@ pub enum ExecuteMsg<T=Empty> {
     },
 
 
-    //TODO-UNDERWRITE documentation
+    /// Expire an underwrite and free the escrowed assets.
+    /// 
+    /// **NOTE**: The underwriter may expire the underwrite at any time. Any other account must wait
+    /// until after the expiry time.
+    /// 
+    /// # Arguments: 
+    /// * `to_vault` - The target vault.
+    /// * `to_asset_ref` - The destination asset.
+    /// * `u` - The underwritten units.
+    /// * `min_out` - The mininum `to_asset_ref` output amount to get on the target vault.
+    /// * `to_account` - The recipient of the swap.
+    /// * `underwrite_incentive_x16` - The underwriting incentive.
+    /// * `calldata` - The swap calldata.
+    ///
     ExpireUnderwrite {
         to_vault: String,
         to_asset_ref: String,
@@ -140,7 +159,14 @@ pub enum ExecuteMsg<T=Empty> {
         calldata: Binary
     },
 
-    //TODO-UNDERWRITE documentation
+    
+    /// Wrap multiple submessages within a single submessage.
+    /// 
+    /// ! **IMPORTANT**: This method can only be invoked by the interface itself.
+    /// 
+    /// # Arguments:
+    /// *sub_msgs* - The submessages to wrap into a single submessage.
+    /// 
     WrapSubMsgs {
         sub_msgs: Vec<SubMsg<T>>
     },
@@ -170,7 +196,17 @@ pub enum QueryMsg {
     #[returns(ListChannelsResponse)]
     ListChannels {},
 
-    //TODO-UNDERWRITE documentation
+    // Get the underwriting identifier of the provided underwrite parameters.
+    /// 
+    /// # Arguments:
+    /// * `to_vault` - The target vault.
+    /// * `to_asset_ref` - The destination asset.
+    /// * `u` - The underwritten units.
+    /// * `min_out` - The mininum `to_asset_ref` output amount to get on the target vault.
+    /// * `to_account` - The recipient of the swap.
+    /// * `underwrite_incentive_x16` - The underwriting incentive.
+    /// * `calldata` - The swap calldata.
+    /// 
     #[returns(UnderwriteIdentifierResponse)]
     UnderwriteIdentifier {
         to_vault: String,
@@ -199,6 +235,6 @@ pub struct ListChannelsResponse {
 
 #[cw_serde]
 pub struct UnderwriteIdentifierResponse {
-    //TODO-UNDERWRITE documentation
+    // The underwrite identifier.
     pub identifier: Binary
 }

@@ -183,7 +183,11 @@ pub enum ExecuteMsg<T, A=Empty> {
         calldata: Option<Binary>
     },
 
-    //TODO-UNDERWRITE documentation
+    /// Reserve liquidity for an incoming asset swap under the given underwrite identifier.
+    /// * `identifier` - The underwrite identifier.
+    /// * `asset_ref` - The purchased asset.
+    /// * `u` - The incoming units.
+    /// * `min_out` - The mininum output amount.
     UnderwriteAsset {
         identifier: Binary,
         asset_ref: String,
@@ -191,7 +195,14 @@ pub enum ExecuteMsg<T, A=Empty> {
         min_out: Uint128
     },
 
-    //TODO-UNDERWRITE documentation
+    /// Complete an underwritten asset swap by sending the assets that had been purchased on 
+    /// underwriting to a recipient.
+    /// * `channel_id` - The source chain identifier.
+    /// * `from_vault` - The source vault on the source chain.
+    /// * `identifier` - The underwrite identifier.
+    /// * `asset_ref` - The purchased asset.
+    /// * `escrow_amount` - The purchased asset amount when underwriting.
+    /// * `recipient` - The recipient of the escrowed assets. 
     ReleaseUnderwriteAsset {
         channel_id: String,
         from_vault: Binary,
@@ -201,7 +212,11 @@ pub enum ExecuteMsg<T, A=Empty> {
         recipient: String
     },
 
-    //TODO-UNDERWRITE documentation
+    /// Undo an underwritten asset swap by releasing the reserved liquidity back into the pool.
+    /// * `identifier` - The underwrite identifier.
+    /// * `asset_ref` - The purchased asset.
+    /// * `escrow_amount` - The purchased asset amount when underwriting.
+    /// * `recipient` - The recipient of the escrowed assets.
     DeleteUnderwriteAsset {
         identifier: Binary,
         asset_ref: String,

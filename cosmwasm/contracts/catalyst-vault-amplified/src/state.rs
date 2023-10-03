@@ -1365,7 +1365,16 @@ pub fn receive_asset(
 }
 
 
-//TODO-UNDERWRITE documentation
+/// Reserve liquidity for an incoming asset swap under the given underwrite identifier.
+/// 
+/// **NOTE**: Only the chain interface may invoke this function.
+/// 
+/// # Arguments:
+/// * `identifier` - The underwrite identifier.
+/// * `asset_ref` - The purchased asset.
+/// * `u` - The incoming units.
+/// * `min_out` - The mininum output amount.
+/// 
 pub fn underwrite_asset(
     deps: &mut DepsMut,
     env: Env,
@@ -1400,7 +1409,7 @@ pub fn underwrite_asset(
         &to_asset_ref
     )?;
 
-    // Keep track of the underwritten escrowed assets to be able to accurately calculate the
+    // ! Keep track of the underwritten escrowed assets to be able to accurately calculate the
     // the vault's `balance0`. This is required as units have been 'received', but no assets 
     // have left the vault.
     TOTAL_UNDERWRITTEN_ESCROWED_ASSETS.update(
@@ -1428,7 +1437,21 @@ pub fn underwrite_asset(
 }
 
 
-//TODO-UNDERWRITE documentation
+/// Complete an underwritten asset swap by sending the assets that had been purchased on 
+/// underwriting to a recipient.
+/// 
+/// **NOTE**: Only the chain interface may invoke this function.
+/// 
+/// **NOTE**: This function requires an active connection with the source vault.
+/// 
+/// # Arguments:
+/// * `channel_id` - The source chain identifier.
+/// * `from_vault` - The source vault on the source chain.
+/// * `identifier` - The underwrite identifier.
+/// * `asset_ref` - The purchased asset.
+/// * `escrow_amount` - The purchased asset amount when underwriting.
+/// * `recipient` - The recipient of the escrowed assets.
+/// 
 pub fn release_underwrite_asset(
     deps: &mut DepsMut,
     env: Env,
@@ -1466,7 +1489,7 @@ pub fn release_underwrite_asset(
         recipient
     )?;
 
-    // Keep track of the underwritten escrowed assets to be able to accurately calculate the
+    // ! Keep track of the underwritten escrowed assets to be able to accurately calculate the
     // the vault's `balance0`.
     TOTAL_UNDERWRITTEN_ESCROWED_ASSETS.update(
         deps.storage,
@@ -1489,7 +1512,16 @@ pub fn release_underwrite_asset(
 }
 
 
-//TODO-UNDERWRITE documentation // ! Mention passed units are **not** verified
+/// Undo an underwritten asset swap by releasing the reserved liquidity back into the pool.
+/// 
+/// **NOTE**: Only the chain interface may invoke this function.
+/// 
+/// # Arguments:
+/// * `identifier` - The underwrite identifier.
+/// * `asset_ref` - The purchased asset.
+/// * `escrow_amount` - The purchased asset amount when underwriting.
+/// * `recipient` - The recipient of the escrowed assets.
+/// 
 pub fn delete_underwrite_asset(
     deps: &mut DepsMut,
     _env: Env,
@@ -1514,7 +1546,7 @@ pub fn delete_underwrite_asset(
 
     // Do **not** send the escrowed amount to the recipient
 
-    // Correct the unit-tracker, as it was updated according to the 'received' units on
+    // ! Correct the unit-tracker, as it was updated according to the 'received' units on
     // `underwrite_asset` (on its `handle_receive_asset` call), and now the 'underwrite' is being
     // reversed.
     UNIT_TRACKER.update(
@@ -1526,7 +1558,7 @@ pub fn delete_underwrite_asset(
         }
     )?;
 
-    // Keep track of the 'underwritten' escrowed assets to be able to accurately calculate the
+    // ! Keep track of the 'underwritten' escrowed assets to be able to accurately calculate the
     // the vault's `balance0`.
     TOTAL_UNDERWRITTEN_ESCROWED_ASSETS.update(
         deps.storage,

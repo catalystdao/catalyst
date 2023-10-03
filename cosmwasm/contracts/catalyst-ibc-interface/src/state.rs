@@ -43,7 +43,22 @@ pub struct IbcChannelInfo {
 // Receive Helpers
 // ************************************************************************************************
 
-//TODO-UNDERWRITE documentation
+/// Handle the reception of a cross-chain asset swap.
+/// 
+/// # Arguments:
+/// * `channel_id` - The source chain identifier.
+/// * `to_vault` - The target vault.
+/// * `to_asset_index` - The index of the purchased asset.
+/// * `to_account` - The recipient of the swap.
+/// * `u` - The incoming units.
+/// * `min_out` - The mininum output amount.
+/// * `underwrite_incentive_x16` - The share of the swap return that is offered to an underwriter as incentive.
+/// * `from_vault` - The source vault on the source chain.
+/// * `from_amount` - The `from_asset` amount sold to the source vault.
+/// * `from_asset` - The source asset.
+/// * `from_block_number_mod` - The block number at which the swap transaction was commited (modulo 2^32).
+/// * `calldata` - Arbitrary data to be executed upon successful execution of the swap.
+/// 
 pub fn handle_receive_asset(
     deps: &mut DepsMut,
     env: &Env,
@@ -121,7 +136,21 @@ pub fn handle_receive_asset(
 }
 
 
-//TODO-UNDERWRITE documentation
+/// Handle the reception of a cross-chain liquidity swap.
+/// 
+/// # Arguments:
+/// * `channel_id` - The source chain identifier.
+/// * `to_vault` - The target vault.
+/// * `to_account` - The recipient of the swap.
+/// * `u` - The incoming units.
+/// * `min_out` - The mininum output amount.
+/// * `min_vault_tokens` - The mininum vault tokens output amount.
+/// * `min_reference_asset` - The output amount's mininum reference asset value.
+/// * `from_vault` - The source vault on the source chain.
+/// * `from_amount` - The `from_asset` amount sold to the source vault.
+/// * `from_block_number_mod` - The block number at which the swap transaction was commited (modulo 2^32).
+/// * `calldata` - Arbitrary data to be executed upon successful execution of the swap.
+/// 
 pub fn handle_receive_liquidity(
     deps: &mut DepsMut,
     channel_id: String,
@@ -566,6 +595,7 @@ pub fn match_underwrite(
 /// 
 /// # Arguments:
 /// * `new_max_duration` - The new desired maximum underwriting duration.
+/// 
 pub fn set_max_underwriting_duration(
     deps: &mut DepsMut,
     info: &MessageInfo,
