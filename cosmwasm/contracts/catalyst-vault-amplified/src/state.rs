@@ -1432,6 +1432,8 @@ pub fn release_underwrite_asset(
     deps: &mut DepsMut,
     env: Env,
     info: MessageInfo,
+    channel_id: String,
+    from_vault: Binary,
     identifier: Binary,
     to_asset_ref: String,
     escrow_amount: Uint128,
@@ -1441,6 +1443,11 @@ pub fn release_underwrite_asset(
     // Only allow the 'chain_interface' to invoke this function.
     if Some(info.sender.clone()) != CHAIN_INTERFACE.load(deps.storage)? {
         return Err(ContractError::Unauthorized {});
+    }
+
+    // Only allow connected vaults.
+    if !is_connected(&deps.as_ref(), &channel_id, from_vault.clone()) {
+        return Err(ContractError::VaultNotConnected { channel_id, vault: from_vault })
     }
 
     release_underwrite_escrow(

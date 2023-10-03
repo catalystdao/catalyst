@@ -297,6 +297,8 @@ pub fn execute(
         ),
 
         AmplifiedExecuteMsg::ReleaseUnderwriteAsset {
+            channel_id,
+            from_vault,
             identifier,
             asset_ref,
             escrow_amount,
@@ -305,6 +307,8 @@ pub fn execute(
             &mut deps,
             env,
             info.clone(),
+            channel_id,
+            from_vault,
             identifier,
             asset_ref,
             escrow_amount,

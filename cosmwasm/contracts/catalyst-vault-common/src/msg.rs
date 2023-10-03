@@ -193,6 +193,8 @@ pub enum ExecuteMsg<T, A=Empty> {
 
     //TODO-UNDERWRITE documentation
     ReleaseUnderwriteAsset {
+        channel_id: String,
+        from_vault: Binary,
         identifier: Binary,
         asset_ref: String,
         escrow_amount: Uint128,

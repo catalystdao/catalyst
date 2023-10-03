@@ -69,6 +69,8 @@ pub fn handle_receive_asset(
     let match_underwrite_response = match_underwrite(
         deps,
         env,
+        &channel_id,
+        &from_vault,
         &to_vault,
         &to_asset,
         &u,
@@ -469,6 +471,8 @@ pub fn handle_underwrite_reply(
 pub fn match_underwrite(
     deps: &mut DepsMut,
     env: &Env,
+    channel_id: &String,
+    from_vault: &Binary,
     to_vault: &str,
     to_asset: &Asset,
     u: &U256,
@@ -511,6 +515,8 @@ pub fn match_underwrite(
     let release_underwrite_messsage = WasmMsg::Execute {
         contract_addr: to_vault.to_owned(),
         msg: to_binary(&VaultExecuteMsg::<()>::ReleaseUnderwriteAsset {
+            channel_id: channel_id.to_owned(),
+            from_vault: from_vault.to_owned(),
             identifier: identifier.clone(),
             asset_ref: to_asset.get_asset_ref().to_owned(),
             escrow_amount: underwritten_amount,
