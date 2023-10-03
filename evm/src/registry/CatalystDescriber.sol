@@ -14,52 +14,66 @@ import "../interfaces/ICatalystV1Factory.sol";
  */
 contract CatalystDescriber is Ownable {
     error ZeroAddress();
+    error IncorrectAddress(address expected, address provided);
     error InvalidIndex(address providedAddress, address readAddress);
+    error DoesNotExist();
     error IncorrectAbi();
+    error VersionAlreadySet(address setTo, uint256 index);
 
     uint256 constant MAX_MEMORY_LIMIT = 64;
-    
-    struct CrossChainInterface {
-        address cci;
+
+    struct AddressAndVersion {
+        address addr;
         string version;
     }
 
     /// @notice Emitted when a vault template is whitelisted and unwhitelisted.
-    event ModifyWhitelistedTemplate(
-        address template,
-        bool state
-    );
-
-    /// @notice Emitted when a vault's abi version is modified.
-    event ModifyVaultAbi(
-        address template,
-        int256 abi_version
+    event ModifyTemplate(
+        address template_address,
+        string version
     );
 
     /// @notice Emitted when a cross-chain interface is whitelisted and unwhitelisted.
     event ModifyWhitelistedCCI(
-        address cci,
-        bool state
+        address cci_address,
+        string version
     );
 
     /// @notice Emitted when vault is added or removed from the describer.
-    event ModifyVaultFactory(
-        address vault_factory,
-        bool state
+    event ModifyWhitelistedFactory(
+        address factory_address,
+        string version
     );
-
-    address[] private _whitelisted_templates;
-
-    CrossChainInterface[] private _whitelisted_ccis;
-
-    address[] private _vault_factories;
 
     address public latestRouter;
 
-    mapping(bytes32 => int256) internal _vault_abi_version;
+    string[] public template_versions;
+    string[] public cci_versions;
+    string[] public factory_versions;
+
+    mapping(string => address) public version_to_template;
+    mapping(string => address) public version_to_cci;
+    mapping(string => address) public version_to_factory;
+
 
     constructor(address defaultOwner) {
         _transferOwnership(defaultOwner);
+    }
+
+    //--- Utility functions ---//
+    function _contains(string memory target, string[] memory versions) private pure returns(int256 index) {
+        uint256 num_versions = versions.length;
+        bytes32 hash_of_target = keccak256(abi.encodePacked(target));
+        for (uint256 i = 0; i < num_versions;) {
+            if (hash_of_target == keccak256(abi.encodePacked(versions[i]))) {
+                return index = int256(i);
+            }
+
+            unchecked {
+                ++i;
+            }
+        }
+        return index = int256(-1);
     }
 
     //--- Router ---//
@@ -67,184 +81,263 @@ contract CatalystDescriber is Ownable {
         latestRouter = newRouter;
     }
 
-    //--- Whitelisted Templates ---//
+    //--- Getters ---//
 
     /**
-     * @notice Returns an array of whitelisted vault templates.
-     * @dev Might contain address(0).
-     */ 
+     * @notice Return an array of whitelisted templates. The index in the array matches the index of template_versions.
+     * @dev Will not contain address(0).
+     */
     function get_whitelisted_templates() external view returns (address[] memory whitelistedTemplates) {
-        return _whitelisted_templates;
+        whitelistedTemplates = new address[](template_versions.length);
+        for (uint256 i = 0; i < template_versions.length; ++i) {
+            string memory version = template_versions[i];
+            whitelistedTemplates[i] =  version_to_template[version];
+        }
+    }
+
+    /**
+     * @notice Return an array of whitelisted templates along with their respective version.
+     * @dev Will not contain address(0), the index in the array matches the index of template_versions.
+     */
+    function getWhitelistedTemplates() external view returns (AddressAndVersion[] memory whitelistedTemplates) {
+        whitelistedTemplates = new AddressAndVersion[](template_versions.length);
+        for (uint256 i = 0; i < template_versions.length; ++i) {
+            string memory version = template_versions[i];
+            whitelistedTemplates[i] = AddressAndVersion({
+                addr: version_to_template[version],
+                version: version
+            });
+        }
+    }
+
+    /**
+     * @notice Return an array of whitelisted CCIs along with their respective version.
+     * @dev Will not contain address(0), the index in the array matches the index of cci_versions.
+     */
+    function get_whitelisted_CCI() external view returns (AddressAndVersion[] memory whitelistedCCI) {
+        whitelistedCCI = new AddressAndVersion[](cci_versions.length);
+        for (uint256 i = 0; i < cci_versions.length; ++i) {
+            string memory version = cci_versions[i];
+            whitelistedCCI[i] = AddressAndVersion({
+                addr: version_to_cci[version],
+                version: version
+            });
+        }
+    }
+
+    /**
+     * @notice Return an array of whitelisted CCIs along with their respective version.
+     * @dev Will not contain address(0), the index in the array matches the index of cci_versions.
+     */
+    function getWhitelistedCCI() external view returns (AddressAndVersion[] memory whitelistedCCI) {
+        whitelistedCCI = new AddressAndVersion[](cci_versions.length);
+        for (uint256 i = 0; i < cci_versions.length; ++i) {
+            string memory version = cci_versions[i];
+            whitelistedCCI[i] = AddressAndVersion({
+                addr: version_to_cci[version],
+                version: version
+            });
+        }
+    }
+
+    /**
+     * @notice Returns an array of whitelisted factories. The index in the array matches the index of factory_versions.
+     * @dev Will not contain address(0).
+     */ 
+    function get_vault_factories() external view returns (address[] memory vaultFactories) {
+        vaultFactories = new address[](factory_versions.length);
+        for (uint256 i = 0; i < factory_versions.length; ++i) {
+            string memory version = factory_versions[i];
+            vaultFactories[i] = version_to_factory[version];
+        }
+    }
+
+    /**
+     * @notice Return an array of whitelisted factories along with their respective version.
+     * @dev Will not contain address(0), the index in the array matches the index of factory_versions.
+     */
+    function getWhitelistedFactories() external view returns (AddressAndVersion[] memory vaultFactories) {
+        vaultFactories = new AddressAndVersion[](factory_versions.length);
+        for (uint256 i = 0; i < factory_versions.length; ++i) {
+            string memory version = factory_versions[i];
+            vaultFactories[i] = AddressAndVersion({
+                addr: version_to_factory[version],
+                version: version
+            });
+        }
     }
 
     /**
      * @notice Returns the number of whitelisted templates.
-     * @dev Returns the length of _whitelisted_templates, as such it might not be "exact".
-     * Some of the whitelisted templates might have been unwhitelisted, however, they are still
-     * counted in the number of whitelisteed templates.
+     * @dev Returns the length of template_versions  which should contain no empty entries.
      */ 
     function get_num_whitelisted_templates() external view returns(uint256) {
-        return _whitelisted_templates.length;
+        return template_versions.length;
     }
 
     /**
-     * @notice Whitelist a template.
-     * @param template_to_whitelist The address of the template which should be whitelisted.
-     * @param vault_abi A number representing the ABI version.
-     */
-    function add_whitelisted_template(address template_to_whitelist, int256 vault_abi) external onlyOwner {
-        if (template_to_whitelist == address(0)) revert ZeroAddress(); 
-        if (vault_abi <= 0) revert IncorrectAbi();
-
-        // Update whitelist table
-        _whitelisted_templates.push(template_to_whitelist);
-
-        emit ModifyWhitelistedTemplate(template_to_whitelist, true);
-
-        // Set abi
-        bytes32 vault_type = get_vault_type(template_to_whitelist);
-        _vault_abi_version[vault_type] = vault_abi;
-
-        emit ModifyVaultAbi(template_to_whitelist, vault_abi);
-    }
-
-    /**
-     * @notice Unwhitelist a template.
-     * @dev While only template_index is needed to unwhitelist a template, template_to_unwhitelist is used 
-     * to ensure a wrong template is not mistakenly unwhitelisted.
-     * @param template_to_unwhitelist The address of the template which should be unwhitelisted.
-     * @param template_index The index of the whitelist to unwhitelist.
-     */
-    function remove_whitelisted_template(address template_to_unwhitelist, uint256 template_index) external onlyOwner {
-        if (template_to_unwhitelist == address(0)) revert ZeroAddress();
-        // Check that the template_index corrosponds to the expected template (template_to_unwhitelist).
-        if (_whitelisted_templates[template_index] != template_to_unwhitelist) revert InvalidIndex(template_to_unwhitelist, _whitelisted_templates[template_index]);
-
-        // Set the template to address(0);
-        delete _whitelisted_templates[template_index];
-
-        // Emit event
-        emit ModifyWhitelistedTemplate(template_to_unwhitelist, false);
-    }
-
-    //--- Whitelisted Cross-Chain Interface ---//
-
-    /**
-     * @notice Returns an array of whitelisted CCIs.
-     * @dev Might contain address(0).
+     * @notice Returns the number of whitelisted templates.
+     * @dev Returns the length of template_versions  which should contain no empty entries.
      */ 
-    function get_whitelisted_CCI() external view returns (CrossChainInterface[] memory whitelistedCCI) {
-        return _whitelisted_ccis;
+    function getNumWhitelistedTemplates() external view returns(uint256) {
+        return template_versions.length;
     }
 
     /**
      * @notice Returns the number of whitelisted CCIs.
-     * @dev Returns the length of _whitelisted_ccis, as such it might not be "exact".
-     * Some of the whitelisted CCIs might have been unwhitelisted, however, they are still
-     * counted in the number of whitelisted CCIs.
+     * @dev Returns the length of cci_versions which should contain no empty entries.
      */
     function get_num_whitelisted_ccis() external view returns(uint256) {
-        return _whitelisted_ccis.length;
+        return cci_versions.length;
     }
 
     /**
-     * @notice Whitelist a cross-chain interface.
-     * @param cci_to_whitelist The address of the CCI to whitelisted.
+     * @notice Returns the number of whitelisted CCIs.
+     * @dev Returns the length of cci_versions which should contain no empty entries.
      */
-    function add_whitelisted_cci(address cci_to_whitelist, string memory version) external onlyOwner {
-        if (cci_to_whitelist == address(0)) revert ZeroAddress(); 
-
-        _whitelisted_ccis.push(CrossChainInterface({cci: cci_to_whitelist, version: version}));
-
-        emit ModifyWhitelistedCCI(cci_to_whitelist, true);
+    function getNumWhitelistedCcis() external view returns(uint256) {
+        return cci_versions.length;
     }
 
-    /**
-     * @notice Unwhitelist a cross-chain interface.
-     * @dev While only template_index is needed to unwhitelist a template, template_to_unwhitelist is used 
-     * to ensure a wrong template is not mistakenly unwhitelisted.
-     * @param cci_to_unwhitelist The address of the CCI to whitelisted.
-     * @param cci_index The index of the cci to unwhitelist.
-     */
-    function remove_whitelisted_cci(address cci_to_unwhitelist, uint256 cci_index) external onlyOwner {
-        if (cci_to_unwhitelist == address(0)) revert ZeroAddress();
-        // Check that the cci_index corrosponds to the expected cci (cci_to_unwhitelist).
-        if (_whitelisted_ccis[cci_index].cci != cci_to_unwhitelist) revert InvalidIndex(cci_to_unwhitelist, _whitelisted_ccis[cci_index].cci);
-
-        // Set the cci to address(0);
-        delete _whitelisted_ccis[cci_index];
-
-        // Emit event
-        emit ModifyWhitelistedTemplate(cci_to_unwhitelist, false);
-    }
 
     /**
-     * @notice Reverse lookup a cci version.
-     * @dev If there are multiple ccis with the same version, it will return the latest.
-     * If none are found address(0) will be returned.
-     */
-    function find_whitelisted_cci(string memory target_version) external returns(address cci) {
-        CrossChainInterface[] memory ccis = _whitelisted_ccis;
-        bytes32 target_version_hash = keccak256(abi.encodePacked(target_version));
-        uint256 num_ccis = ccis.length;
-        for (uint256 i = 0; i < num_ccis; ++i) {
-            bytes32 lookup_version_hash = keccak256(abi.encodePacked(ccis[num_ccis - 1 - i].version));
-            if (lookup_version_hash == target_version_hash) {
-                return ccis[num_ccis - 1 - i].cci;
-            }
-        }
-    }
-
-    //--- Vault Factories ---//
-
-    /**
-     * @notice Returns an array of vault factories
-     * @dev Might contain address(0).
-     */ 
-    function get_vault_factories() external view returns (address[] memory vaultFactories) {
-        return _vault_factories;
-    }
-
-    /**
-     * @notice Returns the number of vault factories.
-     * @dev Returns the length of _vault_factories, as such it might not be "exact".
-     * Some of the factories might have been removed, however, they are still
-     * counted in the number of factories.
+     * @notice Returns the number of whitelisted factories.
+     * @dev Returns the length of factory_versions which should contain no empty entries.
      */
     function get_num_vault_factories() external view returns (uint256) {
-        return _vault_factories.length;
+        return factory_versions.length;
     }
 
     /**
-     * @notice Adds a vault factory to the list of vault factories.
-     * @param vault_factory Adds a vault factory.
+     * @notice Returns the number of whitelisted factories.
+     * @dev Returns the length of factory_versions which should contain no empty entries.
      */
-    function add_vault_factory(address vault_factory) external onlyOwner {
-        if (vault_factory == address(0)) revert ZeroAddress(); 
-
-        _vault_factories.push(vault_factory);
-
-        emit ModifyVaultFactory(vault_factory, true);
+    function getNumVaultFactories() external view returns (uint256) {
+        return factory_versions.length;
     }
 
-    /**
-     * @notice Remove a vault factory from the list of vault factories.
-     * @dev While only factory_index is needed to remove a factory, vault_factory is used 
-     * to ensure a wrong factory is not mistakenly removed.
-     * @param vault_factory The address of the factory to remove.
-     * @param factory_index The index of the factory to remove.
-     */
-    function remove_vault_factory(address vault_factory, uint256 factory_index) external onlyOwner {
-        if (vault_factory == address(0)) revert ZeroAddress();
-        // Check that the factory_index corrosponds to the expected cci (vault_factory).
-        if (_vault_factories[factory_index] != vault_factory) revert InvalidIndex(vault_factory, _vault_factories[factory_index]);
+    //--- Modifiers ---//
 
-        // Set the factory to address(0);
-        delete _vault_factories[factory_index];
+    // -- Templates -- //
+
+    /**
+     * @notice Sets or modifies a template with a (new) address.
+     * @dev template_address cannot be 0 Instead, use the remove version.
+     * @param template_address The address of the template which should be whitelisted.
+     * @param version The version which the new template should be set to.
+     */
+    function modifyWhitelistedTemplate(address template_address, string calldata version) external onlyOwner {
+        if (template_address == address(0)) revert ZeroAddress();
+
+        // Update version table
+        int256 indexOfVersion = _contains(version, template_versions);
+        if (indexOfVersion == -1) template_versions.push(version);
+
+        version_to_template[version] = template_address;
+
+        emit ModifyTemplate(template_address, version);
+    }
+
+    function removeWhitelistedTemplate(address template_to_remove, string calldata version) external onlyOwner {
+        address read_template = version_to_template[version];
+        if (read_template != template_to_remove) revert IncorrectAddress(read_template, template_to_remove);
+
+        int256 indexOfVersionI = _contains(version, template_versions);
+        if (indexOfVersionI == -1) revert DoesNotExist();
+
+        uint256 indexOfVersion = uint256(indexOfVersionI);
+        if (template_versions.length > 1) {
+            // swap the last element into this element's place.
+            template_versions[indexOfVersion] = template_versions[template_versions.length - 1];
+            template_versions.pop();
+        }
+
+        version_to_template[version] = address(0);
+
+        emit ModifyTemplate(address(0), version);
+    }
+
+    // -- Cross-Chain Interfaces -- //
+
+    /**
+     * @notice Sets or modifies a cci with a (new) address.
+     * @dev cci_address cannot be 0 Instead, use the remove version.
+     * @param cci_address The address of the cci which should be whitelisted.
+     * @param version The version which the new cci should be set to.
+     */
+    function modifyWhitelistedCCI(address cci_address, string calldata version) external onlyOwner {
+        if (cci_address == address(0)) revert ZeroAddress();
+
+        // Update version table
+        int256 indexOfVersion = _contains(version, cci_versions);
+        if (indexOfVersion == -1) cci_versions.push(version);
+
+        version_to_cci[version] = cci_address;
+
+        emit ModifyWhitelistedCCI(cci_address, version);
+    }
+
+    function removeWhitelistedCCI(address cci_to_remove, string calldata version) external onlyOwner {
+        address read_cci = version_to_cci[version];
+        if (read_cci != cci_to_remove) revert IncorrectAddress(read_cci, cci_to_remove);
+
+        int256 indexOfVersionI = _contains(version, template_versions);
+        if (indexOfVersionI == -1) revert DoesNotExist();
+
+        uint256 indexOfVersion = uint256(indexOfVersionI);
+        if (cci_versions.length > 1) {
+            // swap the last element into this element's place.
+            cci_versions[indexOfVersion] = cci_versions[cci_versions.length - 1];
+            cci_versions.pop();
+        }
+
+        version_to_cci[version] = address(0);
+
+        emit ModifyWhitelistedCCI(address(0), version);
+    }
+
+    // -- Vault Factories -- //
+
+    /**
+     * @notice Sets or modifies a factory with a (new) address.
+     * @dev factory_address cannot be 0 Instead, use the remove version.
+     * @param factory_address The address of the cci which should be whitelisted.
+     * @param version The version which the new cci should be set to.
+     */
+    function modifyWhitelistedFactory(address factory_address, string calldata version) external onlyOwner {
+        if (factory_address == address(0)) revert ZeroAddress();
+
+        // Update version table
+        int256 indexOfVersion = _contains(version, factory_versions);
+        if (indexOfVersion == -1) factory_versions.push(version);
+
+        version_to_factory[version] = factory_address;
+
+        emit ModifyWhitelistedFactory(factory_address, version);
+    }
+
+
+    function removeWhitelistedFactory(address factory_to_remove, string calldata version) external onlyOwner {
+        address read_factory = version_to_factory[version];
+        if (read_factory != factory_to_remove) revert IncorrectAddress(read_factory, factory_to_remove);
+        
+        int256 indexOfVersionI = _contains(version, factory_versions);
+        if (indexOfVersionI == -1) revert DoesNotExist();
+
+        uint256 indexOfVersion = uint256(indexOfVersionI);
+        if (factory_versions.length > 1) {
+            // swap the last element into this element's place.
+            factory_versions[indexOfVersion] = factory_versions[factory_versions.length - 1];
+            factory_versions.pop();
+        }
+
+        version_to_factory[version] = address(0);
 
         // Emit event
-        emit ModifyVaultFactory(vault_factory, false);
+        emit ModifyWhitelistedFactory(address(0), version);
     }
+
+    //--- Helpers ---//
 
     /**
      * @notice Returns a vault’s factory.
@@ -258,49 +351,6 @@ contract CatalystDescriber is Ownable {
         // Check if the factory agree
         if (!ICatalystV1Factory(factory).isCreatedByFactory(cci, vault)) factory = address(0);
     }
-
-
-    //--- Vault ABI ---//
-
-    /** 
-     * @notice Returns the code hash of the address.
-     * @dev Is a wrapper around (address).codehash;
-     * @param vault Address of the vault to get codehash of
-     */
-    function get_vault_type(address vault) public view returns (bytes32) {
-        return vault.codehash;
-    }
-
-
-    /** 
-     * @notice Returns the abi_version for a vault
-     * @dev Uses a whitelist table and returns -1 if the address is not known 
-     * @param vault Address of the vault to get abi version of.
-     */
-    function get_vault_abi_version(address vault) public view returns (int256 abi_version) {
-        abi_version = _vault_abi_version[get_vault_type(vault)];
-        if (abi_version == 0) abi_version = -1;
-    }
-
-    /**
-     * @notice Updates a vault's abi version
-     * @param vault Address of the vault to update the abi version.
-     * @param vault_abi The new abi version.
-     */
-    function modify_vault_abi(address vault, int256 vault_abi) external onlyOwner {
-        if (get_vault_abi_version(vault) == -1) revert ZeroAddress();
-        if (vault_abi <= 0) revert IncorrectAbi(); 
-
-        // Set abi
-        bytes32 vault_type = get_vault_type(vault);
-        _vault_abi_version[vault_type] = vault_abi;
-
-        emit ModifyVaultAbi(vault, vault_abi);
-
-    }
-
-
-    //--- Helper Functions for Vaults ---//
 
     /** 
      * @notice Returns the vault's tokens 
@@ -331,7 +381,6 @@ contract CatalystDescriber is Ownable {
     function get_vault_mathematical_lib(address vault) public view returns (address math_lib) {
         math_lib = ICatalystV1VaultImmutables(vault).MATHLIB();
     }
-
 
     /** 
      * @notice Returns a list of token prices for a vault.
