@@ -372,8 +372,8 @@ fn execute_underwrite(
 
     // The swap `min_out` must be increased to take into account the underwriter's incentive
     let min_out = min_out
-        .checked_mul(Uint128::new(2u128.pow(64)))?
-        .div(Uint128::new(2u128.pow(64).wrapping_sub(underwrite_incentive_x16 as u128)));   //'wrapping_sub' safe as `underwrite_incentive_x16` < 2**16
+        .checked_mul(Uint128::new(2u128.pow(16)))?
+        .div(Uint128::new(2u128.pow(16).wrapping_sub(underwrite_incentive_x16 as u128)));   //'wrapping_sub' safe as `underwrite_incentive_x16` < 2**16
     
     // Invoke the vault
     let underwrite_message = WasmMsg::Execute {
