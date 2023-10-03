@@ -371,8 +371,9 @@ fn execute_underwrite(
     underwrite_params.save(deps)?;
 
     // The swap `min_out` must be increased to take into account the underwriter's incentive
-    let min_out = min_out * Uint128::new(2u128.shl(64))
-        / (Uint128::new(2u128.shl(64) - underwrite_incentive_x16 as u128));
+    let min_out = min_out
+        .checked_mul(Uint128::new(2u128.pow(64)))?
+        .div(Uint128::new(2u128.pow(64).wrapping_sub(underwrite_incentive_x16 as u128)));   //'wrapping_sub' safe as `underwrite_incentive_x16` < 2**16
     
     // Invoke the vault
     let underwrite_message = WasmMsg::Execute {
@@ -484,10 +485,10 @@ fn execute_expire_underwrite(
     // Build the messages to transfer the escrowed assets.
     //   -> refund = collateral + incentive
     let underwrite_incentive_x16 = Uint128::new(underwrite_incentive_x16 as u128);
-    let underwrite_incentive = (underwrite_amount * underwrite_incentive_x16) >> 16;
-    let underwrite_collateral = underwrite_amount * (
-        UNDERWRITING_COLLATERAL
-    ) / UNDERWRITING_COLLATERAL_BASE;
+    let underwrite_incentive = (underwrite_amount.checked_mul(underwrite_incentive_x16)?) >> 16;
+    let underwrite_collateral = underwrite_amount
+        .checked_mul(UNDERWRITING_COLLATERAL)?
+        .div(UNDERWRITING_COLLATERAL_BASE);
     let refund_amount = underwrite_incentive
         .wrapping_add(underwrite_collateral);  // 'wrapping_add` safe: a larger computation has already
                                                 // been done on the initial 'underwrite' call.

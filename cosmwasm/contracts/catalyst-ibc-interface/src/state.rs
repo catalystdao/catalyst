@@ -5,6 +5,7 @@ use cosmwasm_std::{IbcEndpoint, Deps, Addr, DepsMut, Event, MessageInfo, Empty, 
 use cw_controllers::Admin;
 use cw_storage_plus::{Map, Item};
 use sha3::{Keccak256, Digest};
+use std::ops::Div;
 
 use crate::{ContractError, event::{set_owner_event, underwrite_swap_event, fulfill_underwrite_event}, catalyst_ibc_payload::{CatalystCalldata, parse_calldata}};
 
@@ -390,12 +391,12 @@ pub fn handle_underwrite_reply(
     //   -> receive_underwriter_amount = swap_return + collateral 
     //   -> send_recipient_amount      = swap_return - underwrite_incentive
 
-    let receive_underwriter_amount = swap_return * (
-        UNDERWRITING_COLLATERAL_BASE + UNDERWRITING_COLLATERAL
-    ) / UNDERWRITING_COLLATERAL_BASE;
+    let receive_underwriter_amount = swap_return
+        .checked_mul(UNDERWRITING_COLLATERAL_BASE + UNDERWRITING_COLLATERAL)?
+        .div(UNDERWRITING_COLLATERAL_BASE);
 
     let underwrite_incentive_x16 = Uint128::new(underwrite_incentive_x16 as u128);
-    let underwrite_incentive = (swap_return * underwrite_incentive_x16) >> 16;
+    let underwrite_incentive = (swap_return.checked_mul(underwrite_incentive_x16)?) >> 16;
     let send_recipient_amount = swap_return
         .wrapping_sub(underwrite_incentive);  // 'wrapping_sub' safe, as `underwrite_incentive` is always < `swap_return`
 
@@ -519,14 +520,14 @@ pub fn match_underwrite(
     };
 
     //  Send the underwrite collateral plus the incentive to the underwriter.
-    let underwriter_collateral = underwritten_amount * (
-        UNDERWRITING_COLLATERAL
-    ) / UNDERWRITING_COLLATERAL_BASE;
+    let underwriter_collateral = underwritten_amount
+        .checked_mul(UNDERWRITING_COLLATERAL)?
+        .div(UNDERWRITING_COLLATERAL_BASE);
 
     let underwrite_incentive_x16 = Uint128::new(underwrite_incentive_x16 as u128);
-    let underwrite_incentive = (underwritten_amount * underwrite_incentive_x16) >> 16;
+    let underwrite_incentive = (underwritten_amount.checked_mul(underwrite_incentive_x16)?) >> 16;
     
-    let underwriter_payment = underwriter_collateral + underwrite_incentive;
+    let underwriter_payment = underwriter_collateral.checked_add(underwrite_incentive)?;
 
     let underwriter_payment_msg = to_asset.send_asset(
         env,

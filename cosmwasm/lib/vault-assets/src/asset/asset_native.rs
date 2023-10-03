@@ -351,7 +351,8 @@ impl AssetTrait<NativeAssetMsg> for NativeAsset {
                 }
                 else if info.funds[0].amount > amount {
 
-                    let refund_amount = info.funds[0].amount - amount;
+                    let refund_amount = info.funds[0].amount
+                        .wrapping_sub(amount);  // 'wrapping_sub' safe: checked right above
 
                     let to_address = refund_address
                         .map(|address| address.to_string())
