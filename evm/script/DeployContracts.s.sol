@@ -22,8 +22,6 @@ import { CatalystVaultAmplified } from "../src/CatalystVaultAmplified.sol";
 struct JsonContracts {
     address amplified_mathlib;
     address amplified_template;
-    address describer;
-    address describer_registry;
     address factory;
     address volatile_mathlib;
     address volatile_template;
@@ -33,14 +31,16 @@ contract DeployContracts is Script {
     using stdJson for string;
     address private admin;
 
+
     bytes32 constant NO_ADDRESS_CODEHASH = 0x0000000000000000000000000000000000000000000000000000000000000000;
 
+    bool get;
     bool verify;
 
     JsonContracts contracts;
     
     function deployFactory(bytes32 salt) internal {
-        if (contracts.factory.codehash != NO_ADDRESS_CODEHASH) {
+        if ((contracts.factory.codehash != NO_ADDRESS_CODEHASH) && (get == false)) {
             return;
         }
         address factory = address(new CatalystFactory{salt: salt}(admin));
@@ -49,7 +49,7 @@ contract DeployContracts is Script {
     }
 
     function deploy_volatile_mathlib(bytes32 salt) internal {
-        if (contracts.volatile_mathlib.codehash != NO_ADDRESS_CODEHASH) {
+        if ((contracts.volatile_mathlib.codehash != NO_ADDRESS_CODEHASH) && (get == false)) {
             return;
         }
         address volatile_mathlib = address(new CatalystMathVol{salt: salt}());
@@ -58,7 +58,7 @@ contract DeployContracts is Script {
     }
 
     function deploy_amplified_mathlib(bytes32 salt) internal {
-        if (contracts.amplified_mathlib.codehash != NO_ADDRESS_CODEHASH) {
+        if ((contracts.amplified_mathlib.codehash != NO_ADDRESS_CODEHASH) && (get == false)) {
             return;
         }
         address amplified_mathlib = address(new CatalystMathAmp{salt: salt}());
@@ -67,7 +67,7 @@ contract DeployContracts is Script {
     }
 
     function deploy_volatile_template(bytes32 salt) internal {
-        if (contracts.volatile_template.codehash != NO_ADDRESS_CODEHASH) {
+        if ((contracts.volatile_template.codehash != NO_ADDRESS_CODEHASH) && (get == false)) {
             return;
         }
         address volatile_template = address(new CatalystVaultVolatile{salt: salt}(contracts.factory, contracts.volatile_mathlib));
@@ -76,7 +76,7 @@ contract DeployContracts is Script {
     }
 
     function deploy_amplified_template(bytes32 salt) internal {
-        if (contracts.amplified_template.codehash != NO_ADDRESS_CODEHASH) {
+        if ((contracts.amplified_template.codehash != NO_ADDRESS_CODEHASH) && (get == false)) {
             return;
         }
         address amplified_template = address(new CatalystVaultAmplified{salt: salt}(contracts.factory, contracts.amplified_mathlib));

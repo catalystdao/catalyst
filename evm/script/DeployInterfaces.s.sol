@@ -13,15 +13,7 @@ import { BaseMultiChainDeployer} from "./BaseMultiChainDeployer.s.sol";
 import { IncentivizedMockEscrow } from "GeneralisedIncentives/src/apps/mock/IncentivizedMockEscrow.sol";
 import { IncentivizedWormholeEscrow } from "GeneralisedIncentives/src/apps/wormhole/IncentivizedWormholeEscrow.sol";
 
-struct JsonContracts {
-    address amplified_mathlib;
-    address amplified_template;
-    address describer;
-    address describer_registry;
-    address factory;
-    address volatile_mathlib;
-    address volatile_template;
-}
+import { JsonContracts } from "./DeployContracts.s.sol";
 
 contract DeployInterfaces is BaseMultiChainDeployer {
     using stdJson for string;

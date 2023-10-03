@@ -33,6 +33,7 @@ contract DeployCatalyst is BaseMultiChainDeployer, DeployContracts {
     }
 
     function getAddresses() external {
+        get = true;
         address admin_ = vm.envAddress("CATALYST_ADDRESS");
         uint256 pk = vm.envUint("CATALYST_DEPLOYER");
 
@@ -53,8 +54,6 @@ contract DeployCatalyst is BaseMultiChainDeployer, DeployContracts {
 
         vm.serializeAddress(obj, "amplified_mathlib", contracts.amplified_mathlib);
         vm.serializeAddress(obj, "amplified_template", contracts.amplified_template);
-        vm.serializeAddress(obj, "describer", contracts.describer);
-        vm.serializeAddress(obj, "describer_registry", contracts.describer_registry);
         vm.serializeAddress(obj, "factory", contracts.factory);
         vm.serializeAddress(obj, "volatile_mathlib", contracts.volatile_mathlib);
         string memory finalJson = vm.serializeAddress(obj, "volatile_template", contracts.volatile_template);
