@@ -1,6 +1,6 @@
 //SPDX-License-Identifier: UNLICENSED
 
-pragma solidity 0.8.19;
+pragma solidity =0.8.19;
 
 import { CatalystVaultAmplified } from "../CatalystVaultAmplified.sol";
 import { FixedPointMathLib } from "../utils/FixedPointMathLib.sol";
