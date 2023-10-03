@@ -134,7 +134,8 @@ pub fn initialize_swap_curves(
         })?;
 
     // Initialize the escrows
-    initialize_escrow_totals(deps, asset_refs)?;
+    initialize_escrow_totals(deps, asset_refs.clone())?;
+    initialize_underwriting_escrow_totals(deps, asset_refs)?;
 
     // Initialize the security limit
     // The maximum limit is derived from the sum of the of the weight-asset products.
@@ -182,6 +183,26 @@ pub fn initialize_swap_curves(
                 )
             )
     )
+}
+
+
+/// Initialize the underwriting escrow totals storage variables.
+/// 
+/// # Arguments:
+/// * `assets_refs` - The vault assets references.
+/// 
+pub fn initialize_underwriting_escrow_totals(
+    deps: &mut DepsMut,
+    assets_refs: Vec<&str>
+) -> Result<(), ContractError> {
+
+    assets_refs
+        .iter()
+        .try_for_each(|asset_ref| {
+            TOTAL_UNDERWRITTEN_ESCROWED_ASSETS.save(deps.storage, asset_ref, &Uint128::zero())
+        })?;
+
+    Ok(())
 }
 
 
@@ -254,13 +275,27 @@ pub fn deposit_mixed(
                 weighted_asset_balance_ampped = I256::zero();
             }
             else {
+                // Compute 'weighted_asset_balance_ampped_sum' taking into account the underwritten
+                // asset escrows for the later 'balance0' calculation
+                let escrowed_underwrite_balance = TOTAL_UNDERWRITTEN_ESCROWED_ASSETS.load(
+                    deps.storage,
+                    asset.get_asset_ref()
+                )?;
+                let weighted_asset_balance_ampped_adjusted = pow_wad(
+                    weighted_asset_balance
+                        .checked_sub(U256::from(escrowed_underwrite_balance).wrapping_mul(weight))? // 'wrapping_mul' is safe as U256.max >= Uint128.max * Uint128.max
+                        .checked_mul(WAD)?
+                        .as_i256(),     // If casting overflows to a negative number, 'pow_wad' will fail
+                    one_minus_amp
+                )?;
+                weighted_asset_balance_ampped_sum = weighted_asset_balance_ampped_sum.checked_add(weighted_asset_balance_ampped_adjusted)?;
+
+
                 weighted_asset_balance_ampped = pow_wad(
                     weighted_asset_balance.checked_mul(WAD)?
                         .as_i256(),     // If casting overflows to a negative number, 'pow_wad' will fail
                     one_minus_amp
                 )?;
-
-                weighted_asset_balance_ampped_sum = weighted_asset_balance_ampped_sum.checked_add(weighted_asset_balance_ampped)?;
             }
 
             // Stop if the user provides no tokens for the specific asset (save gas)
@@ -477,15 +512,22 @@ pub fn withdraw_all(
 
                 let weighted_asset_balance = U256::from(vault_asset_balance)
                     .wrapping_mul((*weight).into());           // 'wrapping_mul' is safe as U256.max >= Uint128.max * Uint128.max
-    
-                let weighted_asset_balance_ampped = pow_wad(
-                    weighted_asset_balance.checked_mul(WAD)?
+
+                // Compute 'weighted_asset_balance_ampped_sum' taking into account the underwritten
+                // asset escrows for the later 'balance0' calculation
+                let escrowed_underwrite_balance = TOTAL_UNDERWRITTEN_ESCROWED_ASSETS.load(
+                    deps.storage,
+                    asset.get_asset_ref()
+                )?;
+                let weighted_asset_balance_ampped_adjusted = pow_wad(
+                    weighted_asset_balance
+                        .checked_sub(U256::from(escrowed_underwrite_balance).wrapping_mul((*weight).into()))?  // 'wrapping_mul' is safe as U256.max >= Uint128.max * Uint128.max
+                        .checked_mul(WAD)?
                         .as_i256(), // If casting overflows to a negative number 'pow_wad' will fail
                     one_minus_amp
                 )?;
-
                 weighted_asset_balance_ampped_sum = weighted_asset_balance_ampped_sum
-                    .checked_add(weighted_asset_balance_ampped)?;
+                    .checked_add(weighted_asset_balance_ampped_adjusted)?;
 
                 let escrowed_asset_balance = TOTAL_ESCROWED_ASSETS.load(deps.storage, asset.get_asset_ref())?;
 
@@ -705,17 +747,25 @@ pub fn withdraw_mixed(
 
             if !vault_asset_balance.is_zero() {
 
-                let weighted_asset_balance = U256::from(vault_asset_balance)
+                // Compute 'weighted_asset_balance_ampped_sum' taking into account the underwritten
+                // asset escrows for the later 'balance0' calculation
+                let escrowed_underwrite_balance = TOTAL_UNDERWRITTEN_ESCROWED_ASSETS.load(
+                    deps.storage,
+                    asset.get_asset_ref()
+                )?;
+
+                let weighted_asset_balance_adjusted = U256::from(vault_asset_balance)
+                    .checked_sub(escrowed_underwrite_balance.into())?
                     .wrapping_mul((*weight).into());     // 'wrapping_mul' is safe as U256.max >= Uint128.max * Uint128.max
     
-                let weighted_asset_balance_ampped = pow_wad(
-                    weighted_asset_balance.checked_mul(WAD)?
+                let weighted_asset_balance_ampped_adjusted = pow_wad(
+                    weighted_asset_balance_adjusted.checked_mul(WAD)?
                         .as_i256(), // If casting overflows to a negative number 'pow_wad' will fail
                     one_minus_amp
                 )?;
 
                 weighted_asset_balance_ampped_sum = weighted_asset_balance_ampped_sum
-                    .checked_add(weighted_asset_balance_ampped)?;
+                    .checked_add(weighted_asset_balance_ampped_adjusted)?;
 
                 Ok(
                     vault_asset_balance.checked_sub(
@@ -1357,7 +1407,7 @@ pub fn underwrite_asset(
         &to_asset_ref,
         |amount| -> StdResult<_> {
             amount
-                .unwrap_or_default()
+                .unwrap()   // unwrap safe: 'escrow total' variable initialized on 'setup()'
                 .checked_add(swap_return)
                 .map_err(|err| err.into())
         }
@@ -1415,8 +1465,7 @@ pub fn release_underwrite_asset(
         &to_asset_ref,
         |amount| -> StdResult<_> {
             amount
-                .unwrap()   // Will never fail, as `underwrite_asset` must always be called before
-                            // this function.
+                .unwrap()   // unwrap safe: 'escrow total' variable initialized on 'setup()'
                 .checked_sub(escrow_amount)
                 .map_err(|err| err.into())
         }
@@ -1476,8 +1525,7 @@ pub fn delete_underwrite_asset(
         &to_asset_ref,
         |amount| -> StdResult<_> {
             amount
-                .unwrap()   // Will never fail, as `underwrite_asset` must always be called before
-                            // this function.
+                .unwrap()   // unwrap safe: 'escrow total' variable initialized on 'setup()'
                 .checked_sub(escrow_amount)
                 .map_err(|err| err.into())
         }
@@ -2073,11 +2121,18 @@ pub fn calc_balance_0_ampped(
         })
         .collect::<StdResult<Vec<Uint128>>>()?;
 
-    let asset_balances = assets.get_assets()
+    // Take into account the escrowed underwrite balances
+    let asset_balances_adjusted = assets.get_assets()
         .iter()
         .map(|asset| -> Result<Uint128, ContractError> {
+            let escrowed_underwrite_balance = TOTAL_UNDERWRITTEN_ESCROWED_ASSETS.load(
+                deps.storage,
+                asset.get_asset_ref()
+            )?;
+
             Ok(
                 asset.query_prior_balance(&deps, &env, info)?
+                    .checked_sub(escrowed_underwrite_balance)?  // Using 'checked_sub' for extra precaution ('wrapping_sub' should suffice).
             )
         })
         .collect::<Result<Vec<Uint128>, ContractError>>()?;
@@ -2086,7 +2141,7 @@ pub fn calc_balance_0_ampped(
 
     let weighted_alpha_0_ampped = calc_weighted_alpha_0_ampped(
         weights,
-        asset_balances,
+        asset_balances_adjusted,
         one_minus_amp,
         unit_tracker
     )?;
