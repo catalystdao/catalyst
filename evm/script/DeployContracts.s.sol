@@ -8,10 +8,6 @@ import {stdJson} from "forge-std/StdJson.sol";
 import { CatalystMathVol } from "../src/registry/CatalystMathVol.sol";
 import { CatalystMathAmp } from "../src/registry/CatalystMathAmp.sol";
 
-// Registry
-import { CatalystDescriber } from "../src/registry/CatalystDescriber.sol";
-import { CatalystDescriberRegistry } from "../src/registry/CatalystDescriberRegistry.sol";
-
 // Router
 import { CatalystRouter } from "../src/router/CatalystRouter.sol";
 import { RouterParameters } from "../src/router/base/RouterImmutables.sol";
@@ -88,24 +84,6 @@ contract DeployContracts is Script {
         contracts.amplified_template = amplified_template;
     }
 
-    function deploy_describer(bytes32 salt) internal {
-        if (contracts.describer.codehash != NO_ADDRESS_CODEHASH) {
-            return;
-        }
-        address describer = address(new CatalystDescriber{salt: salt}(admin));
-        if (verify) require(contracts.describer == describer, "not expected address, describer");
-        contracts.describer = describer;        
-    }
-
-    function deploy_registry(bytes32 salt) internal {
-        if (contracts.describer_registry.codehash != NO_ADDRESS_CODEHASH) {
-            return;
-        }
-        address describer_registry = address(new CatalystDescriberRegistry{salt: salt}(admin));
-        if (verify) require(contracts.describer_registry == describer_registry, "not expected address, describer_registry");
-        contracts.describer_registry = describer_registry;
-    }
-
     function load_config() internal {
         string memory pathRoot = vm.projectRoot();
         string memory pathToContractConfig = string.concat(pathRoot, "/script/config/config_contracts.json");
@@ -127,10 +105,6 @@ contract DeployContracts is Script {
 
         deploy_volatile_template(bytes32(uint256(251)));
         deploy_amplified_template(bytes32(uint256(251)));
-
-        // Deploy Registry
-        deploy_describer(bytes32(uint256(251)));
-        deploy_registry(bytes32(uint256(251)));
     }
 }
 

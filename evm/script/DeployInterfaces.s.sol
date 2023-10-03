@@ -9,8 +9,6 @@ import { CatalystChainInterface } from "../src/CatalystChainInterface.sol";
 
 import { BaseMultiChainDeployer} from "./BaseMultiChainDeployer.s.sol";
 
-import { CatalystDescriber } from "../src/registry/CatalystDescriber.sol";
-
 // Generalised Incentives
 import { IncentivizedMockEscrow } from "GeneralisedIncentives/src/apps/mock/IncentivizedMockEscrow.sol";
 import { IncentivizedWormholeEscrow } from "GeneralisedIncentives/src/apps/wormhole/IncentivizedWormholeEscrow.sol";
@@ -144,25 +142,6 @@ contract DeployInterfaces is BaseMultiChainDeployer {
         require(newlyDeployedInterfaceAddress == interfaceAddress, "Newly deployed interface address isn't expected address");
     }
 
-    function whitelistCCI(address catalyst_describer) forEachInterface() internal {
-        CatalystDescriber describer = CatalystDescriber(catalyst_describer);
-
-        address interfaceAddress = abi.decode(config_interfaces.parseRaw(string.concat(".", rpc[chain], ".", incentiveVersion, ".interface")), (address));
-
-        bool foundCCI = false;
-        CatalystDescriber.CrossChainInterface[] memory ccis = describer.get_whitelisted_CCI();
-        for (uint256 i = 0; i < ccis.length; ++i) {
-            address ci = ccis[i].cci;
-            if (ci == interfaceAddress) {
-                foundCCI = true;
-                break;
-            }
-        }
-
-        if (foundCCI == false) {
-            describer.add_whitelisted_cci(interfaceAddress, incentiveVersion);
-        }
-    }
     
     function _deploy() internal {
         address admin = address(0x0000007aAAC54131e031b3C0D6557723f9365A5B);
@@ -175,8 +154,6 @@ contract DeployInterfaces is BaseMultiChainDeployer {
         deployCCI(admin);
 
         // get describer
-
-        whitelistCCI(contracts.describer);
     }
 
     function deploy() load_config iter_chains(chain_list) broadcast external {
