@@ -99,8 +99,26 @@ pub enum ExecuteMsg<T=Empty> {
     },
 
 
-    //TODO-UNDERWRITE documentation
+    /// Check the existance of a connection between the destination and the source vault, and
+    /// perform an asset underwrite.
+    /// 
+    /// **NOTE**: All the arguments passed to this function must **exactly match** those of the
+    /// desired swap to be underwritten.
+    /// 
+    /// # Arguments: 
+    /// * `channel_id` - The incoming message channel identifier.
+    /// * `from_vault` - The source vault on the source chain.
+    /// * `to_vault` - The target vault.
+    /// * `to_asset_ref` - The destination asset.
+    /// * `u` - The underwritten units.
+    /// * `min_out` - The mininum `to_asset_ref` output amount to get on the target vault.
+    /// * `to_account` - The recipient of the swap.
+    /// * `underwrite_incentive_x16` - The underwriting incentive.
+    /// * `calldata` - The swap calldata.
+    /// 
     UnderwriteAndCheckConnection {
+        channel_id: String,
+        from_vault: Binary,
         to_vault: String,
         to_asset_ref: String,
         u: U256,

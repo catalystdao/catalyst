@@ -100,6 +100,8 @@ pub fn execute(
         ),
 
         ExecuteMsg::UnderwriteAndCheckConnection {
+            channel_id,
+            from_vault,
             to_vault,
             to_asset_ref,
             u,
@@ -108,6 +110,8 @@ pub fn execute(
             underwrite_incentive_x16,
             calldata
         } => execute_underwrite_and_check_connection(
+            channel_id,
+            from_vault,
             to_vault,
             to_asset_ref,
             u,
@@ -259,6 +263,8 @@ fn execute_underwrite(
 
 
 fn execute_underwrite_and_check_connection(
+    channel_id: String,
+    from_vault: Binary,
     to_vault: String,
     to_asset_ref: String,
     u: U256,
@@ -276,6 +282,8 @@ fn execute_underwrite_and_check_connection(
     Ok(
         Response::new()
             .add_attribute("action", "mock-interface-underwrite-and-check-connection")
+            .add_attribute("channel_id", channel_id)
+            .add_attribute("from_vault", from_vault.to_base64())
             .add_attribute("to_vault", to_vault)
             .add_attribute("to_asset_ref", to_asset_ref)
             .add_attribute("u", u)

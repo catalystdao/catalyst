@@ -3,7 +3,7 @@ use cosmwasm_std::entry_point;
 use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, IbcMsg, to_binary, IbcQuery, PortIdResponse, Order, Uint128, WasmMsg, SubMsg, CosmosMsg, ReplyOn};
 use cw2::set_contract_version;
 use catalyst_types::U256;
-use catalyst_vault_common::{bindings::{VaultResponse, CustomMsg, Asset, AssetTrait, IntoCosmosCustomMsg}, msg::{ExecuteMsg as VaultExecuteMsg, AssetResponse, CommonQueryMsg}};
+use catalyst_vault_common::{bindings::{VaultResponse, CustomMsg, Asset, AssetTrait, IntoCosmosCustomMsg}, msg::{ExecuteMsg as VaultExecuteMsg, AssetResponse, CommonQueryMsg, VaultConnectionStateResponse}};
 use std::ops::{Shl, Div};
 
 use crate::{catalyst_ibc_payload::{CatalystV1SendAssetPayload, SendAssetVariablePayload, CatalystV1SendLiquidityPayload, SendLiquidityVariablePayload, CatalystEncodedAddress, parse_calldata}, state::{UnderwriteEvent, UNDERWRITING_COLLATERAL, UNDERWRITING_COLLATERAL_BASE, UNDERWRITING_EXPIRE_REWARD, UNDERWRITING_EXPIRE_REWARD_BASE}, event::expire_underwrite_event};
@@ -133,6 +133,8 @@ pub fn execute(
         ),
 
         ExecuteMsg::UnderwriteAndCheckConnection {
+            channel_id,
+            from_vault,
             to_vault,
             to_asset_ref,
             u,
@@ -141,6 +143,10 @@ pub fn execute(
             underwrite_incentive_x16,
             calldata
         } => execute_underwrite_and_check_connection(
+            &mut deps,
+            &info,
+            channel_id,
+            from_vault,
             to_vault,
             to_asset_ref,
             u,
@@ -400,8 +406,28 @@ fn execute_underwrite(
 }
 
 
-//TODO-UNDERWRITE documentation
+/// Check the existance of a connection between the destination and the source vault, and perform
+/// an asset underwrite.
+/// 
+/// **NOTE**: All the arguments passed to this function must **exactly match** those of the
+/// desired swap to be underwritten.
+/// 
+/// # Arguments: 
+/// * `channel_id` - The incoming message channel identifier.
+/// * `from_vault` - The source vault on the source chain.
+/// * `to_vault` - The target vault.
+/// * `to_asset_ref` - The destination asset.
+/// * `u` - The underwritten units.
+/// * `min_out` - The mininum `to_asset_ref` output amount to get on the target vault.
+/// * `to_account` - The recipient of the swap.
+/// * `underwrite_incentive_x16` - The underwriting incentive.
+/// * `calldata` - The swap calldata.
+/// 
 fn execute_underwrite_and_check_connection(
+    deps: &mut DepsMut,
+    info: &MessageInfo,
+    channel_id: String,
+    from_vault: Binary,
     to_vault: String,
     to_asset_ref: String,
     u: U256,
@@ -410,8 +436,30 @@ fn execute_underwrite_and_check_connection(
     underwrite_incentive_x16: u16,
     calldata: Binary
 ) -> Result<VaultResponse, ContractError> {
-    //TODO-UNDERWRITE
-    todo!()
+
+    let is_source_vault_connected = deps.querier.query_wasm_smart::<VaultConnectionStateResponse>(
+        to_vault.clone(),
+        &CommonQueryMsg::VaultConnectionState {
+            channel_id: channel_id.clone(),
+            vault: from_vault.clone()
+        }
+    )?.state;
+
+    if !is_source_vault_connected {
+        return Err(ContractError::VaultNotConnected { channel_id, vault: from_vault })
+    }
+    
+    execute_underwrite(
+        deps,
+        info,
+        to_vault,
+        to_asset_ref,
+        u,
+        min_out,
+        to_account,
+        underwrite_incentive_x16,
+        calldata
+    )
 }
 
 

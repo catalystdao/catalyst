@@ -42,7 +42,13 @@ pub enum ContractError {
     MaxUnderwriteDurationTooLong {
         set_duration: Uint64,
         max_duration: Uint64
-    }
+    },
+
+    #[error("Vault not connected (channel id: {channel_id}, vault: {vault}).")]
+    VaultNotConnected {
+        channel_id: String,
+        vault: Binary
+    },
 }
 
 
