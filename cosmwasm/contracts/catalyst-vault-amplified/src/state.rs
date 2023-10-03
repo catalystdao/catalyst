@@ -1188,7 +1188,7 @@ pub fn send_asset(
 
     Ok(response
         .add_event(
-            send_asset_event(   //TODO-UNDERWRITE add incentive
+            send_asset_event(
                 channel_id,
                 to_vault,
                 to_account,
@@ -1197,6 +1197,7 @@ pub fn send_asset(
                 amount,
                 min_out,
                 u,
+                underwrite_incentive_x16,
                 vault_fee
             )
         )

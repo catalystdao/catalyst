@@ -38,6 +38,7 @@ pub fn local_swap_event(
 /// * `from_amount` - The `from_asset_ref` amount sold to the vault.
 /// * `min_out` - The mininum `to_asset` output amount to get on the target vault.
 /// * `units` - The amount of units bought.
+/// * `underwrite_incentive_x16` - The share of the swap return that is offered to an underwriter as incentive.
 /// * `fee` - The amount of `from_asset_ref` paid to the vault in fees.
 /// 
 pub fn send_asset_event(
@@ -49,6 +50,7 @@ pub fn send_asset_event(
     from_amount: Uint128,
     min_out: U256,
     units: U256,
+    underwrite_incentive_x16: u16,
     fee: Uint128
 ) -> Event {
     Event::new("send-asset")
@@ -60,6 +62,7 @@ pub fn send_asset_event(
         .add_attribute("from_amount", from_amount)
         .add_attribute("min_out", min_out)
         .add_attribute("units", units)
+        .add_attribute("underwrite_incentive_x16", underwrite_incentive_x16.to_string())
         .add_attribute("fee", fee)
 }
 
