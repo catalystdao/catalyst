@@ -56,6 +56,16 @@ contract Registry is BaseMultiChainDeployer {
         setDescriber();
     }
 
+    function deploy() iter_chains(chain_list) broadcast external {
+        verify = true;
+        admin = vm.envAddress("CATALYST_ADDRESS");
+        _deploy();
+    }
+    function deploy_legacy() iter_chains(chain_list_legacy) broadcast external {
+        verify = true;
+        admin = vm.envAddress("CATALYST_ADDRESS");
+        _deploy();
+    }
     function getAddresses() external {
         get = true;
         admin = vm.envAddress("CATALYST_ADDRESS");
@@ -63,17 +73,48 @@ contract Registry is BaseMultiChainDeployer {
 
         vm.startBroadcast(pk);
 
-        _deploy();
+        deploy_describer(bytes32(0));
+        deploy_registry(bytes32(0));
 
         vm.stopBroadcast();
+
+        writeToJson();
     }
 
+    function setRegistry(address reg, address describer, uint256 version) iter_chains(chain_list) broadcast external {
+        CatalystDescriberRegistry reg = CatalystDescriberRegistry(reg);
+
+        uint256 current_version = reg.catalyst_version();
+        require(current_version >= version, "Registry version too far out");
+        if (current_version == version) {
+            reg.add_describer(describer);
+        } else if (current_version == version + 1) {
+            reg.modify_describer(describer, version);
+        } else {
+            require(false, "not implemented");
+        }
+    }
+
+    function setRegistryLegacy(address reg, address describer, uint256 version) iter_chains(chain_list_legacy) broadcast external {
+        CatalystDescriberRegistry reg = CatalystDescriberRegistry(reg);
+
+        uint256 current_version = reg.catalyst_version();
+        require(current_version >= version, "Registry version too far out");
+        if (current_version == version) {
+            reg.add_describer(describer);
+        } else if (current_version == version + 1) {
+            reg.modify_describer(describer, version);
+        } else {
+            require(false, "not implemented");
+        }
+
+    }
 
     function setRegistry(uint256 version) internal {
         CatalystDescriberRegistry reg = CatalystDescriberRegistry(registry.describer_registry);
 
         uint256 current_version = reg.catalyst_version();
-        require(current_version <= version, "Registry version too far out");
+        require(current_version >= version, "Registry version too far out");
         if (current_version == version) {
             reg.add_describer(registry.describer);
         } else if (current_version == version + 1) {
