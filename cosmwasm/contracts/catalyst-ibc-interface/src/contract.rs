@@ -940,7 +940,7 @@ mod catalyst_ibc_interface_tests {
                     },
                 }
             ),
-            _ => todo!()    //TODO-UNDERWRITE
+            _ => panic!("Payload building not implemented for the given message")
         };
 
         packet.try_encode()
