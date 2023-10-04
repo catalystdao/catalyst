@@ -99,7 +99,7 @@ contract TestUnderwriteNoConnection is TestCommon {
     
         // we need to check that 
         vm.expectEmit();
-        emit SwapFailed(0x23);
+        emit SwapFailed(0x13);
         vm.expectEmit();
         emit Transfer(vault1, toAccount, uint256(1e17));
         vm.expectEmit();
