@@ -88,7 +88,7 @@ contract TestUnderwriteNoConnection is TestCommon {
         address token2 = ICatalystV1Vault(vault2)._tokenIndexing(0);
 
         assertEq(
-            Token(token2).balanceOf(toAccount),
+            Token(token2).balanceOf(address(CCI)),
             0,
             "CCI balance not 0"
         );
