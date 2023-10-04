@@ -89,9 +89,7 @@ mod test_volatile_security_limit {
                     min_out: Uint128::zero(),
                     from_amount: U256::zero(),
                     from_asset: Binary("from_asset".as_bytes().to_vec()),
-                    from_block_number_mod: 0u32,
-                    calldata_target: None,
-                    calldata: None
+                    from_block_number_mod: 0u32
                 },
                 vec![],
                 vec![]
@@ -561,9 +559,7 @@ mod test_volatile_security_limit {
                 min_out: Uint128::zero(),
                 from_amount: U256::zero(),
                 from_asset: Binary("from_asset".as_bytes().to_vec()),
-                from_block_number_mod: 0u32,
-                calldata_target: None,
-                calldata: None
+                from_block_number_mod: 0u32
             },
             vec![],
             vec![]
@@ -592,9 +588,7 @@ mod test_volatile_security_limit {
                 min_out: Uint128::zero(),
                 from_amount: U256::zero(),
                 from_asset: Binary("from_asset".as_bytes().to_vec()),
-                from_block_number_mod: 0u32,
-                calldata_target: None,
-                calldata: None
+                from_block_number_mod: 0u32
             },
             vec![],
             vec![]
@@ -623,9 +617,7 @@ mod test_volatile_security_limit {
                 min_out: Uint128::zero(),
                 from_amount: U256::zero(),
                 from_asset: Binary("from_asset".as_bytes().to_vec()),
-                from_block_number_mod: 0u32,
-                calldata_target: None,
-                calldata: None
+                from_block_number_mod: 0u32
             },
             vec![],
             vec![]
@@ -860,9 +852,7 @@ mod test_volatile_security_limit {
                 min_vault_tokens: Uint128::zero(),
                 min_reference_asset: Uint128::zero(),
                 from_amount: U256::zero(),
-                from_block_number_mod: 0u32,
-                calldata_target: None,
-                calldata: None
+                from_block_number_mod: 0u32
             },
             vec![],
             vec![]
@@ -890,9 +880,7 @@ mod test_volatile_security_limit {
                 min_vault_tokens: Uint128::zero(),
                 min_reference_asset: Uint128::zero(),
                 from_amount: U256::zero(),
-                from_block_number_mod: 0u32,
-                calldata_target: None,
-                calldata: None
+                from_block_number_mod: 0u32
             },
             vec![],
             vec![]
@@ -920,9 +908,7 @@ mod test_volatile_security_limit {
                 min_vault_tokens: Uint128::zero(),
                 min_reference_asset: Uint128::zero(),
                 from_amount: U256::zero(),
-                from_block_number_mod: 0u32,
-                calldata_target: None,
-                calldata: None
+                from_block_number_mod: 0u32
             },
             vec![],
             vec![]

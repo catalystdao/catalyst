@@ -64,9 +64,7 @@ mod test_volatile_receive_asset {
                 min_out: Uint128::zero(),
                 from_amount: U256::zero(),
                 from_asset: Binary("from_asset".as_bytes().to_vec()),
-                from_block_number_mod: 0u32,
-                calldata_target: None,
-                calldata: None
+                from_block_number_mod: 0u32
             },
             vec![],
             vec![]
@@ -161,9 +159,7 @@ mod test_volatile_receive_asset {
                 min_out: min_out.as_uint128(),
                 from_amount,
                 from_asset: from_asset.clone(),
-                from_block_number_mod,
-                calldata_target: None,
-                calldata: None
+                from_block_number_mod
             },
             vec![],
             vec![]
@@ -269,9 +265,7 @@ mod test_volatile_receive_asset {
                 min_out: Uint128::zero(),
                 from_amount: U256::zero(),
                 from_asset: Binary("from_asset".as_bytes().to_vec()),
-                from_block_number_mod: 0u32,
-                calldata_target: None,
-                calldata: None
+                from_block_number_mod: 0u32
             },
             vec![],
             vec![]
@@ -368,9 +362,7 @@ mod test_volatile_receive_asset {
                 min_out: min_out_invalid,
                 from_amount: U256::zero(),
                 from_asset: Binary("from_asset".as_bytes().to_vec()),
-                from_block_number_mod: 0u32,
-                calldata_target: None,
-                calldata: None
+                from_block_number_mod: 0u32
             },
             vec![],
             vec![]
@@ -400,9 +392,7 @@ mod test_volatile_receive_asset {
                 min_out: min_out_valid,
                 from_amount: U256::zero(),
                 from_asset: Binary("from_asset".as_bytes().to_vec()),
-                from_block_number_mod: 0u32,
-                calldata_target: None,
-                calldata: None
+                from_block_number_mod: 0u32
             },
             vec![],
             vec![]
@@ -455,9 +445,7 @@ mod test_volatile_receive_asset {
                 min_out: Uint128::zero(),
                 from_amount: U256::zero(),
                 from_asset: Binary("from_asset".as_bytes().to_vec()),
-                from_block_number_mod: 0u32,
-                calldata_target: None,
-                calldata: None
+                from_block_number_mod: 0u32
             },
             vec![],
             vec![]
@@ -526,9 +514,7 @@ mod test_volatile_receive_asset {
                 min_out: Uint128::zero(),
                 from_amount: U256::zero(),
                 from_asset: Binary("from_asset".as_bytes().to_vec()),
-                from_block_number_mod: 0u32,
-                calldata_target: None,
-                calldata: None
+                from_block_number_mod: 0u32
             },
             vec![],
             vec![]
@@ -596,9 +582,7 @@ mod test_volatile_receive_asset {
                 min_out: Uint128::zero(),
                 from_amount: U256::zero(),
                 from_asset: Binary("from_asset".as_bytes().to_vec()),
-                from_block_number_mod: 0u32,
-                calldata_target: None,
-                calldata: None
+                from_block_number_mod: 0u32
             },
             vec![],
             vec![]
@@ -615,6 +599,7 @@ mod test_volatile_receive_asset {
     }
 
 
+    //TODO move to the interface
     #[test]
     fn test_receive_asset_calldata() {
 
@@ -672,8 +657,8 @@ mod test_volatile_receive_asset {
                 from_amount: U256::zero(),
                 from_asset: Binary("from_asset".as_bytes().to_vec()),
                 from_block_number_mod: 0u32,
-                calldata_target: Some(calldata_target.to_string()),
-                calldata: Some(calldata.clone())
+                // calldata_target: Some(calldata_target.to_string()),
+                // calldata: Some(calldata.clone())
             },
             vec![],
             vec![]

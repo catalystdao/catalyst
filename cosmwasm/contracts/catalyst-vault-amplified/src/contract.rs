@@ -261,9 +261,7 @@ pub fn execute(
             min_out,
             from_amount,
             from_asset,
-            from_block_number_mod,
-            calldata_target,
-            calldata
+            from_block_number_mod
         } => receive_asset(
             &mut deps,
             env,
@@ -276,9 +274,7 @@ pub fn execute(
             min_out,
             from_amount,
             from_asset,
-            from_block_number_mod,
-            calldata_target,
-            calldata
+            from_block_number_mod
         ),
 
         AmplifiedExecuteMsg::UnderwriteAsset {
@@ -360,10 +356,8 @@ pub fn execute(
             u,
             min_vault_tokens,
             min_reference_asset,
-            calldata_target,
             from_amount,
-            from_block_number_mod,
-            calldata
+            from_block_number_mod
         } => receive_liquidity(
             &mut deps,
             env,
@@ -375,9 +369,7 @@ pub fn execute(
             min_vault_tokens,
             min_reference_asset,
             from_amount,
-            from_block_number_mod,
-            calldata_target,
-            calldata
+            from_block_number_mod
         ),
 
         AmplifiedExecuteMsg::OnSendAssetSuccess {

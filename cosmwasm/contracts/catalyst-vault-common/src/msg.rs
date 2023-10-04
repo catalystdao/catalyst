@@ -167,8 +167,6 @@ pub enum ExecuteMsg<T, A=Empty> {
     /// * `from_amount` - The `from_asset` amount sold to the source vault.
     /// * `from_asset` - The source asset reference.
     /// * `from_block_number_mod` - The block number at which the swap transaction was commited (modulo 2^32).
-    /// * `calldata_target` - The contract address to invoke upon successful execution of the swap.
-    /// * `calldata` - The data to pass to `calldata_target` upon successful execution of the swap.
     ReceiveAsset {
         channel_id: String,
         from_vault: Binary,
@@ -178,9 +176,7 @@ pub enum ExecuteMsg<T, A=Empty> {
         min_out: Uint128,
         from_amount: U256,
         from_asset: Binary,
-        from_block_number_mod: u32,
-        calldata_target: Option<String>,
-        calldata: Option<Binary>
+        from_block_number_mod: u32
     },
 
     /// Reserve liquidity for an incoming asset swap under the given underwrite identifier.
@@ -253,8 +249,6 @@ pub enum ExecuteMsg<T, A=Empty> {
     /// * `min_reference_asset` - The mininum reference asset value.
     /// * `from_amount` - The `from_asset` amount sold to the source vault.
     /// * `from_block_number_mod` - The block number at which the swap transaction was commited (modulo 2^32).
-    /// * `calldata_target` - The contract address to invoke upon successful execution of the swap.
-    /// * `calldata` - The data to pass to `calldata_target` upon successful execution of the swap.
     ReceiveLiquidity {
         channel_id: String,
         from_vault: Binary,
@@ -263,9 +257,7 @@ pub enum ExecuteMsg<T, A=Empty> {
         min_vault_tokens: Uint128,
         min_reference_asset: Uint128,
         from_amount: U256,
-        from_block_number_mod: u32,
-        calldata_target: Option<String>,
-        calldata: Option<Binary>
+        from_block_number_mod: u32
     },
 
     /// Handle the confirmation of a successful asset swap.

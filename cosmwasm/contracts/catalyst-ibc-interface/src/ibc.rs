@@ -4,7 +4,7 @@ use cosmwasm_std::{DepsMut, Env, IbcChannelOpenMsg, IbcChannelConnectMsg, IbcBas
 
 use catalyst_vault_common::{msg::ExecuteMsg as VaultExecuteMsg, bindings::{VaultResponse, CustomMsg}};
 
-use crate::{ContractError, state::{IbcChannelInfo, OPEN_CHANNELS, UNDERWRITE_REPLY_ID, handle_underwrite_reply, handle_receive_asset, handle_receive_liquidity}, catalyst_ibc_payload::CatalystV1Packet, error::Never, msg::ExecuteMsg};
+use crate::{ContractError, state::{IbcChannelInfo, OPEN_CHANNELS, UNDERWRITE_REPLY_ID, handle_underwrite_reply, handle_receive_asset, handle_receive_liquidity, RECEIVE_ASSET_REPLY_ID, RECEIVE_LIQUIDITY_REPLY_ID, handle_calldata_on_reply}, catalyst_ibc_payload::CatalystV1Packet, error::Never, msg::ExecuteMsg};
 
 
 // NOTE: Large parts of this IBC section are based on the cw20-ics20 example repository.
@@ -168,6 +168,16 @@ pub fn reply(
                 Ok(Response::new().set_data(ack_fail()))
             }
         },
+        RECEIVE_ASSET_REPLY_ID | RECEIVE_LIQUIDITY_REPLY_ID => match reply.result {
+            SubMsgResult::Ok(response) => {
+                handle_calldata_on_reply(deps, response)
+            },
+            SubMsgResult::Err(_) => {
+                unreachable!(
+                    "Receive asset/liquidity reply should never be an error (ReplyOn::Success set)."
+                )
+            }
+        },
         UNDERWRITE_REPLY_ID => match reply.result {
             SubMsgResult::Ok(response) => {
                 handle_underwrite_reply(deps, env, response)
@@ -305,7 +315,7 @@ pub fn on_packet_receive(
             )
         },
         1 => {
-
+            //TODO this can be optimized further: wrapping of the requested message should not be required
             // If the requested submessage does not require extra handling on 'reply', set it to
             // trigger the `RECEIVE_REPLY_ID` logic.
             if sub_msgs[0].reply_on == ReplyOn::Never {

@@ -1276,8 +1276,6 @@ fn handle_receive_asset(
 /// * `from_amount` - The `from_asset` amount sold to the source vault.
 /// * `from_asset` - The source asset.
 /// * `from_block_number_mod` - The block number at which the swap transaction was commited (modulo 2^32).
-/// * `calldata_target` - The contract address to invoke upon successful execution of the swap.
-/// * `calldata` - The data to pass to `calldata_target` upon successful execution of the swap.
 /// 
 pub fn receive_asset(
     deps: &mut DepsMut,
@@ -1291,9 +1289,7 @@ pub fn receive_asset(
     min_out: Uint128,
     from_amount: U256,
     from_asset: Binary,
-    from_block_number_mod: u32,
-    calldata_target: Option<String>,
-    calldata: Option<Binary>
+    from_block_number_mod: u32
 ) -> Result<VaultResponse, ContractError> {
 
     // Only allow the 'chain_interface' to invoke this function.
@@ -1325,26 +1321,12 @@ pub fn receive_asset(
     // Handle asset transfer from the vault to the swapper
     let send_asset_msg = to_asset.send_asset(&env, out, to_account.clone())?;
 
-    // Build the calldata message.
-    let calldata_message = match calldata_target {
-        Some(target) => Some(create_on_catalyst_call_msg(
-            target,
-            out,
-            calldata.unwrap_or_default()
-        )?),
-        None => None
-    };
-
     // Build and send the response.
     let mut response = VaultResponse::new()
         .set_data(to_binary(&out)?);     // Return the purchased tokens
 
     if let Some(msg) = send_asset_msg {
         response = response.add_message(msg.into_cosmos_vault_msg());
-    }
-
-    if let Some(msg) = calldata_message {
-        response = response.add_message(msg);
     }
 
     Ok(response
@@ -1750,8 +1732,6 @@ pub fn send_liquidity(
 /// * `min_reference_asset` - The mininum reference asset value.
 /// * `from_amount` - The liquidity amount sold to the source vault.
 /// * `from_block_number_mod` - The block number at which the swap transaction was commited (modulo 2^32).
-/// * `calldata_target` - The contract address to invoke upon successful execution of the swap.
-/// * `calldata` - The data to pass to `calldata_target` upon successful execution of the swap.
 /// 
 pub fn receive_liquidity(
     deps: &mut DepsMut,
@@ -1764,9 +1744,7 @@ pub fn receive_liquidity(
     min_vault_tokens: Uint128,
     min_reference_asset: Uint128,
     from_amount: U256,
-    from_block_number_mod: u32,
-    calldata_target: Option<String>,
-    calldata: Option<Binary>
+    from_block_number_mod: u32
 ) -> Result<VaultResponse, ContractError> {
 
     // Only allow the 'chain_interface' to invoke this function.
@@ -1898,26 +1876,12 @@ pub fn receive_liquidity(
         to_account.clone()
     )?;
 
-    // Build the calldata message.
-    let calldata_message = match calldata_target {
-        Some(target) => Some(create_on_catalyst_call_msg(
-            target,
-            vault_tokens,
-            calldata.unwrap_or_default()
-        )?),
-        None => None
-    };
-
     // Build and send the response.
     let mut response = VaultResponse::new()
         .set_data(to_binary(&vault_tokens)?);   // Return the vault tokens 'received'
 
     if let Some(msg) = mint_msg {
         response = response.add_message(msg.into_cosmos_vault_msg());
-    }
-
-    if let Some(msg) = calldata_message {
-        response = response.add_message(msg);
     }
 
     Ok(response

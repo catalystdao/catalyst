@@ -58,9 +58,7 @@ mod test_amplified_receive_liquidity {
                 min_vault_tokens: Uint128::zero(),
                 min_reference_asset: Uint128::zero(),
                 from_amount: U256::zero(),
-                from_block_number_mod: 0u32,
-                calldata_target: None,
-                calldata: None
+                from_block_number_mod: 0u32
             },
             vec![],
             vec![]
@@ -152,9 +150,7 @@ mod test_amplified_receive_liquidity {
                 min_vault_tokens: Uint128::zero(),
                 min_reference_asset: Uint128::zero(),
                 from_amount,
-                from_block_number_mod,
-                calldata_target: None,
-                calldata: None
+                from_block_number_mod
             },
             vec![],
             vec![]
@@ -247,9 +243,7 @@ mod test_amplified_receive_liquidity {
                 min_vault_tokens: Uint128::zero(),
                 min_reference_asset: Uint128::zero(),
                 from_amount: U256::zero(),
-                from_block_number_mod: 0u32,
-                calldata_target: None,
-                calldata: None
+                from_block_number_mod: 0u32
             },
             vec![],
             vec![]
@@ -345,9 +339,7 @@ mod test_amplified_receive_liquidity {
                 min_vault_tokens: min_out_invalid,
                 min_reference_asset: Uint128::zero(),
                 from_amount: U256::zero(),
-                from_block_number_mod: 0u32,
-                calldata_target: None,
-                calldata: None
+                from_block_number_mod: 0u32
             },
             vec![],
             vec![]
@@ -376,9 +368,7 @@ mod test_amplified_receive_liquidity {
                 min_vault_tokens: min_out_valid,
                 min_reference_asset: Uint128::zero(),
                 from_amount: U256::zero(),
-                from_block_number_mod: 0u32,
-                calldata_target: None,
-                calldata: None
+                from_block_number_mod: 0u32
             },
             vec![],
             vec![]
@@ -463,9 +453,7 @@ mod test_amplified_receive_liquidity {
                 min_vault_tokens: Uint128::zero(),
                 min_reference_asset: min_out_invalid,
                 from_amount: U256::zero(),
-                from_block_number_mod: 0u32,
-                calldata_target: None,
-                calldata: None
+                from_block_number_mod: 0u32
             },
             vec![],
             vec![]
@@ -494,9 +482,7 @@ mod test_amplified_receive_liquidity {
                 min_vault_tokens: Uint128::zero(),
                 min_reference_asset: min_out_valid,
                 from_amount: U256::zero(),
-                from_block_number_mod: 0u32,
-                calldata_target: None,
-                calldata: None
+                from_block_number_mod: 0u32
             },
             vec![],
             vec![]
@@ -547,9 +533,7 @@ mod test_amplified_receive_liquidity {
                 min_vault_tokens: Uint128::zero(),
                 min_reference_asset: Uint128::zero(),
                 from_amount: U256::zero(),
-                from_block_number_mod: 0u32,
-                calldata_target: None,
-                calldata: None
+                from_block_number_mod: 0u32
             },
             vec![],
             vec![]
@@ -616,9 +600,7 @@ mod test_amplified_receive_liquidity {
                 min_vault_tokens: Uint128::zero(),
                 min_reference_asset: Uint128::zero(),
                 from_amount: U256::zero(),
-                from_block_number_mod: 0u32,
-                calldata_target: None,
-                calldata: None
+                from_block_number_mod: 0u32
             },
             vec![],
             vec![]
@@ -635,6 +617,7 @@ mod test_amplified_receive_liquidity {
     }
 
 
+    //TODO move to the interface
     #[test]
     fn test_receive_liquidity_calldata() {
 
@@ -689,8 +672,8 @@ mod test_amplified_receive_liquidity {
                 min_reference_asset: Uint128::zero(),
                 from_amount: U256::zero(),
                 from_block_number_mod: 0u32,
-                calldata_target: Some(calldata_target.to_string()),
-                calldata: Some(calldata.clone())
+                // calldata_target: Some(calldata_target.to_string()),
+                // calldata: Some(calldata.clone())
             },
             vec![],
             vec![]

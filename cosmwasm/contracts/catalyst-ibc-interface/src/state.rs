@@ -1,7 +1,7 @@
 use catalyst_types::U256;
 use catalyst_vault_common::{msg::{CommonQueryMsg, AssetResponse, ReceiverExecuteMsg, ExecuteMsg as VaultExecuteMsg}, bindings::{Asset, AssetTrait, CustomMsg, VaultResponse, IntoCosmosCustomMsg}};
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{IbcEndpoint, Deps, Addr, DepsMut, Event, MessageInfo, Empty, Response, Uint64, Uint128, Binary, Env, from_binary, StdError, Coin, CosmosMsg, to_binary, SubMsgResponse, WasmMsg};
+use cosmwasm_std::{IbcEndpoint, Deps, Addr, DepsMut, Event, MessageInfo, Empty, Response, Uint64, Uint128, Binary, Env, from_binary, StdError, Coin, CosmosMsg, to_binary, SubMsgResponse, WasmMsg, SubMsg};
 use cw_controllers::Admin;
 use cw_storage_plus::{Map, Item};
 use sha3::{Keccak256, Digest};
@@ -16,10 +16,19 @@ const ADMIN: Admin = Admin::new("catalyst-ibc-interface-admin");
 
 
 
+// State
+// ************************************************************************************************
+
+const REPLY_CALLDATA_PARAMS: Item<CatalystCalldata> = Item::new("catalyst-interface-calldata-params");
+
+
+
 // Reply
 // ************************************************************************************************
 
-pub const UNDERWRITE_REPLY_ID: u64 = 0x101;
+pub const RECEIVE_ASSET_REPLY_ID     : u64 = 0x10;
+pub const RECEIVE_LIQUIDITY_REPLY_ID : u64 = 0x20;
+pub const UNDERWRITE_REPLY_ID        : u64 = 0x30;
 
 
 
@@ -99,12 +108,6 @@ pub fn handle_receive_asset(
         Some(response) => Ok(response),
         None => {
 
-            // Parse the calldata
-            let parsed_calldata = parse_calldata(
-                deps.as_ref(),
-                calldata
-            )?;
-
             // Build the message to execute the reception of the swap.
             // NOTE: none of the fields are validated, these must be correctly handled by the vault.
             let wasm_msg = WasmMsg::Execute {
@@ -118,16 +121,28 @@ pub fn handle_receive_asset(
                     min_out,
                     from_amount,
                     from_asset,
-                    from_block_number_mod,
-                    calldata_target: parsed_calldata.as_ref().map(|data| data.target.to_string()),
-                    calldata: parsed_calldata.map(|data| data.bytes)
+                    from_block_number_mod
                 })?,
                 funds: vec![]
             };
 
+            // If calldata exists, enable the 'reply' on the vault message to trigger the calldata
+            // execution once the vault's 'receive' handler completes.
+            let parsed_calldata = parse_calldata(
+                deps.as_ref(),
+                calldata
+            )?;
+            let sub_message = match parsed_calldata {
+                Some(calldata) => {
+                    calldata.save(deps)?;
+                    SubMsg::reply_on_success(wasm_msg, RECEIVE_ASSET_REPLY_ID)
+                },
+                None => SubMsg::new(wasm_msg),
+            };
+
             Ok(
                 Response::new()
-                    .add_message(wasm_msg)
+                    .add_submessage(sub_message)
             )
 
         },
@@ -165,12 +180,6 @@ pub fn handle_receive_liquidity(
     calldata: Binary
 ) -> Result<VaultResponse, ContractError> {
 
-    // Parse the calldata
-    let parsed_calldata = parse_calldata(
-        deps.as_ref(),
-        calldata
-    )?;
-
     // Build the message to execute the reception of the swap.
     // NOTE: none of the fields are validated, these must be correctly handled by the vault.
     let wasm_msg = WasmMsg::Execute {
@@ -183,20 +192,104 @@ pub fn handle_receive_liquidity(
             min_vault_tokens,
             min_reference_asset,
             from_amount,
-            from_block_number_mod,
-            calldata_target: parsed_calldata.as_ref().map(|data| data.target.to_string()),
-            calldata: parsed_calldata.map(|data| data.bytes)
+            from_block_number_mod
         })?,
         funds: vec![]
     };
 
+    // If calldata exists, enable the 'reply' on the vault message to trigger the calldata
+    // execution once the vault's 'receive' handler completes.
+    let parsed_calldata = parse_calldata(
+        deps.as_ref(),
+        calldata
+    )?;
+    let sub_message = match parsed_calldata {
+        Some(calldata) => {
+            calldata.save(deps)?;
+            SubMsg::reply_on_success(wasm_msg, RECEIVE_LIQUIDITY_REPLY_ID)
+        },
+        None => SubMsg::new(wasm_msg),
+    };
+
     Ok(
         Response::new()
-            .add_message(wasm_msg)
+            .add_submessage(sub_message)
     )
 
 }
 
+
+
+impl CatalystCalldata {
+
+    /// Save the calldata parameters to the store.
+    /// 
+    /// **NOTE**: The call will only be successful if there is **no** data already saved on the
+    /// store.
+    /// 
+    pub fn save(
+        &self,
+        deps: &mut DepsMut
+    ) -> Result<(), ContractError> {
+
+        if REPLY_CALLDATA_PARAMS.exists(deps.storage) {
+            return Err(ContractError::Unauthorized {});
+        }
+
+        REPLY_CALLDATA_PARAMS.save(deps.storage, self)
+            .map_err(|err| err.into())
+    }
+
+    /// Retrieve and remove the calldata parameters from the store.
+    /// 
+    /// **NOTE**: The call will fail if there is no data saved on the store.
+    /// 
+    pub fn remove(
+        deps: &mut DepsMut
+    ) -> Result<Self, ContractError> {
+
+        let params = REPLY_CALLDATA_PARAMS.load(deps.storage)?;
+        REPLY_CALLDATA_PARAMS.remove(deps.storage);
+
+        Ok(params)
+    }
+}
+
+
+/// Handle the calldata execution after the execution of a swap.
+/// 
+/// # Arguments:
+/// * `swap_return` - The swap return.
+/// 
+pub fn handle_calldata_on_reply(
+    mut deps: DepsMut,
+    response: SubMsgResponse
+) -> Result<VaultResponse, ContractError> {
+
+    // Build the 'onCatalystCall' message using the swap return.
+
+    let response_data = response.data.ok_or_else(|| {
+        StdError::GenericErr { msg: "No data in the vault's `ReceiveAsset`/`ReceiveLiquidity` response.".to_string() }
+    })?;
+    let swap_return: Uint128 = from_binary(&response_data)?;
+
+    let CatalystCalldata {
+        target,
+        bytes
+    } = CatalystCalldata::remove(&mut deps)?;
+
+    let calldata_message = create_on_catalyst_call_msg(
+        target.to_string(),
+        swap_return,
+        bytes
+    )?;
+
+    Ok(
+        Response::new()
+            .add_message(calldata_message)
+    )
+
+}
 
 
 // Underwriting
