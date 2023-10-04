@@ -1,5 +1,5 @@
 [package]
-name = "mock-catalyst-ibc-interface"
+name = "mock-catalyst-interface"
 version = "0.1.0"
 authors = ["Catalyst"]
 edition = "2021"

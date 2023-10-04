@@ -45,9 +45,9 @@ where
 
     // Create contract wrapper
     let contract = ContractWrapper::new_with_empty(
-        mock_catalyst_ibc_interface::contract::execute,
-        mock_catalyst_ibc_interface::contract::instantiate,
-        mock_catalyst_ibc_interface::contract::query,
+        mock_catalyst_interface::contract::execute,
+        mock_catalyst_interface::contract::instantiate,
+        mock_catalyst_interface::contract::query,
     );
 
     // 'Deploy' the contract

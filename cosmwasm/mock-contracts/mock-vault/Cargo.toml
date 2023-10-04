@@ -51,5 +51,5 @@ catalyst-interface-common = { path = "../../contracts/catalyst-interface-common"
 
 [dev-dependencies]
 cw-multi-test = { workspace = true }
-mock-catalyst-ibc-interface = { path = "../mock-catalyst-ibc-interface", features = ["library"] }
+mock-catalyst-interface = { path = "../mock-catalyst-interface", features = ["library"] }
 catalyst-factory = { path = "../../contracts/catalyst-factory", features = ["library"] }

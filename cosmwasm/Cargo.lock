@@ -187,7 +187,7 @@ dependencies = [
  "cw20-base",
  "fixed-point-math",
  "mock-calldata-target",
- "mock-catalyst-ibc-interface",
+ "mock-catalyst-interface",
  "schemars",
  "serde",
  "test-helpers",
@@ -235,7 +235,7 @@ dependencies = [
  "cw20-base",
  "fixed-point-math",
  "mock-calldata-target",
- "mock-catalyst-ibc-interface",
+ "mock-catalyst-interface",
  "schemars",
  "serde",
  "test-helpers",
@@ -724,7 +724,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "mock-catalyst-ibc-interface"
+name = "mock-catalyst-interface"
 version = "0.1.0"
 dependencies = [
  "catalyst-interface-common",
@@ -756,7 +756,7 @@ dependencies = [
  "cw20",
  "cw20-base",
  "fixed-point-math",
- "mock-catalyst-ibc-interface",
+ "mock-catalyst-interface",
  "schemars",
  "serde",
  "thiserror",
@@ -1052,7 +1052,7 @@ dependencies = [
  "cw20",
  "cw20-base",
  "mock-calldata-target",
- "mock-catalyst-ibc-interface",
+ "mock-catalyst-interface",
  "token-bindings",
  "vault-assets",
 ]
