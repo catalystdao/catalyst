@@ -43,4 +43,4 @@ schemars = { workspace = true }
 serde = { workspace = true }
 thiserror = { workspace = true }
 catalyst-types = { path = "../../lib/catalyst-types" }
-catalyst-interface-common = { path = "../../contracts/catalyst-interface-common", features = ["library"] }
+catalyst-interface-common = { path = "../../contracts/catalyst-interface-common" }

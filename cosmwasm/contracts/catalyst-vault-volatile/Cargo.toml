@@ -48,7 +48,7 @@ thiserror = { workspace = true }
 catalyst-vault-common = { path = "../catalyst-vault-common" }
 catalyst-types = { path = "../../lib/catalyst-types" }
 fixed-point-math = { path = "../../lib/fixed-point-math" }
-catalyst-interface-common = { path = "../catalyst-interface-common", features = ["library"] }
+catalyst-interface-common = { path = "../catalyst-interface-common" }
 
 [dev-dependencies]
 cw-multi-test = { workspace = true }

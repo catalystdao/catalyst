@@ -44,7 +44,7 @@ serde = { workspace = true }
 thiserror = { workspace = true }
 catalyst-types = { path = "../../lib/catalyst-types" }
 catalyst-vault-common = { path = "../catalyst-vault-common", features = ["library"] }
-catalyst-interface-common = { path = "../catalyst-interface-common", features = ["library"] }
+catalyst-interface-common = { path = "../catalyst-interface-common" }
 
 
 [dev-dependencies]

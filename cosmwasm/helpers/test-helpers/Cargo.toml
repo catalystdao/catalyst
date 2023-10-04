@@ -9,7 +9,7 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 anyhow = "1.0.41"
-catalyst-interface-common = { path = "../../contracts/catalyst-interface-common", features = ["library"] }
+catalyst-interface-common = { path = "../../contracts/catalyst-interface-common" }
 catalyst-factory = { path = "../../contracts/catalyst-factory", features = ["library"] }
 catalyst-types = { path = "../../lib/catalyst-types" }
 catalyst-vault-common = { path = "../../contracts/catalyst-vault-common" }
