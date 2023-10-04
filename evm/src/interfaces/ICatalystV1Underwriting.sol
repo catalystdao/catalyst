@@ -14,7 +14,9 @@ interface ICatalystV1Underwriting {
         address refundTo,
         bytes32 identifier,
         uint256 escrowAmount,
-        address escrowToken
+        address escrowToken,
+        bytes32 sourceIdentifier,
+        bytes calldata fromVault
     ) external;
 
     function deleteUnderwriteAsset(

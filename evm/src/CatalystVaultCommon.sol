@@ -713,8 +713,10 @@ abstract contract CatalystVaultCommon is
         address refundTo,
         bytes32 identifier,
         uint256 escrowAmount,
-        address escrowToken
-    ) onlyChainInterface virtual public {
+        address escrowToken,
+        bytes32 sourceIdentifier,
+        bytes calldata fromVault
+    ) onlyChainInterface onlyConnectedPool(sourceIdentifier, fromVault) virtual public {
          _releaseAssetEscrow(identifier, escrowAmount, escrowToken); // Only reverts for missing escrow
 
         // Send the assets to the user.

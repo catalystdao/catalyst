@@ -1527,9 +1527,11 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
         address refundTo,
         bytes32 identifier,
         uint256 escrowAmount,
-        address escrowToken
+        address escrowToken,
+        bytes32 sourceIdentifier,
+        bytes calldata fromVault
     )  override public {
-         super.releaseUnderwriteAsset(refundTo, identifier, escrowAmount, escrowToken);
+         super.releaseUnderwriteAsset(refundTo, identifier, escrowAmount, escrowToken, sourceIdentifier, fromVault);
 
         unchecked {
             _underwriteEscrowMatchBalance0[escrowToken] -= escrowAmount;

@@ -823,6 +823,8 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
         bytes32 identifier,
         address toAsset,
         address vault,
+        bytes32 sourceIdentifier,
+        bytes calldata fromVault,
         uint16 underwriteIncentiveX16
     ) internal returns (bool swapUnderwritten) {
         UnderwritingStorage storage underwriteState = underwritingStorage[identifier];
@@ -837,7 +839,7 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
         delete underwritingStorage[identifier];
 
         // Delete escrow information and send swap tokens directly to the underwriter.
-        ICatalystV1Vault(vault).releaseUnderwriteAsset(refundTo, identifier, underwrittenTokenAmount, toAsset);
+        ICatalystV1Vault(vault).releaseUnderwriteAsset(refundTo, identifier, underwrittenTokenAmount, toAsset, sourceIdentifier, fromVault);
         // We know only need to handle the collatoral and underwriting incentive.
         // We also don't have to check that the vault didn't lie to us about underwriting.
 
@@ -870,9 +872,6 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
         // We know that toVault is an EVM address
         address toVault = address(bytes20(data[ TO_VAULT_START_EVM : TO_VAULT_END ]));
 
-        // Check that there is a connection. Otherwise, send a bad (non 0x00) ack back.
-        if (!ICatalystV1Vault(toVault)._vaultConnection(sourceIdentifier, fromVault)) return acknowledgement = 0x23;
-
         // Select excess calldata. Excess calldata is not decoded.
         bytes calldata cdata = data[CTX0_DATA_LENGTH_START:];
 
@@ -902,6 +901,8 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
             identifier,
             toAsset,
             toVault,
+            sourceIdentifier,
+            fromVault,
             underwriteIncentiveX16
         );
 
