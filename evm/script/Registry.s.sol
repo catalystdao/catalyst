@@ -52,7 +52,7 @@ contract Registry is BaseMultiChainDeployer {
         deploy_describer(bytes32(0));
         deploy_registry(bytes32(0));
 
-        setRegistry(0);
+        setRegistry("v1");
         setDescriber();
     }
 
@@ -81,47 +81,22 @@ contract Registry is BaseMultiChainDeployer {
         writeToJson();
     }
 
-    function setRegistry(address reg, address describer, uint256 version) iter_chains(chain_list) broadcast external {
+    function setRegistry(address reg, address describer, string memory version) iter_chains(chain_list) broadcast external {
         CatalystDescriberRegistry reg = CatalystDescriberRegistry(reg);
 
-        uint256 current_version = reg.catalyst_version();
-        require(current_version >= version, "Registry version too far out");
-        if (current_version == version) {
-            reg.add_describer(describer);
-        } else if (current_version == version + 1) {
-            reg.modify_describer(describer, version);
-        } else {
-            require(false, "not implemented");
-        }
+        reg.modifyDescriber(describer, version);
     }
 
-    function setRegistryLegacy(address reg, address describer, uint256 version) iter_chains(chain_list_legacy) broadcast external {
+    function setRegistryLegacy(address reg, address describer, string memory version) iter_chains(chain_list_legacy) broadcast external {
         CatalystDescriberRegistry reg = CatalystDescriberRegistry(reg);
 
-        uint256 current_version = reg.catalyst_version();
-        require(current_version >= version, "Registry version too far out");
-        if (current_version == version) {
-            reg.add_describer(describer);
-        } else if (current_version == version + 1) {
-            reg.modify_describer(describer, version);
-        } else {
-            require(false, "not implemented");
-        }
-
+        reg.modifyDescriber(describer, version);
     }
 
-    function setRegistry(uint256 version) internal {
+    function setRegistry(string memory version) internal {
         CatalystDescriberRegistry reg = CatalystDescriberRegistry(registry.describer_registry);
 
-        uint256 current_version = reg.catalyst_version();
-        require(current_version >= version, "Registry version too far out");
-        if (current_version == version) {
-            reg.add_describer(registry.describer);
-        } else if (current_version == version + 1) {
-            reg.modify_describer(registry.describer, version);
-        } else {
-            require(false, "not implemented");
-        }
+        reg.modifyDescriber(registry.describer, version);
     }
 
     function setDescriber() internal {

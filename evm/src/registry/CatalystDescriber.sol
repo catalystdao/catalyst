@@ -6,20 +6,14 @@ import "openzeppelin-contracts/contracts/access/Ownable.sol";
 import "../interfaces/ICatalystV1VaultImmutables.sol";
 import "./interfaces/ICatalystMathLibCommon.sol";
 import "../interfaces/ICatalystV1Factory.sol";
+import { Contains } from "./lib/Contains.sol";
 /**
  * @title Catalyst: Catalyst Describer
  * @author Catalyst Labs
  * @notice This contract describes the a Catalyst implementation and serves to simplify off-chain queries.
  * As a result, the contract is not optimised for on-chain queries but rather easy of use off-chain.
  */
-contract CatalystDescriber is Ownable {
-    error ZeroAddress();
-    error IncorrectAddress(address expected, address provided);
-    error InvalidIndex(address providedAddress, address readAddress);
-    error DoesNotExist();
-    error IncorrectAbi();
-    error VersionAlreadySet(address setTo, uint256 index);
-
+contract CatalystDescriber is Contains, Ownable {
     uint256 constant MAX_MEMORY_LIMIT = 64;
 
     struct AddressAndVersion {
@@ -45,6 +39,8 @@ contract CatalystDescriber is Ownable {
         string version
     );
 
+    uint256 public initBlock;
+
     address public latestRouter;
 
     string[] public template_versions;
@@ -58,22 +54,7 @@ contract CatalystDescriber is Ownable {
 
     constructor(address defaultOwner) {
         _transferOwnership(defaultOwner);
-    }
-
-    //--- Utility functions ---//
-    function _contains(string memory target, string[] memory versions) private pure returns(int256 index) {
-        uint256 num_versions = versions.length;
-        bytes32 hash_of_target = keccak256(abi.encodePacked(target));
-        for (uint256 i = 0; i < num_versions;) {
-            if (hash_of_target == keccak256(abi.encodePacked(versions[i]))) {
-                return index = int256(i);
-            }
-
-            unchecked {
-                ++i;
-            }
-        }
-        return index = int256(-1);
+        initBlock = block.number;
     }
 
     //--- Router ---//
@@ -230,8 +211,8 @@ contract CatalystDescriber is Ownable {
         if (template_address == address(0)) revert ZeroAddress();
 
         // Update version table
-        int256 indexOfVersion = _contains(version, template_versions);
-        if (indexOfVersion == -1) template_versions.push(version);
+        uint256 indexOfVersion = _contains(version, template_versions);
+        if (indexOfVersion == type(uint256).max) template_versions.push(version);
 
         version_to_template[version] = template_address;
 
@@ -242,10 +223,9 @@ contract CatalystDescriber is Ownable {
         address read_template = version_to_template[version];
         if (read_template != template_to_remove) revert IncorrectAddress(read_template, template_to_remove);
 
-        int256 indexOfVersionI = _contains(version, template_versions);
-        if (indexOfVersionI == -1) revert DoesNotExist();
+        uint256 indexOfVersion = _contains(version, template_versions);
+        if (indexOfVersion == type(uint256).max) revert DoesNotExist();
 
-        uint256 indexOfVersion = uint256(indexOfVersionI);
         if (template_versions.length > 1) {
             // swap the last element into this element's place.
             template_versions[indexOfVersion] = template_versions[template_versions.length - 1];
@@ -269,8 +249,8 @@ contract CatalystDescriber is Ownable {
         if (cci_address == address(0)) revert ZeroAddress();
 
         // Update version table
-        int256 indexOfVersion = _contains(version, cci_versions);
-        if (indexOfVersion == -1) cci_versions.push(version);
+        uint256 indexOfVersion = _contains(version, cci_versions);
+        if (indexOfVersion == type(uint256).max) cci_versions.push(version);
 
         version_to_cci[version] = cci_address;
 
@@ -281,10 +261,9 @@ contract CatalystDescriber is Ownable {
         address read_cci = version_to_cci[version];
         if (read_cci != cci_to_remove) revert IncorrectAddress(read_cci, cci_to_remove);
 
-        int256 indexOfVersionI = _contains(version, template_versions);
-        if (indexOfVersionI == -1) revert DoesNotExist();
+        uint256 indexOfVersion = _contains(version, template_versions);
+        if (indexOfVersion == type(uint256).max) revert DoesNotExist();
 
-        uint256 indexOfVersion = uint256(indexOfVersionI);
         if (cci_versions.length > 1) {
             // swap the last element into this element's place.
             cci_versions[indexOfVersion] = cci_versions[cci_versions.length - 1];
@@ -308,8 +287,8 @@ contract CatalystDescriber is Ownable {
         if (factory_address == address(0)) revert ZeroAddress();
 
         // Update version table
-        int256 indexOfVersion = _contains(version, factory_versions);
-        if (indexOfVersion == -1) factory_versions.push(version);
+        uint256 indexOfVersion = _contains(version, factory_versions);
+        if (indexOfVersion == type(uint256).max) factory_versions.push(version);
 
         version_to_factory[version] = factory_address;
 
@@ -321,10 +300,9 @@ contract CatalystDescriber is Ownable {
         address read_factory = version_to_factory[version];
         if (read_factory != factory_to_remove) revert IncorrectAddress(read_factory, factory_to_remove);
         
-        int256 indexOfVersionI = _contains(version, factory_versions);
-        if (indexOfVersionI == -1) revert DoesNotExist();
+        uint256 indexOfVersion = _contains(version, factory_versions);
+        if (indexOfVersion == type(uint256).max) revert DoesNotExist();
 
-        uint256 indexOfVersion = uint256(indexOfVersionI);
         if (factory_versions.length > 1) {
             // swap the last element into this element's place.
             factory_versions[indexOfVersion] = factory_versions[factory_versions.length - 1];
