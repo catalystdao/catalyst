@@ -4,7 +4,7 @@ use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult,
 use cw2::set_contract_version;
 use catalyst_types::U256;
 use catalyst_vault_common::{bindings::{VaultResponse, CustomMsg, Asset, AssetTrait, IntoCosmosCustomMsg}, msg::{ExecuteMsg as VaultExecuteMsg, AssetResponse, CommonQueryMsg, VaultConnectionStateResponse}};
-use std::ops::{Shl, Div};
+use std::ops::Div;
 
 use crate::{catalyst_ibc_payload::{CatalystV1SendAssetPayload, SendAssetVariablePayload, CatalystV1SendLiquidityPayload, SendLiquidityVariablePayload, CatalystEncodedAddress, parse_calldata}, state::{UnderwriteEvent, UNDERWRITING_COLLATERAL, UNDERWRITING_COLLATERAL_BASE, UNDERWRITING_EXPIRE_REWARD, UNDERWRITING_EXPIRE_REWARD_BASE}, event::expire_underwrite_event};
 use crate::error::ContractError;

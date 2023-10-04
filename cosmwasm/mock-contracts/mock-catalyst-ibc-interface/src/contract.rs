@@ -2,7 +2,7 @@
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, Uint128, Uint64};
 use catalyst_types::U256;
-use catalyst_ibc_interface::{msg::{ExecuteMsg, InstantiateMsg, QueryMsg}, ContractError, state::update_owner};
+use catalyst_ibc_interface::{msg::{ExecuteMsg, InstantiateMsg, QueryMsg}, ContractError};
 
 
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -20,9 +20,9 @@ pub fn instantiate(
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(
-    deps: DepsMut,
+    _deps: DepsMut,
     _env: Env,
-    info: MessageInfo,
+    _info: MessageInfo,
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
 
@@ -139,13 +139,15 @@ pub fn execute(
             calldata
         ),
 
-        ExecuteMsg::WrapSubMsgs { sub_msgs } => todo!(),
+        ExecuteMsg::WrapSubMsgs {
+            sub_msgs: _
+        } => todo!(),
     
 
 
         // Ownership msgs
         ExecuteMsg::TransferOwnership {
-            new_owner
+            new_owner: _
         } => todo!(),
     }
 
