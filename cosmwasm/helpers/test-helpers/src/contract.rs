@@ -113,7 +113,7 @@ where
     app.instantiate_contract(
         contract_code_storage,
         Addr::unchecked(SETUP_MASTER),
-        &catalyst_ibc_interface::msg::InstantiateMsg {},
+        &catalyst_interface_common::msg::InstantiateMsg {},
         &[],
         "interface",
         None

@@ -1,4 +1,4 @@
-use catalyst_ibc_interface::ContractError;
+use catalyst_interface_common::ContractError;
 use cosmwasm_std::{Addr, Deps, DepsMut, Event, Response, MessageInfo, Empty};
 use cw_controllers::Admin;
 

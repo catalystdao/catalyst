@@ -1,6 +1,6 @@
 use cosmwasm_std::{Uint128, DepsMut, Env, MessageInfo, StdResult, CosmosMsg, to_binary, Deps, Binary, Uint64, Timestamp};
 use cw_storage_plus::{Item, Map};
-use catalyst_ibc_interface::msg::ExecuteMsg as InterfaceExecuteMsg;
+use catalyst_interface_common::msg::ExecuteMsg as InterfaceExecuteMsg;
 use catalyst_types::{U256, I256};
 use catalyst_vault_common::{
     ContractError,

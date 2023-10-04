@@ -10,9 +10,9 @@ use std::ops::Div;
 use crate::{ContractError, event::{set_owner_event, underwrite_swap_event, fulfill_underwrite_event}, catalyst_ibc_payload::{CatalystCalldata, parse_calldata}};
 
 // Interface storage
-pub const OPEN_CHANNELS: Map<&str, IbcChannelInfo> = Map::new("catalyst-ibc-interface-open-channels");
+pub const OPEN_CHANNELS: Map<&str, IbcChannelInfo> = Map::new("catalyst-interface-open-channels");
 
-const ADMIN: Admin = Admin::new("catalyst-ibc-interface-admin");
+const ADMIN: Admin = Admin::new("catalyst-interface-admin");
 
 
 

@@ -12,7 +12,7 @@ use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg, PortResponse, ListChannel
 use crate::state::{OPEN_CHANNELS, set_owner_unchecked, update_owner, set_max_underwriting_duration, get_underwrite_identifier, UNDERWRITE_REPLY_ID, UnderwriteParams};
 
 // Version information
-const CONTRACT_NAME: &str = "catalyst-ibc-interface";
+const CONTRACT_NAME: &str = "catalyst-interface-common";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 const TRANSACTION_TIMEOUT_SECONDS: u64 = 2 * 60 * 60;   // 2 hours
@@ -706,7 +706,7 @@ fn query_underwrite_identifier(
 // Tests ******************************************************************************************
 
 #[cfg(test)]
-mod catalyst_ibc_interface_tests {
+mod catalyst_interface_common_tests {
 
     use crate::{ibc_test_helpers::{open_channel, mock_channel_info, TEST_LOCAL_PORT, close_channel, TEST_REMOTE_PORT}, catalyst_ibc_payload::CatalystV1Packet, ibc::{ibc_packet_receive, RECEIVE_REPLY_ID, ibc_packet_ack, ibc_packet_timeout, reply}};
 

@@ -2,7 +2,7 @@
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, Uint128, Uint64};
 use catalyst_types::U256;
-use catalyst_ibc_interface::{msg::{ExecuteMsg, InstantiateMsg, QueryMsg}, ContractError};
+use catalyst_interface_common::{msg::{ExecuteMsg, InstantiateMsg, QueryMsg}, ContractError};
 
 
 #[cfg_attr(not(feature = "library"), entry_point)]

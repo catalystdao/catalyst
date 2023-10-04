@@ -5,8 +5,8 @@ use cw2::set_contract_version;
 use catalyst_types::U256;
 use catalyst_vault_common::bindings::VaultResponse;
 
-use catalyst_ibc_interface::ContractError;
-use catalyst_ibc_interface::catalyst_ibc_payload::{CatalystV1SendAssetPayload, SendAssetVariablePayload, CatalystV1SendLiquidityPayload, SendLiquidityVariablePayload, CatalystEncodedAddress};
+use catalyst_interface_common::ContractError;
+use catalyst_interface_common::catalyst_ibc_payload::{CatalystV1SendAssetPayload, SendAssetVariablePayload, CatalystV1SendLiquidityPayload, SendLiquidityVariablePayload, CatalystEncodedAddress};
 
 use crate::mock_ibc::{execute_ibc_packet_receive, execute_ibc_packet_ack, execute_ibc_packet_timeout};
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};

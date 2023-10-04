@@ -96,7 +96,26 @@ dependencies = [
 ]
 
 [[package]]
-name = "catalyst-ibc-interface"
+name = "catalyst-ibc-interface-poa"
+version = "0.1.0"
+dependencies = [
+ "catalyst-interface-common",
+ "catalyst-types",
+ "catalyst-vault-common",
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cosmwasm-storage",
+ "cw-controllers",
+ "cw-multi-test",
+ "cw-storage-plus",
+ "cw2",
+ "schemars",
+ "serde",
+ "thiserror",
+]
+
+[[package]]
+name = "catalyst-interface-common"
 version = "0.1.0"
 dependencies = [
  "catalyst-types",
@@ -113,25 +132,6 @@ dependencies = [
  "sha3",
  "thiserror",
  "vault-assets",
-]
-
-[[package]]
-name = "catalyst-ibc-interface-poa"
-version = "0.1.0"
-dependencies = [
- "catalyst-ibc-interface",
- "catalyst-types",
- "catalyst-vault-common",
- "cosmwasm-schema",
- "cosmwasm-std",
- "cosmwasm-storage",
- "cw-controllers",
- "cw-multi-test",
- "cw-storage-plus",
- "cw2",
- "schemars",
- "serde",
- "thiserror",
 ]
 
 [[package]]
@@ -174,7 +174,7 @@ name = "catalyst-vault-amplified"
 version = "0.1.0"
 dependencies = [
  "catalyst-factory",
- "catalyst-ibc-interface",
+ "catalyst-interface-common",
  "catalyst-types",
  "catalyst-vault-common",
  "cosmwasm-schema",
@@ -222,7 +222,7 @@ name = "catalyst-vault-volatile"
 version = "0.1.0"
 dependencies = [
  "catalyst-factory",
- "catalyst-ibc-interface",
+ "catalyst-interface-common",
  "catalyst-types",
  "catalyst-vault-common",
  "cosmwasm-schema",
@@ -727,7 +727,7 @@ dependencies = [
 name = "mock-catalyst-ibc-interface"
 version = "0.1.0"
 dependencies = [
- "catalyst-ibc-interface",
+ "catalyst-interface-common",
  "catalyst-types",
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -745,7 +745,7 @@ name = "mock-vault"
 version = "0.1.0"
 dependencies = [
  "catalyst-factory",
- "catalyst-ibc-interface",
+ "catalyst-interface-common",
  "catalyst-vault-common",
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -1040,7 +1040,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "catalyst-factory",
- "catalyst-ibc-interface",
+ "catalyst-interface-common",
  "catalyst-types",
  "catalyst-vault-common",
  "cosmwasm-schema",

@@ -47,7 +47,7 @@ serde = { workspace = true }
 thiserror = { workspace = true }
 fixed-point-math = { path = "../../lib/fixed-point-math" }
 catalyst-vault-common = { path = "../../contracts/catalyst-vault-common" }
-catalyst-ibc-interface = { path = "../../contracts/catalyst-ibc-interface", features = ["library"] }
+catalyst-interface-common = { path = "../../contracts/catalyst-interface-common", features = ["library"] }
 
 [dev-dependencies]
 cw-multi-test = { workspace = true }
