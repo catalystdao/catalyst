@@ -81,6 +81,14 @@ class PoARelayer(MessageSigner):
                 "GI_contract": Web3.to_checksum_address("0x00000001a9818a7807998dbc243b05F2B3CfF6f4"),
                 "key": os.environ["PRIVATE_KEY_ROUTER"],
                 "legacy": False
+            },
+            165: {
+                "name": "omnitestnet",
+                "confirmations": 0,
+                "url": os.environ["omnitestnet"],
+                "GI_contract": Web3.to_checksum_address("0x00000001a9818a7807998dbc243b05F2B3CfF6f4"),
+                "key": os.environ["PRIVATE_KEY_ROUTER"],
+                "legacy": True
             }
         }
     ):
