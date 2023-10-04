@@ -15,8 +15,9 @@ import "../Setup/Setup.t.sol";
 import "../Setup/SetupFinish.t.sol";
 import "../CrossChainInterfaceOnly.t.sol";
 import "../TokenInterface.t.sol";
+import "../Escrow.t.sol";
 
-contract TestVolatileInvariant is TestInvariant, TestLocalswap, TestCrossChainInterfaceOnly, TestLocalswapMinout, TestPoolTokenInterface, TestSetupFinish, TestSetVaultFee, TestSetGovernanceFee, TestLocalswapFees, TestSwapWorthlessTokenLocal {
+contract TestVolatileInvariant is TestInvariant, TestLocalswap, TestCrossChainInterfaceOnly, TestLocalswapMinout, TestPoolTokenInterface, TestSetupFinish, TestSetVaultFee, TestSetGovernanceFee, TestLocalswapFees, TestSwapWorthlessTokenLocal, TestEscrow {
 
     address[] _vaults;
 
