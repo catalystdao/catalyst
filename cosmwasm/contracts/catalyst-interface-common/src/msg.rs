@@ -2,8 +2,6 @@ use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Uint64, Uint128, Binary, SubMsg, Empty};
 use catalyst_types::U256;
 
-use crate::state::IbcChannelInfo;
-
 #[cw_serde]
 pub struct InstantiateMsg {
 }
@@ -13,6 +11,9 @@ pub struct InstantiateMsg {
 pub enum ExecuteMsg<T=Empty> {
 
     /// Initiate a 'send_asset' cross-chain call.
+    /// 
+    /// **NOTE**: This call is **permissionless**. The recipient of the transaction must validate
+    /// the sender of the transaction.
     /// 
     /// # Arguments: 
     /// * `channel_id` - The target chain identifier.
@@ -43,6 +44,9 @@ pub enum ExecuteMsg<T=Empty> {
 
 
     /// Initiate a 'send_liquidity' cross-chain call.
+    /// 
+    /// **NOTE**: This call is **permissionless**. The recipient of the transaction must validate
+    /// the sender of the transaction.
     /// 
     /// # Arguments: 
     /// * `channel_id` - The target chain identifier.
@@ -186,15 +190,7 @@ pub enum ExecuteMsg<T=Empty> {
 
 #[cw_serde]
 #[derive(QueryResponses)]
-pub enum QueryMsg {
-
-    // Get the port id bound by the interface.
-    #[returns(PortResponse)]
-    Port {},
-
-    // Get a list of the channels that are used by the interface.
-    #[returns(ListChannelsResponse)]
-    ListChannels {},
+pub enum InterfaceCommonQueryMsg {
 
     // Get the underwriting identifier of the provided underwrite parameters.
     /// 
@@ -218,18 +214,8 @@ pub enum QueryMsg {
         calldata: Binary
     },
 
-}
+    //TODO add owner query?
 
-#[cw_serde]
-pub struct PortResponse {
-    // The port id used by the interface.
-    pub port_id: String
-}
-
-#[cw_serde]
-pub struct ListChannelsResponse {
-    // List of the channels used by the interface.
-    pub channels: Vec<IbcChannelInfo>
 }
 
 

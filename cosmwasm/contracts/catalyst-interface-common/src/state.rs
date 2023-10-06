@@ -1,18 +1,18 @@
 use catalyst_types::U256;
-use catalyst_vault_common::{msg::{CommonQueryMsg, AssetResponse, ReceiverExecuteMsg, ExecuteMsg as VaultExecuteMsg}, bindings::{Asset, AssetTrait, CustomMsg, VaultResponse, IntoCosmosCustomMsg}};
+use catalyst_vault_common::{msg::{CommonQueryMsg, AssetResponse, ReceiverExecuteMsg, ExecuteMsg as VaultExecuteMsg, VaultConnectionStateResponse}, bindings::{Asset, AssetTrait, CustomMsg, VaultResponse, IntoCosmosCustomMsg}};
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{IbcEndpoint, Deps, Addr, DepsMut, Event, MessageInfo, Empty, Response, Uint64, Uint128, Binary, Env, from_binary, StdError, Coin, CosmosMsg, to_binary, SubMsgResponse, WasmMsg, SubMsg};
+use cosmwasm_std::{Deps, Addr, DepsMut, Event, MessageInfo, Empty, Response, Uint64, Uint128, Binary, Env, from_binary, StdError, Coin, CosmosMsg, to_binary, SubMsgResponse, WasmMsg, SubMsg, ReplyOn, StdResult, SubMsgResult, Reply};
 use cw_controllers::Admin;
 use cw_storage_plus::{Map, Item};
 use sha3::{Keccak256, Digest};
 use std::ops::Div;
 
-use crate::{ContractError, event::{set_owner_event, underwrite_swap_event, fulfill_underwrite_event}, catalyst_ibc_payload::{CatalystCalldata, parse_calldata}};
-
-// Interface storage
-pub const OPEN_CHANNELS: Map<&str, IbcChannelInfo> = Map::new("catalyst-interface-open-channels");
+use crate::{catalyst_ibc_payload::{CatalystV1SendAssetPayload, SendAssetVariablePayload, CatalystV1SendLiquidityPayload, SendLiquidityVariablePayload, CatalystEncodedAddress, CatalystCalldata, parse_calldata, CatalystV1Packet}, msg::UnderwriteIdentifierResponse};
+use crate::error::ContractError;
+use crate::event::{set_owner_event, underwrite_swap_event, fulfill_underwrite_event, expire_underwrite_event};
 
 const ADMIN: Admin = Admin::new("catalyst-interface-admin");
+
 
 
 
@@ -23,34 +23,248 @@ const REPLY_CALLDATA_PARAMS: Item<CatalystCalldata> = Item::new("catalyst-interf
 
 
 
+
 // Reply
 // ************************************************************************************************
 
-pub const RECEIVE_ASSET_REPLY_ID     : u64 = 0x10;
-pub const RECEIVE_LIQUIDITY_REPLY_ID : u64 = 0x20;
-pub const UNDERWRITE_REPLY_ID        : u64 = 0x30;
+pub const SET_ACK_REPLY_ID       : u64 = 0x100;
+pub const RUN_CALLDATA_REPLY_ID  : u64 = 0x200;
+pub const UNDERWRITE_REPLY_ID    : u64 = 0x300;
 
 
 
 
-//TODO move to 'ibc.rs'?
-// IBC
+// Acknowledgements
 // ************************************************************************************************
 
-// Use a stripped down version of cosmwasm_std::IbcChannel to store the information of the
-// interface's open channels.
-#[cw_serde]
-pub struct IbcChannelInfo {
-    pub endpoint: IbcEndpoint,
-    pub counterparty_endpoint: IbcEndpoint,
-    pub connection_id: String
+pub const ACK_SUCCESS: u8 = 0x00;
+pub const ACK_FAIL: u8 = 0x01;
+
+/// Generate a 'success' ack data response.
+pub fn ack_success() -> Binary {
+    Into::<Binary>::into(vec![ACK_SUCCESS])
+}
+
+/// Generate a 'fail' ack data response.
+pub fn ack_fail() -> Binary {
+    Into::<Binary>::into(vec![ACK_FAIL])
 }
 
 
 
 
-// Receive Helpers
+// Instantiation Helpers
 // ************************************************************************************************
+
+/// Setup the interface on instantiation.
+pub fn setup(
+    deps: DepsMut,
+    info: MessageInfo
+) -> Result<VaultResponse, ContractError> {
+
+    let set_owner_event = set_owner_unchecked(deps, info.sender)?;
+
+    Ok(
+        Response::new()
+            .add_event(set_owner_event)
+    )
+
+}
+
+
+
+
+// Send Handlers
+// ************************************************************************************************
+
+/// Pack the arguments of a 'send_asset' transaction into a byte array following Catalyst's
+/// payload definition.
+/// 
+/// # Arguments: 
+/// * `to_vault` - The target vault on the target chain (Catalyst encoded).
+/// * `to_account` - The recipient of the swap on the target chain (Catalyst encoded).
+/// * `to_asset_index` - The destination asset index.
+/// * `u` - The outgoing 'units'.
+/// * `min_out` - The mininum `to_asset` output amount to get on the target vault.
+/// * `from_amount` - The `from_asset` amount sold to the vault.
+/// * `from_asset` - The source asset.
+/// * `underwrite_incentive_x16` - The share of the swap return that is offered to an underwriter as incentive.
+/// * `block_number` - The block number at which the transaction has been committed.
+/// * `calldata` - Arbitrary data to be executed on the target chain upon successful execution of the swap.
+/// 
+pub fn encode_send_cross_chain_asset(
+    info: MessageInfo,
+    to_vault: Binary,
+    to_account: Binary,
+    to_asset_index: u8,
+    u: U256,
+    min_out: U256,
+    from_amount: Uint128,
+    from_asset: String,
+    underwrite_incentive_x16: u16,
+    block_number: u32,
+    calldata: Binary
+) -> Result<Binary, ContractError> {
+
+    // Build the payload
+    let payload = CatalystV1SendAssetPayload {
+        from_vault: CatalystEncodedAddress::try_encode(info.sender.as_bytes())?,
+        to_vault: CatalystEncodedAddress::try_from(to_vault)?,        // 'to_vault' should already be correctly encoded
+        to_account: CatalystEncodedAddress::try_from(to_account)?,    // 'to_account' should already be correctly encoded
+        u,
+        variable_payload: SendAssetVariablePayload {
+            to_asset_index,
+            min_out,
+            from_amount: U256::from(from_amount),
+            from_asset: CatalystEncodedAddress::try_encode(from_asset.as_bytes())?,
+            block_number,
+            underwrite_incentive_x16,
+            calldata,
+        },
+    };
+
+    Ok(
+        payload.try_encode()?.into()    // Encode the parameters into a byte vector
+    )
+}
+
+
+/// Pack the arguments of a 'send_liquidity' transaction into a byte array following Catalyst's
+/// payload definition.
+/// 
+/// # Arguments: 
+/// * `to_vault` - The target vault on the target chain (Catalyst encoded).
+/// * `to_account` - The recipient of the swap on the target chain (Catalyst encoded).
+/// * `u` - The outgoing 'units'.
+/// * `min_vault_tokens` - The mininum vault tokens output amount to get on the target vault.
+/// * `min_reference_asset` - The mininum reference asset value on the target vault.
+/// * `from_amount` - The `from_asset` amount sold to the vault.
+/// * `block_number` - The block number at which the transaction has been committed.
+/// * `calldata` - Arbitrary data to be executed on the target chain upon successful execution of the swap.
+/// 
+pub fn encode_send_cross_chain_liquidity(
+    info: MessageInfo,
+    to_vault: Binary,
+    to_account: Binary,
+    u: U256,
+    min_vault_tokens: U256,
+    min_reference_asset: U256,
+    from_amount: Uint128,
+    block_number: u32,
+    calldata: Binary
+) -> Result<Binary, ContractError> {
+
+    let payload = CatalystV1SendLiquidityPayload {
+        from_vault: CatalystEncodedAddress::try_encode(info.sender.as_bytes())?,
+        to_vault: CatalystEncodedAddress::try_from(to_vault)?,        // 'to_vault' should already be correctly encoded
+        to_account: CatalystEncodedAddress::try_from(to_account)?,    // 'to_account' should already be correctly encoded
+        u,
+        variable_payload: SendLiquidityVariablePayload {
+            min_vault_tokens,
+            min_reference_asset,
+            from_amount: U256::from(from_amount),
+            block_number,
+            calldata,
+        },
+    };
+
+    Ok(
+        payload.try_encode()?.into()     // Encode the parameters into a byte vector
+    )
+}
+
+
+
+
+// Receive Handlers
+// ************************************************************************************************
+
+// TODO explain why the 'common' code has been implemented this way
+
+// ! It is very important for the receive handlers' message execution/reply/ack logic to adhere to
+// ! the following rules to prevent committing partial state changes:
+// ! - A success ack is only returned if **ALL** messages succeed.
+// ! - A fail ack is only returned when only one message has been sent and it has failed.
+// !
+// ! In practice this translates to:
+// ! - Receive asset/liquidity execution (1 message)
+// !    -> Vault execution passes: return Ok(success-ack)
+// !    -> Vault execution fails: return Ok(fail-ack)
+// !
+// ! - Receive asset/liquidity execution WITH CALLDATA EXECUTED ON REPLY
+// !   (2 messages, 'calldata' message sent on 'reply')
+// !    -> Vault execution passes: execute calldata on reply
+// !        -> Calldata execution passes: Ok(success-ack)
+// !        -> Calldata execution fails: FAIL to revert vault execution (do not enable reply)
+// !    -> Vault execution fails: Ok(fail-ack)
+// !
+// ! - Receive asset WITH UNDERWRITE
+// !   (2 messages, both triggered at the same time)
+// !    -> Both pass: Ok(success-ack)
+// !    -> Either fails: FAIL (do not enable reply). Note: returning a fail-ack on failure of the
+// !       first message is not enough, as this would allow the second message to execute.
+
+//TODO function documentation
+pub fn handle_message_reception(
+    deps: &mut DepsMut,
+    env: &Env,
+    channel_id: String,
+    data: Binary
+) -> Result<VaultResponse, ContractError> {
+
+    let catalyst_packet = CatalystV1Packet::try_decode(data)?;
+
+    match catalyst_packet {
+
+        CatalystV1Packet::SendAsset(payload) => {
+
+            // Convert min_out into Uint128
+            let min_out: Uint128 = payload.variable_payload.min_out.try_into()
+                .map_err(|_| ContractError::PayloadDecodingError {})?;
+
+            handle_receive_asset(
+                deps,
+                &env,
+                channel_id,
+                payload.to_vault.try_decode_as_string()?,
+                payload.variable_payload.to_asset_index,
+                payload.to_account.try_decode_as_string()?,
+                payload.u,
+                min_out,
+                payload.variable_payload.underwrite_incentive_x16,
+                payload.from_vault.to_binary(),
+                payload.variable_payload.from_amount,
+                payload.variable_payload.from_asset.to_binary(),
+                payload.variable_payload.block_number,
+                payload.variable_payload.calldata
+            )
+        },
+
+        CatalystV1Packet::SendLiquidity(payload) => {
+
+            // Convert the minimum outputs into Uint128
+            let min_vault_tokens: Uint128 = payload.variable_payload.min_vault_tokens.try_into()
+                .map_err(|_| ContractError::PayloadDecodingError {})?;
+            let min_reference_asset: Uint128 = payload.variable_payload.min_reference_asset.try_into()
+                .map_err(|_| ContractError::PayloadDecodingError {})?;
+
+            handle_receive_liquidity(
+                deps,
+                channel_id,
+                payload.to_vault.try_decode_as_string()?,
+                payload.to_account.try_decode_as_string()?,
+                payload.u,
+                min_vault_tokens,
+                min_reference_asset,
+                payload.from_vault.to_binary(),
+                payload.variable_payload.from_amount,
+                payload.variable_payload.block_number,
+                payload.variable_payload.calldata
+            )
+        }
+    }
+}
+
 
 /// Handle the reception of a cross-chain asset swap.
 /// 
@@ -135,9 +349,9 @@ pub fn handle_receive_asset(
             let sub_message = match parsed_calldata {
                 Some(calldata) => {
                     calldata.save(deps)?;
-                    SubMsg::reply_on_success(wasm_msg, RECEIVE_ASSET_REPLY_ID)
+                    SubMsg::reply_always(wasm_msg, RUN_CALLDATA_REPLY_ID)   // ! Always 'reply' to execute calldata/set failed ack
                 },
-                None => SubMsg::new(wasm_msg),
+                None => SubMsg::reply_always(wasm_msg, SET_ACK_REPLY_ID),   // ! Always 'reply' to set ack
             };
 
             Ok(
@@ -206,9 +420,9 @@ pub fn handle_receive_liquidity(
     let sub_message = match parsed_calldata {
         Some(calldata) => {
             calldata.save(deps)?;
-            SubMsg::reply_on_success(wasm_msg, RECEIVE_LIQUIDITY_REPLY_ID)
+            SubMsg::reply_always(wasm_msg, RUN_CALLDATA_REPLY_ID)   // ! Always 'reply' to execute calldata/set failed ack
         },
-        None => SubMsg::new(wasm_msg),
+        None => SubMsg::reply_always(wasm_msg, SET_ACK_REPLY_ID),   // ! Always 'reply' to set ack
     };
 
     Ok(
@@ -216,6 +430,102 @@ pub fn handle_receive_liquidity(
             .add_submessage(sub_message)
     )
 
+}
+
+
+// TODO documentation
+pub fn handle_message_response(
+    channel_id: String,
+    data: Binary,
+    response: Option<Binary>
+) -> Result<VaultResponse, ContractError> {
+
+    let catalyst_packet = CatalystV1Packet::try_decode(data)?;
+
+    // NOTE: Only the first byte of the 'ack' response is checked. This allows future 'ack' implementations to
+    // extend the 'ack' format.
+    let success = response.is_some_and(|response| {
+        response.get(0).is_some_and(|byte| byte == &ACK_SUCCESS)
+    });
+    
+    // Build the SendAsset/SendLiquidity ack response message
+    let receive_asset_execute_msg: cosmwasm_std::WasmMsg = match catalyst_packet {
+
+        CatalystV1Packet::SendAsset(payload) => {
+
+            // Convert 'from_amount' into Uint128
+            let from_amount: Uint128 = payload.variable_payload.from_amount.try_into()
+                .map_err(|_| ContractError::PayloadDecodingError {})?;
+
+            // Build the message to execute the success/fail call.
+            // NOTE: none of the fields are validated, these must be correctly handled by the vault.
+            let msg = match success {
+                true => VaultExecuteMsg::<()>::OnSendAssetSuccess {
+                    channel_id,
+                    to_account: payload.to_account.to_binary(),
+                    u: payload.u,
+                    escrow_amount: from_amount,
+                    asset_ref: payload.variable_payload.from_asset.try_decode_as_string()?,
+                    block_number_mod: payload.variable_payload.block_number
+                },
+                false => VaultExecuteMsg::<()>::OnSendAssetFailure {
+                    channel_id,
+                    to_account: payload.to_account.to_binary(),
+                    u: payload.u,
+                    escrow_amount: from_amount,
+                    asset_ref: payload.variable_payload.from_asset.try_decode_as_string()?,
+                    block_number_mod: payload.variable_payload.block_number
+                },
+            };
+
+            Ok::<cosmwasm_std::WasmMsg, ContractError>(cosmwasm_std::WasmMsg::Execute {
+                contract_addr: payload.from_vault.try_decode_as_string()?,    // No need to validate, 'Execute' will fail for an invalid address.
+                msg: to_binary(&msg)?,
+                funds: vec![]
+            })
+
+        },
+
+        CatalystV1Packet::SendLiquidity(payload) => {
+
+            // Convert 'from_amount' into Uint128
+            let from_amount: Uint128 = payload.variable_payload.from_amount.try_into()
+                .map_err(|_| ContractError::PayloadDecodingError {})?;
+
+            // Build the message to execute the success/fail call.
+            // NOTE: none of the fields are validated, these must be correctly handled by the vault.
+            let msg = match success {
+                true => VaultExecuteMsg::<()>::OnSendLiquiditySuccess {
+                    channel_id,
+                    to_account: payload.to_account.to_binary(),
+                    u: payload.u,
+                    escrow_amount: from_amount,
+                    block_number_mod: payload.variable_payload.block_number
+                },
+                false => VaultExecuteMsg::<()>::OnSendLiquidityFailure {
+                    channel_id,
+                    to_account: payload.to_account.to_binary(),
+                    u: payload.u,
+                    escrow_amount: from_amount,
+                    block_number_mod: payload.variable_payload.block_number
+                },
+            };
+
+            Ok::<cosmwasm_std::WasmMsg, ContractError>(cosmwasm_std::WasmMsg::Execute {
+                contract_addr: payload.from_vault.try_decode_as_string()?,    // No need to validate, 'Execute' will fail for an invalid address.
+                msg: to_binary(&msg)?,
+                funds: vec![]
+            })
+
+        }
+    }?;
+
+    // Build the response messsage.
+    let response_msg = CosmosMsg::Wasm(receive_asset_execute_msg);
+
+    Ok(
+        Response::new().add_message(response_msg)
+    )
 }
 
 
@@ -242,17 +552,77 @@ impl CatalystCalldata {
 
     /// Retrieve and remove the calldata parameters from the store.
     /// 
-    /// **NOTE**: The call will fail if there is no data saved on the store.
+    /// **NOTE**: Returns None if there is no data saved on the store.
     /// 
     pub fn remove(
         deps: &mut DepsMut
-    ) -> Result<Self, ContractError> {
+    ) -> Result<Option<Self>, ContractError> {
 
-        let params = REPLY_CALLDATA_PARAMS.load(deps.storage)?;
-        REPLY_CALLDATA_PARAMS.remove(deps.storage);
+        let params = REPLY_CALLDATA_PARAMS.may_load(deps.storage)?;
+
+        if params.is_some() {
+            REPLY_CALLDATA_PARAMS.remove(deps.storage);
+        }
 
         Ok(params)
     }
+}
+
+
+// TODO documentation
+pub fn handle_reply(
+    mut deps: DepsMut,
+    env: Env,
+    reply: Reply
+) -> Result<Option<VaultResponse>, ContractError> {
+
+    match reply.id {
+
+        SET_ACK_REPLY_ID => match reply.result {
+            SubMsgResult::Ok(_) => {
+                // Set the custom 'success-ack' for successful executions.
+                Ok(Some(Response::new().set_data(ack_success())))
+            },
+            SubMsgResult::Err(_) => {
+                // Set the custom 'failed-ack' for unsuccessful executions.
+                Ok(Some(Response::new().set_data(ack_fail())))
+            }
+        },
+
+        RUN_CALLDATA_REPLY_ID => match reply.result {
+            SubMsgResult::Ok(response) => {
+                // Check if there is calldata to execute
+                match CatalystCalldata::remove(&mut deps)? {
+                    Some(calldata) => {
+                        handle_calldata_on_reply(response, calldata).map(Some)
+                    },
+                    None => unreachable!("'RUN_CALLDATA_REPLY_ID' set without calldata saved.")
+                }
+            },
+            SubMsgResult::Err(_) => {
+                // The vault 'ReceiveAsset'/'ReceiveLiquidity' invocation is **always** the first
+                // message. If it errors, a non-error response may be returned (i.e. an ack with
+                // information on the error), as it is guaranteed that no prior submessage has 
+                // committed any state to the store.
+                Ok(Some(Response::new().set_data(ack_fail())))
+            }
+        },
+
+        UNDERWRITE_REPLY_ID => match reply.result {
+            SubMsgResult::Ok(response) => {
+                handle_underwrite_reply(deps, env, response).map(Some)
+                
+            },
+            SubMsgResult::Err(_) => {
+                unreachable!(
+                    "Underwrite reply should never be an error (ReplyOn::Success set)."
+                )
+            }
+        },
+
+        _ => Ok(None)
+    }
+
 }
 
 
@@ -262,8 +632,8 @@ impl CatalystCalldata {
 /// * `swap_return` - The swap return.
 /// 
 pub fn handle_calldata_on_reply(
-    mut deps: DepsMut,
-    response: SubMsgResponse
+    response: SubMsgResponse,
+    calldata: CatalystCalldata
 ) -> Result<VaultResponse, ContractError> {
 
     // Build the 'onCatalystCall' message using the swap return.
@@ -273,20 +643,22 @@ pub fn handle_calldata_on_reply(
     })?;
     let swap_return: Uint128 = from_binary(&response_data)?;
 
-    let CatalystCalldata {
-        target,
-        bytes
-    } = CatalystCalldata::remove(&mut deps)?;
-
     let calldata_message = create_on_catalyst_call_msg(
-        target.to_string(),
+        calldata.target.to_string(),
         swap_return,
-        bytes
+        calldata.bytes
     )?;
+
+    // ! ONLY reply on success: DO NOT return an ack-fail, rather error the entire tx
+    // ! See the `Receive Handlers` section above for more information.
+    let submessage = SubMsg::reply_on_success(
+        calldata_message,
+        SET_ACK_REPLY_ID
+    );
 
     Ok(
         Response::new()
-            .add_message(calldata_message)
+            .add_submessage(submessage)
     )
 
 }
@@ -464,6 +836,149 @@ pub fn get_underwrite_identifier(
 }
 
 
+/// Underwrite an asset swap.
+/// 
+/// **NOTE**: All the arguments passed to this function must **exactly match** those of the
+/// desired swap to be underwritten.
+/// 
+/// **NOTE**: This method does not take into account any source vault parameters.
+/// 
+/// # Arguments: 
+/// * `to_vault` - The target vault.
+/// * `to_asset_ref` - The destination asset.
+/// * `u` - The underwritten units.
+/// * `min_out` - The mininum `to_asset_ref` output amount to get on the target vault.
+/// * `to_account` - The recipient of the swap.
+/// * `underwrite_incentive_x16` - The underwriting incentive.
+/// * `calldata` - The swap calldata.
+/// 
+pub fn underwrite(
+    deps: &mut DepsMut,
+    info: &MessageInfo,
+    to_vault: String,
+    to_asset_ref: String,
+    u: U256,
+    min_out: Uint128,
+    to_account: String,
+    underwrite_incentive_x16: u16,
+    calldata: Binary
+) -> Result<VaultResponse, ContractError> {
+
+    let identifier = get_underwrite_identifier(
+        &to_vault,
+        &to_asset_ref,
+        &u,
+        &min_out,
+        &to_account,
+        underwrite_incentive_x16,
+        &calldata
+    );
+
+    // Parse the calldata now to avoid executing all the underwrite logic should the calldata be
+    // wrongly formatted.
+    let parsed_calldata = parse_calldata(deps.as_ref(), calldata)?;
+
+    // Save the underwrite parameters to the store so that they can be recovered on the 'reply'
+    // handler to finish the 'underwrite' logic.
+    let underwrite_params = UnderwriteParams {
+        identifier: identifier.clone(),
+        underwriter: info.sender.clone(),
+        to_vault: to_vault.clone(),
+        to_asset_ref: to_asset_ref.clone(),
+        to_account,
+        underwrite_incentive_x16,
+        calldata: parsed_calldata,
+        funds: info.funds.clone()
+    };
+    underwrite_params.save(deps)?;
+
+    // The swap `min_out` must be increased to take into account the underwriter's incentive
+    let min_out = min_out
+        .checked_mul(Uint128::new(2u128.pow(16)))?
+        .div(Uint128::new(2u128.pow(16).wrapping_sub(underwrite_incentive_x16 as u128)));   //'wrapping_sub' safe as `underwrite_incentive_x16` < 2**16
+    
+    // Invoke the vault
+    let underwrite_message = WasmMsg::Execute {
+        contract_addr: to_vault,
+        msg: to_binary(&VaultExecuteMsg::<()>::UnderwriteAsset {
+            identifier,
+            asset_ref: to_asset_ref,
+            u,
+            min_out
+        })?,
+        funds: vec![]
+    };
+
+    Ok(Response::new()
+        .add_submessage(
+            SubMsg {
+                id: UNDERWRITE_REPLY_ID,
+                msg: CosmosMsg::Wasm(underwrite_message),
+                gas_limit: None,
+                reply_on: ReplyOn::Success,
+            }
+        )
+    )
+}
+
+
+/// Check the existance of a connection between the destination and the source vault, and perform
+/// an asset underwrite.
+/// 
+/// **NOTE**: All the arguments passed to this function must **exactly match** those of the
+/// desired swap to be underwritten.
+/// 
+/// # Arguments: 
+/// * `channel_id` - The incoming message channel identifier.
+/// * `from_vault` - The source vault on the source chain.
+/// * `to_vault` - The target vault.
+/// * `to_asset_ref` - The destination asset.
+/// * `u` - The underwritten units.
+/// * `min_out` - The mininum `to_asset_ref` output amount to get on the target vault.
+/// * `to_account` - The recipient of the swap.
+/// * `underwrite_incentive_x16` - The underwriting incentive.
+/// * `calldata` - The swap calldata.
+/// 
+pub fn underwrite_and_check_connection(
+    deps: &mut DepsMut,
+    info: &MessageInfo,
+    channel_id: String,
+    from_vault: Binary,
+    to_vault: String,
+    to_asset_ref: String,
+    u: U256,
+    min_out: Uint128,
+    to_account: String,
+    underwrite_incentive_x16: u16,
+    calldata: Binary
+) -> Result<VaultResponse, ContractError> {
+
+    let is_source_vault_connected = deps.querier.query_wasm_smart::<VaultConnectionStateResponse>(
+        to_vault.clone(),
+        &CommonQueryMsg::VaultConnectionState {
+            channel_id: channel_id.clone(),
+            vault: from_vault.clone()
+        }
+    )?.state;
+
+    if !is_source_vault_connected {
+        return Err(ContractError::VaultNotConnected { channel_id, vault: from_vault })
+    }
+    
+    underwrite(
+        deps,
+        info,
+        to_vault,
+        to_asset_ref,
+        u,
+        min_out,
+        to_account,
+        underwrite_incentive_x16,
+        calldata
+    )
+}
+
+
 /// Resume the underwriting logic after the successful execution of the `UnderwriteAsset` call on
 /// the destination vault.
 /// 
@@ -578,6 +1093,135 @@ pub fn handle_underwrite_reply(
 }
 
 
+/// Expire an underwrite and free the escrowed assets.
+/// 
+/// **NOTE**: The underwriter may expire the underwrite at any time. Any other account must wait
+/// until after the expiry time.
+/// 
+/// # Arguments: 
+/// * `to_vault` - The target vault.
+/// * `to_asset_ref` - The destination asset.
+/// * `u` - The underwritten units.
+/// * `min_out` - The mininum `to_asset_ref` output amount to get on the target vault.
+/// * `to_account` - The recipient of the swap.
+/// * `underwrite_incentive_x16` - The underwriting incentive.
+/// * `calldata` - The swap calldata.
+///
+pub fn expire_underwrite(
+    deps: &mut DepsMut,
+    env: &Env,
+    info: &MessageInfo,
+    to_vault: String,
+    to_asset_ref: String,
+    u: U256,
+    min_out: Uint128,
+    to_account: String,
+    underwrite_incentive_x16: u16,
+    calldata: Binary
+) -> Result<VaultResponse, ContractError> {
+
+    let identifier = get_underwrite_identifier(
+        &to_vault,
+        &to_asset_ref,
+        &u,
+        &min_out,
+        &to_account,
+        underwrite_incentive_x16,
+        &calldata
+    );
+
+    // ! Remove the underwrite event to prevent 'expire' being called multiple times
+    let underwrite_event = UnderwriteEvent::remove(deps, identifier.clone())?
+        .ok_or(ContractError::UnderwriteDoesNotExist{ id: identifier.clone() })?;
+
+    // Verify that the underwrite has expired. Note that the underwriter may 'expire' the
+    // underwrite at any time.
+    if underwrite_event.underwriter != info.sender {
+        let current_time = env.block.time.seconds();
+        let expiry_time = underwrite_event.expiry.u64();
+        if current_time < expiry_time {
+            return Err(ContractError::UnderwriteNotExpired{
+                // 'wrapping_sub' safe, 'current_time < expiry_time' checked above 
+                time_remaining: expiry_time.wrapping_sub(current_time).into()
+            })
+        }
+    }
+
+    // Build the message to invoke the vault's `DeleteUnderwriteAsset`.
+    let underwrite_amount = underwrite_event.amount;
+    let delete_underwrite_msg = WasmMsg::Execute {
+        contract_addr: to_vault.clone(),
+        msg: to_binary(&VaultExecuteMsg::<()>::DeleteUnderwriteAsset {
+            identifier: identifier.clone(),
+            asset_ref: to_asset_ref.clone(),
+            u,
+            escrow_amount: underwrite_amount
+        })?,
+        funds: vec![]
+    };
+
+    // Build the messages to transfer the escrowed assets.
+    //   -> refund = collateral + incentive
+    let underwrite_incentive_x16 = Uint128::new(underwrite_incentive_x16 as u128);
+    let underwrite_incentive = (underwrite_amount.checked_mul(underwrite_incentive_x16)?) >> 16;
+    let underwrite_collateral = underwrite_amount
+        .checked_mul(UNDERWRITING_COLLATERAL)?
+        .div(UNDERWRITING_COLLATERAL_BASE);
+    let refund_amount = underwrite_incentive
+        .wrapping_add(underwrite_collateral);  // 'wrapping_add` safe: a larger computation has already
+                                                // been done on the initial 'underwrite' call.
+
+    // Compute the share of the refund amount that goes to the caller and to the vault
+    // NOTE: Use U256 to make sure the following calculation never overflowS
+    let expire_reward = U256::from(refund_amount)
+        .wrapping_mul(U256::from_uint128(UNDERWRITING_EXPIRE_REWARD))   // 'wrapping_mul' safe: U256.max > Uint128.max * Uint128.max
+        .div(U256::from_uint128(UNDERWRITING_EXPIRE_REWARD_BASE))
+        .as_uint128();  // Casting safe, as UNDERWRITING_EXPIRE_REWARD < UNDERWRITING_EXPIRE_REWARD_BASE
+
+    let vault_reward = refund_amount.wrapping_sub(expire_reward);   // 'wrapping_sub' safe: expire_reward < refund_amount
+
+    let asset = deps.querier.query_wasm_smart::<AssetResponse<Asset>>(
+        to_vault.clone(),
+        &CommonQueryMsg::Asset { asset_ref: to_asset_ref }
+    )?.asset;
+
+    let expire_reward_msg = asset.send_asset(
+        env,
+        expire_reward,
+        info.sender.to_string()
+    )?;
+
+    let vault_reward_transfer_msg = asset.send_asset(
+        env,
+        vault_reward,
+        to_vault
+    )?;
+
+    // Build the response
+    let mut response = VaultResponse::new()
+        .add_message(delete_underwrite_msg);
+
+    if let Some(msg) = expire_reward_msg {
+        response = response.add_message(msg.into_cosmos_vault_msg());
+    }
+
+    if let Some(msg) = vault_reward_transfer_msg {
+        response = response.add_message(msg.into_cosmos_vault_msg());
+    }
+
+    Ok(
+        response
+            .add_event(
+                expire_underwrite_event(
+                    identifier,
+                    info.sender.to_string(),
+                    expire_reward
+                )
+            )
+    )
+}
+
+
 /// Match the an incoming asset swap with an underwrite event. Returns `None` if no underwrite
 /// is found.
 /// 
@@ -670,7 +1314,17 @@ pub fn match_underwrite(
     if let Some(msg) = underwriter_payment_msg {
         response = response.add_message(msg.into_cosmos_vault_msg());
     }
-    
+
+    // Make sure the **last** message triggers the 'set ack' logic on **success**
+    // ! ONLY reply on success: DO NOT return an ack-fail, rather error the entire tx.
+    // ! See the 'Receive Handlers' section above for more information.
+    let message_count = response.messages.len();
+    let last_sub_msg = response.messages
+        .get_mut(message_count-1)
+        .unwrap();  // Unwrap safe, as there is always at least 1 message
+    last_sub_msg.reply_on = ReplyOn::Success;
+    last_sub_msg.id = SET_ACK_REPLY_ID;
+
     Ok(Some(response
         .add_event(
             fulfill_underwrite_event(
@@ -724,6 +1378,31 @@ pub fn get_max_underwrite_duration(
 
 
 
+/// Wrap multiple submessages within a single submessage.
+/// 
+/// **NOTE**: This method can only be invoked by the interface itself.
+/// 
+/// # Arguments:
+/// *sub_msgs* - The submessages to wrap into a single submessage.
+/// 
+pub fn wrap_sub_msgs(
+    info: &MessageInfo,
+    env: &Env,
+    sub_msgs: Vec<SubMsg<CustomMsg>>
+) -> Result<VaultResponse, ContractError> {
+
+    // ! Only the interface itself may invoke this function
+    if info.sender != env.contract.address {
+        return Err(ContractError::Unauthorized {});
+    }
+
+    Ok(
+        VaultResponse::new()
+            .add_submessages(sub_msgs)
+    )
+}
+
+
 // OnCatalystCall
 // ************************************************************************************************
 
@@ -751,6 +1430,46 @@ pub fn create_on_catalyst_call_msg(
         }
     ))
 
+}
+
+
+
+// Queries
+// ************************************************************************************************
+
+/// Query the identifier of the provided underwrite parameters.
+/// 
+/// # Arguments:
+/// * `to_vault` - The target vault.
+/// * `to_asset_ref` - The destination asset.
+/// * `u` - The underwritten units.
+/// * `min_out` - The mininum `to_asset_ref` output amount to get on the target vault.
+/// * `to_account` - The recipient of the swap.
+/// * `underwrite_incentive_x16` - The underwriting incentive.
+/// * `calldata` - The swap calldata.
+/// 
+pub fn query_underwrite_identifier(
+    to_vault: String,
+    to_asset_ref: String,
+    u: U256,
+    min_out: Uint128,
+    to_account: String,
+    underwrite_incentive_x16: u16,
+    calldata: Binary
+) -> StdResult<UnderwriteIdentifierResponse> {
+    Ok(
+        UnderwriteIdentifierResponse {
+            identifier: get_underwrite_identifier(
+                &to_vault,
+                &to_asset_ref,
+                &u,
+                &min_out,
+                &to_account,
+                underwrite_incentive_x16,
+                &calldata
+            )
+        }
+    )
 }
 
 

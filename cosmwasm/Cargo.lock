@@ -135,6 +135,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "catalyst-interface-ibc"
+version = "0.1.0"
+dependencies = [
+ "catalyst-interface-common",
+ "catalyst-types",
+ "catalyst-vault-common",
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cosmwasm-storage",
+ "cw-controllers",
+ "cw-multi-test",
+ "cw-storage-plus",
+ "cw2",
+ "schemars",
+ "serde",
+ "sha3",
+ "thiserror",
+]
+
+[[package]]
 name = "catalyst-router"
 version = "0.1.0"
 dependencies = [

@@ -1,5 +1,3 @@
-#![cfg(test)]
-
 use crate::{ibc::{ibc_channel_open, ibc_channel_connect, CATALYST_V1_CHANNEL_VERSION, ibc_channel_close}, state::IbcChannelInfo};
 use cosmwasm_std::{testing::mock_env, IbcChannelOpenMsg, IbcChannelConnectMsg, IbcChannel, IbcEndpoint, IbcOrder, DepsMut, IbcChannelCloseMsg};
 
