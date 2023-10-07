@@ -1543,11 +1543,11 @@ pub fn set_owner_unchecked(
 /// 
 /// * `account` - The new interface owner.
 /// 
-pub fn update_owner(
+pub fn update_owner<T>(
     deps: DepsMut,
     info: MessageInfo,
     account: String
-) -> Result<VaultResponse, ContractError> {
+) -> Result<Response<T>, ContractError> {
 
     // Validate the new owner account
     let account = deps.api.addr_validate(account.as_str())?;
