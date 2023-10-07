@@ -41,7 +41,7 @@ echo "Code id: $AMPLIFIED_CODE_ID"
 echo
 
 echo Deploy PoA interface
-deploy_output=$(echo $PASSWORD_LOCAL | wasmd tx wasm store ./target/wasm32-unknown-unknown/release/catalyst_ibc_interface_poa.wasm --from $WALLET_NAME_LOCAL $TX_FLAG -y -b block --output json)
+deploy_output=$(echo $PASSWORD_LOCAL | wasmd tx wasm store ./target/wasm32-unknown-unknown/release/catalyst_interface_poa.wasm --from $WALLET_NAME_LOCAL $TX_FLAG -y -b block --output json)
 export INTERFACE_CODE_ID=$(echo $deploy_output | jq -r '.logs[0].events[-1].attributes[-1].value')
 echo "Code id: $INTERFACE_CODE_ID"
 echo

@@ -3,7 +3,7 @@ use cosmwasm_std::entry_point;
 use cosmwasm_std::{
     DepsMut, Env, IbcReceiveResponse, Reply, Response, SubMsgResult, IbcPacket, IbcEndpoint, Binary, Timestamp, MessageInfo
 };
-use catalyst_interface_common::{ContractError, ibc::{on_packet_receive, ack_fail, on_packet_success, on_packet_failure, RECEIVE_REPLY_ID, ACK_SUCCESS, ack_success}};
+use catalyst_interface_common::ContractError;
 use catalyst_vault_common::bindings::VaultResponse;
 
 use crate::state::is_owner;

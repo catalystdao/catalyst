@@ -13,7 +13,7 @@ use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
 use crate::state::{set_owner_unchecked, update_owner};
 
 // Version information
-const CONTRACT_NAME: &str = "catalyst-ibc-interface-poa";
+const CONTRACT_NAME: &str = "catalyst-interface-poa";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 const TRANSACTION_TIMEOUT: u64 = 2 * 60 * 60;   // 2 hours

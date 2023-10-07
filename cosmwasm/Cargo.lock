@@ -96,25 +96,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "catalyst-ibc-interface-poa"
-version = "0.1.0"
-dependencies = [
- "catalyst-interface-common",
- "catalyst-types",
- "catalyst-vault-common",
- "cosmwasm-schema",
- "cosmwasm-std",
- "cosmwasm-storage",
- "cw-controllers",
- "cw-multi-test",
- "cw-storage-plus",
- "cw2",
- "schemars",
- "serde",
- "thiserror",
-]
-
-[[package]]
 name = "catalyst-interface-common"
 version = "0.1.0"
 dependencies = [
@@ -151,6 +132,25 @@ dependencies = [
  "schemars",
  "serde",
  "sha3",
+ "thiserror",
+]
+
+[[package]]
+name = "catalyst-interface-poa"
+version = "0.1.0"
+dependencies = [
+ "catalyst-interface-common",
+ "catalyst-types",
+ "catalyst-vault-common",
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cosmwasm-storage",
+ "cw-controllers",
+ "cw-multi-test",
+ "cw-storage-plus",
+ "cw2",
+ "schemars",
+ "serde",
  "thiserror",
 ]
 

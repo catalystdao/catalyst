@@ -1,5 +1,5 @@
 [package]
-name = "catalyst-ibc-interface-poa"
+name = "catalyst-interface-poa"
 version = "0.1.0"
 authors = ["Catalyst"]
 edition = "2021"
