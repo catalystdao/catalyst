@@ -405,1340 +405,205 @@ fn query_list(deps: Deps) -> StdResult<ListChannelsResponse> {
 
 
 
-// Tests ******************************************************************************************
 
-// #[cfg(test)]
-// mod catalyst_interface_common_tests {
+// Tests
+// ************************************************************************************************
 
-//     use crate::{ibc_test_helpers::{open_channel, mock_channel_info, TEST_LOCAL_PORT, close_channel, TEST_REMOTE_PORT}, catalyst_ibc_payload::CatalystV1Packet, ibc::{ibc_packet_receive, RECEIVE_REPLY_ID, ibc_packet_ack, ibc_packet_timeout, reply}};
+#[cfg(test)]
+mod catalyst_interface_ibc_tests {
 
-//     use super::*;
-//     use cosmwasm_std::{testing::{mock_dependencies, mock_env, mock_info}, from_binary, Uint128, SubMsg, IbcTimeout, IbcPacket, IbcEndpoint, IbcPacketReceiveMsg, IbcPacketAckMsg, IbcAcknowledgement, IbcPacketTimeoutMsg, Reply, SubMsgResponse, SubMsgResult};
-//     use catalyst_types::u256;
+    use crate::test_helpers::{open_channel, mock_channel_info, close_channel};
 
-//     pub const DEPLOYER_ADDR: &str = "deployer_addr";
+    use super::*;
+    use cosmwasm_std::{testing::{mock_dependencies, mock_env, mock_info}, from_binary};
 
-
-
-//     // Helpers ******************************************************************************************************************
-
-//     fn mock_ibc_packet(
-//         channel_id: &str,
-//         from_vault: &str,
-//         send_msg: ExecuteMsg<CustomMsg>,
-//         from_amount: Option<U256>    // Allow to override the send_msg from_amount to provide invalid configs
-//     ) -> IbcPacket {
-//         IbcPacket::new(
-//             Binary::from(build_payload(from_vault.as_bytes(), send_msg, from_amount).unwrap()),
-//             IbcEndpoint {
-//                 port_id: TEST_REMOTE_PORT.to_string(),
-//                 channel_id: format!("{}-remote", channel_id),
-//             },
-//             IbcEndpoint {
-//                 port_id: TEST_LOCAL_PORT.to_string(),
-//                 channel_id: channel_id.to_string(),
-//             },
-//             7,
-//             mock_env().block.time.plus_seconds(TRANSACTION_TIMEOUT_SECONDS).into(),     // Note mock_env() always returns the same block time
-//         )
-//     }
-    
-
-//     // Send asset helpers
-
-//     fn mock_send_asset_msg(
-//         channel_id: &str,
-//         to_vault: Vec<u8>,
-//         min_out: Option<U256>          // Allow to override the default value to provide invalid configs
-//     ) -> ExecuteMsg<CustomMsg> {
-//         ExecuteMsg::SendCrossChainAsset {
-//             channel_id: channel_id.into(),
-//             to_vault: CatalystEncodedAddress::try_encode(to_vault.as_ref()).unwrap().to_binary(),
-//             to_account: CatalystEncodedAddress::try_encode(b"to_account").unwrap().to_binary(),
-//             to_asset_index: 1u8,
-//             u: u256!("78456988731590487483448276103933454935747871349630657124267302091643025406701"),          // Some large U256 number
-//             min_out: min_out.unwrap_or(
-//                 u256!("323476719582585693194107115743132847255")                                                // Some large Uint128 number (as U256)
-//             ),
-//             from_amount: Uint128::from(4920222095670429824873974121747892731u128),                          // Some large Uint128 number
-//             from_asset: "from_asset".to_string(),
-//             underwrite_incentive_x16: 1001u16,
-//             block_number: 1356u32,
-//             calldata: Binary(vec![])
-//         }
-//     }
-
-//     fn mock_vault_receive_asset_msg(
-//         channel_id: &str,
-//         from_vault: Vec<u8>,
-//     ) -> catalyst_vault_common::msg::ExecuteMsg<(), CustomMsg> {
-//         catalyst_vault_common::msg::ExecuteMsg::ReceiveAsset {
-//             channel_id: channel_id.into(),
-//             from_vault: CatalystEncodedAddress::try_encode(from_vault.as_ref()).unwrap().to_binary(),
-//             to_asset_index: 1u8,
-//             to_account: "to_account".to_string(),
-//             u: u256!("78456988731590487483448276103933454935747871349630657124267302091643025406701"),          // Some large U256 number
-//             min_out: Uint128::from(323476719582585693194107115743132847255u128),                                // Some large Uint128 number
-//             from_asset: CatalystEncodedAddress::try_encode("from_asset".as_bytes()).unwrap().to_binary(),
-//             from_amount: U256::from(4920222095670429824873974121747892731u128),
-//             from_block_number_mod: 1356u32
-//         }
-//     }
-
-//     fn mock_vault_send_asset_success_msg(
-//         channel_id: &str,
-//     ) -> catalyst_vault_common::msg::ExecuteMsg<(), CustomMsg> {
-//         catalyst_vault_common::msg::ExecuteMsg::OnSendAssetSuccess {
-//             channel_id: channel_id.into(),
-//             to_account: CatalystEncodedAddress::try_encode(b"to_account").unwrap().to_binary(),
-//             u: u256!("78456988731590487483448276103933454935747871349630657124267302091643025406701"),          // Some large U256 number
-//             escrow_amount: Uint128::from(4920222095670429824873974121747892731u128),                                   // Some large Uint128 number
-//             asset_ref: "from_asset".to_string(),
-//             block_number_mod: 1356u32
-//         }
-//     }
-
-//     fn mock_vault_send_asset_failure_msg(
-//         channel_id: &str,
-//     ) -> catalyst_vault_common::msg::ExecuteMsg<(), CustomMsg> {
-//         catalyst_vault_common::msg::ExecuteMsg::OnSendAssetFailure {
-//             channel_id: channel_id.into(),
-//             to_account: CatalystEncodedAddress::try_encode(b"to_account").unwrap().to_binary(),
-//             u: u256!("78456988731590487483448276103933454935747871349630657124267302091643025406701"),          // Some large U256 number
-//             escrow_amount: Uint128::from(4920222095670429824873974121747892731u128),                                   // Some large Uint128 number
-//             asset_ref: "from_asset".to_string(),
-//             block_number_mod: 1356u32
-//         }
-//     }
-
-
-//     // Send liquidity helpers
-    
-//     fn mock_send_liquidity_msg(
-//         channel_id: &str,
-//         to_vault: Vec<u8>,
-//         min_vault_tokens: Option<U256>,          // Allow to override the default value to provide invalid configs
-//         min_reference_asset: Option<U256>       // Allow to override the default value to provide invalid configs
-//     ) -> ExecuteMsg<CustomMsg> {
-//         ExecuteMsg::SendCrossChainLiquidity {
-//             channel_id: channel_id.into(),
-//             to_vault: CatalystEncodedAddress::try_encode(to_vault.as_ref()).unwrap().to_binary(),
-//             to_account: CatalystEncodedAddress::try_encode(b"to_account").unwrap().to_binary(),
-//             u: u256!("78456988731590487483448276103933454935747871349630657124267302091643025406701"),          // Some large U256 number
-//             min_vault_tokens: min_vault_tokens.unwrap_or(
-//                 u256!("323476719582585693194107115743132847255")                                                // Some large Uint128 number (as U256)
-//             ),
-//             min_reference_asset: min_reference_asset.unwrap_or(
-//                 u256!("1385371954613879816514345798135479")                                                     // Some large Uint128 number (as U256)
-//             ),
-//             from_amount: Uint128::from(4920222095670429824873974121747892731u128),                              // Some large Uint128 number
-//             block_number: 1356u32,
-//             calldata: Binary(vec![])
-//         }
-//     }
-
-//     fn mock_vault_receive_liquidity_msg(
-//         channel_id: &str,
-//         from_vault: Vec<u8>,
-//     ) -> catalyst_vault_common::msg::ExecuteMsg<()> {
-//         catalyst_vault_common::msg::ExecuteMsg::ReceiveLiquidity {
-//             channel_id: channel_id.into(),
-//             from_vault: CatalystEncodedAddress::try_encode(from_vault.as_ref()).unwrap().to_binary(),
-//             to_account: "to_account".to_string(),
-//             u: u256!("78456988731590487483448276103933454935747871349630657124267302091643025406701"),          // Some large U256 number
-//             min_vault_tokens: Uint128::from(323476719582585693194107115743132847255u128),                        // Some large Uint128 number
-//             min_reference_asset: Uint128::from(1385371954613879816514345798135479u128),                         // Some large Uint128 number
-//             from_amount: U256::from(4920222095670429824873974121747892731u128),
-//             from_block_number_mod: 1356u32
-//         }
-//     }
-
-//     fn mock_vault_send_liquidity_success_msg(
-//         channel_id: &str,
-//     ) -> catalyst_vault_common::msg::ExecuteMsg<()> {
-//         catalyst_vault_common::msg::ExecuteMsg::OnSendLiquiditySuccess {
-//             channel_id: channel_id.into(),
-//             to_account: CatalystEncodedAddress::try_encode(b"to_account").unwrap().to_binary(),
-//             u: u256!("78456988731590487483448276103933454935747871349630657124267302091643025406701"),          // Some large U256 number
-//             escrow_amount: Uint128::from(4920222095670429824873974121747892731u128),                                   // Some large Uint128 number
-//             block_number_mod: 1356u32
-//         }
-//     }
-
-//     fn mock_vault_send_liquidity_failure_msg(
-//         channel_id: &str,
-//     ) -> catalyst_vault_common::msg::ExecuteMsg<()> {
-//         catalyst_vault_common::msg::ExecuteMsg::OnSendLiquidityFailure {
-//             channel_id: channel_id.into(),
-//             to_account: CatalystEncodedAddress::try_encode(b"to_account").unwrap().to_binary(),
-//             u: u256!("78456988731590487483448276103933454935747871349630657124267302091643025406701"),          // Some large U256 number
-//             escrow_amount: Uint128::from(4920222095670429824873974121747892731u128),                                   // Some large Uint128 number
-//             block_number_mod: 1356u32
-//         }
-//     }
-
-
-//     fn build_payload(
-//         from_vault: &[u8],
-//         msg: ExecuteMsg<CustomMsg>,
-//         override_from_amount: Option<U256>    // Allow to override the msg 'from_amount' to provide invalid configs
-//     ) -> Result<Binary, ContractError> {
-//         let packet = match msg {
-//             ExecuteMsg::SendCrossChainAsset {
-//                 channel_id: _,
-//                 to_vault,
-//                 to_account,
-//                 to_asset_index,
-//                 u,
-//                 min_out,
-//                 from_amount,
-//                 from_asset,
-//                 underwrite_incentive_x16,
-//                 block_number,
-//                 calldata
-//             } => CatalystV1Packet::SendAsset(
-//                 CatalystV1SendAssetPayload {
-//                     from_vault: CatalystEncodedAddress::try_encode(from_vault.as_ref()).unwrap(),
-//                     to_vault: CatalystEncodedAddress::from_slice_unchecked(to_vault.as_ref()),
-//                     to_account: CatalystEncodedAddress::from_slice_unchecked(to_account.as_ref()),
-//                     u,
-//                     variable_payload: SendAssetVariablePayload {
-//                         to_asset_index,
-//                         min_out,
-//                         from_amount: override_from_amount.unwrap_or(U256::from(from_amount)),
-//                         from_asset: CatalystEncodedAddress::try_encode(from_asset.as_ref()).unwrap(),
-//                         block_number,
-//                         underwrite_incentive_x16,
-//                         calldata
-//                     },
-//                 }
-//             ),
-//             ExecuteMsg::SendCrossChainLiquidity {
-//                 channel_id: _,
-//                 to_vault,
-//                 to_account,
-//                 u,
-//                 min_vault_tokens,
-//                 min_reference_asset,
-//                 from_amount,
-//                 block_number,
-//                 calldata
-//             } => CatalystV1Packet::SendLiquidity(
-//                 CatalystV1SendLiquidityPayload {
-//                     from_vault: CatalystEncodedAddress::try_encode(from_vault.as_ref()).unwrap(),
-//                     to_vault: CatalystEncodedAddress::from_slice_unchecked(to_vault.as_ref()),
-//                     to_account: CatalystEncodedAddress::from_slice_unchecked(to_account.as_ref()),
-//                     u,
-//                     variable_payload: SendLiquidityVariablePayload {
-//                         min_vault_tokens,
-//                         min_reference_asset,
-//                         from_amount: override_from_amount.unwrap_or(U256::from(from_amount)),
-//                         block_number,
-//                         calldata
-//                     },
-//                 }
-//             ),
-//             _ => panic!("Payload building not implemented for the given message")
-//         };
-
-//         packet.try_encode()
-//     }
+    pub const DEPLOYER_ADDR: &str = "deployer_addr";
 
 
 
-//     // Channel Management Tests *************************************************************************************************
+    // Channel Management Tests
+    // ********************************************************************************************
 
-//     #[test]
-//     fn test_instantiate() {
+    #[test]
+    fn test_instantiate() {
 
-//         let mut deps = mock_dependencies();
+        let mut deps = mock_dependencies();
       
 
-//         // Tested action: instantiate contract
-//         let response = instantiate(
-//             deps.as_mut(),
-//             mock_env(),
-//             mock_info(DEPLOYER_ADDR, &vec![]),
-//             InstantiateMsg {}
-//         ).unwrap();
+        // Tested action: instantiate contract
+        let response = instantiate(
+            deps.as_mut(),
+            mock_env(),
+            mock_info(DEPLOYER_ADDR, &vec![]),
+            InstantiateMsg {}
+        ).unwrap();
 
 
-//         // No response attributes are expected
-//         assert_eq!(response.attributes.len(), 0usize);
+        // No response attributes are expected
+        assert_eq!(response.attributes.len(), 0usize);
 
-//         //TODO add more checks?
+        //TODO add more checks?
 
-//     }
+    }
 
 
-//     #[test]
-//     fn test_open_channel_and_query() {
+    #[test]
+    fn test_open_channel_and_query() {
 
-//         let mut deps = mock_dependencies();
+        let mut deps = mock_dependencies();
       
-//         // Instantiate contract
-//         instantiate(
-//             deps.as_mut(),
-//             mock_env(),
-//             mock_info(DEPLOYER_ADDR, &vec![]),
-//             InstantiateMsg {}
-//         ).unwrap();
+        // Instantiate contract
+        instantiate(
+            deps.as_mut(),
+            mock_env(),
+            mock_info(DEPLOYER_ADDR, &vec![]),
+            InstantiateMsg {}
+        ).unwrap();
 
-//         // Add mock channel
-//         let channel_id = "mock-channel-1";
-
-
-//         // Tested action: open channel
-//         open_channel(deps.as_mut(), channel_id, None, None);
+        // Add mock channel
+        let channel_id = "mock-channel-1";
 
 
-//         // Query open channels
-//         let open_channels: ListChannelsResponse = from_binary(
-//             &query(deps.as_ref(), mock_env(), QueryMsg::ListChannels {}).unwrap()
-//         ).unwrap();
-
-//         assert_eq!(open_channels.channels.len(), 1);
-//         assert_eq!(open_channels.channels[0], mock_channel_info(channel_id));
-
-//     }
+        // Tested action: open channel
+        open_channel(deps.as_mut(), channel_id, None, None);
 
 
-//     #[test]
-//     fn test_open_multiple_channels_and_query() {
+        // Query open channels
+        let open_channels: ListChannelsResponse = from_binary(
+            &query(deps.as_ref(), mock_env(), QueryMsg::ListChannels {}).unwrap()
+        ).unwrap();
 
-//         let mut deps = mock_dependencies();
+        assert_eq!(open_channels.channels.len(), 1);
+        assert_eq!(open_channels.channels[0], mock_channel_info(channel_id));
+
+    }
+
+
+    #[test]
+    fn test_open_multiple_channels_and_query() {
+
+        let mut deps = mock_dependencies();
       
-//         // Instantiate contract
-//         instantiate(
-//             deps.as_mut(),
-//             mock_env(),
-//             mock_info(DEPLOYER_ADDR, &vec![]),
-//             InstantiateMsg {}
-//         ).unwrap();
+        // Instantiate contract
+        instantiate(
+            deps.as_mut(),
+            mock_env(),
+            mock_info(DEPLOYER_ADDR, &vec![]),
+            InstantiateMsg {}
+        ).unwrap();
 
-//         // Open mock channels
-//         let channel_id_1 = "mock-channel-1";
-//         let channel_id_2 = "mock-channel-2";
+        // Open mock channels
+        let channel_id_1 = "mock-channel-1";
+        let channel_id_2 = "mock-channel-2";
 
-//         open_channel(deps.as_mut(), channel_id_1, None, None);
-//         open_channel(deps.as_mut(), channel_id_2, None, None);
-
-
-//         // Tested action: query open channels
-//         let open_channels: ListChannelsResponse = from_binary(
-//             &query(deps.as_ref(), mock_env(), QueryMsg::ListChannels {}).unwrap()
-//         ).unwrap();
+        open_channel(deps.as_mut(), channel_id_1, None, None);
+        open_channel(deps.as_mut(), channel_id_2, None, None);
 
 
-//         assert_eq!(open_channels.channels.len(), 2);
-//         assert_eq!(open_channels.channels[0], mock_channel_info(channel_id_1));
-//         assert_eq!(open_channels.channels[1], mock_channel_info(channel_id_2));
+        // Tested action: query open channels
+        let open_channels: ListChannelsResponse = from_binary(
+            &query(deps.as_ref(), mock_env(), QueryMsg::ListChannels {}).unwrap()
+        ).unwrap();
 
-//     }
+
+        assert_eq!(open_channels.channels.len(), 2);
+        assert_eq!(open_channels.channels[0], mock_channel_info(channel_id_1));
+        assert_eq!(open_channels.channels[1], mock_channel_info(channel_id_2));
+
+    }
 
 
-//     #[test]
-//     fn test_query_open_channels_empty() {
+    #[test]
+    fn test_query_open_channels_empty() {
 
-//         let mut deps = mock_dependencies();
+        let mut deps = mock_dependencies();
       
-//         // Instantiate contract
-//         instantiate(
-//             deps.as_mut(),
-//             mock_env(),
-//             mock_info(DEPLOYER_ADDR, &vec![]),
-//             InstantiateMsg {}
-//         ).unwrap();
+        // Instantiate contract
+        instantiate(
+            deps.as_mut(),
+            mock_env(),
+            mock_info(DEPLOYER_ADDR, &vec![]),
+            InstantiateMsg {}
+        ).unwrap();
 
 
-//         // Tested action: query open channels
-//         let open_channels: ListChannelsResponse = from_binary(
-//             &query(deps.as_ref(), mock_env(), QueryMsg::ListChannels {}).unwrap()
-//         ).unwrap();
+        // Tested action: query open channels
+        let open_channels: ListChannelsResponse = from_binary(
+            &query(deps.as_ref(), mock_env(), QueryMsg::ListChannels {}).unwrap()
+        ).unwrap();
 
 
-//         assert_eq!(open_channels.channels.len(), 0);
+        assert_eq!(open_channels.channels.len(), 0);
 
-//     }
+    }
 
 
-//     #[test]
-//     fn test_delete_channel_and_query() {
+    #[test]
+    fn test_delete_channel_and_query() {
 
-//         let mut deps = mock_dependencies();
+        let mut deps = mock_dependencies();
       
-//         // Instantiate contract
-//         instantiate(
-//             deps.as_mut(),
-//             mock_env(),
-//             mock_info(DEPLOYER_ADDR, &vec![]),
-//             InstantiateMsg {}
-//         ).unwrap();
+        // Instantiate contract
+        instantiate(
+            deps.as_mut(),
+            mock_env(),
+            mock_info(DEPLOYER_ADDR, &vec![]),
+            InstantiateMsg {}
+        ).unwrap();
 
-//         // Open mock channel
-//         let channel_id = "mock-channel-1";
-//         open_channel(deps.as_mut(), channel_id, None, None);
+        // Open mock channel
+        let channel_id = "mock-channel-1";
+        open_channel(deps.as_mut(), channel_id, None, None);
 
-//         // Query open channels
-//         let open_channels: ListChannelsResponse = from_binary(
-//             &query(deps.as_ref(), mock_env(), QueryMsg::ListChannels {}).unwrap()
-//         ).unwrap();
+        // Query open channels
+        let open_channels: ListChannelsResponse = from_binary(
+            &query(deps.as_ref(), mock_env(), QueryMsg::ListChannels {}).unwrap()
+        ).unwrap();
 
-//         assert_eq!(open_channels.channels.len(), 1);
-//         assert_eq!(open_channels.channels[0], mock_channel_info(channel_id));
-
-
-//         // Tested action: delete channel
-//         close_channel(deps.as_mut(), channel_id, None, None);
+        assert_eq!(open_channels.channels.len(), 1);
+        assert_eq!(open_channels.channels[0], mock_channel_info(channel_id));
 
 
-//         // Query open channels
-//         let open_channels: ListChannelsResponse = from_binary(
-//             &query(deps.as_ref(), mock_env(), QueryMsg::ListChannels {}).unwrap()
-//         ).unwrap();
-
-//         assert_eq!(open_channels.channels.len(), 0);
-
-//     }
+        // Tested action: delete channel
+        close_channel(deps.as_mut(), channel_id, None, None);
 
 
-//     // //TODO test_port not working! 'query(...).unwrap' fails
-//     // #[test]
-//     // fn test_port() {
+        // Query open channels
+        let open_channels: ListChannelsResponse = from_binary(
+            &query(deps.as_ref(), mock_env(), QueryMsg::ListChannels {}).unwrap()
+        ).unwrap();
+
+        assert_eq!(open_channels.channels.len(), 0);
+
+    }
 
 
-//     //     let mut deps = mock_dependencies();
+    // //TODO test_port not working! 'query(...).unwrap' fails
+    // #[test]
+    // fn test_port() {
+
+
+    //     let mut deps = mock_dependencies();
       
-//     //     // Instantiate contract
-//     //     instantiate(
-//     //         deps.as_mut(),
-//     //         mock_env(),
-//     //         mock_info(DEPLOYER_ADDR, &vec![]),
-//     //         InstantiateMsg {}
-//     //     ).unwrap();
+    //     // Instantiate contract
+    //     instantiate(
+    //         deps.as_mut(),
+    //         mock_env(),
+    //         mock_info(DEPLOYER_ADDR, &vec![]),
+    //         InstantiateMsg {}
+    //     ).unwrap();
 
 
-//     //     // Tested action: query port
-//     //     let port: PortResponse = from_binary(
-//     //         &query(deps.as_ref(), mock_env(), QueryMsg::Port {}).unwrap()
-//     //     ).unwrap();
+    //     // Tested action: query port
+    //     let port: PortResponse = from_binary(
+    //         &query(deps.as_ref(), mock_env(), QueryMsg::Port {}).unwrap()
+    //     ).unwrap();
 
 
-//     //     assert_eq!(port.port_id, TEST_LOCAL_PORT);
+    //     assert_eq!(port.port_id, TEST_LOCAL_PORT);
 
-//     // }
+    // }
 
 
-//     //TODO add tests to open/close channels with invalid configuration
-
-
-
-//     // Send Asset Tests *********************************************************************************************************
-
-//     #[test]
-//     fn test_send_asset() {
-
-//         let mut deps = mock_dependencies();
-      
-//         // Instantiate contract and open channel
-//         instantiate(
-//             deps.as_mut(),
-//             mock_env(),
-//             mock_info(DEPLOYER_ADDR, &vec![]),
-//             InstantiateMsg {}
-//         ).unwrap();
-
-//         let channel_id = "mock-channel-1";
-//         open_channel(deps.as_mut(), channel_id, None, None);
-
-//         // Get mock params
-//         let from_vault = "sender";
-//         let to_vault = b"to_vault";
-//         let execute_msg = mock_send_asset_msg(channel_id, to_vault.to_vec(), None);
-
-
-//         // Tested action: send asset
-//         let response_result = execute(
-//             deps.as_mut(),
-//             mock_env(),
-//             mock_info(from_vault, &[]),
-//             execute_msg.clone()
-//         );
-
-
-//         // Check the transaction passes
-//         let response = response_result.unwrap();
-
-//         // Response should include a message to send the IBC message
-//         assert_eq!(response.messages.len(), 1);
-
-//         // Make sure the IBC message matches the expected one
-//         assert_eq!(
-//             &response.messages[0],
-//             &SubMsg::new(IbcMsg::SendPacket {
-//                 channel_id: channel_id.to_string(),
-//                 data: build_payload(from_vault.as_bytes(), execute_msg, None).unwrap().into(),
-//                 timeout: IbcTimeout::with_timestamp(mock_env().block.time.plus_seconds(TRANSACTION_TIMEOUT_SECONDS))
-//             })
-//         );
-
-//     }
-
-
-//     //TODO REVIEW TEST UNDERWRITING
-//     #[test]
-//     fn test_receive_asset() {
-
-//         let mut deps = mock_dependencies();
-      
-//         // Instantiate contract and open channel
-//         instantiate(
-//             deps.as_mut(),
-//             mock_env(),
-//             mock_info(DEPLOYER_ADDR, &vec![]),
-//             InstantiateMsg {}
-//         ).unwrap();
-
-//         let channel_id = "mock-channel-1";
-//         open_channel(deps.as_mut(), channel_id, None, None);
-
-//         // Get mock params
-//         let from_vault = "sender";
-//         let to_vault = "to_vault";
-//         let send_msg = mock_send_asset_msg(channel_id, to_vault.as_bytes().to_vec(), None);
-//         let receive_packet = mock_ibc_packet(channel_id, from_vault, send_msg, None);
-
-
-//         // Tested action: receive asset
-//         let response_result = ibc_packet_receive(
-//             deps.as_mut(),
-//             mock_env(),
-//             IbcPacketReceiveMsg::new(receive_packet.clone())
-//         );
-
-
-//         // Check the transaction passes
-//         let response = response_result.unwrap();
-    
-//         // Check vault is invoked
-//         assert_eq!(response.messages.len(), 1);
-
-//         assert_eq!(
-//             response.messages[0],
-//             SubMsg {
-//                 id: RECEIVE_REPLY_ID,
-//                 msg: cosmwasm_std::WasmMsg::Execute {
-//                     contract_addr: to_vault.to_string(),
-//                     msg: to_binary(&mock_vault_receive_asset_msg(channel_id, from_vault.as_bytes().to_vec())).unwrap(),
-//                     funds: vec![]
-//                 }.into(),
-//                 reply_on: cosmwasm_std::ReplyOn::Always,
-//                 gas_limit: None
-
-//             }
-//         )
-
-//     }
-
-
-//     //TODO REVIEW TEST UNDERWRITING
-//     #[test]
-//     fn test_receive_asset_invalid_min_out() {
-
-//         let mut deps = mock_dependencies();
-      
-//         // Instantiate contract and open channel
-//         instantiate(
-//             deps.as_mut(),
-//             mock_env(),
-//             mock_info(DEPLOYER_ADDR, &vec![]),
-//             InstantiateMsg {}
-//         ).unwrap();
-
-//         let channel_id = "mock-channel-1";
-//         open_channel(deps.as_mut(), channel_id, None, None);
-
-//         // Get mock params
-//         let from_vault = "sender";
-//         let to_vault = b"to_vault";
-//         let send_msg = mock_send_asset_msg(
-//             channel_id,
-//             to_vault.to_vec(),
-//             Some(U256::MAX)                                // ! Specify a min_out larger than Uint128
-//         );
-//         let receive_packet = mock_ibc_packet(channel_id, from_vault, send_msg, None);
-
-
-//         // Tested action: receive asset
-//         let response_result = ibc_packet_receive(
-//             deps.as_mut(),
-//             mock_env(),
-//             IbcPacketReceiveMsg::new(receive_packet.clone())
-//         );
-
-
-//         // Check the transaction passes
-//         let response = response_result.unwrap();
-
-//         // Check the returned ack
-//         assert_eq!(
-//             response.acknowledgement.clone(),
-//             Binary(vec![1u8])                   // ! Check ack returned has value of 1 (i.e. error)
-//         );
-    
-//         // Check vault is not invoked
-//         assert_eq!(response.messages.len(), 0);
-
-//     }
-
-
-//     #[test]
-//     fn test_send_asset_ack() {
-
-//         let mut deps = mock_dependencies();
-      
-//         // Instantiate contract and open channel
-//         instantiate(
-//             deps.as_mut(),
-//             mock_env(),
-//             mock_info(DEPLOYER_ADDR, &vec![]),
-//             InstantiateMsg {}
-//         ).unwrap();
-
-//         let channel_id = "mock-channel-1";
-//         open_channel(deps.as_mut(), channel_id, None, None);
-
-//         // Get mock params
-//         let from_vault = "sender";
-//         let to_vault = "to_vault";
-//         let send_msg = mock_send_asset_msg(channel_id, to_vault.as_bytes().to_vec(), None);
-//         let ibc_packet = mock_ibc_packet(channel_id, from_vault, send_msg, None);
-
-
-
-//         // Tested action: send asset ack SUCCESSFUL
-//         let response_result = ibc_packet_ack(
-//             deps.as_mut(),
-//             mock_env(),
-//             IbcPacketAckMsg::new(
-//                 IbcAcknowledgement::new(Binary(vec![0u8])),         // ! Test for success
-//                 ibc_packet.clone()
-//             )
-//         );
-
-//         // Check the transaction passes
-//         let response = response_result.unwrap();
-    
-//         // Check vault ack is invoked
-//         assert_eq!(response.messages.len(), 1);
-//         assert_eq!(
-//             response.messages[0],
-//             SubMsg::new(
-//                 cosmwasm_std::WasmMsg::Execute {
-//                     contract_addr: from_vault.to_string(),
-//                     msg: to_binary(&mock_vault_send_asset_success_msg(channel_id)).unwrap(),
-//                     funds: vec![]
-//                 }
-//             )
-//         );
-
-
-
-//         // Tested action: send asset ack UNSUCCESSFUL
-//         let response_result = ibc_packet_ack(
-//             deps.as_mut(),
-//             mock_env(),
-//             IbcPacketAckMsg::new(
-//                 IbcAcknowledgement::new(Binary(vec![1u8])),         // ! Test for failure
-//                 ibc_packet.clone()
-//             )
-//         );
-
-//         // Check the transaction passes
-//         let response = response_result.unwrap();
-    
-//         // Check vault ack is invoked
-//         assert_eq!(response.messages.len(), 1);
-//         assert_eq!(
-//             response.messages[0],
-//             SubMsg::new(
-//                 cosmwasm_std::WasmMsg::Execute {
-//                     contract_addr: from_vault.to_string(),
-//                     msg: to_binary(&mock_vault_send_asset_failure_msg(channel_id)).unwrap(),
-//                     funds: vec![]
-//                 }
-//             )
-//         );
-
-
-
-//         // Tested action: send asset ack INVALID
-//         let response_result = ibc_packet_ack(
-//             deps.as_mut(),
-//             mock_env(),
-//             IbcPacketAckMsg::new(
-//                 IbcAcknowledgement::new(Binary(vec![9u8])),         // ! Some invalid response
-//                 ibc_packet.clone()
-//             )
-//         );
-
-//         // Check the transaction passes
-//         let response = response_result.unwrap();
-    
-//         // Check vault ack is invoked
-//         assert_eq!(response.messages.len(), 1);
-//         assert_eq!(
-//             response.messages[0],
-//             SubMsg::new(
-//                 cosmwasm_std::WasmMsg::Execute {
-//                     contract_addr: from_vault.to_string(),
-//                     msg: to_binary(&mock_vault_send_asset_failure_msg(channel_id)).unwrap(),    // Invalid responses are treated as failures.
-//                     funds: vec![]
-//                 }
-//             )
-//         );
-
-//     }
-
-
-//     #[test]
-//     fn test_send_asset_timeout() {
-
-//         let mut deps = mock_dependencies();
-      
-//         // Instantiate contract and open channel
-//         instantiate(
-//             deps.as_mut(),
-//             mock_env(),
-//             mock_info(DEPLOYER_ADDR, &vec![]),
-//             InstantiateMsg {}
-//         ).unwrap();
-
-//         let channel_id = "mock-channel-1";
-//         open_channel(deps.as_mut(), channel_id, None, None);
-
-//         // Get mock params
-//         let from_vault = "sender";
-//         let to_vault = "to_vault";
-//         let send_msg = mock_send_asset_msg(channel_id, to_vault.as_bytes().to_vec(), None);
-//         let ibc_packet = mock_ibc_packet(channel_id, from_vault, send_msg, None);
-
-
-//         // Tested action: send asset timeout
-//         let response_result = ibc_packet_timeout(
-//             deps.as_mut(),
-//             mock_env(),
-//             IbcPacketTimeoutMsg::new(ibc_packet.clone())
-//         );
-
-
-//         // Check the transaction passes
-//         let response = response_result.unwrap();
-    
-//         // Check vault timeout is invoked
-//         assert_eq!(response.messages.len(), 1);
-//         assert_eq!(
-//             response.messages[0],
-//             SubMsg::new(
-//                 cosmwasm_std::WasmMsg::Execute {
-//                     contract_addr: from_vault.to_string(),
-//                     msg: to_binary(&mock_vault_send_asset_failure_msg(channel_id)).unwrap(),
-//                     funds: vec![]
-//                 }
-//             )
-//         )
-
-//     }
-
-
-//     #[test]
-//     fn test_send_asset_ack_timeout_invalid_from_amount() {
-
-//         let mut deps = mock_dependencies();
-      
-//         // Instantiate contract and open channel
-//         instantiate(
-//             deps.as_mut(),
-//             mock_env(),
-//             mock_info(DEPLOYER_ADDR, &vec![]),
-//             InstantiateMsg {}
-//         ).unwrap();
-
-//         let channel_id = "mock-channel-1";
-//         open_channel(deps.as_mut(), channel_id, None, None);
-
-//         // Get mock params
-//         let from_vault = "sender";
-//         let to_vault = "to_vault";
-//         let send_msg = mock_send_asset_msg(channel_id, to_vault.as_bytes().to_vec(), None);
-//         let ibc_packet = mock_ibc_packet(channel_id, from_vault, send_msg, Some(U256::from(Uint128::MAX) + U256::from(1u64)));   // ! Inject an invalid from_amount into the ibc_packet
-
-
-
-//         // Tested action: send asset ACK SUCCESSFUL with invalid packet (from_amount)
-//         let response_result = ibc_packet_ack(
-//             deps.as_mut(),
-//             mock_env(),
-//             IbcPacketAckMsg::new(
-//                 IbcAcknowledgement::new(Binary(vec![0u8])),         // ! Test for ack-success
-//                 ibc_packet.clone()
-//             )
-//         );
-
-//         // Check the transaction does not pass
-//         assert!(matches!(
-//             response_result.err().unwrap(),
-//             ContractError::PayloadDecodingError {}
-//         ));
-
-
-
-//         // Tested action: send asset ACK UNSUCCESSFUL with invalid packet
-//         let response_result = ibc_packet_ack(
-//             deps.as_mut(),
-//             mock_env(),
-//             IbcPacketAckMsg::new(
-//                 IbcAcknowledgement::new(Binary(vec![1u8])),         // ! Test for ack-failure
-//                 ibc_packet.clone()
-//             )
-//         );
-
-//         // Check the transaction does not pass
-//         assert!(matches!(
-//             response_result.err().unwrap(),
-//             ContractError::PayloadDecodingError {}
-//         ));
-
-
-
-//         // Tested action: send asset TIMEOUT with invalid packet
-//         let response_result = ibc_packet_timeout(
-//             deps.as_mut(),
-//             mock_env(),
-//             IbcPacketTimeoutMsg::new(                               // ! Test for timeout
-//                 ibc_packet.clone()
-//             )
-//         );
-
-//         // Check the transaction does not pass
-//         assert!(matches!(
-//             response_result.err().unwrap(),
-//             ContractError::PayloadDecodingError {}
-//         ));
-
-//     }
-
-
-
-//     // Send Liquidity Tests *****************************************************************************************************
-
-//     #[test]
-//     fn test_send_liquidity() {
-
-//         let mut deps = mock_dependencies();
-      
-//         // Instantiate contract and open channel
-//         instantiate(
-//             deps.as_mut(),
-//             mock_env(),
-//             mock_info(DEPLOYER_ADDR, &vec![]),
-//             InstantiateMsg {}
-//         ).unwrap();
-
-//         let channel_id = "mock-channel-1";
-//         open_channel(deps.as_mut(), channel_id, None, None);
-
-//         // Get mock params
-//         let from_vault = "sender";
-//         let to_vault = b"to_vault";
-//         let execute_msg = mock_send_liquidity_msg(channel_id, to_vault.to_vec(), None, None);
-
-
-//         // Tested action: send liquidity
-//         let response_result = execute(
-//             deps.as_mut(),
-//             mock_env(),
-//             mock_info(from_vault, &[]),
-//             execute_msg.clone()
-//         );
-
-
-//         // Check the transaction passes
-//         let response = response_result.unwrap();
-
-//         // Response should include a message to send the IBC message
-//         assert_eq!(response.messages.len(), 1);
-
-//         // Make sure the IBC message matches the expected one
-//         assert_eq!(
-//             &response.messages[0],
-//             &SubMsg::new(IbcMsg::SendPacket {
-//                 channel_id: channel_id.to_string(),
-//                 data: build_payload(from_vault.as_bytes(), execute_msg, None).unwrap().into(),
-//                 timeout: IbcTimeout::with_timestamp(mock_env().block.time.plus_seconds(TRANSACTION_TIMEOUT_SECONDS))
-//             })
-//         );
-
-//     }
-
-
-//     #[test]
-//     fn test_receive_liquidity() {
-
-//         let mut deps = mock_dependencies();
-      
-//         // Instantiate contract and open channel
-//         instantiate(
-//             deps.as_mut(),
-//             mock_env(),
-//             mock_info(DEPLOYER_ADDR, &vec![]),
-//             InstantiateMsg {}
-//         ).unwrap();
-
-//         let channel_id = "mock-channel-1";
-//         open_channel(deps.as_mut(), channel_id, None, None);
-
-//         // Get mock params
-//         let from_vault = "sender";
-//         let to_vault = "to_vault";
-//         let send_msg = mock_send_liquidity_msg(channel_id, to_vault.as_bytes().to_vec(), None, None);
-//         let receive_packet = mock_ibc_packet(channel_id, from_vault, send_msg, None);
-
-
-//         // Tested action: receive liquidity
-//         let response_result = ibc_packet_receive(
-//             deps.as_mut(),
-//             mock_env(),
-//             IbcPacketReceiveMsg::new(receive_packet.clone())
-//         );
-
-
-//         // Check the transaction passes
-//         let response = response_result.unwrap();
-    
-//         // Check vault is invoked
-//         assert_eq!(response.messages.len(), 1);
-
-//         assert_eq!(
-//             response.messages[0],
-//             SubMsg {
-//                 id: RECEIVE_REPLY_ID,
-//                 msg: cosmwasm_std::WasmMsg::Execute {
-//                     contract_addr: to_vault.to_string(),
-//                     msg: to_binary(&mock_vault_receive_liquidity_msg(channel_id, from_vault.as_bytes().to_vec())).unwrap(),
-//                     funds: vec![]
-//                 }.into(),
-//                 reply_on: cosmwasm_std::ReplyOn::Always,
-//                 gas_limit: None
-
-//             }
-//         )
-
-//     }
-
-
-//     #[test]
-//     fn test_receive_liquidity_invalid_min_vault_tokens() {
-
-//         let mut deps = mock_dependencies();
-      
-//         // Instantiate contract and open channel
-//         instantiate(
-//             deps.as_mut(),
-//             mock_env(),
-//             mock_info(DEPLOYER_ADDR, &vec![]),
-//             InstantiateMsg {}
-//         ).unwrap();
-
-//         let channel_id = "mock-channel-1";
-//         open_channel(deps.as_mut(), channel_id, None, None);
-
-//         // Get mock params
-//         let from_vault = "sender";
-//         let to_vault = b"to_vault";
-//         let send_msg = mock_send_liquidity_msg(
-//             channel_id,
-//             to_vault.to_vec(),
-//             Some(U256::MAX),                                // ! Specify a min_vault_token that is larger than Uint128
-//             None,
-//         );
-//         let receive_packet = mock_ibc_packet(channel_id, from_vault, send_msg, None);
-
-
-//         // Tested action: receive liquidity
-//         let response_result = ibc_packet_receive(
-//             deps.as_mut(),
-//             mock_env(),
-//             IbcPacketReceiveMsg::new(receive_packet.clone())
-//         );
-
-
-//         // Check the transaction passes
-//         let response = response_result.unwrap();
-
-//         // Check the returned ack
-//         assert_eq!(
-//             response.acknowledgement.clone(),
-//             Binary(vec![1u8])                   // ! Check ack returned has value of 1 (i.e. error)
-//         );
-    
-//         // Check vault is not invoked
-//         assert_eq!(response.messages.len(), 0);
-
-//     }
-
-
-//     #[test]
-//     fn test_receive_liquidity_invalid_min_reference_asset() {
-
-//         let mut deps = mock_dependencies();
-      
-//         // Instantiate contract and open channel
-//         instantiate(
-//             deps.as_mut(),
-//             mock_env(),
-//             mock_info(DEPLOYER_ADDR, &vec![]),
-//             InstantiateMsg {}
-//         ).unwrap();
-
-//         let channel_id = "mock-channel-1";
-//         open_channel(deps.as_mut(), channel_id, None, None);
-
-//         // Get mock params
-//         let from_vault = "sender";
-//         let to_vault = b"to_vault";
-//         let send_msg = mock_send_liquidity_msg(
-//             channel_id,
-//             to_vault.to_vec(),
-//             None,
-//             Some(U256::MAX)                                // ! Specify a min_reference_asset that is larger than Uint128
-//         );
-//         let receive_packet = mock_ibc_packet(channel_id, from_vault, send_msg, None);
-
-
-//         // Tested action: receive liquidity
-//         let response_result = ibc_packet_receive(
-//             deps.as_mut(),
-//             mock_env(),
-//             IbcPacketReceiveMsg::new(receive_packet.clone())
-//         );
-
-
-//         // Check the transaction passes
-//         let response = response_result.unwrap();
-
-//         // Check the returned ack
-//         assert_eq!(
-//             response.acknowledgement.clone(),
-//             Binary(vec![1u8])                   // ! Check ack returned has value of 1 (i.e. error)
-//         );
-    
-//         // Check vault is not invoked
-//         assert_eq!(response.messages.len(), 0);
-
-//     }
-
-
-//     #[test]
-//     fn test_send_liquidity_ack() {
-
-//         let mut deps = mock_dependencies();
-      
-//         // Instantiate contract and open channel
-//         instantiate(
-//             deps.as_mut(),
-//             mock_env(),
-//             mock_info(DEPLOYER_ADDR, &vec![]),
-//             InstantiateMsg {}
-//         ).unwrap();
-
-//         let channel_id = "mock-channel-1";
-//         open_channel(deps.as_mut(), channel_id, None, None);
-
-//         // Get mock params
-//         let from_vault = "sender";
-//         let to_vault = "to_vault";
-//         let send_msg = mock_send_liquidity_msg(channel_id, to_vault.as_bytes().to_vec(), None, None);
-//         let ibc_packet = mock_ibc_packet(channel_id, from_vault, send_msg, None);
-
-
-
-//         // Tested action: send liquidity ack SUCCESSFUL
-//         let response_result = ibc_packet_ack(
-//             deps.as_mut(),
-//             mock_env(),
-//             IbcPacketAckMsg::new(
-//                 IbcAcknowledgement::new(Binary(vec![0u8])),         // ! Test for success
-//                 ibc_packet.clone()
-//             )
-//         );
-
-//         // Check the transaction passes
-//         let response = response_result.unwrap();
-    
-//         // Check vault ack is invoked
-//         assert_eq!(response.messages.len(), 1);
-//         assert_eq!(
-//             response.messages[0],
-//             SubMsg::new(
-//                 cosmwasm_std::WasmMsg::Execute {
-//                     contract_addr: from_vault.to_string(),
-//                     msg: to_binary(&mock_vault_send_liquidity_success_msg(channel_id)).unwrap(),
-//                     funds: vec![]
-//                 }
-//             )
-//         );
-
-
-
-//         // Tested action: send liquidity ack UNSUCCESSFUL
-//         let response_result = ibc_packet_ack(
-//             deps.as_mut(),
-//             mock_env(),
-//             IbcPacketAckMsg::new(
-//                 IbcAcknowledgement::new(Binary(vec![1u8])),         // ! Test for failure
-//                 ibc_packet.clone()
-//             )
-//         );
-
-//         // Check the transaction passes
-//         let response = response_result.unwrap();
-    
-//         // Check vault ack is invoked
-//         assert_eq!(response.messages.len(), 1);
-//         assert_eq!(
-//             response.messages[0],
-//             SubMsg::new(
-//                 cosmwasm_std::WasmMsg::Execute {
-//                     contract_addr: from_vault.to_string(),
-//                     msg: to_binary(&mock_vault_send_liquidity_failure_msg(channel_id)).unwrap(),
-//                     funds: vec![]
-//                 }
-//             )
-//         );
-
-
-
-//         // Tested action: send liquidity ack INVALID
-//         let response_result = ibc_packet_ack(
-//             deps.as_mut(),
-//             mock_env(),
-//             IbcPacketAckMsg::new(
-//                 IbcAcknowledgement::new(Binary(vec![9u8])),         // ! Some invalid response
-//                 ibc_packet.clone()
-//             )
-//         );
-
-//         // Check the transaction passes
-//         let response = response_result.unwrap();
-    
-//         // Check vault ack is invoked
-//         assert_eq!(response.messages.len(), 1);
-//         assert_eq!(
-//             response.messages[0],
-//             SubMsg::new(
-//                 cosmwasm_std::WasmMsg::Execute {
-//                     contract_addr: from_vault.to_string(),
-//                     msg: to_binary(&mock_vault_send_liquidity_failure_msg(channel_id)).unwrap(),    // Invalid responses are treated as failures.
-//                     funds: vec![]
-//                 }
-//             )
-//         );
-
-//     }
-
-
-//     #[test]
-//     fn test_send_liquidity_timeout() {
-
-//         let mut deps = mock_dependencies();
-      
-//         // Instantiate contract and open channel
-//         instantiate(
-//             deps.as_mut(),
-//             mock_env(),
-//             mock_info(DEPLOYER_ADDR, &vec![]),
-//             InstantiateMsg {}
-//         ).unwrap();
-
-//         let channel_id = "mock-channel-1";
-//         open_channel(deps.as_mut(), channel_id, None, None);
-
-//         // Get mock params
-//         let from_vault = "sender";
-//         let to_vault = "to_vault";
-//         let send_msg = mock_send_liquidity_msg(channel_id, to_vault.as_bytes().to_vec(), None, None);
-//         let ibc_packet = mock_ibc_packet(channel_id, from_vault, send_msg, None);
-
-
-//         // Tested action: send liquidity timeout
-//         let response_result = ibc_packet_timeout(
-//             deps.as_mut(),
-//             mock_env(),
-//             IbcPacketTimeoutMsg::new(ibc_packet.clone())
-//         );
-
-
-//         // Check the transaction passes
-//         let response = response_result.unwrap();
-    
-//         // Check vault timeout is invoked
-//         assert_eq!(response.messages.len(), 1);
-//         assert_eq!(
-//             response.messages[0],
-//             SubMsg::new(
-//                 cosmwasm_std::WasmMsg::Execute {
-//                     contract_addr: from_vault.to_string(),
-//                     msg: to_binary(&mock_vault_send_liquidity_failure_msg(channel_id)).unwrap(),
-//                     funds: vec![]
-//                 }
-//             )
-//         )
-
-//     }
-
-
-//     #[test]
-//     fn test_send_liquidity_ack_timeout_invalid_from_amount() {
-
-//         let mut deps = mock_dependencies();
-      
-//         // Instantiate contract and open channel
-//         instantiate(
-//             deps.as_mut(),
-//             mock_env(),
-//             mock_info(DEPLOYER_ADDR, &vec![]),
-//             InstantiateMsg {}
-//         ).unwrap();
-
-//         let channel_id = "mock-channel-1";
-//         open_channel(deps.as_mut(), channel_id, None, None);
-
-//         // Get mock params
-//         let from_vault = "sender";
-//         let to_vault = "to_vault";
-//         let send_msg = mock_send_liquidity_msg(channel_id, to_vault.as_bytes().to_vec(), None, None);
-//         let ibc_packet = mock_ibc_packet(channel_id, from_vault, send_msg, Some(U256::from(Uint128::MAX) + U256::from(1u64)));   // ! Inject an invalid from_amount into the ibc_packet
-
-
-
-//         // Tested action: send liquidity ACK SUCCESSFUL with invalid packet (from_amount)
-//         let response_result = ibc_packet_ack(
-//             deps.as_mut(),
-//             mock_env(),
-//             IbcPacketAckMsg::new(
-//                 IbcAcknowledgement::new(Binary(vec![0u8])),         // ! Test for ack-success
-//                 ibc_packet.clone()
-//             )
-//         );
-
-//         // Check the transaction does not pass
-//         assert!(matches!(
-//             response_result.err().unwrap(),
-//             ContractError::PayloadDecodingError {}
-//         ));
-
-
-
-//         // Tested action: send liquidity ACK UNSUCCESSFUL with invalid packet
-//         let response_result = ibc_packet_ack(
-//             deps.as_mut(),
-//             mock_env(),
-//             IbcPacketAckMsg::new(
-//                 IbcAcknowledgement::new(Binary(vec![1u8])),         // ! Test for ack-failure
-//                 ibc_packet.clone()
-//             )
-//         );
-
-//         // Check the transaction does not pass
-//         assert!(matches!(
-//             response_result.err().unwrap(),
-//             ContractError::PayloadDecodingError {}
-//         ));
-
-
-
-//         // Tested action: send liquidity TIMEOUT with invalid packet
-//         let response_result = ibc_packet_timeout(
-//             deps.as_mut(),
-//             mock_env(),
-//             IbcPacketTimeoutMsg::new(                               // ! Test for timeout
-//                 ibc_packet.clone()
-//             )
-//         );
-
-//         // Check the transaction does not pass
-//         assert!(matches!(
-//             response_result.err().unwrap(),
-//             ContractError::PayloadDecodingError {}
-//         ));
-
-//     }
-
-
-
-//     // Common Tests *************************************************************************************************************
-    
-
-//     #[test]
-//     fn test_receive_reply() {
-
-//         let mut deps = mock_dependencies();
-      
-//         // Instantiate contract and open channel
-//         instantiate(
-//             deps.as_mut(),
-//             mock_env(),
-//             mock_info(DEPLOYER_ADDR, &vec![]),
-//             InstantiateMsg {}
-//         ).unwrap();
-
-
-//         // Tested action: reply ok
-//         let response_result = reply(
-//             deps.as_mut(),
-//             mock_env(),
-//             Reply {
-//                 id: RECEIVE_REPLY_ID,
-//                 result: SubMsgResult::Ok(
-//                     SubMsgResponse { events: vec![], data: None }       // SubMsgResponse contents do not matter
-//                 )
-//             }
-//         );
-
-//         // Check the transaction passes
-//         let response = response_result.unwrap();
-
-//         // Check response
-//         // TODO overhaul this is the desired result
-//         assert_eq!(response.messages.len(), 0);
-//         assert_eq!(
-//             response.data,
-//             Some(Binary(vec![0]))     // ! If the submessage call by 'ibc_packet_receive' is successful, the response 'data' field should be a success ack.
-//         );
-
-
-
-//         // Tested action: reply error
-//         let response_result = reply(
-//             deps.as_mut(),
-//             mock_env(),
-//             Reply {
-//                 id: RECEIVE_REPLY_ID,
-//                 result: SubMsgResult::Err("".to_string())
-//             }
-//         );
-
-//         // Check the transaction passes
-//         let response = response_result.unwrap();
-
-//         // Check response contains an ack-fail
-//         assert_eq!(response.messages.len(), 0);
-//         assert_eq!(
-//             response.data,
-//             Some(Binary(vec![1]))     // ! If the submessage call by 'ibc_packet_receive' returns an error, the response 'data' field should be a failed ack.
-//         );
-
-//     }
-
-// }
+    //TODO add tests to open/close channels with invalid configuration
+}
