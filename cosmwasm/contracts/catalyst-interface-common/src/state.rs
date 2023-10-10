@@ -1619,3 +1619,844 @@ pub fn update_owner<T>(
     )
 
 }
+
+
+
+
+// Tests
+// ************************************************************************************************
+#[cfg(test)]
+mod test_catalyst_interface_common {
+
+    use std::marker::PhantomData;
+
+    use catalyst_types::{U256, u256};
+    use catalyst_vault_common::{bindings::{CustomMsg, Asset}, msg::{ExecuteMsg as VaultExecuteMsg, CommonQueryMsg, AssetResponse}};
+    use cosmwasm_std::{Uint128, Binary, testing::{mock_info, mock_dependencies, mock_env, MockStorage, MockApi, MockQuerier}, SubMsg, to_binary, OwnedDeps, SystemResult, ContractResult, from_binary, Empty};
+
+    use crate::{catalyst_ibc_payload::CatalystEncodedAddress, ContractError, state::{encode_send_cross_chain_asset, encode_send_cross_chain_liquidity, handle_receive_liquidity, SET_ACK_REPLY_ID, handle_send_asset_response, handle_send_liquidity_response, handle_receive_asset}};
+
+
+
+
+    const TEST_CHANNEL_ID           : &str      = "mock-channel-1";
+    const TEST_FROM_VAULT           : &str      = "from_vault";
+    const TEST_TO_VAULT             : &str      = "to_vault";
+    const TEST_TO_ACCOUNT           : &str      = "to_account";
+    const TEST_TO_ASSET_INDEX       : u8        = 1;
+    const TEST_UNITS                : U256      = u256!("78456988731590487483448276103933454935747871349630657124267302091643025406701");
+    const TEST_MIN_OUT              : Uint128   = Uint128::new(323476719582585693194107115743132847255u128);
+    const TEST_MIN_VAULT_TOKENS     : Uint128   = Uint128::new(323476719582585693194107115743132847255u128);
+    const TEST_MIN_REFERENCE_ASSET  : Uint128   = Uint128::new(1385371954613879816514345798135479u128);
+    const TEST_FROM_AMOUNT          : Uint128   = Uint128::new(4920222095670429824873974121747892731u128);
+    const TEST_FROM_AMOUNT_U256     : U256      = u256!("67845877620589376372337165092822343824636760238529546013156291980532914395690");
+    const TEST_FROM_ASSET           : &str      = "from_asset";
+    const TEST_UNDERWRITE_INCENTIVE : u16       = 1001;
+    const TEST_FROM_BLOCK_NUMBER    : u32       = 1356;
+    const TEST_CALLDATA             : Binary    = Binary(vec![]);    //TODO
+
+
+
+
+    // Send asset helpers
+
+    fn mock_vault_receive_asset_msg() -> VaultExecuteMsg<(), CustomMsg> {
+        VaultExecuteMsg::ReceiveAsset {
+            channel_id: TEST_CHANNEL_ID.to_string(),
+            from_vault: CatalystEncodedAddress::try_encode(TEST_FROM_VAULT.as_bytes()).unwrap().to_binary(),
+            to_asset_index: TEST_TO_ASSET_INDEX,
+            to_account: TEST_TO_ACCOUNT.to_string(),
+            u: TEST_UNITS,
+            min_out: TEST_MIN_OUT,
+            from_asset: CatalystEncodedAddress::try_encode(TEST_FROM_ASSET.as_bytes()).unwrap().to_binary(),
+            from_amount: TEST_FROM_AMOUNT_U256,
+            from_block_number_mod: TEST_FROM_BLOCK_NUMBER
+        }
+    }
+
+    fn mock_vault_send_asset_success_msg() -> VaultExecuteMsg<(), CustomMsg> {
+        VaultExecuteMsg::OnSendAssetSuccess {
+            channel_id: TEST_CHANNEL_ID.to_string(),
+            to_account: CatalystEncodedAddress::try_encode(TEST_TO_ACCOUNT.as_bytes()).unwrap().to_binary(),
+            u: TEST_UNITS,
+            escrow_amount: TEST_FROM_AMOUNT,
+            asset_ref: TEST_FROM_ASSET.to_string(),
+            block_number_mod: TEST_FROM_BLOCK_NUMBER
+        }
+    }
+
+    fn mock_vault_send_asset_failure_msg() -> VaultExecuteMsg<(), CustomMsg> {
+        VaultExecuteMsg::OnSendAssetFailure {
+            channel_id: TEST_CHANNEL_ID.to_string(),
+            to_account: CatalystEncodedAddress::try_encode(TEST_TO_ACCOUNT.as_bytes()).unwrap().to_binary(),
+            u: TEST_UNITS,
+            escrow_amount: TEST_FROM_AMOUNT,
+            asset_ref: TEST_FROM_ASSET.to_string(),
+            block_number_mod: TEST_FROM_BLOCK_NUMBER
+        }
+    }
+
+
+
+    // Send liquidity helpers
+
+    fn mock_vault_receive_liquidity_msg() -> VaultExecuteMsg<()> {
+        VaultExecuteMsg::ReceiveLiquidity {
+            channel_id: TEST_CHANNEL_ID.to_string(),
+            from_vault: CatalystEncodedAddress::try_encode(TEST_FROM_VAULT.as_bytes()).unwrap().to_binary(),
+            to_account: TEST_TO_ACCOUNT.to_string(),
+            u: TEST_UNITS,
+            min_vault_tokens: TEST_MIN_VAULT_TOKENS,
+            min_reference_asset: TEST_MIN_REFERENCE_ASSET,
+            from_amount: TEST_FROM_AMOUNT_U256,
+            from_block_number_mod: TEST_FROM_BLOCK_NUMBER
+        }
+    }
+
+    fn mock_vault_send_liquidity_success_msg() -> VaultExecuteMsg<()> {
+        VaultExecuteMsg::OnSendLiquiditySuccess {
+            channel_id: TEST_CHANNEL_ID.to_string(),
+            to_account: CatalystEncodedAddress::try_encode(TEST_TO_ACCOUNT.as_bytes()).unwrap().to_binary(),
+            u: TEST_UNITS,
+            escrow_amount: TEST_FROM_AMOUNT,
+            block_number_mod: TEST_FROM_BLOCK_NUMBER
+        }
+    }
+
+    fn mock_vault_send_liquidity_failure_msg() -> VaultExecuteMsg<()> {
+        VaultExecuteMsg::OnSendLiquidityFailure {
+            channel_id: TEST_CHANNEL_ID.to_string(),
+            to_account: CatalystEncodedAddress::try_encode(TEST_TO_ACCOUNT.as_bytes()).unwrap().to_binary(),
+            u: TEST_UNITS,
+            escrow_amount: TEST_FROM_AMOUNT,
+            block_number_mod: TEST_FROM_BLOCK_NUMBER
+        }
+    }
+
+
+    
+    // Custom Deps Helpers
+    // Some of the interface methods interact with the vaults. The following helpers implement
+    // mocks for these interactions.
+
+    //TODO CW20
+    fn mock_vault_assets() -> Vec<Asset> {
+        vec![
+            Asset { denom: "asset_a".to_string(), alias: "a".to_string() },
+            Asset { denom: "asset_b".to_string(), alias: "b".to_string() },
+            Asset { denom: "asset_c".to_string(), alias: "c".to_string() }
+        ]
+    }
+
+    // Create mock dependencies with the vault queries that are required by the interface.
+    fn mock_deps_with_vault_queries() -> OwnedDeps<MockStorage, MockApi, MockQuerier, Empty> {
+
+        let mut querier = MockQuerier::default();
+        querier.update_wasm(|request| -> SystemResult<ContractResult<Binary>> {
+            match request {
+                cosmwasm_std::WasmQuery::Smart {
+                    contract_addr,
+                    msg
+                } => {
+
+                    if contract_addr != TEST_TO_VAULT {
+                        unimplemented!("Mock query not implemented for contract '{:?}'", contract_addr)
+                    }
+                    
+                    match from_binary::<CommonQueryMsg>(msg).unwrap() {
+
+                        CommonQueryMsg::AssetByIndex { asset_index } => {
+                            let response = AssetResponse {
+                                asset: mock_vault_assets()[asset_index as usize].clone()
+                            };
+                            SystemResult::Ok(ContractResult::Ok(to_binary(&response).unwrap()))
+                        },
+                        query => unimplemented!("Mock query not implemented: {:?}", query)
+                    }
+                },
+                _ => unimplemented!(),
+            }
+        });
+
+        OwnedDeps {
+            storage: MockStorage::default(),
+            api: MockApi::default(),
+            querier,
+            custom_query_type: PhantomData,
+        }
+    }
+
+
+
+    // Send Asset Tests
+    // ********************************************************************************************
+
+    #[test]
+    fn test_send_asset_encoding() {
+
+        let info = mock_info(TEST_FROM_VAULT, &[]);
+
+
+
+        // Tested action: send asset encoding
+        let encoded_payload = encode_send_cross_chain_asset(
+            info,
+            CatalystEncodedAddress::try_encode(TEST_TO_VAULT.as_bytes()).unwrap().to_binary(),
+            CatalystEncodedAddress::try_encode(TEST_TO_ACCOUNT.as_bytes()).unwrap().to_binary(),
+            TEST_TO_ASSET_INDEX,
+            TEST_UNITS,
+            U256::from_uint128(TEST_MIN_OUT),
+            TEST_FROM_AMOUNT,
+            TEST_FROM_ASSET.to_string(),
+            TEST_UNDERWRITE_INCENTIVE,
+            TEST_FROM_BLOCK_NUMBER,
+            TEST_CALLDATA
+        ).unwrap();
+
+
+
+        let expected_payload = "AAoAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABmcm9tX3ZhdWx0CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAdG9fdmF1bHQKAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAdG9fYWNjb3VudK11FPutIXAiE147GgKdkGKPHGCQYwjyY+0HHEN78LrtAQAAAAAAAAAAAAAAAAAAAADzW1mdPtcyQ6KnbCoFMQyXAAAAAAAAAAAAAAAAAAAAAAOzma2zUZuQzXUnhx+qyfsKAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAZnJvbV9hc3NldAAABUwD6QAA";
+
+        assert_eq!(
+            encoded_payload,
+            Binary::from_base64(expected_payload).unwrap()
+        );
+
+    }
+
+
+    #[test]
+    fn test_receive_asset() {
+
+        // Have to use custom mock_deps, as the 'handle_receive_asset' will query the vault for the
+        // asset that corresponds to `TEST_TO_ASSET_INDEX`.
+        let mut deps = mock_deps_with_vault_queries();
+        let env = mock_env();
+
+
+
+        // Tested action: receive asset
+        let response_result = handle_receive_asset(
+            &mut deps.as_mut(),
+            &env,
+            TEST_CHANNEL_ID.to_string(),
+            TEST_TO_VAULT.to_string(),
+            TEST_TO_ASSET_INDEX,
+            TEST_TO_ACCOUNT.to_string(),
+            TEST_UNITS,
+            U256::from_uint128(TEST_MIN_OUT),
+            TEST_UNDERWRITE_INCENTIVE,
+            CatalystEncodedAddress::try_encode(TEST_FROM_VAULT.as_bytes()).unwrap().to_binary(),
+            TEST_FROM_AMOUNT_U256,
+            CatalystEncodedAddress::try_encode(TEST_FROM_ASSET.as_bytes()).unwrap().to_binary(),
+            TEST_FROM_BLOCK_NUMBER,
+            TEST_CALLDATA
+        );
+
+
+
+        // Check the transaction passes
+        let response = response_result.unwrap();
+    
+        // Check vault is invoked
+        assert_eq!(response.messages.len(), 1);
+
+        assert_eq!(
+            response.messages[0],
+            SubMsg {
+                id: SET_ACK_REPLY_ID,
+                msg: cosmwasm_std::WasmMsg::Execute {
+                    contract_addr: TEST_TO_VAULT.to_string(),
+                    msg: to_binary(&mock_vault_receive_asset_msg()).unwrap(),
+                    funds: vec![]
+                }.into(),
+                reply_on: cosmwasm_std::ReplyOn::Always,
+                gas_limit: None
+
+            }
+        )
+
+    }
+
+
+    #[test]
+    fn test_receive_asset_invalid_min_out() {
+
+        let mut deps = mock_dependencies();
+        let env = mock_env();
+
+
+
+        // Tested action: receive asset
+        let response_result = handle_receive_asset(
+            &mut deps.as_mut(),
+            &env,
+            TEST_CHANNEL_ID.to_string(),
+            TEST_TO_VAULT.to_string(),
+            TEST_TO_ASSET_INDEX,
+            TEST_TO_ACCOUNT.to_string(),
+            TEST_UNITS,
+            U256::MAX,      // ! Specify a min_out that is larger than Uint128
+            TEST_UNDERWRITE_INCENTIVE,
+            CatalystEncodedAddress::try_encode(TEST_FROM_VAULT.as_bytes()).unwrap().to_binary(),
+            TEST_FROM_AMOUNT_U256,
+            CatalystEncodedAddress::try_encode(TEST_FROM_ASSET.as_bytes()).unwrap().to_binary(),
+            TEST_FROM_BLOCK_NUMBER,
+            TEST_CALLDATA
+        );
+
+
+
+        // Check the transaction errors
+        assert!(matches!(
+            response_result.err().unwrap(),
+            ContractError::PayloadDecodingError {}
+        ));
+
+    }
+
+
+    #[test]
+    fn test_send_asset_ack() {
+
+
+        // Tested action: send asset ack SUCCESSFUL
+        let response_result = handle_send_asset_response(
+            TEST_CHANNEL_ID.to_string(),
+            CatalystEncodedAddress::try_encode(TEST_TO_ACCOUNT.as_bytes()).unwrap().to_binary(),
+            TEST_UNITS,
+            TEST_FROM_VAULT.to_string(),
+            U256::from_uint128(TEST_FROM_AMOUNT),
+            TEST_FROM_ASSET.to_string(),
+            TEST_FROM_BLOCK_NUMBER,
+            Some(Binary(vec![0u8])),         // ! Test for success
+        );
+
+        // Check the transaction passes
+        let response = response_result.unwrap();
+    
+        // Check vault ack is invoked
+        assert_eq!(response.messages.len(), 1);
+        assert_eq!(
+            response.messages[0],
+            SubMsg::new(
+                cosmwasm_std::WasmMsg::Execute {
+                    contract_addr: TEST_FROM_VAULT.to_string(),
+                    msg: to_binary(&mock_vault_send_asset_success_msg()).unwrap(),
+                    funds: vec![]
+                }
+            )
+        );
+
+
+
+        // Tested action: send asset ack UNSUCCESSFUL
+        let response_result = handle_send_asset_response(
+            TEST_CHANNEL_ID.to_string(),
+            CatalystEncodedAddress::try_encode(TEST_TO_ACCOUNT.as_bytes()).unwrap().to_binary(),
+            TEST_UNITS,
+            TEST_FROM_VAULT.to_string(),
+            U256::from_uint128(TEST_FROM_AMOUNT),
+            TEST_FROM_ASSET.to_string(),
+            TEST_FROM_BLOCK_NUMBER,
+            Some(Binary(vec![1u8])),         // ! Test for failure
+        );
+
+        // Check the transaction passes
+        let response = response_result.unwrap();
+    
+        // Check vault ack is invoked
+        assert_eq!(response.messages.len(), 1);
+        assert_eq!(
+            response.messages[0],
+            SubMsg::new(
+                cosmwasm_std::WasmMsg::Execute {
+                    contract_addr: TEST_FROM_VAULT.to_string(),
+                    msg: to_binary(&mock_vault_send_asset_failure_msg()).unwrap(),
+                    funds: vec![]
+                }
+            )
+        );
+
+
+
+        // Tested action: send asset ack INVALID
+        let response_result = handle_send_asset_response(
+            TEST_CHANNEL_ID.to_string(),
+            CatalystEncodedAddress::try_encode(TEST_TO_ACCOUNT.as_bytes()).unwrap().to_binary(),
+            TEST_UNITS,
+            TEST_FROM_VAULT.to_string(),
+            U256::from_uint128(TEST_FROM_AMOUNT),
+            TEST_FROM_ASSET.to_string(),
+            TEST_FROM_BLOCK_NUMBER,
+            Some(Binary(vec![9u8])),         // ! Some invalid response
+        );
+
+        // Check the transaction passes
+        let response = response_result.unwrap();
+    
+        // Check vault ack is invoked
+        assert_eq!(response.messages.len(), 1);
+        assert_eq!(
+            response.messages[0],
+            SubMsg::new(
+                cosmwasm_std::WasmMsg::Execute {
+                    contract_addr: TEST_FROM_VAULT.to_string(),
+                    msg: to_binary(&mock_vault_send_asset_failure_msg()).unwrap(),    // Invalid responses are treated as failures.
+                    funds: vec![]
+                }
+            )
+        );
+
+    }
+
+
+    #[test]
+    fn test_send_asset_timeout() {
+
+
+        // Tested action: send asset timeout
+        let response_result = handle_send_asset_response(
+            TEST_CHANNEL_ID.to_string(),
+            CatalystEncodedAddress::try_encode(TEST_TO_ACCOUNT.as_bytes()).unwrap().to_binary(),
+            TEST_UNITS,
+            TEST_FROM_VAULT.to_string(),
+            U256::from_uint128(TEST_FROM_AMOUNT),
+            TEST_FROM_ASSET.to_string(),
+            TEST_FROM_BLOCK_NUMBER,
+            None,         // ! No response (i.e. timeout)
+        );
+
+
+        // Check the transaction passes
+        let response = response_result.unwrap();
+    
+        // Check vault timeout is invoked
+        assert_eq!(response.messages.len(), 1);
+        assert_eq!(
+            response.messages[0],
+            SubMsg::new(
+                cosmwasm_std::WasmMsg::Execute {
+                    contract_addr: TEST_FROM_VAULT.to_string(),
+                    msg: to_binary(&mock_vault_send_asset_failure_msg()).unwrap(),
+                    funds: vec![]
+                }
+            )
+        )
+
+    }
+
+
+    #[test]
+    fn test_send_asset_ack_timeout_invalid_from_amount() {
+
+        let invalid_from_amount = U256::from(Uint128::MAX) + U256::one();
+
+
+
+        // Tested action: send asset ACK SUCCESSFUL with invalid packet (from_amount)
+        let response_result = handle_send_asset_response(
+            TEST_CHANNEL_ID.to_string(),
+            CatalystEncodedAddress::try_encode(TEST_TO_ACCOUNT.as_bytes()).unwrap().to_binary(),
+            TEST_UNITS,
+            TEST_FROM_VAULT.to_string(),
+            invalid_from_amount,        // ! Invalid from_amount
+            TEST_FROM_ASSET.to_string(),
+            TEST_FROM_BLOCK_NUMBER,
+            Some(Binary(vec![0u8])),    // ! Test ack-success
+        );
+
+        // Check the transaction does not pass
+        assert!(matches!(
+            response_result.err().unwrap(),
+            ContractError::PayloadDecodingError {}
+        ));
+
+
+
+        // Tested action: send asset ACK UNSUCCESSFUL with invalid packet
+        let response_result = handle_send_asset_response(
+            TEST_CHANNEL_ID.to_string(),
+            CatalystEncodedAddress::try_encode(TEST_TO_ACCOUNT.as_bytes()).unwrap().to_binary(),
+            TEST_UNITS,
+            TEST_FROM_VAULT.to_string(),
+            invalid_from_amount,        // ! Invalid from_amount
+            TEST_FROM_ASSET.to_string(),
+            TEST_FROM_BLOCK_NUMBER,
+            Some(Binary(vec![1u8])),    // ! Test ack-failure
+        );
+
+        // Check the transaction does not pass
+        assert!(matches!(
+            response_result.err().unwrap(),
+            ContractError::PayloadDecodingError {}
+        ));
+
+
+
+        // Tested action: send asset TIMEOUT with invalid packet
+        let response_result = handle_send_asset_response(
+            TEST_CHANNEL_ID.to_string(),
+            CatalystEncodedAddress::try_encode(TEST_TO_ACCOUNT.as_bytes()).unwrap().to_binary(),
+            TEST_UNITS,
+            TEST_FROM_VAULT.to_string(),
+            invalid_from_amount,        // ! Invalid from_amount
+            TEST_FROM_ASSET.to_string(),
+            TEST_FROM_BLOCK_NUMBER,
+            None,                       // ! Test timeout
+        );
+
+        // Check the transaction does not pass
+        assert!(matches!(
+            response_result.err().unwrap(),
+            ContractError::PayloadDecodingError {}
+        ));
+
+    }
+
+
+
+    // Send Liquidity Tests
+    // ********************************************************************************************
+
+    #[test]
+    fn test_send_liquidity_encoding() {
+
+        let info = mock_info(TEST_FROM_VAULT, &[]);
+
+
+
+        // Tested action: send liquidity encoding
+        let encoded_payload = encode_send_cross_chain_liquidity(
+            info,
+            CatalystEncodedAddress::try_encode(TEST_TO_VAULT.as_bytes()).unwrap().to_binary(),
+            CatalystEncodedAddress::try_encode(TEST_TO_ACCOUNT.as_bytes()).unwrap().to_binary(),
+            TEST_UNITS,
+            U256::from_uint128(TEST_MIN_VAULT_TOKENS),
+            U256::from_uint128(TEST_MIN_REFERENCE_ASSET),
+            TEST_FROM_AMOUNT,
+            TEST_FROM_BLOCK_NUMBER,
+            TEST_CALLDATA
+        ).unwrap();
+
+
+
+        let expected_payload = "AQoAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABmcm9tX3ZhdWx0CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAdG9fdmF1bHQKAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAdG9fYWNjb3VudK11FPutIXAiE147GgKdkGKPHGCQYwjyY+0HHEN78LrtAAAAAAAAAAAAAAAAAAAAAPNbWZ0+1zJDoqdsKgUxDJcAAAAAAAAAAAAAAAAAAAAAAABETdo2CALoQfNE9srutwAAAAAAAAAAAAAAAAAAAAADs5mts1GbkM11J4cfqsn7AAAFTAAA";
+
+        assert_eq!(
+            encoded_payload,
+            Binary::from_base64(expected_payload).unwrap()
+        );
+
+    }
+
+
+    #[test]
+    fn test_receive_liquidity() {
+
+        let mut deps = mock_dependencies();
+
+
+
+        // Tested action: receive liquidity
+        let response_result = handle_receive_liquidity(
+            &mut deps.as_mut(),
+            TEST_CHANNEL_ID.to_string(),
+            TEST_TO_VAULT.to_string(),
+            TEST_TO_ACCOUNT.to_string(),
+            TEST_UNITS,
+            U256::from_uint128(TEST_MIN_VAULT_TOKENS),
+            U256::from_uint128(TEST_MIN_REFERENCE_ASSET),
+            CatalystEncodedAddress::try_encode(TEST_FROM_VAULT.as_bytes()).unwrap().to_binary(),
+            TEST_FROM_AMOUNT_U256,
+            TEST_FROM_BLOCK_NUMBER,
+            TEST_CALLDATA
+        );
+
+
+
+        // Check the transaction passes
+        let response = response_result.unwrap();
+    
+        // Check vault is invoked
+        assert_eq!(response.messages.len(), 1);
+
+        assert_eq!(
+            response.messages[0],
+            SubMsg {
+                id: SET_ACK_REPLY_ID,
+                msg: cosmwasm_std::WasmMsg::Execute {
+                    contract_addr: TEST_TO_VAULT.to_string(),
+                    msg: to_binary(
+                        &mock_vault_receive_liquidity_msg()
+                    ).unwrap(),
+                    funds: vec![]
+                }.into(),
+                reply_on: cosmwasm_std::ReplyOn::Always,
+                gas_limit: None
+
+            }
+        )
+
+    }
+
+
+    #[test]
+    fn test_receive_liquidity_invalid_min_vault_tokens() {
+
+        let mut deps = mock_dependencies();
+
+
+
+        // Tested action: receive liquidity
+        let response_result = handle_receive_liquidity(
+            &mut deps.as_mut(),
+            TEST_CHANNEL_ID.to_string(),
+            TEST_TO_VAULT.to_string(),
+            TEST_TO_ACCOUNT.to_string(),
+            TEST_UNITS,
+            U256::MAX,      // ! Specify a min_vault_token that is larger than Uint128
+            U256::from_uint128(TEST_MIN_REFERENCE_ASSET),
+            CatalystEncodedAddress::try_encode(TEST_FROM_VAULT.as_bytes()).unwrap().to_binary(),
+            TEST_FROM_AMOUNT_U256,
+            TEST_FROM_BLOCK_NUMBER,
+            TEST_CALLDATA
+        );
+
+
+
+        // Check the transaction errors
+        assert!(matches!(
+            response_result.err().unwrap(),
+            ContractError::PayloadDecodingError {}
+        ));
+
+    }
+
+
+    #[test]
+    fn test_receive_liquidity_invalid_min_reference_asset() {
+
+        let mut deps = mock_dependencies();
+
+
+
+        // Tested action: receive liquidity
+        let response_result = handle_receive_liquidity(
+            &mut deps.as_mut(),
+            TEST_CHANNEL_ID.to_string(),
+            TEST_TO_VAULT.to_string(),
+            TEST_TO_ACCOUNT.to_string(),
+            TEST_UNITS,
+            U256::from_uint128(TEST_MIN_VAULT_TOKENS),
+            U256::MAX,      // ! Specify a min_vault_token that is larger than Uint128
+            CatalystEncodedAddress::try_encode(TEST_FROM_VAULT.as_bytes()).unwrap().to_binary(),
+            TEST_FROM_AMOUNT_U256,
+            TEST_FROM_BLOCK_NUMBER,
+            TEST_CALLDATA
+        );
+
+
+
+        // Check the transaction errors
+        assert!(matches!(
+            response_result.err().unwrap(),
+            ContractError::PayloadDecodingError {}
+        ));
+
+    }
+
+
+    #[test]
+    fn test_send_liquidity_ack() {
+
+
+        // Tested action: send liquidity ack SUCCESSFUL
+        let response_result = handle_send_liquidity_response(
+            TEST_CHANNEL_ID.to_string(),
+            CatalystEncodedAddress::try_encode(TEST_TO_ACCOUNT.as_bytes()).unwrap().to_binary(),
+            TEST_UNITS,
+            TEST_FROM_VAULT.to_string(),
+            U256::from_uint128(TEST_FROM_AMOUNT),
+            TEST_FROM_BLOCK_NUMBER,
+            Some(Binary(vec![0u8])),         // ! Test for success
+        );
+
+        // Check the transaction passes
+        let response = response_result.unwrap();
+    
+        // Check vault ack is invoked
+        assert_eq!(response.messages.len(), 1);
+        assert_eq!(
+            response.messages[0],
+            SubMsg::new(
+                cosmwasm_std::WasmMsg::Execute {
+                    contract_addr: TEST_FROM_VAULT.to_string(),
+                    msg: to_binary(&mock_vault_send_liquidity_success_msg()).unwrap(),
+                    funds: vec![]
+                }
+            )
+        );
+
+
+
+        // Tested action: send liquidity ack UNSUCCESSFUL
+        let response_result = handle_send_liquidity_response(
+            TEST_CHANNEL_ID.to_string(),
+            CatalystEncodedAddress::try_encode(TEST_TO_ACCOUNT.as_bytes()).unwrap().to_binary(),
+            TEST_UNITS,
+            TEST_FROM_VAULT.to_string(),
+            U256::from_uint128(TEST_FROM_AMOUNT),
+            TEST_FROM_BLOCK_NUMBER,
+            Some(Binary(vec![1u8])),         // ! Test for failure
+        );
+
+        // Check the transaction passes
+        let response = response_result.unwrap();
+    
+        // Check vault ack is invoked
+        assert_eq!(response.messages.len(), 1);
+        assert_eq!(
+            response.messages[0],
+            SubMsg::new(
+                cosmwasm_std::WasmMsg::Execute {
+                    contract_addr: TEST_FROM_VAULT.to_string(),
+                    msg: to_binary(&mock_vault_send_liquidity_failure_msg()).unwrap(),
+                    funds: vec![]
+                }
+            )
+        );
+
+
+
+        // Tested action: send liquidity ack INVALID
+        let response_result = handle_send_liquidity_response(
+            TEST_CHANNEL_ID.to_string(),
+            CatalystEncodedAddress::try_encode(TEST_TO_ACCOUNT.as_bytes()).unwrap().to_binary(),
+            TEST_UNITS,
+            TEST_FROM_VAULT.to_string(),
+            U256::from_uint128(TEST_FROM_AMOUNT),
+            TEST_FROM_BLOCK_NUMBER,
+            Some(Binary(vec![9u8])),         // ! Some invalid response
+        );
+
+        // Check the transaction passes
+        let response = response_result.unwrap();
+    
+        // Check vault ack is invoked
+        assert_eq!(response.messages.len(), 1);
+        assert_eq!(
+            response.messages[0],
+            SubMsg::new(
+                cosmwasm_std::WasmMsg::Execute {
+                    contract_addr: TEST_FROM_VAULT.to_string(),
+                    msg: to_binary(&mock_vault_send_liquidity_failure_msg()).unwrap(),    // Invalid responses are treated as failures.
+                    funds: vec![]
+                }
+            )
+        );
+
+    }
+
+
+    #[test]
+    fn test_send_liquidity_timeout() {
+
+
+        // Tested action: send liquidity timeout
+        let response_result = handle_send_liquidity_response(
+            TEST_CHANNEL_ID.to_string(),
+            CatalystEncodedAddress::try_encode(TEST_TO_ACCOUNT.as_bytes()).unwrap().to_binary(),
+            TEST_UNITS,
+            TEST_FROM_VAULT.to_string(),
+            U256::from_uint128(TEST_FROM_AMOUNT),
+            TEST_FROM_BLOCK_NUMBER,
+            None,         // ! No response (i.e. timeout)
+        );
+
+
+
+        // Check the transaction passes
+        let response = response_result.unwrap();
+    
+        // Check vault timeout is invoked
+        assert_eq!(response.messages.len(), 1);
+        assert_eq!(
+            response.messages[0],
+            SubMsg::new(
+                cosmwasm_std::WasmMsg::Execute {
+                    contract_addr: TEST_FROM_VAULT.to_string(),
+                    msg: to_binary(&mock_vault_send_liquidity_failure_msg()).unwrap(),
+                    funds: vec![]
+                }
+            )
+        )
+
+    }
+
+
+    #[test]
+    fn test_send_liquidity_ack_timeout_invalid_from_amount() {
+
+        let invalid_from_amount = U256::from(Uint128::MAX) + U256::one();
+
+
+
+        // Tested action: send liquidity ACK SUCCESSFUL with invalid packet (from_amount)
+        let response_result = handle_send_liquidity_response(
+            TEST_CHANNEL_ID.to_string(),
+            CatalystEncodedAddress::try_encode(TEST_TO_ACCOUNT.as_bytes()).unwrap().to_binary(),
+            TEST_UNITS,
+            TEST_FROM_VAULT.to_string(),
+            invalid_from_amount,        // ! Invalid from_amount
+            TEST_FROM_BLOCK_NUMBER,
+            Some(Binary(vec![0u8])),    // ! Test ack-success
+        );
+
+        // Check the transaction does not pass
+        assert!(matches!(
+            response_result.err().unwrap(),
+            ContractError::PayloadDecodingError {}
+        ));
+
+
+
+        // Tested action: send liquidity ACK UNSUCCESSFUL with invalid packet
+        let response_result = handle_send_liquidity_response(
+            TEST_CHANNEL_ID.to_string(),
+            CatalystEncodedAddress::try_encode(TEST_TO_ACCOUNT.as_bytes()).unwrap().to_binary(),
+            TEST_UNITS,
+            TEST_FROM_VAULT.to_string(),
+            invalid_from_amount,        // ! Invalid from_amount
+            TEST_FROM_BLOCK_NUMBER,
+            Some(Binary(vec![1u8])),    // ! Test ack-failure
+        );
+
+        // Check the transaction does not pass
+        assert!(matches!(
+            response_result.err().unwrap(),
+            ContractError::PayloadDecodingError {}
+        ));
+
+
+
+        // Tested action: send liquidity TIMEOUT with invalid packet
+        let response_result = handle_send_liquidity_response(
+            TEST_CHANNEL_ID.to_string(),
+            CatalystEncodedAddress::try_encode(TEST_TO_ACCOUNT.as_bytes()).unwrap().to_binary(),
+            TEST_UNITS,
+            TEST_FROM_VAULT.to_string(),
+            invalid_from_amount,        // ! Invalid from_amount
+            TEST_FROM_BLOCK_NUMBER,
+            None,                       // ! Test timeout
+        );
+
+        // Check the transaction does not pass
+        assert!(matches!(
+            response_result.err().unwrap(),
+            ContractError::PayloadDecodingError {}
+        ));
+
+    }
+
+}
