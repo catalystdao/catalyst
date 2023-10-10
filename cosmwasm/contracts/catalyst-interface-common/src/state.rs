@@ -256,6 +256,47 @@ pub fn handle_message_reception(
 }
 
 
+// TODO documentation
+pub fn handle_message_response(
+    channel_id: String,
+    data: Binary,
+    response: Option<Binary>
+) -> Result<VaultResponse, ContractError> {
+
+    let catalyst_packet = CatalystV1Packet::try_decode(data)?;
+
+    match catalyst_packet {
+
+        CatalystV1Packet::SendAsset(payload) => {
+
+            handle_send_asset_response(
+                channel_id,
+                payload.to_account.to_binary(),
+                payload.u,
+                payload.from_vault.try_decode_as_string()?,
+                payload.variable_payload.from_amount,
+                payload.variable_payload.from_asset.try_decode_as_string()?,
+                payload.variable_payload.block_number,
+                response
+            )
+        },
+
+        CatalystV1Packet::SendLiquidity(payload) => {
+
+            handle_send_liquidity_response(
+                channel_id,
+                payload.to_account.to_binary(),
+                payload.u,
+                payload.from_vault.try_decode_as_string()?,
+                payload.variable_payload.from_amount,
+                payload.variable_payload.block_number,
+                response
+            )
+        }
+    }
+}
+
+
 /// Handle the reception of a cross-chain asset swap.
 /// 
 /// # Arguments:
@@ -433,95 +474,106 @@ pub fn handle_receive_liquidity(
 }
 
 
-// TODO documentation
-pub fn handle_message_response(
+//TODO documentation
+pub fn handle_send_asset_response(
     channel_id: String,
-    data: Binary,
+    to_account: Binary,
+    u: U256,
+    from_vault: String,
+    from_amount: U256,
+    from_asset: String,
+    from_block_number_mod: u32,
     response: Option<Binary>
 ) -> Result<VaultResponse, ContractError> {
-
-    let catalyst_packet = CatalystV1Packet::try_decode(data)?;
 
     // NOTE: Only the first byte of the 'ack' response is checked. This allows future 'ack' implementations to
     // extend the 'ack' format.
     let success = response.is_some_and(|response| {
         response.get(0).is_some_and(|byte| byte == &ACK_SUCCESS)
     });
-    
-    // Build the SendAsset/SendLiquidity ack response message
-    let receive_asset_execute_msg: cosmwasm_std::WasmMsg = match catalyst_packet {
 
-        CatalystV1Packet::SendAsset(payload) => {
+    // Convert 'from_amount' into Uint128
+    let from_amount: Uint128 = from_amount.try_into()
+        .map_err(|_| ContractError::PayloadDecodingError {})?;
 
-            // Convert 'from_amount' into Uint128
-            let from_amount: Uint128 = payload.variable_payload.from_amount.try_into()
-                .map_err(|_| ContractError::PayloadDecodingError {})?;
-
-            // Build the message to execute the success/fail call.
-            // NOTE: none of the fields are validated, these must be correctly handled by the vault.
-            let msg = match success {
-                true => VaultExecuteMsg::<()>::OnSendAssetSuccess {
-                    channel_id,
-                    to_account: payload.to_account.to_binary(),
-                    u: payload.u,
-                    escrow_amount: from_amount,
-                    asset_ref: payload.variable_payload.from_asset.try_decode_as_string()?,
-                    block_number_mod: payload.variable_payload.block_number
-                },
-                false => VaultExecuteMsg::<()>::OnSendAssetFailure {
-                    channel_id,
-                    to_account: payload.to_account.to_binary(),
-                    u: payload.u,
-                    escrow_amount: from_amount,
-                    asset_ref: payload.variable_payload.from_asset.try_decode_as_string()?,
-                    block_number_mod: payload.variable_payload.block_number
-                },
-            };
-
-            Ok::<cosmwasm_std::WasmMsg, ContractError>(cosmwasm_std::WasmMsg::Execute {
-                contract_addr: payload.from_vault.try_decode_as_string()?,    // No need to validate, 'Execute' will fail for an invalid address.
-                msg: to_binary(&msg)?,
-                funds: vec![]
-            })
-
+    // Build the message to execute the success/fail call.
+    // NOTE: none of the fields are validated, these must be correctly handled by the vault.
+    let msg = match success {
+        true => VaultExecuteMsg::<()>::OnSendAssetSuccess {
+            channel_id,
+            to_account,
+            u,
+            escrow_amount: from_amount,
+            asset_ref: from_asset,
+            block_number_mod: from_block_number_mod
         },
+        false => VaultExecuteMsg::<()>::OnSendAssetFailure {
+            channel_id,
+            to_account,
+            u,
+            escrow_amount: from_amount,
+            asset_ref: from_asset,
+            block_number_mod: from_block_number_mod
+        },
+    };
 
-        CatalystV1Packet::SendLiquidity(payload) => {
+    let response_msg = CosmosMsg::Wasm(WasmMsg::Execute {
+        contract_addr: from_vault,    // No need to validate, 'Execute' will fail for an invalid address.
+        msg: to_binary(&msg)?,
+        funds: vec![]
+    });
 
-            // Convert 'from_amount' into Uint128
-            let from_amount: Uint128 = payload.variable_payload.from_amount.try_into()
-                .map_err(|_| ContractError::PayloadDecodingError {})?;
+    Ok(
+        Response::new().add_message(response_msg)
+    )
+}
 
-            // Build the message to execute the success/fail call.
-            // NOTE: none of the fields are validated, these must be correctly handled by the vault.
-            let msg = match success {
-                true => VaultExecuteMsg::<()>::OnSendLiquiditySuccess {
-                    channel_id,
-                    to_account: payload.to_account.to_binary(),
-                    u: payload.u,
-                    escrow_amount: from_amount,
-                    block_number_mod: payload.variable_payload.block_number
-                },
-                false => VaultExecuteMsg::<()>::OnSendLiquidityFailure {
-                    channel_id,
-                    to_account: payload.to_account.to_binary(),
-                    u: payload.u,
-                    escrow_amount: from_amount,
-                    block_number_mod: payload.variable_payload.block_number
-                },
-            };
 
-            Ok::<cosmwasm_std::WasmMsg, ContractError>(cosmwasm_std::WasmMsg::Execute {
-                contract_addr: payload.from_vault.try_decode_as_string()?,    // No need to validate, 'Execute' will fail for an invalid address.
-                msg: to_binary(&msg)?,
-                funds: vec![]
-            })
+//TODO documentation
+pub fn handle_send_liquidity_response(
+    channel_id: String,
+    to_account: Binary,
+    u: U256,
+    from_vault: String,
+    from_amount: U256,
+    from_block_number_mod: u32,
+    response: Option<Binary>
+) -> Result<VaultResponse, ContractError> {
 
-        }
-    }?;
+    // NOTE: Only the first byte of the 'ack' response is checked. This allows future 'ack' implementations to
+    // extend the 'ack' format.
+    let success = response.is_some_and(|response| {
+        response.get(0).is_some_and(|byte| byte == &ACK_SUCCESS)
+    });
 
-    // Build the response messsage.
-    let response_msg = CosmosMsg::Wasm(receive_asset_execute_msg);
+    // Convert 'from_amount' into Uint128
+    let from_amount: Uint128 = from_amount.try_into()
+        .map_err(|_| ContractError::PayloadDecodingError {})?;
+
+    // Build the message to execute the success/fail call.
+    // NOTE: none of the fields are validated, these must be correctly handled by the vault.
+    let msg = match success {
+        true => VaultExecuteMsg::<()>::OnSendLiquiditySuccess {
+            channel_id,
+            to_account,
+            u,
+            escrow_amount: from_amount,
+            block_number_mod: from_block_number_mod
+        },
+        false => VaultExecuteMsg::<()>::OnSendLiquidityFailure {
+            channel_id,
+            to_account,
+            u,
+            escrow_amount: from_amount,
+            block_number_mod: from_block_number_mod
+        },
+    };
+
+    let response_msg = CosmosMsg::Wasm(WasmMsg::Execute {
+        contract_addr: from_vault,    // No need to validate, 'Execute' will fail for an invalid address.
+        msg: to_binary(&msg)?,
+        funds: vec![]
+    });
 
     Ok(
         Response::new().add_message(response_msg)
