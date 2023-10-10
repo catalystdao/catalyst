@@ -218,10 +218,6 @@ pub fn handle_message_reception(
 
         CatalystV1Packet::SendAsset(payload) => {
 
-            // Convert min_out into Uint128
-            let min_out: Uint128 = payload.variable_payload.min_out.try_into()
-                .map_err(|_| ContractError::PayloadDecodingError {})?;
-
             handle_receive_asset(
                 deps,
                 &env,
@@ -230,7 +226,7 @@ pub fn handle_message_reception(
                 payload.variable_payload.to_asset_index,
                 payload.to_account.try_decode_as_string()?,
                 payload.u,
-                min_out,
+                payload.variable_payload.min_out,
                 payload.variable_payload.underwrite_incentive_x16,
                 payload.from_vault.to_binary(),
                 payload.variable_payload.from_amount,
@@ -242,20 +238,14 @@ pub fn handle_message_reception(
 
         CatalystV1Packet::SendLiquidity(payload) => {
 
-            // Convert the minimum outputs into Uint128
-            let min_vault_tokens: Uint128 = payload.variable_payload.min_vault_tokens.try_into()
-                .map_err(|_| ContractError::PayloadDecodingError {})?;
-            let min_reference_asset: Uint128 = payload.variable_payload.min_reference_asset.try_into()
-                .map_err(|_| ContractError::PayloadDecodingError {})?;
-
             handle_receive_liquidity(
                 deps,
                 channel_id,
                 payload.to_vault.try_decode_as_string()?,
                 payload.to_account.try_decode_as_string()?,
                 payload.u,
-                min_vault_tokens,
-                min_reference_asset,
+                payload.variable_payload.min_vault_tokens,
+                payload.variable_payload.min_reference_asset,
                 payload.from_vault.to_binary(),
                 payload.variable_payload.from_amount,
                 payload.variable_payload.block_number,
@@ -290,7 +280,7 @@ pub fn handle_receive_asset(
     to_asset_index: u8,
     to_account: String,
     u: U256,
-    min_out: Uint128,
+    min_out: U256,
     underwrite_incentive_x16: u16,
     from_vault: Binary,
     from_amount: U256,
@@ -298,6 +288,10 @@ pub fn handle_receive_asset(
     from_block_number_mod: u32,
     calldata: Binary
 ) -> Result<VaultResponse, ContractError> {
+
+    // Convert min_out into Uint128
+    let min_out: Uint128 = min_out.try_into()
+        .map_err(|_| ContractError::PayloadDecodingError {})?;
 
     let to_asset = deps.querier.query_wasm_smart::<AssetResponse<Asset>>(
         to_vault.clone(),
@@ -386,13 +380,19 @@ pub fn handle_receive_liquidity(
     to_vault: String,
     to_account: String,
     u: U256,
-    min_vault_tokens: Uint128,
-    min_reference_asset: Uint128,
+    min_vault_tokens: U256,
+    min_reference_asset: U256,
     from_vault: Binary,
     from_amount: U256,
     from_block_number_mod: u32,
     calldata: Binary
 ) -> Result<VaultResponse, ContractError> {
+
+    // Convert the minimum outputs into Uint128
+    let min_vault_tokens: Uint128 = min_vault_tokens.try_into()
+        .map_err(|_| ContractError::PayloadDecodingError {})?;
+    let min_reference_asset: Uint128 = min_reference_asset.try_into()
+        .map_err(|_| ContractError::PayloadDecodingError {})?;
 
     // Build the message to execute the reception of the swap.
     // NOTE: none of the fields are validated, these must be correctly handled by the vault.
