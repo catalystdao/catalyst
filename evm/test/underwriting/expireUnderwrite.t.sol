@@ -75,7 +75,7 @@ contract TestExpireUnderwrite is TestCommon {
             address(this)
         );
 
-        vm.warp(block.timestamp + maxUnderwritingDuration * 2);
+        vm.roll(block.number + maxUnderwritingDuration * 2);
 
         vm.prank(expirer);
         CCI.expireUnderwrite(
@@ -145,7 +145,7 @@ contract TestExpireUnderwrite is TestCommon {
         vm.prank(expirer);
         vm.expectRevert(
             abi.encodeWithSignature("UnderwriteNotExpired(uint256)", (
-                expiry-block.timestamp
+                expiry-block.number
             ))
         );
         CCI.expireUnderwrite(
