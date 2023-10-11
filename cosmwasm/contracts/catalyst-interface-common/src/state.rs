@@ -1789,13 +1789,23 @@ mod test_catalyst_interface_common {
     // Some of the interface methods interact with the vaults. The following helpers implement
     // mocks for these interactions.
 
-    //TODO CW20
     fn mock_vault_assets() -> Vec<Asset> {
-        vec![
+
+        #[cfg(feature="asset_native")]
+        let assets = vec![
             Asset { denom: "asset_a".to_string(), alias: "a".to_string() },
             Asset { denom: "asset_b".to_string(), alias: "b".to_string() },
             Asset { denom: "asset_c".to_string(), alias: "c".to_string() }
-        ]
+        ];
+
+        #[cfg(feature="asset_cw20")]
+        let assets = vec![
+            Asset ("asset_a".to_string()),
+            Asset ("asset_b".to_string()),
+            Asset ("asset_c".to_string())
+        ];
+
+        assets
     }
 
     // Create mock dependencies with the vault queries that are required by the interface.
