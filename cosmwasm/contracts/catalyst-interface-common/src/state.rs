@@ -24,7 +24,7 @@ pub const UNDERWRITING_COLLATERAL_BASE: Uint128 = Uint128::new(1000);
 pub const UNDERWRITING_EXPIRE_REWARD: Uint128 = Uint128::new(350);      // 35% of the collateral
 pub const UNDERWRITING_EXPIRE_REWARD_BASE: Uint128 = Uint128::new(1000);
 
-pub const MAX_UNDERWRITE_DURATION_ALLOWED_SECONDS: Uint64 = Uint64::new(15 * 24 * 60 * 60); // 15 days
+pub const MAX_UNDERWRITE_DURATION_ALLOWED_BLOCKS: Uint64 = Uint64::new(15 * 24 * 60 * 60); // 15 days at 1 block/s
 
 
 
@@ -39,7 +39,7 @@ const ADMIN: Admin = Admin::new("catalyst-interface-admin");
 const REPLY_CALLDATA_PARAMS: Item<CatalystCalldata> = Item::new("catalyst-interface-calldata-params");
 
 // Underwriting
-pub const MAX_UNDERWRITE_DURATION_SECONDS: Item<Uint64> = Item::new("catalyst-interface-max-underwrite-duration");
+pub const MAX_UNDERWRITE_DURATION_BLOCKS: Item<Uint64> = Item::new("catalyst-interface-max-underwrite-duration");
 pub const UNDERWRITE_EVENTS: Map<Vec<u8>, UnderwriteEvent> = Map::new("catalyst-interface-underwrite-events");
 
 const REPLY_UNDERWRITE_PARAMS: Item<UnderwriteParams> = Item::new("catalyst-interface-underwrite-params");
@@ -1121,7 +1121,7 @@ pub fn handle_underwrite_reply(
         StdError::GenericErr { msg: "No data in the vault's `UnderwriteAsset` response.".to_string() }
     })?;
     let swap_return: Uint128 = from_binary(&response_data)?;
-    let expiry = Uint64::new(env.block.time.seconds()) + get_max_underwrite_duration(&deps.as_ref())?;
+    let expiry = Uint64::new(env.block.height) + get_max_underwrite_duration(&deps.as_ref())?;
 
     let underwrite_event = UnderwriteEvent {
         amount: swap_return,
@@ -1208,7 +1208,7 @@ pub fn handle_underwrite_reply(
 /// Expire an underwrite and free the escrowed assets.
 /// 
 /// **NOTE**: The underwriter may expire the underwrite at any time. Any other account must wait
-/// until after the expiry time.
+/// until after the expiry block.
 /// 
 /// # Arguments: 
 /// * `to_vault` - The target vault.
@@ -1249,12 +1249,12 @@ pub fn expire_underwrite(
     // Verify that the underwrite has expired. Note that the underwriter may 'expire' the
     // underwrite at any time.
     if underwrite_event.underwriter != info.sender {
-        let current_time = env.block.time.seconds();
-        let expiry_time = underwrite_event.expiry.u64();
-        if current_time < expiry_time {
+        let current_block = env.block.height;
+        let expiry_block = underwrite_event.expiry.u64();
+        if current_block < expiry_block {
             return Err(ContractError::UnderwriteNotExpired{
-                // 'wrapping_sub' safe, 'current_time < expiry_time' checked above 
-                time_remaining: expiry_time.wrapping_sub(current_time).into()
+                // 'wrapping_sub' safe, 'current_block < expiry_block' checked above 
+                blocks_remaining: expiry_block.wrapping_sub(current_block).into()
             })
         }
     }
@@ -1465,7 +1465,7 @@ pub fn set_max_underwriting_duration(
 
     only_owner(deps.as_ref(), info)?;
 
-    let max_duration_allowed = max_duration_allowed.unwrap_or(MAX_UNDERWRITE_DURATION_ALLOWED_SECONDS);
+    let max_duration_allowed = max_duration_allowed.unwrap_or(MAX_UNDERWRITE_DURATION_ALLOWED_BLOCKS);
     if new_max_duration > max_duration_allowed {
         return Err(ContractError::MaxUnderwriteDurationTooLong {
             set_duration: new_max_duration,
@@ -1473,7 +1473,7 @@ pub fn set_max_underwriting_duration(
         })
     }
 
-    MAX_UNDERWRITE_DURATION_SECONDS.save(deps.storage, &new_max_duration)?;
+    MAX_UNDERWRITE_DURATION_BLOCKS.save(deps.storage, &new_max_duration)?;
 
     Ok(Response::new())
 
@@ -1485,7 +1485,7 @@ pub fn get_max_underwrite_duration(
     deps: &Deps
 ) -> Result<Uint64, ContractError> {
 
-    MAX_UNDERWRITE_DURATION_SECONDS
+    MAX_UNDERWRITE_DURATION_BLOCKS
         .load(deps.storage)
         .map_err(|err| err.into())
 

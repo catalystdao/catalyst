@@ -35,8 +35,8 @@ pub enum ContractError {
     #[error("An underwrite for the given parameters does not exist, id: {id}")]
     UnderwriteDoesNotExist { id: Binary },
 
-    #[error("The underwrite has not expired. Time remaining: {time_remaining}")]
-    UnderwriteNotExpired { time_remaining: Uint64 },
+    #[error("The underwrite has not expired. Blocks remaining: {blocks_remaining}")]
+    UnderwriteNotExpired { blocks_remaining: Uint64 },
 
     #[error("The specified max underwrite duration is too long (set {set_duration}, max {max_duration})")]
     MaxUnderwriteDurationTooLong {
