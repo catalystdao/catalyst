@@ -69,7 +69,7 @@ contract TestExpireUnderwrite is TestCommon {
         );
 
         // check that storage has been set.
-        (, address refundTo, ) = CCI.underwritingStorage(identifier);
+        (, address refundTo,, ) = CCI.underwritingStorage(identifier);
         assertEq(
             refundTo,
             address(this)
@@ -88,7 +88,7 @@ contract TestExpireUnderwrite is TestCommon {
             hex"0000"
         );
 
-        (, refundTo, ) = CCI.underwritingStorage(identifier);
+        (, refundTo,, ) = CCI.underwritingStorage(identifier);
         assertEq(
             refundTo,
             address(0)
@@ -139,7 +139,7 @@ contract TestExpireUnderwrite is TestCommon {
             hex"0000"
         );
 
-        (, ,uint80 expiry) = CCI.underwritingStorage(identifier);
+        (, ,uint80 expiry,) = CCI.underwritingStorage(identifier);
 
 
         vm.prank(expirer);
