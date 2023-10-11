@@ -41,11 +41,10 @@ contract TestUnderwrite is TestCommon, ICatalystReceiver {
             hex"0000"
         );
 
-        (uint256 tokensStorage, address refundToStorage, uint80 expiryStorage, uint32 lastTouchBlock) = CCI.underwritingStorage(identifier);
+        (uint256 tokensStorage, address refundToStorage, uint96 expiryStorage) = CCI.underwritingStorage(identifier);
 
         assertEq(address(this), refundToStorage, "RefundTo isn't the same as storage");
         assertEq(expiryStorage, block.timestamp + maxUnderwritingDuration, "Expiry storage not correctly set");
-        assertEq(lastTouchBlock, 0, "Last Touch Block not 0");
 
         // Check the balance of CCI.
 

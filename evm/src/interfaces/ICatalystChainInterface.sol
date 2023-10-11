@@ -72,5 +72,5 @@ interface ICatalystChainInterface is ICatalystV1Structs, ICrossChainReceiver {
         uint16 underwriteIncentiveX16,
         bytes memory cdata
     ) external;
-    function underwritingStorage(bytes32) external view returns (uint256 tokens, address refundTo, uint64 expiry, uint32 lastTouchBlock);
+    function underwritingStorage(bytes32) external view returns (uint256 tokens, address refundTo, uint96 expiry);
 }

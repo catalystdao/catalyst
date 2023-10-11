@@ -11,13 +11,11 @@ import { Token } from "../mocks/token.sol";
 
 import { ICatalystReceiver } from "../../src/interfaces/IOnCatalyst.sol";
 
-contract TestSendAssetUnderwritePurpose is TestCommon {
+contract TestDoubleHitUnderwrite is TestCommon {
     address vault1;
     address vault2;
 
     bytes32 FEE_RECIPITANT = bytes32(uint256(uint160(0xfee0eec191fa4f)));
-
-    event SwapFailed(bytes1 error);
 
     event SendAssetSuccess(
         bytes32 channelId,
@@ -47,15 +45,13 @@ contract TestSendAssetUnderwritePurpose is TestCommon {
         setConnection(vault1, vault2, DESTINATION_IDENTIFIER, DESTINATION_IDENTIFIER);
     }
 
-    function test_send_asset_underwrite_purpose(address refundTo, address toAccount) external {
+    function test_double_hit_underwrite(address refundTo, address toAccount) external {
         vm.assume(refundTo != address(0));
         vm.assume(toAccount != address(0));
         vm.assume(toAccount != refundTo);  // makes it really hard to debug
         vm.assume(toAccount != vault1);
-        vm.assume(toAccount != vault2);
         vm.assume(toAccount != address(CCI));
         vm.assume(toAccount != address(this));
-        // execute the swap.
         address token1 = ICatalystV1Vault(vault1)._tokenIndexing(0);
 
         Token(token1).approve(vault1, 2**256-1);
@@ -67,33 +63,13 @@ contract TestSendAssetUnderwritePurpose is TestCommon {
             incentive: _INCENTIVE
         });
 
-        address token2 = ICatalystV1Vault(vault2)._tokenIndexing(0);
-
-
-        
-        Token(token2).transfer(refundTo, 103489651034896500);
-        vm.prank(refundTo);
-        Token(token2).approve(address(CCI), 2**256-1);
-        vm.prank(refundTo);
-        bytes32 underwriteIdentifier = CCI.underwrite(
-            vault2,  // -- Swap information
-            token2,
-            99995000333308,
-            0,
-            toAccount,
-            0,
-            hex"0000"
-        );
-
-
         vm.recordLogs();
-        uint256 units = ICatalystV1Vault(vault1).sendAssetFixedUnit{value: _getTotalIncentive(_INCENTIVE)}(
+        uint256 units = ICatalystV1Vault(vault1).sendAsset{value: _getTotalIncentive(_INCENTIVE)}(
             routeDescription,
             token1,
             0, 
             uint256(1e17), 
             0,
-            99995000333308,
             toAccount,
             0,
             hex""
@@ -102,26 +78,25 @@ contract TestSendAssetUnderwritePurpose is TestCommon {
 
         (, , bytes memory messageWithContext) = abi.decode(entries[1].data, (bytes32, bytes, bytes));
 
-        assertEq(units, 99995000333308, "expected number of units");
+        address token2 = ICatalystV1Vault(vault2)._tokenIndexing(0);
 
-
+        Token(token2).approve(address(CCI), 2**256-1);
+        
+        Token(token2).transfer(refundTo, 103489651034896500);
+        vm.prank(refundTo);
+        Token(token2).approve(address(CCI), 2**256-1);
+        vm.prank(refundTo);
+        bytes32 underwriteIdentifier = CCI.underwrite(
+            vault2,  // -- Swap information
+            token2,
+            units,
+            0,
+            toAccount,
+            0,
+            hex"0000"
+        );
 
         (uint256 numTokens, ,) = CCI.underwritingStorage(underwriteIdentifier);
-
-        // assert that toAccount get the tokens.
-        assertEq(
-            Token(token2).balanceOf(toAccount),
-            99990000999900000,
-            "tokens received"
-        );
-
-        assertEq(
-            Token(token2).balanceOf(address(CCI)),
-            numTokens * (
-                CCI.UNDERWRITING_COLLATORAL()
-            )/CCI.UNDERWRITING_COLLATORAL_DENOMINATOR(),
-            "CCI balance incorrect"
-        );
 
         // Then let the package arrive.
         (bytes memory _metadata, bytes memory toExecuteMessage) = getVerifiedMessage(address(GARP), messageWithContext);
@@ -130,28 +105,17 @@ contract TestSendAssetUnderwritePurpose is TestCommon {
         GARP.processMessage(_metadata, toExecuteMessage, FEE_RECIPITANT);
         entries = vm.getRecordedLogs();
 
-        assertEq(
-            Token(token2).balanceOf(address(CCI)),
+        // Underwrite the swap again.
+        vm.expectRevert(abi.encodeWithSignature("SwapRecentlyUnderwritten()"));
+        CCI.underwrite(
+            vault2,  // -- Swap information
+            token2,
+            units,
             0,
-            "CCI balance not 0"
+            toAccount,
+            0,
+            hex"0000"
         );
-
-        assertEq(
-            Token(token2).balanceOf(refundTo),
-            numTokens + numTokens * (
-                CCI.UNDERWRITING_COLLATORAL()
-            )/CCI.UNDERWRITING_COLLATORAL_DENOMINATOR(),
-            "refundTo balance not expected"
-        );
-
-        // Lets execute the message on the source chain and check that the escrow is properly removed.
-        (,, messageWithContext) = abi.decode(entries[4].data, (bytes32, bytes, bytes));
-        (_metadata, toExecuteMessage) = getVerifiedMessage(address(GARP), messageWithContext);
-
-        // Check for the success event
-        vm.expectEmit();
-        emit SendAssetSuccess(DESTINATION_IDENTIFIER, convertEVMTo65(toAccount), units, uint256(1e17), address(token1), 1);
-
-        GARP.processMessage(_metadata, toExecuteMessage, FEE_RECIPITANT);
     }
 }
+
