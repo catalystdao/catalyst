@@ -11,14 +11,13 @@ use crate::{catalyst_ibc_payload::{CatalystV1SendAssetPayload, SendAssetVariable
 use crate::error::ContractError;
 use crate::event::{set_owner_event, underwrite_swap_event, fulfill_underwrite_event, expire_underwrite_event};
 
-const ADMIN: Admin = Admin::new("catalyst-interface-admin");
-
 
 
 
 // State
 // ************************************************************************************************
 
+const ADMIN: Admin = Admin::new("catalyst-interface-admin");
 const REPLY_CALLDATA_PARAMS: Item<CatalystCalldata> = Item::new("catalyst-interface-calldata-params");
 
 
