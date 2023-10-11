@@ -5,7 +5,7 @@ use cw_storage_plus::Map;
 
 // Constants
 pub const TRANSACTION_TIMEOUT_SECONDS: u64 = 2 * 60 * 60;   // 2 hours
-pub const WRAPPED_MESSAGES_REPLY_ID: u64 = 0x999;   //TODO move definition to 'common'?
+pub const WRAPPED_MESSAGES_REPLY_ID: u64 = 0x999;
 
 
 // Storage

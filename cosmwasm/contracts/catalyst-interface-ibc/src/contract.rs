@@ -332,7 +332,6 @@ pub fn reply(
         return Ok(response);
     }
 
-    //TODO move to 'common'?
     // Match ibc-specific replies
     match reply.id {
         

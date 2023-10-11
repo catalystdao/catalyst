@@ -236,7 +236,6 @@ pub fn encode_ibc_receive_response(
             else {
                 // ! This case is only reached if calldata is to be executed, so the message
                 // ! **must** be wrapped in case it fails.
-                //TODO add helper on 'common' to do the following?
                 let cosmos_msg = CosmosMsg::Wasm(WasmMsg::Execute {
                     contract_addr: env.contract.address.to_string(),
                     msg: to_binary(&ExecuteMsg::WrapSubMsgs { sub_msgs })?,
