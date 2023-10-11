@@ -46,6 +46,7 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
     error MaxUnderwriteDurationTooLong(); // 3f6368aa
     error NoVaultConnection(); // ea66ca6d
     error MaliciousVault(); // 847ca49a
+    error SwapRecentlyUnderwritten(); // 695b3a94
 
     //--- Events ---//
 
@@ -80,7 +81,8 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
     struct UnderwritingStorage {
         uint256 tokens;     // 1 slot
         address refundTo;   // 2 slot: 20/32
-        uint80 expiry;      // 2 slot: 30/32
+        uint64 expiry;      // 2 slot: 28/32
+        uint32 lastTouchBlock;  // 2 slot: 32/32
     }
 
     bytes32 constant KECCACK_OF_NOTHING = 0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470;
@@ -90,6 +92,9 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
 
 
     //-- Underwriting Config--//
+
+    // How many blocks should there be between when an identifier can be underwritten.
+    uint24 constant BUFFER_BLOCKS = 4;
 
     uint256 constant public UNDERWRITING_COLLATORAL = 35;  // 3,5% extra as collatoral.
     uint256 constant public UNDERWRITING_COLLATORAL_DENOMINATOR = 1000;
@@ -679,6 +684,22 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
 
         // For most implementations, the observation can be ignored because of the strength of point 1.
 
+        // Check if the assocaited underwrite just arrived and has already been matched.
+        // This is an issue when the swap was JUST underwriten, JUST arrived (and matched), AND someone else JUST underwrote the swap.
+        // To give the user a bit more protection, we add a buffer of 1 block (-1).
+        unchecked {
+            // Get the last touch block. For most underwrites it is going to be 0.
+            uint32 lastTouchBlock = underwritingStorage[identifier].lastTouchBlock;
+            // if lastTouchBlock < BUFFER_BLOCKS then lastTouchBlock - BUFFER_BLOCKS underflows.
+            if (lastTouchBlock >= BUFFER_BLOCKS) {
+                // Add a reasonable buffer so if the transaction got into the memory pool and is delayed into the next blocks
+                // it doesn't underwrite a non-existing swap.
+                if (lastTouchBlock - BUFFER_BLOCKS >= uint24(block.number)) revert SwapRecentlyUnderwritten();
+            } else {
+                if (lastTouchBlock == uint24(block.number)) revert SwapRecentlyUnderwritten();
+            }
+        }
+
         // Get the number of purchased units from the vault. This uses a custom call which doesn't return
         // any assets.
         // This calls escrows the purchasedTokens on the vault.
@@ -700,7 +721,8 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
         underwritingStorage[identifier] = UnderwritingStorage({
             tokens: purchasedTokens,
             refundTo: msg.sender,
-            expiry: uint80(uint256(block.timestamp) + uint256(maxUnderwritingDuration))  // Should never overflow.
+            expiry: uint64(uint256(block.timestamp) + uint256(maxUnderwritingDuration)),  // Should never overflow.
+            lastTouchBlock: uint32(0)
         });
 
         // The above combination of lines act as local re-entry protection.
@@ -837,6 +859,8 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
 
         // Reentry protection. No external calls are allowed before this line. The line 'if (refundTo == address(0)) ...' will always be true.
         delete underwritingStorage[identifier];
+        // Set the last touch block so someone doesn't underwrite this swap again.
+        underwritingStorage[identifier].lastTouchBlock = uint32(block.number);
 
         // Delete escrow information and send swap tokens directly to the underwriter.
         ICatalystV1Vault(vault).releaseUnderwriteAsset(refundTo, identifier, underwrittenTokenAmount, toAsset, sourceIdentifier, fromVault);

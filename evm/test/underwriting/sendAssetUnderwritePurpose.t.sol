@@ -106,7 +106,7 @@ contract TestSendAssetUnderwritePurpose is TestCommon {
 
 
 
-        (uint256 numTokens, , ) = CCI.underwritingStorage(underwriteIdentifier);
+        (uint256 numTokens, , ,) = CCI.underwritingStorage(underwriteIdentifier);
 
         // assert that toAccount get the tokens.
         assertEq(

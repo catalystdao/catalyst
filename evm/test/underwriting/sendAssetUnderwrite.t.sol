@@ -99,7 +99,7 @@ contract TestSendAssetUnderwrite is TestCommon {
             hex"0000"
         );
 
-        (uint256 numTokens, , ) = CCI.underwritingStorage(underwriteIdentifier);
+        (uint256 numTokens, , ,) = CCI.underwritingStorage(underwriteIdentifier);
 
         // assert that toAccount get the tokens.
         assertEq(
@@ -122,6 +122,9 @@ contract TestSendAssetUnderwrite is TestCommon {
         vm.recordLogs();
         GARP.processMessage(_metadata, toExecuteMessage, FEE_RECIPITANT);
         entries = vm.getRecordedLogs();
+
+        (, , , uint32 lastTouchBlock) = CCI.underwritingStorage(underwriteIdentifier);
+        assertEq(lastTouchBlock, uint24(block.number));
 
         assertEq(
             Token(token2).balanceOf(address(CCI)),
