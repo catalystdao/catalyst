@@ -4,8 +4,7 @@ use cosmwasm_std::entry_point;
 use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, Uint128, Reply};
 use cw2::set_contract_version;
 use catalyst_types::U256;
-use catalyst_vault_common::bindings::VaultResponse;
-use catalyst_interface_common::ContractError;
+use catalyst_interface_common::{bindings::InterfaceResponse, ContractError};
 
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
 
@@ -26,7 +25,7 @@ pub fn instantiate(
     _env: Env,
     info: MessageInfo,
     _msg: InstantiateMsg,
-) -> Result<VaultResponse, ContractError> {
+) -> Result<InterfaceResponse, ContractError> {
 
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
@@ -45,7 +44,7 @@ pub fn execute(
     env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
-) -> Result<VaultResponse, ContractError> {
+) -> Result<InterfaceResponse, ContractError> {
     match msg {
 
         ExecuteMsg::SendCrossChainAsset {
@@ -228,7 +227,7 @@ fn execute_send_cross_chain_asset(
     underwrite_incentive_x16: u16,
     block_number: u32,
     calldata: Binary
-) -> Result<VaultResponse, ContractError> {
+) -> Result<InterfaceResponse, ContractError> {
 
     let payload = encode_send_cross_chain_asset(
         info,
@@ -264,7 +263,7 @@ fn execute_send_cross_chain_liquidity(
     from_amount: Uint128,
     block_number: u32,
     calldata: Binary
-) -> Result<VaultResponse, ContractError> {
+) -> Result<InterfaceResponse, ContractError> {
 
     let payload = encode_send_cross_chain_liquidity(
         info,
@@ -293,7 +292,7 @@ pub fn execute_packet_receive(
     info: MessageInfo,
     data: Binary,
     channel_id: String
-) -> Result<VaultResponse, ContractError> {
+) -> Result<InterfaceResponse, ContractError> {
 
     if !is_owner(deps.as_ref(), &info.sender)? {
         return Err(ContractError::Unauthorized {});
@@ -317,7 +316,7 @@ pub fn execute_packet_ack(
     data: Binary,
     response: Binary,
     channel_id: String
-) -> Result<VaultResponse, ContractError> {
+) -> Result<InterfaceResponse, ContractError> {
 
     if !is_owner(deps.as_ref(), &info.sender)? {
         return Err(ContractError::Unauthorized {});
@@ -340,7 +339,7 @@ pub fn execute_packet_timeout(
     info: MessageInfo,
     data: Binary,
     channel_id: String
-) -> Result<VaultResponse, ContractError> {
+) -> Result<InterfaceResponse, ContractError> {
 
     if !is_owner(deps.as_ref(), &info.sender)? {
         return Err(ContractError::Unauthorized {});
@@ -368,7 +367,7 @@ pub fn reply(
     deps: DepsMut,
     env: Env,
     reply: Reply
-) -> Result<VaultResponse, ContractError> {
+) -> Result<InterfaceResponse, ContractError> {
 
     // Run the common reply handler before handling any custom replies
     let response = handle_reply(

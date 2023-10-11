@@ -47,7 +47,6 @@ sha3 = { workspace = true }
 thiserror = { workspace = true }
 catalyst-interface-common = { path = "../catalyst-interface-common" }
 catalyst-types = { path = "../../lib/catalyst-types" }
-catalyst-vault-common = { path = "../catalyst-vault-common" }
 
 [dev-dependencies]
 cw-multi-test = { workspace = true }

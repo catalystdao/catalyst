@@ -45,7 +45,6 @@ schemars = { workspace = true }
 serde = { workspace = true }
 thiserror = { workspace = true }
 catalyst-types = { path = "../../lib/catalyst-types" }
-catalyst-vault-common = { path = "../catalyst-vault-common" }
 catalyst-interface-common = { path = "../catalyst-interface-common" }
 
 

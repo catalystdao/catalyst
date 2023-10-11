@@ -2,8 +2,7 @@
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{DepsMut, Env, IbcChannelOpenMsg, IbcChannelConnectMsg, IbcBasicResponse, IbcChannelCloseMsg, IbcPacketReceiveMsg, IbcReceiveResponse, IbcPacketAckMsg, IbcPacketTimeoutMsg, IbcChannel, CosmosMsg, to_binary, SubMsg, WasmMsg, ReplyOn};
 
-use catalyst_vault_common::bindings::{CustomMsg, VaultResponse}; //TODO import from catalyst_interface_common
-use catalyst_interface_common::{ContractError, error::Never, state::{handle_message_reception, handle_message_response, ack_fail, ack_success, SET_ACK_REPLY_ID}, msg::ExecuteMsg};
+use catalyst_interface_common::{ContractError, error::Never, state::{handle_message_reception, handle_message_response, ack_fail, ack_success, SET_ACK_REPLY_ID}, msg::ExecuteMsg, bindings::{CustomMsg, InterfaceResponse}};
 
 use crate::state::{IbcChannelInfo, OPEN_CHANNELS, WRAPPED_MESSAGES_REPLY_ID};
 
@@ -200,7 +199,7 @@ pub fn ibc_packet_timeout(
 
 pub fn encode_ibc_receive_response(
     env: &Env,
-    native_response: VaultResponse
+    native_response: InterfaceResponse
 ) -> Result<IbcReceiveResponse<CustomMsg>, ContractError> {
 
     // ! No IBC request handled by the interface should error, rather a fail-ack response should
@@ -281,7 +280,7 @@ pub fn encode_ibc_receive_response(
 
 
 pub fn encode_ibc_basic_response(
-    native_response: VaultResponse
+    native_response: InterfaceResponse
 ) -> Result<IbcBasicResponse<CustomMsg>, ContractError> {
     
     Ok(

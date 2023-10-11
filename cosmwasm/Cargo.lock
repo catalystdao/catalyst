@@ -121,7 +121,6 @@ version = "0.1.0"
 dependencies = [
  "catalyst-interface-common",
  "catalyst-types",
- "catalyst-vault-common",
  "cosmwasm-schema",
  "cosmwasm-std",
  "cosmwasm-storage",
@@ -141,7 +140,6 @@ version = "0.1.0"
 dependencies = [
  "catalyst-interface-common",
  "catalyst-types",
- "catalyst-vault-common",
  "cosmwasm-schema",
  "cosmwasm-std",
  "cosmwasm-storage",

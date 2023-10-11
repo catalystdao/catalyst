@@ -3,8 +3,7 @@ use cosmwasm_std::entry_point;
 use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, IbcMsg, to_binary, IbcQuery, PortIdResponse, Order, Uint128, Reply, SubMsgResult};
 use cw2::set_contract_version;
 use catalyst_types::U256;
-use catalyst_vault_common::bindings::{VaultResponse, CustomMsg}; //TODO import from catalyst_interface_common
-use catalyst_interface_common::{state::{encode_send_cross_chain_liquidity, encode_send_cross_chain_asset, underwrite, underwrite_and_check_connection, wrap_sub_msgs, query_underwrite_identifier, set_max_underwriting_duration, expire_underwrite, update_owner, ack_success, ack_fail, setup, handle_reply}, msg::{InstantiateMsg, ExecuteMsg}, ContractError};
+use catalyst_interface_common::{bindings::{InterfaceResponse, CustomMsg}, state::{encode_send_cross_chain_liquidity, encode_send_cross_chain_asset, underwrite, underwrite_and_check_connection, wrap_sub_msgs, query_underwrite_identifier, set_max_underwriting_duration, expire_underwrite, update_owner, ack_success, ack_fail, setup, handle_reply}, msg::{InstantiateMsg, ExecuteMsg}, ContractError};
 use crate::{msg::{QueryMsg, PortResponse, ListChannelsResponse}, state::{OPEN_CHANNELS, TRANSACTION_TIMEOUT_SECONDS, WRAPPED_MESSAGES_REPLY_ID}};
 
 
@@ -24,7 +23,7 @@ pub fn instantiate(
     _env: Env,
     info: MessageInfo,
     _msg: InstantiateMsg,
-) -> Result<VaultResponse, ContractError> {
+) -> Result<InterfaceResponse, ContractError> {
 
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
@@ -43,7 +42,7 @@ pub fn execute(
     env: Env,
     info: MessageInfo,
     msg: ExecuteMsg<CustomMsg>,
-) -> Result<VaultResponse, ContractError> {
+) -> Result<InterfaceResponse, ContractError> {
     match msg {
 
         ExecuteMsg::SendCrossChainAsset {
@@ -223,7 +222,7 @@ fn execute_send_cross_chain_asset(
     underwrite_incentive_x16: u16,
     block_number: u32,
     calldata: Binary
-) -> Result<VaultResponse, ContractError> {
+) -> Result<InterfaceResponse, ContractError> {
 
     let payload = encode_send_cross_chain_asset(
         info,
@@ -280,7 +279,7 @@ fn execute_send_cross_chain_liquidity(
     from_amount: Uint128,
     block_number: u32,
     calldata: Binary
-) -> Result<VaultResponse, ContractError> {
+) -> Result<InterfaceResponse, ContractError> {
 
     let payload = encode_send_cross_chain_liquidity(
         info,
@@ -319,7 +318,7 @@ pub fn reply(
     deps: DepsMut,
     env: Env,
     reply: Reply
-) -> Result<VaultResponse, ContractError> {
+) -> Result<InterfaceResponse, ContractError> {
 
     // Run the common reply handler before handling any custom replies
     let common_response = handle_reply(
