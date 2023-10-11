@@ -42,7 +42,7 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
     //-- Underwriting Errors --//
     error SwapAlreadyUnderwritten(); // d0c27c9f
     error UnderwriteDoesNotExist(bytes32 identifier); // ae029d69
-    error UnderwriteNotExpired(uint256 timeUnitilExpiry); // 62141db5
+    error UnderwriteNotExpired(uint256 blocksUnitilExpiry); // 62141db5
     error MaxUnderwriteDurationTooLong(); // 3f6368aa
     error NoVaultConnection(); // ea66ca6d
     error MaliciousVault(); // 847ca49a
@@ -63,7 +63,7 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
     event UnderwriteSwap(
         bytes32 indexed identifier,
         address indexed underwriter,
-        uint80 expiry
+        uint96 expiry
     );
 
     event FulfillUnderwrite(
@@ -112,7 +112,7 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
     /// @notice Sets the maximum duration for underwriting.
     /// @dev Should be set long enough for all swaps to be able to confirm + a small buffer
     /// Should also be set long enough to not take up an excess amount of escrow usage.
-    uint256 public maxUnderwritingDuration = 24 hours;
+    uint256 public maxUnderwritingDuration = 24 hours / 12 seconds; // is roughly number of blocks on Ethereum for 24 hours
 
     /// @notice Maps underwriting identifiers to underwriting state.
     /// refundTo can be checked to see if the ID has been underwritten.
@@ -719,7 +719,7 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
         underwritingStorage[identifier] = UnderwritingStorage({
             tokens: purchasedTokens,
             refundTo: msg.sender,
-            expiry: uint96(uint256(block.timestamp) + uint256(maxUnderwritingDuration))  // Should never overflow.
+            expiry: uint96(uint256(block.number) + uint256(maxUnderwritingDuration))  // Should never overflow.
         });
 
         // The above combination of lines act as local re-entry protection.
@@ -759,7 +759,7 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
         emit UnderwriteSwap(
             identifier,
             msg.sender,
-            uint80(uint256(block.timestamp) + uint256(maxUnderwritingDuration))
+            uint96(uint256(block.number) + uint256(maxUnderwritingDuration))
         );
     }
 
@@ -794,7 +794,7 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
         // This lets the underwriter reclaim *some* of the collatoral they provided if they change their mind or observed an issue.
         if (msg.sender != underwriteState.refundTo) {
             // Otherwise, the expiry time must have been passed.
-            if (underwriteState.expiry > block.timestamp) revert UnderwriteNotExpired(underwriteState.expiry - block.timestamp);
+            if (underwriteState.expiry > block.number) revert UnderwriteNotExpired(underwriteState.expiry - block.number);
         }
         uint256 underWrittenTokens = underwriteState.tokens;
         // The next line acts as reentry protection. When the storage is deleted underwriteState.refundTo == address(0) will be true.
