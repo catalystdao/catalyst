@@ -9,7 +9,7 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 anyhow = "1.0.41"
-catalyst-ibc-interface = { path = "../../contracts/catalyst-ibc-interface", features = ["library"] }
+catalyst-interface-common = { path = "../../contracts/catalyst-interface-common" }
 catalyst-factory = { path = "../../contracts/catalyst-factory", features = ["library"] }
 catalyst-types = { path = "../../lib/catalyst-types" }
 catalyst-vault-common = { path = "../../contracts/catalyst-vault-common" }
@@ -22,6 +22,6 @@ cw20 = { workspace = true }
 cw20-base = { workspace = true }
 cw-multi-test = { workspace = true }
 token-bindings = { workspace = true }
-mock-catalyst-ibc-interface = { path = "../../mock-contracts/mock-catalyst-ibc-interface", features = ["library"] }
+mock-catalyst-interface = { path = "../../mock-contracts/mock-catalyst-interface", features = ["library"] }
 mock-calldata-target = { path = "../../mock-contracts/mock-calldata-target", features = ["library"] }
 vault-assets = { path = "../../lib/vault-assets" }

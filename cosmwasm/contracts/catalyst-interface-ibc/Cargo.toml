@@ -1,5 +1,5 @@
 [package]
-name = "mock-catalyst-ibc-interface"
+name = "catalyst-interface-ibc"
 version = "0.1.0"
 authors = ["Catalyst"]
 edition = "2021"
@@ -20,6 +20,8 @@ crate-type = ["cdylib", "rlib"]
 backtraces = ["cosmwasm-std/backtraces"]
 # use library feature to disable all instantiate/execute/query exports
 library = []
+asset_native = ["catalyst-interface-common/asset_native"]
+asset_cw20 = ["catalyst-interface-common/asset_cw20"]
 
 [profile.release]
 codegen-units = 1
@@ -33,7 +35,7 @@ panic = 'abort'
 rpath = false
 
 [dependencies]
-cosmwasm-schema ={ workspace = true }
+cosmwasm-schema = { workspace = true }
 cosmwasm-std = { workspace = true, features = ["stargate"] }
 cosmwasm-storage = { workspace = true }
 cw-storage-plus = { workspace = true }
@@ -41,6 +43,10 @@ cw-controllers = { workspace = true }
 cw2 = { workspace = true }
 schemars = { workspace = true }
 serde = { workspace = true }
+sha3 = { workspace = true }
 thiserror = { workspace = true }
+catalyst-interface-common = { path = "../catalyst-interface-common" }
 catalyst-types = { path = "../../lib/catalyst-types" }
-catalyst-ibc-interface = { path = "../../contracts/catalyst-ibc-interface", features = ["library"] }
+
+[dev-dependencies]
+cw-multi-test = { workspace = true }

@@ -1,5 +1,5 @@
 [package]
-name = "mock-vault"
+name = "catalyst-interface-poa"
 version = "0.1.0"
 authors = ["Catalyst"]
 edition = "2021"
@@ -20,8 +20,8 @@ crate-type = ["cdylib", "rlib"]
 backtraces = ["cosmwasm-std/backtraces"]
 # use library feature to disable all instantiate/execute/query exports
 library = []
-asset_native = ["catalyst-vault-common/asset_native"]
-asset_cw20 = ["catalyst-vault-common/asset_cw20"]
+asset_native = ["catalyst-interface-common/asset_native"]
+asset_cw20 = ["catalyst-interface-common/asset_cw20"]
 
 [profile.release]
 codegen-units = 1
@@ -39,17 +39,14 @@ cosmwasm-schema = { workspace = true }
 cosmwasm-std = { workspace = true }
 cosmwasm-storage = { workspace = true }
 cw-storage-plus = { workspace = true }
+cw-controllers = { workspace = true }
 cw2 = { workspace = true }
-cw20 = { workspace = true }
-cw20-base = { workspace = true }
 schemars = { workspace = true }
 serde = { workspace = true }
 thiserror = { workspace = true }
-fixed-point-math = { path = "../../lib/fixed-point-math" }
-catalyst-vault-common = { path = "../../contracts/catalyst-vault-common" }
-catalyst-interface-common = { path = "../../contracts/catalyst-interface-common" }
+catalyst-types = { path = "../../lib/catalyst-types" }
+catalyst-interface-common = { path = "../catalyst-interface-common" }
+
 
 [dev-dependencies]
 cw-multi-test = { workspace = true }
-mock-catalyst-interface = { path = "../mock-catalyst-interface", features = ["library"] }
-catalyst-factory = { path = "../../contracts/catalyst-factory", features = ["library"] }

@@ -2,7 +2,7 @@
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, Uint128, Uint64};
 use catalyst_types::U256;
-use catalyst_ibc_interface::{msg::{ExecuteMsg, InstantiateMsg, QueryMsg}, ContractError};
+use catalyst_interface_common::{msg::{ExecuteMsg, InstantiateMsg, InterfaceCommonQueryMsg}, ContractError};
 
 
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -328,7 +328,7 @@ fn execute_expire_underwrite(
 
 // The following 'query' code has been taken in part from the cw20-ics20 contract of the cw-plus repository.
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(_deps: Deps, _env: Env, _msg: QueryMsg) -> StdResult<Binary> {
+pub fn query(_deps: Deps, _env: Env, _msg: InterfaceCommonQueryMsg) -> StdResult<Binary> {
 
     panic!("'query' is not implemented for the mock interface.")
 

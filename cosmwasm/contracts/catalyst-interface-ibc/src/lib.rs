@@ -1,4 +1,7 @@
 pub mod contract;
+pub mod ibc;
 pub mod msg;
 pub mod state;
-pub mod mock_ibc;
+
+#[cfg(test)]
+mod test_helpers;

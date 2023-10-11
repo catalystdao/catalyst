@@ -1,5 +1,5 @@
 [package]
-name = "catalyst-ibc-interface"
+name = "mock-catalyst-interface"
 version = "0.1.0"
 authors = ["Catalyst"]
 edition = "2021"
@@ -33,7 +33,7 @@ panic = 'abort'
 rpath = false
 
 [dependencies]
-cosmwasm-schema = { workspace = true }
+cosmwasm-schema ={ workspace = true }
 cosmwasm-std = { workspace = true, features = ["stargate"] }
 cosmwasm-storage = { workspace = true }
 cw-storage-plus = { workspace = true }
@@ -41,11 +41,6 @@ cw-controllers = { workspace = true }
 cw2 = { workspace = true }
 schemars = { workspace = true }
 serde = { workspace = true }
-sha3 = { workspace = true }
 thiserror = { workspace = true }
 catalyst-types = { path = "../../lib/catalyst-types" }
-catalyst-vault-common = { path = "../catalyst-vault-common", features = ["library"] }
-vault-assets = { path = "../../lib/vault-assets" }
-
-[dev-dependencies]
-cw-multi-test = { workspace = true }
+catalyst-interface-common = { path = "../../contracts/catalyst-interface-common" }
