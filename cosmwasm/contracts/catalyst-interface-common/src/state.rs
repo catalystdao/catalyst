@@ -14,11 +14,35 @@ use crate::event::{set_owner_event, underwrite_swap_event, fulfill_underwrite_ev
 
 
 
+// Constants
+// ************************************************************************************************
+
+// Underwriting
+pub const UNDERWRITING_COLLATERAL: Uint128 = Uint128::new(35);          // 3.5% collateral
+pub const UNDERWRITING_COLLATERAL_BASE: Uint128 = Uint128::new(1000);
+
+pub const UNDERWRITING_EXPIRE_REWARD: Uint128 = Uint128::new(350);      // 35% of the collateral
+pub const UNDERWRITING_EXPIRE_REWARD_BASE: Uint128 = Uint128::new(1000);
+
+pub const MAX_UNDERWRITE_DURATION_ALLOWED_SECONDS: Uint64 = Uint64::new(15 * 24 * 60 * 60); // 15 days
+
+
+
+
 // State
 // ************************************************************************************************
 
+// Admin
 const ADMIN: Admin = Admin::new("catalyst-interface-admin");
+
+// Calldata
 const REPLY_CALLDATA_PARAMS: Item<CatalystCalldata> = Item::new("catalyst-interface-calldata-params");
+
+// Underwriting
+pub const MAX_UNDERWRITE_DURATION_SECONDS: Item<Uint64> = Item::new("catalyst-interface-max-underwrite-duration");
+pub const UNDERWRITE_EVENTS: Map<Vec<u8>, UnderwriteEvent> = Map::new("catalyst-interface-underwrite-events");
+
+const REPLY_UNDERWRITE_PARAMS: Item<UnderwriteParams> = Item::new("catalyst-interface-underwrite-params");
 
 
 
@@ -765,22 +789,9 @@ pub fn handle_calldata_on_reply(
 }
 
 
+
 // Underwriting
 // ************************************************************************************************
-
-pub const UNDERWRITING_COLLATERAL: Uint128 = Uint128::new(35);          // 3.5% collateral
-pub const UNDERWRITING_COLLATERAL_BASE: Uint128 = Uint128::new(1000);
-
-pub const UNDERWRITING_EXPIRE_REWARD: Uint128 = Uint128::new(350);      // 35% of the collateral
-pub const UNDERWRITING_EXPIRE_REWARD_BASE: Uint128 = Uint128::new(1000);
-
-pub const MAX_UNDERWRITE_DURATION_ALLOWED_SECONDS: Uint64 = Uint64::new(15 * 24 * 60 * 60); // 15 days
-
-pub const MAX_UNDERWRITE_DURATION_SECONDS: Item<Uint64> = Item::new("catalyst-interface-max-underwrite-duration");
-pub const UNDERWRITE_EVENTS: Map<Vec<u8>, UnderwriteEvent> = Map::new("catalyst-interface-underwrite-events");
-
-const REPLY_UNDERWRITE_PARAMS: Item<UnderwriteParams> = Item::new("catalyst-interface-underwrite-params");
-
 
 /// Record of an underwrite event. Used to finish the underwriting logic upon reception of the
 /// underwritten swap or expiry of the underwrite.
