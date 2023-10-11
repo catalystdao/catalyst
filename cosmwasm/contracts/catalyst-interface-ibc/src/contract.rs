@@ -102,7 +102,8 @@ pub fn execute(
         } => set_max_underwriting_duration(
             &mut deps,
             &info,
-            new_max_underwrite_duration
+            new_max_underwrite_duration,
+            None
         ),
 
         ExecuteMsg::Underwrite {

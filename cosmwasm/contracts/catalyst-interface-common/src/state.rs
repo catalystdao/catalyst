@@ -1454,19 +1454,22 @@ pub fn match_underwrite(
 /// 
 /// # Arguments:
 /// * `new_max_duration` - The new desired maximum underwriting duration.
+/// * `max_duration_allowed` - The maximum allowed underwriting duration. If `None`, defaults to hardcoded constant.
 /// 
 pub fn set_max_underwriting_duration(
     deps: &mut DepsMut,
     info: &MessageInfo,
-    new_max_duration: Uint64
+    new_max_duration: Uint64,
+    max_duration_allowed: Option<Uint64>
 ) -> Result<VaultResponse, ContractError> {
 
     only_owner(deps.as_ref(), info)?;
 
-    if new_max_duration > MAX_UNDERWRITE_DURATION_ALLOWED_SECONDS {
+    let max_duration_allowed = max_duration_allowed.unwrap_or(MAX_UNDERWRITE_DURATION_ALLOWED_SECONDS);
+    if new_max_duration > max_duration_allowed {
         return Err(ContractError::MaxUnderwriteDurationTooLong {
             set_duration: new_max_duration,
-            max_duration: MAX_UNDERWRITE_DURATION_ALLOWED_SECONDS,
+            max_duration: max_duration_allowed,
         })
     }
 
