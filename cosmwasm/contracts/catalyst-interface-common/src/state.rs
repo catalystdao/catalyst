@@ -1632,9 +1632,9 @@ mod test_catalyst_interface_common {
 
     use catalyst_types::{U256, u256};
     use catalyst_vault_common::{bindings::{CustomMsg, Asset}, msg::{ExecuteMsg as VaultExecuteMsg, CommonQueryMsg, AssetResponse}};
-    use cosmwasm_std::{Uint128, Binary, testing::{mock_info, mock_dependencies, mock_env, MockStorage, MockApi, MockQuerier}, SubMsg, to_binary, OwnedDeps, SystemResult, ContractResult, from_binary, Empty};
+    use cosmwasm_std::{Uint128, Binary, testing::{mock_info, mock_dependencies, mock_env, MockStorage, MockApi, MockQuerier}, SubMsg, to_binary, OwnedDeps, SystemResult, ContractResult, from_binary, Empty, Reply, SubMsgResult, SubMsgResponse};
 
-    use crate::{catalyst_ibc_payload::CatalystEncodedAddress, ContractError, state::{encode_send_cross_chain_asset, encode_send_cross_chain_liquidity, handle_receive_liquidity, SET_ACK_REPLY_ID, handle_send_asset_response, handle_send_liquidity_response, handle_receive_asset}};
+    use crate::{catalyst_ibc_payload::CatalystEncodedAddress, ContractError, state::{encode_send_cross_chain_asset, encode_send_cross_chain_liquidity, handle_receive_liquidity, SET_ACK_REPLY_ID, handle_send_asset_response, handle_send_liquidity_response, handle_receive_asset, handle_reply}};
 
 
 
@@ -2457,6 +2457,105 @@ mod test_catalyst_interface_common {
             ContractError::PayloadDecodingError {}
         ));
 
+    }
+
+
+
+    // Common Tests
+    // ********************************************************************************************
+
+    #[test]
+    fn test_reply_set_ack() {
+
+        let mut deps = mock_dependencies();
+        let env = mock_env();
+
+
+
+        // Tested action 1: reply ok
+        let result = handle_reply(
+            deps.as_mut(),
+            env.clone(),
+            Reply {
+                id: SET_ACK_REPLY_ID,
+                result: SubMsgResult::Ok(
+                    SubMsgResponse { events: vec![], data: None }       // SubMsgResponse contents do not matter
+                )
+            }
+        ).unwrap(); // Make sure the call passes
+
+        // Make sure the reply handler matches the `reply_id` (i.e. the return value is not None)
+        let response = result.unwrap(); 
+
+        // Check the response
+        assert_eq!(response.messages.len(), 0);
+        assert_eq!(
+            response.data,
+            Some(Binary(vec![0]))     // ! Verify the response 'data' field is a success ack.
+        );
+
+
+
+        // Tested action 2: reply error
+        let result = handle_reply(
+            deps.as_mut(),
+            env,
+            Reply {
+                id: SET_ACK_REPLY_ID,
+                result: SubMsgResult::Err("Some error".to_string())
+            }
+        ).unwrap(); // Make sure the call passes
+
+        // Make sure the reply handler matches the `reply_id` (i.e. the return value is not None)
+        let response = result.unwrap(); 
+
+        // Check the response
+        assert_eq!(response.messages.len(), 0);
+        assert_eq!(
+            response.data,
+            Some(Binary(vec![1]))     // ! Verify the response 'data' field is a fail ack.
+        );
+
+    }
+    
+
+    #[test]
+    fn test_reply_unknown_id() {
+
+        let mut deps = mock_dependencies();
+        let env = mock_env();
+
+
+
+        // Tested action 1: reply ok with unknown id
+        let result = handle_reply(
+            deps.as_mut(),
+            env.clone(),
+            Reply {
+                id: 90909,  // Some random id
+                result: SubMsgResult::Ok(
+                    SubMsgResponse { events: vec![], data: None }       // SubMsgResponse contents do not matter
+                )
+            }
+        ).unwrap(); // Make sure the call passes
+
+        // Make sure the reply handler returns None
+        assert!(result.is_none());
+
+
+
+        // Tested action 2: reply err with unknown id
+        let result = handle_reply(
+            deps.as_mut(),
+            env.clone(),
+            Reply {
+                id: 90909,  // Some random id
+                result: SubMsgResult::Err("Some error".to_string())
+            }
+        ).unwrap(); // Make sure the call passes
+
+        // Make sure the reply handler returns None
+        assert!(result.is_none())
     }
 
 }
