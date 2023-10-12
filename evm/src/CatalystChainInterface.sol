@@ -682,9 +682,9 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
 
         // For most implementations, the observation can be ignored because of the strength of point 1.
 
-        // Check if the assocaited underwrite just arrived and has already been matched.
+        // Check if the associated underwrite just arrived and has already been matched.
         // This is an issue when the swap was JUST underwriten, JUST arrived (and matched), AND someone else JUST underwrote the swap.
-        // To give the user a bit more protection, we add a buffer of 1 block (-1).
+        // To give the user a bit more protection, we add a buffer of size `BUFFER_BLOCKS`.
         unchecked {
             // Get the last touch block. For most underwrites it is going to be 0.
             uint96 lastTouchBlock = underwritingStorage[identifier].expiry;
