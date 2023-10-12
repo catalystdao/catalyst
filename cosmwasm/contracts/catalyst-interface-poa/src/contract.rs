@@ -1,7 +1,7 @@
 use catalyst_interface_common::state::{encode_send_cross_chain_asset, encode_send_cross_chain_liquidity, handle_message_reception, handle_message_response, handle_reply, set_max_underwriting_duration, underwrite, underwrite_and_check_connection, expire_underwrite, setup, update_owner, is_owner};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, Uint128, Reply};
+use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, Uint128, Reply, Uint64};
 use cw2::set_contract_version;
 use catalyst_types::U256;
 use catalyst_interface_common::{bindings::InterfaceResponse, ContractError};
@@ -14,6 +14,8 @@ const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 const TRANSACTION_TIMEOUT: u64 = 2 * 60 * 60;   // 2 hours
 
+pub const MAX_UNDERWRITE_DURATION_INITIAL_BLOCKS: Uint64 = Uint64::new(24 * 60 * 60);       // 1 day at 1 block/s
+pub const MAX_UNDERWRITE_DURATION_ALLOWED_BLOCKS: Uint64 = Uint64::new(15 * 24 * 60 * 60);  // 15 days at 1 block/s
 
 
 // Instantiation
@@ -29,7 +31,12 @@ pub fn instantiate(
 
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
-    setup(deps, info)
+    setup(
+        deps,
+        info,
+        MAX_UNDERWRITE_DURATION_INITIAL_BLOCKS,
+        Some(MAX_UNDERWRITE_DURATION_ALLOWED_BLOCKS)
+    )
 }
 
 
@@ -138,7 +145,7 @@ pub fn execute(
             &mut deps,
             &info,
             new_max_underwrite_duration,
-            None
+            Some(MAX_UNDERWRITE_DURATION_ALLOWED_BLOCKS)
         ),
 
         ExecuteMsg::Underwrite {

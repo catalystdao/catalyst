@@ -80,10 +80,24 @@ pub fn ack_fail() -> Binary {
 // ************************************************************************************************
 
 /// Setup the interface on instantiation.
+/// 
+/// # Arguments:
+/// * `max_underwrite_duration` - The initial maximum underwrite duration.
+/// * `max_underwrite_duration_allowed` - The maximum underwrite duration allowed. If `None`, 
+/// defaults to a hardcoded constant.
+/// 
 pub fn setup(
-    deps: DepsMut,
-    info: MessageInfo
+    mut deps: DepsMut,
+    info: MessageInfo,
+    max_underwrite_duration: Uint64,
+    max_underwrite_duration_allowed: Option<Uint64>
 ) -> Result<VaultResponse, ContractError> {
+
+    set_max_underwriting_duration_unchecked(
+        &mut deps,
+        max_underwrite_duration,
+        max_underwrite_duration_allowed
+    )?;
 
     let set_owner_event = set_owner_unchecked(deps, info.sender)?;
 
@@ -1450,20 +1464,17 @@ pub fn match_underwrite(
 
 /// Set the maximum underwriting duration (only applies to new underwrite orders).
 /// 
-/// NOTE: This function checks that the sender of the transaction is the current interface owner.
+/// ! **IMPORTANT**: This function **DOES NOT** check the authority of the sender of the transaction.
 /// 
 /// # Arguments:
 /// * `new_max_duration` - The new desired maximum underwriting duration.
-/// * `max_duration_allowed` - The maximum allowed underwriting duration. If `None`, defaults to hardcoded constant.
+/// * `max_duration_allowed` - The maximum allowed underwriting duration. If `None`, defaults to a hardcoded constant.
 /// 
-pub fn set_max_underwriting_duration(
+pub fn set_max_underwriting_duration_unchecked(
     deps: &mut DepsMut,
-    info: &MessageInfo,
     new_max_duration: Uint64,
     max_duration_allowed: Option<Uint64>
 ) -> Result<VaultResponse, ContractError> {
-
-    only_owner(deps.as_ref(), info)?;
 
     let max_duration_allowed = max_duration_allowed.unwrap_or(MAX_UNDERWRITE_DURATION_ALLOWED_BLOCKS);
     if new_max_duration > max_duration_allowed {
@@ -1477,6 +1488,31 @@ pub fn set_max_underwriting_duration(
 
     Ok(Response::new())
 
+}
+
+
+/// Set the maximum underwriting duration (only applies to new underwrite orders).
+/// 
+/// **NOTE**: This function checks that the sender of the transaction is the current interface owner.
+/// 
+/// # Arguments:
+/// * `new_max_duration` - The new desired maximum underwriting duration.
+/// * `max_duration_allowed` - The maximum allowed underwriting duration. If `None`, defaults to a hardcoded constant.
+/// 
+pub fn set_max_underwriting_duration(
+    deps: &mut DepsMut,
+    info: &MessageInfo,
+    new_max_duration: Uint64,
+    max_duration_allowed: Option<Uint64>
+) -> Result<VaultResponse, ContractError> {
+
+    only_owner(deps.as_ref(), info)?;
+
+    set_max_underwriting_duration_unchecked(
+        deps,
+        new_max_duration,
+        max_duration_allowed
+    )
 }
 
 
