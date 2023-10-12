@@ -44,6 +44,7 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
     error UnderwriteDoesNotExist(bytes32 identifier); // ae029d69
     error UnderwriteNotExpired(uint256 blocksUnitilExpiry); // 62141db5
     error MaxUnderwriteDurationTooLong(); // 3f6368aa
+    error MaxUnderwriteDurationTooShort(); // 6229dcd0
     error NoVaultConnection(); // ea66ca6d
     error MaliciousVault(); // 847ca49a
     error SwapRecentlyUnderwritten(); // 695b3a94
@@ -52,6 +53,7 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
 
     event SwapFailed(bytes1 error);
     event RemoteImplementationSet(bytes32 chainIdentifier, bytes remoteCCI, bytes remoteGARP);
+    event MaxUnderwriteDuration(uint256 newMaxUnderwriteDuration);
     
     event MinGasFor(
         bytes32 identifier,
@@ -84,6 +86,10 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
         uint96 expiry;      // 2 slot: 32/32
     }
 
+    uint256 constant INITIAL_MAX_UNDERWRITE_DURATION = 24 hours / 6 seconds; // Is 8 hours if the block time is 2 seconds, 48 hours if the block time is 12 seconds. Not a great initial value but better than nothing.
+    uint256 constant MAX_UNDERWRITE_DURATION = 14 days / 3 seconds;  // Is 9.3 days if the block time is 2 seconds, 56 days if the block time is 12 seconds. Not a great measure but better than no protection.
+    uint256 constant MIN_UNDERWRITE_DURATION = 1 hours / 12 seconds;  // Is 10 minutes if the block time is 2 seconds, 1 hour if the block time is 12 seconds. Not a great measure but better than no protection.
+
     //--- Config ---//
     IIncentivizedMessageEscrow public immutable GARP; // Set on deployment
 
@@ -112,7 +118,7 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
     /// @notice Sets the maximum duration for underwriting.
     /// @dev Should be set long enough for all swaps to be able to confirm + a small buffer
     /// Should also be set long enough to not take up an excess amount of escrow usage.
-    uint256 public maxUnderwritingDuration = 24 hours / 12 seconds; // is roughly number of blocks on Ethereum for 24 hours
+    uint256 public maxUnderwritingDuration = INITIAL_MAX_UNDERWRITE_DURATION;
 
     /// @notice Maps underwriting identifiers to underwriting state.
     /// refundTo can be checked to see if the ID has been underwritten.
@@ -123,6 +129,8 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
         require(address(GARP_) != address(0));  // dev: GARP_ cannot be zero address
         GARP = IIncentivizedMessageEscrow(GARP_);
         _transferOwnership(defaultOwner);
+
+        emit MaxUnderwriteDuration(INITIAL_MAX_UNDERWRITE_DURATION);
     }
 
 
@@ -136,11 +144,20 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
         emit MinGasFor(chainIdentifier, minGas);
     }
 
+    /// @notice Sets the new max underwrite duration, which is the period of time
+    /// before an underwrite can be expired. When an underwrite is expired, the underwriter
+    /// loses all capital provided.
+    /// @dev This function can be exploited by the owner. By setting newMaxUnderwriteDuration to (almost) 0 right before someone calls underwrite and then
+    /// expiring them before the actual swap arrives. The min protection here is not sufficient since it needs to be well into 
+    /// when a message can be validated. As a result, the owner of this contract should be a timelock which underwriters monitor.
     function setMaxUnderwritingDuration(uint256 newMaxUnderwriteDuration) onlyOwner override external {
+        if (newMaxUnderwriteDuration <= MIN_UNDERWRITE_DURATION) revert MaxUnderwriteDurationTooShort();
         // If the underwriting duration is too long, users can freeze up a lot of value for not a lot of cost.
-        if (newMaxUnderwriteDuration > 15 days) revert MaxUnderwriteDurationTooLong();
+        if (newMaxUnderwriteDuration > MAX_UNDERWRITE_DURATION) revert MaxUnderwriteDurationTooLong();
 
         maxUnderwritingDuration = newMaxUnderwriteDuration;
+        
+        emit MaxUnderwriteDuration(newMaxUnderwriteDuration);
     }
 
     modifier checkRouteDescription(ICatalystV1Vault.RouteDescription calldata routeDescription) {
@@ -688,11 +705,15 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
         unchecked {
             // Get the last touch block. For most underwrites it is going to be 0.
             uint96 lastTouchBlock = underwritingStorage[identifier].expiry;
-            // if lastTouchBlock < BUFFER_BLOCKS then lastTouchBlock - BUFFER_BLOCKS underflows.
-            if (lastTouchBlock >= BUFFER_BLOCKS) {
+            // if lastTouchBlock > type(uint96).max + BUFFER_BLOCKS then lastTouchBlock + BUFFER_BLOCKS overflows.
+            if (lastTouchBlock <  type(uint96).max - BUFFER_BLOCKS) {
                 // Add a reasonable buffer so if the transaction got into the memory pool and is delayed into the next blocks
                 // it doesn't underwrite a non-existing swap.
-                if (lastTouchBlock - BUFFER_BLOCKS >= uint96(block.number)) revert SwapRecentlyUnderwritten();
+                if (lastTouchBlock + BUFFER_BLOCKS >= uint96(block.number)) {
+                    // Check that uint96(block.number) hasn't overflowed and this is an old reference. We don't care about the underflow
+                    // as that will always return false.
+                    if (lastTouchBlock - BUFFER_BLOCKS <= uint96(block.number)) revert SwapRecentlyUnderwritten();
+                }
             } else {
                 if (lastTouchBlock == uint96(block.number)) revert SwapRecentlyUnderwritten();
             }
