@@ -158,7 +158,7 @@ mod test_amplified_send_asset {
         );
 
         // Verify interface contract gets invoked
-        let invoked_interface = get_response_attribute::<String>(response.events[response.events.len()-1].clone(), "_contract_addr").unwrap();
+        let invoked_interface = get_response_attribute::<String>(response.events[response.events.len()-1].clone(), "_contract_address").unwrap();
         assert_eq!(
             Addr::unchecked(invoked_interface),
             interface
