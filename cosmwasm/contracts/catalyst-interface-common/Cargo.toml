@@ -19,8 +19,8 @@ crate-type = ["cdylib", "rlib"]
 # for more explicit tests, cargo test --features=backtraces
 backtraces = ["cosmwasm-std/backtraces"]
 # configure the asset type support using either of the following features
-asset_native = []
-asset_cw20 = []
+asset_native = ["catalyst-vault-common/asset_native"]
+asset_cw20 = ["catalyst-vault-common/asset_cw20"]
 
 [profile.release]
 codegen-units = 1
