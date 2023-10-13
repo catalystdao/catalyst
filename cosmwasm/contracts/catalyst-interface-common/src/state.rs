@@ -24,8 +24,8 @@ pub const UNDERWRITING_COLLATERAL_BASE: Uint128 = Uint128::new(1000);
 pub const UNDERWRITING_EXPIRE_REWARD: Uint128 = Uint128::new(350);      // 35% of the collateral
 pub const UNDERWRITING_EXPIRE_REWARD_BASE: Uint128 = Uint128::new(1000);
 
-pub const MIN_UNDERWRITE_DURATION_ALLOWED_BLOCKS: Uint64 = Uint64::new(12 * 60 * 60);      // 12 hours at 1 block/s
-pub const MAX_UNDERWRITE_DURATION_ALLOWED_BLOCKS: Uint64 = Uint64::new(15 * 24 * 60 * 60); // 15 days at 1 block/s
+pub const DEFAULT_MIN_UNDERWRITE_DURATION_ALLOWED_BLOCKS: Uint64 = Uint64::new(12 * 60 * 60);      // 12 hours at 1 block/s
+pub const DEFAULT_MAX_UNDERWRITE_DURATION_ALLOWED_BLOCKS: Uint64 = Uint64::new(15 * 24 * 60 * 60); // 15 days at 1 block/s
 
 pub const UNDERWRITE_BUFFER_BLOCKS: Uint64 = Uint64::new(4);
 
@@ -1561,7 +1561,9 @@ pub fn set_max_underwriting_duration_unchecked(
     max_duration_allowed: Option<Uint64>
 ) -> Result<Event, ContractError> {
 
-    let min_duration_allowed = min_duration_allowed.unwrap_or(MIN_UNDERWRITE_DURATION_ALLOWED_BLOCKS);
+    let min_duration_allowed = min_duration_allowed.unwrap_or(
+        DEFAULT_MIN_UNDERWRITE_DURATION_ALLOWED_BLOCKS
+    );
     if new_max_duration < min_duration_allowed {
         return Err(ContractError::MaxUnderwriteDurationTooShort {
             set_duration: new_max_duration,
@@ -1569,7 +1571,9 @@ pub fn set_max_underwriting_duration_unchecked(
         })
     }
 
-    let max_duration_allowed = max_duration_allowed.unwrap_or(MAX_UNDERWRITE_DURATION_ALLOWED_BLOCKS);
+    let max_duration_allowed = max_duration_allowed.unwrap_or(
+        DEFAULT_MAX_UNDERWRITE_DURATION_ALLOWED_BLOCKS
+    );
     if new_max_duration > max_duration_allowed {
         return Err(ContractError::MaxUnderwriteDurationTooLong {
             set_duration: new_max_duration,
