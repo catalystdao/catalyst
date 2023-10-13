@@ -44,6 +44,9 @@ pub enum ContractError {
         max_duration: Uint64
     },
 
+    #[error("The swap has already been recently underwritten")]
+    SwapRecentlyUnderwritten {},
+
     #[error("Vault not connected (channel id: {channel_id}, vault: {vault}).")]
     VaultNotConnected {
         channel_id: String,

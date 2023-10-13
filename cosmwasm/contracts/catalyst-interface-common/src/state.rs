@@ -26,6 +26,8 @@ pub const UNDERWRITING_EXPIRE_REWARD_BASE: Uint128 = Uint128::new(1000);
 
 pub const MAX_UNDERWRITE_DURATION_ALLOWED_BLOCKS: Uint64 = Uint64::new(15 * 24 * 60 * 60); // 15 days at 1 block/s
 
+pub const UNDERWRITE_BUFFER_BLOCKS: Uint64 = Uint64::new(4);
+
 
 
 
@@ -41,6 +43,7 @@ const REPLY_CALLDATA_PARAMS: Item<CatalystCalldata> = Item::new("catalyst-interf
 // Underwriting
 pub const MAX_UNDERWRITE_DURATION_BLOCKS: Item<Uint64> = Item::new("catalyst-interface-max-underwrite-duration");
 pub const UNDERWRITE_EVENTS: Map<Vec<u8>, UnderwriteEvent> = Map::new("catalyst-interface-underwrite-events");
+pub const UNDERWRITE_EXPIRIES: Map<Vec<u8>, UnderwriteExpiry> = Map::new("catalyst-interface-underwrite-expiries");
 
 const REPLY_UNDERWRITE_PARAMS: Item<UnderwriteParams> = Item::new("catalyst-interface-underwrite-params");
 
@@ -812,9 +815,19 @@ pub fn handle_calldata_on_reply(
 #[cw_serde]
 pub struct UnderwriteEvent {
     pub amount: Uint128,
-    pub underwriter: Addr,
+    pub underwriter: Addr
+}
+
+
+/// Expiry of an underwrite event. This is separate from the 'UnderwriteEvent' class, as the
+/// 'UnderwriteExpiry' annotations are never removed from the storage. This is done to prevent
+/// two underwrites targetting the same underwrite id on the same (or adjecent) blocks from
+/// affecting each other. 
+#[cw_serde]
+pub struct UnderwriteExpiry {
     pub expiry: Uint64
 }
+
 
 impl UnderwriteEvent {
 
@@ -864,6 +877,50 @@ impl UnderwriteEvent {
         }
 
         Ok(event)
+    }
+}
+
+
+impl UnderwriteExpiry {
+
+    /// Save the underwrite expiry to the store under the given identifier.
+    /// 
+    /// **NOTE**: This call will always be successful, even if there is data already saved on the
+    /// store under the given identifier.
+    /// 
+    /// # Arguments:
+    /// * `identifier` - The underwrite identifier under which to save the event.
+    /// 
+    pub fn update(
+        &self,
+        deps: &mut DepsMut,
+        identifier: Binary
+    ) -> Result<(), ContractError> {
+
+        UNDERWRITE_EXPIRIES.save(deps.storage, identifier.0, self)
+            .map_err(|err| err.into())
+
+    }
+
+    /// Get the underwrite expiry from the store of the given identifier.
+    /// 
+    /// **NOTE**: Will return `0` if there is no data saved on the store with the given
+    /// identifier.
+    /// 
+    /// # Arguments:
+    /// * `identifier` - The underwrite identifier of which to get the expiry.
+    /// 
+    pub fn get(
+        deps: &Deps,
+        identifier: Binary
+    ) -> Result<Self, ContractError> {
+
+        let expiry = UNDERWRITE_EXPIRIES
+            .may_load(deps.storage, identifier.0)?
+            .unwrap_or(UnderwriteExpiry { expiry: Uint64::zero() });
+
+        Ok(expiry)
+
     }
 }
 
@@ -980,6 +1037,7 @@ pub fn get_underwrite_identifier(
 /// 
 pub fn underwrite(
     deps: &mut DepsMut,
+    env: &Env,
     info: &MessageInfo,
     to_vault: String,
     to_asset_ref: String,
@@ -999,6 +1057,13 @@ pub fn underwrite(
         underwrite_incentive_x16,
         &calldata
     );
+
+    // Check if another underwriter has already fulfilled the underwrite, and update the expiry to
+    // the current block.
+    let expiry = UnderwriteExpiry::get(&deps.as_ref(), identifier.clone())?.expiry;
+    if (expiry + UNDERWRITE_BUFFER_BLOCKS).u64() >= env.block.height {
+        return Err(ContractError::SwapRecentlyUnderwritten{});
+    }
 
     // Parse the calldata now to avoid executing all the underwrite logic should the calldata be
     // wrongly formatted.
@@ -1067,6 +1132,7 @@ pub fn underwrite(
 /// 
 pub fn underwrite_and_check_connection(
     deps: &mut DepsMut,
+    env: &Env,
     info: &MessageInfo,
     channel_id: String,
     from_vault: Binary,
@@ -1093,6 +1159,7 @@ pub fn underwrite_and_check_connection(
     
     underwrite(
         deps,
+        env,
         info,
         to_vault,
         to_asset_ref,
@@ -1139,10 +1206,14 @@ pub fn handle_underwrite_reply(
 
     let underwrite_event = UnderwriteEvent {
         amount: swap_return,
-        underwriter: underwriter.clone(),
-        expiry,
+        underwriter: underwriter.clone()
     };
     underwrite_event.save(&mut deps, identifier.clone())?;
+
+    let underwrite_expiry = UnderwriteExpiry {
+        expiry
+    };
+    underwrite_expiry.update(&mut deps, identifier.clone())?;
 
 
     // Query the asset information from the destination vault
@@ -1264,7 +1335,7 @@ pub fn expire_underwrite(
     // underwrite at any time.
     if underwrite_event.underwriter != info.sender {
         let current_block = env.block.height;
-        let expiry_block = underwrite_event.expiry.u64();
+        let expiry_block = UnderwriteExpiry::get(&deps.as_ref(), identifier.clone())?.expiry.u64();
         if current_block < expiry_block {
             return Err(ContractError::UnderwriteNotExpired{
                 // 'wrapping_sub' safe, 'current_block < expiry_block' checked above 
@@ -1272,6 +1343,10 @@ pub fn expire_underwrite(
             })
         }
     }
+
+    // Clear the underwrite expiry (do not set it to the current block, as the 'double' underwrite
+    // protection is not needed since the underwrite did not happen.)
+    UnderwriteExpiry{ expiry: Uint64::zero() }.update(deps, identifier.clone())?;
 
     // Build the message to invoke the vault's `DeleteUnderwriteAsset`.
     let underwrite_amount = underwrite_event.amount;
@@ -1390,18 +1465,21 @@ pub fn match_underwrite(
         identifier.clone()
     )?;
 
-
     if underwrite_event.is_none() {
         return Ok(None);
     }
 
-
     let UnderwriteEvent {
         amount: underwritten_amount,
-        underwriter,
-        expiry: _,
+        underwriter
     } = underwrite_event.unwrap();  // Unwrap safe: if the event is `None`, the function returns on
                                     // the previous statement.
+
+    // Set the expiry to the current block to prevent new underwrites for the same underwrite id in
+    // the next UNDERWRITE_BUFFER_BLOCKS blocks from happening (prevent accidental loss of funds).
+    UnderwriteExpiry {
+        expiry: Uint64::new(env.block.height)
+    }.update(deps, identifier.clone());
 
     // Call the vault to release the underwrite escrow
     let release_underwrite_messsage = WasmMsg::Execute {

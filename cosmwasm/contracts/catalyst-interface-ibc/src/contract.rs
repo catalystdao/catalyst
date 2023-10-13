@@ -121,6 +121,7 @@ pub fn execute(
             calldata
         } => underwrite(
             &mut deps,
+            &env,
             &info,
             to_vault,
             to_asset_ref,
@@ -143,6 +144,7 @@ pub fn execute(
             calldata
         } => underwrite_and_check_connection(
             &mut deps,
+            &env,
             &info,
             channel_id,
             from_vault,
