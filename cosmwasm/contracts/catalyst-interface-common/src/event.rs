@@ -14,6 +14,19 @@ pub fn set_owner_event(
 }
 
 
+/// Generate an event for the modification of the maximum underwrite duration.
+/// 
+/// # Arguments:
+/// * `new_max_underwrite_duration` - The new max underwrite duration.
+/// 
+pub fn set_max_underwrite_duration_event(
+    new_max_underwrite_duration: Uint64
+) -> Event {
+    Event::new("set-max-underwrite-duration")
+        .add_attribute("new_max_underwrite_duration", new_max_underwrite_duration)
+}
+
+
 /// Generate an event for a swap underwrite.
 /// 
 /// # Arguments:

@@ -7,7 +7,7 @@ use cw_storage_plus::{Map, Item};
 use sha3::{Keccak256, Digest};
 use std::ops::Div;
 
-use crate::{catalyst_ibc_payload::{CatalystV1SendAssetPayload, SendAssetVariablePayload, CatalystV1SendLiquidityPayload, SendLiquidityVariablePayload, CatalystEncodedAddress, CatalystCalldata, parse_calldata, CatalystV1Packet}, msg::UnderwriteIdentifierResponse};
+use crate::{catalyst_ibc_payload::{CatalystV1SendAssetPayload, SendAssetVariablePayload, CatalystV1SendLiquidityPayload, SendLiquidityVariablePayload, CatalystEncodedAddress, CatalystCalldata, parse_calldata, CatalystV1Packet}, msg::UnderwriteIdentifierResponse, event::set_max_underwrite_duration_event};
 use crate::error::ContractError;
 use crate::event::{set_owner_event, underwrite_swap_event, fulfill_underwrite_event, expire_underwrite_event};
 
@@ -1552,7 +1552,7 @@ pub fn set_max_underwriting_duration_unchecked(
     deps: &mut DepsMut,
     new_max_duration: Uint64,
     max_duration_allowed: Option<Uint64>
-) -> Result<VaultResponse, ContractError> {
+) -> Result<Event, ContractError> {
 
     let max_duration_allowed = max_duration_allowed.unwrap_or(MAX_UNDERWRITE_DURATION_ALLOWED_BLOCKS);
     if new_max_duration > max_duration_allowed {
@@ -1564,7 +1564,9 @@ pub fn set_max_underwriting_duration_unchecked(
 
     MAX_UNDERWRITE_DURATION_BLOCKS.save(deps.storage, &new_max_duration)?;
 
-    Ok(Response::new())
+    Ok(
+        set_max_underwrite_duration_event(new_max_duration)
+    )
 
 }
 
@@ -1586,10 +1588,15 @@ pub fn set_max_underwriting_duration(
 
     only_owner(deps.as_ref(), info)?;
 
-    set_max_underwriting_duration_unchecked(
+    let event = set_max_underwriting_duration_unchecked(
         deps,
         new_max_duration,
         max_duration_allowed
+    )?;
+
+    Ok(
+        Response::new()
+            .add_event(event)
     )
 }
 
