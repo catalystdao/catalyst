@@ -15,6 +15,7 @@ const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 const TRANSACTION_TIMEOUT: u64 = 2 * 60 * 60;   // 2 hours
 
 pub const MAX_UNDERWRITE_DURATION_INITIAL_BLOCKS: Uint64 = Uint64::new(24 * 60 * 60);       // 1 day at 1 block/s
+pub const MIN_UNDERWRITE_DURATION_ALLOWED_BLOCKS: Uint64 = Uint64::new(12 * 60 * 60);       // 12 hours at 1 block/s
 pub const MAX_UNDERWRITE_DURATION_ALLOWED_BLOCKS: Uint64 = Uint64::new(15 * 24 * 60 * 60);  // 15 days at 1 block/s
 
 
@@ -35,6 +36,7 @@ pub fn instantiate(
         deps,
         info,
         MAX_UNDERWRITE_DURATION_INITIAL_BLOCKS,
+        Some(MIN_UNDERWRITE_DURATION_ALLOWED_BLOCKS),
         Some(MAX_UNDERWRITE_DURATION_ALLOWED_BLOCKS)
     )
 }
@@ -145,6 +147,7 @@ pub fn execute(
             &mut deps,
             &info,
             new_max_underwrite_duration,
+            Some(MIN_UNDERWRITE_DURATION_ALLOWED_BLOCKS),
             Some(MAX_UNDERWRITE_DURATION_ALLOWED_BLOCKS)
         ),
 

@@ -4,7 +4,7 @@ use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult,
 use cw2::set_contract_version;
 use catalyst_types::U256;
 use catalyst_interface_common::{bindings::{InterfaceResponse, CustomMsg}, state::{encode_send_cross_chain_liquidity, encode_send_cross_chain_asset, underwrite, underwrite_and_check_connection, wrap_sub_msgs, query_underwrite_identifier, set_max_underwriting_duration, expire_underwrite, update_owner, ack_success, ack_fail, setup, handle_reply}, msg::{InstantiateMsg, ExecuteMsg}, ContractError};
-use crate::{msg::{QueryMsg, PortResponse, ListChannelsResponse}, state::{OPEN_CHANNELS, TRANSACTION_TIMEOUT_SECONDS, WRAPPED_MESSAGES_REPLY_ID, MAX_UNDERWRITE_DURATION_INITIAL_BLOCKS, MAX_UNDERWRITE_DURATION_ALLOWED_BLOCKS}};
+use crate::{msg::{QueryMsg, PortResponse, ListChannelsResponse}, state::{OPEN_CHANNELS, TRANSACTION_TIMEOUT_SECONDS, WRAPPED_MESSAGES_REPLY_ID, MAX_UNDERWRITE_DURATION_INITIAL_BLOCKS, MAX_UNDERWRITE_DURATION_ALLOWED_BLOCKS, MIN_UNDERWRITE_DURATION_ALLOWED_BLOCKS}};
 
 
 // Version information
@@ -31,6 +31,7 @@ pub fn instantiate(
         deps,
         info,
         MAX_UNDERWRITE_DURATION_INITIAL_BLOCKS,
+        Some(MIN_UNDERWRITE_DURATION_ALLOWED_BLOCKS),
         Some(MAX_UNDERWRITE_DURATION_ALLOWED_BLOCKS)
     )
 }
@@ -108,6 +109,7 @@ pub fn execute(
             &mut deps,
             &info,
             new_max_underwrite_duration,
+            Some(MIN_UNDERWRITE_DURATION_ALLOWED_BLOCKS),
             Some(MAX_UNDERWRITE_DURATION_ALLOWED_BLOCKS)
         ),
 

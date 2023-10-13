@@ -24,6 +24,7 @@ pub const UNDERWRITING_COLLATERAL_BASE: Uint128 = Uint128::new(1000);
 pub const UNDERWRITING_EXPIRE_REWARD: Uint128 = Uint128::new(350);      // 35% of the collateral
 pub const UNDERWRITING_EXPIRE_REWARD_BASE: Uint128 = Uint128::new(1000);
 
+pub const MIN_UNDERWRITE_DURATION_ALLOWED_BLOCKS: Uint64 = Uint64::new(12 * 60 * 60);      // 12 hours at 1 block/s
 pub const MAX_UNDERWRITE_DURATION_ALLOWED_BLOCKS: Uint64 = Uint64::new(15 * 24 * 60 * 60); // 15 days at 1 block/s
 
 pub const UNDERWRITE_BUFFER_BLOCKS: Uint64 = Uint64::new(4);
@@ -86,6 +87,8 @@ pub fn ack_fail() -> Binary {
 /// 
 /// # Arguments:
 /// * `max_underwrite_duration` - The initial maximum underwrite duration.
+/// * `min_underwrite_duration_allowed` - The minimum underwrite duration allowed. If `None`, 
+/// defaults to a hardcoded constant.
 /// * `max_underwrite_duration_allowed` - The maximum underwrite duration allowed. If `None`, 
 /// defaults to a hardcoded constant.
 /// 
@@ -93,12 +96,14 @@ pub fn setup(
     mut deps: DepsMut,
     info: MessageInfo,
     max_underwrite_duration: Uint64,
+    min_underwrite_duration_allowed: Option<Uint64>,
     max_underwrite_duration_allowed: Option<Uint64>
 ) -> Result<VaultResponse, ContractError> {
 
     set_max_underwriting_duration_unchecked(
         &mut deps,
         max_underwrite_duration,
+        min_underwrite_duration_allowed,
         max_underwrite_duration_allowed
     )?;
 
@@ -1546,13 +1551,23 @@ pub fn match_underwrite(
 /// 
 /// # Arguments:
 /// * `new_max_duration` - The new desired maximum underwriting duration.
+/// * `min_duration_allowed` - The minimum allowed underwriting duration. If `None`, defaults to a hardcoded constant.
 /// * `max_duration_allowed` - The maximum allowed underwriting duration. If `None`, defaults to a hardcoded constant.
 /// 
 pub fn set_max_underwriting_duration_unchecked(
     deps: &mut DepsMut,
     new_max_duration: Uint64,
+    min_duration_allowed: Option<Uint64>,
     max_duration_allowed: Option<Uint64>
 ) -> Result<Event, ContractError> {
+
+    let min_duration_allowed = min_duration_allowed.unwrap_or(MIN_UNDERWRITE_DURATION_ALLOWED_BLOCKS);
+    if new_max_duration < min_duration_allowed {
+        return Err(ContractError::MaxUnderwriteDurationTooShort {
+            set_duration: new_max_duration,
+            min_duration: min_duration_allowed,
+        })
+    }
 
     let max_duration_allowed = max_duration_allowed.unwrap_or(MAX_UNDERWRITE_DURATION_ALLOWED_BLOCKS);
     if new_max_duration > max_duration_allowed {
@@ -1577,12 +1592,14 @@ pub fn set_max_underwriting_duration_unchecked(
 /// 
 /// # Arguments:
 /// * `new_max_duration` - The new desired maximum underwriting duration.
+/// * `min_duration_allowed` - The minimum allowed underwriting duration. If `None`, defaults to a hardcoded constant.
 /// * `max_duration_allowed` - The maximum allowed underwriting duration. If `None`, defaults to a hardcoded constant.
 /// 
 pub fn set_max_underwriting_duration(
     deps: &mut DepsMut,
     info: &MessageInfo,
     new_max_duration: Uint64,
+    min_duration_allowed: Option<Uint64>,
     max_duration_allowed: Option<Uint64>
 ) -> Result<VaultResponse, ContractError> {
 
@@ -1591,6 +1608,7 @@ pub fn set_max_underwriting_duration(
     let event = set_max_underwriting_duration_unchecked(
         deps,
         new_max_duration,
+        min_duration_allowed,
         max_duration_allowed
     )?;
 

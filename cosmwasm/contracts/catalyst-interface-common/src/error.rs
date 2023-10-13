@@ -38,6 +38,12 @@ pub enum ContractError {
     #[error("The underwrite has not expired. Blocks remaining: {blocks_remaining}")]
     UnderwriteNotExpired { blocks_remaining: Uint64 },
 
+    #[error("The specified max underwrite duration is too short (set {set_duration}, min {min_duration})")]
+    MaxUnderwriteDurationTooShort {
+        set_duration: Uint64,
+        min_duration: Uint64
+    },
+
     #[error("The specified max underwrite duration is too long (set {set_duration}, max {max_duration})")]
     MaxUnderwriteDurationTooLong {
         set_duration: Uint64,
