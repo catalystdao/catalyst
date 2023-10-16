@@ -31,5 +31,8 @@
     },
     "omnitestnet": {
         "chainIdentifier": 165
+    },
+    "inevmdevnet": {
+        "chainIdentifier": 1738
     }
 }

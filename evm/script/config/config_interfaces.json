@@ -72,5 +72,11 @@
       "incentive": "0x00000001a9818a7807998dbc243b05F2B3CfF6f4",
       "interface": "0xF6b469228822d92c867f5949DA58431673095aEA"
     }
+  },
+  "inevmdevnet": {
+    "MOCK": {
+      "incentive": "0x00000001a9818a7807998dbc243b05F2B3CfF6f4",
+      "interface": "0xF6b469228822d92c867f5949DA58431673095aEA"
+    }
   }
 }

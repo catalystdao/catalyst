@@ -20,7 +20,8 @@ contract BaseMultiChainDeployer is Script {
         OPBNBTestnet,
         BSCTestnet,
         MantleTestnet,
-        OmniTestnet
+        OmniTestnet,
+        INEVMDevnet
     }
 
     mapping(Chains => string) public rpc;
@@ -76,6 +77,10 @@ contract BaseMultiChainDeployer is Script {
         rpc[Chains.OmniTestnet] = "omnitestnet";
         wrapped_gas[Chains.OmniTestnet] = "WOMNI";
         chain_list_legacy.push(Chains.OmniTestnet);
+
+        rpc[Chains.INEVMDevnet] = "inevmdevnet";
+        wrapped_gas[Chains.OmniTestnet] = "WINJ";
+        chain_list.push(Chains.INEVMDevnet);
     }
 
     uint256 pk;
