@@ -134,6 +134,7 @@ contract DeployVaults is BaseMultiChainDeployer {
             string[] memory vault_chains = vm.parseJsonKeys(config_vault, string.concat(".", pool));
             for (uint256 vc_i = 0; vc_i < vault_chains.length; ++ vc_i) {
                 string memory vault_chain = vault_chains[vc_i];
+                if (keccak256(abi.encodePacked(vault_chain)) == keccak256(abi.encodePacked("amplification"))) continue;
                 console.log(vault_chain);
                 if (keccak256(abi.encodePacked(chain_name)) == keccak256(abi.encodePacked(vault_chain))) continue;
 

@@ -38,5 +38,54 @@
         "USDT": 1000000000000000000000
       }
     }
+  },
+  "CrossChainBNB": {
+    "amplification": 250000000000000000,
+    "opbnbtestnet": {
+      "cci": "0x307737d19238D3E07CC3E0167cEd991a32D21dD9",
+      "address": "0x0f1ff6216866cbad075a89a8e4cb3c7a9734df0d",
+      "weights": [
+        1
+      ],
+      "fee": 500000000000000,
+      "tokens": {
+        "WGAS": 10000000000000000
+      }
+    },
+    "bsctestnet": {
+      "cci": "0x307737d19238D3E07CC3E0167cEd991a32D21dD9",
+      "address": "0x0f1ff6216866cbad075a89a8e4cb3c7a9734df0d",
+      "weights": [
+        1
+      ],
+      "fee": 500000000000000,
+      "tokens": {
+        "WGAS": 10000000000000000
+      }
+    }
+  },
+  "inEVM-Scroll": {
+    "scrollsepolia": {
+      "cci": "0x307737d19238D3E07CC3E0167cEd991a32D21dD9",
+      "address": "0x0f1ff6216866cbad075a89a8e4cb3c7a9734df0d",
+      "weights": [
+        1
+      ],
+      "fee": 500000000000000,
+      "tokens": {
+        "WGAS": 10000000000000000
+      }
+    },
+    "inevmdevnet": {
+      "cci": "0x307737d19238D3E07CC3E0167cEd991a32D21dD9",
+      "address": "0x0f1ff6216866cbad075a89a8e4cb3c7a9734df0d",
+      "weights": [
+        1
+      ],
+      "fee": 500000000000000,
+      "tokens": {
+        "WGAS": 10000000000000000
+      }
+    }
   }
 }
