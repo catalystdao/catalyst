@@ -8,10 +8,12 @@ import { BaseMultiChainDeployer } from "./BaseMultiChainDeployer.s.sol";
 import { JsonContracts } from "./DeployContracts.s.sol";
 import { CatalystDescriber } from "../src/registry/CatalystDescriber.sol";
 import { CatalystDescriberRegistry } from "../src/registry/CatalystDescriberRegistry.sol";
+import { CatalystLens } from "token-lens/src/CatalystLens.sol";
 
 struct JsonRegistry {
     address describer;
     address describer_registry;
+    address lens;
 }
 
 contract Registry is BaseMultiChainDeployer {
@@ -47,10 +49,20 @@ contract Registry is BaseMultiChainDeployer {
         registry.describer_registry = describer_registry;
     }
 
+    function deploy_lens(bytes32 salt) internal {
+        if ((registry.lens.codehash != NO_ADDRESS_CODEHASH) && (get == false)) {
+            return;
+        }
+        address lens = address(new CatalystLens{salt: salt}());
+        if (verify) require(registry.lens == lens, "not expected address, lens");
+        registry.lens = lens;
+    }
+
     function _deploy() internal {
         load_config();
         deploy_describer(bytes32(0));
         deploy_registry(bytes32(0));
+        deploy_lens(bytes32(0));
 
         setRegistry("v1");
         setDescriber();
@@ -75,6 +87,7 @@ contract Registry is BaseMultiChainDeployer {
 
         deploy_describer(bytes32(0));
         deploy_registry(bytes32(0));
+        deploy_lens(bytes32(0));
 
         vm.stopBroadcast();
 
@@ -143,6 +156,7 @@ contract Registry is BaseMultiChainDeployer {
         string memory obj = "";
 
         vm.serializeAddress(obj, "describer", registry.describer);
+        vm.serializeAddress(obj, "lens", registry.lens);
         string memory finalJson = vm.serializeAddress(obj, "describer_registry", registry.describer_registry);
 
         vm.writeJson(finalJson, pathToContractConfig, string.concat(".registry"));

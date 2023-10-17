@@ -79,7 +79,7 @@ contract BaseMultiChainDeployer is Script {
         chain_list_legacy.push(Chains.OmniTestnet);
 
         rpc[Chains.INEVMDevnet] = "inevmdevnet";
-        wrapped_gas[Chains.OmniTestnet] = "WINJ";
+        wrapped_gas[Chains.INEVMDevnet] = "WINJ";
         chain_list.push(Chains.INEVMDevnet);
     }
 
