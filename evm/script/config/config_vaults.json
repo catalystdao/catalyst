@@ -1,8 +1,8 @@
 {
-  "Mantle-Base": {
+  "MantleBase": {
     "mantletestnet": {
-      "cci": "0xF6b469228822d92c867f5949DA58431673095aEA",
-      "address": "0xdee468a6b3458a1f372de6b4309e364f82536bc3",
+      "cci": "0x307737d19238D3E07CC3E0167cEd991a32D21dD9",
+      "address": "0x0f1ff6216866cbad075a89a8e4cb3c7a9734df0d",
       "weights": [
         1
       ],
@@ -12,8 +12,8 @@
       }
     },
     "basegoerli": {
-      "cci": "0xF6b469228822d92c867f5949DA58431673095aEA",
-      "address": "0xdee468a6b3458a1f372de6b4309e364f82536bc3",
+      "cci": "0x307737d19238D3E07CC3E0167cEd991a32D21dD9",
+      "address": "0x0f1ff6216866cbad075a89a8e4cb3c7a9734df0d",
       "weights": [
         1
       ],
@@ -24,9 +24,10 @@
     }
   },
   "OmniStables": {
+    "amplification": 250000000000000000,
     "omnitestnet": {
       "cci": "0x0000000000000000000000000000000000000000",
-      "address": "0x4bb60f2b6c9de5947ddbf307bd92cda8c946a456",
+      "address": "0x0f1ff6216866cbad075a89a8e4cb3c7a9734df0d",
       "weights": [
         1,
         1
