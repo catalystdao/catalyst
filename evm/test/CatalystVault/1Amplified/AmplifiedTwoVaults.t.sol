@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.13;
+pragma solidity =0.8.19;
 
 import "../../../src/ICatalystV1Vault.sol";
 import "../../../src/CatalystVaultAmplified.sol";
@@ -8,6 +8,7 @@ import "../Invariant.t.sol";
 import {TestSendAsset} from "../SendAsset.t.sol";
 import {TestReceiveAsset} from "../ReceiveAsset.t.sol";
 import "../non-exploits/CrossSwap.SwapWorthlessToken.t.sol";
+import {Token} from "../../mocks/token.sol";
 
 contract TestAmplifiedInvariant2 is TestInvariant, TestSendAsset, TestReceiveAsset, TestSwapWorthlessTokenCrossChain {
 
@@ -66,6 +67,31 @@ contract TestAmplifiedInvariant2 is TestInvariant, TestSendAsset, TestReceiveAss
         balances = powerArray(balances, oneMinusAmp);
 
         inv = getSum(balances);
+    }
+
+    // Uses the invariant \sum (i · W)^(1-amp) / \sum (i_0 · W)^(1-amp) = constant for deposits and withdrawals.
+    // TODO: Fix
+    function strong_invariant(address vault) view internal override returns(uint256 inv) {
+        address[] memory vaults = new address[](1);
+        vaults[0] = vault;
+        (uint256[] memory balances, uint256[] memory weights) = getBalances(vaults);
+
+        // Get the number of tokens.
+        uint256 numTokens = balances.length;
+
+        int256 oneMinusAmp = CatalystVaultAmplified(vaults[0])._oneMinusAmp();
+
+        uint256 vaultTokens = Token(vault).totalSupply();
+
+        uint256 balance0 = CatalystVaultAmplified(vault).computeBalance0();
+
+        uint256 denum = balance0 * numTokens;
+
+        balances = xProduct(balances, weights);
+
+        balances = powerArray(balances, oneMinusAmp);
+
+        inv = getSum(balances) / denum;
     }
 
     

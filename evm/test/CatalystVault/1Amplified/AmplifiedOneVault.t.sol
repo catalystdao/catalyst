@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.13;
+pragma solidity =0.8.19;
 
 import "../../../src/ICatalystV1Vault.sol";
 import "../../../src/CatalystVaultAmplified.sol";
@@ -16,8 +16,11 @@ import "../Setup/SetupFinish.t.sol";
 import "../CrossChainInterfaceOnly.t.sol";
 import "../TokenInterface.t.sol";
 import "../Escrow.t.sol";
+import "../Withdraw/WithdrawCompare.sol";
+import "../Withdraw/WithdrawInvariant.sol";
+import {Token} from "../../mocks/token.sol";
 
-contract TestAmplifiedInvariant is TestInvariant, TestLocalswap, TestCrossChainInterfaceOnly, TestLocalswapMinout, TestPoolTokenInterface, TestSetupFinish, TestSetVaultFee, TestSetGovernanceFee, TestLocalswapFees, TestSwapWorthlessTokenLocal, TestEscrow {
+contract TestAmplifiedInvariant is TestInvariant, TestLocalswap, TestCrossChainInterfaceOnly, TestLocalswapMinout, TestPoolTokenInterface, TestSetupFinish, TestSetVaultFee, TestSetGovernanceFee, TestLocalswapFees, TestSwapWorthlessTokenLocal, TestEscrow, TestWithdrawInvariant, TestWithdrawComparison {
     address[] _vaults;
 
     function setUp() virtual override public {
@@ -63,6 +66,31 @@ contract TestAmplifiedInvariant is TestInvariant, TestLocalswap, TestCrossChainI
         balances = powerArray(balances, oneMinusAmp);
 
         inv = getSum(balances);
+    }
+
+    // Uses the invariant \sum (i · W)^(1-amp) / \sum (i_0 · W)^(1-amp) = constant for deposits and withdrawals.
+    // TODO: Fix
+    function strong_invariant(address vault) view internal override returns(uint256 inv) {
+        address[] memory vaults = new address[](1);
+        vaults[0] = vault;
+        (uint256[] memory balances, uint256[] memory weights) = getBalances(vaults);
+
+        // Get the number of tokens.
+        uint256 numTokens = balances.length;
+
+        int256 oneMinusAmp = CatalystVaultAmplified(vaults[0])._oneMinusAmp();
+
+        uint256 vaultTokens = Token(vault).totalSupply();
+
+        uint256 balance0 = CatalystVaultAmplified(vault).computeBalance0();
+
+        uint256 denum = balance0 * numTokens;
+
+        balances = xProduct(balances, weights);
+
+        balances = powerArray(balances, oneMinusAmp);
+
+        inv = getSum(balances) / denum;
     }
 
     function getTestConfig() internal override view returns(address[] memory vaults) {

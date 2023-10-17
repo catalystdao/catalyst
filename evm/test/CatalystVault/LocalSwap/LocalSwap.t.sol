@@ -49,7 +49,7 @@ abstract contract TestLocalswap is Test, AVaultInterfaces {
         address[] memory vaults = getTestConfig();
 
         address vault = vaults[0];
-            ICatalystV1Vault v = ICatalystV1Vault(vault);
+        ICatalystV1Vault v = ICatalystV1Vault(vault);
 
         address fromToken = v._tokenIndexing(0);
         address toToken = v._tokenIndexing(1);

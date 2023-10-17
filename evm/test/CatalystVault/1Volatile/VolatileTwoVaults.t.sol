@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.13;
+pragma solidity =0.8.19;
 
 import "../../../src/ICatalystV1Vault.sol";
 
@@ -7,6 +7,7 @@ import "../Invariant.t.sol";
 import {TestSendAsset} from "../SendAsset.t.sol";
 import {TestReceiveAsset} from "../ReceiveAsset.t.sol";
 import "../non-exploits/CrossSwap.SwapWorthlessToken.t.sol";
+import {Token} from "../../mocks/token.sol";
 
 contract TestVolatileInvariant2 is TestInvariant, TestSendAsset, TestReceiveAsset, TestSwapWorthlessTokenCrossChain {
 
@@ -60,6 +61,28 @@ contract TestVolatileInvariant2 is TestInvariant, TestSendAsset, TestReceiveAsse
         balances = xProduct(balances, weights);
 
         inv = getSum(balances);
+    }
+
+    // Uses the invariant \prod x^w / TS = constant for deposits and withdrawals.
+    // It is rewritten as \sum ln(x) * w - ln(TS) = constant
+    // TODO: Fix
+    function strong_invariant(address vault) view internal override returns(uint256 inv) {
+        address[] memory vaults = new address[](1);
+        vaults[0] = vault;
+        (uint256[] memory balances, uint256[] memory weights) = getBalances(vaults);
+        
+        // Get the number of tokens.
+        uint256 numTokens = balances.length;
+
+        uint256 vaultTokens = Token(vault).totalSupply();
+
+
+        balances = logArray(balances);
+
+        balances = xProduct(balances, weights);
+
+        inv = getSum(balances) - uint256(FixedPointMathLib.lnWad(int256(vaultTokens)));
+        
     }
 
     function getTestConfig() internal override view returns(address[] memory vaults) {
