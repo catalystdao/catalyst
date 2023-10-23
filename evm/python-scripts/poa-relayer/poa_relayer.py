@@ -89,6 +89,38 @@ class PoARelayer(MessageSigner):
                 "GI_contract": Web3.to_checksum_address("0x00000001a9818a7807998dbc243b05F2B3CfF6f4"),
                 "key": os.environ["PRIVATE_KEY_ROUTER"],
                 "legacy": True
+            },
+            5611: {
+                "name": "opbnbtestnet",
+                "confirmations": 0,
+                "url": os.environ["opbnbtestnet"],
+                "GI_contract": Web3.to_checksum_address("0x00000001a9818a7807998dbc243b05F2B3CfF6f4"),
+                "key": os.environ["PRIVATE_KEY_ROUTER"],
+                "legacy": True
+            },
+            97: {
+                "name": "bsctestnet",
+                "confirmations": 0,
+                "url": os.environ["bsctestnet"],
+                "GI_contract": Web3.to_checksum_address("0x00000001a9818a7807998dbc243b05F2B3CfF6f4"),
+                "key": os.environ["PRIVATE_KEY_ROUTER"],
+                "legacy": True
+            },
+            1738: {
+                "name": "inevmdevnet",
+                "confirmations": 0,
+                "url": os.environ["inevmdevnet"],
+                "GI_contract": Web3.to_checksum_address("0x00000001a9818a7807998dbc243b05F2B3CfF6f4"),
+                "key": os.environ["PRIVATE_KEY_ROUTER"],
+                "legacy": True
+            },
+            534351: {
+                "name": "scrollsepolia",
+                "confirmations": 0,
+                "url": os.environ["scrollsepolia"],
+                "GI_contract": Web3.to_checksum_address("0x00000001a9818a7807998dbc243b05F2B3CfF6f4"),
+                "key": os.environ["PRIVATE_KEY_ROUTER"],
+                "legacy": True
             }
         }
     ):
