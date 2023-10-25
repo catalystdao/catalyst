@@ -18,9 +18,15 @@ abstract contract TestWithdrawComparison is TestCommon, AVaultInterfaces {
         for (uint256 i = 0; i < vaults.length; ++i) {
             address vault = vaults[i];
             ICatalystV1Vault v = ICatalystV1Vault(vault);
-
             // Get number of tokens:
-            uint256 numTokens = 0; // TODO: balances.length;
+            uint256 numTokens = 0;
+            for (numTokens = 0; numTokens < 100; ++numTokens) {
+                address tkn = v._tokenIndexing(numTokens);
+                if (v._tokenIndexing(numTokens) == address(0)) {
+                    break;
+                }
+            }
+
             // If withdraw percentage is below 0.1%, then make it 0.1%.
             if (withdrawPercentage < 2**32/2**22) {
                 withdrawPercentage = 2**32/2**22;
@@ -41,15 +47,17 @@ abstract contract TestWithdrawComparison is TestCommon, AVaultInterfaces {
             // Withdraw ratios using progressive weights:
             uint256[] memory weights = new uint256[](numTokens);
             for (uint256 j = 0; j < numTokens; ++j) {
-                weights[j] = 10**18 / (numTokens - j);
+                weights[j] = 10**18;
             }
+            weights = getWithdrawPercentages(vault, weights);
 
             // WithdrawMixed
             uint256[] memory outsMixed = v.withdrawMixed(amountToWithdraw, weights, minOut);
 
             // Check that outsAll and outsMixed are equal
             for (uint256 j = 0; j < numTokens; ++j) {
-                assertEq(outsAll[j], outsMixed[j], "Not equal withdrawn amoutns");
+                assertGt(outsAll[j] * (10**18 + 10 ** 12)/10**18, outsMixed[j], "Withdraw all is higher than withdraw mixed by more than margin");
+                assertGt(outsMixed[j] * (10**18 + 10 ** 12)/10**18, outsAll[j], "Withdraw mixed is higher than withdraw all by more than margin");
             }
         }
     }

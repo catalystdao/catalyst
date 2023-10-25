@@ -19,6 +19,7 @@ import "../Escrow.t.sol";
 import "src/utils/FixedPointMathLib.sol";
 import "../Withdraw/WithdrawCompare.sol";
 import "../Withdraw/WithdrawInvariant.sol";
+import "src/ICatalystV1Vault.sol";
 import {Token} from "../../mocks/token.sol";
 
 contract TestVolatileInvariant is TestInvariant, TestLocalswap, TestCrossChainInterfaceOnly, TestLocalswapMinout, TestPoolTokenInterface, TestSetupFinish, TestSetVaultFee, TestSetGovernanceFee, TestLocalswapFees, TestSwapWorthlessTokenLocal, TestEscrow, TestWithdrawInvariant, TestWithdrawComparison {
@@ -98,6 +99,25 @@ contract TestVolatileInvariant is TestInvariant, TestLocalswap, TestCrossChainIn
 
     function getTestConfig() internal override view returns(address[] memory vaults) {
         return vaults = _vaults;
+    }
+
+    function getWithdrawPercentages(address vault, uint256[] memory withdraw_weights) internal override returns(uint256[] memory new_weights) {
+        new_weights = new uint256[](withdraw_weights.length);
+        // get weights
+        uint256 progressiveWeightSum = 0;
+        new_weights = new uint256[](withdraw_weights.length);
+        for (uint256 i = withdraw_weights.length - 1; ;) {
+            ICatalystV1Vault v = ICatalystV1Vault(vault);
+            address tkn = v._tokenIndexing(i);
+            uint256 ww = withdraw_weights[i];
+            uint256 tw = v._weight(tkn);
+            progressiveWeightSum += tw;
+            new_weights[i] = ww * tw / progressiveWeightSum;
+            if (i == 0) {
+                break;
+            }
+            --i;
+        }
     }
 }
 
