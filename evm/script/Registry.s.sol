@@ -8,7 +8,7 @@ import { BaseMultiChainDeployer } from "./BaseMultiChainDeployer.s.sol";
 import { JsonContracts } from "./DeployContracts.s.sol";
 import { CatalystDescriber } from "../src/registry/CatalystDescriber.sol";
 import { CatalystDescriberRegistry } from "../src/registry/CatalystDescriberRegistry.sol";
-import { CatalystLens } from "token-lens/src/CatalystLens.sol";
+import { CatalystLens } from "../src/token-lens/CatalystLens.sol";
 
 struct JsonRegistry {
     address describer;
@@ -94,14 +94,14 @@ contract Registry is BaseMultiChainDeployer {
         writeToJson();
     }
 
-    function setRegistry(address reg, address describer, string memory version) iter_chains(chain_list) broadcast external {
-        CatalystDescriberRegistry reg = CatalystDescriberRegistry(reg);
+    function setRegistry(address reg_address, address describer, string memory version) iter_chains(chain_list) broadcast external {
+        CatalystDescriberRegistry reg = CatalystDescriberRegistry(reg_address);
 
         reg.modifyDescriber(describer, version);
     }
 
-    function setRegistryLegacy(address reg, address describer, string memory version) iter_chains(chain_list_legacy) broadcast external {
-        CatalystDescriberRegistry reg = CatalystDescriberRegistry(reg);
+    function setRegistryLegacy(address reg_address, address describer, string memory version) iter_chains(chain_list_legacy) broadcast external {
+        CatalystDescriberRegistry reg = CatalystDescriberRegistry(reg_address);
 
         reg.modifyDescriber(describer, version);
     }
