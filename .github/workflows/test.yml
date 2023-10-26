@@ -29,9 +29,11 @@ jobs:
         run: |
           forge --version
           forge build --sizes
+        working-directory: evm
         id: build
 
       - name: Run Forge tests
         run: |
           forge test -vvv
+        working-directory: evm
         id: test
