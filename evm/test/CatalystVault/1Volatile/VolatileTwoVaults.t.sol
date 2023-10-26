@@ -6,10 +6,12 @@ import "../../../src/ICatalystV1Vault.sol";
 import "../Invariant.t.sol";
 import {TestSendAsset} from "../SendAsset.t.sol";
 import {TestReceiveAsset} from "../ReceiveAsset.t.sol";
+import { TestSendLiquidity } from "../SendLiquidity.t.soL";
+import { TestReceiveLiquidity } from "../ReceiveLiquidity.t.sol";
 import "../non-exploits/CrossSwap.SwapWorthlessToken.t.sol";
 import {Token} from "../../mocks/token.sol";
 
-contract TestVolatileInvariant2 is TestInvariant, TestSendAsset, TestReceiveAsset, TestSwapWorthlessTokenCrossChain {
+contract TestVolatileInvariant2 is TestInvariant, TestSendAsset, TestReceiveAsset, TestSwapWorthlessTokenCrossChain, TestReceiveLiquidity, TestSendLiquidity {
 
     address[] _vaults;
 
@@ -70,9 +72,6 @@ contract TestVolatileInvariant2 is TestInvariant, TestSendAsset, TestReceiveAsse
         address[] memory vaults = new address[](1);
         vaults[0] = vault;
         (uint256[] memory balances, uint256[] memory weights) = getBalances(vaults);
-        
-        // Get the number of tokens.
-        uint256 numTokens = balances.length;
 
         uint256 vaultTokens = Token(vault).totalSupply();
 

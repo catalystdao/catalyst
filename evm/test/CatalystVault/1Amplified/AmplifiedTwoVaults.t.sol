@@ -7,10 +7,12 @@ import "../../../src/CatalystVaultAmplified.sol";
 import "../Invariant.t.sol";
 import {TestSendAsset} from "../SendAsset.t.sol";
 import {TestReceiveAsset} from "../ReceiveAsset.t.sol";
+import { TestSendLiquidity } from "../SendLiquidity.t.soL";
+import { TestReceiveLiquidity } from "../ReceiveLiquidity.t.sol";
 import "../non-exploits/CrossSwap.SwapWorthlessToken.t.sol";
 import {Token} from "../../mocks/token.sol";
 
-contract TestAmplifiedInvariant2 is TestInvariant, TestSendAsset, TestReceiveAsset, TestSwapWorthlessTokenCrossChain {
+contract TestAmplifiedInvariant2 is TestInvariant, TestSendAsset, TestReceiveAsset, TestSwapWorthlessTokenCrossChain, TestReceiveLiquidity, TestSendLiquidity  {
 
     address[] _vaults;
 
@@ -80,8 +82,6 @@ contract TestAmplifiedInvariant2 is TestInvariant, TestSendAsset, TestReceiveAss
         uint256 numTokens = balances.length;
 
         int256 oneMinusAmp = CatalystVaultAmplified(vaults[0])._oneMinusAmp();
-
-        uint256 vaultTokens = Token(vault).totalSupply();
 
         uint256 balance0 = CatalystVaultAmplified(vault).computeBalance0();
 

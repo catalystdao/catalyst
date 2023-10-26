@@ -20,7 +20,7 @@ import "src/utils/FixedPointMathLib.sol";
 import "../Withdraw/WithdrawCompare.sol";
 import "../Withdraw/WithdrawInvariant.sol";
 import "src/ICatalystV1Vault.sol";
-import "../Deposit/DepositWIthdrawCompare.t.sol";
+import "../Deposit/DepositWithdrawCompare.t.sol";
 import {Token} from "../../mocks/token.sol";
 
 contract TestVolatileInvariant is TestInvariant, TestLocalswap, TestCrossChainInterfaceOnly, TestLocalswapMinout, TestPoolTokenInterface, TestSetupFinish, TestSetVaultFee, TestSetGovernanceFee, TestLocalswapFees, TestSwapWorthlessTokenLocal, TestEscrow, TestWithdrawInvariant, TestWithdrawComparison, TestCompareDepositWithWithdraw {
@@ -84,9 +84,6 @@ contract TestVolatileInvariant is TestInvariant, TestLocalswap, TestCrossChainIn
         address[] memory vaults = new address[](1);
         vaults[0] = vault;
         (uint256[] memory balances, uint256[] memory weights) = getBalances(vaults);
-        
-        // Get the number of tokens.
-        uint256 numTokens = balances.length;
 
         uint256 vaultTokens = Token(vault).totalSupply();
 

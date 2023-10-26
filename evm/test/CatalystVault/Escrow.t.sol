@@ -8,7 +8,7 @@ import {Token} from "../mocks/token.sol";
 import {AVaultInterfaces} from "./AVaultInterfaces.t.sol";
 
 abstract contract TestEscrow is TestCommon, AVaultInterfaces {
-    function test_escrow_ack(uint256 swapPercentage) external {
+    function test_escrow_ack() external {
         address[] memory vaults = getTestConfig();
         address bob = makeAddr("bob");
 
@@ -272,7 +272,7 @@ abstract contract TestEscrow is TestCommon, AVaultInterfaces {
         }
     }
 
-    function test_escrow_impact_ack(uint256 swapAmount) external {
+    function test_escrow_impact_ack() external {
         address[] memory vaults = getTestConfig();
         address bob = makeAddr("bob");
 
@@ -347,7 +347,7 @@ abstract contract TestEscrow is TestCommon, AVaultInterfaces {
         }
     }
 
-    function test_escrow_impact_timeout(uint256 swapAmount) external {
+    function test_escrow_impact_timeout() external {
         address[] memory vaults = getTestConfig();
         address bob = makeAddr("bob");
 

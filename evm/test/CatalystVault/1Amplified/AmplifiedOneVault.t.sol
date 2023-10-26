@@ -18,7 +18,7 @@ import "../TokenInterface.t.sol";
 import "../Escrow.t.sol";
 import "../Withdraw/WithdrawCompare.sol";
 import "../Withdraw/WithdrawInvariant.sol";
-import "../Deposit/DepositWIthdrawCompare.t.sol";
+import "../Deposit/DepositWithdrawCompare.t.sol";
 import {Token} from "../../mocks/token.sol";
 
 contract TestAmplifiedInvariant is TestInvariant, TestLocalswap, TestCrossChainInterfaceOnly, TestLocalswapMinout, TestPoolTokenInterface, TestSetupFinish, TestSetVaultFee, TestSetGovernanceFee, TestLocalswapFees, TestSwapWorthlessTokenLocal, TestEscrow, TestWithdrawInvariant, TestWithdrawComparison, TestCompareDepositWithWithdraw {
@@ -80,8 +80,6 @@ contract TestAmplifiedInvariant is TestInvariant, TestLocalswap, TestCrossChainI
         uint256 numTokens = balances.length;
 
         int256 oneMinusAmp = CatalystVaultAmplified(vaults[0])._oneMinusAmp();
-
-        uint256 vaultTokens = Token(vault).totalSupply();
 
         uint256 balance0 = CatalystVaultAmplified(vault).computeBalance0();
 

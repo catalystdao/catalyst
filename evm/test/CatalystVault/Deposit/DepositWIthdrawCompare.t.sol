@@ -22,16 +22,16 @@ abstract contract TestCompareDepositWithWithdraw is TestCommon, AVaultInterfaces
             uint256 numTokens = 0;
             for (numTokens = 0; numTokens < 100; ++numTokens) {
                 address tkn = v._tokenIndexing(numTokens);
-                if (v._tokenIndexing(numTokens) == address(0)) {
+                if (tkn == address(0)) {
                     break;
                 }
             }
 
             uint256[] memory depositAmounts = new uint256[](numTokens);
-            for (uint256 i = 0; i < numTokens; ++i) {
-                address tkn = v._tokenIndexing(i);
-                depositAmounts[i] = Token(tkn).balanceOf(address(this)) * uint256(depositPercentage) / (2**32 - 1);
-                Token(tkn).approve(vault, depositAmounts[i]);
+            for (uint256 j = 0; j < numTokens; ++j) {
+                address tkn = v._tokenIndexing(j);
+                depositAmounts[j] = Token(tkn).balanceOf(address(this)) * uint256(depositPercentage) / (2**32 - 1);
+                Token(tkn).approve(vault, depositAmounts[j]);
             }
 
             // Get invariant
@@ -42,7 +42,7 @@ abstract contract TestCompareDepositWithWithdraw is TestCommon, AVaultInterfaces
 
             uint256[] memory minOut = new uint256[](numTokens);
             // Withdraw using withdraw all
-            uint256[] memory outsAll = v.withdrawAll(poolTokensMinted, minOut);
+            v.withdrawAll(poolTokensMinted, minOut);
 
             uint256 invAfter = invariant(vaults);
 

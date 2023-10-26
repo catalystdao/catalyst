@@ -22,7 +22,7 @@ abstract contract TestWithdrawComparison is TestCommon, AVaultInterfaces {
             uint256 numTokens = 0;
             for (numTokens = 0; numTokens < 100; ++numTokens) {
                 address tkn = v._tokenIndexing(numTokens);
-                if (v._tokenIndexing(numTokens) == address(0)) {
+                if (tkn == address(0)) {
                     break;
                 }
             }
