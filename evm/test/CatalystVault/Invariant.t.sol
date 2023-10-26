@@ -20,7 +20,6 @@ abstract contract TestInvariant is TestCommon {
         }
     }
 
-
     function getBalances(address[] memory vaults) view internal returns(uint256[] memory balances, uint256[] memory weights) {
         uint256 numAssets = getNumberOfAssets(vaults);
         balances = new uint256[](numAssets);
@@ -65,6 +64,10 @@ abstract contract TestInvariant is TestCommon {
     function powerArray(uint256[] memory x, int256 power) pure internal returns(uint256[] memory y) {
         y = new uint256[](x.length);
         for (uint256 i = 0; i < x.length; ++i) {
+            if (x[i] == 0) {
+                y[i] = 0;
+                continue;
+            }
             y[i] = uint256(FixedPointMathLib.powWad(int256(x[i]), power));
         }
     }
