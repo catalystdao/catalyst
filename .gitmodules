@@ -10,6 +10,3 @@
 [submodule "evm/lib/solmate"]
 	path = evm/lib/solmate
 	url = https://github.com/transmissions11/solmate
-[submodule "evm/lib/token-lens"]
-	path = evm/lib/token-lens
-	url = https://github.com/catalystdao/token-lens
