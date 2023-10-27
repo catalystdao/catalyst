@@ -25,6 +25,7 @@ contract TestUnderwrite is TestCommon, ICatalystReceiver {
 
     function test_underwrite_storage(address sendTo) external {
         vm.assume(sendTo != address(0));
+        vm.assume(sendTo != 0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496);
         uint256 maxUnderwritingDuration = CCI.maxUnderwritingDuration();
 
         address token = ICatalystV1Vault(vault2)._tokenIndexing(0);
