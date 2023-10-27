@@ -706,17 +706,21 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
         unchecked {
             // Get the last touch block. For most underwrites it is going to be 0.
             uint96 lastTouchBlock = underwritingStorage[identifier].expiry;
-            // if lastTouchBlock > type(uint96).max + BUFFER_BLOCKS then lastTouchBlock + BUFFER_BLOCKS overflows.
-            if (lastTouchBlock <  type(uint96).max - BUFFER_BLOCKS) {
-                // Add a reasonable buffer so if the transaction got into the memory pool and is delayed into the next blocks
-                // it doesn't underwrite a non-existing swap.
-                if (lastTouchBlock + BUFFER_BLOCKS >= uint96(block.number)) {
-                    // Check that uint96(block.number) hasn't overflowed and this is an old reference. We don't care about the underflow
-                    // as that will always return false.
-                    if (lastTouchBlock - BUFFER_BLOCKS <= uint96(block.number)) revert SwapRecentlyUnderwritten();
+            if (lastTouchBlock != 0) { // implies that the swap has never been underwritten.
+                // if lastTouchBlock > type(uint96).max + BUFFER_BLOCKS then lastTouchBlock + BUFFER_BLOCKS overflows.
+                // if lastTouchBlock < BUFFER_BLOCKS then lastTouchBlock - BUFFER_BLOCKS underflows.
+                if ((lastTouchBlock <  type(uint96).max - BUFFER_BLOCKS) && (lastTouchBlock > BUFFER_BLOCKS)) {
+                    // Add a reasonable buffer so if the transaction got into the memory pool and is delayed into the next blocks
+                    // it doesn't underwrite a non-existing swap.
+                    if (lastTouchBlock + BUFFER_BLOCKS >= uint96(block.number)) {
+                        // Check that uint96(block.number) hasn't overflowed and this is an old reference. We don't care about the underflow
+                        // as that will always return false.
+                        // First however, we need to check that this won't underflow.
+                        if (lastTouchBlock - BUFFER_BLOCKS <= uint96(block.number)) revert SwapRecentlyUnderwritten();
+                    }
+                } else {
+                    if (lastTouchBlock == uint96(block.number)) revert SwapRecentlyUnderwritten();
                 }
-            } else {
-                if (lastTouchBlock == uint96(block.number)) revert SwapRecentlyUnderwritten();
             }
         }
 
