@@ -6,7 +6,7 @@ import "../../../src/ICatalystV1Vault.sol";
 import "../Invariant.t.sol";
 import {TestSendAsset} from "../SendAsset.t.sol";
 import {TestReceiveAsset} from "../ReceiveAsset.t.sol";
-import { TestSendLiquidity } from "../SendLiquidity.t.soL";
+import { TestSendLiquidity } from "../SendLiquidity.t.sol";
 import { TestReceiveLiquidity } from "../ReceiveLiquidity.t.sol";
 import "../non-exploits/CrossSwap.SwapWorthlessToken.t.sol";
 import {Token} from "../../mocks/token.sol";
