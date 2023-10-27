@@ -18,7 +18,7 @@ import "../TokenInterface.t.sol";
 import "../Escrow.t.sol";
 import "../Withdraw/WithdrawCompare.sol";
 import "../Withdraw/WithdrawInvariant.sol";
-import { TestWithdrawComparison } from "../Deposit/DepositWithdrawCompare.t.sol";
+import { TestCompareDepositWithWithdraw } from "../Deposit/DepositWithdrawCompare.t.sol";
 import {Token} from "../../mocks/token.sol";
 
 contract TestAmplifiedInvariant is TestInvariant, TestLocalswap, TestCrossChainInterfaceOnly, TestLocalswapMinout, TestPoolTokenInterface, TestSetupFinish, TestSetVaultFee, TestSetGovernanceFee, TestLocalswapFees, TestSwapWorthlessTokenLocal, TestEscrow, TestWithdrawInvariant, TestWithdrawComparison, TestCompareDepositWithWithdraw {
