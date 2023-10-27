@@ -2,7 +2,7 @@
 pragma solidity =0.8.19;
 
 import "../../../src/ICatalystV1Vault.sol";
-
+import "src/utils/FixedPointMathLib.sol";
 
 import "../Invariant.t.sol";
 import "../LocalSwap/LocalSwap.t.sol";
@@ -16,7 +16,6 @@ import "../Setup/SetupFinish.t.sol";
 import "../CrossChainInterfaceOnly.t.sol";
 import "../TokenInterface.t.sol";
 import "../Escrow.t.sol";
-import "src/utils/FixedPointMathLib.sol";
 import "../Withdraw/WithdrawCompare.sol";
 import "../Withdraw/WithdrawInvariant.sol";
 import { TestWithdrawComparison } from "../Deposit/DepositWithdrawCompare.t.sol";

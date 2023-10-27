@@ -34,16 +34,17 @@ abstract contract TestCompareDepositWithWithdraw is TestCommon, AVaultInterfaces
                 Token(tkn).approve(vault, depositAmounts[j]);
             }
 
-            // Get invariant
+            // Get invariant before
             uint256 inv = invariant(vaults);
 
-            // Deposit
+            // Deposit and get number of pool tokens minted.
             uint256 poolTokensMinted = v.depositMixed(depositAmounts, 0);
 
             uint256[] memory minOut = new uint256[](numTokens);
             // Withdraw using withdraw all
             v.withdrawAll(poolTokensMinted, minOut);
 
+            // Get invariant after to compare with before.
             uint256 invAfter = invariant(vaults);
 
             // Check that the invariant didn't decrease. A small buffer is added because the math isn't exact.
