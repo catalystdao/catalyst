@@ -19,8 +19,7 @@ import "../Escrow.t.sol";
 import "src/utils/FixedPointMathLib.sol";
 import "../Withdraw/WithdrawCompare.sol";
 import "../Withdraw/WithdrawInvariant.sol";
-import "src/ICatalystV1Vault.sol";
-import "../Deposit/DepositWithdrawCompare.t.sol";
+import { TestWithdrawComparison } from "../Deposit/DepositWithdrawCompare.t.sol";
 import {Token} from "../../mocks/token.sol";
 
 contract TestVolatileInvariant is TestInvariant, TestLocalswap, TestCrossChainInterfaceOnly, TestLocalswapMinout, TestPoolTokenInterface, TestSetupFinish, TestSetVaultFee, TestSetGovernanceFee, TestLocalswapFees, TestSwapWorthlessTokenLocal, TestEscrow, TestWithdrawInvariant, TestWithdrawComparison, TestCompareDepositWithWithdraw {
