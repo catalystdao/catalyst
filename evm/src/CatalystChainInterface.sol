@@ -83,8 +83,6 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
         uint80 expiry;      // 2 slot: 30/32
     }
 
-    bytes32 constant KECCACK_OF_NOTHING = 0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470;
-
     //--- Config ---//
     IIncentivizedMessageEscrow public immutable GARP; // Set on deployment
 
@@ -207,7 +205,7 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
     function connectNewChain(bytes32 chainIdentifier, bytes calldata remoteCCI, bytes calldata remoteGARP) onlyOwner checkBytes65Address(remoteCCI) override external {
         // Check if the chain has already been set.
         // If it has, we don't allow setting it as another. This would impact existing pools.
-        if (keccak256(chainIdentifierToDestinationAddress[chainIdentifier]) != KECCACK_OF_NOTHING) revert ChainAlreadySetup();
+        if (chainIdentifierToDestinationAddress[chainIdentifier].length != 0) revert ChainAlreadySetup();
 
         // Set the remote CCI.
         chainIdentifierToDestinationAddress[chainIdentifier] = remoteCCI;

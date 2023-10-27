@@ -1,7 +1,7 @@
 {
   "contracts": {
     "amplified_mathlib": "0xD46e85168b281c5A57Af3c01dE36E5BBDb22438C",
-    "amplified_template": "0xB9382379a90A42DcbeAe0F11092Ca1c898636dBD",
+    "amplified_template": "0x66cdD84E44f6Ee1f361a030F86294F9e61A1AEab",
     "factory": "0x876c1B5732E000FF24bf30BE820E32D504Dd469e",
     "volatile_mathlib": "0x59a16218251422ec14D7e1A15AFc09cf4fE89b0b",
     "volatile_template": "0xb6391De47CC3754be5cDC91fA423cbDadeB96976"
