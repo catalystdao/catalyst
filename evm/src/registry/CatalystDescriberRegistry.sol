@@ -1,6 +1,6 @@
 //SPDX-License-Identifier: MIT
 
-pragma solidity =0.8.19;
+pragma solidity ^0.8.19;
 
 import "openzeppelin-contracts/contracts/access/Ownable.sol";
 import { Contains } from "./lib/Contains.sol";
