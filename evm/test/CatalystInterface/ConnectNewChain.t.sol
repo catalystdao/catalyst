@@ -23,7 +23,7 @@ contract TestConnectNewChain is TestCommon {
         vm.expectCall(
             address(GARP),
             abi.encodeCall(
-                GARP.setRemoteEscrowImplementation,
+                GARP.setRemoteImplementation,
                 (
                     chainIdentifier, remoteGARP
                 )

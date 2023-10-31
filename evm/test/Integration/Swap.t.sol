@@ -255,7 +255,7 @@ contract TestSwapIntegration is TestCommon {
         );
 
         vm.recordLogs();
-        GARP.processMessage(_metadata, toExecuteMessage, FEE_RECIPITANT);
+        GARP.processPacket(_metadata, toExecuteMessage, FEE_RECIPITANT);
 
         entries = vm.getRecordedLogs();
         (destinationIdentifier, recipitent, messageWithContext) = abi.decode(entries[3].data, (bytes32, bytes, bytes));
@@ -272,6 +272,6 @@ contract TestSwapIntegration is TestCommon {
             1
         );
 
-        GARP.processMessage(_metadata, toExecuteMessage, FEE_RECIPITANT);
+        GARP.processPacket(_metadata, toExecuteMessage, FEE_RECIPITANT);
     }
 }

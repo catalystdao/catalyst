@@ -48,8 +48,11 @@ contract TestCommon is Test, Bytes65, IMessageEscrowStructs, TestTokenFunctions,
 
     CatalystChainInterface CCI;
 
+    address SEND_LOST_GAS_TO;
+
     function setUp() virtual public {
         (SIGNER, PRIVATEKEY) = makeAddrAndKey("signer");
+        SEND_LOST_GAS_TO = makeAddr("sendLostGasTo");
 
         _INCENTIVE.refundGasTo = makeAddr("refundGasTo");
 
@@ -63,7 +66,7 @@ contract TestCommon is Test, Bytes65, IMessageEscrowStructs, TestTokenFunctions,
         amplifiedMathlib = CatalystMathAmp(contracts.amplified_mathlib);
         amplifiedTemplate = CatalystVaultAmplified(contracts.amplified_template);
 
-        GARP = new IncentivizedMockEscrow(DESTINATION_IDENTIFIER, SIGNER, 0);
+        GARP = new IncentivizedMockEscrow(SEND_LOST_GAS_TO, DESTINATION_IDENTIFIER, SIGNER, 0);
 
         CCI = new CatalystChainInterface(address(GARP), address(this));
     }

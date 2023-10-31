@@ -127,7 +127,7 @@ contract TestSendAssetUnderwritePurpose is TestCommon {
         (bytes memory _metadata, bytes memory toExecuteMessage) = getVerifiedMessage(address(GARP), messageWithContext);
 
         vm.recordLogs();
-        GARP.processMessage(_metadata, toExecuteMessage, FEE_RECIPITANT);
+        GARP.processPacket(_metadata, toExecuteMessage, FEE_RECIPITANT);
         entries = vm.getRecordedLogs();
 
         assertEq(
@@ -152,6 +152,6 @@ contract TestSendAssetUnderwritePurpose is TestCommon {
         vm.expectEmit();
         emit SendAssetSuccess(DESTINATION_IDENTIFIER, convertEVMTo65(toAccount), units, uint256(1e17), address(token1), 1);
 
-        GARP.processMessage(_metadata, toExecuteMessage, FEE_RECIPITANT);
+        GARP.processPacket(_metadata, toExecuteMessage, FEE_RECIPITANT);
     }
 }

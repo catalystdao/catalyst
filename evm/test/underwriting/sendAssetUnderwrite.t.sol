@@ -120,7 +120,7 @@ contract TestSendAssetUnderwrite is TestCommon {
         (bytes memory _metadata, bytes memory toExecuteMessage) = getVerifiedMessage(address(GARP), messageWithContext);
 
         vm.recordLogs();
-        GARP.processMessage(_metadata, toExecuteMessage, FEE_RECIPITANT);
+        GARP.processPacket(_metadata, toExecuteMessage, FEE_RECIPITANT);
         entries = vm.getRecordedLogs();
 
         (, , uint96 expiry) = CCI.underwritingStorage(underwriteIdentifier);
@@ -148,7 +148,7 @@ contract TestSendAssetUnderwrite is TestCommon {
         vm.expectEmit();
         emit SendAssetSuccess(DESTINATION_IDENTIFIER, convertEVMTo65(toAccount), units, uint256(1e17), address(token1), 1);
 
-        GARP.processMessage(_metadata, toExecuteMessage, FEE_RECIPITANT);
+        GARP.processPacket(_metadata, toExecuteMessage, FEE_RECIPITANT);
     }
 
 
@@ -195,7 +195,7 @@ contract TestSendAssetUnderwrite is TestCommon {
         (bytes memory _metadata, bytes memory toExecuteMessage) = getVerifiedMessage(address(GARP), messageWithContext);
 
         vm.recordLogs();
-        GARP.processMessage(_metadata, toExecuteMessage, FEE_RECIPITANT);
+        GARP.processPacket(_metadata, toExecuteMessage, FEE_RECIPITANT);
         entries = vm.getRecordedLogs();
 
         // check that the user received their tokens like nothing happened.
@@ -220,7 +220,7 @@ contract TestSendAssetUnderwrite is TestCommon {
             1
         );
 
-        GARP.processMessage(_metadata, toExecuteMessage, FEE_RECIPITANT);
+        GARP.processPacket(_metadata, toExecuteMessage, FEE_RECIPITANT);
 
     }
 }

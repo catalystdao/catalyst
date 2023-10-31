@@ -218,7 +218,7 @@ class PoARelayer(MessageSigner):
 
         try:
             # Build the transaction and simulate
-            GI.functions.processMessage(
+            GI.functions.processPacket(
                 signature[1], signature[0], encode(["address"], [relayer_address.address])
             ).build_transaction(
                 {
@@ -232,7 +232,7 @@ class PoARelayer(MessageSigner):
             )
             
             # If we can build it and correctly simulate it, execute with 2 million gas.
-            tx = GI.functions.processMessage(
+            tx = GI.functions.processPacket(
                 signature[1], signature[0], encode(["address"], [relayer_address.address])
             ).build_transaction(
                 {
@@ -263,7 +263,7 @@ class PoARelayer(MessageSigner):
             logging.info(f"Rate limited, simulate, {error_message}")
             sleep(1)
             try:
-                tx = GI.functions.processMessage(
+                tx = GI.functions.processPacket(
                     signature[1], signature[0], encode(["address"], [relayer_address.address])
                 ).build_transaction(
                     {

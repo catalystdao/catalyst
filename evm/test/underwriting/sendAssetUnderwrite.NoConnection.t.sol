@@ -82,7 +82,7 @@ contract TestUnderwriteNoConnection is TestCommon {
         (bytes memory _metadata, bytes memory toExecuteMessage) = getVerifiedMessage(address(GARP), messageWithContext);
 
         vm.recordLogs();
-        GARP.processMessage(_metadata, toExecuteMessage, FEE_RECIPITANT);
+        GARP.processPacket(_metadata, toExecuteMessage, FEE_RECIPITANT);
         entries = vm.getRecordedLogs();
 
         address token2 = ICatalystV1Vault(vault2)._tokenIndexing(0);
@@ -106,7 +106,7 @@ contract TestUnderwriteNoConnection is TestCommon {
         emit SendAssetFailure(DESTINATION_IDENTIFIER, convertEVMTo65(toAccount), units, uint256(1e17), address(token1), 1);
 
 
-        GARP.processMessage(_metadata, toExecuteMessage, FEE_RECIPITANT);
+        GARP.processPacket(_metadata, toExecuteMessage, FEE_RECIPITANT);
     }
 }
 

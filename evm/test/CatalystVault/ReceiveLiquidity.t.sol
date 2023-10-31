@@ -90,7 +90,7 @@ abstract contract TestReceiveLiquidity is TestCommon, AVaultInterfaces {
                 )
             )
         );
-        GARP.processMessage(_metadata, toExecuteMessage, FEE_RECIPITANT);
+        GARP.processPacket(_metadata, toExecuteMessage, FEE_RECIPITANT);
     }
 }
 

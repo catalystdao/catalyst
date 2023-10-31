@@ -234,7 +234,7 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
         emit RemoteImplementationSet(chainIdentifier, remoteCCI, remoteGARP);
 
         // Set the remote messaging router escrow.
-        GARP.setRemoteEscrowImplementation(chainIdentifier, remoteGARP);
+        GARP.setRemoteImplementation(chainIdentifier, remoteGARP);
     }
 
     /**
@@ -294,7 +294,7 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
             calldata_
         );
 
-        GARP.escrowMessage{value: msg.value}(
+        GARP.submitMessage{value: msg.value}(
             routeDescription.chainIdentifier,
             chainIdentifierToDestinationAddress[routeDescription.chainIdentifier],
             data,
@@ -345,7 +345,7 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
             calldata_
         );
 
-        GARP.escrowMessage{value: msg.value}(
+        GARP.submitMessage{value: msg.value}(
             routeDescription.chainIdentifier,
             chainIdentifierToDestinationAddress[routeDescription.chainIdentifier],
             data,
@@ -427,7 +427,7 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
      * @param destinationIdentifier Identifier for the destination chain
      * @param acknowledgement The acknowledgement bytes for the cross-chain swap.
      */
-    function ackMessage(bytes32 destinationIdentifier, bytes32 messageIdentifier, bytes calldata acknowledgement) onlyGARP override external {
+    function receiveAck(bytes32 destinationIdentifier, bytes32 messageIdentifier, bytes calldata acknowledgement) onlyGARP override external {
         // If the transaction executed but some logic failed, an ack is sent back with an error acknowledgement.
         // This is known as "fail on ack". The package should be failed.
         // The acknowledgement is prepended the message, so we need to fetch it.

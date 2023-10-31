@@ -17,8 +17,8 @@ interface TF {
 }
 
 abstract contract TestSelfSwap is TestCommon, AVaultInterfaces {
-    uint256 private constant MARGIN_NUM = 1;
-    uint256 private constant MARGIN_DENOM = 1e12;
+    uint256 private constant MARGIN_NUM = 10**18 + 10**10;
+    uint256 private constant MARGIN_DENOM = 10**18;
 
     bytes32 private FEE_RECIPITANT = bytes32(uint256(uint160(0xfee0eec191fa4f)));
 
@@ -87,15 +87,13 @@ abstract contract TestSelfSwap is TestCommon, AVaultInterfaces {
                 )
             )
         );
-        GARP.processMessage(_metadata, toExecuteMessage, FEE_RECIPITANT);
+        GARP.processPacket(_metadata, toExecuteMessage, FEE_RECIPITANT);
 
         
         uint256 toAmount = Token(toAsset).balanceOf(toAccount);
 
         if (fromAmount == 0 && toAmount == 0) return;
         // Allow a very small error.
-        uint256 MARGIN_NUM = 10**18 + 10**10;
-        uint256 MARGIN_DENOM = 10**18;
         assertGt(fromAmount * MARGIN_NUM / MARGIN_DENOM, toAmount, "More out than in");
     }
 }
