@@ -772,7 +772,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
         uint256 purchasedTokens = calcReceiveAsset(toAsset, U);
 
         // Ensure the user is satisfied with the number of tokens.
-        if (minOut > purchasedTokens)  revert ReturnInsufficientOnReceive();
+        if (minOut > purchasedTokens)  revert ReturnInsufficient(purchasedTokens, minOut);
 
         return purchasedTokens;
     }
@@ -943,7 +943,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
         uint256 vaultTokens = FixedPointMathLib.mulWadDown(_calcPriceCurveLimitShare(U, wsum), totalSupply);
 
         // Check if more than the minimum output is returned.
-        if (minVaultTokens > vaultTokens) revert ReturnInsufficientOnReceive();
+        if (minVaultTokens > vaultTokens) revert ReturnInsufficient(vaultTokens, minVaultTokens);
         // Then check if the minimum number of reference assets is honoured.
         if (minReferenceAsset > 0) {
             // This is done by computing the reference balance through a locally observable method.
@@ -993,7 +993,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
             // Add escrow to ensure that even if all ongoing transaction revert, the user gets their expected amount.
             // Add vault tokens because they are going to be minted.
             referenceAmount = (referenceAmount * vaultTokens)/(totalSupply + _escrowedVaultTokens + vaultTokens);
-            if (minReferenceAsset > referenceAmount) revert ReturnInsufficientOnReceive();
+            if (minReferenceAsset > referenceAmount) revert ReturnInsufficient(referenceAmount, minReferenceAsset);
         }
 
         return vaultTokens;

@@ -207,15 +207,16 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
     /// and then reverts a relevant ack which can be exposed on the origin to provide information
     /// about why the transaction didn't execute as expected.
     function _handleError(bytes memory err) pure internal returns (bytes1) {
-        // To safe on gas, only examine the first 32 bytes.
-        bytes32 errorIdentifier = bytes32(err);
+        // To only get the error identifier, only use the first 8 bytes. This lets us add additional error
+        // data for easier debugger on trace.
+        bytes8 errorIdentifier = bytes8(err);
         // We can use memory sclies to get better insight into exactly the error which occured.
         // This would also allow us to reuse events.
         // However, it looks like it will significantly increase gas costs so this works for now.
         // It looks like Solidity will improve their error catch implementation which will replace this.
-        if (bytes32(abi.encodeWithSelector(ExceedsSecurityLimit.selector)) == errorIdentifier) return 0x11;
-        if (bytes32(abi.encodeWithSelector(ReturnInsufficientOnReceive.selector)) == errorIdentifier) return 0x12;
-        if (bytes32(abi.encodeWithSelector(VaultNotConnected.selector)) == errorIdentifier) return 0x13;
+        if (bytes8(abi.encodeWithSelector(ExceedsSecurityLimit.selector)) == errorIdentifier) return 0x11;
+        if (bytes8(abi.encodeWithSelector(ReturnInsufficient.selector)) == errorIdentifier) return 0x12;
+        if (bytes8(abi.encodeWithSelector(VaultNotConnected.selector)) == errorIdentifier) return 0x13;
         return 0x10; // unknown error.
     }
 

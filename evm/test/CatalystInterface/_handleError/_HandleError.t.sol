@@ -22,7 +22,7 @@ contract TestHandleError is Test {
         );
     }
     function test_handle_error_0x12() external {
-        bytes memory err = abi.encodeWithSelector(ReturnInsufficientOnReceive.selector);
+        bytes memory err = abi.encodeWithSelector(ReturnInsufficient.selector);
         bytes1 code = exposeHandleError.handleError(err);
 
         assertEq(
@@ -42,15 +42,15 @@ contract TestHandleError is Test {
     }
 
     function test_handle_error_0x10(bytes memory err) external {
-        bytes32 hashOfError = bytes32(err);
+        bytes8 hashOfError = bytes8(err);
         vm.assume(
-            hashOfError != bytes32(abi.encodeWithSelector(ExceedsSecurityLimit.selector))
+            hashOfError != bytes8(abi.encodeWithSelector(ExceedsSecurityLimit.selector))
         );
         vm.assume(
-            hashOfError != bytes32(abi.encodeWithSelector(ReturnInsufficientOnReceive.selector))
+            hashOfError != bytes8(abi.encodeWithSelector(ReturnInsufficient.selector))
         );
         vm.assume(
-            hashOfError != bytes32(abi.encodeWithSelector(VaultNotConnected.selector))
+            hashOfError != bytes8(abi.encodeWithSelector(VaultNotConnected.selector))
         );
         bytes1 code = exposeHandleError.handleError(err);
 

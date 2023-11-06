@@ -1052,7 +1052,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
         _updateUnitCapacity(deltaSecurityLimit);
 
         // Ensure the user is satisfied with the number of tokens.
-        if (minOut > purchasedTokens) revert ReturnInsufficientOnReceive();
+        if (minOut > purchasedTokens) revert ReturnInsufficient(purchasedTokens, minOut);
 
         // Track units for balance0 computation.
         _unitTracker -= int256(U);
@@ -1307,7 +1307,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
         uint256 vaultTokens = _calcPriceCurveLimitShare(U, totalSupply, it_times_walpha_amped, oneMinusAmpInverse);
 
         // Check if more than the minimum output is returned.
-        if (minVaultTokens > vaultTokens) revert ReturnInsufficientOnReceive();
+        if (minVaultTokens > vaultTokens) revert ReturnInsufficient(vaultTokens, minVaultTokens);
         // Then check if the minimum number of reference assets is honoured.
         if (minReferenceAsset != 0) {
             uint256 walpha_0 = uint256(FixedPointMathLib.powWad(  // uint256 casting: Is always positive.
@@ -1317,7 +1317,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
             // Add escrow to ensure that even if all ongoing transaction revert, the user gets their expected amount.
             // Add vault tokens because they are going to be minted.
             uint256 walpha_0_owned = ((walpha_0 * vaultTokens) / (totalSupply + _escrowedVaultTokens + vaultTokens)) / FixedPointMathLib.WAD;
-            if (minReferenceAsset > walpha_0_owned) revert ReturnInsufficientOnReceive();
+            if (minReferenceAsset > walpha_0_owned) revert ReturnInsufficient(walpha_0_owned, minReferenceAsset);
         }
 
         // Update the unit tracker:
