@@ -2,13 +2,68 @@ mod test_underwrite {
     use std::str::FromStr;
 
     use catalyst_interface_common::{msg::{InterfaceCommonQueryMsg, UnderwriteIdentifierResponse}, state::{UNDERWRITING_COLLATERAL, UNDERWRITING_COLLATERAL_BASE, UNDERWRITE_BUFFER_BLOCKS}, ContractError, catalyst_payload::CatalystEncodedAddress};
-    use catalyst_vault_common::ContractError as VaultContractError;
+    use catalyst_vault_common::{ContractError as VaultContractError, bindings::Asset};
     use cosmwasm_std::{Uint128, Addr, Binary, Uint64};
     use catalyst_types::{U256, u256};
-    use test_helpers::{math::f64_to_uint128, definitions::{SETUP_MASTER, CHANNEL_ID, SWAPPER_B, UNDERWRITER}, env::CustomTestEnv, asset::CustomTestAsset, contract::mock_instantiate_calldata_target, misc::get_response_attribute};
+    use test_helpers::{math::f64_to_uint128, definitions::{SETUP_MASTER, CHANNEL_ID, SWAPPER_B, UNDERWRITER}, env::CustomTestEnv, asset::CustomTestAsset, contract::{mock_instantiate_calldata_target, mock_factory_deploy_vault, mock_set_vault_connection}, misc::{get_response_attribute, encode_payload_address}};
 
-    use crate::{tests::{TestEnv, helpers::{compute_expected_receive_asset, encode_mock_packet, MockTestState}}, contract::MAX_UNDERWRITE_DURATION_INITIAL_BLOCKS};
+    use crate::{tests::{TestEnv, TestAsset, helpers::{compute_expected_receive_asset, encode_mock_packet, mock_instantiate_interface, vault_contract_storage}, parameters::{TEST_VAULT_ASSET_COUNT, TEST_VAULT_BALANCES, TEST_VAULT_WEIGHTS, AMPLIFICATION}}, contract::MAX_UNDERWRITE_DURATION_INITIAL_BLOCKS};
     use crate::msg::ExecuteMsg as InterfaceExecuteMsg;
+
+
+    pub struct MockTestState {
+        pub interface: Addr,
+        pub vault: Addr,
+        pub from_vault: String,
+        pub vault_assets: Vec<TestAsset>,
+        pub vault_initial_balances: Vec<Uint128>,
+        pub vault_weights: Vec<Uint128>
+    }
+    
+    impl MockTestState {
+    
+        pub fn initialize(
+            env: &mut TestEnv
+        ) -> Self {
+    
+            // Instantiate and initialize vault
+            let interface = mock_instantiate_interface(env.get_app());
+            let vault_assets = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
+            let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
+            let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
+            let vault_code_id = vault_contract_storage(env.get_app());
+            let vault = mock_factory_deploy_vault::<Asset, _, _>(
+                env,
+                vault_assets.clone(),
+                vault_initial_balances.clone(),
+                vault_weights.clone(),
+                AMPLIFICATION,
+                vault_code_id,
+                Some(interface.clone()),
+                None,
+                None
+            );
+    
+            // Connect vault with a mock vault
+            let from_vault = "from_vault".to_string();
+            mock_set_vault_connection(
+                env.get_app(),
+                vault.clone(),
+                CHANNEL_ID.to_string(),
+                encode_payload_address(from_vault.as_bytes()),
+                true
+            );
+    
+            Self {
+                interface,
+                vault,
+                from_vault,
+                vault_assets,
+                vault_initial_balances,
+                vault_weights,
+            }
+        }
+    }
 
 
     #[test]

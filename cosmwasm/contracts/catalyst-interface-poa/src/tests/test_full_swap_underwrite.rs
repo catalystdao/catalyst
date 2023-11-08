@@ -1,9 +1,10 @@
 mod test_full_swap_underwrite {
     use cosmwasm_std::{Uint128, Addr, Binary};
     use catalyst_types::{U256, u256};
-    use test_helpers::{math::f64_to_uint128, definitions::{SETUP_MASTER, CHANNEL_ID, SWAPPER_B, UNDERWRITER}, env::CustomTestEnv, asset::CustomTestAsset};
+    use test_helpers::{math::f64_to_uint128, definitions::{SETUP_MASTER, CHANNEL_ID, SWAPPER_B, UNDERWRITER}, env::CustomTestEnv, asset::CustomTestAsset, contract::{mock_factory_deploy_vault, mock_set_vault_connection}, misc::encode_payload_address};
+    use catalyst_vault_common::bindings::Asset;
 
-    use crate::tests::{TestEnv, helpers::{compute_expected_receive_asset, encode_mock_packet, MockTestState}};
+    use crate::tests::{TestEnv, helpers::{compute_expected_receive_asset, encode_mock_packet, mock_instantiate_interface, vault_contract_storage}, parameters::{TEST_VAULT_ASSET_COUNT, TEST_VAULT_BALANCES, TEST_VAULT_WEIGHTS, AMPLIFICATION}};
     use crate::msg::ExecuteMsg as InterfaceExecuteMsg;
 
 
@@ -13,14 +14,33 @@ mod test_full_swap_underwrite {
 
         let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
 
-        let MockTestState {
-            interface,
-            vault,
-            from_vault,
-            vault_assets,
-            vault_initial_balances,
-            vault_weights,
-        } = MockTestState::initialize(&mut env);
+        // Instantiate and initialize vault
+        let interface = mock_instantiate_interface(env.get_app());
+        let vault_assets = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
+        let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
+        let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
+        let vault_code_id = vault_contract_storage(env.get_app());
+        let vault = mock_factory_deploy_vault::<Asset, _, _>(
+            &mut env,
+            vault_assets.clone(),
+            vault_initial_balances.clone(),
+            vault_weights.clone(),
+            AMPLIFICATION,
+            vault_code_id,
+            Some(interface.clone()),
+            None,
+            None
+        );
+
+        // Connect vault with a mock vault
+        let from_vault = "from_vault".to_string();
+        mock_set_vault_connection(
+            env.get_app(),
+            vault.clone(),
+            CHANNEL_ID.to_string(),
+            encode_payload_address(from_vault.as_bytes()),
+            true
+        );
 
         // Define the receive asset configuration
         let to_asset_idx = 0;
