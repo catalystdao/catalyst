@@ -208,6 +208,7 @@ mod test_volatile_send_asset {
 
         let to_asset_idx = 1;
         let min_out = f64_to_u256(12345.678).unwrap();  // Some random value
+        let underwrite_incentive_x16 = 8765u16;
 
         // Fund swapper with tokens and set vault allowance
         from_asset.transfer(
@@ -232,7 +233,7 @@ mod test_volatile_send_asset {
                 amount: swap_amount,
                 min_out,
                 fallback_account: SWAPPER_A.to_string(),
-                underwrite_incentive_x16: 0u16,
+                underwrite_incentive_x16,
                 calldata: Binary(vec![])
             },
             vec![from_asset.clone()],
@@ -273,6 +274,10 @@ mod test_volatile_send_asset {
         assert_eq!(
             send_asset_event.attributes[7],
             Attribute::new("min_out", min_out)
+        );
+        assert_eq!(
+            send_asset_event.attributes[9],
+            Attribute::new("underwrite_incentive_x16", underwrite_incentive_x16.to_string())
         );
 
         // NOTE: the 'units' and 'fee' fields are indirectly checked on `test_send_asset_calculation`.
