@@ -1,5 +1,6 @@
 mod helpers;
 mod parameters;
+mod test_expire_underwrite;
 mod test_full_swap_underwrite;
 mod test_underwrite;
 
