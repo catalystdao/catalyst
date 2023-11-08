@@ -50,3 +50,8 @@ catalyst-interface-common = { path = "../catalyst-interface-common" }
 
 [dev-dependencies]
 cw-multi-test = { workspace = true }
+catalyst-factory = { path = "../catalyst-factory", features = ["library"] }
+catalyst-vault-common = { path = "../catalyst-vault-common" }
+catalyst-vault-volatile = { path = "../catalyst-vault-volatile", features = ["library"] }
+mock-calldata-target = { path = "../../mock-contracts/mock-calldata-target", features = ["library"] }
+test-helpers = { path = "../../helpers/test-helpers" }

@@ -113,6 +113,7 @@ dependencies = [
  "cw-controllers",
  "cw-multi-test",
  "cw-storage-plus",
+ "cw0",
  "cw2",
  "schemars",
  "serde",
@@ -144,8 +145,11 @@ dependencies = [
 name = "catalyst-interface-poa"
 version = "0.1.0"
 dependencies = [
+ "catalyst-factory",
  "catalyst-interface-common",
  "catalyst-types",
+ "catalyst-vault-common",
+ "catalyst-vault-volatile",
  "cosmwasm-schema",
  "cosmwasm-std",
  "cosmwasm-storage",
@@ -153,8 +157,10 @@ dependencies = [
  "cw-multi-test",
  "cw-storage-plus",
  "cw2",
+ "mock-calldata-target",
  "schemars",
  "serde",
+ "test-helpers",
  "thiserror",
 ]
 
