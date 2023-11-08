@@ -1407,6 +1407,7 @@ pub fn underwrite_asset(
     
     Ok(
         VaultResponse::new()
+            .set_data(to_binary(&swap_return)?)
             .add_event(
                 underwrite_asset_event(
                     identifier,
