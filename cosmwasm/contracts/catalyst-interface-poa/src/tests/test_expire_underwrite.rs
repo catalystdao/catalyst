@@ -1,7 +1,7 @@
 mod test_expire_underwrite {
 
     use catalyst_interface_common::{state::{UNDERWRITING_COLLATERAL, UNDERWRITING_COLLATERAL_BASE, UNDERWRITING_EXPIRE_REWARD, UNDERWRITING_EXPIRE_REWARD_BASE}, ContractError};
-    use catalyst_vault_common::bindings::Asset;
+    use catalyst_vault_common::{bindings::Asset, msg::{TotalEscrowedAssetResponse, AssetEscrowResponse, CommonQueryMsg as VaultQueryMsg}};
     use cosmwasm_std::{Uint128, Addr, Binary, Uint64};
     use catalyst_types::{U256, u256};
     use test_helpers::{math::f64_to_uint128, definitions::{SETUP_MASTER, CHANNEL_ID, SWAPPER_B, UNDERWRITER, SWAPPER_C}, env::CustomTestEnv, asset::CustomTestAsset, contract::{mock_factory_deploy_vault, mock_set_vault_connection}, misc::encode_payload_address};
@@ -236,7 +236,7 @@ mod test_expire_underwrite {
 
         let queried_vault_balance = env.get_app().wrap()
             .query_balance(
-                vault,
+                vault.clone(),
                 to_asset.denom.to_string()
             )
             .unwrap()
@@ -256,6 +256,34 @@ mod test_expire_underwrite {
             .amount;
 
         assert!(queried_interface_balance.is_zero());
+
+        // Verify vault escrow is released
+        let queried_escrowed_total = env.get_app()
+            .wrap()
+            .query_wasm_smart::<TotalEscrowedAssetResponse>(
+                vault.clone(),
+                &VaultQueryMsg::TotalEscrowedAsset { asset_ref: to_asset.get_asset_ref() }
+            )
+            .unwrap()
+            .amount;
+
+        assert!(queried_escrowed_total.is_zero());
+
+        let queried_fallback_account = env.get_app()
+            .wrap()
+            .query_wasm_smart::<AssetEscrowResponse>(
+                vault.clone(),
+                &VaultQueryMsg::AssetEscrow {
+                    hash: Binary::from_base64(&underwrite_identifier).unwrap()
+                }
+            )
+            .unwrap()
+            .fallback_account;
+
+        assert_eq!(
+            queried_fallback_account,
+            None
+        );
 
     }
 
