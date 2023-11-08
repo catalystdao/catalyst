@@ -2,6 +2,7 @@ use catalyst_types::U256;
 use catalyst_vault_common::{msg::{CommonQueryMsg, AssetResponse, ReceiverExecuteMsg, ExecuteMsg as VaultExecuteMsg, VaultConnectionStateResponse}, bindings::{Asset, AssetTrait, CustomMsg, VaultResponse, IntoCosmosCustomMsg}};
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Deps, Addr, DepsMut, Event, MessageInfo, Empty, Response, Uint64, Uint128, Binary, Env, from_binary, StdError, Coin, CosmosMsg, to_binary, SubMsgResponse, WasmMsg, SubMsg, ReplyOn, StdResult, SubMsgResult, Reply};
+use cw0::parse_execute_response_data;
 use cw_controllers::Admin;
 use cw_storage_plus::{Map, Item};
 use sha3::{Keccak256, Digest};
@@ -789,7 +790,11 @@ pub fn handle_calldata_on_reply(
     let response_data = response.data.ok_or_else(|| {
         StdError::GenericErr { msg: "No data in the vault's `ReceiveAsset`/`ReceiveLiquidity` response.".to_string() }
     })?;
-    let swap_return: Uint128 = from_binary(&response_data)?;
+    let parsed_response_bytes = parse_execute_response_data(&response_data)
+        .map_err(|err| {ContractError::Std(StdError::generic_err(err.to_string()))})?
+        .data
+        .ok_or(StdError::generic_err("No data in the vault's `ReceiveAsset`/`ReceiveLiquidity` response."))?;
+    let swap_return: Uint128 = from_binary(&parsed_response_bytes)?;
 
     let calldata_message = create_on_catalyst_call_msg(
         calldata.target.to_string(),
@@ -1207,7 +1212,12 @@ pub fn handle_underwrite_reply(
     let response_data = response.data.ok_or_else(|| {
         StdError::GenericErr { msg: "No data in the vault's `UnderwriteAsset` response.".to_string() }
     })?;
-    let swap_return: Uint128 = from_binary(&response_data)?;
+    let parsed_response_bytes = parse_execute_response_data(&response_data)
+        .map_err(|err| {ContractError::Std(StdError::generic_err(err.to_string()))})?
+        .data
+        .ok_or(StdError::generic_err("No data in the vault's `UnderwriteAsset` response."))?;
+    let swap_return: Uint128 = from_binary(&parsed_response_bytes)?;
+        
     let expiry = Uint64::new(env.block.height) + get_max_underwrite_duration(&deps.as_ref())?;
 
     let underwrite_event = UnderwriteEvent {
