@@ -1,5 +1,5 @@
 use catalyst_types::U256;
-use catalyst_vault_common::{msg::{CommonQueryMsg, AssetResponse, ReceiverExecuteMsg, ExecuteMsg as VaultExecuteMsg, VaultConnectionStateResponse}, bindings::{Asset, AssetTrait, CustomMsg, VaultResponse, IntoCosmosCustomMsg}};
+use catalyst_vault_common::{msg::{CommonQueryMsg, AssetResponse, ReceiverExecuteMsg, ExecuteMsg as VaultExecuteMsg, VaultConnectionStateResponse}, bindings::{Asset, AssetTrait, CustomMsg, IntoCosmosCustomMsg}};
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Deps, Addr, DepsMut, Event, MessageInfo, Empty, Response, Uint64, Uint128, Binary, Env, from_binary, StdError, Coin, CosmosMsg, to_binary, SubMsgResponse, WasmMsg, SubMsg, ReplyOn, StdResult, SubMsgResult, Reply};
 use cw0::parse_execute_response_data;
@@ -11,6 +11,7 @@ use std::ops::Div;
 use crate::{catalyst_payload::{CatalystV1SendAssetPayload, SendAssetVariablePayload, CatalystV1SendLiquidityPayload, SendLiquidityVariablePayload, CatalystEncodedAddress, CatalystCalldata, parse_calldata, CatalystV1Packet}, msg::UnderwriteIdentifierResponse, event::set_max_underwrite_duration_event};
 use crate::error::ContractError;
 use crate::event::{set_owner_event, underwrite_swap_event, fulfill_underwrite_event, expire_underwrite_event};
+use crate::bindings::InterfaceResponse;
 
 
 
@@ -99,7 +100,7 @@ pub fn setup(
     max_underwrite_duration: Uint64,
     min_underwrite_duration_allowed: Option<Uint64>,
     max_underwrite_duration_allowed: Option<Uint64>
-) -> Result<VaultResponse, ContractError> {
+) -> Result<InterfaceResponse, ContractError> {
 
     //TODO event
     set_max_underwriting_duration_unchecked(
@@ -273,7 +274,7 @@ pub fn handle_message_reception(
     env: &Env,
     channel_id: String,
     data: Binary
-) -> Result<VaultResponse, ContractError> {
+) -> Result<InterfaceResponse, ContractError> {
 
     let catalyst_packet = CatalystV1Packet::try_decode(data)?;
 
@@ -330,7 +331,7 @@ pub fn handle_message_response(
     channel_id: String,
     data: Binary,
     response: Option<Binary>
-) -> Result<VaultResponse, ContractError> {
+) -> Result<InterfaceResponse, ContractError> {
 
     let catalyst_packet = CatalystV1Packet::try_decode(data)?;
 
@@ -397,7 +398,7 @@ pub fn handle_receive_asset(
     from_asset: Binary,
     from_block_number_mod: u32,
     calldata: Binary
-) -> Result<VaultResponse, ContractError> {
+) -> Result<InterfaceResponse, ContractError> {
 
     // Convert min_out into Uint128
     let min_out: Uint128 = min_out.try_into()
@@ -496,7 +497,7 @@ pub fn handle_receive_liquidity(
     from_amount: U256,
     from_block_number_mod: u32,
     calldata: Binary
-) -> Result<VaultResponse, ContractError> {
+) -> Result<InterfaceResponse, ContractError> {
 
     // Convert the minimum outputs into Uint128
     let min_vault_tokens: Uint128 = min_vault_tokens.try_into()
@@ -564,7 +565,7 @@ pub fn handle_send_asset_response(
     from_asset: String,
     from_block_number_mod: u32,
     response: Option<Binary>
-) -> Result<VaultResponse, ContractError> {
+) -> Result<InterfaceResponse, ContractError> {
 
     // NOTE: Only the first byte of the 'ack' response is checked. This allows future 'ack' implementations to
     // extend the 'ack' format.
@@ -628,7 +629,7 @@ pub fn handle_send_liquidity_response(
     from_amount: U256,
     from_block_number_mod: u32,
     response: Option<Binary>
-) -> Result<VaultResponse, ContractError> {
+) -> Result<InterfaceResponse, ContractError> {
 
     // NOTE: Only the first byte of the 'ack' response is checked. This allows future 'ack' implementations to
     // extend the 'ack' format.
@@ -723,7 +724,7 @@ pub fn handle_reply(
     mut deps: DepsMut,
     env: Env,
     reply: Reply
-) -> Result<Option<VaultResponse>, ContractError> {
+) -> Result<Option<InterfaceResponse>, ContractError> {
 
     match reply.id {
 
@@ -783,7 +784,7 @@ pub fn handle_reply(
 pub fn handle_calldata_on_reply(
     response: SubMsgResponse,
     calldata: CatalystCalldata
-) -> Result<VaultResponse, ContractError> {
+) -> Result<InterfaceResponse, ContractError> {
 
     // Build the 'onCatalystCall' message using the swap return.
 
@@ -1057,7 +1058,7 @@ pub fn underwrite(
     to_account: String,
     underwrite_incentive_x16: u16,
     calldata: Binary
-) -> Result<VaultResponse, ContractError> {
+) -> Result<InterfaceResponse, ContractError> {
 
     let identifier = get_underwrite_identifier(
         &to_vault,
@@ -1154,7 +1155,7 @@ pub fn underwrite_and_check_connection(
     to_account: String,
     underwrite_incentive_x16: u16,
     calldata: Binary
-) -> Result<VaultResponse, ContractError> {
+) -> Result<InterfaceResponse, ContractError> {
 
     let is_source_vault_connected = deps.querier.query_wasm_smart::<VaultConnectionStateResponse>(
         to_vault.clone(),
@@ -1193,7 +1194,7 @@ pub fn handle_underwrite_reply(
     mut deps: DepsMut,
     env: Env,
     response: SubMsgResponse
-) -> Result<VaultResponse, ContractError> {
+) -> Result<InterfaceResponse, ContractError> {
 
     let UnderwriteParams {
         identifier,
@@ -1331,7 +1332,7 @@ pub fn expire_underwrite(
     to_account: String,
     underwrite_incentive_x16: u16,
     calldata: Binary
-) -> Result<VaultResponse, ContractError> {
+) -> Result<InterfaceResponse, ContractError> {
 
     let identifier = get_underwrite_identifier(
         &to_vault,
@@ -1415,7 +1416,7 @@ pub fn expire_underwrite(
     )?;
 
     // Build the response
-    let mut response = VaultResponse::new()
+    let mut response = InterfaceResponse::new()
         .add_message(delete_underwrite_msg);
 
     if let Some(msg) = expire_reward_msg {
@@ -1463,7 +1464,7 @@ pub fn match_underwrite(
     to_account: &str,
     underwrite_incentive_x16: u16,
     calldata: &Binary
-) -> Result<Option<VaultResponse>, ContractError> {
+) -> Result<Option<InterfaceResponse>, ContractError> {
 
     let identifier = get_underwrite_identifier(
         to_vault,
@@ -1616,7 +1617,7 @@ pub fn set_max_underwriting_duration(
     new_max_duration: Uint64,
     min_duration_allowed: Option<Uint64>,
     max_duration_allowed: Option<Uint64>
-) -> Result<VaultResponse, ContractError> {
+) -> Result<InterfaceResponse, ContractError> {
 
     only_owner(deps.as_ref(), info)?;
 
@@ -1658,7 +1659,7 @@ pub fn wrap_sub_msgs(
     info: &MessageInfo,
     env: &Env,
     sub_msgs: Vec<SubMsg<CustomMsg>>
-) -> Result<VaultResponse, ContractError> {
+) -> Result<InterfaceResponse, ContractError> {
 
     // ! Only the interface itself may invoke this function
     if info.sender != env.contract.address {
@@ -1666,7 +1667,7 @@ pub fn wrap_sub_msgs(
     }
 
     Ok(
-        VaultResponse::new()
+        InterfaceResponse::new()
             .add_submessages(sub_msgs)
     )
 }
