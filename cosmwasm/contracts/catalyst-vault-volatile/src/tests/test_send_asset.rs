@@ -862,4 +862,209 @@ mod test_volatile_send_asset {
 
     }
 
+
+    #[test]
+    fn test_send_asset_fixed_units_calculation() {
+
+        let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
+
+        // Instantiate and initialize vault
+        let interface = mock_instantiate_interface(env.get_app());
+        let vault_assets = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
+        let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
+        let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
+        let vault_code_id = volatile_vault_contract_storage(env.get_app());
+        let vault = mock_factory_deploy_vault::<Asset, _, _>(
+            &mut env,
+            vault_assets.clone(),
+            vault_initial_balances.clone(),
+            vault_weights.clone(),
+            AMPLIFICATION,
+            vault_code_id,
+            Some(interface.clone()),
+            None,
+            None
+        );
+
+        // Connect vault with a mock vault
+        let target_vault = encode_payload_address(b"target_vault");
+        mock_set_vault_connection(
+            env.get_app(),
+            vault.clone(),
+            CHANNEL_ID.to_string(),
+            target_vault.clone(),
+            true
+        );
+
+        // Define send asset configuration
+        let from_asset_idx = 0;
+        let from_asset = vault_assets[from_asset_idx].clone();
+        let from_weight = vault_weights[from_asset_idx];
+        let from_balance = vault_initial_balances[from_asset_idx];
+        let send_percentage = 0.15;
+        let swap_amount = f64_to_uint128(uint128_to_f64(from_balance) * send_percentage).unwrap();
+
+        let to_asset_idx = 1;
+        let to_account = encode_payload_address(SWAPPER_B.as_bytes());
+
+        // Fund swapper with tokens and set vault allowance
+        from_asset.transfer(
+            env.get_app(),
+            swap_amount,
+            Addr::unchecked(SETUP_MASTER),
+            SWAPPER_A.to_string()
+        );
+
+        // Get the expected return of a normal 'send_asset'
+        let expected_return = compute_expected_send_asset(
+            swap_amount,
+            from_weight,
+            from_balance,
+            Some(DEFAULT_TEST_VAULT_FEE),
+            Some(DEFAULT_TEST_GOV_FEE)
+        );
+
+        // Set the 'fixed units' to a value slightly smaller than the expected swap output
+        let fixed_units = f64_to_u256(expected_return.u * 1e18 * 0.99999).unwrap();
+
+
+
+        // Tested action: send asset
+        let response = env.execute_contract(
+            Addr::unchecked(SWAPPER_A),
+            vault.clone(),
+            &VolatileExecuteMsg::SendAssetFixedUnits {
+                channel_id: CHANNEL_ID.to_string(),
+                to_vault: target_vault,
+                to_account: to_account.clone(),
+                from_asset_ref: from_asset.get_asset_ref(),
+                to_asset_index: to_asset_idx,
+                amount: swap_amount,
+                min_out: U256::zero(),
+                u: fixed_units,
+                fallback_account: SWAPPER_C.to_string(),
+                underwrite_incentive_x16: 0u16,
+                calldata: Binary(vec![])
+            },
+            vec![from_asset.clone()],
+            vec![swap_amount]
+        ).unwrap();
+
+
+
+        let observed_return = get_response_attribute::<U256>(response.events[1].clone(), "units").unwrap();
+        
+        assert_eq!(
+            observed_return,
+            fixed_units
+        );
+
+        // Verify the input assets have been transferred from the swapper to the vault
+        let swapper_from_asset_balance = from_asset.query_balance(env.get_app(), SWAPPER_A.to_string());
+        assert_eq!(
+            swapper_from_asset_balance,
+            Uint128::zero()
+        );
+
+    }
+
+
+    #[test]
+    fn test_send_asset_fixed_units_too_few_units() {
+
+        let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
+
+        // Instantiate and initialize vault
+        let interface = mock_instantiate_interface(env.get_app());
+        let vault_assets = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
+        let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
+        let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
+        let vault_code_id = volatile_vault_contract_storage(env.get_app());
+        let vault = mock_factory_deploy_vault::<Asset, _, _>(
+            &mut env,
+            vault_assets.clone(),
+            vault_initial_balances.clone(),
+            vault_weights.clone(),
+            AMPLIFICATION,
+            vault_code_id,
+            Some(interface.clone()),
+            None,
+            None
+        );
+
+        // Connect vault with a mock vault
+        let target_vault = encode_payload_address(b"target_vault");
+        mock_set_vault_connection(
+            env.get_app(),
+            vault.clone(),
+            CHANNEL_ID.to_string(),
+            target_vault.clone(),
+            true
+        );
+
+        // Define send asset configuration
+        let from_asset_idx = 0;
+        let from_asset = vault_assets[from_asset_idx].clone();
+        let from_weight = vault_weights[from_asset_idx];
+        let from_balance = vault_initial_balances[from_asset_idx];
+        let send_percentage = 0.15;
+        let swap_amount = f64_to_uint128(uint128_to_f64(from_balance) * send_percentage).unwrap();
+
+        let to_asset_idx = 1;
+        let to_account = encode_payload_address(SWAPPER_B.as_bytes());
+
+        // Fund swapper with tokens and set vault allowance
+        from_asset.transfer(
+            env.get_app(),
+            swap_amount,
+            Addr::unchecked(SETUP_MASTER),
+            SWAPPER_A.to_string()
+        );
+
+        // Get the expected return of a normal 'send_asset'
+        let expected_return = compute_expected_send_asset(
+            swap_amount,
+            from_weight,
+            from_balance,
+            Some(DEFAULT_TEST_VAULT_FEE),
+            Some(DEFAULT_TEST_GOV_FEE)
+        );
+
+        // Set the 'fixed units' to a value slightly larger than the expected swap output
+        let fixed_units = f64_to_u256(expected_return.u * 1e18 * 1.00001).unwrap();
+
+
+
+        // Tested action: send asset
+        let response_result = env.execute_contract(
+            Addr::unchecked(SWAPPER_A),
+            vault.clone(),
+            &VolatileExecuteMsg::SendAssetFixedUnits {
+                channel_id: CHANNEL_ID.to_string(),
+                to_vault: target_vault,
+                to_account: to_account.clone(),
+                from_asset_ref: from_asset.get_asset_ref(),
+                to_asset_index: to_asset_idx,
+                amount: swap_amount,
+                min_out: U256::zero(),
+                u: fixed_units,
+                fallback_account: SWAPPER_C.to_string(),
+                underwrite_incentive_x16: 0u16,
+                calldata: Binary(vec![])
+            },
+            vec![from_asset.clone()],
+            vec![swap_amount]
+        );
+
+
+
+        // Verify the transaction fails
+        assert!(matches!(
+            response_result.err().unwrap().downcast().unwrap(),
+            ContractError::ReturnInsufficientUnits { units: err_units, fixed_units: err_fixed_units }
+                if err_units < err_fixed_units && err_fixed_units == fixed_units
+        ));
+
+    }
+
 }
