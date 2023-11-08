@@ -14,9 +14,6 @@ pub enum ContractError {
     #[error("Unauthorized")]
     Unauthorized {},
 
-    #[error("Only IBC channel version 'catalyst-v1' is supported, got {version}.")]
-    InvalidIbcChannelVersion { version: String },
-
     #[error("Payload encoding failed.")]
     PayloadEncodingError {},
 

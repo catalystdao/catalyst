@@ -257,7 +257,7 @@ fn execute_send_cross_chain_asset(
     )?;
 
     Ok(Response::new()
-        .add_attribute("action", "ibc_send")
+        .add_attribute("action", "interface-send-cross-chain-asset")
         .add_attribute("channel_id", channel_id)
         .add_attribute("data", payload.to_base64())
         .add_attribute("timeout", env.block.time.plus_seconds(TRANSACTION_TIMEOUT).seconds().to_string())
@@ -291,7 +291,7 @@ fn execute_send_cross_chain_liquidity(
     )?;
 
     Ok(Response::new()
-        .add_attribute("action", "ibc_send")
+        .add_attribute("action", "interface-send-cross-chain-liquidity")
         .add_attribute("channel_id", channel_id)
         .add_attribute("data", payload.to_base64())
         .add_attribute("timeout", env.block.time.plus_seconds(TRANSACTION_TIMEOUT).seconds().to_string())

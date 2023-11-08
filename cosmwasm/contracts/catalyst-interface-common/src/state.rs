@@ -7,7 +7,7 @@ use cw_storage_plus::{Map, Item};
 use sha3::{Keccak256, Digest};
 use std::ops::Div;
 
-use crate::{catalyst_ibc_payload::{CatalystV1SendAssetPayload, SendAssetVariablePayload, CatalystV1SendLiquidityPayload, SendLiquidityVariablePayload, CatalystEncodedAddress, CatalystCalldata, parse_calldata, CatalystV1Packet}, msg::UnderwriteIdentifierResponse, event::set_max_underwrite_duration_event};
+use crate::{catalyst_payload::{CatalystV1SendAssetPayload, SendAssetVariablePayload, CatalystV1SendLiquidityPayload, SendLiquidityVariablePayload, CatalystEncodedAddress, CatalystCalldata, parse_calldata, CatalystV1Packet}, msg::UnderwriteIdentifierResponse, event::set_max_underwrite_duration_event};
 use crate::error::ContractError;
 use crate::event::{set_owner_event, underwrite_swap_event, fulfill_underwrite_event, expire_underwrite_event};
 
@@ -100,6 +100,7 @@ pub fn setup(
     max_underwrite_duration_allowed: Option<Uint64>
 ) -> Result<VaultResponse, ContractError> {
 
+    //TODO event
     set_max_underwriting_duration_unchecked(
         &mut deps,
         max_underwrite_duration,
@@ -1840,7 +1841,7 @@ mod test_catalyst_interface_common {
     use catalyst_vault_common::{bindings::{CustomMsg, Asset}, msg::{ExecuteMsg as VaultExecuteMsg, CommonQueryMsg, AssetResponse}};
     use cosmwasm_std::{Uint128, Binary, testing::{mock_info, mock_dependencies, mock_env, MockStorage, MockApi, MockQuerier}, SubMsg, to_binary, OwnedDeps, SystemResult, ContractResult, from_binary, Empty, Reply, SubMsgResult, SubMsgResponse};
 
-    use crate::{catalyst_ibc_payload::CatalystEncodedAddress, ContractError, state::{encode_send_cross_chain_asset, encode_send_cross_chain_liquidity, handle_receive_liquidity, SET_ACK_REPLY_ID, handle_send_asset_response, handle_send_liquidity_response, handle_receive_asset, handle_reply}};
+    use crate::{catalyst_payload::CatalystEncodedAddress, ContractError, state::{encode_send_cross_chain_asset, encode_send_cross_chain_liquidity, handle_receive_liquidity, SET_ACK_REPLY_ID, handle_send_asset_response, handle_send_liquidity_response, handle_receive_asset, handle_reply}};
 
 
 

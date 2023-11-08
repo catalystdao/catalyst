@@ -747,7 +747,7 @@ pub fn send_asset(
         vault_fee
     )?;
 
-    // Build the message to send the purchased units via the IBC interface.
+    // Build the message to send the purchased units via the cross chain interface.
     let send_cross_chain_asset_msg = InterfaceExecuteMsg::<CustomMsg>::SendCrossChainAsset {
         channel_id: channel_id.clone(),
         to_vault: to_vault.clone(),
@@ -1161,7 +1161,7 @@ pub fn send_liquidity(
     // NOTE: The security limit adjustment is delayed until the swap confirmation is received to
     // prevent a router from abusing swap 'timeouts' to circumvent the security limit.
 
-    // Build the message to 'send' the liquidity via the IBC interface.
+    // Build the message to 'send' the liquidity via the cross chain interface.
     let send_cross_chain_liquidity_msg = InterfaceExecuteMsg::<CustomMsg>::SendCrossChainLiquidity {
         channel_id: channel_id.clone(),
         to_vault: to_vault.clone(),

@@ -1,6 +1,6 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{DepsMut, Env, IbcChannelOpenMsg, IbcChannelConnectMsg, IbcBasicResponse, IbcChannelCloseMsg, IbcPacketReceiveMsg, IbcReceiveResponse, IbcPacketAckMsg, IbcPacketTimeoutMsg, IbcChannel, CosmosMsg, to_binary, SubMsg, WasmMsg, ReplyOn};
+use cosmwasm_std::{DepsMut, Env, IbcChannelOpenMsg, IbcChannelConnectMsg, IbcBasicResponse, IbcChannelCloseMsg, IbcPacketReceiveMsg, IbcReceiveResponse, IbcPacketAckMsg, IbcPacketTimeoutMsg, IbcChannel, CosmosMsg, to_binary, SubMsg, WasmMsg, ReplyOn, StdError};
 
 use catalyst_interface_common::{ContractError, error::Never, state::{handle_message_reception, handle_message_response, ack_fail, ack_success, SET_ACK_REPLY_ID}, msg::ExecuteMsg, bindings::{CustomMsg, InterfaceResponse}};
 
@@ -97,9 +97,10 @@ fn validate_ibc_channel_config(
     // Check the channel version on the local side
     if channel.version != CATALYST_V1_CHANNEL_VERSION {
         return Err(
-            ContractError::InvalidIbcChannelVersion {
-                version: channel.version.clone()
-            }
+            StdError::generic_err(&format!(
+                "Only IBC channel version 'catalyst-v1' is supported, got {}.",
+                channel.version.clone()
+            )).into()
         );
     }
 
@@ -109,9 +110,10 @@ fn validate_ibc_channel_config(
     if let Some(version) = counterparty_version {
         if version != CATALYST_V1_CHANNEL_VERSION {
             return Err(
-                ContractError::InvalidIbcChannelVersion {
-                    version: version.to_string()
-                }
+                StdError::generic_err(&format!(
+                    "Only IBC channel version 'catalyst-v1' is supported, got {}.",
+                    version.to_string()
+                )).into()
             );
         }
     }
