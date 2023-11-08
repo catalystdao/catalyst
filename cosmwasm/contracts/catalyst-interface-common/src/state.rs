@@ -1495,7 +1495,7 @@ pub fn match_underwrite(
     // the next UNDERWRITE_BUFFER_BLOCKS blocks from happening (prevent accidental loss of funds).
     UnderwriteExpiry {
         expiry: Uint64::new(env.block.height)
-    }.update(deps, identifier.clone());
+    }.update(deps, identifier.clone())?;
 
     // Call the vault to release the underwrite escrow
     let release_underwrite_messsage = WasmMsg::Execute {
