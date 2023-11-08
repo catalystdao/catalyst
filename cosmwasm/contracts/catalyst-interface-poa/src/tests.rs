@@ -2,6 +2,7 @@ mod helpers;
 mod parameters;
 mod test_expire_underwrite;
 mod test_full_swap_underwrite;
+mod test_fulfill_underwrite;
 mod test_underwrite;
 
 #[cfg(feature="asset_native")]
