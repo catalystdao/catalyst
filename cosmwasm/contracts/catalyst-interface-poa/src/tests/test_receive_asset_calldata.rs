@@ -4,7 +4,7 @@ mod test_receive_asset_calldata {
     use catalyst_vault_common::bindings::Asset;
     use cosmwasm_std::{Uint128, Addr, Binary};
     use catalyst_types::{U256, u256};
-    use test_helpers::{definitions::{SETUP_MASTER, CHANNEL_ID, SWAPPER_B}, env::CustomTestEnv, contract::{mock_factory_deploy_vault, mock_set_vault_connection, mock_instantiate_calldata_target}, misc::{encode_payload_address, get_response_attribute}};
+    use test_helpers::{definitions::{SETUP_MASTER, CHANNEL_ID, SWAPPER_B}, env::CustomTestEnv, contract::{mock_factory_deploy_vault, mock_set_vault_connection, mock_instantiate_calldata_target}, misc::{encode_payload_address, get_response_attribute}, asset::CustomTestAsset};
 
     use crate::tests::{TestEnv, helpers::{mock_instantiate_interface, vault_contract_storage, encode_mock_send_asset_packet}, parameters::{TEST_VAULT_ASSET_COUNT, TEST_VAULT_BALANCES, TEST_VAULT_WEIGHTS, AMPLIFICATION}};
     use crate::msg::ExecuteMsg as InterfaceExecuteMsg;
@@ -99,14 +99,7 @@ mod test_receive_asset_calldata {
         );
     
         let observed_purchased_tokens = get_response_attribute::<Uint128>(calldata_target_event.clone(), "purchased_tokens").unwrap();
-        let queried_user_balance = env.get_app()
-            .wrap()
-            .query_balance(
-                SWAPPER_B,
-                to_asset.denom.to_string()
-            )
-            .unwrap()
-            .amount;
+        let queried_user_balance = to_asset.query_balance(env.get_app(), SWAPPER_B);
         assert_eq!(
             observed_purchased_tokens,
             queried_user_balance

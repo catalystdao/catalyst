@@ -98,7 +98,7 @@ mod test_expire_underwrite {
                 interface.clone(),
                 &InterfaceExecuteMsg::Underwrite {
                     to_vault: vault.to_string(),
-                    to_asset_ref: to_asset.alias.to_string(),
+                    to_asset_ref: to_asset.get_asset_ref(),
                     u: swap_units,
                     min_out: Uint128::zero(),
                     to_account: SWAPPER_B.to_string(),
@@ -185,7 +185,7 @@ mod test_expire_underwrite {
             interface.clone(),
             &InterfaceExecuteMsg::ExpireUnderwrite {
                 to_vault: vault.to_string(),
-                to_asset_ref: to_asset.alias.to_string(),
+                to_asset_ref: to_asset.get_asset_ref(),
                 u,
                 min_out,
                 to_account: to_account.clone(),
@@ -221,40 +221,19 @@ mod test_expire_underwrite {
 
         
         // Verify fund transfers
-        let queried_expirer_balance = env.get_app().wrap()
-            .query_balance(
-                SWAPPER_C,
-                to_asset.denom.clone()
-            )
-            .unwrap()
-            .amount;
-
+        let queried_expirer_balance = to_asset.query_balance(env.get_app(), SWAPPER_C);
         assert_eq!(
             queried_expirer_balance,
             expected_reward
         );
 
-        let queried_vault_balance = env.get_app().wrap()
-            .query_balance(
-                vault.clone(),
-                to_asset.denom.to_string()
-            )
-            .unwrap()
-            .amount;
-
+        let queried_vault_balance = to_asset.query_balance(env.get_app(), vault.clone());
         assert_eq!(
             queried_vault_balance,
             vault_initial_balances[to_asset_idx] + (interface_escrowed_funds - expected_reward)
         );
 
-        let queried_interface_balance = env.get_app().wrap()
-            .query_balance(
-                interface,
-                to_asset.denom.clone()
-            )
-            .unwrap()
-            .amount;
-
+        let queried_interface_balance = to_asset.query_balance(env.get_app(), interface);
         assert!(queried_interface_balance.is_zero());
 
         // Verify vault escrow is released
@@ -380,7 +359,7 @@ mod test_expire_underwrite {
             interface.clone(),
             &InterfaceExecuteMsg::ExpireUnderwrite {
                 to_vault: vault.to_string(),
-                to_asset_ref: to_asset.alias.to_string(),
+                to_asset_ref: to_asset.get_asset_ref(),
                 u,
                 min_out,
                 to_account: to_account.clone(),
@@ -399,7 +378,7 @@ mod test_expire_underwrite {
             interface.clone(),
             &InterfaceExecuteMsg::ExpireUnderwrite {
                 to_vault: vault.to_string(),
-                to_asset_ref: to_asset.alias.to_string(),
+                to_asset_ref: to_asset.get_asset_ref(),
                 u,
                 min_out,
                 to_account: to_account.clone(),
@@ -455,7 +434,7 @@ mod test_expire_underwrite {
             interface.clone(),
             &InterfaceExecuteMsg::ExpireUnderwrite {
                 to_vault: vault.to_string(),
-                to_asset_ref: to_asset.alias.to_string(),
+                to_asset_ref: to_asset.get_asset_ref(),
                 u,
                 min_out,
                 to_account: to_account.clone(),
@@ -510,7 +489,7 @@ mod test_expire_underwrite {
             interface.clone(),
             &InterfaceExecuteMsg::ExpireUnderwrite {
                 to_vault: vault.to_string(),
-                to_asset_ref: to_asset.alias.to_string(),
+                to_asset_ref: to_asset.get_asset_ref(),
                 u,
                 min_out,
                 to_account: to_account.clone(),
@@ -541,7 +520,7 @@ mod test_expire_underwrite {
             interface.clone(),
             &InterfaceExecuteMsg::ExpireUnderwrite {
                 to_vault: vault.to_string(),
-                to_asset_ref: to_asset.alias.to_string(),
+                to_asset_ref: to_asset.get_asset_ref(),
                 u,
                 min_out,
                 to_account: to_account.clone(),

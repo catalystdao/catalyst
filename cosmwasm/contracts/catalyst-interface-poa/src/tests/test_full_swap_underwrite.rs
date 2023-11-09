@@ -77,7 +77,7 @@ mod test_full_swap_underwrite {
             interface.clone(),
             &InterfaceExecuteMsg::Underwrite {
                 to_vault: vault.to_string(),
-                to_asset_ref: to_asset.alias.to_string(),
+                to_asset_ref: to_asset.get_asset_ref(),
                 u: swap_units,
                 min_out: Uint128::zero(),
                 to_account: SWAPPER_B.to_string(),
@@ -102,34 +102,13 @@ mod test_full_swap_underwrite {
         );
 
         // Make sure funds have been transferred
-        let queried_underwriter_balance = env.get_app()
-            .wrap()
-            .query_balance(
-                UNDERWRITER,
-                to_asset.denom.to_string()
-            )
-            .unwrap()
-            .amount;
+        let queried_underwriter_balance = to_asset.query_balance(env.get_app(), UNDERWRITER);
         assert!(queried_underwriter_balance < underwriter_provided_funds);  // The underwriter's balance won't be 0, as excess funds will have been refunded
 
-        let queried_interface_balance = env.get_app()
-            .wrap()
-            .query_balance(
-                interface.clone(),
-                to_asset.denom.to_string()
-            )
-            .unwrap()
-            .amount;
+        let queried_interface_balance = to_asset.query_balance(env.get_app(), interface.clone());
         assert!(queried_interface_balance > Uint128::zero()); // Escrowed funds (incentive + collateral)
 
-        let queried_to_account_balance = env.get_app()
-            .wrap()
-            .query_balance(
-                SWAPPER_B,
-                to_asset.denom.to_string()
-            )
-            .unwrap()
-            .amount;
+        let queried_to_account_balance = to_asset.query_balance(env.get_app(), SWAPPER_B);
         assert!(queried_to_account_balance > Uint128::zero());  // End user has been paid
 
 
@@ -171,24 +150,10 @@ mod test_full_swap_underwrite {
         );
 
         // Verify the funds have been transferred
-        let new_queried_underwriter_balance = env.get_app()
-            .wrap()
-            .query_balance(
-                UNDERWRITER,
-                to_asset.denom.to_string()
-            )
-            .unwrap()
-            .amount;
+        let new_queried_underwriter_balance = to_asset.query_balance(env.get_app(), UNDERWRITER);
         assert!(new_queried_underwriter_balance > queried_underwriter_balance);  // The underwriter has received the incentive/collateral
 
-        let new_queried_interface_balance = env.get_app()
-            .wrap()
-            .query_balance(
-                interface.clone(),
-                to_asset.denom.to_string()
-            )
-            .unwrap()
-            .amount;
+        let new_queried_interface_balance = to_asset.query_balance(env.get_app(), interface.clone());
         assert!(new_queried_interface_balance.is_zero()); // No escrowed funds left
 
     }

@@ -116,7 +116,7 @@ mod test_underwrite {
             interface.clone(),
             &InterfaceExecuteMsg::Underwrite {
                 to_vault: vault.to_string(),
-                to_asset_ref: to_asset.alias.to_string(),
+                to_asset_ref: to_asset.get_asset_ref(),
                 u: swap_units,
                 min_out: Uint128::zero(),
                 to_account: SWAPPER_B.to_string(),
@@ -136,7 +136,7 @@ mod test_underwrite {
                 interface.clone(),
                 &InterfaceCommonQueryMsg::UnderwriteIdentifier {
                     to_vault: vault.to_string(),
-                    to_asset_ref: to_asset.alias.to_string(),
+                    to_asset_ref: to_asset.get_asset_ref(),
                     u: swap_units,
                     min_out: Uint128::zero(),
                     to_account: SWAPPER_B.to_string(),
@@ -197,43 +197,19 @@ mod test_underwrite {
         let expected_user_output = observed_vault_return - expected_incentive;
         let expected_underwriter_refund = underwriter_provided_funds - (expected_user_output + expected_escrowed_funds);
 
-        let queried_interface_balance = env.get_app()
-            .wrap()
-            .query_balance(
-                interface,
-                to_asset.denom.to_string()
-            )
-            .unwrap()
-            .amount;
-
+        let queried_interface_balance = to_asset.query_balance(env.get_app(), interface);
         assert_eq!(
             queried_interface_balance,
             expected_escrowed_funds
         );
 
-        let queried_user_balance = env.get_app()
-            .wrap()
-            .query_balance(
-                SWAPPER_B,
-                to_asset.denom.to_string()
-            )
-            .unwrap()
-            .amount;
-
+        let queried_user_balance = to_asset.query_balance(env.get_app(), SWAPPER_B);
         assert_eq!(
             queried_user_balance,
             expected_user_output
         );
 
-        let queried_underwriter_balance = env.get_app()
-            .wrap()
-            .query_balance(
-                UNDERWRITER,
-                to_asset.denom.to_string()
-            )
-            .unwrap()
-            .amount;
-
+        let queried_underwriter_balance = to_asset.query_balance(env.get_app(), UNDERWRITER);
         assert_eq!(
             queried_underwriter_balance,
             expected_underwriter_refund
@@ -300,7 +276,7 @@ mod test_underwrite {
             interface.clone(),
             &InterfaceExecuteMsg::Underwrite {
                 to_vault: vault.to_string(),
-                to_asset_ref: to_asset.alias.to_string(),
+                to_asset_ref: to_asset.get_asset_ref(),
                 u: swap_units,
                 min_out,
                 to_account: SWAPPER_B.to_string(),
@@ -333,7 +309,7 @@ mod test_underwrite {
             interface.clone(),
             &InterfaceExecuteMsg::Underwrite {
                 to_vault: vault.to_string(),
-                to_asset_ref: to_asset.alias.to_string(),
+                to_asset_ref: to_asset.get_asset_ref(),
                 u: swap_units,
                 min_out,
                 to_account: SWAPPER_B.to_string(),
@@ -398,7 +374,7 @@ mod test_underwrite {
             interface.clone(),
             &InterfaceExecuteMsg::Underwrite {
                 to_vault: vault.to_string(),
-                to_asset_ref: to_asset.alias.to_string(),
+                to_asset_ref: to_asset.get_asset_ref(),
                 u: swap_units,
                 min_out: Uint128::zero(),
                 to_account: SWAPPER_B.to_string(),
@@ -421,7 +397,7 @@ mod test_underwrite {
             interface.clone(),
             &InterfaceExecuteMsg::Underwrite {
                 to_vault: vault.to_string(),
-                to_asset_ref: to_asset.alias.to_string(),
+                to_asset_ref: to_asset.get_asset_ref(),
                 u: swap_units,
                 min_out: Uint128::zero(),
                 to_account: SWAPPER_B.to_string(),
@@ -491,7 +467,7 @@ mod test_underwrite {
             interface.clone(),
             &InterfaceExecuteMsg::Underwrite {
                 to_vault: vault.to_string(),
-                to_asset_ref: to_asset.alias.to_string(),
+                to_asset_ref: to_asset.get_asset_ref(),
                 u: swap_units,
                 min_out: Uint128::zero(),
                 to_account: SWAPPER_B.to_string(),
@@ -540,7 +516,7 @@ mod test_underwrite {
             interface.clone(),
             &InterfaceExecuteMsg::Underwrite {
                 to_vault: vault.to_string(),
-                to_asset_ref: to_asset.alias.to_string(),
+                to_asset_ref: to_asset.get_asset_ref(),
                 u: swap_units,
                 min_out: Uint128::zero(),
                 to_account: SWAPPER_B.to_string(),
@@ -568,7 +544,7 @@ mod test_underwrite {
             interface.clone(),
             &InterfaceExecuteMsg::Underwrite {
                 to_vault: vault.to_string(),
-                to_asset_ref: to_asset.alias.to_string(),
+                to_asset_ref: to_asset.get_asset_ref(),
                 u: swap_units,
                 min_out: Uint128::zero(),
                 to_account: SWAPPER_B.to_string(),
@@ -596,7 +572,7 @@ mod test_underwrite {
             interface.clone(),
             &InterfaceExecuteMsg::Underwrite {
                 to_vault: vault.to_string(),
-                to_asset_ref: to_asset.alias.to_string(),
+                to_asset_ref: to_asset.get_asset_ref(),
                 u: swap_units,
                 min_out: Uint128::zero(),
                 to_account: SWAPPER_B.to_string(),
@@ -675,7 +651,7 @@ mod test_underwrite {
             interface.clone(),
             &InterfaceExecuteMsg::Underwrite {
                 to_vault: vault.to_string(),
-                to_asset_ref: to_asset.alias.to_string(),
+                to_asset_ref: to_asset.get_asset_ref(),
                 u: swap_units,
                 min_out: Uint128::zero(),
                 to_account: SWAPPER_B.to_string(),
@@ -697,14 +673,7 @@ mod test_underwrite {
         );
     
         let observed_purchased_tokens = get_response_attribute::<Uint128>(calldata_target_event.clone(), "purchased_tokens").unwrap();
-        let queried_user_balance = env.get_app()
-            .wrap()
-            .query_balance(
-                SWAPPER_B,
-                to_asset.denom.to_string()
-            )
-            .unwrap()
-            .amount;
+        let queried_user_balance = to_asset.query_balance(env.get_app(), SWAPPER_B);
         assert_eq!(
             observed_purchased_tokens,
             queried_user_balance
@@ -773,7 +742,7 @@ mod test_underwrite {
                 channel_id: CHANNEL_ID.to_string(),
                 from_vault: not_connected_from_vault.clone(),   // ! Set a non-connected vault as origin
                 to_vault: vault.to_string(),
-                to_asset_ref: to_asset.alias.to_string(),
+                to_asset_ref: to_asset.get_asset_ref(),
                 u: swap_units,
                 min_out: Uint128::zero(),
                 to_account: SWAPPER_B.to_string(),
@@ -804,7 +773,7 @@ mod test_underwrite {
                 channel_id: CHANNEL_ID.to_string(),
                 from_vault: connected_from_vault,   // ! Set a connected vault as origin
                 to_vault: vault.to_string(),
-                to_asset_ref: to_asset.alias.to_string(),
+                to_asset_ref: to_asset.get_asset_ref(),
                 u: swap_units,
                 min_out: Uint128::zero(),
                 to_account: SWAPPER_B.to_string(),

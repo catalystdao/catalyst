@@ -51,7 +51,7 @@ mod test_underwriting {
             vault.clone(),
             &VolatileExecuteMsg::UnderwriteAsset {
                 identifier: underwrite_id.clone(),
-                asset_ref: to_asset.alias.to_string(),
+                asset_ref: to_asset.get_asset_ref(),
                 u: swap_units,
                 min_out: Uint128::zero()
             },
@@ -73,7 +73,7 @@ mod test_underwriting {
         );
         assert_eq!(
             underwrite_asset_event.attributes[2].value,   // to asset ref
-            to_asset.alias.to_string()
+            to_asset.get_asset_ref()
         );
         assert_eq!(
             underwrite_asset_event.attributes[3].value,   // units
@@ -160,7 +160,7 @@ mod test_underwriting {
             vault.clone(),
             &VolatileExecuteMsg::UnderwriteAsset {
                 identifier: underwrite_id.clone(),
-                asset_ref: to_asset.alias.to_string(),
+                asset_ref: to_asset.get_asset_ref(),
                 u: swap_units,
                 min_out: Uint128::zero()
             },
@@ -176,7 +176,7 @@ mod test_underwriting {
             vault.clone(),
             &VolatileExecuteMsg::UnderwriteAsset {
                 identifier: underwrite_id.clone(),
-                asset_ref: to_asset.alias.to_string(),
+                asset_ref: to_asset.get_asset_ref(),
                 u: swap_units,
                 min_out: Uint128::zero()
             },
@@ -231,7 +231,7 @@ mod test_underwriting {
             vault.clone(),
             &VolatileExecuteMsg::UnderwriteAsset {
                 identifier: underwrite_id.clone(),
-                asset_ref: to_asset.alias.to_owned(),
+                asset_ref: to_asset.get_asset_ref(),
                 u: swap_units,
                 min_out: Uint128::zero()
             },
@@ -299,7 +299,7 @@ mod test_underwriting {
             vault.clone(),
             &VolatileExecuteMsg::UnderwriteAsset {
                 identifier: underwrite_id.clone(),
-                asset_ref: to_asset.alias.to_string(),
+                asset_ref: to_asset.get_asset_ref(),
                 u: swap_units,
                 min_out: Uint128::zero()
             },
@@ -320,7 +320,7 @@ mod test_underwriting {
                 channel_id: CHANNEL_ID.to_string(),
                 from_vault: from_vault.clone(),
                 identifier: underwrite_id.clone(),
-                asset_ref: to_asset.alias.to_string(),
+                asset_ref: to_asset.get_asset_ref(),
                 escrow_amount: observed_return,
                 recipient: UNDERWRITER.to_string()
             },
@@ -331,10 +331,7 @@ mod test_underwriting {
 
 
         // Verify the underwriter has received the escrowed assets
-        let queried_balance = env.get_app().wrap().query_balance(
-            UNDERWRITER,
-            to_asset.denom.to_owned()
-        ).unwrap().amount;
+        let queried_balance = to_asset.query_balance(env.get_app(), UNDERWRITER);
 
         assert_eq!(
             queried_balance,
@@ -422,7 +419,7 @@ mod test_underwriting {
                 channel_id: CHANNEL_ID.to_string(),
                 from_vault: from_vault.clone(),
                 identifier: underwrite_id.clone(),
-                asset_ref: to_asset.alias.to_string(),
+                asset_ref: to_asset.get_asset_ref(),
                 escrow_amount: Uint128::zero(),
                 recipient: UNDERWRITER.to_string()
             },
@@ -484,7 +481,7 @@ mod test_underwriting {
             vault.clone(),
             &VolatileExecuteMsg::UnderwriteAsset {
                 identifier: underwrite_id.clone(),
-                asset_ref: to_asset.alias.to_string(),
+                asset_ref: to_asset.get_asset_ref(),
                 u: swap_units,
                 min_out: Uint128::zero()
             },
@@ -505,7 +502,7 @@ mod test_underwriting {
                 channel_id: CHANNEL_ID.to_string(),
                 from_vault: from_vault.clone(),
                 identifier: underwrite_id.clone(),
-                asset_ref: to_asset.alias.to_string(),
+                asset_ref: to_asset.get_asset_ref(),
                 escrow_amount: observed_return,
                 recipient: UNDERWRITER.to_string()
             },
@@ -561,7 +558,7 @@ mod test_underwriting {
             vault.clone(),
             &VolatileExecuteMsg::UnderwriteAsset {
                 identifier: underwrite_id.clone(),
-                asset_ref: to_asset.alias.to_string(),
+                asset_ref: to_asset.get_asset_ref(),
                 u: swap_units,
                 min_out: Uint128::zero()
             },
@@ -579,7 +576,7 @@ mod test_underwriting {
                 channel_id: CHANNEL_ID.to_string(),
                 from_vault: from_vault.clone(),
                 identifier: underwrite_id.clone(),
-                asset_ref: to_asset.alias.to_string(),
+                asset_ref: to_asset.get_asset_ref(),
                 escrow_amount: Uint128::zero(),
                 recipient: UNDERWRITER.to_string()
             },
@@ -637,7 +634,7 @@ mod test_underwriting {
             vault.clone(),
             &VolatileExecuteMsg::UnderwriteAsset {
                 identifier: underwrite_id.clone(),
-                asset_ref: to_asset.alias.to_string(),
+                asset_ref: to_asset.get_asset_ref(),
                 u: swap_units,
                 min_out: Uint128::zero()
             },
@@ -656,7 +653,7 @@ mod test_underwriting {
             vault.clone(),
             &VolatileExecuteMsg::DeleteUnderwriteAsset {
                 identifier: underwrite_id.clone(),
-                asset_ref: to_asset.alias.to_string(),
+                asset_ref: to_asset.get_asset_ref(),
                 u: swap_units,
                 escrow_amount: observed_return
             },
@@ -732,7 +729,7 @@ mod test_underwriting {
             vault.clone(),
             &VolatileExecuteMsg::UnderwriteAsset {
                 identifier: underwrite_id.clone(),
-                asset_ref: to_asset.alias.to_string(),
+                asset_ref: to_asset.get_asset_ref(),
                 u: swap_units,
                 min_out: Uint128::zero()
             },
@@ -751,7 +748,7 @@ mod test_underwriting {
             vault.clone(),
             &VolatileExecuteMsg::DeleteUnderwriteAsset {
                 identifier: underwrite_id.clone(),
-                asset_ref: to_asset.alias.to_string(),
+                asset_ref: to_asset.get_asset_ref(),
                 u: swap_units,
                 escrow_amount: observed_return
             },

@@ -99,7 +99,7 @@ mod test_fulfill_underwrite {
                 interface.clone(),
                 &InterfaceExecuteMsg::Underwrite {
                     to_vault: vault.to_string(),
-                    to_asset_ref: to_asset.alias.to_string(),
+                    to_asset_ref: to_asset.get_asset_ref(),
                     u: swap_units,
                     min_out: Uint128::zero(),
                     to_account: SWAPPER_B.to_string(),
@@ -190,13 +190,7 @@ mod test_fulfill_underwrite {
             calldata
         );
 
-        let prior_underwriter_balance = env.get_app().wrap()
-            .query_balance(
-                UNDERWRITER,
-                to_asset.denom.to_string()
-            )
-            .unwrap()
-            .amount;
+        let prior_underwriter_balance = to_asset.query_balance(env.get_app(), UNDERWRITER);
         
 
         // Tested action: fulfill the underwrite
@@ -225,26 +219,14 @@ mod test_fulfill_underwrite {
         );
 
         // Verify funds transfers
-        let queried_underwriter_balance = env.get_app().wrap()
-            .query_balance(
-                UNDERWRITER,
-                to_asset.denom.to_string()
-            )
-            .unwrap()
-            .amount;
+        let queried_underwriter_balance = to_asset.query_balance(env.get_app(), UNDERWRITER);
 
         assert_eq!(
             queried_underwriter_balance - prior_underwriter_balance,
             interface_escrowed_funds + vault_return
         );
 
-        let queried_interface_balance = env.get_app().wrap()
-            .query_balance(
-                interface,
-                to_asset.denom.clone()
-            )
-            .unwrap()
-            .amount;
+        let queried_interface_balance = to_asset.query_balance(env.get_app(), interface);
 
         assert!(queried_interface_balance.is_zero());
 
