@@ -1070,8 +1070,8 @@ pub fn underwrite(
         &calldata
     );
 
-    // Check if another underwriter has already fulfilled the underwrite, and update the expiry to
-    // the current block.
+    // Check if the underwrite already exists or if another underwriter has already fulfilled the
+    // underwrite recently.
     let expiry = UnderwriteExpiry::get(&deps.as_ref(), identifier.clone())?.expiry;
     if (expiry + UNDERWRITE_BUFFER_BLOCKS).u64() >= env.block.height {
         return Err(ContractError::SwapRecentlyUnderwritten{});

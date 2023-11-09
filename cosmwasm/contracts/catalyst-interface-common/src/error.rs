@@ -26,9 +26,6 @@ pub enum ContractError {
     #[error("Submessage reply id unknown: {id}")]
     UnknownReplyId { id: u64 },
 
-    #[error("The swap has already been underwritten, id: {id}")]
-    SwapAlreadyUnderwritten { id: Binary },
-
     #[error("An underwrite for the given parameters does not exist, id: {id}")]
     UnderwriteDoesNotExist { id: Binary },
 
