@@ -4,7 +4,7 @@ mod test_full_swap_underwrite {
     use test_helpers::{math::f64_to_uint128, definitions::{SETUP_MASTER, CHANNEL_ID, SWAPPER_B, UNDERWRITER}, env::CustomTestEnv, asset::CustomTestAsset, contract::{mock_factory_deploy_vault, mock_set_vault_connection}, misc::encode_payload_address};
     use catalyst_vault_common::bindings::Asset;
 
-    use crate::tests::{TestEnv, helpers::{compute_expected_receive_asset, encode_mock_packet, mock_instantiate_interface, vault_contract_storage}, parameters::{TEST_VAULT_ASSET_COUNT, TEST_VAULT_BALANCES, TEST_VAULT_WEIGHTS, AMPLIFICATION}};
+    use crate::tests::{TestEnv, helpers::{compute_expected_receive_asset, encode_mock_send_asset_packet, mock_instantiate_interface, vault_contract_storage}, parameters::{TEST_VAULT_ASSET_COUNT, TEST_VAULT_BALANCES, TEST_VAULT_WEIGHTS, AMPLIFICATION}};
     use crate::msg::ExecuteMsg as InterfaceExecuteMsg;
 
 
@@ -136,7 +136,7 @@ mod test_full_swap_underwrite {
 
 
         // Tested action 2: fulfill the underwrite
-        let mock_packet = encode_mock_packet(
+        let mock_packet = encode_mock_send_asset_packet(
             from_vault,
             vault.to_string(),
             SWAPPER_B,

@@ -3,6 +3,8 @@ mod parameters;
 mod test_expire_underwrite;
 mod test_full_swap_underwrite;
 mod test_fulfill_underwrite;
+mod test_receive_asset_calldata;
+mod test_receive_liquidity_calldata;
 mod test_underwrite;
 
 #[cfg(feature="asset_native")]

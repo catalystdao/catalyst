@@ -1,4 +1,4 @@
-use catalyst_interface_common::catalyst_payload::{CatalystV1SendAssetPayload, SendAssetVariablePayload, CatalystEncodedAddress};
+use catalyst_interface_common::catalyst_payload::{CatalystV1SendAssetPayload, SendAssetVariablePayload, CatalystEncodedAddress, CatalystV1SendLiquidityPayload, SendLiquidityVariablePayload};
 use catalyst_vault_common::bindings::{CustomMsg, Asset};
 use cosmwasm_std::{Uint128, Addr, Binary, Empty};
 use cw_multi_test::{ContractWrapper, Module, Executor};
@@ -82,7 +82,7 @@ pub fn compute_expected_receive_asset(
     
 }
 
-pub fn encode_mock_packet(
+pub fn encode_mock_send_asset_packet(
     from_vault: impl ToString,
     to_vault: impl ToString,
     to_account: impl ToString,
@@ -128,3 +128,41 @@ pub fn encode_mock_packet(
     packet.try_encode().unwrap()
 }
 
+pub fn encode_mock_send_liquidity_packet(
+    from_vault: impl ToString,
+    to_vault: impl ToString,
+    to_account: impl ToString,
+    u: U256,
+    min_vault_tokens: U256,
+    min_reference_asset: U256,
+    from_amount: U256,
+    block_number: u32,
+    calldata: Binary
+) -> Binary {
+
+    let from_vault = CatalystEncodedAddress::try_encode(
+        from_vault.to_string().as_bytes()
+    ).unwrap();
+    let to_vault = CatalystEncodedAddress::try_encode(
+        to_vault.to_string().as_bytes()
+    ).unwrap();
+    let to_account = CatalystEncodedAddress::try_encode(
+        to_account.to_string().as_bytes()
+    ).unwrap();
+    
+    let packet = CatalystV1SendLiquidityPayload {
+        from_vault,
+        to_vault,
+        to_account,
+        u,
+        variable_payload: SendLiquidityVariablePayload {
+            min_vault_tokens,
+            min_reference_asset,
+            from_amount,
+            block_number,
+            calldata,
+        },
+    };
+
+    packet.try_encode().unwrap()
+}

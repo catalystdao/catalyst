@@ -7,7 +7,7 @@ mod test_fulfill_underwrite {
     use test_helpers::{math::f64_to_uint128, definitions::{SETUP_MASTER, CHANNEL_ID, SWAPPER_B, UNDERWRITER}, env::CustomTestEnv, asset::CustomTestAsset, contract::{mock_factory_deploy_vault, mock_set_vault_connection}, misc::encode_payload_address};
     use std::str::FromStr;
 
-    use crate::tests::{TestEnv, TestAsset, helpers::{compute_expected_receive_asset, mock_instantiate_interface, vault_contract_storage, encode_mock_packet}, parameters::{TEST_VAULT_ASSET_COUNT, TEST_VAULT_BALANCES, TEST_VAULT_WEIGHTS, AMPLIFICATION}};
+    use crate::tests::{TestEnv, TestAsset, helpers::{compute_expected_receive_asset, mock_instantiate_interface, vault_contract_storage, encode_mock_send_asset_packet}, parameters::{TEST_VAULT_ASSET_COUNT, TEST_VAULT_BALANCES, TEST_VAULT_WEIGHTS, AMPLIFICATION}};
     use crate::msg::ExecuteMsg as InterfaceExecuteMsg;
     
 
@@ -176,7 +176,7 @@ mod test_fulfill_underwrite {
             interface_escrowed_funds
         } = MockTestState::initialize(&mut env);
 
-        let mock_packet = encode_mock_packet(
+        let mock_packet = encode_mock_send_asset_packet(
             from_vault,
             vault.to_string(),
             SWAPPER_B,
