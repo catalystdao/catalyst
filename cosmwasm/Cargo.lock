@@ -789,7 +789,6 @@ dependencies = [
 name = "mock-vault"
 version = "0.1.0"
 dependencies = [
- "catalyst-factory",
  "catalyst-interface-common",
  "catalyst-vault-common",
  "cosmwasm-schema",
