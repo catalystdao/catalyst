@@ -102,8 +102,7 @@ pub fn setup(
     max_underwrite_duration_allowed: Option<Uint64>
 ) -> Result<InterfaceResponse, ContractError> {
 
-    //TODO event
-    set_max_underwriting_duration_unchecked(
+    let duration_event = set_max_underwriting_duration_unchecked(
         &mut deps,
         max_underwrite_duration,
         min_underwrite_duration_allowed,
@@ -114,6 +113,7 @@ pub fn setup(
 
     Ok(
         Response::new()
+            .add_event(duration_event)
             .add_event(set_owner_event)
     )
 
