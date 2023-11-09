@@ -6,7 +6,7 @@ use cw2::set_contract_version;
 use catalyst_types::U256;
 use catalyst_interface_common::{bindings::InterfaceResponse, ContractError};
 
-use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
+use crate::msg::{ExecuteMsg, InstantiateMsg};
 
 // Version information
 const CONTRACT_NAME: &str = "catalyst-interface-poa";

@@ -1,13 +1,11 @@
 use catalyst_interface_common::catalyst_payload::{CatalystV1SendAssetPayload, SendAssetVariablePayload, CatalystEncodedAddress, CatalystV1SendLiquidityPayload, SendLiquidityVariablePayload};
-use catalyst_vault_common::bindings::{CustomMsg, Asset};
+use catalyst_vault_common::bindings::CustomMsg;
 use cosmwasm_std::{Uint128, Addr, Binary, Empty};
 use cw_multi_test::{ContractWrapper, Module, Executor};
 use catalyst_types::U256;
 
-use test_helpers::{math::u256_to_f64, contract::{ExpectedReceiveAssetResult, ExpectedReceiveLiquidityResult, ExpectedReferenceAsset, mock_factory_deploy_vault, mock_set_vault_connection}, definitions::{SETUP_MASTER, CHANNEL_ID, UNDERWRITER}, env::{CustomApp, CustomTestEnv}, asset::{TestNativeAsset, CustomTestAsset}, misc::encode_payload_address};
-use crate::tests::{TestApp, TestEnv, TestAsset};
-
-use super::parameters::{TEST_VAULT_ASSET_COUNT, TEST_VAULT_BALANCES, TEST_VAULT_WEIGHTS, AMPLIFICATION};
+use test_helpers::{math::u256_to_f64, contract::ExpectedReceiveAssetResult, definitions::SETUP_MASTER, env::CustomApp};
+use crate::tests::TestApp;
 
 
 // Contracts
