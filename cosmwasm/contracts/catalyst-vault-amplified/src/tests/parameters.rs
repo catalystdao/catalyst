@@ -4,7 +4,7 @@ use cosmwasm_std::{Uint64, Uint128};
 pub const AMPLIFICATION: Uint64 = Uint64::new(900000000000000000u64);
 
 pub const DECIMALS_6: u128 = 1000000u128;
-pub const DECIMALS_18: u128 = 1000000000000000000u128;
+// pub const DECIMALS_18: u128 = 1000000000000000000u128;
 
 pub const TEST_VAULT_ASSET_COUNT: usize = 3usize;
 

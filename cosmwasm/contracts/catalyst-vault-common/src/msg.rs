@@ -1,11 +1,10 @@
-use cosmwasm_schema::cw_serde;
+use cosmwasm_schema::{cw_serde, QueryResponses};
 
 use cosmwasm_std::{Binary, Uint64, Uint128, Addr, Empty};
 use catalyst_types::U256;
 
 #[cfg(feature="asset_cw20")]
-use cw20::Expiration;
-
+use cw20::{Expiration, AllowanceResponse, TokenInfoResponse};
 
 
 /// Vault instantiation struct
@@ -117,6 +116,7 @@ pub enum ExecuteMsg<T, A=Empty> {
     /// * `amount` - The `from_asset_ref` amount sold to the vault.
     /// * `min_out` - The mininum `to_asset` output amount to get on the target vault.
     /// * `fallback_account` - The recipient of the swapped amount should the swap fail.
+    /// * `underwrite_incentive_x16` - The share of the swap return that is offered to an underwriter as incentive.
     /// * `calldata` - Arbitrary data to be executed on the target chain upon successful execution of the swap.
     SendAsset {
         channel_id: String,
@@ -127,6 +127,33 @@ pub enum ExecuteMsg<T, A=Empty> {
         amount: Uint128,
         min_out: U256,
         fallback_account: String,
+        underwrite_incentive_x16: u16,
+        calldata: Binary
+    },
+
+    /// Initiate a cross-chain asset swap specifying the amount of units to send.
+    /// * `channel_id` - The target chain identifier.
+    /// * `to_vault` - The target vault on the target chain (Catalyst encoded).
+    /// * `to_account` - The recipient of the swap on the target chain (Catalyst encoded).
+    /// * `from_asset_ref` - The source asset reference.
+    /// * `to_asset_index` - The destination asset index.
+    /// * `amount` - The `from_asset_ref` amount sold to the vault.
+    /// * `min_out` - The mininum `to_asset` output amount to get on the target vault.
+    /// * `u` - The amount of units to send.
+    /// * `fallback_account` - The recipient of the swapped amount should the swap fail.
+    /// * `underwrite_incentive_x16` - The share of the swap return that is offered to an underwriter as incentive.
+    /// * `calldata` - Arbitrary data to be executed on the target chain upon successful execution of the swap.
+    SendAssetFixedUnits {
+        channel_id: String,
+        to_vault: Binary,
+        to_account: Binary,
+        from_asset_ref: String,
+        to_asset_index: u8,
+        amount: Uint128,
+        min_out: U256,
+        u: U256,
+        fallback_account: String,
+        underwrite_incentive_x16: u16,
         calldata: Binary
     },
 
@@ -140,8 +167,6 @@ pub enum ExecuteMsg<T, A=Empty> {
     /// * `from_amount` - The `from_asset` amount sold to the source vault.
     /// * `from_asset` - The source asset reference.
     /// * `from_block_number_mod` - The block number at which the swap transaction was commited (modulo 2^32).
-    /// * `calldata_target` - The contract address to invoke upon successful execution of the swap.
-    /// * `calldata` - The data to pass to `calldata_target` upon successful execution of the swap.
     ReceiveAsset {
         channel_id: String,
         from_vault: Binary,
@@ -151,9 +176,48 @@ pub enum ExecuteMsg<T, A=Empty> {
         min_out: Uint128,
         from_amount: U256,
         from_asset: Binary,
-        from_block_number_mod: u32,
-        calldata_target: Option<String>,
-        calldata: Option<Binary>
+        from_block_number_mod: u32
+    },
+
+    /// Reserve liquidity for an incoming asset swap under the given underwrite identifier.
+    /// * `identifier` - The underwrite identifier.
+    /// * `asset_ref` - The purchased asset.
+    /// * `u` - The incoming units.
+    /// * `min_out` - The mininum output amount.
+    UnderwriteAsset {
+        identifier: Binary,
+        asset_ref: String,
+        u: U256,
+        min_out: Uint128
+    },
+
+    /// Complete an underwritten asset swap by sending the assets that had been purchased on 
+    /// underwriting to a recipient.
+    /// * `channel_id` - The source chain identifier.
+    /// * `from_vault` - The source vault on the source chain.
+    /// * `identifier` - The underwrite identifier.
+    /// * `asset_ref` - The purchased asset.
+    /// * `escrow_amount` - The purchased asset amount when underwriting.
+    /// * `recipient` - The recipient of the escrowed assets. 
+    ReleaseUnderwriteAsset {
+        channel_id: String,
+        from_vault: Binary,
+        identifier: Binary,
+        asset_ref: String,
+        escrow_amount: Uint128,
+        recipient: String
+    },
+
+    /// Undo an underwritten asset swap by releasing the reserved liquidity back into the pool.
+    /// * `identifier` - The underwrite identifier.
+    /// * `asset_ref` - The purchased asset.
+    /// * `escrow_amount` - The purchased asset amount when underwriting.
+    /// * `recipient` - The recipient of the escrowed assets.
+    DeleteUnderwriteAsset {
+        identifier: Binary,
+        asset_ref: String,
+        u: U256,
+        escrow_amount: Uint128
     },
 
     /// Initiate a cross-chain liquidity swap.
@@ -185,8 +249,6 @@ pub enum ExecuteMsg<T, A=Empty> {
     /// * `min_reference_asset` - The mininum reference asset value.
     /// * `from_amount` - The `from_asset` amount sold to the source vault.
     /// * `from_block_number_mod` - The block number at which the swap transaction was commited (modulo 2^32).
-    /// * `calldata_target` - The contract address to invoke upon successful execution of the swap.
-    /// * `calldata` - The data to pass to `calldata_target` upon successful execution of the swap.
     ReceiveLiquidity {
         channel_id: String,
         from_vault: Binary,
@@ -195,9 +257,7 @@ pub enum ExecuteMsg<T, A=Empty> {
         min_vault_tokens: Uint128,
         min_reference_asset: Uint128,
         from_amount: U256,
-        from_block_number_mod: u32,
-        calldata_target: Option<String>,
-        calldata: Option<Binary>
+        from_block_number_mod: u32
     },
 
     /// Handle the confirmation of a successful asset swap.
@@ -314,6 +374,120 @@ pub enum ExecuteMsg<T, A=Empty> {
 }
 
 
+/// Vault query messages
+/// 
+/// NOTE: This enum defines the queries that **all** vaults should support, but is not necessarilly an
+/// exhaustive collection of all the vault's possible queries, as vaults are free to implement custom
+/// queries of their own. Because of implementation limitations, each vault should define its own
+/// `QueryMsg` duplicating the queries of this list.
+/// 
+#[cw_serde]
+#[derive(QueryResponses)]
+pub enum CommonQueryMsg {
+
+
+    // Catalyst Base Queries
+    #[returns(ChainInterfaceResponse)]
+    ChainInterface {},
+    #[returns(SetupMasterResponse)]
+    SetupMaster {},
+    #[returns(FactoryResponse)]
+    Factory {},
+    #[returns(FactoryOwnerResponse)]
+    FactoryOwner {},
+
+    #[returns(VaultConnectionStateResponse)]
+    VaultConnectionState {
+        channel_id: String,
+        vault: Binary
+    },
+
+    #[returns(ReadyResponse)]
+    Ready {},
+    #[returns(OnlyLocalResponse)]
+    OnlyLocal {},
+    #[returns(AssetsResponse)]
+    Assets {},
+    #[returns(AssetResponse)]
+    Asset{
+        asset_ref: String
+    },
+    #[returns(AssetResponse)]
+    AssetByIndex{
+        asset_index: u8
+    },
+    #[returns(WeightResponse)]
+    Weight {
+        asset_ref: String
+    },
+
+    #[returns(TotalSupplyResponse)]
+    TotalSupply {},
+    #[returns(BalanceResponse)]
+    Balance {
+        address: String
+    },
+
+    #[returns(VaultFeeResponse)]
+    VaultFee {},
+    #[returns(GovernanceFeeShareResponse)]
+    GovernanceFeeShare {},
+    #[returns(FeeAdministratorResponse)]
+    FeeAdministrator {},
+
+    #[returns(CalcSendAssetResponse)]
+    CalcSendAsset {
+        from_asset_ref: String,
+        amount: Uint128
+    },
+    #[returns(CalcReceiveAssetResponse)]
+    CalcReceiveAsset {
+        to_asset_ref: String,
+        u: U256
+    },
+    #[returns(CalcLocalSwapResponse)]
+    CalcLocalSwap {
+        from_asset_ref: String,
+        to_asset_ref: String,
+        amount: Uint128
+    },
+
+    #[returns(GetLimitCapacityResponse)]
+    GetLimitCapacity {},
+
+    #[returns(TotalEscrowedAssetResponse)]
+    TotalEscrowedAsset {
+        asset_ref: String
+    },
+    #[returns(TotalEscrowedLiquidityResponse)]
+    TotalEscrowedLiquidity {},
+    #[returns(AssetEscrowResponse)]
+    AssetEscrow {
+        hash: Binary
+    },
+    #[returns(LiquidityEscrowResponse)]
+    LiquidityEscrow {
+        hash: Binary
+    },
+
+
+    // Native Asset Implementation
+    #[cfg(feature="asset_native")]
+    #[returns(VaultTokenDenomResponse)]
+    VaultTokenDenom {},
+
+
+    // CW20 Implementation
+    #[cfg(feature="asset_cw20")]
+    #[returns(TokenInfoResponse)]
+    TokenInfo {},
+    #[cfg(feature="asset_cw20")]
+    #[returns(AllowanceResponse)]
+    Allowance { owner: String, spender: String },
+
+}
+
+
 /// 'OnCatalystCall' callback message format.
 #[cw_serde]
 pub enum ReceiverExecuteMsg {
@@ -361,6 +535,11 @@ pub struct OnlyLocalResponse {
 #[cw_serde]
 pub struct AssetsResponse<A = Empty> {
     pub assets: Vec<A>
+}
+
+#[cw_serde]
+pub struct AssetResponse<A = Empty> {
+    pub asset: A
 }
 
 #[cw_serde]

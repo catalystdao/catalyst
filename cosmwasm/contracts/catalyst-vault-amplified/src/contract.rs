@@ -4,7 +4,7 @@ use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, StdResult, to_binary
 use cw2::set_contract_version;
 use catalyst_vault_common::ContractError;
 use catalyst_vault_common::state::{
-    setup, finish_setup, set_fee_administrator, set_vault_fee, set_governance_fee_share, set_connection, query_chain_interface, query_setup_master, query_ready, query_only_local, query_assets, query_weight, query_vault_fee, query_governance_fee_share, query_fee_administrator, query_total_escrowed_liquidity, query_total_escrowed_asset, query_asset_escrow, query_liquidity_escrow, query_vault_connection_state, query_factory, query_factory_owner, on_send_liquidity_success, query_total_supply, query_balance
+    setup, finish_setup, set_fee_administrator, set_vault_fee, set_governance_fee_share, set_connection, query_chain_interface, query_setup_master, query_ready, query_only_local, query_assets, query_weight, query_vault_fee, query_governance_fee_share, query_fee_administrator, query_total_escrowed_liquidity, query_total_escrowed_asset, query_asset_escrow, query_liquidity_escrow, query_vault_connection_state, query_factory, query_factory_owner, on_send_liquidity_success, query_total_supply, query_balance, query_asset, query_asset_by_index
 };
 use catalyst_vault_common::bindings::{VaultResponse, VaultAssets, VaultAssetsTrait};
 
@@ -24,7 +24,7 @@ use catalyst_vault_common::bindings::IntoVaultResponse;
 
 use crate::msg::{AmplifiedExecuteMsg, InstantiateMsg, QueryMsg, AmplifiedExecuteExtension};
 use crate::state::{
-    initialize_swap_curves, deposit_mixed, withdraw_all, withdraw_mixed, local_swap, send_asset, receive_asset, send_liquidity, receive_liquidity, query_calc_send_asset, query_calc_receive_asset, query_calc_local_swap, query_get_limit_capacity, on_send_asset_success_amplified, on_send_asset_failure_amplified, on_send_liquidity_failure_amplified, set_amplification, query_target_amplification, query_amplification_update_finish_timestamp, query_balance_0, query_amplification, query_unit_tracker, update_max_limit_capacity
+    initialize_swap_curves, deposit_mixed, withdraw_all, withdraw_mixed, local_swap, send_asset, receive_asset, send_liquidity, receive_liquidity, query_calc_send_asset, query_calc_receive_asset, query_calc_local_swap, query_get_limit_capacity, on_send_asset_success_amplified, on_send_asset_failure_amplified, on_send_liquidity_failure_amplified, set_amplification, query_target_amplification, query_amplification_update_finish_timestamp, query_balance_0, query_amplification, query_unit_tracker, update_max_limit_capacity, underwrite_asset, release_underwrite_asset, delete_underwrite_asset
 };
 
 // Version information
@@ -198,6 +198,7 @@ pub fn execute(
             amount,
             min_out,
             fallback_account,
+            underwrite_incentive_x16,
             calldata
         } => {
             receive_no_assets = false;
@@ -212,7 +213,41 @@ pub fn execute(
                 to_asset_index,
                 amount,
                 min_out,
+                None,
                 fallback_account,
+                underwrite_incentive_x16,
+                calldata
+            )
+        },
+
+        AmplifiedExecuteMsg::SendAssetFixedUnits {
+            channel_id,
+            to_vault,
+            to_account,
+            from_asset_ref,
+            to_asset_index,
+            amount,
+            min_out,
+            u,
+            fallback_account,
+            underwrite_incentive_x16,
+            calldata
+        } => {
+            receive_no_assets = false;
+            send_asset(
+                &mut deps,
+                env,
+                info.clone(),
+                channel_id,
+                to_vault,
+                to_account,
+                from_asset_ref,
+                to_asset_index,
+                amount,
+                min_out,
+                Some(u),
+                fallback_account,
+                underwrite_incentive_x16,
                 calldata
             )
         },
@@ -226,9 +261,7 @@ pub fn execute(
             min_out,
             from_amount,
             from_asset,
-            from_block_number_mod,
-            calldata_target,
-            calldata
+            from_block_number_mod
         } => receive_asset(
             &mut deps,
             env,
@@ -241,9 +274,56 @@ pub fn execute(
             min_out,
             from_amount,
             from_asset,
-            from_block_number_mod,
-            calldata_target,
-            calldata
+            from_block_number_mod
+        ),
+
+        AmplifiedExecuteMsg::UnderwriteAsset {
+            identifier,
+            asset_ref,
+            u,
+            min_out
+        } => underwrite_asset(
+            &mut deps,
+            env,
+            info.clone(),
+            identifier,
+            asset_ref,
+            u,
+            min_out
+        ),
+
+        AmplifiedExecuteMsg::ReleaseUnderwriteAsset {
+            channel_id,
+            from_vault,
+            identifier,
+            asset_ref,
+            escrow_amount,
+            recipient
+        } => release_underwrite_asset(
+            &mut deps,
+            env,
+            info.clone(),
+            channel_id,
+            from_vault,
+            identifier,
+            asset_ref,
+            escrow_amount,
+            recipient
+        ),
+
+        AmplifiedExecuteMsg::DeleteUnderwriteAsset {
+            identifier,
+            asset_ref,
+            u,
+            escrow_amount
+        } => delete_underwrite_asset(
+            &mut deps,
+            env,
+            info.clone(),
+            identifier,
+            asset_ref,
+            u,
+            escrow_amount
         ),
 
         AmplifiedExecuteMsg::SendLiquidity {
@@ -276,10 +356,8 @@ pub fn execute(
             u,
             min_vault_tokens,
             min_reference_asset,
-            calldata_target,
             from_amount,
-            from_block_number_mod,
-            calldata
+            from_block_number_mod
         } => receive_liquidity(
             &mut deps,
             env,
@@ -291,9 +369,7 @@ pub fn execute(
             min_vault_tokens,
             min_reference_asset,
             from_amount,
-            from_block_number_mod,
-            calldata_target,
-            calldata
+            from_block_number_mod
         ),
 
         AmplifiedExecuteMsg::OnSendAssetSuccess {
@@ -499,6 +575,12 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::Ready{} => to_binary(&query_ready(deps)?),
         QueryMsg::OnlyLocal{} => to_binary(&query_only_local(deps)?),
         QueryMsg::Assets {} => to_binary(&query_assets(deps)?),
+        QueryMsg::Asset {
+            asset_ref
+        } => to_binary(&query_asset(deps, asset_ref)?),
+        QueryMsg::AssetByIndex {
+            asset_index
+        } => to_binary(&query_asset_by_index(deps, asset_index)?),
         QueryMsg::Weight {
             asset_ref
         } => to_binary(&query_weight(deps, asset_ref)?),

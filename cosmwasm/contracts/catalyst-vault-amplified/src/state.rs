@@ -1,12 +1,12 @@
 use cosmwasm_std::{Uint128, DepsMut, Env, MessageInfo, StdResult, CosmosMsg, to_binary, Deps, Binary, Uint64, Timestamp};
-use cw_storage_plus::Item;
-use catalyst_ibc_interface::msg::ExecuteMsg as InterfaceExecuteMsg;
+use cw_storage_plus::{Item, Map};
+use catalyst_interface_common::msg::ExecuteMsg as InterfaceExecuteMsg;
 use catalyst_types::{U256, I256, u256};
 use catalyst_vault_common::{
     ContractError,
-    event::{local_swap_event, send_asset_event, receive_asset_event, send_liquidity_event, receive_liquidity_event, deposit_event, withdraw_event},
+    event::{local_swap_event, send_asset_event, receive_asset_event, send_liquidity_event, receive_liquidity_event, deposit_event, withdraw_event, underwrite_asset_event},
     msg::{CalcSendAssetResponse, CalcReceiveAssetResponse, CalcLocalSwapResponse, GetLimitCapacityResponse}, 
-    state::{FACTORY, MAX_ASSETS, WEIGHTS, INITIAL_MINT_AMOUNT, VAULT_FEE, MAX_LIMIT_CAPACITY, USED_LIMIT_CAPACITY, CHAIN_INTERFACE, TOTAL_ESCROWED_LIQUIDITY, TOTAL_ESCROWED_ASSETS, is_connected, update_limit_capacity, collect_governance_fee_message, compute_send_asset_hash, compute_send_liquidity_hash, create_asset_escrow, create_liquidity_escrow, on_send_asset_success, get_limit_capacity, on_send_asset_failure, on_send_liquidity_failure, factory_owner, initialize_escrow_totals, initialize_limit_capacity, create_on_catalyst_call_msg}, bindings::{Asset, AssetTrait, VaultAssets, VaultAssetsTrait, VaultToken, VaultTokenTrait, VaultResponse, IntoCosmosCustomMsg, CustomMsg}
+    state::{FACTORY, MAX_ASSETS, WEIGHTS, INITIAL_MINT_AMOUNT, VAULT_FEE, MAX_LIMIT_CAPACITY, USED_LIMIT_CAPACITY, CHAIN_INTERFACE, TOTAL_ESCROWED_LIQUIDITY, TOTAL_ESCROWED_ASSETS, is_connected, update_limit_capacity, collect_governance_fee_message, compute_send_asset_hash, compute_send_liquidity_hash, create_asset_escrow, create_liquidity_escrow, on_send_asset_success, get_limit_capacity, on_send_asset_failure, on_send_liquidity_failure, factory_owner, initialize_escrow_totals, initialize_limit_capacity, create_on_catalyst_call_msg, create_underwrite_escrow, release_underwrite_escrow}, bindings::{Asset, AssetTrait, VaultAssets, VaultAssetsTrait, VaultToken, VaultTokenTrait, VaultResponse, IntoCosmosCustomMsg, CustomMsg}
 };
 use fixed_point_math::{self, WAD, WADWAD, mul_wad_down, pow_wad, div_wad_up, div_wad_down, mul_wad_up};
 use std::ops::Div;
@@ -24,6 +24,8 @@ pub const UNIT_TRACKER  : Item<I256> = Item::new("catalyst-vault-amplified-unit-
 
 const SMALL_SWAP_RATIO  : Uint128 = Uint128::new(1000000000000u128);   // 1e12
 const SMALL_SWAP_RETURN : U256 = u256!("950000000000000000");          // 0.95 * WAD
+
+pub const TOTAL_UNDERWRITTEN_ESCROWED_ASSETS: Map<&str, Uint128> = Map::new("catalyst-vault-amplified-underwritten-escrowed-assets");
 
 // Amplification adjustment storage variables and constants
 pub const TARGET_ONE_MINUS_AMP: Item<I256> = Item::new("catalyst-vault-amplified-target-one-minus-amp");
@@ -132,7 +134,8 @@ pub fn initialize_swap_curves(
         })?;
 
     // Initialize the escrows
-    initialize_escrow_totals(deps, asset_refs)?;
+    initialize_escrow_totals(deps, asset_refs.clone())?;
+    initialize_underwriting_escrow_totals(deps, asset_refs)?;
 
     // Initialize the security limit
     // The maximum limit is derived from the sum of the of the weight-asset products.
@@ -180,6 +183,26 @@ pub fn initialize_swap_curves(
                 )
             )
     )
+}
+
+
+/// Initialize the underwriting escrow totals storage variables.
+/// 
+/// # Arguments:
+/// * `assets_refs` - The vault assets references.
+/// 
+pub fn initialize_underwriting_escrow_totals(
+    deps: &mut DepsMut,
+    assets_refs: Vec<&str>
+) -> Result<(), ContractError> {
+
+    assets_refs
+        .iter()
+        .try_for_each(|asset_ref| {
+            TOTAL_UNDERWRITTEN_ESCROWED_ASSETS.save(deps.storage, asset_ref, &Uint128::zero())
+        })?;
+
+    Ok(())
 }
 
 
@@ -252,13 +275,27 @@ pub fn deposit_mixed(
                 weighted_asset_balance_ampped = I256::zero();
             }
             else {
+                // Compute 'weighted_asset_balance_ampped_sum' taking into account the underwritten
+                // asset escrows for the later 'balance0' calculation
+                let escrowed_underwrite_balance = TOTAL_UNDERWRITTEN_ESCROWED_ASSETS.load(
+                    deps.storage,
+                    asset.get_asset_ref()
+                )?;
+                let weighted_asset_balance_ampped_adjusted = pow_wad(
+                    weighted_asset_balance
+                        .checked_sub(U256::from(escrowed_underwrite_balance).wrapping_mul(weight))? // 'wrapping_mul' is safe as U256.max >= Uint128.max * Uint128.max
+                        .checked_mul(WAD)?
+                        .as_i256(),     // If casting overflows to a negative number, 'pow_wad' will fail
+                    one_minus_amp
+                )?;
+                weighted_asset_balance_ampped_sum = weighted_asset_balance_ampped_sum.checked_add(weighted_asset_balance_ampped_adjusted)?;
+
+
                 weighted_asset_balance_ampped = pow_wad(
                     weighted_asset_balance.checked_mul(WAD)?
                         .as_i256(),     // If casting overflows to a negative number, 'pow_wad' will fail
                     one_minus_amp
                 )?;
-
-                weighted_asset_balance_ampped_sum = weighted_asset_balance_ampped_sum.checked_add(weighted_asset_balance_ampped)?;
             }
 
             // Stop if the user provides no tokens for the specific asset (save gas)
@@ -475,15 +512,22 @@ pub fn withdraw_all(
 
                 let weighted_asset_balance = U256::from(vault_asset_balance)
                     .wrapping_mul((*weight).into());           // 'wrapping_mul' is safe as U256.max >= Uint128.max * Uint128.max
-    
-                let weighted_asset_balance_ampped = pow_wad(
-                    weighted_asset_balance.checked_mul(WAD)?
+
+                // Compute 'weighted_asset_balance_ampped_sum' taking into account the underwritten
+                // asset escrows for the later 'balance0' calculation
+                let escrowed_underwrite_balance = TOTAL_UNDERWRITTEN_ESCROWED_ASSETS.load(
+                    deps.storage,
+                    asset.get_asset_ref()
+                )?;
+                let weighted_asset_balance_ampped_adjusted = pow_wad(
+                    weighted_asset_balance
+                        .checked_sub(U256::from(escrowed_underwrite_balance).wrapping_mul((*weight).into()))?  // 'wrapping_mul' is safe as U256.max >= Uint128.max * Uint128.max
+                        .checked_mul(WAD)?
                         .as_i256(), // If casting overflows to a negative number 'pow_wad' will fail
                     one_minus_amp
                 )?;
-
                 weighted_asset_balance_ampped_sum = weighted_asset_balance_ampped_sum
-                    .checked_add(weighted_asset_balance_ampped)?;
+                    .checked_add(weighted_asset_balance_ampped_adjusted)?;
 
                 let escrowed_asset_balance = TOTAL_ESCROWED_ASSETS.load(deps.storage, asset.get_asset_ref())?;
 
@@ -703,17 +747,25 @@ pub fn withdraw_mixed(
 
             if !vault_asset_balance.is_zero() {
 
-                let weighted_asset_balance = U256::from(vault_asset_balance)
+                // Compute 'weighted_asset_balance_ampped_sum' taking into account the underwritten
+                // asset escrows for the later 'balance0' calculation
+                let escrowed_underwrite_balance = TOTAL_UNDERWRITTEN_ESCROWED_ASSETS.load(
+                    deps.storage,
+                    asset.get_asset_ref()
+                )?;
+
+                let weighted_asset_balance_adjusted = U256::from(vault_asset_balance)
+                    .checked_sub(escrowed_underwrite_balance.into())?
                     .wrapping_mul((*weight).into());     // 'wrapping_mul' is safe as U256.max >= Uint128.max * Uint128.max
     
-                let weighted_asset_balance_ampped = pow_wad(
-                    weighted_asset_balance.checked_mul(WAD)?
+                let weighted_asset_balance_ampped_adjusted = pow_wad(
+                    weighted_asset_balance_adjusted.checked_mul(WAD)?
                         .as_i256(), // If casting overflows to a negative number 'pow_wad' will fail
                     one_minus_amp
                 )?;
 
                 weighted_asset_balance_ampped_sum = weighted_asset_balance_ampped_sum
-                    .checked_add(weighted_asset_balance_ampped)?;
+                    .checked_add(weighted_asset_balance_ampped_adjusted)?;
 
                 Ok(
                     vault_asset_balance.checked_sub(
@@ -995,7 +1047,9 @@ pub fn local_swap(
 /// * `to_asset_index` - The destination asset index.
 /// * `amount` - The `from_asset_ref` amount sold to the vault.
 /// * `min_out` - The mininum `to_asset` output amount to get on the target vault.
+/// * `fixed_units` - The amount of units to send.
 /// * `fallback_account` - The recipient of the swapped amount should the swap fail.
+/// * `underwrite_incentive_x16` - The share of the swap return that is offered to an underwriter as incentive.
 /// * `calldata` - Arbitrary data to be executed on the target chain upon successful execution of the swap.
 /// 
 pub fn send_asset(
@@ -1009,7 +1063,9 @@ pub fn send_asset(
     to_asset_index: u8,
     amount: Uint128,
     min_out: U256,
+    fixed_units: Option<U256>,
     fallback_account: String,
+    underwrite_incentive_x16: u16,
     calldata: Binary
 ) -> Result<VaultResponse, ContractError> {
 
@@ -1029,13 +1085,24 @@ pub fn send_asset(
 
     // Calculate the units bought.
     let from_asset = Asset::from_asset_ref(&deps.as_ref(), &from_asset_ref)?;
-    let u = calc_send_asset(
+    let mut u = calc_send_asset(
         &deps.as_ref(),
         &env,
         Some(&info),
         &from_asset,
         effective_swap_amount
     )?;
+
+    if let Some(fixed_units) = fixed_units {
+        if u < fixed_units {
+            return Err(
+                ContractError::ReturnInsufficientUnits {
+                    units: u, fixed_units
+                }
+            );
+        }
+        u = fixed_units;
+    }
 
     // Update the 'unit_tracker' for the 'balance0' calculations.
     UNIT_TRACKER.update(
@@ -1082,8 +1149,8 @@ pub fn send_asset(
         vault_fee
     )?;
 
-    // Build the message to send the purchased units via the IBC interface.
-    let send_cross_chain_asset_msg = InterfaceExecuteMsg::SendCrossChainAsset {
+    // Build the message to send the purchased units via the cross chain interface.
+    let send_cross_chain_asset_msg = InterfaceExecuteMsg::<CustomMsg>::SendCrossChainAsset {
         channel_id: channel_id.clone(),
         to_vault: to_vault.clone(),
         to_account: to_account.clone(),
@@ -1092,6 +1159,7 @@ pub fn send_asset(
         min_out,
         from_amount: effective_swap_amount,
         from_asset: from_asset.get_asset_ref().to_string(),
+        underwrite_incentive_x16,
         block_number,
         calldata
     };
@@ -1129,6 +1197,7 @@ pub fn send_asset(
                 amount,
                 min_out,
                 u,
+                underwrite_incentive_x16,
                 vault_fee
             )
         )
@@ -1136,59 +1205,26 @@ pub fn send_asset(
 }
 
 
-/// Receive a cross-chain asset swap.
-/// 
-/// **NOTE**: Only the chain interface may invoke this function.
+/// Update the vault state on `receive asset`.
 /// 
 /// # Arguments:
-/// * `channel_id` - The source chain identifier.
-/// * `from_vault` - The source vault on the source chain.
-/// * `to_asset_index` - The index of the purchased asset.
-/// * `to_account` - The recipient of the swap.
+/// * `to_asset` - The destination asset.
 /// * `u` - The incoming units.
 /// * `min_out` - The mininum output amount.
-/// * `from_amount` - The `from_asset` amount sold to the source vault.
-/// * `from_asset` - The source asset.
-/// * `from_block_number_mod` - The block number at which the swap transaction was commited (modulo 2^32).
-/// * `calldata_target` - The contract address to invoke upon successful execution of the swap.
-/// * `calldata` - The data to pass to `calldata_target` upon successful execution of the swap.
 /// 
-pub fn receive_asset(
+fn handle_receive_asset(
     deps: &mut DepsMut,
     env: Env,
     info: MessageInfo,
-    channel_id: String,
-    from_vault: Binary,
-    to_asset_index: u8,
-    to_account: String,
+    to_asset: &Asset,
     u: U256,
-    min_out: Uint128,
-    from_amount: U256,
-    from_asset: Binary,
-    from_block_number_mod: u32,
-    calldata_target: Option<String>,
-    calldata: Option<Binary>
-) -> Result<VaultResponse, ContractError> {
-
-    // Only allow the 'chain_interface' to invoke this function.
-    if Some(info.sender.clone()) != CHAIN_INTERFACE.load(deps.storage)? {
-        return Err(ContractError::Unauthorized {});
-    }
-
-    // Only allow connected vaults.
-    if !is_connected(&deps.as_ref(), &channel_id, from_vault.clone()) {
-        return Err(ContractError::VaultNotConnected { channel_id, vault: from_vault })
-    }
+    min_out: Uint128
+) -> Result<Uint128, ContractError> {
 
     update_amplification(deps, env.block.time)?;
 
     // Calculate the swap return.
     // NOTE: no fee is taken here, the fee is always taken on the sending side.
-    let to_asset_ref = VaultAssets::load_refs(&deps.as_ref())?
-        .get(to_asset_index as usize)
-        .ok_or(ContractError::AssetNotFound {})?
-        .clone();
-    let to_asset = Asset::from_asset_ref(&deps.as_ref(), &to_asset_ref)?;
     let out = calc_receive_asset(&deps.as_ref(), &env, Some(&info), &to_asset, u)?;
 
     if min_out > out {
@@ -1223,18 +1259,67 @@ pub fn receive_asset(
         }
     )?;
 
+    Ok(out)
+}
+
+/// Receive a cross-chain asset swap.
+/// 
+/// **NOTE**: Only the chain interface may invoke this function.
+/// 
+/// # Arguments:
+/// * `channel_id` - The source chain identifier.
+/// * `from_vault` - The source vault on the source chain.
+/// * `to_asset_index` - The index of the purchased asset.
+/// * `to_account` - The recipient of the swap.
+/// * `u` - The incoming units.
+/// * `min_out` - The mininum output amount.
+/// * `from_amount` - The `from_asset` amount sold to the source vault.
+/// * `from_asset` - The source asset.
+/// * `from_block_number_mod` - The block number at which the swap transaction was commited (modulo 2^32).
+/// 
+pub fn receive_asset(
+    deps: &mut DepsMut,
+    env: Env,
+    info: MessageInfo,
+    channel_id: String,
+    from_vault: Binary,
+    to_asset_index: u8,
+    to_account: String,
+    u: U256,
+    min_out: Uint128,
+    from_amount: U256,
+    from_asset: Binary,
+    from_block_number_mod: u32
+) -> Result<VaultResponse, ContractError> {
+
+    // Only allow the 'chain_interface' to invoke this function.
+    if Some(info.sender.clone()) != CHAIN_INTERFACE.load(deps.storage)? {
+        return Err(ContractError::Unauthorized {});
+    }
+
+    // Only allow connected vaults.
+    if !is_connected(&deps.as_ref(), &channel_id, from_vault.clone()) {
+        return Err(ContractError::VaultNotConnected { channel_id, vault: from_vault })
+    }
+
+    // Update the vault state and calculate the swap return.
+    let to_asset_ref = VaultAssets::load_refs(&deps.as_ref())?
+        .get(to_asset_index as usize)
+        .ok_or(ContractError::AssetNotFound {})?
+        .clone();
+    let to_asset = Asset::from_asset_ref(&deps.as_ref(), &to_asset_ref)?;
+
+    let out = handle_receive_asset(
+        deps,
+        env.clone(),
+        info,
+        &to_asset,
+        u,
+        min_out
+    )?;
+
     // Handle asset transfer from the vault to the swapper
     let send_asset_msg = to_asset.send_asset(&env, out, to_account.clone())?;
-
-    // Build the calldata message.
-    let calldata_message = match calldata_target {
-        Some(target) => Some(create_on_catalyst_call_msg(
-            target,
-            out,
-            calldata.unwrap_or_default()
-        )?),
-        None => None
-    };
 
     // Build and send the response.
     let mut response = VaultResponse::new()
@@ -1242,10 +1327,6 @@ pub fn receive_asset(
 
     if let Some(msg) = send_asset_msg {
         response = response.add_message(msg.into_cosmos_vault_msg());
-    }
-
-    if let Some(msg) = calldata_message {
-        response = response.add_message(msg);
     }
 
     Ok(response
@@ -1263,6 +1344,217 @@ pub fn receive_asset(
             )
         )
     )
+}
+
+
+/// Reserve liquidity for an incoming asset swap under the given underwrite identifier.
+/// 
+/// **NOTE**: Only the chain interface may invoke this function.
+/// 
+/// # Arguments:
+/// * `identifier` - The underwrite identifier.
+/// * `asset_ref` - The purchased asset.
+/// * `u` - The incoming units.
+/// * `min_out` - The mininum output amount.
+/// 
+pub fn underwrite_asset(
+    deps: &mut DepsMut,
+    env: Env,
+    info: MessageInfo,
+    identifier: Binary,
+    to_asset_ref: String,
+    u: U256,
+    min_out: Uint128
+) -> Result<VaultResponse, ContractError> {
+
+    // Only allow the 'chain_interface' to invoke this function.
+    if Some(info.sender.clone()) != CHAIN_INTERFACE.load(deps.storage)? {
+        return Err(ContractError::Unauthorized {});
+    }
+
+    // NOTE: `handle_receive_asset` will fail if `u` cannot be converted to I256.
+
+    let to_asset = Asset::from_asset_ref(&deps.as_ref(), &to_asset_ref)?;
+    let swap_return = handle_receive_asset(
+        deps,
+        env,
+        info,
+        &to_asset,
+        u,
+        min_out
+    )?;
+
+    create_underwrite_escrow(
+        deps,
+        identifier.to_vec(),
+        swap_return,
+        &to_asset_ref
+    )?;
+
+    // ! Keep track of the underwritten escrowed assets to be able to accurately calculate the
+    // the vault's `balance0`. This is required as units have been 'received', but no assets 
+    // have left the vault.
+    TOTAL_UNDERWRITTEN_ESCROWED_ASSETS.update(
+        deps.storage,
+        &to_asset_ref,
+        |amount| -> StdResult<_> {
+            amount
+                .unwrap()   // unwrap safe: 'escrow total' variable initialized on 'setup()'
+                .checked_add(swap_return)
+                .map_err(|err| err.into())
+        }
+    )?;
+    
+    Ok(
+        VaultResponse::new()
+            .set_data(to_binary(&swap_return)?)
+            .add_event(
+                underwrite_asset_event(
+                    identifier,
+                    to_asset_ref,
+                    u,
+                    swap_return
+                )
+            )
+    )
+}
+
+
+/// Complete an underwritten asset swap by sending the assets that had been purchased on 
+/// underwriting to a recipient.
+/// 
+/// **NOTE**: Only the chain interface may invoke this function.
+/// 
+/// **NOTE**: This function requires an active connection with the source vault.
+/// 
+/// # Arguments:
+/// * `channel_id` - The source chain identifier.
+/// * `from_vault` - The source vault on the source chain.
+/// * `identifier` - The underwrite identifier.
+/// * `asset_ref` - The purchased asset.
+/// * `escrow_amount` - The purchased asset amount when underwriting.
+/// * `recipient` - The recipient of the escrowed assets.
+/// 
+pub fn release_underwrite_asset(
+    deps: &mut DepsMut,
+    env: Env,
+    info: MessageInfo,
+    channel_id: String,
+    from_vault: Binary,
+    identifier: Binary,
+    to_asset_ref: String,
+    escrow_amount: Uint128,
+    recipient: String
+) -> Result<VaultResponse, ContractError> {
+
+    // Only allow the 'chain_interface' to invoke this function.
+    if Some(info.sender.clone()) != CHAIN_INTERFACE.load(deps.storage)? {
+        return Err(ContractError::Unauthorized {});
+    }
+
+    // Only allow connected vaults.
+    if !is_connected(&deps.as_ref(), &channel_id, from_vault.clone()) {
+        return Err(ContractError::VaultNotConnected { channel_id, vault: from_vault })
+    }
+
+    release_underwrite_escrow(
+        deps,
+        identifier.to_vec(),
+        escrow_amount,
+        &to_asset_ref
+    )?;
+
+    // Create the message to send the escrowed amount to the recipient
+    let to_asset = Asset::from_asset_ref(&deps.as_ref(), &to_asset_ref)?;
+    let send_asset_msg = to_asset.send_asset(
+        &env,
+        escrow_amount,
+        recipient
+    )?;
+
+    // ! Keep track of the underwritten escrowed assets to be able to accurately calculate the
+    // the vault's `balance0`.
+    TOTAL_UNDERWRITTEN_ESCROWED_ASSETS.update(
+        deps.storage,
+        &to_asset_ref,
+        |amount| -> StdResult<_> {
+            amount
+                .unwrap()   // unwrap safe: 'escrow total' variable initialized on 'setup()'
+                .checked_sub(escrow_amount)
+                .map_err(|err| err.into())
+        }
+    )?;
+
+    let mut response = VaultResponse::new();
+
+    if let Some(msg) = send_asset_msg {
+        response = response.add_message(msg.into_cosmos_vault_msg());
+    }
+
+    Ok(response)
+}
+
+
+/// Undo an underwritten asset swap by releasing the reserved liquidity back into the pool.
+/// 
+/// **NOTE**: Only the chain interface may invoke this function.
+/// 
+/// # Arguments:
+/// * `identifier` - The underwrite identifier.
+/// * `asset_ref` - The purchased asset.
+/// * `escrow_amount` - The purchased asset amount when underwriting.
+/// * `recipient` - The recipient of the escrowed assets.
+/// 
+pub fn delete_underwrite_asset(
+    deps: &mut DepsMut,
+    _env: Env,
+    info: MessageInfo,
+    identifier: Binary,
+    to_asset_ref: String,
+    u: U256,
+    escrow_amount: Uint128
+) -> Result<VaultResponse, ContractError> {
+
+    // Only allow the 'chain_interface' to invoke this function.
+    if Some(info.sender.clone()) != CHAIN_INTERFACE.load(deps.storage)? {
+        return Err(ContractError::Unauthorized {});
+    }
+
+    release_underwrite_escrow(
+        deps,
+        identifier.to_vec(),
+        escrow_amount,
+        &to_asset_ref
+    )?;
+
+    // Do **not** send the escrowed amount to the recipient
+
+    // ! Correct the unit-tracker, as it was updated according to the 'received' units on
+    // `underwrite_asset` (on its `handle_receive_asset` call), and now the 'underwrite' is being
+    // reversed.
+    UNIT_TRACKER.update(
+        deps.storage,
+        |unit_tracker| -> StdResult<_> {
+            unit_tracker
+            .checked_add(u.try_into()?)
+            .map_err(|err| err.into())
+        }
+    )?;
+
+    // ! Keep track of the 'underwritten' escrowed assets to be able to accurately calculate the
+    // the vault's `balance0`.
+    TOTAL_UNDERWRITTEN_ESCROWED_ASSETS.update(
+        deps.storage,
+        &to_asset_ref,
+        |amount| -> StdResult<_> {
+            amount
+                .unwrap()   // unwrap safe: 'escrow total' variable initialized on 'setup()'
+                .checked_sub(escrow_amount)
+                .map_err(|err| err.into())
+        }
+    )?;
+
+    Ok(VaultResponse::new())
 }
 
 
@@ -1378,8 +1670,8 @@ pub fn send_liquidity(
     // NOTE: The security limit adjustment is delayed until the swap confirmation is received to
     // prevent a router from abusing swap 'timeouts' to circumvent the security limit.
 
-    // Build the message to 'send' the liquidity via the IBC interface.
-    let send_cross_chain_liquidity_msg = InterfaceExecuteMsg::SendCrossChainLiquidity {
+    // Build the message to 'send' the liquidity via the cross chain interface.
+    let send_cross_chain_liquidity_msg = InterfaceExecuteMsg::<CustomMsg>::SendCrossChainLiquidity {
         channel_id: channel_id.clone(),
         to_vault: to_vault.clone(),
         to_account: to_account.clone(),
@@ -1441,8 +1733,6 @@ pub fn send_liquidity(
 /// * `min_reference_asset` - The mininum reference asset value.
 /// * `from_amount` - The liquidity amount sold to the source vault.
 /// * `from_block_number_mod` - The block number at which the swap transaction was commited (modulo 2^32).
-/// * `calldata_target` - The contract address to invoke upon successful execution of the swap.
-/// * `calldata` - The data to pass to `calldata_target` upon successful execution of the swap.
 /// 
 pub fn receive_liquidity(
     deps: &mut DepsMut,
@@ -1455,9 +1745,7 @@ pub fn receive_liquidity(
     min_vault_tokens: Uint128,
     min_reference_asset: Uint128,
     from_amount: U256,
-    from_block_number_mod: u32,
-    calldata_target: Option<String>,
-    calldata: Option<Binary>
+    from_block_number_mod: u32
 ) -> Result<VaultResponse, ContractError> {
 
     // Only allow the 'chain_interface' to invoke this function.
@@ -1589,26 +1877,12 @@ pub fn receive_liquidity(
         to_account.clone()
     )?;
 
-    // Build the calldata message.
-    let calldata_message = match calldata_target {
-        Some(target) => Some(create_on_catalyst_call_msg(
-            target,
-            vault_tokens,
-            calldata.unwrap_or_default()
-        )?),
-        None => None
-    };
-
     // Build and send the response.
     let mut response = VaultResponse::new()
         .set_data(to_binary(&vault_tokens)?);   // Return the vault tokens 'received'
 
     if let Some(msg) = mint_msg {
         response = response.add_message(msg.into_cosmos_vault_msg());
-    }
-
-    if let Some(msg) = calldata_message {
-        response = response.add_message(msg);
     }
 
     Ok(response
@@ -1852,11 +2126,18 @@ pub fn calc_balance_0_ampped(
         })
         .collect::<StdResult<Vec<Uint128>>>()?;
 
-    let asset_balances = assets.get_assets()
+    // Take into account the escrowed underwrite balances
+    let asset_balances_adjusted = assets.get_assets()
         .iter()
         .map(|asset| -> Result<Uint128, ContractError> {
+            let escrowed_underwrite_balance = TOTAL_UNDERWRITTEN_ESCROWED_ASSETS.load(
+                deps.storage,
+                asset.get_asset_ref()
+            )?;
+
             Ok(
                 asset.query_prior_balance(&deps, &env, info)?
+                    .checked_sub(escrowed_underwrite_balance)?  // Using 'checked_sub' for extra precaution ('wrapping_sub' should suffice).
             )
         })
         .collect::<Result<Vec<Uint128>, ContractError>>()?;
@@ -1865,7 +2146,7 @@ pub fn calc_balance_0_ampped(
 
     let weighted_alpha_0_ampped = calc_weighted_alpha_0_ampped(
         weights,
-        asset_balances,
+        asset_balances_adjusted,
         one_minus_amp,
         unit_tracker
     )?;

@@ -102,7 +102,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "catalyst-ibc-interface"
+name = "catalyst-interface-common"
 version = "0.1.0"
 dependencies = [
  "catalyst-types",
@@ -113,19 +113,43 @@ dependencies = [
  "cw-controllers",
  "cw-multi-test",
  "cw-storage-plus",
+ "cw0",
  "cw2",
  "schemars",
  "serde",
+ "sha3",
+ "thiserror",
+ "vault-assets",
+]
+
+[[package]]
+name = "catalyst-interface-ibc"
+version = "0.1.0"
+dependencies = [
+ "catalyst-interface-common",
+ "catalyst-types",
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cosmwasm-storage",
+ "cw-controllers",
+ "cw-multi-test",
+ "cw-storage-plus",
+ "cw2",
+ "schemars",
+ "serde",
+ "sha3",
  "thiserror",
 ]
 
 [[package]]
-name = "catalyst-ibc-interface-poa"
+name = "catalyst-interface-poa"
 version = "0.1.0"
 dependencies = [
- "catalyst-ibc-interface",
+ "catalyst-factory",
+ "catalyst-interface-common",
  "catalyst-types",
  "catalyst-vault-common",
+ "catalyst-vault-volatile",
  "cosmwasm-schema",
  "cosmwasm-std",
  "cosmwasm-storage",
@@ -133,8 +157,10 @@ dependencies = [
  "cw-multi-test",
  "cw-storage-plus",
  "cw2",
+ "mock-calldata-target",
  "schemars",
  "serde",
+ "test-helpers",
  "thiserror",
 ]
 
@@ -178,7 +204,7 @@ name = "catalyst-vault-amplified"
 version = "0.1.0"
 dependencies = [
  "catalyst-factory",
- "catalyst-ibc-interface",
+ "catalyst-interface-common",
  "catalyst-types",
  "catalyst-vault-common",
  "cosmwasm-schema",
@@ -191,7 +217,7 @@ dependencies = [
  "cw20-base",
  "fixed-point-math",
  "mock-calldata-target",
- "mock-catalyst-ibc-interface",
+ "mock-catalyst-interface",
  "schemars",
  "serde",
  "test-helpers",
@@ -226,7 +252,7 @@ name = "catalyst-vault-volatile"
 version = "0.1.0"
 dependencies = [
  "catalyst-factory",
- "catalyst-ibc-interface",
+ "catalyst-interface-common",
  "catalyst-types",
  "catalyst-vault-common",
  "cosmwasm-schema",
@@ -239,7 +265,7 @@ dependencies = [
  "cw20-base",
  "fixed-point-math",
  "mock-calldata-target",
- "mock-catalyst-ibc-interface",
+ "mock-catalyst-interface",
  "schemars",
  "serde",
  "test-helpers",
@@ -743,10 +769,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "mock-catalyst-ibc-interface"
+name = "mock-catalyst-interface"
 version = "0.1.0"
 dependencies = [
- "catalyst-ibc-interface",
+ "catalyst-interface-common",
  "catalyst-types",
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -764,7 +790,7 @@ name = "mock-vault"
 version = "0.1.0"
 dependencies = [
  "catalyst-factory",
- "catalyst-ibc-interface",
+ "catalyst-interface-common",
  "catalyst-vault-common",
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -775,7 +801,7 @@ dependencies = [
  "cw20",
  "cw20-base",
  "fixed-point-math",
- "mock-catalyst-ibc-interface",
+ "mock-catalyst-interface",
  "schemars",
  "serde",
  "thiserror",
@@ -1058,7 +1084,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "catalyst-factory",
- "catalyst-ibc-interface",
+ "catalyst-interface-common",
  "catalyst-types",
  "catalyst-vault-common",
  "cosmwasm-schema",
@@ -1070,7 +1096,7 @@ dependencies = [
  "cw20",
  "cw20-base",
  "mock-calldata-target",
- "mock-catalyst-ibc-interface",
+ "mock-catalyst-interface",
  "token-bindings",
  "vault-assets",
 ]

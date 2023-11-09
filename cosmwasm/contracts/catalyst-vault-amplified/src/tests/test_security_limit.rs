@@ -100,9 +100,7 @@ mod test_amplified_security_limit {
                             min_out: Uint128::zero(),
                             from_amount: U256::zero(),
                             from_asset: Binary("from_asset".as_bytes().to_vec()),
-                            from_block_number_mod: 0u32,
-                            calldata_target: None,
-                            calldata: None
+                            from_block_number_mod: 0u32
                         },
                         vec![],
                         vec![]
@@ -232,6 +230,7 @@ mod test_amplified_security_limit {
                 amount: swap_amount,
                 min_out: U256::zero(),
                 fallback_account: SWAPPER_C.to_string(),
+                underwrite_incentive_x16: 0u16,
                 calldata: Binary(vec![])
             },
             vec![from_asset.clone()],
@@ -457,6 +456,7 @@ mod test_amplified_security_limit {
                 amount: swap_amount,
                 min_out: U256::zero(),
                 fallback_account: SWAPPER_C.to_string(),
+                underwrite_incentive_x16: 0u16,
                 calldata: Binary(vec![])
             },
             vec![from_asset.clone()],
@@ -664,9 +664,7 @@ mod test_amplified_security_limit {
                 min_out: Uint128::zero(),
                 from_amount: U256::zero(),
                 from_asset: Binary("from_asset".as_bytes().to_vec()),
-                from_block_number_mod: 0u32,
-                calldata_target: None,
-                calldata: None
+                from_block_number_mod: 0u32
             },
             vec![],
             vec![]
@@ -717,9 +715,7 @@ mod test_amplified_security_limit {
                 min_out: Uint128::zero(),
                 from_amount: U256::zero(),
                 from_asset: Binary("from_asset".as_bytes().to_vec()),
-                from_block_number_mod: 0u32,
-                calldata_target: None,
-                calldata: None
+                from_block_number_mod: 0u32
             },
             vec![],
             vec![]
@@ -748,9 +744,7 @@ mod test_amplified_security_limit {
                 min_out: Uint128::zero(),
                 from_amount: U256::zero(),
                 from_asset: Binary("from_asset".as_bytes().to_vec()),
-                from_block_number_mod: 0u32,
-                calldata_target: None,
-                calldata: None
+                from_block_number_mod: 0u32
             },
             vec![],
             vec![]
@@ -1074,9 +1068,7 @@ mod test_amplified_security_limit {
                 min_vault_tokens: Uint128::zero(),
                 min_reference_asset: Uint128::zero(),
                 from_amount: U256::zero(),
-                from_block_number_mod: 0u32,
-                calldata_target: None,
-                calldata: None
+                from_block_number_mod: 0u32
             },
             vec![],
             vec![]
@@ -1111,9 +1103,7 @@ mod test_amplified_security_limit {
                 min_vault_tokens: Uint128::zero(),
                 min_reference_asset: Uint128::zero(),
                 from_amount: U256::zero(),
-                from_block_number_mod: 0u32,
-                calldata_target: None,
-                calldata: None
+                from_block_number_mod: 0u32
             },
             vec![],
             vec![]
@@ -1141,9 +1131,7 @@ mod test_amplified_security_limit {
                 min_vault_tokens: Uint128::zero(),
                 min_reference_asset: Uint128::zero(),
                 from_amount: U256::zero(),
-                from_block_number_mod: 0u32,
-                calldata_target: None,
-                calldata: None
+                from_block_number_mod: 0u32
             },
             vec![],
             vec![]

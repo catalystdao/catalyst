@@ -64,9 +64,7 @@ mod test_volatile_receive_asset {
                 min_out: Uint128::zero(),
                 from_amount: U256::zero(),
                 from_asset: Binary("from_asset".as_bytes().to_vec()),
-                from_block_number_mod: 0u32,
-                calldata_target: None,
-                calldata: None
+                from_block_number_mod: 0u32
             },
             vec![],
             vec![]
@@ -161,9 +159,7 @@ mod test_volatile_receive_asset {
                 min_out: min_out.as_uint128(),
                 from_amount,
                 from_asset: from_asset.clone(),
-                from_block_number_mod,
-                calldata_target: None,
-                calldata: None
+                from_block_number_mod
             },
             vec![],
             vec![]
@@ -269,9 +265,7 @@ mod test_volatile_receive_asset {
                 min_out: Uint128::zero(),
                 from_amount: U256::zero(),
                 from_asset: Binary("from_asset".as_bytes().to_vec()),
-                from_block_number_mod: 0u32,
-                calldata_target: None,
-                calldata: None
+                from_block_number_mod: 0u32
             },
             vec![],
             vec![]
@@ -368,9 +362,7 @@ mod test_volatile_receive_asset {
                 min_out: min_out_invalid,
                 from_amount: U256::zero(),
                 from_asset: Binary("from_asset".as_bytes().to_vec()),
-                from_block_number_mod: 0u32,
-                calldata_target: None,
-                calldata: None
+                from_block_number_mod: 0u32
             },
             vec![],
             vec![]
@@ -400,9 +392,7 @@ mod test_volatile_receive_asset {
                 min_out: min_out_valid,
                 from_amount: U256::zero(),
                 from_asset: Binary("from_asset".as_bytes().to_vec()),
-                from_block_number_mod: 0u32,
-                calldata_target: None,
-                calldata: None
+                from_block_number_mod: 0u32
             },
             vec![],
             vec![]
@@ -455,9 +445,7 @@ mod test_volatile_receive_asset {
                 min_out: Uint128::zero(),
                 from_amount: U256::zero(),
                 from_asset: Binary("from_asset".as_bytes().to_vec()),
-                from_block_number_mod: 0u32,
-                calldata_target: None,
-                calldata: None
+                from_block_number_mod: 0u32
             },
             vec![],
             vec![]
@@ -526,9 +514,7 @@ mod test_volatile_receive_asset {
                 min_out: Uint128::zero(),
                 from_amount: U256::zero(),
                 from_asset: Binary("from_asset".as_bytes().to_vec()),
-                from_block_number_mod: 0u32,
-                calldata_target: None,
-                calldata: None
+                from_block_number_mod: 0u32
             },
             vec![],
             vec![]
@@ -596,9 +582,7 @@ mod test_volatile_receive_asset {
                 min_out: Uint128::zero(),
                 from_amount: U256::zero(),
                 from_asset: Binary("from_asset".as_bytes().to_vec()),
-                from_block_number_mod: 0u32,
-                calldata_target: None,
-                calldata: None
+                from_block_number_mod: 0u32
             },
             vec![],
             vec![]
@@ -611,96 +595,6 @@ mod test_volatile_receive_asset {
             response_result.err().unwrap().downcast().unwrap(),
             ContractError::Unauthorized {}
         ));
-
-    }
-
-
-    #[test]
-    fn test_receive_asset_calldata() {
-
-        let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
-
-        // Instantiate and initialize vault
-        let vault_assets = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
-        let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
-        let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
-        let vault_code_id = volatile_vault_contract_storage(env.get_app());
-        let vault = mock_factory_deploy_vault::<Asset, _, _>(
-            &mut env,
-            vault_assets.clone(),
-            vault_initial_balances.clone(),
-            vault_weights.clone(),
-            AMPLIFICATION,
-            vault_code_id,
-            Some(Addr::unchecked(CHAIN_INTERFACE)),         // Using a mock address, no need for an interface to be deployed
-            None,
-            None
-        );
-
-        // Connect vault with a mock vault
-        let from_vault = encode_payload_address(b"from_vault");
-        mock_set_vault_connection(
-            env.get_app(),
-            vault.clone(),
-            CHANNEL_ID.to_string(),
-            from_vault.clone(),
-            true
-        );
-
-        // Define the receive asset configuration
-        let to_asset_idx = 0;
-        
-        let swap_units = u256!("500000000000000000");
-
-        // Define the calldata
-        let calldata_target = mock_instantiate_calldata_target(env.get_app());
-        let calldata = Binary(vec![0x43, 0x41, 0x54, 0x41, 0x4C, 0x59, 0x53, 0x54]);
-
-
-
-        // Tested action: receive asset calldata
-        let response = env.execute_contract(
-            Addr::unchecked(CHAIN_INTERFACE),
-            vault.clone(),
-            &VolatileExecuteMsg::ReceiveAsset {
-                channel_id: CHANNEL_ID.to_string(),
-                from_vault,
-                to_asset_index: to_asset_idx as u8,
-                to_account: SWAPPER_B.to_string(),
-                u: swap_units,
-                min_out: Uint128::zero(),
-                from_amount: U256::zero(),
-                from_asset: Binary("from_asset".as_bytes().to_vec()),
-                from_block_number_mod: 0u32,
-                calldata_target: Some(calldata_target.to_string()),
-                calldata: Some(calldata.clone())
-            },
-            vec![],
-            vec![]
-        ).unwrap();
-
-
-
-        // Verify the 'calldata' target is executed
-        let mock_target_event = response.events[response.events.len()-1].clone(); // Mock target event is the last one
-        let observed_action = get_response_attribute::<String>(mock_target_event.clone(), "action").unwrap();
-        assert_eq!(
-            observed_action,
-            "on-catalyst-call"
-        );
-    
-        let observed_purchased_tokens = get_response_attribute::<Uint128>(mock_target_event.clone(), "purchased_tokens").unwrap();
-        let observed_return = get_response_attribute::<Uint128>(response.events[1].clone(), "to_amount").unwrap();
-        assert_eq!(
-            observed_purchased_tokens,
-            observed_return
-        );
-
-        let observed_data = get_response_attribute::<String>(mock_target_event.clone(), "data").unwrap();
-        assert_eq!(
-            Binary::from_base64(&observed_data).unwrap(),
-            calldata
-        )
 
     }
 

@@ -7,7 +7,7 @@ use std::ops::Div;
 use catalyst_types::{U256, u256};
 use fixed_point_math::mul_wad_down;
 
-use crate::{ContractError, bindings::{VaultAssets, Asset, VaultAssetsTrait, AssetTrait, VaultToken, VaultTokenTrait, VaultResponse, IntoCosmosCustomMsg, CustomMsg}, msg::{ChainInterfaceResponse, SetupMasterResponse, ReadyResponse, OnlyLocalResponse, AssetsResponse, WeightResponse, VaultFeeResponse, GovernanceFeeShareResponse, FeeAdministratorResponse, TotalEscrowedAssetResponse, TotalEscrowedLiquidityResponse, AssetEscrowResponse, LiquidityEscrowResponse, VaultConnectionStateResponse, FactoryResponse, FactoryOwnerResponse, ReceiverExecuteMsg, TotalSupplyResponse, BalanceResponse}, event::{send_asset_success_event, send_asset_failure_event, send_liquidity_success_event, send_liquidity_failure_event, finish_setup_event, set_fee_administrator_event, set_vault_fee_event, set_governance_fee_share_event, set_connection_event}};
+use crate::{ContractError, bindings::{VaultAssets, Asset, VaultAssetsTrait, AssetTrait, VaultToken, VaultTokenTrait, VaultResponse, IntoCosmosCustomMsg, CustomMsg}, msg::{ChainInterfaceResponse, SetupMasterResponse, ReadyResponse, OnlyLocalResponse, AssetsResponse, WeightResponse, VaultFeeResponse, GovernanceFeeShareResponse, FeeAdministratorResponse, TotalEscrowedAssetResponse, TotalEscrowedLiquidityResponse, AssetEscrowResponse, LiquidityEscrowResponse, VaultConnectionStateResponse, FactoryResponse, FactoryOwnerResponse, ReceiverExecuteMsg, TotalSupplyResponse, BalanceResponse, AssetResponse}, event::{send_asset_success_event, send_asset_failure_event, send_liquidity_success_event, send_liquidity_failure_event, finish_setup_event, set_fee_administrator_event, set_vault_fee_event, set_governance_fee_share_event, set_connection_event}};
 
 #[cfg(feature="asset_native")]
 use crate::msg::VaultTokenDenomResponse;
@@ -26,6 +26,8 @@ pub const MAX_GOVERNANCE_FEE_SHARE  : Uint64 = Uint64::new(75u64 * 1000000000000
 pub const DECAY_RATE: U256 = u256!("86400");    // 60*60*24
 
 pub const CATALYST_ENCODED_ADDRESS_LENGTH: usize = 65usize;
+
+pub const UNDERWRITER_ESCROW_ADDRESS_ID: &str = "underwriter";
 
 
 
@@ -650,6 +652,30 @@ pub fn create_liquidity_escrow(
 }
 
 
+/// Create an underwrite escrow.
+/// 
+/// # Arguments:
+/// * `underwrite_identifier` - The underwrite id.
+/// * `amount` - The escrow amount.
+/// * `asset_ref` - The escrowed asset reference.
+/// 
+pub fn create_underwrite_escrow(
+    deps: &mut DepsMut,
+    underwrite_identifier: Vec<u8>,
+    amount: Uint128,
+    asset_ref: &str
+) -> Result<(), ContractError> {
+
+    create_asset_escrow(
+        deps,
+        underwrite_identifier,
+        amount,
+        asset_ref,
+        UNDERWRITER_ESCROW_ADDRESS_ID.to_string()
+    )
+}
+
+
 /// Release an asset escrow and return the escrow's fallback account.
 /// 
 /// ! IMPORTANT: This function has no means of verifying the correctness of the escrow `amount`. 
@@ -717,6 +743,34 @@ pub fn release_liquidity_escrow(
     )?;
 
     Ok(fallback_account)
+}
+
+
+/// Release an underwrite escrow.
+/// 
+/// ! IMPORTANT: This function has no means of verifying the correctness of the escrow `amount`. 
+/// The caller of this function should make sure that the `amount` is correct.
+/// 
+/// # Arguments:
+/// * `underwrite_identifier` - The underwrite id.
+/// * `amount` - The escrow amount.
+/// * `asset_ref` - The escrowed asset reference.
+/// 
+pub fn release_underwrite_escrow(
+    deps: &mut DepsMut,
+    underwrite_identifier: Vec<u8>,
+    amount: Uint128,
+    asset_ref: &str
+) -> Result<(), ContractError> {
+
+    release_asset_escrow(
+        deps,
+        underwrite_identifier,
+        amount,
+        asset_ref
+    )?;
+
+    Ok(())
 }
 
 
@@ -1144,6 +1198,44 @@ pub fn query_assets(deps: Deps) -> StdResult<AssetsResponse<Asset>> {
             assets: VaultAssets::load(&deps)?
                 .get_assets()
                 .to_owned()
+        }
+    )
+}
+
+/// Query the vault's asset that corresponds to the given asset reference.
+/// 
+/// # Arguments:
+/// * `asset_ref` - The asset reference.
+/// 
+pub fn query_asset(
+    deps: Deps,
+    asset_ref: String
+) -> StdResult<AssetResponse<Asset>> {
+    Ok(
+        AssetResponse {
+            asset: Asset::from_asset_ref(&deps, &asset_ref)?
+        }
+    )
+}
+
+/// Query the vault's asset that corresponds to the given asset index.
+/// 
+/// # Arguments:
+/// * `asset_index` - The asset index.
+/// 
+pub fn query_asset_by_index(
+    deps: Deps,
+    asset_index: u8
+) -> StdResult<AssetResponse<Asset>> {
+
+    let asset_ref = VaultAssets::load_refs(&deps)?
+        .get(asset_index as usize)
+        .ok_or(ContractError::AssetNotFound {})?
+        .clone();
+
+    Ok(
+        AssetResponse {
+            asset: Asset::from_asset_ref(&deps, &asset_ref)?
         }
     )
 }

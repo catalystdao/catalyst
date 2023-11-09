@@ -1,5 +1,5 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{DepsMut, Deps, Uint128, MessageInfo, Coin, BankMsg, Env};
+use cosmwasm_std::{DepsMut, Deps, Uint128, MessageInfo, Coin, BankMsg, Env, Addr};
 use cw_storage_plus::{Item, Map};
 
 use crate::{asset::{AssetTrait, VaultAssetsTrait}, error::AssetError};
@@ -285,18 +285,15 @@ impl AssetTrait<NativeAssetMsg> for NativeAsset {
         amount: Uint128
     ) -> Result<Option<NativeAssetMsg>, AssetError> {
 
-        // NOTE: The 'bank' module disallows zero-valued coin transfers. Do not check
-        // received funds for these cases.
-        if amount.is_zero() {
-            if info.funds.len() != 0 {
-                return Err(AssetError::AssetSurplusReceived {});
-            }
-            
-            return Ok(None);
-        }
-
         match info.funds.len() {
-            0 => Err(AssetError::AssetNotReceived { asset: self.to_string() }),
+            0 => {
+                if amount.is_zero() {
+                    Ok(None)
+                }
+                else {
+                    Err(AssetError::AssetNotReceived { asset: self.to_string() })
+                }
+            },
             1 => {
 
                 if info.funds[0].denom != self.denom {
@@ -318,6 +315,61 @@ impl AssetTrait<NativeAssetMsg> for NativeAsset {
             _ => Err(AssetError::AssetSurplusReceived {})
         }
     }
+
+
+    fn receive_asset_with_refund(
+        &self,
+        _env: &Env,
+        info: &MessageInfo,
+        amount: Uint128,
+        refund_address: Option<Addr>
+    ) -> Result<Option<NativeAssetMsg>, AssetError> {
+
+        match info.funds.len() {
+            0 => {
+                if amount.is_zero() {
+                    Ok(None)
+                }
+                else {
+                    Err(AssetError::AssetNotReceived { asset: self.to_string() })
+                }
+            },
+            1 => {
+
+                if info.funds[0].denom != self.denom {
+                    return Err(AssetError::AssetNotReceived {
+                        asset: self.to_string()
+                    })
+                }
+
+                if info.funds[0].amount < amount {
+                    return Err(AssetError::UnexpectedAssetAmountReceived {
+                        received_amount: info.funds[0].amount,
+                        expected_amount: amount,
+                        asset: self.to_string()
+                    });
+                }
+                else if info.funds[0].amount > amount {
+
+                    let refund_amount = info.funds[0].amount
+                        .wrapping_sub(amount);  // 'wrapping_sub' safe: checked right above
+
+                    let to_address = refund_address
+                        .map(|address| address.to_string())
+                        .unwrap_or_else(|| info.sender.to_string());
+
+                    return Ok(Some(NativeAssetMsg::Bank(BankMsg::Send {
+                        to_address,
+                        amount: vec![Coin::new(refund_amount.u128(), self.denom.clone())]
+                    })))
+                }
+
+                Ok(None)
+            },
+            _ => Err(AssetError::AssetSurplusReceived {})
+        }
+    }
+
 
     fn send_asset(
         &self,
@@ -351,7 +403,7 @@ impl ToString for NativeAsset {
 
 #[cfg(test)]
 mod asset_native_tests {
-    use cosmwasm_std::{testing::{mock_dependencies, mock_env, mock_info}, Uint128, Coin};
+    use cosmwasm_std::{testing::{mock_dependencies, mock_env, mock_info}, Uint128, Coin, coin, Addr};
 
     use crate::{asset::{VaultAssetsTrait, AssetTrait, asset_native::NativeAssetMsg}, error::AssetError};
 
@@ -1215,6 +1267,266 @@ mod asset_native_tests {
         // Verify action passes
         assert!(result.is_ok());
         assert!(result.ok().unwrap().is_none());
+
+    }
+
+
+    #[test]
+    fn test_receive_asset_with_refund() {
+
+        let env = mock_env();
+
+        let asset = get_mock_asset();
+        let received_coin = Coin::new(
+            123_u128,
+            asset.denom.clone()
+        );
+        let refund_address = "refund-address";
+
+
+
+        // Tested action 1: receive asset exact amount
+        let desired_received_amount = received_coin.amount;
+        let msg = asset.receive_asset_with_refund(
+            &env,
+            &mock_info(
+                SENDER_ADDR,
+                &[received_coin.clone()]
+            ),
+            desired_received_amount.clone(),
+            Some(Addr::unchecked(refund_address))
+        ).unwrap();     // Call is successful
+
+
+
+        // Verify no messages are generated
+        assert!(msg.is_none());
+
+
+
+        // Tested action 2: receive asset excess amount
+        let excess_amount = Uint128::one();
+        let desired_received_amount = received_coin.amount - excess_amount;
+        let msg = asset.receive_asset_with_refund(
+            &env,
+            &mock_info(
+                SENDER_ADDR,
+                &[received_coin.clone()]
+            ),
+            desired_received_amount.clone(),
+            Some(Addr::unchecked(refund_address))
+        ).unwrap();     // Call is successful
+
+
+
+        // Verify a refund message is generated
+        matches!(
+            msg.unwrap(),
+            NativeAssetMsg::Bank(cosmwasm_std::BankMsg::Send { to_address, amount })
+            if to_address == refund_address.to_string()
+                && amount == vec![coin(excess_amount.u128(), received_coin.denom)]
+        );
+
+    }
+
+
+    #[test]
+    fn test_receive_asset_with_refund_no_refund_address_specified() {
+
+        let env = mock_env();
+
+        let asset = get_mock_asset();
+        let received_coin = Coin::new(
+            123_u128,
+            asset.denom.clone()
+        );
+        let excess_amount = Uint128::one();
+        let desired_received_amount = received_coin.amount - excess_amount;
+
+
+
+        // Tested action: specify a non-None refund address
+        let msg = asset.receive_asset_with_refund(
+            &env,
+            &mock_info(
+                SENDER_ADDR,
+                &[received_coin.clone()]
+            ),
+            desired_received_amount.clone(),
+            None   // ! No refund address specified
+        ).unwrap();     // Call is successful
+
+
+
+        // Verify a refund message is generated
+        matches!(
+            msg.unwrap(),
+            NativeAssetMsg::Bank(cosmwasm_std::BankMsg::Send { to_address, amount })
+            if to_address == SENDER_ADDR.to_string()    // Refund address is the message sender
+                && amount == vec![coin(excess_amount.u128(), received_coin.denom)]
+        );
+
+    }
+
+
+    #[test]
+    fn test_receive_asset_with_refund_invalid_funds() {
+
+        let env = mock_env();
+
+        let asset = get_mock_asset();
+        let desired_received_amount = Uint128::from(123_u128);
+        let valid_received_coin = Coin::new(
+            desired_received_amount.u128(),
+            asset.denom.clone()
+        );
+
+
+
+        // Tested action 1: no funds
+        let result = asset.receive_asset_with_refund(
+            &env,
+            &mock_info(
+                SENDER_ADDR,
+                &[]             // No funds
+            ),
+            desired_received_amount.clone(),
+            None
+        );
+
+        // Make sure action fails
+        matches!(
+            result.err().unwrap(),
+            AssetError::AssetNotReceived { asset: error_asset }
+                if error_asset == asset.to_string()
+        );
+
+
+
+        // Tested action 2: too many assets
+        let result = asset.receive_asset_with_refund(
+            &env,
+            &mock_info(
+                SENDER_ADDR,
+                &[valid_received_coin.clone(), Coin::new(99u128, "other_coin")]    // One asset more than expected
+            ),
+            desired_received_amount.clone(),
+            None
+        );
+
+        // Make sure action fails
+        matches!(
+            result.err().unwrap(),
+            AssetError::AssetSurplusReceived {}
+        );
+
+
+
+        // Tested action 3: invalid asset
+        let result = asset.receive_asset_with_refund(
+            &env,
+            &mock_info(
+                SENDER_ADDR,
+                &[Coin::new(99u128, "other_coin")]    // Different asset
+            ),
+            desired_received_amount.clone(),
+            None
+        );
+
+        // Make sure action fails
+        matches!(
+            result.err().unwrap(),
+            AssetError::AssetNotReceived { asset: error_asset }
+                if error_asset == asset.to_string()
+        );
+
+
+
+        // Tested action 4: asset amount too small
+        let mut received_coin_small_amount = valid_received_coin.clone();
+        received_coin_small_amount.amount = received_coin_small_amount.amount - Uint128::one();
+        let result = asset.receive_asset_with_refund(
+            &env,
+            &mock_info(
+                SENDER_ADDR,
+                &[received_coin_small_amount.clone()]    // Amount too small
+            ),
+            desired_received_amount.clone(),
+            None
+        );
+
+        // Make sure action fails
+        matches!(
+            result.err().unwrap(),
+            AssetError::UnexpectedAssetAmountReceived {asset: error_asset, received_amount, expected_amount }
+                if error_asset == asset.to_string()
+                    && received_amount == received_coin_small_amount.amount
+                    && expected_amount == valid_received_coin.amount
+        );
+
+
+    
+        // Make sure 'receive' works for valid funds
+        asset.receive_asset_with_refund(
+            &env,
+            &mock_info(
+                SENDER_ADDR,
+                &[valid_received_coin]
+            ),
+            desired_received_amount.clone(),
+            None
+        ).unwrap();     // Call is successful
+
+    }
+
+
+    #[test]
+    fn test_receive_asset_with_refund_zero_amount() {
+
+        let env = mock_env();
+
+        let asset = get_mock_asset();
+        let desired_received_amount = Uint128::zero();
+
+
+
+        // Tested action 1: receive zero amount exact
+        let receive_amount = &[];   // ! Receive no funds
+        let result = asset.receive_asset_with_refund(
+            &env,
+            &mock_info(
+                SENDER_ADDR,
+                receive_amount
+            ),
+            desired_received_amount,
+            None
+        );
+
+        // Verify action passes
+        assert!(result.is_ok());
+        assert!(result.ok().unwrap().is_none());
+
+
+
+        // Tested action 1: expect zero amount for non-zero funds
+        let receive_amount = &[coin(1u128, asset.denom.clone())];   // ! Receive funds
+        let result = asset.receive_asset_with_refund(
+            &env,
+            &mock_info(
+                SENDER_ADDR,
+                receive_amount
+            ),
+            desired_received_amount,
+            None
+        );
+
+        // Verify refund message
+        matches!(
+            result.unwrap().unwrap(),
+            NativeAssetMsg::Bank(cosmwasm_std::BankMsg::Send { to_address, amount })
+            if to_address == SENDER_ADDR.to_string()
+                && amount == receive_amount.to_vec()    // All funds are returned
+        );
 
     }
 

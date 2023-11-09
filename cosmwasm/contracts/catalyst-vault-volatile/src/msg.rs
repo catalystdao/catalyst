@@ -3,7 +3,7 @@ use cosmwasm_std::{Uint64, Uint128, Binary};
 use catalyst_types::U256;
 pub use catalyst_vault_common::msg::InstantiateMsg;
 use catalyst_vault_common::{msg::{
-    ExecuteMsg, AssetEscrowResponse, AssetsResponse, CalcLocalSwapResponse, CalcReceiveAssetResponse, CalcSendAssetResponse, ChainInterfaceResponse, FeeAdministratorResponse, GetLimitCapacityResponse, GovernanceFeeShareResponse, LiquidityEscrowResponse, OnlyLocalResponse, VaultConnectionStateResponse, VaultFeeResponse, ReadyResponse, SetupMasterResponse, TotalEscrowedAssetResponse, TotalEscrowedLiquidityResponse, WeightResponse, FactoryResponse, FactoryOwnerResponse, TotalSupplyResponse, BalanceResponse
+    ExecuteMsg, AssetEscrowResponse, AssetsResponse, CalcLocalSwapResponse, CalcReceiveAssetResponse, CalcSendAssetResponse, ChainInterfaceResponse, FeeAdministratorResponse, GetLimitCapacityResponse, GovernanceFeeShareResponse, LiquidityEscrowResponse, OnlyLocalResponse, VaultConnectionStateResponse, VaultFeeResponse, ReadyResponse, SetupMasterResponse, TotalEscrowedAssetResponse, TotalEscrowedLiquidityResponse, WeightResponse, FactoryResponse, FactoryOwnerResponse, TotalSupplyResponse, BalanceResponse, AssetResponse
 }, bindings::Asset};
 
 #[cfg(feature="asset_native")]
@@ -55,6 +55,14 @@ pub enum QueryMsg {
     OnlyLocal {},
     #[returns(AssetsResponse)]
     Assets {},
+    #[returns(AssetResponse)]
+    Asset{
+        asset_ref: String
+    },
+    #[returns(AssetResponse)]
+    AssetByIndex{
+        asset_index: u8
+    },
     #[returns(WeightResponse)]
     Weight {
         asset_ref: String

@@ -48,11 +48,11 @@ thiserror = { workspace = true }
 catalyst-vault-common = { path = "../catalyst-vault-common" }
 catalyst-types = { path = "../../lib/catalyst-types" }
 fixed-point-math = { path = "../../lib/fixed-point-math" }
-catalyst-ibc-interface = { path = "../catalyst-ibc-interface", features = ["library"] }
+catalyst-interface-common = { path = "../catalyst-interface-common" }
 
 [dev-dependencies]
 cw-multi-test = { workspace = true }
-mock-catalyst-ibc-interface = { path = "../../mock-contracts/mock-catalyst-ibc-interface", features = ["library"] }
+mock-catalyst-interface = { path = "../../mock-contracts/mock-catalyst-interface", features = ["library"] }
 mock-calldata-target = { path = "../../mock-contracts/mock-calldata-target", features = ["library"] }
 catalyst-factory = { path = "../catalyst-factory", features = ["library"] }
 test-helpers = { path = "../../helpers/test-helpers" }

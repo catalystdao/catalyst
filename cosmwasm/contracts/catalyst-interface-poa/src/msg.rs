@@ -1,5 +1,5 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{Uint128, Binary};
+use cosmwasm_std::{Uint128, Binary, Uint64};
 use catalyst_types::U256;
 
 
@@ -20,6 +20,7 @@ pub enum ExecuteMsg {
         min_out: U256,
         from_amount: Uint128,
         from_asset: String,
+        underwrite_incentive_x16: u16,
         block_number: u32,
         calldata: Binary
     },
@@ -36,22 +37,59 @@ pub enum ExecuteMsg {
         calldata: Binary
     },
 
-    IBCPacketReceive {
+    PacketReceive {
         data: Binary,
         channel_id: String
     },
 
-    IBCPacketAck {
+    PacketAck {
         data: Binary,
         response: Binary,
         channel_id: String
     },
 
-    IBCPacketTimeout {
+    PacketTimeout {
         data: Binary,
         channel_id: String
     },
 
+
+    
+    SetMaxUnderwriteDuration {
+        new_max_underwrite_duration: Uint64
+    },
+
+    Underwrite {
+        to_vault: String,
+        to_asset_ref: String,
+        u: U256,
+        min_out: Uint128,
+        to_account: String,
+        underwrite_incentive_x16: u16,
+        calldata: Binary
+    },
+
+    UnderwriteAndCheckConnection {
+        channel_id: String,
+        from_vault: Binary,
+        to_vault: String,
+        to_asset_ref: String,
+        u: U256,
+        min_out: Uint128,
+        to_account: String,
+        underwrite_incentive_x16: u16,
+        calldata: Binary
+    },
+
+    ExpireUnderwrite {
+        to_vault: String,
+        to_asset_ref: String,
+        u: U256,
+        min_out: Uint128,
+        to_account: String,
+        underwrite_incentive_x16: u16,
+        calldata: Binary
+    },
 
 
     // Ownership msgs

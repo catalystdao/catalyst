@@ -1,5 +1,5 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{DepsMut, Deps, Uint128, MessageInfo, Env, to_binary, WasmMsg, Coin};
+use cosmwasm_std::{DepsMut, Deps, Uint128, MessageInfo, Env, to_binary, WasmMsg, Coin, Addr};
 use cw20::{BalanceResponse, Cw20QueryMsg, Cw20ExecuteMsg};
 use cw_storage_plus::Item;
 
@@ -247,6 +247,21 @@ impl AssetTrait<Cw20AssetMsg> for Cw20Asset {
     }
 
 
+    fn receive_asset_with_refund(
+        &self,
+        env: &Env,
+        info: &MessageInfo,
+        amount: Uint128,
+        _refund_address: Option<Addr>
+    ) -> Result<Option<Cw20AssetMsg>, AssetError> {
+
+        // CW20 assets do not need to implement 'refund' logic, as the receiving contract is always
+        // the one that specifies the 'receive' amount.
+
+        self.receive_asset(env, info, amount)
+    }
+
+
     fn send_asset(
         &self,
         _env: &Env,
@@ -286,7 +301,7 @@ impl ToString for Cw20Asset {
 
 #[cfg(test)]
 mod asset_cw20_tests {
-    use cosmwasm_std::{testing::{mock_dependencies, mock_env, mock_info}, Uint128, to_binary, WasmMsg, coin};
+    use cosmwasm_std::{testing::{mock_dependencies, mock_env, mock_info}, Uint128, to_binary, WasmMsg, coin, Addr};
     use cw20::Cw20ExecuteMsg;
 
     use crate::{asset::{VaultAssetsTrait, AssetTrait}, error::AssetError};
@@ -926,6 +941,109 @@ mod asset_cw20_tests {
             result.err().unwrap(),
             AssetError::AssetSurplusReceived {}
         ))
+
+    }
+
+
+    #[test]
+    fn test_receive_asset_with_refund() {
+
+        let env = mock_env();
+
+        let asset = get_mock_asset();
+        let desired_received_amount = Uint128::from(123_u128);
+        let refund_address = "refund-address";
+
+
+
+        // Tested action: receive asset
+        let asset_msg = asset.receive_asset_with_refund(
+            &env,
+            &mock_info(
+                SENDER_ADDR,
+                &[]
+            ),
+            desired_received_amount.clone(),
+            Some(Addr::unchecked(refund_address))
+        ).unwrap();     // Call is successful
+
+
+
+        // Verify the genereted transfer message (refund address ignored)
+        assert!(asset_msg.is_some());
+        verify_cw20_transfer_from_msg(
+            asset_msg.unwrap(),
+            asset,
+            desired_received_amount,
+            SENDER_ADDR.to_string(),
+            env.contract.address.to_string()
+        );
+
+    }
+
+
+    #[test]
+    fn test_receive_asset_with_refund_no_refund_address_specified() {
+
+        let env = mock_env();
+
+        let asset = get_mock_asset();
+        let desired_received_amount = Uint128::from(123_u128);
+
+
+
+        // Tested action: receive asset
+        let asset_msg = asset.receive_asset_with_refund(
+            &env,
+            &mock_info(
+                SENDER_ADDR,
+                &[]
+            ),
+            desired_received_amount.clone(),
+            None
+        ).unwrap();     // Call is successful
+
+
+
+        // Verify the genereted transfer message ('None' refund address ignored)
+        assert!(asset_msg.is_some());
+        verify_cw20_transfer_from_msg(
+            asset_msg.unwrap(),
+            asset,
+            desired_received_amount,
+            SENDER_ADDR.to_string(),
+            env.contract.address.to_string()
+        );
+
+    }
+
+
+    #[test]
+    fn test_receive_asset_with_refund_zero_amount() {
+
+        let env = mock_env();
+
+        let asset = get_mock_asset();
+        let desired_received_amount = Uint128::zero();
+
+
+
+        // Tested action: receive zero amount
+        let result = asset.receive_asset_with_refund(
+            &env,
+            &mock_info(
+                SENDER_ADDR,
+                &[]
+            ),
+            desired_received_amount,
+            None
+        );
+
+
+
+        // Verify action passes
+        assert!(result.is_ok());
+        assert!(result.ok().unwrap().is_none());
 
     }
 

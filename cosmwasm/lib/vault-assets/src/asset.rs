@@ -1,4 +1,4 @@
-use cosmwasm_std::{Uint128, Deps, DepsMut, MessageInfo, Env, Coin};
+use cosmwasm_std::{Uint128, Deps, DepsMut, MessageInfo, Env, Coin, Addr};
 use serde::Serialize;
 use std::fmt::Debug;
 
@@ -136,7 +136,8 @@ pub trait VaultAssetsTrait<'a, T: AssetTrait<Msg> + 'a, Msg> {
     /// * `amounts` - The amounts of the assets to send.
     /// * `recipient` - The recipient of the assets
     /// 
-    fn send_assets(&self,
+    fn send_assets(
+        &self,
         env: &Env,
         amounts: Vec<Uint128>,
         recipient: String
@@ -192,10 +193,30 @@ pub trait AssetTrait<Msg>: Serialize + PartialEq + Debug + Clone + ToString {
     /// # Arguments:
     /// * `amount` - The asset amount to receive
     /// 
-    fn receive_asset(&self,
+    fn receive_asset(
+        &self,
         env: &Env,
         info: &MessageInfo,
         amount: Uint128
+    ) -> Result<Option<Msg>, AssetError>;
+
+
+    /// Receive the specified amount of the asset within the message execution and refund any
+    /// excess amount.
+    /// 
+    /// NOTE: May return a `Msg` to order the transfer of assets.
+    /// 
+    /// # Arguments:
+    /// * `amount` - The asset amount to receive
+    /// * `refund_address` - The address to which refund any excess amount received. Defaults to
+    /// the message sender if None.
+    /// 
+    fn receive_asset_with_refund(
+        &self,
+        env: &Env,
+        info: &MessageInfo,
+        amount: Uint128,
+        refund_address: Option<Addr>
     ) -> Result<Option<Msg>, AssetError>;
 
 
@@ -207,7 +228,8 @@ pub trait AssetTrait<Msg>: Serialize + PartialEq + Debug + Clone + ToString {
     /// # Arguments:
     /// * `amount` - The asset amount to receive
     /// 
-    fn send_asset(&self,
+    fn send_asset(
+        &self,
         env: &Env,
         amount: Uint128,
         recipient: String

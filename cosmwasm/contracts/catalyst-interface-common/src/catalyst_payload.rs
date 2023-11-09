@@ -1,32 +1,33 @@
 
 // ******************************************************************************************************************************
-// Catalyst IBC payload structure
+// Catalyst payload structure
 // ******************************************************************************************************************************
 
-// Common Payload
-//    CONTEXT                   0   (1 byte)
-//    + FROM_VAULT              1   (65 bytes)
-//    + TO_VAULT                66  (65 bytes)
-//    + TO_ACCOUNT              131 (65 bytes)
-//    + UNITS                   196 (32 bytes)
+// Common Payload               Start       Length
+//    CONTEXT                   0           1
+//    + FROM_VAULT              1           65
+//    + TO_VAULT                66          65
+//    + TO_ACCOUNT              131         65
+//    + UNITS                   196         32
 // 
 // Context-depending Payload
 //    CTX0 - 0x00 - Asset Swap Payload
-//       + TO_ASSET_INDEX       228 (1 byte)
-//       + MIN_OUT              229 (32 bytes)
-//       + FROM_AMOUNT          261 (32 bytes)
-//       + FROM_ASSET           293 (65 bytes)
-//       + BLOCK_NUMBER         358 (4 bytes)
+//       + TO_ASSET_INDEX       228         1
+//       + MIN_OUT              229         32
+//       + FROM_AMOUNT          261         32
+//       + FROM_ASSET           293         65
+//       + BLOCK_NUMBER         358         4
+//       + UW_INCENTIVE         362         2       (underwrite incentive)
 //
 //    CTX1 - 0x01 - Liquidity Swap Payload
-//       + MIN_VAULT_TOKENS     228 (32 bytes)
-//       + MIN_REFERENCE        260 (32 bytes)
-//       + FROM_AMOUNT          292 (32 bytes)
-//       + BLOCK_NUMBER         324 (4 bytes)
+//       + MIN_VAULT_TOKENS     228         32
+//       + MIN_REFERENCE        260         32
+//       + FROM_AMOUNT          292         32
+//       + BLOCK_NUMBER         324         4
 //
 // Calldata
-//    + DATA_LENGTH             LENGTH-N-2 (2 bytes)
-//    + DATA                    LENGTH-N   (N bytes)
+//    + DATA_LENGTH             LENGTH-N-2  2
+//    + DATA                    LENGTH-N    N
 
 
 // Contexts *********************************************************************************************************************
@@ -70,10 +71,13 @@ pub const CTX0_FROM_ASSET_END        : usize = 358;
 pub const CTX0_BLOCK_NUMBER_START    : usize = 358;
 pub const CTX0_BLOCK_NUMBER_END      : usize = 362;
 
-pub const CTX0_DATA_LENGTH_START     : usize = 362;
-pub const CTX0_DATA_LENGTH_END       : usize = 364;
+pub const CTX0_UW_INCENTIVE_START    : usize = 362;
+pub const CTX0_UW_INCENTIVE_END      : usize = 364;
 
-pub const CTX0_DATA_START            : usize = 364;
+pub const CTX0_DATA_LENGTH_START     : usize = 364;
+pub const CTX0_DATA_LENGTH_END       : usize = 366;
+
+pub const CTX0_DATA_START            : usize = 366;
 
 
 
@@ -112,6 +116,7 @@ pub const CALLDATA_BYTES_START       : usize = 65;
 // ******************************************************************************************************************************
 // Payload Helpers
 // ******************************************************************************************************************************
+use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Deps, Addr, Binary};
 use catalyst_types::U256;
 use crate::ContractError;
@@ -260,7 +265,7 @@ impl<T: CatalystV1VariablePayload> CatalystV1Payload<T> {
         let u = U256::from_be_bytes(
             data.get(UNITS_START .. UNITS_END)
                 .ok_or(ContractError::PayloadDecodingError {})?
-                .try_into().unwrap()    // If 'UNITS_START' and 'UNITS_END' are 32 bytes apart, this should never panic.
+                .try_into().unwrap()    // If 'UNITS_START' and 'UNITS_END' are 32 bytes apart this should never panic.
         );
 
         // Decode the variable part of the payload
@@ -286,7 +291,7 @@ impl<T: CatalystV1VariablePayload> CatalystV1Payload<T> {
 // Payload Implementations ******************************************************************************************************
 
 /// Type for decoded calldata.
-#[derive(Clone)]
+#[cw_serde]
 pub struct CatalystCalldata {
     pub target: Addr,
     pub bytes: Binary
@@ -301,6 +306,7 @@ pub struct CatalystCalldata {
 /// * `from_amount` - The source asset amount.
 /// * `from_asset` - The source asset.
 /// * `block_number` - The block number at which the transaction was committed.
+/// * `underwrite_incentive_x16` - The underwrite incentive.
 /// * `calldata` - Arbitrary data to be executed on the destination.
 /// 
 pub struct SendAssetVariablePayload {
@@ -309,6 +315,7 @@ pub struct SendAssetVariablePayload {
     pub from_amount: U256,
     pub from_asset: CatalystEncodedAddress,
     pub block_number: u32,
+    pub underwrite_incentive_x16: u16,
     pub calldata: Binary
 }
 
@@ -338,6 +345,7 @@ impl CatalystV1VariablePayload for SendAssetVariablePayload {
         buffer.extend_from_slice(&self.from_amount.to_be_bytes());
         buffer.extend_from_slice(self.from_asset.as_ref());
         buffer.extend_from_slice(&self.block_number.to_be_bytes());
+        buffer.extend_from_slice(&self.underwrite_incentive_x16.to_be_bytes());
     
         let calldata_length: u16 = self.calldata.len().try_into()
             .map_err(|_| ContractError::PayloadEncodingError {})?;    // Cast length into u16 catching overflow.
@@ -363,7 +371,7 @@ impl CatalystV1VariablePayload for SendAssetVariablePayload {
                 CTX0_MIN_OUT_START .. CTX0_MIN_OUT_END
             ).ok_or(
                 ContractError::PayloadDecodingError {}
-            )?.try_into().unwrap()      // If 'CTX0_MIN_OUT_START' and 'CTX0_MIN_OUT_END' are 32 bytes apart, this should never panic.
+            )?.try_into().unwrap()      // If 'CTX0_MIN_OUT_START' and 'CTX0_MIN_OUT_END' are 32 bytes apart this should never panic.
         );
 
         let from_amount = U256::from_be_bytes(
@@ -371,7 +379,7 @@ impl CatalystV1VariablePayload for SendAssetVariablePayload {
                 CTX0_FROM_AMOUNT_START .. CTX0_FROM_AMOUNT_END
             ).ok_or(
                 ContractError::PayloadDecodingError {}
-            )?.try_into().unwrap()      // If 'CTX0_FROM_AMOUNT_START' and 'CTX0_FROM_AMOUNT_END' are 32 bytes apart, this should never panic.
+            )?.try_into().unwrap()      // If 'CTX0_FROM_AMOUNT_START' and 'CTX0_FROM_AMOUNT_END' are 32 bytes apart this should never panic.
         );
 
         // NOTE: The decoded address is not verified at this point, as it might not get used by the
@@ -386,7 +394,15 @@ impl CatalystV1VariablePayload for SendAssetVariablePayload {
                 CTX0_BLOCK_NUMBER_START .. CTX0_BLOCK_NUMBER_END
             ).ok_or(
                 ContractError::PayloadDecodingError {}
-            )?.try_into().unwrap()      // If 'CTX0_BLOCK_NUMBER_START' and 'CTX0_BLOCK_NUMBER_END' are 4 bytes apart, this should never panic.
+            )?.try_into().unwrap()      // If 'CTX0_BLOCK_NUMBER_START' and 'CTX0_BLOCK_NUMBER_END' are 4 bytes apart this should never panic.
+        );
+
+        let underwrite_incentive_x16 = u16::from_be_bytes(
+            buffer.get(
+                CTX0_UW_INCENTIVE_START .. CTX0_UW_INCENTIVE_END
+            ).ok_or(
+                ContractError::PayloadDecodingError {}
+            )?.try_into().unwrap()      // If 'CTX0_UW_INCENTIVE_START' and 'CTX0_UW_INCENTIVE_END' are 2 bytes apart this should never panic.
         );
 
         let calldata_length: usize = u16::from_be_bytes(
@@ -394,7 +410,7 @@ impl CatalystV1VariablePayload for SendAssetVariablePayload {
                 CTX0_DATA_LENGTH_START .. CTX0_DATA_LENGTH_END
             ).ok_or(
                 ContractError::PayloadDecodingError {}
-            )?.try_into().unwrap()      // If 'CTX0_DATA_LENGTH_START' and 'CTX0_DATA_LENGTH_END' are 2 bytes apart, this should never panic.
+            )?.try_into().unwrap()      // If 'CTX0_DATA_LENGTH_START' and 'CTX0_DATA_LENGTH_END' are 2 bytes apart this should never panic.
         ) as usize;
 
         let calldata = Binary(
@@ -409,6 +425,7 @@ impl CatalystV1VariablePayload for SendAssetVariablePayload {
             from_amount,
             from_asset,
             block_number,
+            underwrite_incentive_x16,
             calldata
         })
 
@@ -481,7 +498,7 @@ impl CatalystV1VariablePayload for SendLiquidityVariablePayload {
                 CTX1_MIN_VAULT_TOKEN_START .. CTX1_MIN_VAULT_TOKEN_END
             ).ok_or(
                 ContractError::PayloadDecodingError {}
-            )?.try_into().unwrap()      // If 'CTX1_MIN_VAULT_TOKEN_START' and 'CTX1_MIN_VAULT_TOKEN_END' are 32 bytes apart, this should never panic.
+            )?.try_into().unwrap()      // If 'CTX1_MIN_VAULT_TOKEN_START' and 'CTX1_MIN_VAULT_TOKEN_END' are 32 bytes apart this should never panic.
         );
 
         let min_reference_asset = U256::from_be_bytes(
@@ -489,7 +506,7 @@ impl CatalystV1VariablePayload for SendLiquidityVariablePayload {
                 CTX1_MIN_REFERENCE_START .. CTX1_MIN_REFERENCE_END
             ).ok_or(
                 ContractError::PayloadDecodingError {}
-            )?.try_into().unwrap()      // If 'CTX1_MIN_REFERENCE_START' and 'CTX1_MIN_REFERENCE_END' are 32 bytes apart, this should never panic.
+            )?.try_into().unwrap()      // If 'CTX1_MIN_REFERENCE_START' and 'CTX1_MIN_REFERENCE_END' are 32 bytes apart this should never panic.
         );
 
         let from_amount = U256::from_be_bytes(
@@ -497,7 +514,7 @@ impl CatalystV1VariablePayload for SendLiquidityVariablePayload {
                 CTX1_FROM_AMOUNT_START .. CTX1_FROM_AMOUNT_END
             ).ok_or(
                 ContractError::PayloadDecodingError {}
-            )?.try_into().unwrap()      // If 'CTX1_FROM_AMOUNT_START' and 'CTX1_FROM_AMOUNT_END' are 32 bytes apart, this should never panic.
+            )?.try_into().unwrap()      // If 'CTX1_FROM_AMOUNT_START' and 'CTX1_FROM_AMOUNT_END' are 32 bytes apart this should never panic.
         );
 
         let block_number = u32::from_be_bytes(
@@ -505,7 +522,7 @@ impl CatalystV1VariablePayload for SendLiquidityVariablePayload {
                 CTX1_BLOCK_NUMBER_START .. CTX1_BLOCK_NUMBER_END
             ).ok_or(
                 ContractError::PayloadDecodingError {}
-            )?.try_into().unwrap()      // If 'CTX1_BLOCK_NUMBER_START' and 'CTX1_BLOCK_NUMBER_END' are 4 bytes apart, this should never panic.
+            )?.try_into().unwrap()      // If 'CTX1_BLOCK_NUMBER_START' and 'CTX1_BLOCK_NUMBER_END' are 4 bytes apart this should never panic.
         );
 
         let calldata_length: usize = u16::from_be_bytes(
@@ -513,7 +530,7 @@ impl CatalystV1VariablePayload for SendLiquidityVariablePayload {
                 CTX1_DATA_LENGTH_START .. CTX1_DATA_LENGTH_END
             ).ok_or(
                 ContractError::PayloadDecodingError {}
-            )?.try_into().unwrap()      // If 'CTX1_DATA_LENGTH_START' and 'CTX1_DATA_LENGTH_END' are 2 bytes apart, this should never panic.
+            )?.try_into().unwrap()      // If 'CTX1_DATA_LENGTH_START' and 'CTX1_DATA_LENGTH_END' are 2 bytes apart this should never panic.
         ) as usize;
 
         let calldata = Binary(

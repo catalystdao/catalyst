@@ -8,6 +8,7 @@ pub const LOCAL_SWAPPER         : &str = "local_swapper_addr";
 pub const SWAPPER_A             : &str = "swapper_a_addr";
 pub const SWAPPER_B             : &str = "swapper_b_addr";
 pub const SWAPPER_C             : &str = "swapper_c_addr";
+pub const UNDERWRITER           : &str = "underwriter";
 
 pub const VAULT_TOKEN_DENOM     : &str = "CAT";
 
