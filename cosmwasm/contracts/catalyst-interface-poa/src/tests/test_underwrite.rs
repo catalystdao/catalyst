@@ -717,4 +717,106 @@ mod test_underwrite {
         )
 
     }
+
+    #[test]
+    fn test_underwrite_and_check_connection() {
+
+        let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
+
+        let MockTestState {
+            interface,
+            vault,
+            from_vault,
+            vault_assets,
+            vault_initial_balances,
+            vault_weights,
+        } = MockTestState::initialize(&mut env);
+
+        // Define the receive asset configuration
+        let to_asset_idx = 0;
+        let to_asset = vault_assets[to_asset_idx].clone();
+        let to_weight = vault_weights[to_asset_idx];
+        let to_balance = vault_initial_balances[to_asset_idx];
+        
+        let swap_units = u256!("500000000000000000");
+        let underwrite_incentive_x16 = 1u16 << 13u16; // 12.5%
+
+        // Get the expected swap return
+        let expected_return = compute_expected_receive_asset(
+            swap_units,
+            to_weight,
+            to_balance
+        );
+
+        let underwriter_provided_funds = f64_to_uint128(
+            expected_return.to_amount * 1.1
+        ).unwrap();
+
+        // Fund underwriter with assets
+        to_asset.transfer(
+            env.get_app(),
+            underwriter_provided_funds,
+            Addr::unchecked(SETUP_MASTER),
+            UNDERWRITER.to_string(),
+        );
+
+
+        
+        // Tested action 1: underwrite a swap from a non-connected vault
+        let not_connected_from_vault = CatalystEncodedAddress::try_encode(b"not-a-connected-vault")
+            .unwrap()
+            .to_binary();
+        let response_result = env.execute_contract(
+            Addr::unchecked(UNDERWRITER),
+            interface.clone(),
+            &InterfaceExecuteMsg::UnderwriteAndCheckConnection {
+                channel_id: CHANNEL_ID.to_string(),
+                from_vault: not_connected_from_vault.clone(),   // ! Set a non-connected vault as origin
+                to_vault: vault.to_string(),
+                to_asset_ref: to_asset.alias.to_string(),
+                u: swap_units,
+                min_out: Uint128::zero(),
+                to_account: SWAPPER_B.to_string(),
+                underwrite_incentive_x16,
+                calldata: Binary::default()
+            },
+            vec![to_asset.clone()],
+            vec![underwriter_provided_funds]
+        );
+
+        // Make sure the transaction fails
+        assert!(matches!(
+            response_result.err().unwrap().downcast().unwrap(),
+            ContractError::VaultNotConnected { channel_id: err_channel_id, vault: err_vault }
+                if err_channel_id == CHANNEL_ID.to_string() && err_vault == not_connected_from_vault
+        ));
+
+
+        
+        // Tested action 2: underwrite a swap from a connected vault
+        let connected_from_vault = CatalystEncodedAddress::try_encode(from_vault.as_bytes())
+            .unwrap()
+            .to_binary();
+        let response_result = env.execute_contract(
+            Addr::unchecked(UNDERWRITER),
+            interface.clone(),
+            &InterfaceExecuteMsg::UnderwriteAndCheckConnection {
+                channel_id: CHANNEL_ID.to_string(),
+                from_vault: connected_from_vault,   // ! Set a connected vault as origin
+                to_vault: vault.to_string(),
+                to_asset_ref: to_asset.alias.to_string(),
+                u: swap_units,
+                min_out: Uint128::zero(),
+                to_account: SWAPPER_B.to_string(),
+                underwrite_incentive_x16,
+                calldata: Binary::default()
+            },
+            vec![to_asset.clone()],
+            vec![underwriter_provided_funds]
+        );
+
+        // Make sure the transaction passes
+        assert!(response_result.is_ok());
+
+    }
 }
