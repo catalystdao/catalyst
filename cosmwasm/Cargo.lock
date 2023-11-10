@@ -193,6 +193,7 @@ version = "0.1.0"
 dependencies = [
  "bnum 0.7.0",
  "cosmwasm-std",
+ "cw-storage-plus",
  "forward_ref",
  "schemars",
  "serde",

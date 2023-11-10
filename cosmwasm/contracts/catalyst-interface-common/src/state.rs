@@ -1,4 +1,4 @@
-use catalyst_types::U256;
+use catalyst_types::{U256, Bytes32};
 use catalyst_vault_common::{msg::{CommonQueryMsg, AssetResponse, ReceiverExecuteMsg, ExecuteMsg as VaultExecuteMsg, VaultConnectionStateResponse}, bindings::{Asset, AssetTrait, CustomMsg, IntoCosmosCustomMsg}};
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Deps, Addr, DepsMut, Event, MessageInfo, Empty, Response, Uint64, Uint128, Binary, Env, from_binary, StdError, Coin, CosmosMsg, to_binary, SubMsgResponse, WasmMsg, SubMsg, ReplyOn, StdResult, SubMsgResult, Reply};
@@ -272,7 +272,7 @@ pub fn encode_send_cross_chain_liquidity(
 pub fn handle_message_reception(
     deps: &mut DepsMut,
     env: &Env,
-    channel_id: String,
+    channel_id: Bytes32,
     data: Binary
 ) -> Result<InterfaceResponse, ContractError> {
 
@@ -328,7 +328,7 @@ pub fn handle_message_reception(
 /// * `response` - The response bytes. 'None' if there has been no response.
 /// 
 pub fn handle_message_response(
-    channel_id: String,
+    channel_id: Bytes32,
     data: Binary,
     response: Option<Binary>
 ) -> Result<InterfaceResponse, ContractError> {
@@ -386,7 +386,7 @@ pub fn handle_message_response(
 pub fn handle_receive_asset(
     deps: &mut DepsMut,
     env: &Env,
-    channel_id: String,
+    channel_id: Bytes32,
     to_vault: String,
     to_asset_index: u8,
     to_account: String,
@@ -487,7 +487,7 @@ pub fn handle_receive_asset(
 /// 
 pub fn handle_receive_liquidity(
     deps: &mut DepsMut,
-    channel_id: String,
+    channel_id: Bytes32,
     to_vault: String,
     to_account: String,
     u: U256,
@@ -557,7 +557,7 @@ pub fn handle_receive_liquidity(
 /// * `response` - The response bytes ('None' if no response).
 /// 
 pub fn handle_send_asset_response(
-    channel_id: String,
+    channel_id: Bytes32,
     to_account: Binary,
     u: U256,
     from_vault: String,
@@ -622,7 +622,7 @@ pub fn handle_send_asset_response(
 /// * `response` - The response bytes ('None' if no response).
 /// 
 pub fn handle_send_liquidity_response(
-    channel_id: String,
+    channel_id: Bytes32,
     to_account: Binary,
     u: U256,
     from_vault: String,
@@ -1146,7 +1146,7 @@ pub fn underwrite_and_check_connection(
     deps: &mut DepsMut,
     env: &Env,
     info: &MessageInfo,
-    channel_id: String,
+    channel_id: Bytes32,
     from_vault: Binary,
     to_vault: String,
     to_asset_ref: String,
@@ -1455,7 +1455,7 @@ pub fn expire_underwrite(
 pub fn match_underwrite(
     deps: &mut DepsMut,
     env: &Env,
-    channel_id: &String,
+    channel_id: &Bytes32,
     from_vault: &Binary,
     to_vault: &str,
     to_asset: &Asset,
@@ -1848,7 +1848,7 @@ mod test_catalyst_interface_common {
 
     use std::marker::PhantomData;
 
-    use catalyst_types::{U256, u256};
+    use catalyst_types::{U256, u256, Bytes32};
     use catalyst_vault_common::{bindings::{CustomMsg, Asset}, msg::{ExecuteMsg as VaultExecuteMsg, CommonQueryMsg, AssetResponse}};
     use cosmwasm_std::{Uint128, Binary, testing::{mock_info, mock_dependencies, mock_env, MockStorage, MockApi, MockQuerier}, SubMsg, to_binary, OwnedDeps, SystemResult, ContractResult, from_binary, Empty, Reply, SubMsgResult, SubMsgResponse};
 
@@ -1857,7 +1857,7 @@ mod test_catalyst_interface_common {
 
 
 
-    const TEST_CHANNEL_ID           : &str      = "mock-channel-1";
+    const TEST_CHANNEL_ID           : Bytes32   = Bytes32([1u8; 32]);
     const TEST_FROM_VAULT           : &str      = "from_vault";
     const TEST_TO_VAULT             : &str      = "to_vault";
     const TEST_TO_ACCOUNT           : &str      = "to_account";
@@ -1880,7 +1880,7 @@ mod test_catalyst_interface_common {
 
     fn mock_vault_receive_asset_msg() -> VaultExecuteMsg<(), CustomMsg> {
         VaultExecuteMsg::ReceiveAsset {
-            channel_id: TEST_CHANNEL_ID.to_string(),
+            channel_id: TEST_CHANNEL_ID,
             from_vault: CatalystEncodedAddress::try_encode(TEST_FROM_VAULT.as_bytes()).unwrap().to_binary(),
             to_asset_index: TEST_TO_ASSET_INDEX,
             to_account: TEST_TO_ACCOUNT.to_string(),
@@ -1894,7 +1894,7 @@ mod test_catalyst_interface_common {
 
     fn mock_vault_send_asset_success_msg() -> VaultExecuteMsg<(), CustomMsg> {
         VaultExecuteMsg::OnSendAssetSuccess {
-            channel_id: TEST_CHANNEL_ID.to_string(),
+            channel_id: TEST_CHANNEL_ID,
             to_account: CatalystEncodedAddress::try_encode(TEST_TO_ACCOUNT.as_bytes()).unwrap().to_binary(),
             u: TEST_UNITS,
             escrow_amount: TEST_FROM_AMOUNT,
@@ -1905,7 +1905,7 @@ mod test_catalyst_interface_common {
 
     fn mock_vault_send_asset_failure_msg() -> VaultExecuteMsg<(), CustomMsg> {
         VaultExecuteMsg::OnSendAssetFailure {
-            channel_id: TEST_CHANNEL_ID.to_string(),
+            channel_id: TEST_CHANNEL_ID,
             to_account: CatalystEncodedAddress::try_encode(TEST_TO_ACCOUNT.as_bytes()).unwrap().to_binary(),
             u: TEST_UNITS,
             escrow_amount: TEST_FROM_AMOUNT,
@@ -1920,7 +1920,7 @@ mod test_catalyst_interface_common {
 
     fn mock_vault_receive_liquidity_msg() -> VaultExecuteMsg<()> {
         VaultExecuteMsg::ReceiveLiquidity {
-            channel_id: TEST_CHANNEL_ID.to_string(),
+            channel_id: TEST_CHANNEL_ID,
             from_vault: CatalystEncodedAddress::try_encode(TEST_FROM_VAULT.as_bytes()).unwrap().to_binary(),
             to_account: TEST_TO_ACCOUNT.to_string(),
             u: TEST_UNITS,
@@ -1933,7 +1933,7 @@ mod test_catalyst_interface_common {
 
     fn mock_vault_send_liquidity_success_msg() -> VaultExecuteMsg<()> {
         VaultExecuteMsg::OnSendLiquiditySuccess {
-            channel_id: TEST_CHANNEL_ID.to_string(),
+            channel_id: TEST_CHANNEL_ID,
             to_account: CatalystEncodedAddress::try_encode(TEST_TO_ACCOUNT.as_bytes()).unwrap().to_binary(),
             u: TEST_UNITS,
             escrow_amount: TEST_FROM_AMOUNT,
@@ -1943,7 +1943,7 @@ mod test_catalyst_interface_common {
 
     fn mock_vault_send_liquidity_failure_msg() -> VaultExecuteMsg<()> {
         VaultExecuteMsg::OnSendLiquidityFailure {
-            channel_id: TEST_CHANNEL_ID.to_string(),
+            channel_id: TEST_CHANNEL_ID,
             to_account: CatalystEncodedAddress::try_encode(TEST_TO_ACCOUNT.as_bytes()).unwrap().to_binary(),
             u: TEST_UNITS,
             escrow_amount: TEST_FROM_AMOUNT,
@@ -2067,7 +2067,7 @@ mod test_catalyst_interface_common {
         let response_result = handle_receive_asset(
             &mut deps.as_mut(),
             &env,
-            TEST_CHANNEL_ID.to_string(),
+            TEST_CHANNEL_ID,
             TEST_TO_VAULT.to_string(),
             TEST_TO_ASSET_INDEX,
             TEST_TO_ACCOUNT.to_string(),
@@ -2119,7 +2119,7 @@ mod test_catalyst_interface_common {
         let response_result = handle_receive_asset(
             &mut deps.as_mut(),
             &env,
-            TEST_CHANNEL_ID.to_string(),
+            TEST_CHANNEL_ID,
             TEST_TO_VAULT.to_string(),
             TEST_TO_ASSET_INDEX,
             TEST_TO_ACCOUNT.to_string(),
@@ -2150,7 +2150,7 @@ mod test_catalyst_interface_common {
 
         // Tested action: send asset ack SUCCESSFUL
         let response_result = handle_send_asset_response(
-            TEST_CHANNEL_ID.to_string(),
+            TEST_CHANNEL_ID,
             CatalystEncodedAddress::try_encode(TEST_TO_ACCOUNT.as_bytes()).unwrap().to_binary(),
             TEST_UNITS,
             TEST_FROM_VAULT.to_string(),
@@ -2180,7 +2180,7 @@ mod test_catalyst_interface_common {
 
         // Tested action: send asset ack UNSUCCESSFUL
         let response_result = handle_send_asset_response(
-            TEST_CHANNEL_ID.to_string(),
+            TEST_CHANNEL_ID,
             CatalystEncodedAddress::try_encode(TEST_TO_ACCOUNT.as_bytes()).unwrap().to_binary(),
             TEST_UNITS,
             TEST_FROM_VAULT.to_string(),
@@ -2210,7 +2210,7 @@ mod test_catalyst_interface_common {
 
         // Tested action: send asset ack INVALID
         let response_result = handle_send_asset_response(
-            TEST_CHANNEL_ID.to_string(),
+            TEST_CHANNEL_ID,
             CatalystEncodedAddress::try_encode(TEST_TO_ACCOUNT.as_bytes()).unwrap().to_binary(),
             TEST_UNITS,
             TEST_FROM_VAULT.to_string(),
@@ -2245,7 +2245,7 @@ mod test_catalyst_interface_common {
 
         // Tested action: send asset timeout
         let response_result = handle_send_asset_response(
-            TEST_CHANNEL_ID.to_string(),
+            TEST_CHANNEL_ID,
             CatalystEncodedAddress::try_encode(TEST_TO_ACCOUNT.as_bytes()).unwrap().to_binary(),
             TEST_UNITS,
             TEST_FROM_VAULT.to_string(),
@@ -2284,7 +2284,7 @@ mod test_catalyst_interface_common {
 
         // Tested action: send asset ACK SUCCESSFUL with invalid packet (from_amount)
         let response_result = handle_send_asset_response(
-            TEST_CHANNEL_ID.to_string(),
+            TEST_CHANNEL_ID,
             CatalystEncodedAddress::try_encode(TEST_TO_ACCOUNT.as_bytes()).unwrap().to_binary(),
             TEST_UNITS,
             TEST_FROM_VAULT.to_string(),
@@ -2304,7 +2304,7 @@ mod test_catalyst_interface_common {
 
         // Tested action: send asset ACK UNSUCCESSFUL with invalid packet
         let response_result = handle_send_asset_response(
-            TEST_CHANNEL_ID.to_string(),
+            TEST_CHANNEL_ID,
             CatalystEncodedAddress::try_encode(TEST_TO_ACCOUNT.as_bytes()).unwrap().to_binary(),
             TEST_UNITS,
             TEST_FROM_VAULT.to_string(),
@@ -2324,7 +2324,7 @@ mod test_catalyst_interface_common {
 
         // Tested action: send asset TIMEOUT with invalid packet
         let response_result = handle_send_asset_response(
-            TEST_CHANNEL_ID.to_string(),
+            TEST_CHANNEL_ID,
             CatalystEncodedAddress::try_encode(TEST_TO_ACCOUNT.as_bytes()).unwrap().to_binary(),
             TEST_UNITS,
             TEST_FROM_VAULT.to_string(),
@@ -2389,7 +2389,7 @@ mod test_catalyst_interface_common {
         // Tested action: receive liquidity
         let response_result = handle_receive_liquidity(
             &mut deps.as_mut(),
-            TEST_CHANNEL_ID.to_string(),
+            TEST_CHANNEL_ID,
             TEST_TO_VAULT.to_string(),
             TEST_TO_ACCOUNT.to_string(),
             TEST_UNITS,
@@ -2439,7 +2439,7 @@ mod test_catalyst_interface_common {
         // Tested action: receive liquidity
         let response_result = handle_receive_liquidity(
             &mut deps.as_mut(),
-            TEST_CHANNEL_ID.to_string(),
+            TEST_CHANNEL_ID,
             TEST_TO_VAULT.to_string(),
             TEST_TO_ACCOUNT.to_string(),
             TEST_UNITS,
@@ -2472,7 +2472,7 @@ mod test_catalyst_interface_common {
         // Tested action: receive liquidity
         let response_result = handle_receive_liquidity(
             &mut deps.as_mut(),
-            TEST_CHANNEL_ID.to_string(),
+            TEST_CHANNEL_ID,
             TEST_TO_VAULT.to_string(),
             TEST_TO_ACCOUNT.to_string(),
             TEST_UNITS,
@@ -2501,7 +2501,7 @@ mod test_catalyst_interface_common {
 
         // Tested action: send liquidity ack SUCCESSFUL
         let response_result = handle_send_liquidity_response(
-            TEST_CHANNEL_ID.to_string(),
+            TEST_CHANNEL_ID,
             CatalystEncodedAddress::try_encode(TEST_TO_ACCOUNT.as_bytes()).unwrap().to_binary(),
             TEST_UNITS,
             TEST_FROM_VAULT.to_string(),
@@ -2530,7 +2530,7 @@ mod test_catalyst_interface_common {
 
         // Tested action: send liquidity ack UNSUCCESSFUL
         let response_result = handle_send_liquidity_response(
-            TEST_CHANNEL_ID.to_string(),
+            TEST_CHANNEL_ID,
             CatalystEncodedAddress::try_encode(TEST_TO_ACCOUNT.as_bytes()).unwrap().to_binary(),
             TEST_UNITS,
             TEST_FROM_VAULT.to_string(),
@@ -2559,7 +2559,7 @@ mod test_catalyst_interface_common {
 
         // Tested action: send liquidity ack INVALID
         let response_result = handle_send_liquidity_response(
-            TEST_CHANNEL_ID.to_string(),
+            TEST_CHANNEL_ID,
             CatalystEncodedAddress::try_encode(TEST_TO_ACCOUNT.as_bytes()).unwrap().to_binary(),
             TEST_UNITS,
             TEST_FROM_VAULT.to_string(),
@@ -2593,7 +2593,7 @@ mod test_catalyst_interface_common {
 
         // Tested action: send liquidity timeout
         let response_result = handle_send_liquidity_response(
-            TEST_CHANNEL_ID.to_string(),
+            TEST_CHANNEL_ID,
             CatalystEncodedAddress::try_encode(TEST_TO_ACCOUNT.as_bytes()).unwrap().to_binary(),
             TEST_UNITS,
             TEST_FROM_VAULT.to_string(),
@@ -2632,7 +2632,7 @@ mod test_catalyst_interface_common {
 
         // Tested action: send liquidity ACK SUCCESSFUL with invalid packet (from_amount)
         let response_result = handle_send_liquidity_response(
-            TEST_CHANNEL_ID.to_string(),
+            TEST_CHANNEL_ID,
             CatalystEncodedAddress::try_encode(TEST_TO_ACCOUNT.as_bytes()).unwrap().to_binary(),
             TEST_UNITS,
             TEST_FROM_VAULT.to_string(),
@@ -2651,7 +2651,7 @@ mod test_catalyst_interface_common {
 
         // Tested action: send liquidity ACK UNSUCCESSFUL with invalid packet
         let response_result = handle_send_liquidity_response(
-            TEST_CHANNEL_ID.to_string(),
+            TEST_CHANNEL_ID,
             CatalystEncodedAddress::try_encode(TEST_TO_ACCOUNT.as_bytes()).unwrap().to_binary(),
             TEST_UNITS,
             TEST_FROM_VAULT.to_string(),
@@ -2670,7 +2670,7 @@ mod test_catalyst_interface_common {
 
         // Tested action: send liquidity TIMEOUT with invalid packet
         let response_result = handle_send_liquidity_response(
-            TEST_CHANNEL_ID.to_string(),
+            TEST_CHANNEL_ID,
             CatalystEncodedAddress::try_encode(TEST_TO_ACCOUNT.as_bytes()).unwrap().to_binary(),
             TEST_UNITS,
             TEST_FROM_VAULT.to_string(),

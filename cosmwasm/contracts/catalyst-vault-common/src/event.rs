@@ -1,5 +1,5 @@
 use cosmwasm_std::{Uint128, Event, Binary, Uint64, Response};
-use catalyst_types::U256;
+use catalyst_types::{U256, Bytes32};
 
 
 /// Generate the event of a local swap.
@@ -42,7 +42,7 @@ pub fn local_swap_event(
 /// * `fee` - The amount of `from_asset_ref` paid to the vault in fees.
 /// 
 pub fn send_asset_event(
-    channel_id: String,
+    channel_id: Bytes32,
     to_vault: Binary,
     to_account: Binary,
     from_asset_ref: impl Into<String>,
@@ -54,7 +54,7 @@ pub fn send_asset_event(
     fee: Uint128
 ) -> Event {
     Event::new("send-asset")
-        .add_attribute("channel_id", channel_id)
+        .add_attribute("channel_id", channel_id.to_base64())
         .add_attribute("to_vault", to_vault.to_base64())
         .add_attribute("to_account", to_account.to_base64())
         .add_attribute("from_asset_ref", from_asset_ref)
@@ -81,7 +81,7 @@ pub fn send_asset_event(
 /// * `from_block_number_mod` - The block number at which the swap transaction was commited (modulo 2^32).
 /// 
 pub fn receive_asset_event(
-    channel_id: String,
+    channel_id: Bytes32,
     from_vault: Binary,
     to_account: String,
     to_asset_ref: impl Into<String>,
@@ -92,7 +92,7 @@ pub fn receive_asset_event(
     from_block_number_mod: u32
 ) -> Event {
     Event::new("receive-asset")
-        .add_attribute("channel_id", channel_id)
+        .add_attribute("channel_id", channel_id.to_base64())
         .add_attribute("from_vault", from_vault.to_base64())
         .add_attribute("to_account", to_account)
         .add_attribute("to_asset_ref", to_asset_ref)
@@ -138,7 +138,7 @@ pub fn underwrite_asset_event(
 /// * `units` - The amount of units bought.
 /// 
 pub fn send_liquidity_event(
-    channel_id: String,
+    channel_id: Bytes32,
     to_vault: Binary,
     to_account: Binary,
     from_amount: Uint128,
@@ -147,7 +147,7 @@ pub fn send_liquidity_event(
     units: U256
 ) -> Event {
     Event::new("send-liquidity")
-        .add_attribute("channel_id", channel_id)
+        .add_attribute("channel_id", channel_id.to_base64())
         .add_attribute("to_vault", to_vault.to_base64())
         .add_attribute("to_account", to_account.to_base64())
         .add_attribute("from_amount", from_amount)
@@ -169,7 +169,7 @@ pub fn send_liquidity_event(
 /// * `from_block_number_mod` - The block number at which the swap transaction was commited (modulo 2^32).
 /// 
 pub fn receive_liquidity_event(
-    channel_id: String,
+    channel_id: Bytes32,
     from_vault: Binary,
     to_account: String,
     units: U256,
@@ -178,7 +178,7 @@ pub fn receive_liquidity_event(
     from_block_number_mod: u32
 ) -> Event {
     Event::new("receive-liquidity")
-        .add_attribute("channel_id", channel_id)
+        .add_attribute("channel_id", channel_id.to_base64())
         .add_attribute("from_vault", from_vault.to_base64())
         .add_attribute("to_account", to_account)
         .add_attribute("units", units)
@@ -237,7 +237,7 @@ pub fn withdraw_event(
 /// * `block_number_mod` - The block number at which the swap transaction was commited (modulo 2^32).
 /// 
 pub fn send_asset_success_event(
-    channel_id: String,
+    channel_id: Bytes32,
     to_account: Binary,
     units: U256,
     escrow_amount: Uint128,
@@ -245,7 +245,7 @@ pub fn send_asset_success_event(
     block_number_mod: u32
 ) -> Event {
     Event::new("send-asset-success")
-        .add_attribute("channel_id", channel_id)
+        .add_attribute("channel_id", channel_id.to_base64())
         .add_attribute("to_account", to_account.to_base64())
         .add_attribute("units", units)
         .add_attribute("escrow_amount", escrow_amount)
@@ -265,7 +265,7 @@ pub fn send_asset_success_event(
 /// * `block_number_mod` - The block number at which the swap transaction was commited (modulo 2^32).
 /// 
 pub fn send_asset_failure_event(
-    channel_id: String,
+    channel_id: Bytes32,
     to_account: Binary,
     units: U256,
     escrow_amount: Uint128,
@@ -273,7 +273,7 @@ pub fn send_asset_failure_event(
     block_number_mod: u32
 ) -> Event {
     Event::new("send-asset-failure")
-        .add_attribute("channel_id", channel_id)
+        .add_attribute("channel_id", channel_id.to_base64())
         .add_attribute("to_account", to_account.to_base64())
         .add_attribute("units", units)
         .add_attribute("escrow_amount", escrow_amount)
@@ -292,14 +292,14 @@ pub fn send_asset_failure_event(
 /// * `block_number_mod` - The block number at which the swap transaction was commited (modulo 2^32).
 /// 
 pub fn send_liquidity_success_event(
-    channel_id: String,
+    channel_id: Bytes32,
     to_account: Binary,
     units: U256,
     escrow_amount: Uint128,
     block_number_mod: u32
 ) -> Event {
     Event::new("send-liquidity-success")
-        .add_attribute("channel_id", channel_id)
+        .add_attribute("channel_id", channel_id.to_base64())
         .add_attribute("to_account", to_account.to_base64())
         .add_attribute("units", units)
         .add_attribute("escrow_amount", escrow_amount)
@@ -317,14 +317,14 @@ pub fn send_liquidity_success_event(
 /// * `block_number_mod` - The block number at which the swap transaction was commited (modulo 2^32).
 /// 
 pub fn send_liquidity_failure_event(
-    channel_id: String,
+    channel_id: Bytes32,
     to_account: Binary,
     units: U256,
     escrow_amount: Uint128,
     block_number_mod: u32
 ) -> Event {
     Event::new("send-liquidity-failure")
-        .add_attribute("channel_id", channel_id)
+        .add_attribute("channel_id", channel_id.to_base64())
         .add_attribute("to_account", to_account.to_base64())
         .add_attribute("units", units)
         .add_attribute("escrow_amount", escrow_amount)
@@ -385,12 +385,12 @@ pub fn set_governance_fee_share_event(
 /// * `state` - Whether the connection is enabled.
 /// 
 pub fn set_connection_event(
-    channel_id: String,
+    channel_id: Bytes32,
     vault: Binary,
     state: bool
 ) -> Event {
     Event::new("set-connection")
-        .add_attribute("channel_id", channel_id)
+        .add_attribute("channel_id", channel_id.to_base64())
         .add_attribute("vault", vault.to_base64())
         .add_attribute("state", state.to_string())
 }

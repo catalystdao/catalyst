@@ -1,4 +1,4 @@
-use catalyst_types::U256;
+use catalyst_types::{U256, Bytes32};
 use catalyst_vault_common::msg::BalanceResponse;
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Env, Binary, CosmosMsg, to_binary, Uint128, Uint64, Coin, Deps};
@@ -80,7 +80,7 @@ pub fn execute_send_asset(
     deps: &Deps,
     env: &Env,
     vault: String,
-    channel_id: String,
+    channel_id: Bytes32,
     to_vault: Binary,
     to_account: Binary,
     from_asset_ref: String,
@@ -122,7 +122,7 @@ pub fn execute_send_liquidity(
     deps: &Deps,
     env: &Env,
     vault: String,
-    channel_id: String,
+    channel_id: Bytes32,
     to_vault: Binary,
     to_account: Binary,
     amount: ValueAmount,

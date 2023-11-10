@@ -1,4 +1,5 @@
 mod test_volatile_vault_connections {
+    use catalyst_types::Bytes32;
     use cosmwasm_std::{Addr, Binary, Attribute};
     use catalyst_vault_common::{ContractError, msg::VaultConnectionStateResponse, bindings::Asset};
     use test_helpers::{misc::encode_payload_address, definitions::{SETUP_MASTER, FACTORY_OWNER}, contract::{mock_instantiate_interface, mock_factory_deploy_vault, mock_finish_vault_setup}, env::CustomTestEnv};
@@ -31,7 +32,7 @@ mod test_volatile_vault_connections {
         // Deploy vault
         let vault = deploy_mock_vault(&mut env);
 
-        let channel_id = "channel_0";
+        let channel_id = Bytes32([1; 32]);
         let target_vault = encode_payload_address(b"target_vault");
 
 
@@ -41,7 +42,7 @@ mod test_volatile_vault_connections {
             Addr::unchecked(SETUP_MASTER),
             vault.clone(),
             &VolatileExecuteMsg::SetConnection {
-                channel_id: channel_id.to_string(),
+                channel_id: channel_id.clone(),
                 to_vault: target_vault.clone(),
                 state: true
             },
@@ -58,7 +59,7 @@ mod test_volatile_vault_connections {
 
         assert_eq!(
             event.attributes[1],
-            Attribute::new("channel_id", channel_id.to_string())
+            Attribute::new("channel_id", channel_id.to_base64())
         );
         assert_eq!(
             event.attributes[2],
@@ -73,7 +74,7 @@ mod test_volatile_vault_connections {
         let queried_connection_state: bool = env.get_app().wrap().query_wasm_smart::<VaultConnectionStateResponse>(
             vault.clone(),
             &crate::msg::QueryMsg::VaultConnectionState {
-                channel_id: channel_id.to_string(),
+                channel_id,
                 vault: target_vault
             }
         ).unwrap().state;
@@ -93,7 +94,7 @@ mod test_volatile_vault_connections {
         // Deploy vault
         let vault = deploy_mock_vault(&mut env);
 
-        let channel_id = "channel_0";
+        let channel_id = Bytes32([1; 32]);
         let target_vault = encode_payload_address(b"target_vault");
 
         // Set the connection
@@ -101,7 +102,7 @@ mod test_volatile_vault_connections {
             Addr::unchecked(SETUP_MASTER),
             vault.clone(),
             &VolatileExecuteMsg::SetConnection {
-                channel_id: channel_id.to_string(),
+                channel_id: channel_id.clone(),
                 to_vault: target_vault.clone(),
                 state: true
             },
@@ -116,7 +117,7 @@ mod test_volatile_vault_connections {
             Addr::unchecked(SETUP_MASTER),
             vault.clone(),
             &VolatileExecuteMsg::SetConnection {
-                channel_id: channel_id.to_string(),
+                channel_id: channel_id.clone(),
                 to_vault: target_vault.clone(),
                 state: false
             },
@@ -133,7 +134,7 @@ mod test_volatile_vault_connections {
 
         assert_eq!(
             event.attributes[1],
-            Attribute::new("channel_id", channel_id.to_string())
+            Attribute::new("channel_id", channel_id.to_base64())
         );
         assert_eq!(
             event.attributes[2],
@@ -148,7 +149,7 @@ mod test_volatile_vault_connections {
         let queried_connection_state: bool = env.get_app().wrap().query_wasm_smart::<VaultConnectionStateResponse>(
             vault.clone(),
             &crate::msg::QueryMsg::VaultConnectionState {
-                channel_id: channel_id.to_string(),
+                channel_id,
                 vault: target_vault
             }
         ).unwrap().state;
@@ -168,7 +169,7 @@ mod test_volatile_vault_connections {
         // Deploy vault
         let vault = deploy_mock_vault(&mut env);
 
-        let channel_id = "channel_0";
+        let channel_id = Bytes32([1; 32]);
         let target_vault = encode_payload_address(b"target_vault");
 
         // Finish vault setup
@@ -180,7 +181,7 @@ mod test_volatile_vault_connections {
             Addr::unchecked(SETUP_MASTER),
             vault.clone(),
             &VolatileExecuteMsg::SetConnection {
-                channel_id: channel_id.to_string(),
+                channel_id,
                 to_vault: target_vault.clone(),
                 state: true
             },
@@ -205,7 +206,7 @@ mod test_volatile_vault_connections {
         // Deploy vault
         let vault = deploy_mock_vault(&mut env);
 
-        let channel_id = "channel_0";
+        let channel_id = Bytes32([1; 32]);
         let target_vault = encode_payload_address(b"target_vault");
 
         // Finish vault setup
@@ -217,7 +218,7 @@ mod test_volatile_vault_connections {
             Addr::unchecked(FACTORY_OWNER),     // ! Invoked by the factory owner
             vault.clone(),
             &VolatileExecuteMsg::SetConnection {
-                channel_id: channel_id.to_string(),
+                channel_id: channel_id.clone(),
                 to_vault: target_vault.clone(),
                 state: true
             },
@@ -230,7 +231,7 @@ mod test_volatile_vault_connections {
         let queried_connection_state: bool = env.get_app().wrap().query_wasm_smart::<VaultConnectionStateResponse>(
             vault.clone(),
             &crate::msg::QueryMsg::VaultConnectionState {
-                channel_id: channel_id.to_string(),
+                channel_id: channel_id,
                 vault: target_vault
             }
         ).unwrap().state;
@@ -250,7 +251,7 @@ mod test_volatile_vault_connections {
         // Deploy vault
         let vault = deploy_mock_vault(&mut env);
 
-        let channel_id = "channel_0";
+        let channel_id = Bytes32([1; 32]);
         let target_vault = Binary(b"target_vault".to_vec());
 
 
@@ -259,7 +260,7 @@ mod test_volatile_vault_connections {
             Addr::unchecked("some_other_caller"),     // ! Not setup master nor factory owner
             vault.clone(),
             &VolatileExecuteMsg::SetConnection {
-                channel_id: channel_id.to_string(),
+                channel_id,
                 to_vault: target_vault.clone(),
                 state: true
             },

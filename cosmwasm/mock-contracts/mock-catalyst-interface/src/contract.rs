@@ -1,7 +1,7 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, Uint128, Uint64};
-use catalyst_types::U256;
+use catalyst_types::{U256, Bytes32};
 use catalyst_interface_common::{msg::{ExecuteMsg, InstantiateMsg, InterfaceCommonQueryMsg}, ContractError};
 
 
@@ -154,7 +154,7 @@ pub fn execute(
 }
 
 fn execute_send_cross_chain_asset(
-    channel_id: String,
+    channel_id: Bytes32,
     to_vault: Binary,
     to_account: Binary,
     to_asset_index: u8,
@@ -175,7 +175,7 @@ fn execute_send_cross_chain_asset(
     Ok(
         Response::new()
             .add_attribute("action", "mock-interface-send-asset")
-            .add_attribute("channel_id", channel_id)
+            .add_attribute("channel_id", channel_id.to_base64())
             .add_attribute("to_vault", to_vault.to_base64())
             .add_attribute("to_account", to_account.to_base64())
             .add_attribute("to_asset_index", to_asset_index.to_string())
@@ -191,7 +191,7 @@ fn execute_send_cross_chain_asset(
 }
 
 fn execute_send_cross_chain_liquidity(
-    channel_id: String,
+    channel_id: Bytes32,
     to_vault: Binary,
     to_account: Binary,
     u: U256,
@@ -210,7 +210,7 @@ fn execute_send_cross_chain_liquidity(
     Ok(
         Response::new()
             .add_attribute("action", "mock-interface-send-liquidity")
-            .add_attribute("channel_id", channel_id)
+            .add_attribute("channel_id", channel_id.to_base64())
             .add_attribute("to_vault", to_vault.to_base64())
             .add_attribute("to_account", to_account.to_base64())
             .add_attribute("u", u)
@@ -265,7 +265,7 @@ fn execute_underwrite(
 
 
 fn execute_underwrite_and_check_connection(
-    channel_id: String,
+    channel_id: Bytes32,
     from_vault: Binary,
     to_vault: String,
     to_asset_ref: String,
@@ -284,7 +284,7 @@ fn execute_underwrite_and_check_connection(
     Ok(
         Response::new()
             .add_attribute("action", "mock-interface-underwrite-and-check-connection")
-            .add_attribute("channel_id", channel_id)
+            .add_attribute("channel_id", channel_id.to_base64())
             .add_attribute("from_vault", from_vault.to_base64())
             .add_attribute("to_vault", to_vault)
             .add_attribute("to_asset_ref", to_asset_ref)

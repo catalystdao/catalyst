@@ -570,7 +570,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::VaultConnectionState {
             channel_id,
             vault 
-        } => to_binary(&query_vault_connection_state(deps, channel_id.as_ref(), vault)?),
+        } => to_binary(&query_vault_connection_state(deps, &channel_id, vault)?),
 
         QueryMsg::Ready{} => to_binary(&query_ready(deps)?),
         QueryMsg::OnlyLocal{} => to_binary(&query_only_local(deps)?),

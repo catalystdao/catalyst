@@ -37,7 +37,7 @@ mod test_amplified_send_liquidity {
         mock_set_vault_connection(
             env.get_app(),
             vault.clone(),
-            CHANNEL_ID.to_string(),
+            CHANNEL_ID,
             target_vault.clone(),
             true
         );
@@ -63,7 +63,7 @@ mod test_amplified_send_liquidity {
             Addr::unchecked(SWAPPER_A),
             vault.clone(),
             &AmplifiedExecuteMsg::SendLiquidity {
-                channel_id: CHANNEL_ID.to_string(),
+                channel_id: CHANNEL_ID,
                 to_vault: target_vault,
                 to_account: to_account.clone(),
                 amount: swap_amount,
@@ -175,7 +175,7 @@ mod test_amplified_send_liquidity {
         mock_set_vault_connection(
             env.get_app(),
             vault.clone(),
-            CHANNEL_ID.to_string(),
+            CHANNEL_ID,
             target_vault.clone(),
             true
         );
@@ -203,7 +203,7 @@ mod test_amplified_send_liquidity {
             Addr::unchecked(SWAPPER_A),
             vault.clone(),
             &AmplifiedExecuteMsg::SendLiquidity {
-                channel_id: CHANNEL_ID.to_string(),
+                channel_id: CHANNEL_ID,
                 to_vault: target_vault.clone(),
                 to_account: to_account.clone(),
                 amount: swap_amount,
@@ -225,7 +225,7 @@ mod test_amplified_send_liquidity {
 
         assert_eq!(
             event.attributes[1],
-            Attribute::new("channel_id", CHANNEL_ID)
+            Attribute::new("channel_id", CHANNEL_ID.to_base64())
         );
         assert_eq!(
             event.attributes[2],
@@ -281,7 +281,7 @@ mod test_amplified_send_liquidity {
         mock_set_vault_connection(
             env.get_app(),
             vault.clone(),
-            CHANNEL_ID.to_string(),
+            CHANNEL_ID,
             target_vault.clone(),
             true
         );
@@ -305,7 +305,7 @@ mod test_amplified_send_liquidity {
             Addr::unchecked(SWAPPER_A),
             vault.clone(),
             &AmplifiedExecuteMsg::SendLiquidity {
-                channel_id: CHANNEL_ID.to_string(),
+                channel_id: CHANNEL_ID,
                 to_vault: target_vault,
                 to_account: encode_payload_address(SWAPPER_B.as_bytes()),
                 amount: swap_amount,
@@ -377,7 +377,7 @@ mod test_amplified_send_liquidity {
             Addr::unchecked(SWAPPER_A),
             vault.clone(),
             &AmplifiedExecuteMsg::SendLiquidity {
-                channel_id: CHANNEL_ID.to_string(),
+                channel_id: CHANNEL_ID,
                 to_vault: target_vault.clone(),
                 to_account: encode_payload_address(SWAPPER_B.as_bytes()),
                 amount: swap_amount,
@@ -430,7 +430,7 @@ mod test_amplified_send_liquidity {
         mock_set_vault_connection(
             env.get_app(),
             vault.clone(),
-            CHANNEL_ID.to_string(),
+            CHANNEL_ID,
             target_vault.clone(),
             true
         );
@@ -461,7 +461,7 @@ mod test_amplified_send_liquidity {
             Addr::unchecked(SWAPPER_A),
             vault.clone(),
             &AmplifiedExecuteMsg::SendLiquidity {
-                channel_id: CHANNEL_ID.to_string(),
+                channel_id: CHANNEL_ID,
                 to_vault: target_vault,
                 to_account: to_account.clone(),
                 amount: swap_amount,

@@ -37,7 +37,7 @@ mod test_volatile_send_asset {
         mock_set_vault_connection(
             env.get_app(),
             vault.clone(),
-            CHANNEL_ID.to_string(),
+            CHANNEL_ID,
             target_vault.clone(),
             true
         );
@@ -68,7 +68,7 @@ mod test_volatile_send_asset {
             Addr::unchecked(SWAPPER_A),
             vault.clone(),
             &VolatileExecuteMsg::SendAsset {
-                channel_id: CHANNEL_ID.to_string(),
+                channel_id: CHANNEL_ID,
                 to_vault: target_vault,
                 to_account: to_account.clone(),
                 from_asset_ref: from_asset.get_asset_ref(),
@@ -194,7 +194,7 @@ mod test_volatile_send_asset {
         mock_set_vault_connection(
             env.get_app(),
             vault.clone(),
-            CHANNEL_ID.to_string(),
+            CHANNEL_ID,
             target_vault.clone(),
             true
         );
@@ -225,7 +225,7 @@ mod test_volatile_send_asset {
             Addr::unchecked(SWAPPER_A),
             vault.clone(),
             &VolatileExecuteMsg::SendAsset {
-                channel_id: CHANNEL_ID.to_string(),
+                channel_id: CHANNEL_ID,
                 to_vault: target_vault.clone(),
                 to_account: encode_payload_address(SWAPPER_B.as_bytes()),
                 from_asset_ref: from_asset.get_asset_ref(),
@@ -249,7 +249,7 @@ mod test_volatile_send_asset {
 
         assert_eq!(
             send_asset_event.attributes[1],
-            Attribute::new("channel_id", CHANNEL_ID)
+            Attribute::new("channel_id", CHANNEL_ID.to_base64())
         );
         assert_eq!(
             send_asset_event.attributes[2],
@@ -313,7 +313,7 @@ mod test_volatile_send_asset {
         mock_set_vault_connection(
             env.get_app(),
             vault.clone(),
-            CHANNEL_ID.to_string(),
+            CHANNEL_ID,
             target_vault.clone(),
             true
         );
@@ -332,7 +332,7 @@ mod test_volatile_send_asset {
             Addr::unchecked(SWAPPER_A),
             vault.clone(),
             &VolatileExecuteMsg::SendAsset {
-                channel_id: CHANNEL_ID.to_string(),
+                channel_id: CHANNEL_ID,
                 to_vault: target_vault,
                 to_account: encode_payload_address(SWAPPER_B.as_bytes()),
                 from_asset_ref: from_asset.get_asset_ref(),
@@ -410,7 +410,7 @@ mod test_volatile_send_asset {
             Addr::unchecked(SWAPPER_A),
             vault.clone(),
             &VolatileExecuteMsg::SendAsset {
-                channel_id: CHANNEL_ID.to_string(),
+                channel_id: CHANNEL_ID,
                 to_vault: target_vault.clone(),
                 to_account: encode_payload_address(SWAPPER_B.as_bytes()),
                 from_asset_ref: from_asset.get_asset_ref(),
@@ -465,7 +465,7 @@ mod test_volatile_send_asset {
         mock_set_vault_connection(
             env.get_app(),
             vault.clone(),
-            CHANNEL_ID.to_string(),
+            CHANNEL_ID,
             target_vault.clone(),
             true
         );
@@ -491,7 +491,7 @@ mod test_volatile_send_asset {
             Addr::unchecked(SWAPPER_A),
             vault.clone(),
             &VolatileExecuteMsg::SendAsset {
-                channel_id: CHANNEL_ID.to_string(),
+                channel_id: CHANNEL_ID,
                 to_vault: target_vault,
                 to_account: encode_payload_address(SWAPPER_B.as_bytes()),
                 from_asset_ref: from_asset.get_asset_ref(),
@@ -545,7 +545,7 @@ mod test_volatile_send_asset {
         mock_set_vault_connection(
             env.get_app(),
             vault.clone(),
-            CHANNEL_ID.to_string(),
+            CHANNEL_ID,
             target_vault.clone(),
             true
         );
@@ -578,7 +578,7 @@ mod test_volatile_send_asset {
             Addr::unchecked(SWAPPER_A),
             vault.clone(),
             &VolatileExecuteMsg::SendAsset {
-                channel_id: CHANNEL_ID.to_string(),
+                channel_id: CHANNEL_ID,
                 to_vault: target_vault,
                 to_account: encode_payload_address(SWAPPER_B.as_bytes()),
                 from_asset_ref: from_asset.get_asset_ref(),
@@ -636,7 +636,7 @@ mod test_volatile_send_asset {
         mock_set_vault_connection(
             env.get_app(),
             vault.clone(),
-            CHANNEL_ID.to_string(),
+            CHANNEL_ID,
             target_vault.clone(),
             true
         );
@@ -660,7 +660,7 @@ mod test_volatile_send_asset {
             Addr::unchecked(SETUP_MASTER),
             vault.clone(),
             &VolatileExecuteMsg::SendAsset {
-                channel_id: CHANNEL_ID.to_string(),
+                channel_id: CHANNEL_ID,
                 to_vault: target_vault.clone(),
                 to_account: to_account.clone(),
                 from_asset_ref: from_asset.get_asset_ref(),
@@ -696,7 +696,7 @@ mod test_volatile_send_asset {
             Addr::unchecked(SETUP_MASTER),
             vault.clone(),
             &VolatileExecuteMsg::SendAsset {
-                channel_id: CHANNEL_ID.to_string(),
+                channel_id: CHANNEL_ID,
                 to_vault: target_vault.clone(),
                 to_account: to_account.clone(),
                 from_asset_ref: from_asset.get_asset_ref(),
@@ -732,7 +732,7 @@ mod test_volatile_send_asset {
             Addr::unchecked(SETUP_MASTER),
             vault.clone(),
             &VolatileExecuteMsg::SendAsset {
-                channel_id: CHANNEL_ID.to_string(),
+                channel_id: CHANNEL_ID,
                 to_vault: target_vault.clone(),
                 to_account: to_account.clone(),
                 from_asset_ref: from_asset.get_asset_ref(),
@@ -767,7 +767,7 @@ mod test_volatile_send_asset {
             Addr::unchecked(SETUP_MASTER),
             vault.clone(),
             &VolatileExecuteMsg::SendAsset {
-                channel_id: CHANNEL_ID.to_string(),
+                channel_id: CHANNEL_ID,
                 to_vault: target_vault.clone(),
                 to_account: to_account.clone(),
                 from_asset_ref: from_asset.get_asset_ref(),
@@ -806,7 +806,7 @@ mod test_volatile_send_asset {
             Addr::unchecked(SETUP_MASTER),
             vault.clone(),
             &VolatileExecuteMsg::SendAsset {
-                channel_id: CHANNEL_ID.to_string(),
+                channel_id: CHANNEL_ID,
                 to_vault: target_vault.clone(),
                 to_account: to_account.clone(),
                 from_asset_ref: from_asset.get_asset_ref(),
@@ -845,7 +845,7 @@ mod test_volatile_send_asset {
             Addr::unchecked(SETUP_MASTER),
             vault.clone(),
             &VolatileExecuteMsg::SendAsset {
-                channel_id: CHANNEL_ID.to_string(),
+                channel_id: CHANNEL_ID,
                 to_vault: target_vault,
                 to_account: to_account.clone(),
                 from_asset_ref: from_asset.get_asset_ref(),
@@ -891,7 +891,7 @@ mod test_volatile_send_asset {
         mock_set_vault_connection(
             env.get_app(),
             vault.clone(),
-            CHANNEL_ID.to_string(),
+            CHANNEL_ID,
             target_vault.clone(),
             true
         );
@@ -934,7 +934,7 @@ mod test_volatile_send_asset {
             Addr::unchecked(SWAPPER_A),
             vault.clone(),
             &VolatileExecuteMsg::SendAssetFixedUnits {
-                channel_id: CHANNEL_ID.to_string(),
+                channel_id: CHANNEL_ID,
                 to_vault: target_vault,
                 to_account: to_account.clone(),
                 from_asset_ref: from_asset.get_asset_ref(),
@@ -997,7 +997,7 @@ mod test_volatile_send_asset {
         mock_set_vault_connection(
             env.get_app(),
             vault.clone(),
-            CHANNEL_ID.to_string(),
+            CHANNEL_ID,
             target_vault.clone(),
             true
         );
@@ -1040,7 +1040,7 @@ mod test_volatile_send_asset {
             Addr::unchecked(SWAPPER_A),
             vault.clone(),
             &VolatileExecuteMsg::SendAssetFixedUnits {
-                channel_id: CHANNEL_ID.to_string(),
+                channel_id: CHANNEL_ID,
                 to_vault: target_vault,
                 to_account: to_account.clone(),
                 from_asset_ref: from_asset.get_asset_ref(),

@@ -49,7 +49,7 @@ mod test_volatile_send_asset_success_failure {
             mock_set_vault_connection(
                 test_env.get_app(),
                 vault.clone(),
-                CHANNEL_ID.to_string(),
+                CHANNEL_ID,
                 target_vault.clone(),
                 true
             );
@@ -77,7 +77,7 @@ mod test_volatile_send_asset_success_failure {
                 Addr::unchecked(SWAPPER_A),
                 vault.clone(),
                 &VolatileExecuteMsg::SendAsset {
-                    channel_id: CHANNEL_ID.to_string(),
+                    channel_id: CHANNEL_ID,
                     to_vault: target_vault,
                     to_account: to_account.clone(),
                     from_asset_ref: from_asset.get_asset_ref(),
@@ -129,7 +129,7 @@ mod test_volatile_send_asset_success_failure {
             mock.interface,
             mock.vault.clone(),
             &VolatileExecuteMsg::OnSendAssetSuccess {
-                channel_id: CHANNEL_ID.to_string(),
+                channel_id: CHANNEL_ID,
                 to_account: mock.to_account.clone(),
                 u: mock.u,
                 escrow_amount: mock.from_amount - mock.fee,
@@ -208,7 +208,7 @@ mod test_volatile_send_asset_success_failure {
             mock.interface,
             mock.vault.clone(),
             &VolatileExecuteMsg::OnSendAssetFailure {
-                channel_id: CHANNEL_ID.to_string(),
+                channel_id: CHANNEL_ID,
                 to_account: mock.to_account.clone(),
                 u: mock.u,
                 escrow_amount: mock.from_amount - mock.fee,
@@ -286,7 +286,7 @@ mod test_volatile_send_asset_success_failure {
             mock.interface,
             mock.vault.clone(),
             &VolatileExecuteMsg::OnSendAssetSuccess {
-                channel_id: CHANNEL_ID.to_string(),
+                channel_id: CHANNEL_ID,
                 to_account: mock.to_account.clone(),
                 u: mock.u,
                 escrow_amount: mock.from_amount - mock.fee,
@@ -306,7 +306,7 @@ mod test_volatile_send_asset_success_failure {
 
         assert_eq!(
             event.attributes[1],
-            Attribute::new("channel_id", CHANNEL_ID)
+            Attribute::new("channel_id", CHANNEL_ID.to_base64())
         );
         assert_eq!(
             event.attributes[2],
@@ -346,7 +346,7 @@ mod test_volatile_send_asset_success_failure {
             mock.interface,
             mock.vault.clone(),
             &VolatileExecuteMsg::OnSendAssetFailure {
-                channel_id: CHANNEL_ID.to_string(),
+                channel_id: CHANNEL_ID,
                 to_account: mock.to_account.clone(),
                 u: mock.u,
                 escrow_amount: mock.from_amount - mock.fee,
@@ -366,7 +366,7 @@ mod test_volatile_send_asset_success_failure {
 
         assert_eq!(
             event.attributes[1],
-            Attribute::new("channel_id", CHANNEL_ID)
+            Attribute::new("channel_id", CHANNEL_ID.to_base64())
         );
         assert_eq!(
             event.attributes[2],
@@ -404,7 +404,7 @@ mod test_volatile_send_asset_success_failure {
             mock.interface.clone(),
             mock.vault.clone(),
             &VolatileExecuteMsg::OnSendAssetSuccess {
-                channel_id: CHANNEL_ID.to_string(),
+                channel_id: CHANNEL_ID,
                 to_account: mock.to_account.clone(),
                 u: mock.u,
                 escrow_amount: mock.from_amount - mock.fee,
@@ -422,7 +422,7 @@ mod test_volatile_send_asset_success_failure {
             mock.interface,
             mock.vault.clone(),
             &VolatileExecuteMsg::OnSendAssetFailure {
-                channel_id: CHANNEL_ID.to_string(),
+                channel_id: CHANNEL_ID,
                 to_account: mock.to_account.clone(),
                 u: mock.u,
                 escrow_amount: mock.from_amount - mock.fee,
@@ -457,7 +457,7 @@ mod test_volatile_send_asset_success_failure {
             mock.interface.clone(),
             mock.vault.clone(),
             &VolatileExecuteMsg::OnSendAssetFailure {
-                channel_id: CHANNEL_ID.to_string(),
+                channel_id: CHANNEL_ID,
                 to_account: mock.to_account.clone(),
                 u: mock.u,
                 escrow_amount: mock.from_amount - mock.fee,
@@ -475,7 +475,7 @@ mod test_volatile_send_asset_success_failure {
             mock.interface,
             mock.vault.clone(),
             &VolatileExecuteMsg::OnSendAssetSuccess {
-                channel_id: CHANNEL_ID.to_string(),
+                channel_id: CHANNEL_ID,
                 to_account: mock.to_account.clone(),
                 u: mock.u,
                 escrow_amount: mock.from_amount - mock.fee,
@@ -512,7 +512,7 @@ mod test_volatile_send_asset_success_failure {
             Addr::unchecked("not_interface"),           // ! Not the interface contract
             mock.vault.clone(),
             &VolatileExecuteMsg::OnSendAssetSuccess {
-                channel_id: CHANNEL_ID.to_string(),
+                channel_id: CHANNEL_ID,
                 to_account: mock.to_account.clone(),
                 u: mock.u,
                 escrow_amount: mock.from_amount - mock.fee,
@@ -547,7 +547,7 @@ mod test_volatile_send_asset_success_failure {
             Addr::unchecked("not_interface"),           // ! Not the interface contract
             mock.vault.clone(),
             &VolatileExecuteMsg::OnSendAssetFailure {
-                channel_id: CHANNEL_ID.to_string(),
+                channel_id: CHANNEL_ID,
                 to_account: mock.to_account.clone(),
                 u: mock.u,
                 escrow_amount: mock.from_amount - mock.fee,
@@ -583,7 +583,7 @@ mod test_volatile_send_asset_success_failure {
             mock.interface.clone(),
             mock.vault.clone(),
             &VolatileExecuteMsg::OnSendAssetSuccess {
-                channel_id: CHANNEL_ID.to_string(),
+                channel_id: CHANNEL_ID,
                 to_account: Binary("not_to_account".as_bytes().to_vec()),   // ! Not the chain interface
                 u: mock.u,
                 escrow_amount: mock.from_amount - mock.fee,
@@ -602,7 +602,7 @@ mod test_volatile_send_asset_success_failure {
             mock.interface.clone(),
             mock.vault.clone(),
             &VolatileExecuteMsg::OnSendAssetSuccess {
-                channel_id: CHANNEL_ID.to_string(),
+                channel_id: CHANNEL_ID,
                 to_account: mock.to_account.clone(),
                 u: mock.u + u256!("1"),                              // ! Increased units
                 escrow_amount: mock.from_amount - mock.fee,
@@ -621,7 +621,7 @@ mod test_volatile_send_asset_success_failure {
             mock.interface.clone(),
             mock.vault.clone(),
             &VolatileExecuteMsg::OnSendAssetSuccess {
-                channel_id: CHANNEL_ID.to_string(),
+                channel_id: CHANNEL_ID,
                 to_account: mock.to_account.clone(),
                 u: mock.u,
                 escrow_amount: (mock.from_amount - mock.fee) + Uint128::from(1u64),      // ! Increased from amount
@@ -640,7 +640,7 @@ mod test_volatile_send_asset_success_failure {
             mock.interface.clone(),
             mock.vault.clone(),
             &VolatileExecuteMsg::OnSendAssetSuccess {
-                channel_id: CHANNEL_ID.to_string(),
+                channel_id: CHANNEL_ID,
                 to_account: mock.to_account.clone(),
                 u: mock.u,
                 escrow_amount: mock.from_amount - mock.fee,
@@ -659,7 +659,7 @@ mod test_volatile_send_asset_success_failure {
             mock.interface.clone(),
             mock.vault.clone(),
             &VolatileExecuteMsg::OnSendAssetSuccess {
-                channel_id: CHANNEL_ID.to_string(),
+                channel_id: CHANNEL_ID,
                 to_account: mock.to_account.clone(),
                 u: mock.u,
                 escrow_amount: mock.from_amount - mock.fee,
@@ -678,7 +678,7 @@ mod test_volatile_send_asset_success_failure {
             mock.interface.clone(),
             mock.vault.clone(),
             &VolatileExecuteMsg::OnSendAssetSuccess {
-                channel_id: CHANNEL_ID.to_string(),
+                channel_id: CHANNEL_ID,
                 to_account: mock.to_account,
                 u: mock.u,
                 escrow_amount: mock.from_amount - mock.fee,
@@ -705,7 +705,7 @@ mod test_volatile_send_asset_success_failure {
             mock.interface.clone(),
             mock.vault.clone(),
             &VolatileExecuteMsg::OnSendAssetFailure {
-                channel_id: CHANNEL_ID.to_string(),
+                channel_id: CHANNEL_ID,
                 to_account: Binary("not_to_account".as_bytes().to_vec()),   // ! Not the chain interface
                 u: mock.u,
                 escrow_amount: mock.from_amount - mock.fee,
@@ -724,7 +724,7 @@ mod test_volatile_send_asset_success_failure {
             mock.interface.clone(),
             mock.vault.clone(),
             &VolatileExecuteMsg::OnSendAssetFailure {
-                channel_id: CHANNEL_ID.to_string(),
+                channel_id: CHANNEL_ID,
                 to_account: mock.to_account.clone(),
                 u: mock.u + u256!("1"),                              // ! Increased units
                 escrow_amount: mock.from_amount - mock.fee,
@@ -743,7 +743,7 @@ mod test_volatile_send_asset_success_failure {
             mock.interface.clone(),
             mock.vault.clone(),
             &VolatileExecuteMsg::OnSendAssetFailure {
-                channel_id: CHANNEL_ID.to_string(),
+                channel_id: CHANNEL_ID,
                 to_account: mock.to_account.clone(),
                 u: mock.u,
                 escrow_amount: (mock.from_amount - mock.fee) * Uint128::from(2u64),      // ! Increased from amount
@@ -762,7 +762,7 @@ mod test_volatile_send_asset_success_failure {
             mock.interface.clone(),
             mock.vault.clone(),
             &VolatileExecuteMsg::OnSendAssetFailure {
-                channel_id: CHANNEL_ID.to_string(),
+                channel_id: CHANNEL_ID,
                 to_account: mock.to_account.clone(),
                 u: mock.u,
                 escrow_amount: mock.from_amount - mock.fee,
@@ -781,7 +781,7 @@ mod test_volatile_send_asset_success_failure {
             mock.interface.clone(),
             mock.vault.clone(),
             &VolatileExecuteMsg::OnSendAssetFailure {
-                channel_id: CHANNEL_ID.to_string(),
+                channel_id: CHANNEL_ID,
                 to_account: mock.to_account.clone(),
                 u: mock.u,
                 escrow_amount: mock.from_amount - mock.fee,
@@ -800,7 +800,7 @@ mod test_volatile_send_asset_success_failure {
             mock.interface.clone(),
             mock.vault.clone(),
             &VolatileExecuteMsg::OnSendAssetFailure {
-                channel_id: CHANNEL_ID.to_string(),
+                channel_id: CHANNEL_ID,
                 to_account: mock.to_account,
                 u: mock.u,
                 escrow_amount: mock.from_amount - mock.fee,

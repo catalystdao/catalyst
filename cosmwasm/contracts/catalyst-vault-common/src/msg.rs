@@ -1,7 +1,7 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
 
 use cosmwasm_std::{Binary, Uint64, Uint128, Addr, Empty};
-use catalyst_types::U256;
+use catalyst_types::{U256, Bytes32};
 
 #[cfg(feature="asset_cw20")]
 use cw20::{Expiration, AllowanceResponse, TokenInfoResponse};
@@ -63,7 +63,7 @@ pub enum ExecuteMsg<T, A=Empty> {
     /// * `vault` - The remote vault address to be connected to this vault.
     /// * `state` - Whether the connection is enabled.
     SetConnection {
-        channel_id: String,
+        channel_id: Bytes32,
         to_vault: Binary,
         state: bool
     },
@@ -119,7 +119,7 @@ pub enum ExecuteMsg<T, A=Empty> {
     /// * `underwrite_incentive_x16` - The share of the swap return that is offered to an underwriter as incentive.
     /// * `calldata` - Arbitrary data to be executed on the target chain upon successful execution of the swap.
     SendAsset {
-        channel_id: String,
+        channel_id: Bytes32,
         to_vault: Binary,
         to_account: Binary,
         from_asset_ref: String,
@@ -144,7 +144,7 @@ pub enum ExecuteMsg<T, A=Empty> {
     /// * `underwrite_incentive_x16` - The share of the swap return that is offered to an underwriter as incentive.
     /// * `calldata` - Arbitrary data to be executed on the target chain upon successful execution of the swap.
     SendAssetFixedUnits {
-        channel_id: String,
+        channel_id: Bytes32,
         to_vault: Binary,
         to_account: Binary,
         from_asset_ref: String,
@@ -168,7 +168,7 @@ pub enum ExecuteMsg<T, A=Empty> {
     /// * `from_asset` - The source asset reference.
     /// * `from_block_number_mod` - The block number at which the swap transaction was commited (modulo 2^32).
     ReceiveAsset {
-        channel_id: String,
+        channel_id: Bytes32,
         from_vault: Binary,
         to_asset_index: u8,
         to_account: String,
@@ -200,7 +200,7 @@ pub enum ExecuteMsg<T, A=Empty> {
     /// * `escrow_amount` - The purchased asset amount when underwriting.
     /// * `recipient` - The recipient of the escrowed assets. 
     ReleaseUnderwriteAsset {
-        channel_id: String,
+        channel_id: Bytes32,
         from_vault: Binary,
         identifier: Binary,
         asset_ref: String,
@@ -230,7 +230,7 @@ pub enum ExecuteMsg<T, A=Empty> {
     /// * `fallback_account` - The recipient of the swapped amount should the swap fail.
     /// * `calldata` - Arbitrary data to be executed on the target chain upon successful execution of the swap.
     SendLiquidity {
-        channel_id: String,
+        channel_id: Bytes32,
         to_vault: Binary,
         to_account: Binary,
         amount: Uint128,
@@ -250,7 +250,7 @@ pub enum ExecuteMsg<T, A=Empty> {
     /// * `from_amount` - The `from_asset` amount sold to the source vault.
     /// * `from_block_number_mod` - The block number at which the swap transaction was commited (modulo 2^32).
     ReceiveLiquidity {
-        channel_id: String,
+        channel_id: Bytes32,
         from_vault: Binary,
         to_account: String,
         u: U256,
@@ -268,7 +268,7 @@ pub enum ExecuteMsg<T, A=Empty> {
     /// * `asset_ref` - The swap source asset reference.
     /// * `block_number_mod` - The block number at which the swap transaction was commited (modulo 2^32).
     OnSendAssetSuccess {
-        channel_id: String,
+        channel_id: Bytes32,
         to_account: Binary,
         u: U256,
         escrow_amount: Uint128,
@@ -284,7 +284,7 @@ pub enum ExecuteMsg<T, A=Empty> {
     /// * `asset_ref` - The swap source asset reference.
     /// * `block_number_mod` - The block number at which the swap transaction was commited (modulo 2^32).
     OnSendAssetFailure {
-        channel_id: String,
+        channel_id: Bytes32,
         to_account: Binary,
         u: U256,
         escrow_amount: Uint128,
@@ -299,7 +299,7 @@ pub enum ExecuteMsg<T, A=Empty> {
     /// * `escrow_amount` - The escrowed liquidity amount.
     /// * `block_number_mod` - The block number at which the swap transaction was commited (modulo 2^32).
     OnSendLiquiditySuccess {
-        channel_id: String,
+        channel_id: Bytes32,
         to_account: Binary,
         u: U256,
         escrow_amount: Uint128,
@@ -313,7 +313,7 @@ pub enum ExecuteMsg<T, A=Empty> {
     /// * `escrow_amount` - The escrowed liquidity amount.
     /// * `block_number_mod` - The block number at which the swap transaction was commited (modulo 2^32).
     OnSendLiquidityFailure {
-        channel_id: String,
+        channel_id: Bytes32,
         to_account: Binary,
         u: U256,
         escrow_amount: Uint128,
@@ -398,7 +398,7 @@ pub enum CommonQueryMsg {
 
     #[returns(VaultConnectionStateResponse)]
     VaultConnectionState {
-        channel_id: String,
+        channel_id: Bytes32,
         vault: Binary
     },
 

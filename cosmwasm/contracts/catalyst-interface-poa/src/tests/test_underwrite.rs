@@ -49,7 +49,7 @@ mod test_underwrite {
             mock_set_vault_connection(
                 env.get_app(),
                 vault.clone(),
-                CHANNEL_ID.to_string(),
+                CHANNEL_ID,
                 encode_payload_address(from_vault.as_bytes()),
                 true
             );
@@ -502,7 +502,7 @@ mod test_underwrite {
             interface.clone(),
             &InterfaceExecuteMsg::PacketReceive {
                 data: mock_packet,
-                channel_id: CHANNEL_ID.to_string()
+                channel_id: CHANNEL_ID
             },
             vec![],
             vec![]
@@ -739,7 +739,7 @@ mod test_underwrite {
             Addr::unchecked(UNDERWRITER),
             interface.clone(),
             &InterfaceExecuteMsg::UnderwriteAndCheckConnection {
-                channel_id: CHANNEL_ID.to_string(),
+                channel_id: CHANNEL_ID,
                 from_vault: not_connected_from_vault.clone(),   // ! Set a non-connected vault as origin
                 to_vault: vault.to_string(),
                 to_asset_ref: to_asset.get_asset_ref(),
@@ -757,7 +757,7 @@ mod test_underwrite {
         assert!(matches!(
             response_result.err().unwrap().downcast().unwrap(),
             ContractError::VaultNotConnected { channel_id: err_channel_id, vault: err_vault }
-                if err_channel_id == CHANNEL_ID.to_string() && err_vault == not_connected_from_vault
+                if err_channel_id == CHANNEL_ID && err_vault == not_connected_from_vault
         ));
 
 
@@ -770,7 +770,7 @@ mod test_underwrite {
             Addr::unchecked(UNDERWRITER),
             interface.clone(),
             &InterfaceExecuteMsg::UnderwriteAndCheckConnection {
-                channel_id: CHANNEL_ID.to_string(),
+                channel_id: CHANNEL_ID,
                 from_vault: connected_from_vault,   // ! Set a connected vault as origin
                 to_vault: vault.to_string(),
                 to_asset_ref: to_asset.get_asset_ref(),

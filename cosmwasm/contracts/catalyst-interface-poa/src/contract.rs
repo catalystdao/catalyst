@@ -3,7 +3,7 @@ use catalyst_interface_common::{state::{encode_send_cross_chain_asset, encode_se
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, Uint128, Reply, Uint64, to_binary};
 use cw2::set_contract_version;
-use catalyst_types::U256;
+use catalyst_types::{U256, Bytes32};
 use catalyst_interface_common::{bindings::InterfaceResponse, ContractError};
 
 use crate::msg::{ExecuteMsg, InstantiateMsg};
@@ -229,7 +229,7 @@ pub fn execute(
 fn execute_send_cross_chain_asset(
     env: Env,
     info: MessageInfo,
-    channel_id: String,
+    channel_id: Bytes32,
     to_vault: Binary,
     to_account: Binary,
     to_asset_index: u8,
@@ -258,7 +258,7 @@ fn execute_send_cross_chain_asset(
 
     Ok(Response::new()
         .add_attribute("action", "interface-send-cross-chain-asset")
-        .add_attribute("channel_id", channel_id)
+        .add_attribute("channel_id", channel_id.to_base64())
         .add_attribute("data", payload.to_base64())
         .add_attribute("timeout", env.block.time.plus_seconds(TRANSACTION_TIMEOUT).seconds().to_string())
     )
@@ -267,7 +267,7 @@ fn execute_send_cross_chain_asset(
 fn execute_send_cross_chain_liquidity(
     env: Env,
     info: MessageInfo,
-    channel_id: String,
+    channel_id: Bytes32,
     to_vault: Binary,
     to_account: Binary,
     u: U256,
@@ -292,7 +292,7 @@ fn execute_send_cross_chain_liquidity(
 
     Ok(Response::new()
         .add_attribute("action", "interface-send-cross-chain-liquidity")
-        .add_attribute("channel_id", channel_id)
+        .add_attribute("channel_id", channel_id.to_base64())
         .add_attribute("data", payload.to_base64())
         .add_attribute("timeout", env.block.time.plus_seconds(TRANSACTION_TIMEOUT).seconds().to_string())
     )
@@ -304,7 +304,7 @@ pub fn execute_packet_receive(
     env: Env,
     info: MessageInfo,
     data: Binary,
-    channel_id: String
+    channel_id: Bytes32
 ) -> Result<InterfaceResponse, ContractError> {
 
     if !is_owner(deps.as_ref(), &info.sender)? {
@@ -328,7 +328,7 @@ pub fn execute_packet_ack(
     info: MessageInfo,
     data: Binary,
     response: Binary,
-    channel_id: String
+    channel_id: Bytes32
 ) -> Result<InterfaceResponse, ContractError> {
 
     if !is_owner(deps.as_ref(), &info.sender)? {
@@ -351,7 +351,7 @@ pub fn execute_packet_timeout(
     deps: DepsMut,
     info: MessageInfo,
     data: Binary,
-    channel_id: String
+    channel_id: Bytes32
 ) -> Result<InterfaceResponse, ContractError> {
 
     if !is_owner(deps.as_ref(), &info.sender)? {

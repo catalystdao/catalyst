@@ -1,6 +1,6 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Uint64, Uint128, Binary};
-use catalyst_types::{U256, I256};
+use catalyst_types::{U256, I256, Bytes32};
 pub use catalyst_vault_common::msg::InstantiateMsg;
 use catalyst_vault_common::{msg::{
     ExecuteMsg, AssetEscrowResponse, AssetsResponse, CalcLocalSwapResponse, CalcReceiveAssetResponse, CalcSendAssetResponse, ChainInterfaceResponse, FeeAdministratorResponse, GetLimitCapacityResponse, GovernanceFeeShareResponse, LiquidityEscrowResponse, OnlyLocalResponse, VaultConnectionStateResponse, VaultFeeResponse, ReadyResponse, SetupMasterResponse, TotalEscrowedAssetResponse, TotalEscrowedLiquidityResponse, WeightResponse, FactoryResponse, FactoryOwnerResponse, TotalSupplyResponse, BalanceResponse, AssetResponse
@@ -47,7 +47,7 @@ pub enum QueryMsg {
 
     #[returns(VaultConnectionStateResponse)]
     VaultConnectionState {
-        channel_id: String,
+        channel_id: Bytes32,
         vault: Binary
     },
 

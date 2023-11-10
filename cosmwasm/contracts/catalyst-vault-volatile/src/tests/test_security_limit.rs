@@ -56,7 +56,7 @@ mod test_volatile_security_limit {
         mock_set_vault_connection(
             env.get_app(),
             vault.clone(),
-            CHANNEL_ID.to_string(),
+            CHANNEL_ID,
             remote_vault.clone(),
             true
         );
@@ -81,7 +81,7 @@ mod test_volatile_security_limit {
                 interface.clone(),
                 vault.clone(),
                 &VolatileExecuteMsg::ReceiveAsset {
-                    channel_id: CHANNEL_ID.to_string(),
+                    channel_id: CHANNEL_ID,
                     from_vault: remote_vault.clone(),
                     to_asset_index: 0u8,
                     to_account: SETUP_MASTER.to_string(),
@@ -144,7 +144,7 @@ mod test_volatile_security_limit {
             Addr::unchecked(SETUP_MASTER),
             mock_vault_config.vault.clone(),
             &VolatileExecuteMsg::SendAsset {
-                channel_id: CHANNEL_ID.to_string(),
+                channel_id: CHANNEL_ID,
                 to_vault: remote_vault,
                 to_account: to_account.clone(),
                 from_asset_ref: from_asset.get_asset_ref(),
@@ -206,7 +206,7 @@ mod test_volatile_security_limit {
             Addr::unchecked(SETUP_MASTER),
             mock_vault_config.vault.clone(),
             &VolatileExecuteMsg::SendLiquidity {
-                channel_id: CHANNEL_ID.to_string(),
+                channel_id: CHANNEL_ID,
                 to_vault: remote_vault,
                 to_account: to_account.clone(),
                 amount: swap_amount,
@@ -361,7 +361,7 @@ mod test_volatile_security_limit {
             Addr::unchecked(SETUP_MASTER),
             vault.clone(),
             &VolatileExecuteMsg::SendAsset {
-                channel_id: CHANNEL_ID.to_string(),
+                channel_id: CHANNEL_ID,
                 to_vault: remote_vault,
                 to_account: to_account.clone(),
                 from_asset_ref: from_asset.get_asset_ref(),
@@ -424,7 +424,7 @@ mod test_volatile_security_limit {
             mock_vault_config.interface.clone(),
             vault.clone(),
             &VolatileExecuteMsg::OnSendAssetSuccess {
-                channel_id: CHANNEL_ID.to_string(),
+                channel_id: CHANNEL_ID,
                 to_account: mock_send_asset_result.to_account.clone(),
                 u: mock_send_asset_result.units.clone(),
                 escrow_amount: mock_send_asset_result.swap_amount - mock_send_asset_result.fee,
@@ -456,7 +456,7 @@ mod test_volatile_security_limit {
             mock_vault_config.interface.clone(),
             vault.clone(),
             &VolatileExecuteMsg::OnSendAssetSuccess {
-                channel_id: CHANNEL_ID.to_string(),
+                channel_id: CHANNEL_ID,
                 to_account: mock_send_asset_result.to_account.clone(),
                 u: mock_send_asset_result.units.clone(),
                 escrow_amount: mock_send_asset_result.swap_amount - mock_send_asset_result.fee,
@@ -505,7 +505,7 @@ mod test_volatile_security_limit {
             mock_vault_config.interface.clone(),
             vault.clone(),
             &VolatileExecuteMsg::OnSendAssetFailure {
-                channel_id: CHANNEL_ID.to_string(),
+                channel_id: CHANNEL_ID,
                 to_account: mock_send_asset_result.to_account.clone(),
                 u: mock_send_asset_result.units.clone(),
                 escrow_amount: mock_send_asset_result.swap_amount - mock_send_asset_result.fee,
@@ -551,7 +551,7 @@ mod test_volatile_security_limit {
             mock_vault_config.interface.clone(),
             vault.clone(),
             &VolatileExecuteMsg::ReceiveAsset {
-                channel_id: CHANNEL_ID.to_string(),
+                channel_id: CHANNEL_ID,
                 from_vault: mock_vault_config.remote_vault.clone(),
                 to_asset_index: 0u8,
                 to_account: SETUP_MASTER.to_string(),
@@ -580,7 +580,7 @@ mod test_volatile_security_limit {
             mock_vault_config.interface.clone(),
             vault.clone(),
             &VolatileExecuteMsg::ReceiveAsset {
-                channel_id: CHANNEL_ID.to_string(),
+                channel_id: CHANNEL_ID,
                 from_vault: mock_vault_config.remote_vault.clone(),
                 to_asset_index: 0u8,
                 to_account: SETUP_MASTER.to_string(),
@@ -609,7 +609,7 @@ mod test_volatile_security_limit {
             mock_vault_config.interface.clone(),
             vault.clone(),
             &VolatileExecuteMsg::ReceiveAsset {
-                channel_id: CHANNEL_ID.to_string(),
+                channel_id: CHANNEL_ID,
                 from_vault: mock_vault_config.remote_vault.clone(),
                 to_asset_index: 0u8,
                 to_account: SETUP_MASTER.to_string(),
@@ -660,7 +660,7 @@ mod test_volatile_security_limit {
             Addr::unchecked(SETUP_MASTER),
             vault.clone(),
             &VolatileExecuteMsg::SendLiquidity {
-                channel_id: CHANNEL_ID.to_string(),
+                channel_id: CHANNEL_ID,
                 to_vault: remote_vault,
                 to_account: to_account.clone(),
                 amount: swap_amount,
@@ -721,7 +721,7 @@ mod test_volatile_security_limit {
             mock_vault_config.interface.clone(),
             vault.clone(),
             &VolatileExecuteMsg::OnSendLiquiditySuccess {
-                channel_id: CHANNEL_ID.to_string(),
+                channel_id: CHANNEL_ID,
                 to_account: mock_send_liquidity_result.to_account.clone(),
                 u: mock_send_liquidity_result.units.clone(),
                 escrow_amount: mock_send_liquidity_result.swap_amount,
@@ -752,7 +752,7 @@ mod test_volatile_security_limit {
             mock_vault_config.interface.clone(),
             vault.clone(),
             &VolatileExecuteMsg::OnSendLiquiditySuccess {
-                channel_id: CHANNEL_ID.to_string(),
+                channel_id: CHANNEL_ID,
                 to_account: mock_send_liquidity_result.to_account.clone(),
                 u: mock_send_liquidity_result.units.clone(),
                 escrow_amount: mock_send_liquidity_result.swap_amount,
@@ -800,7 +800,7 @@ mod test_volatile_security_limit {
             mock_vault_config.interface.clone(),
             vault.clone(),
             &VolatileExecuteMsg::OnSendLiquidityFailure {
-                channel_id: CHANNEL_ID.to_string(),
+                channel_id: CHANNEL_ID,
                 to_account: mock_send_liquidity_result.to_account.clone(),
                 u: mock_send_liquidity_result.units.clone(),
                 escrow_amount: mock_send_liquidity_result.swap_amount,
@@ -845,7 +845,7 @@ mod test_volatile_security_limit {
             mock_vault_config.interface.clone(),
             vault.clone(),
             &VolatileExecuteMsg::ReceiveLiquidity {
-                channel_id: CHANNEL_ID.to_string(),
+                channel_id: CHANNEL_ID,
                 from_vault: mock_vault_config.remote_vault.clone(),
                 to_account: SETUP_MASTER.to_string(),
                 u: units,
@@ -873,7 +873,7 @@ mod test_volatile_security_limit {
             mock_vault_config.interface.clone(),
             vault.clone(),
             &VolatileExecuteMsg::ReceiveLiquidity {
-                channel_id: CHANNEL_ID.to_string(),
+                channel_id: CHANNEL_ID,
                 from_vault: mock_vault_config.remote_vault.clone(),
                 to_account: SETUP_MASTER.to_string(),
                 u: units,
@@ -901,7 +901,7 @@ mod test_volatile_security_limit {
             mock_vault_config.interface.clone(),
             vault.clone(),
             &VolatileExecuteMsg::ReceiveLiquidity {
-                channel_id: CHANNEL_ID.to_string(),
+                channel_id: CHANNEL_ID,
                 from_vault: mock_vault_config.remote_vault.clone(),
                 to_account: SETUP_MASTER.to_string(),
                 u: units,

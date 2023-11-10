@@ -44,7 +44,7 @@ mod test_amplified_send_liquidity_success_failure {
             mock_set_vault_connection(
                 test_env.get_app(),
                 vault.clone(),
-                CHANNEL_ID.to_string(),
+                CHANNEL_ID,
                 target_vault.clone(),
                 true
             );
@@ -68,7 +68,7 @@ mod test_amplified_send_liquidity_success_failure {
                 Addr::unchecked(SWAPPER_A),
                 vault.clone(),
                 &AmplifiedExecuteMsg::SendLiquidity {
-                    channel_id: CHANNEL_ID.to_string(),
+                    channel_id: CHANNEL_ID,
                     to_vault: target_vault,
                     to_account: to_account.clone(),
                     amount: swap_amount,
@@ -112,7 +112,7 @@ mod test_amplified_send_liquidity_success_failure {
             mock.interface,
             mock.vault.clone(),
             &AmplifiedExecuteMsg::OnSendLiquiditySuccess {
-                channel_id: CHANNEL_ID.to_string(),
+                channel_id: CHANNEL_ID,
                 to_account: mock.to_account.clone(),
                 u: mock.u,
                 escrow_amount: mock.from_amount,
@@ -187,7 +187,7 @@ mod test_amplified_send_liquidity_success_failure {
             mock.interface,
             mock.vault.clone(),
             &AmplifiedExecuteMsg::OnSendLiquidityFailure {
-                channel_id: CHANNEL_ID.to_string(),
+                channel_id: CHANNEL_ID,
                 to_account: mock.to_account.clone(),
                 u: mock.u,
                 escrow_amount: mock.from_amount,
@@ -261,7 +261,7 @@ mod test_amplified_send_liquidity_success_failure {
             mock.interface,
             mock.vault.clone(),
             &AmplifiedExecuteMsg::OnSendLiquiditySuccess {
-                channel_id: CHANNEL_ID.to_string(),
+                channel_id: CHANNEL_ID,
                 to_account: mock.to_account.clone(),
                 u: mock.u,
                 escrow_amount: mock.from_amount,
@@ -280,7 +280,7 @@ mod test_amplified_send_liquidity_success_failure {
 
         assert_eq!(
             event.attributes[1],
-            Attribute::new("channel_id", CHANNEL_ID)
+            Attribute::new("channel_id", CHANNEL_ID.to_base64())
         );
         assert_eq!(
             event.attributes[2],
@@ -316,7 +316,7 @@ mod test_amplified_send_liquidity_success_failure {
             mock.interface,
             mock.vault.clone(),
             &AmplifiedExecuteMsg::OnSendLiquidityFailure {
-                channel_id: CHANNEL_ID.to_string(),
+                channel_id: CHANNEL_ID,
                 to_account: mock.to_account.clone(),
                 u: mock.u,
                 escrow_amount: mock.from_amount,
@@ -335,7 +335,7 @@ mod test_amplified_send_liquidity_success_failure {
 
         assert_eq!(
             event.attributes[1],
-            Attribute::new("channel_id", CHANNEL_ID)
+            Attribute::new("channel_id", CHANNEL_ID.to_base64())
         );
         assert_eq!(
             event.attributes[2],
@@ -369,7 +369,7 @@ mod test_amplified_send_liquidity_success_failure {
             mock.interface.clone(),
             mock.vault.clone(),
             &AmplifiedExecuteMsg::OnSendLiquiditySuccess {
-                channel_id: CHANNEL_ID.to_string(),
+                channel_id: CHANNEL_ID,
                 to_account: mock.to_account.clone(),
                 u: mock.u,
                 escrow_amount: mock.from_amount,
@@ -386,7 +386,7 @@ mod test_amplified_send_liquidity_success_failure {
             mock.interface,
             mock.vault.clone(),
             &AmplifiedExecuteMsg::OnSendLiquidityFailure {
-                channel_id: CHANNEL_ID.to_string(),
+                channel_id: CHANNEL_ID,
                 to_account: mock.to_account.clone(),
                 u: mock.u,
                 escrow_amount: mock.from_amount,
@@ -420,7 +420,7 @@ mod test_amplified_send_liquidity_success_failure {
             mock.interface.clone(),
             mock.vault.clone(),
             &AmplifiedExecuteMsg::OnSendLiquidityFailure {
-                channel_id: CHANNEL_ID.to_string(),
+                channel_id: CHANNEL_ID,
                 to_account: mock.to_account.clone(),
                 u: mock.u,
                 escrow_amount: mock.from_amount,
@@ -437,7 +437,7 @@ mod test_amplified_send_liquidity_success_failure {
             mock.interface,
             mock.vault.clone(),
             &AmplifiedExecuteMsg::OnSendLiquiditySuccess {
-                channel_id: CHANNEL_ID.to_string(),
+                channel_id: CHANNEL_ID,
                 to_account: mock.to_account.clone(),
                 u: mock.u,
                 escrow_amount: mock.from_amount,
@@ -473,7 +473,7 @@ mod test_amplified_send_liquidity_success_failure {
             Addr::unchecked("not_interface"),           // ! Not the interface contract
             mock.vault.clone(),
             &AmplifiedExecuteMsg::OnSendLiquiditySuccess {
-                channel_id: CHANNEL_ID.to_string(),
+                channel_id: CHANNEL_ID,
                 to_account: mock.to_account.clone(),
                 u: mock.u,
                 escrow_amount: mock.from_amount,
@@ -507,7 +507,7 @@ mod test_amplified_send_liquidity_success_failure {
             Addr::unchecked("not_interface"),           // ! Not the interface contract
             mock.vault.clone(),
             &AmplifiedExecuteMsg::OnSendLiquidityFailure {
-                channel_id: CHANNEL_ID.to_string(),
+                channel_id: CHANNEL_ID,
                 to_account: mock.to_account.clone(),
                 u: mock.u,
                 escrow_amount: mock.from_amount,
@@ -542,7 +542,7 @@ mod test_amplified_send_liquidity_success_failure {
             mock.interface.clone(),
             mock.vault.clone(),
             &AmplifiedExecuteMsg::OnSendLiquiditySuccess {
-                channel_id: CHANNEL_ID.to_string(),
+                channel_id: CHANNEL_ID,
                 to_account: Binary("not_to_account".as_bytes().to_vec()),   // ! Not the chain interface
                 u: mock.u,
                 escrow_amount: mock.from_amount,
@@ -560,7 +560,7 @@ mod test_amplified_send_liquidity_success_failure {
             mock.interface.clone(),
             mock.vault.clone(),
             &AmplifiedExecuteMsg::OnSendLiquiditySuccess {
-                channel_id: CHANNEL_ID.to_string(),
+                channel_id: CHANNEL_ID,
                 to_account: mock.to_account.clone(),
                 u: mock.u + u256!("1"),                              // ! Increased units
                 escrow_amount: mock.from_amount,
@@ -578,7 +578,7 @@ mod test_amplified_send_liquidity_success_failure {
             mock.interface.clone(),
             mock.vault.clone(),
             &AmplifiedExecuteMsg::OnSendLiquiditySuccess {
-                channel_id: CHANNEL_ID.to_string(),
+                channel_id: CHANNEL_ID,
                 to_account: mock.to_account.clone(),
                 u: mock.u,
                 escrow_amount: mock.from_amount + Uint128::from(1u64),      // ! Increased from amount
@@ -596,7 +596,7 @@ mod test_amplified_send_liquidity_success_failure {
             mock.interface.clone(),
             mock.vault.clone(),
             &AmplifiedExecuteMsg::OnSendLiquiditySuccess {
-                channel_id: CHANNEL_ID.to_string(),
+                channel_id: CHANNEL_ID,
                 to_account: mock.to_account.clone(),
                 u: mock.u,
                 escrow_amount: mock.from_amount,
@@ -614,7 +614,7 @@ mod test_amplified_send_liquidity_success_failure {
             mock.interface.clone(),
             mock.vault.clone(),
             &AmplifiedExecuteMsg::OnSendLiquiditySuccess {
-                channel_id: CHANNEL_ID.to_string(),
+                channel_id: CHANNEL_ID,
                 to_account: mock.to_account,
                 u: mock.u,
                 escrow_amount: mock.from_amount,
@@ -640,7 +640,7 @@ mod test_amplified_send_liquidity_success_failure {
             mock.interface.clone(),
             mock.vault.clone(),
             &AmplifiedExecuteMsg::OnSendLiquidityFailure {
-                channel_id: CHANNEL_ID.to_string(),
+                channel_id: CHANNEL_ID,
                 to_account: Binary("not_to_account".as_bytes().to_vec()),   // ! Not the chain interface
                 u: mock.u,
                 escrow_amount: mock.from_amount,
@@ -658,7 +658,7 @@ mod test_amplified_send_liquidity_success_failure {
             mock.interface.clone(),
             mock.vault.clone(),
             &AmplifiedExecuteMsg::OnSendLiquidityFailure {
-                channel_id: CHANNEL_ID.to_string(),
+                channel_id: CHANNEL_ID,
                 to_account: mock.to_account.clone(),
                 u: mock.u + u256!("1"),                              // ! Increased units
                 escrow_amount: mock.from_amount,
@@ -676,7 +676,7 @@ mod test_amplified_send_liquidity_success_failure {
             mock.interface.clone(),
             mock.vault.clone(),
             &AmplifiedExecuteMsg::OnSendLiquidityFailure {
-                channel_id: CHANNEL_ID.to_string(),
+                channel_id: CHANNEL_ID,
                 to_account: mock.to_account.clone(),
                 u: mock.u,
                 escrow_amount: mock.from_amount + Uint128::from(1u64),      // ! Increased from amount
@@ -694,7 +694,7 @@ mod test_amplified_send_liquidity_success_failure {
             mock.interface.clone(),
             mock.vault.clone(),
             &AmplifiedExecuteMsg::OnSendLiquidityFailure {
-                channel_id: CHANNEL_ID.to_string(),
+                channel_id: CHANNEL_ID,
                 to_account: mock.to_account.clone(),
                 u: mock.u,
                 escrow_amount: mock.from_amount,
@@ -712,7 +712,7 @@ mod test_amplified_send_liquidity_success_failure {
             mock.interface.clone(),
             mock.vault.clone(),
             &AmplifiedExecuteMsg::OnSendLiquidityFailure {
-                channel_id: CHANNEL_ID.to_string(),
+                channel_id: CHANNEL_ID,
                 to_account: mock.to_account,
                 u: mock.u,
                 escrow_amount: mock.from_amount,

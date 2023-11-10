@@ -1,3 +1,5 @@
+use catalyst_types::Bytes32;
+
 pub const CHAIN_INTERFACE       : &str = "chain_interface_addr";
 pub const DEPLOYER              : &str = "deployer_addr";
 pub const FACTORY_OWNER         : &str = "factory_owner_addr";
@@ -12,4 +14,4 @@ pub const UNDERWRITER           : &str = "underwriter";
 
 pub const VAULT_TOKEN_DENOM     : &str = "CAT";
 
-pub const CHANNEL_ID            : &str = "channel_id";
+pub const CHANNEL_ID            : Bytes32 = Bytes32([1; 32]);

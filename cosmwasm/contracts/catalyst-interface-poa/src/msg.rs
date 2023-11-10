@@ -1,6 +1,6 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Uint128, Binary, Uint64};
-use catalyst_types::U256;
+use catalyst_types::{U256, Bytes32};
 
 
 #[cw_serde]
@@ -12,7 +12,7 @@ pub struct InstantiateMsg {
 pub enum ExecuteMsg {
 
     SendCrossChainAsset {
-        channel_id: String,
+        channel_id: Bytes32,
         to_vault: Binary,
         to_account: Binary,
         to_asset_index: u8,
@@ -26,7 +26,7 @@ pub enum ExecuteMsg {
     },
 
     SendCrossChainLiquidity {
-        channel_id: String,
+        channel_id: Bytes32,
         to_vault: Binary,
         to_account: Binary,
         u: U256,
@@ -39,18 +39,18 @@ pub enum ExecuteMsg {
 
     PacketReceive {
         data: Binary,
-        channel_id: String
+        channel_id: Bytes32
     },
 
     PacketAck {
         data: Binary,
         response: Binary,
-        channel_id: String
+        channel_id: Bytes32
     },
 
     PacketTimeout {
         data: Binary,
-        channel_id: String
+        channel_id: Bytes32
     },
 
 
@@ -70,7 +70,7 @@ pub enum ExecuteMsg {
     },
 
     UnderwriteAndCheckConnection {
-        channel_id: String,
+        channel_id: Bytes32,
         from_vault: Binary,
         to_vault: String,
         to_asset_ref: String,

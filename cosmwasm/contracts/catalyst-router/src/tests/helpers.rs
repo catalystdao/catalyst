@@ -1,3 +1,4 @@
+use catalyst_types::Bytes32;
 use cosmwasm_std::{Uint64, Uint128, Addr, CosmosMsg, Coin, Binary, Empty};
 use cw_multi_test::{ContractWrapper, Executor, AppResponse, Module};
 
@@ -124,7 +125,7 @@ pub struct  MockVault {
     pub vault_assets: Vec<TestNativeAsset>,
     pub vault: Addr,
     pub target_vault: Binary,
-    pub channel_id: String
+    pub channel_id: Bytes32
 }
 
 impl MockVault {
@@ -164,7 +165,7 @@ impl MockVault {
 
         // Connect vault with a mock vault
         let target_vault = encode_payload_address(b"target_vault");
-        let channel_id = "channel_id".to_string();
+        let channel_id = Bytes32([1u8; 32]);
         mock_set_vault_connection(
             test_env.get_app(),
             vault.clone(),

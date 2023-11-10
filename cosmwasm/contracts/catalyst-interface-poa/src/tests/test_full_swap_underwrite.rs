@@ -37,7 +37,7 @@ mod test_full_swap_underwrite {
         mock_set_vault_connection(
             env.get_app(),
             vault.clone(),
-            CHANNEL_ID.to_string(),
+            CHANNEL_ID,
             encode_payload_address(from_vault.as_bytes()),
             true
         );
@@ -134,7 +134,7 @@ mod test_full_swap_underwrite {
             interface.clone(),
             &InterfaceExecuteMsg::PacketReceive {
                 data: mock_packet,
-                channel_id: CHANNEL_ID.to_string()
+                channel_id: CHANNEL_ID
             },
             vec![],
             vec![]

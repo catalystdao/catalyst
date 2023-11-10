@@ -1,3 +1,4 @@
+use catalyst_types::Bytes32;
 use cosmwasm_schema::{serde::{Serialize, de::DeserializeOwned}, schemars::JsonSchema};
 use cosmwasm_std::{Uint128, Addr, Uint64, Binary, Empty, Coin};
 use cw_multi_test::{ContractWrapper, Executor, AppResponse, Module};
@@ -325,7 +326,7 @@ where
 pub fn mock_set_vault_connection<HandlerC>(
     app: &mut CustomApp<HandlerC, CustomMsg>,
     vault_contract: Addr,
-    channel_id: String,
+    channel_id: Bytes32,
     to_vault: Binary,
     state: bool
 ) -> AppResponse

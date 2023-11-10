@@ -1,5 +1,5 @@
 use cosmwasm_std::{StdError, OverflowError, Uint64, Uint128, Binary, ConversionOverflowError, DivideByZeroError, Coin};
-use catalyst_types::U256;
+use catalyst_types::{U256, Bytes32};
 use fixed_point_math::FixedPointMathError;
 use thiserror::Error;
 
@@ -74,7 +74,7 @@ pub enum ContractError {
     ReturnInsufficientUnits { units: U256, fixed_units: U256 },
 
     #[error("Vault not connected (channel id: {channel_id}, vault: {vault}).")]
-    VaultNotConnected { channel_id: String, vault: Binary },
+    VaultNotConnected { channel_id: Bytes32, vault: Binary },
 
     #[error("The vault only allows for local swaps, as it has no cross chain interface.")]
     VaultHasNoInterface {},

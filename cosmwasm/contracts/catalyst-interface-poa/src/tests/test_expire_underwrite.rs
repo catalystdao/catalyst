@@ -59,7 +59,7 @@ mod test_expire_underwrite {
             mock_set_vault_connection(
                 env.get_app(),
                 vault.clone(),
-                CHANNEL_ID.to_string(),
+                CHANNEL_ID,
                 encode_payload_address(from_vault.as_bytes()),
                 true
             );

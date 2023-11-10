@@ -1,3 +1,4 @@
+mod bytes32;
 mod unsigned256;
 mod signed256;
 mod traits;
@@ -6,6 +7,7 @@ mod traits;
 pub mod macros;
 
 pub use crate::{
+    bytes32::Bytes32,
     unsigned256::U256,
     signed256::I256,
     traits::AsU256,

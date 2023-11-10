@@ -1,7 +1,7 @@
 use cosmwasm_std::{Uint128, DepsMut, Env, MessageInfo, StdResult, CosmosMsg, to_binary, Deps, Binary, Uint64, Timestamp};
 use cw_storage_plus::{Item, Map};
 use catalyst_interface_common::msg::ExecuteMsg as InterfaceExecuteMsg;
-use catalyst_types::{U256, I256};
+use catalyst_types::{U256, I256, Bytes32};
 use catalyst_vault_common::{
     ContractError,
     event::{local_swap_event, send_asset_event, receive_asset_event, send_liquidity_event, receive_liquidity_event, deposit_event, withdraw_event, underwrite_asset_event}, 
@@ -666,7 +666,7 @@ pub fn send_asset(
     deps: &mut DepsMut,
     env: Env,
     info: MessageInfo,
-    channel_id: String,
+    channel_id: Bytes32,
     to_vault: Binary,
     to_account: Binary,
     from_asset_ref: String,
@@ -855,7 +855,7 @@ pub fn receive_asset(
     deps: &mut DepsMut,
     env: Env,
     info: MessageInfo,
-    channel_id: String,
+    channel_id: Bytes32,
     from_vault: Binary,
     to_asset_index: u8,
     to_account: String,
@@ -998,7 +998,7 @@ pub fn release_underwrite_asset(
     deps: &mut DepsMut,
     env: Env,
     info: MessageInfo,
-    channel_id: String,
+    channel_id: Bytes32,
     from_vault: Binary,
     identifier: Binary,
     to_asset_ref: String,
@@ -1099,7 +1099,7 @@ pub fn send_liquidity(
     deps: &mut DepsMut,
     env: Env,
     info: MessageInfo,
-    channel_id: String,
+    channel_id: Bytes32,
     to_vault: Binary,
     to_account: Binary,
     amount: Uint128,
@@ -1230,7 +1230,7 @@ pub fn receive_liquidity(
     deps: &mut DepsMut,
     env: Env,
     info: MessageInfo,
-    channel_id: String,
+    channel_id: Bytes32,
     from_vault: Binary,
     to_account: String,
     u: U256,
@@ -1507,7 +1507,7 @@ pub fn on_send_asset_success_volatile(
     deps: &mut DepsMut,
     env: &Env,
     info: &MessageInfo,
-    channel_id: String,
+    channel_id: Bytes32,
     to_account: Binary,
     u: U256,
     escrow_amount: Uint128,
@@ -1559,7 +1559,7 @@ pub fn on_send_liquidity_success_volatile(
     deps: &mut DepsMut,
     env: &Env,
     info: &MessageInfo,
-    channel_id: String,
+    channel_id: Bytes32,
     to_account: Binary,
     u: U256,
     escrow_amount: Uint128,

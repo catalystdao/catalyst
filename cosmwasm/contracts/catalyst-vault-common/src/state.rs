@@ -4,7 +4,7 @@ use cw_storage_plus::{Map, Item};
 use sha3::{Digest, Keccak256};
 use std::ops::Div;
 
-use catalyst_types::{U256, u256};
+use catalyst_types::{U256, u256, Bytes32};
 use fixed_point_math::mul_wad_down;
 
 use crate::{ContractError, bindings::{VaultAssets, Asset, VaultAssetsTrait, AssetTrait, VaultToken, VaultTokenTrait, VaultResponse, IntoCosmosCustomMsg, CustomMsg}, msg::{ChainInterfaceResponse, SetupMasterResponse, ReadyResponse, OnlyLocalResponse, AssetsResponse, WeightResponse, VaultFeeResponse, GovernanceFeeShareResponse, FeeAdministratorResponse, TotalEscrowedAssetResponse, TotalEscrowedLiquidityResponse, AssetEscrowResponse, LiquidityEscrowResponse, VaultConnectionStateResponse, FactoryResponse, FactoryOwnerResponse, ReceiverExecuteMsg, TotalSupplyResponse, BalanceResponse, AssetResponse}, event::{send_asset_success_event, send_asset_failure_event, send_liquidity_success_event, send_liquidity_failure_event, finish_setup_event, set_fee_administrator_event, set_vault_fee_event, set_governance_fee_share_event, set_connection_event}};
@@ -44,7 +44,7 @@ pub const FEE_ADMINISTRATOR: Item<Addr> = Item::new("catalyst-vault-fee-administ
 pub const VAULT_FEE: Item<Uint64> = Item::new("catalyst-vault-vault-fee");
 pub const GOVERNANCE_FEE_SHARE: Item<Uint64> = Item::new("catalyst-vault-governance-fee");
 
-pub const VAULT_CONNECTIONS: Map<(&str, Vec<u8>), bool> = Map::new("catalyst-vault-connections");
+pub const VAULT_CONNECTIONS: Map<(&[u8], Vec<u8>), bool> = Map::new("catalyst-vault-connections");
 
 pub const TOTAL_ESCROWED_ASSETS: Map<&str, Uint128> = Map::new("catalyst-vault-escrowed-assets");
 pub const TOTAL_ESCROWED_LIQUIDITY: Item<Uint128> = Item::new("catalyst-vault-escrowed-vault-tokens");
@@ -261,7 +261,7 @@ pub fn finish_setup(
 pub fn set_connection(
     deps: &mut DepsMut,
     info: MessageInfo,
-    channel_id: String,
+    channel_id: Bytes32,
     vault: Binary,
     state: bool
 ) -> Result<VaultResponse, ContractError> {
@@ -281,7 +281,7 @@ pub fn set_connection(
         );
     }
 
-    VAULT_CONNECTIONS.save(deps.storage, (channel_id.as_str(), vault.0.clone()), &state)?;
+    VAULT_CONNECTIONS.save(deps.storage, (channel_id.as_slice(), vault.0.clone()), &state)?;
 
     Ok(
         Response::new()
@@ -304,12 +304,12 @@ pub fn set_connection(
 /// 
 pub fn is_connected(
     deps: &Deps,
-    channel_id: &str,
+    channel_id: &Bytes32,
     vault: Binary
 ) -> bool {
 
     VAULT_CONNECTIONS
-        .load(deps.storage, (channel_id, vault.0))
+        .load(deps.storage, (channel_id.as_slice(), vault.0))
         .unwrap_or(false)
 
 }
@@ -793,7 +793,7 @@ pub fn on_send_asset_success(
     deps: &mut DepsMut,
     _env: &Env,
     info: &MessageInfo,
-    channel_id: String,
+    channel_id: Bytes32,
     to_account: Binary,
     u: U256,
     escrow_amount: Uint128,
@@ -852,7 +852,7 @@ pub fn on_send_asset_failure(
     deps: &mut DepsMut,
     env: &Env,
     info: &MessageInfo,
-    channel_id: String,
+    channel_id: Bytes32,
     to_account: Binary,
     u: U256,
     escrow_amount: Uint128,
@@ -918,7 +918,7 @@ pub fn on_send_liquidity_success(
     deps: &mut DepsMut,
     _env: &Env,
     info: &MessageInfo,
-    channel_id: String,
+    channel_id: Bytes32,
     to_account: Binary,
     u: U256,
     escrow_amount: Uint128,
@@ -973,7 +973,7 @@ pub fn on_send_liquidity_failure(
     deps: &mut DepsMut,
     env: &Env,
     info: &MessageInfo,
-    channel_id: String,
+    channel_id: Bytes32,
     to_account: Binary,
     u: U256,
     escrow_amount: Uint128,
@@ -1365,10 +1365,10 @@ pub fn query_liquidity_escrow(deps: Deps, hash: Binary) -> StdResult<LiquidityEs
 /// * `channel_id` - The channel id which connects the vault.
 /// * `vault` - The remote vault address (Catalyst encoded).
 /// 
-pub fn query_vault_connection_state(deps: Deps, channel_id: &str, vault: Binary) -> StdResult<VaultConnectionStateResponse> {
+pub fn query_vault_connection_state(deps: Deps, channel_id: &Bytes32, vault: Binary) -> StdResult<VaultConnectionStateResponse> {
     Ok(
         VaultConnectionStateResponse {
-            state: VAULT_CONNECTIONS.may_load(deps.storage, (channel_id, vault.0))?.unwrap_or(false)
+            state: VAULT_CONNECTIONS.may_load(deps.storage, (channel_id.as_slice(), vault.0))?.unwrap_or(false)
         }
     )
 }

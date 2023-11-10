@@ -1,3 +1,4 @@
+use catalyst_types::Bytes32;
 use cosmwasm_std::{StdError, Uint64, Binary, OverflowError};
 use thiserror::Error;
 use vault_assets::error::AssetError;
@@ -49,7 +50,7 @@ pub enum ContractError {
 
     #[error("Vault not connected (channel id: {channel_id}, vault: {vault}).")]
     VaultNotConnected {
-        channel_id: String,
+        channel_id: Bytes32,
         vault: Binary
     },
 }

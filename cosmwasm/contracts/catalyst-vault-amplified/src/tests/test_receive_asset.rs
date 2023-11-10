@@ -36,7 +36,7 @@ mod test_amplified_receive_asset {
         mock_set_vault_connection(
             env.get_app(),
             vault.clone(),
-            CHANNEL_ID.to_string(),
+            CHANNEL_ID,
             from_vault.clone(),
             true
         );
@@ -56,7 +56,7 @@ mod test_amplified_receive_asset {
             Addr::unchecked(CHAIN_INTERFACE),
             vault.clone(),
             &AmplifiedExecuteMsg::ReceiveAsset {
-                channel_id: CHANNEL_ID.to_string(),
+                channel_id: CHANNEL_ID,
                 from_vault,
                 to_asset_index: to_asset_idx as u8,
                 to_account: SWAPPER_B.to_string(),
@@ -129,7 +129,7 @@ mod test_amplified_receive_asset {
         mock_set_vault_connection(
             env.get_app(),
             vault.clone(),
-            CHANNEL_ID.to_string(),
+            CHANNEL_ID,
             from_vault.clone(),
             true
         );
@@ -152,7 +152,7 @@ mod test_amplified_receive_asset {
             Addr::unchecked(CHAIN_INTERFACE),
             vault.clone(),
             &AmplifiedExecuteMsg::ReceiveAsset {
-                channel_id: CHANNEL_ID.to_string(),
+                channel_id: CHANNEL_ID,
                 from_vault: from_vault.clone(),
                 to_asset_index: to_asset_idx as u8,
                 to_account: SWAPPER_B.to_string(),
@@ -175,7 +175,7 @@ mod test_amplified_receive_asset {
 
         assert_eq!(
             event.attributes[1],
-            Attribute::new("channel_id", CHANNEL_ID)
+            Attribute::new("channel_id", CHANNEL_ID.to_base64())
         );
         assert_eq!(
             event.attributes[2],
@@ -240,7 +240,7 @@ mod test_amplified_receive_asset {
         mock_set_vault_connection(
             env.get_app(),
             vault.clone(),
-            CHANNEL_ID.to_string(),
+            CHANNEL_ID,
             from_vault.clone(),
             true
         );
@@ -258,7 +258,7 @@ mod test_amplified_receive_asset {
             Addr::unchecked(CHAIN_INTERFACE),
             vault.clone(),
             &AmplifiedExecuteMsg::ReceiveAsset {
-                channel_id: CHANNEL_ID.to_string(),
+                channel_id: CHANNEL_ID,
                 from_vault,
                 to_asset_index: to_asset_idx as u8,
                 to_account: SWAPPER_B.to_string(),
@@ -323,7 +323,7 @@ mod test_amplified_receive_asset {
         mock_set_vault_connection(
             env.get_app(),
             vault.clone(),
-            CHANNEL_ID.to_string(),
+            CHANNEL_ID,
             from_vault.clone(),
             true
         );
@@ -356,7 +356,7 @@ mod test_amplified_receive_asset {
             Addr::unchecked(CHAIN_INTERFACE),
             vault.clone(),
             &AmplifiedExecuteMsg::ReceiveAsset {
-                channel_id: CHANNEL_ID.to_string(),
+                channel_id: CHANNEL_ID,
                 from_vault: from_vault.clone(),
                 to_asset_index: to_asset_idx as u8,
                 to_account: SWAPPER_B.to_string(),
@@ -386,7 +386,7 @@ mod test_amplified_receive_asset {
             Addr::unchecked(CHAIN_INTERFACE),
             vault.clone(),
             &AmplifiedExecuteMsg::ReceiveAsset {
-                channel_id: CHANNEL_ID.to_string(),
+                channel_id: CHANNEL_ID,
                 from_vault,
                 to_asset_index: to_asset_idx as u8,
                 to_account: SWAPPER_B.to_string(),
@@ -439,7 +439,7 @@ mod test_amplified_receive_asset {
             Addr::unchecked(CHAIN_INTERFACE),
             vault.clone(),
             &AmplifiedExecuteMsg::ReceiveAsset {
-                channel_id: CHANNEL_ID.to_string(),
+                channel_id: CHANNEL_ID,
                 from_vault: from_vault.clone(),
                 to_asset_index: to_asset_idx as u8,
                 to_account: SWAPPER_B.to_string(),
@@ -492,7 +492,7 @@ mod test_amplified_receive_asset {
         mock_set_vault_connection(
             env.get_app(),
             vault.clone(),
-            CHANNEL_ID.to_string(),
+            CHANNEL_ID,
             from_vault.clone(),
             true
         );
@@ -508,7 +508,7 @@ mod test_amplified_receive_asset {
             Addr::unchecked(CHAIN_INTERFACE),
             vault.clone(),
             &AmplifiedExecuteMsg::ReceiveAsset {
-                channel_id: CHANNEL_ID.to_string(),
+                channel_id: CHANNEL_ID,
                 from_vault,
                 to_asset_index: to_asset_idx as u8,
                 to_account: SWAPPER_B.to_string(),
@@ -560,7 +560,7 @@ mod test_amplified_receive_asset {
         mock_set_vault_connection(
             env.get_app(),
             vault.clone(),
-            CHANNEL_ID.to_string(),
+            CHANNEL_ID,
             from_vault.clone(),
             true
         );
@@ -576,7 +576,7 @@ mod test_amplified_receive_asset {
             Addr::unchecked("not_chain_interface"),     // ! Caller is not CHAIN_INTERFACE
             vault.clone(),
             &AmplifiedExecuteMsg::ReceiveAsset {
-                channel_id: CHANNEL_ID.to_string(),
+                channel_id: CHANNEL_ID,
                 from_vault,
                 to_asset_index: to_asset_idx as u8,
                 to_account: SWAPPER_B.to_string(),

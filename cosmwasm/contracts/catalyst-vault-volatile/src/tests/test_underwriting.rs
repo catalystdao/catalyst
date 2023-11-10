@@ -282,7 +282,7 @@ mod test_underwriting {
         mock_set_vault_connection(
             env.get_app(),
             vault.clone(),
-            CHANNEL_ID.to_string(),
+            CHANNEL_ID,
             from_vault.clone(),
             true
         );
@@ -317,7 +317,7 @@ mod test_underwriting {
             Addr::unchecked(CHAIN_INTERFACE),
             vault.clone(),
             &VolatileExecuteMsg::ReleaseUnderwriteAsset {
-                channel_id: CHANNEL_ID.to_string(),
+                channel_id: CHANNEL_ID,
                 from_vault: from_vault.clone(),
                 identifier: underwrite_id.clone(),
                 asset_ref: to_asset.get_asset_ref(),
@@ -397,7 +397,7 @@ mod test_underwriting {
         mock_set_vault_connection(
             env.get_app(),
             vault.clone(),
-            CHANNEL_ID.to_string(),
+            CHANNEL_ID,
             from_vault.clone(),
             true
         );
@@ -416,7 +416,7 @@ mod test_underwriting {
             Addr::unchecked(CHAIN_INTERFACE),
             vault.clone(),
             &VolatileExecuteMsg::ReleaseUnderwriteAsset {
-                channel_id: CHANNEL_ID.to_string(),
+                channel_id: CHANNEL_ID,
                 from_vault: from_vault.clone(),
                 identifier: underwrite_id.clone(),
                 asset_ref: to_asset.get_asset_ref(),
@@ -464,7 +464,7 @@ mod test_underwriting {
         mock_set_vault_connection(
             env.get_app(),
             vault.clone(),
-            CHANNEL_ID.to_string(),
+            CHANNEL_ID,
             from_vault.clone(),
             true
         );
@@ -499,7 +499,7 @@ mod test_underwriting {
             Addr::unchecked("not_chain_interface"),     // ! Not the chain interface
             vault.clone(),
             &VolatileExecuteMsg::ReleaseUnderwriteAsset {
-                channel_id: CHANNEL_ID.to_string(),
+                channel_id: CHANNEL_ID,
                 from_vault: from_vault.clone(),
                 identifier: underwrite_id.clone(),
                 asset_ref: to_asset.get_asset_ref(),
@@ -573,7 +573,7 @@ mod test_underwriting {
             Addr::unchecked(CHAIN_INTERFACE),
             vault.clone(),
             &VolatileExecuteMsg::ReleaseUnderwriteAsset {
-                channel_id: CHANNEL_ID.to_string(),
+                channel_id: CHANNEL_ID,
                 from_vault: from_vault.clone(),
                 identifier: underwrite_id.clone(),
                 asset_ref: to_asset.get_asset_ref(),
@@ -590,7 +590,7 @@ mod test_underwriting {
         assert!(matches!(
             response_result.err().unwrap().downcast().unwrap(),
             ContractError::VaultNotConnected { channel_id, vault }
-                if channel_id == CHANNEL_ID.to_string() && vault == from_vault
+                if channel_id == CHANNEL_ID && vault == from_vault
         ));
     }
 

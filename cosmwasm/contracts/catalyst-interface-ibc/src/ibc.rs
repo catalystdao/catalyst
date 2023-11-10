@@ -1,3 +1,4 @@
+use catalyst_types::Bytes32;
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{DepsMut, Env, IbcChannelOpenMsg, IbcChannelConnectMsg, IbcBasicResponse, IbcChannelCloseMsg, IbcPacketReceiveMsg, IbcReceiveResponse, IbcPacketAckMsg, IbcPacketTimeoutMsg, IbcChannel, CosmosMsg, to_binary, SubMsg, WasmMsg, ReplyOn, StdError};
@@ -143,7 +144,7 @@ pub fn ibc_packet_receive(
     let common_response = handle_message_reception(
         &mut deps,
         &env,
-        msg.packet.dest.channel_id,
+        Bytes32::from_base64(&msg.packet.dest.channel_id).unwrap(), // ! TODO: This mapping is here to allow for contract compilation, but does not work in practice.
         msg.packet.data
     );
 
@@ -173,7 +174,7 @@ pub fn ibc_packet_ack(
 ) -> Result<IbcBasicResponse<CustomMsg>, ContractError> {
 
     let handle_response = handle_message_response(
-        msg.original_packet.dest.channel_id,
+        Bytes32::from_base64(&msg.original_packet.dest.channel_id).unwrap(), // ! TODO: This mapping is here to allow for contract compilation, but does not work in practice.
         msg.original_packet.data,
         Some(msg.acknowledgement.data)
     )?;
@@ -190,7 +191,7 @@ pub fn ibc_packet_timeout(
 ) -> Result<IbcBasicResponse<CustomMsg>, ContractError> {
 
     let handle_response = handle_message_response(
-        msg.packet.dest.channel_id,
+        Bytes32::from_base64(&msg.packet.dest.channel_id).unwrap(), // ! TODO: This mapping is here to allow for contract compilation, but does not work in practice.
         msg.packet.data,
         None
     )?;

@@ -1,4 +1,4 @@
-use catalyst_types::U256;
+use catalyst_types::{U256, Bytes32};
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{CosmosMsg, Deps, Env, Binary, Uint128, Uint64};
 
@@ -28,7 +28,7 @@ pub enum CommandMsg {
     },
     SendAsset {
         vault: String,
-        channel_id: String,
+        channel_id: Bytes32,
         to_vault: Binary,
         to_account: Binary,
         from_asset_ref: String,
@@ -40,7 +40,7 @@ pub enum CommandMsg {
     },
     SendLiquidity {
         vault: String,
-        channel_id: String,
+        channel_id: Bytes32,
         to_vault: Binary,
         to_account: Binary,
         amount: ValueAmount,

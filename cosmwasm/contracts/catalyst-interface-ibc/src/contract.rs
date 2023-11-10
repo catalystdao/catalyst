@@ -2,7 +2,7 @@
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, IbcMsg, to_binary, IbcQuery, PortIdResponse, Order, Uint128, Reply, SubMsgResult};
 use cw2::set_contract_version;
-use catalyst_types::U256;
+use catalyst_types::{U256, Bytes32};
 use catalyst_interface_common::{bindings::{InterfaceResponse, CustomMsg}, state::{encode_send_cross_chain_liquidity, encode_send_cross_chain_asset, underwrite, underwrite_and_check_connection, wrap_sub_msgs, query_underwrite_identifier, set_max_underwriting_duration, expire_underwrite, update_owner, ack_success, ack_fail, setup, handle_reply}, msg::{InstantiateMsg, ExecuteMsg}, ContractError};
 use crate::{msg::{QueryMsg, PortResponse, ListChannelsResponse}, state::{OPEN_CHANNELS, TRANSACTION_TIMEOUT_SECONDS, WRAPPED_MESSAGES_REPLY_ID, MAX_UNDERWRITE_DURATION_INITIAL_BLOCKS, MAX_UNDERWRITE_DURATION_ALLOWED_BLOCKS, MIN_UNDERWRITE_DURATION_ALLOWED_BLOCKS}};
 
@@ -221,7 +221,7 @@ pub fn execute(
 fn execute_send_cross_chain_asset(
     env: Env,
     info: MessageInfo,
-    channel_id: String,
+    channel_id: Bytes32,
     to_vault: Binary,
     to_account: Binary,
     to_asset_index: u8,
@@ -249,7 +249,7 @@ fn execute_send_cross_chain_asset(
     )?;
 
     let ibc_msg = IbcMsg::SendPacket {
-        channel_id,
+        channel_id: channel_id.to_base64(),     // ! TODO: This mapping is here to allow for contract compilation, but does not work in practice.
         data: payload,
         timeout: env.block.time.plus_seconds(TRANSACTION_TIMEOUT_SECONDS).into()
     };
@@ -280,7 +280,7 @@ fn execute_send_cross_chain_asset(
 fn execute_send_cross_chain_liquidity(
     env: Env,
     info: MessageInfo,
-    channel_id: String,
+    channel_id: Bytes32,
     to_vault: Binary,
     to_account: Binary,
     u: U256,
@@ -304,7 +304,7 @@ fn execute_send_cross_chain_liquidity(
     )?;
 
     let ibc_msg = IbcMsg::SendPacket {
-        channel_id,
+        channel_id: channel_id.to_base64(),     // ! TODO: This mapping is here to allow for contract compilation, but does not work in practice.
         data: payload,
         timeout: env.block.time.plus_seconds(TRANSACTION_TIMEOUT_SECONDS).into()
     };

@@ -36,7 +36,7 @@ mod test_volatile_receive_liquidity {
         mock_set_vault_connection(
             env.get_app(),
             vault.clone(),
-            CHANNEL_ID.to_string(),
+            CHANNEL_ID,
             from_vault.clone(),
             true
         );
@@ -51,7 +51,7 @@ mod test_volatile_receive_liquidity {
             Addr::unchecked(CHAIN_INTERFACE),
             vault.clone(),
             &VolatileExecuteMsg::ReceiveLiquidity {
-                channel_id: CHANNEL_ID.to_string(),
+                channel_id: CHANNEL_ID,
                 from_vault,
                 to_account: SWAPPER_B.to_string(),
                 u: swap_units,
@@ -123,7 +123,7 @@ mod test_volatile_receive_liquidity {
         mock_set_vault_connection(
             env.get_app(),
             vault.clone(),
-            CHANNEL_ID.to_string(),
+            CHANNEL_ID,
             from_vault.clone(),
             true
         );
@@ -140,7 +140,7 @@ mod test_volatile_receive_liquidity {
             Addr::unchecked(CHAIN_INTERFACE),
             vault.clone(),
             &VolatileExecuteMsg::ReceiveLiquidity {
-                channel_id: CHANNEL_ID.to_string(),
+                channel_id: CHANNEL_ID,
                 from_vault: from_vault.clone(),
                 to_account: SWAPPER_B.to_string(),
                 u: swap_units,
@@ -162,7 +162,7 @@ mod test_volatile_receive_liquidity {
 
         assert_eq!(
             event.attributes[1],
-            Attribute::new("channel_id", CHANNEL_ID)
+            Attribute::new("channel_id", CHANNEL_ID.to_base64())
         );
         assert_eq!(
             event.attributes[2],
@@ -218,7 +218,7 @@ mod test_volatile_receive_liquidity {
         mock_set_vault_connection(
             env.get_app(),
             vault.clone(),
-            CHANNEL_ID.to_string(),
+            CHANNEL_ID,
             from_vault.clone(),
             true
         );
@@ -233,7 +233,7 @@ mod test_volatile_receive_liquidity {
             Addr::unchecked(CHAIN_INTERFACE),
             vault.clone(),
             &VolatileExecuteMsg::ReceiveLiquidity {
-                channel_id: CHANNEL_ID.to_string(),
+                channel_id: CHANNEL_ID,
                 from_vault,
                 to_account: SWAPPER_B.to_string(),
                 u: swap_units,
@@ -298,7 +298,7 @@ mod test_volatile_receive_liquidity {
         mock_set_vault_connection(
             env.get_app(),
             vault.clone(),
-            CHANNEL_ID.to_string(),
+            CHANNEL_ID,
             from_vault.clone(),
             true
         );
@@ -326,7 +326,7 @@ mod test_volatile_receive_liquidity {
             Addr::unchecked(CHAIN_INTERFACE),
             vault.clone(),
             &VolatileExecuteMsg::ReceiveLiquidity {
-                channel_id: CHANNEL_ID.to_string(),
+                channel_id: CHANNEL_ID,
                 from_vault: from_vault.clone(),
                 to_account: SWAPPER_B.to_string(),
                 u: swap_units,
@@ -355,7 +355,7 @@ mod test_volatile_receive_liquidity {
             Addr::unchecked(CHAIN_INTERFACE),
             vault.clone(),
             &VolatileExecuteMsg::ReceiveLiquidity {
-                channel_id: CHANNEL_ID.to_string(),
+                channel_id: CHANNEL_ID,
                 from_vault,
                 to_account: SWAPPER_B.to_string(),
                 u: swap_units,
@@ -399,7 +399,7 @@ mod test_volatile_receive_liquidity {
         mock_set_vault_connection(
             env.get_app(),
             vault.clone(),
-            CHANNEL_ID.to_string(),
+            CHANNEL_ID,
             from_vault.clone(),
             true
         );
@@ -435,7 +435,7 @@ mod test_volatile_receive_liquidity {
             Addr::unchecked(CHAIN_INTERFACE),
             vault.clone(),
             &VolatileExecuteMsg::ReceiveLiquidity {
-                channel_id: CHANNEL_ID.to_string(),
+                channel_id: CHANNEL_ID,
                 from_vault: from_vault.clone(),
                 to_account: SWAPPER_B.to_string(),
                 u: swap_units,
@@ -464,7 +464,7 @@ mod test_volatile_receive_liquidity {
             Addr::unchecked(CHAIN_INTERFACE),
             vault.clone(),
             &VolatileExecuteMsg::ReceiveLiquidity {
-                channel_id: CHANNEL_ID.to_string(),
+                channel_id: CHANNEL_ID,
                 from_vault,
                 to_account: SWAPPER_B.to_string(),
                 u: swap_units,
@@ -515,7 +515,7 @@ mod test_volatile_receive_liquidity {
             Addr::unchecked(CHAIN_INTERFACE),
             vault.clone(),
             &VolatileExecuteMsg::ReceiveLiquidity {
-                channel_id: CHANNEL_ID.to_string(),
+                channel_id: CHANNEL_ID,
                 from_vault: from_vault.clone(),
                 to_account: SWAPPER_B.to_string(),
                 u: swap_units,
@@ -567,7 +567,7 @@ mod test_volatile_receive_liquidity {
         mock_set_vault_connection(
             env.get_app(),
             vault.clone(),
-            CHANNEL_ID.to_string(),
+            CHANNEL_ID,
             from_vault.clone(),
             true
         );
@@ -582,7 +582,7 @@ mod test_volatile_receive_liquidity {
             Addr::unchecked("not_chain_interface"),     // ! Caller is not CHAIN_INTERFACE
             vault.clone(),
             &VolatileExecuteMsg::ReceiveLiquidity {
-                channel_id: CHANNEL_ID.to_string(),
+                channel_id: CHANNEL_ID,
                 from_vault,
                 to_account: SWAPPER_B.to_string(),
                 u: swap_units,
