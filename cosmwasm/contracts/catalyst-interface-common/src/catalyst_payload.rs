@@ -121,8 +121,6 @@ use cosmwasm_std::{Deps, Addr, Binary};
 use catalyst_types::U256;
 use crate::ContractError;
 
-const CATALYST_ADDRESS_LENGTH: usize = 65;
-
 
 // Catalyst Packet **************************************************************************************************************
 
@@ -596,7 +594,7 @@ pub fn parse_calldata(
 
 
 /// Wrapper around a bytes vec for encoding/decoding of Catalyst's 65-byte payload addresses.
-pub struct CatalystEncodedAddress(Vec<u8>);
+pub struct CatalystEncodedAddress([u8; 65]);
 
 impl AsRef<[u8]> for CatalystEncodedAddress {
     fn as_ref(&self) -> &[u8] {
@@ -606,13 +604,13 @@ impl AsRef<[u8]> for CatalystEncodedAddress {
 
 impl Into<Vec<u8>> for CatalystEncodedAddress {
     fn into(self) -> Vec<u8> {
-        self.0
+        self.0.to_vec()
     }
 }
 
 impl Into<Binary> for CatalystEncodedAddress {
     fn into(self) -> Binary {
-        Binary(self.0)
+        Binary(self.0.to_vec())
     }
 }
 
@@ -621,11 +619,15 @@ impl TryFrom<Vec<u8>> for CatalystEncodedAddress {
 
     fn try_from(value: Vec<u8>) -> Result<Self, Self::Error> {
 
-        if value.len() != CATALYST_ADDRESS_LENGTH {
+        let bytes: [u8; Self::LENGTH] = value
+            .try_into()
+            .map_err(|_| ContractError::InvalidCatalystEncodedAddress {})?;
+
+        if bytes[0] as usize >= Self::LENGTH {
             return Err(ContractError::InvalidCatalystEncodedAddress {})
         }
 
-        Ok(Self(value))
+        Ok(Self(bytes))
     }
 }
 
@@ -634,11 +636,15 @@ impl TryFrom<Binary> for CatalystEncodedAddress {
 
     fn try_from(value: Binary) -> Result<Self, Self::Error> {
 
-        if value.len() != CATALYST_ADDRESS_LENGTH {
+        let bytes: [u8; Self::LENGTH] = value.0
+            .try_into()
+            .map_err(|_| ContractError::InvalidCatalystEncodedAddress {})?;
+
+        if bytes[0] as usize >= Self::LENGTH {
             return Err(ContractError::InvalidCatalystEncodedAddress {})
         }
 
-        Ok(Self(value.0))
+        Ok(Self(bytes))
     }
 }
 
@@ -647,25 +653,31 @@ impl TryFrom<&[u8]> for CatalystEncodedAddress {
 
     fn try_from(value: &[u8]) -> Result<Self, Self::Error> {
 
-        if value.len() != CATALYST_ADDRESS_LENGTH {
+        let bytes: [u8; Self::LENGTH] = value
+            .try_into()
+            .map_err(|_| ContractError::InvalidCatalystEncodedAddress {})?;
+
+        if bytes[0] as usize >= Self::LENGTH {
             return Err(ContractError::InvalidCatalystEncodedAddress {})
         }
 
-        Ok(Self(value.to_vec()))
+        Ok(Self(bytes))
     }
 }
 
 
 impl CatalystEncodedAddress {
 
+    const LENGTH: usize = 65;
+
     /// Return a vector representation of the address.
     pub fn to_vec(self) -> Vec<u8> {
-        self.0
+        self.0.to_vec()
     }
 
     /// Return a Binary representation of the address.
     pub fn to_binary(self) -> Binary {
-        Binary(self.0)
+        Binary(self.0.to_vec())
     }
 
     /// Create a CatalystEncodedAddress from a slice.
@@ -676,11 +688,11 @@ impl CatalystEncodedAddress {
     /// * `data` - The slice from which to create the CatalystEncodedAddress.
     /// 
     pub fn from_slice_unchecked(data: &[u8]) -> Self {
-        Self(data.to_vec())
+        Self(data.try_into().unwrap())
     }
 
     /// Try to encode an address from a slice. The encoded address always has fixed length
-    /// (`CATALYST_ADDRESS_LENGTH`), and is of the following form:
+    /// (`LENGTH`), and is of the following form:
     ///     <Address length (1 byte)> <Zero padding> <Address>
     /// 
     /// # Arguments:
@@ -689,20 +701,15 @@ impl CatalystEncodedAddress {
     pub fn try_encode(address: &[u8]) -> Result<Self, ContractError> {
 
         let address_len = address.len();
-        if address_len > (CATALYST_ADDRESS_LENGTH - 1) {   // Subtracting '1', as the first byte of the encoded 
-                                                           // address is reserved for the address length
+        if address_len > (Self::LENGTH - 1) {   // Subtracting '1', as the first byte of the encoded 
+                                                // address is reserved for the address length
             return Err(ContractError::PayloadEncodingError {});
         }
 
-        let mut encoded_address: Vec<u8> = Vec::with_capacity(CATALYST_ADDRESS_LENGTH);
-        encoded_address.push(address_len as u8);     // Casting to u8 is safe, as address_len is < CATALYST_ADDRESS_LENGTH < u8.max
+        let mut encoded_address = [0u8; Self::LENGTH];
+        encoded_address[0] = address_len as u8;     // Casting to u8 is safe, as address_len is < Self::LENGTH < u8.max
 
-        // Pad the encoded address with '0' if the provided slice is less than (CATALYST_ADDRESS_LENGTH-1) bytes long.
-        if address_len != CATALYST_ADDRESS_LENGTH - 1 {
-            encoded_address.extend_from_slice(vec![0u8; 64-address_len].as_ref());
-        }
-
-        encoded_address.extend_from_slice(address.as_ref());
+        encoded_address[Self::LENGTH-address_len..].copy_from_slice(address.as_ref());
 
         Ok(Self(encoded_address))
     }
@@ -714,7 +721,7 @@ impl CatalystEncodedAddress {
             .ok_or(ContractError::PayloadDecodingError {})? as usize;
 
         // Get the last <address_length> bytes of the encoded address.
-        let address_start_byte = CATALYST_ADDRESS_LENGTH
+        let address_start_byte = Self::LENGTH
             .checked_sub(address_length)
             .ok_or(ContractError::InvalidCatalystEncodedAddress {})?;
 
