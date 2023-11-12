@@ -1,0 +1,59 @@
+[package]
+name = "catalyst-interface-gi"
+version = "0.1.0"
+authors = ["Catalyst"]
+edition = "2021"
+
+exclude = [
+  # Those files are rust-optimizer artifacts. You might want to commit them for convenience but they should not be part of the source code publication.
+  "contract.wasm",
+  "hash.txt",
+]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[features]
+# for more explicit tests, cargo test --features=backtraces
+backtraces = ["cosmwasm-std/backtraces"]
+# use library feature to disable all instantiate/execute/query exports
+library = []
+asset_native = ["catalyst-interface-common/asset_native"]
+asset_cw20 = ["catalyst-interface-common/asset_cw20"]
+
+[profile.release]
+codegen-units = 1
+debug = false
+debug-assertions = false
+incremental = false
+lto = true
+opt-level = 3
+overflow-checks = true
+panic = 'abort'
+rpath = false
+
+[dependencies]
+cosmwasm-schema = { workspace = true }
+cosmwasm-std = { workspace = true }
+cosmwasm-storage = { workspace = true }
+cw-storage-plus = { workspace = true }
+cw-controllers = { workspace = true }
+cw2 = { workspace = true }
+generalised-incentives-common = { workspace = true }
+schemars = { workspace = true }
+serde = { workspace = true }
+thiserror = { workspace = true }
+catalyst-types = { path = "../../lib/catalyst-types" }
+catalyst-interface-common = { path = "../catalyst-interface-common" }
+
+
+[dev-dependencies]
+cw-multi-test = { workspace = true }
+catalyst-factory = { path = "../catalyst-factory", features = ["library"] }
+catalyst-vault-common = { path = "../catalyst-vault-common" }
+catalyst-vault-volatile = { path = "../catalyst-vault-volatile", features = ["library"] }
+mock-calldata-target = { path = "../../mock-contracts/mock-calldata-target", features = ["library"] }
+test-helpers = { path = "../../helpers/test-helpers" }
+generalised-incentives-mock-on-receive = { git = "https://github.com/catalystdao/GeneralisedIncentivesCW", features = ["library"] }

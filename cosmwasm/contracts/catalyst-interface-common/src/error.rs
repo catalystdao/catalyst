@@ -1,5 +1,5 @@
 use catalyst_types::Bytes32;
-use cosmwasm_std::{StdError, Uint64, Binary, OverflowError};
+use cosmwasm_std::{StdError, Uint64, Binary, OverflowError, Uint128};
 use thiserror::Error;
 use vault_assets::error::AssetError;
 
@@ -53,8 +53,24 @@ pub enum ContractError {
         channel_id: Bytes32,
         vault: Binary
     },
+
+    #[error("The source cross chain interface is invalid.")]
+    InvalidSourceInterface {},
+
+    #[error("Insufficient incentive \"{description}\" (minimum: {minimum}, actual: {actual})")]
+    NotEnoughIncentives {
+        description: String,
+        minimum: Uint128,
+        actual: Uint128
+    }
 }
 
+
+impl From<ContractError> for StdError {
+    fn from(err: ContractError) -> StdError {
+        StdError::GenericErr { msg: err.to_string() }
+    }
+}
 
 impl From<AssetError> for ContractError {
     fn from(err: AssetError) -> Self {

@@ -593,7 +593,8 @@ pub fn parse_calldata(
 }
 
 
-/// Wrapper around a bytes vec for encoding/decoding of Catalyst's 65-byte payload addresses.
+/// Wrapper around a bytes array for encoding/decoding of Catalyst's 65-byte payload addresses.
+#[derive(Clone, PartialEq)]
 pub struct CatalystEncodedAddress([u8; 65]);
 
 impl AsRef<[u8]> for CatalystEncodedAddress {
