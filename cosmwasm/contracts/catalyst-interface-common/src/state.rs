@@ -8,7 +8,7 @@ use cw_storage_plus::{Map, Item};
 use sha3::{Keccak256, Digest};
 use std::ops::Div;
 
-use crate::{catalyst_payload::{CatalystV1SendAssetPayload, SendAssetVariablePayload, CatalystV1SendLiquidityPayload, SendLiquidityVariablePayload, CatalystEncodedAddress, CatalystCalldata, parse_calldata, CatalystV1Packet}, msg::UnderwriteIdentifierResponse, event::set_max_underwrite_duration_event};
+use crate::{catalyst_payload::{CatalystV1SendAssetPayload, SendAssetVariablePayload, CatalystV1SendLiquidityPayload, SendLiquidityVariablePayload, CatalystEncodedAddress, CatalystCalldata, parse_calldata, CatalystV1Packet}, msg::UnderwriteIdentifierResponse, event::{set_max_underwrite_duration_event, swap_failed}};
 use crate::error::ContractError;
 use crate::event::{set_owner_event, underwrite_swap_event, fulfill_underwrite_event, expire_underwrite_event};
 use crate::bindings::InterfaceResponse;
@@ -623,6 +623,14 @@ pub fn handle_send_asset_response(
         },
     };
 
+    let mut response = Response::new();
+
+    if !success {
+        response = response.add_event(
+            swap_failed(result)
+        )
+    }
+
     let response_msg = CosmosMsg::Wasm(WasmMsg::Execute {
         contract_addr: from_vault,    // No need to validate, 'Execute' will fail for an invalid address.
         msg: to_binary(&msg)?,
@@ -630,7 +638,7 @@ pub fn handle_send_asset_response(
     });
 
     Ok(
-        Response::new().add_message(response_msg)
+        response.add_message(response_msg)
     )
 }
 
@@ -683,6 +691,14 @@ pub fn handle_send_liquidity_response(
         },
     };
 
+    let mut response = Response::new();
+
+    if !success {
+        response = response.add_event(
+            swap_failed(result)
+        )
+    }
+
     let response_msg = CosmosMsg::Wasm(WasmMsg::Execute {
         contract_addr: from_vault,    // No need to validate, 'Execute' will fail for an invalid address.
         msg: to_binary(&msg)?,
@@ -690,7 +706,7 @@ pub fn handle_send_liquidity_response(
     });
 
     Ok(
-        Response::new().add_message(response_msg)
+        response.add_message(response_msg)
     )
 }
 
