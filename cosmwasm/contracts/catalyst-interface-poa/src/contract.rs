@@ -121,13 +121,13 @@ pub fn execute(
     
         ExecuteMsg::PacketAck {
             data,
-            response,
+            result,
             channel_id
         } => execute_packet_ack(
             deps,
             info,
             data,
-            response,
+            result,
             channel_id
         ),
     
@@ -327,7 +327,7 @@ pub fn execute_packet_ack(
     deps: DepsMut,
     info: MessageInfo,
     data: Binary,
-    response: Binary,
+    result: Option<u8>,
     channel_id: Bytes32
 ) -> Result<InterfaceResponse, ContractError> {
 
@@ -338,7 +338,7 @@ pub fn execute_packet_ack(
     let response = handle_message_response(
         channel_id,
         data,
-        Some(response)
+        result
     )?;
 
     Ok(

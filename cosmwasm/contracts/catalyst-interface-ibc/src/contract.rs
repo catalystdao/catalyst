@@ -348,12 +348,10 @@ pub fn reply(
         
         WRAPPED_MESSAGES_REPLY_ID => match reply.result {
             SubMsgResult::Ok(_) => {
-                // Set the custom 'success-ack' for successful executions.
-                Ok(Response::new().set_data(ack_success()))
+                unimplemented!()
             },
             SubMsgResult::Err(_) => {
-                // Set the custom 'failed-ack' for unsuccessful executions.
-                Ok(Response::new().set_data(ack_fail()))
+                unimplemented!()
             }
         },
         _ => Err(ContractError::UnknownReplyId { id: reply.id }),

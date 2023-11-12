@@ -44,7 +44,7 @@ pub enum ExecuteMsg {
 
     PacketAck {
         data: Binary,
-        response: Binary,
+        result: Option<u8>,
         channel_id: Bytes32
     },
 
