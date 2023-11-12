@@ -6,7 +6,7 @@ mod test_volatile_security_limit {
     use cosmwasm_std::{Addr, Uint128, Binary};
     use test_helpers::{contract::{mock_factory_deploy_vault, mock_instantiate_interface, mock_set_vault_connection}, definitions::{SETUP_MASTER, SWAPPER_B, CHANNEL_ID, SWAPPER_C}, math::{uint128_to_f64, f64_to_uint128, u256_to_f64, f64_to_u256}, misc::{encode_payload_address, get_response_attribute}, env::CustomTestEnv, asset::CustomTestAsset};
 
-    use crate::tests::{TestEnv, TestAsset, TestApp};
+    use crate::tests::{TestEnv, TestAsset, TestApp, helpers::mock_incentive};
     use crate::{tests::{parameters::{TEST_VAULT_BALANCES, TEST_VAULT_WEIGHTS, TEST_VAULT_ASSET_COUNT, AMPLIFICATION}, helpers::volatile_vault_contract_storage}, msg::{QueryMsg, VolatileExecuteMsg}};
 
 
@@ -153,7 +153,8 @@ mod test_volatile_security_limit {
                 min_out: U256::zero(),
                 fallback_account: SWAPPER_C.to_string(),
                 underwrite_incentive_x16: 0u16,
-                calldata: Binary(vec![])
+                calldata: Binary(vec![]),
+                incentive: mock_incentive()
             },
             vec![from_asset.clone()],
             vec![swap_amount]
@@ -213,7 +214,8 @@ mod test_volatile_security_limit {
                 min_vault_tokens: U256::zero(),
                 min_reference_asset: U256::zero(),
                 fallback_account: SWAPPER_C.to_string(),
-                calldata: Binary(vec![])
+                calldata: Binary(vec![]),
+                incentive: mock_incentive()
             },
             vec![],
             vec![]
@@ -370,7 +372,8 @@ mod test_volatile_security_limit {
                 min_out: U256::zero(),
                 fallback_account: SWAPPER_C.to_string(),
                 underwrite_incentive_x16: 0u16,
-                calldata: Binary(vec![])
+                calldata: Binary(vec![]),
+                incentive: mock_incentive()
             },
             vec![from_asset.clone()],
             vec![swap_amount]
@@ -667,7 +670,8 @@ mod test_volatile_security_limit {
                 min_vault_tokens: U256::zero(),
                 min_reference_asset: U256::zero(),
                 fallback_account: SWAPPER_C.to_string(),
-                calldata: Binary(vec![])
+                calldata: Binary(vec![]),
+                incentive: mock_incentive()
             },
             vec![],
             vec![]

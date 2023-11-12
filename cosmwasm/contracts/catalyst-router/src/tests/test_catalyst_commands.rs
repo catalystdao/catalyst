@@ -13,7 +13,7 @@ mod test_catalyst_commands {
     use crate::commands::{execute_command, CommandMsg};
     use crate::executors::catalyst::get_vault_token_amount;
     use crate::executors::types::{CoinAmount, ValueAmount};
-    use crate::tests::helpers::{MockVault, ROUTER, run_command_result, fund_account};
+    use crate::tests::helpers::{MockVault, ROUTER, run_command_result, fund_account, mock_incentive};
 
 
 
@@ -100,7 +100,8 @@ mod test_catalyst_commands {
                 amount: CoinAmount::Coin(swap_amount.clone()),
                 min_out: U256::zero(),
                 fallback_account: "fallback-account".to_string(),
-                calldata: Binary(vec![])
+                calldata: Binary(vec![]),
+                incentive: mock_incentive()
             }
         ).unwrap();
 
@@ -152,7 +153,8 @@ mod test_catalyst_commands {
                 min_vault_tokens: U256::zero(),
                 min_reference_asset: U256::zero(),
                 fallback_account: "fallback-account".to_string(),
-                calldata: Binary(vec![])
+                calldata: Binary(vec![]),
+                incentive: mock_incentive()
             }
         ).unwrap();
 

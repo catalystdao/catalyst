@@ -62,7 +62,8 @@ pub fn execute(
             from_asset,
             underwrite_incentive_x16,
             block_number,
-            calldata
+            calldata,
+            incentive: _
         } => execute_send_cross_chain_asset(
             env,
             info,
@@ -88,7 +89,8 @@ pub fn execute(
             min_reference_asset,
             from_amount,
             block_number,
-            calldata
+            calldata,
+            incentive: _
         } => execute_send_cross_chain_liquidity(
             env,
             info,

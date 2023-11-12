@@ -1,6 +1,7 @@
 use catalyst_types::{U256, Bytes32};
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{CosmosMsg, Deps, Env, Binary, Uint128, Uint64};
+use generalised_incentives_common::state::IncentiveDescription;
 
 use crate::{error::ContractError, executors::{catalyst, payments, cancel_swap, types::{CoinAmount, Denom, Account, ValueAmount}}};
 
@@ -36,7 +37,8 @@ pub enum CommandMsg {
         amount: CoinAmount,
         min_out: U256,
         fallback_account: String,
-        calldata: Binary
+        calldata: Binary,
+        incentive: IncentiveDescription
     },
     SendLiquidity {
         vault: String,
@@ -47,7 +49,8 @@ pub enum CommandMsg {
         min_vault_tokens: U256,
         min_reference_asset: U256,
         fallback_account: String,
-        calldata: Binary
+        calldata: Binary,
+        incentive: IncentiveDescription
     },
     WithdrawAll {
         vault: String,
@@ -146,7 +149,8 @@ pub fn execute_command(
             amount,
             min_out,
             fallback_account,
-            calldata
+            calldata,
+            incentive
         } => catalyst::execute_send_asset(
             deps,
             env,
@@ -159,7 +163,8 @@ pub fn execute_command(
             amount,
             min_out,
             fallback_account,
-            calldata
+            calldata,
+            incentive
         ),
         CommandMsg::SendLiquidity {
             vault,
@@ -170,7 +175,8 @@ pub fn execute_command(
             min_vault_tokens,
             min_reference_asset,
             fallback_account,
-            calldata
+            calldata,
+            incentive
         } => catalyst::execute_send_liquidity(
             deps,
             env,
@@ -182,7 +188,8 @@ pub fn execute_command(
             min_vault_tokens,
             min_reference_asset,
             fallback_account,
-            calldata
+            calldata,
+            incentive
         ),
         CommandMsg::WithdrawAll {
             vault,

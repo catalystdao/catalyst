@@ -39,6 +39,7 @@ cosmwasm-storage = { workspace = true }
 cw-storage-plus = { workspace = true }
 cw-controllers = { workspace = true }
 cw2 = { workspace = true }
+generalised-incentives-common = { workspace = true }
 schemars = { workspace = true }
 serde = { workspace = true }
 thiserror = { workspace = true }

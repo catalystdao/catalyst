@@ -4,7 +4,7 @@ mod test_amplified_send_liquidity {
     use catalyst_vault_common::{ContractError, msg::{TotalEscrowedLiquidityResponse, LiquidityEscrowResponse}, state::{INITIAL_MINT_AMOUNT, compute_send_liquidity_hash}, bindings::Asset};
     use test_helpers::{math::{uint128_to_f64, f64_to_uint128, u256_to_f64}, misc::{encode_payload_address, get_response_attribute}, definitions::{SETUP_MASTER, CHANNEL_ID, SWAPPER_A, SWAPPER_B, SWAPPER_C, VAULT_TOKEN_DENOM}, contract::{mock_instantiate_interface, mock_factory_deploy_vault, mock_set_vault_connection}, env::CustomTestEnv, vault_token::CustomTestVaultToken};
 
-    use crate::tests::{TestEnv, TestVaultToken};
+    use crate::tests::{TestEnv, TestVaultToken, helpers::mock_incentive};
     use crate::{msg::AmplifiedExecuteMsg, tests::{helpers::{compute_expected_send_liquidity, amplified_vault_contract_storage}, parameters::{AMPLIFICATION, TEST_VAULT_BALANCES, TEST_VAULT_WEIGHTS, TEST_VAULT_ASSET_COUNT}}};
 
 
@@ -70,7 +70,8 @@ mod test_amplified_send_liquidity {
                 min_vault_tokens: U256::zero(),
                 min_reference_asset: U256::zero(),
                 fallback_account: SWAPPER_C.to_string(),
-                calldata: Binary(vec![])
+                calldata: Binary(vec![]),
+                incentive: mock_incentive()
             },
             vec![],
             vec![]
@@ -210,7 +211,8 @@ mod test_amplified_send_liquidity {
                 min_vault_tokens,
                 min_reference_asset,
                 fallback_account: SWAPPER_C.to_string(),
-                calldata: Binary(vec![])
+                calldata: Binary(vec![]),
+                incentive: mock_incentive()
             },
             vec![],
             vec![]
@@ -312,7 +314,8 @@ mod test_amplified_send_liquidity {
                 min_vault_tokens: U256::zero(),
                 min_reference_asset: U256::zero(),
                 fallback_account: SWAPPER_C.to_string(),
-                calldata: Binary(vec![])
+                calldata: Binary(vec![]),
+                incentive: mock_incentive()
             },
             vec![],
             vec![]
@@ -384,7 +387,8 @@ mod test_amplified_send_liquidity {
                 min_vault_tokens: U256::zero(),
                 min_reference_asset: U256::zero(),
                 fallback_account: SWAPPER_C.to_string(),
-                calldata: Binary(vec![])
+                calldata: Binary(vec![]),
+                incentive: mock_incentive()
             },
             vec![],
             vec![]
@@ -468,7 +472,8 @@ mod test_amplified_send_liquidity {
                 min_vault_tokens: U256::zero(),
                 min_reference_asset: U256::zero(),
                 fallback_account: SWAPPER_C.to_string(),
-                calldata: calldata.clone()
+                calldata: calldata.clone(),
+                incentive: mock_incentive()
             },
             vec![],
             vec![]

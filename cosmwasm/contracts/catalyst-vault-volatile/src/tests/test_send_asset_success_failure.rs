@@ -4,7 +4,7 @@ mod test_volatile_send_asset_success_failure {
     use catalyst_vault_common::{ContractError, msg::{TotalEscrowedAssetResponse, AssetEscrowResponse}, state::compute_send_asset_hash, bindings::Asset};
     use test_helpers::{math::{uint128_to_f64, f64_to_uint128}, misc::{encode_payload_address, get_response_attribute}, definitions::{SETUP_MASTER, CHANNEL_ID, SWAPPER_B, SWAPPER_A, FACTORY_OWNER}, contract::{mock_instantiate_interface, mock_factory_deploy_vault, mock_set_vault_connection}, env::CustomTestEnv, asset::CustomTestAsset};
 
-    use crate::tests::{TestEnv, TestAsset};
+    use crate::tests::{TestEnv, TestAsset, helpers::mock_incentive};
     use crate::{msg::{VolatileExecuteMsg, QueryMsg}, tests::{helpers::volatile_vault_contract_storage, parameters::{TEST_VAULT_BALANCES, TEST_VAULT_WEIGHTS, AMPLIFICATION, TEST_VAULT_ASSET_COUNT}}};
 
 
@@ -86,7 +86,8 @@ mod test_volatile_send_asset_success_failure {
                     min_out: U256::zero(),
                     fallback_account: SWAPPER_A.to_string(),
                     underwrite_incentive_x16: 0u16,
-                    calldata: Binary(vec![])
+                    calldata: Binary(vec![]),
+                    incentive: mock_incentive()
                 },
                 vec![from_asset.clone()],
                 vec![swap_amount]

@@ -4,7 +4,7 @@ mod test_volatile_send_asset {
     use catalyst_vault_common::{ContractError, msg::{TotalEscrowedAssetResponse, AssetEscrowResponse}, state::compute_send_asset_hash, bindings::Asset};
     use test_helpers::{math::{uint128_to_f64, f64_to_uint128, u256_to_f64, f64_to_u256}, misc::{encode_payload_address, get_response_attribute}, definitions::{SETUP_MASTER, CHANNEL_ID, SWAPPER_B, SWAPPER_A, FACTORY_OWNER, SWAPPER_C}, contract::{mock_instantiate_interface, mock_factory_deploy_vault, DEFAULT_TEST_VAULT_FEE, DEFAULT_TEST_GOV_FEE, mock_set_vault_connection}, env::CustomTestEnv, asset::CustomTestAsset};
 
-    use crate::tests::TestEnv;
+    use crate::tests::{TestEnv, helpers::mock_incentive};
     use crate::{msg::VolatileExecuteMsg, tests::{helpers::{compute_expected_send_asset, volatile_vault_contract_storage}, parameters::{TEST_VAULT_BALANCES, TEST_VAULT_WEIGHTS, AMPLIFICATION, TEST_VAULT_ASSET_COUNT}}};
 
 
@@ -77,7 +77,8 @@ mod test_volatile_send_asset {
                 min_out: U256::zero(),
                 fallback_account: SWAPPER_C.to_string(),
                 underwrite_incentive_x16: 0u16,
-                calldata: Binary(vec![])
+                calldata: Binary(vec![]),
+                incentive: mock_incentive()
             },
             vec![from_asset.clone()],
             vec![swap_amount]
@@ -234,7 +235,8 @@ mod test_volatile_send_asset {
                 min_out,
                 fallback_account: SWAPPER_A.to_string(),
                 underwrite_incentive_x16,
-                calldata: Binary(vec![])
+                calldata: Binary(vec![]),
+                incentive: mock_incentive()
             },
             vec![from_asset.clone()],
             vec![swap_amount]
@@ -341,7 +343,8 @@ mod test_volatile_send_asset {
                 min_out: U256::zero(),
                 fallback_account: SWAPPER_A.to_string(),
                 underwrite_incentive_x16: 0u16,
-                calldata: Binary(vec![])
+                calldata: Binary(vec![]),
+                incentive: mock_incentive()
             },
             vec![from_asset.clone()],
             vec![swap_amount]
@@ -419,7 +422,8 @@ mod test_volatile_send_asset {
                 min_out: U256::zero(),
                 fallback_account: SWAPPER_A.to_string(),
                 underwrite_incentive_x16: 0u16,
-                calldata: Binary(vec![])
+                calldata: Binary(vec![]),
+                incentive: mock_incentive()
             },
             vec![from_asset.clone()],
             vec![swap_amount]
@@ -500,7 +504,8 @@ mod test_volatile_send_asset {
                 min_out: U256::zero(),
                 fallback_account: SWAPPER_A.to_string(),
                 underwrite_incentive_x16: 0u16,
-                calldata: Binary(vec![])
+                calldata: Binary(vec![]),
+                incentive: mock_incentive()
             },
             vec![from_asset.clone()],
             vec![swap_amount]
@@ -587,7 +592,8 @@ mod test_volatile_send_asset {
                 min_out: U256::zero(),
                 fallback_account: SWAPPER_A.to_string(),
                 underwrite_incentive_x16: 0u16,
-                calldata: calldata.clone()
+                calldata: calldata.clone(),
+                incentive: mock_incentive()
             },
             vec![from_asset.clone()],
             vec![swap_amount]
@@ -669,7 +675,8 @@ mod test_volatile_send_asset {
                 min_out: U256::zero(),
                 fallback_account: SWAPPER_C.to_string(),
                 underwrite_incentive_x16: 0u16,
-                calldata: Binary(vec![])
+                calldata: Binary(vec![]),
+                incentive: mock_incentive()
             },
             vec![],   // ! Do not send funds
             vec![]
@@ -705,7 +712,8 @@ mod test_volatile_send_asset {
                 min_out: U256::zero(),
                 fallback_account: SWAPPER_C.to_string(),
                 underwrite_incentive_x16: 0u16,
-                calldata: Binary(vec![])
+                calldata: Binary(vec![]),
+                incentive: mock_incentive()
             },
             vec![other_asset.clone()],   // ! Send 'other_asset' instead of 'from_asset'
             vec![swap_amount]
@@ -741,7 +749,8 @@ mod test_volatile_send_asset {
                 min_out: U256::zero(),
                 fallback_account: SWAPPER_C.to_string(),
                 underwrite_incentive_x16: 0u16,
-                calldata: Binary(vec![])
+                calldata: Binary(vec![]),
+                incentive: mock_incentive()
             },
             vec![from_asset.clone(), other_asset.clone()],   // ! Send another asset together with 'from_asset'
             vec![swap_amount, Uint128::one()]
@@ -776,7 +785,8 @@ mod test_volatile_send_asset {
                 min_out: U256::zero(),
                 fallback_account: SWAPPER_C.to_string(),
                 underwrite_incentive_x16: 0u16,
-                calldata: Binary(vec![])
+                calldata: Binary(vec![]),
+                incentive: mock_incentive()
             },
             vec![from_asset.clone()],
             vec![swap_amount - Uint128::one()]
@@ -815,7 +825,8 @@ mod test_volatile_send_asset {
                 min_out: U256::zero(),
                 fallback_account: SWAPPER_C.to_string(),
                 underwrite_incentive_x16: 0u16,
-                calldata: Binary(vec![])
+                calldata: Binary(vec![]),
+                incentive: mock_incentive()
             },
             vec![from_asset.clone()],
             vec![swap_amount + Uint128::one()]
@@ -854,7 +865,8 @@ mod test_volatile_send_asset {
                 min_out: U256::zero(),
                 fallback_account: SWAPPER_C.to_string(),
                 underwrite_incentive_x16: 0u16,
-                calldata: Binary(vec![])
+                calldata: Binary(vec![]),
+                incentive: mock_incentive()
             },
             vec![from_asset.clone()],
             vec![swap_amount]
@@ -944,7 +956,8 @@ mod test_volatile_send_asset {
                 u: fixed_units,
                 fallback_account: SWAPPER_C.to_string(),
                 underwrite_incentive_x16: 0u16,
-                calldata: Binary(vec![])
+                calldata: Binary(vec![]),
+                incentive: mock_incentive()
             },
             vec![from_asset.clone()],
             vec![swap_amount]
@@ -1050,7 +1063,8 @@ mod test_volatile_send_asset {
                 u: fixed_units,
                 fallback_account: SWAPPER_C.to_string(),
                 underwrite_incentive_x16: 0u16,
-                calldata: Binary(vec![])
+                calldata: Binary(vec![]),
+                incentive: mock_incentive()
             },
             vec![from_asset.clone()],
             vec![swap_amount]

@@ -1,6 +1,7 @@
 use cosmwasm_std::{Uint128, Uint64};
 use cw_multi_test::ContractWrapper;
 use catalyst_types::U256;
+use generalised_incentives_common::state::IncentiveDescription;
 use test_helpers::{math::{u256_to_f64, uint128_to_f64}, contract::{ExpectedLocalSwapResult, ExpectedSendAssetResult, ExpectedReceiveAssetResult, ExpectedSendLiquidityResult, ExpectedReceiveLiquidityResult, ExpectedReferenceAsset}};
 use crate::tests::TestApp;
 
@@ -264,3 +265,14 @@ pub fn compute_expected_withdraw_mixed(
 
 }
 
+
+pub fn mock_incentive() -> IncentiveDescription {
+    IncentiveDescription {
+        max_gas_delivery: Uint64::new(10000000u64),
+        max_gas_ack: Uint64::new(2000000u64),
+        refund_gas_to: "refund-gas-to".to_string(),
+        price_of_delivery_gas: Uint128::new(50000u128),
+        price_of_ack_gas: Uint128::new(2000u128),
+        target_delta: Uint64::new(5 * 60 * 60)  // 5 hours
+    }
+}

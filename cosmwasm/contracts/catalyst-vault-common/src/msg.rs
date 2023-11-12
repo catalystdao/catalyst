@@ -2,6 +2,7 @@ use cosmwasm_schema::{cw_serde, QueryResponses};
 
 use cosmwasm_std::{Binary, Uint64, Uint128, Addr, Empty};
 use catalyst_types::{U256, Bytes32};
+use generalised_incentives_common::state::IncentiveDescription;
 
 #[cfg(feature="asset_cw20")]
 use cw20::{Expiration, AllowanceResponse, TokenInfoResponse};
@@ -118,6 +119,7 @@ pub enum ExecuteMsg<T, A=Empty> {
     /// * `fallback_account` - The recipient of the swapped amount should the swap fail.
     /// * `underwrite_incentive_x16` - The share of the swap return that is offered to an underwriter as incentive.
     /// * `calldata` - Arbitrary data to be executed on the target chain upon successful execution of the swap.
+    /// * `incentive` - The relaying incentive.
     SendAsset {
         channel_id: Bytes32,
         to_vault: Binary,
@@ -128,7 +130,8 @@ pub enum ExecuteMsg<T, A=Empty> {
         min_out: U256,
         fallback_account: String,
         underwrite_incentive_x16: u16,
-        calldata: Binary
+        calldata: Binary,
+        incentive: IncentiveDescription
     },
 
     /// Initiate a cross-chain asset swap specifying the amount of units to send.
@@ -143,6 +146,7 @@ pub enum ExecuteMsg<T, A=Empty> {
     /// * `fallback_account` - The recipient of the swapped amount should the swap fail.
     /// * `underwrite_incentive_x16` - The share of the swap return that is offered to an underwriter as incentive.
     /// * `calldata` - Arbitrary data to be executed on the target chain upon successful execution of the swap.
+    /// * `incentive` - The relaying incentive.
     SendAssetFixedUnits {
         channel_id: Bytes32,
         to_vault: Binary,
@@ -154,7 +158,8 @@ pub enum ExecuteMsg<T, A=Empty> {
         u: U256,
         fallback_account: String,
         underwrite_incentive_x16: u16,
-        calldata: Binary
+        calldata: Binary,
+        incentive: IncentiveDescription
     },
 
     /// Receive a cross-chain asset swap.
@@ -229,6 +234,7 @@ pub enum ExecuteMsg<T, A=Empty> {
     /// * `min_reference_asset` - The mininum reference asset value on the target vault.
     /// * `fallback_account` - The recipient of the swapped amount should the swap fail.
     /// * `calldata` - Arbitrary data to be executed on the target chain upon successful execution of the swap.
+    /// * `incentive` - The relaying incentive.
     SendLiquidity {
         channel_id: Bytes32,
         to_vault: Binary,
@@ -237,7 +243,8 @@ pub enum ExecuteMsg<T, A=Empty> {
         min_vault_tokens: U256,
         min_reference_asset: U256,
         fallback_account: String,
-        calldata: Binary
+        calldata: Binary,
+        incentive: IncentiveDescription
     },
 
     /// Receive a cross-chain liquidity swap.

@@ -199,7 +199,8 @@ pub fn execute(
             min_out,
             fallback_account,
             underwrite_incentive_x16,
-            calldata
+            calldata,
+            incentive
         } => {
             receive_no_assets = false;
             send_asset(
@@ -216,7 +217,8 @@ pub fn execute(
                 None,
                 fallback_account,
                 underwrite_incentive_x16,
-                calldata
+                calldata,
+                incentive
             )
         },
 
@@ -231,7 +233,8 @@ pub fn execute(
             u,
             fallback_account,
             underwrite_incentive_x16,
-            calldata
+            calldata,
+            incentive
         } => {
             receive_no_assets = false;
             send_asset(
@@ -248,7 +251,8 @@ pub fn execute(
                 Some(u),
                 fallback_account,
                 underwrite_incentive_x16,
-                calldata
+                calldata,
+                incentive
             )
         },
 
@@ -334,7 +338,8 @@ pub fn execute(
             min_vault_tokens,
             min_reference_asset,
             fallback_account,
-            calldata
+            calldata,
+            incentive
         } => send_liquidity(
             &mut deps,
             env,
@@ -346,7 +351,8 @@ pub fn execute(
             min_vault_tokens,
             min_reference_asset,
             fallback_account,
-            calldata
+            calldata,
+            incentive
         ),
 
         AmplifiedExecuteMsg::ReceiveLiquidity {
