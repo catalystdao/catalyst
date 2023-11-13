@@ -1,6 +1,6 @@
 use anyhow::{Result as AnyResult, bail};
 use cosmwasm_schema::serde::Serialize;
-use cosmwasm_std::{Uint128, Addr, Empty};
+use cosmwasm_std::{Uint128, Addr, Empty, Coin, coins};
 use cw_multi_test::{Executor, AppResponse, FailingModule, BasicAppBuilder};
 
 use catalyst_vault_common::bindings::cw20_asset_vault_modules::Cw20AssetCustomMsg;
@@ -38,13 +38,14 @@ impl CustomTestEnv<Cw20AssetApp, TestCw20Asset> for TestCw20AssetEnv {
         self.1.to_vec()
     }
 
-    fn execute_contract<U: Serialize + std::fmt::Debug>(
+    fn execute_contract_with_additional_coins<U: Serialize + std::fmt::Debug>(
         &mut self,
         sender: Addr,
         contract_addr: Addr,
         msg: &U,
         send_assets: Vec<TestCw20Asset>,
-        send_amounts: Vec<Uint128>
+        send_amounts: Vec<Uint128>,
+        additional_coins: Vec<Coin>
     ) -> AnyResult<AppResponse> {
 
         if send_assets.len() != send_amounts.len() {
@@ -82,7 +83,7 @@ impl CustomTestEnv<Cw20AssetApp, TestCw20Asset> for TestCw20AssetEnv {
             sender.clone(),
             contract_addr.clone(),
             msg,
-            &[]
+            &additional_coins
         );
 
         // Reset the contract allowances
@@ -108,6 +109,18 @@ impl CustomTestEnv<Cw20AssetApp, TestCw20Asset> for TestCw20AssetEnv {
             });
 
         result
+    }
+
+
+    fn initialize_coin(
+        &mut self,
+        denom: String,
+        amount: Uint128,
+        account: String
+    ) -> () {
+        self.get_app().init_modules(|router, _, storage| {
+            router.bank.init_balance(storage, &Addr::unchecked(account), coins(amount.u128(), denom)).unwrap()
+        })
     }
 
 }
