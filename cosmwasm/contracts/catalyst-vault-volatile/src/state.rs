@@ -740,7 +740,7 @@ pub fn send_asset(
     // prevent a router from abusing swap 'timeouts' to circumvent the security limit.
 
     // Handle asset transfer from the swapper to the vault
-    let receive_asset_msg = from_asset.receive_asset(&env, &info, amount)?;
+    let (receive_asset_msg, excess_coins) = from_asset.receive_asset_with_excess_coins(&env, &info, amount)?;
 
     // Build the message to collect the governance fee.
     let collect_governance_fee_message = collect_governance_fee_message(
@@ -770,7 +770,7 @@ pub fn send_asset(
         cosmwasm_std::WasmMsg::Execute {
             contract_addr: chain_interface.ok_or(ContractError::VaultHasNoInterface {})?.to_string(),
             msg: to_binary(&send_cross_chain_asset_msg)?,
-            funds: vec![]   // ! TODO incentive payment
+            funds: excess_coins     // Use the excess coins received for the incentive payment
         }
     );
 
@@ -1186,7 +1186,7 @@ pub fn send_liquidity(
         cosmwasm_std::WasmMsg::Execute {
             contract_addr: chain_interface.as_ref().ok_or(ContractError::VaultHasNoInterface {})?.to_string(),
             msg: to_binary(&send_cross_chain_liquidity_msg)?,
-            funds: vec![]   // ! TODO incentive payment
+            funds: info.funds.to_owned()    // Send all of the funds received for incentive payment
         }
     );
 

@@ -340,20 +340,23 @@ pub fn execute(
             fallback_account,
             calldata,
             incentive
-        } => send_liquidity(
-            &mut deps,
-            env,
-            info.clone(),
-            channel_id,
-            to_vault,
-            to_account,
-            amount,
-            min_vault_tokens,
-            min_reference_asset,
-            fallback_account,
-            calldata,
-            incentive
-        ),
+        } => {
+            receive_no_assets = false;  // Required for incentive payment
+            send_liquidity(
+                &mut deps,
+                env,
+                info.clone(),
+                channel_id,
+                to_vault,
+                to_account,
+                amount,
+                min_vault_tokens,
+                min_reference_asset,
+                fallback_account,
+                calldata,
+                incentive
+            )
+        },
 
         AmplifiedExecuteMsg::ReceiveLiquidity {
             channel_id,

@@ -735,43 +735,7 @@ mod test_volatile_send_asset {
 
 
 
-        // Tested action 3: too many assets
-        let response_result = env.execute_contract(
-            Addr::unchecked(SETUP_MASTER),
-            vault.clone(),
-            &VolatileExecuteMsg::SendAsset {
-                channel_id: CHANNEL_ID,
-                to_vault: target_vault.clone(),
-                to_account: to_account.clone(),
-                from_asset_ref: from_asset.get_asset_ref(),
-                to_asset_index: to_asset_idx,
-                amount: swap_amount,
-                min_out: U256::zero(),
-                fallback_account: SWAPPER_C.to_string(),
-                underwrite_incentive_x16: 0u16,
-                calldata: Binary(vec![]),
-                incentive: mock_incentive()
-            },
-            vec![from_asset.clone(), other_asset.clone()],   // ! Send another asset together with 'from_asset'
-            vec![swap_amount, Uint128::one()]
-        );
-
-        // Make sure the transaction fails
-        #[cfg(feature="asset_native")]
-        assert!(response_result.is_err());
-        #[cfg(feature="asset_native")]
-        matches!(
-            response_result.err().unwrap().downcast().unwrap(),
-            ContractError::AssetSurplusReceived {}
-        );
-        
-        // NOTE: this does not error for cw20 assets, as it's just the *allowance* that is set.
-        #[cfg(feature="asset_cw20")]
-        assert!(response_result.is_ok());
-
-
-
-        // Tested action 4: asset amount too low
+        // Tested action 3: asset amount too low
         let response_result = env.execute_contract(
             Addr::unchecked(SETUP_MASTER),
             vault.clone(),
@@ -811,43 +775,8 @@ mod test_volatile_send_asset {
 
 
 
-        // Tested action 5: asset amount too high
-        let response_result = env.execute_contract(
-            Addr::unchecked(SETUP_MASTER),
-            vault.clone(),
-            &VolatileExecuteMsg::SendAsset {
-                channel_id: CHANNEL_ID,
-                to_vault: target_vault.clone(),
-                to_account: to_account.clone(),
-                from_asset_ref: from_asset.get_asset_ref(),
-                to_asset_index: to_asset_idx,
-                amount: swap_amount,
-                min_out: U256::zero(),
-                fallback_account: SWAPPER_C.to_string(),
-                underwrite_incentive_x16: 0u16,
-                calldata: Binary(vec![]),
-                incentive: mock_incentive()
-            },
-            vec![from_asset.clone()],
-            vec![swap_amount + Uint128::one()]
-        );
-
-        // Make sure the transaction fails
-        #[cfg(feature="asset_native")]
-        assert!(response_result.is_err());
-        #[cfg(feature="asset_native")]
-        matches!(
-            response_result.err().unwrap().downcast().unwrap(),
-            ContractError::UnexpectedAssetAmountReceived { received_amount, expected_amount, asset }
-                if
-                    received_amount == swap_amount + Uint128::one() &&
-                    expected_amount == swap_amount &&
-                    asset == Into::<Asset>::into(from_asset.clone()).to_string()
-        );
-        
-        // NOTE: this does not error for cw20 assets, as it's just the *allowance* that is set too high.
-        #[cfg(feature="asset_cw20")]
-        assert!(response_result.is_ok());
+        // NOTE: Too many assets do not constitute invalid funds, as excess assets sent are used
+        // to pay for the relaying incentive.
 
 
 
