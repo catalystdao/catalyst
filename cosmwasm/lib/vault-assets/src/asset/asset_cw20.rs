@@ -262,6 +262,39 @@ impl AssetTrait<Cw20AssetMsg> for Cw20Asset {
     }
 
 
+    fn receive_asset_with_excess_coins(
+        &self,
+        env: &Env,
+        info: &MessageInfo,
+        amount: Uint128,
+    ) -> Result<(Option<Cw20AssetMsg>, Vec<Coin>), AssetError> {
+
+        let excess_coins = info.funds.to_owned();
+
+        // NOTE: Some cw20 contracts disallow zero-valued token transfers. Do not generate
+        // transfer messages for zero-valued balance transfers to prevent these cases from 
+        // resulting in failed transactions.
+        if amount.is_zero() {
+            return Ok((None, excess_coins));
+        }
+
+        Ok((
+            Some(Cw20AssetMsg::Wasm(
+                cosmwasm_std::WasmMsg::Execute {
+                    contract_addr: self.0.clone(),
+                    msg: to_binary(&Cw20ExecuteMsg::TransferFrom {
+                        owner: info.sender.to_string(),
+                        recipient: env.contract.address.to_string(),
+                        amount
+                    })?,
+                    funds: vec![]
+                }
+            )),
+            excess_coins
+        ))
+    }
+
+
     fn send_asset(
         &self,
         _env: &Env,

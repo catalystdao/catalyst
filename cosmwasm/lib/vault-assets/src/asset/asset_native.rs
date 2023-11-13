@@ -371,6 +371,48 @@ impl AssetTrait<NativeAssetMsg> for NativeAsset {
     }
 
 
+    fn receive_asset_with_excess_coins(
+        &self,
+        _env: &Env,
+        info: &MessageInfo,
+        amount: Uint128,
+    ) -> Result<(Option<NativeAssetMsg>, Vec<Coin>), AssetError> {
+
+        let mut received_funds: Vec<Coin> = info.funds.to_owned();
+
+        if amount.is_zero() {
+            return Ok((None, received_funds));
+        }
+
+        let required_coin = received_funds
+            .iter_mut()
+            .find(|fund| fund.denom == self.denom)
+            .ok_or_else(|| AssetError::AssetNotReceived { asset: self.to_string() })?;
+
+        if required_coin.amount < amount {
+            return  Err(AssetError::UnexpectedAssetAmountReceived {
+                received_amount: info.funds[0].amount,
+                expected_amount: amount,
+                asset: self.to_string()
+            });
+        }
+
+        if required_coin.amount == amount {
+
+            // Remove the 'coin' entirely from the funds array (zero valued amounts are not allowed
+            // within 'funds' fields).
+            received_funds = received_funds.into_iter()
+                .filter(|coin| coin.denom != self.denom)
+                .collect();
+        }
+        else {
+            required_coin.amount = required_coin.amount.wrapping_sub(amount);   // 'wrapping_sub' safe, 'amount' checked shortly above
+        }
+
+        Ok((None, received_funds))
+    }
+
+
     fn send_asset(
         &self,
         _env: &Env,
