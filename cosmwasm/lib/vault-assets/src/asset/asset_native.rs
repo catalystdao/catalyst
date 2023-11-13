@@ -1572,7 +1572,225 @@ mod asset_native_tests {
 
     }
 
+    
+    #[test]
+    fn test_receive_asset_with_excess_coin() {
 
+        let env = mock_env();
+
+        let asset = get_mock_asset();
+        let desired_coin = Coin::new(
+            123_u128,
+            asset.denom.clone()
+        );
+
+
+
+        // Tested action 1: receive asset without excess
+        let msg = asset.receive_asset_with_excess_coins(
+            &env,
+            &mock_info(
+                SENDER_ADDR,
+                &[desired_coin.clone()]     // ! Exact
+            ),
+            desired_coin.amount
+        ).unwrap();     // Call is successful
+
+
+
+        // Verify no messages are generated
+        assert!(msg.0.is_none());
+        // Verify no excess coins are returned
+        assert!(msg.1.len() == 0);
+
+
+
+        // Tested action 2: receive asset with excess
+        let excess_coin = Coin::new(456, "excess_coin");
+        let msg = asset.receive_asset_with_excess_coins(
+            &env,
+            &mock_info(
+                SENDER_ADDR,
+                &[desired_coin.clone(), excess_coin.clone()]    // ! Excess
+            ),
+            desired_coin.amount
+        ).unwrap();     // Call is successful
+
+
+
+        // Verify no messages are generated
+        assert!(msg.0.is_none());
+        // Verify excess coins are returned
+        assert!(msg.1 == vec![excess_coin]);
+
+    }
+    
+    
+    #[test]
+    fn test_receive_asset_with_excess_coin_of_same_denom() {
+
+        let env = mock_env();
+
+        let asset = get_mock_asset();
+        let desired_coin = Coin::new(
+            123_u128,
+            asset.denom.clone()
+        );
+
+
+
+        // Tested action: receive asset (more than desired)
+        let received_coin = Coin::new(
+            desired_coin.amount.u128() + 1,    // ! Receive more than desired
+            asset.denom.clone()
+        );
+        let msg = asset.receive_asset_with_excess_coins(
+            &env,
+            &mock_info(
+                SENDER_ADDR,
+                &[received_coin.clone()]
+            ),
+            desired_coin.amount
+        ).unwrap();     // Call is successful
+
+
+
+        // Verify no messages are generated
+        assert!(msg.0.is_none());
+        // Verify excess coins are returned
+        assert_eq!(
+            msg.1,
+            vec![Coin::new(1, asset.denom)]
+        );
+
+    }
+    
+    
+    #[test]
+    fn test_receive_asset_with_excess_coin_invalid_funds() {
+
+        let env = mock_env();
+
+        let asset = get_mock_asset();
+        let desired_coin = Coin::new(
+            123_u128,
+            asset.denom.clone()
+        );
+
+
+
+        // Tested action 1: no funds
+        let result = asset.receive_asset_with_excess_coins(
+            &env,
+            &mock_info(
+                SENDER_ADDR,
+                &[]             // ! No funds
+            ),
+            desired_coin.amount
+        );
+
+        // Make sure action fails
+        matches!(
+            result.err().unwrap(),
+            AssetError::AssetNotReceived { asset: error_asset }
+                if error_asset == asset.to_string()
+        );
+
+
+
+        // Tested action 2: invalid asset
+        let result = asset.receive_asset_with_excess_coins(
+            &env,
+            &mock_info(
+                SENDER_ADDR,
+                &[Coin::new(99u128, "other_coin")]    // ! Different asset
+            ),
+            desired_coin.amount
+        );
+
+        // Make sure action fails
+        matches!(
+            result.err().unwrap(),
+            AssetError::AssetNotReceived { asset: error_asset }
+                if error_asset == asset.to_string()
+        );
+
+
+
+        // Tested action 3: asset amount too small
+        let mut received_coin_small_amount = desired_coin.clone();
+        received_coin_small_amount.amount = received_coin_small_amount.amount - Uint128::one();
+        let result = asset.receive_asset_with_excess_coins(
+            &env,
+            &mock_info(
+                SENDER_ADDR,
+                &[received_coin_small_amount.clone()]    // ! Amount too small
+            ),
+            desired_coin.amount
+        );
+
+        // Make sure action fails
+        matches!(
+            result.err().unwrap(),
+            AssetError::UnexpectedAssetAmountReceived {asset: error_asset, received_amount, expected_amount }
+                if error_asset == asset.to_string()
+                    && received_amount == received_coin_small_amount.amount
+                    && expected_amount == desired_coin.amount
+        );
+
+    }
+
+
+    #[test]
+    fn test_receive_asset_with_excess_coin_zero_amount() {
+
+        let env = mock_env();
+
+        let asset = get_mock_asset();
+        let desired_zero_amount = Uint128::zero();
+
+
+
+        // Tested action 1: receive asset without funds
+        let msg = asset.receive_asset_with_excess_coins(
+            &env,
+            &mock_info(
+                SENDER_ADDR,
+                &[]     // ! No funds
+            ),
+            desired_zero_amount
+        ).unwrap();     // Call is successful
+
+
+
+        // Verify no messages are generated
+        assert!(msg.0.is_none());
+        // Verify no excess coins are returned
+        assert!(msg.1.len() == 0);
+
+
+
+        // Tested action 2: receive asset with excess
+        let excess_coin = Coin::new(456, "excess_coin");
+        let msg = asset.receive_asset_with_excess_coins(
+            &env,
+            &mock_info(
+                SENDER_ADDR,
+                &[excess_coin.clone()]
+            ),
+            desired_zero_amount
+        ).unwrap();     // Call is successful
+
+
+
+        // Verify no messages are generated
+        assert!(msg.0.is_none());
+        // Verify excess coins are returned
+        assert!(msg.1 == vec![excess_coin]);
+
+    }
+    
+    
     #[test]
     fn test_send_asset() {
 

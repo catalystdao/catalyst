@@ -334,7 +334,7 @@ impl ToString for Cw20Asset {
 
 #[cfg(test)]
 mod asset_cw20_tests {
-    use cosmwasm_std::{testing::{mock_dependencies, mock_env, mock_info}, Uint128, to_binary, WasmMsg, coin, Addr};
+    use cosmwasm_std::{testing::{mock_dependencies, mock_env, mock_info}, Uint128, to_binary, WasmMsg, coin, Addr, Coin};
     use cw20::Cw20ExecuteMsg;
 
     use crate::{asset::{VaultAssetsTrait, AssetTrait}, error::AssetError};
@@ -1081,6 +1081,120 @@ mod asset_cw20_tests {
     }
 
 
+    #[test]
+    fn test_receive_asset_with_excess_coin() {
+
+        let env = mock_env();
+
+        let asset = get_mock_asset();
+        let desired_received_amount = Uint128::from(123_u128);
+
+
+
+        // Tested action 1: receive asset without excess
+        let msg = asset.receive_asset_with_excess_coins(
+            &env,
+            &mock_info(
+                SENDER_ADDR,
+                &[]     // ! Exact
+            ),
+            desired_received_amount
+        ).unwrap();     // Call is successful
+
+
+
+        // Verify the genereted transfer message
+        assert!(msg.0.is_some());
+        verify_cw20_transfer_from_msg(
+            msg.0.unwrap(),
+            asset.clone(),
+            desired_received_amount,
+            SENDER_ADDR.to_string(),
+            env.contract.address.to_string()
+        );
+        // Verify no excess coins are returned
+        assert!(msg.1.len() == 0);
+
+
+
+        // Tested action 2: receive asset with excess
+        let excess_coin = Coin::new(456, "excess_coin");
+        let msg = asset.receive_asset_with_excess_coins(
+            &env,
+            &mock_info(
+                SENDER_ADDR,
+                &[excess_coin.clone()]    // ! Excess
+            ),
+            desired_received_amount
+        ).unwrap();     // Call is successful
+
+
+
+        // Verify the genereted transfer message
+        assert!(msg.0.is_some());
+        verify_cw20_transfer_from_msg(
+            msg.0.unwrap(),
+            asset,
+            desired_received_amount,
+            SENDER_ADDR.to_string(),
+            env.contract.address.to_string()
+        );
+        // Verify excess coins are returned
+        assert!(msg.1 == vec![excess_coin]);
+
+    }
+
+
+    #[test]
+    fn test_receive_asset_with_excess_coin_zero_amount() {
+
+        let env = mock_env();
+
+        let asset = get_mock_asset();
+        let desired_zero_amount = Uint128::zero();
+
+
+
+        // Tested action 1: receive asset without funds
+        let msg = asset.receive_asset_with_excess_coins(
+            &env,
+            &mock_info(
+                SENDER_ADDR,
+                &[]     // ! No funds
+            ),
+            desired_zero_amount
+        ).unwrap();     // Call is successful
+
+
+
+        // Verify no messages are generated
+        assert!(msg.0.is_none());
+        // Verify no excess coins are returned
+        assert!(msg.1.len() == 0);
+
+
+
+        // Tested action 2: receive asset with excess
+        let excess_coin = Coin::new(456, "excess_coin");
+        let msg = asset.receive_asset_with_excess_coins(
+            &env,
+            &mock_info(
+                SENDER_ADDR,
+                &[excess_coin.clone()]
+            ),
+            desired_zero_amount
+        ).unwrap();     // Call is successful
+
+
+
+        // Verify no messages are generated
+        assert!(msg.0.is_none());
+        // Verify excess coins are returned
+        assert!(msg.1 == vec![excess_coin]);
+
+    }
+    
+    
     #[test]
     fn test_send_asset() {
 
