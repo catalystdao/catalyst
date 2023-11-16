@@ -1,10 +1,10 @@
 {
   "contracts": {
-    "amplified_mathlib": "0x907A292755f8A655Cc2a81b93CE11CD5d9462738",
-    "amplified_template": "0x3F9180c2A54f77f03D796EeaD4Ff5d551691c2Cc",
-    "factory": "0x2A83821A48465C555e931FA8638Cf0b6842C0c9A",
-    "volatile_mathlib": "0xe245bd69cC6C40aBf9e7CFb230B954DBF704b812",
-    "volatile_template": "0xB6AB4ce8a6a3c4070ccC62ACab3625D31fDa2e99"
+    "amplified_mathlib": "0x825154ca552eA59538eC2812CcAf0814E4644ca3",
+    "amplified_template": "0xaf487C1dB903211f9Db682428491A34288f2f70b",
+    "factory": "0xb643b68D3502E30ba28E08Efd6766Fe3B772dE66",
+    "volatile_mathlib": "0xb52317A9ec24ceC0d4057E6028BFDB69C912Fab9",
+    "volatile_template": "0xe68331DaE416e0FdfE18B7E4Ca83f7e81D968234"
   },
   "registry": {
     "describer": "0xA9C609b79d62b9E27CDefA685CB795982f852d3c",
