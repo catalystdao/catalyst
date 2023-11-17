@@ -49,8 +49,13 @@ contract TestSendAssetUnderwritePurpose is TestCommon {
 
     function test_send_asset_underwrite_purpose(address refundTo, address toAccount) external {
         vm.assume(refundTo != address(0));
-        vm.assume(toAccount != address(0));
+        vm.assume(refundTo != address(0));
+        vm.assume(refundTo != vault1);
+        vm.assume(refundTo != vault2);
+        vm.assume(refundTo != address(CCI));
+        vm.assume(refundTo != address(this));
         vm.assume(toAccount != refundTo);  // makes it really hard to debug
+        vm.assume(toAccount != address(0));
         vm.assume(toAccount != vault1);
         vm.assume(toAccount != vault2);
         vm.assume(toAccount != address(CCI));
