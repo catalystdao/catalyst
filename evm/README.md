@@ -14,9 +14,9 @@ More specifically, the code structure is as follows:
 - `CatalystVaultCommon.sol` : Defines the structure of a Catalyst vault and implements logic that is common to all vaults.
   - `CatalystVaultVolatile.sol` : Extends `CatalystVaultCommon.sol` with the price curve $P(w) = \frac{W}{w}$.
   - `CatalystVaultAmplified.sol` : Extends `CatalystVaultCommon.sol` with the price curve $P(w) = \left(1 - \theta\right) \frac{W}{(W w)^\theta}$.
-  - `FixedPointMathLib.sol` : The mathematical library used by Catalyst (based on the [solmate](https://github.com/transmissions11/solmate/blob/ed67feda67b24fdeff8ad1032360f0ee6047ba0a/src/utils/FixedPointMathLib.sol)).
+  - `FixedPointMathLib.sol` : The mathematical library used by Catalyst (based on [solmate](https://github.com/transmissions11/solmate/blob/ed67feda67b24fdeff8ad1032360f0ee6047ba0a/src/utils/FixedPointMathLib.sol)).
 - `CatalystFactory.sol` : Simplifies the deployment of vaults via Open Zeppelin's *Clones*: vaults are deployed as minimal proxies which delegate call to the above vault contracts. This significantly reduces vault deployment cost.
-- `CatalystChainInterface.sol` : Bridges the Catalyst protocol with [Generalised Incentives](https://github.com/catalystdao/GeneralisedIncentives) which enables Catalyst to support any AMB through the same interface and with the same impact on user experience.
+- `CatalystChainInterface.sol` : Bridges the Catalyst protocol with [Generalised Incentives](https://github.com/catalystdao/GeneralisedIncentives) which enables Catalyst to support any AMB through the same interface and with the same impact on user experience. The CatalystChainInterface also holds logic for underwriting.
 
 # Catalyst Contracts
 
@@ -48,27 +48,28 @@ An intermediate contract designed to interface Catalyst vaults with [Generalised
 
 Catalyst v1 implements 2 type of swaps, *Asset Swaps* and *Liquidity Swaps*. The byte array specification for these can be found in `/contracts/CatalystPayload.sol`.
 
-- <u>`0x00`: Asset Swap</u><br/> Swaps with context `0x00` define asset swaps. Although primarily designed for cross-chain asset swaps, there is nothing from stopping a user of *Asset Swapping* between 2 vaults on the same chain.
-- <u>`0x01`: Liquidity Swap</u><br/> Swaps with context `0x01` define liquidity swaps. These reduce the cost of rebalancing the liquidity distribution across vaults by combining the following steps into a single transaction:
+- <u>`0x00`: Asset Swap</u><br/> Swaps with context `0x00` define asset swaps. Although primarily designed for cross-chain asset swaps, there is nothing from stopping a user of *Asset Swapping* between 2 vaults on the same chain. Asset swaps can always be underwritten, it is not possible to opt out of underwriting but it is possible to set the underwriting incentive to 0.
+- <u>`0x01`: Liquidity Swap</u><br/> Swaps with context `0x01` define liquidity swaps. Liquidity swap cannot be underwritten. Liquidity swaps reduce the cost of rebalancing the liquidity distribution across vaults by combining the following steps into a single transaction:
   1. Withdraw tokens
   2. Convert tokens to units and transfer to target vault
   3. Convert units to an even mix of tokens
   4. Deposit the tokens into the vault.
+   
 
 ## Dev dependencies
 
-- Install`foundryup`
+- Install `foundryup`.
   
   - `https://book.getfoundry.sh/getting-started/installation`
   - or read https://book.getfoundry.sh/getting-started/installation
 
 # Development with Foundry
 
-This repository contains a helper script for deployment `script/DeployCatalyst.s.sol` which is based on `script/DeployContracts.s.sol` which is the origin for most of the testing configuration. This deploys core swap contracts but not the cross-chain interface. This is instead done by `script/DeployInterfaces.s.sol` which also handles management/deployment of the dependency on [Generalised Incentives](https://github.com/catalystdao/GeneralisedIncentives).
+This repository contains a helper script for deployment `script/DeployCatalyst.s.sol` which is based on `script/DeployContracts.s.sol` which is the origin for most of the testing configuration. The script deploys core swap contracts but not the cross-chain interface. The cross-chain interface is deployed by `script/DeployInterfaces.s.sol` which also handles management/deployment of the dependency on [Generalised Incentives](https://github.com/catalystdao/GeneralisedIncentives).
 
 ## Local Catalyst
 
-Local Catalyst consists of Volatile and Amplified pools along with the Factory. To deploy Local Catalyst to another chain, add the chain config to `script/BaseMultiChainDeployer.s.sol`. For chains without EIP-1559 add them as a legacy chain.Then run `forge script DeployCatalyst --sig "deploy()" --broadcast` or `forge script DeployCatalyst --sig "deploy_legacy()" --legacy --broadcast` depending on if the chain added was with EIP-1559 support (non-legacy) or with (legacy). Some chains require running with `--slow`. If deployment fails, wait a few blocks and re-try.
+Local Catalyst consists of Volatile and Amplified pools along with the Factory. To deploy Local Catalyst to another chain, add the chain config to `script/BaseMultiChainDeployer.s.sol`. For chains without EIP-1559 add them as a legacy chain. Then run `forge script DeployCatalyst --sig "deploy()" --broadcast` or `forge script DeployCatalyst --sig "deploy_legacy()" --legacy --broadcast` depending on if the chain has EIP-1559 support (non-legacy) or has no support (legacy). Some chains require running with `--slow`. If deployment fails, wait a few blocks and re-try.
 
 ## Cross-chain Catalyst
 
@@ -80,31 +81,66 @@ The deployment scheme is designed such that any deployment which matches the add
 
 ## Catalyst Setup
 
-To easily interact with Catalyst, you can create a script. Start by importing `script/deployCatalyst.s.sol`. This script allows you to easily deploy the core protocol along with any dependencies.
+There are multiple ways to interfact with Catalyst: Creating a test file and importing `test/TestCommon.t.sol` or writing a script and importing `script/DeployCatalyst.s.sol` and `script/DeployInterfaces.s.sol` to access the core protocol along with any dependencies.
 
-Import the relevant classes needed for this example:
+Below, we will go over writing a test which does a localswap, cross-chain swap, and underwrites a swap. The resulting file generated by this tutorial can be found in `test/exampleTest.t.sol`
 
-```python
-from scripts.deployCatalyst import Catalyst, decode_payload, convert_64_bytes_address
-from brownie import convert  # Used to convert between values and bytes.
+Start by declaring the scaffolding:
+
+```solidity
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity ^0.8.19;
+
+import { TestCommon } from "./TestCommon.t.sol";
+
+contract ExampleTest is TestCommon {
+    ...
+}
 ```
 
-The class `Catalyst` wraps logic in an easy to understand package, `decode_payload` can decode a package into a dictionary and  `convert_64_bytes_address` can convert EVM addresses into the proper format for cross-chain address.
+By importing `TestCommon` Catalyst is already deployed. It also has several helpers which can simply development of tests.
 
-Next, define external accounts and addresses that will be used. In this case, we are purely interested in a deployer and a contract to emulate IBC packages. The emulator contains no message routing logic but simulates a simple delivery of an IBC package.
+Catalyst is deployed through a `setUp()` function which is called before any test is executed. Since we want to implement multiple functions, we want to add further logic to the contract initiation. Lets deploy a vault:
 
-```python
-acct = accounts[0]  # Define the account used for testing
-ie = IBCEmulator.deploy({'from': acct})  # Deploy the IBC emulator.
+```solidity
+contract ExampleTest is TestCommon {
+  address vault1;
+  address vault2;
+  function setUp() public override {
+    // Calls setup() on testCommon
+    super.setup();
+
+    // Create relevant arrays for the vault.
+    uint256 numTokens = 2;
+    address[] memory assets = new address[](numTokens);
+    uint256[] memory init_balances = new uint256[](numTokens);
+    uint256[] memory weights = new uint256[](numTokens);
+
+    // Deploy a token
+    assets[0] = address(new Token("TEST", "TEST", 18, 1e6));
+    init_balances[0] = 1000 * 1e18;
+    weights[0] = 1;
+    // Deploy another token
+    assets[1] = address(new Token("TEST2", "TEST2", 18, 1e6));
+    init_balances[1] = 1000 * 1e18;
+    weights[1] = 1;
+
+    // Set approvals.
+    Token(assets[0]).approve(address(catFactory), init_balances[0] * 2);
+    Token(assets[1]).approve(address(catFactory), init_balances[1] * 2);
+
+    vault1 = catFactory.deployVault(
+      address(volatileTemplate), assets, init_balances, weights, 10**18, 0, "Example Pool1", "EXMP1", address(CCI)
+    );
+    vault2 = catFactory.deployVault(
+      address(volatileTemplate), assets, init_balances, weights, 10**18, 0, "Example Pool2", "EXMP2", address(CCI)
+    );
+  }
+}
 ```
 
-Deploy Catalyst by invoking the helper `Catalyst(...)` from the imported script. This deploys all Catalyst contracts and creates a Catalyst vault. The account defined earlier is provided as the deployer and the emulator is provided as the package handler. The script also also deploys a vault (and tokens) by default, which can be turned off by `default=False`. The default vault can be access through `.vault` and the default tokens through `.tokens`.
+We have deployed 2 vaults with the same tokens so we can do a cross-chain swap between the 2 of them later and also compare the output of localswap vs cross-chain swap.
 
-```python
-ps = Catalyst(acct, ibcinterface=ie)  # Deploys Catalyst
-vault = ps.vault
-tokens = ps.tokens
-```
 ## Execute a LocalSwap
 
 Lets execute a localswap. That is a swap which happens atomically on a single chain to and from the same vault. Before we can do that, we need to allow the vault to take tokens from us. This is done by calling the approve function. For our example, we will be using the token indexed 0 but you can use token index 0, 1 or 2 in this example.
