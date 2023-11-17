@@ -703,6 +703,11 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
         // Check if the associated underwrite just arrived and has already been matched.
         // This is an issue when the swap was JUST underwriten, JUST arrived (and matched), AND someone else JUST underwrote the swap.
         // To give the user a bit more protection, we add a buffer of size `BUFFER_BLOCKS`.
+        // SwapAlreadyUnderwritten vs SwapRecentlyUnderwritten: It is very likely that this block is trigger not because a swap was fulfilled but because it has already been underwritten. That is because (lastTouchBlock + BUFFER_BLOCKS >= uint96(block.number)) WILL ALWAYS be true when it is the case
+        // and SwapRecentlyUnderwritten will be the error. You might have expected the error "SwapAlreadyUnderwritten". However, we never get there so it
+        // cannot emit. We also cannot move that check up here, since then an external call would be made between a state check and a state modification. (reentry)
+        // As a result, SwapRecentlyUnderwritten will be emitted when a swap has already been underwritten EXCEPT when underwriting a swap through reentry.
+        // Then the reentry will underwrite the swap and the main call will fail with SwapAlreadyUnderwritten.
         unchecked {
             // Get the last touch block. For most underwrites it is going to be 0.
             uint96 lastTouchBlock = underwritingStorage[identifier].expiry;
@@ -736,9 +741,10 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
             minOut * (2**16-1) / (2**16-1 - uint256(underwriteIncentiveX16))  // minout is checked after underwrite fee.
         );
 
-        // The following number of lines act as re-entry protection.
+        // The following number of lines act as re-entry protection. Do not add any external call inbetween these lines.
 
         // Ensure the swap hasn't already been underwritten by checking if refundTo is set. 
+        // Notice that this is very unlikely to ever get emitted. Instead, read the comment about SwapRecentlyUnderwritten.
         if (underwritingStorage[identifier].refundTo != address(0)) revert SwapAlreadyUnderwritten();
 
         // Save the underwriting state.
@@ -748,7 +754,7 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
             expiry: uint96(uint256(block.number) + uint256(maxUnderwritingDuration))  // Should never overflow.
         });
 
-        // The above combination of lines act as local re-entry protection.
+        // The above combination of lines act as local re-entry protection. Do not add any external call inbetween these lines.
 
         // Collect tokens and collatoral from underwriter.
         // We still collect the tokens used to incentivise the underwriter as otherwise they could freely reserve liquidity
