@@ -10,7 +10,7 @@ import { CatalystVaultVolatile } from "src/CatalystVaultVolatile.sol";
 import { TestInvariant } from "../Invariant.t.sol";
 
 
-abstract contract TestSetWeights is Test, AVaultInterfaces, TestInvariant {
+abstract contract TestSetWeights is Test, AVaultInterfaces {
     using stdStorage for StdStorage;
 
     uint256 constant MIN_ADJUSTMENT_TIME = 7 days;
@@ -27,12 +27,12 @@ abstract contract TestSetWeights is Test, AVaultInterfaces, TestInvariant {
 
     function mockWeights() internal returns(uint256[] memory) {
 
-        uint256[] memory mockWeights = new uint256[](3);
-        mockWeights[0] = 1501;
-        mockWeights[1] = 3333;
-        mockWeights[2] = 78654;
+        uint256[] memory weights = new uint256[](3);
+        weights[0] = 1501;
+        weights[1] = 3333;
+        weights[2] = 78654;
 
-        return mockWeights;
+        return weights;
     }
 
     function mockWeightChangeFactors() internal returns(uint256[] memory) {
@@ -59,12 +59,16 @@ abstract contract TestSetWeights is Test, AVaultInterfaces, TestInvariant {
         return newWeights;
     }
 
-    function getCurrentWeights(address vault) internal returns (uint256[] memory) {
+    function getCurrentWeights(
+        CatalystVaultVolatile vault
+    ) internal returns (uint256[] memory) {
 
-        address[] memory vaults = new address[](1);
-        vaults[0] = vault;
+        uint256[] memory weights = new uint256[](3);
 
-        (uint256[] memory balances, uint256[] memory weights) = getBalances(vaults);
+        for (uint256 i; i < weights.length; i++) {
+            address token = vault._tokenIndexing(i);
+            weights[i] = vault._weight(token);
+        }
 
         return weights;
     }
@@ -85,7 +89,7 @@ abstract contract TestSetWeights is Test, AVaultInterfaces, TestInvariant {
         }
 
         // Verify the weights have been correctly set
-        uint256[] memory currentWeights = getCurrentWeights(address(vault));
+        uint256[] memory currentWeights = getCurrentWeights(vault);
         for (uint256 i; i < currentWeights.length; i++) {
             assertEq(currentWeights[i], weights[i]);
         }
@@ -115,7 +119,7 @@ abstract contract TestSetWeights is Test, AVaultInterfaces, TestInvariant {
         CatalystVaultVolatile vault = CatalystVaultVolatile(getTestConfig()[0]);
 
         forceSetWeights(vault, mockWeights());
-        uint256[] memory currentWeights = getCurrentWeights(address(vault));
+        uint256[] memory currentWeights = getCurrentWeights(vault);
         uint256[] memory newWeights = mockNewWeights();
 
         uint256 currentTimestamp = block.timestamp;
@@ -139,7 +143,7 @@ abstract contract TestSetWeights is Test, AVaultInterfaces, TestInvariant {
         CatalystVaultVolatile vault = CatalystVaultVolatile(getTestConfig()[0]);
 
         forceSetWeights(vault, mockWeights());
-        uint256[] memory currentWeights = getCurrentWeights(address(vault));
+        uint256[] memory currentWeights = getCurrentWeights(vault);
         uint256[] memory newWeights = mockNewWeights();
 
         uint256 currentTimestamp = block.timestamp;
@@ -162,7 +166,7 @@ abstract contract TestSetWeights is Test, AVaultInterfaces, TestInvariant {
         CatalystVaultVolatile vault = CatalystVaultVolatile(getTestConfig()[0]);
 
         forceSetWeights(vault, mockWeights());
-        uint256[] memory currentWeights = getCurrentWeights(address(vault));
+        uint256[] memory currentWeights = getCurrentWeights(vault);
         uint256[] memory newWeights = mockNewWeights();
 
         uint256 currentTimestamp = block.timestamp;
@@ -185,7 +189,7 @@ abstract contract TestSetWeights is Test, AVaultInterfaces, TestInvariant {
         CatalystVaultVolatile vault = CatalystVaultVolatile(getTestConfig()[0]);
 
         forceSetWeights(vault, mockWeights());
-        uint256[] memory currentWeights = getCurrentWeights(address(vault));
+        uint256[] memory currentWeights = getCurrentWeights(vault);
         uint256[] memory newWeights = mockNewWeights();
 
         // Set the last weight larger than the max allowed
@@ -213,7 +217,7 @@ abstract contract TestSetWeights is Test, AVaultInterfaces, TestInvariant {
         CatalystVaultVolatile vault = CatalystVaultVolatile(getTestConfig()[0]);
 
         forceSetWeights(vault, mockWeights());
-        uint256[] memory currentWeights = getCurrentWeights(address(vault));
+        uint256[] memory currentWeights = getCurrentWeights(vault);
         uint256[] memory newWeights = mockNewWeights();
 
         // Set the last weight smaller than the min allowed
@@ -241,7 +245,7 @@ abstract contract TestSetWeights is Test, AVaultInterfaces, TestInvariant {
         CatalystVaultVolatile vault = CatalystVaultVolatile(getTestConfig()[0]);
 
         forceSetWeights(vault, mockWeights());
-        uint256[] memory currentWeights = getCurrentWeights(address(vault));
+        uint256[] memory currentWeights = getCurrentWeights(vault);
         uint256[] memory newWeights = mockNewWeights();
 
         // Set the last weight to 0
@@ -270,7 +274,7 @@ abstract contract TestSetWeights is Test, AVaultInterfaces, TestInvariant {
         CatalystVaultVolatile vault = CatalystVaultVolatile(getTestConfig()[0]);
 
         forceSetWeights(vault, mockWeights());
-        uint256[] memory currentWeights = getCurrentWeights(address(vault));
+        uint256[] memory currentWeights = getCurrentWeights(vault);
         uint256[] memory newWeights = mockNewWeights();
 
         uint256 startTimestamp = block.timestamp;
@@ -285,7 +289,7 @@ abstract contract TestSetWeights is Test, AVaultInterfaces, TestInvariant {
         vault.setWeights(currentTimestamp + weightsAdjustmentTime, newWeights);
 
         // Verify that the weights have not changed immediately
-        uint256[] memory queriedWeights = getCurrentWeights(address(vault));
+        uint256[] memory queriedWeights = getCurrentWeights(vault);
         for (uint256 i; i < queriedWeights.length; i++) {
             assertEq(queriedWeights[i], currentWeights[i]);
         }
@@ -300,7 +304,7 @@ abstract contract TestSetWeights is Test, AVaultInterfaces, TestInvariant {
         dummyLocalSwap(vault);
 
         // Verify that the weights have started updating
-        queriedWeights = getCurrentWeights(address(vault));
+        queriedWeights = getCurrentWeights(vault);
         for (uint256 i; i < queriedWeights.length; i++) {
             int256 currentWeight = int256(currentWeights[i]);
             int256 targetWeight = int256(newWeights[i]);
@@ -321,7 +325,7 @@ abstract contract TestSetWeights is Test, AVaultInterfaces, TestInvariant {
         dummyLocalSwap(vault);
 
         // Verify that the weights have reached the desired values
-        queriedWeights = getCurrentWeights(address(vault));
+        queriedWeights = getCurrentWeights(vault);
         for (uint256 i; i < queriedWeights.length; i++) {
             assertEq(queriedWeights[i], newWeights[i]);
         }
@@ -335,7 +339,7 @@ abstract contract TestSetWeights is Test, AVaultInterfaces, TestInvariant {
         dummyLocalSwap(vault);
 
         // Verify that the weights have not continued updating
-        queriedWeights = getCurrentWeights(address(vault));
+        queriedWeights = getCurrentWeights(vault);
         for (uint256 i; i < queriedWeights.length; i++) {
             assertEq(queriedWeights[i], newWeights[i]);
         }
