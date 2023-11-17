@@ -21,9 +21,10 @@ import "../Withdraw/WithdrawInvariant.sol";
 import { TestCompareDepositWithWithdraw } from "../Deposit/DepositWithdrawCompare.t.sol";
 import { TestSelfSwap } from "../SelfSwap.t.sol";
 import { TestSetWeights } from "./SetWeights.t.sol";
+import { TestVaultConnections } from "../VaultConnections.t.sol";
 import {Token} from "../../mocks/token.sol";
 
-contract TestVolatileInvariant is TestInvariant, TestLocalswap, TestCrossChainInterfaceOnly, TestLocalswapMinout, TestPoolTokenInterface, TestSetup, TestSetupFinish, TestSetVaultFee, TestSetGovernanceFee, TestSetWeights, TestLocalswapFees, TestSwapWorthlessTokenLocal, TestEscrow, TestWithdrawInvariant, TestWithdrawComparison, TestCompareDepositWithWithdraw, TestSelfSwap {
+contract TestVolatileInvariant is TestInvariant, TestLocalswap, TestCrossChainInterfaceOnly, TestLocalswapMinout, TestPoolTokenInterface, TestSetup, TestSetupFinish, TestSetVaultFee, TestSetGovernanceFee, TestSetWeights, TestLocalswapFees, TestSwapWorthlessTokenLocal, TestEscrow, TestWithdrawInvariant, TestWithdrawComparison, TestCompareDepositWithWithdraw, TestSelfSwap, TestVaultConnections {
 
     address[] _vaults;
 
