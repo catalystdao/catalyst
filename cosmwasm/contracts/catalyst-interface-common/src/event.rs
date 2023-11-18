@@ -14,6 +14,24 @@ pub fn set_owner_event(
 }
 
 
+/// Generate an event for a 'failed' swap.
+/// 
+/// # Arguments:
+/// * `status` - The status id.
+/// 
+pub fn swap_failed(
+    status: Option<u8>
+) -> Event {
+
+    let status = status
+        .map(|status| status.to_string())
+        .unwrap_or("None".to_string());
+
+    Event::new("swap-failed")
+        .add_attribute("status", status)
+}
+
+
 /// Generate an event for the modification of the maximum underwrite duration.
 /// 
 /// # Arguments:

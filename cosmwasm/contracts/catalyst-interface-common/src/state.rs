@@ -8,7 +8,7 @@ use cw_storage_plus::{Map, Item};
 use sha3::{Keccak256, Digest};
 use std::ops::Div;
 
-use crate::{catalyst_payload::{CatalystV1SendAssetPayload, SendAssetVariablePayload, CatalystV1SendLiquidityPayload, SendLiquidityVariablePayload, CatalystEncodedAddress, CatalystCalldata, parse_calldata, CatalystV1Packet}, msg::UnderwriteIdentifierResponse, event::set_max_underwrite_duration_event};
+use crate::{catalyst_payload::{CatalystV1SendAssetPayload, SendAssetVariablePayload, CatalystV1SendLiquidityPayload, SendLiquidityVariablePayload, CatalystEncodedAddress, CatalystCalldata, parse_calldata, CatalystV1Packet}, msg::UnderwriteIdentifierResponse, event::{set_max_underwrite_duration_event, swap_failed}};
 use crate::error::ContractError;
 use crate::event::{set_owner_event, underwrite_swap_event, fulfill_underwrite_event, expire_underwrite_event};
 use crate::bindings::InterfaceResponse;
@@ -40,7 +40,8 @@ pub const UNDERWRITE_BUFFER_BLOCKS: Uint64 = Uint64::new(4);
 // Admin
 const ADMIN: Admin = Admin::new("catalyst-interface-admin");
 
-// Calldata
+// Reply
+const REPLY_ORIGINAL_PACKET: Item<Vec<u8>> = Item::new("catalyst-interface-original-packet");
 const REPLY_CALLDATA_PARAMS: Item<CatalystCalldata> = Item::new("catalyst-interface-calldata-params");
 
 // Underwriting
@@ -70,13 +71,35 @@ pub const ACK_SUCCESS: u8 = 0x00;
 pub const ACK_FAIL: u8 = 0x01;
 
 /// Generate a 'success' ack data response.
-pub fn ack_success() -> Binary {
-    Into::<Binary>::into(vec![ACK_SUCCESS])
+/// 
+/// # Arguments:
+/// * `original_message` - The original message received (appended to the 'ack' response).
+/// 
+pub fn ack_success(
+    original_message: Binary
+) -> Binary {
+    
+    let mut ack = Vec::with_capacity(original_message.len() + 1);
+    ack.push(ACK_SUCCESS);
+    ack.extend_from_slice(original_message.as_slice());
+
+    ack.into()
 }
 
 /// Generate a 'fail' ack data response.
-pub fn ack_fail() -> Binary {
-    Into::<Binary>::into(vec![ACK_FAIL])
+/// 
+/// # Arguments:
+/// * `original_message` - The original message received (appended to the 'ack' response).
+/// 
+pub fn ack_fail(
+    original_message: Binary
+) -> Binary {
+    
+    let mut ack = Vec::with_capacity(original_message.len() + 1);
+    ack.push(ACK_FAIL);
+    ack.extend_from_slice(original_message.as_slice());
+
+    ack.into()
 }
 
 
@@ -276,6 +299,10 @@ pub fn handle_message_reception(
     data: Binary
 ) -> Result<InterfaceResponse, ContractError> {
 
+    // Save a copy of the message so that it can be recovered when returning the tx ack (on the
+    // 'reply' handler).
+    save_message(deps, &data)?;
+
     let catalyst_packet = CatalystV1Packet::try_decode(data)?;
 
     match catalyst_packet {
@@ -325,12 +352,12 @@ pub fn handle_message_reception(
 /// # Arguments:
 /// * `channel_id` - The source chain identifier.
 /// * `data` - The Catalyst payload bytes.
-/// * `response` - The response bytes. 'None' if there has been no response.
+/// * `result` - The result id. 'None' if there has been no response.
 /// 
 pub fn handle_message_response(
     channel_id: Bytes32,
     data: Binary,
-    response: Option<Binary>
+    result: Option<u8>
 ) -> Result<InterfaceResponse, ContractError> {
 
     let catalyst_packet = CatalystV1Packet::try_decode(data)?;
@@ -347,7 +374,7 @@ pub fn handle_message_response(
                 payload.variable_payload.from_amount,
                 payload.variable_payload.from_asset.try_decode_as_string()?,
                 payload.variable_payload.block_number,
-                response
+                result
             )
         },
 
@@ -360,7 +387,7 @@ pub fn handle_message_response(
                 payload.from_vault.try_decode_as_string()?,
                 payload.variable_payload.from_amount,
                 payload.variable_payload.block_number,
-                response
+                result
             )
         }
     }
@@ -554,7 +581,7 @@ pub fn handle_receive_liquidity(
 /// * `from_amount` - The `from_asset` amount sold to the vault (excl. fee).
 /// * `from_asset` - The source asset.
 /// * `from_block_number_mod` - The block number at which the transaction was committed.
-/// * `response` - The response bytes ('None' if no response).
+/// * `result` - The result id. 'None' if there has been no response.
 /// 
 pub fn handle_send_asset_response(
     channel_id: Bytes32,
@@ -564,13 +591,11 @@ pub fn handle_send_asset_response(
     from_amount: U256,
     from_asset: String,
     from_block_number_mod: u32,
-    response: Option<Binary>
+    result: Option<u8>
 ) -> Result<InterfaceResponse, ContractError> {
 
-    // NOTE: Only the first byte of the 'ack' response is checked. This allows future 'ack' implementations to
-    // extend the 'ack' format.
-    let success = response.is_some_and(|response| {
-        response.get(0).is_some_and(|byte| byte == &ACK_SUCCESS)
+    let success = result.is_some_and(|byte| {
+        byte == ACK_SUCCESS
     });
 
     // Convert 'from_amount' into Uint128
@@ -598,6 +623,14 @@ pub fn handle_send_asset_response(
         },
     };
 
+    let mut response = Response::new();
+
+    if !success {
+        response = response.add_event(
+            swap_failed(result)
+        )
+    }
+
     let response_msg = CosmosMsg::Wasm(WasmMsg::Execute {
         contract_addr: from_vault,    // No need to validate, 'Execute' will fail for an invalid address.
         msg: to_binary(&msg)?,
@@ -605,7 +638,7 @@ pub fn handle_send_asset_response(
     });
 
     Ok(
-        Response::new().add_message(response_msg)
+        response.add_message(response_msg)
     )
 }
 
@@ -619,7 +652,7 @@ pub fn handle_send_asset_response(
 /// * `from_vault` - The source vault.
 /// * `from_amount` - The `from_asset` amount sold to the vault.
 /// * `from_block_number_mod` - The block number at which the transaction was committed.
-/// * `response` - The response bytes ('None' if no response).
+/// * `result` - The result id. 'None' if there has been no response.
 /// 
 pub fn handle_send_liquidity_response(
     channel_id: Bytes32,
@@ -628,13 +661,11 @@ pub fn handle_send_liquidity_response(
     from_vault: String,
     from_amount: U256,
     from_block_number_mod: u32,
-    response: Option<Binary>
+    result: Option<u8>
 ) -> Result<InterfaceResponse, ContractError> {
 
-    // NOTE: Only the first byte of the 'ack' response is checked. This allows future 'ack' implementations to
-    // extend the 'ack' format.
-    let success = response.is_some_and(|response| {
-        response.get(0).is_some_and(|byte| byte == &ACK_SUCCESS)
+    let success = result.is_some_and(|byte| {
+        byte == ACK_SUCCESS
     });
 
     // Convert 'from_amount' into Uint128
@@ -660,6 +691,14 @@ pub fn handle_send_liquidity_response(
         },
     };
 
+    let mut response = Response::new();
+
+    if !success {
+        response = response.add_event(
+            swap_failed(result)
+        )
+    }
+
     let response_msg = CosmosMsg::Wasm(WasmMsg::Execute {
         contract_addr: from_vault,    // No need to validate, 'Execute' will fail for an invalid address.
         msg: to_binary(&msg)?,
@@ -667,7 +706,7 @@ pub fn handle_send_liquidity_response(
     });
 
     Ok(
-        Response::new().add_message(response_msg)
+        response.add_message(response_msg)
     )
 }
 
@@ -712,6 +751,46 @@ impl CatalystCalldata {
 }
 
 
+/// Save the message received when receiving a cross-chain order.
+/// 
+/// ! **NOTE**: This function may only be called if there is **no** existing message saved. It is
+/// therefore very important for the interface logic to always delete any stored message at the 
+/// end of the `receive` transactions.
+/// 
+/// # Arguments:
+/// * `data` - The message received.
+/// 
+fn save_message(
+    deps: &mut DepsMut,
+    data: &Binary
+) -> Result<(), ContractError> {
+    
+    if REPLY_ORIGINAL_PACKET.may_load(deps.storage)?.is_some() {
+        return Err(ContractError::Unauthorized {});
+    }
+
+    REPLY_ORIGINAL_PACKET.save(deps.storage, &data.0)?;
+
+    Ok(())
+}
+
+
+/// Get and delete the message corresponding to the current `receive` transaction.
+/// 
+/// **NOTE**: This function will fail if no message is saved.
+/// 
+pub fn recover_message(
+    deps: &mut DepsMut
+) -> Result<Binary, ContractError> {
+    
+    let data = REPLY_ORIGINAL_PACKET.load(deps.storage)?;
+
+    REPLY_ORIGINAL_PACKET.remove(deps.storage);
+
+    Ok(data.into())
+}
+
+
 /// Handle the replies for 'common' messages (i.e. messages that are generated by the common
 /// interface code/messages that use the common 'reply ids').
 /// 
@@ -731,11 +810,13 @@ pub fn handle_reply(
         SET_ACK_REPLY_ID => match reply.result {
             SubMsgResult::Ok(_) => {
                 // Set the custom 'success-ack' for successful executions.
-                Ok(Some(Response::new().set_data(ack_success())))
+                let original_message = recover_message(&mut deps)?;
+                Ok(Some(Response::new().set_data(ack_success(original_message))))
             },
             SubMsgResult::Err(_) => {
                 // Set the custom 'failed-ack' for unsuccessful executions.
-                Ok(Some(Response::new().set_data(ack_fail())))
+                let original_message = recover_message(&mut deps)?;
+                Ok(Some(Response::new().set_data(ack_fail(original_message))))
             }
         },
 
@@ -754,7 +835,8 @@ pub fn handle_reply(
                 // message. If it errors, a non-error response may be returned (i.e. an ack with
                 // information on the error), as it is guaranteed that no prior submessage has 
                 // committed any state to the store.
-                Ok(Some(Response::new().set_data(ack_fail())))
+                let original_message = recover_message(&mut deps)?;
+                Ok(Some(Response::new().set_data(ack_fail(original_message))))
             }
         },
 
@@ -1852,7 +1934,7 @@ mod test_catalyst_interface_common {
     use catalyst_vault_common::{bindings::{CustomMsg, Asset}, msg::{ExecuteMsg as VaultExecuteMsg, CommonQueryMsg, AssetResponse}};
     use cosmwasm_std::{Uint128, Binary, testing::{mock_info, mock_dependencies, mock_env, MockStorage, MockApi, MockQuerier}, SubMsg, to_binary, OwnedDeps, SystemResult, ContractResult, from_binary, Empty, Reply, SubMsgResult, SubMsgResponse};
 
-    use crate::{catalyst_payload::CatalystEncodedAddress, ContractError, state::{encode_send_cross_chain_asset, encode_send_cross_chain_liquidity, handle_receive_liquidity, SET_ACK_REPLY_ID, handle_send_asset_response, handle_send_liquidity_response, handle_receive_asset, handle_reply}};
+    use crate::{catalyst_payload::CatalystEncodedAddress, ContractError, state::{encode_send_cross_chain_asset, encode_send_cross_chain_liquidity, handle_receive_liquidity, SET_ACK_REPLY_ID, handle_send_asset_response, handle_send_liquidity_response, handle_receive_asset, handle_reply, save_message}};
 
 
 
@@ -2157,7 +2239,7 @@ mod test_catalyst_interface_common {
             U256::from_uint128(TEST_FROM_AMOUNT),
             TEST_FROM_ASSET.to_string(),
             TEST_FROM_BLOCK_NUMBER,
-            Some(Binary(vec![0u8])),         // ! Test for success
+            Some(0u8),         // ! Test for success
         );
 
         // Check the transaction passes
@@ -2187,7 +2269,7 @@ mod test_catalyst_interface_common {
             U256::from_uint128(TEST_FROM_AMOUNT),
             TEST_FROM_ASSET.to_string(),
             TEST_FROM_BLOCK_NUMBER,
-            Some(Binary(vec![1u8])),         // ! Test for failure
+            Some(1u8),         // ! Test for failure
         );
 
         // Check the transaction passes
@@ -2217,7 +2299,7 @@ mod test_catalyst_interface_common {
             U256::from_uint128(TEST_FROM_AMOUNT),
             TEST_FROM_ASSET.to_string(),
             TEST_FROM_BLOCK_NUMBER,
-            Some(Binary(vec![9u8])),         // ! Some invalid response
+            Some(9u8),         // ! Some invalid response
         );
 
         // Check the transaction passes
@@ -2291,7 +2373,7 @@ mod test_catalyst_interface_common {
             invalid_from_amount,        // ! Invalid from_amount
             TEST_FROM_ASSET.to_string(),
             TEST_FROM_BLOCK_NUMBER,
-            Some(Binary(vec![0u8])),    // ! Test ack-success
+            Some(0u8),    // ! Test ack-success
         );
 
         // Check the transaction does not pass
@@ -2311,7 +2393,7 @@ mod test_catalyst_interface_common {
             invalid_from_amount,        // ! Invalid from_amount
             TEST_FROM_ASSET.to_string(),
             TEST_FROM_BLOCK_NUMBER,
-            Some(Binary(vec![1u8])),    // ! Test ack-failure
+            Some(1u8),    // ! Test ack-failure
         );
 
         // Check the transaction does not pass
@@ -2507,7 +2589,7 @@ mod test_catalyst_interface_common {
             TEST_FROM_VAULT.to_string(),
             U256::from_uint128(TEST_FROM_AMOUNT),
             TEST_FROM_BLOCK_NUMBER,
-            Some(Binary(vec![0u8])),         // ! Test for success
+            Some(0u8),         // ! Test for success
         );
 
         // Check the transaction passes
@@ -2536,7 +2618,7 @@ mod test_catalyst_interface_common {
             TEST_FROM_VAULT.to_string(),
             U256::from_uint128(TEST_FROM_AMOUNT),
             TEST_FROM_BLOCK_NUMBER,
-            Some(Binary(vec![1u8])),         // ! Test for failure
+            Some(1u8),         // ! Test for failure
         );
 
         // Check the transaction passes
@@ -2565,7 +2647,7 @@ mod test_catalyst_interface_common {
             TEST_FROM_VAULT.to_string(),
             U256::from_uint128(TEST_FROM_AMOUNT),
             TEST_FROM_BLOCK_NUMBER,
-            Some(Binary(vec![9u8])),         // ! Some invalid response
+            Some(9u8),         // ! Some invalid response
         );
 
         // Check the transaction passes
@@ -2638,7 +2720,7 @@ mod test_catalyst_interface_common {
             TEST_FROM_VAULT.to_string(),
             invalid_from_amount,        // ! Invalid from_amount
             TEST_FROM_BLOCK_NUMBER,
-            Some(Binary(vec![0u8])),    // ! Test ack-success
+            Some(0u8),    // ! Test ack-success
         );
 
         // Check the transaction does not pass
@@ -2657,7 +2739,7 @@ mod test_catalyst_interface_common {
             TEST_FROM_VAULT.to_string(),
             invalid_from_amount,        // ! Invalid from_amount
             TEST_FROM_BLOCK_NUMBER,
-            Some(Binary(vec![1u8])),    // ! Test ack-failure
+            Some(1u8),    // ! Test ack-failure
         );
 
         // Check the transaction does not pass
@@ -2701,6 +2783,11 @@ mod test_catalyst_interface_common {
 
 
         // Tested action 1: reply ok
+
+        // Save a mock message
+        let mock_message = Binary(vec![6u8, 5u8, 4u8]);
+        save_message(&mut deps.as_mut(), &mock_message).unwrap();
+
         let result = handle_reply(
             deps.as_mut(),
             env.clone(),
@@ -2719,12 +2806,17 @@ mod test_catalyst_interface_common {
         assert_eq!(response.messages.len(), 0);
         assert_eq!(
             response.data,
-            Some(Binary(vec![0]))     // ! Verify the response 'data' field is a success ack.
+            Some(Binary(vec![0u8, 6u8, 5u8, 4u8]))     // ! Verify the response 'data' field is a success ack.
         );
 
 
 
         // Tested action 2: reply error
+
+        // Save a mock message
+        let mock_message = Binary(vec![6u8, 5u8, 4u8]);
+        save_message(&mut deps.as_mut(), &mock_message).unwrap();
+
         let result = handle_reply(
             deps.as_mut(),
             env,
@@ -2741,7 +2833,7 @@ mod test_catalyst_interface_common {
         assert_eq!(response.messages.len(), 0);
         assert_eq!(
             response.data,
-            Some(Binary(vec![1]))     // ! Verify the response 'data' field is a fail ack.
+            Some(Binary(vec![1u8, 6u8, 5u8, 4u8]))     // ! Verify the response 'data' field is a fail ack.
         );
 
     }

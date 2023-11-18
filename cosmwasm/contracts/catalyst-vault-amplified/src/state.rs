@@ -9,6 +9,7 @@ use catalyst_vault_common::{
     state::{FACTORY, MAX_ASSETS, WEIGHTS, INITIAL_MINT_AMOUNT, VAULT_FEE, MAX_LIMIT_CAPACITY, USED_LIMIT_CAPACITY, CHAIN_INTERFACE, TOTAL_ESCROWED_LIQUIDITY, TOTAL_ESCROWED_ASSETS, is_connected, update_limit_capacity, collect_governance_fee_message, compute_send_asset_hash, compute_send_liquidity_hash, create_asset_escrow, create_liquidity_escrow, on_send_asset_success, get_limit_capacity, on_send_asset_failure, on_send_liquidity_failure, factory_owner, initialize_escrow_totals, initialize_limit_capacity, create_underwrite_escrow, release_underwrite_escrow}, bindings::{Asset, AssetTrait, VaultAssets, VaultAssetsTrait, VaultToken, VaultTokenTrait, VaultResponse, IntoCosmosCustomMsg, CustomMsg}
 };
 use fixed_point_math::{self, WAD, WADWAD, mul_wad_down, pow_wad, div_wad_up, div_wad_down, mul_wad_up};
+use generalised_incentives_common::state::IncentiveDescription;
 use std::ops::Div;
 
 use crate::{
@@ -1051,6 +1052,7 @@ pub fn local_swap(
 /// * `fallback_account` - The recipient of the swapped amount should the swap fail.
 /// * `underwrite_incentive_x16` - The share of the swap return that is offered to an underwriter as incentive.
 /// * `calldata` - Arbitrary data to be executed on the target chain upon successful execution of the swap.
+/// * `incentive` - The relaying incentive.
 /// 
 pub fn send_asset(
     deps: &mut DepsMut,
@@ -1066,7 +1068,8 @@ pub fn send_asset(
     fixed_units: Option<U256>,
     fallback_account: String,
     underwrite_incentive_x16: u16,
-    calldata: Binary
+    calldata: Binary,
+    incentive: IncentiveDescription
 ) -> Result<VaultResponse, ContractError> {
 
     // Only allow connected vaults.
@@ -1139,7 +1142,7 @@ pub fn send_asset(
     // prevent a router from abusing swap 'timeouts' to circumvent the security limit.
 
     // Handle asset transfer from the swapper to the vault
-    let receive_asset_msg = from_asset.receive_asset(&env, &info, amount)?;
+    let (receive_asset_msg, excess_coins) = from_asset.receive_asset_with_excess_coins(&env, &info, amount)?;
 
     // Build the message to collect the governance fee.
     let collect_governance_fee_message = collect_governance_fee_message(
@@ -1161,14 +1164,15 @@ pub fn send_asset(
         from_asset: from_asset.get_asset_ref().to_string(),
         underwrite_incentive_x16,
         block_number,
-        calldata
+        calldata,
+        incentive
     };
     let chain_interface = CHAIN_INTERFACE.load(deps.storage)?;
     let send_asset_execute_msg = CosmosMsg::Wasm(
         cosmwasm_std::WasmMsg::Execute {
             contract_addr: chain_interface.ok_or(ContractError::VaultHasNoInterface {})?.to_string(),
             msg: to_binary(&send_cross_chain_asset_msg)?,
-            funds: vec![]
+            funds: excess_coins     // Use the excess coins received for the incentive payment
         }
     );
 
@@ -1573,6 +1577,7 @@ pub fn delete_underwrite_asset(
 /// * `min_reference_asset` - The mininum reference asset value on the target vault.
 /// * `fallback_account` - The recipient of the swapped amount should the swap fail.
 /// * `calldata` - Arbitrary data to be executed on the target chain upon successful execution of the swap.
+/// * `incentive` - The relaying incentive.
 /// 
 pub fn send_liquidity(
     deps: &mut DepsMut,
@@ -1585,7 +1590,8 @@ pub fn send_liquidity(
     min_vault_tokens: U256,
     min_reference_asset: U256,
     fallback_account: String,
-    calldata: Binary
+    calldata: Binary,
+    incentive: IncentiveDescription
 ) -> Result<VaultResponse, ContractError> {
 
     // Only allow connected vaults
@@ -1680,14 +1686,15 @@ pub fn send_liquidity(
         min_reference_asset,
         from_amount: amount,
         block_number,
-        calldata
+        calldata,
+        incentive
     };
     let chain_interface = CHAIN_INTERFACE.load(deps.storage)?;
     let send_liquidity_execute_msg = CosmosMsg::Wasm(
         cosmwasm_std::WasmMsg::Execute {
             contract_addr: chain_interface.as_ref().ok_or(ContractError::VaultHasNoInterface {})?.to_string(),
             msg: to_binary(&send_cross_chain_liquidity_msg)?,
-            funds: vec![]
+            funds: info.funds.to_owned()    // Send all of the funds received for incentive payment
         }
     );
 

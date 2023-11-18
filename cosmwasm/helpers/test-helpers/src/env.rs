@@ -1,6 +1,6 @@
 use anyhow::Result as AnyResult;
 use cosmwasm_schema::serde::Serialize;
-use cosmwasm_std::{Uint128, Addr, testing::{MockApi, MockStorage}, Empty};
+use cosmwasm_std::{Uint128, Addr, testing::{MockApi, MockStorage}, Empty, Coin};
 use cw_multi_test::{App, AppResponse, BankKeeper, WasmKeeper, FailingModule};
 
 use crate::asset::CustomTestAsset;
@@ -48,6 +48,39 @@ pub trait CustomTestEnv<AppC, TestAssetC: CustomTestAsset<AppC>> {
         msg: &U,
         send_assets: Vec<TestAssetC>,
         send_amounts: Vec<Uint128>
+    ) -> AnyResult<AppResponse> {
+
+        self.execute_contract_with_additional_coins(
+            sender,
+            contract_addr,
+            msg,
+            send_assets,
+            send_amounts,
+            vec![]
+        )
+    }
+
+
+    /// Execute a contract with the specified funds and additional coins.
+    /// - Native assets: the funds are specified on the contract execution.
+    /// - CW20 assets: token allowances are set for the invoked contract.
+    fn execute_contract_with_additional_coins<U: Serialize + std::fmt::Debug>(
+        &mut self,
+        sender: Addr,
+        contract_addr: Addr,
+        msg: &U,
+        send_assets: Vec<TestAssetC>,
+        send_amounts: Vec<Uint128>,
+        additional_coins: Vec<Coin>
     ) -> AnyResult<AppResponse>;
+
+
+    /// Initialize a new coin and set a balance for the given account.
+    fn initialize_coin(
+        &mut self,
+        denom: String,
+        amount: Uint128,
+        account: String
+    ) -> ();
 
 }

@@ -62,7 +62,8 @@ pub fn execute(
             from_asset,
             underwrite_incentive_x16,
             block_number,
-            calldata
+            calldata,
+            incentive: _
         } => execute_send_cross_chain_asset(
             env,
             info,
@@ -88,7 +89,8 @@ pub fn execute(
             min_reference_asset,
             from_amount,
             block_number,
-            calldata
+            calldata,
+            incentive: _
         } => execute_send_cross_chain_liquidity(
             env,
             info,
@@ -346,12 +348,10 @@ pub fn reply(
         
         WRAPPED_MESSAGES_REPLY_ID => match reply.result {
             SubMsgResult::Ok(_) => {
-                // Set the custom 'success-ack' for successful executions.
-                Ok(Response::new().set_data(ack_success()))
+                unimplemented!()
             },
             SubMsgResult::Err(_) => {
-                // Set the custom 'failed-ack' for unsuccessful executions.
-                Ok(Response::new().set_data(ack_fail()))
+                unimplemented!()
             }
         },
         _ => Err(ContractError::UnknownReplyId { id: reply.id }),

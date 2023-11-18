@@ -225,13 +225,14 @@ impl CustomTestEnv<NativeAssetApp, TestNativeAsset> for TestNativeAssetEnv {
         self.1.to_vec()
     }
 
-    fn execute_contract<U: Serialize + std::fmt::Debug>(
+    fn execute_contract_with_additional_coins<U: Serialize + std::fmt::Debug>(
         &mut self,
         sender: Addr,
         contract_addr: Addr,
         msg: &U,
         send_assets: Vec<TestNativeAsset>,
-        send_amounts: Vec<Uint128>
+        send_amounts: Vec<Uint128>,
+        additional_coins: Vec<Coin>
     ) -> AnyResult<AppResponse> {
 
         if send_assets.len() != send_amounts.len() {
@@ -239,13 +240,24 @@ impl CustomTestEnv<NativeAssetApp, TestNativeAsset> for TestNativeAssetEnv {
         }
 
         // Get funds
-        let funds = send_assets.iter()
+        let mut funds = send_assets.iter()
             .zip(send_amounts)
             .filter(|(_, amount)| !amount.is_zero())    // Bank module does not allow zero-valued amounts
             .map(|(asset, amount)| {
                 Coin::new(amount.u128(), asset.denom.clone())
             })
             .collect::<Vec<Coin>>();
+
+        additional_coins.into_iter()
+            .for_each(|additional_fund| {
+                let existing_fund = funds.iter_mut()
+                    .find(|fund| fund.denom == additional_fund.denom);
+
+                match existing_fund {
+                    Some(existing_fund) => existing_fund.amount = existing_fund.amount + additional_fund.amount,
+                    None => funds.push(additional_fund),
+                }
+            });
 
         // Execute contract
         self.get_app().execute_contract(
@@ -254,6 +266,18 @@ impl CustomTestEnv<NativeAssetApp, TestNativeAsset> for TestNativeAssetEnv {
             msg,
             funds.as_ref()
         )
+    }
+
+
+    fn initialize_coin(
+        &mut self,
+        denom: String,
+        amount: Uint128,
+        account: String
+    ) -> () {
+        self.get_app().init_modules(|router, _, storage| {
+            router.bank.init_balance(storage, &Addr::unchecked(account), coins(amount.u128(), denom)).unwrap()
+        })
     }
 
 }

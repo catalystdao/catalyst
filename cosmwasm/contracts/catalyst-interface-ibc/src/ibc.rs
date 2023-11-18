@@ -3,7 +3,7 @@ use catalyst_types::Bytes32;
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{DepsMut, Env, IbcChannelOpenMsg, IbcChannelConnectMsg, IbcBasicResponse, IbcChannelCloseMsg, IbcPacketReceiveMsg, IbcReceiveResponse, IbcPacketAckMsg, IbcPacketTimeoutMsg, IbcChannel, CosmosMsg, to_binary, SubMsg, WasmMsg, ReplyOn, StdError};
 
-use catalyst_interface_common::{ContractError, error::Never, state::{handle_message_reception, handle_message_response, ack_fail, ack_success, SET_ACK_REPLY_ID}, msg::ExecuteMsg, bindings::{CustomMsg, InterfaceResponse}};
+use catalyst_interface_common::{ContractError, error::Never, state::{handle_message_reception, handle_message_response, ack_fail, SET_ACK_REPLY_ID, recover_message}, msg::ExecuteMsg, bindings::{CustomMsg, InterfaceResponse}};
 
 use crate::state::{IbcChannelInfo, OPEN_CHANNELS, WRAPPED_MESSAGES_REPLY_ID};
 
@@ -145,23 +145,26 @@ pub fn ibc_packet_receive(
         &mut deps,
         &env,
         Bytes32::from_base64(&msg.packet.dest.channel_id).unwrap(), // ! TODO: This mapping is here to allow for contract compilation, but does not work in practice.
-        msg.packet.data
+        msg.packet.data.clone()
     );
 
-    // Adapt the common interface handle response to the IBC interface requirements
-    let ibc_response = common_response.and_then(
-        |common_response| {
-            encode_ibc_receive_response(&env, common_response)
-        }
-    );
-
-    // This function should never error, rather it should send a failure message within the
-    // returned ack.
-    ibc_response.or_else(|_| {
-        Ok(IbcReceiveResponse::new()
-            .set_ack(ack_fail())
-        )
-    })
+    match common_response {
+        Ok(common_response) => {
+            // Adapt the common interface handle response to the IBC interface requirements
+            let ibc_response = encode_ibc_receive_response(&env, common_response);
+            
+            // This function should never error, rather it should send a failure message within the
+            // returned ack.
+            ibc_response.or_else(|_| {
+                let original_message = recover_message(&mut deps).unwrap();
+                Ok(IbcReceiveResponse::new().set_ack(ack_fail(original_message)))
+            })
+        },
+        Err(_) => {
+            let original_message = recover_message(&mut deps).unwrap_or(msg.packet.data);
+            Ok(IbcReceiveResponse::new().set_ack(ack_fail(original_message)))
+        },
+    }
 
 }
 
@@ -176,7 +179,7 @@ pub fn ibc_packet_ack(
     let handle_response = handle_message_response(
         Bytes32::from_base64(&msg.original_packet.dest.channel_id).unwrap(), // ! TODO: This mapping is here to allow for contract compilation, but does not work in practice.
         msg.original_packet.data,
-        Some(msg.acknowledgement.data)
+        msg.acknowledgement.data.get(0).cloned()
     )?;
 
     encode_ibc_basic_response(handle_response)
@@ -217,13 +220,8 @@ pub fn encode_ibc_receive_response(
 
     match sub_msgs.len() {
         0 => {
-            // If no messages have to be excuted, return a success-ack
             // NOTE: this case should never be reached, as a message is always generated.
-            Ok(IbcReceiveResponse::new()
-                .set_ack(ack_success())
-                .add_attributes(native_response.attributes)
-                .add_events(native_response.events)
-            )
+            unreachable!("No messages set to be executed on 'ibc receive response'.")
         },
         1 => {
             

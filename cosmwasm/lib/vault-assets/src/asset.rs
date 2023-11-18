@@ -220,6 +220,22 @@ pub trait AssetTrait<Msg>: Serialize + PartialEq + Debug + Clone + ToString {
     ) -> Result<Option<Msg>, AssetError>;
 
 
+    /// Receive the specified amount of the asset within the message execution and return the
+    /// excess coins received.
+    /// 
+    /// NOTE: May return a `Msg` to order the transfer of assets.
+    /// 
+    /// # Arguments:
+    /// * `amount` - The asset amount to receive
+    /// 
+    fn receive_asset_with_excess_coins(
+        &self,
+        env: &Env,
+        info: &MessageInfo,
+        amount: Uint128
+    ) -> Result<(Option<Msg>, Vec<Coin>), AssetError>;
+
+
     /// Send the specified amount of the asset to a recipient within the message execution.
     /// 
     /// NOTE: Always returns a `Msg` to order the transfer of the assets except for

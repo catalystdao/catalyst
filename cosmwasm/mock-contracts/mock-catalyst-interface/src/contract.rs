@@ -3,6 +3,7 @@ use cosmwasm_std::entry_point;
 use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, Uint128, Uint64};
 use catalyst_types::{U256, Bytes32};
 use catalyst_interface_common::{msg::{ExecuteMsg, InstantiateMsg, InterfaceCommonQueryMsg}, ContractError};
+use generalised_incentives_common::state::IncentiveDescription;
 
 
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -38,7 +39,8 @@ pub fn execute(
             from_asset,
             underwrite_incentive_x16,
             block_number,
-            calldata
+            calldata,
+            incentive
         } => execute_send_cross_chain_asset(
             channel_id,
             to_vault,
@@ -50,7 +52,8 @@ pub fn execute(
             from_asset,
             underwrite_incentive_x16,
             block_number,
-            calldata
+            calldata,
+            incentive
         ),
 
         ExecuteMsg::SendCrossChainLiquidity {
@@ -62,7 +65,8 @@ pub fn execute(
             min_reference_asset,
             from_amount,
             block_number,
-            calldata
+            calldata,
+            incentive
         } => execute_send_cross_chain_liquidity(
             channel_id,
             to_vault,
@@ -72,7 +76,8 @@ pub fn execute(
             min_reference_asset,
             from_amount,
             block_number,
-            calldata
+            calldata,
+            incentive
         ),
 
         ExecuteMsg::SetMaxUnderwriteDuration {
@@ -164,7 +169,8 @@ fn execute_send_cross_chain_asset(
     from_asset: String,
     underwrite_incentive_x16: u16,
     block_number: u32,
-    calldata: Binary
+    calldata: Binary,
+    incentive: IncentiveDescription
 ) -> Result<Response, ContractError> {
 
     let calldata = match calldata.len() {
@@ -186,6 +192,12 @@ fn execute_send_cross_chain_asset(
             .add_attribute("underwrite_incentive_x16", underwrite_incentive_x16.to_string())
             .add_attribute("block_number", block_number.to_string())
             .add_attribute("calldata", calldata)
+            .add_attribute("incentive_max_gas_delivery", incentive.max_gas_delivery.to_string())
+            .add_attribute("incentive_max_gas_ack", incentive.max_gas_ack.to_string())
+            .add_attribute("incentive_refund_gas_to", incentive.refund_gas_to.to_string())
+            .add_attribute("incentive_price_of_delivery_gas", incentive.price_of_delivery_gas.to_string())
+            .add_attribute("incentive_price_of_ack_gas", incentive.price_of_ack_gas.to_string())
+            .add_attribute("incentive_target_delta", incentive.target_delta.to_string())
     )
 
 }
@@ -199,7 +211,8 @@ fn execute_send_cross_chain_liquidity(
     min_reference_asset: U256,
     from_amount: Uint128,
     block_number: u32,
-    calldata: Binary
+    calldata: Binary,
+    incentive: IncentiveDescription
 ) -> Result<Response, ContractError> {
 
     let calldata = match calldata.len() {
@@ -219,6 +232,12 @@ fn execute_send_cross_chain_liquidity(
             .add_attribute("from_amount", from_amount)
             .add_attribute("block_number", block_number.to_string())
             .add_attribute("calldata", calldata)
+            .add_attribute("incentive_max_gas_delivery", incentive.max_gas_delivery.to_string())
+            .add_attribute("incentive_max_gas_ack", incentive.max_gas_ack.to_string())
+            .add_attribute("incentive_refund_gas_to", incentive.refund_gas_to.to_string())
+            .add_attribute("incentive_price_of_delivery_gas", incentive.price_of_delivery_gas.to_string())
+            .add_attribute("incentive_price_of_ack_gas", incentive.price_of_ack_gas.to_string())
+            .add_attribute("incentive_target_delta", incentive.target_delta.to_string())
     )
 
 }

@@ -1,10 +1,10 @@
 mod test_volatile_send_asset {
-    use cosmwasm_std::{Uint128, Addr, Binary, Attribute};
+    use cosmwasm_std::{Uint128, Addr, Binary, Attribute, coin};
     use catalyst_types::U256;
     use catalyst_vault_common::{ContractError, msg::{TotalEscrowedAssetResponse, AssetEscrowResponse}, state::compute_send_asset_hash, bindings::Asset};
     use test_helpers::{math::{uint128_to_f64, f64_to_uint128, u256_to_f64, f64_to_u256}, misc::{encode_payload_address, get_response_attribute}, definitions::{SETUP_MASTER, CHANNEL_ID, SWAPPER_B, SWAPPER_A, FACTORY_OWNER, SWAPPER_C}, contract::{mock_instantiate_interface, mock_factory_deploy_vault, DEFAULT_TEST_VAULT_FEE, DEFAULT_TEST_GOV_FEE, mock_set_vault_connection}, env::CustomTestEnv, asset::CustomTestAsset};
 
-    use crate::tests::TestEnv;
+    use crate::tests::{TestEnv, helpers::mock_incentive};
     use crate::{msg::VolatileExecuteMsg, tests::{helpers::{compute_expected_send_asset, volatile_vault_contract_storage}, parameters::{TEST_VAULT_BALANCES, TEST_VAULT_WEIGHTS, AMPLIFICATION, TEST_VAULT_ASSET_COUNT}}};
 
 
@@ -49,14 +49,19 @@ mod test_volatile_send_asset {
         let from_balance = vault_initial_balances[from_asset_idx];
         let send_percentage = 0.15;
         let swap_amount = f64_to_uint128(uint128_to_f64(from_balance) * send_percentage).unwrap();
+        let incentive_amount = swap_amount;
 
         let to_asset_idx = 1;
         let to_account = encode_payload_address(SWAPPER_B.as_bytes());
 
         // Fund swapper with tokens and set vault allowance
+        #[cfg(feature="asset_native")]
+        let send_amount = swap_amount + incentive_amount;
+        #[cfg(feature="asset_cw20")]
+        let send_amount = swap_amount;  // For cw20 assets, the incentive payment cannot be the same as the asset (incentive is always a coin)
         from_asset.transfer(
             env.get_app(),
-            swap_amount,
+            send_amount,
             Addr::unchecked(SETUP_MASTER),
             SWAPPER_A.to_string()
         );
@@ -77,10 +82,11 @@ mod test_volatile_send_asset {
                 min_out: U256::zero(),
                 fallback_account: SWAPPER_C.to_string(),
                 underwrite_incentive_x16: 0u16,
-                calldata: Binary(vec![])
+                calldata: Binary(vec![]),
+                incentive: mock_incentive()
             },
             vec![from_asset.clone()],
-            vec![swap_amount]
+            vec![send_amount],    // ! Include incentive payment of the same denom to make sure it does not affect the send asset calculation
         ).unwrap();
 
 
@@ -234,7 +240,8 @@ mod test_volatile_send_asset {
                 min_out,
                 fallback_account: SWAPPER_A.to_string(),
                 underwrite_incentive_x16,
-                calldata: Binary(vec![])
+                calldata: Binary(vec![]),
+                incentive: mock_incentive()
             },
             vec![from_asset.clone()],
             vec![swap_amount]
@@ -341,7 +348,8 @@ mod test_volatile_send_asset {
                 min_out: U256::zero(),
                 fallback_account: SWAPPER_A.to_string(),
                 underwrite_incentive_x16: 0u16,
-                calldata: Binary(vec![])
+                calldata: Binary(vec![]),
+                incentive: mock_incentive()
             },
             vec![from_asset.clone()],
             vec![swap_amount]
@@ -419,7 +427,8 @@ mod test_volatile_send_asset {
                 min_out: U256::zero(),
                 fallback_account: SWAPPER_A.to_string(),
                 underwrite_incentive_x16: 0u16,
-                calldata: Binary(vec![])
+                calldata: Binary(vec![]),
+                incentive: mock_incentive()
             },
             vec![from_asset.clone()],
             vec![swap_amount]
@@ -500,7 +509,8 @@ mod test_volatile_send_asset {
                 min_out: U256::zero(),
                 fallback_account: SWAPPER_A.to_string(),
                 underwrite_incentive_x16: 0u16,
-                calldata: Binary(vec![])
+                calldata: Binary(vec![]),
+                incentive: mock_incentive()
             },
             vec![from_asset.clone()],
             vec![swap_amount]
@@ -587,7 +597,8 @@ mod test_volatile_send_asset {
                 min_out: U256::zero(),
                 fallback_account: SWAPPER_A.to_string(),
                 underwrite_incentive_x16: 0u16,
-                calldata: calldata.clone()
+                calldata: calldata.clone(),
+                incentive: mock_incentive()
             },
             vec![from_asset.clone()],
             vec![swap_amount]
@@ -669,7 +680,8 @@ mod test_volatile_send_asset {
                 min_out: U256::zero(),
                 fallback_account: SWAPPER_C.to_string(),
                 underwrite_incentive_x16: 0u16,
-                calldata: Binary(vec![])
+                calldata: Binary(vec![]),
+                incentive: mock_incentive()
             },
             vec![],   // ! Do not send funds
             vec![]
@@ -705,7 +717,8 @@ mod test_volatile_send_asset {
                 min_out: U256::zero(),
                 fallback_account: SWAPPER_C.to_string(),
                 underwrite_incentive_x16: 0u16,
-                calldata: Binary(vec![])
+                calldata: Binary(vec![]),
+                incentive: mock_incentive()
             },
             vec![other_asset.clone()],   // ! Send 'other_asset' instead of 'from_asset'
             vec![swap_amount]
@@ -727,7 +740,7 @@ mod test_volatile_send_asset {
 
 
 
-        // Tested action 3: too many assets
+        // Tested action 3: asset amount too low
         let response_result = env.execute_contract(
             Addr::unchecked(SETUP_MASTER),
             vault.clone(),
@@ -741,42 +754,8 @@ mod test_volatile_send_asset {
                 min_out: U256::zero(),
                 fallback_account: SWAPPER_C.to_string(),
                 underwrite_incentive_x16: 0u16,
-                calldata: Binary(vec![])
-            },
-            vec![from_asset.clone(), other_asset.clone()],   // ! Send another asset together with 'from_asset'
-            vec![swap_amount, Uint128::one()]
-        );
-
-        // Make sure the transaction fails
-        #[cfg(feature="asset_native")]
-        assert!(response_result.is_err());
-        #[cfg(feature="asset_native")]
-        matches!(
-            response_result.err().unwrap().downcast().unwrap(),
-            ContractError::AssetSurplusReceived {}
-        );
-        
-        // NOTE: this does not error for cw20 assets, as it's just the *allowance* that is set.
-        #[cfg(feature="asset_cw20")]
-        assert!(response_result.is_ok());
-
-
-
-        // Tested action 4: asset amount too low
-        let response_result = env.execute_contract(
-            Addr::unchecked(SETUP_MASTER),
-            vault.clone(),
-            &VolatileExecuteMsg::SendAsset {
-                channel_id: CHANNEL_ID,
-                to_vault: target_vault.clone(),
-                to_account: to_account.clone(),
-                from_asset_ref: from_asset.get_asset_ref(),
-                to_asset_index: to_asset_idx,
-                amount: swap_amount,
-                min_out: U256::zero(),
-                fallback_account: SWAPPER_C.to_string(),
-                underwrite_incentive_x16: 0u16,
-                calldata: Binary(vec![])
+                calldata: Binary(vec![]),
+                incentive: mock_incentive()
             },
             vec![from_asset.clone()],
             vec![swap_amount - Uint128::one()]
@@ -801,42 +780,8 @@ mod test_volatile_send_asset {
 
 
 
-        // Tested action 5: asset amount too high
-        let response_result = env.execute_contract(
-            Addr::unchecked(SETUP_MASTER),
-            vault.clone(),
-            &VolatileExecuteMsg::SendAsset {
-                channel_id: CHANNEL_ID,
-                to_vault: target_vault.clone(),
-                to_account: to_account.clone(),
-                from_asset_ref: from_asset.get_asset_ref(),
-                to_asset_index: to_asset_idx,
-                amount: swap_amount,
-                min_out: U256::zero(),
-                fallback_account: SWAPPER_C.to_string(),
-                underwrite_incentive_x16: 0u16,
-                calldata: Binary(vec![])
-            },
-            vec![from_asset.clone()],
-            vec![swap_amount + Uint128::one()]
-        );
-
-        // Make sure the transaction fails
-        #[cfg(feature="asset_native")]
-        assert!(response_result.is_err());
-        #[cfg(feature="asset_native")]
-        matches!(
-            response_result.err().unwrap().downcast().unwrap(),
-            ContractError::UnexpectedAssetAmountReceived { received_amount, expected_amount, asset }
-                if
-                    received_amount == swap_amount + Uint128::one() &&
-                    expected_amount == swap_amount &&
-                    asset == Into::<Asset>::into(from_asset.clone()).to_string()
-        );
-        
-        // NOTE: this does not error for cw20 assets, as it's just the *allowance* that is set too high.
-        #[cfg(feature="asset_cw20")]
-        assert!(response_result.is_ok());
+        // NOTE: Too many assets do not constitute invalid funds, as excess assets sent are used
+        // to pay for the relaying incentive.
 
 
 
@@ -854,11 +799,123 @@ mod test_volatile_send_asset {
                 min_out: U256::zero(),
                 fallback_account: SWAPPER_C.to_string(),
                 underwrite_incentive_x16: 0u16,
-                calldata: Binary(vec![])
+                calldata: Binary(vec![]),
+                incentive: mock_incentive()
             },
             vec![from_asset.clone()],
             vec![swap_amount]
         ).unwrap();
+
+    }
+
+
+    #[test]
+    fn test_send_asset_incentive_relay() {
+
+        let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
+
+        let incentive_coin_denom = "incentive-coin".to_string();
+        env.initialize_coin(
+            incentive_coin_denom.clone(),
+            Uint128::new(1000000000),
+            SWAPPER_A.to_string()
+        );
+
+        // Instantiate and initialize vault
+        let interface = mock_instantiate_interface(env.get_app());
+        let vault_assets = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
+        let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
+        let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
+        let vault_code_id = volatile_vault_contract_storage(env.get_app());
+        let vault = mock_factory_deploy_vault::<Asset, _, _>(
+            &mut env,
+            vault_assets.clone(),
+            vault_initial_balances.clone(),
+            vault_weights.clone(),
+            AMPLIFICATION,
+            vault_code_id,
+            Some(interface.clone()),
+            None,
+            None
+        );
+
+        // Connect vault with a mock vault
+        let target_vault = encode_payload_address(b"target_vault");
+        mock_set_vault_connection(
+            env.get_app(),
+            vault.clone(),
+            CHANNEL_ID,
+            target_vault.clone(),
+            true
+        );
+
+        // Define send asset configuration
+        let from_asset_idx = 0;
+        let from_asset = vault_assets[from_asset_idx].clone();
+        let from_balance = vault_initial_balances[from_asset_idx];
+        let send_percentage = 0.15;
+        let swap_amount = f64_to_uint128(uint128_to_f64(from_balance) * send_percentage).unwrap();
+
+        let to_asset_idx = 1;
+        let min_out = f64_to_u256(12345.678).unwrap();  // Some random value
+        let underwrite_incentive_x16 = 8765u16;
+
+        let incentive_payment = coin(101u128, incentive_coin_denom.clone());
+
+        // Fund swapper with tokens and set vault allowance
+        from_asset.transfer(
+            env.get_app(),
+            swap_amount,
+            Addr::unchecked(SETUP_MASTER),
+            SWAPPER_A.to_string()
+        );
+
+
+
+        // Tested action: send asset
+        env.execute_contract_with_additional_coins(
+            Addr::unchecked(SWAPPER_A),
+            vault.clone(),
+            &VolatileExecuteMsg::SendAsset {
+                channel_id: CHANNEL_ID,
+                to_vault: target_vault.clone(),
+                to_account: encode_payload_address(SWAPPER_B.as_bytes()),
+                from_asset_ref: from_asset.get_asset_ref(),
+                to_asset_index: to_asset_idx,
+                amount: swap_amount,
+                min_out,
+                fallback_account: SWAPPER_A.to_string(),
+                underwrite_incentive_x16,
+                calldata: Binary(vec![]),
+                incentive: mock_incentive()
+            },
+            vec![from_asset.clone()],
+            vec![swap_amount],
+            vec![incentive_payment.clone()]
+        ).unwrap();
+
+
+
+        // Verify the incentive payment has been relayed to the interface contract
+        let queried_vault_balance = env.get_app().wrap().query_balance(
+            vault,
+            incentive_coin_denom.clone()
+        ).unwrap();
+
+        assert_eq!(
+            queried_vault_balance.amount,
+            Uint128::zero()
+        );
+
+        let queried_interface_balance = env.get_app().wrap().query_balance(
+            interface,
+            incentive_coin_denom
+        ).unwrap();
+
+        assert_eq!(
+            queried_interface_balance.amount,
+            incentive_payment.amount
+        );
 
     }
 
@@ -944,7 +1001,8 @@ mod test_volatile_send_asset {
                 u: fixed_units,
                 fallback_account: SWAPPER_C.to_string(),
                 underwrite_incentive_x16: 0u16,
-                calldata: Binary(vec![])
+                calldata: Binary(vec![]),
+                incentive: mock_incentive()
             },
             vec![from_asset.clone()],
             vec![swap_amount]
@@ -1050,7 +1108,8 @@ mod test_volatile_send_asset {
                 u: fixed_units,
                 fallback_account: SWAPPER_C.to_string(),
                 underwrite_incentive_x16: 0u16,
-                calldata: Binary(vec![])
+                calldata: Binary(vec![]),
+                incentive: mock_incentive()
             },
             vec![from_asset.clone()],
             vec![swap_amount]

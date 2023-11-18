@@ -3,6 +3,7 @@ use cosmwasm_std::{Uint64, Uint128, Addr, CosmosMsg, Coin, Binary, Empty};
 use cw_multi_test::{ContractWrapper, Executor, AppResponse, Module};
 
 use catalyst_vault_common::bindings::native_asset_vault_modules::{NativeAsset, NativeAssetCustomMsg};
+use generalised_incentives_common::state::IncentiveDescription;
 use schemars::JsonSchema;
 use serde::de::DeserializeOwned;
 use std::fmt::Debug;
@@ -116,6 +117,18 @@ pub fn run_command_result(
                 Err(error) => panic!("Command result check error: {}", error),
             }
         },
+    }
+}
+
+
+pub fn mock_incentive() -> IncentiveDescription {
+    IncentiveDescription {
+        max_gas_delivery: Uint64::new(10000000u64),
+        max_gas_ack: Uint64::new(2000000u64),
+        refund_gas_to: "refund-gas-to".to_string(),
+        price_of_delivery_gas: Uint128::new(50000u128),
+        price_of_ack_gas: Uint128::new(2000u128),
+        target_delta: Uint64::new(5 * 60 * 60)  // 5 hours
     }
 }
 

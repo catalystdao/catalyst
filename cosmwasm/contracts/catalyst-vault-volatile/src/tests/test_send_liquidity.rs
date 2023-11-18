@@ -1,10 +1,10 @@
 mod test_volatile_send_liquidity {
-    use cosmwasm_std::{Uint128, Addr, Binary, Attribute};
+    use cosmwasm_std::{Uint128, Addr, Binary, Attribute, coins, coin};
     use catalyst_types::{U256, u256};
     use catalyst_vault_common::{ContractError, msg::{TotalEscrowedLiquidityResponse, LiquidityEscrowResponse}, state::{INITIAL_MINT_AMOUNT, compute_send_liquidity_hash}, bindings::Asset};
-    use test_helpers::{math::{uint128_to_f64, f64_to_uint128, u256_to_f64}, misc::{encode_payload_address, get_response_attribute}, definitions::{SETUP_MASTER, CHANNEL_ID, SWAPPER_A, SWAPPER_B, SWAPPER_C, VAULT_TOKEN_DENOM}, contract::{mock_instantiate_interface, mock_factory_deploy_vault, mock_set_vault_connection}, env::CustomTestEnv, vault_token::CustomTestVaultToken};
+    use test_helpers::{math::{uint128_to_f64, f64_to_uint128, u256_to_f64}, misc::{encode_payload_address, get_response_attribute}, definitions::{SETUP_MASTER, CHANNEL_ID, SWAPPER_A, SWAPPER_B, SWAPPER_C, VAULT_TOKEN_DENOM}, contract::{mock_instantiate_interface, mock_factory_deploy_vault, mock_set_vault_connection}, env::CustomTestEnv, vault_token::CustomTestVaultToken, asset::CustomTestAsset};
 
-    use crate::tests::{TestEnv, TestVaultToken};
+    use crate::tests::{TestEnv, TestVaultToken, helpers::mock_incentive};
     use crate::{msg::VolatileExecuteMsg, tests::{helpers::{compute_expected_send_liquidity, volatile_vault_contract_storage}, parameters::{TEST_VAULT_BALANCES, TEST_VAULT_WEIGHTS, AMPLIFICATION, TEST_VAULT_ASSET_COUNT}}};
 
 
@@ -56,10 +56,32 @@ mod test_volatile_send_liquidity {
             SWAPPER_A.to_string()
         );
 
+        // ! Include incentive payment of the same denom as one of the vault's assets to make sure
+        // ! it does not affect the send liquidity calculation.
+        let additional_coins;
+
+        #[cfg(feature="asset_native")]
+        {
+            let incentive_asset = vault_assets[0].clone();
+            let incentive_amount = vault_initial_balances[0].u128()/100u128;
+            incentive_asset.transfer(
+                env.get_app(),
+                incentive_amount.into(),
+                Addr::unchecked(SETUP_MASTER),
+                SWAPPER_A.to_string()
+            );
+            additional_coins = coins(incentive_amount, incentive_asset.denom);
+        }
+        
+        #[cfg(feature="asset_cw20")]
+        {
+            additional_coins = vec![];
+        }
+        // For cw20 assets, the incentive payment cannot be a vault asset (incentive is always a coin)
 
 
         // Tested action: send liquidity
-        let response = env.execute_contract(
+        let response = env.execute_contract_with_additional_coins(
             Addr::unchecked(SWAPPER_A),
             vault.clone(),
             &VolatileExecuteMsg::SendLiquidity {
@@ -70,10 +92,12 @@ mod test_volatile_send_liquidity {
                 min_vault_tokens: U256::zero(),
                 min_reference_asset: U256::zero(),
                 fallback_account: SWAPPER_C.to_string(),
-                calldata: Binary(vec![])
+                calldata: Binary(vec![]),
+                incentive: mock_incentive()
             },
             vec![],
-            vec![]
+            vec![],
+            additional_coins
         ).unwrap();
 
 
@@ -207,7 +231,8 @@ mod test_volatile_send_liquidity {
                 min_vault_tokens,
                 min_reference_asset,
                 fallback_account: SWAPPER_C.to_string(),
-                calldata: Binary(vec![])
+                calldata: Binary(vec![]),
+                incentive: mock_incentive()
             },
             vec![],
             vec![]
@@ -309,7 +334,8 @@ mod test_volatile_send_liquidity {
                 min_vault_tokens: U256::zero(),
                 min_reference_asset: U256::zero(),
                 fallback_account: SWAPPER_C.to_string(),
-                calldata: Binary(vec![])
+                calldata: Binary(vec![]),
+                incentive: mock_incentive()
             },
             vec![],
             vec![]
@@ -381,7 +407,8 @@ mod test_volatile_send_liquidity {
                 min_vault_tokens: U256::zero(),
                 min_reference_asset: U256::zero(),
                 fallback_account: SWAPPER_C.to_string(),
-                calldata: Binary(vec![])
+                calldata: Binary(vec![]),
+                incentive: mock_incentive()
             },
             vec![],
             vec![]
@@ -465,7 +492,8 @@ mod test_volatile_send_liquidity {
                 min_vault_tokens: U256::zero(),
                 min_reference_asset: U256::zero(),
                 fallback_account: SWAPPER_C.to_string(),
-                calldata: calldata.clone()
+                calldata: calldata.clone(),
+                incentive: mock_incentive()
             },
             vec![],
             vec![]
@@ -484,6 +512,110 @@ mod test_volatile_send_liquidity {
         assert_eq!(
             payload_calldata,
             calldata
+        );
+
+    }
+
+    
+    #[test]
+    fn test_send_liquidity_incentive_relay() {
+
+        let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
+
+        let incentive_coin_denom = "incentive-coin".to_string();
+        env.initialize_coin(
+            incentive_coin_denom.clone(),
+            Uint128::new(1000000000),
+            SWAPPER_A.to_string()
+        );
+
+        // Instantiate and initialize vault
+        let interface = mock_instantiate_interface(env.get_app());
+        let vault_assets = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
+        let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
+        let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
+        let vault_code_id = volatile_vault_contract_storage(env.get_app());
+        let vault = mock_factory_deploy_vault::<Asset, _, _>(
+            &mut env,
+            vault_assets.clone(),
+            vault_initial_balances.clone(),
+            vault_weights.clone(),
+            AMPLIFICATION,
+            vault_code_id,
+            Some(interface.clone()),
+            None,
+            None
+        );
+
+        // Set target mock vault
+        let target_vault = encode_payload_address(b"target_vault");
+        mock_set_vault_connection(
+            env.get_app(),
+            vault.clone(),
+            CHANNEL_ID,
+            target_vault.clone(),
+            true
+        );
+
+        // Define send liquidity configuration
+        let send_percentage = 0.15;
+        let swap_amount = f64_to_uint128(uint128_to_f64(INITIAL_MINT_AMOUNT) * send_percentage).unwrap();
+        let to_account = encode_payload_address(SWAPPER_B.as_bytes());
+
+        // Fund swapper with tokens
+        let vault_token = TestVaultToken::load(vault.to_string(), VAULT_TOKEN_DENOM.to_string());
+        vault_token.transfer(
+            env.get_app(),
+            swap_amount,
+            Addr::unchecked(SETUP_MASTER),
+            SWAPPER_A.to_string()
+        );
+
+        let incentive_payment = coin(101u128, incentive_coin_denom.clone());
+
+
+
+        // Tested action: send liquidity
+        env.execute_contract_with_additional_coins(
+            Addr::unchecked(SWAPPER_A),
+            vault.clone(),
+            &VolatileExecuteMsg::SendLiquidity {
+                channel_id: CHANNEL_ID,
+                to_vault: target_vault,
+                to_account: to_account.clone(),
+                amount: swap_amount,
+                min_vault_tokens: U256::zero(),
+                min_reference_asset: U256::zero(),
+                fallback_account: SWAPPER_C.to_string(),
+                calldata: Binary(vec![]),
+                incentive: mock_incentive()
+            },
+            vec![],
+            vec![],
+            vec![incentive_payment.clone()]
+        ).unwrap();
+
+
+
+        // Verify the incentive payment has been relayed to the interface contract
+        let queried_vault_balance = env.get_app().wrap().query_balance(
+            vault,
+            incentive_coin_denom.clone()
+        ).unwrap();
+
+        assert_eq!(
+            queried_vault_balance.amount,
+            Uint128::zero()
+        );
+
+        let queried_interface_balance = env.get_app().wrap().query_balance(
+            interface,
+            incentive_coin_denom
+        ).unwrap();
+
+        assert_eq!(
+            queried_interface_balance.amount,
+            incentive_payment.amount
         );
 
     }

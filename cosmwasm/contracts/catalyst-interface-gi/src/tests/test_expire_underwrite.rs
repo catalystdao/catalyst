@@ -4,7 +4,7 @@ mod test_expire_underwrite {
     use catalyst_vault_common::{bindings::Asset, msg::{TotalEscrowedAssetResponse, AssetEscrowResponse, CommonQueryMsg as VaultQueryMsg}};
     use cosmwasm_std::{Uint128, Addr, Binary, Uint64};
     use catalyst_types::{U256, u256};
-    use test_helpers::{math::f64_to_uint128, definitions::{SETUP_MASTER, CHANNEL_ID, SWAPPER_B, UNDERWRITER, SWAPPER_C}, env::CustomTestEnv, asset::CustomTestAsset, contract::{mock_factory_deploy_vault, mock_set_vault_connection}, misc::encode_payload_address};
+    use test_helpers::{math::f64_to_uint128, definitions::{SETUP_MASTER, CHANNEL_ID, SWAPPER_B, UNDERWRITER, SWAPPER_C, GENERALISED_INCENTIVES}, env::CustomTestEnv, asset::CustomTestAsset, contract::{mock_factory_deploy_vault, mock_set_vault_connection}, misc::encode_payload_address};
     use std::str::FromStr;
 
     use crate::tests::{TestEnv, TestAsset, helpers::{compute_expected_receive_asset, mock_instantiate_interface, vault_contract_storage}, parameters::{TEST_VAULT_ASSET_COUNT, TEST_VAULT_BALANCES, TEST_VAULT_WEIGHTS, AMPLIFICATION}};
@@ -37,7 +37,7 @@ mod test_expire_underwrite {
         ) -> Self {
     
             // Instantiate and initialize vault
-            let interface = mock_instantiate_interface(env.get_app());
+            let interface = mock_instantiate_interface(env.get_app(), GENERALISED_INCENTIVES.to_string());
             let vault_assets = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
             let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
             let vault_weights = TEST_VAULT_WEIGHTS.to_vec();

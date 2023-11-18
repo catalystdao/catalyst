@@ -1,11 +1,17 @@
+use std::fmt::Debug;
+
 use catalyst_interface_common::catalyst_payload::{CatalystV1SendAssetPayload, SendAssetVariablePayload, CatalystEncodedAddress, CatalystV1SendLiquidityPayload, SendLiquidityVariablePayload};
 use catalyst_vault_common::bindings::CustomMsg;
-use cosmwasm_std::{Uint128, Addr, Binary, Empty};
-use cw_multi_test::{ContractWrapper, Module, Executor};
-use catalyst_types::U256;
+use cosmwasm_std::{Uint128, Addr, Binary, Empty, coin};
+use cw_multi_test::{ContractWrapper, Module, Executor, App, AppResponse};
+use catalyst_types::{U256, Bytes32};
+use generalised_incentives_common::bytes32::Bytes32 as GIBytes32;
+use generalised_incentives_mock_on_receive::{contract::{execute as gi_execute, instantiate as gi_instantiate, query as gi_query, reply as gi_reply}, msg::InstantiateMsg as GIInstantiateMsg};
 
-use test_helpers::{math::u256_to_f64, contract::ExpectedReceiveAssetResult, definitions::SETUP_MASTER, env::CustomApp};
-use crate::tests::TestApp;
+use schemars::JsonSchema;
+use serde::de::DeserializeOwned;
+use test_helpers::{math::u256_to_f64, contract::ExpectedReceiveAssetResult, definitions::{SETUP_MASTER, LOST_GAS, MESSAGING_AUTH, CHANNEL_ID, REMOTE_CHAIN_INTERFACE}, env::CustomApp};
+use crate::{tests::TestApp, msg::{InstantiateMsg, ExecuteMsg}};
 
 
 // Contracts
@@ -43,7 +49,8 @@ where
 }
 
 pub fn mock_instantiate_interface<HandlerC>(
-    app: &mut CustomApp<HandlerC, CustomMsg>    // Cannot be generic on `ExecC`, as the factory contract is hardcoded with `CustomMsg`
+    app: &mut CustomApp<HandlerC, CustomMsg>,    // Cannot be generic on `ExecC`, as the factory contract is hardcoded with `CustomMsg`
+    generalised_incentives: String
 ) -> Addr
 where
     HandlerC: Module<ExecT = CustomMsg, QueryT = Empty>
@@ -54,10 +61,77 @@ where
     app.instantiate_contract(
         contract_code_storage,
         Addr::unchecked(SETUP_MASTER),
-        &catalyst_interface_common::msg::InstantiateMsg {},
+        &InstantiateMsg {
+            generalised_incentives
+        },
         &[],
         "interface",
         None
+    ).unwrap()
+}
+
+pub fn gi_contract_storage<HandlerC, ExecC>(
+    app: &mut CustomApp<HandlerC, ExecC>
+) -> u64
+where
+    HandlerC: Module<ExecT = ExecC, QueryT = Empty>,
+    ExecC: Clone + Debug + DeserializeOwned + JsonSchema + PartialEq + 'static
+{
+
+    // Create contract wrapper
+    let contract = ContractWrapper::new_with_empty(
+        gi_execute,
+        gi_instantiate,
+        gi_query,
+    ).with_reply_empty(gi_reply);
+
+    // 'Deploy' the contract
+    app.store_code(Box::new(contract))
+}
+
+pub fn mock_instantiate_gi<HandlerC, ExecC>(
+    app: &mut CustomApp<HandlerC, ExecC>,
+    self_identifier: Bytes32
+) -> Addr
+where
+    HandlerC: Module<ExecT = ExecC, QueryT = Empty>,
+    ExecC: Clone + Debug + DeserializeOwned + JsonSchema + PartialEq + 'static
+{
+
+    let contract_code_storage = gi_contract_storage(app);
+
+    app.instantiate_contract(
+        contract_code_storage,
+        Addr::unchecked(SETUP_MASTER),
+        &GIInstantiateMsg {
+            messaging_authority: MESSAGING_AUTH.to_string(),
+            self_identifier: GIBytes32(self_identifier.0),
+            message_cost: coin(0, ""),
+            lost_gas_address: LOST_GAS.to_string()
+        },
+        &[],
+        "gi",
+        None
+    ).unwrap()
+}
+
+
+pub fn connect_mock_remote_chain<HandlerC>(
+    app: &mut CustomApp<HandlerC, CustomMsg>,
+    interface: Addr
+) -> AppResponse
+where
+    HandlerC: Module<ExecT = CustomMsg, QueryT = Empty>
+{
+    app.execute_contract(
+        Addr::unchecked(SETUP_MASTER),
+        interface,
+        &ExecuteMsg::ConnectNewChain {
+            channel_id: CHANNEL_ID,
+            remote_interface: CatalystEncodedAddress::try_encode(REMOTE_CHAIN_INTERFACE.as_bytes()).unwrap().to_binary(),
+            remote_gi: Binary(vec![0])
+        },
+        &[]
     ).unwrap()
 }
 

@@ -42,6 +42,7 @@ cw-controllers = { workspace = true }
 cw0 = { workspace = true }
 cw2 = { workspace = true }
 cw20 = { workspace = true }
+generalised-incentives-common = { workspace = true }
 schemars = { workspace = true }
 serde = { workspace = true }
 thiserror = { workspace = true }

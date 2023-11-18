@@ -2,11 +2,11 @@ mod test_receive_asset_calldata {
 
     use catalyst_interface_common::catalyst_payload::CatalystEncodedAddress;
     use catalyst_vault_common::bindings::Asset;
-    use cosmwasm_std::{Uint128, Addr, Binary};
+    use cosmwasm_std::{Uint128, Binary};
     use catalyst_types::{U256, u256};
-    use test_helpers::{definitions::{SETUP_MASTER, CHANNEL_ID, SWAPPER_B}, env::CustomTestEnv, contract::{mock_factory_deploy_vault, mock_set_vault_connection, mock_instantiate_calldata_target}, misc::{encode_payload_address, get_response_attribute}, asset::CustomTestAsset};
+    use test_helpers::{definitions::{SETUP_MASTER, CHANNEL_ID, SWAPPER_B, MESSAGE_ID, REMOTE_CHAIN_INTERFACE}, env::CustomTestEnv, contract::{mock_factory_deploy_vault, mock_set_vault_connection, mock_instantiate_calldata_target}, misc::{encode_payload_address, get_response_attribute}, asset::CustomTestAsset};
 
-    use crate::tests::{TestEnv, helpers::{mock_instantiate_interface, vault_contract_storage, encode_mock_send_asset_packet}, parameters::{TEST_VAULT_ASSET_COUNT, TEST_VAULT_BALANCES, TEST_VAULT_WEIGHTS, AMPLIFICATION}};
+    use crate::tests::{TestEnv, helpers::{mock_instantiate_interface, vault_contract_storage, encode_mock_send_asset_packet, mock_instantiate_gi, connect_mock_remote_chain}, parameters::{TEST_VAULT_ASSET_COUNT, TEST_VAULT_BALANCES, TEST_VAULT_WEIGHTS, AMPLIFICATION}};
     use crate::msg::ExecuteMsg as InterfaceExecuteMsg;
 
     #[test]
@@ -15,7 +15,8 @@ mod test_receive_asset_calldata {
         let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
 
         // Instantiate and initialize vault
-        let interface = mock_instantiate_interface(env.get_app());
+        let generalised_incentives = mock_instantiate_gi(env.get_app(), CHANNEL_ID);
+        let interface = mock_instantiate_interface(env.get_app(), generalised_incentives.to_string());
         let vault_assets = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
@@ -40,6 +41,12 @@ mod test_receive_asset_calldata {
             CHANNEL_ID,
             encode_payload_address(from_vault.as_bytes()),
             true
+        );
+
+        // Connect the interface with a mock remote interface
+        connect_mock_remote_chain(
+            env.get_app(),
+            interface.clone()
         );
 
         // Define the receive asset configuration
@@ -78,11 +85,13 @@ mod test_receive_asset_calldata {
 
         // Tested action: receive asset with calldata
         let response = env.execute_contract(
-            Addr::unchecked(SETUP_MASTER),
+            generalised_incentives,
             interface.clone(),
-            &InterfaceExecuteMsg::PacketReceive {
-                data: mock_packet,
-                channel_id: CHANNEL_ID
+            &InterfaceExecuteMsg::ReceiveMessage {
+                source_identifier: CHANNEL_ID,
+                message_identifier: MESSAGE_ID,
+                from_application: CatalystEncodedAddress::try_encode(REMOTE_CHAIN_INTERFACE.as_bytes()).unwrap().to_binary(),
+                message: mock_packet,
             },
             vec![],
             vec![]

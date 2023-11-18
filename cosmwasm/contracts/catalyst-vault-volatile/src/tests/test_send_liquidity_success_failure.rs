@@ -4,7 +4,7 @@ mod test_volatile_send_liquidity_success_failure {
     use catalyst_vault_common::{ContractError, msg::{TotalEscrowedLiquidityResponse, LiquidityEscrowResponse}, state::{compute_send_liquidity_hash, INITIAL_MINT_AMOUNT}, bindings::Asset};
     use test_helpers::{math::{uint128_to_f64, f64_to_uint128}, misc::{encode_payload_address, get_response_attribute}, definitions::{SETUP_MASTER, CHANNEL_ID, SWAPPER_B, SWAPPER_A, VAULT_TOKEN_DENOM}, contract::{mock_instantiate_interface, mock_factory_deploy_vault, mock_set_vault_connection}, env::CustomTestEnv, vault_token::CustomTestVaultToken};
 
-    use crate::tests::{TestEnv, TestVaultToken};
+    use crate::tests::{TestEnv, TestVaultToken, helpers::mock_incentive};
     use crate::{msg::{VolatileExecuteMsg, QueryMsg}, tests::{helpers::volatile_vault_contract_storage, parameters::{TEST_VAULT_BALANCES, TEST_VAULT_WEIGHTS, AMPLIFICATION, TEST_VAULT_ASSET_COUNT}}};
 
 
@@ -75,7 +75,8 @@ mod test_volatile_send_liquidity_success_failure {
                     min_vault_tokens: U256::zero(),
                     min_reference_asset: U256::zero(),
                     fallback_account: SWAPPER_A.to_string(),
-                    calldata: Binary(vec![])
+                    calldata: Binary(vec![]),
+                    incentive: mock_incentive()
                 },
                 vec![],
                 vec![]

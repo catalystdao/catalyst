@@ -2,6 +2,7 @@ use catalyst_types::{U256, Bytes32};
 use catalyst_vault_common::msg::BalanceResponse;
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Env, Binary, CosmosMsg, to_binary, Uint128, Uint64, Coin, Deps};
+use generalised_incentives_common::state::IncentiveDescription;
 
 use crate::{commands::CommandResult, error::ContractError, executors::types::{ValueAmount, CoinAmount}};
 
@@ -88,7 +89,8 @@ pub fn execute_send_asset(
     amount: CoinAmount,
     min_out: U256,
     fallback_account: String,
-    calldata: Binary
+    calldata: Binary,
+    incentive: IncentiveDescription
 ) -> Result<CommandResult, ContractError> {
 
     let swap_amount = amount.get_coin(deps, env)?;
@@ -103,7 +105,8 @@ pub fn execute_send_asset(
         min_out,
         fallback_account,
         underwrite_incentive_x16: 0u16, //TODO implement in router
-        calldata
+        calldata,
+        incentive
     };
 
     Ok(CommandResult::Message(
@@ -129,7 +132,8 @@ pub fn execute_send_liquidity(
     min_vault_tokens: U256,
     min_reference_asset: U256,
     fallback_account: String,
-    calldata: Binary
+    calldata: Binary,
+    incentive: IncentiveDescription
 ) -> Result<CommandResult, ContractError> {
 
     let send_amount = get_vault_token_amount(
@@ -147,7 +151,8 @@ pub fn execute_send_liquidity(
         min_vault_tokens,
         min_reference_asset,
         fallback_account,
-        calldata
+        calldata,
+        incentive
     };
 
     Ok(CommandResult::Message(

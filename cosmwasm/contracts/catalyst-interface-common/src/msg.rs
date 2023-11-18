@@ -1,6 +1,7 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Uint64, Uint128, Binary, SubMsg, Empty};
 use catalyst_types::{U256, Bytes32};
+use generalised_incentives_common::state::IncentiveDescription;
 
 #[cw_serde]
 pub struct InstantiateMsg {
@@ -27,6 +28,7 @@ pub enum ExecuteMsg<T=Empty> {
     /// * `underwrite_incentive_x16` - The share of the swap return that is offered to an underwriter as incentive.
     /// * `block_number` - The block number at which the transaction has been committed.
     /// * `calldata` - Arbitrary data to be executed on the target chain upon successful execution of the swap.
+    /// * `incentive` - The relaying incentive.
     /// 
     SendCrossChainAsset {
         channel_id: Bytes32,
@@ -39,7 +41,8 @@ pub enum ExecuteMsg<T=Empty> {
         from_asset: String,
         underwrite_incentive_x16: u16,
         block_number: u32,
-        calldata: Binary
+        calldata: Binary,
+        incentive: IncentiveDescription
     },
 
 
@@ -58,6 +61,7 @@ pub enum ExecuteMsg<T=Empty> {
     /// * `from_amount` - The `from_asset` amount sold to the vault.
     /// * `block_number` - The block number at which the transaction has been committed.
     /// * `calldata` - Arbitrary data to be executed on the target chain upon successful execution of the swap.
+    /// * `incentive` - The relaying incentive.
     /// 
     SendCrossChainLiquidity {
         channel_id: Bytes32,
@@ -68,7 +72,8 @@ pub enum ExecuteMsg<T=Empty> {
         min_reference_asset: U256,
         from_amount: Uint128,
         block_number: u32,
-        calldata: Binary
+        calldata: Binary,
+        incentive: IncentiveDescription
     },
 
 
