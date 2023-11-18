@@ -1,18 +1,19 @@
 mod test_fulfill_underwrite {
 
-    use catalyst_interface_common::state::{UNDERWRITING_COLLATERAL, UNDERWRITING_COLLATERAL_BASE};
+    use catalyst_interface_common::{state::{UNDERWRITING_COLLATERAL, UNDERWRITING_COLLATERAL_BASE}, catalyst_payload::CatalystEncodedAddress};
     use catalyst_vault_common::{bindings::Asset, msg::{TotalEscrowedAssetResponse, CommonQueryMsg as VaultQueryMsg, AssetEscrowResponse}};
     use cosmwasm_std::{Uint128, Addr, Binary, Uint64};
     use catalyst_types::{U256, u256};
-    use test_helpers::{math::f64_to_uint128, definitions::{SETUP_MASTER, CHANNEL_ID, SWAPPER_B, UNDERWRITER}, env::CustomTestEnv, asset::CustomTestAsset, contract::{mock_factory_deploy_vault, mock_set_vault_connection}, misc::encode_payload_address};
+    use test_helpers::{math::f64_to_uint128, definitions::{SETUP_MASTER, CHANNEL_ID, SWAPPER_B, UNDERWRITER, MESSAGE_ID, REMOTE_CHAIN_INTERFACE}, env::CustomTestEnv, asset::CustomTestAsset, contract::{mock_factory_deploy_vault, mock_set_vault_connection}, misc::encode_payload_address};
     use std::str::FromStr;
 
-    use crate::tests::{TestEnv, TestAsset, helpers::{compute_expected_receive_asset, mock_instantiate_interface, vault_contract_storage, encode_mock_send_asset_packet}, parameters::{TEST_VAULT_ASSET_COUNT, TEST_VAULT_BALANCES, TEST_VAULT_WEIGHTS, AMPLIFICATION}};
+    use crate::tests::{TestEnv, TestAsset, helpers::{compute_expected_receive_asset, mock_instantiate_interface, vault_contract_storage, encode_mock_send_asset_packet, mock_instantiate_gi, connect_mock_remote_chain}, parameters::{TEST_VAULT_ASSET_COUNT, TEST_VAULT_BALANCES, TEST_VAULT_WEIGHTS, AMPLIFICATION}};
     use crate::msg::ExecuteMsg as InterfaceExecuteMsg;
     
 
     pub struct MockTestState {
         pub interface: Addr,
+        pub generalised_incentives: Addr,
         pub vault: Addr,
         pub from_vault: String,
         pub vault_assets: Vec<TestAsset>,
@@ -38,7 +39,8 @@ mod test_fulfill_underwrite {
         ) -> Self {
     
             // Instantiate and initialize vault
-            let interface = mock_instantiate_interface(env.get_app());
+            let generalised_incentives = mock_instantiate_gi(env.get_app(), CHANNEL_ID);
+            let interface = mock_instantiate_interface(env.get_app(), generalised_incentives.to_string());
             let vault_assets = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
             let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
             let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
@@ -63,6 +65,12 @@ mod test_fulfill_underwrite {
                 CHANNEL_ID,
                 encode_payload_address(from_vault.as_bytes()),
                 true
+            );
+
+            // Connect the interface with a mock remote interface
+            connect_mock_remote_chain(
+                env.get_app(),
+                interface.clone()
             );
 
             // Define the receive asset configuration
@@ -130,6 +138,7 @@ mod test_fulfill_underwrite {
     
             Self {
                 interface,
+                generalised_incentives,
                 vault,
                 from_vault,
                 vault_assets,
@@ -158,6 +167,7 @@ mod test_fulfill_underwrite {
 
         let MockTestState {
             interface,
+            generalised_incentives,
             vault,
             from_vault,
             vault_assets: _,
@@ -195,11 +205,13 @@ mod test_fulfill_underwrite {
 
         // Tested action: fulfill the underwrite
         let response = env.execute_contract(
-            Addr::unchecked(SETUP_MASTER),
+            generalised_incentives,
             interface.clone(),
-            &InterfaceExecuteMsg::PacketReceive {
-                data: mock_packet,
-                channel_id: CHANNEL_ID
+            &InterfaceExecuteMsg::ReceiveMessage {
+                source_identifier: CHANNEL_ID,
+                message_identifier: MESSAGE_ID,
+                from_application: CatalystEncodedAddress::try_encode(REMOTE_CHAIN_INTERFACE.as_bytes()).unwrap().to_binary(),
+                message: mock_packet,
             },
             vec![],
             vec![]
@@ -208,11 +220,10 @@ mod test_fulfill_underwrite {
 
 
         // Verify the underwrite fulfill event
-        let event = response.events[2].clone();
-        assert_eq!(
-            event.ty,
-            "wasm-fulfill-underwrite"
-        );
+        let event = response.events.iter()
+            .find(|event| event.ty == "wasm-fulfill-underwrite")
+            .unwrap();
+
         assert_eq!(
             event.attributes[1].value,
             underwrite_identifier

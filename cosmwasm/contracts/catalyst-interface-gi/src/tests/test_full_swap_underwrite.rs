@@ -1,10 +1,11 @@
 mod test_full_swap_underwrite {
+    use catalyst_interface_common::catalyst_payload::CatalystEncodedAddress;
     use cosmwasm_std::{Uint128, Addr, Binary};
     use catalyst_types::{U256, u256};
-    use test_helpers::{math::f64_to_uint128, definitions::{SETUP_MASTER, CHANNEL_ID, SWAPPER_B, UNDERWRITER}, env::CustomTestEnv, asset::CustomTestAsset, contract::{mock_factory_deploy_vault, mock_set_vault_connection}, misc::encode_payload_address};
+    use test_helpers::{math::f64_to_uint128, definitions::{SETUP_MASTER, CHANNEL_ID, SWAPPER_B, UNDERWRITER, REMOTE_CHAIN_INTERFACE, MESSAGE_ID}, env::CustomTestEnv, asset::CustomTestAsset, contract::{mock_factory_deploy_vault, mock_set_vault_connection}, misc::encode_payload_address};
     use catalyst_vault_common::bindings::Asset;
 
-    use crate::tests::{TestEnv, helpers::{compute_expected_receive_asset, encode_mock_send_asset_packet, mock_instantiate_interface, vault_contract_storage}, parameters::{TEST_VAULT_ASSET_COUNT, TEST_VAULT_BALANCES, TEST_VAULT_WEIGHTS, AMPLIFICATION}};
+    use crate::tests::{TestEnv, helpers::{compute_expected_receive_asset, encode_mock_send_asset_packet, mock_instantiate_interface, vault_contract_storage, mock_instantiate_gi, connect_mock_remote_chain}, parameters::{TEST_VAULT_ASSET_COUNT, TEST_VAULT_BALANCES, TEST_VAULT_WEIGHTS, AMPLIFICATION}};
     use crate::msg::ExecuteMsg as InterfaceExecuteMsg;
 
 
@@ -15,7 +16,8 @@ mod test_full_swap_underwrite {
         let mut env = TestEnv::initialize(SETUP_MASTER.to_string());
 
         // Instantiate and initialize vault
-        let interface = mock_instantiate_interface(env.get_app());
+        let generalised_incentives = mock_instantiate_gi(env.get_app(), CHANNEL_ID);
+        let interface = mock_instantiate_interface(env.get_app(), generalised_incentives.to_string());
         let vault_assets = env.get_assets()[..TEST_VAULT_ASSET_COUNT].to_vec();
         let vault_initial_balances = TEST_VAULT_BALANCES.to_vec();
         let vault_weights = TEST_VAULT_WEIGHTS.to_vec();
@@ -40,6 +42,12 @@ mod test_full_swap_underwrite {
             CHANNEL_ID,
             encode_payload_address(from_vault.as_bytes()),
             true
+        );
+
+        // Connect the interface with a mock remote interface
+        connect_mock_remote_chain(
+            env.get_app(),
+            interface.clone()
         );
 
         // Define the receive asset configuration
@@ -130,11 +138,13 @@ mod test_full_swap_underwrite {
         );
 
         let response = env.execute_contract(
-            Addr::unchecked(SETUP_MASTER),
+            generalised_incentives,
             interface.clone(),
-            &InterfaceExecuteMsg::PacketReceive {
-                data: mock_packet,
-                channel_id: CHANNEL_ID
+            &InterfaceExecuteMsg::ReceiveMessage {
+                source_identifier: CHANNEL_ID,
+                message_identifier: MESSAGE_ID,
+                from_application: CatalystEncodedAddress::try_encode(REMOTE_CHAIN_INTERFACE.as_bytes()).unwrap().to_binary(),
+                message: mock_packet,
             },
             vec![],
             vec![]
@@ -143,11 +153,9 @@ mod test_full_swap_underwrite {
 
 
         // Verify the underwrite fulfill event
-        let event = response.events[2].clone();
-        assert_eq!(
-            event.ty,
-            "wasm-fulfill-underwrite"
-        );
+        response.events.iter()
+            .find(|event| event.ty == "wasm-fulfill-underwrite")
+            .unwrap();  // Make sure event exists
 
         // Verify the funds have been transferred
         let new_queried_underwriter_balance = to_asset.query_balance(env.get_app(), UNDERWRITER);
