@@ -425,7 +425,7 @@ mod test_underwrite {
         // Make sure the transaction fails
         assert!(matches!(
             response_result.err().unwrap().downcast().unwrap(),
-            ContractError::SwapRecentlyUnderwritten {}  //TODO error!
+            ContractError::SwapRecentlyUnderwritten {}
         ));
 
     }
