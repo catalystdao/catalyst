@@ -216,7 +216,7 @@ pub fn get_remote_interface(
     let implementation = REMOTE_IMPLEMENTATIONS.load(
         deps.storage,
         channel_id
-    )?;
+    ).map_err(|_| ContractError::NoSourceInterfaceSet {})?;
 
     Ok(implementation.try_into()?)
 }

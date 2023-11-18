@@ -54,6 +54,9 @@ pub enum ContractError {
         vault: Binary
     },
 
+    #[error("No source cross chain interface is set for the given channel id.")]
+    NoSourceInterfaceSet {},
+
     #[error("The source cross chain interface is invalid.")]
     InvalidSourceInterface {},
 
