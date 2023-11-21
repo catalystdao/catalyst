@@ -152,5 +152,74 @@ contract TestCommon is Test, Bytes65, IMessageEscrowStructs, TestTokenFunctions,
     function sliceMemory(bytes calldata a, uint256 start, uint256 end) pure external returns(bytes calldata) {
         return a[start:end];
     }
+
+    function constructSendAsset(address sourceVault, address destinationVault, address toAccount, uint256 units, uint8 toAssetIndex, uint256 minOut, uint256 fromAmount, address fromAsset, uint32 blocknumber, uint16 underwriteIncentiveX16, bytes memory cdata) pure internal returns(bytes memory message) {
+        message = abi.encodePacked(
+            CTX0_ASSET_SWAP,
+            abi.encodePacked(
+                uint8(20),
+                bytes32(0),
+                abi.encode(sourceVault)
+            ),
+            abi.encodePacked(
+                uint8(20),
+                bytes32(0),
+                abi.encode(destinationVault)
+            ),
+            abi.encodePacked(
+                uint8(20),
+                bytes32(0),
+                abi.encode(toAccount)
+            ),
+            units,
+            uint8(toAssetIndex),
+            minOut,
+            fromAmount,
+            abi.encodePacked(
+                uint8(20),
+                bytes32(0),
+                abi.encode(fromAsset)
+            ),
+            uint32(blocknumber),
+            uint16(underwriteIncentiveX16),
+            uint16(cdata.length),
+            cdata
+        );
+    }
+
+    function constructSendAsset(address sourceVault, address destinationVault, address toAccount, uint256 units, uint8 toAssetIndex, uint256 minOut, uint256 fromAmount, address fromAsset) view internal returns(bytes memory message) {
+        message = constructSendAsset(sourceVault, destinationVault, toAccount, units, toAssetIndex, minOut, fromAmount, fromAsset, uint32(block.number), uint16(0), hex"");
+    }
+
+    function constructSendAsset(address sourceVault, address destinationVault, address toAccount, uint256 units, uint8 toAssetIndex) view internal returns(bytes memory message) {
+        message = constructSendAsset(sourceVault, destinationVault, toAccount, units, toAssetIndex, 0, 0, address(0), uint32(block.number), uint16(0), hex"");
+    }
+
+    function addGARPContext(bytes32 messageIdentifier, address fromApplication, address destinationAddress, bytes memory message) internal returns(bytes memory package) {
+        return abi.encodePacked(
+            bytes1(0x00),
+            messageIdentifier,
+            abi.encodePacked(
+                uint8(20),
+                bytes32(0),
+                bytes32(abi.encode(fromApplication))
+            ),
+            abi.encodePacked(
+                uint8(20),
+                bytes32(0),
+                bytes32(abi.encode(destinationAddress))
+            ),
+            uint48(4000000),
+            message
+        );
+    }
+    
+    function addMockContext(bytes memory message) internal returns(bytes memory package) {
+        return abi.encodePacked(
+            DESTINATION_IDENTIFIER,
+            DESTINATION_IDENTIFIER,
+            message
+        );
+    }
 }
 
