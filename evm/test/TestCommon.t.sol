@@ -195,6 +195,43 @@ contract TestCommon is Test, Bytes65, IMessageEscrowStructs, TestTokenFunctions,
         message = constructSendAsset(sourceVault, destinationVault, toAccount, units, toAssetIndex, 0, 0, address(0), uint32(block.number), uint16(0), hex"");
     }
 
+    function constructSendLiquidity(address sourceVault, address destinationVault, address toAccount, uint256 units, uint256[2] memory minOuts, uint256 fromAmount, uint32 blocknumber, uint16 underwriteIncentiveX16, bytes memory cdata) pure internal returns(bytes memory message) {
+        message = abi.encodePacked(
+            CTX1_LIQUIDITY_SWAP,
+            abi.encodePacked(
+                uint8(20),
+                bytes32(0),
+                abi.encode(sourceVault)
+            ),
+            abi.encodePacked(
+                uint8(20),
+                bytes32(0),
+                abi.encode(destinationVault)
+            ),
+            abi.encodePacked(
+                uint8(20),
+                bytes32(0),
+                abi.encode(toAccount)
+            ),
+            units,
+            minOuts[0],
+            minOuts[1],
+            fromAmount,
+            uint32(blocknumber),
+            uint16(cdata.length),
+            cdata
+        );
+    }
+
+    function constructSendLiquidity(address sourceVault, address destinationVault, address toAccount, uint256 units, uint256[2] memory minOuts, uint256 fromAmount) view internal returns(bytes memory message) {
+        message = constructSendLiquidity(sourceVault, destinationVault, toAccount, units, minOuts, fromAmount, uint32(block.number), uint16(0), hex"");
+    }
+
+    function constructSendLiquidity(address sourceVault, address destinationVault, address toAccount, uint256 units) view internal returns(bytes memory message) {
+        uint256[2] memory minOuts = [uint256(0), uint256(0)];
+        message = constructSendLiquidity(sourceVault, destinationVault, toAccount, units, minOuts, 0, uint32(block.number), uint16(0), hex"");
+    }
+
     function addGARPContext(bytes32 messageIdentifier, address fromApplication, address destinationAddress, bytes memory message) internal returns(bytes memory package) {
         return abi.encodePacked(
             bytes1(0x00),
