@@ -126,8 +126,8 @@ contract TestVolatileInvariant is TestInvariant, TestLocalswap, TestCrossChainIn
             address tkn = v._tokenIndexing(i);
             uint256 ww = withdraw_weights[i];
             uint256 tw = v._weight(tkn);
-            progressiveWeightSum += tw;
-            new_weights[i] = ww * tw / progressiveWeightSum;
+            progressiveWeightSum += tw * ww;
+            new_weights[i] = ww * tw * 10**18 / progressiveWeightSum;
             if (i == 0) {
                 break;
             }
