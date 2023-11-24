@@ -471,9 +471,14 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
      * @notice Burns vaultTokens and release a token distribution which can be set by the user.
      * @dev It is advised that the withdrawal matches the vault's %token distribution.
      * Notice the special scheme for the ratios used. This is done to optimise gas since it doesn't require a sum or ratios.
+     * When weights are equal, the ratios can easily be computed with cumulative sums. If the weights aren't equal, the weights needs to be included.
+     * This is because _calcPriceCurveLimit divides U by the associated weight. This implies that units aren't equal between tokens. (but are in value)
+     * To adjust for the weights, assume WR_n is the ratio of token n. Then: withdrawRatio[i] = w_i * WR_i / \sum_{j >= i}^n (w_j * WR_j)
+     * For 3 tokens, this would look like withdrawRatio = [w_1 * WR_1 / (w_1 * WR_1 + w_2 * WR_2 + w_3 * WR_3), w_2 * WR_2 / (w_2 * WR_2 + w_3 * WR_3), w_3 * WR_3 / (w_3 * WR_3)]
+     * Notice that the last index is 1.
      * Cannot be used to withdraw all liquidity. For that, withdrawAll should be used.
      * @param vaultTokens The number of vault tokens to withdraw.
-     * @param withdrawRatio The percentage of units used to withdraw. In the following special scheme: U_0 = U · withdrawRatio[0], U_1 = (U - U_0) · withdrawRatio[1], U_2 = (U - U_0 - U_1) · withdrawRatio[2], .... Is WAD.
+     * @param withdrawRatio The percentage of units used to withdraw. In the following scheme: U_0 = U · withdrawRatio[0], U_1 = (U - U_0) · withdrawRatio[1], U_2 = (U - U_0 - U_1) · withdrawRatio[2], .... To withdraw similarly to withdrawAll, the weights needs to be multiplied by weights. See @dev.
      * @param minOut The minimum number of tokens withdrawn.
      * @return uint256[] memory An array containing the amounts withdrawn.
      */
