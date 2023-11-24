@@ -19,6 +19,7 @@ import "../Escrow.t.sol";
 import "../Withdraw/WithdrawCompare.sol";
 import "../Withdraw/WithdrawInvariant.sol";
 import { TestCompareDepositWithWithdraw } from "../Deposit/DepositWithdrawCompare.t.sol";
+import { TestWithdrawNothing } from "../Withdraw/WithdrawNothing.t.sol";
 import { TestSelfSwap } from "../SelfSwap.t.sol";
 import { TestSetWeights } from "./SetWeights.t.sol";
 import { TestVaultConnections } from "../VaultConnections.t.sol";
@@ -27,7 +28,7 @@ import { TestSecurityLimitAssetSwap } from "../SecurityLimit.ReceiveAsset.t.sol"
 import { TestSecurityLimitLiquiditySwap } from "../SecurityLimit.ReceiveLiquidity.t.sol";
 import {Token} from "../../mocks/token.sol";
 
-contract TestVolatileInvariant is TestInvariant, TestLocalswap, TestCrossChainInterfaceOnly, TestLocalswapMinout, TestPoolTokenInterface, TestSetup, TestSetupFinish, TestSetVaultFee, TestSetGovernanceFee, TestSetWeights, TestLocalswapFees, TestSwapWorthlessTokenLocal, TestEscrow, TestWithdrawInvariant, TestWithdrawComparison, TestCompareDepositWithWithdraw, TestSelfSwap, TestVaultConnections, TestEvilRouterExploitVolatile, TestSecurityLimitAssetSwap, TestSecurityLimitLiquiditySwap {
+contract TestVolatileInvariant is TestInvariant, TestLocalswap, TestCrossChainInterfaceOnly, TestLocalswapMinout, TestPoolTokenInterface, TestSetup, TestSetupFinish, TestSetVaultFee, TestSetGovernanceFee, TestSetWeights, TestLocalswapFees, TestSwapWorthlessTokenLocal, TestEscrow, TestWithdrawInvariant, TestWithdrawComparison, TestCompareDepositWithWithdraw, TestWithdrawNothing, TestSelfSwap, TestVaultConnections, TestEvilRouterExploitVolatile, TestSecurityLimitAssetSwap, TestSecurityLimitLiquiditySwap {
 
     address[] _vaults;
 
