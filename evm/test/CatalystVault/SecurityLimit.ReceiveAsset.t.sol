@@ -54,11 +54,11 @@ abstract contract TestSecurityLimitAssetSwap is TestCommon, AVaultInterfaces {
                 // This doesn't really work if there is more than 3 tokens though. :|
                 uint256 vault_tokens = 0;
                 while (true) {
-                    address vault_tkn = ICatalystV1Vault(vault)._tokenIndexing(vault_tokens);
-                    uint256 token_weight = ICatalystV1Vault(vault)._weight(vault_tkn);
-                    if (vault_tkn == address(0)) break;
+                    address vault_tkn_1 = ICatalystV1Vault(vault)._tokenIndexing(vault_tokens);
+                    uint256 token_weight_1 = ICatalystV1Vault(vault)._weight(vault_tkn_1);
+                    if (vault_tkn_1 == address(0)) break;
                     vault_tokens += 1;
-                    max_extract += Token(vault_tkn).balanceOf(vault) * token_weight / 2;
+                    max_extract += Token(vault_tkn_1).balanceOf(vault) * token_weight_1 / 2;
                 }
                 address vault_tkn = ICatalystV1Vault(vault)._tokenIndexing(target_token_index);
                 uint256 token_weight = ICatalystV1Vault(vault)._weight(vault_tkn);
