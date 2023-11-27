@@ -431,10 +431,11 @@ mod test_underwriting {
 
 
         // Make sure the transaction fails
-        assert_eq!(
-            response_result.err().unwrap().root_cause().to_string(),
-            "cosmwasm_std::addresses::Addr not found"   // NOTE: This error is shown, as the vault fails to load the escrow fallback address
-        )
+        let error = response_result.err().unwrap().root_cause().to_string();
+
+        // NOTE: This error is shown, as the vault fails to load the escrow fallback address
+        assert!(error.starts_with("type: cosmwasm_std::addresses::Addr; key: "));
+        assert!(error.ends_with("not found"));
     }
 
 

@@ -6,7 +6,7 @@ use cw_multi_test::{Executor, AppResponse, Module, CosmosRouter, BasicAppBuilder
 
 use catalyst_vault_common::bindings::native_asset_vault_modules::NativeAssetCustomMsg;
 use cw_storage_plus::Map;
-use token_bindings::{TokenMsg, Metadata};
+use token_bindings::{TokenFactoryMsg, Metadata};
 
 use crate::asset::TestNativeAsset;
 use super::{CustomTestEnv, CustomApp};
@@ -75,7 +75,7 @@ impl Module for NativeAssetCustomHandler {
             NativeAssetCustomMsg::Token(token_msg) => {
                 match token_msg {
 
-                    TokenMsg::CreateDenom { subdenom, metadata } => {
+                    TokenFactoryMsg::CreateDenom { subdenom, metadata } => {
 
                         let denom = format!("factory/{}/{}", sender.to_string(), subdenom);
 
@@ -87,7 +87,7 @@ impl Module for NativeAssetCustomHandler {
                         bank.init_balance(storage, &sender, coins(0u128, denom))?
                     },
 
-                    TokenMsg::MintTokens {
+                    TokenFactoryMsg::MintTokens {
                         denom,
                         amount,
                         mint_to_address
@@ -114,7 +114,7 @@ impl Module for NativeAssetCustomHandler {
                         
                     },
 
-                    TokenMsg::BurnTokens {
+                    TokenFactoryMsg::BurnTokens {
                         denom,
                         amount,
                         burn_from_address

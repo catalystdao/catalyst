@@ -437,11 +437,9 @@ mod test_volatile_send_asset_success_failure {
 
 
         // Make sure transaction fails
-        assert!(
-            format!(
-                "{}", response_result.err().unwrap().root_cause()
-            ).contains("Addr not found")
-        )
+        let error = response_result.err().unwrap().root_cause().to_string();
+        assert!(error.starts_with("type: cosmwasm_std::addresses::Addr; key: "));
+        assert!(error.ends_with("not found"));
 
     }
     
@@ -490,11 +488,9 @@ mod test_volatile_send_asset_success_failure {
 
 
         // Make sure transaction fails
-        assert!(
-            format!(
-                "{}", response_result.err().unwrap().root_cause()
-            ).contains("Addr not found")
-        )
+        let error = response_result.err().unwrap().root_cause().to_string();
+        assert!(error.starts_with("type: cosmwasm_std::addresses::Addr; key: "));
+        assert!(error.ends_with("not found"));
 
     }
 

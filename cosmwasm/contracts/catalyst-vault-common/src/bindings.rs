@@ -85,7 +85,7 @@ pub mod native_asset_vault_modules {
 
     #[cw_serde]
     pub enum NativeAssetCustomMsg {     // NOTE: This must match the allowed msgs of CosmosMsg::Custom
-        Token(token_bindings::TokenMsg),
+        Token(token_bindings::TokenFactoryMsg),
     }
 
     impl IntoCosmosCustomMsg<NativeAssetCustomMsg> for NativeAssetMsg {

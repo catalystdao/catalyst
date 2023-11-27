@@ -1,7 +1,7 @@
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Uint128, Deps, DepsMut, Env, MessageInfo};
 use cw_storage_plus::Item;
-use token_bindings::{TokenMsg, Metadata, DenomUnit};
+use token_bindings::{TokenFactoryMsg, Metadata, DenomUnit};
 
 use crate::error::VaultTokenError;
 use super::VaultTokenTrait;
@@ -14,7 +14,7 @@ const VAULT_TOKEN_DENOM: Item<String> = Item::new("catalyst-vault-token-denom");
 
 #[cw_serde]
 pub enum NativeVaultTokenMsg {
-    Token(TokenMsg)
+    Token(TokenFactoryMsg)
 }
 
 
@@ -61,7 +61,7 @@ impl VaultTokenTrait<NativeVaultTokenMsg> for NativeVaultToken {
             symbol: Some(symbol.clone()),
         };
 
-        let create_msg = TokenMsg::CreateDenom {
+        let create_msg = TokenFactoryMsg::CreateDenom {
             subdenom: symbol,
             metadata: Some(metadata)
         };
@@ -112,7 +112,7 @@ impl VaultTokenTrait<NativeVaultTokenMsg> for NativeVaultToken {
             return Ok(None);
         }
 
-        let mint_msg = TokenMsg::MintTokens {
+        let mint_msg = TokenFactoryMsg::MintTokens {
             denom: self.0.to_owned(),
             amount,
             mint_to_address: recipient
@@ -137,7 +137,7 @@ impl VaultTokenTrait<NativeVaultTokenMsg> for NativeVaultToken {
             return Ok(None);
         }
 
-        let burn_msg = TokenMsg::BurnTokens {
+        let burn_msg = TokenFactoryMsg::BurnTokens {
             denom: self.0.to_owned(),
             amount,
             burn_from_address: info.sender.to_string()
@@ -154,7 +154,7 @@ impl VaultTokenTrait<NativeVaultTokenMsg> for NativeVaultToken {
 #[cfg(test)]
 mod vault_token_cw20_tests{
     use cosmwasm_std::{testing::{mock_dependencies, mock_env, mock_info}, Uint128, DepsMut, Env};
-    use token_bindings::TokenMsg;
+    use token_bindings::TokenFactoryMsg;
 
     use crate::vault_token::{VaultTokenTrait, vault_token_native::NativeVaultTokenMsg};
     use super::NativeVaultToken;
@@ -206,7 +206,7 @@ mod vault_token_cw20_tests{
 
         // Verify the TokenFactory message
         if let NativeVaultTokenMsg::Token(
-            TokenMsg::CreateDenom { subdenom, metadata }
+            TokenFactoryMsg::CreateDenom { subdenom, metadata }
         ) = result.unwrap() {
 
             assert_eq!(
@@ -265,7 +265,7 @@ mod vault_token_cw20_tests{
         assert!(matches!(
             result.unwrap(),
             NativeVaultTokenMsg::Token(token_msg)
-                if token_msg == TokenMsg::MintTokens {
+                if token_msg == TokenFactoryMsg::MintTokens {
                     denom: mock_vault_token_denom(),
                     amount: mint_amount,
                     mint_to_address: TOKEN_HOLDER.to_string()
@@ -342,7 +342,7 @@ mod vault_token_cw20_tests{
         assert!(matches!(
             result.unwrap(),
             NativeVaultTokenMsg::Token(token_msg)
-                if token_msg == TokenMsg::BurnTokens {
+                if token_msg == TokenFactoryMsg::BurnTokens {
                     denom: mock_vault_token_denom(),
                     amount: burn_amount,
                     burn_from_address: TOKEN_HOLDER.to_string()
