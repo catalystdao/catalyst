@@ -1,4 +1,4 @@
-use catalyst_interface_common::{state::{encode_send_cross_chain_asset, encode_send_cross_chain_liquidity, handle_message_reception, handle_message_response, handle_reply, set_max_underwriting_duration, underwrite, underwrite_and_check_connection, expire_underwrite, setup, update_owner, is_owner, query_underwrite_identifier}, msg::InterfaceCommonQueryMsg};
+use catalyst_interface_common::state::{encode_send_cross_chain_asset, encode_send_cross_chain_liquidity, handle_message_reception, handle_message_response, handle_reply, set_max_underwriting_duration, underwrite, underwrite_and_check_connection, expire_underwrite, setup, update_owner, query_underwrite_identifier};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, StdResult, Uint128, Reply, Uint64, to_json_binary, WasmMsg};
