@@ -24,9 +24,10 @@ import { TestWithdrawUnbalanced } from "../Withdraw/WithdrawUnbalanced.t.sol";
 import { TestSecurityLimitAssetSwap } from "../SecurityLimit.ReceiveAsset.t.sol";
 import { TestSecurityLimitLiquiditySwap } from "../SecurityLimit.ReceiveLiquidity.t.sol";
 import { TestSelfSwap } from "../SelfSwap.t.sol";
+import { TestLargeDepositWithdraw } from "../non-exploits/LargeDepositWithdraw.t.sol";
 import {Token} from "../../mocks/token.sol";
 
-contract TestAmplifiedInvariant is TestInvariant, TestLocalswap, TestCrossChainInterfaceOnly, TestLocalswapMinout, TestPoolTokenInterface, TestSetup, TestSetupFinish, TestSetVaultFee, TestSetGovernanceFee, TestLocalswapFees, TestSwapWorthlessTokenLocal, TestEscrow, TestWithdrawInvariant, TestWithdrawComparison, TestCompareDepositWithWithdraw, TestWithdrawNothing, TestWithdrawUnbalanced, TestSelfSwap, TestSecurityLimitAssetSwap, TestSecurityLimitLiquiditySwap {
+contract TestAmplifiedInvariant is TestInvariant, TestLocalswap, TestCrossChainInterfaceOnly, TestLocalswapMinout, TestPoolTokenInterface, TestSetup, TestSetupFinish, TestSetVaultFee, TestSetGovernanceFee, TestLocalswapFees, TestSwapWorthlessTokenLocal, TestEscrow, TestWithdrawInvariant, TestWithdrawComparison, TestCompareDepositWithWithdraw, TestWithdrawNothing, TestWithdrawUnbalanced, TestSelfSwap, TestSecurityLimitAssetSwap, TestSecurityLimitLiquiditySwap, TestLargeDepositWithdraw {
     address[] _vaults;
 
     function setUp() virtual override public {
