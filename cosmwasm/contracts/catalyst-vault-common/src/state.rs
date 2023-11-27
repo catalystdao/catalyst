@@ -1,5 +1,5 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, Uint128, DepsMut, Env, Response, Event, MessageInfo, Deps, StdResult, to_binary, Timestamp, StdError, Binary, Uint64, CosmosMsg};
+use cosmwasm_std::{Addr, Uint128, DepsMut, Env, Response, Event, MessageInfo, Deps, StdResult, to_json_binary, Timestamp, StdError, Binary, Uint64, CosmosMsg};
 use cw_storage_plus::{Map, Item};
 use sha3::{Digest, Keccak256};
 use std::ops::Div;
@@ -1122,7 +1122,7 @@ pub fn create_on_catalyst_call_msg(
     Ok(CosmosMsg::Wasm(
         cosmwasm_std::WasmMsg::Execute {
             contract_addr: calldata_target,
-            msg: to_binary(&ReceiverExecuteMsg::OnCatalystCall {
+            msg: to_json_binary(&ReceiverExecuteMsg::OnCatalystCall {
                 purchased_tokens,
                 data
             })?,

@@ -1,4 +1,4 @@
-use cosmwasm_std::{Uint128, DepsMut, Env, MessageInfo, StdResult, CosmosMsg, to_binary, Deps, Binary, Uint64, Timestamp};
+use cosmwasm_std::{Uint128, DepsMut, Env, MessageInfo, StdResult, CosmosMsg, to_json_binary, Deps, Binary, Uint64, Timestamp};
 use cw_storage_plus::{Item, Map};
 use catalyst_interface_common::msg::ExecuteMsg as InterfaceExecuteMsg;
 use catalyst_types::{U256, I256, Bytes32};
@@ -268,7 +268,7 @@ pub fn deposit_mixed(
 
 
     let mut response = VaultResponse::new()
-        .set_data(to_binary(&out)?)     // Return the deposit output
+        .set_data(to_json_binary(&out)?)     // Return the deposit output
         .add_messages(
             receive_asset_msgs
                 .into_iter()
@@ -385,7 +385,7 @@ pub fn withdraw_all(
     }
 
     Ok(response
-        .set_data(to_binary(&withdraw_amounts)?)    // Return the withdrawn amounts
+        .set_data(to_json_binary(&withdraw_amounts)?)    // Return the withdrawn amounts
         .add_messages(
             transfer_msgs.into_iter()
                 .map(|msg| msg.into_cosmos_vault_msg())
@@ -541,7 +541,7 @@ pub fn withdraw_mixed(
     }
 
     Ok(response
-        .set_data(to_binary(&withdraw_amounts)?)    // Return the withdrawn amounts
+        .set_data(to_json_binary(&withdraw_amounts)?)    // Return the withdrawn amounts
         .add_messages(
             transfer_msgs.into_iter()
                 .map(|msg| msg.into_cosmos_vault_msg())
@@ -618,7 +618,7 @@ pub fn local_swap(
 
     // Build response
     let mut response = VaultResponse::new()
-        .set_data(to_binary(&out)?);     // Return the swap output
+        .set_data(to_json_binary(&out)?);     // Return the swap output
 
     if let Some(msg) = receive_asset_msg {
         response = response.add_message(msg.into_cosmos_vault_msg());
@@ -769,14 +769,14 @@ pub fn send_asset(
     let send_asset_execute_msg = CosmosMsg::Wasm(
         cosmwasm_std::WasmMsg::Execute {
             contract_addr: chain_interface.ok_or(ContractError::VaultHasNoInterface {})?.to_string(),
-            msg: to_binary(&send_cross_chain_asset_msg)?,
+            msg: to_json_binary(&send_cross_chain_asset_msg)?,
             funds: excess_coins     // Use the excess coins received for the incentive payment
         }
     );
 
     // Build response
     let mut response = VaultResponse::new()
-        .set_data(to_binary(&u)?);       // Return the purchased 'units'
+        .set_data(to_json_binary(&u)?);       // Return the purchased 'units'
 
     if let Some(msg) = receive_asset_msg {
         response = response.add_message(msg.into_cosmos_vault_msg());
@@ -902,7 +902,7 @@ pub fn receive_asset(
 
     // Build and send the response.
     let mut response = VaultResponse::new()
-        .set_data(to_binary(&out)?);     // Return the purchased tokens
+        .set_data(to_json_binary(&out)?);     // Return the purchased tokens
 
     if let Some(msg) = send_asset_msg {
         response = response.add_message(msg.into_cosmos_vault_msg());
@@ -970,7 +970,7 @@ pub fn underwrite_asset(
     
     Ok(
         VaultResponse::new()
-            .set_data(to_binary(&swap_return)?)
+            .set_data(to_json_binary(&swap_return)?)
             .add_event(
                 underwrite_asset_event(
                     identifier,
@@ -1185,7 +1185,7 @@ pub fn send_liquidity(
     let send_liquidity_execute_msg = CosmosMsg::Wasm(
         cosmwasm_std::WasmMsg::Execute {
             contract_addr: chain_interface.as_ref().ok_or(ContractError::VaultHasNoInterface {})?.to_string(),
-            msg: to_binary(&send_cross_chain_liquidity_msg)?,
+            msg: to_json_binary(&send_cross_chain_liquidity_msg)?,
             funds: info.funds.to_owned()    // Send all of the funds received for incentive payment
         }
     );
@@ -1198,7 +1198,7 @@ pub fn send_liquidity(
     }
 
     Ok(response
-        .set_data(to_binary(&u)?)   // Return the 'units' sent
+        .set_data(to_json_binary(&u)?)   // Return the 'units' sent
         .add_message(send_liquidity_execute_msg)
         .add_event(
             send_liquidity_event(
@@ -1348,7 +1348,7 @@ pub fn receive_liquidity(
 
     // Build and send the response.
     let mut response = VaultResponse::new()
-        .set_data(to_binary(&out)?);   // Return the vault tokens 'received'
+        .set_data(to_json_binary(&out)?);   // Return the vault tokens 'received'
 
     if let Some(msg) = mint_msg {
         response = response.add_message(msg.into_cosmos_vault_msg());

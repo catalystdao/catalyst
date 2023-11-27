@@ -677,7 +677,7 @@ impl CatalystEncodedAddress {
     }
 
     /// Return a Binary representation of the address.
-    pub fn to_binary(self) -> Binary {
+    pub fn to_json_binary(self) -> Binary {
         Binary(self.0.to_vec())
     }
 

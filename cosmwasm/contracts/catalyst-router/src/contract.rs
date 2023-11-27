@@ -1,6 +1,6 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{DepsMut, Env, MessageInfo, Response, Reply, StdResult, Deps, Binary, Empty, from_binary};
+use cosmwasm_std::{DepsMut, Env, MessageInfo, Response, Reply, StdResult, Deps, Binary, Empty, from_json};
 use cw2::set_contract_version;
 
 use crate::commands::CommandOrder;
@@ -68,7 +68,7 @@ pub fn execute(
             purchased_tokens: _,
             data
         } => {
-            let params: ExecuteParams = from_binary(&data)?;
+            let params: ExecuteParams = from_json(&data)?;
 
             execute_execute(
                 &mut deps,

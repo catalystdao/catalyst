@@ -1,6 +1,6 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, StdResult, to_binary};
+use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, StdResult, to_json_binary};
 use cw2::set_contract_version;
 use catalyst_vault_common::ContractError;
 use catalyst_vault_common::state::{
@@ -571,74 +571,74 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
 
         // Common Queries
-        QueryMsg::ChainInterface {} => to_binary(&query_chain_interface(deps)?),
-        QueryMsg::SetupMaster {} => to_binary(&query_setup_master(deps)?),
-        QueryMsg::Factory {} => to_binary(&query_factory(deps)?),
-        QueryMsg::FactoryOwner {} => to_binary(&query_factory_owner(deps)?),
+        QueryMsg::ChainInterface {} => to_json_binary(&query_chain_interface(deps)?),
+        QueryMsg::SetupMaster {} => to_json_binary(&query_setup_master(deps)?),
+        QueryMsg::Factory {} => to_json_binary(&query_factory(deps)?),
+        QueryMsg::FactoryOwner {} => to_json_binary(&query_factory_owner(deps)?),
 
         QueryMsg::VaultConnectionState {
             channel_id,
             vault 
-        } => to_binary(&query_vault_connection_state(deps, &channel_id, vault)?),
+        } => to_json_binary(&query_vault_connection_state(deps, &channel_id, vault)?),
 
-        QueryMsg::Ready{} => to_binary(&query_ready(deps)?),
-        QueryMsg::OnlyLocal{} => to_binary(&query_only_local(deps)?),
-        QueryMsg::Assets {} => to_binary(&query_assets(deps)?),
+        QueryMsg::Ready{} => to_json_binary(&query_ready(deps)?),
+        QueryMsg::OnlyLocal{} => to_json_binary(&query_only_local(deps)?),
+        QueryMsg::Assets {} => to_json_binary(&query_assets(deps)?),
         QueryMsg::Asset {
             asset_ref
-        } => to_binary(&query_asset(deps, asset_ref)?),
+        } => to_json_binary(&query_asset(deps, asset_ref)?),
         QueryMsg::AssetByIndex {
             asset_index
-        } => to_binary(&query_asset_by_index(deps, asset_index)?),
+        } => to_json_binary(&query_asset_by_index(deps, asset_index)?),
         QueryMsg::Weight {
             asset_ref
-        } => to_binary(&query_weight(deps, asset_ref)?),
+        } => to_json_binary(&query_weight(deps, asset_ref)?),
 
-        QueryMsg::TotalSupply {} => to_binary(&query_total_supply(deps)?),
-        QueryMsg::Balance { address } => to_binary(&query_balance(deps, address)?),
+        QueryMsg::TotalSupply {} => to_json_binary(&query_total_supply(deps)?),
+        QueryMsg::Balance { address } => to_json_binary(&query_balance(deps, address)?),
 
-        QueryMsg::VaultFee {} => to_binary(&query_vault_fee(deps)?),
-        QueryMsg::GovernanceFeeShare {} => to_binary(&query_governance_fee_share(deps)?),
-        QueryMsg::FeeAdministrator {} => to_binary(&query_fee_administrator(deps)?),
+        QueryMsg::VaultFee {} => to_json_binary(&query_vault_fee(deps)?),
+        QueryMsg::GovernanceFeeShare {} => to_json_binary(&query_governance_fee_share(deps)?),
+        QueryMsg::FeeAdministrator {} => to_json_binary(&query_fee_administrator(deps)?),
 
         QueryMsg::CalcSendAsset{
             from_asset_ref,
             amount
-        } => to_binary(&query_calc_send_asset(deps, env, from_asset_ref, amount)?),
+        } => to_json_binary(&query_calc_send_asset(deps, env, from_asset_ref, amount)?),
         QueryMsg::CalcReceiveAsset{
             to_asset_ref,
             u
-        } => to_binary(&query_calc_receive_asset(deps, env, to_asset_ref, u)?),
+        } => to_json_binary(&query_calc_receive_asset(deps, env, to_asset_ref, u)?),
         QueryMsg::CalcLocalSwap{
             from_asset_ref,
             to_asset_ref,
             amount
-        } => to_binary(&query_calc_local_swap(deps, env, from_asset_ref, to_asset_ref, amount)?),
+        } => to_json_binary(&query_calc_local_swap(deps, env, from_asset_ref, to_asset_ref, amount)?),
 
-        QueryMsg::GetLimitCapacity{} => to_binary(&query_get_limit_capacity(deps, env)?),
+        QueryMsg::GetLimitCapacity{} => to_json_binary(&query_get_limit_capacity(deps, env)?),
 
         QueryMsg::TotalEscrowedAsset {
             asset_ref
-        } => to_binary(&query_total_escrowed_asset(deps, asset_ref)?),
-        QueryMsg::TotalEscrowedLiquidity {} => to_binary(&query_total_escrowed_liquidity(deps)?),
-        QueryMsg::AssetEscrow { hash } => to_binary(&query_asset_escrow(deps, hash)?),
-        QueryMsg::LiquidityEscrow { hash } => to_binary(&query_liquidity_escrow(deps, hash)?),
+        } => to_json_binary(&query_total_escrowed_asset(deps, asset_ref)?),
+        QueryMsg::TotalEscrowedLiquidity {} => to_json_binary(&query_total_escrowed_liquidity(deps)?),
+        QueryMsg::AssetEscrow { hash } => to_json_binary(&query_asset_escrow(deps, hash)?),
+        QueryMsg::LiquidityEscrow { hash } => to_json_binary(&query_liquidity_escrow(deps, hash)?),
 
         // Amplified-Specific Queries
-        QueryMsg::Amplification {} => to_binary(&query_amplification(deps)?),
-        QueryMsg::TargetAmplification {} => to_binary(&query_target_amplification(deps)?),
-        QueryMsg::AmplificationUpdateFinishTimestamp {} => to_binary(&query_amplification_update_finish_timestamp(deps)?),
-        QueryMsg::Balance0 {} => to_binary(&query_balance_0(deps, env)?),
-        QueryMsg::UnitTracker {} => to_binary(&query_unit_tracker(deps)?),
+        QueryMsg::Amplification {} => to_json_binary(&query_amplification(deps)?),
+        QueryMsg::TargetAmplification {} => to_json_binary(&query_target_amplification(deps)?),
+        QueryMsg::AmplificationUpdateFinishTimestamp {} => to_json_binary(&query_amplification_update_finish_timestamp(deps)?),
+        QueryMsg::Balance0 {} => to_json_binary(&query_balance_0(deps, env)?),
+        QueryMsg::UnitTracker {} => to_json_binary(&query_unit_tracker(deps)?),
 
         // Native asset query msgs
         #[cfg(feature="asset_native")]
-        QueryMsg::VaultTokenDenom {} => to_binary(&query_vault_token_denom(deps)?),
+        QueryMsg::VaultTokenDenom {} => to_json_binary(&query_vault_token_denom(deps)?),
 
         // CW20 query msgs - Use cw20-base for the implementation
         #[cfg(feature="asset_cw20")]
-        QueryMsg::TokenInfo {} => to_binary(&query_token_info(deps)?),
+        QueryMsg::TokenInfo {} => to_json_binary(&query_token_info(deps)?),
         #[cfg(feature="asset_cw20")]
-        QueryMsg::Allowance { owner, spender } => to_binary(&query_allowance(deps, owner, spender)?)
+        QueryMsg::Allowance { owner, spender } => to_json_binary(&query_allowance(deps, owner, spender)?)
     }
 }

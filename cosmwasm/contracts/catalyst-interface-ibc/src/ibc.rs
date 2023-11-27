@@ -1,7 +1,7 @@
 use catalyst_types::Bytes32;
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{DepsMut, Env, IbcChannelOpenMsg, IbcChannelConnectMsg, IbcBasicResponse, IbcChannelCloseMsg, IbcPacketReceiveMsg, IbcReceiveResponse, IbcPacketAckMsg, IbcPacketTimeoutMsg, IbcChannel, CosmosMsg, to_binary, SubMsg, WasmMsg, ReplyOn, StdError};
+use cosmwasm_std::{DepsMut, Env, IbcChannelOpenMsg, IbcChannelConnectMsg, IbcBasicResponse, IbcChannelCloseMsg, IbcPacketReceiveMsg, IbcReceiveResponse, IbcPacketAckMsg, IbcPacketTimeoutMsg, IbcChannel, CosmosMsg, to_json_binary, SubMsg, WasmMsg, ReplyOn, StdError};
 
 use catalyst_interface_common::{ContractError, error::Never, state::{handle_message_reception, handle_message_response, ack_fail, SET_ACK_REPLY_ID, recover_message}, msg::ExecuteMsg, bindings::{CustomMsg, InterfaceResponse}};
 
@@ -238,7 +238,7 @@ pub fn encode_ibc_receive_response(
                 // ! **must** be wrapped in case it fails.
                 let cosmos_msg = CosmosMsg::Wasm(WasmMsg::Execute {
                     contract_addr: env.contract.address.to_string(),
-                    msg: to_binary(&ExecuteMsg::WrapSubMsgs { sub_msgs })?,
+                    msg: to_json_binary(&ExecuteMsg::WrapSubMsgs { sub_msgs })?,
                     funds: vec![]
                 });
     
@@ -259,7 +259,7 @@ pub fn encode_ibc_receive_response(
             // ! Wrap the submessages within a single message in case any of the messages fails.
             let cosmos_msg = CosmosMsg::Wasm(WasmMsg::Execute {
                 contract_addr: env.contract.address.to_string(),
-                msg: to_binary(&ExecuteMsg::WrapSubMsgs { sub_msgs })?,
+                msg: to_json_binary(&ExecuteMsg::WrapSubMsgs { sub_msgs })?,
                 funds: vec![]
             });
 

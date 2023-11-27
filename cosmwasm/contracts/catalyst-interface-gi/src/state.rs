@@ -1,6 +1,6 @@
 use catalyst_interface_common::{bindings::InterfaceResponse, ContractError, state::only_owner, catalyst_payload::CatalystEncodedAddress};
 use catalyst_types::Bytes32;
-use cosmwasm_std::{Addr, DepsMut, Deps, Uint64, MessageInfo, StdResult, StdError, Binary, WasmMsg, to_binary, Uint128};
+use cosmwasm_std::{Addr, DepsMut, Deps, Uint64, MessageInfo, StdResult, StdError, Binary, WasmMsg, to_json_binary, Uint128};
 use cw_storage_plus::{Item, Map};
 use generalised_incentives_common::{msg::{EstimateAddtionalCostResponse, QueryMsg as GIQueryMsg, ExecuteMsg as GIExecuteMsg}, bytes32::Bytes32 as GIBytes32, state::IncentiveDescription};
 
@@ -51,7 +51,7 @@ pub fn connect_new_chain(
 
     let set_remote_gi_submsg = WasmMsg::Execute {
         contract_addr: get_generalised_incentives(&deps.as_ref())?.to_string(),
-        msg: to_binary(&GIExecuteMsg::SetRemoteImplementation {
+        msg: to_json_binary(&GIExecuteMsg::SetRemoteImplementation {
             remote_identifier: GIBytes32(channel_id.0),
             implementation: remote_gi.clone()
         })?,

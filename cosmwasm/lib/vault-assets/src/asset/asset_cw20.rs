@@ -1,5 +1,5 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{DepsMut, Deps, Uint128, MessageInfo, Env, to_binary, WasmMsg, Coin, Addr};
+use cosmwasm_std::{DepsMut, Deps, Uint128, MessageInfo, Env, to_json_binary, WasmMsg, Coin, Addr};
 use cw20::{BalanceResponse, Cw20QueryMsg, Cw20ExecuteMsg};
 use cw_storage_plus::Item;
 
@@ -116,7 +116,7 @@ impl<'a> VaultAssetsTrait<'a, Cw20Asset, Cw20AssetMsg> for Cw20VaultAssets {
                 Ok(Cw20AssetMsg::Wasm(
                     cosmwasm_std::WasmMsg::Execute {
                         contract_addr: asset.0.clone(),
-                        msg: to_binary(&Cw20ExecuteMsg::TransferFrom {
+                        msg: to_json_binary(&Cw20ExecuteMsg::TransferFrom {
                             owner: info.sender.to_string(),
                             recipient: env.contract.address.to_string(),
                             amount
@@ -155,7 +155,7 @@ impl<'a> VaultAssetsTrait<'a, Cw20Asset, Cw20AssetMsg> for Cw20VaultAssets {
                 Ok(Cw20AssetMsg::Wasm(
                     cosmwasm_std::WasmMsg::Execute {
                         contract_addr: asset.0.to_owned(),
-                        msg: to_binary(&Cw20ExecuteMsg::Transfer {
+                        msg: to_json_binary(&Cw20ExecuteMsg::Transfer {
                             recipient: recipient.clone(),
                             amount
                         })?,
@@ -236,7 +236,7 @@ impl AssetTrait<Cw20AssetMsg> for Cw20Asset {
         Ok(Some(Cw20AssetMsg::Wasm(
             cosmwasm_std::WasmMsg::Execute {
                 contract_addr: self.0.clone(),
-                msg: to_binary(&Cw20ExecuteMsg::TransferFrom {
+                msg: to_json_binary(&Cw20ExecuteMsg::TransferFrom {
                     owner: info.sender.to_string(),
                     recipient: env.contract.address.to_string(),
                     amount
@@ -282,7 +282,7 @@ impl AssetTrait<Cw20AssetMsg> for Cw20Asset {
             Some(Cw20AssetMsg::Wasm(
                 cosmwasm_std::WasmMsg::Execute {
                     contract_addr: self.0.clone(),
-                    msg: to_binary(&Cw20ExecuteMsg::TransferFrom {
+                    msg: to_json_binary(&Cw20ExecuteMsg::TransferFrom {
                         owner: info.sender.to_string(),
                         recipient: env.contract.address.to_string(),
                         amount
@@ -312,7 +312,7 @@ impl AssetTrait<Cw20AssetMsg> for Cw20Asset {
         Ok(Some(Cw20AssetMsg::Wasm(
             cosmwasm_std::WasmMsg::Execute {
                 contract_addr: self.0.to_owned(),
-                msg: to_binary(&Cw20ExecuteMsg::Transfer {
+                msg: to_json_binary(&Cw20ExecuteMsg::Transfer {
                     recipient,
                     amount
                 })?,
@@ -334,7 +334,7 @@ impl ToString for Cw20Asset {
 
 #[cfg(test)]
 mod asset_cw20_tests {
-    use cosmwasm_std::{testing::{mock_dependencies, mock_env, mock_info}, Uint128, to_binary, WasmMsg, coin, Addr, Coin};
+    use cosmwasm_std::{testing::{mock_dependencies, mock_env, mock_info}, Uint128, to_json_binary, WasmMsg, coin, Addr, Coin};
     use cw20::Cw20ExecuteMsg;
 
     use crate::{asset::{VaultAssetsTrait, AssetTrait}, error::AssetError};
@@ -382,7 +382,7 @@ mod asset_cw20_tests {
                 }
             )
                 if contract_addr == asset.0
-                    && msg == to_binary(&expected_execute_msg).unwrap()
+                    && msg == to_json_binary(&expected_execute_msg).unwrap()
                     && funds == vec![]
         );
     }
@@ -408,7 +408,7 @@ mod asset_cw20_tests {
                 }
             )
                 if contract_addr == asset.0
-                    && msg == to_binary(&expected_execute_msg).unwrap()
+                    && msg == to_json_binary(&expected_execute_msg).unwrap()
                     && funds == vec![]
         );
     }

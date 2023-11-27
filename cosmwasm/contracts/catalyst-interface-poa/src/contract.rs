@@ -1,7 +1,7 @@
 use catalyst_interface_common::{state::{encode_send_cross_chain_asset, encode_send_cross_chain_liquidity, handle_message_reception, handle_message_response, handle_reply, set_max_underwriting_duration, underwrite, underwrite_and_check_connection, expire_underwrite, setup, update_owner, is_owner, query_underwrite_identifier}, msg::InterfaceCommonQueryMsg};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, Uint128, Reply, Uint64, to_binary};
+use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, Uint128, Reply, Uint64, to_json_binary};
 use cw2::set_contract_version;
 use catalyst_types::{U256, Bytes32};
 use catalyst_interface_common::{bindings::InterfaceResponse, ContractError};
@@ -412,7 +412,7 @@ pub fn query(_deps: Deps, _env: Env, msg: InterfaceCommonQueryMsg) -> StdResult<
             to_account,
             underwrite_incentive_x16,
             calldata
-        } => to_binary(&query_underwrite_identifier(
+        } => to_json_binary(&query_underwrite_identifier(
             to_vault,
             to_asset_ref,
             u,

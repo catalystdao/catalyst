@@ -26,6 +26,6 @@ pub fn remote_implementation_set_event(
 ) -> Event {
     Event::new("remote-implementation-set")
         .add_attribute("channel_id", channel_id.to_base64())
-        .add_attribute("remote_interface", remote_interface.to_binary().to_base64())
+        .add_attribute("remote_interface", remote_interface.to_json_binary().to_base64())
         .add_attribute("remote_gi", remote_gi.to_base64())
 }

@@ -1,7 +1,7 @@
 mod test_catalyst_on_call {
 
 
-    use cosmwasm_std::{Uint128, Addr, to_binary};
+    use cosmwasm_std::{Uint128, Addr, to_json_binary};
     use test_helpers::definitions::SETUP_MASTER;
     use test_helpers::env::CustomTestEnv;
     use test_helpers::env::env_native_asset::TestNativeAssetEnv;
@@ -44,7 +44,7 @@ mod test_catalyst_on_call {
             router.clone(),
             &ExecuteMsg::OnCatalystCall {
                 purchased_tokens: Uint128::new(0u128),
-                data: to_binary(&ExecuteParams{
+                data: to_json_binary(&ExecuteParams{
                     command_orders,
                     deadline: None,
                 }).unwrap()

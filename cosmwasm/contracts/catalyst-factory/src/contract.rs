@@ -1,6 +1,6 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{DepsMut, Env, MessageInfo, Uint128, CosmosMsg, to_binary, StdError, SubMsg, Reply, SubMsgResult, StdResult, Uint64, Deps, Binary, Coin};
+use cosmwasm_std::{DepsMut, Env, MessageInfo, Uint128, CosmosMsg, to_json_binary, StdError, SubMsg, Reply, SubMsgResult, StdResult, Uint64, Deps, Binary, Coin};
 use cw0::parse_reply_instantiate_data;
 use cw2::set_contract_version;
 use catalyst_vault_common::bindings::{Asset, VaultAssets, VaultAssetsTrait, VaultResponse, IntoCosmosCustomMsg, CustomMsg};
@@ -180,7 +180,7 @@ fn execute_deploy_vault(
         cosmwasm_std::WasmMsg::Instantiate {
             admin: None,            // ! The vault should NOT be upgradable.
             code_id: vault_code_id,
-            msg: to_binary(&catalyst_vault_common::msg::InstantiateMsg {
+            msg: to_json_binary(&catalyst_vault_common::msg::InstantiateMsg {
                 name,
                 symbol: symbol.clone(),
                 chain_interface: chain_interface.clone(),
@@ -290,7 +290,7 @@ fn handle_deploy_vault_reply(
     let initialize_swap_curves_msg = CosmosMsg::Wasm(
         cosmwasm_std::WasmMsg::Execute {
             contract_addr: vault_address.clone(),
-            msg: to_binary(&catalyst_vault_common::msg::ExecuteMsg::<(), Asset>::InitializeSwapCurves {
+            msg: to_json_binary(&catalyst_vault_common::msg::ExecuteMsg::<(), Asset>::InitializeSwapCurves {
                 assets: deploy_args.assets.clone(),
                 weights: deploy_args.weights,
                 amp: deploy_args.amplification,
@@ -303,7 +303,7 @@ fn handle_deploy_vault_reply(
 
     Ok(
         VaultResponse::new()
-            .set_data(to_binary(&vault_address)?)   // Return the deployed vault address.
+            .set_data(to_json_binary(&vault_address)?)   // Return the deployed vault address.
             .add_messages(
                 transfer_msgs.into_iter()
                     .map(|msg| msg.into_cosmos_vault_msg())
@@ -331,8 +331,8 @@ fn handle_deploy_vault_reply(
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
-        QueryMsg::Owner {} => to_binary(&query_owner(deps)?),
-        QueryMsg::DefaultGovernanceFeeShare {} => to_binary(&query_default_governance_fee_share(deps)?)
+        QueryMsg::Owner {} => to_json_binary(&query_owner(deps)?),
+        QueryMsg::DefaultGovernanceFeeShare {} => to_json_binary(&query_default_governance_fee_share(deps)?)
     }
 }
 
@@ -363,7 +363,7 @@ fn query_default_governance_fee_share(deps: Deps) -> StdResult<DefaultGovernance
 mod catalyst_vault_factory_tests {
     use std::str::FromStr;
 
-    use cosmwasm_std::{Addr, Uint64, Uint128, Event, StdError, Attribute, WasmMsg, to_binary};
+    use cosmwasm_std::{Addr, Uint64, Uint128, Event, StdError, Attribute, WasmMsg, to_json_binary};
     use cw_multi_test::{Executor, ContractWrapper};
     use test_helpers::{env::CustomTestEnv, asset::CustomTestAsset, definitions::VAULT_TOKEN_DENOM, vault_token::CustomTestVaultToken};
 
@@ -497,7 +497,7 @@ mod catalyst_vault_factory_tests {
         let wasm_instantiate_msg = WasmMsg::Instantiate {
             admin: None,
             code_id: code_id,
-            msg: to_binary(&InstantiateMsg { default_governance_fee_share }).unwrap(),
+            msg: to_json_binary(&InstantiateMsg { default_governance_fee_share }).unwrap(),
             funds: vec![],
             label: "catalyst-factory".into(),
         };

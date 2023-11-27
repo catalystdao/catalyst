@@ -1,7 +1,7 @@
 use catalyst_types::{U256, Bytes32};
 use catalyst_vault_common::msg::BalanceResponse;
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Env, Binary, CosmosMsg, to_binary, Uint128, Uint64, Coin, Deps};
+use cosmwasm_std::{Env, Binary, CosmosMsg, to_json_binary, Uint128, Uint64, Coin, Deps};
 use generalised_incentives_common::state::IncentiveDescription;
 
 use crate::{commands::CommandResult, error::ContractError, executors::types::{ValueAmount, CoinAmount}};
@@ -69,7 +69,7 @@ pub fn execute_local_swap(
         CosmosMsg::Wasm(
             cosmwasm_std::WasmMsg::Execute {
                 contract_addr: vault,
-                msg: to_binary(&msg)?,
+                msg: to_json_binary(&msg)?,
                 funds: vec![swap_amount]
             }
         )
@@ -113,7 +113,7 @@ pub fn execute_send_asset(
         CosmosMsg::Wasm(
             cosmwasm_std::WasmMsg::Execute {
                 contract_addr: vault,
-                msg: to_binary(&msg)?,
+                msg: to_json_binary(&msg)?,
                 funds: vec![swap_amount]
             }
         )
@@ -159,7 +159,7 @@ pub fn execute_send_liquidity(
         CosmosMsg::Wasm(
             cosmwasm_std::WasmMsg::Execute {
                 contract_addr: vault,
-                msg: to_binary(&msg)?,
+                msg: to_json_binary(&msg)?,
                 funds: vec![]
             }
         )
@@ -196,7 +196,7 @@ pub fn execute_deposit_mixed(
         CosmosMsg::Wasm(
             cosmwasm_std::WasmMsg::Execute {
                 contract_addr: vault,
-                msg: to_binary(&msg)?,
+                msg: to_json_binary(&msg)?,
                 funds: send_coins
             }
         )
@@ -228,7 +228,7 @@ pub fn execute_withdraw_all(
         CosmosMsg::Wasm(
             cosmwasm_std::WasmMsg::Execute {
                 contract_addr: vault,
-                msg: to_binary(&msg)?,
+                msg: to_json_binary(&msg)?,
                 funds: vec![]
             }
         )
@@ -262,7 +262,7 @@ pub fn execute_withdraw_mixed(
         CosmosMsg::Wasm(
             cosmwasm_std::WasmMsg::Execute {
                 contract_addr: vault,
-                msg: to_binary(&msg)?,
+                msg: to_json_binary(&msg)?,
                 funds: vec![]
             }
         )

@@ -60,7 +60,7 @@ mod test_receive_asset_calldata {
         let calldata_target = mock_instantiate_calldata_target(env.get_app());
         let encoded_calldata_target = CatalystEncodedAddress::try_encode(calldata_target.as_bytes())
             .unwrap()
-            .to_binary();
+            .to_json_binary();
         let calldata_bytes = Binary(vec![0x43, 0x41, 0x54, 0x41, 0x4C, 0x59, 0x53, 0x54]);
         let mut calldata = Vec::new();
         calldata.extend_from_slice(encoded_calldata_target.as_slice());
@@ -90,7 +90,7 @@ mod test_receive_asset_calldata {
             &InterfaceExecuteMsg::ReceiveMessage {
                 source_identifier: CHANNEL_ID,
                 message_identifier: MESSAGE_ID,
-                from_application: CatalystEncodedAddress::try_encode(REMOTE_CHAIN_INTERFACE.as_bytes()).unwrap().to_binary(),
+                from_application: CatalystEncodedAddress::try_encode(REMOTE_CHAIN_INTERFACE.as_bytes()).unwrap().to_json_binary(),
                 message: mock_packet,
             },
             vec![],

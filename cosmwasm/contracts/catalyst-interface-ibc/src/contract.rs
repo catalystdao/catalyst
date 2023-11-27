@@ -1,6 +1,6 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, IbcMsg, to_binary, IbcQuery, PortIdResponse, Order, Uint128, Reply, SubMsgResult};
+use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, IbcMsg, to_json_binary, IbcQuery, PortIdResponse, Order, Uint128, Reply, SubMsgResult};
 use cw2::set_contract_version;
 use catalyst_types::{U256, Bytes32};
 use catalyst_interface_common::{bindings::{InterfaceResponse, CustomMsg}, state::{encode_send_cross_chain_liquidity, encode_send_cross_chain_asset, underwrite, underwrite_and_check_connection, wrap_sub_msgs, query_underwrite_identifier, set_max_underwriting_duration, expire_underwrite, update_owner, ack_success, ack_fail, setup, handle_reply}, msg::{InstantiateMsg, ExecuteMsg}, ContractError};
@@ -371,8 +371,8 @@ pub fn reply(
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
-        QueryMsg::Port {} => to_binary(&query_port(deps)?),
-        QueryMsg::ListChannels {} => to_binary(&query_list(deps)?),
+        QueryMsg::Port {} => to_json_binary(&query_port(deps)?),
+        QueryMsg::ListChannels {} => to_json_binary(&query_list(deps)?),
         QueryMsg::UnderwriteIdentifier {
             to_vault,
             to_asset_ref,
@@ -381,7 +381,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
             to_account,
             underwrite_incentive_x16,
             calldata
-        } => to_binary(
+        } => to_json_binary(
             &query_underwrite_identifier(
                 to_vault,
                 to_asset_ref,
@@ -423,7 +423,7 @@ mod catalyst_interface_ibc_tests {
     use crate::test_helpers::{open_channel, mock_channel_info, close_channel};
 
     use super::*;
-    use cosmwasm_std::{testing::{mock_dependencies, mock_env, mock_info}, from_binary};
+    use cosmwasm_std::{testing::{mock_dependencies, mock_env, mock_info}, from_json};
 
     pub const DEPLOYER_ADDR: &str = "deployer_addr";
 
@@ -477,7 +477,7 @@ mod catalyst_interface_ibc_tests {
 
 
         // Query open channels
-        let open_channels: ListChannelsResponse = from_binary(
+        let open_channels: ListChannelsResponse = from_json(
             &query(deps.as_ref(), mock_env(), QueryMsg::ListChannels {}).unwrap()
         ).unwrap();
 
@@ -509,7 +509,7 @@ mod catalyst_interface_ibc_tests {
 
 
         // Tested action: query open channels
-        let open_channels: ListChannelsResponse = from_binary(
+        let open_channels: ListChannelsResponse = from_json(
             &query(deps.as_ref(), mock_env(), QueryMsg::ListChannels {}).unwrap()
         ).unwrap();
 
@@ -536,7 +536,7 @@ mod catalyst_interface_ibc_tests {
 
 
         // Tested action: query open channels
-        let open_channels: ListChannelsResponse = from_binary(
+        let open_channels: ListChannelsResponse = from_json(
             &query(deps.as_ref(), mock_env(), QueryMsg::ListChannels {}).unwrap()
         ).unwrap();
 
@@ -564,7 +564,7 @@ mod catalyst_interface_ibc_tests {
         open_channel(deps.as_mut(), channel_id, None, None);
 
         // Query open channels
-        let open_channels: ListChannelsResponse = from_binary(
+        let open_channels: ListChannelsResponse = from_json(
             &query(deps.as_ref(), mock_env(), QueryMsg::ListChannels {}).unwrap()
         ).unwrap();
 
@@ -577,7 +577,7 @@ mod catalyst_interface_ibc_tests {
 
 
         // Query open channels
-        let open_channels: ListChannelsResponse = from_binary(
+        let open_channels: ListChannelsResponse = from_json(
             &query(deps.as_ref(), mock_env(), QueryMsg::ListChannels {}).unwrap()
         ).unwrap();
 
@@ -603,7 +603,7 @@ mod catalyst_interface_ibc_tests {
 
 
     //     // Tested action: query port
-    //     let port: PortResponse = from_binary(
+    //     let port: PortResponse = from_json(
     //         &query(deps.as_ref(), mock_env(), QueryMsg::Port {}).unwrap()
     //     ).unwrap();
 

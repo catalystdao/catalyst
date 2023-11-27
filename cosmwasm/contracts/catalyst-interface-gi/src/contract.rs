@@ -1,7 +1,7 @@
 use catalyst_interface_common::{state::{encode_send_cross_chain_asset, encode_send_cross_chain_liquidity, handle_message_reception, handle_message_response, handle_reply, set_max_underwriting_duration, underwrite, underwrite_and_check_connection, expire_underwrite, setup, update_owner, is_owner, query_underwrite_identifier}, msg::InterfaceCommonQueryMsg};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, StdResult, Uint128, Reply, Uint64, to_binary, WasmMsg};
+use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, StdResult, Uint128, Reply, Uint64, to_json_binary, WasmMsg};
 use cw2::set_contract_version;
 use catalyst_types::{U256, Bytes32};
 use catalyst_interface_common::{bindings::InterfaceResponse, ContractError};
@@ -297,9 +297,9 @@ fn execute_send_cross_chain_asset(
 
     let gi_message = WasmMsg::Execute {
         contract_addr: get_generalised_incentives(&deps)?.to_string(),
-        msg: to_binary(&GIExecuteMsg::SubmitMessage {
+        msg: to_json_binary(&GIExecuteMsg::SubmitMessage {
             destination_identifier: GIBytes32(channel_id.0.clone()),
-            destination_address: get_remote_interface(&deps, channel_id)?.to_binary(),
+            destination_address: get_remote_interface(&deps, channel_id)?.to_json_binary(),
             message: payload,
             incentive
         })?,
@@ -350,9 +350,9 @@ fn execute_send_cross_chain_liquidity(
 
     let gi_message = WasmMsg::Execute {
         contract_addr: get_generalised_incentives(&deps)?.to_string(),
-        msg: to_binary(&GIExecuteMsg::SubmitMessage {
+        msg: to_json_binary(&GIExecuteMsg::SubmitMessage {
             destination_identifier: GIBytes32(channel_id.0.clone()),
-            destination_address: get_remote_interface(&deps, channel_id)?.to_binary(),
+            destination_address: get_remote_interface(&deps, channel_id)?.to_json_binary(),
             message: payload,
             incentive
         })?,
@@ -380,7 +380,7 @@ pub fn execute_receive_message(
     let expected_from_application = get_remote_interface(
         &deps.as_ref(),
         channel_id.clone()
-    )?.to_binary();
+    )?.to_json_binary();
 
     if from_application != expected_from_application {
         return Err(ContractError::InvalidSourceInterface {})
@@ -459,7 +459,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
             to_account,
             underwrite_incentive_x16,
             calldata
-        } => to_binary(&query_underwrite_identifier(
+        } => to_json_binary(&query_underwrite_identifier(
             to_vault,
             to_asset_ref,
             u,
@@ -470,6 +470,6 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
         )?),
 
         QueryMsg::EstimateAdditionalCost {            
-        } => to_binary(&query_estimate_additional_cost(&deps)?)
+        } => to_json_binary(&query_estimate_additional_cost(&deps)?)
     }
 }

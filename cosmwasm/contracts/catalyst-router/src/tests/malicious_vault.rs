@@ -1,5 +1,5 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{DepsMut, Env, MessageInfo, Response, Empty, Uint128, Addr, Deps, StdResult, Binary, SubMsg, CosmosMsg, to_binary, StdError};
+use cosmwasm_std::{DepsMut, Env, MessageInfo, Response, Empty, Uint128, Addr, Deps, StdResult, Binary, SubMsg, CosmosMsg, to_json_binary, StdError};
 use cw_multi_test::{Module, ContractWrapper, Executor};
 use cw_storage_plus::Item;
 use schemars::JsonSchema;
@@ -100,7 +100,7 @@ fn execute_reentry(
                 CosmosMsg::Wasm(
                     cosmwasm_std::WasmMsg::Execute {
                         contract_addr: router,
-                        msg: to_binary(&reentry_msg).unwrap(),
+                        msg: to_json_binary(&reentry_msg).unwrap(),
                         funds: vec![]
                     }
                 )

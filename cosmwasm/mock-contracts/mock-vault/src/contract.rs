@@ -1,6 +1,6 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, StdResult, to_binary};
+use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, StdResult, to_json_binary};
 use cw2::set_contract_version;
 use cw20_base::contract::query_token_info;
 use catalyst_vault_common::bindings::{VaultResponse, Asset};
@@ -79,18 +79,18 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
 
         // Only define the queries needed to verify that initialization of the vault has been successful
-        QueryMsg::ChainInterface {} => to_binary(&query_chain_interface(deps)?),
-        QueryMsg::SetupMaster {} => to_binary(&query_setup_master(deps)?),
-        QueryMsg::Factory {} => to_binary(&query_factory(deps)?),
-        QueryMsg::FactoryOwner {} => to_binary(&query_factory_owner(deps)?),
-        QueryMsg::Assets {} => to_binary(&query_assets(deps)?),
+        QueryMsg::ChainInterface {} => to_json_binary(&query_chain_interface(deps)?),
+        QueryMsg::SetupMaster {} => to_json_binary(&query_setup_master(deps)?),
+        QueryMsg::Factory {} => to_json_binary(&query_factory(deps)?),
+        QueryMsg::FactoryOwner {} => to_json_binary(&query_factory_owner(deps)?),
+        QueryMsg::Assets {} => to_json_binary(&query_assets(deps)?),
         QueryMsg::Weight {
             asset_ref
-        } => to_binary(&query_weight(deps, asset_ref)?),
-        QueryMsg::VaultFee {} => to_binary(&query_vault_fee(deps)?),
-        QueryMsg::GovernanceFeeShare {} => to_binary(&query_governance_fee_share(deps)?),
-        QueryMsg::FeeAdministrator {} => to_binary(&query_fee_administrator(deps)?),
-        QueryMsg::TokenInfo {} => to_binary(&query_token_info(deps)?),
+        } => to_json_binary(&query_weight(deps, asset_ref)?),
+        QueryMsg::VaultFee {} => to_json_binary(&query_vault_fee(deps)?),
+        QueryMsg::GovernanceFeeShare {} => to_json_binary(&query_governance_fee_share(deps)?),
+        QueryMsg::FeeAdministrator {} => to_json_binary(&query_fee_administrator(deps)?),
+        QueryMsg::TokenInfo {} => to_json_binary(&query_token_info(deps)?),
         _ => unimplemented!()
     }
 }

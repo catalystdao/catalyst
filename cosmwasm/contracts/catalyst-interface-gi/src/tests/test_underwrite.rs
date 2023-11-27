@@ -516,7 +516,7 @@ mod test_underwrite {
             &InterfaceExecuteMsg::ReceiveMessage {
                 source_identifier: CHANNEL_ID,
                 message_identifier: MESSAGE_ID,
-                from_application: CatalystEncodedAddress::try_encode(REMOTE_CHAIN_INTERFACE.as_bytes()).unwrap().to_binary(),
+                from_application: CatalystEncodedAddress::try_encode(REMOTE_CHAIN_INTERFACE.as_bytes()).unwrap().to_json_binary(),
                 message: mock_packet,
             },
             vec![],
@@ -632,7 +632,7 @@ mod test_underwrite {
         let calldata_target = mock_instantiate_calldata_target(env.get_app());
         let encoded_calldata_target = CatalystEncodedAddress::try_encode(calldata_target.as_bytes())
             .unwrap()
-            .to_binary();
+            .to_json_binary();
         let calldata_bytes = Binary(vec![0x43, 0x41, 0x54, 0x41, 0x4C, 0x59, 0x53, 0x54]);
         let mut calldata = Vec::new();
         calldata.extend_from_slice(encoded_calldata_target.as_slice());
@@ -751,7 +751,7 @@ mod test_underwrite {
         // Tested action 1: underwrite a swap from a non-connected vault
         let not_connected_from_vault = CatalystEncodedAddress::try_encode(b"not-a-connected-vault")
             .unwrap()
-            .to_binary();
+            .to_json_binary();
         let response_result = env.execute_contract(
             Addr::unchecked(UNDERWRITER),
             interface.clone(),
@@ -782,7 +782,7 @@ mod test_underwrite {
         // Tested action 2: underwrite a swap from a connected vault
         let connected_from_vault = CatalystEncodedAddress::try_encode(from_vault.as_bytes())
             .unwrap()
-            .to_binary();
+            .to_json_binary();
         let response_result = env.execute_contract(
             Addr::unchecked(UNDERWRITER),
             interface.clone(),

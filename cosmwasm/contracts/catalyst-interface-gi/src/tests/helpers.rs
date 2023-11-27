@@ -128,7 +128,7 @@ where
         interface,
         &ExecuteMsg::ConnectNewChain {
             channel_id: CHANNEL_ID,
-            remote_interface: CatalystEncodedAddress::try_encode(REMOTE_CHAIN_INTERFACE.as_bytes()).unwrap().to_binary(),
+            remote_interface: CatalystEncodedAddress::try_encode(REMOTE_CHAIN_INTERFACE.as_bytes()).unwrap().to_json_binary(),
             remote_gi: Binary(vec![0])
         },
         &[]

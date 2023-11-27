@@ -143,7 +143,7 @@ mod test_full_swap_underwrite {
             &InterfaceExecuteMsg::ReceiveMessage {
                 source_identifier: CHANNEL_ID,
                 message_identifier: MESSAGE_ID,
-                from_application: CatalystEncodedAddress::try_encode(REMOTE_CHAIN_INTERFACE.as_bytes()).unwrap().to_binary(),
+                from_application: CatalystEncodedAddress::try_encode(REMOTE_CHAIN_INTERFACE.as_bytes()).unwrap().to_json_binary(),
                 message: mock_packet,
             },
             vec![],

@@ -1,6 +1,6 @@
 
 mod test_volatile_instantiate {
-    use cosmwasm_std::{Uint128, Addr, Uint64, WasmMsg, to_binary, Attribute};
+    use cosmwasm_std::{Uint128, Addr, Uint64, WasmMsg, to_json_binary, Attribute};
     use cw_multi_test::Executor;
     use catalyst_vault_common::msg::{SetupMasterResponse, ChainInterfaceResponse, OnlyLocalResponse, VaultFeeResponse, GovernanceFeeShareResponse, TotalSupplyResponse};
     use test_helpers::{definitions::{DEPLOYER, SETUP_MASTER, VAULT_TOKEN_DENOM}, contract::mock_instantiate_vault_msg, env::CustomTestEnv, vault_token::CustomTestVaultToken};
@@ -194,7 +194,7 @@ mod test_volatile_instantiate {
         let wasm_instantiate_msg = WasmMsg::Instantiate {
             admin: None,
             code_id: contract_code_storage,
-            msg: to_binary(&instantiate_msg).unwrap(),
+            msg: to_json_binary(&instantiate_msg).unwrap(),
             funds: vec![],
             label: "volatile_vault".into(),
         };
