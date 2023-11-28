@@ -3,7 +3,7 @@ use std::fmt::Debug;
 use catalyst_interface_common::catalyst_payload::{CatalystV1SendAssetPayload, SendAssetVariablePayload, CatalystEncodedAddress, CatalystV1SendLiquidityPayload, SendLiquidityVariablePayload};
 use catalyst_vault_common::bindings::CustomMsg;
 use cosmwasm_std::{Uint128, Addr, Binary, Empty, coin};
-use cw_multi_test::{ContractWrapper, Module, Executor, App, AppResponse};
+use cw_multi_test::{ContractWrapper, Module, Executor, AppResponse};
 use catalyst_types::{U256, Bytes32};
 use generalised_incentives_common::bytes32::Bytes32 as GIBytes32;
 use generalised_incentives_mock_on_receive::{contract::{execute as gi_execute, instantiate as gi_instantiate, query as gi_query, reply as gi_reply}, msg::InstantiateMsg as GIInstantiateMsg};
