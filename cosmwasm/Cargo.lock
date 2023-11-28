@@ -452,16 +452,16 @@ dependencies = [
 
 [[package]]
 name = "cw-multi-test"
-version = "0.17.0"
+version = "0.18.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6d818f5323c80ed4890db7f89d65eda3f0261fe21878e628c27ea2d8de4b7ba4"
+checksum = "6a710459f7cd15dc322db4ecd7ab6c8fda6ffbe06faf1843cc63023f9c190b76"
 dependencies = [
  "anyhow",
  "cosmwasm-std",
  "cw-storage-plus",
  "cw-utils",
  "derivative",
- "itertools",
+ "itertools 0.12.0",
  "prost",
  "schemars",
  "serde",
@@ -780,6 +780,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "itertools"
+version = "0.12.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "25db6b064527c5d482d0423354fcd07a89a2dfe07b67892e62411946db7f07b0"
+dependencies = [
+ "either",
+]
+
+[[package]]
 name = "itoa"
 version = "1.0.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -910,7 +919,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "efb6c9a1dd1def8e2124d17e83a20af56f1570d6c2d2bd9e266ccb768df3840e"
 dependencies = [
  "anyhow",
- "itertools",
+ "itertools 0.11.0",
  "proc-macro2",
  "quote",
  "syn 2.0.39",
