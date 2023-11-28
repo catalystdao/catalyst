@@ -1,7 +1,6 @@
 use anyhow::{Result as AnyResult, bail};
 use cosmwasm_schema::{serde::{Serialize, de::DeserializeOwned}, schemars::JsonSchema};
 use cosmwasm_std::{Uint128, Coin, Addr, Empty, Api, Storage, BlockInfo, CustomQuery, Querier, Binary, coins, BankMsg};
-use cosmwasm_storage::{prefixed, prefixed_read};
 use cw_multi_test::{Executor, AppResponse, Module, CosmosRouter, BasicAppBuilder, BankKeeper, BankSudo};
 
 use catalyst_vault_common::bindings::native_asset_vault_modules::NativeAssetCustomMsg;
@@ -19,8 +18,7 @@ pub type NativeAssetApp = CustomApp<NativeAssetCustomHandler, NativeAssetCustomM
 
 impl NativeAssetCustomHandler {
 
-    const BANK_METADATA_NAMESPACE: &[u8] = b"bank-metadata";
-    const BANK_METADATA: Map<'static, String, Metadata> = Map::new("denom-metadata");
+    const BANK_METADATA: Map<'static, String, Metadata> = Map::new("test-denom-metadata");
 
     // Extend the 'BankKeeper' functionality with a new storage map that holds denom metadata
     // NOTE: The following code mirrors the logic of `cw_multi_test::bank.rs`
@@ -30,9 +28,9 @@ impl NativeAssetCustomHandler {
         denom: String,
         metadata: Metadata
     ) -> AnyResult<()> {
-        let mut bank_metadata_storage = prefixed(storage, Self::BANK_METADATA_NAMESPACE);
+
         Self::BANK_METADATA
-            .save(&mut bank_metadata_storage, denom, &metadata)
+            .save(storage, denom, &metadata)
             .map_err(Into::into)
     }
 
@@ -40,14 +38,12 @@ impl NativeAssetCustomHandler {
         storage: &dyn Storage,
         denom: String
     ) -> AnyResult<Option<Metadata>> {
-        let mut bank_metadata_storage = prefixed_read(storage, Self::BANK_METADATA_NAMESPACE);
         
         Ok(
             Self::BANK_METADATA
-                .load(&mut bank_metadata_storage, denom)
+                .load(storage, denom)
                 .ok()
         )
-
     }
 }
 

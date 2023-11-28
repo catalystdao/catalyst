@@ -15,7 +15,6 @@ catalyst-types = { path = "../../lib/catalyst-types" }
 catalyst-vault-common = { path = "../../contracts/catalyst-vault-common" }
 cosmwasm-schema = { workspace = true }
 cosmwasm-std = { workspace = true }
-cosmwasm-storage = { workspace = true }
 cw-storage-plus = { workspace = true }
 cw2 = { workspace = true }
 cw20 = { workspace = true }
