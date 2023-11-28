@@ -125,6 +125,10 @@ contract TestCommon is Test, Bytes65, IMessageEscrowStructs, TestTokenFunctions,
         );
     }
 
+    function setConnection(address vault1, address vault2, bytes32 chainIdentifier) internal {
+        setConnection(vault1, vault2, chainIdentifier, chainIdentifier);
+    }
+
     function setUpChains(bytes32 chainIdentifier) internal {
         CCI.connectNewChain(chainIdentifier, convertEVMTo65(address(CCI)), abi.encode(address(GARP)));
     }

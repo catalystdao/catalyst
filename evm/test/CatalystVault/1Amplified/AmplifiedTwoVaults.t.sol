@@ -10,10 +10,11 @@ import {TestReceiveAsset} from "../ReceiveAsset.t.sol";
 import { TestSendLiquidity } from "../SendLiquidity.t.sol";
 import { TestReceiveLiquidity } from "../ReceiveLiquidity.t.sol";
 import { TestFullLiquiditySwap } from "../FullLiquiditySwap.t.sol";
+import { TestDepositArbitrageExploit } from "../non-exploits/DepositArbitrage.t.sol";
 import "../non-exploits/CrossSwap.SwapWorthlessToken.t.sol";
 import {Token} from "../../mocks/token.sol";
 
-contract TestAmplifiedInvariant2 is TestInvariant, TestSendAsset, TestReceiveAsset, TestSwapWorthlessTokenCrossChain, TestReceiveLiquidity, TestSendLiquidity, TestFullLiquiditySwap  {
+contract TestAmplifiedInvariant2 is TestInvariant, TestSendAsset, TestReceiveAsset, TestSwapWorthlessTokenCrossChain, TestReceiveLiquidity, TestSendLiquidity, TestFullLiquiditySwap, TestDepositArbitrageExploit  {
 
     address[] _vaults;
 
