@@ -87,5 +87,29 @@
         "WGAS": 10000000000000000
       }
     }
+  },
+  "Sepolia-Mumbai": {
+    "sepolia": {
+      "cci": "0x307737d19238D3E07CC3E0167cEd991a32D21dD9",
+      "address": "0x4207b55dcf38ad113c6e91721c932ccd19fd7604",
+      "weights": [
+        1
+      ],
+      "fee": 500000000000000,
+      "tokens": {
+        "WGAS": 10000000000000000
+      }
+    },
+    "mumbai": {
+      "cci": "0x307737d19238D3E07CC3E0167cEd991a32D21dD9",
+      "address": "0x4207b55dcf38ad113c6e91721c932ccd19fd7604",
+      "weights": [
+        1
+      ],
+      "fee": 500000000000000,
+      "tokens": {
+        "WGAS": 10000000000000000
+      }
+    }
   }
 }
