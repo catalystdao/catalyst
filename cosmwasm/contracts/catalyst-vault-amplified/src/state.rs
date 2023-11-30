@@ -563,15 +563,24 @@ pub fn withdraw_all(
         .div(effective_supply);
 
     // inner_diff = (w·a_0)^(1-k) · (1-vault_tokens_share^(1-k))
-    let inner_diff = mul_wad_down(
-        weighted_alpha_0_ampped,
-        WAD.checked_sub(                            // Using 'checked_sub' for extra precaution ('wrapping_sub' should suffice)
-            pow_wad(
-                vault_tokens_share.as_i256(),       // Casting is safe as 'vault_tokens_share' <= 1 (WAD)
-                one_minus_amp
-            )?.as_u256()                            // Casting is safe as 'pow_wad' result is >= 0
-        )?
-    )?;
+    let inner_diff;
+
+    // If 'vault_tokens_share' is zero, the calculation 'vault_tokens_share^(1-k)' will fail
+    // ('powWad' limitation). Handle the edge case separately.
+    if vault_tokens_share.is_zero() {
+        inner_diff = weighted_alpha_0_ampped;
+    }
+    else {
+        inner_diff = mul_wad_down(
+            weighted_alpha_0_ampped,
+            WAD.checked_sub(                            // Using 'checked_sub' for extra precaution ('wrapping_sub' should suffice)
+                pow_wad(
+                    vault_tokens_share.as_i256(),       // Casting is safe as 'vault_tokens_share' <= 1 (WAD)
+                    one_minus_amp
+                )?.as_u256()                            // Casting is safe as 'pow_wad' result is >= 0
+            )?
+        )?;
+    }
 
 
     // Compute the asset withdraw amounts
