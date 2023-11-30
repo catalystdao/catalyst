@@ -534,7 +534,9 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
             uint256 ts = (totalSupply + _escrowedVaultTokens + vaultTokens);
             uint256 pt_fraction = ((ts - vaultTokens) * FixedPointMathLib.WAD) / ts;
 
-            innerdiff = FixedPointMathLib.mulWadDown(
+            // If pt_fraction == 0 => 0^oneMinusAmp = powWad(0, oneMinusAmp) => exp(ln(0) * oneMinusAmp) which is undefined.
+            // However, we know what 0^oneMinusAmp is: 0^oneMinusAmp is: 0!. So we just set it to 0.
+            innerdiff = pt_fraction == 0 ? walpha_0_ampped : FixedPointMathLib.mulWadDown(
                 walpha_0_ampped, 
                     FixedPointMathLib.WAD - uint256(FixedPointMathLib.powWad(  // Always casts a positive value
                     int256(pt_fraction),  // Casting always safe, as pt_fraction < 1
