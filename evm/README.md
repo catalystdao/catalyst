@@ -14,21 +14,21 @@ More specifically, the code structure is as follows:
 - `CatalystVaultCommon.sol` : Defines the structure of a Catalyst vault and implements logic that is common to all vaults.
   - `CatalystVaultVolatile.sol` : Extends `CatalystVaultCommon.sol` with the price curve $P(w) = \frac{W}{w}$.
   - `CatalystVaultAmplified.sol` : Extends `CatalystVaultCommon.sol` with the price curve $P(w) = \left(1 - \theta\right) \frac{W}{(W w)^\theta}$.
-  - `FixedPointMathLib.sol` : The mathematical library used by Catalyst (based on the [solmate](https://github.com/transmissions11/solmate/blob/ed67feda67b24fdeff8ad1032360f0ee6047ba0a/src/utils/FixedPointMathLib.sol)).
+  - `FixedPointMathLib.sol` : The mathematical library used by Catalyst (based on [solmate](https://github.com/transmissions11/solmate/blob/ed67feda67b24fdeff8ad1032360f0ee6047ba0a/src/utils/FixedPointMathLib.sol)).
 - `CatalystFactory.sol` : Simplifies the deployment of vaults via Open Zeppelin's *Clones*: vaults are deployed as minimal proxies which delegate call to the above vault contracts. This significantly reduces vault deployment cost.
-- `CatalystChainInterface.sol` : Bridges the Catalyst protocol with [Generalised Incentives](https://github.com/catalystdao/GeneralisedIncentives) which enables Catalyst to support any AMB through the same interface and with the same impact on user experience.
+- `CatalystChainInterface.sol` : Bridges the Catalyst protocol with [Generalised Incentives](https://github.com/catalystdao/GeneralisedIncentives) which enables Catalyst to support any AMB through the same interface and with the same great user experience.
 
 # Catalyst Contracts
 
 ## CatalystVaultCommon.sol
 
-An `abstract` contract (i.e. a contract that is made to be overriden), which enforces the core structure of a Catalyst vault and implements features which are generic to any pricing curve. Among these are:
+An `abstract` contract (i.e. a contract that is ment to be overriden), which enforces the core structure of a Catalyst vault and implements features which are generic to any pricing curve. Among these are:
 
 - Vault administration, including fees and vault connections management
 - Cross chain swaps acknowledgement and timeout
 - Security limit
 
-Note that contracts derived from this one cannot be used directly but should be used via proxy contracts. For this, `CatalystVaultCommon.sol` implements [Initializable.sol](https://docs.openzeppelin.com/contracts/4.x/api/proxy#Initializable) to ensure that vault proxies are correctly setup.
+`CatalystVaultCommon.sol` implements [Initializable.sol](https://docs.openzeppelin.com/contracts/4.x/api/proxy#Initializable) to ensure contract which inherit it are deployed with delegrate proxies rather than using the contract directly.
 
 ## CatalystVaultVolatile.sol
 
@@ -48,8 +48,8 @@ An intermediate contract designed to interface Catalyst vaults with [Generalised
 
 Catalyst v1 implements 2 type of swaps, *Asset Swaps* and *Liquidity Swaps*. The byte array specification for these can be found in `/contracts/CatalystPayload.sol`.
 
-- <u>`0x00`: Asset Swap</u><br/> Swaps with context `0x00` define asset swaps. Although primarily designed for cross-chain asset swaps, there is nothing from stopping a user of *Asset Swapping* between 2 vaults on the same chain.
-- <u>`0x01`: Liquidity Swap</u><br/> Swaps with context `0x01` define liquidity swaps. These reduce the cost of rebalancing the liquidity distribution across vaults by combining the following steps into a single transaction:
+- `<u>0x00`: Asset Swap `</u><br/>` Swaps with context `0x00` define asset swaps. Although primarily designed for cross-chain asset swaps, there is nothing from stopping a user of *Asset Swapping* between 2 vaults on the same chain.
+- `<u>0x01`: Liquidity Swap `</u><br/>` Swaps with context `0x01` define liquidity swaps. These reduce the cost of rebalancing the liquidity distribution across vaults by combining the following steps into a single transaction:
   1. Withdraw tokens
   2. Convert tokens to units and transfer to target vault
   3. Convert units to an even mix of tokens
@@ -57,28 +57,30 @@ Catalyst v1 implements 2 type of swaps, *Asset Swaps* and *Liquidity Swaps*. The
 
 ## Dev dependencies
 
-- Install`foundryup`
-  
-  - `https://book.getfoundry.sh/getting-started/installation`
-  - or read https://book.getfoundry.sh/getting-started/installation
+- Install `foundryup`
+
+  - https://book.getfoundry.sh/getting-started/installation
 
 # Development with Foundry
 
-This repository contains a helper script for deployment `script/DeployCatalyst.s.sol` which is based on `script/DeployContracts.s.sol` which is the origin for most of the testing configuration. This deploys core swap contracts but not the cross-chain interface. This is instead done by `script/DeployInterfaces.s.sol` which also handles management/deployment of the dependency on [Generalised Incentives](https://github.com/catalystdao/GeneralisedIncentives).
+This repository contains a helper script for deployment `script/DeployCatalyst.s.sol`. This script deploys the core vault contract. It is based on `script/DeployContracts.s.sol` which is used to deploy the test configuration of Catalyst. The core valut contracts include the vault templates and the facotry but not the cross-chain interface. This is instead done by `script/DeployInterfaces.s.sol` which also handles management/deployment of the dependency on [Generalised Incentives](https://github.com/catalystdao/GeneralisedIncentives).
 
-## Local Catalyst
+### Local Catalyst
 
-Local Catalyst consists of Volatile and Amplified pools along with the Factory. To deploy Local Catalyst to another chain, add the chain config to `script/BaseMultiChainDeployer.s.sol`. For chains without EIP-1559 add them as a legacy chain.Then run `forge script DeployCatalyst --sig "deploy()" --broadcast` or `forge script DeployCatalyst --sig "deploy_legacy()" --legacy --broadcast` depending on if the chain added was with EIP-1559 support (non-legacy) or with (legacy). Some chains require running with `--slow`. If deployment fails, wait a few blocks and re-try.
+Local Catalyst consists of Volatile and Amplified pools along with the Factory. To deploy Local Catalyst to another chain, add the chain config to `script/BaseMultiChainDeployer.s.sol`. For chains without EIP-1559 add them as a legacy chain. 
+Then run `forge script DeployCatalyst --sig "deploy()" --broadcast` or `forge script DeployCatalyst --sig "deploy_legacy()" --legacy --broadcast` depending on if the chain added was with EIP-1559 support (non-legacy) or with (legacy). Some chains require running with `--slow`. If deployment fails, wait a few blocks and re-try.
 
-## Cross-chain Catalyst
+This deployment strategy ensures that Catalyst has the same addresses on every chain and it is simple to audit if the contract addresses are correct.
+
+### Cross-chain Catalyst
 
 Cross-chain Catalyst requires governance approval. This is unavoidable, since there are no trustless way to verify which chain identifier belongs to which chain. While the cross-chain interface can be deployed by anyone, the setup can only be done by the pre-designated address.
 
-## Deployment verification
+### Deployment verification
 
 The deployment scheme is designed such that any deployment which matches the addresses in `script/config/config_contracts.json` is legitimate. This makes it easy for anyone to deploy, verify, and scale Catalyst.
 
-## Catalyst Setup
+## Interacting with Catalyst
 
 To easily interact with Catalyst, you can create a script. Start by importing `script/deployCatalyst.s.sol`. This script allows you to easily deploy the core protocol along with any dependencies.
 
@@ -105,6 +107,7 @@ ps = Catalyst(acct, ibcinterface=ie)  # Deploys Catalyst
 vault = ps.vault
 tokens = ps.tokens
 ```
+
 ## Execute a LocalSwap
 
 Lets execute a localswap. That is a swap which happens atomically on a single chain to and from the same vault. Before we can do that, we need to allow the vault to take tokens from us. This is done by calling the approve function. For our example, we will be using the token indexed 0 but you can use token index 0, 1 or 2 in this example.
@@ -146,11 +149,13 @@ vault.setConnection(
     {"from": acct}
 )
 ```
+
 Notice that the encoder `convert_64_bytes_address` is used. This encodes the address into 64 bytes (for evm this is quite wasteful but it has a purpose) and then prefixes the 64 bytes with a single byte to indicate the address length. For evm this is 20 bytes. If this is confusing, try the below example:
 
 ```python
 convert_64_bytes_address(acct.address).hex(), int("14", 16), acct.address
 ```
+
 The encoded address begins with `14` in hex. This corrosponds to 20 in decimal. Then the last 20 bytes are the same as acct.address.
 
 ## Execute a Cross Chain Swap
@@ -189,10 +194,12 @@ swap_execution_tx.info()
 
 If you ran `chain.undo()` earlier, you can compare the output with the localswap. Notice that the swap outputs (as per the transfer event or the swap events) is almost exactly the same.
 If there is not transfer event AND you see the following event:
+
 ```
 └── Acknowledgement
         └── acknowledgement: 0x01
 ```
+
 Then the transaction failed for some reason. If you instead see `acknowledgement: 0x00` the transaction executed correctly. Debugging such a transaction relies on using `.call_trace(True)`. Since this is an example and it isn't supposed to happen, we suggest quitting the interactive console and starting over.
 
 ## Contracts
@@ -204,13 +211,11 @@ All contracts are stored in *`./contracts`*. These can be compiled by brownie wi
 To compile solidity contracts directly (not through Brownie), perform the following steps:
 
 - Install the Solidity compiler
-  
+
   - via brew: `brew tap ethereum/ethereum` then `brew install solidity`
   - via npm: `pnpm install -g solc` (installs solcjs)
   - [soliditylang.org](https://docs.soliditylang.org/en/latest/installing-solidity.html)
-
 - Install the required contract dependencies `pnpm install` (see the dev dependencies section of this README for further details).
-
 - Compile the contracts with `solc <path-to-contract> --base-path . --include-path node_modules`
 
 ### Slither
