@@ -234,28 +234,8 @@ If there is not transfer event AND you see the following event:
 
 Then the transaction failed for some reason. If you instead see `acknowledgement: 0x00` the transaction executed correctly. Debugging such a transaction relies on using `.call_trace(True)`. Since this is an example and it isn't supposed to happen, we suggest quitting the interactive console and starting over.
 
-## Contracts
-
-All contracts are stored in *`./contracts`*. These can be compiled by brownie with `brownie compile`, which will save the compilation output to *`./build`*. Brownie will automatically download the required solidity and vyper compiler versions.
-
-### Solidity
-
-To compile solidity contracts directly (not through Brownie), perform the following steps:
-
-- Install the Solidity compiler
-
-  - via brew: `brew tap ethereum/ethereum` then `brew install solidity`
-  - via npm: `pnpm install -g solc` (installs solcjs)
-  - [soliditylang.org](https://docs.soliditylang.org/en/latest/installing-solidity.html)
-- Install the required contract dependencies `pnpm install` (see the dev dependencies section of this README for further details).
-- Compile the contracts with `solc <path-to-contract> --base-path . --include-path node_modules`
-
 ### Slither
 
 *[Slither](https://github.com/crytic/slither) is a Solidity static analysis framework written in Python 3. It runs a suite of vulnerability detectors, prints visual information about contract details, and provides an API to easily write custom analyses. Slither enables developers to find vulnerabilities, enhance their code comprehension, and quickly prototype custom analyses.*
 
-Catalyst has been analyzed using Slither and no major bugs have been found. To rerun the analytics, run:
-
-`slither contracts/<>.sol --solc-args "--base-path . --include-path node_modules --optimize --optimize-runs 9000" --exclude naming-convention`
-
-Alternativly, run `slither contracts` to analyze all contracts.
+Catalyst has been analyzed using Slither and no major bugs have been found. To rerun the analytics, run: `slither src`
