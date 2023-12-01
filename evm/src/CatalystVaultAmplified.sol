@@ -1,6 +1,6 @@
 //SPDX-License-Identifier: UNLICENSED
 
-pragma solidity 0.8.19;
+pragma solidity ^0.8.19;
 
 import { ERC20 } from 'solmate/tokens/ERC20.sol';
 import { SafeTransferLib } from 'solmate/utils/SafeTransferLib.sol';
@@ -534,7 +534,9 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
             uint256 ts = (totalSupply + _escrowedVaultTokens + vaultTokens);
             uint256 pt_fraction = ((ts - vaultTokens) * FixedPointMathLib.WAD) / ts;
 
-            innerdiff = FixedPointMathLib.mulWadDown(
+            // If pt_fraction == 0 => 0^oneMinusAmp = powWad(0, oneMinusAmp) => exp(ln(0) * oneMinusAmp) which is undefined.
+            // However, we know what 0^oneMinusAmp is: 0^oneMinusAmp is: 0!. So we just set it to 0.
+            innerdiff = pt_fraction == 0 ? walpha_0_ampped : FixedPointMathLib.mulWadDown(
                 walpha_0_ampped, 
                     FixedPointMathLib.WAD - uint256(FixedPointMathLib.powWad(  // Always casts a positive value
                     int256(pt_fraction),  // Casting always safe, as pt_fraction < 1
@@ -1052,7 +1054,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
         _updateUnitCapacity(deltaSecurityLimit);
 
         // Ensure the user is satisfied with the number of tokens.
-        if (minOut > purchasedTokens) revert ReturnInsufficientOnReceive();
+        if (minOut > purchasedTokens) revert ReturnInsufficient(purchasedTokens, minOut);
 
         // Track units for balance0 computation.
         _unitTracker -= int256(U);
@@ -1307,7 +1309,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
         uint256 vaultTokens = _calcPriceCurveLimitShare(U, totalSupply, it_times_walpha_amped, oneMinusAmpInverse);
 
         // Check if more than the minimum output is returned.
-        if (minVaultTokens > vaultTokens) revert ReturnInsufficientOnReceive();
+        if (minVaultTokens > vaultTokens) revert ReturnInsufficient(vaultTokens, minVaultTokens);
         // Then check if the minimum number of reference assets is honoured.
         if (minReferenceAsset != 0) {
             uint256 walpha_0 = uint256(FixedPointMathLib.powWad(  // uint256 casting: Is always positive.
@@ -1317,7 +1319,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
             // Add escrow to ensure that even if all ongoing transaction revert, the user gets their expected amount.
             // Add vault tokens because they are going to be minted.
             uint256 walpha_0_owned = ((walpha_0 * vaultTokens) / (totalSupply + _escrowedVaultTokens + vaultTokens)) / FixedPointMathLib.WAD;
-            if (minReferenceAsset > walpha_0_owned) revert ReturnInsufficientOnReceive();
+            if (minReferenceAsset > walpha_0_owned) revert ReturnInsufficient(walpha_0_owned, minReferenceAsset);
         }
 
         // Update the unit tracker:
@@ -1527,9 +1529,11 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
         address refundTo,
         bytes32 identifier,
         uint256 escrowAmount,
-        address escrowToken
+        address escrowToken,
+        bytes32 sourceIdentifier,
+        bytes calldata fromVault
     )  override public {
-         super.releaseUnderwriteAsset(refundTo, identifier, escrowAmount, escrowToken);
+         super.releaseUnderwriteAsset(refundTo, identifier, escrowAmount, escrowToken, sourceIdentifier, fromVault);
 
         unchecked {
             _underwriteEscrowMatchBalance0[escrowToken] -= escrowAmount;

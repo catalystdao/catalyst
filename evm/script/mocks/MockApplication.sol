@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.13;
+pragma solidity ^0.8.19;
 
 import { IIncentivizedMessageEscrow } from "GeneralisedIncentives/src/interfaces/IIncentivizedMessageEscrow.sol";
 import { ICrossChainReceiver } from "GeneralisedIncentives/src/interfaces/ICrossChainReceiver.sol";
@@ -19,13 +19,13 @@ contract MockApplication is ICrossChainReceiver {
         MESSAGE_ESCROW = IIncentivizedMessageEscrow(messageEscrow_);
     }
 
-    function escrowMessage(
+    function submitMessage(
         bytes32 destinationIdentifier,
         bytes calldata destinationAddress,
         bytes calldata message,
         IIncentivizedMessageEscrow.IncentiveDescription calldata incentive
     ) external payable returns(uint256 gasRefund, bytes32 messageIdentifier) {
-        (gasRefund, messageIdentifier) = MESSAGE_ESCROW.escrowMessage{value: msg.value}(
+        (gasRefund, messageIdentifier) = MESSAGE_ESCROW.submitMessage{value: msg.value}(
             destinationIdentifier,
             destinationAddress,
             message,
@@ -35,11 +35,11 @@ contract MockApplication is ICrossChainReceiver {
         emit EscrowMessage(gasRefund, messageIdentifier);
     }
 
-    function setRemoteEscrowImplementation(bytes32 chainIdentifier, bytes calldata implementation) external {
-        MESSAGE_ESCROW.setRemoteEscrowImplementation(chainIdentifier, implementation);
+    function setRemoteImplementation(bytes32 chainIdentifier, bytes calldata implementation) external {
+        MESSAGE_ESCROW.setRemoteImplementation(chainIdentifier, implementation);
     }
 
-    function ackMessage(bytes32 destinationIdentifier, bytes32 messageIdentifier, bytes calldata acknowledgement) external {
+    function receiveAck(bytes32 destinationIdentifier, bytes32 messageIdentifier, bytes calldata acknowledgement) external {
         emit AckMessage(destinationIdentifier, acknowledgement);
     }
 

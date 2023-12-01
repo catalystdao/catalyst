@@ -1,26 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.13;
+pragma solidity ^0.8.19;
 
 import "forge-std/Script.sol";
-
-// Math libs
-import { CatalystMathVol } from "../src/registry/CatalystMathVol.sol";
-import { CatalystMathAmp } from "../src/registry/CatalystMathAmp.sol";
-
-// Registry
-import { CatalystDescriber } from "../src/registry/CatalystDescriber.sol";
-import { CatalystDescriberRegistry } from "../src/registry/CatalystDescriberRegistry.sol";
-
-// Router
-import { CatalystRouter } from "../src/router/CatalystRouter.sol";
-import { RouterParameters } from "../src/router/base/RouterImmutables.sol";
-
-// Core Catalyst
-import { CatalystFactory } from "../src/CatalystFactory.sol";
-import { CatalystChainInterface } from "../src/CatalystChainInterface.sol";
-/// Catalyst Templates
-import { CatalystVaultVolatile } from "../src/CatalystVaultVolatile.sol";
-import { CatalystVaultAmplified } from "../src/CatalystVaultAmplified.sol";
 
 contract BaseMultiChainDeployer is Script {
     enum Stage {
@@ -39,7 +20,8 @@ contract BaseMultiChainDeployer is Script {
         OPBNBTestnet,
         BSCTestnet,
         MantleTestnet,
-        OmniTestnet
+        OmniTestnet,
+        INEVMDevnet
     }
 
     mapping(Chains => string) public rpc;
@@ -95,6 +77,10 @@ contract BaseMultiChainDeployer is Script {
         rpc[Chains.OmniTestnet] = "omnitestnet";
         wrapped_gas[Chains.OmniTestnet] = "WOMNI";
         chain_list_legacy.push(Chains.OmniTestnet);
+
+        rpc[Chains.INEVMDevnet] = "inevmdevnet";
+        wrapped_gas[Chains.INEVMDevnet] = "WINJ";
+        chain_list.push(Chains.INEVMDevnet);
     }
 
     uint256 pk;

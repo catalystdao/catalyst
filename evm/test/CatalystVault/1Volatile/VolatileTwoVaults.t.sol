@@ -1,14 +1,20 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.13;
+pragma solidity ^0.8.19;
 
 import "../../../src/ICatalystV1Vault.sol";
 
 import "../Invariant.t.sol";
 import {TestSendAsset} from "../SendAsset.t.sol";
 import {TestReceiveAsset} from "../ReceiveAsset.t.sol";
+import { TestSendLiquidity } from "../SendLiquidity.t.sol";
+import { TestReceiveLiquidity } from "../ReceiveLiquidity.t.sol";
+import { TestExploitCircumventLiquiditySwapMinOut } from "./ExploitCircumventLiquiditySwapMinOut.t.sol";
+import { TestFullLiquiditySwap } from "../FullLiquiditySwap.t.sol";
+import { TestDepositArbitrageExploit } from "../non-exploits/DepositArbitrage.t.sol";
 import "../non-exploits/CrossSwap.SwapWorthlessToken.t.sol";
+import {Token} from "../../mocks/token.sol";
 
-contract TestVolatileInvariant2 is TestInvariant, TestSendAsset, TestReceiveAsset, TestSwapWorthlessTokenCrossChain {
+contract TestVolatileInvariant2 is TestInvariant, TestSendAsset, TestReceiveAsset, TestSwapWorthlessTokenCrossChain, TestReceiveLiquidity, TestSendLiquidity, TestExploitCircumventLiquiditySwapMinOut, TestFullLiquiditySwap, TestDepositArbitrageExploit {
 
     address[] _vaults;
 
@@ -62,8 +68,46 @@ contract TestVolatileInvariant2 is TestInvariant, TestSendAsset, TestReceiveAsse
         inv = getSum(balances);
     }
 
+    // Uses the invariant \prod x^w / TS = constant for deposits and withdrawals.
+    // It is rewritten as \sum ln(x) * w - ln(TS) = constant
+    // TODO: Fix
+    function strong_invariant(address vault) view internal override returns(uint256 inv) {
+        address[] memory vaults = new address[](1);
+        vaults[0] = vault;
+        (uint256[] memory balances, uint256[] memory weights) = getBalances(vaults);
+
+        uint256 vaultTokens = Token(vault).totalSupply();
+
+
+        balances = logArray(balances);
+
+        balances = xProduct(balances, weights);
+
+        inv = getSum(balances) - uint256(FixedPointMathLib.lnWad(int256(vaultTokens)));
+        
+    }
+
     function getTestConfig() internal override view returns(address[] memory vaults) {
         return vaults = _vaults;
+    }
+
+    function getWithdrawPercentages(address vault, uint256[] memory withdraw_weights) internal override returns(uint256[] memory new_weights) {
+        new_weights = new uint256[](withdraw_weights.length);
+        // get weights
+        uint256 progressiveWeightSum = 0;
+        new_weights = new uint256[](withdraw_weights.length);
+        for (uint256 i = withdraw_weights.length - 1; ;) {
+            ICatalystV1Vault v = ICatalystV1Vault(vault);
+            address tkn = v._tokenIndexing(i);
+            uint256 ww = withdraw_weights[i];
+            uint256 tw = v._weight(tkn);
+            progressiveWeightSum += tw;
+            new_weights[i] = ww * tw / progressiveWeightSum;
+            if (i == 0) {
+                break;
+            }
+            --i;
+        }
     }
 }
 

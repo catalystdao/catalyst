@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.17;
+pragma solidity ^0.8.19;
 
 import "forge-std/Script.sol";
 import {stdJson} from "forge-std/StdJson.sol";
@@ -8,28 +8,7 @@ import { Token } from "../test/mocks/token.sol";
 import { IWETH } from "./IWETH.sol";
 import { ICatalystV1Vault } from "../src/ICatalystV1Vault.sol";
 
-// Math libs
-import { CatalystMathVol } from "../src/registry/CatalystMathVol.sol";
-import { CatalystMathAmp } from "../src/registry/CatalystMathAmp.sol";
 
-// Registry
-import { CatalystDescriber } from "../src/registry/CatalystDescriber.sol";
-import { CatalystDescriberRegistry } from "../src/registry/CatalystDescriberRegistry.sol";
-
-// Router
-import { CatalystRouter } from "../src/router/CatalystRouter.sol";
-import { RouterParameters } from "../src/router/base/RouterImmutables.sol";
-
-// Core Catalyst
-import { CatalystFactory } from "../src/CatalystFactory.sol";
-import { CatalystChainInterface } from "../src/CatalystChainInterface.sol";
-/// Catalyst Templates
-import { CatalystVaultVolatile } from "../src/CatalystVaultVolatile.sol";
-import { CatalystVaultAmplified } from "../src/CatalystVaultAmplified.sol";
-
-
-// Generalised Incentives
-import { IncentivizedMockEscrow } from "GeneralisedIncentives/src/apps/mock/IncentivizedMockEscrow.sol";
 import { IMessageEscrowStructs } from "GeneralisedIncentives/src/interfaces/IMessageEscrowStructs.sol";
 import { ICatalystV1Structs } from "../src/interfaces/ICatalystV1VaultState.sol";
 

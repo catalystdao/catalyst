@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.13;
+pragma solidity ^0.8.19;
 
 import "forge-std/Test.sol";
 import { TestCommon } from "../TestCommon.t.sol";
@@ -82,13 +82,13 @@ contract TestUnderwriteNoConnection is TestCommon {
         (bytes memory _metadata, bytes memory toExecuteMessage) = getVerifiedMessage(address(GARP), messageWithContext);
 
         vm.recordLogs();
-        GARP.processMessage(_metadata, toExecuteMessage, FEE_RECIPITANT);
+        GARP.processPacket(_metadata, toExecuteMessage, FEE_RECIPITANT);
         entries = vm.getRecordedLogs();
 
         address token2 = ICatalystV1Vault(vault2)._tokenIndexing(0);
 
         assertEq(
-            Token(token2).balanceOf(toAccount),
+            Token(token2).balanceOf(address(CCI)),
             0,
             "CCI balance not 0"
         );
@@ -99,14 +99,14 @@ contract TestUnderwriteNoConnection is TestCommon {
     
         // we need to check that 
         vm.expectEmit();
-        emit SwapFailed(0x23);
+        emit SwapFailed(0x13);
         vm.expectEmit();
         emit Transfer(vault1, toAccount, uint256(1e17));
         vm.expectEmit();
         emit SendAssetFailure(DESTINATION_IDENTIFIER, convertEVMTo65(toAccount), units, uint256(1e17), address(token1), 1);
 
 
-        GARP.processMessage(_metadata, toExecuteMessage, FEE_RECIPITANT);
+        GARP.processPacket(_metadata, toExecuteMessage, FEE_RECIPITANT);
     }
 }
 

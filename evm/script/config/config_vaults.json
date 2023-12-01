@@ -1,8 +1,8 @@
 {
-  "Mantle-Base": {
+  "MantleBase": {
     "mantletestnet": {
-      "cci": "0xF6b469228822d92c867f5949DA58431673095aEA",
-      "address": "0x66efc14c5a8bac9a4068248b2781b312edfff552",
+      "cci": "0x307737d19238D3E07CC3E0167cEd991a32D21dD9",
+      "address": "0x0f1ff6216866cbad075a89a8e4cb3c7a9734df0d",
       "weights": [
         1
       ],
@@ -12,8 +12,97 @@
       }
     },
     "basegoerli": {
-      "cci": "0xF6b469228822d92c867f5949DA58431673095aEA",
-      "address": "0x66efc14c5a8bac9a4068248b2781b312edfff552",
+      "cci": "0x307737d19238D3E07CC3E0167cEd991a32D21dD9",
+      "address": "0x0f1ff6216866cbad075a89a8e4cb3c7a9734df0d",
+      "weights": [
+        1
+      ],
+      "fee": 500000000000000,
+      "tokens": {
+        "WGAS": 10000000000000000
+      }
+    }
+  },
+  "OmniStables": {
+    "amplification": 250000000000000000,
+    "omnitestnet": {
+      "cci": "0x0000000000000000000000000000000000000000",
+      "address": "0x0f1ff6216866cbad075a89a8e4cb3c7a9734df0d",
+      "weights": [
+        1,
+        1
+      ],
+      "fee": 500000000000000,
+      "tokens": {
+        "USDC": 1000000000000000000000,
+        "USDT": 1000000000000000000000
+      }
+    }
+  },
+  "CrossChainBNB": {
+    "amplification": 250000000000000000,
+    "opbnbtestnet": {
+      "cci": "0x307737d19238D3E07CC3E0167cEd991a32D21dD9",
+      "address": "0x0f1ff6216866cbad075a89a8e4cb3c7a9734df0d",
+      "weights": [
+        1
+      ],
+      "fee": 500000000000000,
+      "tokens": {
+        "WGAS": 10000000000000000
+      }
+    },
+    "bsctestnet": {
+      "cci": "0x307737d19238D3E07CC3E0167cEd991a32D21dD9",
+      "address": "0x0f1ff6216866cbad075a89a8e4cb3c7a9734df0d",
+      "weights": [
+        1
+      ],
+      "fee": 500000000000000,
+      "tokens": {
+        "WGAS": 10000000000000000
+      }
+    }
+  },
+  "inEVM-Scroll": {
+    "scrollsepolia": {
+      "cci": "0x307737d19238D3E07CC3E0167cEd991a32D21dD9",
+      "address": "0x0f1ff6216866cbad075a89a8e4cb3c7a9734df0d",
+      "weights": [
+        1
+      ],
+      "fee": 500000000000000,
+      "tokens": {
+        "WGAS": 10000000000000000
+      }
+    },
+    "inevmdevnet": {
+      "cci": "0x307737d19238D3E07CC3E0167cEd991a32D21dD9",
+      "address": "0x0f1ff6216866cbad075a89a8e4cb3c7a9734df0d",
+      "weights": [
+        1
+      ],
+      "fee": 500000000000000,
+      "tokens": {
+        "WGAS": 10000000000000000
+      }
+    }
+  },
+  "Sepolia-Mumbai": {
+    "sepolia": {
+      "cci": "0x307737d19238D3E07CC3E0167cEd991a32D21dD9",
+      "address": "0x4207b55dcf38ad113c6e91721c932ccd19fd7604",
+      "weights": [
+        1
+      ],
+      "fee": 500000000000000,
+      "tokens": {
+        "WGAS": 10000000000000000
+      }
+    },
+    "mumbai": {
+      "cci": "0x307737d19238D3E07CC3E0167cEd991a32D21dD9",
+      "address": "0x4207b55dcf38ad113c6e91721c932ccd19fd7604",
       "weights": [
         1
       ],

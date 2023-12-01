@@ -1,4 +1,4 @@
-pragma solidity ^0.8.10;
+pragma solidity ^0.8.17;
 
 import { ICatalystV1Structs } from "./ICatalystV1VaultState.sol";
 import { ICrossChainReceiver } from "GeneralisedIncentives/src/interfaces/ICrossChainReceiver.sol";
@@ -72,5 +72,5 @@ interface ICatalystChainInterface is ICatalystV1Structs, ICrossChainReceiver {
         uint16 underwriteIncentiveX16,
         bytes memory cdata
     ) external;
-    function underwritingStorage(bytes32) external view returns (uint256 tokens, address refundTo, uint80 expiry);
+    function underwritingStorage(bytes32) external view returns (uint256 tokens, address refundTo, uint96 expiry);
 }

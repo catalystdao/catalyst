@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.13;
+pragma solidity ^0.8.19;
 
 import "forge-std/Test.sol";
 import { TestCommon } from "../TestCommon.t.sol";
@@ -25,6 +25,7 @@ contract TestUnderwrite is TestCommon, ICatalystReceiver {
 
     function test_underwrite_storage(address sendTo) external {
         vm.assume(sendTo != address(0));
+        vm.assume(sendTo != 0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496);
         uint256 maxUnderwritingDuration = CCI.maxUnderwritingDuration();
 
         address token = ICatalystV1Vault(vault2)._tokenIndexing(0);
@@ -41,7 +42,7 @@ contract TestUnderwrite is TestCommon, ICatalystReceiver {
             hex"0000"
         );
 
-        (uint256 tokensStorage, address refundToStorage, uint80 expiryStorage) = CCI.underwritingStorage(identifier);
+        (uint256 tokensStorage, address refundToStorage, uint96 expiryStorage) = CCI.underwritingStorage(identifier);
 
         assertEq(address(this), refundToStorage, "RefundTo isn't the same as storage");
         assertEq(expiryStorage, block.timestamp + maxUnderwritingDuration, "Expiry storage not correctly set");

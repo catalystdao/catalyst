@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.17;
+pragma solidity ^0.8.19;
 
 import "forge-std/Script.sol";
 import {stdJson} from "forge-std/StdJson.sol";
@@ -9,21 +9,11 @@ import { CatalystChainInterface } from "../src/CatalystChainInterface.sol";
 
 import { BaseMultiChainDeployer} from "./BaseMultiChainDeployer.s.sol";
 
-import { CatalystDescriber } from "../src/registry/CatalystDescriber.sol";
-
 // Generalised Incentives
 import { IncentivizedMockEscrow } from "GeneralisedIncentives/src/apps/mock/IncentivizedMockEscrow.sol";
 import { IncentivizedWormholeEscrow } from "GeneralisedIncentives/src/apps/wormhole/IncentivizedWormholeEscrow.sol";
 
-struct JsonContracts {
-    address amplified_mathlib;
-    address amplified_template;
-    address describer;
-    address describer_registry;
-    address factory;
-    address volatile_mathlib;
-    address volatile_template;
-}
+import { JsonContracts } from "./DeployContracts.s.sol";
 
 contract DeployInterfaces is BaseMultiChainDeployer {
     using stdJson for string;
@@ -65,7 +55,7 @@ contract DeployInterfaces is BaseMultiChainDeployer {
             uint256 pv_key = vm.envUint("INCENTIVE_DEPLOYER");
             vm.startBroadcast(pv_key);
 
-            incentive = address(new IncentivizedMockEscrow(chainIdentifier, signer, 0));
+            incentive = address(new IncentivizedMockEscrow(vm.envAddress("CATALYST_ADDRESS"), chainIdentifier, signer, 0));
 
             vm.stopBroadcast();
             vm.startBroadcast(pk);
@@ -75,7 +65,7 @@ contract DeployInterfaces is BaseMultiChainDeployer {
             uint256 pv_key = vm.envUint("WORMHOLE_DEPLOYER");
             vm.startBroadcast(pv_key);
 
-            incentive = address(new IncentivizedWormholeEscrow(wormholeBridge[chain]));
+            incentive = address(new IncentivizedWormholeEscrow(vm.envAddress("CATALYST_ADDRESS"), wormholeBridge[chain]));
 
             vm.stopBroadcast();
             vm.startBroadcast(pk);
@@ -144,25 +134,6 @@ contract DeployInterfaces is BaseMultiChainDeployer {
         require(newlyDeployedInterfaceAddress == interfaceAddress, "Newly deployed interface address isn't expected address");
     }
 
-    function whitelistCCI(address catalyst_describer) forEachInterface() internal {
-        CatalystDescriber describer = CatalystDescriber(catalyst_describer);
-
-        address interfaceAddress = abi.decode(config_interfaces.parseRaw(string.concat(".", rpc[chain], ".", incentiveVersion, ".interface")), (address));
-
-        bool foundCCI = false;
-        CatalystDescriber.CrossChainInterface[] memory ccis = describer.get_whitelisted_CCI();
-        for (uint256 i = 0; i < ccis.length; ++i) {
-            address ci = ccis[i].cci;
-            if (ci == interfaceAddress) {
-                foundCCI = true;
-                break;
-            }
-        }
-
-        if (foundCCI == false) {
-            describer.add_whitelisted_cci(interfaceAddress, incentiveVersion);
-        }
-    }
     
     function _deploy() internal {
         address admin = address(0x0000007aAAC54131e031b3C0D6557723f9365A5B);
@@ -175,8 +146,6 @@ contract DeployInterfaces is BaseMultiChainDeployer {
         deployCCI(admin);
 
         // get describer
-
-        whitelistCCI(contracts.describer);
     }
 
     function deploy() load_config iter_chains(chain_list) broadcast external {

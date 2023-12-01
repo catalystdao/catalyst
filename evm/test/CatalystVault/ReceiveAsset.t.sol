@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.13;
+pragma solidity ^0.8.19;
 
 import "forge-std/Test.sol";
 import "../TestCommon.t.sol";
@@ -26,7 +26,7 @@ abstract contract TestReceiveAsset is TestCommon, AVaultInterfaces {
     uint256 private constant MARGIN_NUM = 1;
     uint256 private constant MARGIN_DENOM = 1e12;
 
-    bytes32 FEE_RECIPITANT = bytes32(uint256(uint160(0xfee0eec191fa4f)));
+    bytes32 private FEE_RECIPITANT = bytes32(uint256(uint160(0xfee0eec191fa4f)));
 
     function setupSendAsset(uint8 fromVaultIndex, uint8 fromAssetIndex, uint8 toVaultIndex, uint8 toAssetIndex, address[] memory vaults, uint32 swapSizePercentage, address toAccount) internal returns(uint256 units, bytes memory messageWithContext) {
 
@@ -95,7 +95,7 @@ abstract contract TestReceiveAsset is TestCommon, AVaultInterfaces {
                 )
             )
         );
-        GARP.processMessage(_metadata, toExecuteMessage, FEE_RECIPITANT);
+        GARP.processPacket(_metadata, toExecuteMessage, FEE_RECIPITANT);
 
         uint256 after_invariant = invariant(vaults);
 

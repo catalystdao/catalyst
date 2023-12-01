@@ -1,94 +1,107 @@
 //SPDX-License-Identifier: MIT
 
-pragma solidity 0.8.19;
+pragma solidity ^0.8.19;
 
 import "openzeppelin-contracts/contracts/access/Ownable.sol";
+import { Contains } from "./lib/Contains.sol";
 
 /**
  * @title Catalyst: Describer Registry
  * @author Catalyst Labs
  * @notice This contract serves as an index of Catalyst Describer.
  */
-contract CatalystDescriberRegistry is Ownable {
-    error WrongCatalystVersion(uint256 proposed, uint256 actual);
-    error ZeroDescriber();
+contract CatalystDescriberRegistry is Contains, Ownable {
+    struct AddressAndVersion {
+        address addr;
+        string version;
+    }
 
     /// @notice Describes the catalyst version and the associated describer.
-    event CatalystDescriber(
-        uint256 catalystVersion,
-        address catalystDescriber
+    event ModifyDescriber(
+        address catalystDescriber,
+        string version
     );
+
+    uint256 public initBlock;
+
+    string[] public describer_versions;
+    mapping(string => address) version_to_describer;
+    mapping(address => string) describer_to_version;
 
     address[] private _vault_describers;
     mapping(address => uint256) private _describer_version;
 
     constructor(address defaultOwner) {
         _transferOwnership(defaultOwner);
+        initBlock = block.number;
     }
 
-    /** 
-    * @notice Given a Catalyst version, returns the current vault describer.
-    * @dev Returns address(0) if no describer exists.
-    * @param catalystVersion The Catalyst version. Is 1 indexed.
-    */
-    function get_vault_describer(uint256 catalystVersion) public view returns(address) {
-        if (_vault_describers.length <= catalystVersion) return address(0);
-        return _vault_describers[catalystVersion];
-    }
-
-    /** 
-    * @notice Returns the current catalyst version.
-    * @dev Returns the length of _vault_describers. 
-    * To get the latest describer: get_vault_describer(catalyst_version())
-    */
-    function catalyst_version() public view returns(uint256) {
-        return _vault_describers.length;
-    }
+    //--- Getters ---//
 
     /**
-     * @notice Given a vault describer, returns the catalyst version. 
-     * @dev Returns 0 if address is not a CatalystDescriber.
-     * It might be that get_vault_describer(get_describer_version(catalystDescriber)) != catalystDescriber,
-     * since when a describer is updated it doesn't delete the index.
-     * @param catalystDescriber The address of the catalyst describer
-     */
-    function get_describer_version(address catalystDescriber) external view returns (uint256) {
-        return _describer_version[catalystDescriber];
-    }
-
-    /**
-    * @notice Returns all CatalystDescribers.
+    * @notice Returns all describers.
     */
     function get_vault_describers() public view returns (address[] memory catalystDescribers) {
-        return _vault_describers;
+        catalystDescribers = new address[](describer_versions.length);
+        for (uint256 i = 0; i < describer_versions.length; ++i) {
+            string memory version = describer_versions[i];
+            catalystDescribers[i] = version_to_describer[version];
+        }
     }
 
     /**
-     * @notice Defines a new Catalyst Describer and incremenets the Catalyst version
-     * @param catalystDescriber The address of the catalyst describer to use for the new version
+     * @notice Return an array of describers along with their respective version.
+     * @dev Will not contain address(0), the index in the array matches the index of describer_versions.
      */
-    function add_describer(address catalystDescriber) external onlyOwner {
-        if (catalystDescriber == address(0)) revert  ZeroDescriber(); 
-
-        _vault_describers.push(catalystDescriber);
-        _describer_version[catalystDescriber] = _vault_describers.length;
-
-        emit CatalystDescriber(_vault_describers.length, catalystDescriber);
+    function getVaultDescribers() external view returns (AddressAndVersion[] memory catalystDescribers) {
+        catalystDescribers = new AddressAndVersion[](describer_versions.length);
+        for (uint256 i = 0; i < describer_versions.length; ++i) {
+            string memory version = describer_versions[i];
+            catalystDescribers[i] = AddressAndVersion({
+                addr: version_to_describer[version],
+                version: version
+            });
+        }
     }
 
+    //--- Modifiers ---//
+
     /**
-     * @notice Updates a Catalyst version with a new describer.
-     * @dev Doesn't reset _describer_version for the old describer. 
-     * @param catalystDescriber The address of the new describer
-     * @param catalystVersion The version which the new describer will overwrite.
+     * @notice Sets or modifies a describer.
+     * @dev describer_address cannot be 0 Instead, use the remove version.
+     * @param describer_address The address of the cci which should be whitelisted.
+     * @param version The version which the new cci should be set to.
      */
-    function modify_describer(address catalystDescriber, uint256 catalystVersion) external onlyOwner {
-        if (catalystDescriber == address(0)) revert ZeroDescriber(); 
+    function modifyDescriber(address describer_address, string calldata version) external onlyOwner {
+        if (describer_address == address(0)) revert ZeroAddress();
 
-        _vault_describers[catalystVersion] = catalystDescriber;
-        _describer_version[catalystDescriber] = catalystVersion;
+        // Update version table
+        uint256 indexOfVersion = _contains(version, describer_versions);
+        if (indexOfVersion == type(uint256).max) describer_versions.push(version);
 
-        emit CatalystDescriber(catalystVersion, catalystDescriber);
+        version_to_describer[version] = describer_address;
+
+        emit ModifyDescriber(describer_address, version);
+    }
+
+
+    function removeDescriber(address describer_to_remove, string calldata version) external onlyOwner {
+        address read_factory = version_to_describer[version];
+        if (read_factory != describer_to_remove) revert IncorrectAddress(read_factory, describer_to_remove);
+        
+        uint256 indexOfVersion = _contains(version, describer_versions);
+        if (indexOfVersion == type(uint256).max) revert DoesNotExist();
+
+        if (describer_versions.length > 1) {
+            // swap the last element into this element's place.
+            describer_versions[indexOfVersion] = describer_versions[describer_versions.length - 1];
+            describer_versions.pop();
+        }
+
+        version_to_describer[version] = address(0);
+
+        // Emit event
+        emit ModifyDescriber(address(0), version);
     }
 
 }

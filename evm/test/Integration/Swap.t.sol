@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.13;
+pragma solidity ^0.8.19;
 
 import "forge-std/Test.sol";
 import { TestCommon } from "../TestCommon.t.sol";
@@ -255,7 +255,7 @@ contract TestSwapIntegration is TestCommon {
         );
 
         vm.recordLogs();
-        GARP.processMessage(_metadata, toExecuteMessage, FEE_RECIPITANT);
+        GARP.processPacket(_metadata, toExecuteMessage, FEE_RECIPITANT);
 
         entries = vm.getRecordedLogs();
         (destinationIdentifier, recipitent, messageWithContext) = abi.decode(entries[3].data, (bytes32, bytes, bytes));
@@ -272,6 +272,6 @@ contract TestSwapIntegration is TestCommon {
             1
         );
 
-        GARP.processMessage(_metadata, toExecuteMessage, FEE_RECIPITANT);
+        GARP.processPacket(_metadata, toExecuteMessage, FEE_RECIPITANT);
     }
 }

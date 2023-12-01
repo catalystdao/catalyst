@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.13;
+pragma solidity ^0.8.19;
 
 import "forge-std/Test.sol";
 import { TestCommon } from "../TestCommon.t.sol";
@@ -47,11 +47,18 @@ contract TestSendAssetUnderwrite is TestCommon {
 
     function test_send_asset_underwrite(address refundTo, address toAccount) external {
         vm.assume(refundTo != address(0));
-        vm.assume(toAccount != address(0));
+        vm.assume(refundTo != address(0));
+        vm.assume(refundTo != vault1);
+        vm.assume(refundTo != vault2);
+        vm.assume(refundTo != address(CCI));
+        vm.assume(refundTo != address(this));
         vm.assume(toAccount != refundTo);  // makes it really hard to debug
+        vm.assume(toAccount != address(0));
         vm.assume(toAccount != vault1);
+        vm.assume(toAccount != vault2);
         vm.assume(toAccount != address(CCI));
         vm.assume(toAccount != address(this));
+        // execute the swap.
         address token1 = ICatalystV1Vault(vault1)._tokenIndexing(0);
 
         Token(token1).approve(vault1, 2**256-1);
@@ -99,7 +106,7 @@ contract TestSendAssetUnderwrite is TestCommon {
             hex"0000"
         );
 
-        (uint256 numTokens, , ) = CCI.underwritingStorage(underwriteIdentifier);
+        (uint256 numTokens, ,) = CCI.underwritingStorage(underwriteIdentifier);
 
         // assert that toAccount get the tokens.
         assertEq(
@@ -120,8 +127,11 @@ contract TestSendAssetUnderwrite is TestCommon {
         (bytes memory _metadata, bytes memory toExecuteMessage) = getVerifiedMessage(address(GARP), messageWithContext);
 
         vm.recordLogs();
-        GARP.processMessage(_metadata, toExecuteMessage, FEE_RECIPITANT);
+        GARP.processPacket(_metadata, toExecuteMessage, FEE_RECIPITANT);
         entries = vm.getRecordedLogs();
+
+        (, , uint96 expiry) = CCI.underwritingStorage(underwriteIdentifier);
+        assertEq(expiry, uint96(block.number));
 
         assertEq(
             Token(token2).balanceOf(address(CCI)),
@@ -145,7 +155,7 @@ contract TestSendAssetUnderwrite is TestCommon {
         vm.expectEmit();
         emit SendAssetSuccess(DESTINATION_IDENTIFIER, convertEVMTo65(toAccount), units, uint256(1e17), address(token1), 1);
 
-        GARP.processMessage(_metadata, toExecuteMessage, FEE_RECIPITANT);
+        GARP.processPacket(_metadata, toExecuteMessage, FEE_RECIPITANT);
     }
 
 
@@ -192,7 +202,7 @@ contract TestSendAssetUnderwrite is TestCommon {
         (bytes memory _metadata, bytes memory toExecuteMessage) = getVerifiedMessage(address(GARP), messageWithContext);
 
         vm.recordLogs();
-        GARP.processMessage(_metadata, toExecuteMessage, FEE_RECIPITANT);
+        GARP.processPacket(_metadata, toExecuteMessage, FEE_RECIPITANT);
         entries = vm.getRecordedLogs();
 
         // check that the user received their tokens like nothing happened.
@@ -217,7 +227,7 @@ contract TestSendAssetUnderwrite is TestCommon {
             1
         );
 
-        GARP.processMessage(_metadata, toExecuteMessage, FEE_RECIPITANT);
+        GARP.processPacket(_metadata, toExecuteMessage, FEE_RECIPITANT);
 
     }
 }

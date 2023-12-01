@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.13;
+pragma solidity ^0.8.19;
 
 import "forge-std/Test.sol";
 import { TestCommon } from "../TestCommon.t.sol";
@@ -69,13 +69,13 @@ contract TestExpireUnderwrite is TestCommon {
         );
 
         // check that storage has been set.
-        (, address refundTo, ) = CCI.underwritingStorage(identifier);
+        (, address refundTo,) = CCI.underwritingStorage(identifier);
         assertEq(
             refundTo,
             address(this)
         );
 
-        vm.warp(block.timestamp + maxUnderwritingDuration * 2);
+        vm.roll(block.number + maxUnderwritingDuration * 2);
 
         vm.prank(expirer);
         CCI.expireUnderwrite(
@@ -88,7 +88,7 @@ contract TestExpireUnderwrite is TestCommon {
             hex"0000"
         );
 
-        (, refundTo, ) = CCI.underwritingStorage(identifier);
+        (, refundTo,) = CCI.underwritingStorage(identifier);
         assertEq(
             refundTo,
             address(0)
@@ -139,13 +139,13 @@ contract TestExpireUnderwrite is TestCommon {
             hex"0000"
         );
 
-        (, ,uint80 expiry) = CCI.underwritingStorage(identifier);
+        (, ,uint96 expiry) = CCI.underwritingStorage(identifier);
 
 
         vm.prank(expirer);
         vm.expectRevert(
             abi.encodeWithSignature("UnderwriteNotExpired(uint256)", (
-                expiry-block.timestamp
+                expiry-block.number
             ))
         );
         CCI.expireUnderwrite(

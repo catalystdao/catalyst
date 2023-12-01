@@ -81,6 +81,46 @@ class PoARelayer(MessageSigner):
                 "GI_contract": Web3.to_checksum_address("0x00000001a9818a7807998dbc243b05F2B3CfF6f4"),
                 "key": os.environ["PRIVATE_KEY_ROUTER"],
                 "legacy": False
+            },
+            165: {
+                "name": "omnitestnet",
+                "confirmations": 0,
+                "url": os.environ["omnitestnet"],
+                "GI_contract": Web3.to_checksum_address("0x00000001a9818a7807998dbc243b05F2B3CfF6f4"),
+                "key": os.environ["PRIVATE_KEY_ROUTER"],
+                "legacy": True
+            },
+            5611: {
+                "name": "opbnbtestnet",
+                "confirmations": 0,
+                "url": os.environ["opbnbtestnet"],
+                "GI_contract": Web3.to_checksum_address("0x00000001a9818a7807998dbc243b05F2B3CfF6f4"),
+                "key": os.environ["PRIVATE_KEY_ROUTER"],
+                "legacy": True
+            },
+            97: {
+                "name": "bsctestnet",
+                "confirmations": 0,
+                "url": os.environ["bsctestnet"],
+                "GI_contract": Web3.to_checksum_address("0x00000001a9818a7807998dbc243b05F2B3CfF6f4"),
+                "key": os.environ["PRIVATE_KEY_ROUTER"],
+                "legacy": True
+            },
+            1738: {
+                "name": "inevmdevnet",
+                "confirmations": 0,
+                "url": os.environ["inevmdevnet"],
+                "GI_contract": Web3.to_checksum_address("0x00000001a9818a7807998dbc243b05F2B3CfF6f4"),
+                "key": os.environ["PRIVATE_KEY_ROUTER"],
+                "legacy": True
+            },
+            534351: {
+                "name": "scrollsepolia",
+                "confirmations": 0,
+                "url": os.environ["scrollsepolia"],
+                "GI_contract": Web3.to_checksum_address("0x00000001a9818a7807998dbc243b05F2B3CfF6f4"),
+                "key": os.environ["PRIVATE_KEY_ROUTER"],
+                "legacy": True
             }
         }
     ):
@@ -177,17 +217,33 @@ class PoARelayer(MessageSigner):
         w3 = self.chains[toChain]["w3"]
 
         try:
-            # Execute the transaction on the target side:
-            tx = GI.functions.processMessage(
+            # Build the transaction and simulate
+            GI.functions.processPacket(
+                signature[1], signature[0], encode(["address"], [relayer_address.address])
+            ).build_transaction(
+                {
+                    "from": relayer_address.address,
+                    "nonce": self.chains[toChain]["nonce"]
+                } if not self.chains[toChain]["legacy"] else {
+                    "from": relayer_address.address,
+                    "nonce": self.chains[toChain]["nonce"],
+                    "gasPrice": w3.eth.gas_price
+                }
+            )
+            
+            # If we can build it and correctly simulate it, execute with 2 million gas.
+            tx = GI.functions.processPacket(
                 signature[1], signature[0], encode(["address"], [relayer_address.address])
             ).build_transaction(
                 {
                     "from": relayer_address.address,
                     "nonce": self.chains[toChain]["nonce"],
+                    "gas": 2000000
                 } if not self.chains[toChain]["legacy"] else {
                     "from": relayer_address.address,
                     "nonce": self.chains[toChain]["nonce"],
-                    "gasPrice": w3.eth.gas_price
+                    "gasPrice": w3.eth.gas_price,
+                    "gas": 2000000
                 }
             )
         except web3.exceptions.ContractCustomError as e:
@@ -207,16 +263,18 @@ class PoARelayer(MessageSigner):
             logging.info(f"Rate limited, simulate, {error_message}")
             sleep(1)
             try:
-                tx = GI.functions.processMessage(
+                tx = GI.functions.processPacket(
                     signature[1], signature[0], encode(["address"], [relayer_address.address])
                 ).build_transaction(
                     {
                         "from": relayer_address.address,
                         "nonce": self.chains[toChain]["nonce"],
+                        "gas": 2000000
                     } if not self.chains[toChain]["legacy"] else {
                         "from": relayer_address.address,
                         "nonce": self.chains[toChain]["nonce"],
-                        "gasPrice": w3.eth.gas_price
+                        "gasPrice": w3.eth.gas_price,
+                        "gas": 2000000
                     }
                 )
             except: return "no tx"
@@ -308,7 +366,12 @@ def main():
         logging.basicConfig(level=logging.INFO)
 
     relayer = PoARelayer()
-    relayer.run()
+    
+    while True:
+        try:
+            relayer.run()
+        except:
+            sleep(2)
 
 
 if __name__ == "__main__":

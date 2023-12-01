@@ -1,6 +1,6 @@
 //SPDX-License-Identifier: MIT
 
-pragma solidity 0.8.19;
+pragma solidity ^0.8.19;
 
 import {ERC20} from 'solmate/tokens/ERC20.sol';
 import {SafeTransferLib} from 'solmate/utils/SafeTransferLib.sol';
@@ -42,15 +42,18 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
     //-- Underwriting Errors --//
     error SwapAlreadyUnderwritten(); // d0c27c9f
     error UnderwriteDoesNotExist(bytes32 identifier); // ae029d69
-    error UnderwriteNotExpired(uint256 timeUnitilExpiry); // 62141db5
+    error UnderwriteNotExpired(uint256 blocksUnitilExpiry); // 62141db5
     error MaxUnderwriteDurationTooLong(); // 3f6368aa
+    error MaxUnderwriteDurationTooShort(); // 6229dcd0
     error NoVaultConnection(); // ea66ca6d
     error MaliciousVault(); // 847ca49a
+    error SwapRecentlyUnderwritten(); // 695b3a94
 
     //--- Events ---//
 
     event SwapFailed(bytes1 error);
     event RemoteImplementationSet(bytes32 chainIdentifier, bytes remoteCCI, bytes remoteGARP);
+    event MaxUnderwriteDuration(uint256 newMaxUnderwriteDuration);
     
     event MinGasFor(
         bytes32 identifier,
@@ -62,7 +65,7 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
     event UnderwriteSwap(
         bytes32 indexed identifier,
         address indexed underwriter,
-        uint80 expiry
+        uint96 expiry
     );
 
     event FulfillUnderwrite(
@@ -80,16 +83,21 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
     struct UnderwritingStorage {
         uint256 tokens;     // 1 slot
         address refundTo;   // 2 slot: 20/32
-        uint80 expiry;      // 2 slot: 30/32
+        uint96 expiry;      // 2 slot: 32/32
     }
 
-    bytes32 constant KECCACK_OF_NOTHING = 0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470;
+    uint256 constant INITIAL_MAX_UNDERWRITE_DURATION = 24 hours / 6 seconds; // Is 8 hours if the block time is 2 seconds, 48 hours if the block time is 12 seconds. Not a great initial value but better than nothing.
+    uint256 constant MAX_UNDERWRITE_DURATION = 14 days / 3 seconds;  // Is 9.3 days if the block time is 2 seconds, 56 days if the block time is 12 seconds. Not a great measure but better than no protection.
+    uint256 constant MIN_UNDERWRITE_DURATION = 1 hours / 12 seconds;  // Is 10 minutes if the block time is 2 seconds, 1 hour if the block time is 12 seconds. Not a great measure but better than no protection.
 
     //--- Config ---//
     IIncentivizedMessageEscrow public immutable GARP; // Set on deployment
 
 
     //-- Underwriting Config--//
+
+    // How many blocks should there be between when an identifier can be underwritten.
+    uint24 constant BUFFER_BLOCKS = 4;
 
     uint256 constant public UNDERWRITING_COLLATORAL = 35;  // 3,5% extra as collatoral.
     uint256 constant public UNDERWRITING_COLLATORAL_DENOMINATOR = 1000;
@@ -110,7 +118,7 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
     /// @notice Sets the maximum duration for underwriting.
     /// @dev Should be set long enough for all swaps to be able to confirm + a small buffer
     /// Should also be set long enough to not take up an excess amount of escrow usage.
-    uint256 public maxUnderwritingDuration = 24 hours;
+    uint256 public maxUnderwritingDuration = INITIAL_MAX_UNDERWRITE_DURATION;
 
     /// @notice Maps underwriting identifiers to underwriting state.
     /// refundTo can be checked to see if the ID has been underwritten.
@@ -121,6 +129,8 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
         require(address(GARP_) != address(0));  // dev: GARP_ cannot be zero address
         GARP = IIncentivizedMessageEscrow(GARP_);
         _transferOwnership(defaultOwner);
+
+        emit MaxUnderwriteDuration(INITIAL_MAX_UNDERWRITE_DURATION);
     }
 
 
@@ -134,11 +144,20 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
         emit MinGasFor(chainIdentifier, minGas);
     }
 
+    /// @notice Sets the new max underwrite duration, which is the period of time
+    /// before an underwrite can be expired. When an underwrite is expired, the underwriter
+    /// loses all capital provided.
+    /// @dev This function can be exploited by the owner. By setting newMaxUnderwriteDuration to (almost) 0 right before someone calls underwrite and then
+    /// expiring them before the actual swap arrives. The min protection here is not sufficient since it needs to be well into 
+    /// when a message can be validated. As a result, the owner of this contract should be a timelock which underwriters monitor.
     function setMaxUnderwritingDuration(uint256 newMaxUnderwriteDuration) onlyOwner override external {
+        if (newMaxUnderwriteDuration <= MIN_UNDERWRITE_DURATION) revert MaxUnderwriteDurationTooShort();
         // If the underwriting duration is too long, users can freeze up a lot of value for not a lot of cost.
-        if (newMaxUnderwriteDuration > 15 days) revert MaxUnderwriteDurationTooLong();
+        if (newMaxUnderwriteDuration > MAX_UNDERWRITE_DURATION) revert MaxUnderwriteDurationTooLong();
 
         maxUnderwritingDuration = newMaxUnderwriteDuration;
+        
+        emit MaxUnderwriteDuration(newMaxUnderwriteDuration);
     }
 
     modifier checkRouteDescription(ICatalystV1Vault.RouteDescription calldata routeDescription) {
@@ -188,14 +207,16 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
     /// and then reverts a relevant ack which can be exposed on the origin to provide information
     /// about why the transaction didn't execute as expected.
     function _handleError(bytes memory err) pure internal returns (bytes1) {
-        bytes32 errorHash = keccak256(err);
+        // To only get the error identifier, only use the first 8 bytes. This lets us add additional error
+        // data for easier debugger on trace.
+        bytes8 errorIdentifier = bytes8(err);
         // We can use memory sclies to get better insight into exactly the error which occured.
         // This would also allow us to reuse events.
         // However, it looks like it will significantly increase gas costs so this works for now.
         // It looks like Solidity will improve their error catch implementation which will replace this.
-        if (keccak256(abi.encodeWithSelector(ExceedsSecurityLimit.selector)) == errorHash) return 0x11;
-        if (keccak256(abi.encodeWithSelector(ReturnInsufficientOnReceive.selector)) == errorHash) return 0x12;
-        if (keccak256(abi.encodeWithSelector(VaultNotConnected.selector)) == errorHash) return 0x13;
+        if (bytes8(abi.encodeWithSelector(ExceedsSecurityLimit.selector)) == errorIdentifier) return 0x11;
+        if (bytes8(abi.encodeWithSelector(ReturnInsufficient.selector)) == errorIdentifier) return 0x12;
+        if (bytes8(abi.encodeWithSelector(VaultNotConnected.selector)) == errorIdentifier) return 0x13;
         return 0x10; // unknown error.
     }
 
@@ -206,7 +227,7 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
     function connectNewChain(bytes32 chainIdentifier, bytes calldata remoteCCI, bytes calldata remoteGARP) onlyOwner checkBytes65Address(remoteCCI) override external {
         // Check if the chain has already been set.
         // If it has, we don't allow setting it as another. This would impact existing pools.
-        if (keccak256(chainIdentifierToDestinationAddress[chainIdentifier]) != KECCACK_OF_NOTHING) revert ChainAlreadySetup();
+        if (chainIdentifierToDestinationAddress[chainIdentifier].length != 0) revert ChainAlreadySetup();
 
         // Set the remote CCI.
         chainIdentifierToDestinationAddress[chainIdentifier] = remoteCCI;
@@ -214,7 +235,7 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
         emit RemoteImplementationSet(chainIdentifier, remoteCCI, remoteGARP);
 
         // Set the remote messaging router escrow.
-        GARP.setRemoteEscrowImplementation(chainIdentifier, remoteGARP);
+        GARP.setRemoteImplementation(chainIdentifier, remoteGARP);
     }
 
     /**
@@ -274,7 +295,7 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
             calldata_
         );
 
-        GARP.escrowMessage{value: msg.value}(
+        GARP.submitMessage{value: msg.value}(
             routeDescription.chainIdentifier,
             chainIdentifierToDestinationAddress[routeDescription.chainIdentifier],
             data,
@@ -325,7 +346,7 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
             calldata_
         );
 
-        GARP.escrowMessage{value: msg.value}(
+        GARP.submitMessage{value: msg.value}(
             routeDescription.chainIdentifier,
             chainIdentifierToDestinationAddress[routeDescription.chainIdentifier],
             data,
@@ -407,7 +428,7 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
      * @param destinationIdentifier Identifier for the destination chain
      * @param acknowledgement The acknowledgement bytes for the cross-chain swap.
      */
-    function ackMessage(bytes32 destinationIdentifier, bytes32 messageIdentifier, bytes calldata acknowledgement) onlyGARP override external {
+    function receiveAck(bytes32 destinationIdentifier, bytes32 messageIdentifier, bytes calldata acknowledgement) onlyGARP override external {
         // If the transaction executed but some logic failed, an ack is sent back with an error acknowledgement.
         // This is known as "fail on ack". The package should be failed.
         // The acknowledgement is prepended the message, so we need to fetch it.
@@ -679,6 +700,35 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
 
         // For most implementations, the observation can be ignored because of the strength of point 1.
 
+        // Check if the associated underwrite just arrived and has already been matched.
+        // This is an issue when the swap was JUST underwriten, JUST arrived (and matched), AND someone else JUST underwrote the swap.
+        // To give the user a bit more protection, we add a buffer of size `BUFFER_BLOCKS`.
+        // SwapAlreadyUnderwritten vs SwapRecentlyUnderwritten: It is very likely that this block is trigger not because a swap was fulfilled but because it has already been underwritten. That is because (lastTouchBlock + BUFFER_BLOCKS >= uint96(block.number)) WILL ALWAYS be true when it is the case
+        // and SwapRecentlyUnderwritten will be the error. You might have expected the error "SwapAlreadyUnderwritten". However, we never get there so it
+        // cannot emit. We also cannot move that check up here, since then an external call would be made between a state check and a state modification. (reentry)
+        // As a result, SwapRecentlyUnderwritten will be emitted when a swap has already been underwritten EXCEPT when underwriting a swap through reentry.
+        // Then the reentry will underwrite the swap and the main call will fail with SwapAlreadyUnderwritten.
+        unchecked {
+            // Get the last touch block. For most underwrites it is going to be 0.
+            uint96 lastTouchBlock = underwritingStorage[identifier].expiry;
+            if (lastTouchBlock != 0) { // implies that the swap has never been underwritten.
+                // if lastTouchBlock > type(uint96).max + BUFFER_BLOCKS then lastTouchBlock + BUFFER_BLOCKS overflows.
+                // if lastTouchBlock < BUFFER_BLOCKS then lastTouchBlock - BUFFER_BLOCKS underflows.
+                if ((lastTouchBlock <  type(uint96).max - BUFFER_BLOCKS) && (lastTouchBlock > BUFFER_BLOCKS)) {
+                    // Add a reasonable buffer so if the transaction got into the memory pool and is delayed into the next blocks
+                    // it doesn't underwrite a non-existing swap.
+                    if (lastTouchBlock + BUFFER_BLOCKS >= uint96(block.number)) {
+                        // Check that uint96(block.number) hasn't overflowed and this is an old reference. We don't care about the underflow
+                        // as that will always return false.
+                        // First however, we need to check that this won't underflow.
+                        if (lastTouchBlock - BUFFER_BLOCKS <= uint96(block.number)) revert SwapRecentlyUnderwritten();
+                    }
+                } else {
+                    if (lastTouchBlock == uint96(block.number)) revert SwapRecentlyUnderwritten();
+                }
+            }
+        }
+
         // Get the number of purchased units from the vault. This uses a custom call which doesn't return
         // any assets.
         // This calls escrows the purchasedTokens on the vault.
@@ -691,19 +741,20 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
             minOut * (2 << 16) / (2 << 16 - uint256(underwriteIncentiveX16))  // minout is checked after underwrite fee.
         );
 
-        // The following number of lines act as re-entry protection.
+        // The following number of lines act as re-entry protection. Do not add any external call inbetween these lines.
 
         // Ensure the swap hasn't already been underwritten by checking if refundTo is set. 
+        // Notice that this is very unlikely to ever get emitted. Instead, read the comment about SwapRecentlyUnderwritten.
         if (underwritingStorage[identifier].refundTo != address(0)) revert SwapAlreadyUnderwritten();
 
         // Save the underwriting state.
         underwritingStorage[identifier] = UnderwritingStorage({
             tokens: purchasedTokens,
             refundTo: msg.sender,
-            expiry: uint80(uint256(block.timestamp) + uint256(maxUnderwritingDuration))  // Should never overflow.
+            expiry: uint96(uint256(block.number) + uint256(maxUnderwritingDuration))  // Should never overflow.
         });
 
-        // The above combination of lines act as local re-entry protection.
+        // The above combination of lines act as local re-entry protection. Do not add any external call inbetween these lines.
 
         // Collect tokens and collatoral from underwriter.
         // We still collect the tokens used to incentivise the underwriter as otherwise they could freely reserve liquidity
@@ -740,7 +791,7 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
         emit UnderwriteSwap(
             identifier,
             msg.sender,
-            uint80(uint256(block.timestamp) + uint256(maxUnderwritingDuration))
+            uint96(uint256(block.number) + uint256(maxUnderwritingDuration))
         );
     }
 
@@ -775,7 +826,7 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
         // This lets the underwriter reclaim *some* of the collatoral they provided if they change their mind or observed an issue.
         if (msg.sender != underwriteState.refundTo) {
             // Otherwise, the expiry time must have been passed.
-            if (underwriteState.expiry > block.timestamp) revert UnderwriteNotExpired(underwriteState.expiry - block.timestamp);
+            if (underwriteState.expiry > block.number) revert UnderwriteNotExpired(underwriteState.expiry - block.number);
         }
         uint256 underWrittenTokens = underwriteState.tokens;
         // The next line acts as reentry protection. When the storage is deleted underwriteState.refundTo == address(0) will be true.
@@ -823,6 +874,8 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
         bytes32 identifier,
         address toAsset,
         address vault,
+        bytes32 sourceIdentifier,
+        bytes calldata fromVault,
         uint16 underwriteIncentiveX16
     ) internal returns (bool swapUnderwritten) {
         UnderwritingStorage storage underwriteState = underwritingStorage[identifier];
@@ -835,9 +888,11 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
 
         // Reentry protection. No external calls are allowed before this line. The line 'if (refundTo == address(0)) ...' will always be true.
         delete underwritingStorage[identifier];
+        // Set the last touch block so someone doesn't underwrite this swap again.
+        underwritingStorage[identifier].expiry = uint96(block.number);
 
         // Delete escrow information and send swap tokens directly to the underwriter.
-        ICatalystV1Vault(vault).releaseUnderwriteAsset(refundTo, identifier, underwrittenTokenAmount, toAsset);
+        ICatalystV1Vault(vault).releaseUnderwriteAsset(refundTo, identifier, underwrittenTokenAmount, toAsset, sourceIdentifier, fromVault);
         // We know only need to handle the collatoral and underwriting incentive.
         // We also don't have to check that the vault didn't lie to us about underwriting.
 
@@ -870,9 +925,6 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
         // We know that toVault is an EVM address
         address toVault = address(bytes20(data[ TO_VAULT_START_EVM : TO_VAULT_END ]));
 
-        // Check that there is a connection. Otherwise, send a bad (non 0x00) ack back.
-        if (!ICatalystV1Vault(toVault)._vaultConnection(sourceIdentifier, fromVault)) return acknowledgement = 0x23;
-
         // Select excess calldata. Excess calldata is not decoded.
         bytes calldata cdata = data[CTX0_DATA_LENGTH_START:];
 
@@ -902,6 +954,8 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
             identifier,
             toAsset,
             toVault,
+            sourceIdentifier,
+            fromVault,
             underwriteIncentiveX16
         );
 

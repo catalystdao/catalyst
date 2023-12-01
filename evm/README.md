@@ -80,11 +80,7 @@ The deployment scheme is designed such that any deployment which matches the add
 
 ## Catalyst Setup
 
-Start by opening the Brownie interactive console. For simplicity, use a local ganache instance. This allows us to undo a block if we made a mistake `chain.undo()`, execute transaction from arbitrary addresses or access transaction traces `.call_trace(True)` for debugging purposes.
-
-```bash
-brownie console --network development
-```
+To easily interact with Catalyst, you can create a script. Start by importing `script/deployCatalyst.s.sol`. This script allows you to easily deploy the core protocol along with any dependencies.
 
 Import the relevant classes needed for this example:
 
