@@ -3,6 +3,7 @@ pragma solidity ^0.8.19;
 
 import { Token } from "./mocks/token.sol";
 import { TestCommon } from "./TestCommon.t.sol";
+import { ICatalystV1Vault } from "../src/ICatalystV1Vault.sol";
 
 contract ExampleTest is TestCommon {
     
@@ -34,5 +35,28 @@ contract ExampleTest is TestCommon {
     vault = catFactory.deployVault(
       address(volatileTemplate), assets, init_balances, weights, 10**18, 0, "Example Pool", "EXMP", address(CCI)
     );
+  }
+
+  function test_localswap() external {
+    // Make an account for testing
+    address alice = makeAddr("Alice");
+    uint256 swapAmount = 100 * 10**18;
+
+    // Get the token at index 0 from the vault
+    address fromToken = ICatalystV1Vault(vault)._tokenIndexing(0);
+    // Lets also get the to token while we are at it:
+    address toToken = ICatalystV1Vault(vault)._tokenIndexing(1);
+
+    Token(fromToken).transfer(alice, swapAmount);
+
+    // Approve as alice.
+    vm.prank(alice);
+    Token(fromToken).approve(vault, swapAmount);
+
+    uint256 minOut = 0;
+    vm.prank(alice);
+    uint256 swapReturn = ICatalystV1Vault(vault).localSwap(fromToken, toToken, swapAmount, minOut);
+    
+    assertEq(swapReturn, Token(toToken).balanceOf(alice), "Alice didn't get enough tokens");
   }
 }
