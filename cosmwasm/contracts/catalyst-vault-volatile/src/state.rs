@@ -759,7 +759,7 @@ pub fn send_asset(
         u,
         min_out,
         from_amount: effective_swap_amount,
-        from_asset: from_asset.get_asset_ref().to_string(),
+        from_asset_ref: from_asset.get_asset_ref().to_string(),
         underwrite_incentive_x16,
         block_number,
         calldata,

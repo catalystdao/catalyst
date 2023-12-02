@@ -59,7 +59,7 @@ pub fn execute(
             u,
             min_out,
             from_amount,
-            from_asset,
+            from_asset_ref,
             underwrite_incentive_x16,
             block_number,
             calldata,
@@ -74,7 +74,7 @@ pub fn execute(
             u,
             min_out,
             from_amount,
-            from_asset,
+            from_asset_ref,
             underwrite_incentive_x16,
             block_number,
             calldata
@@ -215,7 +215,7 @@ pub fn execute(
 /// * `u` - The outgoing 'units'.
 /// * `min_out` - The mininum `to_asset` output amount to get on the target vault.
 /// * `from_amount` - The `from_asset` amount sold to the vault.
-/// * `from_asset` - The source asset.
+/// * `from_asset_ref` - The source asset reference.
 /// * `underwrite_incentive_x16` - The share of the swap return that is offered to an underwriter as incentive.
 /// * `block_number` - The block number at which the transaction has been committed.
 /// * `calldata` - Arbitrary data to be executed on the target chain upon successful execution of the swap.
@@ -230,7 +230,7 @@ fn execute_send_cross_chain_asset(
     u: U256,
     min_out: U256,
     from_amount: Uint128,
-    from_asset: String,
+    from_asset_ref: String,
     underwrite_incentive_x16: u16,
     block_number: u32,
     calldata: Binary
@@ -244,7 +244,7 @@ fn execute_send_cross_chain_asset(
         u,
         min_out,
         from_amount,
-        from_asset,
+        from_asset_ref,
         underwrite_incentive_x16,
         block_number,
         calldata

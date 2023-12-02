@@ -20,7 +20,7 @@ pub enum ExecuteMsg {
         u: U256,
         min_out: U256,
         from_amount: Uint128,
-        from_asset: String,
+        from_asset_ref: String,
         underwrite_incentive_x16: u16,
         block_number: u32,
         calldata: Binary

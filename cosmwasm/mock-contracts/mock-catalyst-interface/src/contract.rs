@@ -36,7 +36,7 @@ pub fn execute(
             u,
             min_out,
             from_amount,
-            from_asset,
+            from_asset_ref,
             underwrite_incentive_x16,
             block_number,
             calldata,
@@ -49,7 +49,7 @@ pub fn execute(
             u,
             min_out,
             from_amount,
-            from_asset,
+            from_asset_ref,
             underwrite_incentive_x16,
             block_number,
             calldata,
@@ -166,7 +166,7 @@ fn execute_send_cross_chain_asset(
     u: U256,
     min_out: U256,
     from_amount: Uint128,
-    from_asset: String,
+    from_asset_ref: String,
     underwrite_incentive_x16: u16,
     block_number: u32,
     calldata: Binary,
@@ -188,7 +188,7 @@ fn execute_send_cross_chain_asset(
             .add_attribute("u", u)
             .add_attribute("min_out", min_out)
             .add_attribute("from_amount", from_amount)
-            .add_attribute("from_asset", from_asset)
+            .add_attribute("from_asset_ref", from_asset_ref)
             .add_attribute("underwrite_incentive_x16", underwrite_incentive_x16.to_string())
             .add_attribute("block_number", block_number.to_string())
             .add_attribute("calldata", calldata)
