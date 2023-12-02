@@ -37,6 +37,7 @@ pub enum CommandMsg {
         amount: CoinAmount,
         min_out: U256,
         fallback_account: String,
+        underwrite_incentive_x16: u16,
         calldata: Binary,
         incentive: IncentiveDescription
     },
@@ -149,6 +150,7 @@ pub fn execute_command(
             amount,
             min_out,
             fallback_account,
+            underwrite_incentive_x16,
             calldata,
             incentive
         } => catalyst::execute_send_asset(
@@ -163,6 +165,7 @@ pub fn execute_command(
             amount,
             min_out,
             fallback_account,
+            underwrite_incentive_x16,
             calldata,
             incentive
         ),

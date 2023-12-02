@@ -100,6 +100,7 @@ mod test_catalyst_commands {
                 amount: CoinAmount::Coin(swap_amount.clone()),
                 min_out: U256::zero(),
                 fallback_account: "fallback-account".to_string(),
+                underwrite_incentive_x16: 10101u16,
                 calldata: Binary(vec![]),
                 incentive: mock_incentive()
             }

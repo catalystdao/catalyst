@@ -89,6 +89,7 @@ pub fn execute_send_asset(
     amount: CoinAmount,
     min_out: U256,
     fallback_account: String,
+    underwrite_incentive_x16: u16,
     calldata: Binary,
     incentive: IncentiveDescription
 ) -> Result<CommandResult, ContractError> {
@@ -104,7 +105,7 @@ pub fn execute_send_asset(
         amount: swap_amount.amount,
         min_out,
         fallback_account,
-        underwrite_incentive_x16: 0u16, //TODO implement in router
+        underwrite_incentive_x16,
         calldata,
         incentive
     };
