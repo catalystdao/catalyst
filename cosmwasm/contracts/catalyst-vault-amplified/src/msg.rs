@@ -17,6 +17,7 @@ use cw20::{AllowanceResponse, TokenInfoResponse};
 #[cw_serde]
 pub enum AmplifiedExecuteExtension {
 
+    #[cfg(feature="amplification_update")]
     SetAmplification {
         target_timestamp: Uint64,
         target_amplification: Uint64
@@ -123,14 +124,17 @@ pub enum QueryMsg {
     // Amplified vault specific queries
     #[returns(AmplificationResponse)]
     Amplification {},
-    #[returns(TargetAmplificationResponse)]
-    TargetAmplification {},
-    #[returns(AmplificationUpdateFinishTimestampResponse)]
-    AmplificationUpdateFinishTimestamp {},
     #[returns(Balance0Response)]
     Balance0 {},
     #[returns(UnitTrackerResponse)]
     UnitTracker {},
+
+    #[cfg(feature="amplification_update")]
+    #[returns(TargetAmplificationResponse)]
+    TargetAmplification {},
+    #[cfg(feature="amplification_update")]
+    #[returns(AmplificationUpdateFinishTimestampResponse)]
+    AmplificationUpdateFinishTimestamp {},
 
 
     // Native Asset Implementation
@@ -156,16 +160,6 @@ pub struct AmplificationResponse {
 }
 
 #[cw_serde]
-pub struct TargetAmplificationResponse {
-    pub target_amplification: Uint64
-}
-
-#[cw_serde]
-pub struct AmplificationUpdateFinishTimestampResponse {
-    pub timestamp: Uint64
-}
-
-#[cw_serde]
 pub struct Balance0Response {
     pub balance_0: U256
 }
@@ -173,4 +167,16 @@ pub struct Balance0Response {
 #[cw_serde]
 pub struct UnitTrackerResponse {
     pub amount: I256
+}
+
+#[cfg(feature="amplification_update")]
+#[cw_serde]
+pub struct TargetAmplificationResponse {
+    pub target_amplification: Uint64
+}
+
+#[cfg(feature="amplification_update")]
+#[cw_serde]
+pub struct AmplificationUpdateFinishTimestampResponse {
+    pub timestamp: Uint64
 }

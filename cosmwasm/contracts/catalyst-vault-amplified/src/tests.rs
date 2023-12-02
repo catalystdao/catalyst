@@ -1,6 +1,5 @@
 mod helpers;
 mod parameters;
-mod test_amplification_update;
 mod test_deposit;
 mod test_fees;
 mod test_finish_setup;
@@ -18,6 +17,10 @@ mod test_underwriting;
 mod test_vault_connections;
 mod test_withdraw_even;
 mod test_withdraw_mixed;
+
+#[cfg(feature="amplification_update")]
+mod test_amplification_update;
+
 
 #[cfg(feature="asset_native")]
 pub use test_helpers::env::env_native_asset::{

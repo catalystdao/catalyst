@@ -24,8 +24,10 @@ use catalyst_vault_common::bindings::IntoVaultResponse;
 
 use crate::msg::{AmplifiedExecuteMsg, InstantiateMsg, QueryMsg, AmplifiedExecuteExtension};
 use crate::state::{
-    initialize_swap_curves, deposit_mixed, withdraw_all, withdraw_mixed, local_swap, send_asset, receive_asset, send_liquidity, receive_liquidity, query_calc_send_asset, query_calc_receive_asset, query_calc_local_swap, query_get_limit_capacity, on_send_asset_success_amplified, on_send_asset_failure_amplified, on_send_liquidity_failure_amplified, set_amplification, query_target_amplification, query_amplification_update_finish_timestamp, query_balance_0, query_amplification, query_unit_tracker, update_max_limit_capacity, underwrite_asset, release_underwrite_asset, delete_underwrite_asset
+    initialize_swap_curves, deposit_mixed, withdraw_all, withdraw_mixed, local_swap, send_asset, receive_asset, send_liquidity, receive_liquidity, query_calc_send_asset, query_calc_receive_asset, query_calc_local_swap, query_get_limit_capacity, on_send_asset_success_amplified, on_send_asset_failure_amplified, on_send_liquidity_failure_amplified, query_balance_0, query_amplification, query_unit_tracker, update_max_limit_capacity, underwrite_asset, release_underwrite_asset, delete_underwrite_asset
 };
+#[cfg(feature="amplification_update")]
+use crate::state::{set_amplification, query_target_amplification, query_amplification_update_finish_timestamp};
 
 // Version information
 const CONTRACT_NAME: &str = "catalyst-vault-amplified";
@@ -456,6 +458,8 @@ pub fn execute(
         AmplifiedExecuteMsg::Custom(extension) => {
 
             match extension {
+
+                #[cfg(feature="amplification_update")]
                 AmplifiedExecuteExtension::SetAmplification {
                     target_timestamp,
                     target_amplification
@@ -626,10 +630,13 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
 
         // Amplified-Specific Queries
         QueryMsg::Amplification {} => to_json_binary(&query_amplification(deps)?),
-        QueryMsg::TargetAmplification {} => to_json_binary(&query_target_amplification(deps)?),
-        QueryMsg::AmplificationUpdateFinishTimestamp {} => to_json_binary(&query_amplification_update_finish_timestamp(deps)?),
         QueryMsg::Balance0 {} => to_json_binary(&query_balance_0(deps, env)?),
         QueryMsg::UnitTracker {} => to_json_binary(&query_unit_tracker(deps)?),
+
+        #[cfg(feature="amplification_update")]
+        QueryMsg::TargetAmplification {} => to_json_binary(&query_target_amplification(deps)?),
+        #[cfg(feature="amplification_update")]
+        QueryMsg::AmplificationUpdateFinishTimestamp {} => to_json_binary(&query_amplification_update_finish_timestamp(deps)?),
 
         // Native asset query msgs
         #[cfg(feature="asset_native")]

@@ -1,4 +1,6 @@
-use cosmwasm_std::{Uint128, DepsMut, Env, MessageInfo, StdResult, CosmosMsg, to_json_binary, Deps, Binary, Uint64, Timestamp};
+use cosmwasm_std::{Uint128, DepsMut, Env, MessageInfo, StdResult, CosmosMsg, to_json_binary, Deps, Binary, Uint64};
+#[cfg(feature="amplification_update")]
+use cosmwasm_std::Timestamp;
 use cw_storage_plus::{Item, Map};
 use catalyst_interface_common::msg::ExecuteMsg as InterfaceExecuteMsg;
 use catalyst_types::{U256, I256, u256, Bytes32};
@@ -6,16 +8,22 @@ use catalyst_vault_common::{
     ContractError,
     event::{local_swap_event, send_asset_event, receive_asset_event, send_liquidity_event, receive_liquidity_event, deposit_event, withdraw_event, underwrite_asset_event},
     msg::{CalcSendAssetResponse, CalcReceiveAssetResponse, CalcLocalSwapResponse, GetLimitCapacityResponse}, 
-    state::{FACTORY, MAX_ASSETS, WEIGHTS, INITIAL_MINT_AMOUNT, VAULT_FEE, MAX_LIMIT_CAPACITY, USED_LIMIT_CAPACITY, CHAIN_INTERFACE, TOTAL_ESCROWED_LIQUIDITY, TOTAL_ESCROWED_ASSETS, is_connected, update_limit_capacity, collect_governance_fee_message, compute_send_asset_hash, compute_send_liquidity_hash, create_asset_escrow, create_liquidity_escrow, on_send_asset_success, get_limit_capacity, on_send_asset_failure, on_send_liquidity_failure, factory_owner, initialize_escrow_totals, initialize_limit_capacity, create_underwrite_escrow, release_underwrite_escrow}, bindings::{Asset, AssetTrait, VaultAssets, VaultAssetsTrait, VaultToken, VaultTokenTrait, VaultResponse, IntoCosmosCustomMsg, CustomMsg}
+    state::{FACTORY, MAX_ASSETS, WEIGHTS, INITIAL_MINT_AMOUNT, VAULT_FEE, MAX_LIMIT_CAPACITY, USED_LIMIT_CAPACITY, CHAIN_INTERFACE, TOTAL_ESCROWED_LIQUIDITY, TOTAL_ESCROWED_ASSETS, is_connected, update_limit_capacity, collect_governance_fee_message, compute_send_asset_hash, compute_send_liquidity_hash, create_asset_escrow, create_liquidity_escrow, on_send_asset_success, get_limit_capacity, on_send_asset_failure, on_send_liquidity_failure, initialize_escrow_totals, initialize_limit_capacity, create_underwrite_escrow, release_underwrite_escrow}, bindings::{Asset, AssetTrait, VaultAssets, VaultAssetsTrait, VaultToken, VaultTokenTrait, VaultResponse, IntoCosmosCustomMsg, CustomMsg}
 };
+#[cfg(feature="amplification_update")]
+use catalyst_vault_common::state::factory_owner;
 use fixed_point_math::{self, WAD, WADWAD, mul_wad_down, pow_wad, div_wad_up, div_wad_down, mul_wad_up};
 use generalised_incentives_common::state::IncentiveDescription;
 use std::ops::Div;
 
 use crate::{
     calculation_helpers::{calc_price_curve_area, calc_price_curve_limit, calc_combined_price_curves, calc_price_curve_limit_share, calc_weighted_alpha_0_ampped}, 
+    msg::{Balance0Response, AmplificationResponse, UnitTrackerResponse}
+};
+#[cfg(feature="amplification_update")]
+use crate::{
     event::set_amplification_event,
-    msg::{TargetAmplificationResponse, AmplificationUpdateFinishTimestampResponse, Balance0Response, AmplificationResponse, UnitTrackerResponse}
+    msg::{TargetAmplificationResponse, AmplificationUpdateFinishTimestampResponse}
 };
 
 
@@ -33,8 +41,11 @@ pub const TARGET_ONE_MINUS_AMP: Item<I256> = Item::new("catalyst-vault-amplified
 pub const AMP_UPDATE_TIMESTAMP_SECONDS: Item<Uint64> = Item::new("catalyst-vault-amplified-amp-update-timestamp");
 pub const AMP_UPDATE_FINISH_TIMESTAMP_SECONDS: Item<Uint64> = Item::new("catalyst-vault-amplified-amp-update-finish-timestamp");
 
+#[cfg(feature="amplification_update")]
 const MIN_ADJUSTMENT_TIME_SECONDS : Uint64 = Uint64::new(7 * 24 * 60 * 60);     // 7 days
+#[cfg(feature="amplification_update")]
 const MAX_ADJUSTMENT_TIME_SECONDS : Uint64 = Uint64::new(365 * 24 * 60 * 60);   // 1 year
+#[cfg(feature="amplification_update")]
 const MAX_AMP_ADJUSTMENT_FACTOR   : Uint64 = Uint64::new(2);
 
 
@@ -230,6 +241,7 @@ pub fn deposit_mixed(
     // This deposit function works by calculating how many units the deposited assets
     // are worth, and translating those into vault tokens.
 
+    #[cfg(feature="amplification_update")]
     update_amplification(deps, env.block.time)?;
 
     let one_minus_amp = ONE_MINUS_AMP.load(deps.storage)?;
@@ -462,6 +474,7 @@ pub fn withdraw_all(
     // the provided ones account for. Assets are then returned to the user according to
     // this share.
 
+    #[cfg(feature="amplification_update")]
     update_amplification(deps, env.block.time)?;
 
     // Compute the effective supply. Include the escrowed tokens to yield a smaller return.
@@ -715,6 +728,7 @@ pub fn withdraw_mixed(
     // This withdraw function works by computing the 'units' value of the provided vault tokens,
     // and then translating those into assets balances according to the provided 'withdraw_ratio'.
 
+    #[cfg(feature="amplification_update")]
     update_amplification(deps, env.block.time)?;
 
     // Compute the effective supply. Include the escrowed tokens to yield a smaller return.
@@ -955,6 +969,7 @@ pub fn local_swap(
     min_out: Uint128
 ) -> Result<VaultResponse, ContractError> {
 
+    #[cfg(feature="amplification_update")]
     update_amplification(deps, env.block.time)?;
 
     let vault_fee: Uint128 = mul_wad_down(
@@ -1086,6 +1101,7 @@ pub fn send_asset(
         return Err(ContractError::VaultNotConnected { channel_id, vault: to_vault })
     }
 
+    #[cfg(feature="amplification_update")]
     update_amplification(deps, env.block.time)?;
 
     let vault_fee: Uint128 = mul_wad_down(
@@ -1234,6 +1250,7 @@ fn handle_receive_asset(
     min_out: Uint128
 ) -> Result<Uint128, ContractError> {
 
+    #[cfg(feature="amplification_update")]
     update_amplification(deps, env.block.time)?;
 
     // Calculate the swap return.
@@ -1608,6 +1625,7 @@ pub fn send_liquidity(
         return Err(ContractError::VaultNotConnected { channel_id, vault: to_vault })
     }
 
+    #[cfg(feature="amplification_update")]
     update_amplification(deps, env.block.time)?;
 
     // Compute the effective supply. Include the escrowed tokens to yield a smaller return.
@@ -1774,6 +1792,7 @@ pub fn receive_liquidity(
         return Err(ContractError::VaultNotConnected { channel_id, vault: from_vault })
     }
 
+    #[cfg(feature="amplification_update")]
     update_amplification(deps, env.block.time)?;
 
     // Compute (w·alpha_0)^(1-k) to find the vault's reference balances (point at which
@@ -2354,6 +2373,8 @@ pub fn on_send_liquidity_failure_amplified(
 
 /// Allow governance to modify the vault amplification.
 /// 
+/// **NOTE**: To enable amplification update, set the 'amplification_update' feature flag.
+/// 
 /// **NOTE**: the amplification value has to be less than 1 (in WAD notation) and it cannot 
 /// introduce a change larger than `MAX_AMP_ADJUSTMENT_FACTOR`.
 /// 
@@ -2364,6 +2385,7 @@ pub fn on_send_liquidity_failure_amplified(
 /// * `target_timestamp` - The time at which the amplification update must be completed.
 /// * `target_amplification` - The new desired amplification.
 /// 
+#[cfg(feature="amplification_update")]
 pub fn set_amplification(
     deps: &mut DepsMut,
     env: &Env,
@@ -2443,11 +2465,14 @@ pub fn set_amplification(
 
 /// Perform an incremental amplification update.
 /// 
+/// **NOTE**: To enable amplification update, set the 'amplification_update' feature flag.
+/// 
 /// **DEV-NOTE**: This function should be called at the beginning of amplification-dependent functions.
 /// 
 /// # Arguments:
 /// * `current_timestamp` - The current time.
 /// 
+#[cfg(feature="amplification_update")]
 pub fn update_amplification(
     deps: &mut DepsMut,
     current_timestamp: Timestamp
@@ -2705,6 +2730,7 @@ pub fn query_amplification(
 
 
 /// Query the vault target amplification (in WAD notation).
+#[cfg(feature="amplification_update")]
 pub fn query_target_amplification(
     deps: Deps
 ) -> StdResult<TargetAmplificationResponse> {
@@ -2725,6 +2751,7 @@ pub fn query_target_amplification(
 
 
 /// Query the amplification update finish timestamp.
+#[cfg(feature="amplification_update")]
 pub fn query_amplification_update_finish_timestamp(
     deps: Deps
 ) -> StdResult<AmplificationUpdateFinishTimestampResponse> {

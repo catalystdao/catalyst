@@ -22,6 +22,7 @@ backtraces = ["cosmwasm-std/backtraces"]
 library = []
 asset_native = ["catalyst-vault-common/asset_native"]
 asset_cw20 = ["catalyst-vault-common/asset_cw20"]
+amplification_update = []
 
 [profile.release]
 codegen-units = 1
