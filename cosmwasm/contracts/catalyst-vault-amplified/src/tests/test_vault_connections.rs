@@ -214,7 +214,7 @@ mod test_amplified_vault_connections {
 
 
         // Tested action: set connection invoked by factory owner
-        let _response = env.execute_contract::<AmplifiedExecuteMsg>(
+        let response_result = env.execute_contract::<AmplifiedExecuteMsg>(
             Addr::unchecked(FACTORY_OWNER),     // ! Invoked by the factory owner
             vault.clone(),
             &AmplifiedExecuteMsg::SetConnection {
@@ -224,22 +224,14 @@ mod test_amplified_vault_connections {
             },
             vec![],
             vec![]
-        ).unwrap();
+        );
 
 
-        // Verify the connection is set
-        let queried_connection_state: bool = env.get_app().wrap().query_wasm_smart::<VaultConnectionStateResponse>(
-            vault.clone(),
-            &crate::msg::QueryMsg::VaultConnectionState {
-                channel_id: channel_id,
-                vault: target_vault
-            }
-        ).unwrap().state;
-
-        assert_eq!(
-            queried_connection_state,
-            true                        // ! Connection is set
-        )
+        // Make sure SetConnection fails
+        assert!(matches!(
+            response_result.err().unwrap().downcast().unwrap(),
+            ContractError::Unauthorized {}
+        ));
     }
 
 

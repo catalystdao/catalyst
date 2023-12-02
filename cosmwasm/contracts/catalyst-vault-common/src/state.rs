@@ -250,8 +250,7 @@ pub fn finish_setup(
 
 /// Setup a vault connection.
 /// 
-/// **NOTE**: This function checks whether the sender of the transaction is the factory owner or
-/// the setup master.
+/// **NOTE**: This function checks whether the sender of the transaction is the setup master.
 /// 
 /// # Arguments:
 /// * `channel_id` - The channel id that connects with the remoute vault.
@@ -266,12 +265,9 @@ pub fn set_connection(
     state: bool
 ) -> Result<VaultResponse, ContractError> {
 
-    // Only allow a connection setup if the caller is the setup master or the factory owner
+    // Only allow a connection setup if the caller is the setup master
     let setup_master = SETUP_MASTER.load(deps.storage)?;
-    if
-        Some(info.sender.clone()) != setup_master &&
-        info.sender != factory_owner(&deps.as_ref())?
-    {
+    if Some(info.sender.clone()) != setup_master {
         return Err(ContractError::Unauthorized {});
     }
 

@@ -334,7 +334,7 @@ where
     HandlerC: Module<ExecT = CustomMsg, QueryT = Empty>
 {
     app.execute_contract::<ExecuteMsg::<()>>(
-        Addr::unchecked(FACTORY_OWNER),
+        Addr::unchecked(SETUP_MASTER),
         vault_contract,
         &ExecuteMsg::<()>::SetConnection {
             channel_id,
