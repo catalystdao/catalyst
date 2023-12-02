@@ -5,6 +5,7 @@ use generalised_incentives_common::state::IncentiveDescription;
 
 #[cw_serde]
 pub struct InstantiateMsg {
+    pub owner: String
 }
 
 

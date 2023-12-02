@@ -26,15 +26,15 @@ pub const MAX_UNDERWRITE_DURATION_ALLOWED_BLOCKS: Uint64 = Uint64::new(15 * 24 *
 pub fn instantiate(
     deps: DepsMut,
     _env: Env,
-    info: MessageInfo,
-    _msg: InstantiateMsg,
+    _info: MessageInfo,
+    msg: InstantiateMsg,
 ) -> Result<InterfaceResponse, ContractError> {
 
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
     setup(
         deps,
-        info,
+        msg.owner,
         MAX_UNDERWRITE_DURATION_INITIAL_BLOCKS,
         Some(MIN_UNDERWRITE_DURATION_ALLOWED_BLOCKS),
         Some(MAX_UNDERWRITE_DURATION_ALLOWED_BLOCKS)

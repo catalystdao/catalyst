@@ -7,6 +7,7 @@ use generalised_incentives_common::{msg::EstimateAddtionalCostResponse, state::I
 
 #[cw_serde]
 pub struct InstantiateMsg {
+    pub owner: String,
     pub generalised_incentives: String
 }
 

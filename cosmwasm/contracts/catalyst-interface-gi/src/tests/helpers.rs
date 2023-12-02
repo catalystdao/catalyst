@@ -62,6 +62,7 @@ where
         contract_code_storage,
         Addr::unchecked(SETUP_MASTER),
         &InstantiateMsg {
+            owner: SETUP_MASTER.to_string(),
             generalised_incentives
         },
         &[],

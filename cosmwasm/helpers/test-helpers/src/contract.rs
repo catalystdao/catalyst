@@ -114,7 +114,9 @@ where
     app.instantiate_contract(
         contract_code_storage,
         Addr::unchecked(SETUP_MASTER),
-        &catalyst_interface_common::msg::InstantiateMsg {},
+        &catalyst_interface_common::msg::InstantiateMsg {
+            owner: SETUP_MASTER.to_string()
+        },
         &[],
         "interface",
         None

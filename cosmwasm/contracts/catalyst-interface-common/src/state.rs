@@ -111,6 +111,7 @@ pub fn ack_fail(
 /// Setup the interface on instantiation.
 /// 
 /// # Arguments:
+/// * `owner` - The owner of the interface.
 /// * `max_underwrite_duration` - The initial maximum underwrite duration.
 /// * `min_underwrite_duration_allowed` - The minimum underwrite duration allowed. If `None`, 
 /// defaults to a hardcoded constant.
@@ -119,7 +120,7 @@ pub fn ack_fail(
 /// 
 pub fn setup(
     mut deps: DepsMut,
-    info: MessageInfo,
+    owner: String,
     max_underwrite_duration: Uint64,
     min_underwrite_duration_allowed: Option<Uint64>,
     max_underwrite_duration_allowed: Option<Uint64>
@@ -132,7 +133,8 @@ pub fn setup(
         max_underwrite_duration_allowed
     )?;
 
-    let set_owner_event = set_owner_unchecked(deps, info.sender)?;
+    let validated_owner = deps.api.addr_validate(&owner)?;
+    let set_owner_event = set_owner_unchecked(deps, validated_owner)?;
 
     Ok(
         Response::new()

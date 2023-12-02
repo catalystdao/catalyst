@@ -5,6 +5,7 @@ use catalyst_types::{U256, Bytes32};
 
 #[cw_serde]
 pub struct InstantiateMsg {
+    pub owner: String
 }
 
 

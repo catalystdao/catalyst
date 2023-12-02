@@ -21,15 +21,15 @@ const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 pub fn instantiate(
     deps: DepsMut,
     _env: Env,
-    info: MessageInfo,
-    _msg: InstantiateMsg,
+    _info: MessageInfo,
+    msg: InstantiateMsg,
 ) -> Result<InterfaceResponse, ContractError> {
 
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
     setup(
         deps,
-        info,
+        msg.owner,
         MAX_UNDERWRITE_DURATION_INITIAL_BLOCKS,
         Some(MIN_UNDERWRITE_DURATION_ALLOWED_BLOCKS),
         Some(MAX_UNDERWRITE_DURATION_ALLOWED_BLOCKS)
@@ -443,7 +443,9 @@ mod catalyst_interface_ibc_tests {
             deps.as_mut(),
             mock_env(),
             mock_info(DEPLOYER_ADDR, &vec![]),
-            InstantiateMsg {}
+            InstantiateMsg {
+                owner: DEPLOYER_ADDR.to_string()
+            }
         ).unwrap();
 
 
@@ -465,7 +467,9 @@ mod catalyst_interface_ibc_tests {
             deps.as_mut(),
             mock_env(),
             mock_info(DEPLOYER_ADDR, &vec![]),
-            InstantiateMsg {}
+            InstantiateMsg {
+                owner: DEPLOYER_ADDR.to_string()
+            }
         ).unwrap();
 
         // Add mock channel
@@ -497,7 +501,9 @@ mod catalyst_interface_ibc_tests {
             deps.as_mut(),
             mock_env(),
             mock_info(DEPLOYER_ADDR, &vec![]),
-            InstantiateMsg {}
+            InstantiateMsg {
+                owner: DEPLOYER_ADDR.to_string()
+            }
         ).unwrap();
 
         // Open mock channels
@@ -531,7 +537,9 @@ mod catalyst_interface_ibc_tests {
             deps.as_mut(),
             mock_env(),
             mock_info(DEPLOYER_ADDR, &vec![]),
-            InstantiateMsg {}
+            InstantiateMsg {
+                owner: DEPLOYER_ADDR.to_string()
+            }
         ).unwrap();
 
 
@@ -556,7 +564,9 @@ mod catalyst_interface_ibc_tests {
             deps.as_mut(),
             mock_env(),
             mock_info(DEPLOYER_ADDR, &vec![]),
-            InstantiateMsg {}
+            InstantiateMsg {
+                owner: DEPLOYER_ADDR.to_string()
+            }
         ).unwrap();
 
         // Open mock channel
@@ -598,7 +608,9 @@ mod catalyst_interface_ibc_tests {
     //         deps.as_mut(),
     //         mock_env(),
     //         mock_info(DEPLOYER_ADDR, &vec![]),
-    //         InstantiateMsg {}
+    //         InstantiateMsg {
+    //             owner: DEPLOYER_ADDR.to_string()
+    //         }
     //     ).unwrap();
 
 
