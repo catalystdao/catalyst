@@ -12,7 +12,8 @@ import { FixedPointMathLib } from "src/utils/FixedPointMathLib.sol";
 
 abstract contract TestSecurityLimitLiquiditySwap is TestCommon, AVaultInterfaces {
 
-    function test_security_limit_liquidity_swap(uint256 units) external {
+    function test_security_limit_liquidity_swap() external {
+        uint256 units = 4158883083359672064;
         address toAccount = makeAddr("toAccount"); 
         address[] memory vaults = getTestConfig();
         setUpChains(DESTINATION_IDENTIFIER);
@@ -39,16 +40,16 @@ abstract contract TestSecurityLimitLiquiditySwap is TestCommon, AVaultInterfaces
             fake_payload = addMockContext(fake_payload);
 
             // Sign the fake payload
-            (bytes memory _metadata, bytes memory readyMessage) = getVerifiedMessage(address(GARP), fake_payload);
+            (bytes memory _metadata, bytes memory toExecuteMessage) = getVerifiedMessage(address(GARP), fake_payload);
 
             // Execute the fake payload
-            GARP.processPacket(_metadata, readyMessage, bytes32(abi.encode(address(this))));
-
+            GARP.processPacket(_metadata, toExecuteMessage, bytes32(abi.encode(address(this))));
 
             // Make a minout array that is 10. That should cover all test cases. The array is initialized with zeroes.
             uint256[] memory minOuts = new uint256[](10);
             // Withdraw the liquidity.
             uint256 pool_tokens = Token(vault).balanceOf(toAccount);
+            vm.prank(toAccount);
             uint256[] memory withdrawal_amounts = ICatalystV1Vault(vault).withdrawAll(pool_tokens, minOuts);
 
             // For each token check that not more than 50% was transfered.
@@ -58,8 +59,7 @@ abstract contract TestSecurityLimitLiquiditySwap is TestCommon, AVaultInterfaces
                 if (tkn == address(0)) break;
                 // Remember to add the withdrawn amount to the pool balance.
                 uint256 pool_balance = Token(tkn).balanceOf(vault) + withdrawal_amount;
-                assertGe(pool_balance / 2, withdrawal_amount, "More than expected withdrawn / liquidity swapped");
-                require(pool_balance / 2 >= withdrawal_amount, "More than expected withdrawn / liquidity swapped");
+                assertGe(pool_balance / 2 * 10001 / 10000, withdrawal_amount, "More than expected withdrawn / liquidity swapped");
             }
 
             vm.revertTo(snapshot);

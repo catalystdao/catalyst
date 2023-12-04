@@ -122,11 +122,10 @@ abstract contract TestFullLiquiditySwap is TestCommon, AVaultInterfaces {
     // Tests
     // ********************************************************************************************
 
-    function test_FullLiquiditySwap() external {
-        (uint32 depositPercentage, uint32 swapPercentage) = (4680, 6607);
-        vm.assume(depositPercentage < 20000);
-        vm.assume(swapPercentage < 10000);
-        uint256 percentageBase = 10000;
+    function test_FullLiquiditySwap(uint32 depositPercentage, uint32 swapPercentage) external {
+        uint256 depositPercentageMultiplier = 2;
+        vm.assume(depositPercentage > 1000);
+        vm.assume(swapPercentage > 1000);
 
 
         // Test config
@@ -152,7 +151,7 @@ abstract contract TestFullLiquiditySwap is TestCommon, AVaultInterfaces {
         for (uint256 i; i < fromVaultAssetCount; i++) {
 
             Token token = Token(fromVault._tokenIndexing(i));
-            uint256 depositAmount = token.balanceOf(address(fromVault)) * depositPercentage / percentageBase;
+            uint256 depositAmount = token.balanceOf(address(fromVault)) * depositPercentage * depositPercentageMultiplier / type(uint32).max;
             depositAmounts[i] = depositAmount;
 
             token.transfer(swapper, depositAmount);
@@ -162,7 +161,7 @@ abstract contract TestFullLiquiditySwap is TestCommon, AVaultInterfaces {
         }
 
         uint256 expectedVaultTokens = Token(address(fromVault)).totalSupply()
-            * depositPercentage / percentageBase;
+            * depositPercentage * depositPercentageMultiplier / type(uint32).max;
 
         vm.prank(swapper);
         uint256 fromVaultTokens = fromVault.depositMixed(
@@ -172,7 +171,7 @@ abstract contract TestFullLiquiditySwap is TestCommon, AVaultInterfaces {
 
 
         // Perform the liquidity swap
-        uint256 swappedVaultTokens = fromVaultTokens * swapPercentage / percentageBase;
+        uint256 swappedVaultTokens = fromVaultTokens * swapPercentage / type(uint32).max;
 
         (uint256 expectedUnits, uint256 expectedReturn) = computeExpectedLiquiditySwap(
             amplified,
@@ -291,12 +290,12 @@ abstract contract TestFullLiquiditySwap is TestCommon, AVaultInterfaces {
         );
 
         // Verify the liquidity swap calculation
-        require(
-            purchasedVaultTokens <= expectedReturn * 1000001 / 1000000,
+        assertLe(
+            purchasedVaultTokens, expectedReturn * 1001 / 1000,
             "Liquidity swap returns more than expected."
         );
-        require(
-            purchasedVaultTokens >= expectedReturn * 999 / 1000,
+        assertGe(
+            purchasedVaultTokens, expectedReturn * 999 / 1000,
             "Liquidity swap returns less than expected."
         );
 

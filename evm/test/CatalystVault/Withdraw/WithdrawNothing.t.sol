@@ -67,8 +67,8 @@ abstract contract TestWithdrawNothing is TestCommon, AVaultInterfaces {
             vault.withdrawAll(0, new uint256[](assetCount));
 
             // Verify no assets have been received
-            for (uint i; true; i++) {
-                address token = vault._tokenIndexing(i);
+            for (uint j = 0; true; j++) {
+                address token = vault._tokenIndexing(j);
 
                 if (token != address(0)) {
                     assert(Token(token).balanceOf(withdrawer) == 0);
@@ -108,9 +108,9 @@ abstract contract TestWithdrawNothing is TestCommon, AVaultInterfaces {
             Token(address(vault)).transfer(withdrawer, withdrawAmount);
 
             uint256[] memory initialBalances = new uint256[](assetCount);
-            for (uint i; i < assetCount; i++) {
-                Token token = Token(vault._tokenIndexing(i));
-                initialBalances[i] = token.balanceOf(address(vault));
+            for (uint j; j < assetCount; j++) {
+                Token token = Token(vault._tokenIndexing(j));
+                initialBalances[j] = token.balanceOf(address(vault));
             }
 
             uint256 snapshot = vm.snapshot();
@@ -126,9 +126,9 @@ abstract contract TestWithdrawNothing is TestCommon, AVaultInterfaces {
             );
 
             // Check the withdrawn amounts are approx correct
-            for (uint i; i < assetCount; i++) {
+            for (uint j; j < assetCount; j++) {
                 assert(
-                    tokenOutputs[i] <= initialBalances[i] * withdrawAmount / totalSupply * 101 / 100
+                    tokenOutputs[j] <= initialBalances[j] * withdrawAmount / totalSupply * 101 / 100
                 );
             }
 
@@ -143,14 +143,14 @@ abstract contract TestWithdrawNothing is TestCommon, AVaultInterfaces {
                 withdrawAmount,
                 getEvenWithdrawRatios(assetCount),
                 new uint256[](assetCount)  // Set minimum output to 0
-            ) returns (uint256[] memory tokenOutputs) {
+            ) returns (uint256[] memory callTokenOutputs) {
                  
                 // If the transaction does not revert, verify that the token return was very small
-                for (uint i; i < tokenOutputs.length; i++) {
-                    address token = vault._tokenIndexing(i);
+                for (uint j; j < callTokenOutputs.length; j++) {
+                    address token = vault._tokenIndexing(j);
                     if (token == address(0)) break;
                     assertLt(
-                        tokenOutputs[i] * 100000000 / Token(token).balanceOf(address(vault)),
+                        callTokenOutputs[j] * 100000000 / Token(token).balanceOf(address(vault)),
                         1
                     );
                 }
@@ -158,10 +158,10 @@ abstract contract TestWithdrawNothing is TestCommon, AVaultInterfaces {
             catch {
 
                 // Check the withdrawn amounts are approx correct
-                for (uint i; i < assetCount; i++) {
+                for (uint j; j < assetCount; j++) {
                     if (!amplified) continue;   // TODO implement once the `withdrawMixed` ratios implementation is overhauled 
                     assert(
-                        tokenOutputs[i] <= initialBalances[i] * withdrawAmount / totalSupply * 101 / 100
+                        tokenOutputs[j] <= initialBalances[j] * withdrawAmount / totalSupply * 101 / 100
                     );
                 }
             }
@@ -191,9 +191,9 @@ abstract contract TestWithdrawNothing is TestCommon, AVaultInterfaces {
 
 
             uint256[] memory initialBalances = new uint256[](assetCount);
-            for (uint i; i < assetCount; i++) {
-                Token token = Token(vault._tokenIndexing(i));
-                initialBalances[i] = token.balanceOf(address(vault));
+            for (uint j; j < assetCount; j++) {
+                Token token = Token(vault._tokenIndexing(j));
+                initialBalances[j] = token.balanceOf(address(vault));
             }
 
             uint256 snapshot = vm.snapshot();
@@ -209,9 +209,9 @@ abstract contract TestWithdrawNothing is TestCommon, AVaultInterfaces {
 
 
             // Check the withdrawn amounts are approx correct
-            for (uint i; i < assetCount; i++) {
+            for (uint j; j < assetCount; j++) {
                 assert(
-                    tokenOutputs[i] <= initialBalances[i] * withdrawAmount / totalSupply * 101 / 100
+                    tokenOutputs[j] <= initialBalances[j] * withdrawAmount / totalSupply * 101 / 100
                 );
             }
 
@@ -227,10 +227,10 @@ abstract contract TestWithdrawNothing is TestCommon, AVaultInterfaces {
             );
 
             // Check the withdrawn amounts are approx correct
-            for (uint i; i < assetCount; i++) {
+            for (uint j; j < assetCount; j++) {
                 if (!amplified) continue;   // TODO implement once the `withdrawMixed` ratios implementation is overhauled 
                 assert(
-                    tokenOutputs[i] <= initialBalances[i] * withdrawAmount / totalSupply * 101 / 100
+                    tokenOutputs[j] <= initialBalances[j] * withdrawAmount / totalSupply * 101 / 100
                 );
             }
         }
