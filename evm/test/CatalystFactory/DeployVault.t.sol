@@ -83,7 +83,8 @@ contract TestDeployVault is TestCommon {
         );
     }
 
-    function test_deploy_3_token_amplified(uint16[3] memory weights_, uint64 amplification) external {
+    function test_deploy_3_token_amplified(uint16[3] memory weights_, uint64 amplificationPercentage) external {
+        uint64 amplification = 10**18 * amplificationPercentage / type(uint64).max;
         vm.assume(amplification < 10**18);
         vm.assume(0 < amplification);
         vm.assume(weights_[0] > 0);
@@ -105,7 +106,8 @@ contract TestDeployVault is TestCommon {
         t_deploy_amplified(tokens, init_balances, weights, amplification);
     }
 
-    function test_deploy_2_token_amplified(uint16[2] memory weights_, uint64 amplification) external {
+    function test_deploy_2_token_amplified(uint16[2] memory weights_, uint64 amplificationPercentage) external {
+        uint64 amplification = 10**18 * amplificationPercentage / type(uint64).max;
         vm.assume(amplification < 10**18);
         vm.assume(0 < amplification);
         vm.assume(weights_[0] > 0);
