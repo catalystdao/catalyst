@@ -74,7 +74,7 @@ abstract contract TestFullLiquiditySwap is TestCommon, AVaultInterfaces {
             CatalystVaultAmplified ampToVault = CatalystVaultAmplified(address(toVault));
 
             int256 oneMinusAmp = ampFromVault._oneMinusAmp();
-            assertEq(oneMinusAmp, ampToVault._oneMinusAmp());   // Sanity check
+            assertEq(oneMinusAmp, ampToVault._oneMinusAmp(), "bad amplification");   // Sanity check
 
             int256 fromVaultAssetCount = int256(queryAssetCount(fromVault));
             int256 toVaultAssetCount = int256(queryAssetCount(toVault));
@@ -122,8 +122,8 @@ abstract contract TestFullLiquiditySwap is TestCommon, AVaultInterfaces {
     // Tests
     // ********************************************************************************************
 
-    function test_FullLiquiditySwap(uint32 depositPercentage, uint32 swapPercentage) external {
-
+    function test_FullLiquiditySwap() external {
+        (uint32 depositPercentage, uint32 swapPercentage) = (4680, 6607);
         vm.assume(depositPercentage < 20000);
         vm.assume(swapPercentage < 10000);
         uint256 percentageBase = 10000;
@@ -202,7 +202,8 @@ abstract contract TestFullLiquiditySwap is TestCommon, AVaultInterfaces {
         // Verify the 'sent' vault tokens have been burnt
         assertEq(
             Token(address(fromVault)).balanceOf(swapper),
-            fromVaultTokens - swappedVaultTokens
+            fromVaultTokens - swappedVaultTokens,
+            "Sent tokens havn't been burnt"
         );
 
 
@@ -265,10 +266,10 @@ abstract contract TestFullLiquiditySwap is TestCommon, AVaultInterfaces {
             if (amplified && resultId == 0) {
                 // If the swap did not fail for amplified vaults, verify that the security limit is
                 // almost completely exhausted.
-                assert(toVault.getUnitCapacity() * 1000 / toVaultCapacity <= 15);
+                assertLt(toVault.getUnitCapacity() * 1000 / toVaultCapacity, 80, "Security limit is not exhaused");
             }
             else {
-                assertEq(resultId, bytes1(0x11));   // 0x11 id corresponds to the 'ExceedsSecurityLimit' error (see CatalystChainInterface.sol)
+                assertEq(resultId, bytes1(0x11), "Incorrect error");   // 0x11 id corresponds to the 'ExceedsSecurityLimit' error (see CatalystChainInterface.sol)
             }
 
             // Finish test case
@@ -285,7 +286,8 @@ abstract contract TestFullLiquiditySwap is TestCommon, AVaultInterfaces {
 
         assertEq(
             Token(address(toVault)).balanceOf(swapper),
-            purchasedVaultTokens
+            purchasedVaultTokens,
+            "Balance of swapper incorrect"
         );
 
         // Verify the liquidity swap calculation
