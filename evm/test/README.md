@@ -1,4 +1,16 @@
-# Catalust Tests
+# Catalyst Tests
+
+Tests can be run by
+```
+forge test -vvv
+```
+or coverage with
+```
+forge coverage --ir-minimum
+```
+Note that coverage doesn't work right now.
+
+## Test Structure
 
 Tests are organised based on which feature they test:
 
@@ -27,4 +39,3 @@ The majority of testing is for the Catalyst vaults, since this is where the majo
 
 For the simplest example, see *./CatalystVault/LocalSwap.t.sol*. This contract is inherited by *./CatalystVault/Volatile/VolatileLocalSwap.t.sol* where the test is run.
 
-## 
