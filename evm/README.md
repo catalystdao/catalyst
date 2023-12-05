@@ -81,6 +81,18 @@ forge test -vvv
 
 Compiling the tests takes a significant amount of time but running the tests themselves is almost instant. The `-vvv` argument prints trace for any failling tests. Many tests are designed for fuzzing. By default, 100 fuzzes are made. To increase the number of runs add the argument `--fuzz-runs 1000`. If the number of runs is particularly high (>10000) some tests might fail with "rejected too many inputs".
 
+## Coverage
+
+Coverage currently doesn't work. It is unclear if this is an issue with Foundry or Solidity. The repository uses the Soldiity pipeline `--via-ir` to circumvent the *stack too deep* issue. The result is that when Foundry tries to re-compile the contracts without any optimisations it fails.
+
+The forge argument `-ir-minimum` has to be used to compile the contracts using the `ir` representation. Note that this changes the mapping of source code to compiled code and some sections can be incorrectled marked as uncovered or covered.
+
+```
+forge coverage --ir-minimum
+```
+
+Currently, this doesn't work.
+
 # Deploying Catalyst
 
 This repository contains a helper script for deployment `script/DeployCatalyst.s.sol` which is based on `script/DeployContracts.s.sol` which is the origin for most of the testing configuration. This deploys core swap contracts but not the cross-chain interface. This is instead done by `script/DeployInterfaces.s.sol` which also handles management/deployment of the dependency on [Generalised Incentives](https://github.com/catalystdao/GeneralisedIncentives).
