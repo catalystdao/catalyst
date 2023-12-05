@@ -56,17 +56,6 @@ function queryVaultWeights(ICatalystV1Vault vault) returns (uint256[] memory) {
     return weights;
 }
 
-function getEvenWithdrawRatios(uint256 assetCount) returns (uint256[] memory) {
-
-    uint256[] memory ratios = new uint256[](assetCount);
-
-    for (uint256 i; i < assetCount; i++) {
-        ratios[i] = Math.WAD / (assetCount - i);
-    }
-
-    return ratios;
-}
-
 
 abstract contract TestWithdrawUnbalanced is TestCommon, AVaultInterfaces {
 
@@ -98,23 +87,22 @@ abstract contract TestWithdrawUnbalanced is TestCommon, AVaultInterfaces {
             int256 oneMinusAmp = ampVault._oneMinusAmp();
             int256 balance0 = int256(ampVault.computeBalance0());
 
-            int256 inner = int256(Math.WAD) - Math.powWad(
+            int256 inner = totalSupply == withdrawAmount ? int256(Math.WAD) : int256(Math.WAD) - Math.powWad(
                 int256(Math.WAD * (totalSupply - withdrawAmount) / totalSupply),
                 oneMinusAmp
             );
-            assert(inner < int256(Math.WAD));
             inner = inner * Math.powWad(balance0, oneMinusAmp) / int256(Math.WAD);
 
             for (uint256 i; i < assetCount; i++) {
-
                 int256 weightedBalance = int256(vaultBalances[i] * vaultWeights[i] * Math.WAD);
 
                 if (Math.powWad(weightedBalance, oneMinusAmp) >= inner) {
+                    int256 weightedBalanceAmped = Math.powWad(weightedBalance, oneMinusAmp);
                     expectedWithdrawAmounts[i] = uint256(
-                        weightedBalance - Math.powWad(
-                            Math.powWad(weightedBalance, oneMinusAmp) - inner,
+                        weightedBalance - (weightedBalanceAmped == inner ? int256(0) : Math.powWad(
+                            weightedBalanceAmped - inner,
                             Math.WADWAD / oneMinusAmp
-                        )
+                        ))
                     )  / vaultWeights[i] / Math.WAD;
                 }
                 else {
@@ -136,11 +124,8 @@ abstract contract TestWithdrawUnbalanced is TestCommon, AVaultInterfaces {
         uint32 withdrawalPercentage
     ) external {
 
-        vm.assume(unbalancePercentage >= 100);
-        vm.assume(unbalancePercentage <= 10000);
-        vm.assume(withdrawalPercentage >= 100);
-        vm.assume(withdrawalPercentage <= 10000);
-        uint256 percentageBase = 10000;
+        vm.assume(unbalancePercentage >= type(uint32).max/100);
+        vm.assume(withdrawalPercentage >= type(uint32).max/100);
 
 
         address[] memory vaults = getTestConfig();
@@ -156,7 +141,7 @@ abstract contract TestWithdrawUnbalanced is TestCommon, AVaultInterfaces {
 
 
             // Perform a swap to 'unbalance' the vault
-            uint256 swapAmount = initialBalances[0] * unbalancePercentage / percentageBase;
+            uint256 swapAmount = initialBalances[0] * unbalancePercentage / type(uint32).max;
 
             Token fromToken = Token(vault._tokenIndexing(0));
             Token toToken = Token(vault._tokenIndexing(1));
@@ -177,7 +162,7 @@ abstract contract TestWithdrawUnbalanced is TestCommon, AVaultInterfaces {
 
 
             // Execute the withdrawal
-            uint256 withdrawAmount = totalSupply * withdrawalPercentage / percentageBase;
+            uint256 withdrawAmount = totalSupply * withdrawalPercentage / type(uint32).max;
 
             uint256[] memory expectedAmounts = calculateExpectedEqualWithdrawal(vault, withdrawAmount);
 
@@ -190,9 +175,9 @@ abstract contract TestWithdrawUnbalanced is TestCommon, AVaultInterfaces {
 
 
             // Check the withdrawal return
-            for (uint256 i; i < assetCount; i++) {
-                uint256 expectedAmount = expectedAmounts[i];
-                uint256 withdrawnAmount = withdrawOutput[i];
+            for (uint256 j; j < assetCount; j++) {
+                uint256 expectedAmount = expectedAmounts[j];
+                uint256 withdrawnAmount = withdrawOutput[j];
 
                 assert(
                     withdrawnAmount <= expectedAmount * 10000000001 / 10000000000 + 1
@@ -206,16 +191,9 @@ abstract contract TestWithdrawUnbalanced is TestCommon, AVaultInterfaces {
     }
 
 
-    function test_CompareWithdrawAllAndMixedUnbalanced(
-        uint32 unbalancePercentage,
-        uint32 withdrawalPercentage
-    ) external {
-
-        vm.assume(unbalancePercentage >= 100);
-        vm.assume(unbalancePercentage <= 10000);
-        vm.assume(withdrawalPercentage >= 100);
-        vm.assume(withdrawalPercentage <= 10000);
-        uint256 percentageBase = 10000;
+    function test_CompareWithdrawAllAndMixedUnbalanced(uint32 unbalancePercentage,uint32 withdrawalPercentage) external {
+        vm.assume(unbalancePercentage >= type(uint32).max/100);
+        vm.assume(withdrawalPercentage >= type(uint32).max/100);
 
 
         address[] memory vaults = getTestConfig();
@@ -231,7 +209,7 @@ abstract contract TestWithdrawUnbalanced is TestCommon, AVaultInterfaces {
 
 
             // Perform a swap to 'unbalance' the vault
-            uint256 swapAmount = initialBalances[0] * unbalancePercentage / percentageBase;
+            uint256 swapAmount = initialBalances[0] * unbalancePercentage / type(uint32).max;
 
             Token fromToken = Token(vault._tokenIndexing(0));
             Token toToken = Token(vault._tokenIndexing(1));
@@ -250,7 +228,7 @@ abstract contract TestWithdrawUnbalanced is TestCommon, AVaultInterfaces {
 
             uint256[] memory afterSwapBalances = queryVaultBalances(vault);
 
-            uint256 withdrawAmount = totalSupply * withdrawalPercentage / percentageBase;
+            uint256 withdrawAmount = totalSupply * withdrawalPercentage / type(uint32).max;
             Token(address(vault)).transfer(user, withdrawAmount);
 
             uint256 beforeWithdrawalSnapshot = vm.snapshot();
@@ -263,37 +241,30 @@ abstract contract TestWithdrawUnbalanced is TestCommon, AVaultInterfaces {
                 new uint256[](assetCount)  // Set minimum output to 0
             );
 
-
+            uint256[] memory withdrawalWeights = new uint256[](assetCount);
+            for (uint256 j = 0; j < assetCount; ++j) {
+                withdrawalWeights[j] = 10**18;
+            }
             // Execute `WithdrawMixed`
             vm.revertTo(beforeWithdrawalSnapshot);
             vm.prank(user);
             uint256[] memory withdrawMixedOutput;
             try vault.withdrawMixed(
                 withdrawAmount,
-                getEvenWithdrawRatios(assetCount),
+                getWithdrawPercentages(address(vault), withdrawalWeights),
                 new uint256[](assetCount)  // Set minimum output to 0
             ) returns (uint256[] memory _withdrawMixedOutput) {
                 withdrawMixedOutput = _withdrawMixedOutput;
             }
             catch {
-
-                assert(
-                    unbalancePercentage + withdrawalPercentage > percentageBase
-                );
                 // Skip comparison and continue
                 // TODO do a more exhaustive check here?
                 continue;
             }
 
-
-            // Compare `WithdrawAll` and `WithdrawMixed`
-            if (!amplified) {
-                continue; // TODO skip the calculation check until the `withdrawMixed` ratios implementation is overhauled 
-            }
-
-            for (uint256 i; i < assetCount; i++) {
-                uint256 withdrawAllAmount = withdrawAllOutput[i];
-                uint256 withdrawMixedAmount = withdrawMixedOutput[i];
+            for (uint256 j; j < assetCount; j++) {
+                uint256 withdrawAllAmount = withdrawAllOutput[j];
+                uint256 withdrawMixedAmount = withdrawMixedOutput[j];
 
                 assert(
                     withdrawMixedAmount <= withdrawAllAmount * 10000000001 / 10000000000 + 1

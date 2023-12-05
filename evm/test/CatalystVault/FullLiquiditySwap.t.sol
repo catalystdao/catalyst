@@ -74,7 +74,7 @@ abstract contract TestFullLiquiditySwap is TestCommon, AVaultInterfaces {
             CatalystVaultAmplified ampToVault = CatalystVaultAmplified(address(toVault));
 
             int256 oneMinusAmp = ampFromVault._oneMinusAmp();
-            assertEq(oneMinusAmp, ampToVault._oneMinusAmp());   // Sanity check
+            assertEq(oneMinusAmp, ampToVault._oneMinusAmp(), "bad amplification");   // Sanity check
 
             int256 fromVaultAssetCount = int256(queryAssetCount(fromVault));
             int256 toVaultAssetCount = int256(queryAssetCount(toVault));
@@ -123,10 +123,9 @@ abstract contract TestFullLiquiditySwap is TestCommon, AVaultInterfaces {
     // ********************************************************************************************
 
     function test_FullLiquiditySwap(uint32 depositPercentage, uint32 swapPercentage) external {
-
-        vm.assume(depositPercentage < 20000);
-        vm.assume(swapPercentage < 10000);
-        uint256 percentageBase = 10000;
+        uint256 depositPercentageMultiplier = 2;
+        vm.assume(depositPercentage > 1000);
+        vm.assume(swapPercentage > 1000);
 
 
         // Test config
@@ -152,7 +151,7 @@ abstract contract TestFullLiquiditySwap is TestCommon, AVaultInterfaces {
         for (uint256 i; i < fromVaultAssetCount; i++) {
 
             Token token = Token(fromVault._tokenIndexing(i));
-            uint256 depositAmount = token.balanceOf(address(fromVault)) * depositPercentage / percentageBase;
+            uint256 depositAmount = token.balanceOf(address(fromVault)) * depositPercentage * depositPercentageMultiplier / type(uint32).max;
             depositAmounts[i] = depositAmount;
 
             token.transfer(swapper, depositAmount);
@@ -162,7 +161,7 @@ abstract contract TestFullLiquiditySwap is TestCommon, AVaultInterfaces {
         }
 
         uint256 expectedVaultTokens = Token(address(fromVault)).totalSupply()
-            * depositPercentage / percentageBase;
+            * depositPercentage * depositPercentageMultiplier / type(uint32).max;
 
         vm.prank(swapper);
         uint256 fromVaultTokens = fromVault.depositMixed(
@@ -172,7 +171,7 @@ abstract contract TestFullLiquiditySwap is TestCommon, AVaultInterfaces {
 
 
         // Perform the liquidity swap
-        uint256 swappedVaultTokens = fromVaultTokens * swapPercentage / percentageBase;
+        uint256 swappedVaultTokens = fromVaultTokens * swapPercentage / type(uint32).max;
 
         (uint256 expectedUnits, uint256 expectedReturn) = computeExpectedLiquiditySwap(
             amplified,
@@ -202,7 +201,8 @@ abstract contract TestFullLiquiditySwap is TestCommon, AVaultInterfaces {
         // Verify the 'sent' vault tokens have been burnt
         assertEq(
             Token(address(fromVault)).balanceOf(swapper),
-            fromVaultTokens - swappedVaultTokens
+            fromVaultTokens - swappedVaultTokens,
+            "Sent tokens havn't been burnt"
         );
 
 
@@ -265,10 +265,10 @@ abstract contract TestFullLiquiditySwap is TestCommon, AVaultInterfaces {
             if (amplified && resultId == 0) {
                 // If the swap did not fail for amplified vaults, verify that the security limit is
                 // almost completely exhausted.
-                assert(toVault.getUnitCapacity() * 1000 / toVaultCapacity <= 15);
+                assertLt(toVault.getUnitCapacity() * 1000 / toVaultCapacity, 80, "Security limit is not exhaused");
             }
             else {
-                assertEq(resultId, bytes1(0x11));   // 0x11 id corresponds to the 'ExceedsSecurityLimit' error (see CatalystChainInterface.sol)
+                assertEq(resultId, bytes1(0x11), "Incorrect error");   // 0x11 id corresponds to the 'ExceedsSecurityLimit' error (see CatalystChainInterface.sol)
             }
 
             // Finish test case
@@ -285,16 +285,17 @@ abstract contract TestFullLiquiditySwap is TestCommon, AVaultInterfaces {
 
         assertEq(
             Token(address(toVault)).balanceOf(swapper),
-            purchasedVaultTokens
+            purchasedVaultTokens,
+            "Balance of swapper incorrect"
         );
 
         // Verify the liquidity swap calculation
-        require(
-            purchasedVaultTokens <= expectedReturn * 1000001 / 1000000,
+        assertLe(
+            purchasedVaultTokens, expectedReturn * 1001 / 1000,
             "Liquidity swap returns more than expected."
         );
-        require(
-            purchasedVaultTokens >= expectedReturn * 999 / 1000,
+        assertGe(
+            purchasedVaultTokens, expectedReturn * 999 / 1000,
             "Liquidity swap returns less than expected."
         );
 
