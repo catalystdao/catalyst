@@ -55,6 +55,43 @@ Catalyst v1 implements 2 type of swaps, *Asset Swaps* and *Liquidity Swaps*. The
   3. Convert units to an even mix of tokens
   4. Deposit the tokens into the vault.
 
+### Underwriting
+
+Catalyst allows fast execution for swaps. This is done by allowing external underwriters to pre-execute a swap which is then settled ocne the swap is confirmed by the associated AMB (and relayed).
+
+Each swap is assigned a somewhat-uniquely identifier which contains the context for executing a swap. The computation for the identifier can be found below.
+
+```solidity
+/**
+     * @notice Returns the underwriting identifier for a Catalyst swap.
+     */
+    function _getUnderwriteIdentifier(
+        address targetVault,
+        address toAsset,
+        uint256 U,
+        uint256 minOut,
+        address toAccount,
+        uint16 underwriteIncentiveX16,
+        bytes calldata cdata
+    ) internal pure returns (bytes32 identifier) {
+        return identifier = keccak256(
+            abi.encodePacked(
+                targetVault,
+                toAsset,
+                U,
+                minOut,
+                toAccount,
+                underwriteIncentiveX16,
+                cdata
+            )
+        );
+    }
+```
+
+When a swap is initially underwritten the identifier describes exactly how the swap is supposed to be executed. An underwriter collect the relevant swap execution context by decoding the AMB payload and then delivers it to the associated cross-chain interface `.underwrite`. The relevant swap is executed with the payment taken from the underwriter but escrowed on the vault. 
+
+Once the swap arrives, the identifier is calculated based on the payload and if an underwrite exists it is matched and the escrowed tokens are delivered to the underwriter.
+
 # Development with Foundry
 
 This repository uses Foundry for testing and development.
