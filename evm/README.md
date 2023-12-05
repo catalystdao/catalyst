@@ -55,14 +55,33 @@ Catalyst v1 implements 2 type of swaps, *Asset Swaps* and *Liquidity Swaps*. The
   3. Convert units to an even mix of tokens
   4. Deposit the tokens into the vault.
 
+# Development with Foundry
+
+This repository uses Foundry for testing and development.
+
 ## Dev dependencies
 
-- Install`foundryup`
+- Install `foundryup`
   
-  - `https://book.getfoundry.sh/getting-started/installation`
-  - or read https://book.getfoundry.sh/getting-started/installation
+  - https://book.getfoundry.sh/getting-started/installation
 
-# Development with Foundry
+## Contracts
+
+All contracts are stored in *`./contracts`*. These can be compiled by Foundry with `forge compile`, which will save the compilation output to *`./out`*. Foundry will automatically download the required solidity version.
+
+## Running tests
+
+Catalyst tests can be found within `./test`. A dedicated readme exists within which describes how tests are organised.
+
+To run the tests with Foundry:
+
+```
+forge test -vvv
+```
+
+Compiling the tests takes a significant amount of time but running the tests themselves is almost instant. The `-vvv` argument prints trace for any failling tests. Many tests are designed for fuzzing. By default, 100 fuzzes are made. To increase the number of runs add the argument `--fuzz-runs 1000`. If the number of runs is particularly high (>10000) some tests might fail with "rejected too many inputs".
+
+# Deploying Catalyst
 
 This repository contains a helper script for deployment `script/DeployCatalyst.s.sol` which is based on `script/DeployContracts.s.sol` which is the origin for most of the testing configuration. This deploys core swap contracts but not the cross-chain interface. This is instead done by `script/DeployInterfaces.s.sol` which also handles management/deployment of the dependency on [Generalised Incentives](https://github.com/catalystdao/GeneralisedIncentives).
 
@@ -427,25 +446,9 @@ If you run both tests: `forge test --match-contract ExampleTest -vvvv` you can s
 
 The final test file can be found in `./test/ExampleTest.t.sol`.
 
-## Contracts
+# Other comments
 
-All contracts are stored in *`./contracts`*. These can be compiled by brownie with `brownie compile`, which will save the compilation output to *`./build`*. Brownie will automatically download the required solidity and vyper compiler versions.
-
-### Solidity
-
-To compile solidity contracts directly (not through Brownie), perform the following steps:
-
-- Install the Solidity compiler
-  
-  - via brew: `brew tap ethereum/ethereum` then `brew install solidity`
-  - via npm: `pnpm install -g solc` (installs solcjs)
-  - [soliditylang.org](https://docs.soliditylang.org/en/latest/installing-solidity.html)
-
-- Install the required contract dependencies `pnpm install` (see the dev dependencies section of this README for further details).
-
-- Compile the contracts with `solc <path-to-contract> --base-path . --include-path node_modules`
-
-### Slither
+## Slither
 
 *[Slither](https://github.com/crytic/slither) is a Solidity static analysis framework written in Python 3. It runs a suite of vulnerability detectors, prints visual information about contract details, and provides an API to easily write custom analyses. Slither enables developers to find vulnerabilities, enhance their code comprehension, and quickly prototype custom analyses.*
 
