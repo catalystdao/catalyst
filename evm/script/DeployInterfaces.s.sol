@@ -43,11 +43,11 @@ contract DeployInterfaces is BaseMultiChainDeployer {
         wormholeBridge[Chains.Mumbai] = 0x0CBE91CF822c73C2315FB05100C2F714765d5c20;
     }
 
-    function deployGeneralisedIncentives(string memory version, bytes32 chainIdentifier) internal returns(address incentive) {
+    function deployGeneralisedIncentives(string memory version) internal returns(address incentive) {
         // Here is the map of id to version:
         // id == 0: Mock (POA)
         // id == 1: Wormhole
-
+        bytes32 chainIdentifier = abi.decode(config_chain.parseRaw(string.concat(".", version, ".", rpc[chain], ".", rpc[chain])), (bytes32));
         if (keccak256(abi.encodePacked(version)) == keccak256(abi.encodePacked("MOCK"))) {
             address signer = vm.envAddress("MOCK_SIGNER");
 
@@ -100,7 +100,7 @@ contract DeployInterfaces is BaseMultiChainDeployer {
         _;
     }
 
-    function deployBaseIncentive(bytes32 chainIdentifier) forEachInterface() internal {
+    function deployBaseIncentive() forEachInterface() internal {
         // Get the address of the incentives contract.
         address incentiveAddress = abi.decode(config_interfaces.parseRaw(string.concat(".", rpc[chain], ".", incentiveVersion, ".incentive")), (address));
         console.log("inc", incentiveVersion);
@@ -108,7 +108,7 @@ contract DeployInterfaces is BaseMultiChainDeployer {
             console.logAddress(incentiveAddress);
             return;
         }
-        address newlyDeployedIncentiveAddress = deployGeneralisedIncentives(incentiveVersion, chainIdentifier);
+        address newlyDeployedIncentiveAddress = deployGeneralisedIncentives(incentiveVersion);
         console.logAddress(newlyDeployedIncentiveAddress);
         require(newlyDeployedIncentiveAddress == incentiveAddress, "Newly deployed incentive address isn't expected address");
     }
@@ -137,11 +137,10 @@ contract DeployInterfaces is BaseMultiChainDeployer {
     
     function _deploy() internal {
         address admin = address(0x0000007aAAC54131e031b3C0D6557723f9365A5B);
-        bytes32 chainIdentifier = abi.decode(config_chain.parseRaw(string.concat(".", rpc[chain], ".chainIdentifier")), (bytes32));
 
         fund(vm.envAddress("INCENTIVE_DEPLOYER_ADDRESS"), 0.05*10**18);
 
-        deployBaseIncentive(chainIdentifier);
+        deployBaseIncentive();
 
         deployCCI(admin);
 
@@ -176,7 +175,7 @@ contract DeployInterfaces is BaseMultiChainDeployer {
                 !vm.keyExists(config_interfaces, string.concat(".", rpc[remoteChain], ".", incentiveVersion))
             ) continue;
 
-            bytes32 chainIdentifier = abi.decode(config_chain.parseRaw(string.concat(".", rpc[remoteChain], ".chainIdentifier")), (bytes32));
+            bytes32 chainIdentifier = abi.decode(config_chain.parseRaw(string.concat(".", incentiveVersion, ".", rpc[chain], ".",  rpc[remoteChain])), (bytes32));
             // check if a connection has already been set.
 
             if (keccak256(cci.chainIdentifierToDestinationAddress(chainIdentifier)) != KECCACK_OF_NOTHING) {

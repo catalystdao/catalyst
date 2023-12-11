@@ -1,38 +1,192 @@
 {
-    "sepolia": {
-        "chainIdentifier": 11155111
+    "EXAMPLE": {
+        "FROM_CHAIN": {
+            "TO_CHAIN": "CONNECTION_ID_AS_INTEGER"
+        }
     },
-    "mumbai": {
-        "chainIdentifier": 80001
+    "MOCK": {
+        "from": {
+            "to": 0
+        },
+        "sepolia": {
+            "sepolia": 11155111,
+            "mumbai": 80001,
+            "basegoerli": 84531,
+            "mantletestnet" : 5001,
+            "taikoeldfell": 167006,
+            "scrollsepolia": 534351,
+            "arbitrumgoerli": 421613,
+            "optimismgoerli": 420,
+            "bsctestnet": 97,
+            "opbnbtestnet": 5611,
+            "omnitestnet": 165,
+            "inevmdevnet": 1738
+        },
+        "mumbai": {
+            "sepolia": 11155111,
+            "mumbai": 80001,
+            "basegoerli": 84531,
+            "mantletestnet" : 5001,
+            "taikoeldfell": 167006,
+            "scrollsepolia": 534351,
+            "arbitrumgoerli": 421613,
+            "optimismgoerli": 420,
+            "bsctestnet": 97,
+            "opbnbtestnet": 5611,
+            "omnitestnet": 165,
+            "inevmdevnet": 1738
+        },
+        "basegoerli": {
+            "sepolia": 11155111,
+            "mumbai": 80001,
+            "basegoerli": 84531,
+            "mantletestnet" : 5001,
+            "taikoeldfell": 167006,
+            "scrollsepolia": 534351,
+            "arbitrumgoerli": 421613,
+            "optimismgoerli": 420,
+            "bsctestnet": 97,
+            "opbnbtestnet": 5611,
+            "omnitestnet": 165,
+            "inevmdevnet": 1738
+        },
+        "mantletestnet" : {
+            "sepolia": 11155111,
+            "mumbai": 80001,
+            "basegoerli": 84531,
+            "mantletestnet" : 5001,
+            "taikoeldfell": 167006,
+            "scrollsepolia": 534351,
+            "arbitrumgoerli": 421613,
+            "optimismgoerli": 420,
+            "bsctestnet": 97,
+            "opbnbtestnet": 5611,
+            "omnitestnet": 165,
+            "inevmdevnet": 1738
+        },
+        "taikoeldfell": {
+            "sepolia": 11155111,
+            "mumbai": 80001,
+            "basegoerli": 84531,
+            "mantletestnet" : 5001,
+            "taikoeldfell": 167006,
+            "scrollsepolia": 534351,
+            "arbitrumgoerli": 421613,
+            "optimismgoerli": 420,
+            "bsctestnet": 97,
+            "opbnbtestnet": 5611,
+            "omnitestnet": 165,
+            "inevmdevnet": 1738
+        },
+        "scrollsepolia": {
+            "sepolia": 11155111,
+            "mumbai": 80001,
+            "basegoerli": 84531,
+            "mantletestnet" : 5001,
+            "taikoeldfell": 167006,
+            "scrollsepolia": 534351,
+            "arbitrumgoerli": 421613,
+            "optimismgoerli": 420,
+            "bsctestnet": 97,
+            "opbnbtestnet": 5611,
+            "omnitestnet": 165,
+            "inevmdevnet": 1738
+        },
+        "arbitrumgoerli": {
+            "sepolia": 11155111,
+            "mumbai": 80001,
+            "basegoerli": 84531,
+            "mantletestnet" : 5001,
+            "taikoeldfell": 167006,
+            "scrollsepolia": 534351,
+            "arbitrumgoerli": 421613,
+            "optimismgoerli": 420,
+            "bsctestnet": 97,
+            "opbnbtestnet": 5611,
+            "omnitestnet": 165,
+            "inevmdevnet": 1738
+        },
+        "optimismgoerli": {
+            "sepolia": 11155111,
+            "mumbai": 80001,
+            "basegoerli": 84531,
+            "mantletestnet" : 5001,
+            "taikoeldfell": 167006,
+            "scrollsepolia": 534351,
+            "arbitrumgoerli": 421613,
+            "optimismgoerli": 420,
+            "bsctestnet": 97,
+            "opbnbtestnet": 5611,
+            "omnitestnet": 165,
+            "inevmdevnet": 1738
+        },
+        "bsctestnet": {
+            "sepolia": 11155111,
+            "mumbai": 80001,
+            "basegoerli": 84531,
+            "mantletestnet" : 5001,
+            "taikoeldfell": 167006,
+            "scrollsepolia": 534351,
+            "arbitrumgoerli": 421613,
+            "optimismgoerli": 420,
+            "bsctestnet": 97,
+            "opbnbtestnet": 5611,
+            "omnitestnet": 165,
+            "inevmdevnet": 1738
+        },
+        "opbnbtestnet": {
+            "sepolia": 11155111,
+            "mumbai": 80001,
+            "basegoerli": 84531,
+            "mantletestnet" : 5001,
+            "taikoeldfell": 167006,
+            "scrollsepolia": 534351,
+            "arbitrumgoerli": 421613,
+            "optimismgoerli": 420,
+            "bsctestnet": 97,
+            "opbnbtestnet": 5611,
+            "omnitestnet": 165,
+            "inevmdevnet": 1738
+        },
+        "omnitestnet": {
+            "sepolia": 11155111,
+            "mumbai": 80001,
+            "basegoerli": 84531,
+            "mantletestnet" : 5001,
+            "taikoeldfell": 167006,
+            "scrollsepolia": 534351,
+            "arbitrumgoerli": 421613,
+            "optimismgoerli": 420,
+            "bsctestnet": 97,
+            "opbnbtestnet": 5611,
+            "omnitestnet": 165,
+            "inevmdevnet": 1738
+        },
+        "inevmdevnet": {
+            "sepolia": 11155111,
+            "mumbai": 80001,
+            "basegoerli": 84531,
+            "mantletestnet" : 5001,
+            "taikoeldfell": 167006,
+            "scrollsepolia": 534351,
+            "arbitrumgoerli": 421613,
+            "optimismgoerli": 420,
+            "bsctestnet": 97,
+            "opbnbtestnet": 5611,
+            "omnitestnet": 165,
+            "inevmdevnet": 1738
+        }
     },
-    "basegoerli": {
-        "chainIdentifier": 84531
+    "WORMHOLE": {
+        "sepolia": {
+            "sepolia": 1,
+            "mumbai": 5
+        },
+        "mumbai": {
+            "sepolia": 1,
+            "mumbai": 5
+        }
     },
-    "mantletestnet" : {
-        "chainIdentifier": 5001
-    },
-    "taikoeldfell": {
-        "chainIdentifier": 167006
-    },
-    "scrollsepolia": {
-        "chainIdentifier": 534351
-    },
-    "arbitrumgoerli": {
-        "chainIdentifier": 421613
-    },
-    "optimismgoerli": {
-        "chainIdentifier": 420
-    },
-    "bsctestnet": {
-        "chainIdentifier": 97
-    },
-    "opbnbtestnet": {
-        "chainIdentifier": 5611
-    },
-    "omnitestnet": {
-        "chainIdentifier": 165
-    },
-    "inevmdevnet": {
-        "chainIdentifier": 1738
-    }
+    "HYPERLANE": {},
+    "POLYMER": {}
 }
