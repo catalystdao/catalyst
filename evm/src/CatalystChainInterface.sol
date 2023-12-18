@@ -62,10 +62,15 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
 
     //-- Underwriting Events --//
 
-    event UnderwriteSwap(
+    event SwapUnderwritten(
         bytes32 indexed identifier,
         address indexed underwriter,
-        uint96 expiry
+        uint96 expiry,
+        address targetVault,
+        address toAsset,
+        uint256 U,
+        address toAccount,
+        uint256 outAmount
     );
 
     event FulfillUnderwrite(
@@ -788,10 +793,15 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
             ICatalystReceiver(dataTarget).onCatalystCall(purchasedTokens, customCalldata);
         }
         
-        emit UnderwriteSwap(
+        emit SwapUnderwritten(
             identifier,
             msg.sender,
-            uint96(uint256(block.number) + uint256(maxUnderwritingDuration))
+            uint96(uint256(block.number) + uint256(maxUnderwritingDuration)),
+            targetVault,
+            toAsset,
+            U,
+            toAccount,
+            purchasedTokens
         );
     }
 
