@@ -26,7 +26,7 @@
     }
   },
   "basesepolia": {
-    "POLYMER": {
+    "Polymer": {
       "incentive": "0x000000d76e7F74E60cFAA1a885E01a8770C9E580",
       "interface": "0xe5cFD130edbC99bd38e0B7A2E0A0Ac10dDE30B5F"
     }
@@ -62,7 +62,7 @@
     }
   },
   "optimismsepolia": {
-    "POLYMER": {
+    "Polymer": {
       "incentive": "0x000000d76e7F74E60cFAA1a885E01a8770C9E580",
       "interface": "0xe5cFD130edbC99bd38e0B7A2E0A0Ac10dDE30B5F"
     }

@@ -76,7 +76,7 @@ contract DeployInterfaces is BaseMultiChainDeployer {
 
             vm.stopBroadcast();
             vm.startBroadcast(pk);
-        } else if (keccak256(abi.encodePacked(version)) == keccak256(abi.encodePacked("POLYMER"))) {
+        } else if (keccak256(abi.encodePacked(version)) == keccak256(abi.encodePacked("Polymer"))) {
             vm.stopBroadcast();
             uint256 pv_key = vm.envUint("POLYMER_DEPLOYER");
             vm.startBroadcast(pv_key);

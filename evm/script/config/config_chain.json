@@ -177,7 +177,7 @@
             "inevmdevnet": 1738
         }
     },
-    "WORMHOLE": {
+    "Wormhole": {
         "sepolia": {
             "sepolia": 1,
             "mumbai": 5
@@ -187,8 +187,8 @@
             "mumbai": 5
         }
     },
-    "HYPERLANE": {},
-    "POLYMER": {
+    "Hyperlane": {},
+    "Polymer": {
         "basesepolia": {
             "optimismsepolia": 44963396551096171397160558726282299286140034337171331191205222918429706551296
         },
