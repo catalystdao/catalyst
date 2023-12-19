@@ -21,7 +21,9 @@ contract BaseMultiChainDeployer is Script {
         BSCTestnet,
         MantleTestnet,
         OmniTestnet,
-        INEVMDevnet
+        INEVMDevnet,
+        BaseSepolia,
+        OptimismSepolia
     }
 
     mapping(Chains => string) public rpc;
@@ -81,6 +83,14 @@ contract BaseMultiChainDeployer is Script {
         rpc[Chains.INEVMDevnet] = "inevmdevnet";
         wrapped_gas[Chains.INEVMDevnet] = "WINJ";
         chain_list.push(Chains.INEVMDevnet);
+
+        rpc[Chains.BaseSepolia] = "basesepolia";
+        wrapped_gas[Chains.BaseSepolia] = "WOMNI";
+        chain_list.push(Chains.BaseSepolia);
+
+        rpc[Chains.OptimismSepolia] = "optimismsepolia";
+        wrapped_gas[Chains.OptimismSepolia] = "WINJ";
+        chain_list.push(Chains.OptimismSepolia);
     }
 
     uint256 pk;
