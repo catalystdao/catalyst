@@ -85,11 +85,11 @@ contract BaseMultiChainDeployer is Script {
         chain_list.push(Chains.INEVMDevnet);
 
         rpc[Chains.BaseSepolia] = "basesepolia";
-        wrapped_gas[Chains.BaseSepolia] = "WOMNI";
+        wrapped_gas[Chains.BaseSepolia] = "WETH";
         chain_list.push(Chains.BaseSepolia);
 
         rpc[Chains.OptimismSepolia] = "optimismsepolia";
-        wrapped_gas[Chains.OptimismSepolia] = "WINJ";
+        wrapped_gas[Chains.OptimismSepolia] = "WETH";
         chain_list.push(Chains.OptimismSepolia);
     }
 

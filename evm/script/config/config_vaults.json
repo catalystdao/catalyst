@@ -116,5 +116,30 @@
         "WGAS": 10000000000000000
       }
     }
+  },
+  "Polymer-BASE-OP": {
+    "cci_version": "Polymer",
+    "basesepolia": {
+      "cci": "0xe5cfd130edbc99bd38e0b7a2e0a0ac10dde30b5f",
+      "address": "0x517cea700498a086c42b19067b780ad723d5929f",
+      "weights": [
+        1
+      ],
+      "fee": 500000000000000,
+      "tokens": {
+        "WGAS": 10000000000000000
+      }
+    },
+    "optimismsepolia": {
+      "cci": "0xe5cfd130edbc99bd38e0b7a2e0a0ac10dde30b5f",
+      "address": "0x517cea700498a086c42b19067b780ad723d5929f",
+      "weights": [
+        1
+      ],
+      "fee": 500000000000000,
+      "tokens": {
+        "WGAS": 10000000000000000
+      }
+    }
   }
 }
