@@ -72,6 +72,7 @@ contract DeployInterfaces is BaseMultiChainDeployer {
             uint256 pv_key = vm.envUint("WORMHOLE_DEPLOYER");
             vm.startBroadcast(pv_key);
 
+            require(wormholeBridge[chain] != address(0), "Contract to send messages to cannot be 0.");
             incentive = address(new IncentivizedWormholeEscrow(vm.envAddress("CATALYST_ADDRESS"), wormholeBridge[chain]));
 
             vm.stopBroadcast();
@@ -81,7 +82,8 @@ contract DeployInterfaces is BaseMultiChainDeployer {
             uint256 pv_key = vm.envUint("POLYMER_DEPLOYER");
             vm.startBroadcast(pv_key);
 
-            incentive = address(new IncentivizedPolymerEscrow(vm.envAddress("CATALYST_ADDRESS"), wormholeBridge[chain]));
+            require(polymerContract[chain] != address(0), "Contract to send messages to cannot be 0.");
+            incentive = address(new IncentivizedPolymerEscrow(vm.envAddress("CATALYST_ADDRESS"), polymerContract[chain]));
 
             vm.stopBroadcast();
             vm.startBroadcast(pk);
