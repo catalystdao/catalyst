@@ -121,7 +121,7 @@
     "cci_version": "Polymer",
     "basesepolia": {
       "cci": "0x05c1da5011e22184b5d6c2f314a9908176589af3",
-      "address": "0x40939b7a3a6f3523c38458b2e9b0181583d1f18e",
+      "address": "0xf79fd327817b22179a3bef0cd8b8a9818700508d",
       "weights": [
         1
       ],
@@ -132,7 +132,7 @@
     },
     "optimismsepolia": {
       "cci": "0x05c1da5011e22184b5d6c2f314a9908176589af3",
-      "address": "0x40939b7a3a6f3523c38458b2e9b0181583d1f18e",
+      "address": "0xf79fd327817b22179a3bef0cd8b8a9818700508d",
       "weights": [
         1
       ],

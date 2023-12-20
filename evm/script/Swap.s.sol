@@ -27,8 +27,8 @@ contract Swap is Script, IMessageEscrowStructs {
         uint256 deployerPrivateKey = vm.envUint("CATALYST_DEPLOYER");
         vm.startBroadcast(deployerPrivateKey);
 
-        address fromVault = address(0x40939B7a3A6F3523C38458b2E9b0181583D1f18E);
-        address toVault = address(0x40939B7a3A6F3523C38458b2E9b0181583D1f18E);
+        address fromVault = address(0xF79fD327817b22179A3BeF0cD8B8a9818700508d);
+        address toVault = address(0xF79fD327817b22179A3BeF0cD8B8a9818700508d);
 
         // mantle
         address WGAS = ICatalystV1Vault(fromVault)._tokenIndexing(0);
@@ -41,7 +41,7 @@ contract Swap is Script, IMessageEscrowStructs {
         for (uint256 i = 0; i < n; ++i) {
             ICatalystV1Vault(fromVault).sendAsset{value: 0.1 ether}(
                 ICatalystV1Structs.RouteDescription({
-                    chainIdentifier: bytes32(uint256(44963396551096171397160558726282299286140034337171331191205222918429706551296)),
+                    chainIdentifier: bytes32(uint256(44963396551096171397185078654936153507873767889605736138143122744384644186112)),
                     toVault: abi.encodePacked(uint8(20), bytes32(0), abi.encode(toVault)),
                     toAccount: abi.encodePacked(uint8(20), bytes32(0), abi.encode(address(0x0000007aAAC54131e031b3C0D6557723f9365A5B))),
                     incentive: IncentiveDescription({
