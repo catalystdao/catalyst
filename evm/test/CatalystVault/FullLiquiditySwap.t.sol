@@ -41,8 +41,6 @@ abstract contract TestFullLiquiditySwap is TestCommon, AVaultInterfaces {
 
     function computeExpectedLiquiditySwap(
         bool amplified,
-        ICatalystV1Vault fromVault,
-        ICatalystV1Vault toVault,
         uint256 swapAmount
     ) private returns (uint256, uint256) {
 
@@ -117,29 +115,36 @@ abstract contract TestFullLiquiditySwap is TestCommon, AVaultInterfaces {
 
     bytes32 private constant FEE_RECIPIENT = bytes32(uint256(uint160(0xfee0eec191fa4f)));
 
+    uint256 private constant DEPOSIT_PERCENTAGE_MULTIPLIER = 2;
+    address private constant swapper = address(1);
 
+    // Move stack to storage
+    uint256 private expectedReturn;
+    uint256 private toVaultCapacity;
+    int256 private NtoVaultBalance0;
+    bytes private crossChainPacket;
+    bool private securityLimitPasses;
+    ICatalystV1Vault private fromVault;
+    ICatalystV1Vault private toVault;
 
     // Tests
     // ********************************************************************************************
 
     function test_FullLiquiditySwap(uint32 depositPercentage, uint32 swapPercentage) external {
-        uint256 depositPercentageMultiplier = 2;
         vm.assume(depositPercentage > 1000);
         vm.assume(swapPercentage > 1000);
-
 
         // Test config
         address[] memory vaults = getTestConfig();
         require(vaults.length >= 2, "Not enough vaults defined");
 
-        uint8 fromVaultIndex = 0;
-        uint8 toVaultIndex   = 1;
+        // uint8 fromVaultIndex = 0;
+        // uint8 toVaultIndex   = 1;
 
-        address swapper = address(1);
         vm.deal(swapper, 1 ether);     // Fund account for incentive payment
 
-        ICatalystV1Vault fromVault = ICatalystV1Vault(vaults[fromVaultIndex]);
-        ICatalystV1Vault toVault   = ICatalystV1Vault(vaults[toVaultIndex]);
+        fromVault = ICatalystV1Vault(vaults[0]);
+        toVault   = ICatalystV1Vault(vaults[1]);
 
         setConnection(address(fromVault), address(toVault), DESTINATION_IDENTIFIER, DESTINATION_IDENTIFIER);
 
@@ -151,7 +156,7 @@ abstract contract TestFullLiquiditySwap is TestCommon, AVaultInterfaces {
         for (uint256 i; i < fromVaultAssetCount; i++) {
 
             Token token = Token(fromVault._tokenIndexing(i));
-            uint256 depositAmount = token.balanceOf(address(fromVault)) * depositPercentage * depositPercentageMultiplier / type(uint32).max;
+            uint256 depositAmount = token.balanceOf(address(fromVault)) * depositPercentage * DEPOSIT_PERCENTAGE_MULTIPLIER / type(uint32).max;
             depositAmounts[i] = depositAmount;
 
             token.transfer(swapper, depositAmount);
@@ -160,23 +165,23 @@ abstract contract TestFullLiquiditySwap is TestCommon, AVaultInterfaces {
             token.approve(address(fromVault), depositAmount);
         }
 
-        uint256 expectedVaultTokens = Token(address(fromVault)).totalSupply()
-            * depositPercentage * depositPercentageMultiplier / type(uint32).max;
+        uint256 fromVaultTokens;
+        {
+            uint256 expectedVaultTokens = Token(address(fromVault)).totalSupply()
+                * depositPercentage * DEPOSIT_PERCENTAGE_MULTIPLIER / type(uint32).max;
 
-        vm.prank(swapper);
-        uint256 fromVaultTokens = fromVault.depositMixed(
-            depositAmounts,
-            expectedVaultTokens * 999 / 1000    // Minimum output
-        );
-
+            vm.prank(swapper);
+            fromVaultTokens = fromVault.depositMixed(
+                depositAmounts,
+                expectedVaultTokens * 999 / 1000    // Minimum output
+            );
+        }
 
         // Perform the liquidity swap
         uint256 swappedVaultTokens = fromVaultTokens * swapPercentage / type(uint32).max;
 
-        (uint256 expectedUnits, uint256 expectedReturn) = computeExpectedLiquiditySwap(
+        (, expectedReturn) = computeExpectedLiquiditySwap(
             amplified,
-            fromVault,
-            toVault,
             swappedVaultTokens
         );
 
@@ -207,8 +212,8 @@ abstract contract TestFullLiquiditySwap is TestCommon, AVaultInterfaces {
 
 
         // Check whether the swap passes the security limit.
-        uint256 toVaultCapacity = toVault.getUnitCapacity();
-        bool securityLimitPasses = false;
+        toVaultCapacity = toVault.getUnitCapacity();
+        securityLimitPasses = false;
         if (!amplified) {
             securityLimitPasses = toVaultCapacity >= outputUnits;
         }
@@ -216,7 +221,7 @@ abstract contract TestFullLiquiditySwap is TestCommon, AVaultInterfaces {
             int256 oneMinusAmp = CatalystVaultAmplified(address(toVault))._oneMinusAmp();
 
             int256 toVaultBalance0 = int256(CatalystVaultAmplified(address(toVault)).computeBalance0());
-            int256 NtoVaultBalance0 = int256(queryAssetCount(toVault)) * toVaultBalance0;
+            NtoVaultBalance0 = int256(queryAssetCount(toVault)) * toVaultBalance0;
 
             int256 NtoVaultBalance0Ampped = Math.powWad(NtoVaultBalance0, oneMinusAmp);
 
@@ -228,12 +233,10 @@ abstract contract TestFullLiquiditySwap is TestCommon, AVaultInterfaces {
                 if (diffAmped == 0) diff = 0;
                 else diff = uint256(Math.powWad(diffAmped, Math.WADWAD / oneMinusAmp));
 
-                uint256 expectedEffectiveSwapYield = uint256(
-                    Math.mulWadDown(
-                        uint256(NtoVaultBalance0),
-                        Math.WAD - diff
-                    ) / Math.WAD
-                );
+                // Save stack:
+                diff = Math.WAD - diff;
+
+                uint256 expectedEffectiveSwapYield = uint256(uint256(NtoVaultBalance0) * diff) / (Math.WAD**2);
 
                 securityLimitPasses = toVaultCapacity >= expectedEffectiveSwapYield * 11 / 10;  // Allow some extra margin for calculation errors
             }
@@ -242,7 +245,7 @@ abstract contract TestFullLiquiditySwap is TestCommon, AVaultInterfaces {
 
         // Complete the execution on the destination chain
         Vm.Log[] memory entries = vm.getRecordedLogs();
-        (, , bytes memory crossChainPacket) = abi.decode(entries[2].data, (bytes32, bytes, bytes));
+        (, , crossChainPacket) = abi.decode(entries[2].data, (bytes32, bytes, bytes));
 
         vm.recordLogs();
         (bytes memory _metadata, bytes memory toExecuteMessage) = getVerifiedMessage(address(GARP), crossChainPacket);
