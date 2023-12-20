@@ -14,7 +14,7 @@ import { TestDepositArbitrageExploit } from "../non-exploits/DepositArbitrage.t.
 import "../non-exploits/CrossSwap.SwapWorthlessToken.t.sol";
 import {Token} from "../../mocks/token.sol";
 
-contract TestVolatileInvariant2 is TestInvariant, TestSendAsset, TestReceiveAsset, TestSwapWorthlessTokenCrossChain, TestReceiveLiquidity, TestSendLiquidity, TestFullLiquiditySwap, TestExploitCircumventLiquiditySwapMinOut {
+contract TestVolatileInvariant2 is TestInvariant, TestSendAsset, TestReceiveAsset, TestSwapWorthlessTokenCrossChain, TestReceiveLiquidity, TestSendLiquidity, TestFullLiquiditySwap, TestExploitCircumventLiquiditySwapMinOut, TestDepositArbitrageExploit {
 
     address[] _vaults;
 
