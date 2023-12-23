@@ -283,12 +283,14 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
                 bytes32(0),     // EVM only uses 20 bytes. abi.encode packs the 20 bytes into 32 then we need to add 32 more
                 abi.encode(msg.sender)  // Use abi.encode to encode address into 32 bytes
             ),
-            routeDescription.toVault,    // Length is expected to be pre-encoded.
-            routeDescription.toAccount,  // Length is expected to be pre-encoded.
-            U,
-            toAssetIndex,
-            minOut,
-            fromAmount,
+            abi.encodePacked(
+                routeDescription.toVault,    // Length is expected to be pre-encoded.
+                routeDescription.toAccount,  // Length is expected to be pre-encoded.
+                U,
+                toAssetIndex,
+                minOut,
+                fromAmount
+            ),
             abi.encodePacked(
                 uint8(20),      // EVM addresses are 20 bytes.
                 bytes32(0),     // EVM only uses 20 bytes. abi.encode packs the 20 bytes into 32 then we need to add 32 more
@@ -337,9 +339,11 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
         // Encode payload. See CatalystPayload.sol for the payload definition
         bytes memory data = abi.encodePacked(
             CTX1_LIQUIDITY_SWAP,
-            uint8(20),  // EVM addresses are 20 bytes.
-            bytes32(0),  // EVM only uses 20 bytes. abi.encode packs the 20 bytes into 32 then we need to add 32 more
-            abi.encode(msg.sender),  // Use abi.encode to encode address into 32 bytes
+            abi.encodePacked(
+                uint8(20),  // EVM addresses are 20 bytes.
+                bytes32(0),  // EVM only uses 20 bytes. abi.encode packs the 20 bytes into 32 then we need to add 32 more
+                abi.encode(msg.sender)  // Use abi.encode to encode address into 32 bytes
+            ),
             routeDescription.toVault,  // Length is expected to be pre-encoded.
             routeDescription.toAccount,  // Length is expected to be pre-encoded.
             U,

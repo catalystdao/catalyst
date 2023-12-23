@@ -120,15 +120,13 @@ Compiling the tests takes a significant amount of time but running the tests the
 
 ## Coverage
 
-Coverage currently doesn't work. It is unclear if this is an issue with Foundry or Solidity. The repository uses the Soldiity pipeline `--via-ir` to circumvent the *stack too deep* issue. The result is that when Foundry tries to re-compile the contracts without any optimisations it fails.
+The repository uses the Soldiity pipeline `--via-ir` to circumvent the *stack too deep* issue. The result is that when Foundry tries to re-compile the contracts without any optimisations it fails.
 
 The forge argument `-ir-minimum` has to be used to compile the contracts using the `ir` representation. Note that this changes the mapping of source code to compiled code and some sections can be incorrectled marked as uncovered or covered.
 
 ```
 forge coverage --ir-minimum
 ```
-
-Currently, this doesn't work.
 
 # Deploying Catalyst
 
