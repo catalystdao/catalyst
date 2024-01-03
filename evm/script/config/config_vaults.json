@@ -1,127 +1,9 @@
 {
-  "MantleBase": {
+  "MumbaiSepolia": {
     "cci_version": "MOCK",
-    "mantletestnet": {
-      "cci": "0x307737d19238D3E07CC3E0167cEd991a32D21dD9",
-      "address": "0x0f1ff6216866cbad075a89a8e4cb3c7a9734df0d",
-      "weights": [
-        1
-      ],
-      "fee": 500000000000000,
-      "tokens": {
-        "WGAS": 10000000000000000
-      }
-    },
-    "basegoerli": {
-      "cci": "0x307737d19238D3E07CC3E0167cEd991a32D21dD9",
-      "address": "0x0f1ff6216866cbad075a89a8e4cb3c7a9734df0d",
-      "weights": [
-        1
-      ],
-      "fee": 500000000000000,
-      "tokens": {
-        "WGAS": 10000000000000000
-      }
-    }
-  },
-  "OmniStables": {
-    "cci_version": "NONE",
-    "amplification": 250000000000000000,
-    "omnitestnet": {
-      "cci": "0x0000000000000000000000000000000000000000",
-      "address": "0x0f1ff6216866cbad075a89a8e4cb3c7a9734df0d",
-      "weights": [
-        1,
-        1
-      ],
-      "fee": 500000000000000,
-      "tokens": {
-        "USDC": 1000000000000000000000,
-        "USDT": 1000000000000000000000
-      }
-    }
-  },
-  "CrossChainBNB": {
-    "cci_version": "MOCK",
-    "amplification": 250000000000000000,
-    "opbnbtestnet": {
-      "cci": "0x307737d19238D3E07CC3E0167cEd991a32D21dD9",
-      "address": "0x0f1ff6216866cbad075a89a8e4cb3c7a9734df0d",
-      "weights": [
-        1
-      ],
-      "fee": 500000000000000,
-      "tokens": {
-        "WGAS": 10000000000000000
-      }
-    },
-    "bsctestnet": {
-      "cci": "0x307737d19238D3E07CC3E0167cEd991a32D21dD9",
-      "address": "0x0f1ff6216866cbad075a89a8e4cb3c7a9734df0d",
-      "weights": [
-        1
-      ],
-      "fee": 500000000000000,
-      "tokens": {
-        "WGAS": 10000000000000000
-      }
-    }
-  },
-  "inEVM-Scroll": {
-    "cci_version": "MOCK",
-    "scrollsepolia": {
-      "cci": "0x307737d19238D3E07CC3E0167cEd991a32D21dD9",
-      "address": "0x0f1ff6216866cbad075a89a8e4cb3c7a9734df0d",
-      "weights": [
-        1
-      ],
-      "fee": 500000000000000,
-      "tokens": {
-        "WGAS": 10000000000000000
-      }
-    },
-    "inevmdevnet": {
-      "cci": "0x307737d19238D3E07CC3E0167cEd991a32D21dD9",
-      "address": "0x0f1ff6216866cbad075a89a8e4cb3c7a9734df0d",
-      "weights": [
-        1
-      ],
-      "fee": 500000000000000,
-      "tokens": {
-        "WGAS": 10000000000000000
-      }
-    }
-  },
-  "Sepolia-Mumbai": {
-    "cci_version": "MOCK",
-    "sepolia": {
-      "cci": "0x307737d19238D3E07CC3E0167cEd991a32D21dD9",
-      "address": "0x4207b55dcf38ad113c6e91721c932ccd19fd7604",
-      "weights": [
-        1
-      ],
-      "fee": 500000000000000,
-      "tokens": {
-        "WGAS": 10000000000000000
-      }
-    },
     "mumbai": {
-      "cci": "0x307737d19238D3E07CC3E0167cEd991a32D21dD9",
-      "address": "0x4207b55dcf38ad113c6e91721c932ccd19fd7604",
-      "weights": [
-        1
-      ],
-      "fee": 500000000000000,
-      "tokens": {
-        "WGAS": 10000000000000000
-      }
-    }
-  },
-  "Polymer-BASE-OP": {
-    "cci_version": "Polymer",
-    "basesepolia": {
-      "cci": "0x05c1da5011e22184b5d6c2f314a9908176589af3",
-      "address": "0xf79fd327817b22179a3bef0cd8b8a9818700508d",
+      "cci": "0xa55eaf1c45cdabe41c374862982f1543a60a8139",
+      "address": "0x6243df63dc7e97a5968578e9ae35008af3ec69df",
       "weights": [
         1
       ],
@@ -130,9 +12,9 @@
         "WGAS": 10000000000000000
       }
     },
-    "optimismsepolia": {
-      "cci": "0x05c1da5011e22184b5d6c2f314a9908176589af3",
-      "address": "0xf79fd327817b22179a3bef0cd8b8a9818700508d",
+    "sepolia": {
+      "cci": "0xa55eaf1c45cdabe41c374862982f1543a60a8139",
+      "address": "0x6243df63dc7e97a5968578e9ae35008af3ec69df",
       "weights": [
         1
       ],

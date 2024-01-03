@@ -122,6 +122,7 @@ contract Registry is BaseMultiChainDeployer {
         if (current_amplified_template != contracts.amplified_template) desc.modifyWhitelistedTemplate(contracts.amplified_template, "amplified");
 
         // Set (or update) the cross-chain interfaces
+        if (!vm.keyExists(config_interfaces, string.concat(".", rpc[chain]))) return;
         string[] memory availableInterfaces = vm.parseJsonKeys(config_interfaces, string.concat(".", rpc[chain]));
         for (uint256 i = 0; i < availableInterfaces.length; ++i) {
             string memory incentiveVersion = availableInterfaces[i];

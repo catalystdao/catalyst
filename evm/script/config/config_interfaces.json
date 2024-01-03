@@ -1,94 +1,68 @@
 {
   "sepolia": {
     "MOCK": {
-      "incentive": "0x00000001a9818a7807998dbc243b05F2B3CfF6f4",
-      "interface": "0x307737d19238D3E07CC3E0167cEd991a32D21dD9"
-    },
-    "Wormhole": {
-      "incentive": "0x000000ED80503e3A7EA614FFB5507FD52584a1f2",
-      "interface": "0xdEf8359242FfD915f427e53346A5dC645F0F2637"
+      "incentive": "0x0000006aA532b110f36f393887079b35F6C6979a",
+      "interface": "0xa55eAf1c45cDAbe41c374862982F1543A60A8139"
     }
   },
   "mumbai": {
     "MOCK": {
-      "incentive": "0x00000001a9818a7807998dbc243b05F2B3CfF6f4",
-      "interface": "0x307737d19238D3E07CC3E0167cEd991a32D21dD9"
-    },
-    "Wormhole": {
-      "incentive": "0x000000ED80503e3A7EA614FFB5507FD52584a1f2",
-      "interface": "0xdEf8359242FfD915f427e53346A5dC645F0F2637"
+      "incentive": "0x0000006aA532b110f36f393887079b35F6C6979a",
+      "interface": "0xa55eAf1c45cDAbe41c374862982F1543A60A8139"
     }
   },
   "basegoerli": {
     "MOCK": {
-      "incentive": "0x00000001a9818a7807998dbc243b05F2B3CfF6f4",
-      "interface": "0x307737d19238D3E07CC3E0167cEd991a32D21dD9"
-    }
-  },
-  "basesepolia": {
-    "Polymer": {
-      "incentive": "0x0000006D5B617207FFDA710ee3364FBC7e5276a8",
-      "interface": "0x05c1DA5011E22184b5d6C2f314a9908176589aF3"
+      "incentive": "0x0000006aA532b110f36f393887079b35F6C6979a",
+      "interface": "0xa55eAf1c45cDAbe41c374862982F1543A60A8139"
     }
   },
   "mantletestnet" : {
     "MOCK": {
-      "incentive": "0x00000001a9818a7807998dbc243b05F2B3CfF6f4",
-      "interface": "0x307737d19238D3E07CC3E0167cEd991a32D21dD9"
+      "incentive": "0x0000006aA532b110f36f393887079b35F6C6979a",
+      "interface": "0xa55eAf1c45cDAbe41c374862982F1543A60A8139"
     }
   },
   "taikoeldfell": {
     "MOCK": {
-      "incentive": "0x00000001a9818a7807998dbc243b05F2B3CfF6f4",
-      "interface": "0x307737d19238D3E07CC3E0167cEd991a32D21dD9"
+      "incentive": "0x0000006aA532b110f36f393887079b35F6C6979a",
+      "interface": "0xa55eAf1c45cDAbe41c374862982F1543A60A8139"
     }
   },
   "scrollsepolia": {
     "MOCK": {
-      "incentive": "0x00000001a9818a7807998dbc243b05F2B3CfF6f4",
-      "interface": "0x307737d19238D3E07CC3E0167cEd991a32D21dD9"
+      "incentive": "0x0000006aA532b110f36f393887079b35F6C6979a",
+      "interface": "0xa55eAf1c45cDAbe41c374862982F1543A60A8139"
     }
   },
   "arbitrumgoerli": {
     "MOCK": {
-      "incentive": "0x00000001a9818a7807998dbc243b05F2B3CfF6f4",
-      "interface": "0x307737d19238D3E07CC3E0167cEd991a32D21dD9"
+      "incentive": "0x0000006aA532b110f36f393887079b35F6C6979a",
+      "interface": "0xa55eAf1c45cDAbe41c374862982F1543A60A8139"
     }
   },
   "optimismgoerli": {
     "MOCK": {
-      "incentive": "0x00000001a9818a7807998dbc243b05F2B3CfF6f4",
-      "interface": "0x307737d19238D3E07CC3E0167cEd991a32D21dD9"
-    }
-  },
-  "optimismsepolia": {
-    "Polymer": {
-      "incentive": "0x0000006D5B617207FFDA710ee3364FBC7e5276a8",
-      "interface": "0x05c1DA5011E22184b5d6C2f314a9908176589aF3"
+      "incentive": "0x0000006aA532b110f36f393887079b35F6C6979a",
+      "interface": "0xa55eAf1c45cDAbe41c374862982F1543A60A8139"
     }
   },
   "bsctestnet": {
     "MOCK": {
-      "incentive": "0x00000001a9818a7807998dbc243b05F2B3CfF6f4",
-      "interface": "0x307737d19238D3E07CC3E0167cEd991a32D21dD9"
+      "incentive": "0x0000006aA532b110f36f393887079b35F6C6979a",
+      "interface": "0xa55eAf1c45cDAbe41c374862982F1543A60A8139"
     }
   },
   "opbnbtestnet": {
     "MOCK": {
-      "incentive": "0x00000001a9818a7807998dbc243b05F2B3CfF6f4",
-      "interface": "0x307737d19238D3E07CC3E0167cEd991a32D21dD9"
-    }
-  },
-  "omnitestnet": {
-    "MOCK": {
-      "incentive": "0x00000001a9818a7807998dbc243b05F2B3CfF6f4",
-      "interface": "0x307737d19238D3E07CC3E0167cEd991a32D21dD9"
+      "incentive": "0x0000006aA532b110f36f393887079b35F6C6979a",
+      "interface": "0xa55eAf1c45cDAbe41c374862982F1543A60A8139"
     }
   },
   "inevmdevnet": {
     "MOCK": {
-      "incentive": "0x00000001a9818a7807998dbc243b05F2B3CfF6f4",
-      "interface": "0x307737d19238D3E07CC3E0167cEd991a32D21dD9"
+      "incentive": "0x0000006aA532b110f36f393887079b35F6C6979a",
+      "interface": "0xa55eAf1c45cDAbe41c374862982F1543A60A8139"
     }
   }
 }

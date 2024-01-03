@@ -93,6 +93,7 @@ contract DeployInterfaces is BaseMultiChainDeployer {
     }
 
     modifier forEachInterface() {
+        if (!vm.keyExists(config_interfaces, string.concat(".", rpc[chain]))) return;
         string[] memory availableInterfaces = vm.parseJsonKeys(config_interfaces, string.concat(".", rpc[chain]));
         for (uint256 i = 0; i < availableInterfaces.length; ++i) {
             incentiveVersion = availableInterfaces[i];
