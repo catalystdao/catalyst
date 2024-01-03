@@ -62,10 +62,15 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
 
     //-- Underwriting Events --//
 
-    event UnderwriteSwap(
+    event SwapUnderwritten(
         bytes32 indexed identifier,
         address indexed underwriter,
-        uint96 expiry
+        uint96 expiry,
+        address targetVault,
+        address toAsset,
+        uint256 U,
+        address toAccount,
+        uint256 outAmount
     );
 
     event FulfillUnderwrite(
@@ -278,12 +283,14 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
                 bytes32(0),     // EVM only uses 20 bytes. abi.encode packs the 20 bytes into 32 then we need to add 32 more
                 abi.encode(msg.sender)  // Use abi.encode to encode address into 32 bytes
             ),
-            routeDescription.toVault,    // Length is expected to be pre-encoded.
-            routeDescription.toAccount,  // Length is expected to be pre-encoded.
-            U,
-            toAssetIndex,
-            minOut,
-            fromAmount,
+            abi.encodePacked(
+                routeDescription.toVault,    // Length is expected to be pre-encoded.
+                routeDescription.toAccount,  // Length is expected to be pre-encoded.
+                U,
+                toAssetIndex,
+                minOut,
+                fromAmount
+            ),
             abi.encodePacked(
                 uint8(20),      // EVM addresses are 20 bytes.
                 bytes32(0),     // EVM only uses 20 bytes. abi.encode packs the 20 bytes into 32 then we need to add 32 more
@@ -332,9 +339,11 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
         // Encode payload. See CatalystPayload.sol for the payload definition
         bytes memory data = abi.encodePacked(
             CTX1_LIQUIDITY_SWAP,
-            uint8(20),  // EVM addresses are 20 bytes.
-            bytes32(0),  // EVM only uses 20 bytes. abi.encode packs the 20 bytes into 32 then we need to add 32 more
-            abi.encode(msg.sender),  // Use abi.encode to encode address into 32 bytes
+            abi.encodePacked(
+                uint8(20),  // EVM addresses are 20 bytes.
+                bytes32(0),  // EVM only uses 20 bytes. abi.encode packs the 20 bytes into 32 then we need to add 32 more
+                abi.encode(msg.sender)  // Use abi.encode to encode address into 32 bytes
+            ),
             routeDescription.toVault,  // Length is expected to be pre-encoded.
             routeDescription.toAccount,  // Length is expected to be pre-encoded.
             U,
@@ -788,10 +797,15 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
             ICatalystReceiver(dataTarget).onCatalystCall(purchasedTokens, customCalldata);
         }
         
-        emit UnderwriteSwap(
+        emit SwapUnderwritten(
             identifier,
             msg.sender,
-            uint96(uint256(block.number) + uint256(maxUnderwritingDuration))
+            uint96(uint256(block.number) + uint256(maxUnderwritingDuration)),
+            targetVault,
+            toAsset,
+            U,
+            toAccount,
+            purchasedTokens
         );
     }
 
