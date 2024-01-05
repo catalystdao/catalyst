@@ -3,12 +3,20 @@
     "MOCK": {
       "incentive": "0x0000006aA532b110f36f393887079b35F6C6979a",
       "interface": "0xa55eAf1c45cDAbe41c374862982F1543A60A8139"
+    },
+    "Wormhole": {
+      "incentive": "0x0000003Cc3fE3FC127a3c38598659585A5A42f5c",
+      "interface": "0xe601b80556dE4F12Ed8e83946b98c188277E50de"
     }
   },
   "mumbai": {
     "MOCK": {
       "incentive": "0x0000006aA532b110f36f393887079b35F6C6979a",
       "interface": "0xa55eAf1c45cDAbe41c374862982F1543A60A8139"
+    },
+    "Wormhole": {
+      "incentive": "0x0000003Cc3fE3FC127a3c38598659585A5A42f5c",
+      "interface": "0xe601b80556dE4F12Ed8e83946b98c188277E50de"
     }
   },
   "basegoerli": {

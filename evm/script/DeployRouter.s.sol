@@ -54,7 +54,7 @@ contract DeployRouter is BaseMultiChainDeployer {
     }
     
     function _deploy() internal {
-        fund(vm.envAddress("ROUTER_DEPLOYER_ADDRESS"), 0.01*10**18);
+        // fund(vm.envAddress("ROUTER_DEPLOYER_ADDRESS"), 0.01*10**18);
 
         deployPermit2();
         

@@ -23,5 +23,30 @@
         "WGAS": 10000000000000000
       }
     }
+  },
+  "WormholeMumbaiSepolia": {
+    "cci_version": "Wormhole",
+    "mumbai": {
+      "cci": "0xe601b80556de4f12ed8e83946b98c188277e50de",
+      "address": "0xc9f695de02661f3958460218951cd05087977127",
+      "weights": [
+        1
+      ],
+      "fee": 500000000000000,
+      "tokens": {
+        "WGAS": 10000000000000000
+      }
+    },
+    "sepolia": {
+      "cci": "0xe601b80556de4f12ed8e83946b98c188277e50de",
+      "address": "0xc9f695de02661f3958460218951cd05087977127",
+      "weights": [
+        1
+      ],
+      "fee": 500000000000000,
+      "tokens": {
+        "WGAS": 10000000000000000
+      }
+    }
   }
 }
