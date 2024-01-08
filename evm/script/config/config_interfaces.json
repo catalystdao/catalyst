@@ -5,8 +5,8 @@
       "interface": "0xa55eAf1c45cDAbe41c374862982F1543A60A8139"
     },
     "Wormhole": {
-      "incentive": "0x0000003Cc3fE3FC127a3c38598659585A5A42f5c",
-      "interface": "0xe601b80556dE4F12Ed8e83946b98c188277E50de"
+      "incentive": "0x000000731594E9be29E6c45Ab477034939053d4E",
+      "interface": "0x1100100AA9CF8D110EC7a10dBd982e83eb6F02Fd"
     }
   },
   "mumbai": {
@@ -15,8 +15,8 @@
       "interface": "0xa55eAf1c45cDAbe41c374862982F1543A60A8139"
     },
     "Wormhole": {
-      "incentive": "0x0000003Cc3fE3FC127a3c38598659585A5A42f5c",
-      "interface": "0xe601b80556dE4F12Ed8e83946b98c188277E50de"
+      "incentive": "0x000000731594E9be29E6c45Ab477034939053d4E",
+      "interface": "0x1100100AA9CF8D110EC7a10dBd982e83eb6F02Fd"
     }
   },
   "basegoerli": {

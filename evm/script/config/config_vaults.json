@@ -27,8 +27,8 @@
   "WormholeMumbaiSepolia": {
     "cci_version": "Wormhole",
     "mumbai": {
-      "cci": "0xe601b80556de4f12ed8e83946b98c188277e50de",
-      "address": "0xc9f695de02661f3958460218951cd05087977127",
+      "cci": "0x1100100aa9cf8d110ec7a10dbd982e83eb6f02fd",
+      "address": "0x88524cfad5e8352725c98d761bb3450f0a12ab87",
       "weights": [
         1
       ],
@@ -38,8 +38,8 @@
       }
     },
     "sepolia": {
-      "cci": "0xe601b80556de4f12ed8e83946b98c188277e50de",
-      "address": "0xc9f695de02661f3958460218951cd05087977127",
+      "cci": "0x1100100aa9cf8d110ec7a10dbd982e83eb6f02fd",
+      "address": "0x88524cfad5e8352725c98d761bb3450f0a12ab87",
       "weights": [
         1
       ],
