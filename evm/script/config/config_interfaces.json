@@ -19,37 +19,13 @@
       "interface": "0x1100100AA9CF8D110EC7a10dBd982e83eb6F02Fd"
     }
   },
-  "basegoerli": {
-    "MOCK": {
-      "incentive": "0x0000006aA532b110f36f393887079b35F6C6979a",
-      "interface": "0xa55eAf1c45cDAbe41c374862982F1543A60A8139"
-    }
-  },
   "mantletestnet" : {
     "MOCK": {
       "incentive": "0x0000006aA532b110f36f393887079b35F6C6979a",
       "interface": "0xa55eAf1c45cDAbe41c374862982F1543A60A8139"
     }
   },
-  "taikoeldfell": {
-    "MOCK": {
-      "incentive": "0x0000006aA532b110f36f393887079b35F6C6979a",
-      "interface": "0xa55eAf1c45cDAbe41c374862982F1543A60A8139"
-    }
-  },
   "scrollsepolia": {
-    "MOCK": {
-      "incentive": "0x0000006aA532b110f36f393887079b35F6C6979a",
-      "interface": "0xa55eAf1c45cDAbe41c374862982F1543A60A8139"
-    }
-  },
-  "arbitrumgoerli": {
-    "MOCK": {
-      "incentive": "0x0000006aA532b110f36f393887079b35F6C6979a",
-      "interface": "0xa55eAf1c45cDAbe41c374862982F1543A60A8139"
-    }
-  },
-  "optimismgoerli": {
     "MOCK": {
       "incentive": "0x0000006aA532b110f36f393887079b35F6C6979a",
       "interface": "0xa55eAf1c45cDAbe41c374862982F1543A60A8139"
@@ -71,6 +47,18 @@
     "MOCK": {
       "incentive": "0x0000006aA532b110f36f393887079b35F6C6979a",
       "interface": "0xa55eAf1c45cDAbe41c374862982F1543A60A8139"
+    }
+  },
+  "basesepolia": {
+    "Polymer": {
+      "incentive": "0x000000B42EcC1cBeC12A86Fe4C695a6805b6b150",
+      "interface": "0xE277FE38A43060Fd288EfE20AEEc1f6c2Cd6dB83"
+    }
+  },
+  "optimismsepolia": {
+    "Polymer": {
+      "incentive": "0x000000B42EcC1cBeC12A86Fe4C695a6805b6b150",
+      "interface": "0xE277FE38A43060Fd288EfE20AEEc1f6c2Cd6dB83"
     }
   }
 }

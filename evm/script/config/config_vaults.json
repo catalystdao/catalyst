@@ -28,7 +28,7 @@
     "cci_version": "Wormhole",
     "mumbai": {
       "cci": "0x1100100aa9cf8d110ec7a10dbd982e83eb6f02fd",
-      "address": "0x88524cfad5e8352725c98d761bb3450f0a12ab87",
+      "address": "0xc20fbcad3bf1781ab95bec04fe75c9ba4fe4aeb2",
       "weights": [
         1
       ],
@@ -39,7 +39,32 @@
     },
     "sepolia": {
       "cci": "0x1100100aa9cf8d110ec7a10dbd982e83eb6f02fd",
-      "address": "0x88524cfad5e8352725c98d761bb3450f0a12ab87",
+      "address": "0xc20fbcad3bf1781ab95bec04fe75c9ba4fe4aeb2",
+      "weights": [
+        1
+      ],
+      "fee": 500000000000000,
+      "tokens": {
+        "WGAS": 10000000000000000
+      }
+    }
+  },
+  "PolymerSepoliaBaseOp": {
+    "cci_version": "Polymer",
+    "basesepolia": {
+      "cci": "0xe277fe38a43060fd288efe20aeec1f6c2cd6db83",
+      "address": "0x6243df63dc7e97a5968578e9ae35008af3ec69df",
+      "weights": [
+        1
+      ],
+      "fee": 500000000000000,
+      "tokens": {
+        "WGAS": 10000000000000000
+      }
+    },
+    "optimismsepolia": {
+      "cci": "0xe277fe38a43060fd288efe20aeec1f6c2cd6db83",
+      "address": "0x6243df63dc7e97a5968578e9ae35008af3ec69df",
       "weights": [
         1
       ],

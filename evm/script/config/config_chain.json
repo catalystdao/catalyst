@@ -89,11 +89,11 @@
     },
     "Wormhole": {
         "sepolia": {
-            "sepolia": 1,
+            "sepolia": 10002,
             "mumbai": 5
         },
         "mumbai": {
-            "sepolia": 1,
+            "sepolia": 10002,
             "mumbai": 5
         }
     },
