@@ -389,6 +389,7 @@ abstract contract CatalystVaultCommon is
     //-- Escrow Functions --//
 
     /// @notice Creates a token escrow for a swap.
+    /// @param fallbackUser The user who the escrow belongs to. Do not set to address(0).
     function _setTokenEscrow(
         bytes32 sendAssetHash,
         address fallbackUser,
@@ -404,6 +405,7 @@ abstract contract CatalystVaultCommon is
     }
 
     /// @notice Creates a liquidity escrow for a swap.
+    /// @param fallbackUser The user who the escrow belongs to. Do not set to address(0).
     function _setLiquidityEscrow(
         bytes32 sendLiquidityHash,
         address fallbackUser,
