@@ -70,8 +70,8 @@ contract CatalystFactory is Ownable, ICatalystV1Factory {
         uint256[] calldata weights,
         uint256 amp,
         uint256 vaultFee,
-        string calldata name,
-        string calldata symbol,
+        string memory name,
+        string memory symbol,
         address chainInterface
     ) override external returns (address) {
         // Check if an invalid asset count has been provided
