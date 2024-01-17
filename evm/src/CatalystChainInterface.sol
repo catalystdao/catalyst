@@ -91,11 +91,31 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
         uint96 expiry;      // 2 slot: 32/32
     }
 
-    uint256 constant INITIAL_MAX_UNDERWRITE_DURATION = 24 hours / 6 seconds; // Is 8 hours if the block time is 2 seconds, 48 hours if the block time is 12 seconds. Not a great initial value but better than nothing.
-    uint256 constant MAX_UNDERWRITE_DURATION = 14 days / 3 seconds;  // Is 9.3 days if the block time is 2 seconds, 56 days if the block time is 12 seconds. Not a great measure but better than no protection.
-    uint256 constant MIN_UNDERWRITE_DURATION = 1 hours / 12 seconds;  // Is 10 minutes if the block time is 2 seconds, 1 hour if the block time is 12 seconds. Not a great measure but better than no protection.
+    //--- Underwrite Duration Frame Parameters ---//
+    // Underwriters should take on as little risk as possible. One risk associated with underwriting is
+    // chain haulting or timestamp manipulation / diviation. To combat this risk, time is measured in blocks.
+    // This implies that there needs to be some configuration if the block time changes over time or to fit it
+    // to various blockchains.
+    // The reason behind is if the underwrite duration was timestamp based, say 8 hours. If the chain haulted for
+    // 10 hours, then the underwriter would risk being expired and lose everything. If a chain doesn't produce any
+    // blocks during a hault, then it wouldn't be a risk to an underwriter.
+    // Generally, it is more common for there to be unpredictable block slowdowns rather than unpredictable block speedups.
+
+    /// @notice The initial underwrite duration (in blocks).
+    /// @dev Is 8 hours if the block time is 2 seconds, 48 hours if the block time is 12 seconds. Not a great initial value but better than nothing.
+    uint256 constant INITIAL_MAX_UNDERWRITE_BLOCK_DURATION = 24 hours / 6 seconds; 
+
+    /// @notice The maximum configurable underwrite duration (in blocks).
+    /// @dev Is 9.3 days if the block time is 2 seconds, 56 days if the block time is 12 seconds.
+    uint256 constant MAX_UNDERWRITE_BLOCK_DURATION = 14 days / 3 seconds;  
+
+    /// @notice The minimum configurable underwrite duration (in blocks).
+    /// @dev Is 10 minutes if the block time is 2 seconds, 1 hour if the block time is 12 seconds.
+    uint256 constant MIN_UNDERWRITE_BLOCK_DURATION = 1 hours / 12 seconds;  
+
 
     //--- Config ---//
+
     IIncentivizedMessageEscrow public immutable GARP; // Set on deployment
 
 
@@ -123,7 +143,7 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
     /// @notice Sets the maximum duration for underwriting.
     /// @dev Should be set long enough for all swaps to be able to confirm + a small buffer
     /// Should also be set long enough to not take up an excess amount of escrow usage.
-    uint256 public maxUnderwritingDuration = INITIAL_MAX_UNDERWRITE_DURATION;
+    uint256 public maxUnderwritingDuration = INITIAL_MAX_UNDERWRITE_BLOCK_DURATION;
 
     /// @notice Maps underwriting identifiers to underwriting state.
     /// refundTo can be checked to see if the ID has been underwritten.
@@ -135,7 +155,7 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
         GARP = IIncentivizedMessageEscrow(GARP_);
         _transferOwnership(defaultOwner);
 
-        emit MaxUnderwriteDuration(INITIAL_MAX_UNDERWRITE_DURATION);
+        emit MaxUnderwriteDuration(INITIAL_MAX_UNDERWRITE_BLOCK_DURATION);
     }
 
 
@@ -156,9 +176,9 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
     /// expiring them before the actual swap arrives. The min protection here is not sufficient since it needs to be well into 
     /// when a message can be validated. As a result, the owner of this contract should be a timelock which underwriters monitor.
     function setMaxUnderwritingDuration(uint256 newMaxUnderwriteDuration) onlyOwner override external {
-        if (newMaxUnderwriteDuration <= MIN_UNDERWRITE_DURATION) revert MaxUnderwriteDurationTooShort();
+        if (newMaxUnderwriteDuration <= MIN_UNDERWRITE_BLOCK_DURATION) revert MaxUnderwriteDurationTooShort();
         // If the underwriting duration is too long, users can freeze up a lot of value for not a lot of cost.
-        if (newMaxUnderwriteDuration > MAX_UNDERWRITE_DURATION) revert MaxUnderwriteDurationTooLong();
+        if (newMaxUnderwriteDuration > MAX_UNDERWRITE_BLOCK_DURATION) revert MaxUnderwriteDurationTooLong();
 
         maxUnderwritingDuration = newMaxUnderwriteDuration;
         
