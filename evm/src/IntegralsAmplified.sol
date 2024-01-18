@@ -2,7 +2,8 @@
 
 pragma solidity ^0.8.19;
 
-import { FixedPointMathLib } from "./utils/FixedPointMathLib.sol";
+import { FixedPointMathLib } from "solmate/utils/FixedPointMathLib.sol";
+import { WADWAD } from "./utils/MathConstants.sol";
 
 /**
  * @title Catalyst: Amplified Integrals
@@ -84,7 +85,7 @@ contract IntegralsAmplified {
             FixedPointMathLib.WAD - uint256(                                                        // Always casts a positive value
                 FixedPointMathLib.powWad(
                     int256(FixedPointMathLib.divWadUp(W_BxBtoOMA - U, W_BxBtoOMA)),                 // Casting never overflows, as division result is always < 1
-                    FixedPointMathLib.WADWAD / oneMinusAmp 
+                    WADWAD / oneMinusAmp 
                 )
             )
         );

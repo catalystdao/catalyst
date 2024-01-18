@@ -6,7 +6,8 @@ import { ICatalystV1VaultEvents } from "src/interfaces/ICatalystV1VaultEvents.so
 import { CatalystVaultAmplified } from "src/CatalystVaultAmplified.sol";
 import { VaultNotConnected } from "src/interfaces/ICatalystV1VaultErrors.sol";
 import { ICatalystV1Structs } from "src/interfaces/ICatalystV1VaultState.sol";
-import { FixedPointMathLib as Math } from "src/utils/FixedPointMathLib.sol";
+import { WADWAD } from "src/utils/MathConstants.sol";
+import { FixedPointMathLib as Math } from "solmate/utils/FixedPointMathLib.sol";
 
 import "forge-std/Test.sol";
 import { TestCommon } from "test/TestCommon.t.sol";
@@ -91,7 +92,7 @@ abstract contract TestFullLiquiditySwap is TestCommon, AVaultInterfaces {
 
             int256 wpt = Math.powWad(
                 Math.powWad(toVaultB0, oneMinusAmp) + int256(units)/toVaultAssetCount,
-                Math.WADWAD / oneMinusAmp
+                WADWAD / oneMinusAmp
             ) - toVaultB0;
             if (wpt < 0) wpt = 0;   // 'wpt' may go negative if 'units' is very small or 0 (calculation error)
 
@@ -231,7 +232,7 @@ abstract contract TestFullLiquiditySwap is TestCommon, AVaultInterfaces {
                 int256 diffAmped = (NtoVaultBalance0Ampped - int256(outputUnits)) * int256(Math.WAD) / NtoVaultBalance0Ampped;
                 uint256 diff;
                 if (diffAmped == 0) diff = 0;
-                else diff = uint256(Math.powWad(diffAmped, Math.WADWAD / oneMinusAmp));
+                else diff = uint256(Math.powWad(diffAmped, WADWAD / oneMinusAmp));
 
                 // Save stack:
                 diff = Math.WAD - diff;

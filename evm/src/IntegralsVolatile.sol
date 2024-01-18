@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.19;
 
-import { FixedPointMathLib } from "./utils/FixedPointMathLib.sol";
+import { FixedPointMathLib } from "solmate/utils/FixedPointMathLib.sol";
 
 /**
  * @title Catalyst: Volatile Integrals

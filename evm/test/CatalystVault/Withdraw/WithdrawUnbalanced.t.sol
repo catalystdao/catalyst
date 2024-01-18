@@ -2,8 +2,9 @@
 pragma solidity ^0.8.19;
 
 import { ICatalystV1Vault } from "src/ICatalystV1Vault.sol";
-import { FixedPointMathLib as Math } from "src/utils/FixedPointMathLib.sol";
+import { FixedPointMathLib as Math } from "solmate/utils/FixedPointMathLib.sol";
 import { CatalystVaultAmplified } from "src/CatalystVaultAmplified.sol";
+import { WADWAD } from "src/utils/MathConstants.sol";
 
 import "forge-std/Test.sol";
 import { TestCommon } from "test/TestCommon.t.sol";
@@ -101,7 +102,7 @@ abstract contract TestWithdrawUnbalanced is TestCommon, AVaultInterfaces {
                     expectedWithdrawAmounts[i] = uint256(
                         weightedBalance - (weightedBalanceAmped == inner ? int256(0) : Math.powWad(
                             weightedBalanceAmped - inner,
-                            Math.WADWAD / oneMinusAmp
+                            WADWAD / oneMinusAmp
                         ))
                     )  / vaultWeights[i] / Math.WAD;
                 }

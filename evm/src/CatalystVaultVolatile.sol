@@ -4,11 +4,12 @@ pragma solidity ^0.8.19;
 
 import { ERC20 } from 'solmate/tokens/ERC20.sol';
 import { SafeTransferLib } from 'solmate/utils/SafeTransferLib.sol';
-import { FixedPointMathLib } from "./utils/FixedPointMathLib.sol";
+import { FixedPointMathLib } from "solmate/utils/FixedPointMathLib.sol";
 import { ICatalystChainInterface } from "./interfaces/ICatalystChainInterface.sol";
 import { CatalystVaultCommon } from "./CatalystVaultCommon.sol";
 import { IntegralsVolatile } from "./IntegralsVolatile.sol";
 import { ICatalystReceiver} from "./interfaces/IOnCatalyst.sol";
+import { LN2 } from "./utils/MathConstants.sol";
 import "./ICatalystV1Vault.sol";
 
 /**
@@ -47,6 +48,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
     //--- ERRORS ---//
     // Errors are defined in interfaces/ICatalystV1VaultErrors.sol
 
+    //--- MATH ---//
 
     //--- Config ---//
     // Minimum time parameter adjustments can be made over.
@@ -121,7 +123,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
 
         // The maximum unit flow is \sum Weights * ln(2). The value is multiplied by WAD 
         // since units are always WAD denominated (note WAD is already included in the LN2 factor).
-        _maxUnitCapacity = maxUnitCapacity * FixedPointMathLib.LN2;
+        _maxUnitCapacity = maxUnitCapacity * LN2;
 
         // Mint vault tokens for vault creator.
         _mint(depositor, INITIAL_MINT_AMOUNT);
@@ -212,7 +214,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
                     }
                 }
                 // Save weight sum.
-                _maxUnitCapacity = wsum * FixedPointMathLib.LN2;
+                _maxUnitCapacity = wsum * LN2;
 
                 // Set adjustmentTime to 0. This ensures the if statement is never entered.
                 _adjustmentTarget = 0;
@@ -252,7 +254,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
                 }
             }
             // Update security limit
-            _maxUnitCapacity = wsum * FixedPointMathLib.LN2;
+            _maxUnitCapacity = wsum * LN2;
         }
     }
 
@@ -396,7 +398,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
         }
 
         // Fetch wsum.
-        uint256 wsum = _maxUnitCapacity / FixedPointMathLib.LN2;
+        uint256 wsum = _maxUnitCapacity / LN2;
 
         // Compute the number of vault tokens minted to the user. Notice that _calcPriceCurveLimitShare can be greater than 1
         // and more than the totalSupply can be minted given sufficiently large U.
@@ -496,7 +498,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
         _burn(msg.sender, vaultTokens);
 
         // Fetch wsum.
-        uint256 wsum = _maxUnitCapacity / FixedPointMathLib.LN2;
+        uint256 wsum = _maxUnitCapacity / LN2;
 
         // Compute the unit worth of the vault tokens.
         // The following line implies that one cannot withdraw all liquidity using this function.
@@ -877,7 +879,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
         _burn(msg.sender, vaultTokens);
 
         // Fetch wsum.
-        uint256 wsum = _maxUnitCapacity / FixedPointMathLib.LN2;
+        uint256 wsum = _maxUnitCapacity / LN2;
 
         // Compute the unit value of the provided vaultTokens.
         // This step simplifies withdrawing and swapping into a single calculation.
@@ -941,7 +943,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
         _updateUnitCapacity(U);
 
         // Fetch wsum.
-        uint256 wsum = _maxUnitCapacity / FixedPointMathLib.LN2;
+        uint256 wsum = _maxUnitCapacity / LN2;
 
         // Compute mint %. It comes as WAD, multiply by totalSupply and divide by WAD (mulWadDown) to get number of vault tokens.
         // On totalSupply. Do not add escrow amount, as higher amount results in a larger return.

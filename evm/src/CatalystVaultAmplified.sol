@@ -4,11 +4,12 @@ pragma solidity ^0.8.19;
 
 import { ERC20 } from 'solmate/tokens/ERC20.sol';
 import { SafeTransferLib } from 'solmate/utils/SafeTransferLib.sol';
-import { FixedPointMathLib } from "./utils/FixedPointMathLib.sol";
+import { FixedPointMathLib } from "solmate/utils/FixedPointMathLib.sol";
 import { ICatalystChainInterface } from "./interfaces/ICatalystChainInterface.sol";
 import { CatalystVaultCommon } from "./CatalystVaultCommon.sol";
 import { IntegralsAmplified } from "./IntegralsAmplified.sol";
 import { ICatalystReceiver} from "./interfaces/IOnCatalyst.sol";
+import { WADWAD } from "./utils/MathConstants.sol";
 import "./ICatalystV1Vault.sol";
 
 /**
@@ -424,7 +425,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
             );
         }
 
-        int256 oneMinusAmpInverse = FixedPointMathLib.WADWAD / oneMinusAmp;
+        int256 oneMinusAmpInverse = WADWAD / oneMinusAmp;
 
         uint256 it_times_walpha_amped = it * walpha_0_ampped;
 
@@ -572,7 +573,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
                 // the transaction reverts. If that is the case, use withdrawAll.
                 // This quirk is "okay", since it means fewer tokens are always returned.
 
-                int256 oneMinusAmpInverse = FixedPointMathLib.WADWAD / oneMinusAmp;
+                int256 oneMinusAmpInverse = WADWAD / oneMinusAmp;
                 // Since tokens are withdrawn, the change is negative. As such, multiply the
                 // equation by -1.
                 weightedTokenAmount = FixedPointMathLib.mulWadDown(
@@ -1180,7 +1181,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
         walpha_0 = uint256( // casting: powWad is not negative.
             FixedPointMathLib.powWad(
                 int256(walpha_0_ampped),  // Casting: If overflow, then powWad fails as the overflow is into negative.
-                FixedPointMathLib.WADWAD / _oneMinusAmp
+                WADWAD / _oneMinusAmp
             )
         );
     }
@@ -1301,7 +1302,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
         // number of tokens the vault should have If the price in the pool is 1:1.
         (uint256 walpha_0_ampped, uint256 it) = _computeBalance0(oneMinusAmp);
 
-        int256 oneMinusAmpInverse = FixedPointMathLib.WADWAD / oneMinusAmp;
+        int256 oneMinusAmpInverse = WADWAD / oneMinusAmp;
 
         uint256 it_times_walpha_amped = it * walpha_0_ampped;
 

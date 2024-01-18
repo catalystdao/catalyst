@@ -3,7 +3,7 @@
 pragma solidity ^0.8.19;
 
 import { CatalystVaultAmplified } from "../CatalystVaultAmplified.sol";
-import { FixedPointMathLib } from "../utils/FixedPointMathLib.sol";
+import { FixedPointMathLib } from "solmate/utils/FixedPointMathLib.sol";
 
 /**
  * @title Catalyst: The Multi-Chain Vault

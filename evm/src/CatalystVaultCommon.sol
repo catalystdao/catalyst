@@ -10,7 +10,7 @@ import { ReentrancyGuard} from "openzeppelin-contracts/contracts/security/Reentr
 import { Initializable } from "openzeppelin-contracts/contracts/proxy/utils/Initializable.sol";
 import { Multicall } from "openzeppelin-contracts/contracts/utils/Multicall.sol";
 import { MAX_GOVERNANCE_FEE_SHARE } from"./CatalystFactory.sol";
-import { FixedPointMathLib} from "./utils/FixedPointMathLib.sol";
+import { FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 import { ICatalystReceiver} from "./interfaces/IOnCatalyst.sol";
 import { ICatalystV1Vault } from "./ICatalystV1Vault.sol";
 import { ICatalystV1Factory } from "./interfaces/ICatalystV1Factory.sol";

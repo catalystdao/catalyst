@@ -2,7 +2,7 @@
 pragma solidity ^0.8.19;
 
 import "../../../src/ICatalystV1Vault.sol";
-import "../../../src/utils/FixedPointMathLib.sol";
+import "solmate/utils/FixedPointMathLib.sol";
 
 import "../Invariant.t.sol";
 import "../LocalSwap/LocalSwap.t.sol";
