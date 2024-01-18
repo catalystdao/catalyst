@@ -12,9 +12,9 @@ contract ExposeHandleError {
     }
 
     function _handleError(bytes memory err) pure internal returns (bytes1) {
-        // To safe on gas, only examine the first 32 bytes.
+        // To save on gas, only examine the first 32 bytes.
         bytes8 errorIdentifier = bytes8(err);
-        // We can use memory sclies to get better insight into exactly the error which occured.
+        // We can use memory slices to get better insight into exactly the error which occured.
         // This would also allow us to reuse events.
         // However, it looks like it will significantly increase gas costs so this works for now.
         // It looks like Solidity will improve their error catch implementation which will replace this.

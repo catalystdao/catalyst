@@ -929,7 +929,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
      * @param fallbackUser If the transaction fails, send the escrowed funds to this address
      * @param underwriteIncentiveX16 The payment for underwriting the swap (out of type(uint16).max)
      * @param calldata_ Data field if a call should be made on the target chain.
-     * Encoding depends on the target chain, with EVM: abi.encodePacket(bytes20(<address>), <data>).
+     * Encoding depends on the target chain, with EVM: abi.encodePacket(bytes20(<address>), <data>). At maximum 65535 bytes can be passed.
      * @return uint256 The number of units bought.
      */
     function sendAsset(
@@ -984,7 +984,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
      * @param fallbackUser If the transaction fails, send the escrowed funds to this address.
      * @param underwriteIncentiveX16 The payment for underwriting the swap (out of type(uint16).max)
      * @param calldata_ Data field if a call should be made on the target chain.
-     * Encoding depends on the target chain, with evm being: abi.encodePacket(bytes20(<address>), <data>)
+     * Encoding depends on the target chain, with EVM: abi.encodePacket(bytes20(<address>), <data>). At maximum 65535 bytes can be passed..
      * @return uint256 The number of units minted.
      */
      function sendAssetFixedUnit(
@@ -1194,7 +1194,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
      * @param minOut An array of minout describing: [the minimum number of vault tokens, the minimum number of reference assets].
      * @param fallbackUser If the transaction fails, send the escrowed funds to this address.
      * @param calldata_ Data field if a call should be made on the target chain.
-     * Encoding depends on the target chain, with EVM: abi.encodePacket(bytes20(<address>), <data>).
+     * Encoding depends on the target chain, with EVM: abi.encodePacket(bytes20(<address>), <data>). At maximum 65535 bytes can be passed.
      * @return uint256 The number of units bought.
      */
     function sendLiquidity(

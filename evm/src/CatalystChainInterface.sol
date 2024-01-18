@@ -89,11 +89,31 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
         uint96 expiry;      // 2 slot: 32/32
     }
 
-    uint256 constant INITIAL_MAX_UNDERWRITE_DURATION = 24 hours / 6 seconds; // Is 8 hours if the block time is 2 seconds, 48 hours if the block time is 12 seconds. Not a great initial value but better than nothing.
-    uint256 constant MAX_UNDERWRITE_DURATION = 14 days / 3 seconds;  // Is 9.3 days if the block time is 2 seconds, 56 days if the block time is 12 seconds. Not a great measure but better than no protection.
-    uint256 constant MIN_UNDERWRITE_DURATION = 1 hours / 12 seconds;  // Is 10 minutes if the block time is 2 seconds, 1 hour if the block time is 12 seconds. Not a great measure but better than no protection.
+    //--- Underwrite Duration Frame Parameters ---//
+    // Underwriters should take on as little risk as possible. One risk associated with underwriting is
+    // chain haulting or timestamp manipulation / diviation. To combat this risk, time is measured in blocks.
+    // This implies that there needs to be some configuration if the block time changes over time or to fit it
+    // to various blockchains.
+    // The reason behind is if the underwrite duration was timestamp based, say 8 hours. If the chain haulted for
+    // 10 hours, then the underwriter would risk being expired and lose everything. If a chain doesn't produce any
+    // blocks during a hault, then it wouldn't be a risk to an underwriter.
+    // Generally, it is more common for there to be unpredictable block slowdowns rather than unpredictable block speedups.
+
+    /// @notice The initial underwrite duration (in blocks).
+    /// @dev Is 8 hours if the block time is 2 seconds, 48 hours if the block time is 12 seconds. Not a great initial value but better than nothing.
+    uint256 constant INITIAL_MAX_UNDERWRITE_BLOCK_DURATION = 24 hours / 6 seconds; 
+
+    /// @notice The maximum configurable underwrite duration (in blocks).
+    /// @dev Is 9.3 days if the block time is 2 seconds, 56 days if the block time is 12 seconds.
+    uint256 constant MAX_UNDERWRITE_BLOCK_DURATION = 14 days / 3 seconds;  
+
+    /// @notice The minimum configurable underwrite duration (in blocks).
+    /// @dev Is 10 minutes if the block time is 2 seconds, 1 hour if the block time is 12 seconds.
+    uint256 constant MIN_UNDERWRITE_BLOCK_DURATION = 1 hours / 12 seconds;  
+
 
     //--- Config ---//
+
     IIncentivizedMessageEscrow public immutable GARP; // Set on deployment
 
 
@@ -102,8 +122,8 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
     // How many blocks should there be between when an identifier can be underwritten.
     uint24 constant BUFFER_BLOCKS = 4;
 
-    uint256 constant public UNDERWRITING_COLLATORAL = 35;  // 3,5% extra as collatoral.
-    uint256 constant public UNDERWRITING_COLLATORAL_DENOMINATOR = 1000;
+    uint256 constant public UNDERWRITING_COLLATERAL = 35;  // 3,5% extra as collateral.
+    uint256 constant public UNDERWRITING_COLLATERAL_DENOMINATOR = 1000;
 
     uint256 constant public EXPIRE_CALLER_REWARD = 350;  // 35% of the 3,5% = 1,225%. Of $1000 = $12,25
     uint256 constant public EXPIRE_CALLER_REWARD_DENOMINATOR = 1000;
@@ -121,7 +141,7 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
     /// @notice Sets the maximum duration for underwriting.
     /// @dev Should be set long enough for all swaps to be able to confirm + a small buffer
     /// Should also be set long enough to not take up an excess amount of escrow usage.
-    uint256 public maxUnderwritingDuration = INITIAL_MAX_UNDERWRITE_DURATION;
+    uint256 public maxUnderwritingDuration = INITIAL_MAX_UNDERWRITE_BLOCK_DURATION;
 
     /// @notice Maps underwriting identifiers to underwriting state.
     /// refundTo can be checked to see if the ID has been underwritten.
@@ -133,7 +153,7 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
         GARP = IIncentivizedMessageEscrow(GARP_);
         _transferOwnership(defaultOwner);
 
-        emit MaxUnderwriteDuration(INITIAL_MAX_UNDERWRITE_DURATION);
+        emit MaxUnderwriteDuration(INITIAL_MAX_UNDERWRITE_BLOCK_DURATION);
     }
 
 
@@ -154,9 +174,9 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
     /// expiring them before the actual swap arrives. The min protection here is not sufficient since it needs to be well into 
     /// when a message can be validated. As a result, the owner of this contract should be a timelock which underwriters monitor.
     function setMaxUnderwritingDuration(uint256 newMaxUnderwriteDuration) onlyOwner override external {
-        if (newMaxUnderwriteDuration <= MIN_UNDERWRITE_DURATION) revert MaxUnderwriteDurationTooShort();
+        if (newMaxUnderwriteDuration <= MIN_UNDERWRITE_BLOCK_DURATION) revert MaxUnderwriteDurationTooShort();
         // If the underwriting duration is too long, users can freeze up a lot of value for not a lot of cost.
-        if (newMaxUnderwriteDuration > MAX_UNDERWRITE_DURATION) revert MaxUnderwriteDurationTooLong();
+        if (newMaxUnderwriteDuration > MAX_UNDERWRITE_BLOCK_DURATION) revert MaxUnderwriteDurationTooLong();
 
         maxUnderwritingDuration = newMaxUnderwriteDuration;
         
@@ -213,7 +233,7 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
         // To only get the error identifier, only use the first 8 bytes. This lets us add additional error
         // data for easier debugger on trace.
         bytes8 errorIdentifier = bytes8(err);
-        // We can use memory sclies to get better insight into exactly the error which occured.
+        // We can use memory slices to get better insight into exactly the error which occured.
         // This would also allow us to reuse events.
         // However, it looks like it will significantly increase gas costs so this works for now.
         // It looks like Solidity will improve their error catch implementation which will replace this.
@@ -435,7 +455,7 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
      * @param destinationIdentifier Identifier for the destination chain
      * @param acknowledgement The acknowledgement bytes for the cross-chain swap.
      */
-    function receiveAck(bytes32 destinationIdentifier, bytes32 messageIdentifier, bytes calldata acknowledgement) onlyGARP override external {
+    function receiveAck(bytes32 destinationIdentifier, bytes32 /* messageIdentifier */, bytes calldata acknowledgement) onlyGARP override external {
         // If the transaction executed but some logic failed, an ack is sent back with an error acknowledgement.
         // This is known as "fail on ack". The package should be failed.
         // The acknowledgement is prepended the message, so we need to fetch it.
@@ -763,15 +783,15 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
 
         // The above combination of lines act as local re-entry protection. Do not add any external call inbetween these lines.
 
-        // Collect tokens and collatoral from underwriter.
+        // Collect tokens and collateral from underwriter.
         // We still collect the tokens used to incentivise the underwriter as otherwise they could freely reserve liquidity
         // in the vaults. Vaults would essentially be a free source of short term options which isn't wanted.
         ERC20(toAsset).safeTransferFrom(
             msg.sender, 
             address(this),
             purchasedTokens * (
-                UNDERWRITING_COLLATORAL_DENOMINATOR+UNDERWRITING_COLLATORAL
-            )/UNDERWRITING_COLLATORAL_DENOMINATOR
+                UNDERWRITING_COLLATERAL_DENOMINATOR+UNDERWRITING_COLLATERAL
+            )/UNDERWRITING_COLLATERAL_DENOMINATOR
         );
 
         uint256 underwritingIncentive = (purchasedTokens * uint256(underwriteIncentiveX16)) >> 16;
@@ -835,7 +855,7 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
         if (underwriteState.refundTo == address(0)) revert UnderwriteDoesNotExist(identifier);
         
         // Check that the underwriting can be expired. If the msg.sender is the refundTo address, then it can be expired at any time.
-        // This lets the underwriter reclaim *some* of the collatoral they provided if they change their mind or observed an issue.
+        // This lets the underwriter reclaim *some* of the collateral they provided if they change their mind or observed an issue.
         if (msg.sender != underwriteState.refundTo) {
             // Otherwise, the expiry time must have been passed.
             if (underwriteState.expiry > block.number) revert UnderwriteNotExpired(underwriteState.expiry - block.number);
@@ -849,19 +869,19 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
 
         unchecked {
             // Compute the underwriting incentive. 
-            // Notice the parts that we only have: incentive + collatoral to work with
+            // Notice the parts that we only have: incentive + collateral to work with
             // The incentive was never sent to the user, neither was the underwriting incentive.
             uint256 underwritingIncentive = (underWrittenTokens * uint256(underwriteIncentiveX16)) >> 16; 
             // This computation has been done before.
 
-            // Get the collatoral.
+            // Get the collateral.
             // A larger computation has already been done when the swap was initially underwritten.
             uint256 refundAmount = underWrittenTokens * (
-                UNDERWRITING_COLLATORAL
-            )/UNDERWRITING_COLLATORAL_DENOMINATOR + underwritingIncentive;
-            // collatoral + underwritingIncentive must be less than the full amount.
+                UNDERWRITING_COLLATERAL
+            )/UNDERWRITING_COLLATERAL_DENOMINATOR + underwritingIncentive;
+            // collateral + underwritingIncentive must be less than the full amount.
 
-            // Send the coded shares of the collatoral to the expirer the rest to the vault.
+            // Send the coded shares of the collateral to the expirer the rest to the vault.
         
             // This following logic might overflow but we would rather have it overflow (which reduces expireShare)
             // than to never be able to expire an underwrite.
@@ -905,16 +925,16 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
 
         // Delete escrow information and send swap tokens directly to the underwriter.
         ICatalystV1Vault(vault).releaseUnderwriteAsset(refundTo, identifier, underwrittenTokenAmount, toAsset, sourceIdentifier, fromVault);
-        // We know only need to handle the collatoral and underwriting incentive.
+        // We know only need to handle the collateral and underwriting incentive.
         // We also don't have to check that the vault didn't lie to us about underwriting.
 
-        // Also refund the collatoral.
+        // Also refund the collateral.
         uint256 refundAmount = underwrittenTokenAmount * (
-            UNDERWRITING_COLLATORAL
-        )/UNDERWRITING_COLLATORAL_DENOMINATOR;
+            UNDERWRITING_COLLATERAL
+        )/UNDERWRITING_COLLATERAL_DENOMINATOR;
 
         // add the underwriting incentive as well. Notice that 2x refundAmount are in play.
-        //   1. The first part comes from the underwriter + collatoral.
+        //   1. The first part comes from the underwriter + collateral.
         // + 1. The second part comes from the vault after the matching message arrives.
         // = 2 parts
         // 1 - incentive has been sent to the user.

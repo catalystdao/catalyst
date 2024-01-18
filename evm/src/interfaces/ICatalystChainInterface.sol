@@ -8,8 +8,8 @@ interface ICatalystChainInterface is ICatalystV1Structs, ICrossChainReceiver {
 
     function EXPIRE_CALLER_REWARD() external view returns (uint256);
     function EXPIRE_CALLER_REWARD_DENOMINATOR() external view returns (uint256);
-    function UNDERWRITING_COLLATORAL() external view returns (uint256);
-    function UNDERWRITING_COLLATORAL_DENOMINATOR() external view returns (uint256);
+    function UNDERWRITING_COLLATERAL() external view returns (uint256);
+    function UNDERWRITING_COLLATERAL_DENOMINATOR() external view returns (uint256);
     function chainIdentifierToDestinationAddress(bytes32) external view returns (bytes memory);
     function connectNewChain(bytes32 chainIdentifier, bytes memory remoteCCI, bytes memory remoteGARP) external;
     function estimateAdditionalCost() external view returns (address asset, uint256 amount);
