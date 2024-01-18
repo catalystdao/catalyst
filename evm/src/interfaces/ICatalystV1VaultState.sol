@@ -1,6 +1,5 @@
-//SPDX-License-Identifier: UNLICENSED
+//SPDX-License-Identifier: MIT
 pragma solidity ^0.8.17;
-
 
 import { IMessageEscrowStructs } from "GeneralisedIncentives/src/interfaces/IMessageEscrowStructs.sol";
 
