@@ -414,20 +414,6 @@ abstract contract CatalystVaultCommon is
         _escrowedVaultTokens += vaultTokens;
     }
 
-    /// @notice Creates a token escrow for a swap.
-    function _setUnderwriteEscrow(
-        bytes32 underwriteIdentifier,
-        address fromAsset,
-        uint256 amount
-    ) internal {
-        if (_escrowLookup[underwriteIdentifier] != address(0))  revert EscrowAlreadyExists();
-        _escrowLookup[underwriteIdentifier] = address(uint160(1));
-        unchecked {
-            // Must be less than than the vault balance.
-            _escrowedTokens[fromAsset] += amount;
-        }
-    }
-
     /// @notice Returns the fallbackUser for the escrow and cleans up the escrow information.
     /// @dev 'delete _escrowLookup[sendAssetHash]' ensures this function can only be called once.
     function _releaseAssetEscrow(
@@ -462,26 +448,6 @@ abstract contract CatalystVaultCommon is
         unchecked {
             // escrowAmount \subseteq _escrowedVaultTokens => escrowAmount <= _escrowedVaultTokens. Cannot be called twice since the 3 lines before ensure this can only be reached once.
             _escrowedVaultTokens -= escrowAmount;
-        }
-        
-        return fallbackUser;
-    }
-
-    /// @notice Returns the fallbackUser for the escrow and cleans up the escrow information.
-    /// @dev 'delete _escrowLookup[sendAssetHash]' ensures this function can only be called once.
-    function _releaseUnderwriteEscrow(
-        bytes32 sendAssetHash,
-        uint256 escrowAmount,
-        address escrowToken
-    ) internal returns(address) {
-
-        address fallbackUser = _escrowLookup[sendAssetHash];  // Passing in an invalid swapHash returns address(0)
-        require(fallbackUser != address(0));  // dev: Invalid swapHash. Alt: Escrow doesn't exist.
-        delete _escrowLookup[sendAssetHash];  // Stops timeout and further acks from being called
-
-        unchecked {
-            // escrowAmount \subseteq _escrowedTokens => escrowAmount <= _escrowedTokens. Cannot be called twice since the 3 lines before ensure this can only be reached once.
-            _escrowedTokens[escrowToken] -= escrowAmount;
         }
         
         return fallbackUser;
@@ -723,9 +689,10 @@ abstract contract CatalystVaultCommon is
         ERC20(escrowToken).safeTransfer(refundTo, escrowAmount);
     }
 
+    /// @dev The unsued parameter U is used for overwrites. (see CataulystVaultAmplified.sol)
     function deleteUnderwriteAsset(
         bytes32 identifier,
-        uint256 U,
+        uint256 /* U */,
         uint256 escrowAmount,
         address escrowToken
     ) onlyChainInterface virtual public {

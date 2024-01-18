@@ -35,7 +35,6 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
     error InvalidContext(bytes1 context); // 9f769791
     error InvalidAddress(); // e6c4247b
     error InvalidSourceApplication(); // 003923e0
-    error SubcallOutOfGas(); // d271060e
     error NotEnoughIncentives(uint256 expected, uint256 actual); // 6de78246
     error ChainAlreadySetup(); // b8e35614
     
@@ -46,7 +45,6 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
     error MaxUnderwriteDurationTooLong(); // 3f6368aa
     error MaxUnderwriteDurationTooShort(); // 6229dcd0
     error NoVaultConnection(); // ea66ca6d
-    error MaliciousVault(); // 847ca49a
     error SwapRecentlyUnderwritten(); // 695b3a94
 
     //--- Events ---//
