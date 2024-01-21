@@ -2,7 +2,7 @@
 
 This monorepo contains all Catalyst implementations
 
-Catalyst is an implementation of the `Unit of Liquidity` AMM design. A design which used independent pricing to asynchronously price assets using shared liquidity, supporting both volatile assets and stable assets.
+Catalyst is an implementation of the [Unit of Liquidity](https://github.com/catalystdao/papers/blob/main/Catalyst%20-%20Asynchronous%20Autonomous%20Market%20Making%20via%20a%20Unit%20of%20Liquidity.pdf) AMM design. A design which used independent pricing to asynchronously price assets using shared liquidity, supporting both volatile assets and stable assets.
 
 Each implementation is contained within its own folder.
 
@@ -41,7 +41,7 @@ Amplification: $P^\theta(w)= \frac{W_i}{(W_i \cdot w)^\theta} \cdot (1-\theta)$
 
 ## AMM Terms
 
-**Marginal Price**: If someone were to buy/sell an infinitesimal in the vault. the marginal price is the price they would pay. The marginal price can generally be derived in 3 ways: $\lim_{x_\alpha \to 0} y_\beta/x_\alpha$, $\frac{\mathrm{d}}{\mathrm{d}i_\alpha} solve(Invariant, i_\beta)$, or $\frac{P_\alpha(w)}{P_\beta(w)}$.
+**Marginal Price**: If someone were to buy/sell an infinitesimal in the vault. the marginal price is the price they would pay. The marginal price can generally be derived in 2 + 1 ways: $\lim_{x_\alpha \to 0} y_\beta/x_\alpha$ or $\frac{\mathrm{d}}{\mathrm{d}i_\alpha} solve(Invariant, i_\beta)$. Often they are equal to $\frac{P_\alpha(w)}{P_\beta(w)}$.
 
 **sendAsset**: The first swap of a Catalyst swap. It is independent of the state of the second leg of the transaction. Within a vault $U$ can be used to transparently purchase any token via *receiveAsset*. 
 
@@ -49,7 +49,7 @@ Amplification: $P^\theta(w)= \frac{W_i}{(W_i \cdot w)^\theta} \cdot (1-\theta)$
 
 **LocalSwap**: A combination of *sendAsset* and *receiveAsset* executed atomically, often on a single chain.
 
-**Invariant**: A measure used to measure the vault value. Specific to the *invariant* measure, is that it is constant whenever a swap is completed. If a vault implements a swap fee, the measure increases as fees accumulate in the vault. The invariant is not invariant to deposits or withdrawals.
+**Invariant**: A measure used to measure the vault value. Specific to the *invariant* measure, is that it is constant whenever a swap is completed. If a vault implements a swap fee, the measure increases as fees accumulate in the vault. The invariant is not invariant to deposits or withdrawals. The invariants can continously be examined if the the number of emitted Units is kept track of. In the below equations, this is representated as $\sum U$.
 
 ## The AMM Equations
 
@@ -63,7 +63,7 @@ Using the Catalyst Equation with the price curves, the mathematical swap equatio
 
 - SwapFromUnits: $y_j = j_t \cdot \left(1-\exp\left(-\frac{U}{W_j}\right)\right)$
 
-- Invariant: $K = \prod_{i} i_t^{W_i}$
+- Invariant: $K = \sum_{i \in \{\alpha, \beta, \dots\}} \ln(i_t) \cdot W_i + \sum U$
 
 ### Amplified Tokens
 
@@ -73,4 +73,4 @@ Using the Catalyst Equation with the price curves, the mathematical swap equatio
 
 - SwapFromUnits: $y_j = j_t \cdot \left(1 -\left(\frac{\left(j_t \cdot W_j\right)^{1-\theta} - U }{\left(j_t \cdot W_j\right)^{1-\theta}}\right)^{\frac{1}{1-\theta}}\right)$
 
-- Invariant: $K = \sum_{i \in \{\alpha, \beta, \dots\}} i^{1-\theta} W_i^{1-\theta}$
+- Invariant: $K = \sum_{i \in \{\alpha, \beta, \dots\}} i^{1-\theta} W_i^{1-\theta} + \sum U$
