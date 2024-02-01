@@ -328,7 +328,9 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
         uint256 W_B = _weight[toAsset];
 
         // The swap equation simplifies to the ordinary constant product if the token weights are equal.
-        if (W_A == W_B)
+        // Check that the weights aren't 0 such that swaps between tokens not the in vault
+        // is disallowed. This specifically protects against proxyERC20 tokens.
+        if ((W_A == W_B) && (W_A != 0))
             // Saves gas and is exact.
             // NOTE: If W_A == 0 and W_B == 0 => W_A == W_B => The calculation will not fail.
             // This is not a problem, since W_B != 0 for assets contained in the vault, and hence a 0-weighted asset 
