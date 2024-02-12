@@ -527,7 +527,15 @@ abstract contract CatalystVaultCommon is
         // This call provides re-entry protection against re-entering this call. Otherwise, this call can always be called.
         address fallbackAddress = _releaseAssetEscrow(sendAssetHash, escrowAmount, escrowToken); // Only reverts for missing escrow,
 
-        ERC20(escrowToken).safeTransfer(fallbackAddress, escrowAmount);  // Would fail if there is no balance. To protect against this, the escrow amount should be removed from what can be claimed by users.
+        // Make a low level call such that the transfer never fails. This is important for tokens
+        // that use block lists.
+        // This also implies that if you get blacklisted between when you initiated the swap and the swap failed, you
+        // would lose the tokens.
+        bytes memory payload = abi.encodeWithSignature("transfer(address,uint256)", fallbackAddress, escrowAmount);
+        assembly ("memory-safe") {
+            let success := call(gas(), escrowToken, 0,  add(payload, 0x20), mload(payload), 0, 0)
+            // ERC20(escrowToken).safeTransfer(fallbackAddress, escrowAmount);
+        }
 
         emit SendAssetFailure( // Never reverts.
             channelId,
