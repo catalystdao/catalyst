@@ -1,8 +1,9 @@
 {
-  "MantleBase": {
-    "mantletestnet": {
-      "cci": "0x307737d19238D3E07CC3E0167cEd991a32D21dD9",
-      "address": "0x0f1ff6216866cbad075a89a8e4cb3c7a9734df0d",
+  "MumbaiSepolia": {
+    "cci_version": "MOCK",
+    "mumbai": {
+      "cci": "0xa55eaf1c45cdabe41c374862982f1543a60a8139",
+      "address": "0x6243df63dc7e97a5968578e9ae35008af3ec69df",
       "weights": [
         1
       ],
@@ -11,9 +12,9 @@
         "WGAS": 10000000000000000
       }
     },
-    "basegoerli": {
-      "cci": "0x307737d19238D3E07CC3E0167cEd991a32D21dD9",
-      "address": "0x0f1ff6216866cbad075a89a8e4cb3c7a9734df0d",
+    "sepolia": {
+      "cci": "0xa55eaf1c45cdabe41c374862982f1543a60a8139",
+      "address": "0x6243df63dc7e97a5968578e9ae35008af3ec69df",
       "weights": [
         1
       ],
@@ -23,27 +24,72 @@
       }
     }
   },
-  "OmniStables": {
-    "amplification": 250000000000000000,
-    "omnitestnet": {
-      "cci": "0x0000000000000000000000000000000000000000",
-      "address": "0x0f1ff6216866cbad075a89a8e4cb3c7a9734df0d",
+  "WormholeMumbaiSepolia": {
+    "cci_version": "Wormhole",
+    "mumbai": {
+      "cci": "0x1100100aa9cf8d110ec7a10dbd982e83eb6f02fd",
+      "address": "0xc20fbcad3bf1781ab95bec04fe75c9ba4fe4aeb2",
       "weights": [
-        1,
         1
       ],
       "fee": 500000000000000,
       "tokens": {
-        "USDC": 1000000000000000000000,
-        "USDT": 1000000000000000000000
+        "WGAS": 10000000000000000
+      }
+    },
+    "sepolia": {
+      "cci": "0x1100100aa9cf8d110ec7a10dbd982e83eb6f02fd",
+      "address": "0xc20fbcad3bf1781ab95bec04fe75c9ba4fe4aeb2",
+      "weights": [
+        1
+      ],
+      "fee": 500000000000000,
+      "tokens": {
+        "WGAS": 10000000000000000
       }
     }
   },
-  "CrossChainBNB": {
-    "amplification": 250000000000000000,
-    "opbnbtestnet": {
-      "cci": "0x307737d19238D3E07CC3E0167cEd991a32D21dD9",
-      "address": "0x0f1ff6216866cbad075a89a8e4cb3c7a9734df0d",
+  "PolymerSepoliaBaseOp": {
+    "cci_version": "Polymer",
+    "basesepolia": {
+      "cci": "0xe277fe38a43060fd288efe20aeec1f6c2cd6db83",
+      "address": "0x6243df63dc7e97a5968578e9ae35008af3ec69df",
+      "weights": [
+        1
+      ],
+      "fee": 500000000000000,
+      "tokens": {
+        "WGAS": 10000000000000000
+      }
+    },
+    "optimismsepolia": {
+      "cci": "0xe277fe38a43060fd288efe20aeec1f6c2cd6db83",
+      "address": "0x6243df63dc7e97a5968578e9ae35008af3ec69df",
+      "weights": [
+        1
+      ],
+      "fee": 500000000000000,
+      "tokens": {
+        "WGAS": 10000000000000000
+      }
+    }
+  },
+  "MockMumbaiSepoliaBSC": {
+    "cci_version": "MOCK",
+    "mumbai": {
+      "cci": "0xa55eaf1c45cdabe41c374862982f1543a60a8139",
+      "address": "0x94d4fb4d1091333dd88e5ec661fcb58ecb21df42",
+      "weights": [
+        1
+      ],
+      "fee": 500000000000000,
+      "tokens": {
+        "WGAS": 10000000000000000
+      }
+    },
+    "sepolia": {
+      "cci": "0xa55eaf1c45cdabe41c374862982f1543a60a8139",
+      "address": "0x94d4fb4d1091333dd88e5ec661fcb58ecb21df42",
       "weights": [
         1
       ],
@@ -53,56 +99,8 @@
       }
     },
     "bsctestnet": {
-      "cci": "0x307737d19238D3E07CC3E0167cEd991a32D21dD9",
-      "address": "0x0f1ff6216866cbad075a89a8e4cb3c7a9734df0d",
-      "weights": [
-        1
-      ],
-      "fee": 500000000000000,
-      "tokens": {
-        "WGAS": 10000000000000000
-      }
-    }
-  },
-  "inEVM-Scroll": {
-    "scrollsepolia": {
-      "cci": "0x307737d19238D3E07CC3E0167cEd991a32D21dD9",
-      "address": "0x0f1ff6216866cbad075a89a8e4cb3c7a9734df0d",
-      "weights": [
-        1
-      ],
-      "fee": 500000000000000,
-      "tokens": {
-        "WGAS": 10000000000000000
-      }
-    },
-    "inevmdevnet": {
-      "cci": "0x307737d19238D3E07CC3E0167cEd991a32D21dD9",
-      "address": "0x0f1ff6216866cbad075a89a8e4cb3c7a9734df0d",
-      "weights": [
-        1
-      ],
-      "fee": 500000000000000,
-      "tokens": {
-        "WGAS": 10000000000000000
-      }
-    }
-  },
-  "Sepolia-Mumbai": {
-    "sepolia": {
-      "cci": "0x307737d19238D3E07CC3E0167cEd991a32D21dD9",
-      "address": "0x4207b55dcf38ad113c6e91721c932ccd19fd7604",
-      "weights": [
-        1
-      ],
-      "fee": 500000000000000,
-      "tokens": {
-        "WGAS": 10000000000000000
-      }
-    },
-    "mumbai": {
-      "cci": "0x307737d19238D3E07CC3E0167cEd991a32D21dD9",
-      "address": "0x4207b55dcf38ad113c6e91721c932ccd19fd7604",
+      "cci": "0xa55eaf1c45cdabe41c374862982f1543a60a8139",
+      "address": "0x6243df63dc7e97a5968578e9ae35008af3ec69df",
       "weights": [
         1
       ],

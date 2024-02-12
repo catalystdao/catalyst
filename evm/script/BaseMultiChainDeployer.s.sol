@@ -12,16 +12,13 @@ contract BaseMultiChainDeployer is Script {
     enum Chains {
         Mumbai,
         Sepolia,
-        BaseGoerli,
-        ArbitrumGoerli,
         ScrollSepolia,
-        OptimismGoerli,
-        // TaikoEldfell,
         OPBNBTestnet,
         BSCTestnet,
         MantleTestnet,
-        OmniTestnet,
-        INEVMDevnet
+        INEVMDevnet,
+        BaseSepolia,
+        OptimismSepolia
     }
 
     mapping(Chains => string) public rpc;
@@ -42,25 +39,9 @@ contract BaseMultiChainDeployer is Script {
         wrapped_gas[Chains.Sepolia] = "WETH10";
         chain_list.push(Chains.Sepolia);
 
-        rpc[Chains.BaseGoerli] = "basegoerli";
-        wrapped_gas[Chains.BaseGoerli] = "WETH";
-        chain_list.push(Chains.BaseGoerli);
-
-        rpc[Chains.ArbitrumGoerli] = "arbitrumgoerli";
-        wrapped_gas[Chains.ArbitrumGoerli] = "WETH";
-        chain_list.push(Chains.ArbitrumGoerli);
-
         rpc[Chains.ScrollSepolia] = "scrollsepolia";
         wrapped_gas[Chains.ScrollSepolia] = "WETH";
         chain_list_legacy.push(Chains.ScrollSepolia);
-
-        rpc[Chains.OptimismGoerli] = "optimismgoerli";
-        wrapped_gas[Chains.OptimismGoerli] = "WETH";
-        chain_list.push(Chains.OptimismGoerli);
-
-        // rpc[Chains.TaikoEldfell] = "taikoeldfell";
-        // wrapped_gas[Chains.TaikoEldfell] = "WETH";
-        // chain_list.push(Chains.TaikoEldfell);
 
         rpc[Chains.OPBNBTestnet] = "opbnbtestnet";
         wrapped_gas[Chains.OPBNBTestnet] = "WBNB";
@@ -74,13 +55,17 @@ contract BaseMultiChainDeployer is Script {
         wrapped_gas[Chains.MantleTestnet] = "WMNT";
         chain_list_legacy.push(Chains.MantleTestnet);
 
-        rpc[Chains.OmniTestnet] = "omnitestnet";
-        wrapped_gas[Chains.OmniTestnet] = "WOMNI";
-        chain_list_legacy.push(Chains.OmniTestnet);
-
         rpc[Chains.INEVMDevnet] = "inevmdevnet";
         wrapped_gas[Chains.INEVMDevnet] = "WINJ";
         chain_list.push(Chains.INEVMDevnet);
+
+        rpc[Chains.BaseSepolia] = "basesepolia";
+        wrapped_gas[Chains.BaseSepolia] = "WETH";
+        chain_list.push(Chains.BaseSepolia);
+
+        rpc[Chains.OptimismSepolia] = "optimismsepolia";
+        wrapped_gas[Chains.OptimismSepolia] = "WETH";
+        chain_list.push(Chains.OptimismSepolia);
     }
 
     uint256 pk;

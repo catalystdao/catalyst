@@ -13,6 +13,8 @@ import { BaseMultiChainDeployer} from "./BaseMultiChainDeployer.s.sol";
 import { IncentivizedMockEscrow } from "GeneralisedIncentives/src/apps/mock/IncentivizedMockEscrow.sol";
 import { IncentivizedWormholeEscrow } from "GeneralisedIncentives/src/apps/wormhole/IncentivizedWormholeEscrow.sol";
 
+import { IncentivizedPolymerEscrow } from "GeneralisedIncentives/src/apps/polymer/IncentivizedPolymerEscrow.sol";
+
 import { JsonContracts } from "./DeployContracts.s.sol";
 
 contract DeployInterfaces is BaseMultiChainDeployer {
@@ -33,22 +35,27 @@ contract DeployInterfaces is BaseMultiChainDeployer {
 
     mapping(Chains => address) wormholeBridge;
 
+    mapping(Chains => address) polymerContract;
+
     constructor() {
         interfaceSalt[0x00000001a9818a7807998dbc243b05F2B3CfF6f4] = bytes32(uint256(1));
 
         interfaceSalt[0x000000ED80503e3A7EA614FFB5507FD52584a1f2] = bytes32(uint256(1));
 
         wormholeBridge[Chains.Sepolia] = 0x4a8bc80Ed5a4067f1CCf107057b8270E0cC11A78;
-
         wormholeBridge[Chains.Mumbai] = 0x0CBE91CF822c73C2315FB05100C2F714765d5c20;
+
+        polymerContract[Chains.BaseSepolia] = 0xfcef85E0F0Afd1Acd73fAF1648266DF923d4521d;
+        polymerContract[Chains.OptimismSepolia] = 0x3001b73254EB715799EB93E8413EdCE4721090Ab;
     }
 
-    function deployGeneralisedIncentives(string memory version, bytes32 chainIdentifier) internal returns(address incentive) {
+    function deployGeneralisedIncentives(string memory version) internal returns(address incentive) {
         // Here is the map of id to version:
         // id == 0: Mock (POA)
         // id == 1: Wormhole
-
         if (keccak256(abi.encodePacked(version)) == keccak256(abi.encodePacked("MOCK"))) {
+            bytes32 chainIdentifier = abi.decode(config_chain.parseRaw(string.concat(".", version, ".", rpc[chain], ".", rpc[chain])), (bytes32));
+
             address signer = vm.envAddress("MOCK_SIGNER");
 
             vm.stopBroadcast();
@@ -65,7 +72,18 @@ contract DeployInterfaces is BaseMultiChainDeployer {
             uint256 pv_key = vm.envUint("WORMHOLE_DEPLOYER");
             vm.startBroadcast(pv_key);
 
+            require(wormholeBridge[chain] != address(0), "Contract to send messages to cannot be 0.");
             incentive = address(new IncentivizedWormholeEscrow(vm.envAddress("CATALYST_ADDRESS"), wormholeBridge[chain]));
+
+            vm.stopBroadcast();
+            vm.startBroadcast(pk);
+        } else if (keccak256(abi.encodePacked(version)) == keccak256(abi.encodePacked("Polymer"))) {
+            vm.stopBroadcast();
+            uint256 pv_key = vm.envUint("POLYMER_DEPLOYER");
+            vm.startBroadcast(pv_key);
+
+            require(polymerContract[chain] != address(0), "Contract to send messages to cannot be 0.");
+            incentive = address(new IncentivizedPolymerEscrow(vm.envAddress("CATALYST_ADDRESS"), polymerContract[chain]));
 
             vm.stopBroadcast();
             vm.startBroadcast(pk);
@@ -75,6 +93,7 @@ contract DeployInterfaces is BaseMultiChainDeployer {
     }
 
     modifier forEachInterface() {
+        if (!vm.keyExists(config_interfaces, string.concat(".", rpc[chain]))) return;
         string[] memory availableInterfaces = vm.parseJsonKeys(config_interfaces, string.concat(".", rpc[chain]));
         for (uint256 i = 0; i < availableInterfaces.length; ++i) {
             incentiveVersion = availableInterfaces[i];
@@ -100,7 +119,7 @@ contract DeployInterfaces is BaseMultiChainDeployer {
         _;
     }
 
-    function deployBaseIncentive(bytes32 chainIdentifier) forEachInterface() internal {
+    function deployBaseIncentive() forEachInterface() internal {
         // Get the address of the incentives contract.
         address incentiveAddress = abi.decode(config_interfaces.parseRaw(string.concat(".", rpc[chain], ".", incentiveVersion, ".incentive")), (address));
         console.log("inc", incentiveVersion);
@@ -108,7 +127,8 @@ contract DeployInterfaces is BaseMultiChainDeployer {
             console.logAddress(incentiveAddress);
             return;
         }
-        address newlyDeployedIncentiveAddress = deployGeneralisedIncentives(incentiveVersion, chainIdentifier);
+        address newlyDeployedIncentiveAddress = deployGeneralisedIncentives(incentiveVersion);
+        console.log("Deploying new base incentive");
         console.logAddress(newlyDeployedIncentiveAddress);
         require(newlyDeployedIncentiveAddress == incentiveAddress, "Newly deployed incentive address isn't expected address");
     }
@@ -129,6 +149,7 @@ contract DeployInterfaces is BaseMultiChainDeployer {
             new CatalystChainInterface{salt: salt}(incentiveAddress, admin)
         );
 
+        console.log("Deploying new base interface");
         console.logAddress(newlyDeployedInterfaceAddress);
 
         require(newlyDeployedInterfaceAddress == interfaceAddress, "Newly deployed interface address isn't expected address");
@@ -137,11 +158,10 @@ contract DeployInterfaces is BaseMultiChainDeployer {
     
     function _deploy() internal {
         address admin = address(0x0000007aAAC54131e031b3C0D6557723f9365A5B);
-        bytes32 chainIdentifier = abi.decode(config_chain.parseRaw(string.concat(".", rpc[chain], ".chainIdentifier")), (bytes32));
 
-        fund(vm.envAddress("INCENTIVE_DEPLOYER_ADDRESS"), 0.05*10**18);
+        // fund(vm.envAddress("INCENTIVE_DEPLOYER_ADDRESS"), 0.05*10**18);
 
-        deployBaseIncentive(chainIdentifier);
+        deployBaseIncentive();
 
         deployCCI(admin);
 
@@ -176,7 +196,7 @@ contract DeployInterfaces is BaseMultiChainDeployer {
                 !vm.keyExists(config_interfaces, string.concat(".", rpc[remoteChain], ".", incentiveVersion))
             ) continue;
 
-            bytes32 chainIdentifier = abi.decode(config_chain.parseRaw(string.concat(".", rpc[remoteChain], ".chainIdentifier")), (bytes32));
+            bytes32 chainIdentifier = abi.decode(config_chain.parseRaw(string.concat(".", incentiveVersion, ".", rpc[chain], ".",  rpc[remoteChain])), (bytes32));
             // check if a connection has already been set.
 
             if (keccak256(cci.chainIdentifierToDestinationAddress(chainIdentifier)) != KECCACK_OF_NOTHING) {
