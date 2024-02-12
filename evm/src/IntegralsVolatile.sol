@@ -1,7 +1,7 @@
 //SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.19;
 
-import { FixedPointMathLib } from "solmate/utils/FixedPointMathLib.sol";
+import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
 
 /**
  * @title Catalyst: Volatile Integrals
@@ -25,7 +25,7 @@ contract IntegralsVolatile {
     ) internal pure returns (uint256) {
         // Notice, A + in and A are not WAD but divWadDown is used anyway.
         // That is because lnWad requires a scaled number.
-        return W * uint256(FixedPointMathLib.lnWad(int256(FixedPointMathLib.divWadDown(A + input, A))));    // int256 casting is safe. If overflows, it returns negative. lnWad fails on negative numbers. If the vault balance is high, this is unlikely.
+        return W * uint256(FixedPointMathLib.lnWad(int256(FixedPointMathLib.divWad(A + input, A))));    // int256 casting is safe. If overflows, it returns negative. lnWad fails on negative numbers. If the vault balance is high, this is unlikely.
     }
 
     /**
@@ -44,7 +44,7 @@ contract IntegralsVolatile {
         uint256 B,
         uint256 W
     ) internal pure returns (uint256) {
-        return FixedPointMathLib.mulWadDown(
+        return FixedPointMathLib.mulWad(
             B,
             FixedPointMathLib.WAD - uint256(FixedPointMathLib.expWad(-int256(U / W)))   // int256 casting is initially not safe. If overflow, the equation becomes: 1 - exp(U/W) => exp(U/W) > 1. In this case, Solidity's built-in safe math protection catches the overflow.
         );
@@ -91,6 +91,6 @@ contract IntegralsVolatile {
         
         // Compute the vault owner share before liquidity has been added.
         // (solve share = pt/(PT+pt) for pt.)
-        return FixedPointMathLib.divWadDown(FixedPointMathLib.WAD - npos, npos);
+        return FixedPointMathLib.divWad(FixedPointMathLib.WAD - npos, npos);
     }
 }

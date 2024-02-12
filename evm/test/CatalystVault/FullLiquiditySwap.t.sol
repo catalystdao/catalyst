@@ -7,7 +7,7 @@ import { CatalystVaultAmplified } from "src/CatalystVaultAmplified.sol";
 import { VaultNotConnected } from "src/interfaces/ICatalystV1VaultErrors.sol";
 import { ICatalystV1Structs } from "src/interfaces/ICatalystV1VaultState.sol";
 import { WADWAD } from "src/utils/MathConstants.sol";
-import { FixedPointMathLib as Math } from "solmate/utils/FixedPointMathLib.sol";
+import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
 
 import "forge-std/Test.sol";
 import { TestCommon } from "test/TestCommon.t.sol";

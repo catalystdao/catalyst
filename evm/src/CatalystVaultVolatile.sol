@@ -1,9 +1,9 @@
 //SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.19;
 
-import { ERC20 } from 'solmate/tokens/ERC20.sol';
-import { SafeTransferLib } from 'solmate/utils/SafeTransferLib.sol';
-import { FixedPointMathLib } from "solmate/utils/FixedPointMathLib.sol";
+import { ERC20 } from 'solady/tokens/ERC20.sol';
+import { SafeTransferLib } from 'solady/utils/SafeTransferLib.sol';
+import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
 import { ICatalystChainInterface } from "./interfaces/ICatalystChainInterface.sol";
 import { CatalystVaultCommon } from "./CatalystVaultCommon.sol";
 import { IntegralsVolatile } from "./IntegralsVolatile.sol";
@@ -42,8 +42,6 @@ import "./ICatalystV1Vault.sol";
  * !If finishSetup is not called, the vault can be drained by the creators!
  */
 contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
-    using SafeTransferLib for ERC20;
-
     //--- ERRORS ---//
     // Errors are defined in interfaces/ICatalystV1VaultErrors.sol
 
@@ -358,7 +356,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
     ) nonReentrant external override returns(uint256) {
         _updateWeights();
         // Smaller initialTotalSupply => fewer vault tokens minted: _escrowedVaultTokens is not added.
-        uint256 initialTotalSupply = totalSupply; 
+        uint256 initialTotalSupply = totalSupply(); 
 
         uint256 U = 0;
         for (uint256 it; it < MAX_ASSETS;) {
@@ -378,7 +376,8 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
 
             U += _calcPriceCurveArea(tokenAmounts[it], At, _weight[token]);
 
-            ERC20(token).safeTransferFrom(
+            SafeTransferLib.safeTransferFrom(
+                token,
                 msg.sender,
                 address(this),
                 tokenAmounts[it]
@@ -402,8 +401,8 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
         uint256 wsum = _maxUnitCapacity / LN2;
 
         // Compute the number of vault tokens minted to the user. Notice that _calcPriceCurveLimitShare can be greater than 1
-        // and more than the totalSupply can be minted given sufficiently large U.
-        uint256 vaultTokens = FixedPointMathLib.mulWadDown(initialTotalSupply, _calcPriceCurveLimitShare(U, wsum));
+        // and more than the totalSupply() can be minted given sufficiently large U.
+        uint256 vaultTokens = FixedPointMathLib.mulWad(initialTotalSupply, _calcPriceCurveLimitShare(U, wsum));
 
         // Check that the minimum output is honoured.
         if (minOut > vaultTokens) revert ReturnInsufficient(vaultTokens, minOut);
@@ -431,10 +430,10 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
         uint256[] calldata minOut
     ) nonReentrant external override returns(uint256[] memory) {
         _updateWeights();
-        // Cache totalSupply. This saves some gas.
-        uint256 initialTotalSupply = totalSupply + _escrowedVaultTokens;
+        // Cache totalSupply(). This saves some gas.
+        uint256 initialTotalSupply = totalSupply() + _escrowedVaultTokens;
 
-        // Since we have already cached totalSupply, we might as well burn the tokens
+        // Since we have already cached totalSupply(), we might as well burn the tokens
         // now. If the user doesn't have enough tokens, they save a bit of gas.
         _burn(msg.sender, vaultTokens);
 
@@ -457,7 +456,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
             amounts[it] = tokenAmount;
 
             // Transfer the released tokens to the user.
-            ERC20(token).safeTransfer(msg.sender, tokenAmount);
+            SafeTransferLib.safeTransfer(token, msg.sender, tokenAmount);
 
             unchecked {
                 ++it;
@@ -491,10 +490,10 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
         uint256[] calldata minOut
     ) nonReentrant external override returns(uint256[] memory) {
         _updateWeights();
-        // cache totalSupply. This saves a bit of gas.
-        uint256 initialTotalSupply = totalSupply + _escrowedVaultTokens;
+        // cache totalSupply(). This saves a bit of gas.
+        uint256 initialTotalSupply = totalSupply() + _escrowedVaultTokens;
 
-        // Since we have already cached totalSupply, we might as well burn the tokens
+        // Since we have already cached totalSupply(), we might as well burn the tokens
         // now. If the user doesn't have enough tokens, they save a bit of gas.
         _burn(msg.sender, vaultTokens);
 
@@ -504,7 +503,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
         // Compute the unit worth of the vault tokens.
         // The following line implies that one cannot withdraw all liquidity using this function.
         uint256 U = uint256(FixedPointMathLib.lnWad( // uint256: ln computed of a value which is greater than > 1 is always positive
-            int256(FixedPointMathLib.divWadDown(initialTotalSupply, initialTotalSupply - vaultTokens)    // int265: if vaultTokens is almost equal to initialTotalSupply this can overflow the cast. The result is a negative input to lnWad which fails.
+            int256(FixedPointMathLib.divWad(initialTotalSupply, initialTotalSupply - vaultTokens)    // int265: if vaultTokens is almost equal to initialTotalSupply this can overflow the cast. The result is a negative input to lnWad which fails.
         ))) * wsum;
 
         // For later event logging, the amounts transferred to the vault are stored.
@@ -514,7 +513,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
             if (token == address(0)) break;
 
             // Units allocated for the specific token.
-            uint256 U_i = FixedPointMathLib.mulWadDown(U, withdrawRatio[it]);
+            uint256 U_i = FixedPointMathLib.mulWad(U, withdrawRatio[it]);
             if (U_i == 0) {
                 // After a withdrawRatio of 1, all other withdrawRatios should be 0. Otherwise, there was an input error.
                 if (withdrawRatio[it] != 0) revert WithdrawRatioNotZero();
@@ -541,7 +540,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
             amounts[it] = tokenAmount;
 
             // Transfer the released tokens to the user.
-            ERC20(token).safeTransfer(msg.sender, tokenAmount);
+            SafeTransferLib.safeTransfer(token, msg.sender, tokenAmount);
 
             unchecked {
                 ++it;
@@ -571,7 +570,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
         uint256 minOut
     ) nonReentrant external override returns (uint256) {
         _updateWeights();
-        uint256 fee = FixedPointMathLib.mulWadDown(amount, _vaultFee);
+        uint256 fee = FixedPointMathLib.mulWad(amount, _vaultFee);
 
         // Calculate the return value.
         uint256 out = calcLocalSwap(fromAsset, toAsset, amount - fee);
@@ -582,8 +581,8 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
         // Transfer tokens to the user and collect tokens from the user.
         // The order doesn't matter, since the function is reentrant protected.
         // The transaction which is most likly to revert is first.
-        ERC20(fromAsset).safeTransferFrom(msg.sender, address(this), amount);
-        ERC20(toAsset).safeTransfer(msg.sender, out);
+        SafeTransferLib.safeTransferFrom(fromAsset, msg.sender, address(this), amount);
+        SafeTransferLib.safeTransfer(toAsset, msg.sender, out);
 
         // Collect potential governance fee
         _collectGovernanceFee(fromAsset, fee);
@@ -644,7 +643,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
         // This is unfortunate.
 
         // Collect the tokens from the user.
-        ERC20(fromAsset).safeTransferFrom(msg.sender, address(this), amount);
+        SafeTransferLib.safeTransferFrom(fromAsset, msg.sender, address(this), amount);
 
         // Governance Fee
         _collectGovernanceFee(fromAsset, fee);
@@ -690,7 +689,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
     ) nonReentrant onlyConnectedPool(routeDescription.chainIdentifier, routeDescription.toVault) external payable override returns (uint256) {
         _updateWeights();
 
-        uint256 fee = FixedPointMathLib.mulWadDown(amount, _vaultFee);
+        uint256 fee = FixedPointMathLib.mulWad(amount, _vaultFee);
 
         // Calculate the units bought.
         uint256 U = calcSendAsset(fromAsset, amount - fee);
@@ -738,7 +737,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
     ) nonReentrant onlyConnectedPool(routeDescription.chainIdentifier, routeDescription.toVault) external payable override returns (uint256) {
         _updateWeights();
 
-        uint256 fee = FixedPointMathLib.mulWadDown(amount, _vaultFee);
+        uint256 fee = FixedPointMathLib.mulWad(amount, _vaultFee);
 
         // Calculate the units bought.
         uint256 U = calcSendAsset(fromAsset, amount - fee);
@@ -818,7 +817,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
         );
 
         // Send the assets to the user.
-        ERC20(toAsset).safeTransfer(toAccount, purchasedTokens);
+        SafeTransferLib.safeTransfer(toAsset, toAccount, purchasedTokens);
 
         emit ReceiveAsset(
             channelId, 
@@ -874,8 +873,8 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
         // Update weights
         _updateWeights();
 
-        uint256 initialTotalSupply = totalSupply + _escrowedVaultTokens;
-        // Since we have already cached totalSupply, we might as well burn the tokens
+        uint256 initialTotalSupply = totalSupply() + _escrowedVaultTokens;
+        // Since we have already cached totalSupply(), we might as well burn the tokens
         // now. If the user doesn't have enough tokens, they save a bit of gas.
         _burn(msg.sender, vaultTokens);
 
@@ -885,7 +884,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
         // Compute the unit value of the provided vaultTokens.
         // This step simplifies withdrawing and swapping into a single calculation.
         uint256 U = uint256(FixedPointMathLib.lnWad(  // uint256: ln computed of a value greater than 1 is always positive
-            int256(FixedPointMathLib.divWadDown(initialTotalSupply, initialTotalSupply - vaultTokens))   // int256: if casting overflows, the result is a negative input. lnWad reverts.
+            int256(FixedPointMathLib.divWad(initialTotalSupply, initialTotalSupply - vaultTokens))   // int256: if casting overflows, the result is a negative input. lnWad reverts.
         )) * wsum;
 
         // Transfer the units to the target vault.
@@ -946,9 +945,9 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
         // Fetch wsum.
         uint256 wsum = _maxUnitCapacity / LN2;
 
-        // Compute mint %. It comes as WAD, multiply by totalSupply and divide by WAD (mulWadDown) to get number of vault tokens.
-        // On totalSupply. Do not add escrow amount, as higher amount results in a larger return.
-        uint256 vaultTokens = FixedPointMathLib.mulWadDown(_calcPriceCurveLimitShare(U, wsum), totalSupply);
+        // Compute mint %. It comes as WAD, multiply by totalSupply() and divide by WAD (mulWadDown) to get number of vault tokens.
+        // On totalSupply(). Do not add escrow amount, as higher amount results in a larger return.
+        uint256 vaultTokens = FixedPointMathLib.mulWad(_calcPriceCurveLimitShare(U, wsum), totalSupply());
 
         // Check if more than the minimum output is returned.
         if (minVaultTokens > vaultTokens) revert ReturnInsufficient(vaultTokens, minVaultTokens);
@@ -1000,7 +999,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
             // Find the fraction of the referenceAmount that the user owns.
             // Add escrow to ensure that even if all ongoing transaction revert, the user gets their expected amount.
             // Add vault tokens because they are going to be minted.
-            referenceAmount = (referenceAmount * vaultTokens)/(totalSupply + _escrowedVaultTokens + vaultTokens);
+            referenceAmount = (referenceAmount * vaultTokens)/(totalSupply() + _escrowedVaultTokens + vaultTokens);
             if (minReferenceAsset > referenceAmount) revert ReturnInsufficient(referenceAmount, minReferenceAsset);
         }
 

@@ -1,9 +1,9 @@
 //SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.19;
 
-import { ERC20 } from 'solmate/tokens/ERC20.sol';
-import { SafeTransferLib } from 'solmate/utils/SafeTransferLib.sol';
-import { FixedPointMathLib } from "solmate/utils/FixedPointMathLib.sol";
+import { ERC20 } from 'solady/tokens/ERC20.sol';
+import { SafeTransferLib } from 'solady/utils/SafeTransferLib.sol';
+import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
 import { ICatalystChainInterface } from "./interfaces/ICatalystChainInterface.sol";
 import { CatalystVaultCommon } from "./CatalystVaultCommon.sol";
 import { IntegralsAmplified } from "./IntegralsAmplified.sol";
@@ -42,8 +42,6 @@ import "./ICatalystV1Vault.sol";
  * !If finishSetup is not called, the vault can be drained by the creators!
  */
 contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
-    using SafeTransferLib for ERC20;
-
     //--- Storage ---//
     
     /// @notice Adjustment used to remove a certain escrow amount from the balance 0 computation
@@ -378,7 +376,8 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
 
                 assetDepositSum += tokenAmounts[it] * weight;
                 
-                ERC20(token).safeTransferFrom(
+                SafeTransferLib.safeTransferFrom(
+                    token,
                     msg.sender,
                     address(this),
                     tokenAmounts[it]
@@ -428,9 +427,9 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
 
         uint256 it_times_walpha_amped = it * walpha_0_ampped;
 
-        // On totalSupply. Do not add escrow amount, as higher amount
+        // On totalSupply(). Do not add escrow amount, as higher amount
         // results in a larger return.
-        uint256 vaultTokens = _calcPriceCurveLimitShare(uint256(intU), totalSupply, it_times_walpha_amped, oneMinusAmpInverse);  // uint256: intU is positive by design.
+        uint256 vaultTokens = _calcPriceCurveLimitShare(uint256(intU), totalSupply(), it_times_walpha_amped, oneMinusAmpInverse);  // uint256: intU is positive by design.
 
         // Check that the minimum output is honoured.
         if (minOut > vaultTokens) revert ReturnInsufficient(vaultTokens, minOut);
@@ -460,7 +459,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
         // _updateAmplification();
         // Burn the desired number of vault tokens to the user.
         // If they don't have it, it saves gas.
-        // * Remember to add vaultTokens when accessing totalSupply
+        // * Remember to add vaultTokens when accessing totalSupply()
         _burn(msg.sender, vaultTokens);
         // (For everyone else, it is probably cheaper to burn last. However, burning here makes
         // the implementation more similar to the volatile one)
@@ -529,14 +528,14 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
         // since it doesn't depend on the token, it should only be computed once.
         uint256 innerdiff;
         {
-            // Remember to add the number of vault tokens burned to totalSupply
+            // Remember to add the number of vault tokens burned to totalSupply()
             // _escrowedVaultTokens is added, since it makes pt_fraction smaller
-            uint256 ts = (totalSupply + _escrowedVaultTokens + vaultTokens);
+            uint256 ts = (totalSupply() + _escrowedVaultTokens + vaultTokens);
             uint256 pt_fraction = ((ts - vaultTokens) * FixedPointMathLib.WAD) / ts;
 
             // If pt_fraction == 0 => 0^oneMinusAmp = powWad(0, oneMinusAmp) => exp(ln(0) * oneMinusAmp) which is undefined.
             // However, we know what 0^oneMinusAmp is: 0^oneMinusAmp is: 0!. So we just set it to 0.
-            innerdiff = pt_fraction == 0 ? walpha_0_ampped : FixedPointMathLib.mulWadDown(
+            innerdiff = pt_fraction == 0 ? walpha_0_ampped : FixedPointMathLib.mulWad(
                 walpha_0_ampped, 
                     FixedPointMathLib.WAD - uint256(FixedPointMathLib.powWad(  // Always casts a positive value
                     int256(pt_fraction),  // Casting always safe, as pt_fraction < 1
@@ -575,7 +574,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
                 int256 oneMinusAmpInverse = WADWAD / oneMinusAmp;
                 // Since tokens are withdrawn, the change is negative. As such, multiply the
                 // equation by -1.
-                weightedTokenAmount = FixedPointMathLib.mulWadDown(
+                weightedTokenAmount = FixedPointMathLib.mulWad(
                     weightedTokenAmount,
                     FixedPointMathLib.WAD - uint256(FixedPointMathLib.powWad(  // The inner is between 0 and 1. Power of < 1 is always between 0 and 1.
                         int256(FixedPointMathLib.divWadUp(  // 0 < innerdiff < ampWeightAssetBalance => < 1 thus casting never overflows. 
@@ -602,7 +601,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
             amounts[it] = weightedTokenAmount;
 
             // Transfer the released tokens to the user.
-            ERC20(token).safeTransfer(msg.sender, weightedTokenAmount);
+            SafeTransferLib.safeTransfer(token, msg.sender, weightedTokenAmount);
 
             unchecked {
                 ++it;
@@ -645,7 +644,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
         // _updateAmplification();
         // Burn the desired number of vault tokens to the user.
         // If they don't have it, it saves gas.
-        // * Remember to add vaultTokens when accessing totalSupply
+        // * Remember to add vaultTokens when accessing totalSupply()
         _burn(msg.sender, vaultTokens);
         // (For everyone else, it is probably cheaper to burn last. However, burning here makes
         // the implementation more similar to the volatile one)
@@ -715,17 +714,17 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
 
                 // set U = number of tokens in the vault. But that is exactly what it is.
             }
-            // Remember to add the number of vault tokens burned to totalSupply
-            uint256 ts = totalSupply + _escrowedVaultTokens + vaultTokens;
+            // Remember to add the number of vault tokens burned to totalSupply()
+            uint256 ts = totalSupply() + _escrowedVaultTokens + vaultTokens;
             // Since vault tokens are getting subtracted from the total supply, remember
             // to add a negative sign to vault tokens.
-            uint256 pt_fraction = FixedPointMathLib.divWadDown(ts - vaultTokens, ts);
+            uint256 pt_fraction = FixedPointMathLib.divWad(ts - vaultTokens, ts);
 
             // Compute the unit worth of the vault tokens.
             // Recall that U is equal to N already. So we only need to multiply by the right side.
             // Since pt_fraction < 1, the units are negative. This is expected for swap to tokens. As such
             // FixedPointMathLib.WAD is moved in front to make U positive.
-            U *= FixedPointMathLib.mulWadDown(
+            U *= FixedPointMathLib.mulWad(
                 walpha_0_ampped, 
                 FixedPointMathLib.WAD - uint256(FixedPointMathLib.powWad(   // Always casts a positive value
                     int256(pt_fraction),  // If casting overflows to a negative number, powWad fails
@@ -742,7 +741,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
             if (tokenIndexed[it] == address(0)) break;
 
             // Units allocated for the specific token.
-            uint256 U_i = FixedPointMathLib.mulWadDown(U, withdrawRatio[it]);
+            uint256 U_i = FixedPointMathLib.mulWad(U, withdrawRatio[it]);
             if (U_i == 0) {
                 // After a withdrawRatio of 1, all other withdrawRatios should be 0. Otherwise, there was an input error.
                 if (withdrawRatio[it] != 0) revert WithdrawRatioNotZero();
@@ -767,7 +766,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
             amounts[it] = tokenAmount;
 
             // Transfer the released tokens to the user.
-            ERC20(tokenIndexed[it]).safeTransfer(msg.sender, tokenAmount);
+            SafeTransferLib.safeTransfer(tokenIndexed[it], msg.sender, tokenAmount);
 
             // Decrease the security limit by the amount withdrawn.
             totalWithdrawn += tokenAmount * assetWeight;
@@ -811,7 +810,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
         uint256 minOut
     ) nonReentrant external override returns (uint256) {
         // _updateAmplification();
-        uint256 fee = FixedPointMathLib.mulWadDown(amount, _vaultFee);
+        uint256 fee = FixedPointMathLib.mulWad(amount, _vaultFee);
 
         // Calculate the return value.
         uint256 out = calcLocalSwap(fromAsset, toAsset, amount - fee);
@@ -822,8 +821,8 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
         // Transfer tokens to the user and collect tokens from the user.
         // The order doesn't matter, since the function is reentrant protected.
         // The transaction which is most likly to revert is first.
-        ERC20(fromAsset).safeTransferFrom(msg.sender, address(this), amount);
-        ERC20(toAsset).safeTransfer(msg.sender, out);
+        SafeTransferLib.safeTransferFrom(fromAsset, msg.sender, address(this), amount);
+        SafeTransferLib.safeTransfer(toAsset, msg.sender, out);
 
         // Collect potential governance fee
         _collectGovernanceFee(fromAsset, fee);
@@ -898,7 +897,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
         // This is unfortunate.
 
         // Collect the tokens from the user.
-        ERC20(fromAsset).safeTransferFrom(msg.sender, address(this), amount);
+        SafeTransferLib.safeTransferFrom(fromAsset, msg.sender, address(this), amount);
 
         // Governance Fee
         _collectGovernanceFee(fromAsset, fee);
@@ -952,7 +951,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
         */
 
         // _updateAmplification();
-        uint256 fee = FixedPointMathLib.mulWadDown(amount, _vaultFee);
+        uint256 fee = FixedPointMathLib.mulWad(amount, _vaultFee);
 
         // Calculate the units bought.
         uint256 U = calcSendAsset(fromAsset, amount - fee);
@@ -1007,7 +1006,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
             require(toAccount.length == 65);  // dev: Account addresses are uint8 + 64 bytes.
         */
 
-        uint256 fee = FixedPointMathLib.mulWadDown(amount, _vaultFee);
+        uint256 fee = FixedPointMathLib.mulWad(amount, _vaultFee);
 
         // Calculate the units bought.
         uint256 U = calcSendAsset(fromAsset, amount - fee);
@@ -1095,7 +1094,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
         );
 
         // Send the assets to the user.
-        ERC20(toAsset).safeTransfer(toAccount, purchasedTokens);
+        SafeTransferLib.safeTransfer(toAsset, toAccount, purchasedTokens);
 
         emit ReceiveAsset(
             channelId, 
@@ -1227,10 +1226,10 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
         uint256 U = 0;
         {
             // Plus _escrowedVaultTokens since we want the withdrawal to return less. Adding vaultTokens as these have already been burnt.
-            uint256 ts = totalSupply + _escrowedVaultTokens + vaultTokens;
-            uint256 pt_fraction = FixedPointMathLib.divWadDown(ts + vaultTokens, ts);
+            uint256 ts = totalSupply() + _escrowedVaultTokens + vaultTokens;
+            uint256 pt_fraction = FixedPointMathLib.divWad(ts + vaultTokens, ts);
 
-            U = it * FixedPointMathLib.mulWadDown(
+            U = it * FixedPointMathLib.mulWad(
                 walpha_0_ampped, 
                 uint256(FixedPointMathLib.powWad(  // Always casts a positive value
                     int256(pt_fraction),  // If casting overflows to a negative number, powWad fails
@@ -1305,8 +1304,8 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
 
         uint256 it_times_walpha_amped = it * walpha_0_ampped;
 
-        // On totalSupply. Do not add escrow amount, as higher amount results in a larger return.
-        uint256 vaultTokens = _calcPriceCurveLimitShare(U, totalSupply, it_times_walpha_amped, oneMinusAmpInverse);
+        // On totalSupply(). Do not add escrow amount, as higher amount results in a larger return.
+        uint256 vaultTokens = _calcPriceCurveLimitShare(U, totalSupply(), it_times_walpha_amped, oneMinusAmpInverse);
 
         // Check if more than the minimum output is returned.
         if (minVaultTokens > vaultTokens) revert ReturnInsufficient(vaultTokens, minVaultTokens);
@@ -1318,7 +1317,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
             )); 
             // Add escrow to ensure that even if all ongoing transaction revert, the user gets their expected amount.
             // Add vault tokens because they are going to be minted.
-            uint256 walpha_0_owned = ((walpha_0 * vaultTokens) / (totalSupply + _escrowedVaultTokens + vaultTokens)) / FixedPointMathLib.WAD;
+            uint256 walpha_0_owned = ((walpha_0 * vaultTokens) / (totalSupply() + _escrowedVaultTokens + vaultTokens)) / FixedPointMathLib.WAD;
             if (minReferenceAsset > walpha_0_owned) revert ReturnInsufficient(walpha_0_owned, minReferenceAsset);
         }
 
@@ -1338,7 +1337,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
                     oneMinusAmpInverse
                 )),
                 FixedPointMathLib.WAD - uint256(FixedPointMathLib.powWad(  // powWad is always <= 1, as 'base' is always <= 1
-                    int256(FixedPointMathLib.divWadDown(  // Casting never overflows, as division result is always <= 1
+                    int256(FixedPointMathLib.divWad(  // Casting never overflows, as division result is always <= 1
                         it_times_walpha_amped - U,
                         it_times_walpha_amped
                     )),
@@ -1346,7 +1345,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
                 ))
             );
             // Check if the swap is according to the swap limits
-            _updateUnitCapacity(FixedPointMathLib.mulWadDown(2, vaultTokenEquiv));
+            _updateUnitCapacity(FixedPointMathLib.mulWad(2, vaultTokenEquiv));
         }
 
         return vaultTokens;

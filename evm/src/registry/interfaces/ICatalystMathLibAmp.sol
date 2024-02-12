@@ -1,7 +1,7 @@
 //SPDX-License-Identifier: MIT
 pragma solidity ^0.8.17;
 
-import {ERC20} from 'solmate/tokens/ERC20.sol';
+import {ERC20} from 'solady/tokens/ERC20.sol';
 import "../../interfaces/ICatalystV1VaultDerived.sol";
 import "../../interfaces/ICatalystV1VaultState.sol";
 import "./ICatalystMathLibCommon.sol";

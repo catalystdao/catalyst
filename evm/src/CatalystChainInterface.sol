@@ -1,8 +1,8 @@
 //SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.19;
 
-import {ERC20} from 'solmate/tokens/ERC20.sol';
-import {SafeTransferLib} from 'solmate/utils/SafeTransferLib.sol';
+import {ERC20} from 'solady/tokens/ERC20.sol';
+import {SafeTransferLib} from 'solady/utils/SafeTransferLib.sol';
 import { IMessageEscrowStructs } from "GeneralisedIncentives/src/interfaces/IMessageEscrowStructs.sol";
 import { IIncentivizedMessageEscrow } from "GeneralisedIncentives/src/interfaces/IIncentivizedMessageEscrow.sol";
 import { ICatalystReceiver } from "./interfaces/IOnCatalyst.sol";
@@ -26,7 +26,6 @@ import { ICatalystChainInterface } from "./interfaces/ICatalystChainInterface.so
  * message routers with more flexibility.
  */
 contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
-    using SafeTransferLib for ERC20;
     
     //--- ERRORS ---//
      // Only the message router should be able to deliver messages.
@@ -787,7 +786,8 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
         // Collect tokens and collateral from underwriter.
         // We still collect the tokens used to incentivise the underwriter as otherwise they could freely reserve liquidity
         // in the vaults. Vaults would essentially be a free source of short term options which isn't wanted.
-        ERC20(toAsset).safeTransferFrom(
+        SafeTransferLib.safeTransferFrom(
+            toAsset,
             msg.sender, 
             address(this),
             purchasedTokens * (
@@ -803,7 +803,7 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
         }
 
         // Send the assets to the user.
-        ERC20(toAsset).safeTransfer(toAccount, purchasedTokens);
+        SafeTransferLib.safeTransfer(toAsset,toAccount, purchasedTokens);
 
         // Figure out if the user wants to execute additional logic.
         // Note that this logic is not contained within a try catch. It could fail.
@@ -887,10 +887,10 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
             // This following logic might overflow but we would rather have it overflow (which reduces expireShare)
             // than to never be able to expire an underwrite.
             uint256 expireShare = refundAmount * EXPIRE_CALLER_REWARD / EXPIRE_CALLER_REWARD_DENOMINATOR;
-            ERC20(toAsset).safeTransfer(msg.sender, expireShare);
+            SafeTransferLib.safeTransfer(toAsset, msg.sender, expireShare);
             // refundAmount > expireShare, and specially when expireShare overflows.
             uint256 vaultShare = refundAmount - expireShare;
-            ERC20(toAsset).safeTransfer(targetVault, vaultShare);
+            SafeTransferLib.safeTransfer(toAsset, targetVault, vaultShare);
 
             emit ExpireUnderwrite(
                 identifier,
@@ -943,7 +943,7 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
         uint256 underwritingIncentive = (underwrittenTokenAmount * uint256(underwriteIncentiveX16)) >> 16;
         refundAmount += underwritingIncentive;
 
-        ERC20(toAsset).safeTransfer(refundTo, refundAmount);
+        SafeTransferLib.safeTransfer(toAsset, refundTo, refundAmount);
 
         emit FulfillUnderwrite(
             identifier

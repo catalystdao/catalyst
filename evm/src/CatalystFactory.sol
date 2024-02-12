@@ -2,8 +2,7 @@
 pragma solidity ^0.8.19;
 
 import { Ownable } from "openzeppelin-contracts/contracts/access/Ownable.sol";
-import { ERC20 } from 'solmate/tokens/ERC20.sol';
-import { SafeTransferLib } from 'solmate/utils/SafeTransferLib.sol';
+import { SafeTransferLib } from 'solady/utils/SafeTransferLib.sol';
 import { ICatalystV1Vault } from "./ICatalystV1Vault.sol";
 import { Clones } from "openzeppelin-contracts/contracts/proxy/Clones.sol";
 import { ICatalystV1Factory } from "./interfaces/ICatalystV1Factory.sol";
@@ -18,7 +17,6 @@ uint256 constant MAX_GOVERNANCE_FEE_SHARE = 75e16;   // 75%
  * !The owner of the factory must be a timelock!
  */
 contract CatalystFactory is Ownable, ICatalystV1Factory {
-    using SafeTransferLib for ERC20;
 
     /// @notice A mapping which describes if a vault has been created by this factory. Indexed by chainInterface then vault address.
     mapping(address => mapping(address => bool)) public isCreatedByFactory;
@@ -85,7 +83,8 @@ contract CatalystFactory is Ownable, ICatalystV1Factory {
 
         // The vault expects the balances to exist in the vault when setup is called.
         for (uint256 it; it < assets.length;) {
-            ERC20(assets[it]).safeTransferFrom(
+            SafeTransferLib.safeTransferFrom(
+                assets[it],
                 msg.sender,
                 vault,
                 init_balances[it]

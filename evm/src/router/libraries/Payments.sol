@@ -3,13 +3,12 @@ pragma solidity ^0.8.17;
 
 import {Constants} from '../libraries/Constants.sol';
 import {RouterImmutables} from '../base/RouterImmutables.sol';
-import {SafeTransferLib} from 'solmate/utils/SafeTransferLib.sol';
-import {ERC20} from 'solmate/tokens/ERC20.sol';
+import {SafeTransferLib} from 'solady/utils/SafeTransferLib.sol';
+import {ERC20} from 'solady/tokens/ERC20.sol';
 
 /// @title Payments contract
 /// @notice Performs various operations around the payment of ETH and tokens
 abstract contract Payments is RouterImmutables {
-    using SafeTransferLib for ERC20;
     using SafeTransferLib for address;
 
     error InsufficientToken();  // 675cae38
@@ -30,7 +29,7 @@ abstract contract Payments is RouterImmutables {
                 value = ERC20(token).balanceOf(address(this));
             }
 
-            ERC20(token).safeTransfer(recipient, value);
+            SafeTransferLib.safeTransfer(token, recipient, value);
         }
     }
 
@@ -49,7 +48,7 @@ abstract contract Payments is RouterImmutables {
             uint256 balance = ERC20(token).balanceOf(address(this));
             uint256 amount = (balance * bips) / FEE_BIPS_BASE;
             // pay with tokens already in the contract (for the exact input multihop case)
-            ERC20(token).safeTransfer(recipient, amount);
+            SafeTransferLib.safeTransfer(token, recipient, amount);
         }
     }
 
@@ -66,7 +65,7 @@ abstract contract Payments is RouterImmutables {
         } else {
             balance = ERC20(token).balanceOf(address(this));
             if (balance < amountMinimum) revert InsufficientToken();
-            if (balance > 0) ERC20(token).safeTransfer(recipient, balance);
+            if (balance > 0) SafeTransferLib.safeTransfer(token, recipient, balance);
         }
     }
 
@@ -104,6 +103,6 @@ abstract contract Payments is RouterImmutables {
     }
 
     function transferFrom(address token, address from, address to, uint160 amount) internal {
-        ERC20(token).safeTransferFrom(from, to, amount);
+        SafeTransferLib.safeTransferFrom(token, from, to, amount);
     }
 }

@@ -3,7 +3,7 @@ pragma solidity ^0.8.19;
 
 import "../TestCommon.t.sol";
 import "src/ICatalystV1Vault.sol";
-import "solmate/utils/FixedPointMathLib.sol";
+import "solady/utils/FixedPointMathLib.sol";
 import {Token} from "../mocks/token.sol";
 
 abstract contract TestInvariant is TestCommon {

@@ -2,7 +2,7 @@
 pragma solidity ^0.8.19;
 
 import { ICatalystV1Vault } from "src/ICatalystV1Vault.sol";
-import { FixedPointMathLib as Math } from "solmate/utils/FixedPointMathLib.sol";
+import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
 import { CatalystVaultAmplified } from "src/CatalystVaultAmplified.sol";
 import { WADWAD } from "src/utils/MathConstants.sol";
 
