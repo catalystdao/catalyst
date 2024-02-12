@@ -13,7 +13,7 @@ import { BaseMultiChainDeployer} from "./BaseMultiChainDeployer.s.sol";
 import { IncentivizedMockEscrow } from "GeneralisedIncentives/src/apps/mock/IncentivizedMockEscrow.sol";
 import { IncentivizedWormholeEscrow } from "GeneralisedIncentives/src/apps/wormhole/IncentivizedWormholeEscrow.sol";
 
-import { IncentivizedPolymerEscrow } from "GeneralisedIncentives/src/apps/polymer/IncentivizedPolymerEscrow.sol";
+// import { IncentivizedPolymerEscrow } from "GeneralisedIncentives/src/apps/polymer/IncentivizedPolymerEscrow.sol";
 
 import { JsonContracts } from "./DeployContracts.s.sol";
 
@@ -78,15 +78,15 @@ contract DeployInterfaces is BaseMultiChainDeployer {
             vm.stopBroadcast();
             vm.startBroadcast(pk);
         } else if (keccak256(abi.encodePacked(version)) == keccak256(abi.encodePacked("Polymer"))) {
-            vm.stopBroadcast();
-            uint256 pv_key = vm.envUint("POLYMER_DEPLOYER");
-            vm.startBroadcast(pv_key);
+            // vm.stopBroadcast();
+            // uint256 pv_key = vm.envUint("POLYMER_DEPLOYER");
+            // vm.startBroadcast(pv_key);
 
-            require(polymerContract[chain] != address(0), "Contract to send messages to cannot be 0.");
-            incentive = address(new IncentivizedPolymerEscrow(vm.envAddress("CATALYST_ADDRESS"), polymerContract[chain]));
+            // require(polymerContract[chain] != address(0), "Contract to send messages to cannot be 0.");
+            // incentive = address(new IncentivizedPolymerEscrow(vm.envAddress("CATALYST_ADDRESS"), polymerContract[chain]));
 
-            vm.stopBroadcast();
-            vm.startBroadcast(pk);
+            // vm.stopBroadcast();
+            // vm.startBroadcast(pk);
         } else {
             revert IncentivesIdNotFound();
         }

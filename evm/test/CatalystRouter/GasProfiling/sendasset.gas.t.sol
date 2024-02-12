@@ -68,7 +68,8 @@ contract TestRouterSendassetProfile is TestCommon {
             chainIdentifier: DESTINATION_IDENTIFIER,
             toVault: convertEVMTo65(toVault),
             toAccount: convertEVMTo65(TO_ACCOUNT),
-            incentive: _INCENTIVE
+            incentive: _INCENTIVE,
+            deadline: uint64(0)
         });
 
         bytes memory commands = abi.encodePacked(bytes1(0x1f), bytes1(0x01));

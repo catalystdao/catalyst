@@ -51,7 +51,8 @@ abstract contract TestSendAsset is TestCommon, AVaultInterfaces {
             chainIdentifier: channelId,
             toVault: convertEVMTo65(toVault),
             toAccount: convertEVMTo65(toAccount),
-            incentive: _INCENTIVE
+            incentive: _INCENTIVE,
+            deadline: uint64(0)
         });
 
         uint256 units = ICatalystV1Vault(fromVault).sendAsset{value: _getTotalIncentive(_INCENTIVE)}(
@@ -97,7 +98,8 @@ abstract contract TestSendAsset is TestCommon, AVaultInterfaces {
             chainIdentifier: channelId,
             toVault: convertEVMTo65(toVault),
             toAccount: convertEVMTo65(toAccount),
-            incentive: _INCENTIVE
+            incentive: _INCENTIVE,
+            deadline: uint64(0)
         });
 
         vm.expectRevert();
@@ -142,7 +144,8 @@ abstract contract TestSendAsset is TestCommon, AVaultInterfaces {
             chainIdentifier: channelId,
             toVault: convertEVMTo65(toVault),
             toAccount: convertEVMTo65(toAccount),
-            incentive: _INCENTIVE
+            incentive: _INCENTIVE,
+            deadline: uint64(0)
         });
 
 

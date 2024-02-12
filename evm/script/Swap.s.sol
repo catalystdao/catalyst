@@ -51,7 +51,8 @@ contract Swap is Script, IMessageEscrowStructs {
                         priceOfDeliveryGas: 10 gwei,
                         priceOfAckGas: 60 gwei,
                         targetDelta: 0 minutes
-                    })
+                    }),
+                    deadline: uint64(0)
                 }),
                 WGAS,
                 0,

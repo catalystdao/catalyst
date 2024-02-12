@@ -44,7 +44,8 @@ abstract contract TestSendLiquidity is TestCommon, AVaultInterfaces {
             chainIdentifier: channelId,
             toVault: convertEVMTo65(toVault),
             toAccount: convertEVMTo65(toAccount),
-            incentive: _INCENTIVE
+            incentive: _INCENTIVE,
+            deadline: uint64(0)
         });
 
         ICatalystV1Vault(fromVault).sendLiquidity{value: _getTotalIncentive(_INCENTIVE)}(
@@ -75,7 +76,8 @@ abstract contract TestSendLiquidity is TestCommon, AVaultInterfaces {
             chainIdentifier: channelId,
             toVault: convertEVMTo65(toVault),
             toAccount: convertEVMTo65(address(this)),
-            incentive: _INCENTIVE
+            incentive: _INCENTIVE,
+            deadline: uint64(0)
         });
 
         vm.expectRevert();

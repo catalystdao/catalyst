@@ -323,7 +323,8 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
             routeDescription.chainIdentifier,
             chainIdentifierToDestinationAddress[routeDescription.chainIdentifier],
             data,
-            routeDescription.incentive
+            routeDescription.incentive,
+            routeDescription.deadline
         );
     }
 
@@ -376,7 +377,8 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
             routeDescription.chainIdentifier,
             chainIdentifierToDestinationAddress[routeDescription.chainIdentifier],
             data,
-            routeDescription.incentive
+            routeDescription.incentive,
+            routeDescription.deadline
         );
     }
 

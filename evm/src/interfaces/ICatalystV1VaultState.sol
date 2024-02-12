@@ -15,6 +15,7 @@ interface ICatalystV1Structs is IMessageEscrowStructs {
         bytes toVault;
         bytes toAccount;
         IncentiveDescription incentive;
+        uint64 deadline;
     }
 }
 

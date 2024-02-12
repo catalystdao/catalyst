@@ -69,7 +69,8 @@ contract TestSendAssetUnderwritePurpose is TestCommon {
             chainIdentifier: DESTINATION_IDENTIFIER,
             toVault: convertEVMTo65(vault2),
             toAccount: convertEVMTo65(toAccount),
-            incentive: _INCENTIVE
+            incentive: _INCENTIVE,
+            deadline: uint64(0)
         });
 
         address token2 = ICatalystV1Vault(vault2)._tokenIndexing(0);

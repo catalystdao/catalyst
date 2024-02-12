@@ -60,7 +60,8 @@ contract TestDoubleHitUnderwrite is TestCommon {
             chainIdentifier: DESTINATION_IDENTIFIER,
             toVault: convertEVMTo65(vault2),
             toAccount: convertEVMTo65(toAccount),
-            incentive: _INCENTIVE
+            incentive: _INCENTIVE,
+            deadline: uint64(0)
         });
 
         vm.recordLogs();

@@ -193,7 +193,8 @@ abstract contract TestFullLiquiditySwap is TestCommon, AVaultInterfaces {
             chainIdentifier: DESTINATION_IDENTIFIER,
             toVault: convertEVMTo65(address(toVault)),
             toAccount: convertEVMTo65(swapper),
-            incentive: _INCENTIVE
+            incentive: _INCENTIVE,
+            deadline: uint64(0)
         });
 
         uint256 outputUnits = ICatalystV1Vault(fromVault).sendLiquidity{value: _getTotalIncentive(_INCENTIVE)}(

@@ -30,8 +30,8 @@ contract TestCommon is Test, Bytes65, IMessageEscrowStructs, TestTokenFunctions,
     uint256 PRIVATEKEY;
 
     IncentiveDescription _INCENTIVE = IncentiveDescription({
-        maxGasDelivery: 1199199,
-        maxGasAck: 1188188,
+        maxGasDelivery: 2199199,
+        maxGasAck: 2188188,
         refundGasTo: address(0),
         priceOfDeliveryGas: 123321,
         priceOfAckGas: 321123,

@@ -151,7 +151,8 @@ contract TestSwapIntegration is TestCommon {
             chainIdentifier: DESTINATION_IDENTIFIER,
             toVault: convertEVMTo65(toVault),
             toAccount: convertEVMTo65(TO_ACCOUNT),
-            incentive: _INCENTIVE
+            incentive: _INCENTIVE,
+            deadline: uint64(0)
         });
         
         uint256 snapshotId = vm.snapshot();
@@ -231,7 +232,7 @@ contract TestSwapIntegration is TestCommon {
                     DESTINATION_IDENTIFIER,
                     messageIdentifier,
                     convertEVMTo65(address(CCI)),
-                    this.sliceMemory(messageWithContext, 64+169)
+                    this.sliceMemory(messageWithContext, 64+177)
                 )
             )
         );

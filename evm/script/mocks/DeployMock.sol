@@ -39,7 +39,8 @@ contract DeployMock is BaseMultiChainDeployer, IMessageEscrowStructs {
                 priceOfDeliveryGas: 10 gwei,
                 priceOfAckGas: 10 gwei,
                 targetDelta: 0 minutes
-            })
+            }),
+            uint64(0)
         );
     }
 }
