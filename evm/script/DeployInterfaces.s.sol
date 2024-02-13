@@ -43,10 +43,8 @@ contract DeployInterfaces is BaseMultiChainDeployer {
         interfaceSalt[0x000000ED80503e3A7EA614FFB5507FD52584a1f2] = bytes32(uint256(1));
 
         wormholeBridge[Chains.Sepolia] = 0x4a8bc80Ed5a4067f1CCf107057b8270E0cC11A78;
-        wormholeBridge[Chains.Mumbai] = 0x0CBE91CF822c73C2315FB05100C2F714765d5c20;
-
-        polymerContract[Chains.BaseSepolia] = 0xfcef85E0F0Afd1Acd73fAF1648266DF923d4521d;
-        polymerContract[Chains.OptimismSepolia] = 0x3001b73254EB715799EB93E8413EdCE4721090Ab;
+        wormholeBridge[Chains.ArbitrumSepolia] = 0x6b9C8671cdDC8dEab9c719bB87cBd3e782bA6a35;
+        wormholeBridge[Chains.OptimismSepolia] = 0x31377888146f3253211EFEf5c676D41ECe7D58Fe;
     }
 
     function deployGeneralisedIncentives(string memory version) internal returns(address incentive) {

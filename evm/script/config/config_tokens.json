@@ -2,47 +2,8 @@
   "sepolia": {
     "WETH10": "0xE67ABDA0D43f7AC8f37876bBF00D1DFadbB93aaa"
   },
-  "mumbai": {
-    "WMATIC": "0x9c3C9283D3e44854697Cd22D3Faa240Cfb032889"
-  },
-  "basegoerli": {
-    "WETH": "0x231401dC8b53338d78c08f83CC4EBc74148196d0"
-  },
-  "mantletestnet" : {
-    "WMNT": "0xEa12Be2389c2254bAaD383c6eD1fa1e15202b52A"
-  },
-  "taikoeldfell": {
-    "WETH": "0x1017f42d1d3e7d490ea3cc4c95591c339ba71ac5"
-  },
-  "scrollsepolia": {
-    "WETH": "0xBa4Cec9b8137DDf02546534f14e438940ba58AF6"
-  },
-  "arbitrumgoerli": {
-    "WETH": "0x7F5bc2250ea57d8ca932898297b1FF9aE1a04999"
-  },
-  "optimismgoerli": {
-    "WETH": "0x4200000000000000000000000000000000000006"
-  },
-  "bsctestnet": {
-    "WBNB": "0xae13d989daC2f0dEbFf460aC112a837C89BAa7cd"
-  },
-  "opbnbtestnet": {
-    "WBNB": "0xB5C20CD5F998C028a1fC0FDdCE3D61c5a50F7B38"
-  },
-  "omnitestnet": {
-    "WOMNI": "0x0000005eff5E63a9B4C4505Af65F701354d0Bef7",
-    "USDT": {
-      "address": "0xE25FBF6a2f90d96E3b4DfB96EabF797211d8939B"
-    },
-    "USDC": {
-      "address": "0xCC38C652731Bd2c5CeEC4e9191a1b55D44f2aB17"
-    }
-  },
-  "inevmdevnet": {
-    "WINJ": "0x0000005eff5E63a9B4C4505Af65F701354d0Bef7"
-  },
-  "basesepolia": {
-    "WETH": "0x1BDD24840e119DC2602dCC587Dd182812427A5Cc"
+  "arbitrumsepolia": {
+    "WETH": "0xC8bF2D5c0D6bEC807c21EF4cef2f1fd3bf16947e"
   },
   "optimismsepolia": {
     "WETH": "0x1BDD24840e119DC2602dCC587Dd182812427A5Cc"

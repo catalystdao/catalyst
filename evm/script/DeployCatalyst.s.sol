@@ -4,6 +4,8 @@ pragma solidity ^0.8.19;
 import "forge-std/Script.sol";
 import {stdJson} from "forge-std/StdJson.sol";
 
+import { WETH } from "solady/tokens/WETH.sol";
+
 import { BaseMultiChainDeployer } from "./BaseMultiChainDeployer.s.sol";
 import { JsonContracts, DeployContracts } from "./DeployContracts.s.sol";
 
@@ -59,6 +61,15 @@ contract DeployCatalyst is BaseMultiChainDeployer, DeployContracts {
         string memory finalJson = vm.serializeAddress(obj, "volatile_template", contracts.volatile_template);
 
         vm.writeJson(finalJson, pathToContractConfig, string.concat(".contracts"));
+    }
+
+    function deployWETH() external {
+        uint256 pk = vm.envUint("CATALYST_DEPLOYER");
+        vm.startBroadcast(pk);
+
+        new WETH{salt: bytes32(0)}();
+
+        vm.stopBroadcast();
     }
 }
 

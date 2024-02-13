@@ -10,94 +10,37 @@
         },
         "sepolia": {
             "sepolia": 11155111,
-            "mumbai": 80001,
-            "basegoerli": 84531,
-            "mantletestnet" : 5001,
-            "scrollsepolia": 534351,
-            "bsctestnet": 97,
-            "opbnbtestnet": 5611,
-            "inevmdevnet": 1738
+            "arbitrumsepolia": 421614,
+            "optimismsepolia": 11155420
         },
-        "mumbai": {
+        "arbitrumsepolia": {
             "sepolia": 11155111,
-            "mumbai": 80001,
-            "basegoerli": 84531,
-            "mantletestnet" : 5001,
-            "scrollsepolia": 534351,
-            "bsctestnet": 97,
-            "opbnbtestnet": 5611,
-            "inevmdevnet": 1738
+            "arbitrumsepolia": 421614,
+            "optimismsepolia": 11155420
         },
-        "basegoerli": {
+        "optimismsepolia": {
             "sepolia": 11155111,
-            "mumbai": 80001,
-            "basegoerli": 84531,
-            "mantletestnet" : 5001,
-            "scrollsepolia": 534351,
-            "bsctestnet": 97,
-            "opbnbtestnet": 5611,
-            "inevmdevnet": 1738
-        },
-        "mantletestnet" : {
-            "sepolia": 11155111,
-            "mumbai": 80001,
-            "mantletestnet" : 5001,
-            "scrollsepolia": 534351,
-            "bsctestnet": 97,
-            "opbnbtestnet": 5611,
-            "inevmdevnet": 1738
-        },
-        "scrollsepolia": {
-            "sepolia": 11155111,
-            "mumbai": 80001,
-            "mantletestnet" : 5001,
-            "scrollsepolia": 534351,
-            "bsctestnet": 97,
-            "opbnbtestnet": 5611,
-            "inevmdevnet": 1738
-        },
-        "bsctestnet": {
-            "sepolia": 11155111,
-            "mumbai": 80001,
-            "basegoerli": 84531,
-            "mantletestnet" : 5001,
-            "scrollsepolia": 534351,
-            "bsctestnet": 97,
-            "opbnbtestnet": 5611,
-            "inevmdevnet": 1738
-        },
-        "opbnbtestnet": {
-            "sepolia": 11155111,
-            "mumbai": 80001,
-            "basegoerli": 84531,
-            "mantletestnet" : 5001,
-            "scrollsepolia": 534351,
-            "bsctestnet": 97,
-            "opbnbtestnet": 5611,
-            "inevmdevnet": 1738
-        },
-        "inevmdevnet": {
-            "sepolia": 11155111,
-            "mumbai": 80001,
-            "basegoerli": 84531,
-            "mantletestnet" : 5001,
-            "scrollsepolia": 534351,
-            "bsctestnet": 97,
-            "opbnbtestnet": 5611,
-            "inevmdevnet": 1738
+            "arbitrumsepolia": 421614,
+            "optimismsepolia": 11155420 
         }
     },
     "Wormhole": {
         "sepolia": {
             "sepolia": 10002,
-            "mumbai": 5
+            "arbitrumsepolia": 10003,
+            "optimismsepolia": 10005 
         },
-        "mumbai": {
+        "arbitrumsepolia": {
             "sepolia": 10002,
-            "mumbai": 5
+            "arbitrumsepolia": 10003,
+            "optimismsepolia": 10005 
+        },
+        "optimismsepolia": {
+            "sepolia": 10002,
+            "arbitrumsepolia": 10003,
+            "optimismsepolia": 10005
         }
     },
-    "Hyperlane": {},
     "Polymer": {
         "basesepolia": {
             "optimismsepolia": 44963396551096171397185078654936153507873767889605736138143122744384644186112

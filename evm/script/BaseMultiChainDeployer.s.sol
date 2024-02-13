@@ -10,14 +10,8 @@ contract BaseMultiChainDeployer is Script {
     }
 
     enum Chains {
-        Mumbai,
         Sepolia,
-        ScrollSepolia,
-        OPBNBTestnet,
-        BSCTestnet,
-        MantleTestnet,
-        INEVMDevnet,
-        BaseSepolia,
+        ArbitrumSepolia,
         OptimismSepolia
     }
 
@@ -31,37 +25,13 @@ contract BaseMultiChainDeployer is Script {
     Chains chain;
 
     constructor() {
-        rpc[Chains.Mumbai] = "mumbai";
-        wrapped_gas[Chains.Mumbai] = "WMATIC";
-        chain_list.push(Chains.Mumbai);
-
         rpc[Chains.Sepolia] = "sepolia";
         wrapped_gas[Chains.Sepolia] = "WETH10";
         chain_list.push(Chains.Sepolia);
 
-        rpc[Chains.ScrollSepolia] = "scrollsepolia";
-        wrapped_gas[Chains.ScrollSepolia] = "WETH";
-        chain_list_legacy.push(Chains.ScrollSepolia);
-
-        rpc[Chains.OPBNBTestnet] = "opbnbtestnet";
-        wrapped_gas[Chains.OPBNBTestnet] = "WBNB";
-        chain_list.push(Chains.OPBNBTestnet);
-
-        rpc[Chains.BSCTestnet] = "bsctestnet";
-        wrapped_gas[Chains.BSCTestnet] = "WBNB";
-        chain_list.push(Chains.BSCTestnet);
-
-        rpc[Chains.MantleTestnet] = "mantletestnet";
-        wrapped_gas[Chains.MantleTestnet] = "WMNT";
-        chain_list_legacy.push(Chains.MantleTestnet);
-
-        rpc[Chains.INEVMDevnet] = "inevmdevnet";
-        wrapped_gas[Chains.INEVMDevnet] = "WINJ";
-        chain_list.push(Chains.INEVMDevnet);
-
-        rpc[Chains.BaseSepolia] = "basesepolia";
-        wrapped_gas[Chains.BaseSepolia] = "WETH";
-        chain_list.push(Chains.BaseSepolia);
+        rpc[Chains.ArbitrumSepolia] = "arbitrumsepolia";
+        wrapped_gas[Chains.ArbitrumSepolia] = "WETH";
+        chain_list.push(Chains.ArbitrumSepolia);
 
         rpc[Chains.OptimismSepolia] = "optimismsepolia";
         wrapped_gas[Chains.OptimismSepolia] = "WETH";
