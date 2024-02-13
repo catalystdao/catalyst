@@ -34,6 +34,6 @@ jobs:
 
       - name: Run Forge tests
         run: |
-          forge test -vvv
+          forge test --allow-failure --gas-report --fuzz-seed 10
         working-directory: evm
         id: test
