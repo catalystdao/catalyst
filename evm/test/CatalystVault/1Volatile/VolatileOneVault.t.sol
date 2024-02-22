@@ -30,7 +30,7 @@ import { TestSecurityLimitLiquiditySwap } from "../SecurityLimit.ReceiveLiquidit
 import { TestWithdrawEverything } from "../Withdraw/WithdrawEverything.t.sol";
 import {Token} from "../../mocks/token.sol";
 
-contract TestVolatileInvariant is TestInvariant, TestLocalswap, TestCrossChainInterfaceOnly, TestLocalswapMinout, TestPoolTokenInterface, TestSetup, TestSetupFinish, TestSetVaultFee, TestSetGovernanceFee, TestSetWeights, TestLocalswapFees, TestSwapWorthlessTokenLocal, TestEscrow, TestWithdrawInvariant, TestWithdrawComparison,  TestCompareDepositWithWithdraw, TestWithdrawNothing, TestWithdrawUnbalanced, TestSelfSwap, TestVaultConnections, TestSecurityLimitAssetSwap, TestSecurityLimitLiquiditySwap, TestWithdrawEverything { //,TestEvilRouterExploitVolatile  {
+contract TestVolatileInvariant is TestInvariant, TestLocalswap, TestCrossChainInterfaceOnly, TestLocalswapMinout, TestPoolTokenInterface, TestSetup, TestSetupFinish, TestSetVaultFee, TestSetGovernanceFee, TestLocalswapFees, TestSwapWorthlessTokenLocal, TestEscrow, TestWithdrawInvariant, TestWithdrawComparison,  TestCompareDepositWithWithdraw, TestWithdrawNothing, TestWithdrawUnbalanced, TestSelfSwap, TestVaultConnections, TestSecurityLimitAssetSwap, TestSecurityLimitLiquiditySwap, TestWithdrawEverything, TestSetWeights { // TestEvilRouterExploitVolatile  {
 
     address[] _vaults;
 

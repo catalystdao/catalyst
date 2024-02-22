@@ -232,6 +232,9 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
                 // If the weight has already been reached, skip the mathematics.
                 if (currentWeight == targetWeight) {
                     wsum += targetWeight;
+                    unchecked {
+                        ++it;
+                    }
                     continue;
                 }
 
