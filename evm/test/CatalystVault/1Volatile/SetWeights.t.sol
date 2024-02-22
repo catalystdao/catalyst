@@ -13,8 +13,8 @@ import { TestInvariant } from "../Invariant.t.sol";
 abstract contract TestSetWeights is Test, AVaultInterfaces {
     using stdStorage for StdStorage;
 
-    uint256 constant MIN_ADJUSTMENT_TIME = 7 days;
-    uint256 constant MAX_ADJUSTMENT_TIME = 365 days;
+    uint48 constant MIN_ADJUSTMENT_TIME = 7 days;
+    uint48 constant MAX_ADJUSTMENT_TIME = 365 days;
 
     uint256 constant MAX_WEIGHTS_CHANGE = 10;
 
@@ -25,7 +25,7 @@ abstract contract TestSetWeights is Test, AVaultInterfaces {
     // Helpers
     // ********************************************************************************************
 
-    function mockWeights() internal returns(uint256[] memory) {
+    function mockWeights() pure internal returns(uint256[] memory) {
 
         uint256[] memory weights = new uint256[](3);
         weights[0] = 1501;
@@ -35,7 +35,7 @@ abstract contract TestSetWeights is Test, AVaultInterfaces {
         return weights;
     }
 
-    function mockWeightChangeFactors() internal returns(uint256[] memory) {
+    function mockWeightChangeFactors() view internal returns(uint256[] memory) {
 
         uint256[] memory changeFactors = new uint256[](3);
 
@@ -61,7 +61,7 @@ abstract contract TestSetWeights is Test, AVaultInterfaces {
 
     function getCurrentWeights(
         CatalystVaultVolatile vault
-    ) internal returns (uint256[] memory) {
+    ) view internal returns (uint256[] memory) {
 
         uint256[] memory weights = new uint256[](3);
 
@@ -119,10 +119,9 @@ abstract contract TestSetWeights is Test, AVaultInterfaces {
         CatalystVaultVolatile vault = CatalystVaultVolatile(getTestConfig()[0]);
 
         forceSetWeights(vault, mockWeights());
-        uint256[] memory currentWeights = getCurrentWeights(vault);
         uint256[] memory newWeights = mockNewWeights();
 
-        uint256 currentTimestamp = block.timestamp;
+        uint48 currentTimestamp = uint48(block.timestamp);
 
 
 
@@ -143,10 +142,9 @@ abstract contract TestSetWeights is Test, AVaultInterfaces {
         CatalystVaultVolatile vault = CatalystVaultVolatile(getTestConfig()[0]);
 
         forceSetWeights(vault, mockWeights());
-        uint256[] memory currentWeights = getCurrentWeights(vault);
         uint256[] memory newWeights = mockNewWeights();
 
-        uint256 currentTimestamp = block.timestamp;
+        uint48 currentTimestamp = uint48(block.timestamp);
 
 
 
@@ -166,10 +164,9 @@ abstract contract TestSetWeights is Test, AVaultInterfaces {
         CatalystVaultVolatile vault = CatalystVaultVolatile(getTestConfig()[0]);
 
         forceSetWeights(vault, mockWeights());
-        uint256[] memory currentWeights = getCurrentWeights(vault);
         uint256[] memory newWeights = mockNewWeights();
 
-        uint256 currentTimestamp = block.timestamp;
+        uint48 currentTimestamp = uint48(block.timestamp);
 
 
 
@@ -196,7 +193,7 @@ abstract contract TestSetWeights is Test, AVaultInterfaces {
         uint256 weightsCount = currentWeights.length;
         newWeights[weightsCount-1] = currentWeights[weightsCount-1] * MAX_WEIGHTS_CHANGE + 1;
 
-        uint256 currentTimestamp = block.timestamp;
+        uint48 currentTimestamp = uint48(block.timestamp);
 
 
 
@@ -224,7 +221,7 @@ abstract contract TestSetWeights is Test, AVaultInterfaces {
         uint256 weightsCount = currentWeights.length;
         newWeights[weightsCount-1] = currentWeights[weightsCount-1] / MAX_WEIGHTS_CHANGE - 1;
 
-        uint256 currentTimestamp = block.timestamp;
+        uint48 currentTimestamp = uint48(block.timestamp);
 
 
 
@@ -252,7 +249,7 @@ abstract contract TestSetWeights is Test, AVaultInterfaces {
         uint256 weightsCount = currentWeights.length;
         newWeights[weightsCount-1] = 0;
 
-        uint256 currentTimestamp = block.timestamp;
+        uint48 currentTimestamp = uint48(block.timestamp);
 
 
 
@@ -277,10 +274,10 @@ abstract contract TestSetWeights is Test, AVaultInterfaces {
         uint256[] memory currentWeights = getCurrentWeights(vault);
         uint256[] memory newWeights = mockNewWeights();
 
-        uint256 startTimestamp = block.timestamp;
-        uint256 weightsAdjustmentTime = MIN_ADJUSTMENT_TIME * 2;
+        uint48 startTimestamp = uint48(block.timestamp);
+        uint48 weightsAdjustmentTime = MIN_ADJUSTMENT_TIME * 2;
 
-        uint256 currentTimestamp = block.timestamp;
+        uint48 currentTimestamp = uint48(block.timestamp);
 
 
 

@@ -126,7 +126,7 @@ contract TestDeployVault is TestCommon {
         t_deploy_amplified(tokens, init_balances, weights, amplification);
     }
 
-    function t_deploy_amplified(address[] memory tokens, uint256[] memory init_balances, uint256[] memory weights, uint256 amplification) internal {
+    function t_deploy_amplified(address[] memory tokens, uint256[] memory init_balances, uint256[] memory weights, uint64 amplification) internal {
         address vault = catFactory.deployVault(
             address(amplifiedTemplate),
             tokens,

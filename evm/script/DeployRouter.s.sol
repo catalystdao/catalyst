@@ -25,7 +25,7 @@ contract DeployRouter is BaseMultiChainDeployer {
         _;
     }
 
-    function deployPermit2() public {
+    function deployPermit2() view public {
         if (expectedPermit2Address.codehash != bytes32(0)) return;
 
         // We cannot deploy permit2 because of the way remappings work. As a result, we

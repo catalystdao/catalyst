@@ -56,7 +56,7 @@ abstract contract TestSetGovernanceFee is Test, AVaultInterfaces {
     function test_set_governance_fee_not_too_large() external virtual {
         address[] memory vaults = getTestConfig();
 
-        uint256 vaultFee = 75 * 10**16;
+        uint64 vaultFee = 75 * 10**16;
 
         for (uint256 i = 0; i < vaults.length; ++i) {
             address vault = vaults[i];
@@ -71,7 +71,7 @@ abstract contract TestSetGovernanceFee is Test, AVaultInterfaces {
     function test_error_set_governance_fee_too_large() external virtual {
         address[] memory vaults = getTestConfig();
 
-        uint256 vaultFee = 75 * 10**16 + 1;
+        uint64 vaultFee = 75 * 10**16 + 1;
 
         for (uint256 i = 0; i < vaults.length; ++i) {
             address vault = vaults[i];

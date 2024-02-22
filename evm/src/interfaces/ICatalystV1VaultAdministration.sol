@@ -6,9 +6,9 @@ pragma solidity ^0.8.17;
 interface ICatalystV1VaultAdministration {
     function setFeeAdministrator(address administrator) external;
 
-    function setVaultFee(uint256 fee) external;
+    function setVaultFee(uint64 fee) external;
 
-    function setGovernanceFee(uint256 fee) external;
+    function setGovernanceFee(uint64 fee) external;
 
     /**
      * @notice Initializes the vault pricing parameters.
@@ -20,7 +20,7 @@ interface ICatalystV1VaultAdministration {
     function initializeSwapCurves(
         address[] calldata assets,
         uint256[] calldata weights,
-        uint256 amp,
+        uint64 amp,
         address depositor
     ) external;
 

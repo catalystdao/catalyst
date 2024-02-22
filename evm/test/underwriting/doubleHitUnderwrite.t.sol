@@ -97,7 +97,7 @@ contract TestDoubleHitUnderwrite is TestCommon {
             hex"0000"
         );
 
-        (uint256 numTokens, ,) = CCI.underwritingStorage(underwriteIdentifier);
+        CCI.underwritingStorage(underwriteIdentifier);
 
         // Then let the package arrive.
         (bytes memory _metadata, bytes memory toExecuteMessage) = getVerifiedMessage(address(GARP), messageWithContext);

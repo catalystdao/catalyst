@@ -64,7 +64,7 @@ contract TestVolatileInvariant is TestInvariant, TestLocalswap, TestCrossChainIn
         return getLargestSwap(fromVault, toVault, fromAsset, toAsset, false);
     }
 
-    function getLargestSwap(address fromVault, address toVault, address fromAsset, address toAsset, bool securityLimit) view override internal returns(uint256 amount) {
+    function getLargestSwap(address fromVault, address toVault, address fromAsset, address /* toAsset */, bool securityLimit) view override internal returns(uint256 amount) {
         if (securityLimit) {
             amount = Token(fromAsset).balanceOf(fromVault) / 2;
         } else {
@@ -119,7 +119,7 @@ contract TestVolatileInvariant is TestInvariant, TestLocalswap, TestCrossChainIn
      * That implies, generally we need to multiply the i'th index by: \sum_(j >= i) (WR_j * w_j) / (w_i * \sum_(j >= i) WR_j)
      * This is fairly complicated and kindof expensive. 
      */
-    function getWithdrawPercentages(address vault, uint256[] memory withdraw_weights) internal override returns(uint256[] memory new_weights) {
+    function getWithdrawPercentages(address vault, uint256[] memory withdraw_weights) view internal override returns(uint256[] memory new_weights) {
         new_weights = new uint256[](withdraw_weights.length);
         // get weights
         uint256 progressiveWeightSum = 0;

@@ -11,7 +11,7 @@ import { AVaultInterfaces } from "test/CatalystVault/AVaultInterfaces.t.sol";
 import { TestInvariant } from "test/CatalystVault/Invariant.t.sol";
 
 
-function queryAssetCount(ICatalystV1Vault vault) returns (uint256) {
+function queryAssetCount(ICatalystV1Vault vault) view returns (uint256) {
     uint256 tokenCount = 0;
     for (uint256 i; true; i++) {
         address token = vault._tokenIndexing(i);
@@ -20,7 +20,7 @@ function queryAssetCount(ICatalystV1Vault vault) returns (uint256) {
     }
 }
 
-function queryWeightsSum(ICatalystV1Vault vault) returns (uint256) {
+function queryWeightsSum(ICatalystV1Vault vault) view returns (uint256) {
     uint256 weightsSum = 0;
     for (uint256 i; true; i++) {
         uint256 weight = vault._weight(vault._tokenIndexing(i));
@@ -99,7 +99,6 @@ abstract contract TestWithdrawNothing is TestCommon, AVaultInterfaces {
 
             ICatalystV1Vault vault = ICatalystV1Vault(vaults[i]);
             uint256 assetCount = queryAssetCount(vault);
-            uint256 weightSum = queryWeightsSum(vault);
             uint256 totalSupply = Token(address(vault)).totalSupply();
             uint256 withdrawAmount = 1;
 
@@ -181,7 +180,6 @@ abstract contract TestWithdrawNothing is TestCommon, AVaultInterfaces {
             ICatalystV1Vault vault = ICatalystV1Vault(vaults[i]);
 
             uint256 assetCount = queryAssetCount(vault);
-            uint256 weightSum = queryWeightsSum(vault);
             uint256 totalSupply = Token(address(vault)).totalSupply();
             uint256 withdrawAmount = 1000000;
 

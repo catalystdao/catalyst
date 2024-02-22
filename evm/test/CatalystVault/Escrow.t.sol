@@ -74,7 +74,7 @@ abstract contract TestEscrow is TestCommon, AVaultInterfaces {
         }
     }
 
-    function test_escrow_timeout(uint256 swapPercentage) external {
+    function test_escrow_timeout() external {
         address[] memory vaults = getTestConfig();
         address bob = makeAddr("bob");
 

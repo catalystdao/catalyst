@@ -65,14 +65,14 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
     // For other config options, see CatalystVaultCommon.sol
 
     //-- Variables --//
-    int256 public _oneMinusAmp;
-    int256 public _targetAmplification;
+    int64 public _oneMinusAmp;
+    int64 public _targetAmplification;
 
     // To keep track of pool ownership, the vault needs to keep track of
     // the local unit balance. That is, do other vaults own or owe assets to this vault?
     int256 public _unitTracker;
 
-    constructor(address factory_, address mathlib_) CatalystVaultCommon(factory_, mathlib_) {}
+    constructor(address factory_, address mathlib_) payable CatalystVaultCommon(factory_, mathlib_) {}
 
     /**
      * @notice Configures an empty vault.
@@ -91,11 +91,12 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
     function initializeSwapCurves(
         address[] calldata assets,
         uint256[] calldata weights,
-        uint256 amp,
+        uint64 amp,
         address depositor
     ) external override {
         // May only be invoked by the FACTORY. The factory only invokes this function for proxy contracts.
-        require(msg.sender == FACTORY && _tokenIndexing[0] == address(0));  // dev: swap curves may only be initialized once by the factory
+        require(msg.sender == FACTORY); // dev: swap curves may only be initialized once by the factory
+        require(_tokenIndexing[0] == address(0)); // dev: swap curves may only be initialized once by the factory
         // Check that the amplification is correct.
         require(amp < FixedPointMathLib.WAD);  // dev: amplification not set correctly.
         // Note there is no need to check whether assets.length/weights.length are valid, as invalid arguments
@@ -111,14 +112,15 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
         
         unchecked {
             // Amplification is stored as 1 - amp since most equations uses amp this way.
-            _oneMinusAmp = int256(FixedPointMathLib.WAD - amp);
-            _targetAmplification = int256(FixedPointMathLib.WAD - amp);
+            _oneMinusAmp = int64(uint64(FixedPointMathLib.WAD - amp));
+            _targetAmplification = int64(uint64(FixedPointMathLib.WAD - amp));
         }   
 
         // Compute the security limit.
         uint256[] memory initialBalances = new uint256[](MAX_ASSETS);
         uint256 maxUnitCapacity = 0;
-        for (uint256 it; it < assets.length;) {
+        uint assetLength = assets.length;
+        for (uint256 it; it < assetLength;) {
 
             address tokenAddress = assets[it];
             _tokenIndexing[it] = tokenAddress;
@@ -545,6 +547,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
         }
 
         uint256 totalWithdrawn;
+        int256 oneMinusAmpInverse = WADWAD / oneMinusAmp;
         for (uint256 it; it < MAX_ASSETS;) {
             address token = tokenIndexed[it];
             if (token == address(0)) break;
@@ -571,7 +574,6 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
                 // the transaction reverts. If that is the case, use withdrawAll.
                 // This quirk is "okay", since it means fewer tokens are always returned.
 
-                int256 oneMinusAmpInverse = WADWAD / oneMinusAmp;
                 // Since tokens are withdrawn, the change is negative. As such, multiply the
                 // equation by -1.
                 weightedTokenAmount = FixedPointMathLib.mulWad(
@@ -699,7 +701,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
                     }
 
                     unchecked {
-                        U++;
+                        ++U;
                     }
                 }
 

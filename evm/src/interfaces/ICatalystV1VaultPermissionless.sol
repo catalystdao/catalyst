@@ -18,8 +18,8 @@ interface ICatalystV1VaultPermissionless {
         string calldata name_,
         string calldata symbol_,
         address chainInterface,
-        uint256 vaultFee,
-        uint256 governanceFee,
+        uint64 vaultFee,
+        uint64 governanceFee,
         address feeAdministrator,
         address setupMaster
     ) external;

@@ -22,16 +22,16 @@ contract CatalystFactory is Ownable, ICatalystV1Factory {
     mapping(address => mapping(address => bool)) public isCreatedByFactory;
 
     /// @notice Default governance fee. When a vault is created, this is the governance fee applied to that vault.
-    uint256 public _defaultGovernanceFee;
+    uint64 public _defaultGovernanceFee;
 
     address public _governanceFeeDestination;
 
-    constructor(address defaultOwner) {
+    constructor(address defaultOwner) payable {
         _transferOwnership(defaultOwner);
         _governanceFeeDestination = defaultOwner;
     }
 
-    function setDefaultGovernanceFee(uint256 fee) override public onlyOwner {
+    function setDefaultGovernanceFee(uint64 fee) override public onlyOwner {
         require(fee <= MAX_GOVERNANCE_FEE_SHARE); // dev: Maximum GovernanceFeeSare exceeded.
 
         emit SetDefaultGovernanceFee(fee);
@@ -65,8 +65,8 @@ contract CatalystFactory is Ownable, ICatalystV1Factory {
         address[] calldata assets,
         uint256[] calldata init_balances,
         uint256[] calldata weights,
-        uint256 amp,
-        uint256 vaultFee,
+        uint64 amp,
+        uint64 vaultFee,
         string memory name,
         string memory symbol,
         address chainInterface
@@ -82,7 +82,8 @@ contract CatalystFactory is Ownable, ICatalystV1Factory {
         address vault = Clones.clone(vaultTemplate);
 
         // The vault expects the balances to exist in the vault when setup is called.
-        for (uint256 it; it < assets.length;) {
+        uint256 assetLength = assets.length;
+        for (uint256 it; it < assetLength;) {
             SafeTransferLib.safeTransferFrom(
                 assets[it],
                 msg.sender,

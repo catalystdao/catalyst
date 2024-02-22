@@ -56,7 +56,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
     //-- Variables --//
     mapping(address => uint256) public _targetWeight;
 
-    constructor(address factory_, address mathlib_) CatalystVaultCommon(factory_, mathlib_) {}
+    constructor(address factory_, address mathlib_) payable CatalystVaultCommon(factory_, mathlib_) {}
 
     /**
      * @notice Configures an empty vault.
@@ -75,11 +75,12 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
     function initializeSwapCurves(
         address[] calldata assets,
         uint256[] calldata weights,
-        uint256 amp,
+        uint64 amp,
         address depositor
     ) external override {
         // May only be invoked by the FACTORY. The factory only invokes this function for proxy contracts.
-        require(msg.sender == FACTORY && _tokenIndexing[0] == address(0));  // dev: swap curves may only be initialized once by the factory
+        require(msg.sender == FACTORY); // dev: swap curves may only be initialized once by the factory
+        require(_tokenIndexing[0] == address(0)); // dev: swap curves may only be initialized once by the factory
         require(amp == FixedPointMathLib.WAD);  // dev: amplification not set correctly.
         // Note there is no need to check whether assets.length/weights.length are valid, as invalid arguments
         // will either cause the function to fail (e.g. if assets.length > MAX_ASSETS the assignment
@@ -95,7 +96,8 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
         // Compute the security limit.
         uint256[] memory initialBalances = new uint256[](MAX_ASSETS);
         uint256 maxUnitCapacity = 0;
-        for (uint256 it; it < assets.length;) {
+        uint assetsLength = assets.length;
+        for (uint256 it; it < assetsLength;) {
 
             address tokenAddress = assets[it];
             _tokenIndexing[it] = tokenAddress;
@@ -141,7 +143,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
      * @param targetTime Once reached, _weight[...] = newWeights[...]
      * @param newWeights The new weights to apply
      */
-    function setWeights(uint256 targetTime, uint256[] calldata newWeights) external onlyFactoryOwner {
+    function setWeights(uint48 targetTime, uint256[] calldata newWeights) external onlyFactoryOwner {
         unchecked {
             require(targetTime >= block.timestamp + MIN_ADJUSTMENT_TIME); // dev: targetTime must be more than MIN_ADJUSTMENT_TIME in the future.
             require(targetTime <= block.timestamp + 365 days); // dev: Target time cannot be too far into the future.
@@ -149,7 +151,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
 
         // Save adjustment information
         _adjustmentTarget = targetTime;
-        _lastModificationTime = block.timestamp;
+        _lastModificationTime = uint48(block.timestamp);
 
         // Save the target weights
         for (uint256 it; it < MAX_ASSETS;) {
@@ -160,7 +162,8 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
             uint256 newWeight = newWeights[it];
             uint256 currentWeight = _weight[token];
             require(newWeight != 0); // dev: newWeights must be greater than 0 to protect liquidity providers.
-            require(newWeight <= currentWeight*10 && newWeight >= currentWeight/10); // dev: newWeights must be maximum a factor of 10 larger/smaller than the current weights to protect liquidity providers.
+            require(newWeight <= currentWeight*10); // dev: newWeights must be maximum a factor of 10 larger/smaller than the current weights to protect liquidity providers.
+            require(newWeight >= currentWeight/10); // dev: newWeights must be maximum a factor of 10 larger/smaller than the current weights to protect liquidity providers.
             _targetWeight[token] = newWeight;
 
             unchecked {
@@ -189,7 +192,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
             if (block.timestamp == lastModification) return;
 
             // Since we are storing lastModification, update the variable now. This avoid repetitions.
-            _lastModificationTime = block.timestamp;
+            _lastModificationTime = uint48(block.timestamp);
 
             uint256 wsum = 0;
             // If the current time is past the adjustment, the weights need to be finalized.
@@ -220,7 +223,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
             }
 
             // Calculate partial weight change
-            for (uint256 it; it < MAX_ASSETS; ++it) {
+            for (uint256 it; it < MAX_ASSETS;) {
                 address token = _tokenIndexing[it];
                 if (token == address(0)) break;
 
@@ -248,6 +251,9 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
                     ) / (adjTarget - lastModification);
                     _weight[token] = newWeight;
                     wsum += newWeight;
+                }
+                unchecked {
+                    ++it;
                 }
             }
             // Update security limit
@@ -952,7 +958,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
         // Check if more than the minimum output is returned.
         if (minVaultTokens > vaultTokens) revert ReturnInsufficient(vaultTokens, minVaultTokens);
         // Then check if the minimum number of reference assets is honoured.
-        if (minReferenceAsset > 0) {
+        if (minReferenceAsset != 0) {
             // This is done by computing the reference balance through a locally observable method.
             // The balance0s are a point on the invariant. As such, another way of deriving balance0
             // is by finding a balance such that \prod balance0 = \prod balance**weight.

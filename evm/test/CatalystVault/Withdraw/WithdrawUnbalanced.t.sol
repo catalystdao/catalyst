@@ -13,7 +13,7 @@ import { AVaultInterfaces } from "test/CatalystVault/AVaultInterfaces.t.sol";
 import { TestInvariant } from "test/CatalystVault/Invariant.t.sol";
 
 
-function queryAssetCount(ICatalystV1Vault vault) returns (uint256) {
+function queryAssetCount(ICatalystV1Vault vault) view returns (uint256) {
     uint256 tokenCount = 0;
     for (uint256 i; true; i++) {
         address token = vault._tokenIndexing(i);
@@ -22,7 +22,7 @@ function queryAssetCount(ICatalystV1Vault vault) returns (uint256) {
     }
 }
 
-function queryWeightsSum(ICatalystV1Vault vault) returns (uint256) {
+function queryWeightsSum(ICatalystV1Vault vault) view returns (uint256) {
     uint256 weightsSum = 0;
     for (uint256 i; true; i++) {
         uint256 weight = vault._weight(vault._tokenIndexing(i));

@@ -132,8 +132,6 @@ abstract contract TestSendAsset is TestCommon, AVaultInterfaces {
 
         setConnection(fromVault, toVault, channelId, channelId);
 
-        uint256 initial_invariant = invariant(vaults);
-
         address fromToken = ICatalystV1Vault(fromVault)._tokenIndexing(fromAssetIndex);
 
         uint256 amount = getLargestSwap(fromVault, toVault, fromToken, ICatalystV1Vault(toVault)._tokenIndexing(toAssetIndex)) * uint256(swapSizePercentage) / (2**32 - 1);

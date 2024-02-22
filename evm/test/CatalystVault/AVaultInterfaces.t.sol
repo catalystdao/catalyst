@@ -15,7 +15,7 @@ abstract contract AVaultInterfaces  {
 
     function getLargestSwap(address fromVault, address toVault, address fromAsset, address toAsset, bool securityLimit) virtual internal returns(uint256 amount);
 
-    function getWithdrawPercentages(address vault, uint256[] memory withdraw_weights) virtual internal returns(uint256[] memory new_weights) {
+    function getWithdrawPercentages(address /* vault */, uint256[] memory withdraw_weights) view virtual internal returns(uint256[] memory new_weights) {
         uint256 progressiveSum = 0;
         new_weights = new uint256[](withdraw_weights.length);
         for (uint256 j = withdraw_weights.length - 1; ; ) {

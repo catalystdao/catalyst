@@ -16,7 +16,7 @@ import { AVaultInterfaces } from "test/CatalystVault/AVaultInterfaces.t.sol";
 import { TestInvariant } from "test/CatalystVault/Invariant.t.sol";
 
 
-function queryAssetCount(ICatalystV1Vault vault) returns (uint256) {
+function queryAssetCount(ICatalystV1Vault vault) view returns (uint256) {
     uint256 tokenCount = 0;
     for (uint256 i; true; i++) {
         address token = vault._tokenIndexing(i);
@@ -25,7 +25,7 @@ function queryAssetCount(ICatalystV1Vault vault) returns (uint256) {
     }
 }
 
-function queryVaultWeightsSum(ICatalystV1Vault vault) returns (uint256) {
+function queryVaultWeightsSum(ICatalystV1Vault vault) view returns (uint256) {
     uint256 weightsSum = 0;
     for (uint256 i; true; i++) {
         uint256 weight = vault._weight(vault._tokenIndexing(i));
@@ -103,10 +103,7 @@ abstract contract TestFullLiquiditySwap is TestCommon, AVaultInterfaces {
         return (units, toAmount);
     }
 
-    function findLog(Vm.Log[] memory logs, bytes32 logSelector) private returns(Vm.Log memory) {
-        
-        Vm.Log memory log;
-
+    function findLog(Vm.Log[] memory logs, bytes32 logSelector) pure private returns(Vm.Log memory) {
         for (uint256 i; i < logs.length; i++) {
             if (logs[i].topics[0] == logSelector) return logs[i];
         }

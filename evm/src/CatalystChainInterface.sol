@@ -146,7 +146,7 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
      mapping(bytes32 => UnderwritingStorage) public underwritingStorage;
 
 
-    constructor(address GARP_, address defaultOwner) {
+    constructor(address GARP_, address defaultOwner) payable {
         require(address(GARP_) != address(0));  // dev: GARP_ cannot be zero address
         GARP = IIncentivizedMessageEscrow(GARP_);
         _transferOwnership(defaultOwner);
@@ -343,7 +343,7 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
         uint256 U,
         uint256[2] calldata minOut,
         uint256 fromAmount,
-        bytes memory calldata_
+        bytes calldata calldata_
     ) checkRouteDescription(routeDescription) override external payable {
         // We need to ensure that all information is in the correct places. This ensures that calls to this contract
         // will always be decoded semi-correctly even if the input is very incorrect. This also checks that the user 
@@ -735,9 +735,10 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
         // cannot emit. We also cannot move that check up here, since then an external call would be made between a state check and a state modification. (reentry)
         // As a result, SwapRecentlyUnderwritten will be emitted when a swap has already been underwritten EXCEPT when underwriting a swap through reentry.
         // Then the reentry will underwrite the swap and the main call will fail with SwapAlreadyUnderwritten.
+        UnderwritingStorage storage underwriteState = underwritingStorage[identifier];
         unchecked {
             // Get the last touch block. For most underwrites it is going to be 0.
-            uint96 lastTouchBlock = underwritingStorage[identifier].expiry;
+            uint96 lastTouchBlock = underwriteState.expiry;
             if (lastTouchBlock != 0) { // implies that the swap has never been underwritten.
                 // if lastTouchBlock > type(uint96).max + BUFFER_BLOCKS then lastTouchBlock + BUFFER_BLOCKS overflows.
                 // if lastTouchBlock < BUFFER_BLOCKS then lastTouchBlock - BUFFER_BLOCKS underflows.
@@ -772,13 +773,15 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
 
         // Ensure the swap hasn't already been underwritten by checking if refundTo is set. 
         // Notice that this is very unlikely to ever get emitted. Instead, read the comment about SwapRecentlyUnderwritten.
-        if (underwritingStorage[identifier].refundTo != address(0)) revert SwapAlreadyUnderwritten();
+        if (underwriteState.refundTo != address(0)) revert SwapAlreadyUnderwritten();
+
+        uint256 _maxUnderwritingDuration = maxUnderwritingDuration;
 
         // Save the underwriting state.
         underwritingStorage[identifier] = UnderwritingStorage({
             tokens: purchasedTokens,
             refundTo: msg.sender,
-            expiry: uint96(uint256(block.number) + uint256(maxUnderwritingDuration))  // Should never overflow.
+            expiry: uint96(uint256(block.number) + uint256(_maxUnderwritingDuration))  // Should never overflow.
         });
 
         // The above combination of lines act as local re-entry protection. Do not add any external call inbetween these lines.
@@ -819,7 +822,7 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
         emit SwapUnderwritten(
             identifier,
             msg.sender,
-            uint96(uint256(block.number) + uint256(maxUnderwritingDuration)),
+            uint96(uint256(block.number) + uint256(_maxUnderwritingDuration)),
             targetVault,
             toAsset,
             U,

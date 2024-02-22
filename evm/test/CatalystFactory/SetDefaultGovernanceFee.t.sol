@@ -31,7 +31,7 @@ contract TestDefaultGovernanceFee is TestCommon {
         assertEq(catFactory._defaultGovernanceFee(), 0);
     }
 
-    function test_set_default_governance_fee_storage_only_owner(address caller, uint256 fee) external {
+    function test_set_default_governance_fee_storage_only_owner(address caller, uint64 fee) external {
         vm.assume(caller != catFactory.owner());
 
         vm.prank(caller);

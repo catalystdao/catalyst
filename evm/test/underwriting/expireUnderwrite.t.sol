@@ -164,7 +164,7 @@ contract TestExpireUnderwrite is TestCommon {
 
         Token(token).approve(address(CCI), 2**256-1);
 
-        bytes32 identifier = CCI.underwrite(
+        CCI.underwrite(
             vault2,  // -- Swap information
             token,
             1e17,

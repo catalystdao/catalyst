@@ -16,7 +16,7 @@ import { IncentivizedWormholeEscrow } from "GeneralisedIncentives/src/apps/wormh
 
 contract Swap is Script, IMessageEscrowStructs {
 
-    function getChainIdentifierWormhole() external {
+    function getChainIdentifierWormhole() view external {
         address wormhole_incentive = 0x000000ED80503e3A7EA614FFB5507FD52584a1f2;
 
         console.logUint(IncentivizedWormholeEscrow(wormhole_incentive).chainId());

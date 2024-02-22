@@ -62,7 +62,7 @@ contract DeployInterfaces is BaseMultiChainDeployer {
             uint256 pv_key = vm.envUint("INCENTIVE_DEPLOYER");
             vm.startBroadcast(pv_key);
 
-            incentive = address(new IncentivizedMockEscrow(vm.envAddress("CATALYST_ADDRESS"), chainIdentifier, signer, 0));
+            incentive = address(new IncentivizedMockEscrow(vm.envAddress("CATALYST_ADDRESS"), chainIdentifier, signer, 0, 0));
 
             vm.stopBroadcast();
             vm.startBroadcast(pk);

@@ -19,7 +19,7 @@ contract RouterImmutables {
     /// @dev WETH9 address
     IWETH9 public immutable WETH9;
 
-    constructor(RouterParameters memory params) {
+    constructor(RouterParameters memory params) payable {
         PERMIT2 = IAllowanceTransfer(params.permit2);
         WETH9 = IWETH9(params.weth9);
     }

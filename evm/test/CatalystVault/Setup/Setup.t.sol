@@ -28,7 +28,7 @@ abstract contract TestSetup is TestCommon, AVaultInterfaces {
             Token(assets[i]).approve(address(catFactory), initBalances[i]);
         }
         
-        uint256 amplification = amplified ? 10**18/2 : 10**18;
+        uint64 amplification = amplified ? 10**18/2 : 10**18;
         address vaultTemplate = amplified ? address(amplifiedTemplate) : address(volatileTemplate);
 
 
@@ -81,7 +81,7 @@ abstract contract TestSetup is TestCommon, AVaultInterfaces {
         uint256[] memory initBalances = new uint256[](0);
         uint256[] memory weights = new uint256[](0);
         
-        uint256 amplification = amplified ? 10**18/2 : 10**18;
+        uint64 amplification = amplified ? 10**18/2 : 10**18;
 
 
 
@@ -105,7 +105,7 @@ abstract contract TestSetup is TestCommon, AVaultInterfaces {
             Token(assets[i]).approve(address(catFactory), initBalances[i]);
         }
         
-        uint256 amplification = amplified ? 10**18/2 : 10**18;
+        uint64 amplification = amplified ? 10**18/2 : 10**18;
         address vaultTemplate = amplified ? address(amplifiedTemplate) : address(amplifiedTemplate);
 
 
@@ -138,7 +138,7 @@ abstract contract TestSetup is TestCommon, AVaultInterfaces {
             Token(assets[i]).approve(address(catFactory), initBalances[i]);
         }
         
-        uint256 amplification = amplified ? 10**18/2 : 10**18;
+        uint64 amplification = amplified ? 10**18/2 : 10**18;
         address vaultTemplate = amplified ? address(amplifiedTemplate) : address(amplifiedTemplate);
 
         // ! Set the last balance argument to 0
@@ -173,7 +173,7 @@ abstract contract TestSetup is TestCommon, AVaultInterfaces {
             weights[i] = 1;
         }
         
-        uint256 amplification = amplified ? 10**18/2 : 10**18;
+        uint64 amplification = amplified ? 10**18/2 : 10**18;
         address vaultTemplate = amplified ? address(amplifiedTemplate) : address(amplifiedTemplate);
 
         // ! Set the last weight argument to 0
@@ -209,7 +209,7 @@ abstract contract TestSetup is TestCommon, AVaultInterfaces {
             // ! Do not set token allowances
         }
         
-        uint256 amplification = amplified ? 10**18/2 : 10**18;
+        uint64 amplification = amplified ? 10**18/2 : 10**18;
         address vaultTemplate = amplified ? address(amplifiedTemplate) : address(volatileTemplate);
 
 
@@ -242,7 +242,7 @@ abstract contract TestSetup is TestCommon, AVaultInterfaces {
             Token(assets[i]).approve(address(catFactory), initBalances[i]);
         }
         
-        uint256 amplification = amplified ? 10**18/2 : 10**18;
+        uint64 amplification = amplified ? 10**18/2 : 10**18;
 
         // ! Set the wrong template on purpose
         address vaultTemplate = amplified ? address(volatileTemplate) : address(amplifiedTemplate);
@@ -277,7 +277,7 @@ abstract contract TestSetup is TestCommon, AVaultInterfaces {
             Token(assets[i]).approve(address(catFactory), initBalances[i]);
         }
         
-        uint256 amplification = amplified ? 10**18/2 : 10**18;
+        uint64 amplification = amplified ? 10**18/2 : 10**18;
         address vaultTemplate = amplified ? address(amplifiedTemplate) : address(volatileTemplate);
 
         ICatalystV1Vault vault = ICatalystV1Vault(catFactory.deployVault(
@@ -320,7 +320,7 @@ abstract contract TestSetup is TestCommon, AVaultInterfaces {
             Token(assets[i]).approve(address(catFactory), initBalances[i]);
         }
         
-        uint256 amplification = amplified ? 10**18/2 : 10**18;
+        uint64 amplification = amplified ? 10**18/2 : 10**18;
         address vaultTemplate = amplified ? address(amplifiedTemplate) : address(volatileTemplate);
 
         ICatalystV1Vault vault = ICatalystV1Vault(catFactory.deployVault(

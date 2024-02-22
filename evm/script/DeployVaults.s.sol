@@ -28,7 +28,7 @@ contract DeployVaults is BaseMultiChainDeployer {
 
     JsonContracts contracts;
 
-    function deployVault(address[] memory assets, uint256[] memory init_balances, uint256[] memory weights, uint256 amp, uint256 vaultFee, string memory name, string memory symbol, address chainInterface) internal returns(address vaultAddress) {
+    function deployVault(address[] memory assets, uint256[] memory init_balances, uint256[] memory weights, uint64 amp, uint64 vaultFee, string memory name, string memory symbol, address chainInterface) internal returns(address vaultAddress) {
         address vaultTemplate;
         if (amp == 10**18) {
             vaultTemplate = contracts.volatile_template;
@@ -104,11 +104,11 @@ contract DeployVaults is BaseMultiChainDeployer {
             string memory cci_version = vm.parseJsonString(config_vault, string.concat(".", pool, ".cci_version"));
             if (CCI == address(0)) CCI = vm.parseJsonAddress(config_interface, string.concat(".", chain_name, ".", cci_version, ".interface"));
             uint256[] memory weights = vm.parseJsonUintArray(config_vault, string.concat(".", pool, ".", chain_name, ".weights"));
-            uint256 amp = 10**18;
+            uint64 amp = 10**18;
             if (vm.keyExists(config_vault, string.concat(".", pool, ".amplification"))) {
-                amp = vm.parseJsonUint(config_vault, string.concat(".", pool, ".amplification"));
+                amp = uint64(vm.parseJsonUint(config_vault, string.concat(".", pool, ".amplification")));
             }
-            uint256 vaultFee = vm.parseJsonUint(config_vault, string.concat(".", pool, ".", chain_name, ".fee"));
+            uint64 vaultFee = uint64(vm.parseJsonUint(config_vault, string.concat(".", pool, ".", chain_name, ".fee")));
             vaultAddress = deployVault(
                 assets, init_balances, weights, amp, vaultFee, pool, pool, CCI
             );
