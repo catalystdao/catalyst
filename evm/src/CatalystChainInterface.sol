@@ -292,29 +292,29 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
         // they cannot drain any value. As such, the very worst they can do is waste gas.
 
         // Encode payload. See CatalystPayload.sol for the payload definition
-        bytes memory data = abi.encodePacked(
+        bytes memory data = bytes.concat(
             CTX0_ASSET_SWAP,
-            abi.encodePacked(
-                uint8(20),      // EVM addresses are 20 bytes.
+            // bytes.concat(
+                bytes1(uint8(20)),      // EVM addresses are 20 bytes.
                 bytes32(0),     // EVM only uses 20 bytes. abi.encode packs the 20 bytes into 32 then we need to add 32 more
-                abi.encode(msg.sender)  // Use abi.encode to encode address into 32 bytes
-            ),
-            abi.encodePacked(
+                bytes32(uint256(uint160(msg.sender))),  // Use abi.encode to encode address into 32 bytes
+            // ),
+            bytes.concat(
                 routeDescription.toVault,    // Length is expected to be pre-encoded.
                 routeDescription.toAccount,  // Length is expected to be pre-encoded.
-                U,
-                toAssetIndex,
-                minOut,
-                fromAmount
+                bytes32(U),
+                bytes1(toAssetIndex),
+                bytes32(minOut),
+                bytes32(fromAmount)
             ),
-            abi.encodePacked(
-                uint8(20),      // EVM addresses are 20 bytes.
+            // bytes.concat(
+                bytes1(uint8(20)),      // EVM addresses are 20 bytes.
                 bytes32(0),     // EVM only uses 20 bytes. abi.encode packs the 20 bytes into 32 then we need to add 32 more
-                abi.encode(fromAsset)  // Use abi.encode to encode address into 32 bytes
-            ),
-            uint32(block.number),   // This is the same as block.number mod 2**32-1
-            uint16(underwriteIncentiveX16),
-            uint16(calldata_.length),   // max length of calldata is 2**16-1 = 65535 bytes which should be more than plenty.
+                bytes32(uint256(uint160(fromAsset))),  // Use abi.encode to encode address into 32 bytes
+            // ),
+            bytes4(uint32(block.number)),   // This is the same as block.number mod 2**32-1
+            bytes2(uint16(underwriteIncentiveX16)),
+            bytes2(uint16(calldata_.length)),   // max length of calldata is 2**16-1 = 65535 bytes which should be more than plenty.
             calldata_
         );
 
@@ -354,21 +354,21 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
         // they cannot drain any value. As such, the very worst they can do is waste gas.
 
         // Encode payload. See CatalystPayload.sol for the payload definition
-        bytes memory data = abi.encodePacked(
+        bytes memory data = bytes.concat(
             CTX1_LIQUIDITY_SWAP,
-            abi.encodePacked(
-                uint8(20),  // EVM addresses are 20 bytes.
+            bytes.concat(
+                bytes1(uint8(20)),  // EVM addresses are 20 bytes.
                 bytes32(0),  // EVM only uses 20 bytes. abi.encode packs the 20 bytes into 32 then we need to add 32 more
-                abi.encode(msg.sender)  // Use abi.encode to encode address into 32 bytes
+                bytes32(uint256(uint160(msg.sender)))  // Use abi.encode to encode address into 32 bytes
             ),
             routeDescription.toVault,  // Length is expected to be pre-encoded.
             routeDescription.toAccount,  // Length is expected to be pre-encoded.
-            U,
-            minOut[0],
-            minOut[1],
-            fromAmount,
-            uint32(block.number),
-            uint16(calldata_.length),
+            bytes32(U),
+            bytes32(minOut[0]),
+            bytes32(minOut[1]),
+            bytes32(fromAmount),
+            bytes4(uint32(block.number)),
+            bytes2(uint16(calldata_.length)),
             calldata_
         );
 
@@ -603,13 +603,13 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
         bytes calldata cdata
     ) internal pure returns (bytes32 identifier) {
         return identifier = keccak256(
-            abi.encodePacked(
-                targetVault,
-                toAsset,
-                U,
-                minOut,
-                toAccount,
-                underwriteIncentiveX16,
+            bytes.concat(
+                bytes20(targetVault),
+                bytes20(toAsset),
+                bytes32(U),
+                bytes32(minOut),
+                bytes20(toAccount),
+                bytes2(underwriteIncentiveX16),
                 cdata
             )
         );

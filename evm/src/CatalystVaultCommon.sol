@@ -646,12 +646,12 @@ abstract contract CatalystVaultCommon is
         uint32 blockNumberMod
     ) internal pure returns(bytes32) {
         return keccak256(
-            abi.encodePacked(
+            bytes.concat(
                 toAccount,      // Ensures no collisions between different users
-                U,              // Used to randomise the hash
-                amount,         // Required! to validate release escrow data
-                fromAsset,      // Required! to validate release escrow data
-                blockNumberMod  // Used to randomize the hash.
+                bytes32(U),              // Used to randomise the hash
+                bytes32(amount),         // Required! to validate release escrow data
+                bytes20(fromAsset),      // Required! to validate release escrow data
+                bytes4(blockNumberMod)  // Used to randomize the hash.
             )
         );
     }
@@ -665,11 +665,11 @@ abstract contract CatalystVaultCommon is
         uint32 blockNumberMod
     ) internal pure returns(bytes32) {
         return keccak256(
-            abi.encodePacked(
+            bytes.concat(
                 toAccount,      // Ensures no collisions between different users
-                U,              // Used to randomise the hash
-                amount,         // Required! to validate release escrow data
-                blockNumberMod  // Used to randomize the hash.
+                bytes32(U),              // Used to randomise the hash
+                bytes32(amount),         // Required! to validate release escrow data
+                bytes4(blockNumberMod)  // Used to randomize the hash.
             )
         );
     }
