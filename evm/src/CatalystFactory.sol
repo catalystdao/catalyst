@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.19;
 
-import { Ownable } from "openzeppelin-contracts/contracts/access/Ownable.sol";
+import { Ownable } from "solady/auth/Ownable.sol";
 import { SafeTransferLib } from 'solady/utils/SafeTransferLib.sol';
-import { ICatalystV1Vault } from "./ICatalystV1Vault.sol";
-import { Clones } from "openzeppelin-contracts/contracts/proxy/Clones.sol";
+import { LibClone } from "solady/utils/LibClone.sol";
+
 import { ICatalystV1Factory } from "./interfaces/ICatalystV1Factory.sol";
+import { ICatalystV1Vault } from "./ICatalystV1Vault.sol";
 
 uint256 constant MAX_GOVERNANCE_FEE_SHARE = 75e16;   // 75%
 
@@ -27,7 +28,7 @@ contract CatalystFactory is Ownable, ICatalystV1Factory {
     address public _governanceFeeDestination;
 
     constructor(address defaultOwner) payable {
-        _transferOwnership(defaultOwner);
+        _initializeOwner(defaultOwner);
         _governanceFeeDestination = defaultOwner;
     }
 
@@ -79,7 +80,7 @@ contract CatalystFactory is Ownable, ICatalystV1Factory {
         // will fail. If longer, values will just be ignored.
 
         // Create a minimal transparent proxy:
-        address vault = Clones.clone(vaultTemplate);
+        address vault = LibClone.clone(vaultTemplate);
 
         // The vault expects the balances to exist in the vault when setup is called.
         uint256 assetLength = assets.length;

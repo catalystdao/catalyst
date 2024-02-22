@@ -4,11 +4,12 @@ pragma solidity ^0.8.19;
 import { ERC20 } from 'solady/tokens/ERC20.sol';
 import { SafeTransferLib } from 'solady/utils/SafeTransferLib.sol';
 import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
+
 import { ICatalystChainInterface } from "./interfaces/ICatalystChainInterface.sol";
-import { CatalystVaultCommon } from "./CatalystVaultCommon.sol";
-import { IntegralsVolatile } from "./IntegralsVolatile.sol";
 import { ICatalystReceiver} from "./interfaces/IOnCatalyst.sol";
 import { LN2 } from "./utils/MathConstants.sol";
+import { CatalystVaultCommon } from "./CatalystVaultCommon.sol";
+import { IntegralsVolatile } from "./IntegralsVolatile.sol";
 import "./ICatalystV1Vault.sol";
 
 /**

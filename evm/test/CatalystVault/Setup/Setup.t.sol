@@ -295,7 +295,7 @@ abstract contract TestSetup is TestCommon, AVaultInterfaces {
 
 
         // Tested action
-        vm.expectRevert(bytes("Initializable: contract is already initialized"));
+        vm.expectRevert(0xf92ee8a9);
         vault.setup(
             DEFAULT_POOL_NAME,
             DEFAULT_POOL_SYMBOL,

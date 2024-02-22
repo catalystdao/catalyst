@@ -3,17 +3,19 @@ pragma solidity ^0.8.19;
 
 import {ERC20} from 'solady/tokens/ERC20.sol';
 import {SafeTransferLib} from 'solady/utils/SafeTransferLib.sol';
+import { Ownable} from "solady/auth/Ownable.sol";
+
 import { IMessageEscrowStructs } from "GeneralisedIncentives/src/interfaces/IMessageEscrowStructs.sol";
 import { IIncentivizedMessageEscrow } from "GeneralisedIncentives/src/interfaces/IIncentivizedMessageEscrow.sol";
-import { ICatalystReceiver } from "./interfaces/IOnCatalyst.sol";
-import { ICatalystV1Vault } from "./ICatalystV1Vault.sol";
-import { Ownable} from "openzeppelin-contracts/contracts/access/Ownable.sol";
-import "./ICatalystV1Vault.sol";
-import "./interfaces/ICatalystV1VaultState.sol"; // structs
-import "./CatalystPayload.sol";
 import { Bytes65 } from "GeneralisedIncentives/src/utils/Bytes65.sol";
 
 import { ICatalystChainInterface } from "./interfaces/ICatalystChainInterface.sol";
+import { ICatalystReceiver } from "./interfaces/IOnCatalyst.sol";
+import "./interfaces/ICatalystV1VaultState.sol"; // structs
+import { ICatalystV1Vault } from "./ICatalystV1Vault.sol";
+import "./ICatalystV1Vault.sol";
+import "./CatalystPayload.sol";
+
 
 /**
  * @title Catalyst: Generalised IBC Interface
@@ -149,7 +151,7 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
     constructor(address GARP_, address defaultOwner) payable {
         require(address(GARP_) != address(0));  // dev: GARP_ cannot be zero address
         GARP = IIncentivizedMessageEscrow(GARP_);
-        _transferOwnership(defaultOwner);
+        _initializeOwner(defaultOwner);
 
         emit MaxUnderwriteDuration(INITIAL_MAX_UNDERWRITE_BLOCK_DURATION);
     }

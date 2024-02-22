@@ -1,19 +1,21 @@
 //SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.19;
 
+import { Ownable } from "solady/auth/Ownable.sol";
 import {ERC20} from 'solady/tokens/ERC20.sol';
 import {SafeTransferLib} from 'solady/utils/SafeTransferLib.sol';
-import { IMessageEscrowStructs } from "GeneralisedIncentives/src/interfaces/IMessageEscrowStructs.sol";
-import { Ownable } from "openzeppelin-contracts/contracts/access/Ownable.sol";
-import { ReentrancyGuard} from "openzeppelin-contracts/contracts/security/ReentrancyGuard.sol";
-import { Initializable } from "openzeppelin-contracts/contracts/proxy/utils/Initializable.sol";
-import { Multicall } from "openzeppelin-contracts/contracts/utils/Multicall.sol";
-import { MAX_GOVERNANCE_FEE_SHARE } from"./CatalystFactory.sol";
+import { ReentrancyGuard} from "solady/utils/ReentrancyGuard.sol";
+import { Initializable } from "solady/utils/Initializable.sol";
+import { Multicallable } from "solady/utils/Multicallable.sol";
 import { FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
+
+import { IMessageEscrowStructs } from "GeneralisedIncentives/src/interfaces/IMessageEscrowStructs.sol";
+
 import { ICatalystReceiver} from "./interfaces/IOnCatalyst.sol";
-import { ICatalystV1Vault } from "./ICatalystV1Vault.sol";
 import { ICatalystV1Factory } from "./interfaces/ICatalystV1Factory.sol";
 import "./interfaces/ICatalystV1VaultErrors.sol";
+import { MAX_GOVERNANCE_FEE_SHARE } from"./CatalystFactory.sol";
+import { ICatalystV1Vault } from "./ICatalystV1Vault.sol";
 
 /**
  * @title Catalyst: Common Vault Logic
@@ -34,7 +36,7 @@ import "./interfaces/ICatalystV1VaultErrors.sol";
  */
 abstract contract CatalystVaultCommon is
     Initializable,
-    Multicall,
+    Multicallable,
     ReentrancyGuard,
     ERC20,
     ICatalystV1Vault

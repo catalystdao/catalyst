@@ -4,11 +4,12 @@ pragma solidity ^0.8.19;
 import { ERC20 } from 'solady/tokens/ERC20.sol';
 import { SafeTransferLib } from 'solady/utils/SafeTransferLib.sol';
 import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
+
 import { ICatalystChainInterface } from "./interfaces/ICatalystChainInterface.sol";
+import { WADWAD } from "./utils/MathConstants.sol";
 import { CatalystVaultCommon } from "./CatalystVaultCommon.sol";
 import { IntegralsAmplified } from "./IntegralsAmplified.sol";
 import { ICatalystReceiver} from "./interfaces/IOnCatalyst.sol";
-import { WADWAD } from "./utils/MathConstants.sol";
 import "./ICatalystV1Vault.sol";
 
 /**
@@ -288,19 +289,18 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
      * @return uint256 The number of minted vault tokens.
      */
     function depositMixed(
-        uint256[] calldata tokenAmounts,
+        uint256[] memory tokenAmounts,
         uint256 minOut
     ) nonReentrant external override returns(uint256) {
         // _updateAmplification();
         int256 oneMinusAmp = _oneMinusAmp;
 
-        uint256 walpha_0_ampped;
+        uint256 it_times_walpha_amped;
 
         // There is a Stack too deep issue in a later branch. To counteract this,
         // wab is stored short-lived. This requires letting U get negative.
         // As such, we define an additional variable called intU which is signed
         int256 intU;
-        uint256 it;
         
         // Compute walpha_0 to find the reference balances. This lets us evaluate the
         // number of tokens the vault should have If the price in the pool is 1:1.
@@ -320,11 +320,11 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
         {
             int256 weightedAssetBalanceSum = 0;
             uint256 assetDepositSum = 0;
-            for (it; it < MAX_ASSETS;) {
+            for (uint256 it; it < MAX_ASSETS;) {
                 address token = _tokenIndexing[it];
                 if (token == address(0)) break;
                 uint256 weight = _weight[token];
-
+                {
                 // Whenever balance0 is computed, the true balance should be used.
                 uint256 weightAssetBalance = weight * ERC20(token).balanceOf(address(this));
 
@@ -375,7 +375,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
                     int256((weightAssetBalance + weight * tokenAmounts[it]) * FixedPointMathLib.WAD),   // If casting overflows to a negative number, powWad fails
                     oneMinusAmp
                 );
-
+                }
                 assetDepositSum += tokenAmounts[it] * weight;
                 
                 SafeTransferLib.safeTransferFrom(
@@ -403,7 +403,8 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
             unchecked {
                 // weightedAssetBalanceSum - _unitTracker can overflow for negative _unitTracker.
                 // The result will be correct once it is casted to uint256.
-                walpha_0_ampped = uint256(weightedAssetBalanceSum - _unitTracker) / it;   // By design, weightedAssetBalanceSum > _unitTracker
+                it_times_walpha_amped = uint256(weightedAssetBalanceSum - _unitTracker);   // By design, weightedAssetBalanceSum > _unitTracker
+                // Notice that we are not dividing by it. That is because we would then later have to multiply by it.
             }
         
         }
@@ -426,8 +427,6 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
         }
 
         int256 oneMinusAmpInverse = WADWAD / oneMinusAmp;
-
-        uint256 it_times_walpha_amped = it * walpha_0_ampped;
 
         // On totalSupply(). Do not add escrow amount, as higher amount
         // results in a larger return.
@@ -456,7 +455,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
      */
     function withdrawAll(
         uint256 vaultTokens,
-        uint256[] calldata minOut
+        uint256[] memory minOut
     ) nonReentrant external override returns(uint256[] memory) {
         // _updateAmplification();
         // Burn the desired number of vault tokens to the user.

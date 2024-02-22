@@ -35,7 +35,7 @@ contract TestDefaultGovernanceFee is TestCommon {
         vm.assume(caller != catFactory.owner());
 
         vm.prank(caller);
-        vm.expectRevert("Ownable: caller is not the owner");
+        vm.expectRevert(0x82b42900);
         catFactory.setDefaultGovernanceFee(fee);
 
         // Check that the storage isn't updated.
