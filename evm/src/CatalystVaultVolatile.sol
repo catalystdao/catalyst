@@ -358,12 +358,12 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
      * The elements of tokenAmounts correspond to _tokenIndexing[0...N].
      * @param tokenAmounts An array of the tokens amounts to be deposited.
      * @param minOut The minimum number of vault tokens to be minted.
-     * @return uint256 The number of minted vault tokens.
+     * @return vaultTokens The number of minted vault tokens.
      */
     function depositMixed(
         uint256[] calldata tokenAmounts,
         uint256 minOut
-    ) nonReentrant external override returns(uint256) {
+    ) nonReentrant external override returns(uint256 vaultTokens) {
         _updateWeights();
         // Smaller initialTotalSupply => fewer vault tokens minted: _escrowedVaultTokens is not added.
         uint256 initialTotalSupply = totalSupply(); 
@@ -412,7 +412,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
 
         // Compute the number of vault tokens minted to the user. Notice that _calcPriceCurveLimitShare can be greater than 1
         // and more than the totalSupply() can be minted given sufficiently large U.
-        uint256 vaultTokens = FixedPointMathLib.mulWad(initialTotalSupply, _calcPriceCurveLimitShare(U, wsum));
+        vaultTokens = FixedPointMathLib.mulWad(initialTotalSupply, _calcPriceCurveLimitShare(U, wsum));
 
         // Check that the minimum output is honoured.
         if (minOut > vaultTokens) revert ReturnInsufficient(vaultTokens, minOut);
@@ -423,8 +423,6 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
 
         // Emit the deposit event
         emit VaultDeposit(msg.sender, vaultTokens, tokenAmounts);
-
-        return vaultTokens;
     }
 
     /**
@@ -433,12 +431,12 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
      * @dev This is the cheapest way to withdraw and only way to withdraw 100% of the liquidity.
      * @param vaultTokens The number of vault tokens to burn.
      * @param minOut The minimum token output. If less is returned, the transaction reverts.
-     * @return uint256[] memory An array containing the amounts withdrawn.
+     * @return amounts An array containing the amounts withdrawn.
      */
     function withdrawAll(
         uint256 vaultTokens,
         uint256[] calldata minOut
-    ) nonReentrant external override returns(uint256[] memory) {
+    ) nonReentrant external override returns(uint256[] memory amounts) {
         _updateWeights();
         // Cache totalSupply(). This saves some gas.
         uint256 initialTotalSupply = totalSupply() + _escrowedVaultTokens;
@@ -448,7 +446,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
         _burn(msg.sender, vaultTokens);
 
         // For later event logging, the amounts transferred from the vault are stored.
-        uint256[] memory amounts = new uint256[](MAX_ASSETS);
+        amounts = new uint256[](MAX_ASSETS);
         for (uint256 it; it < MAX_ASSETS;) {
             address token = _tokenIndexing[it];
             if (token == address(0)) break;
@@ -475,8 +473,6 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
 
         // Emit the event
         emit VaultWithdraw(msg.sender, vaultTokens, amounts);
-
-        return amounts;
     }
 
     /**
@@ -492,13 +488,13 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
      * @param vaultTokens The number of vault tokens to withdraw.
      * @param withdrawRatio The percentage of units used to withdraw. In the following scheme: U_0 = U · withdrawRatio[0], U_1 = (U - U_0) · withdrawRatio[1], U_2 = (U - U_0 - U_1) · withdrawRatio[2], .... To withdraw similarly to withdrawAll, the weights needs to be multiplied by weights. See @dev.
      * @param minOut The minimum number of tokens withdrawn.
-     * @return uint256[] memory An array containing the amounts withdrawn.
+     * @return amounts An array containing the amounts withdrawn.
      */
     function withdrawMixed(
         uint256 vaultTokens,
         uint256[] calldata withdrawRatio,
         uint256[] calldata minOut
-    ) nonReentrant external override returns(uint256[] memory) {
+    ) nonReentrant external override returns(uint256[] memory amounts) {
         _updateWeights();
         // cache totalSupply(). This saves a bit of gas.
         uint256 initialTotalSupply = totalSupply() + _escrowedVaultTokens;
@@ -517,7 +513,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
         ))) * wsum;
 
         // For later event logging, the amounts transferred to the vault are stored.
-        uint256[] memory amounts = new uint256[](MAX_ASSETS);
+        amounts = new uint256[](MAX_ASSETS);
         for (uint256 it; it < MAX_ASSETS;) {
             address token = _tokenIndexing[it]; // Collect the token into memory to save gas.
             if (token == address(0)) break;
@@ -561,8 +557,6 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
 
         // Emit the event
         emit VaultWithdraw(msg.sender, vaultTokens, amounts);
-
-        return amounts;
     }
 
     /**
@@ -571,19 +565,19 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
      * @param toAsset The asset the user wants to buy
      * @param amount The amount of fromAsset the user wants to sell
      * @param minOut The minimum output the user wants. Otherwise, the transaction reverts.
-     * @return uint256 The number of tokens purchased.
+     * @return out The number of tokens purchased.
      */
     function localSwap(
         address fromAsset,
         address toAsset,
         uint256 amount,
         uint256 minOut
-    ) nonReentrant external override returns (uint256) {
+    ) nonReentrant external override returns (uint256 out) {
         _updateWeights();
         uint256 fee = FixedPointMathLib.mulWad(amount, _vaultFee);
 
         // Calculate the return value.
-        uint256 out = calcLocalSwap(fromAsset, toAsset, amount - fee);
+        out = calcLocalSwap(fromAsset, toAsset, amount - fee);
 
         // Ensure the return value is more than the minimum output.
         if (minOut > out) revert ReturnInsufficient(out, minOut);
@@ -598,8 +592,6 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
         _collectGovernanceFee(fromAsset, fee);
 
         emit LocalSwap(msg.sender, fromAsset, toAsset, amount, out);
-
-        return out;
     }
 
     /// @notice Handles common logic between both sendAsset implementations
@@ -685,7 +677,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
      * @param underwriteIncentiveX16 The payment for underwriting the swap (out of type(uint16).max)
      * @param calldata_ Data field if a call should be made on the target chain.
      * Encoding depends on the target chain, with evm being: abi.encodePacket(bytes20(<address>), <data>). At maximum 65535 bytes can be passed.
-     * @return uint256 The number of units minted.
+     * @return U The number of units minted.
      */
     function sendAsset(
         RouteDescription calldata routeDescription,
@@ -696,13 +688,13 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
         address fallbackUser,
         uint16 underwriteIncentiveX16,
         bytes calldata calldata_
-    ) nonReentrant onlyConnectedPool(routeDescription.chainIdentifier, routeDescription.toVault) external payable override returns (uint256) {
+    ) nonReentrant onlyConnectedPool(routeDescription.chainIdentifier, routeDescription.toVault) external payable override returns (uint256 U) {
         _updateWeights();
 
         uint256 fee = FixedPointMathLib.mulWad(amount, _vaultFee);
 
         // Calculate the units bought.
-        uint256 U = calcSendAsset(fromAsset, amount - fee);
+        U = calcSendAsset(fromAsset, amount - fee);
 
         _sendAsset(
             routeDescription,
@@ -716,8 +708,6 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
             underwriteIncentiveX16,
             calldata_
         );
-
-        return U;
     }
 
     /**
@@ -779,19 +769,17 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
         address toAsset,
         uint256 U,
         uint256 minOut
-    ) internal override returns (uint256) {
+    ) internal override returns (uint256 purchasedTokens) {
         _updateWeights();
 
         // Check and update the security limit.
         _updateUnitCapacity(U);
 
         // Calculate the swap return value. Fee is always taken on the sending token.
-        uint256 purchasedTokens = calcReceiveAsset(toAsset, U);
+        purchasedTokens = calcReceiveAsset(toAsset, U);
 
         // Ensure the user is satisfied with the number of tokens.
         if (minOut > purchasedTokens)  revert ReturnInsufficient(purchasedTokens, minOut);
-
-        return purchasedTokens;
     }
 
     /**
@@ -862,7 +850,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
      * @param fallbackUser If the transaction fails, send the escrowed funds to this address.
      * @param calldata_ Data field if a call should be made on the target chain.
      * Encoding depends on the target chain, with EVM: abi.encodePacket(bytes20(<address>), <data>). At maximum 65535 bytes can be passed.
-     * @return uint256 The number of units bought.
+     * @return U The number of units bought.
      */
     function sendLiquidity(
         RouteDescription calldata routeDescription,
@@ -870,7 +858,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
         uint256[2] calldata minOut,
         address fallbackUser,
         bytes calldata calldata_
-    ) nonReentrant onlyConnectedPool(routeDescription.chainIdentifier, routeDescription.toVault) external payable override returns (uint256) {
+    ) nonReentrant onlyConnectedPool(routeDescription.chainIdentifier, routeDescription.toVault) external payable override returns (uint256 U) {
         // Fallback user cannot be address(0) since this is used as a check for the existance of an escrow.
         // It would also be a silly fallback address.
         require(fallbackUser != address(0));
@@ -893,7 +881,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
 
         // Compute the unit value of the provided vaultTokens.
         // This step simplifies withdrawing and swapping into a single calculation.
-        uint256 U = uint256(FixedPointMathLib.lnWad(  // uint256: ln computed of a value greater than 1 is always positive
+        U = uint256(FixedPointMathLib.lnWad(  // uint256: ln computed of a value greater than 1 is always positive
             int256(FixedPointMathLib.divWad(initialTotalSupply, initialTotalSupply - vaultTokens))   // int256: if casting overflows, the result is a negative input. lnWad reverts.
         )) * wsum;
 
@@ -935,8 +923,6 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
 
         // Adjustment of the security limit is delayed until ack to avoid
         // a router abusing timeout to circumvent the security limit at a low cost.
-
-        return U;
     }
 
     /**
@@ -947,7 +933,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
         uint256 U,
         uint256 minVaultTokens,
         uint256 minReferenceAsset
-    ) internal returns (uint256) {
+    ) internal returns (uint256 vaultTokens) {
         _updateWeights();
 
         _updateUnitCapacity(U);
@@ -957,7 +943,7 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
 
         // Compute mint %. It comes as WAD, multiply by totalSupply() and divide by WAD (mulWadDown) to get number of vault tokens.
         // On totalSupply(). Do not add escrow amount, as higher amount results in a larger return.
-        uint256 vaultTokens = FixedPointMathLib.mulWad(_calcPriceCurveLimitShare(U, wsum), totalSupply());
+        vaultTokens = FixedPointMathLib.mulWad(_calcPriceCurveLimitShare(U, wsum), totalSupply());
 
         // Check if more than the minimum output is returned.
         if (minVaultTokens > vaultTokens) revert ReturnInsufficient(vaultTokens, minVaultTokens);
@@ -1012,8 +998,6 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
             referenceAmount = (referenceAmount * vaultTokens)/(totalSupply() + _escrowedVaultTokens + vaultTokens);
             if (minReferenceAsset > referenceAmount) revert ReturnInsufficient(referenceAmount, minReferenceAsset);
         }
-
-        return vaultTokens;
     }
 
      /**

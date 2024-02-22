@@ -59,7 +59,7 @@ contract CatalystFactory is Ownable, ICatalystV1Factory {
      * @param name Name of the Vault token.
      * @param symbol Symbol for the Vault token.
      * @param chainInterface The cross chain interface used for cross-chain swaps. (Can be address(0) to disable cross-chain swaps.)
-     * @return address The address of the created Catalyst Vault. (minimal transparent proxy)
+     * @return vault The address of the created Catalyst Vault. (minimal transparent proxy)
      */
     function deployVault(
         address vaultTemplate,
@@ -71,7 +71,7 @@ contract CatalystFactory is Ownable, ICatalystV1Factory {
         string memory name,
         string memory symbol,
         address chainInterface
-    ) override external returns (address) {
+    ) override external returns (address vault) {
         // Check if an invalid asset count has been provided
         require(assets.length != 0);  // dev: invalid asset count
         // Check if an invalid weight count has been provided
@@ -80,7 +80,7 @@ contract CatalystFactory is Ownable, ICatalystV1Factory {
         // will fail. If longer, values will just be ignored.
 
         // Create a minimal transparent proxy:
-        address vault = LibClone.clone(vaultTemplate);
+        vault = LibClone.clone(vaultTemplate);
 
         // The vault expects the balances to exist in the vault when setup is called.
         uint256 assetLength = assets.length;
