@@ -188,8 +188,10 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
 
         ICatalystV1Vault.IncentiveDescription calldata incentive = routeDescription.incentive;
         // 1. Gas limits
-        if (incentive.maxGasDelivery < minGasFor[routeDescription.chainIdentifier]) revert NotEnoughIncentives(minGasFor[routeDescription.chainIdentifier], incentive.maxGasDelivery);
-        if (incentive.maxGasAck < minGasFor[bytes32(0)]) revert NotEnoughIncentives(minGasFor[bytes32(0)], incentive.maxGasAck);
+        uint48 minGasChainIdentifier = minGasFor[routeDescription.chainIdentifier];
+        if (incentive.maxGasDelivery < minGasChainIdentifier) revert NotEnoughIncentives(minGasChainIdentifier, incentive.maxGasDelivery);
+        uint48 minGasDefault = minGasFor[bytes32(0)];
+        if (incentive.maxGasAck < minGasDefault) revert NotEnoughIncentives(minGasDefault, incentive.maxGasAck);
 
         // 2. Gas prices
         // The gas price of ack has to be 10% higher than the gas price spent on this transaction.
@@ -777,14 +779,12 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
         // Notice that this is very unlikely to ever get emitted. Instead, read the comment about SwapRecentlyUnderwritten.
         if (underwriteState.refundTo != address(0)) revert SwapAlreadyUnderwritten();
 
-        uint256 _maxUnderwritingDuration = maxUnderwritingDuration;
+        uint96 underwriteExpiry = uint96(uint256(block.number) + uint256(maxUnderwritingDuration)); // Should never overflow.
 
         // Save the underwriting state.
-        underwritingStorage[identifier] = UnderwritingStorage({
-            tokens: purchasedTokens,
-            refundTo: msg.sender,
-            expiry: uint96(uint256(block.number) + uint256(_maxUnderwritingDuration))  // Should never overflow.
-        });
+        underwriteState.tokens = purchasedTokens;
+        underwriteState.refundTo = msg.sender;
+        underwriteState.expiry = underwriteExpiry;
 
         // The above combination of lines act as local re-entry protection. Do not add any external call inbetween these lines.
 
@@ -824,7 +824,7 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
         emit SwapUnderwritten(
             identifier,
             msg.sender,
-            uint96(uint256(block.number) + uint256(_maxUnderwritingDuration)),
+            underwriteExpiry,
             targetVault,
             toAsset,
             U,
@@ -858,16 +858,19 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
 
         UnderwritingStorage storage underwriteState = underwritingStorage[identifier];
         // Check that the refundTo address is set. (Indicates that the underwrite exists.)
-        if (underwriteState.refundTo == address(0)) revert UnderwriteDoesNotExist(identifier);
+        address refundAddress = underwriteState.refundTo;
+        if (refundAddress == address(0)) revert UnderwriteDoesNotExist(identifier);
         
         // Check that the underwriting can be expired. If the msg.sender is the refundTo address, then it can be expired at any time.
         // This lets the underwriter reclaim *some* of the collateral they provided if they change their mind or observed an issue.
-        if (msg.sender != underwriteState.refundTo) {
-            // Otherwise, the expiry time must have been passed.
-            if (underwriteState.expiry > block.number) revert UnderwriteNotExpired(underwriteState.expiry - block.number);
-        }
+        // Load the associated storage slot.
         uint256 underWrittenTokens = underwriteState.tokens;
-        // The next line acts as reentry protection. When the storage is deleted underwriteState.refundTo == address(0) will be true.
+        uint256 expiryTime = uint256(underwriteState.expiry);
+        if (msg.sender != refundAddress) {
+            // Otherwise, the expiry time must have been passed.
+            if (underwriteState.expiry > block.number) revert UnderwriteNotExpired(expiryTime - block.number);
+        }
+        // The next line acts as reentry protection. When the storage is deleted refundAddress == address(0) will be true.
         delete underwritingStorage[identifier];
 
         // Delete the escrow

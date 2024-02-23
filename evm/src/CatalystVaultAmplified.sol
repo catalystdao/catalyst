@@ -162,7 +162,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
      * half of the common implementation (or of _maxUnitCapacity)
      */
     function getUnitCapacity() public view override returns (uint256) {
-        return super.getUnitCapacity() / 2;
+        return super.getUnitCapacity() >> 1;  // Equal to divide by 2.
     }
 
     /**
@@ -592,7 +592,8 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
             }
             
             // Check if the user is satisfied with the output.
-            if (minOut[it] > weightedTokenAmount) revert ReturnInsufficient(weightedTokenAmount, minOut[it]);
+            uint256 tokenMinOut = minOut[it];   // GAS SAVING
+            if (tokenMinOut > weightedTokenAmount) revert ReturnInsufficient(weightedTokenAmount, tokenMinOut);
 
             // Store the token amount.
             amounts[it] = weightedTokenAmount;
