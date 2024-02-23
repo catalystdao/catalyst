@@ -373,8 +373,9 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
             address token = _tokenIndexing[it];
             if (token == address(0)) break;
 
+            uint256 tokenAmount = tokenAmounts[it];
             // Save gas if the user provides no tokens.
-            if (tokenAmounts[it] == 0) {
+            if (tokenAmount == 0) {
                 unchecked {
                     ++it;
                 }
@@ -384,13 +385,13 @@ contract CatalystVaultVolatile is CatalystVaultCommon, IntegralsVolatile {
             // A high => fewer units returned. Do not subtract the escrow amount
             uint256 At = ERC20(token).balanceOf(address(this));
 
-            U += _calcPriceCurveArea(tokenAmounts[it], At, _weight[token]);
+            U += _calcPriceCurveArea(tokenAmount, At, _weight[token]);
 
             SafeTransferLib.safeTransferFrom(
                 token,
                 msg.sender,
                 address(this),
-                tokenAmounts[it]
+                tokenAmount
             ); // dev: Token transfer from user failed.
 
             unchecked {

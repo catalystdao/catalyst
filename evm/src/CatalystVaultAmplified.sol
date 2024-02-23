@@ -322,6 +322,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
                 address token = _tokenIndexing[it];
                 if (token == address(0)) break;
                 uint256 weight = _weight[token];
+                uint256 tokenAmount = tokenAmounts[it];
                 {
                 // Whenever balance0 is computed, the true balance should be used.
                 uint256 weightAssetBalance = weight * ERC20(token).balanceOf(address(this));
@@ -351,7 +352,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
                     // since it implies we cannot move intU += before this section.
                     // which would solve the issue.
                     // Save gas if the user provides no tokens, as the rest of the loop has no effect in that case
-                    if (tokenAmounts[it] == 0) {
+                    if (tokenAmount == 0) {
                         unchecked {
                             ++it;
                         }
@@ -368,19 +369,19 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
                 }
                 
                 // Add F(A+x).
-                // This computation will not revert, since we know tokenAmounts[it] != 0.
+                // This computation will not revert, since we know tokenAmount != 0.
                 intU += FixedPointMathLib.powWad(
-                    int256((weightAssetBalance + weight * tokenAmounts[it]) * FixedPointMathLib.WAD),   // If casting overflows to a negative number, powWad fails
+                    int256((weightAssetBalance + weight * tokenAmount) * FixedPointMathLib.WAD),   // If casting overflows to a negative number, powWad fails
                     oneMinusAmp
                 );
                 }
-                assetDepositSum += tokenAmounts[it] * weight;
+                assetDepositSum += tokenAmount * weight;
                 
                 SafeTransferLib.safeTransferFrom(
                     token,
                     msg.sender,
                     address(this),
-                    tokenAmounts[it]
+                    tokenAmount
                 );  // dev: Token withdrawal from user failed.
 
                 unchecked {
@@ -1162,12 +1163,13 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
      * @return walpha_0 Balance0**(1-amp)
      */
     function computeBalance0() external view returns(uint256 walpha_0) {
-       (uint256 walpha_0_ampped, ) = _computeBalance0(_oneMinusAmp);
+        int256 oneMinusAmp = _oneMinusAmp;
+       (uint256 walpha_0_ampped, ) = _computeBalance0(oneMinusAmp);
 
         walpha_0 = uint256( // casting: powWad is not negative.
             FixedPointMathLib.powWad(
                 int256(walpha_0_ampped),  // Casting: If overflow, then powWad fails as the overflow is into negative.
-                WADWAD / _oneMinusAmp
+                WADWAD / oneMinusAmp
             )
         );
     }
