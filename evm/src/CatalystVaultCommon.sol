@@ -527,15 +527,21 @@ abstract contract CatalystVaultCommon is
         // This call provides re-entry protection against re-entering this call. Otherwise, this call can always be called.
         address fallbackAddress = _releaseAssetEscrow(sendAssetHash, escrowAmount, escrowToken); // Only reverts for missing escrow,
 
+        // We are going to make a low-level call. It may revert (see comment below) but it should not revert if it runs out of gas (that should be raised). As such, get the current gas in the contract.
+        uint256 gasLeftBeforeCall = gasleft();
+
         // Make a low level call such that the transfer never fails. This is important for tokens
         // that use block lists.
         // This also implies that if you get blacklisted between when you initiated the swap and the swap failed, you
         // would lose the tokens.
         bytes memory payload = abi.encodeWithSignature("transfer(address,uint256)", fallbackAddress, escrowAmount);
         assembly ("memory-safe") {
-            let success := call(gas(), escrowToken, 0,  add(payload, 0x20), mload(payload), 0, 0)
+            // We send gas as the largest bit, such that we don't have to estimate anything. This is equiv to sending all.
+            let success := call(0x8000000000000000000000000000000000000000000000000000000000000000, escrowToken, 0,  add(payload, 0x20), mload(payload), 0, 0)
             // ERC20(escrowToken).safeTransfer(fallbackAddress, escrowAmount);
         }
+        // Check that the call didn't use all of its gas.
+        if(gasleft() < gasLeftBeforeCall * 1 / 63) revert NotEnoughGas();
 
         emit SendAssetFailure( // Never reverts.
             channelId,

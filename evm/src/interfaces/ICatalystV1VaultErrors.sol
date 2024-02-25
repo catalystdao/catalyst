@@ -7,3 +7,4 @@ error VaultNotConnected();  // 2c64c1b
 error WithdrawRatioNotZero();  // b8003bf
 error UnusedUnitsAfterWithdrawal(uint256 Units);  // 0289311
 error EscrowAlreadyExists();  // ed77877
+error NotEnoughGas(); // dd629f86
