@@ -56,7 +56,7 @@ abstract contract Dispatcher is Permit2Payments, CatalystExchange, CancelSwap, L
 
                     // To save gas, the calldata is decoded as a slice at the end. This is possible because we know the exact sizes of
                     // other variables.
-                    bytes calldata calldata_ = inputs[800:];
+                    bytes calldata calldata_ = inputs[832:];
                     
                     CatalystExchange.sendAsset(vault, routeDescription, fromAsset, toAssetIndex8, amount, minOut, map(fallbackUser), gas, calldata_);
                 } else if (command == Commands.PERMIT2_TRANSFER_FROM) {
@@ -183,7 +183,7 @@ abstract contract Dispatcher is Permit2Payments, CatalystExchange, CancelSwap, L
 
                     // To save gas, the calldata is decoded as a slice at the end. This is possible because we know the exact sizes of
                     // other variables.
-                    bytes calldata calldata_ = inputs[768:];
+                    bytes calldata calldata_ = inputs[800:];
                     
                     CatalystExchange.sendLiquidity(vault, routeDescription, amount, minOut, fallbackUser, gas, calldata_);
                 } else if (command == Commands.ALLOW_CANCEL) {
