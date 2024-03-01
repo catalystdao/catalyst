@@ -9,6 +9,7 @@ contract TestConnectNewChain is TestCommon {
     
 
     function test_connect_new_chain(bytes32 chainIdentifier, address remoteCCI, bytes calldata remoteGARP) external {
+        vm.assume(remoteGARP.length != 0);
         bytes memory remoteCCIBytes = abi.encodePacked(
             uint8(20),
             bytes32(0),
@@ -42,6 +43,7 @@ contract TestConnectNewChain is TestCommon {
     }
 
     function test_error_connect_not_new_chain(bytes32 chainIdentifier, address remoteCCI, bytes calldata remoteGARP) external {
+        vm.assume(remoteGARP.length != 0);
         bytes memory remoteCCIBytes = abi.encodePacked(
             uint8(20),
             bytes32(0),
