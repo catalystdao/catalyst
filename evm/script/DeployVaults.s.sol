@@ -10,11 +10,11 @@ import { ICatalystV1Vault } from "../src/ICatalystV1Vault.sol";
 
 import { CatalystFactory } from "../src/CatalystFactory.sol";
 
-import { BaseMultiChainDeployer} from "./BaseMultiChainDeployer.s.sol";
+import { MultiChainDeployer} from "./BaseMultiChainDeployer.s.sol";
 
 import { JsonContracts } from "./DeployContracts.s.sol";
 
-contract DeployVaults is BaseMultiChainDeployer {
+contract DeployVaults is MultiChainDeployer {
     using stdJson for string;
 
     string pathToVaultConfig;
@@ -54,7 +54,7 @@ contract DeployVaults is BaseMultiChainDeployer {
         pathToVaultConfig = string.concat(pathRoot, "/script/config/config_vaults.json");
         config_vault = vm.readFile(pathToVaultConfig);
 
-        string memory pathToChainConfig = string.concat(pathRoot, "/script/config/config_chain.json");
+        string memory pathToChainConfig = string.concat(pathRoot, "/lib/catalyst-channels-list/src/config/chains.json");
         config_chain = vm.readFile(pathToChainConfig);
 
         string memory pathToInterfaceConfig = string.concat(pathRoot, "/script/config/config_interfaces.json");
@@ -64,7 +64,7 @@ contract DeployVaults is BaseMultiChainDeployer {
     }
 
     function _deploy() internal {
-        string memory chain_name = rpc[chain];
+        string memory chain_name = currentChainKey;
 
         string[] memory pools = vm.parseJsonKeys(config_vault, "$");
         for (uint256 p_i = 0; p_i < pools.length; ++p_i) {
@@ -86,7 +86,7 @@ contract DeployVaults is BaseMultiChainDeployer {
                 init_balances[j] = vm.parseJsonUint(config_vault, string.concat(".", pool, ".", chain_name, ".tokens.", assets_name));
 
                 if (keccak256(abi.encodePacked(assets_name)) == keccak256(abi.encodePacked("WGAS"))) {
-                    assets_name = wrapped_gas[chain];
+                    assets_name = wrappedGas[currentChainKey];
                     assets[j] = vm.parseJsonAddress(
                         config_token, string.concat(".", chain_name, ".", assets_name)
                     );
@@ -122,7 +122,7 @@ contract DeployVaults is BaseMultiChainDeployer {
     }
 
     function _setConnection() internal {
-        string memory from_chain = rpc[chain];
+        string memory from_chain = currentChainKey;
 
         string[] memory pools = vm.parseJsonKeys(config_vault, "$");
         for (uint256 p_i = 0; p_i < pools.length; ++p_i) {

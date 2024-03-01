@@ -4,12 +4,12 @@ pragma solidity ^0.8.19;
 import "forge-std/Script.sol";
 import {stdJson} from "forge-std/StdJson.sol";
 
-import { BaseMultiChainDeployer} from "./BaseMultiChainDeployer.s.sol";
+import { MultiChainDeployer} from "./BaseMultiChainDeployer.s.sol";
 
 import { CatalystRouter } from "../src/router/CatalystRouter.sol";
 import { RouterParameters } from "../src/router/base/RouterImmutables.sol";
 
-contract DeployRouter is BaseMultiChainDeployer {
+contract DeployRouter is MultiChainDeployer {
     using stdJson for string;
 
     address expectedRouterAddress = address(0x00000054ee91d36f03664321e4be673006Af380E);
@@ -30,7 +30,7 @@ contract DeployRouter is BaseMultiChainDeployer {
 
         // We cannot deploy permit2 because of the way remappings work. As a result, we
         // can only check if it exists and if it doesn't manually deploy it later.
-        console.log("! -- Deploy Permit2 to", rpc[chain], "-- !");
+        console.log("! -- Deploy Permit2 to", currentChainKey, "-- !");
     }
 
     function deployRouter() public {
@@ -41,7 +41,7 @@ contract DeployRouter is BaseMultiChainDeployer {
 
         CatalystRouter router = new CatalystRouter(RouterParameters({
             permit2: expectedPermit2Address,
-            weth9: abi.decode(config_token.parseRaw(string.concat(".", rpc[chain], ".", wrapped_gas[chain])), (address))
+            weth9: abi.decode(config_token.parseRaw(string.concat(".", currentChainKey, ".", wrappedGas[currentChainKey])), (address))
         }));
 
         require(
@@ -54,8 +54,6 @@ contract DeployRouter is BaseMultiChainDeployer {
     }
     
     function _deploy() internal {
-        // fund(vm.envAddress("ROUTER_DEPLOYER_ADDRESS"), 0.01*10**18);
-
         deployPermit2();
         
         deployRouter();

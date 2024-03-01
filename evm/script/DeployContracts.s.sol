@@ -29,10 +29,10 @@ struct JsonContracts {
 
 contract DeployContracts is Script {
     using stdJson for string;
+    
     address private admin;
 
-
-    bytes32 constant NO_ADDRESS_CODEHASH = 0x0000000000000000000000000000000000000000000000000000000000000000;
+    bytes32 constant NO_ADDRESS_CODEHASH = bytes32(0);
 
     bool get;
     bool verify;
