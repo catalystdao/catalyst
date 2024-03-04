@@ -25,7 +25,7 @@ contract TestSetMinGasFor is TestCommon {
         vm.assume(caller != CCI.owner());
 
         vm.prank(caller);
-        vm.expectRevert("Ownable: caller is not the owner");
+        vm.expectRevert(0x82b42900);
         CCI.setMinGasFor(defaultExampleChainIdentifier, defaultExampleMinGas);
 
         // Check that the storage isn't updated.

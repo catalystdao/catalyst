@@ -3,7 +3,7 @@ pragma solidity ^0.8.19;
 
 import "forge-std/Test.sol";
 import "src/ICatalystV1Vault.sol";
-import "solmate/utils/FixedPointMathLib.sol";
+import "solady/utils/FixedPointMathLib.sol";
 import {Token} from "../../mocks/token.sol";
 import {AVaultInterfaces} from "../AVaultInterfaces.t.sol";
 
@@ -56,7 +56,7 @@ abstract contract TestSetGovernanceFee is Test, AVaultInterfaces {
     function test_set_governance_fee_not_too_large() external virtual {
         address[] memory vaults = getTestConfig();
 
-        uint256 vaultFee = 75 * 10**16;
+        uint64 vaultFee = 75 * 10**16;
 
         for (uint256 i = 0; i < vaults.length; ++i) {
             address vault = vaults[i];
@@ -71,7 +71,7 @@ abstract contract TestSetGovernanceFee is Test, AVaultInterfaces {
     function test_error_set_governance_fee_too_large() external virtual {
         address[] memory vaults = getTestConfig();
 
-        uint256 vaultFee = 75 * 10**16 + 1;
+        uint64 vaultFee = 75 * 10**16 + 1;
 
         for (uint256 i = 0; i < vaults.length; ++i) {
             address vault = vaults[i];

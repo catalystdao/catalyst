@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.19;
 
-import {ERC20} from "solmate/tokens/ERC20.sol";
+import {ERC20} from "solady/tokens/ERC20.sol";
 
 contract TokenLens {
   struct AccountBalance {

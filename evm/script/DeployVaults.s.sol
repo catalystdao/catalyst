@@ -24,9 +24,11 @@ contract DeployVaults is BaseMultiChainDeployer {
 
     string config_chain;
 
+    string config_interface;
+
     JsonContracts contracts;
 
-    function deployVault(address[] memory assets, uint256[] memory init_balances, uint256[] memory weights, uint256 amp, uint256 vaultFee, string memory name, string memory symbol, address chainInterface) internal returns(address vaultAddress) {
+    function deployVault(address[] memory assets, uint256[] memory init_balances, uint256[] memory weights, uint64 amp, uint64 vaultFee, string memory name, string memory symbol, address chainInterface) internal returns(address vaultAddress) {
         address vaultTemplate;
         if (amp == 10**18) {
             vaultTemplate = contracts.volatile_template;
@@ -54,6 +56,9 @@ contract DeployVaults is BaseMultiChainDeployer {
 
         string memory pathToChainConfig = string.concat(pathRoot, "/script/config/config_chain.json");
         config_chain = vm.readFile(pathToChainConfig);
+
+        string memory pathToInterfaceConfig = string.concat(pathRoot, "/script/config/config_interfaces.json");
+        config_interface = vm.readFile(pathToInterfaceConfig);
 
         _;
     }
@@ -96,23 +101,28 @@ contract DeployVaults is BaseMultiChainDeployer {
                 }
             }
             address CCI = vm.parseJsonAddress(config_vault, string.concat(".", pool, ".", chain_name, ".cci"));
+            string memory cci_version = vm.parseJsonString(config_vault, string.concat(".", pool, ".cci_version"));
+            if (CCI == address(0)) CCI = vm.parseJsonAddress(config_interface, string.concat(".", chain_name, ".", cci_version, ".interface"));
             uint256[] memory weights = vm.parseJsonUintArray(config_vault, string.concat(".", pool, ".", chain_name, ".weights"));
-            uint256 amp = 10**18;
+            uint64 amp = 10**18;
             if (vm.keyExists(config_vault, string.concat(".", pool, ".amplification"))) {
-                amp = vm.parseJsonUint(config_vault, string.concat(".", pool, ".amplification"));
+                amp = uint64(vm.parseJsonUint(config_vault, string.concat(".", pool, ".amplification")));
             }
-            uint256 vaultFee = vm.parseJsonUint(config_vault, string.concat(".", pool, ".", chain_name, ".fee"));
+            uint64 vaultFee = uint64(vm.parseJsonUint(config_vault, string.concat(".", pool, ".", chain_name, ".fee")));
             vaultAddress = deployVault(
                 assets, init_balances, weights, amp, vaultFee, pool, pool, CCI
             );
 
-            // Write:
+            // Write  address
             vm.writeJson(Strings.toHexString(uint160(vaultAddress), 20), pathToVaultConfig, string.concat(".", pool, ".", chain_name, ".address"));
+            
+            // Write cci
+            vm.writeJson(Strings.toHexString(uint160(CCI), 20), pathToVaultConfig, string.concat(".", pool, ".", chain_name, ".cci"));
         }
     }
 
     function _setConnection() internal {
-        string memory chain_name = rpc[chain];
+        string memory from_chain = rpc[chain];
 
         string[] memory pools = vm.parseJsonKeys(config_vault, "$");
         for (uint256 p_i = 0; p_i < pools.length; ++p_i) {
@@ -120,10 +130,10 @@ contract DeployVaults is BaseMultiChainDeployer {
             console.log(pool);
 
             // Check if the vault exists on this chain.
-            if (!vm.keyExists(config_vault, string.concat(".", pool, ".", chain_name))) continue;
+            if (!vm.keyExists(config_vault, string.concat(".", pool, ".", from_chain))) continue;
 
             // Check if the address has been set
-            address vaultAddress = vm.parseJsonAddress(config_vault, string.concat(".", pool, ".", chain_name, ".address"));
+            address vaultAddress = vm.parseJsonAddress(config_vault, string.concat(".", pool, ".", from_chain, ".address"));
             console.logAddress(vaultAddress);
             if (vaultAddress == address(0)) continue;
 
@@ -131,16 +141,18 @@ contract DeployVaults is BaseMultiChainDeployer {
             console.logAddress(ICatalystV1Vault(vaultAddress)._setupMaster());
             if (ICatalystV1Vault(vaultAddress)._setupMaster() == address(0)) continue;
 
+            string memory cci_version = vm.parseJsonString(config_vault, string.concat(".", pool, ".cci_version"));
             string[] memory vault_chains = vm.parseJsonKeys(config_vault, string.concat(".", pool));
             for (uint256 vc_i = 0; vc_i < vault_chains.length; ++ vc_i) {
-                string memory vault_chain = vault_chains[vc_i];
-                if (keccak256(abi.encodePacked(vault_chain)) == keccak256(abi.encodePacked("amplification"))) continue;
-                console.log(vault_chain);
-                if (keccak256(abi.encodePacked(chain_name)) == keccak256(abi.encodePacked(vault_chain))) continue;
+                string memory to_chain = vault_chains[vc_i];
+                if (keccak256(abi.encodePacked(to_chain)) == keccak256(abi.encodePacked("amplification"))) continue;
+                if (keccak256(abi.encodePacked(to_chain)) == keccak256(abi.encodePacked("cci_version"))) continue;
+                console.log(to_chain);
+                if (keccak256(abi.encodePacked(from_chain)) == keccak256(abi.encodePacked(to_chain))) continue;
 
-                bytes32 chainIdentifier = bytes32(vm.parseJsonUint(config_chain, string.concat(".", vault_chain, ".chainIdentifier")));
+                bytes32 chainIdentifier = bytes32(vm.parseJsonUint(config_chain, string.concat(".", cci_version, ".", from_chain, ".", to_chain)));
 
-                address connectedVaultAddress = vm.parseJsonAddress(config_vault, string.concat(".", pool, ".", vault_chain, ".address"));
+                address connectedVaultAddress = vm.parseJsonAddress(config_vault, string.concat(".", pool, ".", to_chain, ".address"));
 
                 ICatalystV1Vault(vaultAddress).setConnection(
                     chainIdentifier, abi.encodePacked(

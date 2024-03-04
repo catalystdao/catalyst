@@ -1,19 +1,21 @@
 //SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.19;
 
-import {ERC20} from 'solmate/tokens/ERC20.sol';
-import {SafeTransferLib} from 'solmate/utils/SafeTransferLib.sol';
+import { Ownable } from "solady/auth/Ownable.sol";
+import {ERC20} from 'solady/tokens/ERC20.sol';
+import {SafeTransferLib} from 'solady/utils/SafeTransferLib.sol';
+import { ReentrancyGuard} from "solady/utils/ReentrancyGuard.sol";
+import { Initializable } from "solady/utils/Initializable.sol";
+import { Multicallable } from "solady/utils/Multicallable.sol";
+import { FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
+
 import { IMessageEscrowStructs } from "GeneralisedIncentives/src/interfaces/IMessageEscrowStructs.sol";
-import { Ownable } from "openzeppelin-contracts/contracts/access/Ownable.sol";
-import { ReentrancyGuard} from "openzeppelin-contracts/contracts/security/ReentrancyGuard.sol";
-import { Initializable } from "openzeppelin-contracts/contracts/proxy/utils/Initializable.sol";
-import { Multicall } from "openzeppelin-contracts/contracts/utils/Multicall.sol";
-import { MAX_GOVERNANCE_FEE_SHARE } from"./CatalystFactory.sol";
-import { FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
+
 import { ICatalystReceiver} from "./interfaces/IOnCatalyst.sol";
-import { ICatalystV1Vault } from "./ICatalystV1Vault.sol";
 import { ICatalystV1Factory } from "./interfaces/ICatalystV1Factory.sol";
 import "./interfaces/ICatalystV1VaultErrors.sol";
+import { MAX_GOVERNANCE_FEE_SHARE } from"./CatalystFactory.sol";
+import { ICatalystV1Vault } from "./ICatalystV1Vault.sol";
 
 /**
  * @title Catalyst: Common Vault Logic
@@ -34,13 +36,11 @@ import "./interfaces/ICatalystV1VaultErrors.sol";
  */
 abstract contract CatalystVaultCommon is
     Initializable,
-    Multicall,
+    Multicallable,
     ReentrancyGuard,
     ERC20,
     ICatalystV1Vault
 {
-    using SafeTransferLib for ERC20;
-
     //--- Config ---//
     // The following section contains the configurable variables.
 
@@ -61,6 +61,20 @@ abstract contract CatalystVaultCommon is
 
     //-- Variables --//
 
+    // ERC20
+    string _name;
+    string _symbol;
+
+    function name() public override view returns(string memory) {
+        return _name;
+    }
+
+    function symbol() public override view returns(string memory) {
+        return _symbol;
+    }
+
+    // END ERC20
+
     // immutable variables can be read by proxies, thus it is safe to set this on the constructor.
     address public immutable FACTORY;
     address public _chainInterface;
@@ -77,17 +91,21 @@ abstract contract CatalystVaultCommon is
     /// @notice The token weights. Used for maintaining a non-symmetric vault asset balance.
     mapping(address => uint256) public _weight;
 
-    //-- Parameter change variables --//
-    uint256 public _adjustmentTarget;
-    uint256 public _lastModificationTime;
+    //-- Parameter Flow & Change variables --//
+    // Use getUnitCapacity to indirectly access these variables
+    uint256 _usedUnitCapacity;
+    uint48 public _adjustmentTarget;
+
+    uint48 public _lastModificationTime;
+    uint48 _usedUnitCapacityTimestamp;
 
     //-- Vault fee variables --//
     /// @notice The total vault fee. Multiplied by 10**18. 
-    /// @dev Implementation of fee: FixedPointMathLib.mulWadDown(amount, _vaultFee);
-    uint256 public _vaultFee;
+    /// @dev Implementation of fee: FixedPointMathLib.mulWad(amount, _vaultFee);
+    uint64 public _vaultFee;
     /// @notice The governance's cut of _vaultFee. 
-    /// @dev FixedPointMathLib.mulWadDown(FixedPointMathLib.mulWadDown(amount, _vaultFee), _governanceFeeShare);
-    uint256 public _governanceFeeShare;
+    /// @dev FixedPointMathLib.mulWad(FixedPointMathLib.mulWad(amount, _vaultFee), _governanceFeeShare);
+    uint64 public _governanceFeeShare;
     /// @notice The vault fee can be changed. _feeAdministrator is the address allowed to change it
     address public _feeAdministrator; 
 
@@ -108,10 +126,6 @@ abstract contract CatalystVaultCommon is
 
     /// @notice The max incoming liquidity flow from the router.
     uint256 public _maxUnitCapacity;
-    // -- State related to unit flow calculation -- //
-    // Use getUnitCapacity to indirectly access these variables.
-    uint256 _usedUnitCapacity;
-    uint256 _usedUnitCapacityTimestamp;
 
     // Escrow reference
     /// @notice Total current escrowed tokens
@@ -125,9 +139,12 @@ abstract contract CatalystVaultCommon is
     /// @notice A mathematical lib which describes various properties of this contract. These helper functions are not contained the swap template, since they notisably inflate the contract side which reduceses the number of optimizer runs => increase the gas cost.
     address immutable public MATHLIB;
 
-    constructor(address factory_, address mathlib) ERC20("Catalyst Vault Template", "", DECIMALS) {
+    constructor(address factory_, address mathlib) payable {
         FACTORY = factory_;
         MATHLIB = mathlib;
+
+        _name = "Catalyst Vault Template";
+        _symbol = "";
 
         // Disable the contract from being initialized. This ensures the factory is
         // used to deploy vaults.
@@ -184,8 +201,8 @@ abstract contract CatalystVaultCommon is
         string calldata name_,
         string calldata symbol_,
         address chainInterface,
-        uint256 vaultFee,
-        uint256 governanceFee,
+        uint64 vaultFee,
+        uint64 governanceFee,
         address feeAdministrator,
         address setupMaster
     ) initializer external override {
@@ -200,8 +217,8 @@ abstract contract CatalystVaultCommon is
         _setFeeAdministrator(feeAdministrator);
 
         // Name the ERC20 vault token //
-        name = name_;
-        symbol = symbol_;
+        _name = name_;
+        _symbol = symbol_;
         // END ERC20 //
     }
 
@@ -317,7 +334,7 @@ abstract contract CatalystVaultCommon is
         // If the change is greater than the units which have passed through the limit is max
         if (UC <= unitCapacityReleased) {
             if (Units > MUC) revert ExceedsSecurityLimit();
-            _usedUnitCapacityTimestamp = block.timestamp;  // Set last change to block.timestamp.
+            _usedUnitCapacityTimestamp = uint48(block.timestamp);  // Set last change to block.timestamp.
             _usedUnitCapacity = Units;
             return;
         }
@@ -328,7 +345,7 @@ abstract contract CatalystVaultCommon is
             newUnitFlow -= unitCapacityReleased;
         }
         if (newUnitFlow > MUC) revert ExceedsSecurityLimit();
-        _usedUnitCapacityTimestamp = block.timestamp;  // Set last change to block.timestamp.
+        _usedUnitCapacityTimestamp = uint48(block.timestamp);  // Set last change to block.timestamp.
         _usedUnitCapacity = newUnitFlow;
         return;
     }
@@ -344,14 +361,14 @@ abstract contract CatalystVaultCommon is
     }
 
     /// @notice Sets a new vault fee, taken from input amount.
-    function _setVaultFee(uint256 fee) internal {
+    function _setVaultFee(uint64 fee) internal {
         require(fee <= 1e18);  // dev: VaultFee is maximum 100%.
         _vaultFee = fee;
         emit SetVaultFee(fee);
     }
 
     /// @notice Sets a new governance fee. Taken out of the vault fee.
-    function _setGovernanceFee(uint256 fee) internal {
+    function _setGovernanceFee(uint64 fee) internal {
         require(fee <= MAX_GOVERNANCE_FEE_SHARE);  // dev: Maximum GovernanceFeeSare exceeded.
         _governanceFeeShare = fee;
         emit SetGovernanceFee(fee);
@@ -363,12 +380,12 @@ abstract contract CatalystVaultCommon is
     }
 
     /// @notice Allows the factory owner to set a new the governance fee
-    function setGovernanceFee(uint256 fee) public override onlyFactoryOwner {
+    function setGovernanceFee(uint64 fee) public override onlyFactoryOwner {
         _setGovernanceFee(fee);
     }
 
     /// @notice Allows the factory owner to modify the vault fee
-    function setVaultFee(uint256 fee) public override {
+    function setVaultFee(uint64 fee) public override {
         require(msg.sender == _feeAdministrator); // dev: Only feeAdministrator can set new fee
         _setVaultFee(fee);
     }
@@ -380,8 +397,8 @@ abstract contract CatalystVaultCommon is
 
         // If governanceFeeShare == 0, then skip the rest of the logic.
         if (governanceFeeShare != 0) {
-            uint256 governanceFeeAmount = FixedPointMathLib.mulWadDown(vaultFeeAmount, governanceFeeShare);
-            ERC20(asset).safeTransfer(governanceFeeDestination(), governanceFeeAmount);
+            uint256 governanceFeeAmount = FixedPointMathLib.mulWad(vaultFeeAmount, governanceFeeShare);
+            SafeTransferLib.safeTransfer(asset, governanceFeeDestination(), governanceFeeAmount);
         }
     }
 
@@ -536,9 +553,8 @@ abstract contract CatalystVaultCommon is
         // would lose the tokens.
         bytes memory payload = abi.encodeWithSignature("transfer(address,uint256)", fallbackAddress, escrowAmount);
         assembly ("memory-safe") {
-            // We send gas as the largest bit, such that we don't have to estimate anything. This is equiv to sending all.
             let success := call(0x8000000000000000000000000000000000000000000000000000000000000000, escrowToken, 0,  add(payload, 0x20), mload(payload), 0, 0)
-            // ERC20(escrowToken).safeTransfer(fallbackAddress, escrowAmount);
+            // SafeTransferLib.safeTransferFrom(escrowToken, fallbackAddress, escrowAmount);
         }
         // Check that the call didn't use all of its gas.
         if(gasleft() < gasLeftBeforeCall * 1 / 63) revert NotEnoughGas();
@@ -630,19 +646,19 @@ abstract contract CatalystVaultCommon is
     /// @notice Computes a unique identifier for a swap. This unique identifier can be used to identify swaps cross-chain.
     /// However, it is never exposed. This is done to let the hashing algorithm be flexible between implementations.
     function _computeSendAssetHash(
-        bytes memory toAccount,
+        bytes calldata toAccount,
         uint256 U,
         uint256 amount,
         address fromAsset,
         uint32 blockNumberMod
     ) internal pure returns(bytes32) {
         return keccak256(
-            abi.encodePacked(
+            bytes.concat(
                 toAccount,      // Ensures no collisions between different users
-                U,              // Used to randomise the hash
-                amount,         // Required! to validate release escrow data
-                fromAsset,      // Required! to validate release escrow data
-                blockNumberMod  // Used to randomize the hash.
+                bytes32(U),              // Used to randomise the hash
+                bytes32(amount),         // Required! to validate release escrow data
+                bytes20(fromAsset),      // Required! to validate release escrow data
+                bytes4(blockNumberMod)  // Used to randomize the hash.
             )
         );
     }
@@ -656,11 +672,11 @@ abstract contract CatalystVaultCommon is
         uint32 blockNumberMod
     ) internal pure returns(bytes32) {
         return keccak256(
-            abi.encodePacked(
+            bytes.concat(
                 toAccount,      // Ensures no collisions between different users
-                U,              // Used to randomise the hash
-                amount,         // Required! to validate release escrow data
-                blockNumberMod  // Used to randomize the hash.
+                bytes32(U),              // Used to randomise the hash
+                bytes32(amount),         // Required! to validate release escrow data
+                bytes4(blockNumberMod)  // Used to randomize the hash.
             )
         );
     }
@@ -701,7 +717,7 @@ abstract contract CatalystVaultCommon is
          _releaseAssetEscrow(identifier, escrowAmount, escrowToken); // Only reverts for missing escrow
 
         // Send the assets to the user.
-        ERC20(escrowToken).safeTransfer(refundTo, escrowAmount);
+        SafeTransferLib.safeTransfer(escrowToken, refundTo, escrowAmount);
     }
 
     /// @dev The unsued parameter U is used for overwrites. (see CataulystVaultAmplified.sol)

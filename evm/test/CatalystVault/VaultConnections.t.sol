@@ -164,7 +164,8 @@ abstract contract TestVaultConnections is TestCommon, AVaultInterfaces {
             chainIdentifier: MOCK_CHANNEL_ID,
             toVault: MOCK_REMOTE_VAULT,
             toAccount: MOCK_TO_ACCOUNT,
-            incentive: _INCENTIVE
+            incentive: _INCENTIVE,
+            deadline: uint64(0)
         });
 
 
@@ -266,7 +267,8 @@ abstract contract TestVaultConnections is TestCommon, AVaultInterfaces {
             chainIdentifier: MOCK_CHANNEL_ID,
             toVault: MOCK_REMOTE_VAULT,
             toAccount: MOCK_TO_ACCOUNT,
-            incentive: _INCENTIVE
+            incentive: _INCENTIVE,
+            deadline: uint64(0)
         });
 
 

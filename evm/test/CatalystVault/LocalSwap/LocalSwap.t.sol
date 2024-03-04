@@ -3,7 +3,7 @@ pragma solidity ^0.8.19;
 
 import "forge-std/Test.sol";
 import "src/ICatalystV1Vault.sol";
-import "solmate/utils/FixedPointMathLib.sol";
+import "solady/utils/FixedPointMathLib.sol";
 import {Token} from "../../mocks/token.sol";
 import {AVaultInterfaces} from "../AVaultInterfaces.t.sol";
 
@@ -110,9 +110,7 @@ abstract contract TestLocalswap is Test, AVaultInterfaces {
             address toToken = v._tokenIndexing(1);
 
 
-            vm.expectRevert(
-                "TRANSFER_FROM_FAILED"
-            );
+            vm.expectRevert(abi.encodePacked(uint32(0x7939f424))); // TRANSFER_FROM_FAILED
             v.localSwap(fromToken, toToken, amount, 0);
         }
     }

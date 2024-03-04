@@ -182,7 +182,7 @@ interface ICatalystV1VaultEvents {
      * @param fee The new vault fee
      */
     event SetVaultFee(
-        uint256 fee
+        uint64 fee
     );
 
     /**
@@ -190,7 +190,7 @@ interface ICatalystV1VaultEvents {
      * @param fee The new governance fee
      */
     event SetGovernanceFee(
-        uint256 fee
+        uint64 fee
     );
 
     /**
@@ -199,7 +199,7 @@ interface ICatalystV1VaultEvents {
      * @param targetWeights The desired new weights.
      */
     event SetWeights(
-        uint256 targetTime,
+        uint248 targetTime,
         uint256[] targetWeights
     );
 
@@ -209,7 +209,7 @@ interface ICatalystV1VaultEvents {
      * @param targetAmplification The desired new amplification.
      */
     event SetAmplification(
-        uint256 targetTime,
+        uint48 targetTime,
         uint256 targetAmplification
     );
 

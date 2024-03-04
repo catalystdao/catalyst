@@ -60,7 +60,8 @@ contract TestDoubleHitUnderwrite is TestCommon {
             chainIdentifier: DESTINATION_IDENTIFIER,
             toVault: convertEVMTo65(vault2),
             toAccount: convertEVMTo65(toAccount),
-            incentive: _INCENTIVE
+            incentive: _INCENTIVE,
+            deadline: uint64(0)
         });
 
         vm.recordLogs();
@@ -96,7 +97,7 @@ contract TestDoubleHitUnderwrite is TestCommon {
             hex"0000"
         );
 
-        (uint256 numTokens, ,) = CCI.underwritingStorage(underwriteIdentifier);
+        CCI.underwritingStorage(underwriteIdentifier);
 
         // Then let the package arrive.
         (bytes memory _metadata, bytes memory toExecuteMessage) = getVerifiedMessage(address(GARP), messageWithContext);

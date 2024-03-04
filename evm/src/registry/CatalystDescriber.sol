@@ -51,7 +51,7 @@ contract CatalystDescriber is Contains, Ownable {
     mapping(string => address) public version_to_factory;
 
 
-    constructor(address defaultOwner) {
+    constructor(address defaultOwner) payable {
         _transferOwnership(defaultOwner);
         initBlock = block.number;
     }

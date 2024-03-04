@@ -1,7 +1,8 @@
 //SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.19;
 
-import { FixedPointMathLib } from "solmate/utils/FixedPointMathLib.sol";
+import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
+
 import { WADWAD } from "./utils/MathConstants.sol";
 
 /**
@@ -79,7 +80,7 @@ contract IntegralsAmplified {
             )
         );
 
-        return FixedPointMathLib.mulWadDown(
+        return FixedPointMathLib.mulWad(
             B,
             FixedPointMathLib.WAD - uint256(                                                        // Always casts a positive value
                 FixedPointMathLib.powWad(
@@ -149,11 +150,11 @@ contract IntegralsAmplified {
      * @return uint256 Output denominated in vault tokens.
      */
     function _calcPriceCurveLimitShare(uint256 U, uint256 ts, uint256 it_times_walpha_amped, int256 oneMinusAmpInverse) internal pure returns (uint256) {
-        uint256 vaultTokens = FixedPointMathLib.mulWadDown(
+        uint256 vaultTokens = FixedPointMathLib.mulWad(
             ts,
             uint256(  // Always casts a positive value, as powWad >= 1, hence powWad - WAD >= 0
                 FixedPointMathLib.powWad(  // poWad always >= 1, as the 'base' is always >= 1
-                    int256(FixedPointMathLib.divWadDown(  // If casting overflows to a negative number, powWad fails
+                    int256(FixedPointMathLib.divWad(  // If casting overflows to a negative number, powWad fails
                         it_times_walpha_amped + U,
                         it_times_walpha_amped
                     )),

@@ -25,7 +25,7 @@ contract DeployRouter is BaseMultiChainDeployer {
         _;
     }
 
-    function deployPermit2() public {
+    function deployPermit2() view public {
         if (expectedPermit2Address.codehash != bytes32(0)) return;
 
         // We cannot deploy permit2 because of the way remappings work. As a result, we
@@ -54,7 +54,7 @@ contract DeployRouter is BaseMultiChainDeployer {
     }
     
     function _deploy() internal {
-        fund(vm.envAddress("ROUTER_DEPLOYER_ADDRESS"), 0.01*10**18);
+        // fund(vm.envAddress("ROUTER_DEPLOYER_ADDRESS"), 0.01*10**18);
 
         deployPermit2();
         

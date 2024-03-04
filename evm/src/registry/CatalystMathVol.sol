@@ -1,9 +1,9 @@
 //SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
-import {ERC20} from 'solmate/tokens/ERC20.sol';
+import {ERC20} from 'solady/tokens/ERC20.sol';
 import {ICatalystMathLibVol} from "./interfaces/ICatalystMathLibVol.sol";
-import "solmate/utils/FixedPointMathLib.sol";
+import "solady/utils/FixedPointMathLib.sol";
 import "../interfaces/ICatalystV1VaultDerived.sol";
 import "../interfaces/ICatalystV1VaultState.sol";
 import "../CatalystVaultVolatile.sol";
@@ -66,7 +66,7 @@ contract CatalystMathVol is IntegralsVolatile, ICatalystMathLibVol {
     function calcFee(address vault, uint256 amount) public view returns(uint256) {
         uint256 fee = CatalystVaultVolatile(vault)._vaultFee();
 
-        return FixedPointMathLib.mulWadDown(amount, FixedPointMathLib.WAD - fee);
+        return FixedPointMathLib.mulWad(amount, FixedPointMathLib.WAD - fee);
     }
     
     /**
@@ -144,7 +144,7 @@ contract CatalystMathVol is IntegralsVolatile, ICatalystMathLibVol {
         
         // Compute the vault owner share before liquidity has been added.
         // (solve share = pt/(PT+pt) for pt.)
-        return FixedPointMathLib.divWadDown(FixedPointMathLib.WAD - npos, npos);
+        return FixedPointMathLib.divWad(FixedPointMathLib.WAD - npos, npos);
     }
 
     // The below swap result implementation are not 1:1 with the true implementation. Instead, they attempt to

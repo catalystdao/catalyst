@@ -3,7 +3,7 @@ pragma solidity ^0.8.19;
 
 import "../TestCommon.t.sol";
 import "src/ICatalystV1Vault.sol";
-import "solmate/utils/FixedPointMathLib.sol";
+import "solady/utils/FixedPointMathLib.sol";
 import {Token} from "../mocks/token.sol";
 import {AVaultInterfaces} from "./AVaultInterfaces.t.sol";
 
@@ -19,7 +19,8 @@ abstract contract TestEscrow is TestCommon, AVaultInterfaces {
             chainIdentifier: chainIdentifier,
             toVault: abi.encodePacked(uint8(20), bytes32(0), abi.encode(vaults[0])),
             toAccount: abi.encodePacked(uint8(20), bytes32(0), abi.encode(address(bob))),
-            incentive: _INCENTIVE
+            incentive: _INCENTIVE,
+            deadline: uint64(0)
         });
 
         for (uint256 i = 0; i < vaults.length; ++i) {
@@ -73,7 +74,7 @@ abstract contract TestEscrow is TestCommon, AVaultInterfaces {
         }
     }
 
-    function test_escrow_timeout(uint256 swapPercentage) external {
+    function test_escrow_timeout() external {
         address[] memory vaults = getTestConfig();
         address bob = makeAddr("bob");
 
@@ -84,7 +85,8 @@ abstract contract TestEscrow is TestCommon, AVaultInterfaces {
             chainIdentifier: chainIdentifier,
             toVault: abi.encodePacked(uint8(20), bytes32(0), abi.encode(vaults[0])),
             toAccount: abi.encodePacked(uint8(20), bytes32(0), abi.encode(address(bob))),
-            incentive: _INCENTIVE
+            incentive: _INCENTIVE,
+            deadline: uint64(0)
         });
 
         for (uint256 i = 0; i < vaults.length; ++i) {
@@ -149,7 +151,8 @@ abstract contract TestEscrow is TestCommon, AVaultInterfaces {
             chainIdentifier: chainIdentifier,
             toVault: abi.encodePacked(uint8(20), bytes32(0), abi.encode(vaults[0])),
             toAccount: abi.encodePacked(uint8(20), bytes32(0), abi.encode(address(bob))),
-            incentive: _INCENTIVE
+            incentive: _INCENTIVE,
+            deadline: uint64(0)
         });
 
         for (uint256 i = 0; i < vaults.length; ++i) {
@@ -216,7 +219,8 @@ abstract contract TestEscrow is TestCommon, AVaultInterfaces {
             chainIdentifier: chainIdentifier,
             toVault: abi.encodePacked(uint8(20), bytes32(0), abi.encode(vaults[0])),
             toAccount: abi.encodePacked(uint8(20), bytes32(0), abi.encode(address(bob))),
-            incentive: _INCENTIVE
+            incentive: _INCENTIVE,
+            deadline: uint64(0)
         });
 
         for (uint256 i = 0; i < vaults.length; ++i) {
@@ -283,7 +287,8 @@ abstract contract TestEscrow is TestCommon, AVaultInterfaces {
             chainIdentifier: chainIdentifier,
             toVault: abi.encodePacked(uint8(20), bytes32(0), abi.encode(vaults[0])),
             toAccount: abi.encodePacked(uint8(20), bytes32(0), abi.encode(address(bob))),
-            incentive: _INCENTIVE
+            incentive: _INCENTIVE,
+            deadline: uint64(0)
         });
 
         for (uint256 i = 0; i < vaults.length; ++i) {
@@ -358,7 +363,8 @@ abstract contract TestEscrow is TestCommon, AVaultInterfaces {
             chainIdentifier: chainIdentifier,
             toVault: abi.encodePacked(uint8(20), bytes32(0), abi.encode(vaults[0])),
             toAccount: abi.encodePacked(uint8(20), bytes32(0), abi.encode(address(bob))),
-            incentive: _INCENTIVE
+            incentive: _INCENTIVE,
+            deadline: uint64(0)
         });
 
         for (uint256 i = 0; i < vaults.length; ++i) {

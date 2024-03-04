@@ -4,7 +4,7 @@ pragma solidity ^0.8.19;
 import "forge-std/Test.sol";
 import "../TestCommon.t.sol";
 import "src/ICatalystV1Vault.sol";
-import "solmate/utils/FixedPointMathLib.sol";
+import "solady/utils/FixedPointMathLib.sol";
 import { ICatalystV1Structs } from "src/interfaces/ICatalystV1VaultState.sol";
 import {Token} from "../mocks/token.sol";
 import {AVaultInterfaces} from "./AVaultInterfaces.t.sol";
@@ -122,7 +122,7 @@ abstract contract TestPoolTokenInterface is TestCommon, AVaultInterfaces {
             uint256 transfer_amount = 11 * mintedVaultTokens / 10;
 
             vm.prank(alice);
-            vm.expectRevert(stdError.arithmeticError);
+            vm.expectRevert();
             Token(vault).transfer(bob, transfer_amount);
         }
     }
@@ -197,7 +197,7 @@ abstract contract TestPoolTokenInterface is TestCommon, AVaultInterfaces {
             Token(vault).approve(bob, allowance_amount);
 
             vm.prank(bob);
-            vm.expectRevert(stdError.arithmeticError);
+            vm.expectRevert();
             Token(vault).transferFrom(alice, charlie, transfer_amount);
         }
     }

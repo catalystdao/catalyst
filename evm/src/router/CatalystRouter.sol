@@ -23,7 +23,7 @@ contract CatalystRouter is RouterImmutables, ICatalystRouter, Dispatcher, ICatal
         _;
     }
 
-    constructor(RouterParameters memory params) RouterImmutables(params) {}
+    constructor(RouterParameters memory params) payable RouterImmutables(params) {}
 
     /// @inheritdoc ICatalystRouter
     function execute(
@@ -71,7 +71,7 @@ contract CatalystRouter is RouterImmutables, ICatalystRouter, Dispatcher, ICatal
         return command & Commands.FLAG_ALLOW_REVERT == 0;
     }
 
-    function onCatalystCall(uint256 purchasedTokens, bytes calldata data) external {
+    function onCatalystCall(uint256 /* purchasedTokens */, bytes calldata data) external {
         bytes calldata commands = data.toBytes(0);
         bytes[] calldata inputs = data.toBytesArray(1);
 

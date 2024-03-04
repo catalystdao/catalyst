@@ -109,7 +109,13 @@ contract Registry is BaseMultiChainDeployer {
     function setRegistry(string memory version) internal {
         CatalystDescriberRegistry reg = CatalystDescriberRegistry(registry.describer_registry);
 
-        reg.modifyDescriber(registry.describer, version);
+        // Check what is the current describer.
+        address[] memory describers = reg.get_vault_describers();
+        bool contains = false;
+        for (uint256 i = 0; i < describers.length; ++i) {
+            if (describers[i] == registry.describer) contains = true;
+        }
+        if (!contains) reg.modifyDescriber(registry.describer, version);
     }
 
     function setDescriber() internal {
@@ -121,19 +127,21 @@ contract Registry is BaseMultiChainDeployer {
         address current_amplified_template = desc.version_to_template("amplified");
         if (current_amplified_template != contracts.amplified_template) desc.modifyWhitelistedTemplate(contracts.amplified_template, "amplified");
 
-        // Set (or update) the cross-chain interfaces
-        string[] memory availableInterfaces = vm.parseJsonKeys(config_interfaces, string.concat(".", rpc[chain]));
-        for (uint256 i = 0; i < availableInterfaces.length; ++i) {
-            string memory incentiveVersion = availableInterfaces[i];
-            address excepted_cci = abi.decode(config_interfaces.parseRaw(string.concat(".", rpc[chain], ".", incentiveVersion, ".interface")), (address));
-            
-            address current_cci = desc.version_to_cci(incentiveVersion);
-            if (current_cci != excepted_cci) desc.modifyWhitelistedCCI(excepted_cci, incentiveVersion);
-        }
-
         // Set (or update) the factory.
         address current_factory = desc.version_to_factory("v1");
         if (current_factory != contracts.factory) desc.modifyWhitelistedFactory(contracts.factory, "v1");
+
+        // Set (or update) the cross-chain interfaces
+        if (vm.keyExists(config_interfaces, string.concat(".", rpc[chain]))) {
+            string[] memory availableInterfaces = vm.parseJsonKeys(config_interfaces, string.concat(".", rpc[chain]));
+            for (uint256 i = 0; i < availableInterfaces.length; ++i) {
+                string memory incentiveVersion = availableInterfaces[i];
+                address excepted_cci = abi.decode(config_interfaces.parseRaw(string.concat(".", rpc[chain], ".", incentiveVersion, ".interface")), (address));
+                
+                address current_cci = desc.version_to_cci(incentiveVersion);
+                if (current_cci != excepted_cci) desc.modifyWhitelistedCCI(excepted_cci, incentiveVersion);
+            }  
+        }
     }
 
 

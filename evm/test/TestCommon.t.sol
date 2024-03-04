@@ -30,8 +30,8 @@ contract TestCommon is Test, Bytes65, IMessageEscrowStructs, TestTokenFunctions,
     uint256 PRIVATEKEY;
 
     IncentiveDescription _INCENTIVE = IncentiveDescription({
-        maxGasDelivery: 1199199,
-        maxGasAck: 1188188,
+        maxGasDelivery: 2199199,
+        maxGasAck: 2188188,
         refundGasTo: address(0),
         priceOfDeliveryGas: 123321,
         priceOfAckGas: 321123,
@@ -66,7 +66,7 @@ contract TestCommon is Test, Bytes65, IMessageEscrowStructs, TestTokenFunctions,
         amplifiedMathlib = CatalystMathAmp(contracts.amplified_mathlib);
         amplifiedTemplate = CatalystVaultAmplified(contracts.amplified_template);
 
-        GARP = new IncentivizedMockEscrow(SEND_LOST_GAS_TO, DESTINATION_IDENTIFIER, SIGNER, 0);
+        GARP = new IncentivizedMockEscrow(SEND_LOST_GAS_TO, DESTINATION_IDENTIFIER, SIGNER, 0, 0);
 
         CCI = new CatalystChainInterface(address(GARP), address(this));
     }
@@ -75,8 +75,8 @@ contract TestCommon is Test, Bytes65, IMessageEscrowStructs, TestTokenFunctions,
         address[] memory assets,
         uint256[] memory init_balances,
         uint256[] memory weights,
-        uint256 amp,
-        uint256 vaultFee
+        uint64 amp,
+        uint64 vaultFee
     ) internal returns(address vault) {
 
         for (uint256 i = 0; i < assets.length; ++i) {
@@ -102,8 +102,8 @@ contract TestCommon is Test, Bytes65, IMessageEscrowStructs, TestTokenFunctions,
             weights[i] = 1;
         }
 
-        uint256 amp = 10**18;
-        uint256 vaultFee = 0;
+        uint64 amp = 10**18;
+        uint64 vaultFee = 0;
 
         return vault = deployVault(assets, init_balances, weights, amp, vaultFee);
     }
@@ -236,7 +236,7 @@ contract TestCommon is Test, Bytes65, IMessageEscrowStructs, TestTokenFunctions,
         message = constructSendLiquidity(sourceVault, destinationVault, toAccount, units, minOuts, 0, uint32(block.number), uint16(0), hex"");
     }
 
-    function addGARPContext(bytes32 messageIdentifier, address fromApplication, address destinationAddress, bytes memory message) internal returns(bytes memory package) {
+    function addGARPContext(bytes32 messageIdentifier, address fromApplication, address destinationAddress, bytes memory message) pure internal returns(bytes memory package) {
         return abi.encodePacked(
             bytes1(0x00),
             messageIdentifier,
@@ -255,7 +255,7 @@ contract TestCommon is Test, Bytes65, IMessageEscrowStructs, TestTokenFunctions,
         );
     }
     
-    function addMockContext(bytes memory message) internal returns(bytes memory package) {
+    function addMockContext(bytes memory message) pure internal returns(bytes memory package) {
         return abi.encodePacked(
             DESTINATION_IDENTIFIER,
             DESTINATION_IDENTIFIER,

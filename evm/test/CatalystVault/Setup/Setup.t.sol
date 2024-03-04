@@ -4,7 +4,7 @@ pragma solidity ^0.8.19;
 import "forge-std/Test.sol";
 import "../../TestCommon.t.sol";
 import "src/ICatalystV1Vault.sol";
-import "solmate/utils/FixedPointMathLib.sol";
+import "solady/utils/FixedPointMathLib.sol";
 import { Token } from "../../mocks/token.sol";
 import { AVaultInterfaces } from "../AVaultInterfaces.t.sol";
 import { CatalystVaultCommon } from "src/CatalystVaultCommon.sol";
@@ -28,7 +28,7 @@ abstract contract TestSetup is TestCommon, AVaultInterfaces {
             Token(assets[i]).approve(address(catFactory), initBalances[i]);
         }
         
-        uint256 amplification = amplified ? 10**18/2 : 10**18;
+        uint64 amplification = amplified ? 10**18/2 : 10**18;
         address vaultTemplate = amplified ? address(amplifiedTemplate) : address(volatileTemplate);
 
 
@@ -81,7 +81,7 @@ abstract contract TestSetup is TestCommon, AVaultInterfaces {
         uint256[] memory initBalances = new uint256[](0);
         uint256[] memory weights = new uint256[](0);
         
-        uint256 amplification = amplified ? 10**18/2 : 10**18;
+        uint64 amplification = amplified ? 10**18/2 : 10**18;
 
 
 
@@ -105,7 +105,7 @@ abstract contract TestSetup is TestCommon, AVaultInterfaces {
             Token(assets[i]).approve(address(catFactory), initBalances[i]);
         }
         
-        uint256 amplification = amplified ? 10**18/2 : 10**18;
+        uint64 amplification = amplified ? 10**18/2 : 10**18;
         address vaultTemplate = amplified ? address(amplifiedTemplate) : address(amplifiedTemplate);
 
 
@@ -138,7 +138,7 @@ abstract contract TestSetup is TestCommon, AVaultInterfaces {
             Token(assets[i]).approve(address(catFactory), initBalances[i]);
         }
         
-        uint256 amplification = amplified ? 10**18/2 : 10**18;
+        uint64 amplification = amplified ? 10**18/2 : 10**18;
         address vaultTemplate = amplified ? address(amplifiedTemplate) : address(amplifiedTemplate);
 
         // ! Set the last balance argument to 0
@@ -173,7 +173,7 @@ abstract contract TestSetup is TestCommon, AVaultInterfaces {
             weights[i] = 1;
         }
         
-        uint256 amplification = amplified ? 10**18/2 : 10**18;
+        uint64 amplification = amplified ? 10**18/2 : 10**18;
         address vaultTemplate = amplified ? address(amplifiedTemplate) : address(amplifiedTemplate);
 
         // ! Set the last weight argument to 0
@@ -209,13 +209,13 @@ abstract contract TestSetup is TestCommon, AVaultInterfaces {
             // ! Do not set token allowances
         }
         
-        uint256 amplification = amplified ? 10**18/2 : 10**18;
+        uint64 amplification = amplified ? 10**18/2 : 10**18;
         address vaultTemplate = amplified ? address(amplifiedTemplate) : address(volatileTemplate);
 
 
 
         // Tested action
-        vm.expectRevert(bytes("TRANSFER_FROM_FAILED"));
+        vm.expectRevert(abi.encodePacked(uint32(0x7939f424))); // TRANSFER_FROM_FAILED
         catFactory.deployVault(
             vaultTemplate,
             assets,
@@ -242,7 +242,7 @@ abstract contract TestSetup is TestCommon, AVaultInterfaces {
             Token(assets[i]).approve(address(catFactory), initBalances[i]);
         }
         
-        uint256 amplification = amplified ? 10**18/2 : 10**18;
+        uint64 amplification = amplified ? 10**18/2 : 10**18;
 
         // ! Set the wrong template on purpose
         address vaultTemplate = amplified ? address(volatileTemplate) : address(amplifiedTemplate);
@@ -277,7 +277,7 @@ abstract contract TestSetup is TestCommon, AVaultInterfaces {
             Token(assets[i]).approve(address(catFactory), initBalances[i]);
         }
         
-        uint256 amplification = amplified ? 10**18/2 : 10**18;
+        uint64 amplification = amplified ? 10**18/2 : 10**18;
         address vaultTemplate = amplified ? address(amplifiedTemplate) : address(volatileTemplate);
 
         ICatalystV1Vault vault = ICatalystV1Vault(catFactory.deployVault(
@@ -295,7 +295,7 @@ abstract contract TestSetup is TestCommon, AVaultInterfaces {
 
 
         // Tested action
-        vm.expectRevert(bytes("Initializable: contract is already initialized"));
+        vm.expectRevert(0xf92ee8a9);
         vault.setup(
             DEFAULT_POOL_NAME,
             DEFAULT_POOL_SYMBOL,
@@ -320,7 +320,7 @@ abstract contract TestSetup is TestCommon, AVaultInterfaces {
             Token(assets[i]).approve(address(catFactory), initBalances[i]);
         }
         
-        uint256 amplification = amplified ? 10**18/2 : 10**18;
+        uint64 amplification = amplified ? 10**18/2 : 10**18;
         address vaultTemplate = amplified ? address(amplifiedTemplate) : address(volatileTemplate);
 
         ICatalystV1Vault vault = ICatalystV1Vault(catFactory.deployVault(

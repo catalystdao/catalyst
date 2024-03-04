@@ -1,19 +1,21 @@
 //SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.19;
 
-import {ERC20} from 'solmate/tokens/ERC20.sol';
-import {SafeTransferLib} from 'solmate/utils/SafeTransferLib.sol';
+import {ERC20} from 'solady/tokens/ERC20.sol';
+import {SafeTransferLib} from 'solady/utils/SafeTransferLib.sol';
+import { Ownable} from "solady/auth/Ownable.sol";
+
 import { IMessageEscrowStructs } from "GeneralisedIncentives/src/interfaces/IMessageEscrowStructs.sol";
 import { IIncentivizedMessageEscrow } from "GeneralisedIncentives/src/interfaces/IIncentivizedMessageEscrow.sol";
-import { ICatalystReceiver } from "./interfaces/IOnCatalyst.sol";
-import { ICatalystV1Vault } from "./ICatalystV1Vault.sol";
-import { Ownable} from "openzeppelin-contracts/contracts/access/Ownable.sol";
-import "./ICatalystV1Vault.sol";
-import "./interfaces/ICatalystV1VaultState.sol"; // structs
-import "./CatalystPayload.sol";
 import { Bytes65 } from "GeneralisedIncentives/src/utils/Bytes65.sol";
 
 import { ICatalystChainInterface } from "./interfaces/ICatalystChainInterface.sol";
+import { ICatalystReceiver } from "./interfaces/IOnCatalyst.sol";
+import "./interfaces/ICatalystV1VaultState.sol"; // structs
+import { ICatalystV1Vault } from "./ICatalystV1Vault.sol";
+import "./ICatalystV1Vault.sol";
+import "./CatalystPayload.sol";
+
 
 /**
  * @title Catalyst: Generalised IBC Interface
@@ -26,7 +28,6 @@ import { ICatalystChainInterface } from "./interfaces/ICatalystChainInterface.so
  * message routers with more flexibility.
  */
 contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
-    using SafeTransferLib for ERC20;
     
     //--- ERRORS ---//
      // Only the message router should be able to deliver messages.
@@ -147,10 +148,10 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
      mapping(bytes32 => UnderwritingStorage) public underwritingStorage;
 
 
-    constructor(address GARP_, address defaultOwner) {
+    constructor(address GARP_, address defaultOwner) payable {
         require(address(GARP_) != address(0));  // dev: GARP_ cannot be zero address
         GARP = IIncentivizedMessageEscrow(GARP_);
-        _transferOwnership(defaultOwner);
+        _initializeOwner(defaultOwner);
 
         emit MaxUnderwriteDuration(INITIAL_MAX_UNDERWRITE_BLOCK_DURATION);
     }
@@ -187,8 +188,10 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
 
         ICatalystV1Vault.IncentiveDescription calldata incentive = routeDescription.incentive;
         // 1. Gas limits
-        if (incentive.maxGasDelivery < minGasFor[routeDescription.chainIdentifier]) revert NotEnoughIncentives(minGasFor[routeDescription.chainIdentifier], incentive.maxGasDelivery);
-        if (incentive.maxGasAck < minGasFor[bytes32(0)]) revert NotEnoughIncentives(minGasFor[bytes32(0)], incentive.maxGasAck);
+        uint48 minGasChainIdentifier = minGasFor[routeDescription.chainIdentifier];
+        if (incentive.maxGasDelivery < minGasChainIdentifier) revert NotEnoughIncentives(minGasChainIdentifier, incentive.maxGasDelivery);
+        uint48 minGasDefault = minGasFor[bytes32(0)];
+        if (incentive.maxGasAck < minGasDefault) revert NotEnoughIncentives(minGasDefault, incentive.maxGasAck);
 
         // 2. Gas prices
         // The gas price of ack has to be 10% higher than the gas price spent on this transaction.
@@ -293,29 +296,29 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
         // they cannot drain any value. As such, the very worst they can do is waste gas.
 
         // Encode payload. See CatalystPayload.sol for the payload definition
-        bytes memory data = abi.encodePacked(
+        bytes memory data = bytes.concat(
             CTX0_ASSET_SWAP,
-            abi.encodePacked(
-                uint8(20),      // EVM addresses are 20 bytes.
+            // bytes.concat(
+                bytes1(uint8(20)),      // EVM addresses are 20 bytes.
                 bytes32(0),     // EVM only uses 20 bytes. abi.encode packs the 20 bytes into 32 then we need to add 32 more
-                abi.encode(msg.sender)  // Use abi.encode to encode address into 32 bytes
-            ),
-            abi.encodePacked(
+                bytes32(uint256(uint160(msg.sender))),  // Use abi.encode to encode address into 32 bytes
+            // ),
+            bytes.concat(
                 routeDescription.toVault,    // Length is expected to be pre-encoded.
                 routeDescription.toAccount,  // Length is expected to be pre-encoded.
-                U,
-                toAssetIndex,
-                minOut,
-                fromAmount
+                bytes32(U),
+                bytes1(toAssetIndex),
+                bytes32(minOut),
+                bytes32(fromAmount)
             ),
-            abi.encodePacked(
-                uint8(20),      // EVM addresses are 20 bytes.
+            // bytes.concat(
+                bytes1(uint8(20)),      // EVM addresses are 20 bytes.
                 bytes32(0),     // EVM only uses 20 bytes. abi.encode packs the 20 bytes into 32 then we need to add 32 more
-                abi.encode(fromAsset)  // Use abi.encode to encode address into 32 bytes
-            ),
-            uint32(block.number),   // This is the same as block.number mod 2**32-1
-            uint16(underwriteIncentiveX16),
-            uint16(calldata_.length),   // max length of calldata is 2**16-1 = 65535 bytes which should be more than plenty.
+                bytes32(uint256(uint160(fromAsset))),  // Use abi.encode to encode address into 32 bytes
+            // ),
+            bytes4(uint32(block.number)),   // This is the same as block.number mod 2**32-1
+            bytes2(uint16(underwriteIncentiveX16)),
+            bytes2(uint16(calldata_.length)),   // max length of calldata is 2**16-1 = 65535 bytes which should be more than plenty.
             calldata_
         );
 
@@ -323,7 +326,8 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
             routeDescription.chainIdentifier,
             chainIdentifierToDestinationAddress[routeDescription.chainIdentifier],
             data,
-            routeDescription.incentive
+            routeDescription.incentive,
+            routeDescription.deadline
         );
     }
 
@@ -343,7 +347,7 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
         uint256 U,
         uint256[2] calldata minOut,
         uint256 fromAmount,
-        bytes memory calldata_
+        bytes calldata calldata_
     ) checkRouteDescription(routeDescription) override external payable {
         // We need to ensure that all information is in the correct places. This ensures that calls to this contract
         // will always be decoded semi-correctly even if the input is very incorrect. This also checks that the user 
@@ -354,21 +358,21 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
         // they cannot drain any value. As such, the very worst they can do is waste gas.
 
         // Encode payload. See CatalystPayload.sol for the payload definition
-        bytes memory data = abi.encodePacked(
+        bytes memory data = bytes.concat(
             CTX1_LIQUIDITY_SWAP,
-            abi.encodePacked(
-                uint8(20),  // EVM addresses are 20 bytes.
+            bytes.concat(
+                bytes1(uint8(20)),  // EVM addresses are 20 bytes.
                 bytes32(0),  // EVM only uses 20 bytes. abi.encode packs the 20 bytes into 32 then we need to add 32 more
-                abi.encode(msg.sender)  // Use abi.encode to encode address into 32 bytes
+                bytes32(uint256(uint160(msg.sender)))  // Use abi.encode to encode address into 32 bytes
             ),
             routeDescription.toVault,  // Length is expected to be pre-encoded.
             routeDescription.toAccount,  // Length is expected to be pre-encoded.
-            U,
-            minOut[0],
-            minOut[1],
-            fromAmount,
-            uint32(block.number),
-            uint16(calldata_.length),
+            bytes32(U),
+            bytes32(minOut[0]),
+            bytes32(minOut[1]),
+            bytes32(fromAmount),
+            bytes4(uint32(block.number)),
+            bytes2(uint16(calldata_.length)),
             calldata_
         );
 
@@ -376,7 +380,8 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
             routeDescription.chainIdentifier,
             chainIdentifierToDestinationAddress[routeDescription.chainIdentifier],
             data,
-            routeDescription.incentive
+            routeDescription.incentive,
+            routeDescription.deadline
         );
     }
 
@@ -602,13 +607,13 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
         bytes calldata cdata
     ) internal pure returns (bytes32 identifier) {
         return identifier = keccak256(
-            abi.encodePacked(
-                targetVault,
-                toAsset,
-                U,
-                minOut,
-                toAccount,
-                underwriteIncentiveX16,
+            bytes.concat(
+                bytes20(targetVault),
+                bytes20(toAsset),
+                bytes32(U),
+                bytes32(minOut),
+                bytes20(toAccount),
+                bytes2(underwriteIncentiveX16),
                 cdata
             )
         );
@@ -734,9 +739,10 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
         // cannot emit. We also cannot move that check up here, since then an external call would be made between a state check and a state modification. (reentry)
         // As a result, SwapRecentlyUnderwritten will be emitted when a swap has already been underwritten EXCEPT when underwriting a swap through reentry.
         // Then the reentry will underwrite the swap and the main call will fail with SwapAlreadyUnderwritten.
+        UnderwritingStorage storage underwriteState = underwritingStorage[identifier];
         unchecked {
             // Get the last touch block. For most underwrites it is going to be 0.
-            uint96 lastTouchBlock = underwritingStorage[identifier].expiry;
+            uint96 lastTouchBlock = underwriteState.expiry;
             if (lastTouchBlock != 0) { // implies that the swap has never been underwritten.
                 // if lastTouchBlock > type(uint96).max + BUFFER_BLOCKS then lastTouchBlock + BUFFER_BLOCKS overflows.
                 // if lastTouchBlock < BUFFER_BLOCKS then lastTouchBlock - BUFFER_BLOCKS underflows.
@@ -771,21 +777,22 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
 
         // Ensure the swap hasn't already been underwritten by checking if refundTo is set. 
         // Notice that this is very unlikely to ever get emitted. Instead, read the comment about SwapRecentlyUnderwritten.
-        if (underwritingStorage[identifier].refundTo != address(0)) revert SwapAlreadyUnderwritten();
+        if (underwriteState.refundTo != address(0)) revert SwapAlreadyUnderwritten();
+
+        uint96 underwriteExpiry = uint96(uint256(block.number) + uint256(maxUnderwritingDuration)); // Should never overflow.
 
         // Save the underwriting state.
-        underwritingStorage[identifier] = UnderwritingStorage({
-            tokens: purchasedTokens,
-            refundTo: msg.sender,
-            expiry: uint96(uint256(block.number) + uint256(maxUnderwritingDuration))  // Should never overflow.
-        });
+        underwriteState.tokens = purchasedTokens;
+        underwriteState.refundTo = msg.sender;
+        underwriteState.expiry = underwriteExpiry;
 
         // The above combination of lines act as local re-entry protection. Do not add any external call inbetween these lines.
 
         // Collect tokens and collateral from underwriter.
         // We still collect the tokens used to incentivise the underwriter as otherwise they could freely reserve liquidity
         // in the vaults. Vaults would essentially be a free source of short term options which isn't wanted.
-        ERC20(toAsset).safeTransferFrom(
+        SafeTransferLib.safeTransferFrom(
+            toAsset,
             msg.sender, 
             address(this),
             purchasedTokens * (
@@ -801,7 +808,7 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
         }
 
         // Send the assets to the user.
-        ERC20(toAsset).safeTransfer(toAccount, purchasedTokens);
+        SafeTransferLib.safeTransfer(toAsset,toAccount, purchasedTokens);
 
         // Figure out if the user wants to execute additional logic.
         // Note that this logic is not contained within a try catch. It could fail.
@@ -817,7 +824,7 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
         emit SwapUnderwritten(
             identifier,
             msg.sender,
-            uint96(uint256(block.number) + uint256(maxUnderwritingDuration)),
+            underwriteExpiry,
             targetVault,
             toAsset,
             U,
@@ -851,16 +858,19 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
 
         UnderwritingStorage storage underwriteState = underwritingStorage[identifier];
         // Check that the refundTo address is set. (Indicates that the underwrite exists.)
-        if (underwriteState.refundTo == address(0)) revert UnderwriteDoesNotExist(identifier);
+        address refundAddress = underwriteState.refundTo;
+        if (refundAddress == address(0)) revert UnderwriteDoesNotExist(identifier);
         
         // Check that the underwriting can be expired. If the msg.sender is the refundTo address, then it can be expired at any time.
         // This lets the underwriter reclaim *some* of the collateral they provided if they change their mind or observed an issue.
-        if (msg.sender != underwriteState.refundTo) {
-            // Otherwise, the expiry time must have been passed.
-            if (underwriteState.expiry > block.number) revert UnderwriteNotExpired(underwriteState.expiry - block.number);
-        }
+        // Load the associated storage slot.
         uint256 underWrittenTokens = underwriteState.tokens;
-        // The next line acts as reentry protection. When the storage is deleted underwriteState.refundTo == address(0) will be true.
+        uint256 expiryTime = uint256(underwriteState.expiry);
+        if (msg.sender != refundAddress) {
+            // Otherwise, the expiry time must have been passed.
+            if (underwriteState.expiry > block.number) revert UnderwriteNotExpired(expiryTime - block.number);
+        }
+        // The next line acts as reentry protection. When the storage is deleted refundAddress == address(0) will be true.
         delete underwritingStorage[identifier];
 
         // Delete the escrow
@@ -885,10 +895,10 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
             // This following logic might overflow but we would rather have it overflow (which reduces expireShare)
             // than to never be able to expire an underwrite.
             uint256 expireShare = refundAmount * EXPIRE_CALLER_REWARD / EXPIRE_CALLER_REWARD_DENOMINATOR;
-            ERC20(toAsset).safeTransfer(msg.sender, expireShare);
+            SafeTransferLib.safeTransfer(toAsset, msg.sender, expireShare);
             // refundAmount > expireShare, and specially when expireShare overflows.
             uint256 vaultShare = refundAmount - expireShare;
-            ERC20(toAsset).safeTransfer(targetVault, vaultShare);
+            SafeTransferLib.safeTransfer(toAsset, targetVault, vaultShare);
 
             emit ExpireUnderwrite(
                 identifier,
@@ -941,7 +951,7 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
         uint256 underwritingIncentive = (underwrittenTokenAmount * uint256(underwriteIncentiveX16)) >> 16;
         refundAmount += underwritingIncentive;
 
-        ERC20(toAsset).safeTransfer(refundTo, refundAmount);
+        SafeTransferLib.safeTransfer(toAsset, refundTo, refundAmount);
 
         emit FulfillUnderwrite(
             identifier

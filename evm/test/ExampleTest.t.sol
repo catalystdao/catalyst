@@ -106,7 +106,8 @@ contract ExampleTest is TestCommon {
         chainIdentifier: DESTINATION_IDENTIFIER,
         toVault: convertEVMTo65(vault2),
         toAccount: convertEVMTo65(alice),
-        incentive: _INCENTIVE
+        incentive: _INCENTIVE,
+        deadline: uint64(0)
     });
 
     // We need the log emitted by the mock Generalised Incentives implementation.

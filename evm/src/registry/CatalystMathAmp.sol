@@ -1,9 +1,9 @@
 //SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
-import {ERC20} from 'solmate/tokens/ERC20.sol';
+import {ERC20} from 'solady/tokens/ERC20.sol';
 import {ICatalystMathLibAmp} from "./interfaces/ICatalystMathLibAmp.sol";
-import "solmate/utils/FixedPointMathLib.sol";
+import "solady/utils/FixedPointMathLib.sol";
 import "../interfaces/ICatalystV1VaultDerived.sol";
 import "../interfaces/ICatalystV1VaultState.sol";
 import "../CatalystVaultAmplified.sol";
@@ -84,7 +84,7 @@ contract CatalystMathAmp is IntegralsAmplified, ICatalystMathLibAmp {
     function calcFee(address vault, uint256 amount) public view returns(uint256) {
         uint256 fee = CatalystVaultAmplified(vault)._vaultFee();
 
-        return FixedPointMathLib.mulWadDown(amount, FixedPointMathLib.WAD - fee);
+        return FixedPointMathLib.mulWad(amount, FixedPointMathLib.WAD - fee);
     }
     
     /**

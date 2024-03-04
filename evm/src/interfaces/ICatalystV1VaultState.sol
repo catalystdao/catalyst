@@ -15,6 +15,7 @@ interface ICatalystV1Structs is IMessageEscrowStructs {
         bytes toVault;
         bytes toAccount;
         IncentiveDescription incentive;
+        uint64 deadline;
     }
 }
 
@@ -24,14 +25,14 @@ interface ICatalystV1VaultState {
     /// @notice The token weights. Used for maintaining a non symmetric vault asset balance.
     function _weight(address token) external view returns (uint256);
 
-    function _adjustmentTarget() external view returns (uint256);
+    function _adjustmentTarget() external view returns (uint48);
 
-    function _lastModificationTime() external view returns (uint256);
+    function _lastModificationTime() external view returns (uint48);
 
     /// @notice The vault fee in WAD. Implementation of fee: mulWadDown(_amount, _vaultFee)
-    function _vaultFee() external view returns (uint256);
+    function _vaultFee() external view returns (uint64);
 
-    function _governanceFeeShare() external view returns (uint256);
+    function _governanceFeeShare() external view returns (uint64);
 
     /// @notice The address of the responsible for adjusting the fees.
     function _feeAdministrator() external view returns (address);

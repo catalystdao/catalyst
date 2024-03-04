@@ -56,7 +56,6 @@ contract TestRouterSendassetProfile is TestCommon {
     function test_profile_sendasset() external {
         (address fromVault, address toVault) = pool1();
         address fromAsset = ICatalystV1Vault(fromVault)._tokenIndexing(0);
-        address toAsset = ICatalystV1Vault(fromVault)._tokenIndexing(1);
 
         uint256 amount = uint256(0x11111111111111111);
 
@@ -68,7 +67,8 @@ contract TestRouterSendassetProfile is TestCommon {
             chainIdentifier: DESTINATION_IDENTIFIER,
             toVault: convertEVMTo65(toVault),
             toAccount: convertEVMTo65(TO_ACCOUNT),
-            incentive: _INCENTIVE
+            incentive: _INCENTIVE,
+            deadline: uint64(0)
         });
 
         bytes memory commands = abi.encodePacked(bytes1(0x1f), bytes1(0x01));
@@ -100,8 +100,6 @@ contract TestRouterSendassetProfile is TestCommon {
         Vm.Log[] memory entries = vm.getRecordedLogs();
 
         (bytes32 destinationIdentifier, bytes memory recipitent, bytes memory messageWithContext) = abi.decode(entries[4].data, (bytes32, bytes, bytes));
-
-        bytes32 messageIdentifier = bytes32(this.sliceMemory(messageWithContext, 64+1, 64+1+32));
 
         (bytes memory _metadata, bytes memory toExecuteMessage) = getVerifiedMessage(address(GARP), messageWithContext);
 

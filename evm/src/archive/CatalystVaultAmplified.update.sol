@@ -3,7 +3,7 @@
 pragma solidity ^0.8.19;
 
 import { CatalystVaultAmplified } from "../CatalystVaultAmplified.sol";
-import { FixedPointMathLib } from "solmate/utils/FixedPointMathLib.sol";
+import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
 
 /**
  * @title Catalyst: The Multi-Chain Vault
@@ -39,7 +39,7 @@ contract CatalystVaultAmplifiedUpdate is CatalystVaultAmplified {
     // ! The vault doesn't correctly use the amplification changes. To do that, _updateAmplification should be added to all functions that
     // ! reads _oneMinusAmp.
 
-    constructor(address factory_, address mathlib_) CatalystVaultAmplified(factory_, mathlib_) {}
+    constructor(address factory_, address mathlib_) payable CatalystVaultAmplified(factory_, mathlib_) {}
 
 
     /**
@@ -48,13 +48,13 @@ contract CatalystVaultAmplifiedUpdate is CatalystVaultAmplified {
      * @param targetTime Once reached, _weight[...] = newWeights[...]
      * @param targetAmplification The new weights to apply
      */
-    function setAmplification(uint256 targetTime, uint256 targetAmplification) external onlyFactoryOwner {
+    function setAmplification(uint48 targetTime, uint64 targetAmplification) external onlyFactoryOwner {
         unchecked {
             require(targetTime >= block.timestamp + MIN_ADJUSTMENT_TIME); // dev: targetTime must be more than MIN_ADJUSTMENT_TIME in the future.
             require(targetTime <= block.timestamp + 365 days); // dev: Target time cannot be too far into the future.
         
-            uint256 currentAmplification = FixedPointMathLib.WAD - uint256(_oneMinusAmp);
-            require(targetAmplification < FixedPointMathLib.WAD);  // dev: amplification not set correctly.
+            uint64 currentAmplification = uint64(FixedPointMathLib.WAD) - uint64(_oneMinusAmp);
+            require(targetAmplification < uint64(FixedPointMathLib.WAD));  // dev: amplification not set correctly.
             // Limit the maximum allowed relative amplification change to a factor of 2. Note that this effectively 'locks'
             // the amplification if it gets intialized to 0. Similarly, the amplification will never be allowed to be set to
             // 0 if it is initialized to any other value (note how 'targetAmplification*2 >= currentAmplification' is used
@@ -67,9 +67,9 @@ contract CatalystVaultAmplifiedUpdate is CatalystVaultAmplified {
 
             // Save adjustment information
             _adjustmentTarget = targetTime;
-            _lastModificationTime = block.timestamp;
+            _lastModificationTime = uint48(block.timestamp);
 
-            _targetAmplification = int256(FixedPointMathLib.WAD - targetAmplification);
+            _targetAmplification = int64(uint64(FixedPointMathLib.WAD) - targetAmplification);
         }
 
         emit SetAmplification(targetTime, targetAmplification);
@@ -91,7 +91,7 @@ contract CatalystVaultAmplifiedUpdate is CatalystVaultAmplified {
             if (block.timestamp == lastModification) return;
 
             // Since we are storing lastModification, update the variable now. This avoid repetitions.
-            _lastModificationTime = block.timestamp;
+            _lastModificationTime = uint48(block.timestamp);
 
             // If the current time is past the adjustment, the amplification needs to be finalized.
             if (block.timestamp >= adjTarget) {
@@ -127,9 +127,11 @@ contract CatalystVaultAmplifiedUpdate is CatalystVaultAmplified {
                 // Sorry for having you go through all that to make the calculation unchecked. We need the gas savings.
 
                 // Add the change to the current amp.
-                _oneMinusAmp = currentAmplification + (
-                    (targetAmplification - currentAmplification) * int256(block.timestamp - lastModification)  // timestamp is largest but small relative to int256.
-                ) / int256(adjTarget - lastModification);   // adjTarget is bounded by block.timestap + 1 year
+                _oneMinusAmp = int64(
+                        currentAmplification + (
+                        (targetAmplification - currentAmplification) * int256(block.timestamp - lastModification)  // timestamp is largest but small relative to int256.
+                    ) / int256(adjTarget - lastModification)   // adjTarget is bounded by block.timestap + 1 year
+                );
             }
             
         }

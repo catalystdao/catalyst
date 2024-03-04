@@ -16,7 +16,7 @@ import { IncentivizedWormholeEscrow } from "GeneralisedIncentives/src/apps/wormh
 
 contract Swap is Script, IMessageEscrowStructs {
 
-    function getChainIdentifierWormhole() external {
+    function getChainIdentifierWormhole() view external {
         address wormhole_incentive = 0x000000ED80503e3A7EA614FFB5507FD52584a1f2;
 
         console.logUint(IncentivizedWormholeEscrow(wormhole_incentive).chainId());
@@ -27,8 +27,8 @@ contract Swap is Script, IMessageEscrowStructs {
         uint256 deployerPrivateKey = vm.envUint("CATALYST_DEPLOYER");
         vm.startBroadcast(deployerPrivateKey);
 
-        address fromVault = address(0x66efC14C5a8bAC9a4068248b2781B312eDfff552);
-        address toVault = address(0x66efC14C5a8bAC9a4068248b2781B312eDfff552);
+        address fromVault = address(0x6243dF63DC7E97A5968578E9aE35008AF3Ec69Df);
+        address toVault = address(0x6243dF63DC7E97A5968578E9aE35008AF3Ec69Df);
 
         // mantle
         address WGAS = ICatalystV1Vault(fromVault)._tokenIndexing(0);
@@ -39,24 +39,25 @@ contract Swap is Script, IMessageEscrowStructs {
         IWETH(WGAS).deposit{value: amount}();
 
         for (uint256 i = 0; i < n; ++i) {
-            ICatalystV1Vault(fromVault).sendAsset{value: 0.1 ether}(
+            ICatalystV1Vault(fromVault).sendAsset{value: 0.2 ether}(
                 ICatalystV1Structs.RouteDescription({
-                    chainIdentifier: bytes32(uint256(5001)),
+                    chainIdentifier: bytes32(uint256(80001)),
                     toVault: abi.encodePacked(uint8(20), bytes32(0), abi.encode(toVault)),
                     toAccount: abi.encodePacked(uint8(20), bytes32(0), abi.encode(address(0x0000007aAAC54131e031b3C0D6557723f9365A5B))),
                     incentive: IncentiveDescription({
                         maxGasDelivery: 2000000,
                         maxGasAck: 2000000,
                         refundGasTo: address(0x0000007aAAC54131e031b3C0D6557723f9365A5B),
-                        priceOfDeliveryGas: 5 gwei,
-                        priceOfAckGas: 5 gwei,
+                        priceOfDeliveryGas: 10 gwei,
+                        priceOfAckGas: 60 gwei,
                         targetDelta: 0 minutes
-                    })
+                    }),
+                    deadline: uint64(0)
                 }),
                 WGAS,
                 0,
                 amount/n,
-                2**256-1,
+                0,
                 address(0x0000007aAAC54131e031b3C0D6557723f9365A5B),
                 0,
                 hex""

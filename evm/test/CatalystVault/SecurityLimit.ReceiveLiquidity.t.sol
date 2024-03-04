@@ -4,11 +4,11 @@ pragma solidity ^0.8.19;
 import "forge-std/Test.sol";
 import "../TestCommon.t.sol";
 import "src/ICatalystV1Vault.sol";
-import "solmate/utils/FixedPointMathLib.sol";
+import "solady/utils/FixedPointMathLib.sol";
 import { ICatalystV1Structs } from "src/interfaces/ICatalystV1VaultState.sol";
 import {Token} from "../mocks/token.sol";
 import {AVaultInterfaces} from "./AVaultInterfaces.t.sol";
-import { FixedPointMathLib } from "solmate/utils/FixedPointMathLib.sol";
+import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
 
 abstract contract TestSecurityLimitLiquiditySwap is TestCommon, AVaultInterfaces {
 
@@ -30,8 +30,6 @@ abstract contract TestSecurityLimitLiquiditySwap is TestCommon, AVaultInterfaces
 
             uint256 target_token_index = 0;
             address target_token = ICatalystV1Vault(vault)._tokenIndexing(target_token_index);
-
-            uint256 initial_target_token_balance = Token(target_token).balanceOf(vault);
 
             bytes memory fake_payload = constructSendLiquidity(vault, vault, toAccount, units);
 

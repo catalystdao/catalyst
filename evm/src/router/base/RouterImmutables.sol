@@ -2,7 +2,7 @@
 pragma solidity ^0.8.17;
 
 import {IAllowanceTransfer} from '../libraries/permit2/IAllowanceTransfer.sol';
-import {ERC20} from 'solmate/tokens/ERC20.sol';
+import {ERC20} from 'solady/tokens/ERC20.sol';
 import {IWETH9} from '../interfaces/external/IWETH9.sol';
 
 struct RouterParameters {
@@ -19,7 +19,7 @@ contract RouterImmutables {
     /// @dev WETH9 address
     IWETH9 public immutable WETH9;
 
-    constructor(RouterParameters memory params) {
+    constructor(RouterParameters memory params) payable {
         PERMIT2 = IAllowanceTransfer(params.permit2);
         WETH9 = IWETH9(params.weth9);
     }
