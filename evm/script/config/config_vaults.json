@@ -1,3 +1,38 @@
 {
-  
+  "WormholeSepoliaOptimismArbitrum": {
+    "cci_version": "Wormhole",
+    "sepolia": {
+      "cci": "0x169e7e77e463ffe86b30afd1605a09a632bea5b0",
+      "address": "0xbd529ff730dae029fa85b38d98d6046721215fa4",
+      "weights": [
+        1
+      ],
+      "fee": 500000000000000,
+      "tokens": {
+        "WGAS": 10000000000000000
+      }
+    },
+    "optimismsepolia": {
+      "cci": "0x2603e874d589373a0c4766808b93e3d4b63164c8",
+      "address": "0xbd529ff730dae029fa85b38d98d6046721215fa4",
+      "weights": [
+        1
+      ],
+      "fee": 500000000000000,
+      "tokens": {
+        "WGAS": 10000000000000000
+      }
+    },
+    "arbitrumsepolia": {
+      "cci": "0xf779d8e1b07f1e3df141a81c4f1f7d65c0a38611",
+      "address": "0xbd529ff730dae029fa85b38d98d6046721215fa4",
+      "weights": [
+        1
+      ],
+      "fee": 500000000000000,
+      "tokens": {
+        "WGAS": 10000000000000000
+      }
+    }
+  }
 }
