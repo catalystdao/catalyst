@@ -1,33 +1,33 @@
 {
   "Wormhole": {
     "mumbai": {
-      "interface": "0xB616C8E40e22ca1f60A41131c341673d88d5dEd6",
+      "interface": "0x74e46a8113F2E06db0e07D592F6Cf5B1A59756EE",
       "escrow": "0xFb4B1475e61642b3930d762B66d9DD4E08B14367"
     },
     "sepolia": {
-      "interface": "0xc033786069D7eDCab4F0A31BA8Da5aF59c4a0b66",
+      "interface": "0x169e7E77E463FfE86b30Afd1605A09A632BeA5B0",
       "escrow": "0x45C140Dd2526E4bfD1c2A5Bb0Aa6aA1DB00b1744"
     },
     "basesepolia": {
-      "interface": "0xC44DDC29dCD056300aE33Ce7F6c29579e0Eb4d8e",
+      "interface": "0xa71ae9298Ba6DD5f2Aa96415bC1eC33e62980751",
       "escrow": "0xEA2F1d38e31fBE501c0b42BA25E217a47132D8fa"
     },
     "arbitrumsepolia": {
-      "interface": "0xd63F662F64B49e9759c0DD831F968ba76aEB4423",
+      "interface": "0xf779D8e1B07F1e3dF141A81c4f1f7D65c0A38611",
       "escrow": "0xdF25f1BdE09Cee5ac1e6ef8dFA7113addBd58B28"
     },
     "optimismsepolia": {
-      "interface": "0x805260DD8Ec2c338f1A540AE036cbab476738E13",
+      "interface": "0x2603e874D589373A0c4766808B93e3D4b63164C8",
       "escrow": "0xbDFD9163d8Cee1368698B023369f9A5Fd319A40F"
     }
   },
   "Polymer": {
     "basesepolia": {
-      "interface": "0x9dF66FEB886e01bA370946c76eF2a4339e938bbB",
+      "interface": "0x76Dc10065949C258923B9273513E27fF52de8C02",
       "escrow": "0x147d414F1964c94c4Ac7422aC148aBddb4BEdC82"
     },
     "optimismsepolia": {
-      "interface": "0x0d1Ba87B31dBC857f467Cabb588f3EC581797B50",
+      "interface": "0x77D13F9aea291F7294d596431EA61d1765C4aCAB",
       "escrow": "0x62e27C0bD89D7AC599Df8765cDEe0183A34A9929"
     }
   }
