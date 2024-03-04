@@ -12,7 +12,7 @@ import { RouterParameters } from "../src/router/base/RouterImmutables.sol";
 contract DeployRouter is MultiChainDeployer {
     using stdJson for string;
 
-    address expectedRouterAddress = address(0x00000054ee91d36f03664321e4be673006Af380E);
+    address expectedRouterAddress = address(0x00000037aD5E8b70E91bc42e50b3cAE746609C22);
     address expectedPermit2Address = address(0x000000000022D473030F116dDEE9F6B43aC78BA3);
 
     string config_token;
@@ -39,9 +39,14 @@ contract DeployRouter is MultiChainDeployer {
 
         if (expectedRouterAddress.codehash != bytes32(0)) return;
 
+        address gasToken = abi.decode(config_token.parseRaw(string.concat(".", currentChainKey, ".", wrappedGas[currentChainKey])), (address));
+
+
+        require(gasToken != address(0), "Gas token cannot be address0");
+
         CatalystRouter router = new CatalystRouter(RouterParameters({
             permit2: expectedPermit2Address,
-            weth9: abi.decode(config_token.parseRaw(string.concat(".", currentChainKey, ".", wrappedGas[currentChainKey])), (address))
+            weth9: gasToken
         }));
 
         require(
