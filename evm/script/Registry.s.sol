@@ -139,15 +139,16 @@ contract Registry is BaseMultiChainDeployer {
         if (current_factory != contracts.factory) desc.modifyWhitelistedFactory(contracts.factory, "v1");
 
         // Set (or update) the cross-chain interfaces
-        if (vm.keyExists(config_interfaces, string.concat(".", currentChainKey))) {
-            string[] memory availableInterfaces = vm.parseJsonKeys(config_interfaces, string.concat(".", currentChainKey));
-            for (uint256 i = 0; i < availableInterfaces.length; ++i) {
-                string memory incentiveVersion = availableInterfaces[i];
-                address excepted_cci = abi.decode(config_interfaces.parseRaw(string.concat(".", currentChainKey, ".", incentiveVersion, ".interface")), (address));
-                
-                address current_cci = desc.version_to_cci(incentiveVersion);
-                if (current_cci != excepted_cci) desc.modifyWhitelistedCCI(excepted_cci, incentiveVersion);
-            }  
+        string[] memory availableInterfaces = vm.parseJsonKeys(config_interfaces, string.concat("$"));
+        for (uint256 i = 0; i < availableInterfaces.length; ++i) {
+            string memory incentiveVersion = availableInterfaces[i];
+            if (!vm.keyExists(config_interfaces, string.concat(".", incentiveVersion, ".", currentChainKey))) {
+                continue;
+            }
+            address excepted_cci = abi.decode(config_interfaces.parseRaw(string.concat(".", incentiveVersion, ".", currentChainKey, ".interface")), (address));
+            
+            address current_cci = desc.version_to_cci(incentiveVersion);
+            if (current_cci != excepted_cci) desc.modifyWhitelistedCCI(excepted_cci, incentiveVersion);
         }
     }
 
