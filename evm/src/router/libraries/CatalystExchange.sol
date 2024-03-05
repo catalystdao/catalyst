@@ -49,6 +49,7 @@ abstract contract CatalystExchange is RouterImmutables, ICatalystV1Structs {
         uint256 minOut,
         address fallbackUser,
         uint256 gas,
+        uint16 underwritingIncentive,
         bytes calldata calldata_
     ) internal {
         amount = amount == Constants.CONTRACT_BALANCE ? ERC20(fromAsset).balanceOf(address(this)) : amount;
@@ -63,7 +64,7 @@ abstract contract CatalystExchange is RouterImmutables, ICatalystV1Structs {
             amount,
             minOut,
             fallbackUser,
-            0,
+            underwritingIncentive,
             calldata_
         );
     }

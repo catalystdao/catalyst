@@ -87,7 +87,8 @@ contract TestRouterSendassetProfile is TestCommon {
             amount,
             MINOUT,
             ADDRESS_THIS,
-            _getTotalIncentive(_INCENTIVE)
+            _getTotalIncentive(_INCENTIVE),
+            0
         );
 
         bytes[] memory inputs = new bytes[](2);
