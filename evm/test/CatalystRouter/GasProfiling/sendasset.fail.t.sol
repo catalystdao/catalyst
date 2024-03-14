@@ -85,7 +85,8 @@ contract TestRouterSendassetFailProfile is TestCommon {
             amount,
             2**256-1,
             ADDRESS_THIS,
-            _getTotalIncentive(_INCENTIVE)
+            _getTotalIncentive(_INCENTIVE),
+            0
         );
 
         bytes[] memory inputs = new bytes[](2);

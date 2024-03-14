@@ -1,64 +1,34 @@
 {
-  "sepolia": {
-    "MOCK": {
-      "incentive": "0x0000006aA532b110f36f393887079b35F6C6979a",
-      "interface": "0xa55eAf1c45cDAbe41c374862982F1543A60A8139"
+  "Wormhole": {
+    "mumbai": {
+      "interface": "0x74e46a8113F2E06db0e07D592F6Cf5B1A59756EE",
+      "escrow": "0xFb4B1475e61642b3930d762B66d9DD4E08B14367"
     },
-    "Wormhole": {
-      "incentive": "0x000000731594E9be29E6c45Ab477034939053d4E",
-      "interface": "0x1100100AA9CF8D110EC7a10dBd982e83eb6F02Fd"
-    }
-  },
-  "mumbai": {
-    "MOCK": {
-      "incentive": "0x0000006aA532b110f36f393887079b35F6C6979a",
-      "interface": "0xa55eAf1c45cDAbe41c374862982F1543A60A8139"
+    "sepolia": {
+      "interface": "0x169e7E77E463FfE86b30Afd1605A09A632BeA5B0",
+      "escrow": "0x45C140Dd2526E4bfD1c2A5Bb0Aa6aA1DB00b1744"
     },
-    "Wormhole": {
-      "incentive": "0x000000731594E9be29E6c45Ab477034939053d4E",
-      "interface": "0x1100100AA9CF8D110EC7a10dBd982e83eb6F02Fd"
+    "basesepolia": {
+      "interface": "0xa71ae9298Ba6DD5f2Aa96415bC1eC33e62980751",
+      "escrow": "0xEA2F1d38e31fBE501c0b42BA25E217a47132D8fa"
+    },
+    "arbitrumsepolia": {
+      "interface": "0xf779D8e1B07F1e3dF141A81c4f1f7D65c0A38611",
+      "escrow": "0xdF25f1BdE09Cee5ac1e6ef8dFA7113addBd58B28"
+    },
+    "optimismsepolia": {
+      "interface": "0x2603e874D589373A0c4766808B93e3D4b63164C8",
+      "escrow": "0xbDFD9163d8Cee1368698B023369f9A5Fd319A40F"
     }
   },
-  "mantletestnet" : {
-    "MOCK": {
-      "incentive": "0x0000006aA532b110f36f393887079b35F6C6979a",
-      "interface": "0xa55eAf1c45cDAbe41c374862982F1543A60A8139"
-    }
-  },
-  "scrollsepolia": {
-    "MOCK": {
-      "incentive": "0x0000006aA532b110f36f393887079b35F6C6979a",
-      "interface": "0xa55eAf1c45cDAbe41c374862982F1543A60A8139"
-    }
-  },
-  "bsctestnet": {
-    "MOCK": {
-      "incentive": "0x0000006aA532b110f36f393887079b35F6C6979a",
-      "interface": "0xa55eAf1c45cDAbe41c374862982F1543A60A8139"
-    }
-  },
-  "opbnbtestnet": {
-    "MOCK": {
-      "incentive": "0x0000006aA532b110f36f393887079b35F6C6979a",
-      "interface": "0xa55eAf1c45cDAbe41c374862982F1543A60A8139"
-    }
-  },
-  "inevmdevnet": {
-    "MOCK": {
-      "incentive": "0x0000006aA532b110f36f393887079b35F6C6979a",
-      "interface": "0xa55eAf1c45cDAbe41c374862982F1543A60A8139"
-    }
-  },
-  "basesepolia": {
-    "Polymer": {
-      "incentive": "0x000000B42EcC1cBeC12A86Fe4C695a6805b6b150",
-      "interface": "0xE277FE38A43060Fd288EfE20AEEc1f6c2Cd6dB83"
-    }
-  },
-  "optimismsepolia": {
-    "Polymer": {
-      "incentive": "0x000000B42EcC1cBeC12A86Fe4C695a6805b6b150",
-      "interface": "0xE277FE38A43060Fd288EfE20AEEc1f6c2Cd6dB83"
+  "Polymer": {
+    "basesepolia": {
+      "interface": "0x76Dc10065949C258923B9273513E27fF52de8C02",
+      "escrow": "0x147d414F1964c94c4Ac7422aC148aBddb4BEdC82"
+    },
+    "optimismsepolia": {
+      "interface": "0x77D13F9aea291F7294d596431EA61d1765C4aCAB",
+      "escrow": "0x62e27C0bD89D7AC599Df8765cDEe0183A34A9929"
     }
   }
 }

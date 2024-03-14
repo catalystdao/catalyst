@@ -52,13 +52,13 @@ abstract contract Dispatcher is Permit2Payments, CatalystExchange, CancelSwap, L
                     }
                     CatalystExchange.localSwap(vault, fromAsset, toAsset, amount, minOut);
                 }  else if (command == Commands.SENDASSET) {
-                    (address vault, RouteDescription memory routeDescription, address fromAsset, uint8 toAssetIndex8, uint256 amount, uint256 minOut, address fallbackUser, uint256 gas) = abi.decode(inputs, (address, RouteDescription, address, uint8, uint256, uint256, address, uint256));
+                    (address vault, RouteDescription memory routeDescription, address fromAsset, uint8 toAssetIndex8, uint256 amount, uint256 minOut, address fallbackUser, uint256 gas, uint16 underwritingIncentive) = abi.decode(inputs, (address, RouteDescription, address, uint8, uint256, uint256, address, uint256, uint16));
 
                     // To save gas, the calldata is decoded as a slice at the end. This is possible because we know the exact sizes of
                     // other variables.
-                    bytes calldata calldata_ = inputs[800:];
+                    bytes calldata calldata_ = inputs[864:];
                     
-                    CatalystExchange.sendAsset(vault, routeDescription, fromAsset, toAssetIndex8, amount, minOut, map(fallbackUser), gas, calldata_);
+                    CatalystExchange.sendAsset(vault, routeDescription, fromAsset, toAssetIndex8, amount, minOut, map(fallbackUser), gas, underwritingIncentive, calldata_);
                 } else if (command == Commands.PERMIT2_TRANSFER_FROM) {
                     // equivalent: abi.decode(inputs, (address, address, uint160))
                     address token;
@@ -183,7 +183,7 @@ abstract contract Dispatcher is Permit2Payments, CatalystExchange, CancelSwap, L
 
                     // To save gas, the calldata is decoded as a slice at the end. This is possible because we know the exact sizes of
                     // other variables.
-                    bytes calldata calldata_ = inputs[768:];
+                    bytes calldata calldata_ = inputs[800:];
                     
                     CatalystExchange.sendLiquidity(vault, routeDescription, amount, minOut, fallbackUser, gas, calldata_);
                 } else if (command == Commands.ALLOW_CANCEL) {

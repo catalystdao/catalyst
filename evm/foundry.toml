@@ -5,7 +5,7 @@ libs = ["lib"]
 via_ir = true
 optimizer = true
 optimizer_runs = 10000
-fs_permissions = [{ access = "read-write", path = "./script/config" }]
+fs_permissions = [{ access = "read-write", path = "./script/config" }, { access = "read", path = "./lib/GeneralisedIncentives/script/bridge_contracts.json" }, { access = "read", path = "./lib/catalyst-channel-lists/src/config/chains.json" }]
 evm_version = "paris"
 solc_version = "0.8.22"
 

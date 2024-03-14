@@ -4,21 +4,28 @@ pragma solidity ^0.8.19;
 import "forge-std/Script.sol";
 import {stdJson} from "forge-std/StdJson.sol";
 
-import { BaseMultiChainDeployer } from "./BaseMultiChainDeployer.s.sol";
+import { MultiChainDeployer } from "./BaseMultiChainDeployer.s.sol";
 import { JsonContracts, DeployContracts } from "./DeployContracts.s.sol";
 
 
-contract DeployCatalyst is BaseMultiChainDeployer, DeployContracts {
+contract DeployCatalyst is MultiChainDeployer, DeployContracts {
     using stdJson for string;
 
     address private admin;
 
-    function deploy() iter_chains(chain_list) broadcast external {
+    function deployAll(string[] memory chains) iter_chains_string(chains) broadcast external {
         verify = true;
         admin = vm.envAddress("CATALYST_ADDRESS");
         deployAllContracts(admin);
     }
-    function deploy_legacy() iter_chains(chain_list_legacy) broadcast external {
+
+    function deployAll() iter_chains(chain_list) broadcast external {
+        verify = true;
+        admin = vm.envAddress("CATALYST_ADDRESS");
+        deployAllContracts(admin);
+    }
+
+    function deployAllLegacy() iter_chains(chain_list_legacy) broadcast external {
         verify = true;
         admin = vm.envAddress("CATALYST_ADDRESS");
         deployAllContracts(admin);
@@ -35,9 +42,8 @@ contract DeployCatalyst is BaseMultiChainDeployer, DeployContracts {
     function getAddresses() external {
         get = true;
         address admin_ = vm.envAddress("CATALYST_ADDRESS");
-        uint256 pk = vm.envUint("CATALYST_DEPLOYER");
 
-        vm.startBroadcast(pk);
+        vm.startBroadcast(uint256(1));
 
         deployAllContracts(admin_);
 
