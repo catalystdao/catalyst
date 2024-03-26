@@ -210,7 +210,10 @@ abstract contract Dispatcher is Permit2Payments, CatalystExchange, CancelSwap, L
                 }
             }
         } else {
-             if (command == Commands.TRANSFER_FROM) {
+             if (command == Commands.PERMIT2_TRANSFER_FROM_BATCH) {
+                (IAllowanceTransfer.AllowanceTransferDetails[] memory batchDetails) = abi.decode(inputs, (IAllowanceTransfer.AllowanceTransferDetails[]));
+                permit2TransferFrom(batchDetails, lockedBy);
+             } else if (command == Commands.TRANSFER_FROM) {
                     // equivalent: abi.decode(inputs, (address, address, uint160))
                     address token;
                     address recipient;

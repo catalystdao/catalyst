@@ -30,5 +30,6 @@ library Commands {
 
     // Command Types where 0x10<=value
     uint256 constant EXECUTE_SUB_PLAN       = 0x10;
+    uint256 constant PERMIT2_TRANSFER_FROM_BATCH = 0x1e;
     uint256 constant TRANSFER_FROM          = 0x1f;
 }
