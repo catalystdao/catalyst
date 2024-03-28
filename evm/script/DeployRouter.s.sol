@@ -12,7 +12,7 @@ import { RouterParameters } from "../src/router/base/RouterImmutables.sol";
 contract DeployRouter is MultiChainDeployer {
     using stdJson for string;
 
-    address expectedRouterAddress = address(0x0000002B1B9521c5c406FF340B2E8E3cFbf5e03a);
+    address expectedRouterAddress = address(0x0000009586123fBAAe1929B0768feb8BDBB0145d);
     address expectedPermit2Address = address(0x000000000022D473030F116dDEE9F6B43aC78BA3);
 
     string config_token;
