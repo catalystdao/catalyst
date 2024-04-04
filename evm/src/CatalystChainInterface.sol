@@ -545,7 +545,7 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
                 // The logic is not contained within a try - except so if the logic reverts
                 // the transaction will timeout and the user gets the input tokens on the sending chain.
                 // If this is not desired, wrap further logic in a try - except at dataTarget.
-                ICatalystReceiver(dataTarget).onCatalystCall(purchasedTokens, dataArguments);
+                ICatalystReceiver(dataTarget).onCatalystCall(purchasedTokens, dataArguments, false);
                 // If dataTarget doesn't implement onCatalystCall BUT implements a fallback function, the call will still succeed.
             }
             return 0x00;
@@ -579,7 +579,7 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
                 // The logic is not contained within a try - except so if the logic reverts
                 // the transaction will timeout and the user gets the input tokens on the sending chain.
                 // If this is not desired, wrap further logic in a try - except at dataTarget.
-                ICatalystReceiver(dataTarget).onCatalystCall(purchasedVaultTokens, dataArguments);
+                ICatalystReceiver(dataTarget).onCatalystCall(purchasedVaultTokens, dataArguments, false);
                 // If dataTarget doesn't implement onCatalystCall BUT implements a fallback function, the call will still succeed.
             }
             return 0x00;
@@ -818,7 +818,7 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
         if (calldataLength != 0) {
             address dataTarget = address(bytes20(cdata[2:2+20]));
             bytes calldata customCalldata = cdata[2+20:2+calldataLength];
-            ICatalystReceiver(dataTarget).onCatalystCall(purchasedTokens, customCalldata);
+            ICatalystReceiver(dataTarget).onCatalystCall(purchasedTokens, customCalldata, true);
         }
         
         emit SwapUnderwritten(
