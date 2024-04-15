@@ -770,7 +770,7 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
             identifier,
             toAsset,
             U,
-            minOut * (2 << 16) / ((2 << 16) - uint256(underwriteIncentiveX16))  // minout is checked after underwrite fee.
+            minOut * (1 << 16) / ((1 << 16) - uint256(underwriteIncentiveX16))  // minout is checked after underwrite fee.
         );
 
         // The following number of lines act as re-entry protection. Do not add any external call inbetween these lines.
