@@ -96,8 +96,9 @@ contract TestUnderwrite is TestCommon, ICatalystReceiver {
     
     bytes on_catalyst_call_data;
 
-    function onCatalystCall(uint256 /* purchasedTokens */, bytes calldata data) external {
+    function onCatalystCall(uint256 /* purchasedTokens */, bytes calldata data, bool underwritten) external {
         on_catalyst_call_data = data;
+        assertEq(underwritten, true, "Underwrite not correctly indicated");
     }
 }
 

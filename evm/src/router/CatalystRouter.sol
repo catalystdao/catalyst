@@ -71,7 +71,7 @@ contract CatalystRouter is RouterImmutables, ICatalystRouter, Dispatcher, ICatal
         return command & Commands.FLAG_ALLOW_REVERT == 0;
     }
 
-    function onCatalystCall(uint256 /* purchasedTokens */, bytes calldata data) external {
+    function onCatalystCall(uint256 /* purchasedTokens */, bytes calldata data, bool /* underwritten */) external {
         bytes calldata commands = data.toBytes(0);
         bytes[] calldata inputs = data.toBytesArray(1);
 
