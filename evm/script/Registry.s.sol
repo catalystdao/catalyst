@@ -65,7 +65,18 @@ contract Registry is BaseMultiChainDeployer {
         deploy_lens(bytes32(0));
 
         setRegistry("v1");
-        setDescriber();
+        __setDescriber();
+    }
+
+    function _setDescriber() internal {
+        load_config();
+
+        __setDescriber();
+    }
+
+    function setDescriber(string[] memory chains) iter_chains_string(chains) broadcast external {
+        admin = vm.envAddress("CATALYST_ADDRESS");
+        _setDescriber();
     }
 
     function deploy(string[] memory chains) iter_chains_string(chains) broadcast external {
@@ -125,7 +136,7 @@ contract Registry is BaseMultiChainDeployer {
         if (!contains) reg.modifyDescriber(registry.describer, version);
     }
 
-    function setDescriber() internal {
+    function __setDescriber() internal {
         CatalystDescriber desc = CatalystDescriber(registry.describer);
         // Set (or update) the templates
         address current_volatile_template = desc.version_to_template("volatile");

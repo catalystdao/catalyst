@@ -27,29 +27,29 @@ contract Swap is Script, IMessageEscrowStructs {
         uint256 deployerPrivateKey = vm.envUint("DEPLOYER_PK");
         vm.startBroadcast(deployerPrivateKey);
 
-        address fromVault = address(0xBd529ff730DAE029fA85B38d98d6046721215FA4);
-        address toVault = address(0xcdFeF148155ee1d5d908D4d7030de865E5720D1f);
+        address fromVault = address(0xf1D1A2ee1Eb8A04be6474aaaADDB8539D06bd0d0);
+        address toVault = address(0x794EfdbE09A135BE183C3cED192A1eD94A02b074);
 
         // mantle
         address WGAS = ICatalystV1Vault(fromVault)._tokenIndexing(0);
 
-        uint256 amount = 0.0001 * 1e18;
+        uint256 amount = 1 * 1e18;
 
         Token(WGAS).approve(fromVault, 2**256-1);
         IWETH(WGAS).deposit{value: amount}();
 
         for (uint256 i = 0; i < n; ++i) {
-            ICatalystV1Vault(fromVault).sendAsset{value: 0.2 ether}(
+            ICatalystV1Vault(fromVault).sendAsset{value: 0.007 ether}(
                 ICatalystV1Structs.RouteDescription({
-                    chainIdentifier: bytes32(uint256(44963396551096171397092266893742463113889440497773945538210212856297399779328)),
+                    chainIdentifier: bytes32(uint256(44963396551096171397165175003751151599300063736385732409163549762670697644032)),
                     toVault: abi.encodePacked(uint8(20), bytes32(0), abi.encode(toVault)),
                     toAccount: abi.encodePacked(uint8(20), bytes32(0), abi.encode(address(0x0000007aAAC54131e031b3C0D6557723f9365A5B))),
                     incentive: IncentiveDescription({
-                        maxGasDelivery: 2000000,
-                        maxGasAck: 2000000,
+                        maxGasDelivery: 700000,
+                        maxGasAck: 700000,
                         refundGasTo: address(0x0000007aAAC54131e031b3C0D6557723f9365A5B),
-                        priceOfDeliveryGas: 10 gwei,
-                        priceOfAckGas: 60 gwei,
+                        priceOfDeliveryGas: 5 gwei,
+                        priceOfAckGas: 5 gwei,
                         targetDelta: 0 minutes
                     }),
                     deadline: uint64(0)

@@ -38,8 +38,8 @@
   "PolymerOPBASEsepolia": {
     "cci_version": "Polymer",
     "optimismsepolia": {
-      "cci": "0x77d13f9aea291f7294d596431ea61d1765c4acab",
-      "address": "0xcdfef148155ee1d5d908d4d7030de865e5720d1f",
+      "cci": "0xa47591ba12dd1c0e59a997a84356228dd9d2a5ed",
+      "address": "0x8d4a70ffa99a8a74b1a9f4409352a5d2e9e9a132",
       "weights": [
         1
       ],
@@ -49,8 +49,8 @@
       }
     },
     "basesepolia": {
-      "cci": "0x76dc10065949c258923b9273513e27ff52de8c02",
-      "address": "0xbd529ff730dae029fa85b38d98d6046721215fa4",
+      "cci": "0xae1b33e8570a3485f846f2fbe1e7d5d9e64978c3",
+      "address": "0xf1d1a2ee1eb8a04be6474aaaaddb8539d06bd0d0",
       "weights": [
         1
       ],
