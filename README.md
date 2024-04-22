@@ -49,7 +49,7 @@ Amplification: $P^\theta(w)= \frac{W_i}{(W_i \cdot w)^\theta} \cdot (1-\theta)$
 
 **LocalSwap**: A combination of *sendAsset* and *receiveAsset* executed atomically, often on a single chain.
 
-**Invariant**: A measure used to measure the vault value. Specific to the *invariant* measure, is that it is constant whenever a swap is completed. If a vault implements a swap fee, the measure increases as fees accumulate in the vault. The invariant is not invariant to deposits or withdrawals. The invariants can continously be examined if the the number of emitted Units is kept track of. In the below equations, this is representated as $\sum U$.
+**Invariant**: A measure used to measure the vault value. Specific to the *invariant* measure, is that it is constant whenever a swap is completed. If a vault implements a swap fee, the measure increases as fees accumulate in the vault. The invariant is not invariant to deposits or withdrawals. The invariants can continously be examined if the number of emitted Units is kept track of. In the below equations, this is representated as $\sum U$.
 
 ## The AMM Equations
 
