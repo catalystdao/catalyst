@@ -415,7 +415,7 @@ abstract contract CatalystVaultCommon is
         if (_escrowLookup[sendAssetHash] != address(0))  revert EscrowAlreadyExists();
         _escrowLookup[sendAssetHash] = fallbackUser;
         unchecked {
-            // Must be less than than the vault balance.
+            // Must be less than the vault balance.
             _escrowedTokens[fromAsset] += amount;
         }
     }
