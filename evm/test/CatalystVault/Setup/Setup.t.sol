@@ -51,7 +51,7 @@ abstract contract TestSetup is TestCommon, AVaultInterfaces {
 
         // Verify the 'VaultDeployed' event
         Vm.Log[] memory logs = vm.getRecordedLogs();
-        Vm.Log memory vaultDeployedLog = logs[12];
+        Vm.Log memory vaultDeployedLog = logs[logs.length - 1];
 
         assertEq(vaultDeployedLog.topics[1], bytes32(uint256(uint160(vaultTemplate))));
         assertEq(vaultDeployedLog.topics[2], bytes32(uint256(uint160(address(CCI)))));

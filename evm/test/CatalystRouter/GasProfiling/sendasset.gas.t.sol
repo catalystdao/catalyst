@@ -100,7 +100,7 @@ contract TestRouterSendassetProfile is TestCommon {
 
         Vm.Log[] memory entries = vm.getRecordedLogs();
 
-        (bytes32 destinationIdentifier, bytes memory recipitent, bytes memory messageWithContext) = abi.decode(entries[4].data, (bytes32, bytes, bytes));
+        (bytes32 destinationIdentifier, bytes memory recipitent, bytes memory messageWithContext) = abi.decode(entries[3].data, (bytes32, bytes, bytes));
 
         (bytes memory _metadata, bytes memory toExecuteMessage) = getVerifiedMessage(address(GARP), messageWithContext);
 
