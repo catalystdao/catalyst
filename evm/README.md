@@ -334,7 +334,7 @@ import { ICatalystV1Vault, ICatalystV1Structs } from "../src/ICatalystV1Vault.so
 contract ExampleTest is TestCommon {
   address vault1;
   address vault2;
-  bytes32 FEE_RECIPITANT = bytes32(uint256(uint160(0)));
+  bytes32 FEE_RECIPITANT = bytes32(uint256(uint160(0xdead)));
 
   function setUp() public override {...}
 
@@ -390,7 +390,7 @@ import { ICatalystV1Vault, ICatalystV1Structs } from "../src/ICatalystV1Vault.so
 contract ExampleTest is TestCommon {
   address vault1;
   address vault2;
-  bytes32 FEE_RECIPITANT = bytes32(uint256(uint160(0)));
+  bytes32 FEE_RECIPITANT = bytes32(uint256(uint160(0xdead)));
 
   function setUp() public override {...}
 
@@ -449,7 +449,7 @@ import { ICatalystV1Vault, ICatalystV1Structs } from "../src/ICatalystV1Vault.so
 contract ExampleTest is TestCommon {
   address vault1;
   address vault2;
-  bytes32 FEE_RECIPITANT = bytes32(uint256(uint160(0)));
+  bytes32 FEE_RECIPITANT = bytes32(uint256(uint160(0xdead)));
 
   function setUp() public override {...}
 
