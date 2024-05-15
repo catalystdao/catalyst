@@ -7,7 +7,7 @@ import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
 
 /**
  * @title Catalyst: The Multi-Chain Vault
- * @author Cata Labs
+ * @author Cata Labs Inc.
  * @notice Catalyst multi-chain vault using the asset specific
  * pricing curve: 1/w^\theta (1 - \theta) where \theta is 
  * the vault amplification and w is the vault asset balance.

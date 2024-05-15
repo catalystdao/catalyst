@@ -12,7 +12,7 @@ uint256 constant MAX_GOVERNANCE_FEE_SHARE = 75e16;   // 75%
 
 /**
  * @title Catalyst Swap Factory
- * @author Cata Labs
+ * @author Cata Labs Inc.
  * @notice Allows permissionless deployment Catalyst vaults
  * and defines governance address for vaults to read.
  * !The owner of the factory must be a timelock!

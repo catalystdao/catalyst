@@ -18,20 +18,31 @@ import "./CatalystPayload.sol";
 
 
 /**
- * @title Catalyst: Generalised IBC Interface
- * @author Cata Labs
- * @notice This contract is a generalised proof of concept
- * IBC interface using an example ABI.
- * It acts as an intermediate between the vault and the router to
- * abstract router logic away from the vaults. This simplifies the
- * development of the vaults and allows Catalyst to adopt or change
- * message routers with more flexibility.
+ * @title Catalyst Cross-chain Interface for Generalised Incentives.
+ * @author Cata Labs Inc.
+ * @notice Cross-chain interface built using Generalised Incentives.
+ * Catalyst vaults depends on a translator contract to execute cross-chain swaps to convert
+ * the swap details into a bytearray that can be sent to the destination chain.
+ *
+ * The cross-chain interface is also in charge of extending messaging protocol with additional features
+ * like underwriting. 
+ * 
+ * Underwriting is facilitated by allowing external actors to front the output of a swap. The cross-chain interfaces creates 
+ * an appropriate escrow on the vault and then pays the user. Once the incoming swap arrives, it is intercepted to release the
+ * escrow to then pay the underwriter.
+ *
+ * @dev To adopt the cross-chain interface for another messaging protocol, you need to
+ * - Change the message submission flow: (GARP.submitMessage(...))
+ * - Change the package callbakcs (receiveMessage, receiveAck)
+ *
+ * However, it may be required to also modify the vaults as the incentive structure is currently fixed.
  */
 contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
     
     //--- ERRORS ---//
-     // Only the message router should be able to deliver messages.
+    /** @dev Only the message router should be able to deliver messages. */
     error InvalidCaller(); // 48f5c3ed 
+
     error InvalidContext(bytes1 context); // 9f769791
     error InvalidAddress(); // e6c4247b
     error InvalidSourceApplication(); // 003923e0
@@ -97,7 +108,7 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
     // The reason behind is if the underwrite duration was timestamp based, say 8 hours. If the chain haulted for
     // 10 hours, then the underwriter would risk being expired and lose everything. If a chain doesn't produce any
     // blocks during a hault, then it wouldn't be a risk to an underwriter.
-    // Generally, it is more common for there to be unpredictable block slowdowns rather than unpredictable block speedups.
+    // Generally, it is more common for unpredictable block slowdowns rather than unpredictable block speedups.
 
     /// @notice The initial underwrite duration (in blocks).
     /// @dev Is 8 hours if the block time is 2 seconds, 48 hours if the block time is 12 seconds. Not a great initial value but better than nothing.
@@ -114,39 +125,47 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
 
     //--- Config ---//
 
+    /** @notice The generalised incentives endpoint */
     IIncentivizedMessageEscrow public immutable GARP; // Set on deployment
-
 
     //-- Underwriting Config--//
 
-    // How many blocks should there be between when an identifier can be underwritten.
+    /** 
+     * @notice How many blocks should there be between when an identifier can be underwritten.
+     * @dev The purpose of these buffer blocks is to ensure that underwriters don't mistakenly underwrite swaps right after they are filled.
+     */
     uint24 constant BUFFER_BLOCKS = 4;
 
-    uint256 constant public UNDERWRITING_COLLATERAL = 35;  // 3,5% extra as collateral.
+    /** @notice Set underwriter collateral. Is of UNDERWRITING_COLLATERAL_DENOMINATOR */
+    uint256 constant public UNDERWRITING_COLLATERAL = 35;  // 3.5% extra as collateral.
     uint256 constant public UNDERWRITING_COLLATERAL_DENOMINATOR = 1000;
 
-    uint256 constant public EXPIRE_CALLER_REWARD = 350;  // 35% of the 3,5% = 1,225%. Of $1000 = $12,25
+    /** @notice How much of the collateral is given to the exipirer the rest goes to the vault. Is of EXPIRE_CALLER_REWARD_DENOMINATOR. */
+    uint256 constant public EXPIRE_CALLER_REWARD = 350;  // 35% of the 3.5% = 1.225%. Of $1000 = $12.25
     uint256 constant public EXPIRE_CALLER_REWARD_DENOMINATOR = 1000;
-
 
     //--- Storage ---//
 
-    /// @notice The destination address on the chain by chain identifier.
+    /** @notice The destination address on the chain by chain identifier. */
     mapping(bytes32 => bytes) public chainIdentifierToDestinationAddress;
 
-    /// @notice The minimum amount of gas for a specific chain. bytes32(0) indicates ack.
+    /** @notice The minimum amount of gas for a specific chain. bytes32(0) indicates ack. */
     mapping(bytes32 => uint48) public minGasFor;
 
     //-- Underwriting Storage --//
-    /// @notice Sets the maximum duration for underwriting.
-    /// @dev Should be set long enough for all swaps to be able to confirm + a small buffer
-    /// Should also be set long enough to not take up an excess amount of escrow usage.
+
+    /** 
+     * @notice Sets the maximum duration for underwriting.
+     * @dev Should be set long enough for all swaps to be able to confirm + a small buffer
+     * Should also be set short enough to not take up an excess amount of escrow usage.
+     */
     uint256 public maxUnderwritingDuration = INITIAL_MAX_UNDERWRITE_BLOCK_DURATION;
 
-    /// @notice Maps underwriting identifiers to underwriting state.
-    /// refundTo can be checked to see if the ID has been underwritten.
+    /** 
+     * @notice Maps underwriting identifiers to underwriting state.
+     * refundTo can be checked to see if the ID has been underwritten.
+     */
      mapping(bytes32 => UnderwritingStorage) public underwritingStorage;
-
 
     constructor(address GARP_, address defaultOwner) payable {
         require(address(GARP_) != address(0));  // dev: GARP_ cannot be zero address
@@ -156,23 +175,26 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
         emit MaxUnderwriteDuration(INITIAL_MAX_UNDERWRITE_BLOCK_DURATION);
     }
 
-
     //-- Admin--//
 
-    /// @notice Allow updating of the minimum gas limit.
-    /// @dev Set chainIdentifier to 0 for gas for ack. 
+    /** 
+     * @notice Allow updating of the minimum gas limit.
+     * @dev Set chainIdentifier to 0 for gas for ack. 
+     */
     function setMinGasFor(bytes32 chainIdentifier, uint48 minGas) override external onlyOwner {
         minGasFor[chainIdentifier] = minGas;
 
         emit MinGasFor(chainIdentifier, minGas);
     }
 
-    /// @notice Sets the new max underwrite duration, which is the period of time
-    /// before an underwrite can be expired. When an underwrite is expired, the underwriter
-    /// loses all capital provided.
-    /// @dev This function can be exploited by the owner. By setting newMaxUnderwriteDuration to (almost) 0 right before someone calls underwrite and then
-    /// expiring them before the actual swap arrives. The min protection here is not sufficient since it needs to be well into 
-    /// when a message can be validated. As a result, the owner of this contract should be a timelock which underwriters monitor.
+    /**
+     * @notice Sets the new max underwrite duration: That is the period of time before an underwrite can be expired.
+     * When an underwrite is expired, the underwriter loses all capital provided.
+     * @dev This function can be exploited by the owner. By setting newMaxUnderwriteDuration to (almost) 0 right before 
+     * someone calls underwrite and then expiring them before the actual swap arrives. The min protection here is not
+     * sufficient since it needs to be well into when a message can be validated. As a result, the owner of this contract
+     * should be a timelock which underwriters monitor or trusted by underwriters.
+     */
     function setMaxUnderwritingDuration(uint256 newMaxUnderwriteDuration) onlyOwner override external {
         if (newMaxUnderwriteDuration <= MIN_UNDERWRITE_BLOCK_DURATION) revert MaxUnderwriteDurationTooShort();
         // If the underwriting duration is too long, users can freeze up a lot of value for not a lot of cost.

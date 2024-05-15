@@ -14,7 +14,7 @@ import "./ICatalystV1Vault.sol";
 
 /**
  * @title Catalyst: The Multi-Chain Vault
- * @author Cata Labs
+ * @author Cata Labs Inc.
  * @notice Catalyst multi-chain vault using the asset specific
  * pricing curve: W/w where W is an asset-specific weight and w
  * is the vault asset balance.

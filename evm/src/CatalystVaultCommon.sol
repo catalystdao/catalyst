@@ -19,7 +19,7 @@ import { ICatalystV1Vault } from "./ICatalystV1Vault.sol";
 
 /**
  * @title Catalyst: Common Vault Logic
- * @author Cata Labs
+ * @author Cata Labs Inc.
  * @notice This abstract contract defines general logic of a Catalyst vault like:
  * - Vault Token through Solmate's ERC20 implementation.
  * - Connection management
