@@ -41,7 +41,7 @@ contract MockApplication is ICrossChainReceiver {
         MESSAGE_ESCROW.setRemoteImplementation(chainIdentifier, implementation);
     }
 
-    function receiveAck(bytes32 destinationIdentifier, bytes32 messageIdentifier, bytes calldata acknowledgement) external {
+    function receiveAck(bytes32 destinationIdentifier, bytes32 /* messageIdentifier */, bytes calldata acknowledgement) external {
         emit AckMessage(destinationIdentifier, acknowledgement);
     }
 

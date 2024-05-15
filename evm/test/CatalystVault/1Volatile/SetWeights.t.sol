@@ -46,7 +46,7 @@ abstract contract TestSetWeights is Test, AVaultInterfaces {
         return changeFactors;
     }
 
-    function mockNewWeights() internal returns(uint256[] memory) {
+    function mockNewWeights() view internal returns(uint256[] memory) {
 
         uint256[] memory weights = mockWeights();
         uint256[] memory changeFactors = mockWeightChangeFactors();

@@ -31,7 +31,7 @@ function queryWeightsSum(ICatalystV1Vault vault) view returns (uint256) {
     }
 }
 
-function queryVaultBalances(ICatalystV1Vault vault) returns (uint256[] memory) {
+function queryVaultBalances(ICatalystV1Vault vault) view returns (uint256[] memory) {
 
     uint256 assetCount = queryAssetCount(vault);
 
@@ -44,7 +44,7 @@ function queryVaultBalances(ICatalystV1Vault vault) returns (uint256[] memory) {
     return balances;
 }
 
-function queryVaultWeights(ICatalystV1Vault vault) returns (uint256[] memory) {
+function queryVaultWeights(ICatalystV1Vault vault) view returns (uint256[] memory) {
 
     uint256 assetCount = queryAssetCount(vault);
 
@@ -159,8 +159,6 @@ abstract contract TestWithdrawUnbalanced is TestCommon, AVaultInterfaces {
                 0
             );
 
-            uint256[] memory afterSwapBalances = queryVaultBalances(vault);
-
 
             // Execute the withdrawal
             uint256 withdrawAmount = totalSupply * withdrawalPercentage / type(uint32).max;
@@ -226,8 +224,6 @@ abstract contract TestWithdrawUnbalanced is TestCommon, AVaultInterfaces {
                 swapAmount,
                 0
             );
-
-            uint256[] memory afterSwapBalances = queryVaultBalances(vault);
 
             uint256 withdrawAmount = totalSupply * withdrawalPercentage / type(uint32).max;
             Token(address(vault)).transfer(user, withdrawAmount);
