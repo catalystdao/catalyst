@@ -52,7 +52,7 @@ contract TestRouterLocalswapProfile is TestCommon {
     }
     
     function test_profile_localswap() external {
-        (address fromVault, address toVault) = pool1();
+        (address fromVault, ) = pool1();
         address fromAsset = ICatalystV1Vault(fromVault)._tokenIndexing(0);
         address toAsset = ICatalystV1Vault(fromVault)._tokenIndexing(1);
 

@@ -27,7 +27,7 @@ function queryWeightsSum(ICatalystV1Vault vault) view returns (uint256 weightsSu
     }
 }
 
-function getEvenWithdrawRatios(uint256 assetCount) returns (uint256[] memory) {
+function getEvenWithdrawRatios(uint256 assetCount) view returns (uint256[] memory) {
 
     uint256[] memory ratios = new uint256[](assetCount);
 
