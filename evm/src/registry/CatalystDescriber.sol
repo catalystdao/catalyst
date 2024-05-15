@@ -1,7 +1,7 @@
 //SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
-import "openzeppelin-contracts/contracts/access/Ownable.sol";
+import { Ownable } from "solady/auth/Ownable.sol";
 import "../interfaces/ICatalystV1VaultImmutables.sol";
 import "./interfaces/ICatalystMathLibCommon.sol";
 import "../interfaces/ICatalystV1Factory.sol";
@@ -52,7 +52,7 @@ contract CatalystDescriber is Contains, Ownable {
 
 
     constructor(address defaultOwner) payable {
-        _transferOwnership(defaultOwner);
+        _initializeOwner(defaultOwner);
         initBlock = block.number;
     }
 

@@ -1,7 +1,7 @@
 //SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
-import "openzeppelin-contracts/contracts/access/Ownable.sol";
+import { Ownable } from "solady/auth/Ownable.sol";
 import { Contains } from "./lib/Contains.sol";
 
 /**
@@ -31,7 +31,7 @@ contract CatalystDescriberRegistry is Contains, Ownable {
     mapping(address => uint256) private _describer_version;
 
     constructor(address defaultOwner) {
-        _transferOwnership(defaultOwner);
+        _initializeOwner(defaultOwner);
         initBlock = block.number;
     }
 
