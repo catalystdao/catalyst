@@ -1,8 +1,10 @@
 //SPDX-License-Identifier: MIT
 pragma solidity ^0.8.17;
 
-/// @title Derived Vault state
-/// @notice Contains all vault state which is derived from vault storage
+/**
+ * @title Derived Vault state
+ * @notice Contains all vault state which is derived from vault storage
+ */
 interface ICatalystV1VaultDerived {
     /** @notice  Returns the current cross-chain unit capacity. */
     function getUnitCapacity() external view returns (uint256);

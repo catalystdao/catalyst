@@ -1,8 +1,10 @@
 //SPDX-License-Identifier: MIT
 pragma solidity ^0.8.17;
 
-/// @title Immutable vault state
-/// @notice Contains all vault state which doesn't change once set.
+/**
+ * @title Immutable vault state
+ * @notice Contains all vault state which doesn't change once set.
+ */
 interface ICatalystV1VaultImmutables {
     function _chainInterface() external view returns (address);
 
@@ -10,6 +12,9 @@ interface ICatalystV1VaultImmutables {
 
     function MATHLIB() external view returns (address);
 
-    /// @notice To indicate which token is desired on the target vault, the _toAsset is an integer from 0 to MAX_ASSETS indicating which asset the vault should purchase with units.
+    /** 
+     * @notice To indicate which token is desired on the target vault,the _toAsset is an integer
+     * from 0 to MAX_ASSETS indicating which asset the vault should purchase with units.
+     */
     function _tokenIndexing(uint256 tokenIndex) external view returns (address);
 }

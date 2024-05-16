@@ -1,7 +1,7 @@
 //SPDX-License-Identifier: MIT
 pragma solidity ^0.8.17;
 
-/// @title Extensions to vaults which supports underwriting.
+/** @title Extensions to vaults which supports underwriting. */
 interface ICatalystV1Underwriting {
     function underwriteAsset(
         bytes32 identifier,

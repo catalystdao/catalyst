@@ -13,7 +13,7 @@ import { ICatalystReceiver} from "./interfaces/IOnCatalyst.sol";
 import "./ICatalystV1Vault.sol";
 
 /**
- * @title Catalyst: The Multi-Chain Vault
+ * @title Catalyst: Fixed rate cross-chain swap vault.
  * @author Cata Labs Inc.
  * @notice Catalyst multi-chain vault using the asset specific
  * pricing curve: 1/w^\theta (1 - \theta) where \theta is 
@@ -41,15 +41,14 @@ import "./ICatalystV1Vault.sol";
  * If connected to a supported cross-chain interface, call
  * setConnection to connect the vault with vaults on other chains.
  *
- * Finally, call finishSetup to give up the creator's control
- * over the vault. 
+ * Finally, call finishSetup to give up the creator's control over the vault. 
  * !If finishSetup is not called, the vault can be drained by the creator!
  */
 contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
     //--- Storage ---//
     
     /** 
-     * @notice Adjustment used to remove a certain escrow amount from the balance 0 computation
+     * @notice Adjustment used to remove a certain escrow amount from the balance * computation
      */
     mapping(address => uint256) public _underwriteEscrowMatchBalance0;
 
@@ -96,7 +95,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
      * i_t \cdot W_i = j_t \cdot W_j \forall i, j when P_i(i_t) = P_j(j_t).
      * in other words, weights are used to compensate for the difference in decimals. (or non 1:1.)
      * @param amp Amplification factor. Should be < 10**18.
-     * @param depositor The address depositing the initial token balances.
+     * @param depositor The address to mint tokens to.
      */
     function initializeSwapCurves(
         address[] calldata assets,
@@ -136,7 +135,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
             _tokenIndexing[it] = tokenAddress;
 
             uint256 weight = weights[it];
-            require(weight != 0);       // dev: invalid 0-valued weight provided
+            require(weight != 0);  // dev: invalid 0-valued weight provided
             _weight[tokenAddress] = weight;
 
             // The contract expects the tokens to have been sent to it before setup is
@@ -162,7 +161,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
         // storage should be the current balance.
         _maxUnitCapacity = maxUnitCapacity;
 
-        // Mint vault tokens for vault creator.
+        // Mint vault tokens to the vault creator.
         _mint(depositor, INITIAL_MINT_AMOUNT);
 
         emit VaultDeposit(depositor, INITIAL_MINT_AMOUNT, initialBalances);
@@ -205,8 +204,8 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
      * @dev Reverts if 'fromAsset' is not a token in the vault or if 
      * 'amount' and the vault asset balance are both 0.
      * Does not contain the swap fee.
-     * @param fromAsset The address of the token to sell.
-     * @param amount The amount of from token to sell.
+     * @param fromAsset Address of the token to sell.
+     * @param amount Amount of from token to sell.
      * @return uint256 Units.
      */
     function calcSendAsset(
@@ -235,9 +234,9 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
      * @notice Computes the output of ReceiveAsset excluding fees.
      * @dev Reverts if 'toAsset' is not a token in the vault.
      * Does not contain the swap fee.
-     * @param toAsset The address of the token to buy.
-     * @param U The number of units to convert.
-     * @return uint256 Number of purchased tokens.
+     * @param toAsset Address of the token to buy.
+     * @param U Number of units to convert.
+     * @return uint256 Ppurchased tokens.
      */
     function calcReceiveAsset(
         address toAsset,
@@ -260,9 +259,9 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
      * Reverts if either 'fromAsset' or 'toAsset' is not in the vault, or if the vault 'fromAsset'
      * balance and 'amount' are both 0.
      * Does not contain the swap fee.
-     * @param fromAsset The address of the token to sell.
-     * @param toAsset The address of the token to buy.
-     * @param amount The amount of from token to sell for to token.
+     * @param fromAsset Address of the token to sell.
+     * @param toAsset Address of the token to buy.
+     * @param amount Amount of from token to sell for to token.
      * @return output Output denominated in toAsset.
      */
     function calcLocalSwap(
@@ -292,9 +291,9 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
      * Deposit is done by converting tokenAmounts into units and then using
      * the macro for units to vault tokens. (_calcPriceCurveLimitShare).
      * The elements of tokenAmounts correspond to _tokenIndexing[0...N].
-     * @param tokenAmounts An array of the tokens amounts to be deposited.
-     * @param minOut The minimum number of vault tokens to be minted.
-     * @return vaultTokens The number of minted vault tokens.
+     * @param tokenAmounts Array of the tokens amounts to be deposited.
+     * @param minOut Minimum number of vault tokens to be minted.
+     * @return vaultTokens Number of minted vault tokens.
      */
     function depositMixed(
         uint256[] memory tokenAmounts,
@@ -450,9 +449,9 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
      * @notice Burns vault tokens and releases the symmetrical share of tokens to the burner.
      * This can impact the vault prices.
      * @dev This is the cheapest way to withdraw and only way to withdraw 100% of the liquidity.
-     * @param vaultTokens The number of vault tokens to burn.
-     * @param minOut The minimum token output. If less is returned, the transaction reverts.
-     * @return amounts An array containing the amounts withdrawn.
+     * @param vaultTokens Number of vault tokens to burn.
+     * @param minOut Minimum token output. If less is returned, the transaction reverts.
+     * @return amounts Array containing the amounts withdrawn.
      */
     function withdrawAll(
         uint256 vaultTokens,
@@ -625,14 +624,14 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
     }
 
     /**
-     * @notice Burns vaultTokens and release a token distribution which can be set by the user.
+     * @notice Burns vaultTokens and release a token distribution set by the user.
      * @dev It is advised that the withdrawal matches the vault's %token distribution.
      * Notice the special scheme for the ratios used. This is done to optimise gas since it doesn't require a sum or ratios.
      * Cannot be used to withdraw all liquidity. For that, withdrawAll should be used.
-     * @param vaultTokens The number of vault tokens to withdraw.
-     * @param withdrawRatio The percentage of units used to withdraw. In the following special scheme: U_0 = U · withdrawRatio[0], U_1 = (U - U_0) · withdrawRatio[1], U_2 = (U - U_0 - U_1) · withdrawRatio[2], .... Is WAD.
-     * @param minOut The minimum number of tokens withdrawn.
-     * @return amounts An array containing the amounts withdrawn.
+     * @param vaultTokens Number of vault tokens to withdraw.
+     * @param withdrawRatio Percentage of units used to withdraw. In the following special scheme: U_0 = U · withdrawRatio[0], U_1 = (U - U_0) · withdrawRatio[1], U_2 = (U - U_0 - U_1) · withdrawRatio[2], .... Is WAD.
+     * @param minOut Minimum number of tokens withdrawn.
+     * @return amounts Array containing the amounts withdrawn.
      */
     function withdrawMixed(
         uint256 vaultTokens,
@@ -791,10 +790,10 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
 
     /**
      * @notice A swap between 2 assets within the vault. Is atomic.
-     * @param fromAsset The asset the user wants to sell.
-     * @param toAsset The asset the user wants to buy.
-     * @param amount The amount of fromAsset the user wants to sell.
-     * @param minOut The minimum output the user wants. Otherwise, the transaction reverts.
+     * @param fromAsset Asset the user wants to sell.
+     * @param toAsset Asset the user wants to buy.
+     * @param amount Amount of fromAsset the user wants to sell.
+     * @param minOut Minimum output the user wants. Otherwise, the transaction reverts.
      * @return out The number of tokens purchased.
      */
     function localSwap(
@@ -834,7 +833,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
         emit LocalSwap(msg.sender, fromAsset, toAsset, amount, out);
     }
 
-    /** @notice Handles common logic between both sendAsset implementations  */
+    /** @notice Common logic between sendAsset implementations */
     function _sendAsset(
         RouteDescription calldata routeDescription,
         address fromAsset,
@@ -911,16 +910,16 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
 
     /**
      * @notice Initiate a cross-chain swap by purchasing units and transfering the units to the target vault.
-     * @param routeDescription A cross-chain route description that contains the chainIdentifier, toAccount, toVault and relaying incentive.
-     * @param fromAsset The asset the user wants to sell.
-     * @param toAssetIndex The index of the asset the user wants to buy in the target vault.
-     * @param amount The number of fromAsset to sell to the vault.
-     * @param minOut The minimum number output of tokens on the target chain.
+     * @param routeDescription Cross-chain route description that contains the chainIdentifier, toAccount, toVault and relaying incentive.
+     * @param fromAsset Asset the user wants to sell.
+     * @param toAssetIndex Index of the asset the user wants to buy in the target vault.
+     * @param amount Number of fromAsset to sell to the vault.
+     * @param minOut Minimum number output of tokens on the target chain.
      * @param fallbackUser If the transaction fails, send the escrowed funds to this address.
-     * @param underwriteIncentiveX16 The payment for underwriting the swap (out of type(uint16).max).
+     * @param underwriteIncentiveX16 Payment for underwriting the swap (out of type(uint16).max).
      * @param calldata_ Data field if a call should be made on the target chain.
      * Encoding depends on the target chain, with EVM: bytes.concat(bytes20(uint160(<address>)), <data>). At maximum 65535 bytes can be passed.
-     * @return U The number of units bought.
+     * @return U Number of units bought.
      */
     function sendAsset(
         RouteDescription calldata routeDescription,
@@ -932,16 +931,8 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
         uint16 underwriteIncentiveX16,
         bytes calldata calldata_
     ) nonReentrant onlyConnectedPool(routeDescription.chainIdentifier, routeDescription.toVault) external payable override returns (uint256 U) {
-        // Fallback user cannot be address(0) since this is used as a check for the existance of an escrow.
-        // It would also be a silly fallback address.
-        require(fallbackUser != address(0));
-        // Correct address format is checked on the cross-chain interface. As a result, the below snippit is not needed.
-        /*
-            require(toVault.length == 65);  // dev: Vault addresses are uint8 + 64 bytes.
-            require(toAccount.length == 65);  // dev: Account addresses are uint8 + 64 bytes.
-        */
-
         // _updateAmplification();
+
         uint256 fee = FixedPointMathLib.mulWad(amount, _vaultFee);
 
         // Calculate the units bought.
@@ -966,14 +957,14 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
      * @notice Initiate a cross-chain swap by purchasing units and transfer them to another vault using a fixed number of units.
      * @dev This function is intended to match an existing underwrite. Since normal sendAssets aren't "exact" in regards to U,
      * this functions makes it easier to hit a specific underwrite.
-     * @param routeDescription A cross-chain route description that contains the chainIdentifier, toAccount, toVault and relaying incentive.
-     * @param fromAsset The asset the user wants to sell.
-     * @param toAssetIndex The index of the asset the user wants to buy in the target vault.
-     * @param amount The number of fromAsset to sell to the vault.
-     * @param minOut The minimum number output of tokens on the target chain.
-     * @param minU The minimum and exact number of units sent.
+     * @param routeDescription Cross-chain route description that contains the chainIdentifier, toAccount, toVault and relaying incentive.
+     * @param fromAsset Asset the user wants to sell.
+     * @param toAssetIndex Index of the asset the user wants to buy in the target vault.
+     * @param amount Number of fromAsset to sell to the vault.
+     * @param minOut Minimum number output of tokens on the target chain.
+     * @param minU Minimum and exact number of units sent.
      * @param fallbackUser If the transaction fails, send the escrowed funds to this address.
-     * @param underwriteIncentiveX16 The payment for underwriting the swap (out of type(uint16).max).
+     * @param underwriteIncentiveX16 Payment for underwriting the swap (out of type(uint16).max).
      * @param calldata_ Data field if a call should be made on the target chain.
      * Encoding depends on the target chain, with EVM: bytes.concat(bytes20(uint160(<address>)), <data>). At maximum 65535 bytes can be passed..
      * @return U Always equal to minOut, as that is the number of units to be used on the destination chain.
@@ -989,14 +980,7 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
         uint16 underwriteIncentiveX16,
         bytes calldata calldata_
     ) nonReentrant onlyConnectedPool(routeDescription.chainIdentifier, routeDescription.toVault) external payable override returns (uint256 U) {
-        // Fallback user cannot be address(0) since this is used as a check for the existance of an escrow.
-        // It would also be a silly fallback address.
-        require(fallbackUser != address(0));
-        // Correct address format is checked on the cross-chain interface. As a result, the below snippit is not needed.
-        /*
-            require(toVault.length == 65);  // dev: Vault addresses are uint8 + 64 bytes.
-            require(toAccount.length == 65);  // dev: Account addresses are uint8 + 64 bytes.
-        */
+        // _updateAmplification();
 
         uint256 fee = FixedPointMathLib.mulWad(amount, _vaultFee);
 
@@ -1026,10 +1010,10 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
      * @notice Handles common logic associated with the completion of a cross-chain swap.
      * This function convert incoming Units (expected to be from an incoming cross-chain swap) into a specific token.
      * @dev This function is intended to finalise a receiveAsset call.
-     * @param toAsset The asset to buy with the units.
+     * @param toAsset Asset to buy with the units.
      * @param U Incoming units to be turned into vaults tokens.
-     * @param minOut The minimum number of tokens to purchase. Will revert if less.
-     * @return purchasedTokens The number of toAsset bought. Is greater than minOut.
+     * @param minOut Minimum number of tokens to purchase. Will revert if less.
+     * @return purchasedTokens Number of toAsset bought.
      */
     function _receiveAsset(
         address toAsset,
@@ -1060,15 +1044,16 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
     /**
      * @notice Completes a cross-chain swap by converting units to the desired token.
      * @dev Security checks are performed by _receiveAsset.
-     * @param channelId The source chain identifier.
-     * @param fromVault The source vault.
+     * @param channelId Source chain identifier.
+     * @param fromVault Source vault.
      * @param toAssetIndex Index of the asset to be purchased.
-     * @param toAccount The recipient.
+     * @param toAccount Recipient of assets on destination chain.
      * @param U Incoming units.
      * @param minOut Minimum number of token to buy. Reverts back to the sending side.
      * @param fromAmount Used to match cross-chain swap events. The input amount minus fees on the sending chain.
      * @param fromAsset Used to match cross-chain swap events. The input asset on the source chain.
      * @param blockNumberMod Used to match cross-chain swap events. The block number from the source chain.
+     * @param purchasedTokens Number of toAsset bought.
      */
     function receiveAsset(
         bytes32 channelId,
@@ -1189,13 +1174,13 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
      * @notice Initiate a cross-chain liquidity swap by withdrawing tokens and converting them to units.
      * @dev While the description says tokens are withdrawn and then converted to units, vault tokens are converted
      * directly into units through the following equation: U = N · wa^(1-k) · (((PT + pt)/PT)^(1-k) - 1)
-     * @param routeDescription A cross-chain route description that contains the chainIdentifier, toAccount, toVault, and relaying incentive.
-     * @param vaultTokens The number of vault tokens to exchange.
-     * @param minOut An array of minout describing: [the minimum number of vault tokens, the minimum number of reference assets].
+     * @param routeDescription Cross-chain route description that contains the chainIdentifier, toAccount, toVault, and relaying incentive.
+     * @param vaultTokens Number of vault tokens to exchange.
+     * @param minOut Array of minout describing: [the minimum number of vault tokens, the minimum number of reference assets].
      * @param fallbackUser If the transaction fails, send the escrowed funds to this address.
      * @param calldata_ Data field if a call should be made on the target chain.
      * Encoding depends on the target chain, with EVM: abi.encodePacket(bytes20(<address>), <data>). At maximum 65535 bytes can be passed.
-     * @return U The number of units bought.
+     * @return U Number of units bought.
      */
     function sendLiquidity(
         RouteDescription calldata routeDescription,
@@ -1207,15 +1192,11 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
         // Fallback user cannot be address(0) since this is used as a check for the existance of an escrow.
         // It would also be a silly fallback address.
         require(fallbackUser != address(0));
-        // Correct address format is checked on the cross-chain interface. As a result, the below snippit is not needed.
-        /*
-            require(toVault.length == 65);  // dev: Vault addresses are uint8 + 64 bytes.
-            require(toAccount.length == 65);  // dev: Account addresses are uint8 + 64 bytes.
-        */
+        // Correct address format is checked on the cross-chain interface.
 
         // _updateAmplification();
 
-        // When accesssing totalSupply, remember that we have already burnt the incoming vaultTokens.
+        // When accesssing totalSupply, remember that we already burnt the incoming vaultTokens.
         _burn(msg.sender, vaultTokens);
 
         int256 oneMinusAmp = _oneMinusAmp;
@@ -1357,9 +1338,9 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
      * @dev Security checks are performed by _receiveLiquidity.
      * While the description says units are converted to tokens and then deposited, units are converted
      * directly to vault tokens through the following equation: pt = PT · (((N · wa_0^(1-k) + U)/(N · wa_0^(1-k))^(1/(1-k)) - 1)
-     * @param channelId The source chain identifier.
-     * @param fromVault The source vault.
-     * @param toAccount The recipient.
+     * @param channelId Source chain identifier.
+     * @param fromVault Source vault.
+     * @param toAccount Recipient of vault tokens.
      * @param U Incoming units to be turned into vault tokens.
      * @param minVaultTokens Minimum number of vault tokens to mint (revert if less).
      * @param minReferenceAsset Minimum number of reference tokens the vaults tokens are worth (revert if less).
@@ -1396,11 +1377,11 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
      * @dev Should never revert!
      * The base implementation exists in CatalystVaultCommon. The function adds security limit
      * adjustment to the implementation to swap volume supported.
-     * @param toAccount The recipient of the transaction on the target chain.
-     * @param U The number of units purchased.
-     * @param escrowAmount The number of tokens escrowed.
-     * @param escrowToken The token escrowed.
-     * @param blockNumberMod The block number at which the swap transaction was commited (mod 32)
+     * @param toAccount Recipient of the transaction on the target chain.
+     * @param U Number of units purchased.
+     * @param escrowAmount Number of tokens escrowed.
+     * @param escrowToken Token escrowed.
+     * @param blockNumberMod Block number at which the swap transaction was commited (mod 32)
      */
     function onSendAssetSuccess(
         bytes32 channelId,
@@ -1452,11 +1433,11 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
      * @dev Should never revert!
      * The base implementation exists in CatalystVaultCommon. The function adds security limit
      * adjustment to the implementation to swap volume supported.
-     * @param toAccount The recipient of the transaction on the target chain.
-     * @param U The number of units acquired.
-     * @param escrowAmount The number of tokens escrowed.
-     * @param escrowToken The token escrowed.
-     * @param blockNumberMod The block number at which the swap transaction was commited (mod 32)
+     * @param toAccount Recipient of the transaction on the target chain.
+     * @param U Number of units acquired.
+     * @param escrowAmount Number of tokens escrowed.
+     * @param escrowToken Token escrowed.
+     * @param blockNumberMod Block number at which the swap transaction was commited (mod 32)
      */
     function onSendAssetFailure(
         bytes32 channelId,
@@ -1484,10 +1465,10 @@ contract CatalystVaultAmplified is CatalystVaultCommon, IntegralsAmplified {
      * @notice Deletes and releases liquidity escrowed tokens to the vault and updates the security limit.
      * @dev Should never revert!  
      * The base implementation exists in CatalystVaultCommon.
-     * @param toAccount The recipient of the transaction on the target chain. Encoded in bytes32.
-     * @param U The number of units initially acquired.
-     * @param escrowAmount The number of vault tokens escrowed.
-     * @param blockNumberMod The block number at which the swap transaction was commited (mod 32)
+     * @param toAccount Recipient of the transaction on the target chain. Encoded in bytes32.
+     * @param U Number of units initially acquired.
+     * @param escrowAmount Number of vault tokens escrowed.
+     * @param blockNumberMod Block number at which the swap transaction was commited (mod 32)
      */
     function onSendLiquidityFailure(
         bytes32 channelId,
