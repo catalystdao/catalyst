@@ -295,7 +295,7 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
     }
 
     /**
-     * @notice Packs cross-chain swap information into a bytearray and sends it to the target vault with IBC.
+     * @notice Packs cross-chain swap information into a bytearray to send to the destination cross-chain interface.
      * @dev Callable by anyone but this cannot be abused since the connection management ensures no wrong messages enter a healthy vault.
      * @param routeDescription A cross-chain route description which contains the chainIdentifier, toAccount, toVault and relaying incentive.
      * @param toAssetIndex The index of the asset the user wants to buy in the target vault.
@@ -362,7 +362,7 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
     }
 
     /**
-     * @notice Packs cross-chain swap information into a bytearray and sends it to the target vault with IBC.
+     * @notice Packs cross-chain swap information into a bytearray and sends it to the destination cross-chain interface.
      * @dev Callable by anyone but this cannot be abused since the connection management ensures no wrong messages enter a healthy vault.
      * @param routeDescription A cross-chain route description which contains the chainIdentifier, toAccount, toVault and relaying incentive.
      * @param U The calculated liquidity reference. (Units)
