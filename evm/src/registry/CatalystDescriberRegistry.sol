@@ -6,8 +6,8 @@ import { Contains } from "./lib/Contains.sol";
 
 /**
  * @title Catalyst: Describer Registry
- * @author Catalyst Labs
- * @notice This contract serves as an index of Catalyst Describer.
+ * @author Catalyst Labs Inc.
+ * @notice This contract serves as an index of Catalyst Describers.
  */
 contract CatalystDescriberRegistry is Contains, Ownable {
     struct AddressAndVersion {
@@ -15,7 +15,7 @@ contract CatalystDescriberRegistry is Contains, Ownable {
         string version;
     }
 
-    /// @notice Describes the catalyst version and the associated describer.
+    /** @notice Describes the catalyst version and the associated describer. */
     event ModifyDescriber(
         address catalystDescriber,
         string version
@@ -36,17 +36,6 @@ contract CatalystDescriberRegistry is Contains, Ownable {
     }
 
     //--- Getters ---//
-
-    /**
-    * @notice Returns all describers.
-    */
-    function get_vault_describers() public view returns (address[] memory catalystDescribers) {
-        catalystDescribers = new address[](describer_versions.length);
-        for (uint256 i = 0; i < describer_versions.length; ++i) {
-            string memory version = describer_versions[i];
-            catalystDescribers[i] = version_to_describer[version];
-        }
-    }
 
     /**
      * @notice Return an array of describers along with their respective version.

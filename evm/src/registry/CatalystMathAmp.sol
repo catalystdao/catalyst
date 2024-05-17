@@ -11,23 +11,26 @@ import "../IntegralsAmplified.sol";
 
 /**
  * @title Catalyst: Amplified mathematics implementation
- * @author Catalyst Labs
+ * @author Catalyst Labs Inc.
  * @notice This contract is not optimised for on-chain calls and serves to aid in off-chain quering.
  */
 contract CatalystMathAmp is IntegralsAmplified, ICatalystMathLibAmp {
 
-    // When the swap is a very small size of the vault, the swaps
-    // returns slightly more. To counteract this, an additional fee
-    // slightly larger than the error is added. The below constants
-    // determines when this fee is added and the size.
+    /**
+     * @dev  When the swap is a very small size of the vault, the
+     * swaps returns slightly more. To counteract this, an additional 
+     * fee slightly larger than the error is added. The below 
+     * constants determines when this fee is added and the size.
+     */
     uint256 constant public SMALL_SWAP_RATIO = 1e12;
     uint256 constant public SMALL_SWAP_RETURN = 95e16;
     
     /**
      * @notice Helper function which returns the true amplification. If amp is being adjusted, the pure vault amp might be inaccurate.
-     * @dev If amplification is being changed, the amplification read directly from the vaults are only updated when they are needed. (swaps, balance changes, etc)
+     * @dev This function is unused.
+     * If amplification is being changed, the amplification read directly from the vaults are only updated when they are needed. (swaps, balance changes, etc)
      * This function implements the amp change logic (almost exactly), such that one can read the amplifications if one were to execute a balance change.
-     * @param vault The address of the vault to fetch the amp for.
+     * @param vault Address of the vault to fetch the amp for.
      * @return uint256 Returns the (estimated) true amp.
      */
     function getTrueAmp(address vault) public view returns(int256) {
@@ -76,7 +79,7 @@ contract CatalystMathAmp is IntegralsAmplified, ICatalystMathLibAmp {
 
     /** 
      * @notice Helper function which returns the amount after fee.
-     * @dev The fee is taken from the input amount
+     * @dev The fee is taken from the input amount.
      * @param vault Vault to read vault fee.
      * @param amount Input swap amount
      * @return uint256 Input amount after vault fee.
@@ -93,10 +96,10 @@ contract CatalystMathAmp is IntegralsAmplified, ICatalystMathLibAmp {
      * The value is returned as units, which is always WAD.
      * @dev All input amounts should be the raw numbers and not WAD.
      * Since units are always denominated in WAD, the function should be treated as mathematically *native*.
-     * @param input The input amount.
-     * @param A The current vault balance of the x token.
-     * @param W The weight of the x token.
-     * @param oneMinusAmp The amplification.
+     * @param input Input amount.
+     * @param A Current vault balance of the x token.
+     * @param W Weight of the x token.
+     * @param oneMinusAmp Amplification as (1-k)
      * @return uint256 Units (units are **always** WAD).
      */
     function calcPriceCurveArea(
@@ -119,8 +122,8 @@ contract CatalystMathAmp is IntegralsAmplified, ICatalystMathLibAmp {
      * Since units are always multiplied by WAD, the function
      * should be treated as mathematically *native*.
      * @param U Incoming vault specific units.
-     * @param B The current vault balance of the y token.
-     * @param W The weight of the y token.
+     * @param B Current vault balance of the y token.
+     * @param W Weight of the y token.
      * @return uint25 Output denominated in output token. (not WAD)
      */
     function calcPriceCurveLimit(
@@ -144,11 +147,11 @@ contract CatalystMathAmp is IntegralsAmplified, ICatalystMathLibAmp {
      * _calcPriceCurveLimit(_calcPriceCurveArea(input, A, W_A, amp), B, W_B, amp).
      * @dev All input amounts should be the raw numbers and not WAD.
      * @param input The input amount.
-     * @param A The current vault balance of the _in token.
-     * @param B The current vault balance of the _out token.
-     * @param W_A The vault weight of the _in token.
-     * @param W_B The vault weight of the _out token.
-     * @param oneMinusAmp The amplification.
+     * @param A Current vault balance of the _in token.
+     * @param B Current vault balance of the _out token.
+     * @param W_A Vault weight of the _in token.
+     * @param W_B Vault weight of the _out token.
+     * @param oneMinusAmp Amplification as (1-k).
      * @return uint256 Output denominated in output token.
      */
     function calcCombinedPriceCurves(
@@ -166,10 +169,10 @@ contract CatalystMathAmp is IntegralsAmplified, ICatalystMathLibAmp {
      * @notice Converts units into vault tokens with the below formula
      *      pt = PT · (((N · wa_0^(1-k) + U)/(N · wa_0^(1-k))^(1/(1-k)) - 1)
      * @dev The function leaves a lot of computation to the external implementation. This is done to avoid recomputing values several times.
-     * @param U Then number of units to convert into vault tokens.
-     * @param ts The current vault token supply. The escrowed vault tokens should not be added, since the function then returns more.
+     * @param U Number of units to convert into vault tokens.
+     * @param ts Current vault token supply. The escrowed vault tokens should not be added, since the function then returns more.
      * @param it_times_walpha_amped wa_0^(1-k)
-     * @param oneMinusAmpInverse The vault amplification.
+     * @param oneMinusAmpInverse Vault amplification as 1/(1-k)
      * @return uint256 Output denominated in vault tokens.
      */
     function calcPriceCurveLimitShare(uint256 U, uint256 ts, uint256 it_times_walpha_amped, int256 oneMinusAmpInverse) external pure returns (uint256) {
@@ -186,9 +189,9 @@ contract CatalystMathAmp is IntegralsAmplified, ICatalystMathLibAmp {
     /**
      * @notice Computes the exchange of assets to units. This is the first part of a swap.
      * @dev Reverts if fromAsset is not in the vault.
-     * @param vault The vault address to examine.
-     * @param fromAsset The address of the token to sell.
-     * @param amount The amount of from token to sell.
+     * @param vault Vault address to examine.
+     * @param fromAsset Address of the token to sell.
+     * @param amount Amount of from token to sell.
      * @return uint256 Units.
      */
     function calcSendAsset(
@@ -217,8 +220,8 @@ contract CatalystMathAmp is IntegralsAmplified, ICatalystMathLibAmp {
     /**
      * @notice Computes the exchange of units to assets. This is the second and last part of a swap.
      * @dev Reverts if toAsset is not in the vault.
-     * @param vault The vault address to examine.
-     * @param toAsset The address of the token to buy.
+     * @param vault Vault address to examine.
+     * @param toAsset Address of the token to buy.
      * @return uint256 tokens.
      */
     function calcReceiveAsset(
@@ -241,10 +244,10 @@ contract CatalystMathAmp is IntegralsAmplified, ICatalystMathLibAmp {
      * @notice Computes the output of localSwap.
      * @dev Reverts if either from or to is not in the vault,
      * or if the vault 'fromAsset' balance and 'amount' are both 0.
-     * @param vault The vault address to examine.
-     * @param fromAsset The address of the token to sell.
-     * @param toAsset The address of the token to buy.
-     * @param amount The amount of from token to sell for to token.
+     * @param vault Vault address to examine.
+     * @param fromAsset Address of the token to sell.
+     * @param toAsset Address of the token to buy.
+     * @param amount Amount of from token to sell for to token.
      * @return uint256 Output denominated in toAsset.
      */
     function calcLocalSwap(
@@ -280,8 +283,8 @@ contract CatalystMathAmp is IntegralsAmplified, ICatalystMathLibAmp {
     /**
     * @notice Computes part of the mid price. calcCurrentPriceTo can be used to compute the pairwise price.
     * @dev Alternativly, dividing calcAsyncPriceFrom by another calcAsyncPriceFrom, results in the pairwise price.
-    * @param vault The vault address to examine.
-    * @param fromAsset The address of the token to sell.
+    * @param vault Vault address to examine.
+    * @param fromAsset Address of the token to sell.
     */
     function calcAsyncPriceFrom(
         address vault,
@@ -300,8 +303,8 @@ contract CatalystMathAmp is IntegralsAmplified, ICatalystMathLibAmp {
 
     /**
     * @notice Computes a pairwise mid price. Requires input from calcAsyncPriceFrom.
-    * @param vault The vault address to examine.
-    * @param toAsset The address of the token to buy.
+    * @param vault Vault address to examine.
+    * @param toAsset Address of the token to buy.
     * @param calcAsyncPriceFromQuote The output of calcAsyncPriceFrom.
     * @return uint256 The pairwise mid price.
     */
@@ -325,10 +328,10 @@ contract CatalystMathAmp is IntegralsAmplified, ICatalystMathLibAmp {
 
     /**
     * @notice Computes the current mid price. This is the current marginal price between the 2 assets.
-    * @dev The mid price cannot be traded on, since the fees acts as the spread.
-    * @param vault The vault address to examine.
-    * @param fromAsset The address of the token to sell.
-    * @param toAsset The address of the token to buy.
+    * @dev The mid price cannot be traded on, since the fees acts as spread.
+    * @param vault Vault address to examine.
+    * @param fromAsset Address of the token to sell.
+    * @param toAsset Address of the token to buy.
     * @return uint256 Output denominated in toAsset.
     */
     function calcCurrentPrice(
