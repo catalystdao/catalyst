@@ -1,14 +1,14 @@
 {
   "contracts": {
-    "amplified_mathlib": "0xBB5a61795DF139d79818A34B350e64DAF5ABA263",
-    "amplified_template": "0x227eDab609f7369291290e4f8bfB1Ab5ab09C4BD",
-    "factory": "0xa957Ab873c06933b389D32a58131f13e60E488c5",
-    "volatile_mathlib": "0x8a550acf727f484d93B1b18A6Fc87cE9081cE260",
-    "volatile_template": "0x6E288f366141CbbabeEB8F3d8efc2eE9D28c1fF2"
+    "amplified_mathlib": "0x0000005243d4f6c3123F922eb3A1B832E171F972",
+    "amplified_template": "0x00000000b02189eA1fB645bD0127f23B65aE8D1E",
+    "factory": "0x00000000bA0074B396954A4d17293BFcD818215C",
+    "volatile_mathlib": "0x0000007A30bD219B5B7FDcaA8a47784F301505C4",
+    "volatile_template": "0x0000000004B96454e2d7890E6dd8448E511250b1"
   },
   "registry": {
-    "describer": "0x5514d9b55CdCbA70A6aF19Ca1E3443b1abEa104A",
-    "describer_registry": "0x56dCAa213D0da8dC0eb21ac71fB63EF28D497fd8",
-    "lens": "0x7E511493d23c0ad9dc1a6137D24BE5aa273773eE"
+    "describer": "0x02C76C5E0D6F84CEdcDA11c20E982A1939d1de3E",
+    "describer_registry": "0xe4D78617900e4c2241ccA45FFe0aA1F3A37B5164",
+    "lens": "0xAfdF93959eeE61Fc7AB577d3D26e840FA21CD7c9"
   }
 }

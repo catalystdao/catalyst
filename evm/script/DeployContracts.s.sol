@@ -98,13 +98,13 @@ contract DeployContracts is Script {
 
         admin = admin_;
 
-        deployFactory(bytes32(uint256(251)));
+        deployFactory(bytes32(0xe810ad7329bc18a3661da69243c260bddf93c02cb86f51d82cef8f77664b1dc1));
 
-        deploy_volatile_mathlib(bytes32(uint256(251)));
-        deploy_amplified_mathlib(bytes32(uint256(251)));
+        deploy_volatile_mathlib(bytes32(0xeadb0c4c623a1504e49ea876afaf2e1a24a663e81e05ac04fc82ab1a53974533));
+        deploy_amplified_mathlib(bytes32(0x178f2263b6b48c743c92919210db1f9ffdd16b679f9a49a60db831ee745c1b53));
 
-        deploy_volatile_template(bytes32(uint256(251)));
-        deploy_amplified_template(bytes32(uint256(251)));
+        deploy_volatile_template(bytes32(0xab571b0631b64d37caa8e7d85912d505bf434d66e2b9df4088447821dac531d8));
+        deploy_amplified_template(bytes32(0x4aa36fb7e5e332061b6ad20a3b0de53dd4cf41391c9bf553367ba5165b60c5cd));
     }
 }
 
