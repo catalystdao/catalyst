@@ -70,25 +70,25 @@ contract Registry is BaseMultiChainDeployer {
 
     function deploy(string[] memory chains) iter_chains_string(chains) broadcast external {
         verify = true;
-        admin = vm.envAddress("CATALYST_ADDRESS");
+        admin = vm.addr(pk);
         _deploy();
     }
 
     function deployAll() iter_chains(chain_list) broadcast external {
         verify = true;
-        admin = vm.envAddress("CATALYST_ADDRESS");
+        admin = vm.addr(pk);
         _deploy();
     }
 
     function deployAllLegacy() iter_chains(chain_list_legacy) broadcast external {
         verify = true;
-        admin = vm.envAddress("CATALYST_ADDRESS");
+        admin = vm.addr(pk);
         _deploy();
     }
     
     function getAddresses() external {
         get = true;
-        admin = vm.envAddress("CATALYST_ADDRESS");
+        admin = vm.addr(vm.envUint("DEPLOYER_PK"));
 
         vm.startBroadcast(uint256(1));
 

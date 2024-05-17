@@ -1,27 +1,15 @@
 {
   "Wormhole": {
-    "mumbai": {
-      "interface": "0x0000000000000000000000000000000000000000",
-      "escrow": "0x0000000000000000000000000000000000000000"
-    },
     "sepolia": {
-      "interface": "0xB61759BD2De4b9D08FBd589848c5DC57aef0B608",
+      "interface": "0xEF04d76391C4b6a0c8BB5262f0f2214c261C4AD2",
       "escrow": "0x294F41D30D058C9e5A71810A6C758E595b7aC170"
     },
     "basesepolia": {
-      "interface": "0x9E2FDcf89e6A2536F4d7DEE99430d582a263441a",
+      "interface": "0xC7D9815055Ea739B78E2D10D0055d97010396b78",
       "escrow": "0x63B4E24DC9814fAcDe241fB4dEFcA04d5fc6d763"
     },
-    "arbitrumsepolia": {
-      "interface": "0x0000000000000000000000000000000000000000",
-      "escrow": "0x0000000000000000000000000000000000000000"
-    },
-    "optimismsepolia": {
-      "interface": "0x0000000000000000000000000000000000000000",
-      "escrow": "0x0000000000000000000000000000000000000000"
-    },
     "blasttestnet": {
-      "interface": "0xE4F88fa3b7D5B54A2B7FA1B9DBffBb68c942b365",
+      "interface": "0x39629dDb16a11E11fB62Bf46f34F63fF1c42B090",
       "escrow": "0x9524ACA1fF46fAd177160F0a803189Cb552A3780"
     }
   },
