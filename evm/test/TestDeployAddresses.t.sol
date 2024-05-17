@@ -26,7 +26,7 @@ contract TestDeployedCorrectAddresses is Test, DeployContracts {
         verify = false;
         vm.startBroadcast(123);
 
-        deployAllContracts(0x00000000042A0e90f74f036587d7912EA32EF5cC);
+        deployAllContracts(0x0000000099263f0735D03bB2787cE8FB84f6ED6E);
 
         vm.stopBroadcast();
 

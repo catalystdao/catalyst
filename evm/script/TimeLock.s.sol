@@ -27,9 +27,9 @@ contract DeployTimelock is BaseMultiChainDeployer {
     }
 
     function run() public {
-        bytes32 salt = bytes32(0x67e6613ce8cbbe2cbdf83a49a42f7506ba4f34ef5ce61e83c3935e85cac6a4a6);
+        bytes32 salt = bytes32(0xe28b85a3a6cd3c7b941c273688ed961305638df07108218fc6e68bcc364e7f37);
         address initalProposer = address(0xE759cBa7dE5bF6E024BcbdD01941fc3b1713D2FC);
-        deployTimelockController(salt, initalProposer); // 0x00000000042A0e90f74f036587d7912EA32EF5cC
+        deployTimelockController(salt, initalProposer); // 0x0000000099263f0735D03bB2787cE8FB84f6ED6E
     }
 }
 
