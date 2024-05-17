@@ -4,6 +4,10 @@
       "interface": "0xEF04d76391C4b6a0c8BB5262f0f2214c261C4AD2",
       "escrow": "0x294F41D30D058C9e5A71810A6C758E595b7aC170"
     },
+    "optimismsepolia": {
+      "interface": "0xdB321B1E304eA155B1977768904De998818F986E",
+      "escrow": "0x198cDD55d90277726f3222D5A8111AdB8b0af9ee"
+    },
     "basesepolia": {
       "interface": "0xC7D9815055Ea739B78E2D10D0055d97010396b78",
       "escrow": "0x63B4E24DC9814fAcDe241fB4dEFcA04d5fc6d763"
