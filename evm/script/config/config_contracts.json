@@ -1,14 +1,14 @@
 {
   "contracts": {
-    "amplified_mathlib": "0xc090dcdC90178c86CFB643f6ce64aBecD3360247",
-    "amplified_template": "0x65E17EB8Eb46a7FA97d9E5316893C95D5e84bf35",
-    "factory": "0x343A85b1e0383A50D65adB5ed88B06cCF4187606",
-    "volatile_mathlib": "0x33D494F7AC4E506D31F37e3fD75CaE3ca87A3916",
-    "volatile_template": "0x35D30159b7A9B9098C1048cbe29168EffE7d3D02"
+    "amplified_mathlib": "0x000000575b0D9cc6ddbd8990db4d845fe480281f",
+    "amplified_template": "0x000000004aBe0D620b25b8B06B0712BDcff21899",
+    "factory": "0x00000000E5E81E25aeaD7fCCb4C9560C6b5b718F",
+    "volatile_mathlib": "0x000000992f6Bd813E0De5C595099C44d67ea28eD",
+    "volatile_template": "0x0000000003b8C9BFeB9351933CFC301Eea92073F"
   },
   "registry": {
-    "describer": "0x5514d9b55CdCbA70A6aF19Ca1E3443b1abEa104A",
-    "describer_registry": "0x56dCAa213D0da8dC0eb21ac71fB63EF28D497fd8",
-    "lens": "0x7E511493d23c0ad9dc1a6137D24BE5aa273773eE"
+    "describer": "0x3F578971672d5469D28B39ec2b367CbeBF238a11",
+    "describer_registry": "0x39AcfC1Edd61Eb08fB96523A3b5419B83A603820",
+    "lens": "0x7363003E709EE4Ce16c32D2DEE8B7616d91D51d5"
   }
 }

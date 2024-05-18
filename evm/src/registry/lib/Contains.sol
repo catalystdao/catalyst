@@ -3,7 +3,7 @@ pragma solidity ^0.8.19;
 
 /**
  * @title Catalyst: Catalyst Describer
- * @author Catalyst Labs
+ * @author Catalyst Labs Inc.
  * @notice This contract describes the a Catalyst implementation and serves to simplify off-chain queries.
  * As a result, the contract is not optimised for on-chain queries but rather easy of use off-chain.
  */

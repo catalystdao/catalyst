@@ -18,20 +18,31 @@ import "./CatalystPayload.sol";
 
 
 /**
- * @title Catalyst: Generalised IBC Interface
- * @author Cata Labs
- * @notice This contract is a generalised proof of concept
- * IBC interface using an example ABI.
- * It acts as an intermediate between the vault and the router to
- * abstract router logic away from the vaults. This simplifies the
- * development of the vaults and allows Catalyst to adopt or change
- * message routers with more flexibility.
+ * @title Catalyst Cross-chain Interface for Generalised Incentives.
+ * @author Cata Labs Inc.
+ * @notice Cross-chain interface built using Generalised Incentives.
+ * Catalyst vaults depends on a translator contract to execute cross-chain swaps to convert
+ * the swap details into a bytearray that can be sent to the destination chain.
+ *
+ * The cross-chain interface is also in charge of extending messaging protocol with additional features
+ * like underwriting. 
+ * 
+ * Underwriting is facilitated by allowing external actors to front the output of a swap. The cross-chain interfaces creates 
+ * an appropriate escrow on the vault and then pays the user. Once the incoming swap arrives, it is intercepted to release the
+ * escrow to then pay the underwriter.
+ *
+ * @dev To adopt the cross-chain interface for another messaging protocol, you need to
+ * - Change the message submission flow: (GARP.submitMessage(...))
+ * - Change the package callbakcs (receiveMessage, receiveAck)
+ *
+ * However, it may be required to also modify the vaults as the incentive structure is currently fixed.
  */
 contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
     
     //--- ERRORS ---//
-     // Only the message router should be able to deliver messages.
+    /** @dev Only the message router should be able to deliver messages. */
     error InvalidCaller(); // 48f5c3ed 
+
     error InvalidContext(bytes1 context); // 9f769791
     error InvalidAddress(); // e6c4247b
     error InvalidSourceApplication(); // 003923e0
@@ -97,7 +108,7 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
     // The reason behind is if the underwrite duration was timestamp based, say 8 hours. If the chain haulted for
     // 10 hours, then the underwriter would risk being expired and lose everything. If a chain doesn't produce any
     // blocks during a hault, then it wouldn't be a risk to an underwriter.
-    // Generally, it is more common for there to be unpredictable block slowdowns rather than unpredictable block speedups.
+    // Generally, it is more common for unpredictable block slowdowns rather than unpredictable block speedups.
 
     /// @notice The initial underwrite duration (in blocks).
     /// @dev Is 8 hours if the block time is 2 seconds, 48 hours if the block time is 12 seconds. Not a great initial value but better than nothing.
@@ -111,42 +122,49 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
     /// @dev Is 10 minutes if the block time is 2 seconds, 1 hour if the block time is 12 seconds.
     uint256 constant MIN_UNDERWRITE_BLOCK_DURATION = 1 hours / 12 seconds;  
 
-
     //--- Config ---//
 
+    /** @notice The generalised incentives endpoint */
     IIncentivizedMessageEscrow public immutable GARP; // Set on deployment
-
 
     //-- Underwriting Config--//
 
-    // How many blocks should there be between when an identifier can be underwritten.
+    /** 
+     * @notice How many blocks should there be between when an identifier can be underwritten.
+     * @dev The purpose of these buffer blocks is to ensure that underwriters don't mistakenly underwrite swaps right after they are filled.
+     */
     uint24 constant BUFFER_BLOCKS = 4;
 
-    uint256 constant public UNDERWRITING_COLLATERAL = 35;  // 3,5% extra as collateral.
+    /** @notice Set underwriter collateral. Is of UNDERWRITING_COLLATERAL_DENOMINATOR */
+    uint256 constant public UNDERWRITING_COLLATERAL = 35;  // 3.5% extra as collateral.
     uint256 constant public UNDERWRITING_COLLATERAL_DENOMINATOR = 1000;
 
-    uint256 constant public EXPIRE_CALLER_REWARD = 350;  // 35% of the 3,5% = 1,225%. Of $1000 = $12,25
+    /** @notice How much of the collateral is given to the exipirer the rest goes to the vault. Is of EXPIRE_CALLER_REWARD_DENOMINATOR. */
+    uint256 constant public EXPIRE_CALLER_REWARD = 350;  // 35% of the 3.5% = 1.225%. Of $1000 = $12.25
     uint256 constant public EXPIRE_CALLER_REWARD_DENOMINATOR = 1000;
-
 
     //--- Storage ---//
 
-    /// @notice The destination address on the chain by chain identifier.
+    /** @notice The destination address on the chain by chain identifier. */
     mapping(bytes32 => bytes) public chainIdentifierToDestinationAddress;
 
-    /// @notice The minimum amount of gas for a specific chain. bytes32(0) indicates ack.
+    /** @notice The minimum amount of gas for a specific chain. bytes32(0) indicates ack. */
     mapping(bytes32 => uint48) public minGasFor;
 
     //-- Underwriting Storage --//
-    /// @notice Sets the maximum duration for underwriting.
-    /// @dev Should be set long enough for all swaps to be able to confirm + a small buffer
-    /// Should also be set long enough to not take up an excess amount of escrow usage.
+
+    /** 
+     * @notice Sets the maximum duration for underwriting.
+     * @dev Should be set long enough for all swaps to be able to confirm + a small buffer
+     * Should also be set short enough to not take up an excess amount of escrow usage.
+     */
     uint256 public maxUnderwritingDuration = INITIAL_MAX_UNDERWRITE_BLOCK_DURATION;
 
-    /// @notice Maps underwriting identifiers to underwriting state.
-    /// refundTo can be checked to see if the ID has been underwritten.
+    /** 
+     * @notice Maps underwriting identifiers to underwriting state.
+     * refundTo can be checked to see if the ID has been underwritten.
+     */
      mapping(bytes32 => UnderwritingStorage) public underwritingStorage;
-
 
     constructor(address GARP_, address defaultOwner) payable {
         require(address(GARP_) != address(0));  // dev: GARP_ cannot be zero address
@@ -156,23 +174,26 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
         emit MaxUnderwriteDuration(INITIAL_MAX_UNDERWRITE_BLOCK_DURATION);
     }
 
-
     //-- Admin--//
 
-    /// @notice Allow updating of the minimum gas limit.
-    /// @dev Set chainIdentifier to 0 for gas for ack. 
+    /** 
+     * @notice Allow updating of the minimum gas limit.
+     * @dev Set chainIdentifier to 0 for gas for ack. 
+     */
     function setMinGasFor(bytes32 chainIdentifier, uint48 minGas) override external onlyOwner {
         minGasFor[chainIdentifier] = minGas;
 
         emit MinGasFor(chainIdentifier, minGas);
     }
 
-    /// @notice Sets the new max underwrite duration, which is the period of time
-    /// before an underwrite can be expired. When an underwrite is expired, the underwriter
-    /// loses all capital provided.
-    /// @dev This function can be exploited by the owner. By setting newMaxUnderwriteDuration to (almost) 0 right before someone calls underwrite and then
-    /// expiring them before the actual swap arrives. The min protection here is not sufficient since it needs to be well into 
-    /// when a message can be validated. As a result, the owner of this contract should be a timelock which underwriters monitor.
+    /**
+     * @notice Sets the new max underwrite duration: That is the period of time before an underwrite can be expired.
+     * When an underwrite is expired, the underwriter loses all capital provided.
+     * @dev This function can be exploited by the owner. By setting newMaxUnderwriteDuration to (almost) 0 right before 
+     * someone calls underwrite and then expiring them before the actual swap arrives. The min protection here is not
+     * sufficient since it needs to be well into when a message can be validated. As a result, the owner of this contract
+     * should be a timelock which underwriters monitor or trusted by underwriters.
+     */
     function setMaxUnderwritingDuration(uint256 newMaxUnderwriteDuration) onlyOwner override external {
         if (newMaxUnderwriteDuration <= MIN_UNDERWRITE_BLOCK_DURATION) revert MaxUnderwriteDurationTooShort();
         // If the underwriting duration is too long, users can freeze up a lot of value for not a lot of cost.
@@ -183,9 +204,13 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
         emit MaxUnderwriteDuration(newMaxUnderwriteDuration);
     }
 
+    /**
+     * @notice Check that the incentives are set. This is important for the system work
+     * without external monitoring. Especially the ack gas limit is important.
+     * @dev Is it enforced that the gas price of ack has to be 10% higher than the gas price spent on the submitted transaction.
+     */
     modifier checkRouteDescription(ICatalystV1Vault.RouteDescription calldata routeDescription) {
         // -- Check incentives -- //
-
         ICatalystV1Vault.IncentiveDescription calldata incentive = routeDescription.incentive;
         // 1. Gas limits
         uint48 minGasChainIdentifier = minGasFor[routeDescription.chainIdentifier];
@@ -198,7 +223,6 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
         if (incentive.priceOfAckGas < tx.gasprice * 11 / 10) revert NotEnoughIncentives(tx.gasprice * 11 / 10, incentive.priceOfAckGas);
 
         // -- Check Address Lengths -- //
-
         // toAccount
         if (!_checkBytes65(routeDescription.toAccount)) revert InvalidBytes65Address();
 
@@ -220,17 +244,22 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
 
     //-- Transparent viewer --//
 
-    /// @notice Estimate the addition verification cost beyond the 
-    /// cost paid to the relayer.
+    /**
+     * @notice Estimate the addition verification cost beyond the cost paid to the relayer.
+     * @dev This is implement as a simple lookup on GARP.
+     */
     function estimateAdditionalCost() override external view returns(address asset, uint256 amount) {
         (asset, amount) = GARP.estimateAdditionalCost();
     }
 
     //-- Functions --//
 
-    /// @notice matches the hash of error calldata to common revert functions
-    /// and then reverts a relevant ack which can be exposed on the origin to provide information
-    /// about why the transaction didn't execute as expected.
+    /**
+     * @notice matches the hash of error calldata to common revert functions
+     * and then reverts a relevant ack which can be exposed on the origin to provide information
+     * about why the transaction didn't execute as expected.
+     * @param err The error in bytes
+     */
     function _handleError(bytes memory err) pure internal returns (bytes1) {
         // To only get the error identifier, only use the first 8 bytes. This lets us add additional error
         // data for easier debugger on trace.
@@ -238,17 +267,19 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
         // We can use memory slices to get better insight into exactly the error which occured.
         // This would also allow us to reuse events.
         // However, it looks like it will significantly increase gas costs so this works for now.
-        // It looks like Solidity will improve their error catch implementation which will replace this.
+        // It looks like Solidity will improve their error catch implementation which can replace this.
         if (bytes8(abi.encodeWithSelector(ExceedsSecurityLimit.selector)) == errorIdentifier) return 0x11;
         if (bytes8(abi.encodeWithSelector(ReturnInsufficient.selector)) == errorIdentifier) return 0x12;
         if (bytes8(abi.encodeWithSelector(VaultNotConnected.selector)) == errorIdentifier) return 0x13;
         return 0x10; // unknown error.
     }
 
-    /// @notice Connects this CCI with another contract on another chain.
-    /// @dev To simplify the implementation, each chain can only be setup once. This reduces governance risks.
-    /// @param remoteCCI The bytes65 encoded address on the destination chain.
-    /// @param remoteGARP The messaging router encoded address on the destination chain.
+    /**
+     * @notice Connects this CCI with another contract on another chain.
+     * @dev Each chain can only be setup once. This reduces governance risks.
+     * @param remoteCCI The bytes65 encoded address on the destination chain.
+     * @param remoteGARP The messaging router encoded address on the destination chain.
+     */
     function connectNewChain(bytes32 chainIdentifier, bytes calldata remoteCCI, bytes calldata remoteGARP) onlyOwner checkBytes65Address(remoteCCI) override external {
         // Check if the chain has already been set.
         // If it has, we don't allow setting it as another. This would impact existing pools.
@@ -264,9 +295,8 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
     }
 
     /**
-     * @notice Packs cross-chain swap information into a bytearray and sends it to the target vault with IBC.
-     * @dev Callable by anyone but this cannot be abused since the connection management ensures no
-     * wrong messages enter a healthy vault.
+     * @notice Packs cross-chain swap information into a bytearray to send to the destination cross-chain interface.
+     * @dev Callable by anyone but this cannot be abused since the connection management ensures no wrong messages enter a healthy vault.
      * @param routeDescription A cross-chain route description which contains the chainIdentifier, toAccount, toVault and relaying incentive.
      * @param toAssetIndex The index of the asset the user wants to buy in the target vault.
      * @param U The calculated liquidity reference. (Units)
@@ -275,7 +305,7 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
      * @param fromAsset Escrow related value. The asset that was sold.
      * @param underwriteIncentiveX16 The payment for underwriting the swap (out of type(uint16).max)
      * @param calldata_ Data field if a call should be made on the target chain.
-     * Encoding depends on the target chain, with EVM: abi.encodePacket(bytes20(<address>), <data>).
+     * Encoding depends on the target chain, with EVM: bytes.concat(bytes20(uint160(<address>)), <data>).
      */
     function sendCrossChainAsset(
         ICatalystV1Vault.RouteDescription calldata routeDescription,
@@ -288,8 +318,8 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
         bytes calldata calldata_
     ) checkRouteDescription(routeDescription) override external payable {
         // We need to ensure that all information is in the correct places. This ensures that calls to this contract
-        // will always be decoded semi-correctly even if the input is very incorrect. This also checks that the user 
-        // inputs into the swap contracts are correct while making the cross-chain interface flexible for future implementations.
+        // will always be decoded semi-correctly even if the inputs are incorrect. This also checks that the user inputs
+        // into the swap contracts are correct while making the cross-chain interface flexible for future implementations.
         // These checks are done by the modifier.
 
         // Anyone can call this function, but unless someone can also manage to pass the security check on onRecvPacket
@@ -332,15 +362,14 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
     }
 
     /**
-     * @notice Packs cross-chain swap information into a bytearray and sends it to the target vault with IBC.
-     * @dev Callable by anyone but this cannot be abused since the connection management ensures no
-     * wrong messages enter a healthy vault.
+     * @notice Packs cross-chain swap information into a bytearray and sends it to the destination cross-chain interface.
+     * @dev Callable by anyone but this cannot be abused since the connection management ensures no wrong messages enter a healthy vault.
      * @param routeDescription A cross-chain route description which contains the chainIdentifier, toAccount, toVault and relaying incentive.
      * @param U The calculated liquidity reference. (Units)
      * @param minOut An array of minout describing: [the minimum number of vault tokens, the minimum number of reference assets]
      * @param fromAmount Escrow related value. The amount returned if the swap fails.
      * @param calldata_ Data field if a call should be made on the target chain.
-     * Encoding depends on the target chain, with EVM: abi.encodePacket(bytes20(<address>), <data>).
+     * Encoding depends on the target chain, with EVM: bytes.concat(bytes20(uint160(<address>)), <data>).
      */
     function sendCrossChainLiquidity(
         ICatalystV1Vault.RouteDescription calldata routeDescription,
@@ -350,8 +379,8 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
         bytes calldata calldata_
     ) checkRouteDescription(routeDescription) override external payable {
         // We need to ensure that all information is in the correct places. This ensures that calls to this contract
-        // will always be decoded semi-correctly even if the input is very incorrect. This also checks that the user 
-        // inputs into the swap contracts are correct while making the cross-chain interface flexible for future implementations.
+        // will always be decoded semi-correctly even if the input is incorrect. This also checks that the user inputs
+        // into the swap contracts are correct while making the cross-chain interface flexible for future implementations.
         // These checks are done by the modifier.
 
         // Anyone can call this function, but unless someone can also manage to pass the security check on onRecvPacket
@@ -360,11 +389,11 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
         // Encode payload. See CatalystPayload.sol for the payload definition
         bytes memory data = bytes.concat(
             CTX1_LIQUIDITY_SWAP,
-            bytes.concat(
+            // bytes.concat(
                 bytes1(uint8(20)),  // EVM addresses are 20 bytes.
                 bytes32(0),  // EVM only uses 20 bytes. abi.encode packs the 20 bytes into 32 then we need to add 32 more
-                bytes32(uint256(uint160(msg.sender)))  // Use abi.encode to encode address into 32 bytes
-            ),
+                bytes32(uint256(uint160(msg.sender))),  // Use abi.encode to encode address into 32 bytes
+            // )
             routeDescription.toVault,  // Length is expected to be pre-encoded.
             routeDescription.toAccount,  // Length is expected to be pre-encoded.
             bytes32(U),
@@ -396,7 +425,7 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
 
         if (context == CTX0_ASSET_SWAP) {
             ICatalystV1Vault(fromVault).onSendAssetSuccess(
-                destinationIdentifier,                                              // connectionId
+                destinationIdentifier,                                                      // connectionId
                 data[ TO_ACCOUNT_LENGTH_POS : TO_ACCOUNT_END ],                             // toAccount
                 uint256(bytes32(data[ UNITS_START : UNITS_END ])),                          // units
                 uint256(bytes32(data[ CTX0_FROM_AMOUNT_START : CTX0_FROM_AMOUNT_END ])),    // fromAmount
@@ -407,7 +436,7 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
         }
         if (context == CTX1_LIQUIDITY_SWAP) {
             ICatalystV1Vault(fromVault).onSendLiquiditySuccess(
-                destinationIdentifier,                                              // connectionId
+                destinationIdentifier,                                                      // connectionId
                 data[ TO_ACCOUNT_LENGTH_POS : TO_ACCOUNT_END ],                             // toAccount
                 uint256(bytes32(data[ UNITS_START : UNITS_END ])),                          // units
                 uint256(bytes32(data[ CTX1_FROM_AMOUNT_START : CTX1_FROM_AMOUNT_END ])),    // fromAmount
@@ -429,25 +458,23 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
         address fromVault = address(bytes20(data[ FROM_VAULT_START_EVM : FROM_VAULT_END ]));
 
         if (context == CTX0_ASSET_SWAP) {
-            ICatalystV1Vault(fromVault).onSendAssetFailure(
-                destinationIdentifier,                                        // connectionId
+            return ICatalystV1Vault(fromVault).onSendAssetFailure(
+                destinationIdentifier,                                                      // connectionId
                 data[ TO_ACCOUNT_LENGTH_POS : TO_ACCOUNT_END ],                             // toAccount
                 uint256(bytes32(data[ UNITS_START : UNITS_END ])),                          // units
                 uint256(bytes32(data[ CTX0_FROM_AMOUNT_START : CTX0_FROM_AMOUNT_END ])),    // fromAmount
                 address(bytes20(data[ CTX0_FROM_ASSET_START_EVM : CTX0_FROM_ASSET_END ])),  // fromAsset
                 uint32(bytes4(data[ CTX0_BLOCK_NUMBER_START : CTX0_BLOCK_NUMBER_END ]))     // block number
             );
-            return;
         }
         if (context == CTX1_LIQUIDITY_SWAP) {
-            ICatalystV1Vault(fromVault).onSendLiquidityFailure(
-                destinationIdentifier,                                        // connectionId
+            return ICatalystV1Vault(fromVault).onSendLiquidityFailure(
+                destinationIdentifier,                                                     // connectionId
                 data[ TO_ACCOUNT_LENGTH_POS : TO_ACCOUNT_END ],                             // toAccount
                 uint256(bytes32(data[ UNITS_START : UNITS_END ])),                          // units
                 uint256(bytes32(data[ CTX1_FROM_AMOUNT_START : CTX1_FROM_AMOUNT_END ])),    // fromAmount
                 uint32(bytes4(data[ CTX1_BLOCK_NUMBER_START : CTX1_BLOCK_NUMBER_END ]))     // block number
             );
-            return;
         }
         // A proper message should never get here. If the message got here, we are never going to be able to properly process it.
         revert InvalidContext(context);
@@ -461,7 +488,7 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
      */
     function receiveAck(bytes32 destinationIdentifier, bytes32 /* messageIdentifier */, bytes calldata acknowledgement) onlyGARP override external {
         // If the transaction executed but some logic failed, an ack is sent back with an error acknowledgement.
-        // This is known as "fail on ack". The package should be failed.
+        // We refer to this as "fail on ack". The package should be failed.
         // The acknowledgement is prepended the message, so we need to fetch it.
         // Then, we need to ignore it when passing the data to the handlers.
         bytes1 swapStatus = acknowledgement[0];
@@ -483,6 +510,7 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
     function receiveMessage(bytes32 sourceIdentifier, bytes32 /* messageIdentifier */, bytes calldata fromApplication, bytes calldata message) onlyGARP verifySourceChainAddress(sourceIdentifier, fromApplication) override external returns (bytes memory acknowledgement) {
         bytes1 swapStatus = _receiveMessage(sourceIdentifier, message);
 
+        // We will send the original message back. While this is not ideal from a size perspective, it makes it very easy to manage.
         return acknowledgement = bytes.concat(
             swapStatus,
             message
@@ -491,7 +519,7 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
 
     /**
      * @notice Message handler
-     * @param data The IBC packet
+     * @param data The data packet we originally sent.
      * @return acknowledgement The status of the transaction after execution
      */
     function _receiveMessage(bytes32 sourceIdentifier, bytes calldata data) internal virtual returns (bytes1 acknowledgement) {
@@ -512,12 +540,11 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
             return acknowledgement = _handleReceiveLiquidity(sourceIdentifier, data);
         }
         /* revert InvalidContext(context); */
-        // No return here. Instead, another implementation can override this implementation. It should just keep adding ifs with returns inside:
+        // No revert here. Instead, another implementation can override this implementation. It should just keep adding ifs with returns inside:
         // acknowledgement = super._receiveMessage(...)
         // if (acknowledgement == 0x01) { if (context == CTXX) ...}
         return acknowledgement = 0x01;
     }
-
 
     function _handleReceiveAssetFallback(bytes32 sourceIdentifier, bytes calldata data) internal returns (bytes1 status) {
         // We don't know how from_vault is encoded. So we load it as bytes. Including the length.
@@ -526,17 +553,17 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
         address toVault = address(bytes20(data[ TO_VAULT_START_EVM : TO_VAULT_END ]));
 
         try ICatalystV1Vault(toVault).receiveAsset(
-            sourceIdentifier,                                                      // connectionId
-            fromVault,                                                                   // fromVault
+            sourceIdentifier,                                                           // connectionId
+            fromVault,                                                                  // fromVault
             uint8(data[CTX0_TO_ASSET_INDEX_POS]),                                       // toAssetIndex
-            address(bytes20(data[ TO_ACCOUNT_START_EVM : TO_ACCOUNT_END ])),           // toAccount
+            address(bytes20(data[ TO_ACCOUNT_START_EVM : TO_ACCOUNT_END ])),            // toAccount
             uint256(bytes32(data[ UNITS_START : UNITS_END ])),                          // units
             uint256(bytes32(data[ CTX0_MIN_OUT_START : CTX0_MIN_OUT_END ])),            // minOut
             uint256(bytes32(data[ CTX0_FROM_AMOUNT_START : CTX0_FROM_AMOUNT_END ])),    // fromAmount
             bytes(data[ CTX0_FROM_ASSET_LENGTH_POS : CTX0_FROM_ASSET_END ]),            // fromAsset
             uint32(bytes4(data[ CTX0_BLOCK_NUMBER_START : CTX0_BLOCK_NUMBER_END ]))     // blocknumber
         ) returns(uint256 purchasedTokens) {
-            uint16 dataLength = uint16(bytes2(data[CTX0_DATA_LENGTH_START:CTX0_DATA_LENGTH_END]));
+            uint16 dataLength = uint16(bytes2(data[CTX0_DATA_LENGTH_START : CTX0_DATA_LENGTH_END]));
             if (dataLength != 0) {
                 address dataTarget = address(bytes20(data[ CTX0_DATA_START : CTX0_DATA_START+20 ]));
                 bytes calldata dataArguments = data[ CTX0_DATA_START+20 : CTX0_DATA_START+dataLength ];
@@ -570,7 +597,7 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
             uint256(bytes32(data[ CTX1_FROM_AMOUNT_START : CTX1_FROM_AMOUNT_END ])),    // fromAmount
             uint32(bytes4(data[ CTX1_BLOCK_NUMBER_START : CTX1_BLOCK_NUMBER_END ]))     // blocknumber
         ) returns (uint256 purchasedVaultTokens) {
-            uint16 dataLength = uint16(bytes2(data[CTX1_DATA_LENGTH_START:CTX1_DATA_LENGTH_END]));
+            uint16 dataLength = uint16(bytes2(data[CTX1_DATA_LENGTH_START : CTX1_DATA_LENGTH_END]));
             if (dataLength != 0) {
                 address dataTarget = address(bytes20(data[ CTX1_DATA_START : CTX1_DATA_START+20 ]));
                 bytes calldata dataArguments = data[ CTX1_DATA_START+20 : CTX1_DATA_START+dataLength ];
@@ -586,7 +613,6 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
         } catch (bytes memory err) {
             return _handleError(err);
         }
-        
     }
 
     //--- Underwriting ---//
@@ -595,7 +621,7 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
     // by pre-executing the latter part and then reserving the swap result in the escrow.
 
     /**
-     * @notice Returns the underwriting identifier for a Catalyst swap.
+     * @notice Computes the underwriting identifier for a Catalyst swap.
      */
     function _getUnderwriteIdentifier(
         address targetVault,
@@ -620,7 +646,7 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
     }
 
     /**
-     * @notice Returns the underwriting identifier for a Catalyst swap.
+     * @notice Computes the underwriting identifier for a Catalyst swap.
      */
     function getUnderwriteIdentifier(
         address targetVault,
@@ -641,7 +667,6 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
             cdata
         );
     }
-
 
     /**
      * @notice Underwrites a swap and check if there is a connection. 
@@ -682,18 +707,18 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
      *      does not fill the underwrite but instead fails on ack and releases the input on the source chain.
      *      You can use the similar function underwriteAndCheckConnection to also check the connection.
      *
-     * 2. You are underwriting the specific instance of the transaction not the inclusion of the transaction.
+     * 2. You are underwriting the specific instance of the transaction NOT the inclusion of the transaction.
      *      What this means for you, is that if the block of the transaction is lost/abandon/re-entered, then
-     *      the underwriting will not be noted unless the transaction is re-executed almost EXACTLY as it was before.
+     *      the underwriting will not be noted unless the transaction is re-executed EXACTLY as it was before.
      *      The most important parameter is U which is volatile and any change to the vault balances on the source chain
      *      will cause U to be different.
-     *      In other words, if that transaction is re-executed before or after another swap which wasn't the case before
+     *      In other words, if that transaction is re-executed before or after another swap and it wasn't the case before,
      *      then it won't fill the underwrite anymore and either be exeucted as an ordinary swap (to the user) or fail
-     *      with an ack and release the original funds back to the user.
+     *      on ack and release the original funds back to the user.
      *
      * 3. The execution of the underwrite is dependent on the correct execution of both
      *      the minout but also the additional logic. If either fails, then the swap is not
-     *      underwritable. As a result, it is important that the underwrite is simulated before executed.
+     *      underwritable. To avoid wasting gas, it is important that the underwrite is simulated before executed.
      */
     function underwrite(
         address targetVault,  // -- Swap information
@@ -724,21 +749,23 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
         // In these cases, it would not be possible to underwrite the second swap (or further swaps) 
         // until after the first swap has arrived. This can be counteracted by either:
         // 1. Changing U. The tail of U is **volatile**. As a result, to get overlapping identifiers,
-        // it would have to be done deliberatly.
+        // it would have to be deliberatly.
         // 2. Add random noise to minOut or underwriteIncentiveX16. For tokens with 18 decimals, this noise can
-        // be as small as 1e-12 then the chance that 2 swaps collide would be 1 in a million'th. (literally 1/(1e(18-12)) = 1/1e6)
+        // be as small as 1e-12 then the chance that 2 swaps collide would be 1 in a million. (literally 1/(1e(18-12)) = 1/1e6)
         // 3. Add either a counter or noise to cdata.
 
         // For most implementations, the observation can be ignored because of the strength of point 1.
 
         // Check if the associated underwrite just arrived and has already been matched.
         // This is an issue when the swap was JUST underwriten, JUST arrived (and matched), AND someone else JUST underwrote the swap.
-        // To give the user a bit more protection, we add a buffer of size `BUFFER_BLOCKS`.
-        // SwapAlreadyUnderwritten vs SwapRecentlyUnderwritten: It is very likely that this block is trigger not because a swap was fulfilled but because it has already been underwritten. That is because (lastTouchBlock + BUFFER_BLOCKS >= uint96(block.number)) WILL ALWAYS be true when it is the case
-        // and SwapRecentlyUnderwritten will be the error. You might have expected the error "SwapAlreadyUnderwritten". However, we never get there so it
-        // cannot emit. We also cannot move that check up here, since then an external call would be made between a state check and a state modification. (reentry)
-        // As a result, SwapRecentlyUnderwritten will be emitted when a swap has already been underwritten EXCEPT when underwriting a swap through reentry.
-        // Then the reentry will underwrite the swap and the main call will fail with SwapAlreadyUnderwritten.
+        // To give underwriters a bit more protection, we add a buffer of size `BUFFER_BLOCKS`.
+        // Error SwapAlreadyUnderwritten vs Error SwapRecentlyUnderwritten: It is very likely that this block is triggered not because a swap was
+        // fulfilled but because it has already been underwritten. 
+        // That is because (lastTouchBlock + BUFFER_BLOCKS >= uint96(block.number)) WILL ALWAYS be true when a swap has been underwritten, thus  
+        // SwapRecentlyUnderwritten will be the error. You might have expected the error "SwapAlreadyUnderwritten". However, we never get there so
+        // it cannot emit. We also cannot move that check up here, since then an external call would be made between a state check and a
+        // state modification (reentry). As a result, SwapRecentlyUnderwritten will be emitted when a swap has already been underwritten EXCEPT
+        // when underwriting a swap through reentry. Then the reentry will underwrite the swap and the main call will fail with SwapAlreadyUnderwritten.
         UnderwritingStorage storage underwriteState = underwritingStorage[identifier];
         unchecked {
             // Get the last touch block. For most underwrites it is going to be 0.
@@ -752,7 +779,6 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
                     if (lastTouchBlock + BUFFER_BLOCKS >= uint96(block.number)) {
                         // Check that uint96(block.number) hasn't overflowed and this is an old reference. We don't care about the underflow
                         // as that will always return false.
-                        // First however, we need to check that this won't underflow.
                         if (lastTouchBlock - BUFFER_BLOCKS <= uint96(block.number)) revert SwapRecentlyUnderwritten();
                     }
                 } else {
@@ -761,9 +787,8 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
             }
         }
 
-        // Get the number of purchased units from the vault. This uses a custom call which doesn't return
-        // any assets.
-        // This calls escrows the purchasedTokens on the vault.
+        // Get the number of purchased units from the vault. 
+        // This uses a custom call that doesn't return any assets. The cal escrows purchasedTokens on the vault.
         // Importantly! The connection is not checked here. Instead it is checked when the
         // message arrives. As a result, the underwriter should verify that a message is good.
         uint256 purchasedTokens = ICatalystV1Vault(targetVault).underwriteAsset(
@@ -776,7 +801,7 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
         // The following number of lines act as re-entry protection. Do not add any external call inbetween these lines.
 
         // Ensure the swap hasn't already been underwritten by checking if refundTo is set. 
-        // Notice that this is very unlikely to ever get emitted. Instead, read the comment about SwapRecentlyUnderwritten.
+        // This line is very unlikely to ever get emitted. Instead, read the comment about SwapRecentlyUnderwritten.
         if (underwriteState.refundTo != address(0)) revert SwapAlreadyUnderwritten();
 
         uint96 underwriteExpiry = uint96(uint256(block.number) + uint256(maxUnderwritingDuration)); // Should never overflow.
@@ -862,7 +887,7 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
         if (refundAddress == address(0)) revert UnderwriteDoesNotExist(identifier);
         
         // Check that the underwriting can be expired. If the msg.sender is the refundTo address, then it can be expired at any time.
-        // This lets the underwriter reclaim *some* of the collateral they provided if they change their mind or observed an issue.
+        // This lets the underwriter reclaim _some_ of the collateral they provided if they change their mind or observed an issue.
         // Load the associated storage slot.
         uint256 underWrittenTokens = underwriteState.tokens;
         uint256 expiryTime = uint256(underwriteState.expiry);
@@ -906,11 +931,10 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
                 expireShare
             );
         }
-
         // The underwriting storage has already been deleted.
     }
 
-    // It is important that any call to this functions has pre-checked the vault connection.
+    /** @dev It is important that any call to this functions has pre-checked the vault connection. */
     function _matchUnderwrite(
         bytes32 identifier,
         address toAsset,
@@ -934,8 +958,9 @@ contract CatalystChainInterface is ICatalystChainInterface, Ownable, Bytes65 {
 
         // Delete escrow information and send swap tokens directly to the underwriter.
         ICatalystV1Vault(vault).releaseUnderwriteAsset(refundTo, identifier, underwrittenTokenAmount, toAsset, sourceIdentifier, fromVault);
-        // We know only need to handle the collateral and underwriting incentive.
-        // We also don't have to check that the vault didn't lie to us about underwriting.
+
+        // We now only need to handle the collateral and underwriting incentive.
+        // We don't have to check that the vault didn't lie to us about underwriting.
 
         // Also refund the collateral.
         uint256 refundAmount = underwrittenTokenAmount * (

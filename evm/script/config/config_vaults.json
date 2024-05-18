@@ -1,45 +1,10 @@
 {
-  "WormholeSepoliaOptimismArbitrum": {
+  "WormholeOptimismBaseBlast": {
     "cci_version": "Wormhole",
-    "sepolia": {
-      "cci": "0x169e7e77e463ffe86b30afd1605a09a632bea5b0",
-      "address": "0xbd529ff730dae029fa85b38d98d6046721215fa4",
-      "weights": [
-        1
-      ],
-      "fee": 500000000000000,
-      "tokens": {
-        "WGAS": 10000000000000000
-      }
-    },
+    "amplification": 250000000000000000,
     "optimismsepolia": {
-      "cci": "0x2603e874d589373a0c4766808b93e3d4b63164c8",
-      "address": "0xbd529ff730dae029fa85b38d98d6046721215fa4",
-      "weights": [
-        1
-      ],
-      "fee": 500000000000000,
-      "tokens": {
-        "WGAS": 10000000000000000
-      }
-    },
-    "arbitrumsepolia": {
-      "cci": "0xf779d8e1b07f1e3df141a81c4f1f7d65c0a38611",
-      "address": "0xbd529ff730dae029fa85b38d98d6046721215fa4",
-      "weights": [
-        1
-      ],
-      "fee": 500000000000000,
-      "tokens": {
-        "WGAS": 10000000000000000
-      }
-    }
-  },
-  "PolymerOPBASEsepolia": {
-    "cci_version": "Polymer",
-    "optimismsepolia": {
-      "cci": "0x622ebf7b017b42cec6e30f47b4895f198b9a7364",
-      "address": "0x52ddaf2596c653bd6e0422336fe4a8dfb3418141",
+      "cci": "0xdb321b1e304ea155b1977768904de998818f986e",
+      "address": "0x06d4b5289b981933e34af10817f352061bad6353",
       "weights": [
         1
       ],
@@ -49,8 +14,19 @@
       }
     },
     "basesepolia": {
-      "cci": "0x7d2193429c1ae9ba1b36ffb8d5ee467b4ce0efc3",
-      "address": "0xcdfef148155ee1d5d908d4d7030de865e5720d1f",
+      "cci": "0xc7d9815055ea739b78e2d10d0055d97010396b78",
+      "address": "0x06d4b5289b981933e34af10817f352061bad6353",
+      "weights": [
+        1
+      ],
+      "fee": 500000000000000,
+      "tokens": {
+        "WGAS": 10000000000000000
+      }
+    },
+    "blasttestnet": {
+      "cci": "0x39629ddb16a11e11fb62bf46f34f63ff1c42b090",
+      "address": "0x06d4b5289b981933e34af10817f352061bad6353",
       "weights": [
         1
       ],

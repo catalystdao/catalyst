@@ -199,7 +199,7 @@ contract TestCommon is Test, Bytes65, IMessageEscrowStructs, TestTokenFunctions,
         message = constructSendAsset(sourceVault, destinationVault, toAccount, units, toAssetIndex, 0, 0, address(0), uint32(block.number), uint16(0), hex"");
     }
 
-    function constructSendLiquidity(address sourceVault, address destinationVault, address toAccount, uint256 units, uint256[2] memory minOuts, uint256 fromAmount, uint32 blocknumber, uint16 underwriteIncentiveX16, bytes memory cdata) pure internal returns(bytes memory message) {
+    function constructSendLiquidity(address sourceVault, address destinationVault, address toAccount, uint256 units, uint256[2] memory minOuts, uint256 fromAmount, uint32 blocknumber, uint16 /* underwriteIncentiveX16 */, bytes memory cdata) pure internal returns(bytes memory message) {
         message = abi.encodePacked(
             CTX1_LIQUIDITY_SWAP,
             abi.encodePacked(

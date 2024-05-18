@@ -8,11 +8,11 @@ interface ICatalystV1VaultPermissionless {
      * @notice Setup a vault.
      * @param name_ Name of the Vault token.
      * @param symbol_ Symbol for the Vault token.
-     * @param chainInterface The cross chain interface used for cross-chain swaps. (Can be address(0) to disable cross-chain swaps.)
-     * @param vaultFee The vault fee.
-     * @param governanceFee The governance fee share.
-     * @param feeAdministrator The account that can modify the fees.
-     * @param setupMaster The short-term owner of the vault (until finishSetup is called).
+     * @param chainInterface Cross chain interface used for cross-chain swaps. (Can be address(0) to disable cross-chain swaps.)
+     * @param vaultFee Vault fee.
+     * @param governanceFee Governance fee share.
+     * @param feeAdministrator Account that can modify the fees.
+     * @param setupMaster Short-term owner of the vault (until finishSetup is called).
      */
     function setup(
         string calldata name_,
@@ -32,8 +32,8 @@ interface ICatalystV1VaultPermissionless {
      * Volatile: It is advised that the deposit matches the vault's %token distribution.
      * Amplified: It is advised that the deposit is as close to 1,1,... as possible.
      *            Otherwise between 1,1,... and the vault's %token distribution.
-     * @param tokenAmounts An array of the tokens amounts to be deposited.
-     * @param minOut The minimum number of vault tokens to be minted.
+     * @param tokenAmounts Array of the tokens amounts to be deposited.
+     * @param minOut Minimum number of vault tokens to be minted.
      */
     function depositMixed(uint256[] calldata tokenAmounts, uint256 minOut)
         external returns(uint256);
@@ -41,7 +41,7 @@ interface ICatalystV1VaultPermissionless {
     /**
      * @notice Burns baseAmount and releases the symmetrical share
      * of tokens to the burner. This doesn't change the vault price.
-     * @param baseAmount The number of vault tokens to burn.
+     * @param baseAmount Number of vault tokens to burn.
      */
     function withdrawAll(uint256 baseAmount, uint256[] calldata minOut)
         external returns(uint256[] memory);
@@ -52,9 +52,9 @@ interface ICatalystV1VaultPermissionless {
      * Volatile: It is advised that the deposit matches the vault's %token distribution.
      * Amplified: It is advised that the deposit matches the vault's %token distribution.
      *            Otherwise it should be weighted towards the tokens the vault has more of.
-     * @param vaultTokens The number of vault tokens to withdraw.
-     * @param withdrawRatio The percentage of units used to withdraw. In the following special scheme: U_0 = U · withdrawRatio[0], U_1 = (U - U_0) · withdrawRatio[1], U_2 = (U - U_0 - U_1) · withdrawRatio[2], .... Is WAD.
-     * @param minOut The minimum number of tokens minted.
+     * @param vaultTokens Number of vault tokens to withdraw.
+     * @param withdrawRatio Percentage of units used to withdraw. In the following special scheme: U_0 = U · withdrawRatio[0], U_1 = (U - U_0) · withdrawRatio[1], U_2 = (U - U_0 - U_1) · withdrawRatio[2], .... Is WAD.
+     * @param minOut Minimum number of tokens minted.
      */
     function withdrawMixed(
         uint256 vaultTokens,
@@ -66,10 +66,10 @@ interface ICatalystV1VaultPermissionless {
 
     /**
      * @notice A swap between 2 assets which both are inside the vault. Is atomic.
-     * @param fromAsset The asset the user wants to sell.
-     * @param toAsset The asset the user wants to buy.
-     * @param amount The amount of fromAsset the user wants to sell.
-     * @param minOut The minimum output of _toAsset the user wants.
+     * @param fromAsset Asset the user wants to sell.
+     * @param toAsset Asset the user wants to buy.
+     * @param amount Amount of fromAsset the user wants to sell.
+     * @param minOut Minimum output of _toAsset the user wants.
      */
     function localSwap(
         address fromAsset,
@@ -83,12 +83,12 @@ interface ICatalystV1VaultPermissionless {
      * @dev Addresses are encoded in 64 + 1 bytes. To encode for EVM, encode as:
      * Solidity: abi.encodePacket(uint8(20), bytes32(0), abi.encode(<vaultAddress>))
      * @param routeDescription A cross-chain route description which contains the chainIdentifier, toAccount, toVault and relaying incentive.
-     * @param fromAsset The asset the user wants to sell.
-     * @param toAssetIndex The index of the asset the user wants to buy in the target vault.
-     * @param amount The number of fromAsset to sell to the vault.
-     * @param minOut The minimum number of returned tokens to the toAccount on the target chain.
+     * @param fromAsset Asset the user wants to sell.
+     * @param toAssetIndex Index of the asset the user wants to buy in the target vault.
+     * @param amount Number of fromAsset to sell to the vault.
+     * @param minOut Minimum number of returned tokens to the toAccount on the target chain.
      * @param fallbackUser If the transaction fails, send the escrowed funds to this address.
-     * @param underwriteIncentiveX16 The payment for underwriting the swap (out of type(uint16.max))
+     * @param underwriteIncentiveX16 Payment for underwriting the swap (out of type(uint16.max))
      * @param calldata_ Data field if a call should be made on the target chain.
      * Encoding depends on the target chain, with EVM: abi.encodePacket(bytes20(<address>), <data>). At maximum 65535 bytes can be passed.
      * @return uint256 The number of units minted.
@@ -109,16 +109,16 @@ interface ICatalystV1VaultPermissionless {
      * @dev Addresses are encoded in 64 + 1 bytes. To encode for EVM, encode as:
      * Solidity: abi.encodePacket(uint8(20), bytes32(0), abi.encode(<vaultAddress>))
      * @param routeDescription A cross-chain route description which contains the chainIdentifier, toAccount, toVault and relaying incentive.
-     * @param fromAsset The asset the user wants to sell.
-     * @param toAssetIndex The index of the asset the user wants to buy in the target vault.
-     * @param amount The number of fromAsset to sell to the vault.
-     * @param minOut The minimum number of returned tokens to the toAccount on the target chain.
-     * @param minU The minimum and exact number of units sent.
+     * @param fromAsset Asset the user wants to sell.
+     * @param toAssetIndex Index of the asset the user wants to buy in the target vault.
+     * @param amount Number of fromAsset to sell to the vault.
+     * @param minOut Minimum number of returned tokens to the toAccount on the target chain.
+     * @param minU Minimum and exact number of units sent.
      * @param fallbackUser If the transaction fails, send the escrowed funds to this address.
      * @param calldata_ Data field if a call should be made on the target chain.
      * Encoding depends on the target chain, with evm being: abi.encodePacket(bytes20(<address>), <data>)
-     * @param underwriteIncentiveX16 The payment for underwriting the swap (out of type(uint16.max))
-     * @return uint256 The number of units minted.
+     * @param underwriteIncentiveX16 Payment for underwriting the swap (out of type(uint16.max))
+     * @return uint256 Number of units minted.
      */
     function sendAssetFixedUnit(
         ICatalystV1Structs.RouteDescription calldata routeDescription,
@@ -163,12 +163,12 @@ interface ICatalystV1VaultPermissionless {
      * directly into units through the following equation:
      *      U = ln(PT/(PT-pt)) * \sum W_i
      * @param routeDescription A cross-chain route description which contains the chainIdentifier, toAccount, toVault and relaying incentive.
-     * @param vaultTokens The number of vault tokens to exchange.
-     * @param minOut An array of minout describing: [the minimum number of vault tokens, the minimum number of reference assets].
+     * @param vaultTokens Number of vault tokens to exchange.
+     * @param minOut Array of minout describing: [the minimum number of vault tokens, the minimum number of reference assets].
      * @param fallbackUser If the transaction fails, send the escrowed funds to this address.
      * @param calldata_ Data field if a call should be made on the target chain.
      * Encoding depends on the target chain, with EVM: abi.encodePacket(bytes20(<address>), <data>). At maximum 65535 bytes can be passed.
-     * @return uint256 The number of units minted.
+     * @return uint256 Number of units minted.
      */
     function sendLiquidity(
         ICatalystV1Structs.RouteDescription calldata routeDescription,
@@ -181,11 +181,11 @@ interface ICatalystV1VaultPermissionless {
     /**
      * @notice Completes a cross-chain liquidity swap by converting units to tokens and depositing.
      * @dev Called exclusively by the chainInterface.
-     * @param fromVault The source vault
-     * @param toAccount The recipient of the vault tokens
+     * @param fromVault Source vault
+     * @param toAccount Recipient of the vault tokens
      * @param U Number of units to convert into vault tokens.
-     * @param minVaultTokens The minimum number of vault tokens to mint on target vault. Otherwise: Reject
-     * @param minReferenceAsset The minimum number of reference asset the vaults tokens are worth. Otherwise: Reject
+     * @param minVaultTokens Minimum number of vault tokens to mint on target vault. Otherwise: Reject
+     * @param minReferenceAsset Minimum number of reference asset the vaults tokens are worth. Otherwise: Reject
      * @param fromAmount Used to match cross-chain swap events. The input amount on the sending chain.
      * @param blockNumberMod Used to match cross-chain swap events. The block number from the host side.
      */

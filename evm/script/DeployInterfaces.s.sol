@@ -131,7 +131,7 @@ contract DeployInterfaces is MultiChainDeployer {
 
     
     function _deploy(string[] memory bridges) internal {
-        admin = vm.envAddress("CATALYST_ADDRESS");
+        admin = vm.addr(pk);
 
         deployCCI(bridges);
     }

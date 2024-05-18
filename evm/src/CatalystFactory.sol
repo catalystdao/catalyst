@@ -12,36 +12,70 @@ uint256 constant MAX_GOVERNANCE_FEE_SHARE = 75e16;   // 75%
 
 /**
  * @title Catalyst Swap Factory
- * @author Cata Labs
- * @notice Allows permissionless deployment Catalyst vaults
- * and defines governance address for vaults to read.
+ * @author Cata Labs Inc.
+ * @notice Allows permissionless deployment Catalyst vaults and defines governance address for vaults to read.
+ * Importantly, this vault allows anyone to deploy a vault using any vault template and vault cross-chain interface.
+ * As a result, just because a vault was deployed using this contract does not imply that it is safe. Vaults should
+ * be cross-checked for their template, cross-chain interface, and if they are setup correctly. It may even be
+ * that some vault templates only work with some cross-chain interfaces.
+ *
+ * Using the reference Catalyst Vault Templates, the owner of the factory is also the _owner_ of the Vaults.
+ * They have certain privilege that may be able to be abused depending on the vault. One of these is configurating
+ * fees. As a result:
  * !The owner of the factory must be a timelock!
  */
 contract CatalystFactory is Ownable, ICatalystV1Factory {
 
-    /// @notice A mapping which describes if a vault has been created by this factory. Indexed by chainInterface then vault address.
+    error InvalidAssetCount();
+    error InvalidWeightCount();
+    error FeeDestinationAddress0();
+    error MaximumGovernanceFeeShare();
+
+    /**
+     * @notice A mapping which describes if a vault has been created by this factory.
+     * Indexed by chainInterface then vault address.
+     */
     mapping(address => mapping(address => bool)) public isCreatedByFactory;
 
-    /// @notice Default governance fee. When a vault is created, this is the governance fee applied to that vault.
+    /** 
+     * @notice Default governance fee. When a vault is created, this is the governance fee applied to that vault.
+     */
     uint64 public _defaultGovernanceFee;
 
+    /**
+     * @notice The address to send governance fees to.
+     * @dev Not enforced by the factory but vaults are expected to follow it.
+     */
     address public _governanceFeeDestination;
+
+    // The 2 above storage slots are packed together.
 
     constructor(address defaultOwner) payable {
         _initializeOwner(defaultOwner);
         _governanceFeeDestination = defaultOwner;
     }
 
+    /**
+     * @notice Set default governance fee share. 
+     * @dev The set governance fee only applies to newly created vaults. Vaults have to be individual modified post creation. 
+     * Is in WAD, (1e18 terms). So 1e16 is 1%. Cannot be set larger than 75% (75e16).
+     */
     function setDefaultGovernanceFee(uint64 fee) override public onlyOwner {
-        require(fee <= MAX_GOVERNANCE_FEE_SHARE); // dev: Maximum GovernanceFeeSare exceeded.
+        if (fee > MAX_GOVERNANCE_FEE_SHARE) revert MaximumGovernanceFeeShare();
 
         emit SetDefaultGovernanceFee(fee);
 
         _defaultGovernanceFee = fee;
     }
 
+    /**
+     * @notice Set the recipient of the governance.
+     * @dev It is expected that vaults read this value and send their governance fees here.
+     * This contract has no way to enforce if vaults honour this value.
+     * Cannot be set to address(0). If wish to burn, set to 0xdead.
+     */
     function setGovernanceFeeDestination(address feeDestination) override public onlyOwner {
-        require(feeDestination != address(0), "Fee destination cannot be address(0)");
+        if (feeDestination == address(0)) revert FeeDestinationAddress0();
         emit SetGovernanceFeeDestination(feeDestination);
 
         _governanceFeeDestination = feeDestination;
@@ -49,7 +83,15 @@ contract CatalystFactory is Ownable, ICatalystV1Factory {
 
     /**
      * @notice Deploys a Catalyst vault, funds the vault with tokens, and calls setup.
-     * @dev The deployer needs to set approvals for this contract before calling deployVault
+     * When deploying vaults, there are 2 stages that needs to happen:
+     * 1. We need to setup the vaults with the correct configuration.
+     * 2. We need to set the vault swap curve. This consists of setting assets, vaults, amplification, etc.
+     * The reason it is done in 2 steps is because of the stack limit. By spreading it across 2 calls, it is
+     * cheaper gas wise.
+     * This is done in a safe way by expecting both of these init. calls to be done in a single transaction.
+     * As a result, the vaults are never left in a vulnerable state. It is expected that the latter call
+     * (initializeSwapCurves) completes initialization and blocks the setup functions from being called again.
+     * @dev The deployer needs to set relevant approvals to this contract before calling deployVault.
      * @param vaultTemplate The template the transparent proxy should target.
      * @param assets The list of assets the vault should support.
      * @param init_balances The initial balances of the vault. (Should be approved)
@@ -73,9 +115,9 @@ contract CatalystFactory is Ownable, ICatalystV1Factory {
         address chainInterface
     ) override external returns (address vault) {
         // Check if an invalid asset count has been provided
-        require(assets.length != 0);  // dev: invalid asset count
+        if (assets.length == 0) revert InvalidAssetCount();
         // Check if an invalid weight count has been provided
-        require(weights.length == assets.length); //dev: invalid weight count
+        if (weights.length != assets.length) revert InvalidWeightCount();
         // init_balances length not checked: if shorter than assets, the funds transfer loop
         // will fail. If longer, values will just be ignored.
 

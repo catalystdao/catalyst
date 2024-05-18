@@ -13,5 +13,8 @@
   },
   "optimismsepolia": {
     "WETH": "0x1BDD24840e119DC2602dCC587Dd182812427A5Cc"
+  },
+  "blasttestnet": {
+    "WETH": "0x4200000000000000000000000000000000000006"
   }
 }

@@ -70,25 +70,25 @@ contract Registry is BaseMultiChainDeployer {
 
     function deploy(string[] memory chains) iter_chains_string(chains) broadcast external {
         verify = true;
-        admin = vm.envAddress("CATALYST_ADDRESS");
+        admin = vm.addr(pk);
         _deploy();
     }
 
     function deployAll() iter_chains(chain_list) broadcast external {
         verify = true;
-        admin = vm.envAddress("CATALYST_ADDRESS");
+        admin = vm.addr(pk);
         _deploy();
     }
 
     function deployAllLegacy() iter_chains(chain_list_legacy) broadcast external {
         verify = true;
-        admin = vm.envAddress("CATALYST_ADDRESS");
+        admin = vm.addr(pk);
         _deploy();
     }
     
     function getAddresses() external {
         get = true;
-        admin = vm.envAddress("CATALYST_ADDRESS");
+        admin = vm.addr(vm.envUint("DEPLOYER_PK"));
 
         vm.startBroadcast(uint256(1));
 
@@ -117,10 +117,10 @@ contract Registry is BaseMultiChainDeployer {
         CatalystDescriberRegistry reg = CatalystDescriberRegistry(registry.describer_registry);
 
         // Check what is the current describer.
-        address[] memory describers = reg.get_vault_describers();
+        CatalystDescriberRegistry.AddressAndVersion[] memory describers = reg.getVaultDescribers();
         bool contains = false;
         for (uint256 i = 0; i < describers.length; ++i) {
-            if (describers[i] == registry.describer) contains = true;
+            if (describers[i].addr == registry.describer) contains = true;
         }
         if (!contains) reg.modifyDescriber(registry.describer, version);
     }
@@ -128,14 +128,14 @@ contract Registry is BaseMultiChainDeployer {
     function setDescriber() internal {
         CatalystDescriber desc = CatalystDescriber(registry.describer);
         // Set (or update) the templates
-        address current_volatile_template = desc.version_to_template("volatile");
+        address current_volatile_template = desc.versionToTemplate("volatile");
         if (current_volatile_template != contracts.volatile_template) desc.modifyWhitelistedTemplate(contracts.volatile_template, "volatile");
 
-        address current_amplified_template = desc.version_to_template("amplified");
+        address current_amplified_template = desc.versionToTemplate("amplified");
         if (current_amplified_template != contracts.amplified_template) desc.modifyWhitelistedTemplate(contracts.amplified_template, "amplified");
 
         // Set (or update) the factory.
-        address current_factory = desc.version_to_factory("v1");
+        address current_factory = desc.versionToFactory("v1");
         if (current_factory != contracts.factory) desc.modifyWhitelistedFactory(contracts.factory, "v1");
 
         // Set (or update) the cross-chain interfaces
@@ -147,7 +147,7 @@ contract Registry is BaseMultiChainDeployer {
             }
             address excepted_cci = abi.decode(config_interfaces.parseRaw(string.concat(".", incentiveVersion, ".", currentChainKey, ".interface")), (address));
             
-            address current_cci = desc.version_to_cci(incentiveVersion);
+            address current_cci = desc.versionToCCI(incentiveVersion);
             if (current_cci != excepted_cci) desc.modifyWhitelistedCCI(excepted_cci, incentiveVersion);
         }
     }

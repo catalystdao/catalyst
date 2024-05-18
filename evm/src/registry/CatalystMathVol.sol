@@ -11,7 +11,7 @@ import "../IntegralsVolatile.sol";
 
 /**
  * @title Catalyst: Volatile mathematics implementation
- * @author Catalyst Labs
+ * @author Catalyst Labs Inc.
  * @notice This contract is not optimised for on-chain calls and serves to aid in off-chain quering.
  */
 contract CatalystMathVol is IntegralsVolatile, ICatalystMathLibVol {
@@ -20,8 +20,8 @@ contract CatalystMathVol is IntegralsVolatile, ICatalystMathLibVol {
      * @notice Helper function which returns the true weight. If weights are being adjusted, the pure vault weights might be inaccurate.
      * @dev If weights are being changed, the weights read directly from the vaults are only updated when they are needed. (swaps, balance changes, etc)
      * This function implements the weight change logic (almost exactly), such that one can read the weight if one were to execute a balance change.
-     * @param vault The address of the vault to fetch the weight for.
-     * @param asset The asset to get the weight for.
+     * @param vault Address of the vault to fetch the weight for.
+     * @param asset Asset to get the weight for.
      * @return uint256 Returns the (estimated) true weight.
      */
     function getTrueWeight(address vault, address asset) public view returns(uint256) {
@@ -58,7 +58,7 @@ contract CatalystMathVol is IntegralsVolatile, ICatalystMathLibVol {
 
     /** 
      * @notice Helper function which returns the amount after fee.
-     * @dev The fee is taken from the input amount
+     * @dev Fee is taken from the input amount
      * @param vault Vault to read vault fee.
      * @param amount Input swap amount
      * @return uint256 Input amount after vault fee.
@@ -74,9 +74,9 @@ contract CatalystMathVol is IntegralsVolatile, ICatalystMathLibVol {
      * The value is returned as units, which is always WAD.
      * @dev All input amounts should be the raw numbers and not WAD.
      * Since units are always denominated in WAD, the function should be treated as mathematically *native*.
-     * @param input The input amount.
-     * @param A The current vault balance of the x token.
-     * @param W The weight of the x token.
+     * @param input Input amount.
+     * @param A Current vault balance of the x token.
+     * @param W Weight of the x token.
      * @return uint256 Units (units are **always** WAD).
      */
     function calcPriceCurveArea(
@@ -94,8 +94,8 @@ contract CatalystMathVol is IntegralsVolatile, ICatalystMathLibVol {
      * Since units are always multiplied by WAD, the function
      * should be treated as mathematically *native*.
      * @param U Incoming vault specific units.
-     * @param B The current vault balance of the y token.
-     * @param W The weight of the y token.
+     * @param B Current vault balance of the y token.
+     * @param W Weight of the y token.
      * @return uint25 Output denominated in output token. (not WAD)
      */
     function calcPriceCurveLimit(
@@ -111,10 +111,10 @@ contract CatalystMathVol is IntegralsVolatile, ICatalystMathLibVol {
      *     \int_{A}^{A+x} W_a/w dw = \int_{B-y}^{B} W_b/w dw for y = B · (1 - ((A+x)/A)^(-W_a/W_b))
      * @dev All input amounts should be the raw numbers and not WAD. Is computed through calcPriceCurveLimit(calcPriceCurveArea).
      * @param input The input amount.
-     * @param A The current vault balance of the x token.
-     * @param B The current vault balance of the y token.
-     * @param W_A The weight of the x token.
-     * @param W_B TThe weight of the y token.
+     * @param A Current vault balance of the x token.
+     * @param B Current vault balance of the y token.
+     * @param W_A Weight of the x token.
+     * @param W_B Weight of the y token.
      * @return uint256 Output denominated in output token.
      */
     function calcCombinedPriceCurves(
@@ -132,7 +132,7 @@ contract CatalystMathVol is IntegralsVolatile, ICatalystMathLibVol {
      * @dev Based on _calcPriceCurveLimit but the multiplication by the
      * specific token is never done.
      * @param U Input units.
-     * @param W The generalised weights.
+     * @param W Generalised weights.
      * @return uint256 Output denominated in vault share.
      */
     function calcPriceCurveLimitShare(
@@ -166,9 +166,9 @@ contract CatalystMathVol is IntegralsVolatile, ICatalystMathLibVol {
      * @dev Returns 0 if from is not a token in the vault
      * Should also be exposed from any vault. For on-chain calls, it is cheaper to call this function rather than the vault.
      * However, it is not optimised for on-chain calls.
-     * @param vault The vault address to examine.
-     * @param fromAsset The address of the token to sell.
-     * @param amount The amount of from token to sell.
+     * @param vault Vault address to examine.
+     * @param fromAsset Address of the token to sell.
+     * @param amount Amount of from token to sell.
      * @return uint256 Units.
      */
     function calcSendAsset(
@@ -189,9 +189,9 @@ contract CatalystMathVol is IntegralsVolatile, ICatalystMathLibVol {
      * @notice Computes the exchange of units to assets. This is the second and last part of a swap.
      * @dev Reverts if to is not a token in the vault. For on-chain calls, it is cheaper to call this function rather than the vault.
      * However, it is not optimised for on-chain calls.
-     * @param vault The vault address to examine.
-     * @param toAsset The address of the token to buy.
-     * @param U The number of units used to buy to.
+     * @param vault Vault address to examine.
+     * @param toAsset Address of the token to buy.
+     * @param U Number of units used to buy to.
      * @return uint256 Number of purchased tokens.
      */
     function calcReceiveAsset(
@@ -217,10 +217,10 @@ contract CatalystMathVol is IntegralsVolatile, ICatalystMathLibVol {
      * If both from and to are not part of the vault, the swap can actually return a positive value.
      * For on-chain calls, it is cheaper to call this function rather than the vault.
      * However, it is not optimised for on-chain calls.
-     * @param vault The vault address to examine.
-     * @param fromAsset The address of the token to sell.
-     * @param toAsset The address of the token to buy.
-     * @param amount The amount of from token to sell for to token.
+     * @param vault Vault address to examine.
+     * @param fromAsset Address of the token to sell.
+     * @param toAsset Address of the token to buy.
+     * @param amount Amount of from token to sell for to token.
      * @return uint256 Output denominated in toAsset.
      */
     function calcLocalSwap(
@@ -257,8 +257,8 @@ contract CatalystMathVol is IntegralsVolatile, ICatalystMathLibVol {
     /**
     * @notice Computes part of the mid price. calcCurrentPriceTo can be used to compute the pairwise price.
     * @dev Alternativly, dividing calcAsyncPriceFrom by another calcAsyncPriceFrom, results in the pairwise price.
-    * @param vault The vault address to examine.
-    * @param fromAsset The address of the token to sell.
+    * @param vault Vault address to examine.
+    * @param fromAsset Address of the token to sell.
     */
     function calcAsyncPriceFrom(
         address vault,
@@ -273,10 +273,10 @@ contract CatalystMathVol is IntegralsVolatile, ICatalystMathLibVol {
 
     /**
     * @notice Computes a pairwise mid price. Requires input from calcAsyncPriceFrom.
-    * @param vault The vault address to examine.
-    * @param toAsset The address of the token to buy.
+    * @param vault Vault address to examine.
+    * @param toAsset Address of the token to buy.
     * @param calcAsyncPriceFromQuote The output of calcAsyncPriceFrom.
-    * @return uint256 The pairwise mid price.
+    * @return uint256 Pairwise mid price.
     */
     function calcCurrentPriceTo(
         address vault,
@@ -293,9 +293,9 @@ contract CatalystMathVol is IntegralsVolatile, ICatalystMathLibVol {
     /**
     * @notice Computes the current mid price. This is the current marginal price between the 2 assets.
     * @dev The mid price cannot be traded on, since the fees acts as the spread.
-    * @param vault The vault address to examine.
-    * @param fromAsset The address of the token to sell.
-    * @param toAsset The address of the token to buy.
+    * @param vault Vault address to examine.
+    * @param fromAsset Address of the token to sell.
+    * @param toAsset Address of the token to buy.
     * @return uint256 Output denominated in toAsset.
     */
     function calcCurrentPrice(

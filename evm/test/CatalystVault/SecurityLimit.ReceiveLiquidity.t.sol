@@ -28,9 +28,6 @@ abstract contract TestSecurityLimitLiquiditySwap is TestCommon, AVaultInterfaces
                 true
             );
 
-            uint256 target_token_index = 0;
-            address target_token = ICatalystV1Vault(vault)._tokenIndexing(target_token_index);
-
             bytes memory fake_payload = constructSendLiquidity(vault, vault, toAccount, units);
 
             fake_payload = addGARPContext(keccak256(fake_payload), address(CCI), address(CCI), fake_payload);

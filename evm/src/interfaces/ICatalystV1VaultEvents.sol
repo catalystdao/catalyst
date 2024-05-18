@@ -1,10 +1,12 @@
 //SPDX-License-Identifier: MIT
 pragma solidity ^0.8.17;
 
-/// @title Events emitted by Catalyst v1 Vaults
-/// @notice Contains all events emitted by the vault
-/// @dev When using events to match transations, the combination of: channelId, fromVault, toAccount, toAsset, units, and block number is semi-guranteed to be unique.
-///     If more than 2**32 blocks exist, then all instances are guaranteed to be non-overlapping
+/**
+ * @title Events emitted by Catalyst v1 Vaults
+ * @notice Contains all events emitted by the vault
+ * @dev When using events to match transations, the combination of: channelId, fromVault, toAccount, toAsset, units, and block number is semi-guranteed to be unique.
+ *      If more than 2**32 blocks exist, then all instances are guaranteed to be non-overlapping
+ */
 interface ICatalystV1VaultEvents {
     /**
      * @notice  Describes an atomic swap between the 2 tokens: _fromAsset and _toAsset.

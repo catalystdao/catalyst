@@ -64,7 +64,7 @@ contract TestVolatileInvariant is TestInvariant, TestLocalswap, TestCrossChainIn
         return getLargestSwap(fromVault, toVault, fromAsset, toAsset, false);
     }
 
-    function getLargestSwap(address fromVault, address toVault, address fromAsset, address /* toAsset */, bool securityLimit) view override internal returns(uint256 amount) {
+    function getLargestSwap(address fromVault, address /* toVault */, address fromAsset, address /* toAsset */, bool securityLimit) view override internal returns(uint256 amount) {
         if (securityLimit) {
             amount = Token(fromAsset).balanceOf(fromVault) / 2;
         } else {

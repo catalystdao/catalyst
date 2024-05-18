@@ -11,27 +11,24 @@ import { AVaultInterfaces } from "test/CatalystVault/AVaultInterfaces.t.sol";
 import { TestInvariant } from "test/CatalystVault/Invariant.t.sol";
 
 
-function queryAssetCount(ICatalystV1Vault vault) view returns (uint256) {
-    uint256 tokenCount = 0;
-    for (uint256 i; true; i++) {
+function queryAssetCount(ICatalystV1Vault vault) view returns (uint256 tokenCount) {
+    for (uint256 i; true; ++i) {
         address token = vault._tokenIndexing(i);
         if (token == address(0)) return tokenCount;
-        else tokenCount += 1;
+        tokenCount += 1;
     }
 }
 
-function queryWeightsSum(ICatalystV1Vault vault) view returns (uint256) {
-    uint256 weightsSum = 0;
-    for (uint256 i; true; i++) {
+function queryWeightsSum(ICatalystV1Vault vault) view returns (uint256 weightsSum) {
+    for (uint256 i; true; ++i) {
         uint256 weight = vault._weight(vault._tokenIndexing(i));
         if (weight == 0) return weightsSum;
-        else weightsSum += weight;
+        weightsSum += weight;
     }
 }
 
-function getEvenWithdrawRatios(uint256 assetCount) returns (uint256[] memory) {
-
-    uint256[] memory ratios = new uint256[](assetCount);
+function getEvenWithdrawRatios(uint256 assetCount) pure returns (uint256[] memory ratios) {
+    ratios = new uint256[](assetCount);
 
     for (uint256 i; i < assetCount; i++) {
         ratios[i] = Math.WAD / (assetCount - i);

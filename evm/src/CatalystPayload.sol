@@ -1,7 +1,7 @@
 //SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
-// Catalyst IBC payload structure ***********************************************************************************************
+// Catalyst Messaging payload structure ***********************************************************************************************
 // Note: Addresses have 65 bytes reserved, however, the first byte should only be used for the address size.
 //
 // Common Payload (beginning)

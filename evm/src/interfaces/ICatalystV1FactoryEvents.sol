@@ -1,8 +1,10 @@
 //SPDX-License-Identifier: MIT
 pragma solidity ^0.8.17;
 
-/// @title Events emitted by Catalyst v1 Factory
-/// @notice Contains all events emitted by the Factory
+/**
+ * @title Events emitted by Catalyst v1 Factory
+ * @notice Contains all events emitted by the Factory
+*/
 interface ICatalystV1FactoryEvents {
     /**
      * @notice  Describes the deployment of a new vault as a proxy of the given vault template.
