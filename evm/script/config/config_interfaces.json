@@ -1,5 +1,17 @@
 {
   "Wormhole": {
+    "base": {
+      "interface": "0x2AC500c5f53D0219B1691B785aa857A0fbb2035D",
+      "escrow": "0x3C5C5436BCa59042cBC835276E51428781366d85"
+    },
+    "blast": {
+      "interface": "0x2AC500c5f53D0219B1691B785aa857A0fbb2035D",
+      "escrow": "0x3C5C5436BCa59042cBC835276E51428781366d85"
+    },
+    "optimism": {
+      "interface": "0x23bC307c20941164025624455bdda22B754468b2",
+      "escrow": "0x8C8727276725b7Da11fDA6e2646B2d2448E5B3c5"
+    },
     "sepolia": {
       "interface": "0xEF04d76391C4b6a0c8BB5262f0f2214c261C4AD2",
       "escrow": "0x294F41D30D058C9e5A71810A6C758E595b7aC170"
