@@ -1,38 +1,38 @@
 {
   "WormholeOptimismBaseBlast": {
     "cci_version": "Wormhole",
-    "amplification": 250000000000000000,
-    "optimismsepolia": {
-      "cci": "0xdb321b1e304ea155b1977768904de998818f986e",
+    "amplification": 100000000000000000,
+    "optimism": {
+      "cci": "0x23bc307c20941164025624455bdda22b754468b2",
       "address": "0x06d4b5289b981933e34af10817f352061bad6353",
       "weights": [
         1
       ],
       "fee": 500000000000000,
       "tokens": {
-        "WGAS": 10000000000000000
+        "WGAS": 500000000000000000
       }
     },
-    "basesepolia": {
-      "cci": "0xc7d9815055ea739b78e2d10d0055d97010396b78",
+    "base": {
+      "cci": "0x2ac500c5f53d0219b1691b785aa857a0fbb2035d",
       "address": "0x06d4b5289b981933e34af10817f352061bad6353",
       "weights": [
         1
       ],
       "fee": 500000000000000,
       "tokens": {
-        "WGAS": 10000000000000000
+        "WGAS": 500000000000000000
       }
     },
-    "blasttestnet": {
-      "cci": "0x39629ddb16a11e11fb62bf46f34f63ff1c42b090",
+    "blast": {
+      "cci": "0x2ac500c5f53d0219b1691b785aa857a0fbb2035d",
       "address": "0x06d4b5289b981933e34af10817f352061bad6353",
       "weights": [
         1
       ],
       "fee": 500000000000000,
       "tokens": {
-        "WGAS": 10000000000000000
+        "WGAS": 500000000000000000
       }
     }
   }

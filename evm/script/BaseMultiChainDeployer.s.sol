@@ -11,6 +11,12 @@ contract MultiChainDeployer is BaseMultiChainDeployer {
     mapping(string => string) wrappedGas;
 
     constructor() BaseMultiChainDeployer() {
+        wrappedGas[chainKey[Chains.Base]] = "WETH";
+
+        wrappedGas[chainKey[Chains.Blast]] = "WETH";
+
+        wrappedGas[chainKey[Chains.Optimism]] = "WETH";
+
         wrappedGas[chainKey[Chains.Sepolia]] = "WETH10";
 
         wrappedGas[chainKey[Chains.BaseSepolia]] = "WETH";
