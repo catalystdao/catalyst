@@ -23,7 +23,7 @@ Let $P_i(w)$ be a decreasing, non-negative marginal price function for a token $
 
 $$U = \int_{i_t}^{i_t + \Delta i} P_i(w) \ dw$$
 
-Where $i_t$ is the current balance in the vault, $\Delta i$ is the change in balance caused by the user and $U$ is Units: A measure of the value change by the user. The equation can be used both ways, where a positive change implies a "swap in" and a negative change implies a "swap out". It is implies that when assets are swapped out, $U$ the sign is flipped from positive to negative. 
+Where $i_t$ is the current balance in the vault, $\Delta i$ is the change in balance caused by the user and $U$ is Units: A measure of the value change by the user. The equation can be used both ways, where a positive change implies a "swap in" and a negative change implies a "swap out". It implies that when assets are swapped out, $U$ the sign is flipped from positive to negative. 
 
 This implies that the full swap from a token $i$ to another token $j$ can be computed as:
 
@@ -49,7 +49,7 @@ Amplification: $P^\theta(w)= \frac{W_i}{(W_i \cdot w)^\theta} \cdot (1-\theta)$
 
 **LocalSwap**: A combination of *sendAsset* and *receiveAsset* executed atomically, often on a single chain.
 
-**Invariant**: A measure used to measure the vault value. Specific to the *invariant* measure, is that it is constant whenever a swap is completed. If a vault implements a swap fee, the measure increases as fees accumulate in the vault. The invariant is not invariant to deposits or withdrawals. The invariants can continously be examined if the number of emitted Units is kept track of. In the below equations, this is representated as $\sum U$.
+**Invariant**: A measure used to measure the vault value. Specific to the *invariant* measure, is that it is constant whenever a swap is completed. If a vault implements a swap fee, the measure increases as fees accumulate in the vault. The invariant is not invariant to deposits or withdrawals. The invariants can continuously be examined if the number of emitted Units is kept track of. In the below equations, this is represented as $\sum U$.
 
 ## The AMM Equations
 
