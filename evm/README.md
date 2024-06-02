@@ -22,7 +22,7 @@ More specifically, the code structure is as follows:
 
 ## CatalystVaultCommon.sol
 
-An `abstract` contract (i.e. a contract that is made to be overriden), which enforces the core structure of a Catalyst vault and implements features which are generic to any pricing curve. Among these are:
+An `abstract` contract (i.e. a contract that is made to be overridden), which enforces the core structure of a Catalyst vault and implements features which are generic to any pricing curve. Among these are:
 
 - Vault administration, including fees and vault connections management
 - Cross chain swaps acknowledgement and timeout
@@ -57,7 +57,7 @@ Catalyst v1 implements 2 type of swaps, *Asset Swaps* and *Liquidity Swaps*. The
 
 ### Underwriting
 
-Catalyst allows fast execution for swaps. This is done by allowing external underwriters to pre-execute a swap which is then settled ocne the swap is confirmed by the associated AMB (and relayed).
+Catalyst allows fast execution for swaps. This is done by allowing external underwriters to pre-execute a swap which is then settled once the swap is confirmed by the associated AMB (and relayed).
 
 Each swap is assigned a somewhat-uniquely identifier which contains the context for executing a swap. The computation for the identifier can be found below.
 
@@ -88,7 +88,7 @@ Each swap is assigned a somewhat-uniquely identifier which contains the context 
     }
 ```
 
-When a swap is initially underwritten the identifier describes exactly how the swap is supposed to be executed. An underwriter collect the relevant swap execution context by decoding the AMB payload and then delivers it to the associated cross-chain interface `.underwrite`. The relevant swap is executed with the payment taken from the underwriter but escrowed on the vault. 
+When a swap is initially underwritten the identifier describes exactly how the swap is supposed to be executed. An underwriter collects the relevant swap execution context by decoding the AMB payload and then delivers it to the associated cross-chain interface `.underwrite`. The relevant swap is executed with the payment taken from the underwriter but escrowed on the vault. 
 
 Once the swap arrives, the identifier is calculated based on the payload and if an underwrite exists it is matched and the escrowed tokens are delivered to the underwriter.
 
@@ -116,13 +116,13 @@ To run the tests with Foundry:
 forge test -vvv
 ```
 
-Compiling the tests takes a significant amount of time but running the tests themselves is almost instant. The `-vvv` argument prints trace for any failling tests. Many tests are designed for fuzzing. By default, 100 fuzzes are made. To increase the number of runs add the argument `--fuzz-runs 1000`. If the number of runs is particularly high (>10000) some tests might fail with "rejected too many inputs".
+Compiling the tests takes a significant amount of time but running the tests themselves is almost instant. The `-vvv` argument prints trace for any failing tests. Many tests are designed for fuzzing. By default, 100 fuzzes are made. To increase the number of runs add the argument `--fuzz-runs 1000`. If the number of runs is particularly high (>10000) some tests might fail with "rejected too many inputs".
 
 ## Coverage
 
 The repository uses the Soldiity pipeline `--via-ir` to circumvent the *stack too deep* issue. The result is that when Foundry tries to re-compile the contracts without any optimisations it fails.
 
-The forge argument `-ir-minimum` has to be used to compile the contracts using the `ir` representation. Note that this changes the mapping of source code to compiled code and some sections can be incorrectled marked as uncovered or covered.
+The forge argument `-ir-minimum` has to be used to compile the contracts using the `ir` representation. Note that this changes the mapping of source code to compiled code and some sections can be incorrectly marked as uncovered or covered.
 
 ```
 forge coverage --ir-minimum
@@ -134,7 +134,7 @@ This repository contains a helper script for deployment `script/DeployCatalyst.s
 
 ## Local Catalyst
 
-Local Catalyst consists of Volatile and Amplified pools along with the Factory. To deploy Local Catalyst to another chain, add the chain config to `script/BaseMultiChainDeployer.s.sol`. For chains without EIP-1559 add them as a legacy chain.Then run `forge script DeployCatalyst --sig "deploy()" --broadcast` or `forge script DeployCatalyst --sig "deploy_legacy()" --legacy --broadcast` depending on if the chain added was with EIP-1559 support (non-legacy) or with (legacy). Some chains require running with `--slow`. If deployment fails, wait a few blocks and re-try.
+Local Catalyst consists of Volatile and Amplified pools along with the Factory. To deploy Local Catalyst to another chain, add the chain config to `script/BaseMultiChainDeployer.s.sol`. For chains without EIP-1559 add them as a legacy chain. Then run `forge script DeployCatalyst --sig "deploy()" --broadcast` or `forge script DeployCatalyst --sig "deploy_legacy()" --legacy --broadcast` depending on if the chain added was with EIP-1559 support (non-legacy) or with (legacy). Some chains require running with `--slow`. If deployment fails, wait a few blocks and re-try.
 
 ## Cross-chain Catalyst
 
@@ -239,7 +239,7 @@ contract ExampleTest is TestCommon {
 }
 ```
 
-We are now ready to execute a localswpa. Lets swap 50 token0 for token1. A minimum output of 45 tokens is specified (if not fulfilled, the transaction will revert).
+We are now ready to execute a localswap. Lets swap 50 token0 for token1. A minimum output of 45 tokens is specified (if not fulfilled, the transaction will revert).
 
 
 ```solidity
@@ -270,7 +270,7 @@ If you executed more swaps to test the minimum output, please undo those with `c
 
 ## Cross-Chain Vault Setup
 
-Before being able of executing a cross-chain swap, we need to setup the associated cross-chain communication. We have already deployed a cross-chain interface but we havn't set it up yet. Lets do that:
+Before being able of executing a cross-chain swap, we need to setup the associated cross-chain communication. We have already deployed a cross-chain interface but we haven't set it up yet. Lets do that:
 
 ```solidity
 import { ICatalystV1Vault } from "../src/ICatalystV1Vault.sol";
@@ -285,7 +285,7 @@ contract ExampleTest is TestCommon {
     // We need to set address(CCI) as the allowed caller and address(GARP) as the destination.
     bytes memory approvedRemoteCaller = convertEVMTo65(address(CCI));
     bytes memory remoteGARPImplementation = abi.encode(address(GARP));
-    // notice that remoteGARPImplementation needs to be encoded with how the AMB expectes it
+    // notice that remoteGARPImplementation needs to be encoded with how the AMB expects it
     // and approvedRemoteCaller needs to be encoded with how GARP expects it.
     CCI.connectNewChain(DESTINATION_IDENTIFIER, approvedRemoteCaller, remoteGARPImplementation);
   }
@@ -505,4 +505,4 @@ Catalyst has been analyzed using Slither and no major bugs have been found. To r
 
 `slither contracts/<>.sol --solc-args "--base-path . --include-path node_modules --optimize --optimize-runs 9000" --exclude naming-convention`
 
-Alternativly, run `slither contracts` to analyze all contracts.
+Alternatively, run `slither contracts` to analyze all contracts.
