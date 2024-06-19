@@ -165,7 +165,7 @@ contract DeployVaults is MultiChainDeployer {
         }
     }
 
-    function deploy() load_config iter_chains(chain_list) broadcast public {
+    function deploy(string[] calldata chains) load_config iter_chains_string(chains) broadcast public {
         _deploy();
     }
 
@@ -173,7 +173,7 @@ contract DeployVaults is MultiChainDeployer {
         _deploy();
     }
 
-    function setConnection() load_config iter_chains(chain_list) broadcast public {
+    function setConnection(string[] calldata chains) load_config iter_chains_string(chains) broadcast public {
         _setConnection();
     }
 

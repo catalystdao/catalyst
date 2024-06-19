@@ -154,68 +154,60 @@ contract DeployInterfaces is MultiChainDeployer {
         _deploy(availableBridges);
     }
 
-    function _connect_cci(string[] memory bridges) forEachInterface(bridges) internal {
-        Chains[] memory all_chains = new Chains[](chain_list.length + chain_list_legacy.length);
-        uint256 i = 0;
-        for (i = 0; i < chain_list.length; ++i) {
-            all_chains[i] = chain_list[i];
-        }
-        for (uint256 j = 0; j < chain_list_legacy.length; ++j) {
-            all_chains[i+j] = chain_list_legacy[j];
-        }
+    function _connect_cci(string[] memory bridges, string[] memory counterpartChains) forEachInterface(bridges) internal {
 
         CatalystChainInterface cci = CatalystChainInterface(abi.decode(config_interfaces.parseRaw(string.concat(".", bridgeVersion, ".", currentChainKey, ".interface")), (address)));
 
-        for (i = 0; i < all_chains.length; ++i) {
-            Chains remoteChain = all_chains[i];
-            if (keccak256(abi.encodePacked(currentChainKey)) == keccak256(abi.encodePacked(chainKey[remoteChain]))) continue;
+        for (uint256 i = 0; i < counterpartChains.length; ++i) {
+            string memory remoteChain = counterpartChains[i];
+            if (keccak256(abi.encodePacked(currentChainKey)) == keccak256(abi.encodePacked(remoteChain))) continue;
             if (
-                !vm.keyExists(config_interfaces, string.concat(".", bridgeVersion, ".", chainKey[remoteChain]))
+                !vm.keyExists(config_interfaces, string.concat(".", bridgeVersion, ".", remoteChain))
             ) continue;
 
             // Check if there exists a remote deployment.
             if (
-                !vm.keyExists(config_interfaces, string.concat(".", bridgeVersion, ".", chainKey[remoteChain]))
+                !vm.keyExists(config_interfaces, string.concat(".", bridgeVersion, ".", remoteChain))
             ) {
                 console2.log(
                     "no-deployment",
                     bridgeVersion,
-                    chainKey[remoteChain]
+                    remoteChain
                 );
                 continue;
             }
 
             // Check if the chain identifier expists.
             if (
-                !vm.keyExists(config_chain, string.concat(".", bridgeVersion, ".", currentChainKey, ".",  chainKey[remoteChain]))
+                !vm.keyExists(config_chain, string.concat(".", bridgeVersion, ".", currentChainKey, ".",  remoteChain))
             ) {
                 console2.log(
                     "no-chainidentifier",
                     currentChainKey,
-                    chainKey[remoteChain]
+                    remoteChain
                 );
                 continue;
             }
 
-            bytes32 chainIdentifier = abi.decode(config_chain.parseRaw(string.concat(".", bridgeVersion, ".", currentChainKey, ".",  chainKey[remoteChain])), (bytes32));
+            bytes32 chainIdentifier = abi.decode(config_chain.parseRaw(string.concat(".", bridgeVersion, ".", currentChainKey, ".",  remoteChain)), (bytes32));
 
             // check if a connection has already been set.
             if (keccak256(cci.chainIdentifierToDestinationAddress(chainIdentifier)) != KECCACK_OF_NOTHING) {
                 console2.log(
                 "skipping",
                 currentChainKey,
-                chainKey[remoteChain]
+                remoteChain
             );
                 continue;
             }
 
-            address remoteInterface = abi.decode(config_interfaces.parseRaw(string.concat(".", bridgeVersion, ".", chainKey[remoteChain], ".interface")), (address));
-            address remoteIncentive = abi.decode(config_interfaces.parseRaw(string.concat(".", bridgeVersion, ".", chainKey[remoteChain], ".escrow")), (address));
+            address remoteInterface = abi.decode(config_interfaces.parseRaw(string.concat(".", bridgeVersion, ".", remoteChain, ".interface")), (address));
+            address remoteIncentive = abi.decode(config_interfaces.parseRaw(string.concat(".", bridgeVersion, ".", remoteChain, ".escrow")), (address));
 
             console2.log(
                 "connecting",
                 currentChainKey,
-                chainKey[remoteChain]
+                remoteChain
             );
 
             cci.connectNewChain(
@@ -230,12 +222,12 @@ contract DeployInterfaces is MultiChainDeployer {
         }
     }
 
-    function connectCCIAll(string[] memory bridges) load_config iter_chains(chain_list) broadcast external {
-        _connect_cci(bridges);
+    function connectCCI(string[] calldata bridges, string[] calldata chains) load_config iter_chains_string(chains) broadcast external {
+        _connect_cci(bridges, chains);
     }
 
-    function connectCCIAllLegacy(string[] memory bridges) load_config iter_chains(chain_list_legacy) broadcast external {
-        _connect_cci(bridges);
+    function connectCCI(string[] calldata bridges, string[] calldata localChains, string[] calldata remoteChains) load_config iter_chains_string(localChains) broadcast external {
+        _connect_cci(bridges, remoteChains);
     }
 }
 

@@ -35,5 +35,30 @@
         "WGAS": 500000000000000000
       }
     }
+  },
+  "LayerZeroSepoliaArbitrumSeidevnet": {
+    "cci_version": "LayerZero",
+    "arbitrumsepolia": {
+      "cci": "0x971a39ab3fc82a1b5e813946fd8d16cb363f4907",
+      "address": "0x06d4b5289b981933e34af10817f352061bad6353",
+      "weights": [
+        1
+      ],
+      "fee": 1000000000000000,
+      "tokens": {
+        "WGAS": 500000000000000000
+      }
+    },
+    "seidevnet": {
+      "cci": "0x971a39ab3fc82a1b5e813946fd8d16cb363f4907",
+      "address": "0x06d4b5289b981933e34af10817f352061bad6353",
+      "weights": [
+        1
+      ],
+      "fee": 1000000000000000,
+      "tokens": {
+        "WGAS": 500000000000000000
+      }
+    }
   }
 }

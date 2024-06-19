@@ -29,6 +29,24 @@
       "escrow": "0x9524ACA1fF46fAd177160F0a803189Cb552A3780"
     }
   },
+  "LayerZero": {
+    "arbitrumsepolia": {
+      "interface": "0x971a39ab3fc82a1b5e813946fd8d16Cb363f4907",
+      "escrow": "0xbA6f62a6539e4Bc11d2A8B1C760b5a1097c6cF6B"
+    },
+    "optimismsepolia": {
+      "interface": "0x971a39ab3fc82a1b5e813946fd8d16Cb363f4907",
+      "escrow": "0xbA6f62a6539e4Bc11d2A8B1C760b5a1097c6cF6B"
+    },
+    "basesepolia": {
+      "interface": "0x971a39ab3fc82a1b5e813946fd8d16Cb363f4907",
+      "escrow": "0xbA6f62a6539e4Bc11d2A8B1C760b5a1097c6cF6B"
+    },
+    "seidevnet": {
+      "interface": "0x971a39ab3fc82a1b5e813946fd8d16Cb363f4907",
+      "escrow": "0xbA6f62a6539e4Bc11d2A8B1C760b5a1097c6cF6B"
+    }
+  },
   "Polymer": {
     "basesepolia": {
       "interface": "0x7d2193429C1ae9BA1b36ffb8d5Ee467B4ce0EFC3",

@@ -64,7 +64,7 @@ contract DeployRouter is MultiChainDeployer {
         deployRouter();
     }
 
-    function deploy() load_config iter_chains(chain_list) broadcast external {
+    function deploy(string[] calldata chains) load_config iter_chains_string(chains) broadcast external {
         _deploy();
     }
 

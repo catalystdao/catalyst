@@ -26,6 +26,8 @@ contract MultiChainDeployer is BaseMultiChainDeployer {
         wrappedGas[chainKey[Chains.OptimismSepolia]] = "WETH";
 
         wrappedGas[chainKey[Chains.BlastTestnet]] = "WETH";
+
+        wrappedGas["seidevnet"] = "WSEI";
     }
 }
 
