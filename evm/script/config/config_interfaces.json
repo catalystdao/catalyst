@@ -17,16 +17,24 @@
       "escrow": "0x294F41D30D058C9e5A71810A6C758E595b7aC170"
     },
     "optimismsepolia": {
-      "interface": "0xdB321B1E304eA155B1977768904De998818F986E",
-      "escrow": "0x198cDD55d90277726f3222D5A8111AdB8b0af9ee"
+      "interface": "0x728d3bc59c4bace99a7bf748c613b4d4aec3e309",
+      "escrow": "0xca9b12f536f54a468e13446617418e5fedb6f1d5"
     },
     "basesepolia": {
-      "interface": "0xC7D9815055Ea739B78E2D10D0055d97010396b78",
-      "escrow": "0x63B4E24DC9814fAcDe241fB4dEFcA04d5fc6d763"
+      "interface": "0xc3e71c11e7cbe39a21c7ec2992250955e4eb67f9",
+      "escrow": "0xa5191c09deda2ddbfd94a2c084200136fd6d7325"
     },
     "blasttestnet": {
-      "interface": "0x39629dDb16a11E11fB62Bf46f34F63fF1c42B090",
-      "escrow": "0x9524ACA1fF46fAd177160F0a803189Cb552A3780"
+      "interface": "0xfa70af7005f03987974fdfbde25d5d69638af709",
+      "escrow": "0x926d96fbb882c14689aec2fa28cbcb621473d6ce"
+    },
+    "mantlesepolia": {
+      "interface": "0xb979bda4581349dfbde65f670269b25437d5e473",
+      "escrow": "0x18cbeb2de60c4475a831d160ce3f19301d500708"
+    },
+    "arbitrumsepolia": {
+      "interface": "0xb51020f308498c9bfa25ec079410f05fd0593345",
+      "escrow": "0x59aa9e2339dd0c019f188f1ed9b27b9a10ae664d"
     }
   },
   "Polymer": {
