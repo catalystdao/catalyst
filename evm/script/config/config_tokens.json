@@ -25,5 +25,11 @@
   },
   "optimism": {
     "WETH": "0x4200000000000000000000000000000000000006"
+  },
+  "mantle": {
+    "WMNT": "0x78c1b0C915c4FAA5FffA6CAbf0219DA63d7f4cb8"
+  },
+  "mantlesepolia": {
+    "WMNT": "0x0a53E0A951F0fce205e9c1c1d6c568403cA5Fb2C"
   }
 }

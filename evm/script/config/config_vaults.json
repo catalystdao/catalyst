@@ -35,5 +35,31 @@
         "WGAS": 500000000000000000
       }
     }
+  },
+  "WormholeSepoliaMantleArbitrum": {
+    "cci_version": "Wormhole",
+    "amplification": 100000000000000000,
+    "mantlesepolia": {
+      "cci": "0xb979bda4581349dfbde65f670269b25437d5e473",
+      "address": "0x06d4b5289b981933e34af10817f352061bad6353",
+      "weights": [
+        1
+      ],
+      "fee": 500000000000000,
+      "tokens": {
+        "WGAS": 25000000000000000
+      }
+    },
+    "arbitrumsepolia": {
+      "cci": "0xb51020f308498c9bfa25ec079410f05fd0593345",
+      "address": "0xd62a4d7b49b549527196629bd0be1cff745a89b6",
+      "weights": [
+        1
+      ],
+      "fee": 500000000000000,
+      "tokens": {
+        "WGAS": 25000000000000000
+      }
+    }
   }
 }
