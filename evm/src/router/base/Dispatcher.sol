@@ -185,7 +185,7 @@ abstract contract Dispatcher is Permit2Payments, CatalystExchange, CancelSwap, L
                     // other variables.
                     bytes calldata calldata_ = inputs[800:];
                     
-                    CatalystExchange.sendLiquidity(vault, routeDescription, amount, minOut, fallbackUser, gas, calldata_);
+                    CatalystExchange.sendLiquidity(vault, routeDescription, amount, minOut, map(fallbackUser), gas, calldata_);
                 } else if (command == Commands.ALLOW_CANCEL) {
                     // equivalent: abi.decode(inputs, (address, bytes32))
                     address swappie;
