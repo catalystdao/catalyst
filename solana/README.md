@@ -3,7 +3,7 @@
 - Specific Program: `anchor deploy -p <ProgramName>`
     -   Note: `<ProgramName>` is the name of the program in TitleCase
 # Wallet
-test-wallet.json contains the keypair used for testing of the Anchor programs.
+test-wallet.json contains the keypair used for testing the Anchor programs.
 # Add program
 Add program key to Anchor.toml, example:
 - programName = "Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS"
