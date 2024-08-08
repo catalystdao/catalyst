@@ -22,7 +22,7 @@ More specifically, the code structure is as follows:
 
 ## CatalystVaultCommon.sol
 
-An `abstract` contract (i.e. a contract that is made to be overriden), which enforces the core structure of a Catalyst vault and implements features which are generic to any pricing curve. Among these are:
+An `abstract` contract (i.e. a contract that is made to be overridden), which enforces the core structure of a Catalyst vault and implements features which are generic to any pricing curve. Among these are:
 
 - Vault administration, including fees and vault connections management
 - Cross chain swaps acknowledgement and timeout
@@ -122,7 +122,7 @@ Compiling the tests takes a significant amount of time but running the tests the
 
 The repository uses the Soldiity pipeline `--via-ir` to circumvent the *stack too deep* issue. The result is that when Foundry tries to re-compile the contracts without any optimisations it fails.
 
-The forge argument `-ir-minimum` has to be used to compile the contracts using the `ir` representation. Note that this changes the mapping of source code to compiled code and some sections can be incorrectled marked as uncovered or covered.
+The forge argument `-ir-minimum` has to be used to compile the contracts using the `ir` representation. Note that this changes the mapping of source code to compiled code and some sections can be incorrectly marked as uncovered or covered.
 
 ```
 forge coverage --ir-minimum
@@ -293,7 +293,7 @@ contract ExampleTest is TestCommon {
 ```
 
 This flow only has to be done once for each deployment and each chain. Since we are only simulating cross-chain connectivity, we only need to set the connection once. If we were to swap between 2 different chains, we would have to set connect the CCIs on both chains with their respective opposite addresses: (`CCI.connectNewChain(remoteChainIdentifier, remoteCCI, remoteGARP)`).¨
-Security for vaults is handled by the vaults and we havn't set that yet.  So lets set a connection for the vaults:
+Security for vaults is handled by the vaults and we haven't set that yet.  So lets set a connection for the vaults:
 
 ```solidity
 import { ICatalystV1Vault } from "../src/ICatalystV1Vault.sol";
