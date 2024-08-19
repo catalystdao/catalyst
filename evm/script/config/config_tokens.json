@@ -31,5 +31,19 @@
   },
   "mantlesepolia": {
     "WMNT": "0x0a53E0A951F0fce205e9c1c1d6c568403cA5Fb2C"
+  },
+  "seidevnet": {
+    "WSEI": "0x63600a899ad94ae1bc638504fa56d8a6144df2fe"
+  },
+  "scrollsepolia": {
+    "WETH": "0x5300000000000000000000000000000000000004"
+  },
+  "arbitrum": {
+    "WETH": "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1",
+    "USDC": "0xaf88d065e77c8cC2239327C5EDb3A432268e5831"
+  },
+  "scroll": {
+    "WETH": "0x5300000000000000000000000000000000000004",
+    "USDC": "0x06eFdBFf2a14a7c8E15944D1F4A48F9F95F663A4"
   }
 }

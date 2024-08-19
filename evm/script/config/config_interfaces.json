@@ -12,6 +12,18 @@
       "interface": "0x23bC307c20941164025624455bdda22B754468b2",
       "escrow": "0x8C8727276725b7Da11fDA6e2646B2d2448E5B3c5"
     },
+    "scroll": {
+      "escrow": "0xcd0205116f47b29ba9789409441cb7c12dd385d1",
+      "interface": "0x6be412f11a78c1155b2498dc263add1e63a9348f"
+    },
+    "mantle": {
+      "escrow": "0xcd0205116f47b29ba9789409441cb7c12dd385d1",
+      "interface": "0x6be412f11a78c1155b2498dc263add1e63a9348f"
+    },
+    "arbitrum": {
+      "escrow": "0x8d29395080f0a8116ff98c02624981e53f9dfdd0",
+      "interface": "0x9322836ea913ff49a7b759456ef9d068df9a6ac4"
+    },
     "sepolia": {
       "interface": "0xEF04d76391C4b6a0c8BB5262f0f2214c261C4AD2",
       "escrow": "0x294F41D30D058C9e5A71810A6C758E595b7aC170"
@@ -35,9 +47,21 @@
     "arbitrumsepolia": {
       "interface": "0xb51020f308498c9bfa25ec079410f05fd0593345",
       "escrow": "0x59aa9e2339dd0c019f188f1ed9b27b9a10ae664d"
+    },
+    "scrollsepolia": {
+      "interface": "0x7e3babd949a7b05ec396f96f4776083efbe1e243",
+      "escrow": "0xdbc4a272d9bf8d912328fd6a1f1e79cd72c3a128"
     }
   },
   "LayerZero": {
+    "arbitrum": {
+      "interface": "0xce3bca22c64af451228570e8b0ae2eb4450474b0",
+      "escrow": "0x1b2a4d11519a31c6ef8e000d7257d31176da90ed"
+    },
+    "sei": {
+      "interface": "0xce3bca22c64af451228570e8b0ae2eb4450474b0",
+      "escrow": "0x1b2a4d11519a31c6ef8e000d7257d31176da90ed"
+    },
     "basesepolia": {
       "interface": "0x1bd01de44d36921302cec387ffe733a93d2b6e96",
       "escrow": "0xd41ace766aed57fefdca3a7d27d20b837284b872"

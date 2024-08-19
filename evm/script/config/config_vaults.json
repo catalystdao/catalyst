@@ -61,5 +61,169 @@
         "WGAS": 25000000000000000
       }
     }
+  },
+  "WormholeSepoliaScrollArbitrum": {
+    "cci_version": "Wormhole",
+    "amplification": 100000000000000000,
+    "scrollsepolia": {
+      "cci": "0x7e3babd949a7b05ec396f96f4776083efbe1e243",
+      "address": "0x06d4b5289b981933e34af10817f352061bad6353",
+      "weights": [
+        1
+      ],
+      "fee": 500000000000000,
+      "tokens": {
+        "WGAS": 25000000000000000
+      }
+    },
+    "arbitrumsepolia": {
+      "cci": "0xb51020f308498c9bfa25ec079410f05fd0593345",
+      "address": "0x5bdb4e52d82c0fc6ab33d1cf95b74c3bfa35d5bb",
+      "weights": [
+        1
+      ],
+      "fee": 500000000000000,
+      "tokens": {
+        "WGAS": 25000000000000000
+      }
+    }
+  },
+  "LayerZeroSepoliaArbitrumSei": {
+    "cci_version": "LayerZero",
+    "arbitrumsepolia": {
+      "cci": "0x1bd01de44d36921302cec387ffe733a93d2b6e96",
+      "address": "0x34fe5ee7b18b88bd4f13522913ad3e3c8b97e938",
+      "weights": [
+        1
+      ],
+      "fee": 500000000000000,
+      "tokens": {
+        "WGAS": 25000000000000000
+      }
+    },
+    "seidevnet": {
+      "cci": "0x1bd01de44d36921302cec387ffe733a93d2b6e96",
+      "address": "0xd62a4d7b49b549527196629bd0be1cff745a89b6",
+      "weights": [
+        1
+      ],
+      "fee": 500000000000000,
+      "tokens": {
+        "WGAS": 25000000000000000
+      }
+    }
+  },
+  "LayerZeroSepoliaArbitrumOptimism": {
+    "cci_version": "LayerZero",
+    "arbitrumsepolia": {
+      "cci": "0x1bd01de44d36921302cec387ffe733a93d2b6e96",
+      "address": "0x9edc174621f4680f5a8e562ca54566bb916e6ed3",
+      "weights": [
+        1
+      ],
+      "fee": 500000000000000,
+      "tokens": {
+        "WGAS": 25000000000000000
+      }
+    },
+    "optimismsepolia": {
+      "cci": "0x1bd01de44d36921302cec387ffe733a93d2b6e96",
+      "address": "0x34fe5ee7b18b88bd4f13522913ad3e3c8b97e938",
+      "weights": [
+        1
+      ],
+      "fee": 500000000000000,
+      "tokens": {
+        "WGAS": 25000000000000000
+      }
+    }
+  },
+  "LayerZeroArbitrumSei": {
+    "cci_version": "LayerZero",
+    "arbitrumsepolia": {
+      "cci": "0x1bd01de44d36921302cec387ffe733a93d2b6e96",
+      "address": "0x2f2771d0b8de12bb48ff1a3cfc5fb0d7e0566e62",
+      "weights": [
+        1
+      ],
+      "fee": 500000000000000,
+      "tokens": {
+        "WGAS": 25000000000000000
+      }
+    },
+    "seidevnet": {
+      "cci": "0x0000000000000000000000000000000000000000",
+      "address": "0x0000000000000000000000000000000000000000",
+      "weights": [
+        1
+      ],
+      "fee": 500000000000000,
+      "tokens": {
+        "WGAS": 25000000000000000
+      }
+    }
+  },
+  "WormholeSepoliaBaseArbOp": {
+    "cci_version": "Wormhole",
+    "amplification": 100000000000000000,
+    "arbitrumsepolia": {
+      "cci": "0xb51020f308498c9bfa25ec079410f05fd0593345",
+      "address": "0x00fc75f7a4ae318b21fa548d1c88c6c23af58b9e",
+      "weights": [
+        1
+      ],
+      "fee": 500000000000000,
+      "tokens": {
+        "WGAS": 25000000000000000
+      }
+    },
+    "basesepolia": {
+      "cci": "0xc3e71c11e7cbe39a21c7ec2992250955e4eb67f9",
+      "address": "0x34fe5ee7b18b88bd4f13522913ad3e3c8b97e938",
+      "weights": [
+        1
+      ],
+      "fee": 500000000000000,
+      "tokens": {
+        "WGAS": 25000000000000000
+      }
+    },
+    "optimismsepolia": {
+      "cci": "0x728d3bc59c4bace99a7bf748c613b4d4aec3e309",
+      "address": "0x9edc174621f4680f5a8e562ca54566bb916e6ed3",
+      "weights": [
+        1
+      ],
+      "fee": 500000000000000,
+      "tokens": {
+        "WGAS": 25000000000000000
+      }
+    }
+  },
+  "WormholeScrollArbitrum": {
+    "cci_version": "Wormhole",
+    "amplification": 100000000000000000,
+    "arbitrum": {
+      "cci": "0x9322836ea913ff49a7b759456ef9d068df9a6ac4",
+      "address": "0x06d4b5289b981933e34af10817f352061bad6353",
+      "weights": [
+        1
+      ],
+      "fee": 500000000000000,
+      "tokens": {
+        "USDC": 50000000
+      }
+    },
+    "scroll": {
+      "cci": "0x6be412f11a78c1155b2498dc263add1e63a9348f",
+      "address": "0x06d4b5289b981933e34af10817f352061bad6353",
+      "weights": [
+        1
+      ],
+      "fee": 500000000000000,
+      "tokens": {
+        "USDC": 50000000
+      }
+    }
   }
 }
