@@ -27,7 +27,7 @@ And then for larger tests of the system as a whole *./integration*
 Tests may be sub-organised based on the function which they test. For example *./CatalystFactory/DeployVault.t.sol* tests the `deployVault` function in the Catalyst Factory.
 
 *./TestCommon.t.sol*
-Contains frequently used code snippits to simplify testing and inherits from other `Common` contracts which exposes other often uses macros.
+Contains frequently used code snippits to simplify testing and inherits from other `Common` contracts which expose other often used macros.
 
 *./mocks*
 Contains various mocks used throughout testing.
@@ -43,4 +43,4 @@ For the simplest example, see *./CatalystVault/LocalSwap/LocalSwap.t.sol*. This 
 
 Many tests are implemented as invariant testing with fuzzing. An example of such a test is *./CatalystVault/LocalSwap/LocalSwap.t.sol*
 
-The test *test_local_swap_invariance*  is implemented as an fuzz test on the invariant. It collects vaults from the config and then tries various swap values and computes the invariant before and after the swap. If it decreased below a certain margin, then the test fails.
+The test *test_local_swap_invariance*  is implemented as a fuzz test on the invariant. It collects vaults from the config and then tries various swap values and computes the invariant before and after the swap. If it decreased below a certain margin, then the test fails.

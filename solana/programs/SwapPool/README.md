@@ -25,7 +25,7 @@ Users:
 The steps to create and setup a new SwapPool are:
 1. Create the pool with **create_swap_pool()**
     - The transaction signer *setup_master* is set as the only authority allowed to make changes during the pool setup process.
-    - Internally, the Account that holds the SwapPool state is initialised, and rent is payed by the *setup_master*.
+    - Internally, the Account that holds the SwapPool state is initialised, and rent is paid by the *setup_master*.
         - **TODO** Separate the payer from the *setup_master*?
 2. Add assets (tokens) to the SwapPool via **add_swap_pool_asset()**
     - The desired token mint account is added as an asset to the *SwapPoolState*.
@@ -35,7 +35,7 @@ The steps to create and setup a new SwapPool are:
             1. The PDA is derived from the SwapPoolState public key, which can be kept private until the pool setup is complete.
             2. **TODO CHECK** The entire setup process can be executed atomically.
     - The authorities for the asset wallet and the token mint also have to be passed (PDAs too).
-    - Rent for the asset wallet and token mint is payed by the *setup_master*.
+    - Rent for the asset wallet and token mint is paid by the *setup_master*.
     - **NOTE**: Assets are added individually, and not as group when calling *create_swap_pool()* (like with the EVM implementation), because Anchor does not (currently?) support passing arrays of accounts to instructions. Also, creation of the asset wallet and token mint is defined in the *add_swap_pool_asset* context definition (*AddSwapPoolAsset*); the way these are defined would make it incompatible with passing an array of asset accounts.
 3. **TODO** Create SwapPool ICCS connection
 4. Finish the setup via **finish_setup()**
